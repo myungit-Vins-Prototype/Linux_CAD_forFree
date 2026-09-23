@@ -1,0 +1,143 @@
+# CLAUDE.md
+
+Contesto del progetto per Claude Code. La lingua di lavoro è l'italiano (UI, commenti, messaggi).
+
+## Cos'è
+
+Nonostante il nome della cartella (`pdfReader_C`), il progetto attivo è **ForgeCAD**: un CAD parametrico 2D/3D in C++17 + Qt6 + OpenCASCADE (geometria esatta) + OpenGL legacy per il display (pipeline fissa, `glBegin/glEnd`), con un backend CUDA opzionale (al momento solo una sonda di disponibilità). L'interfaccia richiama "Part Studio" in stile Onshape: albero modello, piani di riferimento, schizzi, estrusioni e operazioni booleane.
+
+I file `pdfReader.c` e `pdfView.c` sono **legacy**: esperimenti in C con MuPDF (estrazione testo) e GTK3 (visualizzatore PDF). Non sono in CMake e non fanno parte di ForgeCAD. Anche `pdfView_qt6` (binario nella root) è un vecchio artefatto.
+
+## Requisito di precisione (vincolante)
+
+ForgeCAD è destinato a uso ingegneristico: **tutta la geometria è esatta**. Il kernel è **OpenCASCADE 7.9** (pacchetto Arch `opencascade`, include in `/usr/include/opencascade`, LGPL-2.1 con eccezione).
+- Coordinate del modello in `double` (`QPointF` per lo schizzo, `gp_Pnt`/`TopoDS_Shape` in 3D). `float`/`QVector3D` solo per il disegno a schermo.
+- Curve di schizzo memorizzate come parametri esatti e convertite in `Geom2d_*`; solidi come B-rep (`TopoDS_Shape`); booleane con `BRepAlgoAPI_*`.
+- La tassellazione (`BodyDisplay`, `CurveObject::samples`) serve solo a disegnare e a selezionare a video: **non va mai usata per calcoli** (volumi, booleane, misure). Niente CSG su mesh o geometria fatta in casa.
+- Tolleranze: `Precision::Confusion()` (1e-7) nel kernel, `ForgeCad::kSketchConnectionTolerance` (1e-6) per unire gli estremi dello schizzo nei contorni.
+- Eccezione concordata (settembre 2026): in `kernel/` si sviluppa un kernel geometrico proprio (vedi sotto). Resta **affiancato** a OCCT, che rimane il kernel di produzione e fa da riferimento nei test. Una funzione dell'app passa al nuovo kernel solo quando i test contro OCCT la confermano.
+
+## Build ed esecuzione
+
+```fish
+cmake -S . -B forgecad-cuda-build -DCMAKE_BUILD_TYPE=Debug   # solo la prima volta
+cmake --build forgecad-cuda-build -j
+./forgecad-cuda-build/forgecad
+```
+
+- Directory di build esistente: `forgecad-cuda-build/` (Debug, `CMAKE_CUDA_ARCHITECTURES=native` → sm_75 per la Quadro RTX 3000, nvcc 13.4, Qt6 trovato in `/opt/cuda/lib/cmake/Qt6`).
+- La build compila pulita (a settembre 2026).
+- CUDA: se esiste `/opt/cuda/bin/nvcc` si compila `cuda_support.cu` e si definisce `FORGECAD_HAS_CUDA=1`; altrimenti si usa il fallback `cuda_support_cpu.cpp` (`FORGECAD_HAS_CUDA=0`).
+- GPU ibrida (Intel UHD P630 + NVIDIA): l'ambiente di sessione forza EGL su Mesa (`__EGL_VENDOR_LIBRARY_FILENAMES=50_mesa.json`), quindi Qt su Wayland renderizzerebbe su Intel. `preferDiscreteGpu()` in `forgeCad2026.cpp` imposta le variabili PRIME/EGL NVIDIA prima di `QApplication`; `FORGECAD_IGPU=1` la disattiva. La status bar mostra il `GL_RENDERER` reale.
+- Il viewport è a pipeline fissa: `requestCompatibilityContext()` (sempre in `forgeCad2026.cpp`) chiede un contesto desktop OpenGL in compatibility profile con depth 24. Senza, NVIDIA via EGL dà un contesto **OpenGL ES** e `glBegin`/luci non disegnano nulla (restano visibili solo gli overlay QPainter).
+- Warning attivi: `-Wall -Wextra -Wpedantic` (solo CXX).
+- `compile_commands.json` è un symlink verso la build; `.clangd` rimuove `-mno-direct-extern-access`.
+- Non c'è git. L'app si verifica compilando e avviandola; il kernel proprio ha test automatici: `./forgecad-cuda-build/kernel/forgekernel_tests [filtro]` oppure `ctest` nella directory di build.
+
+## Mappa dei file
+
+| File | Ruolo |
+|---|---|
+| `forgeCad2026.cpp` | `main()`: crea `QApplication` e `PdfWindow`. |
+| `forgeCad2026_gui.h/.cpp` | **Il grosso del codice (~1600 righe).** `CadViewport` (un `QOpenGLWidget`, definito e implementato tutto inline nel .cpp) e `PdfWindow` (un `QMainWindow`: menu, toolbar, dock con l'albero modello, status bar, tema scuro). |
+| `cad_types.h` | Tipi del modello (double): `CurveObject` (parametri esatti + `samples` di display), `SketchObject`, `ExtrusionObject` (definizione parametrica + `TopoDS_Shape shape` + `BodyDisplay display` + `error`), `BooleanOperation`, `DocumentState`, `BackgroundSettings`. |
+| `cad_curve_solver.h/.cpp` | `curveGeometry(curve)` → `Geom2d_Curve` esatte: spline = Bezier cubiche C1 a tratti come B-spline grado 3 (nodi interni molteplicità 3), NURBS (poli + `weights`, nodi uniformi clamped, grado ≤3), cerchio, arco (centro/inizio/fine), poligono (lati come segmenti). `recalculateCurve` produce solo i `samples` di visualizzazione (`GCPnts_TangentialDeflection`). |
+| `cad_history.h/.cpp` | `ForgeCad::History`: Undo/Redo a istantanee complete di `DocumentState` (schizzi + estrusioni), limite 200. |
+| `cad_kernel.h/.cpp` | Modellazione esatta con OpenCASCADE: `sketchAxes`/`sketchToWorld`/`worldToSketch`, `buildSketchProfile` (contorni chiusi → facce con fori annidati, altrimenti fili aperti), `buildExtrusion` (`BRepPrimAPI_MakePrism` + `BRepCheck_Analyzer`), `booleanOperation` (Fuse/Common/Cut + `ShapeUpgrade_UnifySameDomain`), `tessellate` (solo display, spigoli B-rep senza cuciture), `intersectRay` (selezione sulla forma esatta). |
+| `cad_snap.h/.cpp` | `ForgeCad::snapSegments` in double: punti notevoli (estremi delle curve, centri, vertici), estremi/punti medi/punto più vicino dei segmenti, poi griglia (passo 0.25). |
+| `cuda_support.*` | `forgecad_cuda_backend()` / `forgecad_cuda_available()`. |
+| `cad_kernel_lab.h/.cpp` | Banco di prova del menu *Debug → Kernel sperimentale*. Costruisce una superficie (sfera, toro, cono, NURBS, rivoluzione, estrusione) sia con il nuovo kernel sia con OCCT e proietta il punto sotto il mouse con entrambi, confrontando risultato e tempi. Mostra anche due solidi B-rep del nuovo kernel (prisma con fori, cilindro) con conteggi, genere ed esito di `checkBody`. *Debug → Confronta il corpo selezionato col nuovo kernel* converte lo schizzo del corpo selezionato (`sketchSegments`, stessa geometria di `curveGeometry`), lo estrude con `makeExtrusion` e lo confronta con la forma OCCT del documento (conteggi, SP-curve esatte, volume, area, baricentro, lunghezza degli spigoli). Se il corpo è una booleana lo ricostruisce ricorsivamente con `booleanOperation` e confronta volume, area, baricentro e numero di facce con la forma OCCT. Non tocca il documento. |
+| `kernel/` | Kernel geometrico proprio in sviluppo (libreria `forgekernel` + `forgekernel_tests`). Vedi la sezione dedicata. |
+
+## Architettura di `CadViewport`
+
+- **Stato**: tutto in membri privati alla fine della classe: `sketches_`, `extrusions_`, camera (`yaw_`, `pitch_`, `zoom_`), modalità (`sketchMode_`, `drawingTool_`, `constraintMode_`, `displayMode_`, `lightingPreset_`, `tessellationQuality_`), selezioni (`selection_`, `sketchSelections_`, `selectedPoints_`), drag dei punti di controllo e curva in costruzione (`curveControlPoints_`, `pendingPoint_`, `hasPendingPoint_`).
+- **Rendering** (`paintGL`): proiezione ortografica → sfondo sfumato → piani di riferimento → griglia → luci → estrusioni → schizzo → marker di snap → etichette (QPainter) → evidenziazione di hover e selezione (QPainter).
+- **Sfondo** (`background_`, `BackgroundSettings`): sfumatura a due colori con angolo e posizione del punto di mescolanza, disegnata a bande in coordinate schermo. Se `affectsLighting` è attivo, `configureEnvironmentLighting` usa `GL_LIGHT2`/`GL_LIGHT3` (direzionali in coordinate vista, dai lati dei due colori) e tinge la luce ambiente; le luci principali (`GL_LIGHT0`/`GL_LIGHT1`) vengono attenuate di conseguenza. Si modifica da *Visualizza → Sfondo e luce ambiente...* (`PdfWindow::editBackground`, con anteprima dal vivo).
+- **Hover e selezione**: `SceneSelection` con `SceneObjectKind { None, Plane, Sketch, Extrusion }`; `hover_` (azzurro, `kHoverColor`) e `selection_` (giallo, `kSelectionColor`). `pickSceneObject` ha questa priorità: linee degli schizzi (in pixel) → estrusioni (raycast con `viewRay` + `intersectExtrusion`, vince la più vicina) → piani (`pickReferencePlane`). Le estrusioni sotto il puntatore si illuminano (colore + `GL_EMISSION`) e hanno un contorno fatto con lo stencil (`drawExtrusionOutline`); piani e schizzi sono evidenziati con QPainter (`strokeHighlight`). In modalità schizzo l'hover è `sketchHover_` sugli elementi dello schizzo attivo.
+- **Undo/Redo**: ogni modifica al documento segue lo schema `recordUndo();` → modifica → `documentChanged();`. `documentChanged` notifica la finestra, che ricostruisce l'albero (`rebuildModelTree`) e aggiorna Annulla/Ripeti. Il trascinamento dei punti di controllo registra l'istantanea al primo movimento effettivo (`dragSnapshot_`). `restoreDocument` azzera lo stato transitorio (curve in costruzione, selezioni) ed esce dalla modalità schizzo se lo schizzo attivo non esiste più. Anche la visibilità degli oggetti è annullabile; la visibilità dei piani no.
+- **Visibilità**: `setObjectVisible` / `showAllObjects`. Gli oggetti nascosti non vengono disegnati né selezionati (lo schizzo attivo in modalità schizzo viene comunque disegnato). I piani hanno `planeVisible_[3]` oltre al flag globale `referencePlanesVisible_`.
+- **Coordinate**: i punti di schizzo sono `QPointF` (double) nel piano. `ForgeCad::sketchAxes(plane)` dà il `gp_Ax3` del piano (`0 = XY` normale +Z, `1 = XZ` normale −Y con assi X,Z, `2 = YZ` normale −X con assi Z,Y); `mapSketchPoint` nel viewport converte solo per il display. `extrusionVector` estrude lungo +Z / +Y / +X per distanza positiva.
+- **Modalità schizzo**: `beginSketchMode(plane)` blocca la camera sulla vista normale al piano; si esce con `Esc` o `endSketchMode()`. Comandi mouse:
+  - Linea/Polilinea: clic dopo clic. I vincoli orizzontale/verticale/automatico, la quota di lunghezza e la quota angolare vengono applicati al segmento. In `SketchObject` si scrivono insieme `segments`, `constraints`, `segmentLengths` e `segmentAngles`: sono **array paralleli** e vanno tenuti allineati.
+  - Spline/NURBS: clic per aggiungere punti; `Invio` o tasto destro per chiudere (`finalizeCurve`, le NURBS richiedono almeno 4 punti). `Shift+clic` aggiunge un punto a una curva esistente; trascinando si muovono i punti di controllo e le maniglie tangenti.
+  - Cerchio/Poligono (2 clic) e Arco (3 clic: centro, inizio, fine) → `finalizePrimitive`, che salva solo i parametri esatti (punti con aggancio a griglia/geometria, `sides` per il poligono). I punti di cerchi/archi/poligoni si possono trascinare (modifica parametrica).
+  - `Ctrl+clic`: selezione di punti ed elementi (crea `CoincidentConstraint`).
+- **Estrusione** (`createExtrusion`, restituisce l'errore o stringa vuota): profili dello schizzo attivo da `buildSketchProfile`; più contorni chiusi e fori annidati sono supportati; un profilo aperto dà una superficie (`solid = false`).
+- **Corpi e rigenerazione parametrica**: `ExtrusionObject` è estrusione (`sketchIndex`, `distance`) o booleana (`operation`, `firstBody`, `secondBody`, sempre indici minori del proprio). Le modifiche allo schizzo attivo chiamano `sketchEdited()` → `regenerateDependents(sketch)`: ricalcola le estrusioni di quello schizzo e a cascata le booleane che le usano; se fallisce, il corpo ha `error` (voce arancione con ⚠ nell'albero). Durante il trascinamento la rigenerazione avviene al rilascio.
+- **Booleane** (`createBoolean`, restituisce l'errore): B-rep esatte tra due solidi qualsiasi (anche piani diversi, anche risultati di booleane). Gli operandi vengono **nascosti** nello stesso passo di Undo; nell'albero il risultato ha figli informativi "A: …" / "B: …" (`kTreeInfo`).
+- **Stile di visualizzazione**: `displayMode_` 0 = solo spigoli, 1 = solo facce, 2 = facce + spigoli (`drawExtrusionFaces` / `drawExtrusionEdges` su `BodyDisplay`). Cambiando la qualità si ritassellano i corpi dalla forma esatta.
+- **Comunicazione con la finestra**: callback `std::function` (`setSelectionCallback`, `setDocumentChangedCallback`, `setPlaneContextCallback`, `setSketchModeCallback`, `setRendererCallback`), non signal/slot. `PdfWindow` non usa `Q_OBJECT`.
+
+## Kernel proprio (`kernel/`, namespace `ForgeCad::Kernel`)
+
+C++17 puro: **né Qt né OCCT** nella libreria `forgekernel`. OCCT si usa solo in `kernel/tests/` come riferimento. L'app lo collega solo per il banco di prova del menu Debug (`cad_kernel_lab`); la modellazione usa ancora OCCT. File con prefisso `fk_`, test in `kernel/tests/test_*.cpp` (micro framework `fk_test.h`: `FK_TEST`, `FK_CHECK`, `FK_CHECK_NEAR`, `FK_CHECK_THROWS`; generatori casuali con seme fisso e ponte verso OCCT in `fk_test_util.h`).
+
+- `fk_precision.h`: size box alla Parasolid (cubo di 1 km, unità mm), `kLinearResolution` 1e-7, `kAngularResolution` 1e-11.
+- `fk_math.h/.cpp`: `Vec<N>` (N = 2, 3; punti e vettori sono lo stesso tipo), `Interval`, `Frame3` (≈ `gp_Ax3`), `Transform3` (con `isSimilarity`, `projectionAlong`).
+- `fk_predicates`: `orient2d`/`orient3d` esatti (filtro + espansioni di Shewchuk).
+- `fk_bernstein`: polinomi di Bernstein, isolamento di **tutte** le radici in [0,1] (regola dei segni + bisezione). È la base per proiezioni e intersezioni.
+- `fk_curve`: `Curve<N>` astratta (`evaluate(t, order, out)`, `evaluateLeft` per i nodi C0, `breakpoints`), `Line`, `Circle`, `Ellipse` (stessa parametrizzazione di `Geom_*`), `TrimmedCurve`, `TransformedCurve` (solo 3D).
+- `fk_bspline_basis` (interno, `detail`): funzioni di base (A2.1, A2.3), validazione dei nodi, `ScratchBuffer` (buffer sullo stack: niente allocazioni nel percorso caldo).
+- `fk_bspline`: `BSplineCurve<N>` non periodica, razionale o no, con nodi **espansi** (`expandKnots` converte dal formato OCCT). Supporta derivate di ordine qualsiasi (A2.3/A4.2 del NURBS Book), `insertKnot` (A5.1), `clamped`, `bezierSegments` e gli archi di conica esatti come NURBS quadratiche (`toBSpline`).
+- `fk_curve_algo`: `projectPoint`, `projectPointCandidates` (tutti i minimi locali) e `arcLength`. La proiezione considera anche gli estremi, a differenza di `GeomAPI_ProjectPointOnCurve`. Su B-spline trova tutte le radici di C'·(C−P) con Bernstein. Le curve trasformate da una similitudine si proiettano sulla base. `arcLength` usa Gauss-Kronrod 7-15 adattivo.
+- `fk_surface`: `Surface` astratta (`evaluate(u, v, order, out)` con `out[derivativeIndex(k, l, order)]`, `normal`, `uIso`/`vIso` esatte o `nullptr`, breakpoint), `Plane`, `CylindricalSurface`, `ConicalSurface`, `SphericalSurface`, `ToroidalSurface`, `ExtrusionSurface`, `RevolutionSurface`. Parametrizzazioni identiche a quelle di OCCT.
+- `fk_bspline_surface`: `BSplineSurface` a prodotto tensoriale (A3.6/A4.4). Poli `[i * vPoleCount + j]` come `Poles(i+1, j+1)` di OCCT. Isoparametriche esatte e `bezierPatches`.
+- `fk_surface_algo`: `projectPoint` su superficie, bordi compresi (isoparametriche dei bordi e degli spigoli interni proiettate in modo esatto). Il metodo per l'interno dipende dal tipo:
+  - piano e cilindro: forma chiusa;
+  - cono, sfera, toro: punti stazionari in forma chiusa;
+  - B-spline: branch-and-bound sulle pezze di Bézier (limite inferiore dal box dei poli e dal limite direzionale min (p−qᵢ)·n);
+  - estrusione: riduzione esatta alla curva base proiettata, anche con v infinito;
+  - rivoluzione con meridiano piano: riduzione esatta al meridiano;
+  - resto (meridiano sghembo): griglia + Newton.
+
+- `fk_topology`: `Body` B-rep alla Parasolid (region → shell → face → loop → fin → edge → vertex), entità in vettori con id tipizzati (`VertexId`, `FinId`, …; il body si copia per valore), tolleranze locali su vertici ed edge, facce periodiche senza cucitura. Operatori di Eulero con le loro inverse: `mvfs/kvfs`, `mev/kev`, `mef/kef`, `kemr/mekr`, `kfmrh/mfkrh`, `semv/jekv`. Convenzione: la faccia sta a sinistra della fin (loop esterno antiorario attorno alla normale, fori orari).
+- `fk_body_check`: `checkBody` (topologia, formula di Eulero-Poincaré, vertici sulle curve, edge sulle superfici, orientamento dei loop delle facce piane) e `shellGenus`.
+- `fk_curve_ops`: `reversedCurve` (R(s) = C(−s), stesso tipo) ed `embedCurve` (curva 2D del piano di un `Frame3` portata in 3D, stesso tipo e parametro). `Body::reverseEdge` le usa per girare un edge.
+- `fk_quadrature.h`: Gauss-Kronrod 7-15 adattivo con soglia di arrotondamento alla QUADPACK (senza, gli integrandi grandi facevano scendere la bisezione fino in fondo).
+- `fk_profile`: `ProfileSegment`/`ProfileLoop`/`ProfileRegion`. `buildProfile` concatena i tratti per estremi entro tolleranza (in qualsiasi ordine e verso) e li annida come lo schizzo dell'app (profondità pari = materiale). Poi `signedArea`, `area` e `windingNumber`, calcolati come integrali esatti sulle curve.
+- `fk_extrude`: `makeExtrusion(frame, region, height)`: base e coperchio piani, lati piani (segmenti), cilindrici (archi) o `ExtrusionSurface` (ellissi, spline, NURBS). Un loop di una sola curva chiusa dà un fianco con due loop e senza cucitura. Gli estremi che si toccano solo entro la tolleranza diventano vertici (ed edge verticali) tolleranti.
+- `fk_primitives`: `makePrism`, `makeBox` e `makeCylinder` sono casi particolari di `makeExtrusion`. C'è anche `assignPolyhedralGeometry`.
+- `fk_pcurve`: SP-curve delle fin (`Fin::pcurve`, stesso parametro dell'edge: S(p(t)) = C(t); `pcurveTolerance` 0 = esatta). `exactPCurve`: sul piano la curva nel sistema del piano (stesso tipo); altrove si ipotizza (u, v) affine in t dai parametri di alcuni punti e lo si verifica in 3D (isoparametriche, generatrici, curve base delle estrusioni, eliche) → `Line<2>` se la pendenza è unitaria, altrimenti B-spline di grado 1. `fitPCurve`: B-spline cubica C1 (Hermite a tratti, nodi interni tripli) raffinata finché lo scarto 3D è sotto la tolleranza (`kPCurveTolerance` 1e-7). `computePCurves(body)` le assegna alle fin che non le hanno; `makeExtrusion` la chiama (tutte esatte). `reverseEdge` e `semv` le aggiornano; `checkBody` le verifica (`PCurveOffEdge`). Chi cambia la geometria di un body deve azzerarle e ricalcolarle. `invertPoint` (in `fk_surface_algo`) è l'inversione condivisa: Newton dalla stima, poi proiezione, parametri periodici srotolati vicino alla stima.
+- `fk_intersect`: `planeRoots` (radici di n·C(t) = c per tutte le curve, Bernstein sulle B-spline, tratti coincidenti a parte), `intersectCurves` (curva-curva nel piano: retta o conica in forma chiusa/implicita, B-spline-B-spline per suddivisione di Bezier + Newton; sovrapposizioni segnalate), `intersectPlaneSurface` (piano con piano, cilindro, sfera, estrusione: rette, cerchi, ellissi; sezione obliqua di un'estrusione = proiezione obliqua della curva base, NURBS esatta; rette di tangenza separate), `intersectLineSurface` (per il raggio del punto-in-solido). Niente intersezioni tra due superfici non piane (serve il marching).
+- `fk_classify`: `classifyPointOnFace` (semiretta verticale nello spazio (u, v) contro le SP-curve; la prima incontrata dice da che parte sta il dominio, funziona sulle superfici periodiche senza cucitura) e `SolidClassifier` (parità delle intersezioni di un raggio, cambia direzione se sfiora facce o edge).
+- `fk_boolean`: `booleanOperation(a, b, op)` con `op` 0 unione, 1 intersezione, 2 differenza (come l'app). Archi d'intersezione faccia-faccia limitati alle due facce → divisione di edge e archi nei loro estremi → ogni faccia divisa dal grafo dei tagli (cicli con la faccia a sinistra, ordine angolare attorno alla normale; raggruppamento in esterni/fori/fasce sui poligoni (u, v)) → classificazione dei pezzi (prima le facce complanari: sopra con verso uguale/opposto; poi il verso della faccia che taglia; poi un raggio) → selezione e cucitura con `Body::build` → `computePCurves` e `checkBody` (se fallisce: `std::domain_error`, mai un body sbagliato). Tolleranza di default 1e-6. Gestisce facce complanari, fori ciechi e passanti, corpi annidati o disgiunti, booleane in cascata. Non gestisce (eccezione): due superfici non piane che si intersecano (cilindro-cilindro, fianchi da spline tra loro), superfici non piane coincidenti, contatti tangenti (OCCT stesso sbaglia l'unione in quei casi).
+- `Body::build` costruisce un body da vertici, edge e facce per indici (usato dalle booleane).
+- `ExtrusionSurface` di una curva chiusa non periodica (spline chiusa) è periodica in u con periodo = lunghezza del dominio: `evaluate` riporta u nel dominio.
+- `fk_mass`: `massProperties(body)` (volume, area, baricentro, tensore d'inerzia come `GProp_GProps::MatrixOfInertia`) e `faceArea`, sulle superfici esatte. Divergenza (integrali di flusso sulle facce), poi Green nello spazio (u, v): \oint −G du con G = \int f dv calcolata con una quadratura interna. Le curve dei loop in (u, v) sono le SP-curve esatte (traslate di periodi interi per restare continue lungo il loop); senza SP-curve esatta si inverte la superficie sui punti degli edge. Facce periodiche senza cucitura: il termine in du non vede le cuciture. Poli (sfera, vertice del cono) e facce del toro si chiudono aggiungendo le fasce complete di parametro. Non gestiti (lancia `std::domain_error`): loop avvolti nella direzione v del toro, facce aperte o illimitate.
+- `fk_quadrature.h` ha anche la versione vettoriale (`integrateVector`, N integrali sugli stessi nodi). Ogni valore porta una "grandezza" che fissa l'errore di arrotondamento: senza, le componenti che si annullano per cancellazione (x·n su un piano che passa per il riferimento, du lungo un edge in v) mandavano la bisezione fino in fondo.
+
+Attenzione a `BRepGProp` di OCCT come riferimento: senza `Eps` usa una regola di Gauss a ordine fisso, imprecisa sulle curve razionali. `VolumeProperties`, anche con `Eps`, sbaglia fino a qualche percento sui prismi con fianchi estrusi da spline (verificato: area vera 6.358333, volume OCCT −0.7% di default e −3% adattivo). Nei test il volume di riferimento di un prisma è l'area adattiva del profilo per l'altezza; le lunghezze si misurano con `GCPnts_AbscissaPoint`. Anche `SurfaceProperties(face, props, 1e-13)` è affidabile solo per l'area: su una faccia con un foro a spline sbaglia I_xx di 3e-6 (relativo) e il baricentro di 1e-8. Per i momenti di un prisma i test usano il teorema di Green lungo le curve del profilo (`greenMoments` in `test_mass.cpp`); i solidi analitici (cono, sfera, toro) hanno riferimenti in forma chiusa. Il nuovo kernel coincide con questi a 1e-11.
+
+Il kernel e i suoi test si compilano sempre con `-O2 -g`, anche in Debug: la suite completa gira in circa 12 s (quasi tutto nei test delle booleane, che confrontano con BRepAlgoAPI e con una tassellazione fine di OCCT). Anche l'area di `BRepGProp::SurfaceProperties` sbaglia (fino allo 0.06%) sulle facce estruse da spline tagliate da un piano: lì i test usano come terzo parere l'area e il volume della tassellazione fine, e l'identità V(A∪B) = V(A) + V(B) − V(A∩B).
+
+Roadmap: 0–7 fatti (infrastruttura, curve, superfici, topologia B-rep con controllo di validità, estrusione di profili qualsiasi, proprietà di massa, SP-curve, intersezioni con un piano e booleane). Seguono: intersezione superficie-superficie generale (marching con SP-curve approssimate) per le booleane tra superfici non piane, contatti tangenti, fusione delle facce sulla stessa superficie dopo le booleane (come `ShapeUpgrade_UnifySameDomain`), poi il passaggio dell'app al nuovo kernel dove i test lo confermano. Ogni nuovo modulo va con i suoi test contro OCCT.
+
+## Albero modello (`PdfWindow`)
+
+L'albero è ricostruito da `rebuildModelTree()` a partire da `viewport_->sketches()` / `extrusions()`: le prime 4 voci (origine e piani) sono fisse, le altre vengono rigenerate. `Qt::UserRole` = tipo (`TreeItemType`: `kTreeOrigin` 0, `kTreePlane` 1, `kTreeSketch` 3, `kTreeExtrusion` 4) e `Qt::UserRole+1` = indice nel vettore del viewport. La casella di spunta controlla la visibilità (`suppressTreeClick_` evita che il clic sulla casella apra lo schizzo). Nomi: "Schizzo N" / "Estrusione N" / "Unione N" con N = numero di elementi + 1.
+
+## Scorciatoie
+
+- `1`–`6`: viste Front/Rear/Right/Top/Isometric/Trimetric (disabilitate in modalità schizzo).
+- `+`, `-`, `0`: zoom (anche con la rotella, se attiva).
+- `Ctrl+E`: estrusione.
+- `Ctrl+Z` annulla, `Ctrl+Shift+Z` / `Ctrl+Y` ripete, `Ctrl+Shift+H` mostra tutti gli oggetti.
+- Vincoli: `A` automatico, `O` libero, `H` orizzontale, `V` verticale, `L` lunghezza, `G` angolo.
+
+## Convenzioni di codice
+
+- Stile Qt: `QVector`, `QVector3D`, `QStringLiteral`, `qBound`/`qMax`. Membri con suffisso `_`. Indentazione a 4 spazi. Graffa di apertura sulla stessa riga.
+- Le enum sono spesso passate come `int` (display mode, plane, constraint mode, operazione booleana: `0` unione, `1` intersezione, `2` differenza). Se ne aggiungi una, mantieni la numerazione.
+- Qualità di tessellazione `0/1/2` (bassa/media/alta) → densità dei campioni di display di curve e corpi (deflessione relativa alla diagonale del corpo).
+- Il codice nuovo di geometria e algoritmi va in moduli separati `cad_*.h/.cpp` (namespace `ForgeCad`) e va aggiunto in `add_executable` in `CMakeLists.txt`. `forgeCad2026_gui.cpp` è già molto grande.
+
+## Limiti e punti deboli noti
+
+- Nessuna persistenza (salvataggio/caricamento).
+- OpenGL a pipeline fissa (compatibility profile). Il passaggio a shader/VBO sarebbe un refactor importante.
+- Il backend CUDA non fa ancora calcoli: esegue solo un kernel vuoto di prova.
+
+- La selezione dei corpi (`intersectRay`) ricostruisce un `IntCurvesFace_ShapeIntersector` a ogni movimento del mouse: con molti corpi o facce complesse andrà messo in cache.
+- I vincoli dello schizzo non sono ancora un risolutore: orizzontale/verticale/lunghezza/angolo sono applicati al momento del disegno, la coincidenza unisce i punti una volta sola.
+- Le booleane si riferiscono agli operandi per indice: non esiste ancora la cancellazione di corpi (spezzerebbe i riferimenti).

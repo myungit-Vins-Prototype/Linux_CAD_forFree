@@ -1,0 +1,46 @@
+{
+    "configurations": [
+        {
+            "name": "Linux",
+            "compilerPath": "/usr/bin/gcc",
+            "cStandard": "c11",
+            "intelliSenseMode": "linux-gcc-x64",
+            "includePath": [
+                "${workspaceFolder}",
+                "${workspaceFolder}/mupdf-1.28.4/include",
+                "/usr/include/qt6",
+                "/usr/include/qt6/QtCore",
+                "/usr/include/qt6/QtGui",
+                "/usr/include/qt6/QtWidgets",
+                "/usr/include/qt6/QtOpenGL",
+                "/usr/include/qt6/QtOpenGLWidgets",
+                "/usr/include/gtk-3.0",
+                "/usr/include/gdk-pixbuf-2.0",
+                "/usr/include/glib-2.0",
+                "/usr/lib/glib-2.0/include",
+                "/usr/include/pango-1.0",
+                "/usr/include/cairo",
+                "/usr/include/atk-1.0",
+                "/usr/include/at-spi2-atk/2.0",
+                "/usr/include/at-spi2-core/2.0",
+                "/usr/include/fribidi",
+                "/usr/include/harfbuzz",
+                "/usr/include/freetype2",
+                "/usr/include/libpng16",
+                "/usr/include/pixman-1",
+                "/usr/include/gio-unix-2.0",
+                "/usr/include/dbus-1.0",
+                "/usr/lib/dbus-1.0/include",
+                "/usr/include/libmount",
+                "/usr/include/blkid"
+            ],
+            "defines": [
+                "WITH_GZFILEOP"
+            ],
+            "browse": {
+                "limitSymbolsToIncludedHeaders": true
+            }
+        }
+    ],
+    "version": 4
+}

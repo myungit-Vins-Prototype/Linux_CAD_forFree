@@ -1,0 +1,312 @@
+#include <BRepAlgoAPI_Common.hxx>
+#include <BRepAlgoAPI_Cut.hxx>
+#include <BRepAlgoAPI_Fuse.hxx>
+#include <BRepGProp.hxx>
+#include <BRepPrimAPI_MakeBox.hxx>
+#include <BRepPrimAPI_MakeCylinder.hxx>
+#include <BRepPrimAPI_MakePrism.hxx>
+#include <GProp_GProps.hxx>
+#include <BRepMesh_IncrementalMesh.hxx>
+#include <BRep_Tool.hxx>
+#include <Poly_Triangulation.hxx>
+#include <TopExp_Explorer.hxx>
+
+#include "fk_body_check.h"
+#include "fk_boolean.h"
+#include "fk_extrude.h"
+#include "fk_mass.h"
+#include "fk_primitives.h"
+#include "fk_test_profiles.h"
+
+using namespace fktest;
+
+namespace {
+
+gp_Ax2 toAx2(const Frame3 &frame) { return gp_Ax2(toPnt(frame.origin()), toDir(frame.zDir()), toDir(frame.xDir())); }
+
+// Solido del nuovo kernel e lo stesso in OCCT.
+struct Operand {
+    Body body;
+    TopoDS_Shape shape;
+};
+
+Operand box(const Frame3 &frame, double dx, double dy, double dz) {
+    return {makeBox(frame, dx, dy, dz), BRepPrimAPI_MakeBox(toAx2(frame), dx, dy, dz).Shape()};
+}
+
+Operand cylinder(const Frame3 &frame, double r, double h) {
+    return {makeCylinder(frame, r, h), BRepPrimAPI_MakeCylinder(toAx2(frame), r, h).Shape()};
+}
+
+Operand extrusion(const Frame3 &frame, const std::vector<ProfileSegment> &segments, double height) {
+    const ProfileRegion region = buildProfile(segments, 1e-6).regions.front();
+    return {makeExtrusion(frame, region, height),
+            BRepPrimAPI_MakePrism(occtFace(region, frame), gp_Vec(toPnt(Vec3()), toPnt(height * frame.zDir()))).Shape()};
+}
+
+// Area e volume da una tassellazione fine di OCCT: solo un terzo parere,
+// quando BRepGProp non e' affidabile (facce estruse da spline tagliate: la
+// sua area sbaglia anche dello 0.06%, la tassellazione fine no).
+void meshProperties(const TopoDS_Shape &shape, double &area, double &volume) {
+    BRepMesh_IncrementalMesh mesh(shape, 5e-4, false, 0.05);
+    area = volume = 0.0;
+    for (TopExp_Explorer faces(shape, TopAbs_FACE); faces.More(); faces.Next()) {
+        const TopoDS_Face &face = TopoDS::Face(faces.Current());
+        TopLoc_Location location;
+        const Handle(Poly_Triangulation) triangulation = BRep_Tool::Triangulation(face, location);
+        for (int t = 1; t <= triangulation->NbTriangles(); ++t) {
+            int n1, n2, n3;
+            triangulation->Triangle(t).Get(n1, n2, n3);
+            if (face.Orientation() == TopAbs_REVERSED) std::swap(n2, n3);
+            const gp_Pnt p1 = triangulation->Node(n1).Transformed(location), p2 = triangulation->Node(n2).Transformed(location),
+                         p3 = triangulation->Node(n3).Transformed(location);
+            area += 0.5 * gp_Vec(p1, p2).Crossed(gp_Vec(p1, p3)).Magnitude();
+            volume += gp_Vec(p1.XYZ()).Dot(gp_Vec(p2.XYZ()).Crossed(gp_Vec(p3.XYZ()))) / 6.0;
+        }
+    }
+}
+
+TopoDS_Shape occtBoolean(const TopoDS_Shape &a, const TopoDS_Shape &b, BooleanOperation operation) {
+    switch (operation) {
+    case BooleanOperation::Unite: return BRepAlgoAPI_Fuse(a, b).Shape();
+    case BooleanOperation::Intersect: return BRepAlgoAPI_Common(a, b).Shape();
+    default: return BRepAlgoAPI_Cut(a, b).Shape();
+    }
+}
+
+const char *name(BooleanOperation operation) {
+    switch (operation) {
+    case BooleanOperation::Unite: return "unione";
+    case BooleanOperation::Intersect: return "intersezione";
+    default: return "differenza";
+    }
+}
+
+// Booleana del nuovo kernel (valida per costruzione: passa da checkBody)
+// contro BRepAlgoAPI: volume, area e baricentro. `exactOcct`: facce solo
+// piane e cilindriche, dove BRepGProp e' affidabile; altrimenti area e
+// volume si confrontano con la tassellazione fine del risultato OCCT.
+void compare(const Operand &a, const Operand &b, BooleanOperation operation, bool exactOcct = true) {
+    Body result;
+    try {
+        result = booleanOperation(a.body, b.body, operation);
+    } catch (const std::exception &error) {
+        reportFailure(__FILE__, __LINE__, std::string(name(operation)) + ": " + error.what());
+        return;
+    }
+    const TopoDS_Shape reference = occtBoolean(a.shape, b.shape, operation);
+    GProp_GProps volume, surface;
+    BRepGProp::VolumeProperties(reference, volume, 1e-12);
+    BRepGProp::SurfaceProperties(reference, surface, 1e-12);
+    if (volume.Mass() < 1e-9) {
+        FK_CHECK(result.faces().empty());
+        return;
+    }
+    const MassProperties ours = massProperties(result);
+    if (exactOcct) {
+        FK_CHECK_NEAR(ours.volume, volume.Mass(), 1e-8 * volume.Mass());
+        FK_CHECK_NEAR(ours.area, surface.Mass(), 1e-8 * surface.Mass());
+        FK_CHECK(distance(ours.centroid, fromOcct(volume.CentreOfMass())) <= 1e-8 * std::cbrt(volume.Mass()));
+    } else {
+        double meshArea, meshVolume;
+        meshProperties(reference, meshArea, meshVolume);
+        FK_CHECK_NEAR(ours.volume, meshVolume, 2e-4 * meshVolume);
+        FK_CHECK_NEAR(ours.area, meshArea, 5e-5 * meshArea);
+        FK_CHECK(distance(ours.centroid, fromOcct(volume.CentreOfMass())) <= 1e-2 * std::cbrt(volume.Mass()));
+    }
+}
+
+void compareAll(const Operand &a, const Operand &b, bool exactOcct = true) {
+    for (BooleanOperation operation : {BooleanOperation::Unite, BooleanOperation::Intersect, BooleanOperation::Subtract})
+        compare(a, b, operation, exactOcct);
+}
+
+// Frame ruotato attorno a un punto, con orientamento casuale.
+Frame3 rotatedFrame(std::mt19937 &rng, const Vec3 &origin) {
+    return Frame3(origin, randomDirection(rng), randomDirection(rng));
+}
+
+}
+
+// Parallelepipedi in posizione generica (nessuna faccia complanare).
+FK_TEST(BooleanBoxesGeneralPosition) {
+    std::mt19937 rng(500);
+    for (int trial = 0; trial < 12; ++trial) {
+        const Frame3 frameA = randomFrame(rng, 20.0);
+        const Operand a = box(frameA, uniform(rng, 10, 30), uniform(rng, 10, 30), uniform(rng, 10, 30));
+        const Operand b = box(rotatedFrame(rng, frameA.toGlobal(Vec3(uniform(rng, 0, 15), uniform(rng, 0, 15), uniform(rng, 0, 15)))),
+                              uniform(rng, 5, 25), uniform(rng, 5, 25), uniform(rng, 5, 25));
+        compareAll(a, b);
+    }
+}
+
+// Facce complanari: stesso piano di schizzo, blocchi affiancati, a filo,
+// tasca aperta sul fondo, unione che si tocca solo su una faccia.
+FK_TEST(BooleanCoplanarBoxes) {
+    const Frame3 frame(Vec3(1, 2, 3), Vec3(0.3, -0.2, 1), Vec3(1, 0.5, 0));
+    const Operand a = box(frame, 20, 10, 5);
+    compareAll(a, box(Frame3(frame.toGlobal(Vec3(12, 3, 0)), frame.zDir(), frame.xDir()), 15, 4, 5));   // stesso fondo e cima
+    compareAll(a, box(Frame3(frame.toGlobal(Vec3(5, 2, 0)), frame.zDir(), frame.xDir()), 6, 4, 2));     // tasca dal fondo
+    compareAll(a, box(Frame3(frame.toGlobal(Vec3(5, -3, 2)), frame.zDir(), frame.xDir()), 6, 20, 1));   // attraversa due fianchi
+    compare(a, box(Frame3(frame.toGlobal(Vec3(4, 3, 5)), frame.zDir(), frame.xDir()), 5, 5, 5), BooleanOperation::Unite);  // appoggiato sopra
+    compareAll(a, box(Frame3(frame.toGlobal(Vec3(0, 0, 0)), frame.zDir(), frame.xDir()), 20, 10, 8));   // stessa base, piu' alto
+}
+
+// Un solido dentro l'altro (nessuna intersezione) e solidi disgiunti.
+FK_TEST(BooleanNestedAndDisjoint) {
+    const Operand a = box(Frame3(), 20, 20, 20);
+    compareAll(a, box(Frame3(Vec3(5, 5, 5), Vec3(1, 1, 1), Vec3(1, 0, 0)), 4, 4, 4));
+    compareAll(a, box(Frame3(Vec3(40, 0, 0), Vec3(0, 0, 1), Vec3(1, 0, 0)), 5, 5, 5));
+}
+
+// Parallelepipedo e cilindro: fori passanti e ciechi (cerchi), cilindro
+// obliquo (ellissi), cilindro parallelo a due facce (generatrici).
+FK_TEST(BooleanBoxAndCylinder) {
+    std::mt19937 rng(501);
+    const Operand a = box(Frame3(), 30, 20, 10);
+    compareAll(a, cylinder(Frame3(Vec3(10, 10, -5), Vec3(0, 0, 1), Vec3(1, 0, 0)), 4, 20));     // foro passante
+    compareAll(a, cylinder(Frame3(Vec3(20, 8, 4), Vec3(0, 0, 1), Vec3(1, 0, 0)), 3, 20));       // cieco dall'alto
+    compareAll(a, cylinder(Frame3(Vec3(-5, 10, 5), Vec3(1, 0, 0), Vec3(0, 1, 0)), 3, 40));      // lungo X
+    compareAll(a, cylinder(Frame3(Vec3(15, 10, 12), Vec3(1, 0, 0), Vec3(0, 1, 0)), 6, 10));     // sporge dalla cima
+    compare(a, cylinder(Frame3(Vec3(12, 9, 10), Vec3(0, 0, 1), Vec3(1, 0, 0)), 3, 6), BooleanOperation::Unite);  // appoggiato sopra
+    compareAll(a, cylinder(Frame3(Vec3(12, 9, 0), Vec3(0, 0, 1), Vec3(1, 0, 0)), 3, 5));        // tasca dal fondo (disco complanare)
+    compareAll(a, cylinder(Frame3(Vec3(28, 9, 0), Vec3(0, 0, 1), Vec3(1, 0, 0)), 5, 10));       // stesso fondo e cima, sporge di lato
+    for (int trial = 0; trial < 6; ++trial) {
+        const Vec3 center(uniform(rng, 8, 22), uniform(rng, 6, 14), uniform(rng, -10, -6));
+        Vec3 axis = randomDirection(rng);
+        axis = normalized(Vec3(0.4 * axis.x(), 0.4 * axis.y(), 1.0));
+        compareAll(a, cylinder(Frame3(center, axis, Vec3(1, 0, 0)), uniform(rng, 1.5, 4.0), 30));  // obliquo
+    }
+}
+
+// Estrusioni con spline e NURBS contro parallelepipedi: sezioni oblique dei
+// fianchi estrusi (NURBS esatte) e generatrici.
+FK_TEST(BooleanExtrusionAndBox) {
+    std::mt19937 rng(502);
+    std::vector<ProfileSegment> profile = roundedRectangle(Vec2(-10, -6), 20.0, 12.0, 2.5);
+    profile.push_back(closedSpline(Vec2(4, 0), 2.0, true));
+    const Operand a = extrusion(Frame3(), profile, 8.0);
+    for (int trial = 0; trial < 6; ++trial) {
+        const Frame3 frame = rotatedFrame(rng, Vec3(uniform(rng, -8, 2), uniform(rng, -8, 0), uniform(rng, -2, 4)));
+        compareAll(a, box(frame, uniform(rng, 6, 14), uniform(rng, 6, 14), uniform(rng, 6, 14)), false);
+    }
+    // Spline aperta chiusa da due segmenti, tagliata da un blocco parallelo all'estrusione.
+    auto spline = std::make_shared<BSplineCurve<2>>(3, std::vector<double>{0, 0, 0, 0, 0.5, 1, 1, 1, 1},
+                                                    std::vector<Vec2>{Vec2(-5, 0), Vec2(-4, 4), Vec2(0, 6), Vec2(4, 2), Vec2(5, 0)});
+    const Operand c = extrusion(Frame3(), {{spline, spline->domain()}, lineSegment(Vec2(5, 0), Vec2(0, -3)), lineSegment(Vec2(0, -3), Vec2(-5, 0))}, 6.0);
+    compareAll(c, box(Frame3(Vec3(-1, -5, -2), Vec3(0, 0, 1), Vec3(1, 0.2, 0)), 3, 15, 10), false);
+
+    // Identita' dei volumi con le nostre sole proprieta' di massa.
+    const Operand b = box(rotatedFrame(rng, Vec3(-3, -4, 1)), 10, 9, 12);
+    const double va = massProperties(a.body).volume, vb = massProperties(b.body).volume;
+    const double vu = massProperties(booleanOperation(a.body, b.body, BooleanOperation::Unite)).volume;
+    const double vi = massProperties(booleanOperation(a.body, b.body, BooleanOperation::Intersect)).volume;
+    const double vd = massProperties(booleanOperation(a.body, b.body, BooleanOperation::Subtract)).volume;
+    FK_CHECK_NEAR(vu, va + vb - vi, 1e-9 * vu);
+    FK_CHECK_NEAR(vd, va - vi, 1e-9 * va);
+}
+
+// Booleane in cascata: il risultato di una booleana come operando.
+FK_TEST(BooleanChained) {
+    const Operand a = box(Frame3(), 30, 20, 10);
+    const Operand hole = cylinder(Frame3(Vec3(10, 10, -5), Vec3(0, 0, 1), Vec3(1, 0, 0)), 4, 20);
+    const Operand slot = box(Frame3(Vec3(18, -1, 6), Vec3(0, 0, 1), Vec3(1, 0, 0)), 5, 22, 10);
+    const Body first = booleanOperation(a.body, hole.body, BooleanOperation::Subtract);
+    const Body second = booleanOperation(first, slot.body, BooleanOperation::Subtract);
+    const TopoDS_Shape reference = BRepAlgoAPI_Cut(BRepAlgoAPI_Cut(a.shape, hole.shape).Shape(), slot.shape).Shape();
+    GProp_GProps properties;
+    BRepGProp::VolumeProperties(reference, properties, 1e-12);
+    FK_CHECK_NEAR(massProperties(second).volume, properties.Mass(), 1e-8 * properties.Mass());
+}
+
+// Coppie non ancora gestite: errore esplicito, non un risultato sbagliato.
+FK_TEST(BooleanUnsupportedCases) {
+    const Body a = makeCylinder(Frame3(), 5, 20);
+    const Body b = makeCylinder(Frame3(Vec3(-10, 0, 10), Vec3(1, 0, 0), Vec3(0, 1, 0)), 3, 20);
+    FK_CHECK_THROWS(booleanOperation(a, b, BooleanOperation::Unite));
+}
+
+namespace {
+
+// Esito di una booleana contro OCCT (solo volume): "" se torna, altrimenti il
+// problema. `tangent`: la booleana e' stata rifiutata per un contatto tangente.
+std::string stressCase(const Operand &a, const Operand &b, BooleanOperation op, bool &tangent) {
+    tangent = false;
+    try {
+        const Body result = booleanOperation(a.body, b.body, op);
+        GProp_GProps volume;
+        BRepGProp::VolumeProperties(occtBoolean(a.shape, b.shape, op), volume, 1e-12);
+        const double ours = result.faces().empty() ? 0.0 : massProperties(result).volume;
+        if (std::fabs(ours - volume.Mass()) > 1e-7 * std::max(1.0, volume.Mass()))
+            return "volume " + std::to_string(ours) + " invece di " + std::to_string(volume.Mass());
+        return "";
+    } catch (const std::exception &e) {
+        tangent = std::string(e.what()).find("tangente") != std::string::npos;
+        return std::string("eccezione: ") + e.what();
+    }
+}
+
+}
+
+// Configurazioni degeneri su una griglia intera: facce complanari, spigoli
+// e vertici sulle facce dell'altro solido, cilindri tangenti. Nessun
+// risultato deve essere sbagliato; i contatti tangenti sono rifiutati
+// (OCCT stesso sbaglia l'unione in quei casi) e al piu' qualche caso
+// degenere (vertice su vertice) puo' fallire con un'eccezione.
+FK_TEST(BooleanStressGrid) {
+    std::mt19937 rng(777);
+    int wrong = 0, errors = 0, tangents = 0;
+    for (int trial = 0; trial < 150; ++trial) {
+        auto snap = [&](double lo, double hi) { return std::round(uniform(rng, lo, hi)); };
+        const Operand a = box(Frame3(), snap(4, 12), snap(4, 12), snap(4, 12));
+        Operand b;
+        switch (trial % 3) {
+        case 0: {
+            const Vec3 corner(snap(-4, 8), snap(-4, 8), snap(-4, 8));
+            b = box(Frame3(corner, Vec3(0, 0, 1), Vec3(1, 0, 0)), snap(2, 10), snap(2, 10), snap(2, 10));
+            break;
+        }
+        case 1: {
+            const Vec3 base(snap(0, 10), snap(0, 10), snap(-4, 6));
+            b = cylinder(Frame3(base, Vec3(0, 0, 1), Vec3(1, 0, 0)), snap(1, 4), snap(2, 12));
+            break;
+        }
+        default: {
+            const Vec3 base(snap(-4, 2), snap(0, 10), snap(0, 10));
+            b = cylinder(Frame3(base, Vec3(1, 0, 0), Vec3(0, 1, 0)), snap(1, 4), snap(4, 16));
+            break;
+        }
+        }
+        for (BooleanOperation op : {BooleanOperation::Unite, BooleanOperation::Intersect, BooleanOperation::Subtract}) {
+            bool tangent;
+            const std::string problem = stressCase(a, b, op, tangent);
+            if (problem.empty()) continue;
+            if (tangent) ++tangents;
+            else if (problem.rfind("eccezione", 0) == 0) ++errors;
+            else {
+                ++wrong;
+                reportFailure(__FILE__, __LINE__, "caso " + std::to_string(trial) + ": " + problem);
+            }
+        }
+    }
+    FK_CHECK(wrong == 0);
+    FK_CHECK(errors <= 3);
+    FK_CHECK(tangents < 150);
+}
+
+// Posizioni generiche (rotazioni casuali): nessuna eccezione ammessa.
+FK_TEST(BooleanStressGeneral) {
+    std::mt19937 rng(778);
+    for (int trial = 0; trial < 40; ++trial) {
+        const Frame3 frame = randomFrame(rng, 10.0);
+        const Operand a = trial % 2 ? box(frame, uniform(rng, 5, 15), uniform(rng, 5, 15), uniform(rng, 5, 15))
+                                    : cylinder(frame, uniform(rng, 3, 8), uniform(rng, 5, 15));
+        const Operand b = box(rotatedFrame(rng, frame.toGlobal(Vec3(uniform(rng, -3, 5), uniform(rng, -3, 5), uniform(rng, 0, 8)))),
+                              uniform(rng, 3, 12), uniform(rng, 3, 12), uniform(rng, 3, 12));
+        for (BooleanOperation op : {BooleanOperation::Unite, BooleanOperation::Intersect, BooleanOperation::Subtract}) {
+            bool tangent;
+            const std::string problem = stressCase(a, b, op, tangent);
+            if (!problem.empty()) reportFailure(__FILE__, __LINE__, "caso " + std::to_string(trial) + ": " + problem);
+        }
+    }
+}
