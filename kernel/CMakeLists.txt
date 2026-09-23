@@ -41,6 +41,8 @@ add_library(forgekernel STATIC
     fk_mass.cpp
     fk_intersect.h
     fk_intersect.cpp
+    fk_marching.h
+    fk_marching.cpp
     fk_classify.h
     fk_classify.cpp
     fk_boolean.h
@@ -73,6 +75,7 @@ add_executable(forgekernel_tests
     tests/test_pcurve.cpp
     tests/test_mass.cpp
     tests/test_intersect.cpp
+    tests/test_marching.cpp
     tests/test_boolean.cpp
 )
 target_link_libraries(forgekernel_tests PRIVATE

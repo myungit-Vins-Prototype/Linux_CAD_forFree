@@ -123,35 +123,77 @@ void genericCandidates(const Curve<N> &curve, const Vec<N> &p, const Interval &r
 // (C = A / w in coordinate omogenee). Se ne trovano *tutte* le radici con
 // l'isolamento di Bernstein, poi le si rifinisce con Newton sulla curva.
 template <int N>
+void segmentCandidates(const BSplineCurve<N> &curve, const BSplineCurve<N> &segment, const Vec<N> &p, const Interval &range,
+                       Candidates<N> &out) {
+    const Interval span = segment.domain();
+    const Interval local{std::max(span.lo, range.lo), std::min(span.hi, range.hi)};
+    if (!(local.lo <= local.hi)) return;
+    addCandidate<N>(curve, p, local.lo, out);  // estremo o possibile spigolo
+
+    const int degree = segment.degree();
+    std::vector<double> weights(degree + 1);
+    std::vector<std::vector<double>> homogeneous(N, std::vector<double>(degree + 1));
+    for (int i = 0; i <= degree; ++i) {
+        weights[i] = segment.weight(i);
+        for (int c = 0; c < N; ++c) homogeneous[c][i] = weights[i] * segment.poles()[i][c];
+    }
+    const BernsteinPolynomial w(weights);
+    BernsteinPolynomial stationary({0.0});
+    for (int c = 0; c < N; ++c) {
+        const BernsteinPolynomial a(homogeneous[c]);
+        if (curve.isRational())
+            stationary = stationary + (a.derivative() * w - a * w.derivative()) * (a - w * p[c]);
+        else
+            stationary = stationary + a.derivative() * (a - BernsteinPolynomial({p[c]}));
+    }
+    for (double s : stationary.roots()) {
+        const double t = span.lo + s * (span.hi - span.lo);
+        if (local.contains(t)) addCandidate<N>(curve, p, refineProjection<N>(curve, p, t, local), out);
+    }
+}
+
+template <int N>
 void bsplineCandidates(const BSplineCurve<N> &curve, const Vec<N> &p, const Interval &range, Candidates<N> &out) {
     addCandidate<N>(curve, p, range.hi, out);
-    for (const BSplineCurve<N> &segment : curve.bezierSegments()) {
-        const Interval span = segment.domain();
-        const Interval local{std::max(span.lo, range.lo), std::min(span.hi, range.hi)};
-        if (!(local.lo <= local.hi)) continue;
-        addCandidate<N>(curve, p, local.lo, out);  // estremo o possibile spigolo
+    const auto segments = curve.cachedBezierSegments();
+    for (const BSplineCurve<N> &segment : *segments) segmentCandidates(curve, segment, p, range, out);
+}
 
-        const int degree = segment.degree();
-        std::vector<double> weights(degree + 1);
-        std::vector<std::vector<double>> homogeneous(N, std::vector<double>(degree + 1));
-        for (int i = 0; i <= degree; ++i) {
-            weights[i] = segment.weight(i);
-            for (int c = 0; c < N; ++c) homogeneous[c][i] = weights[i] * segment.poles()[i][c];
-        }
-        const BernsteinPolynomial w(weights);
-        BernsteinPolynomial stationary({0.0});
+// Solo il minimo globale su una B-spline: i tratti si esaminano in ordine di
+// distanza dal box dei loro poli (che contiene il tratto) e ci si ferma
+// quando quel limite inferiore supera il minimo gia' trovato.
+template <int N>
+CurveProjection<N> bsplineMinimum(const BSplineCurve<N> &curve, const Vec<N> &p, const Interval &range) {
+    const auto segments = curve.cachedBezierSegments();
+    std::vector<std::pair<double, std::size_t>> order;
+    for (std::size_t i = 0; i < segments->size(); ++i) {
+        const BSplineCurve<N> &segment = (*segments)[i];
+        const Interval span = segment.domain();
+        if (span.hi < range.lo || span.lo > range.hi) continue;
+        double gap = 0.0;
         for (int c = 0; c < N; ++c) {
-            const BernsteinPolynomial a(homogeneous[c]);
-            if (curve.isRational())
-                stationary = stationary + (a.derivative() * w - a * w.derivative()) * (a - w * p[c]);
-            else
-                stationary = stationary + a.derivative() * (a - BernsteinPolynomial({p[c]}));
+            double lo = 1e300, hi = -1e300;
+            for (const Vec<N> &pole : segment.poles()) {
+                lo = std::min(lo, pole[c]);
+                hi = std::max(hi, pole[c]);
+            }
+            const double outside = std::max({lo - p[c], p[c] - hi, 0.0});
+            gap += outside * outside;
         }
-        for (double s : stationary.roots()) {
-            const double t = span.lo + s * (span.hi - span.lo);
-            if (local.contains(t)) addCandidate<N>(curve, p, refineProjection<N>(curve, p, t, local), out);
-        }
+        order.emplace_back(std::sqrt(gap), i);
     }
+    std::sort(order.begin(), order.end());
+    Candidates<N> candidates;
+    addCandidate<N>(curve, p, range.lo, candidates);
+    addCandidate<N>(curve, p, range.hi, candidates);
+    double best = std::min(candidates[0].distance, candidates[1].distance);
+    for (const auto &[bound, index] : order) {
+        if (bound > best) break;
+        segmentCandidates(curve, (*segments)[index], p, range, candidates);
+        for (const CurveProjection<N> &c : candidates) best = std::min(best, c.distance);
+    }
+    return *std::min_element(candidates.begin(), candidates.end(),
+                             [](const CurveProjection<N> &a, const CurveProjection<N> &b) { return a.distance < b.distance; });
 }
 
 template <int N>
@@ -212,6 +254,21 @@ std::vector<CurveProjection<N>> projectPointCandidates(const Curve<N> &curve, co
 
 template <int N>
 CurveProjection<N> projectPoint(const Curve<N> &curve, const Vec<N> &p, const Interval &range) {
+    const Curve<N> *base = &curve;
+    Interval baseRange = range;
+    while (base->type() == CurveType::Trimmed) {
+        const auto &trimmed = static_cast<const TrimmedCurve<N> &>(*base);
+        const Interval domain = trimmed.domain();
+        baseRange = Interval{std::max(baseRange.lo, domain.lo), std::min(baseRange.hi, domain.hi)};
+        base = trimmed.basis().get();
+    }
+    if (base->type() == CurveType::BSpline && baseRange.isFinite() && baseRange.lo <= baseRange.hi) {
+        const auto &spline = static_cast<const BSplineCurve<N> &>(*base);
+        // I pesi positivi garantiscono che il tratto stia nel box dei poli.
+        bool positive = true;
+        for (double w : spline.weights()) positive = positive && w > 0.0;
+        if (positive) return bsplineMinimum(spline, p, baseRange);
+    }
     const Candidates<N> candidates = projectPointCandidates(curve, p, range);
     return *std::min_element(candidates.begin(), candidates.end(),
                              [](const CurveProjection<N> &a, const CurveProjection<N> &b) { return a.distance < b.distance; });

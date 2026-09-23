@@ -1,6 +1,8 @@
 #ifndef FORGECAD_FK_BSPLINE_H
 #define FORGECAD_FK_BSPLINE_H
 
+#include <memory>
+
 #include "fk_curve.h"
 
 // Curve B-spline e NURBS non periodiche. Riferimento per gli algoritmi:
@@ -49,6 +51,9 @@ public:
     BSplineCurve clamped() const;
     // Decomposizione nei tratti di Bezier, uno per intervallo tra nodi distinti.
     std::vector<BSplineCurve> bezierSegments() const;
+    // La stessa, calcolata una volta per curva e conservata (le curve sono
+    // immutabili; la cache si legge e si scrive in modo atomico).
+    std::shared_ptr<const std::vector<BSplineCurve>> cachedBezierSegments() const;
 
 private:
     void validate() const;
@@ -58,6 +63,7 @@ private:
     std::vector<double> knots_;
     std::vector<Vec<N>> poles_;
     std::vector<double> weights_;
+    mutable std::shared_ptr<const std::vector<BSplineCurve>> bezierCache_;
 };
 
 template <int N>

@@ -130,7 +130,8 @@ void rootsOf(const Curve<N> &curve, const Interval &range, const Vec<N> &n, doub
     }
     case CurveType::BSpline: {
         const auto &spline = static_cast<const BSplineCurve<N> &>(curve);
-        for (const BSplineCurve<N> &segment : spline.bezierSegments()) {
+        const auto segments = spline.cachedBezierSegments();
+        for (const BSplineCurve<N> &segment : *segments) {
             const Interval dom = segment.domain();
             if (dom.hi < range.lo || dom.lo > range.hi) continue;
             std::vector<double> coefficients;
@@ -233,7 +234,8 @@ bool angleIn(const ConicData &q, const Vec2 &p, const Interval &range, double &a
 
 std::vector<BSplineCurve<2>> bezierPieces(const BSplineCurve<2> &spline, const Interval &range) {
     std::vector<BSplineCurve<2>> pieces;
-    for (BSplineCurve<2> segment : spline.bezierSegments()) {
+    const auto segments = spline.cachedBezierSegments();
+    for (BSplineCurve<2> segment : *segments) {
         Interval dom = segment.domain();
         if (dom.hi <= range.lo || dom.lo >= range.hi) continue;
         if (dom.lo < range.lo) {
@@ -256,11 +258,8 @@ std::vector<BSplineCurve<2>> rationalPieces(const Curve<2> &curve, const Interva
     throw std::domain_error("intersectCurves: tipo di curva non gestito");
 }
 
-void addPoint(CurveCurveIntersection &out, const CurveCurvePoint &p, double tolerance) {
-    for (const CurveCurvePoint &q : out.points)
-        if (distance(p.point, q.point) <= tolerance) return;
-    out.points.push_back(p);
-}
+// I doppioni si tolgono alla fine (vedi intersectCurves).
+void addPoint(CurveCurveIntersection &out, const CurveCurvePoint &p, double) { out.points.push_back(p); }
 
 // Parametro di un punto (che sta sulla curva) nel tratto.
 bool parameterOn(const Curve<2> &curve, const Interval &range, const Vec2 &p, double tolerance, double &t) {
@@ -425,7 +424,7 @@ void subdivide(const Curve<2> &a, const Interval &ra, const Curve<2> &b, const I
 }
 
 CurveCurveIntersection intersectCurves(const Curve<2> &a, const Interval &aRange, const Curve<2> &b, const Interval &bRange,
-                                       double tolerance) {
+                                       double tolerance, bool distinctParameters) {
     CurveCurveIntersection out;
     const Curve<2> &ua = unwrap(a), &ub = unwrap(b);
     if (ua.type() == CurveType::Line) {
@@ -463,16 +462,25 @@ CurveCurveIntersection intersectCurves(const Curve<2> &a, const Interval &aRange
     } else {
         throw std::domain_error("intersectCurves: tipo di curva non gestito");
     }
+    // Stesso punto: un doppione, a meno che (distinctParameters) i parametri
+    // sulla prima curva siano diversi.
+    const double gap = 1e-6 * std::max(1.0, aRange.isFinite() ? aRange.length() : 1.0);
+    std::vector<CurveCurvePoint> unique;
+    for (const CurveCurvePoint &p : out.points) {
+        bool duplicate = false;
+        for (const CurveCurvePoint &q : unique)
+            duplicate = duplicate || (distance(p.point, q.point) <= tolerance && (!distinctParameters || std::fabs(p.s - q.s) <= gap));
+        if (!duplicate) unique.push_back(p);
+    }
+    out.points = std::move(unique);
     std::sort(out.points.begin(), out.points.end(), [](const CurveCurvePoint &x, const CurveCurvePoint &y) { return x.s < y.s; });
     return out;
 }
 
 // --- Piano con superficie -------------------------------------------------------
 
-namespace {
-
 // Tratto della retta dentro il box (metodo delle lastre).
-bool lineRangeInBox(const Vec3 &origin, const Vec3 &direction, const Box &box, Interval &range) {
+bool clipLineToBox(const Vec3 &origin, const Vec3 &direction, const Box &box, Interval &range) {
     double lo = -1e300, hi = 1e300;
     for (int i = 0; i < 3; ++i) {
         if (std::fabs(direction[i]) < 1e-300) {
@@ -489,10 +497,12 @@ bool lineRangeInBox(const Vec3 &origin, const Vec3 &direction, const Box &box, I
     return true;
 }
 
+namespace {
+
 void addLine(PlaneSurfaceIntersection &out, const Vec3 &point, const Vec3 &direction, const Box &bounds, bool tangent = false) {
     auto line = std::make_shared<Line<3>>(point, direction);
     Interval range;
-    if (!lineRangeInBox(line->origin(), line->direction(), bounds, range)) return;
+    if (!clipLineToBox(line->origin(), line->direction(), bounds, range)) return;
     (tangent ? out.tangentCurves : out.curves).push_back(line);
     (tangent ? out.tangentRanges : out.ranges).push_back(range);
 }
@@ -639,7 +649,7 @@ PlaneSurfaceIntersection intersectPlaneSurface(const Plane &plane, const Surface
                 }
                 auto line = std::make_shared<Line<3>>(base.point(u), d);
                 Interval range;
-                if (lineRangeInBox(line->origin(), line->direction(), bounds, range)) {
+                if (clipLineToBox(line->origin(), line->direction(), bounds, range)) {
                     out.curves.push_back(line);
                     out.ranges.push_back(range);
                 }
@@ -744,6 +754,160 @@ std::vector<double> intersectLineSurface(const Vec3 &origin, const Vec3 &directi
     }
     std::sort(result.begin(), result.end());
     return result;
+}
+
+
+// --- Cilindri generalizzati e curva con superficie ------------------------------------
+
+bool generalizedCylinder(const Surface &surface, GeneralizedCylinder &out) {
+    if (surface.type() == SurfaceType::Cylinder) {
+        const auto &cylinder = static_cast<const CylindricalSurface &>(surface);
+        const Frame3 &f = cylinder.frame();
+        out.profile = std::make_shared<Circle<3>>(f.origin(), f.xDir(), f.yDir(), cylinder.radius());
+        out.domain = {0.0, kTwoPi};
+        out.direction = f.zDir();
+        out.periodic = true;
+        return true;
+    }
+    if (surface.type() == SurfaceType::Extrusion) {
+        const auto &extrusion = static_cast<const ExtrusionSurface &>(surface);
+        out.profile = extrusion.curve();
+        out.domain = extrusion.uDomain();
+        out.direction = extrusion.direction();
+        out.periodic = extrusion.isUPeriodic();
+        return true;
+    }
+    return false;
+}
+
+PlanarImage planarImage(const Curve<3> &curve, const Interval &range, const Frame3 &frame) {
+    PlanarImage out;
+    auto local = [&](const Vec3 &p) {
+        const Vec3 q = frame.toLocal(p);
+        return Vec2(q.x(), q.y());
+    };
+    auto localDirection = [&](const Vec3 &d) {
+        const Vec3 q = frame.directionToLocal(d);
+        return Vec2(q.x(), q.y());
+    };
+    auto mapSpline = [&](const BSplineCurve<3> &spline) {
+        std::vector<Vec2> poles;
+        for (const Vec3 &pole : spline.poles()) poles.push_back(local(pole));
+        return std::make_shared<BSplineCurve<2>>(spline.degree(), spline.knots(), std::move(poles), spline.weights());
+    };
+    switch (curve.type()) {
+    case CurveType::Line: {
+        const auto &line = static_cast<const Line<3> &>(curve);
+        const Vec2 direction = localDirection(line.direction());
+        const double k = norm(direction);
+        if (k <= 1e-12) {
+            out.point = local(line.origin());
+            out.range = range;
+            out.toCurve = [](double t) { return t; };
+            return out;
+        }
+        out.curve = std::make_shared<Line<2>>(local(line.origin()), direction / k);
+        out.range = {range.lo * k, range.hi * k};
+        out.toCurve = [k](double s) { return s / k; };
+        return out;
+    }
+    case CurveType::Circle:
+    case CurveType::Ellipse: {
+        Vec3 center, x, y;
+        double rx, ry;
+        if (curve.type() == CurveType::Circle) {
+            const auto &c = static_cast<const Circle<3> &>(curve);
+            center = c.center(), x = c.xAxis(), y = c.yAxis(), rx = ry = c.radius();
+        } else {
+            const auto &e = static_cast<const Ellipse<3> &>(curve);
+            center = e.center(), x = e.xAxis(), y = e.yAxis(), rx = e.xRadius(), ry = e.yRadius();
+        }
+        if (std::fabs(dot(cross(x, y), frame.zDir())) >= 1.0 - 1e-12) {
+            // Conica in un piano parallelo: resta una conica, stesso parametro.
+            const Vec2 c2 = local(center), x2 = localDirection(x), y2 = localDirection(y);
+            if (curve.type() == CurveType::Circle) out.curve = std::make_shared<Circle<2>>(c2, x2, y2, rx);
+            else out.curve = std::make_shared<Ellipse<2>>(c2, x2, y2, rx, ry);
+            out.range = range;
+            out.toCurve = [](double t) { return t; };
+            return out;
+        }
+        auto spline = std::make_shared<BSplineCurve<3>>(
+            curve.type() == CurveType::Circle ? toBSpline(static_cast<const Circle<3> &>(curve), range.lo, range.hi)
+                                              : toBSpline(static_cast<const Ellipse<3> &>(curve), range.lo, range.hi));
+        out.curve = mapSpline(*spline);
+        out.range = spline->domain();
+        // Il parametro NURBS non e' l'angolo: lo si ricava dal punto 3D.
+        out.toCurve = [spline, center, x, y, rx, ry, range](double s) {
+            const Vec3 d = spline->point(s) - center;
+            const double theta = std::atan2(dot(d, y) / ry, dot(d, x) / rx);
+            return range.clamp(theta + kTwoPi * std::ceil((range.lo - 1e-9 - theta) / kTwoPi));
+        };
+        return out;
+    }
+    case CurveType::BSpline:
+        out.curve = mapSpline(static_cast<const BSplineCurve<3> &>(curve));
+        out.range = range;
+        out.toCurve = [](double t) { return t; };
+        return out;
+    case CurveType::Trimmed:
+        return planarImage(*static_cast<const TrimmedCurve<3> &>(curve).basis(), range, frame);
+    default:
+        throw std::domain_error("planarImage: tipo di curva non gestito");
+    }
+}
+
+Frame3 normalFrame(const Vec3 &direction, const Vec3 &origin) {
+    int smallest = 0;
+    for (int i = 1; i < 3; ++i)
+        if (std::fabs(direction[i]) < std::fabs(direction[smallest])) smallest = i;
+    Vec3 reference;
+    reference[smallest] = 1.0;
+    return Frame3(origin, direction, reference);
+}
+
+CurveSurfaceIntersection intersectCurveSurface(const Curve<3> &curve, const Interval &range, const Surface &surface,
+                                               double tolerance) {
+    CurveSurfaceIntersection out;
+    if (surface.type() == SurfaceType::Plane) {
+        const Frame3 &f = static_cast<const Plane &>(surface).frame();
+        const PlaneRoots<3> roots = planeRoots<3>(curve, range, f.zDir(), dot(f.zDir(), f.origin()), tolerance);
+        out.parameters = roots.parameters;
+        out.coincident = roots.coincident;
+        return out;
+    }
+    GeneralizedCylinder cylinder;
+    if (!generalizedCylinder(surface, cylinder)) throw std::domain_error("intersectCurveSurface: superficie non gestita");
+    // Un punto sta sulla superficie se la sua proiezione lungo D sta sulla sezione.
+    const Frame3 frame = normalFrame(cylinder.direction, cylinder.profile->point(cylinder.domain.lo));
+    const PlanarImage image = planarImage(curve, range, frame);
+    const PlanarImage section = planarImage(*cylinder.profile, cylinder.domain, frame);
+    if (!image.curve) {
+        if (projectPoint(*section.curve, image.point, section.range).distance <= tolerance) out.coincident.push_back(range);
+        return out;
+    }
+    // La proiezione puo' sovrapporre punti diversi della curva (un cerchio in
+    // un piano parallelo a D si proietta in un segmento percorso due volte).
+    const CurveCurveIntersection hits = intersectCurves(*image.curve, image.range, *section.curve, section.range, tolerance, true);
+    for (const CurveCurvePoint &p : hits.points) out.parameters.push_back(range.clamp(image.toCurve(p.s)));
+    std::sort(out.parameters.begin(), out.parameters.end());
+    if (hits.overlap) {
+        // Tratti comuni: tra due parametri consecutivi, se il punto medio sta sulla superficie.
+        std::vector<double> ends{range.lo};
+        ends.insert(ends.end(), out.parameters.begin(), out.parameters.end());
+        ends.push_back(range.hi);
+        for (std::size_t i = 0; i + 1 < ends.size(); ++i) {
+            if (ends[i + 1] - ends[i] <= 1e-12 * std::max(1.0, range.length())) continue;
+            const Vec3 middle = curve.point(0.5 * (ends[i] + ends[i + 1]));
+            if (projectPoint(*section.curve, Vec2(frame.toLocal(middle).x(), frame.toLocal(middle).y()), section.range).distance <= tolerance)
+                out.coincident.push_back({ends[i], ends[i + 1]});
+        }
+        out.parameters.erase(std::remove_if(out.parameters.begin(), out.parameters.end(), [&](double t) {
+            for (const Interval &piece : out.coincident)
+                if (t > piece.lo && t < piece.hi) return true;
+            return false;
+        }), out.parameters.end());
+    }
+    return out;
 }
 
 }

@@ -1,6 +1,7 @@
 #ifndef FORGECAD_FK_INTERSECT_H
 #define FORGECAD_FK_INTERSECT_H
 
+#include <functional>
 #include <vector>
 
 #include "fk_surface.h"
@@ -18,8 +19,9 @@
 //    base): curve esatte (rette, cerchi, ellissi, NURBS);
 //  - retta con piano, cilindro, sfera, superficie estrusa (per il test
 //    punto-in-solido).
-// Le intersezioni tra due superfici non piane richiedono il "marching" e
-// non ci sono ancora: chi le chiede riceve std::domain_error.
+//  - curva con piano, cilindro, superficie estrusa (riduzione esatta a
+//    un'intersezione curva-curva nel piano normale alla direzione).
+// Le intersezioni tra due superfici non piane sono in fk_marching.h.
 namespace ForgeCad::Kernel {
 
 struct Box {
@@ -56,9 +58,12 @@ struct CurveCurveIntersection {
     std::vector<CurveCurvePoint> points;  // anche gli estremi dei tratti sovrapposti
     bool overlap = false;                 // le curve hanno un tratto in comune
 };
-// Intersezione di due curve del piano sui due tratti.
+// Intersezione di due curve del piano sui due tratti. Punti coincidenti
+// entro tolerance compaiono una volta sola; con distinctParameters restano
+// distinti se hanno parametri diversi sulla prima curva (curve che passano
+// due volte per lo stesso punto).
 CurveCurveIntersection intersectCurves(const Curve<2> &a, const Interval &aRange, const Curve<2> &b, const Interval &bRange,
-                                       double tolerance);
+                                       double tolerance, bool distinctParameters = false);
 
 // Curve d'intersezione tra un piano e una superficie. Le rette sono limitate
 // alla parte dentro `bounds`.
@@ -79,6 +84,45 @@ PlaneSurfaceIntersection intersectPlaneSurface(const Plane &plane, const Surface
 // superficie, e il conteggio delle intersezioni non e' affidabile.
 std::vector<double> intersectLineSurface(const Vec3 &origin, const Vec3 &direction, const Surface &surface, bool &grazing,
                                          double tolerance);
+
+// Tratto della retta origin + t direction dentro il box (falso se non c'e').
+bool clipLineToBox(const Vec3 &origin, const Vec3 &direction, const Box &box, Interval &range);
+
+// Cilindro generalizzato S(u, v) = C(u) + v D (D unitaria): il cilindro
+// (C = cerchio di base, u = angolo) e la superficie estrusa. Falso per le
+// altre superfici.
+struct GeneralizedCylinder {
+    CurvePtr<3> profile;
+    Interval domain;  // dominio di u
+    Vec3 direction;
+    bool periodic = false;
+};
+bool generalizedCylinder(const Surface &surface, GeneralizedCylinder &out);
+
+// Sistema con asse z = direction (unitaria) e origine data.
+Frame3 normalFrame(const Vec3 &direction, const Vec3 &origin);
+
+// Immagine di una curva nella proiezione ortogonale sul piano xy di `frame`
+// (le coordinate 2D sono quelle locali x, y). Esatta: rette e coniche in un
+// piano parallelo restano del loro tipo con lo stesso parametro, le altre
+// coniche passano per la NURBS esatta, le B-spline conservano il parametro.
+struct PlanarImage {
+    CurvePtr<2> curve;  // nullptr: la curva si riduce a `point` (retta parallela a z)
+    Interval range;
+    Vec2 point;
+    std::function<double(double)> toCurve;  // parametro dell'immagine -> parametro della curva
+};
+PlanarImage planarImage(const Curve<3> &curve, const Interval &range, const Frame3 &frame);
+
+// Parametri della curva (nel tratto) in cui incontra la superficie: piano,
+// cilindro o superficie estrusa (std::domain_error per le altre). I tratti
+// che giacciono sulla superficie vanno in `coincident`.
+struct CurveSurfaceIntersection {
+    std::vector<double> parameters;
+    std::vector<Interval> coincident;
+};
+CurveSurfaceIntersection intersectCurveSurface(const Curve<3> &curve, const Interval &range, const Surface &surface,
+                                               double tolerance);
 
 }
 

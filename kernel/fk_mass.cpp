@@ -28,6 +28,9 @@ using LoopEvaluation = detail::Evaluation<kLoopValues>;
 // quello dei double; lungo i loop anche il rumore dell'inversione (u, v).
 constexpr double kInnerRoundoff = 50.0 * 2.220446049250313e-16;
 constexpr double kLoopRoundoff = 1000.0 * 2.220446049250313e-16;
+// SP-curve approssimate usate come bordo del dominio (u, v) al posto
+// dell'inversione: lo scarto e' sotto quello che conta nelle proprieta' di massa.
+constexpr double kMassPCurveTolerance = 1e-8;
 
 struct Sample {
     double t;
@@ -100,8 +103,12 @@ FaceIntegrator::FaceIntegrator(const Body &body, FaceId faceId, const Vec3 &refe
             track.sense = fin.sense;
             track.acceptance = 10.0 * std::max(edge.tolerance, kLinearResolution) + 1e-9 * scale_;
 
-            if (fin.pcurve && fin.pcurveTolerance == 0.0) {
-                // SP-curve esatta: niente inversione, solo lo srotolamento.
+            if (fin.pcurve && fin.pcurveTolerance <= kMassPCurveTolerance) {
+                // SP-curve esatta, o approssimata molto da vicino (curve
+                // d'intersezione tracciate): niente inversione, solo lo
+                // srotolamento. Un edge che sta sulla superficie solo entro la
+                // sua approssimazione darebbe all'inversione un rumore di quel
+                // livello, e la quadratura non convergerebbe.
                 const double tStart = fin.sense ? edge.range.lo : edge.range.hi;
                 const double tEnd = fin.sense ? edge.range.hi : edge.range.lo;
                 const Vec2 startUV = fin.pcurve->point(tStart);

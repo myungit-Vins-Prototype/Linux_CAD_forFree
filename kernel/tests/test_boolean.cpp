@@ -86,7 +86,7 @@ const char *name(BooleanOperation operation) {
 // contro BRepAlgoAPI: volume, area e baricentro. `exactOcct`: facce solo
 // piane e cilindriche, dove BRepGProp e' affidabile; altrimenti area e
 // volume si confrontano con la tassellazione fine del risultato OCCT.
-void compare(const Operand &a, const Operand &b, BooleanOperation operation, bool exactOcct = true) {
+void compare(const Operand &a, const Operand &b, BooleanOperation operation, bool exactOcct = true, double relative = 1e-8) {
     Body result;
     try {
         result = booleanOperation(a.body, b.body, operation);
@@ -104,9 +104,9 @@ void compare(const Operand &a, const Operand &b, BooleanOperation operation, boo
     }
     const MassProperties ours = massProperties(result);
     if (exactOcct) {
-        FK_CHECK_NEAR(ours.volume, volume.Mass(), 1e-8 * volume.Mass());
-        FK_CHECK_NEAR(ours.area, surface.Mass(), 1e-8 * surface.Mass());
-        FK_CHECK(distance(ours.centroid, fromOcct(volume.CentreOfMass())) <= 1e-8 * std::cbrt(volume.Mass()));
+        FK_CHECK_NEAR(ours.volume, volume.Mass(), relative * volume.Mass());
+        FK_CHECK_NEAR(ours.area, surface.Mass(), relative * surface.Mass());
+        FK_CHECK(distance(ours.centroid, fromOcct(volume.CentreOfMass())) <= relative * std::cbrt(volume.Mass()));
     } else {
         double meshArea, meshVolume;
         meshProperties(reference, meshArea, meshVolume);
@@ -116,9 +116,9 @@ void compare(const Operand &a, const Operand &b, BooleanOperation operation, boo
     }
 }
 
-void compareAll(const Operand &a, const Operand &b, bool exactOcct = true) {
+void compareAll(const Operand &a, const Operand &b, bool exactOcct = true, double relative = 1e-8) {
     for (BooleanOperation operation : {BooleanOperation::Unite, BooleanOperation::Intersect, BooleanOperation::Subtract})
-        compare(a, b, operation, exactOcct);
+        compare(a, b, operation, exactOcct, relative);
 }
 
 // Frame ruotato attorno a un punto, con orientamento casuale.
@@ -219,11 +219,91 @@ FK_TEST(BooleanChained) {
     FK_CHECK_NEAR(massProperties(second).volume, properties.Mass(), 1e-8 * properties.Mass());
 }
 
+namespace {
+
+// Volume comune a due cilindri infiniti di raggi r <= R con assi
+// perpendicolari incidenti: 8 int_0^r sqrt(r^2 - x^2) sqrt(R^2 - x^2) dx
+// (sezioni rettangolari), con x = r sin(t) e Gauss-Legendre composta.
+double crossedCylindersVolume(double r, double R) {
+    const double nodes[5] = {-0.9061798459386640, -0.5384693101056831, 0.0, 0.5384693101056831, 0.9061798459386640};
+    const double weights[5] = {0.2369268850561891, 0.4786286704993665, 0.5688888888888889, 0.4786286704993665, 0.2369268850561891};
+    const int panels = 400;
+    double sum = 0.0;
+    for (int p = 0; p < panels; ++p) {
+        const double a = kHalfPi * p / panels, h = kHalfPi / panels;
+        for (int j = 0; j < 5; ++j) {
+            const double t = a + 0.5 * h * (nodes[j] + 1.0), s = std::sin(t), c = std::cos(t);
+            sum += 0.5 * h * weights[j] * r * r * c * c * std::sqrt(R * R - r * r * s * s);
+        }
+    }
+    return 8.0 * sum;
+}
+
+}
+
+// Cilindro contro cilindro (curve d'intersezione tracciate): attraversamento
+// completo con il volume esatto, innesto a T, assi sghembi e obliqui, assi
+// paralleli (generatrici esatte), contro BRepAlgoAPI.
+FK_TEST(BooleanCylinderCylinder) {
+    const Frame3 frame(Vec3(1, -2, 3), Vec3(0.2, 0.1, 1), Vec3(1, 0, 0));
+    auto local = [&](double x, double y, double z) { return frame.toGlobal(Vec3(x, y, z)); };
+    const Operand a = cylinder(Frame3(local(0, 0, -10), frame.zDir(), frame.xDir()), 5, 20);
+    const Operand through = cylinder(Frame3(local(-10, 0, 0), frame.xDir(), frame.yDir()), 3, 20);
+    compareAll(a, through, true, 1e-6);
+    const double exact = crossedCylindersVolume(3, 5);
+    FK_CHECK_NEAR(massProperties(booleanOperation(a.body, through.body, BooleanOperation::Intersect)).volume, exact, 1e-9 * exact);
+
+    compareAll(a, cylinder(Frame3(local(0, 0, 2), frame.xDir(), frame.yDir()), 2, 12), true, 1e-6);    // innesto a T
+    compareAll(a, cylinder(Frame3(local(-10, 1.5, 1), frame.xDir(), frame.yDir()), 2.5, 20), true, 1e-6);  // assi sghembi
+    const Vec3 oblique = normalized(frame.xDir() + 0.4 * frame.zDir() + 0.3 * frame.yDir());
+    compareAll(a, cylinder(Frame3(local(0, 0, 0) - 12.0 * oblique, oblique, frame.zDir()), 2, 24), true, 1e-6);  // obliquo
+    compareAll(a, cylinder(Frame3(local(3, 2, -4), frame.zDir(), frame.xDir()), 3, 10), true, 1e-8);    // assi paralleli
+
+    // Due fori incrociati in un blocco, uno dopo l'altro.
+    const Operand block = box(Frame3(local(-8, -8, -6), frame.zDir(), frame.xDir()), 16, 16, 12);
+    const Operand holeZ = cylinder(Frame3(local(0, 0, -10), frame.zDir(), frame.xDir()), 4, 20);
+    const Operand holeX = cylinder(Frame3(local(-10, 0, 1), frame.xDir(), frame.yDir()), 3, 20);
+    const Body drilled = booleanOperation(booleanOperation(block.body, holeZ.body, BooleanOperation::Subtract), holeX.body,
+                                          BooleanOperation::Subtract);
+    const TopoDS_Shape reference = BRepAlgoAPI_Cut(BRepAlgoAPI_Cut(block.shape, holeZ.shape).Shape(), holeX.shape).Shape();
+    GProp_GProps properties;
+    BRepGProp::VolumeProperties(reference, properties, 1e-12);
+    FK_CHECK_NEAR(massProperties(drilled).volume, properties.Mass(), 1e-6 * properties.Mass());
+}
+
+// Fianchi estrusi da spline contro cilindri e contro altri fianchi estrusi in
+// un'altra direzione.
+FK_TEST(BooleanCurvedExtrusions) {
+    std::vector<ProfileSegment> profile = roundedRectangle(Vec2(-10, -6), 20.0, 12.0, 2.5);
+    profile.push_back(closedSpline(Vec2(4, 0), 2.0, true));
+    const Operand a = extrusion(Frame3(), profile, 8.0);
+    // Riferimento: la tassellazione fine di OCCT (lenta: un'operazione per caso, tranne il primo).
+    compareAll(a, cylinder(Frame3(Vec3(-14, 0.5, 4), Vec3(1, 0.1, 0.05), Vec3(0, 0, 1)), 2.5, 30), false);  // attraversa il foro a spline
+    compare(a, cylinder(Frame3(Vec3(4, -9, 3.5), Vec3(0.1, 1, 0.2), Vec3(0, 0, 1)), 1.5, 20), BooleanOperation::Subtract, false);
+    const ProfileSegment spline = closedSpline(Vec2(0, 0), 3.0, false);
+    const Operand b = extrusion(Frame3(Vec3(-2, 1, 4), Vec3(1, 0.2, 0.1), Vec3(0, 0, 1)), {spline}, 14.0);
+    const Operand c = extrusion(Frame3(Vec3(-12, 0, 4), Vec3(1, 0, 0), Vec3(0, 0, 1)), {spline}, 24.0);
+    compare(a, c, BooleanOperation::Intersect, false);  // spigoli vivi delle due spline chiuse che si incrociano
+    compare(b, cylinder(Frame3(Vec3(3, -6, 4.5), Vec3(0, 1, 0.1), Vec3(1, 0, 0)), 1.2, 14), BooleanOperation::Unite, false);
+
+    // Identita' dei volumi con le nostre sole proprieta' di massa.
+    const double va = massProperties(a.body).volume, vc = massProperties(c.body).volume;
+    const double vu = massProperties(booleanOperation(a.body, c.body, BooleanOperation::Unite)).volume;
+    const double vi = massProperties(booleanOperation(a.body, c.body, BooleanOperation::Intersect)).volume;
+    const double vd = massProperties(booleanOperation(a.body, c.body, BooleanOperation::Subtract)).volume;
+    FK_CHECK_NEAR(vu, va + vc - vi, 1e-9 * vu);
+    FK_CHECK_NEAR(vd, va - vi, 1e-9 * va);
+}
+
 // Coppie non ancora gestite: errore esplicito, non un risultato sbagliato.
 FK_TEST(BooleanUnsupportedCases) {
     const Body a = makeCylinder(Frame3(), 5, 20);
-    const Body b = makeCylinder(Frame3(Vec3(-10, 0, 10), Vec3(1, 0, 0), Vec3(0, 1, 0)), 3, 20);
-    FK_CHECK_THROWS(booleanOperation(a, b, BooleanOperation::Unite));
+    // Raggi uguali e assi incidenti: le curve si incrociano in punti di tangenza.
+    FK_CHECK_THROWS(booleanOperation(a, makeCylinder(Frame3(Vec3(-10, 0, 10), Vec3(1, 0, 0), Vec3(0, 1, 0)), 5, 20),
+                                     BooleanOperation::Unite));
+    // Stesso cilindro spostato lungo l'asse: fianchi coincidenti.
+    FK_CHECK_THROWS(booleanOperation(a, makeCylinder(Frame3(Vec3(0, 0, 10), Vec3(0, 0, 1), Vec3(1, 0, 0)), 5, 20),
+                                     BooleanOperation::Unite));
 }
 
 namespace {
@@ -292,6 +372,68 @@ FK_TEST(BooleanStressGrid) {
     FK_CHECK(wrong == 0);
     FK_CHECK(errors <= 3);
     FK_CHECK(tangents < 150);
+}
+
+// Cilindri su una griglia intera, assi paralleli o perpendicolari: raggi
+// uguali, fianchi tangenti o coincidenti, cerchi sulle facce dell'altro.
+// Nessun risultato sbagliato; i casi non gestiti danno un'eccezione.
+FK_TEST(BooleanStressCylinderGrid) {
+    std::mt19937 rng(780);
+    int wrong = 0, errors = 0, tangents = 0;
+    for (int trial = 0; trial < 60; ++trial) {
+        auto snap = [&](double lo, double hi) { return std::round(uniform(rng, lo, hi)); };
+        const double ra = snap(2, 5), ha = snap(4, 10);
+        const Operand a = cylinder(Frame3(Vec3(0, 0, 0), Vec3(0, 0, 1), Vec3(1, 0, 0)), ra, ha);
+        const Vec3 axes[3] = {Vec3(1, 0, 0), Vec3(0, 1, 0), Vec3(0, 0, 1)};
+        const Vec3 axis = axes[trial % 3];
+        const Vec3 base = trial % 3 == 2 ? Vec3(snap(-4, 4), snap(-4, 4), snap(-4, 8)) : Vec3(snap(-4, 4), snap(-4, 4), snap(0, 10)) - 8.0 * axis;
+        const double rb = snap(1, 5), hb = snap(4, 16);
+        const Operand b = cylinder(Frame3(base, axis, trial % 3 == 0 ? Vec3(0, 1, 0) : Vec3(1, 0, 0)), rb, hb);
+        for (BooleanOperation op : {BooleanOperation::Unite, BooleanOperation::Intersect, BooleanOperation::Subtract}) {
+            try {
+                const Body result = booleanOperation(a.body, b.body, op);
+                GProp_GProps volume;
+                BRepGProp::VolumeProperties(occtBoolean(a.shape, b.shape, op), volume, 1e-12);
+                const double ours = result.faces().empty() ? 0.0 : massProperties(result).volume;
+                if (std::fabs(ours - volume.Mass()) > 1e-6 * std::max(1.0, volume.Mass())) {
+                    ++wrong;
+                    reportFailure(__FILE__, __LINE__, "caso " + std::to_string(trial) + ": volume " + std::to_string(ours) + " invece di " +
+                                                          std::to_string(volume.Mass()));
+                }
+            } catch (const std::exception &e) {
+                if (std::string(e.what()).find("tangente") != std::string::npos) ++tangents;
+                else ++errors;
+            }
+        }
+    }
+    FK_CHECK(wrong == 0);
+    FK_CHECK(errors <= 3);
+    FK_CHECK(tangents < 90);
+}
+
+// Cilindri in posizione generica contro cilindri: nessuna eccezione ammessa.
+FK_TEST(BooleanStressCylinders) {
+    std::mt19937 rng(779);
+    for (int trial = 0; trial < 12; ++trial) {
+        const Frame3 frame = randomFrame(rng, 10.0);
+        const Operand a = cylinder(frame, uniform(rng, 3, 8), uniform(rng, 8, 15));
+        const Vec3 center = frame.toGlobal(Vec3(uniform(rng, -2, 2), uniform(rng, -2, 2), uniform(rng, 2, 8)));
+        const Vec3 axis = randomDirection(rng);
+        const Operand b = cylinder(Frame3(center - 10.0 * axis, axis, randomDirection(rng)), uniform(rng, 1, 5), uniform(rng, 12, 20));
+        for (BooleanOperation op : {BooleanOperation::Unite, BooleanOperation::Intersect, BooleanOperation::Subtract}) {
+            try {
+                const Body result = booleanOperation(a.body, b.body, op);
+                GProp_GProps volume;
+                BRepGProp::VolumeProperties(occtBoolean(a.shape, b.shape, op), volume, 1e-12);
+                const double ours = result.faces().empty() ? 0.0 : massProperties(result).volume;
+                if (std::fabs(ours - volume.Mass()) > 1e-6 * std::max(1.0, volume.Mass()))
+                    reportFailure(__FILE__, __LINE__, "caso " + std::to_string(trial) + ": volume " + std::to_string(ours) + " invece di " +
+                                                          std::to_string(volume.Mass()));
+            } catch (const std::exception &e) {
+                reportFailure(__FILE__, __LINE__, "caso " + std::to_string(trial) + ": " + e.what());
+            }
+        }
+    }
 }
 
 // Posizioni generiche (rotazioni casuali): nessuna eccezione ammessa.

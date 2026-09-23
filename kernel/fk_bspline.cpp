@@ -1,6 +1,7 @@
 #include "fk_bspline.h"
 
 #include <algorithm>
+#include <atomic>
 
 #include "fk_bspline_basis.h"
 #include "fk_precision.h"
@@ -192,32 +193,30 @@ BSplineCurve<N> BSplineCurve<N>::clamped() const {
 
 template <int N>
 std::vector<BSplineCurve<N>> BSplineCurve<N>::bezierSegments() const {
+    // Ogni tratto dipende solo dai suoi p + 1 poli e dai 2p + 2 nodi vicini:
+    // la curva locale, resa clamped, e' il tratto di Bezier. Costo lineare nel
+    // numero dei tratti (inserire i nodi sulla curva intera costerebbe il quadrato).
     const int p = degree_;
-    const Interval dom = domain();
-
-    std::vector<double> distinct{dom.lo};
-    for (double knot : knots_)
-        if (knot > dom.lo && knot < dom.hi && knot != distinct.back()) distinct.push_back(knot);
-    distinct.push_back(dom.hi);
-
-    BSplineCurve refined = clamped();
-    for (std::size_t i = 1; i + 1 < distinct.size(); ++i)
-        refined = refined.insertKnot(distinct[i], p);
-
-    const int spans = int(distinct.size()) - 1;
-    if (refined.poleCount() != p * spans + 1) throw std::logic_error("bezierSegments: raffinamento incoerente");
-
     std::vector<BSplineCurve> result;
-    result.reserve(spans);
-    for (int i = 0; i < spans; ++i) {
-        std::vector<double> knots(p + 1, distinct[i]);
-        knots.insert(knots.end(), p + 1, distinct[i + 1]);
-        std::vector<Vec<N>> poles(refined.poles_.begin() + i * p, refined.poles_.begin() + i * p + p + 1);
+    for (int span = p; span < poleCount(); ++span) {
+        if (!(knots_[span + 1] > knots_[span])) continue;
+        std::vector<double> knots(knots_.begin() + span - p, knots_.begin() + span + p + 2);
+        std::vector<Vec<N>> poles(poles_.begin() + span - p, poles_.begin() + span + 1);
         std::vector<double> weights;
-        if (isRational()) weights.assign(refined.weights_.begin() + i * p, refined.weights_.begin() + i * p + p + 1);
-        result.emplace_back(p, std::move(knots), std::move(poles), std::move(weights));
+        if (isRational()) weights.assign(weights_.begin() + span - p, weights_.begin() + span + 1);
+        result.push_back(BSplineCurve(p, std::move(knots), std::move(poles), std::move(weights)).clamped());
     }
     return result;
+}
+
+template <int N>
+std::shared_ptr<const std::vector<BSplineCurve<N>>> BSplineCurve<N>::cachedBezierSegments() const {
+    std::shared_ptr<const std::vector<BSplineCurve>> segments = std::atomic_load(&bezierCache_);
+    if (!segments) {
+        segments = std::make_shared<const std::vector<BSplineCurve>>(bezierSegments());
+        std::atomic_store(&bezierCache_, segments);
+    }
+    return segments;
 }
 
 std::vector<double> expandKnots(const std::vector<double> &distinctKnots, const std::vector<int> &multiplicities) {

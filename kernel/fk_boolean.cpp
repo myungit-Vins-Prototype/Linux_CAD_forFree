@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cmath>
 #include <functional>
+#include <limits>
 #include <map>
 #include <memory>
 #include <stdexcept>
@@ -11,6 +12,7 @@
 #include "fk_classify.h"
 #include "fk_curve_algo.h"
 #include "fk_intersect.h"
+#include "fk_marching.h"
 #include "fk_pcurve.h"
 #include "fk_surface_algo.h"
 
@@ -103,6 +105,12 @@ public:
 private:
     void pairArcs(FaceId fa, FaceId fb);
     void coplanarArcs(FaceId fa, FaceId fb);
+    void surfaceArcs(FaceId fa, FaceId fb);
+    Box commonBounds(FaceId fa, FaceId fb) const;
+    bool touchesBoth(FaceId fa, FaceId fb, const Vec3 &x) const;
+    void rejectTangentLines(FaceId fa, FaceId fb, const std::vector<CurvePtr<3>> &curves, const std::vector<Interval> &ranges) const;
+    void addArcs(const CurvePtr<3> &curve, const Interval &range, const std::vector<double> &parameters, FaceId fa, FaceId fb,
+                 const IntersectionCurve *source = nullptr);
     std::vector<Interval> splitRange(const Curve<3> &curve, const Interval &range, std::vector<double> parameters) const;
     std::vector<Interval> splitAtPoints(const Curve<3> &curve, const Interval &range) const;
     std::vector<SubFace> buildSubFaces(int k, FaceId f, const std::vector<Piece> &cuts) const;
@@ -117,6 +125,13 @@ private:
     std::map<int, Box> boxes_[2];
     std::vector<Arc> arcs_;
     std::vector<Vec3> vertexPoints_;
+    // SP-curve delle curve d'intersezione approssimate, per curva e superficie.
+    struct PCurves {
+        const Surface *surface[2];
+        CurvePtr<2> pcurve[2];
+        double deviation;
+    };
+    std::map<const Curve<3> *, PCurves> pcurves_;
 };
 
 // --- 1. archi d'intersezione ----------------------------------------------------
@@ -164,34 +179,17 @@ void BooleanBuilder::pairArcs(FaceId fa, FaceId fb) {
     int k;
     if (isPlane(sa)) k = 0;
     else if (isPlane(sb)) k = 1;
-    else throw std::domain_error("booleanOperation: intersezione tra due superfici non piane non ancora gestita");
+    else {
+        surfaceArcs(fa, fb);
+        return;
+    }
     const FaceId fp = k == 0 ? fa : fb, fq = k == 0 ? fb : fa;
     const Body &bp = bodies_[k], &bq = bodies_[1 - k];
     const Plane &plane = static_cast<const Plane &>(*bp.face(fp).surface);
-    const Box &boxP = boxes_[k].at(fp.index), &boxQ = boxes_[1 - k].at(fq.index);
-    Box bounds;
-    for (int i = 0; i < 3; ++i) {
-        bounds.lo[i] = std::max(boxP.lo[i], boxQ.lo[i]);
-        bounds.hi[i] = std::min(boxP.hi[i], boxQ.hi[i]);
-    }
-    // Le rette vengono limitate al box comune, allargato ben oltre la
-    // tolleranza: un estremo artificiale vicino a un vertice vero si
-    // confonderebbe con lui.
     const PlaneSurfaceIntersection intersection =
-        intersectPlaneSurface(plane, *bq.face(fq).surface, bounds.padded(1e-3 * scale_ + 100.0 * tolerance_), tolerance_);
+        intersectPlaneSurface(plane, *bq.face(fq).surface, commonBounds(fa, fb), tolerance_);
     if (intersection.coincident) throw std::domain_error("booleanOperation: superficie non piana che contiene parte di un piano");
-    // Contatto tangente dentro le due facce: non gestito (le facce si
-    // toccherebbero lungo una retta senza attraversarsi).
-    for (std::size_t i = 0; i < intersection.tangentCurves.size(); ++i) {
-        const Curve<3> &line = *intersection.tangentCurves[i];
-        const Interval &range = intersection.tangentRanges[i];
-        for (int j = 0; j <= 256; ++j) {
-            const Vec3 x = line.point(range.lo + range.length() * j / 256.0);
-            if (classifyPointOnFace(bp, fp, x, tolerance_) != PointLocation::Outside &&
-                classifyPointOnFace(bq, fq, x, tolerance_) != PointLocation::Outside)
-                throw std::domain_error("booleanOperation: contatto tangente tra facce non ancora gestito");
-        }
-    }
+    rejectTangentLines(fa, fb, intersection.tangentCurves, intersection.tangentRanges);
     const Vec3 n = plane.frame().zDir();
     const double offset = dot(n, plane.frame().origin());
 
@@ -224,24 +222,118 @@ void BooleanBuilder::pairArcs(FaceId fa, FaceId fb) {
                     if (projection.distance <= 10.0 * tolerance_) parameters.push_back(projection.parameter);
                 }
             }
-        for (const Interval &piece : splitRange(*curve, range, parameters)) {
-            const Vec3 middle = curve->point(0.5 * (piece.lo + piece.hi));
-            // Tratto degenere (una curva chiusa intera ha il punto medio lontano dagli estremi).
-            if (distance(curve->point(piece.lo), curve->point(piece.hi)) <= tolerance_ && distance(middle, curve->point(piece.lo)) <= tolerance_)
-                continue;
-            const PointLocation inP = classifyPointOnFace(bp, fp, middle, tolerance_);
-            if (inP == PointLocation::Outside) continue;
-            const PointLocation inQ = classifyPointOnFace(bq, fq, middle, tolerance_);
-            if (inQ == PointLocation::Outside) continue;
-            Arc arc;
-            arc.curve = curve;
-            arc.range = piece;
-            arc.face[k] = fp;
-            arc.face[1 - k] = fq;
-            arc.cut[k] = inP == PointLocation::Inside;
-            arc.cut[1 - k] = inQ == PointLocation::Inside;
-            arcs_.push_back(arc);
+        addArcs(curve, range, parameters, fa, fb);
+    }
+}
+
+// Box comune alle due facce, allargato ben oltre la tolleranza: le curve
+// vengono limitate a questo box e un estremo artificiale vicino a un vertice
+// vero si confonderebbe con lui.
+Box BooleanBuilder::commonBounds(FaceId fa, FaceId fb) const {
+    const Box &boxA = boxes_[0].at(fa.index), &boxB = boxes_[1].at(fb.index);
+    Box bounds;
+    for (int i = 0; i < 3; ++i) {
+        bounds.lo[i] = std::max(boxA.lo[i], boxB.lo[i]);
+        bounds.hi[i] = std::min(boxA.hi[i], boxB.hi[i]);
+    }
+    return bounds.padded(1e-3 * scale_ + 100.0 * tolerance_);
+}
+
+bool BooleanBuilder::touchesBoth(FaceId fa, FaceId fb, const Vec3 &x) const {
+    return classifyPointOnFace(bodies_[0], fa, x, tolerance_) != PointLocation::Outside
+        && classifyPointOnFace(bodies_[1], fb, x, tolerance_) != PointLocation::Outside;
+}
+
+// Contatto tangente dentro le due facce: non gestito (le facce si
+// toccherebbero lungo una retta senza attraversarsi).
+void BooleanBuilder::rejectTangentLines(FaceId fa, FaceId fb, const std::vector<CurvePtr<3>> &curves,
+                                        const std::vector<Interval> &ranges) const {
+    for (std::size_t i = 0; i < curves.size(); ++i)
+        for (int j = 0; j <= 256; ++j)
+            if (touchesBoth(fa, fb, curves[i]->point(ranges[i].lo + ranges[i].length() * j / 256.0)))
+                throw std::domain_error("booleanOperation: contatto tangente tra facce non ancora gestito");
+}
+
+// Tratti della curva (divisa nei parametri dati) che stanno in entrambe le facce.
+void BooleanBuilder::addArcs(const CurvePtr<3> &curve, const Interval &range, const std::vector<double> &parameters, FaceId fa,
+                             FaceId fb, const IntersectionCurve *source) {
+    bool added = false;
+    for (const Interval &piece : splitRange(*curve, range, parameters)) {
+        const Vec3 middle = curve->point(0.5 * (piece.lo + piece.hi));
+        // Tratto degenere (una curva chiusa intera ha il punto medio lontano dagli estremi).
+        if (distance(curve->point(piece.lo), curve->point(piece.hi)) <= tolerance_ && distance(middle, curve->point(piece.lo)) <= tolerance_)
+            continue;
+        const PointLocation in0 = classifyPointOnFace(bodies_[0], fa, middle, tolerance_);
+        if (in0 == PointLocation::Outside) continue;
+        const PointLocation in1 = classifyPointOnFace(bodies_[1], fb, middle, tolerance_);
+        if (in1 == PointLocation::Outside) continue;
+        Arc arc;
+        arc.curve = curve;
+        arc.range = piece;
+        arc.face[0] = fa;
+        arc.face[1] = fb;
+        arc.cut[0] = in0 == PointLocation::Inside;
+        arc.cut[1] = in1 == PointLocation::Inside;
+        arcs_.push_back(arc);
+        added = true;
+    }
+    if (added && source && source->pcurves[0]) {
+        PCurves entry;
+        entry.surface[0] = bodies_[0].face(fa).surface.get();
+        entry.surface[1] = bodies_[1].face(fb).surface.get();
+        entry.pcurve[0] = source->pcurves[0];
+        entry.pcurve[1] = source->pcurves[1];
+        entry.deviation = source->deviation;
+        pcurves_[curve.get()] = entry;
+    }
+}
+
+// Due superfici non piane: curve d'intersezione tracciate (fk_marching) a
+// partire dai punti in cui gli edge di una faccia attraversano la superficie
+// dell'altra dentro di essa.
+void BooleanBuilder::surfaceArcs(FaceId fa, FaceId fb) {
+    std::vector<Vec3> crossings;
+    auto collect = [&](int k, FaceId self, FaceId otherFace) {
+        const Body &body = bodies_[k], &other = bodies_[1 - k];
+        const Surface &otherSurface = *other.face(otherFace).surface;
+        for (LoopId l : body.face(self).loops)
+            for (FinId f : body.loopFins(l)) {
+                const Edge &edge = body.edge(body.fin(f).edge);
+                const CurveSurfaceIntersection hits = intersectCurveSurface(*edge.curve, edge.range, otherSurface, tolerance_);
+                for (const Interval &piece : hits.coincident)
+                    if (classifyPointOnFace(other, otherFace, edge.curve->point(0.5 * (piece.lo + piece.hi)), tolerance_) != PointLocation::Outside)
+                        throw std::domain_error("booleanOperation: edge che giace su una superficie non piana dell'altro solido non ancora gestito");
+                for (double t : hits.parameters) {
+                    const Vec3 x = edge.curve->point(t);
+                    if (classifyPointOnFace(other, otherFace, x, tolerance_) != PointLocation::Outside) crossings.push_back(x);
+                }
+            }
+    };
+    collect(0, fa, fb);
+    collect(1, fb, fa);
+
+    SurfaceIntersectionOptions options;
+    options.tolerance = tolerance_;
+    const SurfaceIntersection intersection =
+        intersectSurfaces(*bodies_[0].face(fa).surface, *bodies_[1].face(fb).surface, commonBounds(fa, fb), crossings, options);
+    if (intersection.coincident) throw std::domain_error("booleanOperation: superfici non piane coincidenti non ancora gestite");
+    for (const Vec3 &x : intersection.tangentPoints)
+        if (touchesBoth(fa, fb, x)) throw std::domain_error("booleanOperation: contatto tangente tra facce non ancora gestito");
+    std::vector<CurvePtr<3>> tangentCurves;
+    std::vector<Interval> tangentRanges;
+    for (const IntersectionCurve &line : intersection.tangentCurves) {
+        tangentCurves.push_back(line.curve);
+        tangentRanges.push_back(line.range);
+    }
+    rejectTangentLines(fa, fb, tangentCurves, tangentRanges);
+
+    for (const IntersectionCurve &curve : intersection.curves) {
+        std::vector<double> parameters;
+        for (const Vec3 &x : crossings) {
+            const CurveProjection<3> projection = projectPoint(*curve.curve, x, curve.range);
+            if (projection.distance <= 10.0 * tolerance_) parameters.push_back(projection.parameter);
         }
+        addArcs(curve.curve, curve.range, parameters, fa, fb, &curve);
     }
 }
 
@@ -791,6 +883,18 @@ Body BooleanBuilder::run() {
         result = Body::build(vertices, edges, faces);
     } catch (const std::invalid_argument &error) {
         throw std::domain_error(std::string("booleanOperation: risultato non chiuso (") + error.what() + ")");
+    }
+    // SP-curve approssimate delle curve tracciate (le altre le calcola computePCurves).
+    for (FinId f : result.fins()) {
+        Fin &fin = result.fin(f);
+        const auto found = pcurves_.find(result.edge(fin.edge).curve.get());
+        if (fin.pcurve || found == pcurves_.end()) continue;
+        const Surface *surface = result.face(result.finFace(f)).surface.get();
+        for (int k = 0; k < 2; ++k)
+            if (found->second.surface[k] == surface) {
+                fin.pcurve = found->second.pcurve[k];
+                fin.pcurveTolerance = std::max(found->second.deviation, std::numeric_limits<double>::min());
+            }
     }
     computePCurves(result);
     const std::vector<CheckIssue> issues = checkBody(result);

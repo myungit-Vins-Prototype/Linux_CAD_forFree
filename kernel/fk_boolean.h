@@ -6,8 +6,9 @@
 // Booleane tra solidi B-rep esatti (unione, intersezione, differenza).
 //
 // Procedimento (lo stesso schema di Parasolid e di BOPAlgo di OCCT):
-//  1. intersezione faccia-faccia: curve esatte (fk_intersect) limitate alla
-//     parte che sta in entrambe le facce;
+//  1. intersezione faccia-faccia: curve esatte con un piano (fk_intersect),
+//     tracciate tra due superfici non piane (fk_marching, B-spline con le
+//     loro SP-curve entro 1e-9), limitate alla parte che sta in entrambe le facce;
 //  2. i punti estremi di questi archi dividono gli edge dei due body e gli
 //     archi stessi;
 //  3. ogni faccia viene divisa dagli archi che la attraversano: grafo degli
@@ -21,11 +22,12 @@
 // Il risultato passa da checkBody; se non e' valido si lancia
 // std::domain_error invece di restituire un body sbagliato.
 //
-// Limiti di questa versione: ogni coppia di facce che si toccano deve avere
-// almeno un piano (piano-piano, piano-cilindro, piano-sfera, piano-superficie
-// estrusa, anche complanari); due superfici non piane che si intersecano,
-// superfici coincidenti non piane e contatti tangenti non sono gestiti
-// (std::domain_error).
+// Coppie di facce gestite: piano con piano (anche complanari), cilindro, sfera
+// o superficie estrusa; cilindri e superfici estruse tra loro (tutti i
+// fianchi dei solidi estrusi, in qualsiasi direzione). Non gestiti
+// (std::domain_error): le altre coppie di superfici non piane, superfici non
+// piane coincidenti, edge che giacciono su una superficie non piana
+// dell'altro solido, contatti tangenti.
 namespace ForgeCad::Kernel {
 
 // Stessa numerazione dell'app: 0 unione, 1 intersezione, 2 differenza.
