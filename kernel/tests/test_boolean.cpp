@@ -14,8 +14,10 @@
 #include "fk_body_check.h"
 #include "fk_boolean.h"
 #include "fk_extrude.h"
+#include "fk_marching.h"
 #include "fk_mass.h"
 #include "fk_primitives.h"
+#include "fk_quadrature.h"
 #include "fk_test_profiles.h"
 
 using namespace fktest;
@@ -297,31 +299,97 @@ FK_TEST(BooleanCurvedExtrusions) {
 
 // Coppie non ancora gestite: errore esplicito, non un risultato sbagliato.
 FK_TEST(BooleanUnsupportedCases) {
-    const Body a = makeCylinder(Frame3(), 5, 20);
-    // Raggi uguali e assi incidenti: le curve si incrociano in punti di tangenza.
-    FK_CHECK_THROWS(booleanOperation(a, makeCylinder(Frame3(Vec3(-10, 0, 10), Vec3(1, 0, 0), Vec3(0, 1, 0)), 5, 20),
-                                     BooleanOperation::Unite));
     // Stesso cilindro spostato lungo l'asse: fianchi coincidenti.
+    const Body a = makeCylinder(Frame3(), 5, 20);
     FK_CHECK_THROWS(booleanOperation(a, makeCylinder(Frame3(Vec3(0, 0, 10), Vec3(0, 0, 1), Vec3(1, 0, 0)), 5, 20),
                                      BooleanOperation::Unite));
 }
 
 namespace {
 
-// Esito di una booleana contro OCCT (solo volume): "" se torna, altrimenti il
-// problema. `tangent`: la booleana e' stata rifiutata per un contatto tangente.
-std::string stressCase(const Operand &a, const Operand &b, BooleanOperation op, bool &tangent) {
-    tangent = false;
+// --- Volumi esatti per le configurazioni allineate agli assi -----------------
+
+double overlap(double a0, double a1, double b0, double b1) { return std::max(0.0, std::min(a1, b1) - std::max(a0, b0)); }
+
+// Integrale di f su [lo, hi] spezzato nei punti dati (dove f non e' liscia).
+template <class F>
+double integratePieces(const F &f, double lo, double hi, std::vector<double> breaks) {
+    if (!(hi > lo)) return 0.0;
+    breaks.push_back(lo);
+    breaks.push_back(hi);
+    std::sort(breaks.begin(), breaks.end());
+    double total = 0.0, previous = lo;
+    for (double b : breaks) {
+        if (b <= previous || b > hi) continue;
+        total += ForgeCad::Kernel::detail::integrate(f, previous, b, 1e-12);
+        previous = b;
+    }
+    return total;
+}
+
+// Ascisse in cui sqrt(r^2 - (x - c)^2) = d.
+void sqrtLevels(double c, double r, double d, std::vector<double> &out) {
+    if (std::fabs(d) < r) {
+        const double w = std::sqrt(r * r - d * d);
+        out.push_back(c - w);
+        out.push_back(c + w);
+    }
+}
+
+// Area del disco (centro c, raggio r) dentro il rettangolo [x0, x1] x [y0, y1].
+double discRectangleArea(const Vec2 &c, double r, double x0, double x1, double y0, double y1) {
+    std::vector<double> breaks;
+    sqrtLevels(c.x(), r, c.y() - y0, breaks);
+    sqrtLevels(c.x(), r, y1 - c.y(), breaks);
+    auto f = [&](double x) {
+        const double h = std::sqrt(std::max(0.0, r * r - (x - c.x()) * (x - c.x())));
+        return overlap(c.y() - h, c.y() + h, y0, y1);
+    };
+    return integratePieces(f, std::max(x0, c.x() - r), std::min(x1, c.x() + r), breaks);
+}
+
+// Area comune a due dischi (lente, forma chiusa).
+double discDiscArea(const Vec2 &c1, double r1, const Vec2 &c2, double r2) {
+    const double d = distance(c1, c2);
+    if (d >= r1 + r2) return 0.0;
+    if (d <= std::fabs(r1 - r2)) return kPi * std::pow(std::min(r1, r2), 2);
+    const double a1 = std::acos((d * d + r1 * r1 - r2 * r2) / (2 * d * r1)), a2 = std::acos((d * d + r2 * r2 - r1 * r1) / (2 * d * r2));
+    return r1 * r1 * (a1 - std::sin(2 * a1) / 2) + r2 * r2 * (a2 - std::sin(2 * a2) / 2);
+}
+
+// Volume comune al cilindro A (asse z per l'origine, raggio ra, z in [0, ha])
+// e al cilindro B con asse lungo x: (y - yc)^2 + (z - zc)^2 <= rb^2, x in [x0, x1].
+// Per sezioni y = costante: rettangolo comune in (x, z).
+double crossedCylinderVolume(double ra, double ha, double yc, double zc, double rb, double x0, double x1) {
+    std::vector<double> breaks;
+    sqrtLevels(0.0, ra, x0, breaks);
+    sqrtLevels(0.0, ra, x1, breaks);
+    sqrtLevels(yc, rb, zc, breaks);
+    sqrtLevels(yc, rb, ha - zc, breaks);
+    auto f = [&](double y) {
+        const double sa = std::sqrt(std::max(0.0, ra * ra - y * y)), sb = std::sqrt(std::max(0.0, rb * rb - (y - yc) * (y - yc)));
+        return overlap(-sa, sa, x0, x1) * overlap(zc - sb, zc + sb, 0.0, ha);
+    };
+    return integratePieces(f, std::max(-ra, yc - rb), std::min(ra, yc + rb), breaks);
+}
+
+double expectedVolume(double va, double vb, double common, BooleanOperation op) {
+    switch (op) {
+    case BooleanOperation::Unite: return va + vb - common;
+    case BooleanOperation::Intersect: return common;
+    default: return va - common;
+    }
+}
+
+// Esito di una booleana contro il volume esatto: "" se torna, altrimenti il problema.
+std::string stressCase(const Operand &a, const Operand &b, BooleanOperation op, double expected) {
     try {
         const Body result = booleanOperation(a.body, b.body, op);
-        GProp_GProps volume;
-        BRepGProp::VolumeProperties(occtBoolean(a.shape, b.shape, op), volume, 1e-12);
         const double ours = result.faces().empty() ? 0.0 : massProperties(result).volume;
-        if (std::fabs(ours - volume.Mass()) > 1e-7 * std::max(1.0, volume.Mass()))
-            return "volume " + std::to_string(ours) + " invece di " + std::to_string(volume.Mass());
+        if (std::fabs(ours - expected) > 1e-7 * std::max(1.0, expected))
+            return "volume " + std::to_string(ours) + " invece di " + std::to_string(expected);
         return "";
     } catch (const std::exception &e) {
-        tangent = std::string(e.what()).find("tangente") != std::string::npos;
         return std::string("eccezione: ") + e.what();
     }
 }
@@ -329,57 +397,58 @@ std::string stressCase(const Operand &a, const Operand &b, BooleanOperation op, 
 }
 
 // Configurazioni degeneri su una griglia intera: facce complanari, spigoli
-// e vertici sulle facce dell'altro solido, cilindri tangenti. Nessun
-// risultato deve essere sbagliato; i contatti tangenti sono rifiutati
-// (OCCT stesso sbaglia l'unione in quei casi) e al piu' qualche caso
-// degenere (vertice su vertice) puo' fallire con un'eccezione.
+// e vertici sulle facce dell'altro solido, cilindri tangenti alle facce
+// (dentro e fuori). Riferimento: il volume esatto (OCCT sbaglia l'unione nei
+// contatti tangenti, anche con volumi negativi). Nessun risultato sbagliato e
+// nessuna eccezione.
 FK_TEST(BooleanStressGrid) {
     std::mt19937 rng(777);
-    int wrong = 0, errors = 0, tangents = 0;
     for (int trial = 0; trial < 150; ++trial) {
         auto snap = [&](double lo, double hi) { return std::round(uniform(rng, lo, hi)); };
-        const Operand a = box(Frame3(), snap(4, 12), snap(4, 12), snap(4, 12));
+        const double ax = snap(4, 12), ay = snap(4, 12), az = snap(4, 12);
+        const Operand a = box(Frame3(), ax, ay, az);
         Operand b;
+        double vb = 0.0, common = 0.0;
         switch (trial % 3) {
         case 0: {
             const Vec3 corner(snap(-4, 8), snap(-4, 8), snap(-4, 8));
-            b = box(Frame3(corner, Vec3(0, 0, 1), Vec3(1, 0, 0)), snap(2, 10), snap(2, 10), snap(2, 10));
+            const double bx = snap(2, 10), by = snap(2, 10), bz = snap(2, 10);
+            b = box(Frame3(corner, Vec3(0, 0, 1), Vec3(1, 0, 0)), bx, by, bz);
+            vb = bx * by * bz;
+            common = overlap(0, ax, corner.x(), corner.x() + bx) * overlap(0, ay, corner.y(), corner.y() + by) *
+                     overlap(0, az, corner.z(), corner.z() + bz);
             break;
         }
         case 1: {
             const Vec3 base(snap(0, 10), snap(0, 10), snap(-4, 6));
-            b = cylinder(Frame3(base, Vec3(0, 0, 1), Vec3(1, 0, 0)), snap(1, 4), snap(2, 12));
+            const double r = snap(1, 4), h = snap(2, 12);
+            b = cylinder(Frame3(base, Vec3(0, 0, 1), Vec3(1, 0, 0)), r, h);
+            vb = kPi * r * r * h;
+            common = discRectangleArea(Vec2(base.x(), base.y()), r, 0, ax, 0, ay) * overlap(0, az, base.z(), base.z() + h);
             break;
         }
         default: {
             const Vec3 base(snap(-4, 2), snap(0, 10), snap(0, 10));
-            b = cylinder(Frame3(base, Vec3(1, 0, 0), Vec3(0, 1, 0)), snap(1, 4), snap(4, 16));
+            const double r = snap(1, 4), h = snap(4, 16);
+            b = cylinder(Frame3(base, Vec3(1, 0, 0), Vec3(0, 1, 0)), r, h);
+            vb = kPi * r * r * h;
+            common = discRectangleArea(Vec2(base.y(), base.z()), r, 0, ay, 0, az) * overlap(0, ax, base.x(), base.x() + h);
             break;
         }
         }
         for (BooleanOperation op : {BooleanOperation::Unite, BooleanOperation::Intersect, BooleanOperation::Subtract}) {
-            bool tangent;
-            const std::string problem = stressCase(a, b, op, tangent);
-            if (problem.empty()) continue;
-            if (tangent) ++tangents;
-            else if (problem.rfind("eccezione", 0) == 0) ++errors;
-            else {
-                ++wrong;
-                reportFailure(__FILE__, __LINE__, "caso " + std::to_string(trial) + ": " + problem);
-            }
+            const std::string problem = stressCase(a, b, op, expectedVolume(ax * ay * az, vb, common, op));
+            if (!problem.empty()) reportFailure(__FILE__, __LINE__, "caso " + std::to_string(trial) + ": " + problem);
         }
     }
-    FK_CHECK(wrong == 0);
-    FK_CHECK(errors <= 3);
-    FK_CHECK(tangents < 150);
 }
 
 // Cilindri su una griglia intera, assi paralleli o perpendicolari: raggi
-// uguali, fianchi tangenti o coincidenti, cerchi sulle facce dell'altro.
-// Nessun risultato sbagliato; i casi non gestiti danno un'eccezione.
+// uguali (rami che si incrociano), fianchi tangenti dentro e fuori, contatti
+// in un punto, cerchi sulle facce dell'altro. Riferimento: il volume esatto;
+// nessun risultato sbagliato e nessuna eccezione.
 FK_TEST(BooleanStressCylinderGrid) {
     std::mt19937 rng(780);
-    int wrong = 0, errors = 0, tangents = 0;
     for (int trial = 0; trial < 60; ++trial) {
         auto snap = [&](double lo, double hi) { return std::round(uniform(rng, lo, hi)); };
         const double ra = snap(2, 5), ha = snap(4, 10);
@@ -389,26 +458,83 @@ FK_TEST(BooleanStressCylinderGrid) {
         const Vec3 base = trial % 3 == 2 ? Vec3(snap(-4, 4), snap(-4, 4), snap(-4, 8)) : Vec3(snap(-4, 4), snap(-4, 4), snap(0, 10)) - 8.0 * axis;
         const double rb = snap(1, 5), hb = snap(4, 16);
         const Operand b = cylinder(Frame3(base, axis, trial % 3 == 0 ? Vec3(0, 1, 0) : Vec3(1, 0, 0)), rb, hb);
+        double common;
+        if (trial % 3 == 0) common = crossedCylinderVolume(ra, ha, base.y(), base.z(), rb, base.x(), base.x() + hb);
+        else if (trial % 3 == 1) common = crossedCylinderVolume(ra, ha, base.x(), base.z(), rb, base.y(), base.y() + hb);  // simmetria x <-> y
+        else common = discDiscArea(Vec2(0, 0), ra, Vec2(base.x(), base.y()), rb) * overlap(0, ha, base.z(), base.z() + hb);
         for (BooleanOperation op : {BooleanOperation::Unite, BooleanOperation::Intersect, BooleanOperation::Subtract}) {
-            try {
-                const Body result = booleanOperation(a.body, b.body, op);
-                GProp_GProps volume;
-                BRepGProp::VolumeProperties(occtBoolean(a.shape, b.shape, op), volume, 1e-12);
-                const double ours = result.faces().empty() ? 0.0 : massProperties(result).volume;
-                if (std::fabs(ours - volume.Mass()) > 1e-6 * std::max(1.0, volume.Mass())) {
-                    ++wrong;
-                    reportFailure(__FILE__, __LINE__, "caso " + std::to_string(trial) + ": volume " + std::to_string(ours) + " invece di " +
-                                                          std::to_string(volume.Mass()));
-                }
-            } catch (const std::exception &e) {
-                if (std::string(e.what()).find("tangente") != std::string::npos) ++tangents;
-                else ++errors;
-            }
+            const std::string problem = stressCase(a, b, op, expectedVolume(kPi * ra * ra * ha, kPi * rb * rb * hb, common, op));
+            if (!problem.empty()) reportFailure(__FILE__, __LINE__, "caso " + std::to_string(trial) + ": " + problem);
         }
     }
-    FK_CHECK(wrong == 0);
-    FK_CHECK(errors <= 3);
-    FK_CHECK(tangents < 90);
+}
+
+namespace {
+
+// Volume del risultato contro quello atteso dai volumi dei due solidi e della parte comune.
+void checkVolumes(const Body &a, const Body &b, double va, double vb, double common) {
+    for (BooleanOperation op : {BooleanOperation::Unite, BooleanOperation::Intersect, BooleanOperation::Subtract}) {
+        try {
+            const Body result = booleanOperation(a, b, op);
+            const double ours = result.faces().empty() ? 0.0 : massProperties(result).volume;
+            const double expected = expectedVolume(va, vb, common, op);
+            FK_CHECK_NEAR(ours, expected, 1e-9 * std::max(1.0, expected));
+        } catch (const std::exception &error) {
+            reportFailure(__FILE__, __LINE__, std::string(name(op)) + ": " + error.what());
+        }
+    }
+}
+
+}
+
+// Contatti tangenti, con i volumi esatti (OCCT stesso sbaglia l'unione in
+// questi casi): rette di tangenza, punti di contatto isolati, rami che si
+// incrociano (cilindri di raggio uguale), anse a otto (un cilindro che tocca
+// l'interno dell'altro in un punto), solidi che si toccano lungo uno spigolo.
+FK_TEST(BooleanTangentContacts) {
+    // Due cilindri di raggio uguale con assi incidenti: volume di Steinmetz 16 r^3 / 3.
+    {
+        const double r = 5, h = 20;
+        const Body a = makeCylinder(Frame3(), r, h), b = makeCylinder(Frame3(Vec3(-10, 0, 10), Vec3(1, 0, 0), Vec3(0, 1, 0)), r, h);
+        checkVolumes(a, b, kPi * r * r * h, kPi * r * r * h, 16.0 * r * r * r / 3.0);
+    }
+    // Cilindro appoggiato sopra un blocco (retta di tangenza, fuori) e dentro
+    // un blocco contro una parete (retta di tangenza, dentro).
+    {
+        const Body block = makeBox(Frame3(), 20, 10, 6);
+        const double vBlock = 20 * 10 * 6, vCyl = kPi * 4 * 14;
+        checkVolumes(block, makeCylinder(Frame3(Vec3(-2, 5, 8), Vec3(1, 0, 0), Vec3(0, 1, 0)), 2, 14), vBlock, vCyl, 0.0);
+        checkVolumes(block, makeCylinder(Frame3(Vec3(3, 5, 4), Vec3(1, 0, 0), Vec3(0, 1, 0)), 2, 14), vBlock, vCyl, vCyl);
+    }
+    // Cilindri paralleli tangenti dentro e fuori.
+    {
+        const Body a = makeCylinder(Frame3(), 5, 7);
+        checkVolumes(a, makeCylinder(Frame3(Vec3(2, 0, -2), Vec3(0, 0, 1), Vec3(1, 0, 0)), 3, 7), kPi * 25 * 7, kPi * 9 * 7, kPi * 9 * 5);
+        checkVolumes(a, makeCylinder(Frame3(Vec3(8, 0, 2), Vec3(0, 0, 1), Vec3(1, 0, 0)), 3, 7), kPi * 25 * 7, kPi * 9 * 7, 0.0);
+    }
+    // Assi perpendicolari: contatto isolato in un punto (fuori) e ansa a otto (dentro).
+    {
+        const Body a = makeCylinder(Frame3(), 4, 8);
+        checkVolumes(a, makeCylinder(Frame3(Vec3(-10, 6, 4), Vec3(1, 0, 0), Vec3(0, 1, 0)), 2, 20), kPi * 16 * 8, kPi * 4 * 20, 0.0);
+        checkVolumes(a, makeCylinder(Frame3(Vec3(-10, -2, 3), Vec3(1, 0, 0), Vec3(0, 1, 0)), 2, 11), kPi * 16 * 8, kPi * 4 * 11,
+                     crossedCylinderVolume(4, 8, -2, 3, 2, -10, 1));
+    }
+    // Blocchi che si toccano lungo uno spigolo; profilo con raccordi il cui
+    // lato piatto e' complanare con la faccia dell'altro solido (il piano e'
+    // tangente al raccordo lungo lo spigolo).
+    {
+        const Body a = makeBox(Frame3(), 7, 4, 8);
+        checkVolumes(a, makeBox(Frame3(Vec3(7, 4, 0), Vec3(0, 0, 1), Vec3(1, 0, 0)), 4, 6, 10), 7 * 4 * 8, 4 * 6 * 10, 0.0);
+        const ProfileRegion region = buildProfile(roundedRectangle(Vec2(0, 0), 20.0, 12.0, 3.0), 1e-6).regions.front();
+        const Body rounded = makeExtrusion(Frame3(), region, 5.0);
+        const double va = (20 * 12 - (4 - kPi) * 9) * 5;
+        checkVolumes(rounded, makeBox(Frame3(Vec3(14, 12, -1), Vec3(0, 0, 1), Vec3(1, 0, 0)), 10, 3, 7), va, 10 * 3 * 7, 0.0);
+        // Stesso blocco abbassato: taglia il raccordo; parte comune per integrazione.
+        const double y0 = 10.0;
+        auto top = [](double x) { return x <= 17.0 ? 12.0 : 9.0 + std::sqrt(std::max(0.0, 9.0 - (x - 17.0) * (x - 17.0))); };
+        const double common = integratePieces([&](double x) { return std::max(0.0, top(x) - y0); }, 14.0, 20.0, {17.0}) * 5.0;
+        checkVolumes(rounded, makeBox(Frame3(Vec3(14, y0, -1), Vec3(0, 0, 1), Vec3(1, 0, 0)), 10, 5, 7), va, 10 * 5 * 7, common);
+    }
 }
 
 // Cilindri in posizione generica contro cilindri: nessuna eccezione ammessa.
@@ -446,9 +572,17 @@ FK_TEST(BooleanStressGeneral) {
         const Operand b = box(rotatedFrame(rng, frame.toGlobal(Vec3(uniform(rng, -3, 5), uniform(rng, -3, 5), uniform(rng, 0, 8)))),
                               uniform(rng, 3, 12), uniform(rng, 3, 12), uniform(rng, 3, 12));
         for (BooleanOperation op : {BooleanOperation::Unite, BooleanOperation::Intersect, BooleanOperation::Subtract}) {
-            bool tangent;
-            const std::string problem = stressCase(a, b, op, tangent);
-            if (!problem.empty()) reportFailure(__FILE__, __LINE__, "caso " + std::to_string(trial) + ": " + problem);
+            try {
+                const Body result = booleanOperation(a.body, b.body, op);
+                GProp_GProps volume;
+                BRepGProp::VolumeProperties(occtBoolean(a.shape, b.shape, op), volume, 1e-12);
+                const double ours = result.faces().empty() ? 0.0 : massProperties(result).volume;
+                if (std::fabs(ours - volume.Mass()) > 1e-7 * std::max(1.0, volume.Mass()))
+                    reportFailure(__FILE__, __LINE__, "caso " + std::to_string(trial) + ": volume " + std::to_string(ours) + " invece di " +
+                                                          std::to_string(volume.Mass()));
+            } catch (const std::exception &e) {
+                reportFailure(__FILE__, __LINE__, "caso " + std::to_string(trial) + ": " + e.what());
+            }
         }
     }
 }

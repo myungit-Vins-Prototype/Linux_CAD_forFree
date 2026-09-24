@@ -228,3 +228,47 @@ FK_TEST(MarchingCurveSurface) {
         }
     }
 }
+
+// Cilindri di raggio uguale con assi incidenti: due ellissi che si incrociano
+// in due punti di tangenza. I punti sono vertici delle curve (che finiscono
+// li') e la lunghezza totale e' quella delle due ellissi (semiassi r sqrt 2 e r).
+FK_TEST(MarchingSingularPoints) {
+    const double r = 3.0;
+    const CylindricalSurface a(Frame3(), r), b(Frame3(Vec3(-10, 0, 0), Vec3(1, 0, 0), Vec3(0, 1, 0)), r);
+    const SurfaceIntersection result = intersectSurfaces(a, b, cube(20.0), {});
+    FK_CHECK(result.singularPoints.size() == 2);
+    FK_CHECK(result.tangentPoints.empty());
+    checkOnSurfaces(result, a, b);
+    double total = 0.0;
+    for (const IntersectionCurve &c : result.curves) {
+        total += arcLength(*c.curve, c.range);
+        // Ogni curva va da un punto di tangenza all'altro.
+        for (double t : {c.range.lo, c.range.hi}) {
+            double best = 1e300;
+            for (const Vec3 &p : result.singularPoints) best = std::min(best, distance(p, c.curve->point(t)));
+            FK_CHECK(best <= 1e-12);
+        }
+    }
+    // Perimetro dell'ellisse per Gauss-Legendre composta.
+    const double major = r * std::sqrt(2.0), minor = r;
+    double perimeter = 0.0;
+    const int panels = 2000;
+    for (int i = 0; i < panels; ++i)
+        for (double node : {-0.5773502691896258, 0.5773502691896258}) {
+            const double t = kTwoPi * (i + 0.5 + 0.5 * node) / panels;
+            perimeter += 0.5 * kTwoPi / panels * std::hypot(major * std::sin(t), minor * std::cos(t));
+        }
+    FK_CHECK_NEAR(total, 2.0 * perimeter, 1e-8 * perimeter);
+
+    // Contatto isolato (un punto, nessuna curva) e ansa a otto (un cilindro
+    // che tocca l'interno dell'altro): rami che partono e tornano nel punto.
+    const CylindricalSurface touching(Frame3(Vec3(-10, 5, 0), Vec3(1, 0, 0), Vec3(0, 1, 0)), 2.0);
+    const SurfaceIntersection isolated = intersectSurfaces(a, touching, cube(20.0), {});
+    FK_CHECK(isolated.curves.empty() && isolated.isolatedPoints.size() == 1);
+    const CylindricalSurface inner(Frame3(Vec3(-10, -1.5, 0), Vec3(1, 0, 0), Vec3(0, 1, 0)), 1.5);
+    const SurfaceIntersection eight = intersectSurfaces(a, inner, cube(20.0), {});
+    FK_CHECK(eight.singularPoints.size() == 1 && eight.tangentPoints.empty() && !eight.curves.empty());
+    // Le due anse arrivano fino a x = +-3 (y = 0, z = 0).
+    FK_CHECK(distanceToCurves(eight, Vec3(3, 0, 0)) <= 1e-6 && distanceToCurves(eight, Vec3(-3, 0, 0)) <= 1e-6);
+    checkOnSurfaces(eight, a, inner);
+}

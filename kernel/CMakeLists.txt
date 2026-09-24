@@ -47,6 +47,8 @@ add_library(forgekernel STATIC
     fk_classify.cpp
     fk_boolean.h
     fk_boolean.cpp
+    fk_unify.h
+    fk_unify.cpp
 )
 target_include_directories(forgekernel PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_compile_features(forgekernel PUBLIC cxx_std_17)
@@ -77,10 +79,11 @@ add_executable(forgekernel_tests
     tests/test_intersect.cpp
     tests/test_marching.cpp
     tests/test_boolean.cpp
+    tests/test_unify.cpp
 )
 target_link_libraries(forgekernel_tests PRIVATE
     forgekernel
-    TKernel TKMath TKG2d TKG3d TKGeomBase TKGeomAlgo TKBRep TKTopAlgo TKPrim TKBO TKMesh
+    TKernel TKMath TKG2d TKG3d TKGeomBase TKGeomAlgo TKBRep TKTopAlgo TKPrim TKBO TKMesh TKShHealing
 )
 target_include_directories(forgekernel_tests SYSTEM PRIVATE ${OpenCASCADE_INCLUDE_DIR})
 target_compile_options(forgekernel_tests PRIVATE -Wall -Wextra -Wpedantic -O2 -g)

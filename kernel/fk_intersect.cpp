@@ -81,6 +81,17 @@ Box curveBox(const Curve<3> &curve, const Interval &range) {
 
 namespace {
 
+// Radici del polinomio piu' i punti in cui tocca lo zero senza attraversarlo
+// (tangenze: radici doppie che l'isolamento per cambi di segno puo' perdere
+// per un arrotondamento): minimi di |p| entro valueTolerance.
+std::vector<double> rootsAndTouchings(const BernsteinPolynomial &p, double valueTolerance) {
+    std::vector<double> result = p.roots();
+    if (p.degree() >= 2)
+        for (double s : p.derivative().roots())
+            if (std::fabs(p.evaluate(s)) <= valueTolerance) result.push_back(s);
+    return result;
+}
+
 void addInRange(std::vector<double> &out, double t, const Interval &range) {
     const double slack = 1e-12 * std::max({1.0, std::fabs(range.lo), std::fabs(range.hi)});
     if (t >= range.lo - slack && t <= range.hi + slack) out.push_back(range.clamp(t));
@@ -95,7 +106,7 @@ void trigRoots(double c0, double a, double b, const Interval &range, double tole
         return;
     }
     const double k = -c0 / amplitude;
-    if (std::fabs(k) > 1.0 + 1e-12) return;
+    if (std::fabs(c0) > amplitude + tolerance) return;  // entro la tolleranza: tangenza
     const double phase = std::atan2(b, a), alpha = std::acos(std::clamp(k, -1.0, 1.0));
     for (double base : {phase - alpha, phase + alpha}) {
         const double first = base + kTwoPi * std::ceil((range.lo - base) / kTwoPi - 1e-12);
@@ -136,16 +147,19 @@ void rootsOf(const Curve<N> &curve, const Interval &range, const Vec<N> &n, doub
             if (dom.hi < range.lo || dom.lo > range.hi) continue;
             std::vector<double> coefficients;
             bool onPlane = true;
+            double largestWeight = 0.0;
             for (int j = 0; j < segment.poleCount(); ++j) {
                 const double value = dot(n, segment.poles()[j]) - offset;
                 onPlane = onPlane && std::fabs(value) <= tolerance;
                 coefficients.push_back(segment.weight(j) * value);
+                largestWeight = std::max(largestWeight, segment.weight(j));
             }
             if (onPlane) {
                 out.coincident.push_back({std::max(dom.lo, range.lo), std::min(dom.hi, range.hi)});
                 continue;
             }
-            for (double s : BernsteinPolynomial(coefficients).roots()) addInRange(out.parameters, dom.lo + s * dom.length(), range);
+            for (double s : rootsAndTouchings(BernsteinPolynomial(coefficients), 0.1 * tolerance * largestWeight * norm(n)))
+                addInRange(out.parameters, dom.lo + s * dom.length(), range);
         }
         return;
     }
@@ -180,8 +194,16 @@ PlaneRoots<N> planeRoots(const Curve<N> &curve, const Interval &range, const Vec
     rootsOf(curve, range, normal, offset, tolerance, out);
     std::sort(out.parameters.begin(), out.parameters.end());
     std::vector<double> unique;
-    for (double t : out.parameters)
-        if (unique.empty() || t - unique.back() > 1e-12 * std::max(1.0, std::fabs(t))) unique.push_back(t);
+    // Radici nello stesso punto (entro la tolleranza): una sola, la piu' vicina al piano.
+    auto residual = [&](double t) { return std::fabs(dot(normal, curve.point(t)) - offset); };
+    for (double t : out.parameters) {
+        if (!unique.empty() && (t - unique.back() <= 1e-12 * std::max(1.0, std::fabs(t))
+                                || distance(curve.point(t), curve.point(unique.back())) <= tolerance)) {
+            if (residual(t) < residual(unique.back())) unique.back() = t;
+            continue;
+        }
+        unique.push_back(t);
+    }
     out.parameters = std::move(unique);
     // Le radici dentro un tratto coincidente non sono isolate.
     out.parameters.erase(std::remove_if(out.parameters.begin(), out.parameters.end(), [&](double t) {
@@ -337,7 +359,10 @@ void conicCase(const Curve<2> &conic, const Interval &conicRange, const Curve<2>
         const BernsteinPolynomial x(xs), y(ys), w(ws);
         const BernsteinPolynomial f = x * x + y * y - w * w;
         const Interval dom = piece.domain();
-        for (double sRoot : f.roots()) {
+        // Vicino alla conica f ~ 2 w^2 d / r: la tolleranza sulla distanza d.
+        const double largestWeight = *std::max_element(ws.begin(), ws.end());
+        const double valueTolerance = 0.2 * tolerance * largestWeight * largestWeight / std::min(q.rx, q.ry);
+        for (double sRoot : rootsAndTouchings(f, valueTolerance)) {
             const Vec2 p = piece.point(dom.lo + sRoot * dom.length());
             double s, t;
             if (!angleIn(q, p, conicRange, s)) continue;
@@ -507,6 +532,13 @@ void addLine(PlaneSurfaceIntersection &out, const Vec3 &point, const Vec3 &direc
     (tangent ? out.tangentRanges : out.ranges).push_back(range);
 }
 
+// La curva passa da un lato all'altro del piano nella radice u?
+bool crossesPlane(const Curve<3> &curve, const Interval &domain, double u, const Vec3 &n, double offset) {
+    const double delta = 1e-5 * (domain.isFinite() ? domain.length() : 1.0);
+    if (!curve.isPeriodic() && (u - delta < domain.lo || u + delta > domain.hi)) return false;
+    return (dot(n, curve.point(u - delta)) - offset) * (dot(n, curve.point(u + delta)) - offset) < 0.0;
+}
+
 // Proiezione obliqua sul piano lungo D applicata a una curva (mappa affine:
 // il tipo NURBS e' conservato; le coniche passano per la NURBS esatta).
 CurvePtr<3> obliqueImage(const Curve<3> &curve, const Interval &range, const Vec3 &n, double offset, const Vec3 &d, Interval &outRange) {
@@ -634,8 +666,9 @@ PlaneSurfaceIntersection intersectPlaneSurface(const Plane &plane, const Surface
                 return out;
             }
             for (double u : roots.parameters) {
-                // Tangenza della curva base al piano: generatrice di tangenza.
-                if (std::fabs(dot(n, base.derivative(u))) <= 1e-9 * norm(base.derivative(u))) {
+                // Tangenza della curva base al piano: generatrice di tangenza,
+                // a meno che la curva attraversi comunque il piano (flesso).
+                if (std::fabs(dot(n, base.derivative(u))) <= 1e-9 * norm(base.derivative(u)) && !crossesPlane(base, domain, u, n, offset)) {
                     out.tangent = true;
                     addLine(out, base.point(u), d, bounds, true);
                     continue;

@@ -18,7 +18,10 @@
 //  4. ogni pezzo di faccia e' dentro, fuori o sopra (facce complanari)
 //     l'altro solido: dal verso della faccia che lo taglia o con un raggio;
 //  5. si tengono i pezzi richiesti dall'operazione (girando quelli di B
-//     nella differenza) e si cuciono edge e vertici coincidenti.
+//     nella differenza) e si cuciono edge e vertici coincidenti; dove i due
+//     solidi si toccano soltanto (lungo uno spigolo, in un punto) edge e
+//     vertici restano distinti, cosi' il risultato e' sempre una varieta';
+//  6. facce ed edge sulla stessa geometria si fondono (fk_unify.h).
 // Il risultato passa da checkBody; se non e' valido si lancia
 // std::domain_error invece di restituire un body sbagliato.
 //
@@ -27,7 +30,9 @@
 // fianchi dei solidi estrusi, in qualsiasi direzione). Non gestiti
 // (std::domain_error): le altre coppie di superfici non piane, superfici non
 // piane coincidenti, edge che giacciono su una superficie non piana
-// dell'altro solido, contatti tangenti.
+// dell'altro solido. I contatti tangenti (rette e punti di tangenza, rami
+// che si incrociano nei punti di tangenza) sono gestiti; restano esclusi i
+// contatti di ordine superiore (rami tangenti tra loro).
 namespace ForgeCad::Kernel {
 
 // Stessa numerazione dell'app: 0 unione, 1 intersezione, 2 differenza.
@@ -35,6 +40,9 @@ enum class BooleanOperation { Unite = 0, Intersect = 1, Subtract = 2 };
 
 struct BooleanOptions {
     double tolerance = 1e-6;  // distanza sotto la quale due punti sono lo stesso vertice
+    // Fonde facce ed edge sulla stessa geometria (fk_unify.h), come fa l'app
+    // con ShapeUpgrade_UnifySameDomain dopo le booleane di OCCT.
+    bool unifySameDomain = true;
 };
 
 Body booleanOperation(const Body &a, const Body &b, BooleanOperation operation, const BooleanOptions &options = {});

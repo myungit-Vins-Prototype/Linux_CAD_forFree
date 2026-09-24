@@ -182,6 +182,8 @@ public:
     struct BuildFin {
         int edge = -1;
         bool sense = true;  // true: percorre l'edge nel suo verso
+        CurvePtr<2> pcurve;  // facoltativa (vedi Fin::pcurve)
+        double pcurveTolerance = 0.0;
     };
     struct BuildFace {
         SurfacePtr surface;
@@ -191,7 +193,7 @@ public:
     // Body con una region solida; le shell sono le componenti connesse delle
     // facce (attraverso gli edge). Ogni edge deve essere usato da esattamente
     // due fin di verso opposto (altrimenti std::invalid_argument). Le SP-curve
-    // non vengono assegnate (vedi computePCurves).
+    // sono quelle date nelle BuildFin (le mancanti: vedi computePCurves).
     static Body build(const std::vector<Vec3> &vertices, const std::vector<BuildEdge> &edges,
                       const std::vector<BuildFace> &faces);
 

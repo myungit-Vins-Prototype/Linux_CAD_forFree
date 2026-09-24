@@ -29,6 +29,7 @@ struct Node {
     Vec3 tIn;
     Vec2 daIn, dbIn;
     double sine = 0.0;
+    bool singular = false;  // nodo in un punto di tangenza (vertice)
 
     void setIncoming() {
         tIn = t;
@@ -101,7 +102,7 @@ bool inside(const Box &box, const Vec3 &p) {
     return true;
 }
 
-enum class Stop { Box, Limit, Closed, Tangent };
+enum class Stop { Box, Limit, Closed, Tangent, Singular };
 
 class Marcher {
 public:
@@ -113,7 +114,9 @@ public:
         hMin_ = 1e-9 * scale_;
     }
 
-    void traceFrom(const Vec3 &seed, SurfaceIntersection &out);
+    // singularOnly: solo se il seme e' un punto di tangenza (primo passaggio:
+    // cosi' i tracciamenti successivi li conoscono gia' e vi si fermano).
+    void traceFrom(const Vec3 &seed, SurfaceIntersection &out, bool singularOnly = false);
 
 private:
     void evaluate(const Params &x, Vec3 *ea, Vec3 *eb) const {
@@ -128,7 +131,27 @@ private:
     bool makeBreakNode(const Params &x, const Vec3 &reference, const Params &direction, int index, Node &node) const;
     bool validate(const Node &a, const Node &b, double &curveDeviation, double &pcurveDeviation) const;
     bool firstCrossing(const Params &from, const Params &to, double &fraction, int &index, double &value, bool &limit) const;
-    Stop trace(const Node &seed, std::vector<Node> &out, Vec3 &tangentPoint);
+    Stop trace(Node &seed, std::vector<Node> &out, Vec3 &tangentPoint);
+    // Curva per il seme (tracciata nei due versi) aggiunta a out.
+    void traceCurve(const Node &seed, SurfaceIntersection &out);
+    // Punto di tangenza vicino a x (Gauss-Newton su S_A = S_B e normali parallele).
+    bool refineSingular(Params &x) const;
+    // Direzioni dei rami in un punto di tangenza: 2 (si incrociano), 0
+    // (contatto isolato), -1 (contatto di ordine superiore).
+    int singularBranches(const Params &x, Vec3 directions[2]) const;
+    void singularSeed(const Params &x, SurfaceIntersection &out);  // registra il punto
+public:
+    void traceSingularBranches(SurfaceIntersection &out);  // dopo aver registrato tutti i punti
+private:
+    struct Singular {
+        Params x;
+        Vec3 p;
+        Vec3 directions[2];
+    };
+    // Nodo finale nel punto di tangenza, arrivando da `current`.
+    Node singularNode(const Singular &singular, const Node &current) const;
+    std::vector<Singular> singular_;
+    bool knownPoint(const Vec3 &p, const SurfaceIntersection &out) const;
     IntersectionCurve assemble(const std::vector<Node> &nodes, bool closed) const;
 
     const Surface &a_, &b_;
@@ -285,9 +308,24 @@ bool Marcher::firstCrossing(const Params &from, const Params &to, double &fracti
 // Tracciamento dal seme nel verso della sua tangente, fino al bordo del box,
 // al bordo di un dominio, a un punto di tangenza o al ritorno sul seme.
 // `out` riceve i nodi dopo il seme.
-Stop Marcher::trace(const Node &seed, std::vector<Node> &out, Vec3 &tangentPoint) {
+Stop Marcher::trace(Node &seed, std::vector<Node> &out, Vec3 &tangentPoint) {
     Node current = seed;
     double h = h0_, travelled = 0.0;
+    // Un nodo a una distanza minima dall'ultimo prende il suo posto (se la
+    // cubica dal penultimo resta nella tolleranza): tratti cortissimi
+    // renderebbero rumorose le derivate delle SP-curve.
+    auto replaceLast = [&](const Node &node) {
+        if (out.empty()) return false;
+        const Node &before = out.size() >= 2 ? out[out.size() - 2] : seed;
+        double curveDeviation, pcurveDeviation;
+        if (!validate(before, node, curveDeviation, pcurveDeviation) || curveDeviation > fitTolerance_ || pcurveDeviation > fitTolerance_)
+            return false;
+        curveDeviation_ = std::max(curveDeviation_, curveDeviation);
+        pcurveDeviation_ = std::max(pcurveDeviation_, pcurveDeviation);
+        out.back() = node;
+        return true;
+    };
+    const double shortest = 1e-5 * scale_;
     for (int guard = 0; guard < 200000; ++guard) {
         if (h < hMin_) {
             if (current.sine < 1e-3) {
@@ -296,6 +334,26 @@ Stop Marcher::trace(const Node &seed, std::vector<Node> &out, Vec3 &tangentPoint
             }
             throw std::domain_error("intersectSurfaces: tracciamento dell'intersezione non riuscito");
         }
+        // Un punto di tangenza poco avanti: la curva finisce li' (i rami che
+        // vi si incrociano sono curve distinte, il punto e' un vertice).
+        bool nearSingular = false;
+        for (const Singular &singular : singular_) {
+            const Vec3 d = singular.p - current.p;
+            const double along = dot(d, current.t);
+            if (along <= 1e-6 * scale_ || along > 1.5 * h || norm(d - along * current.t) > 0.2 * along + 10.0 * tolerance_) continue;
+            const Node node = singularNode(singular, current);
+            double curveDeviation, pcurveDeviation;
+            if (validate(current, node, curveDeviation, pcurveDeviation) && curveDeviation <= fitTolerance_ && pcurveDeviation <= fitTolerance_) {
+                curveDeviation_ = std::max(curveDeviation_, curveDeviation);
+                pcurveDeviation_ = std::max(pcurveDeviation_, pcurveDeviation);
+                out.push_back(node);
+                return Stop::Singular;
+            }
+            h = 0.5 * along;
+            nearSingular = true;
+            break;
+        }
+        if (nearSingular) continue;
         Params x = current.x;
         for (int i = 0; i < 2; ++i) {
             x[i] += h * current.da[i];
@@ -351,7 +409,21 @@ Stop Marcher::trace(const Node &seed, std::vector<Node> &out, Vec3 &tangentPoint
             }
             if (distance(next.p, current.p) <= 1e-9 * scale_) {
                 if (limit) return Stop::Limit;
-                current.x[index] = value;  // gia' sul nodo
+                // Gia' sul nodo (a meno dell'arrotondamento): il nodo corrente
+                // diventa quello esatto sul nodo della superficie.
+                next.tIn = current.tIn;
+                next.daIn = current.daIn;
+                next.dbIn = current.dbIn;
+                next.singular = current.singular;
+                if (out.empty()) seed = next;
+                else out.back() = next;
+                current = next;
+                continue;
+            }
+            if (distance(next.p, current.p) <= shortest && replaceLast(next)) {
+                current = next;
+                if (limit) return Stop::Limit;
+                if (!inside(bounds_, current.p)) return Stop::Box;
                 continue;
             }
         } else {
@@ -367,7 +439,7 @@ Stop Marcher::trace(const Node &seed, std::vector<Node> &out, Vec3 &tangentPoint
             const Vec3 chord = next.p - current.p;
             const double length2 = squaredNorm(chord);
             const double lambda = dot(seed.p - current.p, chord) / length2;
-            if (lambda * std::sqrt(length2) > 1e-9 * scale_ && lambda <= 1.0 + 1e-9 && dot(seed.tIn, current.t) > 0.8
+            if (lambda > 0.0 && lambda <= 1.0 + 1e-9 && dot(seed.tIn, current.t) > 0.8
                 && distance(seed.p, current.p + lambda * chord) <= 0.05 * std::sqrt(length2) + 10.0 * tolerance_) {
                 Node closing = seed;
                 bool consistent = true;
@@ -381,6 +453,7 @@ Stop Marcher::trace(const Node &seed, std::vector<Node> &out, Vec3 &tangentPoint
                     }
                     consistent = consistent && std::fabs(closing.x[i] - expected) <= 0.1 * (1.0 + std::fabs(next.x[i] - current.x[i]));
                 }
+                if (consistent && lambda * std::sqrt(length2) <= shortest && replaceLast(closing)) return Stop::Closed;
                 if (consistent) {
                     double curveDeviation, pcurveDeviation;
                     if (validate(current, closing, curveDeviation, pcurveDeviation) && curveDeviation <= fitTolerance_
@@ -424,6 +497,8 @@ IntersectionCurve Marcher::assemble(const std::vector<Node> &nodes, bool closed)
     std::vector<Vec3> poles{nodes.front().p};
     std::vector<Vec2> polesA{Vec2(nodes.front().x[0], nodes.front().x[1])}, polesB{Vec2(nodes.front().x[2], nodes.front().x[3])};
     double t = 0.0;
+    IntersectionCurve curve;
+    if (nodes.front().singular) curve.splitParameters.push_back(0.0);
     for (std::size_t i = 0; i + 1 < nodes.size(); ++i) {
         const Node &a = nodes[i], &b = nodes[i + 1];
         const double h = distance(a.p, b.p);
@@ -440,8 +515,8 @@ IntersectionCurve Marcher::assemble(const std::vector<Node> &nodes, bool closed)
         polesB.push_back(b1);
         t += h;
         knots.insert(knots.end(), i + 2 == nodes.size() ? 4 : 3, t);
+        if (b.singular) curve.splitParameters.push_back(t);
     }
-    IntersectionCurve curve;
     curve.curve = std::make_shared<BSplineCurve<3>>(3, knots, std::move(poles));
     curve.pcurves[0] = std::make_shared<BSplineCurve<2>>(3, knots, std::move(polesA));
     curve.pcurves[1] = std::make_shared<BSplineCurve<2>>(3, knots, std::move(polesB));
@@ -451,15 +526,24 @@ IntersectionCurve Marcher::assemble(const std::vector<Node> &nodes, bool closed)
     return curve;
 }
 
-void Marcher::traceFrom(const Vec3 &seedPoint, SurfaceIntersection &out) {
+void Marcher::traceFrom(const Vec3 &seedPoint, SurfaceIntersection &out, bool singularOnly) {
     const SurfaceProjection pa = projectPoint(a_, seedPoint), pb = projectPoint(b_, seedPoint);
     if (pa.distance > 100.0 * tolerance_ || pb.distance > 100.0 * tolerance_) return;
     Params x{pa.u, pa.v, pb.u, pb.v};
     Node seed;
-    if (!makeNode(x, Vec3(), seed)) {
-        out.tangentPoints.push_back(seedPoint);
-        return;
+    // Vicino a un punto di tangenza: lo si cerca e se ne tracciano i rami.
+    if (!makeNode(x, Vec3(), seed) || seed.sine < 1e-4) {
+        Params y = x;
+        if (refineSingular(y)) {
+            singularSeed(y, out);
+            return;
+        }
+        if (!makeNode(x, Vec3(), seed)) {
+            if (!singularOnly) out.tangentPoints.push_back(seedPoint);
+            return;
+        }
     }
+    if (singularOnly || knownPoint(seedPoint, out)) return;
     Constraint plane;
     plane.normal = seed.t;
     plane.origin = seedPoint;
@@ -525,20 +609,206 @@ void Marcher::traceFrom(const Vec3 &seedPoint, SurfaceIntersection &out) {
         }
         if (!moved) throw std::domain_error("intersectSurfaces: punto iniziale su uno spigolo delle superfici non gestito");
     }
+    traceCurve(seed, out);
+}
+
+void Marcher::traceCurve(const Node &seed, SurfaceIntersection &out) {
     curveDeviation_ = pcurveDeviation_ = 0.0;
     std::vector<Node> forward, backward;
     Vec3 tangentPoint;
-    const Stop stop = trace(seed, forward, tangentPoint);
+    Node start = seed;  // il tracciamento puo' spostarlo esattamente su un nodo vicino
+    const Stop stop = trace(start, forward, tangentPoint);
     if (stop == Stop::Tangent) out.tangentPoints.push_back(tangentPoint);
     if (stop != Stop::Closed) {
-        if (trace(seed.reversed(), backward, tangentPoint) == Stop::Tangent) out.tangentPoints.push_back(tangentPoint);
+        Node reversed = start.reversed();
+        if (trace(reversed, backward, tangentPoint) == Stop::Tangent) out.tangentPoints.push_back(tangentPoint);
+        start = reversed.reversed();
     }
     std::vector<Node> nodes;
     for (auto it = backward.rbegin(); it != backward.rend(); ++it) nodes.push_back(it->reversed());
-    nodes.push_back(seed);
+    nodes.push_back(start);
     nodes.insert(nodes.end(), forward.begin(), forward.end());
     if (nodes.size() < 2) return;
     out.curves.push_back(assemble(nodes, stop == Stop::Closed));
+}
+
+bool Marcher::knownPoint(const Vec3 &p, const SurfaceIntersection &out) const {
+    for (const IntersectionCurve &curve : out.curves)
+        if (projectPoint(*curve.curve, p, curve.range).distance <= 10.0 * tolerance_) return true;
+    for (const std::vector<Vec3> *points : {&out.tangentPoints, &out.isolatedPoints, &out.singularPoints})
+        for (const Vec3 &q : *points)
+            if (distance(p, q) <= 10.0 * tolerance_) return true;
+    return false;
+}
+
+bool Marcher::refineSingular(Params &x) const {
+    // Residui: S_A - S_B e le componenti di n_B nel piano tangente di A.
+    auto residual = [&](const Params &y, double r[5]) {
+        Vec3 ea[4], eb[4];
+        evaluate(y, ea, eb);
+        const Vec3 na = normalized(cross(ea[kU], ea[kV])), nb = normalized(cross(eb[kU], eb[kV]));
+        const Vec3 e1 = normalized(ea[kU]), e2 = cross(na, e1);
+        const Vec3 gap = ea[0] - eb[0];
+        for (int i = 0; i < 3; ++i) r[i] = gap[i];
+        // Le componenti angolari pesate con la dimensione del modello.
+        r[3] = scale_ * dot(nb, e1);
+        r[4] = scale_ * dot(nb, e2);
+    };
+    const Params start = x;
+    for (int iteration = 0; iteration < 40; ++iteration) {
+        double r[5], jac[5][4];
+        residual(x, r);
+        double size = 0.0;
+        for (double value : r) size = std::max(size, std::fabs(value));
+        if (size <= 1e-12 * scale_) break;
+        for (int k = 0; k < 4; ++k) {
+            Params y = x;
+            const double step = 1e-7 * (1.0 + std::fabs(x[k]));
+            y[k] += step;
+            double ry[5];
+            residual(y, ry);
+            for (int i = 0; i < 5; ++i) jac[i][k] = (ry[i] - r[i]) / step;
+        }
+        // Equazioni normali (sistema coerente: Gauss-Newton converge al punto).
+        double m[4][5];
+        for (int i = 0; i < 4; ++i) {
+            for (int j = 0; j < 4; ++j) {
+                m[i][j] = 0.0;
+                for (int k = 0; k < 5; ++k) m[i][j] += jac[k][i] * jac[k][j];
+            }
+            m[i][4] = 0.0;
+            for (int k = 0; k < 5; ++k) m[i][4] -= jac[k][i] * r[k];
+        }
+        double dx[4];
+        if (!solve4(m, dx)) return false;
+        double largest = 0.0;
+        for (int k = 0; k < 4; ++k) {
+            x[k] += dx[k];
+            largest = std::max(largest, std::fabs(dx[k]) / (1.0 + std::fabs(x[k])));
+        }
+        if (largest <= 1e-14) break;
+    }
+    double r[5];
+    residual(x, r);
+    Vec3 ea[4], eb[4];
+    evaluate(x, ea, eb);
+    const Vec3 moved = ea[0] - a_.point(start[0], start[1]);
+    return norm(Vec3(r[0], r[1], r[2])) <= 1e-10 * scale_ && std::fabs(r[3]) + std::fabs(r[4]) <= 1e-8 * scale_
+        && norm(moved) <= 1e-3 * scale_;
+}
+
+int Marcher::singularBranches(const Params &x, Vec3 directions[2]) const {
+    constexpr int kUU = Surface::derivativeIndex(2, 0, 2), kUV = Surface::derivativeIndex(1, 1, 2),
+                  kVV = Surface::derivativeIndex(0, 2, 2), kU2 = Surface::derivativeIndex(1, 0, 2),
+                  kV2 = Surface::derivativeIndex(0, 1, 2);
+    Vec3 ea[9], eb[9];
+    a_.evaluate(x[0], x[1], 2, ea);
+    b_.evaluate(x[2], x[3], 2, eb);
+    const Vec3 n = normalized(cross(ea[kU2], ea[kV2]));
+    // Quota di ciascuna superficie sul piano tangente comune: 1/2 II(x).
+    auto height = [&](const Vec3 *e, const Vec3 &direction) {
+        const Vec2 ab = tangentParameters(e[kU2], e[kV2], direction);
+        return 0.5 * (dot(e[kUU], n) * ab[0] * ab[0] + 2.0 * dot(e[kUV], n) * ab[0] * ab[1] + dot(e[kVV], n) * ab[1] * ab[1]);
+    };
+    const Vec3 e1 = normalized(ea[kU2]), e2 = cross(n, e1);
+    auto q = [&](const Vec3 &direction) { return height(ea, direction) - height(eb, direction); };
+    const double d11 = q(e1), d22 = q(e2), d12 = 0.5 * (q(e1 + e2) - d11 - d22);
+    const double size = std::max({std::fabs(d11), std::fabs(d22), std::fabs(d12)});
+    if (!(size > 1e-9 / scale_)) return -1;  // le superfici coincidono al secondo ordine
+    const double disc = d12 * d12 - d11 * d22;
+    if (disc < -1e-9 * size * size) return 0;
+    if (disc <= 1e-9 * size * size) return -1;  // i due rami sono tangenti tra loro
+    const double root = std::sqrt(disc);
+    for (int k = 0; k < 2; ++k) {
+        const double sign = k == 0 ? 1.0 : -1.0;
+        if (std::fabs(d11) >= std::fabs(d22)) directions[k] = normalized(((-d12 + sign * root) / d11) * e1 + e2);
+        else directions[k] = normalized(e1 + ((-d12 + sign * root) / d22) * e2);
+    }
+    return 2;
+}
+
+void Marcher::singularSeed(const Params &x, SurfaceIntersection &out) {
+    const Vec3 p = a_.point(x[0], x[1]);
+    for (const std::vector<Vec3> *points : {&out.tangentPoints, &out.isolatedPoints, &out.singularPoints})
+        for (const Vec3 &q : *points)
+            if (distance(p, q) <= 10.0 * tolerance_) return;
+    Vec3 directions[2];
+    const int branches = singularBranches(x, directions);
+    if (branches < 0) {
+        out.tangentPoints.push_back(p);
+        return;
+    }
+    if (branches == 0) {
+        out.isolatedPoints.push_back(p);
+        return;
+    }
+    out.singularPoints.push_back(p);
+    Singular singular;
+    singular.x = x;
+    singular.p = p;
+    singular.directions[0] = directions[0];
+    singular.directions[1] = directions[1];
+    singular_.push_back(singular);
+}
+
+void Marcher::traceSingularBranches(SurfaceIntersection &out) {
+    const std::vector<Singular> points = singular_;
+    for (const Singular &singular : points) {
+        Vec3 ea[4], eb[4];
+        evaluate(singular.x, ea, eb);
+        // Quattro semirami: ogni curva tracciata da qui ne copre due (avanti e indietro).
+        for (const Vec3 &w : singular.directions)
+            for (double sign : {1.0, -1.0}) {
+                const Vec3 h = sign * w;
+                // Gia' coperto: una curva che nel punto (un suo nodo singolare)
+                // parte lungo h o arriva lungo -h.
+                bool known = false;
+                for (const IntersectionCurve &curve : out.curves)
+                    for (double t : curve.splitParameters) {
+                        if (distance(curve.curve->point(t), singular.p) > 10.0 * tolerance_) continue;
+                        Vec3 left[2], right[2];
+                        curve.curve->evaluateLeft(t, 1, left);
+                        curve.curve->evaluate(t, 1, right);
+                        if (t < curve.range.hi && dot(normalized(right[1]), h) > 0.99) known = true;
+                        if (t > curve.range.lo && dot(normalized(left[1]), -h) > 0.99) known = true;
+                    }
+                if (known) continue;
+                Node node;
+                node.x = singular.x;
+                node.p = singular.p;
+                node.t = h;
+                node.da = tangentParameters(ea[kU], ea[kV], h);
+                node.db = tangentParameters(eb[kU], eb[kV], h);
+                node.setIncoming();
+                node.singular = true;
+                traceCurve(node, out);
+            }
+    }
+}
+
+Node Marcher::singularNode(const Singular &singular, const Node &current) const {
+    Node node;
+    node.x = singular.x;
+    for (int i = 0; i < 4; ++i) {  // periodi come il nodo di arrivo
+        const Surface &surface = i < 2 ? a_ : b_;
+        const bool periodic = i % 2 == 0 ? surface.isUPeriodic() : surface.isVPeriodic();
+        if (!periodic) continue;
+        const double period = i % 2 == 0 ? surface.uPeriod() : surface.vPeriod();
+        node.x[i] += period * std::round((current.x[i] - node.x[i]) / period);
+    }
+    node.p = singular.p;
+    const Vec3 chord = normalized(singular.p - current.p);
+    Vec3 w = std::fabs(dot(singular.directions[0], chord)) >= std::fabs(dot(singular.directions[1], chord)) ? singular.directions[0]
+                                                                                                                : singular.directions[1];
+    if (dot(w, chord) < 0.0) w = -w;
+    Vec3 ea[4], eb[4];
+    evaluate(node.x, ea, eb);
+    node.t = w;
+    node.da = tangentParameters(ea[kU], ea[kV], w);
+    node.db = tangentParameters(eb[kU], eb[kV], w);
+    node.setIncoming();
+    node.singular = true;
+    return node;
 }
 
 // Parametri in cui n.C(u) e' stazionaria.
@@ -644,9 +914,21 @@ SurfaceIntersection parallelCase(const GeneralizedCylinder &ga, const Generalize
         out.coincident = true;
         return out;
     }
+    // Lato della curva B da cui sta il punto (distanza con segno).
+    auto side = [&](const Vec2 &q) {
+        const CurveProjection<2> projection = projectPoint(*ib.curve, q, ib.range);
+        return cross(ib.curve->derivative(projection.parameter), q - projection.point);
+    };
     for (const CurveCurvePoint &p : hits.points) {
         const Vec2 ta = ia.curve->derivative(p.s), tb = ib.curve->derivative(p.t);
-        const bool tangent = std::fabs(cross(normalized(ta), normalized(tb))) <= 1e-9;
+        bool tangent = std::fabs(cross(normalized(ta), normalized(tb))) <= 1e-9;
+        if (tangent) {
+            // Tangenti ma attraversandosi (flesso): e' una retta di taglio.
+            const double delta = 1e-5 * ia.range.length();
+            if (p.s - delta >= ia.range.lo && p.s + delta <= ia.range.hi
+                && side(ia.curve->point(p.s - delta)) * side(ia.curve->point(p.s + delta)) < 0.0)
+                tangent = false;
+        }
         IntersectionCurve line;
         line.curve = std::make_shared<Line<3>>(frame.toGlobal(Vec3(p.point.x(), p.point.y(), 0.0)), ga.direction);
         if (!clipLineToBox(frame.toGlobal(Vec3(p.point.x(), p.point.y(), 0.0)), ga.direction, bounds, line.range)) continue;
@@ -674,13 +956,9 @@ SurfaceIntersection intersectSurfaces(const Surface &a, const Surface &b, const 
 
     SurfaceIntersection out;
     Marcher marcher(a, b, bounds, options);
-    for (const Vec3 &seed : all) {
-        bool known = false;
-        for (const IntersectionCurve &curve : out.curves)
-            known = known || projectPoint(*curve.curve, seed, curve.range).distance <= 10.0 * options.tolerance;
-        for (const Vec3 &p : out.tangentPoints) known = known || distance(p, seed) <= 10.0 * options.tolerance;
-        if (!known) marcher.traceFrom(seed, out);
-    }
+    for (const Vec3 &seed : all) marcher.traceFrom(seed, out, true);
+    marcher.traceSingularBranches(out);
+    for (const Vec3 &seed : all) marcher.traceFrom(seed, out);
     return out;
 }
 

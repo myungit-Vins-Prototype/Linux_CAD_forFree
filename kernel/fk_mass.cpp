@@ -253,6 +253,7 @@ void FaceIntegrator::refine(const FinTrack &track, const Sample &a, const Sample
 }
 
 LoopValues FaceIntegrator::finIntegral(const FinTrack &track) const {
+    double spanWidth = 1.0;  // tratto liscio corrente (vedi sotto)
     auto f = [&](double t) {
         Vec3 c[2];
         track.curve->evaluate(t, 1, c);
@@ -273,7 +274,9 @@ LoopValues FaceIntegrator::finIntegral(const FinTrack &track) const {
         if (track.pcurve) {
             du = p[1][0];
             dv = p[1][1];
-            duMagnitude = std::fabs(du) + norm(p[1]);
+            // La derivata di una B-spline su un tratto corto ha l'arrotondamento
+            // dei poli diviso per la lunghezza del tratto.
+            duMagnitude = std::fabs(du) + norm(p[1]) + 0.03 * (norm(uv) + 1.0) / spanWidth;
         } else if (det > 1e-24 * a * cc && a > 0.0) {
             const double ru = dot(su, c[1]), rv = dot(sv, c[1]);
             du = (cc * ru - b * rv) / det;
@@ -301,6 +304,7 @@ LoopValues FaceIntegrator::finIntegral(const FinTrack &track) const {
     LoopValues total{};
     const std::vector<double> breaks = track.curve->breakpoints(track.range);
     for (std::size_t i = 0; i + 1 < breaks.size(); ++i) {
+        spanWidth = breaks[i + 1] - breaks[i];
         const LoopEvaluation piece = detail::integrateVector<kLoopValues>(f, breaks[i], breaks[i + 1], tolerance_, kLoopRoundoff);
         for (std::size_t k = 0; k < kLoopValues; ++k) total[k] += piece.value[k];
     }

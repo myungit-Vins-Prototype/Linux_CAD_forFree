@@ -259,6 +259,8 @@ Body Body::build(const std::vector<Vec3> &points, const std::vector<BuildEdge> &
                 const VertexId start = vertexIds[finSpec.sense ? spec.start : spec.end];
                 const FinId fin = body.newFin(l, edgeIds[finSpec.edge], start, finSpec.sense);
                 (finSpec.sense ? body.edge(edgeIds[finSpec.edge]).forward : body.edge(edgeIds[finSpec.edge]).backward) = fin;
+                body.fin(fin).pcurve = finSpec.pcurve;
+                body.fin(fin).pcurveTolerance = finSpec.pcurveTolerance;
                 if (!first.valid()) first = fin;
                 else body.link(previous, fin);
                 previous = fin;

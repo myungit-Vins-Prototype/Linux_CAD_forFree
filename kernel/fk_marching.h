@@ -31,6 +31,13 @@
 // intersectCurveSurface), che il chiamante passa come `seeds`.
 // Direzioni parallele: la sezione nel piano normale da' rette esatte.
 //
+// Punti di tangenza: sulle superfici cilindriche generalizzate stanno sempre
+// su generatrici critiche di entrambe, quindi sono semi. Li' la differenza
+// delle seconde forme fondamentali (una forma quadratica sul piano tangente)
+// dice se le superfici si toccano soltanto (definita) o se due rami della
+// curva si incrociano (indefinita: le sue due direzioni nulle); ogni ramo si
+// traccia partendo dal punto stesso, che diventa un nodo della curva.
+//
 // Le altre coppie di superfici (sfere, coni, tori, B-spline, rivoluzione)
 // non sono ancora gestite: std::domain_error.
 namespace ForgeCad::Kernel {
@@ -43,13 +50,23 @@ struct IntersectionCurve {
     CurvePtr<2> pcurves[2];
     double deviation = 0.0;  // scarto massimo misurato (curva e SP-curve), 0 per le curve esatte
     bool closed = false;     // curva chiusa (primo punto = ultimo)
+    std::vector<double> splitParameters;  // dove la curva passa per un punto di tangenza (vertici)
 };
 
 struct SurfaceIntersection {
     std::vector<IntersectionCurve> curves;
-    bool coincident = false;                       // le superfici hanno una parte in comune
-    std::vector<Vec3> tangentPoints;               // punti di contatto tangente (tracciamento interrotto)
-    std::vector<IntersectionCurve> tangentCurves;  // rette di tangenza (direzioni parallele)
+    bool coincident = false;  // le superfici hanno una parte in comune
+    // Punti di tangenza (normali parallele):
+    //  - singularPoints: due rami della curva vi si incrociano (per esempio due
+    //    cilindri di raggio uguale con assi incidenti); le curve passano per
+    //    questi punti, che vanno usati come vertici;
+    //  - isolatedPoints: le superfici si toccano solo li' (contatto senza
+    //    attraversamento), nessuna curva;
+    //  - tangentPoints: contatti di ordine superiore o tracciamento interrotto,
+    //    non gestiti.
+    std::vector<Vec3> singularPoints, isolatedPoints, tangentPoints;
+    // Rette lungo le quali le superfici (direzioni parallele) si toccano senza attraversarsi.
+    std::vector<IntersectionCurve> tangentCurves;
 };
 
 struct SurfaceIntersectionOptions {
