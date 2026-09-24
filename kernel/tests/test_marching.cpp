@@ -3,7 +3,15 @@
 #include <GeomAPI_ProjectPointOnCurve.hxx>
 #include <Geom_Circle.hxx>
 #include <Geom_CylindricalSurface.hxx>
+#include <Geom_ConicalSurface.hxx>
+#include <Geom_Plane.hxx>
+#include <Geom_SphericalSurface.hxx>
+#include <Geom_SurfaceOfRevolution.hxx>
+#include <Geom_ToroidalSurface.hxx>
+#include <Geom_TrimmedCurve.hxx>
 
+#include <cstdio>
+#include <cstdlib>
 #include "fk_curve_algo.h"
 #include "fk_curve_ops.h"
 #include "fk_marching.h"
@@ -271,4 +279,114 @@ FK_TEST(MarchingSingularPoints) {
     // Le due anse arrivano fino a x = +-3 (y = 0, z = 0).
     FK_CHECK(distanceToCurves(eight, Vec3(3, 0, 0)) <= 1e-6 && distanceToCurves(eight, Vec3(-3, 0, 0)) <= 1e-6);
     checkOnSurfaces(eight, a, inner);
+}
+
+namespace {
+
+gp_Ax3 occtAxes(const Frame3 &f) { return gp_Ax3(toPnt(f.origin()), toDir(f.zDir()), toDir(f.xDir())); }
+
+Handle(Geom_Surface) occtSurface(const Surface &surface) {
+    switch (surface.type()) {
+    case SurfaceType::Plane: return new Geom_Plane(occtAxes(static_cast<const Plane &>(surface).frame()));
+    case SurfaceType::Cylinder: {
+        const auto &c = static_cast<const CylindricalSurface &>(surface);
+        return new Geom_CylindricalSurface(occtAxes(c.frame()), c.radius());
+    }
+    case SurfaceType::Cone: {
+        const auto &c = static_cast<const ConicalSurface &>(surface);
+        return new Geom_ConicalSurface(occtAxes(c.frame()), c.semiAngle(), c.referenceRadius());
+    }
+    case SurfaceType::Sphere: {
+        const auto &c = static_cast<const SphericalSurface &>(surface);
+        return new Geom_SphericalSurface(occtAxes(c.frame()), c.radius());
+    }
+    case SurfaceType::Torus: {
+        const auto &c = static_cast<const ToroidalSurface &>(surface);
+        return new Geom_ToroidalSurface(occtAxes(c.frame()), c.majorRadius(), c.minorRadius());
+    }
+    case SurfaceType::BSpline: return toOcct(static_cast<const BSplineSurface &>(surface));
+    default: break;
+    }
+    throw std::invalid_argument("occtSurface");
+}
+
+// Curve nostre e di GeomAPI_IntSS a confronto (nel box): ogni punto delle une vicino alle altre.
+void compareWithOcct(const Surface &a, const Surface &b, const Box &bounds, int &compared) {
+    SurfaceIntersection ours;
+    try {
+        ours = intersectSurfaces(a, b, bounds, {});
+    } catch (const std::exception &error) {
+        reportFailure(__FILE__, __LINE__, error.what());
+        return;
+    }
+    checkOnSurfaces(ours, a, b);
+    GeomAPI_IntSS reference(occtSurface(a), occtSurface(b), 1e-9);
+    if (!reference.IsDone()) return;
+    ++compared;
+    const Box inner = bounds.padded(-1e-3);
+    if (getenv("FKM")) { fprintf(stderr, "pair %d-%d ours %zu curves (tangent %zu singular %zu isolated %zu) occt %d\n", int(a.type()), int(b.type()), ours.curves.size(), ours.tangentPoints.size(), ours.singularPoints.size(), ours.isolatedPoints.size(), reference.NbLines());
+        for (auto &c : ours.curves) fprintf(stderr, "   curve len %g closed %d\n", arcLength(*c.curve, c.range), int(c.closed)); }
+    auto in = [&](const Vec3 &p) {
+        for (int k = 0; k < 3; ++k)
+            if (p[k] < inner.lo[k] || p[k] > inner.hi[k]) return false;
+        return true;
+    };
+    for (int i = 1; i <= reference.NbLines(); ++i) {
+        const Handle(Geom_Curve) line = reference.Line(i);
+        const double t0 = line->FirstParameter(), t1 = line->LastParameter();
+        if (!std::isfinite(t0) || !std::isfinite(t1) || std::fabs(t1 - t0) > 1e6) continue;
+        for (int j = 0; j <= 80; ++j) {
+            const Vec3 p = fromOcct(line->Value(t0 + (t1 - t0) * j / 80.0));
+            if (in(p)) {
+                // Le curve di GeomAPI_IntSS tra superfici B-spline sono
+                // approssimate (anche 5e-5 fuori dalle superfici): la loro
+                // distanza dalle superfici fa parte della tolleranza.
+                const double offSurfaces = std::max(projectPoint(a, p).distance, projectPoint(b, p).distance);
+                const double gap = distanceToCurves(ours, p);
+                if (getenv("FKM") && gap > 1e-5 + 2.0 * offSurfaces) fprintf(stderr, "   MISSING occt line %d point %g %g %g gap %g off %g\n", i, p.x(), p.y(), p.z(), gap, offSurfaces);
+                FK_CHECK(gap <= 1e-5 + 2.0 * offSurfaces);
+            }
+        }
+    }
+    for (const IntersectionCurve &c : ours.curves)
+        for (int j = 0; j <= 50; ++j) {
+            const Vec3 x = c.curve->point(c.range.lo + c.range.length() * j / 50.0);
+            if (!in(x)) continue;
+            double best = 1e300;
+            for (int i = 1; i <= reference.NbLines(); ++i) {
+                GeomAPI_ProjectPointOnCurve projection(toPnt(x), reference.Line(i));
+                if (projection.NbPoints() > 0) best = std::min(best, projection.LowerDistance());
+            }
+            FK_CHECK(best <= 1e-4);
+        }
+}
+
+}
+
+// Coppie qualsiasi di superfici (semi dalla suddivisione delle forme NURBS):
+// sfere, coni, tori, piani, cilindri e B-spline, contro GeomAPI_IntSS.
+FK_TEST(MarchingGeneralSurfacesAgainstOcct) {
+    std::mt19937 rng(911);
+    int compared = 0;
+    const Box bounds = cube(20.0);
+    for (int trial = 0; trial < 4; ++trial) {
+        const Frame3 f1(randomVec<3>(rng, 1.0), randomDirection(rng), randomDirection(rng));
+        const Frame3 f2(f1.origin() + randomVec<3>(rng, 2.0), randomDirection(rng), randomDirection(rng));
+        const SphericalSurface sphere(f1, uniform(rng, 3.0, 5.0));
+        const CylindricalSurface cylinder(f2, uniform(rng, 1.0, 2.5));
+        const SphericalSurface other(f2, uniform(rng, 2.0, 4.0));
+        const ToroidalSurface torus(f1, 6.0, uniform(rng, 1.0, 2.0));
+        const Plane plane(Frame3(f1.origin() + randomVec<3>(rng, 1.0), randomDirection(rng), randomDirection(rng)));
+        const ConicalSurface cone(f2, uniform(rng, 0.3, 0.8), uniform(rng, 1.0, 2.0));
+        compareWithOcct(sphere, cylinder, bounds, compared);
+        compareWithOcct(sphere, other, bounds, compared);
+        compareWithOcct(torus, plane, bounds, compared);
+        compareWithOcct(torus, cylinder, bounds, compared);
+        compareWithOcct(sphere, cone, bounds, compared);
+        compareWithOcct(torus, other, bounds, compared);
+        const BSplineSurface patch = randomBSplineSurface(rng, trial % 2 == 1, 3.0);
+        compareWithOcct(patch, plane, bounds, compared);
+        compareWithOcct(patch, sphere, bounds, compared);
+    }
+    FK_CHECK(compared >= 24);
 }

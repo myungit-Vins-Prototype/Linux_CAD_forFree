@@ -16,6 +16,11 @@ CurvePtr<N> reversedCurve(const CurvePtr<N> &curve);
 // normale: (x, y) -> frame.toGlobal(x, y, z). Stesso parametro, stesso tipo.
 CurvePtr<3> embedCurve(const CurvePtr<2> &curve, const Frame3 &frame, double z = 0.0);
 
+// Curva traslata di `offset` (stesso parametro, stesso tipo): per esempio
+// un'SP-curve spostata di un periodo.
+template <int N>
+CurvePtr<N> translatedCurve(const CurvePtr<N> &curve, const Vec<N> &offset);
+
 }
 
 #endif

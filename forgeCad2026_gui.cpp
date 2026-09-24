@@ -1,6 +1,8 @@
 #include "forgeCad2026_gui.h"
 #include "cuda_support.h"
 #include "cad_curve_solver.h"
+#include "cad_forge.h"
+#include "fk_topology.h"
 #include "cad_history.h"
 #include "cad_kernel.h"
 #include "cad_kernel_lab.h"
@@ -29,6 +31,7 @@
 #include <QPainter>
 #include <QPainterPath>
 #include <QPushButton>
+#include <QSettings>
 #include <QSpinBox>
 #include <QStatusBar>
 #include <QStringList>
@@ -103,7 +106,7 @@ public:
         for (SketchObject &sketch : sketches_) {
             for (CurveObject &curve : sketch.curves) ForgeCad::recalculateCurve(curve, tessellationQuality_);
         }
-        for (ExtrusionObject &body : extrusions_) ForgeCad::tessellate(body.shape, tessellationQuality_, body.display);
+        for (ExtrusionObject &body : extrusions_) tessellateBody(body);
         update();
     }
     void setWheelZoomEnabled(bool enabled) { wheelZoomEnabled_ = enabled; }
@@ -144,6 +147,18 @@ public:
         kernelLabCallback_ = std::move(callback);
     }
 
+    // Kernel geometrico dei corpi (menu Opzioni). Cambiandolo si rigenerano
+    // tutti i corpi dalla loro definizione: non e' una modifica del documento
+    // (niente Undo), ma i corpi che il kernel scelto non sa costruire restano
+    // con l'errore nell'albero.
+    GeometryKernel geometryKernel() const { return geometryKernel_; }
+    void setGeometryKernel(GeometryKernel kernel) {
+        if (kernel == geometryKernel_) return;
+        geometryKernel_ = kernel;
+        regenerateAll();
+        documentChanged();
+    }
+
     // Menu Debug: l'estrusione selezionata rifatta con il kernel sperimentale e
     // confrontata con quella OCCT. Restituisce un messaggio d'errore o vuoto.
     QString compareSelectedExtrusionWithKernel() {
@@ -151,7 +166,7 @@ public:
             return QStringLiteral("Seleziona prima un'estrusione (nella vista o nell'albero modello).");
         const ExtrusionObject &body = extrusions_.at(selection_.index);
         if (body.operation >= 0) {
-            const QString error = kernelLab_.compareDocumentBody(sketches_, extrusions_, selection_.index);
+            const QString error = kernelLab_.compareDocumentBody(sketches_, occtBodies(), selection_.index);
             kernelLabProbe_ = {};
             if (error.isEmpty() && kernelLabCallback_) kernelLabCallback_(kernelLab_.summary());
             update();
@@ -159,7 +174,8 @@ public:
         }
         if (body.sketchIndex < 0 || body.sketchIndex >= sketches_.size())
             return QStringLiteral("Lo schizzo dell'estrusione non esiste piu'.");
-        const QString error = kernelLab_.compareSketchExtrusion(sketches_.at(body.sketchIndex), body.distance, body.shape);
+        const QString error = kernelLab_.compareSketchExtrusion(sketches_.at(body.sketchIndex), body.distance,
+                                                                occtBodies().at(selection_.index).shape);
         kernelLabProbe_ = {};
         if (error.isEmpty() && kernelLabCallback_) kernelLabCallback_(kernelLab_.summary());
         update();
@@ -257,11 +273,8 @@ public:
         result.operation = int(operation);
         result.firstBody = firstIndex;
         result.secondBody = secondIndex;
-        QString error;
-        result.shape = ForgeCad::booleanOperation(first.shape, second.shape, operation, &error);
-        if (result.shape.IsNull()) return error;
-        result.solid = ForgeCad::isSolidShape(result.shape);
-        ForgeCad::tessellate(result.shape, tessellationQuality_, result.display);
+        rebuildBody(result, int(extrusions_.size()));
+        if (!hasGeometry(result)) return result.error;
         recordUndo();
         extrusions_[firstIndex].visible = false;
         extrusions_[secondIndex].visible = false;
@@ -281,10 +294,8 @@ public:
         extrusion.sketchIndex = activeSketch_;
         extrusion.plane = sketches_.at(activeSketch_).plane;
         extrusion.distance = distance;
-        QString error;
-        extrusion.shape = ForgeCad::buildExtrusion(sketches_.at(activeSketch_), distance, extrusion.solid, &error);
-        if (extrusion.shape.IsNull()) return error;
-        ForgeCad::tessellate(extrusion.shape, tessellationQuality_, extrusion.display);
+        rebuildBody(extrusion, int(extrusions_.size()));
+        if (!hasGeometry(extrusion)) return extrusion.error;
         recordUndo();
         extrusions_.append(extrusion);
         selection_ = {SceneObjectKind::Extrusion, int(extrusions_.size()) - 1, -1};
@@ -671,21 +682,82 @@ private:
             ExtrusionObject &body = extrusions_[index];
             if (body.operation < 0) {
                 if (body.sketchIndex != sketchIndex) continue;
-                body.error.clear();
-                body.shape = ForgeCad::buildExtrusion(sketches_.at(sketchIndex), body.distance, body.solid, &body.error);
             } else {
                 const bool firstDirty = body.firstBody >= 0 && body.firstBody < index && dirty.at(body.firstBody);
                 const bool secondDirty = body.secondBody >= 0 && body.secondBody < index && dirty.at(body.secondBody);
                 if (!firstDirty && !secondDirty) continue;
-                body.error.clear();
-                body.shape = ForgeCad::booleanOperation(extrusions_.at(body.firstBody).shape,
-                                                        extrusions_.at(body.secondBody).shape,
-                                                        BooleanOperation(body.operation), &body.error);
-                body.solid = ForgeCad::isSolidShape(body.shape);
             }
-            ForgeCad::tessellate(body.shape, tessellationQuality_, body.display);
+            rebuildBody(body, index);
             dirty[index] = true;
         }
+    }
+
+    // Tutti i corpi, in ordine (dopo un cambio di kernel).
+    void regenerateAll() {
+        for (int index = 0; index < extrusions_.size(); ++index) rebuildBody(extrusions_[index], index);
+    }
+
+    static bool hasGeometry(const ExtrusionObject &body) {
+        return body.kernel == GeometryKernel::Forge ? body.forgeBody != nullptr : !body.shape.IsNull();
+    }
+
+    // Geometria esatta del corpo `index` (estrusione o booleana) con il kernel
+    // attivo, poi la sua tassellazione. Gli operandi di una booleana hanno
+    // indice minore e sono gia' rigenerati. In caso d'errore il corpo resta
+    // senza geometria con il messaggio in `error`.
+    void rebuildBody(ExtrusionObject &body, int index) {
+        body.error.clear();
+        body.shape.Nullify();
+        body.forgeBody.reset();
+        body.solid = false;
+        body.kernel = geometryKernel_;
+        const bool forge = geometryKernel_ == GeometryKernel::Forge;
+        if (body.operation < 0) {
+            if (body.sketchIndex < 0 || body.sketchIndex >= sketches_.size()) {
+                body.error = QStringLiteral("Lo schizzo del corpo non esiste piu'.");
+            } else if (forge) {
+                body.forgeBody = ForgeCad::forgeExtrusion(sketches_.at(body.sketchIndex), body.distance, &body.error);
+                body.solid = body.forgeBody && !body.forgeBody->isSheet();
+            } else {
+                body.shape = ForgeCad::buildExtrusion(sketches_.at(body.sketchIndex), body.distance, body.solid, &body.error);
+            }
+        } else if (body.firstBody < 0 || body.secondBody < 0 || body.firstBody >= index || body.secondBody >= index) {
+            body.error = QStringLiteral("Operandi della booleana non validi.");
+        } else {
+            const ExtrusionObject &first = extrusions_.at(body.firstBody), &second = extrusions_.at(body.secondBody);
+            if (forge) {
+                body.forgeBody = ForgeCad::forgeBoolean(first.forgeBody, second.forgeBody, BooleanOperation(body.operation), &body.error);
+                body.solid = body.forgeBody != nullptr;
+            } else {
+                body.shape = ForgeCad::booleanOperation(first.shape, second.shape, BooleanOperation(body.operation), &body.error);
+                body.solid = ForgeCad::isSolidShape(body.shape);
+            }
+        }
+        tessellateBody(body);
+    }
+
+    void tessellateBody(ExtrusionObject &body) const {
+        if (body.forgeBody) ForgeCad::forgeTessellate(*body.forgeBody, tessellationQuality_, body.display);
+        else ForgeCad::tessellate(body.shape, tessellationQuality_, body.display);
+    }
+
+    // I corpi del documento con la forma OCCT, rifatta se il kernel attivo e'
+    // l'altro (per i confronti del menu Debug).
+    QVector<ExtrusionObject> occtBodies() const {
+        QVector<ExtrusionObject> bodies = extrusions_;
+        if (geometryKernel_ == GeometryKernel::OpenCascade) return bodies;
+        for (int index = 0; index < bodies.size(); ++index) {
+            ExtrusionObject &body = bodies[index];
+            body.shape.Nullify();
+            if (body.operation < 0) {
+                if (body.sketchIndex >= 0 && body.sketchIndex < sketches_.size())
+                    body.shape = ForgeCad::buildExtrusion(sketches_.at(body.sketchIndex), body.distance, body.solid, nullptr);
+            } else if (body.firstBody >= 0 && body.secondBody >= 0 && body.firstBody < index && body.secondBody < index) {
+                body.shape = ForgeCad::booleanOperation(bodies.at(body.firstBody).shape, bodies.at(body.secondBody).shape,
+                                                        BooleanOperation(body.operation), nullptr);
+            }
+        }
+        return bodies;
     }
 
     void restoreDocument(DocumentState state) {
@@ -694,9 +766,14 @@ private:
         for (SketchObject &sketch : sketches_) {
             for (CurveObject &curve : sketch.curves) ForgeCad::recalculateCurve(curve, tessellationQuality_);
         }
-        for (ExtrusionObject &body : extrusions_) {
-            if (body.display.quality != tessellationQuality_)
-                ForgeCad::tessellate(body.shape, tessellationQuality_, body.display);
+        // Le istantanee costruite con l'altro kernel si rigenerano.
+        bool otherKernel = false;
+        for (const ExtrusionObject &body : extrusions_) otherKernel = otherKernel || body.kernel != geometryKernel_;
+        if (otherKernel) {
+            regenerateAll();
+        } else {
+            for (ExtrusionObject &body : extrusions_)
+                if (body.display.quality != tessellationQuality_) tessellateBody(body);
         }
         hasPendingPoint_ = false;
         curveControlPoints_.clear();
@@ -1251,9 +1328,11 @@ private:
         double nearest = std::numeric_limits<double>::max();
         for (int index = 0; index < extrusions_.size(); ++index) {
             const ExtrusionObject &extrusion = extrusions_.at(index);
-            if (!extrusion.visible || extrusion.shape.IsNull()) continue;
+            if (!extrusion.visible || !hasGeometry(extrusion)) continue;
             double distance = 0.0;
-            if (ForgeCad::intersectRay(extrusion.shape, origin, direction, distance) && distance < nearest) {
+            const bool hit = extrusion.forgeBody ? ForgeCad::forgeIntersectRay(*extrusion.forgeBody, origin, direction, distance)
+                                                 : ForgeCad::intersectRay(extrusion.shape, origin, direction, distance);
+            if (hit && distance < nearest) {
                 nearest = distance;
                 result = {SceneObjectKind::Extrusion, index, -1};
             }
@@ -1752,6 +1831,7 @@ private:
     std::function<void(const QString &)> kernelLabCallback_;
     ForgeCad::KernelLab kernelLab_;
     ForgeCad::KernelLabProbe kernelLabProbe_;
+    GeometryKernel geometryKernel_ = GeometryKernel::OpenCascade;
 };
 
 // Tipi delle voci dell'albero modello (Qt::UserRole); Qt::UserRole + 1 e' l'indice.
@@ -1939,7 +2019,7 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
         QVector<int> indices;
         const QVector<ExtrusionObject> &bodies = viewport->extrusions();
         for (int index = 0; index < bodies.size(); ++index) {
-            if (!bodies.at(index).solid || bodies.at(index).shape.IsNull()) continue;
+            if (!bodies.at(index).solid || (bodies.at(index).shape.IsNull() && !bodies.at(index).forgeBody)) continue;
             names.append(bodies.at(index).visible ? bodies.at(index).name
                                                   : bodies.at(index).name + QStringLiteral(" (nascosto)"));
             indices.append(index);
@@ -1974,6 +2054,38 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
     connect(unionAction, &QAction::triggered, this, [runBoolean] { runBoolean(BooleanOperation::Union, QStringLiteral("Unione")); });
     connect(intersectionAction, &QAction::triggered, this, [runBoolean] { runBoolean(BooleanOperation::Intersection, QStringLiteral("Intersezione")); });
     connect(differenceAction, &QAction::triggered, this, [runBoolean] { runBoolean(BooleanOperation::Difference, QStringLiteral("Differenza")); });
+
+    // Opzioni: kernel geometrico con cui si costruiscono i corpi. La scelta
+    // resta per gli avvii successivi (QSettings).
+    auto *optionsMenu = menuBar()->addMenu(QStringLiteral("Opzioni"));
+    auto *kernelMenu = optionsMenu->addMenu(QStringLiteral("Kernel geometrico"));
+    auto *kernelGroup = new QActionGroup(this); kernelGroup->setExclusive(true);
+    QAction *occtKernel = kernelMenu->addAction(QStringLiteral("OpenCASCADE"));
+    QAction *forgeKernel = kernelMenu->addAction(QStringLiteral("ForgeCAD (kernel proprio)"));
+    occtKernel->setCheckable(true); forgeKernel->setCheckable(true);
+    kernelGroup->addAction(occtKernel); kernelGroup->addAction(forgeKernel);
+    auto *kernelStatus = new QLabel(this);
+    const auto applyKernel = [this, viewport, kernelStatus](GeometryKernel kernel, bool remember) {
+        QApplication::setOverrideCursor(Qt::WaitCursor);
+        viewport->setGeometryKernel(kernel);
+        QApplication::restoreOverrideCursor();
+        kernelStatus->setText(kernel == GeometryKernel::Forge ? QStringLiteral("Kernel: ForgeCAD")
+                                                              : QStringLiteral("Kernel: OpenCASCADE"));
+        if (remember) QSettings().setValue(QStringLiteral("kernel/geometry"), int(kernel));
+        int failed = 0;
+        for (const ExtrusionObject &body : viewport->extrusions()) failed += !body.error.isEmpty();
+        if (remember && failed > 0)
+            QMessageBox::warning(this, QStringLiteral("Kernel geometrico"),
+                                 QStringLiteral("%1 corpi non sono stati ricostruiti con il kernel scelto: "
+                                                "sono segnati con \u26A0 nell'albero modello.").arg(failed));
+    };
+    connect(occtKernel, &QAction::triggered, this, [applyKernel] { applyKernel(GeometryKernel::OpenCascade, true); });
+    connect(forgeKernel, &QAction::triggered, this, [applyKernel] { applyKernel(GeometryKernel::Forge, true); });
+    const GeometryKernel startKernel =
+        QSettings().value(QStringLiteral("kernel/geometry"), 0).toInt() == int(GeometryKernel::Forge) ? GeometryKernel::Forge
+                                                                                                      : GeometryKernel::OpenCascade;
+    (startKernel == GeometryKernel::Forge ? forgeKernel : occtKernel)->setChecked(true);
+    applyKernel(startKernel, false);
 
     auto *debugMenu = menuBar()->addMenu(QStringLiteral("Debug"));
     auto *labMenu = debugMenu->addMenu(QStringLiteral("Kernel sperimentale"));
@@ -2096,6 +2208,7 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
         connect(action, &QAction::triggered, this, [viewport, index] { viewport->setViewPreset(index); });
     }
     modeStatus_ = new QLabel(QStringLiteral("Mesh + linee esterne")); statusBar()->addWidget(modeStatus_);
+    statusBar()->addWidget(kernelStatus);
     auto *labStatus = new QLabel(this); statusBar()->addWidget(labStatus);
     viewport->setKernelLabCallback([labStatus](const QString &text) { labStatus->setText(text); });
     const QString cudaStatus = forgecad_cuda_available()

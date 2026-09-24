@@ -8,16 +8,27 @@
 
 #include "fk_curve_algo.h"
 #include "fk_pcurve.h"
+#include "fk_surface_algo.h"
 
 namespace ForgeCad::Kernel {
 namespace {
 
+// Stessa superficie (anche oggetti diversi: piani coincidenti, cilindri
+// coassiali, ...) e normali della faccia concordi.
 bool sameDomain(const Face &a, const Face &b, double tolerance) {
     if (a.surface == b.surface) return a.sense == b.sense;
-    if (a.surface->type() != SurfaceType::Plane || b.surface->type() != SurfaceType::Plane) return false;
-    const Frame3 &fa = static_cast<const Plane &>(*a.surface).frame(), &fb = static_cast<const Plane &>(*b.surface).frame();
-    const Vec3 na = a.sense ? fa.zDir() : -fa.zDir(), nb = b.sense ? fb.zDir() : -fb.zDir();
-    return dot(na, nb) > 1.0 - 1e-12 && std::fabs(dot(na, fb.origin() - fa.origin())) <= tolerance;
+    if (!sameSurface(*a.surface, *b.surface, tolerance)) return false;
+    const Interval u = a.surface->uDomain(), v = a.surface->vDomain();
+    const double u0 = u.isFinite() ? 0.5 * (u.lo + u.hi) : 0.0, v0 = v.isFinite() ? 0.5 * (v.lo + v.hi) : 0.0;
+    try {
+        const Vec3 p = a.surface->point(u0, v0);
+        const SurfaceProjection onB = projectPoint(*b.surface, p);
+        const Vec3 na = a.surface->normal(u0, v0) * (a.sense ? 1.0 : -1.0);
+        const Vec3 nb = b.surface->normal(onB.u, onB.v) * (b.sense ? 1.0 : -1.0);
+        return dot(na, nb) > 0.0;
+    } catch (const std::exception &) {
+        return false;  // punto singolare (polo, vertice): non si rischia
+    }
 }
 
 struct Lists {
@@ -244,7 +255,12 @@ Body unifySameDomain(const Body &body, double tolerance) {
                     }
                     built.loops.push_back(std::move(loop));
                 }
-        if (!built.loops.empty()) lists.faces.push_back(std::move(built));
+        // Una faccia senza edge (sfera o toro intero: loop di un vertice
+        // isolato) resta senza loop; Body::build ne rifa' il vertice.
+        bool edgeless = true;
+        for (FaceId f : members)
+            for (LoopId l : body.face(f).loops) edgeless = edgeless && !body.loop(l).first.valid();
+        if (!built.loops.empty() || edgeless) lists.faces.push_back(std::move(built));
     }
 
     // 3. Edge sulla stessa curva separati da un vertice che non serve piu'.

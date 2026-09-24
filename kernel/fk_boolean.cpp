@@ -10,6 +10,7 @@
 
 #include "fk_body_check.h"
 #include "fk_classify.h"
+#include "fk_curve_ops.h"
 #include "fk_curve_algo.h"
 #include "fk_intersect.h"
 #include "fk_marching.h"
@@ -26,7 +27,7 @@ struct Arc {
     Interval range;
     FaceId face[2];
     bool cut[2] = {false, false};  // divide l'interno della faccia del body 0 / 1
-    bool coplanar = false;         // viene da due facce complanari
+    bool coplanar = false;         // viene da due facce sulla stessa superficie (complanari, cilindri coassiali, ...)
 };
 
 // Tratto di curva percorso in un verso: pezzo di bordo o taglio.
@@ -66,14 +67,18 @@ enum class Location { In, Out, OnSame, OnOpposite };
 struct Cycle {
     std::vector<Piece> pieces;
     std::vector<Vec2> polygon;  // nello spazio (u, v), srotolato
-    int wrap = 0;               // giri in u (superfici periodiche)
-    double area = 0.0, meanV = 0.0;
+    int wrap = 0;               // giri in u (superfici periodiche in u)
+    int wrapV = 0;              // giri in v (superfici periodiche in v, il toro)
+    double area = 0.0, meanV = 0.0, meanU = 0.0;  // quota media dei cicli avvolti in u (v) e in v (u)
 };
 
 struct SubFace {
     int body = 0;
     FaceId face;
     std::vector<Cycle> cycles;
+    // Senza contorno esterno: tutta la superficie chiusa (sfera, toro) meno
+    // gli eventuali fori; nessun ciclo: la superficie intera.
+    bool whole = false;
 };
 
 bool isPlane(const Surface &s) { return s.type() == SurfaceType::Plane; }
@@ -106,7 +111,8 @@ public:
 
 private:
     void pairArcs(FaceId fa, FaceId fb);
-    void coplanarArcs(FaceId fa, FaceId fb);
+    bool coincident(const Surface &a, const Surface &b) const;
+    void coincidentArcs(FaceId fa, FaceId fb);
     void surfaceArcs(FaceId fa, FaceId fb);
     Box commonBounds(FaceId fa, FaceId fb) const;
     bool touchesBoth(FaceId fa, FaceId fb, const Vec3 &x) const;
@@ -137,6 +143,7 @@ private:
         double deviation;
     };
     std::map<const Curve<3> *, PCurves> pcurves_;
+    mutable std::map<std::pair<const Surface *, const Surface *>, bool> coincident_;  // sameSurface gia' calcolati
 };
 
 // --- 1. archi d'intersezione ----------------------------------------------------
@@ -176,19 +183,30 @@ std::vector<Interval> BooleanBuilder::splitRange(const Curve<3> &curve, const In
     return result;
 }
 
+bool BooleanBuilder::coincident(const Surface &a, const Surface &b) const {
+    const auto key = std::make_pair(&a, &b);
+    const auto found = coincident_.find(key);
+    if (found != coincident_.end()) return found->second;
+    return coincident_[key] = sameSurface(a, b, tolerance_);
+}
+
 void BooleanBuilder::pairArcs(FaceId fa, FaceId fb) {
     const Surface &sa = *bodies_[0].face(fa).surface, &sb = *bodies_[1].face(fb).surface;
-    if (isPlane(sa) && isPlane(sb)) {
-        const Frame3 &pa = static_cast<const Plane &>(sa).frame(), &pb = static_cast<const Plane &>(sb).frame();
-        if (norm(cross(pa.zDir(), pb.zDir())) <= 1e-12 && std::fabs(dot(pa.zDir(), pb.origin() - pa.origin())) <= tolerance_) {
-            coplanarArcs(fa, fb);
-            return;
-        }
+    if (coincident(sa, sb)) {
+        coincidentArcs(fa, fb);
+        return;
     }
     int k;
     if (isPlane(sa)) k = 0;
     else if (isPlane(sb)) k = 1;
     else {
+        surfaceArcs(fa, fb);
+        return;
+    }
+    // Piano con cono, toro, rivoluzione o B-spline: curve tracciate come tra
+    // due superfici qualsiasi (semi dalla suddivisione).
+    const SurfaceType other = (k == 0 ? sb : sa).type();
+    if (other != SurfaceType::Cylinder && other != SurfaceType::Sphere && other != SurfaceType::Extrusion) {
         surfaceArcs(fa, fb);
         return;
     }
@@ -300,9 +318,15 @@ void BooleanBuilder::surfaceArcs(FaceId fa, FaceId fb) {
             for (FinId f : body.loopFins(l)) {
                 const Edge &edge = body.edge(body.fin(f).edge);
                 const CurveSurfaceIntersection hits = intersectCurveSurface(*edge.curve, edge.range, otherSurface, tolerance_);
+                // Un edge che giace sull'altra superficie (per esempio una
+                // generatrice comune a due fianchi estrusi nella stessa
+                // direzione) e' anche un tratto della curva d'intersezione:
+                // i suoi estremi dividono le curve come i punti di attraversamento.
                 for (const Interval &piece : hits.coincident)
-                    if (classifyPointOnFace(other, otherFace, edge.curve->point(0.5 * (piece.lo + piece.hi)), tolerance_) != PointLocation::Outside)
-                        throw std::domain_error("booleanOperation: edge che giace su una superficie non piana dell'altro solido non ancora gestito");
+                    for (double t : {piece.lo, piece.hi}) {
+                        const Vec3 x = edge.curve->point(t);
+                        if (classifyPointOnFace(other, otherFace, x, tolerance_) != PointLocation::Outside) crossings.push_back(x);
+                    }
                 for (double t : hits.parameters) {
                     const Vec3 x = edge.curve->point(t);
                     if (classifyPointOnFace(other, otherFace, x, tolerance_) != PointLocation::Outside) crossings.push_back(x);
@@ -334,23 +358,44 @@ void BooleanBuilder::surfaceArcs(FaceId fa, FaceId fb) {
     }
 }
 
-// Facce complanari: il bordo di ciascuna, dove passa dentro l'altra, la taglia.
-void BooleanBuilder::coplanarArcs(FaceId fa, FaceId fb) {
+// Facce sulla stessa superficie (complanari, cilindri coassiali dello stesso
+// raggio, fianchi estrusi dalla stessa curva): il bordo di ciascuna, dove
+// passa dentro l'altra, la taglia. Gli attraversamenti tra i due bordi si
+// cercano nello spazio (u, v) della faccia tagliata, con le SP-curve degli
+// edge dell'altra portate su quella superficie (sulle superfici periodiche
+// anche spostate di un periodo).
+void BooleanBuilder::coincidentArcs(FaceId fa, FaceId fb) {
     for (int k = 0; k < 2; ++k) {
         const FaceId fx = k == 0 ? fa : fb, fy = k == 0 ? fb : fa;
         const Body &bx = bodies_[k], &by = bodies_[1 - k];
-        const Plane &plane = static_cast<const Plane &>(*bx.face(fx).surface);
+        const Surface &surface = *bx.face(fx).surface;
+        const double accept = std::max(tolerance_, 1e-9 * scale_);
         for (LoopId l : by.face(fy).loops)
             for (FinId f : by.loopFins(l)) {
                 const Edge &edge = by.edge(by.fin(f).edge);
-                const CurvePtr<2> planar = exactPCurve(plane, edge.curve, edge.range, std::max(tolerance_, 1e-9 * scale_));
-                if (!planar) throw std::logic_error("booleanOperation: edge fuori dal piano complanare");
+                CurvePtr<2> pcurve = exactPCurve(surface, edge.curve, edge.range, accept);
+                if (!pcurve && !isPlane(surface)) pcurve = fitPCurve(surface, edge.curve, edge.range, std::min(accept, kPCurveTolerance));
+                if (!pcurve) throw std::logic_error("booleanOperation: edge fuori dalla superficie coincidente");
+                std::vector<CurvePtr<2>> images{pcurve};
+                for (int d = 0; d < 2; ++d) {
+                    const bool periodic = d == 0 ? surface.isUPeriodic() : surface.isVPeriodic();
+                    if (!periodic) continue;
+                    const double period = d == 0 ? surface.uPeriod() : surface.vPeriod();
+                    const std::size_t count = images.size();
+                    for (std::size_t i = 0; i < count; ++i)
+                        for (double shift : {-period, period}) {
+                            Vec2 offset;
+                            offset[d] = shift;
+                            images.push_back(translatedCurve<2>(images[i], offset));
+                        }
+                }
                 std::vector<double> parameters;
                 for (LoopId lx : bx.face(fx).loops)
                     for (FinId fxFin : bx.loopFins(lx)) {
                         const Edge &other = bx.edge(bx.fin(fxFin).edge);
-                        for (const CurveCurvePoint &p : intersectCurves(*planar, edge.range, *bx.fin(fxFin).pcurve, other.range, tolerance_).points)
-                            parameters.push_back(p.s);
+                        for (const CurvePtr<2> &image : images)
+                            for (const CurveCurvePoint &p : intersectCurves(*image, edge.range, *bx.fin(fxFin).pcurve, other.range, tolerance_).points)
+                                parameters.push_back(p.s);
                     }
                 for (const Interval &piece : splitRange(*edge.curve, edge.range, parameters)) {
                     const Vec3 middle = edge.curve->point(0.5 * (piece.lo + piece.hi));
@@ -403,6 +448,7 @@ void BooleanBuilder::finishCycle(const Surface &surface, bool sense, Cycle &cycl
         for (int j = 0; j < samples; ++j) points.push_back(piece.pointAt(double(j) / samples));
     points.push_back(points.front());
     const double period = surface.isUPeriodic() ? surface.uPeriod() : 0.0;
+    const double periodV = surface.isVPeriodic() ? surface.vPeriod() : 0.0;
     std::vector<Vec2> &polygon = cycle.polygon;
     if (isPlane(surface)) {
         const Frame3 &frame = static_cast<const Plane &>(surface).frame();
@@ -419,69 +465,117 @@ void BooleanBuilder::finishCycle(const Surface &surface, bool sense, Cycle &cycl
             polygon.push_back(uv);
         }
     }
-    const double du = polygon.back()[0] - polygon.front()[0];
+    const double du = polygon.back()[0] - polygon.front()[0], dv = polygon.back()[1] - polygon.front()[1];
     polygon.pop_back();
     cycle.wrap = period > 0.0 ? int(std::lround(du / period)) : 0;
-    double area = 0.0, vdu = 0.0;
+    cycle.wrapV = periodV > 0.0 ? int(std::lround(dv / periodV)) : 0;
+    double area = 0.0, vdu = 0.0, udv = 0.0;
     for (std::size_t i = 0; i < polygon.size(); ++i) {
         Vec2 a = polygon[i], b = polygon[(i + 1) % polygon.size()];
-        if (i + 1 == polygon.size()) b[0] += cycle.wrap * period;  // chiusura di un ciclo avvolto
+        if (i + 1 == polygon.size()) b += Vec2(cycle.wrap * period, cycle.wrapV * periodV);  // chiusura di un ciclo avvolto
         area += cross(a, b);
         vdu += 0.5 * (a[1] + b[1]) * (b[0] - a[0]);
+        udv += 0.5 * (a[0] + b[0]) * (b[1] - a[1]);
     }
     cycle.area = 0.5 * area * (sense ? 1.0 : -1.0);  // positiva per i contorni esterni
     cycle.meanV = cycle.wrap != 0 ? vdu / (cycle.wrap * period) : 0.0;
+    cycle.meanU = cycle.wrapV != 0 ? udv / (cycle.wrapV * periodV) : 0.0;
 }
 
-// Semiretta verticale nello spazio (u, v) contro i poligoni dei cicli: il
-// primo attraversamento sopra (o sotto) dice da che parte sta il dominio.
-bool verticalRayInside(const std::vector<const Cycle *> &cycles, const Vec2 &uv, double period, double sign) {
-    double above = 1e300, below = -1e300;
-    int aboveOrientation = 0, belowOrientation = 0;
-    for (const Cycle *cycle : cycles) {
-        const std::vector<Vec2> &polygon = cycle->polygon;
-        for (std::size_t i = 0; i < polygon.size(); ++i) {
-            Vec2 a = polygon[i], b = polygon[(i + 1) % polygon.size()];
-            if (i + 1 == polygon.size()) b[0] += cycle->wrap * period;
-            if (a[0] == b[0]) continue;
-            const double lo = std::min(a[0], b[0]), hi = std::max(a[0], b[0]);
-            int kLo = 0, kHi = 0;
-            if (period > 0.0) {
-                kLo = int(std::floor((lo - uv[0]) / period)) - 1;
-                kHi = int(std::ceil((hi - uv[0]) / period)) + 1;
-            }
-            for (int k = kLo; k <= kHi; ++k) {
-                const double u = uv[0] + k * period;
-                if (!(u > lo && u <= hi)) continue;
-                const double v = a[1] + (b[1] - a[1]) * (u - a[0]) / (b[0] - a[0]);
-                const int orientation = (b[0] > a[0] ? 1 : -1) * int(sign);
-                if (v > uv[1] && v < above) {
-                    above = v;
-                    aboveOrientation = orientation;
-                } else if (v <= uv[1] && v > below) {
-                    below = v;
-                    belowOrientation = orientation;
+// Semiretta nello spazio (u, v) contro i poligoni dei cicli (verticale, o
+// orizzontale se la verticale non ne incontra: i cicli avvolti in v del toro
+// sono linee verticali): il primo attraversamento sopra (o sotto) dice da
+// che parte sta il dominio. Nelle direzioni periodiche la semiretta fa il
+// giro. Nessun attraversamento: dentro solo se il dominio non ha contorno esterno.
+bool rayInside(const std::vector<const Cycle *> &cycles, const Vec2 &uv, const double periods[2], double sign, bool whole) {
+    // La semiretta orizzontale serve solo ai cicli avvolti in v (verticali).
+    bool vertical = false;
+    for (const Cycle *cycle : cycles) vertical = vertical || cycle->wrapV != 0;
+    for (int along : {1, 0}) {  // along: coordinata che varia lungo la semiretta
+        if (along == 0 && !vertical) break;
+        const int across = 1 - along;
+        const double period = periods[across], periodAlong = periods[along];
+        double above = 1e300, below = -1e300;
+        int aboveOrientation = 0, belowOrientation = 0;
+        for (const Cycle *cycle : cycles) {
+            const std::vector<Vec2> &polygon = cycle->polygon;
+            for (std::size_t i = 0; i < polygon.size(); ++i) {
+                Vec2 a = polygon[i], b = polygon[(i + 1) % polygon.size()];
+                if (i + 1 == polygon.size()) b += Vec2(cycle->wrap * periods[0], cycle->wrapV * periods[1]);
+                if (a[across] == b[across]) continue;
+                const double lo = std::min(a[across], b[across]), hi = std::max(a[across], b[across]);
+                int kLo = 0, kHi = 0;
+                if (period > 0.0) {
+                    kLo = int(std::floor((lo - uv[across]) / period)) - 1;
+                    kHi = int(std::ceil((hi - uv[across]) / period)) + 1;
+                }
+                for (int k = kLo; k <= kHi; ++k) {
+                    const double c = uv[across] + k * period;
+                    if (!(c > lo && c <= hi)) continue;
+                    double value = a[along] + (b[along] - a[along]) * (c - a[across]) / (b[across] - a[across]);
+                    // Verso del dominio: con la semiretta verticale, un tratto che
+                    // avanza in u ha il dominio sopra; con quella orizzontale, un
+                    // tratto che avanza in v ha il dominio a sinistra (u minori).
+                    const int orientation = (b[across] > a[across] ? 1 : -1) * int(sign) * (along == 1 ? 1 : -1);
+                    // Direzione periodica lungo la semiretta: il valore piu' vicino sopra e sotto.
+                    if (periodAlong > 0.0) {
+                        double up = value + periodAlong * std::ceil((uv[along] - value) / periodAlong);
+                        if (up <= uv[along]) up += periodAlong;
+                        const double down = up - periodAlong;
+                        if (up < above) {
+                            above = up;
+                            aboveOrientation = orientation;
+                        }
+                        if (down > below) {
+                            below = down;
+                            belowOrientation = orientation;
+                        }
+                        continue;
+                    }
+                    if (value > uv[along] && value < above) {
+                        above = value;
+                        aboveOrientation = orientation;
+                    } else if (value <= uv[along] && value > below) {
+                        below = value;
+                        belowOrientation = orientation;
+                    }
                 }
             }
         }
+        if (aboveOrientation != 0) return aboveOrientation < 0;
+        if (belowOrientation != 0) return belowOrientation > 0;
     }
-    if (aboveOrientation != 0) return aboveOrientation < 0;
-    if (belowOrientation != 0) return belowOrientation > 0;
-    return false;
+    return whole;
 }
 
 bool BooleanBuilder::insideSubFace(const SubFace &subFace, const Vec2 &uv) const {
     const Face &face = bodies_[subFace.body].face(subFace.face);
     std::vector<const Cycle *> cycles;
     for (const Cycle &cycle : subFace.cycles) cycles.push_back(&cycle);
-    return verticalRayInside(cycles, uv, face.surface->isUPeriodic() ? face.surface->uPeriod() : 0.0, face.sense ? 1.0 : -1.0);
+    const double periods[2] = {face.surface->isUPeriodic() ? face.surface->uPeriod() : 0.0,
+                               face.surface->isVPeriodic() ? face.surface->vPeriod() : 0.0};
+    return rayInside(cycles, uv, periods, face.sense ? 1.0 : -1.0, subFace.whole);
+}
+
+// La superficie degenera in un punto (polo della sfera, vertice del cono,
+// estremo del meridiano sull'asse) alla quota v?
+bool poleAt(const Surface &surface, double v) {
+    try {
+        for (double u : {0.3, 2.1, 4.4}) {
+            Vec3 d[4];
+            surface.evaluate(u, v, 1, d);
+            if (norm(d[Surface::derivativeIndex(1, 0, 1)]) > 1e-9 * (1.0 + norm(d[0]))) return false;
+        }
+        return true;
+    } catch (const std::exception &) {
+        return false;
+    }
 }
 
 std::vector<SubFace> BooleanBuilder::buildSubFaces(int k, FaceId f, const std::vector<Piece> &cuts) const {
     const Body &body = bodies_[k];
     const Face &face = body.face(f);
     const Surface &surface = *face.surface;
-    if (surface.isVPeriodic()) throw std::domain_error("booleanOperation: superfici periodiche in v non gestite");
 
     // Semilati: pezzi di bordo nel verso della fin, tagli nei due versi.
     std::vector<Piece> halfEdges;
@@ -599,6 +693,18 @@ std::vector<SubFace> BooleanBuilder::buildSubFaces(int k, FaceId f, const std::v
                     addCycle(outer);
                     return;
                 }
+        // Taglio isolato dentro la faccia (percorso avanti e indietro, per
+        // esempio dove l'altro solido la tocca lungo una retta): non divide nulla.
+        bool slit = true;
+        for (int h : sequence) {
+            bool twin = false;
+            for (int g : sequence)
+                twin = twin || (g != h && halfEdges[h].cut && halfEdges[g].cut && distance(halfEdges[h].start(), halfEdges[g].end()) <= tolerance_
+                                && distance(halfEdges[h].end(), halfEdges[g].start()) <= tolerance_
+                                && distance(halfEdges[h].middle(), halfEdges[g].middle()) <= 10.0 * tolerance_);
+            slit = slit && twin;
+        }
+        if (slit) return;
         Cycle cycle;
         for (int h : sequence) cycle.pieces.push_back(halfEdges[h]);
         finishCycle(surface, face.sense, cycle);
@@ -621,37 +727,97 @@ std::vector<SubFace> BooleanBuilder::buildSubFaces(int k, FaceId f, const std::v
     }
 
     // Raggruppamento: contorni esterni con i loro fori; sulle superfici
-    // periodiche anche fasce tra due cicli avvolti.
-    const double period = surface.isUPeriodic() ? surface.uPeriod() : 0.0;
+    // periodiche anche fasce tra due cicli avvolti (o tra un ciclo e un polo,
+    // o attraverso il taglio di una direzione periodica); sulle superfici
+    // chiuse anche "tutto meno i fori".
+    const double periods[2] = {surface.isUPeriodic() ? surface.uPeriod() : 0.0, surface.isVPeriodic() ? surface.vPeriod() : 0.0};
     const double sign = face.sense ? 1.0 : -1.0;
-    std::vector<int> outers, holes, wrapping;
+    std::vector<int> outers, holes, wrapU, wrapV;
     for (std::size_t i = 0; i < cycles.size(); ++i) {
-        if (cycles[i].wrap != 0) {
-            if (std::abs(cycles[i].wrap) > 1) throw std::domain_error("booleanOperation: ciclo avvolto piu' volte");
-            wrapping.push_back(int(i));
-        } else {
-            (cycles[i].area > 0.0 ? outers : holes).push_back(int(i));
-        }
+        const Cycle &cycle = cycles[i];
+        if (std::abs(cycle.wrap) > 1 || std::abs(cycle.wrapV) > 1) throw std::domain_error("booleanOperation: ciclo avvolto piu' volte");
+        if (cycle.wrap != 0 && cycle.wrapV != 0) throw std::domain_error("booleanOperation: ciclo avvolto nelle due direzioni del toro non gestito");
+        if (cycle.wrap != 0) wrapU.push_back(int(i));
+        else if (cycle.wrapV != 0) wrapV.push_back(int(i));
+        else (cycle.area > 0.0 ? outers : holes).push_back(int(i));
     }
     std::vector<SubFace> result;
     std::vector<std::vector<int>> members;
-    for (int o : outers) members.push_back({o});
-    // A pari quota (un taglio chiuso percorso nei due versi) prima il ciclo
-    // che chiude la fascia inferiore (dominio sotto), poi quello che apre la successiva.
-    std::sort(wrapping.begin(), wrapping.end(), [&](int a, int b) {
-        const double gap = cycles[a].meanV - cycles[b].meanV;
-        if (std::fabs(gap) > 1e-9 * (1.0 + std::fabs(cycles[a].meanV))) return gap < 0.0;
-        return int(sign) * cycles[a].wrap < int(sign) * cycles[b].wrap;
-    });
-    if (wrapping.size() % 2) throw std::domain_error("booleanOperation: cicli avvolti spaiati");
-    const std::size_t bandStart = members.size();
-    for (std::size_t i = 0; i < wrapping.size(); i += 2) {
-        // Dominio sopra il ciclo inferiore (avanza in u) e sotto quello superiore.
-        const int lower = wrapping[i], upper = wrapping[i + 1];
-        if (int(sign) * cycles[lower].wrap != 1 || int(sign) * cycles[upper].wrap != -1)
-            throw std::domain_error("booleanOperation: fascia non chiusa su una superficie periodica");
-        members.push_back({lower, upper});
+    std::vector<bool> wholeMember;
+    for (int o : outers) {
+        members.push_back({o});
+        wholeMember.push_back(false);
     }
+    const std::size_t bandStart = members.size();
+    // Superficie chiusa: dove non ci sono contorni resta tutta la superficie.
+    const Interval vDomain = surface.vDomain();
+    const bool poleLow = vDomain.isFinite() && poleAt(surface, vDomain.lo), poleHigh = vDomain.isFinite() && poleAt(surface, vDomain.hi);
+    const bool closedSurface = periods[0] > 0.0 && (periods[1] > 0.0 || (poleLow && poleHigh));
+    // Fasce: `list` ordinata lungo la direzione trasversale; `side` +1 se il
+    // dominio sta verso le quote maggiori, -1 verso le minori.
+    auto bands = [&](std::vector<int> list, const std::function<double(int)> &level, const std::function<int(int)> &side, bool cyclic,
+                     bool closedBelow, bool closedAbove) {
+        std::sort(list.begin(), list.end(), [&](int a, int b) {
+            const double gap = level(a) - level(b);
+            if (std::fabs(gap) > 1e-9 * (1.0 + std::fabs(level(a)))) return gap < 0.0;
+            return side(a) < side(b);  // a pari quota prima chi chiude la fascia inferiore
+        });
+        std::size_t start = 0, end = list.size();
+        if (!list.empty() && side(list.front()) < 0) {
+            // Dominio sotto il primo ciclo: fino al polo, o (direzione periodica) oltre il taglio fino all'ultimo.
+            if (cyclic && side(list.back()) > 0) {
+                members.push_back({list.back(), list.front()});
+                wholeMember.push_back(false);
+                --end;
+            } else if (closedBelow) {
+                members.push_back({list.front()});
+                wholeMember.push_back(false);
+            } else {
+                throw std::domain_error("booleanOperation: fascia non chiusa su una superficie periodica");
+            }
+            ++start;
+        }
+        if (end > start && side(list[end - 1]) > 0) {
+            if (!closedAbove) throw std::domain_error("booleanOperation: fascia non chiusa su una superficie periodica");
+            members.push_back({list[end - 1]});
+            wholeMember.push_back(false);
+            --end;
+        }
+        if ((end - start) % 2) throw std::domain_error("booleanOperation: cicli avvolti spaiati");
+        for (std::size_t i = start; i < end; i += 2) {
+            if (side(list[i]) != 1 || side(list[i + 1]) != -1) throw std::domain_error("booleanOperation: fascia non chiusa su una superficie periodica");
+            members.push_back({list[i], list[i + 1]});
+            wholeMember.push_back(false);
+        }
+    };
+    if (!wrapU.empty()) {
+        // Poli: vertice del cono sopra o sotto i cicli, estremi del dominio in v.
+        bool below = poleLow, above = poleHigh;
+        if (surface.type() == SurfaceType::Cone) {
+            const auto &cone = static_cast<const ConicalSurface &>(surface);
+            const double apex = -cone.referenceRadius() / std::sin(cone.semiAngle());
+            double lowest = 1e300, highest = -1e300;
+            for (int c : wrapU) {
+                lowest = std::min(lowest, cycles[c].meanV);
+                highest = std::max(highest, cycles[c].meanV);
+            }
+            below = apex < lowest;
+            above = apex > highest;
+        }
+        bands(wrapU, [&](int c) { return cycles[c].meanV; }, [&](int c) { return int(sign) * cycles[c].wrap; }, periods[1] > 0.0, below, above);
+    }
+    if (!wrapV.empty())
+        bands(wrapV, [&](int c) { return cycles[c].meanU; }, [&](int c) { return -int(sign) * cycles[c].wrapV; }, periods[0] > 0.0, false, false);
+    int implicitWhole = -1;
+    auto wholeOne = [&]() {
+        if (implicitWhole < 0) {
+            if (!closedSurface) throw std::domain_error("booleanOperation: foro fuori da ogni contorno");
+            members.push_back({});
+            wholeMember.push_back(true);
+            implicitWhole = int(members.size()) - 1;
+        }
+        return implicitWhole;
+    };
     for (int h : holes) {
         // Punto appena dentro il dominio del foro (a sinistra del ciclo
         // nell'orientamento della faccia): un punto sul foro stesso starebbe
@@ -669,8 +835,10 @@ std::vector<SubFace> BooleanBuilder::buildSubFaces(int k, FaceId f, const std::v
             for (std::size_t c = 0; c < cycles.size(); ++c) {
                 if (int(c) == h) continue;
                 for (const Vec2 &q : cycles[c].polygon)
-                    for (int shift = -1; shift <= 1; ++shift)
-                        if (shift == 0 || period > 0.0) clearance = std::min(clearance, distance(middle, q + Vec2(shift * period, 0.0)));
+                    for (int su = -1; su <= 1; ++su)
+                        for (int sv = -1; sv <= 1; ++sv)
+                            if ((su == 0 || periods[0] > 0.0) && (sv == 0 || periods[1] > 0.0))
+                                clearance = std::min(clearance, distance(middle, q + Vec2(su * periods[0], sv * periods[1])));
             }
             if (clearance > bestClearance) {
                 bestClearance = clearance;
@@ -682,24 +850,31 @@ std::vector<SubFace> BooleanBuilder::buildSubFaces(int k, FaceId f, const std::v
         int best = -1;
         double bestArea = 1e300;
         for (std::size_t m = 0; m < members.size(); ++m) {
+            if (wholeMember[m]) continue;
             std::vector<const Cycle *> boundary;
             for (int c : members[m]) boundary.push_back(&cycles[c]);
             // Il punto del foro deve stare nella regione delimitata dal solo contorno.
-            if (!verticalRayInside(boundary, probe, period, sign)) continue;
+            if (!rayInside(boundary, probe, periods, sign, false)) continue;
             const double size = m < bandStart ? cycles[members[m][0]].area : 1e299;
             if (size < bestArea) {
                 bestArea = size;
                 best = int(m);
             }
         }
-        if (best < 0) throw std::domain_error("booleanOperation: foro fuori da ogni contorno");
+        if (best < 0) best = wholeOne();
         members[best].push_back(h);
     }
-    for (const std::vector<int> &group : members) {
+    // Nessun ciclo (faccia senza bordo e senza tagli): la superficie intera.
+    if (cycles.empty()) {
+        if (!closedSurface) throw std::domain_error("booleanOperation: faccia senza bordo su una superficie aperta");
+        wholeOne();
+    }
+    for (std::size_t m = 0; m < members.size(); ++m) {
         SubFace subFace;
         subFace.body = k;
         subFace.face = f;
-        for (int c : group) subFace.cycles.push_back(cycles[c]);
+        subFace.whole = wholeMember[m];
+        for (int c : members[m]) subFace.cycles.push_back(cycles[c]);
         result.push_back(std::move(subFace));
     }
     return result;
@@ -718,21 +893,11 @@ Location BooleanBuilder::classify(const SubFace &subFace, const SolidClassifier 
         return normalized(cross(n, normalized(piece.tangentAt(t))));
     };
 
-    // Facce complanari dell'altro body: prima di tutto si guarda se il pezzo
-    // ci sta sopra (le regole locali darebbero dentro/fuori a caso).
+    // Facce dell'altro body sulla stessa superficie: prima di tutto si guarda
+    // se il pezzo ci sta sopra (le regole locali darebbero dentro/fuori a caso).
     std::vector<FaceId> coplanar;
-    Vec3 planeNormal;
-    if (isPlane(surface)) {
-        const Frame3 &frame = static_cast<const Plane &>(surface).frame();
-        planeNormal = face.sense ? frame.zDir() : -frame.zDir();
-        for (FaceId g : otherBody.faces()) {
-            const Surface &gs = *otherBody.face(g).surface;
-            if (!isPlane(gs)) continue;
-            const Frame3 &gf = static_cast<const Plane &>(gs).frame();
-            if (norm(cross(gf.zDir(), frame.zDir())) <= 1e-9 && std::fabs(dot(gf.zDir(), frame.origin() - gf.origin())) <= tolerance_)
-                coplanar.push_back(g);
-        }
-    }
+    for (FaceId g : otherBody.faces())
+        if (coincident(surface, *otherBody.face(g).surface)) coplanar.push_back(g);
 
     // Punti interni vicino ai tratti del bordo, dai piu' lunghi, a varie
     // frazioni del tratto: se uno cade su un contatto con l'altro solido (una
@@ -744,6 +909,16 @@ Location BooleanBuilder::classify(const SubFace &subFace, const SolidClassifier 
     std::sort(pieces.begin(), pieces.end(), [](const auto &a, const auto &b) { return a.first > b.first; });
     if (pieces.size() > 4) pieces.resize(4);
     auto interiorPoints = [&](const std::function<bool(const Vec3 &)> &accept) {
+        if (pieces.empty()) {
+            // Superficie intera senza bordo: punti qualsiasi della superficie.
+            const Interval u = surface.uDomain(), v = surface.vDomain();
+            for (double a : {0.13, 0.51, 0.77, 0.29})
+                for (double b : {0.37, 0.61, 0.19}) {
+                    const Vec3 x = surface.point(u.lo + a * u.length(), v.lo + b * v.length());
+                    if (accept(x)) return true;
+                }
+            return false;
+        }
         for (const auto &[length, piece] : pieces)
             for (double fraction : {0.5, 0.31, 0.69, 0.17, 0.83}) {
                 const double t = piece->forward ? piece->range.lo + fraction * piece->range.length() : piece->range.hi - fraction * piece->range.length();
@@ -770,9 +945,9 @@ Location BooleanBuilder::classify(const SubFace &subFace, const SolidClassifier 
                 const PointLocation location = classifyPointOnFace(otherBody, g, z, tolerance_);
                 if (location == PointLocation::Boundary) return false;
                 if (location == PointLocation::Inside) {
-                    const Frame3 &gf = static_cast<const Plane &>(*otherBody.face(g).surface).frame();
-                    const Vec3 gn = otherBody.face(g).sense ? gf.zDir() : -gf.zDir();
-                    on = dot(gn, planeNormal) > 0.0 ? Location::OnSame : Location::OnOpposite;
+                    const Face &gface = otherBody.face(g);
+                    const double d = dot(faceNormal(*gface.surface, gface.sense, z), faceNormal(surface, face.sense, z));
+                    on = d > 0.0 ? Location::OnSame : Location::OnOpposite;
                     found = true;
                 }
             }

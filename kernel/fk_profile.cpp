@@ -92,8 +92,29 @@ Profile buildProfile(const std::vector<ProfileSegment> &segments, double toleran
             if (!extended) break;
             closed = distance(current, chainStart) <= tolerance;
         }
-        if (closed) loops.push_back(std::move(chain));
-        else ++profile.openChains;
+        if (closed) {
+            loops.push_back(std::move(chain));
+            continue;
+        }
+        // Catena aperta: si prolunga anche all'indietro dal primo tratto.
+        Vec2 head = chainStart;
+        for (bool extended = true; extended;) {
+            extended = false;
+            for (std::size_t j = 0; j < segments.size() && !extended; ++j) {
+                if (used[j]) continue;
+                if (distance(segments[j].end(), head) <= tolerance) {
+                    chain.segments.insert(chain.segments.begin(), segments[j]);
+                } else if (distance(segments[j].start(), head) <= tolerance) {
+                    chain.segments.insert(chain.segments.begin(), reversed(segments[j]));
+                } else {
+                    continue;
+                }
+                used[j] = extended = true;
+                head = chain.segments.front().start();
+            }
+        }
+        ++profile.openChains;
+        profile.chains.push_back(std::move(chain));
     }
 
     // Annidamento: dal loop piu' grande al piu' piccolo; il genitore e' il

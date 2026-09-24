@@ -9,6 +9,9 @@
 #include "fk_bspline.h"
 #include "fk_curve_algo.h"
 #include "fk_surface_algo.h"
+#include "fk_curve_surface.h"
+#include "fk_nurbs.h"
+#include <functional>
 
 namespace ForgeCad::Kernel {
 namespace {
@@ -104,6 +107,26 @@ bool inside(const Box &box, const Vec3 &p) {
 
 enum class Stop { Box, Limit, Closed, Tangent, Singular };
 
+// Nodi della superficie che contano per il tracciamento (curvatura
+// discontinua): i quadranti delle superfici analitiche servono solo alla
+// proiezione, la superficie li' e' liscia.
+std::vector<double> surfaceBreaks(const Surface &surface, bool isU, const Interval &range) {
+    switch (surface.type()) {
+    case SurfaceType::Plane:
+    case SurfaceType::Cylinder:
+    case SurfaceType::Cone:
+    case SurfaceType::Sphere:
+    case SurfaceType::Torus:
+        return {range.lo, range.hi};
+    case SurfaceType::Revolution:
+        if (isU) return {range.lo, range.hi};  // la rotazione e' liscia; i nodi del meridiano no
+        break;
+    default:
+        break;
+    }
+    return isU ? surface.uBreakpoints(range) : surface.vBreakpoints(range);
+}
+
 class Marcher {
 public:
     Marcher(const Surface &a, const Surface &b, const Box &bounds, const SurfaceIntersectionOptions &options)
@@ -134,10 +157,18 @@ private:
     Stop trace(Node &seed, std::vector<Node> &out, Vec3 &tangentPoint);
     // Curva per il seme (tracciata nei due versi) aggiunta a out.
     void traceCurve(const Node &seed, SurfaceIntersection &out);
-    // Punto di tangenza vicino a x (Gauss-Newton su S_A = S_B e normali parallele).
-    bool refineSingular(Params &x) const;
+    // Punto di tangenza vicino a x (Gauss-Newton su S_A = S_B e normali
+    // parallele), facoltativamente su un piano (per le curve di tangenza).
+    bool refineSingular(Params &x, const Vec3 *planeOrigin = nullptr, const Vec3 *planeNormal = nullptr) const;
+    // Curva lungo la quale le superfici si toccano (tangenti in ogni punto,
+    // una sola direzione in cui le curvature coincidono): per esempio una
+    // sfera in un cilindro dello stesso raggio. Va in out.tangentCurves.
+    bool traceTangentCurve(const Params &x, const Vec3 &direction, SurfaceIntersection &out);
+    bool tangentNode(const Params &x, const Vec3 &reference, Node &node) const;
     // Direzioni dei rami in un punto di tangenza: 2 (si incrociano), 0
-    // (contatto isolato), -1 (contatto di ordine superiore).
+    // (contatto isolato), -2 (una sola direzione in cui le curvature
+    // coincidono, in directions[0]: forse una curva di tangenza), -1 (contatto
+    // di ordine superiore).
     int singularBranches(const Params &x, Vec3 directions[2]) const;
     void singularSeed(const Params &x, SurfaceIntersection &out);  // registra il punto
 public:
@@ -290,7 +321,7 @@ bool Marcher::firstCrossing(const Params &from, const Params &to, double &fracti
                 limit = isLimit;
             }
         };
-        const std::vector<double> breaks = isU ? surface.uBreakpoints({lo, hi}) : surface.vBreakpoints({lo, hi});
+        const std::vector<double> breaks = surfaceBreaks(surface, isU, {lo, hi});
         for (double c : breaks) {
             const double margin = 1e-12 * (1.0 + std::fabs(c));
             if (c > lo + margin && c < hi - margin) consider(c, false);
@@ -531,8 +562,10 @@ void Marcher::traceFrom(const Vec3 &seedPoint, SurfaceIntersection &out, bool si
     if (pa.distance > 100.0 * tolerance_ || pb.distance > 100.0 * tolerance_) return;
     Params x{pa.u, pa.v, pb.u, pb.v};
     Node seed;
+    // Gia' su una curva di tangenza (o su un punto noto).
+    if (knownPoint(seedPoint, out)) return;
     // Vicino a un punto di tangenza: lo si cerca e se ne tracciano i rami.
-    if (!makeNode(x, Vec3(), seed) || seed.sine < 1e-4) {
+    if (!makeNode(x, Vec3(), seed) || seed.sine < 1e-3) {
         Params y = x;
         if (refineSingular(y)) {
             singularSeed(y, out);
@@ -561,7 +594,7 @@ void Marcher::traceFrom(const Vec3 &seedPoint, SurfaceIntersection &out, bool si
         const Surface &surface = i < 2 ? a_ : b_;
         const double margin = 1e-10 * (1.0 + std::fabs(x[i]));
         const Interval around{x[i] - margin, x[i] + margin};
-        const std::vector<double> breaks = i % 2 == 0 ? surface.uBreakpoints(around) : surface.vBreakpoints(around);
+        const std::vector<double> breaks = surfaceBreaks(surface, i % 2 == 0, around);
         for (double c : breaks)
             if (c > around.lo && c < around.hi) {
                 x[i] = c;
@@ -633,17 +666,20 @@ void Marcher::traceCurve(const Node &seed, SurfaceIntersection &out) {
 }
 
 bool Marcher::knownPoint(const Vec3 &p, const SurfaceIntersection &out) const {
-    for (const IntersectionCurve &curve : out.curves)
-        if (projectPoint(*curve.curve, p, curve.range).distance <= 10.0 * tolerance_) return true;
+    for (const std::vector<IntersectionCurve> *curves : {&out.curves, &out.tangentCurves})
+        for (const IntersectionCurve &curve : *curves)
+            if (projectPoint(*curve.curve, p, curve.range).distance <= 10.0 * tolerance_) return true;
     for (const std::vector<Vec3> *points : {&out.tangentPoints, &out.isolatedPoints, &out.singularPoints})
         for (const Vec3 &q : *points)
             if (distance(p, q) <= 10.0 * tolerance_) return true;
     return false;
 }
 
-bool Marcher::refineSingular(Params &x) const {
-    // Residui: S_A - S_B e le componenti di n_B nel piano tangente di A.
-    auto residual = [&](const Params &y, double r[5]) {
+bool Marcher::refineSingular(Params &x, const Vec3 *planeOrigin, const Vec3 *planeNormal) const {
+    // Residui: S_A - S_B, le componenti di n_B nel piano tangente di A e, se
+    // c'e', la distanza dal piano.
+    const int count = planeOrigin ? 6 : 5;
+    auto residual = [&](const Params &y, double r[6]) {
         Vec3 ea[4], eb[4];
         evaluate(y, ea, eb);
         const Vec3 na = normalized(cross(ea[kU], ea[kV])), nb = normalized(cross(eb[kU], eb[kV]));
@@ -653,32 +689,38 @@ bool Marcher::refineSingular(Params &x) const {
         // Le componenti angolari pesate con la dimensione del modello.
         r[3] = scale_ * dot(nb, e1);
         r[4] = scale_ * dot(nb, e2);
+        if (planeOrigin) r[5] = dot(*planeNormal, ea[0] - *planeOrigin);
     };
     const Params start = x;
     for (int iteration = 0; iteration < 40; ++iteration) {
-        double r[5], jac[5][4];
+        double r[6], jac[6][4];
         residual(x, r);
         double size = 0.0;
-        for (double value : r) size = std::max(size, std::fabs(value));
+        for (int i = 0; i < count; ++i) size = std::max(size, std::fabs(r[i]));
         if (size <= 1e-12 * scale_) break;
         for (int k = 0; k < 4; ++k) {
             Params y = x;
             const double step = 1e-7 * (1.0 + std::fabs(x[k]));
             y[k] += step;
-            double ry[5];
+            double ry[6];
             residual(y, ry);
-            for (int i = 0; i < 5; ++i) jac[i][k] = (ry[i] - r[i]) / step;
+            for (int i = 0; i < count; ++i) jac[i][k] = (ry[i] - r[i]) / step;
         }
-        // Equazioni normali (sistema coerente: Gauss-Newton converge al punto).
+        // Equazioni normali (sistema coerente: Gauss-Newton converge al punto),
+        // con uno smorzamento minimo: lungo una curva di tangenza il sistema
+        // senza piano ha una direzione libera (si va al punto piu' vicino).
         double m[4][5];
         for (int i = 0; i < 4; ++i) {
             for (int j = 0; j < 4; ++j) {
                 m[i][j] = 0.0;
-                for (int k = 0; k < 5; ++k) m[i][j] += jac[k][i] * jac[k][j];
+                for (int k = 0; k < count; ++k) m[i][j] += jac[k][i] * jac[k][j];
             }
             m[i][4] = 0.0;
-            for (int k = 0; k < 5; ++k) m[i][4] -= jac[k][i] * r[k];
+            for (int k = 0; k < count; ++k) m[i][4] -= jac[k][i] * r[k];
         }
+        double trace = 0.0;
+        for (int i = 0; i < 4; ++i) trace += m[i][i];
+        for (int i = 0; i < 4; ++i) m[i][i] += 1e-12 * trace;
         double dx[4];
         if (!solve4(m, dx)) return false;
         double largest = 0.0;
@@ -688,13 +730,13 @@ bool Marcher::refineSingular(Params &x) const {
         }
         if (largest <= 1e-14) break;
     }
-    double r[5];
+    double r[6];
     residual(x, r);
     Vec3 ea[4], eb[4];
     evaluate(x, ea, eb);
     const Vec3 moved = ea[0] - a_.point(start[0], start[1]);
     return norm(Vec3(r[0], r[1], r[2])) <= 1e-10 * scale_ && std::fabs(r[3]) + std::fabs(r[4]) <= 1e-8 * scale_
-        && norm(moved) <= 1e-3 * scale_;
+        && (!planeOrigin || std::fabs(r[5]) <= 1e-10 * scale_) && norm(moved) <= 1e-3 * scale_ * (planeOrigin ? 100.0 : 1.0);
 }
 
 int Marcher::singularBranches(const Params &x, Vec3 directions[2]) const {
@@ -717,7 +759,12 @@ int Marcher::singularBranches(const Params &x, Vec3 directions[2]) const {
     if (!(size > 1e-9 / scale_)) return -1;  // le superfici coincidono al secondo ordine
     const double disc = d12 * d12 - d11 * d22;
     if (disc < -1e-9 * size * size) return 0;
-    if (disc <= 1e-9 * size * size) return -1;  // i due rami sono tangenti tra loro
+    if (disc <= 1e-9 * size * size) {
+        // q semidefinita: la sua direzione nulla (le curvature coincidono).
+        if (std::fabs(d11) >= std::fabs(d22)) directions[0] = normalized((-d12 / d11) * e1 + e2);
+        else directions[0] = normalized(e1 + (-d12 / d22) * e2);
+        return -2;
+    }
     const double root = std::sqrt(disc);
     for (int k = 0; k < 2; ++k) {
         const double sign = k == 0 ? 1.0 : -1.0;
@@ -729,11 +776,13 @@ int Marcher::singularBranches(const Params &x, Vec3 directions[2]) const {
 
 void Marcher::singularSeed(const Params &x, SurfaceIntersection &out) {
     const Vec3 p = a_.point(x[0], x[1]);
+    if (knownPoint(p, out)) return;
     for (const std::vector<Vec3> *points : {&out.tangentPoints, &out.isolatedPoints, &out.singularPoints})
         for (const Vec3 &q : *points)
             if (distance(p, q) <= 10.0 * tolerance_) return;
     Vec3 directions[2];
     const int branches = singularBranches(x, directions);
+    if (branches == -2 && traceTangentCurve(x, directions[0], out)) return;
     if (branches < 0) {
         out.tangentPoints.push_back(p);
         return;
@@ -784,6 +833,105 @@ void Marcher::traceSingularBranches(SurfaceIntersection &out) {
                 traceCurve(node, out);
             }
     }
+}
+
+bool Marcher::tangentNode(const Params &x, const Vec3 &reference, Node &node) const {
+    Vec3 directions[2];
+    if (singularBranches(x, directions) != -2) return false;
+    Vec3 ea[4], eb[4];
+    evaluate(x, ea, eb);
+    node = Node();
+    node.x = x;
+    node.p = 0.5 * (ea[0] + eb[0]);
+    node.t = dot(directions[0], reference) < 0.0 ? -directions[0] : directions[0];
+    node.da = tangentParameters(ea[kU], ea[kV], node.t);
+    node.db = tangentParameters(eb[kU], eb[kV], node.t);
+    node.setIncoming();
+    return true;
+}
+
+bool Marcher::traceTangentCurve(const Params &x, const Vec3 &direction, SurfaceIntersection &out) {
+    Node start;
+    if (!tangentNode(x, direction, start)) return false;
+    const double tolerance = 100.0 * fitTolerance_;
+    const double shortest = 1e-5 * scale_;
+    // Cubica di Hermite tra due nodi contro la curva di tangenza vera.
+    auto fits = [&](const Node &a, const Node &b) {
+        const double h = distance(a.p, b.p);
+        for (double s : {0.25, 0.5, 0.75}) {
+            Vec3 derivative;
+            const Vec3 point = hermite(a.p, a.t, b.p, b.tIn, h, s, &derivative);
+            const Vec2 pa = hermite(Vec2(a.x[0], a.x[1]), a.da, Vec2(b.x[0], b.x[1]), b.daIn, h, s);
+            const Vec2 pb = hermite(Vec2(a.x[2], a.x[3]), a.db, Vec2(b.x[2], b.x[3]), b.dbIn, h, s);
+            Params y{pa[0], pa[1], pb[0], pb[1]};
+            const Vec3 normal = normalized(derivative);
+            if (!refineSingular(y, &point, &normal)) return false;
+            if (distance(a_.point(y[0], y[1]), point) > tolerance || distance(a_.point(pa[0], pa[1]), point) > tolerance
+                || distance(b_.point(pb[0], pb[1]), point) > tolerance)
+                return false;
+        }
+        return true;
+    };
+    std::vector<Node> halves[2];
+    bool closed = false;
+    for (int side = 0; side < 2 && !closed; ++side) {
+        Node current = side == 0 ? start : start.reversed();
+        double h = h0_, travelled = 0.0;
+        for (int guard = 0; guard < 20000; ++guard) {
+            if (h < 1e-6 * scale_) break;  // il contatto finisce (o non si riesce a seguirlo)
+            Params y = current.x;
+            for (int i = 0; i < 2; ++i) {
+                y[i] += h * current.da[i];
+                y[i + 2] += h * current.db[i];
+            }
+            const Vec3 origin = current.p + h * current.t;
+            Node next;
+            if (!refineSingular(y, &origin, &current.t) || !tangentNode(y, current.t, next)) {
+                h *= 0.5;
+                continue;
+            }
+            // Ritorno all'inizio: curva chiusa.
+            if (travelled > 2.0 * h && distance(next.p, start.p) <= 1.5 * h && dot(start.t, current.t) > 0.5 * (side == 0 ? 1.0 : -1.0)) {
+                Node closing = side == 0 ? start : start.reversed();
+                for (int i = 0; i < 4; ++i) {
+                    const Surface &surface = i < 2 ? a_ : b_;
+                    const bool periodic = i % 2 == 0 ? surface.isUPeriodic() : surface.isVPeriodic();
+                    if (!periodic) continue;
+                    const double period = i % 2 == 0 ? surface.uPeriod() : surface.vPeriod();
+                    closing.x[i] += period * std::round((current.x[i] - closing.x[i]) / period);
+                }
+                if (distance(closing.p, current.p) > shortest && fits(current, closing)) {
+                    halves[side].push_back(closing);
+                    closed = side == 0;
+                    break;
+                }
+                if (distance(closing.p, current.p) <= shortest && !halves[side].empty()) {
+                    halves[side].back() = closing;
+                    closed = side == 0;
+                    break;
+                }
+            }
+            if (distance(next.p, current.p) > 1.5 * h || !fits(current, next)) {
+                h *= 0.5;
+                continue;
+            }
+            travelled += distance(next.p, current.p);
+            halves[side].push_back(next);
+            current = next;
+            if (!inside(bounds_, current.p)) break;
+            h = std::min(hMax_, 1.5 * h);
+        }
+    }
+    std::vector<Node> nodes;
+    for (auto it = halves[1].rbegin(); it != halves[1].rend(); ++it) nodes.push_back(it->reversed());
+    nodes.push_back(start);
+    nodes.insert(nodes.end(), halves[0].begin(), halves[0].end());
+    if (nodes.size() < 2) return false;
+    double length = 0.0;
+    for (std::size_t i = 0; i + 1 < nodes.size(); ++i) length += distance(nodes[i].p, nodes[i + 1].p);
+    if (length < 10.0 * shortest) return false;
+    out.tangentCurves.push_back(assemble(nodes, closed));
+    return true;
 }
 
 Node Marcher::singularNode(const Singular &singular, const Node &current) const {
@@ -939,11 +1087,142 @@ SurfaceIntersection parallelCase(const GeneralizedCylinder &ga, const Generalize
 
 }
 
+namespace {
+
+// Finestra dei parametri della superficie che copre il box: un periodo nelle
+// direzioni periodiche, il dominio in quelle limitate, altrimenti i valori
+// dei parametri negli angoli del box (piano: coordinate; cono e cilindri
+// generalizzati: v lineare lungo l'asse).
+void parameterWindow(const Surface &surface, const Box &bounds, Interval &u, Interval &v) {
+    u = surface.uDomain();
+    v = surface.vDomain();
+    if (surface.isUPeriodic()) u = {u.lo, u.lo + surface.uPeriod()};
+    if (surface.isVPeriodic()) v = {v.lo, v.lo + surface.vPeriod()};
+    if (u.isFinite() && v.isFinite()) return;
+    std::vector<Vec3> corners;
+    for (int i = 0; i < 8; ++i)
+        corners.push_back(Vec3(i & 1 ? bounds.hi.x() : bounds.lo.x(), i & 2 ? bounds.hi.y() : bounds.lo.y(), i & 4 ? bounds.hi.z() : bounds.lo.z()));
+    Interval pu{1e300, -1e300}, pv{1e300, -1e300};
+    auto add = [](Interval &range, double value) {
+        range.lo = std::min(range.lo, value);
+        range.hi = std::max(range.hi, value);
+    };
+    for (const Vec3 &c : corners) {
+        if (surface.type() == SurfaceType::Plane) {
+            const Vec3 local = static_cast<const Plane &>(surface).frame().toLocal(c);
+            add(pu, local.x());
+            add(pv, local.y());
+        } else if (surface.type() == SurfaceType::Cone) {
+            const auto &cone = static_cast<const ConicalSurface &>(surface);
+            add(pv, dot(c - cone.frame().origin(), cone.frame().zDir()) / std::cos(cone.semiAngle()));
+        } else {
+            GeneralizedCylinder g;
+            if (!generalizedCylinder(surface, g)) throw std::domain_error("intersectSurfaces: superficie illimitata non gestita");
+            add(pv, dot(c - g.profile->point(g.domain.lo), g.direction));
+        }
+    }
+    const double margin = 1e-3 * std::max(1.0, bounds.diagonal());
+    if (!u.isFinite()) u = {pu.lo - margin, pu.hi + margin};
+    if (!v.isFinite()) v = {pv.lo - margin, pv.hi + margin};
+}
+
+// Semi per qualsiasi coppia di superfici: le pezze di Bezier delle forme
+// NURBS esatte si dividono finche' i box dei poli si toccano e sono piccoli;
+// da ogni coppia rimasta Newton (a norma minima, 3 equazioni e 4 incognite)
+// sulle superfici vere cerca un punto comune. Ogni componente
+// dell'intersezione nel box passa per coppie di pezze i cui box si toccano,
+// quindi riceve un seme, tranne anse piu' piccole delle pezze finali.
+void subdivisionSeeds(const Surface &a, const Surface &b, const Box &bounds, double tolerance, std::vector<Vec3> &seeds) {
+    Interval ua, va, ub, vb;
+    parameterWindow(a, bounds, ua, va);
+    parameterWindow(b, bounds, ub, vb);
+    const std::vector<BSplineSurface> patchesA = toBSplineSurface(a, ua, va).bezierPatches();
+    const std::vector<BSplineSurface> patchesB = toBSplineSurface(b, ub, vb).bezierPatches();
+    const double scale = std::max(bounds.diagonal(), 1e-9);
+    const double leafSize = 0.02 * scale;
+    const Box area = bounds.padded(10.0 * tolerance);
+    std::size_t visits = 0;
+    auto newton = [&](Vec3 pa, Vec3 pb) {
+        SurfaceProjection qa = projectPoint(a, pa), qb = projectPoint(b, pb);
+        double x[4] = {qa.u, qa.v, qb.u, qb.v};
+        for (int iteration = 0; iteration < 40; ++iteration) {
+            Vec3 ea[4], eb[4];
+            a.evaluate(x[0], x[1], 1, ea);
+            b.evaluate(x[2], x[3], 1, eb);
+            const Vec3 f = ea[0] - eb[0];
+            if (norm(f) <= 1e-12 * scale) break;
+            const Vec3 columns[4] = {ea[kU], ea[kV], -eb[kU], -eb[kV]};
+            // Passo a norma minima: dx = -J^T (J J^T)^-1 f.
+            double m[3][3] = {};
+            for (int i = 0; i < 3; ++i)
+                for (int j = 0; j < 3; ++j)
+                    for (int k = 0; k < 4; ++k) m[i][j] += columns[k][i] * columns[k][j];
+            const Vec3 r0(m[0][0], m[0][1], m[0][2]), r1(m[1][0], m[1][1], m[1][2]), r2(m[2][0], m[2][1], m[2][2]);
+            const double det = dot(r0, cross(r1, r2));
+            if (!(std::fabs(det) > 1e-300)) return;
+            const Vec3 rhs = -f;
+            const Vec3 y(dot(rhs, cross(r1, r2)) / det, dot(r0, cross(rhs, r2)) / det, dot(r0, cross(r1, rhs)) / det);
+            for (int k = 0; k < 4; ++k) x[k] += dot(columns[k], y);
+            // Parametri limitati ai domini non periodici.
+            const Interval domains[4] = {a.uDomain(), a.vDomain(), b.uDomain(), b.vDomain()};
+            const bool periodic[4] = {a.isUPeriodic(), a.isVPeriodic(), b.isUPeriodic(), b.isVPeriodic()};
+            for (int k = 0; k < 4; ++k)
+                if (!periodic[k]) x[k] = domains[k].clamp(x[k]);
+        }
+        const Vec3 p = a.point(x[0], x[1]), q = b.point(x[2], x[3]);
+        if (distance(p, q) > 1e-9 * scale || !inside(area, p)) return;
+        for (const Vec3 &known : seeds)
+            if (distance(known, p) <= 1e-3 * leafSize) return;
+        seeds.push_back(p);
+    };
+    std::function<void(const BSplineSurface &, const BSplineSurface &, int)> search = [&](const BSplineSurface &pa, const BSplineSurface &pb,
+                                                                                         int depth) {
+        if (++visits > 400000) throw std::domain_error("intersectSurfaces: suddivisione per i semi troppo profonda");
+        const Box boxA = patchBox(pa), boxB = patchBox(pb);
+        if (!boxA.padded(tolerance).overlaps(boxB) || !boxA.overlaps(area) || !boxB.overlaps(area)) return;
+        const double da = boxA.diagonal(), db = boxB.diagonal();
+        if ((da <= leafSize && db <= leafSize) || depth > 40) {
+            const Interval pua = pa.uDomain(), pva = pa.vDomain(), pub = pb.uDomain(), pvb = pb.vDomain();
+            newton(pa.point(0.5 * (pua.lo + pua.hi), 0.5 * (pva.lo + pva.hi)), pb.point(0.5 * (pub.lo + pub.hi), 0.5 * (pvb.lo + pvb.hi)));
+            return;
+        }
+        const bool splitA = da >= db;
+        const BSplineSurface &patch = splitA ? pa : pb;
+        const double uLength = distance(patch.pole(patch.uPoleCount() - 1, 0), patch.pole(0, 0))
+                             + distance(patch.pole(patch.uPoleCount() - 1, patch.vPoleCount() - 1), patch.pole(0, patch.vPoleCount() - 1));
+        const double vLength = distance(patch.pole(0, patch.vPoleCount() - 1), patch.pole(0, 0))
+                             + distance(patch.pole(patch.uPoleCount() - 1, patch.vPoleCount() - 1), patch.pole(patch.uPoleCount() - 1, 0));
+        const auto [first, second] = splitPatch(patch, uLength >= vLength);
+        if (splitA) {
+            search(first, pb, depth + 1);
+            search(second, pb, depth + 1);
+        } else {
+            search(pa, first, depth + 1);
+            search(pa, second, depth + 1);
+        }
+    };
+    for (const BSplineSurface &pa : patchesA)
+        for (const BSplineSurface &pb : patchesB) search(pa, pb, 0);
+}
+
+}
+
 SurfaceIntersection intersectSurfaces(const Surface &a, const Surface &b, const Box &bounds, const std::vector<Vec3> &seeds,
                                       const SurfaceIntersectionOptions &options) {
     GeneralizedCylinder ga, gb;
-    if (!generalizedCylinder(a, ga) || !generalizedCylinder(b, gb))
-        throw std::domain_error("intersectSurfaces: coppia di superfici non ancora gestita");
+    if (!generalizedCylinder(a, ga) || !generalizedCylinder(b, gb)) {
+        // Coppia qualsiasi: semi dalla suddivisione delle forme NURBS.
+        std::vector<Vec3> all;
+        for (const Vec3 &p : seeds)
+            if (inside(bounds, p)) all.push_back(p);
+        subdivisionSeeds(a, b, bounds, options.tolerance, all);
+        SurfaceIntersection out;
+        Marcher marcher(a, b, bounds, options);
+        for (const Vec3 &seed : all) marcher.traceFrom(seed, out, true);
+        marcher.traceSingularBranches(out);
+        for (const Vec3 &seed : all) marcher.traceFrom(seed, out);
+        return out;
+    }
     const Vec3 normal = cross(ga.direction, gb.direction);
     if (norm(normal) <= 1e-12) return parallelCase(ga, gb, bounds, options.tolerance);
     const Vec3 n = normalized(normal);

@@ -85,6 +85,21 @@ void checkTopology(const Body &body, Report &report) {
 
     for (EdgeId e : body.edges()) {
         const Edge &ed = body.edge(e);
+        // Edge di bordo di una lamina: una sola fin, in una shell non solida.
+        if (ed.forward.valid() != ed.backward.valid()) {
+            const FinId only = ed.forward.valid() ? ed.forward : ed.backward;
+            if (!body.contains(only) || body.fin(only).edge != e || body.fin(only).sense != ed.forward.valid()) {
+                report.add(CheckCode::BadEdge, "edge ", e.index, ": fin di bordo non collegata correttamente");
+                continue;
+            }
+            const Fin &fn = body.fin(only);
+            if (body.contains(fn.loop) && body.contains(body.loop(fn.loop).face)) {
+                const Face &face = body.face(body.loop(fn.loop).face);
+                if (body.contains(face.shell) && body.contains(body.shell(face.shell).region) && body.region(body.shell(face.shell).region).solid)
+                    report.add(CheckCode::BadEdge, "edge ", e.index, ": una sola fin in un solido");
+            }
+            continue;
+        }
         if (!body.contains(ed.forward) || !body.contains(ed.backward) || ed.forward == ed.backward) {
             report.add(CheckCode::BadEdge, "edge ", e.index, ": servono due fin distinte");
             continue;
@@ -144,7 +159,7 @@ void checkTopology(const Body &body, Report &report) {
 
 void checkEuler(const Body &body, Report &report) {
     for (ShellId s : body.shells())
-        if (shellGenus(body, s) < 0)
+        if (body.region(body.shell(s).region).solid && shellGenus(body, s) < 0)
             report.add(CheckCode::EulerViolation, "shell ", s.index, ": la formula di Eulero-Poincare' non torna");
 }
 
@@ -182,6 +197,7 @@ void checkGeometry(const Body &body, Report &report) {
         // La curva deve giacere sulle superfici delle due facce adiacenti.
         const double tolerance = std::max(kLinearResolution, ed.tolerance);
         for (FinId f : {ed.forward, ed.backward}) {
+            if (!f.valid()) continue;  // bordo di una lamina
             const FaceId faceId = body.finFace(f);
             const Face &fc = body.face(faceId);
             if (!fc.surface) continue;  // segnalato sotto

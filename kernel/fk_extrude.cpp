@@ -221,4 +221,77 @@ Body makeExtrusion(const Frame3 &inputFrame, const ProfileRegion &region, double
     return body;
 }
 
+
+Body makeSheetExtrusion(const Frame3 &inputFrame, const std::vector<ProfileLoop> &chains, double height) {
+    if (!(std::fabs(height) > kLinearResolution)) throw std::invalid_argument("makeSheetExtrusion: altezza nulla");
+    const Frame3 frame = height > 0.0 ? inputFrame
+        : Frame3(inputFrame.origin() + height * inputFrame.zDir(), inputFrame.zDir(), inputFrame.xDir());
+    const double h = std::fabs(height);
+    auto at = [&](const Vec2 &p, double z) { return frame.toGlobal(Vec3(p.x(), p.y(), z)); };
+    std::vector<Vec3> vertices;
+    std::vector<Body::BuildEdge> edges;
+    std::vector<Body::BuildFace> faces;
+    for (const ProfileLoop &chain : chains) {
+        const std::size_t n = chain.segments.size();
+        if (n == 0) continue;
+        // Vertici in basso e in alto a ogni estremo di tratto (n + 1).
+        const int base = int(vertices.size());
+        std::vector<double> gaps(n + 1, 0.0);
+        for (std::size_t i = 0; i <= n; ++i) {
+            const Vec2 p = i < n ? chain.segments[i].start() : chain.segments[n - 1].end();
+            if (i > 0 && i < n) gaps[i] = distance(chain.segments[i - 1].end(), p);
+            vertices.push_back(at(p, 0.0));
+            vertices.push_back(at(p, h));
+        }
+        auto bottom = [&](std::size_t i) { return base + 2 * int(i); };
+        auto top = [&](std::size_t i) { return base + 2 * int(i) + 1; };
+        const int verticalBase = int(edges.size());
+        for (std::size_t i = 0; i <= n; ++i) {
+            Body::BuildEdge vertical;
+            vertical.start = bottom(i);
+            vertical.end = top(i);
+            vertical.curve = std::make_shared<Line<3>>(vertices[std::size_t(bottom(i))], frame.zDir());
+            vertical.range = {0.0, h};
+            vertical.tolerance = gaps[i] > kLinearResolution ? 1.01 * gaps[i] : 0.0;
+            edges.push_back(vertical);
+        }
+        for (std::size_t j = 0; j < n; ++j) {
+            const ProfileSegment &segment = chain.segments[j];
+            Body::BuildEdge lower, upper;
+            lower.start = bottom(j);
+            lower.end = bottom(j + 1);
+            lower.curve = embedCurve(segment.curve, frame, 0.0);
+            lower.range = segment.range;
+            upper.start = top(j);
+            upper.end = top(j + 1);
+            upper.curve = embedCurve(segment.curve, frame, h);
+            upper.range = segment.range;
+            lower.tolerance = upper.tolerance = std::max(gaps[j], gaps[j + 1]) > kLinearResolution ? 1.01 * std::max(gaps[j], gaps[j + 1]) : 0.0;
+            const int lowerIndex = int(edges.size());
+            edges.push_back(lower);
+            edges.push_back(upper);
+            // La faccia sta a sinistra: in basso nel verso del tratto, su
+            // alla fine, in alto all'indietro, giu' all'inizio.
+            Face face;
+            assignSideSurface(face, segment, frame);
+            Body::BuildFace built;
+            built.surface = face.surface;
+            built.sense = face.sense;
+            auto fin = [](int edge, bool sense) {
+                Body::BuildFin result;
+                result.edge = edge;
+                result.sense = sense;
+                return result;
+            };
+            built.loops.push_back({fin(lowerIndex, true), fin(verticalBase + int(j) + 1, true), fin(lowerIndex + 1, false),
+                                   fin(verticalBase + int(j), false)});
+            faces.push_back(std::move(built));
+        }
+    }
+    if (faces.empty()) throw std::invalid_argument("makeSheetExtrusion: nessun tratto");
+    Body body = Body::buildSheet(vertices, edges, faces);
+    computePCurves(body);
+    return body;
+}
+
 }

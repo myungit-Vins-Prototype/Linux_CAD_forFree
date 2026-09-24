@@ -83,6 +83,41 @@ CurvePtr<3> embedCurve(const CurvePtr<2> &curve, const Frame3 &frame, double z) 
     throw std::invalid_argument("embedCurve: tipo di curva non supportato");
 }
 
+template <int N>
+CurvePtr<N> translatedCurve(const CurvePtr<N> &curve, const Vec<N> &offset) {
+    if (!curve) throw std::invalid_argument("translatedCurve: curva nulla");
+    switch (curve->type()) {
+    case CurveType::Line: {
+        const auto &line = static_cast<const Line<N> &>(*curve);
+        return std::make_shared<Line<N>>(line.origin() + offset, line.direction());
+    }
+    case CurveType::Circle: {
+        const auto &circle = static_cast<const Circle<N> &>(*curve);
+        return std::make_shared<Circle<N>>(circle.center() + offset, circle.xAxis(), circle.yAxis(), circle.radius());
+    }
+    case CurveType::Ellipse: {
+        const auto &ellipse = static_cast<const Ellipse<N> &>(*curve);
+        return std::make_shared<Ellipse<N>>(ellipse.center() + offset, ellipse.xAxis(), ellipse.yAxis(), ellipse.xRadius(),
+                                            ellipse.yRadius());
+    }
+    case CurveType::BSpline: {
+        const auto &spline = static_cast<const BSplineCurve<N> &>(*curve);
+        std::vector<Vec<N>> poles;
+        for (const Vec<N> &pole : spline.poles()) poles.push_back(pole + offset);
+        return std::make_shared<BSplineCurve<N>>(spline.degree(), spline.knots(), std::move(poles), spline.weights());
+    }
+    case CurveType::Trimmed: {
+        const auto &trimmed = static_cast<const TrimmedCurve<N> &>(*curve);
+        return std::make_shared<TrimmedCurve<N>>(translatedCurve<N>(trimmed.basis(), offset), trimmed.domain().lo, trimmed.domain().hi);
+    }
+    default:
+        break;
+    }
+    throw std::invalid_argument("translatedCurve: tipo di curva non supportato");
+}
+
+template CurvePtr<2> translatedCurve<2>(const CurvePtr<2> &, const Vec2 &);
+template CurvePtr<3> translatedCurve<3>(const CurvePtr<3> &, const Vec3 &);
 template CurvePtr<2> reversedCurve<2>(const CurvePtr<2> &);
 template CurvePtr<3> reversedCurve<3>(const CurvePtr<3> &);
 

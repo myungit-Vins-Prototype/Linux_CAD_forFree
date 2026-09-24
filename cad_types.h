@@ -8,7 +8,17 @@
 #include <QVector>
 #include <QVector3D>
 
+#include <memory>
+
 #include <TopoDS_Shape.hxx>
+
+namespace ForgeCad::Kernel {
+class Body;
+}
+namespace ForgeCad {
+// B-rep del kernel proprio (kernel/), immutabile e condiviso tra le istantanee dell'Undo.
+using ForgeBody = std::shared_ptr<const Kernel::Body>;
+}
 
 // Precisione: tutte le coordinate del modello sono in double (QPointF usa
 // qreal = double). I float (QVector3D) servono solo per la visualizzazione.
@@ -63,6 +73,10 @@ struct SketchObject {
 
 enum class BooleanOperation { Union = 0, Intersection = 1, Difference = 2 };
 
+// Kernel geometrico con cui si costruiscono i corpi (menu Opzioni): OpenCASCADE
+// o il kernel proprio di ForgeCAD (kernel/).
+enum class GeometryKernel { OpenCascade = 0, Forge = 1 };
+
 // Approssimazione della forma esatta usata SOLO per il disegno a schermo.
 struct BodyDisplay {
     QVector<QVector3D> vertices;   // tre vertici per triangolo
@@ -75,7 +89,8 @@ struct BodyDisplay {
 //  - estrusione (operation = -1): profili chiusi dello schizzo `sketchIndex`
 //    estrusi di `distance` lungo la normale del piano;
 //  - booleana: `operation` tra i corpi `firstBody` e `secondBody`.
-// `shape` e' il B-rep esatto (OpenCASCADE) rigenerato dalla definizione.
+// Il B-rep esatto rigenerato dalla definizione e' `shape` (OpenCASCADE) o
+// `forgeBody` (kernel proprio), secondo `kernel`; l'altro resta vuoto.
 struct ExtrusionObject {
     QString name;
     int sketchIndex = -1;
@@ -87,6 +102,8 @@ struct ExtrusionObject {
     int firstBody = -1;
     int secondBody = -1;
     TopoDS_Shape shape;
+    ForgeCad::ForgeBody forgeBody;
+    GeometryKernel kernel = GeometryKernel::OpenCascade;
     QString error;
     BodyDisplay display;
 };

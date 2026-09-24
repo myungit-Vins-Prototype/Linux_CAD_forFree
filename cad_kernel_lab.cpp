@@ -29,6 +29,7 @@
 #include <chrono>
 #include <cmath>
 
+#include "cad_forge.h"
 #include "cad_kernel.h"
 #include "fk_body_check.h"
 #include "fk_boolean.h"
@@ -114,108 +115,6 @@ double timeAverage(const Work &work) {
         ++repetitions;
     } while (repetitions < kTimingRepetitions && std::chrono::steady_clock::now() - start < kTimingBudget);
     return std::chrono::duration<double, std::micro>(std::chrono::steady_clock::now() - start).count() / repetitions;
-}
-
-Vec2 toVec(const QPointF &point) { return Vec2(point.x(), point.y()); }
-
-ProfileSegment lineSegment(const Vec2 &a, const Vec2 &b) {
-    return {std::make_shared<Line<2>>(a, b - a), {0.0, distance(a, b)}};
-}
-
-// Stessa geometria esatta di ForgeCad::curveGeometry (cad_curve_solver.cpp),
-// ma con le curve del nuovo kernel.
-std::vector<ProfileSegment> sketchSegments(const SketchObject &sketch) {
-    constexpr double confusion = 1.0e-7;  // Precision::Confusion()
-    std::vector<ProfileSegment> result;
-    for (const SketchSegment &segment : sketch.segments) {
-        const Vec2 a = toVec(segment.first), b = toVec(segment.second);
-        if (distance(a, b) > confusion) result.push_back(lineSegment(a, b));
-    }
-    for (const CurveObject &curve : sketch.curves) {
-        const int count = curve.controlPoints.size();
-        switch (curve.tool) {
-        case DrawingTool::Spline: {
-            // Bezier cubiche C1 a tratti come B-spline di grado 3 (nodi interni tripli).
-            if (count < 2 || curve.tangentHandles.size() != count) break;
-            std::vector<Vec2> poles;
-            for (int i = 0; i < count; ++i) {
-                if (i > 0) poles.push_back(toVec(curve.tangentHandles.at(i).first));
-                poles.push_back(toVec(curve.controlPoints.at(i)));
-                if (i + 1 < count) poles.push_back(toVec(curve.tangentHandles.at(i).second));
-            }
-            std::vector<double> knots;
-            std::vector<int> multiplicities;
-            for (int i = 0; i < count; ++i) {
-                knots.push_back(double(i));
-                multiplicities.push_back(i == 0 || i == count - 1 ? 4 : 3);
-            }
-            auto spline = std::make_shared<BSplineCurve<2>>(3, expandKnots(knots, multiplicities), std::move(poles));
-            result.push_back({spline, spline->domain()});
-            break;
-        }
-        case DrawingTool::Nurbs: {
-            if (count < 2) break;
-            const int degree = std::min(3, count - 1);
-            std::vector<Vec2> poles;
-            std::vector<double> weights;
-            bool validWeights = true;
-            for (int i = 0; i < count; ++i) {
-                poles.push_back(toVec(curve.controlPoints.at(i)));
-                const double weight = curve.weights.size() == count ? curve.weights.at(i) : 1.0;
-                validWeights &= weight > 0.0;
-                weights.push_back(weight);
-            }
-            if (!validWeights) break;
-            const int spans = count - degree;
-            std::vector<double> knots;
-            std::vector<int> multiplicities;
-            for (int i = 0; i <= spans; ++i) {
-                knots.push_back(double(i) / spans);
-                multiplicities.push_back(i == 0 || i == spans ? degree + 1 : 1);
-            }
-            auto nurbs = std::make_shared<BSplineCurve<2>>(degree, expandKnots(knots, multiplicities), std::move(poles), std::move(weights));
-            result.push_back({nurbs, nurbs->domain()});
-            break;
-        }
-        case DrawingTool::Circle: {
-            if (count < 2) break;
-            const double radius = distance(toVec(curve.controlPoints.at(0)), toVec(curve.controlPoints.at(1)));
-            if (radius <= confusion) break;
-            result.push_back({std::make_shared<Circle<2>>(makeCircle(toVec(curve.controlPoints.at(0)), radius)), {0.0, kTwoPi}});
-            break;
-        }
-        case DrawingTool::Arc: {
-            if (count < 3) break;
-            const Vec2 center = toVec(curve.controlPoints.at(0)), start = toVec(curve.controlPoints.at(1)),
-                       end = toVec(curve.controlPoints.at(2));
-            const double radius = distance(center, start);
-            if (radius <= confusion || distance(center, end) <= confusion) break;
-            const double startAngle = std::atan2(start.y() - center.y(), start.x() - center.x());
-            double endAngle = std::atan2(end.y() - center.y(), end.x() - center.x());
-            while (endAngle <= startAngle + 1.0e-12) endAngle += kTwoPi;  // Precision::Angular()
-            result.push_back({std::make_shared<Circle<2>>(makeCircle(center, radius)), {startAngle, endAngle}});
-            break;
-        }
-        case DrawingTool::Polygon: {
-            if (count < 2 || curve.sides < 3) break;
-            const Vec2 center = toVec(curve.controlPoints.at(0)), vertex = toVec(curve.controlPoints.at(1));
-            const double radius = distance(center, vertex);
-            if (radius <= confusion) break;
-            const double startAngle = std::atan2(vertex.y() - center.y(), vertex.x() - center.x());
-            std::vector<Vec2> corners;
-            for (int side = 0; side < curve.sides; ++side) {
-                const double angle = startAngle + kTwoPi * side / curve.sides;
-                corners.push_back(side == 0 ? vertex : center + Vec2(radius * std::cos(angle), radius * std::sin(angle)));
-            }
-            for (int side = 0; side < curve.sides; ++side)
-                result.push_back(lineSegment(corners[side], corners[(side + 1) % curve.sides]));
-            break;
-        }
-        default:
-            break;
-        }
-    }
-    return result;
 }
 
 // Lunghezza degli spigoli OCCT escluse le cuciture delle facce periodiche.
@@ -451,7 +350,7 @@ KernelLabProbe KernelLab::probe(double x, double y, double z) const {
 
 QString KernelLab::compareSketchExtrusion(const SketchObject &sketch, double distance, const TopoDS_Shape &occtShape) {
     impl_->build(KernelLabShape::None);
-    const Profile profile = buildProfile(sketchSegments(sketch), kSketchConnectionTolerance);
+    const Profile profile = buildProfile(forgeSketchSegments(sketch), kSketchConnectionTolerance);
     if (profile.regions.empty())
         return QStringLiteral("Lo schizzo non ha contorni chiusi: il nuovo kernel non estrude ancora profili aperti.");
 
@@ -540,15 +439,6 @@ QString KernelLab::compareSketchExtrusion(const SketchObject &sketch, double dis
 
 namespace {
 
-// Sistema del piano di schizzo e altezza con segno lungo la sua normale.
-void sketchFrame(const SketchObject &sketch, double distance, Frame3 &frame, double &height) {
-    const gp_Ax3 axes = sketchAxes(sketch.plane);
-    auto fromDir = [](const gp_Dir &d) { return Vec3(d.X(), d.Y(), d.Z()); };
-    frame = Frame3(Vec3(axes.Location().X(), axes.Location().Y(), axes.Location().Z()), fromDir(axes.Direction()),
-                   fromDir(axes.XDirection()));
-    height = extrusionVector(sketch.plane, distance).Dot(gp_Vec(axes.Direction()));
-}
-
 // Corpo del documento col nuovo kernel (lancia std::exception se non riesce).
 Body documentBody(const QVector<SketchObject> &sketches, const QVector<ExtrusionObject> &bodies, int index, int depth) {
     if (index < 0 || index >= bodies.size() || depth > 64) throw std::invalid_argument("riferimento a un corpo inesistente");
@@ -560,11 +450,11 @@ Body documentBody(const QVector<SketchObject> &sketches, const QVector<Extrusion
     }
     if (object.sketchIndex < 0 || object.sketchIndex >= sketches.size()) throw std::invalid_argument("schizzo inesistente");
     const SketchObject &sketch = sketches.at(object.sketchIndex);
-    const Profile profile = buildProfile(sketchSegments(sketch), kSketchConnectionTolerance);
+    const Profile profile = buildProfile(forgeSketchSegments(sketch), kSketchConnectionTolerance);
     if (profile.regions.empty()) throw std::invalid_argument("lo schizzo non ha contorni chiusi");
     Frame3 frame;
     double height;
-    sketchFrame(sketch, object.distance, frame, height);
+    forgeSketchFrame(sketch, object.distance, frame, height);
     // Piu' regioni: unione (disgiunta) dei loro prismi.
     Body result = makeExtrusion(frame, profile.regions.front(), height);
     for (std::size_t i = 1; i < profile.regions.size(); ++i)

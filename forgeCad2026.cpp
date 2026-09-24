@@ -36,6 +36,8 @@ int main(int argc, char **argv) {
     requestCompatibilityContext();
     QCoreApplication::setAttribute(Qt::AA_UseDesktopOpenGL);
     QApplication application(argc, argv);
+    QCoreApplication::setOrganizationName(QStringLiteral("ForgeCAD"));
+    QCoreApplication::setApplicationName(QStringLiteral("ForgeCAD"));
     PdfWindow window;
     window.show();
     return application.exec();

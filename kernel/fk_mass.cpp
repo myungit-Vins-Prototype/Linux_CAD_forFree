@@ -37,6 +37,76 @@ struct Sample {
     Vec2 uv;
 };
 
+// Superficie con i parametri scambiati: S'(u, v) = S(v, u). Serve ai loop
+// avvolti nella direzione v del toro, che diventano avvolti in u (il caso
+// gestito dalle fasce). Scambiare i parametri inverte la normale Su x Sv.
+class SwappedSurface final : public Surface {
+public:
+    explicit SwappedSurface(SurfacePtr base) : base_(std::move(base)) {}
+    SurfaceType type() const override { return base_->type(); }
+    Interval uDomain() const override { return base_->vDomain(); }
+    Interval vDomain() const override { return base_->uDomain(); }
+    bool isUPeriodic() const override { return base_->isVPeriodic(); }
+    bool isVPeriodic() const override { return base_->isUPeriodic(); }
+    double uPeriod() const override { return base_->vPeriod(); }
+    double vPeriod() const override { return base_->uPeriod(); }
+    void evaluate(double u, double v, int order, Vec3 *out) const override {
+        std::vector<Vec3> swapped(std::size_t((order + 1) * (order + 1)));
+        base_->evaluate(v, u, order, swapped.data());
+        for (int k = 0; k <= order; ++k)
+            for (int l = 0; l <= order; ++l) out[derivativeIndex(k, l, order)] = swapped[std::size_t(derivativeIndex(l, k, order))];
+    }
+    std::vector<double> uBreakpoints(const Interval &range) const override { return base_->vBreakpoints(range); }
+    std::vector<double> vBreakpoints(const Interval &range) const override { return base_->uBreakpoints(range); }
+
+private:
+    SurfacePtr base_;
+};
+
+// SP-curve con le coordinate scambiate (per SwappedSurface).
+class SwappedCurve final : public Curve<2> {
+public:
+    explicit SwappedCurve(CurvePtr<2> base) : base_(std::move(base)) {}
+    CurveType type() const override { return base_->type(); }
+    Interval domain() const override { return base_->domain(); }
+    bool isPeriodic() const override { return base_->isPeriodic(); }
+    double period() const override { return base_->period(); }
+    void evaluate(double t, int order, Vec2 *out) const override {
+        base_->evaluate(t, order, out);
+        for (int k = 0; k <= order; ++k) out[k] = Vec2(out[k][1], out[k][0]);
+    }
+    void evaluateLeft(double t, int order, Vec2 *out) const override {
+        base_->evaluateLeft(t, order, out);
+        for (int k = 0; k <= order; ++k) out[k] = Vec2(out[k][1], out[k][0]);
+    }
+    std::vector<double> breakpoints(const Interval &range) const override { return base_->breakpoints(range); }
+
+private:
+    CurvePtr<2> base_;
+};
+
+// I loop della faccia avanzano di un periodo in v ma non in u (su una
+// superficie periodica in entrambe le direzioni)?
+bool wrapsOnlyInV(const Body &body, const Face &face) {
+    const Surface &surface = *face.surface;
+    if (!surface.isVPeriodic()) return false;
+    bool inV = false;
+    for (LoopId l : face.loops) {
+        Vec2 travelled;
+        for (FinId f : body.loopFins(l)) {
+            const Fin &fin = body.fin(f);
+            if (!fin.pcurve) return false;
+            const Edge &edge = body.edge(fin.edge);
+            const Vec2 a = fin.pcurve->point(fin.sense ? edge.range.lo : edge.range.hi);
+            const Vec2 b = fin.pcurve->point(fin.sense ? edge.range.hi : edge.range.lo);
+            travelled += b - a;
+        }
+        if (surface.isUPeriodic() && std::fabs(travelled[0]) > 0.5 * surface.uPeriod()) return false;
+        inV = inV || std::fabs(travelled[1]) > 0.5 * surface.vPeriod();
+    }
+    return inV;
+}
+
 // Una fin con la sua immagine nello spazio (u, v), con i parametri periodici
 // "srotolati" in modo continuo lungo il loop: l'SP-curve esatta della fin
 // traslata di `shift` (periodi interi) o, se manca, campioni ottenuti
@@ -73,6 +143,8 @@ private:
     bool degenerateAt(double v) const;
 
     const Surface *surface_;
+    SurfacePtr swapped_;  // superficie con i parametri scambiati, se serve
+    const Surface *base_ = nullptr;  // la superficie vera (per proiezione e inversione)
     bool sense_;
     Vec3 reference_;
     double scale_, tolerance_;
@@ -85,7 +157,16 @@ FaceIntegrator::FaceIntegrator(const Body &body, FaceId faceId, const Vec3 &refe
     const Face &face = body.face(faceId);
     if (!face.surface) throw std::invalid_argument("massProperties: faccia senza superficie");
     surface_ = face.surface.get();
+    base_ = surface_;
     sense_ = face.sense;
+    const bool swap = wrapsOnlyInV(body, face);
+    if (swap) {
+        // Nel piano (u', v') scambiato i loop girano al contrario: il verso
+        // del dominio si inverte; la normale fisica resta quella di S (vedi integrand).
+        swapped_ = std::make_shared<SwappedSurface>(face.surface);
+        surface_ = swapped_.get();
+        sense_ = !sense_;
+    }
 
     bool first = true;
     Vec2 previous;  // ultimo campione: i loop successivi si srotolano vicino a questo
@@ -103,7 +184,8 @@ FaceIntegrator::FaceIntegrator(const Body &body, FaceId faceId, const Vec3 &refe
             track.sense = fin.sense;
             track.acceptance = 10.0 * std::max(edge.tolerance, kLinearResolution) + 1e-9 * scale_;
 
-            if (fin.pcurve && fin.pcurveTolerance <= kMassPCurveTolerance) {
+            const CurvePtr<2> pcurve = fin.pcurve && swap ? std::make_shared<SwappedCurve>(fin.pcurve) : fin.pcurve;
+            if (pcurve && fin.pcurveTolerance <= kMassPCurveTolerance) {
                 // SP-curve esatta, o approssimata molto da vicino (curve
                 // d'intersezione tracciate): niente inversione, solo lo
                 // srotolamento. Un edge che sta sulla superficie solo entro la
@@ -111,8 +193,8 @@ FaceIntegrator::FaceIntegrator(const Body &body, FaceId faceId, const Vec3 &refe
                 // livello, e la quadratura non convergerebbe.
                 const double tStart = fin.sense ? edge.range.lo : edge.range.hi;
                 const double tEnd = fin.sense ? edge.range.hi : edge.range.lo;
-                const Vec2 startUV = fin.pcurve->point(tStart);
-                track.pcurve = fin.pcurve;
+                const Vec2 startUV = pcurve->point(tStart);
+                track.pcurve = pcurve;
                 if (first) {
                     v0_ = startUV[1];
                     first = false;
@@ -121,7 +203,7 @@ FaceIntegrator::FaceIntegrator(const Body &body, FaceId faceId, const Vec3 &refe
                     unwrap(shifted, previous);
                     track.shift = shifted - startUV;
                 }
-                previous = fin.pcurve->point(tEnd) + track.shift;
+                previous = pcurve->point(tEnd) + track.shift;
                 tracks.push_back(std::move(track));
                 continue;
             }
@@ -139,8 +221,8 @@ FaceIntegrator::FaceIntegrator(const Body &body, FaceId faceId, const Vec3 &refe
                 const Vec3 p = edge.curve->point(t);
                 Sample sample{t, Vec2()};
                 if (first) {
-                    const SurfaceProjection projection = projectPoint(*surface_, p);
-                    sample.uv = Vec2(projection.u, projection.v);
+                    const SurfaceProjection projection = projectPoint(*base_, p);
+                    sample.uv = swapped_ ? Vec2(projection.v, projection.u) : Vec2(projection.u, projection.v);
                     v0_ = projection.v;
                     first = false;
                 } else {
@@ -166,7 +248,8 @@ FaceEvaluation FaceIntegrator::integrand(double u, double v) const {
     Vec3 d[4];
     surface_->evaluate(u, v, 1, d);
     const Vec3 &su = d[Surface::derivativeIndex(1, 0, 1)], &sv = d[Surface::derivativeIndex(0, 1, 1)];
-    const Vec3 n = cross(su, sv);
+    // Con i parametri scambiati Su' x Sv' = -N: si usa la normale di S.
+    const Vec3 n = swapped_ ? cross(sv, su) : cross(su, sv);
     const Vec3 x = d[0] - reference_;
     const double w = dot(x, n);
     const double area = norm(n), r = norm(x), m1 = r * area, m2 = r * m1, m3 = r * m2;
@@ -219,9 +302,11 @@ void FaceIntegrator::unwrap(Vec2 &uv, const Vec2 &guess) const {
 }
 
 Vec2 FaceIntegrator::invert(const Vec3 &p, const Vec2 &guess, double acceptance) const {
-    Vec2 uv = guess;
-    if (!invertPoint(*surface_, p, uv, std::max(acceptance, 1e-4 * scale_), scale_))
+    // Proiezione e inversione sulla superficie vera (i parametri scambiati si rigirano).
+    Vec2 uv = swapped_ ? Vec2(guess[1], guess[0]) : guess;
+    if (!invertPoint(*base_, p, uv, std::max(acceptance, 1e-4 * scale_), scale_))
         throw std::domain_error("massProperties: un edge non sta sulla superficie della sua faccia");
+    if (swapped_) uv = Vec2(uv[1], uv[0]);
     unwrap(uv, guess);
     return uv;
 }
@@ -440,6 +525,7 @@ void referenceFrame(const Body &body, Vec3 &reference, double &scale) {
 }
 
 MassProperties massProperties(const Body &body, double relativeTolerance) {
+    if (body.isSheet()) throw std::domain_error("massProperties: una lamina non ha volume (usare faceArea)");
     Vec3 reference;
     double scale;
     referenceFrame(body, reference, scale);

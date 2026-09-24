@@ -37,6 +37,13 @@ SurfaceProjection projectPoint(const Surface &surface, const Vec3 &p);
 // il criterio di arresto. Falso se il punto dista piu' di `tolerance`.
 bool invertPoint(const Surface &surface, const Vec3 &p, Vec2 &uv, double tolerance, double scale);
 
+// Le due superfici sono lo stesso insieme di punti (entro `tolerance`), con
+// parametrizzazioni anche diverse: piani coincidenti, cilindri coassiali
+// dello stesso raggio, sfere, coni e tori uguali, superfici estruse in
+// direzioni parallele dalla stessa curva (la curva base di ciascuna sta
+// sull'altra). Per le altre superfici solo se sono lo stesso oggetto.
+bool sameSurface(const Surface &a, const Surface &b, double tolerance);
+
 }
 
 #endif

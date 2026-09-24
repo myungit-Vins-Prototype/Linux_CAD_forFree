@@ -34,7 +34,8 @@ struct ProfileRegion {
 
 struct Profile {
     std::vector<ProfileRegion> regions;
-    int openChains = 0;  // catene di tratti che non si chiudono (escluse)
+    int openChains = 0;  // catene di tratti che non si chiudono (escluse dalle regioni)
+    std::vector<ProfileLoop> chains;  // le catene aperte, tratti in ordine (per le lamine)
 };
 
 // Concatena i tratti per estremi coincidenti entro `tolerance` (ciascuno puo'

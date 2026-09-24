@@ -158,8 +158,17 @@ public:
     VertexId finEnd(FinId f) const { return fin(fin(f).next).vertex; }
     FinId otherFin(FinId f) const;
     FaceId finFace(FinId f) const { return loop(fin(f).loop).face; }
-    VertexId edgeStart(EdgeId e) const { return fin(edge(e).forward).vertex; }
-    VertexId edgeEnd(EdgeId e) const { return fin(edge(e).backward).vertex; }
+    // Estremi dell'edge (anche per gli edge di bordo delle lamine, con una fin sola).
+    VertexId edgeStart(EdgeId e) const {
+        const Edge &ed = edge(e);
+        return ed.forward.valid() ? fin(ed.forward).vertex : finEnd(ed.backward);
+    }
+    VertexId edgeEnd(EdgeId e) const {
+        const Edge &ed = edge(e);
+        return ed.backward.valid() ? fin(ed.backward).vertex : finEnd(ed.forward);
+    }
+    // Edge di bordo di una lamina: una sola fin.
+    bool isLaminar(EdgeId e) const { return !edge(e).forward.valid() || !edge(e).backward.valid(); }
     // Fin del loop nell'ordine del ciclo, a partire da loop.first.
     std::vector<FinId> loopFins(LoopId l) const;
     // Prima fin del loop che parte da v (non valida se non c'e').
@@ -188,7 +197,7 @@ public:
     struct BuildFace {
         SurfacePtr surface;
         bool sense = true;
-        std::vector<std::vector<BuildFin>> loops;  // ogni loop: fin nell'ordine del ciclo
+        std::vector<std::vector<BuildFin>> loops;  // ogni loop: fin nell'ordine del ciclo; nessuno: faccia senza bordo
     };
     // Body con una region solida; le shell sono le componenti connesse delle
     // facce (attraverso gli edge). Ogni edge deve essere usato da esattamente
@@ -196,6 +205,13 @@ public:
     // sono quelle date nelle BuildFin (le mancanti: vedi computePCurves).
     static Body build(const std::vector<Vec3> &vertices, const std::vector<BuildEdge> &edges,
                       const std::vector<BuildFace> &faces);
+    // Lamina (sheet body di Parasolid): superfici aperte senza volume, in una
+    // region non solida. Gli edge interni hanno due fin di verso opposto,
+    // quelli di bordo ("laminari") una sola.
+    static Body buildSheet(const std::vector<Vec3> &vertices, const std::vector<BuildEdge> &edges,
+                           const std::vector<BuildFace> &faces);
+    // Il body e' fatto di lamine (nessuna region solida).
+    bool isSheet() const;
 
     // --- Operatori di Eulero (Mantyla, "An Introduction to Solid Modeling") ---
     // Ognuno lascia il body topologicamente valido e ha la sua inversa.
@@ -271,6 +287,8 @@ public:
     void jekv(EdgeId secondHalf);
 
 private:
+    static Body buildShells(const std::vector<Vec3> &vertices, const std::vector<BuildEdge> &edges,
+                            const std::vector<BuildFace> &faces, bool sheet);
     VertexId newVertex(const Vec3 &point);
     EdgeId newEdge();
     FinId newFin(LoopId loop, EdgeId edge, VertexId vertex, bool sense);

@@ -118,6 +118,9 @@ FK_TEST(UnifyCylinders) {
     compareUnified(block, cylinder(at(14, 6, 0), 3, 6), BooleanOperation::Unite);  // stessa altezza del blocco
     const Solid crossed = cylinder(Frame3(Vec3(-2, 6, 3), Vec3(1, 0, 0), Vec3(0, 1, 0)), 2, 24);
     compareUnified(block, crossed, BooleanOperation::Subtract);
+    // Cilindri coassiali dello stesso raggio: un solo fianco.
+    compareAllUnified(cylinder(at(0, 0, 0), 5, 10), cylinder(at(0, 0, 6), 5, 10));
+    compareUnified(cylinder(at(0, 0, 0), 5, 10), cylinder(Frame3(Vec3(0, 0, 10), Vec3(0, 0, 1), Vec3(0, 1, 0)), 5, 4), BooleanOperation::Unite);
 }
 
 // La fusione da sola su un corpo gia' minimo non cambia nulla.

@@ -208,6 +208,25 @@ int Body::finsAt(VertexId v) const {
 // --- Costruzione diretta -----------------------------------------------------
 
 Body Body::build(const std::vector<Vec3> &points, const std::vector<BuildEdge> &edgeSpecs, const std::vector<BuildFace> &faceSpecs) {
+    return buildShells(points, edgeSpecs, faceSpecs, false);
+}
+
+Body Body::buildSheet(const std::vector<Vec3> &points, const std::vector<BuildEdge> &edgeSpecs, const std::vector<BuildFace> &faceSpecs) {
+    return buildShells(points, edgeSpecs, faceSpecs, true);
+}
+
+bool Body::isSheet() const {
+    bool any = false;
+    for (RegionId r : regions()) {
+        if (r == exteriorRegion()) continue;
+        if (region(r).solid) return false;
+        any = any || !region(r).shells.empty();
+    }
+    return any;
+}
+
+Body Body::buildShells(const std::vector<Vec3> &points, const std::vector<BuildEdge> &edgeSpecs, const std::vector<BuildFace> &faceSpecs,
+                       bool sheet) {
     // Shell: componenti connesse delle facce (union-find sugli edge).
     std::vector<int> parent(faceSpecs.size());
     for (std::size_t i = 0; i < parent.size(); ++i) parent[i] = int(i);
@@ -224,12 +243,14 @@ Body Body::build(const std::vector<Vec3> &points, const std::vector<BuildEdge> &
                 if (firstFace[finSpec.edge] < 0) firstFace[finSpec.edge] = int(f);
                 else parent[root(int(f))] = root(firstFace[finSpec.edge]);
             }
-    for (std::size_t e = 0; e < edgeSpecs.size(); ++e)
-        if (forwardCount[e] != 1 || backwardCount[e] != 1)
+    for (std::size_t e = 0; e < edgeSpecs.size(); ++e) {
+        const bool laminar = sheet && forwardCount[e] + backwardCount[e] == 1;
+        if (!laminar && (forwardCount[e] != 1 || backwardCount[e] != 1))
             throw std::invalid_argument("Body::build: l'edge " + std::to_string(e) + " non ha due fin opposte");
+    }
 
     Body body;
-    const RegionId region = body.newRegion(true);
+    const RegionId region = body.newRegion(!sheet);
     std::vector<ShellId> shellOf(faceSpecs.size());
     std::vector<int> shellIndex(faceSpecs.size(), -1);
     for (std::size_t f = 0; f < faceSpecs.size(); ++f) {
@@ -251,6 +272,16 @@ Body Body::build(const std::vector<Vec3> &points, const std::vector<BuildEdge> &
         const FaceId face = body.newFace(shellOf[f]);
         body.face(face).surface = faceSpecs[f].surface;
         body.face(face).sense = faceSpecs[f].sense;
+        if (faceSpecs[f].loops.empty()) {
+            // Faccia senza bordo (sfera o toro interi): un loop fatto di un
+            // vertice isolato su un punto della superficie.
+            if (!faceSpecs[f].surface) throw std::invalid_argument("Body::build: faccia senza bordo e senza superficie");
+            const Surface &surface = *faceSpecs[f].surface;
+            const Interval u = surface.uDomain(), v = surface.vDomain();
+            const LoopId l = body.newLoop(face);
+            body.loop(l).isolatedVertex = body.newVertex(surface.point(u.isFinite() ? u.lo : 0.0, v.isFinite() ? 0.5 * (v.lo + v.hi) : 0.0));
+            continue;
+        }
         for (const auto &loopSpec : faceSpecs[f].loops) {
             const LoopId l = body.newLoop(face);
             FinId first, previous;

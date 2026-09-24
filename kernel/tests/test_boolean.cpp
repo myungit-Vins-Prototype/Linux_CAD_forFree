@@ -5,6 +5,8 @@
 #include <BRepPrimAPI_MakeBox.hxx>
 #include <BRepPrimAPI_MakeCylinder.hxx>
 #include <BRepPrimAPI_MakePrism.hxx>
+#include <BRepPrimAPI_MakeRevol.hxx>
+#include <gp_Ax1.hxx>
 #include <GProp_GProps.hxx>
 #include <BRepMesh_IncrementalMesh.hxx>
 #include <BRep_Tool.hxx>
@@ -14,6 +16,7 @@
 #include "fk_body_check.h"
 #include "fk_boolean.h"
 #include "fk_extrude.h"
+#include "fk_revolve.h"
 #include "fk_marching.h"
 #include "fk_mass.h"
 #include "fk_primitives.h"
@@ -298,11 +301,70 @@ FK_TEST(BooleanCurvedExtrusions) {
 }
 
 // Coppie non ancora gestite: errore esplicito, non un risultato sbagliato.
-FK_TEST(BooleanUnsupportedCases) {
-    // Stesso cilindro spostato lungo l'asse: fianchi coincidenti.
-    const Body a = makeCylinder(Frame3(), 5, 20);
-    FK_CHECK_THROWS(booleanOperation(a, makeCylinder(Frame3(Vec3(0, 0, 10), Vec3(0, 0, 1), Vec3(1, 0, 0)), 5, 20),
-                                     BooleanOperation::Unite));
+namespace {
+
+// Solido di rivoluzione del profilo (piano XZ di frame, asse Z) e il suo gemello OCCT.
+Operand revolved(const Frame3 &frame, const std::vector<ProfileSegment> &segments) {
+    const ProfileRegion region = buildProfile(segments, 1e-9).regions.front();
+    const Frame3 profilePlane(frame.origin(), -frame.yDir(), frame.xDir());
+    return {makeRevolution(frame, region),
+            BRepPrimAPI_MakeRevol(occtFace(region, profilePlane), gp_Ax1(toPnt(frame.origin()), toDir(frame.zDir()))).Shape()};
+}
+
+}
+
+// Sfere, coni e tori (solidi di rivoluzione) contro blocchi e cilindri:
+// piani e cilindri con superfici di ogni tipo (semi dalla suddivisione).
+FK_TEST(BooleanRevolvedSolids) {
+    const Frame3 frame(Vec3(1, -2, 3), Vec3(0.2, 0.1, 1), Vec3(1, 0, 0));
+    auto local = [&](double x, double y, double z) { return frame.toGlobal(Vec3(x, y, z)); };
+    const Operand sphere = revolved(frame, {arcSegment(Vec2(0, 0), 4.0, -kHalfPi, kHalfPi), lineSegment(Vec2(0, 4), Vec2(0, -4))});
+    const Operand block = box(Frame3(local(1, -6, -6), frame.zDir(), frame.xDir()), 10, 12, 12);
+    compareAll(sphere, block);
+    const Operand hole = cylinder(Frame3(local(0.5, 0.3, -8), frame.zDir(), frame.xDir()), 1.5, 16);
+    compareAll(sphere, hole);
+    const Operand cone = revolved(frame, {lineSegment(Vec2(0, -3), Vec2(4, -3)), lineSegment(Vec2(4, -3), Vec2(0, 5)), lineSegment(Vec2(0, 5), Vec2(0, -3))});
+    compareAll(cone, block);
+    const Operand torus = revolved(frame, {arcSegment(Vec2(5, 0), 1.5, 0.0, kTwoPi)});
+    compareAll(torus, block);
+    compareAll(torus, cylinder(Frame3(local(-8, 5, 0.3), frame.xDir(), frame.yDir()), 1.0, 16));
+}
+
+// Superfici non piane coincidenti: cilindri coassiali dello stesso raggio
+// (sovrapposti, impilati, uno dentro l'altro, con parametrizzazioni
+// diverse), un foro riempito da un perno dello stesso raggio, fianchi estrusi
+// dalla stessa spline chiusa.
+FK_TEST(BooleanCoincidentSurfaces) {
+    const Frame3 frame(Vec3(1, -2, 3), Vec3(0.2, 0.1, 1), Vec3(1, 0, 0));
+    auto at = [&](double x, double y, double z) { return Frame3(frame.toGlobal(Vec3(x, y, z)), frame.zDir(), frame.xDir()); };
+    const Operand a = cylinder(at(0, 0, 0), 5, 20);
+    compareAll(a, cylinder(at(0, 0, 10), 5, 20));   // sovrapposti
+    compareAll(a, cylinder(at(0, 0, 20), 5, 10));   // impilati: si toccano nel cerchio
+    compareAll(a, cylinder(at(0, 0, 5), 5, 10));    // uno dentro l'altro, stesso fianco
+    compareAll(a, cylinder(at(0, 0, -5), 5, 30));   // l'altro sporge dalle due parti
+    compareAll(a, cylinder(at(0, 0, 0), 5, 20));    // identici
+    compareAll(a, cylinder(Frame3(frame.toGlobal(Vec3(0, 0, 8)), frame.zDir(), frame.yDir()), 5, 20));  // u spostato
+    compareAll(a, cylinder(Frame3(frame.toGlobal(Vec3(0, 0, 25)), -frame.zDir(), frame.xDir()), 5, 15));  // asse opposto
+
+    // Foro e perno dello stesso raggio.
+    const Operand block = box(at(-8, -8, 0), 16, 16, 12);
+    const Operand hole = cylinder(at(2, 1, -5), 3, 30);
+    const Operand drilled{booleanOperation(block.body, hole.body, BooleanOperation::Subtract), BRepAlgoAPI_Cut(block.shape, hole.shape).Shape()};
+    compareAll(drilled, cylinder(at(2, 1, 4), 3, 20));
+    compareAll(drilled, cylinder(at(2, 1, 3), 3, 5));
+
+    // Spigoli di un solido che giacciono sul fianco curvo dell'altro: un
+    // segmento di disco (arco + corda) e un cilindro che passa per i due
+    // vertici dell'arco; poi una spline chiusa per quei punti.
+    const double c = std::cos(kPi / 3.0) * 5.0, h = std::sin(kPi / 3.0) * 5.0;
+    const std::vector<ProfileSegment> segmentOfDisc{arcSegment(Vec2(0, 0), 5.0, -kPi / 3.0, kPi / 3.0), lineSegment(Vec2(c, h), Vec2(c, -h))};
+    const Operand disc = extrusion(at(0, 0, 0), segmentOfDisc, 8);
+    compareAll(disc, cylinder(at(c + 3.0, 0, -2), std::hypot(3.0, h), 12));
+    compareAll(disc, cylinder(at(c - 3.0, 0, 2), std::hypot(3.0, h), 12));
+
+    // Fianchi estrusi dalla stessa spline chiusa.
+    const std::vector<ProfileSegment> profile{closedSpline(Vec2(0, 0), 4.0, true)};
+    compareAll(extrusion(at(0, 0, 0), profile, 6), extrusion(at(0, 0, 3), profile, 6), false);
 }
 
 namespace {
@@ -585,4 +647,20 @@ FK_TEST(BooleanStressGeneral) {
             }
         }
     }
+}
+
+// Contatti lungo una curva: una sfera in un cilindro dello stesso raggio
+// (tangenti lungo l'equatore) e un toro attorno a un cilindro che ne tocca
+// l'equatore interno. Volumi esatti.
+FK_TEST(BooleanTangentCurves) {
+    const Frame3 frame(Vec3(1, -2, 3), Vec3(0.2, 0.1, 1), Vec3(1, 0, 0));
+    const double r = 4.0;
+    const Body sphere = makeRevolution(frame, buildProfile({arcSegment(Vec2(0, 0), r, -kHalfPi, kHalfPi), lineSegment(Vec2(0, r), Vec2(0, -r))}, 1e-9)
+                                                  .regions.front());
+    const Body cylinder = makeCylinder(frame, r, 10.0);
+    checkVolumes(sphere, cylinder, 4.0 * kPi * r * r * r / 3.0, kPi * r * r * 10.0, 2.0 * kPi * r * r * r / 3.0);
+    const double big = 5.0, small = 1.5;
+    const Body torus = makeRevolution(frame, buildProfile({arcSegment(Vec2(big, 0), small, 0.0, kTwoPi)}, 1e-9).regions.front());
+    const Body core = makeCylinder(Frame3(frame.origin() - 3.0 * frame.zDir(), frame.zDir(), frame.xDir()), big - small, 6.0);
+    checkVolumes(torus, core, 2.0 * kPi * kPi * big * small * small, kPi * (big - small) * (big - small) * 6.0, 0.0);
 }

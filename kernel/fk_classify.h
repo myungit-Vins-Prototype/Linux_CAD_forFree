@@ -22,6 +22,11 @@ double distanceToFaceBoundary(const Body &body, FaceId face, const Vec3 &point);
 // periodiche in u senza cucitura. Servono le SP-curve di tutte le fin.
 PointLocation classifyPointOnFace(const Body &body, FaceId face, const Vec3 &point, double tolerance);
 
+// Parametro t >= 0 del primo punto in cui la semiretta origin + t direction
+// incontra una faccia del body (falso se non la incontra). Serve alla
+// selezione a video.
+bool firstRayHit(const Body &body, const Vec3 &origin, const Vec3 &direction, double tolerance, double &t);
+
 // Box che contiene la faccia.
 Box faceBox(const Body &body, FaceId face);
 

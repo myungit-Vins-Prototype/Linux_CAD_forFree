@@ -49,6 +49,14 @@ add_library(forgekernel STATIC
     fk_boolean.cpp
     fk_unify.h
     fk_unify.cpp
+    fk_tessellate.h
+    fk_tessellate.cpp
+    fk_nurbs.h
+    fk_nurbs.cpp
+    fk_curve_surface.h
+    fk_curve_surface.cpp
+    fk_revolve.h
+    fk_revolve.cpp
 )
 target_include_directories(forgekernel PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_compile_features(forgekernel PUBLIC cxx_std_17)
@@ -80,6 +88,10 @@ add_executable(forgekernel_tests
     tests/test_marching.cpp
     tests/test_boolean.cpp
     tests/test_unify.cpp
+    tests/test_tessellate.cpp
+    tests/test_nurbs.cpp
+    tests/test_curve_surface.cpp
+    tests/test_revolve.cpp
 )
 target_link_libraries(forgekernel_tests PRIVATE
     forgekernel

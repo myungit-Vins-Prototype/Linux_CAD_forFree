@@ -20,6 +20,8 @@
 #include "fk_curve_algo.h"
 #include "fk_curve_ops.h"
 #include "fk_extrude.h"
+#include "fk_mass.h"
+#include "fk_tessellate.h"
 #include "fk_test_profiles.h"
 
 using namespace fktest;
@@ -203,4 +205,59 @@ FK_TEST(ExtrusionWithTolerantVertices) {
     int tolerant = 0;
     for (VertexId v : body.vertices()) tolerant += body.vertex(v).tolerance > 0.0;
     FK_CHECK(tolerant == 2);  // il vertice interessato, alla base e in cima
+}
+
+// Lamine: catene aperte (anche date in disordine e al contrario) estruse in
+// superfici; area delle facce contro la lunghezza della catena per l'altezza
+// e contro l'area della superficie OCCT (BRepPrimAPI_MakePrism del filo).
+FK_TEST(SheetExtrusion) {
+    const ProfileSegment line = lineSegment(Vec2(-6, 0), Vec2(0, 0));
+    const ProfileSegment arc = arcSegment(Vec2(0, 3), 3.0, -kHalfPi, 0.0);
+    std::vector<Vec2> poles{Vec2(3, 3), Vec2(3, 6), Vec2(6, 7), Vec2(9, 5)};
+    auto spline = std::make_shared<BSplineCurve<2>>(3, expandKnots({0.0, 1.0}, {4, 4}), poles);
+    const ProfileSegment tail{spline, spline->domain()};
+    const Profile profile = buildProfile({arc, reversed(tail), line}, 1e-6);  // in disordine, uno al contrario
+    FK_CHECK(profile.regions.empty());
+    FK_CHECK(profile.openChains == 1 && profile.chains.size() == 1);
+    FK_CHECK(profile.chains.front().segments.size() == 3);
+
+    for (double height : {4.0, -2.5}) {
+        const Frame3 frame(Vec3(1, 2, 3), Vec3(0.3, -0.2, 1), Vec3(1, 0, 0));
+        const Body sheet = makeSheetExtrusion(frame, profile.chains, height);
+        FK_CHECK(sheet.isSheet());
+        FK_CHECK(checkBody(sheet).empty());
+        FK_CHECK(sheet.counts().faces == 3);
+        int laminar = 0;
+        for (EdgeId e : sheet.edges()) laminar += sheet.isLaminar(e);
+        FK_CHECK(laminar == 2 * 3 + 2);
+        double length = 0.0;
+        for (const ProfileSegment &segment : profile.chains.front().segments) length += arcLength(*segment.curve, segment.range);
+        double area = 0.0;
+        for (FaceId f : sheet.faces()) area += faceArea(sheet, f);
+        FK_CHECK_NEAR(area, length * std::fabs(height), 1e-10 * area);
+
+        const TopoDS_Shape occt = BRepPrimAPI_MakePrism(occtWire(profile.chains.front(), frame),
+                                                        gp_Vec(toPnt(Vec3()), toPnt(height * frame.zDir()))).Shape();
+        double occtTotal = 0.0;
+        for (TopExp_Explorer faces(occt, TopAbs_FACE); faces.More(); faces.Next()) occtTotal += occtArea(TopoDS::Face(faces.Current()));
+        // BRepGProp sulla faccia estrusa dalla spline scarta di qualche 1e-9
+        // (la lunghezza per l'altezza, sopra, e' il riferimento esatto).
+        FK_CHECK_NEAR(area, occtTotal, 1e-7 * area);
+
+        // Anche la visualizzazione: nessuna faccia persa, area della mesh vicina.
+        TessellationOptions options;
+        options.deflection = 1e-3;
+        const Tessellation mesh = tessellate(sheet, options);
+        FK_CHECK(mesh.failedFaces == 0 && mesh.faces.size() == 3);
+        double meshArea = 0.0;
+        for (const FaceMesh &face : mesh.faces)
+            for (const std::array<int, 3> &t : face.triangles)
+                meshArea += 0.5 * norm(cross(face.points[std::size_t(t[1])] - face.points[std::size_t(t[0])],
+                                             face.points[std::size_t(t[2])] - face.points[std::size_t(t[0])]));
+        FK_CHECK_NEAR(meshArea, area, 1e-3 * area);
+    }
+    // Due catene: due lamine nello stesso body.
+    const Body two = makeSheetExtrusion(Frame3(), {ProfileLoop{{line}}, ProfileLoop{{tail}}}, 1.0);
+    FK_CHECK(two.counts().shells == 2);
+    FK_CHECK(checkBody(two).empty());
 }

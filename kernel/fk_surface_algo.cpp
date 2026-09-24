@@ -634,4 +634,67 @@ bool invertPoint(const Surface &surface, const Vec3 &p, Vec2 &uv, double toleran
     return true;
 }
 
+
+namespace {
+
+bool parallelAxes(const Vec3 &a, const Vec3 &b) { return norm(cross(a, b)) <= 1e-12; }
+
+double distanceToAxis(const Vec3 &p, const Frame3 &frame) {
+    const Vec3 d = p - frame.origin();
+    return norm(d - dot(d, frame.zDir()) * frame.zDir());
+}
+
+// Punti della curva base di `from` (sui tratti lisci) tutti sulla superficie `onto`.
+bool baseCurveOn(const ExtrusionSurface &from, const Surface &onto, double tolerance) {
+    const Curve<3> &curve = *from.curve();
+    const Interval domain = curve.domain();
+    std::vector<double> breaks = curve.breakpoints(domain);
+    if (breaks.size() < 2) breaks = {domain.lo, domain.hi};
+    const int perSpan = std::max(2, 64 / int(breaks.size()));
+    for (std::size_t i = 0; i + 1 < breaks.size(); ++i)
+        for (int j = 0; j <= perSpan; ++j)
+            if (projectPoint(onto, curve.point(breaks[i] + (breaks[i + 1] - breaks[i]) * j / perSpan)).distance > tolerance) return false;
+    return true;
+}
+
+}
+
+bool sameSurface(const Surface &a, const Surface &b, double tolerance) {
+    if (&a == &b) return true;
+    if (a.type() != b.type()) return false;
+    switch (a.type()) {
+    case SurfaceType::Plane: {
+        const Frame3 &fa = static_cast<const Plane &>(a).frame(), &fb = static_cast<const Plane &>(b).frame();
+        return parallelAxes(fa.zDir(), fb.zDir()) && std::fabs(dot(fa.zDir(), fb.origin() - fa.origin())) <= tolerance;
+    }
+    case SurfaceType::Cylinder: {
+        const auto &ca = static_cast<const CylindricalSurface &>(a), &cb = static_cast<const CylindricalSurface &>(b);
+        return parallelAxes(ca.frame().zDir(), cb.frame().zDir()) && std::fabs(ca.radius() - cb.radius()) <= tolerance
+            && distanceToAxis(cb.frame().origin(), ca.frame()) <= tolerance;
+    }
+    case SurfaceType::Sphere: {
+        const auto &sa = static_cast<const SphericalSurface &>(a), &sb = static_cast<const SphericalSurface &>(b);
+        return distance(sa.frame().origin(), sb.frame().origin()) <= tolerance && std::fabs(sa.radius() - sb.radius()) <= tolerance;
+    }
+    case SurfaceType::Cone: {
+        // Il cono prosegue oltre il vertice: stesso vertice, asse parallelo o
+        // opposto e stesso semiangolo in valore assoluto.
+        const auto &ca = static_cast<const ConicalSurface &>(a), &cb = static_cast<const ConicalSurface &>(b);
+        return parallelAxes(ca.frame().zDir(), cb.frame().zDir()) && distance(ca.apex(), cb.apex()) <= tolerance
+            && std::fabs(std::fabs(ca.semiAngle()) - std::fabs(cb.semiAngle())) <= 1e-12;
+    }
+    case SurfaceType::Torus: {
+        const auto &ta = static_cast<const ToroidalSurface &>(a), &tb = static_cast<const ToroidalSurface &>(b);
+        return parallelAxes(ta.frame().zDir(), tb.frame().zDir()) && distance(ta.frame().origin(), tb.frame().origin()) <= tolerance
+            && std::fabs(ta.majorRadius() - tb.majorRadius()) <= tolerance && std::fabs(ta.minorRadius() - tb.minorRadius()) <= tolerance;
+    }
+    case SurfaceType::Extrusion: {
+        const auto &ea = static_cast<const ExtrusionSurface &>(a), &eb = static_cast<const ExtrusionSurface &>(b);
+        return parallelAxes(ea.direction(), eb.direction()) && baseCurveOn(ea, eb, tolerance) && baseCurveOn(eb, ea, tolerance);
+    }
+    default:
+        return false;
+    }
+}
+
 }

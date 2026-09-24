@@ -1,5 +1,8 @@
 #include "fk_intersect.h"
 
+#include "fk_curve_surface.h"
+#include "fk_nurbs.h"
+
 #include <algorithm>
 #include <cmath>
 #include <functional>
@@ -8,6 +11,7 @@
 #include "fk_bernstein.h"
 #include "fk_bspline.h"
 #include "fk_curve_algo.h"
+#include "fk_surface_algo.h"
 
 namespace ForgeCad::Kernel {
 
@@ -461,17 +465,50 @@ CurveCurveIntersection intersectCurves(const Curve<2> &a, const Interval &aRange
     } else if (isConic(ub)) {
         conicCase(b, bRange, a, aRange, true, tolerance, out);
     } else if (ua.type() == CurveType::BSpline && ub.type() == CurveType::BSpline) {
-        const std::vector<BSplineCurve<2>> piecesA = bezierPieces(static_cast<const BSplineCurve<2> &>(ua), aRange);
+        // Tratti comuni (due B-spline con un pezzo in comune, per esempio il
+        // bordo di una faccia e la sezione di un fianco estruso dalla stessa
+        // curva): se ne tengono gli estremi e la suddivisione lavora sul resto.
+        std::vector<double> candidates{aRange.lo, aRange.hi};
+        for (double end : {bRange.lo, bRange.hi}) {
+            const CurveProjection<2> projection = projectPoint(a, b.point(end), aRange);
+            if (projection.distance <= tolerance) candidates.push_back(projection.parameter);
+        }
+        std::sort(candidates.begin(), candidates.end());
+        std::vector<Interval> common;
+        for (std::size_t i = 0; i + 1 < candidates.size(); ++i) {
+            const double s0 = candidates[i], s1 = candidates[i + 1];
+            if (s1 - s0 <= 1e-12 * (1.0 + std::fabs(s0) + std::fabs(s1))) continue;
+            bool on = true;
+            for (int j = 1; j <= 9 && on; ++j) on = projectPoint(b, a.point(s0 + (s1 - s0) * j / 10.0), bRange).distance <= tolerance;
+            if (!on) continue;
+            if (!common.empty() && common.back().hi >= s0) common.back().hi = s1;
+            else common.push_back({s0, s1});
+        }
+        std::vector<Interval> rest;
+        double start = aRange.lo;
+        for (const Interval &piece : common) {
+            out.overlap = true;
+            for (double s : {piece.lo, piece.hi}) {
+                const Vec2 p = a.point(s);
+                addPoint(out, {s, projectPoint(b, p, bRange).parameter, p}, tolerance);
+            }
+            if (piece.lo > start) rest.push_back({start, piece.lo});
+            start = piece.hi;
+        }
+        if (start < aRange.hi) rest.push_back({start, aRange.hi});
         const std::vector<BSplineCurve<2>> piecesB = bezierPieces(static_cast<const BSplineCurve<2> &>(ub), bRange);
-        Box2 all;
-        for (const auto &piece : piecesA)
-            for (const Vec2 &p : piece.poles()) all.add(p);
-        for (const auto &piece : piecesB)
-            for (const Vec2 &p : piece.poles()) all.add(p);
-        const double scale = std::max(all.diagonal(), 1e-300);
         int leaves = 0;
-        for (const auto &pa : piecesA)
-            for (const auto &pb : piecesB) subdivide(a, aRange, b, bRange, pa, pb, 0, scale, tolerance, out, leaves);
+        for (const Interval &part : rest) {
+            const std::vector<BSplineCurve<2>> piecesA = bezierPieces(static_cast<const BSplineCurve<2> &>(ua), part);
+            Box2 all;
+            for (const auto &piece : piecesA)
+                for (const Vec2 &p : piece.poles()) all.add(p);
+            for (const auto &piece : piecesB)
+                for (const Vec2 &p : piece.poles()) all.add(p);
+            const double scale = std::max(all.diagonal(), 1e-300);
+            for (const auto &pa : piecesA)
+                for (const auto &pb : piecesB) subdivide(a, part, b, bRange, pa, pb, 0, scale, tolerance, out, leaves);
+        }
         // Estremi dei tratti che stanno sull'altra curva (contatti agli estremi,
         // che Newton puo' trovare solo al limite del tratto).
         for (int side = 0; side < 2; ++side)
@@ -782,8 +819,46 @@ std::vector<double> intersectLineSurface(const Vec3 &origin, const Vec3 &directi
         }
         break;
     }
-    default:
-        throw std::domain_error("intersectLineSurface: superficie non gestita");
+    default: {
+        // Cono, toro, rivoluzione, B-spline: il tratto di retta nel box della
+        // superficie (per il cono illimitato, la sfera che contiene la parte
+        // di interesse non e' nota: si usa l'equazione implicita sulla retta
+        // limitata a un intervallo molto ampio).
+        Interval range{-1e6, 1e6};
+        if (surface.type() != SurfaceType::Cone) {
+            Box box;
+            if (surface.type() == SurfaceType::Torus) {
+                const auto &torus = static_cast<const ToroidalSurface &>(surface);
+                box.add(torus.frame().origin());
+                box = box.padded(torus.majorRadius() + torus.minorRadius());
+            } else {
+                const BSplineSurface nurbs = toBSplineSurface(surface, surface.uDomain(), surface.vDomain());
+                for (int i = 0; i < nurbs.uPoleCount(); ++i)
+                    for (int j = 0; j < nurbs.vPoleCount(); ++j) box.add(nurbs.pole(i, j));
+            }
+            if (!clipLineToBox(origin, direction, box.padded(10.0 * tolerance), range)) return result;
+        } else {
+            const double far = 1e3 * std::max(1.0, norm(origin - static_cast<const ConicalSurface &>(surface).apex()));
+            range = {-far, far};
+        }
+        const Line<3> line(origin, direction);
+        bool touching = false;
+        const CurveSurfaceIntersection hits = hasImplicitEquation(surface)
+                                                  ? implicitCurveSurface(line, range, surface, tolerance, &touching)
+                                                  : numericCurveSurface(line, range, surface, tolerance, &touching);
+        grazing = touching || !hits.coincident.empty();
+        for (double t : hits.parameters) {
+            // Tangenza anche se la retta e' quasi tangente nel punto.
+            try {
+                const SurfaceProjection projection = projectPoint(surface, line.point(t));
+                if (std::fabs(dot(surface.normal(projection.u, projection.v), direction)) <= 1e-9) grazing = true;
+            } catch (const std::domain_error &) {
+                grazing = true;  // punto singolare (vertice del cono, polo)
+            }
+            result.push_back(t);
+        }
+        break;
+    }
     }
     std::sort(result.begin(), result.end());
     return result;
@@ -908,8 +983,9 @@ CurveSurfaceIntersection intersectCurveSurface(const Curve<3> &curve, const Inte
         out.coincident = roots.coincident;
         return out;
     }
+    if (hasImplicitEquation(surface)) return implicitCurveSurface(curve, range, surface, tolerance);
     GeneralizedCylinder cylinder;
-    if (!generalizedCylinder(surface, cylinder)) throw std::domain_error("intersectCurveSurface: superficie non gestita");
+    if (!generalizedCylinder(surface, cylinder)) return numericCurveSurface(curve, range, surface, tolerance);
     // Un punto sta sulla superficie se la sua proiezione lungo D sta sulla sezione.
     const Frame3 frame = normalFrame(cylinder.direction, cylinder.profile->point(cylinder.domain.lo));
     const PlanarImage image = planarImage(curve, range, frame);

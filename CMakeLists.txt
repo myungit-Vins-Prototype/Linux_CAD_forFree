@@ -44,6 +44,8 @@ add_executable(forgecad
     cad_history.cpp
     cad_kernel.h
     cad_kernel.cpp
+    cad_forge.h
+    cad_forge.cpp
     cad_kernel_lab.h
     cad_kernel_lab.cpp
     cuda_support.h
@@ -57,7 +59,7 @@ target_link_libraries(forgecad PRIVATE
     OpenGL::GL
     TKernel TKMath TKG2d TKG3d TKGeomBase TKGeomAlgo TKBRep
     TKTopAlgo TKPrim TKBO TKBool TKMesh TKShHealing
-    forgekernel  # kernel sperimentale, solo per il menu Debug
+    forgekernel  # kernel proprio: alternativa a OCCT (menu Opzioni) e banco di prova del menu Debug
 )
 target_include_directories(forgecad SYSTEM PRIVATE ${OpenCASCADE_INCLUDE_DIR})
 

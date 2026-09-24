@@ -21,6 +21,12 @@ namespace ForgeCad::Kernel {
 // vertici diventano "tolleranti" (tolleranza locale = distanza).
 Body makeExtrusion(const Frame3 &frame, const ProfileRegion &region, double height);
 
+// Lamina: estrusione di catene aperte di tratti (un profilo che non si
+// chiude), una faccia per tratto con le stesse superfici dei fianchi di
+// makeExtrusion; gli spigoli verticali interni sono condivisi, quelli agli
+// estremi e le curve in basso e in alto sono il bordo della lamina.
+Body makeSheetExtrusion(const Frame3 &frame, const std::vector<ProfileLoop> &chains, double height);
+
 }
 
 #endif
