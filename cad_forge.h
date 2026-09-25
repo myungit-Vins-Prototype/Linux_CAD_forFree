@@ -27,6 +27,13 @@ void forgeSketchFrame(const SketchObject &sketch, double distance, Kernel::Frame
 // Body::isSheet). nullptr e messaggio in `error` se non riesce.
 ForgeBody forgeExtrusion(const SketchObject &sketch, double distance, QString *error);
 
+// Rivoluzione dei contorni chiusi dello schizzo attorno al suo asse `axis`
+// (ExtrusionObject::revolveAxis) di `angleDegrees` gradi, come buildRevolution.
+ForgeBody forgeRevolution(const SketchObject &sketch, int axis, double angleDegrees, QString *error);
+
+// Solido elementare (parallelepipedo, cilindro, sfera, cono, toro), come buildPrimitive.
+ForgeBody forgePrimitive(const PrimitiveParameters &parameters, QString *error);
+
 // Booleana esatta (con la fusione delle facce sulla stessa superficie).
 ForgeBody forgeBoolean(const ForgeBody &first, const ForgeBody &second, BooleanOperation operation, QString *error);
 

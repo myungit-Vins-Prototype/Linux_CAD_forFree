@@ -448,8 +448,20 @@ Body documentBody(const QVector<SketchObject> &sketches, const QVector<Extrusion
         const Body second = documentBody(sketches, bodies, object.secondBody, depth + 1);
         return booleanOperation(first, second, BooleanOperation(object.operation));
     }
+    if (object.feature == BodyFeature::Primitive) {
+        QString error;
+        const ForgeBody primitive = forgePrimitive(object.primitive, &error);
+        if (!primitive) throw std::invalid_argument(error.toStdString());
+        return *primitive;
+    }
     if (object.sketchIndex < 0 || object.sketchIndex >= sketches.size()) throw std::invalid_argument("schizzo inesistente");
     const SketchObject &sketch = sketches.at(object.sketchIndex);
+    if (object.feature == BodyFeature::Revolution) {
+        QString error;
+        const ForgeBody revolution = forgeRevolution(sketch, object.revolveAxis, object.revolveAngle, &error);
+        if (!revolution) throw std::invalid_argument(error.toStdString());
+        return *revolution;
+    }
     const Profile profile = buildProfile(forgeSketchSegments(sketch), kSketchConnectionTolerance);
     if (profile.regions.empty()) throw std::invalid_argument("lo schizzo non ha contorni chiusi");
     Frame3 frame;

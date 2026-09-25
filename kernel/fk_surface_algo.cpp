@@ -698,3 +698,73 @@ bool sameSurface(const Surface &a, const Surface &b, double tolerance) {
 }
 
 }
+
+namespace ForgeCad::Kernel {
+
+std::vector<SurfacePole> surfacePoles(const Surface &surface) {
+    std::vector<SurfacePole> poles;
+    switch (surface.type()) {
+    case SurfaceType::Sphere: {
+        const auto &sphere = static_cast<const SphericalSurface &>(surface);
+        const Frame3 &f = sphere.frame();
+        poles.push_back({f.origin() - sphere.radius() * f.zDir(), -kHalfPi});
+        poles.push_back({f.origin() + sphere.radius() * f.zDir(), kHalfPi});
+        break;
+    }
+    case SurfaceType::Cone: {
+        const auto &cone = static_cast<const ConicalSurface &>(surface);
+        poles.push_back({cone.apex(), -cone.referenceRadius() / std::sin(cone.semiAngle())});
+        break;
+    }
+    case SurfaceType::Revolution: {
+        const auto &revolution = static_cast<const RevolutionSurface &>(surface);
+        const Interval v = revolution.vDomain();
+        if (!v.isFinite() || revolution.isVPeriodic()) break;
+        for (double t : {v.lo, v.hi}) {
+            const Vec3 p = revolution.meridian()->point(t), a = revolution.axisPoint(), d = revolution.axisDirection();
+            const Vec3 offset = p - a;
+            if (norm(offset - dot(offset, d) * d) <= 1e-9 * std::max(1.0, norm(offset))) poles.push_back({a + dot(offset, d) * d, t});
+        }
+        break;
+    }
+    default:
+        break;
+    }
+    return poles;
+}
+
+int poleIndex(const std::vector<SurfacePole> &poles, const Vec3 &p, double tolerance) {
+    for (std::size_t i = 0; i < poles.size(); ++i)
+        if (distance(poles[i].point, p) <= tolerance) return int(i);
+    return -1;
+}
+
+double poleWalk(double from, double to, double period, bool top, bool sense) {
+    // Col dominio a sinistra: sopra si cammina verso u minori, sotto verso u maggiori.
+    const bool decreasing = top == sense;
+    double delta = std::fmod(decreasing ? from - to : to - from, period);
+    if (delta < 0.0) delta += period;
+    if (delta > period * (1.0 - 1e-12)) delta = 0.0;
+    return decreasing ? from - delta : from + delta;
+}
+
+double poleWalk(double from, double to, double period, bool top, bool sense, double fromNear, double toNear) {
+    const double reference = poleWalk(fromNear, toNear, period, top, sense) - fromNear + from;
+    // Il valore congruo a `to` piu' vicino al riferimento.
+    return to + period * std::round((reference - to) / period);
+}
+
+Vec3 normalAt(const Surface &surface, double u, double v, int side) {
+    try {
+        return surface.normal(u, v);
+    } catch (const std::domain_error &) {
+    }
+    const Interval domain = surface.vDomain();
+    if (side == 0) side = domain.isFinite() && v > 0.5 * (domain.lo + domain.hi) ? -1 : 1;
+    const double step = 1e-6 * (domain.isFinite() ? std::min(1.0, domain.length()) : 1.0) * side;
+    Vec3 sum;
+    for (int k = 0; k < 8; ++k) sum += surface.normal(u + k * kTwoPi / 8.0, v + step);
+    return normalized(sum);
+}
+
+}

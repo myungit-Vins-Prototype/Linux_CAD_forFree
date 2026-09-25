@@ -33,6 +33,25 @@ bool buildSketchProfile(const SketchObject &sketch, TopoDS_Shape &profile, bool 
 // altrimenti superficie.
 TopoDS_Shape buildExtrusion(const SketchObject &sketch, double distance, bool &solid, QString *error);
 
+// Asse di rivoluzione `axis` di un corpo (ExtrusionObject::revolveAxis) nel
+// piano dello schizzo: un punto e la direzione unitaria.
+bool sketchRevolutionAxis(const SketchObject &sketch, int axis, QPointF &point, QPointF &direction, QString *error);
+
+// Lato dell'asse su cui sta il profilo (entita' di costruzione escluse):
+// +1 a sinistra della direzione, -1 a destra, 0 (con l'errore) se lo
+// attraversa o giace sull'asse.
+int revolutionProfileSide(const SketchObject &sketch, const QPointF &point, const QPointF &direction, QString *error);
+
+// Rivoluzione dei contorni chiusi dello schizzo attorno all'asse `axis` di
+// `angleDegrees` gradi (con segno, destrorso attorno all'asse; 360 = giro completo).
+TopoDS_Shape buildRevolution(const SketchObject &sketch, int axis, double angleDegrees, QString *error);
+
+// Sistema di una primitiva (origine e assi del piano di riferimento) e
+// controllo delle sue dimensioni (messaggio vuoto se valide).
+gp_Ax3 primitiveAxes(const PrimitiveParameters &parameters);
+QString primitiveError(const PrimitiveParameters &parameters);
+TopoDS_Shape buildPrimitive(const PrimitiveParameters &parameters, QString *error);
+
 // Operazione booleana esatta; le facce complanari del risultato vengono unificate.
 TopoDS_Shape booleanOperation(const TopoDS_Shape &first, const TopoDS_Shape &second,
                               BooleanOperation operation, QString *error);

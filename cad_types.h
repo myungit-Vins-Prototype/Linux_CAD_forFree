@@ -23,7 +23,7 @@ using ForgeBody = std::shared_ptr<const Kernel::Body>;
 // Precisione: tutte le coordinate del modello sono in double (QPointF usa
 // qreal = double). I float (QVector3D) servono solo per la visualizzazione.
 
-enum class DrawingTool { Line, Polyline, Spline, Nurbs, Circle, Arc, Polygon };
+enum class DrawingTool { Line, Polyline, Spline, Nurbs, Circle, Arc, Polygon, ConstructionLine };
 enum class SnapKind { None, Endpoint, Midpoint, Nearest };
 
 enum class ReferencePlane { XY, XZ, YZ };
@@ -40,6 +40,8 @@ using SketchSegment = QPair<QPointF, QPointF>;
 //  - Arc: centro, punto iniziale (definisce il raggio), punto finale (definisce l'angolo)
 //  - Polygon: centro, primo vertice, numero di lati
 // `samples` e' solo un'approssimazione per disegnare e selezionare a schermo.
+// Le entita' di costruzione (`construction`) non fanno parte dei profili:
+// servono da riferimento (assi di rivoluzione, agganci).
 struct CurveObject {
     DrawingTool tool = DrawingTool::Spline;
     QVector<QPointF> controlPoints;
@@ -48,6 +50,7 @@ struct CurveObject {
     int sides = 0;
     QVector<QPointF> samples;
     bool numericallyValid = false;
+    bool construction = false;
 };
 
 struct CoincidentConstraint {
@@ -69,6 +72,11 @@ struct SketchObject {
     QVector<CurveObject> curves;
     QVector<CoincidentConstraint> coincidentConstraints;
     bool visible = true;
+    // Segmenti di costruzione: indici in `segments` (linee di riferimento che
+    // non entrano nei profili, per esempio l'asse di una rivoluzione).
+    QVector<int> constructionSegments;
+
+    bool isConstructionSegment(int index) const { return constructionSegments.contains(index); }
 };
 
 enum class BooleanOperation { Union = 0, Intersection = 1, Difference = 2 };
@@ -85,9 +93,33 @@ struct BodyDisplay {
     int quality = -1;
 };
 
+// Funzione che genera un corpo che non e' una booleana (operation = -1).
+enum class BodyFeature { Extrusion = 0, Revolution = 1, Primitive = 2 };
+
+// Solidi elementari. Il sistema del solido ha l'origine in `origin` e gli assi
+// del piano di riferimento `plane` (come gli schizzi: Z = normale del piano).
+//  - Box: parallelepipedo [0, size0] x [0, size1] x [0, size2];
+//  - Cylinder: raggio size0, altezza size1 lungo Z;
+//  - Sphere: centro nell'origine, raggio size0;
+//  - Cone: raggio size0 alla base (z = 0), size1 in cima (z = size2), uno dei due puo' essere 0;
+//  - Torus: raggio maggiore size0 e minore size1, nel piano XY del sistema.
+enum class PrimitiveKind { Box = 0, Cylinder = 1, Sphere = 2, Cone = 3, Torus = 4 };
+
+struct PrimitiveParameters {
+    PrimitiveKind kind = PrimitiveKind::Box;
+    int plane = 0;
+    double origin[3] = {0.0, 0.0, 0.0};
+    double size[3] = {1.0, 1.0, 1.0};
+};
+
 // Corpo della scena, definito in modo parametrico:
-//  - estrusione (operation = -1): profili chiusi dello schizzo `sketchIndex`
-//    estrusi di `distance` lungo la normale del piano;
+//  - estrusione (operation = -1, feature Extrusion): profili chiusi dello
+//    schizzo `sketchIndex` estrusi di `distance` lungo la normale del piano;
+//  - rivoluzione (feature Revolution): profili chiusi dello schizzo
+//    `sketchIndex` ruotati di `revolveAngle` gradi (con segno: verso
+//    destrorso attorno all'asse orientato; 360 = giro completo) attorno al
+//    segmento `revolveAxis` dello schizzo (-1 = asse X, -2 = asse Y del piano);
+//  - primitiva (feature Primitive): `primitive`;
 //  - booleana: `operation` tra i corpi `firstBody` e `secondBody`.
 // Il B-rep esatto rigenerato dalla definizione e' `shape` (OpenCASCADE) o
 // `forgeBody` (kernel proprio), secondo `kernel`; l'altro resta vuoto.
@@ -99,6 +131,10 @@ struct ExtrusionObject {
     bool solid = false;
     bool visible = true;
     int operation = -1;
+    BodyFeature feature = BodyFeature::Extrusion;
+    int revolveAxis = -1;
+    double revolveAngle = 360.0;
+    PrimitiveParameters primitive;
     int firstBody = -1;
     int secondBody = -1;
     TopoDS_Shape shape;

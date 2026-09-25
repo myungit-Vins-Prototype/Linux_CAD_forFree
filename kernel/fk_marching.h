@@ -82,6 +82,11 @@ struct SurfaceIntersectionOptions {
 SurfaceIntersection intersectSurfaces(const Surface &a, const Surface &b, const Box &bounds, const std::vector<Vec3> &seeds,
                                       const SurfaceIntersectionOptions &options = {});
 
+// Le due superfici sono di rivoluzione attorno allo stesso asse (cilindri,
+// coni, sfere, tori, rivoluzioni): intersectSurfaces le interseca con i
+// profili nel semipiano dell'asse, esatte, strisce comuni comprese.
+bool coaxialRotational(const Surface &a, const Surface &b, double tolerance);
+
 }
 
 #endif

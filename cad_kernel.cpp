@@ -15,7 +15,13 @@
 #include <BRepGProp.hxx>
 #include <BRepLib_ToolTriangulatedShape.hxx>
 #include <BRepMesh_IncrementalMesh.hxx>
+#include <BRepPrimAPI_MakeBox.hxx>
+#include <BRepPrimAPI_MakeCone.hxx>
+#include <BRepPrimAPI_MakeCylinder.hxx>
 #include <BRepPrimAPI_MakePrism.hxx>
+#include <BRepPrimAPI_MakeRevol.hxx>
+#include <BRepPrimAPI_MakeSphere.hxx>
+#include <BRepPrimAPI_MakeTorus.hxx>
 #include <BRepTools.hxx>
 #include <BRep_Builder.hxx>
 #include <BRep_Tool.hxx>
@@ -45,6 +51,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <memory>
 
 namespace ForgeCad {
 namespace {
@@ -62,7 +69,9 @@ QString failureMessage(const Standard_Failure &failure) {
 Handle(TopTools_HSequenceOfShape) sketchEdges(const SketchObject &sketch) {
     Handle(TopTools_HSequenceOfShape) edges = new TopTools_HSequenceOfShape;
     const gp_Pln plane(sketchAxes(sketch.plane));
-    for (const SketchSegment &segment : sketch.segments) {
+    for (int index = 0; index < sketch.segments.size(); ++index) {
+        if (sketch.isConstructionSegment(index)) continue;
+        const SketchSegment &segment = sketch.segments.at(index);
         const gp_Pnt first = sketchToWorld(segment.first, sketch.plane);
         const gp_Pnt second = sketchToWorld(segment.second, sketch.plane);
         if (first.Distance(second) <= Precision::Confusion()) continue;
@@ -70,6 +79,7 @@ Handle(TopTools_HSequenceOfShape) sketchEdges(const SketchObject &sketch) {
         if (edge.IsDone()) edges->Append(edge.Edge());
     }
     for (const CurveObject &curve : sketch.curves) {
+        if (curve.construction) continue;
         for (const Handle(Geom2d_Curve) &piece : curveGeometry(curve)) {
             BRepBuilderAPI_MakeEdge edge(GeomAPI::To3d(piece, plane));
             if (edge.IsDone()) edges->Append(edge.Edge());
@@ -222,6 +232,159 @@ TopoDS_Shape buildExtrusion(const SketchObject &sketch, double distance, bool &s
             return {};
         }
         solid = closed && isSolidShape(shape);
+        return shape;
+    } catch (const Standard_Failure &failure) {
+        setError(error, failureMessage(failure));
+        return {};
+    }
+}
+
+bool sketchRevolutionAxis(const SketchObject &sketch, int axis, QPointF &point, QPointF &direction, QString *error) {
+    if (axis == -1 || axis == -2) {
+        point = QPointF(0.0, 0.0);
+        direction = axis == -1 ? QPointF(1.0, 0.0) : QPointF(0.0, 1.0);
+        return true;
+    }
+    if (axis < 0 || axis >= sketch.segments.size()) {
+        setError(error, QStringLiteral("L'asse di rivoluzione non esiste piu' nello schizzo."));
+        return false;
+    }
+    const SketchSegment &segment = sketch.segments.at(axis);
+    const QPointF delta = segment.second - segment.first;
+    const double length = std::hypot(delta.x(), delta.y());
+    if (length <= kSketchConnectionTolerance) {
+        setError(error, QStringLiteral("L'asse di rivoluzione ha lunghezza nulla."));
+        return false;
+    }
+    point = segment.first;
+    direction = delta / length;
+    return true;
+}
+
+int revolutionProfileSide(const SketchObject &sketch, const QPointF &point, const QPointF &direction, QString *error) {
+    double lowest = 0.0, highest = 0.0;
+    const auto consider = [&](const QPointF &q) {
+        const QPointF r = q - point;
+        const double side = direction.x() * r.y() - direction.y() * r.x();
+        lowest = std::min(lowest, side);
+        highest = std::max(highest, side);
+    };
+    for (int index = 0; index < sketch.segments.size(); ++index) {
+        if (sketch.isConstructionSegment(index)) continue;
+        consider(sketch.segments.at(index).first);
+        consider(sketch.segments.at(index).second);
+    }
+    // I campioni di visualizzazione servono solo a decidere il lato (la
+    // geometria resta quella esatta).
+    for (const CurveObject &curve : sketch.curves) {
+        if (curve.construction) continue;
+        for (const QPointF &sample : curve.samples) consider(sample);
+    }
+    const double tolerance = kSketchConnectionTolerance;
+    if (lowest < -tolerance && highest > tolerance) {
+        setError(error, QStringLiteral("Il profilo attraversa l'asse di rivoluzione: deve stare tutto da una parte."));
+        return 0;
+    }
+    if (lowest >= -tolerance && highest <= tolerance) {
+        setError(error, QStringLiteral("Il profilo giace sull'asse di rivoluzione."));
+        return 0;
+    }
+    return highest > tolerance ? 1 : -1;
+}
+
+TopoDS_Shape buildRevolution(const SketchObject &sketch, int axis, double angleDegrees, QString *error) {
+    QPointF point, direction;
+    if (!sketchRevolutionAxis(sketch, axis, point, direction, error)) return {};
+    if (std::abs(angleDegrees) <= 1.0e-9) {
+        setError(error, QStringLiteral("L'angolo di rivoluzione e' nullo."));
+        return {};
+    }
+    if (revolutionProfileSide(sketch, point, direction, error) == 0) return {};
+    TopoDS_Shape profile;
+    bool closed = false;
+    if (!buildSketchProfile(sketch, profile, closed, error)) return {};
+    if (!closed) {
+        setError(error, QStringLiteral("La rivoluzione richiede un profilo chiuso."));
+        return {};
+    }
+    try {
+        const gp_Ax3 axes = sketchAxes(sketch.plane);
+        const gp_Dir worldDirection(gp_Vec(axes.XDirection()) * direction.x() + gp_Vec(axes.YDirection()) * direction.y());
+        const gp_Ax1 revolutionAxis(sketchToWorld(point, sketch.plane), worldDirection);
+        const bool full = std::abs(angleDegrees) >= 360.0 - 1.0e-9;
+        std::unique_ptr<BRepPrimAPI_MakeRevol> revolution =
+            full ? std::make_unique<BRepPrimAPI_MakeRevol>(profile, revolutionAxis, Standard_True)
+                 : std::make_unique<BRepPrimAPI_MakeRevol>(profile, revolutionAxis, angleDegrees * M_PI / 180.0, Standard_True);
+        if (!revolution->IsDone()) {
+            setError(error, QStringLiteral("Rivoluzione non riuscita."));
+            return {};
+        }
+        const TopoDS_Shape shape = revolution->Shape();
+        if (!BRepCheck_Analyzer(shape).IsValid()) {
+            setError(error, QStringLiteral("La rivoluzione ha prodotto una forma non valida."));
+            return {};
+        }
+        return shape;
+    } catch (const Standard_Failure &failure) {
+        setError(error, failureMessage(failure));
+        return {};
+    }
+}
+
+gp_Ax3 primitiveAxes(const PrimitiveParameters &parameters) {
+    gp_Ax3 axes = sketchAxes(parameters.plane);
+    axes.SetLocation(gp_Pnt(parameters.origin[0], parameters.origin[1], parameters.origin[2]));
+    return axes;
+}
+
+QString primitiveError(const PrimitiveParameters &parameters) {
+    const double *size = parameters.size;
+    const double confusion = Precision::Confusion();
+    switch (parameters.kind) {
+    case PrimitiveKind::Box:
+        if (size[0] <= confusion || size[1] <= confusion || size[2] <= confusion)
+            return QStringLiteral("Le dimensioni del parallelepipedo devono essere positive.");
+        break;
+    case PrimitiveKind::Cylinder:
+        if (size[0] <= confusion || size[1] <= confusion) return QStringLiteral("Raggio e altezza del cilindro devono essere positivi.");
+        break;
+    case PrimitiveKind::Sphere:
+        if (size[0] <= confusion) return QStringLiteral("Il raggio della sfera deve essere positivo.");
+        break;
+    case PrimitiveKind::Cone:
+        if (size[2] <= confusion || size[0] < 0.0 || size[1] < 0.0 || std::max(size[0], size[1]) <= confusion)
+            return QStringLiteral("Il cono richiede un'altezza positiva e almeno un raggio positivo.");
+        if (std::abs(size[0] - size[1]) <= confusion) return QStringLiteral("Con i due raggi uguali usa il cilindro.");
+        break;
+    case PrimitiveKind::Torus:
+        if (size[1] <= confusion || size[0] <= size[1] + confusion)
+            return QStringLiteral("Il raggio minore del toro deve essere positivo e minore del maggiore.");
+        break;
+    }
+    return {};
+}
+
+TopoDS_Shape buildPrimitive(const PrimitiveParameters &parameters, QString *error) {
+    const QString invalid = primitiveError(parameters);
+    if (!invalid.isEmpty()) {
+        setError(error, invalid);
+        return {};
+    }
+    try {
+        const gp_Ax2 axes = primitiveAxes(parameters).Ax2();
+        const double *size = parameters.size;
+        TopoDS_Shape shape;
+        switch (parameters.kind) {
+        case PrimitiveKind::Box: shape = BRepPrimAPI_MakeBox(axes, size[0], size[1], size[2]).Shape(); break;
+        case PrimitiveKind::Cylinder: shape = BRepPrimAPI_MakeCylinder(axes, size[0], size[1]).Shape(); break;
+        case PrimitiveKind::Sphere: shape = BRepPrimAPI_MakeSphere(axes, size[0]).Shape(); break;
+        case PrimitiveKind::Cone: shape = BRepPrimAPI_MakeCone(axes, size[0], size[1], size[2]).Shape(); break;
+        case PrimitiveKind::Torus: shape = BRepPrimAPI_MakeTorus(axes, size[0], size[1]).Shape(); break;
+        }
+        if (shape.IsNull() || !BRepCheck_Analyzer(shape).IsValid()) {
+            setError(error, QStringLiteral("La primitiva non e' valida."));
+            return {};
+        }
         return shape;
     } catch (const Standard_Failure &failure) {
         setError(error, failureMessage(failure));

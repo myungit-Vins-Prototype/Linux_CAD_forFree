@@ -30,8 +30,9 @@ MeshMeasures measure(const Body &body, const Tessellation &mesh, double deflecti
             result.volume += dot(a, cross(b, c)) / 6.0;
             ++result.triangles;
             // Orientamento: si escludono i triangoli minuscoli e quelli con un
-            // vertice in un punto singolare (polo, vertice del cono), dove la
-            // parametrizzazione non conserva l'orientamento dei triangoli grandi.
+            // vertice in un punto singolare (polo, vertice del cono) o a meno
+            // della deflessione da esso, dove la parametrizzazione non
+            // conserva l'orientamento dei triangoli grandi.
             const Vec3 vertexNormal = face.normals[std::size_t(t[0])] + face.normals[std::size_t(t[1])] + face.normals[std::size_t(t[2])];
             bool singular = false;
             for (int k : t) {
@@ -41,6 +42,8 @@ MeshMeasures measure(const Body &body, const Tessellation &mesh, double deflecti
                     singular = true;
                 }
             }
+            for (int k : t)
+                singular = singular || poleIndex(surfacePoles(surface), face.points[std::size_t(k)], deflection) >= 0;
             if (!singular && norm(n) > 1e-4 * deflection * deflection && dot(n, vertexNormal) < 0.0) ++result.flipped;
             // Scarto dalla superficie su un triangolo ogni tanto (la proiezione costa).
             if (result.triangles % 7 == 0) {
@@ -211,6 +214,21 @@ FK_TEST(TessellateBooleans) {
     checkMesh(booleanOperation(sphere, makeCylinder(Frame3(local(0.5, 0.3, -8), frame.zDir(), frame.xDir()), 1.5, 16), BooleanOperation::Subtract), 0.01);
     const Body torus = makeRevolution(frame, buildProfile({arcSegment(Vec2(5, 0), 1.5, 0.0, kTwoPi)}, 1e-9).regions.front());
     checkMesh(booleanOperation(torus, makeBox(Frame3(local(0, -10, -10), frame.zDir(), frame.xDir()), 20, 20, 20), BooleanOperation::Intersect), 0.01);
+    // Loop che passano per i poli: mezza sfera, mezzo cono, anse di un cilindro che contiene l'asse.
+    const Body half = makeBox(Frame3(local(0, -6, -6), frame.zDir(), frame.xDir()), 10, 12, 12);
+    checkMesh(booleanOperation(sphere, half, BooleanOperation::Intersect), 0.01);
+    checkMesh(booleanOperation(sphere, half, BooleanOperation::Subtract), 0.01);
+    const Body cone = makeRevolution(frame, buildProfile({lineSegment(Vec2(0, -3), Vec2(4, -3)), lineSegment(Vec2(4, -3), Vec2(0, 5)),
+                                                          lineSegment(Vec2(0, 5), Vec2(0, -3))}, 1e-9).regions.front());
+    checkMesh(booleanOperation(cone, half, BooleanOperation::Intersect), 0.01);
+    checkMesh(booleanOperation(cone, makeCylinder(Frame3(local(1.5, 0, -8), frame.zDir(), frame.xDir()), 1.5, 16), BooleanOperation::Subtract), 0.01);
+    checkMesh(booleanOperation(sphere, makeCylinder(Frame3(local(1.5, 0, -8), frame.zDir(), frame.xDir()), 1.5, 16), BooleanOperation::Subtract), 0.01);
+    // Toro tagliato da un piano bitangente (cerchi di Villarceau: facce con un loop che si tocca).
+    const double tilt = std::asin(1.5 / 5.0);
+    const Vec3 n = normalized(frame.toGlobal(Vec3(0, -std::sin(tilt), std::cos(tilt))) - frame.origin());
+    const Frame3 plane(frame.origin(), n, frame.xDir());
+    const Body bitangent = makeBox(Frame3(frame.origin() - 10.0 * plane.xDir() - 10.0 * plane.yDir(), n, plane.xDir()), 20, 20, 10);
+    checkMesh(booleanOperation(torus, bitangent, BooleanOperation::Intersect), 0.01);
 }
 
 // Selezione: primo punto colpito da un raggio.

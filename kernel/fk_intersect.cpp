@@ -468,8 +468,20 @@ CurveCurveIntersection intersectCurves(const Curve<2> &a, const Interval &aRange
         // Tratti comuni (due B-spline con un pezzo in comune, per esempio il
         // bordo di una faccia e la sezione di un fianco estruso dalla stessa
         // curva): se ne tengono gli estremi e la suddivisione lavora sul resto.
+        // Due tratti polinomiali (o razionali) che coincidono su un intervallo
+        // coincidono su tutto il tratto: un tratto comune finisce in un
+        // estremo o in un nodo di una delle due curve. Si provano prima gli
+        // estremi; se la suddivisione non si esaurisce (curve sovrapposte in
+        // un tratto che finisce in un nodo) anche i nodi.
+        for (int attempt = 0; attempt < 2; ++attempt) {
+        out = CurveCurveIntersection();
         std::vector<double> candidates{aRange.lo, aRange.hi};
-        for (double end : {bRange.lo, bRange.hi}) {
+        std::vector<double> ends{bRange.lo, bRange.hi};
+        if (attempt == 1) {
+            for (double knot : a.breakpoints(aRange)) candidates.push_back(knot);
+            for (double knot : b.breakpoints(bRange)) ends.push_back(knot);
+        }
+        for (double end : ends) {
             const CurveProjection<2> projection = projectPoint(a, b.point(end), aRange);
             if (projection.distance <= tolerance) candidates.push_back(projection.parameter);
         }
@@ -486,11 +498,13 @@ CurveCurveIntersection intersectCurves(const Curve<2> &a, const Interval &aRange
         }
         std::vector<Interval> rest;
         double start = aRange.lo;
+        std::vector<double> commonEnds;
         for (const Interval &piece : common) {
             out.overlap = true;
             for (double s : {piece.lo, piece.hi}) {
                 const Vec2 p = a.point(s);
                 addPoint(out, {s, projectPoint(b, p, bRange).parameter, p}, tolerance);
+                commonEnds.push_back(s);
             }
             if (piece.lo > start) rest.push_back({start, piece.lo});
             start = piece.hi;
@@ -498,6 +512,7 @@ CurveCurveIntersection intersectCurves(const Curve<2> &a, const Interval &aRange
         if (start < aRange.hi) rest.push_back({start, aRange.hi});
         const std::vector<BSplineCurve<2>> piecesB = bezierPieces(static_cast<const BSplineCurve<2> &>(ub), bRange);
         int leaves = 0;
+        try {
         for (const Interval &part : rest) {
             const std::vector<BSplineCurve<2>> piecesA = bezierPieces(static_cast<const BSplineCurve<2> &>(ua), part);
             Box2 all;
@@ -508,6 +523,10 @@ CurveCurveIntersection intersectCurves(const Curve<2> &a, const Interval &aRange
             const double scale = std::max(all.diagonal(), 1e-300);
             for (const auto &pa : piecesA)
                 for (const auto &pb : piecesB) subdivide(a, part, b, bRange, pa, pb, 0, scale, tolerance, out, leaves);
+        }
+        } catch (const std::domain_error &) {
+            if (attempt == 1) throw;
+            continue;
         }
         // Estremi dei tratti che stanno sull'altra curva (contatti agli estremi,
         // che Newton puo' trovare solo al limite del tratto).
@@ -521,6 +540,34 @@ CurveCurveIntersection intersectCurves(const Curve<2> &a, const Interval &aRange
                     addPoint(out, side ? CurveCurvePoint{projection.parameter, end, p} : CurveCurvePoint{end, projection.parameter, p},
                              tolerance);
             }
+        // Punti vicini uniti da un arco che resta entro la tolleranza
+        // dall'altra curva: e' un solo contatto tangente (Newton si ferma in
+        // punti diversi della zona di contatto), o la separazione tangente
+        // all'estremo di un tratto comune, che resta il rappresentante.
+        if (out.points.size() > 1) {
+            std::sort(out.points.begin(), out.points.end(), [](const CurveCurvePoint &x, const CurveCurvePoint &y) { return x.s < y.s; });
+            auto isEnd = [&](double s) {
+                for (double e : commonEnds)
+                    if (std::fabs(e - s) <= 1e-12 * (1.0 + std::fabs(e))) return true;
+                return false;
+            };
+            std::vector<CurveCurvePoint> merged{out.points.front()};
+            for (std::size_t i = 1; i < out.points.size(); ++i) {
+                const CurveCurvePoint &p = out.points[i];
+                CurveCurvePoint &q = merged.back();
+                bool same = distance(p.point, q.point) <= 1e-2 * std::max(1.0, aRange.length()) && p.s > q.s;
+                for (int j = 1; j <= 7 && same; ++j)
+                    same = projectPoint(b, a.point(q.s + (p.s - q.s) * j / 8.0), bRange).distance <= tolerance;
+                // Tra due estremi di tratti comuni c'e' un tratto comune (o
+                // niente): restano entrambi.
+                if (same && isEnd(p.s) && isEnd(q.s)) same = false;
+                if (!same) merged.push_back(p);
+                else if (isEnd(p.s)) q = p;
+            }
+            out.points = std::move(merged);
+        }
+        break;
+        }
     } else {
         throw std::domain_error("intersectCurves: tipo di curva non gestito");
     }
@@ -730,6 +777,49 @@ PlaneSurfaceIntersection intersectPlaneSurface(const Plane &plane, const Surface
         out.curves.push_back(obliqueImage(base, domain, n, offset, d, range));
         out.ranges.push_back(range);
         return out;
+    }
+    case SurfaceType::Cone: {
+        // Solo i casi con curve esatte semplici: piano per il vertice
+        // (generatrici) e piano perpendicolare all'asse (cerchio). Le altre
+        // sezioni coniche passano dal marching.
+        const auto &cone = static_cast<const ConicalSurface &>(surface);
+        const Frame3 &f = cone.frame();
+        const Vec3 apex = cone.apex();
+        const double sa = std::sin(cone.semiAngle()), ca = std::cos(cone.semiAngle());
+        if (std::fabs(dot(n, apex) - offset) <= tolerance) {
+            // n . g(u) = 0 con g(u) = sin a (cos u X + sin u Y) + cos a Z: la
+            // retta vertice + t g(u) sta sul cono (le due falde).
+            const double A = sa * dot(n, f.xDir()), B = sa * dot(n, f.yDir()), C = ca * dot(n, f.zDir());
+            const double R = std::hypot(A, B);
+            if (R <= std::fabs(C) * (1.0 - 1e-12)) {
+                out.tangent = true;  // contatto nel solo vertice
+                return out;
+            }
+            auto generatrix = [&](double u) { return sa * (std::cos(u) * f.xDir() + std::sin(u) * f.yDir()) + ca * f.zDir(); };
+            const double phi = std::atan2(B, A), cosine = std::max(-1.0, std::min(1.0, -C / R));
+            if (std::fabs(cosine) >= 1.0 - 1e-12) {
+                out.tangent = true;
+                addLine(out, apex, generatrix(phi + (cosine > 0.0 ? 0.0 : kPi)), bounds, true);
+                return out;
+            }
+            const double half = std::acos(cosine);
+            addLine(out, apex, generatrix(phi + half), bounds);
+            addLine(out, apex, generatrix(phi - half), bounds);
+            return out;
+        }
+        const double na = dot(n, f.zDir());
+        if (std::fabs(na) >= 1.0 - 1e-15) {
+            const double v = (offset - dot(n, f.origin())) / (na * ca);  // quota lungo la generatrice
+            const double radius = cone.referenceRadius() + v * sa;
+            if (std::fabs(radius) <= tolerance) {
+                out.tangent = true;
+                return out;
+            }
+            out.curves.push_back(std::make_shared<Circle<3>>(f.origin() + v * ca * f.zDir(), f.xDir(), f.yDir(), std::fabs(radius)));
+            out.ranges.push_back({0.0, kTwoPi});
+            return out;
+        }
+        throw std::domain_error("intersectPlaneSurface: sezione conica non gestita");
     }
     default:
         throw std::domain_error("intersectPlaneSurface: superficie non gestita");

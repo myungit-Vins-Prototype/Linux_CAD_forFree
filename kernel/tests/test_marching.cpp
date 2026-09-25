@@ -324,8 +324,6 @@ void compareWithOcct(const Surface &a, const Surface &b, const Box &bounds, int 
     if (!reference.IsDone()) return;
     ++compared;
     const Box inner = bounds.padded(-1e-3);
-    if (getenv("FKM")) { fprintf(stderr, "pair %d-%d ours %zu curves (tangent %zu singular %zu isolated %zu) occt %d\n", int(a.type()), int(b.type()), ours.curves.size(), ours.tangentPoints.size(), ours.singularPoints.size(), ours.isolatedPoints.size(), reference.NbLines());
-        for (auto &c : ours.curves) fprintf(stderr, "   curve len %g closed %d\n", arcLength(*c.curve, c.range), int(c.closed)); }
     auto in = [&](const Vec3 &p) {
         for (int k = 0; k < 3; ++k)
             if (p[k] < inner.lo[k] || p[k] > inner.hi[k]) return false;
@@ -343,7 +341,6 @@ void compareWithOcct(const Surface &a, const Surface &b, const Box &bounds, int 
                 // distanza dalle superfici fa parte della tolleranza.
                 const double offSurfaces = std::max(projectPoint(a, p).distance, projectPoint(b, p).distance);
                 const double gap = distanceToCurves(ours, p);
-                if (getenv("FKM") && gap > 1e-5 + 2.0 * offSurfaces) fprintf(stderr, "   MISSING occt line %d point %g %g %g gap %g off %g\n", i, p.x(), p.y(), p.z(), gap, offSurfaces);
                 FK_CHECK(gap <= 1e-5 + 2.0 * offSurfaces);
             }
         }

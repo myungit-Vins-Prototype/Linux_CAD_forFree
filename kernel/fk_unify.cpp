@@ -120,6 +120,8 @@ bool mergeEdges(const Lists &lists, int e1, int e2, int v, double tolerance, Bod
 
 // Unisce gli edge nei vertici che separano solo due edge sulla stessa curva.
 void mergeCollinearEdges(Lists &lists, double tolerance) {
+    std::vector<std::vector<SurfacePole>> poles;
+    for (const Body::BuildFace &face : lists.faces) poles.push_back(surfacePoles(*face.surface));
     for (bool changed = true; changed;) {
         changed = false;
         std::map<int, std::vector<int>> incident;
@@ -132,6 +134,15 @@ void mergeCollinearEdges(Lists &lists, double tolerance) {
         for (const auto &[v, edges] : incident) {
             if (edges.size() != 2 || edges[0] == edges[1]) continue;
             const int e1 = edges[0], e2 = edges[1];
+            // Un vertice in un polo di una delle facce (sfera, vertice del
+            // cono) resta: li' l'SP-curve salta lungo la linea del polo.
+            bool atPole = false;
+            for (std::size_t f = 0; f < lists.faces.size() && !atPole; ++f) {
+                if (poles[f].empty() || poleIndex(poles[f], lists.vertices[v], std::max(tolerance, 10.0 * lists.edges[e1].tolerance)) < 0) continue;
+                for (const std::vector<Body::BuildFin> &loop : lists.faces[f].loops)
+                    for (const Body::BuildFin &fin : loop) atPole = atPole || fin.edge == e1;
+            }
+            if (atPole) continue;
             Body::BuildEdge merged;
             bool samePointer;
             if (!mergeEdges(lists, e1, e2, v, tolerance, merged, samePointer)) continue;
@@ -163,7 +174,12 @@ void mergeCollinearEdges(Lists &lists, double tolerance) {
                         break;
                     }
                 }
-            if (places.size() != 2) throw std::logic_error("unifySameDomain: fin non consecutive in un vertice di grado 2");
+            // Due fin (una sola sul bordo di una lamina).
+            std::size_t uses = 0;
+            for (const Body::BuildFace &face : lists.faces)
+                for (const std::vector<Body::BuildFin> &loop : face.loops)
+                    for (const Body::BuildFin &fin : loop) uses += fin.edge == e1 ? 1 : 0;
+            if (places.size() != uses || uses == 0) throw std::logic_error("unifySameDomain: fin non consecutive in un vertice di grado 2");
             merged.tolerance = std::max(merged.tolerance, 0.0);
             lists.edges[e1] = merged;
             lists.alive[e2] = false;
@@ -187,12 +203,13 @@ Body unifySameDomain(const Body &body, double tolerance) {
     std::map<int, bool> internal;  // edge -> tra due facce dello stesso gruppo
     for (EdgeId e : body.edges()) {
         const Edge &edge = body.edge(e);
+        if (body.isLaminar(e)) continue;  // bordo di una lamina
         const FaceId f1 = body.finFace(edge.forward), f2 = body.finFace(edge.backward);
         if (f1 == f2 || sameDomain(body.face(f1), body.face(f2), tolerance)) parent[find(position[f1.index])] = find(position[f2.index]);
     }
     for (EdgeId e : body.edges()) {
         const Edge &edge = body.edge(e);
-        internal[e.index] = find(position[body.finFace(edge.forward).index]) == find(position[body.finFace(edge.backward).index]);
+        internal[e.index] = !body.isLaminar(e) && find(position[body.finFace(edge.forward).index]) == find(position[body.finFace(edge.backward).index]);
     }
 
     // 2. Loop dei gruppi: dopo una fin che resta viene la prossima che resta
@@ -286,7 +303,7 @@ Body unifySameDomain(const Body &body, double tolerance) {
     for (Body::BuildFace &face : lists.faces)
         for (std::vector<Body::BuildFin> &loop : face.loops)
             for (Body::BuildFin &fin : loop) fin.edge = newEdge[fin.edge];
-    Body result = Body::build(vertices, edges, lists.faces);
+    Body result = body.isSheet() ? Body::buildSheet(vertices, edges, lists.faces) : Body::build(vertices, edges, lists.faces);
     computePCurves(result);
     return result;
 }

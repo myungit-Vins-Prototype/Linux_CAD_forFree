@@ -664,3 +664,252 @@ FK_TEST(BooleanTangentCurves) {
     const Body core = makeCylinder(Frame3(frame.origin() - 3.0 * frame.zDir(), frame.zDir(), frame.xDir()), big - small, 6.0);
     checkVolumes(torus, core, 2.0 * kPi * kPi * big * small * small, kPi * (big - small) * (big - small) * 6.0, 0.0);
 }
+
+// Curve d'intersezione che passano per i poli della sfera e per il vertice
+// del cono: piani per l'asse (sezioni a meta'), piani inclinati per il polo e
+// per il vertice, un cilindro che contiene l'asse (due anse, ciascuna per un
+// polo: qui BRepGProp sbaglia di 2e-6 e il riferimento e' l'integrale esatto),
+// una rivoluzione di spline che si chiude sull'asse (a meta' per simmetria).
+FK_TEST(BooleanThroughPoles) {
+    const Frame3 frame(Vec3(1, -2, 3), Vec3(0.2, 0.1, 1), Vec3(1, 0, 0));
+    auto local = [&](double x, double y, double z) { return frame.toGlobal(Vec3(x, y, z)); };
+    const double r = 4.0;
+    const Operand sphere = revolved(frame, {arcSegment(Vec2(0, 0), r, -kHalfPi, kHalfPi), lineSegment(Vec2(0, r), Vec2(0, -r))});
+    const Operand half = box(Frame3(local(0, -6, -6), frame.zDir(), frame.xDir()), 10, 12, 12);
+    compareAll(sphere, half);
+    const Operand cone = revolved(frame, {lineSegment(Vec2(0, -3), Vec2(4, -3)), lineSegment(Vec2(4, -3), Vec2(0, 5)), lineSegment(Vec2(0, 5), Vec2(0, -3))});
+    compareAll(cone, half);
+    // Piani inclinati per il polo nord e per il vertice del cono.
+    auto tiltedAt = [&](const Vec3 &point) {
+        const Vec3 n = normalized(frame.toGlobal(Vec3(0.3, 0.2, 1.0)) - frame.origin());
+        const Frame3 plane(point, n, frame.xDir());
+        return box(Frame3(point - 7.0 * plane.xDir() - 7.0 * plane.yDir() - 12.0 * n, n, plane.xDir()), 14, 14, 12);
+    };
+    compareAll(sphere, tiltedAt(local(0, 0, r)));
+    compareAll(cone, tiltedAt(local(0, 0, 5)));
+    // Cilindro che contiene l'asse della sfera: V comune = 2/3 \int (R^3 - (R^2 - 4 a^2 cos^2)^(3/2)).
+    const double a = 1.5, h = 16.0;
+    const Body through = makeCylinder(Frame3(local(a, 0, -8), frame.zDir(), frame.xDir()), a, h);
+    const double common = integratePieces([&](double t) { return 2.0 * (r * r * r - std::pow(r * r - 4 * a * a * std::cos(t) * std::cos(t), 1.5)) / 3.0; },
+                                          -kHalfPi, kHalfPi, {0.0});
+    checkVolumes(sphere.body, through, 4.0 * kPi * r * r * r / 3.0, kPi * a * a * h, common);
+    // Cupola: spline dal bordo all'asse, tagliata a meta' da un piano per l'asse.
+    auto spline = std::make_shared<BSplineCurve<2>>(3, std::vector<double>{0, 0, 0, 0, 1, 1, 1, 1},
+                                                    std::vector<Vec2>{Vec2(3, 0), Vec2(3, 2), Vec2(1.5, 4), Vec2(0, 4)});
+    const Body dome = makeRevolution(frame, buildProfile({lineSegment(Vec2(0, 0), Vec2(3, 0)), ProfileSegment{spline, spline->domain()},
+                                                          lineSegment(Vec2(0, 4), Vec2(0, 0))}, 1e-9).regions.front());
+    const double vDome = massProperties(dome).volume;
+    checkVolumes(dome, half.body, vDome, 10 * 12 * 12, 0.5 * vDome);
+    // Cilindro la cui superficie passa per il vertice del cono (curva
+    // tracciata per il vertice). V comune = \int 8 (1 - rho / 4) sul disco rho <= 3 cos t.
+    const Body cylinderThroughApex = makeCylinder(Frame3(local(1.5, 0, -8), frame.zDir(), frame.xDir()), 1.5, 16.0);
+    checkVolumes(cone.body, cylinderThroughApex, kPi * 16.0 * 8.0 / 3.0, kPi * 2.25 * 16.0, 8.0 * (4.5 * kHalfPi - 3.0));
+}
+
+// Lamine contro solidi: la parte della lamina dentro il solido
+// (intersezione, anche con il solido per primo) e quella fuori (differenza).
+// Riferimento: aree esatte. Unione, lamina tolta da un solido e due lamine: errore.
+FK_TEST(BooleanSheets) {
+    const Frame3 frame(Vec3(1, -2, 3), Vec3(0.2, 0.1, 1), Vec3(1, 0, 0));
+    auto local = [&](double x, double y, double z) { return frame.toGlobal(Vec3(x, y, z)); };
+    auto sheetOf = [&](const std::vector<ProfileSegment> &segments, double height) {
+        return makeSheetExtrusion(frame, buildProfile(segments, 1e-9).chains, height);
+    };
+    auto area = [](const Body &body) {
+        double total = 0.0;
+        for (FaceId f : body.faces()) total += faceArea(body, f);
+        return total;
+    };
+    auto check = [&](const Body &sheet, const Body &solid, double inside) {
+        const double total = area(sheet);
+        try {
+            const Body in = booleanOperation(sheet, solid, BooleanOperation::Intersect);
+            const Body swapped = booleanOperation(solid, sheet, BooleanOperation::Intersect);
+            const Body out = booleanOperation(sheet, solid, BooleanOperation::Subtract);
+            FK_CHECK(in.isSheet() && swapped.isSheet() && out.isSheet());
+            FK_CHECK_NEAR(area(in), inside, 1e-9 * total);
+            FK_CHECK_NEAR(area(swapped), inside, 1e-9 * total);
+            FK_CHECK_NEAR(area(out), total - inside, 1e-9 * total);
+        } catch (const std::exception &error) {
+            reportFailure(__FILE__, __LINE__, error.what());
+        }
+    };
+    // Lamina piana (segmento estruso) per meta' dentro un blocco; poi a L.
+    const Body block = makeBox(Frame3(local(0, -5, -1), frame.zDir(), frame.xDir()), 10, 10, 10);
+    check(sheetOf({lineSegment(Vec2(-6, 0), Vec2(6, 0))}, 6.0), block, 6.0 * 6.0);
+    check(sheetOf({lineSegment(Vec2(-6, 1), Vec2(3, 1)), lineSegment(Vec2(3, 1), Vec2(3, 8))}, 4.0), block, 3.0 * 4.0 + 4.0 * 4.0);
+    // Mezzo cilindro (arco estruso) contro un blocco e contro un cilindro coassiale piu' corto.
+    const double r = 3.0;
+    const Body shell = sheetOf({arcSegment(Vec2(0, 0), r, 0.0, kPi)}, 8.0);
+    check(shell, block, r * kHalfPi * 8.0);
+    check(shell, makeCylinder(Frame3(local(0, 0, 2), frame.zDir(), frame.xDir()), 4.0, 3.0), r * kPi * 3.0);
+    // Cilindro dello stesso raggio: la lamina sta sulla sua superficie (bordo: resta nell'intersezione).
+    check(shell, makeCylinder(Frame3(local(0, 0, 2), frame.zDir(), frame.xDir()), r, 3.0), r * kPi * 3.0);
+    FK_CHECK_THROWS(booleanOperation(shell, block, BooleanOperation::Unite));
+    FK_CHECK_THROWS(booleanOperation(block, shell, BooleanOperation::Subtract));
+    FK_CHECK_THROWS(booleanOperation(shell, shell, BooleanOperation::Intersect));
+}
+
+// Fianchi estrusi che coincidono solo in parte: B usa un pezzo della spline
+// di A (curva diversa: de Casteljau), anche in un tratto che A non ha.
+// Volumi esatti: aree dei profili (integrali esatti sulle curve) per le altezze.
+FK_TEST(BooleanPartialCoincidence) {
+    const Frame3 frame(Vec3(1, -2, 3), Vec3(0.2, 0.1, 1), Vec3(1, 0, 0));
+    auto at = [&](double z) { return Frame3(frame.toGlobal(Vec3(0, 0, z)), frame.zDir(), frame.xDir()); };
+    const std::vector<Vec2> poles{Vec2(0, 0), Vec2(2, 5), Vec2(8, 6), Vec2(10, 0)};
+    // Pezzo [a, b] della cubica di Bezier, riparametrizzato su [0, 1].
+    auto piece = [&](double a, double b) {
+        auto split = [](std::vector<Vec2> p, double t, bool left) {
+            std::vector<Vec2> l{p[0]}, r{p[3]};
+            for (int level = 1; level < 4; ++level) {
+                for (int i = 0; i + level < 4; ++i) p[i] = (1 - t) * p[i] + t * p[i + 1];
+                l.push_back(p[0]);
+                r.insert(r.begin(), p[3 - level]);
+            }
+            return left ? l : r;
+        };
+        std::vector<Vec2> q = split(poles, b, true);
+        q = split(q, a / b, false);
+        auto curve = std::make_shared<BSplineCurve<2>>(3, std::vector<double>{0, 0, 0, 0, 1, 1, 1, 1}, q);
+        return ProfileSegment{curve, curve->domain()};
+    };
+    auto whole = std::make_shared<BSplineCurve<2>>(3, std::vector<double>{0, 0, 0, 0, 1, 1, 1, 1}, poles);
+    const ProfileSegment arc{whole, whole->domain()};
+    auto region = [](const std::vector<ProfileSegment> &segments) { return buildProfile(segments, 1e-9).regions.front(); };
+    const ProfileRegion ra = region({arc, lineSegment(Vec2(10, 0), Vec2(0, 0))});
+    const Body a = makeExtrusion(at(0), ra, 6.0);
+    // B: il pezzo [0.3, 0.8] con la sua corda, piu' alto e spostato (dentro A).
+    const ProfileSegment middle = piece(0.3, 0.8);
+    const ProfileRegion rb = region({middle, lineSegment(middle.curve->point(1.0), middle.curve->point(0.0))});
+    const Body b = makeExtrusion(at(2), rb, 8.0);
+    checkVolumes(a, b, area(ra) * 6.0, area(rb) * 8.0, area(rb) * 4.0);
+    // C: il pezzo [0.5, 1] e poi fuori da A (un triangolo sotto la base di A).
+    const ProfileSegment tail = piece(0.5, 1.0);
+    const Vec2 start = tail.curve->point(0.0);
+    const ProfileRegion rc = region({tail, lineSegment(Vec2(10, 0), Vec2(12, -3)), lineSegment(Vec2(12, -3), start)});
+    const Body c = makeExtrusion(at(-1), rc, 4.0);
+    // Parte comune: la regione di C sopra la base di A (y >= 0), fino all'altezza 3.
+    const double lineX = start.x() + (Vec2(12, -3) - start).x() * (start.y() / (start.y() + 3.0));
+    const ProfileRegion rcAbove = region({tail, lineSegment(Vec2(10, 0), Vec2(lineX, 0)), lineSegment(Vec2(lineX, 0), start)});
+    checkVolumes(a, c, area(ra) * 6.0, area(rc) * 4.0, area(rcAbove) * 3.0);
+    // D: una spline che segue quella di A in [0.3, 0.6] e poi se ne stacca
+    // tangente, dentro A: le superfici si separano lungo una generatrice
+    // interna alla faccia di D.
+    const ProfileSegment first = piece(0.3, 0.6);
+    std::vector<Vec2> q = static_cast<const BSplineCurve<2> &>(*first.curve).poles();
+    q.push_back(q[3] + (q[3] - q[2]));
+    q.push_back(Vec2(7, 2.5));
+    q.push_back(Vec2(6, 1.5));
+    auto departing = std::make_shared<BSplineCurve<2>>(3, std::vector<double>{0, 0, 0, 0, 1, 1, 1, 2, 2, 2, 2}, q);
+    const ProfileRegion rd = region({ProfileSegment{departing, departing->domain()}, lineSegment(Vec2(6, 1.5), q.front())});
+    const Body d = makeExtrusion(at(1), rd, 3.0);
+    checkVolumes(a, d, area(ra) * 6.0, area(rd) * 3.0, area(rd) * 3.0);
+}
+
+// Piano bitangente al toro (per il centro, inclinato di asin(r / R)): la
+// sezione sono i due cerchi di Villarceau, che si incrociano nei due punti di
+// tangenza e si avvolgono nelle due direzioni del toro. Per simmetria ogni
+// meta' ha volume pari a meta' del toro.
+FK_TEST(BooleanVillarceau) {
+    const Frame3 frame(Vec3(1, -2, 3), Vec3(0.2, 0.1, 1), Vec3(1, 0, 0));
+    const double big = 5.0, small = 1.5, tilt = std::asin(small / big);
+    const Body torus = makeRevolution(frame, buildProfile({arcSegment(Vec2(big, 0), small, 0.0, kTwoPi)}, 1e-9).regions.front());
+    const Vec3 n = normalized(frame.toGlobal(Vec3(0, -std::sin(tilt), std::cos(tilt))) - frame.origin());
+    const Frame3 plane(frame.origin(), n, frame.xDir());
+    const Body block = makeBox(Frame3(frame.origin() - 10.0 * plane.xDir() - 10.0 * plane.yDir(), n, plane.xDir()), 20, 20, 10);
+    const double volume = 2.0 * kPi * kPi * big * small * small;
+    checkVolumes(torus, block, volume, 20 * 20 * 10, 0.5 * volume);
+}
+
+// Contatti tangenti di ordine superiore in un punto: una cupola (spline con
+// curvatura nulla sull'asse) che tocca nel polo un blocco appoggiato sopra, o
+// la faccia superiore di un blocco che la contiene. Nessuna curva: il
+// contatto non divide le facce.
+FK_TEST(BooleanHigherOrderContacts) {
+    const Frame3 frame(Vec3(1, -2, 3), Vec3(0.2, 0.1, 1), Vec3(1, 0, 0));
+    auto local = [&](double x, double y, double z) { return frame.toGlobal(Vec3(x, y, z)); };
+    auto spline = std::make_shared<BSplineCurve<2>>(3, std::vector<double>{0, 0, 0, 0, 1, 1, 1, 1},
+                                                    std::vector<Vec2>{Vec2(3, 0), Vec2(3, 4), Vec2(2, 4), Vec2(0, 4)});
+    const Body dome = makeRevolution(frame, buildProfile({lineSegment(Vec2(0, 0), Vec2(3, 0)), ProfileSegment{spline, spline->domain()},
+                                                          lineSegment(Vec2(0, 4), Vec2(0, 0))}, 1e-9).regions.front());
+    const double vDome = massProperties(dome).volume;
+    const Body above = makeBox(Frame3(local(-5, -5, 4), frame.zDir(), frame.xDir()), 10, 10, 3);
+    checkVolumes(dome, above, vDome, 300, 0.0);
+    // Blocco che contiene la cupola e ne tocca il polo con la faccia superiore.
+    const Body around = makeBox(Frame3(local(-5, -5, -1), frame.zDir(), frame.xDir()), 10, 10, 5);
+    checkVolumes(dome, around, vDome, 500, vDome);
+    // Cilindro orizzontale tangente nel polo: ne partono rami tangenti tra
+    // loro che il tracciamento non segue fino al punto. Errore esplicito,
+    // non un risultato sbagliato.
+    const Body roller = makeCylinder(Frame3(local(-6, 0, -6), frame.xDir(), frame.yDir()), 10.0, 12.0);
+    FK_CHECK_THROWS(booleanOperation(dome, roller, BooleanOperation::Intersect));
+}
+
+// Superfici di rivoluzione coassiali che coincidono in parte: una cupola di
+// spline e corpi rivoltati attorno allo stesso asse con un pezzo della stessa
+// spline (curva diversa: de Casteljau), dentro e fuori dalla cupola; poi una
+// sfera e un cilindro coassiali con la cupola (cerchi esatti dai profili).
+FK_TEST(BooleanCoaxialRevolutions) {
+    const Frame3 frame(Vec3(1, -2, 3), Vec3(0.2, 0.1, 1), Vec3(1, 0, 0));
+    const std::vector<Vec2> poles{Vec2(3, 0), Vec2(3, 2), Vec2(1.5, 4), Vec2(0, 4)};
+    auto split = [](std::vector<Vec2> p, double t, bool left) {
+        std::vector<Vec2> l{p[0]}, r{p[3]};
+        for (int level = 1; level < 4; ++level) {
+            for (int i = 0; i + level < 4; ++i) p[i] = (1 - t) * p[i] + t * p[i + 1];
+            l.push_back(p[0]);
+            r.insert(r.begin(), p[3 - level]);
+        }
+        return left ? l : r;
+    };
+    auto piece = [&](double a, double b) {
+        std::vector<Vec2> q = split(poles, b, true);
+        q = split(q, a / b, false);
+        auto curve = std::make_shared<BSplineCurve<2>>(3, std::vector<double>{0, 0, 0, 0, 1, 1, 1, 1}, q);
+        return ProfileSegment{curve, curve->domain()};
+    };
+    auto revolve = [&](const std::vector<ProfileSegment> &segments) { return makeRevolution(frame, buildProfile(segments, 1e-9).regions.front()); };
+    auto whole = std::make_shared<BSplineCurve<2>>(3, std::vector<double>{0, 0, 0, 0, 1, 1, 1, 1}, poles);
+    const Body dome = revolve({lineSegment(Vec2(0, 0), Vec2(3, 0)), ProfileSegment{whole, whole->domain()}, lineSegment(Vec2(0, 4), Vec2(0, 0))});
+    const double vDome = massProperties(dome).volume;
+    // Dentro: il pezzo [0.2, 0.7] chiuso verso l'asse.
+    const ProfileSegment inner = piece(0.2, 0.7);
+    const Vec2 p0 = inner.curve->point(0.0), p1 = inner.curve->point(1.0);
+    const Body core = revolve({inner, lineSegment(p1, Vec2(0, p1.y())), lineSegment(Vec2(0, p1.y()), Vec2(0, p0.y())), lineSegment(Vec2(0, p0.y()), p0)});
+    const double vCore = massProperties(core).volume;
+    checkVolumes(dome, core, vDome, vCore, vCore);
+    // Fuori: il pezzo [0.3, 0.8] con un anello verso l'esterno (solo la striscia in comune).
+    const ProfileSegment outer = piece(0.3, 0.8);
+    const Vec2 q0 = outer.curve->point(0.0), q1 = outer.curve->point(1.0);
+    const Body shell = revolve({outer, lineSegment(q1, q1 + Vec2(2, 0)), lineSegment(q1 + Vec2(2, 0), q0 + Vec2(2, 0)), lineSegment(q0 + Vec2(2, 0), q0)});
+    checkVolumes(dome, shell, vDome, massProperties(shell).volume, 0.0);
+    // Sfera e cilindro coassiali (cerchi dai profili, niente tracciamento).
+    const Body ball = revolve({arcSegment(Vec2(0, 2), 2.5, -kHalfPi, kHalfPi), lineSegment(Vec2(0, 4.5), Vec2(0, -0.5))});
+    const Body post = makeCylinder(Frame3(frame.toGlobal(Vec3(0, 0, -1)), frame.zDir(), frame.xDir()), 1.2, 7.0);
+    // Parte comune con il cilindro: \int 2 pi rho z(rho) drho per rho < 1.2 (sopra la base z = 0, fino a z = 6).
+    {
+        double lo = 0.0, hi = 1.0;
+        for (int i = 0; i < 100; ++i) {
+            const double m = 0.5 * (lo + hi);
+            (whole->point(m).x() > 1.2 ? lo : hi) = m;
+        }
+        const double common = ForgeCad::Kernel::detail::integrate(
+            [&](double t) {
+                Vec2 d[2];
+                whole->evaluate(t, 1, d);
+                return -kTwoPi * d[0].x() * d[0].y() * d[1].x();
+            },
+            lo, 1.0, 1e-13);
+        checkVolumes(dome, post, vDome, kPi * 1.44 * 7.0, common);
+    }
+    for (const Body *other : {&ball, &post}) {
+        try {
+            const double vi = massProperties(booleanOperation(dome, *other, BooleanOperation::Intersect)).volume;
+            const double vu = massProperties(booleanOperation(dome, *other, BooleanOperation::Unite)).volume;
+            const double vd = massProperties(booleanOperation(dome, *other, BooleanOperation::Subtract)).volume;
+            FK_CHECK_NEAR(vu, vDome + massProperties(*other).volume - vi, 1e-9 * vu);
+            FK_CHECK_NEAR(vd, vDome - vi, 1e-9 * vu);
+        } catch (const std::exception &e) {
+            reportFailure(__FILE__, __LINE__, e.what());
+        }
+    }
+}

@@ -98,3 +98,77 @@ FK_TEST(RevolutionSolids) {
     checkRevolution(frame, {lineSegment(Vec2(1, 0), Vec2(5, 0)), ProfileSegment{spline, spline->domain()}, lineSegment(Vec2(5, 3), Vec2(1, 3)),
                             lineSegment(Vec2(1, 3), Vec2(1, 0))}, 4, 0.0, 0.0);
 }
+
+namespace {
+
+// Rivoluzione parziale contro BRepPrimAPI_MakeRevol con lo stesso angolo.
+void checkPartialRevolution(const Frame3 &frame, const std::vector<ProfileSegment> &segments, double angle) {
+    const ProfileRegion region = regionOf(segments);
+    Body body;
+    try {
+        body = makeRevolution(frame, region, angle);
+    } catch (const std::exception &error) {
+        reportFailure(__FILE__, __LINE__, std::string("angolo ") + std::to_string(angle) + ": " + error.what());
+        return;
+    }
+    const std::vector<CheckIssue> issues = checkBody(body);
+    for (const CheckIssue &issue : issues) reportFailure(__FILE__, __LINE__, describe(issue.code) + ": " + issue.message);
+    MassProperties mass;
+    try {
+        mass = massProperties(body);
+    } catch (const std::exception &error) {
+        reportFailure(__FILE__, __LINE__, std::string("massProperties: ") + error.what());
+        return;
+    }
+    const Frame3 profilePlane(frame.origin(), -frame.yDir(), frame.xDir());
+    const TopoDS_Shape occt = BRepPrimAPI_MakeRevol(occtFace(region, profilePlane), gp_Ax1(toPnt(frame.origin()), toDir(frame.zDir())), angle).Shape();
+    GProp_GProps v, s;
+    BRepGProp::VolumeProperties(occt, v, 1e-12);
+    BRepGProp::SurfaceProperties(occt, s, 1e-12);
+    FK_CHECK_NEAR(mass.volume, v.Mass(), 1e-6 * v.Mass());
+    FK_CHECK_NEAR(mass.area, s.Mass(), 1e-6 * s.Mass());
+    FK_CHECK_NEAR(mass.centroid.x(), v.CentreOfMass().X(), 1e-6);
+    FK_CHECK_NEAR(mass.centroid.y(), v.CentreOfMass().Y(), 1e-6);
+    FK_CHECK_NEAR(mass.centroid.z(), v.CentreOfMass().Z(), 1e-6);
+    TessellationOptions options;
+    options.deflection = 1e-3;
+    FK_CHECK(tessellate(body, options).failedFaces == 0);
+}
+
+}
+
+FK_TEST(RevolutionPartial) {
+    const Frame3 frame(Vec3(1, -2, 3), Vec3(0.2, 0.1, 1), Vec3(1, 0, 0));
+    const std::vector<ProfileSegment> tube = polygon({Vec2(2, 0), Vec2(5, 0), Vec2(5, 3), Vec2(2, 3)});
+    const std::vector<ProfileSegment> post = polygon({Vec2(0, 0), Vec2(4, 0), Vec2(4, 3), Vec2(0, 3)});
+    const std::vector<ProfileSegment> ball{arcSegment(Vec2(0, 0), 3.0, -kHalfPi, kHalfPi), lineSegment(Vec2(0, 3), Vec2(0, -3))};
+    const std::vector<ProfileSegment> ring{arcSegment(Vec2(6, 1), 2.0, 0.0, kTwoPi)};
+    const std::vector<ProfileSegment> cone = polygon({Vec2(0, 0), Vec2(4, 0), Vec2(0, 6)});
+    for (double degrees : {90.0, 180.0, 270.0, -120.0}) {
+        const double angle = degrees * kPi / 180.0;
+        checkPartialRevolution(frame, tube, angle);
+        checkPartialRevolution(frame, post, angle);
+        checkPartialRevolution(frame, ball, angle);
+        checkPartialRevolution(frame, ring, angle);
+        checkPartialRevolution(frame, cone, angle);
+    }
+    checkPartialRevolution(frame, roundedRectangle(Vec2(2, -1), 4.0, 3.0, 1.0), 2.0);
+}
+
+FK_TEST(RevolutionPrimitives) {
+    const Frame3 frame(Vec3(1, 2, -1), Vec3(0.3, -0.2, 1), Vec3(1, 0, 0));
+    const auto check = [](const Body &body, double volume, double area) {
+        const std::vector<CheckIssue> issues = checkBody(body);
+        for (const CheckIssue &issue : issues) reportFailure(__FILE__, __LINE__, describe(issue.code) + ": " + issue.message);
+        const MassProperties mass = massProperties(body);
+        FK_CHECK_NEAR(mass.volume, volume, 1e-10 * volume);
+        FK_CHECK_NEAR(mass.area, area, 1e-10 * area);
+    };
+    check(makeSphere(frame, 2.0), 4.0 / 3.0 * kPi * 8.0, 4.0 * kPi * 4.0);
+    check(makeCone(frame, 3.0, 0.0, 4.0), kPi * 9.0 * 4.0 / 3.0, kPi * 9.0 + kPi * 3.0 * 5.0);
+    check(makeCone(frame, 0.0, 3.0, 4.0), kPi * 9.0 * 4.0 / 3.0, kPi * 9.0 + kPi * 3.0 * 5.0);
+    check(makeCone(frame, 3.0, 1.0, 2.0), kPi * 2.0 / 3.0 * (9.0 + 3.0 + 1.0), kPi * 10.0 + kPi * 4.0 * std::sqrt(8.0));
+    check(makeTorus(frame, 5.0, 1.5), 2.0 * kPi * kPi * 5.0 * 2.25, 4.0 * kPi * kPi * 5.0 * 1.5);
+    FK_CHECK_THROWS(makeTorus(frame, 1.0, 2.0));
+    FK_CHECK_THROWS(makeCone(frame, 0.0, 0.0, 1.0));
+}

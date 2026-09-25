@@ -19,6 +19,21 @@ namespace ForgeCad::Kernel {
 
 Body makeRevolution(const Frame3 &frame, const ProfileRegion &region);
 
+// Rivoluzione parziale: la regione ruota di `angle` radianti attorno a Z
+// (verso destrorso, negativo al contrario; |angle| >= 2 pi e' il giro
+// completo). E' il giro completo intersecato con il cuneo dei due semipiani
+// per l'asse ad angolo 0 (il piano del profilo) e `angle`: le facce stanno
+// sulle stesse superfici esatte, piu' le due facce piane del profilo.
+Body makeRevolution(const Frame3 &frame, const ProfileRegion &region, double angle);
+
+// Solidi elementari di rivoluzione attorno a Z di `frame`, base nell'origine.
+// Sfera di centro l'origine; cono (o tronco) di raggio `baseRadius` a z = 0 e
+// `topRadius` a z = height (uno dei due puo' essere nullo); toro di raggio
+// maggiore `majorRadius` e minore `minorRadius` (minore < maggiore) nel piano XY.
+Body makeSphere(const Frame3 &frame, double radius);
+Body makeCone(const Frame3 &frame, double baseRadius, double topRadius, double height);
+Body makeTorus(const Frame3 &frame, double majorRadius, double minorRadius);
+
 }
 
 #endif

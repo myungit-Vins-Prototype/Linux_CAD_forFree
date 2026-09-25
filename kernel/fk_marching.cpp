@@ -178,7 +178,19 @@ private:
         Params x;
         Vec3 p;
         Vec3 directions[2];
+        // Vertice di un cono (superficie `coneSide`) sull'altra superficie: ogni
+        // ramo parte lungo una generatrice, con il suo u (`branch`).
+        bool apex = false;
+        int coneSide = 0;
+        Params branch[2];
     };
+    // Parametri e derivate delle SP-curve di un nodo nel punto singolare lungo w.
+    void singularFrame(const Singular &singular, const Vec3 &w, Node &node) const;
+public:
+    // Vertici dei coni che stanno sull'altra superficie: punti singolari da
+    // cui partono i rami lungo le generatrici nel piano tangente dell'altra.
+    void registerApexes(SurfaceIntersection &out);
+private:
     // Nodo finale nel punto di tangenza, arrivando da `current`.
     Node singularNode(const Singular &singular, const Node &current) const;
     std::vector<Singular> singular_;
@@ -565,9 +577,12 @@ void Marcher::traceFrom(const Vec3 &seedPoint, SurfaceIntersection &out, bool si
     // Gia' su una curva di tangenza (o su un punto noto).
     if (knownPoint(seedPoint, out)) return;
     // Vicino a un punto di tangenza: lo si cerca e se ne tracciano i rami.
-    if (!makeNode(x, Vec3(), seed) || seed.sine < 1e-3) {
+    const bool regular = makeNode(x, Vec3(), seed);
+    if (!regular || seed.sine < 1e-3) {
         Params y = x;
-        if (refineSingular(y)) {
+        // Un punto di tangenza lontano dal seme (le superfici quasi tangenti
+        // attorno a un contatto di ordine superiore) non ferma un seme regolare.
+        if (refineSingular(y) && (!regular || distance(a_.point(y[0], y[1]), seedPoint) <= 1e-3 * scale_)) {
             singularSeed(y, out);
             return;
         }
@@ -825,10 +840,7 @@ void Marcher::traceSingularBranches(SurfaceIntersection &out) {
                 Node node;
                 node.x = singular.x;
                 node.p = singular.p;
-                node.t = h;
-                node.da = tangentParameters(ea[kU], ea[kV], h);
-                node.db = tangentParameters(eb[kU], eb[kV], h);
-                node.setIncoming();
+                singularFrame(singular, h, node);
                 node.singular = true;
                 traceCurve(node, out);
             }
@@ -949,14 +961,91 @@ Node Marcher::singularNode(const Singular &singular, const Node &current) const 
     Vec3 w = std::fabs(dot(singular.directions[0], chord)) >= std::fabs(dot(singular.directions[1], chord)) ? singular.directions[0]
                                                                                                                 : singular.directions[1];
     if (dot(w, chord) < 0.0) w = -w;
-    Vec3 ea[4], eb[4];
-    evaluate(node.x, ea, eb);
-    node.t = w;
-    node.da = tangentParameters(ea[kU], ea[kV], w);
-    node.db = tangentParameters(eb[kU], eb[kV], w);
-    node.setIncoming();
+    singularFrame(singular, w, node);
+    if (singular.apex)  // u del cono come il nodo di arrivo (a meno di periodi)
+        for (int i = 0; i < 4; ++i) {
+            const Surface &surface = i < 2 ? a_ : b_;
+            const bool periodic = i % 2 == 0 ? surface.isUPeriodic() : surface.isVPeriodic();
+            if (periodic) {
+                const double period = i % 2 == 0 ? surface.uPeriod() : surface.vPeriod();
+                node.x[i] += period * std::round((current.x[i] - node.x[i]) / period);
+            }
+        }
     node.singular = true;
     return node;
+}
+
+void Marcher::singularFrame(const Singular &singular, const Vec3 &w, Node &node) const {
+    node.t = w;
+    if (!singular.apex) {
+        Vec3 ea[4], eb[4];
+        evaluate(node.x, ea, eb);
+        node.da = tangentParameters(ea[kU], ea[kV], w);
+        node.db = tangentParameters(eb[kU], eb[kV], w);
+        node.setIncoming();
+        return;
+    }
+    // La generatrice piu' vicina a w: sul cono u fisso e v = distanza lungo
+    // la generatrice (dv/ds = +-1); l'altra superficie e' regolare nel vertice.
+    const int k = std::fabs(dot(singular.directions[0], w)) >= std::fabs(dot(singular.directions[1], w)) ? 0 : 1;
+    node.x = singular.branch[k];
+    const double along = dot(singular.directions[k], w) >= 0.0 ? 1.0 : -1.0;
+    const Surface &cone = singular.coneSide == 0 ? a_ : b_, &other = singular.coneSide == 0 ? b_ : a_;
+    const int o = singular.coneSide == 0 ? 2 : 0;
+    Vec3 d[4];
+    cone.evaluate(node.x[2 - o], node.x[3 - o], 1, d);
+    const Vec2 onCone(0.0, along * (dot(d[Surface::derivativeIndex(0, 1, 1)], singular.directions[k]) >= 0.0 ? 1.0 : -1.0));
+    Vec3 e[4];
+    other.evaluate(node.x[o], node.x[o + 1], 1, e);
+    const Vec2 onOther = tangentParameters(e[kU], e[kV], w);
+    node.da = singular.coneSide == 0 ? onCone : onOther;
+    node.db = singular.coneSide == 0 ? onOther : onCone;
+    node.setIncoming();
+}
+
+void Marcher::registerApexes(SurfaceIntersection &out) {
+    for (int side = 0; side < 2; ++side) {
+        const Surface &surface = side == 0 ? a_ : b_, &other = side == 0 ? b_ : a_;
+        if (surface.type() != SurfaceType::Cone) continue;
+        const auto &cone = static_cast<const ConicalSurface &>(surface);
+        const Vec3 apex = cone.apex();
+        if (!inside(bounds_, apex)) continue;
+        const SurfaceProjection onOther = projectPoint(other, apex);
+        if (onOther.distance > tolerance_) continue;
+        Vec3 n;
+        try {
+            n = other.normal(onOther.u, onOther.v);
+        } catch (const std::exception &) {
+            continue;  // anche l'altra e' singolare li'
+        }
+        const Frame3 &f = cone.frame();
+        const double sa = std::sin(cone.semiAngle()), ca = std::cos(cone.semiAngle());
+        const double A = sa * dot(n, f.xDir()), B = sa * dot(n, f.yDir()), C = ca * dot(n, f.zDir());
+        const double R = std::hypot(A, B);
+        if (R <= std::fabs(C) * (1.0 + 1e-9)) {
+            out.isolatedPoints.push_back(apex);  // l'altra superficie tocca il cono solo nel vertice
+            continue;
+        }
+        const double phi = std::atan2(B, A), half = std::acos(std::max(-1.0, std::min(1.0, -C / R)));
+        const double vApex = -cone.referenceRadius() / sa;
+        Singular singular;
+        singular.apex = true;
+        singular.coneSide = side;
+        singular.p = apex;
+        for (int k = 0; k < 2; ++k) {
+            const double u = phi + (k == 0 ? half : -half);
+            singular.directions[k] = sa * (std::cos(u) * f.xDir() + std::sin(u) * f.yDir()) + ca * f.zDir();
+            Params x;
+            x[side == 0 ? 0 : 2] = u - kTwoPi * std::floor(u / kTwoPi);
+            x[side == 0 ? 1 : 3] = vApex;
+            x[side == 0 ? 2 : 0] = onOther.u;
+            x[side == 0 ? 3 : 1] = onOther.v;
+            singular.branch[k] = x;
+        }
+        singular.x = singular.branch[0];
+        out.singularPoints.push_back(apex);
+        singular_.push_back(singular);
+    }
 }
 
 // Parametri in cui n.C(u) e' stazionaria.
@@ -1058,10 +1147,11 @@ SurfaceIntersection parallelCase(const GeneralizedCylinder &ga, const Generalize
     const PlanarImage ia = planarImage(*ga.profile, ga.domain, frame), ib = planarImage(*gb.profile, gb.domain, frame);
     if (!ia.curve || !ib.curve) throw std::domain_error("intersectSurfaces: sezione degenere");
     const CurveCurveIntersection hits = intersectCurves(*ia.curve, ia.range, *ib.curve, ib.range, tolerance);
-    if (hits.overlap) {
-        out.coincident = true;
-        return out;
-    }
+    // Sezioni sovrapposte in parte: le superfici hanno una striscia in comune;
+    // le rette agli estremi dei tratti comuni (dove le superfici si separano)
+    // sono tagli, anche se li' le sezioni sono tangenti.
+    out.coincident = hits.overlap;
+    auto onB = [&](double s) { return ia.range.contains(s) && projectPoint(*ib.curve, ia.curve->point(s), ib.range).distance <= tolerance; };
     // Lato della curva B da cui sta il punto (distanza con segno).
     auto side = [&](const Vec2 &q) {
         const CurveProjection<2> projection = projectPoint(*ib.curve, q, ib.range);
@@ -1070,6 +1160,16 @@ SurfaceIntersection parallelCase(const GeneralizedCylinder &ga, const Generalize
     for (const CurveCurvePoint &p : hits.points) {
         const Vec2 ta = ia.curve->derivative(p.s), tb = ib.curve->derivative(p.t);
         bool tangent = std::fabs(cross(normalized(ta), normalized(tb))) <= 1e-9;
+        if (hits.overlap) {
+            // A meta' strada (al piu') verso il punto vicino: una separazione
+            // tangente e' ancora entro la tolleranza troppo vicino al punto.
+            double delta = 1e-2 * ia.range.length();
+            for (const CurveCurvePoint &q : hits.points)
+                if (q.s != p.s) delta = std::min(delta, 0.5 * std::fabs(q.s - p.s));
+            const bool before = onB(p.s - delta), after = onB(p.s + delta);
+            if (before && after) continue;  // dentro il tratto comune
+            if (before || after) tangent = false;
+        }
         if (tangent) {
             // Tangenti ma attraversandosi (flesso): e' una retta di taglio.
             const double delta = 1e-5 * ia.range.length();
@@ -1207,8 +1307,212 @@ void subdivisionSeeds(const Surface &a, const Surface &b, const Box &bounds, dou
 
 }
 
+namespace {
+
+// --- Superfici di rivoluzione coassiali --------------------------------------
+// Cilindri, coni, sfere, tori e rivoluzioni con il meridiano in un piano per
+// l'asse, attorno allo stesso asse: l'intersezione sono i cerchi dei punti
+// comuni dei due profili nel semipiano (rho, z), esatti; i tratti di profilo
+// in comune sono strisce comuni alle due superfici.
+
+struct RotationalAxis {
+    Vec3 point, direction;
+    bool free = false;  // sfera: ogni retta per il centro
+};
+
+bool rotationalAxis(const Surface &surface, RotationalAxis &axis) {
+    switch (surface.type()) {
+    case SurfaceType::Cylinder: {
+        const Frame3 &f = static_cast<const CylindricalSurface &>(surface).frame();
+        axis = {f.origin(), f.zDir(), false};
+        return true;
+    }
+    case SurfaceType::Cone: {
+        const Frame3 &f = static_cast<const ConicalSurface &>(surface).frame();
+        axis = {f.origin(), f.zDir(), false};
+        return true;
+    }
+    case SurfaceType::Torus: {
+        const Frame3 &f = static_cast<const ToroidalSurface &>(surface).frame();
+        axis = {f.origin(), f.zDir(), false};
+        return true;
+    }
+    case SurfaceType::Sphere: {
+        const Frame3 &f = static_cast<const SphericalSurface &>(surface).frame();
+        axis = {f.origin(), f.zDir(), true};
+        return true;
+    }
+    case SurfaceType::Revolution: {
+        const auto &r = static_cast<const RevolutionSurface &>(surface);
+        axis = {r.axisPoint(), r.axisDirection(), false};
+        return true;
+    }
+    default:
+        return false;
+    }
+}
+
+struct Profile2 {
+    CurvePtr<2> curve;
+    Interval range;
+};
+
+// Profili della superficie nel semipiano (rho >= 0, z) dell'asse (O, d), limitati al box.
+bool rotationalProfiles(const Surface &surface, const Vec3 &origin, const Vec3 &d, const Box &bounds, double tolerance,
+                        std::vector<Profile2> &out) {
+    double zLo = 1e300, zHi = -1e300;
+    for (int i = 0; i < 8; ++i) {
+        const Vec3 c(i & 1 ? bounds.hi.x() : bounds.lo.x(), i & 2 ? bounds.hi.y() : bounds.lo.y(), i & 4 ? bounds.hi.z() : bounds.lo.z());
+        zLo = std::min(zLo, dot(c - origin, d));
+        zHi = std::max(zHi, dot(c - origin, d));
+    }
+    switch (surface.type()) {
+    case SurfaceType::Cylinder: {
+        const auto &c = static_cast<const CylindricalSurface &>(surface);
+        const double s = dot(c.frame().zDir(), d) > 0.0 ? 1.0 : -1.0, z0 = dot(c.frame().origin() - origin, d);
+        // v -> z = z0 + s v
+        const double v0 = (zLo - z0) * s, v1 = (zHi - z0) * s;
+        out.push_back({std::make_shared<Line<2>>(Vec2(c.radius(), z0), Vec2(0.0, s)), {std::min(v0, v1), std::max(v0, v1)}});
+        return true;
+    }
+    case SurfaceType::Cone: {
+        const auto &c = static_cast<const ConicalSurface &>(surface);
+        const double s = dot(c.frame().zDir(), d) > 0.0 ? 1.0 : -1.0, z0 = dot(c.frame().origin() - origin, d);
+        const double sa = std::sin(c.semiAngle()), ca = std::cos(c.semiAngle()), r = c.referenceRadius();
+        const double vApex = -r / sa;
+        const double v0 = (zLo - z0) * s / ca, v1 = (zHi - z0) * s / ca;
+        const Interval all{std::min(v0, v1), std::max(v0, v1)};
+        // Due falde: la retta del profilo e la sua immagine riflessa (rho < 0 -> -rho).
+        for (double mirror : {1.0, -1.0}) {
+            auto line = std::make_shared<Line<2>>(Vec2(mirror * r, z0), Vec2(mirror * sa, s * ca));
+            // rho = mirror (r + v sa) >= 0
+            Interval range = all;
+            if (mirror * sa > 0.0) range.lo = std::max(range.lo, vApex);
+            else range.hi = std::min(range.hi, vApex);
+            if (range.hi > range.lo) out.push_back({line, range});
+        }
+        return true;
+    }
+    case SurfaceType::Sphere: {
+        const auto &c = static_cast<const SphericalSurface &>(surface);
+        const double zc = dot(c.frame().origin() - origin, d);
+        out.push_back({std::make_shared<Circle<2>>(Vec2(0.0, zc), Vec2(1.0, 0.0), Vec2(0.0, 1.0), c.radius()), {-kHalfPi, kHalfPi}});
+        return true;
+    }
+    case SurfaceType::Torus: {
+        const auto &c = static_cast<const ToroidalSurface &>(surface);
+        const double zc = dot(c.frame().origin() - origin, d);
+        out.push_back({std::make_shared<Circle<2>>(Vec2(c.majorRadius(), zc), Vec2(1.0, 0.0), Vec2(0.0, 1.0), c.minorRadius()), {0.0, kTwoPi}});
+        return true;
+    }
+    case SurfaceType::Revolution: {
+        const auto &r = static_cast<const RevolutionSurface &>(surface);
+        const Curve<3> &meridian = *r.meridian();
+        const Interval domain = r.vDomain();
+        if (!domain.isFinite()) return false;
+        // Piano del meridiano: deve contenere l'asse.
+        Vec3 radial;
+        for (double f : {0.5, 0.3, 0.7, 0.1, 0.9}) {
+            const Vec3 w = meridian.point(domain.lo + f * domain.length()) - origin;
+            radial = w - dot(w, d) * d;
+            if (norm(radial) > 1e-9) break;
+        }
+        if (!(norm(radial) > 1e-9)) return false;
+        radial = normalized(radial);
+        const Vec3 normal = cross(radial, d);
+        for (int k = 0; k <= 16; ++k) {
+            const Vec3 w = meridian.point(domain.lo + domain.length() * k / 16.0) - origin;
+            if (std::fabs(dot(w, normal)) > tolerance || dot(w, radial) < -tolerance) return false;
+        }
+        const PlanarImage image = planarImage(meridian, domain, Frame3(origin, normal, radial));
+        if (!image.curve) return false;
+        out.push_back({image.curve, image.range});
+        return true;
+    }
+    default:
+        return false;
+    }
+}
+
+bool coaxialPair(const Surface &a, const Surface &b, double tolerance, Vec3 &origin, Vec3 &direction) {
+    RotationalAxis aa, ab;
+    if (!rotationalAxis(a, aa) || !rotationalAxis(b, ab)) return false;
+    if (aa.free && ab.free) {
+        // Due sfere: la retta dei centri (centri coincidenti: nessuna curva da qui).
+        if (distance(aa.point, ab.point) <= tolerance) return false;
+        origin = aa.point;
+        direction = normalized(ab.point - aa.point);
+        return true;
+    }
+    const RotationalAxis &fixed = aa.free ? ab : aa, &other = aa.free ? aa : ab;
+    auto offAxis = [&](const Vec3 &p) {
+        const Vec3 w = p - fixed.point;
+        return norm(w - dot(w, fixed.direction) * fixed.direction);
+    };
+    if (offAxis(other.point) > tolerance) return false;
+    if (!other.free && norm(cross(fixed.direction, other.direction)) > 1e-12) return false;
+    origin = fixed.point;
+    direction = fixed.direction;
+    return true;
+}
+
+SurfaceIntersection rotationalCase(const Surface &a, const Surface &b, const Vec3 &origin, const Vec3 &d, const Box &bounds,
+                                   double tolerance, bool &handled) {
+    SurfaceIntersection out;
+    std::vector<Profile2> pa, pb;
+    handled = rotationalProfiles(a, origin, d, bounds, tolerance, pa) && rotationalProfiles(b, origin, d, bounds, tolerance, pb);
+    if (!handled) return out;
+    const Frame3 frame = normalFrame(d, origin);
+    std::vector<Vec2> done;
+    for (const Profile2 &ca : pa)
+        for (const Profile2 &cb : pb) {
+            const CurveCurveIntersection hits = intersectCurves(*ca.curve, ca.range, *cb.curve, cb.range, tolerance);
+            if (hits.overlap) out.coincident = true;
+            auto onB = [&](double s) { return ca.range.contains(s) && projectPoint(*cb.curve, ca.curve->point(s), cb.range).distance <= tolerance; };
+            auto side = [&](const Vec2 &q) {
+                const CurveProjection<2> projection = projectPoint(*cb.curve, q, cb.range);
+                return cross(cb.curve->derivative(projection.parameter), q - projection.point);
+            };
+            for (const CurveCurvePoint &p : hits.points) {
+                const double rho = p.point.x(), z = p.point.y();
+                if (rho <= tolerance) continue;  // sull'asse: un punto (polo, vertice), non un cerchio
+                bool duplicate = false;
+                for (const Vec2 &q : done) duplicate = duplicate || distance(q, p.point) <= tolerance;
+                if (duplicate) continue;
+                const Vec2 ta = ca.curve->derivative(p.s), tb = cb.curve->derivative(p.t);
+                bool tangent = std::fabs(cross(normalized(ta), normalized(tb))) <= 1e-9;
+                double delta = 1e-2 * ca.range.length();
+                for (const CurveCurvePoint &q : hits.points)
+                    if (q.s != p.s) delta = std::min(delta, 0.5 * std::fabs(q.s - p.s));
+                if (hits.overlap) {
+                    const bool before = onB(p.s - delta), after = onB(p.s + delta);
+                    if (before && after) continue;
+                    if (before || after) tangent = false;  // estremo di una striscia comune: taglio
+                }
+                if (tangent && p.s - delta >= ca.range.lo && p.s + delta <= ca.range.hi
+                    && side(ca.curve->point(p.s - delta)) * side(ca.curve->point(p.s + delta)) < 0.0)
+                    tangent = false;  // tangenti ma attraversandosi (flesso)
+                done.push_back(p.point);
+                IntersectionCurve circle;
+                circle.curve = std::make_shared<Circle<3>>(origin + z * d, frame.xDir(), frame.yDir(), rho);
+                circle.range = {0.0, kTwoPi};
+                circle.closed = true;
+                (tangent ? out.tangentCurves : out.curves).push_back(circle);
+            }
+        }
+    return out;
+}
+
+}
+
 SurfaceIntersection intersectSurfaces(const Surface &a, const Surface &b, const Box &bounds, const std::vector<Vec3> &seeds,
                                       const SurfaceIntersectionOptions &options) {
+    Vec3 axisPoint, axisDirection;
+    if (coaxialPair(a, b, options.tolerance, axisPoint, axisDirection)) {
+        bool handled = false;
+        SurfaceIntersection out = rotationalCase(a, b, axisPoint, axisDirection, bounds, options.tolerance, handled);
+        if (handled) return out;
+    }
     GeneralizedCylinder ga, gb;
     if (!generalizedCylinder(a, ga) || !generalizedCylinder(b, gb)) {
         // Coppia qualsiasi: semi dalla suddivisione delle forme NURBS.
@@ -1218,6 +1522,7 @@ SurfaceIntersection intersectSurfaces(const Surface &a, const Surface &b, const 
         subdivisionSeeds(a, b, bounds, options.tolerance, all);
         SurfaceIntersection out;
         Marcher marcher(a, b, bounds, options);
+        marcher.registerApexes(out);
         for (const Vec3 &seed : all) marcher.traceFrom(seed, out, true);
         marcher.traceSingularBranches(out);
         for (const Vec3 &seed : all) marcher.traceFrom(seed, out);
@@ -1239,6 +1544,11 @@ SurfaceIntersection intersectSurfaces(const Surface &a, const Surface &b, const 
     marcher.traceSingularBranches(out);
     for (const Vec3 &seed : all) marcher.traceFrom(seed, out);
     return out;
+}
+
+bool coaxialRotational(const Surface &a, const Surface &b, double tolerance) {
+    Vec3 origin, direction;
+    return coaxialPair(a, b, tolerance, origin, direction);
 }
 
 }

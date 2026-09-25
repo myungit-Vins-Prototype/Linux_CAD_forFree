@@ -3,7 +3,11 @@
 #include <cmath>
 #include <stdexcept>
 
+#include "fk_boolean.h"
+#include "fk_classify.h"
 #include "fk_curve_ops.h"
+#include "fk_intersect.h"
+#include "fk_primitives.h"
 #include "fk_pcurve.h"
 #include "fk_precision.h"
 #include "fk_surface_algo.h"
@@ -16,6 +20,14 @@ const Curve<2> &basisOf(const Curve<2> &curve) {
     while (c->type() == CurveType::Trimmed) c = static_cast<const TrimmedCurve<2> *>(c)->basis().get();
     return *c;
 }
+
+ProfileRegion regionOf(const std::vector<ProfileSegment> &segments) {
+    const Profile profile = buildProfile(segments, kLinearResolution);
+    if (profile.regions.size() != 1) throw std::invalid_argument("profilo di rivoluzione non valido");
+    return profile.regions.front();
+}
+
+ProfileSegment line2(const Vec2 &a, const Vec2 &b) { return {std::make_shared<Line<2>>(a, b - a), {0.0, distance(a, b)}}; }
 
 }
 
@@ -95,6 +107,67 @@ Body makeRevolution(const Frame3 &frame, const ProfileRegion &region) {
     Body body = Body::build(vertices, edges, faces);
     computePCurves(body);
     return body;
+}
+
+Body makeRevolution(const Frame3 &frame, const ProfileRegion &region, double angle) {
+    Body full = makeRevolution(frame, region);
+    if (!(std::fabs(angle) < kTwoPi - kAngularResolution)) return full;
+    if (std::fabs(angle) <= kAngularResolution) throw std::invalid_argument("makeRevolution: angolo nullo");
+    // Estensione del solido lungo l'asse e distanza massima dall'asse, dagli
+    // angoli del suo box.
+    Box box;
+    for (VertexId v : full.vertices()) box.add(full.vertex(v).point);
+    for (EdgeId e : full.edges()) box.add(curveBox(*full.edge(e).curve, full.edge(e).range));
+    for (FaceId f : full.faces()) box.add(faceBox(full, f));
+    const Vec3 O = frame.origin(), Z = frame.zDir();
+    double zlo = 1e300, zhi = -1e300, radius = 0.0;
+    for (int corner = 0; corner < 8; ++corner) {
+        const Vec3 c((corner & 1) ? box.hi.x() : box.lo.x(), (corner & 2) ? box.hi.y() : box.lo.y(), (corner & 4) ? box.hi.z() : box.lo.z());
+        const double z = dot(c - O, Z);
+        zlo = std::min(zlo, z);
+        zhi = std::max(zhi, z);
+        radius = std::max(radius, norm(c - O - z * Z));
+    }
+    const double margin = 0.25 * (zhi - zlo + radius) + 1.0;
+    // Cuneo: poligono con un vertice sull'asse e gli altri a distanza 2 R sui
+    // raggi, al piu' 60 gradi l'uno dall'altro (le corde restano fuori dal
+    // cerchio di raggio R), estruso oltre il solido nei due versi.
+    const double from = std::min(0.0, angle), to = std::max(0.0, angle);
+    const int steps = std::max(1, int(std::ceil((to - from) / (kPi / 3.0))));
+    const double reach = 2.0 * (radius + margin);
+    std::vector<Vec2> wedge{Vec2(0.0, 0.0)};
+    for (int i = 0; i <= steps; ++i) {
+        const double a = from + (to - from) * i / steps;
+        wedge.push_back(Vec2(reach * std::cos(a), reach * std::sin(a)));
+    }
+    const Frame3 base(O + (zlo - margin) * Z, Z, frame.xDir());
+    const Body cutter = makePrism(base, wedge, {}, zhi - zlo + 2.0 * margin);
+    return booleanOperation(full, cutter, BooleanOperation::Intersect);
+}
+
+Body makeSphere(const Frame3 &frame, double radius) {
+    if (!(radius > kLinearResolution)) throw std::invalid_argument("makeSphere: raggio non valido");
+    auto arc = std::make_shared<Circle<2>>(makeCircle(Vec2(0.0, 0.0), radius));
+    return makeRevolution(frame, regionOf({{arc, {-kHalfPi, kHalfPi}}, line2(Vec2(0.0, radius), Vec2(0.0, -radius))}));
+}
+
+Body makeCone(const Frame3 &frame, double baseRadius, double topRadius, double height) {
+    if (!(height > kLinearResolution) || baseRadius < 0.0 || topRadius < 0.0 || std::max(baseRadius, topRadius) <= kLinearResolution)
+        throw std::invalid_argument("makeCone: dimensioni non valide");
+    std::vector<Vec2> points{Vec2(0.0, 0.0)};
+    if (baseRadius > kLinearResolution) points.push_back(Vec2(baseRadius, 0.0));
+    if (topRadius > kLinearResolution) points.push_back(Vec2(topRadius, height));
+    points.push_back(Vec2(0.0, height));
+    std::vector<ProfileSegment> segments;
+    for (std::size_t i = 0; i < points.size(); ++i) segments.push_back(line2(points[i], points[(i + 1) % points.size()]));
+    return makeRevolution(frame, regionOf(segments));
+}
+
+Body makeTorus(const Frame3 &frame, double majorRadius, double minorRadius) {
+    if (!(minorRadius > kLinearResolution) || !(majorRadius > minorRadius + kLinearResolution))
+        throw std::invalid_argument("makeTorus: il raggio minore deve essere positivo e minore del maggiore");
+    auto circle = std::make_shared<Circle<2>>(makeCircle(Vec2(majorRadius, 0.0), minorRadius));
+    return makeRevolution(frame, regionOf({{circle, {0.0, kTwoPi}}}));
 }
 
 }

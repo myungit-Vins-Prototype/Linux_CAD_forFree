@@ -150,6 +150,11 @@ private:
     double scale_, tolerance_;
     double v0_ = 0.0;
     std::vector<std::vector<FinTrack>> loops_;
+    // Cammini lungo la linea di un polo tra due fin del loop (u da `from` a `to`).
+    struct Walk {
+        double v, from, to;
+    };
+    std::vector<std::vector<Walk>> walks_;
 };
 
 FaceIntegrator::FaceIntegrator(const Body &body, FaceId faceId, const Vec3 &reference, double scale, double tolerance)
@@ -170,10 +175,19 @@ FaceIntegrator::FaceIntegrator(const Body &body, FaceId faceId, const Vec3 &refe
 
     bool first = true;
     Vec2 previous;  // ultimo campione: i loop successivi si srotolano vicino a questo
+    // Poli: u non e' definito e il loop che vi passa cammina lungo la linea del
+    // polo (nel verso che lascia il dominio a sinistra) fino alla fin successiva.
+    const std::vector<SurfacePole> poles = swap ? std::vector<SurfacePole>() : surfacePoles(*base_);
+    const double uPeriod = surface_->isUPeriodic() ? surface_->uPeriod() : 0.0;
     for (LoopId l : face.loops) {
         const std::vector<FinId> fins = body.loopFins(l);
         if (fins.empty()) continue;  // vertice isolato
         std::vector<FinTrack> tracks;
+        std::vector<Walk> walks;
+        int previousPole = -1, loopStartPole = -1;
+        bool previousTop = false;
+        Vec2 loopStart;
+        double previousNear = 0.0, loopStartNear = 0.0;  // u dei punti delle fin vicini agli estremi
         for (FinId f : fins) {
             const Fin &fin = body.fin(f);
             const Edge &edge = body.edge(fin.edge);
@@ -194,6 +208,8 @@ FaceIntegrator::FaceIntegrator(const Body &body, FaceId faceId, const Vec3 &refe
                 const double tStart = fin.sense ? edge.range.lo : edge.range.hi;
                 const double tEnd = fin.sense ? edge.range.hi : edge.range.lo;
                 const Vec2 startUV = pcurve->point(tStart);
+                const double startNear = pcurve->point(tStart + (tEnd - tStart) * 0.02)[0];
+                const int startPole = poleIndex(poles, edge.curve->point(tStart), track.acceptance);
                 track.pcurve = pcurve;
                 if (first) {
                     v0_ = startUV[1];
@@ -201,9 +217,21 @@ FaceIntegrator::FaceIntegrator(const Body &body, FaceId faceId, const Vec3 &refe
                 } else {
                     Vec2 shifted = startUV;
                     unwrap(shifted, previous);
+                    if (tracks.size() > 0 && startPole >= 0 && startPole == previousPole && uPeriod > 0.0) {
+                        shifted[0] = poleWalk(previous[0], startUV[0], uPeriod, previousTop, sense_, previousNear, startNear);
+                        walks.push_back({poles[startPole].v, previous[0], shifted[0]});
+                    }
                     track.shift = shifted - startUV;
                 }
+                if (tracks.empty()) {
+                    loopStart = startUV + track.shift;
+                    loopStartNear = startNear + track.shift[0];
+                    loopStartPole = startPole;
+                }
                 previous = pcurve->point(tEnd) + track.shift;
+                previousNear = pcurve->point(tEnd + (tStart - tEnd) * 0.02)[0] + track.shift[0];
+                previousPole = poleIndex(poles, edge.curve->point(tEnd), track.acceptance);
+                if (previousPole >= 0) previousTop = pcurve->point(tEnd + (tStart - tEnd) * 1e-3)[1] < poles[previousPole].v;
                 tracks.push_back(std::move(track));
                 continue;
             }
@@ -232,11 +260,44 @@ FaceIntegrator::FaceIntegrator(const Body &body, FaceId faceId, const Vec3 &refe
                 samples.push_back(sample);
                 previous = sample.uv;
             }
+            // Estremi nei poli: u e' il limite lungo la fin; tra la fin
+            // precedente e questa il loop cammina lungo il polo.
+            const int startPole = poleIndex(poles, edge.curve->point(ts.front()), track.acceptance);
+            const int endPole = poleIndex(poles, edge.curve->point(ts.back()), track.acceptance);
+            if (samples.size() >= 3) {
+                if (startPole >= 0) samples.front().uv = Vec2(2.0 * samples[1].uv[0] - samples[2].uv[0], poles[startPole].v);
+                const std::size_t n = samples.size();
+                if (endPole >= 0) samples.back().uv = Vec2(2.0 * samples[n - 2].uv[0] - samples[n - 3].uv[0], poles[endPole].v);
+            }
+            const double startNear = samples.size() >= 2 ? samples[1].uv[0] : samples.front().uv[0];
+            if (!tracks.empty()) {
+                double target = samples.front().uv[0];
+                if (startPole >= 0 && startPole == previousPole && uPeriod > 0.0) {
+                    target = poleWalk(previous[0], target, uPeriod, previousTop, sense_, previousNear, startNear);
+                    walks.push_back({poles[startPole].v, previous[0], target});
+                }
+                const double delta = target - samples.front().uv[0];
+                if (delta != 0.0)
+                    for (Sample &sample : samples) sample.uv[0] += delta;
+            }
+            if (tracks.empty()) {
+                loopStart = samples.front().uv;
+                loopStartNear = samples.size() >= 2 ? samples[1].uv[0] : loopStart[0];
+                loopStartPole = startPole;
+            }
+            previous = samples.back().uv;
+            previousNear = samples.size() >= 2 ? samples[samples.size() - 2].uv[0] : previous[0];
+            previousPole = endPole;
+            if (endPole >= 0 && samples.size() >= 2) previousTop = samples[samples.size() - 2].uv[1] < poles[endPole].v;
             if (!fin.sense) std::reverse(samples.begin(), samples.end());
             track.samples = std::move(samples);
             tracks.push_back(std::move(track));
         }
+        // Chiusura del loop in un polo.
+        if (loopStartPole >= 0 && loopStartPole == previousPole && uPeriod > 0.0)
+            walks.push_back({poles[loopStartPole].v, previous[0], poleWalk(previous[0], loopStart[0], uPeriod, previousTop, sense_, previousNear, loopStartNear)});
         loops_.push_back(std::move(tracks));
+        walks_.push_back(std::move(walks));
     }
     if (first) {
         const Interval v = surface_->vDomain();
@@ -252,12 +313,17 @@ FaceEvaluation FaceIntegrator::integrand(double u, double v) const {
     const Vec3 n = swapped_ ? cross(sv, su) : cross(su, sv);
     const Vec3 x = d[0] - reference_;
     const double w = dot(x, n);
-    const double area = norm(n), r = norm(x), m1 = r * area, m2 = r * m1, m3 = r * m2;
+    // Grandezza di N: anche l'arrotondamento delle derivate (dell'ordine delle
+    // coordinate): vicino a un polo Su nasce da una cancellazione (il raggio del
+    // cono vicino al vertice) e N ha un rumore ben piu' grande di |N|.
+    const double area = norm(n), r = norm(x);
+    const double size = area + (norm(d[0]) + scale_) * std::max(norm(su), norm(sv));
+    const double m1 = r * size, m2 = r * m1, m3 = r * m2;
     return {{area, w / 3.0,
              x[0] * w / 4.0, x[1] * w / 4.0, x[2] * w / 4.0,
              x[0] * x[0] * w / 5.0, x[1] * x[1] * w / 5.0, x[2] * x[2] * w / 5.0,
              x[0] * x[1] * w / 5.0, x[0] * x[2] * w / 5.0, x[1] * x[2] * w / 5.0},
-            {area, m1, m2, m2, m2, m3, m3, m3, m3, m3, m3}};
+            {size, m1, m2, m2, m2, m3, m3, m3, m3, m3, m3}};
 }
 
 FaceEvaluation FaceIntegrator::inner(double u, double v) const {
@@ -409,11 +475,24 @@ FaceValues FaceIntegrator::domainIntegrals() {
     const double s = sense_ ? 1.0 : -1.0;
     std::vector<LoopValues> loopValues;
     FaceValues result{};
-    for (const std::vector<FinTrack> &tracks : loops_) {
+    for (std::size_t l = 0; l < loops_.size(); ++l) {
         LoopValues sum{};
-        for (const FinTrack &track : tracks) {
+        for (const FinTrack &track : loops_[l]) {
             const LoopValues piece = finIntegral(track);
             for (std::size_t k = 0; k < kLoopValues; ++k) sum[k] += piece[k];
+        }
+        for (const Walk &walk : walks_[l]) {
+            // -\int G(u, v_polo) du lungo la linea del polo.
+            if (walk.to == walk.from) continue;
+            const double lo = std::min(walk.from, walk.to), hi = std::max(walk.from, walk.to);
+            const std::vector<double> breaks = surface_->uBreakpoints({lo, hi});
+            for (std::size_t i = 0; i + 1 < breaks.size(); ++i) {
+                const FaceEvaluation piece = detail::integrateVector<kFaceValues>(
+                    [&](double u) { return inner(u, walk.v); }, breaks[i], breaks[i + 1], tolerance_, kInnerRoundoff);
+                for (std::size_t k = 0; k < kFaceValues; ++k) sum[k] -= (walk.to > walk.from ? 1.0 : -1.0) * piece.value[k];
+            }
+            sum[11] += walk.to - walk.from;
+            sum[12] += walk.v * (walk.to - walk.from);
         }
         for (std::size_t k = 0; k < kFaceValues; ++k) result[k] += s * sum[k];
         loopValues.push_back(sum);

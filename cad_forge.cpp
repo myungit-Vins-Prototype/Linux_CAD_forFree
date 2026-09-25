@@ -12,6 +12,8 @@
 #include "fk_classify.h"
 #include "fk_extrude.h"
 #include "fk_intersect.h"
+#include "fk_primitives.h"
+#include "fk_revolve.h"
 #include "fk_tessellate.h"
 
 namespace ForgeCad {
@@ -37,11 +39,14 @@ ProfileSegment lineSegment(const Vec2 &a, const Vec2 &b) {
 std::vector<ProfileSegment> forgeSketchSegments(const SketchObject &sketch) {
     constexpr double confusion = 1.0e-7;  // Precision::Confusion()
     std::vector<ProfileSegment> result;
-    for (const SketchSegment &segment : sketch.segments) {
+    for (int index = 0; index < sketch.segments.size(); ++index) {
+        if (sketch.isConstructionSegment(index)) continue;
+        const SketchSegment &segment = sketch.segments.at(index);
         const Vec2 a = toVec(segment.first), b = toVec(segment.second);
         if (distance(a, b) > confusion) result.push_back(lineSegment(a, b));
     }
     for (const CurveObject &curve : sketch.curves) {
+        if (curve.construction) continue;
         const int count = curve.controlPoints.size();
         switch (curve.tool) {
         case DrawingTool::Spline: {
@@ -165,15 +170,98 @@ ForgeBody forgeExtrusion(const SketchObject &sketch, double distance, QString *e
     }
 }
 
+ForgeBody forgeRevolution(const SketchObject &sketch, int axis, double angleDegrees, QString *error) {
+    QPointF point, direction;
+    if (!sketchRevolutionAxis(sketch, axis, point, direction, error)) return nullptr;
+    if (std::abs(angleDegrees) <= 1.0e-9) {
+        setError(error, QStringLiteral("L'angolo di rivoluzione e' nullo."));
+        return nullptr;
+    }
+    const int side = revolutionProfileSide(sketch, point, direction, error);
+    if (side == 0) return nullptr;
+    // Il kernel vuole il profilo nel semipiano x >= 0 del piano XZ del suo
+    // sistema, con l'asse lungo Z: coordinate (x, y) = (distanza dall'asse,
+    // posizione lungo l'asse). E' un movimento rigido del piano (rotazione e
+    // traslazione: archi e curve restano esatti e con lo stesso verso). Con il
+    // profilo a sinistra dell'asse lo si percorre al contrario e l'angolo
+    // cambia segno (la stessa rotazione).
+    const QPointF axisDirection = side > 0 ? -direction : direction;
+    const QPointF normal(axisDirection.y(), -axisDirection.x());  // a destra dell'asse
+    const double angle = (side > 0 ? -angleDegrees : angleDegrees) * kPi / 180.0;
+    const auto local = [&](const QPointF &q) {
+        const QPointF r = q - point;
+        double x = r.x() * normal.x() + r.y() * normal.y();
+        // Estremi sull'asse entro la tolleranza di collegamento dello schizzo.
+        if (std::abs(x) <= kSketchConnectionTolerance) x = 0.0;
+        return QPointF(x, r.x() * axisDirection.x() + r.y() * axisDirection.y());
+    };
+    const auto localHandle = [&](const QPointF &q) {
+        const QPointF r = q - point;
+        return QPointF(r.x() * normal.x() + r.y() * normal.y(), r.x() * axisDirection.x() + r.y() * axisDirection.y());
+    };
+    SketchObject profileSketch = sketch;
+    for (SketchSegment &segment : profileSketch.segments) segment = qMakePair(local(segment.first), local(segment.second));
+    for (CurveObject &curve : profileSketch.curves) {
+        for (QPointF &control : curve.controlPoints) control = local(control);
+        for (QPair<QPointF, QPointF> &handles : curve.tangentHandles) handles = qMakePair(localHandle(handles.first), localHandle(handles.second));
+    }
+    try {
+        const std::vector<ProfileSegment> segments = forgeSketchSegments(profileSketch);
+        const Profile profile = buildProfile(segments, kSketchConnectionTolerance);
+        if (profile.regions.empty()) {
+            setError(error, QStringLiteral("La rivoluzione richiede un profilo chiuso."));
+            return nullptr;
+        }
+        const gp_Ax3 axes = sketchAxes(sketch.plane);
+        const Vec3 xs(axes.XDirection().X(), axes.XDirection().Y(), axes.XDirection().Z());
+        const Vec3 ys(axes.YDirection().X(), axes.YDirection().Y(), axes.YDirection().Z());
+        const gp_Pnt origin = sketchToWorld(point, sketch.plane);
+        const Frame3 frame(Vec3(origin.X(), origin.Y(), origin.Z()), axisDirection.x() * xs + axisDirection.y() * ys,
+                           normal.x() * xs + normal.y() * ys);
+        Body result = makeRevolution(frame, profile.regions.front(), angle);
+        for (std::size_t i = 1; i < profile.regions.size(); ++i)
+            result = booleanOperation(result, makeRevolution(frame, profile.regions[i], angle), Kernel::BooleanOperation::Unite);
+        return std::make_shared<const Body>(std::move(result));
+    } catch (const std::exception &failure) {
+        setError(error, QStringLiteral("Rivoluzione non riuscita: %1").arg(QString::fromUtf8(failure.what())));
+        return nullptr;
+    }
+}
+
+ForgeBody forgePrimitive(const PrimitiveParameters &parameters, QString *error) {
+    const QString invalid = primitiveError(parameters);
+    if (!invalid.isEmpty()) {
+        setError(error, invalid);
+        return nullptr;
+    }
+    const gp_Ax3 axes = primitiveAxes(parameters);
+    auto fromDir = [](const gp_Dir &d) { return Vec3(d.X(), d.Y(), d.Z()); };
+    const Frame3 frame(Vec3(axes.Location().X(), axes.Location().Y(), axes.Location().Z()), fromDir(axes.Direction()),
+                       fromDir(axes.XDirection()));
+    const double *size = parameters.size;
+    try {
+        Body body;
+        switch (parameters.kind) {
+        case PrimitiveKind::Box: body = makeBox(frame, size[0], size[1], size[2]); break;
+        case PrimitiveKind::Cylinder: body = makeCylinder(frame, size[0], size[1]); break;
+        case PrimitiveKind::Sphere: body = makeSphere(frame, size[0]); break;
+        case PrimitiveKind::Cone: body = makeCone(frame, size[0], size[1], size[2]); break;
+        case PrimitiveKind::Torus: body = makeTorus(frame, size[0], size[1]); break;
+        }
+        return std::make_shared<const Body>(std::move(body));
+    } catch (const std::exception &failure) {
+        setError(error, QStringLiteral("Primitiva non riuscita: %1").arg(QString::fromUtf8(failure.what())));
+        return nullptr;
+    }
+}
+
 ForgeBody forgeBoolean(const ForgeBody &first, const ForgeBody &second, ::BooleanOperation operation, QString *error) {
     if (!first || !second) {
         setError(error, QStringLiteral("Uno degli operandi non ha geometria valida."));
         return nullptr;
     }
-    if (first->isSheet() || second->isSheet()) {
-        setError(error, QStringLiteral("Le operazioni booleane richiedono due solidi chiusi."));
-        return nullptr;
-    }
+    // Lamina con solido: il kernel tiene la parte della lamina dentro
+    // (intersezione) o fuori (differenza) e rifiuta gli altri casi.
     try {
         Body result = booleanOperation(*first, *second, Kernel::BooleanOperation(int(operation)));
         if (result.faces().empty()) {

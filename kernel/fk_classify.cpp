@@ -6,6 +6,7 @@
 
 #include "fk_curve_algo.h"
 #include "fk_nurbs.h"
+#include "fk_pcurve.h"
 #include "fk_surface_algo.h"
 
 namespace ForgeCad::Kernel {
@@ -36,6 +37,25 @@ PointLocation classifyPointOnFace(const Body &body, FaceId faceId, const Vec3 &p
 
     const SurfaceProjection projection = projectPoint(surface, point);
     const double periods[2] = {surface.isUPeriodic() ? surface.uPeriod() : 0.0, surface.isVPeriodic() ? surface.vPeriod() : 0.0};
+    // Cammini dei loop lungo le linee dei poli (tratti orizzontali in (u, v)).
+    std::vector<LoopPoleWalk> walks;
+    for (LoopId l : face.loops) {
+        const std::vector<LoopPoleWalk> more = loopPoleWalks(body, l, tolerance);
+        walks.insert(walks.end(), more.begin(), more.end());
+    }
+    // Vertice del cono: la faccia sta su una falda sola (dalla parte dei suoi
+    // loop); un punto sull'altra falda e' fuori.
+    if (surface.type() == SurfaceType::Cone) {
+        const double apex = surfacePoles(surface).front().v;
+        double side = 0.0;
+        for (FinId f : fins) {
+            const Edge &edge = body.edge(body.fin(f).edge);
+            if (!body.fin(f).pcurve) continue;
+            const double v = body.fin(f).pcurve->point(0.5 * (edge.range.lo + edge.range.hi))[1];
+            if (std::fabs(v - apex) > std::fabs(side)) side = v - apex;
+        }
+        if (side * (projection.v - apex) < 0.0) return PointLocation::Outside;
+    }
     Vec3 d[4];
     surface.evaluate(projection.u, projection.v, 1, d);
     const double steps[2] = {0.1 * tolerance / std::max(norm(d[Surface::derivativeIndex(1, 0, 1)]), 1e-300),
@@ -106,6 +126,25 @@ PointLocation classifyPointOnFace(const Body &body, FaceId faceId, const Vec3 &p
                 }
             }
         }
+        // Cammini lungo i poli: tratti a v costante, solo per la semiretta verticale.
+        if (along == 1)
+            for (const LoopPoleWalk &walk : walks) {
+                if (walk.from == walk.to) continue;
+                const double lo = std::min(walk.from, walk.to), hi = std::max(walk.from, walk.to);
+                for (int k = int(std::floor((lo - c) / period)) - 1; period > 0.0 && k <= int(std::ceil((hi - c) / period)) + 1; ++k) {
+                    const double at = c + k * period;
+                    if (std::fabs(at - lo) <= 1e-12 || std::fabs(at - hi) <= 1e-12) return -2;
+                    if (!(at > lo && at < hi)) continue;
+                    const int orientation = (walk.to > walk.from ? 1 : -1) * int(faceSign);
+                    if (walk.v > position && walk.v < above) {
+                        above = walk.v;
+                        aboveOrientation = orientation;
+                    } else if (walk.v <= position && walk.v > below) {
+                        below = walk.v;
+                        belowOrientation = orientation;
+                    }
+                }
+            }
         if (aboveOrientation != 0) return aboveOrientation < 0 ? 1 : 0;
         if (belowOrientation != 0) return belowOrientation > 0 ? 1 : 0;
         return -1;

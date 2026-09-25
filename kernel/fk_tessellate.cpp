@@ -3,11 +3,13 @@
 #include <algorithm>
 #include <cmath>
 #include <deque>
+#include <functional>
 #include <limits>
 #include <map>
 #include <stdexcept>
 
 #include "fk_pcurve.h"
+#include "fk_surface_algo.h"
 
 namespace ForgeCad::Kernel {
 
@@ -418,6 +420,7 @@ struct LoopSample {
     int fin;
     double t, tNext;
     Vec2 shift;
+    bool straight = false;  // tratto rettilineo in (u, v) lungo la linea di un polo
 };
 
 struct LoopRing {
@@ -529,6 +532,9 @@ Vec3 FaceTessellator::surfaceNormal(const Vec2 &uv, const Vec2 &center) const {
 }
 
 void FaceTessellator::buildRings() {
+    // Poli: il loop che vi arriva cammina lungo la linea del polo (tratti
+    // rettilinei in (u, v), infittiti con l'angolo) fino alla fin successiva.
+    const std::vector<SurfacePole> poles = periodic_[0] ? surfacePoles(surface_) : std::vector<SurfacePole>();
     for (LoopId l : face_.loops) {
         const std::vector<FinId> fins = body_.loopFins(l);
         if (fins.empty()) continue;
@@ -536,6 +542,23 @@ void FaceTessellator::buildRings() {
         Vec2 previous;
         bool first = true;
         Vec2 firstUV;
+        int previousPole = -1, firstPole = -1;
+        bool previousTop = false;
+        double previousNear = 0.0, firstNear = 0.0;  // u dei punti delle fin vicini agli estremi
+        Vec3 previousPoint;
+        auto walk = [&](const Vec2 &from, double to, int pole) {
+            const double length = std::fabs(to - from[0]);
+            const int steps = std::max(1, int(std::ceil(length / std::max(0.5 * options_.angle, 1e-3))));
+            for (int k = 0; k < steps; ++k) {
+                LoopSample sample;
+                sample.uv = Vec2(from[0] + (to - from[0]) * k / steps, poles[std::size_t(pole)].v);
+                sample.p = previousPoint;
+                sample.fin = -1;
+                sample.t = sample.tNext = 0.0;
+                sample.straight = true;
+                ring.samples.push_back(sample);
+            }
+        };
         for (FinId f : fins) {
             const Fin &fin = body_.fin(f);
             const Edge &edge = body_.edge(fin.edge);
@@ -544,14 +567,24 @@ void FaceTessellator::buildRings() {
             fins_.push_back(&fin);
             std::vector<double> ts = edgeSamples_.at(std::size_t(fin.edge.index));
             if (!fin.sense) std::reverse(ts.begin(), ts.end());
+            const double tolerance = std::max(1e-6, 10.0 * edge.tolerance);
+            const int startPole = poles.empty() ? -1 : poleIndex(poles, edge.curve->point(ts.front()), tolerance);
             Vec2 shift;
             const Vec2 start = fin.pcurve->point(ts.front());
+            const double startNear = fin.pcurve->point(ts.front() + (ts.back() - ts.front()) * 0.02)[0];
             if (first) {
                 firstUV = start;
+                firstNear = startNear;
+                firstPole = startPole;
                 first = false;
             } else {
                 for (int d = 0; d < 2; ++d)
                     if (periodic_[d]) shift[d] = period_[d] * std::round((previous[d] - start[d]) / period_[d]);
+                if (startPole >= 0 && startPole == previousPole) {
+                    const double target = poleWalk(previous[0], start[0], period_[0], previousTop, face_.sense, previousNear, startNear);
+                    walk(previous, target, startPole);
+                    shift[0] = target - start[0];
+                }
             }
             for (std::size_t j = 0; j + 1 < ts.size(); ++j) {
                 LoopSample sample;
@@ -564,8 +597,17 @@ void FaceTessellator::buildRings() {
                 ring.samples.push_back(sample);
             }
             previous = fin.pcurve->point(ts.back()) + shift;
+            previousNear = fin.pcurve->point(ts.back() + (ts.front() - ts.back()) * 0.02)[0] + shift[0];
+            previousPoint = edge.curve->point(ts.back());
+            previousPole = poles.empty() ? -1 : poleIndex(poles, previousPoint, tolerance);
+            if (previousPole >= 0) previousTop = fin.pcurve->point(ts[ts.size() - 2])[1] < poles[std::size_t(previousPole)].v;
         }
         if (ring.samples.empty()) continue;
+        if (firstPole >= 0 && firstPole == previousPole) {
+            const double target = poleWalk(previous[0], firstUV[0], period_[0], previousTop, face_.sense, previousNear, firstNear);
+            walk(previous, target, firstPole);
+            previous[0] = target;
+        }
         ring.wrap = previous - firstUV;
         for (int d = 0; d < 2; ++d) ring.wrap[d] = periodic_[d] ? period_[d] * std::round(ring.wrap[d] / period_[d]) : 0.0;
         rings_.push_back(std::move(ring));
@@ -699,7 +741,7 @@ void FaceTessellator::cutRing(const LoopRing &ring) {
     Chain current;
     for (std::size_t i = 0; i < n; ++i) {
         const LoopSample &sample = ring.samples[i];
-        if (current.points.empty() || distance(current.points.back().p, sample.p) != 0.0)
+        if (current.points.empty() || distance(current.points.back().p, sample.p) != 0.0 || distance(current.points.back().uv, local(sample.uv)) > 1e-12)
             current.points.push_back({local(sample.uv), sample.p});
         const Vec2 a = sample.uv, b = i + 1 < n ? ring.samples[i + 1].uv : ring.samples[0].uv + ring.wrap;
         // Attraversamenti del tratto, in ordine lungo il tratto.
@@ -734,16 +776,23 @@ void FaceTessellator::cutRing(const LoopRing &ring) {
         std::sort(crossings.begin(), crossings.end(), [](const Crossing &x, const Crossing &y) { return x.fraction < y.fraction; });
         for (const Crossing &crossing : crossings) {
             const int d = crossing.dimension;
-            const double t = crossing.fraction <= 0.0   ? sample.t
-                           : crossing.fraction >= 1.0 ? sample.tNext
-                                                      : crossingParameter(sample, d, crossing.line);
-            const Curve<2> &pcurve = *fins_[std::size_t(sample.fin)]->pcurve;
-            const Vec2 uv = pcurve.point(t) + sample.shift;
-            const Vec3 p = body_.edge(fins_[std::size_t(sample.fin)]->edge).curve->point(t);
+            Vec2 uv;
+            Vec3 p;
+            if (sample.straight) {
+                uv = a + crossing.fraction * (b - a);
+                p = sample.p;
+            } else {
+                const double t = crossing.fraction <= 0.0   ? sample.t
+                               : crossing.fraction >= 1.0 ? sample.tNext
+                                                          : crossingParameter(sample, d, crossing.line);
+                uv = fins_[std::size_t(sample.fin)]->pcurve->point(t) + sample.shift;
+                p = body_.edge(fins_[std::size_t(sample.fin)]->edge).curve->point(t);
+            }
             // Fine della catena sul bordo della cella corrente.
             Vec2 end = local(uv);
             end[d] = cuts_[d][std::size_t(strip[d] + (crossing.positive ? 1 : 0))];
-            if (!current.points.empty() && distance(current.points.back().p, p) == 0.0) current.points.pop_back();
+            if (!current.points.empty() && distance(current.points.back().p, p) == 0.0 && distance(current.points.back().uv, end) <= 1e-12)
+                current.points.pop_back();
             current.points.push_back({end, p});
             current.end = d == 0 ? (crossing.positive ? Right : Left) : (crossing.positive ? Top : Bottom);
             current.cell = cellIndex();
@@ -770,7 +819,10 @@ void FaceTessellator::cutRing(const LoopRing &ring) {
     }
     // Il tratto prima del primo attraversamento chiude l'ultima catena.
     Chain &head = pieces.front();
-    std::size_t skip = !current.points.empty() && distance(current.points.back().p, head.points.front().p) == 0.0 ? 1 : 0;
+    std::size_t skip = !current.points.empty() && distance(current.points.back().p, head.points.front().p) == 0.0
+                               && distance(current.points.back().uv, head.points.front().uv) <= 1e-12
+                           ? 1
+                           : 0;
     current.points.insert(current.points.end(), head.points.begin() + std::ptrdiff_t(skip), head.points.end());
     current.end = head.end;
     current.cell = head.cell;
@@ -908,7 +960,27 @@ int FaceTessellator::addVertex(const Vec2 &uv, const Vec3 &p, const Vec2 &center
 
 // Poligoni di una cella: esterni antiorari, fori orari (assegnati
 // all'esterno piu' piccolo che li contiene).
-void FaceTessellator::triangulate(const std::vector<std::vector<BoundaryPoint>> &polygons, const Vec2 &center) {
+void FaceTessellator::triangulate(const std::vector<std::vector<BoundaryPoint>> &input, const Vec2 &center) {
+    // Un poligono che ripassa per lo stesso punto (loop "pizzicato", per
+    // esempio sul toro tagliato da un piano bitangente) si divide li' in
+    // poligoni semplici: earcut non gestisce i poligoni che si toccano.
+    std::vector<std::vector<BoundaryPoint>> polygons;
+    const double gap = 1e-7 * (std::fabs(center[0]) + std::fabs(center[1]) + 1.0);
+    std::function<void(std::vector<BoundaryPoint>)> simple = [&](std::vector<BoundaryPoint> polygon) {
+        for (std::size_t i = 0; i < polygon.size(); ++i)
+            for (std::size_t j = i + 2; j < polygon.size(); ++j) {
+                if (i == 0 && j + 1 == polygon.size()) continue;
+                if (distance(polygon[i].uv, polygon[j].uv) > gap || distance(polygon[i].p, polygon[j].p) > 1e-9 * (1.0 + norm(polygon[i].p))) continue;
+                std::vector<BoundaryPoint> inner(polygon.begin() + std::ptrdiff_t(i), polygon.begin() + std::ptrdiff_t(j));
+                std::vector<BoundaryPoint> outer(polygon.begin(), polygon.begin() + std::ptrdiff_t(i));
+                outer.insert(outer.end(), polygon.begin() + std::ptrdiff_t(j), polygon.end());
+                simple(std::move(inner));
+                simple(std::move(outer));
+                return;
+            }
+        polygons.push_back(std::move(polygon));
+    };
+    for (const std::vector<BoundaryPoint> &polygon : input) simple(polygon);
     std::vector<std::size_t> outers, holes;
     std::vector<double> areas;
     for (std::size_t i = 0; i < polygons.size(); ++i) {

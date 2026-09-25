@@ -46,6 +46,17 @@ double pcurveDeviation(const Surface &surface, const Curve<3> &curve, const Curv
 // fin rimaste senza SP-curve.
 int computePCurves(Body &body, double tolerance = kPCurveTolerance);
 
+// Cammini di un loop lungo la linea di un polo della sua faccia (sfera,
+// vertice del cono): dove una fin arriva nel polo con u = `from` e la
+// successiva (indice `nextFin` in loopFins) riparte con u congruo a `to`, il
+// contorno nello spazio (u, v) segue la linea v = quota del polo (vedi
+// poleWalk in fk_surface_algo.h). Servono le SP-curve delle fin.
+struct LoopPoleWalk {
+    double v = 0.0, from = 0.0, to = 0.0;
+    std::size_t nextFin = 0;
+};
+std::vector<LoopPoleWalk> loopPoleWalks(const Body &body, LoopId loop, double tolerance = 1e-6);
+
 }
 
 #endif

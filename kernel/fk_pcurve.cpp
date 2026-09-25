@@ -79,6 +79,13 @@ bool sampleParameters(const Surface &surface, const Curve<3> &curve, const std::
         uvs[i] = uvs[i + 1];
         if (!invertPoint(surface, curve.point(ts[i]), uvs[i], tolerance, scale)) return false;
     }
+    // Estremi in un polo (sfera, vertice del cono): u vale il limite lungo la curva.
+    if (count >= 3) {
+        const std::vector<SurfacePole> poles = surfacePoles(surface);
+        const int first = poleIndex(poles, curve.point(ts.front()), tolerance), last = poleIndex(poles, curve.point(ts.back()), tolerance);
+        if (first >= 0) uvs.front() = Vec2(2.0 * uvs[1][0] - uvs[2][0], poles[first].v);
+        if (last >= 0) uvs.back() = Vec2(2.0 * uvs[count - 2][0] - uvs[count - 3][0], poles[last].v);
+    }
     return true;
 }
 
@@ -130,13 +137,35 @@ Vec2 hermite(const HermiteNode &a, const HermiteNode &b, double t) {
 
 class Fitter {
 public:
-    Fitter(const Surface &surface, const Curve<3> &curve, double tolerance, double scale)
-        : surface_(surface), curve_(curve), tolerance_(tolerance), scale_(scale) {}
+    Fitter(const Surface &surface, const Curve<3> &curve, const Interval &range, double tolerance, double scale)
+        : surface_(surface), curve_(curve), range_(range), tolerance_(tolerance), scale_(scale), poles_(surfacePoles(surface)) {}
 
     bool node(double t, Vec2 uv, HermiteNode &out) const {
         Vec3 c[2];
         curve_.evaluate(t, 1, c);
-        if (!invertPoint(surface_, c[0], uv, tolerance_, scale_)) return false;
+        const int pole = poleIndex(poles_, c[0], tolerance_);
+        if (pole >= 0) {
+            // Nel polo u e' quello della stima (il limite lungo la curva) e la
+            // derivata e' quella di un punto appena dentro il tratto.
+            const double inside = t + (t < 0.5 * (range_.lo + range_.hi) ? 1.0 : -1.0) * 1e-7 * range_.length();
+            HermiteNode near;
+            if (!node(inside, uv, near)) return false;
+            out = {t, Vec2(uv[0], poles_[pole].v), near.derivative};
+            return true;
+        }
+        bool nearPole = false;
+        for (const SurfacePole &p : poles_) nearPole = nearPole || distance(p.point, c[0]) <= 1e-3 * scale_;
+        if (nearPole) {
+            // Vicino a un polo Newton si ferma sul bordo del dominio (entro la
+            // tolleranza ma non sul punto): proiezione, con u vicino alla stima.
+            const SurfaceProjection projection = projectPoint(surface_, c[0]);
+            if (!(projection.distance <= tolerance_)) return false;
+            Vec2 exact(projection.u, projection.v);
+            if (surface_.isUPeriodic()) exact[0] += surface_.uPeriod() * std::round((uv[0] - exact[0]) / surface_.uPeriod());
+            uv = exact;
+        } else if (!invertPoint(surface_, c[0], uv, tolerance_, scale_)) {
+            return false;
+        }
         out = {t, uv, Vec2()};
         return pcurveDerivative(surface_, uv, c[1], out.derivative);
     }
@@ -163,7 +192,9 @@ public:
 private:
     const Surface &surface_;
     const Curve<3> &curve_;
+    Interval range_;
     double tolerance_, scale_;
+    std::vector<SurfacePole> poles_;
 };
 
 }
@@ -222,7 +253,7 @@ CurvePtr<2> fitPCurve(const Surface &surface, const CurvePtr<3> &curve, const In
     if (!sampleParameters(surface, *curve, ts, tolerance, scale, uvs)) return nullptr;
     const Vec2 shift = baseShift(surface, uvs.front());
 
-    const Fitter fitter(surface, *curve, tolerance, scale);
+    const Fitter fitter(surface, *curve, range, tolerance, scale);
     std::vector<HermiteNode> nodes(1);
     if (!fitter.node(ts[0], uvs[0], nodes[0])) return nullptr;
     for (std::size_t i = 1; i < ts.size(); ++i) {
@@ -277,6 +308,32 @@ int computePCurves(Body &body, double tolerance) {
             }
     }
     return missing;
+}
+
+std::vector<LoopPoleWalk> loopPoleWalks(const Body &body, LoopId loop, double tolerance) {
+    const Face &face = body.face(body.loop(loop).face);
+    const Surface &surface = *face.surface;
+    if (!surface.isUPeriodic()) return {};
+    const std::vector<SurfacePole> poles = surfacePoles(surface);
+    if (poles.empty()) return {};
+    const std::vector<FinId> fins = body.loopFins(loop);
+    std::vector<LoopPoleWalk> walks;
+    for (std::size_t i = 0; i < fins.size(); ++i) {
+        const Fin &a = body.fin(fins[i]), &b = body.fin(fins[(i + 1) % fins.size()]);
+        if (!a.pcurve || !b.pcurve) continue;
+        const Edge &ea = body.edge(a.edge), &eb = body.edge(b.edge);
+        const double aEnd = a.sense ? ea.range.hi : ea.range.lo, aStart = a.sense ? ea.range.lo : ea.range.hi;
+        const double bStart = b.sense ? eb.range.lo : eb.range.hi;
+        const int pole = poleIndex(poles, ea.curve->point(aEnd), std::max(tolerance, 10.0 * ea.tolerance));
+        if (pole < 0) continue;
+        const double from = a.pcurve->point(aEnd)[0];
+        const bool top = a.pcurve->point(aEnd + (aStart - aEnd) * 1e-3)[1] < poles[pole].v;
+        const double bEnd = b.sense ? eb.range.hi : eb.range.lo;
+        const double fromNear = a.pcurve->point(aEnd + (aStart - aEnd) * 0.02)[0], toNear = b.pcurve->point(bStart + (bEnd - bStart) * 0.02)[0];
+        const double to = poleWalk(from, b.pcurve->point(bStart)[0], surface.uPeriod(), top, face.sense, fromNear, toNear);
+        walks.push_back({poles[pole].v, from, to, (i + 1) % fins.size()});
+    }
+    return walks;
 }
 
 }
