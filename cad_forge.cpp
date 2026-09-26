@@ -112,6 +112,17 @@ std::vector<ProfileSegment> forgeSketchSegments(const SketchObject &sketch) {
             result.push_back({std::make_shared<Circle<2>>(makeCircle(center, radius)), {startAngle, endAngle}});
             break;
         }
+        case DrawingTool::Ellipse: {
+            // Come curveGeometry: semiasse maggiore lungo X, stesso parametro di Geom2d_Ellipse.
+            if (count < 3) break;
+            const Vec2 center = toVec(curve.controlPoints.at(0));
+            const double a = distance(center, toVec(curve.controlPoints.at(1))), b = distance(center, toVec(curve.controlPoints.at(2)));
+            if (a <= confusion || b <= confusion) break;
+            const Vec2 u = (toVec(curve.controlPoints.at(1)) - center) / a;
+            const Vec2 x = a >= b ? u : Vec2(-u.y(), u.x()), y(-x.y(), x.x());
+            result.push_back({std::make_shared<Ellipse<2>>(center, x, y, std::max(a, b), std::min(a, b)), {0.0, kTwoPi}});
+            break;
+        }
         case DrawingTool::Polygon: {
             if (count < 2 || curve.sides < 3) break;
             const Vec2 center = toVec(curve.controlPoints.at(0)), vertex = toVec(curve.controlPoints.at(1));
@@ -135,11 +146,11 @@ std::vector<ProfileSegment> forgeSketchSegments(const SketchObject &sketch) {
 }
 
 void forgeSketchFrame(const SketchObject &sketch, double distance, Frame3 &frame, double &height) {
-    const gp_Ax3 axes = sketchAxes(sketch.plane);
+    const gp_Ax3 axes = sketchAxes(sketch);
     auto fromDir = [](const gp_Dir &d) { return Vec3(d.X(), d.Y(), d.Z()); };
     frame = Frame3(Vec3(axes.Location().X(), axes.Location().Y(), axes.Location().Z()), fromDir(axes.Direction()),
                    fromDir(axes.XDirection()));
-    height = extrusionVector(sketch.plane, distance).Dot(gp_Vec(axes.Direction()));
+    height = extrusionVector(sketch, distance).Dot(gp_Vec(axes.Direction()));
 }
 
 ForgeBody forgeExtrusion(const SketchObject &sketch, double distance, QString *error) {
@@ -213,10 +224,10 @@ ForgeBody forgeRevolution(const SketchObject &sketch, int axis, double angleDegr
             setError(error, QStringLiteral("La rivoluzione richiede un profilo chiuso."));
             return nullptr;
         }
-        const gp_Ax3 axes = sketchAxes(sketch.plane);
+        const gp_Ax3 axes = sketchAxes(sketch);
         const Vec3 xs(axes.XDirection().X(), axes.XDirection().Y(), axes.XDirection().Z());
         const Vec3 ys(axes.YDirection().X(), axes.YDirection().Y(), axes.YDirection().Z());
-        const gp_Pnt origin = sketchToWorld(point, sketch.plane);
+        const gp_Pnt origin = sketchToWorld(point, sketch);
         const Frame3 frame(Vec3(origin.X(), origin.Y(), origin.Z()), axisDirection.x() * xs + axisDirection.y() * ys,
                            normal.x() * xs + normal.y() * ys);
         Body result = makeRevolution(frame, profile.regions.front(), angle);
@@ -333,6 +344,39 @@ void forgeTessellate(const Body &body, int quality, BodyDisplay &display) {
         QVector<QVector3D> polyline;
         for (const Vec3 &point : edge) polyline.append(toDisplay(point));
         if (polyline.size() >= 2) display.edges.append(polyline);
+    }
+}
+
+bool forgePickFace(const Body &body, const QVector3D &origin, const QVector3D &direction, FaceHit &hit) {
+    try {
+        double t = 0.0;
+        FaceId f;
+        if (!firstRayHit(body, Vec3(origin.x(), origin.y(), origin.z()), Vec3(direction.x(), direction.y(), direction.z()), 1e-7, t, &f)
+            || !f.valid())
+            return false;
+        hit = {};
+        hit.distance = t;
+        hit.face = f.index;
+        const Face &face = body.face(f);
+        if (face.surface->type() == SurfaceType::Plane) {
+            const Frame3 &frame = static_cast<const Plane &>(*face.surface).frame();
+            const Vec3 normal = face.sense ? frame.zDir() : -frame.zDir();
+            hit.planar = true;
+            for (int k = 0; k < 3; ++k) {
+                hit.point[k] = frame.origin()[k];
+                hit.normal[k] = normal[k];
+            }
+        }
+        for (LoopId l : face.loops)
+            for (FinId fin : body.loopFins(l)) {
+                const Edge &edge = body.edge(body.fin(fin).edge);
+                if (!edge.curve) continue;
+                const Vec3 p = edge.curve->point(0.5 * (edge.range.lo + edge.range.hi));
+                hit.edges.append({p.x(), p.y(), p.z()});
+            }
+        return true;
+    } catch (const std::exception &) {
+        return false;
     }
 }
 

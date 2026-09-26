@@ -299,10 +299,11 @@ bool rayHitsBox(const Vec3 &origin, const Vec3 &direction, const Box &box) {
 
 }
 
-bool firstRayHit(const Body &body, const Vec3 &origin, const Vec3 &direction, double tolerance, double &t) {
+bool firstRayHit(const Body &body, const Vec3 &origin, const Vec3 &direction, double tolerance, double &t, FaceId *face) {
     const Vec3 unit = normalized(direction);
     const double scale = norm(direction);
     double best = 1e300;
+    FaceId bestFace;
     for (FaceId f : body.faces()) {
         const Box box = faceBox(body, f).padded(10.0 * tolerance);
         Interval range;
@@ -317,13 +318,17 @@ bool firstRayHit(const Body &body, const Vec3 &origin, const Vec3 &direction, do
         for (double hit : hits) {
             if (hit < 0.0 || hit >= best) continue;
             try {
-                if (classifyPointOnFace(body, f, origin + hit * unit, tolerance) != PointLocation::Outside) best = hit;
+                if (classifyPointOnFace(body, f, origin + hit * unit, tolerance) != PointLocation::Outside) {
+                    best = hit;
+                    bestFace = f;
+                }
             } catch (const std::exception &) {
             }
         }
     }
     if (best == 1e300) return false;
     t = best / scale;
+    if (face) *face = bestFace;
     return true;
 }
 

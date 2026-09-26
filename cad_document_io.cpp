@@ -5,11 +5,16 @@
 #include <QFile>
 #include <QSaveFile>
 
+#include "cad_constraints.h"
+
 namespace ForgeCad {
 namespace {
 
 constexpr char kMagic[4] = {'F', 'C', 'A', 'D'};
-constexpr quint16 kVersion = 1;
+// Versioni: 1 prima; 2 aggiunge il piano degli schizzi su una faccia (SketchFrame, faceSource);
+// 3 i vincoli geometrici come oggetti (i vecchi dati si convertono all'apertura);
+// 4 la posizione delle quote e l'orientamento degli assi del documento.
+constexpr quint16 kVersion = 4;
 constexpr quint8 kZlib = 1;
 
 void write(QDataStream &out, const CurveObject &curve) {
@@ -42,6 +47,16 @@ void write(QDataStream &out, const SketchObject &sketch) {
     for (const CurveObject &curve : sketch.curves) write(out, curve);
     out << quint32(sketch.coincidentConstraints.size());
     for (const CoincidentConstraint &c : sketch.coincidentConstraints) write(out, c);
+    for (double v : sketch.frame.origin) out << v;
+    for (double v : sketch.frame.xAxis) out << v;
+    for (double v : sketch.frame.normal) out << v;
+    out << sketch.faceSource << sketch.customFrame;
+    out << quint32(sketch.geometricConstraints.size());
+    for (const SketchConstraint &c : sketch.geometricConstraints) {
+        out << qint32(c.type);
+        for (const ConstraintRef &r : {c.first, c.second}) out << qint32(r.kind) << qint32(r.element) << qint32(r.point);
+        out << c.value << c.positions << c.placement << c.placed;
+    }
 }
 
 // Numero di elementi di un vettore, rifiutato se il file e' finito o troppo corto.
@@ -50,7 +65,7 @@ bool readCount(QDataStream &in, quint32 &count) {
     return in.status() == QDataStream::Ok && count <= quint32(in.device()->bytesAvailable());
 }
 
-bool read(QDataStream &in, SketchObject &sketch) {
+bool read(QDataStream &in, SketchObject &sketch, quint16 version) {
     qint32 plane = 0;
     in >> sketch.name >> plane >> sketch.segments >> sketch.constraints >> sketch.segmentLengths >> sketch.segmentAngles
         >> sketch.visible >> sketch.constructionSegments;
@@ -62,12 +77,39 @@ bool read(QDataStream &in, SketchObject &sketch) {
     if (!readCount(in, count)) return false;
     sketch.coincidentConstraints.resize(int(count));
     for (CoincidentConstraint &c : sketch.coincidentConstraints) read(in, c);
+    if (version >= 2) {
+        for (double &v : sketch.frame.origin) in >> v;
+        for (double &v : sketch.frame.xAxis) in >> v;
+        for (double &v : sketch.frame.normal) in >> v;
+        in >> sketch.faceSource;
+    }
+    if (version >= 4) in >> sketch.customFrame;
+    if (version >= 3) {
+        quint32 constraintCount = 0;
+        if (!readCount(in, constraintCount)) return false;
+        sketch.geometricConstraints.resize(int(constraintCount));
+        for (SketchConstraint &c : sketch.geometricConstraints) {
+            qint32 type = 0;
+            in >> type;
+            c.type = ConstraintType(type);
+            for (ConstraintRef *r : {&c.first, &c.second}) {
+                qint32 kind = -1, element = -1, point = -1;
+                in >> kind >> element >> point;
+                *r = {kind, element, point};
+            }
+            in >> c.value >> c.positions;
+            if (version >= 4) in >> c.placement >> c.placed;
+        }
+    }
+    if (sketch.plane < 0 || sketch.plane > kFacePlane) return false;
     // Gli array paralleli dei segmenti devono restare allineati.
     const int segments = sketch.segments.size();
     sketch.constraints.resize(segments);
     sketch.segmentLengths.resize(segments);
     sketch.segmentAngles.resize(segments);
-    return in.status() == QDataStream::Ok;
+    if (in.status() != QDataStream::Ok) return false;
+    migrateLegacyConstraints(sketch);  // i file vecchi: codici, quote e coincidenze diventano vincoli
+    return true;
 }
 
 void write(QDataStream &out, const ExtrusionObject &body) {
@@ -124,6 +166,8 @@ QString saveDocumentFile(const QString &path, const DocumentState &state) {
         for (const SketchObject &sketch : state.sketches) write(out, sketch);
         out << quint32(state.extrusions.size());
         for (const ExtrusionObject &body : state.extrusions) write(out, body);
+        for (const double *axis : {state.orientation.right, state.orientation.up, state.orientation.toward})
+            for (int k = 0; k < 3; ++k) out << axis[k];
     }
     QSaveFile file(path);
     if (!file.open(QIODevice::WriteOnly)) return QStringLiteral("Impossibile scrivere %1: %2").arg(path, file.errorString());
@@ -161,11 +205,17 @@ QString loadDocumentFile(const QString &path, DocumentState &state) {
     if (!readCount(in, count)) return QStringLiteral("Il file e' danneggiato.");
     loaded.sketches.resize(int(count));
     for (SketchObject &sketch : loaded.sketches)
-        if (!read(in, sketch)) return QStringLiteral("Il file e' danneggiato (schizzi).");
+        if (!read(in, sketch, version)) return QStringLiteral("Il file e' danneggiato (schizzi).");
     if (!readCount(in, count)) return QStringLiteral("Il file e' danneggiato.");
     loaded.extrusions.resize(int(count));
     for (ExtrusionObject &body : loaded.extrusions)
         if (!read(in, body)) return QStringLiteral("Il file e' danneggiato (corpi).");
+    if (version >= 4) {
+        for (double *axis : {loaded.orientation.right, loaded.orientation.up, loaded.orientation.toward})
+            for (int k = 0; k < 3; ++k) in >> axis[k];
+        if (in.status() != QDataStream::Ok) return QStringLiteral("Il file e' danneggiato (orientamento degli assi).");
+        loaded.orientationSet = true;
+    }
     state = std::move(loaded);
     return {};
 }

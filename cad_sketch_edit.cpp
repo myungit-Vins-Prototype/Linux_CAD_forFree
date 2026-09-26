@@ -1,5 +1,7 @@
 #include "cad_sketch_edit.h"
 
+#include "cad_constraints.h"
+
 #include <GCE2d_MakeSegment.hxx>
 #include <Geom2dAPI_InterCurveCurve.hxx>
 #include <Geom2dAPI_ProjectPointOnCurve.hxx>
@@ -328,58 +330,54 @@ QVector<int> endPoints(const SketchObject &sketch, SketchEntity entity) {
     return {};
 }
 
-// Vincoli di coincidenza delle entita' toccate: via quelli i cui punti non
-// coincidono piu', aggiunti quelli dei loro estremi con i punti delle altre.
+// Vincoli delle entita' toccate: restano quelli ancora soddisfatti (per
+// esempio un segmento accorciato resta orizzontale); si aggiungono le
+// coincidenze dei loro estremi con i punti delle altre entita'.
 void refreshCoincidences(SketchObject &sketch, const QVector<SketchEntity> &touched) {
-    auto isTouched = [&](int kind, int element) {
+    auto isTouched = [&](const ConstraintRef &r) {
         for (const SketchEntity &e : touched)
-            if (e.kind == kind && e.index == element) return true;
+            if (e.kind == r.kind && e.index == r.element) return true;
         return false;
     };
-    QVector<CoincidentConstraint> kept;
-    for (const CoincidentConstraint &c : sketch.coincidentConstraints) {
-        if (isTouched(c.firstKind, c.firstElement) || isTouched(c.secondKind, c.secondElement)) {
-            QPointF a, b;
-            if (!constraintPoint(sketch, c.firstKind, c.firstElement, c.firstPoint, a)) continue;
-            if (!constraintPoint(sketch, c.secondKind, c.secondElement, c.secondPoint, b)) continue;
-            if (distance(a, b) > kTolerance) continue;
-        }
+    QVector<SketchConstraint> kept;
+    for (const SketchConstraint &c : sketch.geometricConstraints) {
+        if ((isTouched(c.first) || isTouched(c.second)) && constraintError(sketch, c) > kTolerance) continue;
         kept.append(c);
     }
-    auto exists = [&](const CoincidentConstraint &c) {
-        for (const CoincidentConstraint &k : kept) {
-            if (k.firstKind == c.firstKind && k.firstElement == c.firstElement && k.firstPoint == c.firstPoint
-                && k.secondKind == c.secondKind && k.secondElement == c.secondElement && k.secondPoint == c.secondPoint)
-                return true;
-            if (k.firstKind == c.secondKind && k.firstElement == c.secondElement && k.firstPoint == c.secondPoint
-                && k.secondKind == c.firstKind && k.secondElement == c.firstElement && k.secondPoint == c.firstPoint)
-                return true;
-        }
+    auto exists = [&](const ConstraintRef &a, const ConstraintRef &b) {
+        for (const SketchConstraint &k : kept)
+            if (k.type == ConstraintType::Coincident && ((k.first == a && k.second == b) || (k.first == b && k.second == a))) return true;
         return false;
     };
     for (const SketchEntity &entity : touched) {
         for (int end : endPoints(sketch, entity)) {
             QPointF p;
             if (!constraintPoint(sketch, entity.kind, entity.index, end, p)) continue;
+            const ConstraintRef here{entity.kind, entity.index, end};
+            auto add = [&](const ConstraintRef &other) {
+                if (exists(here, other)) return;
+                SketchConstraint c;
+                c.type = ConstraintType::Coincident;
+                c.first = here;
+                c.second = other;
+                kept.append(c);
+            };
             for (int other = 0; other < sketch.segments.size(); ++other) {
                 if (entity.kind == 0 && other == entity.index) continue;
                 for (int k = 0; k < 2; ++k) {
                     const QPointF q = k == 0 ? sketch.segments.at(other).first : sketch.segments.at(other).second;
-                    const CoincidentConstraint c{entity.kind, entity.index, end, 0, other, k};
-                    if (distance(p, q) <= kTolerance && !exists(c)) kept.append(c);
+                    if (distance(p, q) <= kTolerance) add({0, other, k});
                 }
             }
             for (int other = 0; other < sketch.curves.size(); ++other) {
                 if (entity.kind == 1 && other == entity.index) continue;
                 const QVector<QPointF> &points = sketch.curves.at(other).controlPoints;
-                for (int k = 0; k < points.size(); ++k) {
-                    const CoincidentConstraint c{entity.kind, entity.index, end, 1, other, k};
-                    if (distance(p, points.at(k)) <= kTolerance && !exists(c)) kept.append(c);
-                }
+                for (int k = 0; k < points.size(); ++k)
+                    if (distance(p, points.at(k)) <= kTolerance) add({1, other, k});
             }
         }
     }
-    sketch.coincidentConstraints = kept;
+    sketch.geometricConstraints = kept;
 }
 
 void appendSegment(SketchObject &sketch, const SketchSegment &segment, int constraint, double angle, bool construction) {
@@ -409,7 +407,19 @@ QVector<int> replaceWithPieces(SketchObject &sketch, SketchEntity entity, const 
             } else {
                 appendSegment(sketch, piece.line, sketch.constraints.value(entity.index, -1), sketch.segmentAngles.value(entity.index, -1.0),
                               sketch.isConstructionSegment(entity.index));
-                touched.append({0, int(sketch.segments.size()) - 1});
+                const int created = int(sketch.segments.size()) - 1;
+                // I vincoli di direzione del segmento valgono anche per i suoi pezzi.
+                const ConstraintRef original{0, entity.index, -1}, piece{0, created, -1};
+                const QVector<SketchConstraint> existing = sketch.geometricConstraints;
+                for (SketchConstraint c : existing) {
+                    const bool direction = c.type == ConstraintType::Horizontal || c.type == ConstraintType::Vertical || c.type == ConstraintType::Parallel
+                                        || c.type == ConstraintType::Perpendicular || c.type == ConstraintType::Collinear;
+                    if (!direction || (c.first != original && c.second != original)) continue;
+                    if (c.first == original) c.first = piece;
+                    else c.second = piece;
+                    sketch.geometricConstraints.append(c);
+                }
+                touched.append({0, created});
             }
         } else if (k == 0) {
             sketch.curves[entity.index] = piece.curve;
@@ -461,6 +471,8 @@ QString explodePolygon(SketchObject &sketch, SketchEntity &entity, const QPointF
 QString unsupported(const SketchObject &sketch, SketchEntity entity, const QString &operation) {
     if (entity.kind == 1 && entity.index >= 0 && entity.index < sketch.curves.size() && sketch.curves.at(entity.index).tool == DrawingTool::Nurbs)
         return QStringLiteral("%1: le NURBS non si possono modificare (fanno solo da bordo).").arg(operation);
+    if (entity.kind == 1 && entity.index >= 0 && entity.index < sketch.curves.size() && sketch.curves.at(entity.index).tool == DrawingTool::Ellipse)
+        return QStringLiteral("%1: le ellissi non si possono tagliare (fanno solo da bordo).").arg(operation);
     return QStringLiteral("%1: entita' non valida.").arg(operation);
 }
 
@@ -530,16 +542,7 @@ QVector<int> removeSketchEntities(SketchObject &sketch, const QSet<int> &segment
     for (int index : sketch.constructionSegments)
         if (index >= 0 && index < segmentMap.size() && segmentMap.at(index) >= 0) construction.append(segmentMap.at(index));
     sketch.constructionSegments = construction;
-    QVector<CoincidentConstraint> constraints;
-    for (CoincidentConstraint c : sketch.coincidentConstraints) {
-        const QVector<int> &first = c.firstKind == 0 ? segmentMap : curveMap, &second = c.secondKind == 0 ? segmentMap : curveMap;
-        if (c.firstElement < 0 || c.firstElement >= first.size() || first.at(c.firstElement) < 0) continue;
-        if (c.secondElement < 0 || c.secondElement >= second.size() || second.at(c.secondElement) < 0) continue;
-        c.firstElement = first.at(c.firstElement);
-        c.secondElement = second.at(c.secondElement);
-        constraints.append(c);
-    }
-    sketch.coincidentConstraints = constraints;
+    remapConstraints(sketch, segmentMap, curveMap);
     return segmentMap;
 }
 
@@ -730,6 +733,16 @@ SketchEditResult blendSketchSegments(SketchObject &sketch, int first, const QPoi
         touched.append({1, int(work.curves.size()) - 1});
     }
     refreshCoincidences(work, touched);
+    if (!chamfer) {
+        // Il raccordo resta tangente ai due segmenti.
+        for (int segment : {first, second}) {
+            SketchConstraint tangent;
+            tangent.type = ConstraintType::Tangent;
+            tangent.first = {0, segment, -1};
+            tangent.second = {1, int(work.curves.size()) - 1, -1};
+            work.geometricConstraints.append(tangent);
+        }
+    }
     sketch = work;
     return {};
 }

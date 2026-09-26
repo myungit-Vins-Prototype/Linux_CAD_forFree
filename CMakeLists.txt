@@ -46,6 +46,8 @@ add_executable(forgecad
     cad_document_io.cpp
     cad_sketch_edit.h
     cad_sketch_edit.cpp
+    cad_constraints.h
+    cad_constraints.cpp
     cad_history.h
     cad_history.cpp
     cad_kernel.h

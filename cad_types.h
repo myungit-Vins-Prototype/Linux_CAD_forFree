@@ -26,7 +26,11 @@ using ForgeBody = std::shared_ptr<const Kernel::Body>;
 // Gli ultimi cinque sono strumenti di modifica (non creano curve): taglia,
 // estendi, spezza, raccordo e smusso tra segmenti.
 // Select: nessuna creazione, il clic seleziona (e' lo strumento all'apertura di uno schizzo).
-enum class DrawingTool { Line, Polyline, Spline, Nurbs, Circle, Arc, Polygon, ConstructionLine, Trim, Extend, Split, Fillet, Chamfer, Select };
+// Rectangle (due angoli) e CenterRectangle (centro e un angolo) creano quattro
+// segmenti orizzontali e verticali collegati; Ellipse e' una curva. I valori
+// sono salvati nei file: i nuovi strumenti vanno in fondo.
+enum class DrawingTool { Line, Polyline, Spline, Nurbs, Circle, Arc, Polygon, ConstructionLine, Trim, Extend, Split, Fillet, Chamfer, Select,
+                         Rectangle, CenterRectangle, Ellipse };
 enum class SnapKind { None, Endpoint, Midpoint, Nearest };
 
 enum class ReferencePlane { XY, XZ, YZ };
@@ -42,6 +46,11 @@ using SketchSegment = QPair<QPointF, QPointF>;
 //  - Circle: centro, punto sulla circonferenza
 //  - Arc: centro, punto iniziale (definisce il raggio), punto finale (definisce l'angolo)
 //  - Polygon: centro, primo vertice, numero di lati
+//  - Ellipse: centro, estremo di un semiasse (lunghezza e direzione), punto
+//    sull'altro semiasse (la sua lunghezza e' la distanza dal centro: il
+//    punto sta sulla perpendicolare)
+//  - Rectangle / CenterRectangle: due angoli / centro e angolo (solo per
+//    l'anteprima: il rettangolo diventa quattro segmenti)
 // `samples` e' solo un'approssimazione per disegnare e selezionare a schermo.
 // Le entita' di costruzione (`construction`) non fanno parte dei profili:
 // servono da riferimento (assi di rivoluzione, agganci).
@@ -65,9 +74,57 @@ struct CoincidentConstraint {
     int secondPoint = -1;
 };
 
+// Piano di schizzo su una faccia piana di un corpo (SketchObject::plane =
+// kFacePlane): origine e assi esatti nel modello. L'asse Y dello schizzo e' la
+// proiezione di Z del modello sul piano (di Y se il piano e' orizzontale),
+// X = Y x normale; l'origine e' la proiezione dell'origine del modello.
+constexpr int kFacePlane = 3;
+struct SketchFrame {
+    double origin[3] = {0.0, 0.0, 0.0};
+    double xAxis[3] = {1.0, 0.0, 0.0};
+    double normal[3] = {0.0, 0.0, 1.0};  // uscente dalla faccia: l'estrusione positiva aggiunge materiale
+};
+
+// Riferimento di un vincolo geometrico: un'entita' dello schizzo, un suo
+// punto o un riferimento del piano.
+//  - kind 0: segmento `element` (point -1: la retta; 0 / 1: gli estremi);
+//  - kind 1: curva `element` (point -1: la curva; k: il suo punto di controllo
+//    k: per cerchi, archi, ellissi e poligoni 0 e' il centro);
+//  - kind 2: riferimento del piano (element 0 origine, 1 asse X, 2 asse Y).
+struct ConstraintRef {
+    int kind = -1;
+    int element = -1;
+    int point = -1;
+
+    bool isPoint() const { return point >= 0 || (kind == 2 && element == 0); }
+    bool operator==(const ConstraintRef &other) const { return kind == other.kind && element == other.element && point == other.point; }
+    bool operator!=(const ConstraintRef &other) const { return !(*this == other); }
+};
+
+// Tipi di vincolo (valori salvati nei file: i nuovi in fondo). Le quote
+// (Distance, Angle, Radius, Diameter) hanno un valore: lunghezze in unita'
+// del modello, angoli in gradi.
+enum class ConstraintType {
+    Coincident = 0, Horizontal, Vertical, Parallel, Perpendicular, Collinear, Tangent, Equal, Concentric, Midpoint,
+    PointOnCurve, Fix, Distance, Angle, Radius, Diameter
+};
+
+// Vincolo geometrico dello schizzo, mantenuto dal risolutore (cad_constraints).
+struct SketchConstraint {
+    ConstraintType type = ConstraintType::Coincident;
+    ConstraintRef first, second;  // second.kind < 0: vincolo su un solo riferimento
+    double value = 0.0;           // quote; Tangent tra cerchi: 0 esterna, 1 interna
+    QVector<QPointF> positions;   // Fix: posizioni fissate dei punti del riferimento
+    // Quote: dove sta la quota nel disegno (coordinate dello schizzo: il punto
+    // per cui passa la linea di misura, la direzione del raggio, il raggio
+    // dell'arco dell'angolo); se non e' stata spostata, una posizione di default.
+    QPointF placement;
+    bool placed = false;
+};
+
 struct SketchObject {
     QString name;
-    int plane = 0;
+    int plane = 0;  // 0 XY, 1 XZ, 2 YZ, kFacePlane: su una faccia (frame)
     QVector<SketchSegment> segments;
     QVector<int> constraints;
     QVector<double> segmentLengths;
@@ -78,6 +135,18 @@ struct SketchObject {
     // Segmenti di costruzione: indici in `segments` (linee di riferimento che
     // non entrano nei profili, per esempio l'asse di una rivoluzione).
     QVector<int> constructionSegments;
+    // Sistema esplicito del piano (plane == kFacePlane, o customFrame sui piani
+    // di riferimento: gli schizzi nuovi prendono gli assi dello schermo della
+    // vista normale al piano con l'orientamento degli assi del documento).
+    SketchFrame frame;
+    bool customFrame = false;
+    QString faceSource;  // corpo da cui viene il piano (solo per l'albero)
+    // Vincoli geometrici (oggetti): coincidenze, orizzontale/verticale,
+    // parallelismo, quote... I vecchi dati (codici in `constraints`,
+    // `segmentLengths`, `segmentAngles`, `coincidentConstraints`) si
+    // convertono in questi all'apertura dei file vecchi e poi restano vuoti o
+    // neutri (codici -1, lunghezze 0, angoli -1).
+    QVector<SketchConstraint> geometricConstraints;
 
     bool isConstructionSegment(int index) const { return constructionSegments.contains(index); }
 };
@@ -103,6 +172,17 @@ enum class BodyFeature { Extrusion = 0, Revolution = 1, Primitive = 2, Blend = 3
 // dopo una rigenerazione si prende lo spigolo piu' vicino.
 struct EdgePoint {
     double x = 0.0, y = 0.0, z = 0.0;
+};
+
+// Faccia di un corpo sotto il puntatore (geometria esatta): per scegliere i
+// suoi bordi (raccordi e smussi) e, se e' piana, per schizzarci sopra.
+struct FaceHit {
+    double distance = 0.0;  // lungo il raggio di vista
+    int face = -1;          // indice della faccia nel corpo
+    bool planar = false;
+    double point[3] = {0.0, 0.0, 0.0};   // un punto del piano (se planar)
+    double normal[3] = {0.0, 0.0, 1.0};  // normale uscente (se planar)
+    QVector<EdgePoint> edges;            // un punto interno di ogni spigolo della faccia (senza cuciture)
 };
 
 // Solidi elementari. Il sistema del solido ha l'origine in `origin` e gli assi
@@ -159,10 +239,22 @@ struct ExtrusionObject {
     BodyDisplay display;
 };
 
-// Stato del documento soggetto a Undo/Redo.
+// Orientamento degli assi del modello sullo schermo: le direzioni del modello
+// che nella vista frontale puntano a destra, in alto e verso l'osservatore
+// (terna destrorsa ortonormale). Di default Z in alto e Y verso il fondo.
+struct AxesOrientation {
+    double right[3] = {1.0, 0.0, 0.0};
+    double up[3] = {0.0, 0.0, 1.0};
+    double toward[3] = {0.0, -1.0, 0.0};
+};
+
+// Stato del documento soggetto a Undo/Redo (l'orientamento degli assi si
+// salva con il documento ma non torna indietro con l'Undo).
 struct DocumentState {
     QVector<SketchObject> sketches;
     QVector<ExtrusionObject> extrusions;
+    AxesOrientation orientation;
+    bool orientationSet = false;  // letto dal file (altrimenti quello predefinito delle opzioni)
 };
 
 // Sfondo della scena. Con la sfumatura attiva i due colori sono distribuiti

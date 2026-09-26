@@ -43,6 +43,9 @@ ForgeBody forgeBoolean(const ForgeBody &first, const ForgeBody &second, BooleanO
 // Approssimazione per la visualizzazione (quality 0/1/2), come tessellate().
 void forgeTessellate(const Kernel::Body &body, int quality, BodyDisplay &display);
 
+// Faccia del body colpita per prima dal raggio (come pickFace di cad_kernel).
+bool forgePickFace(const Kernel::Body &body, const QVector3D &origin, const QVector3D &direction, FaceHit &hit);
+
 // Distanza lungo il raggio del primo punto del body colpito (geometria esatta).
 bool forgeIntersectRay(const Kernel::Body &body, const QVector3D &origin, const QVector3D &direction, double &distance);
 

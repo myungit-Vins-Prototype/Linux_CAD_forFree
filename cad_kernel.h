@@ -23,6 +23,20 @@ gp_Pnt sketchToWorld(const QPointF &point, int plane);
 QVector3D sketchToDisplay(const QPointF &point, int plane);
 QPointF worldToSketch(const gp_Pnt &point, int plane);
 gp_Vec extrusionVector(int plane, double distance);
+// Le stesse per uno schizzo: piani di riferimento o piano su una faccia
+// (kFacePlane, SketchObject::frame; l'estrusione positiva va lungo la normale uscente).
+gp_Ax3 sketchAxes(const SketchObject &sketch);
+gp_Pnt sketchToWorld(const QPointF &point, const SketchObject &sketch);
+QVector3D sketchToDisplay(const QPointF &point, const SketchObject &sketch);
+QPointF worldToSketch(const gp_Pnt &point, const SketchObject &sketch);
+gp_Vec extrusionVector(const SketchObject &sketch, double distance);
+// Sistema dello schizzo sul piano per `point` con normale uscente `normal`
+// (vedi SketchFrame): l'asse Y dello schizzo e' `up` proiettato sul piano.
+SketchFrame faceSketchFrame(const gp_Pnt &point, const gp_Dir &normal, const gp_Dir &up = gp_Dir(0, 0, 1));
+// Sistema di uno schizzo nuovo sul piano di riferimento `plane` (0 XY, 1 XZ,
+// 2 YZ) con l'orientamento degli assi: la normale verso l'osservatore della
+// vista standard in cui il piano si vede di fronte, X a destra e Y in alto sullo schermo.
+SketchFrame referenceSketchFrame(int plane, const AxesOrientation &orientation);
 
 // Profilo dello schizzo: facce piane (con eventuali fori, anche multiple)
 // formate dai contorni chiusi; se non ci sono contorni chiusi, i fili aperti.
@@ -64,6 +78,10 @@ bool isSolidShape(const TopoDS_Shape &shape);
 
 // Approssimazione per la visualizzazione (quality 0/1/2).
 void tessellate(const TopoDS_Shape &shape, int quality, BodyDisplay &display);
+
+// Faccia della forma esatta colpita per prima dal raggio, con il suo piano
+// (se e' piana) e i punti dei suoi spigoli.
+bool pickFace(const TopoDS_Shape &shape, const QVector3D &origin, const QVector3D &direction, FaceHit &hit);
 
 // Distanza lungo il raggio del primo punto della forma esatta colpito.
 bool intersectRay(const TopoDS_Shape &shape, const QVector3D &origin, const QVector3D &direction,

@@ -1,5 +1,6 @@
 #include "forgeCad2026_gui.h"
 #include "cuda_support.h"
+#include "cad_constraints.h"
 #include "cad_curve_solver.h"
 #include "cad_document_io.h"
 #include "cad_export.h"
@@ -11,6 +12,7 @@
 #include "cad_sketch_edit.h"
 #include "cad_snap.h"
 
+#include <BRepBuilderAPI_Copy.hxx>
 #include <GCPnts_AbscissaPoint.hxx>
 #include <Geom2dAdaptor_Curve.hxx>
 #include <Geom2dAPI_ProjectPointOnCurve.hxx>
@@ -32,7 +34,10 @@
 #include <QFocusEvent>
 #include <QKeyEvent>
 #include <QKeySequenceEdit>
+#include <QGridLayout>
 #include <QLabel>
+#include <QListWidget>
+#include <QVBoxLayout>
 #include <QMenu>
 #include <QMenuBar>
 #include <QMessageBox>
@@ -56,7 +61,10 @@
 #include <QVector>
 #include <QVector2D>
 #include <QVector3D>
+#include <QThreadPool>
 #include <QWheelEvent>
+#include <QWindow>
+#include <QGuiApplication>
 #include <algorithm>
 #include <cmath>
 #include <limits>
@@ -139,7 +147,12 @@ public:
     void zoomIn() { setZoom(zoom_ * 0.85f); }
     void zoomOut() { setZoom(zoom_ / 0.85f); }
     void resetZoom() { fitAll(); }
-    void fitAll() { fitView(sceneGeometryPoints()); }
+    // Inquadra tutta la scena; finche' l'utente non muove la vista si ripete
+    // quando il widget cambia dimensione (il compositor la fissa dopo il primo disegno).
+    void fitAll() {
+        fitView(sceneGeometryPoints());
+        autoFit_ = true;
+    }
     // Pan: tenendo premuto questo tasto (o il tasto centrale del mouse) il
     // trascinamento sposta la vista invece di ruotarla (anche in modalita' schizzo).
     void setPanKey(int key) { panKey_ = key; panKeyHeld_ = false; }
@@ -268,6 +281,7 @@ public:
         activeSketch_ = -1;
         selection_ = {};
         history_.clear();
+        if (state.orientationSet) orientation_ = state.orientation;
         sketches_ = std::move(state.sketches);
         extrusions_ = std::move(state.extrusions);
         for (SketchObject &sketch : sketches_)
@@ -474,8 +488,8 @@ public:
         angleBox->setSuffix(QStringLiteral(" \u00B0"));
         form->addRow(QStringLiteral("Lunghezza:"), lengthBox);
         form->addRow(QStringLiteral("Angolo rispetto all'asse X:"), angleBox);
-        form->addRow(new QLabel(QStringLiteral("Il primo estremo resta fermo; i punti collegati seguono il secondo\n"
-                                               "(i segmenti orizzontali e verticali collegati restano tali)."), &dialog));
+        form->addRow(new QLabel(QStringLiteral("Il primo estremo resta fermo; la lunghezza diventa una quota (vincolo)\n"
+                                               "e gli altri vincoli dello schizzo restano soddisfatti."), &dialog));
         auto *buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dialog);
         connect(buttons, &QDialogButtonBox::accepted, &dialog, &QDialog::accept);
         connect(buttons, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
@@ -483,19 +497,30 @@ public:
         if (dialog.exec() != QDialog::Accepted) return {};
         const double angle = angleBox->value() * M_PI / 180.0, length = lengthBox->value();
         const QPointF second = segment.first + QPointF(std::cos(angle), std::sin(angle)) * length;
-        recordUndo();
+        const DocumentState snapshot = documentState();
+        const SketchObject before = sketch;
         moveSketchPoint(sketch, index, segment.second, second - segment.second, segment.first);
-        while (sketch.segmentLengths.size() < sketch.segments.size()) sketch.segmentLengths.append(0.0);
-        while (sketch.segmentAngles.size() < sketch.segments.size()) sketch.segmentAngles.append(-1.0);
-        while (sketch.constraints.size() < sketch.segments.size()) sketch.constraints.append(-1);
-        sketch.segmentLengths[index] = length;
-        const bool angleChanged = std::abs(std::remainder(angleBox->value() - oldAngle, 360.0)) > 1e-9;
-        if (angleChanged) {
-            sketch.segmentAngles[index] = angleBox->value();
-            const double a = std::remainder(angleBox->value(), 180.0);
-            sketch.constraints[index] = std::abs(a) <= 1e-9 ? 1 : (std::abs(std::abs(a) - 90.0) <= 1e-9 ? 2 : -1);
+        // La lunghezza e' una quota: il vincolo Distanza del segmento (nuovo o aggiornato).
+        const ConstraintRef self{0, index, -1};
+        bool found = false;
+        for (SketchConstraint &c : sketch.geometricConstraints)
+            if (c.type == ConstraintType::Distance && c.first == self && c.second.kind < 0) {
+                c.value = length;
+                found = true;
+            }
+        if (!found) {
+            SketchConstraint c = ForgeCad::makeConstraint(sketch, ConstraintType::Distance, {self});
+            c.value = length;
+            sketch.geometricConstraints.append(c);
         }
-        for (CurveObject &curve : sketch.curves) ForgeCad::recalculateCurve(curve, tessellationQuality_);
+        // Le quote d'angolo del segmento seguono la direzione scelta.
+        for (SketchConstraint &c : sketch.geometricConstraints)
+            if (c.type == ConstraintType::Angle && (c.first == self || c.second == self)) c.value = ForgeCad::currentMeasure(sketch, c);
+        QVector<ForgeCad::PointTarget> targets = targetsAt(sketch, segment.first);
+        targets += targetsAt(sketch, second);
+        QString failure;
+        if (!solveActive(targets, before, &failure)) return failure;
+        history_.record(snapshot);
         sketchEdited();
         return {};
     }
@@ -518,7 +543,8 @@ public:
     // modalita' schizzo elimina le entita' selezionate dello schizzo.
     void deleteSelection() {
         if (sketchMode_) {
-            deleteSketchElements();
+            if (!selectedConstraints_.isEmpty()) deleteConstraints(selectedConstraints_);
+            else deleteSketchElements();
             return;
         }
         if (selection_.kind == SceneObjectKind::Sketch || selection_.kind == SceneObjectKind::Extrusion)
@@ -633,6 +659,98 @@ public:
     // (clic sulla vista, Invio conferma, Esc annulla), poi `edgePickFinished`
     // chiede la misura e crea il corpo con createBlend. Restituisce l'errore.
     QString beginEdgePick(bool chamfer) {
+        edgePickEdit_ = -1;
+        return startEdgePick(chamfer);
+    }
+    // Modifica degli spigoli del raccordo (o smusso) `blend`: la scelta riparte
+    // sulla sua base con gli spigoli attuali; al posto del raccordo si vede
+    // l'anteprima. Invio chiama il callback di setEdgeEditCallback.
+    QString beginBlendEdit(int blend, double size, bool chamfer) {
+        if (blend < 0 || blend >= extrusions_.size() || extrusions_.at(blend).feature != BodyFeature::Blend
+            || extrusions_.at(blend).operation >= 0)
+            return QStringLiteral("Il corpo non e' un raccordo o uno smusso.");
+        const ExtrusionObject &body = extrusions_.at(blend);
+        if (body.firstBody < 0 || body.firstBody >= blend) return QStringLiteral("Il corpo da raccordare non esiste piu'.");
+        selection_ = {SceneObjectKind::Extrusion, body.firstBody, -1};
+        selectedFace_ = {};
+        edgePickSize_ = size;
+        const QString error = startEdgePick(chamfer);
+        if (!error.isEmpty()) return error;
+        edgePickEdit_ = blend;
+        FaceHit points;
+        points.edges = body.blendEdges;
+        pickedEdges_ = faceDisplayEdges(body.firstBody, points);
+        edgePicked();
+        return {};
+    }
+    void setEdgeEditCallback(std::function<void(int, QVector<EdgePoint>, double, bool)> callback) { edgeEditFinished_ = std::move(callback); }
+    // Misura dell'anteprima durante la scelta degli spigoli.
+    void setEdgePickSize(double size) {
+        edgePickSize_ = size;
+        if (edgePickBody_ >= 0) edgePicked();
+    }
+    double edgePickSize() const { return edgePickSize_; }
+
+    // Anteprima di un corpo definito da `definition` (una funzione nuova, o al
+    // posto del corpo `index` se si modifica), calcolata in background con il
+    // kernel attivo; le richieste superate si scartano. Si disegna in ambra; al
+    // suo posto spariscono il corpo modificato e gli operandi (booleane, base
+    // del raccordo), che si vedono finche' l'anteprima non e' pronta.
+    void requestPreview(const ExtrusionObject &definition, int index = -1) {
+        const QString key = previewKey(definition, index);
+        if (key == preview_.key) {
+            if ((preview_.valid || !preview_.error.isEmpty()) && previewCallback_) previewCallback_(preview_.error);
+            return;
+        }
+        preview_.key = key;
+        preview_.definition = definition;
+        preview_.index = index;
+        preview_.replaced.clear();
+        if (definition.operation >= 0) preview_.replaced = {definition.firstBody, definition.secondBody};
+        else if (definition.feature == BodyFeature::Blend) preview_.replaced = {definition.firstBody};
+        preview_.valid = false;
+        preview_.error.clear();
+        ++preview_.generation;
+        if (!previewTimer_) {
+            previewTimer_ = new QTimer(this);
+            previewTimer_->setSingleShot(true);
+            previewTimer_->setInterval(120);
+            previewTimer_->callOnTimeout([this] { startPreviewJob(); });
+        }
+        previewTimer_->start();
+        update();
+    }
+    // Raccordo o smusso degli spigoli `edges` del corpo `base` (al posto del raccordo `hidden`, se c'e').
+    void requestBlendPreview(int base, const QVector<EdgePoint> &edges, double size, bool chamfer, int hidden = -1) {
+        if (base < 0 || base >= extrusions_.size() || edges.isEmpty() || !(size > 0.0)) {
+            clearPreview();
+            return;
+        }
+        ExtrusionObject blend = hidden >= 0 && hidden < extrusions_.size() ? extrusions_.at(hidden) : ExtrusionObject();
+        blend.operation = -1;
+        blend.feature = BodyFeature::Blend;
+        blend.firstBody = base;
+        blend.blendEdges = edges;
+        blend.blendSize = size;
+        blend.blendChamfer = chamfer;
+        requestPreview(blend, hidden);
+    }
+    void clearPreview() {
+        ++preview_.generation;
+        preview_.key.clear();
+        preview_.index = -1;
+        preview_.replaced.clear();
+        preview_.valid = false;
+        preview_.error.clear();
+        preview_.display = {};
+        update();
+    }
+    void clearBlendPreview() { clearPreview(); }
+    // Errore dell'anteprima (vuoto se riuscita o in calcolo), anche a ogni risultato nuovo.
+    QString previewError() const { return preview_.error; }
+    void setPreviewCallback(std::function<void(const QString &)> callback) { previewCallback_ = std::move(callback); }
+
+    QString startEdgePick(bool chamfer) {
         if (sketchMode_) return QStringLiteral("Esci prima dalla modalita' schizzo.");
         if (selection_.kind != SceneObjectKind::Extrusion || selection_.index < 0 || selection_.index >= extrusions_.size())
             return QStringLiteral("Seleziona prima il corpo (nella vista o nell'albero modello).");
@@ -642,10 +760,24 @@ public:
         edgePickChamfer_ = chamfer;
         pickedEdges_.clear();
         hoverEdge_ = -1;
-        if (edgePickStatus_) edgePickStatus_(edgePickMessage());
+        hoverFaceEdges_.clear();
+        // Con una faccia selezionata del corpo si parte dai suoi bordi.
+        if (selectedFace_.body == edgePickBody_) pickedEdges_ = faceDisplayEdges(edgePickBody_, selectedFace_.hit);
         setFocus();
-        update();
+        edgePicked();
         return {};
+    }
+    // Di nuovo alla scelta degli spigoli, con quelli dati gia' scelti (dalla
+    // finestra della misura, per cambiarli dopo un raccordo non riuscito).
+    void resumeEdgePick(int body, const QVector<EdgePoint> &edges, bool chamfer) {
+        if (body < 0 || body >= extrusions_.size()) return;
+        selection_ = {SceneObjectKind::Extrusion, body, -1};
+        selectedFace_ = {};
+        if (!beginEdgePick(chamfer).isEmpty()) return;
+        FaceHit points;
+        points.edges = edges;
+        pickedEdges_ = faceDisplayEdges(body, points);
+        edgePicked();
     }
     void setEdgePickCallbacks(std::function<void(const QString &)> status,
                               std::function<void(int, QVector<EdgePoint>, bool)> finished) {
@@ -700,15 +832,158 @@ public:
         return {};
     }
 
+    // --- Vincoli geometrici (oggetti) -------------------------------------------
+
+    // Lo schizzo attivo in modalita' schizzo (nullptr altrimenti).
+    const SketchObject *activeSketchObject() const {
+        return sketchMode_ && activeSketch_ >= 0 && activeSketch_ < sketches_.size() ? &sketches_.at(activeSketch_) : nullptr;
+    }
+    // Riferimenti scelti per un vincolo: i punti (Ctrl+clic, anche l'origine) e le entita' selezionate.
+    QVector<ConstraintRef> constraintSelection() const {
+        QVector<ConstraintRef> refs;
+        for (const SelectedPoint &point : selectedPoints_)
+            if (isValidSelectedPoint(point)) refs.append({point.kind, point.element, point.kind == 2 ? -1 : point.point});
+        for (const SketchElementSelection &element : sketchSelections_) refs.append({element.kind, element.index, -1});
+        return refs;
+    }
+    // Vincolo del tipo dato sui riferimenti scelti; le quote con `value` (NaN: la misura attuale).
+    QString addConstraint(ConstraintType type, double value = qQNaN()) {
+        const SketchObject *active = activeSketchObject();
+        if (!active) return QStringLiteral("Entra in modalita' schizzo.");
+        const QVector<ConstraintRef> refs = constraintSelection();
+        if (!ForgeCad::applicableConstraints(*active, refs).contains(type))
+            return QStringLiteral("Il vincolo %1 non si applica alle entita' scelte.").arg(ForgeCad::constraintName(type));
+        SketchConstraint constraint = ForgeCad::makeConstraint(*active, type, refs);
+        if (ForgeCad::isDimension(type) && !std::isnan(value)) constraint.value = value;
+        for (const SketchConstraint &other : active->geometricConstraints)
+            if (other.type == constraint.type
+                && ((other.first == constraint.first && other.second == constraint.second) || (other.first == constraint.second && other.second == constraint.first)))
+                return QStringLiteral("Il vincolo c'e' gia'.");
+        const DocumentState snapshot = documentState();
+        SketchObject &sketch = sketches_[activeSketch_];
+        const SketchObject before = sketch;
+        sketch.geometricConstraints.append(constraint);
+        QString failure;
+        if (!solveActive({}, before, &failure)) return failure;
+        history_.record(snapshot);
+        selectedConstraints_ = {int(sketch.geometricConstraints.size()) - 1};
+        sketchEdited();
+        selectionChanged();
+        return {};
+    }
+    QString deleteConstraints(QVector<int> indices) {
+        if (!activeSketchObject() || indices.isEmpty()) return {};
+        recordUndo();
+        SketchObject &sketch = sketches_[activeSketch_];
+        std::sort(indices.begin(), indices.end());
+        indices.erase(std::unique(indices.begin(), indices.end()), indices.end());
+        for (int k = indices.size() - 1; k >= 0; --k)
+            if (indices.at(k) >= 0 && indices.at(k) < sketch.geometricConstraints.size()) sketch.geometricConstraints.removeAt(indices.at(k));
+        selectedConstraints_.clear();
+        constraintHover_ = -1;
+        sketchEdited();
+        selectionChanged();
+        return {};
+    }
+    // Nuovo valore di una quota: lo schizzo si adatta (se i vincoli lo permettono).
+    QString setConstraintValue(int index, double value) {
+        if (!activeSketchObject() || index < 0 || index >= activeSketchObject()->geometricConstraints.size()) return QStringLiteral("Vincolo non valido.");
+        if (!ForgeCad::isDimension(activeSketchObject()->geometricConstraints.at(index).type)) return QStringLiteral("Il vincolo non ha un valore.");
+        const DocumentState snapshot = documentState();
+        SketchObject &sketch = sketches_[activeSketch_];
+        const SketchObject before = sketch;
+        sketch.geometricConstraints[index].value = value;
+        QString failure;
+        if (!solveActive({}, before, &failure)) return failure;
+        history_.record(snapshot);
+        sketchEdited();
+        selectionChanged();
+        return {};
+    }
+    // Finestra del valore di una quota: resta aperta (si riapre) finche' il valore non va bene o si annulla.
+    void editConstraintValue(int index) {
+        const SketchObject *active = activeSketchObject();
+        if (!active || index < 0 || index >= active->geometricConstraints.size()) return;
+        const SketchConstraint constraint = active->geometricConstraints.at(index);
+        if (!ForgeCad::isDimension(constraint.type)) return;
+        double value = constraint.value;
+        for (;;) {
+            bool accepted = false;
+            value = QInputDialog::getDouble(this, ForgeCad::constraintName(constraint.type), ForgeCad::describeConstraint(*activeSketchObject(), constraint),
+                                            value, constraint.type == ConstraintType::Angle ? -360.0 : 1e-9, 1e6, 6, &accepted);
+            if (!accepted) return;
+            const QString error = setConstraintValue(index, value);
+            if (error.isEmpty()) return;
+            QMessageBox::warning(this, ForgeCad::constraintName(constraint.type), error);
+        }
+    }
+    // Gradi di liberta' dello schizzo attivo (ricalcolati quando lo schizzo cambia).
+    const ForgeCad::SketchAnalysis &sketchAnalysis() const {
+        if (analysisDirty_ || analysisSketch_ != activeSketch_) {
+            analysis_ = activeSketchObject() ? ForgeCad::analyzeSketch(*activeSketchObject()) : ForgeCad::SketchAnalysis();
+            analysisSketch_ = activeSketch_;
+            analysisDirty_ = false;
+        }
+        return analysis_;
+    }
+    QVector<int> selectedConstraints() const { return selectedConstraints_; }
+    void setSelectedConstraints(const QVector<int> &indices) {
+        selectedConstraints_ = indices;
+        update();
+    }
+    void setConstraintsVisible(bool visible) {
+        constraintsVisible_ = visible;
+        update();
+    }
+    bool constraintsVisible() const { return constraintsVisible_; }
+    // La finestra dei vincoli si aggiorna (selezione, vincoli, schizzo attivo cambiati).
+    void setConstraintPanelCallback(std::function<void()> callback) { constraintPanelCallback_ = std::move(callback); }
+
     void selectPlane(int plane) { selectObject(SceneObjectKind::Plane, plane); }
 
     int createSketch(int plane, const QString &name) {
         recordUndo();
-        sketches_.append({name, plane, {}, {}, {}, {}, {}, {}, true, {}});
+        SketchObject sketch;
+        sketch.name = name;
+        sketch.plane = plane;
+        // Gli assi dello schizzo sono quelli dello schermo nella vista normale al piano.
+        sketch.frame = ForgeCad::referenceSketchFrame(plane, orientation_);
+        sketch.customFrame = true;
+        sketches_.append(sketch);
         activeSketch_ = sketches_.size() - 1;
         documentChanged();
         beginSketchMode(plane);
         return activeSketch_;
+    }
+
+    // Nuovo schizzo sul piano di una faccia piana del corpo `body` (il piano
+    // resta quello della faccia al momento della creazione). -1 se la faccia non e' piana.
+    int createFaceSketch(int body, const FaceHit &face, const QString &name) {
+        if (!face.planar || body < 0 || body >= extrusions_.size()) return -1;
+        if (sketchMode_) endSketchMode();
+        if (edgePickBody_ >= 0) cancelEdgePick();
+        SketchObject sketch;
+        sketch.name = name;
+        sketch.plane = kFacePlane;
+        sketch.frame = ForgeCad::faceSketchFrame(gp_Pnt(face.point[0], face.point[1], face.point[2]),
+                                                 gp_Dir(face.normal[0], face.normal[1], face.normal[2]),
+                                                 gp_Dir(orientation_.up[0], orientation_.up[1], orientation_.up[2]));
+        sketch.faceSource = extrusions_.at(body).name;
+        recordUndo();
+        sketches_.append(sketch);
+        activeSketch_ = sketches_.size() - 1;
+        selection_ = {};
+        documentChanged();
+        beginSketchMode(kFacePlane);
+        return activeSketch_;
+    }
+    // Menu Schizzo: nuovo schizzo sulla faccia selezionata nella vista. Restituisce l'errore.
+    QString createSketchOnSelectedFace(const QString &name) {
+        if (selectedFace_.body < 0 || selectedFace_.body >= extrusions_.size())
+            return QStringLiteral("Seleziona prima una faccia piana di un corpo (clic sulla faccia nella vista).");
+        if (!selectedFace_.hit.planar) return QStringLiteral("La faccia selezionata non e' piana.");
+        const SelectedFace face = selectedFace_;
+        return createFaceSketch(face.body, face.hit, name) >= 0 ? QString() : QStringLiteral("Schizzo sulla faccia non riuscito.");
     }
 
     void selectSketch(int index) {
@@ -719,7 +994,8 @@ public:
 
     void beginSketchMode(int plane) {
         activePlane_ = plane;
-        selectedPlane_ = plane;
+        selectedPlane_ = plane < 3 ? plane : -1;
+        selectedFace_ = {};
         sketchMode_ = true;
         sceneBoundsDirty_ = true;
         blendFirst_ = -1;
@@ -728,16 +1004,26 @@ public:
         hasPendingPoint_ = false;
         curveControlPoints_.clear();
         sketchSelections_.clear();
-        // Le selezioni di punti si riferiscono allo schizzo precedente.
+        // Le selezioni di punti (e dei vincoli) si riferiscono allo schizzo precedente.
         selectedPoints_.clear();
+        selectedConstraints_.clear();
+        constraintHover_ = -1;
         hover_ = {};
         sketchHover_ = {};
-        setViewNormal(plane);
+        // Vista allineata agli assi dello schizzo (X a destra, Y in alto): screenToSketchPoint lo richiede.
+        if (activeSketch_ >= 0 && activeSketch_ < sketches_.size()) {
+            const gp_Ax3 axes = ForgeCad::sketchAxes(sketches_.at(activeSketch_));
+            setViewFrame(QVector3D(float(axes.XDirection().X()), float(axes.XDirection().Y()), float(axes.XDirection().Z())),
+                         QVector3D(float(axes.Direction().X()), float(axes.Direction().Y()), float(axes.Direction().Z())));
+        } else {
+            setViewNormal(plane);
+        }
         // Lo schizzo in modifica il piu' grande possibile (se e' vuoto, tutta la scena).
         QVector<QVector3D> sketchPoints;
         if (activeSketch_ >= 0 && activeSketch_ < sketches_.size()) sketchPoints = sketchGeometryPoints(sketches_.at(activeSketch_));
         fitView(sketchPoints.isEmpty() ? sceneGeometryPoints() : sketchPoints);
         if (sketchModeCallback_) sketchModeCallback_(true);
+        selectionChanged();
         setDrawingTool(DrawingTool::Select);
         update();
     }
@@ -752,18 +1038,31 @@ public:
         lastSnapKind_ = SnapKind::None;
         sketchSelections_.clear();
         selectedPoints_.clear();
+        selectedConstraints_.clear();
+        constraintHover_ = -1;
         curveControlPoints_.clear();
         sketchHover_ = {};
         if (sketchModeCallback_) sketchModeCallback_(false);
+        selectionChanged();
         update();
     }
 
+    // Rotazione dal modello allo spazio della vista standard: righe destra, alto, verso l'osservatore.
+    QMatrix4x4 basisMatrix() const {
+        const AxesOrientation &o = orientation_;
+        return QMatrix4x4(float(o.right[0]), float(o.right[1]), float(o.right[2]), 0.0f,
+                          float(o.up[0]), float(o.up[1]), float(o.up[2]), 0.0f,
+                          float(o.toward[0]), float(o.toward[1]), float(o.toward[2]), 0.0f,
+                          0.0f, 0.0f, 0.0f, 1.0f);
+    }
+
     void setViewPreset(int preset) {
+        roll_ = 0.0f;
         switch (preset) {
         case 0: yaw_ = 0.0f; pitch_ = 0.0f; break;
         case 1: yaw_ = 180.0f; pitch_ = 0.0f; break;
-        case 2: yaw_ = 90.0f; pitch_ = 0.0f; break;
-        case 3: yaw_ = 0.0f; pitch_ = -90.0f; break;
+        case 2: yaw_ = -90.0f; pitch_ = 0.0f; break;  // destra: dall'asse a destra della vista frontale
+        case 3: yaw_ = 0.0f; pitch_ = 90.0f; break;   // superiore: dall'alto, il fondo in alto
         case 4: yaw_ = -32.0f; pitch_ = 22.0f; break;
         case 5: yaw_ = -45.0f; pitch_ = 12.0f; break;
         default: break;
@@ -771,10 +1070,57 @@ public:
         update();
     }
 
+    // Vista con gli assi x, y dello schermo lungo `x`, `y` e l'osservatore dalla
+    // parte di `normal` (terna destrorsa): la rotazione Rz(roll) Rx(pitch)
+    // Ry(yaw) ha per righe x, y, normal.
+    void setViewFrame(const QVector3D &worldX, const QVector3D &worldNormal) {
+        // Le direzioni del modello nello spazio della vista standard (orientamento degli assi).
+        const QMatrix4x4 basis = basisMatrix();
+        const QVector3D x = basis.mapVector(worldX), normal = basis.mapVector(worldNormal);
+        const double degrees = 180.0 / M_PI;
+        const double a = std::asin(qBound(-1.0, double(normal.y()), 1.0));
+        const double b = std::atan2(-double(normal.x()), double(normal.z()));
+        const QVector3D u1(float(std::cos(b)), 0.0f, float(std::sin(b)));
+        const QVector3D u2(float(std::sin(a) * std::sin(b)), float(std::cos(a)), float(-std::sin(a) * std::cos(b)));
+        pitch_ = float(a * degrees);
+        yaw_ = float(b * degrees);
+        roll_ = float(std::atan2(-double(QVector3D::dotProduct(x, u2)), double(QVector3D::dotProduct(x, u1))) * degrees);
+        update();
+    }
+
+    // Vista normale al piano di riferimento: dalla parte e con l'orientamento
+    // degli schizzi nuovi su quel piano (X a destra, Y in alto).
     void setViewNormal(int plane) {
-        if (plane == 0) setViewPreset(0);       // XY, normal Z
-        else if (plane == 1) setViewPreset(3);  // XZ, normal Y
-        else setViewPreset(2);                  // YZ, normal X
+        const SketchFrame frame = ForgeCad::referenceSketchFrame(plane, orientation_);
+        setViewFrame(QVector3D(float(frame.xAxis[0]), float(frame.xAxis[1]), float(frame.xAxis[2])),
+                     QVector3D(float(frame.normal[0]), float(frame.normal[1]), float(frame.normal[2])));
+    }
+
+    // Orientamento degli assi del documento (non e' una modifica annullabile).
+    const AxesOrientation &orientation() const { return orientation_; }
+    void setOrientation(const AxesOrientation &orientation) {
+        orientation_ = orientation;
+        setViewPreset(4);
+        fitAll();
+        update();
+    }
+    // La vista corrente diventa la vista frontale (come "Aggiorna vista standard" di SolidWorks).
+    AxesOrientation orientationFromCurrentView() const {
+        QMatrix4x4 rotation;
+        rotation.rotate(roll_, 0.0f, 0.0f, 1.0f);
+        rotation.rotate(pitch_, 1.0f, 0.0f, 0.0f);
+        rotation.rotate(yaw_, 0.0f, 1.0f, 0.0f);
+        rotation *= basisMatrix();
+        // Righe della rotazione: le direzioni del modello a destra, in alto e verso l'osservatore.
+        AxesOrientation result;
+        double *rows[3] = {result.right, result.up, result.toward};
+        for (int r = 0; r < 3; ++r) {
+            double length = 0.0;
+            for (int k = 0; k < 3; ++k) length += double(rotation(r, k)) * double(rotation(r, k));
+            length = std::sqrt(length);
+            for (int k = 0; k < 3; ++k) rows[r][k] = double(rotation(r, k)) / length;
+        }
+        return result;
     }
 
 protected:
@@ -798,7 +1144,10 @@ protected:
         maxSamples_ = samples;
     }
 
-    void resizeGL(int width, int height) override { glViewport(0, 0, width, height); }
+    void resizeGL(int width, int height) override {
+        glViewport(0, 0, width, height);
+        if (autoFit_ && painted_ && !sketchMode_) fitView(sceneGeometryPoints());
+    }
 
     void paintGL() override {
         if (!painted_) {
@@ -829,8 +1178,10 @@ protected:
         glMatrixMode(GL_MODELVIEW);
         glLoadIdentity();
         glTranslatef(panX_, panY_, -zoom_);
+        glRotatef(roll_, 0.0f, 0.0f, 1.0f);
         glRotatef(pitch_, 1.0f, 0.0f, 0.0f);
         glRotatef(yaw_, 0.0f, 1.0f, 0.0f);
+        glMultMatrixf(basisMatrix().constData());
         drawReferencePlanes();
         drawGrid();
         if (!axesOnTop_) drawAxes();
@@ -882,6 +1233,12 @@ protected:
                 update();
             } else if (drawingTool_ != DrawingTool::Select) {
                 setDrawingTool(DrawingTool::Select);
+            } else if (!selectedConstraints_.isEmpty() || !selectedPoints_.isEmpty() || !sketchSelections_.isEmpty()) {
+                selectedConstraints_.clear();
+                selectedPoints_.clear();
+                sketchSelections_.clear();
+                selectionChanged();
+                update();
             } else {
                 endSketchMode();
             }
@@ -927,18 +1284,37 @@ protected:
         }
         if (!sketchMode_ && edgePickBody_ >= 0 && event->button() == Qt::LeftButton) {
             // Scelta degli spigoli per raccordo/smusso: il clic li accende o li spegne.
+            // Clic su una faccia: tutti i suoi bordi (o nessuno, se c'erano gia' tutti).
             const int edge = pickEdge(lastMousePosition_);
+            FaceHit face;
             if (edge >= 0) {
                 if (pickedEdges_.contains(edge)) pickedEdges_.removeAll(edge);
                 else pickedEdges_.append(edge);
-                if (edgePickStatus_) edgePickStatus_(edgePickMessage());
-                update();
+            } else if (pickBodyFace(edgePickBody_, lastMousePosition_, face)) {
+                const QVector<int> border = faceDisplayEdges(edgePickBody_, face);
+                bool all = !border.isEmpty();
+                for (int index : border) all = all && pickedEdges_.contains(index);
+                for (int index : border) {
+                    pickedEdges_.removeAll(index);
+                    if (!all) pickedEdges_.append(index);
+                }
             }
+            edgePicked();
             return;
         }
         if (!sketchMode_ && event->button() == Qt::LeftButton) {
             selection_ = pickSceneObject(lastMousePosition_);
             if (selection_.kind == SceneObjectKind::Plane) selectedPlane_ = selection_.index;
+            // Sul corpo si seleziona anche la faccia colpita (bordi evidenziati).
+            selectedFace_ = {};
+            if (selection_.kind == SceneObjectKind::Extrusion && pickBodyFace(selection_.index, lastMousePosition_, selectedFace_.hit)) {
+                selectedFace_.body = selection_.index;
+                showStatus(QStringLiteral("%1: faccia %2%3 (%4 bordi)")
+                               .arg(extrusions_.at(selection_.index).name)
+                               .arg(selectedFace_.hit.face + 1)
+                               .arg(selectedFace_.hit.planar ? QStringLiteral(" piana") : QString())
+                               .arg(selectedFace_.hit.edges.size()));
+            }
             if (selectionCallback_) selectionCallback_(selection_);
             update();
             return;
@@ -950,6 +1326,27 @@ protected:
                 return;
             }
             if (drawingTool_ == DrawingTool::Select) {
+                // Un clic sul simbolo di un vincolo lo seleziona (Maiusc aggiunge o toglie).
+                const int glyph = constraintAt(lastMousePosition_);
+                if (glyph >= 0) {
+                    // Una quota si sposta trascinandola.
+                    if (ForgeCad::isDimension(sketches_.at(activeSketch_).geometricConstraints.at(glyph).type)) {
+                        dimensionDrag_ = glyph;
+                        dragSnapshot_ = documentState();
+                        dragRecorded_ = false;
+                    }
+                    if (event->modifiers() & Qt::ShiftModifier) {
+                        if (selectedConstraints_.contains(glyph)) selectedConstraints_.removeAll(glyph);
+                        else selectedConstraints_.append(glyph);
+                    } else {
+                        selectedConstraints_ = {glyph};
+                        sketchSelections_.clear();
+                        selectedPoints_.clear();
+                    }
+                    selectionChanged();
+                    update();
+                    return;
+                }
                 // Selezione: Ctrl+clic su punti ed elementi come prima, il
                 // trascinamento muove i punti delle curve, il clic seleziona
                 // (Maiusc aggiunge o toglie).
@@ -1003,11 +1400,20 @@ protected:
                     return;
                 }
             }
+            if (drawingTool_ == DrawingTool::Rectangle || drawingTool_ == DrawingTool::CenterRectangle) {
+                QPointF point = snapPoint(rawPoint);
+                if (!curveControlPoints_.isEmpty()) point = rectangleCorner(curveControlPoints_.first(), point);
+                curveControlPoints_.append(point);
+                hasPendingPoint_ = true;
+                if (curveControlPoints_.size() >= 2) finalizeRectangle();
+                update();
+                return;
+            }
             if (drawingTool_ == DrawingTool::Circle || drawingTool_ == DrawingTool::Arc
-                || drawingTool_ == DrawingTool::Polygon) {
+                || drawingTool_ == DrawingTool::Polygon || drawingTool_ == DrawingTool::Ellipse) {
                 curveControlPoints_.append(snapPoint(rawPoint));
                 hasPendingPoint_ = true;
-                const int requiredPoints = drawingTool_ == DrawingTool::Arc ? 3 : 2;
+                const int requiredPoints = drawingTool_ == DrawingTool::Arc || drawingTool_ == DrawingTool::Ellipse ? 3 : 2;
                 if (curveControlPoints_.size() >= requiredPoints) finalizePrimitive();
                 update();
                 return;
@@ -1031,17 +1437,32 @@ protected:
             bool closedOnPoint = false;
             if (activeSketch_ >= 0 && activeSketch_ < sketches_.size()) {
                 recordUndo();
-                sketches_[activeSketch_].segments.append(qMakePair(pendingPoint_, constrainedPoint));
-                sketches_[activeSketch_].constraints.append(appliedConstraint);
-                sketches_[activeSketch_].segmentLengths.append(lineLength_);
-                sketches_[activeSketch_].segmentAngles.append(lineAngle_);
-                if (drawingTool_ == DrawingTool::ConstructionLine)
-                    sketches_[activeSketch_].constructionSegments.append(sketches_[activeSketch_].segments.size() - 1);
-                const int count = sketches_[activeSketch_].coincidentConstraints.size();
-                recordCoincidences(sketches_[activeSketch_], sketches_[activeSketch_].segments.size() - 1);
+                SketchObject &sketch = sketches_[activeSketch_];
+                sketch.segments.append(qMakePair(pendingPoint_, constrainedPoint));
+                sketch.constraints.append(-1);
+                sketch.segmentLengths.append(0.0);
+                sketch.segmentAngles.append(-1.0);
+                const int created = sketch.segments.size() - 1;
+                if (drawingTool_ == DrawingTool::ConstructionLine) sketch.constructionSegments.append(created);
+                // Vincoli del disegno (orizzontale, verticale, perpendicolare o parallelo al
+                // segmento di riferimento, quote) come oggetti.
+                const auto add = [&](ConstraintType type, const ConstraintRef &second = {}) {
+                    QVector<ConstraintRef> refs{{0, created, -1}};
+                    if (second.kind >= 0) refs.append(second);
+                    sketch.geometricConstraints.append(ForgeCad::makeConstraint(sketch, type, refs));
+                };
+                if (appliedConstraint == 1) add(ConstraintType::Horizontal);
+                else if (appliedConstraint == 2) add(ConstraintType::Vertical);
+                else if ((appliedConstraint == 3 || appliedConstraint == 4) && inference.reference >= 0 && inference.reference < created)
+                    add(appliedConstraint == 3 ? ConstraintType::Perpendicular : ConstraintType::Parallel, {0, inference.reference, -1});
+                if (lineLength_ > 0.0) add(ConstraintType::Distance);
+                if (lineAngle_ >= 0.0 && appliedConstraint != 1 && appliedConstraint != 2) add(ConstraintType::Angle, {2, 1, -1});
+                const int count = sketch.geometricConstraints.size();
+                recordCoincidences(sketch, created);
                 // Il secondo estremo e' finito su un punto di un'altra entita' (ora coincidenti)?
-                for (int k = count; k < sketches_[activeSketch_].coincidentConstraints.size(); ++k)
-                    closedOnPoint = closedOnPoint || sketches_[activeSketch_].coincidentConstraints.at(k).firstPoint == 1;
+                for (int k = count; k < sketch.geometricConstraints.size(); ++k)
+                    closedOnPoint = closedOnPoint || (sketch.geometricConstraints.at(k).type == ConstraintType::Coincident
+                                                      && sketch.geometricConstraints.at(k).first.point == 1);
                 startReference_ = sketches_[activeSketch_].segments.size() - 1;  // la polilinea prosegue da qui
                 sketchEdited();
             }
@@ -1103,9 +1524,16 @@ protected:
             dragRecorded_ = true;
         }
         SketchObject &sketch = sketches_[activeSketch_];
+        const SketchObject before = sketch;
         moveSketchPoint(sketch, -1, pointDragPosition_, delta, QPointF(qQNaN(), qQNaN()));
+        // Il risolutore tiene i punti trascinati sul cursore e adatta il resto;
+        // se i vincoli non lo permettono il punto resta dov'era.
+        QString failure;
+        if (!solveActive(targetsAt(sketch, target), before, &failure)) {
+            showStatus(QStringLiteral("Il punto e' bloccato dai vincoli."));
+            return;
+        }
         pointDragPosition_ = target;
-        for (CurveObject &curve : sketch.curves) ForgeCad::recalculateCurve(curve, tessellationQuality_);
         sceneBoundsDirty_ = true;
     }
 
@@ -1124,10 +1552,16 @@ protected:
         }
         const QPointF first = sketch.segments.at(bodyDragSegment_).first, second = sketch.segments.at(bodyDragSegment_).second;
         const QPointF nowhere(qQNaN(), qQNaN());
+        const SketchObject before = sketch;
         moveSketchPoint(sketch, bodyDragSegment_, first, delta, nowhere);
         moveSketchPoint(sketch, bodyDragSegment_, second, delta, nowhere);
+        QVector<ForgeCad::PointTarget> targets = targetsAt(sketch, first + delta);
+        targets += targetsAt(sketch, second + delta);
+        if (!solveActive(targets, before)) {
+            showStatus(QStringLiteral("Il segmento e' bloccato dai vincoli."));
+            return;
+        }
         bodyDragLast_ = raw;
-        for (CurveObject &curve : sketch.curves) ForgeCad::recalculateCurve(curve, tessellationQuality_);
         sceneBoundsDirty_ = true;
     }
 
@@ -1196,6 +1630,8 @@ protected:
         if (!result.segmentMap.isEmpty()) remapRevolutionAxes(activeSketch_, result.segmentMap);
         sketchSelections_.clear();
         selectedPoints_.clear();
+        selectedConstraints_.clear();
+        constraintHover_ = -1;
         sketchHover_ = findSketchElement(point);
         trimPreview_.clear();
         showStatus(QString());
@@ -1378,23 +1814,53 @@ protected:
         return result;
     }
 
-    // Vincoli di coincidenza del segmento appena aggiunto con i punti su cui
-    // i suoi estremi si sono agganciati (estremi di altri segmenti, punti
-    // delle curve).
+    // Vincoli del segmento appena aggiunto con i punti su cui i suoi estremi si
+    // sono agganciati: coincidenze con estremi di altri segmenti e punti delle
+    // curve; punto medio o punto su un altro segmento, punto su un cerchio,
+    // arco o ellisse.
     void recordCoincidences(SketchObject &sketch, int segment) {
         const QPointF ends[2] = {sketch.segments.at(segment).first, sketch.segments.at(segment).second};
+        const double tolerance = ForgeCad::kSketchConnectionTolerance;
+        const auto add = [&](ConstraintType type, const ConstraintRef &a, const ConstraintRef &b) {
+            SketchConstraint c;
+            c.type = type;
+            c.first = a;
+            c.second = b;
+            sketch.geometricConstraints.append(c);
+        };
         for (int end = 0; end < 2; ++end) {
+            const ConstraintRef here{0, segment, end};
+            bool onPoint = false;
             for (int other = 0; other < sketch.segments.size(); ++other) {
                 if (other == segment) continue;
                 const QPointF points[2] = {sketch.segments.at(other).first, sketch.segments.at(other).second};
                 for (int k = 0; k < 2; ++k)
-                    if (pointDistance(points[k], ends[end]) <= ForgeCad::kSketchConnectionTolerance)
-                        sketch.coincidentConstraints.append({0, segment, end, 0, other, k});
+                    if (pointDistance(points[k], ends[end]) <= tolerance) {
+                        add(ConstraintType::Coincident, here, {0, other, k});
+                        onPoint = true;
+                    }
             }
             for (int curve = 0; curve < sketch.curves.size(); ++curve)
                 for (int k = 0; k < sketch.curves.at(curve).controlPoints.size(); ++k)
-                    if (pointDistance(sketch.curves.at(curve).controlPoints.at(k), ends[end]) <= ForgeCad::kSketchConnectionTolerance)
-                        sketch.coincidentConstraints.append({0, segment, end, 1, curve, k});
+                    if (pointDistance(sketch.curves.at(curve).controlPoints.at(k), ends[end]) <= tolerance) {
+                        add(ConstraintType::Coincident, here, {1, curve, k});
+                        onPoint = true;
+                    }
+            if (onPoint) continue;
+            for (int other = 0; other < sketch.segments.size(); ++other) {
+                if (other == segment) continue;
+                const SketchSegment &s = sketch.segments.at(other);
+                if (distanceToSegment(ends[end], s.first, s.second) > 1e-9) continue;
+                add(pointDistance(ends[end], 0.5 * (s.first + s.second)) <= tolerance ? ConstraintType::Midpoint : ConstraintType::PointOnCurve,
+                    here, {0, other, -1});
+            }
+            for (int curve = 0; curve < sketch.curves.size(); ++curve) {
+                const CurveObject &c = sketch.curves.at(curve);
+                if (c.construction && c.tool == DrawingTool::Polygon) continue;
+                if ((c.tool == DrawingTool::Circle || c.tool == DrawingTool::Arc) && c.controlPoints.size() >= 2
+                    && std::abs(pointDistance(ends[end], c.controlPoints.at(0)) - pointDistance(c.controlPoints.at(1), c.controlPoints.at(0))) <= 1e-9)
+                    add(ConstraintType::PointOnCurve, here, {1, curve, -1});
+            }
         }
     }
 
@@ -1424,6 +1890,22 @@ protected:
             if (pointDistance(curve.controlPoints.last(), cursor) > ForgeCad::kSketchConnectionTolerance) curve.controlPoints.append(cursor);
             if (curve.tool == DrawingTool::Spline) ForgeCad::initializeTangentHandles(curve);
             break;
+        case DrawingTool::Rectangle:
+        case DrawingTool::CenterRectangle:
+            if (curve.controlPoints.size() != 1) return false;
+            curve.controlPoints.append(rectangleCorner(curve.controlPoints.first(), cursor));
+            break;
+        case DrawingTool::Ellipse:
+            // Dopo il centro il cerchio del primo semiasse, poi l'ellisse fino al cursore.
+            if (curve.controlPoints.size() == 1) {
+                curve.tool = DrawingTool::Circle;
+                curve.controlPoints.append(cursor);
+            } else if (curve.controlPoints.size() == 2) {
+                curve.controlPoints.append(ellipseMinorPoint(curve.controlPoints.at(0), curve.controlPoints.at(1), cursor));
+            } else {
+                return false;
+            }
+            break;
         default:
             return false;
         }
@@ -1445,6 +1927,17 @@ protected:
         case DrawingTool::Polygon: {
             const double r = pointDistance(p.at(0), p.at(1));
             return {QStringLiteral("R = %1   lato = %2   %3 lati").arg(number(r), number(2.0 * r * std::sin(M_PI / curve.sides))).arg(curve.sides)};
+        }
+        case DrawingTool::Rectangle:
+        case DrawingTool::CenterRectangle: {
+            const QPointF a = curve.tool == DrawingTool::Rectangle ? p.at(0) : 2.0 * p.at(0) - p.at(1);
+            return {QStringLiteral("L = %1   H = %2").arg(number(std::abs(p.at(1).x() - a.x())), number(std::abs(p.at(1).y() - a.y()))),
+                    QStringLiteral("Maiusc: quadrato")};
+        }
+        case DrawingTool::Ellipse: {
+            const double angle = std::atan2(p.at(1).y() - p.at(0).y(), p.at(1).x() - p.at(0).x()) * 180.0 / M_PI;
+            return {QStringLiteral("a = %1   b = %2   A = %3°").arg(number(pointDistance(p.at(0), p.at(1))), number(pointDistance(p.at(0), p.at(2))),
+                                                                   QString::number(angle, 'f', 2))};
         }
         case DrawingTool::Arc: {
             const double r = pointDistance(p.at(0), p.at(1));
@@ -1475,15 +1968,16 @@ protected:
         CurveObject curve;
         if (!previewCurve(curve)) return;
         painter.setBrush(Qt::NoBrush);
-        const bool centered = curve.tool == DrawingTool::Circle || curve.tool == DrawingTool::Arc || curve.tool == DrawingTool::Polygon;
+        const bool centered = curve.tool == DrawingTool::Circle || curve.tool == DrawingTool::Arc || curve.tool == DrawingTool::Polygon
+                           || curve.tool == DrawingTool::Ellipse || curve.tool == DrawingTool::CenterRectangle;
         if (centered) {
             painter.setPen(QPen(QColor(255, 170, 90, 170), 1.2, Qt::DotLine));
-            painter.drawLine(projectWorldPoint(mapSketchPoint(curve.controlPoints.first(), sketch.plane)),
-                             projectWorldPoint(mapSketchPoint(cursorSketchPoint_, sketch.plane)));
+            painter.drawLine(projectWorldPoint(mapSketchPoint(curve.controlPoints.first(), sketch)),
+                             projectWorldPoint(mapSketchPoint(cursorSketchPoint_, sketch)));
         }
         const bool radiusOnly = drawingTool_ == DrawingTool::Arc && curveControlPoints_.size() == 1;
         painter.setPen(QPen(QColor(255, 150, 60, radiusOnly ? 110 : 230), 2.0, radiusOnly ? Qt::DotLine : Qt::DashLine, Qt::RoundCap));
-        const QVector<QPointF> screen = projectSketchPolyline(curve.samples, sketch.plane);
+        const QVector<QPointF> screen = projectSketchPolyline(curve.samples, sketch);
         painter.drawPolyline(screen.data(), int(screen.size()));
     }
 
@@ -1513,8 +2007,8 @@ protected:
             const SketchSegment &segment = sketch.segments.at(currentInference_.reference);
             QPen pen(QColor(120, 255, 170), 2.0, Qt::DashLine);
             painter.setPen(pen);
-            painter.drawLine(projectWorldPoint(mapSketchPoint(segment.first, sketch.plane)),
-                             projectWorldPoint(mapSketchPoint(segment.second, sketch.plane)));
+            painter.drawLine(projectWorldPoint(mapSketchPoint(segment.first, sketch)),
+                             projectWorldPoint(mapSketchPoint(segment.second, sketch)));
         }
         if (labels.isEmpty()) return;
         painter.setFont(QFont(QStringLiteral("Sans"), 9, QFont::DemiBold));
@@ -1541,11 +2035,64 @@ protected:
     // Quote di cerchi, archi e poligoni: raggio e centro (poligono: raggio
     // circoscritto e lati). I punti collegati (estremi di segmenti sul centro
     // o sui punti della curva) seguono con moveSketchPoint.
+    // Quote dell'ellisse: semiassi, angolo del primo semiasse e centro.
+    QString editEllipseDimension(int index) {
+        SketchObject &sketch = sketches_[activeSketch_];
+        const CurveObject curve = sketch.curves.at(index);
+        if (curve.controlPoints.size() < 3) return QStringLiteral("Ellisse non valida.");
+        const QPointF center = curve.controlPoints.at(0);
+        QDialog dialog(this);
+        dialog.setWindowTitle(QStringLiteral("Quota dell'ellisse"));
+        auto *form = new QFormLayout(&dialog);
+        const auto spin = [&dialog](double value, double minimum, double maximum) {
+            auto *box = new QDoubleSpinBox(&dialog);
+            box->setDecimals(6);
+            box->setRange(minimum, maximum);
+            box->setValue(value);
+            return box;
+        };
+        auto *first = spin(pointDistance(center, curve.controlPoints.at(1)), 1e-6, 1e6);
+        auto *second = spin(pointDistance(center, curve.controlPoints.at(2)), 1e-6, 1e6);
+        const QPointF axis = curve.controlPoints.at(1) - center;
+        auto *angle = spin(std::atan2(axis.y(), axis.x()) * 180.0 / M_PI, -360.0, 360.0);
+        angle->setSuffix(QStringLiteral(" \u00B0"));
+        auto *centerX = spin(center.x(), -1e6, 1e6), *centerY = spin(center.y(), -1e6, 1e6);
+        form->addRow(QStringLiteral("Primo semiasse:"), first);
+        form->addRow(QStringLiteral("Secondo semiasse:"), second);
+        form->addRow(QStringLiteral("Angolo del primo semiasse:"), angle);
+        form->addRow(QStringLiteral("Centro X:"), centerX);
+        form->addRow(QStringLiteral("Centro Y:"), centerY);
+        auto *buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dialog);
+        connect(buttons, &QDialogButtonBox::accepted, &dialog, &QDialog::accept);
+        connect(buttons, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
+        form->addRow(buttons);
+        if (dialog.exec() != QDialog::Accepted) return {};
+        const QPointF newCenter(centerX->value(), centerY->value());
+        const double radians = angle->value() * M_PI / 180.0;
+        const QPointF u(std::cos(radians), std::sin(radians)), perpendicular(-u.y(), u.x());
+        CurveObject changed = curve;
+        changed.controlPoints[0] = newCenter;
+        changed.controlPoints[1] = newCenter + first->value() * u;
+        changed.controlPoints[2] = newCenter + second->value() * perpendicular;
+        ForgeCad::recalculateCurve(changed, tessellationQuality_);
+        if (!changed.numericallyValid) return QStringLiteral("Ellisse non valida.");
+        recordUndo();
+        const SketchObject beforeEdit = sketch;
+        // I punti coincidenti con il centro lo seguono.
+        if (pointDistance(center, newCenter) > 0.0) moveSketchPoint(sketch, -1, center, newCenter - center, QPointF(qQNaN(), qQNaN()));
+        sketch.curves[index] = changed;
+        QString failure;
+        if (!solveActive(curveTargets(sketch, index), beforeEdit, &failure)) return failure;
+        sketchEdited();
+        return {};
+    }
+
     QString editCurveDimension(int index) {
         if (!sketchMode_ || activeSketch_ < 0 || activeSketch_ >= sketches_.size()) return QStringLiteral("Entra in modalita' schizzo.");
         SketchObject &sketch = sketches_[activeSketch_];
         if (index < 0 || index >= sketch.curves.size()) return QStringLiteral("Seleziona prima un cerchio, un arco o un poligono.");
         const CurveObject curve = sketch.curves.at(index);
+        if (curve.tool == DrawingTool::Ellipse) return editEllipseDimension(index);
         const bool circle = curve.tool == DrawingTool::Circle, arc = curve.tool == DrawingTool::Arc, polygon = curve.tool == DrawingTool::Polygon;
         if (!(circle || arc || polygon) || curve.controlPoints.size() < (arc ? 3 : 2))
             return QStringLiteral("La quota si modifica su segmenti, cerchi, archi e poligoni.");
@@ -1592,6 +2139,7 @@ protected:
         const QPointF newCenter(centerX->value(), centerY->value());
         const double newRadius = radiusBox->value();
         recordUndo();
+        const SketchObject beforeEdit = sketch;
         const QPointF nowhere(qQNaN(), qQNaN());
         // Prima il centro (con i punti coincidenti), poi i punti sulla curva
         // alla nuova distanza, nella stessa direzione di prima.
@@ -1611,6 +2159,10 @@ protected:
         }
         if (polygon && sidesBox) sketch.curves[index].sides = sidesBox->value();
         for (CurveObject &c : sketch.curves) ForgeCad::recalculateCurve(c, tessellationQuality_);
+        // Le quote del raggio seguono il valore scelto; il resto dello schizzo si adatta.
+        syncCurveDimensions(sketch, index);
+        QString failure;
+        if (!solveActive(curveTargets(sketch, index), beforeEdit, &failure)) return failure;
         sketchEdited();
         return {};
     }
@@ -1621,6 +2173,14 @@ protected:
             mousePressEvent(event);  // con gli strumenti di modifica il secondo clic e' un clic
             return;
         }
+        if (sketchMode_ && event->button() == Qt::LeftButton && drawingTool_ == DrawingTool::Select) {
+            // Doppio clic sul simbolo di una quota: il suo valore.
+            const int glyph = constraintAt(event->position().toPoint());
+            if (glyph >= 0) {
+                editConstraintValue(glyph);
+                return;
+            }
+        }
         if (sketchMode_ && event->button() == Qt::LeftButton) {
             const SketchElementSelection hit = findSketchElement(screenToSketchPoint(event->position().toPoint()));
             if (hit.kind == 0) {
@@ -1630,7 +2190,7 @@ protected:
             }
             if (hit.kind == 1 && hit.index < sketches_.at(activeSketch_).curves.size()) {
                 const DrawingTool tool = sketches_.at(activeSketch_).curves.at(hit.index).tool;
-                if (tool == DrawingTool::Circle || tool == DrawingTool::Arc || tool == DrawingTool::Polygon) {
+                if (tool == DrawingTool::Circle || tool == DrawingTool::Arc || tool == DrawingTool::Polygon || tool == DrawingTool::Ellipse) {
                     hasPendingPoint_ = false;
                     curveControlPoints_.clear();
                     const QString error = editCurveDimension(hit.index);
@@ -1661,11 +2221,30 @@ protected:
                     ? menu.addAction(QStringLiteral("Modifica schizzo")) : nullptr;
                 QAction *editBody = hit.kind == SceneObjectKind::Extrusion && editBodyCallback_
                     ? menu.addAction(QStringLiteral("Modifica parametri...")) : nullptr;
+                // Faccia sotto il puntatore: schizzo sul suo piano, raccordo o smusso dei suoi bordi.
+                FaceHit face;
+                const bool onFace = hit.kind == SceneObjectKind::Extrusion && pickBodyFace(hit.index, event->pos(), face);
+                QAction *faceSketch = nullptr, *faceFillet = nullptr, *faceChamfer = nullptr;
+                if (onFace) {
+                    menu.addSeparator();
+                    faceSketch = menu.addAction(QStringLiteral("Nuovo schizzo sulla faccia"));
+                    faceSketch->setEnabled(face.planar);
+                    const bool solid = extrusions_.at(hit.index).solid && !face.edges.isEmpty() && edgePickFinished_;
+                    faceFillet = menu.addAction(QStringLiteral("Raccordo dei bordi della faccia..."));
+                    faceChamfer = menu.addAction(QStringLiteral("Smusso dei bordi della faccia..."));
+                    faceFillet->setEnabled(solid);
+                    faceChamfer->setEnabled(solid);
+                    menu.addSeparator();
+                }
                 QAction *hide = menu.addAction(QStringLiteral("Nascondi"));
                 QAction *remove = menu.addAction(QStringLiteral("Elimina"));
                 const QAction *chosen = menu.exec(event->globalPos());
                 if (chosen && chosen == editSketch) selectSketch(hit.index);
                 else if (chosen && chosen == editBody) editBodyCallback_(hit.index);
+                else if (chosen && chosen == faceSketch)
+                    createFaceSketch(hit.index, face, QStringLiteral("Schizzo %1").arg(sketches_.size() + 1));
+                else if (chosen && (chosen == faceFillet || chosen == faceChamfer))
+                    edgePickFinished_(hit.index, face.edges, chosen == faceChamfer);
                 else if (chosen && chosen == remove) deleteObject(hit.kind, hit.index);
                 else if (chosen == hide) setObjectVisible(hit.kind, hit.index, false);
                 event->accept();
@@ -1681,6 +2260,7 @@ protected:
             // Un pixel vale 8 * zoom / 8 / altezza unita' della vista.
             const float unit = 8.0f * (zoom_ / 8.0f) / float(qMax(1, height()));
             const QPoint delta = currentPosition - lastMousePosition_;
+            autoFit_ = false;
             panX_ += float(delta.x()) * unit;
             panY_ -= float(delta.y()) * unit;
             lastMousePosition_ = currentPosition;
@@ -1698,6 +2278,19 @@ protected:
             } else {
                 currentInference_ = {};
             }
+            if (dimensionDrag_ >= 0 && (event->buttons() & Qt::LeftButton)) {
+                SketchObject &sketch = sketches_[activeSketch_];
+                if (dimensionDrag_ < sketch.geometricConstraints.size()) {
+                    if (!dragRecorded_) {
+                        history_.record(dragSnapshot_);
+                        dragRecorded_ = true;
+                    }
+                    sketch.geometricConstraints[dimensionDrag_].placement = rawPoint;
+                    sketch.geometricConstraints[dimensionDrag_].placed = true;
+                }
+                update();
+                return;
+            }
             if (pointDragActive_ && (event->buttons() & Qt::LeftButton)) {
                 dragSketchPoint(dragSnapPoint(rawPoint));
                 update();
@@ -1707,6 +2300,12 @@ protected:
                 dragSketchSegment(rawPoint);
                 update();
                 return;
+            }
+            if (drawingTool_ == DrawingTool::Select && !(event->buttons() & Qt::LeftButton)) {
+                const int glyph = constraintAt(currentPosition);
+                if (glyph != constraintHover_) constraintHover_ = glyph;
+            } else {
+                constraintHover_ = -1;
             }
             if (drawingTool_ == DrawingTool::Select && !panKeyHeld_ && !(event->buttons() & Qt::LeftButton)) {
                 QPointF unused;
@@ -1723,10 +2322,26 @@ protected:
                     history_.record(dragSnapshot_);
                     dragRecorded_ = true;
                 }
+                const SketchObject sketchBefore = sketches_[activeSketch_];
                 CurveObject &curve = sketches_[activeSketch_].curves[draggingCurveIndex_];
                 if (draggingPointKind_ == EditablePointKind::Control) {
-                    curve.controlPoints[draggingControlIndex_] = curve.tool == DrawingTool::Spline
-                        || curve.tool == DrawingTool::Nurbs ? rawPoint : cursorSketchPoint_;
+                    const QPointF before = curve.controlPoints.at(draggingControlIndex_);
+                    QPointF position = curve.tool == DrawingTool::Spline || curve.tool == DrawingTool::Nurbs ? rawPoint : cursorSketchPoint_;
+                    // La fine dell'arco sta sul suo cerchio: si trascina solo il suo angolo.
+                    if (curve.tool == DrawingTool::Arc && draggingControlIndex_ == 2 && curve.controlPoints.size() >= 3) {
+                        const QPointF c = curve.controlPoints.at(0), r = position - c;
+                        const double radius = pointDistance(c, curve.controlPoints.at(1)), l = pointLength(r);
+                        if (l > 0.0) position = c + r * (radius / l);
+                    }
+                    curve.controlPoints[draggingControlIndex_] = position;
+                    normalizeEllipse(curve, draggingControlIndex_, before);
+                    SketchObject &sketch = sketches_[activeSketch_];
+                    if (!solveActive({{{1, draggingCurveIndex_, draggingControlIndex_}, curve.controlPoints.at(draggingControlIndex_)}}, sketchBefore)) {
+                        showStatus(QStringLiteral("Il punto e' bloccato dai vincoli."));
+                        update();
+                        return;
+                    }
+                    (void)sketch;
                 } else if (draggingPointKind_ == EditablePointKind::TangentIn) {
                     curve.tangentHandles[draggingControlIndex_].first = rawPoint;
                 } else {
@@ -1749,8 +2364,13 @@ protected:
             probeKernelLab(currentPosition);
         if (edgePickBody_ >= 0 && !(event->buttons() & Qt::LeftButton)) {
             const int edge = pickEdge(currentPosition);
-            if (edge != hoverEdge_) {
+            // Senza uno spigolo vicino si evidenziano i bordi della faccia sotto il puntatore.
+            QVector<int> faceEdges;
+            FaceHit face;
+            if (edge < 0 && pickBodyFace(edgePickBody_, currentPosition, face)) faceEdges = faceDisplayEdges(edgePickBody_, face);
+            if (edge != hoverEdge_ || faceEdges != hoverFaceEdges_) {
                 hoverEdge_ = edge;
+                hoverFaceEdges_ = faceEdges;
                 update();
             }
         }
@@ -1763,8 +2383,10 @@ protected:
         }
         if (event->buttons() & Qt::LeftButton) {
             const QPoint delta = currentPosition - lastMousePosition_;
+            autoFit_ = false;
             yaw_ += delta.x() * 0.5f;
             pitch_ = qBound(-89.0f, pitch_ + delta.y() * 0.5f, 89.0f);
+            roll_ *= 0.9f;  // la vista inclinata di uno schizzo su faccia si raddrizza ruotando
             update();
         }
         lastMousePosition_ = currentPosition;
@@ -1811,6 +2433,11 @@ protected:
                         && std::abs(pointDistance(sketch.segments.at(index).first, sketch.segments.at(index).second) - sketch.segmentLengths.at(index)) > 1e-9)
                         sketch.segmentLengths[index] = 0.0;
             }
+            if (dimensionDrag_ >= 0 && dragRecorded_) {
+                dragRecorded_ = false;
+                documentChanged();
+            }
+            dimensionDrag_ = -1;
             pointDragActive_ = false;
             bodyDragSegment_ = -1;
             if (dragRecorded_) sketchEdited();
@@ -1838,12 +2465,391 @@ protected:
         const QPoint pixelDelta = event->pixelDelta();
         const int delta = angleDelta.y() != 0 ? angleDelta.y() : pixelDelta.y();
         if (delta == 0) { event->ignore(); return; }
+        autoFit_ = false;
         setZoom(zoom_ * std::pow(0.9985f, float(delta)));
         event->accept();
     }
 
 private:
-    DocumentState documentState() const { return {sketches_, extrusions_}; }
+    DocumentState documentState() const { return {sketches_, extrusions_, orientation_, true}; }
+
+    void selectionChanged() {
+        if (constraintPanelCallback_) constraintPanelCallback_();
+    }
+
+    // Risolve i vincoli dello schizzo attivo con i bersagli dati; se non ci
+    // riesce lo schizzo torna a `before`. Le curve si ricampionano.
+    bool solveActive(const QVector<ForgeCad::PointTarget> &targets, const SketchObject &before, QString *error = nullptr) {
+        if (activeSketch_ < 0 || activeSketch_ >= sketches_.size()) return false;
+        SketchObject &sketch = sketches_[activeSketch_];
+        const ForgeCad::SolveResult result = ForgeCad::solveSketch(sketch, targets);
+        analysisDirty_ = true;
+        if (!result.ok) {
+            sketch = before;
+            if (error) *error = result.error;
+        }
+        for (CurveObject &curve : sketch.curves) ForgeCad::recalculateCurve(curve, tessellationQuality_);
+        return result.ok;
+    }
+    // Bersagli: tutti i punti dello schizzo che stanno in `position`, fermi li'.
+    static QVector<ForgeCad::PointTarget> targetsAt(const SketchObject &sketch, const QPointF &position) {
+        QVector<ForgeCad::PointTarget> targets;
+        const double tolerance = ForgeCad::kSketchConnectionTolerance;
+        for (int i = 0; i < sketch.segments.size(); ++i) {
+            if (pointDistance(sketch.segments.at(i).first, position) <= tolerance) targets.append({{0, i, 0}, position});
+            if (pointDistance(sketch.segments.at(i).second, position) <= tolerance) targets.append({{0, i, 1}, position});
+        }
+        for (int c = 0; c < sketch.curves.size(); ++c)
+            for (int k = 0; k < sketch.curves.at(c).controlPoints.size(); ++k)
+                if (pointDistance(sketch.curves.at(c).controlPoints.at(k), position) <= tolerance) targets.append({{1, c, k}, position});
+        return targets;
+    }
+    // Bersagli: i punti della curva dove stanno ora.
+    static QVector<ForgeCad::PointTarget> curveTargets(const SketchObject &sketch, int curve) {
+        QVector<ForgeCad::PointTarget> targets;
+        for (int k = 0; k < sketch.curves.at(curve).controlPoints.size(); ++k) targets.append({{1, curve, k}, sketch.curves.at(curve).controlPoints.at(k)});
+        return targets;
+    }
+    // Le quote di raggio e diametro della curva prendono il valore attuale.
+    static void syncCurveDimensions(SketchObject &sketch, int curve) {
+        for (SketchConstraint &c : sketch.geometricConstraints)
+            if ((c.type == ConstraintType::Radius || c.type == ConstraintType::Diameter) && c.first.kind == 1 && c.first.element == curve)
+                c.value = ForgeCad::currentMeasure(sketch, c);
+    }
+
+    // Quote come nel disegno tecnico (coordinate schermo): linee di misura, di
+    // riferimento e di richiamo, archi, frecce e testo.
+    struct DimensionGraphic {
+        QPainterPath lines;
+        QVector<QPolygonF> arrows;
+        QString text;
+        QPointF textCenter;
+        double textAngle = 0.0;  // gradi
+        QPolygonF textBox;       // per la scelta con il mouse
+    };
+    static QString dimensionText(const SketchConstraint &c) {
+        auto number = [](double v) {
+            QString text = QString::number(v, 'f', 3);
+            while (text.contains(QLatin1Char('.')) && (text.endsWith(QLatin1Char('0')) || text.endsWith(QLatin1Char('.')))) text.chop(1);
+            return text;
+        };
+        switch (c.type) {
+        case ConstraintType::Radius: return QStringLiteral("R") + number(c.value);
+        case ConstraintType::Diameter: return QStringLiteral("\u2300") + number(c.value);
+        case ConstraintType::Angle: return number(std::fabs(c.value)) + QStringLiteral("\u00B0");
+        default: return number(c.value);
+        }
+    }
+    // Freccia con la punta in `tip` e il corpo dalla parte di `from` (schermo).
+    static QPolygonF arrowHead(const QPointF &tip, const QPointF &from) {
+        const QPointF d = from - tip;
+        const double l = pointLength(d);
+        if (l <= 0.0) return {};
+        const QPointF u = d / l, n(-u.y(), u.x());
+        const double length = 9.0, half = 3.0;
+        return QPolygonF({tip, tip + length * u + half * n, tip + length * u - half * n});
+    }
+    bool dimensionGraphic(const SketchObject &sketch, int index, DimensionGraphic &g) const {
+        const SketchConstraint &c = sketch.geometricConstraints.at(index);
+        if (!ForgeCad::isDimension(c.type)) return false;
+        const double px = double(zoom_) / double(qMax(1, height()));  // unita' dello schizzo per pixel
+        const auto screen = [&](const QPointF &p) { return projectWorldPoint(mapSketchPoint(p, sketch)); };
+        const QFontMetricsF metrics(QFont(QStringLiteral("Sans"), 9, QFont::DemiBold));
+        g.text = dimensionText(c);
+        const double textWidth = metrics.horizontalAdvance(g.text), textHeight = metrics.height();
+        const auto readable = [](double degrees) {
+            while (degrees > 90.0) degrees -= 180.0;
+            while (degrees <= -90.0) degrees += 180.0;
+            return degrees;
+        };
+        const auto finishText = [&](const QPointF &center, double degrees) {
+            g.textCenter = center;
+            g.textAngle = degrees;
+            const double a = degrees * M_PI / 180.0;
+            const QPointF u(std::cos(a), std::sin(a)), n(-u.y(), u.x());
+            const double hw = 0.5 * textWidth + 3.0, hh = 0.5 * textHeight + 1.0;
+            g.textBox = QPolygonF({center - hw * u - hh * n, center + hw * u - hh * n, center + hw * u + hh * n, center - hw * u + hh * n});
+        };
+        if (c.type == ConstraintType::Distance) {
+            QPointF p, q;
+            if (!ForgeCad::dimensionPoints(sketch, c, p, q)) return false;
+            const double length = pointDistance(p, q);
+            if (length <= 1e-12) return false;
+            const QPointF u = (q - p) / length;
+            QPointF n(-u.y(), u.x());
+            double offset = 30.0 * px, slide = 0.5;
+            if (!c.placed) {
+                // Di default la quota sta fuori: dalla parte opposta al centro dello schizzo.
+                QPointF center;
+                int count = 0;
+                for (const SketchSegment &segment : sketch.segments) center += segment.first + segment.second, count += 2;
+                for (const CurveObject &curve : sketch.curves)
+                    for (const QPointF &point : curve.controlPoints) center += point, ++count;
+                if (count > 0) center /= double(count);
+                const QPointF away = 0.5 * (p + q) - center;
+                if (away.x() * n.x() + away.y() * n.y() < 0.0) offset = -offset;
+            }
+            if (c.placed) {
+                const QPointF r = c.placement - p;
+                offset = r.x() * n.x() + r.y() * n.y();
+                slide = (r.x() * u.x() + r.y() * u.y()) / length;
+            }
+            const double side = offset >= 0.0 ? 1.0 : -1.0;
+            const QPointF p2 = p + offset * n, q2 = q + offset * n;
+            // Linee di riferimento: dal punto (con un piccolo stacco) a poco oltre la linea di misura.
+            g.lines.moveTo(screen(p + side * 3.0 * px * n));
+            g.lines.lineTo(screen(p2 + side * 6.0 * px * n));
+            g.lines.moveTo(screen(q + side * 3.0 * px * n));
+            g.lines.lineTo(screen(q2 + side * 6.0 * px * n));
+            const QPointF sp = screen(p2), sq = screen(q2);
+            const QPointF textAlong = p2 + slide * (q2 - p2);
+            const double screenLength = pointDistance(sp, sq);
+            // Linea di misura con le frecce dentro; se non c'e' spazio le frecce stanno fuori.
+            if (screenLength >= 26.0) {
+                g.lines.moveTo(sp);
+                g.lines.lineTo(sq);
+                g.arrows << arrowHead(sp, sq) << arrowHead(sq, sp);
+            } else {
+                const QPointF out = (sq - sp) / std::max(screenLength, 1e-9);
+                g.lines.moveTo(sp - 16.0 * out);
+                g.lines.lineTo(sq + 16.0 * out);
+                g.arrows << arrowHead(sp, sp - out) << arrowHead(sq, sq + out);
+            }
+            // Testo fuori dagli estremi: la linea di misura arriva fino a li'.
+            if (slide < 0.0 || slide > 1.0) {
+                g.lines.moveTo(slide < 0.0 ? sp : sq);
+                g.lines.lineTo(screen(textAlong));
+            }
+            const QPointF direction = sq - sp;
+            const double degrees = readable(std::atan2(direction.y(), direction.x()) * 180.0 / M_PI);
+            const double a = degrees * M_PI / 180.0;
+            const QPointF up(std::sin(a), -std::cos(a));  // perpendicolare al testo, verso l'alto del testo
+            finishText(screen(textAlong) + up * (0.5 * textHeight + 2.0), degrees);
+            return true;
+        }
+        if (c.type == ConstraintType::Radius || c.type == ConstraintType::Diameter) {
+            QPointF center;
+            double radius;
+            if (!ForgeCad::circleOf(sketch, c.first, center, radius) || radius <= 0.0) return false;
+            double angle = M_PI / 4.0, reach = radius + 26.0 * px;
+            if (c.placed && pointDistance(c.placement, center) > 0.0) {
+                angle = std::atan2(c.placement.y() - center.y(), c.placement.x() - center.x());
+                reach = std::max(pointDistance(c.placement, center), radius + 10.0 * px);
+            } else {
+                const CurveObject &curve = sketch.curves.at(c.first.element);
+                if (curve.tool == DrawingTool::Arc && curve.controlPoints.size() >= 3) {
+                    const QPointF a0 = curve.controlPoints.at(1) - center, a1 = curve.controlPoints.at(2) - center;
+                    double from = std::atan2(a0.y(), a0.x()), to = std::atan2(a1.y(), a1.x());
+                    while (to <= from) to += 2.0 * M_PI;
+                    angle = 0.5 * (from + to);
+                }
+            }
+            const QPointF u(std::cos(angle), std::sin(angle));
+            const QPointF onCircle = center + radius * u, end = center + reach * u;
+            if (c.type == ConstraintType::Radius) {
+                g.lines.moveTo(screen(center));
+                g.lines.lineTo(screen(end));
+                g.arrows << arrowHead(screen(onCircle), screen(center));
+            } else {
+                const QPointF opposite = center - radius * u;
+                g.lines.moveTo(screen(opposite));
+                g.lines.lineTo(screen(end));
+                g.arrows << arrowHead(screen(onCircle), screen(center)) << arrowHead(screen(opposite), screen(center));
+            }
+            // Testo in orizzontale dopo il richiamo, dalla parte in cui va la linea.
+            const QPointF tail = screen(end), inside = screen(center);
+            const double sideX = tail.x() >= inside.x() ? 1.0 : -1.0;
+            g.lines.lineTo(tail + QPointF(sideX * (textWidth + 6.0), 0.0));
+            finishText(tail + QPointF(sideX * (0.5 * textWidth + 3.0), -(0.5 * textHeight + 1.0)), 0.0);
+            return true;
+        }
+        // Angolo: arco tra le due rette attorno al loro punto comune, dalla prima
+        // direzione per il valore del vincolo (con segno).
+        QPointF p0, p1, q0, q1;
+        if (!ForgeCad::constraintLines(sketch, c, p0, p1, q0, q1)) return false;
+        const QPointF d1 = p1 - p0, d2 = q1 - q0;
+        const double denominator = d1.x() * d2.y() - d1.y() * d2.x();
+        if (std::fabs(denominator) <= 1e-12 * pointLength(d1) * pointLength(d2)) return false;
+        const QPointF r = q0 - p0;
+        const QPointF vertex = p0 + d1 * ((r.x() * d2.y() - r.y() * d2.x()) / denominator);
+        const double a1 = std::atan2(d1.y(), d1.x()), sweep = c.value * M_PI / 180.0;
+        double radius = 40.0 * px;
+        if (c.placed && pointDistance(c.placement, vertex) > 0.0) radius = pointDistance(c.placement, vertex);
+        const int steps = 48;
+        QPointF previous;
+        for (int k = 0; k <= steps; ++k) {
+            const double a = a1 + sweep * k / steps;
+            const QPointF point = screen(vertex + radius * QPointF(std::cos(a), std::sin(a)));
+            if (k == 0) g.lines.moveTo(point);
+            else g.lines.lineTo(point);
+            previous = point;
+        }
+        const QPointF start = screen(vertex + radius * QPointF(std::cos(a1), std::sin(a1)));
+        const QPointF startNext = screen(vertex + radius * QPointF(std::cos(a1 + sweep / steps), std::sin(a1 + sweep / steps)));
+        const QPointF endPrev = screen(vertex + radius * QPointF(std::cos(a1 + sweep * (steps - 1) / steps), std::sin(a1 + sweep * (steps - 1) / steps)));
+        g.arrows << arrowHead(start, startNext) << arrowHead(previous, endPrev);
+        // Linee di riferimento lungo le rette, dove l'arco va oltre i segmenti.
+        const auto extension = [&](const QPointF &a, const QPointF &b, double direction) {
+            const QPointF u(std::cos(direction), std::sin(direction));
+            const double ta = (a - vertex).x() * u.x() + (a - vertex).y() * u.y(), tb = (b - vertex).x() * u.x() + (b - vertex).y() * u.y();
+            const double near = std::max(0.0, std::min(ta, tb)), far = std::max(ta, tb);
+            if (radius > far) {
+                g.lines.moveTo(screen(vertex + (far + 3.0 * px) * u));
+                g.lines.lineTo(screen(vertex + (radius + 6.0 * px) * u));
+            } else if (radius < near) {
+                g.lines.moveTo(screen(vertex + (near - 3.0 * px) * u));
+                g.lines.lineTo(screen(vertex + (radius - 6.0 * px) * u));
+            }
+        };
+        if (c.first.kind != 2) extension(p0, p1, a1);
+        if (c.second.kind != 2) extension(q0, q1, a1 + sweep);
+        const double middle = a1 + 0.5 * sweep;
+        const QPointF mid = screen(vertex + radius * QPointF(std::cos(middle), std::sin(middle)));
+        const QPointF outward = mid - screen(vertex);
+        const QPointF shift = pointLength(outward) > 0.0 ? outward / pointLength(outward) : QPointF(0.0, -1.0);
+        finishText(mid + shift * (0.5 * std::max(textWidth, textHeight) + 4.0), 0.0);
+        return true;
+    }
+    // Quota sotto il puntatore (testo o linee), -1 se nessuna.
+    int dimensionAt(const QPoint &position) const {
+        const SketchObject *sketch = activeSketchObject();
+        if (!sketch || !constraintsVisible_) return -1;
+        for (int index = sketch->geometricConstraints.size() - 1; index >= 0; --index) {
+            DimensionGraphic g;
+            if (!dimensionGraphic(*sketch, index, g)) continue;
+            if (g.textBox.containsPoint(QPointF(position), Qt::OddEvenFill)) return index;
+            QPainterPathStroker stroker;
+            stroker.setWidth(8.0);
+            if (stroker.createStroke(g.lines).contains(QPointF(position))) return index;
+        }
+        return -1;
+    }
+    void drawDimensions(QPainter &painter) const {
+        const SketchObject *sketch = activeSketchObject();
+        if (!sketch || !constraintsVisible_) return;
+        painter.save();
+        painter.setFont(QFont(QStringLiteral("Sans"), 9, QFont::DemiBold));
+        for (int index = 0; index < sketch->geometricConstraints.size(); ++index) {
+            DimensionGraphic g;
+            if (!dimensionGraphic(*sketch, index, g)) continue;
+            const bool selected = selectedConstraints_.contains(index), hovered = index == constraintHover_;
+            const bool broken = ForgeCad::constraintError(*sketch, sketch->geometricConstraints.at(index)) > 1e-7;
+            const QColor color = selected ? kSelectionColor : hovered ? kHoverColor : broken ? QColor(255, 140, 90) : QColor(185, 215, 240);
+            painter.setPen(QPen(color, selected ? 1.6 : 1.1));
+            painter.setBrush(Qt::NoBrush);
+            painter.drawPath(g.lines);
+            painter.setBrush(color);
+            painter.setPen(Qt::NoPen);
+            for (const QPolygonF &arrow : g.arrows) painter.drawPolygon(arrow);
+            painter.save();
+            painter.translate(g.textCenter);
+            painter.rotate(g.textAngle);
+            const QFontMetricsF metrics(painter.font());
+            const QRectF box(-0.5 * metrics.horizontalAdvance(g.text) - 2.0, -0.5 * metrics.height(), metrics.horizontalAdvance(g.text) + 4.0, metrics.height());
+            painter.setBrush(QColor(8, 14, 22, 190));
+            painter.drawRect(box);
+            painter.setPen(color);
+            painter.drawText(box, Qt::AlignCenter, g.text);
+            painter.restore();
+        }
+        painter.restore();
+    }
+
+    // Simboli dei vincoli accanto alle entita' (coordinate schermo), per disegnarli e sceglierli.
+    struct ConstraintGlyph {
+        QRectF rect;
+        int constraint = -1;
+        bool dot = false;  // coincidenza: un punto invece di un'etichetta
+        QString text;
+    };
+    QVector<ConstraintGlyph> constraintGlyphs() const {
+        QVector<ConstraintGlyph> glyphs;
+        const SketchObject *sketch = activeSketchObject();
+        if (!sketch || !constraintsVisible_) return glyphs;
+        const QFontMetricsF metrics(QFont(QStringLiteral("Sans"), 8, QFont::DemiBold));
+        QHash<QString, int> stacked;  // quante etichette ci sono gia' accanto allo stesso punto
+        for (int index = 0; index < sketch->geometricConstraints.size(); ++index) {
+            const SketchConstraint &c = sketch->geometricConstraints.at(index);
+            DimensionGraphic dimension;
+            if (dimensionGraphic(*sketch, index, dimension)) continue;  // quota disegnata come nel disegno tecnico
+            QString text = ForgeCad::constraintSymbol(c.type);
+            if (c.type == ConstraintType::Angle) text += QStringLiteral(" %1\u00B0").arg(c.value, 0, 'f', 2);
+            else if (ForgeCad::isDimension(c.type)) text += QStringLiteral(" %1").arg(c.value, 0, 'f', 3);
+            for (const ForgeCad::ConstraintAnchor &anchor : ForgeCad::constraintAnchors(*sketch, c)) {
+                const QPointF screen = projectWorldPoint(mapSketchPoint(anchor.point, *sketch));
+                ConstraintGlyph glyph;
+                glyph.constraint = index;
+                if (c.type == ConstraintType::Coincident) {
+                    glyph.dot = true;
+                    glyph.rect = QRectF(screen - QPointF(4.0, 4.0), QSizeF(8.0, 8.0));
+                    glyphs.append(glyph);
+                    continue;
+                }
+                glyph.text = text;
+                const QSizeF size(metrics.horizontalAdvance(text) + 8.0, metrics.height() + 2.0);
+                QPointF along(1.0, 0.0), side(0.0, -1.0);
+                if (!anchor.onPoint && pointLength(anchor.direction) > 0.0) {
+                    const QPointF ahead = projectWorldPoint(mapSketchPoint(anchor.point + anchor.direction * (1.0 / pointLength(anchor.direction)), *sketch)) - screen;
+                    if (pointLength(ahead) > 1e-9) {
+                        along = ahead / pointLength(ahead);
+                        side = QPointF(along.y(), -along.x());
+                        if (side.y() > 0.0) side = -side;  // le etichette sopra le entita'
+                    }
+                }
+                const QString key = QStringLiteral("%1,%2").arg(qRound(screen.x() / 4.0)).arg(qRound(screen.y() / 4.0));
+                const int k = stacked.value(key, 0);
+                stacked[key] = k + 1;
+                const QPointF center = anchor.onPoint ? screen + QPointF(12.0 + 0.5 * size.width(), -12.0 - k * (size.height() + 2.0))
+                                                      : screen + side * (4.0 + 0.5 * size.height()) + along * (k * (size.width() + 4.0));
+                glyph.rect = QRectF(center - QPointF(0.5 * size.width(), 0.5 * size.height()), size);
+                glyphs.append(glyph);
+            }
+        }
+        return glyphs;
+    }
+    int constraintAt(const QPoint &position) const {
+        const int dimension = dimensionAt(position);
+        if (dimension >= 0) return dimension;
+        const QVector<ConstraintGlyph> glyphs = constraintGlyphs();
+        for (int k = glyphs.size() - 1; k >= 0; --k)
+            if (glyphs.at(k).rect.adjusted(-2.0, -2.0, 2.0, 2.0).contains(QPointF(position))) return glyphs.at(k).constraint;
+        return -1;
+    }
+    void drawSketchConstraints(QPainter &painter) const {
+        painter.save();
+        painter.setFont(QFont(QStringLiteral("Sans"), 8, QFont::DemiBold));
+        for (const ConstraintGlyph &glyph : constraintGlyphs()) {
+            const bool selected = selectedConstraints_.contains(glyph.constraint), hovered = glyph.constraint == constraintHover_;
+            const QColor color = selected ? kSelectionColor : hovered ? kHoverColor : QColor(150, 200, 235);
+            if (glyph.dot) {
+                painter.setPen(QPen(selected || hovered ? color : QColor(20, 30, 40), 1.2));
+                painter.setBrush(selected || hovered ? color : QColor(120, 225, 150));
+                painter.drawEllipse(glyph.rect.center(), 3.2, 3.2);
+                continue;
+            }
+            painter.setPen(QPen(color, selected ? 1.6 : 1.0));
+            painter.setBrush(QColor(12, 20, 30, 215));
+            painter.drawRoundedRect(glyph.rect, 3.0, 3.0);
+            painter.drawText(glyph.rect, Qt::AlignCenter, glyph.text);
+        }
+        painter.restore();
+    }
+    // Entita' e punti del vincolo evidenziati.
+    void highlightConstraintEntities(QPainter &painter, const SketchObject &sketch, int index, const QColor &color) const {
+        if (index < 0 || index >= sketch.geometricConstraints.size()) return;
+        const SketchConstraint &c = sketch.geometricConstraints.at(index);
+        for (const ConstraintRef &ref : {c.first, c.second}) {
+            if (ref.kind < 0) continue;
+            QPointF point;
+            if (ForgeCad::refPoint(sketch, ref, point)) {
+                painter.setPen(QPen(color, 2.0));
+                painter.setBrush(Qt::NoBrush);
+                painter.drawEllipse(projectWorldPoint(mapSketchPoint(point, sketch)), 6.0, 6.0);
+            } else if (ref.kind == 0 || ref.kind == 1) {
+                highlightSketchElement(painter, sketch, {ref.kind, ref.element}, color);
+            }
+        }
+    }
 
     // Salva lo stato corrente nella cronologia: va chiamata subito prima di
     // una modifica al documento, seguita da documentChanged() a modifica fatta.
@@ -1851,12 +2857,27 @@ private:
 
     void documentChanged() {
         sceneBoundsDirty_ = true;
+        analysisDirty_ = true;
+        if (constraintPanelCallback_) constraintPanelCallback_();
+        selectedFace_ = {};  // la geometria (e la numerazione delle facce) puo' essere cambiata
         if (documentChangedCallback_) documentChangedCallback_();
         update();
     }
 
     // Modifica allo schizzo attivo: rigenera i corpi che ne dipendono.
     void sketchEdited() {
+        // I vincoli dello schizzo restano soddisfatti (se l'ultima modifica li
+        // ha rotti il risolutore li rimette a posto, se puo').
+        if (activeSketch_ >= 0 && activeSketch_ < sketches_.size() && !sketches_.at(activeSketch_).geometricConstraints.isEmpty()) {
+            const SketchObject before = sketches_.at(activeSketch_);
+            QString failure;
+            if (!solveActive({}, before, &failure)) showStatus(failure);
+        }
+        // I vincoli selezionati possono non esserci piu'.
+        const int count = activeSketch_ >= 0 && activeSketch_ < sketches_.size() ? sketches_.at(activeSketch_).geometricConstraints.size() : 0;
+        for (int k = selectedConstraints_.size() - 1; k >= 0; --k)
+            if (selectedConstraints_.at(k) >= count) selectedConstraints_.removeAt(k);
+        if (constraintHover_ >= count) constraintHover_ = -1;
         regenerateDependents(activeSketch_);
         documentChanged();
     }
@@ -1916,6 +2937,8 @@ private:
         remapRevolutionAxes(activeSketch_, ForgeCad::removeSketchEntities(sketches_[activeSketch_], segments, curves));
         sketchSelections_.clear();
         selectedPoints_.clear();
+        selectedConstraints_.clear();
+        constraintHover_ = -1;
         sketchHover_ = {};
         sketchEdited();
     }
@@ -2095,11 +3118,14 @@ private:
         curveControlPoints_.clear();
         sketchSelections_.clear();
         selectedPoints_.clear();
+        selectedConstraints_.clear();
+        constraintHover_ = -1;
         sketchHover_ = {};
         hover_ = {};
         draggingControlPoint_ = false;
         dragRecorded_ = false;
         if (edgePickBody_ >= 0) cancelEdgePick();
+        clearBlendPreview();
         if (selection_.kind == SceneObjectKind::Sketch || selection_.kind == SceneObjectKind::Extrusion)
             selection_ = {};
         if (activeSketch_ >= sketches_.size()) {
@@ -2275,20 +3301,30 @@ private:
 
     void selectSketchElement(const QPointF &point, bool additive) {
         const SketchElementSelection hit = findSketchElement(point);
+        if (!additive) selectedConstraints_.clear();
         if (hit.kind < 0) {
-            if (!additive) sketchSelections_.clear();
+            if (!additive) {
+                sketchSelections_.clear();
+                selectedPoints_.clear();
+            }
+            selectionChanged();
             update();
             return;
         }
-        if (!additive) sketchSelections_.clear();
+        if (!additive) {
+            sketchSelections_.clear();
+            selectedPoints_.clear();
+        }
         for (int index = 0; index < sketchSelections_.size(); ++index) {
             if (sketchSelections_.at(index) == hit) {
                 if (additive) sketchSelections_.removeAt(index);
+                selectionChanged();
                 update();
                 return;
             }
         }
         sketchSelections_.append(hit);
+        selectionChanged();
         update();
     }
 
@@ -2318,28 +3354,29 @@ private:
                 }
             }
         }
+        // L'origine del piano si sceglie come un punto (per i vincoli).
+        if (pointLength(point) < nearestDistance) selected = {2, 0, -1};
         if (selected.kind < 0) return false;
-        if (selectedPoints_.size() >= 2 || (selectedPoints_.size() == 1 && !isValidSelectedPoint(selectedPoints_.first())))
-            selectedPoints_.clear();
+        // Ctrl+clic sceglie o toglie il punto (per i vincoli: la finestra Vincoli li propone).
+        for (int k = 0; k < selectedPoints_.size(); ++k)
+            if (selectedPoints_.at(k).kind == selected.kind && selectedPoints_.at(k).element == selected.element
+                && selectedPoints_.at(k).point == selected.point) {
+                selectedPoints_.removeAt(k);
+                selectionChanged();
+                update();
+                return true;
+            }
+        for (int k = selectedPoints_.size() - 1; k >= 0; --k)
+            if (!isValidSelectedPoint(selectedPoints_.at(k))) selectedPoints_.removeAt(k);
+        if (selectedPoints_.size() + sketchSelections_.size() >= 2) selectedPoints_.clear();
         selectedPoints_.append(selected);
-        if (selectedPoints_.size() == 2) {
-            const SelectedPoint first = selectedPoints_.at(0);
-            const SelectedPoint second = selectedPoints_.at(1);
-            const QPointF merged = (selectedPointPosition(first) + selectedPointPosition(second)) * 0.5;
-            recordUndo();
-            setSelectedPointPosition(first, merged);
-            setSelectedPointPosition(second, merged);
-            if (first.kind == 1) ForgeCad::recalculateCurve(sketches_[activeSketch_].curves[first.element], tessellationQuality_);
-            if (second.kind == 1) ForgeCad::recalculateCurve(sketches_[activeSketch_].curves[second.element], tessellationQuality_);
-            sketches_[activeSketch_].coincidentConstraints.append({first.kind, first.element, first.point,
-                                                                     second.kind, second.element, second.point});
-            sketchEdited();
-        }
+        selectionChanged();
         update();
         return true;
     }
 
     bool isValidSelectedPoint(const SelectedPoint &point) const {
+        if (point.kind == 2) return point.element == 0;
         if (activeSketch_ < 0 || activeSketch_ >= sketches_.size() || point.element < 0) return false;
         const SketchObject &sketch = sketches_.at(activeSketch_);
         if (point.kind == 0) return point.element < sketch.segments.size() && (point.point == 0 || point.point == 1);
@@ -2348,6 +3385,7 @@ private:
     }
 
     QPointF selectedPointPosition(const SelectedPoint &point) const {
+        if (point.kind == 2) return QPointF(0.0, 0.0);
         if (point.kind == 0) {
             const auto &segment = sketches_.at(activeSketch_).segments.at(point.element);
             return point.point == 0 ? segment.first : segment.second;
@@ -2394,6 +3432,8 @@ private:
         primitive.tool = drawingTool_;
         primitive.controlPoints = curveControlPoints_;
         if (drawingTool_ == DrawingTool::Polygon) primitive.sides = polygonSides_;
+        if (drawingTool_ == DrawingTool::Ellipse && primitive.controlPoints.size() >= 3)
+            primitive.controlPoints[2] = ellipseMinorPoint(primitive.controlPoints.at(0), primitive.controlPoints.at(1), primitive.controlPoints.at(2));
         ForgeCad::recalculateCurve(primitive, tessellationQuality_);
         if (primitive.numericallyValid) {
             recordUndo();
@@ -2405,13 +3445,92 @@ private:
         update();
     }
 
+    // Rettangolo (due angoli o centro e angolo): quattro segmenti orizzontali e
+    // verticali, collegati dai vincoli di coincidenza (e agganciati agli altri
+    // punti su cui cadono gli angoli).
+    void finalizeRectangle() {
+        const bool centered = drawingTool_ == DrawingTool::CenterRectangle;
+        const QPointF p = curveControlPoints_.value(0), q = curveControlPoints_.value(1);
+        curveControlPoints_.clear();
+        hasPendingPoint_ = false;
+        if (activeSketch_ < 0 || activeSketch_ >= sketches_.size()) return;
+        const QPointF a = centered ? 2.0 * p - q : p;
+        const double tolerance = ForgeCad::kSketchConnectionTolerance;
+        if (std::abs(q.x() - a.x()) <= tolerance || std::abs(q.y() - a.y()) <= tolerance) {
+            update();
+            return;
+        }
+        const QPointF corners[4] = {a, QPointF(q.x(), a.y()), q, QPointF(a.x(), q.y())};
+        recordUndo();
+        SketchObject &sketch = sketches_[activeSketch_];
+        for (int side = 0; side < 4; ++side) {
+            sketch.segments.append(qMakePair(corners[side], corners[(side + 1) % 4]));
+            sketch.constraints.append(-1);
+            sketch.segmentLengths.append(0.0);
+            sketch.segmentAngles.append(-1.0);
+            SketchConstraint direction;
+            direction.type = side % 2 == 0 ? ConstraintType::Horizontal : ConstraintType::Vertical;
+            direction.first = {0, int(sketch.segments.size()) - 1, -1};
+            sketch.geometricConstraints.append(direction);
+            recordCoincidences(sketch, sketch.segments.size() - 1);
+        }
+        sketchEdited();
+        update();
+    }
+
+    // Angolo opposto del rettangolo in costruzione: con Maiusc un quadrato.
+    QPointF rectangleCorner(const QPointF &anchor, const QPointF &cursor) const {
+        if (!(QGuiApplication::keyboardModifiers() & Qt::ShiftModifier)) return cursor;
+        const QPointF d = cursor - anchor;
+        const double side = std::max(std::abs(d.x()), std::abs(d.y()));
+        return anchor + QPointF(d.x() < 0.0 ? -side : side, d.y() < 0.0 ? -side : side);
+    }
+    // Terzo punto dell'ellisse: sulla perpendicolare al primo semiasse, alla
+    // distanza del punto `through` dalla retta di quel semiasse.
+    static QPointF ellipseMinorPoint(const QPointF &center, const QPointF &major, const QPointF &through) {
+        const double a = pointDistance(center, major);
+        if (a <= 0.0) return through;
+        const QPointF u = (major - center) / a, perpendicular(-u.y(), u.x());
+        const QPointF r = through - center;
+        return center + std::abs(r.x() * perpendicular.x() + r.y() * perpendicular.y()) * perpendicular;
+    }
+    // Dopo lo spostamento di un punto dell'ellisse: il centro trascina gli altri,
+    // il terzo punto torna sulla perpendicolare al primo semiasse.
+    static void normalizeEllipse(CurveObject &curve, int moved, const QPointF &previous) {
+        if (curve.tool != DrawingTool::Ellipse || curve.controlPoints.size() < 3) return;
+        QVector<QPointF> &p = curve.controlPoints;
+        if (moved == 0) {
+            const QPointF delta = p.at(0) - previous;
+            p[1] += delta;
+            p[2] += delta;
+            return;
+        }
+        const double b = pointDistance(p.at(0), p.at(2));
+        const double a = pointDistance(p.at(0), p.at(1));
+        if (a <= 0.0) return;
+        const QPointF u = (p.at(1) - p.at(0)) / a, perpendicular(-u.y(), u.x());
+        if (moved == 2) {
+            p[2] = ellipseMinorPoint(p.at(0), p.at(1), p.at(2));
+        } else {
+            // Il primo semiasse cambia: il secondo resta lungo uguale, perpendicolare
+            // e dalla stessa parte di prima.
+            const QPointF r = previous - p.at(0);
+            const QPointF oldPerpendicular(-r.y(), r.x());
+            const QPointF w = p.at(2) - p.at(0);
+            const double side = w.x() * oldPerpendicular.x() + w.y() * oldPerpendicular.y() < 0.0 ? -1.0 : 1.0;
+            p[2] = p.at(0) + side * b * perpendicular;
+        }
+    }
+
     QPointF projectWorldPoint(const QVector3D &point) const {
         const float aspect = float(width()) / float(qMax(1, height()));
         const float viewScale = zoom_ / 8.0f;
         QMatrix4x4 model;
         model.translate(panX_, panY_, -zoom_);
+        model.rotate(roll_, 0.0f, 0.0f, 1.0f);
         model.rotate(pitch_, 1.0f, 0.0f, 0.0f);
         model.rotate(yaw_, 0.0f, 1.0f, 0.0f);
+        model *= basisMatrix();
         const QVector3D cameraPoint = model.map(point);
         return QPointF((cameraPoint.x() / (4.0f * aspect * viewScale) + 1.0f) * width() * 0.5f,
                    (1.0f - cameraPoint.y() / (4.0f * viewScale)) * height() * 0.5f);
@@ -2443,8 +3562,13 @@ private:
         painter.drawText(projectWorldPoint(QVector3D(0.0f, 3.0f, 3.0f)), QStringLiteral("Piano YZ"));
         if (sketchMode_) {
             painter.setPen(QColor(255, 220, 120));
+            const ForgeCad::SketchAnalysis &analysis = sketchAnalysis();
             painter.drawText(20, 24, QStringLiteral("MODALITA SCHIZZO - VISTA NORMALE BLOCCATA"));
-            drawSketchDimensions(painter);
+            painter.setPen(analysis.fullyDefined() ? QColor(235, 240, 250) : QColor(120, 190, 255));
+            painter.drawText(20, 42, analysis.fullyDefined() ? QStringLiteral("Schizzo completamente definito")
+                                                             : QStringLiteral("Gradi di liberta': %1 (sotto definito)").arg(analysis.degreesOfFreedom));
+            drawDimensions(painter);
+            drawSketchConstraints(painter);
         }
     }
 
@@ -2454,8 +3578,8 @@ private:
         painter.setFont(QFont(QStringLiteral("Sans"), 9, QFont::DemiBold));
         for (int index = 0; index < sketch.segments.size(); ++index) {
             const auto &segment = sketch.segments.at(index);
-            const QVector3D first = mapSketchPoint(segment.first, sketch.plane);
-            const QVector3D second = mapSketchPoint(segment.second, sketch.plane);
+            const QVector3D first = mapSketchPoint(segment.first, sketch);
+            const QVector3D second = mapSketchPoint(segment.second, sketch);
             const QPointF firstScreen = projectWorldPoint(first);
             const QPointF secondScreen = projectWorldPoint(second);
             const QPointF midpoint = (firstScreen + secondScreen) * 0.5;
@@ -2464,8 +3588,9 @@ private:
             const float scale = qMax(1.0f, qMax(qAbs(dx), qAbs(dy)));
             const QPointF labelPosition = midpoint + QPointF(-dy / scale * 14.0, dx / scale * 14.0);
             const double length = pointDistance(segment.first, segment.second);
-            const bool constrained = index < sketch.segmentLengths.size()
-                && sketch.segmentLengths.at(index) > 0.0;
+            bool constrained = false;
+            for (const SketchConstraint &c : sketch.geometricConstraints)
+                constrained = constrained || (c.type == ConstraintType::Distance && c.first == ConstraintRef{0, index, -1} && c.second.kind < 0);
             painter.setPen(constrained ? QColor(255, 215, 90) : QColor(180, 220, 235));
             painter.drawLine(midpoint, labelPosition);
             painter.drawText(labelPosition + QPointF(4.0, -4.0),
@@ -2478,8 +3603,13 @@ private:
         }
     }
 
-    QVector3D mapSketchPoint(const QPointF &point, int plane) const {
-        return ForgeCad::sketchToDisplay(point, plane);
+    QVector3D mapSketchPoint(const QPointF &point, const SketchObject &sketch) const {
+        return ForgeCad::sketchToDisplay(point, sketch);
+    }
+    // Punto del piano dello schizzo attivo (in costruzione, cursore).
+    QVector3D mapActiveSketchPoint(const QPointF &point) const {
+        if (activeSketch_ >= 0 && activeSketch_ < sketches_.size()) return mapSketchPoint(point, sketches_.at(activeSketch_));
+        return ForgeCad::sketchToDisplay(point, activePlane_);
     }
 
     QPointF screenToSketchPoint(const QPoint &position) const {
@@ -2503,6 +3633,11 @@ private:
                 points.append(curve.controlPoints.first());
             if (curve.tool == DrawingTool::Spline || curve.tool == DrawingTool::Nurbs)
                 points += curve.controlPoints;
+            if (curve.tool == DrawingTool::Ellipse && curve.controlPoints.size() >= 3) {
+                const QPointF c = curve.controlPoints.at(0);
+                points << c << curve.controlPoints.at(1) << curve.controlPoints.at(2) << 2.0 * c - curve.controlPoints.at(1)
+                       << 2.0 * c - curve.controlPoints.at(2);
+            }
         }
         for (const CurveObject &curve : sketch.curves) {
             if (curve.tool != DrawingTool::Polygon) continue;
@@ -2633,33 +3768,33 @@ private:
         for (const CurveObject &curve : sketch.curves) {
             glColor3f(curve.tool == DrawingTool::Nurbs ? 0.95f : 1.0f, 0.35f, 0.75f);
             for (const QPointF &control : curve.controlPoints) {
-                const QVector3D world = mapSketchPoint(control, sketch.plane);
+                const QVector3D world = mapSketchPoint(control, sketch);
                 glVertex3f(world.x(), world.y(), world.z());
             }
             for (const auto &handles : curve.tangentHandles) {
-                const QVector3D first = mapSketchPoint(handles.first, sketch.plane);
-                const QVector3D second = mapSketchPoint(handles.second, sketch.plane);
+                const QVector3D first = mapSketchPoint(handles.first, sketch);
+                const QVector3D second = mapSketchPoint(handles.second, sketch);
                 glVertex3f(first.x(), first.y(), first.z());
                 glVertex3f(second.x(), second.y(), second.z());
             }
         }
         glColor3f(1.0f, 0.45f, 0.25f);
         for (const QPointF &control : curveControlPoints_) {
-            const QVector3D world = mapSketchPoint(control, activePlane_);
+            const QVector3D world = mapActiveSketchPoint(control);
             glVertex3f(world.x(), world.y(), world.z());
         }
         for (const auto &segment : sketch.segments) {
             glColor3f(1.0f, 0.85f, 0.15f);
             for (const QPointF &endpoint : {segment.first, segment.second}) {
-                const QVector3D world = mapSketchPoint(endpoint, sketch.plane);
+                const QVector3D world = mapSketchPoint(endpoint, sketch);
                 glVertex3f(world.x(), world.y(), world.z());
             }
-            const QVector3D midpoint = mapSketchPoint((segment.first + segment.second) * 0.5, sketch.plane);
+            const QVector3D midpoint = mapSketchPoint((segment.first + segment.second) * 0.5, sketch);
             glColor3f(0.25f, 1.0f, 0.35f);
             glVertex3f(midpoint.x(), midpoint.y(), midpoint.z());
         }
         if (lastSnapKind_ != SnapKind::None) {
-            const QVector3D world = mapSketchPoint(lastSnapPoint_, sketch.plane);
+            const QVector3D world = mapSketchPoint(lastSnapPoint_, sketch);
             if (lastSnapKind_ == SnapKind::Nearest) glColor3f(0.15f, 0.85f, 1.0f);
             else if (lastSnapKind_ == SnapKind::Midpoint) glColor3f(0.25f, 1.0f, 0.35f);
             else glColor3f(1.0f, 0.85f, 0.15f);
@@ -2670,10 +3805,10 @@ private:
         glBegin(GL_LINES);
         for (const CurveObject &curve : sketch.curves) {
             for (int index = 0; index < curve.tangentHandles.size(); ++index) {
-                const QVector3D control = mapSketchPoint(curve.controlPoints.at(index), sketch.plane);
+                const QVector3D control = mapSketchPoint(curve.controlPoints.at(index), sketch);
                 const auto &handles = curve.tangentHandles.at(index);
-                const QVector3D incoming = mapSketchPoint(handles.first, sketch.plane);
-                const QVector3D outgoing = mapSketchPoint(handles.second, sketch.plane);
+                const QVector3D incoming = mapSketchPoint(handles.first, sketch);
+                const QVector3D outgoing = mapSketchPoint(handles.second, sketch);
                 glColor3f(0.35f, 0.75f, 1.0f);
                 glVertex3f(incoming.x(), incoming.y(), incoming.z());
                 glVertex3f(control.x(), control.y(), control.z());
@@ -2682,16 +3817,6 @@ private:
             }
         }
         glEnd();
-        if (selectedPoints_.size() == 2 && isValidSelectedPoint(selectedPoints_.at(0))
-            && isValidSelectedPoint(selectedPoints_.at(1))) {
-            const QVector3D first = mapSketchPoint(selectedPointPosition(selectedPoints_.at(0)), sketch.plane);
-            const QVector3D second = mapSketchPoint(selectedPointPosition(selectedPoints_.at(1)), sketch.plane);
-            glColor3f(0.30f, 1.0f, 0.45f);
-            glBegin(GL_LINES);
-            glVertex3f(first.x(), first.y(), first.z());
-            glVertex3f(second.x(), second.y(), second.z());
-            glEnd();
-        }
     }
 
     // Raggio di vista (proiezione ortografica) che passa per un pixel.
@@ -2699,8 +3824,10 @@ private:
         const float aspect = float(width()) / float(qMax(1, height()));
         const float viewScale = zoom_ / 8.0f;
         QMatrix4x4 rotation;
+        rotation.rotate(roll_, 0.0f, 0.0f, 1.0f);
         rotation.rotate(pitch_, 1.0f, 0.0f, 0.0f);
         rotation.rotate(yaw_, 0.0f, 1.0f, 0.0f);
+        rotation *= basisMatrix();
         const QMatrix4x4 inverse = rotation.inverted();
         origin = inverse.map(QVector3D(
             (float(position.x()) / float(qMax(1, width())) - 0.5f) * 8.0f * aspect * viewScale - panX_,
@@ -2730,13 +3857,13 @@ private:
             const SketchObject &sketch = sketches_.at(sketchIndex);
             if (!sketch.visible) continue;
             for (const auto &segment : sketch.segments) {
-                considerSegment(projectWorldPoint(mapSketchPoint(segment.first, sketch.plane)),
-                                projectWorldPoint(mapSketchPoint(segment.second, sketch.plane)), sketchIndex);
+                considerSegment(projectWorldPoint(mapSketchPoint(segment.first, sketch)),
+                                projectWorldPoint(mapSketchPoint(segment.second, sketch)), sketchIndex);
             }
             for (const CurveObject &curve : sketch.curves) {
                 for (int sample = 1; sample < curve.samples.size(); ++sample) {
-                    considerSegment(projectWorldPoint(mapSketchPoint(curve.samples.at(sample - 1), sketch.plane)),
-                                    projectWorldPoint(mapSketchPoint(curve.samples.at(sample), sketch.plane)),
+                    considerSegment(projectWorldPoint(mapSketchPoint(curve.samples.at(sample - 1), sketch)),
+                                    projectWorldPoint(mapSketchPoint(curve.samples.at(sample), sketch)),
                                     sketchIndex);
                 }
             }
@@ -2780,10 +3907,10 @@ private:
         painter.drawPath(path);
     }
 
-    QVector<QPointF> projectSketchPolyline(const QVector<QPointF> &points, int plane) const {
+    QVector<QPointF> projectSketchPolyline(const QVector<QPointF> &points, const SketchObject &sketch) const {
         QVector<QPointF> projected;
         projected.reserve(points.size());
-        for (const QPointF &point : points) projected.append(projectWorldPoint(mapSketchPoint(point, plane)));
+        for (const QPointF &point : points) projected.append(projectWorldPoint(mapSketchPoint(point, sketch)));
         return projected;
     }
 
@@ -2791,12 +3918,12 @@ private:
                                 const SketchElementSelection &element, const QColor &color) const {
         if (element.kind == 0 && element.index >= 0 && element.index < sketch.segments.size()) {
             const auto &segment = sketch.segments.at(element.index);
-            const QVector<QPointF> points = projectSketchPolyline({segment.first, segment.second}, sketch.plane);
+            const QVector<QPointF> points = projectSketchPolyline({segment.first, segment.second}, sketch);
             strokeHighlight(painter, points, false, color);
             painter.setBrush(color);
             for (const QPointF &point : points) painter.drawEllipse(point, 4.0, 4.0);
         } else if (element.kind == 1 && element.index >= 0 && element.index < sketch.curves.size()) {
-            strokeHighlight(painter, projectSketchPolyline(sketch.curves.at(element.index).samples, sketch.plane),
+            strokeHighlight(painter, projectSketchPolyline(sketch.curves.at(element.index).samples, sketch),
                             false, color);
         }
     }
@@ -2828,10 +3955,18 @@ private:
                 highlightSketchElement(painter, sketch, selected, kSelectionColor);
             if (blendFirst_ >= 0 && blendFirst_ < sketch.segments.size())
                 highlightSketchElement(painter, sketch, {0, blendFirst_}, kSelectionColor);
+            // Punti scelti (Ctrl+clic) e entita' dei vincoli selezionati o sotto il puntatore.
+            painter.setPen(QPen(kSelectionColor, 2.0));
+            painter.setBrush(Qt::NoBrush);
+            for (const SelectedPoint &point : selectedPoints_)
+                if (isValidSelectedPoint(point))
+                    painter.drawEllipse(projectWorldPoint(mapSketchPoint(selectedPointPosition(point), sketch)), 6.0, 6.0);
+            if (constraintHover_ >= 0 && !selectedConstraints_.contains(constraintHover_)) highlightConstraintEntities(painter, sketch, constraintHover_, kHoverColor);
+            for (int index : selectedConstraints_) highlightConstraintEntities(painter, sketch, index, kSelectionColor);
             drawCurvePreview(painter, sketch);
             if (drawingTool_ == DrawingTool::Trim && trimPreview_.size() >= 2) {
                 painter.setPen(QPen(QColor(255, 80, 70), 4.0, Qt::SolidLine, Qt::RoundCap));
-                painter.drawPolyline(projectSketchPolyline(trimPreview_, sketch.plane).data(), int(trimPreview_.size()));
+                painter.drawPolyline(projectSketchPolyline(trimPreview_, sketch).data(), int(trimPreview_.size()));
             }
             drawInferenceTags(painter);
             return;
@@ -2982,16 +4117,22 @@ private:
             }
         };
         glLineWidth(2.0f);
+        // Nello schizzo attivo le entita' completamente definite sono bianche (come in SolidWorks, dove sono nere).
+        const ForgeCad::SketchAnalysis *analysis = sketchMode_ && activeSketchObject() ? &sketchAnalysis() : nullptr;
         for (int sketchIndex = 0; sketchIndex < sketches_.size(); ++sketchIndex) {
             if (!isSketchDrawn(sketchIndex)) continue;
             const SketchObject &sketch = sketches_.at(sketchIndex);
+            const bool active = analysis && sketchIndex == activeSketch_;
             for (int index = 0; index < sketch.segments.size(); ++index) {
                 const auto &segment = sketch.segments.at(index);
                 const bool construction = sketch.isConstructionSegment(index);
                 setConstructionStyle(construction);
-                if (!construction) glColor3f(1.0f, 0.75f, 0.15f);
-                const QVector3D first = mapSketchPoint(segment.first, sketch.plane);
-                const QVector3D second = mapSketchPoint(segment.second, sketch.plane);
+                if (!construction) {
+                    if (active && analysis->segmentDefined.value(index)) glColor3f(0.94f, 0.96f, 1.0f);
+                    else glColor3f(1.0f, 0.75f, 0.15f);
+                }
+                const QVector3D first = mapSketchPoint(segment.first, sketch);
+                const QVector3D second = mapSketchPoint(segment.second, sketch);
                 glBegin(GL_LINES);
                 glVertex3f(first.x(), first.y(), first.z());
                 glVertex3f(second.x(), second.y(), second.z());
@@ -3002,14 +4143,17 @@ private:
         for (int sketchIndex = 0; sketchIndex < sketches_.size(); ++sketchIndex) {
             if (!isSketchDrawn(sketchIndex)) continue;
             const SketchObject &sketch = sketches_.at(sketchIndex);
-            for (const CurveObject &curve : sketch.curves) {
+            const bool active = analysis && sketchIndex == activeSketch_;
+            for (int curveIndex = 0; curveIndex < sketch.curves.size(); ++curveIndex) {
+                const CurveObject &curve = sketch.curves.at(curveIndex);
                 setConstructionStyle(curve.construction);
-                if (!curve.construction)
-                    glColor3f(curve.tool == DrawingTool::Nurbs ? 0.85f : 0.95f,
-                              curve.tool == DrawingTool::Nurbs ? 0.35f : 0.65f, 1.0f);
+                if (!curve.construction) {
+                    if (active && analysis->curveDefined.value(curveIndex)) glColor3f(0.94f, 0.96f, 1.0f);
+                    else glColor3f(curve.tool == DrawingTool::Nurbs ? 0.85f : 0.95f, curve.tool == DrawingTool::Nurbs ? 0.35f : 0.65f, 1.0f);
+                }
                 glBegin(GL_LINE_STRIP);
                 for (const QPointF &sample : curve.samples) {
-                    const QVector3D world = mapSketchPoint(sample, sketch.plane);
+                    const QVector3D world = mapSketchPoint(sample, sketch);
                     glVertex3f(world.x(), world.y(), world.z());
                 }
                 glEnd();
@@ -3017,7 +4161,7 @@ private:
                 glColor3f(0.75f, 0.75f, 0.80f);
                 glBegin(GL_LINE_STRIP);
                 for (const QPointF &control : curve.controlPoints) {
-                    const QVector3D world = mapSketchPoint(control, sketch.plane);
+                    const QVector3D world = mapSketchPoint(control, sketch);
                     glVertex3f(world.x(), world.y(), world.z());
                 }
                 glEnd();
@@ -3026,16 +4170,16 @@ private:
         const double markerSize = pickTolerance(10.0);
         glBegin(GL_LINES);
         if (hasPendingPoint_) {
-            const QVector3D world = mapSketchPoint(pendingPoint_, activePlane_);
+            const QVector3D world = mapActiveSketchPoint(pendingPoint_);
             glColor3f(1.0f, 0.35f, 0.20f);
-            const QVector3D left = mapSketchPoint(pendingPoint_ - QPointF(markerSize, 0.0), activePlane_);
-            const QVector3D right = mapSketchPoint(pendingPoint_ + QPointF(markerSize, 0.0), activePlane_);
+            const QVector3D left = mapActiveSketchPoint(pendingPoint_ - QPointF(markerSize, 0.0));
+            const QVector3D right = mapActiveSketchPoint(pendingPoint_ + QPointF(markerSize, 0.0));
             glVertex3f(left.x(), left.y(), left.z());
             glVertex3f(right.x(), right.y(), right.z());
             if (drawingTool_ == DrawingTool::Line || drawingTool_ == DrawingTool::Polyline
                 || drawingTool_ == DrawingTool::ConstructionLine) {
                 const QPointF previewPoint = currentInference_.point;
-                const QVector3D previewWorld = mapSketchPoint(previewPoint, activePlane_);
+                const QVector3D previewWorld = mapActiveSketchPoint(previewPoint);
                 glColor3f(1.0f, 0.45f, 0.20f);
                 glVertex3f(world.x(), world.y(), world.z());
                 glVertex3f(previewWorld.x(), previewWorld.y(), previewWorld.z());
@@ -3045,8 +4189,8 @@ private:
             // Croce del cursore nel piano dello schizzo, di dimensione fissa in pixel.
             glColor3f(1.0f, 0.45f, 0.20f);
             for (const QPointF &arm : {QPointF(markerSize, 0.0), QPointF(0.0, markerSize)}) {
-                const QVector3D a = mapSketchPoint(cursorSketchPoint_ - arm, activePlane_);
-                const QVector3D b = mapSketchPoint(cursorSketchPoint_ + arm, activePlane_);
+                const QVector3D a = mapActiveSketchPoint(cursorSketchPoint_ - arm);
+                const QVector3D b = mapActiveSketchPoint(cursorSketchPoint_ + arm);
                 glVertex3f(a.x(), a.y(), a.z());
                 glVertex3f(b.x(), b.y(), b.z());
             }
@@ -3055,8 +4199,8 @@ private:
     }
 
     // Solo visualizzazione: triangoli e spigoli ricavati dalla forma esatta.
-    void drawExtrusionFaces(const ExtrusionObject &extrusion) {
-        const BodyDisplay &display = extrusion.display;
+    void drawExtrusionFaces(const ExtrusionObject &extrusion) { drawDisplayFaces(extrusion.display); }
+    static void drawDisplayFaces(const BodyDisplay &display) {
         glBegin(GL_TRIANGLES);
         for (int index = 0; index < display.vertices.size(); ++index) {
             const QVector3D &normal = display.normals.at(index);
@@ -3103,15 +4247,44 @@ private:
     }
 
     QString edgePickMessage() const {
-        return QStringLiteral("%1: clicca gli spigoli di \"%2\" (%3 scelti), Invio conferma, Esc annulla")
+        QString preview;
+        if (!pickedEdges_.isEmpty())
+            preview = preview_.valid ? QStringLiteral(" - anteprima") : preview_.error.isEmpty() ? QStringLiteral(" - anteprima in calcolo...")
+                                                                                          : QStringLiteral(" - anteprima non riuscita: ") + preview_.error;
+        return QStringLiteral("%1: clicca gli spigoli di \"%2\" o una faccia per tutti i suoi bordi (%3 scelti), Invio conferma, Esc annulla%4")
             .arg(edgePickChamfer_ ? QStringLiteral("Smusso") : QStringLiteral("Raccordo"))
             .arg(extrusions_.value(edgePickBody_).name)
-            .arg(pickedEdges_.size());
+            .arg(pickedEdges_.size())
+            .arg(preview);
     }
-    void cancelEdgePick() {
+    // Un punto per ogni spigolo scelto: un campione interno della polilinea
+    // (i campioni stanno sulla curva esatta), il punto medio se e' un segmento.
+    QVector<EdgePoint> pickedEdgePoints() const {
+        QVector<EdgePoint> points;
+        if (edgePickBody_ < 0 || edgePickBody_ >= extrusions_.size()) return points;
+        const QVector<QVector<QVector3D>> &edges = extrusions_.at(edgePickBody_).display.edges;
+        for (int index : pickedEdges_) {
+            if (index < 0 || index >= edges.size() || edges.at(index).size() < 2) continue;
+            const QVector<QVector3D> &polyline = edges.at(index);
+            const QVector3D p = polyline.size() >= 3 ? polyline.at(polyline.size() / 2) : 0.5f * (polyline.first() + polyline.last());
+            points.append({p.x(), p.y(), p.z()});
+        }
+        return points;
+    }
+    // Gli spigoli scelti sono cambiati: messaggio e anteprima.
+    void edgePicked() {
+        if (pickedEdges_.isEmpty()) clearBlendPreview();
+        else requestBlendPreview(edgePickBody_, pickedEdgePoints(), edgePickSize_, edgePickChamfer_, edgePickEdit_);
+        if (edgePickStatus_) edgePickStatus_(edgePickMessage());
+        update();
+    }
+    void cancelEdgePick(bool keepPreview = false) {
+        if (!keepPreview) clearBlendPreview();
+        edgePickEdit_ = -1;
         edgePickBody_ = -1;
         pickedEdges_.clear();
         hoverEdge_ = -1;
+        hoverFaceEdges_.clear();
         if (edgePickStatus_) edgePickStatus_(QString());
         update();
     }
@@ -3121,19 +4294,20 @@ private:
             cancelEdgePick();
             return;
         }
-        // Ogni spigolo con un suo punto: un campione interno della polilinea
-        // (i campioni stanno sulla curva esatta), il punto medio se e' un segmento.
-        QVector<EdgePoint> points;
-        const QVector<QVector<QVector3D>> &edges = extrusions_.at(body).display.edges;
-        for (int index : pickedEdges_) {
-            if (index < 0 || index >= edges.size() || edges.at(index).size() < 2) continue;
-            const QVector<QVector3D> &polyline = edges.at(index);
-            const QVector3D p = polyline.size() >= 3 ? polyline.at(polyline.size() / 2) : 0.5f * (polyline.first() + polyline.last());
-            points.append({p.x(), p.y(), p.z()});
-        }
+        const QVector<EdgePoint> points = pickedEdgePoints();
         const bool chamfer = edgePickChamfer_;
-        cancelEdgePick();
-        if (edgePickFinished_ && !points.isEmpty()) edgePickFinished_(body, points, chamfer);
+        const int edited = edgePickEdit_;
+        // L'anteprima resta per la finestra della misura (che la aggiorna e poi la toglie).
+        cancelEdgePick(true);
+        if (points.isEmpty()) {
+            clearBlendPreview();
+            return;
+        }
+        if (edited >= 0) {
+            if (edgeEditFinished_) edgeEditFinished_(edited, points, edgePickSize_, chamfer);
+        } else if (edgePickFinished_) {
+            edgePickFinished_(body, points, chamfer);
+        }
     }
     // Spigolo del corpo in scelta sotto il puntatore (entro 8 pixel), -1 se nessuno.
     int pickEdge(const QPoint &position) const {
@@ -3153,7 +4327,58 @@ private:
         }
         return best;
     }
+    // Faccia del corpo `index` sotto il pixel (geometria esatta).
+    bool pickBodyFace(int index, const QPoint &position, FaceHit &hit) const {
+        if (index < 0 || index >= extrusions_.size() || !hasGeometry(extrusions_.at(index))) return false;
+        QVector3D origin, direction;
+        viewRay(position, origin, direction);
+        const ExtrusionObject &body = extrusions_.at(index);
+        return body.forgeBody ? ForgeCad::forgePickFace(*body.forgeBody, origin, direction, hit)
+                              : ForgeCad::pickFace(body.shape, origin, direction, hit);
+    }
+    // Spigoli visualizzati (indici in display.edges) dei bordi della faccia:
+    // per ogni suo spigolo la polilinea piu' vicina al suo punto.
+    QVector<int> faceDisplayEdges(int index, const FaceHit &hit) const {
+        QVector<int> result;
+        if (index < 0 || index >= extrusions_.size()) return result;
+        const QVector<QVector<QVector3D>> &edges = extrusions_.at(index).display.edges;
+        for (const EdgePoint &point : hit.edges) {
+            const QVector3D p(float(point.x), float(point.y), float(point.z));
+            int best = -1;
+            float nearest = std::numeric_limits<float>::max();
+            for (int e = 0; e < edges.size(); ++e)
+                for (int k = 1; k < edges.at(e).size(); ++k) {
+                    const QVector3D a = edges.at(e).at(k - 1), segment = edges.at(e).at(k) - a;
+                    const float length = segment.lengthSquared();
+                    const float t = length > 0.0f ? qBound(0.0f, QVector3D::dotProduct(p - a, segment) / length, 1.0f) : 0.0f;
+                    const float d = (a + t * segment - p).length();
+                    if (d < nearest) {
+                        nearest = d;
+                        best = e;
+                    }
+                }
+            if (best >= 0 && !result.contains(best)) result.append(best);
+        }
+        return result;
+    }
+    // Bordi della faccia selezionata (fuori dalla scelta degli spigoli).
+    void drawSelectedFace() {
+        if (edgePickBody_ >= 0 || sketchMode_ || selectedFace_.body < 0 || selectedFace_.body >= extrusions_.size()) return;
+        const QVector<QVector<QVector3D>> &edges = extrusions_.at(selectedFace_.body).display.edges;
+        glDisable(GL_LIGHTING);
+        glDisable(GL_DEPTH_TEST);
+        glColor3f(float(kSelectionColor.redF()), float(kSelectionColor.greenF()), float(kSelectionColor.blueF()));
+        glLineWidth(3.5f);
+        for (int index : faceDisplayEdges(selectedFace_.body, selectedFace_.hit)) {
+            glBegin(GL_LINE_STRIP);
+            for (const QVector3D &p : edges.at(index)) glVertex3f(p.x(), p.y(), p.z());
+            glEnd();
+        }
+        glLineWidth(1.0f);
+        glEnable(GL_DEPTH_TEST);
+    }
     void drawPickedEdges() {
+        drawSelectedFace();
         if (edgePickBody_ < 0 || edgePickBody_ >= extrusions_.size()) return;
         const QVector<QVector<QVector3D>> &edges = extrusions_.at(edgePickBody_).display.edges;
         glDisable(GL_LIGHTING);
@@ -3167,6 +4392,7 @@ private:
             glEnd();
         };
         for (int index = 0; index < edges.size(); ++index) draw(index, QColor(120, 140, 160), 1.5f);
+        for (int index : hoverFaceEdges_) draw(index, kHoverColor, 3.0f);
         if (!pickedEdges_.contains(hoverEdge_)) draw(hoverEdge_, kHoverColor, 4.0f);
         for (int index : pickedEdges_) draw(index, kSelectionColor, 4.0f);
         glLineWidth(1.0f);
@@ -3176,9 +4402,15 @@ private:
     void drawExtrusions() {
         glDisable(GL_CULL_FACE);
         const GLfloat noEmission[] = {0.0f, 0.0f, 0.0f, 1.0f};
+        const bool previewing = !preview_.key.isEmpty();
         for (int index = 0; index < extrusions_.size(); ++index) {
             const ExtrusionObject &extrusion = extrusions_.at(index);
-            if (!extrusion.visible || (extrusion.display.vertices.isEmpty() && extrusion.display.edges.isEmpty())) continue;
+            // Con un'anteprima il corpo modificato non si vede; gli operandi (e la base
+            // di un raccordo, anche se nascosta) si vedono finche' l'anteprima non e' pronta.
+            const bool replaced = previewing && preview_.replaced.contains(index);
+            if (previewing && (index == preview_.index || (replaced && preview_.valid))) continue;
+            const bool forced = replaced || index == edgePickBody_;
+            if ((!extrusion.visible && !forced) || (extrusion.display.vertices.isEmpty() && extrusion.display.edges.isEmpty())) continue;
             const SceneSelection self{SceneObjectKind::Extrusion, index, -1};
             const bool hovered = hover_ == self;
             if (displayMode_ != 0) {
@@ -3220,8 +4452,180 @@ private:
             if (!extrusion.visible || (extrusion.display.vertices.isEmpty() && extrusion.display.edges.isEmpty())) return;
             drawExtrusionOutline(extrusion, color, width);
         };
+        if (previewing && preview_.valid) drawPreview();
+        if (edgePickBody_ >= 0 || previewing) return;  // nessun contorno di selezione sulla base in scelta
         if (hover_ != selection_) outline(hover_, kHoverColor, 6.0f);
         outline(selection_, kSelectionColor, 7.0f);
+    }
+
+    // Anteprima: facce color ambra e spigoli chiari.
+    void drawPreview() {
+        const BodyDisplay &display = preview_.display;
+        if (displayMode_ != 0) {
+            glEnable(GL_LIGHTING);
+            glEnable(GL_COLOR_MATERIAL);
+            glColor3f(0.95f, 0.66f, 0.28f);
+            glEnable(GL_POLYGON_OFFSET_FILL);
+            glPolygonOffset(1.0f, 2.0f);
+            drawDisplayFaces(display);
+            glDisable(GL_POLYGON_OFFSET_FILL);
+        }
+        glDisable(GL_LIGHTING);
+        glColor3f(1.0f, 0.88f, 0.62f);
+        glLineWidth(1.5f);
+        for (const QVector<QVector3D> &polyline : display.edges) {
+            glBegin(GL_LINE_STRIP);
+            for (const QVector3D &point : polyline) glVertex3f(point.x(), point.y(), point.z());
+            glEnd();
+        }
+        glLineWidth(1.0f);
+    }
+
+    // Chiave di una richiesta d'anteprima: due richieste uguali non si rifanno.
+    static QString previewKey(const ExtrusionObject &d, int index) {
+        const auto n = [](double v) { return QString::number(v, 'g', 17); };
+        QStringList parts{QString::number(index), QString::number(d.operation), QString::number(int(d.feature)), QString::number(d.sketchIndex),
+                          n(d.distance), QString::number(d.revolveAxis), n(d.revolveAngle), QString::number(d.firstBody),
+                          QString::number(d.secondBody), n(d.blendSize), QString::number(d.blendChamfer)};
+        const PrimitiveParameters &p = d.primitive;
+        parts << QString::number(int(p.kind)) << QString::number(p.plane);
+        for (int k = 0; k < 3; ++k) parts << n(p.origin[k]) << n(p.size[k]);
+        for (const EdgePoint &e : d.blendEdges) parts << n(e.x) << n(e.y) << n(e.z);
+        return parts.join(QLatin1Char(','));
+    }
+
+    // Dati di un'anteprima, copiati nel thread dell'interfaccia: il thread del
+    // pool non tocca il documento (le forme OCCT si copiano, i body del kernel
+    // proprio sono immutabili, gli schizzi sono copie).
+    struct PreviewInputs {
+        ExtrusionObject definition;
+        bool forge = false;
+        SketchObject sketch;
+        TopoDS_Shape first, second;
+        ForgeCad::ForgeBody firstBody, secondBody;
+        int quality = 1;
+    };
+    // La geometria dell'anteprima, come rebuildBody, e la sua tassellazione.
+    static bool computePreview(const PreviewInputs &in, BodyDisplay &display, QString &error) {
+        const ExtrusionObject &d = in.definition;
+        if (d.operation >= 0) {
+            if (in.forge) {
+                const ForgeCad::ForgeBody result = ForgeCad::forgeBoolean(in.firstBody, in.secondBody, BooleanOperation(d.operation), &error);
+                if (!result) return false;
+                ForgeCad::forgeTessellate(*result, in.quality, display);
+                return true;
+            }
+            const TopoDS_Shape result = ForgeCad::booleanOperation(in.first, in.second, BooleanOperation(d.operation), &error);
+            if (result.IsNull()) return false;
+            ForgeCad::tessellate(result, in.quality, display);
+            return true;
+        }
+        if (in.forge) {
+            ForgeCad::ForgeBody result;
+            switch (d.feature) {
+            case BodyFeature::Blend: result = ForgeCad::forgeBlend(in.firstBody, d.blendEdges, d.blendSize, d.blendChamfer, &error); break;
+            case BodyFeature::Primitive: result = ForgeCad::forgePrimitive(d.primitive, &error); break;
+            case BodyFeature::Revolution: result = ForgeCad::forgeRevolution(in.sketch, d.revolveAxis, d.revolveAngle, &error); break;
+            case BodyFeature::Extrusion: result = ForgeCad::forgeExtrusion(in.sketch, d.distance, &error); break;
+            }
+            if (!result) return false;
+            ForgeCad::forgeTessellate(*result, in.quality, display);
+            return true;
+        }
+        TopoDS_Shape result;
+        bool solid = false;
+        switch (d.feature) {
+        case BodyFeature::Blend: result = ForgeCad::buildBlend(in.first, d.blendEdges, d.blendSize, d.blendChamfer, &error); break;
+        case BodyFeature::Primitive: result = ForgeCad::buildPrimitive(d.primitive, &error); break;
+        case BodyFeature::Revolution: result = ForgeCad::buildRevolution(in.sketch, d.revolveAxis, d.revolveAngle, &error); break;
+        case BodyFeature::Extrusion: result = ForgeCad::buildExtrusion(in.sketch, d.distance, solid, &error); break;
+        }
+        if (result.IsNull()) return false;
+        ForgeCad::tessellate(result, in.quality, display);
+        return true;
+    }
+
+    // Calcolo dell'anteprima in un thread del pool. Il risultato arriva nel
+    // thread dell'interfaccia e vale solo se nel frattempo non e' arrivata
+    // un'altra richiesta.
+    void startPreviewJob() {
+        if (preview_.key.isEmpty()) return;
+        if (previewRunning_) {
+            previewRerun_ = true;
+            return;
+        }
+        PreviewInputs in;
+        in.definition = preview_.definition;
+        in.definition.shape.Nullify();
+        in.definition.forgeBody.reset();
+        in.definition.display = {};
+        in.forge = geometryKernel_ == GeometryKernel::Forge;
+        in.quality = tessellationQuality_;
+        const ExtrusionObject &d = in.definition;
+        QString invalid;
+        const auto operand = [&](int body, TopoDS_Shape &shape, ForgeCad::ForgeBody &forgeBody) {
+            if (body < 0 || body >= extrusions_.size() || (preview_.index >= 0 && body >= preview_.index) || !hasGeometry(extrusions_.at(body))) {
+                invalid = QStringLiteral("operandi non validi");
+                return;
+            }
+            const ExtrusionObject &source = extrusions_.at(body);
+            if (in.forge) forgeBody = source.forgeBody;
+            else shape = BRepBuilderAPI_Copy(source.shape, true, false).Shape();
+        };
+        if (d.operation >= 0) {
+            if (d.firstBody == d.secondBody) invalid = QStringLiteral("scegli due oggetti diversi");
+            else {
+                operand(d.firstBody, in.first, in.firstBody);
+                operand(d.secondBody, in.second, in.secondBody);
+            }
+        } else if (d.feature == BodyFeature::Blend) {
+            operand(d.firstBody, in.first, in.firstBody);
+        } else if (d.feature == BodyFeature::Extrusion || d.feature == BodyFeature::Revolution) {
+            if (d.sketchIndex < 0 || d.sketchIndex >= sketches_.size()) invalid = QStringLiteral("nessuno schizzo");
+            else in.sketch = sketches_.at(d.sketchIndex);
+        }
+        const quint64 generation = preview_.generation;
+        if (!invalid.isEmpty()) {
+            preview_.error = invalid;
+            if (edgePickBody_ >= 0 && edgePickStatus_) edgePickStatus_(edgePickMessage());
+            if (previewCallback_) previewCallback_(preview_.error);
+            update();
+            return;
+        }
+        if (!previewReceiver_) previewReceiver_ = new QObject(this);
+        QObject *receiver = previewReceiver_;
+        previewRunning_ = true;
+        QThreadPool::globalInstance()->start([this, receiver, generation, in] {
+            BodyDisplay display;
+            QString error;
+            bool ok = false;
+            try {
+                ok = computePreview(in, display, error);
+            } catch (const std::exception &failure) {
+                error = QString::fromUtf8(failure.what());
+            } catch (const Standard_Failure &failure) {
+                error = QString::fromUtf8(failure.GetMessageString());
+            } catch (...) {
+                error = QStringLiteral("errore imprevisto");
+            }
+            if (!ok && error.isEmpty()) error = QStringLiteral("costruzione non riuscita");
+            // Il ricevitore e' figlio del viewport: se il viewport non c'e' piu', la chiamata non avviene.
+            QMetaObject::invokeMethod(receiver, [this, generation, ok, error, display = std::move(display)]() mutable {
+                previewRunning_ = false;
+                if (generation == preview_.generation) {
+                    preview_.valid = ok;
+                    preview_.error = ok ? QString() : error;
+                    preview_.display = std::move(display);
+                    if (edgePickBody_ >= 0 && edgePickStatus_) edgePickStatus_(edgePickMessage());
+                    if (previewCallback_) previewCallback_(preview_.error);
+                    update();
+                    previewRerun_ = false;
+                } else if (!preview_.key.isEmpty()) {
+                    previewRerun_ = false;
+                    startPreviewJob();
+                }
+            }, Qt::QueuedConnection);
+        });
     }
 
     // Il punto sotto il mouse sta sul piano parallelo allo schermo che passa per
@@ -3311,13 +4715,13 @@ private:
     QVector<QVector3D> sketchGeometryPoints(const SketchObject &sketch) const {
         QVector<QVector3D> points;
         for (const SketchSegment &segment : sketch.segments) {
-            points.append(mapSketchPoint(segment.first, sketch.plane));
-            points.append(mapSketchPoint(segment.second, sketch.plane));
+            points.append(mapSketchPoint(segment.first, sketch));
+            points.append(mapSketchPoint(segment.second, sketch));
         }
         for (const CurveObject &curve : sketch.curves) {
-            for (const QPointF &p : curve.samples) points.append(mapSketchPoint(p, sketch.plane));
+            for (const QPointF &p : curve.samples) points.append(mapSketchPoint(p, sketch));
             if (curve.samples.isEmpty())
-                for (const QPointF &p : curve.controlPoints) points.append(mapSketchPoint(p, sketch.plane));
+                for (const QPointF &p : curve.controlPoints) points.append(mapSketchPoint(p, sketch));
         }
         return points;
     }
@@ -3385,8 +4789,10 @@ private:
         // l'inquadratura si ripete al primo paintGL.
         if (!painted_) pendingFit_ = points;
         QMatrix4x4 rotation;
+        rotation.rotate(roll_, 0.0f, 0.0f, 1.0f);
         rotation.rotate(pitch_, 1.0f, 0.0f, 0.0f);
         rotation.rotate(yaw_, 0.0f, 1.0f, 0.0f);
+        rotation *= basisMatrix();
         QVector3D low = rotation.map(points.first()), high = low;
         for (const QVector3D &p : points) {
             const QVector3D v = rotation.map(p);
@@ -3480,10 +4886,15 @@ private:
         glDisable(GL_DEPTH_TEST);
         glDisable(GL_LIGHTING);
         glColor3f(0.16f, 0.21f, 0.25f);
+        // Griglia nel piano orizzontale dell'orientamento (perpendicolare all'asse in alto), poco sotto l'origine.
+        const QVector3D a(float(orientation_.right[0]), float(orientation_.right[1]), float(orientation_.right[2]));
+        const QVector3D b(float(orientation_.toward[0]), float(orientation_.toward[1]), float(orientation_.toward[2]));
+        const QVector3D below = -0.05f * QVector3D(float(orientation_.up[0]), float(orientation_.up[1]), float(orientation_.up[2]));
         glBegin(GL_LINES);
         for (int i = -10; i <= 10; ++i) {
-            glVertex3f(float(i), -0.05f, -10); glVertex3f(float(i), -0.05f, 10);
-            glVertex3f(-10, -0.05f, float(i)); glVertex3f(10, -0.05f, float(i));
+            for (const QVector3D &p : {below + float(i) * a - 10.0f * b, below + float(i) * a + 10.0f * b,
+                                       below - 10.0f * a + float(i) * b, below + 10.0f * a + float(i) * b})
+                glVertex3f(p.x(), p.y(), p.z());
         }
         glEnd();
         glEnable(GL_DEPTH_TEST);
@@ -3491,6 +4902,9 @@ private:
 
     int displayMode_ = 2;
     float yaw_ = -32.0f, pitch_ = 22.0f, zoom_ = 8.0f;
+    float roll_ = 0.0f;  // rotazione attorno all'asse di vista (schizzi su facce inclinate)
+    AxesOrientation orientation_;  // orientamento degli assi del documento (vedi basisMatrix)
+    bool autoFit_ = false;         // l'ultima inquadratura e' "zoom tutto" e l'utente non ha mosso la vista
     float panX_ = 0.0f, panY_ = 0.0f;  // spostamento della vista (unita' della vista)
     int panKey_ = Qt::Key_Space;
     bool panKeyHeld_ = false, panning_ = false;
@@ -3520,6 +4934,14 @@ private:
     SketchElementSelection sketchHover_;
     QVector<SketchElementSelection> sketchSelections_;
     QVector<SelectedPoint> selectedPoints_;
+    QVector<int> selectedConstraints_;  // vincoli selezionati (indici in geometricConstraints dello schizzo attivo)
+    int constraintHover_ = -1;
+    int dimensionDrag_ = -1;  // quota che si sta spostando
+    mutable ForgeCad::SketchAnalysis analysis_;
+    mutable bool analysisDirty_ = true;
+    mutable int analysisSketch_ = -1;
+    bool constraintsVisible_ = true;
+    std::function<void()> constraintPanelCallback_;
     QVector<SketchObject> sketches_;
     QVector<ExtrusionObject> extrusions_;
     ForgeCad::History history_;
@@ -3527,7 +4949,32 @@ private:
     bool dragRecorded_ = false;
     int edgePickBody_ = -1, hoverEdge_ = -1;
     bool edgePickChamfer_ = false;
-    QVector<int> pickedEdges_;
+    QVector<int> pickedEdges_, hoverFaceEdges_;
+    int edgePickEdit_ = -1;         // raccordo di cui si modificano gli spigoli (-1: raccordo nuovo)
+    double edgePickSize_ = 0.5;     // misura dell'anteprima durante la scelta
+    std::function<void(int, QVector<EdgePoint>, double, bool)> edgeEditFinished_;
+    // Anteprima di una funzione (vedi requestPreview).
+    struct Preview {
+        QString key;  // vuota: nessuna anteprima
+        ExtrusionObject definition;
+        int index = -1;           // corpo che l'anteprima sostituisce (modifica), -1 nuovo
+        QVector<int> replaced;    // operandi (booleane) o base (raccordi): al loro posto l'anteprima
+        bool valid = false;
+        QString error;
+        BodyDisplay display;
+        quint64 generation = 0;
+    };
+    Preview preview_;
+    QTimer *previewTimer_ = nullptr;
+    QObject *previewReceiver_ = nullptr;
+    bool previewRunning_ = false, previewRerun_ = false;
+    std::function<void(const QString &)> previewCallback_;
+    // Faccia selezionata con il clic su un corpo (schizzo su faccia, bordi da raccordare).
+    struct SelectedFace {
+        int body = -1;
+        FaceHit hit;
+    };
+    SelectedFace selectedFace_;
     std::function<void(const QString &)> edgePickStatus_;
     std::function<void(int)> editBodyCallback_;
     std::function<void(int, QVector<EdgePoint>, bool)> edgePickFinished_;
@@ -3580,10 +5027,178 @@ static const QStringList &planeNames() {
     return names;
 }
 
+// Finestra di una funzione che si chiude solo se il comando riesce: la
+// conferma esegue `apply`; se restituisce un errore, la finestra resta aperta
+// con i valori inseriti e l'errore in rosso sopra i pulsanti (si esce con
+// Annulla o Esc). Vero se il comando e' riuscito.
+static bool runUntilApplied(QDialog &dialog, QFormLayout *form, QDialogButtonBox *buttons, const std::function<QString()> &apply) {
+    auto *errorLabel = new QLabel(&dialog);
+    errorLabel->setWordWrap(true);
+    errorLabel->setStyleSheet(QStringLiteral("color: #ff7b72; font-weight: 600;"));
+    errorLabel->setMaximumWidth(460);
+    errorLabel->hide();
+    int row = form->rowCount();
+    QFormLayout::ItemRole role;
+    form->getWidgetPosition(buttons, &row, &role);
+    form->insertRow(qMax(0, row), errorLabel);
+    QObject::disconnect(buttons, &QDialogButtonBox::accepted, &dialog, &QDialog::accept);
+    QObject::connect(buttons, &QDialogButtonBox::accepted, &dialog, [&dialog, errorLabel, apply] {
+        QApplication::setOverrideCursor(Qt::WaitCursor);
+        const QString error = apply();
+        QApplication::restoreOverrideCursor();
+        if (error.isEmpty()) {
+            dialog.accept();
+            return;
+        }
+        errorLabel->setText(error + QStringLiteral("\nCorreggi i valori e riprova, oppure Annulla."));
+        errorLabel->show();
+        dialog.adjustSize();
+    });
+    return dialog.exec() == QDialog::Accepted;
+}
+
+// Anteprima dal vivo in una finestra di funzione: una riga "Anteprima" con lo
+// stato, `request` a ogni cambio dei valori; alla chiusura l'anteprima sparisce.
+struct PreviewScope {
+    CadViewport *viewport = nullptr;
+    QLabel *label = nullptr;
+    int index = -1;  // corpo che l'anteprima sostituisce (modifica), -1 nuovo
+    PreviewScope(CadViewport *target, QDialog &dialog, QFormLayout *form, int replacedIndex) : viewport(target), index(replacedIndex) {
+        if (!viewport) return;
+        label = new QLabel(QStringLiteral("in calcolo..."), &dialog);
+        label->setWordWrap(true);
+        label->setMaximumWidth(460);
+        form->addRow(QStringLiteral("Anteprima:"), label);
+        QLabel *status = label;
+        viewport->setPreviewCallback([status](const QString &error) {
+            status->setText(error.isEmpty() ? QStringLiteral("pronta (in ambra nella vista)") : QStringLiteral("non riuscita: ") + error);
+        });
+    }
+    void request(const ExtrusionObject &definition) const {
+        if (!viewport) return;
+        label->setText(QStringLiteral("in calcolo..."));
+        viewport->requestPreview(definition, index);
+    }
+    ~PreviewScope() {
+        if (!viewport) return;
+        viewport->setPreviewCallback({});
+        viewport->clearPreview();
+    }
+    PreviewScope(const PreviewScope &) = delete;
+    PreviewScope &operator=(const PreviewScope &) = delete;
+};
+
+// Dove e come mostrare l'anteprima di una finestra di funzione: il viewport
+// (nullptr: niente anteprima), il corpo sostituito e la definizione dai valori.
+template <class... Values>
+struct PreviewSpec {
+    CadViewport *viewport = nullptr;
+    int index = -1;
+    std::function<ExtrusionObject(Values...)> define;
+};
+
+// Un valore numerico per una funzione (distanza, raggio...), con la finestra
+// che resta aperta finche' `apply` non riesce o si annulla.
+static bool askValueUntilApplied(QWidget *parent, const QString &title, const QString &label, double value, double minimum,
+                                 double maximum, const std::function<QString(double)> &apply, const PreviewSpec<double> &preview = {}) {
+    QDialog dialog(parent);
+    dialog.setWindowTitle(title);
+    auto *form = new QFormLayout(&dialog);
+    auto *spin = new QDoubleSpinBox(&dialog);
+    spin->setDecimals(6);
+    spin->setRange(minimum, maximum);
+    spin->setValue(value);
+    form->addRow(label, spin);
+    const PreviewScope scope(preview.define ? preview.viewport : nullptr, dialog, form, preview.index);
+    if (preview.define) {
+        const auto refresh = [&scope, &preview, spin] { scope.request(preview.define(spin->value())); };
+        QObject::connect(spin, &QDoubleSpinBox::valueChanged, &dialog, refresh);
+        refresh();
+    }
+    auto *buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dialog);
+    QObject::connect(buttons, &QDialogButtonBox::accepted, &dialog, &QDialog::accept);
+    QObject::connect(buttons, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
+    form->addRow(buttons);
+    spin->selectAll();
+    return runUntilApplied(dialog, form, buttons, [spin, &apply] { return apply(spin->value()); });
+}
+
+// Finestra della misura di un raccordo o smusso con l'anteprima dal vivo
+// (CadViewport::requestBlendPreview a ogni cambio). `edgesLabel` descrive gli
+// spigoli; `chamferBox` (facoltativa) permette di passare da raccordo a
+// smusso; "Spigoli..." (se `reselect` non e' nullo) chiude la finestra e
+// chiede di tornare alla scelta degli spigoli. `apply` fa il comando: la
+// finestra resta aperta finche' non riesce o si annulla.
+struct BlendDialogResult {
+    bool applied = false, reselect = false;
+    double size = 0.0;
+    bool chamfer = false;
+};
+static BlendDialogResult blendDialog(QWidget *parent, CadViewport *viewport, const QString &title, int base, int hidden,
+                                     const QVector<EdgePoint> &edges, double size, bool chamfer, bool allowKindChange,
+                                     const std::function<QString(double, bool)> &apply) {
+    BlendDialogResult result;
+    QDialog dialog(parent);
+    dialog.setWindowTitle(title);
+    auto *form = new QFormLayout(&dialog);
+    auto *sizeBox = new QDoubleSpinBox(&dialog);
+    sizeBox->setDecimals(6);
+    sizeBox->setRange(0.000001, 100000.0);
+    sizeBox->setValue(size);
+    QCheckBox *chamferBox = nullptr;
+    auto *sizeLabel = new QLabel(&dialog);
+    const auto describe = [sizeLabel](bool isChamfer) {
+        sizeLabel->setText(isChamfer ? QStringLiteral("Distanza dello smusso dallo spigolo:") : QStringLiteral("Raggio del raccordo:"));
+    };
+    describe(chamfer);
+    form->addRow(sizeLabel, sizeBox);
+    if (allowKindChange) {
+        chamferBox = new QCheckBox(QStringLiteral("Smusso (distanza) invece del raccordo (raggio)"), &dialog);
+        chamferBox->setChecked(chamfer);
+        form->addRow(QString(), chamferBox);
+        QObject::connect(chamferBox, &QCheckBox::toggled, &dialog, describe);
+    }
+    form->addRow(QStringLiteral("Spigoli: %1").arg(edges.size()), new QLabel(&dialog));
+    auto *previewLabel = new QLabel(QStringLiteral("Anteprima in calcolo..."), &dialog);
+    previewLabel->setWordWrap(true);
+    previewLabel->setMaximumWidth(460);
+    form->addRow(QStringLiteral("Anteprima:"), previewLabel);
+    auto *buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dialog);
+    QPushButton *edgesButton = buttons->addButton(QStringLiteral("Spigoli..."), QDialogButtonBox::ActionRole);
+    edgesButton->setToolTip(QStringLiteral("Torna alla scelta degli spigoli (quelli di adesso restano scelti)"));
+    QObject::connect(edgesButton, &QPushButton::clicked, &dialog, [&dialog, &result] {
+        result.reselect = true;
+        dialog.reject();
+    });
+    QObject::connect(buttons, &QDialogButtonBox::accepted, &dialog, &QDialog::accept);
+    QObject::connect(buttons, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
+    form->addRow(buttons);
+    const auto currentChamfer = [chamferBox, chamfer] { return chamferBox ? chamferBox->isChecked() : chamfer; };
+    const auto refresh = [=] {
+        previewLabel->setText(QStringLiteral("in calcolo..."));
+        viewport->requestBlendPreview(base, edges, sizeBox->value(), currentChamfer(), hidden);
+    };
+    viewport->setPreviewCallback([previewLabel](const QString &error) {
+        previewLabel->setText(error.isEmpty() ? QStringLiteral("pronta (in ambra nella vista)") : QStringLiteral("non riuscita: ") + error);
+    });
+    QObject::connect(sizeBox, &QDoubleSpinBox::valueChanged, &dialog, refresh);
+    if (chamferBox) QObject::connect(chamferBox, &QCheckBox::toggled, &dialog, refresh);
+    refresh();
+    sizeBox->selectAll();
+    result.applied = runUntilApplied(dialog, form, buttons, [&] { return apply(sizeBox->value(), currentChamfer()); });
+    viewport->setPreviewCallback({});
+    viewport->clearBlendPreview();
+    result.size = sizeBox->value();
+    result.chamfer = currentChamfer();
+    return result;
+}
+
 // Finestra dei parametri della rivoluzione (anche per modificarne una: lo
 // schizzo resta quello, `fixedSketch`). Valori iniziali e risultato negli argomenti.
+// Con `apply` la conferma esegue il comando e la finestra resta aperta se fallisce.
 static bool revolutionDialog(QWidget *parent, const QVector<SketchObject> &sketches, bool fixedSketch, int &sketch, int &axis,
-                             double &angle) {
+                             double &angle, const std::function<QString(int, int, double)> &apply = {},
+                             const PreviewSpec<int, int, double> &preview = {}) {
     QDialog dialog(parent);
     dialog.setWindowTitle(QStringLiteral("Rivoluzione"));
     auto *form = new QFormLayout(&dialog);
@@ -3619,14 +5234,35 @@ static bool revolutionDialog(QWidget *parent, const QVector<SketchObject> &sketc
     form->addRow(QStringLiteral("Asse:"), axisBox);
     form->addRow(QStringLiteral("Angolo:"), angleBox);
     form->addRow(QString(), reverseBox);
+    const PreviewScope scope(preview.define ? preview.viewport : nullptr, dialog, form, preview.index);
+    if (preview.define) {
+        const auto refresh = [&scope, &preview, sketchBox, axisBox, angleBox, reverseBox] {
+            if (axisBox->currentIndex() < 0) return;
+            scope.request(preview.define(sketchBox->currentIndex(), axisBox->currentData().toInt(),
+                                         reverseBox->isChecked() ? -angleBox->value() : angleBox->value()));
+        };
+        QObject::connect(axisBox, &QComboBox::currentIndexChanged, &dialog, refresh);
+        QObject::connect(angleBox, &QDoubleSpinBox::valueChanged, &dialog, refresh);
+        QObject::connect(reverseBox, &QCheckBox::toggled, &dialog, refresh);
+        refresh();
+    }
     auto *buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dialog);
     QObject::connect(buttons, &QDialogButtonBox::accepted, &dialog, &QDialog::accept);
     QObject::connect(buttons, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
     form->addRow(buttons);
+    const auto read = [&] {
+        sketch = sketchBox->currentIndex();
+        axis = axisBox->currentData().toInt();
+        angle = reverseBox->isChecked() ? -angleBox->value() : angleBox->value();
+    };
+    if (apply)
+        return runUntilApplied(dialog, form, buttons, [&] {
+            if (axisBox->currentIndex() < 0) return QStringLiteral("Scegli l'asse della rivoluzione.");
+            read();
+            return apply(sketch, axis, angle);
+        });
     if (dialog.exec() != QDialog::Accepted || axisBox->currentIndex() < 0) return false;
-    sketch = sketchBox->currentIndex();
-    axis = axisBox->currentData().toInt();
-    angle = reverseBox->isChecked() ? -angleBox->value() : angleBox->value();
+    read();
     return true;
 }
 
@@ -3643,7 +5279,9 @@ static QString primitiveTitle(PrimitiveKind kind) {
 
 // Finestra dei parametri di una primitiva (il tipo non cambia): valori
 // iniziali e risultato in `parameters`.
-static bool primitiveDialog(QWidget *parent, PrimitiveParameters &parameters) {
+static bool primitiveDialog(QWidget *parent, PrimitiveParameters &parameters,
+                            const std::function<QString(const PrimitiveParameters &)> &apply = {},
+                            const PreviewSpec<const PrimitiveParameters &> &preview = {}) {
     struct SizeField { QString label; double minimum; };
     QVector<SizeField> fields;
     switch (parameters.kind) {
@@ -3682,23 +5320,70 @@ static bool primitiveDialog(QWidget *parent, PrimitiveParameters &parameters) {
         sizes.append(makeSpin(parameters.size[index], fields.at(index).minimum));
         form->addRow(fields.at(index).label, sizes.last());
     }
+    const PreviewScope scope(preview.define ? preview.viewport : nullptr, dialog, form, preview.index);
+    const auto current = [&, planeBox] {
+        PrimitiveParameters values = parameters;
+        values.plane = planeBox->currentIndex();
+        for (int axis = 0; axis < 3; ++axis) values.origin[axis] = origin[axis]->value();
+        for (int index = 0; index < sizes.size(); ++index) values.size[index] = sizes.at(index)->value();
+        return values;
+    };
+    if (preview.define) {
+        const auto refresh = [&scope, &preview, current] { scope.request(preview.define(current())); };
+        QObject::connect(planeBox, &QComboBox::currentIndexChanged, &dialog, refresh);
+        for (QDoubleSpinBox *spin : origin) QObject::connect(spin, &QDoubleSpinBox::valueChanged, &dialog, refresh);
+        for (QDoubleSpinBox *spin : sizes) QObject::connect(spin, &QDoubleSpinBox::valueChanged, &dialog, refresh);
+        refresh();
+    }
     auto *buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dialog);
     QObject::connect(buttons, &QDialogButtonBox::accepted, &dialog, &QDialog::accept);
     QObject::connect(buttons, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
     form->addRow(buttons);
+    const auto read = [&] {
+        parameters.plane = planeBox->currentIndex();
+        for (int axis = 0; axis < 3; ++axis) parameters.origin[axis] = origin[axis]->value();
+        for (int index = 0; index < sizes.size(); ++index) parameters.size[index] = sizes.at(index)->value();
+    };
+    if (apply)
+        return runUntilApplied(dialog, form, buttons, [&] {
+            read();
+            return apply(parameters);
+        });
     if (dialog.exec() != QDialog::Accepted) return false;
-    parameters.plane = planeBox->currentIndex();
-    for (int axis = 0; axis < 3; ++axis) parameters.origin[axis] = origin[axis]->value();
-    for (int index = 0; index < sizes.size(); ++index) parameters.size[index] = sizes.at(index)->value();
+    read();
     return true;
 }
 
+// Finestre di dialogo spostabili trascinandone lo sfondo (o un'etichetta):
+// su Wayland i compositor che non disegnano le barre del titolo (niri, e
+// altri con "prefer-no-csd") le lasciano senza un punto da cui trascinarle, e
+// un'applicazione non puo' spostare da se' una sua finestra; puo' pero'
+// chiedere al compositor di iniziare lo spostamento (startSystemMove).
+class DialogMover final : public QObject {
+public:
+    using QObject::QObject;
+
+protected:
+    bool eventFilter(QObject *watched, QEvent *event) override {
+        if (event->type() == QEvent::MouseButtonPress && static_cast<QMouseEvent *>(event)->button() == Qt::LeftButton) {
+            auto *dialog = qobject_cast<QDialog *>(watched);
+            if (dialog && dialog->isWindow() && dialog->windowHandle() && dialog->windowHandle()->startSystemMove()) return true;
+        }
+        return QObject::eventFilter(watched, event);
+    }
+};
+
+static AxesOrientation defaultAxesOrientation();
+static void saveDefaultAxesOrientation(const AxesOrientation &o);
+
 PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
     setWindowTitle(QStringLiteral("ForgeCAD - Qt6"));
+    qApp->installEventFilter(new DialogMover(this));
     resize(1280, 820);
     setMinimumSize(900, 600);
     viewport_ = new CadViewport(this);
     auto *viewport = viewport_;
+    viewport->setOrientation(defaultAxesOrientation());  // assi del documento nuovo (Opzioni, di default Z in alto)
     setCentralWidget(viewport);
 
     auto *modelDock = new QDockWidget(QStringLiteral("Albero modello"), this);
@@ -3714,78 +5399,119 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
     auto createSketchOnPlane = std::make_shared<std::function<void(int)>>();
     // Modifica dei parametri di un corpo: la finestra della sua funzione con
     // i valori attuali, poi CadViewport::updateBody (un passo di Undo).
-    auto editBody = std::make_shared<std::function<void(int)>>([this, viewport](int index) {
+    // Modifica di un raccordo o smusso: misura (con l'anteprima), tipo e spigoli.
+    // "Spigoli..." torna alla scelta sulla base con gli spigoli attuali; Invio
+    // riapre questa finestra con quelli nuovi.
+    auto editBlend = std::make_shared<std::function<void(int, QVector<EdgePoint>, double, bool)>>(
+        [this, viewport](int index, QVector<EdgePoint> edges, double size, bool chamfer) {
+            if (index < 0 || index >= viewport->extrusions().size()) return;
+            const ExtrusionObject original = viewport->extrusions().at(index);
+            const QString title = QStringLiteral("Modifica ") + (original.blendChamfer ? QStringLiteral("smusso") : QStringLiteral("raccordo"));
+            const BlendDialogResult result = blendDialog(this, viewport, title, original.firstBody, index, edges, size, chamfer, true,
+                                                         [&](double newSize, bool newChamfer) {
+                ExtrusionObject body = original;
+                const QString oldPrefix = body.blendChamfer ? QStringLiteral("Smusso") : QStringLiteral("Raccordo");
+                const QString newPrefix = newChamfer ? QStringLiteral("Smusso") : QStringLiteral("Raccordo");
+                if (body.name.startsWith(oldPrefix)) body.name.replace(0, oldPrefix.size(), newPrefix);
+                body.blendSize = newSize;
+                body.blendChamfer = newChamfer;
+                body.blendEdges = edges;
+                const QString error = viewport->updateBody(index, body);
+                return error.isEmpty() ? error : error + QStringLiteral("\nIl corpo resta com'era.");
+            });
+            if (!result.reselect) return;
+            pickSizeBox_->setValue(result.size);
+            const QString error = viewport->beginBlendEdit(index, result.size, result.chamfer);
+            if (!error.isEmpty()) QMessageBox::information(this, title, error);
+        });
+    viewport->setEdgeEditCallback([editBlend](int index, QVector<EdgePoint> edges, double size, bool chamfer) {
+        (*editBlend)(index, edges, size, chamfer);
+    });
+    auto editBody = std::make_shared<std::function<void(int)>>([this, viewport, editBlend](int index) {
         const QVector<ExtrusionObject> &bodies = viewport->extrusions();
         if (index < 0 || index >= bodies.size()) return;
-        ExtrusionObject body = bodies.at(index);
-        QString title;
-        bool accepted = false;
-        if (body.operation >= 0) {
-            title = QStringLiteral("Booleana");
+        // Ogni finestra si chiude solo se il corpo si rigenera con i valori nuovi
+        // (altrimenti mostra l'errore e resta aperta; il corpo resta com'era).
+        const ExtrusionObject original = bodies.at(index);
+        const auto update = [viewport, index](const ExtrusionObject &changed) {
+            const QString error = viewport->updateBody(index, changed);
+            return error.isEmpty() ? error : error + QStringLiteral("\nIl corpo resta com'era.");
+        };
+        const auto standardButtons = [](QDialog &dialog, QFormLayout *form) {
+            auto *buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dialog);
+            QObject::connect(buttons, &QDialogButtonBox::accepted, &dialog, &QDialog::accept);
+            QObject::connect(buttons, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
+            form->addRow(buttons);
+            return buttons;
+        };
+        if (original.operation >= 0) {
             QDialog dialog(this);
             dialog.setWindowTitle(QStringLiteral("Modifica booleana"));
             auto *form = new QFormLayout(&dialog);
             auto *operationBox = new QComboBox(&dialog);
             operationBox->addItems({QStringLiteral("Unione"), QStringLiteral("Intersezione"), QStringLiteral("Differenza A - B")});
-            operationBox->setCurrentIndex(body.operation);
+            operationBox->setCurrentIndex(original.operation);
             auto *swapBox = new QCheckBox(QStringLiteral("Scambia A e B"), &dialog);
-            form->addRow(QStringLiteral("A: ") + bodies.value(body.firstBody).name + QStringLiteral("   B: ") + bodies.value(body.secondBody).name, new QLabel(&dialog));
+            form->addRow(QStringLiteral("A: ") + bodies.value(original.firstBody).name + QStringLiteral("   B: ") + bodies.value(original.secondBody).name, new QLabel(&dialog));
             form->addRow(QStringLiteral("Operazione:"), operationBox);
             form->addRow(QString(), swapBox);
-            auto *buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dialog);
-            connect(buttons, &QDialogButtonBox::accepted, &dialog, &QDialog::accept);
-            connect(buttons, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
-            form->addRow(buttons);
-            if (dialog.exec() != QDialog::Accepted) return;
-            static const QStringList names = {QStringLiteral("Unione"), QStringLiteral("Intersezione"), QStringLiteral("Differenza")};
-            // Il nome segue l'operazione se era quello automatico.
-            if (body.name.startsWith(names.value(body.operation)))
-                body.name.replace(0, names.value(body.operation).size(), names.value(operationBox->currentIndex()));
-            body.operation = operationBox->currentIndex();
-            if (swapBox->isChecked()) std::swap(body.firstBody, body.secondBody);
-            accepted = true;
-        } else if (body.feature == BodyFeature::Extrusion) {
-            title = QStringLiteral("Estrusione");
-            const double distance = QInputDialog::getDouble(this, title, QStringLiteral("Distanza di estrusione (positiva o negativa):"),
-                                                            body.distance, -100000.0, 100000.0, 6, &accepted);
-            body.distance = distance;
-        } else if (body.feature == BodyFeature::Revolution) {
-            title = QStringLiteral("Rivoluzione");
-            int sketch = body.sketchIndex;
-            accepted = revolutionDialog(this, viewport->sketches(), true, sketch, body.revolveAxis, body.revolveAngle);
-        } else if (body.feature == BodyFeature::Primitive) {
-            title = primitiveTitle(body.primitive.kind);
-            accepted = primitiveDialog(this, body.primitive);
-            body.plane = body.primitive.plane;
-        } else if (body.feature == BodyFeature::Blend) {
-            title = body.blendChamfer ? QStringLiteral("Smusso") : QStringLiteral("Raccordo");
-            QDialog dialog(this);
-            dialog.setWindowTitle(QStringLiteral("Modifica ") + title.toLower());
-            auto *form = new QFormLayout(&dialog);
-            auto *sizeBox = new QDoubleSpinBox(&dialog);
-            sizeBox->setDecimals(6);
-            sizeBox->setRange(0.000001, 100000.0);
-            sizeBox->setValue(body.blendSize);
-            auto *chamferBox = new QCheckBox(QStringLiteral("Smusso (distanza) invece del raccordo (raggio)"), &dialog);
-            chamferBox->setChecked(body.blendChamfer);
-            form->addRow(QStringLiteral("Raggio o distanza:"), sizeBox);
-            form->addRow(QString(), chamferBox);
-            form->addRow(QStringLiteral("Spigoli: %1").arg(body.blendEdges.size()), new QLabel(&dialog));
-            auto *buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dialog);
-            connect(buttons, &QDialogButtonBox::accepted, &dialog, &QDialog::accept);
-            connect(buttons, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
-            form->addRow(buttons);
-            if (dialog.exec() != QDialog::Accepted) return;
-            const QString oldPrefix = body.blendChamfer ? QStringLiteral("Smusso") : QStringLiteral("Raccordo");
-            const QString newPrefix = chamferBox->isChecked() ? QStringLiteral("Smusso") : QStringLiteral("Raccordo");
-            if (body.name.startsWith(oldPrefix)) body.name.replace(0, oldPrefix.size(), newPrefix);
-            body.blendSize = sizeBox->value();
-            body.blendChamfer = chamferBox->isChecked();
-            accepted = true;
+            const PreviewScope scope(viewport, dialog, form, index);
+            const auto refresh = [&] {
+                ExtrusionObject body = original;
+                body.operation = operationBox->currentIndex();
+                if (swapBox->isChecked()) std::swap(body.firstBody, body.secondBody);
+                scope.request(body);
+            };
+            connect(operationBox, &QComboBox::currentIndexChanged, &dialog, refresh);
+            connect(swapBox, &QCheckBox::toggled, &dialog, refresh);
+            refresh();
+            QDialogButtonBox *buttons = standardButtons(dialog, form);
+            runUntilApplied(dialog, form, buttons, [&] {
+                static const QStringList names = {QStringLiteral("Unione"), QStringLiteral("Intersezione"), QStringLiteral("Differenza")};
+                ExtrusionObject body = original;
+                // Il nome segue l'operazione se era quello automatico.
+                if (body.name.startsWith(names.value(body.operation)))
+                    body.name.replace(0, names.value(body.operation).size(), names.value(operationBox->currentIndex()));
+                body.operation = operationBox->currentIndex();
+                if (swapBox->isChecked()) std::swap(body.firstBody, body.secondBody);
+                return update(body);
+            });
+        } else if (original.feature == BodyFeature::Extrusion) {
+            askValueUntilApplied(this, QStringLiteral("Estrusione"), QStringLiteral("Distanza di estrusione (positiva o negativa):"),
+                                 original.distance, -100000.0, 100000.0, [&](double distance) {
+                                     ExtrusionObject body = original;
+                                     body.distance = distance;
+                                     return update(body);
+                                 },
+                                 {viewport, index, [&](double distance) {
+                                      ExtrusionObject body = original;
+                                      body.distance = distance;
+                                      return body;
+                                  }});
+        } else if (original.feature == BodyFeature::Revolution) {
+            int sketch = original.sketchIndex, axis = original.revolveAxis;
+            double angle = original.revolveAngle;
+            const auto define = [&](int, int axisIndex, double degrees) {
+                ExtrusionObject body = original;
+                body.revolveAxis = axisIndex;
+                body.revolveAngle = degrees;
+                return body;
+            };
+            revolutionDialog(this, viewport->sketches(), true, sketch, axis, angle,
+                             [&](int s, int a, double d) { return update(define(s, a, d)); }, {viewport, index, define});
+        } else if (original.feature == BodyFeature::Primitive) {
+            PrimitiveParameters parameters = original.primitive;
+            const auto define = [&](const PrimitiveParameters &values) {
+                ExtrusionObject body = original;
+                body.primitive = values;
+                body.plane = values.plane;
+                return body;
+            };
+            primitiveDialog(this, parameters, [&](const PrimitiveParameters &values) { return update(define(values)); },
+                            {viewport, index, define});
+        } else if (original.feature == BodyFeature::Blend) {
+            (*editBlend)(index, original.blendEdges, original.blendSize, original.blendChamfer);
         }
-        if (!accepted) return;
-        const QString error = viewport->updateBody(index, body);
-        if (!error.isEmpty()) QMessageBox::warning(this, title, error + QStringLiteral("\n\nIl corpo resta com'era."));
     });
     viewport->setEditBodyCallback([editBody](int index) { (*editBody)(index); });
     connect(modelTree, &QTreeWidget::itemDoubleClicked, this, [editBody](QTreeWidgetItem *item, int) {
@@ -4052,15 +5778,16 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
     connect(highQuality, &QAction::triggered, this, [viewport] { viewport->setTessellationQuality(2); });
     connect(extrudeAction, &QAction::triggered, this, [this, viewport] {
         if (viewport->activeSketchIndex() < 0) return;
-        bool accepted = false;
-        const double distance = QInputDialog::getDouble(
-            this, QStringLiteral("Estrusione"),
-            QStringLiteral("Distanza di estrusione (positiva o negativa):"),
-            1.0, -100000.0, 100000.0, 6, &accepted);
-        if (!accepted) return;
         const QString name = QStringLiteral("Estrusione %1").arg(viewport->extrusions().size() + 1);
-        const QString error = viewport->createExtrusion(distance, name);
-        if (!error.isEmpty()) QMessageBox::warning(this, QStringLiteral("Estrusione"), error);
+        const int sketch = viewport->activeSketchIndex();
+        askValueUntilApplied(this, QStringLiteral("Estrusione"), QStringLiteral("Distanza di estrusione (positiva o negativa):"), 1.0,
+                             -100000.0, 100000.0, [viewport, name](double distance) { return viewport->createExtrusion(distance, name); },
+                             {viewport, -1, [sketch](double distance) {
+                                  ExtrusionObject body;
+                                  body.sketchIndex = sketch;
+                                  body.distance = distance;
+                                  return body;
+                              }});
     });
     const auto runBoolean = [this, viewport](BooleanOperation operation, const QString &title) {
         // Operandi: i solidi chiusi; per intersezione e differenza anche le
@@ -4087,22 +5814,36 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
             ? QStringLiteral("Oggetto da cui sottrarre (A):") : QStringLiteral("Primo oggetto:");
         const QString secondLabel = operation == BooleanOperation::Difference
             ? QStringLiteral("Oggetto da sottrarre (B):") : QStringLiteral("Secondo oggetto:");
-        bool accepted = false;
-        const QString firstName = QInputDialog::getItem(this, title, firstLabel, names,
-                                                        qMax(0, preferred), false, &accepted);
-        if (!accepted) return;
-        const int firstChoice = names.indexOf(firstName);
-        QStringList others = names;
-        others.removeAt(firstChoice);
-        const QString secondName = QInputDialog::getItem(this, title, secondLabel, others, 0, false, &accepted);
-        if (!accepted) return;
-        const int firstIndex = indices.at(firstChoice);
-        const int secondIndex = indices.at(names.indexOf(secondName));
+        QDialog dialog(this);
+        dialog.setWindowTitle(title);
+        auto *form = new QFormLayout(&dialog);
+        auto *firstBox = new QComboBox(&dialog), *secondBox = new QComboBox(&dialog);
+        firstBox->addItems(names);
+        secondBox->addItems(names);
+        firstBox->setCurrentIndex(qMax(0, preferred));
+        secondBox->setCurrentIndex(firstBox->currentIndex() == 0 ? 1 : 0);
+        form->addRow(firstLabel, firstBox);
+        form->addRow(secondLabel, secondBox);
+        const PreviewScope scope(viewport, dialog, form, -1);
+        const auto refresh = [&] {
+            ExtrusionObject body;
+            body.operation = int(operation);
+            body.firstBody = indices.at(firstBox->currentIndex());
+            body.secondBody = indices.at(secondBox->currentIndex());
+            scope.request(body);
+        };
+        connect(firstBox, &QComboBox::currentIndexChanged, &dialog, refresh);
+        connect(secondBox, &QComboBox::currentIndexChanged, &dialog, refresh);
+        refresh();
+        auto *buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dialog);
+        connect(buttons, &QDialogButtonBox::accepted, &dialog, &QDialog::accept);
+        connect(buttons, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
+        form->addRow(buttons);
         const QString resultName = title + QStringLiteral(" %1").arg(viewport->extrusions().size() + 1);
-        QApplication::setOverrideCursor(Qt::WaitCursor);
-        const QString error = viewport->createBoolean(operation, firstIndex, secondIndex, resultName);
-        QApplication::restoreOverrideCursor();
-        if (!error.isEmpty()) QMessageBox::warning(this, title, error);
+        runUntilApplied(dialog, form, buttons, [&] {
+            if (firstBox->currentIndex() == secondBox->currentIndex()) return QStringLiteral("Scegli due oggetti diversi.");
+            return viewport->createBoolean(operation, indices.at(firstBox->currentIndex()), indices.at(secondBox->currentIndex()), resultName);
+        });
     };
     // Rivoluzione: schizzo (quello attivo o selezionato), asse (linee di
     // costruzione per prime, poi gli altri segmenti e gli assi del piano), angolo.
@@ -4116,12 +5857,17 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
         int sketch = viewport->activeSketchIndex(), axis = 0;
         if (selection.kind == SceneObjectKind::Sketch) sketch = selection.index;
         double angle = 360.0;
-        if (!revolutionDialog(this, sketches, false, sketch, axis, angle)) return;
         const QString name = QStringLiteral("Rivoluzione %1").arg(viewport->extrusions().size() + 1);
-        QApplication::setOverrideCursor(Qt::WaitCursor);
-        const QString error = viewport->createRevolution(sketch, axis, angle, name);
-        QApplication::restoreOverrideCursor();
-        if (!error.isEmpty()) QMessageBox::warning(this, QStringLiteral("Rivoluzione"), error);
+        revolutionDialog(this, sketches, false, sketch, axis, angle, [viewport, name](int sketchIndex, int axisIndex, double degrees) {
+            return viewport->createRevolution(sketchIndex, axisIndex, degrees, name);
+        }, {viewport, -1, [](int sketchIndex, int axisIndex, double degrees) {
+            ExtrusionObject body;
+            body.feature = BodyFeature::Revolution;
+            body.sketchIndex = sketchIndex;
+            body.revolveAxis = axisIndex;
+            body.revolveAngle = degrees;
+            return body;
+        }});
     });
 
     // Primitive: piano di riferimento (orientamento), origine e dimensioni.
@@ -4130,12 +5876,14 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
         parameters.kind = kind;
         const double defaults[5][3] = {{2.0, 2.0, 2.0}, {1.0, 2.0, 0.0}, {1.0, 0.0, 0.0}, {1.0, 0.0, 2.0}, {2.0, 0.5, 0.0}};
         for (int index = 0; index < 3; ++index) parameters.size[index] = defaults[int(kind)][index];
-        if (!primitiveDialog(this, parameters)) return;
         const QString name = title + QStringLiteral(" %1").arg(viewport->extrusions().size() + 1);
-        QApplication::setOverrideCursor(Qt::WaitCursor);
-        const QString error = viewport->createPrimitive(parameters, name);
-        QApplication::restoreOverrideCursor();
-        if (!error.isEmpty()) QMessageBox::warning(this, title, error);
+        primitiveDialog(this, parameters, [viewport, name](const PrimitiveParameters &values) { return viewport->createPrimitive(values, name); },
+                        {viewport, -1, [](const PrimitiveParameters &values) {
+                             ExtrusionObject body;
+                             body.feature = BodyFeature::Primitive;
+                             body.primitive = values;
+                             return body;
+                         }});
     };
     const QList<QPair<QString, PrimitiveKind>> primitives = {
         {QStringLiteral("Parallelepipedo"), PrimitiveKind::Box}, {QStringLiteral("Cilindro"), PrimitiveKind::Cylinder},
@@ -4149,30 +5897,46 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
     }
 
     // Raccordi e smussi: gli spigoli si scelgono nella vista, poi la misura.
+    // Durante la scelta: la misura dell'anteprima nella barra di stato.
     auto *edgePickStatus = new QLabel(this);
+    auto *pickSizeLabel = new QLabel(QStringLiteral("Misura:"), this);
+    pickSizeBox_ = new QDoubleSpinBox(this);
+    pickSizeBox_->setDecimals(4);
+    pickSizeBox_->setRange(0.0001, 100000.0);
+    pickSizeBox_->setValue(blendSize_);
+    pickSizeBox_->setToolTip(QStringLiteral("Raggio del raccordo o distanza dello smusso per l'anteprima"));
+    pickSizeLabel->hide();
+    pickSizeBox_->hide();
+    connect(pickSizeBox_, &QDoubleSpinBox::valueChanged, this, [viewport](double value) { viewport->setEdgePickSize(value); });
     viewport->setEdgePickCallbacks(
-        [edgePickStatus](const QString &text) { edgePickStatus->setText(text); },
+        [edgePickStatus, pickSizeLabel, this](const QString &text) {
+            edgePickStatus->setText(text);
+            pickSizeLabel->setVisible(!text.isEmpty());
+            pickSizeBox_->setVisible(!text.isEmpty());
+        },
         [this, viewport](int body, QVector<EdgePoint> edges, bool chamfer) {
+            // La misura con l'anteprima: la finestra resta aperta finche' il raccordo
+            // non riesce; "Spigoli..." torna alla scelta degli spigoli (gli stessi, da cambiare).
             const QString title = chamfer ? QStringLiteral("Smusso") : QStringLiteral("Raccordo");
-            bool accepted = false;
-            const double size = QInputDialog::getDouble(this, title,
-                chamfer ? QStringLiteral("Distanza dello smusso dallo spigolo:") : QStringLiteral("Raggio del raccordo:"),
-                0.5, 0.000001, 100000.0, 6, &accepted);
-            if (!accepted) return;
             const QString name = title + QStringLiteral(" %1").arg(viewport->extrusions().size() + 1);
-            QApplication::setOverrideCursor(Qt::WaitCursor);
-            const QString error = viewport->createBlend(body, edges, size, chamfer, name);
-            QApplication::restoreOverrideCursor();
-            if (!error.isEmpty()) QMessageBox::warning(this, title, error);
+            const BlendDialogResult result = blendDialog(this, viewport, title, body, -1, edges, viewport->edgePickSize(), chamfer, false,
+                                                         [&](double size, bool isChamfer) { return viewport->createBlend(body, edges, size, isChamfer, name); });
+            blendSize_ = result.size;
+            viewport->setEdgePickSize(result.size);
+            if (pickSizeBox_) pickSizeBox_->setValue(result.size);
+            if (result.reselect) viewport->resumeEdgePick(body, edges, chamfer);
         });
     for (const auto &[action, chamfer] : {std::pair<QAction *, bool>{filletAction, false}, {chamferAction, true}}) {
         const bool isChamfer = chamfer;
         connect(action, &QAction::triggered, this, [this, viewport, isChamfer] {
+            viewport->setEdgePickSize(pickSizeBox_->value());
             const QString error = viewport->beginEdgePick(isChamfer);
             if (!error.isEmpty()) QMessageBox::information(this, isChamfer ? QStringLiteral("Smusso") : QStringLiteral("Raccordo"), error);
         });
     }
     statusBar()->addWidget(edgePickStatus);
+    statusBar()->addWidget(pickSizeLabel);
+    statusBar()->addWidget(pickSizeBox_);
 
     connect(unionAction, &QAction::triggered, this, [runBoolean] { runBoolean(BooleanOperation::Union, QStringLiteral("Unione")); });
     connect(intersectionAction, &QAction::triggered, this, [runBoolean] { runBoolean(BooleanOperation::Intersection, QStringLiteral("Intersezione")); });
@@ -4181,6 +5945,97 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
     // Opzioni: kernel geometrico con cui si costruiscono i corpi. La scelta
     // resta per gli avvii successivi (QSettings).
     auto *optionsMenu = menuBar()->addMenu(QStringLiteral("Opzioni"));
+    // Orientamento degli assi del documento: quale asse sta in alto e quale guarda
+    // l'osservatore nella vista frontale (o la vista corrente come frontale).
+    QAction *orientationAction = optionsMenu->addAction(QStringLiteral("Orientamento degli assi..."));
+    connect(orientationAction, &QAction::triggered, this, [this, viewport] {
+        static const QStringList axisNames = {QStringLiteral("+X"), QStringLiteral("-X"), QStringLiteral("+Y"),
+                                              QStringLiteral("-Y"), QStringLiteral("+Z"), QStringLiteral("-Z")};
+        const auto axisVector = [](int index, double out[3]) {
+            for (int k = 0; k < 3; ++k) out[k] = 0.0;
+            out[index / 2] = index % 2 ? -1.0 : 1.0;
+        };
+        const auto axisIndex = [](const double v[3]) {
+            int best = 0;
+            for (int k = 1; k < 3; ++k)
+                if (std::abs(v[k]) > std::abs(v[best])) best = k;
+            return 2 * best + (v[best] < 0.0 ? 1 : 0);
+        };
+        QDialog dialog(this);
+        dialog.setWindowTitle(QStringLiteral("Orientamento degli assi"));
+        auto *form = new QFormLayout(&dialog);
+        auto *upBox = new QComboBox(&dialog), *towardBox = new QComboBox(&dialog);
+        upBox->addItems(axisNames);
+        form->addRow(QStringLiteral("Asse in alto sullo schermo:"), upBox);
+        form->addRow(QStringLiteral("Asse verso l'osservatore (vista frontale):"), towardBox);
+        auto *rightLabel = new QLabel(&dialog);
+        form->addRow(QStringLiteral("Asse a destra:"), rightLabel);
+        const auto fillToward = [=](int keep) {
+            const QSignalBlocker blocker(towardBox);
+            towardBox->clear();
+            for (int k = 0; k < 6; ++k)
+                if (k / 2 != upBox->currentIndex() / 2) towardBox->addItem(axisNames.at(k), k);
+            const int found = towardBox->findData(keep);
+            towardBox->setCurrentIndex(found >= 0 ? found : 0);
+        };
+        const auto current = [=] {
+            AxesOrientation o;
+            axisVector(upBox->currentIndex(), o.up);
+            axisVector(towardBox->currentData().toInt(), o.toward);
+            const double *u = o.up, *t = o.toward;
+            o.right[0] = u[1] * t[2] - u[2] * t[1];
+            o.right[1] = u[2] * t[0] - u[0] * t[2];
+            o.right[2] = u[0] * t[1] - u[1] * t[0];
+            return o;
+        };
+        const auto describe = [=] { rightLabel->setText(axisNames.at(axisIndex(current().right))); };
+        const auto load = [=](const AxesOrientation &o) {
+            upBox->setCurrentIndex(axisIndex(o.up));
+            fillToward(axisIndex(o.toward));
+            describe();
+        };
+        connect(upBox, &QComboBox::currentIndexChanged, &dialog, [=] {
+            fillToward(towardBox->currentData().toInt());
+            describe();
+        });
+        connect(towardBox, &QComboBox::currentIndexChanged, &dialog, describe);
+        load(viewport->orientation());
+        auto *presets = new QHBoxLayout;
+        auto *zUp = new QPushButton(QStringLiteral("Z in alto"), &dialog), *yUp = new QPushButton(QStringLiteral("Y in alto"), &dialog);
+        auto *fromView = new QPushButton(QStringLiteral("La vista corrente come frontale"), &dialog);
+        fromView->setToolTip(QStringLiteral("Gli assi restano girati come li vedi ora: questa diventa la vista frontale"));
+        presets->addWidget(zUp);
+        presets->addWidget(yUp);
+        presets->addWidget(fromView);
+        form->addRow(presets);
+        AxesOrientation yUpOrientation;
+        yUpOrientation.up[0] = 0.0, yUpOrientation.up[1] = 1.0, yUpOrientation.up[2] = 0.0;
+        yUpOrientation.toward[0] = 0.0, yUpOrientation.toward[1] = 0.0, yUpOrientation.toward[2] = 1.0;
+        connect(zUp, &QPushButton::clicked, &dialog, [=] { load(AxesOrientation()); });
+        connect(yUp, &QPushButton::clicked, &dialog, [=] { load(yUpOrientation); });
+        bool useView = false;
+        connect(fromView, &QPushButton::clicked, &dialog, [&dialog, &useView] {
+            useView = true;
+            dialog.accept();
+        });
+        auto *asDefault = new QCheckBox(QStringLiteral("Predefinito per i documenti nuovi"), &dialog);
+        asDefault->setChecked(true);
+        form->addRow(QString(), asDefault);
+        form->addRow(new QLabel(QStringLiteral("Cambia solo come si vedono gli assi (viste standard, orbita, griglia) e gli assi\n"
+                                               "degli schizzi nuovi sui piani; la geometria del modello resta la stessa."), &dialog));
+        auto *buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dialog);
+        connect(buttons, &QDialogButtonBox::accepted, &dialog, &QDialog::accept);
+        connect(buttons, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
+        form->addRow(buttons);
+        if (dialog.exec() != QDialog::Accepted) return;
+        const AxesOrientation chosen = useView ? viewport->orientationFromCurrentView() : current();
+        viewport->setOrientation(chosen);
+        if (useView) viewport->setViewPreset(0);
+        if (asDefault->isChecked()) saveDefaultAxesOrientation(chosen);
+        documentModified_ = true;
+        updateWindowTitle();
+    });
+    optionsMenu->addSeparator();
     auto *kernelMenu = optionsMenu->addMenu(QStringLiteral("Kernel geometrico"));
     auto *kernelGroup = new QActionGroup(this); kernelGroup->setExclusive(true);
     QAction *occtKernel = kernelMenu->addAction(QStringLiteral("OpenCASCADE"));
@@ -4270,6 +6125,12 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
     });
     auto *sketchMenu = menuBar()->addMenu(QStringLiteral("Schizzo"));
     QAction *newSketchAction = sketchMenu->addAction(QStringLiteral("Nuovo schizzo..."));
+    QAction *faceSketchAction = sketchMenu->addAction(QStringLiteral("Nuovo schizzo sulla faccia selezionata"));
+    faceSketchAction->setToolTip(QStringLiteral("Clic su una faccia piana di un corpo, poi questo comando (anche dal menu contestuale della faccia)"));
+    connect(faceSketchAction, &QAction::triggered, this, [this, viewport] {
+        const QString error = viewport->createSketchOnSelectedFace(QStringLiteral("Schizzo %1").arg(viewport->sketches().size() + 1));
+        if (!error.isEmpty()) QMessageBox::information(this, QStringLiteral("Schizzo sulla faccia"), error);
+    });
     QAction *sketchAction = sketchMenu->addAction(QStringLiteral("Disegna segmenti"));
     auto *toolMenu = sketchMenu->addMenu(QStringLiteral("Strumento geometrico"));
     auto *toolGroup = new QActionGroup(this); toolGroup->setExclusive(true);
@@ -4292,6 +6153,12 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
     QAction *circleTool = addTool(QStringLiteral("Cerchio"), DrawingTool::Circle, false);
     QAction *arcTool = addTool(QStringLiteral("Arco (centro, inizio, fine)"), DrawingTool::Arc, false);
     QAction *polygonTool = addTool(QStringLiteral("Poligono"), DrawingTool::Polygon, false);
+    QAction *rectangleTool = addTool(QStringLiteral("Rettangolo (due angoli)"), DrawingTool::Rectangle, false);
+    rectangleTool->setToolTip(QStringLiteral("Rettangolo: due angoli opposti (Maiusc: quadrato); quattro segmenti orizzontali e verticali"));
+    QAction *centerRectangleTool = addTool(QStringLiteral("Rettangolo dal centro"), DrawingTool::CenterRectangle, false);
+    centerRectangleTool->setToolTip(QStringLiteral("Rettangolo: centro e un angolo (Maiusc: quadrato)"));
+    QAction *ellipseTool = addTool(QStringLiteral("Ellisse"), DrawingTool::Ellipse, false);
+    ellipseTool->setToolTip(QStringLiteral("Ellisse: centro, estremo del primo semiasse, punto per il secondo semiasse"));
     QAction *constructionTool = addTool(QStringLiteral("Linea di costruzione"), DrawingTool::ConstructionLine, false);
     QAction *polygonSidesAction = toolMenu->addAction(QStringLiteral("Numero lati poligono..."));
     auto *editToolMenu = sketchMenu->addMenu(QStringLiteral("Modifica entita'"));
@@ -4351,6 +6218,146 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
         const QString error = viewport->toggleConstruction();
         if (!error.isEmpty()) statusBar()->showMessage(error, 5000);
     });
+    // Finestra fluttuante dei vincoli: quelli possibili per le entita' scelte
+    // (clic = vincolo) e l'elenco dei vincoli dello schizzo o della selezione.
+    auto *constraintPanel = new QDialog(this, Qt::Tool);
+    constraintPanel->setObjectName(QStringLiteral("constraintPanel"));
+    constraintPanel->setWindowTitle(QStringLiteral("Vincoli"));
+    constraintPanel->setModal(false);
+    constraintPanel->resize(380, 520);
+    auto *panelLayout = new QVBoxLayout(constraintPanel);
+    auto *selectionLabel = new QLabel(constraintPanel);
+    selectionLabel->setWordWrap(true);
+    panelLayout->addWidget(selectionLabel);
+    auto *addBox = new QWidget(constraintPanel);
+    auto *addLayout = new QGridLayout(addBox);
+    addLayout->setContentsMargins(0, 0, 0, 0);
+    panelLayout->addWidget(addBox);
+    auto *panelError = new QLabel(constraintPanel);
+    panelError->setWordWrap(true);
+    panelError->setStyleSheet(QStringLiteral("color: #ff7b72;"));
+    panelError->hide();
+    panelLayout->addWidget(panelError);
+    auto *onlySelection = new QCheckBox(QStringLiteral("Solo i vincoli delle entita' scelte"), constraintPanel);
+    panelLayout->addWidget(onlySelection);
+    auto *constraintList = new QListWidget(constraintPanel);
+    constraintList->setSelectionMode(QAbstractItemView::ExtendedSelection);
+    constraintList->setToolTip(QStringLiteral("Selezione = vincolo evidenziato nella vista; doppio clic su una quota = valore; Canc = elimina"));
+    panelLayout->addWidget(constraintList, 1);
+    auto *panelButtons = new QHBoxLayout;
+    auto *editValue = new QPushButton(QStringLiteral("Valore..."), constraintPanel);
+    auto *removeConstraint = new QPushButton(QStringLiteral("Elimina"), constraintPanel);
+    panelButtons->addWidget(editValue);
+    panelButtons->addStretch(1);
+    panelButtons->addWidget(removeConstraint);
+    panelLayout->addLayout(panelButtons);
+    auto *showGlyphs = new QCheckBox(QStringLiteral("Mostra i vincoli nella vista"), constraintPanel);
+    showGlyphs->setChecked(true);
+    panelLayout->addWidget(showGlyphs);
+    auto *panelHelp = new QLabel(QStringLiteral("Scegli le entita' con il clic (Maiusc: aggiunge) e i punti con Ctrl+clic (anche l'origine), "
+                                                "poi il vincolo. Un clic sul simbolo di un vincolo nella vista lo seleziona, Canc lo elimina."),
+                                 constraintPanel);
+    panelHelp->setWordWrap(true);
+    panelHelp->setStyleSheet(QStringLiteral("color: #8aa0b4;"));
+    panelLayout->addWidget(panelHelp);
+    auto refreshingPanel = std::make_shared<bool>(false);
+    auto refreshPanel = std::make_shared<std::function<void()>>();
+    *refreshPanel = [=] {
+        if (*refreshingPanel) return;
+        *refreshingPanel = true;
+        const SketchObject *sketch = viewport->activeSketchObject();
+        while (QLayoutItem *item = addLayout->takeAt(0)) {
+            delete item->widget();
+            delete item;
+        }
+        constraintList->clear();
+        const bool active = sketch != nullptr;
+        addBox->setEnabled(active);
+        constraintList->setEnabled(active);
+        if (!active) {
+            selectionLabel->setText(QStringLiteral("Entra in uno schizzo per definirne i vincoli."));
+            *refreshingPanel = false;
+            return;
+        }
+        const QVector<ConstraintRef> refs = viewport->constraintSelection();
+        QStringList names;
+        for (const ConstraintRef &ref : refs) names.append(ForgeCad::describeRef(*sketch, ref));
+        const ForgeCad::SketchAnalysis &analysis = viewport->sketchAnalysis();
+        const QString freedom = analysis.fullyDefined()
+            ? QStringLiteral("<b>Schizzo completamente definito</b> (0 gradi di liberta')")
+            : QStringLiteral("<b>Gradi di liberta': %1</b> (sotto definito: le entita' definite sono bianche)").arg(analysis.degreesOfFreedom);
+        selectionLabel->setText(freedom + QStringLiteral("<br>") + (refs.isEmpty() ? QStringLiteral("Nessuna entita' scelta.")
+                                                                                   : QStringLiteral("Scelti: ") + names.join(QStringLiteral(", ")).toHtmlEscaped()));
+        const QVector<ConstraintType> types = ForgeCad::applicableConstraints(*sketch, refs);
+        int column = 0, row = 0;
+        for (ConstraintType type : types) {
+            auto *button = new QPushButton(ForgeCad::constraintSymbol(type) + QLatin1Char(' ') + ForgeCad::constraintName(type), addBox);
+            connect(button, &QPushButton::clicked, constraintPanel, [=] {
+                const QString error = viewport->addConstraint(type);
+                panelError->setText(error);
+                panelError->setVisible(!error.isEmpty());
+                viewport->setFocus();
+            });
+            addLayout->addWidget(button, row, column);
+            if (++column == 2) column = 0, ++row;
+        }
+        if (types.isEmpty() && !refs.isEmpty()) {
+            auto *none = new QLabel(QStringLiteral("Nessun vincolo per queste entita'."), addBox);
+            addLayout->addWidget(none, 0, 0, 1, 2);
+        }
+        // Elenco: tutti i vincoli o solo quelli delle entita' scelte.
+        const QVector<int> selected = viewport->selectedConstraints();
+        for (int index = 0; index < sketch->geometricConstraints.size(); ++index) {
+            const SketchConstraint &c = sketch->geometricConstraints.at(index);
+            if (onlySelection->isChecked() && !refs.isEmpty()) {
+                bool related = false;
+                for (const ConstraintRef &ref : refs)
+                    related = related || (ref.kind == 2 ? (c.first == ref || c.second == ref) : ForgeCad::refersTo(c, ref.kind, ref.element));
+                if (!related) continue;
+            }
+            auto *item = new QListWidgetItem(ForgeCad::describeConstraint(*sketch, c), constraintList);
+            item->setData(Qt::UserRole, index);
+            if (ForgeCad::constraintError(*sketch, c) > 1e-7) item->setForeground(QColor(255, 140, 90));
+            item->setSelected(selected.contains(index));
+        }
+        *refreshingPanel = false;
+    };
+    viewport->setConstraintPanelCallback([refreshPanel] { (*refreshPanel)(); });
+    const auto listSelection = [constraintList] {
+        QVector<int> indices;
+        for (QListWidgetItem *item : constraintList->selectedItems()) indices.append(item->data(Qt::UserRole).toInt());
+        return indices;
+    };
+    connect(constraintList, &QListWidget::itemSelectionChanged, constraintPanel, [=] {
+        if (*refreshingPanel) return;
+        *refreshingPanel = true;
+        viewport->setSelectedConstraints(listSelection());
+        *refreshingPanel = false;
+    });
+    connect(constraintList, &QListWidget::itemDoubleClicked, constraintPanel, [viewport](QListWidgetItem *item) {
+        viewport->editConstraintValue(item->data(Qt::UserRole).toInt());
+    });
+    connect(editValue, &QPushButton::clicked, constraintPanel, [=] {
+        const QVector<int> indices = listSelection();
+        if (!indices.isEmpty()) viewport->editConstraintValue(indices.first());
+    });
+    connect(removeConstraint, &QPushButton::clicked, constraintPanel, [=] { viewport->deleteConstraints(listSelection()); });
+    auto *deleteShortcut = new QAction(constraintList);
+    deleteShortcut->setShortcut(QKeySequence::Delete);
+    deleteShortcut->setShortcutContext(Qt::WidgetShortcut);
+    constraintList->addAction(deleteShortcut);
+    connect(deleteShortcut, &QAction::triggered, constraintPanel, [=] { viewport->deleteConstraints(listSelection()); });
+    connect(onlySelection, &QCheckBox::toggled, constraintPanel, [refreshPanel] { (*refreshPanel)(); });
+    connect(showGlyphs, &QCheckBox::toggled, constraintPanel, [viewport](bool visible) { viewport->setConstraintsVisible(visible); });
+    QAction *constraintsAction = sketchMenu->addAction(QStringLiteral("Vincoli..."));
+    constraintsAction->setShortcut(QKeySequence(Qt::Key_K));
+    constraintsAction->setToolTip(QStringLiteral("Finestra dei vincoli: quelli possibili per le entita' scelte e l'elenco (K)"));
+    connect(constraintsAction, &QAction::triggered, this, [constraintPanel, refreshPanel] {
+        (*refreshPanel)();
+        constraintPanel->show();
+        constraintPanel->raise();
+    });
+    constraintPanel_ = constraintPanel;
     QAction *exitSketch = sketchMenu->addAction(QStringLiteral("Esci dalla modalita schizzo"));
     automaticConstraint->setShortcut(QKeySequence(Qt::Key_A));
     freeConstraint->setShortcut(QKeySequence(Qt::Key_O));
@@ -4400,11 +6407,13 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
     connect(exitSketch, &QAction::triggered, this, [viewport] { viewport->endSketchMode(); });
 
     auto *drawingToolbar = addToolBar(QStringLiteral("Strumenti schizzo")); drawingToolbar->setObjectName(QStringLiteral("sketchToolbar")); drawingToolbar->setMovable(false); drawingToolbar->setVisible(false);
-    drawingToolbar->addAction(selectTool); drawingToolbar->addAction(lineTool); drawingToolbar->addAction(polylineTool); drawingToolbar->addAction(splineTool); drawingToolbar->addAction(nurbsTool); drawingToolbar->addAction(circleTool); drawingToolbar->addAction(arcTool); drawingToolbar->addAction(polygonTool); drawingToolbar->addAction(constructionTool); drawingToolbar->addAction(toggleConstruction); drawingToolbar->addSeparator();
+    drawingToolbar->addAction(selectTool); drawingToolbar->addAction(lineTool); drawingToolbar->addAction(polylineTool); drawingToolbar->addAction(splineTool); drawingToolbar->addAction(nurbsTool); drawingToolbar->addAction(circleTool); drawingToolbar->addAction(arcTool); drawingToolbar->addAction(polygonTool); drawingToolbar->addAction(rectangleTool); drawingToolbar->addAction(centerRectangleTool); drawingToolbar->addAction(ellipseTool); drawingToolbar->addAction(constructionTool); drawingToolbar->addAction(toggleConstruction); drawingToolbar->addSeparator();
     drawingToolbar->addAction(trimTool); drawingToolbar->addAction(extendTool); drawingToolbar->addAction(splitTool); drawingToolbar->addAction(sketchFilletTool); drawingToolbar->addAction(sketchChamferTool); drawingToolbar->addSeparator(); drawingToolbar->addAction(exitSketch);
     auto viewActions = std::make_shared<QList<QAction *>>();
-    viewport->setSketchModeCallback([viewMenu, viewActions, drawingToolbar](bool active) {
+    viewport->setSketchModeCallback([this, viewMenu, viewActions, drawingToolbar](bool active) {
         viewMenu->setEnabled(!active); for (QAction *action : *viewActions) action->setEnabled(!active); drawingToolbar->setVisible(active);
+        // La finestra dei vincoli accompagna la modalita' schizzo.
+        if (constraintPanel_) constraintPanel_->setVisible(active);
     });
 
     auto *quit = fileMenu->addAction(QStringLiteral("Esci")); connect(quit, &QAction::triggered, this, &QWidget::close);
@@ -4524,10 +6533,29 @@ bool PdfWindow::maybeSaveChanges() {
     return true;
 }
 
+// Orientamento degli assi per i documenti nuovi (Opzioni), di default Z in alto.
+static AxesOrientation defaultAxesOrientation() {
+    const QVariantList values = QSettings().value(QStringLiteral("view/axesOrientation")).toList();
+    AxesOrientation o;
+    if (values.size() != 9) return o;
+    double *axes[3] = {o.right, o.up, o.toward};
+    for (int k = 0; k < 9; ++k) axes[k / 3][k % 3] = values.at(k).toDouble();
+    return o;
+}
+static void saveDefaultAxesOrientation(const AxesOrientation &o) {
+    QVariantList values;
+    for (const double *axis : {o.right, o.up, o.toward})
+        for (int k = 0; k < 3; ++k) values.append(axis[k]);
+    QSettings().setValue(QStringLiteral("view/axesOrientation"), values);
+}
+
 void PdfWindow::newDocument() {
     if (!maybeSaveChanges()) return;
     loadingDocument_ = true;
-    viewport_->loadDocument({});
+    DocumentState empty;
+    empty.orientation = defaultAxesOrientation();
+    empty.orientationSet = true;
+    viewport_->loadDocument(empty);
     loadingDocument_ = false;
     documentPath_.clear();
     documentModified_ = false;
@@ -4548,6 +6576,11 @@ bool PdfWindow::openDocumentPath(const QString &path) {
     if (!error.isEmpty()) {
         QMessageBox::warning(this, QStringLiteral("Apri"), error);
         return false;
+    }
+    // I file senza orientamento (versioni vecchie) prendono quello predefinito.
+    if (!state.orientationSet) {
+        state.orientation = defaultAxesOrientation();
+        state.orientationSet = true;
     }
     loadingDocument_ = true;
     viewport_->loadDocument(std::move(state));
@@ -4627,8 +6660,9 @@ void PdfWindow::rebuildModelTree() {
     const QVector<SketchObject> &sketches = viewport_->sketches();
     for (int index = 0; index < sketches.size(); ++index) {
         const SketchObject &sketch = sketches.at(index);
-        QTreeWidgetItem *item = addObject(sketch.name + QStringLiteral(" [") + planeNames().value(sketch.plane)
-                                              + QStringLiteral("]"), kTreeSketch, index, sketch.visible);
+        const QString plane = sketch.plane == kFacePlane ? QStringLiteral("Faccia di %1").arg(sketch.faceSource)
+                                                         : planeNames().value(sketch.plane);
+        QTreeWidgetItem *item = addObject(sketch.name + QStringLiteral(" [") + plane + QStringLiteral("]"), kTreeSketch, index, sketch.visible);
         if ((selection.kind == SceneObjectKind::Sketch && selection.index == index)
             || viewport_->activeSketchIndex() == index) modelTree_->setCurrentItem(item);
     }

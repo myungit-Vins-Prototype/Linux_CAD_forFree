@@ -4,6 +4,8 @@
 #include <GCPnts_TangentialDeflection.hxx>
 #include <Geom2d_BSplineCurve.hxx>
 #include <Geom2d_Circle.hxx>
+#include <Geom2d_Ellipse.hxx>
+#include <gp_Ax22d.hxx>
 #include <Geom2d_TrimmedCurve.hxx>
 #include <Geom2dAdaptor_Curve.hxx>
 #include <Precision.hxx>
@@ -103,6 +105,28 @@ QVector<Handle(Geom2d_Curve)> curveGeometry(const CurveObject &curve) {
             while (endAngle <= startAngle + Precision::Angular()) endAngle += 2.0 * M_PI;
             const Handle(Geom2d_Circle) circle = new Geom2d_Circle(gp_Ax2d(toPnt(center), gp_Dir2d(1.0, 0.0)), radius);
             result.append(new Geom2d_TrimmedCurve(circle, startAngle, endAngle));
+            break;
+        }
+        case DrawingTool::Ellipse: {
+            if (curve.controlPoints.size() < 3) break;
+            const QPointF center = curve.controlPoints.at(0);
+            const double a = distance(center, curve.controlPoints.at(1)), b = distance(center, curve.controlPoints.at(2));
+            if (a <= Precision::Confusion() || b <= Precision::Confusion()) break;
+            const QPointF u = (curve.controlPoints.at(1) - center) / a;
+            // OCCT vuole il semiasse maggiore lungo X del sistema dell'ellisse.
+            const gp_Dir2d x = a >= b ? gp_Dir2d(u.x(), u.y()) : gp_Dir2d(-u.y(), u.x());
+            const gp_Dir2d y(-x.Y(), x.X());
+            result.append(new Geom2d_Ellipse(gp_Ax22d(toPnt(center), x, y), std::max(a, b), std::min(a, b)));
+            break;
+        }
+        case DrawingTool::Rectangle:
+        case DrawingTool::CenterRectangle: {
+            if (curve.controlPoints.size() < 2) break;
+            const QPointF p = curve.controlPoints.at(0), q = curve.controlPoints.at(1);
+            const QPointF a = curve.tool == DrawingTool::Rectangle ? p : 2.0 * p - q;
+            const gp_Pnt2d corners[4] = {toPnt(a), gp_Pnt2d(q.x(), a.y()), toPnt(q), gp_Pnt2d(a.x(), q.y())};
+            if (std::abs(q.x() - a.x()) <= Precision::Confusion() || std::abs(q.y() - a.y()) <= Precision::Confusion()) break;
+            for (int side = 0; side < 4; ++side) result.append(GCE2d_MakeSegment(corners[side], corners[(side + 1) % 4]).Value());
             break;
         }
         case DrawingTool::Polygon: {

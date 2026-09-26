@@ -354,11 +354,11 @@ QString KernelLab::compareSketchExtrusion(const SketchObject &sketch, double dis
     if (profile.regions.empty())
         return QStringLiteral("Lo schizzo non ha contorni chiusi: il nuovo kernel non estrude ancora profili aperti.");
 
-    const gp_Ax3 axes = sketchAxes(sketch.plane);
+    const gp_Ax3 axes = sketchAxes(sketch);
     auto fromDir = [](const gp_Dir &d) { return Vec3(d.X(), d.Y(), d.Z()); };
     const Frame3 frame(Vec3(axes.Location().X(), axes.Location().Y(), axes.Location().Z()), fromDir(axes.Direction()),
                        fromDir(axes.XDirection()));
-    const double height = extrusionVector(sketch.plane, distance).Dot(gp_Vec(axes.Direction()));
+    const double height = extrusionVector(sketch, distance).Dot(gp_Vec(axes.Direction()));
 
     int vertices = 0, edges = 0, faces = 0, genus = 0, issues = 0, fins = 0, exactPCurves = 0;
     double volume = 0.0, surfaceArea = 0.0, length = 0.0;

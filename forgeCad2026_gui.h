@@ -5,7 +5,9 @@
 
 class CadViewport;
 class QAction;
+class QDoubleSpinBox;
 class QLabel;
+class QWidget;
 class QTreeWidget;
 class QTreeWidgetItem;
 class QCloseEvent;
@@ -43,6 +45,9 @@ private:
     QString documentPath_;
     bool documentModified_ = false;
     bool loadingDocument_ = false;
+    double blendSize_ = 0.5;  // ultima misura di raccordo o smusso (proposta la volta dopo)
+    QDoubleSpinBox *pickSizeBox_ = nullptr;
+    QWidget *constraintPanel_ = nullptr;  // finestra fluttuante dei vincoli (modalita' schizzo)  // misura dell'anteprima durante la scelta degli spigoli
 };
 
 #endif

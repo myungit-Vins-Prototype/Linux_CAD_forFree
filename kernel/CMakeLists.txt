@@ -59,6 +59,8 @@ add_library(forgekernel STATIC
     fk_revolve.cpp
     fk_blend.h
     fk_blend.cpp
+    fk_blend_loop.h
+    fk_blend_loop.cpp
 )
 target_include_directories(forgekernel PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_compile_features(forgekernel PUBLIC cxx_std_17)

@@ -3,6 +3,7 @@
 #include "cad_curve_solver.h"
 
 #include <BRepAdaptor_Curve.hxx>
+#include <BRepAdaptor_Surface.hxx>
 #include <BRepAlgoAPI_Common.hxx>
 #include <BRepAlgoAPI_Cut.hxx>
 #include <BRepAlgoAPI_Fuse.hxx>
@@ -73,12 +74,12 @@ QString failureMessage(const Standard_Failure &failure) {
 // Spigoli esatti di tutte le entita' dello schizzo, nello spazio 3D.
 Handle(TopTools_HSequenceOfShape) sketchEdges(const SketchObject &sketch) {
     Handle(TopTools_HSequenceOfShape) edges = new TopTools_HSequenceOfShape;
-    const gp_Pln plane(sketchAxes(sketch.plane));
+    const gp_Pln plane(sketchAxes(sketch));
     for (int index = 0; index < sketch.segments.size(); ++index) {
         if (sketch.isConstructionSegment(index)) continue;
         const SketchSegment &segment = sketch.segments.at(index);
-        const gp_Pnt first = sketchToWorld(segment.first, sketch.plane);
-        const gp_Pnt second = sketchToWorld(segment.second, sketch.plane);
+        const gp_Pnt first = sketchToWorld(segment.first, sketch);
+        const gp_Pnt second = sketchToWorld(segment.second, sketch);
         if (first.Distance(second) <= Precision::Confusion()) continue;
         BRepBuilderAPI_MakeEdge edge(first, second);
         if (edge.IsDone()) edges->Append(edge.Edge());
@@ -135,6 +136,77 @@ gp_Vec extrusionVector(int plane, double distance) {
     return gp_Vec(0.0, 0.0, distance);
 }
 
+gp_Ax3 sketchAxes(const SketchObject &sketch) {
+    if (sketch.plane != kFacePlane && !sketch.customFrame) return sketchAxes(sketch.plane);
+    const SketchFrame &f = sketch.frame;
+    return gp_Ax3(gp_Pnt(f.origin[0], f.origin[1], f.origin[2]), gp_Dir(f.normal[0], f.normal[1], f.normal[2]),
+                  gp_Dir(f.xAxis[0], f.xAxis[1], f.xAxis[2]));
+}
+
+gp_Pnt sketchToWorld(const QPointF &point, const SketchObject &sketch) {
+    const gp_Ax3 axes = sketchAxes(sketch);
+    return axes.Location().Translated(gp_Vec(axes.XDirection()) * point.x() + gp_Vec(axes.YDirection()) * point.y());
+}
+
+QVector3D sketchToDisplay(const QPointF &point, const SketchObject &sketch) {
+    const gp_Pnt world = sketchToWorld(point, sketch);
+    return QVector3D(float(world.X()), float(world.Y()), float(world.Z()));
+}
+
+QPointF worldToSketch(const gp_Pnt &point, const SketchObject &sketch) {
+    const gp_Ax3 axes = sketchAxes(sketch);
+    const gp_Vec offset(axes.Location(), point);
+    return QPointF(offset.Dot(gp_Vec(axes.XDirection())), offset.Dot(gp_Vec(axes.YDirection())));
+}
+
+gp_Vec extrusionVector(const SketchObject &sketch, double distance) {
+    if (sketch.plane != kFacePlane && !sketch.customFrame) return extrusionVector(sketch.plane, distance);
+    return gp_Vec(sketchAxes(sketch).Direction()) * distance;
+}
+
+SketchFrame referenceSketchFrame(int plane, const AxesOrientation &o) {
+    const gp_Vec right(o.right[0], o.right[1], o.right[2]), up(o.up[0], o.up[1], o.up[2]), toward(o.toward[0], o.toward[1], o.toward[2]);
+    const gp_Vec axis = plane == 0 ? gp_Vec(0, 0, 1) : plane == 1 ? gp_Vec(0, 1, 0) : gp_Vec(1, 0, 0);
+    // In quale vista standard il piano si vede di fronte: frontale (verso
+    // l'osservatore), superiore (in alto) o destra; la normale guarda chi osserva.
+    const double c[3] = {axis.Dot(right), axis.Dot(up), axis.Dot(toward)};
+    int k = 0;
+    for (int i = 1; i < 3; ++i)
+        if (std::abs(c[i]) > std::abs(c[k])) k = i;
+    const gp_Vec normal = axis * (c[k] < 0.0 ? -1.0 : 1.0);
+    gp_Vec screenUp = k == 1 ? -toward : up;  // nella vista superiore in alto c'e' il fondo
+    screenUp -= normal * screenUp.Dot(normal);
+    if (screenUp.Magnitude() < 1e-9) screenUp = right.Crossed(normal);
+    screenUp.Normalize();
+    const gp_Vec x = screenUp.Crossed(normal);
+    SketchFrame frame;
+    for (int i = 0; i < 3; ++i) {
+        frame.origin[i] = 0.0;
+        frame.xAxis[i] = x.Coord(i + 1);
+        frame.normal[i] = normal.Coord(i + 1);
+    }
+    return frame;
+}
+
+SketchFrame faceSketchFrame(const gp_Pnt &point, const gp_Dir &normal, const gp_Dir &upDirection) {
+    const gp_Vec n(normal);
+    // Origine: proiezione dell'origine del modello sul piano.
+    const gp_Vec origin = n * gp_Vec(gp_Pnt(0, 0, 0), point).Dot(n);
+    const gp_Vec upAxis(upDirection);
+    gp_Vec up = upAxis - n * n.Dot(upAxis);
+    if (up.Magnitude() < 1e-9) up = gp_Vec(0, 1, 0) - n * n.Y();
+    if (up.Magnitude() < 1e-9) up = gp_Vec(1, 0, 0) - n * n.X();
+    up.Normalize();
+    const gp_Vec x = up.Crossed(n);
+    SketchFrame frame;
+    for (int k = 0; k < 3; ++k) {
+        frame.origin[k] = origin.Coord(k + 1);
+        frame.xAxis[k] = x.Coord(k + 1);
+        frame.normal[k] = n.Coord(k + 1);
+    }
+    return frame;
+}
+
 bool buildSketchProfile(const SketchObject &sketch, TopoDS_Shape &profile, bool &closed, QString *error) {
     closed = false;
     try {
@@ -148,7 +220,7 @@ bool buildSketchProfile(const SketchObject &sketch, TopoDS_Shape &profile, bool 
 
         QVector<TopoDS_Face> faces;
         QVector<TopoDS_Wire> openWires;
-        const gp_Pln plane(sketchAxes(sketch.plane));
+        const gp_Pln plane(sketchAxes(sketch));
         for (int index = 1; index <= wires->Length(); ++index) {
             TopoDS_Wire wire = TopoDS::Wire(wires->Value(index));
             ShapeFix_Wire fix;
@@ -226,7 +298,7 @@ TopoDS_Shape buildExtrusion(const SketchObject &sketch, double distance, bool &s
     bool closed = false;
     if (!buildSketchProfile(sketch, profile, closed, error)) return {};
     try {
-        BRepPrimAPI_MakePrism prism(profile, extrusionVector(sketch.plane, distance), Standard_True);
+        BRepPrimAPI_MakePrism prism(profile, extrusionVector(sketch, distance), Standard_True);
         if (!prism.IsDone()) {
             setError(error, QStringLiteral("Estrusione non riuscita."));
             return {};
@@ -313,9 +385,9 @@ TopoDS_Shape buildRevolution(const SketchObject &sketch, int axis, double angleD
         return {};
     }
     try {
-        const gp_Ax3 axes = sketchAxes(sketch.plane);
+        const gp_Ax3 axes = sketchAxes(sketch);
         const gp_Dir worldDirection(gp_Vec(axes.XDirection()) * direction.x() + gp_Vec(axes.YDirection()) * direction.y());
-        const gp_Ax1 revolutionAxis(sketchToWorld(point, sketch.plane), worldDirection);
+        const gp_Ax1 revolutionAxis(sketchToWorld(point, sketch), worldDirection);
         const bool full = std::abs(angleDegrees) >= 360.0 - 1.0e-9;
         std::unique_ptr<BRepPrimAPI_MakeRevol> revolution =
             full ? std::make_unique<BRepPrimAPI_MakeRevol>(profile, revolutionAxis, Standard_True)
@@ -580,6 +652,50 @@ void tessellate(const TopoDS_Shape &shape, int quality, BodyDisplay &display) {
         display.vertices.clear();
         display.normals.clear();
         display.edges.clear();
+    }
+}
+
+bool pickFace(const TopoDS_Shape &shape, const QVector3D &origin, const QVector3D &direction, FaceHit &hit) {
+    if (shape.IsNull()) return false;
+    try {
+        IntCurvesFace_ShapeIntersector intersector;
+        intersector.Load(shape, Precision::Confusion());
+        const gp_Lin line(gp_Pnt(origin.x(), origin.y(), origin.z()), gp_Dir(direction.x(), direction.y(), direction.z()));
+        intersector.Perform(line, 0.0, Precision::Infinite());
+        if (!intersector.IsDone() || intersector.NbPnt() == 0) return false;
+        int nearest = 1;
+        for (int index = 2; index <= intersector.NbPnt(); ++index)
+            if (intersector.WParameter(index) < intersector.WParameter(nearest)) nearest = index;
+        const TopoDS_Face face = intersector.Face(nearest);
+        hit = {};
+        hit.distance = intersector.WParameter(nearest);
+        TopTools_IndexedMapOfShape faces;
+        TopExp::MapShapes(shape, TopAbs_FACE, faces);
+        hit.face = faces.FindIndex(face) - 1;
+        BRepAdaptor_Surface surface(face);
+        if (surface.GetType() == GeomAbs_Plane) {
+            const gp_Pln plane = surface.Plane();
+            gp_Dir normal = plane.Axis().Direction();
+            if (face.Orientation() == TopAbs_REVERSED) normal.Reverse();
+            hit.planar = true;
+            for (int k = 0; k < 3; ++k) {
+                hit.point[k] = plane.Location().Coord(k + 1);
+                hit.normal[k] = normal.Coord(k + 1);
+            }
+        }
+        // Un punto interno di ogni spigolo (le cuciture e gli spigoli degeneri non sono bordi).
+        TopTools_IndexedMapOfShape edges;
+        TopExp::MapShapes(face, TopAbs_EDGE, edges);
+        for (int index = 1; index <= edges.Extent(); ++index) {
+            const TopoDS_Edge edge = TopoDS::Edge(edges(index));
+            if (BRep_Tool::Degenerated(edge) || BRep_Tool::IsClosed(edge, face)) continue;
+            BRepAdaptor_Curve curve(edge);
+            const gp_Pnt p = curve.Value(0.5 * (curve.FirstParameter() + curve.LastParameter()));
+            hit.edges.append({p.X(), p.Y(), p.Z()});
+        }
+        return true;
+    } catch (const Standard_Failure &) {
+        return false;
     }
 }
 
