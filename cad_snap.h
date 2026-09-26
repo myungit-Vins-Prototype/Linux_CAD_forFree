@@ -11,7 +11,8 @@ struct SnapResult {
 };
 
 // Aggancio a estremi, punti medi e punto piu' vicino dei segmenti e ai punti
-// notevoli `points` (estremi delle curve, centri, vertici); altrimenti griglia.
+// notevoli `points` (estremi delle curve, centri, vertici, origine); i punti
+// entro la tolleranza vincono sul punto piu' vicino dei segmenti; altrimenti griglia.
 SnapResult snapSegments(const QPointF &point, const QVector<SketchSegment> &segments,
                         const QVector<QPointF> &points, bool enabled, bool snapToGrid,
                         double gridSpacing, double tolerance);

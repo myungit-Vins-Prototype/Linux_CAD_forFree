@@ -40,6 +40,11 @@ SnapResult snapSegments(const QPointF &point, const QVector<SketchSegment> &segm
             result.point = midpoint;
             result.kind = SnapKind::Midpoint;
         }
+    }
+    // I punti (estremi, punti medi, punti notevoli, origine) vincono sul punto
+    // piu' vicino di un segmento, che e' sempre piu' vicino al cursore.
+    if (result.kind != SnapKind::None) return result;
+    for (const auto &segment : segments) {
         const QPointF delta = segment.second - segment.first;
         const double lengthSquared = QPointF::dotProduct(delta, delta);
         if (lengthSquared > 1.0e-12) {

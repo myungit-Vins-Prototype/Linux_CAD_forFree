@@ -15,12 +15,15 @@
 
 #include "fk_body_check.h"
 #include "fk_boolean.h"
+#include "fk_bspline_surface.h"
+#include "fk_pcurve.h"
 #include "fk_extrude.h"
 #include "fk_revolve.h"
 #include "fk_marching.h"
 #include "fk_mass.h"
 #include "fk_primitives.h"
 #include "fk_quadrature.h"
+#include "fk_tessellate.h"
 #include "fk_test_profiles.h"
 
 using namespace fktest;
@@ -838,11 +841,34 @@ FK_TEST(BooleanHigherOrderContacts) {
     // Blocco che contiene la cupola e ne tocca il polo con la faccia superiore.
     const Body around = makeBox(Frame3(local(-5, -5, -1), frame.zDir(), frame.xDir()), 10, 10, 5);
     checkVolumes(dome, around, vDome, 500, vDome);
-    // Cilindro orizzontale tangente nel polo: ne partono rami tangenti tra
-    // loro che il tracciamento non segue fino al punto. Errore esplicito,
-    // non un risultato sbagliato.
+    // Cilindro orizzontale tangente nel polo (piatto al secondo ordine: la
+    // cupola vi va come z = 4 - rho^3 / 54): ne partono quattro rami tangenti
+    // tra loro a due a due (cuspidi y ~ x^(3/2)), completati fino al polo.
+    // Volume comune esatto: integrale su rho (parametro del meridiano) e theta
+    // di min(z cupola, z cilindro), con il punto di scambio in forma chiusa.
     const Body roller = makeCylinder(Frame3(local(-6, 0, -6), frame.xDir(), frame.yDir()), 10.0, 12.0);
-    FK_CHECK_THROWS(booleanOperation(dome, roller, BooleanOperation::Intersect));
+    {
+        using ForgeCad::Kernel::detail::integrate;
+        const double common = integrate(
+            [&](double t) {
+                Vec2 d[2];
+                spline->evaluate(t, 1, d);
+                const double rho = d[0].x(), zd = d[0].y();
+                if (rho <= 0.0) return 0.0;
+                const double k = (100.0 - (zd + 6.0) * (zd + 6.0)) / (rho * rho);
+                double ring = kTwoPi * zd;
+                if (k < 1.0) {
+                    const double switchAngle = std::asin(std::sqrt(std::max(k, 0.0)));
+                    ring = 4.0 * (switchAngle * zd + integrate([&](double theta) {
+                        const double y = rho * std::sin(theta);
+                        return -6.0 + std::sqrt(100.0 - y * y);
+                    }, switchAngle, kHalfPi, 1e-14));
+                }
+                return -ring * rho * d[1].x();
+            },
+            0.0, 1.0, 1e-13);
+        checkVolumes(dome, roller, vDome, kPi * 100.0 * 12.0, common);
+    }
 }
 
 // Superfici di rivoluzione coassiali che coincidono in parte: una cupola di
@@ -912,4 +938,155 @@ FK_TEST(BooleanCoaxialRevolutions) {
             reportFailure(__FILE__, __LINE__, e.what());
         }
     }
+}
+
+namespace {
+
+// Funzione spline Z(u, v) (grado 3 in u, 2 in v) come superficie
+// S(u, v) = (u, v, Z(u, v)): i poli hanno x e y nelle ascisse di Greville.
+struct SplineHeight {
+    std::vector<double> uKnots, vKnots;
+    std::vector<double> z;  // z[i * nv + j]
+    int nu() const { return int(uKnots.size()) - 4; }
+    int nv() const { return int(vKnots.size()) - 3; }
+    SurfacePtr surface() const {
+        std::vector<Vec3> poles;
+        for (int i = 0; i < nu(); ++i)
+            for (int j = 0; j < nv(); ++j) {
+                const double x = (uKnots[i + 1] + uKnots[i + 2] + uKnots[i + 3]) / 3.0, y = 0.5 * (vKnots[j + 1] + vKnots[j + 2]);
+                poles.push_back(Vec3(x, y, z[std::size_t(i * nv() + j)]));
+            }
+        return std::make_shared<BSplineSurface>(3, 2, uKnots, vKnots, nu(), nv(), poles);
+    }
+    // Volume sotto Z sul dominio: somma dei poli per gli integrali delle basi.
+    double volume() const {
+        double total = 0.0;
+        for (int i = 0; i < nu(); ++i)
+            for (int j = 0; j < nv(); ++j)
+                total += z[std::size_t(i * nv() + j)] * (uKnots[i + 4] - uKnots[i]) / 4.0 * (vKnots[j + 3] - vKnots[j]) / 3.0;
+        return total;
+    }
+};
+
+// Blossom (de Casteljau con parametri diversi a ogni livello) di un
+// polinomio di Bezier sull'intervallo [a, c].
+double blossom(std::vector<double> b, double a, double c, const std::vector<double> &args) {
+    for (std::size_t level = 0; level < args.size(); ++level) {
+        const double t = (args[level] - a) / (c - a);
+        for (std::size_t i = 0; i + 1 < b.size() - level; ++i) b[i] = (1 - t) * b[i] + t * b[i + 1];
+    }
+    return b[0];
+}
+
+// Coefficienti di Bezier sul rettangolo [u0, u1] x [v0, v1] del polinomio
+// dato dai coefficienti `z` (4 x 3) sul rettangolo [a0, a1] x [b0, b1].
+std::vector<double> reparametrized(const std::vector<double> &z, double a0, double a1, double b0, double b1, double u0, double u1, double v0, double v1) {
+    std::vector<double> result(12);
+    for (int i = 0; i < 4; ++i)
+        for (int j = 0; j < 3; ++j) {
+            std::vector<double> uArgs, vArgs;
+            for (int k = 0; k < 3; ++k) uArgs.push_back(k < i ? u1 : u0);
+            for (int k = 0; k < 2; ++k) vArgs.push_back(k < j ? v1 : v0);
+            std::vector<double> column;
+            for (int r = 0; r < 4; ++r) {
+                std::vector<double> row{z[std::size_t(r * 3)], z[std::size_t(r * 3 + 1)], z[std::size_t(r * 3 + 2)]};
+                column.push_back(blossom(row, b0, b1, vArgs));
+            }
+            result[std::size_t(i * 3 + j)] = blossom(column, a0, a1, uArgs);
+        }
+    return result;
+}
+
+// Solido fra il piano z = 0 e la superficie S = (u, v, Z) sul dominio della spline.
+Body slab(const SplineHeight &height) {
+    const SurfacePtr top = height.surface();
+    const double x0 = height.uKnots.front(), x1 = height.uKnots.back(), y0 = height.vKnots.front(), y1 = height.vKnots.back();
+    std::vector<Vec3> vertices{Vec3(x0, y0, 0), Vec3(x1, y0, 0), Vec3(x1, y1, 0), Vec3(x0, y1, 0),
+                               top->point(x0, y0), top->point(x1, y0), top->point(x1, y1), top->point(x0, y1)};
+    auto line = [&](int a, int b) {
+        Body::BuildEdge e;
+        e.start = a;
+        e.end = b;
+        e.curve = std::make_shared<Line<3>>(vertices[std::size_t(a)], vertices[std::size_t(b)] - vertices[std::size_t(a)]);
+        e.range = {0.0, distance(vertices[std::size_t(a)], vertices[std::size_t(b)])};
+        return e;
+    };
+    auto iso = [&](int a, int b, CurvePtr<3> curve, double lo, double hi) {
+        Body::BuildEdge e;
+        e.start = a;
+        e.end = b;
+        e.curve = std::move(curve);
+        e.range = {lo, hi};
+        return e;
+    };
+    std::vector<Body::BuildEdge> edges{line(0, 1), line(1, 2), line(2, 3), line(3, 0), line(0, 4), line(1, 5), line(2, 6), line(3, 7),
+                                       iso(4, 5, top->vIso(y0), x0, x1), iso(5, 6, top->uIso(x1), y0, y1), iso(7, 6, top->vIso(y1), x0, x1),
+                                       iso(4, 7, top->uIso(x0), y0, y1)};
+    auto plane = [&](const Vec3 &origin, const Vec3 &normal, const Vec3 &x) { return std::make_shared<Plane>(Frame3(origin, normal, x)); };
+    auto face = [](SurfacePtr surface, std::vector<std::pair<int, bool>> fins) {
+        Body::BuildFace f;
+        f.surface = std::move(surface);
+        std::vector<Body::BuildFin> loop;
+        for (const auto &[edge, sense] : fins) loop.push_back(Body::BuildFin{edge, sense, nullptr, 0.0});
+        f.loops.push_back(loop);
+        return f;
+    };
+    std::vector<Body::BuildFace> faces{
+        face(plane(vertices[0], Vec3(0, 0, -1), Vec3(1, 0, 0)), {{3, false}, {2, false}, {1, false}, {0, false}}),
+        face(top, {{8, true}, {9, true}, {10, false}, {11, false}}),
+        face(plane(vertices[0], Vec3(0, -1, 0), Vec3(1, 0, 0)), {{0, true}, {5, true}, {8, false}, {4, false}}),
+        face(plane(vertices[1], Vec3(1, 0, 0), Vec3(0, 1, 0)), {{1, true}, {6, true}, {9, false}, {5, false}}),
+        face(plane(vertices[2], Vec3(0, 1, 0), Vec3(-1, 0, 0)), {{2, true}, {7, true}, {10, true}, {6, false}}),
+        face(plane(vertices[3], Vec3(-1, 0, 0), Vec3(0, -1, 0)), {{3, true}, {4, true}, {11, true}, {7, false}})};
+    Body body = Body::build(vertices, edges, faces);
+    computePCurves(body);
+    return body;
+}
+
+}
+
+// Superfici B-spline coincidenti in parte: due solidi con la faccia superiore
+// sulla stessa funzione Z (la seconda e' un'altra B-spline, ricavata dai
+// blossom, con un altro dominio che si sovrappone al primo), poi una seconda
+// superficie che coincide con la prima solo fino a una linea di nodo e poi
+// sale (giunzione C0): la linea di nodo taglia le due facce.
+FK_TEST(BooleanPartialSplineCoincidence) {
+    const std::vector<double> base{1.0, 1.2, 1.1, 1.3, 1.6, 1.2, 0.9, 1.4, 1.5, 1.2, 1.0, 1.3};  // Bezier 4 x 3 su [0, 1]^2
+    const SplineHeight a{{0, 0, 0, 0, 1, 1, 1, 1}, {0, 0, 0, 1, 1, 1}, base};
+    const double u0 = 0.4, u1 = 1.4, v0 = 0.3, v1 = 1.3;
+    const SplineHeight shifted{{u0, u0, u0, u0, u1, u1, u1, u1}, {v0, v0, v0, v1, v1, v1}, reparametrized(base, 0, 1, 0, 1, u0, u1, v0, v1)};
+    const Body slabA = slab(a), slabB = slab(shifted);
+    for (const Body *body : {&slabA, &slabB}) {
+        const std::vector<CheckIssue> issues = checkBody(*body);
+        for (const CheckIssue &issue : issues) reportFailure(__FILE__, __LINE__, describe(issue.code) + ": " + issue.message);
+    }
+    FK_CHECK_NEAR(massProperties(slabA).volume, a.volume(), 1e-11);
+    FK_CHECK_NEAR(massProperties(slabB).volume, shifted.volume(), 1e-11);
+    // Parte comune: Z sulla sovrapposizione [0.4, 1] x [0.3, 1].
+    using ForgeCad::Kernel::detail::integrate;
+    const SurfacePtr topA = a.surface();
+    auto underA = [&](double ulo, double uhi, double vlo, double vhi) {
+        return integrate([&](double u) { return integrate([&](double v) { return topA->point(u, v).z(); }, vlo, vhi, 1e-14); }, ulo, uhi, 1e-14);
+    };
+    checkVolumes(slabA, slabB, a.volume(), shifted.volume(), underA(u0, 1.0, v0, 1.0));
+    // Seconda: due pezze in u con un nodo triplo in 0.7; la prima e' la stessa
+    // funzione, la seconda sale (poli interni alzati: Z_B >= Z_A, uguale solo sul nodo).
+    const double knot = 0.7;
+    std::vector<double> z = reparametrized(base, 0, 1, 0, 1, u0, knot, v0, v1);
+    std::vector<double> second = reparametrized(base, 0, 1, 0, 1, knot, u1, v0, v1);
+    for (int i = 1; i < 4; ++i)
+        for (int j = 0; j < 3; ++j) second[std::size_t(i * 3 + j)] += 0.3;
+    for (int i = 1; i < 4; ++i)  // la prima riga della seconda pezza e' l'ultima della prima
+        for (int j = 0; j < 3; ++j) z.push_back(second[std::size_t(i * 3 + j)]);
+    const SplineHeight diverging{{u0, u0, u0, u0, knot, knot, knot, u1, u1, u1, u1}, {v0, v0, v0, v1, v1, v1}, z};
+    const Body slabC = slab(diverging);
+    FK_CHECK_NEAR(massProperties(slabC).volume, diverging.volume(), 1e-11);
+    checkVolumes(slabA, slabC, a.volume(), diverging.volume(), underA(u0, 1.0, v0, 1.0));
+    // La visualizzazione riesce su tutte le facce.
+    for (const Body *other : {&slabB, &slabC})
+        for (BooleanOperation op : {BooleanOperation::Unite, BooleanOperation::Intersect, BooleanOperation::Subtract}) {
+            TessellationOptions options;
+            options.deflection = 0.005;
+            FK_CHECK(tessellate(booleanOperation(slabA, *other, op), options).failedFaces == 0);
+        }
 }

@@ -40,5 +40,8 @@ int main(int argc, char **argv) {
     QCoreApplication::setApplicationName(QStringLiteral("ForgeCAD"));
     PdfWindow window;
     window.show();
+    // ./forgecad documento.prt apre il documento.
+    const QStringList arguments = application.arguments();
+    if (arguments.size() > 1) window.openDocumentPath(arguments.at(1));
     return application.exec();
 }

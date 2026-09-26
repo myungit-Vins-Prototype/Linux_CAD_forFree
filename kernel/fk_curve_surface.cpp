@@ -269,6 +269,18 @@ struct NumericSearch {
         const Box surfaceBox = patchBox(patch);
         if (!curveBox.padded(tolerance).overlaps(surfaceBox)) return;
         const double dc = curveBox.diagonal(), dsurf = surfaceBox.diagonal();
+        // Tratto (gia' diviso) che giace sulla superficie: un pezzo comune,
+        // non una radice (la suddivisione non finirebbe mai).
+        if (depth >= 4 && dc >= dsurf) {
+            const Interval dom = piece.domain();
+            bool on = true;
+            for (int i = 0; i <= 8 && on; ++i) on = projectPoint(surface, piece.point(dom.lo + dom.length() * i / 8.0)).distance <= tolerance;
+            if (on) {
+                const double a = curveParameter(curve, range, piece, dom.lo), b = curveParameter(curve, range, piece, dom.hi);
+                out.coincident.push_back({std::min(a, b), std::max(a, b)});
+                return;
+            }
+        }
         if ((dc <= 1e-4 * scale && dsurf <= 1e-4 * scale) || depth > 60) {
             leaf(piece, patch);
             return;
@@ -292,6 +304,84 @@ struct NumericSearch {
     }
 };
 
+}
+
+std::vector<Interval> curveOnSurface(const Curve<3> &curve, const Interval &range, const Surface &surface, double tolerance,
+                                     const std::vector<std::pair<CurvePtr<3>, Interval>> &snap) {
+    // Sopra la superficie con i parametri dentro il dominio (oltre il bordo
+    // la superficie finisce anche se il polinomio prosegue).
+    const Interval ud = surface.uDomain(), vd = surface.vDomain();
+    auto on = [&](double t) {
+        const Vec3 x = curve.point(t);
+        const SurfaceProjection q = projectPoint(surface, x);
+        return distance(surface.point(ud.clamp(q.u), vd.clamp(q.v)), x) <= tolerance;
+    };
+    const int count = 64;
+    std::vector<bool> flags(count + 1);
+    for (int k = 0; k <= count; ++k) flags[std::size_t(k)] = on(range.lo + range.length() * k / count);
+    // Linee a cui agganciarsi: bordi del dominio e, sulle B-spline, linee di
+    // nodo (dove un'altra superficie che coincideva puo' separarsi).
+    std::vector<std::pair<CurvePtr<3>, Interval>> lines = snap;
+    if (ud.isFinite() && vd.isFinite()) {
+        std::vector<double> us{ud.lo, ud.hi}, vs{vd.lo, vd.hi};
+        if (surface.type() == SurfaceType::BSpline) {
+            us = surface.uBreakpoints(ud);
+            vs = surface.vBreakpoints(vd);
+        }
+        for (double u : us)
+            if (CurvePtr<3> iso = surface.uIso(u)) lines.emplace_back(iso, vd);
+        for (double v : vs)
+            if (CurvePtr<3> iso = surface.vIso(v)) lines.emplace_back(iso, ud);
+    }
+    // ... e i nodi della curva stessa (un'isoparametrica della superficie che si separa).
+    const std::vector<double> knots = curve.breakpoints(range);
+    Box box = curveBox(curve, range);
+    const double reach = 1e-2 * std::max(box.diagonal(), 1.0);
+    // Passaggio sopra/fuori: bisezione, poi il punto comune alla curva e alla
+    // linea piu' vicina (proiezioni alterne).
+    auto transition = [&](double lo, double hi, bool loOn) {
+        for (int i = 0; i < 60; ++i) {
+            const double middle = 0.5 * (lo + hi);
+            (on(middle) == loOn ? lo : hi) = middle;
+        }
+        const double guess = 0.5 * (lo + hi);
+        double t = guess, best = reach;
+        for (double knot : knots) {
+            const double gap = distance(curve.point(knot), curve.point(guess));
+            if (gap < best && std::fabs(knot - guess) <= 1e-3 * range.length()) {
+                best = gap;
+                t = knot;
+            }
+        }
+        for (const auto &[line, lineRange] : lines) {
+            double s = guess;
+            Vec3 onLine;
+            for (int iteration = 0; iteration < 50; ++iteration) {
+                onLine = projectPoint(*line, curve.point(s), lineRange).point;
+                const double next = projectPoint(curve, onLine, range).parameter;
+                const bool done = std::fabs(next - s) <= 1e-15 * (1.0 + std::fabs(s));
+                s = next;
+                if (done) break;
+            }
+            const double gap = distance(curve.point(s), curve.point(guess));
+            if (distance(curve.point(s), onLine) <= 0.1 * tolerance && gap < best) {
+                best = gap;
+                t = s;
+            }
+        }
+        return t;
+    };
+    std::vector<Interval> result;
+    double start = range.lo;
+    for (int k = 1; k <= count; ++k) {
+        if (flags[std::size_t(k)] == flags[std::size_t(k - 1)]) continue;
+        const double t0 = range.lo + range.length() * (k - 1) / count, t1 = range.lo + range.length() * k / count;
+        const double t = transition(t0, t1, flags[std::size_t(k - 1)]);
+        if (flags[std::size_t(k - 1)]) result.push_back({start, t});
+        else start = t;
+    }
+    if (flags[std::size_t(count)]) result.push_back({start, range.hi});
+    return result;
 }
 
 CurveSurfaceIntersection numericCurveSurface(const Curve<3> &curve, const Interval &range, const Surface &surface, double tolerance,
@@ -319,6 +409,19 @@ CurveSurfaceIntersection numericCurveSurface(const Curve<3> &curve, const Interv
             continue;
         }
         for (const BSplineSurface &patch : patches) search.search(piece, patch, 0);
+    }
+    // Tratti sulla superficie trovati: estremi esatti (i tratti della
+    // suddivisione finiscono in punti qualsiasi), e le radici che vi cadono
+    // dentro non sono attraversamenti.
+    if (!out.coincident.empty()) {
+        out.coincident = curveOnSurface(curve, range, surface, tolerance);
+        std::vector<double> kept;
+        for (double t : out.parameters) {
+            bool inside = false;
+            for (const Interval &piece : out.coincident) inside = inside || (t > piece.lo && t < piece.hi);
+            if (!inside) kept.push_back(t);
+        }
+        out.parameters = std::move(kept);
     }
     sortAndMerge(out, curve, tolerance);
     if (touching) *touching = search.touching;

@@ -229,6 +229,14 @@ FK_TEST(TessellateBooleans) {
     const Frame3 plane(frame.origin(), n, frame.xDir());
     const Body bitangent = makeBox(Frame3(frame.origin() - 10.0 * plane.xDir() - 10.0 * plane.yDir(), n, plane.xDir()), 20, 20, 10);
     checkMesh(booleanOperation(torus, bitangent, BooleanOperation::Intersect), 0.01);
+    // Cupola piatta nel polo e cilindro tangente li' (rami di un contatto di ordine superiore).
+    auto meridian = std::make_shared<BSplineCurve<2>>(3, std::vector<double>{0, 0, 0, 0, 1, 1, 1, 1},
+                                                      std::vector<Vec2>{Vec2(3, 0), Vec2(3, 4), Vec2(2, 4), Vec2(0, 4)});
+    const Body dome = makeRevolution(frame, buildProfile({lineSegment(Vec2(0, 0), Vec2(3, 0)), ProfileSegment{meridian, meridian->domain()},
+                                                          lineSegment(Vec2(0, 4), Vec2(0, 0))}, 1e-9).regions.front());
+    const Body roller = makeCylinder(Frame3(local(-6, 0, -6), frame.xDir(), frame.yDir()), 10.0, 12.0);
+    checkMesh(booleanOperation(dome, roller, BooleanOperation::Intersect), 0.01);
+    checkMesh(booleanOperation(dome, roller, BooleanOperation::Subtract), 0.01);
 }
 
 // Selezione: primo punto colpito da un raggio.

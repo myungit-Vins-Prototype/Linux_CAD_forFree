@@ -40,6 +40,12 @@ add_executable(forgecad
     cad_curve_solver.cpp
     cad_snap.h
     cad_snap.cpp
+    cad_export.h
+    cad_export.cpp
+    cad_document_io.h
+    cad_document_io.cpp
+    cad_sketch_edit.h
+    cad_sketch_edit.cpp
     cad_history.h
     cad_history.cpp
     cad_kernel.h
@@ -58,7 +64,8 @@ target_link_libraries(forgecad PRIVATE
     Qt6::OpenGLWidgets
     OpenGL::GL
     TKernel TKMath TKG2d TKG3d TKGeomBase TKGeomAlgo TKBRep
-    TKTopAlgo TKPrim TKBO TKBool TKMesh TKShHealing
+    TKTopAlgo TKPrim TKBO TKBool TKFillet TKMesh TKShHealing
+    TKXSBase TKDESTEP TKDEIGES TKXCAF TKLCAF TKCAF TKDE  # esportazione STEP/IGES (cad_export)
     forgekernel  # kernel proprio: alternativa a OCCT (menu Opzioni) e banco di prova del menu Debug
 )
 target_include_directories(forgecad SYSTEM PRIVATE ${OpenCASCADE_INCLUDE_DIR})

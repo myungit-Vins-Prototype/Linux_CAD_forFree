@@ -23,7 +23,10 @@ using ForgeBody = std::shared_ptr<const Kernel::Body>;
 // Precisione: tutte le coordinate del modello sono in double (QPointF usa
 // qreal = double). I float (QVector3D) servono solo per la visualizzazione.
 
-enum class DrawingTool { Line, Polyline, Spline, Nurbs, Circle, Arc, Polygon, ConstructionLine };
+// Gli ultimi cinque sono strumenti di modifica (non creano curve): taglia,
+// estendi, spezza, raccordo e smusso tra segmenti.
+// Select: nessuna creazione, il clic seleziona (e' lo strumento all'apertura di uno schizzo).
+enum class DrawingTool { Line, Polyline, Spline, Nurbs, Circle, Arc, Polygon, ConstructionLine, Trim, Extend, Split, Fillet, Chamfer, Select };
 enum class SnapKind { None, Endpoint, Midpoint, Nearest };
 
 enum class ReferencePlane { XY, XZ, YZ };
@@ -94,7 +97,13 @@ struct BodyDisplay {
 };
 
 // Funzione che genera un corpo che non e' una booleana (operation = -1).
-enum class BodyFeature { Extrusion = 0, Revolution = 1, Primitive = 2 };
+enum class BodyFeature { Extrusion = 0, Revolution = 1, Primitive = 2, Blend = 3 };
+
+// Spigolo di un corpo identificato da un suo punto (coordinate del modello):
+// dopo una rigenerazione si prende lo spigolo piu' vicino.
+struct EdgePoint {
+    double x = 0.0, y = 0.0, z = 0.0;
+};
 
 // Solidi elementari. Il sistema del solido ha l'origine in `origin` e gli assi
 // del piano di riferimento `plane` (come gli schizzi: Z = normale del piano).
@@ -120,6 +129,9 @@ struct PrimitiveParameters {
 //    destrorso attorno all'asse orientato; 360 = giro completo) attorno al
 //    segmento `revolveAxis` dello schizzo (-1 = asse X, -2 = asse Y del piano);
 //  - primitiva (feature Primitive): `primitive`;
+//  - raccordo o smusso (feature Blend): gli spigoli `blendEdges` del corpo
+//    `firstBody` raccordati con raggio `blendSize` (o smussati a distanza
+//    `blendSize` se `blendChamfer`);
 //  - booleana: `operation` tra i corpi `firstBody` e `secondBody`.
 // Il B-rep esatto rigenerato dalla definizione e' `shape` (OpenCASCADE) o
 // `forgeBody` (kernel proprio), secondo `kernel`; l'altro resta vuoto.
@@ -135,6 +147,9 @@ struct ExtrusionObject {
     int revolveAxis = -1;
     double revolveAngle = 360.0;
     PrimitiveParameters primitive;
+    bool blendChamfer = false;
+    double blendSize = 1.0;
+    QVector<EdgePoint> blendEdges;
     int firstBody = -1;
     int secondBody = -1;
     TopoDS_Shape shape;

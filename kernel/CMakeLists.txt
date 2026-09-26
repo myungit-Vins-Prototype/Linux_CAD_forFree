@@ -57,6 +57,8 @@ add_library(forgekernel STATIC
     fk_curve_surface.cpp
     fk_revolve.h
     fk_revolve.cpp
+    fk_blend.h
+    fk_blend.cpp
 )
 target_include_directories(forgekernel PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_compile_features(forgekernel PUBLIC cxx_std_17)
@@ -92,10 +94,11 @@ add_executable(forgekernel_tests
     tests/test_nurbs.cpp
     tests/test_curve_surface.cpp
     tests/test_revolve.cpp
+    tests/test_blend.cpp
 )
 target_link_libraries(forgekernel_tests PRIVATE
     forgekernel
-    TKernel TKMath TKG2d TKG3d TKGeomBase TKGeomAlgo TKBRep TKTopAlgo TKPrim TKBO TKMesh TKShHealing
+    TKernel TKMath TKG2d TKG3d TKGeomBase TKGeomAlgo TKBRep TKTopAlgo TKPrim TKBO TKMesh TKShHealing TKFillet TKBool
 )
 target_include_directories(forgekernel_tests SYSTEM PRIVATE ${OpenCASCADE_INCLUDE_DIR})
 target_compile_options(forgekernel_tests PRIVATE -Wall -Wextra -Wpedantic -O2 -g)

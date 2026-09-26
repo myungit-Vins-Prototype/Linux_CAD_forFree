@@ -15,6 +15,10 @@
 #include <BRepGProp.hxx>
 #include <BRepLib_ToolTriangulatedShape.hxx>
 #include <BRepMesh_IncrementalMesh.hxx>
+#include <BRepBuilderAPI_MakeVertex.hxx>
+#include <BRepExtrema_DistShapeShape.hxx>
+#include <BRepFilletAPI_MakeChamfer.hxx>
+#include <BRepFilletAPI_MakeFillet.hxx>
 #include <BRepPrimAPI_MakeBox.hxx>
 #include <BRepPrimAPI_MakeCone.hxx>
 #include <BRepPrimAPI_MakeCylinder.hxx>
@@ -39,6 +43,7 @@
 #include <TopExp.hxx>
 #include <TopExp_Explorer.hxx>
 #include <TopTools_HSequenceOfShape.hxx>
+#include <TopTools_IndexedMapOfShape.hxx>
 #include <TopTools_IndexedDataMapOfShapeListOfShape.hxx>
 #include <TopoDS.hxx>
 #include <TopoDS_Compound.hxx>
@@ -383,6 +388,62 @@ TopoDS_Shape buildPrimitive(const PrimitiveParameters &parameters, QString *erro
         }
         if (shape.IsNull() || !BRepCheck_Analyzer(shape).IsValid()) {
             setError(error, QStringLiteral("La primitiva non e' valida."));
+            return {};
+        }
+        return shape;
+    } catch (const Standard_Failure &failure) {
+        setError(error, failureMessage(failure));
+        return {};
+    }
+}
+
+TopoDS_Shape buildBlend(const TopoDS_Shape &base, const QVector<EdgePoint> &points, double size, bool chamfer, QString *error) {
+    if (base.IsNull()) {
+        setError(error, QStringLiteral("Il corpo da raccordare non ha geometria valida."));
+        return {};
+    }
+    if (points.isEmpty() || !(size > Precision::Confusion())) {
+        setError(error, QStringLiteral("Servono almeno uno spigolo e una misura positiva."));
+        return {};
+    }
+    try {
+        TopTools_IndexedMapOfShape edges;
+        TopExp::MapShapes(base, TopAbs_EDGE, edges);
+        Bnd_Box box;
+        BRepBndLib::Add(base, box);
+        const double reach = 1e-3 * std::max(1.0, std::sqrt(box.SquareExtent()));
+        std::unique_ptr<BRepFilletAPI_MakeFillet> fillet;
+        std::unique_ptr<BRepFilletAPI_MakeChamfer> bevel;
+        if (chamfer) bevel = std::make_unique<BRepFilletAPI_MakeChamfer>(base);
+        else fillet = std::make_unique<BRepFilletAPI_MakeFillet>(base);
+        for (const EdgePoint &point : points) {
+            const TopoDS_Shape vertex = BRepBuilderAPI_MakeVertex(gp_Pnt(point.x, point.y, point.z)).Shape();
+            int best = 0;
+            double closest = reach;
+            for (int index = 1; index <= edges.Extent(); ++index) {
+                BRepExtrema_DistShapeShape distance(vertex, edges(index));
+                if (distance.IsDone() && distance.Value() < closest) {
+                    closest = distance.Value();
+                    best = index;
+                }
+            }
+            if (best == 0) {
+                setError(error, QStringLiteral("Uno degli spigoli scelti non esiste piu' nel corpo."));
+                return {};
+            }
+            if (chamfer) bevel->Add(size, TopoDS::Edge(edges(best)));
+            else fillet->Add(size, TopoDS::Edge(edges(best)));
+        }
+        BRepBuilderAPI_MakeShape &maker = chamfer ? static_cast<BRepBuilderAPI_MakeShape &>(*bevel) : static_cast<BRepBuilderAPI_MakeShape &>(*fillet);
+        maker.Build();
+        if (!maker.IsDone()) {
+            setError(error, chamfer ? QStringLiteral("Smusso non riuscito (distanza troppo grande?).")
+                                    : QStringLiteral("Raccordo non riuscito (raggio troppo grande?)."));
+            return {};
+        }
+        const TopoDS_Shape shape = maker.Shape();
+        if (!BRepCheck_Analyzer(shape).IsValid()) {
+            setError(error, QStringLiteral("Il raccordo ha prodotto una forma non valida."));
             return {};
         }
         return shape;

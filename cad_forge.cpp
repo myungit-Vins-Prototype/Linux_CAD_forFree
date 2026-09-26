@@ -7,6 +7,7 @@
 #include <exception>
 
 #include "cad_kernel.h"
+#include "fk_blend.h"
 #include "fk_boolean.h"
 #include "fk_bspline.h"
 #include "fk_classify.h"
@@ -251,6 +252,37 @@ ForgeBody forgePrimitive(const PrimitiveParameters &parameters, QString *error) 
         return std::make_shared<const Body>(std::move(body));
     } catch (const std::exception &failure) {
         setError(error, QStringLiteral("Primitiva non riuscita: %1").arg(QString::fromUtf8(failure.what())));
+        return nullptr;
+    }
+}
+
+ForgeBody forgeBlend(const ForgeBody &base, const QVector<EdgePoint> &points, double size, bool chamfer, QString *error) {
+    if (!base) {
+        setError(error, QStringLiteral("Il corpo da raccordare non ha geometria valida."));
+        return nullptr;
+    }
+    if (points.isEmpty()) {
+        setError(error, QStringLiteral("Nessuno spigolo scelto."));
+        return nullptr;
+    }
+    try {
+        Box box;
+        for (VertexId v : base->vertices()) box.add(base->vertex(v).point);
+        for (FaceId f : base->faces()) box.add(faceBox(*base, f));
+        const double reach = 1e-3 * std::max(1.0, box.diagonal());
+        std::vector<EdgeId> edges;
+        for (const EdgePoint &point : points) {
+            const EdgeId e = nearestEdge(*base, Vec3(point.x, point.y, point.z), reach);
+            if (!e.valid()) {
+                setError(error, QStringLiteral("Uno degli spigoli scelti non esiste piu' nel corpo."));
+                return nullptr;
+            }
+            if (std::find(edges.begin(), edges.end(), e) == edges.end()) edges.push_back(e);
+        }
+        return std::make_shared<const Body>(blendEdges(*base, edges, size, chamfer));
+    } catch (const std::exception &failure) {
+        setError(error, QStringLiteral("%1 non riuscito: %2").arg(chamfer ? QStringLiteral("Smusso") : QStringLiteral("Raccordo"),
+                                                               QString::fromUtf8(failure.what())));
         return nullptr;
     }
 }

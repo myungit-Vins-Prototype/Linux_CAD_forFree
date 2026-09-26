@@ -12,6 +12,7 @@
 
 #include <cstdio>
 #include <cstdlib>
+#include "fk_bspline_surface.h"
 #include "fk_curve_algo.h"
 #include "fk_curve_ops.h"
 #include "fk_marching.h"
@@ -386,4 +387,34 @@ FK_TEST(MarchingGeneralSurfacesAgainstOcct) {
         compareWithOcct(patch, sphere, bounds, compared);
     }
     FK_CHECK(compared >= 24);
+}
+
+// Contatto di ordine superiore lontano dai poli: il piano z = 0 tangente alla
+// "sella di scimmia" z = u^3 - 3 u v^2 (pezza di Bezier esatta, poli dai
+// blossom) nell'origine. Le superfici coincidono al secondo ordine e vi si
+// incrociano tre rette (u = 0, u = +-sqrt(3) v), lisce nel punto: il
+// tracciamento le attraversa (le booleane dividono le curve nei punti comuni).
+FK_TEST(MarchingHigherOrderContactBranches) {
+    std::vector<Vec3> poles;
+    for (int i = 0; i <= 3; ++i)
+        for (int j = 0; j <= 2; ++j) {
+            const double um = (2.0 * i - 3.0) / 3.0, u3 = (3 - i) % 2 ? -1.0 : 1.0, vm = j - 1.0, v2 = (2 - j) % 2 ? -1.0 : 1.0;
+            poles.push_back(Vec3(um, vm, u3 - 3.0 * um * v2));
+        }
+    const BSplineSurface saddle(3, 2, {-1, -1, -1, -1, 1, 1, 1, 1}, {-1, -1, -1, 1, 1, 1}, 4, 3, poles);
+    FK_CHECK_NEAR(saddle.point(0.3, -0.7).z(), 0.027 - 3.0 * 0.3 * 0.49, 1e-14);
+    const Plane plane{Frame3()};
+    const SurfaceIntersection result = intersectSurfaces(plane, saddle, cube(1.5), {});
+    FK_CHECK(result.tangentPoints.empty());
+    FK_CHECK(result.curves.size() == 3);
+    for (const IntersectionCurve &curve : result.curves) {
+        FK_CHECK(projectPoint(*curve.curve, Vec3(0, 0, 0), curve.range).distance <= 1e-9);
+        for (int k = 0; k <= 16; ++k) {
+            const Vec3 p = curve.curve->point(curve.range.lo + curve.range.length() * k / 16.0);
+            const double lines = std::min({std::fabs(p.x()), std::fabs(p.x() - std::sqrt(3.0) * p.y()), std::fabs(p.x() + std::sqrt(3.0) * p.y())});
+            FK_CHECK(lines <= 1e-8);
+            FK_CHECK(std::fabs(p.z()) <= 1e-8);
+        }
+    }
+    checkOnSurfaces(result, plane, saddle);
 }

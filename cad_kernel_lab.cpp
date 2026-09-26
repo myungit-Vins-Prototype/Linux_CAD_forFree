@@ -448,6 +448,13 @@ Body documentBody(const QVector<SketchObject> &sketches, const QVector<Extrusion
         const Body second = documentBody(sketches, bodies, object.secondBody, depth + 1);
         return booleanOperation(first, second, BooleanOperation(object.operation));
     }
+    if (object.feature == BodyFeature::Blend) {
+        QString error;
+        const ForgeBody base = std::make_shared<const Body>(documentBody(sketches, bodies, object.firstBody, depth + 1));
+        const ForgeBody blend = forgeBlend(base, object.blendEdges, object.blendSize, object.blendChamfer, &error);
+        if (!blend) throw std::invalid_argument(error.toStdString());
+        return *blend;
+    }
     if (object.feature == BodyFeature::Primitive) {
         QString error;
         const ForgeBody primitive = forgePrimitive(object.primitive, &error);

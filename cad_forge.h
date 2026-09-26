@@ -34,6 +34,9 @@ ForgeBody forgeRevolution(const SketchObject &sketch, int axis, double angleDegr
 // Solido elementare (parallelepipedo, cilindro, sfera, cono, toro), come buildPrimitive.
 ForgeBody forgePrimitive(const PrimitiveParameters &parameters, QString *error);
 
+// Raccordo o smusso degli spigoli di `base` piu' vicini ai punti (fk_blend).
+ForgeBody forgeBlend(const ForgeBody &base, const QVector<EdgePoint> &points, double size, bool chamfer, QString *error);
+
 // Booleana esatta (con la fusione delle facce sulla stessa superficie).
 ForgeBody forgeBoolean(const ForgeBody &first, const ForgeBody &second, BooleanOperation operation, QString *error);
 

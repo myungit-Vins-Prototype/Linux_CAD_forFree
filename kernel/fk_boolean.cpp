@@ -1,4 +1,5 @@
 #include "fk_boolean.h"
+#include "fk_curve_surface.h"
 
 #include <algorithm>
 #include <cmath>
@@ -161,6 +162,7 @@ private:
     // Superfici che coincidono solo in parte (fianchi estrusi in direzioni
     // parallele con sezioni sovrapposte in un tratto), nei due ordini.
     std::set<std::pair<const Surface *, const Surface *>> partial_;
+    std::vector<IntersectionCurve> partialCuts_;
 };
 
 // --- 1. archi d'intersezione ----------------------------------------------------
@@ -378,8 +380,13 @@ void BooleanBuilder::surfaceArcs(FaceId fa, FaceId fb) {
         GeneralizedCylinder ga, gb;
         const Surface &sa = *bodies_[0].face(fa).surface, &sb = *bodies_[1].face(fb).surface;
         const bool parallel = generalizedCylinder(sa, ga) && generalizedCylinder(sb, gb) && norm(cross(ga.direction, gb.direction)) <= 1e-12;
-        if (!parallel && !coaxialRotational(sa, sb, tolerance_))
+        const bool spline = sa.type() == SurfaceType::BSpline || sb.type() == SurfaceType::BSpline;
+        if (!parallel && !spline && !coaxialRotational(sa, sb, tolerance_))
             throw std::domain_error("booleanOperation: superfici non piane coincidenti in parte non gestite");
+        // Tagli della zona comune (linee di nodo): gli estremi dei tratti
+        // comuni degli edge vi si agganciano (dove una B-spline si separa
+        // dall'altra con continuita' alta lo scarto cresce lentamente).
+        for (const IntersectionCurve &cut : intersection.curves) partialCuts_.push_back(cut);
         partial_.insert({&sa, &sb});
         partial_.insert({&sb, &sa});
         coincidentArcs(fa, fb, true);
@@ -412,6 +419,12 @@ void BooleanBuilder::surfaceArcs(FaceId fa, FaceId fb) {
             through = through || (projection.distance <= 10.0 * tolerance_ && (curve.closed || (projection.parameter > curve.range.lo + margin
                                                                                                && projection.parameter < curve.range.hi - margin)));
         }
+        // Rami che arrivano nel punto (completati dal tracciamento): almeno due estremi.
+        int ends = 0;
+        for (const IntersectionCurve &curve : intersection.curves)
+            if (!curve.closed)
+                for (double t : {curve.range.lo, curve.range.hi}) ends += distance(curve.curve->point(t), x) <= 10.0 * tolerance_;
+        through = through || ends >= 2;
         if (!through) throw std::domain_error("booleanOperation: rami d'intersezione da un contatto tangente di ordine superiore non gestiti");
         crossings.push_back(x);
     }
@@ -483,7 +496,11 @@ std::vector<Interval> BooleanBuilder::coincidentRanges(const Curve<3> &curve, co
             return {range};
         }
     }
-    return intersectCurveSurface(curve, range, surface, tolerance_).coincident;
+    if (surface.type() != SurfaceType::BSpline) return intersectCurveSurface(curve, range, surface, tolerance_).coincident;
+    // B-spline: gli estremi si agganciano anche ai tagli della zona comune.
+    std::vector<std::pair<CurvePtr<3>, Interval>> snap;
+    for (const IntersectionCurve &cut : partialCuts_) snap.emplace_back(cut.curve, cut.range);
+    return curveOnSurface(curve, range, surface, tolerance_, snap);
 }
 
 void BooleanBuilder::coincidentArcs(FaceId fa, FaceId fb, bool partial) {
@@ -877,10 +894,14 @@ std::vector<SubFace> BooleanBuilder::buildSubFaces(int k, FaceId f, const std::v
         finishCycle(surface, face.sense, probe);
         return probe.wrap != 0 && probe.wrapV != 0;
     };
+    // Nei poli un contorno che ci ripassa (i rami di un contatto di ordine
+    // superiore nel polo, tangenti tra loro) non si divide: nello spazio
+    // (u, v) i suoi passaggi sono tratti distinti della linea del polo.
+    const std::vector<SurfacePole> facePoles = surfacePoles(surface);
     std::function<void(const std::vector<int> &)> addCycle = [&](const std::vector<int> &sequence) {
         for (std::size_t i = 0; i < sequence.size(); ++i)
             for (std::size_t j = i + 1; j < sequence.size(); ++j)
-                if (from[sequence[i]] == from[sequence[j]]) {
+                if (from[sequence[i]] == from[sequence[j]] && poleIndex(facePoles, nodes[from[sequence[i]]], tolerance_) < 0) {
                     std::vector<int> inner(sequence.begin() + i, sequence.begin() + j), outer(sequence.begin(), sequence.begin() + i);
                     outer.insert(outer.end(), sequence.begin() + j, sequence.end());
                     if (doublyPeriodic && (windsBothWays(inner) || windsBothWays(outer))) continue;
@@ -1353,7 +1374,10 @@ Body BooleanBuilder::run() {
                 for (Piece &existing : list) {
                     const bool sameEnds = (distance(existing.start(), piece.start()) <= tolerance_ && distance(existing.end(), piece.end()) <= tolerance_)
                         || (distance(existing.start(), piece.end()) <= tolerance_ && distance(existing.end(), piece.start()) <= tolerance_);
-                    if (sameEnds && distance(existing.middle(), piece.middle()) <= 10.0 * tolerance_) {
+                    // Stessa geometria anche con parametri diversi (un'isoparametrica
+                    // esatta e la stessa linea tracciata): il punto medio dell'uno sull'altro.
+                    if (sameEnds && (distance(existing.middle(), piece.middle()) <= 10.0 * tolerance_
+                                     || projectPoint(*existing.curve, piece.middle(), existing.range).distance <= 10.0 * tolerance_)) {
                         duplicate = true;
                         if (existing.coplanar && !piece.coplanar) existing = piece;  // meglio un taglio trasversale
                         break;
@@ -1404,7 +1428,7 @@ Body BooleanBuilder::run() {
             // avanti e indietro di seguito e non divide nulla.
             auto sameReversed = [&](const Piece &a, const Piece &b) {
                 return distance(a.start(), b.end()) <= tolerance_ && distance(a.end(), b.start()) <= tolerance_
-                    && distance(a.middle(), b.middle()) <= 10.0 * tolerance_;
+                    && (distance(a.middle(), b.middle()) <= 10.0 * tolerance_ || projectPoint(*a.curve, b.middle(), a.range).distance <= 10.0 * tolerance_);
             };
             for (bool removed = true; removed && pieces.size() >= 2;) {
                 removed = false;
@@ -1425,7 +1449,8 @@ Body BooleanBuilder::run() {
                 int index = -1;
                 for (std::size_t e = 0; e < edges.size(); ++e) {
                     const bool sameEnds = (edges[e].start == vs && edges[e].end == ve) || (edges[e].start == ve && edges[e].end == vs);
-                    if (sameEnds && distance(edgeMiddles[e], middle) <= 10.0 * tolerance_) {
+                    if (sameEnds && (distance(edgeMiddles[e], middle) <= 10.0 * tolerance_
+                                     || projectPoint(*edges[e].curve, middle, edges[e].range).distance <= 10.0 * tolerance_)) {
                         index = int(e);
                         break;
                     }
@@ -1474,8 +1499,22 @@ Body BooleanBuilder::run() {
                 fin.pcurveTolerance = std::max(found->second.deviation, std::numeric_limits<double>::min());
             }
     }
+    // Estremi che toccano il vertice solo entro la tolleranza della booleana
+    // (punti uniti da curve diverse: un'isoparametrica esatta e una curva
+    // tracciata): l'edge diventa tollerante.
+    auto tolerantEnds = [&](Body &body) {
+        for (EdgeId e : body.edges()) {
+            Edge &edge = body.edge(e);
+            if (!edge.curve) continue;
+            const Vec3 a = edge.curve->point(edge.range.lo), b = edge.curve->point(edge.range.hi);
+            const double gap = std::max(distance(a, body.vertex(body.edgeStart(e)).point), distance(b, body.vertex(body.edgeEnd(e)).point));
+            if (gap > edge.tolerance && gap <= tolerance_) edge.tolerance = 1.01 * gap;
+        }
+    };
+    tolerantEnds(result);
     computePCurves(result);
     if (unify_) result = unifySameDomain(result, tolerance_);
+    tolerantEnds(result);
     const std::vector<CheckIssue> issues = checkBody(result);
     if (!issues.empty())
         throw std::domain_error("booleanOperation: risultato non valido (" + describe(issues.front().code) + ": " + issues.front().message + ")");

@@ -52,6 +52,10 @@ gp_Ax3 primitiveAxes(const PrimitiveParameters &parameters);
 QString primitiveError(const PrimitiveParameters &parameters);
 TopoDS_Shape buildPrimitive(const PrimitiveParameters &parameters, QString *error);
 
+// Raccordo (BRepFilletAPI_MakeFillet) o smusso (BRepFilletAPI_MakeChamfer)
+// degli spigoli di `base` piu' vicini ai punti dati.
+TopoDS_Shape buildBlend(const TopoDS_Shape &base, const QVector<EdgePoint> &points, double size, bool chamfer, QString *error);
+
 // Operazione booleana esatta; le facce complanari del risultato vengono unificate.
 TopoDS_Shape booleanOperation(const TopoDS_Shape &first, const TopoDS_Shape &second,
                               BooleanOperation operation, QString *error);
