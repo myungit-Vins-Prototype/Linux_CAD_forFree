@@ -30,7 +30,7 @@ using ForgeBody = std::shared_ptr<const Kernel::Body>;
 // segmenti orizzontali e verticali collegati; Ellipse e' una curva. I valori
 // sono salvati nei file: i nuovi strumenti vanno in fondo.
 enum class DrawingTool { Line, Polyline, Spline, Nurbs, Circle, Arc, Polygon, ConstructionLine, Trim, Extend, Split, Fillet, Chamfer, Select,
-                         Rectangle, CenterRectangle, Ellipse };
+                         Rectangle, CenterRectangle, Ellipse, ThreePointArc, TangentArc };
 enum class SnapKind { None, Endpoint, Midpoint, Nearest };
 
 enum class ReferencePlane { XY, XZ, YZ };
@@ -51,6 +51,7 @@ using SketchSegment = QPair<QPointF, QPointF>;
 //    punto sta sulla perpendicolare)
 //  - Rectangle / CenterRectangle: due angoli / centro e angolo (solo per
 //    l'anteprima: il rettangolo diventa quattro segmenti)
+//  - ThreePointArc / TangentArc: solo strumenti di disegno, creano un Arc
 // `samples` e' solo un'approssimazione per disegnare e selezionare a schermo.
 // Le entita' di costruzione (`construction`) non fanno parte dei profili:
 // servono da riferimento (assi di rivoluzione, agganci).

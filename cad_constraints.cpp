@@ -133,8 +133,49 @@ QVector<ConstraintRef> ordered(const SketchObject &sketch, QVector<ConstraintRef
     return refs;
 }
 
-// Equazioni del vincolo (lunghezze) nelle coordinate del sistema.
-void equations(const System &s, const SketchConstraint &c, QVector<double> &out) {
+// Punto di contatto di una tangenza: un punto della prima entita' e uno della
+// seconda uniti da un vincolo di coincidenza, entrambi sul cerchio o sulla
+// retta (estremi dei segmenti, estremi degli archi, punto del raggio dei
+// cerchi). Con il contatto la tangenza si scrive nel punto: la retta
+// perpendicolare al raggio, o i due centri allineati con il punto. La forma
+// senza contatto (distanza centro-retta uguale al raggio, distanza dei centri
+// uguale alla somma o alla differenza dei raggi) insieme alla coincidenza nel
+// punto di contatto e' degenere: se la retta gira attorno al punto la distanza
+// cambia solo al secondo ordine, il Jacobiano perde rango (gradi di liberta'
+// contati in piu') e il risolutore converge male.
+struct TangentContact {
+    bool found = false;
+    ConstraintRef first, second;  // i punti coincidenti della prima e della seconda entita'
+};
+
+bool onTangentShape(const SketchObject &sketch, const ConstraintRef &point, const ConstraintRef &entity) {
+    if (point.kind != entity.kind || point.element != entity.element || point.point < 0) return false;
+    if (point.kind == 0) return point.point <= 1;
+    if (point.kind != 1 || point.element < 0 || point.element >= sketch.curves.size()) return false;
+    const DrawingTool tool = sketch.curves.at(point.element).tool;
+    return (tool == DrawingTool::Arc && (point.point == 1 || point.point == 2)) || (tool == DrawingTool::Circle && point.point == 1);
+}
+
+TangentContact tangentContact(const SketchObject &sketch, const SketchConstraint &c) {
+    TangentContact contact;
+    if (c.type != ConstraintType::Tangent) return contact;
+    for (const SketchConstraint &k : sketch.geometricConstraints) {
+        if (k.type != ConstraintType::Coincident) continue;
+        if (onTangentShape(sketch, k.first, c.first) && onTangentShape(sketch, k.second, c.second)) {
+            contact = {true, k.first, k.second};
+            return contact;
+        }
+        if (onTangentShape(sketch, k.second, c.first) && onTangentShape(sketch, k.first, c.second)) {
+            contact = {true, k.second, k.first};
+            return contact;
+        }
+    }
+    return contact;
+}
+
+// Equazioni del vincolo (lunghezze) nelle coordinate del sistema. Per la
+// tangenza `contact` e' il punto di contatto (se nullo si cerca).
+void equations(const System &s, const SketchConstraint &c, QVector<double> &out, const TangentContact *contact = nullptr) {
     const SketchObject &sketch = s.sketch();
     const Shape a = shapeOf(sketch, c.first), b = shapeOf(sketch, c.second);
     const auto lineOf = [&](const ConstraintRef &ref, QPointF &p, QPointF &q) { s.line(ref, p, q); };
@@ -224,6 +265,26 @@ void equations(const System &s, const SketchConstraint &c, QVector<double> &out)
         return;
     }
     case ConstraintType::Tangent: {
+        const TangentContact found = contact ? *contact : tangentContact(sketch, c);
+        if (found.found && (a == Shape::Line || b == Shape::Line)) {
+            const bool lineFirst = a == Shape::Line;
+            QPointF q0, q1, center;
+            double r;
+            lineOf(lineFirst ? c.first : c.second, q0, q1);
+            s.circle(lineFirst ? c.second : c.first, center, r);
+            const QPointF d = q1 - q0, touch = s.refPoint(lineFirst ? found.second : found.first);
+            out << dot(d, center - touch) / std::max(length(d), 1e-300);
+            return;
+        }
+        if (found.found) {
+            QPointF c1, c2;
+            double r1, r2;
+            s.circle(c.first, c1, r1);
+            s.circle(c.second, c2, r2);
+            const QPointF touch = s.refPoint(found.first);
+            out << cross(c1 - touch, c2 - touch) / std::max(length(c1 - touch), 1e-300);
+            return;
+        }
         if (a == Shape::Line || b == Shape::Line) {
             const ConstraintRef &lineRef = a == Shape::Line ? c.first : c.second, &circleRef = a == Shape::Line ? c.second : c.first;
             QPointF q0, q1, center;
@@ -610,7 +671,8 @@ QVector<Block> buildBlocks(const System &system, const SketchObject &sketch, con
         if (c->type == ConstraintType::Concentric) {
             block.points << system.curvePoint(c->first.element, 0) << system.curvePoint(c->second.element, 0);
         }
-        block.evaluate = [&system, c](QVector<double> &out) { equations(system, *c, out); };
+        const TangentContact contact = tangentContact(sketch, *c);
+        block.evaluate = [&system, c, contact](QVector<double> &out) { equations(system, *c, out, &contact); };
         blocks.append(block);
     }
     for (int curve = 0; curve < sketch.curves.size(); ++curve) {

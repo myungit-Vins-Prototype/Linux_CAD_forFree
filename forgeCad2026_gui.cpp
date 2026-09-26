@@ -7,6 +7,7 @@
 #include "cad_forge.h"
 #include "fk_topology.h"
 #include "cad_history.h"
+#include "cad_icons.h"
 #include "cad_kernel.h"
 #include "cad_kernel_lab.h"
 #include "cad_sketch_edit.h"
@@ -56,6 +57,7 @@
 #include <QStatusBar>
 #include <QStringList>
 #include <QToolBar>
+#include <QToolButton>
 #include <QTimer>
 #include <QTreeWidget>
 #include <QVector>
@@ -70,6 +72,7 @@
 #include <limits>
 #include <functional>
 #include <memory>
+#include <qnamespace.h>
 #include <utility>
 
 struct SelectedPoint {
@@ -172,6 +175,7 @@ public:
         if (changed && toolChangedCallback_) toolChangedCallback_(tool);
         hasPendingPoint_ = false;
         curveControlPoints_.clear();
+        tangentStarts_.clear();
         blendFirst_ = -1;
         trimPreview_.clear();
         if (!panKeyHeld_) unsetCursor();
@@ -1192,6 +1196,7 @@ protected:
         drawSketch();
         drawSnapMarkers();
         if (axesOnTop_) drawAxes();
+        makeOpaque();
         if (scene) {
             scene->release();
             QOpenGLFramebufferObject::blitFramebuffer(resolveBuffer_.get(), msaaBuffer_.get());
@@ -1406,6 +1411,24 @@ protected:
                 curveControlPoints_.append(point);
                 hasPendingPoint_ = true;
                 if (curveControlPoints_.size() >= 2) finalizeRectangle();
+                update();
+                return;
+            }
+            if (drawingTool_ == DrawingTool::ThreePointArc || drawingTool_ == DrawingTool::TangentArc) {
+                const QPointF point = snapPoint(rawPoint);
+                if (drawingTool_ == DrawingTool::TangentArc && curveControlPoints_.isEmpty()) {
+                    tangentStarts_ = tangentStartsAt(point);
+                    if (tangentStarts_.isEmpty()) {
+                        showStatus(QStringLiteral("Arco tangente: clic sull'estremo di un segmento o di un arco"));
+                        return;
+                    }
+                }
+                if (!curveControlPoints_.isEmpty()
+                    && pointDistance(point, curveControlPoints_.last()) <= ForgeCad::kSketchConnectionTolerance) return;
+                curveControlPoints_.append(point);
+                hasPendingPoint_ = true;
+                const int requiredPoints = drawingTool_ == DrawingTool::ThreePointArc ? 3 : 2;
+                if (curveControlPoints_.size() >= requiredPoints) finalizeDrawnArc();
                 update();
                 return;
             }
@@ -1819,49 +1842,178 @@ protected:
     // curve; punto medio o punto su un altro segmento, punto su un cerchio,
     // arco o ellisse.
     void recordCoincidences(SketchObject &sketch, int segment) {
-        const QPointF ends[2] = {sketch.segments.at(segment).first, sketch.segments.at(segment).second};
+        recordPointCoincidences(sketch, {0, segment, 0}, sketch.segments.at(segment).first);
+        recordPointCoincidences(sketch, {0, segment, 1}, sketch.segments.at(segment).second);
+    }
+
+    // Vincoli del punto `here` (in `point`) con le altre entita': coincidente
+    // con i punti che tocca, altrimenti punto medio o punto su un segmento, o
+    // su un cerchio o arco.
+    void recordPointCoincidences(SketchObject &sketch, const ConstraintRef &here, const QPointF &point) {
         const double tolerance = ForgeCad::kSketchConnectionTolerance;
-        const auto add = [&](ConstraintType type, const ConstraintRef &a, const ConstraintRef &b) {
+        const auto add = [&](ConstraintType type, const ConstraintRef &b) {
             SketchConstraint c;
             c.type = type;
-            c.first = a;
+            c.first = here;
             c.second = b;
             sketch.geometricConstraints.append(c);
         };
-        for (int end = 0; end < 2; ++end) {
-            const ConstraintRef here{0, segment, end};
-            bool onPoint = false;
-            for (int other = 0; other < sketch.segments.size(); ++other) {
-                if (other == segment) continue;
-                const QPointF points[2] = {sketch.segments.at(other).first, sketch.segments.at(other).second};
-                for (int k = 0; k < 2; ++k)
-                    if (pointDistance(points[k], ends[end]) <= tolerance) {
-                        add(ConstraintType::Coincident, here, {0, other, k});
-                        onPoint = true;
-                    }
-            }
-            for (int curve = 0; curve < sketch.curves.size(); ++curve)
-                for (int k = 0; k < sketch.curves.at(curve).controlPoints.size(); ++k)
-                    if (pointDistance(sketch.curves.at(curve).controlPoints.at(k), ends[end]) <= tolerance) {
-                        add(ConstraintType::Coincident, here, {1, curve, k});
-                        onPoint = true;
-                    }
-            if (onPoint) continue;
-            for (int other = 0; other < sketch.segments.size(); ++other) {
-                if (other == segment) continue;
-                const SketchSegment &s = sketch.segments.at(other);
-                if (distanceToSegment(ends[end], s.first, s.second) > 1e-9) continue;
-                add(pointDistance(ends[end], 0.5 * (s.first + s.second)) <= tolerance ? ConstraintType::Midpoint : ConstraintType::PointOnCurve,
-                    here, {0, other, -1});
-            }
-            for (int curve = 0; curve < sketch.curves.size(); ++curve) {
-                const CurveObject &c = sketch.curves.at(curve);
-                if (c.construction && c.tool == DrawingTool::Polygon) continue;
-                if ((c.tool == DrawingTool::Circle || c.tool == DrawingTool::Arc) && c.controlPoints.size() >= 2
-                    && std::abs(pointDistance(ends[end], c.controlPoints.at(0)) - pointDistance(c.controlPoints.at(1), c.controlPoints.at(0))) <= 1e-9)
-                    add(ConstraintType::PointOnCurve, here, {1, curve, -1});
+        const auto self = [&](int kind, int element) { return here.kind == kind && here.element == element; };
+        bool onPoint = false;
+        for (int other = 0; other < sketch.segments.size(); ++other) {
+            if (self(0, other)) continue;
+            const QPointF points[2] = {sketch.segments.at(other).first, sketch.segments.at(other).second};
+            for (int k = 0; k < 2; ++k)
+                if (pointDistance(points[k], point) <= tolerance) {
+                    add(ConstraintType::Coincident, {0, other, k});
+                    onPoint = true;
+                }
+        }
+        for (int curve = 0; curve < sketch.curves.size(); ++curve) {
+            if (self(1, curve)) continue;
+            for (int k = 0; k < sketch.curves.at(curve).controlPoints.size(); ++k)
+                if (pointDistance(sketch.curves.at(curve).controlPoints.at(k), point) <= tolerance) {
+                    add(ConstraintType::Coincident, {1, curve, k});
+                    onPoint = true;
+                }
+        }
+        if (onPoint) return;
+        for (int other = 0; other < sketch.segments.size(); ++other) {
+            if (self(0, other)) continue;
+            const SketchSegment &s = sketch.segments.at(other);
+            if (distanceToSegment(point, s.first, s.second) > 1e-9) continue;
+            add(pointDistance(point, 0.5 * (s.first + s.second)) <= tolerance ? ConstraintType::Midpoint : ConstraintType::PointOnCurve,
+                {0, other, -1});
+        }
+        for (int curve = 0; curve < sketch.curves.size(); ++curve) {
+            if (self(1, curve)) continue;
+            const CurveObject &c = sketch.curves.at(curve);
+            if (c.construction && c.tool == DrawingTool::Polygon) continue;
+            if ((c.tool == DrawingTool::Circle || c.tool == DrawingTool::Arc) && c.controlPoints.size() >= 2
+                && std::abs(pointDistance(point, c.controlPoints.at(0)) - pointDistance(c.controlPoints.at(1), c.controlPoints.at(0))) <= 1e-9
+                && (c.tool != DrawingTool::Arc || onArc(c, std::atan2(point.y() - c.controlPoints.at(0).y(), point.x() - c.controlPoints.at(0).x()))))
+                add(ConstraintType::PointOnCurve, {1, curve, -1});
+        }
+    }
+
+    // Arco per tre punti (inizio, fine, un punto di passaggio) nel formato
+    // dell'arco: centro, inizio, fine in senso antiorario. Il centro e' il
+    // circocentro dei tre punti; se il passaggio sta a destra della corda
+    // inizio -> fine l'arco gira in senso orario e i due estremi si scambiano.
+    // Falso se i punti sono allineati.
+    static bool threePointArc(const QPointF &start, const QPointF &end, const QPointF &through, CurveObject &arc) {
+        const QPointF b = end - start, c = through - start;
+        const double scale = qMax(pointLength(b), pointLength(c));
+        const double cross = b.x() * c.y() - b.y() * c.x();
+        if (scale <= ForgeCad::kSketchConnectionTolerance || std::abs(cross) <= 1e-9 * scale * scale) return false;
+        const double b2 = b.x() * b.x() + b.y() * b.y(), c2 = c.x() * c.x() + c.y() * c.y();
+        const QPointF center = start + QPointF(c.y() * b2 - b.y() * c2, b.x() * c2 - c.x() * b2) / (2.0 * cross);
+        arc.tool = DrawingTool::Arc;
+        arc.controlPoints = cross < 0.0 ? QVector<QPointF>{center, start, end} : QVector<QPointF>{center, end, start};
+        return true;
+    }
+
+    // Arco che parte da `start` tangente alla direzione `direction` (unitaria)
+    // e finisce in `end`: il centro sta sulla normale in `start`, a distanza
+    // r = |d|^2 / (2 n.d) con d = end - start (con segno: a sinistra della
+    // direzione l'arco gira in senso antiorario). In `startPoint` il punto
+    // dell'arco (1 o 2) che sta in `start`. Falso se `end` sta sulla tangente.
+    static bool tangentArc(const QPointF &start, const QPointF &direction, const QPointF &end, CurveObject &arc, int *startPoint = nullptr) {
+        const QPointF d = end - start, normal(-direction.y(), direction.x());
+        const double length = pointLength(d), across = normal.x() * d.x() + normal.y() * d.y();
+        if (length <= ForgeCad::kSketchConnectionTolerance || std::abs(across) <= 1e-9 * length) return false;
+        const QPointF center = start + normal * (length * length / (2.0 * across));
+        arc.tool = DrawingTool::Arc;
+        arc.controlPoints = across > 0.0 ? QVector<QPointF>{center, start, end} : QVector<QPointF>{center, end, start};
+        if (startPoint) *startPoint = across > 0.0 ? 1 : 2;
+        return true;
+    }
+
+    // Da dove puo' partire un arco tangente: gli estremi di segmenti e archi
+    // in `point`, con la direzione che prosegue l'entita' oltre l'estremo.
+    struct TangentStart {
+        ConstraintRef entity;  // il segmento o l'arco (point -1)
+        QPointF direction;
+    };
+    QVector<TangentStart> tangentStartsAt(const QPointF &point) const {
+        QVector<TangentStart> result;
+        if (activeSketch_ < 0 || activeSketch_ >= sketches_.size()) return result;
+        const SketchObject &sketch = sketches_.at(activeSketch_);
+        const double tolerance = ForgeCad::kSketchConnectionTolerance;
+        for (int index = 0; index < sketch.segments.size(); ++index) {
+            const SketchSegment &s = sketch.segments.at(index);
+            const double length = pointDistance(s.first, s.second);
+            if (length <= tolerance) continue;
+            if (pointDistance(s.first, point) <= tolerance) result.append({{0, index, -1}, (s.first - s.second) / length});
+            else if (pointDistance(s.second, point) <= tolerance) result.append({{0, index, -1}, (s.second - s.first) / length});
+        }
+        for (int index = 0; index < sketch.curves.size(); ++index) {
+            const CurveObject &c = sketch.curves.at(index);
+            if (c.tool != DrawingTool::Arc || c.controlPoints.size() < 3) continue;
+            const QPointF center = c.controlPoints.at(0);
+            const QPointF r0 = c.controlPoints.at(1) - center, r1 = c.controlPoints.at(2) - center;
+            const double l0 = pointLength(r0), l1 = pointLength(r1);
+            if (l0 <= tolerance || l1 <= tolerance) continue;
+            // L'arco gira in senso antiorario: all'inizio prosegue all'indietro (orario).
+            if (pointDistance(c.controlPoints.at(1), point) <= tolerance) result.append({{1, index, -1}, QPointF(r0.y(), -r0.x()) / l0});
+            else if (pointDistance(c.controlPoints.at(2), point) <= tolerance) result.append({{1, index, -1}, QPointF(-r1.y(), r1.x()) / l1});
+        }
+        return result;
+    }
+    // Tra le entita' che finiscono nel punto di partenza, quella la cui
+    // direzione va di piu' verso il cursore (in un angolo tra due segmenti
+    // l'arco continua quello da cui ci si allontana).
+    TangentStart tangentStartFor(const QPointF &cursor) const {
+        if (tangentStarts_.isEmpty() || curveControlPoints_.isEmpty()) return {};
+        const QPointF toward = cursor - curveControlPoints_.first();
+        int best = 0;
+        double bestScore = -std::numeric_limits<double>::infinity();
+        for (int k = 0; k < tangentStarts_.size(); ++k) {
+            const QPointF &t = tangentStarts_.at(k).direction;
+            const double score = (t.x() * toward.x() + t.y() * toward.y()) / qMax(pointLength(toward), 1e-300);
+            if (score > bestScore) {
+                bestScore = score;
+                best = k;
             }
         }
+        return tangentStarts_.at(best);
+    }
+
+    // Crea l'arco per tre punti o l'arco tangente: un Arc (centro, inizio,
+    // fine) con le coincidenze degli estremi e, per quello tangente, il
+    // vincolo di tangenza con l'entita' da cui parte.
+    void finalizeDrawnArc() {
+        const QVector<QPointF> points = curveControlPoints_;
+        const bool tangent = drawingTool_ == DrawingTool::TangentArc;
+        const TangentStart start = tangent ? tangentStartFor(points.value(1)) : TangentStart{};
+        curveControlPoints_.clear();
+        tangentStarts_.clear();
+        hasPendingPoint_ = false;
+        if (activeSketch_ < 0 || activeSketch_ >= sketches_.size()) return;
+        CurveObject arc;
+        const bool built = tangent ? start.entity.kind >= 0 && tangentArc(points.at(0), start.direction, points.at(1), arc)
+                                   : threePointArc(points.at(0), points.at(1), points.at(2), arc);
+        if (!built) {
+            showStatus(tangent ? QStringLiteral("Arco tangente: la fine sta sulla tangente (sarebbe un segmento)")
+                               : QStringLiteral("Arco per tre punti: i punti sono allineati"));
+            update();
+            return;
+        }
+        ForgeCad::recalculateCurve(arc, tessellationQuality_);
+        if (!arc.numericallyValid) {
+            update();
+            return;
+        }
+        recordUndo();
+        SketchObject &sketch = sketches_[activeSketch_];
+        sketch.curves.append(arc);
+        const int created = sketch.curves.size() - 1;
+        recordPointCoincidences(sketch, {1, created, 1}, arc.controlPoints.at(1));
+        recordPointCoincidences(sketch, {1, created, 2}, arc.controlPoints.at(2));
+        if (tangent)
+            sketch.geometricConstraints.append(ForgeCad::makeConstraint(sketch, ConstraintType::Tangent, {{1, created, -1}, start.entity}));
+        sketchEdited();
+        update();
     }
 
     // Anteprima della curva in costruzione (cerchio, arco, poligono, spline,
@@ -1890,6 +2042,21 @@ protected:
             if (pointDistance(curve.controlPoints.last(), cursor) > ForgeCad::kSketchConnectionTolerance) curve.controlPoints.append(cursor);
             if (curve.tool == DrawingTool::Spline) ForgeCad::initializeTangentHandles(curve);
             break;
+        case DrawingTool::ThreePointArc:
+        case DrawingTool::TangentArc: {
+            // Prima dell'ultimo punto la corda fino al cursore, poi l'arco.
+            const QPointF &first = curve.controlPoints.first();
+            const bool arc = drawingTool_ == DrawingTool::ThreePointArc
+                ? curve.controlPoints.size() == 2 && threePointArc(first, curve.controlPoints.at(1), cursor, curve)
+                : tangentArc(first, tangentStartFor(cursor).direction, cursor, curve);
+            if (!arc) {
+                curve.tool = DrawingTool::Line;
+                curve.controlPoints = {first, curve.controlPoints.size() == 2 ? curve.controlPoints.at(1) : cursor};
+                curve.samples = curve.controlPoints;
+                return pointDistance(curve.samples.at(0), curve.samples.at(1)) > ForgeCad::kSketchConnectionTolerance;
+            }
+            break;
+        }
         case DrawingTool::Rectangle:
         case DrawingTool::CenterRectangle:
             if (curve.controlPoints.size() != 1) return false;
@@ -1939,6 +2106,8 @@ protected:
             return {QStringLiteral("a = %1   b = %2   A = %3°").arg(number(pointDistance(p.at(0), p.at(1))), number(pointDistance(p.at(0), p.at(2))),
                                                                    QString::number(angle, 'f', 2))};
         }
+        case DrawingTool::Line:
+            return {QStringLiteral("L = %1").arg(number(pointDistance(p.at(0), p.at(1))))};
         case DrawingTool::Arc: {
             const double r = pointDistance(p.at(0), p.at(1));
             const double a0 = std::atan2(p.at(1).y() - p.at(0).y(), p.at(1).x() - p.at(0).x());
@@ -3405,6 +3574,7 @@ private:
     }
 
     void finalizeCurve() {
+        if (drawingTool_ != DrawingTool::Spline && drawingTool_ != DrawingTool::Nurbs) return;
         const int minimumPoints = drawingTool_ == DrawingTool::Nurbs ? 4 : 2;
         if (curveControlPoints_.size() < minimumPoints
             || activeSketch_ < 0 || activeSketch_ >= sketches_.size()) {
@@ -4007,25 +4177,61 @@ private:
     }
 
     void drawReferencePlanes() {
+        glPushAttrib(GL_ENABLE_BIT | GL_CURRENT_BIT | GL_LINE_BIT | GL_COLOR_BUFFER_BIT);
         glDisable(GL_LIGHTING);
         glDisable(GL_DEPTH_TEST);
         glEnable(GL_BLEND);
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
         const GLfloat colors[][3] = {{0.20f, 0.55f, 0.95f}, {0.25f, 0.90f, 0.70f}, {0.95f, 0.45f, 0.25f}};
         const GLfloat baseAlpha[] = {0.08f, 0.06f, 0.06f};
+        const auto emphasis = [this](int plane) {
+            float extra = 0.0f;
+            if (selectedPlane_ == plane) extra += 1.0f;
+            if (hover_ == SceneSelection{SceneObjectKind::Plane, plane, -1}) extra += 0.8f;
+            return extra;
+        };
         glBegin(GL_QUADS);
         for (int plane = 0; plane < 3; ++plane) {
             if (!isPlaneShown(plane)) continue;
-            const bool hovered = hover_ == SceneSelection{SceneObjectKind::Plane, plane, -1};
-            float alpha = baseAlpha[plane];
-            if (selectedPlane_ == plane) alpha += 0.10f;
-            if (hovered) alpha += 0.08f;
+            const float alpha = baseAlpha[plane] + 0.10f * emphasis(plane);
             glColor4f(colors[plane][0], colors[plane][1], colors[plane][2], alpha);
             for (const QVector3D &corner : planeCorners(plane)) glVertex3f(corner.x(), corner.y(), corner.z());
         }
         glEnd();
-        glDisable(GL_BLEND);
-        glEnable(GL_DEPTH_TEST);
+        // Bordo: un alone largo e tenue del colore del piano, schiarito, e sopra
+        // una linea sottile piu' luminosa dello stesso colore.
+        glEnable(GL_LINE_SMOOTH);
+        glHint(GL_LINE_SMOOTH_HINT, GL_NICEST);
+        const struct { GLfloat width, alpha, light; } strokes[] = {{4.0f, 0.10f, 0.25f}, {1.3f, 0.55f, 0.40f}};
+        for (const auto &stroke : strokes) {
+            glLineWidth(stroke.width);
+            for (int plane = 0; plane < 3; ++plane) {
+                if (!isPlaneShown(plane)) continue;
+                const float alpha = qMin(1.0f, stroke.alpha * (1.0f + 0.6f * emphasis(plane)));
+                const GLfloat *c = colors[plane];
+                glColor4f(c[0] + (1.0f - c[0]) * stroke.light, c[1] + (1.0f - c[1]) * stroke.light,
+                          c[2] + (1.0f - c[2]) * stroke.light, alpha);
+                glBegin(GL_LINE_LOOP);
+                for (const QVector3D &corner : planeCorners(plane)) glVertex3f(corner.x(), corner.y(), corner.z());
+                glEnd();
+            }
+        }
+        glPopAttrib();
+    }
+
+    // La fusione con GL_SRC_ALPHA / GL_ONE_MINUS_SRC_ALPHA mescola anche il
+    // canale alfa del framebuffer, che scende sotto 1 dove si disegna qualcosa
+    // di trasparente (i piani, le anteprime). Il compositore di Wayland (niri)
+    // usa quell'alfa per la finestra e vi fa vedere attraverso il desktop: alla
+    // fine della scena l'alfa torna 1 ovunque, senza toccare i colori.
+    void makeOpaque() {
+        GLfloat clear[4];
+        glGetFloatv(GL_COLOR_CLEAR_VALUE, clear);
+        glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_TRUE);
+        glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+        glClear(GL_COLOR_BUFFER_BIT);
+        glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+        glClearColor(clear[0], clear[1], clear[2], clear[3]);
     }
 
     void configureLighting() {
@@ -4926,6 +5132,7 @@ private:
     LineInference currentInference_;
     int startReference_ = -1;  // segmento su cui parte il segmento in costruzione
     QVector<QPointF> curveControlPoints_;
+    QVector<TangentStart> tangentStarts_;  // arco tangente: le entita' da cui puo' partire
     bool draggingControlPoint_ = false;
     int draggingCurveIndex_ = -1;
     int draggingControlIndex_ = -1;
@@ -5671,6 +5878,7 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
     QAction *intersectionAction = booleanMenu->addAction(QStringLiteral("Intersezione..."));
     QAction *differenceAction = booleanMenu->addAction(QStringLiteral("Differenza A - B..."));
     QAction *revolveAction = functionsMenu->addAction(QStringLiteral("Rivoluzione..."));
+     revolveAction->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_R));
     auto *primitiveMenu = functionsMenu->addMenu(QStringLiteral("Primitive"));
     QAction *filletAction = functionsMenu->addAction(QStringLiteral("Raccordo spigoli..."));
     QAction *chamferAction = functionsMenu->addAction(QStringLiteral("Smusso spigoli..."));
@@ -5889,8 +6097,10 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
         {QStringLiteral("Parallelepipedo"), PrimitiveKind::Box}, {QStringLiteral("Cilindro"), PrimitiveKind::Cylinder},
         {QStringLiteral("Sfera"), PrimitiveKind::Sphere}, {QStringLiteral("Cono"), PrimitiveKind::Cone},
         {QStringLiteral("Toro"), PrimitiveKind::Torus}};
+    QList<QAction *> primitiveActions;
     for (const auto &entry : primitives) {
         QAction *action = primitiveMenu->addAction(entry.first + QStringLiteral("..."));
+        primitiveActions.append(action);
         const QString title = entry.first;
         const PrimitiveKind kind = entry.second;
         connect(action, &QAction::triggered, this, [runPrimitive, kind, title] { runPrimitive(kind, title); });
@@ -6152,6 +6362,10 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
     QAction *nurbsTool = addTool(QStringLiteral("NURBS"), DrawingTool::Nurbs, false);
     QAction *circleTool = addTool(QStringLiteral("Cerchio"), DrawingTool::Circle, false);
     QAction *arcTool = addTool(QStringLiteral("Arco (centro, inizio, fine)"), DrawingTool::Arc, false);
+    QAction *threePointArcTool = addTool(QStringLiteral("Arco per tre punti"), DrawingTool::ThreePointArc, false);
+    threePointArcTool->setToolTip(QStringLiteral("Arco per tre punti: inizio, fine, poi un punto dell'arco"));
+    QAction *tangentArcTool = addTool(QStringLiteral("Arco tangente"), DrawingTool::TangentArc, false);
+    tangentArcTool->setToolTip(QStringLiteral("Arco tangente: clic sull'estremo di un segmento o di un arco, poi la fine"));
     QAction *polygonTool = addTool(QStringLiteral("Poligono"), DrawingTool::Polygon, false);
     QAction *rectangleTool = addTool(QStringLiteral("Rettangolo (due angoli)"), DrawingTool::Rectangle, false);
     rectangleTool->setToolTip(QStringLiteral("Rettangolo: due angoli opposti (Maiusc: quadrato); quattro segmenti orizzontali e verticali"));
@@ -6406,23 +6620,143 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
     });
     connect(exitSketch, &QAction::triggered, this, [viewport] { viewport->endSketchMode(); });
 
-    auto *drawingToolbar = addToolBar(QStringLiteral("Strumenti schizzo")); drawingToolbar->setObjectName(QStringLiteral("sketchToolbar")); drawingToolbar->setMovable(false); drawingToolbar->setVisible(false);
-    drawingToolbar->addAction(selectTool); drawingToolbar->addAction(lineTool); drawingToolbar->addAction(polylineTool); drawingToolbar->addAction(splineTool); drawingToolbar->addAction(nurbsTool); drawingToolbar->addAction(circleTool); drawingToolbar->addAction(arcTool); drawingToolbar->addAction(polygonTool); drawingToolbar->addAction(rectangleTool); drawingToolbar->addAction(centerRectangleTool); drawingToolbar->addAction(ellipseTool); drawingToolbar->addAction(constructionTool); drawingToolbar->addAction(toggleConstruction); drawingToolbar->addSeparator();
-    drawingToolbar->addAction(trimTool); drawingToolbar->addAction(extendTool); drawingToolbar->addAction(splitTool); drawingToolbar->addAction(sketchFilletTool); drawingToolbar->addAction(sketchChamferTool); drawingToolbar->addSeparator(); drawingToolbar->addAction(exitSketch);
     auto viewActions = std::make_shared<QList<QAction *>>();
-    viewport->setSketchModeCallback([this, viewMenu, viewActions, drawingToolbar](bool active) {
-        viewMenu->setEnabled(!active); for (QAction *action : *viewActions) action->setEnabled(!active); drawingToolbar->setVisible(active);
+    auto *quit = fileMenu->addAction(QStringLiteral("Esci")); connect(quit, &QAction::triggered, this, &QWidget::close);
+    const QList<QPair<QString, int>> views = {{QStringLiteral("Frontale"),0},{QStringLiteral("Posteriore"),1},{QStringLiteral("Destra"),2},{QStringLiteral("Superiore"),3},{QStringLiteral("Isometrica"),4},{QStringLiteral("Trimetrica"),5}};
+    for (int index = 0; index < views.size(); ++index) {
+        auto *action = new QAction(QStringLiteral("Vista ") + views.at(index).first.toLower(), this); action->setShortcut(QKeySequence(Qt::Key_1 + index)); addAction(action); viewActions->append(action);
+        connect(action, &QAction::triggered, this, [viewport, index] { viewport->setViewPreset(index); });
+    }
+
+    // Barre a icone. Le icone (cad_icons) valgono anche nei menu; il
+    // suggerimento dice il comando e la scorciatoia. I gruppi di strumenti
+    // simili stanno in un pulsante con il menu (la freccia): il pulsante
+    // mostra l'ultimo scelto (o quello attivo, per gli strumenti dello schizzo).
+    const auto decorate = [](QAction *action, const QString &icon) {
+        action->setIcon(ForgeCad::commandIcon(icon));
+        QString tip = action->toolTip();
+        const QString shortcut = action->shortcut().toString(QKeySequence::NativeText);
+        if (!shortcut.isEmpty() && !tip.contains(QStringLiteral("(") + shortcut + QStringLiteral(")"))) tip += QStringLiteral(" (") + shortcut + QStringLiteral(")");
+        action->setToolTip(tip);
+    };
+    const QList<QPair<QAction *, QString>> iconActions = {
+        {newAction, QStringLiteral("new")}, {openAction, QStringLiteral("open")}, {saveAction, QStringLiteral("save")},
+        {undoAction_, QStringLiteral("undo")}, {redoAction_, QStringLiteral("redo")}, {deleteAction, QStringLiteral("delete")},
+        {newSketchAction, QStringLiteral("newSketch")}, {faceSketchAction, QStringLiteral("faceSketch")},
+        {extrudeAction, QStringLiteral("extrude")}, {revolveAction, QStringLiteral("revolve")},
+        {filletAction, QStringLiteral("fillet")}, {chamferAction, QStringLiteral("chamfer")},
+        {unionAction, QStringLiteral("union")}, {intersectionAction, QStringLiteral("intersection")}, {differenceAction, QStringLiteral("difference")},
+        {resetZoomAction, QStringLiteral("zoomAll")},
+        {modeMenu->actions().at(0), QStringLiteral("displayWireframe")}, {modeMenu->actions().at(1), QStringLiteral("displayShaded")},
+        {modeMenu->actions().at(2), QStringLiteral("displayShadedEdges")},
+        {selectTool, QStringLiteral("select")}, {lineTool, QStringLiteral("line")}, {polylineTool, QStringLiteral("polyline")},
+        {constructionTool, QStringLiteral("constructionLine")}, {splineTool, QStringLiteral("spline")}, {nurbsTool, QStringLiteral("nurbs")},
+        {circleTool, QStringLiteral("circle")}, {arcTool, QStringLiteral("arcCenter")}, {threePointArcTool, QStringLiteral("arcThreePoint")},
+        {tangentArcTool, QStringLiteral("arcTangent")}, {polygonTool, QStringLiteral("polygon")}, {polygonSidesAction, QStringLiteral("polygonSides")},
+        {rectangleTool, QStringLiteral("rectangle")}, {centerRectangleTool, QStringLiteral("centerRectangle")}, {ellipseTool, QStringLiteral("ellipse")},
+        {trimTool, QStringLiteral("trim")}, {extendTool, QStringLiteral("extend")}, {splitTool, QStringLiteral("split")},
+        {sketchFilletTool, QStringLiteral("sketchFillet")}, {sketchChamferTool, QStringLiteral("sketchChamfer")},
+        {toggleConstruction, QStringLiteral("toggleConstruction")}, {constraintsAction, QStringLiteral("constraints")},
+        {dimensionAction, QStringLiteral("dimension")}, {automaticConstraint, QStringLiteral("constraintAuto")},
+        {freeConstraint, QStringLiteral("constraintFree")}, {horizontalConstraint, QStringLiteral("constraintHorizontal")},
+        {verticalConstraint, QStringLiteral("constraintVertical")}, {lengthConstraint, QStringLiteral("constraintLength")},
+        {angleConstraint, QStringLiteral("constraintAngle")}, {snapAction, QStringLiteral("snap")}, {originSnapAction, QStringLiteral("originSnap")},
+        {exitSketch, QStringLiteral("exitSketch")}};
+    for (const auto &entry : iconActions) decorate(entry.first, entry.second);
+    const QStringList primitiveIcons = {QStringLiteral("box"), QStringLiteral("cylinder"), QStringLiteral("sphere"), QStringLiteral("cone"), QStringLiteral("torus")};
+    for (int k = 0; k < primitiveActions.size() && k < primitiveIcons.size(); ++k) decorate(primitiveActions.at(k), primitiveIcons.at(k));
+    const QStringList viewIcons = {QStringLiteral("viewFront"), QStringLiteral("viewRear"), QStringLiteral("viewRight"),
+                                   QStringLiteral("viewTop"), QStringLiteral("viewIso"), QStringLiteral("viewTrimetric")};
+    for (int k = 0; k < viewActions->size(); ++k) decorate(viewActions->at(k), viewIcons.at(k));
+    exitSketch->setToolTip(QStringLiteral("Chiudi lo schizzo"));
+    const auto flyout = [](QToolBar *bar, const QList<QAction *> &actions, const QString &tip) {
+        auto *button = new QToolButton(bar);
+        auto *menu = new QMenu(button);
+        for (QAction *action : actions) menu->addAction(action);
+        button->setMenu(menu);
+        button->setPopupMode(QToolButton::MenuButtonPopup);
+        button->setAutoRaise(true);
+        button->setIconSize(bar->iconSize());
+        button->setDefaultAction(actions.first());
+        const auto show = [button, tip](QAction *action) {
+            button->setDefaultAction(action);
+            button->setToolTip(action->toolTip() + QStringLiteral("\n") + tip);
+        };
+        show(actions.first());
+        for (QAction *action : actions) {
+            connect(action, &QAction::triggered, button, [show, action] { show(action); });
+            if (action->isCheckable()) connect(action, &QAction::toggled, button, [show, action](bool on) { if (on) show(action); });
+        }
+        connect(bar, &QToolBar::iconSizeChanged, button, &QToolButton::setIconSize);
+        bar->addWidget(button);
+        return button;
+    };
+    const auto iconBar = [this](const QString &title, const QString &name) {
+        auto *bar = addToolBar(title);
+        bar->setObjectName(name);
+        bar->setMovable(false);
+        bar->setIconSize(QSize(24, 24));
+        bar->setToolButtonStyle(Qt::ToolButtonIconOnly);
+        return bar;
+    };
+
+    auto *toolbar = iconBar(QStringLiteral("Modellazione"), QStringLiteral("modelingIconBar"));
+    toolbar->addAction(newAction); toolbar->addAction(openAction); toolbar->addAction(saveAction); toolbar->addSeparator();
+    toolbar->addAction(undoAction_); toolbar->addAction(redoAction_); toolbar->addAction(deleteAction); toolbar->addSeparator();
+    toolbar->addAction(newSketchAction); toolbar->addAction(faceSketchAction); toolbar->addSeparator();
+    toolbar->addAction(extrudeAction); toolbar->addAction(revolveAction);
+    flyout(toolbar, primitiveActions, QStringLiteral("Primitive: la freccia per le altre"));
+    toolbar->addAction(filletAction); toolbar->addAction(chamferAction); toolbar->addSeparator();
+    toolbar->addAction(unionAction); toolbar->addAction(intersectionAction); toolbar->addAction(differenceAction); toolbar->addSeparator();
+    toolbar->addAction(resetZoomAction);
+    flyout(toolbar, *viewActions, QStringLiteral("Viste standard: la freccia per le altre"));
+    flyout(toolbar, {modeMenu->actions().at(2), modeMenu->actions().at(1), modeMenu->actions().at(0)}, QStringLiteral("Stile di visualizzazione"));
+    auto *spacer = new QWidget(toolbar); spacer->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred); toolbar->addWidget(spacer);
+    toolbar->addWidget(new QLabel(QStringLiteral("  ForgeCAD / Part Studio  ")));
+
+    // Schizzo: in modalita' schizzo prende il posto della barra di modellazione
+    // (come le schede del CommandManager di SolidWorks), cosi' ci sta anche in
+    // una finestra stretta.
+    // Modalita' della prossima linea: una sola attiva.
+    auto *lineModeGroup = new QActionGroup(this);
+    for (QAction *action : {automaticConstraint, freeConstraint, horizontalConstraint, verticalConstraint}) {
+        action->setCheckable(true);
+        lineModeGroup->addAction(action);
+    }
+    automaticConstraint->setChecked(true);
+    auto *drawingToolbar = iconBar(QStringLiteral("Strumenti schizzo"), QStringLiteral("sketchIconBar"));
+    drawingToolbar->setVisible(false);
+    drawingToolbar->addAction(exitSketch); drawingToolbar->addSeparator();
+    drawingToolbar->addAction(undoAction_); drawingToolbar->addAction(redoAction_); drawingToolbar->addSeparator();
+    drawingToolbar->addAction(selectTool); drawingToolbar->addSeparator();
+    flyout(drawingToolbar, {lineTool, constructionTool}, QStringLiteral("Linee: la freccia per le altre"));
+    drawingToolbar->addAction(polylineTool);
+    flyout(drawingToolbar, {rectangleTool, centerRectangleTool}, QStringLiteral("Rettangoli: la freccia per gli altri"));
+    drawingToolbar->addAction(circleTool);
+    flyout(drawingToolbar, {arcTool, threePointArcTool, tangentArcTool}, QStringLiteral("Archi: la freccia per gli altri"));
+    flyout(drawingToolbar, {polygonTool, polygonSidesAction}, QStringLiteral("Poligono: la freccia per il numero di lati"));
+    drawingToolbar->addAction(ellipseTool);
+    flyout(drawingToolbar, {splineTool, nurbsTool}, QStringLiteral("Curve: la freccia per le altre"));
+    drawingToolbar->addSeparator();
+    flyout(drawingToolbar, {trimTool, extendTool, splitTool}, QStringLiteral("Taglia, estendi, spezza: la freccia per gli altri"));
+    flyout(drawingToolbar, {sketchFilletTool, sketchChamferTool}, QStringLiteral("Raccordo e smusso: la freccia per l'altro"));
+    drawingToolbar->addAction(toggleConstruction);
+    drawingToolbar->addSeparator();
+    drawingToolbar->addAction(constraintsAction); drawingToolbar->addAction(dimensionAction);
+    flyout(drawingToolbar, {automaticConstraint, freeConstraint, horizontalConstraint, verticalConstraint},
+           QStringLiteral("Vincolo della prossima linea: la freccia per gli altri"));
+    flyout(drawingToolbar, {lengthConstraint, angleConstraint}, QStringLiteral("Quote della prossima linea: la freccia per l'altra"));
+    drawingToolbar->addSeparator();
+    drawingToolbar->addAction(snapAction); drawingToolbar->addAction(originSnapAction);
+    drawingToolbar->addSeparator();
+    drawingToolbar->addAction(extrudeAction); drawingToolbar->addAction(revolveAction);
+    viewport->setSketchModeCallback([this, viewMenu, viewActions, drawingToolbar, toolbar](bool active) {
+        viewMenu->setEnabled(!active); for (QAction *action : *viewActions) action->setEnabled(!active);
+        toolbar->setVisible(!active);
+        drawingToolbar->setVisible(active);
         // La finestra dei vincoli accompagna la modalita' schizzo.
         if (constraintPanel_) constraintPanel_->setVisible(active);
     });
-
-    auto *quit = fileMenu->addAction(QStringLiteral("Esci")); connect(quit, &QAction::triggered, this, &QWidget::close);
-    auto *toolbar = addToolBar(QStringLiteral("Modellazione")); toolbar->setObjectName(QStringLiteral("modelingToolbar")); toolbar->setMovable(false); toolbar->addAction(modeMenu->actions().at(2)); toolbar->addAction(modeMenu->actions().at(0)); toolbar->addAction(snapAction); toolbar->addWidget(new QLabel(QStringLiteral("  ForgeCAD / Part Studio  ")));
-    const QList<QPair<QString, int>> views = {{QStringLiteral("Front"),0},{QStringLiteral("Rear"),1},{QStringLiteral("Right"),2},{QStringLiteral("Top"),3},{QStringLiteral("Isometric"),4},{QStringLiteral("Trimetric"),5}};
-    for (int index = 0; index < views.size(); ++index) {
-        auto *action = new QAction(views.at(index).first, this); action->setShortcut(QKeySequence(Qt::Key_1 + index)); addAction(action); viewActions->append(action);
-        connect(action, &QAction::triggered, this, [viewport, index] { viewport->setViewPreset(index); });
-    }
     modeStatus_ = new QLabel(QStringLiteral("Mesh + linee esterne")); statusBar()->addWidget(modeStatus_);
     statusBar()->addWidget(kernelStatus);
     auto *labStatus = new QLabel(this); statusBar()->addWidget(labStatus);
@@ -6813,5 +7147,14 @@ void PdfWindow::setDisplayMode(int mode) {
 
 void PdfWindow::setTheme(bool dark) {
     auto *application = qobject_cast<QApplication *>(QCoreApplication::instance());
-    if (dark && application) application->setStyleSheet(QStringLiteral("QMainWindow { background: #111820; color: #d8e4ea; }QMenuBar,QToolBar,QStatusBar { background: #1b2730; color: #d8e4ea; }QMenu { background: #202d36; color: #d8e4ea; }"));
+    if (dark && application) application->setStyleSheet(QStringLiteral("QMainWindow { background: #111820; color: #d8e4ea; }QMenuBar,QToolBar,QStatusBar { background: #1b2730; color: #d8e4ea; }QMenu { background: #202d36; color: #d8e4ea; }"
+        "QToolBar { spacing: 1px; padding: 2px 4px; border: none; }"
+        "QToolBar::separator { background: #34444f; width: 1px; margin: 5px 3px; }"
+        "QToolBar QToolButton { border: 1px solid transparent; border-radius: 4px; padding: 2px; }"
+        "QToolBar QToolButton:hover { background: #2a3a46; border-color: #3d5566; }"
+        "QToolBar QToolButton:pressed { background: #1f4258; }"
+        "QToolBar QToolButton:checked { background: #24495f; border-color: #4f9fd0; }"
+        "QToolBar QToolButton[popupMode=\"1\"] { padding-right: 11px; }"
+        "QToolBar QToolButton::menu-button { border: none; width: 10px; }"
+        "QToolBar QToolButton::menu-button:hover { background: #34505f; border-radius: 3px; }"));
 }

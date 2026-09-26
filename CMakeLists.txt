@@ -48,6 +48,8 @@ add_executable(forgecad
     cad_sketch_edit.cpp
     cad_constraints.h
     cad_constraints.cpp
+    cad_icons.h
+    cad_icons.cpp
     cad_history.h
     cad_history.cpp
     cad_kernel.h
