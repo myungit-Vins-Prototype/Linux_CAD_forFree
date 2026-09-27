@@ -69,6 +69,8 @@ add_executable(forgecad
     cad_pattern.cpp
     cad_extrude.h
     cad_extrude.cpp
+    cad_sketch_refs.h
+    cad_sketch_refs.cpp
     cuda_support.h
     ${FORGE_CAD_CUDA_SOURCE}
 )

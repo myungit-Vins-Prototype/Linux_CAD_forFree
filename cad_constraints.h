@@ -25,6 +25,9 @@ QString constraintName(ConstraintType type);
 // Simbolo del vincolo accanto alle entita' (testo breve).
 QString constraintSymbol(ConstraintType type);
 bool isDimension(ConstraintType type);
+// Retta che puo' fare da asse (quote di raggio e diametro): asse di
+// simmetria, linea di costruzione o asse del piano.
+bool isAxisReference(const SketchObject &sketch, const ConstraintRef &ref);
 
 // Descrizione di un riferimento ("Segmento 3", "estremo 1 del segmento 3",
 // "centro del cerchio 2", "Origine"...) e del vincolo.

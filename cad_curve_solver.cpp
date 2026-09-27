@@ -74,6 +74,17 @@ std::vector<ProfileSegment> curveGeometry(const CurveObject &curve) {
             if (c) result.push_back({c, c->domain()});
             break;
         }
+        case DrawingTool::Converted: {
+            // Riferimento esterno: la B-spline razionale cosi' com'e'.
+            if (count < 2 || curve.degree < 1 || curve.knots.size() != count + curve.degree + 1) break;
+            std::vector<Vec2> poles;
+            for (const QPointF &p : curve.controlPoints) poles.push_back(toVec(p));
+            std::vector<double> weights(curve.weights.begin(), curve.weights.end());
+            if (int(weights.size()) != count) weights.clear();
+            const auto c = std::make_shared<BSplineCurve<2>>(curve.degree, std::vector<double>(curve.knots.begin(), curve.knots.end()), std::move(poles), std::move(weights));
+            result.push_back({c, c->domain()});
+            break;
+        }
         case DrawingTool::Circle: {
             if (count < 2) break;
             const double radius = distance(toVec(curve.controlPoints.at(0)), toVec(curve.controlPoints.at(1)));

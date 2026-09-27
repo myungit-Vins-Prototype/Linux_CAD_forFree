@@ -27,6 +27,10 @@ bool forgeSharesMaterial(const ForgeBody &tool, const ForgeBody &body, bool subt
 // Solo le shell di `body` per cui `keep` e' vero, come body nuovo (vuoto: nessuna).
 ForgeBody forgeKeepShells(const ForgeBody &body, const std::function<bool(const Kernel::Body &, Kernel::ShellId)> &keep);
 
+// Componenti del body: solidi separati (shell esterne; le cavita' dentro un
+// altro solido non contano) e superfici separate (lamine connesse).
+void forgeComponentCounts(const ForgeBody &body, int &solids, int &sheets);
+
 }
 
 #endif

@@ -22,19 +22,27 @@ constexpr char kMagic[4] = {'F', 'C', 'A', 'D'};
 // 9 corpi importati come testo STEP; 10 ripetizioni dei corpi; 11 ripetizioni
 // parametriche negli schizzi (vincolo Pattern), estrusioni fino a un
 // riferimento e fuse con altri solidi, booleane con piu' strumenti.
-constexpr quint16 kVersion = 11;
+// 12 curve di riferimento prese dai corpi (nodi e grado), spostamento dei corpi.
+// 13 assi di simmetria degli schizzi, simmetrie (terzo riferimento dei vincoli), quote di raggio e diametro dall'asse.
+constexpr quint16 kVersion = 13;
 constexpr quint8 kZlib = 1;
 
 void write(QDataStream &out, const CurveObject &curve) {
     out << qint32(curve.tool) << curve.controlPoints << curve.weights << curve.tangentHandles << qint32(curve.sides)
         << curve.construction;
+    out << curve.knots << qint32(curve.degree);  // formato 12
 }
 
-void read(QDataStream &in, CurveObject &curve) {
+void read(QDataStream &in, CurveObject &curve, quint16 version) {
     qint32 tool = 0, sides = 0;
     in >> tool >> curve.controlPoints >> curve.weights >> curve.tangentHandles >> sides >> curve.construction;
     curve.tool = DrawingTool(tool);
     curve.sides = sides;
+    if (version >= 12) {
+        qint32 degree = 3;
+        in >> curve.knots >> degree;
+        curve.degree = degree;
+    }
 }
 
 void write(QDataStream &out, const CoincidentConstraint &c) {
@@ -103,8 +111,10 @@ void write(QDataStream &out, const SketchObject &sketch) {
         for (const ConstraintRef &r : {c.first, c.second}) out << qint32(r.kind) << qint32(r.element) << qint32(r.point);
         out << c.value << c.positions << c.placement << c.placed;
         if (c.type == ConstraintType::Pattern) writePattern(out, c.pattern);  // formato 11
+        writeRef(out, c.third);                                               // formato 13
     }
     out << qint32(sketch.datumPlane);  // formato 8
+    out << sketch.symmetryAxes;        // formato 13
 }
 
 // Numero di elementi di un vettore, rifiutato se il file e' finito o troppo corto.
@@ -121,7 +131,7 @@ bool read(QDataStream &in, SketchObject &sketch, quint16 version) {
     quint32 count = 0;
     if (!readCount(in, count)) return false;
     sketch.curves.resize(int(count));
-    for (CurveObject &curve : sketch.curves) read(in, curve);
+    for (CurveObject &curve : sketch.curves) read(in, curve, version);
     if (!readCount(in, count)) return false;
     sketch.coincidentConstraints.resize(int(count));
     for (CoincidentConstraint &c : sketch.coincidentConstraints) read(in, c);
@@ -148,6 +158,7 @@ bool read(QDataStream &in, SketchObject &sketch, quint16 version) {
             in >> c.value >> c.positions;
             if (version >= 4) in >> c.placement >> c.placed;
             if (c.type == ConstraintType::Pattern && (version < 11 || !readPattern(in, c.pattern))) return false;
+            if (version >= 13) readRef(in, c.third);
         }
     }
     if (version >= 8) {
@@ -155,6 +166,7 @@ bool read(QDataStream &in, SketchObject &sketch, quint16 version) {
         in >> datum;
         sketch.datumPlane = datum;
     }
+    if (version >= 13) in >> sketch.symmetryAxes;
     if (sketch.plane < 0 || sketch.plane > kFacePlane) return false;
     // Gli array paralleli dei segmenti devono restare allineati.
     const int segments = sketch.segments.size();
@@ -224,6 +236,11 @@ void write(QDataStream &out, const ExtrusionObject &body) {
     out << qint32(body.extent);
     writeRefs(out, {body.extentRef});
     out << qint32(body.mergeOperation) << body.mergeAuto << body.mergeBodies << body.booleanTools;
+    // Formato 12: spostamento.
+    const TransformParameters &m = body.move;
+    for (double v : m.translation) out << v;
+    writeRefs(out, {m.axis});
+    out << m.angle << m.copy;
 }
 
 // `extras` (solo formato 5): i file scritti durante lo sviluppo del formato 5
@@ -322,7 +339,15 @@ bool read(QDataStream &in, ExtrusionObject &body, quint16 version, int extras) {
         body.extentRef = refs.first();
         body.mergeOperation = merge;
     }
-    if (int(body.feature) < 0 || int(body.feature) > int(BodyFeature::Pattern)) return false;
+    if (version >= 12) {
+        TransformParameters &m = body.move;
+        for (double &v : m.translation) in >> v;
+        QVector<GeometryRef> refs;
+        if (!readRefs(in, refs) || refs.size() != 1) return false;
+        m.axis = refs.first();
+        in >> m.angle >> m.copy;
+    }
+    if (int(body.feature) < 0 || int(body.feature) > int(BodyFeature::Transform)) return false;
     return in.status() == QDataStream::Ok;
 }
 

@@ -303,7 +303,7 @@ QVector<int> endPoints(const SketchObject &sketch, SketchEntity entity) {
     if (entity.kind == 0) return {0, 1};
     const CurveObject &curve = sketch.curves.at(entity.index);
     if (curve.tool == DrawingTool::Arc) return {1, 2};
-    if ((curve.tool == DrawingTool::Spline || curve.tool == DrawingTool::Nurbs) && curve.controlPoints.size() >= 2)
+    if ((curve.tool == DrawingTool::Spline || curve.tool == DrawingTool::Nurbs || curve.tool == DrawingTool::Converted) && curve.controlPoints.size() >= 2)
         return {0, int(curve.controlPoints.size()) - 1};
     return {};
 }
@@ -449,6 +449,8 @@ QString explodePolygon(SketchObject &sketch, SketchEntity &entity, const QPointF
 QString unsupported(const SketchObject &sketch, SketchEntity entity, const QString &operation) {
     if (entity.kind == 1 && entity.index >= 0 && entity.index < sketch.curves.size() && sketch.curves.at(entity.index).tool == DrawingTool::Nurbs)
         return QStringLiteral("%1: le NURBS non si possono modificare (fanno solo da bordo).").arg(operation);
+    if (entity.kind == 1 && entity.index >= 0 && entity.index < sketch.curves.size() && sketch.curves.at(entity.index).tool == DrawingTool::Converted)
+        return QStringLiteral("%1: i riferimenti presi dai corpi non si modificano (fanno solo da bordo).").arg(operation);
     if (entity.kind == 1 && entity.index >= 0 && entity.index < sketch.curves.size() && sketch.curves.at(entity.index).tool == DrawingTool::Ellipse)
         return QStringLiteral("%1: le ellissi non si possono tagliare (fanno solo da bordo).").arg(operation);
     return QStringLiteral("%1: entita' non valida.").arg(operation);
@@ -520,6 +522,10 @@ QVector<int> removeSketchEntities(SketchObject &sketch, const QSet<int> &segment
     for (int index : sketch.constructionSegments)
         if (index >= 0 && index < segmentMap.size() && segmentMap.at(index) >= 0) construction.append(segmentMap.at(index));
     sketch.constructionSegments = construction;
+    QVector<int> axes;
+    for (int index : sketch.symmetryAxes)
+        if (index >= 0 && index < segmentMap.size() && segmentMap.at(index) >= 0) axes.append(segmentMap.at(index));
+    sketch.symmetryAxes = axes;
     remapConstraints(sketch, segmentMap, curveMap);
     return segmentMap;
 }

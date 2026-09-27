@@ -131,4 +131,28 @@ ForgeBody forgePatternFeature(const ForgeBody &target, const ForgeBody &tool, ::
     }
 }
 
+ForgeBody forgeMoveBody(const ForgeBody &base, const TransformParameters &move, int owner, const QVector<SketchObject> &sketches,
+                        const QVector<ExtrusionObject> &bodies, QString *error) {
+    if (!base) {
+        setError(error, QStringLiteral("Il corpo da spostare non ha geometria."));
+        return nullptr;
+    }
+    try {
+        Transform3 m = Transform3::translation(Vec3(move.translation[0], move.translation[1], move.translation[2]));
+        if (std::fabs(move.angle) > 1e-12) {
+            ResolvedRef axis;
+            QString why;
+            if (!resolveGeometryRef(move.axis, owner, sketches, bodies, axis, &why) || !axis.hasLine) {
+                setError(error, QStringLiteral("L'asse della rotazione non e' valido%1.").arg(why.isEmpty() ? QString() : QStringLiteral(": ") + why));
+                return nullptr;
+            }
+            m = m * Transform3::rotation(axis.point, axis.direction, move.angle * M_PI / 180.0);
+        }
+        return std::make_shared<const Body>(transformBody(*base, m));
+    } catch (const std::exception &failure) {
+        setError(error, QStringLiteral("Spostamento non riuscito: %1").arg(QString::fromUtf8(failure.what())));
+        return nullptr;
+    }
+}
+
 }

@@ -186,6 +186,8 @@ public:
         object.tool = source.tool;
         object.weights = source.weights;
         object.sides = source.sides;
+        object.knots = source.knots;
+        object.degree = source.degree;
         const int n = source.controlPoints.size();
         for (int k = 0; k < n; ++k) object.controlPoints.append(point(curvePoint(curve, k)));
         if (handleBase_.at(curve) >= 0)
@@ -250,7 +252,7 @@ bool onTangentShape(const SketchObject &sketch, const ConstraintRef &point, cons
     const int n = curve.controlPoints.size();
     // Spline: in un suo punto qualsiasi (la tangente e' quella delle maniglie); NURBS: agli estremi.
     if (tool == DrawingTool::Spline) return splineHandles(curve) && point.point < n;
-    if (tool == DrawingTool::Nurbs) return n >= 2 && (point.point == 0 || point.point == n - 1);
+    if (tool == DrawingTool::Nurbs || tool == DrawingTool::Converted) return n >= 2 && (point.point == 0 || point.point == n - 1);
     return (tool == DrawingTool::Arc && (point.point == 1 || point.point == 2)) || (tool == DrawingTool::Circle && point.point == 1);
 }
 
@@ -300,7 +302,7 @@ bool tangentAt(const System &s, const ConstraintRef &entity, const ConstraintRef
             tangent = k == 0 ? out - p : k == n - 1 ? p - in : out - in;
             return true;
         }
-        if (curve.tool == DrawingTool::Nurbs && n >= 2) {
+        if ((curve.tool == DrawingTool::Nurbs || curve.tool == DrawingTool::Converted) && n >= 2) {
             tangent = k == 0 ? s.refPoint({1, entity.element, 1}) - p : p - s.refPoint({1, entity.element, n - 2});
             return true;
         }
@@ -755,6 +757,43 @@ void equations(const System &s, const SketchConstraint &c, QVector<double> &out,
     case ConstraintType::Pattern:
         patternEquations(s, c, out);
         return;
+    case ConstraintType::Symmetric: {
+        QPointF a0, a1;
+        s.line(c.third, a0, a1);
+        const double l = std::max(length(a1 - a0), 1e-300);
+        const QPointF u = (a1 - a0) / l;
+        // Due punti simmetrici: la congiungente normale all'asse, il punto medio sull'asse.
+        const auto pair = [&](const QPointF &p, const QPointF &q) { out << dot(q - p, u) << cross(u, 0.5 * (p + q) - a0); };
+        if (a == Shape::Point) {
+            pair(s.refPoint(c.first), s.refPoint(c.second));
+        } else if (a == Shape::Line) {
+            QPointF p0, p1, q0, q1;
+            lineOf(c.first, p0, p1);
+            lineOf(c.second, q0, q1);
+            if (c.value > 0.5) std::swap(q0, q1);
+            pair(p0, q0);
+            pair(p1, q1);
+        } else {
+            QPointF c1, c2;
+            double r1, r2;
+            s.circle(c.first, c1, r1);
+            s.circle(c.second, c2, r2);
+            pair(c1, c2);
+            out << r1 - r2;
+        }
+        return;
+    }
+    case ConstraintType::AxisRadius:
+    case ConstraintType::AxisDiameter: {
+        QPointF q0, q1, p = s.refPoint(c.first);
+        lineOf(c.second, q0, q1);
+        if (a == Shape::Line) {
+            QPointF p1;
+            lineOf(c.first, p, p1);
+        }
+        out << (c.type == ConstraintType::AxisDiameter ? 2.0 : 1.0) * std::fabs(pointLineDistance(p, q0, q1)) - c.value;
+        return;
+    }
     }
 }
 
@@ -764,6 +803,9 @@ bool wellFormed(const SketchObject &sketch, const SketchConstraint &c) {
     const Shape a = shapeOf(sketch, c.first), b = shapeOf(sketch, c.second);
     if (a == Shape::None) return false;
     if (c.second.kind >= 0 && b == Shape::None) return false;
+    if (c.type == ConstraintType::Symmetric)
+        return shapeOf(sketch, c.third) == Shape::Line && a == b && (a == Shape::Point || a == Shape::Line || a == Shape::Circle) && c.first != c.second
+            && !(a == Shape::Line && (c.first == c.third || c.second == c.third));
     const QVector<ConstraintType> allowed = applicableConstraints(sketch, c.second.kind >= 0 ? QVector<ConstraintRef>{c.first, c.second}
                                                                                           : QVector<ConstraintRef>{c.first});
     return allowed.contains(c.type);
@@ -794,8 +836,41 @@ QString curveName(const CurveObject &curve) {
     case DrawingTool::Polygon: return QStringLiteral("Poligono");
     case DrawingTool::Ellipse: return QStringLiteral("Ellisse");
     case DrawingTool::Nurbs: return QStringLiteral("NURBS");
+    case DrawingTool::Converted: return QStringLiteral("Riferimento");
     default: return QStringLiteral("Spline");
     }
+}
+
+}
+
+namespace {
+
+// Ruoli di una simmetria tra tre riferimenti: due entita' della stessa forma
+// (punti, segmenti, cerchi o archi) e la retta. Tra tre rette l'asse e'
+// quello di simmetria, poi una linea di costruzione, poi un asse del piano,
+// altrimenti l'ultima scelta.
+bool symmetryRoles(const SketchObject &sketch, const QVector<ConstraintRef> &refs, ConstraintRef &a, ConstraintRef &b, ConstraintRef &axis) {
+    if (refs.size() != 3) return false;
+    int chosen = -1, best = -1;
+    for (int k = 0; k < 3; ++k) {
+        const ConstraintRef &r = refs.at(k);
+        if (shapeOf(sketch, r) != Shape::Line) continue;
+        int score = 1;
+        if (r.kind == 2) score = 2;
+        if (r.kind == 0 && sketch.isConstructionSegment(r.element)) score = 3;
+        if (r.kind == 0 && sketch.symmetryAxes.contains(r.element)) score = 4;
+        if (score >= best) best = score, chosen = k;
+    }
+    if (chosen < 0) return false;
+    axis = refs.at(chosen);
+    QVector<ConstraintRef> others;
+    for (int k = 0; k < 3; ++k)
+        if (k != chosen) others.append(refs.at(k));
+    a = others.at(0);
+    b = others.at(1);
+    const Shape sa = shapeOf(sketch, a), sb = shapeOf(sketch, b);
+    if (sa != sb || a == b || a.kind == 2 || b.kind == 2) return false;
+    return sa == Shape::Point || (sa == Shape::Line && a.kind == 0 && b.kind == 0) || sa == Shape::Circle;
 }
 
 }
@@ -819,6 +894,9 @@ QString constraintName(ConstraintType type) {
     case ConstraintType::Radius: return QStringLiteral("Raggio");
     case ConstraintType::Diameter: return QStringLiteral("Diametro");
     case ConstraintType::Pattern: return QStringLiteral("Ripetizione");
+    case ConstraintType::Symmetric: return QStringLiteral("Simmetrico");
+    case ConstraintType::AxisRadius: return QStringLiteral("Raggio dall'asse");
+    case ConstraintType::AxisDiameter: return QStringLiteral("Diametro dall'asse");
     }
     return {};
 }
@@ -842,12 +920,23 @@ QString constraintSymbol(ConstraintType type) {
     case ConstraintType::Radius: return QStringLiteral("R");
     case ConstraintType::Diameter: return QStringLiteral("⌀");
     case ConstraintType::Pattern: return QStringLiteral("⁂");
+    case ConstraintType::Symmetric: return QStringLiteral("⇹");
+    case ConstraintType::AxisRadius: return QStringLiteral("R");
+    case ConstraintType::AxisDiameter: return QStringLiteral("⌀");
     }
     return {};
 }
 
 bool isDimension(ConstraintType type) {
-    return type == ConstraintType::Distance || type == ConstraintType::Angle || type == ConstraintType::Radius || type == ConstraintType::Diameter;
+    return type == ConstraintType::Distance || type == ConstraintType::Angle || type == ConstraintType::Radius || type == ConstraintType::Diameter
+        || type == ConstraintType::AxisRadius || type == ConstraintType::AxisDiameter;
+}
+
+bool isAxisReference(const SketchObject &sketch, const ConstraintRef &ref) {
+    if (ref.point >= 0) return false;
+    if (ref.kind == 2) return ref.element == 1 || ref.element == 2;
+    return ref.kind == 0 && ref.element >= 0 && ref.element < sketch.segments.size()
+        && (sketch.isConstructionSegment(ref.element) || sketch.symmetryAxes.contains(ref.element));
 }
 
 QString describeRef(const SketchObject &sketch, const ConstraintRef &ref) {
@@ -892,6 +981,7 @@ QString describeConstraint(const SketchObject &sketch, const SketchConstraint &c
     }
     QString text = constraintSymbol(c.type) + QLatin1Char(' ') + constraintName(c.type) + QStringLiteral(": ") + describeRef(sketch, c.first);
     if (c.second.kind >= 0) text += QStringLiteral(" · ") + describeRef(sketch, c.second);
+    if (c.third.kind >= 0) text += QStringLiteral(" rispetto a ") + describeRef(sketch, c.third);
     if (c.type == ConstraintType::Angle) text += QStringLiteral(" = %1°").arg(c.value, 0, 'f', 4);
     else if (isDimension(c.type)) text += QStringLiteral(" = %1").arg(c.value, 0, 'f', 4);
     return text;
@@ -900,6 +990,10 @@ QString describeConstraint(const SketchObject &sketch, const SketchConstraint &c
 QVector<ConstraintType> applicableConstraints(const SketchObject &sketch, const QVector<ConstraintRef> &input) {
     using T = ConstraintType;
     const QVector<ConstraintRef> refs = ordered(sketch, input);
+    if (refs.size() == 3) {
+        ConstraintRef a, b, axis;
+        return symmetryRoles(sketch, input, a, b, axis) ? QVector<T>{T::Symmetric} : QVector<T>{};
+    }
     if (refs.isEmpty() || refs.size() > 2) return {};
     const Shape a = shapeOf(sketch, refs.at(0));
     if (a == Shape::None) return {};
@@ -927,6 +1021,7 @@ QVector<ConstraintType> applicableConstraints(const SketchObject &sketch, const 
         if (b == Shape::Line) {
             QVector<T> result{T::PointOnCurve, T::Distance};
             if (refs.at(1).kind == 0) result.insert(1, T::Midpoint);
+            if (isAxisReference(sketch, refs.at(1))) result << T::AxisRadius << T::AxisDiameter;
             return result;
         }
         if (b == Shape::Circle || b == Shape::Ellipse) return {T::PointOnCurve};
@@ -936,6 +1031,9 @@ QVector<ConstraintType> applicableConstraints(const SketchObject &sketch, const 
         QVector<T> result{T::Parallel, T::Perpendicular, T::Collinear};
         if (refs.at(0).kind == 0 && refs.at(1).kind == 0) result << T::Equal;
         result << T::Angle << T::Distance;
+        // Un segmento e un asse: raggio e diametro (il segmento parallelo all'asse).
+        if (isAxisReference(sketch, refs.at(0)) != isAxisReference(sketch, refs.at(1)) && (refs.at(0).kind == 0 || refs.at(1).kind == 0))
+            result << T::AxisRadius << T::AxisDiameter;
         return result;
     }
     if ((a == Shape::Line && b == Shape::Circle) || (a == Shape::Circle && b == Shape::Line)) return {T::Tangent};
@@ -956,6 +1054,26 @@ QVector<ConstraintType> applicableConstraints(const SketchObject &sketch, const 
 }
 
 SketchConstraint makeConstraint(const SketchObject &sketch, ConstraintType type, const QVector<ConstraintRef> &input) {
+    if (type == ConstraintType::Symmetric) {
+        SketchConstraint c;
+        c.type = type;
+        if (!symmetryRoles(sketch, input, c.first, c.second, c.third)) return c;
+        // Segmenti: gli estremi si accoppiano come stanno ora (il riflesso piu' vicino).
+        if (shapeOf(sketch, c.first) == Shape::Line) {
+            const System s(sketch);
+            QPointF a0, a1, p0, p1, q0, q1;
+            s.line(c.third, a0, a1);
+            s.line(c.first, p0, p1);
+            s.line(c.second, q0, q1);
+            const QPointF u = (a1 - a0) / std::max(length(a1 - a0), 1e-300);
+            const auto mirror = [&](const QPointF &p) {
+                const QPointF r = p - a0;
+                return a0 + 2.0 * dot(r, u) * u - r;
+            };
+            c.value = length(mirror(p0) - q0) + length(mirror(p1) - q1) <= length(mirror(p0) - q1) + length(mirror(p1) - q0) ? 0.0 : 1.0;
+        }
+        return c;
+    }
     const QVector<ConstraintRef> refs = ordered(sketch, input);
     SketchConstraint c;
     c.type = type;
@@ -963,6 +1081,9 @@ SketchConstraint makeConstraint(const SketchObject &sketch, ConstraintType type,
     if (refs.size() > 1) c.second = refs.at(1);
     // La retta dei vincoli tra un segmento e un asse va per prima (l'asse e' il riferimento).
     if (c.second.kind >= 0 && c.first.kind == 2 && c.second.kind != 2 && shapeOf(sketch, c.first) == shapeOf(sketch, c.second)) std::swap(c.first, c.second);
+    // Quote dall'asse: l'asse va per secondo.
+    if ((type == ConstraintType::AxisRadius || type == ConstraintType::AxisDiameter) && isAxisReference(sketch, c.first) && !isAxisReference(sketch, c.second))
+        std::swap(c.first, c.second);
     if (type == ConstraintType::Fix) {
         const System s(sketch);
         for (const ConstraintRef &point : s.entityPoints(c.first)) c.positions.append(s.refPoint(point));
@@ -1034,7 +1155,8 @@ bool refersTo(const SketchConstraint &c, int kind, int element) {
                 if (r.kind == kind && r.element == element) return true;
         return false;
     }
-    return (c.first.kind == kind && c.first.element == element) || (c.second.kind == kind && c.second.element == element);
+    return (c.first.kind == kind && c.first.element == element) || (c.second.kind == kind && c.second.element == element)
+        || (c.third.kind == kind && c.third.element == element);
 }
 
 bool refPoint(const SketchObject &sketch, const ConstraintRef &ref, QPointF &point) {
@@ -1149,6 +1271,7 @@ QVector<Block> buildBlocks(const System &system, const SketchObject &sketch, con
         }
         system.dependencies(c->first, block.points);
         system.dependencies(c->second, block.points);
+        system.dependencies(c->third, block.points);
         if (c->type == ConstraintType::Concentric) {
             block.points << system.curvePoint(c->first.element, 0) << system.curvePoint(c->second.element, 0);
         }
@@ -1267,9 +1390,22 @@ QVector<double> jacobian(const QVector<Block> &blocks, QVector<double> &x, int m
 }
 
 bool dimensionPoints(const SketchObject &sketch, const SketchConstraint &c, QPointF &p, QPointF &q) {
-    if (c.type != ConstraintType::Distance || !wellFormed(sketch, c)) return false;
+    const bool axial = c.type == ConstraintType::AxisRadius || c.type == ConstraintType::AxisDiameter;
+    if ((c.type != ConstraintType::Distance && !axial) || !wellFormed(sketch, c)) return false;
     const System s(sketch);
     const Shape a = shapeOf(sketch, c.first), b = shapeOf(sketch, c.second);
+    if (axial) {
+        // Dal punto al piede sull'asse (raggio) o al suo simmetrico (diametro).
+        QPointF l0, l1, p1;
+        s.line(c.second, l0, l1);
+        if (a == Shape::Line) s.line(c.first, p, p1);
+        else p = s.refPoint(c.first);
+        const QPointF d = l1 - l0;
+        const double l2 = dot(d, d);
+        const QPointF foot = l2 > 0.0 ? l0 + d * (dot(p - l0, d) / l2) : l0;
+        q = c.type == ConstraintType::AxisRadius ? foot : 2.0 * foot - p;
+        return true;
+    }
     if (a == Shape::Point && b == Shape::Curve) {
         QPointF tangent;
         p = s.refPoint(c.first);
@@ -1599,6 +1735,7 @@ void remapConstraints(SketchObject &sketch, const QVector<int> &segmentMap, cons
         }
         if (!remap(c.first)) continue;
         if (c.second.kind >= 0 && !remap(c.second)) continue;
+        if (c.third.kind >= 0 && !remap(c.third)) continue;
         kept.append(c);
     }
     sketch.geometricConstraints = kept;

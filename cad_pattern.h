@@ -27,6 +27,11 @@ ForgeBody forgePattern(const ForgeBody &base, const std::vector<Kernel::Transfor
 ForgeBody forgePatternFeature(const ForgeBody &target, const ForgeBody &tool, BooleanOperation operation,
                               const std::vector<Kernel::Transform3> &placements, QString *error);
 
+// Spostamento del corpo (BodyFeature::Transform, `move`): rotazione attorno
+// all'asse risolto, poi traslazione (transformBody: esatto).
+ForgeBody forgeMoveBody(const ForgeBody &base, const TransformParameters &move, int owner, const QVector<SketchObject> &sketches,
+                        const QVector<ExtrusionObject> &bodies, QString *error);
+
 }
 
 #endif

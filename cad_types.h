@@ -32,8 +32,11 @@ using ForgeCurve = std::shared_ptr<const Kernel::Curve<3>>;
 // Rectangle (due angoli) e CenterRectangle (centro e un angolo) creano quattro
 // segmenti orizzontali e verticali collegati; Ellipse e' una curva. I valori
 // sono salvati nei file: i nuovi strumenti vanno in fondo.
+// Converted: curva di riferimento presa da uno spigolo, una curva o una
+// sezione di un corpo (B-spline razionale esatta: poli, pesi, nodi espansi e
+// grado in CurveObject); ConvertEdges: lo strumento che le crea con un clic.
 enum class DrawingTool { Line, Polyline, Spline, Nurbs, Circle, Arc, Polygon, ConstructionLine, Trim, Extend, Split, Fillet, Chamfer, Select,
-                         Rectangle, CenterRectangle, Ellipse, ThreePointArc, TangentArc };
+                         Rectangle, CenterRectangle, Ellipse, ThreePointArc, TangentArc, Converted, ConvertEdges };
 enum class SnapKind { None, Endpoint, Midpoint, Nearest };
 
 enum class ReferencePlane { XY, XZ, YZ };
@@ -64,6 +67,8 @@ struct CurveObject {
     QVector<double> weights;
     QVector<QPair<QPointF, QPointF>> tangentHandles;
     int sides = 0;
+    QVector<double> knots;  // Converted: nodi espansi (poli + grado + 1)
+    int degree = 3;         // Converted
     QVector<QPointF> samples;
     bool numericallyValid = false;
     bool construction = false;
@@ -115,8 +120,15 @@ struct ConstraintRef {
 // del modello, angoli in gradi.
 enum class ConstraintType {
     Coincident = 0, Horizontal, Vertical, Parallel, Perpendicular, Collinear, Tangent, Equal, Concentric, Midpoint,
-    PointOnCurve, Fix, Distance, Angle, Radius, Diameter, Pattern
+    PointOnCurve, Fix, Distance, Angle, Radius, Diameter, Pattern, Symmetric, AxisRadius, AxisDiameter
 };
+// Symmetric: first e second simmetrici rispetto alla retta `third` (punti;
+// segmenti, con gli estremi accoppiati come dice value: 0 inizio con inizio,
+// 1 inizio con fine; cerchi e archi: centri simmetrici e raggi uguali).
+// AxisRadius / AxisDiameter: distanza (o il doppio) di un punto o di un
+// segmento parallelo dall'asse `second` (asse di simmetria, linea di
+// costruzione o asse del piano): le quote di raggio e diametro di un profilo
+// di rivoluzione.
 
 // Ripetizione parametrica nello schizzo (vincolo Pattern): le copie restano
 // l'immagine delle entita' di partenza, qualunque cosa cambi. Tipi come
@@ -163,6 +175,7 @@ struct SketchConstraint {
     QPointF placement;
     bool placed = false;
     SketchPatternData pattern;  // solo per Pattern
+    ConstraintRef third;        // Symmetric: la retta di simmetria
 };
 
 struct SketchObject {
@@ -178,6 +191,10 @@ struct SketchObject {
     // Segmenti di costruzione: indici in `segments` (linee di riferimento che
     // non entrano nei profili, per esempio l'asse di una rivoluzione).
     QVector<int> constructionSegments;
+    // Assi di simmetria: segmenti di costruzione (indici in `segments`)
+    // disegnati come linee d'asse; fanno da riferimento a simmetrie e quote di
+    // raggio e diametro.
+    QVector<int> symmetryAxes;
     // Sistema esplicito del piano (plane == kFacePlane, o customFrame sui piani
     // di riferimento: gli schizzi nuovi prendono gli assi dello schermo della
     // vista normale al piano con l'orientamento degli assi del documento).
@@ -215,8 +232,9 @@ struct BodyDisplay {
 // Loft: superficie o solido per una successione di sezioni. Imported: forma
 // letta da un file STEP/IGES. DatumPlane: piano di costruzione (niente solido).
 // Pattern: ripetizione (lineare, circolare, specchio) di un corpo o di una funzione.
+// Transform: spostamento e rotazione di un corpo (o di una sua copia).
 enum class BodyFeature { Extrusion = 0, Revolution = 1, Primitive = 2, Blend = 3, SheetTrim = 4, SheetExtend = 5, Scale = 6, Helix = 7, Sweep = 8, Loft = 9,
-                         Imported = 10, DatumPlane = 11, Pattern = 12 };
+                         Imported = 10, DatumPlane = 11, Pattern = 12, Transform = 13 };
 
 // Spigolo di un corpo identificato da un suo punto (coordinate del modello):
 // dopo una rigenerazione si prende lo spigolo piu' vicino.
@@ -347,6 +365,18 @@ struct PatternParameters {
     bool featureOnly = false;
 };
 
+// Spostamento di un corpo (BodyFeature::Transform): prima la rotazione di
+// `angle` gradi attorno alla retta `axis` (GeometryRef risolto a ogni
+// rigenerazione: asse del modello, spigolo rettilineo, asse di una faccia
+// cilindrica, segmento di uno schizzo; verso destrorso), poi la traslazione.
+// Con `copy` il corpo di partenza resta visibile (il risultato e' una copia).
+struct TransformParameters {
+    double translation[3] = {0.0, 0.0, 0.0};
+    GeometryRef axis{2, 2, {}, {}};
+    double angle = 0.0;
+    bool copy = false;
+};
+
 // Corpo della scena, definito in modo parametrico:
 //  - estrusione (operation = -1, feature Extrusion): profili chiusi dello
 //    schizzo `sketchIndex` estrusi di `distance` lungo la normale del piano;
@@ -441,6 +471,8 @@ struct ExtrusionObject {
     bool mergeProbe = false;
     // Booleane: gli strumenti oltre a secondBody (A op B op C ...).
     QVector<int> booleanTools;
+    // Transform: spostamento del corpo firstBody.
+    TransformParameters move;
     SketchFrame datumFrame;
     bool datumValid = false;
     int firstBody = -1;

@@ -10,6 +10,7 @@ class QLabel;
 class QWidget;
 class QTreeWidget;
 class QTreeWidgetItem;
+class QColor;
 class QCloseEvent;
 
 class PdfWindow final : public QMainWindow {
@@ -30,6 +31,8 @@ private:
     void setDisplayMode(int mode);
     void setTheme(bool dark);
     void rebuildModelTree();
+    void renameTreeItem(QTreeWidgetItem *item);
+    void applyTreeBackground(const QColor &color);
     void scheduleModelTreeRebuild();
     void updateUndoActions();
     void editBackground();

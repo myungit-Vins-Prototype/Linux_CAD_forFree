@@ -335,4 +335,71 @@ ForgeBody forgeExtrusionFeature(ExtrusionObject &body, int index, const QVector<
     }
 }
 
+void forgeComponentCounts(const ForgeBody &body, int &solids, int &sheets) {
+    solids = sheets = 0;
+    if (!body) return;
+    const std::vector<ShellId> shells = body->shells();
+    if (body->isSheet()) {
+        sheets = int(shells.size());
+        return;
+    }
+    if (shells.size() <= 1) {
+        solids = int(shells.size());
+        return;
+    }
+    // Un punto di ogni shell: se sta dentro un'altra shell, la shell e' una cavita'.
+    std::vector<Vec3> points;
+    for (ShellId shell : shells) {
+        Vec3 point;
+        bool found = false;
+        for (FaceId f : body->shell(shell).faces) {
+            for (LoopId l : body->face(f).loops)
+                if (body->loop(l).first.valid()) {
+                    point = body->vertex(body->fin(body->loop(l).first).vertex).point;
+                    found = true;
+                    break;
+                }
+            if (!found) {
+                const Surface &surface = *body->face(f).surface;
+                const Interval u = surface.uDomain(), v = surface.vDomain();
+                Vec3 out;
+                surface.evaluate(std::isfinite(u.lo + u.hi) ? 0.5 * (u.lo + u.hi) : 0.0, std::isfinite(v.lo + v.hi) ? 0.5 * (v.lo + v.hi) : 0.0, 0, &out);
+                point = out;
+                found = true;
+            }
+            if (found) break;
+        }
+        points.push_back(point);
+    }
+    // Una shell puo' stare dentro un'altra solo se il suo box sta nel box dell'altra.
+    std::vector<Box> boxes;
+    for (ShellId shell : shells) {
+        Box box;
+        for (FaceId f : body->shell(shell).faces) box.add(faceBox(*body, f));
+        boxes.push_back(box);
+    }
+    const auto inside = [](const Box &a, const Box &b) {
+        for (int k = 0; k < 3; ++k)
+            if (a.lo[k] < b.lo[k] - 1e-9 || a.hi[k] > b.hi[k] + 1e-9) return false;
+        return true;
+    };
+    std::vector<ForgeBody> single(shells.size());
+    for (std::size_t a = 0; a < shells.size(); ++a) {
+        bool cavity = false;
+        for (std::size_t b = 0; b < shells.size() && !cavity; ++b) {
+            if (a == b || !inside(boxes[a], boxes[b])) continue;
+            if (!single[b]) {
+                const ShellId shell = shells[b];
+                single[b] = forgeKeepShells(body, [shell](const Body &, ShellId s) { return s == shell; });
+            }
+            if (!single[b]) continue;
+            try {
+                cavity = SolidClassifier(*single[b], 1e-7).classify(points[a]) == PointLocation::Inside;
+            } catch (const std::exception &) {
+            }
+        }
+        if (!cavity) ++solids;
+    }
+}
+
 }

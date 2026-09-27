@@ -604,6 +604,54 @@ std::map<QString, Draw> &registry() {
         cube(p, c, -1, true, true, 0.4, QPointF(-6, 0));
         cube(p, c, 0, true, true, 0.4, QPointF(6, 0));
     };
+    icons["symmetryAxis"] = [](QPainter &p, const IconPalette &c) {
+        // Linea d'asse (tratto e punto) con due punti simmetrici.
+        QPen axis = stroke(QColor(90, 225, 200), 1.6);
+        axis.setDashPattern({6, 2, 1.5, 2});
+        p.setPen(axis);
+        p.drawLine(QPointF(12, 2), QPointF(12, 22));
+        dot(p, {6, 9}, c.ink, 2.0);
+        dot(p, {18, 9}, c.accent, 2.0);
+        p.setPen(stroke(c.construction, 1.0, Qt::DashLine));
+        p.drawLine(QPointF(6, 9), QPointF(18, 9));
+        p.setPen(stroke(c.accent, 1.4));
+        p.drawLine(QPointF(5, 17), QPointF(9, 17));
+        p.drawLine(QPointF(15, 17), QPointF(19, 17));
+    };
+    icons["convertEdges"] = [](QPainter &p, const IconPalette &c) {
+        // Spigolo di un cubo portato nel piano: il bordo in arancio e la sua proiezione.
+        cube(p, c, 0, true, true, 0.5, QPointF(-2, -3));
+        line(p, {3, 20}, {20, 20}, stroke(c.accent, 1.8));
+        p.setPen(stroke(c.construction, 1.0, Qt::DashLine));
+        p.drawLine(QPointF(5, 14), QPointF(5, 19));
+        p.drawLine(QPointF(17, 14), QPointF(17, 19));
+        arrowHead(p, {11, 19}, {11, 13}, c.accent, 3.0);
+    };
+    icons["sectionCurves"] = [](QPainter &p, const IconPalette &c) {
+        // Cilindro tagliato dal piano: la curva di sezione in arancio.
+        p.setBrush(c.faceMid);
+        p.setPen(stroke(c.ink, 1.2));
+        p.drawRect(QRectF(6, 5, 12, 15));
+        polygon(p, QPolygonF({{2, 13}, {17, 9}, {22, 11}, {7, 15}}), QColor(96, 170, 255, 70), stroke(c.construction, 1.0));
+        p.setPen(stroke(c.accent, 2.0));
+        p.setBrush(Qt::NoBrush);
+        p.drawEllipse(QPointF(12, 12), 6, 1.8);
+    };
+    icons["move"] = [](QPainter &p, const IconPalette &c) {
+        // Cubo con la copia spostata tratteggiata e le frecce di traslazione e rotazione.
+        cube(p, c, -1, true, true, 0.42, QPointF(-5, 4));
+        p.setPen(stroke(c.accent, 1.2, Qt::DashLine));
+        p.setBrush(Qt::NoBrush);
+        p.drawRect(QRectF(12.5, 2.5, 8, 8));
+        line(p, {9, 12}, {14, 7}, stroke(c.accent, 1.6));
+        arrowHead(p, {16, 5}, {11, 10}, c.accent, 3.6);
+        QPainterPath arc;
+        arc.arcMoveTo(QRectF(11, 11, 10, 10), 200);
+        arc.arcTo(QRectF(11, 11, 10, 10), 200, -150);
+        p.setPen(stroke(c.accent, 1.5));
+        p.drawPath(arc);
+        arrowHead(p, arc.currentPosition(), arc.pointAtPercent(0.85), c.accent, 3.2);
+    };
     icons["section"] = [](QPainter &p, const IconPalette &c) {
         // Un cubo tagliato: la faccia di sezione tratteggiata e il piano.
         cube(p, c, 0, true, true, 0.62, QPointF(-1.5, 1.5));
