@@ -32,6 +32,23 @@ Vec3 Frame3::directionToLocal(const Vec3 &globalVector) const {
     return Vec3(dot(globalVector, x_), dot(globalVector, y_), dot(globalVector, z_));
 }
 
+Frame3 Frame3::fromAxes(const Vec3 &origin, const Vec3 &x, const Vec3 &y, const Vec3 &z) {
+    Frame3 frame;
+    frame.origin_ = origin;
+    frame.x_ = x;
+    frame.y_ = y;
+    frame.z_ = z;
+    return frame;
+}
+
+Transform3 Transform3::fromParts(const double (&matrix)[3][3], const Vec3 &translation) {
+    Transform3 result;
+    for (int i = 0; i < 3; ++i)
+        for (int j = 0; j < 3; ++j) result.m_[i][j] = matrix[i][j];
+    result.t_ = translation;
+    return result;
+}
+
 Transform3::Transform3() : m_{{1.0, 0.0, 0.0}, {0.0, 1.0, 0.0}, {0.0, 0.0, 1.0}} {}
 
 Transform3 Transform3::translation(const Vec3 &offset) {

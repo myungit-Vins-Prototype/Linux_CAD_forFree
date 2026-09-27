@@ -481,6 +481,9 @@ struct ExtrusionObject {
     ForgeCad::ForgeBody forgeBody;
     QString error;
     BodyDisplay display;
+    // forgeBody e error vengono dalla copia salvata nel documento (formato 14):
+    // alla prima rigenerazione si usano invece di ricalcolare il corpo.
+    bool cachedGeometry = false;
 };
 
 // Orientamento degli assi del modello sullo schermo: le direzioni del modello

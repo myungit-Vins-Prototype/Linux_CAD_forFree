@@ -45,6 +45,9 @@ add_library(forgekernel STATIC
     fk_marching.cpp
     fk_classify.h
     fk_classify.cpp
+    fk_parallel.h
+    fk_body_io.h
+    fk_body_io.cpp
     fk_boolean.h
     fk_boolean.cpp
     fk_unify.h
@@ -84,6 +87,9 @@ add_library(forgekernel STATIC
     fk_iges.cpp
 )
 target_include_directories(forgekernel PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+# Le booleane calcolano le intersezioni tra le facce in parallelo (std::thread).
+find_package(Threads REQUIRED)
+target_link_libraries(forgekernel PUBLIC Threads::Threads)
 target_compile_features(forgekernel PUBLIC cxx_std_17)
 # Il kernel e' codice numerico nel percorso caldo (proiezioni, intersezioni):
 # lo si compila ottimizzato anche in Debug, senza perdere i simboli.
@@ -132,6 +138,7 @@ add_executable(forgekernel_tests
     tests/test_blend.cpp
     tests/test_sheet.cpp
     tests/test_transform.cpp
+    tests/test_body_io.cpp
     tests/test_helix.cpp
     tests/test_sweep.cpp
     tests/test_loft.cpp

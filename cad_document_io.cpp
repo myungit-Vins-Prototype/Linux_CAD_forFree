@@ -1,13 +1,19 @@
 #include "cad_document_io.h"
 
+#include <exception>
+#include <memory>
+#include <string>
 #include <vector>
 
 #include <QBuffer>
+#include <QCryptographicHash>
 #include <QDataStream>
 #include <QFile>
 #include <QSaveFile>
 
 #include "cad_constraints.h"
+#include "fk_body_io.h"
+#include "forgecad_source_hash.h"
 
 namespace ForgeCad {
 namespace {
@@ -24,7 +30,8 @@ constexpr char kMagic[4] = {'F', 'C', 'A', 'D'};
 // riferimento e fuse con altri solidi, booleane con piu' strumenti.
 // 12 curve di riferimento prese dai corpi (nodi e grado), spostamento dei corpi.
 // 13 assi di simmetria degli schizzi, simmetrie (terzo riferimento dei vincoli), quote di raggio e diametro dall'asse.
-constexpr quint16 kVersion = 13;
+// 14 copia dei corpi calcolati dopo la definizione (stessa definizione del 13).
+constexpr quint16 kVersion = 14;
 constexpr quint8 kZlib = 1;
 
 void write(QDataStream &out, const CurveObject &curve) {
@@ -353,7 +360,69 @@ bool read(QDataStream &in, ExtrusionObject &body, quint16 version, int extras) {
 
 }
 
-QString saveDocumentFile(const QString &path, const DocumentState &state) {
+namespace {
+
+// Copia dei corpi calcolati (formato 14), in un blocco compresso dopo la
+// definizione: l'impronta dei sorgenti della geometria (FORGECAD_SOURCE_HASH)
+// e quella della definizione, poi per ogni corpo il body del kernel in
+// binario (fk_body_io) con il suo messaggio. All'apertura vale solo se le due
+// impronte coincidono: altrimenti (o se un body non si rilegge) si ricalcola.
+QByteArray definitionHash(const QByteArray &payload) { return QCryptographicHash::hash(payload, QCryptographicHash::Sha256); }
+
+QByteArray bodyCache(const QByteArray &payload, const DocumentState &state) {
+    QByteArray cache;
+    QBuffer buffer(&cache);
+    buffer.open(QIODevice::WriteOnly);
+    QDataStream out(&buffer);
+    out.setVersion(QDataStream::Qt_6_0);
+    out << QByteArray(FORGECAD_SOURCE_HASH) << definitionHash(payload) << quint32(state.extrusions.size());
+    for (const ExtrusionObject &body : state.extrusions) {
+        std::string data;
+        if (body.forgeBody) {
+            try {
+                data = Kernel::writeBodyBinary(*body.forgeBody);
+            } catch (const std::exception &) {
+                data.clear();  // geometria che il formato non conosce: si ricalcolera'
+            }
+        }
+        out << quint8(data.empty() ? 0 : 1);
+        if (!data.empty()) out << body.error << QByteArray(data.data(), qsizetype(data.size()));
+    }
+    return qCompress(cache, 6);
+}
+
+void applyBodyCache(const QByteArray &compressed, const QByteArray &payload, DocumentState &state) {
+    const QByteArray cache = qUncompress(compressed);
+    if (cache.isEmpty()) return;
+    QDataStream in(cache);
+    in.setVersion(QDataStream::Qt_6_0);
+    QByteArray sourceHash, payloadHash;
+    quint32 count = 0;
+    in >> sourceHash >> payloadHash >> count;
+    if (in.status() != QDataStream::Ok || sourceHash != QByteArray(FORGECAD_SOURCE_HASH) || payloadHash != definitionHash(payload)
+        || count != quint32(state.extrusions.size()))
+        return;
+    for (ExtrusionObject &body : state.extrusions) {
+        quint8 has = 0;
+        in >> has;
+        if (!has) continue;
+        QString error;
+        QByteArray data;
+        in >> error >> data;
+        if (in.status() != QDataStream::Ok) return;
+        try {
+            body.forgeBody = std::make_shared<const Kernel::Body>(Kernel::readBodyBinary(std::string(data.constData(), std::size_t(data.size()))));
+            body.error = error;
+            body.cachedGeometry = true;
+        } catch (const std::exception &) {
+            body.forgeBody.reset();
+        }
+    }
+}
+
+}
+
+QString saveDocumentFile(const QString &path, const DocumentState &state, bool bodies) {
     QByteArray payload;
     {
         QBuffer buffer(&payload);
@@ -374,7 +443,12 @@ QString saveDocumentFile(const QString &path, const DocumentState &state) {
     out.writeRawData(kMagic, 4);
     out << kVersion << kZlib;
     const QByteArray compressed = qCompress(payload, 9);
+    out << quint32(compressed.size());
     out.writeRawData(compressed.constData(), int(compressed.size()));
+    if (bodies) {
+        const QByteArray cache = bodyCache(payload, state);
+        out.writeRawData(cache.constData(), int(cache.size()));
+    }
     if (out.status() != QDataStream::Ok || !file.commit()) return QStringLiteral("Errore di scrittura su %1: %2").arg(path, file.errorString());
     return {};
 }
@@ -421,7 +495,15 @@ QString loadDocumentFile(const QString &path, DocumentState &state) {
     header >> version >> compression;
     if (version > kVersion) return QStringLiteral("Il file e' stato scritto da una versione piu' recente di ForgeCAD (formato %1).").arg(version);
     if (compression != kZlib) return QStringLiteral("Compressione sconosciuta nel file.");
-    const QByteArray payload = qUncompress(data.mid(7));
+    QByteArray compressed = data.mid(7), cache;
+    if (version >= 14) {
+        quint32 size = 0;
+        header >> size;
+        if (header.status() != QDataStream::Ok || qsizetype(size) > data.size() - 11) return QStringLiteral("Il file e' danneggiato (lunghezza dei dati).");
+        compressed = data.mid(11, qsizetype(size));
+        cache = data.mid(11 + qsizetype(size));
+    }
+    const QByteArray payload = qUncompress(compressed);
     if (payload.isEmpty()) return QStringLiteral("Il file e' danneggiato (dati compressi non validi).");
     // Formato 5: tre varianti (senza e con i campi della scala e dello smusso),
     // vale la prima che si legge tutta.
@@ -433,6 +515,7 @@ QString loadDocumentFile(const QString &path, DocumentState &state) {
         if (error.isEmpty()) break;
     }
     if (!error.isEmpty()) return error;
+    if (!cache.isEmpty()) applyBodyCache(cache, payload, loaded);
     state = std::move(loaded);
     return {};
 }

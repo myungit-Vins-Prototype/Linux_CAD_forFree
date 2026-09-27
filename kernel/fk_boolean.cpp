@@ -2,11 +2,13 @@
 #include "fk_curve_surface.h"
 
 #include <algorithm>
+#include <exception>
 #include <cmath>
 #include <functional>
 #include <limits>
 #include <map>
 #include <memory>
+#include <mutex>
 #include <set>
 #include <stdexcept>
 
@@ -16,6 +18,7 @@
 #include "fk_curve_algo.h"
 #include "fk_intersect.h"
 #include "fk_marching.h"
+#include "fk_parallel.h"
 #include "fk_pcurve.h"
 #include "fk_surface_algo.h"
 #include "fk_unify.h"
@@ -106,7 +109,7 @@ Vec3 faceNormal(const Surface &surface, bool sense, const Vec3 &x, double tolera
 class BooleanBuilder {
 public:
     BooleanBuilder(const Body &a, const Body &b, BooleanOperation operation, const BooleanOptions &options, bool split = false)
-        : operation_(operation), tolerance_(options.tolerance), unify_(options.unifySameDomain), split_(split) {
+        : operation_(operation), tolerance_(options.tolerance), unify_(options.unifySameDomain), split_(split), threads_(options.threads) {
         bodies_[0] = a;
         bodies_[1] = b;
         Box all;
@@ -126,19 +129,40 @@ public:
     std::vector<Body> split();
 
 private:
+    // SP-curve delle curve d'intersezione approssimate, per curva e superficie.
+    struct PCurves {
+        const Surface *surface[2];
+        CurvePtr<2> pcurve[2];
+        double deviation;
+    };
+    // Risultato del passo 1 per una coppia di facce. Le coppie si calcolano
+    // in parallelo, ognuna nel suo PairResult; poi si uniscono nell'ordine
+    // delle coppie, come se fossero state calcolate una dopo l'altra.
+    struct PairResult {
+        std::vector<Arc> arcs;
+        std::map<const Curve<3> *, PCurves> pcurves;
+        // Superfici che coincidono solo in parte e i tagli della loro zona comune.
+        std::set<std::pair<const Surface *, const Surface *>> partial;
+        std::vector<IntersectionCurve> partialCuts;
+        // Tagli delle zone comuni delle coppie precedenti (a cui si agganciano
+        // gli estremi dei tratti comuni degli edge sulle B-spline) e se sono serviti.
+        const std::vector<IntersectionCurve> *earlierCuts = nullptr;
+        bool usedEarlierCuts = false;
+        std::exception_ptr error;
+    };
     // Tagli di ogni faccia (pezzi degli archi d'intersezione) dopo il passo 1.
     void computeCuts(std::map<int, std::vector<Piece>> (&cuts)[2]);
     // Passo 5: cucitura dei pezzi tenuti ("da girare" se il secondo e' vero).
     Body assemble(const std::vector<std::pair<SubFace, bool>> &kept, bool sheetResult);
-    void pairArcs(FaceId fa, FaceId fb);
+    void pairArcs(FaceId fa, FaceId fb, PairResult &out) const;
     bool coincident(const Surface &a, const Surface &b) const;
-    void coincidentArcs(FaceId fa, FaceId fb, bool partial = false);
-    std::vector<Interval> coincidentRanges(const Curve<3> &curve, const Interval &range, const Surface &surface) const;
-    void surfaceArcs(FaceId fa, FaceId fb);
+    void coincidentArcs(FaceId fa, FaceId fb, PairResult &out, bool partial = false) const;
+    std::vector<Interval> coincidentRanges(const Curve<3> &curve, const Interval &range, const Surface &surface, PairResult &out) const;
+    void surfaceArcs(FaceId fa, FaceId fb, PairResult &out) const;
     Box commonBounds(FaceId fa, FaceId fb) const;
     bool touchesBoth(FaceId fa, FaceId fb, const Vec3 &x) const;
     void addArcs(const CurvePtr<3> &curve, const Interval &range, const std::vector<double> &parameters, FaceId fa, FaceId fb,
-                 const IntersectionCurve *source = nullptr);
+                 PairResult &out, const IntersectionCurve *source = nullptr) const;
     std::vector<Interval> splitRange(const Curve<3> &curve, const Interval &range, std::vector<double> parameters) const;
     std::vector<Interval> splitAtPoints(const Curve<3> &curve, const Interval &range) const;
     std::vector<SubFace> buildSubFaces(int k, FaceId f, const std::vector<Piece> &cuts) const;
@@ -155,18 +179,14 @@ private:
     BooleanOperation operation_;
     double tolerance_, scale_ = 1.0;
     bool unify_ = true, split_ = false;
+    int threads_ = 0;
     mutable int polygonSamples_ = 24;  // campioni per tratto dei poligoni (u, v) dei cicli
     std::map<int, Box> boxes_[2];
     std::vector<Arc> arcs_;
     std::vector<Vec3> vertexPoints_;
-    // SP-curve delle curve d'intersezione approssimate, per curva e superficie.
-    struct PCurves {
-        const Surface *surface[2];
-        CurvePtr<2> pcurve[2];
-        double deviation;
-    };
     std::map<const Curve<3> *, PCurves> pcurves_;
     mutable std::map<std::pair<const Surface *, const Surface *>, bool> coincident_;  // sameSurface gia' calcolati
+    mutable std::mutex coincidentMutex_;
     // Superfici che coincidono solo in parte (fianchi estrusi in direzioni
     // parallele con sezioni sovrapposte in un tratto), nei due ordini.
     std::set<std::pair<const Surface *, const Surface *>> partial_;
@@ -212,22 +232,27 @@ std::vector<Interval> BooleanBuilder::splitRange(const Curve<3> &curve, const In
 
 bool BooleanBuilder::coincident(const Surface &a, const Surface &b) const {
     const auto key = std::make_pair(&a, &b);
-    const auto found = coincident_.find(key);
-    if (found != coincident_.end()) return found->second;
-    return coincident_[key] = sameSurface(a, b, tolerance_);
+    {
+        const std::lock_guard<std::mutex> lock(coincidentMutex_);
+        const auto found = coincident_.find(key);
+        if (found != coincident_.end()) return found->second;
+    }
+    const bool same = sameSurface(a, b, tolerance_);
+    const std::lock_guard<std::mutex> lock(coincidentMutex_);
+    return coincident_[key] = same;
 }
 
-void BooleanBuilder::pairArcs(FaceId fa, FaceId fb) {
+void BooleanBuilder::pairArcs(FaceId fa, FaceId fb, PairResult &out) const {
     const Surface &sa = *bodies_[0].face(fa).surface, &sb = *bodies_[1].face(fb).surface;
     if (coincident(sa, sb)) {
-        coincidentArcs(fa, fb);
+        coincidentArcs(fa, fb, out);
         return;
     }
     int k;
     if (isPlane(sa)) k = 0;
     else if (isPlane(sb)) k = 1;
     else {
-        surfaceArcs(fa, fb);
+        surfaceArcs(fa, fb, out);
         return;
     }
     // Piano con cono, toro, rivoluzione o B-spline: curve tracciate come tra
@@ -246,7 +271,7 @@ void BooleanBuilder::pairArcs(FaceId fa, FaceId fb) {
         exact = std::fabs(dot(n, cone.apex()) - offset) <= tolerance_ || std::fabs(dot(n, cone.frame().zDir())) >= 1.0 - 1e-15;
     }
     if (!exact) {
-        surfaceArcs(fa, fb);
+        surfaceArcs(fa, fb, out);
         return;
     }
     const PlaneSurfaceIntersection intersection = intersectPlaneSurface(plane, curved, commonBounds(fa, fb), tolerance_);
@@ -283,7 +308,7 @@ void BooleanBuilder::pairArcs(FaceId fa, FaceId fb) {
                     if (projection.distance <= 10.0 * tolerance_) parameters.push_back(projection.parameter);
                 }
             }
-        addArcs(curve, range, parameters, fa, fb);
+        addArcs(curve, range, parameters, fa, fb, out);
     }
 }
 
@@ -307,7 +332,7 @@ bool BooleanBuilder::touchesBoth(FaceId fa, FaceId fb, const Vec3 &x) const {
 
 // Tratti della curva (divisa nei parametri dati) che stanno in entrambe le facce.
 void BooleanBuilder::addArcs(const CurvePtr<3> &curve, const Interval &range, const std::vector<double> &parameters, FaceId fa,
-                             FaceId fb, const IntersectionCurve *source) {
+                             FaceId fb, PairResult &out, const IntersectionCurve *source) const {
     bool added = false;
     // Le curve che passano per un polo di una delle due superfici (sfera,
     // vertice del cono) vi hanno un vertice: nello spazio (u, v) il polo e'
@@ -334,7 +359,7 @@ void BooleanBuilder::addArcs(const CurvePtr<3> &curve, const Interval &range, co
         arc.face[1] = fb;
         arc.cut[0] = in0 == PointLocation::Inside;
         arc.cut[1] = in1 == PointLocation::Inside;
-        arcs_.push_back(arc);
+        out.arcs.push_back(arc);
         added = true;
     }
     if (added && source && source->pcurves[0]) {
@@ -344,14 +369,14 @@ void BooleanBuilder::addArcs(const CurvePtr<3> &curve, const Interval &range, co
         entry.pcurve[0] = source->pcurves[0];
         entry.pcurve[1] = source->pcurves[1];
         entry.deviation = source->deviation;
-        pcurves_[curve.get()] = entry;
+        out.pcurves[curve.get()] = entry;
     }
 }
 
 // Due superfici non piane: curve d'intersezione tracciate (fk_marching) a
 // partire dai punti in cui gli edge di una faccia attraversano la superficie
 // dell'altra dentro di essa.
-void BooleanBuilder::surfaceArcs(FaceId fa, FaceId fb) {
+void BooleanBuilder::surfaceArcs(FaceId fa, FaceId fb, PairResult &out) const {
     std::vector<Vec3> crossings;
     auto collect = [&](int k, FaceId self, FaceId otherFace) {
         const Body &body = bodies_[k], &other = bodies_[1 - k];
@@ -394,10 +419,10 @@ void BooleanBuilder::surfaceArcs(FaceId fa, FaceId fb) {
         // Tagli della zona comune (linee di nodo): gli estremi dei tratti
         // comuni degli edge vi si agganciano (dove una B-spline si separa
         // dall'altra con continuita' alta lo scarto cresce lentamente).
-        for (const IntersectionCurve &cut : intersection.curves) partialCuts_.push_back(cut);
-        partial_.insert({&sa, &sb});
-        partial_.insert({&sb, &sa});
-        coincidentArcs(fa, fb, true);
+        for (const IntersectionCurve &cut : intersection.curves) out.partialCuts.push_back(cut);
+        out.partial.insert({&sa, &sb});
+        out.partial.insert({&sb, &sa});
+        coincidentArcs(fa, fb, out, true);
     }
     // Contatti di ordine superiore (le seconde forme non bastano a decidere):
     // su un anello attorno al punto, sulla superficie A, la distanza con segno
@@ -482,7 +507,7 @@ void BooleanBuilder::surfaceArcs(FaceId fa, FaceId fb) {
             const CurveProjection<3> projection = projectPoint(*curve.curve, x, curve.range);
             if (projection.distance <= 10.0 * tolerance_) parameters.push_back(projection.parameter);
         }
-        addArcs(curve.curve, curve.range, parameters, fa, fb, &curve);
+        addArcs(curve.curve, curve.range, parameters, fa, fb, out, &curve);
     }
 }
 
@@ -494,7 +519,7 @@ void BooleanBuilder::surfaceArcs(FaceId fa, FaceId fb) {
 // anche spostate di un periodo).
 // Tratti della curva che stanno sulla superficie. Un cerchio coassiale con
 // una superficie di rivoluzione ci sta tutto o per niente.
-std::vector<Interval> BooleanBuilder::coincidentRanges(const Curve<3> &curve, const Interval &range, const Surface &surface) const {
+std::vector<Interval> BooleanBuilder::coincidentRanges(const Curve<3> &curve, const Interval &range, const Surface &surface, PairResult &out) const {
     if (curve.type() == CurveType::Circle) {
         const auto &circle = static_cast<const Circle<3> &>(curve);
         const Vec3 normal = cross(circle.xAxis(), circle.yAxis());
@@ -507,11 +532,14 @@ std::vector<Interval> BooleanBuilder::coincidentRanges(const Curve<3> &curve, co
     if (surface.type() != SurfaceType::BSpline) return intersectCurveSurface(curve, range, surface, tolerance_).coincident;
     // B-spline: gli estremi si agganciano anche ai tagli della zona comune.
     std::vector<std::pair<CurvePtr<3>, Interval>> snap;
-    for (const IntersectionCurve &cut : partialCuts_) snap.emplace_back(cut.curve, cut.range);
+    out.usedEarlierCuts = true;
+    if (out.earlierCuts)
+        for (const IntersectionCurve &cut : *out.earlierCuts) snap.emplace_back(cut.curve, cut.range);
+    for (const IntersectionCurve &cut : out.partialCuts) snap.emplace_back(cut.curve, cut.range);
     return curveOnSurface(curve, range, surface, tolerance_, snap);
 }
 
-void BooleanBuilder::coincidentArcs(FaceId fa, FaceId fb, bool partial) {
+void BooleanBuilder::coincidentArcs(FaceId fa, FaceId fb, PairResult &out, bool partial) const {
     for (int k = 0; k < 2; ++k) {
         const FaceId fx = k == 0 ? fa : fb, fy = k == 0 ? fb : fa;
         const Body &bx = bodies_[k], &by = bodies_[1 - k];
@@ -522,7 +550,7 @@ void BooleanBuilder::coincidentArcs(FaceId fa, FaceId fb, bool partial) {
                 const Edge &fullEdge = by.edge(by.fin(f).edge);
                 // Superfici coincidenti in parte: solo i tratti dell'edge che stanno sull'altra.
                 std::vector<Interval> ranges{fullEdge.range};
-                if (partial) ranges = coincidentRanges(*fullEdge.curve, fullEdge.range, surface);
+                if (partial) ranges = coincidentRanges(*fullEdge.curve, fullEdge.range, surface, out);
                 for (const Interval &range : ranges) {
                 Edge edge = fullEdge;
                 edge.range = range;
@@ -562,7 +590,7 @@ void BooleanBuilder::coincidentArcs(FaceId fa, FaceId fb, bool partial) {
                     arc.face[1 - k] = fy;
                     arc.cut[k] = location == PointLocation::Inside;
                     arc.coplanar = true;
-                    arcs_.push_back(arc);
+                    out.arcs.push_back(arc);
                 }
                 }
             }
@@ -1367,9 +1395,38 @@ void BooleanBuilder::pairRadially(const std::vector<Vec3> &, std::vector<Body::B
 }
 
 void BooleanBuilder::computeCuts(std::map<int, std::vector<Piece>> (&cuts)[2]) {
+    // Coppie di facce i cui box si toccano, in parallelo (il tracciamento tra
+    // B-spline puo' prendere secondi per coppia).
+    std::vector<std::pair<FaceId, FaceId>> pairs;
     for (FaceId fa : bodies_[0].faces())
         for (FaceId fb : bodies_[1].faces())
-            if (boxes_[0].at(fa.index).overlaps(boxes_[1].at(fb.index))) pairArcs(fa, fb);
+            if (boxes_[0].at(fa.index).overlaps(boxes_[1].at(fb.index))) pairs.emplace_back(fa, fb);
+    std::vector<PairResult> results(pairs.size());
+    const auto compute = [&](std::size_t i) {
+        try {
+            pairArcs(pairs[i].first, pairs[i].second, results[i]);
+        } catch (...) {
+            results[i].error = std::current_exception();
+        }
+    };
+    parallelFor(pairs.size(), threadCount(threads_), compute);
+    // Unione nell'ordine delle coppie. Una coppia che ha usato i tagli delle
+    // zone comuni delle precedenti (B-spline coincidenti in parte) senza
+    // vederli, perche' calcolata in parallelo, si rifa' con quelli: il
+    // risultato e' lo stesso del calcolo in sequenza.
+    for (std::size_t i = 0; i < pairs.size(); ++i) {
+        PairResult &result = results[i];
+        if (result.usedEarlierCuts && !partialCuts_.empty()) {
+            result = PairResult();
+            result.earlierCuts = &partialCuts_;
+            compute(i);
+        }
+        if (result.error) std::rethrow_exception(result.error);
+        arcs_.insert(arcs_.end(), result.arcs.begin(), result.arcs.end());
+        for (const auto &[curve, entry] : result.pcurves) pcurves_[curve] = entry;
+        partial_.insert(result.partial.begin(), result.partial.end());
+        partialCuts_.insert(partialCuts_.end(), result.partialCuts.begin(), result.partialCuts.end());
+    }
 
     for (const Arc &arc : arcs_) {
         vertexPoints_.push_back(arc.curve->point(arc.range.lo));

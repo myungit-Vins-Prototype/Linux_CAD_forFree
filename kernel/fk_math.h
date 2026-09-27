@@ -96,6 +96,9 @@ public:
     Frame3();
     // xReference viene proiettato sul piano normale a zDirection, come in gp_Ax2.
     Frame3(const Vec3 &origin, const Vec3 &zDirection, const Vec3 &xReference);
+    // Assi dati gia' ortonormali e destrorsi, presi cosi' come sono (per
+    // rileggere un sistema salvato bit per bit, fk_body_io.h).
+    static Frame3 fromAxes(const Vec3 &origin, const Vec3 &x, const Vec3 &y, const Vec3 &z);
 
     const Vec3 &origin() const { return origin_; }
     const Vec3 &xDir() const { return x_; }
@@ -126,6 +129,8 @@ public:
     static Transform3 reflection(const Vec3 &point, const Vec3 &normal);
     // Da coordinate locali del sistema a coordinate globali.
     static Transform3 fromFrame(const Frame3 &frame);
+    // M e t dati (per rileggere una trasformazione salvata).
+    static Transform3 fromParts(const double (&matrix)[3][3], const Vec3 &translation);
 
     Vec3 applyToPoint(const Vec3 &point) const;
     Vec3 applyToVector(const Vec3 &vector) const;

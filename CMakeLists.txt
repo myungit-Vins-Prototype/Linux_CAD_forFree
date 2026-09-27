@@ -75,6 +75,27 @@ add_executable(forgecad
     ${FORGE_CAD_CUDA_SOURCE}
 )
 
+# Impronta dei sorgenti della geometria per la copia dei corpi nei documenti
+# (cad_document_io): se cambia, i corpi salvati si ricalcolano all'apertura.
+file(GLOB FORGECAD_GEOMETRY_SOURCES CONFIGURE_DEPENDS
+    ${PROJECT_SOURCE_DIR}/kernel/fk_*.h ${PROJECT_SOURCE_DIR}/kernel/fk_*.cpp
+    ${PROJECT_SOURCE_DIR}/cad_*.h ${PROJECT_SOURCE_DIR}/cad_*.cpp
+    ${PROJECT_SOURCE_DIR}/forgeCad2026_gui.cpp)
+list(SORT FORGECAD_GEOMETRY_SOURCES)
+set(FORGECAD_HASH_LIST ${CMAKE_CURRENT_BINARY_DIR}/generated/geometry_sources.txt)
+string(REPLACE ";" "\n" FORGECAD_HASH_LINES "${FORGECAD_GEOMETRY_SOURCES}")
+file(GENERATE OUTPUT ${FORGECAD_HASH_LIST} CONTENT "${FORGECAD_HASH_LINES}\n")
+set(FORGECAD_HASH_HEADER ${CMAKE_CURRENT_BINARY_DIR}/generated/forgecad_source_hash.h)
+add_custom_command(
+    OUTPUT ${FORGECAD_HASH_HEADER} ${CMAKE_CURRENT_BINARY_DIR}/generated/source_hash.stamp
+    COMMAND ${CMAKE_COMMAND} -DOUT=${FORGECAD_HASH_HEADER} -DLIST=${FORGECAD_HASH_LIST} -P ${PROJECT_SOURCE_DIR}/cmake/source_hash.cmake
+    COMMAND ${CMAKE_COMMAND} -E touch ${CMAKE_CURRENT_BINARY_DIR}/generated/source_hash.stamp
+    DEPENDS ${FORGECAD_GEOMETRY_SOURCES} ${PROJECT_SOURCE_DIR}/cmake/source_hash.cmake ${FORGECAD_HASH_LIST}
+    COMMENT "Impronta dei sorgenti della geometria"
+    VERBATIM)
+target_sources(forgecad PRIVATE ${FORGECAD_HASH_HEADER})
+target_include_directories(forgecad PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/generated)
+
 target_link_libraries(forgecad PRIVATE
     Qt6::Widgets
     Qt6::OpenGL

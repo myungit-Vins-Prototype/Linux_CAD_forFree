@@ -18,6 +18,8 @@
 #include "fk_bspline_surface.h"
 #include "fk_pcurve.h"
 #include "fk_extrude.h"
+#include "fk_helix.h"
+#include "fk_sweep.h"
 #include "fk_revolve.h"
 #include "fk_marching.h"
 #include "fk_mass.h"
@@ -1089,4 +1091,55 @@ FK_TEST(BooleanPartialSplineCoincidence) {
             options.deflection = 0.005;
             FK_CHECK(tessellate(booleanOperation(slabA, *other, op), options).failedFaces == 0);
         }
+}
+
+namespace {
+
+// Stesso body, numero per numero (vertici, tratti degli edge, facce, volume).
+void checkIdentical(const Body &a, const Body &b) {
+    FK_CHECK(a.faces().size() == b.faces().size());
+    FK_CHECK(a.edges().size() == b.edges().size());
+    const std::vector<VertexId> va = a.vertices(), vb = b.vertices();
+    FK_CHECK(va.size() == vb.size());
+    if (va.size() == vb.size())
+        for (std::size_t i = 0; i < va.size(); ++i) FK_CHECK(distance(a.vertex(va[i]).point, b.vertex(vb[i]).point) == 0.0);
+    const std::vector<EdgeId> ea = a.edges(), eb = b.edges();
+    if (ea.size() == eb.size())
+        for (std::size_t i = 0; i < ea.size(); ++i)
+            FK_CHECK(a.edge(ea[i]).range.lo == b.edge(eb[i]).range.lo && a.edge(ea[i]).range.hi == b.edge(eb[i]).range.hi);
+    FK_CHECK(massProperties(a).volume == massProperties(b).volume);
+}
+
+}
+
+FK_TEST(BooleanParallelMatchesSequential) {
+    // Le intersezioni tra le coppie di facce si calcolano in parallelo: il
+    // risultato deve essere lo stesso del calcolo in sequenza. Molla (sweep
+    // di un cerchio lungo un'elica, facce B-spline) con un cilindro che la
+    // attraversa, come un flacone con la filettatura.
+    HelixSpec spec;
+    spec.frame = Frame3(Vec3(0, 0, 0), Vec3(0, 0, 1), Vec3(1, 0, 0));
+    spec.radius = 4.0;
+    spec.pitch = 1.5;
+    spec.turns = 0.5;
+    const auto helix = std::make_shared<HelixCurve>(spec);
+    const std::vector<PathSegment> path{{helix, helix->domain()}};
+    ProfileRegion circle;
+    circle.outer.segments = {arcSegment(Vec2(0, 0), 0.5, 0.0, kTwoPi)};
+    const Frame3 start(helix->point(0.0), normalized(helix->derivative(0.0)), Vec3(0.3, 0.7, 0.2));
+    const Body spring = sweepRegions(start, {circle}, path);
+    const Body core = makeCylinder(Frame3(Vec3(0, 0, -1), Vec3(0, 0, 1), Vec3(1, 0, 0)), 4.0, 5.0);
+    BooleanOptions sequential, parallel;
+    sequential.threads = 1;
+    parallel.threads = 8;
+    checkIdentical(booleanOperation(core, spring, BooleanOperation::Subtract, sequential),
+                   booleanOperation(core, spring, BooleanOperation::Subtract, parallel));
+    // B-spline coincidenti in parte: le coppie usano i tagli delle zone comuni delle precedenti.
+    const std::vector<double> base{1.0, 1.2, 1.1, 1.3, 1.6, 1.2, 0.9, 1.4, 1.5, 1.2, 1.0, 1.3};
+    const SplineHeight a{{0, 0, 0, 0, 1, 1, 1, 1}, {0, 0, 0, 1, 1, 1}, base};
+    const double u0 = 0.4, u1 = 1.4, v0 = 0.3, v1 = 1.3;
+    const SplineHeight shifted{{u0, u0, u0, u0, u1, u1, u1, u1}, {v0, v0, v0, v1, v1, v1}, reparametrized(base, 0, 1, 0, 1, u0, u1, v0, v1)};
+    const Body slabA = slab(a), slabB = slab(shifted);
+    for (BooleanOperation op : {BooleanOperation::Unite, BooleanOperation::Intersect, BooleanOperation::Subtract})
+        checkIdentical(booleanOperation(slabA, slabB, op, sequential), booleanOperation(slabA, slabB, op, parallel));
 }

@@ -19,10 +19,12 @@
 #include "cad_kernel.h"
 #include "cad_sketch_edit.h"
 #include "cad_snap.h"
+#include "fk_parallel.h"
 
 #include <QAction>
 #include <QActionGroup>
 #include <QApplication>
+#include <QElapsedTimer>
 #include <QCheckBox>
 #include <QColorDialog>
 #include <QComboBox>
@@ -84,6 +86,7 @@
 #include <QGuiApplication>
 #include <algorithm>
 #include <cmath>
+#include <cstdio>
 #include <limits>
 #include <functional>
 #include <memory>
@@ -3982,17 +3985,63 @@ private:
     // schizzi `dirtySketches` (tutti con `all`). Un piano di costruzione
     // rigenerato porta con se' gli schizzi che vi stanno sopra (followDatum),
     // e con loro i corpi che li usano (hanno indice maggiore del piano).
+    // I corpi indipendenti tra loro (nessuno e' operando dell'altro) si
+    // costruiscono in parallelo, a livelli: un corpo parte quando i suoi
+    // operandi da rifare sono pronti. I piani di costruzione fanno da
+    // separatori, perche' followDatum cambia gli schizzi che vi stanno sopra.
     void regenerateFrom(int from, QVector<bool> dirty, QSet<int> dirtySketches, bool all = false) {
         dirty.resize(extrusions_.size());
+        QVector<int> pending;  // corpi da rifare fino al prossimo piano di costruzione
+        const auto flush = [&] {
+            rebuildParallel(pending);
+            pending.clear();
+        };
         for (int index = qMax(0, from); index < extrusions_.size(); ++index) {
-            ExtrusionObject &body = extrusions_[index];
+            const ExtrusionObject &body = extrusions_.at(index);
             bool depends = all;
             for (int sketch : sketchesOf(body)) depends = depends || dirtySketches.contains(sketch);
             for (int operand : bodyOperands(body)) depends = depends || (operand >= 0 && operand < index && dirty.at(operand));
             if (!depends) continue;
-            rebuildBody(body, index);
             dirty[index] = true;
-            if (isDatumBody(body)) followDatum(index, dirtySketches);
+            if (!isDatumBody(body)) {
+                pending.append(index);
+                continue;
+            }
+            flush();
+            rebuildBody(extrusions_[index], index);
+            followDatum(index, dirtySketches);
+        }
+        flush();
+    }
+
+    // Costruisce i corpi `indices` (crescenti): ogni livello contiene quelli
+    // i cui operandi da rifare stanno nei livelli precedenti. buildGeometry
+    // legge solo gli schizzi e gli operandi (gia' pronti) e scrive il suo corpo.
+    void rebuildParallel(const QVector<int> &indices) {
+        if (indices.size() <= 1) {
+            for (int index : indices) rebuildBody(extrusions_[index], index);
+            return;
+        }
+        QHash<int, int> level;
+        int levels = 0;
+        for (int index : indices) {
+            int l = 0;
+            for (int operand : bodyOperands(extrusions_.at(index)))
+                if (level.contains(operand)) l = qMax(l, level.value(operand) + 1);
+            level.insert(index, l);
+            levels = qMax(levels, l + 1);
+        }
+        ExtrusionObject *bodies = extrusions_.data();  // separato qui, prima dei thread
+        const QVector<SketchObject> &sketches = sketches_;
+        const QVector<ExtrusionObject> &all = extrusions_;
+        const int quality = tessellationQuality_;
+        for (int l = 0; l < levels; ++l) {
+            std::vector<int> batch;
+            for (int index : indices)
+                if (level.value(index) == l) batch.push_back(index);
+            ForgeCad::Kernel::parallelFor(batch.size(), ForgeCad::Kernel::threadCount(0), [&](std::size_t k) {
+                buildBody(bodies[batch[k]], batch[k], sketches, all, quality);
+            });
         }
     }
 
@@ -4242,9 +4291,28 @@ private:
     // attivo, poi la sua tassellazione. Gli operandi di una booleana hanno
     // indice minore e sono gia' rigenerati. In caso d'errore il corpo resta
     // senza geometria con il messaggio in `error`.
-    void rebuildBody(ExtrusionObject &body, int index) {
-        buildGeometry(body, index, sketches_, extrusions_);
-        tessellateBody(body);
+    void rebuildBody(ExtrusionObject &body, int index) { buildBody(body, index, sketches_, extrusions_, tessellationQuality_); }
+    // Geometria e tassellazione di un corpo (anche da un thread: non tocca il viewport).
+    static void buildBody(ExtrusionObject &body, int index, const QVector<SketchObject> &sketches, const QVector<ExtrusionObject> &bodies,
+                          int quality) {
+        QElapsedTimer timer;
+        timer.start();
+        if (body.cachedGeometry && body.forgeBody) {
+            // Appena aperto: il body salvato nel documento (stessi sorgenti,
+            // stessa definizione) al posto del calcolo.
+            body.cachedGeometry = false;
+            body.curve.reset();
+            body.datumValid = false;
+            body.solid = !body.forgeBody->isSheet();
+        } else {
+            body.cachedGeometry = false;
+            buildGeometry(body, index, sketches, bodies);
+        }
+        const qint64 built = timer.elapsed();
+        tessellateGeometry(body, quality, body.display);
+        if (qEnvironmentVariableIsSet("FORGECAD_PROFILE"))
+            std::fprintf(stderr, "PROFILO corpo %d \"%s\": costruzione %lld ms, tassellazione %lld ms\n", index, qPrintable(body.name),
+                         built, timer.elapsed() - built);
     }
 
     // Geometria esatta del corpo `index` (kernel ForgeCAD): gli schizzi e gli
@@ -10411,6 +10479,13 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
         updateWindowTitle();
     });
     optionsMenu->addSeparator();
+    // Copia dei corpi calcolati nei documenti (formato 14): file piu' grandi,
+    // apertura senza ricalcolare le funzioni. In QSettings, di default si'.
+    QAction *saveBodiesAction = optionsMenu->addAction(QStringLiteral("Salva nel documento i corpi calcolati"));
+    saveBodiesAction->setCheckable(true);
+    saveBodiesAction->setChecked(QSettings().value(QStringLiteral("document/saveBodies"), true).toBool());
+    saveBodiesAction->setToolTip(QStringLiteral("Il file e' piu' grande, ma all'apertura i corpi non si ricalcolano"));
+    connect(saveBodiesAction, &QAction::toggled, this, [](bool enabled) { QSettings().setValue(QStringLiteral("document/saveBodies"), enabled); });
     // Tasto per il pan (da tenere premuto trascinando con il sinistro), in QSettings.
     QAction *panKeyAction = optionsMenu->addAction(QStringLiteral("Tasto per il pan..."));
     const auto panKeyName = [](int key) { return QKeySequence(key).toString(QKeySequence::NativeText); };
@@ -10979,7 +11054,7 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
         settings.remove(QStringLiteral("interface"));
         for (const QString &key : {QStringLiteral("view/grid"), QStringLiteral("view/axisLength"), QStringLiteral("view/axes"), QStringLiteral("view/axesOnTop"),
                                    QStringLiteral("view/antialiasing"), QStringLiteral("view/panKey"), QStringLiteral("sketch/originSnap"),
-                                   QStringLiteral("view/constraintPanel")})
+                                   QStringLiteral("view/constraintPanel"), QStringLiteral("document/saveBodies")})
             settings.remove(key);
         statusBar()->showMessage(QStringLiteral("Le impostazioni predefinite valgono dal prossimo avvio."), 6000);
     });
@@ -11102,7 +11177,8 @@ bool PdfWindow::saveDocument(bool askPath) {
         if (QFileInfo(path).suffix().compare(QLatin1String(ForgeCad::kDocumentSuffix), Qt::CaseInsensitive) != 0)
             path += QStringLiteral(".") + QLatin1String(ForgeCad::kDocumentSuffix);
     }
-    const QString error = ForgeCad::saveDocumentFile(path, viewport_->currentDocument());
+    const QString error = ForgeCad::saveDocumentFile(path, viewport_->currentDocument(),
+                                                     QSettings().value(QStringLiteral("document/saveBodies"), true).toBool());
     if (!error.isEmpty()) {
         QMessageBox::warning(this, QStringLiteral("Salva"), error);
         return false;

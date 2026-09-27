@@ -113,6 +113,10 @@ struct TopologyCounts {
     int rings() const { return loops - faces; }  // loop oltre al primo di ogni faccia
 };
 
+namespace detail {
+struct BodyIO;  // fk_body_io.cpp: scrittura e lettura delle entita' cosi' come sono
+}
+
 class Body {
 public:
     Body();  // solo la region esterna
@@ -287,6 +291,7 @@ public:
     void jekv(EdgeId secondHalf);
 
 private:
+    friend struct detail::BodyIO;
     static Body buildShells(const std::vector<Vec3> &vertices, const std::vector<BuildEdge> &edges,
                             const std::vector<BuildFace> &faces, bool sheet);
     VertexId newVertex(const Vec3 &point);
