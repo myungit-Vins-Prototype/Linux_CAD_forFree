@@ -1,5 +1,5 @@
-# Kernel geometrico ForgeCAD (in sviluppo): C++17 puro, senza Qt e senza
-# OpenCASCADE. OpenCASCADE serve solo ai test, come riferimento.
+# Kernel geometrico ForgeCAD: C++17 puro, senza Qt e senza OpenCASCADE.
+# OpenCASCADE serve solo ai test, come riferimento.
 add_library(forgekernel STATIC
     fk_precision.h
     fk_math.h
@@ -61,6 +61,27 @@ add_library(forgekernel STATIC
     fk_blend.cpp
     fk_blend_loop.h
     fk_blend_loop.cpp
+    fk_blend_model.h
+    fk_blend_surface.h
+    fk_blend_surface.cpp
+    fk_sheet.h
+    fk_sheet.cpp
+    fk_transform.h
+    fk_transform.cpp
+    fk_hermite.h
+    fk_hermite.cpp
+    fk_helix.h
+    fk_helix.cpp
+    fk_sweep.h
+    fk_sweep.cpp
+    fk_loft.h
+    fk_loft.cpp
+    fk_exchange.h
+    fk_exchange.cpp
+    fk_step.h
+    fk_step.cpp
+    fk_iges.h
+    fk_iges.cpp
 )
 target_include_directories(forgekernel PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_compile_features(forgekernel PUBLIC cxx_std_17)
@@ -68,6 +89,18 @@ target_compile_features(forgekernel PUBLIC cxx_std_17)
 # lo si compila ottimizzato anche in Debug, senza perdere i simboli.
 target_compile_options(forgekernel PRIVATE -Wall -Wextra -Wpedantic -O2 -g)
 set_target_properties(forgekernel PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
+
+# Ponte da OpenCASCADE al kernel proprio: solo per i test (confronti con le
+# forme OCCT); a parte, perche' forgekernel resta senza OCCT.
+add_library(forgekernel_occt STATIC
+    occt/fk_occt_import.h
+    occt/fk_occt_import.cpp
+)
+target_include_directories(forgekernel_occt PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/occt)
+target_include_directories(forgekernel_occt SYSTEM PUBLIC ${OpenCASCADE_INCLUDE_DIR})
+target_link_libraries(forgekernel_occt PUBLIC forgekernel TKernel TKMath TKG2d TKG3d TKGeomBase TKBRep)
+target_compile_options(forgekernel_occt PRIVATE -Wall -Wextra -Wpedantic -O2 -g)
+set_target_properties(forgekernel_occt PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
 
 add_executable(forgekernel_tests
     tests/fk_test.h
@@ -97,13 +130,26 @@ add_executable(forgekernel_tests
     tests/test_curve_surface.cpp
     tests/test_revolve.cpp
     tests/test_blend.cpp
+    tests/test_sheet.cpp
+    tests/test_transform.cpp
+    tests/test_helix.cpp
+    tests/test_sweep.cpp
+    tests/test_loft.cpp
+    tests/test_occt_import.cpp
+    tests/test_blend_features.cpp
+    tests/test_step.cpp
+    tests/test_iges.cpp
 )
 target_link_libraries(forgekernel_tests PRIVATE
     forgekernel
-    TKernel TKMath TKG2d TKG3d TKGeomBase TKGeomAlgo TKBRep TKTopAlgo TKPrim TKBO TKMesh TKShHealing TKFillet TKBool
+    forgekernel_occt
+    TKXSBase TKDESTEP TKDEIGES TKXCAF TKLCAF TKCAF TKDE
+    TKernel TKMath TKG2d TKG3d TKGeomBase TKGeomAlgo TKBRep TKTopAlgo TKPrim TKBO TKMesh TKShHealing TKFillet TKBool TKOffset
 )
 target_include_directories(forgekernel_tests SYSTEM PRIVATE ${OpenCASCADE_INCLUDE_DIR})
 target_compile_options(forgekernel_tests PRIVATE -Wall -Wextra -Wpedantic -O2 -g)
+# File di prova facoltativi nella radice del progetto (per esempio STEP di altri CAD).
+target_compile_definitions(forgekernel_tests PRIVATE FORGECAD_SOURCE_DIR="${PROJECT_SOURCE_DIR}")
 set_target_properties(forgekernel_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
 
 add_test(NAME forgekernel_tests COMMAND forgekernel_tests)

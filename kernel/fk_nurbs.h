@@ -20,6 +20,16 @@ namespace ForgeCad::Kernel {
 // esattamente sul range.
 std::vector<BSplineCurve<3>> rationalBezierPieces(const Curve<3> &curve, const Interval &range);
 
+// Gli stessi tratti in forma standard (pesi 1 agli estremi di ogni tratto:
+// tratti consecutivi hanno lo stesso punto omogeneo) ed elevati al grado
+// `degree` se e' maggiore del loro (stessa geometria).
+std::vector<BSplineCurve<3>> standardBezierPieces(const Curve<3> &curve, const Interval &range, int degree = 0);
+
+// Tratti di Bezier dello stesso grado, consecutivi, uniti in una B-spline
+// (nodi interni di molteplicita' pari al grado); il tratto k occupa
+// [breaks[k], breaks[k + 1]] (di default 0, 1, 2, ...).
+BSplineCurve<3> joinBezierPieces(const std::vector<BSplineCurve<3>> &pieces, const std::vector<double> &breaks = {});
+
 // Superficie NURBS esatta sulla finestra [u] x [v] dei parametri (finita
 // nelle direzioni non periodiche; nelle periodiche si usa un periodo intero
 // se la finestra lo supera): piani, cilindri, coni, sfere, tori, estrusioni,

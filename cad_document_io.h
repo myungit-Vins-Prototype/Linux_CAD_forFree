@@ -8,8 +8,11 @@
 // File di ForgeCAD (.prt): la sola definizione parametrica del documento
 // (schizzi con i parametri esatti delle curve, funzioni con i loro
 // parametri), in binario compresso. Le forme B-rep e le tassellazioni non si
-// salvano: all'apertura si rigenerano dalla definizione con il kernel attivo,
-// quindi il file resta piccolo e la geometria esatta.
+// salvano: all'apertura si rigenerano dalla definizione, quindi il file resta
+// piccolo e la geometria esatta. Fanno eccezione i corpi importati, che non
+// hanno una definizione: il loro body e' in `importData` come testo STEP del
+// kernel (dal formato 9; nel formato 8 era un B-rep OpenCASCADE, che non si
+// legge piu': quei corpi vanno importati di nuovo).
 //
 // Formato: "FCAD" (4 byte), versione (quint16, big endian), metodo di
 // compressione (quint8: 1 = zlib), poi il blocco qCompress (lunghezza

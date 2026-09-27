@@ -1862,7 +1862,6 @@ SurfaceIntersection rotationalCase(const Surface &a, const Surface &b, const Vec
 // Vero se una parte coincide.
 static bool splineCoincidence(const Surface &a, const Surface &b, const Box &bounds, double tolerance, SurfaceIntersection &out) {
     enum class Cover { On, Off, Mixed };
-    auto onOther = [&](const Surface &other, const Vec3 &p) { return projectPoint(other, p).distance <= tolerance; };
     // Sopra l'altra e con la stessa normale (una curva di tangenza non basta:
     // serve un blocco 2 x 2 di campioni, che nessuna curva contiene).
     auto coincidentAt = [&](const Surface &self, const Surface &other, double u, double v, const Vec3 &p) {

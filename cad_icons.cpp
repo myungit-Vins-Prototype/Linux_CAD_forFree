@@ -523,6 +523,169 @@ std::map<QString, Draw> &registry() {
     icons["union"] = booleanIcon(0);
     icons["intersection"] = booleanIcon(1);
     icons["difference"] = booleanIcon(2);
+    icons["trimSurface"] = [](QPainter &p, const IconPalette &c) {
+        // Superficie divisa da una curva: la parte tenuta piena, quella tolta tratteggiata.
+        QPainterPath kept({3, 9});
+        kept.lineTo(10, 6);
+        kept.cubicTo({11, 11}, {9, 15}, {12, 20});
+        kept.lineTo(5, 21);
+        kept.closeSubpath();
+        p.setPen(stroke(c.ink, 1.0));
+        p.setBrush(c.faceMid);
+        p.drawPath(kept);
+        QPainterPath removed({10, 6});
+        removed.lineTo(20, 3);
+        removed.lineTo(21, 17);
+        removed.lineTo(12, 20);
+        p.setPen(stroke(c.ink, 1.0, Qt::DashLine));
+        p.setBrush(Qt::NoBrush);
+        p.drawPath(removed);
+        QPainterPath cut({10, 6});
+        cut.cubicTo({11, 11}, {9, 15}, {12, 20});
+        p.setPen(stroke(c.remove, 2.0));
+        p.drawPath(cut);
+    };
+    icons["extendSurface"] = [](QPainter &p, const IconPalette &c) {
+        polygon(p, QPolygonF({{2, 9}, {12, 6}, {12, 19}, {2, 21}}), c.faceMid, stroke(c.ink, 1.0));
+        polygon(p, QPolygonF({{12, 6}, {21, 3.5}, {21, 16.5}, {12, 19}}), QColor(255, 176, 74, 60), stroke(c.accent, 1.2, Qt::DashLine));
+        line(p, {12, 6}, {12, 19}, stroke(c.accent, 2.0));
+        line(p, {13.5, 12.5}, {18, 11.3}, stroke(c.accent, 1.4));
+        arrowHead(p, {20, 10.8}, {14, 12.4}, c.accent, 3.4);
+    };
+    // --- Ripetizioni (schizzo: entita' piane; funzioni: cubi) --------------------
+    icons["sketchPatternLinear"] = [](QPainter &p, const IconPalette &c) {
+        // Un cerchio pieno e le sue copie tratteggiate lungo una freccia.
+        p.setBrush(Qt::NoBrush);
+        p.setPen(stroke(c.ink, 1.7));
+        p.drawEllipse(QPointF(5.5, 15), 3, 3);
+        p.setPen(stroke(c.accent, 1.5, Qt::DashLine));
+        p.drawEllipse(QPointF(12, 15), 3, 3);
+        p.drawEllipse(QPointF(18.5, 15), 3, 3);
+        line(p, {4, 7}, {18, 7}, stroke(c.accent, 1.3));
+        arrowHead(p, {21, 7}, {16, 7}, c.accent, 3.4);
+    };
+    icons["sketchPatternCircular"] = [](QPainter &p, const IconPalette &c) {
+        // Sei piccoli cerchi attorno a un centro.
+        dot(p, {12, 12}, c.ink, 1.5);
+        p.setBrush(Qt::NoBrush);
+        for (int k = 0; k < 6; ++k) {
+            const double a = k * M_PI / 3.0 - M_PI / 2.0;
+            p.setPen(k == 0 ? stroke(c.ink, 1.6) : stroke(c.accent, 1.3, Qt::DashLine));
+            p.drawEllipse(QPointF(12 + 7.5 * std::cos(a), 12 + 7.5 * std::sin(a)), 2.3, 2.3);
+        }
+    };
+    icons["sketchMirror"] = [](QPainter &p, const IconPalette &c) {
+        // Retta di simmetria e un triangolo con la sua immagine.
+        line(p, {12, 2.5}, {12, 21.5}, stroke(c.construction, 1.1, Qt::DashLine));
+        p.setBrush(Qt::NoBrush);
+        p.setPen(stroke(c.ink, 1.7));
+        p.drawPolygon(QPolygonF({{9.5, 6}, {9.5, 18}, {3, 18}}));
+        p.setPen(stroke(c.accent, 1.5, Qt::DashLine));
+        p.drawPolygon(QPolygonF({{14.5, 6}, {14.5, 18}, {21, 18}}));
+    };
+    icons["patternLinear"] = [](QPainter &p, const IconPalette &c) {
+        cube(p, c, -1, true, true, 0.42, QPointF(-6.5, 3));
+        cube(p, c, 0, true, true, 0.42, QPointF(0, 3));
+        cube(p, c, 0, true, true, 0.42, QPointF(6.5, 3));
+        line(p, {3, 4.5}, {18, 4.5}, stroke(c.accent, 1.3));
+        arrowHead(p, {21, 4.5}, {16, 4.5}, c.accent, 3.4);
+    };
+    icons["patternCircular"] = [](QPainter &p, const IconPalette &c) {
+        p.setPen(stroke(c.construction, 1.0, Qt::DashLine));
+        p.setBrush(Qt::NoBrush);
+        p.drawEllipse(QPointF(12, 12), 7.5, 7.5);
+        for (int k = 0; k < 4; ++k) {
+            const double a = k * M_PI / 2.0 - M_PI / 2.0;
+            cube(p, c, k == 0 ? -1 : 0, true, true, 0.32, QPointF(7.5 * std::cos(a), 7.5 * std::sin(a)));
+        }
+    };
+    icons["mirror"] = [](QPainter &p, const IconPalette &c) {
+        polygon(p, QPolygonF({{9, 2.5}, {15, 5.5}, {15, 21.5}, {9, 18.5}}), QColor(96, 170, 255, 70), stroke(c.construction, 1.0));
+        cube(p, c, -1, true, true, 0.4, QPointF(-6, 0));
+        cube(p, c, 0, true, true, 0.4, QPointF(6, 0));
+    };
+    icons["scale"] = [](QPainter &p, const IconPalette &c) {
+        // Quadrato piccolo pieno, quadrato grande tratteggiato, freccia in diagonale.
+        p.setPen(stroke(c.accent, 1.2, Qt::DashLine));
+        p.setBrush(Qt::NoBrush);
+        p.drawRect(QRectF(3, 3, 18, 18));
+        polygon(p, QPolygonF({{3, 12}, {12, 12}, {12, 21}, {3, 21}}), c.faceMid, stroke(c.ink, 1.1));
+        line(p, {10, 14}, {17, 7}, stroke(c.accent, 1.6));
+        arrowHead(p, {19, 5}, {14, 10}, c.accent, 4.0);
+    };
+    icons["helix"] = [](QPainter &p, const IconPalette &c) {
+        // Asse tratteggiato e tre giri di elica (la parte davanti piena, dietro sottile).
+        line(p, {12, 2}, {12, 22}, stroke(c.construction, 1.0, Qt::DashLine));
+        for (int turn = 0; turn < 3; ++turn) {
+            const double y = 5.0 + 5.5 * turn;
+            QPainterPath front({4, y}), back({20, y + 2.75});
+            front.cubicTo({4, y + 2.4}, {20, y + 0.4}, {20, y + 2.75});
+            back.cubicTo({20, y + 5.1}, {4, y + 3.1}, {4, y + 5.5});
+            p.setBrush(Qt::NoBrush);
+            p.setPen(stroke(c.accent, 1.9));
+            p.drawPath(front);
+            p.setPen(stroke(c.accent, 0.9));
+            p.drawPath(back);
+        }
+    };
+    icons["sweep"] = [](QPainter &p, const IconPalette &c) {
+        // Tubo lungo un percorso curvo, con il profilo circolare all'inizio.
+        QPainterPath path({4, 19});
+        path.cubicTo({8, 8}, {14, 20}, {20, 6});
+        QPen tube = stroke(c.faceMid, 7.0);
+        p.setBrush(Qt::NoBrush);
+        p.setPen(tube);
+        p.drawPath(path);
+        p.setPen(stroke(c.ink, 1.0, Qt::DashLine));
+        p.drawPath(path);
+        p.setPen(stroke(c.accent, 1.6));
+        p.setBrush(c.faceLight);
+        p.drawEllipse(QRectF(0.8, 15.5, 6.4, 6.4));
+    };
+    icons["loft"] = [](QPainter &p, const IconPalette &c) {
+        // Dal cerchio in basso al quadrato in alto.
+        polygon(p, QPolygonF({{4, 17}, {7, 5}, {17, 5}, {20, 17}}), c.faceMid, QPen(Qt::NoPen));
+        line(p, {4, 17}, {7, 5}, stroke(c.ink, 1.0));
+        line(p, {20, 17}, {17, 5}, stroke(c.ink, 1.0));
+        polygon(p, QPolygonF({{7, 3}, {17, 3}, {17, 7}, {7, 7}}), c.faceLight, stroke(c.accent, 1.4));
+        p.setPen(stroke(c.accent, 1.4));
+        p.setBrush(c.faceLight);
+        p.drawEllipse(QRectF(4, 14.5, 16, 5));
+    };
+    icons["massProperties"] = [](QPainter &p, const IconPalette &c) {
+        // Solido con il baricentro (cerchio a quarti) e il peso.
+        cube(p, c);
+        const QRectF r(8.5, 10.5, 7, 7);
+        p.setPen(stroke(c.ink, 1.0));
+        p.setBrush(Qt::white);
+        p.drawEllipse(r);
+        p.setPen(Qt::NoPen);
+        p.setBrush(QColor(20, 24, 28));
+        p.drawPie(r, 0, 90 * 16);
+        p.drawPie(r, 180 * 16, 90 * 16);
+        p.setPen(c.accent);
+        QFont font(QStringLiteral("Sans"));
+        font.setPixelSize(7);
+        font.setBold(true);
+        p.setFont(font);
+        p.drawText(QRectF(13, 0, 11, 8), Qt::AlignCenter, QStringLiteral("kg"));
+    };
+    icons["datumPlane"] = [](QPainter &p, const IconPalette &c) {
+        // Piano di riferimento (tratteggiato) e il piano nuovo parallelo, spostato dalla freccia.
+        polygon(p, QPolygonF({{1.5, 21}, {7.5, 15.5}, {22.5, 15.5}, {16.5, 21}}), QColor(96, 170, 255, 50), stroke(c.construction, 1.0, Qt::DashLine));
+        polygon(p, QPolygonF({{1.5, 10}, {7.5, 4.5}, {22.5, 4.5}, {16.5, 10}}), QColor(255, 176, 74, 90), stroke(c.accent, 1.4));
+        line(p, {12, 18.2}, {12, 10.5}, stroke(c.ink, 1.3));
+        arrowHead(p, {12, 8}, {12, 12}, c.ink, 3.2);
+    };
+    icons["import"] = [](QPainter &p, const IconPalette &c) {
+        // Documento con la freccia che entra nel solido.
+        polygon(p, QPolygonF({{2.5, 2.5}, {10, 2.5}, {13, 5.5}, {13, 14}, {2.5, 14}}), c.faceLight, stroke(c.ink, 1.1));
+        line(p, {4.5, 7}, {10.5, 7}, stroke(c.faceDark, 1.0));
+        line(p, {4.5, 9.5}, {10.5, 9.5}, stroke(c.faceDark, 1.0));
+        cube(p, c, -1, true, true, 0.55, QPointF(5.5, 5));
+        line(p, {6.5, 11}, {10.5, 15}, stroke(c.accent, 1.8));
+        arrowHead(p, {13, 17.5}, {9.5, 14}, c.accent, 4.0);
+    };
     icons["box"] = [](QPainter &p, const IconPalette &c) { cube(p, c); };
     icons["cylinder"] = [](QPainter &p, const IconPalette &c) {
         QPainterPath side({4, 6});

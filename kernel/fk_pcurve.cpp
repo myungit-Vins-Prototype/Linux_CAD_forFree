@@ -171,14 +171,30 @@ public:
     }
 
     // Infittisce [a, b] finche' l'Hermite cubica sta entro meta' tolleranza.
+    // Una curva che sta sulla superficie solo entro la tolleranza (edge
+    // tolleranti dei file) se ne scosta di d(t): li' conta la distanza dal
+    // punto della superficie piu' vicino alla curva, entro max(tol/2 - d, tol/4)
+    // (lo scarto totale resta sotto la tolleranza se d <= 2/3 tol).
     bool refine(const HermiteNode &a, const HermiteNode &b, int depth, std::vector<HermiteNode> &out) const {
         double worst = 0.0;
+        bool close = true;
         for (double s : {0.1, 0.25, 0.4, 0.5, 0.6, 0.75, 0.9}) {
             const double t = a.t + (b.t - a.t) * s;
             const Vec2 uv = hermite(a, b, t);
-            worst = std::max(worst, distance(surface_.point(uv[0], uv[1]), curve_.point(t)));
+            const Vec3 onSurface = surface_.point(uv[0], uv[1]), c = curve_.point(t);
+            const double gap = distance(onSurface, c);
+            worst = std::max(worst, gap);
+            if (!close || gap <= 0.5 * tolerance_) continue;
+            Vec2 foot = uv;
+            if (!invertPoint(surface_, c, foot, tolerance_, scale_)) {
+                close = false;
+                continue;
+            }
+            const Vec3 nearest = surface_.point(foot[0], foot[1]);
+            const double offset = distance(nearest, c);
+            close = distance(onSurface, nearest) <= std::max(0.5 * tolerance_ - offset, 0.25 * tolerance_);
         }
-        if (worst <= 0.5 * tolerance_) {
+        if (worst <= 0.5 * tolerance_ || (close && worst <= tolerance_)) {
             out.push_back(b);
             return true;
         }

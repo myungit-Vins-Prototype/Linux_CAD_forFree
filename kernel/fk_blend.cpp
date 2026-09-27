@@ -5,9 +5,12 @@
 #include <cmath>
 #include <functional>
 #include <map>
+#include <set>
 #include <stdexcept>
 
 #include "fk_blend_loop.h"
+#include "fk_blend_surface.h"
+#include "fk_blend_model.h"
 #include "fk_boolean.h"
 #include "fk_classify.h"
 #include "fk_curve_algo.h"
@@ -107,23 +110,24 @@ ProfileSegment along(const SectionFace &face, const Vec2 &corner, const Vec2 &to
 // (fuori dal solido per gli spigoli convessi, dentro il materiale per quelli
 // concavi): niente facce coincidenti con quelle del solido nella booleana (le superfici di rivoluzione coassiali
 // che coincidono in parte e toccano il toro del raccordo sono il caso difficile).
+// Smusso: `size` dallo spigolo sulla prima faccia, `size2` sulla seconda (< 0: `size`).
 ProfileRegion blendRegion(const SectionFace &f1, const SectionFace &f2, const Vec2 &corner, double size, bool chamfer, bool convex,
-                          double tolerance, double outward = 0.0, std::vector<Vec2> *extent = nullptr) {
+                          double tolerance, double outward = 0.0, std::vector<Vec2> *extent = nullptr, double size2 = -1.0) {
     Vec2 t1, t2;
     std::vector<ProfileSegment> segments;
     if (chamfer) {
-        auto at = [&](const SectionFace &face) {
-            if (!face.circle) return corner + size * face.t;
+        auto at = [&](const SectionFace &face, double d) {
+            if (!face.circle) return corner + d * face.t;
             SectionFace ring;
             ring.circle = true;
             ring.center = corner;
-            ring.radius = size;
+            ring.radius = d;
             for (const Vec2 &p : meet(face, ring))
                 if (dot(p - corner, face.t) > 0.0) return p;
             throw std::domain_error("blendEdges: distanza dello smusso troppo grande");
         };
-        t1 = at(f1);
-        t2 = at(f2);
+        t1 = at(f1, size);
+        t2 = at(f2, size2 < 0.0 ? size : size2);
         segments.push_back({std::make_shared<Line<2>>(t1, t2 - t1), {0.0, distance(t1, t2)}});
     } else {
         // Il cerchio sta nell'angolo minore tra le facce: dalla parte del
@@ -324,7 +328,8 @@ Body filletCorner(const Corner &c, double r, double inset[3]) {
 // incontrano i bordi degli smussi sulle facce. La pezza e' il tetraedro tra il
 // triangolo e il punto Q comune ai tre piani degli smussi, che gli smussi dei
 // singoli spigoli non tolgono.
-Body chamferCorner(const Corner &c, double distanceFromEdge) {
+// dist[k][s]: distanza dello smusso dello spigolo k sulla faccia edgeFaces[k][s].
+Body chamferCorner(const Corner &c, const double (&dist)[3][2]) {
     // u[k][s]: direzione nella faccia edgeFaces[k][s], normale allo spigolo k, verso l'interno della faccia.
     Vec3 u[3][2];
     for (int k = 0; k < 3; ++k)
@@ -337,18 +342,22 @@ Body chamferCorner(const Corner &c, double distanceFromEdge) {
             if (dot(u[k][s], c.d[other]) < 0.0) u[k][s] = -u[k][s];
         }
     auto inward = [&](int k, int i) { return c.edgeFaces[k][0] == i ? u[k][0] : u[k][1]; };
+    auto distanceOn = [&](int k, int i) { return c.edgeFaces[k][0] == i ? dist[k][0] : dist[k][1]; };
     std::vector<Vec3> points;
     for (int i = 0; i < 3; ++i) {
         int k, l;
         c.edgesOf(i, k, l);
-        const double beta = distanceFromEdge / dot(c.d[l], inward(k, i)), alpha = distanceFromEdge / dot(c.d[k], inward(l, i));
+        // Punto della faccia i in cui si incontrano i bordi degli smussi di k e di l.
+        const double beta = distanceOn(k, i) / dot(c.d[l], inward(k, i)), alpha = distanceOn(l, i) / dot(c.d[k], inward(l, i));
         points.push_back(c.vertex + alpha * c.d[k] + beta * c.d[l]);  // F_i
     }
     Vec3 m[3];
     double offsets[3];
     for (int k = 0; k < 3; ++k) {
-        m[k] = normalized(cross(c.d[k], u[k][1] - u[k][0]));
-        offsets[k] = dot(m[k], distanceFromEdge * u[k][0]);
+        // Piano dello smusso di k: per i suoi due bordi, paralleli allo spigolo.
+        const Vec3 a = dist[k][0] * u[k][0], b = dist[k][1] * u[k][1];
+        m[k] = normalized(cross(c.d[k], b - a));
+        offsets[k] = dot(m[k], a);
     }
     points.push_back(c.vertex + solvePlanes(m, offsets));  // Q
     const Vec3 centroid = 0.25 * (points[0] + points[1] + points[2] + points[3]);
@@ -476,6 +485,8 @@ struct BlendEdge {
     std::vector<Vec2> extent;  // punti che racchiudono la zona nella sezione
     double from = 0.0, to = 0.0;  // retta: tratto lungo l'asse dall'origine (il vertice iniziale)
     std::vector<std::pair<Vec3, Vec3>> trims;  // retta: piani (punto, normale uscente) che limitano la zona agli estremi
+    double chamfer[2] = {0.0, 0.0};  // smusso: distanze sulle facce faces[0] e faces[1]
+    double angleFrom = 0.0, angleTo = 0.0;  // arco: prolungamento (radianti) oltre l'inizio e la fine, poi tagliato dai trims
 };
 
 }
@@ -495,14 +506,119 @@ EdgeId nearestEdge(const Body &body, const Vec3 &point, double tolerance) {
     return best;
 }
 
+namespace {
+
+Body blendEdgesWith(const Body &body, const std::vector<EdgeId> &edges, double size, bool chamfer, const std::vector<ChamferSides> *sides);
+Body analyticBlend(const Body &body, const std::vector<EdgeId> &edges, double size, bool chamfer, const std::vector<ChamferSides> *sides);
+
+}
+
 Body blendEdges(const Body &body, const std::vector<EdgeId> &edges, double size, bool chamfer) {
+    return blendEdgesWith(body, edges, size, chamfer, nullptr);
+}
+
+Body chamferEdges(const Body &body, const std::vector<EdgeId> &edges, const std::vector<ChamferSides> &sides) {
+    if (sides.size() != edges.size()) throw std::invalid_argument("chamferEdges: una coppia di distanze per spigolo");
+    double size = 0.0;
+    for (const ChamferSides &side : sides) {
+        if (!(side.onReference > kLinearResolution) || !(side.onOther > kLinearResolution)) throw std::domain_error("blendEdges: distanze dello smusso non valide");
+        size = std::max({size, side.onReference, side.onOther});
+    }
+    return blendEdgesWith(body, edges, size, true, &sides);
+}
+
+namespace {
+
+// Propagazione per tangenza (come nei CAD: un raccordo non puo' finire in un
+// vertice liscio): gli spigoli che continuano tangenti quelli scelti, tra le
+// stesse facce o facce tangenti a quelle nel vertice. Le distanze degli smussi
+// passano allo spigolo aggiunto.
+void propagateTangent(const Body &body, std::vector<EdgeId> &edges, std::vector<ChamferSides> *sides) {
+    const double tolerance = 1e-9;
+    std::set<int> chosen;
+    for (EdgeId e : edges) chosen.insert(e.index);
+    const auto normalAtVertex = [&](FaceId f, const Vec3 &p) { return outwardNormal(body, f, p); };
+    const auto smooth = [&](EdgeId e) {
+        const Edge &edge = body.edge(e);
+        const Vec3 p = edge.curve->point(0.5 * (edge.range.lo + edge.range.hi));
+        return dot(normalAtVertex(body.finFace(edge.forward), p), normalAtVertex(body.finFace(edge.backward), p)) >= 1.0 - tolerance;
+    };
+    // Direzione dell'edge nel vertice, verso l'interno dell'edge.
+    const auto into = [&](EdgeId e, VertexId v) {
+        const Edge &edge = body.edge(e);
+        const bool atStart = body.edgeStart(e) == v;
+        Vec3 d[2];
+        if (atStart) edge.curve->evaluate(edge.range.lo, 1, d);
+        else edge.curve->evaluateLeft(edge.range.hi, 1, d);
+        const Vec3 t = normalized(d[1]);
+        return atStart ? t : -t;
+    };
+    for (std::size_t k = 0; k < edges.size(); ++k) {
+        const EdgeId e = edges[k];
+        const Edge &edge = body.edge(e);
+        if (!edge.curve || body.isLaminar(e)) continue;
+        for (VertexId v : {body.edgeStart(e), body.edgeEnd(e)}) {
+            if (body.edgeStart(e) == body.edgeEnd(e)) break;  // edge chiuso
+            const Vec3 p = body.vertex(v).point;
+            const Vec3 te = into(e, v);
+            const FaceId fa = body.finFace(edge.forward), fb = body.finFace(edge.backward);
+            const Vec3 na = normalAtVertex(fa, p), nb = normalAtVertex(fb, p);
+            EdgeId found;
+            int candidates = 0;
+            for (EdgeId g : body.edges()) {
+                if (g == e || (body.edgeStart(g) != v && body.edgeEnd(g) != v) || body.isLaminar(g) || !body.edge(g).curve) continue;
+                if (dot(te, into(g, v)) > -(1.0 - tolerance)) continue;
+                const Edge &ge = body.edge(g);
+                const Vec3 ga = normalAtVertex(body.finFace(ge.forward), p), gb = normalAtVertex(body.finFace(ge.backward), p);
+                const bool same = (dot(ga, na) >= 1.0 - 1e-6 && dot(gb, nb) >= 1.0 - 1e-6) || (dot(ga, nb) >= 1.0 - 1e-6 && dot(gb, na) >= 1.0 - 1e-6);
+                if (!same || smooth(g)) continue;
+                found = g;
+                ++candidates;
+            }
+            if (candidates != 1 || chosen.count(found.index)) continue;
+            chosen.insert(found.index);
+            edges.push_back(found);
+            if (sides) sides->push_back((*sides)[k]);
+        }
+    }
+}
+
+Body blendEdgesWith(const Body &body, const std::vector<EdgeId> &selected, double size, bool chamfer, const std::vector<ChamferSides> *selectedSides) {
     if (body.isSheet()) throw std::domain_error("blendEdges: solo solidi");
     if (!(size > kLinearResolution)) throw std::domain_error("blendEdges: raggio o distanza non validi");
+    std::vector<EdgeId> edges = selected;
+    std::vector<ChamferSides> propagatedSides;
+    if (selectedSides) propagatedSides = *selectedSides;
+    propagateTangent(body, edges, selectedSides ? &propagatedSides : nullptr);
+    const std::vector<ChamferSides> *sides = selectedSides ? &propagatedSides : nullptr;
     Box box;
     for (VertexId v : body.vertices()) box.add(body.vertex(v).point);
     for (FaceId f : body.faces()) box.add(faceBox(body, f));
-    const double scale = std::max(box.diagonal(), 1.0), tolerance = 1e-9 * scale, probe = 1e-4 * std::min(scale, size);
+    const double scale = std::max(box.diagonal(), 1.0), tolerance = 1e-9 * scale;
     const double normalTolerance = 1e-9;
+
+    // Spigoli tra facce tangenti (lisci): non c'e' niente da raccordare e si
+    // lasciano (cliccando una faccia se ne prendono anche questi).
+    {
+        auto smooth = [&](EdgeId e) {
+            const Edge &edge = body.edge(e);
+            if (!edge.curve || body.isLaminar(e)) return false;
+            for (double f : {0.2, 0.5, 0.8}) {
+                const Vec3 p = edge.curve->point(edge.range.lo + f * edge.range.length());
+                if (dot(outwardNormal(body, body.finFace(edge.forward), p), outwardNormal(body, body.finFace(edge.backward), p)) < 1.0 - normalTolerance) return false;
+            }
+            return true;
+        };
+        std::vector<EdgeId> sharp;
+        std::vector<ChamferSides> sharpSides;
+        for (std::size_t k = 0; k < edges.size(); ++k)
+            if (!smooth(edges[k])) {
+                sharp.push_back(edges[k]);
+                if (sides) sharpSides.push_back((*sides)[k]);
+            }
+        if (sharp.empty()) throw std::domain_error("blendEdges: gli spigoli scelti stanno tra facce tangenti (niente da raccordare)");
+        if (sharp.size() < edges.size()) return blendEdgesWith(body, sharp, size, chamfer, sides ? &sharpSides : nullptr);
+    }
 
     // Bordi di forma libera (ne' rette ne' cerchi): catene sulle facce piane
     // (fk_blend_loop), con i segmenti e gli archi che li continuano nel
@@ -516,23 +632,122 @@ Body blendEdges(const Body &body, const std::vector<EdgeId> &edges, double size,
         const bool straight = distance(start, end) > tolerance && norm(cross(middle - start, normalized(end - start))) <= tolerance;
         if (!straight && edge.curve->type() != CurveType::Circle) freeform.push_back(e);
     }
-    if (!freeform.empty()) {
-        const std::vector<EdgeId> runs = planarChainRuns(body, edges, freeform);
+    // Quelli che non stanno tra una faccia piana e un fianco normale ad essa
+    // (superfici curve qualsiasi: innesti tra cilindri, cilindri obliqui,
+    // superfici B-spline) vanno al raccordo generale a palla rotolante.
+    std::vector<EdgeId> general;
+    for (EdgeId e : freeform)
+        if (!isPlanarChainEdge(body, e)) general.push_back(e);
+    // Anche rette e cerchi tra facce che le sezioni analitiche non conoscono
+    // (B-spline dei loft e degli sweep, estrusioni, rivoluzioni), se non sono
+    // bordi di una faccia piana con i fianchi normali (catene piane).
+    const auto analyticFace = [&](FinId fin) {
+        const SurfaceType type = body.face(body.finFace(fin)).surface->type();
+        return type == SurfaceType::Plane || type == SurfaceType::Cylinder || type == SurfaceType::Cone || type == SurfaceType::Sphere
+            || type == SurfaceType::Torus;
+    };
+    for (EdgeId e : edges) {
+        if (std::find(freeform.begin(), freeform.end(), e) != freeform.end() || body.isLaminar(e)) continue;
+        if ((!analyticFace(body.edge(e).forward) || !analyticFace(body.edge(e).backward)) && !isPlanarChainEdge(body, e)) general.push_back(e);
+    }
+    // Le distanze di ogni spigolo (smussi asimmetrici) seguono gli spigoli nei
+    // passaggi tra i moduli: si ritrovano dal punto medio.
+    auto sidesOf = [&](EdgeId e) {
+        for (std::size_t k = 0; k < edges.size(); ++k)
+            if (edges[k] == e) return (*sides)[k];
+        throw std::logic_error("blendEdges: spigolo senza distanze");
+    };
+    // Un gruppo di spigoli a un modulo, poi gli altri sul risultato.
+    auto delegate = [&](const std::vector<EdgeId> &runs, const std::function<Body(const std::vector<ChamferSides> *)> &blend, const char *message) {
         std::vector<Vec3> others;
-        for (EdgeId e : edges)
-            if (std::find(runs.begin(), runs.end(), e) == runs.end())
-                others.push_back(body.edge(e).curve->point(0.5 * (body.edge(e).range.lo + body.edge(e).range.hi)));
-        Body result = blendPlanarChains(body, runs, size, chamfer);
+        std::vector<ChamferSides> otherSides, runSides;
+        for (EdgeId e : edges) {
+            if (std::find(runs.begin(), runs.end(), e) != runs.end()) continue;
+            others.push_back(body.edge(e).curve->point(0.5 * (body.edge(e).range.lo + body.edge(e).range.hi)));
+            if (sides) otherSides.push_back(sidesOf(e));
+        }
+        if (sides)
+            for (EdgeId e : runs) runSides.push_back(sidesOf(e));
+        Body result = blend(sides ? &runSides : nullptr);
         if (others.empty()) return result;
         std::vector<EdgeId> rest;
         for (const Vec3 &p : others) {
             const EdgeId e = nearestEdge(result, p, 1e-7 * scale);
-            if (!e.valid()) throw std::domain_error("blendEdges: spigoli che toccano i raccordi dei bordi di forma libera");
+            if (!e.valid()) throw std::domain_error(message);
             rest.push_back(e);
         }
-        return blendEdges(result, rest, size, chamfer);
+        return blendEdgesWith(result, rest, size, chamfer, sides ? &otherSides : nullptr);
+    };
+    if (!general.empty()) {
+        // Le catene possono proseguire per tangenza oltre gli spigoli scelti: al modulo vanno quelli scelti che vi stanno.
+        const std::vector<EdgeId> runs = surfaceChainRuns(body, edges, general);
+        std::vector<EdgeId> chosen;
+        for (EdgeId e : edges)
+            if (std::find(runs.begin(), runs.end(), e) != runs.end()) chosen.push_back(e);
+        return delegate(chosen, [&](const std::vector<ChamferSides> *runSides) { return blendSurfaceChains(body, chosen, size, chamfer, runSides); },
+                        "blendEdges: spigoli che toccano i raccordi tra superfici curve");
+    }
+    if (!freeform.empty()) {
+        const std::vector<EdgeId> runs = planarChainRuns(body, edges, freeform);
+        return delegate(runs, [&](const std::vector<ChamferSides> *runSides) { return blendPlanarChains(body, runs, size, chamfer, runSides); },
+                        "blendEdges: spigoli che toccano i raccordi dei bordi di forma libera");
     }
 
+    // Solo rette e cerchi: le sezioni analitiche. Se non riescono (un arco che
+    // finisce contro un fianco obliquo, angoli vivi tra archi e segmenti) e gli
+    // spigoli sono tutti bordi tra una faccia piana e fianchi normali ad essa,
+    // la palla rotolante delle catene piane (fk_blend_loop).
+    try {
+        try {
+            return analyticBlend(body, edges, size, chamfer, sides);
+        } catch (const std::invalid_argument &failure) {
+            // Una costruzione intermedia non valida: come un caso non gestito dalle sezioni analitiche.
+            throw std::domain_error(failure.what());
+        }
+    } catch (const std::domain_error &) {
+        bool planar = true;
+        for (EdgeId e : edges) planar = planar && isPlanarChainEdge(body, e);
+        std::vector<ChamferSides> allSides;
+        if (sides)
+            for (EdgeId e : edges) allSides.push_back(sidesOf(e));
+        if (planar) {
+            try {
+                // Semi: gli spigoli curvi (hanno una sola faccia piana possibile); le catene proseguono sui segmenti.
+                std::vector<EdgeId> seeds;
+                for (EdgeId e : edges)
+                    if (body.edge(e).curve->type() != CurveType::Line) seeds.push_back(e);
+                if (!seeds.empty()) {
+                    const std::vector<EdgeId> runs = planarChainRuns(body, edges, seeds);
+                    std::vector<ChamferSides> runSides;
+                    if (sides)
+                        for (EdgeId e : runs) runSides.push_back(sidesOf(e));
+                    if (runs.size() == edges.size()) return blendPlanarChains(body, runs, size, chamfer, sides ? &runSides : nullptr);
+                }
+            } catch (const std::domain_error &) {
+            }
+        }
+        // Ultimo tentativo: la palla rotolante tra superfici qualsiasi (angoli
+        // vivi a mitra, estremi contro facce qualsiasi).
+        try {
+            (void)surfaceChainRuns(body, edges, edges);  // eccezione se le catene non sono gestite
+            return blendSurfaceChains(body, edges, size, chamfer, sides ? &allSides : nullptr);
+        } catch (const std::domain_error &) {
+        }
+        throw;
+    }
+}
+
+Body analyticBlend(const Body &body, const std::vector<EdgeId> &edges, double size, bool chamfer, const std::vector<ChamferSides> *sides) {
+    Box box;
+    for (VertexId v : body.vertices()) box.add(body.vertex(v).point);
+    for (FaceId f : body.faces()) box.add(faceBox(body, f));
+    const double scale = std::max(box.diagonal(), 1.0), tolerance = 1e-9 * scale, probe = 1e-4 * std::min(scale, size);
+    const double normalTolerance = 1e-9;
+    auto sidesOf = [&](EdgeId e) {
+        for (std::size_t k = 0; k < edges.size(); ++k)
+            if (edges[k] == e) return (*sides)[k];
+        throw std::logic_error("blendEdges: spigolo senza distanze");
+    };
     std::vector<BlendEdge> infos;
     for (EdgeId e : edges) {
         const Edge &edge = body.edge(e);
@@ -543,6 +758,13 @@ Body blendEdges(const Body &body, const std::vector<EdgeId> &edges, double size,
         info.id = e;
         info.faces[0] = body.finFace(edge.forward);
         info.faces[1] = body.finFace(edge.backward);
+        if (sides) {
+            const auto [onForward, onBackward] = detail::chamferDistances(body, e, sidesOf(e));
+            info.chamfer[0] = onForward;
+            info.chamfer[1] = onBackward;
+        } else {
+            info.chamfer[0] = info.chamfer[1] = size;
+        }
         const FaceId *faces = info.faces;
         if (faces[0] == faces[1]) throw std::domain_error("blendEdges: spigolo interno a una faccia");
         const Vec3 start = edge.curve->point(edge.range.lo), end = edge.curve->point(edge.range.hi);
@@ -680,7 +902,8 @@ Body blendEdges(const Body &body, const std::vector<EdgeId> &edges, double size,
     // scostano dalle facce (vedi blendRegion): le sezioni comuni delle catene coincidono.
     for (BlendEdge &info : infos) {
         const bool offset = !info.straight || info.chain >= 0;
-        info.region = blendRegion(info.section[0], info.section[1], info.corner, size, chamfer, info.convex, tolerance, offset ? 0.05 * size : 0.0, &info.extent);
+        info.region = blendRegion(info.section[0], info.section[1], info.corner, chamfer ? info.chamfer[0] : size, chamfer, info.convex, tolerance,
+                                  offset ? 0.05 * size : 0.0, &info.extent, chamfer ? info.chamfer[1] : -1.0);
     }
 
     // Vertici con tre spigoli scelti: la pezza d'angolo.
@@ -715,7 +938,10 @@ Body blendEdges(const Body &body, const std::vector<EdgeId> &edges, double size,
                 c.edgeFaces[k][s] = int(std::find(around.begin(), around.end(), info.faces[s]) - around.begin());
         }
         if (chamfer) {
-            corners.push_back(chamferCorner(c, size));
+            double dist[3][2];
+            for (int k = 0; k < 3; ++k)
+                for (int s = 0; s < 2; ++s) dist[k][s] = infos[std::size_t(list[std::size_t(k)])].chamfer[s];
+            corners.push_back(chamferCorner(c, dist));
             continue;
         }
         double inset[3];
@@ -755,17 +981,43 @@ Body blendEdges(const Body &body, const std::vector<EdgeId> &edges, double size,
                 flush = flush && (normalEnd || smooth);
             }
             if (flush) continue;
-            if (!info.straight || others.size() != 1 || body.face(others.front()).surface->type() != SurfaceType::Plane)
-                throw std::domain_error("blendEdges: lo spigolo finisce contro facce non gestite");
+            if (others.size() != 1 || body.face(others.front()).surface->type() != SurfaceType::Plane)
+                throw std::domain_error("blendEdges: lo spigolo finisce contro facce non gestite (piu' facce, o una faccia curva non normale allo spigolo)");
             const Vec3 ng = outwardNormal(body, others.front(), p);
             const double c = dot(ng, end == 0 ? -tangent : tangent);
             if (c < 1e-3) throw std::domain_error("blendEdges: lo spigolo finisce contro una faccia quasi parallela");
+            if (!info.straight) {
+                // Arco: la rivoluzione si prolunga oltre il vertice finche' la sezione
+                // sta tutta oltre il piano della faccia, poi si taglia con il suo semispazio.
+                const auto &circle = static_cast<const Circle<3> &>(*edge.curve);
+                const double theta = end == 0 ? edge.range.lo : edge.range.hi, direction = end == 0 ? -1.0 : 1.0;
+                auto sectionPoint = [&](double phi, const Vec2 &q) {
+                    return info.origin + q.x() * (std::cos(phi) * circle.xAxis() + std::sin(phi) * circle.yAxis()) + q.y() * info.axis;
+                };
+                double reach = 0.0;
+                for (const Vec2 &q : info.extent) reach = std::max(reach, -dot(ng, sectionPoint(theta, q) - p));
+                double delta = std::max(1e-3, (reach + 0.25 * size) / (circle.radius() * c));
+                for (int attempt = 0;; ++attempt) {
+                    bool beyond = true;
+                    for (const Vec2 &q : info.extent) beyond = beyond && dot(ng, sectionPoint(theta + direction * delta, q) - p) > 0.0;
+                    if (beyond) break;
+                    delta *= 1.5;
+                    if (attempt > 40 || edge.range.length() + info.angleFrom + info.angleTo + delta >= kTwoPi - 1e-3)
+                        throw std::domain_error("blendEdges: l'arco finisce contro una faccia che il raccordo non raggiunge");
+                }
+                (end == 0 ? info.angleFrom : info.angleTo) = delta;
+                info.trims.push_back({info.convex ? p + 1e-3 * size * ng : p, ng});
+                continue;
+            }
             double reach = 0.0;
             for (const Vec2 &q : info.extent) reach = std::max(reach, -dot(ng, (q.x() - info.corner.x()) * info.e1 + (q.y() - info.corner.y()) * info.e2));
             const double extension = (reach + 0.25 * size) / c;
             if (end == 0) info.from -= extension;
             else info.to += extension;
-            info.trims.push_back({p, ng});
+            // Sugli spigoli convessi (materiale tolto) il taglio sta appena fuori dalla
+            // faccia: oltre non c'e' materiale, e l'utensile non ha facce sulla faccia del
+            // corpo (due curve uguali tracciate due volte dividerebbero male la faccia).
+            info.trims.push_back({info.convex ? p + 1e-3 * size * ng : p, ng});
         }
     }
 
@@ -789,7 +1041,13 @@ Body blendEdges(const Body &body, const std::vector<EdgeId> &edges, double size,
             tool.body = makeRevolution(Frame3(info.origin, info.axis, info.e1), info.region);
         } else {
             const Edge &edge = body.edge(info.id);
-            tool.body = makeRevolution(Frame3(info.origin, info.axis, edge.curve->point(edge.range.lo) - info.origin), info.region, edge.range.length());
+            const auto &circle = static_cast<const Circle<3> &>(*edge.curve);
+            const double start = edge.range.lo - info.angleFrom;
+            const Vec3 startDirection = std::cos(start) * circle.xAxis() + std::sin(start) * circle.yAxis();
+            tool.body = makeRevolution(Frame3(info.origin, info.axis, startDirection), info.region, edge.range.length() + info.angleFrom + info.angleTo);
+            const double reach = 4.0 * (circle.radius() + 10.0 * size);
+            for (const auto &[point, normal] : info.trims)
+                tool.body = booleanOperation(tool.body, halfSpace(point, normal, reach), BooleanOperation::Intersect);
         }
         tools.push_back(std::move(tool));
     }
@@ -811,5 +1069,7 @@ Body blendEdges(const Body &body, const std::vector<EdgeId> &edges, double size,
     for (const Tool &tool : tools) result = booleanOperation(result, tool.body, tool.add ? BooleanOperation::Unite : BooleanOperation::Subtract);
     return result;
 }
+
+}  // namespace
 
 }

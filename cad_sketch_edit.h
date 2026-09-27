@@ -10,8 +10,8 @@
 
 // Modifica delle entita' dello schizzo: taglia, estendi, spezza, raccordo e
 // smusso. Tutto in double sulla geometria esatta: le intersezioni vengono da
-// Geom2dAPI_InterCurveCurve sulle curve di `curveGeometry` (rette e cerchi in
-// forma chiusa); un tratto di segmento o d'arco resta un segmento o un arco
+// intersectCurves del kernel (fk_intersect) sulle curve di `curveGeometry`
+// (rette e cerchi in forma chiusa); un tratto di segmento o d'arco resta un segmento o un arco
 // dello stesso cerchio, un tratto di spline e' fatto dei tratti di Bezier
 // esatti (de Casteljau). Le NURBS fanno da bordo di taglio ma non si
 // modificano (i loro nodi sono uniformi per costruzione); un poligono si
@@ -61,6 +61,36 @@ SketchEditResult blendSketchSegments(SketchObject &sketch, int first, const QPoi
 // segmenti. Dà i due segmenti e un punto sulla parte da tenere di ciascuno.
 bool sketchCornerAt(const SketchObject &sketch, const QPointF &point, double tolerance, int &first, QPointF &pickFirst,
                     int &second, QPointF &pickSecond);
+
+// Ripetizione di entita' dello schizzo (segmenti e curve, anche di
+// costruzione): copie esatte trasformate nel piano.
+//  - kind 0 lineare: `count` istanze lungo `direction` (versore) ogni
+//    `spacing` e, se count2 > 1, `count2` lungo `direction2` ogni `spacing2`
+//    (griglia); l'istanza 0 e' l'originale.
+//  - kind 1 circolare: `count` istanze attorno a `center`; `angle` (gradi) e'
+//    l'angolo totale se `spread` (360: il giro diviso in parti uguali,
+//    altrimenti tra la prima e l'ultima), il passo altrimenti. Con segno: antiorario.
+//  - kind 2 specchio: l'immagine rispetto alla retta per `axisPoint` lungo
+//    `axisDirection` (gli archi si percorrono ancora in senso antiorario).
+// I vincoli tra le entita' ripetute si copiano quando restano veri (non i
+// fissi, ne' quelli verso origine e assi, ne' orizzontale/verticale se le
+// copie ruotano, ne' gli angoli nello specchio); gli estremi delle copie che
+// toccano altri punti diventano coincidenti. `created` riceve le entita' nuove.
+struct SketchPattern {
+    int kind = 0;
+    QPointF direction{1.0, 0.0};
+    double spacing = 10.0;
+    int count = 3;
+    QPointF direction2{0.0, 1.0};
+    double spacing2 = 10.0;
+    int count2 = 1;
+    QPointF center;
+    double angle = 360.0;
+    bool spread = true;
+    QPointF axisPoint, axisDirection{0.0, 1.0};
+};
+SketchEditResult patternSketchEntities(SketchObject &sketch, const QVector<SketchEntity> &entities, const SketchPattern &pattern,
+                                       QVector<SketchEntity> *created = nullptr);
 
 // Elimina segmenti e curve (con i loro vincoli e le linee di costruzione) e
 // restituisce la mappa dei segmenti vecchio -> nuovo indice (-1 eliminato).

@@ -122,6 +122,8 @@ public:
     // Proiezione ortogonale sul piano per l'origine normale a `normal`
     // (singolare: non ha inversa).
     static Transform3 projectionAlong(const Vec3 &normal);
+    // Simmetria rispetto al piano per `point` normale a `normal` (determinante -1).
+    static Transform3 reflection(const Vec3 &point, const Vec3 &normal);
     // Da coordinate locali del sistema a coordinate globali.
     static Transform3 fromFrame(const Frame3 &frame);
 

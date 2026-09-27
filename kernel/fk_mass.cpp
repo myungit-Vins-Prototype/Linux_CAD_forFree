@@ -4,6 +4,7 @@
 #include <cmath>
 #include <stdexcept>
 
+#include "fk_bspline.h"
 #include "fk_precision.h"
 #include "fk_quadrature.h"
 #include "fk_surface_algo.h"
@@ -404,6 +405,28 @@ void FaceIntegrator::refine(const FinTrack &track, const Sample &a, const Sample
 }
 
 LoopValues FaceIntegrator::finIntegral(const FinTrack &track) const {
+    // Fin a u costante (SP-curve rettilinea verticale): du = 0, il termine -G du e'
+    // nullo; resta solo l'avanzamento in v per contare gli avvolgimenti. Senza
+    // questa scorciatoia G si calcolerebbe in ogni nodo della quadratura lungo
+    // l'edge, per niente (costo quadratico sulle superfici con molti nodi in v).
+    if (track.pcurve) {
+        // Il tipo si controlla sulla classe vera: le SP-curve con i parametri
+        // scambiati (SwappedCurve) riportano il tipo della curva di base.
+        bool vertical = false;
+        if (const auto *line = dynamic_cast<const Line<2> *>(track.pcurve.get())) {
+            vertical = line->direction().x() == 0.0;
+        } else if (const auto *spline = dynamic_cast<const BSplineCurve<2> *>(track.pcurve.get())) {
+            vertical = spline->degree() == 1 && !spline->isRational();
+            for (const Vec2 &pole : spline->poles()) vertical = vertical && pole.x() == spline->poles().front().x();
+        }
+        if (vertical) {
+            LoopValues total{};
+            total[13] = track.pcurve->point(track.range.hi).y() - track.pcurve->point(track.range.lo).y();
+            if (!track.sense)
+                for (double &value : total) value = -value;
+            return total;
+        }
+    }
     double spanWidth = 1.0;  // tratto liscio corrente (vedi sotto)
     auto f = [&](double t) {
         Vec3 c[2];

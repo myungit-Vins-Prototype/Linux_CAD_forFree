@@ -4,11 +4,11 @@
 #include <QString>
 #include <QVector>
 
-#include <TopoDS_Shape.hxx>
+#include "cad_types.h"
 
-// Esportazione dei corpi verso altri CAD con i traduttori di OpenCASCADE:
-// STEP (AP203, AP214, AP242) e IGES 5.3, B-rep esatti in millimetri, un
-// prodotto per corpo con il suo nome e il colore (documento XCAF).
+// Esportazione dei corpi verso altri CAD con gli scrittori del kernel
+// (fk_step, fk_iges): STEP (AP203, AP214, AP242) e IGES 5.3, B-rep esatti in
+// millimetri, un prodotto per corpo con il suo nome e il colore.
 namespace ForgeCad {
 
 enum class ExportFormat {
@@ -19,9 +19,11 @@ enum class ExportFormat {
     IgesSurfaces = 4 // IGES 5.3, superfici tagliate (entita' 144): la piu' compatibile
 };
 
+// Un corpo (solido o superficie) o una curva (elica, come curva limitata).
 struct ExportBody {
     QString name;
-    TopoDS_Shape shape;
+    ForgeBody body;
+    ForgeCurve curve;
 };
 
 // Restituisce l'errore (vuoto se riuscito).

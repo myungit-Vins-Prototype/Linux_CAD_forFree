@@ -767,4 +767,32 @@ Vec3 normalAt(const Surface &surface, double u, double v, int side) {
     return normalized(sum);
 }
 
+SurfacePtr planarEquivalent(const Surface &surface, double relativeTolerance) {
+    if (surface.type() != SurfaceType::BSpline) return nullptr;
+    const auto &spline = static_cast<const BSplineSurface &>(surface);
+    Vec3 lo(1e300, 1e300, 1e300), hi(-1e300, -1e300, -1e300), centroid;
+    const int count = spline.uPoleCount() * spline.vPoleCount();
+    for (int i = 0; i < spline.uPoleCount(); ++i)
+        for (int j = 0; j < spline.vPoleCount(); ++j) {
+            const Vec3 &p = spline.pole(i, j);
+            if (spline.weight(i, j) <= 0.0) return nullptr;
+            for (int k = 0; k < 3; ++k) lo[k] = std::min(lo[k], p[k]), hi[k] = std::max(hi[k], p[k]);
+            centroid += p / double(count);
+        }
+    const double tolerance = relativeTolerance * std::max(norm(hi - lo), 1e-300);
+    const Interval u = spline.uDomain(), v = spline.vDomain();
+    const double um = 0.5 * (u.lo + u.hi), vm = 0.5 * (v.lo + v.hi);
+    Vec3 d[3];
+    spline.evaluate(um, vm, 1, d);
+    const Vec3 m = cross(d[Surface::derivativeIndex(1, 0, 1)], d[Surface::derivativeIndex(0, 1, 1)]);
+    if (!(norm(m) > 0.0)) return nullptr;
+    const Vec3 n = normalized(m);
+    for (int i = 0; i < spline.uPoleCount(); ++i)
+        for (int j = 0; j < spline.vPoleCount(); ++j)
+            if (std::fabs(dot(spline.pole(i, j) - centroid, n)) > tolerance) return nullptr;
+    // Stessa normale in tutto il dominio: poli complanari bastano (combinazioni convesse).
+    const Vec3 x = d[Surface::derivativeIndex(1, 0, 1)];
+    return std::make_shared<Plane>(Frame3(d[0] - dot(d[0] - centroid, n) * n, n, norm(cross(x, n)) > 0.0 ? x : cross(n, std::fabs(n.x()) < 0.9 ? Vec3(1, 0, 0) : Vec3(0, 1, 0))));
+}
+
 }

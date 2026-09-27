@@ -1,155 +1,136 @@
 #include "cad_curve_solver.h"
 
-#include <GCE2d_MakeSegment.hxx>
-#include <GCPnts_TangentialDeflection.hxx>
-#include <Geom2d_BSplineCurve.hxx>
-#include <Geom2d_Circle.hxx>
-#include <Geom2d_Ellipse.hxx>
-#include <gp_Ax22d.hxx>
-#include <Geom2d_TrimmedCurve.hxx>
-#include <Geom2dAdaptor_Curve.hxx>
-#include <Precision.hxx>
-#include <Standard_Failure.hxx>
-#include <TColStd_Array1OfInteger.hxx>
-#include <TColStd_Array1OfReal.hxx>
-#include <TColgp_Array1OfPnt2d.hxx>
-#include <gp_Ax2d.hxx>
-
+#include <algorithm>
 #include <cmath>
+#include <memory>
+
+#include "fk_bspline.h"
+#include "fk_curve.h"
 
 namespace ForgeCad {
 namespace {
 
-gp_Pnt2d toPnt(const QPointF &point) { return gp_Pnt2d(point.x(), point.y()); }
+using namespace Kernel;
 
-double distance(const QPointF &a, const QPointF &b) {
-    return std::hypot(b.x() - a.x(), b.y() - a.y());
-}
+constexpr double kConfusion = 1.0e-7;
+
+Vec2 toVec(const QPointF &point) { return Vec2(point.x(), point.y()); }
+
+ProfileSegment lineSegment(const Vec2 &a, const Vec2 &b) { return {std::make_shared<Line<2>>(a, b - a), {0.0, distance(a, b)}}; }
 
 // Spline: sequenza di Bezier cubiche (P_i, H_i+, H_{i+1}-, P_{i+1}) espressa
 // esattamente come B-spline di grado 3 con nodi interni di molteplicita' 3.
-Handle(Geom2d_Curve) makeSpline(const CurveObject &curve) {
+CurvePtr<2> makeSpline(const CurveObject &curve) {
     const int count = curve.controlPoints.size();
     if (count < 2 || curve.tangentHandles.size() != count) return {};
-    TColgp_Array1OfPnt2d poles(1, 3 * (count - 1) + 1);
-    int pole = 1;
-    for (int index = 0; index < count; ++index) {
-        if (index > 0) poles.SetValue(pole++, toPnt(curve.tangentHandles.at(index).first));
-        poles.SetValue(pole++, toPnt(curve.controlPoints.at(index)));
-        if (index + 1 < count) poles.SetValue(pole++, toPnt(curve.tangentHandles.at(index).second));
+    std::vector<Vec2> poles;
+    for (int i = 0; i < count; ++i) {
+        if (i > 0) poles.push_back(toVec(curve.tangentHandles.at(i).first));
+        poles.push_back(toVec(curve.controlPoints.at(i)));
+        if (i + 1 < count) poles.push_back(toVec(curve.tangentHandles.at(i).second));
     }
-    TColStd_Array1OfReal knots(1, count);
-    TColStd_Array1OfInteger multiplicities(1, count);
-    for (int index = 0; index < count; ++index) {
-        knots.SetValue(index + 1, double(index));
-        multiplicities.SetValue(index + 1, index == 0 || index == count - 1 ? 4 : 3);
+    std::vector<double> knots;
+    std::vector<int> multiplicities;
+    for (int i = 0; i < count; ++i) {
+        knots.push_back(double(i));
+        multiplicities.push_back(i == 0 || i == count - 1 ? 4 : 3);
     }
-    return new Geom2d_BSplineCurve(poles, knots, multiplicities, 3);
+    return std::make_shared<BSplineCurve<2>>(3, expandKnots(knots, multiplicities), std::move(poles));
 }
 
 // NURBS: poli e pesi dell'utente, grado min(3, n-1), nodi uniformi "clamped".
-Handle(Geom2d_Curve) makeNurbs(const CurveObject &curve) {
+CurvePtr<2> makeNurbs(const CurveObject &curve) {
     const int count = curve.controlPoints.size();
     if (count < 2) return {};
-    const int degree = qMin(3, count - 1);
-    TColgp_Array1OfPnt2d poles(1, count);
-    TColStd_Array1OfReal weights(1, count);
-    for (int index = 0; index < count; ++index) {
-        poles.SetValue(index + 1, toPnt(curve.controlPoints.at(index)));
-        const double weight = curve.weights.size() == count ? curve.weights.at(index) : 1.0;
-        if (weight <= 0.0) return {};
-        weights.SetValue(index + 1, weight);
+    const int degree = std::min(3, count - 1);
+    std::vector<Vec2> poles;
+    std::vector<double> weights;
+    for (int i = 0; i < count; ++i) {
+        poles.push_back(toVec(curve.controlPoints.at(i)));
+        const double weight = curve.weights.size() == count ? curve.weights.at(i) : 1.0;
+        if (!(weight > 0.0)) return {};
+        weights.push_back(weight);
     }
     const int spans = count - degree;
-    TColStd_Array1OfReal knots(1, spans + 1);
-    TColStd_Array1OfInteger multiplicities(1, spans + 1);
-    for (int index = 0; index <= spans; ++index) {
-        knots.SetValue(index + 1, double(index) / double(spans));
-        multiplicities.SetValue(index + 1, index == 0 || index == spans ? degree + 1 : 1);
+    std::vector<double> knots;
+    std::vector<int> multiplicities;
+    for (int i = 0; i <= spans; ++i) {
+        knots.push_back(double(i) / spans);
+        multiplicities.push_back(i == 0 || i == spans ? degree + 1 : 1);
     }
-    return new Geom2d_BSplineCurve(poles, weights, knots, multiplicities, degree);
+    return std::make_shared<BSplineCurve<2>>(degree, expandKnots(knots, multiplicities), std::move(poles), std::move(weights));
 }
 
 }
 
-QVector<Handle(Geom2d_Curve)> curveGeometry(const CurveObject &curve) {
-    QVector<Handle(Geom2d_Curve)> result;
+std::vector<ProfileSegment> curveGeometry(const CurveObject &curve) {
+    std::vector<ProfileSegment> result;
+    const int count = curve.controlPoints.size();
     try {
         switch (curve.tool) {
-        case DrawingTool::Spline: {
-            const Handle(Geom2d_Curve) spline = makeSpline(curve);
-            if (!spline.IsNull()) result.append(spline);
-            break;
-        }
+        case DrawingTool::Spline:
         case DrawingTool::Nurbs: {
-            const Handle(Geom2d_Curve) nurbs = makeNurbs(curve);
-            if (!nurbs.IsNull()) result.append(nurbs);
+            const CurvePtr<2> c = curve.tool == DrawingTool::Spline ? makeSpline(curve) : makeNurbs(curve);
+            if (c) result.push_back({c, c->domain()});
             break;
         }
         case DrawingTool::Circle: {
-            if (curve.controlPoints.size() < 2) break;
-            const double radius = distance(curve.controlPoints.at(0), curve.controlPoints.at(1));
-            if (radius <= Precision::Confusion()) break;
-            result.append(new Geom2d_Circle(gp_Ax2d(toPnt(curve.controlPoints.at(0)), gp_Dir2d(1.0, 0.0)), radius));
+            if (count < 2) break;
+            const double radius = distance(toVec(curve.controlPoints.at(0)), toVec(curve.controlPoints.at(1)));
+            if (radius <= kConfusion) break;
+            result.push_back({std::make_shared<Circle<2>>(makeCircle(toVec(curve.controlPoints.at(0)), radius)), {0.0, kTwoPi}});
             break;
         }
         case DrawingTool::Arc: {
-            if (curve.controlPoints.size() < 3) break;
-            const QPointF center = curve.controlPoints.at(0);
-            const QPointF start = curve.controlPoints.at(1);
-            const QPointF end = curve.controlPoints.at(2);
+            if (count < 3) break;
+            const Vec2 center = toVec(curve.controlPoints.at(0)), start = toVec(curve.controlPoints.at(1)), end = toVec(curve.controlPoints.at(2));
             const double radius = distance(center, start);
-            if (radius <= Precision::Confusion() || distance(center, end) <= Precision::Confusion()) break;
+            if (radius <= kConfusion || distance(center, end) <= kConfusion) break;
             const double startAngle = std::atan2(start.y() - center.y(), start.x() - center.x());
             double endAngle = std::atan2(end.y() - center.y(), end.x() - center.x());
-            while (endAngle <= startAngle + Precision::Angular()) endAngle += 2.0 * M_PI;
-            const Handle(Geom2d_Circle) circle = new Geom2d_Circle(gp_Ax2d(toPnt(center), gp_Dir2d(1.0, 0.0)), radius);
-            result.append(new Geom2d_TrimmedCurve(circle, startAngle, endAngle));
+            while (endAngle <= startAngle + 1.0e-12) endAngle += kTwoPi;
+            result.push_back({std::make_shared<Circle<2>>(makeCircle(center, radius)), {startAngle, endAngle}});
             break;
         }
         case DrawingTool::Ellipse: {
-            if (curve.controlPoints.size() < 3) break;
-            const QPointF center = curve.controlPoints.at(0);
-            const double a = distance(center, curve.controlPoints.at(1)), b = distance(center, curve.controlPoints.at(2));
-            if (a <= Precision::Confusion() || b <= Precision::Confusion()) break;
-            const QPointF u = (curve.controlPoints.at(1) - center) / a;
-            // OCCT vuole il semiasse maggiore lungo X del sistema dell'ellisse.
-            const gp_Dir2d x = a >= b ? gp_Dir2d(u.x(), u.y()) : gp_Dir2d(-u.y(), u.x());
-            const gp_Dir2d y(-x.Y(), x.X());
-            result.append(new Geom2d_Ellipse(gp_Ax22d(toPnt(center), x, y), std::max(a, b), std::min(a, b)));
+            if (count < 3) break;
+            const Vec2 center = toVec(curve.controlPoints.at(0));
+            const double a = distance(center, toVec(curve.controlPoints.at(1))), b = distance(center, toVec(curve.controlPoints.at(2)));
+            if (a <= kConfusion || b <= kConfusion) break;
+            const Vec2 u = (toVec(curve.controlPoints.at(1)) - center) / a;
+            // Semiasse maggiore lungo X del sistema dell'ellisse.
+            const Vec2 x = a >= b ? u : Vec2(-u.y(), u.x()), y(-x.y(), x.x());
+            result.push_back({std::make_shared<Ellipse<2>>(center, x, y, std::max(a, b), std::min(a, b)), {0.0, kTwoPi}});
             break;
         }
         case DrawingTool::Rectangle:
         case DrawingTool::CenterRectangle: {
-            if (curve.controlPoints.size() < 2) break;
+            if (count < 2) break;
             const QPointF p = curve.controlPoints.at(0), q = curve.controlPoints.at(1);
             const QPointF a = curve.tool == DrawingTool::Rectangle ? p : 2.0 * p - q;
-            const gp_Pnt2d corners[4] = {toPnt(a), gp_Pnt2d(q.x(), a.y()), toPnt(q), gp_Pnt2d(a.x(), q.y())};
-            if (std::abs(q.x() - a.x()) <= Precision::Confusion() || std::abs(q.y() - a.y()) <= Precision::Confusion()) break;
-            for (int side = 0; side < 4; ++side) result.append(GCE2d_MakeSegment(corners[side], corners[(side + 1) % 4]).Value());
+            if (std::abs(q.x() - a.x()) <= kConfusion || std::abs(q.y() - a.y()) <= kConfusion) break;
+            const Vec2 corners[4] = {toVec(a), Vec2(q.x(), a.y()), toVec(q), Vec2(a.x(), q.y())};
+            for (int side = 0; side < 4; ++side) result.push_back(lineSegment(corners[side], corners[(side + 1) % 4]));
             break;
         }
         case DrawingTool::Polygon: {
-            if (curve.controlPoints.size() < 2 || curve.sides < 3) break;
-            const QPointF center = curve.controlPoints.at(0);
-            const QPointF vertex = curve.controlPoints.at(1);
+            if (count < 2 || curve.sides < 3) break;
+            const Vec2 center = toVec(curve.controlPoints.at(0)), vertex = toVec(curve.controlPoints.at(1));
             const double radius = distance(center, vertex);
-            if (radius <= Precision::Confusion()) break;
+            if (radius <= kConfusion) break;
             const double startAngle = std::atan2(vertex.y() - center.y(), vertex.x() - center.x());
-            QVector<gp_Pnt2d> corners;
+            std::vector<Vec2> corners;
             for (int side = 0; side < curve.sides; ++side) {
-                const double angle = startAngle + 2.0 * M_PI * double(side) / double(curve.sides);
-                corners.append(side == 0 ? toPnt(vertex)
-                               : gp_Pnt2d(center.x() + radius * std::cos(angle), center.y() + radius * std::sin(angle)));
+                const double angle = startAngle + kTwoPi * side / curve.sides;
+                corners.push_back(side == 0 ? vertex : center + Vec2(radius * std::cos(angle), radius * std::sin(angle)));
             }
-            for (int side = 0; side < curve.sides; ++side)
-                result.append(GCE2d_MakeSegment(corners.at(side), corners.at((side + 1) % curve.sides)).Value());
+            for (int side = 0; side < curve.sides; ++side) result.push_back(lineSegment(corners[std::size_t(side)], corners[std::size_t((side + 1) % curve.sides)]));
             break;
         }
         default:
             break;
         }
-    } catch (const Standard_Failure &) {
+    } catch (const std::exception &) {
         result.clear();
     }
     return result;
@@ -162,35 +143,61 @@ void initializeTangentHandles(CurveObject &curve) {
         const QPointF previous = curve.controlPoints.at(qMax(0, index - 1));
         const QPointF next = curve.controlPoints.at(qMin(int(curve.controlPoints.size()) - 1, index + 1));
         const QPointF tangent = (next - previous) / 3.0;
-        curve.tangentHandles.append(qMakePair(curve.controlPoints.at(index) - tangent,
-                                               curve.controlPoints.at(index) + tangent));
+        curve.tangentHandles.append(qMakePair(curve.controlPoints.at(index) - tangent, curve.controlPoints.at(index) + tangent));
+    }
+}
+
+void sampleCurve(const Curve<2> &curve, const Interval &range, double angular, double deflection, QVector<QPointF> &out) {
+    const auto push = [&](const Vec2 &p) { out.append(QPointF(p.x(), p.y())); };
+    std::vector<double> breaks = curve.breakpoints(range);
+    if (breaks.size() < 2) breaks = {range.lo, range.hi};
+    if (out.isEmpty()) push(curve.point(breaks.front()));
+    // Suddivisione ricorsiva: il punto medio del parametro deve stare vicino
+    // alla corda e le tangenti agli estremi non devono girare troppo.
+    const auto refine = [&](auto &&self, double a, double b, const Vec2 &pa, const Vec2 &pb, int depth) -> void {
+        const double m = 0.5 * (a + b);
+        const Vec2 pm = curve.point(m);
+        const Vec2 chord = pb - pa;
+        const double length = norm(chord);
+        const double offset = length > 0.0 ? std::fabs(cross(chord, pm - pa)) / length : norm(pm - pa);
+        const Vec2 ta = curve.derivative(a), tb = curve.derivative(b);
+        const double na = norm(ta), nb = norm(tb);
+        double turn = 0.0;
+        if (na > 0.0 && nb > 0.0) turn = std::acos(std::clamp(dot(ta, tb) / (na * nb), -1.0, 1.0));
+        if (depth < 16 && (offset > deflection || turn > angular || depth < 1)) {
+            self(self, a, m, pa, pm, depth + 1);
+            self(self, m, b, pm, pb, depth + 1);
+            return;
+        }
+        push(pb);
+    };
+    for (std::size_t k = 0; k + 1 < breaks.size(); ++k) {
+        const double a = breaks[k], b = breaks[k + 1];
+        if (!(b > a)) continue;
+        // Almeno quattro intervalli per tratto: una corda sola non vede un'ansa simmetrica.
+        Vec2 pa = curve.point(a);
+        for (int part = 0; part < 4; ++part) {
+            const double s = a + (b - a) * part / 4.0, e = part == 3 ? b : a + (b - a) * (part + 1) / 4.0;
+            const Vec2 pe = curve.point(e);
+            refine(refine, s, e, pa, pe, 0);
+            pa = pe;
+        }
     }
 }
 
 void recalculateCurve(CurveObject &curve, int quality) {
-    if (curve.tool == DrawingTool::Spline && curve.tangentHandles.size() != curve.controlPoints.size())
-        initializeTangentHandles(curve);
+    if (curve.tool == DrawingTool::Spline && curve.tangentHandles.size() != curve.controlPoints.size()) initializeTangentHandles(curve);
     curve.samples.clear();
-    const QVector<Handle(Geom2d_Curve)> geometry = curveGeometry(curve);
+    const std::vector<ProfileSegment> geometry = curveGeometry(curve);
     const double angular = quality <= 0 ? 0.2 : quality == 1 ? 0.08 : 0.03;
     const double deflection = quality <= 0 ? 1.0e-2 : quality == 1 ? 2.0e-3 : 4.0e-4;
     try {
-        for (const Handle(Geom2d_Curve) &piece : geometry) {
-            Geom2dAdaptor_Curve adaptor(piece);
-            GCPnts_TangentialDeflection discretizer(adaptor, angular, deflection, 2);
-            for (int index = 1; index <= discretizer.NbPoints(); ++index) {
-                if (index == 1 && !curve.samples.isEmpty()) continue;
-                const gp_Pnt point = discretizer.Value(index);
-                curve.samples.append(QPointF(point.X(), point.Y()));
-            }
-        }
-    } catch (const Standard_Failure &) {
+        for (const ProfileSegment &piece : geometry) sampleCurve(*piece.curve, piece.range, angular, deflection, curve.samples);
+    } catch (const std::exception &) {
         curve.samples.clear();
     }
-    curve.numericallyValid = !geometry.isEmpty() && curve.samples.size() >= 2;
-    for (const QPointF &sample : curve.samples) {
-        curve.numericallyValid = curve.numericallyValid && std::isfinite(sample.x()) && std::isfinite(sample.y());
-    }
+    curve.numericallyValid = !geometry.empty() && curve.samples.size() >= 2;
+    for (const QPointF &sample : curve.samples) curve.numericallyValid = curve.numericallyValid && std::isfinite(sample.x()) && std::isfinite(sample.y());
 }
 
 }

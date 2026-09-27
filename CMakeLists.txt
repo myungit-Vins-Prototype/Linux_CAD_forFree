@@ -24,10 +24,11 @@ set(CMAKE_AUTORCC ON)
 
 find_package(Qt6 REQUIRED COMPONENTS Widgets OpenGL OpenGLWidgets)
 find_package(OpenGL REQUIRED)
-# Kernel geometrico B-rep esatto.
+# OpenCASCADE serve solo ai test del kernel (riferimento per i confronti):
+# l'applicazione usa soltanto il kernel proprio.
 find_package(OpenCASCADE REQUIRED)
 
-# Kernel geometrico proprio (in sviluppo), validato contro OpenCASCADE.
+# Kernel geometrico proprio (kernel/), validato contro OpenCASCADE nei test.
 enable_testing()
 add_subdirectory(kernel)
 
@@ -56,8 +57,16 @@ add_executable(forgecad
     cad_kernel.cpp
     cad_forge.h
     cad_forge.cpp
-    cad_kernel_lab.h
-    cad_kernel_lab.cpp
+    cad_features.h
+    cad_features.cpp
+    cad_mass.h
+    cad_mass.cpp
+    cad_datum.h
+    cad_datum.cpp
+    cad_import.h
+    cad_import.cpp
+    cad_pattern.h
+    cad_pattern.cpp
     cuda_support.h
     ${FORGE_CAD_CUDA_SOURCE}
 )
@@ -67,12 +76,8 @@ target_link_libraries(forgecad PRIVATE
     Qt6::OpenGL
     Qt6::OpenGLWidgets
     OpenGL::GL
-    TKernel TKMath TKG2d TKG3d TKGeomBase TKGeomAlgo TKBRep
-    TKTopAlgo TKPrim TKBO TKBool TKFillet TKMesh TKShHealing
-    TKXSBase TKDESTEP TKDEIGES TKXCAF TKLCAF TKCAF TKDE  # esportazione STEP/IGES (cad_export)
-    forgekernel  # kernel proprio: alternativa a OCCT (menu Opzioni) e banco di prova del menu Debug
+    forgekernel  # kernel geometrico proprio: tutta la modellazione, STEP e IGES
 )
-target_include_directories(forgecad SYSTEM PRIVATE ${OpenCASCADE_INCLUDE_DIR})
 
 target_compile_options(forgecad PRIVATE
     $<$<COMPILE_LANGUAGE:CXX>:-Wall;-Wextra;-Wpedantic>

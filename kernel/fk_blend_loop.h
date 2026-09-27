@@ -3,6 +3,7 @@
 
 #include <vector>
 
+#include "fk_blend.h"
 #include "fk_topology.h"
 
 // Raccordi e smussi dei bordi di forma libera (spline, NURBS, ellissi, e i
@@ -50,7 +51,8 @@ std::vector<EdgeId> planarChainRuns(const Body &body, const std::vector<EdgeId> 
 // Raccordo (o smusso) delle catene formate dagli edge scelti nei loop delle
 // facce piane: `edges` sono tutti gli edge da raccordare, ognuno deve
 // soddisfare isPlanarChainEdge.
-Body blendPlanarChains(const Body &body, const std::vector<EdgeId> &edges, double size, bool chamfer);
+// `sides` (facoltativo, uno per edge): smussi asimmetrici, vedi chamferEdges.
+Body blendPlanarChains(const Body &body, const std::vector<EdgeId> &edges, double size, bool chamfer, const std::vector<ChamferSides> *sides = nullptr);
 
 }
 

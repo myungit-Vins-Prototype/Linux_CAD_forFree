@@ -2,18 +2,6 @@
 
 #include "cad_constraints.h"
 
-#include <GCE2d_MakeSegment.hxx>
-#include <Geom2dAPI_InterCurveCurve.hxx>
-#include <Geom2dAPI_ProjectPointOnCurve.hxx>
-#include <Geom2dInt_GInter.hxx>
-#include <Geom2d_Circle.hxx>
-#include <Geom2d_Line.hxx>
-#include <Geom2d_TrimmedCurve.hxx>
-#include <IntRes2d_IntersectionPoint.hxx>
-#include <IntRes2d_IntersectionSegment.hxx>
-#include <Standard_Failure.hxx>
-#include <gp_Ax2d.hxx>
-
 #include <algorithm>
 #include <array>
 #include <cmath>
@@ -21,6 +9,9 @@
 
 #include "cad_curve_solver.h"
 #include "cad_kernel.h"
+#include "fk_curve.h"
+#include "fk_curve_algo.h"
+#include "fk_intersect.h"
 
 namespace ForgeCad {
 namespace {
@@ -31,8 +22,8 @@ constexpr double kTwoPi = 2.0 * M_PI;
 double length(const QPointF &p) { return std::hypot(p.x(), p.y()); }
 double distance(const QPointF &a, const QPointF &b) { return length(b - a); }
 double cross(const QPointF &a, const QPointF &b) { return a.x() * b.y() - a.y() * b.x(); }
-gp_Pnt2d toPnt(const QPointF &p) { return gp_Pnt2d(p.x(), p.y()); }
-QPointF toPoint(const gp_Pnt2d &p) { return QPointF(p.X(), p.Y()); }
+Kernel::Vec2 toVec(const QPointF &p) { return Kernel::Vec2(p.x(), p.y()); }
+QPointF toPoint(const Kernel::Vec2 &p) { return QPointF(p.x(), p.y()); }
 
 // Angolo riportato in [base, base + 2 pi).
 double wrapAngle(double angle, double base) {
@@ -48,25 +39,22 @@ enum class Shape { Segment, Arc, Circle, Spline, Other };
 // della B-spline (un'unita' per tratto di Bezier) sulle spline.
 struct Geometry {
     Shape shape = Shape::Other;
-    Handle(Geom2d_Curve) basis;
+    Kernel::CurvePtr<2> basis;
     double first = 0.0, last = 0.0;
     QPointF start, end;
     QPointF center;
     double radius = 0.0;
 
-    bool valid() const { return !basis.IsNull(); }
+    bool valid() const { return basis != nullptr; }
     bool closed() const { return shape == Shape::Circle; }
-    QPointF value(double t) const { return toPoint(basis->Value(t)); }
+    QPointF value(double t) const { return toPoint(basis->point(t)); }
     // Agli estremi i punti dell'entita', non ricalcolati.
     QPointF point(double t) const {
         if (!closed() && t == first) return start;
         if (!closed() && t == last) return end;
         return value(t);
     }
-    Handle(Geom2d_Curve) bounded() const {
-        if (closed()) return basis;
-        return new Geom2d_TrimmedCurve(basis, first, last);
-    }
+    Kernel::ProfileSegment bounded() const { return {basis, {first, last}}; }
 };
 
 Geometry geometryOf(const SketchObject &sketch, SketchEntity entity) {
@@ -78,7 +66,7 @@ Geometry geometryOf(const SketchObject &sketch, SketchEntity entity) {
             if (l <= kTolerance) return g;
             const QPointF u = (segment.second - segment.first) / l;
             g.shape = Shape::Segment;
-            g.basis = new Geom2d_Line(toPnt(segment.first), gp_Dir2d(u.x(), u.y()));
+            g.basis = std::make_shared<Kernel::Line<2>>(toVec(segment.first), toVec(u));
             g.first = 0.0;
             g.last = l;
             g.start = segment.first;
@@ -96,7 +84,7 @@ Geometry geometryOf(const SketchObject &sketch, SketchEntity entity) {
             double a1 = std::atan2(end.y() - center.y(), end.x() - center.x());
             while (a1 <= a0 + 1e-12) a1 += kTwoPi;
             g.shape = Shape::Arc;
-            g.basis = new Geom2d_Circle(gp_Ax2d(toPnt(center), gp_Dir2d(1.0, 0.0)), r);
+            g.basis = std::make_shared<Kernel::Circle<2>>(Kernel::makeCircle(toVec(center), r));
             g.first = a0;
             g.last = a1;
             g.center = center;
@@ -110,7 +98,7 @@ Geometry geometryOf(const SketchObject &sketch, SketchEntity entity) {
             const double r = distance(center, curve.controlPoints.at(1));
             if (r <= kTolerance) return g;
             g.shape = Shape::Circle;
-            g.basis = new Geom2d_Circle(gp_Ax2d(toPnt(center), gp_Dir2d(1.0, 0.0)), r);
+            g.basis = std::make_shared<Kernel::Circle<2>>(Kernel::makeCircle(toVec(center), r));
             g.first = 0.0;
             g.last = kTwoPi;
             g.center = center;
@@ -118,43 +106,41 @@ Geometry geometryOf(const SketchObject &sketch, SketchEntity entity) {
             return g;
         }
         if (curve.tool == DrawingTool::Spline) {
-            const QVector<Handle(Geom2d_Curve)> pieces = curveGeometry(curve);
+            const std::vector<Kernel::ProfileSegment> pieces = curveGeometry(curve);
             if (pieces.size() != 1) return g;
             g.shape = Shape::Spline;
-            g.basis = pieces.front();
+            g.basis = pieces.front().curve;
             g.first = 0.0;
             g.last = double(curve.controlPoints.size() - 1);
             g.start = curve.controlPoints.front();
             g.end = curve.controlPoints.back();
             return g;
         }
-    } catch (const Standard_Failure &) {
+    } catch (const std::exception &) {
         return {};
     }
     return g;
 }
 
 // Bordi di taglio: tutte le altre entita' (anche di costruzione).
-QVector<Handle(Geom2d_Curve)> cutters(const SketchObject &sketch, SketchEntity except) {
-    QVector<Handle(Geom2d_Curve)> result;
+std::vector<Kernel::ProfileSegment> cutters(const SketchObject &sketch, SketchEntity except) {
+    std::vector<Kernel::ProfileSegment> result;
     for (int index = 0; index < sketch.segments.size(); ++index) {
         if (except.kind == 0 && except.index == index) continue;
         const SketchSegment &segment = sketch.segments.at(index);
-        if (distance(segment.first, segment.second) <= kTolerance) continue;
-        try {
-            result.append(GCE2d_MakeSegment(toPnt(segment.first), toPnt(segment.second)).Value());
-        } catch (const Standard_Failure &) {
-        }
+        const double l = distance(segment.first, segment.second);
+        if (l <= kTolerance) continue;
+        result.push_back({std::make_shared<Kernel::Line<2>>(toVec(segment.first), toVec(segment.second - segment.first)), {0.0, l}});
     }
     for (int index = 0; index < sketch.curves.size(); ++index) {
         if (except.kind == 1 && except.index == index) continue;
-        for (const Handle(Geom2d_Curve) &curve : curveGeometry(sketch.curves.at(index))) result.append(curve);
+        for (Kernel::ProfileSegment &curve : curveGeometry(sketch.curves.at(index))) result.push_back(std::move(curve));
     }
     return result;
 }
 
 // Parametro di un punto dell'entita' (per rette e cerchi in forma chiusa).
-double parameterOf(const Geometry &g, const QPointF &p, double occtParameter) {
+double parameterOf(const Geometry &g, const QPointF &p, double curveParameter) {
     switch (g.shape) {
     case Shape::Segment: {
         const QPointF u = (g.end - g.start) / distance(g.start, g.end);
@@ -164,30 +150,20 @@ double parameterOf(const Geometry &g, const QPointF &p, double occtParameter) {
     case Shape::Circle:
         return wrapAngle(std::atan2(p.y() - g.center.y(), p.x() - g.center.x()), g.first);
     default:
-        return std::clamp(occtParameter, g.first, g.last);
+        return std::clamp(curveParameter, g.first, g.last);
     }
 }
 
 // Parametri delle intersezioni con le altre entita', ordinati e senza doppi.
 // Sulle entita' aperte solo quelli interni (non sugli estremi).
-QVector<double> crossings(const Geometry &g, const QVector<Handle(Geom2d_Curve)> &others) {
+QVector<double> crossings(const Geometry &g, const std::vector<Kernel::ProfileSegment> &others) {
     QVector<double> params;
-    const Handle(Geom2d_Curve) curve = g.bounded();
-    for (const Handle(Geom2d_Curve) &other : others) {
+    const Kernel::ProfileSegment curve = g.bounded();
+    for (const Kernel::ProfileSegment &other : others) {
         try {
-            Geom2dAPI_InterCurveCurve intersection(curve, other, 1e-9);
-            const Geom2dInt_GInter &result = intersection.Intersector();
-            if (!result.IsDone()) continue;
-            for (int i = 1; i <= result.NbPoints(); ++i)
-                params.append(parameterOf(g, toPoint(result.Point(i).Value()), result.Point(i).ParamOnFirst()));
-            for (int i = 1; i <= result.NbSegments(); ++i) {
-                const IntRes2d_IntersectionSegment &segment = result.Segment(i);
-                if (segment.HasFirstPoint())
-                    params.append(parameterOf(g, toPoint(segment.FirstPoint().Value()), segment.FirstPoint().ParamOnFirst()));
-                if (segment.HasLastPoint())
-                    params.append(parameterOf(g, toPoint(segment.LastPoint().Value()), segment.LastPoint().ParamOnFirst()));
-            }
-        } catch (const Standard_Failure &) {
+            const Kernel::CurveCurveIntersection result = Kernel::intersectCurves(*curve.curve, curve.range, *other.curve, other.range, 1e-9);
+            for (const Kernel::CurveCurvePoint &point : result.points) params.append(parameterOf(g, toPoint(point.point), point.s));
+        } catch (const std::exception &) {
         }
     }
     std::sort(params.begin(), params.end());
@@ -220,9 +196,9 @@ double project(const Geometry &g, const QPointF &p) {
         double best = distance(p, g.start) <= distance(p, g.end) ? g.first : g.last;
         double bestDistance = std::min(distance(p, g.start), distance(p, g.end));
         try {
-            Geom2dAPI_ProjectPointOnCurve projection(toPnt(p), g.basis, g.first, g.last);
-            if (projection.NbPoints() > 0 && projection.LowerDistance() < bestDistance) best = projection.LowerDistanceParameter();
-        } catch (const Standard_Failure &) {
+            const Kernel::CurveProjection<2> projection = Kernel::projectPoint(*g.basis, toVec(p), {g.first, g.last});
+            if (projection.distance < bestDistance) best = projection.parameter;
+        } catch (const std::exception &) {
         }
         return best;
     }
@@ -438,12 +414,12 @@ QString explodePolygon(SketchObject &sketch, SketchEntity &entity, const QPointF
     if (entity.kind != 1 || entity.index < 0 || entity.index >= sketch.curves.size()) return {};
     const CurveObject curve = sketch.curves.at(entity.index);
     if (curve.tool != DrawingTool::Polygon) return {};
-    const QVector<Handle(Geom2d_Curve)> sides = curveGeometry(curve);
-    if (sides.isEmpty()) return QStringLiteral("Il poligono non e' valido.");
+    const std::vector<Kernel::ProfileSegment> sides = curveGeometry(curve);
+    if (sides.empty()) return QStringLiteral("Il poligono non e' valido.");
     const int firstNew = sketch.segments.size();
     QVector<SketchEntity> touched;
-    for (const Handle(Geom2d_Curve) &side : sides) {
-        const QPointF a = toPoint(side->Value(side->FirstParameter())), b = toPoint(side->Value(side->LastParameter()));
+    for (const Kernel::ProfileSegment &side : sides) {
+        const QPointF a = toPoint(side.start()), b = toPoint(side.end());
         appendSegment(sketch, {a, b}, -1, -1.0, curve.construction);
         touched.append({0, int(sketch.segments.size()) - 1});
     }
@@ -592,13 +568,13 @@ SketchEditResult extendSketchEntity(SketchObject &sketch, SketchEntity entity, c
     if (g.shape == Shape::Circle || g.shape == Shape::Spline)
         return {QStringLiteral("Estendi: si estendono solo segmenti e archi."), {}};
     const bool atEnd = distance(pick, g.end) < distance(pick, g.start);
-    const QVector<Handle(Geom2d_Curve)> others = cutters(work, entity);
+    const std::vector<Kernel::ProfileSegment> others = cutters(work, entity);
     if (g.shape == Shape::Segment) {
         const QPointF origin = atEnd ? g.end : g.start;
         const QPointF direction = (atEnd ? g.end - g.start : g.start - g.end) / (g.last - g.first);
         Geometry ray;
         ray.shape = Shape::Segment;
-        ray.basis = new Geom2d_Line(toPnt(origin), gp_Dir2d(direction.x(), direction.y()));
+        ray.basis = std::make_shared<Kernel::Line<2>>(toVec(origin), toVec(direction));
         ray.first = 0.0;
         ray.last = 2.0e6;  // oltre il size box (1 km)
         ray.start = origin;
@@ -774,6 +750,154 @@ bool sketchCornerAt(const SketchObject &sketch, const QPointF &point, double tol
         }
     }
     return found;
+}
+
+namespace {
+
+// Movimento del piano p -> A p + t (rotazione, traslazione o simmetria).
+struct PlaneMap {
+    double a = 1.0, b = 0.0, c = 0.0, d = 1.0;
+    QPointF t;
+    bool mirror = false;
+    QPointF apply(const QPointF &p) const { return QPointF(a * p.x() + b * p.y() + t.x(), c * p.x() + d * p.y() + t.y()); }
+};
+
+PlaneMap translationMap(const QPointF &offset) {
+    PlaneMap m;
+    m.t = offset;
+    return m;
+}
+
+PlaneMap rotationMap(const QPointF &center, double angle) {
+    PlaneMap m;
+    const double cs = std::cos(angle), sn = std::sin(angle);
+    m.a = cs, m.b = -sn, m.c = sn, m.d = cs;
+    m.t = center - QPointF(cs * center.x() - sn * center.y(), sn * center.x() + cs * center.y());
+    return m;
+}
+
+PlaneMap mirrorMap(const QPointF &point, const QPointF &direction) {
+    PlaneMap m;
+    const double l = length(direction);
+    const double ux = direction.x() / l, uy = direction.y() / l;
+    // Riflessione rispetto alla retta: 2 u u^T - I.
+    m.a = 2 * ux * ux - 1, m.b = 2 * ux * uy, m.c = 2 * ux * uy, m.d = 2 * uy * uy - 1;
+    m.t = point - QPointF(m.a * point.x() + m.b * point.y(), m.c * point.x() + m.d * point.y());
+    m.mirror = true;
+    return m;
+}
+
+CurveObject mappedCurve(const CurveObject &curve, const PlaneMap &m) {
+    CurveObject copy = curve;
+    for (QPointF &p : copy.controlPoints) p = m.apply(p);
+    for (QPair<QPointF, QPointF> &h : copy.tangentHandles) h = qMakePair(m.apply(h.first), m.apply(h.second));
+    // Nello specchio l'arco (antiorario dall'inizio alla fine) si scambia gli estremi.
+    if (m.mirror && curve.tool == DrawingTool::Arc && copy.controlPoints.size() >= 3) std::swap(copy.controlPoints[1], copy.controlPoints[2]);
+    copy.samples.clear();
+    return copy;
+}
+
+}
+
+SketchEditResult patternSketchEntities(SketchObject &sketch, const QVector<SketchEntity> &entities, const SketchPattern &pattern,
+                                       QVector<SketchEntity> *created) {
+    SketchEditResult result;
+    QVector<SketchEntity> selected;
+    for (const SketchEntity &e : entities) {
+        const bool valid = (e.kind == 0 && e.index >= 0 && e.index < sketch.segments.size()) || (e.kind == 1 && e.index >= 0 && e.index < sketch.curves.size());
+        bool seen = false;
+        for (const SketchEntity &s2 : selected) seen = seen || (s2.kind == e.kind && s2.index == e.index);
+        if (valid && !seen) selected.append(e);
+    }
+    if (selected.isEmpty()) return {QStringLiteral("Ripetizione: scegli prima le entita' da ripetere."), {}};
+    QVector<PlaneMap> maps;
+    bool rotates = false;
+    switch (pattern.kind) {
+    case 0: {
+        const double l1 = length(pattern.direction), l2 = length(pattern.direction2);
+        if (pattern.count < 1 || pattern.count2 < 1 || pattern.count * pattern.count2 < 2)
+            return {QStringLiteral("Ripetizione: servono almeno due istanze."), {}};
+        if (!(l1 > 0.0) || (pattern.count2 > 1 && !(l2 > 0.0))) return {QStringLiteral("Ripetizione: direzione nulla."), {}};
+        if (!(std::fabs(pattern.spacing) > kTolerance) || (pattern.count2 > 1 && !(std::fabs(pattern.spacing2) > kTolerance)))
+            return {QStringLiteral("Ripetizione: il passo deve essere diverso da zero."), {}};
+        const QPointF u = pattern.direction / l1, w = pattern.count2 > 1 ? pattern.direction2 / l2 : QPointF();
+        for (int j = 0; j < pattern.count2; ++j)
+            for (int i = 0; i < pattern.count; ++i)
+                if (i > 0 || j > 0) maps.append(translationMap(i * pattern.spacing * u + j * pattern.spacing2 * w));
+        break;
+    }
+    case 1: {
+        if (pattern.count < 2) return {QStringLiteral("Ripetizione: servono almeno due istanze."), {}};
+        double step = pattern.angle;
+        if (pattern.spread) step = std::fabs(std::fabs(pattern.angle) - 360.0) < 1e-9 ? pattern.angle / pattern.count : pattern.angle / (pattern.count - 1);
+        if (!(std::fabs(step) > 1e-9)) return {QStringLiteral("Ripetizione: l'angolo deve essere diverso da zero."), {}};
+        for (int i = 1; i < pattern.count; ++i) maps.append(rotationMap(pattern.center, i * step * M_PI / 180.0));
+        rotates = true;
+        break;
+    }
+    case 2:
+        if (!(length(pattern.axisDirection) > 0.0)) return {QStringLiteral("Specchio: la retta di simmetria non e' valida."), {}};
+        maps.append(mirrorMap(pattern.axisPoint, pattern.axisDirection));
+        rotates = true;
+        break;
+    default:
+        return {QStringLiteral("Ripetizione: tipo non valido."), {}};
+    }
+    if (maps.size() > 1000) return {QStringLiteral("Ripetizione: troppe istanze (al massimo 1000)."), {}};
+
+    SketchObject work = sketch;
+    const auto isSelected = [&](const ConstraintRef &r) {
+        for (const SketchEntity &e : selected)
+            if (e.kind == r.kind && e.index == r.element) return true;
+        return false;
+    };
+    // Vincoli da copiare: solo tra entita' ripetute e invarianti per il movimento.
+    QVector<SketchConstraint> copied;
+    for (const SketchConstraint &c : sketch.geometricConstraints) {
+        if (!isSelected(c.first) || (c.second.kind >= 0 && !isSelected(c.second))) continue;
+        if (c.type == ConstraintType::Fix) continue;
+        if (rotates && (c.type == ConstraintType::Horizontal || c.type == ConstraintType::Vertical)) continue;
+        if (pattern.kind == 2 && c.type == ConstraintType::Angle) continue;
+        copied.append(c);
+    }
+    QVector<SketchEntity> touched;
+    for (const PlaneMap &m : maps) {
+        QVector<QPair<SketchEntity, SketchEntity>> remap;
+        for (const SketchEntity &e : selected) {
+            SketchEntity n;
+            if (e.kind == 0) {
+                const SketchSegment &segment = sketch.segments.at(e.index);
+                // I codici H/V valgono ancora solo per le traslazioni.
+                const int code = rotates ? -1 : sketch.constraints.value(e.index, -1);
+                appendSegment(work, {m.apply(segment.first), m.apply(segment.second)}, code == 1 || code == 2 ? code : -1, -1.0,
+                              sketch.isConstructionSegment(e.index));
+                n = {0, int(work.segments.size()) - 1};
+            } else {
+                work.curves.append(mappedCurve(sketch.curves.at(e.index), m));
+                n = {1, int(work.curves.size()) - 1};
+            }
+            remap.append({e, n});
+            touched.append(n);
+        }
+        const auto mapped = [&](ConstraintRef r) {
+            for (const auto &[from, to] : remap)
+                if (from.kind == r.kind && from.index == r.element) {
+                    r.element = to.index;
+                    break;
+                }
+            return r;
+        };
+        for (SketchConstraint c : copied) {
+            c.first = mapped(c.first);
+            if (c.second.kind >= 0) c.second = mapped(c.second);
+            c.placed = false;  // le quote delle copie nella posizione di default
+            work.geometricConstraints.append(c);
+        }
+    }
+    refreshCoincidences(work, touched);
+    sketch = work;
+    if (created) *created = touched;
+    return result;
 }
 
 }

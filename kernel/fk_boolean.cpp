@@ -105,8 +105,8 @@ Vec3 faceNormal(const Surface &surface, bool sense, const Vec3 &x, double tolera
 
 class BooleanBuilder {
 public:
-    BooleanBuilder(const Body &a, const Body &b, BooleanOperation operation, const BooleanOptions &options)
-        : operation_(operation), tolerance_(options.tolerance), unify_(options.unifySameDomain) {
+    BooleanBuilder(const Body &a, const Body &b, BooleanOperation operation, const BooleanOptions &options, bool split = false)
+        : operation_(operation), tolerance_(options.tolerance), unify_(options.unifySameDomain), split_(split) {
         bodies_[0] = a;
         bodies_[1] = b;
         Box all;
@@ -122,8 +122,14 @@ public:
     }
 
     Body run();
+    // Divisione della lamina (body 0) lungo le curve in cui la attraversa il body 1: un body per regione connessa.
+    std::vector<Body> split();
 
 private:
+    // Tagli di ogni faccia (pezzi degli archi d'intersezione) dopo il passo 1.
+    void computeCuts(std::map<int, std::vector<Piece>> (&cuts)[2]);
+    // Passo 5: cucitura dei pezzi tenuti ("da girare" se il secondo e' vero).
+    Body assemble(const std::vector<std::pair<SubFace, bool>> &kept, bool sheetResult);
     void pairArcs(FaceId fa, FaceId fb);
     bool coincident(const Surface &a, const Surface &b) const;
     void coincidentArcs(FaceId fa, FaceId fb, bool partial = false);
@@ -136,6 +142,7 @@ private:
     std::vector<Interval> splitRange(const Curve<3> &curve, const Interval &range, std::vector<double> parameters) const;
     std::vector<Interval> splitAtPoints(const Curve<3> &curve, const Interval &range) const;
     std::vector<SubFace> buildSubFaces(int k, FaceId f, const std::vector<Piece> &cuts) const;
+    std::vector<SubFace> buildSubFacesOnce(int k, FaceId f, const std::vector<Piece> &cuts) const;
     void finishCycle(const Surface &surface, bool sense, Cycle &cycle) const;
     bool insideSubFace(const SubFace &subFace, const Vec2 &uv) const;
     Location classify(const SubFace &subFace, const SolidClassifier &other) const;
@@ -147,7 +154,8 @@ private:
     Body bodies_[2];
     BooleanOperation operation_;
     double tolerance_, scale_ = 1.0;
-    bool unify_ = true;
+    bool unify_ = true, split_ = false;
+    mutable int polygonSamples_ = 24;  // campioni per tratto dei poligoni (u, v) dei cicli
     std::map<int, Box> boxes_[2];
     std::vector<Arc> arcs_;
     std::vector<Vec3> vertexPoints_;
@@ -589,7 +597,7 @@ std::vector<Interval> BooleanBuilder::splitAtPoints(const Curve<3> &curve, const
 // --- 3. divisione delle facce -----------------------------------------------------
 
 void BooleanBuilder::finishCycle(const Surface &surface, bool sense, Cycle &cycle) const {
-    constexpr int samples = 24;
+    const int samples = polygonSamples_;
     const double period = surface.isUPeriodic() ? surface.uPeriod() : 0.0;
     const double periodV = surface.isVPeriodic() ? surface.vPeriod() : 0.0;
     std::vector<Vec2> &polygon = cycle.polygon;
@@ -772,7 +780,28 @@ bool poleAt(const Surface &surface, double v) {
     }
 }
 
+// I cicli si confrontano nello spazio (u, v) come poligoni: se sono troppo
+// grossolani rispetto alla distanza tra due cicli (una corona sottile attorno
+// a un cerchio grande: la freccia delle corde supera la larghezza) la
+// divisione non riesce, e si ripete con poligoni via via piu' fitti.
 std::vector<SubFace> BooleanBuilder::buildSubFaces(int k, FaceId f, const std::vector<Piece> &cuts) const {
+    for (int samples : {24, 96, 384, 1536}) {
+        polygonSamples_ = samples;
+        try {
+            std::vector<SubFace> result = buildSubFacesOnce(k, f, cuts);
+            polygonSamples_ = 24;
+            return result;
+        } catch (const std::domain_error &) {
+            if (samples == 1536) {
+                polygonSamples_ = 24;
+                throw;
+            }
+        }
+    }
+    return {};
+}
+
+std::vector<SubFace> BooleanBuilder::buildSubFacesOnce(int k, FaceId f, const std::vector<Piece> &cuts) const {
     const Body &body = bodies_[k];
     const Face &face = body.face(f);
     const Surface &surface = *face.surface;
@@ -1337,16 +1366,7 @@ void BooleanBuilder::pairRadially(const std::vector<Vec3> &, std::vector<Body::B
     }
 }
 
-Body BooleanBuilder::run() {
-    // Lamine: solo con un solido, e il risultato e' la parte della lamina
-    // dentro (intersezione) o fuori (differenza, lamina meno solido) del solido.
-    const bool sheet[2] = {bodies_[0].isSheet(), bodies_[1].isSheet()};
-    if (sheet[0] && sheet[1]) throw std::domain_error("booleanOperation: operazione tra due lamine non gestita");
-    if ((sheet[0] || sheet[1]) && operation_ == BooleanOperation::Unite)
-        throw std::domain_error("booleanOperation: l'unione di una lamina e di un solido non e' una varieta'");
-    if (sheet[1] && operation_ == BooleanOperation::Subtract)
-        throw std::domain_error("booleanOperation: sottrarre una lamina da un solido non ne cambia il volume");
-    const bool sheetResult = sheet[0] || sheet[1];
+void BooleanBuilder::computeCuts(std::map<int, std::vector<Piece>> (&cuts)[2]) {
     for (FaceId fa : bodies_[0].faces())
         for (FaceId fb : bodies_[1].faces())
             if (boxes_[0].at(fa.index).overlaps(boxes_[1].at(fb.index))) pairArcs(fa, fb);
@@ -1357,7 +1377,6 @@ Body BooleanBuilder::run() {
     }
 
     // Tagli di ogni faccia, divisi nei punti dei vertici e senza doppioni.
-    std::map<int, std::vector<Piece>> cuts[2];
     for (const Arc &arc : arcs_)
         for (int k = 0; k < 2; ++k) {
             if (!arc.cut[k]) continue;
@@ -1387,6 +1406,20 @@ Body BooleanBuilder::run() {
             }
         }
 
+}
+
+Body BooleanBuilder::run() {
+    // Lamine: solo con un solido, e il risultato e' la parte della lamina
+    // dentro (intersezione) o fuori (differenza, lamina meno solido) del solido.
+    const bool sheet[2] = {bodies_[0].isSheet(), bodies_[1].isSheet()};
+    if (sheet[0] && sheet[1]) throw std::domain_error("booleanOperation: operazione tra due lamine non gestita");
+    if ((sheet[0] || sheet[1]) && operation_ == BooleanOperation::Unite)
+        throw std::domain_error("booleanOperation: l'unione di una lamina e di un solido non e' una varieta'");
+    if (sheet[1] && operation_ == BooleanOperation::Subtract)
+        throw std::domain_error("booleanOperation: sottrarre una lamina da un solido non ne cambia il volume");
+    const bool sheetResult = sheet[0] || sheet[1];
+    std::map<int, std::vector<Piece>> cuts[2];
+    computeCuts(cuts);
     std::vector<std::pair<SubFace, bool>> kept;  // pezzo e "da girare"
     for (int k = 0; k < 2; ++k) {
         if (sheetResult && !sheet[k]) continue;  // del solido non resta nulla
@@ -1401,7 +1434,49 @@ Body BooleanBuilder::run() {
         }
     }
     if (kept.empty()) return Body();
+    return assemble(kept, sheetResult);
+}
 
+std::vector<Body> BooleanBuilder::split() {
+    if (!bodies_[0].isSheet()) throw std::domain_error("splitSheet: si dividono solo le lamine");
+    std::map<int, std::vector<Piece>> cuts[2];
+    computeCuts(cuts);
+    std::vector<SubFace> pieces;
+    for (FaceId f : bodies_[0].faces()) {
+        const auto found = cuts[0].find(f.index);
+        const std::vector<Piece> none;
+        for (SubFace &subFace : buildSubFaces(0, f, found != cuts[0].end() ? found->second : none)) pieces.push_back(std::move(subFace));
+    }
+    // Regioni: pezzi che si toccano lungo un tratto di bordo che non e' un taglio.
+    std::vector<int> group(pieces.size());
+    for (std::size_t i = 0; i < group.size(); ++i) group[i] = int(i);
+    std::function<int(int)> root = [&](int i) { return group[std::size_t(i)] == i ? i : group[std::size_t(i)] = root(group[std::size_t(i)]); };
+    auto same = [&](const Piece &a, const Piece &b) {
+        const bool ends = (distance(a.start(), b.start()) <= tolerance_ && distance(a.end(), b.end()) <= tolerance_)
+                       || (distance(a.start(), b.end()) <= tolerance_ && distance(a.end(), b.start()) <= tolerance_);
+        return ends && (distance(a.middle(), b.middle()) <= 10.0 * tolerance_ || projectPoint(*a.curve, b.middle(), a.range).distance <= 10.0 * tolerance_);
+    };
+    for (std::size_t i = 0; i < pieces.size(); ++i)
+        for (std::size_t j = i + 1; j < pieces.size(); ++j) {
+            if (root(int(i)) == root(int(j))) continue;
+            bool touching = false;
+            for (const Cycle &ci : pieces[i].cycles)
+                for (const Piece &a : ci.pieces) {
+                    if (a.cut || touching) continue;
+                    for (const Cycle &cj : pieces[j].cycles)
+                        for (const Piece &b : cj.pieces)
+                            if (!b.cut && same(a, b)) touching = true;
+                }
+            if (touching) group[std::size_t(root(int(i)))] = root(int(j));
+        }
+    std::map<int, std::vector<std::pair<SubFace, bool>>> regions;
+    for (std::size_t i = 0; i < pieces.size(); ++i) regions[root(int(i))].emplace_back(pieces[i], false);
+    std::vector<Body> result;
+    for (const auto &[index, kept] : regions) result.push_back(assemble(kept, true));
+    return result;
+}
+
+Body BooleanBuilder::assemble(const std::vector<std::pair<SubFace, bool>> &kept, bool sheetResult) {
     std::vector<Vec3> vertices;
     auto vertexOf = [&](const Vec3 &p) {
         for (std::size_t i = 0; i < vertices.size(); ++i)
@@ -1525,6 +1600,10 @@ Body BooleanBuilder::run() {
 
 Body booleanOperation(const Body &a, const Body &b, BooleanOperation operation, const BooleanOptions &options) {
     return BooleanBuilder(a, b, operation, options).run();
+}
+
+std::vector<Body> splitSheet(const Body &sheet, const Body &tool, const BooleanOptions &options) {
+    return BooleanBuilder(sheet, tool, BooleanOperation::Intersect, options, true).split();
 }
 
 }

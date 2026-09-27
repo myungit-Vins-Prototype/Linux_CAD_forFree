@@ -47,6 +47,15 @@ struct BooleanOptions {
 
 Body booleanOperation(const Body &a, const Body &b, BooleanOperation operation, const BooleanOptions &options = {});
 
+// Divide la lamina lungo le curve in cui la attraversa `tool` (una lamina o
+// un solido: le sue facce fanno da lame, anche oltre la lamina) e ne
+// restituisce le regioni separate dai tagli, ognuna come lamina (i tagli
+// diventano edge di bordo). Le facce della lamina si dividono come nelle
+// booleane; i pezzi si raggruppano attraverso gli edge che non sono tagli.
+// Se lo strumento non la attraversa del tutto (un taglio che finisce dentro
+// una faccia) la regione resta una sola.
+std::vector<Body> splitSheet(const Body &sheet, const Body &tool, const BooleanOptions &options = {});
+
 }
 
 #endif

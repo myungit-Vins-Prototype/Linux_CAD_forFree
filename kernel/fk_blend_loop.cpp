@@ -1,4 +1,5 @@
 #include "fk_blend_loop.h"
+#include "fk_blend_model.h"
 
 #include <algorithm>
 #include <cmath>
@@ -20,6 +21,8 @@
 
 namespace ForgeCad::Kernel {
 namespace {
+
+using Model = detail::BlendModel;
 
 constexpr double kFitTolerance = 1e-9;  // scarto delle curve di controllo dalle curve vere
 constexpr double kParallel = 1e-9;
@@ -58,132 +61,6 @@ std::vector<FaceId> planarSides(const Body &body, EdgeId e) {
     return result;
 }
 
-// Modello modificabile del body: le liste di Body::build.
-struct Model {
-    std::vector<Vec3> points;
-    std::vector<double> pointTolerance;
-    std::vector<Body::BuildEdge> edges;
-    std::vector<bool> edgeAlive;
-    std::vector<Body::BuildFace> faces;
-    std::map<int, int> vertexIndex, edgeIndex, faceIndex;
-
-    explicit Model(const Body &body) {
-        for (VertexId v : body.vertices()) {
-            vertexIndex[v.index] = int(points.size());
-            points.push_back(body.vertex(v).point);
-            pointTolerance.push_back(body.vertex(v).tolerance);
-        }
-        for (EdgeId e : body.edges()) {
-            const Edge &edge = body.edge(e);
-            edgeIndex[e.index] = int(edges.size());
-            edges.push_back({vertexIndex.at(body.edgeStart(e).index), vertexIndex.at(body.edgeEnd(e).index), edge.curve, edge.range, edge.tolerance});
-            edgeAlive.push_back(true);
-        }
-        for (FaceId f : body.faces()) {
-            const Face &face = body.face(f);
-            faceIndex[f.index] = int(faces.size());
-            Body::BuildFace built;
-            built.surface = face.surface;
-            built.sense = face.sense;
-            for (LoopId l : face.loops) {
-                std::vector<Body::BuildFin> loop;
-                for (FinId fin : body.loopFins(l)) {
-                    const Fin &data = body.fin(fin);
-                    loop.push_back({edgeIndex.at(data.edge.index), data.sense, data.pcurve, data.pcurveTolerance});
-                }
-                if (!loop.empty()) built.loops.push_back(std::move(loop));
-            }
-            faces.push_back(std::move(built));
-        }
-    }
-    int addPoint(const Vec3 &p) {
-        points.push_back(p);
-        pointTolerance.push_back(0.0);
-        return int(points.size()) - 1;
-    }
-    int addEdge(int start, int end, CurvePtr<3> curve, const Interval &range, double tolerance = 0.0) {
-        edges.push_back({start, end, std::move(curve), range, tolerance});
-        edgeAlive.push_back(true);
-        return int(edges.size()) - 1;
-    }
-    // Sposta l'estremo `vertex` dell'edge nel punto `point` (nuovo vertice) accorciandone il tratto.
-    void moveEnd(int edge, int vertex, int point) {
-        Body::BuildEdge &e = edges[std::size_t(edge)];
-        const double t = projectPoint(*e.curve, points[std::size_t(point)], e.range).parameter;
-        if (e.start == vertex) {
-            if (!(t > e.range.lo && t < e.range.hi)) throw std::domain_error("blendEdges: raggio troppo grande per uno spigolo vicino");
-            e.range.lo = t;
-            e.start = point;
-        } else if (e.end == vertex) {
-            if (!(t > e.range.lo && t < e.range.hi)) throw std::domain_error("blendEdges: raggio troppo grande per uno spigolo vicino");
-            e.range.hi = t;
-            e.end = point;
-        } else {
-            throw std::logic_error("blendEdges: edge senza il vertice");
-        }
-    }
-    // Sostituisce l'edge `from` con `to` (stesso verso) nelle fin della faccia.
-    void replaceFin(int face, int from, int to) {
-        for (auto &loop : faces[std::size_t(face)].loops)
-            for (Body::BuildFin &fin : loop)
-                if (fin.edge == from) {
-                    fin.edge = to;
-                    fin.pcurve = nullptr;
-                    fin.pcurveTolerance = 0.0;
-                    return;
-                }
-        throw std::logic_error("blendEdges: fin non trovata");
-    }
-    // Inserisce nel loop della faccia che passa per `vertex` la fin di `edge`
-    // subito dopo la fin che vi arriva.
-    void insertFinAfter(int face, int vertex, int edge, bool sense) {
-        for (auto &loop : faces[std::size_t(face)].loops)
-            for (std::size_t k = 0; k < loop.size(); ++k) {
-                const Body::BuildEdge &e = edges[std::size_t(loop[k].edge)];
-                const int end = loop[k].sense ? e.end : e.start;
-                if (end != vertex) continue;
-                loop.insert(loop.begin() + std::ptrdiff_t(k + 1), Body::BuildFin{edge, sense, nullptr, 0.0});
-                return;
-            }
-        throw std::logic_error("blendEdges: vertice non trovato nel loop");
-    }
-    Body build() const {
-        // Solo i vertici usati, rinumerati.
-        std::vector<int> used(points.size(), -1);
-        std::vector<Vec3> kept;
-        std::vector<double> keptTolerance;
-        std::vector<Body::BuildEdge> keptEdges;
-        std::vector<int> edgeMap(edges.size(), -1);
-        auto point = [&](int index) {
-            if (used[std::size_t(index)] < 0) {
-                used[std::size_t(index)] = int(kept.size());
-                kept.push_back(points[std::size_t(index)]);
-                keptTolerance.push_back(pointTolerance[std::size_t(index)]);
-            }
-            return used[std::size_t(index)];
-        };
-        std::vector<Body::BuildFace> keptFaces = faces;
-        for (Body::BuildFace &face : keptFaces)
-            for (auto &loop : face.loops)
-                for (Body::BuildFin &fin : loop) {
-                    if (edgeMap[std::size_t(fin.edge)] < 0) {
-                        Body::BuildEdge e = edges[std::size_t(fin.edge)];
-                        e.start = point(e.start);
-                        e.end = point(e.end);
-                        edgeMap[std::size_t(fin.edge)] = int(keptEdges.size());
-                        keptEdges.push_back(e);
-                    }
-                    fin.edge = edgeMap[std::size_t(fin.edge)];
-                }
-        Body body = Body::build(kept, keptEdges, keptFaces);
-        const std::vector<VertexId> vertices = body.vertices();
-        for (VertexId v : vertices)
-            for (std::size_t k = 0; k < kept.size(); ++k)
-                if (keptTolerance[k] > 0.0 && distance(body.vertex(v).point, kept[k]) == 0.0) body.vertex(v).tolerance = keptTolerance[k];
-        return body;
-    }
-};
-
 // Curve di controllo del raccordo lungo il bordo: righe della superficie,
 // cubiche di Hermite a tratti con gli stessi nodi.
 struct RowFit {
@@ -199,8 +76,9 @@ struct RowSample {
 
 class ChainEdge {
 public:
-    ChainEdge(const Edge &edge, const Vec3 &normal, double sideT, const Vec3 &wall, double size, bool chamfer)
-        : curve_(edge.curve), range_(edge.range), normal_(normal), sideT_(sideT), wall_(wall), size_(size), chamfer_(chamfer) {}
+    // `wallSize` lungo il fianco, `size` in T (raccordo: entrambe il raggio; smusso: le due distanze).
+    ChainEdge(const Edge &edge, const Vec3 &normal, double sideT, const Vec3 &wall, double size, bool chamfer, double wallSize)
+        : curve_(edge.curve), range_(edge.range), normal_(normal), sideT_(sideT), wall_(wall), size_(size), wallSize_(wallSize), chamfer_(chamfer) {}
 
     // Righe: 0 traslata lungo il fianco, 1 il bordo (solo raccordo), 2 parallela in T.
     RowSample sample(double t, bool left) const {
@@ -213,7 +91,7 @@ public:
         const Vec3 unit = w / length;
         const Vec3 tT = sideT_ * unit, tT1 = sideT_ * (w1 - dot(unit, w1) * unit) / length;
         RowSample s;
-        s.value[0] = d[0] + size_ * wall_;
+        s.value[0] = d[0] + wallSize_ * wall_;
         s.derivative[0] = d[1];
         s.value[1] = d[0];
         s.derivative[1] = d[1];
@@ -313,7 +191,7 @@ private:
     Vec3 normal_;
     double sideT_;
     Vec3 wall_;
-    double size_;
+    double size_, wallSize_;
     bool chamfer_;
 };
 
@@ -328,6 +206,7 @@ struct ChainFin {
     int face = -1;               // faccia nuova nel modello
     int inPlaneEdge = -1, wallEdge = -1;  // edge nuovi: parallela in T e traslata sul fianco
     double fitError = 0.0;
+    std::pair<double, double> sizes;  // in T e sul fianco
 };
 
 // Tipo di vertice della catena.
@@ -382,18 +261,29 @@ std::vector<EdgeId> planarChainRuns(const Body &body, const std::vector<EdgeId> 
     return edges;
 }
 
-Body blendPlanarChains(const Body &input, const std::vector<EdgeId> &selected, double size, bool chamfer) {
+Body blendPlanarChains(const Body &input, const std::vector<EdgeId> &selected, double size, bool chamfer, const std::vector<ChamferSides> *sides) {
     if (!(size > kLinearResolution)) throw std::domain_error("blendEdges: raggio o distanza non validi");
     Body body = input;
     std::vector<EdgeId> edges = selected;
+    std::map<int, ChamferSides> sideOf;
+    if (sides)
+        for (std::size_t k = 0; k < selected.size() && k < sides->size(); ++k) sideOf[selected[k].index] = (*sides)[k];
     // Un loop fatto di un solo edge chiuso si divide in due (i raccordi sono pezze aperte).
     for (std::size_t k = 0; k < edges.size(); ++k) {
         const EdgeId e = edges[k];
         if (body.edgeStart(e) != body.edgeEnd(e)) continue;
         const Edge &edge = body.edge(e);
         const double middle = 0.5 * (edge.range.lo + edge.range.hi);
-        edges.push_back(body.semv(e, edge.curve->point(middle), middle).edge);
+        const EdgeId half = body.semv(e, edge.curve->point(middle), middle).edge;
+        if (sideOf.count(e.index)) sideOf[half.index] = sideOf[e.index];
+        edges.push_back(half);
     }
+    // Distanze in T e sul fianco dell'edge della fin (in T).
+    auto distances = [&](const ChainFin &fin) {
+        if (!sides) return std::make_pair(size, size);
+        const auto [onForward, onBackward] = detail::chamferDistances(body, fin.edge, sideOf.at(fin.edge.index));
+        return body.edge(fin.edge).forward == fin.fin ? std::make_pair(onForward, onBackward) : std::make_pair(onBackward, onForward);
+    };
     Box box;
     for (VertexId v : body.vertices()) box.add(body.vertex(v).point);
     for (FaceId f : body.faces()) box.add(faceBox(body, f));
@@ -481,7 +371,9 @@ Body blendPlanarChains(const Body &input, const std::vector<EdgeId> &selected, d
             const int convex = dot(wall, D) < 0.0 ? 1 : -1;
             if (convexity != 0 && convex != convexity) throw std::domain_error("blendEdges: catena con spigoli convessi e concavi");
             convexity = convex;
-            fin.geometry = std::make_shared<ChainEdge>(edge, D, sideT, wall, size, chamfer);
+            const auto [inPlane, onWall] = distances(fin);
+            fin.geometry = std::make_shared<ChainEdge>(edge, D, sideT, wall, inPlane, chamfer, onWall);
+            fin.sizes = {inPlane, onWall};
             const RowFit fit = fin.geometry->fit();
             fin.fitError = fit.error;
             fin.surface = fin.geometry->surface(fit);
@@ -525,6 +417,10 @@ Body blendPlanarChains(const Body &input, const std::vector<EdgeId> &selected, d
                 if (!inChain) others.push_back(e);
             }
             if (previous && next) {
+                // Le sezioni si incontrano nei vertici: le distanze degli smussi devono coincidere.
+                if (std::fabs(previous->sizes.second - next->sizes.second) > 1e-12 * size
+                    || (std::fabs(previous->sizes.first - next->sizes.first) > 1e-12 * size && dot(loopTangent(*previous, true), loopTangent(*next, false)) >= 1.0 - kParallel))
+                    throw std::domain_error("blendEdges: spigoli consecutivi della catena con distanze diverse dello smusso");
                 const double turn = dot(loopTangent(*previous, true), loopTangent(*next, false));
                 cv.joint = turn >= 1.0 - kParallel ? Joint::Smooth : Joint::Sharp;
                 if (others.size() > 1 || (others.size() == 1 && !straightAlong(model, others.front(), D)))

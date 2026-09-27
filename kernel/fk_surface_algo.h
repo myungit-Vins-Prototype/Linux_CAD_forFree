@@ -76,6 +76,13 @@ double poleWalk(double from, double to, double period, bool top, bool sense, dou
 // perpendicolare conservando l'orientamento.
 Vec3 normalAt(const Surface &surface, double u, double v, int side = 0);
 
+// Superficie B-spline piana (tutti i poli su un piano, entro `relativeTolerance`
+// della diagonale dei poli): il piano con la stessa normale (S_u x S_v) al
+// centro del dominio, cosi' il verso delle facce e dei loop resta; altrimenti nullptr.
+// Serve alle funzioni che costruiscono pezze B-spline (loft rigati, sweep):
+// sul piano esatto raccordi e booleane usano le sezioni analitiche.
+SurfacePtr planarEquivalent(const Surface &surface, double relativeTolerance = 1e-12);
+
 }
 
 #endif

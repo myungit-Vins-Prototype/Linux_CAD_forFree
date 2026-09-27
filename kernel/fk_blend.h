@@ -52,6 +52,19 @@ namespace ForgeCad::Kernel {
 // ciascuna faccia.
 Body blendEdges(const Body &body, const std::vector<EdgeId> &edges, double size, bool chamfer);
 
+// Smusso asimmetrico di un edge: `onReference` sulla faccia la cui normale
+// uscente (nel punto medio dello spigolo) e' piu' vicina a `referenceNormal`,
+// `onOther` sull'altra (distanze dallo spigolo, come nello smusso simmetrico).
+// La faccia si ritrova dalla normale anche dopo che altri spigoli hanno
+// cambiato il body.
+struct ChamferSides {
+    Vec3 referenceNormal;
+    double onReference = 0.0, onOther = 0.0;
+};
+
+// Smusso degli edge con le distanze di ognuno (sides[i] per edges[i]).
+Body chamferEdges(const Body &body, const std::vector<EdgeId> &edges, const std::vector<ChamferSides> &sides);
+
 // Edge del body piu' vicino al punto (non valido se nessuno dista meno di `tolerance`).
 EdgeId nearestEdge(const Body &body, const Vec3 &point, double tolerance);
 

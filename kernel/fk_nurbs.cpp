@@ -103,6 +103,80 @@ std::vector<BSplineCurve<3>> rationalBezierPieces(const Curve<3> &curve, const I
     return wholeSpline(curve, range).bezierSegments();
 }
 
+std::vector<BSplineCurve<3>> standardBezierPieces(const Curve<3> &curve, const Interval &range, int degree) {
+    std::vector<BSplineCurve<3>> result;
+    for (const BSplineCurve<3> &piece : rationalBezierPieces(curve, range)) {
+        int p = piece.degree();
+        const Interval d = piece.domain();
+        // Coordinate omogenee (w P, w).
+        std::vector<Vec3> hp;
+        std::vector<double> hw;
+        for (int i = 0; i <= p; ++i) {
+            hw.push_back(piece.weight(i));
+            hp.push_back(piece.weight(i) * piece.poles()[std::size_t(i)]);
+        }
+        // Forma standard: w_i' = w_i c^i / w_0, c = (w_0 / w_p)^(1/p) (riparametrizzazione di Moebius).
+        if (piece.isRational()) {
+            const double w0 = hw.front(), c = std::pow(w0 / hw.back(), 1.0 / p);
+            for (int i = 0; i <= p; ++i) {
+                const double f = std::pow(c, i) / w0;
+                hw[std::size_t(i)] *= f;
+                hp[std::size_t(i)] *= f;
+            }
+        }
+        // Elevazione del grado: H'_i = i/(p+1) H_{i-1} + (1 - i/(p+1)) H_i.
+        while (p < degree) {
+            std::vector<Vec3> np(std::size_t(p + 2));
+            std::vector<double> nw(std::size_t(p + 2));
+            for (int i = 0; i <= p + 1; ++i) {
+                const double a = double(i) / double(p + 1);
+                if (i > 0) np[std::size_t(i)] += a * hp[std::size_t(i - 1)], nw[std::size_t(i)] += a * hw[std::size_t(i - 1)];
+                if (i <= p) np[std::size_t(i)] += (1.0 - a) * hp[std::size_t(i)], nw[std::size_t(i)] += (1.0 - a) * hw[std::size_t(i)];
+            }
+            hp = std::move(np);
+            hw = std::move(nw);
+            ++p;
+        }
+        std::vector<Vec3> poles;
+        std::vector<double> weights;
+        bool rational = false;
+        for (int i = 0; i <= p; ++i) {
+            poles.push_back(hp[std::size_t(i)] / hw[std::size_t(i)]);
+            weights.push_back(hw[std::size_t(i)]);
+            rational = rational || std::fabs(hw[std::size_t(i)] - 1.0) > 1e-15;
+        }
+        weights.front() = weights.back() = 1.0;
+        poles.front() = piece.poles().front();
+        poles.back() = piece.poles().back();
+        std::vector<double> knots(std::size_t(p + 1), d.lo);
+        knots.insert(knots.end(), std::size_t(p + 1), d.hi);
+        result.emplace_back(p, knots, poles, rational ? weights : std::vector<double>{});
+    }
+    return result;
+}
+
+BSplineCurve<3> joinBezierPieces(const std::vector<BSplineCurve<3>> &pieces, const std::vector<double> &breaks) {
+    if (pieces.empty()) throw std::invalid_argument("joinBezierPieces: nessun tratto");
+    const int p = pieces.front().degree();
+    bool rational = false;
+    for (const BSplineCurve<3> &piece : pieces) {
+        if (piece.degree() != p || piece.poleCount() != p + 1) throw std::invalid_argument("joinBezierPieces: tratti non compatibili");
+        rational = rational || piece.isRational();
+    }
+    const auto at = [&](std::size_t k) { return breaks.empty() ? double(k) : breaks.at(k); };
+    std::vector<double> knots(std::size_t(p + 1), at(0));
+    std::vector<Vec3> poles;
+    std::vector<double> weights;
+    for (std::size_t k = 0; k < pieces.size(); ++k) {
+        for (int i = k == 0 ? 0 : 1; i <= p; ++i) {
+            poles.push_back(pieces[k].poles()[std::size_t(i)]);
+            weights.push_back(pieces[k].weight(i));
+        }
+        knots.insert(knots.end(), std::size_t(k + 1 == pieces.size() ? p + 1 : p), at(k + 1));
+    }
+    return BSplineCurve<3>(p, knots, poles, rational ? weights : std::vector<double>{});
+}
+
 BSplineSurface toBSplineSurface(const Surface &surface, const Interval &uRange, const Interval &vRange) {
     const Interval u = window(uRange, surface.isUPeriodic(), surface.uPeriod(), surface.uDomain());
     const Interval v = window(vRange, surface.isVPeriodic(), surface.vPeriod(), surface.vDomain());

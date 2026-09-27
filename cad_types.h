@@ -1,6 +1,7 @@
 #ifndef FORGECAD_TYPES_H
 #define FORGECAD_TYPES_H
 
+#include <QByteArray>
 #include <QColor>
 #include <QPair>
 #include <QPointF>
@@ -10,14 +11,16 @@
 
 #include <memory>
 
-#include <TopoDS_Shape.hxx>
-
 namespace ForgeCad::Kernel {
 class Body;
+template <int N>
+class Curve;
 }
 namespace ForgeCad {
 // B-rep del kernel proprio (kernel/), immutabile e condiviso tra le istantanee dell'Undo.
 using ForgeBody = std::shared_ptr<const Kernel::Body>;
+// Curva esatta del kernel proprio (le funzioni curva: elica, spirale).
+using ForgeCurve = std::shared_ptr<const Kernel::Curve<3>>;
 }
 
 // Precisione: tutte le coordinate del modello sono in double (QPointF usa
@@ -142,6 +145,9 @@ struct SketchObject {
     SketchFrame frame;
     bool customFrame = false;
     QString faceSource;  // corpo da cui viene il piano (solo per l'albero)
+    // Schizzo su un piano di costruzione (plane == kFacePlane): l'indice del
+    // corpo DatumPlane; quando il piano si rigenera `frame` lo segue. -1: fisso.
+    int datumPlane = -1;
     // Vincoli geometrici (oggetti): coincidenze, orizzontale/verticale,
     // parallelismo, quote... I vecchi dati (codici in `constraints`,
     // `segmentLengths`, `segmentAngles`, `coincidentConstraints`) si
@@ -154,10 +160,6 @@ struct SketchObject {
 
 enum class BooleanOperation { Union = 0, Intersection = 1, Difference = 2 };
 
-// Kernel geometrico con cui si costruiscono i corpi (menu Opzioni): OpenCASCADE
-// o il kernel proprio di ForgeCAD (kernel/).
-enum class GeometryKernel { OpenCascade = 0, Forge = 1 };
-
 // Approssimazione della forma esatta usata SOLO per il disegno a schermo.
 struct BodyDisplay {
     QVector<QVector3D> vertices;   // tre vertici per triangolo
@@ -167,7 +169,15 @@ struct BodyDisplay {
 };
 
 // Funzione che genera un corpo che non e' una booleana (operation = -1).
-enum class BodyFeature { Extrusion = 0, Revolution = 1, Primitive = 2, Blend = 3 };
+// SheetTrim / SheetExtend: taglio ed estensione di una superficie (lamina,
+// estrusione di un profilo aperto): i valori si salvano nei file.
+// Scale: scala uniforme di un corpo. Helix: curva (elica o spirale), non un
+// solido: serve da percorso agli sweep. Sweep: profilo lungo un percorso.
+// Loft: superficie o solido per una successione di sezioni. Imported: forma
+// letta da un file STEP/IGES. DatumPlane: piano di costruzione (niente solido).
+// Pattern: ripetizione (lineare, circolare, specchio) di un corpo o di una funzione.
+enum class BodyFeature { Extrusion = 0, Revolution = 1, Primitive = 2, Blend = 3, SheetTrim = 4, SheetExtend = 5, Scale = 6, Helix = 7, Sweep = 8, Loft = 9,
+                         Imported = 10, DatumPlane = 11, Pattern = 12 };
 
 // Spigolo di un corpo identificato da un suo punto (coordinate del modello):
 // dopo una rigenerazione si prende lo spigolo piu' vicino.
@@ -202,6 +212,102 @@ struct PrimitiveParameters {
     double size[3] = {1.0, 1.0, 1.0};
 };
 
+// Elica (cilindrica o conica) o spirale piana (di Archimede). La base da' asse,
+// raggio iniziale e riferimento dell'angolo:
+//  - source 0: cerchio o arco `curve` dello schizzo sketchIndex (-1: il primo):
+//    asse = normale dello schizzo, angolo 0 verso il punto del cerchio;
+//  - source 1: spigolo circolare del corpo firstBody piu' vicino a `reference`
+//    (asse verso la faccia cilindrica o conica coassiale, se c'e');
+//  - source 2: faccia cilindrica o conica del corpo firstBody che contiene
+//    `reference` (parte dall'estremo della faccia; sul cono la conicita' e'
+//    quella della faccia).
+// Modi dell'elica: 0 passo e giri, 1 altezza e giri, 2 altezza e passo (il
+// terzo valore si ricava); la spirale usa passo (crescita del raggio per giro)
+// e giri. Conicita' in gradi (positiva: il raggio cresce lungo l'asse),
+// angolo di partenza in gradi; sinistrorsa = oraria guardando lungo l'asse.
+struct HelixParameters {
+    bool spiral = false;
+    int mode = 0;
+    double pitch = 1.0;
+    double turns = 5.0;
+    double height = 5.0;
+    double taper = 0.0;
+    double startAngle = 0.0;
+    bool leftHanded = false;
+    bool reverse = false;
+    int source = 0;
+    int curve = -1;
+    EdgePoint reference;
+};
+
+// Riferimento geometrico di un piano di costruzione, scelto nella vista.
+// Tipi (valori salvati nei file):
+//  - 0 origine del modello;
+//  - 1 piano di riferimento `index` (0 XY, 1 XZ, 2 YZ);
+//  - 2 asse del modello `index` (0 X, 1 Y, 2 Z);
+//  - 3 vertice, 4 spigolo, 5 faccia del corpo `index`: quello piu' vicino a
+//    `point` (dopo una rigenerazione, come gli spigoli dei raccordi);
+//  - 6 punto dello schizzo `index` (`element`: kind 0 estremo di un segmento,
+//    1 punto di una curva, come ConstraintRef);
+//  - 7 entita' dello schizzo `index` (`element` con point -1: segmento o curva);
+//  - 8 piano di costruzione (corpo DatumPlane `index`);
+//  - 9 curva del corpo `index` (elica, spirale).
+struct GeometryRef {
+    int kind = -1;
+    int index = -1;
+    ConstraintRef element;
+    EdgePoint point;
+};
+
+// Piano di costruzione. Modi (i riferimenti in `refs`, nell'ordine):
+//  0 parallelo a un piano a distanza `distance`;
+//  1 per tre punti;
+//  2 normale a una curva: curva e punto (il piano passa per il punto della
+//    curva piu' vicino, o per il punto stesso se !onCurve);
+//  3 per una retta e un punto;
+//  4 parallelo a un piano per un punto;
+//  5 per una retta, ad angolo `angle` (gradi) da un piano;
+//  6 piano medio tra due piani (paralleli; altrimenti il bisettore).
+// `flip` gira la normale; `size` e' la mezza misura a video (0: automatica).
+struct DatumParameters {
+    int mode = 0;
+    QVector<GeometryRef> refs;
+    double distance = 10.0;
+    double angle = 45.0;
+    bool flip = false;
+    bool onCurve = true;
+    double size = 0.0;
+};
+
+// Ripetizione (BodyFeature::Pattern) del corpo `firstBody`; le copie si
+// uniscono al corpo in un solo body. Tipi:
+//  - 0 lineare: `count` istanze lungo la direzione di refs[0] ogni `spacing` e,
+//    se count2 > 1, `count2` lungo refs[1] ogni `spacing2` (griglia);
+//  - 1 circolare: `count` istanze attorno all'asse refs[0]; `angle` (gradi)
+//    e' l'angolo totale se `spread` (360: il giro in parti uguali; altrimenti
+//    tra la prima e l'ultima istanza), il passo altrimenti;
+//  - 2 specchio: l'immagine rispetto al piano refs[0] (con il corpo se
+//    `keepOriginal`, altrimenti da sola).
+// I riferimenti (GeometryRef, come per i piani di costruzione) si risolvono a
+// ogni rigenerazione: per una direzione una retta (asse del modello, spigolo
+// rettilineo, faccia cilindrica o conica = il suo asse, segmento di uno
+// schizzo) o la normale di un piano; per l'asse una retta; per lo specchio un
+// piano (di riferimento, di costruzione, faccia piana). `flip`/`flip2` girano
+// il verso. `featureOnly`: se il corpo e' un'unione o una differenza si ripete
+// il suo secondo operando (lo strumento: fori, sporgenze) e l'operazione si
+// applica una volta sola al primo (ripetizione della funzione).
+struct PatternParameters {
+    int kind = 0;
+    QVector<GeometryRef> refs;
+    int count = 3, count2 = 1;
+    double spacing = 10.0, spacing2 = 10.0;
+    double angle = 360.0;
+    bool spread = true;
+    bool flip = false, flip2 = false;
+    bool keepOriginal = true;
+    bool featureOnly = false;
+};
+
 // Corpo della scena, definito in modo parametrico:
 //  - estrusione (operation = -1, feature Extrusion): profili chiusi dello
 //    schizzo `sketchIndex` estrusi di `distance` lungo la normale del piano;
@@ -214,8 +320,25 @@ struct PrimitiveParameters {
 //    `firstBody` raccordati con raggio `blendSize` (o smussati a distanza
 //    `blendSize` se `blendChamfer`);
 //  - booleana: `operation` tra i corpi `firstBody` e `secondBody`.
-// Il B-rep esatto rigenerato dalla definizione e' `shape` (OpenCASCADE) o
-// `forgeBody` (kernel proprio), secondo `kernel`; l'altro resta vuoto.
+// Il B-rep esatto rigenerato dalla definizione e' `forgeBody` (kernel proprio).
+// Smusso: mode 0 la stessa distanza sulle due facce; 1 due distanze (la
+// seconda in `second`); 2 distanza e angolo (gradi, in `second`, tra lo
+// smusso e la faccia della distanza). La prima distanza sta sulla faccia di
+// riferimento: quella con la normale uscente piu' verso +Z (a parita' +X,
+// poi +Y) nel punto medio dello spigolo; con `flip` sull'altra.
+struct ChamferSpec {
+    int mode = 0;
+    double second = 1.0;
+    bool flip = false;
+};
+
+// Parte di una superficie divisa da uno strumento (finestra del taglio): un
+// suo punto e la sua area.
+struct SheetPiece {
+    EdgePoint point;
+    double area = 0.0;
+};
+
 struct ExtrusionObject {
     QString name;
     int sketchIndex = -1;
@@ -229,13 +352,44 @@ struct ExtrusionObject {
     double revolveAngle = 360.0;
     PrimitiveParameters primitive;
     bool blendChamfer = false;
+    ChamferSpec chamferSpec;
     double blendSize = 1.0;
-    QVector<EdgePoint> blendEdges;
+    QVector<EdgePoint> blendEdges;  // anche i bordi di SheetExtend (blendSize = distanza)
+    // SheetTrim: firstBody = superficie, secondBody = corpo strumento (-1: il
+    // piano di riferimento trimPlane), trimKeep un punto della parte da tenere.
+    int trimPlane = 0;
+    EdgePoint trimKeep;
+    bool extendLinear = false;  // SheetExtend: tangente (rigata) invece della stessa superficie
+    // Scale: firstBody = corpo, fattore uniforme e centro (0 origine, 1 baricentro del solido, 2 il punto scaleCenter).
+    double scaleFactor = 1.0;
+    int scaleCenterMode = 0;
+    EdgePoint scaleCenter;
+    // Helix: parametri dell'elica o spirale (la base nello schizzo sketchIndex o nel corpo firstBody).
+    HelixParameters helix;
+    // Sweep: profilo dello schizzo sketchIndex lungo il percorso: lo schizzo
+    // pathSketch (sweepPath 0) o la curva firstBody (1, un'elica). sweepMode: 0
+    // torsione minima, 1 Frenet, 2 orientamento costante.
+    int sweepPath = 0;
+    int pathSketch = -1;
+    int sweepMode = 0;
+    // Loft: le sezioni (schizzi, nell'ordine), rigato o liscio.
+    QVector<int> loftSketches;
+    bool loftRuled = false;
+    // Imported: il body letto dal file come testo STEP scritto dal kernel
+    // (fk_step, numeri a 17 cifre: la stessa geometria) e il nome del file d'origine.
+    QByteArray importData;
+    QString importSource;
+    // DatumPlane: definizione e, dopo la costruzione, il piano (origine = centro
+    // a video, asse X, normale) in `datumFrame` se `datumValid`.
+    DatumParameters datum;
+    // Pattern: la ripetizione del corpo firstBody.
+    PatternParameters pattern;
+    SketchFrame datumFrame;
+    bool datumValid = false;
     int firstBody = -1;
     int secondBody = -1;
-    TopoDS_Shape shape;
+    ForgeCad::ForgeCurve curve;  // funzioni curva (Helix): la curva esatta
     ForgeCad::ForgeBody forgeBody;
-    GeometryKernel kernel = GeometryKernel::OpenCascade;
     QString error;
     BodyDisplay display;
 };
