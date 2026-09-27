@@ -2,9 +2,12 @@
 
 #include <algorithm>
 #include <cmath>
+#include <exception>
 #include <limits>
 
 #include "fk_bspline.h"
+#include "fk_bspline_surface.h"
+#include "fk_parallel.h"
 #include "fk_surface_algo.h"
 
 namespace ForgeCad::Kernel {
@@ -61,6 +64,47 @@ CurvePtr<2> planarCurve(const Frame3 &frame, const CurvePtr<3> &curve) {
     }
 }
 
+// Lato degenere di una B-spline: una fila di poli al bordo del dominio tutta
+// nello stesso punto (CATIA chiude cosi' le pezze triangolari negli angoli dei
+// raccordi). Sul lato u = value (uFixed) Sv e' nulla e v non e' determinato
+// dal punto; sul lato v = value lo stesso per u.
+struct DegenerateSide {
+    Vec3 point;
+    bool uFixed = true;
+    double value = 0.0;
+};
+
+std::vector<DegenerateSide> degenerateSides(const Surface &surface) {
+    std::vector<DegenerateSide> sides;
+    if (surface.type() != SurfaceType::BSpline) return sides;
+    const auto &spline = static_cast<const BSplineSurface &>(surface);
+    const int nu = spline.uPoleCount(), nv = spline.vPoleCount();
+    const auto collapsed = [&](int i0, int j0, int di, int dj, int count) {
+        const Vec3 &first = spline.pole(i0, j0);
+        const double tolerance = 1e-12 * std::max(1.0, norm(first));
+        for (int k = 1; k < count; ++k)
+            if (distance(spline.pole(i0 + k * di, j0 + k * dj), first) > tolerance) return false;
+        return true;
+    };
+    if (collapsed(0, 0, 0, 1, nv)) sides.push_back({spline.pole(0, 0), true, spline.uDomain().lo});
+    if (collapsed(nu - 1, 0, 0, 1, nv)) sides.push_back({spline.pole(nu - 1, 0), true, spline.uDomain().hi});
+    if (collapsed(0, 0, 1, 0, nu)) sides.push_back({spline.pole(0, 0), false, spline.vDomain().lo});
+    if (collapsed(0, nv - 1, 1, 0, nu)) sides.push_back({spline.pole(0, nv - 1), false, spline.vDomain().hi});
+    return sides;
+}
+
+int sideIndex(const std::vector<DegenerateSide> &sides, const Vec3 &p, double tolerance) {
+    for (std::size_t i = 0; i < sides.size(); ++i)
+        if (distance(sides[i].point, p) <= tolerance) return int(i);
+    return -1;
+}
+
+// Estremo nel punto di un lato degenere: il parametro lungo il lato vale il
+// limite lungo la curva (dai due campioni vicini), l'altro e' quello del lato.
+Vec2 degenerateEnd(const DegenerateSide &side, const Vec2 &near, const Vec2 &next) {
+    return side.uFixed ? Vec2(side.value, 2.0 * near[1] - next[1]) : Vec2(2.0 * near[0] - next[0], side.value);
+}
+
 // Parametri di tratti successivi della curva, continui sulle superfici
 // periodiche: si parte dal punto centrale (proiezione globale, senza
 // l'ambiguita' degli estremi di una curva chiusa) e si prosegue con Newton.
@@ -85,6 +129,10 @@ bool sampleParameters(const Surface &surface, const Curve<3> &curve, const std::
         const int first = poleIndex(poles, curve.point(ts.front()), tolerance), last = poleIndex(poles, curve.point(ts.back()), tolerance);
         if (first >= 0) uvs.front() = Vec2(2.0 * uvs[1][0] - uvs[2][0], poles[first].v);
         if (last >= 0) uvs.back() = Vec2(2.0 * uvs[count - 2][0] - uvs[count - 3][0], poles[last].v);
+        const std::vector<DegenerateSide> sides = degenerateSides(surface);
+        const int firstSide = sideIndex(sides, curve.point(ts.front()), tolerance), lastSide = sideIndex(sides, curve.point(ts.back()), tolerance);
+        if (firstSide >= 0) uvs.front() = degenerateEnd(sides[std::size_t(firstSide)], uvs[1], uvs[2]);
+        if (lastSide >= 0) uvs.back() = degenerateEnd(sides[std::size_t(lastSide)], uvs[count - 2], uvs[count - 3]);
     }
     return true;
 }
@@ -124,6 +172,23 @@ bool pcurveDerivative(const Surface &surface, const Vec2 &uv, const Vec3 &tangen
     return isFinite(derivative);
 }
 
+// Vicino al lato degenere di una B-spline la derivata lungo il lato tende a
+// zero e il parametro lungo il lato, diviso per quella, amplifica lo scarto
+// della curva dalla superficie (gli edge tolleranti dei file): la derivata
+// diventa enorme e l'Hermite esce dal dominio. Minimi quadrati smorzati: il
+// parametro lungo il lato si muove poco, e in 3D li' conta poco.
+bool dampedPCurveDerivative(const Surface &surface, const Vec2 &uv, const Vec3 &tangent, Vec2 &derivative) {
+    Vec3 d[4];
+    surface.evaluate(uv[0], uv[1], 1, d);
+    const Vec3 &su = d[Surface::derivativeIndex(1, 0, 1)], &sv = d[Surface::derivativeIndex(0, 1, 1)];
+    const double a = dot(su, su), c = dot(sv, sv), largest = std::max(a, c);
+    if (!(std::min(a, c) < 1e-4 * largest)) return pcurveDerivative(surface, uv, tangent, derivative);
+    const double lambda = 1e-6 * largest, A = a + lambda, B = dot(su, sv), C = c + lambda, det = A * C - B * B;
+    const double ru = dot(su, tangent), rv = dot(sv, tangent);
+    derivative = Vec2((C * ru - B * rv) / det, (A * rv - B * ru) / det);
+    return isFinite(derivative);
+}
+
 struct HermiteNode {
     double t;
     Vec2 uv, derivative;
@@ -138,7 +203,8 @@ Vec2 hermite(const HermiteNode &a, const HermiteNode &b, double t) {
 class Fitter {
 public:
     Fitter(const Surface &surface, const Curve<3> &curve, const Interval &range, double tolerance, double scale)
-        : surface_(surface), curve_(curve), range_(range), tolerance_(tolerance), scale_(scale), poles_(surfacePoles(surface)) {}
+        : surface_(surface), curve_(curve), range_(range), tolerance_(tolerance), scale_(scale), poles_(surfacePoles(surface)),
+          sides_(degenerateSides(surface)) {}
 
     bool node(double t, Vec2 uv, HermiteNode &out) const {
         Vec3 c[2];
@@ -152,6 +218,13 @@ public:
             if (!node(inside, uv, near)) return false;
             out = {t, Vec2(uv[0], poles_[pole].v), near.derivative};
             return true;
+        }
+        const int side = sideIndex(sides_, c[0], tolerance_);
+        if (side >= 0) {
+            // Nel punto del lato degenere vale la stima (il limite lungo la curva).
+            const DegenerateSide &s = sides_[std::size_t(side)];
+            out = {t, s.uFixed ? Vec2(s.value, uv[1]) : Vec2(uv[0], s.value), Vec2()};
+            return dampedPCurveDerivative(surface_, out.uv, c[1], out.derivative);
         }
         bool nearPole = false;
         for (const SurfacePole &p : poles_) nearPole = nearPole || distance(p.point, c[0]) <= 1e-3 * scale_;
@@ -167,6 +240,7 @@ public:
             return false;
         }
         out = {t, uv, Vec2()};
+        if (!sides_.empty()) return dampedPCurveDerivative(surface_, uv, c[1], out.derivative);
         return pcurveDerivative(surface_, uv, c[1], out.derivative);
     }
 
@@ -211,6 +285,7 @@ private:
     Interval range_;
     double tolerance_, scale_;
     std::vector<SurfacePole> poles_;
+    std::vector<DegenerateSide> sides_;
 };
 
 }
@@ -279,6 +354,12 @@ CurvePtr<2> fitPCurve(const Surface &surface, const CurvePtr<3> &curve, const In
         if (!fitter.refine(previous, next, 0, nodes)) return nullptr;
     }
 
+    // Nodi con lo stesso parametro (infittimento fino all'arrotondamento): uno solo.
+    std::vector<HermiteNode> distinct;
+    for (const HermiteNode &node : nodes)
+        if (distinct.empty() || node.t > distinct.back().t) distinct.push_back(node);
+    nodes = std::move(distinct);
+    if (nodes.size() < 2) return nullptr;
     // Tratti di Bezier cubici; nodi interni di molteplicita' 3 (C1 perche'
     // le derivate nei nodi sono le stesse a sinistra e a destra).
     std::vector<double> knots(4, nodes.front().t);
@@ -299,29 +380,58 @@ CurvePtr<2> fitPCurve(const Surface &surface, const CurvePtr<3> &curve, const In
 }
 
 int computePCurves(Body &body, double tolerance) {
-    int missing = 0;
+    // Le fin sono indipendenti: si calcolano in parallelo (curve e superfici
+    // si leggono soltanto) e si assegnano dopo, nell'ordine.
+    struct Job {
+        FinId fin;
+        SurfacePtr surface;
+        CurvePtr<2> pcurve;
+        double pcurveTolerance = 0.0;
+    };
+    std::vector<Job> jobs;
     for (FaceId f : body.faces()) {
         const SurfacePtr surface = body.face(f).surface;
         if (!surface) continue;
         for (LoopId l : body.face(f).loops)
-            for (FinId finId : body.loopFins(l)) {
-                Fin &fin = body.fin(finId);
-                if (fin.pcurve) continue;
-                const Edge &edge = body.edge(fin.edge);
-                const double edgeTolerance = std::max(kLinearResolution, edge.tolerance);
-                if (CurvePtr<2> exact = exactPCurve(*surface, edge.curve, edge.range, edgeTolerance)) {
-                    fin.pcurve = std::move(exact);
-                    fin.pcurveTolerance = 0.0;
-                    continue;
-                }
-                double deviation = 0.0;
-                if (CurvePtr<2> fitted = fitPCurve(*surface, edge.curve, edge.range, std::max(tolerance, edgeTolerance), &deviation)) {
-                    fin.pcurve = std::move(fitted);
-                    fin.pcurveTolerance = std::max(deviation, std::numeric_limits<double>::min());
-                    continue;
-                }
-                ++missing;
-            }
+            for (FinId finId : body.loopFins(l))
+                if (!body.fin(finId).pcurve) jobs.push_back({finId, surface, nullptr, 0.0});
+    }
+    const Body &source = body;
+    std::vector<std::exception_ptr> failures(jobs.size());
+    const auto computeOne = [&](std::size_t k) {
+        Job &job = jobs[k];
+        const Edge &edge = source.edge(source.fin(job.fin).edge);
+        const double edgeTolerance = std::max(kLinearResolution, edge.tolerance);
+        if (CurvePtr<2> exact = exactPCurve(*job.surface, edge.curve, edge.range, edgeTolerance)) {
+            job.pcurve = std::move(exact);
+            job.pcurveTolerance = 0.0;
+            return;
+        }
+        double deviation = 0.0;
+        if (CurvePtr<2> fitted = fitPCurve(*job.surface, edge.curve, edge.range, std::max(tolerance, edgeTolerance), &deviation)) {
+            job.pcurve = std::move(fitted);
+            job.pcurveTolerance = std::max(deviation, std::numeric_limits<double>::min());
+        }
+    };
+    const auto compute = [&](std::size_t k) {
+        try {
+            computeOne(k);
+        } catch (...) {
+            failures[k] = std::current_exception();  // si rilancia dopo, come in sequenza
+        }
+    };
+    parallelFor(jobs.size(), jobs.size() >= 64 ? threadCount(0) : 1u, compute);
+    for (const std::exception_ptr &failure : failures)
+        if (failure) std::rethrow_exception(failure);
+    int missing = 0;
+    for (Job &job : jobs) {
+        if (!job.pcurve) {
+            ++missing;
+            continue;
+        }
+        Fin &fin = body.fin(job.fin);
+        fin.pcurve = std::move(job.pcurve);
+        fin.pcurveTolerance = job.pcurveTolerance;
     }
     return missing;
 }

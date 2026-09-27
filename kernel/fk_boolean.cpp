@@ -33,6 +33,18 @@ struct Arc {
     FaceId face[2];
     bool cut[2] = {false, false};  // divide l'interno della faccia del body 0 / 1
     bool coplanar = false;         // viene da due facce sulla stessa superficie (complanari, cilindri coassiali, ...)
+    // Estremo dove la curva attraversa un edge tollerante (file importati):
+    // il punto sull'edge, che fa da vertice, e lo scarto dalla curva. 0: nessuno.
+    Vec3 loPoint, hiPoint;
+    double loTolerance = 0.0, hiTolerance = 0.0;
+};
+
+// Punto di divisione di una curva d'intersezione preso su un edge tollerante:
+// il vertice nuovo sta sull'edge (parameter = il punto della curva piu' vicino).
+struct Snap {
+    double parameter;
+    Vec3 point;
+    double tolerance;
 };
 
 // Tratto di curva percorso in un verso: pezzo di bordo o taglio.
@@ -45,6 +57,12 @@ struct Piece {
     FaceId partner;  // per i tagli: la faccia dell'altro body che taglia
     bool partnerCrosses = false;  // il taglio sta dentro la faccia che taglia (non sul suo bordo)
     bool coplanar = false;
+    // Estremi in un vertice tollerante del body (file importati: le curve che
+    // vi arrivano si fermano entro la tolleranza del vertice, non nello stesso
+    // punto): il nodo e' il vertice, e vi si uniscono i punti entro loTolerance
+    // (inizio della curva, range.lo) o hiTolerance (fine). 0: il punto della curva.
+    Vec3 loVertex, hiVertex;
+    double loTolerance = 0.0, hiTolerance = 0.0;
 
     double middleParameter() const { return 0.5 * (range.lo + range.hi); }
     Vec3 start() const { return curve->point(forward ? range.lo : range.hi); }
@@ -60,6 +78,17 @@ struct Piece {
     Vec3 pointAt(double fraction) const {
         return curve->point(forward ? range.lo + fraction * range.length() : range.hi - fraction * range.length());
     }
+    // Nodo di un estremo nel verso di percorrenza: punto e tolleranza per unirlo.
+    Vec3 startNode() const {
+        if (forward ? loTolerance > 0.0 : hiTolerance > 0.0) return forward ? loVertex : hiVertex;
+        return start();
+    }
+    Vec3 endNode() const {
+        if (forward ? hiTolerance > 0.0 : loTolerance > 0.0) return forward ? hiVertex : loVertex;
+        return end();
+    }
+    double startTolerance() const { return forward ? loTolerance : hiTolerance; }
+    double endTolerance() const { return forward ? hiTolerance : loTolerance; }
     Piece reversed() const {
         Piece p = *this;
         p.forward = !forward;
@@ -120,6 +149,8 @@ public:
                 boxes_[k][f.index] = faceBox(bodies_[k], f).padded(tolerance_);
                 all.add(boxes_[k][f.index]);
             }
+            for (VertexId v : bodies_[k].vertices()) vertexTolerance_ = std::max(vertexTolerance_, bodies_[k].vertex(v).tolerance);
+            for (EdgeId e : bodies_[k].edges()) vertexTolerance_ = std::max(vertexTolerance_, bodies_[k].edge(e).tolerance);
         }
         scale_ = std::max(all.diagonal(), 1.0);
     }
@@ -162,7 +193,7 @@ private:
     Box commonBounds(FaceId fa, FaceId fb) const;
     bool touchesBoth(FaceId fa, FaceId fb, const Vec3 &x) const;
     void addArcs(const CurvePtr<3> &curve, const Interval &range, const std::vector<double> &parameters, FaceId fa, FaceId fb,
-                 PairResult &out, const IntersectionCurve *source = nullptr) const;
+                 PairResult &out, const IntersectionCurve *source = nullptr, const std::vector<Snap> &snaps = {}) const;
     std::vector<Interval> splitRange(const Curve<3> &curve, const Interval &range, std::vector<double> parameters) const;
     std::vector<Interval> splitAtPoints(const Curve<3> &curve, const Interval &range) const;
     std::vector<SubFace> buildSubFaces(int k, FaceId f, const std::vector<Piece> &cuts) const;
@@ -178,6 +209,7 @@ private:
     Body bodies_[2];
     BooleanOperation operation_;
     double tolerance_, scale_ = 1.0;
+    double vertexTolerance_ = 0.0;  // la piu' grande tolleranza dei vertici dei due body (file importati)
     bool unify_ = true, split_ = false;
     int threads_ = 0;
     mutable int polygonSamples_ = 24;  // campioni per tratto dei poligoni (u, v) dei cicli
@@ -283,6 +315,7 @@ void BooleanBuilder::pairArcs(FaceId fa, FaceId fb, PairResult &out) const {
         const CurvePtr<3> &curve = intersection.curves[i];
         const Interval &range = intersection.ranges[i];
         std::vector<double> parameters;
+        std::vector<Snap> snaps;
         // Attraversamenti del bordo della faccia piana (nel piano).
         const CurvePtr<2> planar = exactPCurve(plane, curve, range, std::max(tolerance_, 1e-9 * scale_));
         if (!planar) throw std::logic_error("booleanOperation: curva d'intersezione fuori dal piano");
@@ -305,10 +338,14 @@ void BooleanBuilder::pairArcs(FaceId fa, FaceId fb, PairResult &out) const {
                 }
                 for (const Vec3 &x : points) {
                     const CurveProjection<3> projection = projectPoint(*curve, x, range);
-                    if (projection.distance <= 10.0 * tolerance_) parameters.push_back(projection.parameter);
+                    if (projection.distance > 10.0 * tolerance_ + 2.0 * edge.tolerance) continue;
+                    parameters.push_back(projection.parameter);
+                    // Punto sull'edge da cui la curva passa solo vicino (edge tolleranti dei file).
+                    if (projection.distance > 0.1 * tolerance_)
+                        snaps.push_back({projection.parameter, x, std::max(tolerance_, 1.01 * projection.distance)});
                 }
             }
-        addArcs(curve, range, parameters, fa, fb, out);
+        addArcs(curve, range, parameters, fa, fb, out, nullptr, snaps);
     }
 }
 
@@ -332,12 +369,36 @@ bool BooleanBuilder::touchesBoth(FaceId fa, FaceId fb, const Vec3 &x) const {
 
 // Tratti della curva (divisa nei parametri dati) che stanno in entrambe le facce.
 void BooleanBuilder::addArcs(const CurvePtr<3> &curve, const Interval &range, const std::vector<double> &parameters, FaceId fa,
-                             FaceId fb, PairResult &out, const IntersectionCurve *source) const {
+                             FaceId fb, PairResult &out, const IntersectionCurve *source, const std::vector<Snap> &snapsIn) const {
+    // Punti presi su edge tolleranti: le altre divisioni entro la loro
+    // tolleranza (per esempio l'estremo della curva tracciata dallo stesso
+    // punto, raffinato altrove) sono lo stesso punto; i tratti che restano tra
+    // il punto e un estremo della curva cosi' vicino si scartano (sotto).
+    std::vector<double> splits = parameters;
+    const std::vector<Snap> &snaps = snapsIn;
+    for (const Snap &snap : snaps) {
+        const Vec3 at = curve->point(snap.parameter);
+        const double reach = 2.0 * snap.tolerance + tolerance_;
+        splits.erase(std::remove_if(splits.begin(), splits.end(), [&](double t) { return distance(curve->point(t), at) <= reach; }),
+                     splits.end());
+        splits.push_back(snap.parameter);
+    }
+    const auto snapAt = [&](double t) -> const Snap * {
+        const Snap *best = nullptr;
+        double bestGap = tolerance_;
+        for (const Snap &snap : snaps) {
+            const double gap = distance(curve->point(t), curve->point(snap.parameter));
+            if (gap <= bestGap) {
+                bestGap = gap;
+                best = &snap;
+            }
+        }
+        return best;
+    };
     bool added = false;
     // Le curve che passano per un polo di una delle due superfici (sfera,
     // vertice del cono) vi hanno un vertice: nello spazio (u, v) il polo e'
     // una linea e l'SP-curve li' salta.
-    std::vector<double> splits = parameters;
     for (const Surface *surface : {bodies_[0].face(fa).surface.get(), bodies_[1].face(fb).surface.get()})
         for (const SurfacePole &pole : surfacePoles(*surface)) {
             const CurveProjection<3> projection = projectPoint(*curve, pole.point, range);
@@ -348,6 +409,37 @@ void BooleanBuilder::addArcs(const CurvePtr<3> &curve, const Interval &range, co
         // Tratto degenere (una curva chiusa intera ha il punto medio lontano dagli estremi).
         if (distance(curve->point(piece.lo), curve->point(piece.hi)) <= tolerance_ && distance(middle, curve->point(piece.lo)) <= tolerance_)
             continue;
+        // Tratti fuori dal dominio di una superficie (le curve tracciate sulle
+        // B-spline possono proseguire dove la superficie e' solo estrapolata):
+        // la proiezione cadrebbe sul bordo della faccia e sembrerebbero dentro.
+        // Le curve d'intersezione stanno sulle due superfici entro 1e-9 (fk_marching).
+        const double onSurface = 10.0 * tolerance_;
+        if (projectPoint(*bodies_[0].face(fa).surface, middle).distance > onSurface
+            || projectPoint(*bodies_[1].face(fb).surface, middle).distance > onSurface)
+            continue;
+        const Snap *loSnap = snaps.empty() ? nullptr : snapAt(piece.lo), *hiSnap = snaps.empty() ? nullptr : snapAt(piece.hi);
+        if (loSnap || hiSnap) {
+            const double reach = 2.0 * std::max(loSnap ? loSnap->tolerance : 0.0, hiSnap ? hiSnap->tolerance : 0.0) + tolerance_;
+            if (distance(curve->point(piece.lo), curve->point(piece.hi)) <= reach && distance(middle, curve->point(piece.lo)) <= reach) continue;
+            // Tratto tra il punto sull'edge tollerante e l'estremo della curva sul
+            // bordo della superficie (dove il piano taglia l'edge di striscio si
+            // allungano): sta lungo il bordo della faccia, entro la tolleranza degli edge.
+            bool alongBoundary = false;
+            for (int k = 0; k < 2 && !alongBoundary; ++k) {
+                const Body &body = bodies_[k];
+                const FaceId face = k == 0 ? fa : fb;
+                double edgeTolerance = 0.0;
+                for (LoopId l : body.face(face).loops)
+                    for (FinId f : body.loopFins(l)) edgeTolerance = std::max(edgeTolerance, body.edge(body.fin(f).edge).tolerance);
+                if (edgeTolerance > tolerance_) {
+                    const double reachBoundary = 2.0 * edgeTolerance;
+                    alongBoundary = distanceToFaceBoundary(body, face, middle) <= reachBoundary
+                                 && distanceToFaceBoundary(body, face, curve->point(piece.lo)) <= reachBoundary
+                                 && distanceToFaceBoundary(body, face, curve->point(piece.hi)) <= reachBoundary;
+                }
+            }
+            if (alongBoundary) continue;
+        }
         const PointLocation in0 = classifyPointOnFace(bodies_[0], fa, middle, tolerance_);
         if (in0 == PointLocation::Outside) continue;
         const PointLocation in1 = classifyPointOnFace(bodies_[1], fb, middle, tolerance_);
@@ -359,6 +451,14 @@ void BooleanBuilder::addArcs(const CurvePtr<3> &curve, const Interval &range, co
         arc.face[1] = fb;
         arc.cut[0] = in0 == PointLocation::Inside;
         arc.cut[1] = in1 == PointLocation::Inside;
+        if (loSnap) {
+            arc.loPoint = loSnap->point;
+            arc.loTolerance = loSnap->tolerance;
+        }
+        if (hiSnap) {
+            arc.hiPoint = hiSnap->point;
+            arc.hiTolerance = hiSnap->tolerance;
+        }
         out.arcs.push_back(arc);
         added = true;
     }
@@ -378,26 +478,27 @@ void BooleanBuilder::addArcs(const CurvePtr<3> &curve, const Interval &range, co
 // dell'altra dentro di essa.
 void BooleanBuilder::surfaceArcs(FaceId fa, FaceId fb, PairResult &out) const {
     std::vector<Vec3> crossings;
+    std::vector<double> crossingTolerances;  // tolleranza dell'edge da cui viene il punto (-1: non viene da un edge)
     auto collect = [&](int k, FaceId self, FaceId otherFace) {
         const Body &body = bodies_[k], &other = bodies_[1 - k];
         const Surface &otherSurface = *other.face(otherFace).surface;
         for (LoopId l : body.face(self).loops)
             for (FinId f : body.loopFins(l)) {
                 const Edge &edge = body.edge(body.fin(f).edge);
+                const double edgeTolerance = edge.tolerance;
+                const auto cross = [&](const Vec3 &x) {
+                    if (classifyPointOnFace(other, otherFace, x, tolerance_) == PointLocation::Outside) return;
+                    crossings.push_back(x);
+                    crossingTolerances.push_back(edgeTolerance);
+                };
                 const CurveSurfaceIntersection hits = intersectCurveSurface(*edge.curve, edge.range, otherSurface, tolerance_);
                 // Un edge che giace sull'altra superficie (per esempio una
                 // generatrice comune a due fianchi estrusi nella stessa
                 // direzione) e' anche un tratto della curva d'intersezione:
                 // i suoi estremi dividono le curve come i punti di attraversamento.
                 for (const Interval &piece : hits.coincident)
-                    for (double t : {piece.lo, piece.hi}) {
-                        const Vec3 x = edge.curve->point(t);
-                        if (classifyPointOnFace(other, otherFace, x, tolerance_) != PointLocation::Outside) crossings.push_back(x);
-                    }
-                for (double t : hits.parameters) {
-                    const Vec3 x = edge.curve->point(t);
-                    if (classifyPointOnFace(other, otherFace, x, tolerance_) != PointLocation::Outside) crossings.push_back(x);
-                }
+                    for (double t : {piece.lo, piece.hi}) cross(edge.curve->point(t));
+                for (double t : hits.parameters) cross(edge.curve->point(t));
             }
     };
     collect(0, fa, fb);
@@ -501,13 +602,23 @@ void BooleanBuilder::surfaceArcs(FaceId fa, FaceId fb, PairResult &out) const {
                 }
         }
 
+    crossingTolerances.resize(crossings.size(), -1.0);
     for (const IntersectionCurve &curve : intersection.curves) {
         std::vector<double> parameters = curve.splitParameters;
-        for (const Vec3 &x : crossings) {
+        std::vector<Snap> snaps;
+        for (std::size_t i = 0; i < crossings.size(); ++i) {
+            const Vec3 &x = crossings[i];
             const CurveProjection<3> projection = projectPoint(*curve.curve, x, curve.range);
-            if (projection.distance <= 10.0 * tolerance_) parameters.push_back(projection.parameter);
+            const double edgeTolerance = crossingTolerances[i];
+            if (projection.distance > 10.0 * tolerance_ + 2.0 * std::max(edgeTolerance, 0.0)) continue;
+            parameters.push_back(projection.parameter);
+            // Punto su un edge da cui la curva passa solo vicino (edge tolleranti dei
+            // file, o curve che si fermano entro la tolleranza): il vertice e' il
+            // punto sull'edge, lo stesso per le curve delle facce vicine.
+            if (edgeTolerance >= 0.0 && projection.distance > 0.1 * tolerance_)
+                snaps.push_back({projection.parameter, x, std::max(tolerance_, 1.01 * projection.distance)});
         }
-        addArcs(curve.curve, curve.range, parameters, fa, fb, out, &curve);
+        addArcs(curve.curve, curve.range, parameters, fa, fb, out, &curve, snaps);
     }
 }
 
@@ -644,7 +755,7 @@ void BooleanBuilder::finishCycle(const Surface &surface, bool sense, Cycle &cycl
         // che arriva nel polo e il successivo che ne riparte il contorno
         // cammina lungo la linea del polo, nel verso che lascia il dominio a sinistra.
         const std::vector<SurfacePole> poles = surfacePoles(surface);
-        const double accept = 10.0 * tolerance_ + 1e-9 * scale_;
+        const double acceptOnSurface = 10.0 * tolerance_ + 1e-9 * scale_;
         Vec2 start, end;
         double startNear = 0.0, endNear = 0.0;  // u dei campioni vicini agli estremi
         int startPole = -1, endPole = -1;
@@ -654,6 +765,9 @@ void BooleanBuilder::finishCycle(const Surface &surface, bool sense, Cycle &cycl
         };
         for (std::size_t p = 0; p < cycle.pieces.size(); ++p) {
             const Piece &piece = cycle.pieces[p];
+            // Edge tolleranti dei file; gli estremi presi su un edge tollerante
+            // possono cadere appena oltre il bordo della superficie.
+            const double accept = std::max({acceptOnSurface, 1.01 * piece.tolerance, 10.0 * std::max(piece.loTolerance, piece.hiTolerance)});
             std::vector<Vec2> uvs(samples + 1);
             const int middle = samples / 2;
             const SurfaceProjection projection = projectPoint(surface, piece.pointAt(0.5));
@@ -840,12 +954,25 @@ std::vector<SubFace> BooleanBuilder::buildSubFacesOnce(int k, FaceId f, const st
         for (FinId finId : body.loopFins(l)) {
             const Fin &fin = body.fin(finId);
             const Edge &edge = body.edge(fin.edge);
+            // Tolleranza degli estremi: del vertice, dell'edge (checkBody accetta
+            // lo scarto curva-vertice entro la piu' grande) e lo scarto effettivo.
+            const Vertex &startVertex = body.vertex(body.edgeStart(fin.edge)), &endVertex = body.vertex(body.edgeEnd(fin.edge));
+            const double startTolerance = std::max({startVertex.tolerance, edge.tolerance, 1.01 * distance(startVertex.point, edge.curve->point(edge.range.lo))});
+            const double endTolerance = std::max({endVertex.tolerance, edge.tolerance, 1.01 * distance(endVertex.point, edge.curve->point(edge.range.hi))});
             for (const Interval &range : splitAtPoints(*edge.curve, edge.range)) {
                 Piece piece;
                 piece.curve = edge.curve;
                 piece.range = range;
                 piece.forward = fin.sense;
                 piece.tolerance = edge.tolerance;
+                if (range.lo == edge.range.lo && startTolerance > tolerance_) {
+                    piece.loVertex = startVertex.point;
+                    piece.loTolerance = startTolerance;
+                }
+                if (range.hi == edge.range.hi && endTolerance > tolerance_) {
+                    piece.hiVertex = endVertex.point;
+                    piece.hiTolerance = endTolerance;
+                }
                 halfEdges.push_back(piece);
             }
         }
@@ -855,18 +982,49 @@ std::vector<SubFace> BooleanBuilder::buildSubFacesOnce(int k, FaceId f, const st
     }
 
     std::vector<Vec3> nodes;
-    auto nodeOf = [&](const Vec3 &p) {
+    std::vector<double> nodeTolerances;
+    auto nodeOf = [&](const Vec3 &p, double tolerance) {
         for (std::size_t i = 0; i < nodes.size(); ++i)
-            if (distance(nodes[i], p) <= tolerance_) return int(i);
+            if (distance(nodes[i], p) <= std::max({tolerance_, tolerance, nodeTolerances[i]})) {
+                if (tolerance > nodeTolerances[i]) {  // un vertice tollerante fa da nodo
+                    nodes[i] = p;
+                    nodeTolerances[i] = tolerance;
+                }
+                return int(i);
+            }
         nodes.push_back(p);
+        nodeTolerances.push_back(tolerance);
         return int(nodes.size()) - 1;
     };
-    const std::size_t count = halfEdges.size();
-    std::vector<int> from(count), to(count);
-    for (std::size_t h = 0; h < count; ++h) {
-        from[h] = nodeOf(halfEdges[h].start());
-        to[h] = nodeOf(halfEdges[h].end());
+    std::vector<int> from, to;
+    {
+        // Tagli che finiscono nel nodo da cui partono e sono lunghi al piu'
+        // quanto la sua tolleranza (tra un punto su un edge tollerante e il
+        // punto della curva accanto): non tagliano nulla.
+        // Prima i nodi tolleranti, dal piu' tollerante: un punto entro la
+        // tolleranza di un vertice vi si unisce anche se viene prima nell'elenco.
+        std::vector<std::pair<double, Vec3>> tolerant;
+        for (const Piece &piece : halfEdges) {
+            if (piece.startTolerance() > tolerance_) tolerant.emplace_back(piece.startTolerance(), piece.startNode());
+            if (piece.endTolerance() > tolerance_) tolerant.emplace_back(piece.endTolerance(), piece.endNode());
+        }
+        std::stable_sort(tolerant.begin(), tolerant.end(), [](const auto &a, const auto &b) { return a.first > b.first; });
+        for (const auto &[tolerance, point] : tolerant) nodeOf(point, tolerance);
+        // Anche i pezzi di bordo cosi' corti (un edge che il piano taglia
+        // entro la tolleranza del vertice) spariscono nel nodo.
+        std::vector<Piece> kept;
+        for (const Piece &piece : halfEdges) {
+            const int a = nodeOf(piece.startNode(), piece.startTolerance()), b = nodeOf(piece.endNode(), piece.endTolerance());
+            if (a == b && nodeTolerances[std::size_t(a)] > tolerance_
+                && distance(piece.start(), piece.middle()) <= 2.0 * std::max({tolerance_, nodeTolerances[std::size_t(a)]}))
+                continue;
+            kept.push_back(piece);
+            from.push_back(a);
+            to.push_back(b);
+        }
+        halfEdges = std::move(kept);
     }
+    const std::size_t count = halfEdges.size();
     std::vector<std::vector<int>> outgoing(nodes.size());
     for (std::size_t h = 0; h < count; ++h) outgoing[from[h]].push_back(int(h));
 
@@ -900,14 +1058,25 @@ std::vector<SubFace> BooleanBuilder::buildSubFacesOnce(int k, FaceId f, const st
     // punto del tratto a una distanza fissa dal nodo, la stessa per tutti i
     // tratti del nodo (a una frazione fissa della lunghezza due cerchi
     // tangenti di raggio diverso darebbero la stessa corda).
-    std::vector<double> lengths(count), reach(nodes.size(), 1e300);
+    std::vector<double> lengths(count), reach(nodes.size(), 1e300), shortestAt(nodes.size(), 1e300);
     for (std::size_t h = 0; h < count; ++h) {
         const Piece &piece = halfEdges[h];
         lengths[h] = distance(piece.start(), piece.pointAt(0.25)) + distance(piece.pointAt(0.25), piece.middle())
                    + distance(piece.middle(), piece.pointAt(0.75)) + distance(piece.pointAt(0.75), piece.end());
         reach[from[h]] = std::min(reach[from[h]], 1e-3 * lengths[h]);
         reach[to[h]] = std::min(reach[to[h]], 1e-3 * lengths[h]);
+        shortestAt[from[h]] = std::min(shortestAt[from[h]], lengths[h]);
+        shortestAt[to[h]] = std::min(shortestAt[to[h]], lengths[h]);
     }
+    // Nodi tolleranti (vertici dei file, punti presi su edge tolleranti): vicino
+    // al nodo le curve possono passare dall'altra parte del bordo entro la
+    // tolleranza e le tangenti ingannano; l'ordine si decide con le corde verso
+    // punti ben oltre la tolleranza.
+    for (std::size_t v = 0; v < nodes.size(); ++v)
+        if (nodeTolerances[v] > tolerance_ && shortestAt[v] < 1e300) {
+            useChords[v] = true;
+            reach[v] = std::min(0.25 * shortestAt[v], std::max(reach[v], 20.0 * nodeTolerances[v]));
+        }
     auto startDirection = [&](int h) {
         const Piece &piece = halfEdges[h];
         if (!useChords[from[h]]) return piece.startTangent();
@@ -928,7 +1097,11 @@ std::vector<SubFace> BooleanBuilder::buildSubFacesOnce(int k, FaceId f, const st
         for (int o : outgoing[v]) {
             double rotation = std::fmod(reverse - startAngle[o], kTwoPi);
             if (rotation < 0.0) rotation += kTwoPi;
-            if (rotation <= 1e-12) rotation = kTwoPi;  // tornare indietro: solo se non c'e' altro
+            // Tornare indietro (lo stesso tratto nell'altro verso): solo se non
+            // c'e' altro. Con le corde i due angoli possono differire di un arrotondamento.
+            const bool twin = halfEdges[o].curve == halfEdges[h].curve && halfEdges[o].range.lo == halfEdges[h].range.lo
+                           && halfEdges[o].range.hi == halfEdges[h].range.hi && halfEdges[o].forward != halfEdges[h].forward;
+            if (rotation <= 1e-12 || rotation >= kTwoPi - 1e-12 || twin) rotation = kTwoPi;
             if (rotation < bestRotation) {
                 bestRotation = rotation;
                 best = o;
@@ -1429,8 +1602,9 @@ void BooleanBuilder::computeCuts(std::map<int, std::vector<Piece>> (&cuts)[2]) {
     }
 
     for (const Arc &arc : arcs_) {
-        vertexPoints_.push_back(arc.curve->point(arc.range.lo));
-        vertexPoints_.push_back(arc.curve->point(arc.range.hi));
+        vertexPoints_.push_back(arc.loTolerance > 0.0 ? arc.loPoint : arc.curve->point(arc.range.lo));
+        vertexPoints_.push_back(arc.hiTolerance > 0.0 ? arc.hiPoint : arc.curve->point(arc.range.hi));
+        vertexTolerance_ = std::max({vertexTolerance_, arc.loTolerance, arc.hiTolerance});
     }
 
     // Tagli di ogni faccia, divisi nei punti dei vertici e senza doppioni.
@@ -1438,6 +1612,11 @@ void BooleanBuilder::computeCuts(std::map<int, std::vector<Piece>> (&cuts)[2]) {
         for (int k = 0; k < 2; ++k) {
             if (!arc.cut[k]) continue;
             for (const Interval &range : splitAtPoints(*arc.curve, arc.range)) {
+                // Pezzi di un arco che esce appena dalla superficie (seme su un edge
+                // tollerante, fuori dal dominio della B-spline): fuori dalla faccia.
+                if (vertexTolerance_ > tolerance_ && (range.lo != arc.range.lo || range.hi != arc.range.hi)
+                    && projectPoint(*bodies_[k].face(arc.face[k]).surface, arc.curve->point(0.5 * (range.lo + range.hi))).distance > 10.0 * tolerance_)
+                    continue;
                 Piece piece;
                 piece.curve = arc.curve;
                 piece.range = range;
@@ -1445,11 +1624,23 @@ void BooleanBuilder::computeCuts(std::map<int, std::vector<Piece>> (&cuts)[2]) {
                 piece.partner = arc.face[1 - k];
                 piece.partnerCrosses = arc.cut[1 - k];
                 piece.coplanar = arc.coplanar;
+                if (range.lo == arc.range.lo && arc.loTolerance > 0.0) {
+                    piece.loVertex = arc.loPoint;
+                    piece.loTolerance = arc.loTolerance;
+                }
+                if (range.hi == arc.range.hi && arc.hiTolerance > 0.0) {
+                    piece.hiVertex = arc.hiPoint;
+                    piece.hiTolerance = arc.hiTolerance;
+                }
                 std::vector<Piece> &list = cuts[k][arc.face[k].index];
                 bool duplicate = false;
+                // Estremi uguali: entro la tolleranza, o quella dei punti presi su edge tolleranti.
+                const auto near = [&](const Vec3 &a, double ta, const Vec3 &b, double tb) { return distance(a, b) <= std::max({tolerance_, ta, tb}); };
                 for (Piece &existing : list) {
-                    const bool sameEnds = (distance(existing.start(), piece.start()) <= tolerance_ && distance(existing.end(), piece.end()) <= tolerance_)
-                        || (distance(existing.start(), piece.end()) <= tolerance_ && distance(existing.end(), piece.start()) <= tolerance_);
+                    const bool sameEnds = (near(existing.startNode(), existing.startTolerance(), piece.startNode(), piece.startTolerance())
+                                           && near(existing.endNode(), existing.endTolerance(), piece.endNode(), piece.endTolerance()))
+                        || (near(existing.startNode(), existing.startTolerance(), piece.endNode(), piece.endTolerance())
+                            && near(existing.endNode(), existing.endTolerance(), piece.startNode(), piece.startTolerance()));
                     // Stessa geometria anche con parametri diversi (un'isoparametrica
                     // esatta e la stessa linea tracciata): il punto medio dell'uno sull'altro.
                     if (sameEnds && (distance(existing.middle(), piece.middle()) <= 10.0 * tolerance_
@@ -1535,12 +1726,32 @@ std::vector<Body> BooleanBuilder::split() {
 
 Body BooleanBuilder::assemble(const std::vector<std::pair<SubFace, bool>> &kept, bool sheetResult) {
     std::vector<Vec3> vertices;
-    auto vertexOf = [&](const Vec3 &p) {
+    std::vector<double> vertexTolerances;
+    auto vertexOf = [&](const Vec3 &p, double tolerance) {
         for (std::size_t i = 0; i < vertices.size(); ++i)
-            if (distance(vertices[i], p) <= tolerance_) return int(i);
+            if (distance(vertices[i], p) <= std::max({tolerance_, tolerance, vertexTolerances[i]})) {
+                if (tolerance > vertexTolerances[i]) {
+                    vertices[i] = p;
+                    vertexTolerances[i] = tolerance;
+                }
+                return int(i);
+            }
         vertices.push_back(p);
+        vertexTolerances.push_back(tolerance);
         return int(vertices.size()) - 1;
     };
+    {
+        // Prima i vertici tolleranti, dal piu' tollerante (come i nodi delle facce).
+        std::vector<std::pair<double, Vec3>> tolerant;
+        for (const auto &[subFace, flip] : kept)
+            for (const Cycle &cycle : subFace.cycles)
+                for (const Piece &piece : cycle.pieces) {
+                    if (piece.startTolerance() > tolerance_) tolerant.emplace_back(piece.startTolerance(), piece.startNode());
+                    if (piece.endTolerance() > tolerance_) tolerant.emplace_back(piece.endTolerance(), piece.endNode());
+                }
+        std::stable_sort(tolerant.begin(), tolerant.end(), [](const auto &a, const auto &b) { return a.first > b.first; });
+        for (const auto &[tolerance, point] : tolerant) vertexOf(point, tolerance);
+    }
     std::vector<Body::BuildEdge> edges;
     std::vector<Vec3> edgeMiddles;
     std::vector<Body::BuildFace> faces;
@@ -1576,8 +1787,12 @@ Body BooleanBuilder::assemble(const std::vector<std::pair<SubFace, bool>> &kept,
             if (pieces.empty()) continue;
             std::vector<Body::BuildFin> loop;
             for (const Piece &piece : pieces) {
-                const int vs = vertexOf(piece.start()), ve = vertexOf(piece.end());
+                const int vs = vertexOf(piece.startNode(), piece.startTolerance()), ve = vertexOf(piece.endNode(), piece.endTolerance());
                 const Vec3 middle = piece.middle();
+                // Tratto piu' corto della tolleranza del vertice in cui comincia e finisce: sparisce.
+                if (vs == ve && vertexTolerances[std::size_t(vs)] > tolerance_
+                    && distance(piece.start(), middle) <= 2.0 * vertexTolerances[std::size_t(vs)])
+                    continue;
                 int index = -1;
                 for (std::size_t e = 0; e < edges.size(); ++e) {
                     const bool sameEnds = (edges[e].start == vs && edges[e].end == ve) || (edges[e].start == ve && edges[e].end == vs);
@@ -1591,13 +1806,20 @@ Body BooleanBuilder::assemble(const std::vector<std::pair<SubFace, bool>> &kept,
                     Body::BuildEdge edge;
                     edge.curve = piece.curve;
                     edge.range = piece.range;
-                    edge.start = vertexOf(piece.curve->point(piece.range.lo));
-                    edge.end = vertexOf(piece.curve->point(piece.range.hi));
+                    edge.start = piece.forward ? vs : ve;
+                    edge.end = piece.forward ? ve : vs;
                     edge.tolerance = piece.tolerance;
                     edges.push_back(edge);
                     edgeMiddles.push_back(middle);
                     index = int(edges.size()) - 1;
                 }
+                // Estremi presi su un edge tollerante: la curva puo' finire appena
+                // oltre il bordo della superficie, l'edge diventa tollerante.
+                for (const auto &[t, snapped] : {std::pair<double, double>{piece.range.lo, piece.loTolerance}, {piece.range.hi, piece.hiTolerance}})
+                    if (snapped > 0.0) {
+                        const double gap = projectPoint(*face.surface, piece.curve->point(t)).distance;
+                        if (gap > tolerance_) edges[index].tolerance = std::max(edges[index].tolerance, 1.5 * gap);
+                    }
                 // Verso della fin: tangente di percorrenza contro quella dell'edge nel punto medio.
                 const Body::BuildEdge &edge = edges[index];
                 const Vec3 edgeTangent = edge.curve->derivative(0.5 * (edge.range.lo + edge.range.hi));
@@ -1607,7 +1829,7 @@ Body BooleanBuilder::assemble(const std::vector<std::pair<SubFace, bool>> &kept,
                 fin.sense = dot(piece.tangentAt(onPiece.parameter), edgeTangent) > 0.0;
                 loop.push_back(fin);
             }
-            built.loops.push_back(std::move(loop));
+            if (!loop.empty()) built.loops.push_back(std::move(loop));
         }
         faces.push_back(std::move(built));
     }
@@ -1633,14 +1855,24 @@ Body BooleanBuilder::assemble(const std::vector<std::pair<SubFace, bool>> &kept,
     }
     // Estremi che toccano il vertice solo entro la tolleranza della booleana
     // (punti uniti da curve diverse: un'isoparametrica esatta e una curva
-    // tracciata): l'edge diventa tollerante.
+    // tracciata) o dei vertici tolleranti dei body: l'edge diventa tollerante.
     auto tolerantEnds = [&](Body &body) {
         for (EdgeId e : body.edges()) {
             Edge &edge = body.edge(e);
             if (!edge.curve) continue;
             const Vec3 a = edge.curve->point(edge.range.lo), b = edge.curve->point(edge.range.hi);
             const double gap = std::max(distance(a, body.vertex(body.edgeStart(e)).point), distance(b, body.vertex(body.edgeEnd(e)).point));
-            if (gap > edge.tolerance && gap <= tolerance_) edge.tolerance = 1.01 * gap;
+            if (gap > edge.tolerance && gap <= std::max(tolerance_, vertexTolerance_)) edge.tolerance = 1.01 * gap;
+        }
+        // Vertici tolleranti (le curve che vi arrivano si fermano entro la loro
+        // tolleranza): la tolleranza resta sul vertice per le operazioni successive.
+        for (EdgeId e : body.edges()) {
+            const Edge &edge = body.edge(e);
+            if (!edge.curve) continue;
+            for (const auto &[v, t] : {std::pair<VertexId, double>{body.edgeStart(e), edge.range.lo}, {body.edgeEnd(e), edge.range.hi}}) {
+                const double gap = distance(body.vertex(v).point, edge.curve->point(t));
+                if (gap > 1e-7) body.vertex(v).tolerance = std::max(body.vertex(v).tolerance, 1.01 * gap);
+            }
         }
     };
     tolerantEnds(result);

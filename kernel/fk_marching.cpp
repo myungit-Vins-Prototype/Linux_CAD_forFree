@@ -353,6 +353,15 @@ bool Marcher::firstCrossing(const Params &from, const Params &to, double &fracti
         if (!periodic) {
             if (std::isfinite(domain.hi) && p1 > domain.hi && p0 <= domain.hi) consider(domain.hi, true);
             if (std::isfinite(domain.lo) && p1 < domain.lo && p0 >= domain.lo) consider(domain.lo, true);
+            // Gia' appena fuori dal dominio (un seme preso su un edge tollerante,
+            // corretto sulla superficie estrapolata) e si allontana: ci si ferma subito.
+            const double outside = 1e-7 * (domain.isFinite() ? domain.length() : 1.0);
+            if ((std::isfinite(domain.hi) && p0 > domain.hi + outside && p1 > p0) || (std::isfinite(domain.lo) && p0 < domain.lo - outside && p1 < p0)) {
+                fraction = 0.0;
+                index = i;
+                value = p0 > domain.hi ? domain.hi : domain.lo;
+                limit = true;
+            }
         }
     }
     return fraction <= 1.0;
@@ -384,6 +393,17 @@ Stop Marcher::trace(Node &seed, std::vector<Node> &out, Vec3 &tangentPoint) {
             if (current.sine < 1e-3) {
                 tangentPoint = current.p;
                 return Stop::Tangent;
+            }
+            // Fuori dal dominio di una superficie non periodica (seme preso su un
+            // edge tollerante, dove la superficie e' solo estrapolata): la curva
+            // finisce qui, i tratti fuori dalle facce si scartano dopo.
+            for (int i = 0; i < 4; ++i) {
+                const Surface &surface = i < 2 ? a_ : b_;
+                const bool isU = i % 2 == 0;
+                if (isU ? surface.isUPeriodic() : surface.isVPeriodic()) continue;
+                const Interval domain = isU ? surface.uDomain() : surface.vDomain();
+                const double margin = 1e-9 * (domain.isFinite() ? domain.length() : 1.0);
+                if (current.x[i] > domain.hi + margin || current.x[i] < domain.lo - margin) return Stop::Limit;
             }
             throw std::domain_error("intersectSurfaces: tracciamento dell'intersezione non riuscito");
         }

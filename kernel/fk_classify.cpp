@@ -172,14 +172,38 @@ PointLocation classifyPointOnFace(const Body &body, FaceId faceId, const Vec3 &p
     const Interval vDomain = surface.vDomain();
     const bool closed = surface.isUPeriodic() && (surface.isVPeriodic() || (vDomain.isFinite() && degenerateAt(surface, vDomain.lo) && degenerateAt(surface, vDomain.hi)));
     if (!closed) return PointLocation::Outside;
+    // Le SP-curve di un loop possono stare in periodi diversi (ognuna parte
+    // nel dominio di base): si attacca ogni fin alla precedente spostandola di
+    // periodi interi. Un loop che cosi' si chiude ha l'area del poligono; uno
+    // avvolto (non si chiude) somma i suoi tratti come sono.
     double area = 0.0;
-    for (FinId f : fins) {
-        const Fin &fin = body.fin(f);
-        const Edge &edge = body.edge(fin.edge);
-        for (int i = 0; i < 16; ++i) {
-            const double t0 = edge.range.lo + edge.range.length() * i / 16.0, t1 = edge.range.lo + edge.range.length() * (i + 1) / 16.0;
-            area += cross(fin.pcurve->point(t0), fin.pcurve->point(t1)) * (fin.sense ? 1.0 : -1.0);
+    for (LoopId l : face.loops) {
+        std::vector<Vec2> polygon;
+        double open = 0.0;
+        for (FinId f : body.loopFins(l)) {
+            const Fin &fin = body.fin(f);
+            const Edge &edge = body.edge(fin.edge);
+            std::vector<Vec2> points;
+            for (int i = 0; i <= 16; ++i) {
+                const double fraction = double(fin.sense ? i : 16 - i) / 16.0;
+                points.push_back(fin.pcurve->point(edge.range.lo + edge.range.length() * fraction));
+            }
+            for (std::size_t i = 0; i + 1 < points.size(); ++i) open += cross(points[i], points[i + 1]);
+            Vec2 shift;
+            if (!polygon.empty())
+                for (int k = 0; k < 2; ++k)
+                    if (periods[k] > 0.0) shift[k] = periods[k] * std::round((polygon.back()[k] - points.front()[k]) / periods[k]);
+            for (std::size_t i = polygon.empty() ? 0 : 1; i < points.size(); ++i) polygon.push_back(points[i] + shift);
         }
+        if (polygon.size() < 2) continue;
+        bool closes = true;
+        for (int k = 0; k < 2; ++k)
+            closes = closes && !(periods[k] > 0.0 && std::fabs(polygon.back()[k] - polygon.front()[k]) > 0.5 * periods[k]);
+        if (!closes) {
+            area += open;
+            continue;
+        }
+        for (std::size_t i = 0; i < polygon.size(); ++i) area += cross(polygon[i], polygon[(i + 1) % polygon.size()]);
     }
     return area * faceSign < 0.0 ? PointLocation::Inside : PointLocation::Outside;
 }

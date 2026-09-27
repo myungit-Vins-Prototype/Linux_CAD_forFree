@@ -273,6 +273,61 @@ FK_TEST(FittedPCurves) {
     }
 }
 
+// Pezza B-spline con un lato degenere (la fila di poli u = 0 tutta in un
+// punto, come le pezze triangolari di CATIA negli angoli dei raccordi): le
+// curve che partono dal punto hanno l'SP-curve, anche se stanno sulla
+// superficie solo entro la tolleranza del file (edge tolleranti).
+FK_TEST(FittedPCurvesFromDegenerateSide) {
+    const Vec3 apex(1.0, 2.0, 3.0);
+    std::vector<Vec3> poles;
+    for (int i = 0; i < 3; ++i)
+        for (int j = 0; j < 3; ++j)
+            poles.push_back(i == 0 ? apex : apex + Vec3(2.0 * i, 1.5 * i * (j - 1.0), 0.3 * i * j * j - 0.2 * i));
+    const auto surface = std::make_shared<BSplineSurface>(2, 2, std::vector<double>{0, 0, 0, 1, 1, 1},
+                                                          std::vector<double>{0, 0, 0, 1, 1, 1}, 3, 3, poles);
+    // Uno scostamento dalla superficie che cresce dal punto: trasversale al lato.
+    class Shifted final : public Curve<3> {
+    public:
+        Shifted(CurvePtr<3> base, Vec3 shift) : base_(std::move(base)), shift_(shift) {}
+        CurveType type() const override { return CurveType::Other; }
+        Interval domain() const override { return base_->domain(); }
+        std::vector<double> breakpoints(const Interval &range) const override { return base_->breakpoints(range); }
+        void evaluate(double t, int order, Vec3 *out) const override {
+            base_->evaluate(t, order, out);
+            out[0] = out[0] + t * shift_;
+            if (order >= 1) out[1] = out[1] + shift_;
+        }
+
+    private:
+        CurvePtr<3> base_;
+        Vec3 shift_;
+    };
+    for (double offset : {0.0, 4e-5}) {
+        for (double v0 : {0.2, 0.5, 0.8}) {
+            const auto q = std::make_shared<BSplineCurve<2>>(2, std::vector<double>{0, 0, 0, 1, 1, 1},
+                                                             std::vector<Vec2>{Vec2(0.0, v0), Vec2(0.5, 0.5), Vec2(0.9, 1.0 - v0)});
+            CurvePtr<3> curve = std::make_shared<CurveOnSurface>(surface, q);
+            if (offset > 0.0) curve = std::make_shared<Shifted>(curve, offset * normalized(Vec3(0.3, 1.0, 0.2)));
+            const Interval range{0.0, 1.0};
+            const double tolerance = offset > 0.0 ? 1e-4 : 1e-7;
+            double deviation = -1.0;
+            const CurvePtr<2> fitted = fitPCurve(*surface, curve, range, tolerance, &deviation);
+            FK_CHECK(fitted != nullptr);
+            if (!fitted) continue;
+            FK_CHECK(deviation >= 0.0 && deviation <= tolerance);
+            FK_CHECK(pcurveDeviation(*surface, *curve, *fitted, range, 64) <= tolerance);
+            // Nel punto degenere u = 0 e v e' il limite lungo la curva.
+            const Vec2 start = fitted->point(0.0);
+            FK_CHECK_NEAR(start[0], 0.0, 1e-12);
+            if (offset == 0.0) FK_CHECK_NEAR(start[1], v0, 1e-3);
+            for (int i = 0; i <= 20; ++i) {
+                const Vec2 p = fitted->point(i / 20.0);
+                FK_CHECK(p[0] >= -1e-9 && p[0] <= 1.0 + 1e-9 && p[1] >= -1e-9 && p[1] <= 1.0 + 1e-9);
+            }
+        }
+    }
+}
+
 // Gli operatori che cambiano gli edge mantengono le SP-curve coerenti.
 FK_TEST(PCurvesSurviveEdgeOperations) {
     Body body = makeCylinder(Frame3(), 3.0, 4.0);

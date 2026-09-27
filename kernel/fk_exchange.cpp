@@ -4,6 +4,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <exception>
 #include <map>
 #include <set>
 #include <stdexcept>
@@ -11,6 +12,7 @@
 #include "fk_body_check.h"
 #include "fk_curve_algo.h"
 #include "fk_curve_ops.h"
+#include "fk_parallel.h"
 #include "fk_pcurve.h"
 #include "fk_surface_algo.h"
 
@@ -234,17 +236,19 @@ Body assembleBody(const RawModel &input, bool solid, std::vector<std::string> *n
         throw std::domain_error(failure.what());
     }
     // Tolleranze: vertici dagli estremi delle curve, edge dalle facce.
-    double worst = 0.0;
-    for (EdgeId e : body.edges()) {
-        Edge &edge = body.edge(e);
-        for (const auto &[v, t] : {std::pair<VertexId, double>{body.edgeStart(e), edge.range.lo}, {body.edgeEnd(e), edge.range.hi}}) {
-            const double d = distance(body.vertex(v).point, edge.curve->point(t));
-            if (d > 1e-7) body.vertex(v).tolerance = std::max(body.vertex(v).tolerance, 1.01 * d);
-        }
+    // Gli scarti degli edge dalle facce (proiezioni sulle superfici: la parte
+    // lunga dei file grandi) si misurano in parallelo, poi si applicano in ordine.
+    std::vector<EdgeId> edgeIds;
+    for (EdgeId e : body.edges()) edgeIds.push_back(e);
+    std::vector<double> deviations(edgeIds.size(), 0.0);
+    std::vector<std::exception_ptr> failures(edgeIds.size());
+    const Body &measured = body;
+    const auto measure = [&](std::size_t i) {
+        const Edge &edge = measured.edge(edgeIds[i]);
         double deviation = 0.0;
         for (FinId fin : {edge.forward, edge.backward}) {
             if (!fin.valid()) continue;
-            const Surface &surface = *body.face(body.finFace(fin)).surface;
+            const Surface &surface = *measured.face(measured.finFace(fin)).surface;
             // Campioni fitti: lo scarto di una B-spline da una superficie libera cambia tra un nodo e l'altro.
             std::vector<double> breaks = edge.curve->breakpoints(edge.range);
             if (breaks.size() < 2 || breaks.size() > 64) breaks = {edge.range.lo, edge.range.hi};
@@ -252,6 +256,26 @@ Body assembleBody(const RawModel &input, bool solid, std::vector<std::string> *n
                 for (int k = 0; k <= 16; ++k)
                     deviation = std::max(deviation, projectPoint(surface, edge.curve->point(breaks[b] + (breaks[b + 1] - breaks[b]) * k / 16.0)).distance);
         }
+        deviations[i] = deviation;
+    };
+    parallelFor(edgeIds.size(), edgeIds.size() >= 256 ? threadCount(0) : 1u, [&](std::size_t i) {
+        try {
+            measure(i);
+        } catch (...) {
+            failures[i] = std::current_exception();  // si rilancia dopo, come in sequenza
+        }
+    });
+    for (const std::exception_ptr &failure : failures)
+        if (failure) std::rethrow_exception(failure);
+    double worst = 0.0;
+    for (std::size_t i = 0; i < edgeIds.size(); ++i) {
+        const EdgeId e = edgeIds[i];
+        Edge &edge = body.edge(e);
+        for (const auto &[v, t] : {std::pair<VertexId, double>{body.edgeStart(e), edge.range.lo}, {body.edgeEnd(e), edge.range.hi}}) {
+            const double d = distance(body.vertex(v).point, edge.curve->point(t));
+            if (d > 1e-7) body.vertex(v).tolerance = std::max(body.vertex(v).tolerance, 1.01 * d);
+        }
+        const double deviation = deviations[i];
         if (deviation > 1e-7) {
             edge.tolerance = std::max(edge.tolerance, 1.5 * deviation);
             worst = std::max(worst, deviation);

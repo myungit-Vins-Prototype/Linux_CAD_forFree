@@ -1143,3 +1143,51 @@ FK_TEST(BooleanParallelMatchesSequential) {
     for (BooleanOperation op : {BooleanOperation::Unite, BooleanOperation::Intersect, BooleanOperation::Subtract})
         checkIdentical(booleanOperation(slabA, slabB, op, sequential), booleanOperation(slabA, slabB, op, parallel));
 }
+
+// Vertici tolleranti come nei file STEP di CATIA: le curve degli edge si
+// fermano 3e-4 prima del vertice (tolleranza 5e-4). Le booleane uniscono gli
+// estremi con la tolleranza dei vertici, non con quella della booleana.
+FK_TEST(BooleanTolerantVertices) {
+    Body box = makeBox(Frame3(Vec3(0, 0, 0), Vec3(0, 0, 1), Vec3(1, 0, 0)), 4.0, 3.0, 2.0);
+    const double gap = 3e-4;
+    for (EdgeId e : box.edges()) {
+        Edge &edge = box.edge(e);
+        edge.range = {edge.range.lo + gap, edge.range.hi - gap};
+    }
+    for (VertexId v : box.vertices()) box.vertex(v).tolerance = 5e-4;
+    for (FinId f : box.fins()) box.fin(f).pcurve = nullptr;
+    FK_CHECK(computePCurves(box) == 0);
+    FK_CHECK(checkBody(box).empty());
+    const Body corner = makeBox(Frame3(Vec3(3, 2, 1), Vec3(0, 0, 1), Vec3(1, 0, 0)), 2.0, 2.0, 2.0);
+    const Body slot = makeBox(Frame3(Vec3(1.5, -1, 1), Vec3(0, 0, 1), Vec3(1, 0, 0)), 1.0, 5.0, 2.0);
+    const Body boss = makeCylinder(Frame3(Vec3(2, 1.5, 1.5), Vec3(0, 0, 1), Vec3(1, 0, 0)), 0.5, 1.0);
+    const struct {
+        const Body &tool;
+        BooleanOperation operation;
+        double volume;
+    } cases[] = {{corner, BooleanOperation::Subtract, 24.0 - 1.0},
+                 {corner, BooleanOperation::Unite, 24.0 + 8.0 - 1.0},
+                 {corner, BooleanOperation::Intersect, 1.0},
+                 {slot, BooleanOperation::Subtract, 24.0 - 3.0},
+                 {boss, BooleanOperation::Unite, 24.0 + 0.25 * kPi * 0.5}};
+    for (const auto &c : cases) {
+        try {
+            const Body result = booleanOperation(box, c.tool, c.operation);
+            FK_CHECK(checkBody(result).empty());
+            // I loop con i buchi ai vertici tolleranti cambiano un poco il volume
+            // integrato (flusso sulle facce): scarto dell'ordine di gap x lati.
+            FK_CHECK_NEAR(massProperties(result).volume, c.volume, 1e-2);
+        } catch (const std::exception &failure) {
+            reportFailure(__FILE__, __LINE__, failure.what());
+        }
+    }
+    // Il risultato si usa in un'altra booleana: i vertici restano tolleranti.
+    try {
+        const Body once = booleanOperation(box, corner, BooleanOperation::Subtract);
+        const Body twice = booleanOperation(once, slot, BooleanOperation::Subtract);
+        FK_CHECK(checkBody(twice).empty());
+        FK_CHECK_NEAR(massProperties(twice).volume, 24.0 - 1.0 - 3.0, 1e-2);
+    } catch (const std::exception &failure) {
+        reportFailure(__FILE__, __LINE__, failure.what());
+    }
+}

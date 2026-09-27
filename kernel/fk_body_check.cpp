@@ -1,9 +1,11 @@
 #include "fk_body_check.h"
 
 #include <algorithm>
+#include <exception>
 #include <set>
 #include <sstream>
 
+#include "fk_parallel.h"
 #include "fk_pcurve.h"
 #include "fk_precision.h"
 #include "fk_surface_algo.h"
@@ -175,51 +177,70 @@ std::vector<Vec3> sampleLoop(const Body &body, LoopId l, int samplesPerFin = 16)
     return points;
 }
 
-void checkGeometry(const Body &body, Report &report) {
-    for (EdgeId e : body.edges()) {
-        const Edge &ed = body.edge(e);
-        if (!ed.curve) {
-            report.add(CheckCode::MissingGeometry, "edge ", e.index, " senza curva");
-            continue;
-        }
-        if (!ed.range.isFinite() || !(ed.range.lo < ed.range.hi)) {
-            report.add(CheckCode::BadRange, "edge ", e.index, ": range non valido");
-            continue;
-        }
-        const VertexId start = body.edgeStart(e), end = body.edgeEnd(e);
-        const double startGap = distance(ed.curve->point(ed.range.lo), body.vertex(start).point);
-        const double endGap = distance(ed.curve->point(ed.range.hi), body.vertex(end).point);
-        if (startGap > vertexTolerance(body, start, ed.tolerance))
-            report.add(CheckCode::VertexOffEdge, "edge ", e.index, ": inizio a ", startGap, " dal vertice ", start.index);
-        if (endGap > vertexTolerance(body, end, ed.tolerance))
-            report.add(CheckCode::VertexOffEdge, "edge ", e.index, ": fine a ", endGap, " dal vertice ", end.index);
+void checkEdge(const Body &body, EdgeId e, Report &report) {
+    const Edge &ed = body.edge(e);
+    if (!ed.curve) {
+        report.add(CheckCode::MissingGeometry, "edge ", e.index, " senza curva");
+        return;
+    }
+    if (!ed.range.isFinite() || !(ed.range.lo < ed.range.hi)) {
+        report.add(CheckCode::BadRange, "edge ", e.index, ": range non valido");
+        return;
+    }
+    const VertexId start = body.edgeStart(e), end = body.edgeEnd(e);
+    const double startGap = distance(ed.curve->point(ed.range.lo), body.vertex(start).point);
+    const double endGap = distance(ed.curve->point(ed.range.hi), body.vertex(end).point);
+    if (startGap > vertexTolerance(body, start, ed.tolerance))
+        report.add(CheckCode::VertexOffEdge, "edge ", e.index, ": inizio a ", startGap, " dal vertice ", start.index);
+    if (endGap > vertexTolerance(body, end, ed.tolerance))
+        report.add(CheckCode::VertexOffEdge, "edge ", e.index, ": fine a ", endGap, " dal vertice ", end.index);
 
-        // La curva deve giacere sulle superfici delle due facce adiacenti.
-        const double tolerance = std::max(kLinearResolution, ed.tolerance);
-        for (FinId f : {ed.forward, ed.backward}) {
-            if (!f.valid()) continue;  // bordo di una lamina
-            const FaceId faceId = body.finFace(f);
-            const Face &fc = body.face(faceId);
-            if (!fc.surface) continue;  // segnalato sotto
-            double worst = 0.0;
-            for (int i = 0; i <= 8; ++i) {
-                const Vec3 p = ed.curve->point(ed.range.lo + ed.range.length() * i / 8.0);
-                worst = std::max(worst, projectPoint(*fc.surface, p).distance);
-            }
-            if (worst > tolerance)
-                report.add(CheckCode::EdgeOffFace, "edge ", e.index, ": fino a ", worst, " dalla superficie della faccia ",
-                           faceId.index);
-            // SP-curve: S(p(t)) deve coincidere con C(t) entro la tolleranza
-            // dell'edge piu' lo scarto dichiarato dell'approssimazione.
-            const Fin &fn = body.fin(f);
-            if (fn.pcurve) {
-                const double gap = pcurveDeviation(*fc.surface, *ed.curve, *fn.pcurve, ed.range, 8);
-                if (!(gap <= tolerance + fn.pcurveTolerance))
-                    report.add(CheckCode::PCurveOffEdge, "fin ", f.index, " (edge ", e.index, "): SP-curve fino a ", gap,
-                               " dalla curva");
-            }
+    // La curva deve giacere sulle superfici delle due facce adiacenti.
+    const double tolerance = std::max(kLinearResolution, ed.tolerance);
+    for (FinId f : {ed.forward, ed.backward}) {
+        if (!f.valid()) continue;  // bordo di una lamina
+        const FaceId faceId = body.finFace(f);
+        const Face &fc = body.face(faceId);
+        if (!fc.surface) continue;  // segnalato sotto
+        double worst = 0.0;
+        for (int i = 0; i <= 8; ++i) {
+            const Vec3 p = ed.curve->point(ed.range.lo + ed.range.length() * i / 8.0);
+            worst = std::max(worst, projectPoint(*fc.surface, p).distance);
+        }
+        if (worst > tolerance)
+            report.add(CheckCode::EdgeOffFace, "edge ", e.index, ": fino a ", worst, " dalla superficie della faccia ",
+                       faceId.index);
+        // SP-curve: S(p(t)) deve coincidere con C(t) entro la tolleranza
+        // dell'edge piu' lo scarto dichiarato dell'approssimazione.
+        const Fin &fn = body.fin(f);
+        if (fn.pcurve) {
+            const double gap = pcurveDeviation(*fc.surface, *ed.curve, *fn.pcurve, ed.range, 8);
+            if (!(gap <= tolerance + fn.pcurveTolerance))
+                report.add(CheckCode::PCurveOffEdge, "fin ", f.index, " (edge ", e.index, "): SP-curve fino a ", gap,
+                           " dalla curva");
         }
     }
+}
+
+void checkGeometry(const Body &body, Report &report) {
+    // Gli edge si controllano in parallelo (proiezioni sulle superfici: e' la
+    // parte lunga sui corpi importati); i messaggi restano nell'ordine degli edge.
+    std::vector<EdgeId> edges;
+    for (EdgeId e : body.edges()) edges.push_back(e);
+    std::vector<std::vector<CheckIssue>> found(edges.size());
+    std::vector<std::exception_ptr> failures(edges.size());
+    parallelFor(edges.size(), edges.size() >= 256 ? threadCount(0) : 1u, [&](std::size_t k) {
+        try {
+            Report local(found[k]);
+            checkEdge(body, edges[k], local);
+        } catch (...) {
+            failures[k] = std::current_exception();  // si rilancia dopo, come in sequenza
+        }
+    });
+    for (const std::exception_ptr &failure : failures)
+        if (failure) std::rethrow_exception(failure);
+    for (const std::vector<CheckIssue> &issues : found)
+        for (const CheckIssue &issue : issues) report.add(issue.code, issue.message);
 
     for (FaceId f : body.faces()) {
         const Face &fc = body.face(f);

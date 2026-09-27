@@ -759,6 +759,22 @@ Vec3 normalAt(const Surface &surface, double u, double v, int side) {
         return surface.normal(u, v);
     } catch (const std::domain_error &) {
     }
+    if (!surface.isUPeriodic() && surface.uDomain().isFinite() && surface.vDomain().isFinite()) {
+        // Lato degenere di una superficie non periodica (B-spline con una fila
+        // di poli in un punto, le pezze triangolari di CATIA): la media delle
+        // normali appena dentro il dominio, verso il centro.
+        const Interval ud = surface.uDomain(), vd = surface.vDomain();
+        const double du = 1e-6 * ud.length() * (u < 0.5 * (ud.lo + ud.hi) ? 1.0 : -1.0);
+        const double dv = 1e-6 * vd.length() * (v < 0.5 * (vd.lo + vd.hi) ? 1.0 : -1.0);
+        Vec3 sum;
+        for (const auto &[a, b] : {std::pair<double, double>{du, 0.0}, {0.0, dv}, {du, dv}}) {
+            try {
+                sum += surface.normal(u + a, v + b);
+            } catch (const std::domain_error &) {
+            }
+        }
+        if (norm(sum) > 0.0) return normalized(sum);
+    }
     const Interval domain = surface.vDomain();
     if (side == 0) side = domain.isFinite() && v > 0.5 * (domain.lo + domain.hi) ? -1 : 1;
     const double step = 1e-6 * (domain.isFinite() ? std::min(1.0, domain.length()) : 1.0) * side;
