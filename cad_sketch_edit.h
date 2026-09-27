@@ -88,9 +88,22 @@ struct SketchPattern {
     double angle = 360.0;
     bool spread = true;
     QPointF axisPoint, axisDirection{0.0, 1.0};
+    // Parametrica: le copie restano legate alle entita' di partenza con un
+    // vincolo Pattern (niente vincoli copiati: sono gia' determinate), con il
+    // passo o l'angolo come quota se `dimensioned`. I riferimenti dello
+    // schizzo da cui vengono direzioni, centro e retta dello specchio (kind -1:
+    // valori fissi, quelli sopra) seguono la geometria.
+    bool parametric = true;
+    bool dimensioned = true;
+    ConstraintRef directionRef, direction2Ref, centerRef, axisRef;
 };
 SketchEditResult patternSketchEntities(SketchObject &sketch, const QVector<SketchEntity> &entities, const SketchPattern &pattern,
                                        QVector<SketchEntity> *created = nullptr);
+
+// Parametri nuovi della ripetizione parametrica `constraint` (istanze, passi,
+// angolo, quote): se il numero di istanze non cambia si aggiornano i valori
+// (le copie si spostano con il risolutore), altrimenti le copie si rifanno.
+SketchEditResult editSketchPattern(SketchObject &sketch, int constraint, const SketchPatternData &values);
 
 // Elimina segmenti e curve (con i loro vincoli e le linee di costruzione) e
 // restituisce la mappa dei segmenti vecchio -> nuovo indice (-1 eliminato).

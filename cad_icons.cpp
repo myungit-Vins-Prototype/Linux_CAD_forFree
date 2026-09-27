@@ -604,6 +604,17 @@ std::map<QString, Draw> &registry() {
         cube(p, c, -1, true, true, 0.4, QPointF(-6, 0));
         cube(p, c, 0, true, true, 0.4, QPointF(6, 0));
     };
+    icons["section"] = [](QPainter &p, const IconPalette &c) {
+        // Un cubo tagliato: la faccia di sezione tratteggiata e il piano.
+        cube(p, c, 0, true, true, 0.62, QPointF(-1.5, 1.5));
+        const QPolygonF cut({{11.5, 5}, {19, 2.5}, {19, 15.5}, {11.5, 18}});
+        polygon(p, cut, QColor(200, 92, 76, 150), stroke(c.accent, 1.3));
+        p.save();
+        p.setClipRegion(QRegion(cut.toPolygon()));
+        p.setPen(stroke(QColor(120, 36, 30), 1.0));
+        for (int k = -4; k < 6; ++k) line(p, {11.0 + 3.0 * k, 20}, {21.0 + 3.0 * k, 0}, stroke(QColor(120, 36, 30), 0.9));
+        p.restore();
+    };
     icons["scale"] = [](QPainter &p, const IconPalette &c) {
         // Quadrato piccolo pieno, quadrato grande tratteggiato, freccia in diagonale.
         p.setPen(stroke(c.accent, 1.2, Qt::DashLine));

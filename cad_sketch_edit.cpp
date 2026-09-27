@@ -1,5 +1,7 @@
 #include "cad_sketch_edit.h"
 
+#include <QSet>
+
 #include "cad_constraints.h"
 
 #include <algorithm>
@@ -851,9 +853,10 @@ SketchEditResult patternSketchEntities(SketchObject &sketch, const QVector<Sketc
             if (e.kind == r.kind && e.index == r.element) return true;
         return false;
     };
-    // Vincoli da copiare: solo tra entita' ripetute e invarianti per il movimento.
+    // Vincoli da copiare: solo tra entita' ripetute e invarianti per il movimento
+    // (nella ripetizione parametrica le copie sono gia' determinate).
     QVector<SketchConstraint> copied;
-    for (const SketchConstraint &c : sketch.geometricConstraints) {
+    for (const SketchConstraint &c : pattern.parametric ? QVector<SketchConstraint>() : sketch.geometricConstraints) {
         if (!isSelected(c.first) || (c.second.kind >= 0 && !isSelected(c.second))) continue;
         if (c.type == ConstraintType::Fix) continue;
         if (rotates && (c.type == ConstraintType::Horizontal || c.type == ConstraintType::Vertical)) continue;
@@ -894,9 +897,153 @@ SketchEditResult patternSketchEntities(SketchObject &sketch, const QVector<Sketc
             work.geometricConstraints.append(c);
         }
     }
+    if (pattern.parametric) {
+        SketchConstraint c;
+        c.type = ConstraintType::Pattern;
+        SketchPatternData &data = c.pattern;
+        data.kind = pattern.kind;
+        for (const SketchEntity &e : selected) data.sources.append({e.kind, e.index, -1});
+        for (const SketchEntity &e : touched) data.copies.append({e.kind, e.index, -1});
+        data.count = pattern.count;
+        data.count2 = pattern.kind == 0 ? std::max(1, pattern.count2) : 1;
+        data.spacing = pattern.spacing;
+        data.spacing2 = pattern.spacing2;
+        data.angle = pattern.angle;
+        data.spread = pattern.spread;
+        data.dimensioned = data.dimensioned2 = pattern.dimensioned;
+        // Direzioni: dalla retta di riferimento (con il suo verso: un verso
+        // opposto diventa un passo negativo) o come angolo fisso.
+        const auto direction = [&](const ConstraintRef &ref, const QPointF &d, ConstraintRef &out, double &degrees, double &spacing) {
+            degrees = std::atan2(d.y(), d.x()) * 180.0 / M_PI;
+            out = ConstraintRef();
+            QPointF a, b;
+            if (ref.kind == 2 && (ref.element == 1 || ref.element == 2)) {
+                a = QPointF(0, 0);
+                b = ref.element == 1 ? QPointF(1, 0) : QPointF(0, 1);
+            } else if (ref.kind == 0 && ref.element >= 0 && ref.element < sketch.segments.size()) {
+                a = sketch.segments.at(ref.element).first;
+                b = sketch.segments.at(ref.element).second;
+            } else {
+                return;
+            }
+            if (!(length(b - a) > 0.0)) return;
+            out = ref;
+            if ((b - a).x() * d.x() + (b - a).y() * d.y() < 0.0) spacing = -spacing;
+        };
+        direction(pattern.directionRef, pattern.direction, data.direction, data.directionAngle, data.spacing);
+        direction(pattern.direction2Ref, pattern.direction2, data.direction2, data.directionAngle2, data.spacing2);
+        data.center = pattern.centerRef;
+        data.centerPoint = pattern.center;
+        data.axis = pattern.axisRef;
+        data.axisPoint = pattern.axisPoint;
+        data.axisDirection = pattern.axisDirection;
+        c.first = data.sources.first();
+        work.geometricConstraints.append(c);
+    }
     refreshCoincidences(work, touched);
     sketch = work;
     if (created) *created = touched;
+    return result;
+}
+
+SketchEditResult editSketchPattern(SketchObject &sketch, int constraint, const SketchPatternData &values) {
+    if (constraint < 0 || constraint >= sketch.geometricConstraints.size() || sketch.geometricConstraints.at(constraint).type != ConstraintType::Pattern)
+        return {QStringLiteral("La ripetizione non esiste piu'."), {}};
+    const SketchPatternData old = sketch.geometricConstraints.at(constraint).pattern;
+    SketchPatternData next = old;
+    next.count = values.count;
+    next.count2 = old.kind == 0 ? std::max(1, values.count2) : 1;
+    next.spacing = values.spacing;
+    next.spacing2 = values.spacing2;
+    next.angle = values.angle;
+    next.spread = values.spread;
+    next.dimensioned = values.dimensioned;
+    next.dimensioned2 = values.dimensioned2;
+    if (next.kind == 0 && (next.count < 1 || next.count * next.count2 < 2)) return {QStringLiteral("Ripetizione: servono almeno due istanze."), {}};
+    if (next.kind == 1 && next.count < 2) return {QStringLiteral("Ripetizione: servono almeno due istanze."), {}};
+    if (next.kind == 0 && (!(std::fabs(next.spacing) > kTolerance) || (next.count2 > 1 && !(std::fabs(next.spacing2) > kTolerance))))
+        return {QStringLiteral("Ripetizione: il passo deve essere diverso da zero."), {}};
+    if (next.instances() > 1000) return {QStringLiteral("Ripetizione: troppe istanze (al massimo 1000)."), {}};
+    if (next.instances() == old.instances() && next.count == old.count) {
+        sketch.geometricConstraints[constraint].pattern = next;
+        return {};
+    }
+    // Istanze diverse: via le copie vecchie (e il vincolo), poi la ripetizione
+    // rifatta dalle stesse sorgenti con i riferimenti rinumerati.
+    SketchObject work = sketch;
+    work.geometricConstraints.removeAt(constraint);
+    QSet<int> segments, curves;
+    for (const ConstraintRef &copy : old.copies)
+        if (copy.kind == 0) segments.insert(copy.element);
+        else if (copy.kind == 1) curves.insert(copy.element);
+    const QVector<int> segmentMap = removeSketchEntities(work, segments, curves);
+    QVector<int> curveMap(sketch.curves.size(), -1);
+    for (int index = 0, next2 = 0; index < sketch.curves.size(); ++index)
+        if (!curves.contains(index)) curveMap[index] = next2++;
+    const auto remap = [&](ConstraintRef r) {
+        if (r.kind == 0) r.element = segmentMap.value(r.element, -1);
+        else if (r.kind == 1) r.element = curveMap.value(r.element, -1);
+        return r;
+    };
+    ForgeCad::SketchPattern pattern;
+    pattern.kind = next.kind;
+    pattern.count = next.count;
+    pattern.count2 = next.count2;
+    pattern.spacing = next.spacing;
+    pattern.spacing2 = next.spacing2;
+    pattern.angle = next.angle;
+    pattern.spread = next.spread;
+    pattern.parametric = true;
+    pattern.dimensioned = next.dimensioned;
+    // Direzioni e riferimenti attuali (le rette danno la loro direzione: il segno sta nel passo).
+    const auto lineDirection = [&](const ConstraintRef &ref, double degrees, ConstraintRef &out) {
+        out = ref.kind >= 0 ? remap(ref) : ref;
+        if (out.kind == 0 && out.element >= 0 && out.element < work.segments.size())
+            return work.segments.at(out.element).second - work.segments.at(out.element).first;
+        if (out.kind == 2) return out.element == 1 ? QPointF(1, 0) : QPointF(0, 1);
+        out = ConstraintRef();
+        return QPointF(std::cos(degrees * M_PI / 180.0), std::sin(degrees * M_PI / 180.0));
+    };
+    pattern.direction = lineDirection(old.direction, old.directionAngle, pattern.directionRef);
+    pattern.direction2 = lineDirection(old.direction2, old.directionAngle2, pattern.direction2Ref);
+    pattern.center = old.centerPoint;
+    pattern.centerRef = old.center.kind >= 0 ? remap(old.center) : old.center;
+    if (pattern.centerRef.kind >= 0) {
+        QPointF c;
+        if (pattern.centerRef.kind == 2) c = QPointF(0, 0);
+        else if (pattern.centerRef.kind == 0 && pattern.centerRef.element >= 0) c = pattern.centerRef.point == 0 ? work.segments.at(pattern.centerRef.element).first
+                                                                                                            : work.segments.at(pattern.centerRef.element).second;
+        else if (pattern.centerRef.kind == 1 && pattern.centerRef.element >= 0) c = work.curves.at(pattern.centerRef.element).controlPoints.value(pattern.centerRef.point);
+        pattern.center = c;
+    }
+    pattern.axisPoint = old.axisPoint;
+    pattern.axisDirection = old.axisDirection;
+    pattern.axisRef = old.axis.kind >= 0 ? remap(old.axis) : old.axis;
+    if (pattern.axisRef.kind == 0 && pattern.axisRef.element >= 0) {
+        pattern.axisPoint = work.segments.at(pattern.axisRef.element).first;
+        pattern.axisDirection = work.segments.at(pattern.axisRef.element).second - pattern.axisPoint;
+    } else if (pattern.axisRef.kind == 2) {
+        pattern.axisPoint = QPointF(0, 0);
+        pattern.axisDirection = pattern.axisRef.element == 1 ? QPointF(1, 0) : QPointF(0, 1);
+    }
+    QVector<SketchEntity> sources;
+    for (const ConstraintRef &r : old.sources) {
+        const ConstraintRef m = remap(r);
+        if (m.element < 0) return {QStringLiteral("La ripetizione non e' valida (entita' di partenza mancanti)."), {}};
+        sources.append({m.kind, m.element});
+    }
+    // Il passo con il suo segno vale gia' lungo la retta: la direzione data e' quella della retta.
+    SketchEditResult result = patternSketchEntities(work, sources, pattern);
+    if (!result.error.isEmpty()) return result;
+    // Il vincolo nuovo e' in fondo: con il segno del passo di prima.
+    SketchPatternData &created = work.geometricConstraints.last().pattern;
+    created.spacing = next.spacing;
+    created.spacing2 = next.spacing2;
+    created.dimensioned2 = next.dimensioned2;
+    created.directionAngle = old.directionAngle;
+    created.directionAngle2 = old.directionAngle2;
+    sketch = work;
+    result.segmentMap = segmentMap;
     return result;
 }
 

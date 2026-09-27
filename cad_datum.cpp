@@ -154,18 +154,18 @@ const QVector<DatumMode> &datumModes() {
 int geometryRefRoles(const GeometryRef &ref, const QVector<SketchObject> &sketches) {
     switch (ref.kind) {
     case 0: return DatumRolePoint;
-    case 1: return DatumRolePlane;
+    case 1: return DatumRolePlane | DatumRoleFace;
     case 2: return DatumRoleLine | DatumRoleCurve;
     case 3: return DatumRolePoint;
     case 4: return DatumRoleLine | DatumRoleCurve;
-    case 5: return DatumRolePlane | DatumRoleLine;
+    case 5: return DatumRolePlane | DatumRoleLine | DatumRoleFace;
     case 6: return DatumRolePoint;
     case 7: {
         const bool segment = ref.element.kind == 0;
         const bool valid = ref.index >= 0 && ref.index < sketches.size();
         return valid && segment ? DatumRoleLine | DatumRoleCurve : DatumRoleCurve;
     }
-    case 8: return DatumRolePlane;
+    case 8: return DatumRolePlane | DatumRoleFace;
     case 9: return DatumRoleCurve;
     default: return 0;
     }

@@ -95,6 +95,11 @@ struct SketchFrame {
 //  - kind 1: curva `element` (point -1: la curva; k: il suo punto di controllo
 //    k: per cerchi, archi, ellissi e poligoni 0 e' il centro);
 //  - kind 2: riferimento del piano (element 0 origine, 1 asse X, 2 asse Y).
+// Le maniglie tangenti delle spline sono punti della curva: point =
+// kHandlePoint + 2 k + lato (lato 0 la maniglia entrante del punto k, 1 l'uscente).
+constexpr int kHandlePoint = 1 << 20;
+inline bool isHandlePoint(int point) { return point >= kHandlePoint; }
+inline int handlePoint(int k, int side) { return kHandlePoint + 2 * k + side; }
 struct ConstraintRef {
     int kind = -1;
     int element = -1;
@@ -110,7 +115,40 @@ struct ConstraintRef {
 // del modello, angoli in gradi.
 enum class ConstraintType {
     Coincident = 0, Horizontal, Vertical, Parallel, Perpendicular, Collinear, Tangent, Equal, Concentric, Midpoint,
-    PointOnCurve, Fix, Distance, Angle, Radius, Diameter
+    PointOnCurve, Fix, Distance, Angle, Radius, Diameter, Pattern
+};
+
+// Ripetizione parametrica nello schizzo (vincolo Pattern): le copie restano
+// l'immagine delle entita' di partenza, qualunque cosa cambi. Tipi come
+// SketchPattern (0 lineare anche a griglia, 1 circolare, 2 specchio).
+//  - sources: le entita' ripetute (point -1); copies: per ogni istanza (1, 2,
+//    ... nell'ordine: lineare riga per riga, j esterno) una copia per
+//    sorgente, kind -1 se la copia e' stata eliminata;
+//  - il passo (spacing, spacing2) o l'angolo (gradi: totale se spread, 360 =
+//    giro diviso in parti uguali, altrimenti il passo) sono incognite del
+//    risolutore: con `dimensioned` (`dimensioned2`) sono quote (valore
+//    fissato), altrimenti restano libere (gradi di liberta');
+//  - direction/direction2: una retta dello schizzo (segmento o asse) o, con
+//    kind -1, l'angolo fisso directionAngle (gradi dall'asse X);
+//  - center: un punto dello schizzo o, con kind -1, centerPoint;
+//  - axis: la retta dello specchio (segmento o asse) o, con kind -1, la retta
+//    per axisPoint lungo axisDirection.
+struct SketchPatternData {
+    int kind = 0;
+    QVector<ConstraintRef> sources;
+    QVector<ConstraintRef> copies;
+    int count = 3, count2 = 1;
+    double spacing = 10.0, spacing2 = 10.0;
+    double angle = 360.0;
+    bool spread = true;
+    bool dimensioned = true, dimensioned2 = true;
+    ConstraintRef direction, direction2;
+    double directionAngle = 0.0, directionAngle2 = 90.0;
+    ConstraintRef center;
+    QPointF centerPoint;
+    ConstraintRef axis;
+    QPointF axisPoint, axisDirection{0.0, 1.0};
+    int instances() const { return kind == 2 ? 1 : kind == 1 ? count - 1 : count * qMax(1, count2) - 1; }
 };
 
 // Vincolo geometrico dello schizzo, mantenuto dal risolutore (cad_constraints).
@@ -124,6 +162,7 @@ struct SketchConstraint {
     // dell'arco dell'angolo); se non e' stata spostata, una posizione di default.
     QPointF placement;
     bool placed = false;
+    SketchPatternData pattern;  // solo per Pattern
 };
 
 struct SketchObject {
@@ -384,6 +423,24 @@ struct ExtrusionObject {
     DatumParameters datum;
     // Pattern: la ripetizione del corpo firstBody.
     PatternParameters pattern;
+    // Extrusion: condizione di fine (0 la distanza `distance`; 1 fino a un
+    // punto; 2 fino a uno spigolo, nel suo punto piu' vicino al riferimento;
+    // 3 fino a una faccia o a un piano) con il riferimento `extentRef`
+    // (GeometryRef come i piani di costruzione).
+    int extent = 0;
+    GeometryRef extentRef;
+    // Extrusion: fusione del risultato con altri solidi (mergeOperation 0
+    // corpo nuovo, 1 unione, 2 sottrazione) nei corpi `mergeBodies` (indici
+    // minori, nascosti come gli operandi delle booleane); `mergeAuto` dice che
+    // sono stati scelti da soli, tra quelli che hanno punti in comune con
+    // l'estrusione. `mergeProbe` (non salvato): alla costruzione mergeBodies
+    // sono i candidati e restano solo quelli che la toccano.
+    int mergeOperation = 0;
+    bool mergeAuto = true;
+    QVector<int> mergeBodies;
+    bool mergeProbe = false;
+    // Booleane: gli strumenti oltre a secondBody (A op B op C ...).
+    QVector<int> booleanTools;
     SketchFrame datumFrame;
     bool datumValid = false;
     int firstBody = -1;

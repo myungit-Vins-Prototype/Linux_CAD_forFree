@@ -30,6 +30,8 @@ bool isDimension(ConstraintType type);
 // "centro del cerchio 2", "Origine"...) e del vincolo.
 QString describeRef(const SketchObject &sketch, const ConstraintRef &ref);
 QString describeConstraint(const SketchObject &sketch, const SketchConstraint &constraint);
+// Parametri di una ripetizione in breve ("3 × 10.000", "6 × 360.00° totali", "specchio").
+QString patternSummary(const SketchPatternData &pattern);
 
 // I vincoli che si possono dare ai riferimenti scelti (uno o due).
 QVector<ConstraintType> applicableConstraints(const SketchObject &sketch, const QVector<ConstraintRef> &refs);
@@ -76,7 +78,8 @@ SolveResult solveSketch(SketchObject &sketch, const QVector<PointTarget> &target
 // equazioni dei vincoli (con quelle implicite delle curve e senza le liberta'
 // che non cambiano la geometria, come il punto del raggio che gira sul
 // cerchio). Un'entita' e' completamente definita se nessun movimento
-// permesso dai vincoli sposta i suoi punti. Le maniglie delle spline non contano.
+// permesso dai vincoli sposta i suoi punti. Le maniglie delle spline contano
+// solo se un vincolo le usa (direttamente o con la tangenza nel loro punto).
 struct SketchAnalysis {
     int variables = 0, rank = 0, degreesOfFreedom = 0;
     QVector<bool> segmentDefined, curveDefined;

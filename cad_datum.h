@@ -15,7 +15,8 @@
 namespace ForgeCad {
 
 // Ruoli dei riferimenti nei modi (maschera di bit).
-enum DatumRole { DatumRolePlane = 1, DatumRolePoint = 2, DatumRoleLine = 4, DatumRoleCurve = 8 };
+// DatumRoleFace: una faccia qualsiasi, anche curva (la fine di un'estrusione).
+enum DatumRole { DatumRolePlane = 1, DatumRolePoint = 2, DatumRoleLine = 4, DatumRoleCurve = 8, DatumRoleFace = 16 };
 
 struct DatumMode {
     QString name;

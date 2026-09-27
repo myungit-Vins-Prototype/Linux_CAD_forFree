@@ -18,8 +18,11 @@ constexpr char kMagic[4] = {'F', 'C', 'A', 'D'};
 // 4 la posizione delle quote e l'orientamento degli assi del documento;
 // 5 taglio ed estensione delle superfici (piano e punto del taglio, tipo dell'estensione);
 // 6 scala dei corpi, smussi con due distanze o distanza e angolo; 7 elica, sweep, loft;
-// 8 corpi importati (STEP/IGES) e piani di costruzione, schizzi sui piani di costruzione.
-constexpr quint16 kVersion = 10;
+// 8 corpi importati (STEP/IGES) e piani di costruzione, schizzi sui piani di costruzione;
+// 9 corpi importati come testo STEP; 10 ripetizioni dei corpi; 11 ripetizioni
+// parametriche negli schizzi (vincolo Pattern), estrusioni fino a un
+// riferimento e fuse con altri solidi, booleane con piu' strumenti.
+constexpr quint16 kVersion = 11;
 constexpr quint8 kZlib = 1;
 
 void write(QDataStream &out, const CurveObject &curve) {
@@ -45,6 +48,44 @@ void read(QDataStream &in, CoincidentConstraint &c) {
     c = {v[0], v[1], v[2], v[3], v[4], v[5]};
 }
 
+void writeRef(QDataStream &out, const ConstraintRef &r) { out << qint32(r.kind) << qint32(r.element) << qint32(r.point); }
+void readRef(QDataStream &in, ConstraintRef &r) {
+    qint32 kind = -1, element = -1, point = -1;
+    in >> kind >> element >> point;
+    r = {kind, element, point};
+}
+
+void writePattern(QDataStream &out, const SketchPatternData &p) {
+    out << qint32(p.kind) << quint32(p.sources.size());
+    for (const ConstraintRef &r : p.sources) writeRef(out, r);
+    out << quint32(p.copies.size());
+    for (const ConstraintRef &r : p.copies) writeRef(out, r);
+    out << qint32(p.count) << qint32(p.count2) << p.spacing << p.spacing2 << p.angle << p.spread << p.dimensioned << p.dimensioned2;
+    for (const ConstraintRef &r : {p.direction, p.direction2, p.center, p.axis}) writeRef(out, r);
+    out << p.directionAngle << p.directionAngle2 << p.centerPoint << p.axisPoint << p.axisDirection;
+}
+
+bool readCount(QDataStream &in, quint32 &count);
+
+bool readPattern(QDataStream &in, SketchPatternData &p) {
+    qint32 kind = 0, count = 0, count2 = 0;
+    quint32 n = 0;
+    in >> kind;
+    if (!readCount(in, n)) return false;
+    p.sources.resize(int(n));
+    for (ConstraintRef &r : p.sources) readRef(in, r);
+    if (!readCount(in, n)) return false;
+    p.copies.resize(int(n));
+    for (ConstraintRef &r : p.copies) readRef(in, r);
+    in >> count >> count2 >> p.spacing >> p.spacing2 >> p.angle >> p.spread >> p.dimensioned >> p.dimensioned2;
+    for (ConstraintRef *r : {&p.direction, &p.direction2, &p.center, &p.axis}) readRef(in, *r);
+    in >> p.directionAngle >> p.directionAngle2 >> p.centerPoint >> p.axisPoint >> p.axisDirection;
+    p.kind = kind;
+    p.count = count;
+    p.count2 = count2;
+    return in.status() == QDataStream::Ok;
+}
+
 void write(QDataStream &out, const SketchObject &sketch) {
     out << sketch.name << qint32(sketch.plane) << sketch.segments << sketch.constraints << sketch.segmentLengths
         << sketch.segmentAngles << sketch.visible << sketch.constructionSegments;
@@ -61,6 +102,7 @@ void write(QDataStream &out, const SketchObject &sketch) {
         out << qint32(c.type);
         for (const ConstraintRef &r : {c.first, c.second}) out << qint32(r.kind) << qint32(r.element) << qint32(r.point);
         out << c.value << c.positions << c.placement << c.placed;
+        if (c.type == ConstraintType::Pattern) writePattern(out, c.pattern);  // formato 11
     }
     out << qint32(sketch.datumPlane);  // formato 8
 }
@@ -105,6 +147,7 @@ bool read(QDataStream &in, SketchObject &sketch, quint16 version) {
             }
             in >> c.value >> c.positions;
             if (version >= 4) in >> c.placement >> c.placed;
+            if (c.type == ConstraintType::Pattern && (version < 11 || !readPattern(in, c.pattern))) return false;
         }
     }
     if (version >= 8) {
@@ -177,6 +220,10 @@ void write(QDataStream &out, const ExtrusionObject &body) {
     out << qint32(r.kind);
     writeRefs(out, r.refs);
     out << qint32(r.count) << qint32(r.count2) << r.spacing << r.spacing2 << r.angle << r.spread << r.flip << r.flip2 << r.keepOriginal << r.featureOnly;
+    // Formato 11: fine e fusione delle estrusioni, strumenti delle booleane.
+    out << qint32(body.extent);
+    writeRefs(out, {body.extentRef});
+    out << qint32(body.mergeOperation) << body.mergeAuto << body.mergeBodies << body.booleanTools;
 }
 
 // `extras` (solo formato 5): i file scritti durante lo sviluppo del formato 5
@@ -264,6 +311,16 @@ bool read(QDataStream &in, ExtrusionObject &body, quint16 version, int extras) {
         p.kind = kind;
         p.count = count;
         p.count2 = count2;
+    }
+    if (version >= 11) {
+        qint32 extent = 0, merge = 0;
+        QVector<GeometryRef> refs;
+        in >> extent;
+        if (!readRefs(in, refs) || refs.size() != 1) return false;
+        in >> merge >> body.mergeAuto >> body.mergeBodies >> body.booleanTools;
+        body.extent = extent;
+        body.extentRef = refs.first();
+        body.mergeOperation = merge;
     }
     if (int(body.feature) < 0 || int(body.feature) > int(BodyFeature::Pattern)) return false;
     return in.status() == QDataStream::Ok;
