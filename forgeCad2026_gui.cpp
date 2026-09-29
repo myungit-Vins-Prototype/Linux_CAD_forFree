@@ -185,6 +185,16 @@ public:
         update();
     }
     void setWheelZoomEnabled(bool enabled) { wheelZoomEnabled_ = enabled; }
+    quint64 renderedFrameSerial() const { return renderedFrameSerial_; }
+    QImage panelBackdropFrame() {
+        if (panelBackdropSerial_ != renderedFrameSerial_ || panelBackdropCache_.isNull()) {
+            panelBackdropCache_ = grabFramebuffer();
+            // grabFramebuffer puo' provocare un paintGL: registra il seriale
+            // dopo la lettura per non considerare la cattura un nuovo frame.
+            panelBackdropSerial_ = renderedFrameSerial_;
+        }
+        return panelBackdropCache_;
+    }
     // Zoom: zoom_ e' l'altezza visibile in unita' del modello. I limiti
     // dipendono dalla geometria della scena (zoomLimits); "zoom tutto"
     // (resetZoom) inquadra tutta la geometria visibile.
@@ -2689,6 +2699,7 @@ protected:
         drawReferenceLabels();
         drawSelectionHighlight();
         drawPlaneResizeHandles();
+        ++renderedFrameSerial_;
     }
 
     void keyPressEvent(QKeyEvent *event) override {
@@ -8756,6 +8767,9 @@ private:
     static constexpr float kDefaultPlaneHalf = 4.0f;  // mezzo lato dei piani senza geometria
     mutable float planeHalf_ = kDefaultPlaneHalf;
     bool painted_ = false;
+    quint64 renderedFrameSerial_ = 0;
+    quint64 panelBackdropSerial_ = std::numeric_limits<quint64>::max();
+    QImage panelBackdropCache_;
     // Trascinamento con lo strumento Selezione: un punto (estremo di segmento
     // con i punti coincidenti) o un segmento intero.
     bool pointDragActive_ = false, bodyDragMoved_ = false;
@@ -8773,6 +8787,412 @@ static const QStringList &planeNames() {
                                       QStringLiteral("Piano YZ - Destro")};
     return names;
 }
+
+// Aspetto comune delle finestre delle funzioni. Il fondale arriva direttamente
+// dal framebuffer del viewport CAD, quindi non dipende da cio' che Wayland
+// considera dietro la finestra e segue ogni nuovo frame della scena.
+class FunctionDialogPanel : public QDialog {
+public:
+    explicit FunctionDialogPanel(QWidget *parent = nullptr)
+        : QDialog(overlayParent(parent)), panelColor_(palette().color(QPalette::Window)), captureTimer_(this) {
+        embedded_ = dynamic_cast<CadViewport *>(parentWidget()) != nullptr;
+        if (embedded_) {
+            setWindowFlags(Qt::Widget);
+            parentWidget()->installEventFilter(this);
+        }
+        setObjectName(QStringLiteral("functionDialogPanel"));
+        setAttribute(Qt::WA_TranslucentBackground);
+        setAutoFillBackground(false);
+        setSizeGripEnabled(false);
+        setWindowFlag(Qt::MSWindowsFixedSizeDialogHint, false);
+        setMinimumSize(400, 280);
+        QSettings settings;
+        if (!settings.contains(QStringLiteral("view/functionPanelOpacity")))
+            settings.setValue(QStringLiteral("view/functionPanelOpacity"), settings.value(QStringLiteral("loft/dialogOpacity"), 88));
+        opacity_ = qBound(25, settings.value(QStringLiteral("view/functionPanelOpacity"),
+                                             settings.value(QStringLiteral("loft/dialogOpacity"), 88)).toInt(), 100);
+        blur_ = qBound(0, settings.value(QStringLiteral("view/functionPanelBlur"), 12).toInt(), 40);
+        cornerRadius_ = qBound(0, settings.value(QStringLiteral("view/functionPanelCornerRadius"), 10).toInt(), 40);
+        resizeGrip_ = new QSizeGrip(this);
+        resizeGrip_->setObjectName(QStringLiteral("functionPanelResizeGrip"));
+        resizeGrip_->setFixedSize(22, 22);
+        resizeGrip_->installEventFilter(this);
+        captureTimer_.setSingleShot(true);
+        connect(&captureTimer_, &QTimer::timeout, this, [this] { captureSceneBackdrop(); });
+        updatePalette();
+    }
+    QFormLayout *createScrollableForm() {
+        if (form_) return form_;
+        auto *root = new QVBoxLayout(this);
+        auto *scroll = new QScrollArea(this);
+        scroll->setObjectName(QStringLiteral("functionDialogScroll"));
+        scroll->setWidgetResizable(true);
+        scroll->setFrameShape(QFrame::NoFrame);
+        scroll->setSizeAdjustPolicy(QAbstractScrollArea::AdjustIgnored);
+        auto *contents = new QWidget(scroll);
+        contents->setObjectName(QStringLiteral("functionDialogContents"));
+        contents->setAutoFillBackground(false);
+        scroll->viewport()->setAutoFillBackground(false);
+        form_ = new QFormLayout(contents);
+        scroll->setWidget(contents);
+        root->addWidget(scroll, 1);
+        resize(560, 600);
+        return form_;
+    }
+    QColor panelColor() const { return panelColor_; }
+    int panelOpacity() const { return opacity_; }
+    int backdropBlur() const { return blur_; }
+    int cornerRadius() const { return cornerRadius_; }
+    bool isEmbedded() const { return embedded_; }
+    void beginEmbeddedMove(const QPoint &globalPosition) {
+        if (!embedded_) return;
+        dragOffset_ = globalPosition - mapToGlobal(QPoint());
+        dragging_ = true;
+        raise();
+    }
+    void updateEmbeddedMove(const QPoint &globalPosition) {
+        if (!dragging_ || !parentWidget()) return;
+        move(parentWidget()->mapFromGlobal(globalPosition - dragOffset_));
+        keepInsideViewport();
+    }
+    void endEmbeddedMove() { dragging_ = false; }
+    void placeAtLeft() {
+        if (!embedded_ || !parentWidget()) return;
+        resize(size().boundedTo(parentWidget()->size() - QSize(32, 32)));
+        move(16, qMax(16, (parentWidget()->height() - height()) / 2));
+        keepInsideViewport();
+        placed_ = true;
+    }
+    void setPanelOpacity(int percent) {
+        opacity_ = qBound(25, percent, 100);
+        updatePalette();
+        scheduleBackdropCapture(0);
+        update();
+    }
+    void setBackdropBlur(int pixels) {
+        blur_ = qBound(0, pixels, 40);
+        scheduleBackdropCapture(0);
+        update();
+    }
+    void setCornerRadius(int pixels) {
+        cornerRadius_ = qBound(0, pixels, 40);
+        updateRoundedMask();
+        update();
+    }
+    void reloadAppearance() {
+        QSettings settings;
+        setPanelOpacity(settings.value(QStringLiteral("view/functionPanelOpacity"), 88).toInt());
+        setBackdropBlur(settings.value(QStringLiteral("view/functionPanelBlur"), 12).toInt());
+        setCornerRadius(settings.value(QStringLiteral("view/functionPanelCornerRadius"), 10).toInt());
+    }
+protected:
+    void showEvent(QShowEvent *event) override {
+        QDialog::showEvent(event);
+        locateViewport();
+        if (embedded_ && !placed_) placeAtLeft();
+        raise();
+        scheduleBackdropCapture(0);
+    }
+    void moveEvent(QMoveEvent *event) override {
+        QDialog::moveEvent(event);
+        scheduleBackdropCapture(0);
+    }
+    void resizeEvent(QResizeEvent *event) override {
+        QDialog::resizeEvent(event);
+        if (embedded_ && placed_) keepInsideViewport();
+        if (resizeGrip_) {
+            resizeGrip_->move(width() - resizeGrip_->width(), height() - resizeGrip_->height());
+            resizeGrip_->raise();
+        }
+        updateRoundedMask();
+        scheduleBackdropCapture(0);
+    }
+    void paintEvent(QPaintEvent *event) override {
+        QPainter painter(this);
+        painter.setRenderHint(QPainter::Antialiasing);
+        painter.setRenderHint(QPainter::SmoothPixmapTransform);
+        const QRectF panelRect = QRectF(rect()).adjusted(0.5, 0.5, -0.5, -0.5);
+        QPainterPath panelPath;
+        panelPath.addRoundedRect(panelRect, cornerRadius_, cornerRadius_);
+        painter.setClipPath(panelPath);
+        if (!backdrop_.isNull()) painter.drawImage(rect(), backdrop_);
+        QColor color = panelColor_;
+        color.setAlpha(qRound(255.0 * opacity_ / 100.0));
+        painter.fillRect(rect(), color);
+        painter.setClipping(false);
+        painter.setPen(QPen(QColor(120, 165, 205, 150), 1.0));
+        painter.setBrush(Qt::NoBrush);
+        painter.drawPath(panelPath);
+        QDialog::paintEvent(event);
+    }
+    bool eventFilter(QObject *watched, QEvent *event) override {
+        if (watched == resizeGrip_) {
+            if (event->type() == QEvent::MouseButtonPress) {
+                auto *mouse = static_cast<QMouseEvent *>(event);
+                if (mouse->button() == Qt::LeftButton) {
+                    resizing_ = true;
+                    resizeStartGlobal_ = mouse->globalPosition().toPoint();
+                    resizeStartSize_ = size();
+                    raise();
+                }
+                return true;
+            }
+            if (event->type() == QEvent::MouseMove && resizing_) {
+                const QPoint delta = static_cast<QMouseEvent *>(event)->globalPosition().toPoint() - resizeStartGlobal_;
+                QSize requested = resizeStartSize_ + QSize(delta.x(), delta.y());
+                requested = requested.expandedTo(minimumSize());
+                if (embedded_ && parentWidget())
+                    requested = requested.boundedTo(QSize(parentWidget()->width() - x(), parentWidget()->height() - y()));
+                resize(requested);
+                return true;
+            }
+            if (event->type() == QEvent::MouseButtonRelease) {
+                resizing_ = false;
+                return true;
+            }
+        }
+        if (embedded_ && watched == parentWidget() && event->type() == QEvent::Resize) keepInsideViewport();
+        return QDialog::eventFilter(watched, event);
+    }
+private:
+    static QWidget *overlayParent(QWidget *requested) {
+        if (!requested) return nullptr;
+        QWidget *root = requested->window();
+        if (!root) return requested;
+        for (QOpenGLWidget *candidate : root->findChildren<QOpenGLWidget *>())
+            if (dynamic_cast<CadViewport *>(candidate)) return candidate;
+        return requested;
+    }
+    void keepInsideViewport() {
+        if (!embedded_ || !parentWidget()) return;
+        const QSize maximum(qMax(1, parentWidget()->width() - 16), qMax(1, parentWidget()->height() - 16));
+        if (size().width() > maximum.width() || size().height() > maximum.height())
+            resize(size().boundedTo(maximum));
+        move(qBound(0, x(), qMax(0, parentWidget()->width() - width())),
+             qBound(0, y(), qMax(0, parentWidget()->height() - height())));
+    }
+    void updateRoundedMask() {
+        if (cornerRadius_ <= 0) {
+            clearMask();
+            return;
+        }
+        QPainterPath path;
+        path.addRoundedRect(QRectF(rect()), cornerRadius_, cornerRadius_);
+        setMask(QRegion(path.toFillPolygon().toPolygon()));
+    }
+    void applyTransparentStyle(const QColor &foreground) {
+        QColor popup = panelColor_.darker(125);
+        popup.setAlpha(245);
+        QColor field = panelColor_.lighter(112);
+        field.setAlpha(150);
+        const QString popupRgba = QStringLiteral("rgba(%1,%2,%3,%4)")
+            .arg(popup.red()).arg(popup.green()).arg(popup.blue()).arg(popup.alpha());
+        const QString fieldRgba = QStringLiteral("rgba(%1,%2,%3,%4)")
+            .arg(field.red()).arg(field.green()).arg(field.blue()).arg(field.alpha());
+        setStyleSheet(QStringLiteral(
+            "QDialog#functionDialogPanel, QScrollArea#functionDialogScroll, "
+            "QScrollArea#functionDialogScroll > QWidget > QWidget, QWidget#functionDialogContents, "
+            "QWidget#loftContents, QWidget#loftFooter, QAbstractItemView, QAbstractSpinBox, QPushButton { background: transparent; }"
+            "QAbstractItemView::item { background: transparent; }"
+            "QComboBox { background-color: %2; color: %1; border: 1px solid rgba(135,170,205,150); padding: 2px 22px 2px 5px; }"
+            "QComboBox QAbstractItemView { background-color: %3; color: %1; border: 1px solid #52708d; outline: 0; }"
+            "QComboBox QAbstractItemView::item { background-color: %3; color: %1; min-height: 22px; }"
+            "QComboBox QAbstractItemView::item:hover, QComboBox QAbstractItemView::item:selected { background-color: #087fe7; color: #ffffff; font-weight: 700; border: 1px solid #69b9ff; }"
+            "QSizeGrip#functionPanelResizeGrip { background: transparent; }")
+            .arg(foreground.name(QColor::HexRgb), fieldRgba, popupRgba));
+    }
+    void locateViewport() {
+        if (viewport_) return;
+        QWidget *root = parentWidget() ? parentWidget()->window() : nullptr;
+        if (!root) return;
+        for (QOpenGLWidget *candidate : root->findChildren<QOpenGLWidget *>()) {
+            if (auto *cad = dynamic_cast<CadViewport *>(candidate)) {
+                viewport_ = cad;
+                connect(viewport_, &QOpenGLWidget::frameSwapped, this,
+                        [this] {
+                            if (viewport_ && viewport_->renderedFrameSerial() != capturedFrameSerial_)
+                                scheduleBackdropCapture(66);
+                        }, Qt::QueuedConnection);
+                break;
+            }
+        }
+    }
+    void scheduleBackdropCapture(int delay) {
+        if (!isVisible() || opacity_ >= 100) return;
+        if (!captureTimer_.isActive() || delay == 0) captureTimer_.start(delay);
+    }
+    static QImage boxBlurPass(const QImage &source, int radius, bool horizontal) {
+        if (radius <= 0 || source.isNull()) return source;
+        QImage result(source.size(), QImage::Format_ARGB32_Premultiplied);
+        result.setDevicePixelRatio(source.devicePixelRatio());
+        const int width = source.width(), height = source.height();
+        const int count = 2 * radius + 1;
+        if (horizontal) {
+            for (int y = 0; y < height; ++y) {
+                const QRgb *input = reinterpret_cast<const QRgb *>(source.constScanLine(y));
+                QRgb *output = reinterpret_cast<QRgb *>(result.scanLine(y));
+                int a = 0, r = 0, g = 0, b = 0;
+                for (int k = -radius; k <= radius; ++k) {
+                    const QRgb pixel = input[qBound(0, k, width - 1)];
+                    a += qAlpha(pixel); r += qRed(pixel); g += qGreen(pixel); b += qBlue(pixel);
+                }
+                for (int x = 0; x < width; ++x) {
+                    output[x] = qRgba(r / count, g / count, b / count, a / count);
+                    const QRgb removed = input[qBound(0, x - radius, width - 1)];
+                    const QRgb added = input[qBound(0, x + radius + 1, width - 1)];
+                    a += qAlpha(added) - qAlpha(removed);
+                    r += qRed(added) - qRed(removed);
+                    g += qGreen(added) - qGreen(removed);
+                    b += qBlue(added) - qBlue(removed);
+                }
+            }
+        } else {
+            for (int x = 0; x < width; ++x) {
+                int a = 0, r = 0, g = 0, b = 0;
+                for (int k = -radius; k <= radius; ++k) {
+                    const QRgb pixel = reinterpret_cast<const QRgb *>(source.constScanLine(qBound(0, k, height - 1)))[x];
+                    a += qAlpha(pixel); r += qRed(pixel); g += qGreen(pixel); b += qBlue(pixel);
+                }
+                for (int y = 0; y < height; ++y) {
+                    reinterpret_cast<QRgb *>(result.scanLine(y))[x] = qRgba(r / count, g / count, b / count, a / count);
+                    const QRgb removed = reinterpret_cast<const QRgb *>(source.constScanLine(qBound(0, y - radius, height - 1)))[x];
+                    const QRgb added = reinterpret_cast<const QRgb *>(source.constScanLine(qBound(0, y + radius + 1, height - 1)))[x];
+                    a += qAlpha(added) - qAlpha(removed);
+                    r += qRed(added) - qRed(removed);
+                    g += qGreen(added) - qGreen(removed);
+                    b += qBlue(added) - qBlue(removed);
+                }
+            }
+        }
+        return result;
+    }
+    static QImage blurScene(QImage image, int radius) {
+        if (radius <= 0) return image;
+        // Tre filtri box separabili approssimano una gaussiana senza ridurre
+        // la risoluzione: linee e silhouette restano morbide ma non a blocchi.
+        const int passRadius = qMax(1, radius / 2);
+        for (int pass = 0; pass < 3; ++pass) {
+            image = boxBlurPass(image, passRadius, true);
+            image = boxBlurPass(image, passRadius, false);
+        }
+        return image;
+    }
+    void captureSceneBackdrop() {
+        if (!isVisible() || opacity_ >= 100) {
+            backdrop_ = QImage();
+            return;
+        }
+        locateViewport();
+        if (!viewport_ || !viewport_->isVisible() || size().isEmpty()) return;
+        QImage frame = viewport_->panelBackdropFrame();
+        if (frame.isNull()) return;
+        // Il pannello e' figlio del viewport: pos() e size() sono nello stesso
+        // sistema di coordinate della scena e identificano esattamente cio'
+        // che si trova sotto il vetro, anche durante il trascinamento.
+        frame.setDevicePixelRatio(1.0);
+        const qreal viewportDpr = viewport_->devicePixelRatioF();
+        const QSize viewportPixels(qMax(1, qRound(viewport_->width() * viewportDpr)),
+                                   qMax(1, qRound(viewport_->height() * viewportDpr)));
+        if (frame.size() != viewportPixels)
+            frame = frame.scaled(viewportPixels, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
+        // Un pixel di lavoro per pixel logico e' sufficiente per un'immagine
+        // volutamente sfocata e riduce fino a quattro volte il costo su HiDPI.
+        const QSize scenePixels(qMax(1, width()), qMax(1, height()));
+        const QRectF source(x() * viewportDpr, y() * viewportDpr,
+                            width() * viewportDpr, height() * viewportDpr);
+        QImage scene(scenePixels, QImage::Format_ARGB32_Premultiplied);
+        scene.setDevicePixelRatio(1.0);
+        scene.fill(Qt::transparent);
+        {
+            QPainter painter(&scene);
+            painter.drawImage(QRectF(QPointF(0, 0), size()), frame, source);
+        }
+        backdrop_ = blurScene(std::move(scene), blur_);
+        capturedFrameSerial_ = viewport_->renderedFrameSerial();
+        updatePalette();
+        update();
+    }
+    void updatePalette() {
+        const QColor behind = backdrop_.isNull() ? panelColor_
+            : backdrop_.pixelColor(backdrop_.width() / 2, backdrop_.height() / 2);
+        const double alpha = opacity_ / 100.0;
+        const QColor visible = QColor::fromRgbF(alpha * panelColor_.redF() + (1.0 - alpha) * behind.redF(),
+                                                alpha * panelColor_.greenF() + (1.0 - alpha) * behind.greenF(),
+                                                alpha * panelColor_.blueF() + (1.0 - alpha) * behind.blueF());
+        const double luminance = 0.2126 * visible.redF() + 0.7152 * visible.greenF() + 0.0722 * visible.blueF();
+        const QColor foreground = luminance > 0.52 ? QColor(20, 24, 29) : QColor(242, 246, 250);
+        QPalette p = palette();
+        for (QPalette::ColorGroup group : {QPalette::Active, QPalette::Inactive, QPalette::Disabled}) {
+            p.setColor(group, QPalette::WindowText, foreground);
+            p.setColor(group, QPalette::Text, foreground);
+            p.setColor(group, QPalette::ButtonText, foreground);
+            p.setColor(group, QPalette::ToolTipText, foreground);
+            p.setColor(group, QPalette::HighlightedText, QColor(255, 255, 255));
+            p.setColor(group, QPalette::Highlight, QColor(8, 127, 231));
+            p.setColor(group, QPalette::Base, panelColor_.darker(125));
+        }
+        setPalette(p);
+        applyTransparentStyle(foreground);
+    }
+    QColor panelColor_;
+    int opacity_ = 88;
+    int blur_ = 12;
+    int cornerRadius_ = 10;
+    QPointer<CadViewport> viewport_;
+    QImage backdrop_;
+    QTimer captureTimer_;
+    quint64 capturedFrameSerial_ = std::numeric_limits<quint64>::max();
+    QFormLayout *form_ = nullptr;
+    QSizeGrip *resizeGrip_ = nullptr;
+    QPoint dragOffset_;
+    QPoint resizeStartGlobal_;
+    QSize resizeStartSize_;
+    bool embedded_ = false, dragging_ = false, resizing_ = false, placed_ = false;
+};
+
+class FeatureOperationDiagram final : public QWidget {
+public:
+    enum Kind { Extrusion, Revolution };
+    explicit FeatureOperationDiagram(Kind kind, QWidget *parent = nullptr) : QWidget(parent), kind_(kind) {
+        setMinimumSize(390, 180);
+        setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+    }
+protected:
+    void paintEvent(QPaintEvent *) override {
+        QPainter p(this);
+        p.setRenderHint(QPainter::Antialiasing);
+        p.fillRect(rect(), QColor(27, 35, 45));
+        const QColor profile(90, 205, 255), result(58, 164, 220, 95), arrow(255, 196, 80), text(225, 232, 240);
+        p.setPen(text);
+        QFont title = p.font(); title.setBold(true); title.setPixelSize(13); p.setFont(title);
+        p.drawText(QRectF(14, 9, width() - 28, 24), kind_ == Extrusion ? QStringLiteral("ESTRUSIONE DEL PROFILO")
+                                                                       : QStringLiteral("RIVOLUZIONE ATTORNO ALL'ASSE"));
+        if (kind_ == Extrusion) {
+            const QRectF front(75, 75, 95, 65), back(205, 45, 95, 65);
+            p.setBrush(result); p.setPen(QPen(profile, 2));
+            QPainterPath body; body.addRect(front); body.addRect(back);
+            body.moveTo(front.topLeft()); body.lineTo(back.topLeft()); body.moveTo(front.topRight()); body.lineTo(back.topRight());
+            body.moveTo(front.bottomLeft()); body.lineTo(back.bottomLeft()); body.moveTo(front.bottomRight()); body.lineTo(back.bottomRight());
+            p.drawPath(body);
+            p.setPen(QPen(arrow, 3, Qt::SolidLine, Qt::RoundCap));
+            p.drawLine(QPointF(165, 58), QPointF(238, 31));
+            p.drawLine(QPointF(238, 31), QPointF(226, 29)); p.drawLine(QPointF(238, 31), QPointF(230, 40));
+            p.setPen(text); p.drawText(QRectF(305, 73, width() - 318, 45), Qt::AlignVCenter | Qt::AlignLeft, QStringLiteral("distanza\no riferimento"));
+        } else {
+            const qreal axisX = width() * 0.43;
+            p.setPen(QPen(QColor(160, 174, 188), 2, Qt::DashLine)); p.drawLine(QPointF(axisX, 40), QPointF(axisX, 158));
+            QPainterPath profilePath; profilePath.moveTo(axisX + 12, 137); profilePath.lineTo(axisX + 58, 137);
+            profilePath.cubicTo(axisX + 80, 116, axisX + 75, 78, axisX + 32, 63); profilePath.lineTo(axisX + 12, 63);
+            p.setBrush(QColor(90, 205, 255, 45)); p.setPen(QPen(profile, 2.5)); p.drawPath(profilePath);
+            p.setBrush(Qt::NoBrush); p.setPen(QPen(arrow, 3, Qt::SolidLine, Qt::RoundCap));
+            QRectF arc(axisX - 96, 47, 192, 100); p.drawArc(arc, 30 * 16, 285 * 16);
+            const QPointF tip(axisX + 83, 63); p.drawLine(tip, tip + QPointF(-12, -1)); p.drawLine(tip, tip + QPointF(-6, 10));
+            p.setPen(text); p.drawText(QRectF(16, 70, axisX - 115, 54), Qt::AlignRight | Qt::AlignVCenter, QStringLiteral("asse scelto\ndallo schizzo"));
+        }
+    }
+private:
+    Kind kind_;
+};
 
 // Finestra di una funzione che si chiude solo se il comando riesce: la
 // conferma esegue `apply`; se restituisce un errore, la finestra resta aperta
@@ -8805,7 +9225,7 @@ static bool runUntilApplied(QDialog &dialog, QFormLayout *form, QDialogButtonBox
         visible.remove(QRegularExpression(QStringLiteral("\\s*\\[\\[loft-section=\\d+\\]\\]")));
         errorLabel->setText(visible + QStringLiteral("\nCorreggi i valori e riprova, oppure Annulla."));
         errorLabel->show();
-        dialog.adjustSize();
+        if (!dynamic_cast<FunctionDialogPanel *>(&dialog)) dialog.adjustSize();
     });
     return dialog.exec() == QDialog::Accepted;
 }
@@ -8841,7 +9261,7 @@ static bool runUntilAppliedModeless(QMainWindow *window, CadViewport *viewport, 
         visible.remove(QRegularExpression(QStringLiteral("\\s*\\[\\[loft-section=\\d+\\]\\]")));
         errorLabel->setText(visible + QStringLiteral("\nCorreggi i valori e riprova, oppure Annulla."));
         errorLabel->show();
-        dialog.adjustSize();
+        if (!dynamic_cast<FunctionDialogPanel *>(&dialog)) dialog.adjustSize();
     });
     return runModeless(window, viewport, dialog);
 }
@@ -8912,9 +9332,9 @@ static BlendDialogResult blendDialog(QWidget *parent, CadViewport *viewport, con
                                      const QVector<EdgePoint> &edges, double size, bool chamfer, bool allowKindChange, const ChamferSpec &initialSpec,
                                      const std::function<QString(double, bool, const ChamferSpec &)> &apply) {
     BlendDialogResult result;
-    QDialog dialog(parent);
+    FunctionDialogPanel dialog(parent);
     dialog.setWindowTitle(title);
-    auto *form = new QFormLayout(&dialog);
+    auto *form = dialog.createScrollableForm();
     auto *sizeBox = new ForgeCad::ExpressionSpinBox(&dialog);
     sizeBox->setDecimals(6);
     sizeBox->setRange(0.000001, 100000.0);
@@ -9035,9 +9455,9 @@ static bool scaleDialog(QWidget *parent, CadViewport *viewport, const QString &t
         QMessageBox::information(parent, title, QStringLiteral("Nella scena non ci sono corpi da scalare."));
         return false;
     }
-    QDialog dialog(parent);
+    FunctionDialogPanel dialog(parent);
     dialog.setWindowTitle(title);
-    auto *form = new QFormLayout(&dialog);
+    auto *form = dialog.createScrollableForm();
     auto *bodyBox = new QComboBox(&dialog);
     for (int index : candidates) bodyBox->addItem(bodies.at(index).visible ? bodies.at(index).name : bodies.at(index).name + QStringLiteral(" (nascosto)"));
     bodyBox->setCurrentIndex(qMax(0, int(candidates.indexOf(definition.firstBody))));
@@ -9143,9 +9563,9 @@ static HelixDialogResult helixDialog(QWidget *parent, CadViewport *viewport, con
         QMessageBox::information(parent, title, QStringLiteral("Serve un cerchio o un arco in uno schizzo, o uno spigolo circolare o una faccia cilindrica."));
         return result;
     }
-    QDialog dialog(parent);
+    FunctionDialogPanel dialog(parent);
     dialog.setWindowTitle(title);
-    auto *form = new QFormLayout(&dialog);
+    auto *form = dialog.createScrollableForm();
     auto *baseRow = new QWidget(&dialog);
     auto *baseLayout = new QHBoxLayout(baseRow);
     baseLayout->setContentsMargins(0, 0, 0, 0);
@@ -9286,9 +9706,9 @@ static bool sweepDialog(QWidget *parent, CadViewport *viewport, const QString &t
         QMessageBox::information(parent, title, QStringLiteral("Servono uno schizzo con il profilo e un percorso: un altro schizzo o una curva (elica)."));
         return false;
     }
-    QDialog dialog(parent);
+    FunctionDialogPanel dialog(parent);
     dialog.setWindowTitle(title);
-    auto *form = new QFormLayout(&dialog);
+    auto *form = dialog.createScrollableForm();
     auto *profileBox = new QComboBox(&dialog), *pathTypeBox = new QComboBox(&dialog), *pathSketchBox = new QComboBox(&dialog),
          *pathChainBox = new QComboBox(&dialog), *curveBox = new QComboBox(&dialog);
     for (const SketchObject &sketch : sketches) {
@@ -9402,30 +9822,6 @@ static bool sweepDialog(QWidget *parent, CadViewport *viewport, const QString &t
     if (auto *window = qobject_cast<QMainWindow *>(parent)) return runUntilAppliedModeless(window, viewport, dialog, form, buttons, validate);
     return runUntilApplied(dialog, form, buttons, validate);
 }
-
-class LoftDialogPanel final : public QDialog {
-public:
-    explicit LoftDialogPanel(QWidget *parent = nullptr) : QDialog(parent), panelColor_(palette().color(QPalette::Window)) {
-        setAttribute(Qt::WA_TranslucentBackground);
-        setAutoFillBackground(false);
-    }
-    QColor panelColor() const { return panelColor_; }
-    void setPanelOpacity(int percent) {
-        opacity_ = qBound(25, percent, 100);
-        update();
-    }
-protected:
-    void paintEvent(QPaintEvent *event) override {
-        QPainter painter(this);
-        QColor color = panelColor_;
-        color.setAlpha(qRound(255.0 * opacity_ / 100.0));
-        painter.fillRect(rect(), color);
-        QDialog::paintEvent(event);
-    }
-private:
-    QColor panelColor_;
-    int opacity_ = 88;
-};
 
 class LoftSelectionDiagram final : public QWidget {
 public:
@@ -9545,7 +9941,7 @@ static bool loftDialog(QWidget *parent, CadViewport *viewport, const QString &ti
         QMessageBox::information(parent, title, QStringLiteral("Servono almeno due schizzi, uno per sezione."));
         return false;
     }
-    LoftDialogPanel dialog(parent);
+    FunctionDialogPanel dialog(parent);
     dialog.setObjectName(QStringLiteral("loftDialog"));
     dialog.setWindowTitle(title);
     dialog.resize(QSettings().value(QStringLiteral("loft/dialogSize"), QSize(680, 720)).toSize());
@@ -9642,54 +10038,6 @@ static bool loftDialog(QWidget *parent, CadViewport *viewport, const QString &ti
                             &dialog);
     help->setWordWrap(true);
     help->setMaximumWidth(570);
-    auto *opacityRow = new QWidget(&dialog);
-    auto *opacityLayout = new QHBoxLayout(opacityRow);
-    opacityLayout->setContentsMargins(0, 0, 0, 0);
-    auto *opacitySlider = new QSlider(Qt::Horizontal, opacityRow);
-    opacitySlider->setRange(25, 100);
-    opacitySlider->setValue(qBound(25, QSettings().value(QStringLiteral("loft/dialogOpacity"), 88).toInt(), 100));
-    auto *opacityValue = new QLabel(opacityRow);
-    opacityValue->setMinimumWidth(42);
-    opacityLayout->addWidget(opacitySlider, 1);
-    opacityLayout->addWidget(opacityValue);
-    const QColor panelColor = dialog.panelColor();
-    const BackgroundSettings sceneBackground = viewport->background();
-    const auto applyPanelOpacity = [&](int percent) {
-        const double alpha = percent / 100.0;
-        const QColor scene = sceneBackground.gradient
-            ? QColor::fromRgbF(0.5 * (sceneBackground.startColor.redF() + sceneBackground.endColor.redF()),
-                               0.5 * (sceneBackground.startColor.greenF() + sceneBackground.endColor.greenF()),
-                               0.5 * (sceneBackground.startColor.blueF() + sceneBackground.endColor.blueF()))
-            : sceneBackground.startColor;
-        const QColor visible = QColor::fromRgbF(alpha * panelColor.redF() + (1.0 - alpha) * scene.redF(),
-                                                alpha * panelColor.greenF() + (1.0 - alpha) * scene.greenF(),
-                                                alpha * panelColor.blueF() + (1.0 - alpha) * scene.blueF());
-        const double luminance = 0.2126 * visible.redF() + 0.7152 * visible.greenF() + 0.0722 * visible.blueF();
-        const QColor foreground = luminance > 0.52 ? QColor(20, 24, 29) : QColor(242, 246, 250);
-        const QColor secondary = luminance > 0.52 ? QColor(65, 75, 85) : QColor(180, 197, 211);
-        QPalette palette = dialog.palette();
-        for (QPalette::ColorGroup group : {QPalette::Active, QPalette::Inactive, QPalette::Disabled}) {
-            palette.setColor(group, QPalette::WindowText, foreground);
-            palette.setColor(group, QPalette::Text, foreground);
-            palette.setColor(group, QPalette::ButtonText, foreground);
-            palette.setColor(group, QPalette::ToolTipText, foreground);
-        }
-        dialog.setPalette(palette);
-        QPalette secondaryPalette = pickStatus->palette();
-        secondaryPalette.setColor(QPalette::WindowText, secondary);
-        pickStatus->setPalette(secondaryPalette);
-        help->setPalette(secondaryPalette);
-        dialog.setPanelOpacity(percent);
-        dialog.setStyleSheet(QStringLiteral(
-            "QDialog#loftDialog, QScrollArea#loftScroll, QScrollArea#loftScroll > QWidget > QWidget, "
-            "QWidget#loftContents, QWidget#loftFooter, QAbstractItemView, QAbstractSpinBox, QComboBox, QPushButton { background: transparent; }"
-            "QAbstractItemView::item { background: transparent; }"));
-        opacityValue->setText(QStringLiteral("%1 %").arg(percent));
-        QSettings().setValue(QStringLiteral("loft/dialogOpacity"), percent);
-    };
-    QObject::connect(opacitySlider, &QSlider::valueChanged, &dialog, applyPanelOpacity);
-    applyPanelOpacity(opacitySlider->value());
-    form->addRow(QStringLiteral("Opacità pannello:"), opacityRow);
     form->addRow(new LoftSelectionDiagram(&dialog));
     form->addRow(QStringLiteral("Sezioni:"), list);
     form->addRow(QString(), moveRow);
@@ -9822,6 +10170,10 @@ static bool loftDialog(QWidget *parent, CadViewport *viewport, const QString &ti
         QSettings().setValue(QStringLiteral("loft/dialogSize"), dialog.size());
     });
     QTimer::singleShot(0, &dialog, [&dialog, parent] {
+        if (dialog.isEmbedded()) {
+            dialog.placeAtLeft();
+            return;
+        }
         const QPoint parentCentre = parent ? parent->mapToGlobal(parent->rect().center()) : QCursor::pos();
         QScreen *screen = QGuiApplication::screenAt(parentCentre);
         if (!screen) screen = QGuiApplication::primaryScreen();
@@ -9926,10 +10278,10 @@ static bool datumDialog(QMainWindow *window, CadViewport *viewport, const QStrin
     definition.operation = -1;
     DatumParameters &d = definition.datum;
     d.mode = qBound(0, d.mode, int(modes.size()) - 1);
-    QDialog dialog(window);
+    FunctionDialogPanel dialog(window);
     dialog.setWindowTitle(title);
     dialog.setModal(false);
-    auto *form = new QFormLayout(&dialog);
+    auto *form = dialog.createScrollableForm();
     auto *modeBox = new QComboBox(&dialog);
     for (const ForgeCad::DatumMode &mode : modes) modeBox->addItem(mode.name);
     modeBox->setCurrentIndex(d.mode);
@@ -10123,9 +10475,9 @@ static bool sketchPatternDialog(QWidget *parent, CadViewport *viewport, int kind
             }
         }
     }
-    QDialog dialog(parent);
+    FunctionDialogPanel dialog(parent);
     dialog.setWindowTitle(titles[kind]);
-    auto *form = new QFormLayout(&dialog);
+    auto *form = dialog.createScrollableForm();
     form->addRow(new QLabel(QStringLiteral("%1 entita' selezionate. Un segmento scelto come riferimento non si ripete.").arg(selection.size()), &dialog));
     const auto spin = [&dialog](double value, double lo, double hi, const QString &suffix = QString()) {
         auto *box = new ForgeCad::ExpressionSpinBox(&dialog);
@@ -10367,10 +10719,10 @@ static bool patternDialog(QMainWindow *window, CadViewport *viewport, const QStr
         y.index = 1;
         p.refs.append(y);
     }
-    QDialog dialog(window);
+    FunctionDialogPanel dialog(window);
     dialog.setWindowTitle(title);
     dialog.setModal(false);
-    auto *form = new QFormLayout(&dialog);
+    auto *form = dialog.createScrollableForm();
     auto *bodyBox = new QComboBox(&dialog);
     for (int index : candidates) bodyBox->addItem(bodies.at(index).visible ? bodies.at(index).name : bodies.at(index).name + QStringLiteral(" (nascosto)"));
     bodyBox->setCurrentIndex(int(candidates.indexOf(definition.firstBody)));
@@ -10567,10 +10919,11 @@ static bool extrusionDialog(QMainWindow *window, CadViewport *viewport, const QS
     ExtrusionObject definition = initial;
     definition.operation = -1;
     definition.feature = BodyFeature::Extrusion;
-    QDialog dialog(window);
+    FunctionDialogPanel dialog(window);
     dialog.setWindowTitle(title);
     dialog.setModal(false);
-    auto *form = new QFormLayout(&dialog);
+    auto *form = dialog.createScrollableForm();
+    form->addRow(new FeatureOperationDiagram(FeatureOperationDiagram::Extrusion, &dialog));
     auto *extentBox = new QComboBox(&dialog);
     extentBox->addItems({QStringLiteral("Distanza"), QStringLiteral("Fino a un punto"), QStringLiteral("Fino a uno spigolo"),
                          QStringLiteral("Fino a una faccia o a un piano")});
@@ -10737,10 +11090,10 @@ static bool transformDialog(QMainWindow *window, CadViewport *viewport, const QS
     definition.operation = -1;
     definition.feature = BodyFeature::Transform;
     if (!candidates.contains(definition.firstBody)) definition.firstBody = candidates.last();
-    QDialog dialog(window);
+    FunctionDialogPanel dialog(window);
     dialog.setWindowTitle(title);
     dialog.setModal(false);
-    auto *form = new QFormLayout(&dialog);
+    auto *form = dialog.createScrollableForm();
     auto *bodyBox = new QComboBox(&dialog);
     for (int index : candidates) bodyBox->addItem(bodies.at(index).visible ? bodies.at(index).name : bodies.at(index).name + QStringLiteral(" (nascosto)"));
     bodyBox->setCurrentIndex(int(candidates.indexOf(definition.firstBody)));
@@ -10872,9 +11225,9 @@ static bool booleanDialog(QWidget *parent, CadViewport *viewport, const QString 
         if (!body.visible && index != initial.firstBody && index != initial.secondBody && !initial.booleanTools.contains(index)) text += QStringLiteral(" (nascosto)");
         return text;
     };
-    QDialog dialog(parent);
+    FunctionDialogPanel dialog(parent);
     dialog.setWindowTitle(title);
-    auto *form = new QFormLayout(&dialog);
+    auto *form = dialog.createScrollableForm();
     auto *operationBox = new QComboBox(&dialog);
     operationBox->addItems({QStringLiteral("Unione"), QStringLiteral("Intersezione"), QStringLiteral("Differenza (A meno gli strumenti)")});
     operationBox->setCurrentIndex(qBound(0, initial.operation, 2));
@@ -10957,7 +11310,7 @@ static void massPropertiesDialog(QWidget *parent, CadViewport *viewport) {
         QMessageBox::information(parent, QStringLiteral("Proprieta' di massa"), QStringLiteral("Nella scena non ci sono corpi."));
         return;
     }
-    QDialog dialog(parent);
+    FunctionDialogPanel dialog(parent);
     dialog.setWindowTitle(QStringLiteral("Proprieta' di massa"));
     dialog.resize(620, 640);
     auto *layout = new QVBoxLayout(&dialog);
@@ -11125,9 +11478,9 @@ static bool trimDialog(QWidget *parent, CadViewport *viewport, const QString &ti
         return false;
     }
     const auto label = [&](int index) { return bodies.at(index).visible ? bodies.at(index).name : bodies.at(index).name + QStringLiteral(" (nascosto)"); };
-    QDialog dialog(parent);
+    FunctionDialogPanel dialog(parent);
     dialog.setWindowTitle(title);
-    auto *form = new QFormLayout(&dialog);
+    auto *form = dialog.createScrollableForm();
     auto *sheetBox = new QComboBox(&dialog), *toolBox = new QComboBox(&dialog), *partBox = new QComboBox(&dialog);
     for (int index : sheets) sheetBox->addItem(label(index));
     for (int index : tools) toolBox->addItem(label(index));
@@ -11214,9 +11567,9 @@ struct ExtendDialogResult {
 static ExtendDialogResult extendDialog(QWidget *parent, CadViewport *viewport, const QString &title, int base, int hidden, const QVector<EdgePoint> &edges,
                                        double distance, bool linear, bool allowReselect, const std::function<QString(double, bool)> &apply) {
     ExtendDialogResult result;
-    QDialog dialog(parent);
+    FunctionDialogPanel dialog(parent);
     dialog.setWindowTitle(title);
-    auto *form = new QFormLayout(&dialog);
+    auto *form = dialog.createScrollableForm();
     auto *distanceBox = new ForgeCad::ExpressionSpinBox(&dialog);
     distanceBox->setDecimals(6);
     distanceBox->setRange(0.000001, 100000.0);
@@ -11270,9 +11623,10 @@ static ExtendDialogResult extendDialog(QWidget *parent, CadViewport *viewport, c
 static bool revolutionDialog(QWidget *parent, const QVector<SketchObject> &sketches, bool fixedSketch, int &sketch, int &axis,
                              double &angle, const std::function<QString(int, int, double)> &apply = {},
                              const PreviewSpec<int, int, double> &preview = {}) {
-    QDialog dialog(parent);
+    FunctionDialogPanel dialog(parent);
     dialog.setWindowTitle(QStringLiteral("Rivoluzione"));
-    auto *form = new QFormLayout(&dialog);
+    auto *form = dialog.createScrollableForm();
+    form->addRow(new FeatureOperationDiagram(FeatureOperationDiagram::Revolution, &dialog));
     auto *sketchBox = new QComboBox(&dialog);
     for (const SketchObject &item : sketches) sketchBox->addItem(item.name);
     sketchBox->setCurrentIndex(qBound(0, sketch, int(sketches.size()) - 1));
@@ -11371,9 +11725,9 @@ static bool primitiveDialog(QWidget *parent, PrimitiveParameters &parameters,
         break;
     case PrimitiveKind::Torus: fields = {{QStringLiteral("Raggio maggiore:"), 1e-6}, {QStringLiteral("Raggio minore:"), 1e-6}}; break;
     }
-    QDialog dialog(parent);
+    FunctionDialogPanel dialog(parent);
     dialog.setWindowTitle(primitiveTitle(parameters.kind));
-    auto *form = new QFormLayout(&dialog);
+    auto *form = dialog.createScrollableForm();
     auto *planeBox = new QComboBox(&dialog);
     planeBox->addItems(planeNames());
     planeBox->setCurrentIndex(qBound(0, parameters.plane, 2));
@@ -11438,15 +11792,10 @@ static bool primitiveDialog(QWidget *parent, PrimitiveParameters &parameters,
 // posizione e dimensione restano in QSettings (`settingsKey`) e si
 // riprendono alla riapertura, anche dopo il riavvio. Resta dentro la finestra
 // quando questa cambia dimensione.
-class FloatingPanel final : public QFrame {
+class FloatingPanel final : public FunctionDialogPanel {
 public:
     FloatingPanel(QWidget *window, const QString &title, const QString &settingsKey, const QSize &defaultSize)
-        : QFrame(window), settingsKey_(settingsKey), defaultSize_(defaultSize) {
-        setObjectName(QStringLiteral("floatingPanel"));
-        setFrameShape(QFrame::StyledPanel);
-        setAutoFillBackground(true);
-        setStyleSheet(QStringLiteral("#floatingPanel { background: #151d25; border: 1px solid #3b4b5c; border-radius: 6px; }"
-                                     "#floatingPanelHeader { background: #1f2a35; border-top-left-radius: 6px; border-top-right-radius: 6px; }"));
+        : FunctionDialogPanel(window), settingsKey_(settingsKey), defaultSize_(defaultSize) {
         auto *outer = new QVBoxLayout(this);
         outer->setContentsMargins(1, 1, 1, 1);
         outer->setSpacing(0);
@@ -11468,16 +11817,14 @@ public:
         outer->addWidget(header_);
         content_ = new QWidget(this);
         outer->addWidget(content_, 1);
-        auto *grip = new QSizeGrip(this);
-        outer->addWidget(grip, 0, Qt::AlignBottom | Qt::AlignRight);
         header_->installEventFilter(this);
-        window->installEventFilter(this);
         hide();
     }
     QWidget *content() const { return content_; }
 
 protected:
     void showEvent(QShowEvent *event) override {
+        FunctionDialogPanel::showEvent(event);
         if (!placed_) {
             placed_ = true;
             const QRect stored = QSettings().value(settingsKey_).toRect();
@@ -11490,10 +11837,9 @@ protected:
         }
         keepInside();
         raise();
-        QFrame::showEvent(event);
     }
     void resizeEvent(QResizeEvent *event) override {
-        QFrame::resizeEvent(event);
+        FunctionDialogPanel::resizeEvent(event);
         if (placed_ && isVisible()) store();
     }
     bool eventFilter(QObject *watched, QEvent *event) override {
@@ -11501,24 +11847,22 @@ protected:
             if (event->type() == QEvent::MouseButtonPress) {
                 auto *mouse = static_cast<QMouseEvent *>(event);
                 if (mouse->button() == Qt::LeftButton) {
-                    dragOffset_ = mouse->globalPosition().toPoint() - pos();
-                    dragging_ = true;
-                    raise();
+                    beginEmbeddedMove(mouse->globalPosition().toPoint());
+                    draggingHeader_ = true;
                     return true;
                 }
-            } else if (event->type() == QEvent::MouseMove && dragging_) {
-                move(static_cast<QMouseEvent *>(event)->globalPosition().toPoint() - dragOffset_);
+            } else if (event->type() == QEvent::MouseMove && draggingHeader_) {
+                updateEmbeddedMove(static_cast<QMouseEvent *>(event)->globalPosition().toPoint());
                 keepInside();
                 return true;
-            } else if (event->type() == QEvent::MouseButtonRelease && dragging_) {
-                dragging_ = false;
+            } else if (event->type() == QEvent::MouseButtonRelease && draggingHeader_) {
+                endEmbeddedMove();
+                draggingHeader_ = false;
                 store();
                 return true;
             }
-        } else if (watched == parentWidget() && event->type() == QEvent::Resize && isVisible()) {
-            keepInside();
         }
-        return QFrame::eventFilter(watched, event);
+        return FunctionDialogPanel::eventFilter(watched, event);
     }
 
 private:
@@ -11534,8 +11878,7 @@ private:
     QString settingsKey_;
     QSize defaultSize_;
     QWidget *header_ = nullptr, *content_ = nullptr;
-    QPoint dragOffset_;
-    bool dragging_ = false, placed_ = false;
+    bool draggingHeader_ = false, placed_ = false;
 };
 
 // In una lista: il tasto Canc va alla lista (elimina gli elementi scelti) e
@@ -11571,11 +11914,33 @@ public:
 protected:
     bool eventFilter(QObject *watched, QEvent *event) override {
         if (event->type() == QEvent::MouseButtonPress && static_cast<QMouseEvent *>(event)->button() == Qt::LeftButton) {
+            QWidget *widget = qobject_cast<QWidget *>(watched);
+            FunctionDialogPanel *panel = nullptr;
+            for (QWidget *candidate = widget; candidate; candidate = candidate->parentWidget()) {
+                panel = dynamic_cast<FunctionDialogPanel *>(candidate);
+                if (panel) break;
+            }
+            if (panel && panel->isEmbedded()
+                && (widget == panel || qobject_cast<QLabel *>(widget))) {
+                panel->beginEmbeddedMove(static_cast<QMouseEvent *>(event)->globalPosition().toPoint());
+                embeddedPanel_ = panel;
+                return true;
+            }
             auto *dialog = qobject_cast<QDialog *>(watched);
             if (dialog && dialog->isWindow() && dialog->windowHandle() && dialog->windowHandle()->startSystemMove()) return true;
+        } else if (event->type() == QEvent::MouseMove && embeddedPanel_) {
+            embeddedPanel_->updateEmbeddedMove(static_cast<QMouseEvent *>(event)->globalPosition().toPoint());
+            return true;
+        } else if (event->type() == QEvent::MouseButtonRelease && embeddedPanel_) {
+            embeddedPanel_->endEmbeddedMove();
+            embeddedPanel_.clear();
+            return true;
         }
         return QObject::eventFilter(watched, event);
     }
+
+private:
+    QPointer<FunctionDialogPanel> embeddedPanel_;
 };
 
 static AxesOrientation defaultAxesOrientation();
@@ -11922,6 +12287,61 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
     connect(deleteAction, &QAction::triggered, this, [viewport] { viewport->deleteSelection(); });
     updateUndoActions();
     auto *viewMenu = menuBar()->addMenu(QStringLiteral("Visualizza"));
+    auto *functionPanelMenu = viewMenu->addMenu(QStringLiteral("Pannelli delle funzioni"));
+    auto *functionPanelOpacityAction = functionPanelMenu->addAction(QString());
+    auto *functionPanelBlurAction = functionPanelMenu->addAction(QString());
+    auto *functionPanelRadiusAction = functionPanelMenu->addAction(QString());
+    const auto updateFunctionPanelActions = [functionPanelOpacityAction, functionPanelBlurAction, functionPanelRadiusAction] {
+        QSettings settings;
+        functionPanelOpacityAction->setText(QStringLiteral("Trasparenza... (%1%)")
+                                                .arg(settings.value(QStringLiteral("view/functionPanelOpacity"), 88).toInt()));
+        functionPanelBlurAction->setText(QStringLiteral("Sfocatura scena... (%1 px)")
+                                             .arg(settings.value(QStringLiteral("view/functionPanelBlur"), 12).toInt()));
+        functionPanelRadiusAction->setText(QStringLiteral("Raggio degli angoli... (%1 px)")
+                                               .arg(settings.value(QStringLiteral("view/functionPanelCornerRadius"), 10).toInt()));
+    };
+    const auto refreshFunctionPanels = [] {
+        for (QWidget *widget : QApplication::topLevelWidgets()) {
+            if (auto *panel = dynamic_cast<FunctionDialogPanel *>(widget)) panel->reloadAppearance();
+            for (QDialog *dialog : widget->findChildren<QDialog *>())
+                if (auto *panel = dynamic_cast<FunctionDialogPanel *>(dialog)) panel->reloadAppearance();
+        }
+    };
+    connect(functionPanelOpacityAction, &QAction::triggered, this, [this, updateFunctionPanelActions, refreshFunctionPanels] {
+        QSettings settings;
+        bool accepted = false;
+        const int value = QInputDialog::getInt(this, QStringLiteral("Trasparenza dei pannelli"), QStringLiteral("Opacità dello sfondo (%):"),
+                                               settings.value(QStringLiteral("view/functionPanelOpacity"), 88).toInt(), 25, 100, 1, &accepted);
+        if (!accepted) return;
+        settings.setValue(QStringLiteral("view/functionPanelOpacity"), value);
+        updateFunctionPanelActions();
+        refreshFunctionPanels();
+    });
+    connect(functionPanelBlurAction, &QAction::triggered, this, [this, updateFunctionPanelActions, refreshFunctionPanels] {
+        QSettings settings;
+        bool accepted = false;
+        const int value = QInputDialog::getInt(this, QStringLiteral("Sfocatura dei pannelli"),
+                                               QStringLiteral("Raggio della sfocatura della scena (px):"),
+                                               settings.value(QStringLiteral("view/functionPanelBlur"), 12).toInt(),
+                                               0, 40, 1, &accepted);
+        if (!accepted) return;
+        settings.setValue(QStringLiteral("view/functionPanelBlur"), value);
+        updateFunctionPanelActions();
+        refreshFunctionPanels();
+    });
+    connect(functionPanelRadiusAction, &QAction::triggered, this, [this, updateFunctionPanelActions, refreshFunctionPanels] {
+        QSettings settings;
+        bool accepted = false;
+        const int value = QInputDialog::getInt(this, QStringLiteral("Angoli dei pannelli"),
+                                               QStringLiteral("Raggio degli angoli (px):"),
+                                               settings.value(QStringLiteral("view/functionPanelCornerRadius"), 10).toInt(),
+                                               0, 40, 1, &accepted);
+        if (!accepted) return;
+        settings.setValue(QStringLiteral("view/functionPanelCornerRadius"), value);
+        updateFunctionPanelActions();
+        refreshFunctionPanels();
+    });
+    updateFunctionPanelActions();
     auto *functionsMenu = menuBar()->addMenu(QStringLiteral("Funzioni"));
     QAction *extrudeAction = functionsMenu->addAction(QStringLiteral("Estrusione..."));
     extrudeAction->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_E));

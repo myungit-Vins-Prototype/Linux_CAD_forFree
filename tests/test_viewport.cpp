@@ -22,14 +22,72 @@ public:
             widget.render(&painter);
             return image.pixelColor(widget.rect().center()).alpha();
         };
-        LoftDialogPanel translucentPanel;
+        FunctionDialogPanel translucentPanel;
         translucentPanel.setPanelOpacity(25);
+        translucentPanel.setBackdropBlur(18);
         const int lowOpacity = renderedAlpha(translucentPanel);
         translucentPanel.setPanelOpacity(100);
         require(lowOpacity > 0 && renderedAlpha(translucentPanel) > lowOpacity,
-                "opacita' regolabile del pannello Loft");
+                "opacita' regolabile dei pannelli funzione");
+        require(translucentPanel.backdropBlur() == 18, "sfocatura della scena regolabile sui pannelli funzione");
+        translucentPanel.setPanelOpacity(70);
+        translucentPanel.show();
+        QApplication::processEvents();
+        translucentPanel.hide();
+        FunctionDialogPanel scrollablePanel;
+        scrollablePanel.createScrollableForm()->addRow(new FeatureOperationDiagram(FeatureOperationDiagram::Extrusion, &scrollablePanel));
+        require(scrollablePanel.findChild<QScrollArea *>(QStringLiteral("functionDialogScroll")),
+                "contenuto scorrevole dei pannelli funzione");
+        FunctionDialogPanel embeddedPanel(&v);
+        require(embeddedPanel.isEmbedded() && !embeddedPanel.isWindow() && embeddedPanel.parentWidget() == &v,
+                "pannello funzione sovrapposto nelle coordinate del viewport");
+        embeddedPanel.resize(420, 300);
+        embeddedPanel.placeAtLeft();
+        const QPoint initialPanelPosition = embeddedPanel.pos();
+        const QPoint dragStart = embeddedPanel.mapToGlobal(QPoint(20, 20));
+        embeddedPanel.beginEmbeddedMove(dragStart);
+        embeddedPanel.updateEmbeddedMove(dragStart + QPoint(40, 30));
+        embeddedPanel.endEmbeddedMove();
+        require(embeddedPanel.pos() == initialPanelPosition + QPoint(40, 30),
+                "trascinamento del vetro aggiorna il ritaglio della scena");
+        embeddedPanel.setCornerRadius(18);
+        require(embeddedPanel.cornerRadius() == 18 && !embeddedPanel.mask().contains(QPoint(0, 0))
+                    && embeddedPanel.mask().contains(embeddedPanel.rect().center()),
+                "angoli arrotondati configurabili dei pannelli funzione");
+        auto *panelGrip = embeddedPanel.findChild<QSizeGrip *>(QStringLiteral("functionPanelResizeGrip"));
+        require(panelGrip && !embeddedPanel.isSizeGripEnabled(),
+                "grip interno senza ridimensionamento nativo della finestra niri");
+        const QSize viewportBeforeGrip = v.size();
+        const QSize panelBeforeGrip = embeddedPanel.size();
+        const QPointF gripLocal(10, 10);
+        const QPointF gripGlobal(panelGrip->mapToGlobal(gripLocal.toPoint()));
+        QMouseEvent gripPress(QEvent::MouseButtonPress, gripLocal, gripGlobal,
+                              Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+        QMouseEvent gripMove(QEvent::MouseMove, gripLocal + QPointF(30, 20), gripGlobal + QPointF(30, 20),
+                             Qt::NoButton, Qt::LeftButton, Qt::NoModifier);
+        QMouseEvent gripRelease(QEvent::MouseButtonRelease, gripLocal + QPointF(30, 20), gripGlobal + QPointF(30, 20),
+                                Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
+        QApplication::sendEvent(panelGrip, &gripPress);
+        QApplication::sendEvent(panelGrip, &gripMove);
+        QApplication::sendEvent(panelGrip, &gripRelease);
+        require(embeddedPanel.size() == panelBeforeGrip + QSize(30, 20) && v.size() == viewportBeforeGrip,
+                "il grip ridimensiona soltanto il pannello funzione");
+        const QPalette panelPalette = embeddedPanel.palette();
+        require(panelPalette.color(QPalette::HighlightedText).lightness() > 200
+                    && panelPalette.color(QPalette::Highlight).lightness() > 50,
+                "testo leggibile nella selezione dei menu a discesa");
+        FloatingPanel constraintStylePanel(&v, QStringLiteral("Vincoli"),
+                                           QStringLiteral("test/constraintPanelStyle"), QSize(380, 360));
+        require(constraintStylePanel.isEmbedded()
+                    && constraintStylePanel.objectName() == QStringLiteral("functionDialogPanel")
+                    && constraintStylePanel.findChild<QSizeGrip *>(QStringLiteral("functionPanelResizeGrip")),
+                "pannello Vincoli con lo stesso vetro e grip dei pannelli funzione");
         LoftSelectionDiagram loftDiagram;
         require(renderedAlpha(loftDiagram) == 255, "grafica Loft sempre opaca");
+        FeatureOperationDiagram extrusionDiagram(FeatureOperationDiagram::Extrusion);
+        FeatureOperationDiagram revolutionDiagram(FeatureOperationDiagram::Revolution);
+        require(renderedAlpha(extrusionDiagram) == 255 && renderedAlpha(revolutionDiagram) == 255,
+                "grafiche Estrusione e Rivoluzione sempre opache");
         v.resize(900, 650);
         v.setViewNormal(0);
         v.zoom_ = 20;
