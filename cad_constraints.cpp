@@ -715,6 +715,19 @@ void equations(const System &s, const SketchConstraint &c, QVector<double> &out,
         }
         return;
     }
+    case ConstraintType::HorizontalDistance:
+    case ConstraintType::VerticalDistance: {
+        QPointF p, q;
+        if (b == Shape::None) {
+            lineOf(c.first, p, q);
+        } else {
+            p = s.refPoint(c.first);
+            q = s.refPoint(c.second);
+        }
+        const QPointF d = q - p;
+        out << std::fabs(c.type == ConstraintType::HorizontalDistance ? d.x() : d.y()) - c.value;
+        return;
+    }
     case ConstraintType::Distance: {
         if (b == Shape::None) {  // lunghezza del segmento
             QPointF p0, p1;
@@ -897,6 +910,8 @@ QString constraintName(ConstraintType type) {
     case ConstraintType::Symmetric: return QStringLiteral("Simmetrico");
     case ConstraintType::AxisRadius: return QStringLiteral("Raggio dall'asse");
     case ConstraintType::AxisDiameter: return QStringLiteral("Diametro dall'asse");
+    case ConstraintType::HorizontalDistance: return QStringLiteral("Distanza orizzontale");
+    case ConstraintType::VerticalDistance: return QStringLiteral("Distanza verticale");
     }
     return {};
 }
@@ -923,13 +938,16 @@ QString constraintSymbol(ConstraintType type) {
     case ConstraintType::Symmetric: return QStringLiteral("⇹");
     case ConstraintType::AxisRadius: return QStringLiteral("R");
     case ConstraintType::AxisDiameter: return QStringLiteral("⌀");
+    case ConstraintType::HorizontalDistance: return QStringLiteral("⟷");
+    case ConstraintType::VerticalDistance: return QStringLiteral("↕");
     }
     return {};
 }
 
 bool isDimension(ConstraintType type) {
     return type == ConstraintType::Distance || type == ConstraintType::Angle || type == ConstraintType::Radius || type == ConstraintType::Diameter
-        || type == ConstraintType::AxisRadius || type == ConstraintType::AxisDiameter;
+        || type == ConstraintType::AxisRadius || type == ConstraintType::AxisDiameter || type == ConstraintType::HorizontalDistance
+        || type == ConstraintType::VerticalDistance;
 }
 
 bool isAxisReference(const SketchObject &sketch, const ConstraintRef &ref) {
@@ -1001,7 +1019,9 @@ QVector<ConstraintType> applicableConstraints(const SketchObject &sketch, const 
         if (refs.at(0).kind == 2) return {};
         switch (a) {
         case Shape::Point: return {T::Fix};
-        case Shape::Line: return {T::Horizontal, T::Vertical, T::Distance, T::Fix};
+        case Shape::Line:
+            if (refs.at(0).kind == 0) return {T::Horizontal, T::Vertical, T::Distance, T::HorizontalDistance, T::VerticalDistance, T::Fix};
+            return {T::Horizontal, T::Vertical, T::Distance, T::Fix};
         case Shape::Circle: return {T::Radius, T::Diameter, T::Fix};
         default: return {T::Fix};
         }
@@ -1012,8 +1032,8 @@ QVector<ConstraintType> applicableConstraints(const SketchObject &sketch, const 
     // Due punti della stessa entita' non si fanno coincidere (resta solo la distanza, o H/V per i segmenti).
     const bool sameEntity = refs.at(0).kind == refs.at(1).kind && refs.at(0).element == refs.at(1).element && refs.at(0).kind != 2;
     if (a == Shape::Point && b == Shape::Point) {
-        if (sameEntity) return {T::Horizontal, T::Vertical, T::Distance};
-        return {T::Coincident, T::Horizontal, T::Vertical, T::Distance};
+        if (sameEntity) return {T::Horizontal, T::Vertical, T::Distance, T::HorizontalDistance, T::VerticalDistance};
+        return {T::Coincident, T::Horizontal, T::Vertical, T::Distance, T::HorizontalDistance, T::VerticalDistance};
     }
     if (a == Shape::Point) {
         if (sameEntity) return {};
@@ -1286,6 +1306,25 @@ QVector<Block> buildBlocks(const System &system, const SketchObject &sketch, con
         block.evaluate = [&system, curve](QVector<double> &out) { implicitEquations(system, curve, out); };
         blocks.append(block);
     }
+    // Una coppia di maniglie collegata definisce una sola tangente: i due
+    // vettori restano collineari. Il verso opposto e' mantenuto dalla
+    // manipolazione grafica; l'equazione lo conserva durante la soluzione di
+    // quote e degli altri vincoli.
+    for (int curve = 0; curve < sketch.curves.size(); ++curve) {
+        const CurveObject &object = sketch.curves.at(curve);
+        const int base = system.handleBase(curve);
+        if (base < 0) continue;
+        for (int point = 0; point < object.controlPoints.size(); ++point) {
+            if (!object.tangentLinked.value(point)) continue;
+            Block block;
+            block.points << base + 2 * point << base + 2 * point + 1;
+            block.evaluate = [&system, base, point](QVector<double> &out) {
+                const QPointF in = system.point(base + 2 * point), away = system.point(base + 2 * point + 1);
+                out << cross(in, away) / std::max({length(in), length(away), 1e-9});
+            };
+            blocks.append(block);
+        }
+    }
     for (const PointTarget &target : targets) {
         Block block;
         system.pointDependencies(target.point, block.points);
@@ -1391,9 +1430,20 @@ QVector<double> jacobian(const QVector<Block> &blocks, QVector<double> &x, int m
 
 bool dimensionPoints(const SketchObject &sketch, const SketchConstraint &c, QPointF &p, QPointF &q) {
     const bool axial = c.type == ConstraintType::AxisRadius || c.type == ConstraintType::AxisDiameter;
-    if ((c.type != ConstraintType::Distance && !axial) || !wellFormed(sketch, c)) return false;
+    const bool projected = c.type == ConstraintType::HorizontalDistance || c.type == ConstraintType::VerticalDistance;
+    if ((c.type != ConstraintType::Distance && !axial && !projected) || !wellFormed(sketch, c)) return false;
     const System s(sketch);
     const Shape a = shapeOf(sketch, c.first), b = shapeOf(sketch, c.second);
+    if (projected) {
+        // I due punti veri: la quota si disegna lungo X o Y dello schizzo.
+        if (b == Shape::None) {
+            s.line(c.first, p, q);
+        } else {
+            p = s.refPoint(c.first);
+            q = s.refPoint(c.second);
+        }
+        return true;
+    }
     if (axial) {
         // Dal punto al piede sull'asse (raggio) o al suo simmetrico (diametro).
         QPointF l0, l1, p1;

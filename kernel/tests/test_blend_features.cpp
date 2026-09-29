@@ -43,6 +43,34 @@ LoftSection rectangleAt(double z, double a, double b) {
     s.loop = rectangleRegion(a, b).outer;
     return s;
 }
+LoftSection polygonAt(double z, double radius, const Vec2 &shift = Vec2(), double rotation = 0.0) {
+    LoftSection section;
+    section.frame = Frame3(Vec3(shift.x(), shift.y(), z), Vec3(0, 0, 1), Vec3(1, 0, 0));
+    constexpr int count = 9;
+    for (int k = 0; k < count; ++k) {
+        const double a = rotation + kTwoPi * k / count;
+        const double b = rotation + kTwoPi * (k + 1) / count;
+        section.loop.segments.push_back(lineSegment(Vec2(radius * std::cos(a), radius * std::sin(a)),
+                                                    Vec2(radius * std::cos(b), radius * std::sin(b))));
+    }
+    return section;
+}
+LoftSection notchedAt(double z, double scale, const Vec2 &shift = Vec2()) {
+    LoftSection section;
+    section.frame = Frame3(Vec3(shift.x(), shift.y(), z), Vec3(0, 0, 1), Vec3(1, 0, 0));
+    const std::vector<Vec2> points{{-3, -2}, {3, -2}, {3, 2}, {0.6, 2}, {0.6, 0}, {-0.6, 0}, {-0.6, 2}, {-3, 2}};
+    for (std::size_t k = 0; k < points.size(); ++k)
+        section.loop.segments.push_back(lineSegment(scale * points[k], scale * points[(k + 1) % points.size()]));
+    return section;
+}
+LoftSection splitRectangleAt(double z, double a, double b, double split, const Vec2 &shift = Vec2()) {
+    LoftSection section;
+    section.frame = Frame3(Vec3(shift.x(), shift.y(), z), Vec3(0, 0, 1), Vec3(1, 0, 0));
+    const std::vector<Vec2> points{{-a, -b}, {split, -b}, {a, -b}, {a, b}, {split, b}, {-a, b}};
+    for (std::size_t k = 0; k < points.size(); ++k)
+        section.loop.segments.push_back(lineSegment(points[k], points[(k + 1) % points.size()]));
+    return section;
+}
 
 // Gli spigoli del contorno della faccia (come il clic su una faccia nell'app).
 std::vector<EdgeId> contour(const Body &body, FaceId face) {
@@ -101,6 +129,41 @@ FK_TEST(BlendGeneralMatchesAnalytic) {
             const double analytic = checkedVolume(blendEdges(frustum, edges, r, chamfer));
             const double general = checkedVolume(blendSurfaceChains(frustum, edges, r, chamfer));
             FK_CHECK_NEAR(general, analytic, 1e-9 * analytic);
+        }
+    }
+}
+
+FK_TEST(BlendSequentialNearbyEdges) {
+    // Seconda lavorazione su un bordo adiacente a un raccordo gia' presente:
+    // il nuovo raccordo/smusso termina sulla superficie cilindrica della prima
+    // operazione, invece che su una faccia piana originale del parallelepipedo.
+    const Body box = makeBox(Frame3(), 4.0, 3.0, 2.0);
+    const EdgeId vertical = nearestEdge(box, Vec3(4.0, 0.0, 1.0), 1e-9);
+    FK_CHECK(vertical.valid());
+    for (bool firstChamfer : {false, true}) {
+        const Body first = blendEdges(box, {vertical}, 0.55, firstChamfer);
+        FK_CHECK(checkedVolume(first) < checkedVolume(box));
+        const EdgeId topFront = nearestEdge(first, Vec3(2.0, 0.0, 2.0), 1e-7);
+        FK_CHECK(topFront.valid());
+        FK_CHECK(first.edge(topFront).curve->type() == CurveType::Line);
+        for (bool secondChamfer : {false, true}) {
+            const Body second = blendEdges(first, {topFront}, 0.3, secondChamfer);
+            const double volume = checkedVolume(second, 1e-9);
+            FK_CHECK(volume > 0.0 && volume < checkedVolume(first));
+        }
+    }
+    // Ordine inverso: il secondo bordo termina sulla faccia curva del primo
+    // raccordo proprio nel vecchio vertice comune.
+    const EdgeId top = nearestEdge(box, Vec3(2.0, 0.0, 2.0), 1e-9);
+    FK_CHECK(top.valid());
+    for (bool firstChamfer : {false, true}) {
+        const Body first = blendEdges(box, {top}, 0.55, firstChamfer);
+        const EdgeId adjacent = nearestEdge(first, Vec3(4.0, 0.0, 1.0), 1e-7);
+        FK_CHECK(adjacent.valid());
+        for (bool secondChamfer : {false, true}) {
+            const Body second = blendEdges(first, {adjacent}, 0.3, secondChamfer);
+            const double volume = checkedVolume(second, 1e-9);
+            FK_CHECK(volume > 0.0 && volume < checkedVolume(first));
         }
     }
 }
@@ -170,4 +233,45 @@ FK_TEST(BlendLoftCircleToSquare) {
         FK_CHECK(filleted < full && chamfered < full);
         FK_CHECK(full - filleted < 0.2 * 0.2 * 16.0 && full - chamfered < 0.2 * 0.2 * 16.0);
     }
+}
+
+FK_TEST(BlendSmoothLoftPolygonCap) {
+    // Regressione del raccordo sulla faccia terminale di un loft poligonale:
+    // sui fianchi B-spline il verso parametrico può essere opposto al verso
+    // topologico e le mitre arrivano in prossimità di vertici quasi singolari.
+    const Body loft = loftSolid({polygonAt(0.0, 5.0), polygonAt(5.0, 4.2, Vec2(0.7, -0.3), 0.08),
+                                 polygonAt(10.0, 3.5, Vec2(0.2, 0.4), -0.04)}, false);
+    const std::vector<EdgeId> cap = contour(loft, planarFace(loft, Vec3(0, 0, 1)));
+    FK_CHECK(cap.size() == 9);
+    const double full = checkedVolume(loft, 1e-8);
+    const double filleted = checkedVolume(blendEdges(loft, cap, 0.45, false), 1e-7);
+    FK_CHECK(filleted > 0.0 && filleted < full);
+}
+
+FK_TEST(BlendConcaveSmoothLoftEdge) {
+    // Un raccordo concavo lungo il fianco termina sui coperchi del loft: i
+    // due loro edge devono essere prolungati fino ai contatti, non accorciati
+    // al vecchio vertice (caso dei fianchi guidati del documento applicativo).
+    const Body loft = loftSolid({notchedAt(0.0, 1.0), notchedAt(4.0, 0.9, Vec2(0.1, 0.05)),
+                                 notchedAt(8.0, 1.1, Vec2(-0.1, 0.0))}, false);
+    const EdgeId edge = nearestEdge(loft, Vec3(0.55, 0.02, 4.0), 0.25);
+    FK_CHECK(edge.valid());
+    const double full = checkedVolume(loft, 1e-8);
+    const double filleted = checkedVolume(blendEdges(loft, {edge}, 0.15, false), 1e-7);
+    FK_CHECK(filleted > full);
+}
+
+FK_TEST(BlendSmoothLoftSplitSidePatches) {
+    // Un lato della sezione e' suddiviso in pezze collineari. Variando il
+    // punto di suddivisione tra le sezioni, il contatto del raccordo sul
+    // coperchio attraversa le cuciture dei fianchi B-spline: deve trovare il
+    // punto interno alla cucitura e non fermarsi al vecchio vertice.
+    const Body loft = loftSolid({splitRectangleAt(0.0, 3.0, 2.0, -1.2),
+                                 splitRectangleAt(4.0, 2.7, 1.8, 0.9, Vec2(0.35, -0.2)),
+                                 splitRectangleAt(8.0, 2.4, 1.6, -0.6, Vec2(-0.15, 0.25))}, false);
+    const std::vector<EdgeId> cap = contour(loft, planarFace(loft, Vec3(0, 0, 1)));
+    FK_CHECK(cap.size() == 6);
+    const double full = checkedVolume(loft, 1e-8);
+    const double filleted = checkedVolume(blendEdges(loft, cap, 0.2, false), 1e-7);
+    FK_CHECK(filleted > 0.0 && filleted < full);
 }

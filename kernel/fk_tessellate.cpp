@@ -1248,6 +1248,7 @@ Tessellation tessellate(const Body &input, const TessellationOptions &options) {
         std::vector<Vec3> polyline;
         for (double t : edgeSamples[std::size_t(e.index)]) polyline.push_back(edge.curve->point(t));
         result.edges.push_back(std::move(polyline));
+        result.edgeIds.push_back(e);
     }
     for (FaceId f : body.faces()) {
         try {

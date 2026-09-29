@@ -9,11 +9,14 @@
 #include "cad_kernel.h"
 #include "fk_boolean.h"
 #include "fk_bspline.h"
+#include "fk_bspline_surface.h"
 #include "fk_classify.h"
 #include "fk_curve_algo.h"
+#include "fk_curve_ops.h"
 #include "fk_helix.h"
 #include "fk_intersect.h"
 #include "fk_nurbs.h"
+#include "fk_precision.h"
 #include "fk_sheet.h"
 
 namespace ForgeCad {
@@ -27,6 +30,85 @@ void appendSegment(SketchObject &sketch, const QPointF &a, const QPointF &b, boo
     sketch.segmentLengths.append(0.0);
     sketch.segmentAngles.append(-1.0);
     if (construction) sketch.constructionSegments.append(sketch.segments.size() - 1);
+}
+
+// Il solido sta tutto dalla parte n . (x - origin) <= tolerance? Certezza
+// esatta, altrimenti falso (e si usa la booleana). Il massimo della funzione
+// lineare h sul bordo del solido si raggiunge sul bordo di una faccia (i suoi
+// edge: estremi e radici di h = tolerance dentro il tratto, esatte) o in un
+// punto critico interno (normale della superficie parallela a n): piani,
+// cilindri e superfici estruse non ne hanno di propri (lungo le rette della
+// superficie h e' lineare, e la retta per un punto interno esce dalla faccia
+// sul bordo); il cono ha il vertice; la sfera i due punti c +- r n; il toro
+// quattro punti (o due cerchi se n e' parallelo all'asse). Un punto critico
+// sopra la soglia che sta nella faccia rompe la condizione; un cerchio critico
+// sopra la soglia non puo' toccare il bordo (che sta sotto) e si prova in un punto.
+bool onOneSide(const Body &body, const Vec3 &origin, const Vec3 &n, double tolerance) {
+    const auto height = [&](const Vec3 &p) { return dot(n, p - origin); };
+    for (VertexId v : body.vertices())
+        if (height(body.vertex(v).point) > tolerance) return false;
+    for (EdgeId e : body.edges()) {
+        const Edge &edge = body.edge(e);
+        if (!edge.curve) continue;
+        if (height(edge.curve->point(edge.range.lo)) > tolerance || height(edge.curve->point(edge.range.hi)) > tolerance) return false;
+        const PlaneRoots<3> roots = planeRoots<3>(*edge.curve, edge.range, n, dot(n, origin) + tolerance, 1e-3 * tolerance);
+        if (!roots.coincident.empty()) return false;
+        const double margin = 1e-12 * std::max(1.0, edge.range.length());
+        for (double t : roots.parameters)
+            if (t > edge.range.lo + margin && t < edge.range.hi - margin) return false;
+    }
+    const auto inside = [&](FaceId f, const Vec3 &p) {
+        return height(p) > tolerance && classifyPointOnFace(body, f, p, 1e-3 * tolerance) != PointLocation::Outside;
+    };
+    for (FaceId f : body.faces()) {
+        const Surface &surface = *body.face(f).surface;
+        switch (surface.type()) {
+        case SurfaceType::Plane:
+        case SurfaceType::Cylinder:
+        case SurfaceType::Extrusion:
+            break;
+        case SurfaceType::Cone:
+            if (height(static_cast<const ConicalSurface &>(surface).apex()) > tolerance) return false;
+            break;
+        case SurfaceType::Sphere: {
+            const auto &sphere = static_cast<const SphericalSurface &>(surface);
+            if (inside(f, sphere.frame().origin() + sphere.radius() * n)) return false;
+            break;
+        }
+        case SurfaceType::Torus: {
+            const auto &torus = static_cast<const ToroidalSurface &>(surface);
+            const Frame3 &frame = torus.frame();
+            const double R = torus.majorRadius(), r = torus.minorRadius();
+            if (!(R > r)) return false;  // toro a fuso: punti singolari
+            const Vec3 c = frame.origin(), a = frame.zDir();
+            const double na = dot(n, a);
+            if (std::fabs(na) >= 1.0 - 1e-12) {
+                // Il cerchio piu' alto (v = +-pi/2), tutto dentro o tutto fuori: un suo punto.
+                if (inside(f, c + R * frame.xDir() + (na > 0.0 ? r : -r) * a)) return false;
+                break;
+            }
+            const Vec3 p = normalized(n - na * a);
+            const double np = norm(n - na * a);
+            for (double sigma : {1.0, -1.0})
+                for (double s : {1.0, -1.0}) {
+                    const double cosV = sigma * s * np, sinV = s * na;
+                    if (inside(f, c + (R + r * cosV) * sigma * p + r * sinV * a)) return false;
+                }
+            break;
+        }
+        case SurfaceType::BSpline: {
+            // Inviluppo convesso dei poli (pesi positivi): basta che i poli stiano sotto la soglia.
+            const auto &spline = static_cast<const BSplineSurface &>(surface);
+            for (int i = 0; i < spline.uPoleCount(); ++i)
+                for (int j = 0; j < spline.vPoleCount(); ++j)
+                    if (!(spline.weight(i, j) > 0.0) || height(spline.pole(i, j)) > tolerance) return false;
+            break;
+        }
+        default:
+            return false;  // rivoluzioni: non si sa dire in modo esatto
+        }
+    }
+    return true;
 }
 
 // Toglie i livelli di TrimmedCurve (il tratto resta quello dato).
@@ -176,6 +258,33 @@ QString appendSectionCurves(SketchObject &sketch, const Body &body, bool constru
         for (FaceId f : body.faces()) box.add(faceBox(body, f));
         const Vec3 middle = 0.5 * (box.lo + box.hi);
         const double half = 2.0 * std::max(1.0, box.diagonal()) + distance(frame.origin(), middle);
+        // Piano d'appoggio (il solido tutto da una parte: lo schizzo su una sua
+        // faccia piana): la sezione sono le facce piane che stanno nel piano, e le
+        // curve i loro bordi, gli edge esatti del corpo (quelli tra due facce del
+        // piano sono interni). Niente booleana, che con tutto il bordo sulla
+        // lamina e' lenta.
+        const Vec3 normal = frame.zDir();
+        if (onOneSide(body, frame.origin(), normal, kLinearResolution) || onOneSide(body, frame.origin(), -normal, kLinearResolution)) {
+            std::vector<FaceId> onPlane;
+            for (FaceId f : body.faces()) {
+                const Surface &surface = *body.face(f).surface;
+                if (surface.type() != SurfaceType::Plane) continue;
+                const Frame3 &plane = static_cast<const Plane &>(surface).frame();
+                if (norm(cross(plane.zDir(), normal)) <= 1e-12 && std::fabs(dot(plane.origin() - frame.origin(), normal)) <= kLinearResolution)
+                    onPlane.push_back(f);
+            }
+            const auto inPlane = [&](FaceId f) { return std::find(onPlane.begin(), onPlane.end(), f) != onPlane.end(); };
+            int count = 0;
+            for (EdgeId e : body.edges()) {
+                const Edge &edge = body.edge(e);
+                if (!edge.curve || body.isLaminar(e) || inPlane(body.finFace(edge.forward)) == inPlane(body.finFace(edge.backward))) continue;
+                const QString error = appendProjectedCurve(sketch, edge.curve, edge.range, construction, fixed, created);
+                if (!error.isEmpty()) return error;
+                ++count;
+            }
+            if (count == 0) return QStringLiteral("Il piano dello schizzo non taglia il solido.");
+            return {};
+        }
         // La parte del piano dentro il solido: i suoi bordi sono la sezione.
         const Body sheet = makePlaneSheet(frame, half);
         const Body inside = booleanOperation(sheet, body, Kernel::BooleanOperation::Intersect);
@@ -194,4 +303,135 @@ QString appendSectionCurves(SketchObject &sketch, const Body &body, bool constru
     return {};
 }
 
+QString appendSketchContactReferences(SketchObject &sketch, const SketchObject &source, QVector<SketchEntity> *created) {
+    try {
+        const Frame3 target = sketchAxes(sketch), from = sketchAxes(source);
+        const Vec3 normal = target.zDir();
+        const double offset = dot(normal, target.origin());
+        const double scale = std::max({1.0, norm(target.origin()), norm(from.origin())});
+        const double tolerance = 1e-8 * scale;
+        const bool coplanar = norm(cross(normal, from.zDir())) <= 1e-10
+                           && std::fabs(dot(normal, from.origin()) - offset) <= tolerance;
+        int added = 0;
+        const auto fixedPoint = [&](const Vec3 &world) {
+            const Vec3 local = target.toLocal(world);
+            const QPointF point(local.x(), local.y());
+            for (int index : sketch.constructionSegments) {
+                if (index < 0 || index >= sketch.segments.size()) continue;
+                const SketchSegment &segment = sketch.segments.at(index);
+                const auto gap = [](const QPointF &a, const QPointF &b) { return std::hypot(a.x() - b.x(), a.y() - b.y()); };
+                if (gap(segment.first, segment.second) <= kSketchConnectionTolerance
+                    && gap(segment.first, point) <= kSketchConnectionTolerance) return;
+            }
+            const int index = int(sketch.segments.size());
+            appendSegment(sketch, point, point, true);
+            sketch.geometricConstraints.append(makeConstraint(sketch, ConstraintType::Fix, {{0, index, -1}}));
+            if (created) created->append({0, index});
+            ++added;
+        };
+        const auto addCurve = [&](const CurvePtr<3> &curve, const Interval &range) {
+            if (coplanar) {
+                QVector<SketchEntity> localCreated;
+                const QString error = appendProjectedCurve(sketch, curve, range, true, true, &localCreated);
+                if (!error.isEmpty()) throw std::domain_error(error.toStdString());
+                if (created) *created += localCreated;
+                added += localCreated.size();
+                return;
+            }
+            const PlaneRoots<3> roots = planeRoots<3>(*curve, range, normal, offset, tolerance);
+            for (const Interval &coincident : roots.coincident) {
+                QVector<SketchEntity> localCreated;
+                const QString error = appendProjectedCurve(sketch, curve, coincident, true, true, &localCreated);
+                if (!error.isEmpty()) throw std::domain_error(error.toStdString());
+                if (created) *created += localCreated;
+                added += localCreated.size();
+            }
+            for (double parameter : roots.parameters) fixedPoint(curve->point(parameter));
+        };
+        for (int index = 0; index < source.segments.size(); ++index) {
+            if (source.isConstructionSegment(index)) continue;
+            const SketchSegment &segment = source.segments.at(index);
+            const Vec3 a = from.toGlobal(Vec3(segment.first.x(), segment.first.y(), 0.0));
+            const Vec3 b = from.toGlobal(Vec3(segment.second.x(), segment.second.y(), 0.0));
+            const double length = distance(a, b);
+            if (length <= kSketchConnectionTolerance) continue;
+            addCurve(std::make_shared<Line<3>>(a, (b - a) / length), {0.0, length});
+        }
+        for (const CurveObject &object : source.curves) {
+            if (object.construction) continue;
+            for (const ProfileSegment &piece : curveGeometry(object)) addCurve(embedCurve(piece.curve, from), piece.range);
+        }
+        if (added == 0)
+            return coplanar ? QStringLiteral("Lo schizzo non contiene entita' utilizzabili.")
+                            : QStringLiteral("Lo schizzo non attraversa il piano attivo.");
+        return {};
+    } catch (const std::exception &failure) {
+        return QStringLiteral("Contatti tra schizzi non riusciti: %1").arg(QString::fromUtf8(failure.what()));
+    }
+}
+
+QString appendSketchContactReference(SketchObject &sketch, const SketchObject &source, SketchEntity entity,
+                                     QVector<SketchEntity> *created) {
+    SketchObject isolated = source;
+    isolated.segments.clear();
+    isolated.curves.clear();
+    isolated.constructionSegments.clear();
+    isolated.geometricConstraints.clear();
+    isolated.coincidentConstraints.clear();
+    isolated.constraints.clear();
+    isolated.segmentLengths.clear();
+    if (entity.kind == 0 && entity.index >= 0 && entity.index < source.segments.size()) {
+        isolated.segments.append(source.segments.at(entity.index));
+    } else if (entity.kind == 1 && entity.index >= 0 && entity.index < source.curves.size()) {
+        CurveObject curve = source.curves.at(entity.index);
+        curve.construction = false;
+        isolated.curves.append(std::move(curve));
+    } else {
+        return QStringLiteral("Entita' dello schizzo sorgente non valida.");
+    }
+    return appendSketchContactReferences(sketch, isolated, created);
+}
+
+}
+
+namespace ForgeCad {
+QString sketchPlaneReference(const SketchObject &sketch, const SketchFrame &plane, QPointF &point, QPointF &direction) {
+    const auto frame = sketchAxes(sketch);
+    const Kernel::Vec3 n(plane.normal[0], plane.normal[1], plane.normal[2]);
+    const Kernel::Vec3 origin(plane.origin[0], plane.origin[1], plane.origin[2]);
+    const double a = Kernel::dot(n, frame.xDir()), b = Kernel::dot(n, frame.yDir());
+    const double c = Kernel::dot(n, frame.origin() - origin), squared = a * a + b * b;
+    if (squared < 1e-20)
+        return QStringLiteral("Il piano e' parallelo o coincidente con lo schizzo: non definisce una retta di riferimento.");
+    point = QPointF(-a * c / squared, -b * c / squared);
+    direction = QPointF(-b, a) / std::sqrt(squared);
+    return {};
+}
+QString sketchAxisReference(const SketchObject &sketch, const Kernel::Vec3 &origin, const Kernel::Vec3 &axis,
+                            QPointF &point, QPointF &direction) {
+    const auto frame = sketchAxes(sketch);
+    point = worldToSketch(origin, sketch);
+    direction = QPointF(Kernel::dot(axis, frame.xDir()), Kernel::dot(axis, frame.yDir()));
+    const double length = std::hypot(direction.x(), direction.y());
+    if (length < 1e-10)
+        return QStringLiteral("L'asse e' normale allo schizzo: la sua proiezione e' un punto, non una retta.");
+    direction /= length;
+    return {};
+}
+int appendFixedReferenceLine(SketchObject &sketch, const QPointF &point, const QPointF &direction, double halfLength) {
+    const auto cross = [](const QPointF &a, const QPointF &b) { return a.x() * b.y() - a.y() * b.x(); };
+    for (int i : sketch.constructionSegments) {
+        if (i < 0 || i >= sketch.segments.size()) continue;
+        const auto &s = sketch.segments.at(i);
+        const QPointF d = s.second - s.first;
+        if (std::fabs(cross(d, direction)) > 1e-12 * std::max(1.0, std::hypot(d.x(), d.y()))
+            || std::fabs(cross(s.first - point, direction)) > 1e-12 * std::max({1.0, std::hypot(point.x(), point.y()), std::hypot(s.first.x(), s.first.y())})) continue;
+        for (const auto &c : sketch.geometricConstraints)
+            if (c.type == ConstraintType::Fix && c.first == ConstraintRef{0, i, -1}) return i;
+    }
+    const int index = int(sketch.segments.size());
+    appendSegment(sketch, point - halfLength * direction, point + halfLength * direction, true);
+    sketch.geometricConstraints.append(makeConstraint(sketch, ConstraintType::Fix, {{0, index, -1}}));
+    return index;
+}
 }

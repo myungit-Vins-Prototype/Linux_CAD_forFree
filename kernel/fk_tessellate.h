@@ -37,6 +37,7 @@ struct FaceMesh {
 struct Tessellation {
     std::vector<FaceMesh> faces;
     std::vector<std::vector<Vec3>> edges;  // polilinee degli edge
+    std::vector<EdgeId> edgeIds;          // stessa numerazione di edges
     int failedFaces = 0;                   // facce che non si e' riusciti a triangolare
 };
 

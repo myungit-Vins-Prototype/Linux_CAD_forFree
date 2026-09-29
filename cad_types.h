@@ -13,6 +13,7 @@
 
 namespace ForgeCad::Kernel {
 class Body;
+struct RayFaceIndex;
 template <int N>
 class Curve;
 }
@@ -35,8 +36,9 @@ using ForgeCurve = std::shared_ptr<const Kernel::Curve<3>>;
 // Converted: curva di riferimento presa da uno spigolo, una curva o una
 // sezione di un corpo (B-spline razionale esatta: poli, pesi, nodi espansi e
 // grado in CurveObject); ConvertEdges: lo strumento che le crea con un clic.
+// Dimension: lo strumento Quota (prima si scelgono le entita', poi si mette la quota).
 enum class DrawingTool { Line, Polyline, Spline, Nurbs, Circle, Arc, Polygon, ConstructionLine, Trim, Extend, Split, Fillet, Chamfer, Select,
-                         Rectangle, CenterRectangle, Ellipse, ThreePointArc, TangentArc, Converted, ConvertEdges };
+                         Rectangle, CenterRectangle, Ellipse, ThreePointArc, TangentArc, Converted, ConvertEdges, Dimension };
 enum class SnapKind { None, Endpoint, Midpoint, Nearest };
 
 enum class ReferencePlane { XY, XZ, YZ };
@@ -66,6 +68,9 @@ struct CurveObject {
     QVector<QPointF> controlPoints;
     QVector<double> weights;
     QVector<QPair<QPointF, QPointF>> tangentHandles;
+    // Per ogni punto di una spline, le due maniglie restano allineate e
+    // opposte. Le lunghezze possono essere quotate separatamente.
+    QVector<bool> tangentLinked;
     int sides = 0;
     QVector<double> knots;  // Converted: nodi espansi (poli + grado + 1)
     int degree = 3;         // Converted
@@ -120,8 +125,12 @@ struct ConstraintRef {
 // del modello, angoli in gradi.
 enum class ConstraintType {
     Coincident = 0, Horizontal, Vertical, Parallel, Perpendicular, Collinear, Tangent, Equal, Concentric, Midpoint,
-    PointOnCurve, Fix, Distance, Angle, Radius, Diameter, Pattern, Symmetric, AxisRadius, AxisDiameter
+    PointOnCurve, Fix, Distance, Angle, Radius, Diameter, Pattern, Symmetric, AxisRadius, AxisDiameter,
+    HorizontalDistance, VerticalDistance
 };
+// HorizontalDistance / VerticalDistance: quota lungo l'asse X (o Y) dello
+// schizzo tra due punti (anche di entita' diverse) o tra gli estremi di un
+// segmento: |dx| (o |dy|) = value.
 // Symmetric: first e second simmetrici rispetto alla retta `third` (punti;
 // segmenti, con gli estremi accoppiati come dice value: 0 inizio con inizio,
 // 1 inizio con fine; cerchi e archi: centri simmetrici e raggi uguali).
@@ -221,6 +230,9 @@ struct BodyDisplay {
     QVector<QVector3D> vertices;   // tre vertici per triangolo
     QVector<QVector3D> normals;    // una normale per vertice
     QVector<QVector<QVector3D>> edges;
+    QVector<QVector<QVector3D>> constructionCurves; // isoparametriche U/V delle anteprime
+    QVector<QVector<int>> faceEdges; // faccia B-rep -> polilinee, senza ricerche geometriche durante il disegno
+    std::shared_ptr<const ForgeCad::Kernel::RayFaceIndex> rayIndex;
     int quality = -1;
 };
 
@@ -336,6 +348,19 @@ struct DatumParameters {
     double size = 0.0;
 };
 
+// Una catena scelta dentro uno schizzo. Gli indici separati mantengono la
+// distinzione fra segmenti e curve e permettono di usare piu' percorsi
+// disconnessi appartenenti allo stesso schizzo.
+struct SketchPathRef {
+    int sketch = -1;
+    QVector<int> segments;
+    QVector<int> curves;
+    bool empty() const { return segments.isEmpty() && curves.isEmpty(); }
+    bool operator==(const SketchPathRef &other) const {
+        return sketch == other.sketch && segments == other.segments && curves == other.curves;
+    }
+};
+
 // Ripetizione (BodyFeature::Pattern) del corpo `firstBody`; le copie si
 // uniscono al corpo in un solo body. Tipi:
 //  - 0 lineare: `count` istanze lungo la direzione di refs[0] ogni `spacing` e,
@@ -440,10 +465,21 @@ struct ExtrusionObject {
     // torsione minima, 1 Frenet, 2 orientamento costante.
     int sweepPath = 0;
     int pathSketch = -1;
+    QVector<int> pathSegments;
+    QVector<int> pathCurves;
     int sweepMode = 0;
-    // Loft: le sezioni (schizzi, nell'ordine), rigato o liscio.
+    // Loft: sezioni e curve guida (schizzi, nell'ordine), rigato o liscio.
+    // La continuita' 0/1/2 corrisponde a G0/G1/G2; le influenze sono [0, 1].
     QVector<int> loftSketches;
+    QVector<int> loftGuides;
+    QVector<SketchPathRef> loftGuidePaths;
     bool loftRuled = false;
+    int loftStartContinuity = 0;
+    int loftEndContinuity = 0;
+    int loftGuideContinuity = 1;
+    double loftGuideInfluence = 1.0;
+    double loftStartInfluence = 1.0;
+    double loftEndInfluence = 1.0;
     // Imported: il body letto dal file come testo STEP scritto dal kernel
     // (fk_step, numeri a 17 cifre: la stessa geometria) e il nome del file d'origine.
     QByteArray importData;

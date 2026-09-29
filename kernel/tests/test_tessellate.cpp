@@ -257,3 +257,40 @@ FK_TEST(TessellateRayHits) {
     FK_CHECK(firstRayHit(drilled, Vec3(5, 3, 2), Vec3(1, 0, 0), 1e-7, t));
     FK_CHECK_NEAR(t, 1.5, 1e-9);
 }
+
+FK_TEST(TessellateCachedRayHits) {
+    const Body box = makeBox(Frame3(), 10, 6, 4);
+    const Body drilled = booleanOperation(box, makeCylinder(Frame3(Vec3(5, 3, -1), Vec3(0, 0, 1), Vec3(1, 0, 0)), 1.5, 6),
+                                         BooleanOperation::Subtract);
+    const std::vector<Body> bodies = {box, drilled, makeSphere(Frame3(), 4), makeTorus(Frame3(), 4, 1)};
+    for (const Body &body : bodies) {
+        const RayFaceIndex index(body);
+        for (int x = -6; x <= 12; ++x)
+            for (int y = -6; y <= 8; ++y) {
+                const Vec3 origin(x + 0.13, y + 0.19, 20), direction(0.01, -0.02, -2);
+                double expected = 0, cached = 0;
+                FaceId expectedFace, cachedFace;
+                const bool a = firstRayHit(body, origin, direction, 1e-7, expected, &expectedFace);
+                const bool b = firstRayHit(body, origin, direction, 1e-7, cached, &cachedFace, &index);
+                FK_CHECK(a == b);
+                if (a && b) {
+                    FK_CHECK_NEAR(cached, expected, 1e-12);
+                    FK_CHECK(cachedFace == expectedFace);
+                }
+            }
+        double t = 0;
+        FK_CHECK(!firstRayHit(body, Vec3(1e4, 1e4, 1e4), Vec3(0, 0, 1), 1e-7, t, nullptr, &index));
+    }
+    const RayFaceIndex index(drilled);
+    double t = 0;
+    FK_CHECK(!firstRayHit(drilled, Vec3(5, 3, 20), Vec3(0, 0, -1), 1e-7, t, nullptr, &index));
+    FK_CHECK(firstRayHit(drilled, Vec3(5, 3, 2), Vec3(1, 0, 0), 1e-7, t, nullptr, &index));
+    FK_CHECK_NEAR(t, 1.5, 1e-9);
+    const Tessellation mesh = tessellate(drilled, {});
+    FK_CHECK(mesh.edges.size() == mesh.edgeIds.size());
+    for (std::size_t i = 0; i < mesh.edges.size(); ++i) {
+        const Edge &edge = drilled.edge(mesh.edgeIds[i]);
+        FK_CHECK(near(mesh.edges[i].front(), edge.curve->point(edge.range.lo), 1e-12));
+        FK_CHECK(near(mesh.edges[i].back(), edge.curve->point(edge.range.hi), 1e-12));
+    }
+}

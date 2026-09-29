@@ -3,6 +3,9 @@
 #include <algorithm>
 #include <cmath>
 #include <exception>
+#include <map>
+
+#include <QRegularExpression>
 
 #include "cad_curve_solver.h"
 #include "cad_kernel.h"
@@ -505,7 +508,9 @@ ForgeBody forgeSweep(const SketchObject &profileSketch, const std::vector<PathSe
     }
 }
 
-ForgeBody forgeLoft(const QVector<SketchObject> &sketches, bool ruled, QString *error) {
+ForgeBody forgeLoft(const QVector<SketchObject> &sketches, const QVector<SketchObject> &guideSketches, bool ruled,
+                    int startContinuity, int endContinuity, int guideContinuity, double guideInfluence, double startInfluence,
+                    double endInfluence, QString *error) {
     if (sketches.size() < 2) {
         setError(error, QStringLiteral("Il loft richiede almeno due sezioni."));
         return nullptr;
@@ -533,9 +538,53 @@ ForgeBody forgeLoft(const QVector<SketchObject> &sketches, bool ruled, QString *
             setError(error, QStringLiteral("Le sezioni del loft devono essere tutte chiuse o tutte aperte."));
             return nullptr;
         }
-        return std::make_shared<const Body>(closedCount > 0 ? loftSolid(sections, ruled) : loftSheet(sections, ruled));
+        LoftOptions options;
+        options.ruled = ruled;
+        options.startContinuity = startContinuity;
+        options.endContinuity = endContinuity;
+        options.guideContinuity = guideContinuity;
+        options.guideInfluence = guideInfluence;
+        options.startInfluence = startInfluence;
+        options.endInfluence = endInfluence;
+        for (const SketchObject &guide : guideSketches) {
+            std::vector<PathSegment> path;
+            QString pathError;
+            if (!sketchPath(guide, path, &pathError)) {
+                setError(error, QStringLiteral("Curva guida \"%1\" non valida: %2").arg(guide.name, pathError));
+                return nullptr;
+            }
+            if (distance(path.front().curve->point(path.front().range.lo), path.back().curve->point(path.back().range.hi))
+                <= kSketchConnectionTolerance) {
+                setError(error, QStringLiteral("La curva guida \"%1\" deve essere una catena aperta.").arg(guide.name));
+                return nullptr;
+            }
+            options.guides.push_back(std::move(path));
+        }
+        return std::make_shared<const Body>(closedCount > 0 ? loftSolid(sections, options) : loftSheet(sections, options));
     } catch (const std::exception &failure) {
-        setError(error, QStringLiteral("Loft non riuscito: %1").arg(QString::fromUtf8(failure.what())));
+        QString detail = QString::fromUtf8(failure.what());
+        const auto marker = [&](const QString &name) {
+            const QString prefix = QStringLiteral("[[") + name + QStringLiteral("=");
+            const int begin = detail.indexOf(prefix);
+            if (begin < 0) return -1;
+            const int end = detail.indexOf(QStringLiteral("]]"), begin);
+            bool ok = false;
+            const int value = end > begin ? detail.mid(begin + prefix.size(), end - begin - prefix.size()).toInt(&ok) : -1;
+            return ok ? value : -1;
+        };
+        const int section = marker(QStringLiteral("loft-section"));
+        const int guide = marker(QStringLiteral("loft-guide"));
+        const QString sectionMarker = section >= 0 ? QStringLiteral(" [[loft-section=%1]]").arg(section) : QString();
+        detail.remove(QRegularExpression(QStringLiteral("\\s*\\[\\[loft-(section|guide)=\\d+\\]\\]")));
+        if (section >= 0 && section < sketches.size()) {
+            const QString sectionName = sketches.at(section).name;
+            const QString guideName = guide >= 0 && guide < guideSketches.size() ? guideSketches.at(guide).name : QStringLiteral("Guida %1").arg(guide + 1);
+            if (detail.contains(QStringLiteral("non incontra una sezione")))
+                detail = QStringLiteral("La curva guida \"%1\" non incontra la sezione \"%2\".%3").arg(guideName, sectionName, sectionMarker);
+            else
+                detail = QStringLiteral("%1 — sezione \"%2\".%3").arg(detail, sectionName, sectionMarker);
+        }
+        setError(error, QStringLiteral("Loft non riuscito: %1").arg(detail));
         return nullptr;
     }
 }
@@ -549,7 +598,8 @@ void forgeTessellate(const Body &body, int quality, BodyDisplay &display) {
         const Edge &edge = body.edge(e);
         if (edge.curve) box.add(curveBox(*edge.curve, edge.range));
     }
-    for (FaceId f : body.faces()) box.add(faceBox(body, f));
+    display.rayIndex = std::make_shared<RayFaceIndex>(body);
+    box.add(display.rayIndex->bounds);
     if (box.isEmpty()) return;
     const double diagonal = std::max(box.diagonal(), 1e-9);
     TessellationOptions options;
@@ -562,18 +612,76 @@ void forgeTessellate(const Body &body, int quality, BodyDisplay &display) {
                 display.vertices.append(toDisplay(face.points[std::size_t(index)]));
                 display.normals.append(toDisplay(face.normals[std::size_t(index)]));
             }
-    for (const std::vector<Vec3> &edge : mesh.edges) {
+    std::map<int, int> edgeDisplay;
+    for (std::size_t e = 0; e < mesh.edges.size(); ++e) {
+        const std::vector<Vec3> &edge = mesh.edges[e];
         QVector<QVector3D> polyline;
         for (const Vec3 &point : edge) polyline.append(toDisplay(point));
-        if (polyline.size() >= 2) display.edges.append(polyline);
+        if (polyline.size() >= 2) {
+            edgeDisplay[mesh.edgeIds[e].index] = int(display.edges.size());
+            display.edges.append(polyline);
+        }
+    }
+    for (FaceId f : body.faces()) {
+        if (display.faceEdges.size() <= f.index) display.faceEdges.resize(f.index + 1);
+        auto &indices = display.faceEdges[f.index];
+        for (LoopId l : body.face(f).loops)
+            for (FinId fin : body.loopFins(l)) {
+                const auto found = edgeDisplay.find(body.fin(fin).edge.index);
+                if (found != edgeDisplay.end() && !indices.contains(found->second)) indices.append(found->second);
+            }
     }
 }
 
-bool forgePickFace(const Body &body, const QVector3D &origin, const QVector3D &direction, FaceHit &hit) {
+void forgeSurfaceConstructionCurves(const Body &body, BodyDisplay &display, int divisions) {
+    divisions = std::clamp(divisions, 2, 12);
+    const int sideFaces = int(body.faces().size()) - (body.isSheet() ? 0 : 2); // i due coperchi del loft solido sono in fondo
+    int facePosition = 0;
+    for (FaceId face : body.faces()) {
+        if (facePosition++ >= sideFaces) continue;
+        const Surface &surface = *body.face(face).surface;
+        if (surface.type() == SurfaceType::Plane) {
+            if (body.face(face).loops.size() != 1) continue;
+            const std::vector<FinId> fins = body.loopFins(body.face(face).loops.front());
+            if (fins.size() != 4) continue;
+            Vec3 corner[4];
+            for (int k = 0; k < 4; ++k) corner[k] = body.vertex(body.finStart(fins[std::size_t(k)])).point;
+            for (int line = 1; line < divisions; ++line) {
+                const double t = double(line) / divisions;
+                for (int family = 0; family < 2; ++family) {
+                    const Vec3 a = family == 0 ? (1.0 - t) * corner[0] + t * corner[3] : (1.0 - t) * corner[0] + t * corner[1];
+                    const Vec3 b = family == 0 ? (1.0 - t) * corner[1] + t * corner[2] : (1.0 - t) * corner[3] + t * corner[2];
+                    display.constructionCurves.append({toDisplay(a), toDisplay(b)});
+                }
+            }
+            continue;
+        }
+        if (surface.type() != SurfaceType::BSpline) continue;
+        const Interval u = surface.uDomain(), v = surface.vDomain();
+        if (!std::isfinite(u.lo) || !std::isfinite(u.hi) || !std::isfinite(v.lo) || !std::isfinite(v.hi)) continue;
+        constexpr int samples = 32;
+        for (int line = 1; line < divisions; ++line) {
+            QVector<QVector3D> curve;
+            const double fixed = u.lo + u.length() * line / divisions;
+            for (int sample = 0; sample <= samples; ++sample)
+                curve.append(toDisplay(surface.point(fixed, v.lo + v.length() * sample / samples)));
+            display.constructionCurves.append(std::move(curve));
+        }
+        for (int line = 1; line < divisions; ++line) {
+            QVector<QVector3D> curve;
+            const double fixed = v.lo + v.length() * line / divisions;
+            for (int sample = 0; sample <= samples; ++sample)
+                curve.append(toDisplay(surface.point(u.lo + u.length() * sample / samples, fixed)));
+            display.constructionCurves.append(std::move(curve));
+        }
+    }
+}
+
+bool forgePickFace(const Body &body, const QVector3D &origin, const QVector3D &direction, FaceHit &hit, const Kernel::RayFaceIndex *index) {
     try {
         double t = 0.0;
         FaceId f;
-        if (!firstRayHit(body, Vec3(origin.x(), origin.y(), origin.z()), Vec3(direction.x(), direction.y(), direction.z()), 1e-7, t, &f)
+        if (!firstRayHit(body, Vec3(origin.x(), origin.y(), origin.z()), Vec3(direction.x(), direction.y(), direction.z()), 1e-7, t, &f, index)
             || !f.valid())
             return false;
         hit = {};
@@ -602,10 +710,10 @@ bool forgePickFace(const Body &body, const QVector3D &origin, const QVector3D &d
     }
 }
 
-bool forgeIntersectRay(const Body &body, const QVector3D &origin, const QVector3D &direction, double &distance) {
+bool forgeIntersectRay(const Body &body, const QVector3D &origin, const QVector3D &direction, double &distance, const Kernel::RayFaceIndex *index) {
     try {
         double t = 0.0;
-        if (!firstRayHit(body, Vec3(origin.x(), origin.y(), origin.z()), Vec3(direction.x(), direction.y(), direction.z()), 1e-7, t))
+        if (!firstRayHit(body, Vec3(origin.x(), origin.y(), origin.z()), Vec3(direction.x(), direction.y(), direction.z()), 1e-7, t, nullptr, index))
             return false;
         distance = t;
         return true;

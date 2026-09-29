@@ -31,13 +31,18 @@ constexpr char kMagic[4] = {'F', 'C', 'A', 'D'};
 // 12 curve di riferimento prese dai corpi (nodi e grado), spostamento dei corpi.
 // 13 assi di simmetria degli schizzi, simmetrie (terzo riferimento dei vincoli), quote di raggio e diametro dall'asse.
 // 14 copia dei corpi calcolati dopo la definizione (stessa definizione del 13).
-constexpr quint16 kVersion = 14;
+// 15 curve guida, continuita' G0/G1/G2 e influenze del loft.
+// 16 collegamento delle coppie di maniglie tangenti delle spline.
+// 17 catene parziali di schizzo per sweep e guide del loft.
+// 18 grado di continuita' imposto dalle guide del loft.
+constexpr quint16 kVersion = 18;
 constexpr quint8 kZlib = 1;
 
 void write(QDataStream &out, const CurveObject &curve) {
     out << qint32(curve.tool) << curve.controlPoints << curve.weights << curve.tangentHandles << qint32(curve.sides)
         << curve.construction;
     out << curve.knots << qint32(curve.degree);  // formato 12
+    out << curve.tangentLinked;                  // formato 16
 }
 
 void read(QDataStream &in, CurveObject &curve, quint16 version) {
@@ -50,6 +55,7 @@ void read(QDataStream &in, CurveObject &curve, quint16 version) {
         in >> curve.knots >> degree;
         curve.degree = degree;
     }
+    if (version >= 16) in >> curve.tangentLinked;
 }
 
 void write(QDataStream &out, const CoincidentConstraint &c) {
@@ -68,6 +74,16 @@ void readRef(QDataStream &in, ConstraintRef &r) {
     qint32 kind = -1, element = -1, point = -1;
     in >> kind >> element >> point;
     r = {kind, element, point};
+}
+
+void writePathRef(QDataStream &out, const SketchPathRef &path) {
+    out << qint32(path.sketch) << path.segments << path.curves;
+}
+bool readPathRef(QDataStream &in, SketchPathRef &path) {
+    qint32 sketch = -1;
+    in >> sketch >> path.segments >> path.curves;
+    path.sketch = sketch;
+    return in.status() == QDataStream::Ok;
 }
 
 void writePattern(QDataStream &out, const SketchPatternData &p) {
@@ -248,6 +264,15 @@ void write(QDataStream &out, const ExtrusionObject &body) {
     for (double v : m.translation) out << v;
     writeRefs(out, {m.axis});
     out << m.angle << m.copy;
+    // Formato 15: guide e continuita' del loft.
+    out << quint32(body.loftGuides.size());
+    for (int sketch : body.loftGuides) out << qint32(sketch);
+    out << qint32(body.loftStartContinuity) << qint32(body.loftEndContinuity) << body.loftGuideInfluence
+        << body.loftStartInfluence << body.loftEndInfluence;
+    // Formato 17: porzioni di schizzo scelte graficamente.
+    out << body.pathSegments << body.pathCurves << quint32(body.loftGuidePaths.size());
+    for (const SketchPathRef &path : body.loftGuidePaths) writePathRef(out, path);
+    out << qint32(body.loftGuideContinuity);
 }
 
 // `extras` (solo formato 5): i file scritti durante lo sviluppo del formato 5
@@ -353,6 +378,43 @@ bool read(QDataStream &in, ExtrusionObject &body, quint16 version, int extras) {
         if (!readRefs(in, refs) || refs.size() != 1) return false;
         m.axis = refs.first();
         in >> m.angle >> m.copy;
+    }
+    if (version >= 15) {
+        quint32 guides = 0;
+        if (!readCount(in, guides)) return false;
+        body.loftGuides.clear();
+        for (quint32 k = 0; k < guides; ++k) {
+            qint32 sketch = -1;
+            in >> sketch;
+            body.loftGuides.append(sketch);
+        }
+        qint32 start = 0, end = 0;
+        in >> start >> end >> body.loftGuideInfluence >> body.loftStartInfluence >> body.loftEndInfluence;
+        body.loftStartContinuity = start;
+        body.loftEndContinuity = end;
+        if (start < 0 || start > 2 || end < 0 || end > 2 || body.loftGuideInfluence < 0.0 || body.loftGuideInfluence > 1.0
+            || body.loftStartInfluence < 0.0 || body.loftStartInfluence > 1.0 || body.loftEndInfluence < 0.0 || body.loftEndInfluence > 1.0)
+            return false;
+    }
+    if (version >= 17) {
+        quint32 paths = 0;
+        in >> body.pathSegments >> body.pathCurves;
+        if (!readCount(in, paths)) return false;
+        body.loftGuidePaths.clear();
+        for (quint32 k = 0; k < paths; ++k) {
+            SketchPathRef path;
+            if (!readPathRef(in, path)) return false;
+            body.loftGuidePaths.append(std::move(path));
+        }
+    }
+    if (version >= 18) {
+        qint32 continuity = 1;
+        in >> continuity;
+        if (continuity < 0 || continuity > 2) return false;
+        body.loftGuideContinuity = continuity;
+    } else {
+        // Fino al formato 17 le guide trasferivano sempre anche la curvatura.
+        body.loftGuideContinuity = 2;
     }
     if (int(body.feature) < 0 || int(body.feature) > int(BodyFeature::Transform)) return false;
     return in.status() == QDataStream::Ok;

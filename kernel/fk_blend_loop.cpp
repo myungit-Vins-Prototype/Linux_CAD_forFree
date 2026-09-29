@@ -207,6 +207,7 @@ struct ChainFin {
     int inPlaneEdge = -1, wallEdge = -1;  // edge nuovi: parallela in T e traslata sul fianco
     double fitError = 0.0;
     std::pair<double, double> sizes;  // in T e sul fianco
+    Interval span;  // dominio in u della superficie: l'edge, allungato oltre gli angoli concavi
 };
 
 // Tipo di vertice della catena.
@@ -220,6 +221,11 @@ struct ChainVertex {
     bool connectorFromWall = true;          // l'edge va dal vertice sul fianco a quello in T
     int vertical = -1;                      // spigolo tra due fianchi (modello), -1 se non c'e'
     int endEdge = -1, endFace = -1;         // estremo di una catena aperta: edge in T e faccia normale
+    // Angolo vivo concavo (in T il bordo gira a destra): le parallele si
+    // incontrano oltre il vertice, nei parametri `previousAt` e `nextAt` degli
+    // edge prolungati, e i raccordi si allungano fin li'.
+    bool concave = false;
+    double previousAt = 0.0, nextAt = 0.0;
 };
 
 std::vector<int> edgesAt(const Model &model, int vertex) {
@@ -261,7 +267,8 @@ std::vector<EdgeId> planarChainRuns(const Body &body, const std::vector<EdgeId> 
     return edges;
 }
 
-Body blendPlanarChains(const Body &input, const std::vector<EdgeId> &selected, double size, bool chamfer, const std::vector<ChamferSides> *sides) {
+Body blendPlanarChains(const Body &input, const std::vector<EdgeId> &selected, double size, bool chamfer, const std::vector<ChamferSides> *sides,
+                       FaceId preferredPlane) {
     if (!(size > kLinearResolution)) throw std::domain_error("blendEdges: raggio o distanza non validi");
     Body body = input;
     std::vector<EdgeId> edges = selected;
@@ -306,6 +313,11 @@ Body blendPlanarChains(const Body &input, const std::vector<EdgeId> &selected, d
         for (int index : pending) {
             const std::vector<FaceId> sides = planarSides(body, EdgeId(index));
             if (sides.empty()) throw std::domain_error("blendEdges: spigolo non tra una faccia piana e un fianco normale ad essa");
+            if (preferredPlane.valid() && std::find(sides.begin(), sides.end(), preferredPlane) != sides.end()) {
+                seed = index;
+                plane = preferredPlane;
+                break;
+            }
             if (seed < 0 || sides.size() == 1) {
                 seed = index;
                 plane = sides.front();
@@ -377,6 +389,7 @@ Body blendPlanarChains(const Body &input, const std::vector<EdgeId> &selected, d
             const RowFit fit = fin.geometry->fit();
             fin.fitError = fit.error;
             fin.surface = fin.geometry->surface(fit);
+            fin.span = edge.range;
             // I punti della parallela devono stare in T, quelli della traslata sul fianco.
             for (double f : {0.25, 0.5, 0.75}) {
                 const double t = edge.range.lo + f * edge.range.length();
@@ -428,8 +441,15 @@ Body blendPlanarChains(const Body &input, const std::vector<EdgeId> &selected, d
                 if (others.size() == 1) cv.vertical = others.front();
                 if (cv.joint == Joint::Sharp) {
                     if (cv.vertical < 0) throw std::domain_error("blendEdges: angolo vivo senza spigolo tra i fianchi");
-                    if (dot(cross(loopTangent(*previous, true), loopTangent(*next, false)), D) <= 0.0)
-                        throw std::domain_error("blendEdges: angoli vivi concavi della catena non gestiti");
+                    cv.concave = dot(cross(loopTangent(*previous, true), loopTangent(*next, false)), D) <= 0.0;
+                    // Negli angoli concavi i raccordi proseguono oltre gli edge: serve
+                    // la geometria esatta prolungata (rette e cerchi).
+                    if (cv.concave)
+                        for (const ChainFin *fin : {previous, next}) {
+                            const CurveType type = body.edge(fin->edge).curve->type();
+                            if (type != CurveType::Line && type != CurveType::Circle)
+                                throw std::domain_error("blendEdges: angolo vivo concavo tra bordi di forma libera (non gestito)");
+                        }
                 }
             } else {
                 // Estremo di una catena aperta: l'edge di T che segue e la faccia normale al bordo.
@@ -452,6 +472,57 @@ Body blendPlanarChains(const Body &input, const std::vector<EdgeId> &selected, d
                     }
                 if (cv.vertical < 0) throw std::domain_error("blendEdges: estremo della catena senza spigolo sul fianco");
             }
+        }
+
+        // Angoli vivi concavi: le parallele in T si incontrano oltre il vertice.
+        // Punto comune esatto (Gauss-Newton sulle parallele vere, prolungate), poi
+        // le superfici dei due raccordi rifatte sul dominio allungato.
+        for (int j = 0; j < vertexCount; ++j) {
+            ChainVertex &cv = vertices[std::size_t(j)];
+            if (cv.joint != Joint::Sharp || !cv.concave) continue;
+            ChainFin &previous = chain.fins[std::size_t((j - 1 + n) % n)];
+            ChainFin &next = chain.fins[std::size_t(j % n)];
+            double ua = previous.endParameter, ub = next.startParameter;
+            double miss = 1e300;
+            for (int iteration = 0; iteration < 100; ++iteration) {
+                const RowSample sa = previous.geometry->sample(ua, false), sb = next.geometry->sample(ub, false);
+                const Vec3 f = sa.value[2] - sb.value[2], da = sa.derivative[2], db = sb.derivative[2];
+                miss = norm(f);
+                const double a11 = dot(da, da), a12 = -dot(da, db), a22 = dot(db, db);
+                const double r1 = -dot(da, f), r2 = dot(db, f), det = a11 * a22 - a12 * a12;
+                if (!(std::fabs(det) > 0.0)) break;
+                const double du = (r1 * a22 - a12 * r2) / det, dv = (a11 * r2 - a12 * r1) / det;
+                ua += du;
+                ub += dv;
+                if (std::fabs(du) + std::fabs(dv) < 1e-15 * (1.0 + std::fabs(ua) + std::fabs(ub))) {
+                    miss = distance(previous.geometry->sample(ua, false).value[2], next.geometry->sample(ub, false).value[2]);
+                    break;
+                }
+            }
+            // Oltre il vertice su entrambi gli edge, e dentro T.
+            const bool beyondPrevious = previous.sense ? ua > previous.endParameter : ua < previous.endParameter;
+            const bool beyondNext = next.sense ? ub < next.startParameter : ub > next.startParameter;
+            const Vec3 meeting = previous.geometry->sample(ua, false).value[2];
+            if (!(miss <= 1e-9 * scale) || !beyondPrevious || !beyondNext
+                || classifyPointOnFace(body, chain.plane, meeting, tolerance) != PointLocation::Inside)
+                throw std::domain_error("blendEdges: le parallele dei raccordi nell'angolo concavo non si incontrano (raggio troppo grande?)");
+            cv.previousAt = ua;
+            cv.nextAt = ub;
+            // Dominio allungato oltre il punto comune (margine per le superfici locali del tracciamento).
+            auto extend = [&](ChainFin &fin, double at, double from) {
+                const double reach = at + 0.75 * (at - from);
+                fin.span = {std::min(fin.span.lo, reach), std::max(fin.span.hi, reach)};
+                if (body.edge(fin.edge).curve->type() == CurveType::Circle && fin.span.length() >= kTwoPi - 1e-3)
+                    throw std::domain_error("blendEdges: arco troppo lungo per l'angolo concavo");
+            };
+            extend(previous, ua, previous.endParameter);
+            extend(next, ub, next.startParameter);
+        }
+        for (ChainFin &fin : chain.fins) {
+            if (fin.span.lo == body.edge(fin.edge).range.lo && fin.span.hi == body.edge(fin.edge).range.hi) continue;
+            const RowFit fit = fin.geometry->fit(fin.span);
+            fin.fitError = fit.error;
+            fin.surface = fin.geometry->surface(fit);
         }
 
         // Facce e edge nuovi dei raccordi.
@@ -495,7 +566,7 @@ Body blendPlanarChains(const Body &input, const std::vector<EdgeId> &selected, d
             // (trasversali: Gauss-Newton ben condizionato), dai loro punti nel vertice.
             const Body::BuildEdge &inA = model.edges[std::size_t(previous.inPlaneEdge)], &inB = model.edges[std::size_t(next.inPlaneEdge)];
             double ua = previous.endParameter, ub = next.startParameter;
-            for (int iteration = 0; iteration < 50; ++iteration) {
+            for (int iteration = 0; iteration < 50 && !cv.concave; ++iteration) {
                 Vec3 da[2], db[2];
                 inA.curve->evaluate(ua, 1, da);
                 inB.curve->evaluate(ub, 1, db);
@@ -507,6 +578,10 @@ Body blendPlanarChains(const Body &input, const std::vector<EdgeId> &selected, d
                 ua = std::clamp(ua + du, inA.range.lo, inA.range.hi);
                 ub = std::clamp(ub + dv, inB.range.lo, inB.range.hi);
                 if (std::fabs(du) + std::fabs(dv) < 1e-15 * (1.0 + std::fabs(ua) + std::fabs(ub))) break;
+            }
+            if (cv.concave) {
+                ua = cv.previousAt;
+                ub = cv.nextAt;
             }
             const Vec3 exact = 0.5 * (inA.curve->point(ua) + inB.curve->point(ub));
             if (distance(inA.curve->point(ua), inB.curve->point(ub)) > 1e-9 * scale)
@@ -521,6 +596,10 @@ Body blendPlanarChains(const Body &input, const std::vector<EdgeId> &selected, d
             for (double v = 0.0; v <= 1.0; v += 0.125) {
                 bounds.add(previous.surface->point(previous.endParameter, v));
                 bounds.add(next.surface->point(next.startParameter, v));
+                if (cv.concave) {
+                    bounds.add(previous.surface->point(ua, v));
+                    bounds.add(next.surface->point(ub, v));
+                }
             }
             bounds = bounds.padded(0.05 * size);
             SurfaceIntersectionOptions options;
@@ -551,7 +630,7 @@ Body blendPlanarChains(const Body &input, const std::vector<EdgeId> &selected, d
             // all'angolo: poche pezze (la ricerca dei semi le suddivide tutte), e
             // coincidono con quelli interi entro la tolleranza delle curve di controllo.
             auto local = [&](const ChainFin &fin, double at, double inner) {
-                const Interval &full = body.edge(fin.edge).range;
+                const Interval &full = fin.span;
                 const double extra = 0.5 * std::fabs(at - inner);
                 const double lo = at < inner ? at : inner - extra, hi = at < inner ? inner + extra : at;
                 return fin.geometry->surface(fin.geometry->fit({std::max(full.lo, lo), std::min(full.hi, hi)}));
@@ -612,7 +691,7 @@ Body blendPlanarChains(const Body &input, const std::vector<EdgeId> &selected, d
             const int vertex = model.vertexIndex.at(cv.vertex.index);
             if (cv.vertical >= 0) model.moveEnd(cv.vertical, vertex, cv.wallPoint);
             if (cv.joint == Joint::End) {
-                model.moveEnd(cv.endEdge, vertex, cv.inPlanePoint);
+                model.moveEnd(cv.endEdge, vertex, cv.inPlanePoint, true);
                 // Nel loop della faccia d'estremita' l'arco sta tra lo spigolo che vi arriva e quello che ne parte.
                 const Body::BuildEdge &vertical = model.edges[std::size_t(cv.vertical)];
                 bool verticalArrives = false;

@@ -12,6 +12,7 @@
 #include <BRepPrimAPI_MakeBox.hxx>
 #include <BRepPrimAPI_MakePrism.hxx>
 #include <BRepPrimAPI_MakeCylinder.hxx>
+#include <BRepAlgoAPI_Common.hxx>
 #include <BRepAlgoAPI_Cut.hxx>
 #include <BRepAlgoAPI_Fuse.hxx>
 #include <BRepAdaptor_Surface.hxx>
@@ -918,3 +919,243 @@ FK_TEST(BlendArcsMeetingSegments) {
     }
 }
 
+namespace {
+
+// Profilo con un lato corto S (0.2) tra il fianco B e l'arco C (R 2)
+// tangente a S; B e S ad angolo retto nello spigolo K = (10 + dx, 5). Il
+// raccordo di raggio 1 dello spigolo tra B e S toccherebbe S a 1 dallo
+// spigolo, oltre la sua fine: S e C formano un solo appoggio (tangenti nel
+// punto comune), il raccordo e' tangente a B e all'arco C e S sparisce.
+// `filleted` e' il profilo atteso (centro a r sopra B e a Rc - r dal centro di C).
+struct ShortFaceProfiles {
+    std::vector<ProfileSegment> prism, filleted;
+    Vec2 corner;
+};
+
+ShortFaceProfiles shortFaceProfiles(double dx, double r) {
+    const Vec2 O(8 + dx, 5.2), K(10 + dx, 5), A(dx, 0), B(4 + dx, 0), C(4 + dx, 5), T(8 + dx, 7.2), U(dx, 7.2);
+    const double Rc = 2.0;
+    ShortFaceProfiles result;
+    result.corner = K;
+    result.prism = {lineSegment(A, B), lineSegment(B, C), lineSegment(C, K), lineSegment(K, Vec2(10 + dx, 5.2)), arcSegment(O, Rc, 0.0, kHalfPi),
+                    lineSegment(T, U), lineSegment(U, A)};
+    const double lift = K.y() + r - O.y();
+    const Vec2 c(O.x() + std::sqrt((Rc - r) * (Rc - r) - lift * lift), K.y() + r);
+    const Vec2 tB(c.x(), K.y()), tC = O + Rc * normalized(c - O);
+    FK_CHECK(tB.x() < K.x() && tC.x() < K.x() && tC.y() > 5.2);
+    result.filleted = {lineSegment(A, B), lineSegment(B, C), lineSegment(C, tB), arcSegment(c, r, -kHalfPi, std::atan2(tC.y() - c.y(), tC.x() - c.x())),
+                       arcSegment(O, Rc, std::atan2(tC.y() - O.y(), tC.x() - O.x()), kHalfPi), lineSegment(T, U), lineSegment(U, A)};
+    return result;
+}
+
+}
+
+FK_TEST(BlendShortFaceJoinsTangentNeighbour) {
+    // Prisma (spigolo convesso) e piastra con il prisma come foro (concavo):
+    // la stessa zona tolta o aggiunta, con il volume esatto del profilo atteso.
+    const double r = 1.0, h = 3.0;
+    const ShortFaceProfiles profiles = shortFaceProfiles(0.0, r);
+    const Body expected = makeExtrusion(Frame3(), buildProfile(profiles.filleted, 1e-9).regions.front(), h);
+    const Operand block = extrusion(profiles.prism, h);
+    const double vPrism = massProperties(block.body).volume, vExpected = massProperties(expected).volume;
+    FK_CHECK(vExpected < vPrism);
+    const Vec3 corner(profiles.corner.x(), profiles.corner.y(), 0.5 * h);
+    FK_CHECK_NEAR(blended(block.body, {corner}, r, false, vExpected), vExpected, 1e-9 * vExpected);
+
+    std::vector<ProfileSegment> plate = polygon({Vec2(-5, -5), Vec2(20, -5), Vec2(20, 15), Vec2(-5, 15)});
+    std::vector<ProfileSegment> plateExpected = plate;
+    plate.insert(plate.end(), profiles.prism.begin(), profiles.prism.end());
+    plateExpected.insert(plateExpected.end(), profiles.filleted.begin(), profiles.filleted.end());
+    const Body holed = makeExtrusion(Frame3(), buildProfile(plate, 1e-9).regions.front(), h);
+    const double vHoledExpected = massProperties(makeExtrusion(Frame3(), buildProfile(plateExpected, 1e-9).regions.front(), h)).volume;
+    FK_CHECK_NEAR(blended(holed, {corner}, r, false, vHoledExpected), vHoledExpected, 1e-9 * vHoledExpected);
+
+    // Faccia corta che finisce ad angolo vivo (non tangente) nella faccia
+    // accanto: niente appoggio da unire, errore invece di un raccordo sbagliato.
+    const std::vector<ProfileSegment> sharp{lineSegment(Vec2(0, 0), Vec2(4, 0)), lineSegment(Vec2(4, 0), Vec2(4, 5)), lineSegment(Vec2(4, 5), Vec2(10, 5)),
+                                            lineSegment(Vec2(10, 5), Vec2(10, 5.2)), lineSegment(Vec2(10, 5.2), Vec2(8, 7.2)),
+                                            lineSegment(Vec2(8, 7.2), Vec2(0, 7.2)), lineSegment(Vec2(0, 7.2), Vec2(0, 0))};
+    const Body sharpBody = extrusion(sharp, h).body;
+    FK_CHECK_THROWS(blendEdges(sharpBody, {nearestEdge(sharpBody, corner, 1e-6)}, r, false));
+}
+
+FK_TEST(BlendShortFaceOnRevolution) {
+    // Lo stesso profilo fatto ruotare attorno all'asse Z (spostato di 5 dall'asse):
+    // lo spigolo circolare tra la corona piana (B) e il cilindro corto (S), con
+    // il toro di C come appoggio. Volume esatto della rivoluzione del profilo atteso.
+    const double r = 1.0;
+    const ShortFaceProfiles profiles = shortFaceProfiles(5.0, r);
+    const Body solid = makeRevolution(Frame3(), buildProfile(profiles.prism, 1e-9).regions.front());
+    const double vExpected = massProperties(makeRevolution(Frame3(), buildProfile(profiles.filleted, 1e-9).regions.front())).volume;
+    FK_CHECK(vExpected < massProperties(solid).volume);
+    blended(solid, {Vec3(profiles.corner.x(), 0.0, profiles.corner.y())}, r, false, vExpected);
+}
+
+FK_TEST(BlendConcaveCornerPocket) {
+    // Tasca rettangolare passante: gli spigoli verticali sono concavi per il
+    // solido, quelli del bordo in alto convessi. Nell'angolo tra due bordi scelti
+    // i due raccordi si incontrano a mitra: oltre gli spigoli, dietro entrambe le
+    // pareti, si toglie il materiale sopra tutti e due (per angolo r^3 (5/3 - pi/2)
+    // col raccordo, r^3 / 3 con lo smusso: l'integrale di min(g(u), g(v)) sul quadrato).
+    const double h = 3.0;
+    const Body plate = makeBox(Frame3(), 10.0, 8.0, h);
+    const Body pocket = booleanOperation(plate, makeBox(Frame3(Vec3(3, 2, -1), Vec3(0, 0, 1), Vec3(1, 0, 0)), 4.0, 3.0, h + 2.0), BooleanOperation::Subtract);
+    const double v0 = 80.0 * h - 12.0 * h;
+    const std::vector<Vec3> rim{Vec3(5, 2, h), Vec3(7, 3.5, h), Vec3(5, 5, h), Vec3(3, 3.5, h)};
+    for (double r : {0.4, 0.5}) {
+        const double waste = r * r * (1.0 - kPi / 4.0), corner = r * r * r * (5.0 / 3.0 - kPi / 2.0);
+        const double chamferWaste = 0.5 * r * r, chamferCorner = r * r * r / 3.0;
+        blended(pocket, rim, r, false, v0 - waste * 14.0 - 4.0 * corner);
+        blended(pocket, rim, r, true, v0 - chamferWaste * 14.0 - 4.0 * chamferCorner);
+        // Due bordi vicini (catena aperta: gli estremi contro le pareti normali, un angolo).
+        blended(pocket, {rim[0], rim[1]}, r, false, v0 - waste * 7.0 - corner);
+        blended(pocket, {rim[0], rim[1]}, r, true, v0 - chamferWaste * 7.0 - chamferCorner);
+        // Un bordo solo: finisce contro le pareti accanto.
+        blended(pocket, {rim[0]}, r, false, v0 - waste * 4.0);
+    }
+}
+
+FK_TEST(BlendConcaveCornerPolygons) {
+    // Tasche poligonali con gli angoli concavi ottusi (esagono) e acuti
+    // (triangolo): tutto il bordo e un lato solo (che finisce contro le pareti
+    // oblique accanto: il raccordo arriva fino a loro), come OCCT.
+    const double h = 3.0, r = 0.4;
+    const Frame3 below(Vec3(0, 0, -1), Vec3(0, 0, 1), Vec3(1, 0, 0));
+    for (const std::vector<Vec2> &corners : {std::vector<Vec2>{Vec2(3, 2), Vec2(7, 2), Vec2(8.5, 4), Vec2(7, 6), Vec2(3, 6), Vec2(1.5, 4)},
+                                             std::vector<Vec2>{Vec2(2, 2), Vec2(8, 2), Vec2(4, 6)}}) {
+        const ProfileRegion region = buildProfile(polygon(corners), 1e-9).regions.front();
+        const Body pocket = booleanOperation(makeBox(Frame3(), 10.0, 8.0, h), makeExtrusion(below, region, h + 2.0), BooleanOperation::Subtract);
+        const TopoDS_Shape occtPocket = BRepAlgoAPI_Cut(BRepPrimAPI_MakeBox(10.0, 8.0, h).Shape(),
+                                                        BRepPrimAPI_MakePrism(occtFace(region, below), gp_Vec(0, 0, h + 2.0)).Shape()).Shape();
+        std::vector<Vec3> rim;
+        for (std::size_t i = 0; i < corners.size(); ++i) {
+            const Vec2 m = 0.5 * (corners[i] + corners[(i + 1) % corners.size()]);
+            rim.push_back(Vec3(m.x(), m.y(), h));
+        }
+        for (bool chamfer : {false, true})
+            for (const std::vector<Vec3> &points : {rim, std::vector<Vec3>{rim.front()}}) {
+                const double occt = occtBlended(occtPocket, points, r, chamfer);
+                FK_CHECK(occt > 0.0);
+                blended(pocket, points, r, chamfer, occt > 0.0 ? occt : 0.0);
+            }
+    }
+}
+
+FK_TEST(BlendConcaveCornerLens) {
+    // Tasca a lente (intersezione di due cerchi) passante in una piastra, come
+    // un foro tagliato da un altro: i due archi del bordo finiscono negli angoli
+    // concavi, ognuno contro il cilindro dell'altro. Riferimento indipendente: le
+    // zone dei due bordi come anelli interi (rivoluzione completa della
+    // sezione); si toglie l'anello di A dentro il cerchio di B (il bordo di A),
+    // quello di B dentro A e negli angoli la parte comune dei due anelli (le
+    // mitre: per lo smusso con la booleana tra i due coni, per il raccordo
+    // integrata numericamente, perche' la booleana tra i due tori non riesce).
+    const double h = 3.0, R = 2.0, offset = 1.5;
+    const Body plate = makeBox(Frame3(Vec3(-5, -5, 0), Vec3(0, 0, 1), Vec3(1, 0, 0)), 12.0, 10.0, h);
+    auto cylinder = [&](double x) { return makeCylinder(Frame3(Vec3(x, 0, -1), Vec3(0, 0, 1), Vec3(1, 0, 0)), R, h + 2.0); };
+    const Body pocket = booleanOperation(plate, booleanOperation(cylinder(0.0), cylinder(offset), BooleanOperation::Intersect), BooleanOperation::Subtract);
+    const double v0 = massProperties(pocket).volume;
+    const std::vector<Vec3> rim{Vec3(R, 0, h), Vec3(offset - R, 0, h)};
+    for (double r : {0.2, 0.5})
+        for (bool chamfer : {false, true}) {
+            auto ring = [&](double x) {
+                std::vector<ProfileSegment> section{lineSegment(Vec2(R, h), Vec2(R + r, h))};
+                if (chamfer) section.push_back(lineSegment(Vec2(R + r, h), Vec2(R, h - r)));
+                else section.push_back(arcSegment(Vec2(R + r, h - r), r, kHalfPi, kPi));
+                section.push_back(lineSegment(Vec2(R, h - r), Vec2(R, h)));
+                return makeRevolution(Frame3(Vec3(x, 0, 0), Vec3(0, 0, 1), Vec3(1, 0, 0)), buildProfile(section, 1e-9).regions.front());
+            };
+            const Body ringA = ring(0.0), ringB = ring(offset);
+            auto common = [&](const Body &a, const Body &b) { return massProperties(booleanOperation(a, b, BooleanOperation::Intersect)).volume; };
+            double mitre = 0.0;
+            if (chamfer) {
+                mitre = common(ringA, ringB);
+            } else {
+                // Altezza tolta dall'anello a distanza d fuori dal suo cerchio; nella
+                // parte comune la minore delle due. Gauss 4 x 4 su 800 x 800 celle attorno all'angolo.
+                auto height = [&](double d) { return d > 0.0 && d < r ? r - std::sqrt(r * r - (r - d) * (r - d)) : 0.0; };
+                const double gx[4] = {-0.8611363115940526, -0.3399810435848563, 0.3399810435848563, 0.8611363115940526};
+                const double gw[4] = {0.3478548451374538, 0.6521451548625461, 0.6521451548625461, 0.3478548451374538};
+                const double cy = std::sqrt(R * R - 0.25 * offset * offset), x0 = 0.5 * offset - 4.0 * r, y0 = cy - r, step = 8.0 * r / 800.0;
+                for (int i = 0; i < 800; ++i)
+                    for (int j = 0; j < 800; ++j)
+                        for (int a = 0; a < 4; ++a)
+                            for (int b = 0; b < 4; ++b) {
+                                const double x = x0 + (i + 0.5 + 0.5 * gx[a]) * step, y = y0 + (j + 0.5 + 0.5 * gx[b]) * step;
+                                const double dA = std::hypot(x, y) - R, dB = std::hypot(x - offset, y) - R;
+                                mitre += 0.25 * gw[a] * gw[b] * step * step * std::min(height(dA), height(dB));
+                            }
+                mitre *= 2.0;  // i due angoli, simmetrici rispetto a y = 0
+            }
+            const double reference = v0 - common(ringA, cylinder(offset)) - common(ringB, cylinder(0.0)) - mitre;
+            const double ours = blended(pocket, rim, r, chamfer, chamfer ? reference : 0.0);
+            if (!chamfer) FK_CHECK_NEAR(ours, reference, 3e-6);
+        }
+}
+
+FK_TEST(BlendConcaveCornerRoundedPocket) {
+    // Come nel documento dell'utente: una tasca con il bordo fatto di archi,
+    // raccordi e segmenti tangenti tra loro tranne in un angolo vivo concavo tra
+    // due archi (la lente dei due cerchi R 2, tagliata in basso da una retta con
+    // due raccordi). Tutto il bordo in alto e' una catena chiusa con
+    // quell'angolo. Riferimento: le zone esatte dei tratti (segmenti: sezione per
+    // lunghezza; archi: Pappus) fino al vertice, piu' la correzione vicino
+    // all'angolo, integrata numericamente sulle altezze: la mitra (la parte
+    // comune dei due anelli fuori dai due cerchi) meno le parti delle due zone
+    // che stanno dietro la parete dell'altro arco.
+    const double h = 3.0, R = 2.0, rho = 0.3, bottom = -1.5;
+    const Vec2 cA(0, 0), cB(1.5, 0);
+    const double cy = std::sqrt(R * R - 0.75 * 0.75);
+    const Vec2 V(0.75, cy);
+    const double xc = std::sqrt((R - rho) * (R - rho) - (bottom + rho) * (bottom + rho));
+    const Vec2 cRight(xc, bottom + rho), cLeft(cB.x() - xc, bottom + rho);
+    const double aRight = std::atan2(cRight.y(), cRight.x()), aLeft = std::atan2(cLeft.y() - cB.y(), cLeft.x() - cB.x());
+    const double aVA = std::atan2(V.y(), V.x()), aVB = std::atan2(V.y() - cB.y(), V.x() - cB.x());
+    struct Arc {
+        Vec2 center;
+        double radius, from, to;
+    };
+    const std::vector<Arc> arcs{{cA, R, aRight, aVA}, {cRight, rho, -kHalfPi, aRight}, {cLeft, rho, aLeft, -kHalfPi}, {cB, R, aVB, aLeft + kTwoPi}};
+    std::vector<ProfileSegment> outline{lineSegment(Vec2(cLeft.x(), bottom), Vec2(cRight.x(), bottom))};
+    for (const Arc &arc : arcs) outline.push_back(arcSegment(arc.center, arc.radius, arc.from, arc.to));
+    const Frame3 below(Vec3(0, 0, -1), Vec3(0, 0, 1), Vec3(1, 0, 0));
+    const Body pocket = booleanOperation(makeBox(Frame3(Vec3(-5, -5, 0), Vec3(0, 0, 1), Vec3(1, 0, 0)), 12.0, 10.0, h),
+                                         makeExtrusion(below, buildProfile(outline, 1e-9).regions.front(), h + 2.0), BooleanOperation::Subtract);
+    const double v0 = massProperties(pocket).volume;
+    for (double r : {0.1, 0.2})
+        for (bool chamfer : {false, true}) {
+            // Zone esatte dei tratti: sezione (area, momento radiale rispetto all'asse) per angolo o lunghezza.
+            const double area = chamfer ? 0.5 * r * r : r * r * (1.0 - kPi / 4.0);
+            auto moment = [&](double radius) {
+                if (chamfer) return 0.5 * r * r * (radius + r / 3.0);
+                return r * r * (radius + 0.5 * r) - 0.25 * kPi * r * r * (radius + r - 4.0 * r / (3.0 * kPi));
+            };
+            double removed = area * (cRight.x() - cLeft.x());
+            for (const Arc &arc : arcs) removed += (arc.to - arc.from) * moment(arc.radius);
+            // Correzione vicino all'angolo (altezza tolta a distanza d fuori da un cerchio).
+            auto height = [&](double d) {
+                if (!(d > 0.0 && d < r)) return 0.0;
+                return chamfer ? r - d : r - std::sqrt(r * r - (r - d) * (r - d));
+            };
+            auto cross2d = [](const Vec2 &a, const Vec2 &b) { return a.x() * b.y() - a.y() * b.x(); };
+            const double gx[4] = {-0.8611363115940526, -0.3399810435848563, 0.3399810435848563, 0.8611363115940526};
+            const double gw[4] = {0.3478548451374538, 0.6521451548625461, 0.6521451548625461, 0.3478548451374538};
+            const double x0 = V.x() - 4.0 * r, y0 = V.y() - 2.0 * r, step = 8.0 * r / 800.0;
+            double correction = 0.0;
+            for (int i = 0; i < 800; ++i)
+                for (int j = 0; j < 800; ++j)
+                    for (int a = 0; a < 4; ++a)
+                        for (int b = 0; b < 4; ++b) {
+                            const Vec2 q(x0 + (i + 0.5 + 0.5 * gx[a]) * step, y0 + (j + 0.5 + 0.5 * gx[b]) * step);
+                            const double dA = distance(q, cA) - R, dB = distance(q, cB) - R;
+                            if (!(dA > 0.0 && dB > 0.0)) continue;  // dentro un cerchio: tasca o bordo dell'altro
+                            double value = std::min(height(dA), height(dB));
+                            if (cross2d(V - cA, q - cA) < 0.0) value -= height(dA);  // zona di A (lato dell'arco) dietro B
+                            if (cross2d(V - cB, q - cB) > 0.0) value -= height(dB);  // zona di B dietro A
+                            correction += 0.25 * gw[a] * gw[b] * step * step * value;
+                        }
+            const double reference = v0 - removed - correction;
+            const double ours = blended(pocket, {Vec3(R, 0, h)}, r, chamfer, 0.0);  // un arco: la catena prosegue per tangenza
+            FK_CHECK_NEAR(ours, reference, 3e-6);
+        }
+}

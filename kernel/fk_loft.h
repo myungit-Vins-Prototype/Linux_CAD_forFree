@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "fk_profile.h"
+#include "fk_sweep.h"
 #include "fk_topology.h"
 
 // Loft: superficie (o solido) che passa per una successione di sezioni piane
@@ -39,8 +40,25 @@ struct LoftSection {
     ProfileLoop loop;  // chiuso (solidi) o catena aperta (lamine)
 };
 
+// Una guida e' una catena 3D che deve attraversare una volta ogni sezione.
+// La prima guida fissa la cucitura/corrispondenza dei contorni chiusi; le
+// altre sono validate come riferimenti trasversali e saranno usate dalle
+// condizioni di forma del loft liscio.
+struct LoftOptions {
+    bool ruled = false;
+    std::vector<std::vector<PathSegment>> guides;
+    int startContinuity = 0;  // 0 G0, 1 G1, 2 G2
+    int endContinuity = 0;
+    int guideContinuity = 1;  // G0 solo attraversamento, G1 tangente, G2 anche curvatura
+    double guideInfluence = 1.0;
+    double startInfluence = 1.0;
+    double endInfluence = 1.0;
+};
+
 Body loftSolid(const std::vector<LoftSection> &sections, bool ruled = false);
 Body loftSheet(const std::vector<LoftSection> &sections, bool ruled = false);
+Body loftSolid(const std::vector<LoftSection> &sections, const LoftOptions &options);
+Body loftSheet(const std::vector<LoftSection> &sections, const LoftOptions &options);
 
 }
 

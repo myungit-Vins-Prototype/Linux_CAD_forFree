@@ -323,15 +323,38 @@ bool rayHitsBox(const Vec3 &origin, const Vec3 &direction, const Box &box) {
 
 }
 
-bool firstRayHit(const Body &body, const Vec3 &origin, const Vec3 &direction, double tolerance, double &t, FaceId *face) {
+RayFaceIndex::RayFaceIndex(const Body &body) {
+    for (FaceId f : body.faces()) {
+        const Box box = faceBox(body, f);
+        faces.emplace_back(f, box);
+        bounds.add(box);
+    }
+}
+
+bool firstRayHit(const Body &body, const Vec3 &origin, const Vec3 &direction, double tolerance, double &t,
+                 FaceId *face, const RayFaceIndex *index) {
     const Vec3 unit = normalized(direction);
     const double scale = norm(direction);
     double best = 1e300;
     FaceId bestFace;
-    for (FaceId f : body.faces()) {
-        const Box box = faceBox(body, f).padded(10.0 * tolerance);
+    std::vector<std::pair<double, FaceId>> candidates;
+    const auto consider = [&](FaceId f, const Box &rawBox) {
+        const Box box = rawBox.padded(10.0 * tolerance);
         Interval range;
-        if (!clipLineToBox(origin, unit, box, range) || range.hi < 0.0 || range.lo > best) continue;
+        if (clipLineToBox(origin, unit, box, range) && range.hi >= 0.0)
+            candidates.emplace_back(std::max(0.0, range.lo), f);
+    };
+    if (index) {
+        Interval range;
+        if (!clipLineToBox(origin, unit, index->bounds.padded(10.0 * tolerance), range) || range.hi < 0.0) return false;
+        for (const auto &entry : index->faces) consider(entry.first, entry.second);
+    } else {
+        for (FaceId f : body.faces()) consider(f, faceBox(body, f));
+    }
+    std::stable_sort(candidates.begin(), candidates.end(), [](const auto &a, const auto &b) { return a.first < b.first; });
+    for (const auto &candidate : candidates) {
+        if (candidate.first > best) break;
+        const FaceId f = candidate.second;
         bool grazing = false;
         std::vector<double> hits;
         try {

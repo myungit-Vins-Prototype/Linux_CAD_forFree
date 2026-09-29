@@ -64,8 +64,15 @@ bool forgeHelixBase(const Kernel::Body &body, int source, const EdgePoint &point
 // minima, 1 Frenet, 2 orientamento costante): solido dai contorni chiusi,
 // lamina dalle catene aperte.
 ForgeBody forgeSweep(const SketchObject &profile, const std::vector<Kernel::PathSegment> &path, int mode, QString *error);
-// Loft per le sezioni (fk_loft): un contorno chiuso per schizzo (solido) o una catena aperta (lamina).
-ForgeBody forgeLoft(const QVector<SketchObject> &sections, bool ruled, QString *error);
+// Loft per le sezioni (fk_loft): un contorno chiuso per schizzo (solido) o
+// una catena aperta (lamina). Le guide sono catene 3D che attraversano tutte
+// le sezioni; continuita' e influenze sono i parametri persistenti G0/G1/G2.
+ForgeBody forgeLoft(const QVector<SketchObject> &sections, const QVector<SketchObject> &guides, bool ruled,
+                    int startContinuity, int endContinuity, int guideContinuity, double guideInfluence, double startInfluence,
+                    double endInfluence, QString *error);
+inline ForgeBody forgeLoft(const QVector<SketchObject> &sections, bool ruled, QString *error) {
+    return forgeLoft(sections, {}, ruled, 0, 0, 1, 1.0, 1.0, 1.0, error);
+}
 
 // Corpo importato: ExtrusionObject::importData e' il testo STEP (fk_step) del
 // corpo scritto all'importazione, con la stessa geometria del file letto.
@@ -73,13 +80,14 @@ ForgeBody forgeImported(const QByteArray &data, QString *error);
 
 // Approssimazione per la visualizzazione (quality 0/1/2), come tessellate().
 void forgeTessellate(const Kernel::Body &body, int quality, BodyDisplay &display);
+void forgeSurfaceConstructionCurves(const Kernel::Body &body, BodyDisplay &display, int divisions = 4);
 
 // Faccia del body colpita per prima dal raggio, con il suo piano (se e'
 // piana) e un punto interno di ogni suo spigolo.
-bool forgePickFace(const Kernel::Body &body, const QVector3D &origin, const QVector3D &direction, FaceHit &hit);
+bool forgePickFace(const Kernel::Body &body, const QVector3D &origin, const QVector3D &direction, FaceHit &hit, const Kernel::RayFaceIndex *index = nullptr);
 
 // Distanza lungo il raggio del primo punto del body colpito (geometria esatta).
-bool forgeIntersectRay(const Kernel::Body &body, const QVector3D &origin, const QVector3D &direction, double &distance);
+bool forgeIntersectRay(const Kernel::Body &body, const QVector3D &origin, const QVector3D &direction, double &distance, const Kernel::RayFaceIndex *index = nullptr);
 
 }
 

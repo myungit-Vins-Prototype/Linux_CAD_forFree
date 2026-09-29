@@ -2,6 +2,7 @@
 #define FORGECAD_FK_CLASSIFY_H
 
 #include <vector>
+#include <utility>
 
 #include "fk_intersect.h"
 #include "fk_topology.h"
@@ -25,7 +26,15 @@ PointLocation classifyPointOnFace(const Body &body, FaceId face, const Vec3 &poi
 // Parametro t >= 0 del primo punto in cui la semiretta origin + t direction
 // incontra una faccia del body (falso se non la incontra) e, se `face` non e'
 // nullo, quella faccia. Serve alla selezione a video.
-bool firstRayHit(const Body &body, const Vec3 &origin, const Vec3 &direction, double tolerance, double &t, FaceId *face = nullptr);
+// Box esatti riutilizzabili finche' la geometria del body non cambia.
+// L'app li prepara insieme alla tassellazione, anche nei thread di anteprima.
+struct RayFaceIndex {
+    explicit RayFaceIndex(const Body &body);
+    std::vector<std::pair<FaceId, Box>> faces;
+    Box bounds;
+};
+bool firstRayHit(const Body &body, const Vec3 &origin, const Vec3 &direction, double tolerance, double &t,
+                 FaceId *face = nullptr, const RayFaceIndex *index = nullptr);
 
 // Box che contiene la faccia.
 Box faceBox(const Body &body, FaceId face);

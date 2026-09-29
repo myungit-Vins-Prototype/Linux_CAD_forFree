@@ -41,6 +41,10 @@ void curveDisplay(const Kernel::Curve<3> &curve, int quality, BodyDisplay &displ
 // Percorso da uno schizzo: le sue entita' (non di costruzione) devono formare
 // una sola catena o un solo contorno chiuso.
 bool sketchPath(const SketchObject &sketch, std::vector<Kernel::PathSegment> &path, QString *error);
+// Componenti connesse della geometria non di costruzione e copia filtrata
+// usata da sweep e loft per riferirsi a una parte dello schizzo.
+QVector<SketchPathRef> sketchPathComponents(const SketchObject &sketch);
+SketchObject sketchPathSubset(const SketchObject &sketch, const SketchPathRef &selection);
 // Percorso da una curva (elica).
 std::vector<Kernel::PathSegment> curvePath(const ForgeCurve &curve);
 // Il percorso orientato perche' parta vicino al profilo: una catena si gira se

@@ -37,12 +37,16 @@ add_executable(forgecad
     forgeCad2026_gui.cpp
     forgeCad2026_gui.h
     cad_types.h
+    cad_display_cache.h
+    cad_display_cache.cpp
     cad_curve_solver.h
     cad_curve_solver.cpp
     cad_snap.h
     cad_snap.cpp
     cad_export.h
     cad_export.cpp
+    cad_expression.h
+    cad_expression.cpp
     cad_document_io.h
     cad_document_io.cpp
     cad_sketch_edit.h
@@ -113,4 +117,22 @@ if(CMAKE_CUDA_COMPILER)
     target_compile_definitions(forgecad PRIVATE FORGECAD_HAS_CUDA=1)
 else()
     target_compile_definitions(forgecad PRIVATE FORGECAD_HAS_CUDA=0)
+endif()
+
+# Test delle interazioni del viewport (Qt offscreen); --gl verifica anche i VBO
+# quando e' disponibile una sessione grafica con OpenGL desktop.
+option(FORGECAD_BUILD_VIEW_TESTS "Compila i test delle interazioni del viewport" OFF)
+if(FORGECAD_BUILD_VIEW_TESTS)
+    get_target_property(FORGECAD_VIEW_TEST_SOURCES forgecad SOURCES)
+    list(REMOVE_ITEM FORGECAD_VIEW_TEST_SOURCES forgeCad2026.cpp forgeCad2026_gui.cpp ${FORGE_CAD_CUDA_SOURCE} ${FORGECAD_HASH_HEADER})
+    add_executable(forgecad_view_tests tests/test_viewport.cpp cuda_support_cpu.cpp ${FORGECAD_VIEW_TEST_SOURCES})
+    add_dependencies(forgecad_view_tests forgecad) # genera l'impronta una sola volta, prima dei test
+    target_include_directories(forgecad_view_tests PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/generated)
+    target_link_libraries(forgecad_view_tests PRIVATE Qt6::Widgets Qt6::OpenGL Qt6::OpenGLWidgets OpenGL::GL forgekernel)
+    target_compile_options(forgecad_view_tests PRIVATE -Wall -Wextra -Wpedantic)
+    target_compile_definitions(forgecad_view_tests PRIVATE FORGECAD_HAS_CUDA=0)
+    add_executable(forgecad_selection_benchmark tests/benchmark_selection.cpp)
+    target_link_libraries(forgecad_selection_benchmark PRIVATE forgekernel)
+    add_test(NAME forgecad_view_tests COMMAND forgecad_view_tests)
+    set_tests_properties(forgecad_view_tests PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen;QT_QPA_PLATFORMTHEME=;QT_STYLE_OVERRIDE=Fusion")
 endif()

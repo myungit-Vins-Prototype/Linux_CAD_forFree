@@ -148,6 +148,7 @@ std::vector<ProfileSegment> curveGeometry(const CurveObject &curve) {
 }
 
 void initializeTangentHandles(CurveObject &curve) {
+    const QVector<bool> linked = curve.tangentLinked;
     curve.tangentHandles.clear();
     if (curve.tool != DrawingTool::Spline) return;
     for (int index = 0; index < curve.controlPoints.size(); ++index) {
@@ -156,6 +157,9 @@ void initializeTangentHandles(CurveObject &curve) {
         const QPointF tangent = (next - previous) / 3.0;
         curve.tangentHandles.append(qMakePair(curve.controlPoints.at(index) - tangent, curve.controlPoints.at(index) + tangent));
     }
+    curve.tangentLinked.fill(false, curve.controlPoints.size());
+    for (int index = 0; index < qMin(linked.size(), curve.tangentLinked.size()); ++index)
+        curve.tangentLinked[index] = linked.at(index);
 }
 
 void sampleCurve(const Curve<2> &curve, const Interval &range, double angular, double deflection, QVector<QPointF> &out) {

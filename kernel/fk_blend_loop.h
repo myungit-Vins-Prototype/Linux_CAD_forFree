@@ -28,14 +28,17 @@
 //  - nei vertici lisci (tangenti continue) le facce dei raccordi si
 //    incontrano sull'arco della sezione, e lo spigolo verticale tra due
 //    fianchi (se c'e') si accorcia;
-//  - negli angoli vivi convessi (il fianco fa uno spigolo verticale) i due
-//    raccordi si tagliano lungo la loro curva d'intersezione (a mitra);
+//  - negli angoli vivi (il fianco fa uno spigolo verticale) i due raccordi si
+//    tagliano lungo la loro curva d'intersezione (a mitra); negli angoli
+//    concavi (in T il bordo gira dall'altra parte, come negli angoli di una
+//    tasca) le parallele si incontrano oltre il vertice e i raccordi vi si
+//    allungano (solo tra segmenti e archi, la cui geometria si prolunga esatta);
 //  - agli estremi di una catena aperta la faccia che segue deve essere un
 //    piano normale al bordo: vi resta l'arco della sezione.
 // Un loop di un solo edge chiuso si divide prima in due.
 //
 // Non gestiti (std::domain_error): fianchi non paralleli alla normale di T,
-// angoli vivi concavi, estremi contro facce non normali, raggi maggiori del
+// angoli vivi concavi con bordi di forma libera, estremi contro facce non normali, raggi maggiori del
 // raggio di curvatura del bordo (la parallela avrebbe una cuspide) o che
 // escono dalle facce.
 namespace ForgeCad::Kernel {
@@ -52,7 +55,10 @@ std::vector<EdgeId> planarChainRuns(const Body &body, const std::vector<EdgeId> 
 // facce piane: `edges` sono tutti gli edge da raccordare, ognuno deve
 // soddisfare isPlanarChainEdge.
 // `sides` (facoltativo, uno per edge): smussi asimmetrici, vedi chamferEdges.
-Body blendPlanarChains(const Body &body, const std::vector<EdgeId> &edges, double size, bool chamfer, const std::vector<ChamferSides> *sides = nullptr);
+// `plane` (facoltativo): la faccia T per gli edge che ne hanno due possibili
+// (un segmento tra due piani perpendicolari).
+Body blendPlanarChains(const Body &body, const std::vector<EdgeId> &edges, double size, bool chamfer, const std::vector<ChamferSides> *sides = nullptr,
+                       FaceId plane = FaceId());
 
 }
 

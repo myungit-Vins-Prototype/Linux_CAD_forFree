@@ -5,6 +5,7 @@
 #include <cmath>
 
 #include "fk_body_check.h"
+#include "fk_bspline_surface.h"
 #include "fk_loft.h"
 #include "fk_mass.h"
 #include "fk_tessellate.h"
@@ -93,6 +94,101 @@ FK_TEST(LoftCircleToSquare) {
         // OCCT sceglie la stessa corrispondenza ma interpola diversamente tra le sezioni.
         const double reference = occtLoftVolume(sections, ruled);
         FK_CHECK_NEAR(m.volume, reference, 0.02 * reference);
+    }
+}
+
+FK_TEST(LoftGuideCrossesEverySection) {
+    const std::vector<LoftSection> sections{circleAt(0.0, 2.0), circleAt(3.0, 1.0)};
+    LoftOptions options;
+    options.ruled = true;
+    const Vec3 a(2, 0, 0), b(1, 0, 3), direction = normalized(b - a);
+    options.guides.push_back({{std::make_shared<Line<3>>(a, direction), {0.0, distance(a, b)}}});
+    const Body guided = loftSolid(sections, options);
+    FK_CHECK_NEAR(checkedSolid(guided).volume, kPi * (4.0 + 2.0 + 1.0), 1e-10 * 22.0);
+
+    LoftOptions invalid = options;
+    invalid.guides.front().front() = {std::make_shared<Line<3>>(Vec3(4, 0, 0), Vec3(0, 0, 1)), {0.0, 3.0}};
+    bool failed = false;
+    try {
+        (void)loftSolid(sections, invalid);
+    } catch (const std::domain_error &) {
+        failed = true;
+    }
+    FK_CHECK(failed);
+}
+
+FK_TEST(LoftGuideInfluenceAndEndContinuity) {
+    const std::vector<LoftSection> sections{circleAt(0.0, 5.0), circleAt(1.0, 1.0), circleAt(4.0, 1.1)};
+    const Vec3 p[3] = {Vec3(5, 0, 0), Vec3(1, 0, 1), Vec3(1.1, 0, 4)};
+    LoftOptions free, guided;
+    for (int i = 0; i < 2; ++i) {
+        const Vec3 direction = normalized(p[i + 1] - p[i]);
+        free.guides.resize(1);
+        free.guides.front().push_back({std::make_shared<Line<3>>(p[i], direction), {0.0, distance(p[i], p[i + 1])}});
+    }
+    guided = free;
+    free.guideInfluence = 0.0;
+    guided.guideInfluence = 1.0;
+    const double freeVolume = checkedSolid(loftSolid(sections, free)).volume;
+    const double guidedVolume = checkedSolid(loftSolid(sections, guided)).volume;
+    FK_CHECK(std::fabs(guidedVolume - freeVolume) > 1e-3 * freeVolume);
+
+    guided.guideContinuity = 1;
+    const double tangentOnlyVolume = checkedSolid(loftSolid(sections, guided)).volume;
+    guided.guideContinuity = 2;
+    const double curvatureVolume = checkedSolid(loftSolid(sections, guided)).volume;
+    FK_CHECK(std::fabs(tangentOnlyVolume - curvatureVolume) > 1e-8 * tangentOnlyVolume);
+
+    guided.startContinuity = 1;
+    guided.endContinuity = 2;
+    guided.startInfluence = 0.7;
+    guided.endInfluence = 0.8;
+    FK_CHECK(checkedSolid(loftSolid(sections, guided)).volume > 0.0);
+}
+
+FK_TEST(LoftGuideG0DoesNotEnableDerivativeConstraints) {
+    const std::vector<LoftSection> sections{circleAt(0.0, 1.0), circleAt(2.0, 2.0), circleAt(4.0, 1.0)};
+    LoftOptions options;
+    options.guideContinuity = 0;
+    options.guideInfluence = 1.0;
+    options.guides.push_back({{std::make_shared<BSplineCurve<3>>(2, std::vector<double>{0, 0, 0, 1, 1, 1},
+                                                                  std::vector<Vec3>{{1, 0, 0}, {3, 0, 2}, {1, 0, 4}}),
+                               {0.0, 1.0}}});
+    const Body body = loftSolid(sections, options);
+    checkedSolid(body);
+    for (FaceId face : body.faces()) {
+        if (body.face(face).surface->type() != SurfaceType::BSpline) continue;
+        const auto &surface = static_cast<const BSplineSurface &>(*body.face(face).surface);
+        FK_CHECK(surface.vDegree() == 2);
+    }
+}
+
+FK_TEST(LoftTangencyAppliesToEveryGuide) {
+    const std::vector<LoftSection> sections{circleAt(0.0, 1.0), circleAt(2.0, 2.0), circleAt(4.0, 1.0)};
+    LoftOptions options;
+    options.guideContinuity = 1;
+    options.guideInfluence = 1.0;
+    const auto right = std::make_shared<BSplineCurve<3>>(2, std::vector<double>{0, 0, 0, 1, 1, 1},
+                                                          std::vector<Vec3>{{1, 0, 0}, {3, 0, 2}, {1, 0, 4}});
+    // La seconda guida cambia posizione relativa sul perimetro: a meta' loft
+    // incontra il cerchio a 120 gradi, mentre sulle estremita' e' a 180.
+    const auto left = std::make_shared<BSplineCurve<3>>(2, std::vector<double>{0, 0, 0, 1, 1, 1},
+                                                         std::vector<Vec3>{{-1, 0, 0}, {-1, 2 * std::sqrt(3.0), 2}, {-1, 0, 4}});
+    options.guides = {{{right, {0.0, 1.0}}}, {{left, {0.0, 1.0}}}};
+    const Body body = loftSolid(sections, options);
+    checkedSolid(body);
+    for (const auto &expected : std::vector<std::pair<Vec3, Vec3>>{{Vec3(1, 0, 0), right->derivative(0.0)},
+                                                                    {Vec3(-1, 0, 0), left->derivative(0.0)}}) {
+        bool found = false;
+        for (EdgeId edgeId : body.edges()) {
+            const Edge &edge = body.edge(edgeId);
+            if (distance(edge.curve->point(edge.range.lo), expected.first) > 1e-8
+                || distance(edge.curve->point(edge.range.hi), expected.first + Vec3(0, 0, 4)) > 1e-8)
+                continue;
+            found = true;
+            FK_CHECK(norm(cross(normalized(edge.curve->derivative(edge.range.lo)), normalized(expected.second))) < 1e-8);
+        }
+        FK_CHECK(found);
     }
 }
 

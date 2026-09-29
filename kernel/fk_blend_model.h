@@ -88,15 +88,41 @@ struct BlendModel {
         return int(edges.size()) - 1;
     }
     // Sposta l'estremo `vertex` dell'edge nel punto `point` (nuovo vertice) accorciandone il tratto.
-    void moveEnd(int edge, int vertex, int point) {
+    // Con `extend` un edge rettilineo si puo' anche allungare (un raccordo che
+    // finisce in un angolo concavo contro un piano normale al bordo).
+    void moveEnd(int edge, int vertex, int point, bool extend = false) {
         Body::BuildEdge &e = edges[std::size_t(edge)];
-        const double t = projectPoint(*e.curve, points[std::size_t(point)], e.range).parameter;
+        Interval window = e.range;
+        if (extend && e.curve->type() == CurveType::Line) {
+            const double reach = 2.0 * (e.range.length() + distance(points[std::size_t(point)], e.curve->point(e.range.lo)));
+            window = {e.range.lo - reach, e.range.hi + reach};
+        }
+        const double t = projectPoint(*e.curve, points[std::size_t(point)], window).parameter;
+        if (extend && (t <= e.range.lo || t >= e.range.hi)) {
+            // Allungamento: l'estremo spostato deve restare dalla sua parte.
+            if ((e.start == vertex && t < e.range.hi) || (e.end == vertex && t > e.range.lo)) {
+                if (e.start == vertex) {
+                    e.range.lo = t;
+                    e.start = point;
+                } else {
+                    e.range.hi = t;
+                    e.end = point;
+                }
+                return;
+            }
+        }
         if (e.start == vertex) {
-            if (!(t > e.range.lo && t < e.range.hi)) throw std::domain_error("blendEdges: raggio troppo grande per uno spigolo vicino");
+            if (!(t > e.range.lo && t < e.range.hi))
+                throw std::domain_error("blendEdges: raggio troppo grande per lo spigolo vicino " + std::to_string(edge)
+                                        + " (parametro " + std::to_string(t) + ", intervallo "
+                                        + std::to_string(e.range.lo) + ".." + std::to_string(e.range.hi) + ")");
             e.range.lo = t;
             e.start = point;
         } else if (e.end == vertex) {
-            if (!(t > e.range.lo && t < e.range.hi)) throw std::domain_error("blendEdges: raggio troppo grande per uno spigolo vicino");
+            if (!(t > e.range.lo && t < e.range.hi))
+                throw std::domain_error("blendEdges: raggio troppo grande per lo spigolo vicino " + std::to_string(edge)
+                                        + " (parametro " + std::to_string(t) + ", intervallo "
+                                        + std::to_string(e.range.lo) + ".." + std::to_string(e.range.hi) + ")");
             e.range.hi = t;
             e.end = point;
         } else {

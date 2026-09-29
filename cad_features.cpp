@@ -150,6 +150,71 @@ bool sketchPath(const SketchObject &sketch, std::vector<PathSegment> &path, QStr
     }
 }
 
+QVector<SketchPathRef> sketchPathComponents(const SketchObject &sketch) {
+    struct Entity { int kind, index; QVector<QPointF> ends; };
+    QVector<Entity> entities;
+    for (int index = 0; index < sketch.segments.size(); ++index) {
+        if (sketch.isConstructionSegment(index)) continue;
+        const SketchSegment &s = sketch.segments.at(index);
+        entities.append({0, index, {s.first, s.second}});
+    }
+    for (int index = 0; index < sketch.curves.size(); ++index) {
+        const CurveObject &curve = sketch.curves.at(index);
+        if (curve.construction || curve.samples.isEmpty()) continue;
+        entities.append({1, index, {curve.samples.first(), curve.samples.last()}});
+    }
+    const auto touches = [](const Entity &a, const Entity &b) {
+        for (const QPointF &p : a.ends) for (const QPointF &q : b.ends)
+            if (std::hypot(p.x() - q.x(), p.y() - q.y()) <= kSketchConnectionTolerance) return true;
+        return false;
+    };
+    QVector<bool> used(entities.size(), false);
+    QVector<SketchPathRef> connected;
+    for (int seed = 0; seed < entities.size(); ++seed) {
+        if (used.at(seed)) continue;
+        SketchPathRef component;
+        QVector<int> pending{seed}; used[seed] = true;
+        while (!pending.isEmpty()) {
+            const int at = pending.takeLast();
+            const Entity &entity = entities.at(at);
+            (entity.kind == 0 ? component.segments : component.curves).append(entity.index);
+            for (int other = 0; other < entities.size(); ++other)
+                if (!used.at(other) && touches(entity, entities.at(other))) { used[other] = true; pending.append(other); }
+        }
+        std::sort(component.segments.begin(), component.segments.end());
+        std::sort(component.curves.begin(), component.curves.end());
+        connected.append(component);
+    }
+    // Ogni curva resta selezionabile da sola anche quando tocca un'altra
+    // entita' (caso tipico di due curve specchiate con un estremo sull'asse).
+    // Le componenti complete restano disponibili per i percorsi composti da
+    // piu' segmenti o curve.
+    QVector<SketchPathRef> result;
+    for (const Entity &entity : entities)
+        if (entity.kind == 1) { SketchPathRef single; single.curves = {entity.index}; result.append(single); }
+    for (const SketchPathRef &component : connected)
+        if (!(component.segments.isEmpty() && component.curves.size() == 1)) result.append(component);
+    return result;
+}
+
+SketchObject sketchPathSubset(const SketchObject &sketch, const SketchPathRef &selection) {
+    if (selection.empty()) return sketch;
+    SketchObject subset = sketch;
+    subset.segments.clear(); subset.curves.clear(); subset.constructionSegments.clear();
+    subset.constraints.clear(); subset.segmentLengths.clear(); subset.segmentAngles.clear();
+    subset.coincidentConstraints.clear(); subset.geometricConstraints.clear();
+    for (int index : selection.segments)
+        if (index >= 0 && index < sketch.segments.size()) {
+            subset.segments.append(sketch.segments.at(index));
+            subset.constraints.append(-1); subset.segmentLengths.append(0.0); subset.segmentAngles.append(-1.0);
+        }
+    for (int index : selection.curves)
+        if (index >= 0 && index < sketch.curves.size()) {
+            CurveObject curve = sketch.curves.at(index); curve.construction = false; subset.curves.append(std::move(curve));
+        }
+    return subset;
+}
+
 std::vector<PathSegment> curvePath(const ForgeCurve &curve) {
     if (!curve) return {};
     return {{curve, curve->domain()}};
