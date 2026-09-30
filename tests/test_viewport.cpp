@@ -39,8 +39,15 @@ public:
         require(scrollablePanel.findChild<QScrollArea *>(QStringLiteral("functionDialogScroll")),
                 "contenuto scorrevole dei pannelli funzione");
         FunctionDialogPanel embeddedPanel(&v);
+        embeddedPanel.setWindowTitle(QStringLiteral("Pannello test"));
         require(embeddedPanel.isEmbedded() && !embeddedPanel.isWindow() && embeddedPanel.parentWidget() == &v,
                 "pannello funzione sovrapposto nelle coordinate del viewport");
+        v.setGlassPanel(123, QRect(10, 20, 300, 220), 16, 14, true);
+        require(v.glassPanels_.contains(123) && v.glassPanels_.value(123).blur == 16
+                    && v.glassPanels_.value(123).radius == 14,
+                "registrazione del pannello per la composizione GPU");
+        v.removeGlassPanel(123);
+        require(!v.glassPanels_.contains(123), "rimozione del pannello dalla composizione GPU");
         embeddedPanel.resize(420, 300);
         embeddedPanel.placeAtLeft();
         const QPoint initialPanelPosition = embeddedPanel.pos();
@@ -72,10 +79,18 @@ public:
         QApplication::sendEvent(panelGrip, &gripRelease);
         require(embeddedPanel.size() == panelBeforeGrip + QSize(30, 20) && v.size() == viewportBeforeGrip,
                 "il grip ridimensiona soltanto il pannello funzione");
+        require(QSettings().value(QStringLiteral("view/functionPanelSizes/Pannello_test")).toSize() == embeddedPanel.size(),
+                "ridimensionamento manuale del pannello memorizzato");
         const QPalette panelPalette = embeddedPanel.palette();
-        require(panelPalette.color(QPalette::HighlightedText).lightness() > 200
-                    && panelPalette.color(QPalette::Highlight).lightness() > 50,
+        const QColor selectionText = panelPalette.color(QPalette::HighlightedText);
+        const QColor selectionBackground = panelPalette.color(QPalette::Highlight);
+        require(selectionBackground.red() > 230 && selectionBackground.green() > 120
+                    && selectionText.lightness() < 80,
                 "testo leggibile nella selezione dei menu a discesa");
+        require(!ForgeCad::commandIcon(QStringLiteral("panelOpacity")).isNull()
+                    && !ForgeCad::commandIcon(QStringLiteral("panelBlur")).isNull()
+                    && !ForgeCad::commandIcon(QStringLiteral("panelCorners")).isNull(),
+                "icone delle impostazioni dei pannelli");
         FloatingPanel constraintStylePanel(&v, QStringLiteral("Vincoli"),
                                            QStringLiteral("test/constraintPanelStyle"), QSize(380, 360));
         require(constraintStylePanel.isEmbedded()
@@ -392,8 +407,23 @@ public:
             v.show();
             for (int i = 0; i < 8; ++i) QApplication::processEvents();
             require(v.isValid(), "contesto OpenGL valido");
+            FunctionDialogPanel focusPanel(&v);
+            focusPanel.setWindowTitle(QStringLiteral("Test focus pannello"));
+            auto *focusSpin = new QDoubleSpinBox(&focusPanel);
+            focusPanel.createScrollableForm()->addRow(QStringLiteral("Valore:"), focusSpin);
+            focusPanel.show();
+            for (int i = 0; i < 4; ++i) QApplication::processEvents();
+            require(focusSpin->hasFocus(), "focus iniziale sul primo dato del pannello");
+            require(focusPanel.size().width() <= v.width() - 32 && focusPanel.size().height() <= v.height() - 32,
+                    "dimensione automatica limitata al viewport");
+            focusPanel.hide();
+            require(v.gpuGlassAvailable(), "shader OpenGL per la sfocatura dei pannelli");
+            v.setGlassPanel(456, QRect(30, 30, 260, 180), 14, 18, true);
+            v.update();
+            for (int i = 0; i < 4; ++i) QApplication::processEvents();
             const QImage screenshot = v.grabFramebuffer();
             require(!screenshot.isNull(), "rendering framebuffer");
+            v.removeGlassPanel(456);
             screenshot.save(QStringLiteral("/tmp/forgecad-viewport-test.png"));
             v.makeCurrent();
             while (glGetError() != GL_NO_ERROR) {}

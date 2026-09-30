@@ -59,6 +59,7 @@
 #include <QGridLayout>
 #include <QHBoxLayout>
 #include <QLabel>
+#include <QLineEdit>
 #include <QListWidget>
 #include <QSlider>
 #include <QVBoxLayout>
@@ -69,6 +70,7 @@
 #include <QMouseEvent>
 #include <QOpenGLFramebufferObject>
 #include <QOpenGLFunctions>
+#include <QOpenGLShaderProgram>
 #include <QOpenGLWidget>
 #include <QPainter>
 #include <QPainterPath>
@@ -164,6 +166,8 @@ public:
         if (context()) disconnect(context(), nullptr, this, nullptr);
         makeCurrent();
         displayCache_.clear();
+        glassShader_.reset();
+        glassSource_.reset(); glassPing_.reset(); glassBlur_.reset();
         msaaBuffer_.reset();
         resolveBuffer_.reset();
         doneCurrent();
@@ -186,6 +190,13 @@ public:
     }
     void setWheelZoomEnabled(bool enabled) { wheelZoomEnabled_ = enabled; }
     quint64 renderedFrameSerial() const { return renderedFrameSerial_; }
+    void setGlassPanel(quintptr id, const QRect &rect, int blur, int radius, bool visible) {
+        if (!visible) glassPanels_.remove(id);
+        else glassPanels_[id] = {rect, blur, radius};
+        update();
+    }
+    void removeGlassPanel(quintptr id) { glassPanels_.remove(id); update(); }
+    bool gpuGlassAvailable() const { return gpuGlassReady_; }
     QImage panelBackdropFrame() {
         if (panelBackdropSerial_ != renderedFrameSerial_ || panelBackdropCache_.isNull()) {
             panelBackdropCache_ = grabFramebuffer();
@@ -2638,6 +2649,7 @@ protected:
         while (glGetError() != GL_NO_ERROR) {
         }
         maxSamples_ = samples;
+        initializeGlassShader();
     }
 
     void resizeGL(int width, int height) override {
@@ -2696,6 +2708,7 @@ protected:
             QOpenGLFramebufferObject::blitFramebuffer(nullptr, QRect(QPoint(), pixels), resolveBuffer_.get(), QRect(QPoint(), pixels));
             glViewport(viewport[0], viewport[1], viewport[2], viewport[3]);
         }
+        drawGpuGlassPanels(pixels, scene ? resolveBuffer_.get() : nullptr);
         drawReferenceLabels();
         drawSelectionHighlight();
         drawPlaneResizeHandles();
@@ -8507,6 +8520,132 @@ private:
         return msaaBuffer_.get();
     }
 
+    void initializeGlassShader() {
+        glassShader_ = std::make_unique<QOpenGLShaderProgram>();
+        static const char *vertex =
+            "#version 120\n"
+            "varying vec2 uv;\n"
+            "void main() { gl_Position = gl_Vertex; uv = gl_MultiTexCoord0.xy; }\n";
+        static const char *fragment =
+            "#version 120\n"
+            "uniform sampler2D sourceTexture;\n"
+            "uniform vec2 direction;\n"
+            "varying vec2 uv;\n"
+            "void main() {\n"
+            " vec4 c = texture2D(sourceTexture, uv) * 0.227027;\n"
+            " c += texture2D(sourceTexture, uv + direction * 1.384615) * 0.316216;\n"
+            " c += texture2D(sourceTexture, uv - direction * 1.384615) * 0.316216;\n"
+            " c += texture2D(sourceTexture, uv + direction * 3.230769) * 0.070270;\n"
+            " c += texture2D(sourceTexture, uv - direction * 3.230769) * 0.070270;\n"
+            " gl_FragColor = c;\n"
+            "}\n";
+        gpuGlassReady_ = glassShader_->addShaderFromSourceCode(QOpenGLShader::Vertex, vertex)
+            && glassShader_->addShaderFromSourceCode(QOpenGLShader::Fragment, fragment)
+            && glassShader_->link() && QOpenGLFramebufferObject::hasOpenGLFramebufferBlit();
+        if (!gpuGlassReady_) glassShader_.reset();
+    }
+
+    void ensureGlassBuffers(const QSize &fullSize) {
+        // Il 75% elimina gran parte della pixelatura visibile sui bordi e sul
+        // testo della scena, mantenendo il costo sotto quello del full-size.
+        const QSize work(qMax(1, (fullSize.width() * 3 + 3) / 4),
+                         qMax(1, (fullSize.height() * 3 + 3) / 4));
+        if (!glassSource_ || glassSource_->size() != fullSize)
+            glassSource_ = std::make_unique<QOpenGLFramebufferObject>(fullSize);
+        if (!glassPing_ || glassPing_->size() != work) {
+            glassPing_ = std::make_unique<QOpenGLFramebufferObject>(work);
+            glassBlur_ = std::make_unique<QOpenGLFramebufferObject>(work);
+        }
+        if (!glassSource_->isValid() || !glassPing_->isValid() || !glassBlur_->isValid()) gpuGlassReady_ = false;
+    }
+
+    void glassBlurPass(QOpenGLFramebufferObject *target, GLuint texture, const QVector2D &direction) {
+        target->bind();
+        glViewport(0, 0, target->width(), target->height());
+        glDisable(GL_DEPTH_TEST); glDisable(GL_LIGHTING); glDisable(GL_BLEND);
+        glassShader_->bind();
+        glassShader_->setUniformValue("sourceTexture", 0);
+        glassShader_->setUniformValue("direction", direction);
+        glActiveTexture(GL_TEXTURE0); glBindTexture(GL_TEXTURE_2D, texture);
+        glBegin(GL_QUADS);
+        glTexCoord2f(0, 0); glVertex2f(-1, -1);
+        glTexCoord2f(1, 0); glVertex2f( 1, -1);
+        glTexCoord2f(1, 1); glVertex2f( 1,  1);
+        glTexCoord2f(0, 1); glVertex2f(-1,  1);
+        glEnd();
+        glBindTexture(GL_TEXTURE_2D, 0);
+        glassShader_->release();
+        target->release();
+    }
+
+    void drawRoundedGlassRect(const QRect &rect, int radius, const QSize &pixels) {
+        const float cx = rect.center().x(), cy = height() - rect.center().y();
+        const float left = rect.left(), right = rect.right() + 1.0f;
+        const float bottom = height() - (rect.bottom() + 1.0f), top = height() - rect.top();
+        const float r = qMin(float(qMax(0, radius)), 0.5f * qMin(rect.width(), rect.height()));
+        const auto vertex = [&](float x, float y) {
+            glTexCoord2f(x / qMax(1, width()), y / qMax(1, height()));
+            glVertex2f(x, y);
+        };
+        glBegin(GL_TRIANGLE_FAN);
+        vertex(cx, cy);
+        if (r <= 0.0f) {
+            vertex(left, bottom); vertex(right, bottom); vertex(right, top); vertex(left, top); vertex(left, bottom);
+        } else {
+            const struct { float x, y, start; } corners[] = {
+                {right - r, bottom + r, -90}, {right - r, top - r, 0},
+                {left + r, top - r, 90}, {left + r, bottom + r, 180}};
+            for (const auto &corner : corners)
+                for (int step = 0; step <= 5; ++step) {
+                    const float a = (corner.start + step * 18.0f) * float(M_PI) / 180.0f;
+                    vertex(corner.x + r * std::cos(a), corner.y + r * std::sin(a));
+                }
+            vertex(right - r, bottom);
+        }
+        glEnd();
+        Q_UNUSED(pixels);
+    }
+
+    void drawGpuGlassPanels(const QSize &pixels, QOpenGLFramebufferObject *resolvedScene) {
+        if (!gpuGlassReady_ || glassPanels_.isEmpty()) return;
+        ensureGlassBuffers(pixels);
+        if (!gpuGlassReady_) return;
+        if (resolvedScene) {
+            QOpenGLFramebufferObject::blitFramebuffer(glassSource_.get(), resolvedScene);
+        } else {
+            QOpenGLFramebufferObject::blitFramebuffer(
+                glassSource_.get(), QRect(QPoint(), pixels), nullptr, QRect(QPoint(), pixels), GL_COLOR_BUFFER_BIT, GL_LINEAR);
+        }
+        int blur = 0;
+        for (const GlassPanel &panel : glassPanels_) blur = qMax(blur, panel.blur);
+        if (blur <= 0) {
+            glBindFramebuffer(GL_FRAMEBUFFER, defaultFramebufferObject());
+            return;
+        }
+        // blur_ e' espresso in pixel logici. Conserva la stessa estensione
+        // visiva al variare sia del DPR sia della risoluzione di lavoro.
+        const float workRatio = float(glassPing_->width()) / qMax(1, pixels.width());
+        const float scale = qMax(0.25f, blur * float(devicePixelRatioF()) * workRatio / 2.0f);
+        glassBlurPass(glassPing_.get(), glassSource_->texture(),
+                      QVector2D(scale / glassPing_->width(), 0));
+        glassBlurPass(glassBlur_.get(), glassPing_->texture(),
+                      QVector2D(0, scale / glassBlur_->height()));
+
+        glBindFramebuffer(GL_FRAMEBUFFER, defaultFramebufferObject());
+        glViewport(0, 0, pixels.width(), pixels.height());
+        glDisable(GL_DEPTH_TEST); glDisable(GL_LIGHTING); glDisable(GL_BLEND);
+        glEnable(GL_TEXTURE_2D); glBindTexture(GL_TEXTURE_2D, glassBlur_->texture());
+        // L'ambiente texture della pipeline compatibility modula il campione
+        // con il colore corrente, lasciato dai disegni della scena.
+        glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
+        glMatrixMode(GL_PROJECTION); glPushMatrix(); glLoadIdentity();
+        glOrtho(0, width(), 0, height(), -1, 1);
+        glMatrixMode(GL_MODELVIEW); glPushMatrix(); glLoadIdentity();
+        for (const GlassPanel &panel : glassPanels_) drawRoundedGlassRect(panel.rect, panel.radius, pixels);
+        glPopMatrix(); glMatrixMode(GL_PROJECTION); glPopMatrix(); glMatrixMode(GL_MODELVIEW);
+        glBindTexture(GL_TEXTURE_2D, 0); glDisable(GL_TEXTURE_2D); glEnable(GL_DEPTH_TEST);
+    }
+
 
     static const QColor &axisColor(int axis) {
         static const QColor colors[3] = {QColor(235, 70, 70), QColor(80, 215, 95), QColor(70, 135, 255)};
@@ -8729,6 +8868,11 @@ private:
     // un framebuffer multisample, risolto in uno normale e copiato nel widget.
     int antialiasing_ = 4, maxSamples_ = 0, bufferSamples_ = 0;
     std::unique_ptr<QOpenGLFramebufferObject> msaaBuffer_, resolveBuffer_;
+    struct GlassPanel { QRect rect; int blur = 0; int radius = 0; };
+    QHash<quintptr, GlassPanel> glassPanels_;
+    std::unique_ptr<QOpenGLShaderProgram> glassShader_;
+    std::unique_ptr<QOpenGLFramebufferObject> glassSource_, glassPing_, glassBlur_;
+    bool gpuGlassReady_ = false;
     bool gridVisible_ = true;
     double referencePlaneScales_[3] = {1.0, 1.0, 1.0};
     mutable QSizeF referencePlaneAuto_[3] = {
@@ -8821,6 +8965,9 @@ public:
         connect(&captureTimer_, &QTimer::timeout, this, [this] { captureSceneBackdrop(); });
         updatePalette();
     }
+    ~FunctionDialogPanel() override {
+        if (viewport_) viewport_->removeGlassPanel(reinterpret_cast<quintptr>(this));
+    }
     QFormLayout *createScrollableForm() {
         if (form_) return form_;
         auto *root = new QVBoxLayout(this);
@@ -8828,7 +8975,7 @@ public:
         scroll->setObjectName(QStringLiteral("functionDialogScroll"));
         scroll->setWidgetResizable(true);
         scroll->setFrameShape(QFrame::NoFrame);
-        scroll->setSizeAdjustPolicy(QAbstractScrollArea::AdjustIgnored);
+        scroll->setSizeAdjustPolicy(QAbstractScrollArea::AdjustToContents);
         auto *contents = new QWidget(scroll);
         contents->setObjectName(QStringLiteral("functionDialogContents"));
         contents->setAutoFillBackground(false);
@@ -8836,7 +8983,6 @@ public:
         form_ = new QFormLayout(contents);
         scroll->setWidget(contents);
         root->addWidget(scroll, 1);
-        resize(560, 600);
         return form_;
     }
     QColor panelColor() const { return panelColor_; }
@@ -8866,16 +9012,19 @@ public:
     void setPanelOpacity(int percent) {
         opacity_ = qBound(25, percent, 100);
         updatePalette();
+        syncGpuGlass();
         scheduleBackdropCapture(0);
         update();
     }
     void setBackdropBlur(int pixels) {
         blur_ = qBound(0, pixels, 40);
+        syncGpuGlass();
         scheduleBackdropCapture(0);
         update();
     }
     void setCornerRadius(int pixels) {
         cornerRadius_ = qBound(0, pixels, 40);
+        syncGpuGlass();
         updateRoundedMask();
         update();
     }
@@ -8889,12 +9038,20 @@ protected:
     void showEvent(QShowEvent *event) override {
         QDialog::showEvent(event);
         locateViewport();
+        initializePanelSize();
         if (embedded_ && !placed_) placeAtLeft();
         raise();
+        syncGpuGlass();
         scheduleBackdropCapture(0);
+        QTimer::singleShot(0, this, [this] { focusFirstEditor(); });
+    }
+    void hideEvent(QHideEvent *event) override {
+        if (viewport_) viewport_->removeGlassPanel(reinterpret_cast<quintptr>(this));
+        QDialog::hideEvent(event);
     }
     void moveEvent(QMoveEvent *event) override {
         QDialog::moveEvent(event);
+        syncGpuGlass();
         scheduleBackdropCapture(0);
     }
     void resizeEvent(QResizeEvent *event) override {
@@ -8905,6 +9062,7 @@ protected:
             resizeGrip_->raise();
         }
         updateRoundedMask();
+        syncGpuGlass();
         scheduleBackdropCapture(0);
     }
     void paintEvent(QPaintEvent *event) override {
@@ -8915,7 +9073,8 @@ protected:
         QPainterPath panelPath;
         panelPath.addRoundedRect(panelRect, cornerRadius_, cornerRadius_);
         painter.setClipPath(panelPath);
-        if (!backdrop_.isNull()) painter.drawImage(rect(), backdrop_);
+        if ((!viewport_ || !viewport_->gpuGlassAvailable()) && !backdrop_.isNull())
+            painter.drawImage(rect(), backdrop_);
         QColor color = panelColor_;
         color.setAlpha(qRound(255.0 * opacity_ / 100.0));
         painter.fillRect(rect(), color);
@@ -8947,6 +9106,7 @@ protected:
                 return true;
             }
             if (event->type() == QEvent::MouseButtonRelease) {
+                if (resizing_) storeManualSize();
                 resizing_ = false;
                 return true;
             }
@@ -8996,10 +9156,73 @@ private:
             "QAbstractItemView::item { background: transparent; }"
             "QComboBox { background-color: %2; color: %1; border: 1px solid rgba(135,170,205,150); padding: 2px 22px 2px 5px; }"
             "QComboBox QAbstractItemView { background-color: %3; color: %1; border: 1px solid #52708d; outline: 0; }"
-            "QComboBox QAbstractItemView::item { background-color: %3; color: %1; min-height: 22px; }"
-            "QComboBox QAbstractItemView::item:hover, QComboBox QAbstractItemView::item:selected { background-color: #087fe7; color: #ffffff; font-weight: 700; border: 1px solid #69b9ff; }"
+            "QComboBox QAbstractItemView::item { background-color: %3; color: %1; min-height: 24px; padding: 2px 5px; }"
+            "QComboBox QAbstractItemView::item:hover, QComboBox QAbstractItemView::item:selected { background-color: #ff9f1c; color: #101820; font-weight: 800; border: 2px solid #ffe0a3; }"
             "QSizeGrip#functionPanelResizeGrip { background: transparent; }")
             .arg(foreground.name(QColor::HexRgb), fieldRgba, popupRgba));
+    }
+    QString panelSizeSettingsKey() const {
+        QString id = objectName() != QLatin1String("functionDialogPanel") ? objectName() : windowTitle();
+        if (id.isEmpty()) id = QStringLiteral("panel");
+        id.replace(QRegularExpression(QStringLiteral("[^A-Za-z0-9_-]+")), QStringLiteral("_"));
+        return QStringLiteral("view/functionPanelSizes/") + id;
+    }
+    QSize naturalPanelSize() {
+        const QList<QScrollArea *> scrolls = findChildren<QScrollArea *>();
+        for (QScrollArea *scroll : scrolls) {
+            scroll->setSizeAdjustPolicy(QAbstractScrollArea::AdjustToContents);
+            if (scroll->widget()) {
+                if (scroll->widget()->layout()) scroll->widget()->layout()->activate();
+                scroll->widget()->adjustSize();
+            }
+            scroll->updateGeometry();
+        }
+        if (layout()) layout()->activate();
+        return (layout() ? layout()->sizeHint() : sizeHint()).expandedTo(minimumSize());
+    }
+    QSize maximumPanelSize() const {
+        if (embedded_ && parentWidget())
+            return QSize(qMax(1, parentWidget()->width() - 32), qMax(1, parentWidget()->height() - 32));
+        QScreen *screen = QGuiApplication::screenAt(mapToGlobal(rect().center()));
+        if (!screen) screen = QGuiApplication::primaryScreen();
+        return screen ? screen->availableGeometry().size() - QSize(32, 32) : QSize(1600, 1000);
+    }
+    void initializePanelSize() {
+        if (panelSizeInitialized_) return;
+        panelSizeInitialized_ = true;
+        const QSize stored = QSettings().value(panelSizeSettingsKey()).toSize();
+        QSize requested = stored.isValid() ? stored : naturalPanelSize();
+        const QSize maximum = maximumPanelSize();
+        requested = requested.expandedTo(minimumSize()).boundedTo(maximum);
+        resize(requested);
+    }
+    void storeManualSize() {
+        if (!size().isValid()) return;
+        QSettings().setValue(panelSizeSettingsKey(), size());
+    }
+    void focusFirstEditor() {
+        QWidget *fallback = nullptr;
+        QWidget *candidate = nextInFocusChain();
+        while (candidate && candidate != this) {
+            if (candidate->isVisibleTo(this) && candidate->isEnabled()
+                && candidate->focusPolicy() != Qt::NoFocus) {
+                if (auto *spin = qobject_cast<QAbstractSpinBox *>(candidate)) {
+                    spin->setFocus(Qt::OtherFocusReason);
+                    spin->selectAll();
+                    return;
+                }
+                if (auto *line = qobject_cast<QLineEdit *>(candidate)) {
+                    if (!line->isReadOnly() && !qobject_cast<QAbstractSpinBox *>(line->parentWidget())) {
+                        line->setFocus(Qt::OtherFocusReason);
+                        line->selectAll();
+                        return;
+                    }
+                }
+                if (!fallback && qobject_cast<QComboBox *>(candidate)) fallback = candidate;
+            }
+            candidate = candidate->nextInFocusChain();
+        }
+        if (fallback) fallback->setFocus(Qt::OtherFocusReason);
     }
     void locateViewport() {
         if (viewport_) return;
@@ -9019,7 +9242,15 @@ private:
     }
     void scheduleBackdropCapture(int delay) {
         if (!isVisible() || opacity_ >= 100) return;
+        if (viewport_ && viewport_->gpuGlassAvailable()) {
+            backdrop_ = QImage();
+            return;
+        }
         if (!captureTimer_.isActive() || delay == 0) captureTimer_.start(delay);
+    }
+    void syncGpuGlass() {
+        if (!viewport_ || !embedded_) return;
+        viewport_->setGlassPanel(reinterpret_cast<quintptr>(this), geometry(), blur_, cornerRadius_, isVisible() && opacity_ < 100);
     }
     static QImage boxBlurPass(const QImage &source, int radius, bool horizontal) {
         if (radius <= 0 || source.isNull()) return source;
@@ -9127,8 +9358,8 @@ private:
             p.setColor(group, QPalette::Text, foreground);
             p.setColor(group, QPalette::ButtonText, foreground);
             p.setColor(group, QPalette::ToolTipText, foreground);
-            p.setColor(group, QPalette::HighlightedText, QColor(255, 255, 255));
-            p.setColor(group, QPalette::Highlight, QColor(8, 127, 231));
+            p.setColor(group, QPalette::HighlightedText, QColor(16, 24, 32));
+            p.setColor(group, QPalette::Highlight, QColor(255, 159, 28));
             p.setColor(group, QPalette::Base, panelColor_.darker(125));
         }
         setPalette(p);
@@ -9147,7 +9378,7 @@ private:
     QPoint dragOffset_;
     QPoint resizeStartGlobal_;
     QSize resizeStartSize_;
-    bool embedded_ = false, dragging_ = false, resizing_ = false, placed_ = false;
+    bool embedded_ = false, dragging_ = false, resizing_ = false, placed_ = false, panelSizeInitialized_ = false;
 };
 
 class FeatureOperationDiagram final : public QWidget {
@@ -9944,9 +10175,8 @@ static bool loftDialog(QWidget *parent, CadViewport *viewport, const QString &ti
     FunctionDialogPanel dialog(parent);
     dialog.setObjectName(QStringLiteral("loftDialog"));
     dialog.setWindowTitle(title);
-    dialog.resize(QSettings().value(QStringLiteral("loft/dialogSize"), QSize(680, 720)).toSize());
     dialog.setMinimumSize(480, 360);
-    dialog.setSizeGripEnabled(true);
+    dialog.setSizeGripEnabled(false);
     dialog.setWindowFlag(Qt::MSWindowsFixedSizeDialogHint, false);
     auto *dialogLayout = new QVBoxLayout(&dialog);
     auto *scroll = new QScrollArea(&dialog);
@@ -10166,9 +10396,6 @@ static bool loftDialog(QWidget *parent, CadViewport *viewport, const QString &ti
     QObject::connect(buttons, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
     footerLayout->addWidget(buttons);
     dialogLayout->addWidget(footer);
-    QObject::connect(&dialog, &QDialog::finished, &dialog, [&dialog] {
-        QSettings().setValue(QStringLiteral("loft/dialogSize"), dialog.size());
-    });
     QTimer::singleShot(0, &dialog, [&dialog, parent] {
         if (dialog.isEmbedded()) {
             dialog.placeAtLeft();
@@ -12291,6 +12518,9 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
     auto *functionPanelOpacityAction = functionPanelMenu->addAction(QString());
     auto *functionPanelBlurAction = functionPanelMenu->addAction(QString());
     auto *functionPanelRadiusAction = functionPanelMenu->addAction(QString());
+    functionPanelOpacityAction->setIcon(ForgeCad::commandIcon(QStringLiteral("panelOpacity")));
+    functionPanelBlurAction->setIcon(ForgeCad::commandIcon(QStringLiteral("panelBlur")));
+    functionPanelRadiusAction->setIcon(ForgeCad::commandIcon(QStringLiteral("panelCorners")));
     const auto updateFunctionPanelActions = [functionPanelOpacityAction, functionPanelBlurAction, functionPanelRadiusAction] {
         QSettings settings;
         functionPanelOpacityAction->setText(QStringLiteral("Trasparenza... (%1%)")

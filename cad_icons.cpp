@@ -842,6 +842,43 @@ std::map<QString, Draw> &registry() {
     };
     icons["displayShaded"] = [](QPainter &p, const IconPalette &c) { cube(p, c, -1, true, false); };
     icons["displayShadedEdges"] = [](QPainter &p, const IconPalette &c) { cube(p, c, -1, true, true); };
+    icons["panelOpacity"] = [](QPainter &p, const IconPalette &c) {
+        QPainterPath panel;
+        panel.addRoundedRect(QRectF(3.5, 4, 17, 16), 2.5, 2.5);
+        p.setPen(stroke(c.ink, 1.4));
+        p.setBrush(c.faceDark);
+        p.drawPath(panel);
+        p.save();
+        p.setClipPath(panel);
+        p.setPen(Qt::NoPen);
+        p.setBrush(c.accent);
+        p.drawRect(QRectF(3.5, 4, 8.5, 16));
+        p.restore();
+        line(p, {12, 5}, {12, 19}, stroke(c.construction, 1.1, Qt::DashLine));
+    };
+    icons["panelBlur"] = [](QPainter &p, const IconPalette &c) {
+        p.setPen(stroke(c.faceMid, 1.0));
+        p.setBrush(c.faceDark);
+        p.drawRoundedRect(QRectF(3.5, 4, 17, 16), 2.5, 2.5);
+        for (int row = 0; row < 3; ++row) {
+            QPainterPath wave(QPointF(6, 8 + row * 4));
+            wave.cubicTo({8, 5.5 + row * 4.0}, {10, 10.5 + row * 4.0}, {12, 8.0 + row * 4.0});
+            wave.cubicTo({14, 5.5 + row * 4.0}, {16, 10.5 + row * 4.0}, {18, 8.0 + row * 4.0});
+            p.setPen(stroke(row == 1 ? c.accent : c.construction, row == 1 ? 1.8 : 1.1));
+            p.drawPath(wave);
+        }
+    };
+    icons["panelCorners"] = [](QPainter &p, const IconPalette &c) {
+        p.setPen(stroke(c.ink, 1.5));
+        p.setBrush(c.faceDark);
+        p.drawRoundedRect(QRectF(3.5, 4, 17, 16), 4.5, 4.5);
+        p.setPen(stroke(c.accent, 2.0));
+        p.setBrush(Qt::NoBrush);
+        p.drawArc(QRectF(3.5, 4, 9, 9), 90 * 16, 90 * 16);
+        p.drawArc(QRectF(11.5, 11, 9, 9), -90 * 16, 90 * 16);
+        dot(p, {8, 8.5}, c.construction, 1.3);
+        dot(p, {16, 15.5}, c.construction, 1.3);
+    };
     return icons;
 }
 
