@@ -60,6 +60,7 @@
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QLineEdit>
+#include <QLocale>
 #include <QListWidget>
 #include <QSlider>
 #include <QVBoxLayout>
@@ -75,6 +76,8 @@
 #include <QPainter>
 #include <QPainterPath>
 #include <QPushButton>
+#include <QProgressBar>
+#include <QProgressDialog>
 #include <QSet>
 #include <QSettings>
 #include <QSignalBlocker>
@@ -89,6 +92,7 @@
 #include <QVector2D>
 #include <QVector3D>
 #include <QThreadPool>
+#include <QRunnable>
 #include <QWheelEvent>
 #include <QWindow>
 #include <QGuiApplication>
@@ -143,6 +147,25 @@ static const QColor kHoverColor(90, 205, 255);
 // Finestra che si chiude solo se `apply` riesce (definita piu' avanti).
 static bool runUntilApplied(QDialog &dialog, QFormLayout *form, QDialogButtonBox *buttons, const std::function<QString()> &apply);
 
+// Notifica uniforme per i calcoli del viewport. Quelli sincroni vengono
+// mostrati in una finestra dalla PdfWindow; quelli in background nella barra
+// di stato. La copia della callback rende la guardia sicura anche se durante
+// il lavoro cambia il gestore installato nel viewport.
+class ScopedWork final {
+public:
+    ScopedWork(const std::function<void(bool, const QString &, bool)> &callback, const QString &message, bool background = false)
+        : callback_(callback), message_(message), background_(background) {
+        if (callback_) callback_(true, message_, background_);
+    }
+    ~ScopedWork() { if (callback_) callback_(false, message_, background_); }
+    ScopedWork(const ScopedWork &) = delete;
+    ScopedWork &operator=(const ScopedWork &) = delete;
+private:
+    std::function<void(bool, const QString &, bool)> callback_;
+    QString message_;
+    bool background_ = false;
+};
+
 class CadViewport final : public QOpenGLWidget, protected QOpenGLFunctions {
     friend class ViewportInteractionTest;
 public:
@@ -181,6 +204,7 @@ public:
     void setLineAngle(double angle) { lineAngle_ = angle; update(); }
     void setPolygonSides(int sides) { polygonSides_ = qBound(3, sides, 64); }
     void setTessellationQuality(int quality) {
+        ScopedWork work(workCallback_, QStringLiteral("Aggiornamento della qualita' della scena..."));
         tessellationQuality_ = qBound(0, quality, 2);
         for (SketchObject &sketch : sketches_) {
             for (CurveObject &curve : sketch.curves) ForgeCad::recalculateCurve(curve, tessellationQuality_);
@@ -350,12 +374,17 @@ public:
     void setRendererCallback(std::function<void(const QString &)> callback) {
         rendererCallback_ = std::move(callback);
     }
+    void setWorkCallback(std::function<void(bool, const QString &, bool)> callback) {
+        workCallback_ = std::move(callback);
+    }
     int activeSketchIndex() const { return activeSketch_; }
     bool sketchModeActive() const { return sketchMode_; }
     // Documento corrente (per il salvataggio) e apertura di un documento: la
     // cronologia riparte da zero e i corpi si rigenerano dalla definizione.
     DocumentState currentDocument() const { return documentState(); }
-    void loadDocument(DocumentState state) {
+    void loadDocument(DocumentState state,
+                      const std::function<void(int, int, const QString &)> &progress = {}) {
+        ScopedWork work(workCallback_, QStringLiteral("Caricamento e rigenerazione del documento..."));
         if (sketchMode_) endSketchMode();
         activeSketch_ = -1;
         selection_ = {};
@@ -369,9 +398,36 @@ public:
                     ForgeCad::initializeTangentHandles(curve);
                 ForgeCad::recalculateCurve(curve, tessellationQuality_);
             }
-        regenerateAll();
+        const int totalBodies = qMax(1, int(extrusions_.size()));
+        if (progress) progress(0, totalBodies, QStringLiteral("Preparazione degli schizzi..."));
+        regenerateAll(progress);
+        if (progress && extrusions_.isEmpty()) progress(1, 1, QStringLiteral("Preparazione della scena..."));
         restoreDocument(documentState());
         fitAll();
+    }
+    // Anteprima nella finestra Apri: usa soltanto le geometrie gia' presenti
+    // nella cache del .prt. Non rigenera la cronologia parametrica e non
+    // modifica il documento aperto nella finestra principale.
+    void loadPreviewDocument(DocumentState state) {
+        activeSketch_ = -1;
+        selection_ = {};
+        if (state.orientationSet) orientation_ = state.orientation;
+        sketches_ = std::move(state.sketches);
+        extrusions_ = std::move(state.extrusions);
+        for (SketchObject &sketch : sketches_)
+            for (CurveObject &curve : sketch.curves) ForgeCad::recalculateCurve(curve, 0);
+        for (ExtrusionObject &body : extrusions_) {
+            if (body.forgeBody) {
+                body.solid = !body.forgeBody->isSheet();
+                tessellateGeometry(body, 0, body.display);
+            } else {
+                body.display = {};
+            }
+        }
+        sceneBoundsDirty_ = true;
+        setViewPreset(4);
+        fitAll();
+        update();
     }
     // Corpi da esportare: quelli visibili con una geometria valida (gli
     // operandi delle booleane e le basi dei raccordi sono nascosti), anche
@@ -396,10 +452,12 @@ public:
     bool canUndo() const { return history_.canUndo(); }
     bool canRedo() const { return history_.canRedo(); }
     void undo() {
+        ScopedWork work(workCallback_, QStringLiteral("Ripristino dello stato precedente..."));
         DocumentState state = documentState();
         if (history_.undo(state)) restoreDocument(std::move(state));
     }
     void redo() {
+        ScopedWork work(workCallback_, QStringLiteral("Ripristino dello stato successivo..."));
         DocumentState state = documentState();
         if (history_.redo(state)) restoreDocument(std::move(state));
     }
@@ -545,9 +603,20 @@ public:
         }
         ExtrusionObject candidate = withMergeCandidates(definition, index);
         candidate.visible = extrusions_.at(index).visible;
-        QApplication::setOverrideCursor(Qt::WaitCursor);
-        rebuildBody(candidate, index);
-        QApplication::restoreOverrideCursor();
+        const bool sameBlendPreview = candidate.operation < 0 && candidate.feature == BodyFeature::Blend
+            && preview_.key == previewKey(candidate, index);
+        if (sameBlendPreview && (!preview_.valid || !preview_.geometry))
+            return preview_.error.isEmpty() ? QStringLiteral("Attendi che l'anteprima sia pronta.") : preview_.error;
+        if (sameBlendPreview) {
+            candidate.forgeBody = preview_.geometry;
+            candidate.solid = true;
+            candidate.display = preview_.resultDisplay;
+            candidate.display.constructionCurves.clear();
+        } else {
+            QApplication::setOverrideCursor(Qt::WaitCursor);
+            rebuildBody(candidate, index);
+            QApplication::restoreOverrideCursor();
+        }
         candidate.mergeProbe = false;
         if (!hasGeometry(candidate)) return candidate.error;
         recordUndo();
@@ -1214,9 +1283,9 @@ public:
     // Raccordo o smusso: prima si scelgono gli spigoli del corpo selezionato
     // (clic sulla vista, Invio conferma, Esc annulla), poi `edgePickFinished`
     // chiede la misura e crea il corpo con createBlend. Restituisce l'errore.
-    QString beginEdgePick(bool chamfer) {
+    QString beginEdgePick(bool chamfer, bool deferPreview = false) {
         edgePickEdit_ = -1;
-        return startEdgePick(chamfer);
+        return startEdgePick(chamfer, false, false, deferPreview);
     }
     // Base di un'elica: un clic su uno spigolo circolare (source 1) o su una
     // faccia cilindrica o conica (source 2) di un corpo visibile; poi
@@ -1301,6 +1370,7 @@ public:
         // Lo strumento del taglio resta visibile; per il resto spariscono gli operandi.
         if (definition.operation < 0 && definition.feature == BodyFeature::SheetTrim) preview_.replaced = {definition.firstBody};
         else if (isCurveBody(definition) || isDatumBody(definition)) preview_.replaced.clear();  // la base dell'elica resta
+        else if (definition.operation < 0 && definition.feature == BodyFeature::Blend) preview_.replaced.clear(); // la base opaca resta sotto la patch
         else if (definition.mergeProbe) preview_.replaced.clear();  // i corpi fusi si sanno a calcolo finito
         else preview_.replaced = bodyOperands(definition);
         // La fine su un altro corpo non lo nasconde (solo quelli che si fondono).
@@ -1308,6 +1378,8 @@ public:
             preview_.replaced = definition.mergeOperation != 0 ? definition.mergeBodies : QVector<int>();
         preview_.valid = false;
         preview_.error.clear();
+        preview_.geometry.reset();
+        preview_.resultDisplay = {};
         previewErrorSketch_ = -1;
         ++preview_.generation;
         if (!previewTimer_) {
@@ -1342,8 +1414,10 @@ public:
         preview_.replaced.clear();
         preview_.valid = false;
         preview_.error.clear();
+        preview_.geometry.reset();
         previewErrorSketch_ = -1;
         preview_.display = {};
+        preview_.resultDisplay = {};
         update();
     }
     void clearBlendPreview() { clearPreview(); }
@@ -1354,11 +1428,12 @@ public:
     // Non serve scegliere prima il corpo: se quello selezionato va bene si parte
     // da lui, altrimenti lo decide il primo spigolo cliccato (su qualsiasi
     // solido visibile, o superficie per l'estensione).
-    QString startEdgePick(bool chamfer, bool extend = false, bool helix = false) {
+    QString startEdgePick(bool chamfer, bool extend = false, bool helix = false, bool deferPreview = false) {
         if (sketchMode_) return QStringLiteral("Esci prima dalla modalita' schizzo.");
         edgePickChamfer_ = chamfer;
         edgePickExtend_ = extend;
         edgePickHelix_ = helix;
+        edgePickPreviewEnabled_ = !deferPreview;
         edgePickBody_ = -1;
         // Il corpo selezionato vale anche se nascosto (la base di un raccordo da modificare).
         if (!helix && selection_.kind == SceneObjectKind::Extrusion && selection_.index >= 0 && selection_.index < extrusions_.size()) {
@@ -1397,6 +1472,22 @@ public:
         edgePickStatus_ = std::move(status);
         edgePickFinished_ = std::move(finished);
     }
+    void setEdgePickChangedCallback(std::function<void(int, QVector<EdgePoint>)> callback) {
+        edgePickChanged_ = std::move(callback);
+    }
+    void setEdgePickPanelKeyCallbacks(std::function<void()> accept, std::function<void()> cancel) {
+        edgePickPanelAccept_ = std::move(accept);
+        edgePickPanelCancel_ = std::move(cancel);
+    }
+    void enableEdgePickPreview() {
+        if (!edgePicking_ || edgePickPreviewEnabled_) return;
+        edgePickPreviewEnabled_ = true;
+        edgePicked();
+    }
+    int edgePickBody() const { return edgePickBody_; }
+    QVector<EdgePoint> edgePickPoints() const { return pickedEdgePoints(); }
+    bool edgePickPanelActive() const { return bool(edgePickChanged_); }
+    void endEdgePick(bool keepPreview = false) { cancelEdgePick(keepPreview); }
 
     QString createBlend(int baseIndex, const QVector<EdgePoint> &edges, double size, bool chamfer, const QString &name, const ChamferSpec &spec = {}) {
         if (baseIndex < 0 || baseIndex >= extrusions_.size()) return QStringLiteral("Corpo non valido.");
@@ -1409,8 +1500,21 @@ public:
         blend.blendSize = size;
         blend.blendEdges = edges;
         blend.chamferSpec = spec;
-        rebuildBody(blend, int(extrusions_.size()));
-        if (!hasGeometry(blend)) return blend.error;
+        // La stessa definizione e' gia' stata costruita dall'anteprima: il
+        // B-rep e la tassellazione sono immutabili e si possono promuovere
+        // direttamente a risultato definitivo, senza ripetere il raccordo.
+        const QString key = previewKey(blend, -1);
+        if (preview_.key == key) {
+            if (!preview_.valid || !preview_.geometry)
+                return preview_.error.isEmpty() ? QStringLiteral("Attendi che l'anteprima sia pronta.") : preview_.error;
+            blend.forgeBody = preview_.geometry;
+            blend.solid = true;
+            blend.display = preview_.resultDisplay;
+            blend.display.constructionCurves.clear();
+        } else {
+            rebuildBody(blend, int(extrusions_.size()));
+            if (!hasGeometry(blend)) return blend.error;
+        }
         recordUndo();
         extrusions_[baseIndex].visible = false;
         extrusions_.append(blend);
@@ -1446,6 +1550,7 @@ public:
     }
     // Le parti in cui lo strumento divide la superficie, per sceglierne una.
     QVector<SheetPiece> sheetPieces(int sheet, int tool, int plane, QString *error) const {
+        ScopedWork work(workCallback_, QStringLiteral("Calcolo delle parti della superficie..."));
         if (sheet < 0 || sheet >= extrusions_.size() || tool >= extrusions_.size() || tool == sheet) {
             if (error) *error = QStringLiteral("Superficie o strumento non validi.");
             return {};
@@ -1589,6 +1694,7 @@ public:
     }
     // Corpi importati (un passo di Undo); `source` e' il nome del file. Restituisce i corpi che non si rileggono.
     QStringList importParts(const QVector<ForgeCad::ImportedPart> &parts, const QString &source) {
+        ScopedWork work(workCallback_, QStringLiteral("Preparazione dei corpi importati..."));
         QStringList failures;
         if (parts.isEmpty()) return failures;
         recordUndo();
@@ -1615,6 +1721,7 @@ public:
 
     // Proprieta' di massa del corpo `index` (densita' 1), sulla geometria esatta.
     ForgeCad::MassReport massReport(int index) const {
+        ScopedWork work(workCallback_, QStringLiteral("Calcolo delle proprieta' di massa..."));
         ForgeCad::MassReport report;
         if (index < 0 || index >= extrusions_.size() || !hasGeometry(extrusions_.at(index))) {
             report.error = QStringLiteral("il corpo non ha geometria");
@@ -1927,6 +2034,7 @@ public:
     }
     // Le sezioni dei solidi visibili con il piano dello schizzo attivo (un passo di Undo).
     QString addSectionReferences(int *added = nullptr) {
+        ScopedWork progressWork(workCallback_, QStringLiteral("Calcolo delle sezioni sul piano di schizzo..."));
         if (!activeSketchObject()) return QStringLiteral("Entra in modalita' schizzo.");
         const int entitiesBefore = sketches_.at(activeSketch_).segments.size() + sketches_.at(activeSketch_).curves.size();
         SketchObject work = sketches_.at(activeSketch_);
@@ -1956,6 +2064,7 @@ public:
     // attivo. I punti sono entita' di costruzione fisse e quindi possono
     // ricevere Coincidente o imporre Punto sull'entita' a segmenti e curve.
     QString addSketchContactReferences(int *added = nullptr) {
+        ScopedWork progressWork(workCallback_, QStringLiteral("Calcolo dei contatti con gli altri schizzi..."));
         if (!activeSketchObject()) return QStringLiteral("Entra in modalita' schizzo.");
         SketchObject work = sketches_.at(activeSketch_);
         const int before = work.segments.size() + work.curves.size();
@@ -2732,10 +2841,18 @@ protected:
         }
         if (edgePicking_) {
             if (event->key() == Qt::Key_Escape) {
+                if (edgePickPanelCancel_) {
+                    edgePickPanelCancel_();
+                    return;
+                }
                 cancelEdgePick();
                 return;
             }
             if (event->key() == Qt::Key_Return || event->key() == Qt::Key_Enter) {
+                if (edgePickPanelAccept_) {
+                    edgePickPanelAccept_();
+                    return;
+                }
                 finishEdgePick();
                 return;
             }
@@ -5029,11 +5146,18 @@ private:
     // costruiscono in parallelo, a livelli: un corpo parte quando i suoi
     // operandi da rifare sono pronti. I piani di costruzione fanno da
     // separatori, perche' followDatum cambia gli schizzi che vi stanno sopra.
-    void regenerateFrom(int from, QVector<bool> dirty, QSet<int> dirtySketches, bool all = false) {
+    void regenerateFrom(int from, QVector<bool> dirty, QSet<int> dirtySketches, bool all = false,
+                        const std::function<void(int, int, const QString &)> &progress = {}) {
         dirty.resize(extrusions_.size());
+        int completed = 0;
+        const int total = all ? qMax(1, int(extrusions_.size())) : 0;
+        const auto advanced = [&](int count, const QString &name) {
+            completed += count;
+            if (progress) progress(completed, total, name);
+        };
         QVector<int> pending;  // corpi da rifare fino al prossimo piano di costruzione
         const auto flush = [&] {
-            rebuildParallel(pending);
+            rebuildParallel(pending, progress ? advanced : std::function<void(int, const QString &)>());
             pending.clear();
         };
         for (int index = qMax(0, from); index < extrusions_.size(); ++index) {
@@ -5049,6 +5173,7 @@ private:
             }
             flush();
             rebuildBody(extrusions_[index], index);
+            advanced(1, extrusions_.at(index).name);
             followDatum(index, dirtySketches);
         }
         flush();
@@ -5057,9 +5182,17 @@ private:
     // Costruisce i corpi `indices` (crescenti): ogni livello contiene quelli
     // i cui operandi da rifare stanno nei livelli precedenti. buildGeometry
     // legge solo gli schizzi e gli operandi (gia' pronti) e scrive il suo corpo.
-    void rebuildParallel(const QVector<int> &indices) {
+    void rebuildParallel(const QVector<int> &indices,
+                         const std::function<void(int, const QString &)> &advanced = {}) {
+        if (indices.isEmpty()) return;
+        ScopedWork work(workCallback_, indices.size() > 1
+                                          ? QStringLiteral("Rigenerazione di %1 corpi...").arg(indices.size())
+                                          : QStringLiteral("Rigenerazione del corpo..."));
         if (indices.size() <= 1) {
-            for (int index : indices) rebuildBody(extrusions_[index], index);
+            for (int index : indices) {
+                rebuildBody(extrusions_[index], index);
+                if (advanced) advanced(1, extrusions_.at(index).name);
+            }
             return;
         }
         QHash<int, int> level;
@@ -5079,9 +5212,15 @@ private:
             std::vector<int> batch;
             for (int index : indices)
                 if (level.value(index) == l) batch.push_back(index);
-            ForgeCad::Kernel::parallelFor(batch.size(), ForgeCad::Kernel::threadCount(0), [&](std::size_t k) {
-                buildBody(bodies[batch[k]], batch[k], sketches, all, quality);
-            });
+            const std::size_t wave = advanced ? std::max<std::size_t>(1, ForgeCad::Kernel::threadCount(0)) : batch.size();
+            for (std::size_t offset = 0; offset < batch.size(); offset += wave) {
+                const std::size_t count = std::min(wave, batch.size() - offset);
+                ForgeCad::Kernel::parallelFor(count, ForgeCad::Kernel::threadCount(0), [&](std::size_t k) {
+                    const int index = batch[offset + k];
+                    buildBody(bodies[index], index, sketches, all, quality);
+                });
+                if (advanced) advanced(int(count), extrusions_.at(batch[offset + count - 1]).name);
+            }
         }
     }
 
@@ -5272,7 +5411,9 @@ private:
     }
 
     // Tutti i corpi, in ordine (dopo un cambio di kernel).
-    void regenerateAll() { regenerateFrom(0, {}, {}, true); }
+    void regenerateAll(const std::function<void(int, int, const QString &)> &progress = {}) {
+        regenerateFrom(0, {}, {}, true, progress);
+    }
 
     static bool hasGeometry(const ExtrusionObject &body) {
         if (isCurveBody(body)) return body.curve != nullptr;
@@ -5322,7 +5463,9 @@ private:
         }
     }
     // Riferimento a un corpo (vertice, spigolo, faccia, piano di costruzione, curva) o a uno schizzo (punto, entita').
-    static bool isBodyRef(const GeometryRef &ref) { return ref.kind == 3 || ref.kind == 4 || ref.kind == 5 || ref.kind == 8 || ref.kind == 9; }
+    static bool isBodyRef(const GeometryRef &ref) {
+        return ref.kind == 3 || ref.kind == 4 || ref.kind == 5 || ref.kind == 8 || ref.kind == 9 || ref.kind == 10;
+    }
     static bool isSketchRef(const GeometryRef &ref) { return ref.kind == 6 || ref.kind == 7; }
     // Schizzi da cui nasce il corpo: estrusione, rivoluzione, base dell'elica,
     // profilo e percorso dello sweep, sezioni e guide del loft.
@@ -5360,7 +5503,11 @@ private:
     // attivo, poi la sua tassellazione. Gli operandi di una booleana hanno
     // indice minore e sono gia' rigenerati. In caso d'errore il corpo resta
     // senza geometria con il messaggio in `error`.
-    void rebuildBody(ExtrusionObject &body, int index) { buildBody(body, index, sketches_, extrusions_, tessellationQuality_); }
+    void rebuildBody(ExtrusionObject &body, int index) {
+        ScopedWork work(workCallback_, body.name.isEmpty() ? QStringLiteral("Calcolo della geometria...")
+                                                            : QStringLiteral("Calcolo di %1...").arg(body.name));
+        buildBody(body, index, sketches_, extrusions_, tessellationQuality_);
+    }
     // Geometria e tassellazione di un corpo (anche da un thread: non tocca il viewport).
     static void buildBody(ExtrusionObject &body, int index, const QVector<SketchObject> &sketches, const QVector<ExtrusionObject> &bodies,
                           int quality) {
@@ -5389,6 +5536,11 @@ private:
     // `bodies`. In caso d'errore il corpo resta senza geometria con il
     // messaggio in `error`. Usata dalla rigenerazione e dalle anteprime (in un
     // thread, su copie).
+    // FORGECAD_GEOMETRY_HASH_BEGIN
+    // Questa sezione entra nell'impronta delle cache B-rep dei documenti.
+    // Tenere tra i due marcatori tutta la logica che decide quale geometria
+    // esatta costruire; le modifiche alla sola UI fuori da qui non devono
+    // invalidare le anteprime salvate.
     static void buildGeometry(ExtrusionObject &body, int index, const QVector<SketchObject> &sketches, const QVector<ExtrusionObject> &bodies) {
         body.error.clear();
         body.forgeBody.reset();
@@ -5649,6 +5801,8 @@ private:
         }
         if (body.error.isEmpty() && !hasGeometry(body)) body.error = QStringLiteral("Costruzione non riuscita.");
     }
+
+    // FORGECAD_GEOMETRY_HASH_END
 
     void tessellateBody(ExtrusionObject &body) const { tessellateGeometry(body, tessellationQuality_, body.display); }
     static void tessellateGeometry(const ExtrusionObject &body, int quality, BodyDisplay &display) {
@@ -6850,6 +7004,17 @@ private:
         if (refPicking_ || !refMarks_.isEmpty()) {
             // Scelta dei riferimenti di un piano di costruzione: quelli scelti e quello sotto il puntatore.
             for (const GeometryRef &mark : refMarks_) drawGeometryRef(painter, mark, kSelectionColor);
+            // Le curve 3D autonome non hanno vertici di un B-rep: quando si
+            // cerca un punto rendiamo espliciti i loro due estremi cliccabili.
+            if (refPicking_ && (refPickRoles_ & ForgeCad::DatumRolePoint)) {
+                painter.setPen(QPen(QColor(130, 215, 255, 210), 1.5));
+                painter.setBrush(QColor(35, 105, 145, 210));
+                for (int body = 0; body < extrusions_.size(); ++body)
+                    for (int end = 0; end < 2; ++end) {
+                        QVector3D point;
+                        if (curveBodyEndpoint(body, end, point)) painter.drawEllipse(projectWorldPoint(point), 4.5, 4.5);
+                    }
+            }
             if (refPicking_ && refHoverValid_) drawGeometryRef(painter, refHover_, kHoverColor, &refHoverFace_, refHoverFaceBody_);
             return;
         }
@@ -7148,6 +7313,16 @@ private:
         const int datum = sketches_.at(index).datumPlane;
         return datum < 0 || refPickOwner_ < 0 || datum < refPickOwner_;
     }
+    bool curveBodyEndpoint(int index, int end, QVector3D &point) const {
+        const int owner = refPickOwner_ < 0 ? int(extrusions_.size()) : refPickOwner_;
+        if (index < 0 || index >= owner || index >= extrusions_.size()) return false;
+        const ExtrusionObject &body = extrusions_.at(index);
+        if (!body.visible || !isCurveBody(body) || !body.curve) return false;
+        const ForgeCad::Kernel::Interval domain = body.curve->domain();
+        const ForgeCad::Kernel::Vec3 p = body.curve->point(end == 1 ? domain.hi : domain.lo);
+        point = QVector3D(float(p.x()), float(p.y()), float(p.z()));
+        return true;
+    }
     // Riferimento sotto il puntatore, con la priorita': punti, poi rette e curve, poi facce e piani.
     bool pickReference(const QPoint &position, GeometryRef &ref, FaceHit *faceHit = nullptr, int *faceBody = nullptr) const {
         const int roles = refPickRoles_;
@@ -7192,6 +7367,17 @@ private:
                         consider(p, r);
                     }
             }
+            for (int b = 0; b < extrusions_.size(); ++b)
+                for (int end = 0; end < 2; ++end) {
+                    QVector3D point;
+                    if (!curveBodyEndpoint(b, end, point)) continue;
+                    GeometryRef r;
+                    r.kind = 10;
+                    r.index = b;
+                    r.element = {-1, -1, end};
+                    r.point = {point.x(), point.y(), point.z()};
+                    consider(point, r);
+                }
             if (found) return true;
         }
         if (roles & (ForgeCad::DatumRoleLine | ForgeCad::DatumRoleCurve)) {
@@ -7372,6 +7558,12 @@ private:
                     strokeHighlight(painter, projected, false, color);
                 }
             break;
+        case 10: {
+            QVector3D endpoint;
+            if (curveBodyEndpoint(ref.index, ref.element.point, endpoint)) dot(endpoint);
+            else dot(point);
+            break;
+        }
         default: break;
         }
     }
@@ -7650,6 +7842,18 @@ private:
         glDisable(GL_LIGHTING);
         glDisable(GL_DEPTH_TEST);
         glDepthMask(GL_FALSE);
+        // Una curva non ha una sagoma di facce: lo stencil e il doppio passaggio
+        // servono solo ai corpi. Evidenziarla direttamente evita lavoro inutile
+        // durante la navigazione con un'elica selezionata.
+        if (isCurveBody(extrusion)) {
+            glLineWidth(width);
+            glColor3f(float(color.redF()), float(color.greenF()), float(color.blueF()));
+            drawExtrusionEdges(extrusion);
+            glDepthMask(GL_TRUE);
+            glEnable(GL_DEPTH_TEST);
+            glLineWidth(1.0f);
+            return;
+        }
         glEnable(GL_STENCIL_TEST);
         glClear(GL_STENCIL_BUFFER_BIT);
         glStencilFunc(GL_ALWAYS, 1, 0xFF);
@@ -7708,10 +7912,11 @@ private:
     }
     // Gli spigoli scelti sono cambiati: messaggio e anteprima.
     void edgePicked() {
-        if (pickedEdges_.isEmpty() || edgePickHelix_) clearBlendPreview();
+        if (!edgePickPreviewEnabled_ || pickedEdges_.isEmpty() || edgePickHelix_) clearBlendPreview();
         else if (edgePickExtend_) requestExtendPreview(edgePickBody_, pickedEdgePoints(), edgePickSize_, edgePickLinear_, edgePickEdit_);
         else requestBlendPreview(edgePickBody_, pickedEdgePoints(), edgePickSize_, edgePickChamfer_, edgePickEdit_, edgePickSpec_);
         if (edgePickStatus_) edgePickStatus_(edgePickMessage());
+        if (edgePickChanged_) edgePickChanged_(edgePickBody_, pickedEdgePoints());
         update();
     }
     void cancelEdgePick(bool keepPreview = false) {
@@ -7728,6 +7933,7 @@ private:
         update();
     }
     void finishEdgePick() {
+        if (edgePickChanged_) return;  // con il pannello aperto si conferma con OK
         const int body = edgePickBody_;
         if (body < 0 || body >= extrusions_.size() || pickedEdges_.isEmpty()) {
             cancelEdgePick();
@@ -8045,11 +8251,15 @@ private:
         const bool previewing = !preview_.key.isEmpty();
         for (int index = 0; index < extrusions_.size(); ++index) {
             const ExtrusionObject &extrusion = extrusions_.at(index);
-            // Con un'anteprima il corpo modificato non si vede; gli operandi (e la base
-            // di un raccordo, anche se nascosta) si vedono finche' l'anteprima non e' pronta.
+            // Con un'anteprima il corpo modificato non si vede. Per raccordi e
+            // smussi la base resta invece opaca sotto la sola patch locale,
+            // anche quando e' un operando nascosto di una lavorazione esistente.
             const bool replaced = previewing && preview_.replaced.contains(index);
+            const bool blendBase = previewing && preview_.definition.operation < 0
+                && preview_.definition.feature == BodyFeature::Blend
+                && preview_.definition.firstBody == index;
             if (previewing && (index == preview_.index || (replaced && preview_.valid))) continue;
-            const bool forced = replaced || index == edgePickBody_;
+            const bool forced = replaced || blendBase || index == edgePickBody_;
             if ((!extrusion.visible && !forced) || (extrusion.display.vertices.isEmpty() && extrusion.display.edges.isEmpty())) continue;
             const SceneSelection self{SceneObjectKind::Extrusion, index, -1};
             const bool hovered = hover_ == self;
@@ -8127,16 +8337,21 @@ private:
         drawSectionPlane();
     }
 
-    // Anteprima: il loft e' semitrasparente e mostra le isoparametriche U/V;
-    // le altre funzioni mantengono le facce ambra opache.
+    // Anteprima di loft e raccordi: semitrasparente con isoparametriche U/V.
+    // Le altre funzioni mantengono le facce ambra opache.
     void drawPreview() {
         const BodyDisplay &display = preview_.display;
         const bool loft = preview_.definition.operation < 0 && preview_.definition.feature == BodyFeature::Loft;
+        const bool blend = preview_.definition.operation < 0 && preview_.definition.feature == BodyFeature::Blend;
+        const bool transparent = loft || blend;
+        // La superficie del raccordo e' interna al vecchio spigolo convesso:
+        // in sovrapposizione alla base opaca la mostriamo come patch X-ray.
+        if (blend) glDisable(GL_DEPTH_TEST);
         if (displayMode_ != 0) {
             glEnable(GL_LIGHTING);
             glEnable(GL_COLOR_MATERIAL);
-            glColor4f(0.95f, 0.66f, 0.28f, loft ? 0.42f : 1.0f);
-            if (loft) {
+            glColor4f(0.95f, 0.66f, 0.28f, transparent ? 0.42f : 1.0f);
+            if (transparent) {
                 glEnable(GL_BLEND);
                 glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
                 glDepthMask(GL_FALSE);
@@ -8145,7 +8360,7 @@ private:
             glPolygonOffset(1.0f, 2.0f);
             drawDisplayFaces(display);
             glDisable(GL_POLYGON_OFFSET_FILL);
-            if (loft) {
+            if (transparent) {
                 glDepthMask(GL_TRUE);
                 glDisable(GL_BLEND);
             }
@@ -8154,7 +8369,7 @@ private:
         glColor3f(1.0f, 0.88f, 0.62f);
         glLineWidth(1.5f);
         displayCache_.edges(display);
-        if (loft && !display.constructionCurves.isEmpty()) {
+        if (transparent && !display.constructionCurves.isEmpty()) {
             glEnable(GL_LINE_STIPPLE);
             glLineStipple(1, 0x3F3F);
             glColor3f(0.45f, 0.92f, 1.0f);
@@ -8167,6 +8382,10 @@ private:
             glDisable(GL_LINE_STIPPLE);
         }
         glLineWidth(1.0f);
+        if (blend) {
+            glEnable(GL_DEPTH_TEST);
+            glDepthFunc(GL_LEQUAL);
+        }
     }
 
     // Chiave di una richiesta d'anteprima: due richieste uguali non si rifanno.
@@ -8235,7 +8454,8 @@ private:
         int quality = 1;
     };
     // La geometria dell'anteprima, come rebuildBody, e la sua tassellazione.
-    static bool computePreview(const PreviewInputs &in, BodyDisplay &display, QString &error, QVector<int> *merged = nullptr) {
+    static bool computePreview(const PreviewInputs &in, BodyDisplay &display, BodyDisplay &resultDisplay, ForgeCad::ForgeBody &geometry,
+                               QString &error, QVector<int> *merged = nullptr) {
         ExtrusionObject body = in.definition;
         buildGeometry(body, in.index, in.sketches, in.bodies);
         if (merged && body.mergeProbe) *merged = body.mergeBodies;  // i corpi toccati dalla fusione automatica
@@ -8243,7 +8463,17 @@ private:
             error = body.error;
             return false;
         }
-        tessellateGeometry(body, in.quality, display);
+        geometry = body.forgeBody;
+        const bool blend = in.definition.operation < 0 && in.definition.feature == BodyFeature::Blend && body.forgeBody
+            && in.definition.firstBody >= 0 && in.definition.firstBody < in.bodies.size()
+            && in.bodies.at(in.definition.firstBody).forgeBody;
+        if (blend) {
+            tessellateGeometry(body, in.quality, resultDisplay);
+            ForgeCad::forgeBlendPreviewDisplay(*in.bodies.at(in.definition.firstBody).forgeBody, *body.forgeBody, in.quality, display,
+                                               in.quality <= 0 ? 3 : in.quality == 1 ? 5 : 7);
+        } else {
+            tessellateGeometry(body, in.quality, display);
+        }
         if (in.definition.operation < 0 && in.definition.feature == BodyFeature::Loft && body.forgeBody)
             ForgeCad::forgeSurfaceConstructionCurves(*body.forgeBody, display, in.quality <= 0 ? 3 : in.quality == 1 ? 5 : 7);
         return true;
@@ -8301,14 +8531,17 @@ private:
         if (!previewReceiver_) previewReceiver_ = new QObject(this);
         QObject *receiver = previewReceiver_;
         previewRunning_ = true;
+        if (workCallback_) workCallback_(true, QStringLiteral("Calcolo dell'anteprima..."), true);
         QThreadPool::globalInstance()->start([this, receiver, generation, in] {
             BodyDisplay display;
+            BodyDisplay resultDisplay;
+            ForgeCad::ForgeBody geometry;
             QString error;
             bool ok = false;
             QVector<int> merged;
             const bool probe = in.definition.mergeProbe;
             try {
-                ok = computePreview(in, display, error, &merged);
+                ok = computePreview(in, display, resultDisplay, geometry, error, &merged);
             } catch (const std::exception &failure) {
                 error = QString::fromUtf8(failure.what());
             } catch (...) {
@@ -8316,13 +8549,18 @@ private:
             }
             if (!ok && error.isEmpty()) error = QStringLiteral("costruzione non riuscita");
             // Il ricevitore e' figlio del viewport: se il viewport non c'e' piu', la chiamata non avviene.
-            QMetaObject::invokeMethod(receiver, [this, generation, ok, error, probe, merged, display = std::move(display)]() mutable {
+            QMetaObject::invokeMethod(receiver, [this, generation, ok, error, probe, merged,
+                                                 geometry = std::move(geometry), display = std::move(display),
+                                                 resultDisplay = std::move(resultDisplay)]() mutable {
                 previewRunning_ = false;
+                if (workCallback_) workCallback_(false, QStringLiteral("Calcolo dell'anteprima..."), true);
                 if (generation == preview_.generation) {
                     if (probe) preview_.replaced = ok ? merged : QVector<int>();
                     preview_.valid = ok;
                     preview_.error = ok ? QString() : preparePreviewError(error);
+                    preview_.geometry = std::move(geometry);
                     preview_.display = std::move(display);
+                    preview_.resultDisplay = std::move(resultDisplay);
                     if (edgePicking_ && edgePickStatus_) edgePickStatus_(edgePickMessage());
                     if (previewCallback_) previewCallback_(preview_.error);
                     update();
@@ -8797,6 +9035,7 @@ private:
     bool edgePickChamfer_ = false;
     bool edgePickExtend_ = false, edgePickLinear_ = false;
     bool edgePickHelix_ = false;  // scelta della base di un'elica (un clic su uno spigolo o una faccia)
+    bool edgePickPreviewEnabled_ = true;  // falso finche' il pannello del raccordo non e' apparso
     // Scelta dei riferimenti dei piani di costruzione (beginReferencePick).
     bool refPicking_ = false;
     int refPickRoles_ = 0;
@@ -8820,6 +9059,8 @@ private:
     int edgePickEdit_ = -1;         // raccordo di cui si modificano gli spigoli (-1: raccordo nuovo)
     double edgePickSize_ = 0.5;     // misura dell'anteprima durante la scelta
     std::function<void(int, QVector<EdgePoint>, double, bool)> edgeEditFinished_;
+    std::function<void(int, QVector<EdgePoint>)> edgePickChanged_; // pannello aperto: selezione aggiornata nella vista
+    std::function<void()> edgePickPanelAccept_, edgePickPanelCancel_;
     // Anteprima di una funzione (vedi requestPreview).
     struct Preview {
         QString key;  // vuota: nessuna anteprima
@@ -8828,7 +9069,9 @@ private:
         QVector<int> replaced;    // operandi (booleane) o base (raccordi): al loro posto l'anteprima
         bool valid = false;
         QString error;
-        BodyDisplay display;
+        ForgeCad::ForgeBody geometry;
+        BodyDisplay display;        // cio' che si disegna (per un raccordo, solo la patch)
+        BodyDisplay resultDisplay;  // tassellazione completa promossa con OK
         quint64 generation = 0;
     };
     Preview preview_;
@@ -8856,6 +9099,7 @@ private:
     std::function<void(bool)> sketchModeCallback_;
     std::function<void(DrawingTool)> toolChangedCallback_;
     std::function<void(const QString &)> rendererCallback_;
+    std::function<void(bool, const QString &, bool)> workCallback_;
     // Strumenti di modifica dello schizzo: misure di raccordo e smusso, primo
     // segmento scelto (se non si e' cliccato uno spigolo) e tratto che il taglio toglierebbe.
     double sketchFilletRadius_ = 1.0, sketchChamferDistance_ = 1.0;
@@ -8931,6 +9175,136 @@ static const QStringList &planeNames() {
                                       QStringLiteral("Piano YZ - Destro")};
     return names;
 }
+
+// Anteprima del documento selezionato nella finestra Apri. Il file viene
+// decodificato su QThreadPool; soltanto l'ultimo risultato selezionato arriva
+// al piccolo viewport, senza toccare il documento della finestra principale.
+class DocumentFilePreview final : public QFrame {
+public:
+    explicit DocumentFilePreview(QWidget *parent = nullptr) : QFrame(parent), timer_(this) {
+        setObjectName(QStringLiteral("documentFilePreview"));
+        setFrameShape(QFrame::StyledPanel);
+        setMinimumWidth(330);
+        setMaximumWidth(390);
+        auto *layout = new QVBoxLayout(this);
+        layout->setContentsMargins(8, 8, 8, 8);
+        auto *title = new QLabel(QStringLiteral("<b>ANTEPRIMA</b>"), this);
+        viewport_ = new CadViewport(this);
+        viewport_->setObjectName(QStringLiteral("documentPreviewViewport"));
+        viewport_->setMinimumSize(300, 230);
+        viewport_->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+        viewport_->setReferencePlanesVisible(false);
+        viewport_->setGridVisible(false);
+        viewport_->setAxesVisible(false);
+        viewport_->setDisplayMode(2);
+        message_ = new QLabel(QStringLiteral("Seleziona un documento ForgeCAD"), viewport_);
+        message_->setAlignment(Qt::AlignCenter);
+        message_->setWordWrap(true);
+        message_->setStyleSheet(QStringLiteral("background:rgba(20,29,39,220); color:#d7e4ec; padding:12px;"));
+        details_ = new QLabel(this);
+        details_->setObjectName(QStringLiteral("documentPreviewDetails"));
+        details_->setWordWrap(true);
+        details_->setTextFormat(Qt::RichText);
+        progress_ = new QProgressBar(this);
+        progress_->setObjectName(QStringLiteral("documentPreviewProgress"));
+        progress_->setRange(0, 0);
+        progress_->setTextVisible(false);
+        progress_->hide();
+        layout->addWidget(title);
+        layout->addWidget(viewport_, 1);
+        layout->addWidget(progress_);
+        layout->addWidget(details_);
+        timer_.setSingleShot(true);
+        timer_.setInterval(160);
+        connect(&timer_, &QTimer::timeout, this, [this] { startLoading(); });
+    }
+
+    void setPath(const QString &path) {
+        currentPath_ = path;
+        ++generation_;
+        timer_.stop();
+        const QFileInfo info(path);
+        if (!info.isFile() || info.suffix().compare(QLatin1String(ForgeCad::kDocumentSuffix), Qt::CaseInsensitive) != 0) {
+            clearPreview(info.isDir() ? QStringLiteral("Seleziona un file .prt")
+                                      : QStringLiteral("Anteprima disponibile per i documenti .prt"));
+            return;
+        }
+        message_->setText(QStringLiteral("Caricamento anteprima..."));
+        message_->show();
+        progress_->show();
+        details_->setText(QStringLiteral("<b>%1</b>").arg(info.fileName().toHtmlEscaped()));
+        timer_.start();
+    }
+
+protected:
+    void resizeEvent(QResizeEvent *event) override {
+        QFrame::resizeEvent(event);
+        if (message_) message_->setGeometry(viewport_->rect());
+    }
+
+private:
+    struct Loaded {
+        DocumentState state;
+        QString error;
+        QString details;
+        int cachedBodies = 0;
+        bool hasSketches = false;
+    };
+    void clearPreview(const QString &message) {
+        DocumentState empty;
+        viewport_->loadPreviewDocument(std::move(empty));
+        message_->setText(message);
+        message_->setGeometry(viewport_->rect());
+        message_->show();
+        progress_->hide();
+        details_->clear();
+    }
+    void startLoading() {
+        const QString path = currentPath_;
+        const quint64 request = generation_;
+        QPointer<DocumentFilePreview> guard(this);
+        QThreadPool::globalInstance()->start(QRunnable::create([guard, path, request] {
+            Loaded loaded;
+            // La cache puo' provenire da una build precedente: qui serve solo
+            // a disegnare il riquadro e non viene mai promossa nel documento.
+            loaded.error = ForgeCad::loadDocumentFile(path, loaded.state, true);
+            if (loaded.error.isEmpty()) {
+                loaded.hasSketches = !loaded.state.sketches.isEmpty();
+                for (const ExtrusionObject &body : loaded.state.extrusions)
+                    loaded.cachedBodies += body.visible && body.forgeBody ? 1 : 0;
+                const QFileInfo info(path);
+                loaded.details = QStringLiteral("<b>%1</b><br>%2<br>%3 schizzi · %4 corpi")
+                    .arg(info.fileName().toHtmlEscaped())
+                    .arg(QLocale().formattedDataSize(info.size()))
+                    .arg(loaded.state.sketches.size())
+                    .arg(loaded.state.extrusions.size());
+                if (loaded.cachedBodies == 0 && !loaded.state.extrusions.isEmpty())
+                    loaded.details += QStringLiteral("<br><span style='color:#ffb84d'>Il file non contiene l'anteprima 3D</span>");
+            }
+            QMetaObject::invokeMethod(qApp, [guard, request, loaded = std::move(loaded)]() mutable {
+                if (!guard || request != guard->generation_) return;
+                if (!loaded.error.isEmpty()) {
+                    guard->clearPreview(loaded.error);
+                    return;
+                }
+                guard->progress_->hide();
+                guard->viewport_->loadPreviewDocument(std::move(loaded.state));
+                guard->message_->setVisible(loaded.cachedBodies == 0 && !loaded.hasSketches);
+                if (loaded.cachedBodies == 0 && !loaded.hasSketches)
+                    guard->message_->setText(QStringLiteral("Nessuna geometria visibile"));
+                guard->details_->setText(loaded.details);
+            }, Qt::QueuedConnection);
+        }));
+    }
+
+    CadViewport *viewport_ = nullptr;
+    QLabel *message_ = nullptr;
+    QLabel *details_ = nullptr;
+    QProgressBar *progress_ = nullptr;
+    QTimer timer_;
+    QString currentPath_;
+    quint64 generation_ = 0;
+};
 
 // Aspetto comune delle finestre delle funzioni. Il fondale arriva direttamente
 // dal framebuffer del viewport CAD, quindi non dipende da cio' che Wayland
@@ -9201,6 +9575,25 @@ private:
         QSettings().setValue(panelSizeSettingsKey(), size());
     }
     void focusFirstEditor() {
+        if (embedded_ && parentWidget() && parentWidget()->window())
+            parentWidget()->window()->activateWindow();
+        // Nei pannelli incorporati il contenuto passa attraverso il viewport
+        // di una QScrollArea: su alcuni compositor la focus chain della
+        // QDialog non entra nel widget dello scroll. Cerca prima gli editor
+        // reali nell'ordine dei figli, poi usa la catena come ripiego.
+        for (QAbstractSpinBox *spin : findChildren<QAbstractSpinBox *>())
+            if (spin->isVisibleTo(this) && spin->isEnabled()) {
+                spin->setFocus(Qt::OtherFocusReason);
+                spin->selectAll();
+                return;
+            }
+        for (QLineEdit *line : findChildren<QLineEdit *>())
+            if (line->isVisibleTo(this) && line->isEnabled() && !line->isReadOnly()
+                && !qobject_cast<QAbstractSpinBox *>(line->parentWidget())) {
+                line->setFocus(Qt::OtherFocusReason);
+                line->selectAll();
+                return;
+            }
         QWidget *fallback = nullptr;
         QWidget *candidate = nextInFocusChain();
         while (candidate && candidate != this) {
@@ -9561,8 +9954,12 @@ struct BlendDialogResult {
 };
 static BlendDialogResult blendDialog(QWidget *parent, CadViewport *viewport, const QString &title, int base, int hidden,
                                      const QVector<EdgePoint> &edges, double size, bool chamfer, bool allowKindChange, const ChamferSpec &initialSpec,
-                                     const std::function<QString(double, bool, const ChamferSpec &)> &apply) {
+                                     const std::function<QString(int, const QVector<EdgePoint> &, double, bool, const ChamferSpec &)> &apply,
+                                     bool pickInView = false) {
     BlendDialogResult result;
+    int selectedBase = base;
+    QVector<EdgePoint> selectedEdges = edges;
+    bool previewStarted = !pickInView;
     FunctionDialogPanel dialog(parent);
     dialog.setWindowTitle(title);
     auto *form = dialog.createScrollableForm();
@@ -9628,8 +10025,10 @@ static BlendDialogResult blendDialog(QWidget *parent, CadViewport *viewport, con
         return spec;
     };
     describe();
-    form->addRow(QStringLiteral("Spigoli: %1").arg(edges.size()), new QLabel(&dialog));
-    auto *previewLabel = new QLabel(QStringLiteral("Anteprima in calcolo..."), &dialog);
+    auto *edgesLabel = new QLabel(&dialog);
+    form->addRow(QStringLiteral("Spigoli:"), edgesLabel);
+    auto *previewLabel = new QLabel(pickInView ? QStringLiteral("seleziona almeno uno spigolo nella vista")
+                                               : QStringLiteral("Anteprima in calcolo..."), &dialog);
     previewLabel->setWordWrap(true);
     previewLabel->setMaximumWidth(460);
     form->addRow(QStringLiteral("Anteprima:"), previewLabel);
@@ -9640,12 +10039,21 @@ static BlendDialogResult blendDialog(QWidget *parent, CadViewport *viewport, con
         result.reselect = true;
         dialog.reject();
     });
+    edgesButton->setVisible(!pickInView);
     QObject::connect(buttons, &QDialogButtonBox::accepted, &dialog, &QDialog::accept);
     QObject::connect(buttons, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
     form->addRow(buttons);
     const auto refresh = [&] {
+        edgesLabel->setText(selectedEdges.isEmpty()
+                                ? QStringLiteral("nessuno — clicca nella vista")
+                                : QStringLiteral("%1 selezionati — clicca per aggiungere o togliere").arg(selectedEdges.size()));
+        if (!previewStarted || selectedBase < 0 || selectedEdges.isEmpty()) {
+            previewLabel->setText(QStringLiteral("seleziona almeno uno spigolo nella vista"));
+            viewport->clearBlendPreview();
+            return;
+        }
         previewLabel->setText(QStringLiteral("in calcolo..."));
-        viewport->requestBlendPreview(base, edges, sizeBox->value(), currentChamfer(), hidden, currentSpec());
+        viewport->requestBlendPreview(selectedBase, selectedEdges, sizeBox->value(), currentChamfer(), hidden, currentSpec());
     };
     viewport->setPreviewCallback([previewLabel](const QString &error) {
         previewLabel->setText(error.isEmpty() ? QStringLiteral("pronta (in ambra nella vista)") : QStringLiteral("non riuscita: ") + error);
@@ -9661,9 +10069,39 @@ static BlendDialogResult blendDialog(QWidget *parent, CadViewport *viewport, con
         describe();
         refresh();
     });
+    if (pickInView) {
+        viewport->setEdgePickPanelKeyCallbacks(
+            [buttons] {
+                if (QPushButton *ok = buttons->button(QDialogButtonBox::Ok)) ok->click();
+            },
+            [&dialog] { dialog.reject(); });
+        viewport->setEdgePickChangedCallback([&](int body, QVector<EdgePoint> changed) {
+            selectedBase = body;
+            selectedEdges = std::move(changed);
+            refresh();
+        });
+        // Il primo calcolo parte dal ciclo eventi successivo: il pannello e'
+        // gia' visibile quando l'eventuale faccia preselezionata viene elaborata.
+        QTimer::singleShot(0, &dialog, [viewport, &previewStarted] {
+            previewStarted = true;
+            viewport->enableEdgePickPreview();
+        });
+    }
     refresh();
     sizeBox->selectAll();
-    result.applied = runUntilApplied(dialog, form, buttons, [&] { return apply(sizeBox->value(), currentChamfer(), currentSpec()); });
+    const auto commit = [&] {
+        if (selectedBase < 0 || selectedEdges.isEmpty()) return QStringLiteral("Seleziona almeno uno spigolo nella vista.");
+        return apply(selectedBase, selectedEdges, sizeBox->value(), currentChamfer(), currentSpec());
+    };
+    if (pickInView && qobject_cast<QMainWindow *>(parent))
+        result.applied = runUntilAppliedModeless(qobject_cast<QMainWindow *>(parent), viewport, dialog, form, buttons, commit);
+    else
+        result.applied = runUntilApplied(dialog, form, buttons, commit);
+    if (pickInView) {
+        viewport->setEdgePickPanelKeyCallbacks({}, {});
+        viewport->setEdgePickChangedCallback({});
+        viewport->endEdgePick(true);
+    }
     viewport->setPreviewCallback({});
     viewport->clearBlendPreview();
     result.size = sizeBox->value();
@@ -12205,7 +12643,7 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
             const ExtrusionObject original = viewport->extrusions().at(index);
             const QString title = QStringLiteral("Modifica ") + (original.blendChamfer ? QStringLiteral("smusso") : QStringLiteral("raccordo"));
             const BlendDialogResult result = blendDialog(this, viewport, title, original.firstBody, index, edges, size, chamfer, true, original.chamferSpec,
-                                                         [&](double newSize, bool newChamfer, const ChamferSpec &spec) {
+                                                         [&](int, const QVector<EdgePoint> &selectedEdges, double newSize, bool newChamfer, const ChamferSpec &spec) {
                 ExtrusionObject body = original;
                 const QString oldPrefix = body.blendChamfer ? QStringLiteral("Smusso") : QStringLiteral("Raccordo");
                 const QString newPrefix = newChamfer ? QStringLiteral("Smusso") : QStringLiteral("Raccordo");
@@ -12213,7 +12651,7 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
                 body.blendSize = newSize;
                 body.blendChamfer = newChamfer;
                 body.chamferSpec = spec;
-                body.blendEdges = edges;
+                body.blendEdges = selectedEdges;
                 const QString error = viewport->updateBody(index, body);
                 return error.isEmpty() ? error : error + QStringLiteral("\nIl corpo resta com'era.");
             });
@@ -12443,12 +12881,12 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
         if (path.isEmpty()) return;
         settings.setValue(QStringLiteral("import/lastDirectory"), QFileInfo(path).absolutePath());
         if (viewport->sketchModeActive()) viewport->endSketchMode();
-        QApplication::setOverrideCursor(Qt::WaitCursor);
+        beginForegroundProgress(QStringLiteral("Importazione di %1...").arg(QFileInfo(path).fileName()));
         QVector<ForgeCad::ImportedPart> parts;
         QStringList notes;
         const QString error = ForgeCad::importCadFile(path, parts, &notes);
         const QStringList failures = error.isEmpty() ? viewport->importParts(parts, QFileInfo(path).fileName()) : QStringList();
-        QApplication::restoreOverrideCursor();
+        endForegroundProgress();
         if (!error.isEmpty()) {
             QMessageBox::warning(this, QStringLiteral("Importa"), error);
             return;
@@ -12491,9 +12929,9 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
             const bool known = suffix == QLatin1String("step") ? (extension == QLatin1String("step") || extension == QLatin1String("stp"))
                                                                : (extension == QLatin1String("igs") || extension == QLatin1String("iges"));
             if (!known) path += QStringLiteral(".") + suffix;
-            QApplication::setOverrideCursor(Qt::WaitCursor);
+            beginForegroundProgress(QStringLiteral("Esportazione %1...").arg(title));
             const QString error = ForgeCad::exportBodies(path, bodies, format);
-            QApplication::restoreOverrideCursor();
+            endForegroundProgress();
             if (!error.isEmpty()) QMessageBox::warning(this, QStringLiteral("Esporta"), error);
             else statusBar()->showMessage(QStringLiteral("Esportati %1 corpi in %2 (%3)").arg(bodies.size()).arg(path, title), 8000);
         });
@@ -13021,8 +13459,8 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
         connect(action, &QAction::triggered, this, [runPrimitive, kind, title] { runPrimitive(kind, title); });
     }
 
-    // Raccordi e smussi: gli spigoli si scelgono nella vista, poi la misura.
-    // Durante la scelta: la misura dell'anteprima nella barra di stato.
+    // Raccordi e smussi: il pannello della misura appare subito; mentre resta
+    // aperto i clic nella vista aggiornano selezione e anteprima.
     auto *edgePickStatus = new QLabel(this);
     auto *pickSizeLabel = new QLabel(QStringLiteral("Misura:"), this);
     pickSizeBox_ = new ForgeCad::ExpressionSpinBox(this);
@@ -13034,32 +13472,36 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
     pickSizeBox_->hide();
     connect(pickSizeBox_, &QDoubleSpinBox::valueChanged, this, [viewport](double value) { viewport->setEdgePickSize(value); });
     viewport->setEdgePickCallbacks(
-        [edgePickStatus, pickSizeLabel, this](const QString &text) {
+        [edgePickStatus, pickSizeLabel, this, viewport](const QString &text) {
             edgePickStatus->setText(text);
-            pickSizeLabel->setVisible(!text.isEmpty());
-            pickSizeBox_->setVisible(!text.isEmpty());
+            const bool statusSize = !text.isEmpty() && !viewport->edgePickPanelActive();
+            pickSizeLabel->setVisible(statusSize);
+            pickSizeBox_->setVisible(statusSize);
         },
-        [this, viewport](int body, QVector<EdgePoint> edges, bool chamfer) {
-            // La misura con l'anteprima: la finestra resta aperta finche' il raccordo
-            // non riesce; "Spigoli..." torna alla scelta degli spigoli (gli stessi, da cambiare).
-            const QString title = chamfer ? QStringLiteral("Smusso") : QStringLiteral("Raccordo");
-            const QString name = title + QStringLiteral(" %1").arg(viewport->extrusions().size() + 1);
-            const BlendDialogResult result = blendDialog(this, viewport, title, body, -1, edges, viewport->edgePickSize(), chamfer, false,
-                                                         viewport->edgePickChamferSpec(), [&](double size, bool isChamfer, const ChamferSpec &spec) {
-                                                             return viewport->createBlend(body, edges, size, isChamfer, name, spec);
-                                                         });
-            viewport->setEdgePickChamferSpec(result.spec);
-            blendSize_ = result.size;
-            viewport->setEdgePickSize(result.size);
-            if (pickSizeBox_) pickSizeBox_->setValue(result.size);
-            if (result.reselect) viewport->resumeEdgePick(body, edges, chamfer);
-        });
+        {});
     for (const auto &[action, chamfer] : {std::pair<QAction *, bool>{filletAction, false}, {chamferAction, true}}) {
         const bool isChamfer = chamfer;
         connect(action, &QAction::triggered, this, [this, viewport, isChamfer] {
             viewport->setEdgePickSize(pickSizeBox_->value());
-            const QString error = viewport->beginEdgePick(isChamfer);
-            if (!error.isEmpty()) QMessageBox::information(this, isChamfer ? QStringLiteral("Smusso") : QStringLiteral("Raccordo"), error);
+            // Il calcolo resta sospeso fino al primo ciclo eventi del pannello,
+            // quindi la finestra compare prima di qualsiasi anteprima.
+            const QString error = viewport->beginEdgePick(isChamfer, true);
+            if (!error.isEmpty()) {
+                QMessageBox::information(this, isChamfer ? QStringLiteral("Smusso") : QStringLiteral("Raccordo"), error);
+                return;
+            }
+            const QString title = isChamfer ? QStringLiteral("Smusso") : QStringLiteral("Raccordo");
+            const QString name = title + QStringLiteral(" %1").arg(viewport->extrusions().size() + 1);
+            const BlendDialogResult result = blendDialog(
+                this, viewport, title, viewport->edgePickBody(), -1, viewport->edgePickPoints(), viewport->edgePickSize(), isChamfer, false,
+                viewport->edgePickChamferSpec(),
+                [viewport, name](int body, const QVector<EdgePoint> &edges, double size, bool chamfer, const ChamferSpec &spec) {
+                    return viewport->createBlend(body, edges, size, chamfer, name, spec);
+                }, true);
+            viewport->setEdgePickChamferSpec(result.spec);
+            blendSize_ = result.size;
+            viewport->setEdgePickSize(result.size);
+            if (pickSizeBox_) pickSizeBox_->setValue(result.size);
         });
     }
     statusBar()->addWidget(edgePickStatus);
@@ -13870,6 +14312,26 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
         if (constraintPanel_) constraintPanel_->setVisible(active);
     });
     modeStatus_ = new QLabel(QStringLiteral("Mesh + linee esterne")); statusBar()->addWidget(modeStatus_);
+    backgroundProgressLabel_ = new QLabel(this);
+    backgroundProgressLabel_->setObjectName(QStringLiteral("backgroundProgressLabel"));
+    backgroundProgress_ = new QProgressBar(this);
+    backgroundProgress_->setObjectName(QStringLiteral("backgroundProgressBar"));
+    backgroundProgress_->setRange(0, 0);
+    backgroundProgress_->setTextVisible(false);
+    backgroundProgress_->setFixedWidth(150);
+    backgroundProgressLabel_->hide();
+    backgroundProgress_->hide();
+    statusBar()->addPermanentWidget(backgroundProgressLabel_);
+    statusBar()->addPermanentWidget(backgroundProgress_);
+    viewport->setWorkCallback([this](bool begin, const QString &message, bool background) {
+        if (background) {
+            if (begin) beginBackgroundProgress(message);
+            else endBackgroundProgress();
+        } else {
+            if (begin) beginForegroundProgress(message);
+            else endForegroundProgress();
+        }
+    });
     const QString cudaStatus = forgecad_cuda_available()
         ? QString::fromUtf8(forgecad_cuda_backend())
         : QStringLiteral("CUDA compilato, GPU runtime non disponibile");
@@ -13998,6 +14460,62 @@ static void saveDefaultAxesOrientation(const AxesOrientation &o) {
     QSettings().setValue(QStringLiteral("view/axesOrientation"), values);
 }
 
+void PdfWindow::beginForegroundProgress(const QString &message, int maximum) {
+    const bool first = foregroundProgressDepth_ == 0;
+    ++foregroundProgressDepth_;
+    if (!foregroundProgress_) {
+        foregroundProgress_ = new QProgressDialog(this);
+        foregroundProgress_->setObjectName(QStringLiteral("foregroundProgressDialog"));
+        foregroundProgress_->setWindowTitle(QStringLiteral("ForgeCAD - operazione in corso"));
+        foregroundProgress_->setCancelButton(nullptr);
+        foregroundProgress_->setAutoClose(false);
+        foregroundProgress_->setAutoReset(false);
+        foregroundProgress_->setMinimumDuration(0);
+        foregroundProgress_->setWindowModality(Qt::WindowModal);
+        foregroundProgress_->setMinimumWidth(430);
+    }
+    foregroundProgress_->setLabelText(message);
+    if (first) {
+        foregroundProgress_->setRange(0, maximum > 0 ? maximum : 0);
+        if (maximum > 0) foregroundProgress_->setValue(0);
+        foregroundProgress_->show();
+        foregroundProgress_->raise();
+    }
+    // Il calcolo partira' subito sul thread GUI: completa il disegno della
+    // finestra prima di bloccare il ciclo eventi, senza accettare altri input.
+    QApplication::processEvents(QEventLoop::ExcludeUserInputEvents);
+}
+
+void PdfWindow::updateForegroundProgress(const QString &message, int value, int maximum) {
+    if (!foregroundProgress_ || foregroundProgressDepth_ <= 0) return;
+    if (maximum > 0 && (foregroundProgress_->minimum() != 0 || foregroundProgress_->maximum() != maximum))
+        foregroundProgress_->setRange(0, maximum);
+    foregroundProgress_->setLabelText(message);
+    foregroundProgress_->setValue(qBound(0, value, qMax(0, maximum)));
+    QApplication::processEvents(QEventLoop::ExcludeUserInputEvents);
+}
+
+void PdfWindow::endForegroundProgress() {
+    if (foregroundProgressDepth_ <= 0) return;
+    if (--foregroundProgressDepth_ == 0 && foregroundProgress_) foregroundProgress_->hide();
+}
+
+void PdfWindow::beginBackgroundProgress(const QString &message) {
+    ++backgroundProgressDepth_;
+    if (backgroundProgressLabel_) {
+        backgroundProgressLabel_->setText(message);
+        backgroundProgressLabel_->show();
+    }
+    if (backgroundProgress_) backgroundProgress_->show();
+}
+
+void PdfWindow::endBackgroundProgress() {
+    if (backgroundProgressDepth_ <= 0) return;
+    if (--backgroundProgressDepth_ != 0) return;
+    if (backgroundProgressLabel_) backgroundProgressLabel_->hide();
+    if (backgroundProgress_) backgroundProgress_->hide();
+}
+
 void PdfWindow::newDocument() {
     if (!maybeSaveChanges()) return;
     loadingDocument_ = true;
@@ -14013,27 +14531,54 @@ void PdfWindow::newDocument() {
 
 void PdfWindow::openDocument() {
     if (!maybeSaveChanges()) return;
-    const QString path = QFileDialog::getOpenFileName(this, QStringLiteral("Apri"), QFileInfo(documentPath_).absolutePath(),
-                                                      QStringLiteral("Documenti ForgeCAD (*.prt);;Tutti i file (*)"));
+    QFileDialog dialog(this, QStringLiteral("Apri"), QFileInfo(documentPath_).absolutePath(),
+                       QStringLiteral("Documenti ForgeCAD (*.prt);;Tutti i file (*)"));
+    dialog.setAcceptMode(QFileDialog::AcceptOpen);
+    dialog.setFileMode(QFileDialog::ExistingFile);
+    // I dialoghi nativi non espongono un'area portabile per un widget
+    // accessorio; il dialogo Qt consente la stessa anteprima su tutti i SO.
+    dialog.setOption(QFileDialog::DontUseNativeDialog, true);
+    auto *preview = new DocumentFilePreview(&dialog);
+    if (auto *grid = qobject_cast<QGridLayout *>(dialog.layout()))
+        grid->addWidget(preview, 0, grid->columnCount(), grid->rowCount(), 1);
+    else
+        dialog.layout()->addWidget(preview);
+    connect(&dialog, &QFileDialog::currentChanged, preview, &DocumentFilePreview::setPath);
+    dialog.resize(1050, 650);
+    if (dialog.exec() != QDialog::Accepted || dialog.selectedFiles().isEmpty()) return;
+    const QString path = dialog.selectedFiles().first();
     if (path.isEmpty()) return;
     openDocumentPath(path);
 }
 
 bool PdfWindow::openDocumentPath(const QString &path) {
+    const QString fileName = QFileInfo(path).fileName();
+    beginForegroundProgress(QStringLiteral("Lettura di %1... 0%").arg(fileName), 100);
+    updateForegroundProgress(QStringLiteral("Lettura del file %1... 5%").arg(fileName), 5);
     DocumentState state;
     const QString error = ForgeCad::loadDocumentFile(path, state);
     if (!error.isEmpty()) {
+        endForegroundProgress();
         QMessageBox::warning(this, QStringLiteral("Apri"), error);
         return false;
     }
+    updateForegroundProgress(QStringLiteral("Definizione caricata, preparazione della geometria... 15%"), 15);
     // I file senza orientamento (versioni vecchie) prendono quello predefinito.
     if (!state.orientationSet) {
         state.orientation = defaultAxesOrientation();
         state.orientationSet = true;
     }
     loadingDocument_ = true;
-    viewport_->loadDocument(std::move(state));
+    viewport_->loadDocument(std::move(state), [this](int completed, int total, const QString &name) {
+        const int percent = 15 + (total > 0 ? 80 * completed / total : 80);
+        const QString detail = name.isEmpty() ? QStringLiteral("Costruzione della scena")
+                                               : QStringLiteral("Costruzione di %1").arg(name);
+        updateForegroundProgress(QStringLiteral("%1... %2%").arg(detail).arg(percent), percent);
+    });
     loadingDocument_ = false;
+    updateForegroundProgress(QStringLiteral("Completamento della vista... 98%"), 98);
+    updateForegroundProgress(QStringLiteral("Documento caricato. 100%"), 100);
+    endForegroundProgress();
     documentPath_ = path;
     documentModified_ = false;
     updateWindowTitle();
@@ -14054,8 +14599,10 @@ bool PdfWindow::saveDocument(bool askPath) {
         if (QFileInfo(path).suffix().compare(QLatin1String(ForgeCad::kDocumentSuffix), Qt::CaseInsensitive) != 0)
             path += QStringLiteral(".") + QLatin1String(ForgeCad::kDocumentSuffix);
     }
+    beginForegroundProgress(QStringLiteral("Salvataggio di %1...").arg(QFileInfo(path).fileName()));
     const QString error = ForgeCad::saveDocumentFile(path, viewport_->currentDocument(),
                                                      QSettings().value(QStringLiteral("document/saveBodies"), true).toBool());
+    endForegroundProgress();
     if (!error.isEmpty()) {
         QMessageBox::warning(this, QStringLiteral("Salva"), error);
         return false;

@@ -1276,12 +1276,22 @@ double sketchScale(const System &system) {
 // `gauges` anche le equazioni che tolgono le liberta' senza effetto sulla
 // geometria (il punto del raggio di un cerchio puo' girare): solo per contare
 // i gradi di liberta'.
-QVector<Block> buildBlocks(const System &system, const SketchObject &sketch, const QVector<PointTarget> &targets, bool gauges) {
+// Un Fix su un punto ordinario o su un'intera entita' determina direttamente
+// le sue coordinate. Un Fix sulla singola maniglia e' invece un'equazione
+// sulla somma punto + scarto della maniglia e deve restare nel Jacobiano.
+bool directFix(const SketchConstraint &constraint) {
+    return constraint.type == ConstraintType::Fix
+        && !(constraint.first.kind == 1 && isHandlePoint(constraint.first.point));
+}
+
+QVector<Block> buildBlocks(const System &system, const SketchObject &sketch, const QVector<PointTarget> &targets,
+                           bool gauges, bool omitDirectFix = false) {
     QVector<const SketchConstraint *> active;
     for (const SketchConstraint &c : sketch.geometricConstraints)
         if (wellFormed(sketch, c)) active.append(&c);
     QVector<Block> blocks;
     for (const SketchConstraint *c : active) {
+        if (omitDirectFix && directFix(*c)) continue;
         Block block;
         if (c->type == ConstraintType::Pattern) {
             patternDependencies(system, *c, block.points);
@@ -1509,12 +1519,31 @@ SketchAnalysis analyzeSketch(const SketchObject &sketch) {
     analysis.variables = n;
     if (n == 0) return analysis;
     const double step = 1e-6 * sketchScale(system);
-    const QVector<Block> blocks = buildBlocks(system, sketch, {}, true);
+    // I riferimenti convertiti possono contenere migliaia di poli e sono
+    // fissati per definizione. Espandere il loro Fix in altrettante righe e
+    // applicare Gram-Schmidt a una matrice quadrata rendeva la conversione
+    // apparentemente interminabile. Le coordinate fissate si marcano qui in
+    // modo diretto e si escludono dal Jacobiano degli altri vincoli.
+    QSet<int> fixedPoints;
+    for (const SketchConstraint &constraint : sketch.geometricConstraints) {
+        if (!directFix(constraint) || !wellFormed(sketch, constraint)) continue;
+        for (const ConstraintRef &point : system.entityPoints(constraint.first)) {
+            QVector<int> dependencies;
+            system.pointDependencies(point, dependencies);
+            for (int dependency : dependencies) fixedPoints.insert(dependency);
+        }
+    }
+    const QVector<Block> blocks = buildBlocks(system, sketch, {}, true, true);
     QVector<double> r;
     for (const Block &block : blocks) block.evaluate(r);
     const int m = r.size();
     QVector<double> &x = const_cast<QVector<double> &>(system.values());
-    const QVector<double> J = jacobian(blocks, x, m, step);
+    QVector<double> J = jacobian(blocks, x, m, step);
+    for (int point : fixedPoints)
+        for (int row = 0; row < m; ++row) {
+            J[row * n + 2 * point] = 0.0;
+            J[row * n + 2 * point + 1] = 0.0;
+        }
     // Base ortonormale dello spazio delle righe (Gram-Schmidt modificato, due
     // passate): la sua dimensione e' il rango; una coordinata e' determinata se
     // il suo versore sta nello spazio delle righe (norma della sua proiezione 1).
@@ -1541,13 +1570,14 @@ SketchAnalysis analyzeSketch(const SketchObject &sketch) {
         for (double &c : v) c /= remaining;
         basis.append(v);
     }
-    analysis.rank = basis.size();
+    analysis.rank = 2 * fixedPoints.size() + basis.size();
     analysis.degreesOfFreedom = n - analysis.rank;
     QVector<bool> determined(n, false);
+    for (int point : fixedPoints) determined[2 * point] = determined[2 * point + 1] = true;
     for (int k = 0; k < n; ++k) {
         double projection = 0.0;
         for (const QVector<double> &b : basis) projection += b[k] * b[k];
-        determined[k] = projection >= 1.0 - 1e-6;
+        determined[k] = determined[k] || projection >= 1.0 - 1e-6;
     }
     const auto pointDefined = [&](int index) { return determined[2 * index] && determined[2 * index + 1]; };
     for (int i = 0; i < sketch.segments.size(); ++i)

@@ -321,6 +321,9 @@ struct HelixParameters {
 //  - 7 entita' dello schizzo `index` (`element` con point -1: segmento o curva);
 //  - 8 piano di costruzione (corpo DatumPlane `index`);
 //  - 9 curva del corpo `index` (elica, spirale).
+//  - 10 estremo della curva del corpo `index` (`element.point`: 0 inizio,
+//    1 fine). Il punto salvato serve solo al picking; la risoluzione usa il
+//    dominio esatto della curva corrente.
 struct GeometryRef {
     int kind = -1;
     int index = -1;

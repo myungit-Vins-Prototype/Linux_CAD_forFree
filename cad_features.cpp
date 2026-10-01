@@ -113,8 +113,14 @@ void curveDisplay(const Curve<3> &curve, int quality, BodyDisplay &display) {
     display.quality = quality;
     const Interval range = curve.domain();
     int count = 200 * (quality + 1);
-    if (const auto *helix = dynamic_cast<const HelixCurve *>(&curve))
-        count = std::max(16, int(std::ceil(helix->spec().turns * (quality <= 0 ? 36 : quality == 1 ? 72 : 144))));
+    if (const auto *helix = dynamic_cast<const HelixCurve *>(&curve)) {
+        const double requested = std::ceil(helix->spec().turns * (quality <= 0 ? 36.0 : quality == 1 ? 72.0 : 144.0));
+        count = requested >= 32768.0 ? 32768 : std::max(16, int(requested));
+    }
+    // Una elica con molti giri non deve produrre una VBO senza limite: oltre
+    // questa soglia i segmenti diventano comunque sub-pixel nella vista
+    // complessiva e rallentano rotazione e zoom senza aggiungere dettaglio.
+    count = std::min(count, 32768);
     QVector<QVector3D> polyline;
     for (int i = 0; i <= count; ++i) {
         const Vec3 p = curve.point(range.lo + range.length() * i / count);

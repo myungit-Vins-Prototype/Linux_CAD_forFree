@@ -3,7 +3,9 @@
 #include <algorithm>
 #include <cmath>
 #include <exception>
+#include <limits>
 #include <map>
+#include <set>
 
 #include <QRegularExpression>
 
@@ -633,13 +635,17 @@ void forgeTessellate(const Body &body, int quality, BodyDisplay &display) {
     }
 }
 
-void forgeSurfaceConstructionCurves(const Body &body, BodyDisplay &display, int divisions) {
+void forgeSurfaceConstructionCurves(const Body &body, BodyDisplay &display, int divisions, bool allCurvedFaces,
+                                    const QVector<int> &faceFilter) {
     divisions = std::clamp(divisions, 2, 12);
-    const int sideFaces = int(body.faces().size()) - (body.isSheet() ? 0 : 2); // i due coperchi del loft solido sono in fondo
+    const int sideFaces = allCurvedFaces ? int(body.faces().size())
+                                         : int(body.faces().size()) - (body.isSheet() ? 0 : 2); // i due coperchi del loft solido sono in fondo
     int facePosition = 0;
     for (FaceId face : body.faces()) {
         if (facePosition++ >= sideFaces) continue;
+        if (!faceFilter.isEmpty() && !faceFilter.contains(face.index)) continue;
         const Surface &surface = *body.face(face).surface;
+        if (allCurvedFaces && surface.type() == SurfaceType::Plane) continue;
         if (surface.type() == SurfaceType::Plane) {
             if (body.face(face).loops.size() != 1) continue;
             const std::vector<FinId> fins = body.loopFins(body.face(face).loops.front());
@@ -656,8 +662,29 @@ void forgeSurfaceConstructionCurves(const Body &body, BodyDisplay &display, int 
             }
             continue;
         }
-        if (surface.type() != SurfaceType::BSpline) continue;
-        const Interval u = surface.uDomain(), v = surface.vDomain();
+        if (!allCurvedFaces && surface.type() != SurfaceType::BSpline) continue;
+        Interval u = surface.uDomain(), v = surface.vDomain();
+        if (allCurvedFaces) {
+            double uLo = std::numeric_limits<double>::infinity(), uHi = -uLo;
+            double vLo = std::numeric_limits<double>::infinity(), vHi = -vLo;
+            for (LoopId loop : body.face(face).loops)
+                for (FinId fin : body.loopFins(loop)) {
+                    const Edge &edge = body.edge(body.fin(fin).edge);
+                    for (int sample = 0; sample <= 12; ++sample) {
+                        const double t = edge.range.lo + edge.range.length() * sample / 12.0;
+                        Vec2 uv;
+                        if (body.fin(fin).pcurve) uv = body.fin(fin).pcurve->point(t);
+                        else {
+                            const SurfaceProjection projection = projectPoint(surface, edge.curve->point(t));
+                            uv = Vec2(projection.u, projection.v);
+                        }
+                        uLo = std::min(uLo, uv.x()); uHi = std::max(uHi, uv.x());
+                        vLo = std::min(vLo, uv.y()); vHi = std::max(vHi, uv.y());
+                    }
+                }
+            if (std::isfinite(uLo) && uHi > uLo) u = {uLo, uHi};
+            if (std::isfinite(vLo) && vHi > vLo) v = {vLo, vHi};
+        }
         if (!std::isfinite(u.lo) || !std::isfinite(u.hi) || !std::isfinite(v.lo) || !std::isfinite(v.hi)) continue;
         constexpr int samples = 32;
         for (int line = 1; line < divisions; ++line) {
@@ -675,6 +702,46 @@ void forgeSurfaceConstructionCurves(const Body &body, BodyDisplay &display, int 
             display.constructionCurves.append(std::move(curve));
         }
     }
+}
+
+void forgeBlendPreviewDisplay(const Body &base, const Body &result, int quality, BodyDisplay &display, int divisions) {
+    display = {};
+    display.quality = quality;
+    std::set<const Surface *> oldSurfaces;
+    for (FaceId face : base.faces()) oldSurfaces.insert(base.face(face).surface.get());
+    QVector<int> patchFaces;
+    std::set<int> patchFaceSet, patchEdges;
+    for (FaceId face : result.faces())
+        if (!oldSurfaces.count(result.face(face).surface.get())) {
+            patchFaces.append(face.index);
+            patchFaceSet.insert(face.index);
+            for (LoopId loop : result.face(face).loops)
+                for (FinId fin : result.loopFins(loop)) patchEdges.insert(result.fin(fin).edge.index);
+        }
+    if (patchFaces.isEmpty()) return;
+
+    Box box;
+    for (VertexId vertex : result.vertices()) box.add(result.vertex(vertex).point);
+    const double diagonal = std::max(box.diagonal(), 1e-9);
+    TessellationOptions options;
+    options.deflection = diagonal * (quality <= 0 ? 4.0e-3 : quality == 1 ? 1.0e-3 : 2.0e-4);
+    options.angle = quality <= 0 ? 0.5 : quality == 1 ? 0.25 : 0.1;
+    const Tessellation mesh = tessellate(result, options);
+    for (const FaceMesh &face : mesh.faces) {
+        if (!patchFaceSet.count(face.face.index)) continue;
+        for (const std::array<int, 3> &triangle : face.triangles)
+            for (int index : triangle) {
+                display.vertices.append(toDisplay(face.points[std::size_t(index)]));
+                display.normals.append(toDisplay(face.normals[std::size_t(index)]));
+            }
+    }
+    for (std::size_t edgeIndex = 0; edgeIndex < mesh.edges.size(); ++edgeIndex) {
+        if (!patchEdges.count(mesh.edgeIds[edgeIndex].index)) continue;
+        QVector<QVector3D> polyline;
+        for (const Vec3 &point : mesh.edges[edgeIndex]) polyline.append(toDisplay(point));
+        if (polyline.size() >= 2) display.edges.append(std::move(polyline));
+    }
+    forgeSurfaceConstructionCurves(result, display, divisions, true, patchFaces);
 }
 
 bool forgePickFace(const Body &body, const QVector3D &origin, const QVector3D &direction, FaceHit &hit, const Kernel::RayFaceIndex *index) {

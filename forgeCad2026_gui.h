@@ -7,6 +7,8 @@ class CadViewport;
 class QAction;
 class QDoubleSpinBox;
 class QLabel;
+class QProgressBar;
+class QProgressDialog;
 class QWidget;
 class QTreeWidget;
 class QTreeWidgetItem;
@@ -27,6 +29,11 @@ private:
     bool saveDocument(bool askPath);
     bool maybeSaveChanges();
     void updateWindowTitle();
+    void beginForegroundProgress(const QString &message, int maximum = 0);
+    void updateForegroundProgress(const QString &message, int value, int maximum = 100);
+    void endForegroundProgress();
+    void beginBackgroundProgress(const QString &message);
+    void endBackgroundProgress();
 
     void setDisplayMode(int mode);
     void setTheme(bool dark);
@@ -48,6 +55,11 @@ private:
     QString documentPath_;
     bool documentModified_ = false;
     bool loadingDocument_ = false;
+    QProgressDialog *foregroundProgress_ = nullptr;
+    QLabel *backgroundProgressLabel_ = nullptr;
+    QProgressBar *backgroundProgress_ = nullptr;
+    int foregroundProgressDepth_ = 0;
+    int backgroundProgressDepth_ = 0;
     double blendSize_ = 0.5;  // ultima misura di raccordo o smusso (proposta la volta dopo)
     QDoubleSpinBox *pickSizeBox_ = nullptr;
     QWidget *constraintPanel_ = nullptr;  // finestra fluttuante dei vincoli (modalita' schizzo)  // misura dell'anteprima durante la scelta degli spigoli

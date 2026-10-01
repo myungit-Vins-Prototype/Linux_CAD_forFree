@@ -170,16 +170,23 @@ QString appendProjectedCurve(SketchObject &sketch, const CurvePtr<3> &curve, con
             // B-spline razionale esatta (le eliche e le altre curve "Other" dalla loro B-spline).
             BSplineCurve<3> spline(1, {0.0, 0.0, 1.0, 1.0}, {Vec3(), Vec3(1, 0, 0)});
             if (const auto *helix = dynamic_cast<const HelixCurve *>(basis)) {
-                const BSplineCurve<3> full = helixBSpline(*helix);
-                std::vector<BSplineCurve<3>> pieces = standardBezierPieces(full, range);
-                int degree = 1;
-                for (const BSplineCurve<3> &piece : pieces) degree = std::max(degree, piece.degree());
-                spline = joinBezierPieces(standardBezierPieces(full, range, degree));
+                // La proiezione e' affine: poli e nodi della B-spline
+                // approssimata dell'elica possono essere proiettati senza
+                // scomporla e ricomporla due volte in tratti di Bezier.
+                const BSplineCurve<3> full = helixBSpline(*helix, kLinearResolution);
+                if (std::fabs(range.lo - full.domain().lo) <= 1e-12
+                    && std::fabs(range.hi - full.domain().hi) <= 1e-12) {
+                    spline = full;
+                } else {
+                    spline = joinBezierPieces(standardBezierPieces(full, range));
+                }
             } else {
                 std::vector<BSplineCurve<3>> pieces = standardBezierPieces(*curve, range);
                 int degree = 1;
                 for (const BSplineCurve<3> &piece : pieces) degree = std::max(degree, piece.degree());
-                spline = joinBezierPieces(standardBezierPieces(*curve, range, degree));
+                bool sameDegree = true;
+                for (const BSplineCurve<3> &piece : pieces) sameDegree = sameDegree && piece.degree() == degree;
+                spline = joinBezierPieces(sameDegree ? pieces : standardBezierPieces(*curve, range, degree));
             }
             // Curva in un piano perpendicolare allo schizzo (i poli proiettati stanno
             // su una retta): la proiezione e' il segmento tra i punti estremi della curva lungo la retta.

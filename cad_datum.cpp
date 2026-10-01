@@ -167,6 +167,7 @@ int geometryRefRoles(const GeometryRef &ref, const QVector<SketchObject> &sketch
     }
     case 8: return DatumRolePlane | DatumRoleFace;
     case 9: return DatumRoleCurve;
+    case 10: return DatumRolePoint;
     default: return 0;
     }
 }
@@ -285,6 +286,18 @@ bool resolveGeometryRef(const GeometryRef &ref, int owner, const QVector<SketchO
             const ForgeCurve curve = bodies.at(ref.index).curve;
             r.hasCurve = true;
             r.nearest = [curve](const Vec3 &q, Vec3 &foot, Vec3 &tangent) { return nearestOnForgeCurve(*curve, curve->domain(), q, foot, tangent); };
+            return true;
+        }
+        case 10: {
+            if (ref.index < 0 || ref.index >= owner || ref.index >= bodies.size() || !bodies.at(ref.index).curve) {
+                setError(error, QStringLiteral("la curva del punto di riferimento non esiste piu'"));
+                return false;
+            }
+            const ForgeCurve curve = bodies.at(ref.index).curve;
+            const Interval domain = curve->domain();
+            const double parameter = ref.element.point == 1 ? domain.hi : domain.lo;
+            r.hasPoint = true;
+            r.point = curve->point(parameter);
             return true;
         }
         default: break;
@@ -406,6 +419,7 @@ QString geometryRefText(const GeometryRef &ref, const QVector<SketchObject> &ske
         return (ref.element.kind == 0 ? QStringLiteral("Segmento %1 di %2") : QStringLiteral("Curva %1 di %2")).arg(ref.element.element + 1).arg(sketchName(ref.index));
     case 8: return bodyName(ref.index);
     case 9: return bodyName(ref.index);
+    case 10: return QStringLiteral("%1 di %2").arg(ref.element.point == 1 ? QStringLiteral("Fine") : QStringLiteral("Inizio"), bodyName(ref.index));
     default: return QStringLiteral("(da scegliere)");
     }
 }

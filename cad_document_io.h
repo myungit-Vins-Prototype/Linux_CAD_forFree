@@ -30,7 +30,10 @@ inline constexpr const char *kDocumentSuffix = "prt";
 // Restituisce l'errore (vuoto se riuscito). Il salvataggio e' atomico (QSaveFile).
 // Con `bodies` si salva anche la copia dei corpi calcolati.
 QString saveDocumentFile(const QString &path, const DocumentState &state, bool bodies = true);
-QString loadDocumentFile(const QString &path, DocumentState &state);
+// `previewCache` permette al solo riquadro della finestra Apri di leggere la
+// copia B-rep salvata anche se l'impronta del kernel e' cambiata. La geometria
+// non viene marcata come cache valida e non puo' quindi entrare nel documento.
+QString loadDocumentFile(const QString &path, DocumentState &state, bool previewCache = false);
 
 }
 

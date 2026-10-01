@@ -1,6 +1,7 @@
 // CadViewport e' ancora definito nel .cpp della finestra. Questa unita' di
 // test lo include per verificare interazioni e rendering senza esportare API di test.
 #include "../forgeCad2026_gui.cpp"
+#include "fk_helix.h"
 #include <QSurfaceFormat>
 #include <QTemporaryDir>
 #include <iostream>
@@ -157,6 +158,69 @@ public:
         require(v.extrusions_.at(datumIndex).datum.size == 3, "Undo dimensione datum");
         v.redo();
         require(v.extrusions_.at(datumIndex).datum.size == resized, "Redo dimensione datum");
+
+        // Una curva 3D autonoma (elica/spirale) offre sia la curva sia i suoi
+        // estremi come riferimenti grafici del piano normale.
+        CadViewport curveReferences;
+        curveReferences.resize(800, 600);
+        ExtrusionObject pathBody;
+        pathBody.name = QStringLiteral("Curva percorso");
+        pathBody.feature = BodyFeature::Helix;
+        const auto pathLine = std::make_shared<Kernel::Line<3>>(Kernel::Vec3(2, 3, 1), normalized(Kernel::Vec3(1, 0.2, 0.4)));
+        pathBody.curve = std::make_shared<Kernel::TrimmedCurve<3>>(pathLine, 0.0, 5.0);
+        curveDisplay(*pathBody.curve, 1, pathBody.display);
+        curveReferences.extrusions_.append(pathBody);
+        curveReferences.refPickOwner_ = -1;
+        GeometryRef pickedCurve, pickedEnd;
+        const Kernel::Vec3 middle3 = pathBody.curve->point(2.5), end3 = pathBody.curve->point(5.0);
+        curveReferences.refPickRoles_ = DatumRoleCurve;
+        require(curveReferences.pickReference(curveReferences.projectWorldPoint(QVector3D(middle3.x(), middle3.y(), middle3.z())).toPoint(), pickedCurve)
+                    && pickedCurve.kind == 9,
+                "curva 3D selezionabile come riferimento del piano normale");
+        curveReferences.refPickRoles_ = DatumRolePoint;
+        require(curveReferences.pickReference(curveReferences.projectWorldPoint(QVector3D(end3.x(), end3.y(), end3.z())).toPoint(), pickedEnd)
+                    && pickedEnd.kind == 10 && pickedEnd.element.point == 1,
+                "estremo finale della curva 3D selezionabile graficamente");
+        ResolvedRef resolvedEnd;
+        require(resolveGeometryRef(pickedEnd, 1, {}, curveReferences.extrusions_, resolvedEnd, nullptr)
+                    && resolvedEnd.hasPoint && distance(resolvedEnd.point, end3) < 1e-12,
+                "estremo della curva risolto sul dominio esatto");
+        DatumParameters normalAtEnd;
+        normalAtEnd.mode = 2;
+        normalAtEnd.refs = {pickedCurve, pickedEnd};
+        SketchFrame normalFrame;
+        QString normalError;
+        require(computeDatum(normalAtEnd, 1, {}, curveReferences.extrusions_, normalFrame, &normalError),
+                "piano normale costruito sull'estremo scelto della curva 3D");
+        require(distance(Kernel::Vec3(normalFrame.origin[0], normalFrame.origin[1], normalFrame.origin[2]), end3) < 1e-9,
+                "origine del piano normale coincidente con l'estremo della curva");
+
+        // La conversione di un'elica crea un riferimento con molti poli. Il
+        // vincolo Fix deve essere analizzato direttamente, senza una matrice
+        // densa quadrata che rendeva l'operazione apparentemente infinita.
+        Kernel::HelixSpec helixSpec;
+        helixSpec.frame = Kernel::Frame3(Kernel::Vec3(), Kernel::Vec3(0, 0, 1), Kernel::Vec3(1, 0, 0));
+        helixSpec.radius = 5.0;
+        helixSpec.pitch = 2.0;
+        helixSpec.turns = 3.0;
+        const auto helixCurve = std::make_shared<Kernel::HelixCurve>(helixSpec);
+        SketchObject projectedHelix;
+        projectedHelix.plane = 0;
+        require(appendProjectedCurve(projectedHelix, helixCurve, helixCurve->domain(), true, true).isEmpty(),
+                "conversione rapida di una elica nello schizzo");
+        require(projectedHelix.curves.size() == 1 && projectedHelix.curves.first().tool == DrawingTool::Converted,
+                "elica convertita come B-spline di riferimento");
+        const SketchAnalysis projectedAnalysis = analyzeSketch(projectedHelix);
+        require(projectedAnalysis.fullyDefined() && projectedAnalysis.curveDefined.value(0),
+                "riferimento convertito fissato senza analisi cubica dei poli");
+
+        Kernel::HelixSpec longHelixSpec = helixSpec;
+        longHelixSpec.turns = 1000.0;
+        const Kernel::HelixCurve longHelix(longHelixSpec);
+        BodyDisplay boundedDisplay;
+        curveDisplay(longHelix, 2, boundedDisplay);
+        require(boundedDisplay.edges.size() == 1 && boundedDisplay.edges.first().size() == 32769,
+                "campionamento grafico delle eliche lunghe limitato");
 
         const int sketch = v.createSketch(0, QStringLiteral("Test riferimenti"));
         require(sketch >= 0, "creazione schizzo");
@@ -341,6 +405,10 @@ public:
         require(saveDocumentFile(path, state, false).isEmpty(), "salvataggio riferimenti e datum");
         DocumentState loaded;
         require(loadDocumentFile(path, loaded).isEmpty(), "lettura riferimenti e datum");
+        CadViewport filePreview;
+        filePreview.loadPreviewDocument(loaded);
+        require(!filePreview.sketches_.isEmpty() && !filePreview.sceneGeometryPoints().isEmpty(),
+                "schizzi visibili nell'anteprima della finestra Apri");
         require(loaded.extrusions.at(datumIndex).datum.size == resized, "dimensione datum nel documento");
         require(loaded.sketches.at(sketch).curves.last().tangentLinked.value(1), "collegamento maniglie nel documento");
         require(loaded.extrusions.at(datumIndex).pathSegments == QVector<int>{1}
@@ -403,10 +471,37 @@ public:
                         "seconda lavorazione grande sulla zona gia' raccordata");
                 require(sequential.extrusions_.back().forgeBody != nullptr, "rigenerazione delle lavorazioni intersecanti");
             }
+
         if (render) {
             v.show();
             for (int i = 0; i < 8; ++i) QApplication::processEvents();
             require(v.isValid(), "contesto OpenGL valido");
+            DocumentFilePreview openPreview;
+            openPreview.resize(360, 420);
+            openPreview.setPath(path);
+            auto *fileProgress = openPreview.findChild<QProgressBar *>(QStringLiteral("documentPreviewProgress"));
+            require(fileProgress && !fileProgress->isHidden(), "barra durante il caricamento dell'anteprima file");
+            openPreview.show();
+            QEventLoop previewWait;
+            QTimer::singleShot(500, &previewWait, &QEventLoop::quit);
+            previewWait.exec();
+            auto *previewViewport = dynamic_cast<CadViewport *>(
+                openPreview.findChild<QOpenGLWidget *>(QStringLiteral("documentPreviewViewport")));
+            auto *previewDetails = openPreview.findChild<QLabel *>(QStringLiteral("documentPreviewDetails"));
+            require(previewViewport && !previewViewport->sketches_.isEmpty()
+                        && previewDetails && previewDetails->text().contains(QStringLiteral("schizzi")),
+                    "caricamento asincrono del riquadro nella finestra Apri");
+            require(fileProgress->isHidden(), "barra nascosta al termine dell'anteprima file");
+            openPreview.grab().save(QStringLiteral("/tmp/forgecad-open-preview.png"));
+            openPreview.hide();
+            PdfWindow progressWindow;
+            progressWindow.show();
+            QApplication::processEvents();
+            require(progressWindow.openDocumentPath(path), "apertura del documento con avanzamento determinato");
+            auto *openProgress = progressWindow.findChild<QProgressDialog *>(QStringLiteral("foregroundProgressDialog"));
+            require(openProgress && openProgress->maximum() == 100 && openProgress->value() == 100 && openProgress->isHidden(),
+                    "finestra di apertura arrivata al 100% e chiusa al termine");
+            progressWindow.close();
             FunctionDialogPanel focusPanel(&v);
             focusPanel.setWindowTitle(QStringLiteral("Test focus pannello"));
             auto *focusSpin = new QDoubleSpinBox(&focusPanel);
@@ -469,6 +564,89 @@ public:
             v.displayCache_.clear();
             v.doneCurrent();
             v.close();
+        }
+        // L'anteprima del raccordo conserva il B-rep esatto e la
+        // tassellazione: OK deve promuoverli senza eseguire di nuovo il kernel.
+        {
+            CadViewport cachedBlend;
+            int foregroundStarts = 0, foregroundEnds = 0, backgroundStarts = 0, backgroundEnds = 0;
+            cachedBlend.setWorkCallback([&](bool begin, const QString &, bool background) {
+                if (background) (begin ? backgroundStarts : backgroundEnds)++;
+                else (begin ? foregroundStarts : foregroundEnds)++;
+            });
+            PrimitiveParameters cachedBlock;
+            cachedBlock.size[0] = 4.0; cachedBlock.size[1] = 3.0; cachedBlock.size[2] = 2.0;
+            require(cachedBlend.createPrimitive(cachedBlock, QStringLiteral("Base anteprima raccordo")).isEmpty(),
+                    "base dell'anteprima raccordo");
+            require(foregroundStarts > 0 && foregroundStarts == foregroundEnds,
+                    "notifiche bilanciate per il calcolo sul thread principale");
+            CadViewport loadedWithProgress;
+            int loadedBodies = -1, totalBodies = -1;
+            loadedWithProgress.loadDocument(cachedBlend.currentDocument(), [&](int completed, int total, const QString &) {
+                loadedBodies = completed;
+                totalBodies = total;
+            });
+            require(loadedBodies == totalBodies && totalBodies == 1,
+                    "avanzamento determinato fino all'ultimo corpo durante l'apertura");
+
+            // Il riquadro Apri puo' disegnare una cache di una build precedente,
+            // ma il documento normale continua a rifiutarla e rigenera il B-rep.
+            QTemporaryDir staleCacheDir;
+            const QString staleCachePath = staleCacheDir.filePath(QStringLiteral("cache-precedente.prt"));
+            require(saveDocumentFile(staleCachePath, cachedBlend.currentDocument(), true).isEmpty(),
+                    "salvataggio del documento con cache 3D");
+            QFile staleFile(staleCachePath);
+            require(staleFile.open(QIODevice::ReadOnly), "lettura del documento con cache 3D");
+            QByteArray staleData = staleFile.readAll();
+            staleFile.close();
+            QDataStream staleHeader(staleData);
+            staleHeader.skipRawData(4);
+            quint16 staleVersion = 0;
+            quint8 staleCompression = 0;
+            quint32 payloadSize = 0;
+            staleHeader >> staleVersion >> staleCompression >> payloadSize;
+            const qsizetype cacheOffset = 11 + qsizetype(payloadSize);
+            QByteArray staleCache = qUncompress(staleData.mid(cacheOffset));
+            require(staleVersion >= 14 && staleCompression == 1 && staleCache.size() > 68,
+                    "blocco cache 3D presente nel documento");
+            staleCache[4] = staleCache.at(4) == '0' ? '1' : '0'; // altera soltanto l'impronta dei sorgenti
+            staleData.replace(cacheOffset, staleData.size() - cacheOffset, qCompress(staleCache, 6));
+            require(staleFile.open(QIODevice::WriteOnly | QIODevice::Truncate)
+                        && staleFile.write(staleData) == staleData.size(),
+                    "scrittura della cache con impronta precedente");
+            staleFile.close();
+            DocumentState strictCache, previewCache;
+            require(loadDocumentFile(staleCachePath, strictCache).isEmpty()
+                        && loadDocumentFile(staleCachePath, previewCache, true).isEmpty(),
+                    "lettura della cache precedente nei due modi");
+            require(!strictCache.extrusions.first().forgeBody && previewCache.extrusions.first().forgeBody,
+                    "cache precedente disponibile solo per il riquadro di anteprima");
+            const QVector<EdgePoint> cachedEdge{{2.0, 0.0, 2.0}};
+            cachedBlend.requestBlendPreview(0, cachedEdge, 0.25, false);
+            cachedBlend.startPreviewJob();
+            QElapsedTimer previewTimeout;
+            previewTimeout.start();
+            while (cachedBlend.previewRunning_ && previewTimeout.elapsed() < 10000) QApplication::processEvents();
+            require(backgroundStarts == 1 && backgroundEnds == 1,
+                    "notifiche bilanciate per il calcolo dell'anteprima in background");
+            require(cachedBlend.preview_.valid && cachedBlend.preview_.geometry,
+                    "B-rep esatto conservato dall'anteprima raccordo");
+            require(!cachedBlend.preview_.display.vertices.isEmpty(),
+                    "patch locale presente nell'anteprima raccordo");
+            require(cachedBlend.preview_.display.vertices.size() < cachedBlend.preview_.resultDisplay.vertices.size(),
+                    "l'anteprima mostra solo la patch e non l'intero corpo");
+            require(!cachedBlend.preview_.display.constructionCurves.isEmpty(),
+                    "curve U/V presenti nell'anteprima raccordo");
+            require(cachedBlend.preview_.replaced.isEmpty(),
+                    "la base opaca non viene sostituita dalla patch del raccordo");
+            const ForgeBody previewGeometry = cachedBlend.preview_.geometry;
+            const int resultTriangles = cachedBlend.preview_.resultDisplay.vertices.size();
+            require(cachedBlend.createBlend(0, cachedEdge, 0.25, false, QStringLiteral("Raccordo da anteprima")).isEmpty(),
+                    "conferma dell'anteprima raccordo");
+            require(cachedBlend.extrusions_.back().forgeBody == previewGeometry,
+                    "la conferma riusa il B-rep dell'anteprima");
+            require(cachedBlend.extrusions_.back().display.vertices.size() == resultTriangles,
+                    "la conferma riusa la tassellazione completa conservata con l'anteprima");
         }
         std::cout << "Viewport: assi, piani, datum, Undo/Redo, riferimenti, vincoli, salvataggio e cache OK" << std::endl;
     }

@@ -80,7 +80,12 @@ ForgeBody forgeImported(const QByteArray &data, QString *error);
 
 // Approssimazione per la visualizzazione (quality 0/1/2), come tessellate().
 void forgeTessellate(const Kernel::Body &body, int quality, BodyDisplay &display);
-void forgeSurfaceConstructionCurves(const Kernel::Body &body, BodyDisplay &display, int divisions = 4);
+void forgeSurfaceConstructionCurves(const Kernel::Body &body, BodyDisplay &display, int divisions = 4,
+                                    bool allCurvedFaces = false, const QVector<int> &faceFilter = {});
+// Visualizzazione locale del raccordo: solo le superfici nuove rispetto alla
+// base, con i loro bordi e le isoparametriche. Il B-rep completo resta separato.
+void forgeBlendPreviewDisplay(const Kernel::Body &base, const Kernel::Body &result, int quality,
+                              BodyDisplay &display, int divisions = 4);
 
 // Faccia del body colpita per prima dal raggio, con il suo piano (se e'
 // piana) e un punto interno di ogni suo spigolo.

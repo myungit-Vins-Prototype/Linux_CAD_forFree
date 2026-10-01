@@ -453,7 +453,7 @@ QByteArray bodyCache(const QByteArray &payload, const DocumentState &state) {
     return qCompress(cache, 6);
 }
 
-void applyBodyCache(const QByteArray &compressed, const QByteArray &payload, DocumentState &state) {
+void applyBodyCache(const QByteArray &compressed, const QByteArray &payload, DocumentState &state, bool previewCache) {
     const QByteArray cache = qUncompress(compressed);
     if (cache.isEmpty()) return;
     QDataStream in(cache);
@@ -461,7 +461,8 @@ void applyBodyCache(const QByteArray &compressed, const QByteArray &payload, Doc
     QByteArray sourceHash, payloadHash;
     quint32 count = 0;
     in >> sourceHash >> payloadHash >> count;
-    if (in.status() != QDataStream::Ok || sourceHash != QByteArray(FORGECAD_SOURCE_HASH) || payloadHash != definitionHash(payload)
+    const bool currentGeometry = sourceHash == QByteArray(FORGECAD_SOURCE_HASH);
+    if (in.status() != QDataStream::Ok || (!currentGeometry && !previewCache) || payloadHash != definitionHash(payload)
         || count != quint32(state.extrusions.size()))
         return;
     for (ExtrusionObject &body : state.extrusions) {
@@ -475,7 +476,10 @@ void applyBodyCache(const QByteArray &compressed, const QByteArray &payload, Doc
         try {
             body.forgeBody = std::make_shared<const Kernel::Body>(Kernel::readBodyBinary(std::string(data.constData(), std::size_t(data.size()))));
             body.error = error;
-            body.cachedGeometry = true;
+            // Solo una cache prodotta dalla geometria corrente puo' evitare la
+            // rigenerazione. Il selettore file usa anche una copia precedente,
+            // ma soltanto nel suo viewport isolato.
+            body.cachedGeometry = currentGeometry;
         } catch (const std::exception &) {
             body.forgeBody.reset();
         }
@@ -545,7 +549,7 @@ QString parsePayload(const QByteArray &payload, quint16 version, int extras, Doc
 
 }
 
-QString loadDocumentFile(const QString &path, DocumentState &state) {
+QString loadDocumentFile(const QString &path, DocumentState &state, bool previewCache) {
     QFile file(path);
     if (!file.open(QIODevice::ReadOnly)) return QStringLiteral("Impossibile aprire %1: %2").arg(path, file.errorString());
     const QByteArray data = file.readAll();
@@ -577,7 +581,7 @@ QString loadDocumentFile(const QString &path, DocumentState &state) {
         if (error.isEmpty()) break;
     }
     if (!error.isEmpty()) return error;
-    if (!cache.isEmpty()) applyBodyCache(cache, payload, loaded);
+    if (!cache.isEmpty()) applyBodyCache(cache, payload, loaded, previewCache);
     state = std::move(loaded);
     return {};
 }

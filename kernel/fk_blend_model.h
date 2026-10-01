@@ -90,13 +90,16 @@ struct BlendModel {
     // Sposta l'estremo `vertex` dell'edge nel punto `point` (nuovo vertice) accorciandone il tratto.
     // Con `extend` un edge rettilineo si puo' anche allungare (un raccordo che
     // finisce in un angolo concavo contro un piano normale al bordo).
-    void moveEnd(int edge, int vertex, int point, bool extend = false) {
+    // endWindow ammette anche un prolungamento locale di un arco, gia'
+    // delimitato dal chiamante sul solo estremo interessato.
+    void moveEnd(int edge, int vertex, int point, bool extend = false, const Interval *endWindow = nullptr) {
         Body::BuildEdge &e = edges[std::size_t(edge)];
         Interval window = e.range;
         if (extend && e.curve->type() == CurveType::Line) {
             const double reach = 2.0 * (e.range.length() + distance(points[std::size_t(point)], e.curve->point(e.range.lo)));
             window = {e.range.lo - reach, e.range.hi + reach};
         }
+        if (endWindow) window = *endWindow;
         const double t = projectPoint(*e.curve, points[std::size_t(point)], window).parameter;
         if (extend && (t <= e.range.lo || t >= e.range.hi)) {
             // Allungamento: l'estremo spostato deve restare dalla sua parte.

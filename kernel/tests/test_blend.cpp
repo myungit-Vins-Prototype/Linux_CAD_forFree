@@ -1159,3 +1159,23 @@ FK_TEST(BlendConcaveCornerRoundedPocket) {
             FK_CHECK_NEAR(ours, reference, 3e-6);
         }
 }
+
+FK_TEST(BlendSurfaceEndsOnConcaveCircularWall) {
+    // Bordo rettilineo che termina su una parete cilindrica concava:
+    // il contatto sul coperchio deve prolungare l'arco, non fermarsi
+    // sul vecchio vertice (scanalatura di 1.prt, Raccordo 23).
+    const std::vector<ProfileSegment> profile{
+        lineSegment(Vec2(-5, -5), Vec2(5, -5)),
+        lineSegment(Vec2(5, -5), Vec2(5, 0)),
+        lineSegment(Vec2(5, 0), Vec2(1, 0)),
+        arcSegment(Vec2(0, -1), std::sqrt(2.0), kPi / 4.0, 3.0 * kPi / 4.0),
+        lineSegment(Vec2(-1, 0), Vec2(-5, 0)),
+        lineSegment(Vec2(-5, 0), Vec2(-5, -5))};
+    const Operand part = extrusion(profile, 4.0);
+    for (const Vec3 &point : {Vec3(-3, 0, 4), Vec3(3, 0, 4)})
+        for (double radius : {0.1, 0.5}) {
+            const double expected = occtBlended(part.shape, {point}, radius, false);
+            FK_CHECK(expected > 0.0);
+            surfaceBlended(part.body, {point}, radius, false, expected);
+        }
+}

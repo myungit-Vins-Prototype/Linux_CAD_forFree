@@ -1278,7 +1278,7 @@ Body blendSurfaceChains(const Body &input, const std::vector<EdgeId> &selected, 
         // Il contatto (riga 0 su A, 2 su B) attraversa lo spigolo `boundary` della faccia `face`:
         // il parametro, da `inside` (contatto dentro la faccia) nel verso `direction` dell'edge.
         const auto crossing = [&](Piece &piece, int row, EdgeId boundary, FaceId face, double inside, double direction,
-                                  bool extendBoundary = false) {
+                                  bool extendBoundary = false, const Interval *endWindow = nullptr) {
             const Edge &g = body.edge(boundary);
             const FinId gFin = body.finFace(g.forward) == face ? g.forward : g.backward;
             const bool gSense = body.fin(gFin).sense;
@@ -1290,6 +1290,7 @@ Body blendSurfaceChains(const Body &input, const std::vector<EdgeId> &selected, 
                     const double margin = 50.0 * size / norm(g.curve->derivative(0.5 * (g.range.lo + g.range.hi)));
                     window = {g.range.lo - margin, g.range.hi + margin};
                 }
+                if (endWindow) window = *endWindow;
                 const CurveProjection q = projectPoint(*g.curve, p, window);
                 Vec3 tg = normalized(g.curve->derivative(q.parameter));
                 if (!gSense) tg = -tg;
@@ -1531,6 +1532,7 @@ Body blendSurfaceChains(const Body &input, const std::vector<EdgeId> &selected, 
             bool atStart = true;
             VertexId vertex;
             EdgeId onA, onB;
+            Interval windowA, windowB;
             FaceId face;
             bool normal = false;  // E piana e normale allo spigolo: la sezione nel vertice
             double tA = 0.0, tB = 0.0;
@@ -1552,6 +1554,26 @@ Body blendSurfaceChains(const Body &input, const std::vector<EdgeId> &selected, 
                 end.onB = body.fin(onB).edge;
                 end.face = body.finFace(body.otherFin(onA));
                 if (body.finFace(body.otherFin(onB)) != end.face) throw std::domain_error("blendEdges: estremo della catena non gestito");
+                // Un raccordo convesso puo' terminare contro una parete
+                // concava: il contatto prolunga l'arco del bordo terminale.
+                // Cerca solo oltre il vertice interessato, senza attraversare
+                // l'altro estremo o fare un giro della curva periodica.
+                const auto endWindow = [&](EdgeId id) {
+                    const Edge &edge = body.edge(id);
+                    Interval window = edge.range;
+                    const bool circle = edge.curve->type() == CurveType::Circle;
+                    if (circle || (!convex && edge.curve->type() == CurveType::Line)) {
+                        const bool start = body.edgeStart(id) == end.vertex;
+                        const double t = start ? edge.range.lo : edge.range.hi;
+                        double margin = (circle ? 2.0 : 50.0) * size / norm(edge.curve->derivative(t));
+                        if (circle) margin = std::min(margin, 0.45 * std::max(0.0, kTwoPi - edge.range.length()));
+                        if (start) window.lo -= margin;
+                        else window.hi += margin;
+                    }
+                    return window;
+                };
+                end.windowA = endWindow(end.onA);
+                end.windowB = endWindow(end.onB);
                 const Face &E = body.face(end.face);
                 const Vec3 tangent = finTangent(body, cf.fin, !atStart);
                 end.normal = E.surface->type() == SurfaceType::Plane
@@ -1564,8 +1586,8 @@ Body blendSurfaceChains(const Body &input, const std::vector<EdgeId> &selected, 
                     // Il raccordo prosegue fino a uscire da E: dove i contatti attraversano gli spigoli di E.
                     const double dir = (cf.end > cf.start ? 1.0 : -1.0) * (atStart ? -1.0 : 1.0);
                     const double inside = 0.5 * (cf.start + cf.end);
-                    end.tA = crossing(piece, 0, end.onA, cf.a, inside, dir, !convex);
-                    end.tB = crossing(piece, 2, end.onB, piece.b, inside, dir, !convex);
+                    end.tA = crossing(piece, 0, end.onA, cf.a, inside, dir, !convex, &end.windowA);
+                    end.tB = crossing(piece, 2, end.onB, piece.b, inside, dir, !convex, &end.windowB);
                     const double speed = norm(body.edge(cf.edge).curve->derivative(vertexParameter)), margin = 0.25 * size / speed;
                     if (dir > 0) piece.fitHi = std::max(piece.fitHi, std::max({end.tA, end.tB, vertexParameter}) + margin);
                     else piece.fitLo = std::min(piece.fitLo, std::min({end.tA, end.tB, vertexParameter}) - margin);
@@ -1672,14 +1694,14 @@ Body blendSurfaceChains(const Body &input, const std::vector<EdgeId> &selected, 
         for (EndData &end : ends) {
             if (end.normal) continue;
             Piece &piece = pieces[std::size_t(end.piece)];
-            const auto refine = [&](double v, EdgeId boundary, double &parameter) {
+            const auto refine = [&](double v, EdgeId boundary, const Interval &window, double &parameter) {
                 const Edge &edge = body.edge(boundary);
                 double onEdge = body.edgeStart(boundary) == end.vertex ? edge.range.lo : edge.range.hi;
                 double onBlend = parameter;
-                if (surfaceCurveMeet(*piece.surface, v, *edge.curve, edge.range, onBlend, onEdge, scale)) parameter = onBlend;
+                if (surfaceCurveMeet(*piece.surface, v, *edge.curve, window, onBlend, onEdge, scale)) parameter = onBlend;
             };
-            refine(0.0, end.onA, end.tA);
-            refine(1.0, end.onB, end.tB);
+            refine(0.0, end.onA, end.windowA, end.tA);
+            refine(1.0, end.onB, end.windowB, end.tB);
         }
         {
             // Due catene non devono toccarsi (un vertice con tre spigoli scelti: pezza d'angolo, non gestita).
@@ -1842,17 +1864,8 @@ Body blendSurfaceChains(const Body &input, const std::vector<EdgeId> &selected, 
                 sectionJunction(junction, piece, end.atStart ? piece.from : piece.to, false, EdgeId());
             } else {
                 const Section &sa = piece.blend->section(end.tA), &sb = piece.blend->section(end.tB);
-                const auto endPoint = [&](EdgeId edgeId, const Vec3 &point) {
-                    const Edge &edge = body.edge(edgeId);
-                    Interval window = edge.range;
-                    if (!convex && edge.curve->type() == CurveType::Line) {
-                        const double margin = 50.0 * size / norm(edge.curve->derivative(0.5 * (edge.range.lo + edge.range.hi)));
-                        window = {edge.range.lo - margin, edge.range.hi + margin};
-                    }
-                    return projectPoint(*edge.curve, point, window).point;
-                };
-                const Vec3 ra = endPoint(end.onA, sa.row[0].p);
-                const Vec3 rb = endPoint(end.onB, sb.row[2].p);
+                const Vec3 ra = projectPoint(*body.edge(end.onA).curve, sa.row[0].p, end.windowA).point;
+                const Vec3 rb = projectPoint(*body.edge(end.onB).curve, sb.row[2].p, end.windowB).point;
                 junction.pointA = model.addPoint(ra);
                 junction.pointB = model.addPoint(rb);
                 setEnd(aLo, aHi, end.piece, !end.atStart, end.tA);
@@ -1865,12 +1878,12 @@ Body blendSurfaceChains(const Body &input, const std::vector<EdgeId> &selected, 
                                                    : model.addEdge(junction.pointB, junction.pointA, kappa.curve, kappa.range, kappa.gap > 1e-7 ? 2.0 * kappa.gap : 0.0);
             }
             const int vertex = model.vertexIndex.at(end.vertex.index);
-            try { model.moveEnd(model.edgeIndex.at(end.onA.index), vertex, junction.pointA, !convex); }
+            try { model.moveEnd(model.edgeIndex.at(end.onA.index), vertex, junction.pointA, true, &end.windowA); }
             catch (const std::domain_error &failure) {
                 throw std::domain_error(std::string(failure.what()) + " (estremo A, bordo " + std::to_string(end.onA.index)
                                         + ", t=" + std::to_string(end.tA) + ")");
             }
-            try { model.moveEnd(model.edgeIndex.at(end.onB.index), vertex, junction.pointB, !convex); }
+            try { model.moveEnd(model.edgeIndex.at(end.onB.index), vertex, junction.pointB, true, &end.windowB); }
             catch (const std::domain_error &failure) {
                 throw std::domain_error(std::string(failure.what()) + " (estremo B, bordo " + std::to_string(end.onB.index)
                                         + ", t=" + std::to_string(end.tB) + ")");
