@@ -13,6 +13,7 @@
 
 #include "cad_constraints.h"
 #include "cad_model_history.h"
+#include "cad_topology_ref.h"
 #include "fk_body_io.h"
 #include "forgecad_source_hash.h"
 
@@ -37,7 +38,8 @@ constexpr char kMagic[4] = {'F', 'C', 'A', 'D'};
 // 17 catene parziali di schizzo per sweep e guide del loft.
 // 18 grado di continuita' imposto dalle guide del loft.
 // 19 identita' persistenti delle feature e corpi logici della storyboard.
-constexpr quint16 kVersion = 19;
+// 20 riferimenti persistenti a feature e sotto-entita' topologiche.
+constexpr quint16 kVersion = 20;
 constexpr quint8 kZlib = 1;
 
 void write(QDataStream &out, const CurveObject &curve) {
@@ -208,10 +210,10 @@ void writeRefs(QDataStream &out, const QVector<GeometryRef> &refs) {
     out << quint32(refs.size());
     for (const GeometryRef &r : refs)
         out << qint32(r.kind) << qint32(r.index) << qint32(r.element.kind) << qint32(r.element.element) << qint32(r.element.point) << r.point.x << r.point.y
-            << r.point.z;
+            << r.point.z << r.featureId << qint32(r.point.subshape) << qint32(r.point.geometry) << qint32(r.point.context);
 }
 
-bool readRefs(QDataStream &in, QVector<GeometryRef> &refs) {
+bool readRefs(QDataStream &in, QVector<GeometryRef> &refs, quint16 version) {
     quint32 count = 0;
     if (!readCount(in, count)) return false;
     refs.resize(int(count));
@@ -221,6 +223,7 @@ bool readRefs(QDataStream &in, QVector<GeometryRef> &refs) {
         r.kind = kind;
         r.index = index;
         r.element = {elementKind, element, point};
+        if (version >= 20) in >> r.featureId >> r.point.subshape >> r.point.geometry >> r.point.context;
     }
     return in.status() == QDataStream::Ok;
 }
@@ -277,6 +280,10 @@ void write(QDataStream &out, const ExtrusionObject &body) {
     out << qint32(body.loftGuideContinuity);
     // Formato 19: identita' persistente nella storyboard.
     out << body.featureId << body.modelBodyId << body.suppressed;
+    // Formato 20: firme topologiche dei punti usati direttamente dalle feature.
+    for (const EdgePoint &e : body.blendEdges) out << qint32(e.subshape) << qint32(e.geometry) << qint32(e.context);
+    for (const EdgePoint *p : {&body.trimKeep, &body.scaleCenter, &body.helix.reference})
+        out << qint32(p->subshape) << qint32(p->geometry) << qint32(p->context);
 }
 
 // `extras` (solo formato 5): i file scritti durante lo sviluppo del formato 5
@@ -351,7 +358,7 @@ bool read(QDataStream &in, ExtrusionObject &body, quint16 version, int extras) {
         DatumParameters &d = body.datum;
         qint32 mode = 0;
         in >> mode;
-        if (!readRefs(in, d.refs)) return false;
+        if (!readRefs(in, d.refs, version)) return false;
         d.mode = mode;
         in >> d.distance >> d.angle >> d.flip >> d.onCurve >> d.size;
     }
@@ -359,7 +366,7 @@ bool read(QDataStream &in, ExtrusionObject &body, quint16 version, int extras) {
         PatternParameters &p = body.pattern;
         qint32 kind = 0, count = 0, count2 = 0;
         in >> kind;
-        if (!readRefs(in, p.refs)) return false;
+        if (!readRefs(in, p.refs, version)) return false;
         in >> count >> count2 >> p.spacing >> p.spacing2 >> p.angle >> p.spread >> p.flip >> p.flip2 >> p.keepOriginal >> p.featureOnly;
         p.kind = kind;
         p.count = count;
@@ -369,7 +376,7 @@ bool read(QDataStream &in, ExtrusionObject &body, quint16 version, int extras) {
         qint32 extent = 0, merge = 0;
         QVector<GeometryRef> refs;
         in >> extent;
-        if (!readRefs(in, refs) || refs.size() != 1) return false;
+        if (!readRefs(in, refs, version) || refs.size() != 1) return false;
         in >> merge >> body.mergeAuto >> body.mergeBodies >> body.booleanTools;
         body.extent = extent;
         body.extentRef = refs.first();
@@ -379,7 +386,7 @@ bool read(QDataStream &in, ExtrusionObject &body, quint16 version, int extras) {
         TransformParameters &m = body.move;
         for (double &v : m.translation) in >> v;
         QVector<GeometryRef> refs;
-        if (!readRefs(in, refs) || refs.size() != 1) return false;
+        if (!readRefs(in, refs, version) || refs.size() != 1) return false;
         m.axis = refs.first();
         in >> m.angle >> m.copy;
     }
@@ -421,6 +428,10 @@ bool read(QDataStream &in, ExtrusionObject &body, quint16 version, int extras) {
         body.loftGuideContinuity = 2;
     }
     if (version >= 19) in >> body.featureId >> body.modelBodyId >> body.suppressed;
+    if (version >= 20) {
+        for (EdgePoint &e : body.blendEdges) in >> e.subshape >> e.geometry >> e.context;
+        for (EdgePoint *p : {&body.trimKeep, &body.scaleCenter, &body.helix.reference}) in >> p->subshape >> p->geometry >> p->context;
+    }
     if (int(body.feature) < 0 || int(body.feature) > int(BodyFeature::Transform)) return false;
     return in.status() == QDataStream::Ok;
 }
@@ -496,6 +507,7 @@ void applyBodyCache(const QByteArray &compressed, const QByteArray &payload, Doc
 QString saveDocumentFile(const QString &path, const DocumentState &state, bool bodies) {
     DocumentState normalized = state;
     normalizeModelHistory(normalized);
+    upgradeTopologyReferences(normalized.extrusions);
     QByteArray payload;
     {
         QBuffer buffer(&payload);

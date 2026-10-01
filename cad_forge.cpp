@@ -11,6 +11,7 @@
 
 #include "cad_curve_solver.h"
 #include "cad_kernel.h"
+#include "cad_topology_ref.h"
 #include "fk_blend.h"
 #include "fk_boolean.h"
 #include "fk_bspline.h"
@@ -194,7 +195,7 @@ ForgeBody forgeBlend(const ForgeBody &base, const QVector<EdgePoint> &points, do
         const double reach = 1e-3 * std::max(1.0, box.diagonal());
         std::vector<EdgeId> edges;
         for (const EdgePoint &point : points) {
-            const EdgeId e = nearestEdge(*base, Vec3(point.x, point.y, point.z), reach);
+            const EdgeId e = resolveEdgeReference(*base, point, reach);
             if (!e.valid()) {
                 setError(error, QStringLiteral("Uno degli spigoli scelti non esiste piu' nel corpo."));
                 return nullptr;
@@ -332,7 +333,7 @@ ForgeBody forgeExtendSheet(const ForgeBody &sheet, const QVector<EdgePoint> &poi
         const double reach = 1e-3 * std::max(1.0, box.diagonal());
         std::vector<EdgeId> edges;
         for (const EdgePoint &point : points) {
-            const EdgeId e = nearestEdge(*sheet, Vec3(point.x, point.y, point.z), reach);
+            const EdgeId e = resolveEdgeReference(*sheet, point, reach);
             if (!e.valid()) {
                 setError(error, QStringLiteral("Uno dei bordi scelti non esiste piu' nella superficie."));
                 return nullptr;
@@ -381,7 +382,6 @@ ForgeBody forgeImported(const QByteArray &data, QString *error) {
 }
 
 bool forgeHelixBase(const Body &body, int source, const EdgePoint &point, HelixBase &base, QString *error) {
-    const Vec3 p(point.x, point.y, point.z);
     base = HelixBase();
     try {
         // Estensione lungo l'asse (dall'origine `from`) dei vertici e dei campioni degli edge della faccia.
@@ -410,13 +410,7 @@ bool forgeHelixBase(const Body &body, int source, const EdgePoint &point, HelixB
             return false;
         };
         if (source == 1) {
-            EdgeId best;
-            double closest = 1e300;
-            for (EdgeId e : body.edges()) {
-                const Edge &edge = body.edge(e);
-                const double d = projectPoint(*edge.curve, p, edge.range).distance;
-                if (d < closest) closest = d, best = e;
-            }
+            const EdgeId best = resolveEdgeReference(body, point, 1e300);
             if (!best.valid()) throw std::domain_error("nessuno spigolo");
             const Curve<3> *curve = body.edge(best).curve.get();
             while (curve->type() == CurveType::Trimmed) curve = static_cast<const TrimmedCurve<3> *>(curve)->basis().get();
@@ -445,14 +439,7 @@ bool forgeHelixBase(const Body &body, int source, const EdgePoint &point, HelixB
             Box box;
             for (VertexId v : body.vertices()) box.add(body.vertex(v).point);
             const double tolerance = 1e-6 * std::max(1.0, box.diagonal());
-            FaceId best;
-            double closest = 1e300;
-            for (FaceId f : body.faces()) {
-                const SurfaceProjection projection = projectPoint(*body.face(f).surface, p);
-                const double d = distance(projection.point, p);
-                if (d < closest && d <= 1e3 * tolerance && classifyPointOnFace(body, f, projection.point, tolerance) != PointLocation::Outside)
-                    closest = d, best = f;
-            }
+            const FaceId best = resolveFaceReference(body, point, 1e3 * tolerance);
             if (!best.valid()) throw std::domain_error("il punto non sta su una faccia del corpo");
             const Surface &surface = *body.face(best).surface;
             Vec3 origin, axis;
@@ -622,6 +609,7 @@ void forgeTessellate(const Body &body, int quality, BodyDisplay &display) {
         if (polyline.size() >= 2) {
             edgeDisplay[mesh.edgeIds[e].index] = int(display.edges.size());
             display.edges.append(polyline);
+            display.edgeIds.append(mesh.edgeIds[e].index);
         }
     }
     for (FaceId f : body.faces()) {
@@ -769,7 +757,7 @@ bool forgePickFace(const Body &body, const QVector3D &origin, const QVector3D &d
                 const Edge &edge = body.edge(body.fin(fin).edge);
                 if (!edge.curve) continue;
                 const Vec3 p = edge.curve->point(0.5 * (edge.range.lo + edge.range.hi));
-                hit.edges.append({p.x(), p.y(), p.z()});
+                hit.edges.append(edgeReference(body, body.fin(fin).edge, p));
             }
         return true;
     } catch (const std::exception &) {

@@ -65,6 +65,46 @@ public:
         storyboard.undo();
         require(storyboard.extrusions().size() == 3 && storyboard.extrusions().at(2).visible,
                 "undo dell'eliminazione nella storyboard");
+        // Il proprietario viene ritrovato dall'ID della feature e la
+        // sotto-entita' dal suo ID B-rep, anche se indice e punto-cache sono
+        // volutamente fuorvianti.
+        const int referencedFeature = 1;
+        const ForgeBody referencedBody = storyboard.extrusions().at(referencedFeature).forgeBody;
+        require(referencedBody && referencedBody->edges().size() > 1, "corpo per i riferimenti topologici");
+        const Kernel::EdgeId persistentEdge = referencedBody->edges().front();
+        const Kernel::Edge &edgeGeometry = referencedBody->edge(persistentEdge);
+        const Kernel::Vec3 edgePoint = edgeGeometry.curve->point(0.5 * (edgeGeometry.range.lo + edgeGeometry.range.hi));
+        EdgePoint persistentPoint = edgeReference(*referencedBody, persistentEdge, edgePoint);
+        const Kernel::Edge &otherGeometry = referencedBody->edge(referencedBody->edges().back());
+        const Kernel::Vec3 wrongPoint = otherGeometry.curve->point(0.5 * (otherGeometry.range.lo + otherGeometry.range.hi));
+        persistentPoint.x = wrongPoint.x(); persistentPoint.y = wrongPoint.y(); persistentPoint.z = wrongPoint.z();
+        require(resolveEdgeReference(*referencedBody, persistentPoint, 1e-12) == persistentEdge,
+                "ID topologico preferito al punto piu' vicino");
+        EdgePoint renumberedPoint = edgeReference(*referencedBody, persistentEdge, edgePoint);
+        renumberedPoint.subshape = std::numeric_limits<int>::max();
+        require(resolveEdgeReference(*referencedBody, renumberedPoint, 1e-12) == persistentEdge,
+                "firma geometrico-topologica recupera uno spigolo rinumerato");
+        const Kernel::FaceId persistentFace = referencedBody->faces().front();
+        const EdgePoint facePoint = faceReference(*referencedBody, persistentFace, edgePoint);
+        require(resolveFaceReference(*referencedBody, facePoint, 1e-12) == persistentFace,
+                "riferimento persistente a una faccia");
+        GeometryRef persistentRef;
+        persistentRef.kind = 4;
+        persistentRef.index = 0; // indice volutamente errato
+        persistentRef.featureId = storyboard.extrusions().at(referencedFeature).featureId;
+        persistentRef.point = persistentPoint;
+        ResolvedRef resolvedPersistent;
+        require(resolveGeometryRef(persistentRef, storyboard.extrusions().size(), {}, storyboard.extrusions(), resolvedPersistent, nullptr)
+                    && resolvedPersistent.hasCurve,
+                "proprietario del riferimento ritrovato dall'ID della feature");
+        GeometryRef deletedOwner = persistentRef;
+        deletedOwner.featureId = std::numeric_limits<quint64>::max();
+        require(!resolveGeometryRef(deletedOwner, storyboard.extrusions().size(), {}, storyboard.extrusions(), resolvedPersistent, nullptr),
+                "un proprietario eliminato non si lega per errore all'indice riutilizzato");
+        GeometryRef legacyRef = persistentRef;
+        legacyRef.point = {edgePoint.x(), edgePoint.y(), edgePoint.z()};
+        storyboard.extrusions_[referencedFeature].extentRef = legacyRef;
+        storyboard.extrusions_[referencedFeature].blendEdges = {persistentPoint};
         QTemporaryDir storyboardDir;
         const QString storyboardPath = storyboardDir.filePath(QStringLiteral("storyboard.prt"));
         require(storyboardDir.isValid() && saveDocumentFile(storyboardPath, storyboard.currentDocument(), false).isEmpty(),
@@ -73,6 +113,10 @@ public:
         require(loadDocumentFile(storyboardPath, storyboardLoaded).isEmpty() && storyboardLoaded.modelBodies.size() == 1
                     && storyboardLoaded.extrusions.at(1).featureId == lastFeature,
                 "persistenza e lettura della storyboard");
+        require(storyboardLoaded.extrusions.at(referencedFeature).extentRef.featureId == persistentRef.featureId
+                    && storyboardLoaded.extrusions.at(referencedFeature).extentRef.point.subshape == persistentEdge.index
+                    && storyboardLoaded.extrusions.at(referencedFeature).blendEdges.first().context != -1,
+                "migrazione e persistenza dei riferimenti topologici nel formato 20");
         CadViewport booleanStory;
         PrimitiveParameters firstBox, secondBox;
         firstBox.size[0] = firstBox.size[1] = firstBox.size[2] = 2.0;
@@ -91,6 +135,19 @@ public:
         require(booleanStory.setFeatureSuppressed(2, false).isEmpty() && !booleanStory.extrusions().at(0).visible
                     && !booleanStory.extrusions().at(1).visible && booleanStory.extrusions().at(2).visible,
                 "riattivare la booleana nasconde di nuovo gli operandi");
+        CadViewport interleavedStory;
+        require(interleavedStory.createPrimitive(firstBox, QStringLiteral("Corpo A")).isEmpty()
+                    && interleavedStory.createPrimitive(secondBox, QStringLiteral("Corpo B")).isEmpty()
+                    && interleavedStory.createScale(0, 1.1, 0, {}, QStringLiteral("A1")).isEmpty()
+                    && interleavedStory.createScale(1, 1.1, 0, {}, QStringLiteral("B1")).isEmpty()
+                    && interleavedStory.createScale(2, 1.1, 0, {}, QStringLiteral("A2")).isEmpty(),
+                "storyboard con feature di corpi intercalati");
+        const quint64 a2Id = interleavedStory.extrusions().at(4).featureId;
+        const quint64 b1Id = interleavedStory.extrusions().at(3).featureId;
+        require(interleavedStory.moveFeatureTo(4, 2).isEmpty()
+                    && interleavedStory.extrusions().at(2).featureId == a2Id
+                    && interleavedStory.extrusions().at(4).featureId == b1Id,
+                "drag logico tra feature con altri corpi intercalati");
         const auto renderedAlpha = [](QWidget &widget) {
             widget.resize(500, 300);
             QImage image(widget.size(), QImage::Format_ARGB32_Premultiplied);

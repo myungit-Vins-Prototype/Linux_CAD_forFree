@@ -21,22 +21,34 @@ B-rep intermedio, ma possiede un `featureId` persistente e un `modelBodyId`.
   faccia o a un bordo scomparso produce un errore visibile nella storyboard.
 - Il riordino dal menu o con trascinamento rimappa tutti gli indici, ricostruisce
   le basi implicite e viene accettato solo se ogni dipendenza resta precedente
-  alla feature che la usa. La feature iniziale non puo' essere spostata.
+  alla feature che la usa. Nel trascinamento anche schizzi e righe informative
+  vengono ricondotti alla feature piu' vicina dello stesso corpo. La feature
+  iniziale non puo' essere spostata.
+- La geometria di riferimento precede i corpi nell'albero; datum ed eliche non
+  partecipano al riordino delle feature dei corpi.
 
 ## File e compatibilita'
 
-Il formato `.prt` 19 salva gli identificatori, la soppressione e i corpi logici.
-I documenti fino al formato 18 vengono migrati automaticamente seguendo gli
+Il formato `.prt` 20 salva gli identificatori, la soppressione, i corpi logici
+e i riferimenti persistenti alle sotto-entita' B-rep. Il formato 19 introduceva
+la storyboard. I documenti fino al formato 19 vengono migrati automaticamente seguendo gli
 operandi gia' presenti: raccordi, smussi, scale, trasformazioni, booleane e
 fusioni ereditano il corpo della loro base. La migrazione non modifica il file
 finche' l'utente non lo salva.
 
+I riferimenti a vertici, spigoli e facce conservano l'ID persistente della
+feature proprietaria, l'ID della sotto-entita', il tipo geometrico e una firma
+del suo contesto topologico. L'ID e' il percorso normale; se una ricostruzione
+rinumera il B-rep, tipo, facce adiacenti o numero dei bordi e punto selezionato
+permettono di ritrovare l'entita'. I file precedenti mantengono il punto come
+fallback e acquistano gli ID al salvataggio successivo.
+
 ## Limiti attuali
 
-- I riferimenti geometrici a facce e bordi usano ancora il riconoscimento
-  geometrico esistente. Dopo un riordino valido dal punto di vista del grafo,
-  una faccia puo' non esistere piu': la feature rimane in errore e deve essere
-  ridefinita.
+- Se una modifica elimina davvero la faccia o il bordo e non esiste una
+  sotto-entita' con la stessa firma topologica, la feature rimane in errore e
+  deve essere ridefinita. Il riferimento non viene assegnato a una feature
+  diversa soltanto perche' ne ha riutilizzato l'indice.
 - Lo spostamento tra due corpi diversi non e' implicito. Richiedera' un comando
   separato che scelga il nuovo corpo bersaglio e rimappi i riferimenti.
 - La cronologia Undo/Redo continua a usare istantanee complete del documento;

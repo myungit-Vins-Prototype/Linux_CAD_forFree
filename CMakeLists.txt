@@ -59,6 +59,8 @@ add_executable(forgecad
     cad_history.cpp
     cad_model_history.h
     cad_model_history.cpp
+    cad_topology_ref.h
+    cad_topology_ref.cpp
     cad_kernel.h
     cad_kernel.cpp
     cad_forge.h

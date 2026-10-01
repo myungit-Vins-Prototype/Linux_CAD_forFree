@@ -76,6 +76,21 @@ void normalizeModelHistory(QVector<ExtrusionObject> &features, QVector<ModelBody
         bodyIds.insert(feature.modelBodyId);
     }
 
+    // Migrazione dei riferimenti nati prima della storyboard: l'indice resta
+    // la cache usata dal grafo, l'ID impedisce che un riordino li leghi a una
+    // feature diversa.
+    const auto bindOwner = [&](GeometryRef &ref) {
+        const bool bodyRef = ref.kind == 3 || ref.kind == 4 || ref.kind == 5 || ref.kind == 8 || ref.kind == 9 || ref.kind == 10;
+        if (bodyRef && !ref.featureId && ref.index >= 0 && ref.index < features.size())
+            ref.featureId = features.at(ref.index).featureId;
+    };
+    for (ExtrusionObject &feature : features) {
+        for (GeometryRef &ref : feature.datum.refs) bindOwner(ref);
+        for (GeometryRef &ref : feature.pattern.refs) bindOwner(ref);
+        bindOwner(feature.extentRef);
+        bindOwner(feature.move.axis);
+    }
+
     QHash<quint64, ModelBody> existing;
     for (const ModelBody &body : modelBodies)
         if (body.id && bodyIds.contains(body.id)) existing.insert(body.id, body);

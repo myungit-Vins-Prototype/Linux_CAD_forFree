@@ -20,6 +20,7 @@
 #include "fk_topology.h"
 #include "cad_history.h"
 #include "cad_model_history.h"
+#include "cad_topology_ref.h"
 #include "cad_icons.h"
 #include "cad_kernel.h"
 #include "cad_sketch_edit.h"
@@ -41,6 +42,8 @@
 #include <QClipboard>
 #include <QDoubleSpinBox>
 #include <QDropEvent>
+#include <QDragEnterEvent>
+#include <QDragMoveEvent>
 #include <QMap>
 #include <QRegularExpression>
 #include <QScrollArea>
@@ -598,7 +601,13 @@ public:
         order.reserve(extrusions_.size());
         for (int old = 0; old < extrusions_.size(); ++old)
             if (old != index) order.append(old);
-        order.insert(target, index);
+        // `target` e' una feature, non una posizione nel vettore: gli stadi
+        // di corpi diversi possono essere intercalati. Salendo si inserisce
+        // prima del bersaglio, scendendo dopo, come indica il drag nell'albero.
+        int insertion = order.indexOf(target);
+        if (insertion < 0) return QStringLiteral("La feature di destinazione non esiste piu'.");
+        if (index < target) ++insertion;
+        order.insert(insertion, index);
         QVector<int> map(extrusions_.size(), -1);
         QVector<ExtrusionObject> reordered;
         reordered.reserve(extrusions_.size());
@@ -3216,7 +3225,12 @@ protected:
                 if (edge >= 0) {
                     const QVector<QVector3D> &polyline = extrusions_.at(edgeBody).display.edges.at(edge);
                     const QVector3D p = polyline.size() >= 3 ? polyline.at(polyline.size() / 2) : 0.5f * (polyline.first() + polyline.last());
-                    body = edgeBody, source = 1, point = {p.x(), p.y(), p.z()};
+                    body = edgeBody, source = 1;
+                    const int edgeId = extrusions_.at(edgeBody).display.edgeIds.value(edge, -1);
+                    point = edgeId >= 0 && extrusions_.at(edgeBody).forgeBody
+                        ? ForgeCad::edgeReference(*extrusions_.at(edgeBody).forgeBody, ForgeCad::Kernel::EdgeId(edgeId),
+                                                  ForgeCad::Kernel::Vec3(p.x(), p.y(), p.z()))
+                        : EdgePoint{p.x(), p.y(), p.z()};
                 } else if (pickBodyFace(faceBody, lastMousePosition_, face)) {
                     QVector3D origin, direction;
                     viewRay(lastMousePosition_, origin, direction);
@@ -3226,6 +3240,9 @@ protected:
                     const double length = double(direction.length());
                     point = {double(origin.x()) + double(direction.x()) / length * face.distance, double(origin.y()) + double(direction.y()) / length * face.distance,
                              double(origin.z()) + double(direction.z()) / length * face.distance};
+                    if (face.face >= 0 && extrusions_.at(faceBody).forgeBody)
+                        point = ForgeCad::faceReference(*extrusions_.at(faceBody).forgeBody, ForgeCad::Kernel::FaceId(face.face),
+                                                        ForgeCad::Kernel::Vec3(point.x, point.y, point.z));
                 }
                 if (body < 0) return;
                 cancelEdgePick();
@@ -7620,9 +7637,15 @@ private:
                 GeometryRef r;
                 r.kind = 3;
                 r.index = b;
+                r.featureId = extrusions_.at(b).featureId;
                 for (const QVector<QVector3D> &polyline : extrusions_.at(b).display.edges)
                     for (const QVector3D &p : {polyline.first(), polyline.last()}) {
                         r.point = {p.x(), p.y(), p.z()};
+                        if (extrusions_.at(b).forgeBody) {
+                            const ForgeCad::Kernel::VertexId vertex = ForgeCad::resolveVertexReference(
+                                *extrusions_.at(b).forgeBody, r.point, std::numeric_limits<double>::max());
+                            if (vertex.valid()) r.point = ForgeCad::vertexReference(*extrusions_.at(b).forgeBody, vertex);
+                        }
                         consider(p, r);
                     }
             }
@@ -7633,6 +7656,7 @@ private:
                     GeometryRef r;
                     r.kind = 10;
                     r.index = b;
+                    r.featureId = extrusions_.at(b).featureId;
                     r.element = {-1, -1, end};
                     r.point = {point.x(), point.y(), point.z()};
                     consider(point, r);
@@ -7651,7 +7675,9 @@ private:
                     if (withPoint) {
                         // Un campione della polilinea (sta sulla curva esatta): il piu' vicino al puntatore.
                         const QVector3D p = pointDistance(a, cursor) <= pointDistance(b, cursor) ? polyline.at(k - 1) : polyline.at(k);
-                        candidate.point = {p.x(), p.y(), p.z()};
+                        candidate.point.x = p.x();
+                        candidate.point.y = p.y();
+                        candidate.point.z = p.z();
                     }
                     ref = candidate;
                     found = true;
@@ -7663,9 +7689,21 @@ private:
                 const ExtrusionObject &body = extrusions_.at(b);
                 if (referenceBodyEligible(b)) {
                     r.kind = 4;
-                    for (const QVector<QVector3D> &polyline : body.display.edges) considerPolyline(polyline, r, true);
+                    r.featureId = body.featureId;
+                    for (int edge = 0; edge < body.display.edges.size(); ++edge) {
+                        GeometryRef candidate = r;
+                        const QVector<QVector3D> &polyline = body.display.edges.at(edge);
+                        const int edgeId = body.display.edgeIds.value(edge, -1);
+                        if (edgeId >= 0 && body.forgeBody && !polyline.isEmpty()) {
+                            const QVector3D sample = polyline.at(polyline.size() / 2);
+                            candidate.point = ForgeCad::edgeReference(*body.forgeBody, ForgeCad::Kernel::EdgeId(edgeId),
+                                                                       ForgeCad::Kernel::Vec3(sample.x(), sample.y(), sample.z()));
+                        }
+                        considerPolyline(polyline, candidate, true);
+                    }
                 } else if (b < owner && body.visible && isCurveBody(body) && body.curve) {
                     r.kind = 9;
+                    r.featureId = body.featureId;
                     for (const QVector<QVector3D> &polyline : body.display.edges) considerPolyline(polyline, r, false);
                 }
             }
@@ -7713,8 +7751,12 @@ private:
                 ref = GeometryRef();
                 ref.kind = 5;
                 ref.index = b;
+                ref.featureId = extrusions_.at(b).featureId;
                 ref.point = {double(origin.x()) + double(direction.x()) / length * hit.distance, double(origin.y()) + double(direction.y()) / length * hit.distance,
                              double(origin.z()) + double(direction.z()) / length * hit.distance};
+                if (hit.face >= 0 && extrusions_.at(b).forgeBody)
+                    ref.point = ForgeCad::faceReference(*extrusions_.at(b).forgeBody, ForgeCad::Kernel::FaceId(hit.face),
+                                                        ForgeCad::Kernel::Vec3(ref.point.x, ref.point.y, ref.point.z));
                 if (faceHit) *faceHit = hit;
                 if (faceBody) *faceBody = b;
                 found = true;
@@ -7726,6 +7768,7 @@ private:
                     ref = GeometryRef();
                     ref.kind = 8;
                     ref.index = datum;
+                    ref.featureId = extrusions_.at(datum).featureId;
                     if (faceBody) *faceBody = -1;
                     found = true;
                 }
@@ -8165,7 +8208,12 @@ private:
             if (index < 0 || index >= edges.size() || edges.at(index).size() < 2) continue;
             const QVector<QVector3D> &polyline = edges.at(index);
             const QVector3D p = polyline.size() >= 3 ? polyline.at(polyline.size() / 2) : 0.5f * (polyline.first() + polyline.last());
-            points.append({p.x(), p.y(), p.z()});
+            const int edgeId = extrusions_.at(edgePickBody_).display.edgeIds.value(index, -1);
+            if (edgeId >= 0 && extrusions_.at(edgePickBody_).forgeBody)
+                points.append(ForgeCad::edgeReference(*extrusions_.at(edgePickBody_).forgeBody, ForgeCad::Kernel::EdgeId(edgeId),
+                                                       ForgeCad::Kernel::Vec3(p.x(), p.y(), p.z())));
+            else
+                points.append({p.x(), p.y(), p.z()});
         }
         return points;
     }
@@ -8332,6 +8380,13 @@ private:
         if (hit.face >= 0 && hit.face < display.faceEdges.size()) return display.faceEdges.at(hit.face);
         const QVector<QVector<QVector3D>> &edges = display.edges;
         for (const EdgePoint &point : hit.edges) {
+            if (point.subshape >= 0) {
+                const int exact = display.edgeIds.indexOf(point.subshape);
+                if (exact >= 0) {
+                    if (!result.contains(exact)) result.append(exact);
+                    continue;
+                }
+            }
             const QVector3D p(float(point.x), float(point.y), float(point.z));
             int best = -1;
             float nearest = std::numeric_limits<float>::max();
@@ -8659,11 +8714,13 @@ private:
         const PrimitiveParameters &p = d.primitive;
         parts << QString::number(int(p.kind)) << QString::number(p.plane);
         for (int k = 0; k < 3; ++k) parts << n(p.origin[k]) << n(p.size[k]);
-        for (const EdgePoint &e : d.blendEdges) parts << n(e.x) << n(e.y) << n(e.z);
+        for (const EdgePoint &e : d.blendEdges)
+            parts << n(e.x) << n(e.y) << n(e.z) << QString::number(e.subshape) << QString::number(e.geometry) << QString::number(e.context);
         const HelixParameters &h = d.helix;
         parts << QString::number(h.spiral) << QString::number(h.mode) << n(h.pitch) << n(h.turns) << n(h.height) << n(h.taper) << n(h.startAngle)
               << QString::number(h.leftHanded) << QString::number(h.reverse) << QString::number(h.source) << QString::number(h.curve)
-              << n(h.reference.x) << n(h.reference.y) << n(h.reference.z) << QString::number(d.sweepPath) << QString::number(d.pathSketch)
+              << n(h.reference.x) << n(h.reference.y) << n(h.reference.z) << QString::number(h.reference.subshape)
+              << QString::number(h.reference.geometry) << QString::number(h.reference.context) << QString::number(d.sweepPath) << QString::number(d.pathSketch)
               << QString::number(d.sweepMode) << QString::number(d.loftRuled) << QStringLiteral("|");
         for (int segment : d.pathSegments) parts << QStringLiteral("ps%1").arg(segment);
         for (int curve : d.pathCurves) parts << QStringLiteral("pc%1").arg(curve);
@@ -8680,7 +8737,8 @@ private:
               << n(d.loftStartInfluence) << n(d.loftEndInfluence);
         const auto ref = [&](const GeometryRef &r) {
             parts << QString::number(r.kind) << QString::number(r.index) << QString::number(r.element.kind) << QString::number(r.element.element)
-                  << QString::number(r.element.point) << n(r.point.x) << n(r.point.y) << n(r.point.z);
+                  << QString::number(r.element.point) << n(r.point.x) << n(r.point.y) << n(r.point.z) << QString::number(r.featureId)
+                  << QString::number(r.point.subshape) << QString::number(r.point.geometry) << QString::number(r.point.context);
         };
         parts << QStringLiteral("D") << QString::number(d.datum.mode) << n(d.datum.distance) << n(d.datum.angle) << QString::number(d.datum.flip)
               << QString::number(d.datum.onCurve) << n(d.datum.size);
@@ -9437,16 +9495,36 @@ public:
         setDropIndicatorShown(true);
         setDragDropMode(QAbstractItemView::InternalMove);
         setDefaultDropAction(Qt::MoveAction);
+        setSelectionMode(QAbstractItemView::SingleSelection);
     }
     void setMoveFeatureCallback(std::function<QString(int, int)> callback) { moveFeature_ = std::move(callback); }
 
 protected:
+    void startDrag(Qt::DropActions actions) override {
+        draggedItem_ = currentItem();
+        if (!isMovableFeature(draggedItem_)) {
+            draggedItem_ = nullptr;
+            return;
+        }
+        QTreeWidget::startDrag(actions);
+        draggedItem_ = nullptr;
+    }
+
+    void dragEnterEvent(QDragEnterEvent *event) override {
+        if (isMovableFeature(draggedItem_)) event->acceptProposedAction();
+        else event->ignore();
+    }
+
+    void dragMoveEvent(QDragMoveEvent *event) override {
+        QTreeWidgetItem *target = targetFeature(event->position().toPoint());
+        if (target && target != draggedItem_) event->acceptProposedAction();
+        else event->ignore();
+    }
+
     void dropEvent(QDropEvent *event) override {
-        QTreeWidgetItem *source = currentItem();
-        QTreeWidgetItem *target = itemAt(event->position().toPoint());
-        if (!source || !target || source == target || source->data(0, Qt::UserRole).toInt() != kTreeExtrusion
-            || target->data(0, Qt::UserRole).toInt() != kTreeExtrusion || source->parent() != target->parent()
-            || !source->parent() || source->parent()->data(0, Qt::UserRole).toInt() != kTreeBody || !moveFeature_) {
+        QTreeWidgetItem *source = draggedItem_;
+        QTreeWidgetItem *target = targetFeature(event->position().toPoint());
+        if (!isMovableFeature(source) || !target || source == target || !moveFeature_) {
             event->ignore();
             return;
         }
@@ -9456,7 +9534,56 @@ protected:
     }
 
 private:
+    static bool isMovableFeature(QTreeWidgetItem *item) {
+        return item && item->data(0, Qt::UserRole).toInt() == kTreeExtrusion && item->parent()
+            && item->parent()->data(0, Qt::UserRole).toInt() == kTreeBody;
+    }
+
+    QTreeWidgetItem *targetFeature(const QPoint &position) const {
+        if (!isMovableFeature(draggedItem_)) return nullptr;
+        QTreeWidgetItem *body = draggedItem_->parent();
+        QTreeWidgetItem *under = itemAt(position);
+        for (QTreeWidgetItem *candidate = under; candidate && candidate != body; candidate = candidate->parent())
+            if (candidate->parent() == body && candidate->data(0, Qt::UserRole).toInt() == kTreeExtrusion)
+                return normalizedTarget(body, candidate);
+
+        // Schizzi e dettagli possono stare tra due feature. In quel caso il
+        // rilascio vale per la feature diretta piu' vicina nello stesso corpo.
+        QTreeWidgetItem *best = nullptr;
+        int distance = std::numeric_limits<int>::max();
+        for (int row = 0; row < body->childCount(); ++row) {
+            QTreeWidgetItem *candidate = body->child(row);
+            if (candidate->data(0, Qt::UserRole).toInt() != kTreeExtrusion) continue;
+            const QRect rect = visualItemRect(candidate);
+            const int d = std::abs(rect.center().y() - position.y());
+            if (d < distance) distance = d, best = candidate;
+        }
+        return normalizedTarget(body, best);
+    }
+
+    QTreeWidgetItem *normalizedTarget(QTreeWidgetItem *body, QTreeWidgetItem *target) const {
+        if (!body || !target || target != firstFeature(body)) return target;
+        // Il primo stadio resta fisso. Un rilascio su di esso significa
+        // "porta subito dopo la radice".
+        bool foundRoot = false;
+        for (int row = 0; row < body->childCount(); ++row) {
+            QTreeWidgetItem *candidate = body->child(row);
+            if (candidate->data(0, Qt::UserRole).toInt() != kTreeExtrusion) continue;
+            if (foundRoot) return candidate;
+            foundRoot = true;
+        }
+        return target;
+    }
+
+    static QTreeWidgetItem *firstFeature(QTreeWidgetItem *body) {
+        if (!body) return nullptr;
+        for (int row = 0; row < body->childCount(); ++row)
+            if (body->child(row)->data(0, Qt::UserRole).toInt() == kTreeExtrusion) return body->child(row);
+        return nullptr;
+    }
+
     std::function<QString(int, int)> moveFeature_;
+    QTreeWidgetItem *draggedItem_ = nullptr;
 };
 
 static const QStringList &planeNames() {
@@ -15073,6 +15200,7 @@ void PdfWindow::rebuildModelTree() {
         auto *item = parent ? new QTreeWidgetItem(parent, {name}) : new QTreeWidgetItem(modelTree_, {name});
         item->setData(0, Qt::UserRole, type);
         item->setData(0, Qt::UserRole + 1, index);
+        item->setFlags(item->flags() & ~(Qt::ItemIsDragEnabled | Qt::ItemIsDropEnabled));
         if (checkState >= 0) {
             item->setFlags(item->flags() | Qt::ItemIsUserCheckable);
             item->setCheckState(0, checkState ? Qt::Checked : Qt::Unchecked);
@@ -15104,16 +15232,24 @@ void PdfWindow::rebuildModelTree() {
     };
     const QVector<ExtrusionObject> &extrusions = viewport_->extrusions();
     const QVector<ModelBody> &modelBodies = viewport_->modelBodies();
+    QTreeWidgetItem *referenceRoot = nullptr;
+    for (const ExtrusionObject &feature : extrusions)
+        if (feature.modelBodyId == 0) {
+            referenceRoot = new QTreeWidgetItem(modelTree_, {QStringLiteral("Geometria di riferimento")});
+            referenceRoot->setData(0, Qt::UserRole, kTreeInfo);
+            referenceRoot->setExpanded(true);
+            break;
+        }
     QHash<quint64, QTreeWidgetItem *> bodyItems;
     for (int index = 0; index < modelBodies.size(); ++index) {
         const ModelBody &body = modelBodies.at(index);
         QTreeWidgetItem *item = addObject(body.name, kTreeBody, index, body.visible);
         item->setIcon(0, ForgeCad::commandIcon(QStringLiteral("box")));
+        item->setFlags(item->flags() | Qt::ItemIsDropEnabled);
         item->setExpanded(true);
         item->setToolTip(0, QStringLiteral("Corpo parametrico: le feature sono calcolate dall'alto verso il basso."));
         bodyItems.insert(body.id, item);
     }
-    QTreeWidgetItem *referenceRoot = nullptr;
     for (int index = 0; index < extrusions.size(); ++index) {
         const ExtrusionObject &body = extrusions.at(index);
         // Piu' solidi o superfici separati in un corpo (per esempio un'unione di corpi che non si toccano).
@@ -15123,11 +15259,6 @@ void PdfWindow::rebuildModelTree() {
         if (parts.second > 1) label += QStringLiteral("  (%1 superfici)").arg(parts.second);
         QTreeWidgetItem *parent = bodyItems.value(body.modelBodyId, nullptr);
         if (!parent) {
-            if (!referenceRoot) {
-                referenceRoot = new QTreeWidgetItem(modelTree_, {QStringLiteral("Geometria di riferimento")});
-                referenceRoot->setData(0, Qt::UserRole, kTreeInfo);
-                referenceRoot->setExpanded(true);
-            }
             parent = referenceRoot;
         }
         for (int sketch : viewport_->featureSketches(index)) addSketch(sketch, parent);
@@ -15136,6 +15267,13 @@ void PdfWindow::rebuildModelTree() {
         if (tip) label += QStringLiteral("   ◀ risultato");
         QTreeWidgetItem *item = addObject(body.error.isEmpty() ? label : label + QStringLiteral("  \u26A0"),
                                           kTreeExtrusion, index, reference ? body.visible : -1, parent);
+        bool hasPreviousStage = false;
+        for (int previous = 0; previous < index; ++previous)
+            if (extrusions.at(previous).modelBodyId == body.modelBodyId) { hasPreviousStage = true; break; }
+        if (!reference) {
+            item->setFlags(item->flags() | Qt::ItemIsDropEnabled);
+            if (hasPreviousStage) item->setFlags(item->flags() | Qt::ItemIsDragEnabled);
+        }
         QString icon = body.operation >= 0 ? QStringList{QStringLiteral("union"), QStringLiteral("intersection"), QStringLiteral("difference")}.value(body.operation)
                      : body.feature == BodyFeature::Extrusion ? QStringLiteral("extrude")
                      : body.feature == BodyFeature::Revolution ? QStringLiteral("revolve")

@@ -230,6 +230,7 @@ struct BodyDisplay {
     QVector<QVector3D> vertices;   // tre vertici per triangolo
     QVector<QVector3D> normals;    // una normale per vertice
     QVector<QVector<QVector3D>> edges;
+    QVector<int> edgeIds;               // polilinea visualizzata -> EdgeId del B-rep
     QVector<QVector<QVector3D>> constructionCurves; // isoparametriche U/V delle anteprime
     QVector<QVector<int>> faceEdges; // faccia B-rep -> polilinee, senza ricerche geometriche durante il disegno
     std::shared_ptr<const ForgeCad::Kernel::RayFaceIndex> rayIndex;
@@ -248,10 +249,14 @@ struct BodyDisplay {
 enum class BodyFeature { Extrusion = 0, Revolution = 1, Primitive = 2, Blend = 3, SheetTrim = 4, SheetExtend = 5, Scale = 6, Helix = 7, Sweep = 8, Loft = 9,
                          Imported = 10, DatumPlane = 11, Pattern = 12, Transform = 13 };
 
-// Spigolo di un corpo identificato da un suo punto (coordinate del modello):
-// dopo una rigenerazione si prende lo spigolo piu' vicino.
+// Riferimento leggero a una sotto-entita' del B-rep. `subshape` e' l'ID
+// topologico al momento della scelta, `geometry` il tipo di curva/superficie.
+// Il punto resta sia una firma geometrica sia il fallback per i file vecchi.
 struct EdgePoint {
     double x = 0.0, y = 0.0, z = 0.0;
+    int subshape = -1;
+    int geometry = -1;
+    int context = -1;
 };
 
 // Faccia di un corpo sotto il puntatore (geometria esatta): per scegliere i
@@ -329,6 +334,7 @@ struct GeometryRef {
     int index = -1;
     ConstraintRef element;
     EdgePoint point;
+    quint64 featureId = 0;  // proprietario persistente; index e' la cache operativa
 };
 
 // Piano di costruzione. Modi (i riferimenti in `refs`, nell'ordine):
