@@ -312,3 +312,10 @@ L'albero è ricostruito da `rebuildModelTree()` a partire da `viewport_->sketche
 
 - La rigenerazione di una loft con superfici B-spline planari poteva terminare con `munmap_chunk(): invalid pointer` o `double free or corruption`. La causa era un overflow dello stack in `planarEquivalent`: `Surface::evaluate` usa per contratto `(order + 1)^2` elementi, ma per le derivate di ordine 1 il chiamante ne riservava soltanto tre invece di quattro. L'errore dell'allocatore appariva in seguito alla corruzione e non indicava una doppia liberazione nella cronologia.
 - `fk_surface_algo.cpp` usa ora il buffer quadrato richiesto. La regressione `PlanarEquivalentOfBSplineSurface` copre il percorso; la modifica dei profili e la rigenerazione sono state ripetute sotto AddressSanitizer sui documenti `prova con loft-CerchiCerchio.prt` e `prova con loft.prt` senza errori di memoria.
+
+### Storyboard delle feature (2026-10-01)
+
+- Il formato documento 19 introduce `featureId`, `modelBodyId`, soppressione e `ModelBody` (nome, visibilita', tip). I file precedenti vengono migrati ricostruendo i corpi logici dagli operandi; soltanto il tip non soppresso di ogni corpo e' visibile.
+- L'albero mostra ogni corpo come una sequenza ordinata di schizzi e feature, con icone, risultato finale marcato e geometria di riferimento separata. Il corpo controlla la visibilita'; i risultati intermedi non sono piu' presentati come solidi autonomi.
+- Una feature si puo' sopprimere, riattivare, eliminare senza cancellare a cascata le successive e riordinare dal menu o trascinandola. Il riordino rimappa i riferimenti per indice, ricostruisce la base implicita e rifiuta le posizioni che violano una dipendenza; la feature iniziale resta fissa. Se una faccia o un bordo non esiste nella nuova geometria, la feature resta nella storia con l'errore di rigenerazione.
+- Implementazione e limiti sono descritti in `docs/storyboard-history.md`. Dopo la stabilizzazione, il porting Windows e macOS ARM64 andra' sviluppato in un branch distinto, conservando il backend CPU sui sistemi senza CUDA.

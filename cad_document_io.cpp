@@ -12,6 +12,7 @@
 #include <QSaveFile>
 
 #include "cad_constraints.h"
+#include "cad_model_history.h"
 #include "fk_body_io.h"
 #include "forgecad_source_hash.h"
 
@@ -35,7 +36,8 @@ constexpr char kMagic[4] = {'F', 'C', 'A', 'D'};
 // 16 collegamento delle coppie di maniglie tangenti delle spline.
 // 17 catene parziali di schizzo per sweep e guide del loft.
 // 18 grado di continuita' imposto dalle guide del loft.
-constexpr quint16 kVersion = 18;
+// 19 identita' persistenti delle feature e corpi logici della storyboard.
+constexpr quint16 kVersion = 19;
 constexpr quint8 kZlib = 1;
 
 void write(QDataStream &out, const CurveObject &curve) {
@@ -273,6 +275,8 @@ void write(QDataStream &out, const ExtrusionObject &body) {
     out << body.pathSegments << body.pathCurves << quint32(body.loftGuidePaths.size());
     for (const SketchPathRef &path : body.loftGuidePaths) writePathRef(out, path);
     out << qint32(body.loftGuideContinuity);
+    // Formato 19: identita' persistente nella storyboard.
+    out << body.featureId << body.modelBodyId << body.suppressed;
 }
 
 // `extras` (solo formato 5): i file scritti durante lo sviluppo del formato 5
@@ -416,6 +420,7 @@ bool read(QDataStream &in, ExtrusionObject &body, quint16 version, int extras) {
         // Fino al formato 17 le guide trasferivano sempre anche la curvatura.
         body.loftGuideContinuity = 2;
     }
+    if (version >= 19) in >> body.featureId >> body.modelBodyId >> body.suppressed;
     if (int(body.feature) < 0 || int(body.feature) > int(BodyFeature::Transform)) return false;
     return in.status() == QDataStream::Ok;
 }
@@ -489,6 +494,8 @@ void applyBodyCache(const QByteArray &compressed, const QByteArray &payload, Doc
 }
 
 QString saveDocumentFile(const QString &path, const DocumentState &state, bool bodies) {
+    DocumentState normalized = state;
+    normalizeModelHistory(normalized);
     QByteArray payload;
     {
         QBuffer buffer(&payload);
@@ -496,12 +503,15 @@ QString saveDocumentFile(const QString &path, const DocumentState &state, bool b
         QDataStream out(&buffer);
         out.setVersion(QDataStream::Qt_6_0);
         out.setFloatingPointPrecision(QDataStream::DoublePrecision);
-        out << quint32(state.sketches.size());
-        for (const SketchObject &sketch : state.sketches) write(out, sketch);
-        out << quint32(state.extrusions.size());
-        for (const ExtrusionObject &body : state.extrusions) write(out, body);
-        for (const double *axis : {state.orientation.right, state.orientation.up, state.orientation.toward})
+        out << quint32(normalized.sketches.size());
+        for (const SketchObject &sketch : normalized.sketches) write(out, sketch);
+        out << quint32(normalized.extrusions.size());
+        for (const ExtrusionObject &body : normalized.extrusions) write(out, body);
+        for (const double *axis : {normalized.orientation.right, normalized.orientation.up, normalized.orientation.toward})
             for (int k = 0; k < 3; ++k) out << axis[k];
+        out << quint32(normalized.modelBodies.size());
+        for (const ModelBody &body : normalized.modelBodies)
+            out << body.id << body.name << body.visible << body.tipFeatureId;
     }
     QSaveFile file(path);
     if (!file.open(QIODevice::WriteOnly)) return QStringLiteral("Impossibile scrivere %1: %2").arg(path, file.errorString());
@@ -512,7 +522,7 @@ QString saveDocumentFile(const QString &path, const DocumentState &state, bool b
     out << quint32(compressed.size());
     out.writeRawData(compressed.constData(), int(compressed.size()));
     if (bodies) {
-        const QByteArray cache = bodyCache(payload, state);
+        const QByteArray cache = bodyCache(payload, normalized);
         out.writeRawData(cache.constData(), int(cache.size()));
     }
     if (out.status() != QDataStream::Ok || !file.commit()) return QStringLiteral("Errore di scrittura su %1: %2").arg(path, file.errorString());
@@ -543,7 +553,15 @@ QString parsePayload(const QByteArray &payload, quint16 version, int extras, Doc
         if (in.status() != QDataStream::Ok) return QStringLiteral("Il file e' danneggiato (orientamento degli assi).");
         loaded.orientationSet = true;
     }
+    if (version >= 19) {
+        if (!readCount(in, count)) return QStringLiteral("Il file e' danneggiato (storyboard).");
+        loaded.modelBodies.resize(int(count));
+        for (ModelBody &body : loaded.modelBodies)
+            in >> body.id >> body.name >> body.visible >> body.tipFeatureId;
+        if (in.status() != QDataStream::Ok) return QStringLiteral("Il file e' danneggiato (storyboard).");
+    }
     if (!buffer.atEnd()) return QStringLiteral("Il file e' danneggiato (dati in piu' alla fine).");
+    normalizeModelHistory(loaded);
     return {};
 }
 

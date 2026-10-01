@@ -35,6 +35,62 @@ public:
                     && sweepUnited->shells().size() == 1,
                 "unione automatica del risultato sweep");
         require(CadViewport::hiddenOperands(sweepMerge).contains(0), "bersaglio della sweep unita nascosto");
+        CadViewport storyboard;
+        PrimitiveParameters box;
+        box.size[0] = 4.0;
+        box.size[1] = 3.0;
+        box.size[2] = 2.0;
+        require(storyboard.createPrimitive(box, QStringLiteral("Blocco")).isEmpty(), "radice della storyboard");
+        require(storyboard.modelBodies().size() == 1 && storyboard.extrusions().at(0).featureId != 0
+                    && storyboard.extrusions().at(0).modelBodyId == storyboard.modelBodies().at(0).id,
+                "identita' persistenti di corpo e feature");
+        require(storyboard.createScale(0, 1.1, 0, {}, QStringLiteral("Scala 1")).isEmpty()
+                    && storyboard.createScale(1, 1.1, 0, {}, QStringLiteral("Scala 2")).isEmpty(),
+                "catena di feature nello stesso corpo logico");
+        require(storyboard.modelBodies().size() == 1 && !storyboard.extrusions().at(0).visible
+                    && !storyboard.extrusions().at(1).visible && storyboard.extrusions().at(2).visible,
+                "solo il tip della storyboard e' visibile");
+        const quint64 lastFeature = storyboard.extrusions().at(2).featureId;
+        require(storyboard.moveFeature(2, -1).isEmpty() && storyboard.extrusions().at(1).featureId == lastFeature,
+                "riordino di due feature compatibili");
+        require(storyboard.setFeatureSuppressed(2, true).isEmpty() && storyboard.extrusions().at(2).suppressed
+                    && storyboard.extrusions().at(1).visible,
+                "soppressione ripristina lo stadio precedente");
+        require(storyboard.setFeatureSuppressed(2, false).isEmpty() && storyboard.extrusions().at(2).visible,
+                "riattivazione della feature");
+        storyboard.deleteFeature(2);
+        require(storyboard.extrusions().size() == 2 && storyboard.extrusions().at(1).visible
+                    && storyboard.modelBodies().at(0).tipFeatureId == storyboard.extrusions().at(1).featureId,
+                "eliminazione del tip ripristina la feature precedente");
+        storyboard.undo();
+        require(storyboard.extrusions().size() == 3 && storyboard.extrusions().at(2).visible,
+                "undo dell'eliminazione nella storyboard");
+        QTemporaryDir storyboardDir;
+        const QString storyboardPath = storyboardDir.filePath(QStringLiteral("storyboard.prt"));
+        require(storyboardDir.isValid() && saveDocumentFile(storyboardPath, storyboard.currentDocument(), false).isEmpty(),
+                "salvataggio della storyboard");
+        DocumentState storyboardLoaded;
+        require(loadDocumentFile(storyboardPath, storyboardLoaded).isEmpty() && storyboardLoaded.modelBodies.size() == 1
+                    && storyboardLoaded.extrusions.at(1).featureId == lastFeature,
+                "persistenza e lettura della storyboard");
+        CadViewport booleanStory;
+        PrimitiveParameters firstBox, secondBox;
+        firstBox.size[0] = firstBox.size[1] = firstBox.size[2] = 2.0;
+        secondBox = firstBox;
+        secondBox.origin[0] = 1.0;
+        require(booleanStory.createPrimitive(firstBox, QStringLiteral("A")).isEmpty()
+                    && booleanStory.createPrimitive(secondBox, QStringLiteral("B")).isEmpty()
+                    && booleanStory.createBoolean(BooleanOperation::Union, 0, {1}, QStringLiteral("Unione")).isEmpty(),
+                "booleana nella storyboard");
+        require(booleanStory.modelBodies().size() == 2 && booleanStory.extrusions().at(2).modelBodyId == booleanStory.extrusions().at(0).modelBodyId
+                    && !booleanStory.extrusions().at(1).visible && booleanStory.extrusions().at(2).visible,
+                "la booleana appartiene al corpo A e consuma il corpo strumento");
+        require(booleanStory.setFeatureSuppressed(2, true).isEmpty() && booleanStory.extrusions().at(0).visible
+                    && booleanStory.extrusions().at(1).visible,
+                "sopprimere la booleana ripristina entrambi gli operandi");
+        require(booleanStory.setFeatureSuppressed(2, false).isEmpty() && !booleanStory.extrusions().at(0).visible
+                    && !booleanStory.extrusions().at(1).visible && booleanStory.extrusions().at(2).visible,
+                "riattivare la booleana nasconde di nuovo gli operandi");
         const auto renderedAlpha = [](QWidget &widget) {
             widget.resize(500, 300);
             QImage image(widget.size(), QImage::Format_ARGB32_Premultiplied);

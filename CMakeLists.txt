@@ -57,6 +57,8 @@ add_executable(forgecad
     cad_icons.cpp
     cad_history.h
     cad_history.cpp
+    cad_model_history.h
+    cad_model_history.cpp
     cad_kernel.h
     cad_kernel.cpp
     cad_forge.h

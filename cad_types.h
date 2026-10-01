@@ -437,6 +437,12 @@ struct SheetPiece {
 };
 
 struct ExtrusionObject {
+    // Identita' persistente della feature e del corpo logico a cui appartiene.
+    // Gli indici nel vettore restano il formato operativo delle dipendenze;
+    // questi identificatori non cambiano quando la storyboard viene riordinata.
+    quint64 featureId = 0;
+    quint64 modelBodyId = 0;  // 0: elemento di riferimento, non uno stadio di un corpo
+    bool suppressed = false;
     QString name;
     int sketchIndex = -1;
     int plane = 0;
@@ -525,6 +531,15 @@ struct ExtrusionObject {
     bool cachedGeometry = false;
 };
 
+// Corpo logico mostrato nella storyboard. Le feature conservano i risultati
+// intermedi, mentre nella scena viene mostrato soltanto `tipFeatureId`.
+struct ModelBody {
+    quint64 id = 0;
+    QString name;
+    bool visible = true;
+    quint64 tipFeatureId = 0;
+};
+
 // Orientamento degli assi del modello sullo schermo: le direzioni del modello
 // che nella vista frontale puntano a destra, in alto e verso l'osservatore
 // (terna destrorsa ortonormale). Di default Z in alto e Y verso il fondo.
@@ -539,6 +554,7 @@ struct AxesOrientation {
 struct DocumentState {
     QVector<SketchObject> sketches;
     QVector<ExtrusionObject> extrusions;
+    QVector<ModelBody> modelBodies;
     AxesOrientation orientation;
     bool orientationSet = false;  // letto dal file (altrimenti quello predefinito delle opzioni)
 };

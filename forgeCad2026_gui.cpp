@@ -19,6 +19,7 @@
 #include "fk_curve_algo.h"
 #include "fk_topology.h"
 #include "cad_history.h"
+#include "cad_model_history.h"
 #include "cad_icons.h"
 #include "cad_kernel.h"
 #include "cad_sketch_edit.h"
@@ -39,6 +40,7 @@
 #include <QPointer>
 #include <QClipboard>
 #include <QDoubleSpinBox>
+#include <QDropEvent>
 #include <QMap>
 #include <QRegularExpression>
 #include <QScrollArea>
@@ -88,6 +90,7 @@
 #include <QToolButton>
 #include <QTimer>
 #include <QTreeWidget>
+#include <QTreeWidgetItemIterator>
 #include <QVector>
 #include <QVector2D>
 #include <QVector3D>
@@ -390,8 +393,10 @@ public:
         selection_ = {};
         history_.clear();
         if (state.orientationSet) orientation_ = state.orientation;
+        ForgeCad::normalizeModelHistory(state);
         sketches_ = std::move(state.sketches);
         extrusions_ = std::move(state.extrusions);
+        modelBodies_ = std::move(state.modelBodies);
         for (SketchObject &sketch : sketches_)
             for (CurveObject &curve : sketch.curves) {
                 if (curve.tool == DrawingTool::Spline && curve.tangentHandles.size() != curve.controlPoints.size())
@@ -412,8 +417,10 @@ public:
         activeSketch_ = -1;
         selection_ = {};
         if (state.orientationSet) orientation_ = state.orientation;
+        ForgeCad::normalizeModelHistory(state);
         sketches_ = std::move(state.sketches);
         extrusions_ = std::move(state.extrusions);
+        modelBodies_ = std::move(state.modelBodies);
         for (SketchObject &sketch : sketches_)
             for (CurveObject &curve : sketch.curves) ForgeCad::recalculateCurve(curve, 0);
         for (ExtrusionObject &body : extrusions_) {
@@ -448,6 +455,213 @@ public:
     bool gridVisible() const { return gridVisible_; }
     const QVector<SketchObject> &sketches() const { return sketches_; }
     const QVector<ExtrusionObject> &extrusions() const { return extrusions_; }
+    const QVector<ModelBody> &modelBodies() const { return modelBodies_; }
+    QVector<int> featureSketches(int index) const {
+        return index >= 0 && index < extrusions_.size() ? sketchesOf(extrusions_.at(index)) : QVector<int>();
+    }
+
+    void setModelBodyVisible(int index, bool visible) {
+        if (index < 0 || index >= modelBodies_.size() || modelBodies_.at(index).visible == visible) return;
+        recordUndo();
+        ModelBody &model = modelBodies_[index];
+        model.visible = visible;
+        for (ExtrusionObject &feature : extrusions_)
+            if (feature.modelBodyId == model.id) feature.visible = feature.featureId == model.tipFeatureId && visible;
+        if (!visible && selection_.kind == SceneObjectKind::Extrusion
+            && selection_.index >= 0 && selection_.index < extrusions_.size()
+            && extrusions_.at(selection_.index).modelBodyId == model.id) selection_ = {};
+        documentChanged();
+    }
+
+    QString renameModelBody(int index, const QString &name) {
+        const QString clean = name.trimmed();
+        if (index < 0 || index >= modelBodies_.size()) return QStringLiteral("Corpo non valido.");
+        if (clean.isEmpty()) return QStringLiteral("Il nome non puo' essere vuoto.");
+        if (modelBodies_.at(index).name == clean) return {};
+        recordUndo();
+        modelBodies_[index].name = clean;
+        documentChanged();
+        return {};
+    }
+
+    int modelBodyTip(int index) const {
+        if (index < 0 || index >= modelBodies_.size()) return -1;
+        const quint64 featureId = modelBodies_.at(index).tipFeatureId;
+        for (int feature = 0; feature < extrusions_.size(); ++feature)
+            if (extrusions_.at(feature).featureId == featureId) return feature;
+        return -1;
+    }
+
+    void deleteModelBody(int index) {
+        if (index < 0 || index >= modelBodies_.size()) return;
+        const quint64 id = modelBodies_.at(index).id;
+        QVector<SceneSelection> features;
+        for (int feature = 0; feature < extrusions_.size(); ++feature)
+            if (extrusions_.at(feature).modelBodyId == id) features.append({SceneObjectKind::Extrusion, feature, -1});
+        deleteObjects(features);
+    }
+
+    QString setFeatureSuppressed(int index, bool suppressed) {
+        if (index < 0 || index >= extrusions_.size()) return QStringLiteral("Feature non valida.");
+        ExtrusionObject &feature = extrusions_[index];
+        if (!feature.modelBodyId) return QStringLiteral("Questa geometria di riferimento non appartiene a una storyboard.");
+        if (feature.suppressed == suppressed) return {};
+        const quint64 bodyId = feature.modelBodyId;
+        bool bodyVisible = true;
+        for (const ModelBody &body : modelBodies_)
+            if (body.id == bodyId) { bodyVisible = body.visible; break; }
+        recordUndo();
+        const QVector<int> consumed = hiddenOperands(feature);
+        feature.suppressed = suppressed;
+        for (int operand : consumed) {
+            if (operand < 0 || operand >= extrusions_.size() || extrusions_.at(operand).modelBodyId == bodyId) continue;
+            bool consumedElsewhere = false;
+            if (suppressed) {
+                for (int other = 0; other < extrusions_.size() && !consumedElsewhere; ++other)
+                    consumedElsewhere = other != index && !extrusions_.at(other).suppressed
+                                     && hiddenOperands(extrusions_.at(other)).contains(operand);
+            }
+            extrusions_[operand].visible = suppressed && !consumedElsewhere;
+        }
+        rebuildBody(feature, index);
+        regenerateAfter(index);
+        int tip = -1;
+        for (int candidate = extrusions_.size() - 1; candidate >= 0; --candidate)
+            if (extrusions_.at(candidate).modelBodyId == bodyId && !extrusions_.at(candidate).suppressed) { tip = candidate; break; }
+        for (int candidate = 0; candidate < extrusions_.size(); ++candidate)
+            if (extrusions_.at(candidate).modelBodyId == bodyId) extrusions_[candidate].visible = candidate == tip && bodyVisible;
+        selection_ = tip >= 0 ? SceneSelection{SceneObjectKind::Extrusion, tip, -1} : SceneSelection{};
+        documentChanged();
+        return {};
+    }
+
+    void deleteFeature(int index) {
+        if (index < 0 || index >= extrusions_.size() || !extrusions_.at(index).modelBodyId) return;
+        const quint64 bodyId = extrusions_.at(index).modelBodyId;
+        bool bodyVisible = true;
+        for (const ModelBody &body : modelBodies_)
+            if (body.id == bodyId) { bodyVisible = body.visible; break; }
+        int previous = -1;
+        for (int candidate = index - 1; candidate >= 0; --candidate)
+            if (extrusions_.at(candidate).modelBodyId == bodyId) { previous = candidate; break; }
+        recordUndo();
+        // La base implicita del ramo prosegue dallo stadio precedente. I
+        // riferimenti geometrici espliciti restano invece invalidi e vengono
+        // segnalati dalla rigenerazione, senza cancellare le feature dipendenti.
+        for (int candidate = index + 1; candidate < extrusions_.size(); ++candidate) {
+            ExtrusionObject &dependent = extrusions_[candidate];
+            if (dependent.modelBodyId != bodyId) continue;
+            if (dependent.firstBody == index) dependent.firstBody = previous;
+            for (int &merged : dependent.mergeBodies)
+                if (merged == index) merged = previous;
+        }
+        removeBodies({index});
+        int tip = -1;
+        for (int candidate = extrusions_.size() - 1; candidate >= 0; --candidate)
+            if (extrusions_.at(candidate).modelBodyId == bodyId && !extrusions_.at(candidate).suppressed) { tip = candidate; break; }
+        for (int candidate = 0; candidate < extrusions_.size(); ++candidate)
+            if (extrusions_.at(candidate).modelBodyId == bodyId) extrusions_[candidate].visible = candidate == tip && bodyVisible;
+        regenerateAll();
+        selection_ = {};
+        documentChanged();
+    }
+
+    QString moveFeature(int index, int direction) {
+        if (index < 0 || index >= extrusions_.size() || !extrusions_.at(index).modelBodyId)
+            return QStringLiteral("Feature non valida.");
+        const quint64 bodyId = extrusions_.at(index).modelBodyId;
+        QVector<int> chain;
+        for (int candidate = 0; candidate < extrusions_.size(); ++candidate)
+            if (extrusions_.at(candidate).modelBodyId == bodyId) chain.append(candidate);
+        const int position = chain.indexOf(index), destination = position + (direction < 0 ? -1 : 1);
+        if (position <= 0 && direction < 0) return QStringLiteral("La feature iniziale deve restare all'inizio del corpo.");
+        if (position < 0 || destination < 0 || destination >= chain.size()) return QStringLiteral("Non ci sono altre feature in quella direzione.");
+        if (destination == 0) return QStringLiteral("La feature iniziale del corpo non puo' essere sostituita.");
+        return moveFeatureTo(index, chain.at(destination));
+    }
+
+    QString moveFeatureTo(int index, int target) {
+        if (index < 0 || index >= extrusions_.size() || target < 0 || target >= extrusions_.size()
+            || !extrusions_.at(index).modelBodyId || extrusions_.at(index).modelBodyId != extrusions_.at(target).modelBodyId)
+            return QStringLiteral("Le feature da riordinare devono appartenere allo stesso corpo.");
+        if (index == target) return {};
+        const quint64 bodyId = extrusions_.at(index).modelBodyId;
+        int first = -1;
+        for (int candidate = 0; candidate < extrusions_.size(); ++candidate)
+            if (extrusions_.at(candidate).modelBodyId == bodyId) { first = candidate; break; }
+        if (index == first || target == first) return QStringLiteral("La feature iniziale deve restare all'inizio del corpo.");
+        bool bodyVisible = true;
+        for (const ModelBody &body : modelBodies_)
+            if (body.id == bodyId) { bodyVisible = body.visible; break; }
+
+        QVector<int> order;
+        order.reserve(extrusions_.size());
+        for (int old = 0; old < extrusions_.size(); ++old)
+            if (old != index) order.append(old);
+        order.insert(target, index);
+        QVector<int> map(extrusions_.size(), -1);
+        QVector<ExtrusionObject> reordered;
+        reordered.reserve(extrusions_.size());
+        for (int old : order) {
+            map[old] = reordered.size();
+            reordered.append(extrusions_.at(old));
+        }
+        const auto mapped = [&](int old) { return old >= 0 ? map.value(old, -1) : old; };
+        const auto remapRef = [&](GeometryRef &ref) {
+            if (isBodyRef(ref)) ref.index = mapped(ref.index);
+        };
+        for (ExtrusionObject &feature : reordered) {
+            feature.firstBody = mapped(feature.firstBody);
+            feature.secondBody = mapped(feature.secondBody);
+            for (int &tool : feature.booleanTools) tool = mapped(tool);
+            for (int &merged : feature.mergeBodies) merged = mapped(merged);
+            for (GeometryRef &ref : feature.datum.refs) remapRef(ref);
+            for (GeometryRef &ref : feature.pattern.refs) remapRef(ref);
+            remapRef(feature.extentRef);
+            remapRef(feature.move.axis);
+        }
+
+        // Le basi interne del corpo sono implicite nella storyboard: dopo il
+        // riordino ogni modificatore prende lo stadio immediatamente precedente.
+        int previous = -1;
+        for (int current = 0; current < reordered.size(); ++current) {
+            ExtrusionObject &feature = reordered[current];
+            if (feature.modelBodyId != bodyId) continue;
+            if (previous >= 0) {
+                if (feature.operation >= 0 || feature.feature == BodyFeature::Blend || feature.feature == BodyFeature::SheetTrim
+                    || feature.feature == BodyFeature::SheetExtend || feature.feature == BodyFeature::Scale
+                    || (feature.feature == BodyFeature::Transform && !feature.move.copy) || feature.feature == BodyFeature::Pattern) {
+                    feature.firstBody = previous;
+                } else if ((feature.feature == BodyFeature::Extrusion || feature.feature == BodyFeature::Sweep) && feature.mergeOperation != 0) {
+                    bool replaced = false;
+                    for (int &merged : feature.mergeBodies)
+                        if (merged >= 0 && reordered.at(merged).modelBodyId == bodyId) { merged = previous; replaced = true; break; }
+                    if (!replaced) feature.mergeBodies.prepend(previous);
+                }
+            }
+            previous = current;
+        }
+        for (int current = 0; current < reordered.size(); ++current)
+            for (int operand : bodyOperands(reordered.at(current)))
+                if (operand >= current)
+                    return QStringLiteral("Spostamento non consentito: \"%1\" deve restare dopo una feature da cui dipende.")
+                        .arg(reordered.at(current).name);
+
+        recordUndo();
+        extrusions_ = std::move(reordered);
+        int tip = -1;
+        for (int candidate = extrusions_.size() - 1; candidate >= 0; --candidate)
+            if (extrusions_.at(candidate).modelBodyId == bodyId && !extrusions_.at(candidate).suppressed) { tip = candidate; break; }
+        for (int candidate = 0; candidate < extrusions_.size(); ++candidate)
+            if (extrusions_.at(candidate).modelBodyId == bodyId) extrusions_[candidate].visible = candidate == tip && bodyVisible;
+        for (SketchObject &sketch : sketches_)
+            if (sketch.datumPlane >= 0) sketch.datumPlane = mapped(sketch.datumPlane);
+        regenerateAll();
+        const int moved = map.value(index, -1);
+        selection_ = moved >= 0 ? SceneSelection{SceneObjectKind::Extrusion, moved, -1} : SceneSelection{};
+        documentChanged();
+        return {};
+    }
 
     bool canUndo() const { return history_.canUndo(); }
     bool canRedo() const { return history_.canRedo(); }
@@ -1000,7 +1214,14 @@ public:
             deleteObject(selection_.kind, selection_.index);
     }
 
-    void deleteObject(SceneObjectKind kind, int index) { deleteObjects({{kind, index, -1}}); }
+    void deleteObject(SceneObjectKind kind, int index) {
+        if (kind == SceneObjectKind::Extrusion && index >= 0 && index < extrusions_.size()
+            && extrusions_.at(index).modelBodyId != 0) {
+            deleteFeature(index);
+            return;
+        }
+        deleteObjects({{kind, index, -1}});
+    }
 
     // Elimina schizzi e corpi; i corpi che ne dipendono (e non sono tra quelli
     // scelti) si elencano e si eliminano solo con la conferma. Un passo di Undo.
@@ -4677,7 +4898,15 @@ protected:
     }
 
 private:
-    DocumentState documentState() const { return {sketches_, extrusions_, orientation_, true}; }
+    DocumentState documentState() const {
+        DocumentState state;
+        state.sketches = sketches_;
+        state.extrusions = extrusions_;
+        state.modelBodies = modelBodies_;
+        state.orientation = orientation_;
+        state.orientationSet = true;
+        return state;
+    }
 
     void selectionChanged() {
         if (constraintPanelCallback_) constraintPanelCallback_();
@@ -5109,6 +5338,7 @@ private:
     void recordUndo() { history_.record(documentState()); }
 
     void documentChanged() {
+        ForgeCad::normalizeModelHistory(extrusions_, modelBodies_);
         sceneBoundsDirty_ = true;
         raySelectionCache_.clear();
         projectedEdges_.clear();
@@ -5294,7 +5524,7 @@ private:
                 const ExtrusionObject &body = extrusions_.at(index);
                 QVector<int> hidden{body.firstBody, body.secondBody};
                 hidden += body.booleanTools;
-                if (body.operation < 0 && body.feature == BodyFeature::Extrusion) hidden += body.mergeBodies;
+                hidden += hiddenOperands(body);
                 for (int operand : hidden)
                     if (operand >= 0 && operand < extrusions_.size() && !removed.contains(operand)) extrusions_[operand].visible = true;
                 continue;
@@ -5564,6 +5794,19 @@ private:
             return i >= 0 && i < index && i < bodies.size() ? &bodies.at(i) : nullptr;
         };
         const auto sketch = [&](int i) -> const SketchObject * { return i >= 0 && i < sketches.size() ? &sketches.at(i) : nullptr; };
+        if (body.suppressed) {
+            // Una feature soppressa e' un passaggio trasparente nella catena:
+            // conserva un risultato intermedio valido per le feature seguenti.
+            const ExtrusionObject *previous = nullptr;
+            for (int candidate = index - 1; candidate >= 0; --candidate)
+                if (bodies.at(candidate).modelBodyId == body.modelBodyId) { previous = &bodies.at(candidate); break; }
+            if (previous) {
+                body.forgeBody = previous->forgeBody;
+                body.curve = previous->curve;
+                body.solid = previous->solid;
+            }
+            return;
+        }
         try {
             if (body.operation >= 0) {
                 const ExtrusionObject *first = operand(body.firstBody), *second = operand(body.secondBody);
@@ -5830,8 +6073,10 @@ private:
 
     void restoreDocument(DocumentState state) {
         dimensionPlacing_ = -1;
+        ForgeCad::normalizeModelHistory(state);
         sketches_ = std::move(state.sketches);
         extrusions_ = std::move(state.extrusions);
+        modelBodies_ = std::move(state.modelBodies);
         for (SketchObject &sketch : sketches_) {
             for (CurveObject &curve : sketch.curves) ForgeCad::recalculateCurve(curve, tessellationQuality_);
         }
@@ -9041,6 +9286,7 @@ private:
     std::function<void()> constraintPanelCallback_;
     QVector<SketchObject> sketches_;
     QVector<ExtrusionObject> extrusions_;
+    QVector<ModelBody> modelBodies_;
     ForgeCad::History history_;
     DocumentState dragSnapshot_;
     bool dragRecorded_ = false;
@@ -9181,7 +9427,37 @@ private:
 };
 
 // Tipi delle voci dell'albero modello (Qt::UserRole); Qt::UserRole + 1 e' l'indice.
-enum TreeItemType { kTreeInfo = -1, kTreeOrigin = 0, kTreePlane = 1, kTreeSketch = 3, kTreeExtrusion = 4 };
+enum TreeItemType { kTreeInfo = -1, kTreeOrigin = 0, kTreePlane = 1, kTreeSketch = 3, kTreeExtrusion = 4, kTreeBody = 5 };
+
+class StoryboardTree final : public QTreeWidget {
+public:
+    explicit StoryboardTree(QWidget *parent = nullptr) : QTreeWidget(parent) {
+        setDragEnabled(true);
+        setAcceptDrops(true);
+        setDropIndicatorShown(true);
+        setDragDropMode(QAbstractItemView::InternalMove);
+        setDefaultDropAction(Qt::MoveAction);
+    }
+    void setMoveFeatureCallback(std::function<QString(int, int)> callback) { moveFeature_ = std::move(callback); }
+
+protected:
+    void dropEvent(QDropEvent *event) override {
+        QTreeWidgetItem *source = currentItem();
+        QTreeWidgetItem *target = itemAt(event->position().toPoint());
+        if (!source || !target || source == target || source->data(0, Qt::UserRole).toInt() != kTreeExtrusion
+            || target->data(0, Qt::UserRole).toInt() != kTreeExtrusion || source->parent() != target->parent()
+            || !source->parent() || source->parent()->data(0, Qt::UserRole).toInt() != kTreeBody || !moveFeature_) {
+            event->ignore();
+            return;
+        }
+        const QString error = moveFeature_(source->data(0, Qt::UserRole + 1).toInt(), target->data(0, Qt::UserRole + 1).toInt());
+        event->ignore();  // l'albero viene ricostruito dal documento, mai spostato solo graficamente
+        if (!error.isEmpty()) QMessageBox::information(this, QStringLiteral("Riordina storyboard"), error);
+    }
+
+private:
+    std::function<QString(int, int)> moveFeature_;
+};
 
 static const QStringList &planeNames() {
     static const QStringList names = {QStringLiteral("Piano XY - Superiore"),
@@ -12697,8 +12973,9 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
 
     auto *modelDock = new QDockWidget(QStringLiteral("Albero modello"), this);
     modelDock->setObjectName(QStringLiteral("modelDock"));  // per saveState/restoreState
-    auto *modelTree = new QTreeWidget(modelDock);
+    auto *modelTree = new StoryboardTree(modelDock);
     modelTree_ = modelTree;
+    modelTree->setMoveFeatureCallback([viewport](int feature, int target) { return viewport->moveFeatureTo(feature, target); });
     modelTree->setHeaderLabel(QStringLiteral("Oggetti scena"));
     modelTree->setMinimumWidth(220);
     modelTree->setContextMenuPolicy(Qt::CustomContextMenu);
@@ -12830,8 +13107,8 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
         if (item->data(0, Qt::UserRole).toInt() == kTreeExtrusion) (*editBody)(item->data(0, Qt::UserRole + 1).toInt());
     });
     viewport->setSelectionCallback([this](SceneSelection selection) {
-        for (int index = 0; index < modelTree_->topLevelItemCount(); ++index) {
-            QTreeWidgetItem *item = modelTree_->topLevelItem(index);
+        for (QTreeWidgetItemIterator it(modelTree_); *it; ++it) {
+            QTreeWidgetItem *item = *it;
             const int type = item->data(0, Qt::UserRole).toInt();
             const int itemIndex = item->data(0, Qt::UserRole + 1).toInt();
             const bool matches = itemIndex == selection.index
@@ -12872,6 +13149,7 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
         if (type == kTreePlane) viewport->setPlaneVisible(index, visible);
         else if (type == kTreeSketch) viewport->setObjectVisible(SceneObjectKind::Sketch, index, visible);
         else if (type == kTreeExtrusion) viewport->setObjectVisible(SceneObjectKind::Extrusion, index, visible);
+        else if (type == kTreeBody) viewport->setModelBodyVisible(index, visible);
     });
     connect(modelTree, &QTreeWidget::itemClicked, this, [this, viewport](QTreeWidgetItem *item, int) {
         if (suppressTreeClick_) return;
@@ -12880,6 +13158,10 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
         if (type == kTreePlane) viewport->selectPlane(index);
         if (type == kTreeSketch) viewport->selectSketch(index);
         if (type == kTreeExtrusion) viewport->selectObject(SceneObjectKind::Extrusion, index);
+        if (type == kTreeBody) {
+            const int tip = viewport->modelBodyTip(index);
+            if (tip >= 0) viewport->selectObject(SceneObjectKind::Extrusion, tip);
+        }
     });
     // Rinomina (F2 o menu contestuale): schizzi e corpi.
     auto *renameShortcut = new QShortcut(QKeySequence(Qt::Key_F2), modelTree);
@@ -12901,16 +13183,35 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
             const QAction *chosen = menu.exec(globalPosition);
             if (chosen == newSketch && *createSketchOnPlane) (*createSketchOnPlane)(index);
             if (chosen == normalView) { item->setSelected(true); viewport->setViewNormal(index); }
+        } else if (type == kTreeBody) {
+            const bool visible = index >= 0 && index < viewport->modelBodies().size() && viewport->modelBodies().at(index).visible;
+            QAction *toggle = menu.addAction(visible ? QStringLiteral("Nascondi corpo") : QStringLiteral("Mostra corpo"));
+            QAction *rename = menu.addAction(QStringLiteral("Rinomina corpo..."));
+            rename->setShortcut(QKeySequence(Qt::Key_F2));
+            menu.addSeparator();
+            QAction *remove = menu.addAction(QStringLiteral("Elimina corpo e storyboard"));
+            const QAction *chosen = menu.exec(globalPosition);
+            if (chosen == rename) renameTreeItem(item);
+            else if (chosen == toggle) viewport->setModelBodyVisible(index, !visible);
+            else if (chosen == remove) viewport->deleteModelBody(index);
         } else if (type == kTreeSketch || type == kTreeExtrusion) {
             const SceneObjectKind kind = type == kTreeSketch ? SceneObjectKind::Sketch : SceneObjectKind::Extrusion;
             const bool visible = viewport->isObjectVisible(kind, index);
             QAction *editSketch = type == kTreeSketch ? menu.addAction(QStringLiteral("Modifica schizzo")) : nullptr;
             QAction *editParameters = type == kTreeExtrusion ? menu.addAction(QStringLiteral("Modifica parametri...")) : nullptr;
+            const bool storyboardFeature = type == kTreeExtrusion && index >= 0 && index < viewport->extrusions().size()
+                                        && viewport->extrusions().at(index).modelBodyId != 0;
+            QAction *suppress = storyboardFeature
+                ? menu.addAction(viewport->extrusions().at(index).suppressed ? QStringLiteral("Riattiva feature")
+                                                                            : QStringLiteral("Sopprimi feature"))
+                : nullptr;
+            QAction *moveEarlier = storyboardFeature ? menu.addAction(QStringLiteral("Sposta prima nella storia")) : nullptr;
+            QAction *moveLater = storyboardFeature ? menu.addAction(QStringLiteral("Sposta dopo nella storia")) : nullptr;
             const bool datum = type == kTreeExtrusion && index >= 0 && index < viewport->extrusions().size()
                             && viewport->extrusions().at(index).feature == BodyFeature::DatumPlane;
             QAction *datumSketch = datum ? menu.addAction(QStringLiteral("Nuovo schizzo sul piano")) : nullptr;
             if (datumSketch) datumSketch->setEnabled(viewport->extrusions().at(index).datumValid);
-            QAction *toggle = menu.addAction(visible ? QStringLiteral("Nascondi") : QStringLiteral("Mostra"));
+            QAction *toggle = storyboardFeature ? nullptr : menu.addAction(visible ? QStringLiteral("Nascondi") : QStringLiteral("Mostra"));
             QAction *rename = menu.addAction(QStringLiteral("Rinomina..."));
             rename->setShortcut(QKeySequence(Qt::Key_F2));
             menu.addSeparator();
@@ -12922,9 +13223,18 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
             }
             if (chosen && chosen == editSketch) viewport->selectSketch(index);
             else if (chosen && chosen == editParameters) (*editBody)(index);
+            else if (chosen && chosen == suppress) {
+                const bool value = !viewport->extrusions().at(index).suppressed;
+                const QString error = viewport->setFeatureSuppressed(index, value);
+                if (!error.isEmpty()) QMessageBox::warning(this, QStringLiteral("Storyboard"), error);
+            }
+            else if (chosen && (chosen == moveEarlier || chosen == moveLater)) {
+                const QString error = viewport->moveFeature(index, chosen == moveEarlier ? -1 : 1);
+                if (!error.isEmpty()) QMessageBox::information(this, QStringLiteral("Riordina storyboard"), error);
+            }
             else if (chosen && chosen == datumSketch) viewport->createDatumSketch(index, QStringLiteral("Schizzo %1").arg(viewport->sketches().size() + 1));
             else if (chosen && chosen == remove) viewport->deleteObject(kind, index);
-            else if (chosen == toggle) viewport->setObjectVisible(kind, index, !visible);
+            else if (toggle && chosen == toggle) viewport->setObjectVisible(kind, index, !visible);
         }
     });
 
@@ -14720,7 +15030,19 @@ void PdfWindow::renameTreeItem(QTreeWidgetItem *item) {
     if (!item) return;
     const int type = item->data(0, Qt::UserRole).toInt();
     const int index = item->data(0, Qt::UserRole + 1).toInt();
-    if (type != kTreeSketch && type != kTreeExtrusion) return;
+    if (type != kTreeSketch && type != kTreeExtrusion && type != kTreeBody) return;
+    if (type == kTreeBody) {
+        const QString current = viewport_->modelBodies().value(index).name;
+        for (;;) {
+            bool accepted = false;
+            const QString name = QInputDialog::getText(this, QStringLiteral("Rinomina corpo"), QStringLiteral("Nome:"),
+                                                       QLineEdit::Normal, current, &accepted);
+            if (!accepted) return;
+            const QString error = viewport_->renameModelBody(index, name);
+            if (error.isEmpty()) return;
+            QMessageBox::warning(this, QStringLiteral("Rinomina corpo"), error);
+        }
+    }
     const SceneObjectKind kind = type == kTreeSketch ? SceneObjectKind::Sketch : SceneObjectKind::Extrusion;
     const QString current = kind == SceneObjectKind::Sketch ? viewport_->sketches().value(index).name : viewport_->extrusions().value(index).name;
     for (;;) {
@@ -14747,8 +15069,8 @@ void PdfWindow::applyTreeBackground(const QColor &color) {
 
 void PdfWindow::rebuildModelTree() {
     rebuildingTree_ = true;
-    const auto addObject = [this](const QString &name, int type, int index, int checkState) {
-        auto *item = new QTreeWidgetItem(modelTree_, {name});
+    const auto addObject = [this](const QString &name, int type, int index, int checkState, QTreeWidgetItem *parent = nullptr) {
+        auto *item = parent ? new QTreeWidgetItem(parent, {name}) : new QTreeWidgetItem(modelTree_, {name});
         item->setData(0, Qt::UserRole, type);
         item->setData(0, Qt::UserRole + 1, index);
         if (checkState >= 0) {
@@ -14766,16 +15088,32 @@ void PdfWindow::rebuildModelTree() {
     const SceneSelection selection = viewport_->selection();
     while (modelTree_->topLevelItemCount() > fixedItems) delete modelTree_->takeTopLevelItem(fixedItems);
     const QVector<SketchObject> &sketches = viewport_->sketches();
-    for (int index = 0; index < sketches.size(); ++index) {
+    QSet<int> shownSketches;
+    const auto addSketch = [&](int index, QTreeWidgetItem *parent) {
+        if (index < 0 || index >= sketches.size() || shownSketches.contains(index)) return;
+        shownSketches.insert(index);
         const SketchObject &sketch = sketches.at(index);
         const QString plane = sketch.plane != kFacePlane ? planeNames().value(sketch.plane)
                             : sketch.datumPlane >= 0 && sketch.datumPlane < viewport_->extrusions().size() ? viewport_->extrusions().at(sketch.datumPlane).name
                                                                                                          : QStringLiteral("Faccia di %1").arg(sketch.faceSource);
-        QTreeWidgetItem *item = addObject(sketch.name + QStringLiteral(" [") + plane + QStringLiteral("]"), kTreeSketch, index, sketch.visible);
+        QTreeWidgetItem *item = addObject(sketch.name + QStringLiteral(" [") + plane + QStringLiteral("]"), kTreeSketch, index,
+                                          sketch.visible, parent);
+        item->setIcon(0, ForgeCad::commandIcon(QStringLiteral("newSketch")));
         if ((selection.kind == SceneObjectKind::Sketch && selection.index == index)
             || viewport_->activeSketchIndex() == index) modelTree_->setCurrentItem(item);
-    }
+    };
     const QVector<ExtrusionObject> &extrusions = viewport_->extrusions();
+    const QVector<ModelBody> &modelBodies = viewport_->modelBodies();
+    QHash<quint64, QTreeWidgetItem *> bodyItems;
+    for (int index = 0; index < modelBodies.size(); ++index) {
+        const ModelBody &body = modelBodies.at(index);
+        QTreeWidgetItem *item = addObject(body.name, kTreeBody, index, body.visible);
+        item->setIcon(0, ForgeCad::commandIcon(QStringLiteral("box")));
+        item->setExpanded(true);
+        item->setToolTip(0, QStringLiteral("Corpo parametrico: le feature sono calcolate dall'alto verso il basso."));
+        bodyItems.insert(body.id, item);
+    }
+    QTreeWidgetItem *referenceRoot = nullptr;
     for (int index = 0; index < extrusions.size(); ++index) {
         const ExtrusionObject &body = extrusions.at(index);
         // Piu' solidi o superfici separati in un corpo (per esempio un'unione di corpi che non si toccano).
@@ -14783,8 +15121,47 @@ void PdfWindow::rebuildModelTree() {
         QString label = body.name;
         if (parts.first > 1) label += QStringLiteral("  (%1 solidi)").arg(parts.first);
         if (parts.second > 1) label += QStringLiteral("  (%1 superfici)").arg(parts.second);
+        QTreeWidgetItem *parent = bodyItems.value(body.modelBodyId, nullptr);
+        if (!parent) {
+            if (!referenceRoot) {
+                referenceRoot = new QTreeWidgetItem(modelTree_, {QStringLiteral("Geometria di riferimento")});
+                referenceRoot->setData(0, Qt::UserRole, kTreeInfo);
+                referenceRoot->setExpanded(true);
+            }
+            parent = referenceRoot;
+        }
+        for (int sketch : viewport_->featureSketches(index)) addSketch(sketch, parent);
+        const bool reference = body.modelBodyId == 0;
+        const bool tip = !reference && parent && modelBodies.value(parent->data(0, Qt::UserRole + 1).toInt()).tipFeatureId == body.featureId;
+        if (tip) label += QStringLiteral("   ◀ risultato");
         QTreeWidgetItem *item = addObject(body.error.isEmpty() ? label : label + QStringLiteral("  \u26A0"),
-                                          kTreeExtrusion, index, body.visible);
+                                          kTreeExtrusion, index, reference ? body.visible : -1, parent);
+        QString icon = body.operation >= 0 ? QStringList{QStringLiteral("union"), QStringLiteral("intersection"), QStringLiteral("difference")}.value(body.operation)
+                     : body.feature == BodyFeature::Extrusion ? QStringLiteral("extrude")
+                     : body.feature == BodyFeature::Revolution ? QStringLiteral("revolve")
+                     : body.feature == BodyFeature::Blend ? (body.blendChamfer ? QStringLiteral("chamfer") : QStringLiteral("fillet"))
+                     : body.feature == BodyFeature::SheetTrim ? QStringLiteral("trimSurface")
+                     : body.feature == BodyFeature::SheetExtend ? QStringLiteral("extendSurface")
+                     : body.feature == BodyFeature::Scale ? QStringLiteral("scale")
+                     : body.feature == BodyFeature::Helix ? QStringLiteral("helix")
+                     : body.feature == BodyFeature::Sweep ? QStringLiteral("sweep")
+                     : body.feature == BodyFeature::Loft ? QStringLiteral("loft")
+                     : body.feature == BodyFeature::DatumPlane ? QStringLiteral("datumPlane")
+                     : body.feature == BodyFeature::Imported ? QStringLiteral("import")
+                     : body.feature == BodyFeature::Transform ? QStringLiteral("move")
+                     : body.feature == BodyFeature::Pattern ? QStringLiteral("patternLinear")
+                     : body.feature == BodyFeature::Primitive
+                           ? QStringList{QStringLiteral("box"), QStringLiteral("cylinder"), QStringLiteral("sphere"),
+                                         QStringLiteral("cone"), QStringLiteral("torus")}.value(int(body.primitive.kind))
+                           : QString();
+        if (!icon.isEmpty()) item->setIcon(0, ForgeCad::commandIcon(icon));
+        if (!tip && !reference && body.error.isEmpty()) item->setForeground(0, QColor(135, 150, 165));
+        if (body.suppressed) {
+            QFont font = item->font(0);
+            font.setStrikeOut(true);
+            item->setFont(0, font);
+            item->setForeground(0, QColor(115, 125, 135));
+        }
         if (!body.error.isEmpty()) {
             item->setForeground(0, QColor(255, 150, 90));
             item->setToolTip(0, QStringLiteral("Rigenerazione non riuscita: ") + body.error);
@@ -14946,6 +15323,16 @@ void PdfWindow::rebuildModelTree() {
             item->setExpanded(true);
         }
         if (selection.kind == SceneObjectKind::Extrusion && selection.index == index) modelTree_->setCurrentItem(item);
+    }
+    QTreeWidgetItem *sketchRoot = nullptr;
+    for (int index = 0; index < sketches.size(); ++index) {
+        if (shownSketches.contains(index)) continue;
+        if (!sketchRoot) {
+            sketchRoot = new QTreeWidgetItem(modelTree_, {QStringLiteral("Schizzi non utilizzati")});
+            sketchRoot->setData(0, Qt::UserRole, kTreeInfo);
+            sketchRoot->setExpanded(true);
+        }
+        addSketch(index, sketchRoot);
     }
     // Solidi e superfici separati dei corpi visibili (barra di stato).
     if (auto *counts = statusBar()->findChild<QLabel *>(QStringLiteral("sceneCounts"))) {
