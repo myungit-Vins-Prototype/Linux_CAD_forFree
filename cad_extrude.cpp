@@ -278,6 +278,11 @@ ForgeBody forgeExtrusionFeature(ExtrusionObject &body, int index, const QVector<
         setError(error, QStringLiteral("Estrusione non riuscita: %1").arg(QString::fromUtf8(failure.what())));
         return nullptr;
     }
+    return forgeMergeFeatureResult(body, result, index, bodies, error);
+}
+
+ForgeBody forgeMergeFeatureResult(ExtrusionObject &body, const ForgeBody &result, int index,
+                                  const QVector<ExtrusionObject> &bodies, QString *error) {
     if (!result) return nullptr;
     if (body.mergeOperation == 0) return result;
 
@@ -298,7 +303,7 @@ ForgeBody forgeExtrusionFeature(ExtrusionObject &body, int index, const QVector<
     if (body.mergeProbe) body.mergeBodies = targets;
     if (targets.isEmpty()) {
         if (subtract) {
-            setError(error, QStringLiteral("Nessun solido da cui sottrarre l'estrusione (non ne tocca nessuno)."));
+            setError(error, QStringLiteral("Nessun solido da cui sottrarre la funzione (non ne tocca nessuno)."));
             return nullptr;
         }
         return result;  // unione automatica senza corpi da toccare: un corpo nuovo

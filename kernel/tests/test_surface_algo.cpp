@@ -123,6 +123,17 @@ FK_TEST(ProjectOnBSplineSurface) {
     }
 }
 
+FK_TEST(PlanarEquivalentOfBSplineSurface) {
+    // La loft passa da qui durante la rigenerazione delle sezioni. Il buffer
+    // delle derivate deve rispettare il contratto quadrato di Surface::evaluate.
+    const BSplineSurface surface(1, 1, {0, 0, 1, 1}, {0, 0, 1, 1}, 2, 2,
+                                 {Vec3(0, 0, 2), Vec3(0, 3, 2), Vec3(4, 0, 2), Vec3(4, 3, 2)});
+    const SurfacePtr equivalent = planarEquivalent(surface);
+    FK_CHECK(equivalent && equivalent->type() == SurfaceType::Plane);
+    FK_CHECK(near(equivalent->point(0.0, 0.0), Vec3(2, 1.5, 2), 1e-14));
+    FK_CHECK(near(equivalent->normal(0.0, 0.0), Vec3(0, 0, 1), 1e-14));
+}
+
 FK_TEST(ProjectOnExtrusionAndRevolution) {
     std::mt19937 rng(73);
     for (int trial = 0; trial < 60; ++trial) {

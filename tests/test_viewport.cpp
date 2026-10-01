@@ -2,6 +2,7 @@
 // test lo include per verificare interazioni e rendering senza esportare API di test.
 #include "../forgeCad2026_gui.cpp"
 #include "fk_helix.h"
+#include "fk_primitives.h"
 #include <QSurfaceFormat>
 #include <QTemporaryDir>
 #include <iostream>
@@ -15,6 +16,25 @@ public:
     static void run(bool render) {
         using namespace ForgeCad;
         CadViewport v;
+        // La fusione parametrica e' condivisa da estrusione e sweep: il probe
+        // conserva il bersaglio realmente intersecato e produce un solo solido.
+        ExtrusionObject mergeTarget;
+        mergeTarget.forgeBody = std::make_shared<const Kernel::Body>(Kernel::makeBox(
+            Kernel::Frame3(Kernel::Vec3(), Kernel::Vec3(0, 0, 1), Kernel::Vec3(1, 0, 0)), 3.0, 3.0, 3.0));
+        mergeTarget.solid = true;
+        ExtrusionObject sweepMerge;
+        sweepMerge.feature = BodyFeature::Sweep;
+        sweepMerge.mergeOperation = 1;
+        sweepMerge.mergeProbe = true;
+        sweepMerge.mergeBodies = {0};
+        const ForgeBody sweepTool = std::make_shared<const Kernel::Body>(Kernel::makeBox(
+            Kernel::Frame3(Kernel::Vec3(2, 1, 1), Kernel::Vec3(0, 0, 1), Kernel::Vec3(1, 0, 0)), 2.0, 1.0, 1.0));
+        QString sweepMergeError;
+        const ForgeBody sweepUnited = forgeMergeFeatureResult(sweepMerge, sweepTool, 1, {mergeTarget}, &sweepMergeError);
+        require(sweepUnited && sweepMergeError.isEmpty() && sweepMerge.mergeBodies == QVector<int>{0}
+                    && sweepUnited->shells().size() == 1,
+                "unione automatica del risultato sweep");
+        require(CadViewport::hiddenOperands(sweepMerge).contains(0), "bersaglio della sweep unita nascosto");
         const auto renderedAlpha = [](QWidget &widget) {
             widget.resize(500, 300);
             QImage image(widget.size(), QImage::Format_ARGB32_Premultiplied);
@@ -83,6 +103,17 @@ public:
         require(QSettings().value(QStringLiteral("view/functionPanelSizes/Pannello_test")).toSize() == embeddedPanel.size(),
                 "ridimensionamento manuale del pannello memorizzato");
         const QPalette panelPalette = embeddedPanel.palette();
+        require(std::abs(panelPalette.color(QPalette::WindowText).lightness() - embeddedPanel.panelColor().lightness()) > 100,
+                "contrasto del testo sul vetro");
+        QComboBox panelCombo(&embeddedPanel);
+        panelCombo.addItems({QStringLiteral("Prima voce"), QStringLiteral("Seconda voce")});
+        panelCombo.ensurePolished();
+        panelCombo.view()->ensurePolished();
+        require(std::abs(panelCombo.palette().color(QPalette::Text).lightness()
+                         - embeddedPanel.panelColor().lighter(112).lightness()) > 100
+                    && std::abs(panelCombo.view()->palette().color(QPalette::Text).lightness()
+                                - embeddedPanel.panelColor().darker(125).lightness()) > 100,
+                "testo leggibile nel campo e nella tendina dei pannelli funzione");
         const QColor selectionText = panelPalette.color(QPalette::HighlightedText);
         const QColor selectionBackground = panelPalette.color(QPalette::Highlight);
         require(selectionBackground.red() > 230 && selectionBackground.green() > 120

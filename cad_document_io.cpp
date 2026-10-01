@@ -255,7 +255,7 @@ void write(QDataStream &out, const ExtrusionObject &body) {
     out << qint32(r.kind);
     writeRefs(out, r.refs);
     out << qint32(r.count) << qint32(r.count2) << r.spacing << r.spacing2 << r.angle << r.spread << r.flip << r.flip2 << r.keepOriginal << r.featureOnly;
-    // Formato 11: fine e fusione delle estrusioni, strumenti delle booleane.
+    // Formato 11: fine delle estrusioni e fusione di estrusioni/sweep, strumenti delle booleane.
     out << qint32(body.extent);
     writeRefs(out, {body.extentRef});
     out << qint32(body.mergeOperation) << body.mergeAuto << body.mergeBodies << body.booleanTools;

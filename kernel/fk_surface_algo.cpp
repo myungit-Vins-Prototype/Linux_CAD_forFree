@@ -798,7 +798,9 @@ SurfacePtr planarEquivalent(const Surface &surface, double relativeTolerance) {
     const double tolerance = relativeTolerance * std::max(norm(hi - lo), 1e-300);
     const Interval u = spline.uDomain(), v = spline.vDomain();
     const double um = 0.5 * (u.lo + u.hi), vm = 0.5 * (v.lo + v.hi);
-    Vec3 d[3];
+    // Surface::evaluate usa l'indicizzazione quadrata (order + 1)^2 anche se
+    // per l'ordine uno sono significativi soltanto S, Su e Sv.
+    Vec3 d[4];
     spline.evaluate(um, vm, 1, d);
     const Vec3 m = cross(d[Surface::derivativeIndex(1, 0, 1)], d[Surface::derivativeIndex(0, 1, 1)]);
     if (!(norm(m) > 0.0)) return nullptr;

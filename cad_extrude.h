@@ -20,6 +20,12 @@ namespace ForgeCad {
 ForgeBody forgeExtrusionFeature(ExtrusionObject &body, int index, const QVector<SketchObject> &sketches, const QVector<ExtrusionObject> &bodies,
                                 QString *error);
 
+// Applica al risultato gia' costruito di una funzione l'unione o la
+// sottrazione richieste da mergeOperation. Usata dalle estrusioni e dagli
+// sweep; con mergeProbe conserva in mergeBodies soltanto i solidi toccati.
+ForgeBody forgeMergeFeatureResult(ExtrusionObject &body, const ForgeBody &result, int index,
+                                  const QVector<ExtrusionObject> &bodies, QString *error);
+
 // Estrusione e corpo hanno punti in comune: per l'unione si toccano (il
 // risultato ha meno componenti), per la sottrazione si sovrappongono.
 bool forgeSharesMaterial(const ForgeBody &tool, const ForgeBody &body, bool subtract);

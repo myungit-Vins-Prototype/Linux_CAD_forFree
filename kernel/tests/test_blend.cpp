@@ -34,6 +34,7 @@
 #include "fk_boolean.h"
 #include "fk_extrude.h"
 #include "fk_mass.h"
+#include "fk_loft.h"
 #include "fk_primitives.h"
 #include "fk_revolve.h"
 #include "fk_tessellate.h"
@@ -118,6 +119,14 @@ std::vector<ProfileSegment> polygon(const std::vector<Vec2> &points) {
     std::vector<ProfileSegment> segments;
     for (std::size_t i = 0; i < points.size(); ++i) segments.push_back(lineSegment(points[i], points[(i + 1) % points.size()]));
     return segments;
+}
+
+LoftSection splitCircleAt(double z, double radius) {
+    LoftSection section;
+    section.frame = Frame3(Vec3(0, 0, z), Vec3(0, 0, 1), Vec3(1, 0, 0));
+    for (int quarter = 0; quarter < 4; ++quarter)
+        section.loop.segments.push_back(arcSegment(Vec2(0, 0), radius, quarter * kHalfPi, (quarter + 1) * kHalfPi));
+    return section;
 }
 
 // Forma OCCT con gli spigoli per i punti dati raccordati o smussati (nulla se OCCT fallisce).
@@ -897,6 +906,19 @@ FK_TEST(BlendSmallRadiusOnLargeRims) {
     // Una selezione con uno spigolo liscio (corpo cilindrico e spalla toroidale, tangenti): si lascia.
     FK_CHECK_NEAR(blended(bottle, {Vec3(12.1, 0, 110), Vec3(24, 0, 85.8)}, 0.5, false, 0.0), v - ringVolume(12.1, 0.5, true), 1e-9 * v);
     FK_CHECK_THROWS(blendEdges(bottle, {nearestEdge(bottle, Vec3(24, 0, 85.8), 1e-6)}, 0.5, false));
+}
+
+FK_TEST(BlendLoftCircularCapsSplitIntoPatches) {
+    // Una loft liscia tra cerchi suddivisi in quarti produce quattro fianchi
+    // B-spline. I bordi dei coperchi sono quindi catene circolari con giunti
+    // tra patch, come nel modello prova con loft-CerchiCerchio.prt.
+    const double endRadius = 7.4, middleRadius = 15.0, height = 100.0;
+    const Body loft = loftSolid({splitCircleAt(0.0, endRadius), splitCircleAt(0.5 * height, middleRadius), splitCircleAt(height, endRadius)}, false);
+    const double c = std::sqrt(0.5) * endRadius;
+    for (double radius : {0.01, 0.1}) {
+        blended(loft, {Vec3(c, c, 0.0)}, radius, false, 0.0);
+        blended(loft, {Vec3(c, c, height)}, radius, false, 0.0);
+    }
 }
 
 FK_TEST(BlendArcsMeetingSegments) {

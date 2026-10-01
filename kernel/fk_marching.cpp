@@ -973,9 +973,16 @@ void Marcher::traceFrom(const Vec3 &seedPoint, SurfaceIntersection &out, bool si
             for (double orientation : {1.0, -1.0}) {
                 const Node n = orientation > 0.0 ? side : side.reversed();
                 bool agrees = true;
+                std::vector<bool> tangentToBreak(onBreak.size());
                 for (std::size_t k = 0; k < onBreak.size(); ++k) {
                     const int i = onBreak[k];
-                    agrees = agrees && (i < 2 ? n.da[i] : n.db[i - 2]) * sign[k] > 0.0;
+                    const double rate = i < 2 ? n.da[i] : n.db[i - 2];
+                    // Il ramo puo' correre lungo una linea di nodo: in quella
+                    // coordinata non deve scegliere uno dei due lati. Prima
+                    // veniva rifiutato in tutti i quadranti e la booleana si
+                    // fermava proprio sul bordo della superficie.
+                    tangentToBreak[k] = std::fabs(step * rate) <= 1e-9 * (1.0 + std::fabs(x[i]));
+                    agrees = agrees && (tangentToBreak[k] || rate * sign[k] > 0.0);
                 }
                 if (!agrees) continue;
                 Params z = y;
@@ -988,7 +995,8 @@ void Marcher::traceFrom(const Vec3 &seedPoint, SurfaceIntersection &out, bool si
                 plane.origin = seed.p + step * n.t;
                 if (!correct(z, plane)) continue;
                 bool sameSides = true;
-                for (std::size_t k = 0; k < onBreak.size(); ++k) sameSides = sameSides && (z[onBreak[k]] - x[onBreak[k]]) * sign[k] > 0.0;
+                for (std::size_t k = 0; k < onBreak.size(); ++k)
+                    sameSides = sameSides && (tangentToBreak[k] || (z[onBreak[k]] - x[onBreak[k]]) * sign[k] > 0.0);
                 if (sameSides && makeNode(z, n.t, seed)) {
                     x = z;
                     moved = true;
@@ -996,7 +1004,11 @@ void Marcher::traceFrom(const Vec3 &seedPoint, SurfaceIntersection &out, bool si
                 }
             }
         }
-        if (!moved) throw std::domain_error("intersectSurfaces: punto iniziale su uno spigolo delle superfici non gestito");
+        // Se nessun quadrante permette il piccolo avanzamento, conserva il
+        // nodo esatto sullo spigolo. traceCurve() puo' tracciarlo oppure
+        // registrarlo come contatto, che il chiamante valuta sulle facce
+        // finite; scartare qui l'intera coppia rendeva impossibili, tra
+        // l'altro, le unioni in cui una sweep termina sul bordo del bersaglio.
     }
     traceCurve(seed, out);
 }

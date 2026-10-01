@@ -27,6 +27,7 @@ using Model = detail::BlendModel;
 
 constexpr double kFitTolerance = 1e-9;  // scarto della superficie dagli archi (o dai segmenti) veri
 constexpr double kSmooth = 1e-9;        // vertici lisci: 1 - coseno dell'angolo tra le tangenti
+constexpr double kFilletSolveTolerance = 1e-2;  // residuo relativo ammesso sulle patch B-spline approssimate
 
 // Punto di una faccia con le derivate prime, la normale uscente e le sue derivate.
 struct FacePoint {
@@ -108,6 +109,7 @@ HPoint operator*(double s, const HPoint &a) { return {s * a.p, s * a.w}; }
 // Sezione del raccordo (o dello smusso) nel parametro t dello spigolo.
 struct Section {
     double t = 0.0;
+    double residual = 0.0;               // scarto numerico delle superfici offset
     double x[4] = {0.0, 0.0, 0.0, 0.0};   // (uA, vA, uB, vB)
     double dx[4] = {0.0, 0.0, 0.0, 0.0};  // derivate rispetto a t
     Vec3 center, dcenter;                 // centro della palla (raccordo)
@@ -248,7 +250,13 @@ private:
                 }
             }
             if (!improved) {
-                converged = error < 1e-12 * scale_;
+                // Sulle B-spline dei loft l'intersezione delle due superfici
+                // offset puo' fermarsi al limite numerico della pezza: il
+                // residuo scende di molti ordini ma non fino alla soglia da
+                // aritmetica esatta. Accettalo solo dopo la stagnazione e se
+                // resta trascurabile rispetto al raggio; i controlli
+                // topologici finali verificano comunque i contatti ottenuti.
+                converged = error <= std::max(1e-12 * scale_, kFilletSolveTolerance * radius);
                 break;
             }
         }
@@ -260,6 +268,7 @@ private:
         if (!solveLinear<4>(J, rhs)) return false;
         std::copy(x, x + 4, s.x);
         std::copy(rhs, rhs + 4, s.dx);
+        s.residual = error;
         const Vec3 dpA = pa.su * rhs[0] + pa.sv * rhs[1], dpB = pb.su * rhs[2] + pb.sv * rhs[3];
         const Vec3 dc = (pa.su + k * pa.nu) * rhs[0] + (pa.sv + k * pa.nv) * rhs[1];
         s.center = center;
@@ -283,6 +292,7 @@ private:
 
     // Smusso: su ciascuna faccia il punto a distanza d dallo spigolo nel piano normale.
     bool solveChamfer(const Vec3 *e, const Vec3 &T, const Vec3 &dT, double d, double tolerance, Section &s) const {
+        s.residual = 0.0;
         for (int side = 0; side < 2; ++side) {
             const Surface &surface = side == 0 ? *a_ : *b_;
             const bool sense = side == 0 ? senseA_ : senseB_;
@@ -351,6 +361,7 @@ private:
                 }
             }
             if (!converged || !jacobian()) return false;
+            s.residual = std::max(s.residual, error);
             const Vec3 r = p.p - e[0];
             double rhs[2] = {dot(r / norm(r), e[1]), dot(e[1], T) - dot(r, dT)};
             if (!solveLinear<2>(J, rhs)) return false;
@@ -441,8 +452,10 @@ public:
             const Section sa = section(a), sb = section(b, knots.count(b) > 0);
             const double h = b - a;
             double error = 0.0;
+            double numericalFloor = std::max(sa.residual, sb.residual);
             for (double f : {0.2, 0.5, 0.8}) {
                 const Section &exact = section(a + f * h);
+                numericalFloor = std::max(numericalFloor, exact.residual);
                 const double h00 = (1 + 2 * f) * (1 - f) * (1 - f), h10 = f * (1 - f) * (1 - f), h01 = f * f * (3 - 2 * f), h11 = f * f * (f - 1);
                 HPoint fitted[3];
                 for (int r = 0; r < 3; ++r)
@@ -455,7 +468,7 @@ public:
                 if (!(dot(exact.drow[0].p, tangent) > 0.0) || !(dot(exact.drow[2].p, tangent) > 0.0))
                     throw std::domain_error("blendEdges: raggio maggiore del raggio di curvatura delle facce lungo lo spigolo");
             }
-            if (error > kFitTolerance && h > 1e-9 * range_.length()) {
+            if (error > std::max(kFitTolerance, numericalFloor) && h > 1e-9 * range_.length()) {
                 const double m = 0.5 * (a + b);
                 pending.push_back({m, b});
                 pending.push_back({a, m});
@@ -793,7 +806,7 @@ struct Cut {
 // veri. Vicino al punto in A i raccordi sono tangenti tra loro (entrambi
 // tangenti ad A) e il sistema degenera: l'ultimo tratto va fino al punto
 // esatto e il suo scarto (misurato) diventa la tolleranza della curva.
-Cut traceMitre(const Surface &S, const Surface &T, double t0, double s0, const double X[4], double scale) {
+Cut traceMitre(const Surface &S, const Surface &T, double t0, double s0, const double X[4], double scale, double fitTolerance) {
     struct Node {
         double g = 0.0, x[4] = {0, 0, 0, 0}, dx[4] = {0, 0, 0, 0};
         Vec3 p, dp;
@@ -901,7 +914,7 @@ Cut traceMitre(const Surface &S, const Surface &T, double t0, double s0, const d
         // Vicino alle singolarita' dei fianchi di un loft Newton puo' non
         // risolvere uno dei campioni pur avendo estremi validi. Non suddividere
         // indefinitamente un intervallo ormai trascurabile.
-        if ((!ok || error > kFitTolerance) && gb - ga > 1e-4 * gX) {
+        if ((!ok || error > fitTolerance) && gb - ga > 1e-4 * gX) {
             const double gm = 0.5 * (ga + gb);
             Node mid;
             // La continuazione puo' attraversare una parametrizzazione quasi
@@ -914,7 +927,7 @@ Cut traceMitre(const Surface &S, const Surface &T, double t0, double s0, const d
             pending.push_back({ga, gm});
             continue;
         }
-        if (!ok || error > kFitTolerance) {
+        if (!ok || error > fitTolerance) {
             for (double f : {0.25, 0.5, 0.75}) {
                 const Vec3 p = hermite(a, b, f);
                 approximationGap = std::max({approximationGap, projectPoint(S, p).distance, projectPoint(T, p).distance});
@@ -963,10 +976,15 @@ Cut traceMitre(const Surface &S, const Surface &T, double t0, double s0, const d
 // cubiche di Hermite a tratti raffinate a kFitTolerance. Funziona anche con le
 // superfici che si incontrano sotto un angolo piccolo (dove il tracciamento
 // generale si ferma), purche' la curva avanzi lungo la corda.
-Cut traceBetween(const Surface &S, const Surface &T, const Vec3 &from, const Vec3 &to, double scale) {
+Cut traceBetween(const Surface &S, const Surface &T, const Vec3 &from, const Vec3 &to, double scale, double surfaceError) {
     const Vec3 D = to - from;
     const double L2 = dot(D, D);
     if (!(L2 > 0.0)) throw std::domain_error("blendEdges: curva di taglio degenere");
+    // Le superfici B-spline importate o ottenute da una loft portano un
+    // errore di approssimazione proporzionale alle dimensioni del modello.
+    // Pretendere sempre un nanometro assoluto rende il fit instabile nei
+    // giunti tra pezze, dove Newton oscilla tra soluzioni equivalenti.
+    const double fitTolerance = std::max(kFitTolerance, surfaceError);
     struct Node {
         double s = 0.0, y[4] = {0, 0, 0, 0}, dy[4] = {0, 0, 0, 0};
         Vec3 p, dp;
@@ -1029,6 +1047,10 @@ Cut traceBetween(const Surface &S, const Surface &T, const Vec3 &from, const Vec
     };
     Node first, last;
     if (!seedNode(from, 0.0, first) || !seedNode(to, 1.0, last)) throw std::domain_error("blendEdges: estremi della curva di taglio non sulle due superfici");
+    const auto nodeBetween = [&](double target, const Node &a, const Node &b, Node &out) {
+        if (nodeAt(target, a, out)) return true;
+        return nodeAt(target, b, out);
+    };
     std::map<double, Node> nodes{{0.0, first}, {1.0, last}};
     const auto hermite = [](const Node &a, const Node &b, double f) {
         const double h = b.s - a.s;
@@ -1038,7 +1060,7 @@ Cut traceBetween(const Surface &S, const Surface &T, const Vec3 &from, const Vec
     std::vector<std::pair<double, double>> pending{{0.0, 0.5}, {0.5, 1.0}};
     {
         Node mid;
-        if (!nodeAt(0.5, first, mid)) throw std::domain_error("blendEdges: curva di taglio non tracciata");
+        if (!nodeBetween(0.5, first, last, mid)) throw std::domain_error("blendEdges: curva di taglio non tracciata");
         nodes[0.5] = mid;
     }
     int guard = 0;
@@ -1051,16 +1073,16 @@ Cut traceBetween(const Surface &S, const Surface &T, const Vec3 &from, const Vec
         bool ok = true;
         for (double f : {0.25, 0.5, 0.75}) {
             Node exact;
-            if (!nodeAt(sa + f * (sb - sa), a, exact)) {
+            if (!nodeBetween(sa + f * (sb - sa), a, b, exact)) {
                 ok = false;
                 break;
             }
             error = std::max(error, distance(hermite(a, b, f), exact.p));
         }
-        if (!ok || (error > kFitTolerance && sb - sa > 1e-9)) {
+        if (!ok || (error > fitTolerance && sb - sa > 1e-9)) {
             const double sm = 0.5 * (sa + sb);
             Node mid;
-            if (!nodeAt(sm, a, mid)) throw std::domain_error("blendEdges: curva di taglio non tracciata");
+            if (!nodeBetween(sm, a, b, mid)) throw std::domain_error("blendEdges: curva di taglio non tracciata");
             nodes[sm] = mid;
             pending.push_back({sm, sb});
             pending.push_back({sa, sm});
@@ -1243,7 +1265,7 @@ Body blendSurfaceChains(const Body &input, const std::vector<EdgeId> &selected, 
             };
             Section seed;
             bool found = false;
-            for (double fraction : {1.0 / 64.0, 1.0 / 16.0, 1.0 / 4.0, 1.0}) {
+            for (double fraction : {1.0 / 64.0, 1.0 / 32.0, 1.0 / 16.0, 1.0 / 8.0, 1.0 / 4.0, 1.0 / 2.0, 1.0}) {
                 const double r = fraction * reachA;
                 Section trial = seed;
                 bool ok = found && piece.solver->solve(t, false, trial, r);
@@ -1806,14 +1828,23 @@ Body blendSurfaceChains(const Body &input, const std::vector<EdgeId> &selected, 
             // Contatti su B: il basso finisce in X, il profondo sull'attraversamento di c.
             const Vec3 onC0 = mitre->haveOnC0 ? mitre->onC0 : a.surface->point(mitre->q0, 1.0);
             const Vec3 onC1 = mitre->haveOnC1 ? mitre->onC1 : b.surface->point(mitre->q1, 1.0);
+            const auto deepPoint = [&](const Vec3 &onC) {
+                const double gap = distance(X, onC);
+                if (gap <= std::max(1e-8 * scale, 0.01 * size)) {
+                    if (gap > 1e-9 * scale)
+                        model.pointTolerance[std::size_t(junction.pointB)] = std::max(model.pointTolerance[std::size_t(junction.pointB)], 2.0 * gap);
+                    return junction.pointB;
+                }
+                return model.addPoint(onC);
+            };
             if (junction.deep == 1) {
                 setEnd(bLo, bHi, p, true, t0);
                 setEnd(bLo, bHi, next(p), false, mitre->q1);
-                junction.deepPoint = model.addPoint(onC1);
+                junction.deepPoint = deepPoint(onC1);
             } else if (junction.deep == 0) {
                 setEnd(bLo, bHi, p, true, mitre->q0);
                 setEnd(bLo, bHi, next(p), false, t1);
-                junction.deepPoint = model.addPoint(onC0);
+                junction.deepPoint = deepPoint(onC0);
             } else {
                 setEnd(bLo, bHi, p, true, mitre->q0);
                 setEnd(bLo, bHi, next(p), false, mitre->q1);
@@ -1832,20 +1863,21 @@ Body blendSurfaceChains(const Body &input, const std::vector<EdgeId> &selected, 
                 // Simmetrico: X su c; il punto comune esatto dei due contatti su B.
                 Xp[0] = t0, Xp[1] = 1.0, Xp[2] = s0, Xp[3] = w0;
             }
-            gamma = traceMitre(*a.surface, *b.surface, mitre->tA0, mitre->tA1, Xp, scale);
+            const double mitreTolerance = std::max({kFitTolerance, a.fit.error, b.fit.error});
+            gamma = traceMitre(*a.surface, *b.surface, mitre->tA0, mitre->tA1, Xp, scale, mitreTolerance);
             {
                 const Vec3 end = gamma.curve->point(gamma.range.hi), begin = gamma.curve->point(gamma.range.lo);
                 gamma.gap = std::max({gamma.gap, distance(end, X), distance(begin, pA)});
             }
             junction.gamma = model.addEdge(junction.pointA, junction.pointB, gamma.curve, gamma.range, gamma.gap > 1e-7 ? 2.0 * gamma.gap : 0.0);
             if (gamma.gap > 1e-7) model.pointTolerance[std::size_t(junction.pointA)] = std::max(model.pointTolerance[std::size_t(junction.pointA)], 2.0 * gamma.gap);
-            if (junction.deep >= 0) {
+            if (junction.deep >= 0 && junction.deepPoint != junction.pointB) {
                 // Delta: il raccordo profondo con il fianco del basso, da X a c.
                 const Piece &deepPiece = junction.deep == 1 ? b : a;
                 const FaceId other = junction.deep == 1 ? a.b : b.b;
                 const Vec3 to = model.points[std::size_t(junction.deepPoint)];
                 Cut delta;
-                try { delta = traceBetween(*deepPiece.surface, *body.face(other).surface, X, to, scale); }
+                try { delta = traceBetween(*deepPiece.surface, *body.face(other).surface, X, to, scale, deepPiece.fit.error); }
                 catch (const std::domain_error &failure) { throw std::domain_error(std::string("blendEdges: delta della mitra: ") + failure.what()); }
                 junction.delta = delta.forward ? model.addEdge(junction.pointB, junction.deepPoint, delta.curve, delta.range, delta.gap > 1e-7 ? 2.0 * delta.gap : 0.0)
                                                : model.addEdge(junction.deepPoint, junction.pointB, delta.curve, delta.range, delta.gap > 1e-7 ? 2.0 * delta.gap : 0.0);
@@ -1872,7 +1904,7 @@ Body blendSurfaceChains(const Body &input, const std::vector<EdgeId> &selected, 
                 setEnd(bLo, bHi, end.piece, !end.atStart, end.tB);
                 const Surface &E = *body.face(end.face).surface;
                 Cut kappa;
-                try { kappa = traceBetween(*piece.surface, E, ra, rb, scale); }
+                try { kappa = traceBetween(*piece.surface, E, ra, rb, scale, piece.fit.error); }
                 catch (const std::domain_error &failure) { throw std::domain_error(std::string("blendEdges: chiusura dell'estremo: ") + failure.what()); }
                 junction.connector = kappa.forward ? model.addEdge(junction.pointA, junction.pointB, kappa.curve, kappa.range, kappa.gap > 1e-7 ? 2.0 * kappa.gap : 0.0)
                                                    : model.addEdge(junction.pointB, junction.pointA, kappa.curve, kappa.range, kappa.gap > 1e-7 ? 2.0 * kappa.gap : 0.0);

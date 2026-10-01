@@ -547,7 +547,7 @@ public:
         return {};
     }
 
-    // Candidati della fusione automatica di un'estrusione nel posto `index`:
+    // Candidati della fusione automatica di un'estrusione o sweep nel posto `index`:
     // i solidi visibili che vengono prima.
     QVector<int> mergeCandidates(int index) const {
         QVector<int> candidates;
@@ -561,7 +561,9 @@ public:
     // da fondere sono ancora da scegliere tra i candidati.
     ExtrusionObject withMergeCandidates(ExtrusionObject definition, int index) const {
         definition.mergeProbe = false;
-        if (definition.operation < 0 && definition.feature == BodyFeature::Extrusion && definition.mergeOperation != 0 && definition.mergeAuto) {
+        if (definition.operation < 0
+            && (definition.feature == BodyFeature::Extrusion || definition.feature == BodyFeature::Sweep)
+            && definition.mergeOperation != 0 && definition.mergeAuto) {
             definition.mergeBodies = mergeCandidates(index);
             definition.mergeProbe = true;
         }
@@ -570,7 +572,8 @@ public:
     // Corpi che la funzione nasconde (operandi delle booleane, corpi in cui si fonde l'estrusione).
     static QVector<int> hiddenOperands(const ExtrusionObject &body) {
         if (body.operation >= 0) return QVector<int>{body.firstBody, body.secondBody} + body.booleanTools;
-        if (body.feature == BodyFeature::Extrusion && body.mergeOperation != 0) return body.mergeBodies;
+        if ((body.feature == BodyFeature::Extrusion || body.feature == BodyFeature::Sweep) && body.mergeOperation != 0)
+            return body.mergeBodies;
         if (body.feature == BodyFeature::Transform && !body.move.copy) return {body.firstBody};
         return {};
     }
@@ -1374,7 +1377,9 @@ public:
         else if (definition.mergeProbe) preview_.replaced.clear();  // i corpi fusi si sanno a calcolo finito
         else preview_.replaced = bodyOperands(definition);
         // La fine su un altro corpo non lo nasconde (solo quelli che si fondono).
-        if (definition.operation < 0 && definition.feature == BodyFeature::Extrusion && !definition.mergeProbe)
+        if (definition.operation < 0
+            && (definition.feature == BodyFeature::Extrusion || definition.feature == BodyFeature::Sweep)
+            && !definition.mergeProbe)
             preview_.replaced = definition.mergeOperation != 0 ? definition.mergeBodies : QVector<int>();
         preview_.valid = false;
         preview_.error.clear();
@@ -1604,13 +1609,17 @@ public:
     }
 
     // Corpo nuovo dalla definizione (elica, sweep, loft); i corpi `hide` (il
-    // percorso di uno sweep) si nascondono nello stesso passo di Undo.
+    // percorso di uno sweep) e quelli assorbiti da una fusione si nascondono
+    // nello stesso passo di Undo.
     // Restituisce l'errore.
     QString createBody(ExtrusionObject body, const QVector<int> &hide = {}) {
+        body = withMergeCandidates(body, int(extrusions_.size()));
         rebuildBody(body, int(extrusions_.size()));
+        body.mergeProbe = false;
         if (!hasGeometry(body)) return body.error;
         recordUndo();
-        for (int index : hide)
+        QVector<int> hidden = hide + hiddenOperands(body);
+        for (int index : hidden)
             if (index >= 0 && index < extrusions_.size()) extrusions_[index].visible = false;
         extrusions_.append(body);
         selection_ = {SceneObjectKind::Extrusion, int(extrusions_.size()) - 1, -1};
@@ -5441,7 +5450,11 @@ private:
         case BodyFeature::Scale: return {body.firstBody};
         case BodyFeature::SheetTrim: return body.secondBody >= 0 ? QVector<int>{body.firstBody, body.secondBody} : QVector<int>{body.firstBody};
         case BodyFeature::Helix: return body.helix.source != 0 ? QVector<int>{body.firstBody} : QVector<int>{};
-        case BodyFeature::Sweep: return body.sweepPath == 1 ? QVector<int>{body.firstBody} : QVector<int>{};
+        case BodyFeature::Sweep: {
+            QVector<int> result = body.sweepPath == 1 ? QVector<int>{body.firstBody} : QVector<int>();
+            if (body.mergeOperation != 0) result += body.mergeBodies;
+            return result;
+        }
         case BodyFeature::DatumPlane: {
             QVector<int> bodies;
             for (const GeometryRef &ref : body.datum.refs)
@@ -5689,6 +5702,7 @@ private:
                 }
                 path = ForgeCad::alignPath(path, *profile);
                 body.forgeBody = ForgeCad::forgeSweep(*profile, path, body.sweepMode, &body.error);
+                body.forgeBody = ForgeCad::forgeMergeFeatureResult(body, body.forgeBody, index, bodies, &body.error);
                 body.solid = body.forgeBody && !body.forgeBody->isSheet();
                 return;
             }
@@ -9514,11 +9528,23 @@ private:
         path.addRoundedRect(QRectF(rect()), cornerRadius_, cornerRadius_);
         setMask(QRegion(path.toFillPolygon().toPolygon()));
     }
-    void applyTransparentStyle(const QColor &foreground) {
+    static QColor readableText(const QColor &background) {
+        // I pannelli mantengono un aspetto scuro/medio anche sopra scene
+        // luminose. Il testo nero diventa utile soltanto su un fondo davvero
+        // chiaro; una soglia piu' bassa faceva oscillare tutta la palette dopo
+        // la prima cattura del framebuffer.
+        const double luminance = 0.2126 * background.redF() + 0.7152 * background.greenF() + 0.0722 * background.blueF();
+        return luminance > 0.70 ? QColor(20, 24, 29) : QColor(242, 246, 250);
+    }
+    void applyTransparentStyle() {
         QColor popup = panelColor_.darker(125);
         popup.setAlpha(245);
         QColor field = panelColor_.lighter(112);
         field.setAlpha(150);
+        // Campi e popup hanno fondi propri: non devono ereditare il colore
+        // scelto per il vetro, che puo' diventare nero sopra una scena chiara.
+        const QColor fieldForeground = readableText(field);
+        const QColor popupForeground = readableText(popup);
         const QString popupRgba = QStringLiteral("rgba(%1,%2,%3,%4)")
             .arg(popup.red()).arg(popup.green()).arg(popup.blue()).arg(popup.alpha());
         const QString fieldRgba = QStringLiteral("rgba(%1,%2,%3,%4)")
@@ -9528,12 +9554,12 @@ private:
             "QScrollArea#functionDialogScroll > QWidget > QWidget, QWidget#functionDialogContents, "
             "QWidget#loftContents, QWidget#loftFooter, QAbstractItemView, QAbstractSpinBox, QPushButton { background: transparent; }"
             "QAbstractItemView::item { background: transparent; }"
-            "QComboBox { background-color: %2; color: %1; border: 1px solid rgba(135,170,205,150); padding: 2px 22px 2px 5px; }"
-            "QComboBox QAbstractItemView { background-color: %3; color: %1; border: 1px solid #52708d; outline: 0; }"
-            "QComboBox QAbstractItemView::item { background-color: %3; color: %1; min-height: 24px; padding: 2px 5px; }"
+            "QComboBox { background-color: %1; color: %2; border: 1px solid rgba(135,170,205,150); padding: 2px 22px 2px 5px; }"
+            "QComboBox QAbstractItemView { background-color: %3; color: %4; border: 1px solid #52708d; outline: 0; }"
+            "QComboBox QAbstractItemView::item { background-color: %3; color: %4; min-height: 24px; padding: 2px 5px; }"
             "QComboBox QAbstractItemView::item:hover, QComboBox QAbstractItemView::item:selected { background-color: #ff9f1c; color: #101820; font-weight: 800; border: 2px solid #ffe0a3; }"
             "QSizeGrip#functionPanelResizeGrip { background: transparent; }")
-            .arg(foreground.name(QColor::HexRgb), fieldRgba, popupRgba));
+            .arg(fieldRgba, fieldForeground.name(QColor::HexRgb), popupRgba, popupForeground.name(QColor::HexRgb)));
     }
     QString panelSizeSettingsKey() const {
         QString id = objectName() != QLatin1String("functionDialogPanel") ? objectName() : windowTitle();
@@ -9737,14 +9763,27 @@ private:
         update();
     }
     void updatePalette() {
-        const QColor behind = backdrop_.isNull() ? panelColor_
-            : backdrop_.pixelColor(backdrop_.width() / 2, backdrop_.height() / 2);
+        QColor behind = panelColor_;
+        if (!backdrop_.isNull()) {
+            // Un solo pixel (prima quello centrale) rendeva il testo instabile:
+            // bastava che sotto il centro passasse una faccia chiara per
+            // convertire in nero tutte le scritte. Campiona l'intera area con
+            // una griglia regolare, abbastanza economica da rifare a ogni frame.
+            constexpr int samples = 7;
+            int red = 0, green = 0, blue = 0;
+            for (int y = 0; y < samples; ++y)
+                for (int x = 0; x < samples; ++x) {
+                    const QColor pixel = backdrop_.pixelColor((2 * x + 1) * backdrop_.width() / (2 * samples),
+                                                              (2 * y + 1) * backdrop_.height() / (2 * samples));
+                    red += pixel.red(); green += pixel.green(); blue += pixel.blue();
+                }
+            behind = QColor(red / (samples * samples), green / (samples * samples), blue / (samples * samples));
+        }
         const double alpha = opacity_ / 100.0;
         const QColor visible = QColor::fromRgbF(alpha * panelColor_.redF() + (1.0 - alpha) * behind.redF(),
                                                 alpha * panelColor_.greenF() + (1.0 - alpha) * behind.greenF(),
                                                 alpha * panelColor_.blueF() + (1.0 - alpha) * behind.blueF());
-        const double luminance = 0.2126 * visible.redF() + 0.7152 * visible.greenF() + 0.0722 * visible.blueF();
-        const QColor foreground = luminance > 0.52 ? QColor(20, 24, 29) : QColor(242, 246, 250);
+        const QColor foreground = readableText(visible);
         QPalette p = palette();
         for (QPalette::ColorGroup group : {QPalette::Active, QPalette::Inactive, QPalette::Disabled}) {
             p.setColor(group, QPalette::WindowText, foreground);
@@ -9756,7 +9795,7 @@ private:
             p.setColor(group, QPalette::Base, panelColor_.darker(125));
         }
         setPalette(p);
-        applyTransparentStyle(foreground);
+        applyTransparentStyle();
     }
     QColor panelColor_;
     int opacity_ = 88;
@@ -10396,6 +10435,23 @@ static bool sweepDialog(QWidget *parent, CadViewport *viewport, const QString &t
     modeBox->addItems({QStringLiteral("Torsione minima (segue il percorso senza ruotare attorno)"),
                        QStringLiteral("Frenet (segue la curvatura: molle, filetti)"), QStringLiteral("Orientamento costante (il profilo trasla)")});
     modeBox->setCurrentIndex(qBound(0, initial.sweepMode, 2));
+    auto *operationBox = new QComboBox(&dialog);
+    operationBox->addItems({QStringLiteral("Corpo nuovo"), QStringLiteral("Unisci ai solidi"), QStringLiteral("Sottrai dai solidi")});
+    operationBox->setCurrentIndex(qBound(0, initial.mergeOperation, 2));
+    auto *autoBox = new QCheckBox(QStringLiteral("Automatico: i solidi che hanno punti in comune con la sweep"), &dialog);
+    autoBox->setChecked(initial.mergeAuto);
+    auto *bodyList = new QListWidget(&dialog);
+    bodyList->setMinimumHeight(110);
+    for (int index = 0; index < bodies.size() && (replaced < 0 || index < replaced); ++index) {
+        const ExtrusionObject &body = bodies.at(index);
+        if (!body.forgeBody || !body.solid || (body.operation < 0 && (body.feature == BodyFeature::DatumPlane || body.feature == BodyFeature::Helix)))
+            continue;
+        const bool used = initial.mergeBodies.contains(index);
+        auto *item = new QListWidgetItem(body.visible || used ? body.name : body.name + QStringLiteral(" (nascosto)"), bodyList);
+        item->setFlags(item->flags() | Qt::ItemIsUserCheckable);
+        item->setCheckState(used ? Qt::Checked : Qt::Unchecked);
+        item->setData(Qt::UserRole, index);
+    }
     auto *help = new QLabel(QStringLiteral("Il profilo resta dove e' disegnato e si muove con il percorso, che parte dal punto piu' vicino al profilo "
                                            "(di solito lo si disegna sul piano normale al percorso, all'inizio). I tratti del percorso devono essere tangenti."),
                             &dialog);
@@ -10413,6 +10469,9 @@ static bool sweepDialog(QWidget *parent, CadViewport *viewport, const QString &t
     form->addRow(QString(), pickStatus);
     form->addRow(QStringLiteral("Curva del percorso:"), curveBox);
     form->addRow(QStringLiteral("Orientamento:"), modeBox);
+    form->addRow(QStringLiteral("Risultato:"), operationBox);
+    form->addRow(QString(), autoBox);
+    form->addRow(QStringLiteral("Solidi:"), bodyList);
     form->addRow(help);
     const PreviewScope scope(viewport, dialog, form, replaced);
     QVector<SketchPathRef> pathComponents;
@@ -10446,6 +10505,12 @@ static bool sweepDialog(QWidget *parent, CadViewport *viewport, const QString &t
         }
         d.firstBody = d.sweepPath == 1 && !curves.isEmpty() ? curves.at(qMax(0, curveBox->currentIndex())) : -1;
         d.sweepMode = modeBox->currentIndex();
+        d.mergeOperation = operationBox->currentIndex();
+        d.mergeAuto = autoBox->isChecked();
+        d.mergeBodies.clear();
+        for (int row = 0; row < bodyList->count(); ++row)
+            if (bodyList->item(row)->checkState() == Qt::Checked)
+                d.mergeBodies.append(bodyList->item(row)->data(Qt::UserRole).toInt());
         return d;
     };
     const auto refresh = [&] {
@@ -10453,10 +10518,17 @@ static bool sweepDialog(QWidget *parent, CadViewport *viewport, const QString &t
         pathChainBox->setEnabled(pathTypeBox->currentIndex() == 0);
         pickPath->setEnabled(pathTypeBox->currentIndex() == 0);
         curveBox->setEnabled(pathTypeBox->currentIndex() == 1 && !curves.isEmpty());
-        scope.request(current());
+        const bool merge = operationBox->currentIndex() != 0;
+        form->setRowVisible(autoBox, merge);
+        form->setRowVisible(bodyList, merge);
+        bodyList->setEnabled(!autoBox->isChecked());
+        scope.request(viewport->withMergeCandidates(current(), replaced >= 0 ? replaced : int(bodies.size())));
     };
     QObject::connect(pathSketchBox, &QComboBox::currentIndexChanged, &dialog, [&](int) { refillPaths(); refresh(); });
-    for (QComboBox *box : {profileBox, pathTypeBox, pathChainBox, curveBox, modeBox}) QObject::connect(box, &QComboBox::currentIndexChanged, &dialog, refresh);
+    for (QComboBox *box : {profileBox, pathTypeBox, pathChainBox, curveBox, modeBox, operationBox})
+        QObject::connect(box, &QComboBox::currentIndexChanged, &dialog, refresh);
+    QObject::connect(autoBox, &QCheckBox::toggled, &dialog, refresh);
+    QObject::connect(bodyList, &QListWidget::itemChanged, &dialog, refresh);
     bool pathPicking = false;
     QObject::connect(pickPath, &QPushButton::clicked, &dialog, [&] {
         pathPicking = true;
@@ -10486,6 +10558,8 @@ static bool sweepDialog(QWidget *parent, CadViewport *viewport, const QString &t
         if (d.sweepPath == 1 && d.firstBody < 0) return QStringLiteral("Nella scena non ci sono curve (eliche) da usare come percorso.");
         if (d.sweepPath == 0 && d.pathSegments.isEmpty() && d.pathCurves.isEmpty()) return QStringLiteral("Seleziona una catena valida nello schizzo del percorso.");
         if (d.sweepPath == 0 && d.pathSketch == d.sketchIndex) return QStringLiteral("Profilo e percorso devono stare in schizzi diversi.");
+        if (d.mergeOperation != 0 && !d.mergeAuto && d.mergeBodies.isEmpty())
+            return QStringLiteral("Spunta almeno un solido (o scegli Automatico).");
         return apply(d);
     };
     if (auto *window = qobject_cast<QMainWindow *>(parent)) return runUntilAppliedModeless(window, viewport, dialog, form, buttons, validate);
@@ -13590,6 +13664,14 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
         definition.feature = BodyFeature::Sweep;
         const SceneSelection selection = viewport->selection();
         definition.sketchIndex = selection.kind == SceneObjectKind::Sketch ? selection.index : qMax(0, viewport->activeSketchIndex());
+        // Una nuova sweep parte come funzione additiva se nella scena esiste
+        // gia' un solido visibile. Il probe conserva soltanto quelli realmente
+        // toccati; se non ce ne sono il risultato resta un corpo separato.
+        for (const ExtrusionObject &body : viewport->extrusions())
+            if (body.visible && body.solid && body.forgeBody) {
+                definition.mergeOperation = 1;
+                break;
+            }
         if (selection.kind == SceneObjectKind::Extrusion && selection.index >= 0 && selection.index < viewport->extrusions().size()
             && viewport->extrusions().at(selection.index).feature == BodyFeature::Helix) {
             definition.sweepPath = 1;
@@ -14767,8 +14849,11 @@ void PdfWindow::rebuildModelTree() {
                     .arg(planeNames().value(body.primitive.plane)));
             }
         }
-        // Estrusione fino a un riferimento o fusa con altri solidi: la fine e i corpi.
-        if (body.operation < 0 && body.feature == BodyFeature::Extrusion && (body.extent != 0 || (body.mergeOperation != 0 && !body.mergeBodies.isEmpty()))) {
+        // Estrusione fino a un riferimento, oppure estrusione/sweep fusa con altri solidi.
+        if (body.operation < 0
+            && ((body.feature == BodyFeature::Extrusion && body.extent != 0)
+                || ((body.feature == BodyFeature::Extrusion || body.feature == BodyFeature::Sweep)
+                    && body.mergeOperation != 0 && !body.mergeBodies.isEmpty()))) {
             QStringList children;
             if (body.extent != 0) children.append(QStringLiteral("Fino a: ") + ForgeCad::geometryRefText(body.extentRef, sketches, extrusions));
             if (body.mergeOperation != 0)

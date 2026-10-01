@@ -532,7 +532,9 @@ void BooleanBuilder::surfaceArcs(FaceId fa, FaceId fb, PairResult &out) const {
     // solo se una curva tracciata passa per il punto (lo divide come un
     // incrocio); un tracciamento fermato vicino al punto lascerebbe il taglio aperto.
     for (const Vec3 &x : intersection.tangentPoints) {
-        if (!touchesBoth(fa, fb, x)) continue;
+        const PointLocation onFaceA = classifyPointOnFace(bodies_[0], fa, x, tolerance_);
+        const PointLocation onFaceB = classifyPointOnFace(bodies_[1], fb, x, tolerance_);
+        if (onFaceA == PointLocation::Outside || onFaceB == PointLocation::Outside) continue;
         const Vec3 n = faceNormal(surfaceA, true, x, tolerance_);
         const Vec3 e1 = normalized(std::fabs(n.x()) < 0.9 ? cross(n, Vec3(1, 0, 0)) : cross(n, Vec3(0, 1, 0))), e2 = cross(n, e1);
         bool positive = false, negative = false;
@@ -559,7 +561,13 @@ void BooleanBuilder::surfaceArcs(FaceId fa, FaceId fb, PairResult &out) const {
             if (!curve.closed)
                 for (double t : {curve.range.lo, curve.range.hi}) ends += distance(curve.curve->point(t), x) <= 10.0 * tolerance_;
         through = through || ends >= 2;
-        if (!through) throw std::domain_error("booleanOperation: rami d'intersezione da un contatto tangente di ordine superiore non gestiti");
+        // L'anello appartiene alle superfici illimitate e puo' vedere rami che
+        // non diventano un taglio nelle facce finite. Gli edge hanno gia'
+        // fornito i semi e le divisioni necessarie: se il tracciamento non ha
+        // prodotto ne' un ramo passante ne' due estremi, resta un contatto e
+        // non deve far fallire tutta l'operazione (caso tipico della testa di
+        // una sweep appoggiata al bordo del solido bersaglio).
+        if (!through) continue;
         crossings.push_back(x);
     }
     // Contatti isolati e rette di tangenza non dividono le facce; nei punti

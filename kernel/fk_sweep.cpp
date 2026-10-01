@@ -530,7 +530,15 @@ Body sweep(const Frame3 &profileFrame, const ProfileData &profile, bool sheet, c
                         else if (c.radius() < rhoC) surface = std::make_shared<ToroidalSurface>(f, rhoC, c.radius());
                     }
                 }
-                if (!surface) surface = std::make_shared<RevolutionSurface>(section.curve, center, axis);
+                if (!surface) {
+                    // La curva geometrica del profilo puo' essere illimitata
+                    // (in particolare una retta), mentre lo schizzo ne usa
+                    // soltanto `section.range`. La superficie deve conservare
+                    // quel dominio finito: projectPoint e le p-curve non
+                    // possono cercare su un meridiano infinito.
+                    const CurvePtr<3> meridian = std::make_shared<TrimmedCurve<3>>(section.curve, section.range.lo, section.range.hi);
+                    surface = std::make_shared<RevolutionSurface>(meridian, center, axis);
+                }
                 surfaces[std::size_t(p)] = surface;
             }
         } else {

@@ -91,6 +91,19 @@ FK_TEST(SweepLineAndArcAreExact) {
     FK_CHECK_NEAR(checkedSolid(sweepRegions(radial, {offset}, bend)).volume, 0.16 * (R + 0.3) * 2.0, 1e-10);
 }
 
+FK_TEST(SweepObliqueProfileAlongArcUsesFiniteMeridians) {
+    // Un profilo non perfettamente normale al percorso produce, per alcuni
+    // lati rettilinei, superfici di rivoluzione generali. La retta di
+    // supporto e' infinita, ma il meridiano della faccia deve restare il
+    // segmento finito dello schizzo.
+    const double radius = 3.0;
+    const auto arc = std::make_shared<Circle<3>>(Vec3(0, 0, 0), Vec3(1, 0, 0), Vec3(0, 1, 0), radius);
+    const std::vector<PathSegment> path{{arc, {0.0, 0.8}}};
+    const Frame3 oblique(arc->point(0.0), normalized(Vec3(0, 1, 0.2)), Vec3(1, 0, 0));
+    const Body body = sweepRegions(oblique, {squareRegion(0.4)}, path, SweepOrientation::MinimalTwist);
+    FK_CHECK(checkedSolid(body).volume > 0.0);
+}
+
 FK_TEST(SweepPlanarPathIsTube) {
     // Tubo lungo segmento + arco + spline: V = A L, area laterale = perimetro L (baricentro sul percorso, sezioni normali).
     const std::vector<PathSegment> path = planarPath();

@@ -498,11 +498,11 @@ struct ExtrusionObject {
     // (GeometryRef come i piani di costruzione).
     int extent = 0;
     GeometryRef extentRef;
-    // Extrusion: fusione del risultato con altri solidi (mergeOperation 0
+    // Estrusione e sweep: fusione del risultato con altri solidi (mergeOperation 0
     // corpo nuovo, 1 unione, 2 sottrazione) nei corpi `mergeBodies` (indici
     // minori, nascosti come gli operandi delle booleane); `mergeAuto` dice che
-    // sono stati scelti da soli, tra quelli che hanno punti in comune con
-    // l'estrusione. `mergeProbe` (non salvato): alla costruzione mergeBodies
+    // sono stati scelti da soli, tra quelli che hanno punti in comune con la
+    // funzione. `mergeProbe` (non salvato): alla costruzione mergeBodies
     // sono i candidati e restano solo quelli che la toccano.
     int mergeOperation = 0;
     bool mergeAuto = true;

@@ -284,3 +284,31 @@ L'albero è ricostruito da `rebuildModelTree()` a partire da `viewport_->sketche
 - L'anteprima di raccordi e smussi lascia il corpo di base opaco e mostra soltanto la nuova patch locale, ambra semitrasparente e con isoparametriche U/V. Per superfici con dominio infinito (cilindri, coni e simili) l'intervallo visualizzato viene ricavato dalle p-curve del contorno della faccia. La patch usa una visualizzazione sovrapposta per restare leggibile anche dove il vecchio spigolo la occluderebbe.
 - Il lavoro in background conserva il `ForgeBody` esatto, il `BodyDisplay` parziale usato nella vista e una tassellazione completa separata. Se parametri e spigoli coincidono, OK promuove direttamente B-rep e tassellazione completa nella cronologia, anche durante la modifica di un raccordo, senza ripetere kernel e tassellazione. Se il calcolo non e' terminato, OK chiede di attendere; se e' fallito, riporta lo stesso errore dell'anteprima.
 - Regressione in `tests/test_viewport.cpp`: verifica che la patch sia non vuota e piu' piccola del corpo completo, che contenga le curve U/V, l'identita' dello `shared_ptr` del B-rep e il riuso della tassellazione completa dopo la conferma. Test viewport normale e OpenGL superati.
+
+### Raccordi sui coperchi circolari delle loft (2026-10-01)
+
+- Riprodotto su `prova con loft-CerchiCerchio.prt`, corpo `Loft 4`: i bordi circolari superiore e inferiore sono quattro archi adiacenti a quattro patch B-spline laterali. La selezione di un arco estende correttamente la catena all'intero bordo, ma il risolutore rifiutava il residuo numerico delle superfici offset e il fit inseguiva quel rumore fino a generare decine di migliaia di poli.
+- `fk_blend_surface.cpp` continua il seme con passi di raggio piu' fitti, accetta un residuo soltanto dopo la stagnazione di Newton ed entro l'1% del raggio (lo stesso limite gia' imposto dalla validazione topologica), e usa la precisione effettivamente misurata per interpolare solo i tratti rumorosi; i casi analitici conservano la precisione precedente. Le curve di mitra usano la precisione delle due patch e provano la continuazione da entrambi gli estremi. Una delta di mitra piu' corta della tolleranza topologica viene collassata nel vertice comune, registrandone lo scarto, invece di tentare una curva quasi degenere.
+- Sul file reale sono verificati i raggi 0,01, 0,1, 0,5 e 1 sui due coperchi; il raccordo da 0,1 passa da oltre 35.000 poli su una patch a poche decine. La regressione `BlendLoftCircularCapsSplitIntoPatches` costruisce una loft liscia a tre sezioni circolari divise in quarti e verifica entrambi i bordi con raggi 0,01 e 0,1, validita' del B-rep e tassellazione.
+
+### Sweep con profilo obliquo su un arco (2026-10-01)
+
+- Riprodotto su `forgecad-cuda-build/flacone.prt`: profilo `Schizzo 6`, percorso parziale di una sola curva in `Schizzo 8`, torsione minima. Il calcolo falliva con `projectPoint: questa superficie richiede intervalli finiti`.
+- Nel tratto a moto di rotazione, un lato rettilineo del profilo non riconducibile a piano, cilindro o cono genera una `RevolutionSurface`. La superficie riceveva la retta di supporto illimitata e perdeva l'intervallo del segmento dello schizzo; ora il meridiano e' una `TrimmedCurve` sul `ProfilePiece::range`, così proiezione e p-curve lavorano su un dominio finito.
+- Verificata direttamente la combinazione `Schizzo 6`/`Schizzo 8` del documento. La regressione `SweepObliqueProfileAlongArcUsesFiniteMeridians` controlla B-rep, tassellazione e volume positivo del caso geometrico equivalente.
+
+### Fusione parametrica della sweep (2026-10-01)
+
+- La finestra Sweep offre `Corpo nuovo`, `Unisci ai solidi` e `Sottrai dai solidi`, con scelta automatica o manuale dei bersagli come l'estrusione. Se esiste gia' un solido visibile, una nuova sweep parte in modalita' additiva; senza contatto resta comunque un corpo separato. I bersagli entrano nelle dipendenze parametriche, vengono nascosti dopo la conferma e sono mostrati come figli nell'albero.
+- La costruzione passa il B-rep della sweep a `forgeMergeFeatureResult`; `mergeOperation`, `mergeAuto` e `mergeBodies` erano gia' persistiti nel formato del documento. Il probe automatico conserva solo i solidi realmente toccati.
+- Nel caso `flacone.prt`, `Schizzo 6` lungo la curva selezionata di `Schizzo 8` viene unito automaticamente a `Raccordo 12` e il risultato ha una sola shell. La booleana ora accetta un seme d'intersezione su una linea di nodo e ignora i rami di una superficie illimitata che, nel punto tangente, non producono alcun taglio tracciato nelle facce finite.
+
+### Contrasto dei pannelli funzione (2026-10-01)
+
+- Il colore del testo del vetro viene ancora adattato alla scena dopo ogni cattura, ma usa una griglia sull'intera area sfocata invece del solo pixel centrale e passa al nero soltanto su fondi realmente chiari: un dettaglio luminoso sotto il centro non converte piu' in nero tutto il pannello.
+- Campi `QComboBox` e relative tendine calcolano il contrasto dai propri fondi, separatamente dal vetro. Il popup scuro mantiene quindi il testo chiaro, mentre la selezione arancione conserva il testo scuro ad alto contrasto.
+
+### Crash durante la modifica di un profilo loft (2026-10-01)
+
+- La rigenerazione di una loft con superfici B-spline planari poteva terminare con `munmap_chunk(): invalid pointer` o `double free or corruption`. La causa era un overflow dello stack in `planarEquivalent`: `Surface::evaluate` usa per contratto `(order + 1)^2` elementi, ma per le derivate di ordine 1 il chiamante ne riservava soltanto tre invece di quattro. L'errore dell'allocatore appariva in seguito alla corruzione e non indicava una doppia liberazione nella cronologia.
+- `fk_surface_algo.cpp` usa ora il buffer quadrato richiesto. La regressione `PlanarEquivalentOfBSplineSurface` copre il percorso; la modifica dei profili e la rigenerazione sono state ripetute sotto AddressSanitizer sui documenti `prova con loft-CerchiCerchio.prt` e `prova con loft.prt` senza errori di memoria.
