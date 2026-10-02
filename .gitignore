@@ -3,3 +3,4 @@
 *.step
 *.iges
 *.igs
+forgecad-cuda-build/
