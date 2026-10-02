@@ -1,0 +1,12 @@
+<RCC>
+    <qresource prefix="/icons">
+        <file alias="forgecad-16.png">hicolor/16x16/apps/forgecad.png</file>
+        <file alias="forgecad-24.png">hicolor/24x24/apps/forgecad.png</file>
+        <file alias="forgecad-32.png">hicolor/32x32/apps/forgecad.png</file>
+        <file alias="forgecad-48.png">hicolor/48x48/apps/forgecad.png</file>
+        <file alias="forgecad-64.png">hicolor/64x64/apps/forgecad.png</file>
+        <file alias="forgecad-128.png">hicolor/128x128/apps/forgecad.png</file>
+        <file alias="forgecad-256.png">hicolor/256x256/apps/forgecad.png</file>
+        <file alias="forgecad-512.png">hicolor/512x512/apps/forgecad.png</file>
+    </qresource>
+</RCC>

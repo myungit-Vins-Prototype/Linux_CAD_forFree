@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Name=ForgeCAD
+GenericName=CAD parametrico 3D
+Comment=Modellazione parametrica di parti con geometria esatta
+Exec=@FORGECAD_EXEC@ %f
+Icon=forgecad
+Terminal=false
+Categories=Graphics;Engineering;3DGraphics;
+MimeType=application/x-forgecad-part;
+StartupWMClass=forgecad
+Keywords=CAD;3D;parametric;STEP;IGES;
