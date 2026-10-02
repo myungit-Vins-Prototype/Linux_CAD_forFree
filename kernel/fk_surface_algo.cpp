@@ -346,7 +346,10 @@ void projectOnBSplineSurface(const BSplineSurface &surface, const Vec3 &p, const
     };
     std::priority_queue<Node> queue;
     double rootDiagonal = 0.0;
-    for (const BSplineSurface &piece : surface.bezierPatches()) {
+    // Le pezze si calcolano una volta per superficie: la proiezione si ripete
+    // per ogni raggio della selezione a video e per ogni punto delle SP-curve.
+    const auto patches = surface.cachedBezierPatches();
+    for (const BSplineSurface &piece : *patches) {
         BezierPatch patch = toPatch(piece);
         if (patch.u.hi < uRange.lo || patch.u.lo > uRange.hi || patch.v.hi < vRange.lo || patch.v.lo > vRange.hi) continue;
         const PatchBounds bounds = patchBounds(patch, p);

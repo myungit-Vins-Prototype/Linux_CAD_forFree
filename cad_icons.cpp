@@ -439,6 +439,36 @@ std::map<QString, Draw> &registry() {
         line(p, {10, 11}, {10.3, 18}, stroke(c.remove, 1.1));
         line(p, {14, 11}, {13.7, 18}, stroke(c.remove, 1.1));
     };
+    icons["edit"] = [](QPainter &p, const IconPalette &c) {
+        p.save();
+        p.translate(12, 12);
+        p.rotate(-45);
+        polygon(p, QPolygonF({{-2.4, -8}, {2.4, -8}, {2.4, 6}, {0, 9}, {-2.4, 6}}), c.accent, stroke(c.ink, 1.1));
+        line(p, {-2.4, -4.5}, {2.4, -4.5}, stroke(c.ink, 1.0));
+        p.restore();
+    };
+    icons["visibility"] = [](QPainter &p, const IconPalette &c) {
+        QPainterPath eye(QPointF(2.5, 12));
+        eye.cubicTo({6, 5.5}, {18, 5.5}, {21.5, 12});
+        eye.cubicTo({18, 18.5}, {6, 18.5}, {2.5, 12});
+        p.setPen(stroke(c.ink, 1.4));
+        p.setBrush(c.faceDark);
+        p.drawPath(eye);
+        dot(p, {12, 12}, c.accent, 3.2);
+        dot(p, {12, 12}, c.faceDark, 1.2);
+    };
+    icons["rename"] = [](QPainter &p, const IconPalette &c) {
+        line(p, {4, 5}, {15, 5}, stroke(c.ink, 1.2));
+        line(p, {9.5, 5}, {9.5, 17}, stroke(c.ink, 2.0));
+        line(p, {6.5, 17}, {12.5, 17}, stroke(c.ink, 1.2));
+        line(p, {4, 20}, {20, 20}, stroke(c.accent, 2.0));
+        arrowHead(p, {20, 20}, {14, 20}, c.accent, 3.2);
+    };
+    icons["meshColor"] = [](QPainter &p, const IconPalette &c) {
+        cube(p, c, -1, true, true, 0.72, QPointF(-3, -1));
+        dot(p, {17.5, 16.5}, c.accent, 4.3);
+        dot(p, {17.5, 16.5}, c.construction, 2.0);
+    };
 
     // --- Modellazione ---------------------------------------------------------
     icons["newSketch"] = [](QPainter &p, const IconPalette &c) {
@@ -465,6 +495,14 @@ std::map<QString, Draw> &registry() {
         line(p, {3, 21}, {12, 21}, stroke(c.accent, 1.8));
         line(p, {20.5, 21}, {20.5, 7}, stroke(c.accent, 1.8));
         arrowHead(p, {20.5, 2.5}, {20.5, 8}, c.accent, 4.2);
+    };
+    // Inverti il verso: il piano dello schizzo e le due frecce opposte.
+    icons["reverseDirection"] = [](QPainter &p, const IconPalette &c) {
+        line(p, {2.5, 12}, {21.5, 12}, stroke(c.ink, 1.4));
+        line(p, {8, 12}, {8, 6}, stroke(c.accent, 1.8));
+        arrowHead(p, {8, 2}, {8, 7}, c.accent, 4.0);
+        line(p, {16, 12}, {16, 18}, stroke(c.construction, 1.8));
+        arrowHead(p, {16, 22}, {16, 17}, c.construction, 4.0);
     };
     icons["revolve"] = [](QPainter &p, const IconPalette &c) {
         line(p, {8, 1.5}, {8, 22.5}, stroke(c.construction, 1.1, Qt::DashLine));

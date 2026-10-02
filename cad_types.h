@@ -510,6 +510,12 @@ struct ExtrusionObject {
     // (GeometryRef come i piani di costruzione).
     int extent = 0;
     GeometryRef extentRef;
+    // Extrusion: versi rispetto al piano dello schizzo (0 uno solo; 1
+    // simmetrica: `distance` in tutto, meta' per parte, solo con la fine a
+    // distanza; 2 due versi: la fine scelta da una parte e `distance2` > 0
+    // dall'altra).
+    int extrudeSides = 0;
+    double distance2 = 1.0;
     // Estrusione e sweep: fusione del risultato con altri solidi (mergeOperation 0
     // corpo nuovo, 1 unione, 2 sottrazione) nei corpi `mergeBodies` (indici
     // minori, nascosti come gli operandi delle booleane); `mergeAuto` dice che
@@ -544,6 +550,9 @@ struct ModelBody {
     QString name;
     bool visible = true;
     quint64 tipFeatureId = 0;
+    // Colore delle facce nel viewport e nei formati di scambio che lo
+    // supportano. Non valido = azzurro predefinito (solido o superficie).
+    QColor meshColor;
 };
 
 // Orientamento degli assi del modello sullo schermo: le direzioni del modello

@@ -39,7 +39,8 @@ QString exportBodies(const QString &path, const QVector<ExportBody> &bodies, Exp
         e.curve = body.curve;
         if (body.curve) e.curveRange = body.curve->domain();
         e.hasColor = format != ExportFormat::StepAP203;
-        e.color[0] = 0.25, e.color[1] = 0.65, e.color[2] = 0.90;  // come a video
+        const QColor color = body.color.isValid() ? body.color : QColor::fromRgbF(0.25, 0.65, 0.90);
+        e.color[0] = color.redF(), e.color[1] = color.greenF(), e.color[2] = color.blueF();
         exchange.push_back(std::move(e));
     }
     if (exchange.empty()) return QStringLiteral("Non ci sono corpi da esportare.");

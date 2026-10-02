@@ -16,6 +16,7 @@
 #include "cad_display_cache.h"
 #include <QOpenGLContext>
 #include <array>
+#include "fk_classify.h"
 #include "fk_curve_algo.h"
 #include "fk_topology.h"
 #include "cad_history.h"
@@ -103,6 +104,7 @@
 #include <QWheelEvent>
 #include <QWindow>
 #include <QGuiApplication>
+#include <QStandardItemModel>
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
@@ -150,6 +152,30 @@ static double pointDistance(const QPointF &a, const QPointF &b) { return pointLe
 // Colori di evidenziazione: giallo per la selezione, azzurro per l'hover.
 static const QColor kSelectionColor(255, 225, 70);
 static const QColor kHoverColor(90, 205, 255);
+
+// La stessa icona identifica una feature nell'albero e nella voce contestuale
+// che ne apre i parametri.
+static QString featureIconName(const ExtrusionObject &body) {
+    if (body.operation >= 0)
+        return QStringList{QStringLiteral("union"), QStringLiteral("intersection"), QStringLiteral("difference")}.value(body.operation);
+    if (body.feature == BodyFeature::Extrusion) return QStringLiteral("extrude");
+    if (body.feature == BodyFeature::Revolution) return QStringLiteral("revolve");
+    if (body.feature == BodyFeature::Blend) return body.blendChamfer ? QStringLiteral("chamfer") : QStringLiteral("fillet");
+    if (body.feature == BodyFeature::SheetTrim) return QStringLiteral("trimSurface");
+    if (body.feature == BodyFeature::SheetExtend) return QStringLiteral("extendSurface");
+    if (body.feature == BodyFeature::Scale) return QStringLiteral("scale");
+    if (body.feature == BodyFeature::Helix) return QStringLiteral("helix");
+    if (body.feature == BodyFeature::Sweep) return QStringLiteral("sweep");
+    if (body.feature == BodyFeature::Loft) return QStringLiteral("loft");
+    if (body.feature == BodyFeature::DatumPlane) return QStringLiteral("datumPlane");
+    if (body.feature == BodyFeature::Imported) return QStringLiteral("import");
+    if (body.feature == BodyFeature::Transform) return QStringLiteral("move");
+    if (body.feature == BodyFeature::Pattern) return QStringLiteral("patternLinear");
+    if (body.feature == BodyFeature::Primitive)
+        return QStringList{QStringLiteral("box"), QStringLiteral("cylinder"), QStringLiteral("sphere"),
+                           QStringLiteral("cone"), QStringLiteral("torus")}.value(int(body.primitive.kind));
+    return {};
+}
 
 // Finestra che si chiude solo se `apply` riesce (definita piu' avanti).
 static bool runUntilApplied(QDialog &dialog, QFormLayout *form, QDialogButtonBox *buttons, const std::function<QString()> &apply);
@@ -445,8 +471,11 @@ public:
     // le curve (eliche).
     QVector<ForgeCad::ExportBody> exportableBodies() const {
         QVector<ForgeCad::ExportBody> result;
-        for (const ExtrusionObject &body : extrusions_)
-            if (body.visible && body.error.isEmpty() && (body.forgeBody || body.curve)) result.append({body.name, body.forgeBody, body.curve});
+        for (int index = 0; index < extrusions_.size(); ++index) {
+            const ExtrusionObject &body = extrusions_.at(index);
+            if (body.visible && body.error.isEmpty() && (body.forgeBody || body.curve))
+                result.append({body.name, body.forgeBody, body.curve, meshColorForFeature(index)});
+        }
         return result;
     }
 
@@ -475,6 +504,39 @@ public:
             && selection_.index >= 0 && selection_.index < extrusions_.size()
             && extrusions_.at(selection_.index).modelBodyId == model.id) selection_ = {};
         documentChanged();
+    }
+
+    QColor modelBodyMeshColor(int index) const {
+        if (index < 0 || index >= modelBodies_.size()) return QColor();
+        const ModelBody &model = modelBodies_.at(index);
+        if (model.meshColor.isValid()) return model.meshColor;
+        const int tip = modelBodyTip(index);
+        return tip >= 0 && !extrusions_.at(tip).solid ? QColor::fromRgbF(0.20, 0.80, 0.95)
+                                                      : QColor::fromRgbF(0.25, 0.65, 0.90);
+    }
+
+    void setModelBodyMeshColor(int index, const QColor &color) {
+        if (index < 0 || index >= modelBodies_.size() || !color.isValid()) return;
+        const QColor opaque(color.red(), color.green(), color.blue());
+        if (modelBodies_.at(index).meshColor == opaque) return;
+        recordUndo();
+        modelBodies_[index].meshColor = opaque;
+        documentChanged();
+    }
+
+    int modelBodyIndexForFeature(int feature) const {
+        if (feature < 0 || feature >= extrusions_.size()) return -1;
+        const quint64 id = extrusions_.at(feature).modelBodyId;
+        for (int index = 0; index < modelBodies_.size(); ++index)
+            if (modelBodies_.at(index).id == id) return index;
+        return -1;
+    }
+
+    QColor meshColorForFeature(int feature) const {
+        const int model = modelBodyIndexForFeature(feature);
+        if (model >= 0) return modelBodyMeshColor(model);
+        return feature >= 0 && feature < extrusions_.size() && !extrusions_.at(feature).solid
+            ? QColor::fromRgbF(0.20, 0.80, 0.95) : QColor::fromRgbF(0.25, 0.65, 0.90);
     }
 
     QString renameModelBody(int index, const QString &name) {
@@ -1601,6 +1663,17 @@ public:
         preview_.definition = definition;
         preview_.index = index;
         preview_.replaced.clear();
+        preview_.later.clear();
+        preview_.restored.clear();
+        if (index >= 0 && index < extrusions_.size()) {
+            preview_.later = withDependentBodies({index});
+            preview_.later.remove(index);
+            for (int body : preview_.later)
+                for (int operand : bodyOperands(extrusions_.at(body)))
+                    if (operand != index && !preview_.later.contains(operand) && operand >= 0 && operand < extrusions_.size()
+                        && !extrusions_.at(operand).suppressed)
+                        preview_.restored.insert(operand);
+        }
         // Lo strumento del taglio resta visibile; per il resto spariscono gli operandi.
         if (definition.operation < 0 && definition.feature == BodyFeature::SheetTrim) preview_.replaced = {definition.firstBody};
         else if (isCurveBody(definition) || isDatumBody(definition)) preview_.replaced.clear();  // la base dell'elica resta
@@ -1648,6 +1721,8 @@ public:
         preview_.key.clear();
         preview_.index = -1;
         preview_.replaced.clear();
+        preview_.later.clear();
+        preview_.restored.clear();
         preview_.valid = false;
         preview_.error.clear();
         preview_.geometry.reset();
@@ -3200,6 +3275,14 @@ protected:
             setCursor(Qt::SizeAllCursor);
             return;
         }
+        if (!releasingSelection_ && event->button() == Qt::LeftButton
+            && (!sketchMode_ || (sketchViewUnlocked_ && refPicking_))
+            && (edgePicking_ || refPicking_ || !(event->modifiers() & Qt::ShiftModifier))) {
+            selectionPress_ = lastMousePosition_;
+            selectionPending_ = true;
+            selectionDragged_ = false;
+            return;
+        }
         if ((!sketchMode_ || sketchViewUnlocked_) && refPicking_ && event->button() == Qt::LeftButton) {
             // Riferimento di un piano di costruzione; lontano da tutto il trascinamento ruota la vista.
             GeometryRef ref;
@@ -3285,15 +3368,20 @@ protected:
             if (selection_.kind == SceneObjectKind::Plane) selectedPlane_ = selection_.index;
             // Sul corpo si seleziona anche la faccia colpita (bordi evidenziati).
             selectedFace_ = {};
+            selectedFeature_ = selection_.kind == SceneObjectKind::Extrusion ? selection_.index : -1;
             if (selection_.kind == SceneObjectKind::Extrusion && pickBodyFace(selection_.index, lastMousePosition_, selectedFace_.hit)) {
                 selectedFace_.body = selection_.index;
-                showStatus(QStringLiteral("%1: faccia %2%3 (%4 bordi)")
+                // La parte cliccata seleziona la funzione che l'ha creata (nell'albero e per il menu).
+                selectedFeature_ = faceOwnerFeature(selection_.index, lastMousePosition_, selectedFace_.hit);
+                showStatus(QStringLiteral("%1: faccia %2%3 (%4 bordi), creata da %5")
                                .arg(extrusions_.at(selection_.index).name)
                                .arg(selectedFace_.hit.face + 1)
                                .arg(selectedFace_.hit.planar ? QStringLiteral(" piana") : QString())
-                               .arg(selectedFace_.hit.edges.size()));
+                               .arg(selectedFace_.hit.edges.size())
+                               .arg(extrusions_.at(selectedFeature_).name));
             }
-            if (selectionCallback_) selectionCallback_(selection_);
+            if (selectionCallback_)
+                selectionCallback_(selectedFeature_ >= 0 ? SceneSelection{SceneObjectKind::Extrusion, selectedFeature_, -1} : selection_);
             if (sketchPickCallback_ && selection_.kind == SceneObjectKind::Sketch) sketchPickCallback_(selection_.index);
             if (sketchEntityPickCallback_ && selection_.kind == SceneObjectKind::Sketch) {
                 int sketch = -1, kind = -1, entity = -1;
@@ -4351,6 +4439,18 @@ protected:
     // Doppio clic su un segmento dello schizzo: la sua quota.
     void mouseDoubleClickEvent(QMouseEvent *event) override {
         if (sketchMode_ && sketchViewUnlocked_) return;
+        // Fuori dallo schizzo, doppio clic su una parte del modello: si modifica
+        // la funzione che l'ha creata (come dall'albero).
+        if (!sketchMode_ && event->button() == Qt::LeftButton && editBodyCallback_ && !interactionLocked_ && !refPicking_ && !edgePicking_) {
+            const SceneSelection hit = pickSceneObject(event->pos());
+            if (hit.kind == SceneObjectKind::Extrusion && !isDatumBody(extrusions_.at(hit.index))) {
+                FaceHit face;
+                const int feature = pickBodyFace(hit.index, event->pos(), face) ? faceOwnerFeature(hit.index, event->pos(), face) : hit.index;
+                event->accept();
+                editBodyCallback_(feature);
+                return;
+            }
+        }
         if (sketchMode_ && (isEditTool() || drawingTool_ == DrawingTool::Dimension)) {
             mousePressEvent(event);  // con gli strumenti di modifica il secondo clic e' un clic
             return;
@@ -4500,38 +4600,62 @@ protected:
             }
             if (hit.kind == SceneObjectKind::Sketch || hit.kind == SceneObjectKind::Extrusion) {
                 QMenu menu(this);
-                QAction *editSketch = hit.kind == SceneObjectKind::Sketch
-                    ? menu.addAction(QStringLiteral("Modifica schizzo")) : nullptr;
-                QAction *editBody = hit.kind == SceneObjectKind::Extrusion && editBodyCallback_
-                    ? menu.addAction(QStringLiteral("Modifica parametri...")) : nullptr;
                 const bool datum = hit.kind == SceneObjectKind::Extrusion && isDatumBody(extrusions_.at(hit.index));
-                QAction *datumSketch = datum ? menu.addAction(QStringLiteral("Nuovo schizzo sul piano")) : nullptr;
-                if (datumSketch) datumSketch->setEnabled(extrusions_.at(hit.index).datumValid);
-                // Faccia sotto il puntatore: schizzo sul suo piano, raccordo o smusso dei suoi bordi.
+                // Faccia sotto il puntatore: la funzione che l'ha creata (si
+                // modifica quella), schizzo sul suo piano, raccordo o smusso dei suoi bordi.
                 FaceHit face;
                 const bool onFace = hit.kind == SceneObjectKind::Extrusion && !datum && pickBodyFace(hit.index, event->pos(), face);
+                const int feature = hit.kind != SceneObjectKind::Extrusion ? -1 : onFace ? faceOwnerFeature(hit.index, event->pos(), face) : hit.index;
+                if (feature >= 0 && selectionCallback_) selectionCallback_({SceneObjectKind::Extrusion, feature, -1});
+                QAction *editSketch = hit.kind == SceneObjectKind::Sketch
+                    ? menu.addAction(QStringLiteral("Modifica schizzo")) : nullptr;
+                QAction *editBody = feature >= 0 && editBodyCallback_
+                    ? menu.addAction(QStringLiteral("Modifica \"%1\"...").arg(extrusions_.at(feature).name)) : nullptr;
+                if (editSketch) editSketch->setIcon(ForgeCad::commandIcon(QStringLiteral("edit")));
+                if (editBody) editBody->setIcon(ForgeCad::commandIcon(featureIconName(extrusions_.at(feature))));
+                // La funzione che ha creato la faccia e' fatta da uno schizzo: lo si apre.
+                const int featureSketch = feature >= 0 && extrusions_.at(feature).operation < 0 ? extrusions_.at(feature).sketchIndex : -1;
+                QAction *editFeatureSketch = featureSketch >= 0 && featureSketch < sketches_.size()
+                        && (extrusions_.at(feature).feature == BodyFeature::Extrusion || extrusions_.at(feature).feature == BodyFeature::Revolution
+                            || extrusions_.at(feature).feature == BodyFeature::Sweep)
+                    ? menu.addAction(QStringLiteral("Modifica lo schizzo \"%1\"").arg(sketches_.at(featureSketch).name)) : nullptr;
+                QAction *datumSketch = datum ? menu.addAction(QStringLiteral("Nuovo schizzo sul piano")) : nullptr;
+                if (editFeatureSketch) editFeatureSketch->setIcon(ForgeCad::commandIcon(QStringLiteral("newSketch")));
+                if (datumSketch) datumSketch->setIcon(ForgeCad::commandIcon(QStringLiteral("newSketch")));
+                if (datumSketch) datumSketch->setEnabled(extrusions_.at(hit.index).datumValid);
                 QAction *faceSketch = nullptr, *faceFillet = nullptr, *faceChamfer = nullptr;
                 if (onFace) {
                     menu.addSeparator();
                     faceSketch = menu.addAction(QStringLiteral("Nuovo schizzo sulla faccia"));
+                    faceSketch->setIcon(ForgeCad::commandIcon(QStringLiteral("faceSketch")));
                     faceSketch->setEnabled(face.planar);
                     const bool solid = extrusions_.at(hit.index).solid && !face.edges.isEmpty() && edgePickFinished_;
                     faceFillet = menu.addAction(QStringLiteral("Raccordo dei bordi della faccia..."));
                     faceChamfer = menu.addAction(QStringLiteral("Smusso dei bordi della faccia..."));
+                    faceFillet->setIcon(ForgeCad::commandIcon(QStringLiteral("fillet")));
+                    faceChamfer->setIcon(ForgeCad::commandIcon(QStringLiteral("chamfer")));
                     faceFillet->setEnabled(solid);
                     faceChamfer->setEnabled(solid);
                     menu.addSeparator();
                 }
-                QAction *hide = menu.addAction(QStringLiteral("Nascondi"));
-                QAction *remove = menu.addAction(QStringLiteral("Elimina"));
+                QAction *meshColor = hit.kind == SceneObjectKind::Extrusion && modelBodyIndexForFeature(hit.index) >= 0
+                    ? menu.addAction(ForgeCad::commandIcon(QStringLiteral("meshColor")), QStringLiteral("Colore mesh...")) : nullptr;
+                QAction *hide = menu.addAction(ForgeCad::commandIcon(QStringLiteral("visibility")), QStringLiteral("Nascondi"));
+                QAction *remove = menu.addAction(ForgeCad::commandIcon(QStringLiteral("delete")), QStringLiteral("Elimina"));
                 const QAction *chosen = menu.exec(event->globalPos());
                 if (chosen && chosen == editSketch) selectSketch(hit.index);
-                else if (chosen && chosen == editBody) editBodyCallback_(hit.index);
+                else if (chosen && chosen == editBody) editBodyCallback_(feature);
+                else if (chosen && chosen == editFeatureSketch) selectSketch(featureSketch);
                 else if (chosen && chosen == datumSketch) createDatumSketch(hit.index, QStringLiteral("Schizzo %1").arg(sketches_.size() + 1));
                 else if (chosen && chosen == faceSketch)
                     createFaceSketch(hit.index, face, QStringLiteral("Schizzo %1").arg(sketches_.size() + 1));
                 else if (chosen && (chosen == faceFillet || chosen == faceChamfer))
                     edgePickFinished_(hit.index, face.edges, chosen == faceChamfer);
+                else if (chosen && chosen == meshColor) {
+                    const int model = modelBodyIndexForFeature(hit.index);
+                    const QColor color = QColorDialog::getColor(modelBodyMeshColor(model), this, QStringLiteral("Colore mesh del corpo"));
+                    if (color.isValid()) setModelBodyMeshColor(model, color);
+                }
                 else if (chosen && chosen == remove) deleteObject(hit.kind, hit.index);
                 else if (chosen == hide) setObjectVisible(hit.kind, hit.index, false);
                 event->accept();
@@ -4542,6 +4666,10 @@ protected:
     }
 
     void mouseMoveEvent(QMouseEvent *event) override {
+        if (selectionPending_ && (event->buttons() & Qt::LeftButton)
+            && (event->position().toPoint() - selectionPress_).manhattanLength() >= QApplication::startDragDistance())
+            selectionDragged_ = true;
+        if (selectionPending_ && (event->buttons() & Qt::LeftButton) && !selectionDragged_) return;
         const QPoint currentPosition = event->position().toPoint();
         if (planeResizing_) {
             const double delta = QPointF::dotProduct(QPointF(currentPosition - planeResizeStart_), planeResizeDirection_)
@@ -4752,7 +4880,33 @@ protected:
             update();
             return;
         }
-        if (refPicking_ && !(event->buttons() & Qt::LeftButton)) {
+        if (!(event->buttons() & Qt::LeftButton)) {
+            // L'evidenziazione al passaggio si calcola una volta per giro del
+            // ciclo degli eventi, con l'ultima posizione: i movimenti che
+            // arrivano mentre si calcola non si accodano (era il ritardo nel
+            // ruotare e zoomare).
+            hoverPosition_ = currentPosition;
+            if (!hoverScheduled_) {
+                hoverScheduled_ = true;
+                QTimer::singleShot(0, this, [this] {
+                    hoverScheduled_ = false;
+                    updateHover(hoverPosition_);
+                });
+            }
+        }
+        if (event->buttons() & Qt::LeftButton) {
+            const QPoint delta = currentPosition - lastMousePosition_;
+            autoFit_ = false;
+            orbitView(delta);  // la vista inclinata di uno schizzo su faccia si raddrizza ruotando
+            update();
+        }
+        lastMousePosition_ = currentPosition;
+    }
+
+    // Evidenziazione al passaggio (riferimenti, spigoli, oggetti) nel punto `currentPosition`.
+    void updateHover(const QPoint &currentPosition) {
+        if (QApplication::mouseButtons() & Qt::LeftButton) return;
+        if (refPicking_) {
             GeometryRef ref;
             FaceHit face;
             int faceBody = -1;
@@ -4763,7 +4917,7 @@ protected:
             refHoverFaceBody_ = valid && ref.kind == 5 ? faceBody : -1;
             update();
         }
-        if (edgePicking_ && !(event->buttons() & Qt::LeftButton)) {
+        if (edgePicking_) {
             int edgeBody = -1;
             const int edge = pickEdge(currentPosition, &edgeBody);
             // Senza uno spigolo vicino si evidenziano i bordi della faccia sotto il puntatore.
@@ -4781,20 +4935,11 @@ protected:
                 update();
             }
         }
-        if (!(event->buttons() & Qt::LeftButton)) {
-            const SceneSelection hover = pickSceneObject(currentPosition);
-            if (hover != hover_) {
-                hover_ = hover;
-                update();
-            }
-        }
-        if (event->buttons() & Qt::LeftButton) {
-            const QPoint delta = currentPosition - lastMousePosition_;
-            autoFit_ = false;
-            orbitView(delta);  // la vista inclinata di uno schizzo su faccia si raddrizza ruotando
+        const SceneSelection hover = pickSceneObject(currentPosition, false);
+        if (hover != hover_) {
+            hover_ = hover;
             update();
         }
-        lastMousePosition_ = currentPosition;
     }
 
     // Il tasto del pan vince sulle scorciatoie dei menu (per esempio una lettera).
@@ -4832,6 +4977,18 @@ protected:
     }
 
     void mouseReleaseEvent(QMouseEvent *event) override {
+        if (selectionPending_ && event->button() == Qt::LeftButton) {
+            selectionPending_ = false;
+            if (!selectionDragged_
+                && (event->position().toPoint() - selectionPress_).manhattanLength() < QApplication::startDragDistance()) {
+                QMouseEvent click(QEvent::MouseButtonPress, event->position(), event->globalPosition(),
+                                  Qt::LeftButton, Qt::LeftButton, event->modifiers());
+                releasingSelection_ = true;
+                mousePressEvent(&click);
+                releasingSelection_ = false;
+            }
+            return;
+        }
         if (planeResizing_ && event->button() == Qt::LeftButton) { finishPlaneResize(false); return; }
         if (sectionDragging_) {
             sectionDragging_ = false;
@@ -7059,7 +7216,40 @@ private:
 
     // Oggetto sotto il puntatore, in ordine di priorita': linee degli schizzi,
     // solidi estrusi (il piu' vicino all'osservatore), piani di riferimento.
-    SceneSelection pickSceneObject(const QPoint &position) const {
+    // Primo triangolo della tassellazione colpito dal raggio (distanza lungo la
+    // direzione normalizzata). Solo per l'evidenziazione al passaggio del
+    // mouse: e' la selezione a video, non un calcolo; il clic usa la forma esatta.
+    static bool meshRayHit(const BodyDisplay &display, const QVector3D &origin, const QVector3D &direction, float &distance) {
+        const QVector3D d = direction.normalized();
+        bool found = false;
+        float best = std::numeric_limits<float>::max();
+        const QVector<QVector3D> &v = display.vertices;
+        for (int k = 0; k + 2 < v.size(); k += 3) {
+            // Moller-Trumbore, entrambe le facce del triangolo.
+            const QVector3D e1 = v[k + 1] - v[k], e2 = v[k + 2] - v[k];
+            const QVector3D p = QVector3D::crossProduct(d, e2);
+            const float det = QVector3D::dotProduct(e1, p);
+            if (std::fabs(det) < 1e-20f) continue;
+            const float inverse = 1.0f / det;
+            const QVector3D s = origin - v[k];
+            const float u = QVector3D::dotProduct(s, p) * inverse;
+            if (u < 0.0f || u > 1.0f) continue;
+            const QVector3D q = QVector3D::crossProduct(s, e1);
+            const float w = QVector3D::dotProduct(d, q) * inverse;
+            if (w < 0.0f || u + w > 1.0f) continue;
+            const float t = QVector3D::dotProduct(e2, q) * inverse;
+            if (t >= 0.0f && t < best) {
+                best = t;
+                found = true;
+            }
+        }
+        if (found) distance = best;
+        return found;
+    }
+
+    // `exact` falso: i corpi si provano sulla tassellazione (evidenziazione al
+    // passaggio, che deve restare fluida anche su modelli con molte facce).
+    SceneSelection pickSceneObject(const QPoint &position, bool exact = true) const {
         SceneSelection result;
         float nearestDistance = 7.0f;
         const auto considerSegment = [&](const QPointF &first, const QPointF &second, int sketchIndex) {
@@ -7118,8 +7308,16 @@ private:
             const ExtrusionObject &extrusion = extrusions_.at(index);
             if (!extrusion.visible || !isShapeBody(extrusion)) continue;
             FaceHit face;
-            bool hit = cachedRayFace(index, origin, direction, face);
-            double distance = hit ? face.distance : 0.0;
+            bool hit = false;
+            double distance = 0.0;
+            if (exact) {
+                hit = cachedRayFace(index, origin, direction, face);
+                distance = hit ? face.distance : 0.0;
+            } else {
+                float t = 0.0f;
+                hit = meshRayHit(extrusion.display, origin, direction, t);
+                distance = t;
+            }
             if (hit && sectionRemoves(origin + float(distance) * direction.normalized())) hit = false;
             distance += skipped;
             if (hit && distance < nearest) {
@@ -8354,7 +8552,16 @@ private:
             cache.body = body.forgeBody;
             cache.origin = origin;
             cache.direction = direction;
-            cache.hit = ForgeCad::forgePickFace(*body.forgeBody, origin, direction, cache.face, body.display.rayIndex.get());
+            // Prima la sola zona del punto colpito sulla tassellazione (poche
+            // facce, esatte); se li' non c'e' nulla, tutte le facce.
+            float meshT = 0.0f;
+            cache.hit = false;
+            if (body.display.rayIndex && meshRayHit(body.display, origin, direction, meshT)) {
+                const double slack = std::max(1e-6, 0.01 * body.display.rayIndex->bounds.diagonal());
+                const ForgeCad::Kernel::Interval window{double(meshT) - slack, double(meshT) + slack};
+                cache.hit = ForgeCad::forgePickFace(*body.forgeBody, origin, direction, cache.face, body.display.rayIndex.get(), &window);
+            }
+            if (!cache.hit) cache.hit = ForgeCad::forgePickFace(*body.forgeBody, origin, direction, cache.face, body.display.rayIndex.get());
             cache.valid = true;
         }
         if (cache.hit) hit = cache.face;
@@ -8371,6 +8578,40 @@ private:
         if (sectionRemoves(origin + float(hit.distance) * direction.normalized())) return false;
         hit.distance += skipped;
         return true;
+    }
+    // Funzione che ha creato la faccia `hit` del corpo `index` sotto il pixel
+    // `position` (la storia del corpo, dalla prima funzione all'ultima: vince
+    // la prima che ha gia' quella faccia). Senza faccia: il corpo stesso.
+    int faceOwnerFeature(int index, const QPoint &position, const FaceHit &hit) const {
+        if (index < 0 || index >= extrusions_.size() || hit.face < 0 || !extrusions_.at(index).forgeBody) return index;
+        QVector3D origin, direction;
+        viewRay(position, origin, direction);
+        double skipped = 0.0;
+        if (!sectionRay(origin, direction, skipped)) return index;
+        // Lo stesso punto del raggio del kernel (cachedRayFace).
+        const double t = hit.distance - skipped;
+        const ForgeCad::Kernel::Vec3 point(double(origin.x()) + t * double(direction.x()), double(origin.y()) + t * double(direction.y()),
+                                           double(origin.z()) + t * double(direction.z()));
+        QSet<int> chain{index};
+        QVector<int> pending{index};
+        while (!pending.isEmpty()) {
+            const int body = pending.takeLast();
+            for (int operand : bodyOperands(extrusions_.at(body)))
+                if (operand >= 0 && operand < body && !chain.contains(operand)) {
+                    chain.insert(operand);
+                    pending.append(operand);
+                }
+        }
+        QVector<int> ordered(chain.begin(), chain.end());
+        std::sort(ordered.begin(), ordered.end());
+        std::vector<std::pair<int, ForgeCad::ForgeBody>> bodies;
+        for (int body : ordered) {
+            const ExtrusionObject &feature = extrusions_.at(body);
+            if (feature.suppressed || !isShapeBody(feature) || !feature.forgeBody) continue;
+            bodies.push_back({body, feature.forgeBody});
+        }
+        const int owner = ForgeCad::forgeFaceOwner(*extrusions_.at(index).forgeBody, hit.face, point, bodies);
+        return owner >= 0 ? owner : index;
     }
     // Spigoli visualizzati (indici in display.edges) dei bordi della faccia:
     // per ogni suo spigolo la polilinea piu' vicina al suo punto.
@@ -8573,16 +8814,15 @@ private:
             const bool blendBase = previewing && preview_.definition.operation < 0
                 && preview_.definition.feature == BodyFeature::Blend
                 && preview_.definition.firstBody == index;
-            if (previewing && (index == preview_.index || (replaced && preview_.valid))) continue;
-            const bool forced = replaced || blendBase || index == edgePickBody_;
+            if (previewing && (index == preview_.index || preview_.later.contains(index) || (replaced && preview_.valid))) continue;
+            const bool forced = replaced || blendBase || index == edgePickBody_ || (previewing && preview_.restored.contains(index));
             if ((!extrusion.visible && !forced) || (extrusion.display.vertices.isEmpty() && extrusion.display.edges.isEmpty())) continue;
             const SceneSelection self{SceneObjectKind::Extrusion, index, -1};
             const bool hovered = hover_ == self;
             if (displayMode_ != 0) {
                 glEnable(GL_LIGHTING);
                 glEnable(GL_COLOR_MATERIAL);
-                QColor color = extrusion.solid ? QColor::fromRgbF(0.25f, 0.65f, 0.90f)
-                                               : QColor::fromRgbF(0.20f, 0.80f, 0.95f);
+                QColor color = meshColorForFeature(index);
                 if (hovered) {
                     // L'oggetto sotto il puntatore si "accende".
                     color = QColor::fromRgbF(color.redF() * 0.75 + kHoverColor.redF() * 0.25,
@@ -8750,7 +8990,7 @@ private:
               << QString::number(r.featureOnly);
         for (const GeometryRef &g : r.refs) ref(g);
         parts << QStringLiteral("E") << QString::number(d.extent) << QString::number(d.mergeOperation) << QString::number(d.mergeAuto)
-              << QString::number(d.mergeProbe);
+              << QString::number(d.mergeProbe) << QString::number(d.extrudeSides) << n(d.distance2);
         ref(d.extentRef);
         for (int body : d.mergeBodies) parts << QString::number(body);
         parts << QStringLiteral("T");
@@ -9281,6 +9521,11 @@ private:
     int panKey_ = Qt::Key_Space;
     bool panKeyHeld_ = false, panning_ = false;
     QPoint lastMousePosition_;
+    QPoint selectionPress_;
+    QPoint hoverPosition_;
+    int selectedFeature_ = -1;  // funzione che ha creato la parte cliccata (vedi faceOwnerFeature)
+    bool hoverScheduled_ = false;
+    bool selectionPending_ = false, selectionDragged_ = false, releasingSelection_ = false;
     int lightingPreset_ = 0, constraintMode_ = 0, selectedPlane_ = 0, activePlane_ = 0, activeSketch_ = -1;
     double lineLength_ = 0.0;
     double lineAngle_ = -1.0;
@@ -9386,6 +9631,10 @@ private:
         ExtrusionObject definition;
         int index = -1;           // corpo che l'anteprima sostituisce (modifica), -1 nuovo
         QVector<int> replaced;    // operandi (booleane) o base (raccordi): al loro posto l'anteprima
+        // Modifica di una funzione intermedia: la storia torna a quel punto.
+        // Le funzioni che ne dipendono (anche il risultato finale del corpo)
+        // non si disegnano, i corpi che solo loro consumavano si' di nuovo.
+        QSet<int> later, restored;
         bool valid = false;
         QString error;
         ForgeCad::ForgeBody geometry;
@@ -10384,7 +10633,7 @@ struct PreviewSpec {
 };
 
 // Finestra della misura di un raccordo o smusso con l'anteprima dal vivo
-// (CadViewport::requestBlendPreview a ogni cambio). `edgesLabel` descrive gli
+// (CadViewport::requestBlendPreview dopo Invio nel campo). `edgesLabel` descrive gli
 // spigoli; `chamferBox` (facoltativa) permette di passare da raccordo a
 // smusso; "Spigoli..." (se `reselect` non e' nullo) chiude la finestra e
 // chiede di tornare alla scelta degli spigoli. `apply` fa il comando: la
@@ -10501,8 +10750,10 @@ static BlendDialogResult blendDialog(QWidget *parent, CadViewport *viewport, con
     viewport->setPreviewCallback([previewLabel](const QString &error) {
         previewLabel->setText(error.isEmpty() ? QStringLiteral("pronta (in ambra nella vista)") : QStringLiteral("non riuscita: ") + error);
     });
-    QObject::connect(sizeBox, &QDoubleSpinBox::valueChanged, &dialog, refresh);
-    QObject::connect(secondBox, &QDoubleSpinBox::valueChanged, &dialog, refresh);
+    sizeBox->setKeyboardTracking(false);
+    secondBox->setKeyboardTracking(false);
+    sizeBox->onReturn = refresh;
+    secondBox->onReturn = refresh;
     QObject::connect(flipBox, &QCheckBox::toggled, &dialog, refresh);
     QObject::connect(modeBox, &QComboBox::currentIndexChanged, &dialog, [&] {
         describe();
@@ -12075,6 +12326,25 @@ static bool extrusionDialog(QMainWindow *window, CadViewport *viewport, const QS
     distanceBox->setDecimals(6);
     distanceBox->setRange(-100000.0, 100000.0);
     distanceBox->setValue(definition.distance);
+    // Versi: uno solo, simmetrica (meta' per parte del piano dello schizzo) o
+    // due versi con la seconda distanza dall'altra parte.
+    auto *sidesBox = new QComboBox(&dialog);
+    sidesBox->addItems({QStringLiteral("Un verso"), QStringLiteral("Simmetrica"), QStringLiteral("Due versi")});
+    sidesBox->setCurrentIndex(qBound(0, definition.extrudeSides, 2));
+    sidesBox->setToolTip(QStringLiteral("Simmetrica: la distanza in tutto, meta' per parte dello schizzo (solo con la fine a distanza).\n"
+                                        "Due versi: la fine scelta da una parte e la seconda distanza dall'altra."));
+    auto *distance2Box = new ForgeCad::ExpressionSpinBox(&dialog);
+    distance2Box->setDecimals(6);
+    distance2Box->setRange(0.0, 100000.0);
+    distance2Box->setValue(definition.distance2);
+    distance2Box->setToolTip(QStringLiteral("Distanza nel verso opposto alla prima (positiva)."));
+    // Inverti il verso: la distanza cambia segno (nei due versi le due
+    // distanze si scambiano); con la fine "fino a" il verso lo da' il riferimento.
+    auto *flipButton = new QPushButton(ForgeCad::commandIcon(QStringLiteral("reverseDirection")), QStringLiteral("Inverti il verso"), &dialog);
+    flipButton->setToolTip(QStringLiteral("Estrude dall'altra parte del piano dello schizzo"));
+    // Come nei raccordi: l'anteprima si calcola con Invio, non a ogni carattere.
+    distanceBox->setKeyboardTracking(false);
+    distance2Box->setKeyboardTracking(false);
     auto *refButton = new QPushButton(&dialog);
     refButton->setToolTip(QStringLiteral("Scegli nella vista"));
     auto *operationBox = new QComboBox(&dialog);
@@ -12093,9 +12363,12 @@ static bool extrusionDialog(QMainWindow *window, CadViewport *viewport, const QS
         item->setCheckState(used ? Qt::Checked : Qt::Unchecked);
         item->setData(Qt::UserRole, index);
     }
+    form->addRow(QStringLiteral("Versi:"), sidesBox);
     form->addRow(QStringLiteral("Fine:"), extentBox);
     form->addRow(QStringLiteral("Distanza:"), distanceBox);
     form->addRow(QStringLiteral("Fino a:"), refButton);
+    form->addRow(QStringLiteral("Secondo verso:"), distance2Box);
+    form->addRow(QString(), flipButton);
     form->addRow(QStringLiteral("Risultato:"), operationBox);
     form->addRow(QString(), autoBox);
     form->addRow(QStringLiteral("Solidi:"), bodyList);
@@ -12121,6 +12394,8 @@ static bool extrusionDialog(QMainWindow *window, CadViewport *viewport, const QS
         ExtrusionObject d = definition;
         d.extent = extentBox->currentIndex();
         d.distance = distanceBox->value();
+        d.extrudeSides = sidesBox->currentIndex();
+        d.distance2 = distance2Box->value();
         d.mergeOperation = operationBox->currentIndex();
         d.mergeAuto = autoBox->isChecked();
         d.mergeBodies.clear();
@@ -12130,8 +12405,21 @@ static bool extrusionDialog(QMainWindow *window, CadViewport *viewport, const QS
     };
     const auto refresh = [&] {
         const int extent = extentBox->currentIndex();
+        // La simmetrica vale solo con la fine a distanza.
+        if (auto *model = qobject_cast<QStandardItemModel *>(sidesBox->model()))
+            if (QStandardItem *item = model->item(1)) item->setEnabled(extent == 0);
+        if (extent != 0 && sidesBox->currentIndex() == 1) {
+            const QSignalBlocker block(sidesBox);
+            sidesBox->setCurrentIndex(2);
+        }
+        const int sides = sidesBox->currentIndex();
         form->setRowVisible(distanceBox, extent == 0);
         form->setRowVisible(refButton, extent != 0);
+        form->setRowVisible(distance2Box, sides == 2);
+        if (auto *label = qobject_cast<QLabel *>(form->labelForField(distanceBox)))
+            label->setText(sides == 1 ? QStringLiteral("Distanza totale:") : QStringLiteral("Distanza:"));
+        // La simmetrica non ha verso; con la fine "fino a" lo decide il riferimento.
+        flipButton->setEnabled(extent == 0 && sides != 1);
         const bool merge = operationBox->currentIndex() != 0;
         form->setRowVisible(autoBox, merge);
         form->setRowVisible(bodyList, merge);
@@ -12178,10 +12466,32 @@ static bool extrusionDialog(QMainWindow *window, CadViewport *viewport, const QS
     QObject::connect(operationBox, &QComboBox::currentIndexChanged, &dialog, refresh);
     QObject::connect(autoBox, &QCheckBox::toggled, &dialog, refresh);
     QObject::connect(bodyList, &QListWidget::itemChanged, &dialog, refresh);
-    QObject::connect(distanceBox, &QDoubleSpinBox::valueChanged, &dialog, refresh);
+    QObject::connect(sidesBox, &QComboBox::currentIndexChanged, &dialog, refresh);
+    QObject::connect(flipButton, &QPushButton::clicked, &dialog, [&] {
+        distanceBox->interpretText();
+        distance2Box->interpretText();
+        const double d = distanceBox->value();
+        if (sidesBox->currentIndex() == 2) {
+            const double back = distance2Box->value();
+            distanceBox->setValue(d >= 0.0 ? -back : back);
+            distance2Box->setValue(std::fabs(d));
+        } else {
+            distanceBox->setValue(-d);
+        }
+        refresh();
+    });
+    distanceBox->onReturn = refresh;
+    distance2Box->onReturn = refresh;
     QObject::connect(buttons, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
     QObject::connect(buttons, &QDialogButtonBox::accepted, &dialog, [&] {
+        // Il valore scritto e non ancora confermato con Invio vale comunque.
+        distanceBox->interpretText();
+        distance2Box->interpretText();
         const ExtrusionObject d = current();
+        if (d.extrudeSides == 2 && !(d.distance2 > 1e-7)) {
+            setStatus(QStringLiteral("La distanza nel secondo verso deve essere positiva."), true);
+            return;
+        }
         if (d.extent != 0 && d.extentRef.kind < 0) {
             setStatus(QStringLiteral("Scegli prima nella vista dove finisce l'estrusione."), true);
             return;
@@ -12796,8 +13106,13 @@ static bool revolutionDialog(QWidget *parent, const QVector<SketchObject> &sketc
     angleBox->setRange(0.000001, 360.0);
     angleBox->setValue(std::abs(angle));
     angleBox->setSuffix(QStringLiteral(" \u00B0"));
-    auto *reverseBox = new QCheckBox(QStringLiteral("Verso opposto"), &dialog);
+    // Inverti il verso: pulsante a due stati (premuto = angolo negativo).
+    auto *reverseBox = new QPushButton(ForgeCad::commandIcon(QStringLiteral("reverseDirection")), QStringLiteral("Inverti il verso"), &dialog);
+    reverseBox->setCheckable(true);
+    reverseBox->setToolTip(QStringLiteral("Ruota nel verso opposto attorno all'asse"));
     reverseBox->setChecked(angle < 0.0);
+    // Come nei raccordi: l'anteprima si calcola con Invio (o con le frecce), non a ogni carattere.
+    angleBox->setKeyboardTracking(false);
     form->addRow(QStringLiteral("Schizzo:"), sketchBox);
     form->addRow(QStringLiteral("Asse:"), axisBox);
     form->addRow(QStringLiteral("Angolo:"), angleBox);
@@ -12810,8 +13125,8 @@ static bool revolutionDialog(QWidget *parent, const QVector<SketchObject> &sketc
                                          reverseBox->isChecked() ? -angleBox->value() : angleBox->value()));
         };
         QObject::connect(axisBox, &QComboBox::currentIndexChanged, &dialog, refresh);
-        QObject::connect(angleBox, &QDoubleSpinBox::valueChanged, &dialog, refresh);
-        QObject::connect(reverseBox, &QCheckBox::toggled, &dialog, refresh);
+        angleBox->onReturn = refresh;
+        QObject::connect(reverseBox, &QPushButton::toggled, &dialog, refresh);
         refresh();
     }
     auto *buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dialog);
@@ -12819,6 +13134,7 @@ static bool revolutionDialog(QWidget *parent, const QVector<SketchObject> &sketc
     QObject::connect(buttons, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
     form->addRow(buttons);
     const auto read = [&] {
+        angleBox->interpretText();  // il valore scritto vale anche senza Invio
         sketch = sketchBox->currentIndex();
         axis = axisBox->currentData().toInt();
         angle = reverseBox->isChecked() ? -angleBox->value() : angleBox->value();
@@ -13317,35 +13633,55 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
             const bool visible = index >= 0 && index < viewport->modelBodies().size() && viewport->modelBodies().at(index).visible;
             QAction *toggle = menu.addAction(visible ? QStringLiteral("Nascondi corpo") : QStringLiteral("Mostra corpo"));
             QAction *rename = menu.addAction(QStringLiteral("Rinomina corpo..."));
+            QAction *meshColor = menu.addAction(QStringLiteral("Colore mesh..."));
+            toggle->setIcon(ForgeCad::commandIcon(QStringLiteral("visibility")));
+            rename->setIcon(ForgeCad::commandIcon(QStringLiteral("rename")));
+            meshColor->setIcon(ForgeCad::commandIcon(QStringLiteral("meshColor")));
             rename->setShortcut(QKeySequence(Qt::Key_F2));
             menu.addSeparator();
             QAction *remove = menu.addAction(QStringLiteral("Elimina corpo e storyboard"));
+            remove->setIcon(ForgeCad::commandIcon(QStringLiteral("delete")));
             const QAction *chosen = menu.exec(globalPosition);
             if (chosen == rename) renameTreeItem(item);
             else if (chosen == toggle) viewport->setModelBodyVisible(index, !visible);
+            else if (chosen == meshColor) {
+                const QColor color = QColorDialog::getColor(viewport->modelBodyMeshColor(index), this,
+                                                            QStringLiteral("Colore mesh del corpo"));
+                if (color.isValid()) viewport->setModelBodyMeshColor(index, color);
+            }
             else if (chosen == remove) viewport->deleteModelBody(index);
         } else if (type == kTreeSketch || type == kTreeExtrusion) {
             const SceneObjectKind kind = type == kTreeSketch ? SceneObjectKind::Sketch : SceneObjectKind::Extrusion;
             const bool visible = viewport->isObjectVisible(kind, index);
             QAction *editSketch = type == kTreeSketch ? menu.addAction(QStringLiteral("Modifica schizzo")) : nullptr;
             QAction *editParameters = type == kTreeExtrusion ? menu.addAction(QStringLiteral("Modifica parametri...")) : nullptr;
+            if (editSketch) editSketch->setIcon(ForgeCad::commandIcon(QStringLiteral("edit")));
+            if (editParameters && index >= 0 && index < viewport->extrusions().size())
+                editParameters->setIcon(ForgeCad::commandIcon(featureIconName(viewport->extrusions().at(index))));
             const bool storyboardFeature = type == kTreeExtrusion && index >= 0 && index < viewport->extrusions().size()
                                         && viewport->extrusions().at(index).modelBodyId != 0;
             QAction *suppress = storyboardFeature
                 ? menu.addAction(viewport->extrusions().at(index).suppressed ? QStringLiteral("Riattiva feature")
                                                                             : QStringLiteral("Sopprimi feature"))
                 : nullptr;
+            if (suppress) suppress->setIcon(ForgeCad::commandIcon(QStringLiteral("visibility")));
             QAction *moveEarlier = storyboardFeature ? menu.addAction(QStringLiteral("Sposta prima nella storia")) : nullptr;
             QAction *moveLater = storyboardFeature ? menu.addAction(QStringLiteral("Sposta dopo nella storia")) : nullptr;
+            if (moveEarlier) moveEarlier->setIcon(ForgeCad::commandIcon(QStringLiteral("move")));
+            if (moveLater) moveLater->setIcon(ForgeCad::commandIcon(QStringLiteral("move")));
             const bool datum = type == kTreeExtrusion && index >= 0 && index < viewport->extrusions().size()
                             && viewport->extrusions().at(index).feature == BodyFeature::DatumPlane;
             QAction *datumSketch = datum ? menu.addAction(QStringLiteral("Nuovo schizzo sul piano")) : nullptr;
+            if (datumSketch) datumSketch->setIcon(ForgeCad::commandIcon(QStringLiteral("newSketch")));
             if (datumSketch) datumSketch->setEnabled(viewport->extrusions().at(index).datumValid);
             QAction *toggle = storyboardFeature ? nullptr : menu.addAction(visible ? QStringLiteral("Nascondi") : QStringLiteral("Mostra"));
             QAction *rename = menu.addAction(QStringLiteral("Rinomina..."));
+            if (toggle) toggle->setIcon(ForgeCad::commandIcon(QStringLiteral("visibility")));
+            rename->setIcon(ForgeCad::commandIcon(QStringLiteral("rename")));
             rename->setShortcut(QKeySequence(Qt::Key_F2));
             menu.addSeparator();
             QAction *remove = menu.addAction(QStringLiteral("Elimina"));
+            remove->setIcon(ForgeCad::commandIcon(QStringLiteral("delete")));
             const QAction *chosen = menu.exec(globalPosition);
             if (chosen && chosen == rename) {
                 renameTreeItem(item);
@@ -15295,24 +15631,7 @@ void PdfWindow::rebuildModelTree() {
             item->setFlags(item->flags() | Qt::ItemIsDropEnabled);
             if (hasPreviousStage) item->setFlags(item->flags() | Qt::ItemIsDragEnabled);
         }
-        QString icon = body.operation >= 0 ? QStringList{QStringLiteral("union"), QStringLiteral("intersection"), QStringLiteral("difference")}.value(body.operation)
-                     : body.feature == BodyFeature::Extrusion ? QStringLiteral("extrude")
-                     : body.feature == BodyFeature::Revolution ? QStringLiteral("revolve")
-                     : body.feature == BodyFeature::Blend ? (body.blendChamfer ? QStringLiteral("chamfer") : QStringLiteral("fillet"))
-                     : body.feature == BodyFeature::SheetTrim ? QStringLiteral("trimSurface")
-                     : body.feature == BodyFeature::SheetExtend ? QStringLiteral("extendSurface")
-                     : body.feature == BodyFeature::Scale ? QStringLiteral("scale")
-                     : body.feature == BodyFeature::Helix ? QStringLiteral("helix")
-                     : body.feature == BodyFeature::Sweep ? QStringLiteral("sweep")
-                     : body.feature == BodyFeature::Loft ? QStringLiteral("loft")
-                     : body.feature == BodyFeature::DatumPlane ? QStringLiteral("datumPlane")
-                     : body.feature == BodyFeature::Imported ? QStringLiteral("import")
-                     : body.feature == BodyFeature::Transform ? QStringLiteral("move")
-                     : body.feature == BodyFeature::Pattern ? QStringLiteral("patternLinear")
-                     : body.feature == BodyFeature::Primitive
-                           ? QStringList{QStringLiteral("box"), QStringLiteral("cylinder"), QStringLiteral("sphere"),
-                                         QStringLiteral("cone"), QStringLiteral("torus")}.value(int(body.primitive.kind))
-                           : QString();
+        const QString icon = featureIconName(body);
         if (!icon.isEmpty()) item->setIcon(0, ForgeCad::commandIcon(icon));
         if (!tip && !reference && body.error.isEmpty()) item->setForeground(0, QColor(135, 150, 165));
         if (body.suppressed) {
@@ -15387,11 +15706,15 @@ void PdfWindow::rebuildModelTree() {
         }
         // Estrusione fino a un riferimento, oppure estrusione/sweep fusa con altri solidi.
         if (body.operation < 0
-            && ((body.feature == BodyFeature::Extrusion && body.extent != 0)
+            && ((body.feature == BodyFeature::Extrusion && (body.extent != 0 || body.extrudeSides != 0))
                 || ((body.feature == BodyFeature::Extrusion || body.feature == BodyFeature::Sweep)
                     && body.mergeOperation != 0 && !body.mergeBodies.isEmpty()))) {
             QStringList children;
+            if (body.feature == BodyFeature::Extrusion && body.extrudeSides == 1)
+                children.append(QStringLiteral("Simmetrica: %1 in tutto").arg(body.distance));
             if (body.extent != 0) children.append(QStringLiteral("Fino a: ") + ForgeCad::geometryRefText(body.extentRef, sketches, extrusions));
+            if (body.feature == BodyFeature::Extrusion && body.extrudeSides == 2)
+                children.append(QStringLiteral("Secondo verso: %1").arg(body.distance2));
             if (body.mergeOperation != 0)
                 for (int other : body.mergeBodies)
                     children.append((body.mergeOperation == 1 ? QStringLiteral("Unita a: ") : QStringLiteral("Sottratta da: ")) + extrusions.value(other).name);

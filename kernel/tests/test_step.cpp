@@ -5,12 +5,14 @@
 #include <STEPControl_Reader.hxx>
 #include <TopExp_Explorer.hxx>
 
+#include <algorithm>
 #include <cmath>
 #include <cstdio>
 #include <fstream>
 
 #include "fk_blend.h"
 #include "fk_body_check.h"
+#include "fk_body_io.h"
 #include "fk_boolean.h"
 #include "fk_curve_ops.h"
 #include "fk_helix.h"
@@ -20,6 +22,7 @@
 #include "fk_revolve.h"
 #include "fk_step.h"
 #include "fk_sweep.h"
+#include "fk_tessellate.h"
 #include "fk_test_profiles.h"
 
 using namespace fktest;
@@ -360,4 +363,82 @@ FK_TEST(StepReadSolidWorksFile) {
     GProp_GProps props;
     BRepGProp::VolumeProperties(shape, props, 1e-9);
     FK_CHECK_NEAR(massProperties(body, 1e-9).volume, props.Mass(), 1e-6 * props.Mass());
+}
+
+FK_TEST(StepReadSignedMajorTorus) {
+    const Frame3 frame(Vec3(3, -2, 7), normalized(Vec3(1, 2, 3)), Vec3(1, 0, 0));
+    ExchangeBody source;
+    source.body = makeTorus(frame, 10.5, 1.0);
+    const std::string original = writeStep({source});
+    for (const std::string type : {"TOROIDAL_SURFACE", "DEGENERATE_TOROIDAL_SURFACE"}) {
+        std::string content = original;
+        const auto start = content.find("TOROIDAL_SURFACE(");
+        FK_CHECK(start != std::string::npos);
+        if (start == std::string::npos) return;
+        const auto placementEnd = content.find(',', content.find(',', start) + 1);
+        const auto end = content.find(')', placementEnd);
+        content.replace(placementEnd + 1, end - placementEnd - 1,
+                        type == "TOROIDAL_SURFACE" ? "-10.5,13." : "-10.5,13.,.T.");
+        content.replace(start, std::string("TOROIDAL_SURFACE").size(), type);
+        const auto read = readStep(content);
+        FK_CHECK(read.bodies.size() == 1);
+        if (read.bodies.empty()) continue;
+        const Body &body = read.bodies.front().body;
+        FK_CHECK(checkBody(body).empty());
+        FK_CHECK(body.faces().size() == 1);
+        const Surface &surface = *body.face(body.faces().front()).surface;
+        FK_CHECK(surface.type() == SurfaceType::Revolution);
+        for (double u : {0.0, 0.7, 2.1, 5.8}) {
+            for (double v : {0.0, 0.3, 1.4, 3.2, 5.7}) {
+                const Vec3 radial = std::cos(u) * frame.xDir() + std::sin(u) * frame.yDir();
+                const Vec3 tangent = -std::sin(u) * frame.xDir() + std::cos(u) * frame.yDir();
+                const double rho = -10.5 + 13.0 * std::cos(v);
+                const Vec3 expected = frame.origin() + rho * radial + 13.0 * std::sin(v) * frame.zDir();
+                FK_CHECK_NEAR(distance(surface.point(u, v), expected), 0.0, 1e-10);
+                const Vec3 normal = normalized(cross(rho * tangent,
+                    -13.0 * std::sin(v) * radial + 13.0 * std::cos(v) * frame.zDir()));
+                FK_CHECK_NEAR(distance(surface.normal(u, v), normal), 0.0, 1e-10);
+            }
+        }
+    }
+}
+
+FK_TEST(StepReadAP0730SolidWorksFile) {
+    const std::string path = std::string(FORGECAD_SOURCE_DIR) + "/File_Esempio/AP0730-REV00.STEP";
+    std::ifstream file(path, std::ios::binary);
+    if (!file) return;  // fixture reale facoltativa, test sintetico sempre eseguito
+    const std::string content((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+    const auto read = readStep(content);
+    FK_CHECK(read.bodies.size() == 1);
+    if (read.bodies.empty()) return;
+    const Body &body = read.bodies.front().body;
+    FK_CHECK(!body.isSheet());
+    FK_CHECK(checkBody(body).empty());
+    int revolutions = 0;
+    for (FaceId id : body.faces())
+        if (body.face(id).surface->type() == SurfaceType::Revolution) ++revolutions;
+    FK_CHECK(revolutions == 2);
+    const auto mesh = tessellate(body, {});
+    // Tutte le facce si triangolano, anche quelle sottili tra un segmento e
+    // un arco con freccia sotto la deflessione. L'area dei triangoli non
+    // supera quella esatta: sul toro della faccia 249 un campione quasi
+    // doppio (salto di 6e-12 tra le SP-curve) dava una "membrana" piatta
+    // percorsa nei due versi, sei volte l'area della faccia.
+    FK_CHECK(mesh.failedFaces == 0);
+    FK_CHECK(mesh.faces.size() == body.faces().size());
+    for (FaceId id : body.faces()) {
+        const auto found = std::find_if(mesh.faces.begin(), mesh.faces.end(),
+            [id](const FaceMesh &face) { return face.face == id; });
+        FK_CHECK(found != mesh.faces.end());
+        if (found == mesh.faces.end()) continue;
+        FK_CHECK(!found->triangles.empty());
+        double area = 0.0;
+        for (const auto &t : found->triangles)
+            area += 0.5 * norm(cross(found->points[std::size_t(t[1])] - found->points[std::size_t(t[0])],
+                                     found->points[std::size_t(t[2])] - found->points[std::size_t(t[0])]));
+        FK_CHECK(area <= 1.05 * faceArea(body, id, 1e-9));
+    }
+    const Body restored = readBodyBinary(writeBodyBinary(body));
+    FK_CHECK(restored.faces().size() == body.faces().size());
+    FK_CHECK(checkBody(restored).empty());
 }

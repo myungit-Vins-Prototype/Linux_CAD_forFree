@@ -3,6 +3,7 @@
 
 #include <QDoubleSpinBox>
 #include <QString>
+#include <functional>
 
 class QWidget;
 
@@ -25,6 +26,14 @@ public:
     QValidator::State validate(QString &text, int &pos) const override;
     double valueFromText(const QString &text) const override;
     void fixup(QString &input) const override;
+    // Se impostato, Invio conferma il valore senza accettare il dialogo.
+    // Lo chiamano anche i passi delle frecce e della rotella (un valore
+    // completo scelto dall'utente), non i caratteri scritti.
+    std::function<void()> onReturn;
+    void stepBy(int steps) override;
+
+protected:
+    void keyPressEvent(QKeyEvent *event) override;
 
 private:
     QString expressionText(const QString &text) const;

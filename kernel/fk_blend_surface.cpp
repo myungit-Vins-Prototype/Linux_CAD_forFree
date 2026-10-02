@@ -1556,6 +1556,8 @@ Body blendSurfaceChains(const Body &input, const std::vector<EdgeId> &selected, 
             EdgeId onA, onB;
             Interval windowA, windowB;
             FaceId face;
+            FaceId secondFace;
+            EdgeId seam;
             bool normal = false;  // E piana e normale allo spigolo: la sezione nel vertice
             double tA = 0.0, tB = 0.0;
         };
@@ -1568,14 +1570,26 @@ Body blendSurfaceChains(const Body &input, const std::vector<EdgeId> &selected, 
                 const ChainFin &cf = chain.fins[std::size_t(atStart ? 0 : n - 1)];
                 end.vertex = atStart ? body.finStart(cf.fin) : body.finEnd(cf.fin);
                 const std::vector<EdgeId> at = edgesAtVertex(body, end.vertex);
-                if (at.size() != 3) throw std::domain_error("blendEdges: estremo della catena con piu' di tre spigoli (scegli tutto il contorno)");
+                if (at.size() != 3 && at.size() != 4)
+                    throw std::domain_error("blendEdges: estremo della catena con piu' di quattro spigoli (caso non gestito)");
                 const FinId finB = body.otherFin(cf.fin);
                 const FinId onA = atStart ? body.fin(cf.fin).previous : body.fin(cf.fin).next;
                 const FinId onB = atStart ? body.fin(finB).next : body.fin(finB).previous;
                 end.onA = body.fin(onA).edge;
                 end.onB = body.fin(onB).edge;
                 end.face = body.finFace(body.otherFin(onA));
-                if (body.finFace(body.otherFin(onB)) != end.face) throw std::domain_error("blendEdges: estremo della catena non gestito");
+                end.secondFace = body.finFace(body.otherFin(onB));
+                if (end.secondFace != end.face) {
+                    if (at.size() != 4 || chamfer)
+                        throw std::domain_error("blendEdges: pezza d'angolo terminale non gestita per gli smussi");
+                    for (EdgeId candidate : at) {
+                        if (candidate == cf.edge || candidate == end.onA || candidate == end.onB) continue;
+                        const Edge &edge = body.edge(candidate);
+                        const FaceId f0 = body.finFace(edge.forward), f1 = body.finFace(edge.backward);
+                        if ((f0 == end.face && f1 == end.secondFace) || (f1 == end.face && f0 == end.secondFace)) end.seam = candidate;
+                    }
+                    if (!end.seam.valid()) throw std::domain_error("blendEdges: cucitura della pezza d'angolo non trovata");
+                }
                 // Un raccordo convesso puo' terminare contro una parete
                 // concava: il contatto prolunga l'arco del bordo terminale.
                 // Cerca solo oltre il vertice interessato, senza attraversare
@@ -1598,7 +1612,7 @@ Body blendSurfaceChains(const Body &input, const std::vector<EdgeId> &selected, 
                 end.windowB = endWindow(end.onB);
                 const Face &E = body.face(end.face);
                 const Vec3 tangent = finTangent(body, cf.fin, !atStart);
-                end.normal = E.surface->type() == SurfaceType::Plane
+                end.normal = end.face == end.secondFace && E.surface->type() == SurfaceType::Plane
                           && std::fabs(dot(static_cast<const Plane &>(*E.surface).frame().zDir(), tangent)) >= 1.0 - kSmooth;
                 Piece &piece = pieces[std::size_t(end.piece)];
                 const double vertexParameter = atStart ? cf.start : cf.end;
@@ -1896,32 +1910,177 @@ Body blendSurfaceChains(const Body &input, const std::vector<EdgeId> &selected, 
                 sectionJunction(junction, piece, end.atStart ? piece.from : piece.to, false, EdgeId());
             } else {
                 const Section &sa = piece.blend->section(end.tA), &sb = piece.blend->section(end.tB);
-                const Vec3 ra = projectPoint(*body.edge(end.onA).curve, sa.row[0].p, end.windowA).point;
-                const Vec3 rb = projectPoint(*body.edge(end.onB).curve, sb.row[2].p, end.windowB).point;
-                junction.pointA = model.addPoint(ra);
-                junction.pointB = model.addPoint(rb);
+                Vec3 ra = projectPoint(*body.edge(end.onA).curve, sa.row[0].p, end.windowA).point;
+                Vec3 rb = projectPoint(*body.edge(end.onB).curve, sb.row[2].p, end.windowB).point;
+                // I raccordi precedenti possono lasciare, presso il vertice,
+                // un micro-edge tollerante con intervallo parametrico quasi
+                // nullo. Non e' accorciabile ulteriormente: la nuova pezza
+                // riusa il vertice comune e assorbe lo scarto nella propria
+                // tolleranza geometrica.
+                const auto microEdge = [&](EdgeId id) {
+                    const Edge &edge = body.edge(id);
+                    return edge.range.length() <= 1e-10 * std::max(1.0, std::fabs(edge.range.lo))
+                        || distance(body.vertex(body.edgeStart(id)).point, body.vertex(body.edgeEnd(id)).point) <= 1e-3 * size;
+                };
+                const bool snapA = end.seam.valid() && microEdge(end.onA);
+                const bool snapB = end.seam.valid() && microEdge(end.onB);
+                if (snapA) ra = body.vertex(end.vertex).point;
+                if (snapB) rb = body.vertex(end.vertex).point;
+                const int oldVertex = model.vertexIndex.at(end.vertex.index);
+                junction.pointA = snapA ? oldVertex : model.addPoint(ra);
+                junction.pointB = snapB ? oldVertex : model.addPoint(rb);
                 setEnd(aLo, aHi, end.piece, !end.atStart, end.tA);
                 setEnd(bLo, bHi, end.piece, !end.atStart, end.tB);
                 const Surface &E = *body.face(end.face).surface;
-                Cut kappa;
-                try { kappa = traceBetween(*piece.surface, E, ra, rb, scale, piece.fit.error); }
-                catch (const std::domain_error &failure) { throw std::domain_error(std::string("blendEdges: chiusura dell'estremo: ") + failure.what()); }
-                junction.connector = kappa.forward ? model.addEdge(junction.pointA, junction.pointB, kappa.curve, kappa.range, kappa.gap > 1e-7 ? 2.0 * kappa.gap : 0.0)
-                                                   : model.addEdge(junction.pointB, junction.pointA, kappa.curve, kappa.range, kappa.gap > 1e-7 ? 2.0 * kappa.gap : 0.0);
+                if (!end.seam.valid()) {
+                    Cut kappa;
+                    try { kappa = traceBetween(*piece.surface, E, ra, rb, scale, piece.fit.error); }
+                    catch (const std::domain_error &failure) { throw std::domain_error(std::string("blendEdges: chiusura dell'estremo: ") + failure.what()); }
+                    junction.connector = kappa.forward ? model.addEdge(junction.pointA, junction.pointB, kappa.curve, kappa.range, kappa.gap > 1e-7 ? 2.0 * kappa.gap : 0.0)
+                                                       : model.addEdge(junction.pointB, junction.pointA, kappa.curve, kappa.range, kappa.gap > 1e-7 ? 2.0 * kappa.gap : 0.0);
+                } else {
+                    // Pezza triangolare di Coons (il lato opposto al nuovo
+                    // raccordo collassa nel vertice Q). I tre bordi cubici
+                    // seguono le superfici adiacenti con le loro tangenti;
+                    // la costruzione vale anche quando i raccordi terminali
+                    // hanno un raggio diverso da quello nuovo.
+                    const VertexId qVertex = body.edgeStart(end.seam) == end.vertex ? body.edgeEnd(end.seam) : body.edgeStart(end.seam);
+                    const Vec3 q = body.vertex(qVertex).point;
+                    constexpr int segments = 8;
+                    std::vector<double> knots(4, 0.0);
+                    for (int k = 1; k < segments; ++k)
+                        for (int repeat = 0; repeat < 3; ++repeat) knots.push_back(double(k) / segments);
+                    knots.insert(knots.end(), 4, 1.0);
+                    // Cubiche di Hermite della traccia rettilinea nello spazio
+                    // parametrico; lo scarto viene verificato sui supporti.
+                    const auto surfacePath = [&](const Surface &support, double u0, double v0, double u1, double v1) {
+                        std::vector<Vec3> control;
+                        for (int k = 0; k < segments; ++k) {
+                            const double a = double(k) / segments, b = double(k + 1) / segments;
+                            const auto sample = [&](double f, Vec3 &p, Vec3 &dp) {
+                                Vec3 d[4];
+                                support.evaluate(u0 + f * (u1 - u0), v0 + f * (v1 - v0), 1, d);
+                                p = d[0];
+                                dp = (u1 - u0) * d[Surface::derivativeIndex(1, 0, 1)]
+                                   + (v1 - v0) * d[Surface::derivativeIndex(0, 1, 1)];
+                            };
+                            Vec3 pa, pb, da, db;
+                            sample(a, pa, da);
+                            sample(b, pb, db);
+                            if (k == 0) control.push_back(pa);
+                            const double h = b - a;
+                            control.push_back(pa + (h / 3.0) * da);
+                            control.push_back(pb - (h / 3.0) * db);
+                            control.push_back(pb);
+                        }
+                        return control;
+                    };
+                    const SurfaceProjection ea = projectPoint(E, ra), eq = projectPoint(E, q);
+                    const Surface &supportB = *body.face(end.secondFace).surface;
+                    const SurfaceProjection eb = projectPoint(supportB, rb), eq2 = projectPoint(supportB, q);
+                    std::vector<Vec3> c0 = surfacePath(*piece.surface, end.tA, 0.0, end.tB, 1.0);
+                    std::vector<Vec3> ca = surfacePath(E, ea.u, ea.v, eq.u, eq.v);
+                    std::vector<Vec3> cb = surfacePath(supportB, eb.u, eb.v, eq2.u, eq2.v);
+                    c0.front() = ca.front() = ra;
+                    c0.back() = cb.front() = rb;
+                    ca.back() = cb.back() = q;
+                    const int count = int(c0.size());
+                    std::vector<double> parameters;
+                    parameters.reserve(std::size_t(count));
+                    for (int i = 0; i < count; ++i)
+                        parameters.push_back((knots[std::size_t(i + 1)] + knots[std::size_t(i + 2)] + knots[std::size_t(i + 3)]) / 3.0);
+                    std::vector<Vec3> poles;
+                    poles.reserve(std::size_t(count * count));
+                    for (int i = 0; i < count; ++i)
+                        for (int j = 0; j < count; ++j) {
+                            const double u = parameters[std::size_t(i)], v = parameters[std::size_t(j)], collapse = 1.0 - u;
+                            const Vec3 ruled = (1.0 - v) * ca[std::size_t(i)] + v * cb[std::size_t(i)];
+                            const Vec3 linear = (1.0 - v) * ra + v * rb;
+                            poles.push_back(ruled + collapse * (c0[std::size_t(j)] - linear));
+                        }
+                    const auto surface = std::make_shared<BSplineSurface>(3, 3, knots, knots, count, count, poles, std::vector<double>());
+                    const auto curve = [&](const std::vector<Vec3> &control) {
+                        return std::make_shared<BSplineCurve<3>>(3, knots, control);
+                    };
+                    const auto curveGap = [&](const std::vector<Vec3> &control, const Surface &support) {
+                        const BSplineCurve<3> candidate(3, knots, control);
+                        double gap = 0.0;
+                        for (int sample = 0; sample <= 32; ++sample)
+                            gap = std::max(gap, projectPoint(support, candidate.point(sample / 32.0)).distance);
+                        return gap;
+                    };
+                    const double gapNew = curveGap(c0, *piece.surface), gapA = curveGap(ca, E);
+                    const double gapB = curveGap(cb, supportB);
+                    const double allowed = 0.01 * size;
+                    // I punti di contatto possono appartenere a edge gia'
+                    // tolleranti. Eredita soltanto lo scarto misurato agli
+                    // estremi, e solo se coperto dalla tolleranza precedente.
+                    const auto inheritedGap = [&](double gap, EdgeId edgeId, VertexId vertex) {
+                        const double tolerance = std::max({kLinearResolution, body.edge(edgeId).tolerance,
+                                                           body.vertex(vertex).tolerance});
+                        return gap <= tolerance ? gap : 0.0;
+                    };
+                    const double allowedA = std::max({allowed,
+                        inheritedGap(ea.distance, end.onA, end.vertex), inheritedGap(eq.distance, end.seam, qVertex)});
+                    const double allowedB = std::max({allowed,
+                        inheritedGap(eb.distance, end.onB, end.vertex), inheritedGap(eq2.distance, end.seam, qVertex)});
+                    if (gapNew > allowed || gapA > allowedA + kLinearResolution || gapB > allowedB + kLinearResolution)
+                        throw std::domain_error("blendEdges: la pezza d'angolo si discosta troppo dai raccordi adiacenti ("
+                                                + std::to_string(gapNew) + ", " + std::to_string(gapA) + ", "
+                                                + std::to_string(gapB) + "; limiti " + std::to_string(allowed) + ", "
+                                                + std::to_string(allowedA) + ", " + std::to_string(allowedB) + ")");
+                    const int pointQ = model.vertexIndex.at(qVertex.index);
+                    junction.connector = model.addEdge(junction.pointA, junction.pointB, curve(c0), {0, 1}, 1.01 * gapNew);
+                    const int first = model.addEdge(junction.pointA, pointQ, curve(ca), {0, 1}, 1.01 * gapA);
+                    const int second = model.addEdge(junction.pointB, pointQ, curve(cb), {0, 1}, 1.01 * gapB);
+                    const int oldSeam = model.edgeIndex.at(end.seam.index);
+                    model.edgeAlive[std::size_t(oldSeam)] = false;
+                    edits[model.faceIndex.at(end.face.index)].removed.insert(oldSeam);
+                    edits[model.faceIndex.at(end.secondFace.index)].removed.insert(oldSeam);
+                    edits[model.faceIndex.at(end.face.index)].free.push_back(first);
+                    edits[model.faceIndex.at(end.secondFace.index)].free.push_back(second);
+                    const Edge &oldSeamEdge = body.edge(end.seam);
+                    const FinId seamOnFirst = body.finFace(oldSeamEdge.forward) == end.face ? oldSeamEdge.forward : oldSeamEdge.backward;
+                    const bool firstFollowsOld = body.edgeStart(end.seam) == end.vertex;
+                    const bool firstSenseInOldFace = firstFollowsOld ? body.fin(seamOnFirst).sense : !body.fin(seamOnFirst).sense;
+                    Body::BuildFace corner;
+                    corner.surface = surface;
+                    // Allinea la normale geometrica al verso del loop
+                    // triangolare nel dominio (u,v).
+                    corner.sense = !firstSenseInOldFace;
+                    const int cornerFace = int(model.faces.size());
+                    model.faces.push_back(std::move(corner));
+                    FaceEdit cornerEdit;
+                    // Il triangolo percorre il primo lato nel verso opposto
+                    // alla faccia che prima usava la cucitura rimossa.
+                    const auto pcurve = [](const Vec2 &origin, const Vec2 &direction) {
+                        return std::make_shared<Line<2>>(origin, direction);
+                    };
+                    cornerEdit.fixed.push_back({junction.connector, firstSenseInOldFace,
+                                                pcurve(Vec2(0, 0), Vec2(0, 1)), 0.0});
+                    cornerEdit.fixed.push_back({first, !firstSenseInOldFace,
+                                                pcurve(Vec2(0, 0), Vec2(1, 0)), 0.0});
+                    cornerEdit.fixed.push_back({second, firstSenseInOldFace,
+                                                pcurve(Vec2(0, 1), Vec2(1, 0)), 0.0});
+                    newFaces.push_back({cornerFace, std::move(cornerEdit)});
+                }
             }
             const int vertex = model.vertexIndex.at(end.vertex.index);
-            try { model.moveEnd(model.edgeIndex.at(end.onA.index), vertex, junction.pointA, true, &end.windowA); }
+            try {
+                if (junction.pointA != vertex) model.moveEnd(model.edgeIndex.at(end.onA.index), vertex, junction.pointA, true, &end.windowA);
+            }
             catch (const std::domain_error &failure) {
                 throw std::domain_error(std::string(failure.what()) + " (estremo A, bordo " + std::to_string(end.onA.index)
                                         + ", t=" + std::to_string(end.tA) + ")");
             }
-            try { model.moveEnd(model.edgeIndex.at(end.onB.index), vertex, junction.pointB, true, &end.windowB); }
+            try {
+                if (junction.pointB != vertex) model.moveEnd(model.edgeIndex.at(end.onB.index), vertex, junction.pointB, true, &end.windowB);
+            }
             catch (const std::domain_error &failure) {
                 throw std::domain_error(std::string(failure.what()) + " (estremo B, bordo " + std::to_string(end.onB.index)
                                         + ", t=" + std::to_string(end.tB) + ")");
             }
-            FaceEdit &e = edits[model.faceIndex.at(end.face.index)];
-            e.free.push_back(junction.connector);
+            if (!end.seam.valid()) edits[model.faceIndex.at(end.face.index)].free.push_back(junction.connector);
         }
 
         // Contatti, facce nuove e modifiche di A e delle facce B.
@@ -2040,7 +2199,8 @@ Body blendSurfaceChains(const Body &input, const std::vector<EdgeId> &selected, 
             loops.push_back(std::move(loop));
         }
         for (std::size_t k = 0; k < free.size(); ++k)
-            if (!freeUsed[k]) throw std::domain_error("blendEdges: bordo del raccordo non collegato");
+            if (!freeUsed[k]) throw std::domain_error("blendEdges: bordo del raccordo " + std::to_string(free[k])
+                                                      + " non collegato nella faccia " + std::to_string(face));
         model.faces[std::size_t(face)].loops = std::move(loops);
     };
     for (auto &[face, edit] : edits) {

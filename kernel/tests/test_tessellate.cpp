@@ -1,3 +1,4 @@
+#include "fk_body_check.h"
 #include "fk_boolean.h"
 #include "fk_classify.h"
 #include "fk_extrude.h"
@@ -292,5 +293,81 @@ FK_TEST(TessellateCachedRayHits) {
         const Edge &edge = drilled.edge(mesh.edgeIds[i]);
         FK_CHECK(near(mesh.edges[i].front(), edge.curve->point(edge.range.lo), 1e-12));
         FK_CHECK(near(mesh.edges[i].back(), edge.curve->point(edge.range.hi), 1e-12));
+    }
+}
+
+// Faccia piu' sottile della deflessione: la lunula tra due archi (larga 0.06,
+// lunga 5.25, punte a 2.6 gradi) con deflessione 0.1. Con i soli campioni
+// della deflessione le corde di un arco attraversano l'altro, il contorno in
+// (u, v) si ripiega e i triangoli escono dalla faccia (sugli STEP: la striscia
+// tra una tasca e lo spigolo esterno disegnata sopra la tasca).
+FK_TEST(TessellateFaceThinnerThanDeflection) {
+    const double a = std::atan2(9.6496, 2.625), b = std::atan2(11.7096, 2.625);
+    const std::vector<ProfileSegment> segments = {arcSegment(Vec2(0, 0), 10.0, a, kPi - a),
+                                                  arcSegment(Vec2(0, -2.06), 12.0, b, kPi - b)};
+    const ProfileRegion region = buildProfile(segments, 1e-3).regions.front();
+    const Body body = makeExtrusion(Frame3(), region, 1.0);
+    FK_CHECK(checkBody(body).empty());
+    TessellationOptions options;
+    options.deflection = 0.1;
+    const Tessellation mesh = tessellate(body, options);
+    FK_CHECK(mesh.failedFaces == 0);
+    int planes = 0;
+    for (const FaceMesh &face : mesh.faces) {
+        if (body.face(face.face).surface->type() != SurfaceType::Plane) continue;
+        ++planes;
+        double area = 0.0;
+        int triangles = 0;
+        for (const std::array<int, 3> &t : face.triangles) {
+            const Vec3 &p = face.points[std::size_t(t[0])], &q = face.points[std::size_t(t[1])], &r = face.points[std::size_t(t[2])];
+            const Vec3 n = cross(q - p, r - p);
+            area += 0.5 * norm(n);
+            FK_CHECK(dot(n, face.normals[std::size_t(t[0])]) > 0.0);
+            // Fuori dalla lunula al piu' di una frazione della deflessione.
+            const Vec3 c = (p + q + r) / 3.0;
+            const double outside = std::max({std::hypot(c[0], c[1]) - 10.0, 12.0 - std::hypot(c[0], c[1] + 2.06), 0.0});
+            FK_CHECK(outside <= 0.25 * options.deflection);
+            ++triangles;
+        }
+        // Il contorno e' fatto di corde entro la deflessione: l'area puo'
+        // scostarsi (la faccia e' piu' sottile della deflessione), ma i
+        // triangoli non si sovrappongono e non coprono altro.
+        const double exact = faceArea(body, face.face);
+        FK_CHECK(triangles > 0);
+        FK_CHECK_NEAR(area, exact, 0.25 * exact);
+    }
+    FK_CHECK(planes == 2);
+}
+
+// Striscia sottile su un cilindro (larga 0.001) tra il taglio obliquo e una
+// cava: i loop della faccia hanno le SP-curve in periodi diversi (la cava
+// prima o dopo l'inizio dell'ellisse), e le corde si confrontano a meno di
+// periodi interi. Prima l'area dei triangoli arrivava al doppio di quella vera.
+FK_TEST(TessellateThinBandAcrossPeriods) {
+    for (double offset : {-4.0, 4.0}) {
+        const Vec3 crest(std::cos(1.0), std::sin(1.0), 0.0);
+        const Vec3 n = normalized(Vec3(-0.3 * crest[0], -0.3 * crest[1], 1.0));
+        const Frame3 plane(Vec3(0, 0, 5), n, crest);
+        const Body cut = booleanOperation(makeCylinder(Frame3(), 10.0, 10.0),
+            makeBox(Frame3(Vec3(0, 0, 5) - plane.xDir() * 30.0 - plane.yDir() * 30.0, n, crest), 60, 60, 20), BooleanOperation::Subtract);
+        const Body body = booleanOperation(cut,
+            makeBox(Frame3(Vec3(0, 0, 5) - n * 1.001 + plane.xDir() * 5.0 - plane.yDir() * (3.0 - offset), n, crest), 10, 6, 1.0),
+            BooleanOperation::Subtract);
+        FK_CHECK(checkBody(body).empty());
+        TessellationOptions options;
+        options.deflection = 0.1;
+        const Tessellation mesh = tessellate(body, options);
+        FK_CHECK(mesh.failedFaces == 0);
+        int bands = 0;
+        for (const FaceMesh &face : mesh.faces) {
+            if (body.face(face.face).surface->type() != SurfaceType::Cylinder || body.face(face.face).loops.size() < 3) continue;
+            ++bands;
+            double area = 0.0;
+            for (const std::array<int, 3> &t : face.triangles)
+                area += 0.5 * norm(cross(face.points[std::size_t(t[1])] - face.points[std::size_t(t[0])],
+                                         face.points[std::size_t(t[2])] - face.points[std::size_t(t[0])]));
+            FK_CHECK_NEAR(area, faceArea(body, face.face), 0.02 * faceArea(body, face.face));
+        }
+        FK_CHECK(bands == 1);
     }
 }

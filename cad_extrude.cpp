@@ -167,8 +167,30 @@ ForgeBody forgeExtrusionFeature(ExtrusionObject &body, int index, const QVector<
     ForgeBody result;
     try {
         if (body.extent == 0) {
-            result = forgeExtrusion(sketch, body.distance, error);
+            const double d = body.distance;
+            if (body.extrudeSides == 1) {
+                // Simmetrica: meta' per parte del piano dello schizzo.
+                result = forgeExtrusion(sketch, d, error, -0.5 * d);
+            } else if (body.extrudeSides == 2) {
+                if (std::fabs(d) <= 1e-7) {
+                    setError(error, QStringLiteral("La distanza di estrusione e' nulla."));
+                    return nullptr;
+                }
+                if (!(body.distance2 > 1e-7)) {
+                    setError(error, QStringLiteral("La distanza nel secondo verso deve essere positiva."));
+                    return nullptr;
+                }
+                // Un solo prisma dal piano spostato di distance2 all'indietro.
+                const double s = d > 0.0 ? 1.0 : -1.0;
+                result = forgeExtrusion(sketch, d + s * body.distance2, error, -s * body.distance2);
+            } else {
+                result = forgeExtrusion(sketch, d, error);
+            }
         } else {
+            if (body.extrudeSides == 1) {
+                setError(error, QStringLiteral("L'estrusione simmetrica vale solo con la fine a distanza."));
+                return nullptr;
+            }
             ResolvedRef target;
             QString why;
             if (!resolveGeometryRef(body.extentRef, index, sketches, bodies, target, &why)) {
@@ -229,6 +251,7 @@ ForgeBody forgeExtrusionFeature(ExtrusionObject &body, int index, const QVector<
                         }
                         // Prisma oltre il piano, poi solo la parte dalla parte dello schizzo.
                         const double reach = hi > 0.0 ? hi : lo;
+                        body.distance = reach;  // il verso (e la portata) per il secondo verso
                         const double length = (reach > 0.0 ? 1.0 : -1.0) * (std::fabs(hi > 0.0 ? hi : lo) * 1.05 + 1e-3 * size);
                         const ForgeBody longer = forgeExtrusion(sketch, length, error);
                         if (!longer) return nullptr;
@@ -272,6 +295,22 @@ ForgeBody forgeExtrusionFeature(ExtrusionObject &body, int index, const QVector<
                     }
                     body.distance = side * reach;
                 }
+            }
+            if (result && body.extrudeSides == 2) {
+                // Secondo verso: un prisma dall'altra parte del piano dello
+                // schizzo, unito (si toccano lungo la base comune).
+                if (!(body.distance2 > 1e-7)) {
+                    setError(error, QStringLiteral("La distanza nel secondo verso deve essere positiva."));
+                    return nullptr;
+                }
+                const double s = body.distance > 0.0 ? 1.0 : -1.0;
+                const ForgeBody back = forgeExtrusion(sketch, -s * body.distance2, error);
+                if (!back) return nullptr;
+                if (result->isSheet() || back->isSheet()) {
+                    setError(error, QStringLiteral("Un profilo aperto nei due versi si estrude solo a distanza."));
+                    return nullptr;
+                }
+                result = std::make_shared<const Body>(booleanOperation(*result, *back, Kernel::BooleanOperation::Unite));
             }
         }
     } catch (const std::exception &failure) {

@@ -70,7 +70,7 @@ void forgeSketchFrame(const SketchObject &sketch, double distance, Frame3 &frame
     height = dot(extrusionVector(sketch, distance), frame.zDir());
 }
 
-ForgeBody forgeExtrusion(const SketchObject &sketch, double distance, QString *error) {
+ForgeBody forgeExtrusion(const SketchObject &sketch, double distance, QString *error, double start) {
     if (std::abs(distance) <= 1.0e-7) {
         setError(error, QStringLiteral("La distanza di estrusione e' nulla."));
         return nullptr;
@@ -85,6 +85,7 @@ ForgeBody forgeExtrusion(const SketchObject &sketch, double distance, QString *e
         Frame3 frame;
         double height;
         forgeSketchFrame(sketch, distance, frame, height);
+        if (start != 0.0) frame = Frame3(frame.origin() + extrusionVector(sketch, start), frame.zDir(), frame.xDir());
         // Nessun contorno chiuso: le catene aperte diventano una superficie
         // (lamina).
         if (profile.regions.empty()) return std::make_shared<const Body>(makeSheetExtrusion(frame, profile.chains, height));
@@ -732,11 +733,12 @@ void forgeBlendPreviewDisplay(const Body &base, const Body &result, int quality,
     forgeSurfaceConstructionCurves(result, display, divisions, true, patchFaces);
 }
 
-bool forgePickFace(const Body &body, const QVector3D &origin, const QVector3D &direction, FaceHit &hit, const Kernel::RayFaceIndex *index) {
+bool forgePickFace(const Body &body, const QVector3D &origin, const QVector3D &direction, FaceHit &hit, const Kernel::RayFaceIndex *index,
+                   const Kernel::Interval *window) {
     try {
         double t = 0.0;
         FaceId f;
-        if (!firstRayHit(body, Vec3(origin.x(), origin.y(), origin.z()), Vec3(direction.x(), direction.y(), direction.z()), 1e-7, t, &f, index)
+        if (!firstRayHit(body, Vec3(origin.x(), origin.y(), origin.z()), Vec3(direction.x(), direction.y(), direction.z()), 1e-7, t, &f, index, window)
             || !f.valid())
             return false;
         hit = {};
@@ -763,6 +765,44 @@ bool forgePickFace(const Body &body, const QVector3D &origin, const QVector3D &d
     } catch (const std::exception &) {
         return false;
     }
+}
+
+int forgeFaceOwner(const Body &picked, int face, const Vec3 &point, const std::vector<std::pair<int, ForgeBody>> &chain) {
+    try {
+        const FaceId pickedFace(face);
+        const Face &f = picked.face(pickedFace);
+        if (!f.surface) return -1;
+        const SurfaceProjection onPicked = projectPoint(*f.surface, point);
+        const Vec3 normal = f.surface->normal(onPicked.u, onPicked.v);
+        constexpr double kTolerance = 1e-6;
+        for (const auto &[index, body] : chain) {
+            if (!body) continue;
+            for (FaceId g : body->faces()) {
+                const Face &candidate = body->face(g);
+                if (!candidate.surface) continue;
+                // Gli edge tolleranti (STEP) allargano la tolleranza della faccia.
+                double tolerance = kTolerance;
+                for (LoopId l : candidate.loops)
+                    for (FinId fin : body->loopFins(l)) tolerance = std::max(tolerance, body->edge(body->fin(fin).edge).tolerance);
+                const Box box = faceBox(*body, g).padded(tolerance);
+                bool inside = true;
+                for (int k = 0; k < 3; ++k) inside = inside && point[k] >= box.lo[k] && point[k] <= box.hi[k];
+                if (!inside) continue;
+                bool same = sameSurface(*candidate.surface, *f.surface, tolerance);
+                // Le superfici che sameSurface riconosce solo se sono lo stesso
+                // oggetto (B-spline, rivoluzioni) possono essere copie (corpi
+                // riletti dal documento): stesso tipo, punto sulla superficie e
+                // normale parallela.
+                if (!same && candidate.surface->type() == f.surface->type()) {
+                    const SurfaceProjection on = projectPoint(*candidate.surface, point);
+                    same = on.distance <= tolerance && std::fabs(dot(candidate.surface->normal(on.u, on.v), normal)) > 1.0 - 1e-6;
+                }
+                if (same && classifyPointOnFace(*body, g, point, tolerance) != PointLocation::Outside) return index;
+            }
+        }
+    } catch (const std::exception &) {
+    }
+    return -1;
 }
 
 bool forgeIntersectRay(const Body &body, const QVector3D &origin, const QVector3D &direction, double &distance, const Kernel::RayFaceIndex *index) {

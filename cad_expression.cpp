@@ -4,11 +4,28 @@
 #include <QDialogButtonBox>
 #include <QLabel>
 #include <QLineEdit>
+#include <QKeyEvent>
 #include <QVBoxLayout>
 
 #include <cmath>
 
 namespace ForgeCad {
+
+void ExpressionSpinBox::keyPressEvent(QKeyEvent *event) {
+    if (onReturn && (event->key() == Qt::Key_Return || event->key() == Qt::Key_Enter)) {
+        interpretText();
+        onReturn();
+        event->accept();
+        return;
+    }
+    QDoubleSpinBox::keyPressEvent(event);
+}
+
+void ExpressionSpinBox::stepBy(int steps) {
+    const double before = value();
+    QDoubleSpinBox::stepBy(steps);
+    if (onReturn && value() != before) onReturn();
+}
 
 namespace {
 

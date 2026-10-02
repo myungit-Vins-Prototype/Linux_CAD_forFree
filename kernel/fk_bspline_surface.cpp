@@ -1,6 +1,8 @@
 #include "fk_bspline_surface.h"
 
 #include <algorithm>
+#include <atomic>
+#include <memory>
 
 #include "fk_bspline_basis.h"
 
@@ -135,6 +137,15 @@ BSplineCurve<3> BSplineSurface::vIsoCurve(double v) const {
 // Prima ogni colonna (curva in u) viene divisa nei tratti di Bezier, poi ogni
 // riga di ciascun tratto (curva in v). Le curve razionali lavorano gia' in
 // coordinate omogenee, quindi pesi e poli restano coerenti.
+std::shared_ptr<const std::vector<BSplineSurface>> BSplineSurface::cachedBezierPatches() const {
+    std::shared_ptr<const std::vector<BSplineSurface>> patches = std::atomic_load(&patchCache_);
+    if (!patches) {
+        patches = std::make_shared<const std::vector<BSplineSurface>>(bezierPatches());
+        std::atomic_store(&patchCache_, patches);
+    }
+    return patches;
+}
+
 std::vector<BSplineSurface> BSplineSurface::bezierPatches() const {
     const int pu = uDegree_, pv = vDegree_;
     std::vector<std::vector<BSplineCurve<3>>> columns;
@@ -182,7 +193,35 @@ std::vector<BSplineSurface> BSplineSurface::bezierPatches() const {
     return result;
 }
 
-CurvePtr<3> BSplineSurface::uIso(double u) const { return std::make_shared<BSplineCurve<3>>(uIsoCurve(u)); }
-CurvePtr<3> BSplineSurface::vIso(double v) const { return std::make_shared<BSplineCurve<3>>(vIsoCurve(v)); }
+struct BSplineSurface::IsoCache {
+    std::vector<double> uValues, vValues;
+    std::vector<CurvePtr<3>> uCurves, vCurves;
+};
+
+CurvePtr<3> BSplineSurface::knotIso(bool fixedU, double value) const {
+    std::shared_ptr<const IsoCache> cache = std::atomic_load(&isoCache_);
+    if (!cache) {
+        auto built = std::make_shared<IsoCache>();
+        built->uValues = uBreakpoints(uDomain());
+        built->vValues = vBreakpoints(vDomain());
+        for (double u : built->uValues) built->uCurves.push_back(std::make_shared<BSplineCurve<3>>(uIsoCurve(u)));
+        for (double v : built->vValues) built->vCurves.push_back(std::make_shared<BSplineCurve<3>>(vIsoCurve(v)));
+        cache = built;
+        std::atomic_store(&isoCache_, cache);
+    }
+    const std::vector<double> &values = fixedU ? cache->uValues : cache->vValues;
+    const auto found = std::lower_bound(values.begin(), values.end(), value);
+    if (found == values.end() || *found != value) return nullptr;
+    return (fixedU ? cache->uCurves : cache->vCurves)[std::size_t(found - values.begin())];
+}
+
+CurvePtr<3> BSplineSurface::uIso(double u) const {
+    if (CurvePtr<3> cached = knotIso(true, u)) return cached;
+    return std::make_shared<BSplineCurve<3>>(uIsoCurve(u));
+}
+CurvePtr<3> BSplineSurface::vIso(double v) const {
+    if (CurvePtr<3> cached = knotIso(false, v)) return cached;
+    return std::make_shared<BSplineCurve<3>>(vIsoCurve(v));
+}
 
 }

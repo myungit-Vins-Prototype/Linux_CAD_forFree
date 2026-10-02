@@ -24,6 +24,7 @@ struct ExportBody {
     QString name;
     ForgeBody body;
     ForgeCurve curve;
+    QColor color;
 };
 
 // Restituisce l'errore (vuoto se riuscito).

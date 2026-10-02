@@ -1,5 +1,6 @@
 #include "cad_document_io.h"
 
+#include <cmath>
 #include <exception>
 #include <memory>
 #include <string>
@@ -38,8 +39,9 @@ constexpr char kMagic[4] = {'F', 'C', 'A', 'D'};
 // 17 catene parziali di schizzo per sweep e guide del loft.
 // 18 grado di continuita' imposto dalle guide del loft.
 // 19 identita' persistenti delle feature e corpi logici della storyboard.
-// 20 riferimenti persistenti a feature e sotto-entita' topologiche.
-constexpr quint16 kVersion = 20;
+// 20 riferimenti persistenti a feature e sotto-entita' topologiche; 21
+// estrusione nei due versi; 22 colore della mesh dei corpi logici.
+constexpr quint16 kVersion = 22;
 constexpr quint8 kZlib = 1;
 
 void write(QDataStream &out, const CurveObject &curve) {
@@ -284,6 +286,8 @@ void write(QDataStream &out, const ExtrusionObject &body) {
     for (const EdgePoint &e : body.blendEdges) out << qint32(e.subshape) << qint32(e.geometry) << qint32(e.context);
     for (const EdgePoint *p : {&body.trimKeep, &body.scaleCenter, &body.helix.reference})
         out << qint32(p->subshape) << qint32(p->geometry) << qint32(p->context);
+    // Formato 21: estrusione simmetrica o nei due versi.
+    out << qint32(body.extrudeSides) << body.distance2;
 }
 
 // `extras` (solo formato 5): i file scritti durante lo sviluppo del formato 5
@@ -432,6 +436,12 @@ bool read(QDataStream &in, ExtrusionObject &body, quint16 version, int extras) {
         for (EdgePoint &e : body.blendEdges) in >> e.subshape >> e.geometry >> e.context;
         for (EdgePoint *p : {&body.trimKeep, &body.scaleCenter, &body.helix.reference}) in >> p->subshape >> p->geometry >> p->context;
     }
+    if (version >= 21) {
+        qint32 sides = 0;
+        in >> sides >> body.distance2;
+        if (sides < 0 || sides > 2 || !std::isfinite(body.distance2)) return false;
+        body.extrudeSides = sides;
+    }
     if (int(body.feature) < 0 || int(body.feature) > int(BodyFeature::Transform)) return false;
     return in.status() == QDataStream::Ok;
 }
@@ -523,7 +533,7 @@ QString saveDocumentFile(const QString &path, const DocumentState &state, bool b
             for (int k = 0; k < 3; ++k) out << axis[k];
         out << quint32(normalized.modelBodies.size());
         for (const ModelBody &body : normalized.modelBodies)
-            out << body.id << body.name << body.visible << body.tipFeatureId;
+            out << body.id << body.name << body.visible << body.tipFeatureId << body.meshColor;
     }
     QSaveFile file(path);
     if (!file.open(QIODevice::WriteOnly)) return QStringLiteral("Impossibile scrivere %1: %2").arg(path, file.errorString());
@@ -568,8 +578,10 @@ QString parsePayload(const QByteArray &payload, quint16 version, int extras, Doc
     if (version >= 19) {
         if (!readCount(in, count)) return QStringLiteral("Il file e' danneggiato (storyboard).");
         loaded.modelBodies.resize(int(count));
-        for (ModelBody &body : loaded.modelBodies)
+        for (ModelBody &body : loaded.modelBodies) {
             in >> body.id >> body.name >> body.visible >> body.tipFeatureId;
+            if (version >= 22) in >> body.meshColor;
+        }
         if (in.status() != QDataStream::Ok) return QStringLiteral("Il file e' danneggiato (storyboard).");
     }
     if (!buffer.atEnd()) return QStringLiteral("Il file e' danneggiato (dati in piu' alla fine).");

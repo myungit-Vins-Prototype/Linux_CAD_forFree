@@ -1,6 +1,7 @@
 #include "fk_curve_surface.h"
 
 #include <algorithm>
+#include <map>
 #include <cmath>
 #include <stdexcept>
 
@@ -222,6 +223,40 @@ struct NumericSearch {
     CurveSurfaceIntersection &out;
     bool touching = false;
     int leaves = 0;
+    // Box dei poli delle pezze (contengono la superficie): un punto lontano da
+    // tutti non sta sulla superficie, senza proiettarlo (la proiezione su una
+    // B-spline con molti nodi costa millisecondi).
+    std::vector<Box> boxes;
+
+    bool maybeOnSurface(const Vec3 &x) const {
+        if (boxes.empty()) return true;
+        for (const Box &box : boxes) {
+            bool inside = true;
+            for (int k = 0; k < 3 && inside; ++k) inside = x[k] >= box.lo[k] - tolerance && x[k] <= box.hi[k] + tolerance;
+            if (inside) return true;
+        }
+        return false;
+    }
+    // Risposte gia' date per i tratti (dal loro intervallo): lo stesso tratto
+    // si confronta con molte pezze, e la risposta non dipende dalla pezza.
+    std::map<std::pair<double, double>, bool> onCache;
+    // Il tratto giace sulla superficie (9 campioni; prima i box, poi le proiezioni).
+    bool onSurface(const BSplineCurve<3> &piece) {
+        const Interval dom = piece.domain();
+        const auto key = std::make_pair(dom.lo, dom.hi);
+        if (const auto found = onCache.find(key); found != onCache.end()) return found->second;
+        const bool on = onSurfaceUncached(piece);
+        onCache.emplace(key, on);
+        return on;
+    }
+    bool onSurfaceUncached(const BSplineCurve<3> &piece) const {
+        const Interval dom = piece.domain();
+        for (int i = 0; i <= 8; ++i)
+            if (!maybeOnSurface(piece.point(dom.lo + dom.length() * i / 8.0))) return false;
+        for (int i = 0; i <= 8; ++i)
+            if (projectPoint(surface, piece.point(dom.lo + dom.length() * i / 8.0)).distance > tolerance) return false;
+        return true;
+    }
 
     bool newton(const BSplineCurve<3> &piece, const BSplineSurface &patch, double &s, double &u, double &v) const {
         const Interval ds = piece.domain(), du = patch.uDomain(), dv = patch.vDomain();
@@ -253,12 +288,12 @@ struct NumericSearch {
         double s = 0.5 * (ds.lo + ds.hi), u = 0.5 * (du.lo + du.hi), v = 0.5 * (dv.lo + dv.hi);
         const bool converged = newton(piece, patch, s, u, v);
         const Vec3 x = piece.point(converged ? s : 0.5 * (ds.lo + ds.hi));
+        // Con Newton convergente il punto sta sulla pezza, che e' una parte
+        // esatta della superficie: non serve proiettarlo.
         if (!converged) {
             // Newton non converge nelle tangenze: basta la distanza dalla superficie.
-            if (projectPoint(surface, x).distance > tolerance) return;
+            if (!maybeOnSurface(x) || projectPoint(surface, x).distance > tolerance) return;
             touching = true;
-        } else if (projectPoint(surface, x).distance > tolerance) {
-            return;
         }
         out.parameters.push_back(curveParameter(curve, range, piece, converged ? s : 0.5 * (ds.lo + ds.hi)));
     }
@@ -273,9 +308,7 @@ struct NumericSearch {
         // non una radice (la suddivisione non finirebbe mai).
         if (depth >= 4 && dc >= dsurf) {
             const Interval dom = piece.domain();
-            bool on = true;
-            for (int i = 0; i <= 8 && on; ++i) on = projectPoint(surface, piece.point(dom.lo + dom.length() * i / 8.0)).distance <= tolerance;
-            if (on) {
+            if (onSurface(piece)) {
                 const double a = curveParameter(curve, range, piece, dom.lo), b = curveParameter(curve, range, piece, dom.hi);
                 out.coincident.push_back({std::min(a, b), std::max(a, b)});
                 return;
@@ -391,24 +424,28 @@ CurveSurfaceIntersection numericCurveSurface(const Curve<3> &curve, const Interv
     if (!u.isFinite() || !v.isFinite()) throw std::domain_error("numericCurveSurface: superficie illimitata");
     const BSplineSurface nurbs = toBSplineSurface(surface, u, v);
     const std::vector<BSplineCurve<3>> pieces = rationalBezierPieces(curve, range);
-    Box all;
+    Box all, onSurface;
     for (int i = 0; i < nurbs.uPoleCount(); ++i)
-        for (int j = 0; j < nurbs.vPoleCount(); ++j) all.add(nurbs.pole(i, j));
+        for (int j = 0; j < nurbs.vPoleCount(); ++j) onSurface.add(nurbs.pole(i, j));
+    all = onSurface;
     for (const BSplineCurve<3> &piece : pieces)
         for (const Vec3 &p : piece.poles()) all.add(p);
-    NumericSearch search{curve, range, surface, tolerance, std::max(all.diagonal(), 1e-9), out};
-    const std::vector<BSplineSurface> patches = nurbs.bezierPatches();
+    NumericSearch search{curve, range, surface, tolerance, std::max(all.diagonal(), 1e-9), out, false, 0, {}, {}};
+    // Le pezze di una B-spline (sull'intero dominio) sono in cache nella
+    // superficie: la selezione a video ripete l'intersezione a ogni clic.
+    std::shared_ptr<const std::vector<BSplineSurface>> patches;
+    if (surface.type() == SurfaceType::BSpline) patches = static_cast<const BSplineSurface &>(surface).cachedBezierPatches();
+    else patches = std::make_shared<const std::vector<BSplineSurface>>(nurbs.bezierPatches());
+    for (const BSplineSurface &patch : *patches) search.boxes.push_back(patchBox(patch));
     for (const BSplineCurve<3> &piece : pieces) {
         // Tratto che giace sulla superficie: la suddivisione non finirebbe mai.
-        bool on = true;
         const Interval dom = piece.domain();
-        for (int i = 0; i <= 8 && on; ++i) on = projectPoint(surface, piece.point(dom.lo + dom.length() * i / 8.0)).distance <= tolerance;
-        if (on) {
+        if (search.onSurface(piece)) {
             const double a = curveParameter(curve, range, piece, dom.lo), b = curveParameter(curve, range, piece, dom.hi);
             out.coincident.push_back({std::min(a, b), std::max(a, b)});
             continue;
         }
-        for (const BSplineSurface &patch : patches) search.search(piece, patch, 0);
+        for (const BSplineSurface &patch : *patches) search.search(piece, patch, 0);
     }
     // Tratti sulla superficie trovati: estremi esatti (i tratti della
     // suddivisione finiscono in punti qualsiasi), e le radici che vi cadono

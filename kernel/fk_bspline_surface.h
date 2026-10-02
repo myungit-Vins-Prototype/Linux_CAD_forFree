@@ -40,6 +40,10 @@ public:
     // Pezze di Bezier (una per rettangolo tra nodi distinti), ordinate per u
     // e poi per v: [iu * numero_di_pezze_in_v + iv].
     std::vector<BSplineSurface> bezierPatches() const;
+    // Le stesse, calcolate una volta per superficie (la superficie e'
+    // immutabile; la cache si legge e si scrive in modo atomico). Chi la usa
+    // tiene il puntatore per tutto il tempo in cui scorre il vettore.
+    std::shared_ptr<const std::vector<BSplineSurface>> cachedBezierPatches() const;
 
 private:
     int uDegree_, vDegree_;
@@ -47,6 +51,13 @@ private:
     int uPoleCount_, vPoleCount_;
     std::vector<Vec3> poles_;
     std::vector<double> weights_;
+    mutable std::shared_ptr<const std::vector<BSplineSurface>> patchCache_;
+    // Isoparametriche ai nodi (le linee delle pezze), calcolate una volta: la
+    // proiezione di un punto le prova tutte, e con le curve rifatte a ogni
+    // chiamata costava millisecondi per punto (selezione a video, SP-curve).
+    struct IsoCache;
+    mutable std::shared_ptr<const IsoCache> isoCache_;
+    CurvePtr<3> knotIso(bool fixedU, double value) const;
 };
 
 using BSplineSurfacePtr = std::shared_ptr<const BSplineSurface>;

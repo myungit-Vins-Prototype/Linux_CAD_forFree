@@ -1,12 +1,18 @@
 // CadViewport e' ancora definito nel .cpp della finestra. Questa unita' di
 // test lo include per verificare interazioni e rendering senza esportare API di test.
 #include "../forgeCad2026_gui.cpp"
+#include "fk_blend.h"
+#include "fk_body_io.h"
+#include "fk_classify.h"
 #include "fk_helix.h"
+#include "fk_mass.h"
 #include "fk_primitives.h"
+#include "fk_surface_algo.h"
 #include <QGraphicsItem>
 #include <QGraphicsView>
 #include <QSurfaceFormat>
 #include <QTemporaryDir>
+#include <fstream>
 #include <iostream>
 #include <stdexcept>
 
@@ -15,9 +21,443 @@ static void require(bool ok, const char *message) {
 }
 class ViewportInteractionTest {
 public:
+    static void loftCorner(const QString &path) {
+        using namespace ForgeCad;
+        DocumentState document;
+        require(loadDocumentFile(path, document).isEmpty(), "lettura loft di regressione");
+        for (int i = 0; i < document.extrusions.size(); ++i) {
+            auto &feature = document.extrusions[i];
+            feature.cachedGeometry = false;
+            CadViewport::buildGeometry(feature, i, document.sketches, document.extrusions);
+            std::cout << i << " " << feature.name.toStdString() << std::endl;
+        }
+        const auto body = document.extrusions.back().forgeBody;
+        require(bool(body), "loft rigenerato");
+        // Riproduzione facoltativa della catena del file di esempio: bordo
+        // longitudinale e le due continuazioni sui raccordi dei coperchi.
+        QVector<EdgePoint> references;
+        for (int index : {11, 77, 98}) {
+            const Kernel::EdgeId edge(index);
+            const auto &e = body->edge(edge);
+            const auto p = e.curve->point(0.5 * (e.range.lo + e.range.hi));
+            references.push_back(edgeReference(*body, edge, p));
+        }
+        QString error;
+        const auto result = forgeBlend(body, references, 0.5, false, &error);
+        std::cout << "Catena loft: " << error.toStdString() << std::endl;
+        require(bool(result), "raccordo della catena tangente del loft rigenerato");
+    }
+    // Rendering di un file STEP importato da un punto di vista dato, per
+    // confrontare a occhio la tassellazione: --render-step file.stp out.png
+    // cx cy cz nx ny nz [semi-lato] (centro, normale verso l'osservatore).
+    static void renderStep(const QStringList &args) {
+        using namespace ForgeCad;
+        QVector<ImportedPart> parts;
+        require(importCadFile(args.at(0), parts).isEmpty() && !parts.isEmpty(), "importazione STEP");
+        CadViewport v;
+        v.resize(1200, 1200);
+        v.importParts(parts, args.at(0));
+        v.show();
+        for (int i = 0; i < 8; ++i) QApplication::processEvents();
+        const QVector3D c(args.at(2).toFloat(), args.at(3).toFloat(), args.at(4).toFloat());
+        const QVector3D n = QVector3D(args.at(5).toFloat(), args.at(6).toFloat(), args.at(7).toFloat()).normalized();
+        const float half = args.size() > 8 ? args.at(8).toFloat() : 2.0f;
+        QVector3D x = QVector3D::crossProduct(QVector3D(0, 0, 1), n);
+        if (x.length() < 1e-3f) x = QVector3D(1, 0, 0);
+        v.setViewFrame(x.normalized(), n);
+        v.fitView({c - QVector3D(half, half, half), c + QVector3D(half, half, half)});
+        v.update();
+        for (int i = 0; i < 8; ++i) QApplication::processEvents();
+        require(v.grabFramebuffer().save(args.at(1)), "salvataggio dell'immagine");
+    }
+    // Stato del viewport durante "Modifica parametri" della funzione `index`
+    // di un documento: --render-edit doc.prt indice prima.png dopo.png.
+    static void renderEdit(const QStringList &args) {
+        using namespace ForgeCad;
+        DocumentState document;
+        require(loadDocumentFile(args.at(0), document).isEmpty(), "lettura del documento");
+        CadViewport v;
+        v.resize(1000, 800);
+        v.loadDocument(document);
+        v.show();
+        for (int i = 0; i < 8; ++i) QApplication::processEvents();
+        v.fitAll();
+        for (int i = 0; i < 8; ++i) QApplication::processEvents();
+        for (int i = 0; i < v.extrusions_.size(); ++i) {
+            const ExtrusionObject &e = v.extrusions_.at(i);
+            std::cout << i << " " << e.name.toStdString() << " visible=" << e.visible << " feature=" << int(e.feature)
+                      << " body=" << e.modelBodyId << " suppressed=" << e.suppressed << " ops=";
+            for (int o : CadViewport::bodyOperands(e)) std::cout << o << ",";
+            std::cout << " err=" << e.error.toStdString() << std::endl;
+        }
+        require(v.grabFramebuffer().save(args.at(2)), "immagine prima");
+        const int index = args.at(1).toInt();
+        v.requestPreview(v.extrusions_.at(index), index);
+        QElapsedTimer timer;
+        timer.start();
+        while ((!v.preview_.valid && v.preview_.error.isEmpty()) && timer.elapsed() < 120000) QApplication::processEvents(QEventLoop::AllEvents, 50);
+        std::cout << "preview valid=" << v.preview_.valid << " error=" << v.preview_.error.toStdString() << " replaced=";
+        for (int r : v.preview_.replaced) std::cout << r << ",";
+        std::cout << " triangles=" << v.preview_.display.vertices.size() / 3 << std::endl;
+        v.update();
+        for (int i = 0; i < 8; ++i) QApplication::processEvents();
+        require(v.grabFramebuffer().save(args.at(3)), "immagine dopo");
+    }
+    // Tempi della vista su un documento: --bench-view doc.prt [ripetizioni].
+    // Disegno dopo rotazione e zoom, movimento del mouse senza tasti (hover)
+    // e trascinamento con il sinistro (orbita), come li fa l'utente.
+    static void benchView(const QStringList &args) {
+        using namespace ForgeCad;
+        DocumentState document;
+        require(loadDocumentFile(args.at(0), document).isEmpty(), "lettura del documento");
+        const int count = args.size() > 1 ? args.at(1).toInt() : 30;
+        CadViewport v;
+        v.resize(1400, 900);
+        const auto paintNow = [](CadViewport &w) {
+            w.makeCurrent();
+            w.paintGL();
+            glFinish();
+            w.doneCurrent();
+        };
+        v.loadDocument(document);
+        if (args.size() > 2) v.setAntialiasing(args.at(2).toInt());
+        v.show();
+        for (int i = 0; i < 10; ++i) QApplication::processEvents();
+        v.fitAll();
+        paintNow(v);
+        v.makeCurrent();
+        std::cout << "renderer: " << reinterpret_cast<const char *>(glGetString(GL_RENDERER)) << " dpr " << v.devicePixelRatioF()
+                  << " campioni " << v.bufferSamples_ << std::endl;
+        v.doneCurrent();
+        QElapsedTimer t;
+        t.start();
+        for (int i = 0; i < count; ++i) { v.yaw_ += 2.0f; paintNow(v); }
+        std::cout << "paint dopo rotazione: " << double(t.nsecsElapsed()) / 1e6 / count << " ms" << std::endl;
+        t.restart();
+        for (int i = 0; i < count; ++i) { v.setZoom(v.zoom_ * (i % 2 ? 1.05f : 0.95f)); paintNow(v); }
+        std::cout << "paint dopo zoom: " << double(t.nsecsElapsed()) / 1e6 / count << " ms" << std::endl;
+        t.restart();
+        for (int i = 0; i < count; ++i) {
+            const QPointF p(300 + 20 * i, 300 + 7 * i);
+            v.updateHover(p.toPoint());
+        }
+        if (qEnvironmentVariableIsSet("BENCH_HOVER_ONLY")) {
+            t.restart();
+            for (int i = 0; i < 400; ++i) {
+                const QPointF p(200 + (i * 37) % 900, 150 + (i * 53) % 600);
+                v.updateHover(p.toPoint());
+            }
+            std::cout << "hover x400: " << double(t.nsecsElapsed()) / 1e6 / 400 << " ms" << std::endl;
+            return;
+        }
+        std::cout << "hover (solo evento): " << double(t.nsecsElapsed()) / 1e6 / count << " ms" << std::endl;
+        t.restart();
+        {
+            QPointF p(400, 400);
+            QMouseEvent press(QEvent::MouseButtonPress, p, p, Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+            v.mousePressEvent(&press);
+            for (int i = 0; i < count; ++i) {
+                p += QPointF(6, 2);
+                QMouseEvent move(QEvent::MouseMove, p, p, Qt::NoButton, Qt::LeftButton, Qt::NoModifier);
+                v.mouseMoveEvent(&move);
+                paintNow(v);
+            }
+            QMouseEvent release(QEvent::MouseButtonRelease, p, p, Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
+            v.mouseReleaseEvent(&release);
+        }
+        std::cout << "orbita (evento + paint): " << double(t.nsecsElapsed()) / 1e6 / count << " ms" << std::endl;
+        t.restart();
+        for (int i = 0; i < count; ++i) {
+            QWheelEvent wheel(QPointF(500, 400), QPointF(500, 400), QPoint(), QPoint(0, i % 2 ? 120 : -120), Qt::NoButton, Qt::NoModifier,
+                              Qt::NoScrollPhase, false);
+            v.wheelEvent(&wheel);
+            paintNow(v);
+        }
+        std::cout << "rotella (evento + paint): " << double(t.nsecsElapsed()) / 1e6 / count << " ms" << std::endl;
+    }
+    // Come --bench-view ma nella finestra completa dell'app, con le
+    // impostazioni dell'utente copiate: tempo da un evento al fotogramma
+    // mostrato (frameSwapped). --bench-window doc.prt [ripetizioni]
+    static void benchWindow(const QStringList &args) {
+        const int count = args.size() > 1 ? args.at(1).toInt() : 30;
+        PdfWindow window;
+        window.resize(2560, 1400);
+        window.show();
+        for (int i = 0; i < 20; ++i) QApplication::processEvents();
+        require(window.openDocumentPath(args.at(0)), "apertura del documento");
+        CadViewport *v = nullptr;
+        for (QOpenGLWidget *w : window.findChildren<QOpenGLWidget *>())
+            if (auto *c = dynamic_cast<CadViewport *>(w); c && (!v || c->width() > v->width())) v = c;
+        require(v, "viewport");
+        for (int i = 0; i < 20; ++i) QApplication::processEvents();
+        int frames = 0;
+        QObject::connect(v, &QOpenGLWidget::frameSwapped, [&] { ++frames; });
+        v->makeCurrent();
+        std::cout << "renderer: " << reinterpret_cast<const char *>(glGetString(GL_RENDERER)) << " size " << v->width() << "x" << v->height()
+                  << " campioni " << v->bufferSamples_ << std::endl;
+        v->doneCurrent();
+        const auto waitFrame = [&] {
+            const int start = frames;
+            QElapsedTimer t;
+            t.start();
+            while (frames == start && t.elapsed() < 2000) QApplication::processEvents(QEventLoop::AllEvents, 5);
+        };
+        const QPointF center(v->width() / 2.0, v->height() / 2.0);
+        QElapsedTimer t;
+        t.start();
+        for (int i = 0; i < count; ++i) {
+            QWheelEvent wheel(center, v->mapToGlobal(center), QPoint(), QPoint(0, i % 2 ? 120 : -120), Qt::NoButton, Qt::NoModifier,
+                              Qt::NoScrollPhase, false);
+            QApplication::sendEvent(v, &wheel);
+            waitFrame();
+        }
+        std::cout << "rotella -> fotogramma: " << double(t.nsecsElapsed()) / 1e6 / count << " ms" << std::endl;
+        QPointF p = center;
+        QMouseEvent press(QEvent::MouseButtonPress, p, v->mapToGlobal(p), Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+        QApplication::sendEvent(v, &press);
+        t.restart();
+        for (int i = 0; i < count; ++i) {
+            p += QPointF(8, 3);
+            QMouseEvent move(QEvent::MouseMove, p, v->mapToGlobal(p), Qt::NoButton, Qt::LeftButton, Qt::NoModifier);
+            QApplication::sendEvent(v, &move);
+            waitFrame();
+        }
+        std::cout << "orbita -> fotogramma: " << double(t.nsecsElapsed()) / 1e6 / count << " ms" << std::endl;
+        QMouseEvent release(QEvent::MouseButtonRelease, p, v->mapToGlobal(p), Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
+        QApplication::sendEvent(v, &release);
+        t.restart();
+        for (int i = 0; i < count; ++i) {
+            p += QPointF(-8, 4);
+            QMouseEvent move(QEvent::MouseMove, p, v->mapToGlobal(p), Qt::NoButton, Qt::NoButton, Qt::NoModifier);
+            QApplication::sendEvent(v, &move);
+            waitFrame();
+        }
+        std::cout << "hover -> fotogramma: " << double(t.nsecsElapsed()) / 1e6 / count << " ms" << std::endl;
+        window.close();
+    }
+    // Funzioni proprietarie delle facce cliccate su una griglia di pixel:
+    // --pick-owner doc.prt
+    static void pickOwner(const QStringList &args) {
+        using namespace ForgeCad;
+        DocumentState document;
+        require(loadDocumentFile(args.at(0), document).isEmpty(), "lettura del documento");
+        CadViewport v;
+        v.resize(1000, 800);
+        v.loadDocument(document);
+        v.show();
+        for (int i = 0; i < 8; ++i) QApplication::processEvents();
+        v.fitAll();
+        std::map<std::string, int> owners;
+        QElapsedTimer t;
+        double worst = 0.0, total = 0.0, pickTotal = 0.0;
+        int clicks = 0;
+        for (int y = 40; y < 800; y += 40)
+            for (int x = 40; x < 1000; x += 40) {
+                t.restart();
+                const SceneSelection hit = v.pickSceneObject(QPoint(x, y));
+                if (hit.kind != SceneObjectKind::Extrusion) continue;
+                FaceHit face;
+                if (!v.pickBodyFace(hit.index, QPoint(x, y), face)) continue;
+                const double pickMs = double(t.nsecsElapsed()) / 1e6;
+                const int owner = v.faceOwnerFeature(hit.index, QPoint(x, y), face);
+                const double ms = double(t.nsecsElapsed()) / 1e6;
+                pickTotal += pickMs;
+                worst = std::max(worst, ms);
+                total += ms;
+                ++clicks;
+                ++owners[v.extrusions_.at(hit.index).name.toStdString() + " -> " + v.extrusions_.at(owner).name.toStdString()];
+            }
+        // Dettaglio del raggio esatto sul corpo visibile: con e senza la finestra
+        // attorno al punto della tassellazione.
+        for (int i = 0; i < v.extrusions_.size(); ++i) {
+            const ExtrusionObject &e = v.extrusions_.at(i);
+            if (!e.visible || !e.forgeBody) continue;
+            double withWindow = 0.0, without = 0.0, sketchPart = 0.0;
+            int rays = 0, agree = 0;
+            for (int y = 40; y < 800; y += 40)
+                for (int x = 40; x < 1000; x += 40) {
+                    QVector3D origin, direction;
+                    v.viewRay(QPoint(x, y), origin, direction);
+                    float meshT = 0.0f;
+                    if (!CadViewport::meshRayHit(e.display, origin, direction, meshT)) continue;
+                    ++rays;
+                    if (qEnvironmentVariableIsSet("DUMP_RAYS")) {
+                        static std::ofstream raysOut(qgetenv("DUMP_RAYS").toStdString());
+                        raysOut.precision(17);
+                        raysOut << origin.x() << " " << origin.y() << " " << origin.z() << " " << direction.x() << " " << direction.y() << " "
+                                << direction.z() << " " << meshT << "\n";
+                        static bool dumped = false;
+                        if (!dumped) {
+                            std::ofstream bodyOut(qgetenv("DUMP_RAYS").toStdString() + ".bin", std::ios::binary);
+                            const std::string data = Kernel::writeBodyBinary(*e.forgeBody);
+                            bodyOut.write(data.data(), std::streamsize(data.size()));
+                            dumped = true;
+                        }
+                    }
+                    FaceHit a, b;
+                    t.restart();
+                    const double slack = std::max(1e-6, 0.01 * e.display.rayIndex->bounds.diagonal());
+                    const Kernel::Interval window{double(meshT) - slack, double(meshT) + slack};
+                    const bool ha = forgePickFace(*e.forgeBody, origin, direction, a, e.display.rayIndex.get(), &window);
+                    withWindow += double(t.nsecsElapsed()) / 1e6;
+                    t.restart();
+                    const bool hb = forgePickFace(*e.forgeBody, origin, direction, b, e.display.rayIndex.get());
+                    without += double(t.nsecsElapsed()) / 1e6;
+                    agree += ha == hb && (!ha || a.face == b.face);
+                    t.restart();
+                    v.pickSceneObject(QPoint(x, y), false);
+                    sketchPart += double(t.nsecsElapsed()) / 1e6;
+                }
+            std::cout << "corpo " << i << " raggi " << rays << " finestra " << withWindow / std::max(1, rays) << " ms, tutte le facce "
+                      << without / std::max(1, rays) << " ms, concordi " << agree << ", pick sulla mesh " << sketchPart / std::max(1, rays) << " ms" << std::endl;
+        }
+        for (const auto &[name, count] : owners) std::cout << count << "  " << name << std::endl;
+        std::cout << "clic " << clicks << " media " << total / std::max(1, clicks) << " ms (di cui raggio " << pickTotal / std::max(1, clicks)
+                  << "), peggiore " << worst << " ms" << std::endl;
+        for (int i = 0; i < v.extrusions_.size(); ++i) if (v.extrusions_.at(i).visible) std::cout << "visibile " << i << " " << v.extrusions_.at(i).name.toStdString() << std::endl;
+    }
     static void run(bool render) {
         using namespace ForgeCad;
         CadViewport v;
+        {
+            ExpressionSpinBox value;
+            value.setKeyboardTracking(false);
+            int previews = 0;
+            value.onReturn = [&] { ++previews; };
+            value.findChild<QLineEdit *>()->setText(QStringLiteral("1/2"));
+            require(previews == 0, "nessuna anteprima durante la digitazione");
+            QKeyEvent enter(QEvent::KeyPress, Qt::Key_Return, Qt::NoModifier);
+            QApplication::sendEvent(&value, &enter);
+            require(previews == 1 && value.value() == 0.5, "Invio conferma il valore e richiede una sola anteprima");
+            value.clearFocus();
+            require(previews == 1, "cambio di focus senza nuove anteprime");
+            value.stepBy(1);
+            require(previews == 2, "le frecce aggiornano l'anteprima");
+        }
+        {
+            CadViewport selection;
+            int picks = 0;
+            selection.selectionCallback_ = [&](const SceneSelection &) { ++picks; };
+            const QPointF a(20, 20), b(100, 100);
+            QMouseEvent press(QEvent::MouseButtonPress, a, a, Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+            QMouseEvent move(QEvent::MouseMove, b, b, Qt::NoButton, Qt::LeftButton, Qt::NoModifier);
+            QMouseEvent release(QEvent::MouseButtonRelease, b, b, Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
+            selection.mousePressEvent(&press);
+            require(picks == 0, "selezione differita al rilascio");
+            selection.mouseMoveEvent(&move);
+            selection.mouseReleaseEvent(&release);
+            require(picks == 0, "rotazione senza selezione");
+            selection.mousePressEvent(&press);
+            QMouseEvent clickRelease(QEvent::MouseButtonRelease, a, a, Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
+            selection.mouseReleaseEvent(&clickRelease);
+            require(picks == 1, "clic seleziona una sola volta");
+        }
+        {
+            // Estrusione simmetrica e nei due versi: un solo prisma dal piano
+            // spostato (volumi e quote esatti); con la fine "fino a" il secondo
+            // verso si unisce al primo.
+            SketchObject square;
+            square.plane = 0;
+            const QPointF c[4] = {QPointF(5, 5), QPointF(6, 5), QPointF(6, 6), QPointF(5, 6)};
+            for (int k = 0; k < 4; ++k) square.segments.append({c[k], c[(k + 1) % 4]});
+            const QVector<SketchObject> sketches{square};
+            const auto zRange = [](const Kernel::Body &body, double &lo, double &hi) {
+                lo = 1e300, hi = -1e300;
+                for (Kernel::VertexId v : body.vertices()) lo = std::min(lo, body.vertex(v).point[2]), hi = std::max(hi, body.vertex(v).point[2]);
+            };
+            const auto build = [&](ExtrusionObject e, const QVector<ExtrusionObject> &bodies, double volume, double lo, double hi, const char *what) {
+                e.feature = BodyFeature::Extrusion;
+                e.sketchIndex = 0;
+                QString error;
+                const ForgeBody body = forgeExtrusionFeature(e, int(bodies.size()), sketches, bodies, &error);
+                require(body && error.isEmpty(), what);
+                double zlo, zhi;
+                zRange(*body, zlo, zhi);
+                require(std::fabs(Kernel::massProperties(*body).volume - volume) < 1e-9 && std::fabs(zlo - lo) < 1e-12
+                            && std::fabs(zhi - hi) < 1e-12 && body->shells().size() == 1, what);
+            };
+            ExtrusionObject e;
+            e.distance = 2.0;
+            e.extrudeSides = 1;
+            build(e, {}, 2.0, -1.0, 1.0, "estrusione simmetrica");
+            e.extrudeSides = 2;
+            e.distance2 = 0.5;
+            build(e, {}, 2.5, -0.5, 2.0, "estrusione nei due versi");
+            e.distance = -2.0;
+            build(e, {}, 2.5, -2.0, 0.5, "estrusione nei due versi, prima distanza negativa");
+            ExtrusionObject block;
+            block.forgeBody = std::make_shared<const Kernel::Body>(Kernel::makeBox(
+                Kernel::Frame3(Kernel::Vec3(), Kernel::Vec3(0, 0, 1), Kernel::Vec3(1, 0, 0)), 1.0, 1.0, 3.0));
+            block.solid = true;
+            e.distance = 1.0;
+            e.extent = 1;
+            e.extentRef.kind = 3;
+            e.extentRef.index = 0;
+            e.extentRef.point = {1.0, 1.0, 3.0};
+            build(e, {block}, 3.5, -0.5, 3.0, "fino a un vertice e secondo verso");
+            e.extrudeSides = 1;
+            QString error;
+            e.feature = BodyFeature::Extrusion;
+            require(!forgeExtrusionFeature(e, 1, sketches, {block}, &error) && !error.isEmpty(), "simmetrica solo con la distanza");
+            // Formato 21: versi e seconda distanza nel documento.
+            DocumentState state;
+            state.sketches = sketches;
+            ExtrusionObject saved;
+            saved.name = QStringLiteral("Due versi");
+            saved.feature = BodyFeature::Extrusion;
+            saved.sketchIndex = 0;
+            saved.extrudeSides = 2;
+            saved.distance2 = 0.75;
+            state.extrusions = {saved};
+            QTemporaryDir sidesDir;
+            const QString sidesPath = sidesDir.filePath(QStringLiteral("versi.prt"));
+            require(saveDocumentFile(sidesPath, state, false).isEmpty(), "salvataggio dei versi");
+            DocumentState sidesLoaded;
+            require(loadDocumentFile(sidesPath, sidesLoaded).isEmpty() && sidesLoaded.extrusions.size() == 1
+                        && sidesLoaded.extrusions.at(0).extrudeSides == 2 && sidesLoaded.extrusions.at(0).distance2 == 0.75,
+                    "lettura dei versi dal documento");
+        }
+        {
+            // La parte cliccata appartiene alla funzione che l'ha creata: la
+            // faccia di sopra, accorciata dallo smusso, resta della base; la
+            // faccia dello smusso e' dello smusso.
+            const Kernel::Body block = Kernel::makeBox(Kernel::Frame3(Kernel::Vec3(), Kernel::Vec3(0, 0, 1), Kernel::Vec3(1, 0, 0)), 4.0, 3.0, 2.0);
+            const Kernel::Body chamfered = Kernel::blendEdges(block, {Kernel::nearestEdge(block, Kernel::Vec3(4, 1.5, 2), 1e-6)}, 0.5, true);
+            const std::vector<std::pair<int, ForgeBody>> chain{{0, std::make_shared<const Kernel::Body>(block)},
+                                                               {1, std::make_shared<const Kernel::Body>(chamfered)}};
+            const auto faceAt = [&](const Kernel::Vec3 &p) {
+                for (Kernel::FaceId f : chamfered.faces())
+                    if (Kernel::projectPoint(*chamfered.face(f).surface, p).distance < 1e-9
+                        && Kernel::classifyPointOnFace(chamfered, f, p, 1e-9) == Kernel::PointLocation::Inside)
+                        return f.index;
+                return -1;
+            };
+            const Kernel::Vec3 top(1, 1, 2), bevel(3.75, 1.5, 1.75);
+            require(faceAt(top) >= 0 && faceAt(bevel) >= 0, "facce del corpo smussato");
+            require(forgeFaceOwner(chamfered, faceAt(top), top, chain) == 0, "faccia della base: funzione base");
+            require(forgeFaceOwner(chamfered, faceAt(bevel), bevel, chain) == 1, "faccia dello smusso: lo smusso");
+        }
+        {
+            // Modifica di una funzione intermedia: la storia torna a quel punto.
+            // Le funzioni successive spariscono, il corpo che solo loro
+            // consumavano (lo strumento della differenza) torna visibile.
+            CadViewport rollback;
+            PrimitiveParameters base;
+            base.size[0] = 4.0; base.size[1] = 3.0; base.size[2] = 2.0;
+            PrimitiveParameters tool = base;
+            tool.origin[0] = 3.0;
+            require(rollback.createPrimitive(base, QStringLiteral("Base")).isEmpty()
+                        && rollback.createPrimitive(tool, QStringLiteral("Utensile")).isEmpty()
+                        && rollback.createBoolean(BooleanOperation::Difference, 0, {1}, QStringLiteral("Differenza")).isEmpty(),
+                    "storia per il ritorno indietro");
+            rollback.requestPreview(rollback.extrusions_.at(0), 0);
+            require(rollback.preview_.later == QSet<int>{2} && rollback.preview_.restored == QSet<int>{1},
+                    "modifica della base: differenza nascosta, utensile di nuovo visibile");
+            rollback.requestPreview(rollback.extrusions_.at(2), 2);
+            require(rollback.preview_.later.isEmpty() && rollback.preview_.restored.isEmpty(), "modifica dell'ultima funzione");
+            rollback.clearPreview();
+            require(rollback.preview_.later.isEmpty(), "chiusura dell'anteprima");
+        }
         // La fusione parametrica e' condivisa da estrusione e sweep: il probe
         // conserva il bersaglio realmente intersecato e produce un solo solido.
         ExtrusionObject mergeTarget;
@@ -107,13 +547,15 @@ public:
         legacyRef.point = {edgePoint.x(), edgePoint.y(), edgePoint.z()};
         storyboard.extrusions_[referencedFeature].extentRef = legacyRef;
         storyboard.extrusions_[referencedFeature].blendEdges = {persistentPoint};
+        storyboard.setModelBodyMeshColor(0, QColor(184, 72, 116));
         QTemporaryDir storyboardDir;
         const QString storyboardPath = storyboardDir.filePath(QStringLiteral("storyboard.prt"));
         require(storyboardDir.isValid() && saveDocumentFile(storyboardPath, storyboard.currentDocument(), false).isEmpty(),
                 "salvataggio della storyboard");
         DocumentState storyboardLoaded;
         require(loadDocumentFile(storyboardPath, storyboardLoaded).isEmpty() && storyboardLoaded.modelBodies.size() == 1
-                    && storyboardLoaded.extrusions.at(1).featureId == lastFeature,
+                    && storyboardLoaded.extrusions.at(1).featureId == lastFeature
+                    && storyboardLoaded.modelBodies.first().meshColor == QColor(184, 72, 116),
                 "persistenza e lettura della storyboard");
         require(storyboardLoaded.extrusions.at(referencedFeature).extentRef.featureId == persistentRef.featureId
                     && storyboardLoaded.extrusions.at(referencedFeature).extentRef.point.subshape == persistentEdge.index
@@ -276,7 +718,11 @@ public:
                 "testo leggibile nella selezione dei menu a discesa");
         require(!ForgeCad::commandIcon(QStringLiteral("panelOpacity")).isNull()
                     && !ForgeCad::commandIcon(QStringLiteral("panelBlur")).isNull()
-                    && !ForgeCad::commandIcon(QStringLiteral("panelCorners")).isNull(),
+                    && !ForgeCad::commandIcon(QStringLiteral("panelCorners")).isNull()
+                    && !ForgeCad::commandIcon(QStringLiteral("edit")).isNull()
+                    && !ForgeCad::commandIcon(QStringLiteral("visibility")).isNull()
+                    && !ForgeCad::commandIcon(QStringLiteral("rename")).isNull()
+                    && !ForgeCad::commandIcon(QStringLiteral("meshColor")).isNull(),
                 "icone delle impostazioni dei pannelli");
         FloatingPanel constraintStylePanel(&v, QStringLiteral("Vincoli"),
                                            QStringLiteral("test/constraintPanelStyle"), QSize(380, 360));
@@ -848,6 +1294,28 @@ int main(int argc, char **argv) {
     QTemporaryDir settings;
     QSettings::setDefaultFormat(QSettings::IniFormat);
     QSettings::setPath(QSettings::IniFormat, QSettings::UserScope, settings.path());
-    try { ViewportInteractionTest::run(app.arguments().contains(QStringLiteral("--gl"))); }
+    const int benchWindow = int(app.arguments().indexOf(QStringLiteral("--bench-window")));
+    if (benchWindow > 0) {
+        // Le impostazioni dell'utente, copiate: la finestra non tocca le sue.
+        QDir().mkpath(settings.path() + QStringLiteral("/ForgeCADTests"));
+        QFile::copy(QDir::homePath() + QStringLiteral("/.config/ForgeCAD/ForgeCAD.conf"),
+                    settings.path() + QStringLiteral("/ForgeCADTests/Viewport.ini"));
+        try { ViewportInteractionTest::benchWindow(app.arguments().mid(benchWindow + 1)); }
+        catch (const std::exception &e) { std::cerr << e.what() << std::endl; return 1; }
+        return 0;
+    }
+    try {
+        const int step = int(app.arguments().indexOf(QStringLiteral("--render-step")));
+        const int owner = int(app.arguments().indexOf(QStringLiteral("--pick-owner")));
+        if (owner > 0) { ViewportInteractionTest::pickOwner(app.arguments().mid(owner + 1)); return 0; }
+        const int bench = int(app.arguments().indexOf(QStringLiteral("--bench-view")));
+        if (bench > 0) { ViewportInteractionTest::benchView(app.arguments().mid(bench + 1)); return 0; }
+        const int edit = int(app.arguments().indexOf(QStringLiteral("--render-edit")));
+        if (edit > 0) ViewportInteractionTest::renderEdit(app.arguments().mid(edit + 1));
+        else if (step > 0) ViewportInteractionTest::renderStep(app.arguments().mid(step + 1));
+        else if (app.arguments().contains(QStringLiteral("--loft-corner")))
+            ViewportInteractionTest::loftCorner(QStringLiteral("File_Esempio/prova con loft.prt"));
+        else ViewportInteractionTest::run(app.arguments().contains(QStringLiteral("--gl")));
+    }
     catch (const std::exception &e) { std::cerr << e.what() << std::endl; return 1; }
 }

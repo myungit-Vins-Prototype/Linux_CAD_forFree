@@ -27,7 +27,9 @@ void forgeSketchFrame(const SketchObject &sketch, double distance, Kernel::Frame
 // Estrusione dei contorni chiusi dello schizzo (piu' regioni: un solo body
 // con piu' solidi) o, se non ce ne sono, delle catene aperte (una lamina,
 // Body::isSheet). nullptr e messaggio in `error` se non riesce.
-ForgeBody forgeExtrusion(const SketchObject &sketch, double distance, QString *error);
+// `start`: la base parte dal piano dello schizzo spostato di `start` nel verso
+// di extrusionVector (estrusioni simmetriche o nei due versi).
+ForgeBody forgeExtrusion(const SketchObject &sketch, double distance, QString *error, double start = 0.0);
 
 // Rivoluzione dei contorni chiusi dello schizzo attorno al suo asse `axis`
 // (ExtrusionObject::revolveAxis) di `angleDegrees` gradi, come buildRevolution.
@@ -89,10 +91,22 @@ void forgeBlendPreviewDisplay(const Kernel::Body &base, const Kernel::Body &resu
 
 // Faccia del body colpita per prima dal raggio, con il suo piano (se e'
 // piana) e un punto interno di ogni suo spigolo.
-bool forgePickFace(const Kernel::Body &body, const QVector3D &origin, const QVector3D &direction, FaceHit &hit, const Kernel::RayFaceIndex *index = nullptr);
+// `window`: vedi firstRayHit (la zona del punto colpito sulla tassellazione).
+bool forgePickFace(const Kernel::Body &body, const QVector3D &origin, const QVector3D &direction, FaceHit &hit, const Kernel::RayFaceIndex *index = nullptr,
+                   const Kernel::Interval *window = nullptr);
 
 // Distanza lungo il raggio del primo punto del body colpito (geometria esatta).
 bool forgeIntersectRay(const Kernel::Body &body, const QVector3D &origin, const QVector3D &direction, double &distance, const Kernel::RayFaceIndex *index = nullptr);
+
+// Funzione che ha creato la faccia `face` di `picked` nel punto `point`:
+// la prima di `chain` (le funzioni da cui il corpo deriva, in ordine, con
+// i loro corpi) che ha una faccia sulla stessa superficie e che contiene il
+// punto. Una faccia tagliata o accorciata da una funzione successiva resta
+// della funzione che l'ha creata; un raccordo, un foro o una faccia spostata
+// sono della funzione che li ha fatti. -1 se nessuna (non dovrebbe: il corpo
+// stesso e' l'ultimo della catena).
+int forgeFaceOwner(const Kernel::Body &picked, int face, const Kernel::Vec3 &point,
+                   const std::vector<std::pair<int, ForgeBody>> &chain);
 
 }
 

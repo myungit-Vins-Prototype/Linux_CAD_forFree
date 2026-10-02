@@ -8,7 +8,11 @@ namespace {
 
 std::vector<BSplineCurve<3>> splinePieces(const BSplineCurve<3> &spline, const Interval &range) {
     std::vector<BSplineCurve<3>> pieces;
-    for (BSplineCurve<3> segment : *spline.cachedBezierSegments()) {
+    // Il puntatore resta in vita per tutto il ciclo: se due thread calcolano
+    // la cache nello stesso momento, il secondo la sostituisce e il vettore
+    // del primo sparirebbe sotto il ciclo (range-for su *temporaneo).
+    const auto segments = spline.cachedBezierSegments();
+    for (BSplineCurve<3> segment : *segments) {
         Interval dom = segment.domain();
         if (dom.hi <= range.lo || dom.lo >= range.hi) continue;
         if (dom.lo < range.lo) {

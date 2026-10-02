@@ -9,6 +9,7 @@
 #include <stdexcept>
 
 #include "fk_pcurve.h"
+#include "fk_predicates.h"
 #include "fk_surface_algo.h"
 
 namespace ForgeCad::Kernel {
@@ -559,6 +560,45 @@ void FaceTessellator::buildRings() {
                 ring.samples.push_back(sample);
             }
         };
+        // Una pezza triangolare rappresentata su un dominio rettangolare ha
+        // un lato parametrico collassato in un solo vertice 3D. Non esiste un
+        // edge topologico lungo quel lato: completa esplicitamente il giro in
+        // (u,v) quando il segmento e' davvero singolare sulla superficie.
+        const auto walkCollapsed = [&](const Vec2 &from, const Vec2 &to, const Vec3 &point, double tolerance) {
+            if (distance(from, to) <= 1e-12) return true;
+            try {
+                // Gli estremi di SP-curve consecutive differiscono spesso di
+                // 1e-12..1e-10 per arrotondamento: e' un vertice, non un lato
+                // collassato. Un campione in piu' quasi coincidente con quello
+                // della fin successiva rovina la triangolazione (un poligono
+                // degenere percorso due volte, una "membrana" piatta a video).
+                // Il salto si misura con la derivata maggiore, che resta
+                // finita anche lungo un vero lato collassato.
+                Vec3 d[4];
+                surface_.evaluate(from[0], from[1], 1, d);
+                const double speed = std::max(norm(d[Surface::derivativeIndex(1, 0, 1)]), norm(d[Surface::derivativeIndex(0, 1, 1)]));
+                // Soglia: la tolleranza del giunto (gli scarti di arrotondamento
+                // crescono con le coordinate); i lati collassati veri valgono
+                // decine di unita'.
+                if (distance(from, to) * speed <= tolerance) return true;
+                for (double f : {0.25, 0.5, 0.75})
+                    if (distance(surface_.point((1.0 - f) * from[0] + f * to[0],
+                                                (1.0 - f) * from[1] + f * to[1]), point) > tolerance) return false;
+            } catch (const std::exception &) {
+                return false;
+            }
+            const int steps = std::max(1, int(std::ceil(distance(from, to) / std::max(0.5 * options_.angle, 1e-3))));
+            for (int k = 0; k < steps; ++k) {
+                LoopSample sample;
+                sample.uv = from + (to - from) * (double(k) / steps);
+                sample.p = point;
+                sample.fin = -1;
+                sample.t = sample.tNext = 0.0;
+                sample.straight = true;
+                ring.samples.push_back(sample);
+            }
+            return true;
+        };
         for (FinId f : fins) {
             const Fin &fin = body_.fin(f);
             const Edge &edge = body_.edge(fin.edge);
@@ -584,6 +624,8 @@ void FaceTessellator::buildRings() {
                     const double target = poleWalk(previous[0], start[0], period_[0], previousTop, face_.sense, previousNear, startNear);
                     walk(previous, target, startPole);
                     shift[0] = target - start[0];
+                } else if (distance(previousPoint, edge.curve->point(ts.front())) <= tolerance) {
+                    walkCollapsed(previous, start, previousPoint, tolerance);
                 }
             }
             for (std::size_t j = 0; j + 1 < ts.size(); ++j) {
@@ -607,6 +649,8 @@ void FaceTessellator::buildRings() {
             const double target = poleWalk(previous[0], firstUV[0], period_[0], previousTop, face_.sense, previousNear, firstNear);
             walk(previous, target, firstPole);
             previous[0] = target;
+        } else if (distance(previousPoint, ring.samples.front().p) <= 1e-6) {
+            walkCollapsed(previous, firstUV, previousPoint, 1e-6);
         }
         ring.wrap = previous - firstUV;
         for (int d = 0; d < 2; ++d) ring.wrap[d] = periodic_[d] ? period_[d] * std::round(ring.wrap[d] / period_[d]) : 0.0;
@@ -1223,6 +1267,239 @@ FaceMesh FaceTessellator::run() {
     return mesh;
 }
 
+// --- Corde che si incrociano nello spazio (u, v) ---------------------------------
+//
+// La deflessione decide i campioni degli edge in 3D. In una faccia piu' sottile
+// della deflessione (la striscia tra il bordo di una tasca e lo spigolo esterno,
+// che finisce a punta) le corde di un bordo attraversano l'altro: il poligono
+// in (u, v) si ripiega e i triangoli escono dalla faccia, coprendo le facce
+// vicine come una faccia non limitata. I tratti che si incrociano si dividono
+// a meta' sulla curva esatta finche' il contorno torna semplice, o finche' le
+// corde sono sotto meta' della deflessione (una piega piu' piccola non si vede;
+// cosi' il raffinamento finisce anche dove le curve si incrociano davvero, come
+// negli edge tolleranti dei file importati). I campioni sono quelli degli edge,
+// comuni a tutte le loro facce e alle polilinee: niente crepe tra le facce.
+
+struct UVChord {
+    Vec2 a, b, m;           // estremi e punto della SP-curve a meta' del tratto
+    int edge;               // indice dell'edge
+    std::size_t interval;   // tratto [samples[interval], samples[interval + 1]] dell'edge
+};
+
+// Incrocio proprio di due segmenti: con un estremo in comune (tratti
+// consecutivi) non si incrociano. Non conta neppure un incrocio a ridosso
+// degli estremi di entrambi: ai vertici tolleranti le SP-curve di due fin
+// consecutive non finiscono nello stesso punto e si toccano li'.
+bool segmentsCross(const Vec2 &a, const Vec2 &b, const Vec2 &c, const Vec2 &d) {
+    if (orient2d(a, b, c) * orient2d(a, b, d) >= 0 || orient2d(c, d, a) * orient2d(c, d, b) >= 0) return false;
+    const auto cross2 = [](const Vec2 &p, const Vec2 &q) { return p[0] * q[1] - p[1] * q[0]; };
+    const double denominator = cross2(b - a, d - c);
+    if (denominator == 0.0) return false;
+    const double s = cross2(c - a, d - c) / denominator, t = cross2(c - a, b - a) / denominator;
+    constexpr double kEnd = 1e-3;
+    const auto nearEnd = [](double x) { return x <= kEnd || x >= 1.0 - kEnd; };
+    return !(nearEnd(s) && nearEnd(t));
+}
+
+// La corda di p incrocia la corda di q o la spezzata per il suo punto medio:
+// anche senza incroci tra le corde, la corda di un bordo puo' passare oltre la
+// curva dell'altro (verso la punta della striscia).
+bool chordsCross(const UVChord &p, const UVChord &q) {
+    const auto against = [](const UVChord &x, const UVChord &y) {
+        return segmentsCross(x.a, x.b, y.a, y.b) || segmentsCross(x.a, x.b, y.a, y.m) || segmentsCross(x.a, x.b, y.m, y.b);
+    };
+    return against(p, q) || against(q, p);
+}
+
+// Tratti dei campioni (edge, intervallo) che si incrociano nello spazio
+// (u, v) della faccia.
+void crossingChords(const Body &body, FaceId f, const std::vector<std::vector<double>> &samples,
+                    std::vector<std::pair<int, std::size_t>> &marks) {
+    const Face &face = body.face(f);
+    const Surface &surface = *face.surface;
+    const bool periodic[2] = {surface.isUPeriodic(), surface.isVPeriodic()};
+    const double period[2] = {periodic[0] ? surface.uPeriod() : 0.0, periodic[1] ? surface.vPeriod() : 0.0};
+    std::vector<UVChord> chords;
+    for (LoopId l : face.loops) {
+        Vec2 previous;
+        bool start = true;
+        for (FinId fi : body.loopFins(l)) {
+            const Fin &fin = body.fin(fi);
+            if (!fin.pcurve) return;
+            const std::vector<double> &ts = samples.at(std::size_t(fin.edge.index));
+            const std::size_t n = ts.size();
+            if (n < 2) continue;
+            const auto parameter = [&](std::size_t k) { return fin.sense ? ts[k] : ts[n - 1 - k]; };
+            Vec2 a = fin.pcurve->point(parameter(0)), shift;
+            if (!start)
+                for (int d = 0; d < 2; ++d)
+                    if (periodic[d]) shift[d] = period[d] * std::round((previous[d] - a[d]) / period[d]);
+            start = false;
+            a = a + shift;
+            for (std::size_t k = 0; k + 1 < n; ++k) {
+                const Vec2 b = fin.pcurve->point(parameter(k + 1)) + shift;
+                const Vec2 m = fin.pcurve->point(0.5 * (parameter(k) + parameter(k + 1))) + shift;
+                if (!std::isfinite(a[0] + a[1] + b[0] + b[1] + m[0] + m[1])) return;
+                chords.push_back({a, b, m, fin.edge.index, fin.sense ? k : n - 2 - k});
+                a = b;
+            }
+            previous = a;
+        }
+    }
+    if (chords.size() < 2) return;
+
+    // Finestra della griglia. Nelle direzioni periodiche i loop possono stare
+    // in periodi diversi (ognuno segue le sue SP-curve): ogni corda si porta
+    // in un periodo che comincia dopo il vuoto piu' grande tra le coordinate
+    // dei campioni; se il vuoto e' piccolo (la faccia fa il giro) la griglia
+    // e' ciclica in quella direzione. Le coppie si confrontano spostando
+    // l'una vicino all'altra di periodi interi.
+    Vec2 lo, hi;
+    bool cyclic[2] = {false, false};
+    for (int d = 0; d < 2; ++d) {
+        if (!periodic[d]) continue;
+        const double P = period[d];
+        std::vector<double> values;
+        double extent = 0.0;  // ampiezza massima di una corda in questa direzione
+        for (const UVChord &c : chords) {
+            for (const Vec2 &p : {c.a, c.b, c.m}) values.push_back(p[d] - P * std::floor(p[d] / P));
+            extent = std::max(extent, std::max({c.a[d], c.b[d], c.m[d]}) - std::min({c.a[d], c.b[d], c.m[d]}));
+        }
+        std::sort(values.begin(), values.end());
+        double gap = values.front() + P - values.back(), begin = values.front();
+        for (std::size_t k = 0; k + 1 < values.size(); ++k)
+            if (values[k + 1] - values[k] > gap) gap = values[k + 1] - values[k], begin = values[k + 1];
+        if (gap <= 2.0 * extent) {
+            cyclic[d] = true;
+            begin = values.front();
+        }
+        for (UVChord &c : chords) {
+            const double k = std::floor((c.a[d] - begin) / P) * P;
+            c.a[d] -= k, c.b[d] -= k, c.m[d] -= k;
+        }
+    }
+    lo = hi = chords.front().a;
+    for (const UVChord &c : chords)
+        for (const Vec2 &p : {c.a, c.b, c.m})
+            for (int d = 0; d < 2; ++d) lo[d] = std::min(lo[d], p[d]), hi[d] = std::max(hi[d], p[d]);
+    // Faccia degenere in (u, v) (tutti i bordi su una linea, come le schegge
+    // dei loft tolleranti): non c'e' contorno da sciogliere.
+    for (int d = 0; d < 2; ++d)
+        if (hi[d] - lo[d] <= 1e-9 * (1.0 + std::fabs(lo[d]) + std::fabs(hi[d]))) return;
+    const int cells =std::clamp(int(std::sqrt(double(chords.size()))), 1, 512);
+    Vec2 size;
+    for (int d = 0; d < 2; ++d) {
+        if (cyclic[d]) lo[d] = std::min(lo[d], hi[d] - period[d]), hi[d] = lo[d] + period[d];
+        size[d] = std::max(hi[d] - lo[d], 1e-300) / cells;
+    }
+    const auto index = [&](long long i, int d) {
+        if (cyclic[d]) return int(((i % cells) + cells) % cells);
+        return int(std::clamp<long long>(i, 0, cells - 1));
+    };
+    // Celle attraversate dai due tratti della spezzata a-m-b (passi di
+    // Amanatides-Woo): una corda lunga non occupa tutte le celle del suo box.
+    std::vector<std::vector<int>> grid(std::size_t(cells) * std::size_t(cells));
+    std::vector<std::vector<int>> chordCells(chords.size());
+    const auto traverse = [&](const Vec2 &p, const Vec2 &q, std::vector<int> &out) {
+        double x0[2], x1[2], tMax[2], tDelta[2];
+        long long i[2], e[2];
+        int step[2];
+        for (int d = 0; d < 2; ++d) {
+            x0[d] = (p[d] - lo[d]) / size[d], x1[d] = (q[d] - lo[d]) / size[d];
+            if (!cyclic[d]) x0[d] = std::clamp(x0[d], 0.0, double(cells) - 1e-9), x1[d] = std::clamp(x1[d], 0.0, double(cells) - 1e-9);
+            i[d] = (long long)std::floor(x0[d]), e[d] = (long long)std::floor(x1[d]);
+            const double delta = x1[d] - x0[d];
+            step[d] = delta > 0.0 ? 1 : -1;
+            tDelta[d] = delta != 0.0 ? 1.0 / std::fabs(delta) : std::numeric_limits<double>::infinity();
+            tMax[d] = delta > 0.0 ? (double(i[d]) + 1.0 - x0[d]) * tDelta[d]
+                    : delta < 0.0 ? (x0[d] - double(i[d])) * tDelta[d] : std::numeric_limits<double>::infinity();
+        }
+        long long guard = std::llabs(e[0] - i[0]) + std::llabs(e[1] - i[1]) + 2;
+        for (;;) {
+            out.push_back(index(i[0], 0) * cells + index(i[1], 1));
+            if ((i[0] == e[0] && i[1] == e[1]) || guard-- <= 0) break;
+            const int d = tMax[0] < tMax[1] ? 0 : 1;
+            tMax[d] += tDelta[d];
+            i[d] += step[d];
+        }
+    };
+    for (std::size_t c = 0; c < chords.size(); ++c) {
+        std::vector<int> &list = chordCells[c];
+        traverse(chords[c].a, chords[c].m, list);
+        traverse(chords[c].m, chords[c].b, list);
+        std::sort(list.begin(), list.end());
+        list.erase(std::unique(list.begin(), list.end()), list.end());
+        for (int cell : list) grid[std::size_t(cell)].push_back(int(c));
+    }
+    // Ogni coppia una volta sola (segno dell'ultima corda confrontata).
+    std::vector<int> stamp(chords.size(), -1);
+    std::vector<char> marked(chords.size(), 0);
+    for (std::size_t i = 0; i < chords.size(); ++i)
+        for (int cell : chordCells[i])
+            for (int j : grid[std::size_t(cell)]) {
+                if (j <= int(i) || stamp[std::size_t(j)] == int(i)) continue;
+                stamp[std::size_t(j)] = int(i);
+                if (marked[i] && marked[std::size_t(j)]) continue;
+                UVChord q = chords[std::size_t(j)];
+                for (int d = 0; d < 2; ++d)
+                    if (periodic[d]) {
+                        const double k = period[d] * std::round((chords[i].m[d] - q.m[d]) / period[d]);
+                        q.a[d] += k, q.b[d] += k, q.m[d] += k;
+                    }
+                if (!chordsCross(chords[i], q)) continue;
+                marked[i] = marked[std::size_t(j)] = 1;
+            }
+    for (std::size_t i = 0; i < chords.size(); ++i)
+        if (marked[i]) marks.push_back({chords[i].edge, chords[i].interval});
+}
+
+void separateCrossingChords(const Body &body, std::vector<std::vector<double>> &samples, const TessellationOptions &options) {
+    std::vector<FaceId> faces;
+    std::vector<std::vector<int>> edgeFaces(samples.size());
+    for (FaceId f : body.faces()) {
+        if (!body.face(f).surface) continue;
+        const int index = int(faces.size());
+        faces.push_back(f);
+        for (LoopId l : body.face(f).loops)
+            for (FinId fi : body.loopFins(l)) {
+                const std::size_t e = std::size_t(body.fin(fi).edge.index);
+                if (e < edgeFaces.size() && (edgeFaces[e].empty() || edgeFaces[e].back() != index)) edgeFaces[e].push_back(index);
+            }
+    }
+    std::vector<char> dirty(faces.size(), 1);
+    for (int round = 0; round < 12; ++round) {
+        std::vector<std::pair<int, std::size_t>> marks;
+        for (std::size_t k = 0; k < faces.size(); ++k) {
+            if (!dirty[k]) continue;
+            try {
+                crossingChords(body, faces[k], samples, marks);
+            } catch (const std::exception &) {
+                // La faccia si tassella comunque (o fallisce) piu' avanti.
+            }
+        }
+        std::fill(dirty.begin(), dirty.end(), 0);
+        // Dall'ultimo intervallo al primo: gli indici dei precedenti non cambiano.
+        std::sort(marks.begin(), marks.end(), [](const auto &a, const auto &b) {
+            return a.first != b.first ? a.first < b.first : a.second > b.second;
+        });
+        marks.erase(std::unique(marks.begin(), marks.end()), marks.end());
+        bool changed = false;
+        for (const auto &[e, interval] : marks) {
+            const Edge &edge = body.edge(EdgeId(e));
+            std::vector<double> &ts = samples[std::size_t(e)];
+            const double a = ts[interval], b = ts[interval + 1];
+            // Corde gia' sotto meta' della deflessione (o della tolleranza
+            // dell'edge): la piega che resta non si vede.
+            const double limit = std::max(0.5 * options.deflection, 10.0 * edge.tolerance);
+            if (distance(edge.curve->point(a), edge.curve->point(b)) <= limit) continue;
+            ts.insert(ts.begin() + std::ptrdiff_t(interval) + 1, 0.5 * (a + b));
+            for (int k : edgeFaces[std::size_t(e)]) dirty[std::size_t(k)] = 1;
+            changed = true;
+        }
+        if (!changed) break;
+    }
+}
+
 }
 
 Tessellation tessellate(const Body &input, const TessellationOptions &options) {
@@ -1244,7 +1521,20 @@ Tessellation tessellate(const Body &input, const TessellationOptions &options) {
         const Edge &edge = body.edge(e);
         if (std::size_t(e.index) >= edgeSamples.size()) edgeSamples.resize(std::size_t(e.index) + 1);
         if (!edge.curve) continue;
-        edgeSamples[std::size_t(e.index)] = sampleCurve(*edge.curve, edge.range, options);
+        std::vector<double> &samples = edgeSamples[std::size_t(e.index)];
+        samples = sampleCurve(*edge.curve, edge.range, options);
+        // Una curva con freccia sotto la deflessione diventa la sua corda: in
+        // un loop di un segmento e di un arco poco curvo (le facce sottili
+        // degli STEP) il poligono avrebbe area nulla e la faccia non si
+        // triangolerebbe. Il punto medio basta; vale per tutte le facce
+        // dell'edge e per la sua polilinea, quindi niente crepe.
+        if (samples.size() == 2 && edge.curve->type() != CurveType::Line)
+            samples.insert(samples.begin() + 1, 0.5 * (samples[0] + samples[1]));
+    }
+    separateCrossingChords(body, edgeSamples, options);
+    for (EdgeId e : body.edges()) {
+        const Edge &edge = body.edge(e);
+        if (!edge.curve) continue;
         std::vector<Vec3> polyline;
         for (double t : edgeSamples[std::size_t(e.index)]) polyline.push_back(edge.curve->point(t));
         result.edges.push_back(std::move(polyline));

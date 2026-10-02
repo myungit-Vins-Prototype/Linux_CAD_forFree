@@ -956,8 +956,20 @@ private:
         if (t == "CONICAL_SURFACE")
             return std::make_shared<ConicalSurface>(placement(reference(a.at(1))), number(a.at(3)) * angle_, number(a.at(2)) * length_);
         if (t == "SPHERICAL_SURFACE") return std::make_shared<SphericalSurface>(placement(reference(a.at(1))), number(a.at(2)) * length_);
-        if (t == "TOROIDAL_SURFACE" || t == "DEGENERATE_TOROIDAL_SURFACE")
-            return std::make_shared<ToroidalSurface>(placement(reference(a.at(1))), number(a.at(2)) * length_, number(a.at(3)) * length_);
+        if (t == "TOROIDAL_SURFACE" || t == "DEGENERATE_TOROIDAL_SURFACE") {
+            const Frame3 frame = placement(reference(a.at(1)));
+            const double major = number(a.at(2)) * length_, minor = number(a.at(3)) * length_;
+            if (major < 0.0 && std::isfinite(major)) {
+                // Alcuni STEP SolidWorks usano un raggio maggiore con segno.
+                // La rivoluzione del meridiano mantiene esattamente S(u,v) =
+                // O + (R + r*cos(v))*E(u) + r*sin(v)*Z, incluse le normali.
+                // abs(R) cambierebbe invece geometria e parametrizzazione.
+                const auto meridian = std::make_shared<Circle<3>>(
+                    frame.origin() + major * frame.xDir(), frame.xDir(), frame.zDir(), minor);
+                return std::make_shared<RevolutionSurface>(meridian, frame.origin(), frame.zDir());
+            }
+            return std::make_shared<ToroidalSurface>(frame, major, minor);
+        }
         if (t == "SURFACE_OF_LINEAR_EXTRUSION") {
             const CurvePtr<3> basis = curve(reference(a.at(1)));
             const Vec3 d = vector(reference(a.at(2)));

@@ -921,6 +921,21 @@ FK_TEST(BlendLoftCircularCapsSplitIntoPatches) {
     }
 }
 
+FK_TEST(BlendEdgeEndingOnExistingFilletCornerPatch) {
+    Body body = makeBox(Frame3(), 10.0, 8.0, 20.0);
+    body = blendEdges(body, {nearestEdge(body, Vec3(5, 0, 20), 1e-6)}, 1.0, false);
+    FK_CHECK(checkBody(body).empty());
+    const EdgeId longitudinal = nearestEdge(body, Vec3(10.0, 0.0, 10.0), 1e-6);
+    FK_CHECK(longitudinal.valid());
+    if (longitudinal.valid()) {
+        body = blendEdges(body, {longitudinal}, 0.5, false);
+        FK_CHECK(checkBody(body).empty());
+        TessellationOptions options; options.deflection = 0.02;
+        FK_CHECK(tessellate(body, options).failedFaces == 0);
+        FK_CHECK(massProperties(body).volume > 0.0);
+    }
+}
+
 FK_TEST(BlendArcsMeetingSegments) {
     // Profilo estruso: tre segmenti e un arco che li incontra ad angolo vivo
     // (non tangente). Tutto il bordo in alto (catena piana con gli angoli a
