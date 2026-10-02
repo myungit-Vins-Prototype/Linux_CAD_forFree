@@ -63,6 +63,7 @@ private:
     double blendSize_ = 0.5;  // ultima misura di raccordo o smusso (proposta la volta dopo)
     QDoubleSpinBox *pickSizeBox_ = nullptr;
     QWidget *constraintPanel_ = nullptr;  // finestra fluttuante dei vincoli (modalita' schizzo)  // misura dell'anteprima durante la scelta degli spigoli
+    QWidget *historyGraphDialog_ = nullptr;  // diagnostica non modale della storyboard
 };
 
 #endif

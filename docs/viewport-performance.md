@@ -39,6 +39,28 @@ Gli impieghi GPU più promettenti per ForgeCAD sono la tassellazione di molte fa
 
 Un ulteriore intervento possibile è una selezione GPU con identificatori di facce/oggetti in un framebuffer e successiva verifica geometrica esatta. Richiede gestire correttamente trasparenze, sezione e lettura asincrona dei risultati. Per anticipare il risultato delle operazioni geometriche servirebbe invece profilare singolarmente i moduli del kernel: spostare il calcolo esatto su CUDA è un intervento distinto, da validare numericamente.
 
+## Valutazione del passaggio a OpenGL 3
+
+Il passaggio al solo contesto OpenGL 3 non produce automaticamente un aumento
+di prestazioni. Il lavoro utile consiste nel sostituire la pipeline fissa e i
+percorsi `glBegin/glEnd` residui con shader, VAO/VBO persistenti e disegno
+aggregato, e nel separare la selezione dal calcolo geometrico esatto tramite un
+buffer GPU di identificatori. Una migrazione completa e verificata richiede
+indicativamente **2-4 settimane**: nuovo renderer, materiali e luci, overlay e
+anteprime, picking, fallback/diagnostica e test su driver diversi. La
+compatibilita' OpenGL 3.3 rende inoltre piu' lineare il futuro porting Windows e
+macOS, dove il compatibility profile non e' una base affidabile.
+
+Nei modelli dominati da molte chiamate di disegno, contorni e hover il guadagno
+puo' andare da circa **2x a oltre 10x** nel solo percorso di rendering. Eliche e
+spirali richiedono prima di tutto una cache delle loro polilinee e un indice di
+selezione, per evitare proiezioni e test CPU a ogni movimento del mouse; senza
+questo intervento OpenGL 3 lascerebbe intatto il principale collo di bottiglia.
+Raccordi, booleane, sweep e loft appartengono invece al kernel B-rep CPU: OpenGL
+3 non ne cambia robustezza o tempo di costruzione. Per questi servono profili
+per fase, broad phase tra box, riuso delle intersezioni, tolleranze coerenti e
+una strategia esplicita per casi degeneri e facce tagliate.
+
 ## Verifiche riproducibili
 
 ```sh

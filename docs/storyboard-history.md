@@ -43,6 +43,45 @@ rinumera il B-rep, tipo, facce adiacenti o numero dei bordi e punto selezionato
 permettono di ritrovare l'entita'. I file precedenti mantengono il punto come
 fallback e acquistano gli ID al salvataggio successivo.
 
+## Diagnostica grafica
+
+**Visualizza -> Debug history / storyboard...** apre una finestra non modale e
+ridimensionabile con il grafo parametrico del documento corrente. Ogni corsia
+rappresenta un corpo logico; geometria di riferimento e schizzi hanno corsie
+distinte. Le frecce mostrano profili, operandi booleani, basi dei raccordi,
+percorsi sweep, sezioni e guide loft, fusioni e riferimenti di datum, pattern e
+trasformazioni.
+
+I riferimenti mancanti, rivolti a una feature successiva o non piu' risolvibili
+sono rossi e tratteggiati. Le feature fallite sono rosse, quelle soppresse
+grigie e il risultato corrente di ogni corpo verde. Selezionando un blocco si
+ottengono gli ID persistenti, lo stato, il messaggio esatto del kernel, il
+conteggio topologico B-rep, le sotto-entita' selezionate e tutte le dipendenze.
+Per uno schizzo il dettaglio elenca segmenti, curve e ogni vincolo con i suoi
+riferimenti e il residuo numerico. La selezione nel grafo seleziona anche
+l'elemento corrispondente nel viewport. Ogni blocco riporta esplicitamente il
+nome della feature e il tipo di lavorazione. Una legenda spiega i colori di
+risultati, stadi intermedi, riferimenti, schizzi, errori e feature soppresse.
+La rotella e i pulsanti `−`/`+` cambiano lo zoom, mentre *Adatta leggibile*
+adatta il grafo senza scendere sotto la dimensione minima che rende leggibili
+i testi. Nelle storyboard larghe la vista si apre sulla parte iniziale e il
+resto si raggiunge trascinando o con la barra orizzontale. La finestra e'
+ridimensionabile e conserva
+dimensione e posizione. Il grafo si aggiorna quando cambia il documento senza
+azzerare lo zoom; schizzi ed etichette delle frecce si possono nascondere per
+leggere modelli grandi.
+
+I blocchi possono essere trascinati liberamente; i collegamenti, le frecce e le
+etichette seguono lo spostamento. Le etichette delle dipendenze sono nascoste
+all'apertura e compaiono passando sulla relativa freccia, oppure tutte insieme
+con *Mostra tutte le etichette*. *Ripristina disposizione* elimina gli
+spostamenti manuali. Il contenuto testuale resta ritagliato nel proprio blocco,
+cosi' nomi lunghi o errori non coprono i nodi adiacenti.
+La ricostruzione richiesta da una modifica del documento viene rimandata fino
+al rilascio del mouse: il nodo che Qt sta trascinando non viene eliminato nel
+mezzo dell'evento. La scena elimina inoltre prima i collegamenti e poi i nodi,
+evitando puntatori residui durante aggiornamenti e chiusura.
+
 ## Limiti attuali
 
 - Se una modifica elimina davvero la faccia o il bordo e non esiste una

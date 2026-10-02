@@ -3,6 +3,8 @@
 #include "../forgeCad2026_gui.cpp"
 #include "fk_helix.h"
 #include "fk_primitives.h"
+#include <QGraphicsItem>
+#include <QGraphicsView>
 #include <QSurfaceFormat>
 #include <QTemporaryDir>
 #include <iostream>
@@ -148,6 +150,46 @@ public:
                     && interleavedStory.extrusions().at(2).featureId == a2Id
                     && interleavedStory.extrusions().at(4).featureId == b1Id,
                 "drag logico tra feature con altri corpi intercalati");
+        ForgeCad::HistoryGraphDialog historyGraph;
+        historyGraph.setDocument(interleavedStory.currentDocument());
+        require(historyGraph.nodeCount() >= interleavedStory.extrusions().size()
+                    && historyGraph.edgeCount() == 3 && historyGraph.invalidDependencyCount() == 0,
+                "grafo diagnostico della storyboard");
+        const double graphZoom = historyGraph.zoomFactor();
+        historyGraph.zoomBy(1.25);
+        require(historyGraph.zoomFactor() > graphZoom,
+                "zoom interattivo del grafo diagnostico");
+        historyGraph.zoomBy(0.001);
+        require(historyGraph.zoomFactor() >= 0.719,
+                "limite leggibile dello zoom del grafo diagnostico");
+        historyGraph.show();
+        QApplication::processEvents();
+        QGraphicsView *graphView = historyGraph.findChild<QGraphicsView *>();
+        QGraphicsItem *movableNode = nullptr;
+        if (graphView)
+            for (QGraphicsItem *item : graphView->scene()->items())
+                if ((item->flags() & QGraphicsItem::ItemIsMovable) && item->data(0).toInt() == 1) {
+                    movableNode = item;
+                    break;
+                }
+        require(movableNode, "blocchi spostabili nel grafo diagnostico");
+        const QPointF movedPosition = movableNode->pos() + QPointF(57.0, 31.0);
+        movableNode->setPos(movedPosition);
+        QApplication::processEvents();
+        require(movableNode->pos() == movedPosition,
+                "spostamento di un blocco con aggiornamento dei collegamenti");
+        historyGraph.setDocument(interleavedStory.currentDocument());
+        QApplication::processEvents();
+        bool preservedPosition = false;
+        for (QGraphicsItem *item : graphView->scene()->items())
+            preservedPosition = preservedPosition
+                || ((item->flags() & QGraphicsItem::ItemIsMovable) && item->pos() == movedPosition);
+        require(preservedPosition, "posizione manuale conservata dopo la ricostruzione del grafo");
+        DocumentState invalidGraph = interleavedStory.currentDocument();
+        invalidGraph.extrusions[4].firstBody = 99;
+        historyGraph.setDocument(invalidGraph);
+        require(historyGraph.invalidDependencyCount() == 1,
+                "dipendenza mancante evidenziata dal grafo diagnostico");
         const auto renderedAlpha = [](QWidget &widget) {
             widget.resize(500, 300);
             QImage image(widget.size(), QImage::Format_ARGB32_Premultiplied);

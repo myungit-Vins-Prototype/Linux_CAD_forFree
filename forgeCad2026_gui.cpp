@@ -19,6 +19,7 @@
 #include "fk_curve_algo.h"
 #include "fk_topology.h"
 #include "cad_history.h"
+#include "cad_history_graph.h"
 #include "cad_model_history.h"
 #include "cad_topology_ref.h"
 #include "cad_icons.h"
@@ -13256,6 +13257,8 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
         }
         scheduleModelTreeRebuild();
         updateUndoActions();
+        if (historyGraphDialog_)
+            static_cast<ForgeCad::HistoryGraphDialog *>(historyGraphDialog_)->setDocument(viewport_->currentDocument());
     });
     viewport->setPlaneContextCallback([this, viewport, createSketchOnPlane](int plane) {
         QMenu menu(this);
@@ -13576,6 +13579,24 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
     auto *lightingMenu = viewMenu->addMenu(QStringLiteral("Luci scena"));
     QAction *backgroundAction = viewMenu->addAction(QStringLiteral("Sfondo e luce ambiente..."));
     connect(backgroundAction, &QAction::triggered, this, &PdfWindow::editBackground);
+    QAction *historyGraphAction = viewMenu->addAction(QStringLiteral("Debug history / storyboard..."));
+    historyGraphAction->setToolTip(QStringLiteral("Grafo di feature, schizzi, operandi, riferimenti topologici ed errori di rigenerazione"));
+    connect(historyGraphAction, &QAction::triggered, this, [this, viewport] {
+        auto *dialog = static_cast<ForgeCad::HistoryGraphDialog *>(historyGraphDialog_);
+        if (!dialog) {
+            dialog = new ForgeCad::HistoryGraphDialog(this);
+            historyGraphDialog_ = dialog;
+            dialog->setSelectionCallback([viewport](int kind, int index) {
+                if (kind == 0) viewport->selectSketch(index);
+                else if (kind == 1) viewport->selectObject(SceneObjectKind::Extrusion, index);
+            });
+            connect(dialog, &QObject::destroyed, this, [this] { historyGraphDialog_ = nullptr; });
+        }
+        dialog->setDocument(viewport->currentDocument());
+        dialog->show();
+        dialog->raise();
+        dialog->activateWindow();
+    });
     // Sfondo dell'albero modello (QSettings view/treeBackground; vuoto = quello del tema).
     auto *treeColorMenu = viewMenu->addMenu(QStringLiteral("Sfondo dell'albero"));
     QAction *treeColorAction = treeColorMenu->addAction(QStringLiteral("Scegli il colore..."));

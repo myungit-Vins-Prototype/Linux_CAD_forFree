@@ -57,6 +57,8 @@ add_executable(forgecad
     cad_icons.cpp
     cad_history.h
     cad_history.cpp
+    cad_history_graph.h
+    cad_history_graph.cpp
     cad_model_history.h
     cad_model_history.cpp
     cad_topology_ref.h
