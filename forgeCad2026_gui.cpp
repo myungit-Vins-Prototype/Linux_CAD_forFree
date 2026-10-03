@@ -49,6 +49,7 @@
 #include <QDoubleSpinBox>
 #include <QDropEvent>
 #include <QDragEnterEvent>
+#include <QDragLeaveEvent>
 #include <QDragMoveEvent>
 #include <QMap>
 #include <QRegularExpression>
@@ -10565,7 +10566,10 @@ public:
     explicit StoryboardTree(QWidget *parent = nullptr) : QTreeWidget(parent) {
         setDragEnabled(true);
         setAcceptDrops(true);
-        setDropIndicatorShown(true);
+        // L'indicatore Qt standard tende a evidenziare l'intera voce. Qui la
+        // destinazione e' una posizione nella storia, quindi disegniamo una
+        // riga esplicita fra le due feature.
+        setDropIndicatorShown(false);
         setDragDropMode(QAbstractItemView::InternalMove);
         setDefaultDropAction(Qt::MoveAction);
         setSelectionMode(QAbstractItemView::SingleSelection);
@@ -10581,6 +10585,7 @@ protected:
         }
         QTreeWidget::startDrag(actions);
         draggedItem_ = nullptr;
+        clearInsertionLine();
     }
 
     void dragEnterEvent(QDragEnterEvent *event) override {
@@ -10590,13 +10595,27 @@ protected:
 
     void dragMoveEvent(QDragMoveEvent *event) override {
         QTreeWidgetItem *target = targetFeature(event->position().toPoint());
-        if (target && target != draggedItem_) event->acceptProposedAction();
-        else event->ignore();
+        if (target && target != draggedItem_) {
+            const int sourceIndex = draggedItem_->data(0, Qt::UserRole + 1).toInt();
+            const int targetIndex = target->data(0, Qt::UserRole + 1).toInt();
+            const QRect targetRect = visualItemRect(target);
+            setInsertionLine(sourceIndex < targetIndex ? targetRect.bottom() + 1 : targetRect.top(), targetRect.left());
+            event->acceptProposedAction();
+        } else {
+            clearInsertionLine();
+            event->ignore();
+        }
+    }
+
+    void dragLeaveEvent(QDragLeaveEvent *event) override {
+        clearInsertionLine();
+        QTreeWidget::dragLeaveEvent(event);
     }
 
     void dropEvent(QDropEvent *event) override {
         QTreeWidgetItem *source = draggedItem_;
         QTreeWidgetItem *target = targetFeature(event->position().toPoint());
+        clearInsertionLine();
         if (!isMovableFeature(source) || !target || source == target || !moveFeature_) {
             event->ignore();
             return;
@@ -10606,7 +10625,36 @@ protected:
         if (!error.isEmpty()) QMessageBox::information(this, QStringLiteral("Riordina storyboard"), error);
     }
 
+    void paintEvent(QPaintEvent *event) override {
+        QTreeWidget::paintEvent(event);
+        if (insertionLineY_ < 0) return;
+        QPainter painter(viewport());
+        painter.setRenderHint(QPainter::Antialiasing, false);
+        const QColor color(70, 205, 255);
+        painter.setPen(QPen(color, 2.0));
+        const int right = viewport()->width() - 5;
+        painter.drawLine(insertionLineLeft_, insertionLineY_, right, insertionLineY_);
+        painter.setPen(Qt::NoPen);
+        painter.setBrush(color);
+        painter.drawPolygon(QPolygonF({QPointF(insertionLineLeft_, insertionLineY_ - 4),
+                                       QPointF(insertionLineLeft_ + 6, insertionLineY_),
+                                       QPointF(insertionLineLeft_, insertionLineY_ + 4)}));
+    }
+
 private:
+    void setInsertionLine(int y, int left) {
+        if (insertionLineY_ == y && insertionLineLeft_ == left) return;
+        insertionLineY_ = y;
+        insertionLineLeft_ = qMax(2, left - 8);
+        viewport()->update();
+    }
+
+    void clearInsertionLine() {
+        if (insertionLineY_ < 0) return;
+        insertionLineY_ = -1;
+        viewport()->update();
+    }
+
     static bool isMovableFeature(QTreeWidgetItem *item) {
         return item && item->data(0, Qt::UserRole).toInt() == kTreeExtrusion && item->parent()
             && item->parent()->data(0, Qt::UserRole + 2).toString() == QStringLiteral("H");
@@ -10657,6 +10705,8 @@ private:
 
     std::function<QString(int, int)> moveFeature_;
     QTreeWidgetItem *draggedItem_ = nullptr;
+    int insertionLineY_ = -1;
+    int insertionLineLeft_ = 2;
 };
 
 static const QStringList &planeNames() {
@@ -11632,13 +11682,10 @@ static BlendDialogResult blendDialog(QWidget *parent, CadViewport *viewport, con
 // Finestra della scala: corpo, fattore uniforme e centro (origine, baricentro
 // del solido o un punto), con l'anteprima. `definition` porta i valori
 // iniziali; `replaced` e' il corpo modificato (-1 nuovo).
+static QString logicalBodyLabel(CadViewport *viewport, int index);
 static bool scaleDialog(QWidget *parent, CadViewport *viewport, const QString &title, int replaced, const ExtrusionObject &definition,
                         const std::function<QString(const ExtrusionObject &)> &apply) {
-    const QVector<ExtrusionObject> &bodies = viewport->extrusions();
-    const int limit = replaced >= 0 ? replaced : int(bodies.size());
-    QVector<int> candidates;
-    for (int index = 0; index < limit; ++index)
-        if (bodies.at(index).forgeBody) candidates.append(index);
+    const QVector<int> candidates = viewport->resultBodiesBefore(replaced);
     if (candidates.isEmpty()) {
         QMessageBox::information(parent, title, QStringLiteral("Nella scena non ci sono corpi da scalare."));
         return false;
@@ -11647,7 +11694,7 @@ static bool scaleDialog(QWidget *parent, CadViewport *viewport, const QString &t
     dialog.setWindowTitle(title);
     auto *form = dialog.createScrollableForm();
     auto *bodyBox = new QComboBox(&dialog);
-    for (int index : candidates) bodyBox->addItem(bodies.at(index).visible ? bodies.at(index).name : bodies.at(index).name + QStringLiteral(" (nascosto)"));
+    for (int index : candidates) bodyBox->addItem(logicalBodyLabel(viewport, index));
     bodyBox->setCurrentIndex(qMax(0, int(candidates.indexOf(definition.firstBody))));
     bodyBox->setEnabled(replaced < 0);
     auto *factorBox = new ForgeCad::ExpressionSpinBox(&dialog);
@@ -13005,12 +13052,7 @@ static bool sketchOffsetDialog(QWidget *parent, CadViewport *viewport) {
 static bool patternDialog(QMainWindow *window, CadViewport *viewport, const QString &title, int replaced, const ExtrusionObject &initial,
                           const std::function<QString(const ExtrusionObject &)> &apply) {
     const QVector<ExtrusionObject> &bodies = viewport->extrusions();
-    QVector<int> candidates;
-    for (int index = 0; index < bodies.size() && (replaced < 0 || index < replaced); ++index) {
-        const ExtrusionObject &body = bodies.at(index);
-        const bool shape = body.forgeBody && !(body.operation < 0 && (body.feature == BodyFeature::DatumPlane || body.feature == BodyFeature::Helix));
-        if (shape) candidates.append(index);
-    }
+    const QVector<int> candidates = viewport->resultBodiesBefore(replaced);
     if (candidates.isEmpty()) {
         QMessageBox::information(window, title, QStringLiteral("Nella scena non ci sono corpi da ripetere."));
         return false;
@@ -13039,7 +13081,7 @@ static bool patternDialog(QMainWindow *window, CadViewport *viewport, const QStr
     dialog.setModal(false);
     auto *form = dialog.createScrollableForm();
     auto *bodyBox = new QComboBox(&dialog);
-    for (int index : candidates) bodyBox->addItem(bodies.at(index).visible ? bodies.at(index).name : bodies.at(index).name + QStringLiteral(" (nascosto)"));
+    for (int index : candidates) bodyBox->addItem(logicalBodyLabel(viewport, index));
     bodyBox->setCurrentIndex(int(candidates.indexOf(definition.firstBody)));
     bodyBox->setEnabled(replaced < 0);
     auto *kindBox = new QComboBox(&dialog);
@@ -13452,12 +13494,7 @@ static bool extrusionDialog(QMainWindow *window, CadViewport *viewport, const QS
 // modale; anteprima in ambra; la conferma chiama `apply`.
 static bool transformDialog(QMainWindow *window, CadViewport *viewport, const QString &title, int replaced, const ExtrusionObject &initial,
                             const std::function<QString(const ExtrusionObject &)> &apply) {
-    const QVector<ExtrusionObject> &bodies = viewport->extrusions();
-    QVector<int> candidates;
-    for (int index = 0; index < bodies.size() && (replaced < 0 || index < replaced); ++index) {
-        const ExtrusionObject &body = bodies.at(index);
-        if (body.forgeBody && !(body.operation < 0 && (body.feature == BodyFeature::DatumPlane || body.feature == BodyFeature::Helix))) candidates.append(index);
-    }
+    const QVector<int> candidates = viewport->resultBodiesBefore(replaced);
     if (candidates.isEmpty()) {
         QMessageBox::information(window, title, QStringLiteral("Nella scena non ci sono corpi da spostare."));
         return false;
@@ -13471,7 +13508,7 @@ static bool transformDialog(QMainWindow *window, CadViewport *viewport, const QS
     dialog.setModal(false);
     auto *form = dialog.createScrollableForm();
     auto *bodyBox = new QComboBox(&dialog);
-    for (int index : candidates) bodyBox->addItem(bodies.at(index).visible ? bodies.at(index).name : bodies.at(index).name + QStringLiteral(" (nascosto)"));
+    for (int index : candidates) bodyBox->addItem(logicalBodyLabel(viewport, index));
     bodyBox->setCurrentIndex(int(candidates.indexOf(definition.firstBody)));
     bodyBox->setEnabled(replaced < 0);
     const auto spin = [&dialog](double value, double lo, double hi, const QString &prefix, const QString &suffix = QString()) {
@@ -13576,6 +13613,19 @@ static bool transformDialog(QMainWindow *window, CadViewport *viewport, const QS
     viewport->setReferenceMarks({});
     scope.reset();
     return accepted;
+}
+
+// Nome del solo corpo logico per i pannelli che operano sui corpi interi.
+static QString logicalBodyLabel(CadViewport *viewport, int index) {
+    const ExtrusionObject &body = viewport->extrusions().at(index);
+    QString text = body.name;
+    for (const ModelBody &model : viewport->modelBodies())
+        if (model.id == body.modelBodyId) {
+            text = model.name;
+            break;
+        }
+    if (!body.solid) text += QStringLiteral(" (superficie)");
+    return text;
 }
 
 // Nome di un corpo risultante nelle finestre: il corpo logico e lo stadio
