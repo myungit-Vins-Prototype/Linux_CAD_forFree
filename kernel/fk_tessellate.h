@@ -28,6 +28,9 @@ namespace ForgeCad::Kernel {
 struct TessellationOptions {
     double deflection = 0.01;  // scarto massimo tra corde/triangoli e geometria esatta
     double angle = 0.25;       // angolo massimo (radianti) tra tangenti o normali vicine
+    // Lunghezza massima dei lati dei triangoli e dei segmenti del contorno;
+    // 0 = nessun limite. Utile per mesh di esportazione (STL), anche piane.
+    double maxEdgeLength = 0.0;
     // Thread per le facce (0 = tutti i core): ogni faccia si triangola da
     // sola, il risultato non dipende dal numero di thread.
     int threads = 0;

@@ -165,6 +165,33 @@ FK_TEST(TessellatePrimitives) {
     checkMesh(makeExtrusion(Frame3(Vec3(1, 2, 3), Vec3(0.3, 0.2, 1), Vec3(1, 0, 0)), region, -4.0), 0.005);
 }
 
+// La dimensione della mesh STL deve poter essere limitata indipendentemente
+// dallo scarto: su un piano la sola deflessione non aggiungerebbe triangoli.
+FK_TEST(TessellateMaximumEdgeLength) {
+    TessellationOptions coarse;
+    coarse.deflection = 1.0;
+    coarse.angle = kPi;
+    TessellationOptions limited = coarse;
+    limited.maxEdgeLength = 1.5;
+    for (const Body &body : {makeBox(Frame3(), 12.0, 8.0, 4.0), makeSphere(Frame3(), 5.0), makeTorus(Frame3(), 5.0, 1.5)}) {
+        const Tessellation base = tessellate(body, coarse);
+        const Tessellation fine = tessellate(body, limited);
+        std::size_t baseTriangles = 0, fineTriangles = 0;
+        double longest = 0.0;
+        for (const FaceMesh &face : base.faces) baseTriangles += face.triangles.size();
+        for (const FaceMesh &face : fine.faces) {
+            fineTriangles += face.triangles.size();
+            for (const std::array<int, 3> &triangle : face.triangles)
+                for (int k = 0; k < 3; ++k)
+                    longest = std::max(longest, distance(face.points[std::size_t(triangle[std::size_t(k)])],
+                                                         face.points[std::size_t(triangle[std::size_t((k + 1) % 3)])]));
+        }
+        FK_CHECK(fine.failedFaces == 0);
+        FK_CHECK(fineTriangles > baseTriangles);
+        FK_CHECK(longest <= 1.5 + 1e-9);
+    }
+}
+
 // Superfici con poli, coni, tori e facce senza bordo.
 FK_TEST(TessellatePolesAndTori) {
     const Frame3 frame(Vec3(1, 2, 3), Vec3(0.2, -0.3, 1), Vec3(1, 0, 0));

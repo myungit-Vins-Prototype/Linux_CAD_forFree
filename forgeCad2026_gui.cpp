@@ -256,6 +256,7 @@ public:
     }
 
     void setDisplayMode(int mode) { displayMode_ = mode; update(); }
+    void setHiddenEdgesVisible(bool visible) { hiddenEdgesVisible_ = visible; update(); }
     void setLightingPreset(int preset) { lightingPreset_ = preset; update(); }
     void setSnapEnabled(bool enabled) { snapEnabled_ = enabled; update(); }
     void setConstraintMode(int mode) { constraintMode_ = mode; }
@@ -279,6 +280,17 @@ public:
         update();
     }
     void removeGlassPanel(quintptr id) { glassPanels_.remove(id); update(); }
+    void setExportMeshPreview(const BodyDisplay &display, bool quadrangular, bool limited) {
+        exportMeshPreview_ = display;
+        exportMeshPreviewQuadrangular_ = quadrangular;
+        exportMeshPreviewLimited_ = limited;
+        update();
+    }
+    void clearExportMeshPreview() {
+        exportMeshPreview_ = {};
+        exportMeshPreviewLimited_ = false;
+        update();
+    }
     bool gpuGlassAvailable() const { return gpuGlassReady_; }
     QImage panelBackdropFrame() {
         if (panelBackdropSerial_ != renderedFrameSerial_ || panelBackdropCache_.isNull()) {
@@ -507,9 +519,33 @@ public:
         }
         return result;
     }
+    ForgeCad::StlExportOptions suggestedStlOptions() const {
+        QVector3D minimum, maximum;
+        bool found = false;
+        const auto add = [&](const QVector3D &point) {
+            if (!found) minimum = maximum = point, found = true;
+            else {
+                minimum.setX(qMin(minimum.x(), point.x())); minimum.setY(qMin(minimum.y(), point.y())); minimum.setZ(qMin(minimum.z(), point.z()));
+                maximum.setX(qMax(maximum.x(), point.x())); maximum.setY(qMax(maximum.y(), point.y())); maximum.setZ(qMax(maximum.z(), point.z()));
+            }
+        };
+        for (const ExtrusionObject &body : extrusions_) {
+            if (!body.visible || !body.error.isEmpty() || !body.forgeBody) continue;
+            for (const QVector3D &point : body.display.vertices) add(point);
+            for (const QVector<QVector3D> &edge : body.display.edges)
+                for (const QVector3D &point : edge) add(point);
+        }
+        const double diagonal = found ? qMax(1e-6, double((maximum - minimum).length())) : 100.0;
+        ForgeCad::StlExportOptions options;
+        options.maxEdgeLength = diagonal / 50.0;
+        options.deflection = diagonal / 2000.0;
+        options.angle = 10.0;
+        return options;
+    }
 
     // Impostazioni dell'interfaccia che la finestra salva.
     int displayMode() const { return displayMode_; }
+    bool hiddenEdgesVisible() const { return hiddenEdgesVisible_; }
     int lightingPreset() const { return lightingPreset_; }
     int tessellationQuality() const { return tessellationQuality_; }
     bool wheelZoomEnabled() const { return wheelZoomEnabled_; }
@@ -3369,6 +3405,7 @@ protected:
         if (!axesOnTop_) drawAxes();
         configureLighting();
         drawExtrusions();
+        drawExportMeshPreview();
         drawPickedEdges();
         drawSketch();
         drawSnapMarkers();
@@ -9066,28 +9103,55 @@ private:
         cache.valid = true;
         return cache;
     }
+    static bool edgeOccludedByMesh(const BodyDisplay &display, const QVector3D &origin, const QVector3D &direction,
+                                   const QVector3D &edgePoint, double tolerance) {
+        float surfaceDistance = 0.0f;
+        if (!meshRayHit(display, origin, direction, surfaceDistance)) return false;
+        const double edgeDistance = QVector3D::dotProduct(edgePoint - origin, direction.normalized());
+        return edgeDistance > double(surfaceDistance) + tolerance;
+    }
     // Spigolo sotto il puntatore (entro 8 pixel), -1 se nessuno, e il suo corpo in
     // `body`: quello in scelta o, finche' non ci sono spigoli scelti, qualsiasi corpo adatto.
     int pickEdge(const QPoint &position, int *body = nullptr) const {
         int best = -1, bestBody = -1;
         double nearest = 8.0;
+        const int frontBody = hiddenEdgesVisible_ ? -1 : gpuPickBody(position);
+        QVector3D rayOrigin, rayDirection;
+        if (!hiddenEdgesVisible_) viewRay(position, rayOrigin, rayDirection);
         for (int candidate = 0; candidate < extrusions_.size(); ++candidate) {
             if (!pickedEdges_.isEmpty() && candidate != edgePickBody_) continue;
             if (!edgePickEligible(candidate)) continue;
+            // Un altro corpo opaco davanti impedisce di prendere gli spigoli
+            // di questo. Sullo sfondo si prosegue: puo' essere una silhouette.
+            if (!hiddenEdgesVisible_ && frontBody >= 0 && frontBody != candidate) continue;
             const auto &projected = projectedBodyEdges(candidate);
             const auto &edges = projected.lines;
             for (int index = 0; index < edges.size(); ++index) {
                 if (!projected.bounds.at(index).adjusted(-9, -9, 9, 9).contains(position)) continue;
                 const auto &polyline = edges.at(index);
                 for (int k = 1; k < polyline.size(); ++k) {
+                    const QVector2D screenSegment(polyline.at(k) - polyline.at(k - 1));
+                    const float screenLength = screenSegment.lengthSquared();
+                    const float parameter = screenLength > 0.0f
+                        ? qBound(0.0f, QVector2D::dotProduct(QVector2D(QPointF(position) - polyline.at(k - 1)), screenSegment)
+                                                / screenLength, 1.0f)
+                        : 0.0f;
                     // A parita' di distanza vince il corpo gia' in scelta.
                     const double d = distanceToSegment(QPointF(position), polyline.at(k - 1), polyline.at(k))
                                    - (candidate == edgePickBody_ ? 0.5 : 0.0);
-                    if (d < nearest) {
-                        nearest = d;
-                        best = index;
-                        bestBody = candidate;
+                    if (d >= nearest) continue;
+                    if (!hiddenEdgesVisible_) {
+                        const QVector<QVector3D> &world = extrusions_.at(candidate).display.edges.at(index);
+                        const QVector3D edgePoint = world.at(k - 1) + parameter * (world.at(k) - world.at(k - 1));
+                        // Due pixel di margine assorbono la discretizzazione
+                        // della mesh senza far passare il bordo opposto di
+                        // pareti o fori sottili.
+                        const double tolerance = qMax(1e-5, 2.0 * double(zoom_) / qMax(1, height()));
+                        if (edgeOccludedByMesh(extrusions_.at(candidate).display, rayOrigin, rayDirection, edgePoint, tolerance)) continue;
                     }
+                    nearest = d;
+                    best = index;
+                    bestBody = candidate;
                 }
             }
         }
@@ -9228,20 +9292,45 @@ private:
     void drawPickedEdges() {
         drawSelectedFace();
         if (!edgePicking_) return;
-        glDisable(GL_DEPTH_TEST);
-        auto draw = [&](int body, int index, const QColor &color, float width) {
+        // I candidati rispettano la profondita' (a meno della modalita' X-ray),
+        // cosi' la scena non si riempie di bordi posteriori. Gli spigoli gia'
+        // scelti vengono invece sovrapposti nell'ultimo passaggio: durante il
+        // calcolo o il fallimento di un'anteprima la base viene ridisegnata e
+        // il suo depth buffer non deve far sparire la conferma della scelta.
+        if (hiddenEdgesVisible_) glDisable(GL_DEPTH_TEST);
+        else glEnable(GL_DEPTH_TEST);
+        auto draw = [&](int body, int index, const QColor &color, float width, bool reliableWidth = false) {
             if (body < 0 || body >= extrusions_.size()) return;
             const QVector<QVector<QVector3D>> &edges = extrusions_.at(body).display.edges;
             if (index < 0 || index >= edges.size()) return;
-            glLineWidth(width);
-            overlayRenderer_.draw(GL_LINE_STRIP, edges.at(index),
-                                  QVector4D(float(color.redF()), float(color.greenF()), float(color.blueF()), 1.0f));
+            const QVector4D rgba(float(color.redF()), float(color.greenF()), float(color.blueF()), 1.0f);
+            if (reliableWidth)
+                overlayRenderer_.drawWideLineStrip(edges.at(index), rgba, width * float(devicePixelRatioF()));
+            else {
+                glLineWidth(width);
+                overlayRenderer_.draw(GL_LINE_STRIP, edges.at(index), rgba);
+            }
         };
         if (edgePickBody_ >= 0)
             for (int index = 0; index < extrusions_.at(edgePickBody_).display.edges.size(); ++index) draw(edgePickBody_, index, QColor(120, 140, 160), 1.5f);
         for (int index : hoverFaceEdges_) draw(hoverEdgeBody_, index, kHoverColor, 3.0f);
-        if (hoverEdgeBody_ != edgePickBody_ || !pickedEdges_.contains(hoverEdge_)) draw(hoverEdgeBody_, hoverEdge_, kHoverColor, 4.0f);
-        for (int index : pickedEdges_) draw(edgePickBody_, index, kSelectionColor, 4.0f);
+
+        // Hover e selezione sono conferme dell'interazione, non geometria della
+        // scena: si disegnano opachi, senza profondita', con un alone scuro che
+        // li separa sia dal corpo sia dall'anteprima semitrasparente. Il picking
+        // ha gia' escluso gli spigoli nascosti quando la modalita' X-ray e' spenta.
+        glDisable(GL_DEPTH_TEST);
+        glDisable(GL_BLEND);
+        glDepthMask(GL_FALSE);
+        const QColor edgeHalo(8, 12, 18);
+        const bool hoveredSelected = hoverEdgeBody_ == edgePickBody_ && pickedEdges_.contains(hoverEdge_);
+        if (hoverEdge_ >= 0 && !hoveredSelected) {
+            draw(hoverEdgeBody_, hoverEdge_, edgeHalo, 4.25f, true);
+            draw(hoverEdgeBody_, hoverEdge_, kHoverColor, 2.75f, true);
+        }
+        for (int index : pickedEdges_) draw(edgePickBody_, index, edgeHalo, 5.0f, true);
+        for (int index : pickedEdges_) draw(edgePickBody_, index, kSelectionColor, 3.25f, true);
+        glDepthMask(GL_TRUE);
         glLineWidth(1.0f);
         glEnable(GL_DEPTH_TEST);
     }
@@ -9423,9 +9512,11 @@ private:
             } else if (displayMode_ != 1) {
                 displayCache_.setLightingEnabled(false);
                 displayCache_.setColor(QVector4D(0.82f, 0.91f, 0.96f, 1.0f));
+                if (hiddenEdgesVisible_) glDisable(GL_DEPTH_TEST);
                 glLineWidth(1.5f);
                 drawExtrusionEdges(extrusion);
                 glLineWidth(1.0f);
+                if (hiddenEdgesVisible_) glEnable(GL_DEPTH_TEST);
             }
         }
         const auto outline = [this](const SceneSelection &target, const QColor &color, float width) {
@@ -9449,13 +9540,15 @@ private:
         drawSectionPlane();
     }
 
-    // Anteprima di loft e raccordi: semitrasparente con isoparametriche U/V.
-    // Le altre funzioni mantengono le facce ambra opache.
+    // Anteprima di loft, raccordi, estrusioni e rivoluzioni: semitrasparente
+    // con isoparametriche U/V, nello stesso linguaggio visivo.
     void drawPreview() {
         const BodyDisplay &display = preview_.display;
         const bool loft = preview_.definition.operation < 0 && preview_.definition.feature == BodyFeature::Loft;
         const bool blend = preview_.definition.operation < 0 && preview_.definition.feature == BodyFeature::Blend;
-        const bool transparent = loft || blend;
+        const bool extrusion = preview_.definition.operation < 0 && preview_.definition.feature == BodyFeature::Extrusion;
+        const bool revolution = preview_.definition.operation < 0 && preview_.definition.feature == BodyFeature::Revolution;
+        const bool transparent = loft || blend || extrusion || revolution;
         // La superficie del raccordo e' interna al vecchio spigolo convesso:
         // in sovrapposizione alla base opaca la mostriamo come patch X-ray.
         if (blend) glDisable(GL_DEPTH_TEST);
@@ -9482,18 +9575,45 @@ private:
         glLineWidth(1.5f);
         displayCache_.edges(display);
         if (transparent && !display.constructionCurves.isEmpty()) {
-            overlayRenderer_.setStipple(true, 0x3F3F, 1);
-            glLineWidth(1.0f);
-            for (const QVector<QVector3D> &curve : display.constructionCurves) {
-                overlayRenderer_.draw(GL_LINE_STRIP, curve, QVector4D(0.45f, 0.92f, 1.0f, 1.0f));
-            }
             overlayRenderer_.setStipple(false);
+            glLineWidth(1.8f);
+            for (const QVector<QVector3D> &curve : display.constructionCurves) {
+                overlayRenderer_.draw(GL_LINE_STRIP, curve, QVector4D(0.30f, 0.95f, 1.0f, 1.0f));
+            }
         }
         glLineWidth(1.0f);
         if (blend) {
             glEnable(GL_DEPTH_TEST);
             glDepthFunc(GL_LEQUAL);
         }
+    }
+
+    // Anteprima della mesh d'esportazione. Le facce trasparenti fanno capire
+    // quali corpi sono inclusi; la griglia mostra la topologia effettiva del
+    // file (triangoli STL oppure quad/triangoli OBJ).
+    void drawExportMeshPreview() {
+        if (exportMeshPreview_.vertices.isEmpty() && exportMeshPreview_.edges.isEmpty()) return;
+        glEnable(GL_BLEND);
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+        glDepthMask(GL_FALSE);
+        if (!exportMeshPreview_.vertices.isEmpty()) {
+            displayCache_.setLightingEnabled(false);
+            displayCache_.setColor(exportMeshPreviewQuadrangular_
+                ? QVector4D(0.18f, 0.82f, 0.94f, 0.18f)
+                : QVector4D(1.00f, 0.62f, 0.18f, 0.18f));
+            glEnable(GL_POLYGON_OFFSET_FILL);
+            glPolygonOffset(-0.75f, -1.0f);
+            drawDisplayFaces(exportMeshPreview_);
+            glDisable(GL_POLYGON_OFFSET_FILL);
+        }
+        displayCache_.setLightingEnabled(false);
+        displayCache_.setColor(exportMeshPreviewQuadrangular_
+            ? QVector4D(0.20f, 0.92f, 1.00f, 0.92f)
+            : QVector4D(1.00f, 0.72f, 0.25f, 0.92f));
+        glLineWidth(1.0f);
+        displayCache_.edges(exportMeshPreview_);
+        glDepthMask(GL_TRUE);
+        glDisable(GL_BLEND);
     }
 
     // Chiave di una richiesta d'anteprima: due richieste uguali non si rifanno.
@@ -9613,8 +9733,13 @@ private:
         } else {
             tessellateGeometry(body, in.quality, display);
         }
-        if (in.definition.operation < 0 && in.definition.feature == BodyFeature::Loft && body.forgeBody)
-            ForgeCad::forgeSurfaceConstructionCurves(*body.forgeBody, display, in.quality <= 0 ? 3 : in.quality == 1 ? 5 : 7);
+        if (in.definition.operation < 0 && body.forgeBody) {
+            const int divisions = in.quality <= 0 ? 3 : in.quality == 1 ? 5 : 7;
+            if (in.definition.feature == BodyFeature::Loft)
+                ForgeCad::forgeSurfaceConstructionCurves(*body.forgeBody, display, divisions);
+            else if (in.definition.feature == BodyFeature::Extrusion || in.definition.feature == BodyFeature::Revolution)
+                ForgeCad::forgeSurfaceConstructionCurves(*body.forgeBody, display, divisions, true);
+        }
         return true;
     }
 
@@ -9920,11 +10045,24 @@ private:
             "in vec2 uv;\n"
             "out vec4 fragmentColor;\n"
             "void main() {\n"
-            " vec4 c = texture(sourceTexture, uv) * 0.227027;\n"
-            " c += texture(sourceTexture, uv + direction * 1.384615) * 0.316216;\n"
-            " c += texture(sourceTexture, uv - direction * 1.384615) * 0.316216;\n"
-            " c += texture(sourceTexture, uv + direction * 3.230769) * 0.070270;\n"
-            " c += texture(sourceTexture, uv - direction * 3.230769) * 0.070270;\n"
+            // La composizione finale usa direction=(0,0): in quel passaggio
+            // basta una lettura, non tredici letture identiche.
+            " if (direction.x == 0.0 && direction.y == 0.0) { fragmentColor = texture(sourceTexture, uv); return; }\n"
+            // Tredici campioni contigui: con soli cinque campioni molto
+            // distanziati i contorni netti apparivano come immagini ripetute.
+            " vec4 c = texture(sourceTexture, uv) * 0.137022816;\n"
+            " c += texture(sourceTexture, uv + direction * 1.0) * 0.129618031;\n"
+            " c += texture(sourceTexture, uv - direction * 1.0) * 0.129618031;\n"
+            " c += texture(sourceTexture, uv + direction * 2.0) * 0.109719294;\n"
+            " c += texture(sourceTexture, uv - direction * 2.0) * 0.109719294;\n"
+            " c += texture(sourceTexture, uv + direction * 3.0) * 0.083108539;\n"
+            " c += texture(sourceTexture, uv - direction * 3.0) * 0.083108539;\n"
+            " c += texture(sourceTexture, uv + direction * 4.0) * 0.056331764;\n"
+            " c += texture(sourceTexture, uv - direction * 4.0) * 0.056331764;\n"
+            " c += texture(sourceTexture, uv + direction * 5.0) * 0.034166942;\n"
+            " c += texture(sourceTexture, uv - direction * 5.0) * 0.034166942;\n"
+            " c += texture(sourceTexture, uv + direction * 6.0) * 0.018544022;\n"
+            " c += texture(sourceTexture, uv - direction * 6.0) * 0.018544022;\n"
             " fragmentColor = c;\n"
             "}\n";
         gpuGlassReady_ = glassShader_->addShaderFromSourceCode(QOpenGLShader::Vertex, vertex)
@@ -9934,16 +10072,33 @@ private:
     }
 
     void ensureGlassBuffers(const QSize &fullSize) {
-        // Il 75% elimina gran parte della pixelatura visibile sui bordi e sul
-        // testo della scena, mantenendo il costo sotto quello del full-size.
-        const QSize work(qMax(1, (fullSize.width() * 3 + 3) / 4),
-                         qMax(1, (fullSize.height() * 3 + 3) / 4));
-        if (!glassSource_ || glassSource_->size() != fullSize)
+        // A meta' risoluzione i 13 campioni ravvicinati costano circa quanto i
+        // vecchi 5 campioni al 75%, ma producono una sfocatura continua.
+        const QSize work(qMax(1, (fullSize.width() + 1) / 2),
+                         qMax(1, (fullSize.height() + 1) / 2));
+        bool configureSource = false, configureWork = false;
+        if (!glassSource_ || glassSource_->size() != fullSize) {
             glassSource_ = std::make_unique<QOpenGLFramebufferObject>(fullSize);
+            configureSource = true;
+        }
         if (!glassPing_ || glassPing_->size() != work) {
             glassPing_ = std::make_unique<QOpenGLFramebufferObject>(work);
             glassBlur_ = std::make_unique<QOpenGLFramebufferObject>(work);
+            configureWork = true;
         }
+        const auto configureTexture = [this](GLuint texture) {
+            glBindTexture(GL_TEXTURE_2D, texture);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        };
+        if (configureSource) configureTexture(glassSource_->texture());
+        if (configureWork) {
+            configureTexture(glassPing_->texture());
+            configureTexture(glassBlur_->texture());
+        }
+        glBindTexture(GL_TEXTURE_2D, 0);
         if (!glassSource_->isValid() || !glassPing_->isValid() || !glassBlur_->isValid()) gpuGlassReady_ = false;
     }
 
@@ -10012,7 +10167,8 @@ private:
         // blur_ e' espresso in pixel logici. Conserva la stessa estensione
         // visiva al variare sia del DPR sia della risoluzione di lavoro.
         const float workRatio = float(glassPing_->width()) / qMax(1, pixels.width());
-        const float scale = qMax(0.25f, blur * float(devicePixelRatioF()) * workRatio / 2.0f);
+        const float radiusAtWorkSize = blur * float(devicePixelRatioF()) * workRatio;
+        const float scale = qMax(0.25f, radiusAtWorkSize / 6.0f);
         glassBlurPass(glassPing_.get(), glassSource_->texture(),
                       QVector2D(scale / glassPing_->width(), 0));
         glassBlurPass(glassBlur_.get(), glassPing_->texture(),
@@ -10095,6 +10251,7 @@ private:
     }
 
     int displayMode_ = 2;
+    bool hiddenEdgesVisible_ = false;  // disegno e selezione X-ray degli spigoli occultati
     float yaw_ = -32.0f, pitch_ = 22.0f, zoom_ = 8.0f;
     float roll_ = 0.0f;  // rotazione attorno all'asse di vista (schizzi su facce inclinate)
     AxesOrientation orientation_;  // orientamento degli assi del documento (vedi basisMatrix)
@@ -10226,6 +10383,9 @@ private:
         quint64 generation = 0;
     };
     Preview preview_;
+    BodyDisplay exportMeshPreview_;
+    bool exportMeshPreviewQuadrangular_ = false;
+    bool exportMeshPreviewLimited_ = false;
     int previewErrorSketch_ = -1;  // sezione della loft evidenziata quando una guida non la incontra
     QTimer *previewTimer_ = nullptr;
     QObject *previewReceiver_ = nullptr;
@@ -15412,6 +15572,185 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
     });
     // Esportazione per altri CAD (cad_export): corpi visibili, B-rep esatti in mm.
     auto *exportMenu = fileMenu->addMenu(QStringLiteral("Esporta"));
+    const auto exportMesh = [this, viewport](bool quadrangular) {
+        const QVector<ForgeCad::ExportBody> bodies = viewport->exportableBodies();
+        bool hasBody = false;
+        for (const ForgeCad::ExportBody &body : bodies) hasBody = hasBody || bool(body.body);
+        if (!hasBody) {
+            QMessageBox::information(this, quadrangular ? QStringLiteral("Esporta OBJ") : QStringLiteral("Esporta STL"),
+                                     QStringLiteral("Non ci sono solidi o superfici visibili da esportare."));
+            return;
+        }
+
+        const ForgeCad::StlExportOptions suggested = viewport->suggestedStlOptions();
+        QSettings settings;
+        QDialog dialog(this);
+        dialog.setWindowTitle(quadrangular ? QStringLiteral("Qualita' mesh OBJ quadrangolare")
+                                           : QStringLiteral("Qualita' mesh STL"));
+        dialog.setMinimumWidth(470);
+        auto *layout = new QVBoxLayout(&dialog);
+        auto *description = new QLabel(quadrangular
+            ? QStringLiteral("OBJ conserva i quadrilateri validi per Blender; vicino a poli, fori e transizioni restano alcuni triangoli.\n"
+                             "Dimensione, scarto cordale e angolo controllano la densita' e l'approssimazione delle curve.")
+            : QStringLiteral("La dimensione massima controlla la densita' anche sulle facce piane.\n"
+                             "Lo scarto cordale e l'angolo controllano l'approssimazione di raggi e superfici curve."), &dialog);
+        description->setWordWrap(true);
+        layout->addWidget(description);
+        auto *form = new QFormLayout;
+        const auto distanceBox = [&](double value, bool allowZero) {
+            auto *box = new QDoubleSpinBox(&dialog);
+            box->setDecimals(6);
+            box->setRange(allowZero ? 0.0 : 0.000001, 1.0e9);
+            box->setSingleStep(qMax(0.000001, value / 10.0));
+            box->setSuffix(QStringLiteral(" mm"));
+            box->setValue(value);
+            if (allowZero) box->setSpecialValueText(QStringLiteral("Nessun limite"));
+            return box;
+        };
+        auto *edgeSize = distanceBox(settings.value(QStringLiteral("export/stlMaxEdge"), suggested.maxEdgeLength).toDouble(), true);
+        auto *deflection = distanceBox(settings.value(QStringLiteral("export/stlDeflection"), suggested.deflection).toDouble(), false);
+        auto *angle = new QDoubleSpinBox(&dialog);
+        angle->setDecimals(2); angle->setRange(0.1, 90.0); angle->setSingleStep(1.0); angle->setSuffix(QStringLiteral(" °"));
+        angle->setValue(settings.value(QStringLiteral("export/stlAngle"), suggested.angle).toDouble());
+        edgeSize->setToolTip(QStringLiteral("Lunghezza massima di ogni lato dei triangoli; zero lascia decidere allo scarto e all'angolo"));
+        deflection->setToolTip(QStringLiteral("Distanza massima ammessa tra la mesh e la geometria esatta"));
+        angle->setToolTip(QStringLiteral("Variazione massima della normale tra punti vicini sulle superfici curve"));
+        form->addRow(QStringLiteral("Lato massimo triangolo:"), edgeSize);
+        form->addRow(QStringLiteral("Scarto cordale massimo:"), deflection);
+        form->addRow(QStringLiteral("Angolo massimo superfici:"), angle);
+        auto *count = new QLabel(QStringLiteral("Non ancora calcolato"), &dialog);
+        form->addRow(QStringLiteral("Risultato:"), count);
+        layout->addLayout(form);
+        auto *showPreview = new QCheckBox(QStringLiteral("Mostra anteprima della mesh nella vista"), &dialog);
+        showPreview->setChecked(settings.value(QStringLiteral("export/showMeshPreview"), true).toBool());
+        showPreview->setToolTip(QStringLiteral("Riutilizza la mesh calcolata: non esegue una seconda tassellazione"));
+        layout->addWidget(showPreview);
+        auto *buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dialog);
+        buttons->button(QDialogButtonBox::Ok)->setText(QStringLiteral("Esporta..."));
+        auto *calculate = buttons->addButton(QStringLiteral("Calcola mesh e anteprima"), QDialogButtonBox::ActionRole);
+        layout->addWidget(buttons);
+        connect(buttons, &QDialogButtonBox::accepted, &dialog, &QDialog::accept);
+        connect(buttons, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
+
+        ForgeCad::StlBuildResult built;
+        ForgeCad::ObjBuildResult builtObj;
+        ForgeCad::StlExportOptions builtOptions;
+        bool cacheValid = false;
+        const auto currentOptions = [&] {
+            ForgeCad::StlExportOptions options;
+            options.maxEdgeLength = edgeSize->value();
+            options.deflection = deflection->value();
+            options.angle = angle->value();
+            return options;
+        };
+        const auto sameOptions = [](const ForgeCad::StlExportOptions &a, const ForgeCad::StlExportOptions &b) {
+            return a.maxEdgeLength == b.maxEdgeLength && a.deflection == b.deflection && a.angle == b.angle;
+        };
+        const auto build = [&] {
+            builtOptions = currentOptions();
+            count->setStyleSheet(QString());
+            count->setText(QStringLiteral("Calcolo in corso..."));
+            calculate->setEnabled(false);
+            buttons->button(QDialogButtonBox::Ok)->setEnabled(false);
+            QApplication::setOverrideCursor(Qt::WaitCursor);
+            QApplication::processEvents(QEventLoop::ExcludeUserInputEvents);
+            if (quadrangular) builtObj = ForgeCad::buildQuadObj(bodies, builtOptions);
+            else built = ForgeCad::buildBinaryStl(bodies, builtOptions);
+            QApplication::restoreOverrideCursor();
+            calculate->setEnabled(true);
+            buttons->button(QDialogButtonBox::Ok)->setEnabled(true);
+            const QString buildError = quadrangular ? builtObj.error : built.error;
+            cacheValid = buildError.isEmpty();
+            if (!cacheValid) {
+                viewport->clearExportMeshPreview();
+                count->setStyleSheet(QStringLiteral("color:#ff806e"));
+                count->setText(buildError);
+            } else {
+                const bool limited = quadrangular ? builtObj.previewLimited : built.previewLimited;
+                if (quadrangular) {
+                    count->setText(QStringLiteral("%1 quadrilateri + %2 triangoli — %3%4")
+                        .arg(QLocale().toString(qlonglong(builtObj.quadCount)),
+                             QLocale().toString(qlonglong(builtObj.triangleCount)),
+                             QLocale().formattedDataSize(builtObj.data.size()),
+                             limited ? QStringLiteral(" — anteprima alleggerita") : QString()));
+                } else {
+                    count->setText(QStringLiteral("%1 triangoli — %2%3")
+                        .arg(QLocale().toString(qlonglong(built.triangleCount)),
+                             QLocale().formattedDataSize(built.data.size()),
+                             limited ? QStringLiteral(" — anteprima alleggerita") : QString()));
+                }
+                if (showPreview->isChecked())
+                    viewport->setExportMeshPreview(quadrangular ? builtObj.preview : built.preview, quadrangular, limited);
+                else viewport->clearExportMeshPreview();
+                QApplication::processEvents(QEventLoop::ExcludeUserInputEvents);
+            }
+            return cacheValid;
+        };
+        connect(calculate, &QPushButton::clicked, &dialog, [&, build] { build(); });
+        const auto invalidate = [&] {
+            cacheValid = false;
+            viewport->clearExportMeshPreview();
+            count->setStyleSheet(QString());
+            count->setText(QStringLiteral("Parametri modificati — ricalcolare"));
+        };
+        connect(edgeSize, &QDoubleSpinBox::valueChanged, &dialog, [invalidate](double) { invalidate(); });
+        connect(deflection, &QDoubleSpinBox::valueChanged, &dialog, [invalidate](double) { invalidate(); });
+        connect(angle, &QDoubleSpinBox::valueChanged, &dialog, [invalidate](double) { invalidate(); });
+        connect(showPreview, &QCheckBox::toggled, &dialog, [&](bool visible) {
+            settings.setValue(QStringLiteral("export/showMeshPreview"), visible);
+            if (!visible || !cacheValid) viewport->clearExportMeshPreview();
+            else viewport->setExportMeshPreview(quadrangular ? builtObj.preview : built.preview, quadrangular,
+                                                quadrangular ? builtObj.previewLimited : built.previewLimited);
+        });
+        const int dialogResult = dialog.exec();
+        viewport->clearExportMeshPreview();
+        if (dialogResult != QDialog::Accepted) return;
+
+        const ForgeCad::StlExportOptions requested = currentOptions();
+        settings.setValue(QStringLiteral("export/stlMaxEdge"), requested.maxEdgeLength);
+        settings.setValue(QStringLiteral("export/stlDeflection"), requested.deflection);
+        settings.setValue(QStringLiteral("export/stlAngle"), requested.angle);
+        const QString base = documentPath_.isEmpty() ? QStringLiteral("Senza nome") : QFileInfo(documentPath_).completeBaseName();
+        const QString directory = documentPath_.isEmpty() ? QDir::homePath() : QFileInfo(documentPath_).absolutePath();
+        const QString suffix = quadrangular ? QStringLiteral("obj") : QStringLiteral("stl");
+        QString path = QFileDialog::getSaveFileName(this,
+                                                    quadrangular ? QStringLiteral("Esporta OBJ quadrangolare") : QStringLiteral("Esporta STL"),
+                                                    directory + QStringLiteral("/") + base + QStringLiteral(".") + suffix,
+                                                    quadrangular ? QStringLiteral("Wavefront OBJ (*.obj)") : QStringLiteral("STL binario (*.stl)"));
+        if (path.isEmpty()) return;
+        if (QFileInfo(path).suffix().compare(suffix, Qt::CaseInsensitive) != 0) path += QStringLiteral(".") + suffix;
+        if (!cacheValid || !sameOptions(requested, builtOptions)) {
+            beginForegroundProgress(quadrangular ? QStringLiteral("Tassellazione OBJ quadrangolare...")
+                                                 : QStringLiteral("Tassellazione STL..."));
+            builtOptions = requested;
+            if (quadrangular) builtObj = ForgeCad::buildQuadObj(bodies, requested);
+            else built = ForgeCad::buildBinaryStl(bodies, requested);
+            cacheValid = quadrangular ? builtObj.error.isEmpty() : built.error.isEmpty();
+            endForegroundProgress();
+        }
+        if (!cacheValid) {
+            QMessageBox::warning(this, quadrangular ? QStringLiteral("Esporta OBJ") : QStringLiteral("Esporta STL"),
+                                 quadrangular ? builtObj.error : built.error);
+            return;
+        }
+        beginForegroundProgress(quadrangular ? QStringLiteral("Scrittura OBJ...") : QStringLiteral("Scrittura STL..."));
+        const QString error = quadrangular ? ForgeCad::saveQuadObj(path, builtObj.data)
+                                           : ForgeCad::saveBinaryStl(path, built.data);
+        endForegroundProgress();
+        if (!error.isEmpty()) QMessageBox::warning(this, quadrangular ? QStringLiteral("Esporta OBJ") : QStringLiteral("Esporta STL"), error);
+        else if (quadrangular)
+            statusBar()->showMessage(QStringLiteral("Esportati %1 quadrilateri e %2 triangoli in %3")
+                .arg(QLocale().toString(qlonglong(builtObj.quadCount)),
+                     QLocale().toString(qlonglong(builtObj.triangleCount)), path), 10000);
+        else
+            statusBar()->showMessage(QStringLiteral("Esportati %1 triangoli in %2")
+                                     .arg(QLocale().toString(qlonglong(built.triangleCount)), path), 10000);
+    };
+    connect(exportMenu->addAction(QStringLiteral("STL mesh triangolare...")), &QAction::triggered, this,
+            [exportMesh] { exportMesh(false); });
+    connect(exportMenu->addAction(QStringLiteral("OBJ mesh quadrangolare (Blender)...")), &QAction::triggered, this,
+            [exportMesh] { exportMesh(true); });
+    exportMenu->addSeparator();
     const QList<QPair<QString, ForgeCad::ExportFormat>> exportFormats = {
         {QStringLiteral("STEP AP242..."), ForgeCad::ExportFormat::StepAP242},
         {QStringLiteral("STEP AP214..."), ForgeCad::ExportFormat::StepAP214},
@@ -15738,6 +16077,16 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
     addMode(QStringLiteral("Solo linee esterne"), 0);
     addMode(QStringLiteral("Mesh"), 1);
     addMode(QStringLiteral("Mesh + linee esterne"), 2);
+    modeMenu->addSeparator();
+    QAction *hiddenEdgesAction = modeMenu->addAction(QStringLiteral("Mostra e seleziona i bordi nascosti"));
+    hiddenEdgesAction->setCheckable(true);
+    hiddenEdgesAction->setToolTip(QStringLiteral("Visualizza gli spigoli attraverso le facce e ne consente la selezione; disattivato facilita la scelta dei contorni esterni"));
+    hiddenEdgesAction->setChecked(viewSettings.value(QStringLiteral("view/hiddenEdges"), false).toBool());
+    viewport->setHiddenEdgesVisible(hiddenEdgesAction->isChecked());
+    connect(hiddenEdgesAction, &QAction::toggled, this, [viewport](bool visible) {
+        viewport->setHiddenEdgesVisible(visible);
+        QSettings().setValue(QStringLiteral("view/hiddenEdges"), visible);
+    });
     QAction *studio = lightingMenu->addAction(QStringLiteral("Studio"));
     QAction *soft = lightingMenu->addAction(QStringLiteral("Morbida"));
     QAction *inspection = lightingMenu->addAction(QStringLiteral("Ispezione"));
@@ -17065,6 +17414,7 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
         settings.setValue(QStringLiteral("geometry"), saveGeometry());
         settings.setValue(QStringLiteral("state"), saveState());
         settings.setValue(QStringLiteral("displayMode"), viewport->displayMode());
+        settings.setValue(QStringLiteral("hiddenEdges"), viewport->hiddenEdgesVisible());
         settings.setValue(QStringLiteral("lighting"), viewport->lightingPreset());
         settings.setValue(QStringLiteral("quality"), viewport->tessellationQuality());
         settings.setValue(QStringLiteral("wheelZoom"), viewport->wheelZoomEnabled());
@@ -17098,7 +17448,7 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
         for (const QString &key : {QStringLiteral("view/grid"), QStringLiteral("view/axisLength"), QStringLiteral("view/axes"), QStringLiteral("view/axesOnTop"),
                                    QStringLiteral("view/antialiasing"), QStringLiteral("view/panKey"), QStringLiteral("sketch/originSnap"),
                                    QStringLiteral("view/constraintPanel"), QStringLiteral("document/saveBodies"),
-                                   QStringLiteral("view/sketchBodyOpacity")})
+                                   QStringLiteral("view/sketchBodyOpacity"), QStringLiteral("view/hiddenEdges")})
             settings.remove(key);
         statusBar()->showMessage(QStringLiteral("Le impostazioni predefinite valgono dal prossimo avvio."), 6000);
     });
@@ -17109,6 +17459,7 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
             if (index >= 0 && index < actions.size()) actions.at(index)->trigger();
         };
         if (settings.contains(QStringLiteral("displayMode"))) pick(modeActions, settings.value(QStringLiteral("displayMode")).toInt());
+        if (settings.contains(QStringLiteral("hiddenEdges"))) hiddenEdgesAction->setChecked(settings.value(QStringLiteral("hiddenEdges")).toBool());
         if (settings.contains(QStringLiteral("lighting"))) pick(lightingActions, settings.value(QStringLiteral("lighting")).toInt());
         if (settings.contains(QStringLiteral("quality"))) pick(qualityActions, settings.value(QStringLiteral("quality")).toInt());
         if (settings.contains(QStringLiteral("wheelZoom"))) wheelZoomAction->setChecked(settings.value(QStringLiteral("wheelZoom")).toBool());

@@ -7,12 +7,15 @@
 #include "fk_helix.h"
 #include "fk_mass.h"
 #include "fk_primitives.h"
+#include "fk_revolve.h"
 #include "fk_surface_algo.h"
 #include <QGraphicsItem>
 #include <QGraphicsView>
 #include <QSurfaceFormat>
 #include <QTemporaryDir>
+#include <QtEndian>
 #include <fstream>
+#include <cstring>
 #include <iostream>
 #include <stdexcept>
 
@@ -21,6 +24,33 @@ static void require(bool ok, const char *message) {
 }
 class ViewportInteractionTest {
 public:
+    // Diagnostica facoltativa: --mesh-stats file.prt [lato scarto angolo].
+    static void meshStats(const QStringList &args) {
+        using namespace ForgeCad;
+        DocumentState document;
+        require(!args.isEmpty() && loadDocumentFile(args.first(), document).isEmpty(), "lettura documento mesh");
+        QVector<ExportBody> bodies;
+        for (int i = 0; i < document.extrusions.size(); ++i) {
+            ExtrusionObject &feature = document.extrusions[i];
+            if (!feature.forgeBody && !feature.suppressed)
+                CadViewport::buildGeometry(feature, i, document.sketches, document.extrusions);
+            if (feature.visible && feature.error.isEmpty() && feature.forgeBody) {
+                std::cout << "corpo " << feature.name.toStdString() << " sheet=" << feature.forgeBody->isSheet() << std::endl;
+                bodies.append({feature.name, feature.forgeBody, {}, QColor()});
+            }
+        }
+        StlExportOptions options;
+        options.maxEdgeLength = args.size() > 1 ? args.at(1).toDouble() : 1.0;
+        options.deflection = args.size() > 2 ? args.at(2).toDouble() : 0.05;
+        options.angle = args.size() > 3 ? args.at(3).toDouble() : 10.0;
+        const StlBuildResult stl = buildBinaryStl(bodies, options);
+        const ObjBuildResult obj = buildQuadObj(bodies, options);
+        std::cout << "STL triangoli=" << stl.triangleCount << " errore=" << stl.error.toStdString() << '\n'
+                  << "OBJ quad=" << obj.quadCount << " triangoli=" << obj.triangleCount
+                  << " errore=" << obj.error.toStdString() << std::endl;
+        require(stl.error.isEmpty() && obj.error.isEmpty(), "costruzione mesh del documento");
+        if (args.size() > 4) require(saveQuadObj(args.at(4), obj.data).isEmpty(), "salvataggio OBJ diagnostico");
+    }
     static void loftCorner(const QString &path) {
         using namespace ForgeCad;
         DocumentState document;
@@ -1070,6 +1100,78 @@ public:
         forgeTessellate(*loftBody, 0, loftDisplay);
         forgeSurfaceConstructionCurves(*loftBody, loftDisplay, 4);
         require(!loftDisplay.constructionCurves.isEmpty(), "curve UV dell'anteprima loft");
+        const Kernel::Body previewBox = Kernel::makeBox(
+            Kernel::Frame3(Kernel::Vec3(), Kernel::Vec3(0, 0, 1), Kernel::Vec3(1, 0, 0)), 4.0, 3.0, 2.0);
+        BodyDisplay extrusionDisplay;
+        forgeTessellate(previewBox, 0, extrusionDisplay);
+        forgeSurfaceConstructionCurves(previewBox, extrusionDisplay, 4, true);
+        require(!extrusionDisplay.constructionCurves.isEmpty(), "curve UV anche sulle facce piane dell'anteprima estrusione");
+        const QVector3D rayOrigin(2.0f, 1.5f, 10.0f), rayDirection(0.0f, 0.0f, -1.0f);
+        require(!CadViewport::edgeOccludedByMesh(extrusionDisplay, rayOrigin, rayDirection, QVector3D(0, 0, 2), 1e-5)
+                    && CadViewport::edgeOccludedByMesh(extrusionDisplay, rayOrigin, rayDirection, QVector3D(0, 0, 0), 1e-5),
+                "i bordi posteriori sono esclusi dalla selezione visibile");
+        {
+            const QVector<ExportBody> exportBox{{QStringLiteral("Blocco STL"),
+                std::make_shared<const Kernel::Body>(previewBox), {}, QColor(80, 160, 220)}};
+            StlExportOptions coarse;
+            coarse.maxEdgeLength = 3.0; coarse.deflection = 1.0; coarse.angle = 90.0;
+            const StlBuildResult coarseStl = buildBinaryStl(exportBox, coarse);
+            StlExportOptions fine = coarse;
+            fine.maxEdgeLength = 1.0;
+            const StlBuildResult fineStl = buildBinaryStl(exportBox, fine);
+            require(coarseStl.error.isEmpty() && fineStl.error.isEmpty()
+                        && fineStl.triangleCount > coarseStl.triangleCount,
+                    "STL: il lato massimo aumenta realmente il numero dei triangoli");
+            require(fineStl.data.size() == 84 + 50 * qint64(fineStl.triangleCount),
+                    "STL binario: 50 byte per triangolo");
+            require(fineStl.preview.vertices.size() / 3 == qint64(fineStl.triangleCount)
+                        && !fineStl.preview.edges.isEmpty() && !fineStl.previewLimited,
+                    "STL: anteprima con facce e griglia triangolare completa");
+            quint32 storedTriangles = 0;
+            std::memcpy(&storedTriangles, fineStl.data.constData() + 80, sizeof(storedTriangles));
+            require(qFromLittleEndian(storedTriangles) == fineStl.triangleCount,
+                    "STL binario: conteggio triangoli nell'intestazione");
+            QTemporaryDir stlTemporary;
+            const QString stlPath = stlTemporary.filePath(QStringLiteral("mesh.stl"));
+            require(stlTemporary.isValid() && saveBinaryStl(stlPath, fineStl.data).isEmpty()
+                        && QFileInfo(stlPath).size() == fineStl.data.size(),
+                    "scrittura atomica del file STL");
+            const ObjBuildResult quadObj = buildQuadObj(exportBox, fine);
+            require(quadObj.error.isEmpty() && quadObj.quadCount > 0
+                        && quadObj.quadCount * 2 + quadObj.triangleCount <= fineStl.triangleCount,
+                    "OBJ quadrangolare: triangoli adiacenti accoppiati");
+            quint64 objFaces = 0, objQuads = 0;
+            for (const QByteArray &line : quadObj.data.split('\n')) {
+                if (!line.startsWith("f ")) continue;
+                ++objFaces;
+                if (line.count(' ') == 4) ++objQuads;
+            }
+            require(objFaces == quadObj.quadCount + quadObj.triangleCount && objQuads == quadObj.quadCount,
+                    "OBJ quadrangolare: conteggi coerenti con le facce scritte");
+            require(!quadObj.preview.vertices.isEmpty()
+                        && quadObj.preview.edges.size() == qint64(quadObj.quadCount + quadObj.triangleCount)
+                        && !quadObj.previewLimited,
+                    "OBJ quadrangolare: anteprima con la stessa griglia quad/triangolo esportata");
+            const QString objPath = stlTemporary.filePath(QStringLiteral("mesh.obj"));
+            require(saveQuadObj(objPath, quadObj.data).isEmpty() && QFileInfo(objPath).size() == quadObj.data.size(),
+                    "scrittura atomica del file OBJ quadrangolare");
+
+            const Kernel::Body sphere = Kernel::makeSphere(Kernel::Frame3(), 5.0);
+            const QVector<ExportBody> exportSphere{{QStringLiteral("Sfera STL"),
+                std::make_shared<const Kernel::Body>(sphere), {}, QColor()}};
+            StlExportOptions radialCoarse;
+            radialCoarse.maxEdgeLength = 0.0; radialCoarse.deflection = 0.5; radialCoarse.angle = 90.0;
+            StlExportOptions radialFine = radialCoarse;
+            radialFine.deflection = 0.05;
+            const StlBuildResult coarseSphere = buildBinaryStl(exportSphere, radialCoarse);
+            const StlBuildResult fineSphere = buildBinaryStl(exportSphere, radialFine);
+            require(coarseSphere.error.isEmpty() && fineSphere.error.isEmpty()
+                        && fineSphere.triangleCount > coarseSphere.triangleCount,
+                    "STL: lo scarto cordale aumenta l'approssimazione dei raggi");
+            const ObjBuildResult sphereObj = buildQuadObj(exportSphere, radialFine);
+            require(sphereObj.error.isEmpty() && sphereObj.quadCount > 0,
+                    "OBJ quadrangolare anche sulle superfici curve");
+        }
 
         DocumentState state = v.documentState();
         state.sketches[sketch] = work;
@@ -1196,16 +1298,22 @@ public:
             focusPanel.createScrollableForm()->addRow(QStringLiteral("Valore:"), focusSpin);
             focusPanel.show();
             for (int i = 0; i < 4; ++i) QApplication::processEvents();
-            require(focusSpin->hasFocus(), "focus iniziale sul primo dato del pannello");
+            // Wayland puo' negare l'attivazione della finestra di test quando
+            // l'utente sta lavorando in un'altra applicazione. In quel caso il
+            // widget resta comunque il destinatario predisposto per il focus.
+            require(focusSpin->hasFocus() || focusPanel.focusWidget() == focusSpin,
+                    "focus iniziale sul primo dato del pannello");
             require(focusPanel.size().width() <= v.width() - 32 && focusPanel.size().height() <= v.height() - 32,
                     "dimensione automatica limitata al viewport");
             focusPanel.hide();
             require(v.gpuGlassAvailable(), "shader OpenGL per la sfocatura dei pannelli");
             v.setGlassPanel(456, QRect(30, 30, 260, 180), 14, 18, true);
+            v.setExportMeshPreview(display, true, false);
             v.update();
             for (int i = 0; i < 4; ++i) QApplication::processEvents();
             const QImage screenshot = v.grabFramebuffer();
             require(!screenshot.isNull(), "rendering framebuffer");
+            v.clearExportMeshPreview();
             v.removeGlassPanel(456);
             screenshot.save(QStringLiteral("/tmp/forgecad-viewport-test.png"));
             v.makeCurrent();
@@ -1241,6 +1349,11 @@ public:
                     v.overlayRenderer_.drawInstanced(GL_LINES,
                         QVector<QVector3D>{QVector3D(0, 0, 0), QVector3D(1, 0, 0)},
                         QVector4D(1.0f, 1.0f, 0.0f, 1.0f), instances);
+                    QMatrix4x4 overlayView;
+                    v.overlayRenderer_.setMatrices(projection, overlayView);
+                    v.overlayRenderer_.drawWideLineStrip(
+                        QVector<QVector3D>{QVector3D(-4, 4, 0), QVector3D(4, 4, 0)},
+                        QVector4D(1.0f, 0.0f, 0.0f, 1.0f), 12.0f);
                     glFinish();
                     return framebuffer.toImage();
                 };
@@ -1250,6 +1363,12 @@ public:
                 for (int y = 0; y < cached.height(); ++y)
                     for (int x = 0; x < cached.width(); ++x) colored |= (cached.pixel(x, y) & 0xffffff) != 0;
                 require(colored, "confronto rendering non vuoto");
+                int redBand = 0;
+                for (int y = 0; y < cached.height(); ++y) {
+                    const QColor pixel = cached.pixelColor(cached.width() / 2, y);
+                    if (pixel.red() > 220 && pixel.green() < 50 && pixel.blue() < 50) ++redBand;
+                }
+                require(redBand >= 10, "linea evidenziata espansa realmente oltre il limite di glLineWidth");
                 framebuffer.release();
             }
             v.displayCache_.clear();
@@ -2104,6 +2223,8 @@ int main(int argc, char **argv) {
         const int bench = int(app.arguments().indexOf(QStringLiteral("--bench-view")));
         if (bench > 0) { ViewportInteractionTest::benchView(app.arguments().mid(bench + 1)); return 0; }
         const int edit = int(app.arguments().indexOf(QStringLiteral("--render-edit")));
+        const int meshStats = int(app.arguments().indexOf(QStringLiteral("--mesh-stats")));
+        if (meshStats > 0) { ViewportInteractionTest::meshStats(app.arguments().mid(meshStats + 1)); return 0; }
         if (edit > 0) ViewportInteractionTest::renderEdit(app.arguments().mid(edit + 1));
         else if (step > 0) ViewportInteractionTest::renderStep(app.arguments().mid(step + 1));
         else if (app.arguments().contains(QStringLiteral("--loft-corner")))

@@ -359,7 +359,9 @@ double angleBetween(const Vec3 &a, const Vec3 &b) {
 void subdivideCurve(const Curve<3> &curve, double a, double b, const Vec3 &pa, const Vec3 &pb, const TessellationOptions &options,
                     const std::vector<double> &knots, int depth, std::vector<double> &out) {
     const auto inside = std::upper_bound(knots.begin(), knots.end(), b) - std::lower_bound(knots.begin(), knots.end(), a);
-    bool split = (depth < 1 && distance(pa, pb) <= options.deflection) || inside > 10;  // curva chiusa: almeno due tratti
+    const double chordLength = distance(pa, pb);
+    bool split = (depth < 1 && chordLength <= options.deflection) || inside > 10;  // curva chiusa: almeno due tratti
+    split = split || (options.maxEdgeLength > 0.0 && chordLength > options.maxEdgeLength);
     if (!split && depth < 20) {
         for (double s : {0.25, 0.5, 0.75})
             if (distanceToSegment(curve.point(a + s * (b - a)), pa, pb) > options.deflection) {
@@ -973,7 +975,8 @@ void FaceTessellator::subdividePath(const Vec2 &a, const Vec2 &b, const Vec3 &pa
     // Anche i lati degeneri (poli, vertice del cono) si dividono se la normale
     // cambia lungo il lato: i triangoli che vi arrivano hanno cosi' ciascuno
     // il suo vertice, con il suo u.
-    bool split = depth < 14 && (distanceToSegment(pm, pa, pb) > options_.deflection
+    bool split = depth < 14 && ((options_.maxEdgeLength > 0.0 && distance(pa, pb) > options_.maxEdgeLength)
+                                || distanceToSegment(pm, pa, pb) > options_.deflection
                                 || angleBetween(surfaceNormal(a, center), surfaceNormal(m, center)) > 0.5 * options_.angle
                                 || angleBetween(surfaceNormal(m, center), surfaceNormal(b, center)) > 0.5 * options_.angle);
     if (!split && depth < 14) {
@@ -1300,7 +1303,8 @@ void FaceTessellator::refine() {
                 candidates.push_back({length, edge, 0});
                 continue;
             }
-            if (length <= 0.5 * options_.deflection) {
+            if (length <= 0.5 * options_.deflection
+                && (options_.maxEdgeLength <= 0.0 || length <= options_.maxEdgeLength)) {
                 accepted.insert(edge);
                 continue;
             }
@@ -1320,7 +1324,8 @@ void FaceTessellator::refine() {
 
         for (const Candidate &edge : edges) {
             const int a = edge.edge.first, b = edge.edge.second;
-            if (distanceToSegment(evaluated[edge.sample], points_[std::size_t(a)], points_[std::size_t(b)]) > options_.deflection ||
+            if ((options_.maxEdgeLength > 0.0 && edge.length > options_.maxEdgeLength) ||
+                distanceToSegment(evaluated[edge.sample], points_[std::size_t(a)], points_[std::size_t(b)]) > options_.deflection ||
                 angleBetween(normals_[std::size_t(a)], normals_[std::size_t(b)]) > options_.angle) {
                 splits.tryEmplace(edge.edge, Split{samples[edge.sample], evaluated[edge.sample], evaluatedNormals[edge.sample]});
                 candidates.push_back(edge);

@@ -35,17 +35,24 @@ public:
     void setHatch(bool enabled) { hatchEnabled_ = enabled; }
     void draw(GLenum primitive, const QVector<OverlayVertex> &vertices);
     void draw(GLenum primitive, const QVector<QVector3D> &positions, const QVector4D &color);
+    // Disegna una polilinea con spessore reale in pixel. Nel profilo Core i
+    // driver possono limitare glLineWidth a 1, quindi i segmenti vengono
+    // espansi in triangoli da un geometry shader.
+    void drawWideLineStrip(const QVector<QVector3D> &positions, const QVector4D &color, float widthPixels);
     void drawInstanced(GLenum primitive, const QVector<QVector3D> &positions, const QVector4D &color,
                        const QVector<QMatrix4x4> &transforms);
     void drawTextured(QOpenGLShaderProgram &shader, GLenum primitive, const QVector<TexturedOverlayVertex> &vertices);
 
 private:
     bool ensureReady();
+    bool ensureWideReady();
     QOpenGLBuffer buffer_;
     QOpenGLVertexArrayObject array_;
     QOpenGLVertexArrayObject texturedArray_;
     std::unique_ptr<QOpenGLShaderProgram> shader_;
+    std::unique_ptr<QOpenGLShaderProgram> wideShader_;
     bool tried_ = false;
+    bool triedWide_ = false;
     QMatrix4x4 projection_, modelView_;
     QVector4D clipPlane_;
     quint16 stipplePattern_ = 0xFFFF;

@@ -3,6 +3,8 @@
 *.step
 *.iges
 *.igs
+*.stl
+*.obj
 forgecad-cuda-build/
 tests/
 kernel/tests/

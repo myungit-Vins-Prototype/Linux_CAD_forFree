@@ -11,7 +11,9 @@ void OverlayRenderer::clear() {
     if (texturedArray_.isCreated()) texturedArray_.destroy();
     if (buffer_.isCreated()) buffer_.destroy();
     shader_.reset();
+    wideShader_.reset();
     tried_ = false;
+    triedWide_ = false;
 }
 
 bool OverlayRenderer::ensureReady() {
@@ -82,6 +84,78 @@ void main() {
 
 bool OverlayRenderer::available() { return ensureReady(); }
 
+bool OverlayRenderer::ensureWideReady() {
+    if (triedWide_) return bool(wideShader_);
+    triedWide_ = true;
+    if (!ensureReady()) return false;
+    wideShader_ = std::make_unique<QOpenGLShaderProgram>();
+    static const char *vertex = R"(
+#version 330 core
+layout(location = 0) in vec3 position;
+layout(location = 1) in vec4 vertexColor;
+uniform mat4 modelViewProjection;
+uniform vec4 clipPlane;
+uniform bool clipEnabled;
+out vec4 lineColor;
+out float lineClipDistance;
+void main() {
+    vec4 world = vec4(position, 1.0);
+    gl_Position = modelViewProjection * world;
+    lineColor = vertexColor;
+    lineClipDistance = clipEnabled ? dot(clipPlane, world) : 1.0;
+}
+)";
+    static const char *geometry = R"(
+#version 330 core
+layout(lines) in;
+layout(triangle_strip, max_vertices = 4) out;
+in vec4 lineColor[];
+in float lineClipDistance[];
+out vec4 color;
+uniform vec2 viewportSize;
+uniform float lineWidthPixels;
+void emitLineVertex(vec4 position, vec2 offset, vec4 vertexColor, float clipDistance) {
+    gl_Position = position;
+    gl_Position.xy += offset * position.w;
+    gl_ClipDistance[0] = clipDistance;
+    color = vertexColor;
+    EmitVertex();
+}
+void main() {
+    vec2 a = gl_in[0].gl_Position.xy / gl_in[0].gl_Position.w;
+    vec2 b = gl_in[1].gl_Position.xy / gl_in[1].gl_Position.w;
+    vec2 deltaPixels = (b - a) * 0.5 * viewportSize;
+    float lengthPixels = length(deltaPixels);
+    if (lengthPixels < 0.01) return;
+    vec2 direction = deltaPixels / lengthPixels;
+    vec2 normal = vec2(-direction.y, direction.x);
+    float halfWidth = max(0.5, 0.5 * lineWidthPixels);
+    vec2 side = normal * halfWidth * 2.0 / viewportSize;
+    vec4 p0 = gl_in[0].gl_Position;
+    vec4 p1 = gl_in[1].gl_Position;
+    emitLineVertex(p0,  side, lineColor[0], lineClipDistance[0]);
+    emitLineVertex(p0, -side, lineColor[0], lineClipDistance[0]);
+    emitLineVertex(p1,  side, lineColor[1], lineClipDistance[1]);
+    emitLineVertex(p1, -side, lineColor[1], lineClipDistance[1]);
+    EndPrimitive();
+}
+)";
+    static const char *fragment = R"(
+#version 330 core
+in vec4 color;
+out vec4 fragmentColor;
+void main() { fragmentColor = color; }
+)";
+    if (!wideShader_->addShaderFromSourceCode(QOpenGLShader::Vertex, vertex)
+        || !wideShader_->addShaderFromSourceCode(QOpenGLShader::Geometry, geometry)
+        || !wideShader_->addShaderFromSourceCode(QOpenGLShader::Fragment, fragment)
+        || !wideShader_->link()) {
+        wideShader_.reset();
+        return false;
+    }
+    return true;
+}
+
 void OverlayRenderer::setMatrices(const QMatrix4x4 &projection, const QMatrix4x4 &modelView) {
     projection_ = projection;
     modelView_ = modelView;
@@ -121,6 +195,34 @@ void OverlayRenderer::draw(GLenum primitive, const QVector<QVector3D> &positions
     vertices.reserve(positions.size());
     for (const QVector3D &position : positions) vertices.push_back({position, color});
     draw(primitive, vertices);
+}
+
+void OverlayRenderer::drawWideLineStrip(const QVector<QVector3D> &positions, const QVector4D &color,
+                                        float widthPixels) {
+    if (positions.size() < 2) return;
+    if (!ensureWideReady()) {
+        glLineWidth(widthPixels);
+        draw(GL_LINE_STRIP, positions, color);
+        return;
+    }
+    QVector<OverlayVertex> vertices;
+    vertices.reserve(positions.size());
+    for (const QVector3D &position : positions) vertices.push_back({position, color});
+    GLint viewport[4] = {0, 0, 1, 1};
+    glGetIntegerv(GL_VIEWPORT, viewport);
+    wideShader_->bind();
+    wideShader_->setUniformValue("modelViewProjection", projection_ * modelView_);
+    wideShader_->setUniformValue("clipPlane", clipPlane_);
+    wideShader_->setUniformValue("clipEnabled", clipEnabled_);
+    wideShader_->setUniformValue("viewportSize", QVector2D(float(qMax(1, viewport[2])), float(qMax(1, viewport[3]))));
+    wideShader_->setUniformValue("lineWidthPixels", qMax(1.0f, widthPixels));
+    QOpenGLVertexArrayObject::Binder array(&array_);
+    buffer_.bind();
+    buffer_.setUsagePattern(QOpenGLBuffer::DynamicDraw);
+    buffer_.allocate(vertices.constData(), int(vertices.size() * sizeof(OverlayVertex)));
+    glDrawArrays(GL_LINE_STRIP, 0, vertices.size());
+    buffer_.release();
+    wideShader_->release();
 }
 
 void OverlayRenderer::drawInstanced(GLenum primitive, const QVector<QVector3D> &positions, const QVector4D &color,
