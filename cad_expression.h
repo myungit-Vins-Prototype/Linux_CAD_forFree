@@ -5,6 +5,8 @@
 #include <QString>
 #include <functional>
 
+#include "cad_types.h"
+
 class QWidget;
 
 // Espressioni nei campi numerici: ogni casella dei valori fa da calcolatrice
@@ -17,14 +19,31 @@ namespace ForgeCad {
 // Valore dell'espressione; falso se non e' completa o non e' valida.
 bool evaluateExpression(const QString &text, double &value);
 
+double millimetersPerUnit(LengthUnit unit);
+QString lengthUnitSymbol(LengthUnit unit);
+QString lengthUnitName(LengthUnit unit);
+LengthUnit displayLengthUnit();
+void setDisplayLengthUnit(LengthUnit unit);
+double lengthInDisplayUnits(double millimeters);
+QString formatLength(double millimeters, int decimals = 6, bool withSymbol = true);
+QString formatArea(double squareMillimeters, int decimals = 6, bool withSymbol = true);
+QString formatVolume(double cubicMillimeters, int decimals = 6, bool withSymbol = true);
+
 // QDoubleSpinBox che accetta le espressioni: finche' il testo non e' completo
 // resta "intermedio", con Invio (o all'uscita dal campo) si calcola e si
 // mostra il risultato.
 class ExpressionSpinBox : public QDoubleSpinBox {
 public:
     explicit ExpressionSpinBox(QWidget *parent = nullptr);
+    ~ExpressionSpinBox() override;
+    // Di default il controllo rappresenta una lunghezza interna in mm e la
+    // mostra nell'unita' del documento. Angoli, fattori e densita' la disattivano.
+    void setLengthMeasurement(bool enabled);
+    bool isLengthMeasurement() const { return lengthMeasurement_; }
+    void setSuffix(const QString &suffix);
     QValidator::State validate(QString &text, int &pos) const override;
     double valueFromText(const QString &text) const override;
+    QString textFromValue(double value) const override;
     void fixup(QString &input) const override;
     // Se impostato, Invio conferma il valore senza accettare il dialogo.
     // Lo chiamano anche i passi delle frecce e della rotella (un valore
@@ -37,11 +56,13 @@ protected:
 
 private:
     QString expressionText(const QString &text) const;
+    void refreshLengthUnit();
+    bool lengthMeasurement_ = true;
 };
 
 // Come QInputDialog::getDouble, con la casella a espressioni.
 double getDouble(QWidget *parent, const QString &title, const QString &label, double value, double minimum, double maximum,
-                 int decimals, bool *ok);
+                 int decimals, bool *ok, bool lengthMeasurement = true);
 
 }
 

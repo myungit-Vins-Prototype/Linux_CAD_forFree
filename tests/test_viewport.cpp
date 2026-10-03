@@ -402,6 +402,18 @@ public:
             require(previews == 1, "cambio di focus senza nuove anteprime");
             value.stepBy(1);
             require(previews == 2, "le frecce aggiornano l'anteprima");
+            setDisplayLengthUnit(LengthUnit::Inch);
+            value.setRange(0.0, 1000.0);
+            value.findChild<QLineEdit *>()->setText(QStringLiteral("2"));
+            value.interpretText();
+            require(std::fabs(value.value() - 50.8) < 1e-12 && value.suffix().trimmed() == QStringLiteral("in")
+                        && formatLength(25.4) == QStringLiteral("1 in"),
+                    "campi in pollici convertiti internamente in millimetri");
+            value.setLengthMeasurement(false);
+            value.setSuffix(QStringLiteral(" °"));
+            setDisplayLengthUnit(LengthUnit::Foot);
+            require(value.suffix().trimmed() == QStringLiteral("°"), "gli angoli non cambiano con l'unita' lineare");
+            setDisplayLengthUnit(LengthUnit::Millimeter);
         }
         {
             CadViewport selection;
@@ -1186,12 +1198,16 @@ public:
         state.extrusions[datumIndex].pathSegments = {1};
         SketchPathRef savedGuide{sketch, {1}, {}};
         state.extrusions[datumIndex].loftGuidePaths = {savedGuide};
+        state.lengthUnit = LengthUnit::Foot;
+        state.lengthUnitSet = true;
         QTemporaryDir tmp;
         require(tmp.isValid(), "directory temporanea");
         const QString path = tmp.filePath(QStringLiteral("refs.prt"));
         require(saveDocumentFile(path, state, false).isEmpty(), "salvataggio riferimenti e datum");
         DocumentState loaded;
         require(loadDocumentFile(path, loaded).isEmpty(), "lettura riferimenti e datum");
+        require(loaded.lengthUnitSet && loaded.lengthUnit == LengthUnit::Foot,
+                "unita' lineare del documento salvata nel formato 26");
         CadViewport filePreview;
         filePreview.loadPreviewDocument(loaded);
         require(!filePreview.sketches_.isEmpty() && !filePreview.sceneGeometryPoints().isEmpty(),

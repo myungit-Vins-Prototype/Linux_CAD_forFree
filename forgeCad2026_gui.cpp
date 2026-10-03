@@ -454,6 +454,13 @@ public:
     // cronologia riparte da zero; i corpi usano lo snapshot salvato quando e'
     // presente, altrimenti si rigenerano dalla definizione.
     DocumentState currentDocument() const { return documentState(); }
+    LengthUnit lengthUnit() const { return lengthUnit_; }
+    void setLengthUnit(LengthUnit unit) {
+        if (unit == lengthUnit_) return;
+        lengthUnit_ = unit;
+        ForgeCad::setDisplayLengthUnit(unit);
+        documentChanged();
+    }
     void loadDocument(DocumentState state,
                       const std::function<void(int, int, const QString &)> &progress = {}) {
         ScopedWork work(workCallback_, QStringLiteral("Caricamento e rigenerazione del documento..."));
@@ -462,6 +469,8 @@ public:
         selection_ = {};
         history_.clear();
         if (state.orientationSet) orientation_ = state.orientation;
+        lengthUnit_ = state.lengthUnitSet ? state.lengthUnit : LengthUnit::Millimeter;
+        ForgeCad::setDisplayLengthUnit(lengthUnit_);
         ForgeCad::normalizeModelHistory(state);
         sketches_ = std::move(state.sketches);
         extrusions_ = std::move(state.extrusions);
@@ -488,6 +497,7 @@ public:
         activeSketch_ = -1;
         selection_ = {};
         if (state.orientationSet) orientation_ = state.orientation;
+        lengthUnit_ = state.lengthUnitSet ? state.lengthUnit : LengthUnit::Millimeter;
         ForgeCad::normalizeModelHistory(state);
         sketches_ = std::move(state.sketches);
         extrusions_ = std::move(state.extrusions);
@@ -4491,7 +4501,7 @@ protected:
         CurveObject curve;
         if (!previewCurve(curve)) return {};
         const QVector<QPointF> &p = curve.controlPoints;
-        const auto number = [](double value) { return QString::number(value, 'f', 4); };
+        const auto number = [](double value) { return ForgeCad::formatLength(value, 4); };
         switch (curve.tool) {
         case DrawingTool::Circle: {
             const double r = pointDistance(p.at(0), p.at(1));
@@ -4874,8 +4884,8 @@ protected:
                     const double old = pointDistance(source.controlPoints.at(control), side == 0 ? source.tangentHandles.at(control).first
                                                                                                  : source.tangentHandles.at(control).second);
                     bool ok = false;
-                    const double value = QInputDialog::getDouble(this, QStringLiteral("Quota maniglia"), QStringLiteral("Lunghezza:"), old,
-                                                                  1e-9, 1e9, 6, &ok);
+                    const double value = ForgeCad::getDouble(this, QStringLiteral("Quota maniglia"), QStringLiteral("Lunghezza:"), old,
+                                                              1e-9, 1e9, 6, &ok);
                     if (ok) {
                         const DocumentState snapshot = documentState();
                         SketchObject &sketch = sketches_[activeSketch_];
@@ -5386,6 +5396,8 @@ private:
         state.modelBodies = modelBodies_;
         state.orientation = orientation_;
         state.orientationSet = true;
+        state.lengthUnit = lengthUnit_;
+        state.lengthUnitSet = true;
         return state;
     }
 
@@ -5451,11 +5463,11 @@ private:
         };
         switch (c.type) {
         case ConstraintType::Radius:
-        case ConstraintType::AxisRadius: return QStringLiteral("R") + number(c.value);
+        case ConstraintType::AxisRadius: return QStringLiteral("R") + ForgeCad::formatLength(c.value, 3);
         case ConstraintType::Diameter:
-        case ConstraintType::AxisDiameter: return QStringLiteral("\u2300") + number(c.value);
+        case ConstraintType::AxisDiameter: return QStringLiteral("\u2300") + ForgeCad::formatLength(c.value, 3);
         case ConstraintType::Angle: return number(std::fabs(c.value)) + QStringLiteral("\u00B0");
-        default: return number(c.value);
+        default: return ForgeCad::formatLength(c.value, 3);
         }
     }
     // Freccia con la punta in `tip` e il corpo dalla parte di `from` (schermo).
@@ -5731,7 +5743,7 @@ private:
             QString text = ForgeCad::constraintSymbol(c.type);
             if (c.type == ConstraintType::Pattern) text += QLatin1Char(' ') + ForgeCad::patternSummary(c.pattern);
             else if (c.type == ConstraintType::Angle) text += QStringLiteral(" %1\u00B0").arg(c.value, 0, 'f', 2);
-            else if (ForgeCad::isDimension(c.type)) text += QStringLiteral(" %1").arg(c.value, 0, 'f', 3);
+            else if (ForgeCad::isDimension(c.type)) text += QLatin1Char(' ') + ForgeCad::formatLength(c.value, 3);
             for (const ForgeCad::ConstraintAnchor &anchor : ForgeCad::constraintAnchors(*sketch, c)) {
                 const QPointF screen = projectWorldPoint(mapSketchPoint(anchor.point, *sketch));
                 ConstraintGlyph glyph;
@@ -7027,12 +7039,13 @@ private:
             const int row = qBound(0, points->currentRow(), work.controlPoints.size() - 1);
             points->clear();
             for (int k = 0; k < work.controlPoints.size(); ++k)
-                points->addItem(QStringLiteral("P%1   (%2, %3)").arg(k + 1).arg(work.controlPoints.at(k).x(), 0, 'g', 6).arg(work.controlPoints.at(k).y(), 0, 'g', 6));
+                points->addItem(QStringLiteral("P%1   (%2, %3)").arg(k + 1)
+                    .arg(ForgeCad::formatLength(work.controlPoints.at(k).x()), ForgeCad::formatLength(work.controlPoints.at(k).y())));
             if (points->count()) points->setCurrentRow(initialPoint >= 0 ? qBound(0, initialPoint, points->count() - 1) : row);
             initialPoint = -1;
         };
         auto spin = [&](double value) {
-            auto *box = new QDoubleSpinBox(&dialog);
+            auto *box = new ForgeCad::ExpressionSpinBox(&dialog);
             box->setRange(-1e9, 1e9); box->setDecimals(6); box->setValue(value);
             return box;
         };
@@ -7499,7 +7512,7 @@ private:
             painter.setPen(constrained ? QColor(255, 215, 90) : QColor(180, 220, 235));
             painter.drawLine(midpoint, labelPosition);
             painter.drawText(labelPosition + QPointF(4.0, -4.0),
-                             QStringLiteral("L = %1").arg(length, 0, 'f', 4));
+                             QStringLiteral("L = %1").arg(ForgeCad::formatLength(length, 4)));
             if (index < sketch.segmentAngles.size() && sketch.segmentAngles.at(index) >= 0.0) {
                 painter.drawText(labelPosition + QPointF(4.0, 10.0),
                                  QStringLiteral("A = %1 deg")
@@ -10386,6 +10399,7 @@ private:
     BodyDisplay exportMeshPreview_;
     bool exportMeshPreviewQuadrangular_ = false;
     bool exportMeshPreviewLimited_ = false;
+    LengthUnit lengthUnit_ = LengthUnit::Millimeter;
     int previewErrorSketch_ = -1;  // sezione della loft evidenziata quando una guida non la incontra
     QTimer *previewTimer_ = nullptr;
     QObject *previewReceiver_ = nullptr;
@@ -11505,10 +11519,12 @@ static BlendDialogResult blendDialog(QWidget *parent, CadViewport *viewport, con
         const QSignalBlocker blocker(secondBox);
         if (mode == 2) {
             secondLabel->setText(QStringLiteral("Angolo con la faccia di riferimento (gradi):"));
+            secondBox->setSuffix(QStringLiteral(" °"));
             secondBox->setRange(0.01, 179.99);
             secondBox->setValue(angle);
         } else {
             secondLabel->setText(QStringLiteral("Seconda distanza (altra faccia):"));
+            secondBox->setLengthMeasurement(true);
             secondBox->setRange(0.000001, 100000.0);
             secondBox->setValue(secondDistance);
         }
@@ -11635,6 +11651,7 @@ static bool scaleDialog(QWidget *parent, CadViewport *viewport, const QString &t
     bodyBox->setCurrentIndex(qMax(0, int(candidates.indexOf(definition.firstBody))));
     bodyBox->setEnabled(replaced < 0);
     auto *factorBox = new ForgeCad::ExpressionSpinBox(&dialog);
+    factorBox->setLengthMeasurement(false);
     factorBox->setDecimals(6);
     factorBox->setRange(0.000001, 1000000.0);
     factorBox->setValue(definition.scaleFactor);
@@ -11716,7 +11733,7 @@ static HelixDialogResult helixDialog(QWidget *parent, CadViewport *viewport, con
             const double r = std::hypot(curve.controlPoints.at(1).x() - curve.controlPoints.at(0).x(), curve.controlPoints.at(1).y() - curve.controlPoints.at(0).y());
             bases.append({0, s, c, -1, {}});
             labels.append(QStringLiteral("%1: %2 %3 (R %4)%5").arg(sketches.at(s).name, circle ? QStringLiteral("cerchio") : QStringLiteral("arco"))
-                              .arg(c + 1).arg(r, 0, 'g', 6).arg(curve.construction ? QStringLiteral(", costruzione") : QString()));
+                              .arg(c + 1).arg(ForgeCad::formatLength(r)).arg(curve.construction ? QStringLiteral(", costruzione") : QString()));
         }
     int current = -1;
     if (initial.helix.source != 0 && initial.firstBody >= 0 && initial.firstBody < bodies.size()) {
@@ -11768,6 +11785,7 @@ static HelixDialogResult helixDialog(QWidget *parent, CadViewport *viewport, con
     };
     auto *pitchBox = spin(initial.helix.pitch, 1e-6, 1e6, 6);
     auto *turnsBox = spin(initial.helix.turns, 1e-3, 1e5, 4);
+    turnsBox->setLengthMeasurement(false);
     auto *heightBox = spin(initial.helix.height, 1e-6, 1e6, 6);
     auto *taperBox = spin(initial.helix.taper, -89.0, 89.0, 4, QStringLiteral("°"));
     taperBox->setToolTip(QStringLiteral("Elica conica: positivo = il raggio cresce lungo l'asse. Sulla faccia di un cono vale quella della faccia."));
@@ -14641,7 +14659,9 @@ static void massPropertiesDialog(QWidget *parent, CadViewport *viewport) {
             name = bodies.at(index).name;
         }
         const auto num = [](double v, int digits = 6) { return QString::number(v, 'g', digits); };
-        const auto fixed = [](double v) { return QString::number(v, 'f', 6); };
+        const QString linearUnit = ForgeCad::lengthUnitSymbol(ForgeCad::displayLengthUnit());
+        const double lengthScale = ForgeCad::millimetersPerUnit(ForgeCad::displayLengthUnit());
+        const double inertiaScale = lengthScale * lengthScale;
         QStringList lines;
         QString html = QStringLiteral("<h3>%1</h3>").arg(name.toHtmlEscaped());
         const auto row = [&](const QString &label, const QString &value) {
@@ -14655,44 +14675,52 @@ static void massPropertiesDialog(QWidget *parent, CadViewport *viewport) {
         }
         html += QStringLiteral("<table>");
         if (r.kind == ForgeCad::MassReport::Kind::Curve) {
-            row(QStringLiteral("Lunghezza"), fixed(r.length) + QStringLiteral(" mm"));
-            row(QStringLiteral("Baricentro della curva"), QStringLiteral("X %1, Y %2, Z %3 mm").arg(fixed(r.centroid[0]), fixed(r.centroid[1]), fixed(r.centroid[2])));
+            row(QStringLiteral("Lunghezza"), ForgeCad::formatLength(r.length));
+            row(QStringLiteral("Baricentro della curva"), QStringLiteral("X %1, Y %2, Z %3")
+                .arg(ForgeCad::formatLength(r.centroid[0]), ForgeCad::formatLength(r.centroid[1]), ForgeCad::formatLength(r.centroid[2])));
         } else if (r.kind == ForgeCad::MassReport::Kind::Sheet) {
-            row(QStringLiteral("Area della superficie"), fixed(r.area) + QStringLiteral(" mm²"));
+            row(QStringLiteral("Area della superficie"), ForgeCad::formatArea(r.area));
             if (r.hasCentroid)
-                row(QStringLiteral("Baricentro dell'area"), QStringLiteral("X %1, Y %2, Z %3 mm").arg(fixed(r.centroid[0]), fixed(r.centroid[1]), fixed(r.centroid[2])));
+                row(QStringLiteral("Baricentro dell'area"), QStringLiteral("X %1, Y %2, Z %3")
+                    .arg(ForgeCad::formatLength(r.centroid[0]), ForgeCad::formatLength(r.centroid[1]), ForgeCad::formatLength(r.centroid[2])));
         } else {
             const double mass = rho * r.volume;
-            row(QStringLiteral("Volume"), QStringLiteral("%1 mm³ (%2 cm³)").arg(fixed(r.volume), num(r.volume * 1e-3, 9)));
-            row(QStringLiteral("Area della superficie"), fixed(r.area) + QStringLiteral(" mm²"));
+            row(QStringLiteral("Volume"), ForgeCad::formatVolume(r.volume));
+            row(QStringLiteral("Area della superficie"), ForgeCad::formatArea(r.area));
             row(QStringLiteral("Densita'"), num(densityBox->value()) + QStringLiteral(" g/cm³"));
             row(QStringLiteral("Massa"), QStringLiteral("<b>%1 g</b> (%2 kg)").arg(num(mass, 9), num(mass * 1e-3, 9)));
             if (r.hasCentroid) {
-                row(QStringLiteral("Baricentro"), QStringLiteral("X %1, Y %2, Z %3 mm").arg(fixed(r.centroid[0]), fixed(r.centroid[1]), fixed(r.centroid[2])));
+                row(QStringLiteral("Baricentro"), QStringLiteral("X %1, Y %2, Z %3")
+                    .arg(ForgeCad::formatLength(r.centroid[0]), ForgeCad::formatLength(r.centroid[1]), ForgeCad::formatLength(r.centroid[2])));
                 // Momenti (Ixx = \\int (y^2 + z^2) dm) e prodotti d'inerzia (Pxy = \\int x y dm), in g mm^2.
                 const auto tensorRows = [&](const double t[3][3], const QString &where) {
                     row(QStringLiteral("Momenti d'inerzia %1").arg(where),
-                        QStringLiteral("Ixx %1, Iyy %2, Izz %3 g·mm²").arg(num(rho * t[0][0], 9), num(rho * t[1][1], 9), num(rho * t[2][2], 9)));
+                        QStringLiteral("Ixx %1, Iyy %2, Izz %3 g·%4²")
+                            .arg(num(rho * t[0][0] / inertiaScale, 9), num(rho * t[1][1] / inertiaScale, 9),
+                                 num(rho * t[2][2] / inertiaScale, 9), linearUnit));
                     row(QStringLiteral("Prodotti d'inerzia %1").arg(where),
-                        QStringLiteral("Pxy %1, Pxz %2, Pyz %3 g·mm²").arg(num(-rho * t[0][1], 9), num(-rho * t[0][2], 9), num(-rho * t[1][2], 9)));
+                        QStringLiteral("Pxy %1, Pxz %2, Pyz %3 g·%4²")
+                            .arg(num(-rho * t[0][1] / inertiaScale, 9), num(-rho * t[0][2] / inertiaScale, 9),
+                                 num(-rho * t[1][2] / inertiaScale, 9), linearUnit));
                 };
                 tensorRows(r.inertia, QStringLiteral("al baricentro"));
                 double moments[3], axes[3][3];
                 ForgeCad::principalMoments(r.inertia, moments, axes);
                 for (int k = 0; k < 3; ++k)
                     row(QStringLiteral("Momento principale I%1").arg(k + 1),
-                        QStringLiteral("%1 g·mm² lungo (%2, %3, %4), raggio d'inerzia %5 mm")
-                            .arg(num(rho * moments[k], 9), num(axes[0][k], 6), num(axes[1][k], 6), num(axes[2][k], 6))
-                            .arg(num(r.volume > 0.0 ? std::sqrt(std::max(0.0, moments[k]) / r.volume) : 0.0, 6)));
+                        QStringLiteral("%1 g·%2² lungo (%3, %4, %5), raggio d'inerzia %6")
+                            .arg(num(rho * moments[k] / inertiaScale, 9), linearUnit, num(axes[0][k], 6),
+                                 num(axes[1][k], 6), num(axes[2][k], 6),
+                                 ForgeCad::formatLength(r.volume > 0.0 ? std::sqrt(std::max(0.0, moments[k]) / r.volume) : 0.0, 6)));
                 const double origin[3] = {0.0, 0.0, 0.0};
                 double about[3][3];
                 ForgeCad::inertiaAbout(r, origin, about);
                 tensorRows(about, QStringLiteral("all'origine"));
             }
         }
-        html += QStringLiteral("</table><p style='color:#8aa0b4'>Calcolo: %1.<br>Unita': mm, g. Prodotti d'inerzia con il segno positivo (Pxy = ∫ x y dm); "
+        html += QStringLiteral("</table><p style='color:#8aa0b4'>Calcolo: %1.<br>Unita': %2, g. Prodotti d'inerzia con il segno positivo (Pxy = ∫ x y dm); "
                                "il tensore d'inerzia ha fuori diagonale -Pxy.</p>")
-                    .arg(r.method.toHtmlEscaped());
+                    .arg(r.method.toHtmlEscaped(), linearUnit);
         text->setHtml(html);
         plain = name + QStringLiteral("\n") + lines.join(QLatin1Char('\n'));
     };
@@ -15205,6 +15233,10 @@ private:
 
 static AxesOrientation defaultAxesOrientation();
 static void saveDefaultAxesOrientation(const AxesOrientation &o);
+static LengthUnit defaultLengthUnit() {
+    const int value = QSettings().value(QStringLiteral("units/defaultLength"), int(LengthUnit::Millimeter)).toInt();
+    return LengthUnit(qBound(int(LengthUnit::Millimeter), value, int(LengthUnit::Foot)));
+}
 
 PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
     setWindowTitle(QStringLiteral("ForgeCAD - Qt6"));
@@ -15214,6 +15246,7 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
     viewport_ = new CadViewport(this);
     auto *viewport = viewport_;
     viewport->setOrientation(defaultAxesOrientation());  // assi del documento nuovo (Opzioni, di default Z in alto)
+    viewport->setLengthUnit(defaultLengthUnit());
     setCentralWidget(viewport);
 
     auto *modelDock = new QDockWidget(QStringLiteral("Albero modello"), this);
@@ -15598,11 +15631,10 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
         layout->addWidget(description);
         auto *form = new QFormLayout;
         const auto distanceBox = [&](double value, bool allowZero) {
-            auto *box = new QDoubleSpinBox(&dialog);
+            auto *box = new ForgeCad::ExpressionSpinBox(&dialog);
             box->setDecimals(6);
             box->setRange(allowZero ? 0.0 : 0.000001, 1.0e9);
             box->setSingleStep(qMax(0.000001, value / 10.0));
-            box->setSuffix(QStringLiteral(" mm"));
             box->setValue(value);
             if (allowZero) box->setSpecialValueText(QStringLiteral("Nessun limite"));
             return box;
@@ -16002,7 +16034,7 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
         bool accepted = false;
         const double length = ForgeCad::getDouble(this, QStringLiteral("Dimensione degli assi"),
             QStringLiteral("Scala degli assi a video (2 = dimensione standard, adattata allo zoom):"),
-            viewport->axisLength(), 0.1, 100.0, 3, &accepted);
+            viewport->axisLength(), 0.1, 100.0, 3, &accepted, false);
         if (!accepted) return;
         viewport->setAxisLength(length);
         QSettings().setValue(QStringLiteral("view/axisLength"), viewport->axisLength());
@@ -16697,6 +16729,29 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
     // Opzioni: kernel geometrico con cui si costruiscono i corpi. La scelta
     // resta per gli avvii successivi (QSettings).
     auto *optionsMenu = menuBar()->addMenu(QStringLiteral("Opzioni"));
+    auto *unitsMenu = optionsMenu->addMenu(QStringLiteral("Unita' di misura del documento"));
+    auto *unitsGroup = new QActionGroup(unitsMenu);
+    unitsGroup->setExclusive(true);
+    const QList<LengthUnit> units = {LengthUnit::Millimeter, LengthUnit::Centimeter, LengthUnit::Meter,
+                                     LengthUnit::Inch, LengthUnit::Foot};
+    for (LengthUnit unit : units) {
+        QAction *action = unitsMenu->addAction(QStringLiteral("%1 (%2)")
+            .arg(ForgeCad::lengthUnitName(unit), ForgeCad::lengthUnitSymbol(unit)));
+        action->setCheckable(true);
+        action->setData(int(unit));
+        unitsGroup->addAction(action);
+    }
+    connect(unitsMenu, &QMenu::aboutToShow, this, [viewport, unitsGroup] {
+        for (QAction *action : unitsGroup->actions()) action->setChecked(action->data().toInt() == int(viewport->lengthUnit()));
+    });
+    connect(unitsGroup, &QActionGroup::triggered, this, [this, viewport](QAction *action) {
+        const LengthUnit unit = LengthUnit(action->data().toInt());
+        viewport->setLengthUnit(unit);
+        QSettings().setValue(QStringLiteral("units/defaultLength"), int(unit));
+        statusBar()->showMessage(QStringLiteral("Unita' del documento: %1. Geometria e storia convertite in visualizzazione senza ricalcolo.")
+                                     .arg(ForgeCad::lengthUnitName(unit)), 7000);
+    });
+    optionsMenu->addSeparator();
     // Orientamento degli assi del documento: quale asse sta in alto e quale guarda
     // l'osservatore nella vista frontale (o la vista corrente come frontale).
     QAction *orientationAction = optionsMenu->addAction(QStringLiteral("Orientamento degli assi..."));
@@ -17195,7 +17250,7 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
         const double angle = ForgeCad::getDouble(
             this, QStringLiteral("Quota angolare"),
             QStringLiteral("Angolo rispetto all'asse X del piano (gradi):"),
-            0.0, -360.0, 360.0, 6, &accepted);
+            0.0, -360.0, 360.0, 6, &accepted, false);
         if (accepted) viewport->setLineAngle(angle);
     });
     connect(exitSketch, &QAction::triggered, this, [viewport] { viewport->endSketchMode(); });
@@ -17578,6 +17633,8 @@ void PdfWindow::newDocument() {
     DocumentState empty;
     empty.orientation = defaultAxesOrientation();
     empty.orientationSet = true;
+    empty.lengthUnit = defaultLengthUnit();
+    empty.lengthUnitSet = true;
     viewport_->loadDocument(empty);
     loadingDocument_ = false;
     documentPath_.clear();
@@ -17890,8 +17947,8 @@ void PdfWindow::rebuildModelTree() {
             if (body.feature == BodyFeature::Revolution) {
                 item->setToolTip(0, QStringLiteral("Rivoluzione di %1 di %2\u00B0").arg(sketches.value(body.sketchIndex).name).arg(body.revolveAngle));
             } else if (body.feature == BodyFeature::Blend) {
-                QString size = QString::number(body.blendSize);
-                if (body.blendChamfer && body.chamferSpec.mode == 1) size += QStringLiteral(" x %1").arg(body.chamferSpec.second);
+                QString size = ForgeCad::formatLength(body.blendSize);
+                if (body.blendChamfer && body.chamferSpec.mode == 1) size += QStringLiteral(" x %1").arg(ForgeCad::formatLength(body.chamferSpec.second));
                 if (body.blendChamfer && body.chamferSpec.mode == 2) size += QStringLiteral(" a %1\u00B0").arg(body.chamferSpec.second);
                 item->setToolTip(0, QStringLiteral("%1 %2 su %3 spigoli")
                     .arg(body.blendChamfer ? QStringLiteral("Smusso di") : QStringLiteral("Raccordo di raggio"))
@@ -17903,10 +17960,10 @@ void PdfWindow::rebuildModelTree() {
                 item->setToolTip(0, QStringLiteral("Superficie tagliata da %1").arg(body.secondBody >= 0 ? extrusions.value(body.secondBody).name
                                                                                                          : planeNames().value(body.trimPlane)));
             } else if (body.feature == BodyFeature::SurfaceOffset) {
-                item->setToolTip(0, QStringLiteral("Offset di %1 da %2 (%3)").arg(body.distance).arg(extrusions.value(body.firstBody).name)
+                item->setToolTip(0, QStringLiteral("Offset di %1 da %2 (%3)").arg(ForgeCad::formatLength(body.distance)).arg(extrusions.value(body.firstBody).name)
                     .arg(body.offsetFaces.isEmpty() ? QStringLiteral("tutte le facce") : QStringLiteral("%1 facce").arg(body.offsetFaces.size())));
             } else if (body.feature == BodyFeature::Shell) {
-                item->setToolTip(0, QStringLiteral("Guscio di spessore %1, %2").arg(body.distance)
+                item->setToolTip(0, QStringLiteral("Guscio di spessore %1, %2").arg(ForgeCad::formatLength(body.distance))
                     .arg(body.offsetFaces.isEmpty() ? QStringLiteral("chiuso") : QStringLiteral("%1 facce aperte").arg(body.offsetFaces.size())));
             } else if (body.feature == BodyFeature::BoundarySurface) {
                 item->setToolTip(0, QStringLiteral("Superficie tra %1 curve").arg(body.planarRefs.size()));
@@ -17918,18 +17975,18 @@ void PdfWindow::rebuildModelTree() {
                 item->setToolTip(0, body.planarRefs.isEmpty() ? QStringLiteral("Superficie planare dello schizzo %1").arg(sketches.value(body.sketchIndex).name)
                                                               : QStringLiteral("Superficie planare da %1 bordi").arg(body.planarRefs.size()));
             } else if (body.feature == BodyFeature::Sew) {
-                item->setToolTip(0, QStringLiteral("%1 superfici cucite (tolleranza %2)%3").arg(1 + body.booleanTools.size()).arg(body.sewTolerance)
+                item->setToolTip(0, QStringLiteral("%1 superfici cucite (tolleranza %2)%3").arg(1 + body.booleanTools.size()).arg(ForgeCad::formatLength(body.sewTolerance))
                     .arg(body.solid ? QStringLiteral(": solido") : QString()));
             } else if (body.feature == BodyFeature::SheetExtend) {
-                item->setToolTip(0, QStringLiteral("%1 bordi estesi di %2 (%3)").arg(body.blendEdges.size()).arg(body.blendSize)
+                item->setToolTip(0, QStringLiteral("%1 bordi estesi di %2 (%3)").arg(body.blendEdges.size()).arg(ForgeCad::formatLength(body.blendSize))
                     .arg(body.extendLinear ? QStringLiteral("lineare") : QStringLiteral("stessa superficie")));
             } else if (body.feature == BodyFeature::Helix) {
                 double pitch, turns, height;
                 ForgeCad::helixDimensions(body.helix, pitch, turns, height);
-                item->setToolTip(0, body.helix.spiral ? QStringLiteral("Spirale: passo %1, %2 giri").arg(pitch).arg(turns)
+                item->setToolTip(0, body.helix.spiral ? QStringLiteral("Spirale: passo %1, %2 giri").arg(ForgeCad::formatLength(pitch)).arg(turns)
                                                       : QStringLiteral("Elica%1: passo %2, %3 giri, altezza %4%5")
                                                             .arg(body.helix.taper != 0.0 ? QStringLiteral(" conica") : QString())
-                                                            .arg(pitch).arg(turns).arg(height)
+                                                            .arg(ForgeCad::formatLength(pitch)).arg(turns).arg(ForgeCad::formatLength(height))
                                                             .arg(body.helix.leftHanded ? QStringLiteral(", sinistrorsa") : QString()));
             } else if (body.feature == BodyFeature::Sweep) {
                 static const QStringList modes = {QStringLiteral("torsione minima"), QStringLiteral("Frenet"), QStringLiteral("orientamento costante")};
@@ -17945,22 +18002,23 @@ void PdfWindow::rebuildModelTree() {
                 item->setToolTip(0, QStringLiteral("%1 importato da %2").arg(body.solid ? QStringLiteral("Solido") : QStringLiteral("Superficie"), body.importSource));
             } else if (body.feature == BodyFeature::Pattern) {
                 const PatternParameters &p = body.pattern;
-                QString tip = p.kind == 0 ? QStringLiteral("Ripetizione lineare: %1 x passo %2").arg(p.count).arg(p.spacing)
+                QString tip = p.kind == 0 ? QStringLiteral("Ripetizione lineare: %1 x passo %2").arg(p.count).arg(ForgeCad::formatLength(p.spacing))
                               : p.kind == 1 ? QStringLiteral("Ripetizione circolare: %1 istanze, %2 %3\u00B0").arg(p.count)
                                                   .arg(p.spread ? QStringLiteral("angolo totale") : QStringLiteral("passo")).arg(p.angle)
                                             : QStringLiteral("Specchio%1").arg(p.keepOriginal || p.featureOnly ? QString() : QStringLiteral(" (solo l'immagine)"));
-                if (p.kind == 0 && p.count2 > 1) tip += QStringLiteral(", %1 x passo %2 nella seconda direzione").arg(p.count2).arg(p.spacing2);
+                if (p.kind == 0 && p.count2 > 1) tip += QStringLiteral(", %1 x passo %2 nella seconda direzione").arg(p.count2).arg(ForgeCad::formatLength(p.spacing2));
                 if (p.featureOnly) tip += QStringLiteral(" (della funzione)");
                 item->setToolTip(0, tip);
             } else if (body.feature == BodyFeature::DatumPlane) {
                 const ForgeCad::DatumMode mode = ForgeCad::datumModes().value(body.datum.mode);
                 QString tip = QStringLiteral("Piano di costruzione: %1").arg(mode.name.toLower());
-                if (mode.distance) tip += QStringLiteral(", distanza %1").arg(body.datum.distance);
+                if (mode.distance) tip += QStringLiteral(", distanza %1").arg(ForgeCad::formatLength(body.datum.distance));
                 if (mode.angle) tip += QStringLiteral(", angolo %1\u00B0").arg(body.datum.angle);
                 item->setToolTip(0, tip);
             } else if (body.feature == BodyFeature::Primitive) {
                 item->setToolTip(0, QStringLiteral("Origine (%1, %2, %3), %4")
-                    .arg(body.primitive.origin[0]).arg(body.primitive.origin[1]).arg(body.primitive.origin[2])
+                    .arg(ForgeCad::formatLength(body.primitive.origin[0])).arg(ForgeCad::formatLength(body.primitive.origin[1]))
+                    .arg(ForgeCad::formatLength(body.primitive.origin[2]))
                     .arg(planeNames().value(body.primitive.plane)));
             }
         }
@@ -17971,10 +18029,10 @@ void PdfWindow::rebuildModelTree() {
                     && body.mergeOperation != 0 && !body.mergeBodies.isEmpty()))) {
             QStringList children;
             if (body.feature == BodyFeature::Extrusion && body.extrudeSides == 1)
-                children.append(QStringLiteral("Simmetrica: %1 in tutto").arg(body.distance));
+                children.append(QStringLiteral("Simmetrica: %1 in tutto").arg(ForgeCad::formatLength(body.distance)));
             if (body.extent != 0) children.append(QStringLiteral("Fino a: ") + ForgeCad::geometryRefText(body.extentRef, sketches, extrusions));
             if (body.feature == BodyFeature::Extrusion && body.extrudeSides == 2)
-                children.append(QStringLiteral("Secondo verso: %1").arg(body.distance2));
+                children.append(QStringLiteral("Secondo verso: %1").arg(ForgeCad::formatLength(body.distance2)));
             if (body.mergeOperation != 0)
                 for (int other : body.mergeBodies)
                     if (!previousStage(other))
@@ -17999,10 +18057,10 @@ void PdfWindow::rebuildModelTree() {
             QStringList children;
             if (body.feature == BodyFeature::SurfaceOffset) {
                 if (!previousStage(body.firstBody)) children.append(QStringLiteral("Corpo: ") + extrusions.value(body.firstBody).name);
-                children.append(QStringLiteral("Distanza: %1").arg(body.distance));
+                children.append(QStringLiteral("Distanza: %1").arg(ForgeCad::formatLength(body.distance)));
             } else if (body.feature == BodyFeature::Shell) {
                 if (!previousStage(body.firstBody)) children.append(QStringLiteral("Solido: ") + extrusions.value(body.firstBody).name);
-                children.append(QStringLiteral("Spessore: %1").arg(body.distance));
+                children.append(QStringLiteral("Spessore: %1").arg(ForgeCad::formatLength(body.distance)));
                 children.append(QStringLiteral("Facce aperte: %1").arg(body.offsetFaces.size()));
             } else if (body.feature == BodyFeature::BoundarySurface) {
                 for (const GeometryRef &ref : body.planarRefs) children.append(QStringLiteral("Curva: ") + ForgeCad::geometryRefText(ref, sketches, extrusions));
@@ -18026,7 +18084,8 @@ void PdfWindow::rebuildModelTree() {
                 const TransformParameters &m = body.move;
                 if (m.copy || !previousStage(body.firstBody))
                     children.append((m.copy ? QStringLiteral("Copia di: ") : QStringLiteral("Corpo: ")) + extrusions.value(body.firstBody).name);
-                children.append(QStringLiteral("Traslazione: (%1, %2, %3)").arg(m.translation[0]).arg(m.translation[1]).arg(m.translation[2]));
+                children.append(QStringLiteral("Traslazione: (%1, %2, %3)")
+                    .arg(ForgeCad::formatLength(m.translation[0]), ForgeCad::formatLength(m.translation[1]), ForgeCad::formatLength(m.translation[2])));
                 if (std::fabs(m.angle) > 0.0)
                     children.append(QStringLiteral("Rotazione: %1\u00B0 attorno a %2").arg(m.angle).arg(ForgeCad::geometryRefText(m.axis, sketches, extrusions)));
             } else if (body.feature == BodyFeature::Pattern) {

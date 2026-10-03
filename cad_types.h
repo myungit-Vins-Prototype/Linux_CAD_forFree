@@ -604,6 +604,11 @@ struct AxesOrientation {
     double toward[3] = {0.0, -1.0, 0.0};
 };
 
+// Unita' lineare mostrata dall'interfaccia. La geometria e tutte le
+// definizioni parametriche restano sempre in millimetri: cambiare questa
+// preferenza non modifica ne' rigenera il modello.
+enum class LengthUnit { Millimeter = 0, Centimeter = 1, Meter = 2, Inch = 3, Foot = 4 };
+
 // Stato del documento soggetto a Undo/Redo (l'orientamento degli assi si
 // salva con il documento ma non torna indietro con l'Undo).
 struct DocumentState {
@@ -612,6 +617,8 @@ struct DocumentState {
     QVector<ModelBody> modelBodies;
     AxesOrientation orientation;
     bool orientationSet = false;  // letto dal file (altrimenti quello predefinito delle opzioni)
+    LengthUnit lengthUnit = LengthUnit::Millimeter;
+    bool lengthUnitSet = false;
 };
 
 // Sfondo della scena. Con la sfumatura attiva i due colori sono distribuiti

@@ -46,7 +46,8 @@ constexpr char kMagic[4] = {'F', 'C', 'A', 'D'};
 // 23 offset di superficie e cucitura.
 // 24 loft e sweep di superficie (senza coperchi), superficie rigata (le due
 // catene di riferimenti), superficie planare (bordi scelti nella vista).
-constexpr quint16 kVersion = 25;
+// 25 svuotamento dei solidi; 26 unita' lineare preferita del documento.
+constexpr quint16 kVersion = 26;
 constexpr quint8 kZlib = 1;
 
 void write(QDataStream &out, const CurveObject &curve) {
@@ -649,6 +650,7 @@ QString saveDocumentFile(const QString &path, const DocumentState &state, bool b
         out << quint32(normalized.modelBodies.size());
         for (const ModelBody &body : normalized.modelBodies)
             out << body.id << body.name << body.visible << body.tipFeatureId << body.meshColor;
+        out << qint32(normalized.lengthUnit);
     }
     QSaveFile file(path);
     if (!file.open(QIODevice::WriteOnly)) return QStringLiteral("Impossibile scrivere %1: %2").arg(path, file.errorString());
@@ -698,6 +700,18 @@ QString parsePayload(const QByteArray &payload, quint16 version, int extras, Doc
             if (version >= 22) in >> body.meshColor;
         }
         if (in.status() != QDataStream::Ok) return QStringLiteral("Il file e' danneggiato (storyboard).");
+    }
+    if (version >= 26) {
+        qint32 unit = 0;
+        in >> unit;
+        if (unit < int(LengthUnit::Millimeter) || unit > int(LengthUnit::Foot))
+            return QStringLiteral("Il file contiene un'unita' di misura non valida.");
+        loaded.lengthUnit = LengthUnit(unit);
+        loaded.lengthUnitSet = true;
+    } else {
+        // Tutti i formati precedenti mostravano e accettavano millimetri.
+        loaded.lengthUnit = LengthUnit::Millimeter;
+        loaded.lengthUnitSet = true;
     }
     if (!buffer.atEnd()) return QStringLiteral("Il file e' danneggiato (dati in piu' alla fine).");
     normalizeModelHistory(loaded);
