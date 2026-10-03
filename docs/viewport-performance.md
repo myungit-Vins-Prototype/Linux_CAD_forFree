@@ -70,4 +70,11 @@ QT_QPA_PLATFORM=offscreen QT_QPA_PLATFORMTHEME= QT_STYLE_OVERRIDE=Fusion ./forge
 ./forgecad-cuda-build/forgecad_selection_benchmark APP_errore.stp
 ```
 
+Per confrontare una ricostruzione parametrica completa con l'apertura dello
+snapshot B-rep + mesh salvato nel documento:
+
+```bash
+QT_QPA_PLATFORM=offscreen ./forgecad-cuda-build/forgecad_view_tests --bench-load File_Esempio/AP0730.prt 5
+```
+
 In una sessione grafica con OpenGL desktop, `forgecad_view_tests --gl` verifica anche il disegno dei buffer e confronta pixel per pixel il rendering VBO e quello immediato dello stesso corpo. Le impostazioni dei test sono temporanee. Il test comprende ridimensionamento, annullamento, Undo/Redo, vincoli sui riferimenti fissi, salvataggio e riapertura del documento, e invalidazione della cache durante il pan.

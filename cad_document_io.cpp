@@ -16,6 +16,8 @@
 #include "cad_model_history.h"
 #include "cad_topology_ref.h"
 #include "fk_body_io.h"
+#include "fk_classify.h"
+#include "fk_parallel.h"
 #include "forgecad_source_hash.h"
 
 namespace ForgeCad {
@@ -479,12 +481,47 @@ bool read(QDataStream &in, ExtrusionObject &body, quint16 version, int extras) {
 
 namespace {
 
-// Copia dei corpi calcolati (formato 14), in un blocco compresso dopo la
-// definizione: l'impronta dei sorgenti della geometria (FORGECAD_SOURCE_HASH)
-// e quella della definizione, poi per ogni corpo il body del kernel in
-// binario (fk_body_io) con il suo messaggio. All'apertura vale solo se le due
-// impronte coincidono: altrimenti (o se un body non si rilegge) si ricalcola.
+// Snapshot dello stato calcolato, in un blocco compresso dopo la definizione.
+// Dal formato interno 2 comprende sia il B-rep esatto sia la mesh pronta per
+// il viewport. La definizione parametrica resta sempre la fonte autorevole:
+// una modifica o una rigenerazione esplicita sostituisce immediatamente lo
+// snapshot. Il tag rende leggibili anche le cache precedenti (solo B-rep).
+constexpr quint32 kBodyCacheTag = 0x46434332;  // "FCC2"
+constexpr quint32 kBodyCacheVersion = 2;
+constexpr qsizetype kMaxDisplayValues = 200000000;
+
 QByteArray definitionHash(const QByteArray &payload) { return QCryptographicHash::hash(payload, QCryptographicHash::Sha256); }
+
+bool hasDisplaySnapshot(const BodyDisplay &display) {
+    return display.quality >= 0
+        && (!display.vertices.isEmpty() || !display.edges.isEmpty() || !display.constructionCurves.isEmpty());
+}
+
+void writeDisplay(QDataStream &out, const BodyDisplay &display) {
+    out << qint32(display.quality) << display.vertices << display.normals << display.edges << display.edgeIds
+        << display.constructionCurves << display.faceEdges;
+}
+
+bool reasonableDisplay(const BodyDisplay &display) {
+    qsizetype values = display.vertices.size() + display.normals.size() + display.edgeIds.size();
+    for (const QVector<QVector3D> &line : display.edges) values += line.size();
+    for (const QVector<QVector3D> &line : display.constructionCurves) values += line.size();
+    for (const QVector<int> &face : display.faceEdges) values += face.size();
+    return values <= kMaxDisplayValues
+        && (display.normals.isEmpty() || display.normals.size() == display.vertices.size())
+        && display.edgeIds.size() <= display.edges.size();
+}
+
+bool readDisplay(QDataStream &in, BodyDisplay &display) {
+    qint32 quality = -1;
+    in >> quality >> display.vertices >> display.normals >> display.edges >> display.edgeIds
+       >> display.constructionCurves >> display.faceEdges;
+    display.quality = quality;
+    display.rayIndex.reset();
+    display.instancedBase.reset();
+    display.instanceTransforms.clear();
+    return in.status() == QDataStream::Ok && quality >= 0 && reasonableDisplay(display);
+}
 
 QByteArray bodyCache(const QByteArray &payload, const DocumentState &state) {
     QByteArray cache;
@@ -492,7 +529,8 @@ QByteArray bodyCache(const QByteArray &payload, const DocumentState &state) {
     buffer.open(QIODevice::WriteOnly);
     QDataStream out(&buffer);
     out.setVersion(QDataStream::Qt_6_0);
-    out << QByteArray(FORGECAD_SOURCE_HASH) << definitionHash(payload) << quint32(state.extrusions.size());
+    out << QByteArray(FORGECAD_SOURCE_HASH) << definitionHash(payload) << kBodyCacheTag << kBodyCacheVersion
+        << quint32(state.extrusions.size());
     for (const ExtrusionObject &body : state.extrusions) {
         std::string data;
         if (body.forgeBody) {
@@ -504,40 +542,88 @@ QByteArray bodyCache(const QByteArray &payload, const DocumentState &state) {
         }
         out << quint8(data.empty() ? 0 : 1);
         if (!data.empty()) out << body.error << QByteArray(data.data(), qsizetype(data.size()));
+        const bool display = hasDisplaySnapshot(body.display);
+        out << quint8(display ? 1 : 0);
+        if (display) writeDisplay(out, body.display);
     }
     return qCompress(cache, 6);
 }
 
 void applyBodyCache(const QByteArray &compressed, const QByteArray &payload, DocumentState &state, bool previewCache) {
+    (void)previewCache;
     const QByteArray cache = qUncompress(compressed);
     if (cache.isEmpty()) return;
     QDataStream in(cache);
     in.setVersion(QDataStream::Qt_6_0);
     QByteArray sourceHash, payloadHash;
-    quint32 count = 0;
-    in >> sourceHash >> payloadHash >> count;
-    const bool currentGeometry = sourceHash == QByteArray(FORGECAD_SOURCE_HASH);
-    if (in.status() != QDataStream::Ok || (!currentGeometry && !previewCache) || payloadHash != definitionHash(payload)
-        || count != quint32(state.extrusions.size()))
+    quint32 marker = 0, cacheVersion = 1, count = 0;
+    in >> sourceHash >> payloadHash >> marker;
+    (void)sourceHash;  // informativa: lo snapshot resta valido tra versioni del kernel
+    if (marker == kBodyCacheTag) in >> cacheVersion >> count;
+    else count = marker;  // cache storica: il terzo valore era direttamente il numero dei corpi
+    if (in.status() != QDataStream::Ok || cacheVersion > kBodyCacheVersion
+        || payloadHash != definitionHash(payload) || count != quint32(state.extrusions.size()))
         return;
-    for (ExtrusionObject &body : state.extrusions) {
-        quint8 has = 0;
-        in >> has;
-        if (!has) continue;
+
+    struct CachedBody {
         QString error;
         QByteArray data;
-        in >> error >> data;
-        if (in.status() != QDataStream::Ok) return;
-        try {
-            body.forgeBody = std::make_shared<const Kernel::Body>(Kernel::readBodyBinary(std::string(data.constData(), std::size_t(data.size()))));
-            body.error = error;
-            // Solo una cache prodotta dalla geometria corrente puo' evitare la
-            // rigenerazione. Il selettore file usa anche una copia precedente,
-            // ma soltanto nel suo viewport isolato.
-            body.cachedGeometry = currentGeometry;
-        } catch (const std::exception &) {
-            body.forgeBody.reset();
+        BodyDisplay display;
+        bool hasBody = false;
+        bool hasDisplay = false;
+    };
+    std::vector<CachedBody> records(count);
+    for (quint32 i = 0; i < count; ++i) {
+        quint8 has = 0;
+        in >> has;
+        records[i].hasBody = has != 0;
+        if (has) in >> records[i].error >> records[i].data;
+        if (cacheVersion >= 2) {
+            quint8 hasDisplay = 0;
+            in >> hasDisplay;
+            records[i].hasDisplay = hasDisplay != 0;
+            if (records[i].hasDisplay && !readDisplay(in, records[i].display)) return;
         }
+        if (in.status() != QDataStream::Ok) return;
+    }
+
+    // I body sono indipendenti nello snapshot: lettura binaria e indici per il
+    // picking vengono ricostruiti su tutti i core. Eventuali record non piu'
+    // leggibili ricadranno nella normale rigenerazione parametrica.
+    std::vector<ForgeBody> bodies(count);
+    std::vector<std::shared_ptr<const Kernel::RayFaceIndex>> rayIndices(count);
+    Kernel::parallelFor(count, Kernel::threadCount(0), [&](std::size_t i) {
+        if (!records[i].hasBody) return;
+        try {
+            bodies[i] = std::make_shared<const Kernel::Body>(
+                Kernel::readBodyBinary(std::string(records[i].data.constData(), std::size_t(records[i].data.size()))));
+            if (records[i].hasDisplay) {
+                try {
+                    rayIndices[i] = std::make_shared<const Kernel::RayFaceIndex>(*bodies[i]);
+                } catch (const std::exception &) {
+                    rayIndices[i].reset();
+                }
+            }
+        } catch (const std::exception &) {
+            bodies[i].reset();
+        }
+    });
+    for (quint32 i = 0; i < count; ++i)
+        if (records[i].hasBody && !bodies[i]) return;  // snapshot atomico: niente dipendenze miste
+    for (quint32 i = 0; i < count; ++i) {
+        ExtrusionObject &body = state.extrusions[int(i)];
+        if (!bodies[i]) continue;
+        body.forgeBody = std::move(bodies[i]);
+        body.error = records[i].error;
+        if (records[i].hasDisplay) {
+            body.display = std::move(records[i].display);
+            body.display.rayIndex = std::move(rayIndices[i]);
+        }
+        // Lo snapshot e' uno stato CAD completo, non un risultato usa-e-getta
+        // della build: puo' aprirsi anche dopo un aggiornamento del kernel.
+        // Alla prima modifica della storia cachedGeometry viene azzerato e il
+        // corpo torna a essere calcolato dalla definizione parametrica.
+        body.cachedGeometry = true;
     }
 }
 

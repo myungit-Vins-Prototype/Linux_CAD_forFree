@@ -439,7 +439,8 @@ public:
     int activeSketchIndex() const { return activeSketch_; }
     bool sketchModeActive() const { return sketchMode_; }
     // Documento corrente (per il salvataggio) e apertura di un documento: la
-    // cronologia riparte da zero e i corpi si rigenerano dalla definizione.
+    // cronologia riparte da zero; i corpi usano lo snapshot salvato quando e'
+    // presente, altrimenti si rigenerano dalla definizione.
     DocumentState currentDocument() const { return documentState(); }
     void loadDocument(DocumentState state,
                       const std::function<void(int, int, const QString &)> &progress = {}) {
@@ -453,12 +454,14 @@ public:
         sketches_ = std::move(state.sketches);
         extrusions_ = std::move(state.extrusions);
         modelBodies_ = std::move(state.modelBodies);
-        for (SketchObject &sketch : sketches_)
-            for (CurveObject &curve : sketch.curves) {
-                if (curve.tool == DrawingTool::Spline && curve.tangentHandles.size() != curve.controlPoints.size())
-                    ForgeCad::initializeTangentHandles(curve);
-                ForgeCad::recalculateCurve(curve, tessellationQuality_);
-            }
+        std::vector<CurveObject *> curveJobs;
+        for (SketchObject &sketch : sketches_) {
+            CurveObject *curves = sketch.curves.data();  // detach dei QVector prima dei worker
+            for (int i = 0; i < sketch.curves.size(); ++i) curveJobs.push_back(curves + i);
+        }
+        ForgeCad::Kernel::parallelFor(curveJobs.size(), ForgeCad::Kernel::threadCount(0), [&](std::size_t i) {
+            ForgeCad::recalculateCurve(*curveJobs[i], tessellationQuality_);
+        });
         const int totalBodies = qMax(1, int(extrusions_.size()));
         if (progress) progress(0, totalBodies, QStringLiteral("Preparazione degli schizzi..."));
         regenerateAll(progress);
@@ -482,7 +485,7 @@ public:
         for (ExtrusionObject &body : extrusions_) {
             if (body.forgeBody) {
                 body.solid = !body.forgeBody->isSheet();
-                tessellateGeometry(body, 0, body.display);
+                if (body.display.quality != 0) tessellateGeometry(body, 0, body.display);
             } else {
                 body.display = {};
             }
@@ -6275,9 +6278,10 @@ private:
                           int quality) {
         QElapsedTimer timer;
         timer.start();
-        if (body.cachedGeometry && body.forgeBody) {
-            // Appena aperto: il body salvato nel documento (stessi sorgenti,
-            // stessa definizione) al posto del calcolo.
+        const bool usedSnapshot = body.cachedGeometry && body.forgeBody;
+        if (usedSnapshot) {
+            // Appena aperto: B-rep e, nelle cache nuove, mesh salvati nel
+            // documento al posto del calcolo.
             body.cachedGeometry = false;
             body.curve.reset();
             body.datumValid = false;
@@ -6287,7 +6291,7 @@ private:
             buildGeometry(body, index, sketches, bodies);
         }
         const qint64 built = timer.elapsed();
-        tessellateGeometry(body, quality, body.display);
+        if (!usedSnapshot || body.display.quality != quality) tessellateGeometry(body, quality, body.display);
         configurePatternInstances(body, index, sketches, bodies);
         if (qEnvironmentVariableIsSet("FORGECAD_PROFILE"))
             std::fprintf(stderr, "PROFILO corpo %d \"%s\": costruzione %lld ms, tassellazione %lld ms (punti valutati con CUDA dall'avvio: %llu)\n",

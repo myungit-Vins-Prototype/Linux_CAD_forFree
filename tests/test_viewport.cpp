@@ -175,6 +175,45 @@ public:
         }
         std::cout << "rotella (evento + paint): " << double(t.nsecsElapsed()) / 1e6 / count << " ms" << std::endl;
     }
+    // Confronta la ricostruzione parametrica completa con l'apertura dello
+    // snapshot B-rep + mesh: --bench-load doc.prt [ripetizioni snapshot].
+    static void benchLoad(const QStringList &args) {
+        using namespace ForgeCad;
+        const int count = args.size() > 1 ? qMax(1, args.at(1).toInt()) : 5;
+        QElapsedTimer timer;
+        timer.start();
+        DocumentState source;
+        require(loadDocumentFile(args.at(0), source).isEmpty(), "lettura del documento da misurare");
+        for (ExtrusionObject &body : source.extrusions) {
+            body.cachedGeometry = false;
+            body.forgeBody.reset();
+            body.curve.reset();
+            body.display = {};
+        }
+        CadViewport rebuilt;
+        rebuilt.loadDocument(std::move(source));
+        const double rebuiltMs = double(timer.nsecsElapsed()) / 1e6;
+
+        QTemporaryDir directory;
+        require(directory.isValid(), "directory temporanea per lo snapshot");
+        const QString snapshot = directory.filePath(QStringLiteral("snapshot.prt"));
+        require(saveDocumentFile(snapshot, rebuilt.currentDocument(), true).isEmpty(), "salvataggio dello snapshot");
+        double snapshotMs = 0.0;
+        for (int i = 0; i < count; ++i) {
+            timer.restart();
+            DocumentState state;
+            require(loadDocumentFile(snapshot, state).isEmpty(), "lettura dello snapshot");
+            CadViewport opened;
+            opened.loadDocument(std::move(state));
+            snapshotMs += double(timer.nsecsElapsed()) / 1e6;
+        }
+        snapshotMs /= count;
+        std::cout << "ricostruzione completa: " << rebuiltMs << " ms\n"
+                  << "apertura snapshot: " << snapshotMs << " ms (media di " << count << ")\n"
+                  << "accelerazione: " << rebuiltMs / snapshotMs << "x\n"
+                  << "file origine: " << QFileInfo(args.at(0)).size() << " byte, snapshot: "
+                  << QFileInfo(snapshot).size() << " byte" << std::endl;
+    }
     // Come --bench-view ma nella finestra completa dell'app, con le
     // impostazioni dell'utente copiate: tempo da un evento al fotogramma
     // mostrato (frameSwapped). --bench-window doc.prt [ripetizioni]
@@ -1926,8 +1965,8 @@ public:
             require(loadedBodies == totalBodies && totalBodies == 1,
                     "avanzamento determinato fino all'ultimo corpo durante l'apertura");
 
-            // Il riquadro Apri puo' disegnare una cache di una build precedente,
-            // ma il documento normale continua a rifiutarla e rigenera il B-rep.
+            // Uno snapshot della stessa definizione resta apribile dopo un
+            // aggiornamento del kernel: la prima modifica lo rigenerera'.
             QTemporaryDir staleCacheDir;
             const QString staleCachePath = staleCacheDir.filePath(QStringLiteral("cache-precedente.prt"));
             require(saveDocumentFile(staleCachePath, cachedBlend.currentDocument(), true).isEmpty(),
@@ -1956,8 +1995,10 @@ public:
             require(loadDocumentFile(staleCachePath, strictCache).isEmpty()
                         && loadDocumentFile(staleCachePath, previewCache, true).isEmpty(),
                     "lettura della cache precedente nei due modi");
-            require(!strictCache.extrusions.first().forgeBody && previewCache.extrusions.first().forgeBody,
-                    "cache precedente disponibile solo per il riquadro di anteprima");
+            require(strictCache.extrusions.first().forgeBody && strictCache.extrusions.first().cachedGeometry
+                        && previewCache.extrusions.first().forgeBody
+                        && !strictCache.extrusions.first().display.vertices.isEmpty(),
+                    "snapshot precedente disponibile senza ricalcolo e con mesh salvata");
             const QVector<EdgePoint> cachedEdge{{2.0, 0.0, 2.0}};
             cachedBlend.requestBlendPreview(0, cachedEdge, 0.25, false);
             cachedBlend.startPreviewJob();
@@ -2058,6 +2099,8 @@ int main(int argc, char **argv) {
         const int step = int(app.arguments().indexOf(QStringLiteral("--render-step")));
         const int owner = int(app.arguments().indexOf(QStringLiteral("--pick-owner")));
         if (owner > 0) { ViewportInteractionTest::pickOwner(app.arguments().mid(owner + 1)); return 0; }
+        const int load = int(app.arguments().indexOf(QStringLiteral("--bench-load")));
+        if (load > 0) { ViewportInteractionTest::benchLoad(app.arguments().mid(load + 1)); return 0; }
         const int bench = int(app.arguments().indexOf(QStringLiteral("--bench-view")));
         if (bench > 0) { ViewportInteractionTest::benchView(app.arguments().mid(bench + 1)); return 0; }
         const int edit = int(app.arguments().indexOf(QStringLiteral("--render-edit")));

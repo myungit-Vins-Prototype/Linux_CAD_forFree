@@ -28,7 +28,7 @@ public:
     void setColor(const QVector4D &color) { color_ = color; }
     void setEmission(const QVector4D &emission) { emission_ = emission; }
     void setLightingEnabled(bool enabled) { lightingEnabled_ = enabled; }
-    void setLighting(const Lighting &lighting) { lighting_ = lighting; }
+    void setLighting(const Lighting &lighting);
     void faces(const BodyDisplay &display);
     void edges(const BodyDisplay &display);
     void instancedFaces(const BodyDisplay &display, const QVector<QMatrix4x4> &transforms);
@@ -60,6 +60,9 @@ private:
     QVector4D color_{1.0f, 1.0f, 1.0f, 1.0f};
     QVector4D emission_{0.0f, 0.0f, 0.0f, 1.0f};
     Lighting lighting_;
+    bool faceMatricesDirty_ = true;
+    bool lineMatricesDirty_ = true;
+    bool lightingDirty_ = true;
     bool lightingEnabled_ = false;
     bool clipEnabled_ = false;
 };

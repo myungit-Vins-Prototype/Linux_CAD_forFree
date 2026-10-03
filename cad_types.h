@@ -578,8 +578,8 @@ struct ExtrusionObject {
     ForgeCad::ForgeBody forgeBody;
     QString error;
     BodyDisplay display;
-    // forgeBody e error vengono dalla copia salvata nel documento (formato 14):
-    // alla prima rigenerazione si usano invece di ricalcolare il corpo.
+    // forgeBody, display ed error vengono dallo snapshot salvato: alla prima
+    // apertura si usano invece di ricalcolare e ritassellare il corpo.
     bool cachedGeometry = false;
 };
 

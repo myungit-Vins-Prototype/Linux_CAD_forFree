@@ -23,6 +23,9 @@ void DisplayCache::clear() {
     faceShader_.reset();
     lineShader_.reset();
     shadersTried_ = false;
+    faceMatricesDirty_ = true;
+    lineMatricesDirty_ = true;
+    lightingDirty_ = true;
 }
 void DisplayCache::beginFrame() {
     ++frame_;
@@ -33,6 +36,12 @@ void DisplayCache::beginFrame() {
 void DisplayCache::setMatrices(const QMatrix4x4 &projection, const QMatrix4x4 &modelView) {
     projection_ = projection;
     modelView_ = modelView;
+    faceMatricesDirty_ = true;
+    lineMatricesDirty_ = true;
+}
+void DisplayCache::setLighting(const Lighting &lighting) {
+    lighting_ = lighting;
+    lightingDirty_ = true;
 }
 void DisplayCache::setClipPlane(const QVector4D &plane, bool enabled) {
     clipPlane_ = plane;
@@ -204,6 +213,9 @@ void main() { fragmentColor = color; }
         lineShader_.reset();
         return false;
     }
+    faceMatricesDirty_ = true;
+    lineMatricesDirty_ = true;
+    lightingDirty_ = true;
     return true;
 }
 
@@ -211,20 +223,26 @@ bool DisplayCache::shaderAvailable() { return ensureShaders(); }
 
 void DisplayCache::setFaceUniforms() {
     faceShader_->bind();
-    faceShader_->setUniformValue("modelView", modelView_);
-    faceShader_->setUniformValue("projection", projection_);
-    faceShader_->setUniformValue("normalMatrix", modelView_.normalMatrix());
+    if (faceMatricesDirty_) {
+        faceShader_->setUniformValue("modelView", modelView_);
+        faceShader_->setUniformValue("projection", projection_);
+        faceShader_->setUniformValue("normalMatrix", modelView_.normalMatrix());
+        faceMatricesDirty_ = false;
+    }
     faceShader_->setUniformValue("clipPlane", clipPlane_);
     faceShader_->setUniformValue("clipEnabled", clipEnabled_);
     faceShader_->setUniformValue("baseColor", color_);
     faceShader_->setUniformValue("lightingEnabled", lightingEnabled_);
-    faceShader_->setUniformValue("ambient", lighting_.ambient);
     faceShader_->setUniformValue("emission", emission_);
-    faceShader_->setUniformValue("specularColor", lighting_.specular);
-    faceShader_->setUniformValue("shininess", lighting_.shininess);
-    faceShader_->setUniformValueArray("lightPosition", lighting_.positions.data(), 4);
-    faceShader_->setUniformValueArray("lightColor", lighting_.colors.data(), 4);
-    faceShader_->setUniformValueArray("lightEnabled", lighting_.enabled.data(), 4);
+    if (lightingDirty_) {
+        faceShader_->setUniformValue("ambient", lighting_.ambient);
+        faceShader_->setUniformValue("specularColor", lighting_.specular);
+        faceShader_->setUniformValue("shininess", lighting_.shininess);
+        faceShader_->setUniformValueArray("lightPosition", lighting_.positions.data(), 4);
+        faceShader_->setUniformValueArray("lightColor", lighting_.colors.data(), 4);
+        faceShader_->setUniformValueArray("lightEnabled", lighting_.enabled.data(), 4);
+        lightingDirty_ = false;
+    }
 }
 
 void DisplayCache::faces(const BodyDisplay &display) {
@@ -245,7 +263,10 @@ void DisplayCache::edges(const BodyDisplay &display) {
     Entry &entry = get(display);
     if (!entry.ready || !entry.lineArray.isCreated() || !ensureShaders()) return;
     lineShader_->bind();
-    lineShader_->setUniformValue("modelViewProjection", projection_ * modelView_);
+    if (lineMatricesDirty_) {
+        lineShader_->setUniformValue("modelViewProjection", projection_ * modelView_);
+        lineMatricesDirty_ = false;
+    }
     lineShader_->setUniformValue("color", color_);
     lineShader_->setUniformValue("clipPlane", clipPlane_);
     lineShader_->setUniformValue("clipEnabled", clipEnabled_);
@@ -284,7 +305,10 @@ void DisplayCache::instancedEdges(const BodyDisplay &display, const QVector<QMat
     Entry &entry = get(display);
     if (!entry.ready || !entry.lineArray.isCreated() || !ensureShaders()) return;
     lineShader_->bind();
-    lineShader_->setUniformValue("modelViewProjection", projection_ * modelView_);
+    if (lineMatricesDirty_) {
+        lineShader_->setUniformValue("modelViewProjection", projection_ * modelView_);
+        lineMatricesDirty_ = false;
+    }
     lineShader_->setUniformValue("color", color_);
     lineShader_->setUniformValue("clipPlane", clipPlane_);
     lineShader_->setUniformValue("clipEnabled", clipEnabled_);
@@ -310,9 +334,12 @@ void DisplayCache::pickingFaces(const BodyDisplay &display, const QVector4D &ide
     Entry &entry = get(display);
     if (!entry.ready || !entry.faceArray.isCreated() || !ensureShaders()) return;
     faceShader_->bind();
-    faceShader_->setUniformValue("modelView", modelView_);
-    faceShader_->setUniformValue("projection", projection_);
-    faceShader_->setUniformValue("normalMatrix", modelView_.normalMatrix());
+    if (faceMatricesDirty_) {
+        faceShader_->setUniformValue("modelView", modelView_);
+        faceShader_->setUniformValue("projection", projection_);
+        faceShader_->setUniformValue("normalMatrix", modelView_.normalMatrix());
+        faceMatricesDirty_ = false;
+    }
     faceShader_->setUniformValue("clipPlane", QVector4D());
     faceShader_->setUniformValue("clipEnabled", false);
     faceShader_->setUniformValue("baseColor", identifierColor);
@@ -331,9 +358,12 @@ void DisplayCache::pickingInstancedFaces(const BodyDisplay &display, const QVect
     Entry &entry = get(display);
     if (!entry.ready || !entry.faceArray.isCreated() || !ensureShaders()) return;
     faceShader_->bind();
-    faceShader_->setUniformValue("modelView", modelView_);
-    faceShader_->setUniformValue("projection", projection_);
-    faceShader_->setUniformValue("normalMatrix", modelView_.normalMatrix());
+    if (faceMatricesDirty_) {
+        faceShader_->setUniformValue("modelView", modelView_);
+        faceShader_->setUniformValue("projection", projection_);
+        faceShader_->setUniformValue("normalMatrix", modelView_.normalMatrix());
+        faceMatricesDirty_ = false;
+    }
     faceShader_->setUniformValue("clipPlane", QVector4D());
     faceShader_->setUniformValue("clipEnabled", false);
     faceShader_->setUniformValue("baseColor", identifierColor);
