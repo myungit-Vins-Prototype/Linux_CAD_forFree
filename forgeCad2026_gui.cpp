@@ -97,6 +97,7 @@
 #include <QToolBar>
 #include <QToolButton>
 #include <QTimer>
+#include <QStyledItemDelegate>
 #include <QTreeWidget>
 #include <QTreeWidgetItemIterator>
 #include <QVector>
@@ -498,6 +499,29 @@ public:
     const QVector<SketchObject> &sketches() const { return sketches_; }
     const QVector<ExtrusionObject> &extrusions() const { return extrusions_; }
     const QVector<ModelBody> &modelBodies() const { return modelBodies_; }
+    // Corpo della storyboard in cui confluisce ogni corpo logico: un corpo
+    // consumato da una booleana, da una fusione o da una cucitura di un altro
+    // corpo non esiste piu' da solo, le sue feature sono un ramo della storia
+    // di quello (id -> id del corpo che resta; i corpi indipendenti mappano
+    // su se stessi).
+    QHash<quint64, quint64> storyboardRoots() const {
+        QHash<quint64, quint64> parent;
+        for (const ExtrusionObject &feature : extrusions_) {
+            if (!feature.modelBodyId || feature.suppressed) continue;
+            for (int operand : hiddenOperands(feature)) {
+                if (operand < 0 || operand >= extrusions_.size()) continue;
+                const quint64 consumed = extrusions_.at(operand).modelBodyId;
+                if (consumed && consumed != feature.modelBodyId && !parent.contains(consumed)) parent.insert(consumed, feature.modelBodyId);
+            }
+        }
+        QHash<quint64, quint64> roots;
+        for (const ModelBody &body : modelBodies_) {
+            quint64 root = body.id;
+            for (int guard = 0; parent.contains(root) && guard <= modelBodies_.size(); ++guard) root = parent.value(root);
+            roots.insert(body.id, root);
+        }
+        return roots;
+    }
     QVector<int> featureSketches(int index) const {
         return index >= 0 && index < extrusions_.size() ? sketchesOf(extrusions_.at(index)) : QVector<int>();
     }
@@ -644,27 +668,27 @@ public:
     QString moveFeature(int index, int direction) {
         if (index < 0 || index >= extrusions_.size() || !extrusions_.at(index).modelBodyId)
             return QStringLiteral("Feature non valida.");
-        const quint64 bodyId = extrusions_.at(index).modelBodyId;
+        // Un passo nella storia (le feature di tutti i corpi, nell'ordine di calcolo).
         QVector<int> chain;
         for (int candidate = 0; candidate < extrusions_.size(); ++candidate)
-            if (extrusions_.at(candidate).modelBodyId == bodyId) chain.append(candidate);
+            if (extrusions_.at(candidate).modelBodyId) chain.append(candidate);
         const int position = chain.indexOf(index), destination = position + (direction < 0 ? -1 : 1);
-        if (position <= 0 && direction < 0) return QStringLiteral("La feature iniziale deve restare all'inizio del corpo.");
         if (position < 0 || destination < 0 || destination >= chain.size()) return QStringLiteral("Non ci sono altre feature in quella direzione.");
-        if (destination == 0) return QStringLiteral("La feature iniziale del corpo non puo' essere sostituita.");
         return moveFeatureTo(index, chain.at(destination));
     }
 
     QString moveFeatureTo(int index, int target) {
+        // La storia e' una sola sequenza: il bersaglio puo' essere una feature
+        // di un altro corpo, conta solo che le dipendenze restino prima.
         if (index < 0 || index >= extrusions_.size() || target < 0 || target >= extrusions_.size()
-            || !extrusions_.at(index).modelBodyId || extrusions_.at(index).modelBodyId != extrusions_.at(target).modelBodyId)
-            return QStringLiteral("Le feature da riordinare devono appartenere allo stesso corpo.");
+            || !extrusions_.at(index).modelBodyId || !extrusions_.at(target).modelBodyId)
+            return QStringLiteral("Feature non valida.");
         if (index == target) return {};
         const quint64 bodyId = extrusions_.at(index).modelBodyId;
         int first = -1;
         for (int candidate = 0; candidate < extrusions_.size(); ++candidate)
             if (extrusions_.at(candidate).modelBodyId == bodyId) { first = candidate; break; }
-        if (index == first || target == first) return QStringLiteral("La feature iniziale deve restare all'inizio del corpo.");
+        if (index == first) return QStringLiteral("La feature che crea il corpo non si sposta: sposta le feature che la seguono.");
         bool bodyVisible = true;
         for (const ModelBody &body : modelBodies_)
             if (body.id == bodyId) { bodyVisible = body.visible; break; }
@@ -704,6 +728,13 @@ public:
             remapRef(feature.move.axis);
         }
 
+        for (const ExtrusionObject &feature : reordered)
+            if (feature.modelBodyId == bodyId) {
+                if (feature.featureId != extrusions_.at(first).featureId)
+                    return QStringLiteral("Spostamento non consentito: \"%1\" verrebbe prima di \"%2\", che crea il suo corpo.")
+                        .arg(extrusions_.at(index).name, extrusions_.at(first).name);
+                break;
+            }
         // Le basi interne del corpo sono implicite nella storyboard: dopo il
         // riordino ogni modificatore prende lo stadio immediatamente precedente.
         int previous = -1;
@@ -10053,6 +10084,49 @@ private:
 // Tipi delle voci dell'albero modello (Qt::UserRole); Qt::UserRole + 1 e' l'indice.
 enum TreeItemType { kTreeInfo = -1, kTreeOrigin = 0, kTreePlane = 1, kTreeSketch = 3, kTreeExtrusion = 4, kTreeBody = 5 };
 
+// Numero (badge) accanto al nome delle voci di gruppo dell'albero: il testo in
+// kTreeBadgeRole, disegnato come una pillola dopo il nome.
+constexpr int kTreeBadgeRole = Qt::UserRole + 3;
+
+class TreeBadgeDelegate final : public QStyledItemDelegate {
+public:
+    using QStyledItemDelegate::QStyledItemDelegate;
+
+    void paint(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const override {
+        QStyledItemDelegate::paint(painter, option, index);
+        const QString badge = index.data(kTreeBadgeRole).toString();
+        if (badge.isEmpty()) return;
+        QStyleOptionViewItem item = option;
+        initStyleOption(&item, index);
+        const QWidget *widget = option.widget;
+        QStyle *style = widget ? widget->style() : QApplication::style();
+        const QRect text = style->subElementRect(QStyle::SE_ItemViewItemText, &item, widget);
+        const int textWidth = item.fontMetrics.horizontalAdvance(item.text);
+        QFont font = item.font;
+        font.setBold(true);
+        font.setPointSizeF(std::max(6.0, font.pointSizeF() * 0.85));
+        const QFontMetrics metrics(font);
+        const int height = metrics.height() + 2, width = std::max(height, metrics.horizontalAdvance(badge) + 10);
+        const QRect pill(text.left() + std::min(textWidth, text.width()) + 8, text.center().y() - height / 2 + 1, width, height);
+        painter->save();
+        painter->setRenderHint(QPainter::Antialiasing);
+        painter->setPen(Qt::NoPen);
+        painter->setBrush(QColor(232, 137, 45));
+        painter->drawRoundedRect(pill, height / 2.0, height / 2.0);
+        painter->setPen(QColor(25, 25, 25));
+        painter->setFont(font);
+        painter->drawText(pill, Qt::AlignCenter, badge);
+        painter->restore();
+    }
+
+    QSize sizeHint(const QStyleOptionViewItem &option, const QModelIndex &index) const override {
+        QSize size = QStyledItemDelegate::sizeHint(option, index);
+        const QString badge = index.data(kTreeBadgeRole).toString();
+        if (!badge.isEmpty()) size.rwidth() += option.fontMetrics.horizontalAdvance(badge) + 24;
+        return size;
+    }
+};
+
 class StoryboardTree final : public QTreeWidget {
 public:
     explicit StoryboardTree(QWidget *parent = nullptr) : QTreeWidget(parent) {
@@ -10102,7 +10176,7 @@ protected:
 private:
     static bool isMovableFeature(QTreeWidgetItem *item) {
         return item && item->data(0, Qt::UserRole).toInt() == kTreeExtrusion && item->parent()
-            && item->parent()->data(0, Qt::UserRole).toInt() == kTreeBody;
+            && item->parent()->data(0, Qt::UserRole + 2).toString() == QStringLiteral("H");
     }
 
     QTreeWidgetItem *targetFeature(const QPoint &position) const {
@@ -14441,6 +14515,7 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
     modelDock->setObjectName(QStringLiteral("modelDock"));  // per saveState/restoreState
     auto *modelTree = new StoryboardTree(modelDock);
     modelTree_ = modelTree;
+    modelTree->setItemDelegate(new TreeBadgeDelegate(modelTree));
     modelTree->setMoveFeatureCallback([viewport](int feature, int target) { return viewport->moveFeatureTo(feature, target); });
     modelTree->setHeaderLabel(QStringLiteral("Oggetti scena"));
     modelTree->setMinimumWidth(220);
@@ -16725,6 +16800,18 @@ void PdfWindow::rebuildModelTree() {
     }
     const int fixedItems = 1 + planeNames().size();
     const SceneSelection selection = viewport_->selection();
+    // Stato aperto/chiuso delle voci, ripreso dopo la ricostruzione (chiave in UserRole + 2).
+    QHash<QString, bool> expanded;
+    const std::function<void(QTreeWidgetItem *)> remember = [&](QTreeWidgetItem *item) {
+        const QString key = item->data(0, Qt::UserRole + 2).toString();
+        if (!key.isEmpty()) expanded.insert(key, item->isExpanded());
+        for (int child = 0; child < item->childCount(); ++child) remember(item->child(child));
+    };
+    for (int top = fixedItems; top < modelTree_->topLevelItemCount(); ++top) remember(modelTree_->topLevelItem(top));
+    const auto restore = [&](QTreeWidgetItem *item, const QString &key, bool open) {
+        item->setData(0, Qt::UserRole + 2, key);
+        item->setExpanded(expanded.value(key, open));
+    };
     while (modelTree_->topLevelItemCount() > fixedItems) delete modelTree_->takeTopLevelItem(fixedItems);
     const QVector<SketchObject> &sketches = viewport_->sketches();
     QSet<int> shownSketches;
@@ -16744,38 +16831,73 @@ void PdfWindow::rebuildModelTree() {
     const QVector<ExtrusionObject> &extrusions = viewport_->extrusions();
     const QVector<ModelBody> &modelBodies = viewport_->modelBodies();
     QTreeWidgetItem *referenceRoot = nullptr;
+    int referenceCount = 0;
     for (const ExtrusionObject &feature : extrusions)
-        if (feature.modelBodyId == 0) {
-            referenceRoot = new QTreeWidgetItem(modelTree_, {QStringLiteral("Geometria di riferimento")});
-            referenceRoot->setData(0, Qt::UserRole, kTreeInfo);
-            referenceRoot->setExpanded(true);
-            break;
+        if (feature.modelBodyId == 0) ++referenceCount;
+    if (referenceCount > 0) {
+        referenceRoot = new QTreeWidgetItem(modelTree_, {QStringLiteral("Geometria di riferimento")});
+        referenceRoot->setData(0, Qt::UserRole, kTreeInfo);
+        referenceRoot->setData(0, kTreeBadgeRole, QString::number(referenceCount));
+        referenceRoot->setToolTip(0, QStringLiteral("%1 piani di costruzione e curve di riferimento").arg(referenceCount));
+        restore(referenceRoot, QStringLiteral("R"), false);  // chiusa di default
+    }
+    // Storia: tutte le feature dei corpi nell'ordine di calcolo, ognuna
+    // preceduta dai suoi schizzi. I corpi stanno in un gruppo a parte.
+    QTreeWidgetItem *historyRoot = nullptr, *bodiesRoot = nullptr;
+    const QHash<quint64, quint64> roots = viewport_->storyboardRoots();
+    QHash<quint64, int> bodyIndex;
+    for (int index = 0; index < modelBodies.size(); ++index) bodyIndex.insert(modelBodies.at(index).id, index);
+    if (!modelBodies.isEmpty()) {
+        // Corpi subito sotto la geometria di riferimento, chiusi di default.
+        bodiesRoot = new QTreeWidgetItem(modelTree_, {QStringLiteral("Corpi")});
+        bodiesRoot->setData(0, Qt::UserRole, kTreeInfo);
+        restore(bodiesRoot, QStringLiteral("C"), false);
+        historyRoot = new QTreeWidgetItem(modelTree_, {QStringLiteral("Storia delle feature")});
+        historyRoot->setData(0, Qt::UserRole, kTreeInfo);
+        historyRoot->setToolTip(0, QStringLiteral("Le feature nell'ordine in cui sono calcolate, dall'alto verso il basso"));
+        restore(historyRoot, QStringLiteral("H"), true);
+        // Solo i corpi che esistono alla fine della storia: quelli consumati da
+        // una booleana, una fusione o una cucitura fanno parte di un altro.
+        for (int index = 0; index < modelBodies.size(); ++index) {
+            const ModelBody &body = modelBodies.at(index);
+            if (roots.value(body.id, body.id) != body.id) continue;
+            QString label = body.name;
+            const int tip = viewport_->modelBodyTip(index);
+            if (tip >= 0) {
+                const QPair<int, int> parts = viewport_->bodyComponents(tip);
+                if (parts.first > 1) label += QStringLiteral("  (%1 solidi)").arg(parts.first);
+                if (parts.second > 1) label += QStringLiteral("  (%1 superfici)").arg(parts.second);
+            }
+            QTreeWidgetItem *item = addObject(label, kTreeBody, index, body.visible, bodiesRoot);
+            item->setIcon(0, ForgeCad::commandIcon(QStringLiteral("box")));
+            item->setToolTip(0, tip >= 0 ? QStringLiteral("Risultato di \"%1\" nella storia").arg(extrusions.at(tip).name)
+                                         : QStringLiteral("Tutte le feature del corpo sono soppresse"));
+            if (tip >= 0 && !extrusions.at(tip).error.isEmpty()) item->setForeground(0, QColor(255, 150, 90));
         }
-    QHash<quint64, QTreeWidgetItem *> bodyItems;
-    for (int index = 0; index < modelBodies.size(); ++index) {
-        const ModelBody &body = modelBodies.at(index);
-        QTreeWidgetItem *item = addObject(body.name, kTreeBody, index, body.visible);
-        item->setIcon(0, ForgeCad::commandIcon(QStringLiteral("box")));
-        item->setFlags(item->flags() | Qt::ItemIsDropEnabled);
-        item->setExpanded(true);
-        item->setToolTip(0, QStringLiteral("Corpo parametrico: le feature sono calcolate dall'alto verso il basso."));
-        bodyItems.insert(body.id, item);
+        bodiesRoot->setData(0, kTreeBadgeRole, QString::number(bodiesRoot->childCount()));
+        bodiesRoot->setToolTip(0, QStringLiteral("%1 corpi alla fine della storia").arg(bodiesRoot->childCount()));
     }
     for (int index = 0; index < extrusions.size(); ++index) {
         const ExtrusionObject &body = extrusions.at(index);
-        // Piu' solidi o superfici separati in un corpo (per esempio un'unione di corpi che non si toccano).
-        const QPair<int, int> parts = viewport_->bodyComponents(index);
         QString label = body.name;
-        if (parts.first > 1) label += QStringLiteral("  (%1 solidi)").arg(parts.first);
-        if (parts.second > 1) label += QStringLiteral("  (%1 superfici)").arg(parts.second);
-        QTreeWidgetItem *parent = bodyItems.value(body.modelBodyId, nullptr);
-        if (!parent) {
-            parent = referenceRoot;
-        }
-        for (int sketch : viewport_->featureSketches(index)) addSketch(sketch, parent);
         const bool reference = body.modelBodyId == 0;
-        const bool tip = !reference && parent && modelBodies.value(parent->data(0, Qt::UserRole + 1).toInt()).tipFeatureId == body.featureId;
-        if (tip) label += QStringLiteral("   ◀ risultato");
+        QTreeWidgetItem *parent = reference || !historyRoot ? referenceRoot : historyRoot;
+        for (int sketch : viewport_->featureSketches(index)) addSketch(sketch, parent);
+        // Il corpo in cui finisce la feature (anche attraverso una booleana).
+        const quint64 root = roots.value(body.modelBodyId, body.modelBodyId);
+        const ModelBody owner = modelBodies.value(bodyIndex.value(root, -1));
+        const bool tip = !reference && modelBodies.value(bodyIndex.value(body.modelBodyId, -1)).tipFeatureId == body.featureId
+                      && root == body.modelBodyId;
+        // Le feature sono passi della storia, non solidi: il numero di solidi
+        // o superfici separati sta nel gruppo dei corpi.
+        // Con piu' corpi si dice in quale finisce la feature.
+        if (!reference && !owner.name.isEmpty() && bodiesRoot && bodiesRoot->childCount() > 1) label += QStringLiteral("   \u2192 %1").arg(owner.name);
+        if (tip) label += QStringLiteral("  \u25C0 risultato");
+        // Lo stadio precedente dello stesso ramo e' implicito nella storia: non si ripete tra i dettagli.
+        const auto previousStage = [&](int operand) {
+            return !reference && operand >= 0 && operand < extrusions.size() && extrusions.at(operand).modelBodyId == body.modelBodyId;
+        };
+        const QString featureKey = QStringLiteral("F%1").arg(body.featureId);
         QTreeWidgetItem *item = addObject(body.error.isEmpty() ? label : label + QStringLiteral("  \u26A0"),
                                           kTreeExtrusion, index, reference ? body.visible : -1, parent);
         bool hasPreviousStage = false;
@@ -16882,14 +17004,15 @@ void PdfWindow::rebuildModelTree() {
                 children.append(QStringLiteral("Secondo verso: %1").arg(body.distance2));
             if (body.mergeOperation != 0)
                 for (int other : body.mergeBodies)
-                    children.append((body.mergeOperation == 1 ? QStringLiteral("Unita a: ") : QStringLiteral("Sottratta da: ")) + extrusions.value(other).name);
+                    if (!previousStage(other))
+                        children.append((body.mergeOperation == 1 ? QStringLiteral("Unita a: ") : QStringLiteral("Sottratta da: ")) + extrusions.value(other).name);
             for (const QString &text : children) {
                 auto *child = new QTreeWidgetItem(item, {text});
                 child->setData(0, Qt::UserRole, kTreeInfo);
                 child->setFlags(Qt::ItemIsEnabled);
                 child->setForeground(0, QColor(140, 160, 175));
             }
-            item->setExpanded(true);
+            restore(item, featureKey, false);
         }
         const bool withChildren = body.feature == BodyFeature::Blend || body.feature == BodyFeature::SheetTrim || body.feature == BodyFeature::SheetExtend
                                || body.feature == BodyFeature::Scale || body.feature == BodyFeature::Helix || body.feature == BodyFeature::Sweep
@@ -16900,7 +17023,7 @@ void PdfWindow::rebuildModelTree() {
         if (body.operation < 0 && withChildren) {
             QStringList children;
             if (body.feature == BodyFeature::SurfaceOffset) {
-                children.append(QStringLiteral("Corpo: ") + extrusions.value(body.firstBody).name);
+                if (!previousStage(body.firstBody)) children.append(QStringLiteral("Corpo: ") + extrusions.value(body.firstBody).name);
                 children.append(QStringLiteral("Distanza: %1").arg(body.distance));
             } else if (body.feature == BodyFeature::Ruled) {
                 for (const GeometryRef &ref : body.ruledFirst) children.append(QStringLiteral("Prima curva: ") + ForgeCad::geometryRefText(ref, sketches, extrusions));
@@ -16909,19 +17032,22 @@ void PdfWindow::rebuildModelTree() {
                 if (body.planarRefs.isEmpty()) children.append(QStringLiteral("Schizzo: ") + sketches.value(body.sketchIndex).name);
                 for (const GeometryRef &ref : body.planarRefs) children.append(QStringLiteral("Bordo: ") + ForgeCad::geometryRefText(ref, sketches, extrusions));
             } else if (body.feature == BodyFeature::Sew) {
-                for (int input : QVector<int>{body.firstBody} + body.booleanTools) children.append(QStringLiteral("Superficie: ") + extrusions.value(input).name);
+                for (int input : QVector<int>{body.firstBody} + body.booleanTools)
+                    if (!previousStage(input)) children.append(QStringLiteral("Cucita con: ") + extrusions.value(input).name);
             } else if (body.feature == BodyFeature::DatumPlane) {
                 for (const GeometryRef &ref : body.datum.refs) children.append(ForgeCad::geometryRefText(ref, sketches, extrusions));
             } else if (body.feature == BodyFeature::Imported) {
                 children.append(QStringLiteral("File: ") + body.importSource);
             } else if (body.feature == BodyFeature::Transform) {
                 const TransformParameters &m = body.move;
-                children.append((m.copy ? QStringLiteral("Copia di: ") : QStringLiteral("Corpo: ")) + extrusions.value(body.firstBody).name);
+                if (m.copy || !previousStage(body.firstBody))
+                    children.append((m.copy ? QStringLiteral("Copia di: ") : QStringLiteral("Corpo: ")) + extrusions.value(body.firstBody).name);
                 children.append(QStringLiteral("Traslazione: (%1, %2, %3)").arg(m.translation[0]).arg(m.translation[1]).arg(m.translation[2]));
                 if (std::fabs(m.angle) > 0.0)
                     children.append(QStringLiteral("Rotazione: %1\u00B0 attorno a %2").arg(m.angle).arg(ForgeCad::geometryRefText(m.axis, sketches, extrusions)));
             } else if (body.feature == BodyFeature::Pattern) {
-                children.append((body.pattern.featureOnly ? QStringLiteral("Funzione: ") : QStringLiteral("Corpo: ")) + extrusions.value(body.firstBody).name);
+                if (body.pattern.featureOnly || !previousStage(body.firstBody))
+                    children.append((body.pattern.featureOnly ? QStringLiteral("Funzione: ") : QStringLiteral("Corpo: ")) + extrusions.value(body.firstBody).name);
                 const QStringList roles = {body.pattern.kind == 0 ? QStringLiteral("Direzione: ") : body.pattern.kind == 1 ? QStringLiteral("Asse: ")
                                                                                                                              : QStringLiteral("Piano: "),
                                            QStringLiteral("Direzione 2: ")};
@@ -16950,7 +17076,7 @@ void PdfWindow::rebuildModelTree() {
             } else {
                 const QString role = body.feature == BodyFeature::Blend ? QStringLiteral("Base: ") : body.feature == BodyFeature::Scale ? QStringLiteral("Corpo: ")
                                                                                                                                       : QStringLiteral("Superficie: ");
-                children.append(role + extrusions.value(body.firstBody).name);
+                if (!previousStage(body.firstBody)) children.append(role + extrusions.value(body.firstBody).name);
             }
             if (body.feature == BodyFeature::SheetTrim)
                 children.append(QStringLiteral("Strumento: ") + (body.secondBody >= 0 ? extrusions.value(body.secondBody).name : planeNames().value(body.trimPlane)));
@@ -16960,7 +17086,7 @@ void PdfWindow::rebuildModelTree() {
                 child->setFlags(Qt::ItemIsEnabled);
                 child->setForeground(0, QColor(140, 160, 175));
             }
-            item->setExpanded(true);
+            restore(item, featureKey, false);
         }
         if (body.operation >= 0) {
             // Risultato booleano: gli operandi sono mostrati come voci figlie.
@@ -16971,16 +17097,19 @@ void PdfWindow::rebuildModelTree() {
             if (body.error.isEmpty())
                 item->setToolTip(0, QStringLiteral("%1   (A = %2, B = %3)")
                     .arg(symbols.value(body.operation), firstName, secondName));
-            QStringList operands{QStringLiteral("A: ") + firstName, QStringLiteral("B: ") + secondName};
-            for (int k = 0; k < body.booleanTools.size(); ++k)
-                operands.append(QStringLiteral("%1: ").arg(QChar(u'C' + qMin(k, 23))) + extrusions.value(body.booleanTools.at(k)).name);
+            // Nella storia il primo operando e' lo stadio precedente; restano gli
+            // strumenti (i rami assorbiti, che compaiono sopra nella storia).
+            QStringList operands;
+            if (!previousStage(body.firstBody)) operands.append(QStringLiteral("Corpo: ") + firstName);
+            for (int tool : QVector<int>{body.secondBody} + body.booleanTools)
+                operands.append(QStringLiteral("Strumento: ") + extrusions.value(tool).name);
             for (const QString &operand : operands) {
                 auto *child = new QTreeWidgetItem(item, {operand});
                 child->setData(0, Qt::UserRole, kTreeInfo);
                 child->setFlags(Qt::ItemIsEnabled);
                 child->setForeground(0, QColor(140, 160, 175));
             }
-            item->setExpanded(true);
+            restore(item, featureKey, false);
         }
         if (selection.kind == SceneObjectKind::Extrusion && selection.index == index) modelTree_->setCurrentItem(item);
     }
@@ -16990,7 +17119,7 @@ void PdfWindow::rebuildModelTree() {
         if (!sketchRoot) {
             sketchRoot = new QTreeWidgetItem(modelTree_, {QStringLiteral("Schizzi non utilizzati")});
             sketchRoot->setData(0, Qt::UserRole, kTreeInfo);
-            sketchRoot->setExpanded(true);
+            restore(sketchRoot, QStringLiteral("S"), true);
         }
         addSketch(index, sketchRoot);
     }

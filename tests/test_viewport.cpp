@@ -507,6 +507,20 @@ public:
         storyboard.undo();
         require(storyboard.extrusions().size() == 3 && storyboard.extrusions().at(2).visible,
                 "undo dell'eliminazione nella storyboard");
+        {
+            // Storia unica: una feature si sposta anche tra feature di altri
+            // corpi, mai prima della feature che crea il suo corpo.
+            CadViewport history;
+            require(history.createPrimitive(box, QStringLiteral("A")).isEmpty() && history.createPrimitive(box, QStringLiteral("B")).isEmpty()
+                        && history.createScale(0, 1.1, 0, {}, QStringLiteral("Scala A")).isEmpty(),
+                    "due corpi e una feature del primo");
+            const quint64 scaleId = history.extrusions().at(2).featureId;
+            require(history.moveFeature(2, -1).isEmpty() && history.extrusions().at(1).featureId == scaleId
+                        && history.extrusions().at(1).firstBody == 0 && history.extrusions().at(1).visible,
+                    "feature spostata prima della feature di un altro corpo");
+            require(!history.moveFeature(1, -1).isEmpty() && history.extrusions().at(1).featureId == scaleId,
+                    "una feature non va prima della feature che crea il suo corpo");
+        }
         // Il proprietario viene ritrovato dall'ID della feature e la
         // sotto-entita' dal suo ID B-rep, anche se indice e punto-cache sono
         // volutamente fuorvianti.
