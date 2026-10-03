@@ -4,6 +4,7 @@
 #include <QByteArray>
 #include <QColor>
 #include <QPair>
+#include <QMatrix4x4>
 #include <QPointF>
 #include <QString>
 #include <QVector>
@@ -234,6 +235,11 @@ struct BodyDisplay {
     QVector<QVector<QVector3D>> constructionCurves; // isoparametriche U/V delle anteprime
     QVector<QVector<int>> faceEdges; // faccia B-rep -> polilinee, senza ricerche geometriche durante il disegno
     std::shared_ptr<const ForgeCad::Kernel::RayFaceIndex> rayIndex;
+    // Ripetizioni disgiunte: il risultato finale resta sopra per selezione,
+    // bordi e misure, ma il renderer puo' disegnare questa mesh base con una
+    // sola chiamata instanced. Vuoti negli altri casi e nei file salvati.
+    std::shared_ptr<const BodyDisplay> instancedBase;
+    QVector<QMatrix4x4> instanceTransforms;
     int quality = -1;
 };
 
@@ -253,8 +259,15 @@ struct BodyDisplay {
 // Ruled: superficie rigata tra le catene di curve ruledFirst e ruledSecond.
 // PlanarSurface: lamina piana delimitata dai contorni chiusi dello schizzo
 // sketchIndex (planarRefs vuoto) o dai bordi planarRefs scelti nella vista.
+// DeleteFace: il corpo firstBody senza le facce offsetFaces (lamina con le
+// facce restanti: un solido diventa una superficie aperta).
+// BoundarySurface: superficie tra curve (patch di Coons) delimitata dal
+// contorno chiuso dei riferimenti curva planarRefs (3 o 4 lati).
+// Shell: il solido firstBody svuotato con pareti di spessore `distance` verso
+// l'interno, le facce offsetFaces tolte per l'apertura (nessuna: cavita' chiusa).
 enum class BodyFeature { Extrusion = 0, Revolution = 1, Primitive = 2, Blend = 3, SheetTrim = 4, SheetExtend = 5, Scale = 6, Helix = 7, Sweep = 8, Loft = 9,
-                         Imported = 10, DatumPlane = 11, Pattern = 12, Transform = 13, SurfaceOffset = 14, Sew = 15, Ruled = 16, PlanarSurface = 17 };
+                         Imported = 10, DatumPlane = 11, Pattern = 12, Transform = 13, SurfaceOffset = 14, Sew = 15, Ruled = 16, PlanarSurface = 17,
+                         DeleteFace = 18, BoundarySurface = 19, Shell = 20 };
 
 // Riferimento leggero a una sotto-entita' del B-rep. `subshape` e' l'ID
 // topologico al momento della scelta, `geometry` il tipo di curva/superficie.
@@ -543,6 +556,7 @@ struct ExtrusionObject {
     // Transform: spostamento del corpo firstBody.
     TransformParameters move;
     // SurfaceOffset: le facce scelte (vuoto: tutte le facce del corpo).
+    // DeleteFace: le facce da togliere (almeno una); Shell: le facce dell'apertura.
     QVector<EdgePoint> offsetFaces;
     // Sew: tolleranza della cucitura e solido se il risultato e' chiuso.
     double sewTolerance = 1e-5;

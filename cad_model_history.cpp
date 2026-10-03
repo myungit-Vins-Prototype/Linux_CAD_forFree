@@ -24,6 +24,8 @@ quint64 inheritedBody(const QVector<ExtrusionObject> &features, const ExtrusionO
     case BodyFeature::SheetExtend:
     case BodyFeature::Scale:
     case BodyFeature::Sew:
+    case BodyFeature::DeleteFace:
+    case BodyFeature::Shell:
         return owner(feature.firstBody);
     case BodyFeature::Transform:
         return feature.move.copy ? 0 : owner(feature.firstBody);
@@ -31,6 +33,7 @@ quint64 inheritedBody(const QVector<ExtrusionObject> &features, const ExtrusionO
         return owner(feature.firstBody);
     case BodyFeature::Ruled:
     case BodyFeature::PlanarSurface:
+    case BodyFeature::BoundarySurface:
         return 0;  // superfici nuove: le curve e i bordi scelti restano dei loro corpi
     case BodyFeature::Extrusion:
     case BodyFeature::Sweep:

@@ -307,7 +307,7 @@ Body assembleBody(const RawModel &input, bool solid, std::vector<std::string> *n
                 const RawFin &fin = kept[(begin + k) % n];
                 if (!current.empty() && currentEnd != startOf(fin)) close();
                 if (current.empty()) currentStart = startOf(fin);
-                current.push_back({edgeOf(fin.edge), fin.sense, nullptr, 0.0});
+                current.push_back({edgeOf(fin.edge), fin.sense, fin.pcurve, fin.pcurve ? fin.pcurveTolerance : 0.0});
                 currentEnd = endOf(fin);
             }
             close();
@@ -379,6 +379,11 @@ Body assembleBody(const RawModel &input, bool solid, std::vector<std::string> *n
         for (FinId fin : {edge.forward, edge.backward}) {
             if (!fin.valid()) continue;
             const Surface &surface = *measured.face(measured.finFace(fin)).surface;
+            // SP-curve data: lo scarto e' |S(p(t)) - C(t)|, senza proiezioni.
+            if (const CurvePtr<2> &pcurve = measured.fin(fin).pcurve) {
+                deviation = std::max(deviation, pcurveDeviation(surface, *edge.curve, *pcurve, edge.range, 64));
+                continue;
+            }
             // Campioni fitti: lo scarto di una B-spline da una superficie libera cambia tra un nodo e l'altro.
             std::vector<double> breaks = edge.curve->breakpoints(edge.range);
             if (breaks.size() < 2 || breaks.size() > 64) breaks = {edge.range.lo, edge.range.hi};
@@ -388,7 +393,7 @@ Body assembleBody(const RawModel &input, bool solid, std::vector<std::string> *n
         }
         deviations[i] = deviation;
     };
-    parallelFor(edgeIds.size(), edgeIds.size() >= 256 ? threadCount(0) : 1u, [&](std::size_t i) {
+    parallelFor(edgeIds.size(), edgeIds.size() >= 8 ? threadCount(0) : 1u, [&](std::size_t i) {
         try {
             measure(i);
         } catch (...) {

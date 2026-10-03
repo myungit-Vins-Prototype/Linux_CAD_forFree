@@ -32,6 +32,8 @@
 #include "fk_offset.h"
 #include "fk_planar.h"
 #include "fk_sew.h"
+#include "fk_boundary.h"
+#include "fk_shell.h"
 #include "fk_step.h"
 #include "fk_tessellate.h"
 
@@ -352,6 +354,71 @@ ForgeBody forgeExtendSheet(const ForgeBody &sheet, const QVector<EdgePoint> &poi
         return std::make_shared<const Body>(extendSheet(*sheet, edges, distance, linear));
     } catch (const std::exception &failure) {
         setError(error, QStringLiteral("Estensione non riuscita: %1").arg(QString::fromUtf8(failure.what())));
+        return nullptr;
+    }
+}
+
+ForgeBody forgeShell(const ForgeBody &base, const QVector<EdgePoint> &points, double thickness, QString *error) {
+    if (!base || base->isSheet()) {
+        setError(error, QStringLiteral("Il guscio richiede un solido."));
+        return nullptr;
+    }
+    if (!(thickness > 0.0)) {
+        setError(error, QStringLiteral("Lo spessore del guscio deve essere maggiore di zero."));
+        return nullptr;
+    }
+    try {
+        Box box;
+        for (VertexId v : base->vertices()) box.add(base->vertex(v).point);
+        const double reach = 1e-3 * std::max(1.0, box.diagonal());
+        std::vector<FaceId> removed;
+        for (const EdgePoint &point : points) {
+            const FaceId f = resolveFaceReference(*base, point, reach);
+            if (!f.valid()) {
+                setError(error, QStringLiteral("Una delle facce dell'apertura non esiste piu' nel corpo."));
+                return nullptr;
+            }
+            if (std::find(removed.begin(), removed.end(), f) == removed.end()) removed.push_back(f);
+        }
+        return std::make_shared<const Body>(shellBody(*base, removed, thickness));
+    } catch (const std::exception &failure) {
+        setError(error, QStringLiteral("Guscio non riuscito: %1").arg(QString::fromUtf8(failure.what())));
+        return nullptr;
+    }
+}
+
+ForgeBody forgeDeleteFaces(const ForgeBody &base, const QVector<EdgePoint> &points, QString *error) {
+    if (!base) {
+        setError(error, QStringLiteral("Il corpo di partenza non ha geometria."));
+        return nullptr;
+    }
+    if (points.isEmpty()) {
+        setError(error, QStringLiteral("Nessuna faccia da eliminare."));
+        return nullptr;
+    }
+    try {
+        Box box;
+        for (VertexId v : base->vertices()) box.add(base->vertex(v).point);
+        const double reach = 1e-3 * std::max(1.0, box.diagonal());
+        std::vector<FaceId> removed;
+        for (const EdgePoint &point : points) {
+            const FaceId f = resolveFaceReference(*base, point, reach);
+            if (!f.valid()) {
+                setError(error, QStringLiteral("Una delle facce scelte non esiste piu' nel corpo."));
+                return nullptr;
+            }
+            removed.push_back(f);
+        }
+        std::vector<FaceId> kept;
+        for (FaceId f : base->faces())
+            if (std::find(removed.begin(), removed.end(), f) == removed.end()) kept.push_back(f);
+        if (kept.empty()) {
+            setError(error, QStringLiteral("Non resta nessuna faccia: elimina il corpo invece delle facce."));
+            return nullptr;
+        }
+        return std::make_shared<const Body>(facesAsSheet(*base, kept));
+    } catch (const std::exception &failure) {
+        setError(error, QStringLiteral("Eliminazione delle facce non riuscita: %1").arg(QString::fromUtf8(failure.what())));
         return nullptr;
     }
 }
@@ -679,6 +746,19 @@ ForgeBody forgeRuledSurface(const std::vector<PathSegment> &first, const std::ve
         return std::make_shared<const Body>(ruledSurface(first, second));
     } catch (const std::exception &failure) {
         setError(error, QStringLiteral("Superficie rigata non riuscita: %1").arg(QString::fromUtf8(failure.what())));
+        return nullptr;
+    }
+}
+
+ForgeBody forgeBoundarySurface(const std::vector<PathSegment> &segments, QString *error) {
+    if (segments.empty()) {
+        setError(error, QStringLiteral("Scegli le curve del contorno."));
+        return nullptr;
+    }
+    try {
+        return std::make_shared<const Body>(boundarySheet(segments));
+    } catch (const std::exception &failure) {
+        setError(error, QStringLiteral("Superficie tra curve non riuscita: %1").arg(QString::fromUtf8(failure.what())));
         return nullptr;
     }
 }

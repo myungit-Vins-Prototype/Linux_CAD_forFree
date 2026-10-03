@@ -13,7 +13,11 @@
 #include <Poly_Triangulation.hxx>
 #include <TopExp_Explorer.hxx>
 
+#include <fstream>
+#include <sstream>
+
 #include "fk_body_check.h"
+#include "fk_body_io.h"
 #include "fk_boolean.h"
 #include "fk_bspline_surface.h"
 #include "fk_pcurve.h"
@@ -1189,5 +1193,28 @@ FK_TEST(BooleanTolerantVertices) {
         FK_CHECK_NEAR(massProperties(twice).volume, 24.0 - 1.0 - 3.0, 1e-2);
     } catch (const std::exception &failure) {
         reportFailure(__FILE__, __LINE__, failure.what());
+    }
+}
+
+// Le due lastre del guscio di Parallelepipedo.prt (corpo 1, spessore 0.3):
+// lo spigolo di una fascia, complanare con la corona sottile (0.2) della
+// faccia frontale, ne attraversa il bordo interno proprio in un vertice e
+// prosegue nel foro. Prima: "divisione di una faccia non riuscita".
+FK_TEST(BooleanShellSlabsThroughHoleVertex) {
+    const auto load = [](const char *name) {
+        std::ifstream in(std::string(FORGECAD_SOURCE_DIR) + "/kernel/tests/data/" + name, std::ios::binary);
+        std::stringstream content;
+        content << in.rdbuf();
+        return readBodyBinary(content.str());
+    };
+    try {
+        const Body front = load("shell_slab_front.bin"), sides = load("shell_slab_sides.bin");
+        const Body united = booleanOperation(front, sides, BooleanOperation::Unite);
+        const Body common = booleanOperation(front, sides, BooleanOperation::Intersect);
+        FK_CHECK(checkBody(united).empty());
+        FK_CHECK_NEAR(massProperties(united).volume,
+                      massProperties(front).volume + massProperties(sides).volume - massProperties(common).volume, 1e-8 * massProperties(front).volume);
+    } catch (const std::exception &error) {
+        reportFailure(__FILE__, __LINE__, error.what());
     }
 }

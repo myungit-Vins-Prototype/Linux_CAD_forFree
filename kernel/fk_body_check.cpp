@@ -202,6 +202,20 @@ void checkEdge(const Body &body, EdgeId e, Report &report) {
         const FaceId faceId = body.finFace(f);
         const Face &fc = body.face(faceId);
         if (!fc.surface) continue;  // segnalato sotto
+        // SP-curve: S(p(t)) deve coincidere con C(t) entro la tolleranza
+        // dell'edge piu' lo scarto dichiarato dell'approssimazione.
+        const Fin &fn = body.fin(f);
+        double gap = -1.0;
+        if (fn.pcurve) {
+            gap = pcurveDeviation(*fc.surface, *ed.curve, *fn.pcurve, ed.range, 8);
+            if (!(gap <= tolerance + fn.pcurveTolerance))
+                report.add(CheckCode::PCurveOffEdge, "fin ", f.index, " (edge ", e.index, "): SP-curve fino a ", gap,
+                           " dalla curva");
+        }
+        // La distanza dalla superficie non supera |C(t) - S(p(t))|: se l'SP-curve
+        // sta gia' entro la tolleranza le proiezioni (lente sulle B-spline con
+        // migliaia di pezze) non servono.
+        if (gap >= 0.0 && gap <= tolerance) continue;
         double worst = 0.0;
         for (int i = 0; i <= 8; ++i) {
             const Vec3 p = ed.curve->point(ed.range.lo + ed.range.length() * i / 8.0);
@@ -210,15 +224,6 @@ void checkEdge(const Body &body, EdgeId e, Report &report) {
         if (worst > tolerance)
             report.add(CheckCode::EdgeOffFace, "edge ", e.index, ": fino a ", worst, " dalla superficie della faccia ",
                        faceId.index);
-        // SP-curve: S(p(t)) deve coincidere con C(t) entro la tolleranza
-        // dell'edge piu' lo scarto dichiarato dell'approssimazione.
-        const Fin &fn = body.fin(f);
-        if (fn.pcurve) {
-            const double gap = pcurveDeviation(*fc.surface, *ed.curve, *fn.pcurve, ed.range, 8);
-            if (!(gap <= tolerance + fn.pcurveTolerance))
-                report.add(CheckCode::PCurveOffEdge, "fin ", f.index, " (edge ", e.index, "): SP-curve fino a ", gap,
-                           " dalla curva");
-        }
     }
 }
 

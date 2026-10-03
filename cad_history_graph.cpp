@@ -230,6 +230,9 @@ QString featureType(const ExtrusionObject &feature) {
     case BodyFeature::Sew: return QStringLiteral("Cucitura");
     case BodyFeature::Ruled: return QStringLiteral("Superficie rigata");
     case BodyFeature::PlanarSurface: return QStringLiteral("Superficie planare");
+    case BodyFeature::DeleteFace: return QStringLiteral("Elimina facce");
+    case BodyFeature::BoundarySurface: return QStringLiteral("Superficie tra curve");
+    case BodyFeature::Shell: return QStringLiteral("Guscio");
     }
     return QStringLiteral("Feature");
 }
@@ -362,6 +365,13 @@ QVector<Dependency> dependencies(int index, const DocumentState &document) {
                           feature.offsetFaces.isEmpty() ? QStringLiteral("tutte le facce")
                                                         : QStringLiteral("%1 facce").arg(feature.offsetFaces.size()));
         break;
+    case BodyFeature::Shell:
+        addBodyDependency(result, features, index, feature.firstBody,
+                          QStringLiteral("solido • spessore %1 • %2 facce aperte").arg(feature.distance).arg(feature.offsetFaces.size()));
+        break;
+    case BodyFeature::DeleteFace:
+        addBodyDependency(result, features, index, feature.firstBody, QStringLiteral("corpo • %1 facce tolte").arg(feature.offsetFaces.size()));
+        break;
     case BodyFeature::Sew:
         addBodyDependency(result, features, index, feature.firstBody, QStringLiteral("superficie 1"));
         for (int k = 0; k < feature.booleanTools.size(); ++k)
@@ -410,6 +420,10 @@ QVector<Dependency> dependencies(int index, const DocumentState &document) {
         if (feature.planarRefs.isEmpty()) addSketchDependency(result, sketches, index, feature.sketchIndex, QStringLiteral("contorni"));
         for (int k = 0; k < feature.planarRefs.size(); ++k)
             addGeometryDependency(result, feature.planarRefs.at(k), sketches, features, index, QStringLiteral("bordo %1").arg(k + 1));
+        break;
+    case BodyFeature::BoundarySurface:
+        for (int k = 0; k < feature.planarRefs.size(); ++k)
+            addGeometryDependency(result, feature.planarRefs.at(k), sketches, features, index, QStringLiteral("curva %1").arg(k + 1));
         break;
     case BodyFeature::Transform:
         addBodyDependency(result, features, index, feature.firstBody, feature.move.copy ? QStringLiteral("corpo copiato") : QStringLiteral("corpo"));

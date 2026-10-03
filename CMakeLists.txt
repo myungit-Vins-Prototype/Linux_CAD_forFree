@@ -39,6 +39,8 @@ add_executable(forgecad
     cad_types.h
     cad_display_cache.h
     cad_display_cache.cpp
+    cad_overlay_renderer.h
+    cad_overlay_renderer.cpp
     cad_curve_solver.h
     cad_curve_solver.cpp
     cad_snap.h

@@ -269,7 +269,14 @@ bool BooleanBuilder::coincident(const Surface &a, const Surface &b) const {
         const auto found = coincident_.find(key);
         if (found != coincident_.end()) return found->second;
     }
-    const bool same = sameSurface(a, b, tolerance_);
+    bool same = sameSurface(a, b, tolerance_);
+    // Piani quasi paralleli che dentro i corpi si scostano meno della
+    // tolleranza (normali giuste solo all'ultimo bit, come i piani equivalenti
+    // delle B-spline): lo stesso piano, come per intersectPlaneSurface.
+    if (!same && isPlane(a) && isPlane(b)) {
+        const Frame3 &fa = static_cast<const Plane &>(a).frame(), &fb = static_cast<const Plane &>(b).frame();
+        same = norm(cross(fa.zDir(), fb.zDir())) * scale_ <= tolerance_ && std::fabs(dot(fa.zDir(), fb.origin() - fa.origin())) <= tolerance_;
+    }
     const std::lock_guard<std::mutex> lock(coincidentMutex_);
     return coincident_[key] = same;
 }
@@ -697,6 +704,12 @@ void BooleanBuilder::coincidentArcs(FaceId fa, FaceId fb, PairResult &out, bool 
                         for (const CurvePtr<2> &image : images)
                             for (const CurveCurvePoint &p : intersectCurves(*image, edge.range, *bx.fin(fxFin).pcurve, other.range, tolerance_).points)
                                 parameters.push_back(p.s);
+                        // Un vertice del bordo sull'edge: l'edge vi esce o vi entra
+                        // nella faccia anche se le intersezioni con i due edge del
+                        // vertice cadono appena fuori dai loro tratti.
+                        const Vertex &vertex = bx.vertex(bx.finStart(fxFin));
+                        const CurveProjection<3> onEdge = projectPoint(*edge.curve, vertex.point, edge.range);
+                        if (onEdge.distance <= std::max(tolerance_, vertex.tolerance)) parameters.push_back(onEdge.parameter);
                     }
                 for (const Interval &piece : splitRange(*edge.curve, edge.range, parameters)) {
                     const Vec3 middle = edge.curve->point(0.5 * (piece.lo + piece.hi));

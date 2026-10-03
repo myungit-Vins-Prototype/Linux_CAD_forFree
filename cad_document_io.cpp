@@ -44,7 +44,7 @@ constexpr char kMagic[4] = {'F', 'C', 'A', 'D'};
 // 23 offset di superficie e cucitura.
 // 24 loft e sweep di superficie (senza coperchi), superficie rigata (le due
 // catene di riferimenti), superficie planare (bordi scelti nella vista).
-constexpr quint16 kVersion = 24;
+constexpr quint16 kVersion = 25;
 constexpr quint8 kZlib = 1;
 
 void write(QDataStream &out, const CurveObject &curve) {
@@ -471,7 +471,7 @@ bool read(QDataStream &in, ExtrusionObject &body, quint16 version, int extras) {
         if (!readRefs(in, body.ruledFirst, version) || !readRefs(in, body.ruledSecond, version) || !readRefs(in, body.planarRefs, version))
             return false;
     }
-    if (int(body.feature) < 0 || int(body.feature) > int(BodyFeature::PlanarSurface)) return false;
+    if (int(body.feature) < 0 || int(body.feature) > int(version >= 25 ? BodyFeature::Shell : BodyFeature::PlanarSurface)) return false;
     return in.status() == QDataStream::Ok;
 }
 

@@ -61,6 +61,10 @@ ForgeBody forgeExtendSheet(const ForgeBody &sheet, const QVector<EdgePoint> &poi
 // uscente; negativa verso l'interno) dalle facce `faces` di `base` (vuoto:
 // tutte). Le facce tangenti tra loro restano cucite in una superficie, lungo
 // gli spigoli vivi le superfici si separano: `summary` lo dice.
+// Il corpo senza le facce scelte: lamina con le facce restanti (fk_sew facesAsSheet).
+// Guscio: il solido svuotato con lo spessore verso l'interno, le facce scelte tolte (fk_shell).
+ForgeBody forgeShell(const ForgeBody &base, const QVector<EdgePoint> &openFaces, double thickness, QString *error);
+ForgeBody forgeDeleteFaces(const ForgeBody &base, const QVector<EdgePoint> &faces, QString *error);
 ForgeBody forgeOffsetFaces(const ForgeBody &base, const QVector<EdgePoint> &faces, double distance, QString *error, QString *summary = nullptr);
 // Cucitura delle superfici `sheets` (anche solidi: valgono le loro facce) in
 // una sola entro `tolerance`; con `solid` e il risultato chiuso, un solido.
@@ -92,6 +96,8 @@ ForgeBody forgeRuledSurface(const std::vector<Kernel::PathSegment> &first, const
 ForgeBody forgePlanarSketch(const SketchObject &sketch, QString *error);
 // Superficie planare delimitata da tratti 3D complanari: i tratti si
 // raggruppano in contorni chiusi per estremi comuni, poi planarSheet.
+// Superficie tra curve (patch di Coons, fk_boundary) del contorno chiuso dei tratti.
+ForgeBody forgeBoundarySurface(const std::vector<Kernel::PathSegment> &segments, QString *error);
 ForgeBody forgePlanarCurves(const std::vector<Kernel::PathSegment> &segments, QString *error);
 inline ForgeBody forgeLoft(const QVector<SketchObject> &sections, bool ruled, QString *error) {
     return forgeLoft(sections, {}, ruled, 0, 0, 1, 1.0, 1.0, 1.0, error);

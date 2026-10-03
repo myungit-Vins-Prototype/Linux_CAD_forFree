@@ -27,9 +27,11 @@ Misura locale su `APP_errore.stp`, corpo `D241121_REV0`, 4.089 facce: **25 raggi
 
 ## Calcoli CPU e GPU
 
-La GPU già eseguiva trasformazioni, illuminazione della pipeline fissa, rasterizzazione, profondità, stencil e antialiasing OpenGL. Ora riusa anche la geometria residente nei VBO: si riducono chiamate CPU e invii ripetuti per ogni fotogramma. Il profilo compatibility resta necessario.
+La GPU esegue trasformazioni, illuminazione, rasterizzazione, profondità, stencil e antialiasing OpenGL. I corpi usano shader GLSL 3.30, VAO e VBO persistenti; le polilinee degli spigoli sono riunite in un buffer indicizzato con primitive restart e inviate con una sola draw call per corpo. Un secondo renderer GLSL 3.30 con VBO dinamico disegna sfondo, griglia, assi, piani, datum, punti di snap, sketch, anteprime, contorni e sezione. Anche sfocatura e compositing dei pannelli usano attributi espliciti e buffer, senza immediate mode nel viewport. Il contesto Core richiede questo percorso e non mantiene un fallback fixed-function.
 
-Anche la sfocatura dei pannelli funzione usa ora OpenGL quando sono disponibili GLSL 1.20 e il blit tra framebuffer. La scena viene copiata una volta per fotogramma, sfocata con due passaggi separabili al 75% della risoluzione del viewport e ricomposta soltanto nelle aree arrotondate dei pannelli. Il 75% riduce la pixelatura rispetto alla precedente metà risoluzione, con 2,25 volte i frammenti del filtro ma ancora meno lavoro del formato pieno. Questo elimina la lettura sincrona del framebuffer e i filtri d'immagine sul thread dell'interfaccia. Se il percorso shader non è disponibile, rimane attivo il precedente fallback CPU condiviso e limitato a circa 15 aggiornamenti al secondo. Questa accelerazione non dipende da CUDA.
+L'hover dei corpi usa un framebuffer GPU di identificatori RGB con profondità: viene rigenerato una volta per fotogramma della scena e il movimento del mouse legge un solo pixel. Il clic continua a interrogare la B-rep esatta. Se è attiva una sezione o un'anteprima, il picking torna automaticamente al ray test CPU. Le ripetizioni di corpi con bounding box sicuramente disgiunte condividono inoltre la mesh della base e sono disegnate con draw call instanziate anche nel pass di picking; copie che si toccano o si sovrappongono conservano la tassellazione del risultato booleano. I segmenti rettilinei degli schizzi, incluse le copie delle ripetizioni di schizzo, usano una linea base e trasformazioni instanziate raggruppate per stile, in lotti fino a 64 istanze.
+
+Anche la sfocatura dei pannelli usa GLSL 3.30 e il blit tra framebuffer. La scena viene copiata una volta per fotogramma, sfocata con due passaggi separabili al 75% della risoluzione del viewport e ricomposta soltanto nelle aree arrotondate dei pannelli. Il 75% riduce la pixelatura rispetto alla precedente metà risoluzione, con 2,25 volte i frammenti del filtro ma ancora meno lavoro del formato pieno. Questo elimina la lettura sincrona del framebuffer e i filtri d'immagine sul thread dell'interfaccia. Se il percorso shader non è disponibile, rimane attivo il precedente fallback CPU condiviso e limitato a circa 15 aggiornamenti al secondo. Questa accelerazione non dipende da CUDA.
 
 **CUDA valuta ora le superfici B-spline/NURBS della tassellazione di display.** Il raffinamento di `fk_tessellate` raccoglie a ogni giro i punti medi dei lati da provare e li valuta in un lotto: con un acceleratore (`SurfaceBatchEvaluator`, nell'app `cad_cuda_tessellation` + `cuda_support.cu`) i lotti di almeno 512 punti su una `BSplineSurface` vanno alla GPU (un thread per punto, in double, stessi algoritmi del kernel: scarto dalla CPU 7e-16 relativo sui punti, 3e-14 sulle normali, verificato da `forgecad_cuda_tests`), gli altri alla CPU. Il guadagno misurato e' piccolo, perche' dopo le ottimizzazioni la valutazione e' circa il 15% del tempo: su AP0730-REV00.STEP a qualita' alta la tassellazione passa da 1,9 s a 0,24 s per il lavoro sulla CPU (facce in parallelo, decisioni sui lati prese una volta, tabelle dei lati a indirizzamento aperto, punto valutato riusato come vertice) e a 0,20 s con CUDA; con un thread solo la GPU non conviene (latenza di circa 60 microsecondi per lotto, con la scheda in P8 a batteria). Booleane, misure, raccordi e la geometria esatta restano sulla CPU; si spegne con *Opzioni → Tassellazione con CUDA*.
 
@@ -37,19 +39,16 @@ Roadmap GPU: mantenere sempre il backend CPU e aggiungere CUDA come acceleratore
 
 Gli impieghi GPU più promettenti per ForgeCAD sono la tassellazione di molte facce, il campionamento in parallelo di curve e superfici, la selezione preliminare tramite un buffer di identificatori e l'istanziazione grafica delle ripetizioni. La GPU può anche preparare coppie candidate di facce o box per intersezioni, lasciando al kernel CPU la verifica esatta. Le booleane B-rep finali, la modifica della topologia e gran parte del risolutore dei vincoli hanno molti rami, strutture dinamiche e dipendenze sequenziali; inoltre usano `double`. Sulla Quadro RTX 3000 il vantaggio CUDA in doppia precisione è molto inferiore a quello in `float`, quindi trasferirli integralmente rischierebbe di aumentare latenza e complessità senza un guadagno stabile.
 
-Un ulteriore intervento possibile è una selezione GPU con identificatori di facce/oggetti in un framebuffer e successiva verifica geometrica esatta. Richiede gestire correttamente trasparenze, sezione e lettura asincrona dei risultati. Per anticipare il risultato delle operazioni geometriche servirebbe invece profilare singolarmente i moduli del kernel: spostare il calcolo esatto su CUDA è un intervento distinto, da validare numericamente.
+Un ulteriore affinamento possibile è rendere asincrona la lettura del pixel del picking tramite PBO e ampliare il percorso GPU alle singole facce, continuando a verificare i clic sulla geometria esatta. Per anticipare il risultato delle operazioni geometriche servirebbe invece profilare singolarmente i moduli del kernel: spostare il calcolo esatto su CUDA è un intervento distinto, da validare numericamente.
 
-## Valutazione del passaggio a OpenGL 3
+## Migrazione OpenGL 3
 
-Il passaggio al solo contesto OpenGL 3 non produce automaticamente un aumento
-di prestazioni. Il lavoro utile consiste nel sostituire la pipeline fissa e i
-percorsi `glBegin/glEnd` residui con shader, VAO/VBO persistenti e disegno
-aggregato, e nel separare la selezione dal calcolo geometrico esatto tramite un
-buffer GPU di identificatori. Una migrazione completa e verificata richiede
-indicativamente **2-4 settimane**: nuovo renderer, materiali e luci, overlay e
-anteprime, picking, fallback/diagnostica e test su driver diversi. La
-compatibilita' OpenGL 3.3 rende inoltre piu' lineare il futuro porting Windows e
-macOS, dove il compatibility profile non e' una base affidabile.
+Il contesto richiesto è OpenGL 3.3 Core. Corpi, spigoli, picking, ripetizioni e
+overlay passano da shader, VAO e buffer; non rimangono chiamate immediate né
+client-array. Proiezione, model-view, colori, illuminazione e materiali sono
+stato esplicito degli shader. Il piano di sezione usa una uniform comune e
+`gl_ClipDistance`; i tratteggi di linee e superfici sono prodotti nel fragment
+shader, quindi non dipendono più dagli stati rimossi dal profilo Core.
 
 Nei modelli dominati da molte chiamate di disegno, contorni e hover il guadagno
 puo' andare da circa **2x a oltre 10x** nel solo percorso di rendering. Eliche e

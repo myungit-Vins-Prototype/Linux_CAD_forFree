@@ -30,8 +30,17 @@ struct RawEdge {
 };
 
 struct RawFin {
+    RawFin() = default;
+    RawFin(int edgeIndex, bool forward, CurvePtr<2> known = nullptr, double knownTolerance = 0.0)
+        : edge(edgeIndex), sense(forward), pcurve(std::move(known)), pcurveTolerance(knownTolerance) {}
     int edge = -1;
     bool sense = true;  // nel verso dell'edge
+    // SP-curve gia' nota (stesso parametro dell'edge), con lo scarto in 3D
+    // dichiarato: assembleBody non la ricalcola e misura lo scarto dell'edge
+    // con quella invece che con le proiezioni (le superfici a distanza hanno i
+    // parametri delle facce di partenza).
+    CurvePtr<2> pcurve;
+    double pcurveTolerance = 0.0;
 };
 
 struct RawFace {

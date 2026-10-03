@@ -606,6 +606,48 @@ std::map<QString, Draw> &registry() {
         line(p, {11.5, 16.5}, {11.5, 10.5}, stroke(c.accent, 1.2));
         arrowHead(p, {11.5, 8.6}, {11.5, 13}, c.accent, 3.0);
     };
+    icons["shell"] = [](QPainter &p, const IconPalette &c) {
+        // Scatola svuotata e aperta in alto: il bordo delle pareti in arancio.
+        polygon(p, QPolygonF({{3, 9}, {12, 13}, {12, 22}, {3, 18}}), c.faceMid, stroke(c.ink, 1.0));
+        polygon(p, QPolygonF({{12, 13}, {21, 9}, {21, 18}, {12, 22}}), c.faceDark, stroke(c.ink, 1.0));
+        polygon(p, QPolygonF({{3, 9}, {12, 5}, {21, 9}, {12, 13}}), c.faceLight, stroke(c.accent, 1.4));
+        polygon(p, QPolygonF({{6, 9}, {12, 6.4}, {18, 9}, {12, 11.6}}), c.faceDark, stroke(c.accent, 1.2));
+    };
+    icons["boundarySurface"] = [](QPainter &p, const IconPalette &c) {
+        // Patch curva tesa tra quattro curve del contorno (in arancio).
+        QPainterPath patch;
+        patch.moveTo(3, 15);
+        patch.cubicTo(6, 9, 9, 7, 12, 4);
+        patch.cubicTo(15, 7, 18, 8, 21, 10);
+        patch.cubicTo(19, 14, 18, 17, 17, 21);
+        patch.cubicTo(12, 20, 8, 18, 3, 15);
+        p.setPen(Qt::NoPen);
+        p.setBrush(c.faceMid);
+        p.drawPath(patch);
+        p.setBrush(Qt::NoBrush);
+        p.setPen(stroke(c.accent, 1.8));
+        p.drawPath(patch);
+        // Isoparametriche interne.
+        QPainterPath iso;
+        iso.moveTo(7.5, 9.5);
+        iso.cubicTo(10, 12, 12, 17, 12.5, 19.5);
+        iso.moveTo(5, 13);
+        iso.cubicTo(10, 11.5, 15, 11, 19.5, 12.5);
+        p.setPen(stroke(c.ink, 0.9));
+        p.drawPath(iso);
+    };
+    icons["deleteFace"] = [](QPainter &p, const IconPalette &c) {
+        // Un cubo aperto: la faccia superiore tolta (tratteggiata in rosso) e la croce.
+        polygon(p, QPolygonF({{3, 9}, {12, 13}, {12, 22}, {3, 18}}), c.faceMid, stroke(c.ink, 1.0));
+        polygon(p, QPolygonF({{12, 13}, {21, 9}, {21, 18}, {12, 22}}), c.faceDark, stroke(c.ink, 1.0));
+        QPen dashed = stroke(c.remove, 1.3);
+        dashed.setStyle(Qt::DashLine);
+        p.setBrush(Qt::NoBrush);
+        p.setPen(dashed);
+        p.drawPolygon(QPolygonF({{3, 9}, {12, 5}, {21, 9}, {12, 13}}));
+        line(p, {9, 3.5}, {15, 9.5}, stroke(c.remove, 1.8));
+        line(p, {15, 3.5}, {9, 9.5}, stroke(c.remove, 1.8));
+    };
     icons["sewSurfaces"] = [](QPainter &p, const IconPalette &c) {
         // Due superfici che si toccano lungo un bordo cucito.
         polygon(p, QPolygonF({{2, 8}, {12, 4}, {12, 17}, {2, 21}}), c.faceMid, stroke(c.ink, 1.0));

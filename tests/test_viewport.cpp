@@ -1122,6 +1122,9 @@ public:
             v.show();
             for (int i = 0; i < 8; ++i) QApplication::processEvents();
             require(v.isValid(), "contesto OpenGL valido");
+            require(v.context() && v.context()->format().profile() == QSurfaceFormat::CoreProfile
+                        && v.context()->format().majorVersion() >= 3,
+                    "contesto OpenGL 3 Core effettivo");
             DocumentFilePreview openPreview;
             openPreview.resize(360, 420);
             openPreview.setPath(path);
@@ -1174,33 +1177,36 @@ public:
             {
                 QOpenGLFramebufferObject framebuffer(160, 160, QOpenGLFramebufferObject::CombinedDepthStencil);
                 require(framebuffer.isValid(), "framebuffer confronto VBO");
-                const auto draw = [&](bool cached) {
+                const auto draw = [&]() {
                     framebuffer.bind();
                     glViewport(0, 0, 160, 160);
                     glClearColor(0, 0, 0, 1);
                     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-                    glDisable(GL_LIGHTING); glDisable(GL_BLEND); glDisable(GL_DEPTH_TEST);
-                    glMatrixMode(GL_PROJECTION); glLoadIdentity(); glOrtho(-6, 6, -6, 6, -100, 100);
-                    glMatrixMode(GL_MODELVIEW); glLoadIdentity(); glRotatef(25, 1, 0, 0); glRotatef(30, 0, 1, 0);
-                    glColor3f(0.8f, 0.5f, 0.2f);
-                    if (cached) v.displayCache_.faces(display);
-                    else {
-                        glBegin(GL_TRIANGLES);
-                        for (const auto &p : display.vertices) glVertex3f(p.x(), p.y(), p.z());
-                        glEnd();
-                    }
-                    glColor3f(0.2f, 0.8f, 0.9f);
-                    if (cached) v.displayCache_.edges(display);
-                    else for (const auto &edge : display.edges) {
-                        glBegin(GL_LINE_STRIP);
-                        for (const auto &p : edge) glVertex3f(p.x(), p.y(), p.z());
-                        glEnd();
-                    }
+                    glDisable(GL_BLEND); glDisable(GL_DEPTH_TEST);
+                    QMatrix4x4 projection;
+                    projection.ortho(-6.0f, 6.0f, -6.0f, 6.0f, -100.0f, 100.0f);
+                    QMatrix4x4 modelView;
+                    modelView.rotate(25.0f, 1.0f, 0.0f, 0.0f);
+                    modelView.rotate(30.0f, 0.0f, 1.0f, 0.0f);
+                    v.displayCache_.setMatrices(projection, modelView);
+                    v.displayCache_.setLightingEnabled(false);
+                    v.displayCache_.setColor(QVector4D(0.8f, 0.5f, 0.2f, 1.0f));
+                    v.displayCache_.faces(display);
+                    v.displayCache_.setColor(QVector4D(0.2f, 0.8f, 0.9f, 1.0f));
+                    v.displayCache_.edges(display);
+                    QVector<QMatrix4x4> instances(2);
+                    instances[0].translate(-2.0f, 0.0f, 0.0f);
+                    instances[1].translate(2.0f, 0.0f, 0.0f);
+                    v.displayCache_.pickingInstancedFaces(display, instances, QVector4D(0.1f, 0.2f, 0.3f, 1.0f));
+                    v.overlayRenderer_.setMatrices(projection, modelView);
+                    v.overlayRenderer_.drawInstanced(GL_LINES,
+                        QVector<QVector3D>{QVector3D(0, 0, 0), QVector3D(1, 0, 0)},
+                        QVector4D(1.0f, 1.0f, 0.0f, 1.0f), instances);
                     glFinish();
                     return framebuffer.toImage();
                 };
-                const QImage legacy = draw(false), cached = draw(true);
-                require(legacy == cached, "VBO e pipeline immediata producono gli stessi pixel");
+                const QImage cached = draw();
+                require(glGetError() == GL_NO_ERROR, "renderer Core non produce errori GL");
                 bool colored = false;
                 for (int y = 0; y < cached.height(); ++y)
                     for (int x = 0; x < cached.width(); ++x) colored |= (cached.pixel(x, y) & 0xffffff) != 0;
@@ -1625,6 +1631,115 @@ public:
             require(v.createBody(lid).isEmpty(), "planare dal loop del bordo libero");
             require(std::fabs(area(v.extrusions_.back()) - 12.0) < 1e-9, "area della chiusura dal loop");
         }
+        // Eliminazione di facce (formato 25) e corpi offerti alle booleane.
+        {
+            using namespace ForgeCad::Kernel;
+            CadViewport v;
+            PrimitiveParameters block;
+            block.size[0] = 4.0;
+            block.size[1] = 3.0;
+            block.size[2] = 2.0;
+            require(v.createPrimitive(block, QStringLiteral("Blocco")).isEmpty(), "blocco da aprire");
+            const Body &solid = *v.extrusions_.at(0).forgeBody;
+            ExtrusionObject open;
+            open.feature = BodyFeature::DeleteFace;
+            open.firstBody = 0;
+            for (FaceId f : solid.faces()) {
+                const SurfaceProjection top = projectPoint(*solid.face(f).surface, Vec3(2.0, 1.5, 2.0));
+                if (distance(solid.face(f).surface->point(top.u, top.v), Vec3(2.0, 1.5, 2.0)) < 1e-9)
+                    open.offsetFaces = {ForgeCad::faceReference(solid, f, Vec3(2.0, 1.5, 2.0))};
+            }
+            require(open.offsetFaces.size() == 1, "faccia superiore del blocco");
+            open.name = QStringLiteral("Aperto");
+            require(v.createBody(open).isEmpty(), "eliminazione della faccia superiore");
+            const ExtrusionObject &sheet = v.extrusions_.back();
+            double total = 0.0;
+            for (FaceId f : sheet.forgeBody->faces()) total += faceArea(*sheet.forgeBody, f);
+            require(sheet.forgeBody->isSheet() && !sheet.solid && sheet.forgeBody->faces().size() == 5 && std::fabs(total - 40.0) < 1e-9,
+                    "il solido senza una faccia diventa una superficie di area 40");
+            require(sheet.modelBodyId == v.extrusions_.at(0).modelBodyId && sheet.visible && !v.extrusions_.at(0).visible,
+                    "l'eliminazione e' una feature dello stesso corpo");
+            // Guscio del blocco 4 x 3 x 2 aperto in alto, spessore 0.25: cavita' 3.5 x 2.5 x 1.75.
+            {
+                CadViewport g;
+                require(g.createPrimitive(block, QStringLiteral("Blocco")).isEmpty(), "blocco da svuotare");
+                ExtrusionObject shell = open;
+                shell.feature = BodyFeature::Shell;
+                shell.distance = 0.25;
+                shell.name = QStringLiteral("Guscio");
+                // Anteprima della stessa definizione: OK ne riusa il B-rep, senza ricalcolare.
+                g.requestPreview(shell, -1);
+                QElapsedTimer previewTimeout;
+                previewTimeout.start();
+                while (!(g.preview_.valid || !g.preview_.error.isEmpty()) && previewTimeout.elapsed() < 60000) QApplication::processEvents();
+                require(g.preview_.valid && g.preview_.geometry, "anteprima del guscio");
+                const ForgeBody shellPreview = g.preview_.geometry;
+                require(g.createBody(shell).isEmpty(), "guscio del blocco");
+                require(g.extrusions_.back().forgeBody == shellPreview && !g.extrusions_.back().display.vertices.isEmpty(),
+                        "la conferma del guscio riusa il B-rep e la tassellazione dell'anteprima");
+                // Modifica con un altro spessore mentre l'anteprima e' ancora in corso: si aspetta quella.
+                ExtrusionObject thicker = g.extrusions_.back();
+                thicker.distance = 0.3;
+                g.requestPreview(thicker, 1);
+                require(g.updateBody(1, thicker).isEmpty() && g.preview_.valid && g.extrusions_.at(1).forgeBody == g.preview_.geometry,
+                        "la modifica aspetta l'anteprima in corso e ne riusa il risultato");
+                require(std::fabs(massProperties(*g.extrusions_.at(1).forgeBody).volume - (24.0 - 3.4 * 2.4 * 1.7)) < 1e-8, "guscio piu' spesso");
+                thicker.distance = 0.25;
+                require(g.updateBody(1, thicker).isEmpty(), "spessore di partenza");
+                g.clearPreview();
+                const ExtrusionObject &hollow = g.extrusions_.back();
+                require(hollow.solid && std::fabs(massProperties(*hollow.forgeBody).volume - (24.0 - 3.5 * 2.5 * 1.75)) < 1e-8
+                            && hollow.modelBodyId == g.extrusions_.at(0).modelBodyId,
+                        "guscio: volume e stesso corpo");
+                QTemporaryDir shellDirectory;
+                const QString shellFile = shellDirectory.filePath(QStringLiteral("guscio25.prt"));
+                require(saveDocumentFile(shellFile, g.currentDocument(), false).isEmpty(), "salvataggio del guscio");
+                DocumentState shellReloaded;
+                require(loadDocumentFile(shellFile, shellReloaded).isEmpty() && shellReloaded.extrusions.back().feature == BodyFeature::Shell
+                            && shellReloaded.extrusions.back().distance == 0.25,
+                        "lettura del guscio");
+            }
+            // Superficie tra curve sul bordo libero della scatola aperta (scelto da un solo spigolo).
+            const int openIndex = int(v.extrusions_.size()) - 1;
+            EdgeId rim;
+            for (EdgeId e : sheet.forgeBody->edges())
+                if (sheet.forgeBody->isLaminar(e)) rim = e;
+            ExtrusionObject lid;
+            lid.feature = BodyFeature::BoundarySurface;
+            for (const EdgePoint &point : ForgeCad::freeBoundaryLoop(*sheet.forgeBody, rim)) {
+                GeometryRef ref;
+                ref.kind = 4;
+                ref.index = openIndex;
+                ref.featureId = v.extrusions_.at(openIndex).featureId;
+                ref.point = point;
+                lid.planarRefs.append(ref);
+            }
+            lid.name = QStringLiteral("Coperchio");
+            require(lid.planarRefs.size() == 4 && v.createBody(lid).isEmpty(), "superficie tra curve sul bordo libero");
+            double lidArea = 0.0;
+            for (FaceId f : v.extrusions_.back().forgeBody->faces()) lidArea += faceArea(*v.extrusions_.back().forgeBody, f);
+            require(v.extrusions_.back().forgeBody->isSheet() && std::fabs(lidArea - 12.0) < 1e-8, "superficie tra curve: area del coperchio");
+            QTemporaryDir directory;
+            const QString file = directory.filePath(QStringLiteral("facce25.prt"));
+            require(saveDocumentFile(file, v.currentDocument(), false).isEmpty(), "salvataggio formato 25");
+            DocumentState reloaded;
+            require(loadDocumentFile(file, reloaded).isEmpty() && reloaded.extrusions.at(1).feature == BodyFeature::DeleteFace
+                        && reloaded.extrusions.at(1).offsetFaces.size() == 1 && reloaded.extrusions.back().feature == BodyFeature::BoundarySurface
+                        && reloaded.extrusions.back().planarRefs.size() == 4,
+                    "lettura dell'eliminazione delle facce e della superficie tra curve");
+
+            // Booleane: solo i corpi che esistono in quel punto della storia.
+            CadViewport b;
+            PrimitiveParameters second = block;
+            second.origin[0] = 2.0;
+            require(b.createPrimitive(block, QStringLiteral("A")).isEmpty() && b.createScale(0, 1.0, 0, {}, QStringLiteral("Scala A")).isEmpty()
+                        && b.createPrimitive(second, QStringLiteral("B")).isEmpty(),
+                    "due corpi, il primo con due stadi");
+            require(b.resultBodiesBefore(-1) == QVector<int>({1, 2}), "corpi risultanti: lo stadio finale di A e B");
+            require(b.createBoolean(BooleanOperation::Union, 1, {2}, QStringLiteral("Unione")).isEmpty(), "unione dei due corpi");
+            require(b.resultBodiesBefore(-1) == QVector<int>({3}), "dopo l'unione resta un solo corpo");
+            require(b.resultBodiesBefore(3) == QVector<int>({1, 2}), "prima dell'unione i due corpi");
+        }
         // Revisione delle superfici: riferimenti alle entita' dopo un'eliminazione
         // nello schizzo, feature che si staccano dal corpo di cui erano uno stadio.
         {
@@ -1899,8 +2014,8 @@ public:
 };
 int main(int argc, char **argv) {
     QSurfaceFormat format;
-    format.setRenderableType(QSurfaceFormat::OpenGL); format.setVersion(2, 1);
-    format.setProfile(QSurfaceFormat::CompatibilityProfile); format.setDepthBufferSize(24); format.setStencilBufferSize(8);
+    format.setRenderableType(QSurfaceFormat::OpenGL); format.setVersion(3, 3);
+    format.setProfile(QSurfaceFormat::CoreProfile); format.setDepthBufferSize(24); format.setStencilBufferSize(8);
     QSurfaceFormat::setDefaultFormat(format);
     QApplication app(argc, argv);
     QCoreApplication::setOrganizationName(QStringLiteral("ForgeCADTests"));
@@ -1916,6 +2031,27 @@ int main(int argc, char **argv) {
                     settings.path() + QStringLiteral("/ForgeCADTests/Viewport.ini"));
         try { ViewportInteractionTest::benchWindow(app.arguments().mid(benchWindow + 1)); }
         catch (const std::exception &e) { std::cerr << e.what() << std::endl; return 1; }
+        return 0;
+    }
+    if (app.arguments().indexOf(QStringLiteral("--time-offset")) > 0) {
+        DocumentState state;
+        ForgeCad::loadDocumentFile(app.arguments().last(), state);
+        CadViewport v;
+        v.loadDocument(state);
+        for (int i = 0; i < v.extrusions().size(); ++i) {
+            const ExtrusionObject &e = v.extrusions().at(i);
+            if (e.feature != BodyFeature::SurfaceOffset) continue;
+            const ExtrusionObject &base = v.extrusions().at(e.firstBody);
+            QElapsedTimer t; t.start();
+            QString error;
+            auto r = ForgeCad::forgeOffsetFaces(base.forgeBody, e.offsetFaces, e.distance, &error);
+            std::cout << e.name.toStdString() << ": facce " << (e.offsetFaces.isEmpty() ? base.forgeBody->faces().size() : std::size_t(e.offsetFaces.size()))
+                      << " di " << base.forgeBody->faces().size() << ", " << t.elapsed() << " ms " << error.toStdString() << std::endl;
+            // Tutte le facce del corpo.
+            t.restart();
+            r = ForgeCad::forgeOffsetFaces(base.forgeBody, {}, e.distance, &error);
+            std::cout << "  tutte le facce: " << t.elapsed() << " ms " << error.toStdString() << std::endl;
+        }
         return 0;
     }
     try {

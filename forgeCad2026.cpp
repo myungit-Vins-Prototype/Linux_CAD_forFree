@@ -18,15 +18,13 @@ static void preferDiscreteGpu() {
     qputenv("__GLX_VENDOR_LIBRARY_NAME", "nvidia");
 }
 
-// Il viewport usa OpenGL a pipeline fissa (glBegin/glEnd, luci fisse):
-// serve un contesto desktop in compatibility profile. Senza questa richiesta
-// il driver NVIDIA via EGL restituisce un contesto OpenGL ES, dove quelle
-// chiamate non disegnano nulla.
-static void requestCompatibilityContext() {
+// Tutta la scena usa shader, VAO e VBO OpenGL 3.3; il profilo Core impedisce
+// che nuovi percorsi ricadano accidentalmente nella pipeline fissa.
+static void requestCoreContext() {
     QSurfaceFormat format;
     format.setRenderableType(QSurfaceFormat::OpenGL);
-    format.setVersion(2, 1);
-    format.setProfile(QSurfaceFormat::CompatibilityProfile);
+    format.setVersion(3, 3);
+    format.setProfile(QSurfaceFormat::CoreProfile);
     format.setDepthBufferSize(24);
     format.setStencilBufferSize(8);
     QSurfaceFormat::setDefaultFormat(format);
@@ -34,7 +32,7 @@ static void requestCompatibilityContext() {
 
 int main(int argc, char **argv) {
     preferDiscreteGpu();
-    requestCompatibilityContext();
+    requestCoreContext();
     QCoreApplication::setAttribute(Qt::AA_UseDesktopOpenGL);
     QApplication application(argc, argv);
     QCoreApplication::setOrganizationName(QStringLiteral("ForgeCAD"));

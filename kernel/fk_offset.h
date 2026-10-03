@@ -54,6 +54,9 @@ struct OffsetResult {
 // l'edge a distanza, cucite in una sola superficie; lungo gli spigoli vivi le
 // superfici a distanza si staccano (una si allontana dall'altra o la
 // attraversa) e il risultato ha piu' shell (sharpEdges le conta).
+// Superfici, coppie adiacenti e curve dei bordi sono calcolate in parallelo su
+// un numero di worker limitato ai core; la topologia finale viene assemblata in
+// ordine deterministico dopo il completamento di ciascuna fase.
 // std::domain_error se una faccia degenera.
 OffsetResult offsetFaces(const Body &body, const std::vector<FaceId> &faces, double distance, double tolerance = 1e-7);
 

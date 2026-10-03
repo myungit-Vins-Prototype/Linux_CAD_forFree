@@ -674,12 +674,18 @@ PlaneSurfaceIntersection intersectPlaneSurface(const Plane &plane, const Surface
         const Vec3 m = other.zDir();
         const Vec3 d = cross(n, m);
         const double sine = norm(d);
-        if (sine <= 1e-12) {
+        // Quasi paralleli: se dentro la regione i due piani si scostano meno
+        // della tolleranza sono lo stesso piano (i piani equivalenti delle
+        // B-spline hanno la normale giusta solo all'ultimo bit); altrimenti la
+        // retta comune sarebbe lontanissima o non finita.
+        const Vec3 extent = bounds.hi - bounds.lo;
+        const double size = isFinite(extent) ? norm(extent) : 1.0;
+        if (sine <= 1e-12 || sine * size <= tolerance) {
             if (std::fabs(dot(n, other.origin()) - offset) <= tolerance) out.coincident = true;
             return out;
         }
         // Punto comune: combinazione di n e m.
-        const double c1 = offset, c2 = dot(m, other.origin()), nm = dot(n, m), det = 1.0 - nm * nm;
+        const double c1 = offset, c2 = dot(m, other.origin()), nm = dot(n, m), det = sine * sine;
         const Vec3 point = ((c1 - c2 * nm) / det) * n + ((c2 - c1 * nm) / det) * m;
         addLine(out, point, d / sine, bounds);
         return out;
@@ -689,7 +695,9 @@ PlaneSurfaceIntersection intersectPlaneSurface(const Plane &plane, const Surface
         const Frame3 &f = cylinder.frame();
         const Vec3 a = f.zDir(), c = f.origin();
         const double r = cylinder.radius(), na = dot(n, a);
-        if (std::fabs(na) <= 1e-12) {
+        const Vec3 extent = bounds.hi - bounds.lo;
+        const double size = isFinite(extent) ? norm(extent) : 1.0;
+        if (std::fabs(na) <= 1e-12 || std::fabs(na) * size <= tolerance) {
             // Piano parallelo all'asse: 0, 1 (tangente) o 2 generatrici.
             const double delta = dot(n, c) - offset;
             if (std::fabs(delta) > r + tolerance) return out;

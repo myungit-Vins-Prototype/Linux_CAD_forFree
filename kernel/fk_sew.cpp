@@ -4,11 +4,13 @@
 #include <cmath>
 #include <map>
 #include <stdexcept>
+#include <string>
 
 #include "fk_curve_algo.h"
 #include "fk_exchange.h"
 #include "fk_intersect.h"
 #include "fk_mass.h"
+#include "fk_parallel.h"
 
 namespace ForgeCad::Kernel {
 
@@ -68,32 +70,52 @@ void splitAtJunctions(detail::RawModel &model, const std::vector<int> &edgeBody,
             for (int p : {model.edges[e].start, model.edges[e].end}) boundaryPoints.push_back({p, edgeBody[e]});
     std::sort(boundaryPoints.begin(), boundaryPoints.end());
     boundaryPoints.erase(std::unique(boundaryPoints.begin(), boundaryPoints.end()), boundaryPoints.end());
-    std::map<int, std::vector<int>> replacement;  // edge -> edge nuovi nel verso della curva
     const std::size_t original = boundary.size();
-    for (std::size_t e = 0; e < original; ++e) {
-        if (!boundary[e]) continue;
-        const detail::RawEdge edge = model.edges[e];
-        const Box box = curveBox(*edge.curve, edge.range).padded(tolerance);
-        const Vec3 &a = model.points[std::size_t(edge.start)], &b = model.points[std::size_t(edge.end)];
+    struct SplitJob {
+        std::size_t edge = 0;
         std::vector<std::pair<double, int>> cuts;
-        for (const auto &[p, owner] : boundaryPoints) {
-            if (owner == edgeBody[e]) continue;
-            const Vec3 &q = model.points[std::size_t(p)];
-            if (q.x() < box.lo.x() || q.y() < box.lo.y() || q.z() < box.lo.z() || q.x() > box.hi.x() || q.y() > box.hi.y() || q.z() > box.hi.z())
-                continue;
-            if (distance(q, a) <= tolerance || distance(q, b) <= tolerance) continue;
-            const CurveProjection<3> projection = projectPoint(*edge.curve, q, edge.range);
-            if (projection.distance > tolerance) continue;
-            const double margin = 1e-9 * edge.range.length();
-            if (projection.parameter <= edge.range.lo + margin || projection.parameter >= edge.range.hi - margin) continue;
-            cuts.push_back({projection.parameter, p});
+        std::string failure;
+    };
+    std::vector<SplitJob> jobs;
+    for (std::size_t e = 0; e < original; ++e)
+        if (boundary[e]) jobs.push_back({e, {}, {}});
+    // Le proiezioni di ogni bordo sono indipendenti. Non si modifica il modello
+    // dai worker: i nuovi edge vengono materializzati sotto, nello stesso ordine
+    // dell'implementazione seriale, dopo che tutti i trim sono stati calcolati.
+    parallelFor(jobs.size(), threadCount(0), [&](std::size_t index) {
+        SplitJob &job = jobs[index];
+        try {
+            const std::size_t e = job.edge;
+            const detail::RawEdge &edge = model.edges[e];
+            const Box box = curveBox(*edge.curve, edge.range).padded(tolerance);
+            const Vec3 &a = model.points[std::size_t(edge.start)], &b = model.points[std::size_t(edge.end)];
+            for (const auto &[p, owner] : boundaryPoints) {
+                if (owner == edgeBody[e]) continue;
+                const Vec3 &q = model.points[std::size_t(p)];
+                if (q.x() < box.lo.x() || q.y() < box.lo.y() || q.z() < box.lo.z() || q.x() > box.hi.x() || q.y() > box.hi.y() || q.z() > box.hi.z())
+                    continue;
+                if (distance(q, a) <= tolerance || distance(q, b) <= tolerance) continue;
+                const CurveProjection<3> projection = projectPoint(*edge.curve, q, edge.range);
+                if (projection.distance > tolerance) continue;
+                const double margin = 1e-9 * edge.range.length();
+                if (projection.parameter <= edge.range.lo + margin || projection.parameter >= edge.range.hi - margin) continue;
+                job.cuts.push_back({projection.parameter, p});
+            }
+            std::sort(job.cuts.begin(), job.cuts.end());
+        } catch (const std::exception &error) {
+            job.failure = error.what();
         }
-        if (cuts.empty()) continue;
-        std::sort(cuts.begin(), cuts.end());
+    });
+    std::map<int, std::vector<int>> replacement;  // edge -> edge nuovi nel verso della curva
+    for (const SplitJob &job : jobs) {
+        if (!job.failure.empty()) throw std::domain_error(job.failure);
+        if (job.cuts.empty()) continue;
+        const std::size_t e = job.edge;
+        const detail::RawEdge edge = model.edges[e];
         std::vector<int> pieces;
         double lo = edge.range.lo;
         int start = edge.start;
-        for (const auto &[t, p] : cuts) {
+        for (const auto &[t, p] : job.cuts) {
             if (t - lo < 1e-9 * edge.range.length()) continue;
             detail::RawEdge piece = edge;
             piece.start = start;

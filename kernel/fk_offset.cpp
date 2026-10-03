@@ -8,10 +8,12 @@
 #include <numeric>
 #include <set>
 #include <stdexcept>
+#include <string>
 
 #include "fk_bspline_surface.h"
 #include "fk_exchange.h"
 #include "fk_intersect.h"
+#include "fk_parallel.h"
 #include "fk_pcurve.h"
 #include "fk_surface.h"
 #include "fk_surface_algo.h"
@@ -45,50 +47,73 @@ std::vector<double> sortedBreaks(const Interval &range, std::vector<double> brea
     return cuts;
 }
 
+// Superficie a distanza O = S + d N in (u, v) con le derivate esatte O_u, O_v
+// e O_uv (dalle derivate di S fino al terzo ordine). Le derivate si prendono
+// appena dentro la cella (side +1/-1 per direzione): sulle linee di nodo le
+// derivate di ordine alto di S cambiano da una parte all'altra.
+struct OffsetJet {
+    Vec3 p, pu, pv, puv;
+};
+
+OffsetJet offsetJet(const Surface &surface, double d, double u, double v, int su, int sv, double eu, double ev) {
+    OffsetJet jet;
+    Vec3 s[16];
+    surface.evaluate(u, v, 0, s);
+    const Vec3 point = s[0];
+    for (Vec3 &x : s) x = Vec3();
+    surface.evaluate(u + su * eu, v + sv * ev, 3, s);
+    const auto at = [&](int k, int l) { return s[Surface::derivativeIndex(k, l, 3)]; };
+    const Vec3 Su = at(1, 0), Sv = at(0, 1), Suu = at(2, 0), Suv = at(1, 1), Svv = at(0, 2), Suuv = at(2, 1), Suvv = at(1, 2);
+    const Vec3 n = cross(Su, Sv), nu = cross(Suu, Sv) + cross(Su, Suv), nv = cross(Suv, Sv) + cross(Su, Svv);
+    const Vec3 nuv = cross(Suuv, Sv) + cross(Suu, Svv) + cross(Su, Suvv);
+    const double length = norm(n);
+    if (!(length > 0.0)) throw std::domain_error("offset: punto singolare della superficie B-spline (normale nulla)");
+    const double r = 1.0 / length, r3 = r * r * r;
+    const double a = dot(n, nu), b = dot(n, nv);
+    const double ru = -a * r3, rv = -b * r3;
+    const double ruv = -(dot(nv, nu) + dot(n, nuv)) * r3 + 3.0 * a * b * r3 * r * r;
+    const Vec3 N = n * r;
+    Vec3 nAt;
+    {
+        Vec3 t[4];
+        surface.evaluate(u, v, 1, t);
+        const Vec3 m = cross(t[Surface::derivativeIndex(1, 0, 1)], t[Surface::derivativeIndex(0, 1, 1)]);
+        nAt = norm(m) > 0.0 ? m / norm(m) : N;
+    }
+    jet.p = point + d * nAt;
+    jet.pu = Su + d * (nu * r + n * ru);
+    jet.pv = Sv + d * (nv * r + n * rv);
+    jet.puv = Suv + d * (nuv * r + nu * rv + nv * ru + n * ruv);
+    return jet;
+}
+
 // Superficie a distanza di una B-spline: bicubica di Hermite a tratti sulla
 // griglia dei nodi (infittita finche' lo scarto da O, nello stesso (u, v), e'
-// sotto la tolleranza). In ogni nodo della griglia O, O_u, O_v e O_uv dalle
-// differenze finite dalla parte della cella: i poli sulle linee della griglia
-// sono comuni alle celle vicine (le derivate lungo la linea sono le stesse),
-// quelli interni sono della cella. Nodi interni tripli: C0 garantita, C1 dove
-// O lo e'.
+// sotto la tolleranza). In ogni nodo della griglia O, O_u, O_v e O_uv esatti
+// dalla parte della cella: i poli sulle linee della griglia sono comuni alle
+// celle vicine (le derivate lungo la linea sono le stesse), quelli interni
+// sono della cella. Nodi interni tripli: C0 garantita, C1 dove O lo e'. Le
+// celle si controllano in parallelo; si dividono solo nelle direzioni in cui
+// sbagliano (lo scarto lungo i bordi della cella dice quale).
 SurfacePtr offsetBSpline(const Surface &surface, double d, const Interval &uw, const Interval &vw, double tolerance) {
     const auto O = [&](double u, double v) { return surface.point(u, v) + d * surface.normal(u, v); };
     std::vector<double> us = sortedBreaks(uw, surface.uBreakpoints(uw), 1e-9 * uw.length());
     std::vector<double> vs = sortedBreaks(vw, surface.vBreakpoints(vw), 1e-9 * vw.length());
-    const auto halve = [](std::vector<double> &lines) {
-        std::vector<double> result;
-        for (std::size_t i = 0; i + 1 < lines.size(); ++i) {
-            result.push_back(lines[i]);
-            result.push_back(0.5 * (lines[i] + lines[i + 1]));
-        }
-        result.push_back(lines.back());
-        lines = std::move(result);
-    };
-    halve(us);
-    halve(vs);
     using Cell = std::array<std::array<Vec3, 4>, 4>;
     const auto cellPoles = [&](std::size_t i, std::size_t j) {
         Cell poles;
         const double u0 = us[i], u1 = us[i + 1], v0 = vs[j], v1 = vs[j + 1];
-        // Passi delle differenze: piccoli per le derivate prime, piu' grandi
-        // per la torsione (la doppia differenza divide per il quadrato del
-        // passo: con 1e-4 l'arrotondamento fermava l'errore a 3e-8).
-        const double hu = u1 - u0, hv = v1 - v0, du = 1e-3 * hu, dv = 1e-3 * hv, tu = 1e-2 * hu, tv = 1e-2 * hv;
+        const double hu = u1 - u0, hv = v1 - v0;
         for (int cu = 0; cu < 2; ++cu)
             for (int cv = 0; cv < 2; ++cv) {
                 const double u = cu ? u1 : u0, v = cv ? v1 : v0;
                 const int su = cu ? -1 : 1, sv = cv ? -1 : 1;
-                const auto alongU = [&](double vv, double step) { return derivative([&](double uu) { return O(uu, vv); }, u, step, su); };
-                const Vec3 P = O(u, v);
-                const Vec3 Pu = alongU(v, du);
-                const Vec3 Pv = derivative([&](double vv) { return O(u, vv); }, v, dv, sv);
-                const Vec3 Puv = derivative([&](double vv) { return alongU(vv, tu); }, v, tv, sv);
+                const OffsetJet jet = offsetJet(surface, d, u, v, su, sv, 1e-9 * hu, 1e-9 * hv);
                 const int a = cu ? 3 : 0, b = cv ? 3 : 0, a2 = cu ? 2 : 1, b2 = cv ? 2 : 1;
-                poles[a][b] = P;
-                poles[a2][b] = P + (su * hu / 3.0) * Pu;
-                poles[a][b2] = P + (sv * hv / 3.0) * Pv;
-                poles[a2][b2] = P + (su * hu / 3.0) * Pu + (sv * hv / 3.0) * Pv + (su * sv * hu * hv / 9.0) * Puv;
+                poles[a][b] = jet.p;
+                poles[a2][b] = jet.p + (su * hu / 3.0) * jet.pu;
+                poles[a][b2] = jet.p + (sv * hv / 3.0) * jet.pv;
+                poles[a2][b2] = jet.p + (su * hu / 3.0) * jet.pu + (sv * hv / 3.0) * jet.pv + (su * sv * hu * hv / 9.0) * jet.puv;
             }
         return poles;
     };
@@ -97,22 +122,42 @@ SurfacePtr offsetBSpline(const Surface &surface, double d, const Interval &uw, c
         for (int a = 0; a < 4; ++a) rows[a] = bezier(poles[a][0], poles[a][1], poles[a][2], poles[a][3], t);
         return bezier(rows[0], rows[1], rows[2], rows[3], s);
     };
+    const unsigned threads = threadCount(0);
     for (int round = 0;; ++round) {
-        std::set<std::size_t> splitU, splitV;
-        for (std::size_t i = 0; i + 1 < us.size(); ++i)
-            for (std::size_t j = 0; j + 1 < vs.size(); ++j) {
+        const std::size_t nu = us.size() - 1, nv = vs.size() - 1;
+        // 1: dividere lungo u, 2: lungo v (per cella); eccezioni raccolte per indice.
+        std::vector<int> split(nu * nv, 0);
+        std::vector<std::string> failure(nu * nv);
+        parallelFor(nu * nv, threads, [&](std::size_t c) {
+            const std::size_t i = c / nv, j = c % nv;
+            try {
                 const Cell poles = cellPoles(i, j);
-                double error = 0.0;
-                for (double s : {0.25, 0.5, 0.75})
-                    for (double t : {0.25, 0.5, 0.75})
-                        error = std::max(error, distance(evaluateCell(poles, s, t), O(us[i] + s * (us[i + 1] - us[i]), vs[j] + t * (vs[j + 1] - vs[j]))));
-                if (error > tolerance) {
-                    splitU.insert(i);
-                    splitV.insert(j);
+                const auto error = [&](double s, double t) {
+                    return distance(evaluateCell(poles, s, t), O(us[i] + s * (us[i + 1] - us[i]), vs[j] + t * (vs[j + 1] - vs[j])));
+                };
+                double alongU = 0.0, alongV = 0.0, inside = 0.0;
+                for (double q : {0.25, 0.5, 0.75}) {
+                    alongU = std::max({alongU, error(q, 0.0), error(q, 1.0)});
+                    alongV = std::max({alongV, error(0.0, q), error(1.0, q)});
+                    for (double t : {0.25, 0.5, 0.75}) inside = std::max(inside, error(q, t));
                 }
+                if (inside <= tolerance && alongU <= tolerance && alongV <= tolerance) return;
+                int mask = (alongU > 0.5 * tolerance ? 1 : 0) | (alongV > 0.5 * tolerance ? 2 : 0);
+                split[c] = mask ? mask : 3;
+            } catch (const std::exception &e) {
+                failure[c] = e.what();
             }
-        if (splitU.empty()) break;
-        if (round >= 12 || us.size() > 256 || vs.size() > 256)
+        });
+        for (const std::string &message : failure)
+            if (!message.empty()) throw std::domain_error(message);
+        std::set<std::size_t> splitU, splitV;
+        for (std::size_t c = 0; c < split.size(); ++c) {
+            if (split[c] & 1) splitU.insert(c / nv);
+            if (split[c] & 2) splitV.insert(c % nv);
+        }
+        if (splitU.empty() && splitV.empty()) break;
+        if (round >= 16 || us.size() + splitU.size() > 4097 || vs.size() + splitV.size() > 4097
+            || (us.size() + splitU.size()) * (vs.size() + splitV.size()) > 400000)
             throw std::domain_error("offset: superficie B-spline non approssimabile (spigoli vivi dentro la faccia, "
                                     "o distanza oltre il raggio di curvatura)");
         std::vector<double> nextU, nextV;
@@ -132,12 +177,12 @@ SurfacePtr offsetBSpline(const Surface &surface, double d, const Interval &uw, c
     const std::size_t nu = us.size() - 1, nv = vs.size() - 1;
     const int uCount = int(3 * nu + 1), vCount = int(3 * nv + 1);
     std::vector<Vec3> poles(std::size_t(uCount) * std::size_t(vCount));
-    for (std::size_t i = 0; i < nu; ++i)
-        for (std::size_t j = 0; j < nv; ++j) {
-            const Cell cell = cellPoles(i, j);
-            for (int a = 0; a < 4; ++a)
-                for (int b = 0; b < 4; ++b) poles[(3 * i + std::size_t(a)) * std::size_t(vCount) + 3 * j + std::size_t(b)] = cell[a][b];
-        }
+    parallelFor(nu * nv, threads, [&](std::size_t c) {
+        const std::size_t i = c / nv, j = c % nv;
+        const Cell cell = cellPoles(i, j);
+        for (int a = 0; a < 4; ++a)
+            for (int b = 0; b < 4; ++b) poles[(3 * i + std::size_t(a)) * std::size_t(vCount) + 3 * j + std::size_t(b)] = cell[a][b];
+    });
     const auto knots = [](const std::vector<double> &lines) {
         std::vector<double> result(4, lines.front());
         for (std::size_t k = 1; k + 1 < lines.size(); ++k) result.insert(result.end(), 3, lines[k]);
@@ -164,15 +209,18 @@ CurvePtr<3> exactOffsetCurve(const CurvePtr<3> &curve, const Interval &range, co
         CurvePtr<3> moved = transformCurve(curve, Transform3::translation(shift), &parameterScale);
         if (std::fabs(parameterScale - 1.0) < 1e-15) return moved;
     }
-    if (curve->type() == CurveType::Line) {
-        const auto &line = static_cast<const Line<3> &>(*curve);
+    // Curva limitata: conta la curva di base (stesso parametro).
+    const Curve<3> *basis = curve.get();
+    while (basis->type() == CurveType::Trimmed) basis = static_cast<const TrimmedCurve<3> *>(basis)->basis().get();
+    if (basis->type() == CurveType::Line) {
+        const auto &line = static_cast<const Line<3> &>(*basis);
         const Vec3 origin = values.front() - ts.front() * line.direction();
         bool straight = true;
         for (std::size_t k = 0; k < ts.size() && straight; ++k) straight = distance(values[k], origin + ts[k] * line.direction()) <= eps;
         if (straight) return std::make_shared<Line<3>>(origin, line.direction());
     }
-    if (curve->type() == CurveType::Circle) {
-        const auto &circle = static_cast<const Circle<3> &>(*curve);
+    if (basis->type() == CurveType::Circle) {
+        const auto &circle = static_cast<const Circle<3> &>(*basis);
         // Cerchio per tre campioni, con l'asse dalla parte di quello di partenza.
         const Vec3 &a = values[0], &b = values[4], &c = values[8];
         const Vec3 ab = b - a, ac = c - a;
@@ -323,21 +371,40 @@ SurfacePtr offsetSurface(const Surface &surface, double d, const Interval &uw, c
     case SurfaceType::Extrusion: {
         // La normale non dipende da v: S + d N = (C + d N(u)) + v D.
         const auto &e = static_cast<const ExtrusionSurface &>(surface);
-        const Interval domain = e.curve()->domain().isFinite() ? e.curve()->domain() : uw;
+        // Solo la finestra della faccia (con il margine): fuori la curva a
+        // distanza puo' avere cuspidi che alla faccia non interessano.
+        const Interval full = e.curve()->domain().isFinite() ? e.curve()->domain() : uw;
+        Interval domain = full;
+        if (uw.isFinite()) {
+            if (surface.isUPeriodic()) domain = uw.length() < 0.98 * surface.uPeriod() ? uw : full;  // f riporta u nel periodo
+            else domain = Interval{std::max(full.lo, uw.lo), std::min(full.hi, uw.hi)};
+        }
         const double v0 = vw.isFinite() ? 0.5 * (vw.lo + vw.hi) : 0.0;
         const auto f = [&](double u) { return surface.point(u, v0) + d * surface.normal(u, v0) - v0 * e.direction(); };
         requireClosed(*e.curve(), domain, f, tolerance);
-        result = std::make_shared<ExtrusionSurface>(fitCurve(f, domain, e.curve()->breakpoints(domain), tolerance), e.direction());
+        // Retta o cerchio a distanza: esatti (stesso parametro).
+        CurvePtr<3> base = exactOffsetCurve(e.curve(), domain, f, std::max(1.0, norm(surface.point(domain.lo, v0))));
+        if (!base) base = fitCurve(f, domain, e.curve()->breakpoints(domain), tolerance);
+        result = std::make_shared<ExtrusionSurface>(base, e.direction());
         break;
     }
     case SurfaceType::Revolution: {
         // La normale ruota con u: il meridiano a distanza (in u = 0) ruotato.
         const auto &r = static_cast<const RevolutionSurface &>(surface);
-        const Interval domain = r.meridian()->domain().isFinite() ? r.meridian()->domain() : vw;
+        // Solo la finestra della faccia: il meridiano puo' proseguire fino
+        // all'asse o in tratti molto curvi che la faccia non usa.
+        const Interval full = r.meridian()->domain().isFinite() ? r.meridian()->domain() : vw;
+        Interval domain = full;
+        if (vw.isFinite()) {
+            if (r.meridian()->isPeriodic()) domain = vw.length() < 0.98 * r.meridian()->period() ? vw : full;
+            else domain = Interval{std::max(full.lo, vw.lo), std::min(full.hi, vw.hi)};
+        }
         const auto f = [&](double v) { return surface.point(0.0, v) + d * surface.normal(0.0, v); };
         requireClosed(*r.meridian(), domain, f, tolerance);
-        result = std::make_shared<RevolutionSurface>(fitCurve(f, domain, r.meridian()->breakpoints(domain), tolerance), r.axisPoint(),
-                                                     r.axisDirection());
+        // Meridiano retta o cerchio (il toro scritto come rivoluzione nei file): esatto.
+        CurvePtr<3> meridian = exactOffsetCurve(r.meridian(), domain, f, std::max(1.0, norm(surface.point(0.0, domain.lo))));
+        if (!meridian) meridian = fitCurve(f, domain, r.meridian()->breakpoints(domain), tolerance);
+        result = std::make_shared<RevolutionSurface>(meridian, r.axisPoint(), r.axisDirection());
         break;
     }
     case SurfaceType::BSpline:
@@ -378,31 +445,102 @@ OffsetResult offsetFaces(const Body &input, const std::vector<FaceId> &faces, do
 
     // Superficie a distanza di ogni faccia, sulla finestra (u, v) dei suoi loop.
     std::map<int, SurfacePtr> offsets;
+    // Finestre (u, v) delle facce in sequenza, poi le superfici a distanza in
+    // parallelo (ognuna dipende solo dalla sua faccia; le B-spline sono la
+    // parte lunga).
+    struct SurfaceJob {
+        int index;
+        Interval u, v;
+        SurfacePtr result;
+        std::string failure;
+    };
+    std::vector<SurfaceJob> surfaceJobs;
     for (int index : selected) {
         const FaceId f{index};
         const Face &face = body.face(f);
         const Surface &surface = *face.surface;
-        Interval u{1e300, -1e300}, v{1e300, -1e300};
+        // Intervalli (u, v) delle SP-curve, una per fin (continue).
+        std::vector<Interval> uRanges, vRanges;
         for (LoopId l : face.loops)
             for (FinId finId : body.loopFins(l)) {
                 const Fin &fin = body.fin(finId);
                 const Edge &edge = body.edge(fin.edge);
+                Interval ur{1e300, -1e300}, vr{1e300, -1e300};
                 for (int k = 0; k <= 16; ++k) {
                     const Vec2 uv = fin.pcurve->point(edge.range.lo + edge.range.length() * k / 16.0);
-                    u.lo = std::min(u.lo, uv[0]), u.hi = std::max(u.hi, uv[0]);
-                    v.lo = std::min(v.lo, uv[1]), v.hi = std::max(v.hi, uv[1]);
+                    ur.lo = std::min(ur.lo, uv[0]), ur.hi = std::max(ur.hi, uv[0]);
+                    vr.lo = std::min(vr.lo, uv[1]), vr.hi = std::max(vr.hi, uv[1]);
                 }
+                uRanges.push_back(ur);
+                vRanges.push_back(vr);
             }
-        if (!(u.lo <= u.hi)) u = surface.uDomain(), v = surface.vDomain();  // faccia senza bordo (sfera, toro interi)
-        const auto widen = [](Interval range, const Interval &domain, bool periodic) {
+        // Finestra di una direzione. Nelle direzioni periodiche le SP-curve di
+        // fin diverse possono stare a periodi diversi: si uniscono gli
+        // intervalli sul cerchio e la finestra e' il complemento del buco piu'
+        // grande (con il minimo e il massimo una faccia a cavallo della
+        // cucitura sembrerebbe coprire tutto il periodo).
+        const auto window = [](const std::vector<Interval> &ranges, const Interval &domain, bool periodic, double period) {
+            if (ranges.empty()) return domain;
+            if (!periodic) {
+                Interval all{1e300, -1e300};
+                for (const Interval &r : ranges) all.lo = std::min(all.lo, r.lo), all.hi = std::max(all.hi, r.hi);
+                return all;
+            }
+            std::vector<std::pair<double, double>> pieces;
+            for (const Interval &r : ranges) {
+                if (r.length() >= period * (1.0 - 1e-9)) return domain;
+                const double lo = r.lo - period * std::floor((r.lo - domain.lo) / period);
+                pieces.push_back({lo, lo + r.length()});
+                pieces.push_back({lo + period, lo + period + r.length()});
+            }
+            std::sort(pieces.begin(), pieces.end());
+            std::vector<std::pair<double, double>> merged;
+            for (const auto &p : pieces) {
+                if (!merged.empty() && p.first <= merged.back().second) merged.back().second = std::max(merged.back().second, p.second);
+                else merged.push_back(p);
+            }
+            // Il buco piu' grande tra due tratti coperti consecutivi (entro due periodi).
+            double gap = 0.0, end = 0.0;
+            for (std::size_t k = 0; k + 1 < merged.size(); ++k)
+                if (merged[k + 1].first - merged[k].second > gap) gap = merged[k + 1].first - merged[k].second, end = merged[k + 1].first;
+            if (!(gap > 0.0) || merged.front().second - merged.front().first >= period) return domain;
+            return Interval{end, end + period - gap};
+        };
+        Interval u = window(uRanges, surface.uDomain(), surface.isUPeriodic(), surface.isUPeriodic() ? surface.uPeriod() : 0.0);
+        Interval v = window(vRanges, surface.vDomain(), surface.isVPeriodic(), surface.isVPeriodic() ? surface.vPeriod() : 0.0);
+        // Le B-spline dei file hanno spesso i bordi delle facce un poco fuori dal
+        // dominio (dati tolleranti): li' la superficie si prolunga (lo stesso
+        // polinomio), cosi' le SP-curve delle facce valgono anche per la
+        // superficie a distanza; al piu' il 5% del dominio.
+        const bool extend = surface.type() == SurfaceType::BSpline;
+        const auto widen = [extend](Interval range, const Interval &domain, bool periodic) {
             const double margin = 0.005 * std::max(range.length(), 1e-9);
             range.lo -= margin, range.hi += margin;
-            if (!periodic && domain.isFinite()) range.lo = std::max(range.lo, domain.lo), range.hi = std::min(range.hi, domain.hi);
+            if (!periodic && domain.isFinite()) {
+                const double reach = extend ? 0.05 * domain.length() : 0.0;
+                const double lo = domain.lo - reach, hi = domain.hi + reach;
+                range.lo = std::max(range.lo, lo), range.hi = std::min(range.hi, hi);
+            }
+            // Quasi tutto il periodo: il periodo intero (la superficie resta chiusa).
+            if (periodic && domain.isFinite() && range.length() >= 0.98 * domain.length()) range = domain;
             return range;
         };
         u = widen(u, surface.uDomain(), surface.isUPeriodic());
         v = widen(v, surface.vDomain(), surface.isVPeriodic());
-        offsets[index] = offsetSurface(surface, face.sense ? distanceValue : -distanceValue, u, v, tolerance);
+        surfaceJobs.push_back({index, u, v, nullptr, {}});
+    }
+    parallelFor(surfaceJobs.size(), threadCount(0), [&](std::size_t k) {
+        SurfaceJob &job = surfaceJobs[k];
+        const Face &face = body.face(FaceId{job.index});
+        try {
+            job.result = offsetSurface(*face.surface, face.sense ? distanceValue : -distanceValue, job.u, job.v, tolerance);
+        } catch (const std::exception &e) {
+            job.failure = e.what();
+        }
+    });
+    for (SurfaceJob &job : surfaceJobs) {
+        if (!job.failure.empty()) throw std::domain_error(job.failure);
+        offsets[job.index] = job.result;
     }
 
     // Edge delle facce scelte: tangenti (normali parallele) o spigoli vivi.
@@ -416,18 +554,39 @@ OffsetResult offsetFaces(const Body &input, const std::vector<FaceId> &faces, do
             for (FinId finId : body.loopFins(l)) edges[body.fin(finId).edge.index].fins.push_back(finId);
     constexpr double kTangentAngle = 1e-3;
     OffsetResult result;
-    for (auto &[edgeIndex, info] : edges) {
-        if (info.fins.size() != 2) continue;
-        const Edge &edge = body.edge(EdgeId{edgeIndex});
-        bool tangent = true;
-        for (int k = 0; k < 9 && tangent; ++k) {
-            const double t = edge.range.lo + edge.range.length() * (k + 0.5) / 9.0;
-            const Vec3 a = faceNormal(body, body.finFace(info.fins[0]), body.fin(info.fins[0]).pcurve->point(t));
-            const Vec3 b = faceNormal(body, body.finFace(info.fins[1]), body.fin(info.fins[1]).pcurve->point(t));
-            tangent = dot(a, b) > std::cos(kTangentAngle);
+    // Ogni edge con due fin e' una coppia di facce adiacenti indipendente.
+    // La classificazione puo' richiedere proiezioni/derivate costose sulle
+    // superfici importate: la calcoliamo per coppia in parallelo, ma applichiamo
+    // i risultati alla mappa e ai contatori in ordine stabile dopo il join.
+    struct AdjacencyJob {
+        int edgeIndex = -1;
+        bool tangent = false;
+        std::string failure;
+    };
+    std::vector<AdjacencyJob> adjacencyJobs;
+    for (const auto &[edgeIndex, info] : edges)
+        if (info.fins.size() == 2) adjacencyJobs.push_back({edgeIndex, false, {}});
+    const auto &edgeLookup = edges;
+    parallelFor(adjacencyJobs.size(), threadCount(0), [&](std::size_t jobIndex) {
+        AdjacencyJob &job = adjacencyJobs[jobIndex];
+        try {
+            const EdgeInfo &info = edgeLookup.at(job.edgeIndex);
+            const Edge &edge = body.edge(EdgeId{job.edgeIndex});
+            job.tangent = true;
+            for (int k = 0; k < 9 && job.tangent; ++k) {
+                const double t = edge.range.lo + edge.range.length() * (k + 0.5) / 9.0;
+                const Vec3 a = faceNormal(body, body.finFace(info.fins[0]), body.fin(info.fins[0]).pcurve->point(t));
+                const Vec3 b = faceNormal(body, body.finFace(info.fins[1]), body.fin(info.fins[1]).pcurve->point(t));
+                job.tangent = dot(a, b) > std::cos(kTangentAngle);
+            }
+        } catch (const std::exception &e) {
+            job.failure = e.what();
         }
-        info.tangent = tangent;
-        if (!tangent) ++result.sharpEdges;
+    });
+    for (const AdjacencyJob &job : adjacencyJobs) {
+        if (!job.failure.empty()) throw std::domain_error(job.failure);
+        edges.at(job.edgeIndex).tangent = job.tangent;
+        if (!job.tangent) ++result.sharpEdges;
     }
 
     // Vertici: un punto per vertice e faccia, uniti attraverso gli edge tangenti.
@@ -488,6 +647,15 @@ OffsetResult offsetFaces(const Body &input, const std::vector<FaceId> &faces, do
     // Edge a distanza: uno solo lungo gli edge tangenti (la normale media
     // delle due facce), uno per faccia altrove.
     std::map<std::pair<int, int>, int> rawEdge;  // (edge, faccia o -1) -> indice
+    struct CurveJob {
+        int edge;
+        CurvePtr<3> curve;
+        Interval range;
+        std::function<Vec3(double)> offset;
+        std::vector<double> breaks;
+        std::string failure;
+    };
+    std::vector<CurveJob> curveJobs;
     const auto rawEdgeOf = [&](FinId finId) {
         const Fin &fin = body.fin(finId);
         const EdgeId e = fin.edge;
@@ -498,10 +666,11 @@ OffsetResult offsetFaces(const Body &input, const std::vector<FaceId> &faces, do
         if (found != rawEdge.end()) return found->second;
         const Edge &edge = body.edge(e);
         std::vector<FinId> used = info.tangent ? info.fins : std::vector<FinId>{finId};
-        const auto f = [&](double t) {
+        const Body *source = &body;
+        const std::function<Vec3(double)> f = [source, used, curve = edge.curve, distanceValue](double t) {
             Vec3 n;
-            for (FinId u : used) n += faceNormal(body, body.finFace(u), body.fin(u).pcurve->point(t));
-            return edge.curve->point(t) + distanceValue * (n / norm(n));
+            for (FinId u : used) n += faceNormal(*source, source->finFace(u), source->fin(u).pcurve->point(t));
+            return curve->point(t) + distanceValue * (n / norm(n));
         };
         std::vector<double> breaks;
         for (FinId u : used) {
@@ -511,10 +680,11 @@ OffsetResult offsetFaces(const Body &input, const std::vector<FaceId> &faces, do
         detail::RawEdge raw;
         raw.start = pointIndex(body.edgeStart(e).index, face);
         raw.end = pointIndex(body.edgeEnd(e).index, face);
-        raw.curve = offsetCurve(edge.curve, edge.range, f, breaks, scale, tolerance);
         raw.hasRange = true;
         raw.range = edge.range;
         model.edges.push_back(raw);
+        // La curva si calcola dopo, in parallelo con le altre.
+        curveJobs.push_back({int(model.edges.size()) - 1, edge.curve, edge.range, f, breaks, {}});
         return rawEdge[key] = int(model.edges.size()) - 1;
     };
     for (int index : selected) {
@@ -524,11 +694,45 @@ OffsetResult offsetFaces(const Body &input, const std::vector<FaceId> &faces, do
         raw.sense = face.sense;
         for (LoopId l : face.loops) {
             std::vector<detail::RawFin> loop;
-            for (FinId finId : body.loopFins(l)) loop.push_back({rawEdgeOf(finId), body.fin(finId).sense});
+            for (FinId finId : body.loopFins(l)) {
+                // L'SP-curve della faccia di partenza: la superficie a distanza
+                // ha gli stessi parametri (u, v), cosi' assembleBody non proietta.
+                const Fin &fin = body.fin(finId);
+                // Solo se i suoi (u, v) stanno nel dominio della superficie nuova
+                // (che puo' coprire solo la finestra della faccia, senza periodo).
+                const Surface &target = *raw.surface;
+                const Edge &edge = body.edge(fin.edge);
+                bool inside = true;
+                for (int k = 0; k <= 8 && inside; ++k) {
+                    const Vec2 uv = fin.pcurve->point(edge.range.lo + edge.range.length() * k / 8.0);
+                    for (int d = 0; d < 2 && inside; ++d) {
+                        const bool periodic = d == 0 ? target.isUPeriodic() : target.isVPeriodic();
+                        const Interval domain = d == 0 ? target.uDomain() : target.vDomain();
+                        if (periodic || !domain.isFinite()) continue;
+                        // Le SP-curve dei file escono un poco dal dominio (dati tolleranti):
+                        // li' la superficie nuova si prolunga, e lo scarto misurato va nella
+                        // tolleranza dell'edge.
+                        const double slack = 1e-6 * domain.length();
+                        inside = uv[d] >= domain.lo - slack && uv[d] <= domain.hi + slack;
+                    }
+                }
+                if (inside) loop.push_back({rawEdgeOf(finId), fin.sense, fin.pcurve, fin.pcurveTolerance + 2.0 * tolerance});
+                else loop.push_back({rawEdgeOf(finId), fin.sense});
+            }
             if (!loop.empty()) raw.loops.push_back(std::move(loop));
         }
         model.faces.push_back(std::move(raw));
     }
+    parallelFor(curveJobs.size(), threadCount(0), [&](std::size_t k) {
+        CurveJob &job = curveJobs[k];
+        try {
+            model.edges[std::size_t(job.edge)].curve = offsetCurve(job.curve, job.range, job.offset, job.breaks, scale, tolerance);
+        } catch (const std::exception &e) {
+            job.failure = e.what();
+        }
+    });
+    for (const CurveJob &job : curveJobs)
+        if (!job.failure.empty()) throw std::domain_error(job.failure);
     result.body = detail::assembleBody(model, false, &result.notes);
     for (ShellId s : result.body.shells()) {
         (void)s;
