@@ -220,12 +220,16 @@ QString featureType(const ExtrusionObject &feature) {
     case BodyFeature::SheetExtend: return QStringLiteral("Estensione superficie");
     case BodyFeature::Scale: return QStringLiteral("Scala");
     case BodyFeature::Helix: return feature.helix.spiral ? QStringLiteral("Spirale") : QStringLiteral("Elica");
-    case BodyFeature::Sweep: return QStringLiteral("Sweep");
-    case BodyFeature::Loft: return QStringLiteral("Loft");
+    case BodyFeature::Sweep: return feature.sweepSurface ? QStringLiteral("Sweep di superficie") : QStringLiteral("Sweep");
+    case BodyFeature::Loft: return feature.loftSurface ? QStringLiteral("Loft di superficie") : QStringLiteral("Loft");
     case BodyFeature::Imported: return QStringLiteral("Importato");
     case BodyFeature::DatumPlane: return QStringLiteral("Piano datum");
     case BodyFeature::Pattern: return QStringLiteral("Ripetizione");
     case BodyFeature::Transform: return QStringLiteral("Trasformazione");
+    case BodyFeature::SurfaceOffset: return QStringLiteral("Offset superficie");
+    case BodyFeature::Sew: return QStringLiteral("Cucitura");
+    case BodyFeature::Ruled: return QStringLiteral("Superficie rigata");
+    case BodyFeature::PlanarSurface: return QStringLiteral("Superficie planare");
     }
     return QStringLiteral("Feature");
 }
@@ -353,6 +357,16 @@ QVector<Dependency> dependencies(int index, const DocumentState &document) {
     case BodyFeature::Scale:
         addBodyDependency(result, features, index, feature.firstBody, QStringLiteral("corpo"));
         break;
+    case BodyFeature::SurfaceOffset:
+        addBodyDependency(result, features, index, feature.firstBody,
+                          feature.offsetFaces.isEmpty() ? QStringLiteral("tutte le facce")
+                                                        : QStringLiteral("%1 facce").arg(feature.offsetFaces.size()));
+        break;
+    case BodyFeature::Sew:
+        addBodyDependency(result, features, index, feature.firstBody, QStringLiteral("superficie 1"));
+        for (int k = 0; k < feature.booleanTools.size(); ++k)
+            addBodyDependency(result, features, index, feature.booleanTools.at(k), QStringLiteral("superficie %1").arg(k + 2));
+        break;
     case BodyFeature::SheetTrim:
         addBodyDependency(result, features, index, feature.firstBody, QStringLiteral("superficie"));
         if (feature.secondBody >= 0) addBodyDependency(result, features, index, feature.secondBody, QStringLiteral("strumento"));
@@ -385,6 +399,17 @@ QVector<Dependency> dependencies(int index, const DocumentState &document) {
         addBodyDependency(result, features, index, feature.firstBody, feature.pattern.featureOnly ? QStringLiteral("feature") : QStringLiteral("corpo"));
         for (int k = 0; k < feature.pattern.refs.size(); ++k)
             addGeometryDependency(result, feature.pattern.refs.at(k), sketches, features, index, QStringLiteral("direzione %1").arg(k + 1));
+        break;
+    case BodyFeature::Ruled:
+        for (int k = 0; k < feature.ruledFirst.size(); ++k)
+            addGeometryDependency(result, feature.ruledFirst.at(k), sketches, features, index, QStringLiteral("prima curva %1").arg(k + 1));
+        for (int k = 0; k < feature.ruledSecond.size(); ++k)
+            addGeometryDependency(result, feature.ruledSecond.at(k), sketches, features, index, QStringLiteral("seconda curva %1").arg(k + 1));
+        break;
+    case BodyFeature::PlanarSurface:
+        if (feature.planarRefs.isEmpty()) addSketchDependency(result, sketches, index, feature.sketchIndex, QStringLiteral("contorni"));
+        for (int k = 0; k < feature.planarRefs.size(); ++k)
+            addGeometryDependency(result, feature.planarRefs.at(k), sketches, features, index, QStringLiteral("bordo %1").arg(k + 1));
         break;
     case BodyFeature::Transform:
         addBodyDependency(result, features, index, feature.firstBody, feature.move.copy ? QStringLiteral("corpo copiato") : QStringLiteral("corpo"));

@@ -81,8 +81,13 @@ add_executable(forgecad
     cad_extrude.cpp
     cad_sketch_refs.h
     cad_sketch_refs.cpp
+    cad_cuda_tessellation.h
+    cad_cuda_tessellation.cpp
+    cad_sketch_offset.h
+    cad_sketch_offset.cpp
     cuda_support.h
     ${FORGE_CAD_CUDA_SOURCE}
+    icons/forgecad.qrc
 )
 
 # Impronta dei sorgenti della geometria per la copia dei corpi nei documenti
@@ -123,6 +128,36 @@ if(CMAKE_CUDA_COMPILER)
     target_compile_definitions(forgecad PRIVATE FORGECAD_HAS_CUDA=1)
 else()
     target_compile_definitions(forgecad PRIVATE FORGECAD_HAS_CUDA=0)
+endif()
+
+# Installazione (cmake --install): binario, voce del menu, icone e tipo MIME dei
+# documenti .prt. Per l'utente corrente senza installare il binario:
+# packaging/linux/install-desktop-integration.sh.
+include(GNUInstallDirs)
+install(TARGETS forgecad RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+set(FORGECAD_EXEC forgecad)
+configure_file(packaging/linux/forgecad.desktop.in ${CMAKE_CURRENT_BINARY_DIR}/forgecad.desktop @ONLY)
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/forgecad.desktop DESTINATION ${CMAKE_INSTALL_DATADIR}/applications)
+install(FILES packaging/linux/forgecad-mime.xml DESTINATION ${CMAKE_INSTALL_DATADIR}/mime/packages)
+foreach(size 16 24 32 48 64 128 256 512)
+    install(FILES icons/hicolor/${size}x${size}/apps/forgecad.png
+            DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor/${size}x${size}/apps)
+    install(FILES icons/hicolor/${size}x${size}/mimetypes/application-x-forgecad-part.png
+            DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor/${size}x${size}/mimetypes)
+endforeach()
+install(FILES icons/forgecad.svg DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor/scalable/apps)
+install(FILES icons/forgecad-document.svg DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor/scalable/mimetypes
+        RENAME application-x-forgecad-part.svg)
+
+# Valutazione delle superfici sulla GPU contro il kernel (solo con nvcc; senza
+# GPU il test si salta).
+if(CMAKE_CUDA_COMPILER)
+    add_executable(forgecad_cuda_tests tests/test_cuda_tessellation.cpp cad_cuda_tessellation.cpp cuda_support.cu)
+    set_target_properties(forgecad_cuda_tests PROPERTIES CUDA_STANDARD 17 CUDA_STANDARD_REQUIRED ON)
+    target_include_directories(forgecad_cuda_tests PRIVATE ${PROJECT_SOURCE_DIR})
+    target_link_libraries(forgecad_cuda_tests PRIVATE forgekernel)
+    target_compile_options(forgecad_cuda_tests PRIVATE $<$<COMPILE_LANGUAGE:CXX>:-Wall;-Wextra;-Wpedantic>)
+    add_test(NAME forgecad_cuda_tests COMMAND forgecad_cuda_tests)
 endif()
 
 # Test delle interazioni del viewport (Qt offscreen); --gl verifica anche i VBO

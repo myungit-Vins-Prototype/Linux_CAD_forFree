@@ -66,6 +66,136 @@ bool dropsSeam(const Surface &surface, const RawEdge &edge, const Interval &rang
 
 }  // namespace
 
+// Una sfera si puo' parametrizzare con qualsiasi asse per il centro. Nei file
+// l'asse e' arbitrario: un edge che passa vicino a un polo senza toccarlo (un
+// cerchio massimo inclinato di pochi millesimi su un meridiano, L407-P3.STEP)
+// ha nello spazio (u, v) una curva che gira di quasi mezzo giro in un tratto
+// minuscolo, e l'SP-curve non si approssima. Le sfere delle facce con fin
+// senza SP-curve prendono l'asse con i poli piu' lontani da tutti gli edge
+// delle loro facce (la geometria non cambia, solo i parametri); le SP-curve di
+// quelle facce si rifanno. Vero se qualche sfera e' cambiata.
+static bool reorientSpheres(Body &body) {
+    std::map<const SphericalSurface *, std::vector<FaceId>> spheres;
+    std::set<const SphericalSurface *> failing;
+    for (FaceId f : body.faces()) {
+        const auto *sphere = dynamic_cast<const SphericalSurface *>(body.face(f).surface.get());
+        if (!sphere) continue;
+        spheres[sphere].push_back(f);
+        for (LoopId l : body.face(f).loops)
+            for (FinId fin : body.loopFins(l))
+                if (!body.fin(fin).pcurve) failing.insert(sphere);
+    }
+    bool changed = false;
+    for (const SphericalSurface *sphere : failing) {
+        const std::vector<FaceId> &faces = spheres[sphere];
+        const Vec3 center = sphere->frame().origin();
+        std::vector<Vec3> directions;  // dal centro ai punti degli edge
+        std::vector<Vec3> candidates{sphere->frame().zDir(), sphere->frame().xDir(), sphere->frame().yDir(),
+                                     Vec3(1, 0, 0), Vec3(0, 1, 0), Vec3(0, 0, 1)};
+        for (FaceId f : faces)
+            for (LoopId l : body.face(f).loops)
+                for (FinId fin : body.loopFins(l)) {
+                    const Edge &edge = body.edge(body.fin(fin).edge);
+                    if (!edge.curve || !edge.range.isFinite()) continue;
+                    if (const auto *circle = dynamic_cast<const Circle<3> *>(edge.curve.get()))
+                        candidates.push_back(cross(circle->xAxis(), circle->yAxis()));
+                    for (int k = 0; k <= 32; ++k) {
+                        const Vec3 d = edge.curve->point(edge.range.lo + edge.range.length() * k / 32.0) - center;
+                        if (norm(d) > 0.0) directions.push_back(d / norm(d));
+                    }
+                }
+        // Direzioni sparse in modo uniforme (spirale di Fibonacci).
+        for (int k = 0; k < 400; ++k) {
+            const double z = 1.0 - (k + 0.5) / 200.0, r = std::sqrt(std::max(0.0, 1.0 - z * z)), a = 2.399963229728653 * k;
+            candidates.push_back(Vec3(r * std::cos(a), r * std::sin(a), z));
+        }
+        // Punteggio: il seno dell'angolo piu' piccolo tra un punto e l'asse (i due poli).
+        const auto score = [&](const Vec3 &axis) {
+            double worst = 1.0;
+            for (const Vec3 &d : directions) worst = std::min(worst, norm(cross(d, axis)));
+            return worst;
+        };
+        const double before = score(sphere->frame().zDir());
+        Vec3 best = sphere->frame().zDir();
+        double bestScore = before;
+        for (Vec3 axis : candidates) {
+            if (!(norm(axis) > 0.0)) continue;
+            axis = axis / norm(axis);
+            const double value = score(axis);
+            if (value > bestScore) bestScore = value, best = axis;
+        }
+        if (!(bestScore > before + 1e-3)) continue;
+        // Asse X qualsiasi normale al nuovo asse; il sistema resta destrorso e
+        // la normale uscente, quindi il verso delle facce non cambia.
+        Vec3 x = std::fabs(best[0]) < 0.9 ? Vec3(1, 0, 0) : Vec3(0, 1, 0);
+        x = x - dot(x, best) * best;
+        const SurfacePtr replacement = std::make_shared<SphericalSurface>(Frame3(center, best, x / norm(x)), sphere->radius());
+        for (FaceId f : faces) {
+            body.face(f).surface = replacement;
+            for (LoopId l : body.face(f).loops)
+                for (FinId fin : body.loopFins(l)) {
+                    body.fin(fin).pcurve = nullptr;
+                    body.fin(fin).pcurveTolerance = 0.0;
+                }
+        }
+        changed = true;
+    }
+    return changed;
+}
+
+// Verso delle facce su superfici non periodiche: la faccia sta a sinistra dei
+// suoi loop rispetto alla sua normale, quindi nello spazio (u, v) l'area con
+// segno dei loop e' positiva se la normale della faccia e' quella della
+// superficie (sense) e negativa altrimenti. I loop vengono dalla topologia, che
+// e' coerente con le facce vicine (ogni edge e' percorso nei due versi); il
+// flag same_sense del file puo' essere sbagliato (L407-P3.STEP di SolidWorks:
+// due raccordi B-spline con la normale opposta alle facce tangenti accanto).
+// Si corregge il flag; le superfici periodiche (loop avvolti) non si toccano.
+// Restituisce le facce corrette.
+static int repairFaceSenses(Body &body) {
+    int flipped = 0;
+    for (FaceId f : body.faces()) {
+        Face &face = body.face(f);
+        if (!face.surface || face.surface->isUPeriodic() || face.surface->isVPeriodic()) continue;
+        double area = 0.0, size = 0.0;
+        bool complete = true;
+        for (LoopId l : face.loops) {
+            std::vector<Vec2> polygon;
+            for (FinId finId : body.loopFins(l)) {
+                const Fin &fin = body.fin(finId);
+                const Edge &edge = body.edge(fin.edge);
+                if (!fin.pcurve || !edge.range.isFinite()) {
+                    complete = false;
+                    break;
+                }
+                std::vector<double> breaks = edge.curve->breakpoints(edge.range);
+                if (breaks.size() < 2 || breaks.size() > 64) breaks = {edge.range.lo, edge.range.hi};
+                std::vector<double> ts;
+                for (std::size_t b = 0; b + 1 < breaks.size(); ++b)
+                    for (int k = 0; k < 16; ++k) ts.push_back(breaks[b] + (breaks[b + 1] - breaks[b]) * k / 16.0);
+                if (!fin.sense) {
+                    for (double &t : ts) t = edge.range.lo + edge.range.hi - t;
+                }
+                for (double t : ts) polygon.push_back(fin.pcurve->point(t));
+            }
+            if (!complete) break;
+            for (std::size_t i = 0; i < polygon.size(); ++i) {
+                const Vec2 &a = polygon[i], &b = polygon[(i + 1) % polygon.size()];
+                area += 0.5 * (a[0] * b[1] - b[0] * a[1]);
+                size += 0.5 * std::fabs(a[0] * b[1] - b[0] * a[1]);
+            }
+        }
+        if (!complete || face.loops.empty()) continue;
+        // Solo se il segno e' netto (loop degeneri o quasi a area nulla restano come sono).
+        if (!(std::fabs(area) > 1e-6 * size)) continue;
+        if ((area > 0.0) != face.sense) {
+            face.sense = !face.sense;
+            ++flipped;
+        }
+    }
+    return flipped;
+}
+
 Body assembleBody(const RawModel &input, bool solid, std::vector<std::string> *notes) {
     RawModel model = input;
     const auto note = [&](const std::string &text) {
@@ -285,8 +415,11 @@ Body assembleBody(const RawModel &input, bool solid, std::vector<std::string> *n
         for (VertexId v : {body.edgeStart(e), body.edgeEnd(e)})
             if (body.edge(e).tolerance > 0.0) body.vertex(v).tolerance = std::max(body.vertex(v).tolerance, body.edge(e).tolerance);
     if (worst > 1e-6) note("edge tolleranti fino a " + std::to_string(worst) + " (precisione del file)");
-    const int missing = computePCurves(body);
+    int missing = computePCurves(body);
+    if (missing > 0 && reorientSpheres(body)) missing = computePCurves(body);
     if (missing > 0) throw std::domain_error(std::to_string(missing) + " SP-curve non calcolabili");
+    if (const int flipped = repairFaceSenses(body))
+        note(std::to_string(flipped) + " facce con il verso (same_sense) opposto ai loop: corretto");
     const std::vector<CheckIssue> issues = checkBody(body);
     if (!issues.empty()) throw std::domain_error("corpo non valido: " + describe(issues.front().code) + " (" + issues.front().message + ")");
     return body;

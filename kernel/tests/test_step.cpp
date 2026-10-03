@@ -442,3 +442,127 @@ FK_TEST(StepReadAP0730SolidWorksFile) {
     FK_CHECK(restored.faces().size() == body.faces().size());
     FK_CHECK(checkBody(restored).empty());
 }
+
+namespace {
+
+// Sostituisce il testo dopo "=" dell'entita' `id` (con o senza spazi attorno a "=").
+std::string replaceEntity(std::string text, int id, const std::string &body) {
+    const std::string head = "\n#" + std::to_string(id);
+    for (std::size_t at = text.find(head); at != std::string::npos; at = text.find(head, at + 1)) {
+        std::size_t equal = at + head.size();
+        while (text[equal] == ' ') ++equal;
+        if (text[equal] != '=') continue;
+        const std::size_t end = text.find(';', equal);
+        return text.replace(equal + 1, end - equal - 1, body);
+    }
+    return text;
+}
+
+// Numero dell'entita' e testo dopo "=" delle righe che cominciano con `name`.
+std::vector<std::pair<int, std::string>> entities(const std::string &text, const std::string &name) {
+    std::vector<std::pair<int, std::string>> found;
+    std::size_t at = 0;
+    while ((at = text.find("\n#", at)) != std::string::npos) {
+        const std::size_t equal = text.find('=', at), end = text.find(';', at);
+        std::size_t start = equal + 1;
+        while (text[start] == ' ') ++start;
+        if (text.compare(start, name.size(), name) == 0)
+            found.push_back({std::stoi(text.substr(at + 2, equal - at - 2)), text.substr(start, end - start)});
+        at = end;
+    }
+    return found;
+}
+
+std::vector<int> references(const std::string &entity) {
+    std::vector<int> ids;
+    for (std::size_t at = entity.find('#'); at != std::string::npos; at = entity.find('#', at + 1)) ids.push_back(std::stoi(entity.substr(at + 1)));
+    return ids;
+}
+
+}
+
+// Sfera con l'asse quasi nel piano di un suo cerchio massimo (come negli STEP
+// di SolidWorks, dove l'asse e' arbitrario): il cerchio passa a 0.006 R dai
+// poli e la sua SP-curve non si approssima; la lettura cambia l'asse della
+// sfera (la geometria e' la stessa) e il corpo si legge.
+FK_TEST(StepReadSphereEdgeNearPole) {
+    const double radius = 3.0;
+    ProfileRegion quarter = buildProfile({lineSegment(Vec2(0, 0), Vec2(radius, 0)), arcSegment(Vec2(0, 0), radius, 0.0, kHalfPi),
+                                          lineSegment(Vec2(0, radius), Vec2(0, 0))}, 1e-9).regions.front();
+    const Body hemisphere = makeRevolution(Frame3(Vec3(1, 2, 3), Vec3(0, 0, 1), Vec3(1, 0, 0)), quarter);
+    ExchangeBody exchange;
+    exchange.name = "semisfera";
+    exchange.body = hemisphere;
+    std::string text = writeStep({exchange});
+    const auto spheres = entities(text, "SPHERICAL_SURFACE");
+    FK_CHECK(spheres.size() == 1);
+    if (spheres.empty()) return;
+    const int placement = references(spheres.front().second).front();
+    std::string axis2;
+    for (const auto &entity : entities(text, "AXIS2_PLACEMENT_3D"))
+        if (entity.first == placement) axis2 = entity.second;
+    const std::vector<int> parts = references(axis2);
+    FK_CHECK(parts.size() == 3);
+    if (parts.size() != 3) return;
+    // Asse quasi orizzontale: il cerchio dell'equatore (piano z = 3) passa vicino ai poli.
+    const double tilt = 0.006;
+    text = replaceEntity(text, parts[1], "DIRECTION ( 'NONE', ( " + std::to_string(std::cos(tilt)) + ", 0.0, " + std::to_string(std::sin(tilt)) + " ) )");
+    text = replaceEntity(text, parts[2], "DIRECTION ( 'NONE', ( " + std::to_string(-std::sin(tilt)) + ", 0.0, " + std::to_string(std::cos(tilt)) + " ) )");
+    const auto read = readStep(text);
+    FK_CHECK(read.bodies.size() == 1);
+    if (read.bodies.empty()) return;
+    const Body &body = read.bodies.front().body;
+    FK_CHECK(checkBody(body).empty());
+    const double exact = 2.0 / 3.0 * kPi * radius * radius * radius;
+    FK_CHECK_NEAR(massProperties(body).volume, exact, 1e-8 * exact);
+    FK_CHECK(tessellate(body, {}).failedFaces == 0);
+}
+
+// Faccia con same_sense sbagliato nel file: il verso viene dai loop (la
+// topologia e' coerente con le facce vicine) e il volume resta giusto.
+FK_TEST(StepReadRepairsFaceSense) {
+    const Body box = makeBox(Frame3(Vec3(1, 2, 3), Vec3(0, 0, 1), Vec3(1, 0, 0)), 2.0, 3.0, 4.0);
+    ExchangeBody exchange;
+    exchange.name = "blocco";
+    exchange.body = box;
+    std::string text = writeStep({exchange});
+    const auto faces = entities(text, "ADVANCED_FACE");
+    FK_CHECK(faces.size() == 6);
+    if (faces.empty()) return;
+    std::string face = faces.front().second;
+    const std::size_t flag = face.rfind(face.find(".T.") != std::string::npos ? ".T." : ".F.");
+    face.replace(flag, 3, face.compare(flag, 3, ".T.") == 0 ? ".F." : ".T.");
+    text = replaceEntity(text, faces.front().first, face);
+    const auto read = readStep(text);
+    FK_CHECK(read.bodies.size() == 1);
+    if (read.bodies.empty()) return;
+    const Body &body = read.bodies.front().body;
+    FK_CHECK(checkBody(body).empty());
+    FK_CHECK_NEAR(massProperties(body).volume, 24.0, 1e-10);
+    FK_CHECK_NEAR(massProperties(body).area, 52.0, 1e-10);
+    bool noted = false;
+    for (const std::string &note : read.notes) noted = noted || note.find("same_sense") != std::string::npos;
+    FK_CHECK(noted);
+}
+
+// L407-P3.STEP (SolidWorks): cerchio massimo vicino al polo di una sfera e due
+// raccordi B-spline con same_sense opposto ai loop.
+FK_TEST(StepReadL407SolidWorksFile) {
+    const std::string path = std::string(FORGECAD_SOURCE_DIR) + "/File_Esempio/L407-P3.STEP";
+    std::ifstream file(path, std::ios::binary);
+    if (!file) return;  // fixture reale facoltativa
+    const std::string content((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+    const auto read = readStep(content);
+    FK_CHECK(read.bodies.size() == 1);
+    if (read.bodies.empty()) return;
+    const Body &body = read.bodies.front().body;
+    FK_CHECK(!body.isSheet());
+    FK_CHECK(checkBody(body).empty());
+    for (FaceId id : body.faces()) FK_CHECK(faceArea(body, id, 1e-9) > 0.0);
+    const MassProperties mass = massProperties(body);
+    // Riferimenti: OCCT 16379.188 (volume) e 33614.327 (area); la tassellazione
+    // fine converge verso 16379.1.
+    FK_CHECK_NEAR(mass.volume, 16379.15, 0.1);
+    FK_CHECK_NEAR(mass.area, 33614.33, 0.05);
+    FK_CHECK(tessellate(body, {}).failedFaces == 0);
+}

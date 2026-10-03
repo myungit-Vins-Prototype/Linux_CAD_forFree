@@ -11,6 +11,7 @@
 #include "fk_bspline_surface.h"
 #include "fk_curve_algo.h"
 #include "fk_curve_ops.h"
+#include "fk_helix.h"
 #include "fk_intersect.h"
 #include "fk_nurbs.h"
 #include "fk_pcurve.h"
@@ -284,8 +285,57 @@ std::vector<Homogeneous> hermiteRow(const std::vector<Homogeneous> &value, const
     return poles;
 }
 
-Body loft(const std::vector<LoftSection> &input, const LoftOptions &options, bool closed) {
-    const bool ruled = options.ruled;
+Body loftCore(const std::vector<Section> &sections, const LoftOptions &options, bool closed, const std::vector<Frame3> &capPlanes,
+              double scale, const std::vector<std::vector<double>> &guideParameters, const std::vector<std::vector<GuideHit>> &guideHits);
+
+// Loft di sezioni piane: corrispondenza (verso, partenza, guide), poi loftCore.
+// `closed`: loop chiusi; `caps`: con le facce di testa (solido), altrimenti
+// lamina (tubo aperto alle estremita' se i loop sono chiusi).
+// Partenza di un loop chiuso allineata a `reference` (direzione dal
+// baricentro della partenza della sezione precedente), proiettata sul piano
+// del loop: il vertice con il coseno massimo (il loop ruota, senza dividere
+// tratti) o, su un loop di una curva sola, il suo punto con il coseno massimo.
+void alignStart(Section &s, const Vec3 &reference) {
+    const auto planar = [&](const Vec3 &v) {
+        const Vec3 w = v - dot(v, s.normal) * s.normal;
+        return norm(w) > 0.0 ? w / norm(w) : w;
+    };
+    const Vec3 want = planar(reference);
+    if (s.pieces.size() == 1) {
+        const Piece p = s.pieces.front();
+        double bestT = p.range.lo, best = -2.0;
+        for (int k = 0; k < 720; ++k) {
+            const double t = p.range.lo + p.range.length() * k / 720.0;
+            const double c = dot(planar(p.curve->point(t) - s.centroid), want);
+            if (c > best) best = c, bestT = t;
+        }
+        // Raffinamento: massimo del coseno con la bisezione aurea attorno al campione.
+        double a = bestT - p.range.length() / 720.0, b = bestT + p.range.length() / 720.0;
+        for (int k = 0; k < 80; ++k) {
+            const double m1 = a + 0.381966 * (b - a), m2 = a + 0.618034 * (b - a);
+            if (dot(planar(p.curve->point(m1) - s.centroid), want) > dot(planar(p.curve->point(m2) - s.centroid), want)) b = m2;
+            else a = m1;
+        }
+        double t = 0.5 * (a + b);
+        if (p.curve->isPeriodic()) {
+            s.pieces = {{p.curve, {t, t + p.range.length()}}};
+        } else {
+            t = std::clamp(t, p.range.lo, p.range.hi);
+            if (t - p.range.lo > 1e-9 * p.range.length() && p.range.hi - t > 1e-9 * p.range.length())
+                s.pieces = {{p.curve, {t, p.range.hi}}, {p.curve, {p.range.lo, t}}};
+        }
+    } else {
+        std::size_t bestIndex = 0;
+        double best = -2.0;
+        for (std::size_t k = 0; k < s.pieces.size(); ++k) {
+            const double c = dot(planar(s.pieces[k].curve->point(s.pieces[k].range.lo) - s.centroid), want);
+            if (c > best) best = c, bestIndex = k;
+        }
+        std::rotate(s.pieces.begin(), s.pieces.begin() + std::ptrdiff_t(bestIndex), s.pieces.end());
+    }
+}
+
+Body loft(const std::vector<LoftSection> &input, const LoftOptions &options, bool closed, bool caps) {
     const std::size_t n = input.size();
     if (n < 2) throw std::domain_error("loft: servono almeno due sezioni");
     std::vector<Section> sections(n);
@@ -382,48 +432,27 @@ Body loft(const std::vector<LoftSection> &input, const LoftOptions &options, boo
     // dal baricentro) alla partenza della sezione precedente.
     if (closed && options.guides.empty())
         for (std::size_t i = 1; i < n; ++i) {
-            Section &s = sections[i];
             const Section &previous = sections[i - 1];
-            const Vec3 reference = previous.pieces.front().curve->point(previous.pieces.front().range.lo) - previous.centroid;
-            const auto planar = [&](const Vec3 &v) {
-                const Vec3 w = v - dot(v, s.normal) * s.normal;
-                return norm(w) > 0.0 ? w / norm(w) : w;
-            };
-            const Vec3 want = planar(reference);
-            if (s.pieces.size() == 1) {
-                const Piece p = s.pieces.front();
-                double bestT = p.range.lo, best = -2.0;
-                for (int k = 0; k < 720; ++k) {
-                    const double t = p.range.lo + p.range.length() * k / 720.0;
-                    const double c = dot(planar(p.curve->point(t) - s.centroid), want);
-                    if (c > best) best = c, bestT = t;
-                }
-                // Raffinamento: massimo del coseno con la bisezione aurea attorno al campione.
-                double a = bestT - p.range.length() / 720.0, b = bestT + p.range.length() / 720.0;
-                for (int k = 0; k < 80; ++k) {
-                    const double m1 = a + 0.381966 * (b - a), m2 = a + 0.618034 * (b - a);
-                    if (dot(planar(p.curve->point(m1) - s.centroid), want) > dot(planar(p.curve->point(m2) - s.centroid), want)) b = m2;
-                    else a = m1;
-                }
-                double t = 0.5 * (a + b);
-                if (p.curve->isPeriodic()) {
-                    s.pieces = {{p.curve, {t, t + p.range.length()}}};
-                } else {
-                    t = std::clamp(t, p.range.lo, p.range.hi);
-                    if (t - p.range.lo > 1e-9 * p.range.length() && p.range.hi - t > 1e-9 * p.range.length())
-                        s.pieces = {{p.curve, {t, p.range.hi}}, {p.curve, {p.range.lo, t}}};
-                }
-            } else {
-                std::size_t bestIndex = 0;
-                double best = -2.0;
-                for (std::size_t k = 0; k < s.pieces.size(); ++k) {
-                    const double c = dot(planar(s.pieces[k].curve->point(s.pieces[k].range.lo) - s.centroid), want);
-                    if (c > best) best = c, bestIndex = k;
-                }
-                std::rotate(s.pieces.begin(), s.pieces.begin() + std::ptrdiff_t(bestIndex), s.pieces.end());
-            }
+            alignStart(sections[i], previous.pieces.front().curve->point(previous.pieces.front().range.lo) - previous.centroid);
         }
 
+    std::vector<Frame3> capPlanes;
+    if (closed && caps)
+        for (std::size_t i : {std::size_t(0), n - 1})
+            capPlanes.push_back(Frame3(input[i].frame.origin(), sections[i].normal, input[i].frame.xDir()));
+    return loftCore(sections, options, closed, capPlanes, scale, guideParameters, guideHits);
+}
+
+// Parte comune del loft e della superficie rigata: sezioni gia' nello spazio,
+// orientate e con la partenza scelta (pieces 3D qualsiasi: `normal` e
+// `centroid` servono solo al loft liscio). Divisione nelle frazioni comuni,
+// NURBS compatibili, superfici tra le righe dei poli, topologia. `capPlanes`
+// vuoto: lamina; altrimenti i piani delle facce di testa della prima e
+// dell'ultima sezione (solido, solo con `closed`).
+Body loftCore(const std::vector<Section> &sections, const LoftOptions &options, bool closed, const std::vector<Frame3> &capPlanes,
+              double scale, const std::vector<std::vector<double>> &guideParameters, const std::vector<std::vector<GuideHit>> &guideHits) {
+    const bool ruled = options.ruled;
+    const std::size_t n = sections.size();
     // Sezioni con lo stesso numero di tratti (piu' di uno): tratto con tratto,
     // cosi' gli spigoli vivi (i vertici di due poligoni) si corrispondono. Altrimenti
     // si dividono alle stesse ascisse curvilinee normalizzate.
@@ -618,8 +647,12 @@ Body loft(const std::vector<LoftSection> &input, const LoftOptions &options, boo
     // Parametri delle sezioni lungo il loft (distanze tra i baricentri).
     std::vector<double> v(n, 0.0);
     for (std::size_t i = 1; i < n; ++i) v[i] = v[i - 1] + distance(sections[i].centroid, sections[i - 1].centroid);
-    for (double &value : v) value /= v.back();
-    v.back() = 1.0;
+    if (v.back() > 0.0) {
+        for (double &value : v) value /= v.back();
+        v.back() = 1.0;
+    } else if (!ruled) {
+        throw std::domain_error("loft: due sezioni consecutive hanno lo stesso baricentro");
+    }
     if (!guideParameters.empty() && options.guideInfluence > 0.0) {
         for (std::size_t i = 1; i + 1 < n; ++i) {
             double guided = 0.0;
@@ -855,11 +888,11 @@ Body loft(const std::vector<LoftSection> &input, const LoftOptions &options, boo
         }
     }
     // Facce di testa: uscenti verso -n nella prima sezione, +n nell'ultima (i loop girano attorno a n).
-    if (closed) {
+    if (closed && capPlanes.size() == 2) {
         for (int cap = 0; cap < 2; ++cap) {
             const std::size_t i = cap == 0 ? 0 : n - 1;
             Body::BuildFace face;
-            face.surface = std::make_shared<Plane>(Frame3(input[i].frame.origin(), sections[i].normal, input[i].frame.xDir()));
+            face.surface = std::make_shared<Plane>(capPlanes[std::size_t(cap)]);
             face.sense = cap == 1;
             std::vector<Body::BuildFin> fins;
             if (cap == 1)
@@ -870,7 +903,7 @@ Body loft(const std::vector<LoftSection> &input, const LoftOptions &options, boo
             faces.push_back(std::move(face));
         }
     }
-    Body body = closed ? Body::build(vertices, edges, faces) : Body::buildSheet(vertices, edges, faces);
+    Body body = closed && capPlanes.size() == 2 ? Body::build(vertices, edges, faces) : Body::buildSheet(vertices, edges, faces);
     computePCurves(body);
     const std::vector<CheckIssue> issues = checkBody(body);
     if (!issues.empty()) throw std::domain_error("loft: risultato non valido (" + describe(issues.front().code) + ": " + issues.front().message + ")");
@@ -879,6 +912,69 @@ Body loft(const std::vector<LoftSection> &input, const LoftOptions &options, boo
     // un edge (come dopo le booleane).
     return unifySameDomain(body);
 }
+
+
+// Chiusura di una sezione piana (stessa regola di loftSolid).
+bool sectionClosed(const LoftSection &s) {
+    if (s.loop.segments.empty()) throw std::domain_error("loft: sezione vuota");
+    const ProfileSegment &a = s.loop.segments.front(), &b = s.loop.segments.back();
+    return distance(a.start(), b.end()) <= 1e-6 * std::max(1.0, norm(a.start()));
+}
+
+Piece reversedPiece(const Piece &p) { return {reversedCurve(p.curve), {-p.range.hi, -p.range.lo}}; }
+
+void reverseChain(std::vector<Piece> &pieces) {
+    std::vector<Piece> result;
+    for (auto it = pieces.rbegin(); it != pieces.rend(); ++it) result.push_back(reversedPiece(*it));
+    pieces = std::move(result);
+}
+
+Vec3 chainStart(const std::vector<Piece> &pieces) { return pieces.front().curve->point(pieces.front().range.lo); }
+Vec3 chainEnd(const std::vector<Piece> &pieces) { return pieces.back().curve->point(pieces.back().range.hi); }
+
+// Tratti di una catena 3D, nell'ordine dato e girati in modo che ognuno
+// cominci dove finisce il precedente (estremi entro `tolerance`). Le eliche
+// esatte (non tipi di edge) diventano la loro B-spline entro 1e-9.
+std::vector<Piece> chainPieces(const std::vector<PathSegment> &chain, double tolerance) {
+    if (chain.empty()) throw std::domain_error("superficie rigata: catena vuota");
+    std::vector<Piece> pieces;
+    for (const PathSegment &segment : chain) {
+        if (!segment.curve || !(segment.range.length() > 0.0)) throw std::domain_error("superficie rigata: tratto non valido");
+        CurvePtr<3> curve = segment.curve;
+        if (curve->type() == CurveType::Other) {
+            const auto *helix = dynamic_cast<const HelixCurve *>(curve.get());
+            if (!helix) throw std::domain_error("superficie rigata: tipo di curva non gestito");
+            curve = std::make_shared<BSplineCurve<3>>(helixBSpline(*helix, 1e-9));
+        }
+        pieces.push_back({curve, segment.range});
+    }
+    const auto start = [](const Piece &p) { return p.curve->point(p.range.lo); };
+    const auto end = [](const Piece &p) { return p.curve->point(p.range.hi); };
+    if (pieces.size() > 1) {
+        const Piece &second = pieces[1];
+        const double keep = std::min(distance(end(pieces[0]), start(second)), distance(end(pieces[0]), end(second)));
+        const double flip = std::min(distance(start(pieces[0]), start(second)), distance(start(pieces[0]), end(second)));
+        if (flip < keep) pieces[0] = reversedPiece(pieces[0]);
+    }
+    for (std::size_t k = 1; k < pieces.size(); ++k) {
+        const Vec3 previous = end(pieces[k - 1]);
+        if (distance(previous, start(pieces[k])) <= tolerance) continue;
+        if (distance(previous, end(pieces[k])) <= tolerance) pieces[k] = reversedPiece(pieces[k]);
+        else throw std::domain_error("superficie rigata: i tratti di una catena non sono consecutivi");
+    }
+    return pieces;
+}
+
+// Normale di Newell del loop campionato (meta' dell'area vettoriale).
+Vec3 newellNormal(const std::vector<Piece> &pieces, const Vec3 &centroid) {
+    std::vector<Vec3> samples;
+    for (const Piece &p : pieces)
+        for (int k = 0; k < 64; ++k) samples.push_back(p.curve->point(p.range.lo + p.range.length() * k / 64.0) - centroid);
+    Vec3 sum;
+    for (std::size_t k = 0; k < samples.size(); ++k) sum += cross(samples[k], samples[(k + 1) % samples.size()]);
+    return 0.5 * sum;
+}
+
 
 }
 
@@ -893,7 +989,7 @@ Body loftSolid(const std::vector<LoftSection> &sections, const LoftOptions &opti
         const ProfileSegment &a = s.loop.segments.front(), &b = s.loop.segments.back();
         if (distance(a.start(), b.end()) > 1e-6 * std::max(1.0, norm(a.start()))) throw std::domain_error("loft: una sezione non e' un contorno chiuso");
     }
-    return loft(sections, options, true);
+    return loft(sections, options, true, true);
 }
 
 Body loftSheet(const std::vector<LoftSection> &sections, bool ruled) {
@@ -902,6 +998,59 @@ Body loftSheet(const std::vector<LoftSection> &sections, bool ruled) {
     return loftSheet(sections, options);
 }
 
-Body loftSheet(const std::vector<LoftSection> &sections, const LoftOptions &options) { return loft(sections, options, false); }
+Body loftSheet(const std::vector<LoftSection> &sections, const LoftOptions &options) {
+    if (sections.empty()) throw std::domain_error("loft: servono almeno due sezioni");
+    const bool closed = sectionClosed(sections.front());
+    for (const LoftSection &s : sections)
+        if (sectionClosed(s) != closed)
+            throw std::domain_error("loft: le sezioni di una lamina devono essere tutte chiuse (tubo) o tutte aperte");
+    return loft(sections, options, closed, false);
+}
+
+Body ruledSurface(const std::vector<PathSegment> &first, const std::vector<PathSegment> &second) {
+    // Scala dai campioni delle due catene (prima di concatenarle: serve alla tolleranza).
+    Vec3 lo(1e300, 1e300, 1e300), hi(-1e300, -1e300, -1e300);
+    for (const std::vector<PathSegment> *chain : {&first, &second})
+        for (const PathSegment &segment : *chain) {
+            if (!segment.curve) throw std::domain_error("superficie rigata: tratto non valido");
+            for (int k = 0; k <= 16; ++k) {
+                const Vec3 p = segment.curve->point(segment.range.lo + segment.range.length() * k / 16.0);
+                lo = Vec3(std::min(lo.x(), p.x()), std::min(lo.y(), p.y()), std::min(lo.z(), p.z()));
+                hi = Vec3(std::max(hi.x(), p.x()), std::max(hi.y(), p.y()), std::max(hi.z(), p.z()));
+            }
+        }
+    const double scale = std::max(1.0, distance(lo, hi));
+    const double tolerance = 1e-6 * scale;
+    std::vector<Section> sections(2);
+    sections[0].pieces = chainPieces(first, tolerance);
+    sections[1].pieces = chainPieces(second, tolerance);
+    const bool closed = distance(chainStart(sections[0].pieces), chainEnd(sections[0].pieces)) <= tolerance;
+    if (closed != (distance(chainStart(sections[1].pieces), chainEnd(sections[1].pieces)) <= tolerance))
+        throw std::domain_error("superficie rigata: le due catene devono essere entrambe aperte o entrambe chiuse");
+    for (Section &s : sections) s.centroid = sectionCentroid(s.pieces);
+    if (closed) {
+        // Stesso verso di rotazione (normali di Newell), partenza della seconda
+        // nel punto piu' vicino alla partenza della prima.
+        const Vec3 a = newellNormal(sections[0].pieces, sections[0].centroid), b = newellNormal(sections[1].pieces, sections[1].centroid);
+        if (!(norm(a) > 1e-12 * scale * scale) || !(norm(b) > 1e-12 * scale * scale))
+            throw std::domain_error("superficie rigata: verso di rotazione di una catena chiusa non determinabile");
+        if (dot(a, b) < 0.0) reverseChain(sections[1].pieces);
+        sections[0].normal = normalized(a);
+        sections[1].normal = normalized(dot(a, b) < 0.0 ? -b : b);
+        // Partenza come nel loft rigato: il vertice della seconda nella
+        // direzione (dal baricentro) della partenza della prima; il punto piu'
+        // vicino in 3D cadeva a meta' di un lato con sezioni di misura diversa
+        // o spostate, e la superficie si torceva.
+        alignStart(sections[1], chainStart(sections[0].pieces) - sections[0].centroid);
+    } else {
+        // L'inizio della seconda dalla parte dell'inizio della prima.
+        const Vec3 a0 = chainStart(sections[0].pieces), a1 = chainEnd(sections[0].pieces);
+        const Vec3 b0 = chainStart(sections[1].pieces), b1 = chainEnd(sections[1].pieces);
+        if (distance(a0, b0) + distance(a1, b1) > distance(a0, b1) + distance(a1, b0)) reverseChain(sections[1].pieces);
+    }
+    LoftOptions options;
+    options.ruled = true;
+    return loftCore(sections, options, closed, {}, scale, {}, {});
+}
 
 }

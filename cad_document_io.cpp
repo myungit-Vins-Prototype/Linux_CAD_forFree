@@ -41,7 +41,10 @@ constexpr char kMagic[4] = {'F', 'C', 'A', 'D'};
 // 19 identita' persistenti delle feature e corpi logici della storyboard.
 // 20 riferimenti persistenti a feature e sotto-entita' topologiche; 21
 // estrusione nei due versi; 22 colore della mesh dei corpi logici.
-constexpr quint16 kVersion = 22;
+// 23 offset di superficie e cucitura.
+// 24 loft e sweep di superficie (senza coperchi), superficie rigata (le due
+// catene di riferimenti), superficie planare (bordi scelti nella vista).
+constexpr quint16 kVersion = 24;
 constexpr quint8 kZlib = 1;
 
 void write(QDataStream &out, const CurveObject &curve) {
@@ -288,6 +291,15 @@ void write(QDataStream &out, const ExtrusionObject &body) {
         out << qint32(p->subshape) << qint32(p->geometry) << qint32(p->context);
     // Formato 21: estrusione simmetrica o nei due versi.
     out << qint32(body.extrudeSides) << body.distance2;
+    // Formato 23: facce dell'offset di superficie, parametri della cucitura.
+    out << quint32(body.offsetFaces.size());
+    for (const EdgePoint &e : body.offsetFaces) out << e.x << e.y << e.z << qint32(e.subshape) << qint32(e.geometry) << qint32(e.context);
+    out << body.sewTolerance << body.sewSolid;
+    // Formato 24: superfici da loft e sweep, rigata e planare.
+    out << body.loftSurface << body.sweepSurface;
+    writeRefs(out, body.ruledFirst);
+    writeRefs(out, body.ruledSecond);
+    writeRefs(out, body.planarRefs);
 }
 
 // `extras` (solo formato 5): i file scritti durante lo sviluppo del formato 5
@@ -442,7 +454,24 @@ bool read(QDataStream &in, ExtrusionObject &body, quint16 version, int extras) {
         if (sides < 0 || sides > 2 || !std::isfinite(body.distance2)) return false;
         body.extrudeSides = sides;
     }
-    if (int(body.feature) < 0 || int(body.feature) > int(BodyFeature::Transform)) return false;
+    if (version >= 23) {
+        quint32 faces = 0;
+        if (!readCount(in, faces)) return false;
+        body.offsetFaces.resize(int(faces));
+        for (EdgePoint &e : body.offsetFaces) {
+            qint32 subshape = -1, geometry = -1, context = -1;
+            in >> e.x >> e.y >> e.z >> subshape >> geometry >> context;
+            e.subshape = subshape, e.geometry = geometry, e.context = context;
+        }
+        in >> body.sewTolerance >> body.sewSolid;
+        if (!std::isfinite(body.sewTolerance) || body.sewTolerance <= 0.0) return false;
+    }
+    if (version >= 24) {
+        in >> body.loftSurface >> body.sweepSurface;
+        if (!readRefs(in, body.ruledFirst, version) || !readRefs(in, body.ruledSecond, version) || !readRefs(in, body.planarRefs, version))
+            return false;
+    }
+    if (int(body.feature) < 0 || int(body.feature) > int(BodyFeature::PlanarSurface)) return false;
     return in.status() == QDataStream::Ok;
 }
 

@@ -6,6 +6,10 @@
 
 #include "fk_topology.h"
 
+namespace ForgeCad::Kernel {
+class SurfaceBatchEvaluator;
+}
+
 // Approssimazione a triangoli e polilinee di un body, SOLO per disegnare e
 // selezionare a video (come BRepMesh di OCCT): nessun calcolo del kernel la
 // usa.
@@ -24,6 +28,14 @@ namespace ForgeCad::Kernel {
 struct TessellationOptions {
     double deflection = 0.01;  // scarto massimo tra corde/triangoli e geometria esatta
     double angle = 0.25;       // angolo massimo (radianti) tra tangenti o normali vicine
+    // Thread per le facce (0 = tutti i core): ogni faccia si triangola da
+    // sola, il risultato non dipende dal numero di thread.
+    int threads = 0;
+    // Valutazione a lotti dei punti nuovi del raffinamento (fk_surface_batch.h,
+    // la GPU nell'app); nullptr o superficie non gestita = CPU.
+    SurfaceBatchEvaluator *accelerator = nullptr;
+    // Lotti piu' piccoli restano sulla CPU (il trasferimento costerebbe di piu').
+    std::size_t acceleratorMinimumBatch = 512;
 };
 
 struct FaceMesh {

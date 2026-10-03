@@ -78,6 +78,52 @@ EdgePoint vertexReference(const Body &body, VertexId vertex) {
     return {point.x(), point.y(), point.z(), vertex.index, 0, vertexContext(body, vertex)};
 }
 
+QVector<EdgePoint> freeBoundaryLoop(const Body &body, EdgeId edge) {
+    QVector<EdgePoint> result;
+    if (!body.contains(edge) || !body.isLaminar(edge)) return result;
+    // Edge di bordo per vertice.
+    std::vector<std::vector<EdgeId>> around;
+    for (EdgeId e : body.edges()) {
+        if (!body.isLaminar(e)) continue;
+        for (VertexId v : {body.edgeStart(e), body.edgeEnd(e)}) {
+            if (std::size_t(v.index) >= around.size()) around.resize(std::size_t(v.index) + 1);
+            around[std::size_t(v.index)].push_back(e);
+        }
+    }
+    const auto other = [&](VertexId v, EdgeId from) {
+        const std::vector<EdgeId> &list = around[std::size_t(v.index)];
+        // Un edge chiuso (stesso vertice ai due estremi) compare due volte.
+        if (list.size() != 2 || list[0] == list[1]) return EdgeId();
+        return list[0] == from ? list[1] : list[0];
+    };
+    // Si cammina in avanti dalla fine dell'edge, poi all'indietro dall'inizio.
+    std::vector<EdgeId> forward{edge}, backward;
+    bool closed = false;
+    for (int pass = 0; pass < 2 && !closed; ++pass) {
+        EdgeId current = edge;
+        VertexId vertex = pass == 0 ? body.edgeEnd(edge) : body.edgeStart(edge);
+        while (true) {
+            const EdgeId next = other(vertex, current);
+            if (!next.valid()) break;
+            if (next == edge) {
+                closed = true;
+                break;
+            }
+            (pass == 0 ? forward : backward).push_back(next);
+            vertex = body.edgeStart(next) == vertex ? body.edgeEnd(next) : body.edgeStart(next);
+            current = next;
+            if (forward.size() + backward.size() > body.edges().size()) break;  // sicurezza
+        }
+    }
+    std::vector<EdgeId> chain(backward.rbegin(), backward.rend());
+    chain.insert(chain.end(), forward.begin(), forward.end());
+    for (EdgeId e : chain) {
+        const Edge &data = body.edge(e);
+        result.append(edgeReference(body, e, data.curve->point(0.5 * (data.range.lo + data.range.hi))));
+    }
+    return result;
+}
+
 EdgeId resolveEdgeReference(const Body &body, const EdgePoint &reference, double legacyTolerance) {
     const Vec3 point(reference.x, reference.y, reference.z);
     return resolve<EdgeId>(reference, body.edges(), [&](EdgeId edge) {
@@ -148,10 +194,21 @@ void upgradeTopologyReferences(QVector<ExtrusionObject> &features) {
     for (ExtrusionObject &feature : features) {
         for (GeometryRef &ref : feature.datum.refs) upgrade(ref);
         for (GeometryRef &ref : feature.pattern.refs) upgrade(ref);
+        for (QVector<GeometryRef> *refs : {&feature.ruledFirst, &feature.ruledSecond, &feature.planarRefs})
+            for (GeometryRef &ref : *refs) upgrade(ref);
         upgrade(feature.extentRef);
         upgrade(feature.move.axis);
         if (feature.feature == BodyFeature::Blend || feature.feature == BodyFeature::SheetExtend)
             upgradeEdges(feature.blendEdges, feature.firstBody);
+        if (feature.feature == BodyFeature::SurfaceOffset && feature.firstBody >= 0 && feature.firstBody < features.size()
+            && features.at(feature.firstBody).forgeBody) {
+            const Body &body = *features.at(feature.firstBody).forgeBody;
+            for (EdgePoint &ref : feature.offsetFaces) {
+                if (ref.subshape >= 0) continue;
+                const FaceId face = resolveFaceReference(body, ref, std::numeric_limits<double>::max());
+                if (face.valid()) ref = faceReference(body, face, Vec3(ref.x, ref.y, ref.z));
+            }
+        }
         if (feature.feature == BodyFeature::Helix && feature.helix.source != 0 && feature.firstBody >= 0
             && feature.firstBody < features.size() && features.at(feature.firstBody).forgeBody && feature.helix.reference.subshape < 0) {
             const Body &body = *features.at(feature.firstBody).forgeBody;

@@ -53,6 +53,8 @@ private:
     bool treeRebuildPending_ = false;
     bool suppressTreeClick_ = false;
     QString documentPath_;
+    QString glRenderer_ = QStringLiteral("in avvio");  // GL_RENDERER per la barra di stato
+    QString gpuStatusText() const;
     bool documentModified_ = false;
     bool loadingDocument_ = false;
     QProgressDialog *foregroundProgress_ = nullptr;

@@ -8,6 +8,7 @@
 
 #include "cad_types.h"
 #include "fk_math.h"
+#include "fk_sweep.h"
 
 // Piani di costruzione (BodyFeature::DatumPlane): i riferimenti (GeometryRef)
 // si risolvono sulla geometria esatta del corpo (body del kernel), degli
@@ -39,6 +40,14 @@ struct ResolvedRef {
 // Risolve il riferimento per il corpo `owner` (i corpi usati devono avere indice minore).
 bool resolveGeometryRef(const GeometryRef &ref, int owner, const QVector<SketchObject> &sketches, const QVector<ExtrusionObject> &bodies,
                         ResolvedRef &resolved, QString *error);
+
+// Tratti esatti di un riferimento curva, usato per intero: lo spigolo del
+// corpo (la sua curva sul suo intervallo), l'entita' dello schizzo (il
+// segmento, o i tratti di curveGeometry portati nel piano dello schizzo), la
+// curva di un corpo curva (elica, spirale) sul suo dominio. Gli assi del
+// modello e gli altri riferimenti non sono curve limitate: false con l'errore.
+bool geometryRefPath(const GeometryRef &ref, int owner, const QVector<SketchObject> &sketches, const QVector<ExtrusionObject> &bodies,
+                     std::vector<Kernel::PathSegment> &segments, QString *error);
 
 // Il piano del corpo `index` (origine = centro a video, asse X, normale).
 bool computeDatum(const DatumParameters &parameters, int index, const QVector<SketchObject> &sketches, const QVector<ExtrusionObject> &bodies,

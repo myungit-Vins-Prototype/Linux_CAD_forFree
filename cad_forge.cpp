@@ -3,12 +3,14 @@
 #include <algorithm>
 #include <cmath>
 #include <exception>
+#include <functional>
 #include <limits>
 #include <map>
 #include <set>
 
 #include <QRegularExpression>
 
+#include "cad_cuda_tessellation.h"
 #include "cad_curve_solver.h"
 #include "cad_kernel.h"
 #include "cad_topology_ref.h"
@@ -27,6 +29,9 @@
 #include "fk_surface_algo.h"
 #include "fk_transform.h"
 #include "fk_mass.h"
+#include "fk_offset.h"
+#include "fk_planar.h"
+#include "fk_sew.h"
 #include "fk_step.h"
 #include "fk_tessellate.h"
 
@@ -138,14 +143,17 @@ ForgeBody forgeRevolution(const SketchObject &sketch, int axis, double angleDegr
     try {
         const std::vector<ProfileSegment> segments = forgeSketchSegments(profileSketch);
         const Profile profile = buildProfile(segments, kSketchConnectionTolerance);
-        if (profile.regions.empty()) {
-            setError(error, QStringLiteral("La rivoluzione richiede un profilo chiuso."));
+        if (profile.regions.empty() && profile.chains.empty()) {
+            setError(error, QStringLiteral("Lo schizzo non ha un profilo da far ruotare."));
             return nullptr;
         }
         const Frame3 axes = sketchAxes(sketch);
         const Vec3 xs = axes.xDir(), ys = axes.yDir();
         const Frame3 frame(sketchToWorld(point, sketch), axisDirection.x() * xs + axisDirection.y() * ys,
                            normal.x() * xs + normal.y() * ys);
+        // Nessun contorno chiuso: le catene aperte diventano una superficie
+        // (lamina), come nell'estrusione.
+        if (profile.regions.empty()) return std::make_shared<const Body>(makeSheetRevolution(frame, profile.chains, angle));
         Body result = makeRevolution(frame, profile.regions.front(), angle);
         for (std::size_t i = 1; i < profile.regions.size(); ++i)
             result = booleanOperation(result, makeRevolution(frame, profile.regions[i], angle), Kernel::BooleanOperation::Unite);
@@ -348,6 +356,79 @@ ForgeBody forgeExtendSheet(const ForgeBody &sheet, const QVector<EdgePoint> &poi
     }
 }
 
+ForgeBody forgeOffsetFaces(const ForgeBody &base, const QVector<EdgePoint> &points, double distance, QString *error, QString *summary) {
+    if (!base) {
+        setError(error, QStringLiteral("Il corpo di partenza non ha geometria."));
+        return nullptr;
+    }
+    if (!(std::fabs(distance) > 0.0)) {
+        setError(error, QStringLiteral("La distanza dell'offset deve essere diversa da zero."));
+        return nullptr;
+    }
+    try {
+        std::vector<FaceId> faces;
+        if (points.isEmpty()) {
+            faces = base->faces();
+        } else {
+            Box box;
+            for (VertexId v : base->vertices()) box.add(base->vertex(v).point);
+            const double reach = 1e-3 * std::max(1.0, box.diagonal());
+            for (const EdgePoint &point : points) {
+                const FaceId f = resolveFaceReference(*base, point, reach);
+                if (!f.valid()) {
+                    setError(error, QStringLiteral("Una delle facce scelte non esiste piu' nel corpo."));
+                    return nullptr;
+                }
+                if (std::find(faces.begin(), faces.end(), f) == faces.end()) faces.push_back(f);
+            }
+        }
+        const OffsetResult result = offsetFaces(*base, faces, distance);
+        if (summary) {
+            *summary = result.shells == 1 ? QStringLiteral("una superficie cucita")
+                                          : QStringLiteral("%1 superfici separate").arg(result.shells);
+            if (result.sharpEdges > 0)
+                *summary += QStringLiteral(" (%1 spigoli vivi tra le facce: li' le superfici a distanza si staccano)").arg(result.sharpEdges);
+        }
+        return std::make_shared<const Body>(result.body);
+    } catch (const std::exception &failure) {
+        setError(error, QStringLiteral("Offset non riuscito: %1").arg(QString::fromUtf8(failure.what())));
+        return nullptr;
+    }
+}
+
+ForgeBody forgeSew(const QVector<ForgeBody> &sheets, double tolerance, bool solid, QString *error, QString *summary) {
+    std::vector<const Body *> bodies;
+    for (const ForgeBody &sheet : sheets) {
+        if (!sheet) {
+            setError(error, QStringLiteral("Una delle superfici non ha geometria."));
+            return nullptr;
+        }
+        bodies.push_back(sheet.get());
+    }
+    if (bodies.empty()) {
+        setError(error, QStringLiteral("Scegli le superfici da cucire."));
+        return nullptr;
+    }
+    try {
+        const SewResult result = sewSheets(bodies, tolerance, solid);
+        if (solid && !result.closed) {
+            setError(error, QStringLiteral("Le superfici non chiudono un volume: restano %1 bordi liberi (prova una tolleranza "
+                                           "maggiore, o togli \"Crea un solido\" per una superficie cucita).").arg(result.freeEdges));
+            return nullptr;
+        }
+        if (summary) {
+            *summary = result.solid ? QStringLiteral("solido chiuso")
+                                    : result.closed ? QStringLiteral("superficie chiusa")
+                                                    : QStringLiteral("superficie con %1 bordi liberi").arg(result.freeEdges);
+            if (result.shells > 1) *summary += QStringLiteral(", %1 parti non collegate").arg(result.shells);
+        }
+        return std::make_shared<const Body>(result.body);
+    } catch (const std::exception &failure) {
+        setError(error, QStringLiteral("Cucitura non riuscita: %1").arg(QString::fromUtf8(failure.what())));
+        return nullptr;
+    }
+}
+
 ForgeBody forgeBoolean(const ForgeBody &first, const ForgeBody &second, ::BooleanOperation operation, QString *error) {
     if (!first || !second) {
         setError(error, QStringLiteral("Uno degli operandi non ha geometria valida."));
@@ -478,7 +559,7 @@ bool forgeHelixBase(const Body &body, int source, const EdgePoint &point, HelixB
     }
 }
 
-ForgeBody forgeSweep(const SketchObject &profileSketch, const std::vector<PathSegment> &path, int mode, QString *error) {
+ForgeBody forgeSweep(const SketchObject &profileSketch, const std::vector<PathSegment> &path, int mode, QString *error, bool surface) {
     try {
         const std::vector<ProfileSegment> segments = forgeSketchSegments(profileSketch);
         if (segments.empty()) {
@@ -490,6 +571,16 @@ ForgeBody forgeSweep(const SketchObject &profileSketch, const std::vector<PathSe
         double height;
         forgeSketchFrame(profileSketch, 0.0, frame, height);
         const SweepOrientation orientation = mode == 1 ? SweepOrientation::Frenet : mode == 2 ? SweepOrientation::Fixed : SweepOrientation::MinimalTwist;
+        if (surface) {
+            // Lamina: i contorni (anche i fori) diventano tubi, le catene superfici.
+            std::vector<ProfileLoop> loops;
+            for (const ProfileRegion &region : profile.regions) {
+                loops.push_back(region.outer);
+                for (const ProfileLoop &hole : region.holes) loops.push_back(hole);
+            }
+            for (const ProfileLoop &chain : profile.chains) loops.push_back(chain);
+            return std::make_shared<const Body>(sweepSheet(frame, loops, path, orientation));
+        }
         if (!profile.regions.empty()) return std::make_shared<const Body>(sweepRegions(frame, profile.regions, path, orientation));
         return std::make_shared<const Body>(sweepChains(frame, profile.chains, path, orientation));
     } catch (const std::exception &failure) {
@@ -500,7 +591,7 @@ ForgeBody forgeSweep(const SketchObject &profileSketch, const std::vector<PathSe
 
 ForgeBody forgeLoft(const QVector<SketchObject> &sketches, const QVector<SketchObject> &guideSketches, bool ruled,
                     int startContinuity, int endContinuity, int guideContinuity, double guideInfluence, double startInfluence,
-                    double endInfluence, QString *error) {
+                    double endInfluence, QString *error, bool surface) {
     if (sketches.size() < 2) {
         setError(error, QStringLiteral("Il loft richiede almeno due sezioni."));
         return nullptr;
@@ -550,7 +641,7 @@ ForgeBody forgeLoft(const QVector<SketchObject> &sketches, const QVector<SketchO
             }
             options.guides.push_back(std::move(path));
         }
-        return std::make_shared<const Body>(closedCount > 0 ? loftSolid(sections, options) : loftSheet(sections, options));
+        return std::make_shared<const Body>(closedCount > 0 && !surface ? loftSolid(sections, options) : loftSheet(sections, options));
     } catch (const std::exception &failure) {
         QString detail = QString::fromUtf8(failure.what());
         const auto marker = [&](const QString &name) {
@@ -579,6 +670,72 @@ ForgeBody forgeLoft(const QVector<SketchObject> &sketches, const QVector<SketchO
     }
 }
 
+ForgeBody forgeRuledSurface(const std::vector<PathSegment> &first, const std::vector<PathSegment> &second, QString *error) {
+    if (first.empty() || second.empty()) {
+        setError(error, QStringLiteral("Scegli le due curve della superficie rigata."));
+        return nullptr;
+    }
+    try {
+        return std::make_shared<const Body>(ruledSurface(first, second));
+    } catch (const std::exception &failure) {
+        setError(error, QStringLiteral("Superficie rigata non riuscita: %1").arg(QString::fromUtf8(failure.what())));
+        return nullptr;
+    }
+}
+
+ForgeBody forgePlanarSketch(const SketchObject &sketch, QString *error) {
+    try {
+        const std::vector<ProfileSegment> segments = forgeSketchSegments(sketch);
+        const Profile profile = buildProfile(segments, kSketchConnectionTolerance);
+        if (profile.regions.empty()) {
+            setError(error, QStringLiteral("Lo schizzo \"%1\" non ha contorni chiusi.").arg(sketch.name));
+            return nullptr;
+        }
+        Frame3 frame;
+        double height;
+        forgeSketchFrame(sketch, 0.0, frame, height);
+        return std::make_shared<const Body>(planarSheet(frame, profile.regions));
+    } catch (const std::exception &failure) {
+        setError(error, QStringLiteral("Superficie planare non riuscita: %1").arg(QString::fromUtf8(failure.what())));
+        return nullptr;
+    }
+}
+
+ForgeBody forgePlanarCurves(const std::vector<PathSegment> &segments, QString *error) {
+    if (segments.empty()) {
+        setError(error, QStringLiteral("Scegli i bordi della superficie planare."));
+        return nullptr;
+    }
+    try {
+        // Contorni: tratti collegati per gli estremi (unione per componenti).
+        Box box;
+        std::vector<Vec3> ends;
+        for (const PathSegment &segment : segments) {
+            ends.push_back(segment.curve->point(segment.range.lo));
+            ends.push_back(segment.curve->point(segment.range.hi));
+            box.add(ends[ends.size() - 2]);
+            box.add(ends.back());
+        }
+        const double tolerance = kSketchConnectionTolerance * std::max(1.0, box.diagonal());
+        std::vector<int> parent(segments.size());
+        for (size_t i = 0; i < parent.size(); ++i) parent[i] = int(i);
+        const std::function<int(int)> root = [&](int i) { return parent[i] == i ? i : parent[i] = root(parent[i]); };
+        for (size_t i = 0; i < segments.size(); ++i)
+            for (size_t j = i + 1; j < segments.size(); ++j)
+                for (int a = 0; a < 2; ++a)
+                    for (int b = 0; b < 2; ++b)
+                        if (distance(ends[2 * i + a], ends[2 * j + b]) <= tolerance) parent[root(int(i))] = root(int(j));
+        std::map<int, std::vector<PathSegment>> groups;
+        for (size_t i = 0; i < segments.size(); ++i) groups[root(int(i))].push_back(segments[i]);
+        std::vector<std::vector<PathSegment>> loops;
+        for (auto &group : groups) loops.push_back(std::move(group.second));
+        return std::make_shared<const Body>(planarSheet(loops, tolerance));
+    } catch (const std::exception &failure) {
+        setError(error, QStringLiteral("Superficie planare non riuscita: %1").arg(QString::fromUtf8(failure.what())));
+        return nullptr;
+    }
+}
+
 void forgeTessellate(const Body &body, int quality, BodyDisplay &display) {
     display = {};
     display.quality = quality;
@@ -595,6 +752,8 @@ void forgeTessellate(const Body &body, int quality, BodyDisplay &display) {
     TessellationOptions options;
     options.deflection = diagonal * (quality <= 0 ? 4.0e-3 : quality == 1 ? 1.0e-3 : 2.0e-4);
     options.angle = quality <= 0 ? 0.5 : quality == 1 ? 0.25 : 0.1;
+    const std::unique_ptr<SurfaceBatchEvaluator> accelerator = makeTessellationAccelerator();
+    options.accelerator = accelerator.get();
     const Tessellation mesh = tessellate(body, options);
     for (const FaceMesh &face : mesh.faces)
         for (const std::array<int, 3> &triangle : face.triangles)
@@ -715,6 +874,8 @@ void forgeBlendPreviewDisplay(const Body &base, const Body &result, int quality,
     TessellationOptions options;
     options.deflection = diagonal * (quality <= 0 ? 4.0e-3 : quality == 1 ? 1.0e-3 : 2.0e-4);
     options.angle = quality <= 0 ? 0.5 : quality == 1 ? 0.25 : 0.1;
+    const std::unique_ptr<SurfaceBatchEvaluator> accelerator = makeTessellationAccelerator();
+    options.accelerator = accelerator.get();
     const Tessellation mesh = tessellate(result, options);
     for (const FaceMesh &face : mesh.faces) {
         if (!patchFaceSet.count(face.face.index)) continue;

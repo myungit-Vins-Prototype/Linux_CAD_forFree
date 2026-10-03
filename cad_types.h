@@ -246,8 +246,15 @@ struct BodyDisplay {
 // letta da un file STEP/IGES. DatumPlane: piano di costruzione (niente solido).
 // Pattern: ripetizione (lineare, circolare, specchio) di un corpo o di una funzione.
 // Transform: spostamento e rotazione di un corpo (o di una sua copia).
+// SurfaceOffset: lamina a distanza `distance` dalle facce `offsetFaces` del
+// corpo firstBody (vuoto: tutte), le facce tangenti cucite in una superficie.
+// Sew: cucitura delle superfici firstBody + booleanTools in una (solido se
+// chiusa e sewSolid), entro sewTolerance.
+// Ruled: superficie rigata tra le catene di curve ruledFirst e ruledSecond.
+// PlanarSurface: lamina piana delimitata dai contorni chiusi dello schizzo
+// sketchIndex (planarRefs vuoto) o dai bordi planarRefs scelti nella vista.
 enum class BodyFeature { Extrusion = 0, Revolution = 1, Primitive = 2, Blend = 3, SheetTrim = 4, SheetExtend = 5, Scale = 6, Helix = 7, Sweep = 8, Loft = 9,
-                         Imported = 10, DatumPlane = 11, Pattern = 12, Transform = 13 };
+                         Imported = 10, DatumPlane = 11, Pattern = 12, Transform = 13, SurfaceOffset = 14, Sew = 15, Ruled = 16, PlanarSurface = 17 };
 
 // Riferimento leggero a una sotto-entita' del B-rep. `subshape` e' l'ID
 // topologico al momento della scelta, `geometry` il tipo di curva/superficie.
@@ -483,6 +490,9 @@ struct ExtrusionObject {
     QVector<int> pathSegments;
     QVector<int> pathCurves;
     int sweepMode = 0;
+    // Sweep di superficie: lamina senza coperchi (un profilo chiuso da' un
+    // tubo aperto alle estremita'); niente fusione con i solidi.
+    bool sweepSurface = false;
     // Loft: sezioni e curve guida (schizzi, nell'ordine), rigato o liscio.
     // La continuita' 0/1/2 corrisponde a G0/G1/G2; le influenze sono [0, 1].
     QVector<int> loftSketches;
@@ -495,6 +505,8 @@ struct ExtrusionObject {
     double loftGuideInfluence = 1.0;
     double loftStartInfluence = 1.0;
     double loftEndInfluence = 1.0;
+    // Loft di superficie: lamina senza coperchi (sezioni chiuse: un tubo).
+    bool loftSurface = false;
     // Imported: il body letto dal file come testo STEP scritto dal kernel
     // (fk_step, numeri a 17 cifre: la stessa geometria) e il nome del file d'origine.
     QByteArray importData;
@@ -530,6 +542,20 @@ struct ExtrusionObject {
     QVector<int> booleanTools;
     // Transform: spostamento del corpo firstBody.
     TransformParameters move;
+    // SurfaceOffset: le facce scelte (vuoto: tutte le facce del corpo).
+    QVector<EdgePoint> offsetFaces;
+    // Sew: tolleranza della cucitura e solido se il risultato e' chiuso.
+    double sewTolerance = 1e-5;
+    bool sewSolid = true;
+    // Ruled: le due curve, ognuna una catena di riferimenti curva (GeometryRef
+    // come i piani di costruzione: spigoli dei corpi, entita' degli schizzi,
+    // curve come le eliche), usati per intero; il verso e il punto di
+    // partenza della seconda si accordano alla prima da soli.
+    QVector<GeometryRef> ruledFirst, ruledSecond;
+    // PlanarSurface: bordi scelti nella vista (spigoli, entita' degli schizzi,
+    // curve), raggruppati in contorni chiusi per estremi comuni; vuoto: i
+    // contorni chiusi dello schizzo sketchIndex.
+    QVector<GeometryRef> planarRefs;
     SketchFrame datumFrame;
     bool datumValid = false;
     int firstBody = -1;

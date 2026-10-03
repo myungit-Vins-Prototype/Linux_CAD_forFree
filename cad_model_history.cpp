@@ -23,11 +23,15 @@ quint64 inheritedBody(const QVector<ExtrusionObject> &features, const ExtrusionO
     case BodyFeature::SheetTrim:
     case BodyFeature::SheetExtend:
     case BodyFeature::Scale:
+    case BodyFeature::Sew:
         return owner(feature.firstBody);
     case BodyFeature::Transform:
         return feature.move.copy ? 0 : owner(feature.firstBody);
     case BodyFeature::Pattern:
         return owner(feature.firstBody);
+    case BodyFeature::Ruled:
+    case BodyFeature::PlanarSurface:
+        return 0;  // superfici nuove: le curve e i bordi scelti restano dei loro corpi
     case BodyFeature::Extrusion:
     case BodyFeature::Sweep:
         if (feature.mergeOperation != 0 && !feature.mergeBodies.isEmpty()) return owner(feature.mergeBodies.first());
@@ -37,6 +41,10 @@ quint64 inheritedBody(const QVector<ExtrusionObject> &features, const ExtrusionO
     }
 }
 
+}
+
+quint64 inheritedModelBody(const QVector<ExtrusionObject> &features, const ExtrusionObject &feature) {
+    return inheritedBody(features, feature);
 }
 
 QVector<int> modelBodyFeatures(const DocumentState &state, quint64 bodyId) {
@@ -87,6 +95,8 @@ void normalizeModelHistory(QVector<ExtrusionObject> &features, QVector<ModelBody
     for (ExtrusionObject &feature : features) {
         for (GeometryRef &ref : feature.datum.refs) bindOwner(ref);
         for (GeometryRef &ref : feature.pattern.refs) bindOwner(ref);
+        for (QVector<GeometryRef> *refs : {&feature.ruledFirst, &feature.ruledSecond, &feature.planarRefs})
+            for (GeometryRef &ref : *refs) bindOwner(ref);
         bindOwner(feature.extentRef);
         bindOwner(feature.move.axis);
     }

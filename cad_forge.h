@@ -57,6 +57,15 @@ QVector<SheetPiece> forgeSheetPieces(const ForgeBody &sheet, const ForgeBody &to
 ForgeBody forgeScale(const ForgeBody &base, double factor, int mode, const EdgePoint &point, QString *error);
 // Estensione dei bordi di `sheet` piu' vicini ai punti (fk_sheet extendSheet).
 ForgeBody forgeExtendSheet(const ForgeBody &sheet, const QVector<EdgePoint> &points, double distance, bool linear, QString *error);
+// Offset di superficie: lamina a distanza `distance` (lungo la normale
+// uscente; negativa verso l'interno) dalle facce `faces` di `base` (vuoto:
+// tutte). Le facce tangenti tra loro restano cucite in una superficie, lungo
+// gli spigoli vivi le superfici si separano: `summary` lo dice.
+ForgeBody forgeOffsetFaces(const ForgeBody &base, const QVector<EdgePoint> &faces, double distance, QString *error, QString *summary = nullptr);
+// Cucitura delle superfici `sheets` (anche solidi: valgono le loro facce) in
+// una sola entro `tolerance`; con `solid` e il risultato chiuso, un solido.
+// `summary` dice se e' chiusa e quanti bordi restano liberi.
+ForgeBody forgeSew(const QVector<ForgeBody> &sheets, double tolerance, bool solid, QString *error, QString *summary = nullptr);
 
 // Base dell'elica da uno spigolo circolare (source 1) o da una faccia
 // cilindrica o conica (source 2) del body, vicino a `point` (come
@@ -64,14 +73,26 @@ ForgeBody forgeExtendSheet(const ForgeBody &sheet, const QVector<EdgePoint> &poi
 bool forgeHelixBase(const Kernel::Body &body, int source, const EdgePoint &point, HelixBase &base, QString *error);
 // Sweep del profilo dello schizzo lungo il percorso (fk_sweep; mode 0 torsione
 // minima, 1 Frenet, 2 orientamento costante): solido dai contorni chiusi,
-// lamina dalle catene aperte.
-ForgeBody forgeSweep(const SketchObject &profile, const std::vector<Kernel::PathSegment> &path, int mode, QString *error);
+// lamina dalle catene aperte. Con `surface` sempre una lamina senza coperchi
+// (fk_sweep sweepSheet: un contorno chiuso da' un tubo aperto).
+ForgeBody forgeSweep(const SketchObject &profile, const std::vector<Kernel::PathSegment> &path, int mode, QString *error, bool surface = false);
 // Loft per le sezioni (fk_loft): un contorno chiuso per schizzo (solido) o
 // una catena aperta (lamina). Le guide sono catene 3D che attraversano tutte
 // le sezioni; continuita' e influenze sono i parametri persistenti G0/G1/G2.
+// Con `surface` le sezioni chiuse danno il tubo senza coperchi (loftSheet).
 ForgeBody forgeLoft(const QVector<SketchObject> &sections, const QVector<SketchObject> &guides, bool ruled,
                     int startContinuity, int endContinuity, int guideContinuity, double guideInfluence, double startInfluence,
-                    double endInfluence, QString *error);
+                    double endInfluence, QString *error, bool surface = false);
+// Superficie rigata tra due catene di curve 3D (fk_loft ruledSurface): le
+// catene sono entrambe aperte o entrambe chiuse; verso e partenza della
+// seconda si accordano alla prima.
+ForgeBody forgeRuledSurface(const std::vector<Kernel::PathSegment> &first, const std::vector<Kernel::PathSegment> &second, QString *error);
+// Superficie planare dei contorni chiusi dello schizzo (come la base di
+// un'estrusione, normale lungo quella dello schizzo; fk_planar planarSheet).
+ForgeBody forgePlanarSketch(const SketchObject &sketch, QString *error);
+// Superficie planare delimitata da tratti 3D complanari: i tratti si
+// raggruppano in contorni chiusi per estremi comuni, poi planarSheet.
+ForgeBody forgePlanarCurves(const std::vector<Kernel::PathSegment> &segments, QString *error);
 inline ForgeBody forgeLoft(const QVector<SketchObject> &sections, bool ruled, QString *error) {
     return forgeLoft(sections, {}, ruled, 0, 0, 1, 1.0, 1.0, 1.0, error);
 }

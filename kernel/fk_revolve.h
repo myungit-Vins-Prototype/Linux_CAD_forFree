@@ -26,6 +26,14 @@ Body makeRevolution(const Frame3 &frame, const ProfileRegion &region);
 // sulle stesse superfici esatte, piu' le due facce piane del profilo.
 Body makeRevolution(const Frame3 &frame, const ProfileRegion &region, double angle);
 
+// Lamina di rivoluzione: catene aperte (tratti in ordine, nel semipiano x >= 0
+// del piano XZ di `frame`) ruotate di `angle` attorno a Z (|angle| >= 2 pi:
+// giro completo). Le facce sono quelle di makeRevolution; i cerchi degli
+// estremi fuori dall'asse sono bordi liberi, gli estremi sull'asse poli. La
+// normale sta a destra del verso della catena. Il giro parziale e' il giro
+// completo intersecato con il cuneo, come per i solidi.
+Body makeSheetRevolution(const Frame3 &frame, const std::vector<ProfileLoop> &chains, double angle);
+
 // Solidi elementari di rivoluzione attorno a Z di `frame`, base nell'origine.
 // Sfera di centro l'origine; cono (o tronco) di raggio `baseRadius` a z = 0 e
 // `topRadius` a z = height (uno dei due puo' essere nullo); toro di raggio

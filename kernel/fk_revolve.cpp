@@ -31,25 +31,30 @@ ProfileSegment line2(const Vec2 &a, const Vec2 &b) { return {std::make_shared<Li
 
 }
 
-Body makeRevolution(const Frame3 &frame, const ProfileRegion &region) {
+namespace {
+
+// Facce di rivoluzione (giro completo) dei tratti di `loops`: chiusi (`closed`,
+// i loop di un solido) o catene aperte (lamina: i cerchi degli estremi restano
+// bordi liberi). Normale della faccia a destra del verso di percorrenza.
+void revolveLoops(const Frame3 &frame, const std::vector<ProfileLoop> &loops, bool closed, std::vector<Vec3> &vertices,
+                  std::vector<Body::BuildEdge> &edges, std::vector<Body::BuildFace> &faces) {
     const double tolerance = 1e-9 * std::max(1.0, norm(frame.origin()));
     const Vec3 O = frame.origin(), X = frame.xDir(), Y = frame.yDir(), Z = frame.zDir();
     auto at = [&](const Vec2 &p) { return O + p.x() * X + p.y() * Z; };
     auto direction = [&](const Vec2 &d) { return d.x() * X + d.y() * Z; };
-
-    std::vector<ProfileLoop> loops{signedArea(region.outer) > 0.0 ? region.outer : reversed(region.outer)};
-    for (const ProfileLoop &hole : region.holes) loops.push_back(signedArea(hole) < 0.0 ? hole : reversed(hole));
-
-    std::vector<Vec3> vertices;
-    std::vector<Body::BuildEdge> edges;
-    std::vector<Body::BuildFace> faces;
     for (const ProfileLoop &loop : loops) {
         const std::size_t n = loop.segments.size();
+        if (n == 0) continue;
+        // Punti della catena: n nei loop chiusi (il primo e' anche l'ultimo),
+        // n + 1 nelle catene aperte.
+        const std::size_t points = closed ? n : n + 1;
+        const auto pointAt = [&](std::size_t k) { return k < n ? loop.segments[k].start() : loop.segments[n - 1].end(); };
         // Edge circolare di ogni vertice fuori dall'asse (-1: sull'asse). Un
         // loop di una sola curva chiusa (cerchio: toro intero) non ha vertici.
-        std::vector<int> circle(n, -1);
-        for (std::size_t k = 0; k < n && !(n == 1 && distance(loop.segments[0].start(), loop.segments[0].end()) <= kLinearResolution); ++k) {
-            const Vec2 p = loop.segments[k].start();
+        std::vector<int> circle(points, -1);
+        const bool singleClosedCurve = closed && n == 1 && distance(loop.segments[0].start(), loop.segments[0].end()) <= kLinearResolution;
+        for (std::size_t k = 0; k < points && !singleClosedCurve; ++k) {
+            const Vec2 p = pointAt(k);
             if (p.x() < -tolerance) throw std::invalid_argument("makeRevolution: il profilo attraversa l'asse");
             if (p.x() <= tolerance) continue;
             Body::BuildEdge edge;
@@ -58,8 +63,10 @@ Body makeRevolution(const Frame3 &frame, const ProfileRegion &region) {
             edge.curve = std::make_shared<Circle<3>>(O + p.y() * Z, X, Y, p.x());
             edge.range = {0.0, kTwoPi};
             // Vertici che si toccano solo entro la tolleranza dello schizzo.
-            const double gap = distance(loop.segments[(k + n - 1) % n].end(), p);
-            if (gap > kLinearResolution) edge.tolerance = 1.01 * gap;
+            if (closed || (k > 0 && k < n)) {
+                const double gap = distance(loop.segments[(k + n - 1) % n].end(), p);
+                if (gap > kLinearResolution) edge.tolerance = 1.01 * gap;
+            }
             circle[k] = int(edges.size());
             edges.push_back(edge);
         }
@@ -67,6 +74,7 @@ Body makeRevolution(const Frame3 &frame, const ProfileRegion &region) {
             const ProfileSegment &segment = loop.segments[k];
             const Vec2 a = segment.start(), b = segment.end();
             const Vec2 middle = segment.curve->point(0.5 * (segment.range.lo + segment.range.hi));
+            if (middle.x() < -tolerance) throw std::invalid_argument("makeRevolution: il profilo attraversa l'asse");
             if (a.x() <= tolerance && b.x() <= tolerance && middle.x() <= tolerance) continue;  // sull'asse
             const Curve<2> &basis = basisOf(*segment.curve);
             SurfacePtr surface;
@@ -98,22 +106,20 @@ Body makeRevolution(const Frame3 &frame, const ProfileRegion &region) {
             face.sense = dot(surface->normal(onSurface.u, onSurface.v), outward) > 0.0;
             // Il cerchio all'inizio del tratto si percorre nel verso del suo
             // parametro, quello alla fine al contrario (la faccia a sinistra).
+            const std::size_t next = closed ? (k + 1) % n : k + 1;
             if (circle[k] >= 0) face.loops.push_back({Body::BuildFin{circle[k], true, nullptr, 0.0}});
-            if (circle[(k + 1) % n] >= 0) face.loops.push_back({Body::BuildFin{circle[(k + 1) % n], false, nullptr, 0.0}});
+            if (circle[next] >= 0) face.loops.push_back({Body::BuildFin{circle[next], false, nullptr, 0.0}});
             faces.push_back(std::move(face));
         }
     }
-    if (faces.empty()) throw std::invalid_argument("makeRevolution: profilo tutto sull'asse");
-    Body body = Body::build(vertices, edges, faces);
-    computePCurves(body);
-    return body;
 }
 
-Body makeRevolution(const Frame3 &frame, const ProfileRegion &region, double angle) {
-    Body full = makeRevolution(frame, region);
+// Il corpo del giro completo ridotto all'angolo `angle`: intersezione con il
+// cuneo dei due semipiani per l'asse.
+Body cutToAngle(Body full, const Frame3 &frame, double angle) {
     if (!(std::fabs(angle) < kTwoPi - kAngularResolution)) return full;
     if (std::fabs(angle) <= kAngularResolution) throw std::invalid_argument("makeRevolution: angolo nullo");
-    // Estensione del solido lungo l'asse e distanza massima dall'asse, dagli
+    // Estensione del corpo lungo l'asse e distanza massima dall'asse, dagli
     // angoli del suo box.
     Box box;
     for (VertexId v : full.vertices()) box.add(full.vertex(v).point);
@@ -131,7 +137,7 @@ Body makeRevolution(const Frame3 &frame, const ProfileRegion &region, double ang
     const double margin = 0.25 * (zhi - zlo + radius) + 1.0;
     // Cuneo: poligono con un vertice sull'asse e gli altri a distanza 2 R sui
     // raggi, al piu' 60 gradi l'uno dall'altro (le corde restano fuori dal
-    // cerchio di raggio R), estruso oltre il solido nei due versi.
+    // cerchio di raggio R), estruso oltre il corpo nei due versi.
     const double from = std::min(0.0, angle), to = std::max(0.0, angle);
     const int steps = std::max(1, int(std::ceil((to - from) / (kPi / 3.0))));
     const double reach = 2.0 * (radius + margin);
@@ -143,6 +149,36 @@ Body makeRevolution(const Frame3 &frame, const ProfileRegion &region, double ang
     const Frame3 base(O + (zlo - margin) * Z, Z, frame.xDir());
     const Body cutter = makePrism(base, wedge, {}, zhi - zlo + 2.0 * margin);
     return booleanOperation(full, cutter, BooleanOperation::Intersect);
+}
+
+}
+
+Body makeRevolution(const Frame3 &frame, const ProfileRegion &region) {
+    std::vector<ProfileLoop> loops{signedArea(region.outer) > 0.0 ? region.outer : reversed(region.outer)};
+    for (const ProfileLoop &hole : region.holes) loops.push_back(signedArea(hole) < 0.0 ? hole : reversed(hole));
+    std::vector<Vec3> vertices;
+    std::vector<Body::BuildEdge> edges;
+    std::vector<Body::BuildFace> faces;
+    revolveLoops(frame, loops, true, vertices, edges, faces);
+    if (faces.empty()) throw std::invalid_argument("makeRevolution: profilo tutto sull'asse");
+    Body body = Body::build(vertices, edges, faces);
+    computePCurves(body);
+    return body;
+}
+
+Body makeSheetRevolution(const Frame3 &frame, const std::vector<ProfileLoop> &chains, double angle) {
+    std::vector<Vec3> vertices;
+    std::vector<Body::BuildEdge> edges;
+    std::vector<Body::BuildFace> faces;
+    revolveLoops(frame, chains, false, vertices, edges, faces);
+    if (faces.empty()) throw std::invalid_argument("makeSheetRevolution: profilo tutto sull'asse");
+    Body body = Body::buildSheet(vertices, edges, faces);
+    computePCurves(body);
+    return cutToAngle(std::move(body), frame, angle);
+}
+
+Body makeRevolution(const Frame3 &frame, const ProfileRegion &region, double angle) {
+    return cutToAngle(makeRevolution(frame, region), frame, angle);
 }
 
 Body makeSphere(const Frame3 &frame, double radius) {

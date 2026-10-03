@@ -109,6 +109,18 @@ bool sketchPoint(const SketchObject &sketch, const ConstraintRef &element, QPoin
     return false;
 }
 
+// Corpo di un riferimento: dall'identita' persistente se c'e', altrimenti
+// dall'indice; -1 se non esiste o non viene prima del proprietario.
+int referenceBody(const GeometryRef &ref, int owner, const QVector<ExtrusionObject> &bodies) {
+    int bodyIndex = ref.index;
+    if (ref.featureId) {
+        bodyIndex = -1;
+        for (int candidate = 0; candidate < owner && candidate < bodies.size(); ++candidate)
+            if (bodies.at(candidate).featureId == ref.featureId) { bodyIndex = candidate; break; }
+    }
+    return bodyIndex >= 0 && bodyIndex < owner && bodyIndex < bodies.size() ? bodyIndex : -1;
+}
+
 Vec3 planeNormal(int plane) {
     // Come extrusionVector: la distanza positiva va lungo +Z, +Y, +X.
     return plane == 0 ? Vec3(0, 0, 1) : plane == 1 ? Vec3(0, 1, 0) : Vec3(1, 0, 0);
@@ -318,6 +330,57 @@ bool resolveGeometryRef(const GeometryRef &ref, int owner, const QVector<SketchO
     }
     setError(error, QStringLiteral("riferimento non valido"));
     return false;
+}
+
+bool geometryRefPath(const GeometryRef &ref, int owner, const QVector<SketchObject> &sketches, const QVector<ExtrusionObject> &bodies,
+                     std::vector<PathSegment> &segments, QString *error) {
+    segments.clear();
+    if (owner < 0) owner = int(bodies.size());
+    try {
+        if (ref.kind == 4 || ref.kind == 9) {
+            const int bodyIndex = referenceBody(ref, owner, bodies);
+            if (bodyIndex < 0) return setError(error, QStringLiteral("il corpo del riferimento non esiste piu'")), false;
+            const ExtrusionObject &body = bodies.at(bodyIndex);
+            if (ref.kind == 9) {
+                if (!body.curve) return setError(error, QStringLiteral("la curva \"%1\" non e' valida").arg(body.name)), false;
+                segments.push_back({body.curve, body.curve->domain()});
+                return true;
+            }
+            if (!body.forgeBody) return setError(error, QStringLiteral("il corpo \"%1\" non ha geometria").arg(body.name)), false;
+            const EdgeId edge = resolveEdgeReference(*body.forgeBody, ref.point, std::numeric_limits<double>::max());
+            if (!edge.valid()) return setError(error, QStringLiteral("lo spigolo non esiste piu' in \"%1\"").arg(body.name)), false;
+            const Edge &e = body.forgeBody->edge(edge);
+            segments.push_back({e.curve, e.range});
+            return true;
+        }
+        if (ref.kind == 7) {
+            if (ref.index < 0 || ref.index >= sketches.size()) return setError(error, QStringLiteral("lo schizzo del riferimento non esiste piu'")), false;
+            const SketchObject &sketch = sketches.at(ref.index);
+            if (sketch.datumPlane >= owner && owner >= 0)
+                return setError(error, QStringLiteral("lo schizzo \"%1\" sta su un piano successivo").arg(sketch.name)), false;
+            if (ref.element.kind == 0) {
+                if (ref.element.element < 0 || ref.element.element >= sketch.segments.size())
+                    return setError(error, QStringLiteral("il segmento dello schizzo \"%1\" non esiste piu'").arg(sketch.name)), false;
+                const SketchSegment &s = sketch.segments.at(ref.element.element);
+                const Vec3 a = sketchToWorld(s.first, sketch), b = sketchToWorld(s.second, sketch);
+                if (distance(a, b) < 1e-12) return setError(error, QStringLiteral("segmento di lunghezza nulla")), false;
+                segments.push_back({std::make_shared<Line<3>>(a, b - a), Interval{0.0, distance(a, b)}});
+                return true;
+            }
+            if (ref.element.kind != 1 || ref.element.element < 0 || ref.element.element >= sketch.curves.size())
+                return setError(error, QStringLiteral("la curva dello schizzo \"%1\" non esiste piu'").arg(sketch.name)), false;
+            const Frame3 plane = sketchAxes(sketch);
+            for (const ProfileSegment &piece : curveGeometry(sketch.curves.at(ref.element.element)))
+                segments.push_back({embedCurve(piece.curve, plane), piece.range});
+            if (segments.empty()) return setError(error, QStringLiteral("la curva dello schizzo \"%1\" non ha geometria").arg(sketch.name)), false;
+            return true;
+        }
+    } catch (const std::exception &failure) {
+        segments.clear();
+        setError(error, QString::fromUtf8(failure.what()));
+        return false;
+    }
+    return setError(error, QStringLiteral("serve uno spigolo, un'entita' di uno schizzo o una curva")), false;
 }
 
 bool computeDatum(const DatumParameters &parameters, int index, const QVector<SketchObject> &sketches, const QVector<ExtrusionObject> &bodies,

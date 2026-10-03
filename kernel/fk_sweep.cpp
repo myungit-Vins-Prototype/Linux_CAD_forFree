@@ -383,8 +383,20 @@ Body sweep(const Frame3 &profileFrame, const ProfileData &profile, bool sheet, c
     // Verso: il percorso esce dal piano del profilo verso +n (s = 1) o -n.
     const Vec3 n = profileFrame.zDir();
     const double along = dot(frames.T0(), n);
-    if (!sheet && std::fabs(along) < 1e-6) throw std::domain_error("sweep: il profilo e' parallelo al percorso (il percorso deve uscire dal piano del profilo)");
-    const double s = sheet ? 1.0 : (along > 0.0 ? 1.0 : -1.0);
+    // Le lamine con loop chiusi (tubi senza coperchi, region >= 0) seguono la
+    // regola dei solidi, cosi' le normali escono dal tubo; le sole catene
+    // aperte non hanno un verso preferito (s = 1, come sweepChains).
+    bool oriented = !sheet;
+    for (int region : profile.region) oriented = oriented || region >= 0;
+    if (oriented && std::fabs(along) < 1e-6) throw std::domain_error("sweep: il profilo e' parallelo al percorso (il percorso deve uscire dal piano del profilo)");
+    const double s = oriented ? (along > 0.0 ? 1.0 : -1.0) : 1.0;
+    // Verso per tratto: le catene aperte di una lamina restano come in
+    // sweepChains (1) anche accanto a loop chiusi (un profilo misto).
+    std::vector<double> pieceSign(profile.pieces.size(), s);
+    if (sheet)
+        for (std::size_t l = 0; l < profile.loops.size(); ++l)
+            if (profile.region[l] < 0)
+                for (int piece : profile.loops[l]) pieceSign[std::size_t(piece)] = 1.0;
 
     // Coordinate locali (nel sistema iniziale) e punto mobile.
     const Vec3 P0 = frames.startPoint(), T0 = frames.T0(), N0 = frames.N0(), B0 = frames.B0();
@@ -608,7 +620,8 @@ Body sweep(const Frame3 &profileFrame, const ProfileData &profile, bool sheet, c
             const JV X = moving(vm, false, local(dq[0]), frame);
             const Vec3 w = Vec3(dot(dq[1], T0), dot(dq[1], N0), dot(dq[1], B0));
             const Vec3 Xu = w.x() * frame[0].v + w.y() * frame[1].v + w.z() * frame[2].v;
-            const Vec3 outward = s * cross(Xu, X.d1);
+            const double sp = pieceSign[std::size_t(p)];
+            const Vec3 outward = sp * cross(Xu, X.d1);
             const SurfaceProjection onSurface = projectPoint(*surfaces[std::size_t(p)], X.v);
             if (distance(onSurface.point, X.v) > 1e-6 * scale) throw std::logic_error("sweep: superficie laterale fuori dalla sezione");
             Body::BuildFace face;
@@ -616,7 +629,7 @@ Body sweep(const Frame3 &profileFrame, const ProfileData &profile, bool sheet, c
             face.sense = dot(surfaces[std::size_t(p)]->normal(onSurface.u, onSurface.v), outward) > 0.0;
             const int lower = sectionEdge[std::size_t(k * P + p)], upper = sectionEdge[std::size_t(jointOf(k + 1) * P + p)];
             const int first = longitudinal[std::size_t(piece.start)], last = longitudinal[std::size_t(piece.end)];
-            if (s > 0.0) face.loops.push_back({{lower, true, nullptr, 0.0}, {last, true, nullptr, 0.0}, {upper, false, nullptr, 0.0}, {first, false, nullptr, 0.0}});
+            if (sp > 0.0) face.loops.push_back({{lower, true, nullptr, 0.0}, {last, true, nullptr, 0.0}, {upper, false, nullptr, 0.0}, {first, false, nullptr, 0.0}});
             else face.loops.push_back({{first, true, nullptr, 0.0}, {upper, true, nullptr, 0.0}, {last, false, nullptr, 0.0}, {lower, false, nullptr, 0.0}});
             faces.push_back(std::move(face));
         }
@@ -674,6 +687,29 @@ Body sweepChains(const Frame3 &profileFrame, const std::vector<ProfileLoop> &cha
     if (chains.empty()) throw std::domain_error("sweep: profilo vuoto");
     ProfileData data;
     for (const ProfileLoop &chain : chains) addLoop(data, profileFrame, chain, false, -1);
+    return sweep(profileFrame, data, true, path, orientation);
+}
+
+Body sweepSheet(const Frame3 &profileFrame, const std::vector<ProfileLoop> &loops, const std::vector<PathSegment> &path, SweepOrientation orientation) {
+    if (loops.empty()) throw std::domain_error("sweep: profilo vuoto");
+    ProfileData data;
+    for (const ProfileLoop &loop : loops) {
+        if (loop.segments.empty()) throw std::domain_error("sweep: profilo con un loop vuoto");
+        // Chiuso se la fine dell'ultimo tratto torna all'inizio del primo
+        // (entro la tolleranza di connessione degli schizzi, relativa alla misura del loop).
+        Box box;
+        for (const ProfileSegment &segment : loop.segments)
+            for (const Vec2 &q : {segment.start(), segment.end()}) box.add(Vec3(q.x(), q.y(), 0.0));
+        const double tolerance = 1e-6 * std::max(1.0, box.diagonal());
+        const bool closed = distance(loop.segments.back().end(), loop.segments.front().start()) <= tolerance;
+        if (closed) {
+            // Antiorario attorno alla normale del piano del profilo, come il contorno dei solidi.
+            if (std::fabs(signedArea(loop)) <= tolerance * tolerance) throw std::domain_error("sweep: loop chiuso del profilo con area nulla");
+            addLoop(data, profileFrame, signedArea(loop) > 0.0 ? loop : reversed(loop), true, 0);
+        } else {
+            addLoop(data, profileFrame, loop, false, -1);
+        }
+    }
     return sweep(profileFrame, data, true, path, orientation);
 }
 

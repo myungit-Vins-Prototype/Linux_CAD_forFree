@@ -2,6 +2,7 @@
 
 #include <QApplication>
 #include <QFileInfo>
+#include <QIcon>
 #include <QSurfaceFormat>
 
 // Su portatili ibridi (Intel + NVIDIA) forza il rendering OpenGL sulla GPU
@@ -38,6 +39,13 @@ int main(int argc, char **argv) {
     QApplication application(argc, argv);
     QCoreApplication::setOrganizationName(QStringLiteral("ForgeCAD"));
     QCoreApplication::setApplicationName(QStringLiteral("ForgeCAD"));
+    // Icona della finestra (icons/forgecad.qrc) e nome del file .desktop: su
+    // Wayland il compositore trova l'icona dall'app_id, che e' questo nome
+    // (packaging/linux/install-desktop-integration.sh installa forgecad.desktop).
+    QGuiApplication::setDesktopFileName(QStringLiteral("forgecad"));
+    QIcon icon;
+    for (int size : {16, 24, 32, 48, 64, 128, 256, 512}) icon.addFile(QStringLiteral(":/icons/forgecad-%1.png").arg(size), QSize(size, size));
+    QApplication::setWindowIcon(icon);
     PdfWindow window;
     window.show();
     // ./forgecad documento.prt apre il documento.

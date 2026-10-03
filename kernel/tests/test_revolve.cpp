@@ -172,3 +172,37 @@ FK_TEST(RevolutionPrimitives) {
     FK_CHECK_THROWS(makeTorus(frame, 1.0, 2.0));
     FK_CHECK_THROWS(makeCone(frame, 0.0, 0.0, 1.0));
 }
+
+// Lamine di rivoluzione dalle catene aperte: cilindro + calotta che arriva
+// sull'asse (polo), cono a parte; aree esatte, anche nei giri parziali.
+FK_TEST(RevolutionSheets) {
+    const Frame3 frame(Vec3(1, -2, 3), Vec3(0.2, 0.1, 1), Vec3(1, 0, 0));
+    const std::vector<ProfileSegment> segments{lineSegment(Vec2(1, 0), Vec2(1, 2)), arcSegment(Vec2(0, 2), 1.0, 0.0, kHalfPi),
+                                               lineSegment(Vec2(2, 0), Vec2(3, 1))};
+    const Profile profile = buildProfile(segments, 1e-9);
+    FK_CHECK(profile.regions.empty());
+    FK_CHECK(profile.chains.size() == 2);
+    const double fullArea = 6.0 * kPi + 5.0 * kPi * std::sqrt(2.0);
+    for (double degrees : {360.0, 90.0, 180.0, -120.0}) {
+        const double angle = degrees * kPi / 180.0;
+        Body body;
+        try {
+            body = makeSheetRevolution(frame, profile.chains, angle);
+        } catch (const std::exception &error) {
+            reportFailure(__FILE__, __LINE__, error.what());
+            continue;
+        }
+        FK_CHECK(body.isSheet());
+        for (const CheckIssue &issue : checkBody(body)) reportFailure(__FILE__, __LINE__, describe(issue.code) + ": " + issue.message);
+        double area = 0.0;
+        for (FaceId f : body.faces()) area += faceArea(body, f);
+        const double expected = fullArea * std::min(1.0, std::fabs(angle) / kTwoPi);
+        FK_CHECK_NEAR(area, expected, 1e-8 * expected);
+        TessellationOptions options;
+        options.deflection = 1e-3;
+        FK_CHECK(tessellate(body, options).failedFaces == 0);
+    }
+    // Una catena tutta sull'asse non da' facce.
+    const Profile onAxis = buildProfile({lineSegment(Vec2(0, 0), Vec2(0, 2))}, 1e-9);
+    FK_CHECK_THROWS(makeSheetRevolution(frame, onAxis.chains, kTwoPi));
+}

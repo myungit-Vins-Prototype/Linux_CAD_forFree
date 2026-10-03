@@ -590,6 +590,109 @@ std::map<QString, Draw> &registry() {
         line(p, {13.5, 12.5}, {18, 11.3}, stroke(c.accent, 1.4));
         arrowHead(p, {20, 10.8}, {14, 12.4}, c.accent, 3.4);
     };
+    icons["offsetSurface"] = [](QPainter &p, const IconPalette &c) {
+        // Una superficie curva e la sua copia a distanza, con la freccia della normale.
+        QPainterPath base;
+        base.moveTo(2, 18);
+        base.cubicTo(7, 11, 14, 22, 21, 14);
+        p.setBrush(Qt::NoBrush);
+        p.setPen(stroke(c.ink, 1.8));
+        p.drawPath(base);
+        QPainterPath copy;
+        copy.moveTo(2, 10);
+        copy.cubicTo(7, 3, 14, 14, 21, 6);
+        p.setPen(stroke(c.accent, 1.8));
+        p.drawPath(copy);
+        line(p, {11.5, 16.5}, {11.5, 10.5}, stroke(c.accent, 1.2));
+        arrowHead(p, {11.5, 8.6}, {11.5, 13}, c.accent, 3.0);
+    };
+    icons["sewSurfaces"] = [](QPainter &p, const IconPalette &c) {
+        // Due superfici che si toccano lungo un bordo cucito.
+        polygon(p, QPolygonF({{2, 8}, {12, 4}, {12, 17}, {2, 21}}), c.faceMid, stroke(c.ink, 1.0));
+        polygon(p, QPolygonF({{12, 4}, {22, 8}, {22, 21}, {12, 17}}), c.faceDark, stroke(c.ink, 1.0));
+        line(p, {12, 4}, {12, 17}, stroke(c.accent, 2.2));
+        for (double y : {6.5, 10.5, 14.5}) line(p, {10, y}, {14, y + 1.5}, stroke(c.accent, 1.2));
+    };
+    icons["ruledSurface"] = [](QPainter &p, const IconPalette &c) {
+        // Superficie tra due curve: le rette della rigata dall'una all'altra.
+        QPainterPath top({3, 7}), bottom({3, 18});
+        top.cubicTo({8, 2}, {15, 10}, {21, 4});
+        bottom.cubicTo({9, 21}, {14, 14}, {21, 19});
+        QPainterPath face = top;
+        face.lineTo(21, 19);
+        face.cubicTo({14, 14}, {9, 21}, {3, 18});
+        face.closeSubpath();
+        p.setPen(Qt::NoPen);
+        p.setBrush(QColor(255, 176, 74, 70));
+        p.drawPath(face);
+        for (double t : {0.0, 0.25, 0.5, 0.75, 1.0}) {
+            const QPointF a = top.pointAtPercent(t), b = bottom.pointAtPercent(t);
+            line(p, a, b, stroke(c.accent, 1.0));
+        }
+        p.setBrush(Qt::NoBrush);
+        p.setPen(stroke(c.ink, 1.8));
+        p.drawPath(top);
+        p.drawPath(bottom);
+    };
+    icons["planarSurface"] = [](QPainter &p, const IconPalette &c) {
+        // Lamina piana che riempie un contorno chiuso, con un foro.
+        QPainterPath face;
+        face.addPolygon(QPolygonF({{2, 17}, {8, 5}, {22, 5}, {16, 17}}));
+        face.closeSubpath();
+        QPainterPath hole;
+        hole.addEllipse(QRectF(9.5, 8.6, 5.5, 4.4));
+        p.setPen(Qt::NoPen);
+        p.setBrush(QColor(255, 176, 74, 90));
+        p.drawPath(face.subtracted(hole));
+        p.setBrush(Qt::NoBrush);
+        p.setPen(stroke(c.ink, 1.6));
+        p.drawPath(face);
+        p.setPen(stroke(c.ink, 1.2));
+        p.drawEllipse(QRectF(9.5, 8.6, 5.5, 4.4));
+        line(p, {4, 21}, {14, 21}, stroke(c.accent, 1.4));
+    };
+    icons["loftSurface"] = [](QPainter &p, const IconPalette &c) {
+        // Loft senza coperchi: il fianco tra il cerchio in basso e il quadrato in alto, aperto.
+        polygon(p, QPolygonF({{4, 17}, {7, 5}, {17, 5}, {20, 17}}), QColor(255, 176, 74, 70), QPen(Qt::NoPen));
+        line(p, {4, 17}, {7, 5}, stroke(c.accent, 1.4));
+        line(p, {20, 17}, {17, 5}, stroke(c.accent, 1.4));
+        line(p, {12, 19.5}, {12, 3}, stroke(c.accent, 0.9, Qt::DashLine));
+        p.setBrush(Qt::NoBrush);
+        p.setPen(stroke(c.ink, 1.4));
+        p.drawRect(QRectF(7, 3, 10, 4));
+        p.drawEllipse(QRectF(4, 14.5, 16, 5));
+    };
+    icons["sweepSurface"] = [](QPainter &p, const IconPalette &c) {
+        // Tubo aperto lungo un percorso: il profilo e' solo un bordo.
+        QPainterPath path({4, 19});
+        path.cubicTo({8, 8}, {14, 20}, {20, 6});
+        p.setBrush(Qt::NoBrush);
+        p.setPen(stroke(QColor(255, 176, 74, 90), 7.0));
+        p.drawPath(path);
+        p.setPen(stroke(c.accent, 1.0));
+        p.drawPath(path);
+        p.setPen(stroke(c.ink, 1.6));
+        p.drawEllipse(QRectF(0.8, 15.5, 6.4, 6.4));
+        p.drawEllipse(QRectF(16.8, 2.8, 6.4, 6.4));
+    };
+    icons["sketchOffset"] = [](QPainter &p, const IconPalette &c) {
+        // Una catena di segmenti e la sua parallela tratteggiata.
+        p.setBrush(Qt::NoBrush);
+        QPainterPath chain;
+        chain.moveTo(3, 20);
+        chain.lineTo(3, 11);
+        chain.arcTo(QRectF(3, 6, 10, 10), 180, -90);
+        chain.lineTo(20, 6);
+        p.setPen(stroke(c.ink, 1.8));
+        p.drawPath(chain);
+        QPainterPath copy;
+        copy.moveTo(6, 20);
+        copy.lineTo(6, 11);
+        copy.arcTo(QRectF(6, 9, 4, 4), 180, -90);
+        copy.lineTo(20, 9);
+        p.setPen(stroke(c.accent, 1.6, Qt::DashLine));
+        p.drawPath(copy);
+    };
     // --- Ripetizioni (schizzo: entita' piane; funzioni: cubi) --------------------
     icons["sketchPatternLinear"] = [](QPainter &p, const IconPalette &c) {
         // Un cerchio pieno e le sue copie tratteggiate lungo una freccia.

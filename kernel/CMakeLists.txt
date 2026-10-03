@@ -69,6 +69,12 @@ add_library(forgekernel STATIC
     fk_blend_surface.cpp
     fk_sheet.h
     fk_sheet.cpp
+    fk_offset.h
+    fk_offset.cpp
+    fk_sew.h
+    fk_sew.cpp
+    fk_planar.h
+    fk_planar.cpp
     fk_transform.h
     fk_transform.cpp
     fk_hermite.h
@@ -146,6 +152,10 @@ add_executable(forgekernel_tests
     tests/test_blend_features.cpp
     tests/test_step.cpp
     tests/test_iges.cpp
+    tests/test_offset.cpp
+    tests/test_planar.cpp
+    tests/test_loft_surfaces.cpp
+    tests/test_sweep_surfaces.cpp
 )
 target_link_libraries(forgekernel_tests PRIVATE
     forgekernel

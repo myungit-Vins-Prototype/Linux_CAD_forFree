@@ -1197,6 +1197,583 @@ public:
             v.doneCurrent();
             v.close();
         }
+        // Offset nello schizzo: catene chiuse verso l'esterno (o l'interno),
+        // angoli vivi prolungati o raccordati, archi concentrici, spline
+        // approssimate; i vincoli aggiunti sono soddisfatti.
+        {
+            const auto rectangle = [](double w, double h) {
+                SketchObject sketch;
+                const QVector<QPointF> c{{0, 0}, {w, 0}, {w, h}, {0, h}};
+                for (int k = 0; k < 4; ++k) {
+                    sketch.segments.append({c[k], c[(k + 1) % 4]});
+                    sketch.constraints.append(-1);
+                    sketch.segmentLengths.append(0.0);
+                    sketch.segmentAngles.append(-1.0);
+                }
+                return sketch;
+            };
+            const auto all = [](const SketchObject &sketch) {
+                QVector<ForgeCad::SketchEntity> entities;
+                for (int k = 0; k < sketch.segments.size(); ++k) entities.append({0, k});
+                for (int k = 0; k < sketch.curves.size(); ++k) entities.append({1, k});
+                return entities;
+            };
+            const auto satisfied = [](const SketchObject &sketch) {
+                for (const SketchConstraint &c : sketch.geometricConstraints)
+                    if (ForgeCad::constraintError(sketch, c) > 1e-9) return false;
+                return true;
+            };
+            const auto bounds = [](const SketchObject &sketch, int from) {
+                QRectF box;
+                for (int k = from; k < sketch.segments.size(); ++k) {
+                    const QRectF r = QRectF(sketch.segments.at(k).first, sketch.segments.at(k).second).normalized();
+                    box = box.isNull() ? r : box.united(r);
+                }
+                return box;
+            };
+            SketchObject outward = rectangle(4.0, 3.0);
+            ForgeCad::SketchOffset offset;
+            offset.distance = 0.5;
+            QVector<ForgeCad::SketchEntity> created;
+            require(ForgeCad::offsetSketchEntities(outward, all(outward), offset, &created).error.isEmpty() && created.size() == 4,
+                    "offset del rettangolo verso l'esterno");
+            const QRectF grown = bounds(outward, 4);
+            require(std::fabs(grown.left() + 0.5) < 1e-12 && std::fabs(grown.right() - 4.5) < 1e-12 && std::fabs(grown.top() + 0.5) < 1e-12
+                        && std::fabs(grown.bottom() - 3.5) < 1e-12 && satisfied(outward),
+                    "rettangolo a distanza con gli angoli vivi");
+            SketchObject inward = rectangle(4.0, 3.0);
+            offset.reverse = true;
+            require(ForgeCad::offsetSketchEntities(inward, all(inward), offset).error.isEmpty(), "offset del rettangolo verso l'interno");
+            const QRectF shrunk = bounds(inward, 4);
+            require(std::fabs(shrunk.left() - 0.5) < 1e-12 && std::fabs(shrunk.right() - 3.5) < 1e-12 && satisfied(inward), "rettangolo ristretto");
+            offset.reverse = false;
+            offset.roundCorners = true;
+            SketchObject rounded = rectangle(4.0, 3.0);
+            require(ForgeCad::offsetSketchEntities(rounded, all(rounded), offset, &created).error.isEmpty() && created.size() == 8
+                        && rounded.curves.size() == 4 && satisfied(rounded),
+                    "offset con gli archi negli angoli");
+            offset.roundCorners = false;
+            offset.bothSides = true;
+            SketchObject both = rectangle(4.0, 3.0);
+            require(ForgeCad::offsetSketchEntities(both, all(both), offset, &created).error.isEmpty() && created.size() == 8, "offset dalle due parti");
+            offset.bothSides = false;
+            // Cerchio, arco aperto e spline.
+            SketchObject curves;
+            CurveObject circle;
+            circle.tool = DrawingTool::Circle;
+            circle.controlPoints = {QPointF(0, 0), QPointF(2, 0)};
+            curves.curves.append(circle);
+            require(ForgeCad::offsetSketchEntities(curves, all(curves), offset, &created).error.isEmpty()
+                        && curves.curves.last().tool == DrawingTool::Circle
+                        && std::fabs(QLineF(curves.curves.last().controlPoints.at(0), curves.curves.last().controlPoints.at(1)).length() - 2.5) < 1e-12
+                        && satisfied(curves),
+                    "cerchio a distanza concentrico");
+            offset.reverse = true;
+            offset.distance = 3.0;
+            SketchObject tooFar;
+            tooFar.curves.append(circle);
+            require(!ForgeCad::offsetSketchEntities(tooFar, all(tooFar), offset).error.isEmpty() && tooFar.curves.size() == 1,
+                    "raggio negativo: errore e schizzo invariato");
+            offset.reverse = false;
+            offset.distance = 0.3;
+            SketchObject free;
+            CurveObject spline;
+            spline.tool = DrawingTool::Nurbs;
+            spline.controlPoints = {QPointF(0, 0), QPointF(2, 3), QPointF(5, -1), QPointF(7, 2), QPointF(9, 0)};
+            free.curves.append(spline);
+            require(ForgeCad::offsetSketchEntities(free, all(free), offset, &created).error.isEmpty() && created.size() == 1
+                        && free.curves.last().tool == DrawingTool::Converted,
+                    "NURBS a distanza come curva convertita");
+            const auto original = ForgeCad::curveGeometry(free.curves.first()).front();
+            const auto copy = ForgeCad::curveGeometry(free.curves.last()).front();
+            double worst = 0.0;
+            for (int k = 0; k <= 50; ++k) {
+                const ForgeCad::Kernel::Vec2 p = copy.curve->point(copy.range.lo + copy.range.length() * k / 50.0);
+                worst = std::max(worst, std::fabs(ForgeCad::Kernel::projectPoint(*original.curve, p, original.range).distance - 0.3));
+            }
+            require(worst < 1e-6, "distanza della copia della NURBS");
+            // Rettangolo arrotondato (segmenti e archi tangenti): archi concentrici di raggio R - d.
+            {
+                SketchObject slot;
+                const double r = 1.0;
+                const auto seg = [&](QPointF a, QPointF b) {
+                    slot.segments.append({a, b});
+                    slot.constraints.append(-1);
+                    slot.segmentLengths.append(0.0);
+                    slot.segmentAngles.append(-1.0);
+                };
+                const auto arc = [&](QPointF c, QPointF a, QPointF b) {
+                    CurveObject curve;
+                    curve.tool = DrawingTool::Arc;
+                    curve.controlPoints = {c, a, b};
+                    slot.curves.append(curve);
+                };
+                seg({r, 0}, {5 - r, 0});
+                arc({5 - r, r}, {5 - r, 0}, {5, r});
+                seg({5, r}, {5, 3 - r});
+                arc({5 - r, 3 - r}, {5, 3 - r}, {5 - r, 3});
+                seg({5 - r, 3}, {r, 3});
+                arc({r, 3 - r}, {r, 3}, {0, 3 - r});
+                seg({0, 3 - r}, {0, r});
+                arc({r, r}, {0, r}, {r, 0});
+                ForgeCad::SketchOffset in;
+                in.distance = 0.4;
+                in.reverse = true;
+                require(ForgeCad::offsetSketchEntities(slot, all(slot), in, &created).error.isEmpty() && created.size() == 8 && satisfied(slot),
+                        "rettangolo arrotondato verso l'interno");
+                const CurveObject &inner = slot.curves.at(4);
+                require(inner.tool == DrawingTool::Arc && std::fabs(QLineF(inner.controlPoints.at(0), inner.controlPoints.at(1)).length() - 0.6) < 1e-12,
+                        "arco concentrico di raggio R - d");
+            }
+            // Angolo concavo di una catena aperta (L): le copie si accorciano fino al punto comune.
+            SketchObject corner;
+            for (const SketchSegment &segment : {SketchSegment(QPointF(0, 0), QPointF(4, 0)), SketchSegment(QPointF(4, 0), QPointF(4, 3))}) {
+                corner.segments.append(segment);
+                corner.constraints.append(-1);
+                corner.segmentLengths.append(0.0);
+                corner.segmentAngles.append(-1.0);
+            }
+            offset.distance = 0.5;
+            require(ForgeCad::offsetSketchEntities(corner, all(corner), offset).error.isEmpty() && corner.segments.size() == 4
+                        && QLineF(corner.segments.at(2).second, QPointF(3.5, 0.5)).length() < 1e-12
+                        && QLineF(corner.segments.at(3).first, QPointF(3.5, 0.5)).length() < 1e-12 && satisfied(corner),
+                    "angolo concavo: le copie si incontrano");
+        }
+        // Offset di superficie e cucitura: feature parametriche, salvate nel formato 23.
+        {
+            CadViewport surfaces;
+            PrimitiveParameters ball;
+            ball.kind = PrimitiveKind::Sphere;
+            ball.size[0] = 2.0;
+            require(surfaces.createPrimitive(ball, QStringLiteral("Sfera")).isEmpty(), "sfera per l'offset");
+            ExtrusionObject offset;
+            offset.feature = BodyFeature::SurfaceOffset;
+            offset.firstBody = 0;
+            offset.distance = 0.5;
+            offset.name = QStringLiteral("Offset");
+            require(surfaces.createBody(offset).isEmpty(), "offset di tutte le facce");
+            const ExtrusionObject &skin = surfaces.extrusions_.at(1);
+            require(skin.forgeBody && skin.forgeBody->isSheet() && !skin.solid, "l'offset e' una superficie");
+            require(std::fabs(ForgeCad::Kernel::faceArea(*skin.forgeBody, skin.forgeBody->faces().front()) - 4.0 * M_PI * 6.25) < 1e-8,
+                    "area della sfera a distanza");
+            require(surfaces.extrusions_.at(0).visible, "il corpo di partenza dell'offset resta visibile");
+            ExtrusionObject sew;
+            sew.feature = BodyFeature::Sew;
+            sew.firstBody = 1;
+            sew.sewSolid = true;
+            sew.name = QStringLiteral("Cucitura");
+            require(surfaces.createBody(sew).isEmpty(), "cucitura in un solido");
+            const ExtrusionObject &closed = surfaces.extrusions_.at(2);
+            require(closed.solid && std::fabs(ForgeCad::Kernel::massProperties(*closed.forgeBody).volume - 4.0 / 3.0 * M_PI * 15.625) < 1e-7,
+                    "volume del solido cucito");
+            require(!surfaces.extrusions_.at(1).visible, "le superfici cucite si nascondono");
+            // Offset di una faccia sola di un cilindro (il fianco) con il riferimento persistente.
+            PrimitiveParameters can;
+            can.kind = PrimitiveKind::Cylinder;
+            can.size[0] = 1.0;
+            can.size[1] = 3.0;
+            require(surfaces.createPrimitive(can, QStringLiteral("Cilindro")).isEmpty(), "cilindro per l'offset");
+            const int cylinder = int(surfaces.extrusions_.size()) - 1;
+            const ForgeCad::Kernel::Body &canBody = *surfaces.extrusions_.at(cylinder).forgeBody;
+            ForgeCad::Kernel::FaceId side;
+            for (ForgeCad::Kernel::FaceId f : canBody.faces())
+                if (canBody.face(f).surface->type() == ForgeCad::Kernel::SurfaceType::Cylinder) side = f;
+            ExtrusionObject sideOffset;
+            sideOffset.feature = BodyFeature::SurfaceOffset;
+            sideOffset.firstBody = cylinder;
+            sideOffset.distance = -0.25;
+            sideOffset.offsetFaces = {ForgeCad::faceReference(canBody, side, ForgeCad::Kernel::Vec3(1.0, 0.0, 1.5))};
+            sideOffset.name = QStringLiteral("Offset fianco");
+            require(surfaces.createBody(sideOffset).isEmpty(), "offset del fianco del cilindro");
+            const ExtrusionObject &band = surfaces.extrusions_.back();
+            require(std::fabs(ForgeCad::Kernel::faceArea(*band.forgeBody, band.forgeBody->faces().front()) - 2.0 * M_PI * 0.75 * 3.0) < 1e-9,
+                    "area del fianco a distanza verso l'interno");
+            QTemporaryDir directory;
+            const QString path = directory.filePath(QStringLiteral("superfici.prt"));
+            require(saveDocumentFile(path, surfaces.currentDocument(), false).isEmpty(), "salvataggio di offset e cucitura");
+            DocumentState reloaded;
+            require(loadDocumentFile(path, reloaded).isEmpty(), "lettura di offset e cucitura");
+            require(reloaded.extrusions.at(2).feature == BodyFeature::Sew && reloaded.extrusions.at(2).sewSolid
+                        && reloaded.extrusions.back().feature == BodyFeature::SurfaceOffset && reloaded.extrusions.back().offsetFaces.size() == 1
+                        && reloaded.extrusions.back().distance == -0.25,
+                    "parametri di offset e cucitura nel documento");
+            CadViewport again;
+            again.loadDocument(reloaded);
+            require(again.extrusions_.at(2).solid && again.extrusions_.back().forgeBody, "offset e cucitura rigenerati");
+        }
+        // Superfici rigata, planare, loft e sweep di superfici (formato 24).
+        {
+            using namespace ForgeCad::Kernel;
+            CadViewport surfaces;
+            const auto addSegment = [](SketchObject &sketch, QPointF a, QPointF b) {
+                sketch.segments.append({a, b});
+                sketch.constraints.append(-1);
+                sketch.segmentLengths.append(0.0);
+                sketch.segmentAngles.append(-1.0);
+            };
+            const auto circleSketch = [](const QString &name, double z, double r) {
+                SketchObject sketch;
+                sketch.name = name;
+                sketch.plane = kFacePlane;
+                sketch.frame.origin[2] = z;
+                CurveObject circle;
+                circle.tool = DrawingTool::Circle;
+                circle.controlPoints = {QPointF(0, 0), QPointF(r, 0)};
+                ForgeCad::recalculateCurve(circle, 1);
+                sketch.curves.append(circle);
+                return sketch;
+            };
+            const auto area = [](const ExtrusionObject &body) {
+                double total = 0.0;
+                for (FaceId f : body.forgeBody->faces()) total += faceArea(*body.forgeBody, f);
+                return total;
+            };
+            // 0: rettangolo 4 x 3 con un foro di raggio 0.5 (piano XY); 1, 2: cerchi a z = 0 e 2; 3: percorso lungo Z.
+            SketchObject plate;
+            plate.name = QStringLiteral("Lastra");
+            addSegment(plate, {0, 0}, {4, 0});
+            addSegment(plate, {4, 0}, {4, 3});
+            addSegment(plate, {4, 3}, {0, 3});
+            addSegment(plate, {0, 3}, {0, 0});
+            CurveObject hole;
+            hole.tool = DrawingTool::Circle;
+            hole.controlPoints = {QPointF(2, 1.5), QPointF(2.5, 1.5)};
+            ForgeCad::recalculateCurve(hole, 1);
+            plate.curves.append(hole);
+            surfaces.sketches_.append(plate);
+            surfaces.sketches_.append(circleSketch(QStringLiteral("Basso"), 0.0, 1.0));
+            surfaces.sketches_.append(circleSketch(QStringLiteral("Alto"), 2.0, 2.0));
+            SketchObject path;
+            path.name = QStringLiteral("Percorso");
+            path.plane = 1;  // XZ: la seconda coordinata e' Z
+            addSegment(path, {0, 0}, {0, 3});
+            surfaces.sketches_.append(path);
+
+            ExtrusionObject planar;
+            planar.feature = BodyFeature::PlanarSurface;
+            planar.sketchIndex = 0;
+            planar.name = QStringLiteral("Planare");
+            require(surfaces.createBody(planar).isEmpty(), "superficie planare da uno schizzo");
+            require(surfaces.extrusions_.back().forgeBody->isSheet() && std::fabs(area(surfaces.extrusions_.back()) - (12.0 - M_PI * 0.25)) < 1e-9,
+                    "area della lastra con il foro");
+
+            const double slant = std::sqrt(4.0 + 1.0), frustum = M_PI * 3.0 * slant;
+            ExtrusionObject ruled;
+            ruled.feature = BodyFeature::Ruled;
+            GeometryRef low, high;
+            low.kind = high.kind = 7;
+            low.index = 1;
+            high.index = 2;
+            low.element = high.element = ConstraintRef{1, 0, -1};
+            ruled.ruledFirst = {low};
+            ruled.ruledSecond = {high};
+            ruled.name = QStringLiteral("Rigata");
+            require(surfaces.createBody(ruled).isEmpty(), "superficie rigata tra due cerchi di schizzi");
+            require(surfaces.extrusions_.back().forgeBody->isSheet() && std::fabs(area(surfaces.extrusions_.back()) - frustum) < 1e-8,
+                    "area del tronco di cono rigato");
+
+            ExtrusionObject loft;
+            loft.feature = BodyFeature::Loft;
+            loft.loftSketches = {1, 2};
+            loft.loftRuled = true;
+            loft.loftSurface = true;
+            loft.name = QStringLiteral("Tubo");
+            require(surfaces.createBody(loft).isEmpty(), "loft di superfici");
+            require(surfaces.extrusions_.back().forgeBody->isSheet() && std::fabs(area(surfaces.extrusions_.back()) - frustum) < 1e-8,
+                    "loft di superfici: tubo senza coperchi");
+
+            ExtrusionObject sweep;
+            sweep.feature = BodyFeature::Sweep;
+            sweep.sketchIndex = 1;
+            sweep.pathSketch = 3;
+            sweep.sweepSurface = true;
+            sweep.name = QStringLiteral("Canna");
+            require(surfaces.createBody(sweep).isEmpty(), "sweep di superfici");
+            require(surfaces.extrusions_.back().forgeBody->isSheet() && std::fabs(area(surfaces.extrusions_.back()) - 2.0 * M_PI * 3.0) < 1e-8,
+                    "sweep di superfici: cilindro senza coperchi");
+
+            // Planare dai bordi superiori di un parallelepipedo (riferimenti agli spigoli).
+            PrimitiveParameters block;
+            block.size[0] = 4.0;
+            block.size[1] = 3.0;
+            block.size[2] = 2.0;
+            require(surfaces.createPrimitive(block, QStringLiteral("Blocco")).isEmpty(), "blocco per la planare");
+            const int blockIndex = int(surfaces.extrusions_.size()) - 1;
+            const Body &blockBody = *surfaces.extrusions_.at(blockIndex).forgeBody;
+            ExtrusionObject lid;
+            lid.feature = BodyFeature::PlanarSurface;
+            lid.sketchIndex = -1;
+            for (EdgeId e : blockBody.edges()) {
+                const Edge &edge = blockBody.edge(e);
+                const Vec3 middle = edge.curve->point(0.5 * (edge.range.lo + edge.range.hi));
+                if (std::fabs(middle.z() - 2.0) > 1e-9) continue;
+                GeometryRef ref;
+                ref.kind = 4;
+                ref.index = blockIndex;
+                ref.featureId = surfaces.extrusions_.at(blockIndex).featureId;
+                ref.point = ForgeCad::edgeReference(blockBody, e, middle);
+                lid.planarRefs.append(ref);
+            }
+            require(lid.planarRefs.size() == 4, "quattro bordi superiori");
+            lid.name = QStringLiteral("Coperchio");
+            require(surfaces.createBody(lid).isEmpty(), "superficie planare dai bordi");
+            require(std::fabs(area(surfaces.extrusions_.back()) - 12.0) < 1e-9, "area del coperchio");
+
+            // Undo/Redo della creazione e salvataggio/lettura nel formato 24.
+            const int count = int(surfaces.extrusions_.size());
+            surfaces.undo();
+            require(surfaces.extrusions_.size() == count - 1, "annulla la superficie planare");
+            surfaces.redo();
+            require(surfaces.extrusions_.size() == count && surfaces.extrusions_.back().forgeBody, "ripete la superficie planare");
+            QTemporaryDir directory;
+            const QString file = directory.filePath(QStringLiteral("superfici24.prt"));
+            require(saveDocumentFile(file, surfaces.currentDocument(), false).isEmpty(), "salvataggio formato 24");
+            DocumentState reloaded;
+            require(loadDocumentFile(file, reloaded).isEmpty(), "lettura formato 24");
+            require(reloaded.extrusions.at(1).ruledFirst.size() == 1 && reloaded.extrusions.at(1).ruledSecond.size() == 1
+                        && reloaded.extrusions.at(2).loftSurface && reloaded.extrusions.at(3).sweepSurface
+                        && reloaded.extrusions.back().planarRefs.size() == 4,
+                    "campi delle superfici nel documento");
+            CadViewport again;
+            again.loadDocument(reloaded);
+            for (int k = 0; k < again.extrusions_.size(); ++k)
+                require(again.extrusions_.at(k).forgeBody != nullptr, "superfici rigenerate dopo la lettura");
+            require(std::fabs(area(again.extrusions_.at(1)) - frustum) < 1e-8 && std::fabs(area(again.extrusions_.back()) - 12.0) < 1e-9,
+                    "aree dopo la lettura");
+        }
+        // Rivoluzione di un profilo aperto (superficie) e bordo libero intero
+        // di una superficie come loop per la planare.
+        {
+            using namespace ForgeCad::Kernel;
+            CadViewport v;
+            const auto addSegment = [](SketchObject &sketch, QPointF a, QPointF b) {
+                sketch.segments.append({a, b});
+                sketch.constraints.append(-1);
+                sketch.segmentLengths.append(0.0);
+                sketch.segmentAngles.append(-1.0);
+            };
+            const auto area = [](const ExtrusionObject &body) {
+                double total = 0.0;
+                for (FaceId f : body.forgeBody->faces()) total += faceArea(*body.forgeBody, f);
+                return total;
+            };
+            SketchObject profile;
+            profile.name = QStringLiteral("Profilo");
+            profile.plane = 1;
+            addSegment(profile, {0, 0}, {0, 4});  // asse
+            profile.constructionSegments.append(0);
+            addSegment(profile, {1, 0}, {2, 0});  // corona piana
+            addSegment(profile, {2, 0}, {2, 3});  // cilindro
+            v.sketches_.append(profile);
+            require(v.createRevolution(0, 0, 360.0, QStringLiteral("Vaso")).isEmpty(), "rivoluzione di un profilo aperto");
+            const ExtrusionObject &vase = v.extrusions_.back();
+            require(vase.forgeBody->isSheet() && !vase.solid && std::fabs(area(vase) - 15.0 * M_PI) < 1e-8, "superficie di rivoluzione: area 15 pi");
+            require(v.createRevolution(0, 0, 90.0, QStringLiteral("Quarto")).isEmpty(), "rivoluzione parziale di un profilo aperto");
+            require(std::fabs(area(v.extrusions_.back()) - 15.0 * M_PI / 4.0) < 1e-8, "superficie di rivoluzione parziale");
+            // Il bordo del quarto e' un solo loop: da uno spigolo qualsiasi tutti gli spigoli di bordo.
+            const Body &quarter = *v.extrusions_.back().forgeBody;
+            int laminar = 0;
+            EdgeId some;
+            for (EdgeId e : quarter.edges())
+                if (quarter.isLaminar(e)) ++laminar, some = e;
+            require(ForgeCad::freeBoundaryLoop(quarter, some).size() == laminar, "loop del bordo libero del quarto");
+
+            // Planare chiusa sul bordo esterno di una lastra scelto da un solo spigolo.
+            SketchObject plate;
+            plate.name = QStringLiteral("Lastra");
+            addSegment(plate, {0, 0}, {4, 0});
+            addSegment(plate, {4, 0}, {4, 3});
+            addSegment(plate, {4, 3}, {0, 3});
+            addSegment(plate, {0, 3}, {0, 0});
+            v.sketches_.append(plate);
+            ExtrusionObject planarPlate;
+            planarPlate.feature = BodyFeature::PlanarSurface;
+            planarPlate.sketchIndex = 1;
+            planarPlate.name = QStringLiteral("Lastra piana");
+            require(v.createBody(planarPlate).isEmpty(), "lastra piana");
+            const int plateIndex = int(v.extrusions_.size()) - 1;
+            const Body &plateBody = *v.extrusions_.at(plateIndex).forgeBody;
+            EdgeId first = plateBody.edges().front();
+            const QVector<EdgePoint> loop = ForgeCad::freeBoundaryLoop(plateBody, first);
+            require(loop.size() == 4, "bordo libero della lastra: quattro spigoli");
+            ExtrusionObject lid;
+            lid.feature = BodyFeature::PlanarSurface;
+            lid.sketchIndex = -1;
+            for (const EdgePoint &point : loop) {
+                GeometryRef ref;
+                ref.kind = 4;
+                ref.index = plateIndex;
+                ref.featureId = v.extrusions_.at(plateIndex).featureId;
+                ref.point = point;
+                lid.planarRefs.append(ref);
+            }
+            lid.name = QStringLiteral("Chiusura");
+            require(v.createBody(lid).isEmpty(), "planare dal loop del bordo libero");
+            require(std::fabs(area(v.extrusions_.back()) - 12.0) < 1e-9, "area della chiusura dal loop");
+        }
+        // Revisione delle superfici: riferimenti alle entita' dopo un'eliminazione
+        // nello schizzo, feature che si staccano dal corpo di cui erano uno stadio.
+        {
+            const auto addSegment = [](SketchObject &sketch, QPointF a, QPointF b) {
+                sketch.segments.append({a, b});
+                sketch.constraints.append(-1);
+                sketch.segmentLengths.append(0.0);
+                sketch.segmentAngles.append(-1.0);
+            };
+            const auto minY = [](const ExtrusionObject &body) {
+                double y = 1e300;
+                for (auto v : body.forgeBody->vertices()) y = std::min(y, body.forgeBody->vertex(v).point.y());
+                return y;
+            };
+            {
+                CadViewport v;
+                SketchObject s;
+                s.name = QStringLiteral("S");
+                addSegment(s, {10, 10}, {11, 10});  // 0: estraneo
+                addSegment(s, {0, 0}, {4, 0});      // 1
+                addSegment(s, {0, 3}, {4, 3});      // 2
+                addSegment(s, {0, 6}, {4, 6});      // 3
+                v.sketches_.append(s);
+                ExtrusionObject r;
+                r.feature = BodyFeature::Ruled;
+                r.name = QStringLiteral("R");
+                GeometryRef a, b;
+                a.kind = b.kind = 7;
+                a.index = b.index = 0;
+                a.element = ConstraintRef{0, 1, -1};
+                b.element = ConstraintRef{0, 2, -1};
+                r.ruledFirst = {a};
+                r.ruledSecond = {b};
+                require(v.createBody(r).isEmpty(), "rigata tra due segmenti di uno schizzo");
+                v.activeSketch_ = 0;
+                v.sketchMode_ = true;
+                v.sketchSelections_ = {SketchElementSelection{0, 0}};
+                v.deleteSketchElements();
+                const ExtrusionObject &after = v.extrusions_.back();
+                require(after.ruledFirst.at(0).element.element == 0 && after.ruledSecond.at(0).element.element == 1 && after.forgeBody
+                            && std::fabs(minY(after)) < 1e-12,
+                        "la rigata segue le entita' rinumerate");
+                v.sketchSelections_ = {SketchElementSelection{0, 0}};
+                v.deleteSketchElements();
+                require(v.extrusions_.back().ruledFirst.at(0).element.element == -1 && !v.extrusions_.back().error.isEmpty(),
+                        "entita' eliminata: la rigata va in errore invece di passare a un'altra");
+            }
+            {
+                CadViewport v;
+                SketchObject circle;
+                circle.name = QStringLiteral("C");
+                circle.plane = kFacePlane;
+                CurveObject c;
+                c.tool = DrawingTool::Circle;
+                c.controlPoints = {QPointF(0, 0), QPointF(0.5, 0)};
+                ForgeCad::recalculateCurve(c, 1);
+                circle.curves.append(c);
+                v.sketches_.append(circle);
+                SketchObject path;
+                path.name = QStringLiteral("P");
+                path.plane = 1;
+                addSegment(path, {0, 0}, {0, 3});
+                v.sketches_.append(path);
+                PrimitiveParameters box;
+                box.size[0] = 4;
+                box.size[1] = 3;
+                box.size[2] = 1;
+                box.origin[0] = -2;
+                box.origin[1] = -1.5;
+                box.origin[2] = 0.7;
+                require(v.createPrimitive(box, QStringLiteral("Box")).isEmpty(), "blocco per la sweep fusa");
+                ExtrusionObject sw;
+                sw.feature = BodyFeature::Sweep;
+                sw.sketchIndex = 0;
+                sw.pathSketch = 1;
+                sw.name = QStringLiteral("Sw");
+                sw.mergeOperation = 1;
+                sw.mergeAuto = false;
+                sw.mergeBodies = {0};
+                require(v.createBody(sw).isEmpty() && !v.extrusions_.at(0).visible, "sweep fusa nel blocco");
+                ExtrusionObject edited = v.extrusions_.at(1);
+                edited.sweepSurface = true;
+                edited.mergeOperation = 0;
+                edited.mergeBodies.clear();
+                require(v.updateBody(1, edited).isEmpty(), "sweep resa superficie");
+                require(v.extrusions_.at(0).visible && v.extrusions_.at(1).visible
+                            && v.extrusions_.at(0).modelBodyId != v.extrusions_.at(1).modelBodyId,
+                        "il blocco torna un corpo visibile, la superficie un corpo a parte");
+            }
+            {
+                CadViewport v;
+                for (int k = 0; k < 3; ++k) {
+                    SketchObject s;
+                    s.name = QStringLiteral("Q%1").arg(k);
+                    const double x = 3.0 * k;
+                    addSegment(s, {x, 0}, {x + 1, 0});
+                    addSegment(s, {x + 1, 0}, {x + 1, 1});
+                    addSegment(s, {x + 1, 1}, {x, 1});
+                    addSegment(s, {x, 1}, {x, 0});
+                    v.sketches_.append(s);
+                    ExtrusionObject p;
+                    p.feature = BodyFeature::PlanarSurface;
+                    p.sketchIndex = k;
+                    p.name = QStringLiteral("PL%1").arg(k);
+                    require(v.createBody(p).isEmpty(), "planare per la cucitura");
+                }
+                ExtrusionObject sew;
+                sew.feature = BodyFeature::Sew;
+                sew.firstBody = 0;
+                sew.booleanTools = {1, 2};
+                sew.sewSolid = false;
+                sew.name = QStringLiteral("Sew");
+                require(v.createBody(sew).isEmpty(), "cucitura di tre superfici");
+                ExtrusionObject edited = v.extrusions_.at(3);
+                edited.firstBody = 1;
+                edited.booleanTools = {2};
+                require(v.updateBody(3, edited).isEmpty(), "cucitura senza la prima superficie");
+                require(v.extrusions_.at(0).visible && !v.extrusions_.at(1).visible
+                            && v.extrusions_.at(3).modelBodyId == v.extrusions_.at(1).modelBodyId,
+                        "la superficie tolta torna visibile, la cucitura passa al corpo della nuova prima");
+            }
+        }
+        // Calcolo lungo dei corpi: va in un thread, il ciclo di eventi continua
+        // (timer e ridisegni) e la finestra di avanzamento compare dopo il
+        // ritardo e si chiude alla fine; le eccezioni tornano al chiamante.
+        {
+            CadViewport responsive;
+            responsive.resize(320, 240);
+            responsive.show();
+            int starts = 0, ends = 0;
+            QString shownMessage;
+            responsive.setWorkCallback([&](bool begin, const QString &message, bool background) {
+                if (background) return;
+                (begin ? starts : ends)++;
+                if (begin) shownMessage = message;
+            });
+            int ticks = 0;
+            QTimer ticker;
+            QObject::connect(&ticker, &QTimer::timeout, [&] { ++ticks; });
+            ticker.start(20);
+            {
+                CadViewport::DeferredWork work(&responsive, QStringLiteral("Rigenerazione di prova..."));
+                responsive.runWhileResponsive([] { std::this_thread::sleep_for(std::chrono::milliseconds(600)); });
+                require(starts == 1 && ends == 0 && shownMessage == QStringLiteral("Rigenerazione di prova..."),
+                        "avanzamento mostrato durante un calcolo lungo");
+            }
+            require(ends == 1, "avanzamento chiuso alla fine del calcolo");
+            require(ticks >= 5, "ciclo di eventi attivo durante il calcolo nel thread");
+            {
+                CadViewport::DeferredWork work(&responsive, QStringLiteral("Breve"));
+                responsive.runWhileResponsive([] {});
+            }
+            require(starts == 1, "nessun avanzamento per i calcoli brevi");
+            bool thrown = false;
+            try {
+                responsive.runWhileResponsive([] { throw std::runtime_error("prova"); });
+            } catch (const std::runtime_error &) {
+                thrown = true;
+            }
+            require(thrown, "eccezione del thread riportata al chiamante");
+            ticker.stop();
+            responsive.close();
+        }
         // L'anteprima del raccordo conserva il B-rep esatto e la
         // tassellazione: OK deve promuoverli senza eseguire di nuovo il kernel.
         {
@@ -1210,8 +1787,7 @@ public:
             cachedBlock.size[0] = 4.0; cachedBlock.size[1] = 3.0; cachedBlock.size[2] = 2.0;
             require(cachedBlend.createPrimitive(cachedBlock, QStringLiteral("Base anteprima raccordo")).isEmpty(),
                     "base dell'anteprima raccordo");
-            require(foregroundStarts > 0 && foregroundStarts == foregroundEnds,
-                    "notifiche bilanciate per il calcolo sul thread principale");
+            require(foregroundStarts == foregroundEnds, "notifiche bilanciate per il calcolo sul thread principale");
             CadViewport loadedWithProgress;
             int loadedBodies = -1, totalBodies = -1;
             loadedWithProgress.loadDocument(cachedBlend.currentDocument(), [&](int completed, int total, const QString &) {
@@ -1279,6 +1855,30 @@ public:
                     "la conferma riusa il B-rep dell'anteprima");
             require(cachedBlend.extrusions_.back().display.vertices.size() == resultTriangles,
                     "la conferma riusa la tassellazione completa conservata con l'anteprima");
+
+            // Modifica senza cambiare valori: l'anteprima mostra la patch con le
+            // curve U/V dal body esistente (niente kernel) e la conferma lascia
+            // il corpo com'e'.
+            const int blendIndex = int(cachedBlend.extrusions_.size()) - 1;
+            const ExtrusionObject existing = cachedBlend.extrusions_.at(blendIndex);
+            require(cachedBlend.unchangedFeature(existing, blendIndex), "funzione non modificata riconosciuta");
+            cachedBlend.requestBlendPreview(existing.firstBody, existing.blendEdges, existing.blendSize, existing.blendChamfer,
+                                            blendIndex, existing.chamferSpec);
+            cachedBlend.startPreviewJob();
+            previewTimeout.restart();
+            while (cachedBlend.previewRunning_ && previewTimeout.elapsed() < 10000) QApplication::processEvents();
+            require(cachedBlend.preview_.valid && cachedBlend.preview_.geometry == existing.forgeBody,
+                    "l'anteprima della modifica riusa il B-rep del corpo");
+            require(!cachedBlend.preview_.display.vertices.isEmpty() && !cachedBlend.preview_.display.constructionCurves.isEmpty()
+                        && cachedBlend.preview_.display.vertices.size() < existing.display.vertices.size(),
+                    "patch in trasparenza con le curve U/V senza ricalcolo");
+            require(cachedBlend.updateBody(blendIndex, existing).isEmpty()
+                        && cachedBlend.extrusions_.at(blendIndex).forgeBody == existing.forgeBody,
+                    "conferma senza modifiche: corpo invariato");
+            ExtrusionObject changed = existing;
+            changed.blendSize = 0.3;
+            require(!cachedBlend.unchangedFeature(changed, blendIndex), "un valore cambiato richiede il calcolo");
+            cachedBlend.clearPreview();
         }
         std::cout << "Viewport: assi, piani, datum, Undo/Redo, riferimenti, vincoli, salvataggio e cache OK" << std::endl;
     }

@@ -7,9 +7,12 @@
 #include <limits>
 #include <map>
 #include <stdexcept>
+#include <cstdint>
 
+#include "fk_parallel.h"
 #include "fk_pcurve.h"
 #include "fk_predicates.h"
+#include "fk_surface_batch.h"
 #include "fk_surface_algo.h"
 
 namespace ForgeCad::Kernel {
@@ -444,6 +447,93 @@ struct ClosedRing {
     int cell = 0;
 };
 
+// Tabella dei lati (coppie di indici di vertici non negativi) a indirizzamento
+// aperto: il raffinamento la interroga milioni di volte e con std::map o
+// std::unordered_map (modulo per un primo a ogni accesso) era la parte piu'
+// lenta della tassellazione.
+template <class V>
+class EdgeTable {
+public:
+    using Key = std::pair<int, int>;
+
+    V *find(const Key &key) {
+        const std::size_t slot = locate(pack(key));
+        return slot == kNone ? nullptr : &values_[slot];
+    }
+    const V *find(const Key &key) const { return const_cast<EdgeTable *>(this)->find(key); }
+    bool count(const Key &key) const { return find(key) != nullptr; }
+    V &tryEmplace(const Key &key, const V &value) {
+        const std::uint64_t packed = pack(key);
+        const std::size_t found = locate(packed);
+        if (found != kNone) return values_[found];
+        if (keys_.empty() || 4 * (used_ + 1) > 3 * keys_.size()) grow();
+        std::size_t slot = start(packed);
+        while (keys_[slot] != kEmpty && keys_[slot] != kDeleted) slot = (slot + 1) & mask_;
+        if (keys_[slot] == kEmpty) ++used_;
+        keys_[slot] = packed;
+        values_[slot] = value;
+        ++size_;
+        return values_[slot];
+    }
+    void insert(const Key &key) { tryEmplace(key, V()); }
+    bool erase(const Key &key) {
+        const std::size_t slot = locate(pack(key));
+        if (slot == kNone) return false;
+        keys_[slot] = kDeleted;
+        --size_;
+        return true;
+    }
+    void clear() {
+        keys_.clear();
+        values_.clear();
+        size_ = used_ = 0;
+        mask_ = 0;
+    }
+    template <class F>
+    void forEachKey(const F &f) const {
+        for (std::uint64_t k : keys_)
+            if (k != kEmpty && k != kDeleted) f(Key(int(k >> 32), int(k & 0xffffffffu)));
+    }
+
+private:
+    static constexpr std::uint64_t kEmpty = ~std::uint64_t(0), kDeleted = ~std::uint64_t(0) - 1;
+    static constexpr std::size_t kNone = ~std::size_t(0);
+    static std::uint64_t pack(const Key &key) { return std::uint64_t(std::uint32_t(key.first)) << 32 | std::uint32_t(key.second); }
+    std::size_t start(std::uint64_t packed) const {
+        std::uint64_t h = packed * 0x9E3779B97F4A7C15ull;
+        h ^= h >> 29;
+        return std::size_t(h) & mask_;
+    }
+    std::size_t locate(std::uint64_t packed) const {
+        if (keys_.empty()) return kNone;
+        for (std::size_t slot = start(packed);; slot = (slot + 1) & mask_) {
+            if (keys_[slot] == packed) return slot;
+            if (keys_[slot] == kEmpty) return kNone;
+        }
+    }
+    void grow() {
+        std::size_t capacity = 16;
+        while (capacity < 2 * (size_ + 1)) capacity *= 2;
+        std::vector<std::uint64_t> keys(capacity, kEmpty);
+        std::vector<V> values(capacity);
+        keys.swap(keys_);
+        values.swap(values_);
+        mask_ = capacity - 1;
+        used_ = size_;
+        for (std::size_t i = 0; i < keys.size(); ++i) {
+            if (keys[i] == kEmpty || keys[i] == kDeleted) continue;
+            std::size_t slot = start(keys[i]);
+            while (keys_[slot] != kEmpty) slot = (slot + 1) & mask_;
+            keys_[slot] = keys[i];
+            values_[slot] = values[i];
+        }
+    }
+
+    std::vector<std::uint64_t> keys_;
+    std::vector<V> values_;
+    std::size_t size_ = 0, used_ = 0, mask_ = 0;
+};
+
 struct Cell {
     Vec2 lo, hi;
     Vec2 center() const { return 0.5 * (lo + hi); }
@@ -488,8 +578,9 @@ private:
     std::vector<Vec2> uv_;
     std::vector<Vec3> points_, normals_;
     std::vector<std::array<int, 3>> triangles_;
-    std::map<std::pair<int, int>, int> fixed_;  // lati del bordo (non si dividono ne' si scambiano)
-    std::map<std::pair<int, int>, std::array<int, 2>> adjacency_;  // triangoli ai due lati di ogni lato
+    EdgeTable<char> fixed_;  // lati del bordo (non si dividono ne' si scambiano)
+    EdgeTable<std::array<int, 2>> adjacency_;  // triangoli ai due lati di ogni lato
+    std::vector<std::pair<int, int>> fresh_;  // lati toccati da link() dall'ultimo giro del raffinamento
 
     int strips(int d) const { return int(cuts_[d].size()) - 1; }
     int cellCount() const { return strips(0) * strips(1); }
@@ -509,8 +600,9 @@ private:
     std::vector<BoundaryPoint> rectangle(const Cell &box);
     void triangulate(const std::vector<std::vector<BoundaryPoint>> &polygons, const Vec2 &center);
     int addVertex(const Vec2 &uv, const Vec3 &p, const Vec2 &center);
+    int addRefined(const Vec2 &uv, const Vec3 &p, const Vec3 &normal);
     Vec3 surfaceNormal(const Vec2 &uv, const Vec2 &center) const;
-    bool needsSplit(int a, int b) const;
+    void evaluateBatch(const std::vector<Vec2> &uv, std::vector<Vec3> &points, std::vector<Vec3> &normals) const;
     static std::pair<int, int> key(int a, int b) { return {std::min(a, b), std::max(a, b)}; }
     void link(int t);
     void unlink(int t);
@@ -1054,7 +1146,7 @@ void FaceTessellator::triangulate(const std::vector<std::vector<BoundaryPoint>> 
                 ids.push_back(id);
                 ring.push_back(scaled(polygon[i].uv));
                 const int next = i + 1 < polygon.size() ? id + 1 : first;
-                fixed_[key(id, next)] = 1;
+                fixed_.insert(key(id, next));
             }
         };
         addRing(polygons[outer], outerRing);
@@ -1067,32 +1159,46 @@ void FaceTessellator::triangulate(const std::vector<std::vector<BoundaryPoint>> 
     }
 }
 
-bool FaceTessellator::needsSplit(int a, int b) const {
-    const Vec3 &pa = points_[std::size_t(a)], &pb = points_[std::size_t(b)];
-    if (distance(pa, pb) <= 0.5 * options_.deflection) return false;
-    const Vec2 m = 0.5 * (uv_[std::size_t(a)] + uv_[std::size_t(b)]);
-    if (distanceToSegment(surface_.point(m[0], m[1]), pa, pb) > options_.deflection) return true;
-    return angleBetween(normals_[std::size_t(a)], normals_[std::size_t(b)]) > options_.angle;
+int FaceTessellator::addRefined(const Vec2 &uv, const Vec3 &p, const Vec3 &normal) {
+    uv_.push_back(uv);
+    points_.push_back(p);
+    normals_.push_back(squaredNorm(normal) == 0.0 ? surfaceNormal(uv, uv) : normal);
+    return int(uv_.size()) - 1;
+}
+
+// Punti dei parametri dati e, se l'acceleratore li da', le normali: con
+// l'acceleratore se il lotto e' abbastanza grande e la superficie e' sua,
+// altrimenti sulla CPU. Le normali mancanti (vettore nullo) si calcolano
+// sulla CPU quando il punto diventa un vertice (addRefined): la maggior parte
+// dei punti serve solo a decidere se dividere.
+void FaceTessellator::evaluateBatch(const std::vector<Vec2> &uv, std::vector<Vec3> &points, std::vector<Vec3> &normals) const {
+    points.resize(uv.size());
+    normals.assign(uv.size(), Vec3());
+    if (options_.accelerator && uv.size() >= options_.acceleratorMinimumBatch &&
+        options_.accelerator->evaluate(surface_, uv.data(), uv.size(), points.data(), normals.data()))
+        return;
+    for (std::size_t i = 0; i < uv.size(); ++i) points[i] = surface_.point(uv[i][0], uv[i][1]);
 }
 
 void FaceTessellator::link(int t) {
     for (int k = 0; k < 3; ++k) {
         const int a = triangles_[std::size_t(t)][std::size_t(k)], b = triangles_[std::size_t(t)][std::size_t((k + 1) % 3)];
-        std::array<int, 2> &sides = adjacency_.try_emplace(key(a, b), std::array<int, 2>{-1, -1}).first->second;
+        std::array<int, 2> &sides = adjacency_.tryEmplace(key(a, b), std::array<int, 2>{-1, -1});
         (sides[0] < 0 ? sides[0] : sides[1]) = t;
+        fresh_.push_back(key(a, b));
     }
 }
 
 void FaceTessellator::unlink(int t) {
     for (int k = 0; k < 3; ++k) {
         const int a = triangles_[std::size_t(t)][std::size_t(k)], b = triangles_[std::size_t(t)][std::size_t((k + 1) % 3)];
-        auto found = adjacency_.find(key(a, b));
-        if (found == adjacency_.end()) continue;
-        std::array<int, 2> &sides = found->second;
+        std::array<int, 2> *found = adjacency_.find(key(a, b));
+        if (!found) continue;
+        std::array<int, 2> &sides = *found;
         if (sides[0] == t) sides[0] = sides[1];
         else if (sides[1] != t) continue;
         sides[1] = -1;
-        if (sides[0] < 0) adjacency_.erase(found);
+        if (sides[0] < 0) adjacency_.erase(key(a, b));
     }
 }
 
@@ -1110,9 +1216,9 @@ void FaceTessellator::legalize(std::vector<std::pair<int, int>> &pending) {
         const std::pair<int, int> edge = pending.back();
         pending.pop_back();
         if (fixed_.count(edge)) continue;
-        auto found = adjacency_.find(edge);
-        if (found == adjacency_.end() || found->second[1] < 0) continue;
-        const int t1 = found->second[0], t2 = found->second[1];
+        const std::array<int, 2> *found = adjacency_.find(edge);
+        if (!found || (*found)[1] < 0) continue;
+        const int t1 = (*found)[0], t2 = (*found)[1];
         auto corner = [&](int t, int &p, int &q, int &c) {
             const std::array<int, 3> &tri = triangles_[std::size_t(t)];
             for (int k = 0; k < 3; ++k)
@@ -1148,39 +1254,98 @@ void FaceTessellator::legalize(std::vector<std::pair<int, int>> &pending) {
 void FaceTessellator::refine() {
     constexpr std::size_t kMaxVertices = 200000;
     adjacency_.clear();
+    fresh_.clear();
     for (std::size_t t = 0; t < triangles_.size(); ++t) link(int(t));
     std::vector<std::pair<int, int>> pending;
-    for (const auto &entry : adjacency_) pending.push_back(entry.first);
+    adjacency_.forEachKey([&](const std::pair<int, int> &edge) { pending.push_back(edge); });
+    std::sort(pending.begin(), pending.end());  // ordine che non dipende dalla tabella
     legalize(pending);
+    // A ogni giro i punti medi dei lati e i baricentri da provare si valutano
+    // in un lotto solo (anche sulla GPU), poi si decide e si divide: il punto
+    // valutato diventa il vertice nuovo.
+    struct Candidate {
+        double length;
+        std::pair<int, int> edge;
+        std::size_t sample;
+    };
+    // La decisione su un lato dipende solo dai suoi estremi, che non si
+    // muovono: si prende una volta (i lati che restano dopo gli scambi non si
+    // rivalutano a ogni giro). Per quelli da dividere si tiene il punto medio.
+    struct Split {
+        Vec2 uv;
+        Vec3 point, normal;
+    };
+    EdgeTable<char> accepted;
+    EdgeTable<Split> splits;
+    std::vector<Vec2> samples;
+    std::vector<Vec3> evaluated, evaluatedNormals;
     for (int round = 0; round < 60 && uv_.size() < kMaxVertices; ++round) {
-        struct Candidate {
-            double length;
-            std::pair<int, int> edge;
-        };
+        std::vector<Candidate> edges;
+        std::vector<std::pair<int, std::size_t>> faces;
         std::vector<Candidate> candidates;
-        for (const auto &entry : adjacency_) {
-            if (entry.second[1] < 0 || fixed_.count(entry.first)) continue;
-            if (needsSplit(entry.first.first, entry.first.second))
-                candidates.push_back({distance(points_[std::size_t(entry.first.first)], points_[std::size_t(entry.first.second)]), entry.first});
+        samples.clear();
+        // Solo i lati nati o cambiati dall'ultimo giro (e quelli da dividere
+        // rimandati): gli altri hanno gia' la loro decisione.
+        // L'ordine non conta: i candidati si ordinano per lunghezza e per lato.
+        std::vector<std::pair<int, int>> work;
+        work.swap(fresh_);
+        EdgeTable<char> queued;
+        for (const std::pair<int, int> &edge : work) {
+            const std::array<int, 2> *found = adjacency_.find(edge);
+            if (!found || (*found)[1] < 0 || fixed_.count(edge) || accepted.count(edge) || queued.count(edge)) continue;
+            queued.insert(edge);
+            const int a = edge.first, b = edge.second;
+            const double length = distance(points_[std::size_t(a)], points_[std::size_t(b)]);
+            if (splits.count(edge)) {
+                candidates.push_back({length, edge, 0});
+                continue;
+            }
+            if (length <= 0.5 * options_.deflection) {
+                accepted.insert(edge);
+                continue;
+            }
+            edges.push_back({length, edge, samples.size()});
+            samples.push_back(0.5 * (uv_[std::size_t(a)] + uv_[std::size_t(b)]));
         }
-        std::vector<int> centroids;
-        for (std::size_t t = 0; t < triangles_.size(); ++t) {
+        // I triangoli di soli lati del bordo vengono dalla triangolazione
+        // iniziale (i lati nuovi sono interni): si provano al primo giro.
+        for (std::size_t t = 0; round == 0 && t < triangles_.size(); ++t) {
             const std::array<int, 3> &tri = triangles_[t];
             if (!fixed_.count(key(tri[0], tri[1])) || !fixed_.count(key(tri[1], tri[2])) || !fixed_.count(key(tri[2], tri[0]))) continue;
-            const Vec2 c = (uv_[std::size_t(tri[0])] + uv_[std::size_t(tri[1])] + uv_[std::size_t(tri[2])]) / 3.0;
+            faces.push_back({int(t), samples.size()});
+            samples.push_back((uv_[std::size_t(tri[0])] + uv_[std::size_t(tri[1])] + uv_[std::size_t(tri[2])]) / 3.0);
+        }
+        if (samples.empty() && candidates.empty()) break;
+        evaluateBatch(samples, evaluated, evaluatedNormals);
+
+        for (const Candidate &edge : edges) {
+            const int a = edge.edge.first, b = edge.edge.second;
+            if (distanceToSegment(evaluated[edge.sample], points_[std::size_t(a)], points_[std::size_t(b)]) > options_.deflection ||
+                angleBetween(normals_[std::size_t(a)], normals_[std::size_t(b)]) > options_.angle) {
+                splits.tryEmplace(edge.edge, Split{samples[edge.sample], evaluated[edge.sample], evaluatedNormals[edge.sample]});
+                candidates.push_back(edge);
+            } else {
+                accepted.insert(edge.edge);
+            }
+        }
+        std::vector<std::pair<int, std::size_t>> centroids;
+        for (const std::pair<int, std::size_t> &face : faces) {
             // Distanza dal piano del triangolo.
+            const std::array<int, 3> &tri = triangles_[std::size_t(face.first)];
             const Vec3 &a = points_[std::size_t(tri[0])], &b = points_[std::size_t(tri[1])], &d = points_[std::size_t(tri[2])];
             const Vec3 n = cross(b - a, d - a);
             const double length = norm(n);
-            if (length > 0.0 && std::fabs(dot(surface_.point(c[0], c[1]) - a, n)) / length > options_.deflection) centroids.push_back(int(t));
+            if (length > 0.0 && std::fabs(dot(evaluated[face.second] - a, n)) / length > options_.deflection) centroids.push_back(face);
         }
         if (candidates.empty() && centroids.empty()) break;
-        std::sort(candidates.begin(), candidates.end(), [](const Candidate &a, const Candidate &b) { return a.length > b.length; });
+        std::sort(candidates.begin(), candidates.end(), [](const Candidate &a, const Candidate &b) {
+            return a.length != b.length ? a.length > b.length : a.edge < b.edge;
+        });
         std::vector<bool> touched(triangles_.size(), false);
-        for (int t : centroids) {
+        for (const std::pair<int, std::size_t> &centroid : centroids) {
+            const int t = centroid.first;
             const std::array<int, 3> tri = triangles_[std::size_t(t)];
-            const Vec2 c = (uv_[std::size_t(tri[0])] + uv_[std::size_t(tri[1])] + uv_[std::size_t(tri[2])]) / 3.0;
-            const int m = addVertex(c, surface_.point(c[0], c[1]), c);
+            const int m = addRefined(samples[centroid.second], evaluated[centroid.second], evaluatedNormals[centroid.second]);
             unlink(t);
             triangles_[std::size_t(t)] = {tri[0], tri[1], m};
             triangles_.push_back({tri[1], tri[2], m});
@@ -1192,15 +1357,18 @@ void FaceTessellator::refine() {
             for (int k = 0; k < 3; ++k) pending.push_back(key(tri[std::size_t(k)], tri[std::size_t((k + 1) % 3)]));
         }
         for (const Candidate &candidate : candidates) {
-            auto found = adjacency_.find(candidate.edge);
-            if (found == adjacency_.end() || found->second[1] < 0) continue;
-            const int t1 = found->second[0], t2 = found->second[1];
+            const std::array<int, 2> *found = adjacency_.find(candidate.edge);
+            if (!found || (*found)[1] < 0) continue;
+            const int t1 = (*found)[0], t2 = (*found)[1];
             if (touched.size() < triangles_.size()) touched.resize(triangles_.size(), true);  // nuovi in questo giro
-            if (touched[std::size_t(t1)] || touched[std::size_t(t2)]) continue;
+            if (touched[std::size_t(t1)] || touched[std::size_t(t2)]) {
+                fresh_.push_back(candidate.edge);  // al prossimo giro
+                continue;
+            }
             touched[std::size_t(t1)] = touched[std::size_t(t2)] = true;
-            const int a = candidate.edge.first, b = candidate.edge.second;
-            const Vec2 uv = 0.5 * (uv_[std::size_t(a)] + uv_[std::size_t(b)]);
-            const int m = addVertex(uv, surface_.point(uv[0], uv[1]), uv);
+            const Split split = *splits.find(candidate.edge);
+            splits.erase(candidate.edge);
+            const int m = addRefined(split.uv, split.point, split.normal);
             for (int t : {t1, t2}) {
                 const std::array<int, 3> tri = triangles_[std::size_t(t)];
                 int k = 0;
@@ -1540,13 +1708,23 @@ Tessellation tessellate(const Body &input, const TessellationOptions &options) {
         result.edges.push_back(std::move(polyline));
         result.edgeIds.push_back(e);
     }
-    for (FaceId f : body.faces()) {
+    // Facce indipendenti (leggono solo il body e i campioni degli edge): in
+    // parallelo, raccolte nell'ordine delle facce.
+    std::vector<FaceId> faces;
+    for (FaceId f : body.faces()) faces.push_back(f);
+    std::vector<FaceMesh> meshes(faces.size());
+    std::vector<char> failed(faces.size(), 0);
+    parallelFor(faces.size(), faces.size() < 4 ? 1u : threadCount(options.threads), [&](std::size_t i) {
         try {
-            if (!body.face(f).surface) throw std::invalid_argument("tessellate: faccia senza superficie");
-            result.faces.push_back(FaceTessellator(body, f, edgeSamples, options).run());
+            if (!body.face(faces[i]).surface) throw std::invalid_argument("tessellate: faccia senza superficie");
+            meshes[i] = FaceTessellator(body, faces[i], edgeSamples, options).run();
         } catch (const std::exception &) {
-            ++result.failedFaces;
+            failed[i] = 1;
         }
+    });
+    for (std::size_t i = 0; i < faces.size(); ++i) {
+        if (failed[i]) ++result.failedFaces;
+        else result.faces.push_back(std::move(meshes[i]));
     }
     return result;
 }

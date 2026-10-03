@@ -1,3 +1,4 @@
+#include <atomic>
 #include "fk_body_check.h"
 #include "fk_boolean.h"
 #include "fk_classify.h"
@@ -6,6 +7,7 @@
 #include "fk_primitives.h"
 #include "fk_revolve.h"
 #include "fk_surface_algo.h"
+#include "fk_surface_batch.h"
 #include "fk_tessellate.h"
 #include "fk_test_profiles.h"
 
@@ -369,5 +371,63 @@ FK_TEST(TessellateThinBandAcrossPeriods) {
             FK_CHECK_NEAR(area, faceArea(body, face.face), 0.02 * faceArea(body, face.face));
         }
         FK_CHECK(bands == 1);
+    }
+}
+
+// Facce in parallelo e valutazione a lotti (l'interfaccia dell'acceleratore
+// CUDA dell'app): la mesh non dipende dal numero di thread, e un acceleratore
+// che da' gli stessi valori della CPU (o che rifiuta le superfici) non la cambia.
+FK_TEST(TessellateThreadsAndBatchEvaluator) {
+    struct CpuEvaluator final : SurfaceBatchEvaluator {
+        bool accept = true;
+        std::atomic<std::size_t> points{0}, smallest{~std::size_t(0)};
+        bool evaluate(const Surface &surface, const Vec2 *uv, std::size_t count, Vec3 *out, Vec3 *normals) override {
+            if (!accept) return false;
+            for (std::size_t i = 0; i < count; ++i) {
+                out[i] = surface.point(uv[i][0], uv[i][1]);
+                try {
+                    normals[i] = surface.normal(uv[i][0], uv[i][1]);
+                } catch (const std::exception &) {
+                    normals[i] = Vec3();
+                }
+            }
+            points += count;
+            for (std::size_t s = smallest; count < s && !smallest.compare_exchange_weak(s, count);) {
+            }
+            return true;
+        }
+    };
+    std::vector<ProfileSegment> segments = roundedRectangle(Vec2(-10, -6), 20.0, 12.0, 2.5);
+    segments.push_back(closedSpline(Vec2(-3, 0), 2.5, true));
+    segments.push_back(arcSegment(Vec2(5, 0), 2.0, 0.0, kTwoPi));
+    const Body body = makeExtrusion(Frame3(), buildProfile(segments, 1e-6).regions.front(), 5.0);
+    const Body sphere = makeSphere(Frame3(Vec3(1, 2, 3), Vec3(0.2, -0.3, 1), Vec3(1, 0, 0)), 4.0);
+    const auto same = [](const Tessellation &a, const Tessellation &b) {
+        if (a.faces.size() != b.faces.size() || a.failedFaces != b.failedFaces) return false;
+        for (std::size_t f = 0; f < a.faces.size(); ++f) {
+            const FaceMesh &x = a.faces[f], &y = b.faces[f];
+            if (x.face != y.face || x.triangles != y.triangles || x.points.size() != y.points.size()) return false;
+            for (std::size_t i = 0; i < x.points.size(); ++i)
+                if (distance(x.points[i], y.points[i]) != 0.0 || distance(x.normals[i], y.normals[i]) != 0.0) return false;
+        }
+        return true;
+    };
+    for (const Body *input : {&body, &sphere}) {
+        TessellationOptions options;
+        options.deflection = 0.002;
+        options.angle = 0.1;
+        options.threads = 1;
+        const Tessellation serial = tessellate(*input, options);
+        FK_CHECK(serial.failedFaces == 0);
+        options.threads = 0;
+        FK_CHECK(same(serial, tessellate(*input, options)));
+        CpuEvaluator evaluator;
+        options.accelerator = &evaluator;
+        options.acceleratorMinimumBatch = 16;
+        FK_CHECK(same(serial, tessellate(*input, options)));
+        FK_CHECK(evaluator.points > 0);
+        FK_CHECK(evaluator.smallest >= 16);
+        evaluator.accept = false;
+        FK_CHECK(same(serial, tessellate(*input, options)));
     }
 }

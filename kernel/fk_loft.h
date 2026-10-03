@@ -55,10 +55,33 @@ struct LoftOptions {
     double endInfluence = 1.0;
 };
 
+// Solido: tutte le sezioni chiuse, facce di testa piane.
 Body loftSolid(const std::vector<LoftSection> &sections, bool ruled = false);
-Body loftSheet(const std::vector<LoftSection> &sections, bool ruled = false);
 Body loftSolid(const std::vector<LoftSection> &sections, const LoftOptions &options);
+
+// Lamina (Body::buildSheet). Sezioni tutte aperte: superficie tra le catene.
+// Sezioni tutte chiuse: tubo senza coperchi, con la stessa corrispondenza dei
+// loop del solido (verso, partenza, guide, continuita' G0/G1/G2); le sue facce
+// laterali coincidono con quelle di loftSolid sulle stesse sezioni. Sezioni
+// miste (chiuse e aperte): std::domain_error.
+Body loftSheet(const std::vector<LoftSection> &sections, bool ruled = false);
 Body loftSheet(const std::vector<LoftSection> &sections, const LoftOptions &options);
+
+// Superficie rigata tra due catene 3D qualsiasi (spigoli, curve di schizzi su
+// piani diversi, eliche: le HelixCurve si usano come la loro B-spline entro
+// 1e-9), non necessariamente piane. I tratti di ogni catena sono consecutivi
+// ma in verso qualsiasi: si concatenano per estremi entro 1e-6 della scala.
+// Le due catene sono entrambe aperte o entrambe chiuse (altrimenti
+// std::domain_error). Corrispondenza come il loft rigato: stesso numero di
+// tratti -> tratto con tratto, altrimenti divisione nell'unione delle frazioni
+// di ascissa curvilinea dei vertici. Verso: catene aperte con l'inizio della
+// seconda dalla parte dell'inizio della prima (minimo di |A0-B0| + |A1-B1|);
+// catene chiuse con lo stesso verso di rotazione (normali di Newell) e la
+// partenza della seconda nel punto piu' vicino alla partenza della prima.
+// Superficie esatta: lineare in v tra le righe dei poli omogenei dei tratti
+// (piano esatto dove le pezze sono piane). Lamina: spigoli = le due curve
+// (stesso tipo) e le rette nei vertici corrispondenti.
+Body ruledSurface(const std::vector<PathSegment> &first, const std::vector<PathSegment> &second);
 
 }
 

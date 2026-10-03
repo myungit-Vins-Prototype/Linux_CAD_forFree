@@ -59,6 +59,22 @@ Body sweepRegions(const Frame3 &profileFrame, const std::vector<ProfileRegion> &
 Body sweepChains(const Frame3 &profileFrame, const std::vector<ProfileLoop> &chains, const std::vector<PathSegment> &path,
                  SweepOrientation orientation = SweepOrientation::MinimalTwist);
 
+// Lamina generale: loop chiusi e catene aperte, anche insieme, lungo il
+// percorso; mai coperchi. Un loop e' chiuso se la fine dell'ultimo tratto
+// torna all'inizio del primo entro 1e-6 della sua misura (almeno 1e-6):
+// diventa un tubo aperto alle estremita', orientato come il contorno dei
+// solidi (antiorario attorno alla normale di `profileFrame`, cosi' le normali
+// delle facce escono dal tubo); un loop di una sola curva chiusa si divide in
+// due tratti come in sweepRegions. Le catene aperte sono trattate come in
+// sweepChains (se il profilo ha solo catene il risultato coincide con
+// sweepChains). Ogni loop o catena da' una shell. Su un percorso chiuso un
+// loop chiuso da' una shell chiusa senza bordo (un toro come lamina: region
+// non solida, isSheet() vero); per il solido racchiuso usare sweepRegions.
+// std::domain_error come gli altri sweep; inoltre con loop chiusi il percorso
+// deve uscire dal piano del profilo e il loop deve avere area non nulla.
+Body sweepSheet(const Frame3 &profileFrame, const std::vector<ProfileLoop> &loops, const std::vector<PathSegment> &path,
+                SweepOrientation orientation = SweepOrientation::MinimalTwist);
+
 }
 
 #endif
