@@ -233,6 +233,7 @@ QString featureType(const ExtrusionObject &feature) {
     case BodyFeature::DeleteFace: return QStringLiteral("Elimina facce");
     case BodyFeature::BoundarySurface: return QStringLiteral("Superficie tra curve");
     case BodyFeature::Shell: return QStringLiteral("Guscio");
+    case BodyFeature::Thread: return QStringLiteral("Filettatura");
     }
     return QStringLiteral("Feature");
 }
@@ -368,6 +369,10 @@ QVector<Dependency> dependencies(int index, const DocumentState &document) {
     case BodyFeature::Shell:
         addBodyDependency(result, features, index, feature.firstBody,
                           QStringLiteral("solido • spessore %1 • %2 facce aperte").arg(feature.distance).arg(feature.offsetFaces.size()));
+        break;
+    case BodyFeature::Thread:
+        addBodyDependency(result, features, index, feature.firstBody,
+                          QStringLiteral("faccia • passo %1 • lunghezza %2").arg(feature.thread.pitch).arg(feature.thread.length));
         break;
     case BodyFeature::DeleteFace:
         addBodyDependency(result, features, index, feature.firstBody, QStringLiteral("corpo • %1 facce tolte").arg(feature.offsetFaces.size()));

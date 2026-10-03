@@ -20,6 +20,7 @@
 #include "fk_classify.h"
 #include "fk_extrude.h"
 #include "fk_curve_algo.h"
+#include "fk_helix.h"
 #include "fk_loft.h"
 #include "fk_sweep.h"
 #include "fk_intersect.h"
@@ -51,6 +52,33 @@ QVector3D toDisplay(const Vec3 &v) { return QVector3D(float(v.x()), float(v.y())
 
 ProfileSegment lineSegment(const Vec2 &a, const Vec2 &b) {
     return {std::make_shared<Line<2>>(a, b - a), {0.0, distance(a, b)}};
+}
+
+// Utensile CAD lungo l'elica esatta. Lo sweep genera poche superfici B-spline
+// continue per l'intera lunghezza: la tassellazione resta una proprieta'
+// della vista/export e non entra nella B-rep usata dalle lavorazioni.
+Body sweptHelicalTool(const std::shared_ptr<const HelixCurve> &helix, std::vector<Vec2> polygon,
+                      const Frame3 &profileFrame) {
+    double area = 0.0;
+    for (std::size_t j = 0; j < polygon.size(); ++j) area += cross(polygon[j], polygon[(j + 1) % polygon.size()]);
+    if (area < 0.0) std::reverse(polygon.begin(), polygon.end());
+    ProfileRegion region;
+    for (std::size_t j = 0; j < polygon.size(); ++j)
+        region.outer.segments.push_back(lineSegment(polygon[j], polygon[(j + 1) % polygon.size()]));
+    // Una sola pezza lunga molti giri e' geometricamente corretta, ma rende
+    // molto mal condizionata e lenta l'intersezione B-spline/cilindro. Pezze
+    // di un quarto di giro condividono posizione e tangente (G1), conservano
+    // la stessa elica esatta e hanno domini ben condizionati per le booleane.
+    std::vector<PathSegment> path;
+    const Interval domain = helix->domain();
+    const int spans = std::max(1, int(std::ceil(domain.length() / kHalfPi)));
+    path.reserve(std::size_t(spans));
+    for (int span = 0; span < spans; ++span) {
+        const double lo = domain.lo + domain.length() * span / spans;
+        const double hi = domain.lo + domain.length() * (span + 1) / spans;
+        path.push_back({helix, {lo, hi}});
+    }
+    return sweepRegions(profileFrame, {region}, path, SweepOrientation::Frenet);
 }
 
 }
@@ -623,6 +651,127 @@ bool forgeHelixBase(const Body &body, int source, const EdgePoint &point, HelixB
     } catch (const std::exception &failure) {
         setError(error, QString::fromUtf8(failure.what()));
         return false;
+    }
+}
+
+bool forgeThreadFaceInfo(const Body &body, const EdgePoint &reference, ThreadFaceInfo &info, QString *error) {
+    info = {};
+    try {
+        const FaceId face = resolveFaceReference(body, reference, std::numeric_limits<double>::max());
+        if (!face.valid()) throw std::domain_error("la faccia scelta non esiste piu'");
+        const Face &data = body.face(face);
+        if (!data.surface || (data.surface->type() != SurfaceType::Cylinder && data.surface->type() != SurfaceType::Cone)) {
+            setError(error, QStringLiteral("Scegli una faccia cilindrica o conica."));
+            return false;
+        }
+        HelixBase base;
+        if (!forgeHelixBase(body, 2, reference, base, error)) return false;
+        info.diameter = 2.0 * base.radius;
+        info.length = base.length;
+        info.taper = base.taper;
+        info.conical = base.hasTaper;
+        // La normale naturale di cilindro e cono punta radialmente all'esterno:
+        // una faccia con verso opposto delimita quindi un foro.
+        info.internal = !data.sense;
+        return true;
+    } catch (const std::exception &failure) {
+        setError(error, QString::fromUtf8(failure.what()));
+        return false;
+    }
+}
+
+ForgeBody forgeThread(const ForgeBody &baseBody, const ThreadParameters &parameters, QString *error) {
+    if (!baseBody) {
+        setError(error, QStringLiteral("Il corpo da filettare non ha geometria valida."));
+        return nullptr;
+    }
+    if (baseBody->isSheet()) {
+        setError(error, QStringLiteral("La filettatura richiede un solido."));
+        return nullptr;
+    }
+    if (!(parameters.pitch > 1.0e-7) || !std::isfinite(parameters.pitch)) {
+        setError(error, QStringLiteral("Il passo della filettatura non e' valido."));
+        return nullptr;
+    }
+    try {
+        ThreadFaceInfo info;
+        if (!forgeThreadFaceInfo(*baseBody, parameters.face, info, error)) return nullptr;
+        const bool taperedStandard = parameters.standard == 4 || parameters.standard == 5;
+        if (taperedStandard && !info.conical) {
+            setError(error, QStringLiteral("BSPT e NPT richiedono una faccia conica (conicita' nominale 1:16 sul diametro)."));
+            return nullptr;
+        }
+        if (!taperedStandard && info.conical) {
+            setError(error, QStringLiteral("Questo standard richiede una faccia cilindrica; per una faccia conica scegli BSPT o NPT."));
+            return nullptr;
+        }
+        const double nominalTaper = std::atan(1.0 / 32.0);
+        if (taperedStandard && std::fabs(std::fabs(info.taper) - nominalTaper) > 0.01) {
+            setError(error, QStringLiteral("La conicita' della faccia non corrisponde a 1:16 sul diametro (BSPT/NPT)."));
+            return nullptr;
+        }
+
+        HelixBase base;
+        if (!forgeHelixBase(*baseBody, 2, parameters.face, base, error)) return nullptr;
+        double length = parameters.length > 0.0 ? parameters.length : base.length;
+        if (!(length > 1.0e-7)) throw std::domain_error("lunghezza della faccia nulla");
+        if (base.length > 0.0) length = std::min(length, base.length);
+        double taper = base.hasTaper ? base.taper : 0.0;
+        if (parameters.reverse) {
+            base.origin = base.origin + base.length * base.axis;
+            base.radius += base.length * std::tan(taper);
+            base.axis = -base.axis;
+            taper = -taper;
+        }
+
+        const double pitch = parameters.pitch;
+        const double angle = (parameters.standard == 3 || parameters.standard == 4) ? 55.0
+                           : parameters.standard == 6 ? 30.0
+                           : parameters.standard == 7 ? 29.0 : 60.0;
+        double depth = (parameters.standard == 3 || parameters.standard == 4) ? 0.6403 * pitch
+                     : (parameters.standard == 6 || parameters.standard == 7) ? 0.5 * pitch
+                     : (info.internal ? 0.54127 : 0.61343) * pitch;
+        depth = std::min(depth, 0.45 * info.diameter);
+        if (!(depth > 1.0e-7)) throw std::domain_error("profondita' del filetto nulla");
+
+        // Per i filetti interni il tagliente oltrepassa le estremita', cosi'
+        // non lascia una gola incompleta.  Su un filetto esterno, invece,
+        // quell'eccedenza verrebbe unita al pezzo e produrrebbe due speroni
+        // fuori dalla lunghezza richiesta.
+        const double lead = info.internal ? 0.5 * pitch : 0.0;
+        const Vec3 startOrigin = base.origin - lead * base.axis;
+        const double startRadius = base.radius - lead * std::tan(taper);
+        if (!(startRadius > depth * 0.1)) throw std::domain_error("raggio troppo piccolo per il passo scelto");
+        HelixSpec spec;
+        spec.frame = Frame3(startOrigin, base.axis, base.xRef);
+        spec.radius = startRadius;
+        spec.pitch = pitch;
+        spec.turns = (length + 2.0 * lead) / pitch;
+        spec.taper = taper;
+        spec.leftHanded = parameters.leftHanded;
+        auto helix = std::make_shared<const HelixCurve>(spec);
+        const Vec3 start = helix->point(helix->domain().lo);
+        const Vec3 tangent = normalized(helix->derivative(helix->domain().lo));
+        const Vec3 radial = normalized(start - (startOrigin + dot(start - startOrigin, base.axis) * base.axis));
+        const Frame3 profileFrame(start, tangent, radial);
+
+        std::vector<Vec2> polygon;
+        const double overlap = std::max(1.0e-5 * std::max(1.0, info.diameter), 0.04 * depth);
+        if (parameters.standard == 6 || parameters.standard == 7) {
+            const double wide = 0.25 * pitch, narrow = 0.125 * pitch;
+            polygon = {{-overlap, -wide}, {depth, -narrow}, {depth, narrow}, {-overlap, wide}};
+        } else {
+            const double half = std::min(0.45 * pitch, depth * std::tan(0.5 * angle * kPi / 180.0));
+            polygon = {{-overlap, -half}, {depth, 0.0}, {-overlap, half}};
+        }
+        (void)profileFrame;
+        const Body cutter = sweptHelicalTool(helix, polygon, profileFrame);
+        Body result = booleanOperation(*baseBody, cutter, info.internal ? Kernel::BooleanOperation::Subtract : Kernel::BooleanOperation::Unite);
+        if (result.faces().empty()) throw std::domain_error("il filetto non interseca il corpo");
+        return std::make_shared<const Body>(std::move(result));
+    } catch (const std::exception &failure) {
+        setError(error, QStringLiteral("La filettatura non e' riuscita: %1").arg(QString::fromUtf8(failure.what())));
+        return nullptr;
     }
 }
 

@@ -209,6 +209,13 @@ void upgradeTopologyReferences(QVector<ExtrusionObject> &features) {
                 if (face.valid()) ref = faceReference(body, face, Vec3(ref.x, ref.y, ref.z));
             }
         }
+        if (feature.feature == BodyFeature::Thread && feature.firstBody >= 0 && feature.firstBody < features.size()
+            && features.at(feature.firstBody).forgeBody && feature.thread.face.subshape < 0) {
+            const Body &body = *features.at(feature.firstBody).forgeBody;
+            const Vec3 point(feature.thread.face.x, feature.thread.face.y, feature.thread.face.z);
+            const FaceId face = resolveFaceReference(body, feature.thread.face, std::numeric_limits<double>::max());
+            if (face.valid()) feature.thread.face = faceReference(body, face, point);
+        }
         if (feature.feature == BodyFeature::Helix && feature.helix.source != 0 && feature.firstBody >= 0
             && feature.firstBody < features.size() && features.at(feature.firstBody).forgeBody && feature.helix.reference.subshape < 0) {
             const Body &body = *features.at(feature.firstBody).forgeBody;

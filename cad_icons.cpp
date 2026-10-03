@@ -870,6 +870,26 @@ std::map<QString, Draw> &registry() {
             p.drawPath(back);
         }
     };
+    icons["thread"] = [](QPainter &p, const IconPalette &c) {
+        // Albero cilindrico con profilo elicoidale a V.
+        p.setPen(stroke(c.ink, 1.0));
+        p.setBrush(c.faceMid);
+        p.drawRoundedRect(QRectF(4, 3, 16, 18), 3, 3);
+        p.setBrush(c.faceLight);
+        p.drawEllipse(QRectF(4, 2, 16, 5));
+        p.setBrush(Qt::NoBrush);
+        p.setPen(stroke(c.accent, 1.5));
+        QPainterPath teeth({4, 7});
+        for (int k = 0; k < 4; ++k) {
+            const qreal y = 7.0 + 3.4 * k;
+            teeth.lineTo(8, y + 1.7);
+            teeth.lineTo(4, y + 3.4);
+            teeth.moveTo(20, y);
+            teeth.lineTo(16, y + 1.7);
+            teeth.lineTo(20, y + 3.4);
+        }
+        p.drawPath(teeth);
+    };
     icons["sweep"] = [](QPainter &p, const IconPalette &c) {
         // Tubo lungo un percorso curvo, con il profilo circolare all'inizio.
         QPainterPath path({4, 19});

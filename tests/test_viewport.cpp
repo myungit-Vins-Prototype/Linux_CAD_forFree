@@ -2,6 +2,7 @@
 // test lo include per verificare interazioni e rendering senza esportare API di test.
 #include "../forgeCad2026_gui.cpp"
 #include "fk_blend.h"
+#include "fk_boolean.h"
 #include "fk_body_io.h"
 #include "fk_classify.h"
 #include "fk_helix.h"
@@ -416,6 +417,77 @@ public:
             setDisplayLengthUnit(LengthUnit::Millimeter);
         }
         {
+            // Filettatura parametrica: riconoscimento automatico della faccia
+            // esterna e aggiunta del profilo elicoidale al cilindro.
+            const Kernel::Body cylinder = Kernel::makeCylinder(
+                Kernel::Frame3(Kernel::Vec3(), Kernel::Vec3(0, 0, 1), Kernel::Vec3(1, 0, 0)), 5.0, 10.0);
+            Kernel::FaceId side;
+            for (Kernel::FaceId face : cylinder.faces())
+                if (cylinder.face(face).surface->type() == Kernel::SurfaceType::Cylinder) { side = face; break; }
+            require(side.valid(), "faccia cilindrica per il filetto");
+            const Kernel::FinId fin = cylinder.loop(cylinder.face(side).loops.front()).first;
+            ThreadParameters parameters;
+            parameters.standard = 0;
+            parameters.designation = QStringLiteral("M10 x 1,5");
+            parameters.pitch = 1.5;
+            parameters.length = 6.0;
+            parameters.face = faceReference(cylinder, side, cylinder.finPoint(fin, 0.5));
+            ThreadFaceInfo info;
+            QString error;
+            require(forgeThreadFaceInfo(cylinder, parameters.face, info, &error) && !info.internal
+                        && std::fabs(info.diameter - 10.0) < 1e-9 && std::fabs(info.length - 10.0) < 1e-9,
+                    "misure automatiche della faccia da filettare");
+            const ForgeBody base = std::make_shared<const Kernel::Body>(cylinder);
+            const ForgeBody threaded = forgeThread(base, parameters, &error);
+            require(threaded && error.isEmpty() && Kernel::massProperties(*threaded).volume > Kernel::massProperties(cylinder).volume,
+                    "filettatura geometrica esterna");
+            int sweptFaces = 0;
+            for (Kernel::FaceId face : threaded->faces())
+                sweptFaces += threaded->face(face).surface->type() == Kernel::SurfaceType::BSpline;
+            require(sweptFaces > 0, "filettatura esterna con superfici sweep B-spline, non facce poliedriche");
+            const Kernel::Body bore = Kernel::makeCylinder(
+                Kernel::Frame3(Kernel::Vec3(0, 0, -1), Kernel::Vec3(0, 0, 1), Kernel::Vec3(1, 0, 0)), 3.0, 12.0);
+            const Kernel::Body ring = Kernel::booleanOperation(cylinder, bore, Kernel::BooleanOperation::Subtract);
+            Kernel::FaceId inside;
+            for (Kernel::FaceId face : ring.faces()) {
+                if (ring.face(face).surface->type() != Kernel::SurfaceType::Cylinder) continue;
+                const auto &surface = static_cast<const Kernel::CylindricalSurface &>(*ring.face(face).surface);
+                if (std::fabs(surface.radius() - 3.0) < 1e-9) { inside = face; break; }
+            }
+            require(inside.valid(), "faccia interna per il filetto");
+            parameters.pitch = 1.0;
+            parameters.length = 2.0;
+            const Kernel::FinId insideFin = ring.loop(ring.face(inside).loops.front()).first;
+            parameters.face = faceReference(ring, inside, ring.finPoint(insideFin, 0.5));
+            require(forgeThreadFaceInfo(ring, parameters.face, info, &error) && info.internal,
+                    "riconoscimento automatico del foro interno");
+            const ForgeBody threadedHole = forgeThread(std::make_shared<const Kernel::Body>(ring), parameters, &error);
+            require(threadedHole && error.isEmpty() && Kernel::massProperties(*threadedHole).volume < Kernel::massProperties(ring).volume,
+                    "filettatura geometrica interna");
+            DocumentState state;
+            ExtrusionObject root;
+            root.name = QStringLiteral("Cilindro");
+            root.feature = BodyFeature::Primitive;
+            root.primitive.kind = PrimitiveKind::Cylinder;
+            root.primitive.size[0] = 5.0;
+            root.primitive.size[1] = 10.0;
+            ExtrusionObject feature;
+            feature.name = QStringLiteral("Filettatura 1");
+            feature.feature = BodyFeature::Thread;
+            feature.firstBody = 0;
+            feature.thread = parameters;
+            state.extrusions = {root, feature};
+            QTemporaryDir dir;
+            const QString path = dir.filePath(QStringLiteral("filetto.prt"));
+            require(saveDocumentFile(path, state, false).isEmpty(), "salvataggio della filettatura");
+            DocumentState loaded;
+            require(loadDocumentFile(path, loaded).isEmpty() && loaded.extrusions.size() == 2
+                        && loaded.extrusions.at(1).feature == BodyFeature::Thread
+                        && loaded.extrusions.at(1).thread.designation == parameters.designation
+                        && std::fabs(loaded.extrusions.at(1).thread.pitch - 1.0) < 1e-12,
+                    "lettura della filettatura dal documento");
+        }
+        {
             CadViewport selection;
             int picks = 0;
             selection.selectionCallback_ = [&](const SceneSelection &) { ++picks; };
@@ -529,7 +601,7 @@ public:
             tool.origin[0] = 3.0;
             require(rollback.createPrimitive(base, QStringLiteral("Base")).isEmpty()
                         && rollback.createPrimitive(tool, QStringLiteral("Utensile")).isEmpty()
-                        && rollback.createBoolean(BooleanOperation::Difference, 0, {1}, QStringLiteral("Differenza")).isEmpty(),
+                        && rollback.createBoolean(::BooleanOperation::Difference, 0, {1}, QStringLiteral("Differenza")).isEmpty(),
                     "storia per il ritorno indietro");
             rollback.requestPreview(rollback.extrusions_.at(0), 0);
             require(rollback.preview_.later == QSet<int>{2} && rollback.preview_.restored == QSet<int>{1},
@@ -663,7 +735,7 @@ public:
         secondBox.origin[0] = 1.0;
         require(booleanStory.createPrimitive(firstBox, QStringLiteral("A")).isEmpty()
                     && booleanStory.createPrimitive(secondBox, QStringLiteral("B")).isEmpty()
-                    && booleanStory.createBoolean(BooleanOperation::Union, 0, {1}, QStringLiteral("Unione")).isEmpty(),
+                    && booleanStory.createBoolean(::BooleanOperation::Union, 0, {1}, QStringLiteral("Unione")).isEmpty(),
                 "booleana nella storyboard");
         require(booleanStory.modelBodies().size() == 2 && booleanStory.extrusions().at(2).modelBodyId == booleanStory.extrusions().at(0).modelBodyId
                     && !booleanStory.extrusions().at(1).visible && booleanStory.extrusions().at(2).visible,
@@ -1276,6 +1348,37 @@ public:
             }
 
         if (render) {
+            CadViewport threadView;
+            threadView.resize(720, 720);
+            PrimitiveParameters shaft;
+            shaft.kind = PrimitiveKind::Cylinder;
+            shaft.size[0] = 4.0;
+            shaft.size[1] = 12.0;
+            require(threadView.createPrimitive(shaft, QStringLiteral("Albero")).isEmpty(), "albero per rendering del filetto");
+            const ForgeBody shaftBody = threadView.extrusions_.first().forgeBody;
+            Kernel::FaceId shaftSide;
+            for (Kernel::FaceId face : shaftBody->faces())
+                if (shaftBody->face(face).surface->type() == Kernel::SurfaceType::Cylinder) { shaftSide = face; break; }
+            require(shaftSide.valid(), "faccia dell'albero da renderizzare");
+            ExtrusionObject threadFeature;
+            threadFeature.name = QStringLiteral("Filettatura esterna");
+            threadFeature.feature = BodyFeature::Thread;
+            threadFeature.firstBody = 0;
+            threadFeature.thread.standard = 0;
+            threadFeature.thread.designation = QStringLiteral("M8 x 1,25");
+            threadFeature.thread.pitch = 1.25;
+            threadFeature.thread.length = 10.0;
+            const Kernel::FinId shaftFin = shaftBody->loop(shaftBody->face(shaftSide).loops.front()).first;
+            threadFeature.thread.face = faceReference(*shaftBody, shaftSide, shaftBody->finPoint(shaftFin, 0.5));
+            require(threadView.createBody(threadFeature, {0}).isEmpty(), "feature filettatura esterna da renderizzare");
+            threadView.setViewPreset(4);
+            threadView.show();
+            for (int i = 0; i < 8; ++i) QApplication::processEvents();
+            threadView.fitAll();
+            threadView.update();
+            for (int i = 0; i < 8; ++i) QApplication::processEvents();
+            require(threadView.grabFramebuffer().save(QStringLiteral("/tmp/forgecad-thread.png")), "immagine del filetto esterno");
+            threadView.hide();
             v.show();
             for (int i = 0; i < 8; ++i) QApplication::processEvents();
             require(v.isValid(), "contesto OpenGL valido");
@@ -1910,7 +2013,7 @@ public:
                         && b.createPrimitive(second, QStringLiteral("B")).isEmpty(),
                     "due corpi, il primo con due stadi");
             require(b.resultBodiesBefore(-1) == QVector<int>({1, 2}), "corpi risultanti: lo stadio finale di A e B");
-            require(b.createBoolean(BooleanOperation::Union, 1, {2}, QStringLiteral("Unione")).isEmpty(), "unione dei due corpi");
+            require(b.createBoolean(::BooleanOperation::Union, 1, {2}, QStringLiteral("Unione")).isEmpty(), "unione dei due corpi");
             require(b.resultBodiesBefore(-1) == QVector<int>({3}), "dopo l'unione resta un solo corpo");
             require(b.resultBodiesBefore(3) == QVector<int>({1, 2}), "prima dell'unione i due corpi");
         }

@@ -42,6 +42,18 @@ ForgeBody forgePrimitive(const PrimitiveParameters &parameters, QString *error);
 // Smussi: `spec` (ChamferSpec) per due distanze o distanza e angolo.
 ForgeBody forgeBlend(const ForgeBody &base, const QVector<EdgePoint> &points, double size, bool chamfer, QString *error, const ChamferSpec &spec = {});
 
+struct ThreadFaceInfo {
+    double diameter = 0.0;
+    double length = 0.0;
+    double taper = 0.0;  // angolo del raggio rispetto all'asse, radianti
+    bool internal = false;
+    bool conical = false;
+};
+// Dati nominali della faccia scelta e filettatura modellata mediante profilo
+// elicoidale: aggiunto all'esterno di un albero, sottratto all'interno di un foro.
+bool forgeThreadFaceInfo(const Kernel::Body &body, const EdgePoint &face, ThreadFaceInfo &info, QString *error);
+ForgeBody forgeThread(const ForgeBody &base, const ThreadParameters &parameters, QString *error);
+
 // Booleana esatta (con la fusione delle facce sulla stessa superficie).
 ForgeBody forgeBoolean(const ForgeBody &first, const ForgeBody &second, BooleanOperation operation, QString *error);
 

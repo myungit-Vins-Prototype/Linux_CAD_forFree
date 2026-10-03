@@ -267,7 +267,7 @@ struct BodyDisplay {
 // l'interno, le facce offsetFaces tolte per l'apertura (nessuna: cavita' chiusa).
 enum class BodyFeature { Extrusion = 0, Revolution = 1, Primitive = 2, Blend = 3, SheetTrim = 4, SheetExtend = 5, Scale = 6, Helix = 7, Sweep = 8, Loft = 9,
                          Imported = 10, DatumPlane = 11, Pattern = 12, Transform = 13, SurfaceOffset = 14, Sew = 15, Ruled = 16, PlanarSurface = 17,
-                         DeleteFace = 18, BoundarySurface = 19, Shell = 20 };
+                         DeleteFace = 18, BoundarySurface = 19, Shell = 20, Thread = 21 };
 
 // Riferimento leggero a una sotto-entita' del B-rep. `subshape` e' l'ID
 // topologico al momento della scelta, `geometry` il tipo di curva/superficie.
@@ -431,6 +431,20 @@ struct TransformParameters {
     bool copy = false;
 };
 
+// Filettatura reale ricavata da una faccia cilindrica o conica del corpo
+// `firstBody`. Standard: 0 ISO M, 1 UNC, 2 UNF, 3 BSPP/G, 4 BSPT/R,
+// 5 NPT, 6 ISO trapezoidale Tr, 7 ACME. Il diametro e il verso interno/esterno
+// sono letti dalla faccia; pitch e length sono sempre millimetri.
+struct ThreadParameters {
+    int standard = 0;
+    QString designation;
+    double pitch = 1.5;
+    double length = 0.0;  // 0: tutta la lunghezza della faccia
+    bool leftHanded = false;
+    bool reverse = false;
+    EdgePoint face;
+};
+
 // Corpo della scena, definito in modo parametrico:
 //  - estrusione (operation = -1, feature Extrusion): profili chiusi dello
 //    schizzo `sketchIndex` estrusi di `distance` lungo la normale del piano;
@@ -529,6 +543,8 @@ struct ExtrusionObject {
     DatumParameters datum;
     // Pattern: la ripetizione del corpo firstBody.
     PatternParameters pattern;
+    // Thread: filetto parametrico sulla faccia cilindrica/conica scelta.
+    ThreadParameters thread;
     // Extrusion: condizione di fine (0 la distanza `distance`; 1 fino a un
     // punto; 2 fino a uno spigolo, nel suo punto piu' vicino al riferimento;
     // 3 fino a una faccia o a un piano) con il riferimento `extentRef`

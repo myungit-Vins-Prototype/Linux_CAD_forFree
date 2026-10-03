@@ -46,8 +46,9 @@ constexpr char kMagic[4] = {'F', 'C', 'A', 'D'};
 // 23 offset di superficie e cucitura.
 // 24 loft e sweep di superficie (senza coperchi), superficie rigata (le due
 // catene di riferimenti), superficie planare (bordi scelti nella vista).
-// 25 svuotamento dei solidi; 26 unita' lineare preferita del documento.
-constexpr quint16 kVersion = 26;
+// 25 svuotamento dei solidi; 26 unita' lineare preferita del documento;
+// 27 filettature parametriche su facce cilindriche o coniche.
+constexpr quint16 kVersion = 27;
 constexpr quint8 kZlib = 1;
 
 void write(QDataStream &out, const CurveObject &curve) {
@@ -303,6 +304,10 @@ void write(QDataStream &out, const ExtrusionObject &body) {
     writeRefs(out, body.ruledFirst);
     writeRefs(out, body.ruledSecond);
     writeRefs(out, body.planarRefs);
+    // Formato 27: filettatura.
+    const ThreadParameters &t = body.thread;
+    out << qint32(t.standard) << t.designation << t.pitch << t.length << t.leftHanded << t.reverse
+        << t.face.x << t.face.y << t.face.z << qint32(t.face.subshape) << qint32(t.face.geometry) << qint32(t.face.context);
 }
 
 // `extras` (solo formato 5): i file scritti durante lo sviluppo del formato 5
@@ -474,7 +479,20 @@ bool read(QDataStream &in, ExtrusionObject &body, quint16 version, int extras) {
         if (!readRefs(in, body.ruledFirst, version) || !readRefs(in, body.ruledSecond, version) || !readRefs(in, body.planarRefs, version))
             return false;
     }
-    if (int(body.feature) < 0 || int(body.feature) > int(version >= 25 ? BodyFeature::Shell : BodyFeature::PlanarSurface)) return false;
+    if (version >= 27) {
+        ThreadParameters &t = body.thread;
+        qint32 standard = 0, subshape = -1, geometry = -1, context = -1;
+        in >> standard >> t.designation >> t.pitch >> t.length >> t.leftHanded >> t.reverse
+           >> t.face.x >> t.face.y >> t.face.z >> subshape >> geometry >> context;
+        t.standard = standard;
+        t.face.subshape = subshape;
+        t.face.geometry = geometry;
+        t.face.context = context;
+        if (standard < 0 || standard > 7 || !std::isfinite(t.pitch) || t.pitch <= 0.0 || !std::isfinite(t.length) || t.length < 0.0)
+            return false;
+    }
+    const BodyFeature last = version >= 27 ? BodyFeature::Thread : version >= 25 ? BodyFeature::Shell : BodyFeature::PlanarSurface;
+    if (int(body.feature) < 0 || int(body.feature) > int(last)) return false;
     return in.status() == QDataStream::Ok;
 }
 

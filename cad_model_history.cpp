@@ -26,6 +26,7 @@ quint64 inheritedBody(const QVector<ExtrusionObject> &features, const ExtrusionO
     case BodyFeature::Sew:
     case BodyFeature::DeleteFace:
     case BodyFeature::Shell:
+    case BodyFeature::Thread:
         return owner(feature.firstBody);
     case BodyFeature::Transform:
         return feature.move.copy ? 0 : owner(feature.firstBody);
