@@ -1256,6 +1256,15 @@ Body analyticBlend(const Body &body, const std::vector<EdgeId> &edges, double si
                     if (!flush || partner) {
                         if (info.composite)
                             throw std::domain_error("blendEdges: faccia piu' corta del raggio accanto a uno spigolo che finisce in un angolo concavo (non gestita)");
+                        // Gli utensili degli archi e delle catene sono scostati
+                        // oltre le facce (blendRegion): lungo un bordo libero lo
+                        // scostamento cade nell'aria, ma presso un angolo concavo,
+                        // oltre la parete dello spigolo, c'e' il materiale della
+                        // faccia accanto e l'utensile vi scaverebbe un gradino
+                        // (volume sbagliato, facce spurie). Ci pensano le catene
+                        // piane o il raccordo generale.
+                        if (!info.straight || info.chain >= 0)
+                            throw std::domain_error("blendEdges: arco o catena tangente che finisce in un angolo concavo (sezioni analitiche non esatte)");
                         const SurfaceType type = body.face(g).surface->type();
                         if (type != SurfaceType::Plane && type != SurfaceType::Cylinder)
                             throw std::domain_error("blendEdges: lo spigolo finisce in un angolo concavo contro una faccia non piana ne' cilindrica (non gestita)");

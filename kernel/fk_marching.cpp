@@ -1914,16 +1914,49 @@ static bool splineCoincidence(const Surface &a, const Surface &b, const Box &bou
         const std::size_t nu = us.size() - 1, nv = vs.size() - 1;
         std::vector<Cover> cover(nu * nv, Cover::Off);
         std::vector<bool> near(nu * nv, false);
+        // Campioni 5 x 5 di ogni pezza (valutazioni: costano poco rispetto alle
+        // proiezioni sull'altra superficie) e pezze vicine al box della ricerca.
+        const auto sampleAt = [&](std::size_t i, std::size_t j, int iu, int iv, double &u, double &v) {
+            u = us[i] + (0.1 + 0.2 * iu) * (us[i + 1] - us[i]);
+            v = vs[j] + (0.1 + 0.2 * iv) * (vs[j + 1] - vs[j]);
+            return self.point(u, v);
+        };
+        std::vector<Box> boxes(nu * nv);
         for (std::size_t i = 0; i < nu; ++i)
             for (std::size_t j = 0; j < nv; ++j) {
-                int on = 0, total = 0;
-                bool grid[5][5];
-                Box box;
+                Box &box = boxes[i * nv + j];
                 for (int iu = 0; iu < 5; ++iu)
                     for (int iv = 0; iv < 5; ++iv) {
-                        const double u = us[i] + (0.1 + 0.2 * iu) * (us[i + 1] - us[i]), v = vs[j] + (0.1 + 0.2 * iv) * (vs[j + 1] - vs[j]);
-                        const Vec3 p = self.point(u, v);
-                        box.add(p);
+                        double u, v;
+                        box.add(sampleAt(i, j, iu, iv, u, v));
+                    }
+                near[i * nv + j] = box.padded(0.25 * box.diagonal() + tolerance).overlaps(bounds);
+            }
+        // Si classificano solo le pezze vicine e le loro adiacenti: le altre
+        // non entrano ne' in `any` ne' nei tagli (che stanno tra pezze vicine).
+        const auto relevant = [&](std::size_t i, std::size_t j) {
+            if (near[i * nv + j]) return true;
+            return (i > 0 && near[(i - 1) * nv + j]) || (i + 1 < nu && near[(i + 1) * nv + j]) || (j > 0 && near[i * nv + j - 1])
+                || (j + 1 < nv && near[i * nv + j + 1]);
+        };
+        for (std::size_t i = 0; i < nu; ++i)
+            for (std::size_t j = 0; j < nv; ++j) {
+                if (!relevant(i, j)) continue;
+                const Box &box = boxes[i * nv + j];
+                // Scarto con una proiezione: se il centro della pezza dista
+                // dall'altra superficie piu' della tolleranza e della diagonale,
+                // nessun campione vi sta sopra.
+                {
+                    double u, v;
+                    const Vec3 center = sampleAt(i, j, 2, 2, u, v);
+                    if (projectPoint(other, center).distance > tolerance + box.diagonal()) continue;  // Cover::Off
+                }
+                int on = 0, total = 0;
+                bool grid[5][5];
+                for (int iu = 0; iu < 5; ++iu)
+                    for (int iv = 0; iv < 5; ++iv) {
+                        double u, v;
+                        const Vec3 p = sampleAt(i, j, iu, iv, u, v);
                         grid[iu][iv] = coincidentAt(self, other, u, v, p);
                         on += grid[iu][iv];
                         ++total;
@@ -1931,7 +1964,6 @@ static bool splineCoincidence(const Surface &a, const Surface &b, const Box &bou
                 bool block = false;
                 for (int iu = 0; iu < 4; ++iu)
                     for (int iv = 0; iv < 4; ++iv) block = block || (grid[iu][iv] && grid[iu + 1][iv] && grid[iu][iv + 1] && grid[iu + 1][iv + 1]);
-                near[i * nv + j] = box.padded(0.25 * box.diagonal() + tolerance).overlaps(bounds);
                 cover[i * nv + j] = on == total ? Cover::On : (on == 0 ? Cover::Off : Cover::Mixed);
                 any = any || (near[i * nv + j] && block);
             }

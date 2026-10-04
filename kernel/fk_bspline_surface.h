@@ -44,6 +44,14 @@ public:
     // immutabile; la cache si legge e si scrive in modo atomico). Chi la usa
     // tiene il puntatore per tutto il tempo in cui scorre il vettore.
     std::shared_ptr<const std::vector<BSplineSurface>> cachedBezierPatches() const;
+    // Linee di nodo interne in cui la superficie non e' C1 (le derivate prime
+    // omogenee dai due lati differiscono): solo li' il punto piu' vicino puo'
+    // stare su uno spigolo senza essere stazionario. Ordinate, calcolate una
+    // volta (le superfici dei raccordi hanno nodi tripli ma sono C1).
+    struct SharpKnotLines {
+        std::vector<double> u, v;
+    };
+    std::shared_ptr<const SharpKnotLines> cachedSharpKnotLines() const;
 
 private:
     int uDegree_, vDegree_;
@@ -52,6 +60,7 @@ private:
     std::vector<Vec3> poles_;
     std::vector<double> weights_;
     mutable std::shared_ptr<const std::vector<BSplineSurface>> patchCache_;
+    mutable std::shared_ptr<const SharpKnotLines> sharpCache_;
     // Isoparametriche ai nodi (le linee delle pezze), calcolate una volta: la
     // proiezione di un punto le prova tutte, e con le curve rifatte a ogni
     // chiamata costava millisecondi per punto (selezione a video, SP-curve).

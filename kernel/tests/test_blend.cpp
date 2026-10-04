@@ -983,6 +983,59 @@ FK_TEST(BlendPlanarChainConcaveCornersBetweenLongArcs) {
     }
 }
 
+FK_TEST(BlendArcsIntoConcaveCornersAreExact) {
+    // Stesso profilo (disco e due lobi). Le sezioni analitiche scostano gli
+    // utensili degli archi oltre le facce: presso un angolo concavo lo
+    // scostamento scavava un gradino nella parete accanto (7% di volume in
+    // piu' a r = 0.5, 30 facce invece di 10) e il risultato era valido ma
+    // sbagliato. Ora quei casi vanno alle catene piane o al raccordo generale.
+    const double h = 5.0, d = 19.8, R = 16.0, a = 6.0;
+    Body body = makeCylinder(Frame3(Vec3(0, 0, 0), Vec3(0, 0, 1), Vec3(1, 0, 0)), R, h);
+    for (double x : {-d, d})
+        body = booleanOperation(body, makeCylinder(Frame3(Vec3(x, 0, 0), Vec3(0, 0, 1), Vec3(1, 0, 0)), a, h), BooleanOperation::Unite);
+    FaceId top;
+    for (FaceId f : body.faces()) {
+        const auto *plane = dynamic_cast<const Plane *>(body.face(f).surface.get());
+        if (plane && std::fabs(plane->frame().origin().z() - h) < 1e-9 && std::fabs(std::fabs(plane->frame().zDir().z()) - 1.0) < 1e-12) top = f;
+    }
+    FK_CHECK(top.valid());
+    if (!top.valid()) return;
+    std::vector<EdgeId> contour, lobe;
+    for (LoopId loop : body.face(top).loops)
+        for (FinId fin : body.loopFins(loop)) {
+            const EdgeId e = body.fin(fin).edge;
+            contour.push_back(e);
+            const Edge &edge = body.edge(e);
+            if (edge.curve->point(0.5 * (edge.range.lo + edge.range.hi)).x() > d) lobe.push_back(e);
+        }
+    FK_CHECK(contour.size() == 4 && lobe.size() == 1);
+    const double volume = massProperties(body).volume;
+    try {
+        // Tutto il contorno: lo stesso risultato delle catene piane.
+        const double r = 0.5;
+        const Body result = blendEdges(body, contour, r, false), reference = blendPlanarChains(body, contour, r, false);
+        FK_CHECK(checkBody(result).empty());
+        FK_CHECK(result.counts().faces == reference.counts().faces);
+        FK_CHECK_NEAR(massProperties(result).volume, massProperties(reference).volume, 1e-9 * volume);
+    } catch (const std::exception &error) {
+        reportFailure(__FILE__, __LINE__, error.what());
+    }
+    try {
+        // L'arco di un lobo da solo, con gli estremi negli angoli concavi.
+        const double r = 0.25;
+        const Body result = blendEdges(body, lobe, r, false);
+        FK_CHECK(checkBody(result).empty());
+        FK_CHECK(result.counts().faces == body.counts().faces + 1);
+        const double psi = std::acos((d * d + a * a - R * R) / (2.0 * d * a)), length = a * (kTwoPi - 2.0 * psi);
+        FK_CHECK_NEAR(volume - massProperties(result).volume, r * r * (1.0 - kPi / 4.0) * length, 0.02 * r * r * length);
+        TessellationOptions options;
+        options.deflection = 0.02;
+        FK_CHECK(tessellate(result, options).failedFaces == 0);
+    } catch (const std::exception &error) {
+        reportFailure(__FILE__, __LINE__, error.what());
+    }
+}
+
 FK_TEST(BlendVanishingAtTangentMitreEnd) {
     // Spigolo verticale che prosegue per tangenza nella mitra di due raccordi
     // uguali: la mitra nasce sul coperchio, dove i due raccordi sono tangenti

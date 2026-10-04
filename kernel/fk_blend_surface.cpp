@@ -1425,7 +1425,10 @@ Body blendSurfaceChains(const Body &input, const std::vector<EdgeId> &selected, 
                 if (!(g1 > 0.0)) break;
                 t0 = t1;
                 g0 = g1;
-                travelled += std::fabs(step) * speed;
+                // Il limite vale oltre il vertice (le superfici prolungate): lungo
+                // lo spigolo il percorso dipende dalla sua lunghezza, non dal raggio
+                // (su un arco lungo con un raggio piccolo si fermava prima del vertice).
+                if (direction > 0.0 ? t1 > edge.range.hi : t1 < edge.range.lo) travelled += std::fabs(step) * speed;
                 if (travelled > 50.0 * size) {
                     return direction > 0.0 ? edge.range.hi : edge.range.lo;
                 }

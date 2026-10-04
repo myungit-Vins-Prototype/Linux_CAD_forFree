@@ -146,6 +146,62 @@ std::shared_ptr<const std::vector<BSplineSurface>> BSplineSurface::cachedBezierP
     return patches;
 }
 
+std::shared_ptr<const BSplineSurface::SharpKnotLines> BSplineSurface::cachedSharpKnotLines() const {
+    std::shared_ptr<const SharpKnotLines> lines = std::atomic_load(&sharpCache_);
+    if (lines) return lines;
+    const std::shared_ptr<const std::vector<BSplineSurface>> patches = cachedBezierPatches();
+    const std::vector<double> us = uBreakpoints(uDomain()), vs = vBreakpoints(vDomain());
+    const std::size_t nu = us.size() - 1, nv = vs.size() - 1;
+    auto result = std::make_shared<SharpKnotLines>();
+    // Derivata prima omogenea (w P, w) lungo u o v sul lato di una pezza di Bezier.
+    struct Homogeneous {
+        Vec3 p;
+        double w;
+    };
+    const auto homogeneous = [](const BSplineSurface &patch, int i, int j) { return Homogeneous{patch.weight(i, j) * patch.pole(i, j), patch.weight(i, j)}; };
+    const auto differs = [](const Homogeneous &a, const Homogeneous &b) {
+        const double size = std::max({norm(a.p), norm(b.p), std::fabs(a.w), std::fabs(b.w)});
+        return norm(a.p - b.p) > 1e-9 * size || std::fabs(a.w - b.w) > 1e-9 * size;
+    };
+    if (patches->size() == nu * nv) {
+        for (std::size_t i = 0; i + 1 < nu; ++i) {
+            bool sharp = false;
+            for (std::size_t j = 0; j < nv && !sharp; ++j) {
+                const BSplineSurface &left = (*patches)[i * nv + j], &right = (*patches)[(i + 1) * nv + j];
+                const int p = left.uDegree();
+                const double hl = us[i + 1] - us[i], hr = us[i + 2] - us[i + 1];
+                for (int k = 0; k < left.vPoleCount() && !sharp; ++k) {
+                    const Homogeneous l0 = homogeneous(left, p - 1, k), l1 = homogeneous(left, p, k);
+                    const Homogeneous r0 = homogeneous(right, 0, k), r1 = homogeneous(right, 1, k);
+                    sharp = differs({(l1.p - l0.p) / hl, (l1.w - l0.w) / hl}, {(r1.p - r0.p) / hr, (r1.w - r0.w) / hr});
+                }
+            }
+            if (sharp) result->u.push_back(us[i + 1]);
+        }
+        for (std::size_t j = 0; j + 1 < nv; ++j) {
+            bool sharp = false;
+            for (std::size_t i = 0; i < nu && !sharp; ++i) {
+                const BSplineSurface &low = (*patches)[i * nv + j], &high = (*patches)[i * nv + j + 1];
+                const int q = low.vDegree();
+                const double hl = vs[j + 1] - vs[j], hr = vs[j + 2] - vs[j + 1];
+                for (int k = 0; k < low.uPoleCount() && !sharp; ++k) {
+                    const Homogeneous l0 = homogeneous(low, k, q - 1), l1 = homogeneous(low, k, q);
+                    const Homogeneous r0 = homogeneous(high, k, 0), r1 = homogeneous(high, k, 1);
+                    sharp = differs({(l1.p - l0.p) / hl, (l1.w - l0.w) / hl}, {(r1.p - r0.p) / hr, (r1.w - r0.w) / hr});
+                }
+            }
+            if (sharp) result->v.push_back(vs[j + 1]);
+        }
+    } else {
+        // Disposizione inattesa: tutte le linee, come prima.
+        result->u.assign(us.begin() + 1, us.end() - 1);
+        result->v.assign(vs.begin() + 1, vs.end() - 1);
+    }
+    lines = result;
+    std::atomic_store(&sharpCache_, lines);
+    return lines;
+}
+
 std::vector<BSplineSurface> BSplineSurface::bezierPatches() const {
     const int pu = uDegree_, pv = vDegree_;
     std::vector<std::vector<BSplineCurve<3>>> columns;

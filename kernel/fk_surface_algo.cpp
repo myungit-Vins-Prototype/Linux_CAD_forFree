@@ -88,28 +88,31 @@ private:
 // breakpoint interni: su uno spigolo interno (nodo C0) il minimo non e' un
 // punto stazionario di nessuna delle due pezze, ma e' il minimo della curva
 // isoparametrica, che si trova in modo esatto.
+// Proiezione esatta sull'isoparametrica u = value (fixedU) o v = value, nel tratto dato.
+void projectOnIso(const Surface &surface, const Vec3 &p, bool fixedU, double value, const Interval &range, Candidates &candidates) {
+    if (!std::isfinite(value)) return;
+    const CurvePtr<3> iso = fixedU ? surface.uIso(value) : surface.vIso(value);
+    CurveProjection<3> result;
+    if (iso) {
+        result = projectPoint(*iso, p, range);
+    } else {
+        const IsoAdapter adapter(surface, fixedU, value);
+        // Isoparametrica degenere (polo della sfera, vertice del cono): un punto solo.
+        const Vec3 first = adapter.point(range.lo);
+        if (range.isFinite() && distance(first, adapter.point(0.5 * (range.lo + range.hi))) <= kLinearResolution
+            && distance(first, adapter.point(range.hi)) <= kLinearResolution) {
+            result.parameter = range.lo;
+        } else {
+            result = projectPoint(adapter, p, range);
+        }
+    }
+    if (fixedU) candidates.consider(value, result.parameter);
+    else candidates.consider(result.parameter, value);
+}
+
 void projectOnBoundary(const Surface &surface, const Vec3 &p, const Interval &uRange, const Interval &vRange,
                        Candidates &candidates, bool allPatchEdges = false) {
-    auto edge = [&](bool fixedU, double value, const Interval &range) {
-        if (!std::isfinite(value)) return;
-        const CurvePtr<3> iso = fixedU ? surface.uIso(value) : surface.vIso(value);
-        CurveProjection<3> result;
-        if (iso) {
-            result = projectPoint(*iso, p, range);
-        } else {
-            const IsoAdapter adapter(surface, fixedU, value);
-            // Isoparametrica degenere (polo della sfera, vertice del cono): un punto solo.
-            const Vec3 first = adapter.point(range.lo);
-            if (range.isFinite() && distance(first, adapter.point(0.5 * (range.lo + range.hi))) <= kLinearResolution
-                && distance(first, adapter.point(range.hi)) <= kLinearResolution) {
-                result.parameter = range.lo;
-            } else {
-                result = projectPoint(adapter, p, range);
-            }
-        }
-        if (fixedU) candidates.consider(value, result.parameter);
-        else candidates.consider(result.parameter, value);
-    };
+    auto edge = [&](bool fixedU, double value, const Interval &range) { projectOnIso(surface, p, fixedU, value, range, candidates); };
     if (allPatchEdges) {
         for (double u : surface.uBreakpoints(uRange)) edge(true, u, vRange);
         for (double v : surface.vBreakpoints(vRange)) edge(false, v, uRange);
@@ -334,7 +337,14 @@ void projectOnBSplineSurface(const BSplineSurface &surface, const Vec3 &p, const
                              const Interval &vRange, Candidates &candidates) {
     if (!uRange.isFinite() || !vRange.isFinite())
         throw std::invalid_argument("projectPoint: questa superficie richiede intervalli finiti");
-    projectOnBoundary(surface, p, uRange, vRange, candidates, true);  // primo limite superiore
+    // Primo limite superiore: i bordi del dominio e gli angoli delle pezze (punti
+    // della superficie). Le isoparametriche dei nodi interni (dove il minimo
+    // puo' stare su uno spigolo C0) si proiettano solo per le pezze che il
+    // limite inferiore non scarta: una linea di nodo sta dentro la sua pezza,
+    // quindi non e' piu' vicina del limite della pezza. Proiettarle tutte a ogni
+    // chiamata costava centinaia di proiezioni di curve sulle superfici dei
+    // raccordi, fatte a tratti con molti nodi.
+    projectOnBoundary(surface, p, uRange, vRange, candidates);
 
     // Best-first: si esplora prima la pezza con il limite inferiore piu' basso,
     // cosi' il minimo si trova presto e il resto viene scartato subito.
@@ -349,13 +359,37 @@ void projectOnBSplineSurface(const BSplineSurface &surface, const Vec3 &p, const
     // Le pezze si calcolano una volta per superficie: la proiezione si ripete
     // per ogni raggio della selezione a video e per ogni punto delle SP-curve.
     const auto patches = surface.cachedBezierPatches();
+    // Gli angoli delle pezze intere sono i loro poli d'angolo (punti della
+    // superficie): il piu' vicino si sceglie dai poli e si valuta una volta.
+    double nearestCorner = std::numeric_limits<double>::infinity(), cornerU = 0.0, cornerV = 0.0;
     for (const BSplineSurface &piece : *patches) {
         BezierPatch patch = toPatch(piece);
         if (patch.u.hi < uRange.lo || patch.u.lo > uRange.hi || patch.v.hi < vRange.lo || patch.v.lo > vRange.hi) continue;
         const PatchBounds bounds = patchBounds(patch, p);
         rootDiagonal = std::max(rootDiagonal, bounds.diagonal);
+        const bool whole = patch.u.lo >= uRange.lo && patch.u.hi <= uRange.hi && patch.v.lo >= vRange.lo && patch.v.hi <= vRange.hi;
+        if (whole)
+            for (int a = 0; a < 2; ++a)
+                for (int b = 0; b < 2; ++b) {
+                    const double d = distance(patch.pole(a * patch.uDegree, b * patch.vDegree), p);
+                    if (d < nearestCorner) nearestCorner = d, cornerU = a ? patch.u.hi : patch.u.lo, cornerV = b ? patch.v.hi : patch.v.lo;
+                }
         queue.push({bounds.lowerBound, std::move(patch), 0});
     }
+    if (std::isfinite(nearestCorner)) candidates.consider(cornerU, cornerV);
+    // Lati di una pezza intera che sono linee di nodo interne in cui la
+    // superficie non e' C1 (altrove il minimo e' stazionario e lo trova Newton).
+    const auto sharp = surface.cachedSharpKnotLines();
+    const auto patchEdges = [&](const BezierPatch &patch) {
+        const Interval uSpan{std::max(patch.u.lo, uRange.lo), std::min(patch.u.hi, uRange.hi)};
+        const Interval vSpan{std::max(patch.v.lo, vRange.lo), std::min(patch.v.hi, vRange.hi)};
+        for (double u : {patch.u.lo, patch.u.hi})
+            if (u > uRange.lo && u < uRange.hi && std::binary_search(sharp->u.begin(), sharp->u.end(), u))
+                projectOnIso(surface, p, true, u, vSpan, candidates);
+        for (double v : {patch.v.lo, patch.v.hi})
+            if (v > vRange.lo && v < vRange.hi && std::binary_search(sharp->v.begin(), sharp->v.end(), v))
+                projectOnIso(surface, p, false, v, uSpan, candidates);
+    };
     const double leafDiagonal = std::max(1.0e-4 * rootDiagonal, kLinearResolution);
     while (!queue.empty()) {
         const Node node = queue.top();
@@ -366,6 +400,7 @@ void projectOnBSplineSurface(const BSplineSurface &surface, const Vec3 &p, const
         const Interval uBox{std::max(node.patch.u.lo, uRange.lo), std::min(node.patch.u.hi, uRange.hi)};
         const Interval vBox{std::max(node.patch.v.lo, vRange.lo), std::min(node.patch.v.hi, vRange.hi)};
         if (!(uBox.lo <= uBox.hi && vBox.lo <= vBox.hi)) continue;
+        if (node.depth == 0) patchEdges(node.patch);
         double u = 0.5 * (node.patch.u.lo + node.patch.u.hi), v = 0.5 * (node.patch.v.lo + node.patch.v.hi);
         const Vec3 center = surface.point(u, v);
         const PatchBounds bounds = patchBounds(node.patch, p, &center);
