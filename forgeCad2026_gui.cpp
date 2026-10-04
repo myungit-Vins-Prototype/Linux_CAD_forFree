@@ -14948,7 +14948,8 @@ static bool sewDialog(QWidget *parent, CadViewport *viewport, const QString &tit
     form->addRow(QStringLiteral("Tolleranza:"), toleranceBox);
     form->addRow(QString(), solidBox);
     form->addRow(wrappedNote(QStringLiteral("I bordi comuni (stessi estremi e stessa curva entro la tolleranza) si uniscono; un "
-                                           "bordo su cui finisce il vertice di un'altra superficie si divide li'."), &dialog));
+                                           "bordo su cui finisce il vertice di un'altra superficie si divide li'. Creando un solido, "
+                                           "una singola superficie cilindrica puo' acquisire i trim dell'apertura che chiude."), &dialog));
     const PreviewScope scope(viewport, dialog, form, replaced);
     const auto current = [&] {
         ExtrusionObject body = initial;

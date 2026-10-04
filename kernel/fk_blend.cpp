@@ -781,7 +781,35 @@ Body blendEdgesWith(const Body &body, const std::vector<EdgeId> &selected, doubl
         std::vector<EdgeId> chosen;
         for (EdgeId e : edges)
             if (std::find(runs.begin(), runs.end(), e) != runs.end()) chosen.push_back(e);
-        return delegate(chosen, [&](const std::vector<ChamferSides> *runSides) { return blendSurfaceChains(body, chosen, size, chamfer, runSides); },
+        return delegate(chosen, [&](const std::vector<ChamferSides> *runSides) {
+            bool touching = false;
+            const std::vector<std::vector<EdgeId>> groups = surfaceChainGroups(body, chosen, touching);
+            if (!touching) return blendSurfaceChains(body, chosen, size, chamfer, runSides);
+
+            // Due catene su coppie di facce diverse possono incontrarsi nello
+            // stesso vertice (per esempio elica e fine-filetto). Costruirle
+            // insieme genera due pezze terminali sovrapposte; dopo il primo
+            // raccordo, invece, il secondo termina naturalmente sulla nuova
+            // faccia e chiude il raccordo senza collassare a raggio zero.
+            Body result = body;
+            for (const std::vector<EdgeId> &group : groups) {
+                std::vector<EdgeId> mapped;
+                std::vector<ChamferSides> mappedSides;
+                for (EdgeId original : group) {
+                    const Edge &edge = body.edge(original);
+                    const Vec3 middle = edge.curve->point(0.5 * (edge.range.lo + edge.range.hi));
+                    const EdgeId current = nearestEdge(result, middle, 1e-7 * scale);
+                    if (!current.valid()) throw std::domain_error("blendEdges: raccordo tangente non ritrovato dopo la catena precedente");
+                    mapped.push_back(current);
+                    if (runSides) {
+                        const auto at = std::find(chosen.begin(), chosen.end(), original);
+                        mappedSides.push_back((*runSides)[std::size_t(at - chosen.begin())]);
+                    }
+                }
+                result = blendSurfaceChains(result, mapped, size, chamfer, runSides ? &mappedSides : nullptr);
+            }
+            return result;
+        },
                         "blendEdges: spigoli che toccano i raccordi tra superfici curve");
     }
     if (!freeform.empty()) {

@@ -55,6 +55,11 @@ Body blendSurfaceChains(const Body &body, const std::vector<EdgeId> &edges, doub
 // contengono un edge di `seeds`.
 std::vector<EdgeId> surfaceChainRuns(const Body &body, const std::vector<EdgeId> &selected, const std::vector<EdgeId> &seeds);
 
+// Raggruppa gli edge scelti per catena e segnala se catene distinte
+// condividono un vertice. In quel caso le pezze vanno costruite in sequenza
+// sulla topologia aggiornata, invece di sovrapporre due estremi indipendenti.
+std::vector<std::vector<EdgeId>> surfaceChainGroups(const Body &body, const std::vector<EdgeId> &selected, bool &touching);
+
 }
 
 #endif

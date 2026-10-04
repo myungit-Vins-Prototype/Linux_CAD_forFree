@@ -2,9 +2,11 @@
 // test lo include per verificare interazioni e rendering senza esportare API di test.
 #include "../forgeCad2026_gui.cpp"
 #include "fk_blend.h"
+#include "fk_body_check.h"
 #include "fk_boolean.h"
 #include "fk_body_io.h"
 #include "fk_classify.h"
+#include "fk_sew.h"
 #include "fk_helix.h"
 #include "fk_mass.h"
 #include "fk_primitives.h"
@@ -2269,6 +2271,92 @@ public:
             require(thrown, "eccezione del thread riportata al chiamante");
             ticker.stop();
             responsive.close();
+        }
+        // Regressione del flacone: il contatto terminale del raccordo cade
+        // presso una cucitura della superficie e Newton, con un solo seme,
+        // sceglieva il ramo sbagliato della curva chiusa.
+        {
+            DocumentState bottleDocument;
+            const QString bottlePath = QString::fromUtf8(FORGECAD_SOURCE_DIR) + QStringLiteral("/File_Esempio/flacone.prt");
+            require(loadDocumentFile(bottlePath, bottleDocument).isEmpty(), "lettura di flacone.prt");
+            CadViewport bottle;
+            bottle.loadDocument(bottleDocument);
+            int sourceBody = -1;
+            Kernel::EdgeId singular;
+            for (int index = bottle.extrusions_.size() - 1; index >= 0 && sourceBody < 0; --index) {
+                const ForgeBody &candidate = bottle.extrusions_.at(index).forgeBody;
+                if (!candidate) continue;
+                singular = Kernel::nearestEdge(*candidate, Kernel::Vec3(0.0, 13.6, 105.285), 1e-2);
+                if (singular.valid()) sourceBody = index;
+            }
+            require(sourceBody >= 0, "corpo del flacone prima dei raccordi");
+            const Kernel::Body &base = *bottle.extrusions_.at(sourceBody).forgeBody;
+            require(singular.valid(), "bordo singolare del flacone");
+            const Kernel::Body rounded = Kernel::blendEdges(base, {singular}, 0.6, false);
+            require(Kernel::checkBody(rounded).empty() && rounded.faces().size() == 34 && rounded.edges().size() == 48,
+                    "raccordo da 0,6 mm sulla cucitura del flacone");
+            const Kernel::EdgeId threadEnd = Kernel::nearestEdge(base, Kernel::Vec3(0.0, 13.6, 108.034), 1e-2);
+            require(threadEnd.valid(), "bordo del fine-filetto del flacone");
+            const Kernel::Body joined = Kernel::blendEdges(base, {singular, threadEnd}, 0.3, false);
+            require(Kernel::checkBody(joined).empty() && joined.faces().size() == 37 && joined.edges().size() == 53,
+                    "raccordo congiunto da 0,3 mm su elica e fine-filetto");
+            const Kernel::EdgeId otherThreadEnd = Kernel::nearestEdge(base, Kernel::Vec3(0.0, 13.6, 101.678), 1e-2);
+            require(otherThreadEnd.valid(), "secondo bordo del fine-filetto del flacone");
+            const Kernel::Body joinedEnds = Kernel::blendEdges(base, {singular, threadEnd, otherThreadEnd}, 0.3, false);
+            require(Kernel::checkBody(joinedEnds).empty(), "raccordo congiunto sui due estremi del filetto");
+            const auto edgeNear = [&](const Kernel::Vec3 &point, const char *message) {
+                const Kernel::EdgeId edge = Kernel::nearestEdge(base, point, 1e-2);
+                require(edge.valid(), message);
+                return edge;
+            };
+            const Kernel::EdgeId lowerHelix = edgeNear(Kernel::Vec3(0.0, 13.6, 104.427), "elica inferiore del filetto");
+            const Kernel::EdgeId lowerTrimA = edgeNear(Kernel::Vec3(-2.506, 12.987, 107.704), "primo trim inferiore del filetto");
+            const Kernel::EdgeId lowerTrimB = edgeNear(Kernel::Vec3(2.528, 12.967, 101.153), "secondo trim inferiore del filetto");
+            const Kernel::Body lower = Kernel::blendEdges(base, {lowerHelix, lowerTrimA, lowerTrimB}, 0.3, false);
+            require(Kernel::checkBody(lower).empty() && lower.faces().size() == 34 && lower.edges().size() == 50,
+                    "raccordo del bordo inferiore attraverso i trim del collo");
+            const Kernel::EdgeId upperTrimA = edgeNear(Kernel::Vec3(-2.478, 12.984, 108.560), "primo trim superiore del filetto");
+            const Kernel::EdgeId upperTrimB = edgeNear(Kernel::Vec3(2.555, 12.969, 102.010), "secondo trim superiore del filetto");
+            const Kernel::Body upper = Kernel::blendEdges(base, {singular, upperTrimA, upperTrimB}, 0.3, false);
+            require(Kernel::checkBody(upper).empty() && upper.faces().size() == 34 && upper.edges().size() == 50,
+                    "raccordo del bordo superiore attraverso i trim del collo");
+
+            // La parete del collo e' un cilindro con piu' loop e bordi,
+            // trimmato dalle filettature. Una nuova faccia cilindrica nasce
+            // invece con due soli cerchi: la cucitura deve imprimerle i loop
+            // liberi dell'apertura prima di tentare di chiudere il solido.
+            Kernel::FaceId neck;
+            int mostEdges = 0;
+            for (Kernel::FaceId f : base.faces()) {
+                if (base.face(f).surface->type() != Kernel::SurfaceType::Cylinder) continue;
+                int count = 0;
+                for (Kernel::LoopId loop : base.face(f).loops) count += int(base.loopFins(loop).size());
+                if (count > mostEdges) mostEdges = count, neck = f;
+            }
+            require(neck.valid() && mostEdges > 2, "parete cilindrica trimmata del collo");
+            std::vector<Kernel::FaceId> withoutNeck;
+            for (Kernel::FaceId f : base.faces()) if (f != neck) withoutNeck.push_back(f);
+            const Kernel::Body openBottle = Kernel::facesAsSheet(base, withoutNeck);
+            const auto *cylinder = dynamic_cast<const Kernel::CylindricalSurface *>(base.face(neck).surface.get());
+            require(cylinder != nullptr, "supporto cilindrico del collo");
+            double lo = std::numeric_limits<double>::infinity(), hi = -std::numeric_limits<double>::infinity();
+            for (Kernel::LoopId loop : base.face(neck).loops)
+                for (Kernel::FinId fin : base.loopFins(loop))
+                    for (Kernel::VertexId vertex : {base.finStart(fin), base.finEnd(fin)}) {
+                        const double z = Kernel::dot(base.vertex(vertex).point - cylinder->frame().origin(), cylinder->frame().zDir());
+                        lo = std::min(lo, z);
+                        hi = std::max(hi, z);
+                    }
+            const Kernel::Frame3 replacementFrame(cylinder->frame().origin() + lo * cylinder->frame().zDir(),
+                                                   cylinder->frame().zDir(), cylinder->frame().yDir());
+            const Kernel::Body replacementSolid = Kernel::makeCylinder(replacementFrame, cylinder->radius(), hi - lo);
+            std::vector<Kernel::FaceId> replacementFaces;
+            for (Kernel::FaceId f : replacementSolid.faces())
+                if (replacementSolid.face(f).surface->type() == Kernel::SurfaceType::Cylinder) replacementFaces.push_back(f);
+            const Kernel::Body replacement = Kernel::facesAsSheet(replacementSolid, replacementFaces);
+            const Kernel::SewResult repaired = Kernel::sewSheets({&openBottle, &replacement}, 1e-5, true);
+            require(repaired.closed && repaired.solid && repaired.freeEdges == 0 && Kernel::checkBody(repaired.body).empty(),
+                    "ricostruzione del collo cilindrico trimmato e cucitura in solido");
         }
         // L'anteprima del raccordo conserva il B-rep esatto e la
         // tassellazione: OK deve promuoverli senza eseguire di nuovo il kernel.

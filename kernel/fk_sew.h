@@ -23,6 +23,9 @@ struct SewResult {
 // solo: vertici uniti entro `tolerance`, edge con gli stessi estremi e la
 // stessa geometria (punto medio entro 10 tolleranze) condivisi; un bordo su
 // cui finisce un vertice di un'altra superficie (giunzione a T) si divide li'.
+// Se si chiede un solido e il primo tentativo resta aperto, una lamina formata
+// da una sola faccia cilindrica acquisisce i loop di trim dei bordi liberi che
+// giacciono sul suo supporto e dentro il suo intervallo assiale.
 // I versi delle facce diventano coerenti attraverso gli edge comuni. Se ogni
 // edge ha due facce e `makeSolid`, il risultato e' un solido con la normale
 // uscente (se il volume viene negativo le facce si girano); altrimenti una

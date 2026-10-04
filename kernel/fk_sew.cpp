@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <limits>
 #include <map>
 #include <stdexcept>
 #include <string>
@@ -11,6 +12,7 @@
 #include "fk_intersect.h"
 #include "fk_mass.h"
 #include "fk_parallel.h"
+#include "fk_surface_algo.h"
 
 namespace ForgeCad::Kernel {
 
@@ -19,7 +21,7 @@ namespace {
 // Le facce come modello grezzo: punti, edge con tratto e loop, come nei file.
 // `only` (facoltativo) limita le facce del primo body a quelle indicate.
 detail::RawModel rawModel(const std::vector<const Body *> &bodies, std::vector<int> &edgeBody, std::vector<bool> &boundary,
-                          const std::vector<FaceId> *only = nullptr) {
+                          const std::vector<FaceId> *only = nullptr, std::vector<int> *faceBody = nullptr) {
     detail::RawModel model;
     for (std::size_t b = 0; b < bodies.size(); ++b) {
         const Body &body = *bodies[b];
@@ -55,9 +57,113 @@ detail::RawModel rawModel(const std::vector<const Body *> &bodies, std::vector<i
                 if (!loop.empty()) raw.loops.push_back(std::move(loop));
             }
             model.faces.push_back(std::move(raw));
+            if (faceBody) faceBody->push_back(int(b));
         }
     }
     return model;
+}
+
+// Una superficie sostitutiva non conosce necessariamente i trim della faccia
+// eliminata: un cilindro nuovo, per esempio, nasce con due soli cerchi anche
+// se il collo originale era stato tagliato da una filettatura. Se un body di
+// input e' una singola faccia e i bordi liberi degli altri body giacciono sul
+// suo supporto, usa quei bordi come loop della faccia prima della cucitura.
+// Gli edge sono condivisi direttamente: non rimangono copie coincidenti che
+// impediscono alla shell di chiudersi.
+void imprintReplacementFaces(detail::RawModel &model, const std::vector<int> &edgeBody,
+                             std::vector<bool> &boundary, const std::vector<int> &faceBody,
+                             double tolerance) {
+    if (faceBody.size() != model.faces.size()) return;
+    int bodyCount = 0;
+    for (int body : faceBody) bodyCount = std::max(bodyCount, body + 1);
+    std::vector<int> facesPerBody(std::size_t(bodyCount), 0);
+    for (int body : faceBody) ++facesPerBody[std::size_t(body)];
+
+    const auto usage = [&]() {
+        std::vector<std::vector<std::pair<int, bool>>> uses(model.edges.size());
+        for (std::size_t f = 0; f < model.faces.size(); ++f)
+            for (const auto &loop : model.faces[f].loops)
+                for (const detail::RawFin &fin : loop) uses[std::size_t(fin.edge)].push_back({int(f), fin.sense});
+        return uses;
+    };
+    auto uses = usage();
+    const double limit = 10.0 * tolerance;
+    for (std::size_t faceIndex = 0; faceIndex < model.faces.size(); ++faceIndex) {
+        const int owner = faceBody[faceIndex];
+        if (facesPerBody[std::size_t(owner)] != 1) continue;
+        detail::RawFace &replacement = model.faces[faceIndex];
+        if (!replacement.surface || replacement.surface->type() != SurfaceType::Cylinder) continue;
+        double vMin = std::numeric_limits<double>::infinity(), vMax = -std::numeric_limits<double>::infinity();
+        for (const auto &loop : replacement.loops)
+            for (const detail::RawFin &fin : loop) {
+                const detail::RawEdge &edge = model.edges[std::size_t(fin.edge)];
+                for (double f : {0.0, 0.5, 1.0}) {
+                    const double t = edge.range.lo + f * edge.range.length();
+                    try {
+                        const SurfaceProjection projection = projectPoint(*replacement.surface, edge.curve->point(t));
+                        vMin = std::min(vMin, projection.v);
+                        vMax = std::max(vMax, projection.v);
+                    } catch (const std::exception &) {
+                    }
+                }
+            }
+        if (!(vMin <= vMax)) continue;
+
+        struct OrientedEdge { int edge = -1; bool sense = true; int start = -1, end = -1; };
+        std::vector<OrientedEdge> selected;
+        for (std::size_t e = 0; e < model.edges.size(); ++e) {
+            if (e >= boundary.size() || !boundary[e] || edgeBody[e] == owner || uses[e].size() != 1) continue;
+            const detail::RawEdge &edge = model.edges[e];
+            bool onSupport = true;
+            for (double f : {0.0, 0.25, 0.5, 0.75, 1.0}) {
+                const double t = edge.range.lo + f * edge.range.length();
+                try {
+                    const SurfaceProjection projection = projectPoint(*replacement.surface, edge.curve->point(t));
+                    if (projection.distance <= limit && projection.v >= vMin - limit && projection.v <= vMax + limit) continue;
+                } catch (const std::exception &) {
+                }
+                onSupport = false;
+                break;
+            }
+            if (!onSupport) continue;
+            const bool sense = !uses[e].front().second;
+            selected.push_back({int(e), sense, sense ? edge.start : edge.end, sense ? edge.end : edge.start});
+        }
+        if (selected.empty()) continue;
+
+        std::vector<bool> used(selected.size(), false);
+        std::vector<std::vector<detail::RawFin>> loops;
+        bool complete = true;
+        for (std::size_t seed = 0; seed < selected.size() && complete; ++seed) {
+            if (used[seed]) continue;
+            std::vector<detail::RawFin> loop;
+            const int origin = selected[seed].start;
+            int at = origin;
+            while (true) {
+                int found = -1;
+                for (std::size_t k = 0; k < selected.size(); ++k)
+                    if (!used[k] && selected[k].start == at) {
+                        if (found >= 0) { found = -2; break; }
+                        found = int(k);
+                    }
+                if (found < 0) {
+                    complete = at == origin && !loop.empty();
+                    break;
+                }
+                used[std::size_t(found)] = true;
+                const OrientedEdge &edge = selected[std::size_t(found)];
+                loop.push_back({edge.edge, edge.sense});
+                at = edge.end;
+                if (at == origin) break;
+            }
+            if (!loop.empty()) loops.push_back(std::move(loop));
+        }
+        if (!complete || std::find(used.begin(), used.end(), false) != used.end()) continue;
+        replacement.loops = std::move(loops);
+        uses = usage();
+        boundary.assign(model.edges.size(), false);
+        for (std::size_t e = 0; e < uses.size(); ++e) boundary[e] = uses[e].size() == 1;
+    }
 }
 
 // Giunzioni a T: un vertice di un'altra superficie che sta (entro la
@@ -190,11 +296,21 @@ SewResult sewSheets(const std::vector<const Body *> &bodies, double tolerance, b
     if (bodies.empty()) throw std::domain_error("cucitura: nessuna superficie");
     std::vector<int> edgeBody;
     std::vector<bool> boundary;
-    detail::RawModel model = rawModel(bodies, edgeBody, boundary);
+    std::vector<int> faceBody;
+    detail::RawModel model = rawModel(bodies, edgeBody, boundary, nullptr, &faceBody);
     if (model.faces.empty()) throw std::domain_error("cucitura: nessuna faccia");
     splitAtJunctions(model, edgeBody, boundary, tolerance);
     SewResult result;
     result.closed = detail::sewModel(model, tolerance);
+    if (makeSolid && !result.closed) {
+        edgeBody.clear();
+        boundary.clear();
+        faceBody.clear();
+        model = rawModel(bodies, edgeBody, boundary, nullptr, &faceBody);
+        imprintReplacementFaces(model, edgeBody, boundary, faceBody, tolerance);
+        splitAtJunctions(model, edgeBody, boundary, tolerance);
+        result.closed = detail::sewModel(model, tolerance);
+    }
     result.solid = result.closed && makeSolid;
     // Edge usati da una faccia sola (dopo la cucitura).
     std::map<int, int> uses;
