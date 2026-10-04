@@ -47,8 +47,9 @@ constexpr char kMagic[4] = {'F', 'C', 'A', 'D'};
 // 24 loft e sweep di superficie (senza coperchi), superficie rigata (le due
 // catene di riferimenti), superficie planare (bordi scelti nella vista).
 // 25 svuotamento dei solidi; 26 unita' lineare preferita del documento;
-// 27 filettature parametriche su facce cilindriche o coniche.
-constexpr quint16 kVersion = 27;
+// 27 filettature parametriche su facce cilindriche o coniche; 28 componenti
+// connesse separate prodotte dall'eliminazione delle facce.
+constexpr quint16 kVersion = 28;
 constexpr quint8 kZlib = 1;
 
 void write(QDataStream &out, const CurveObject &curve) {
@@ -308,6 +309,8 @@ void write(QDataStream &out, const ExtrusionObject &body) {
     const ThreadParameters &t = body.thread;
     out << qint32(t.standard) << t.designation << t.pitch << t.length << t.leftHanded << t.reverse
         << t.face.x << t.face.y << t.face.z << qint32(t.face.subshape) << qint32(t.face.geometry) << qint32(t.face.context);
+    // Formato 28: indice della componente prodotta da DeleteFace.
+    out << qint32(body.deleteComponent);
 }
 
 // `extras` (solo formato 5): i file scritti durante lo sviluppo del formato 5
@@ -491,6 +494,12 @@ bool read(QDataStream &in, ExtrusionObject &body, quint16 version, int extras) {
         if (standard < 0 || standard > 7 || !std::isfinite(t.pitch) || t.pitch <= 0.0 || !std::isfinite(t.length) || t.length < 0.0)
             return false;
     }
+    if (version >= 28) {
+        qint32 component = -1;
+        in >> component;
+        if (component < -1) return false;
+        body.deleteComponent = component;
+    }
     const BodyFeature last = version >= 27 ? BodyFeature::Thread : version >= 25 ? BodyFeature::Shell : BodyFeature::PlanarSurface;
     if (int(body.feature) < 0 || int(body.feature) > int(last)) return false;
     return in.status() == QDataStream::Ok;
@@ -506,7 +515,7 @@ namespace {
 // una modifica o una rigenerazione esplicita sostituisce immediatamente lo
 // snapshot. Il tag rende leggibili anche le cache precedenti (solo B-rep).
 constexpr quint32 kBodyCacheTag = 0x46434332;  // "FCC2"
-constexpr quint32 kBodyCacheVersion = 2;
+constexpr quint32 kBodyCacheVersion = 3;
 constexpr qsizetype kMaxDisplayValues = 200000000;
 
 QByteArray definitionHash(const QByteArray &payload) { return QCryptographicHash::hash(payload, QCryptographicHash::Sha256); }
@@ -518,23 +527,26 @@ bool hasDisplaySnapshot(const BodyDisplay &display) {
 
 void writeDisplay(QDataStream &out, const BodyDisplay &display) {
     out << qint32(display.quality) << display.vertices << display.normals << display.edges << display.edgeIds
-        << display.constructionCurves << display.faceEdges;
+        << display.constructionCurves << display.faceEdges << display.faceIds << display.faceLabelPoints;
 }
 
 bool reasonableDisplay(const BodyDisplay &display) {
-    qsizetype values = display.vertices.size() + display.normals.size() + display.edgeIds.size();
+    qsizetype values = display.vertices.size() + display.normals.size() + display.edgeIds.size()
+                     + display.faceIds.size() + display.faceLabelPoints.size();
     for (const QVector<QVector3D> &line : display.edges) values += line.size();
     for (const QVector<QVector3D> &line : display.constructionCurves) values += line.size();
     for (const QVector<int> &face : display.faceEdges) values += face.size();
     return values <= kMaxDisplayValues
         && (display.normals.isEmpty() || display.normals.size() == display.vertices.size())
-        && display.edgeIds.size() <= display.edges.size();
+        && display.edgeIds.size() <= display.edges.size()
+        && display.faceIds.size() == display.faceLabelPoints.size();
 }
 
-bool readDisplay(QDataStream &in, BodyDisplay &display) {
+bool readDisplay(QDataStream &in, BodyDisplay &display, quint32 cacheVersion) {
     qint32 quality = -1;
     in >> quality >> display.vertices >> display.normals >> display.edges >> display.edgeIds
        >> display.constructionCurves >> display.faceEdges;
+    if (cacheVersion >= 3) in >> display.faceIds >> display.faceLabelPoints;
     display.quality = quality;
     display.rayIndex.reset();
     display.instancedBase.reset();
@@ -601,7 +613,7 @@ void applyBodyCache(const QByteArray &compressed, const QByteArray &payload, Doc
             quint8 hasDisplay = 0;
             in >> hasDisplay;
             records[i].hasDisplay = hasDisplay != 0;
-            if (records[i].hasDisplay && !readDisplay(in, records[i].display)) return;
+            if (records[i].hasDisplay && !readDisplay(in, records[i].display, cacheVersion)) return;
         }
         if (in.status() != QDataStream::Ok) return;
     }

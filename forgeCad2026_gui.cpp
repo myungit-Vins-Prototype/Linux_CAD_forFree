@@ -259,6 +259,7 @@ public:
 
     void setDisplayMode(int mode) { displayMode_ = mode; update(); }
     void setHiddenEdgesVisible(bool visible) { hiddenEdgesVisible_ = visible; update(); }
+    void setTopologyIdsVisible(bool visible) { topologyIdsVisible_ = visible; update(); }
     void setLightingPreset(int preset) { lightingPreset_ = preset; update(); }
     void setSnapEnabled(bool enabled) { snapEnabled_ = enabled; update(); }
     void setConstraintMode(int mode) { constraintMode_ = mode; }
@@ -2175,6 +2176,45 @@ public:
         return {};
     }
 
+    // Elimina facce puo' disconnettere davvero la topologia (per esempio un
+    // filetto rimasto isolato dal collo). Ogni shell risultante diventa un
+    // corpo di storyboard distinto, invece di restare nascosta dentro un solo
+    // ExtrusionObject multi-shell.
+    QString createDeleteFaces(ExtrusionObject definition) {
+        if (definition.firstBody < 0 || definition.firstBody >= extrusions_.size()
+            || !extrusions_.at(definition.firstBody).forgeBody)
+            return QStringLiteral("Il corpo di partenza non ha geometria.");
+        QString error;
+        const QVector<ForgeCad::ForgeBody> components = ForgeCad::forgeDeleteFacesSeparated(
+            extrusions_.at(definition.firstBody).forgeBody, definition.offsetFaces, &error);
+        if (components.isEmpty()) return error;
+
+        recordUndo();
+        quint64 nextBodyId = 1;
+        for (const ExtrusionObject &feature : extrusions_) nextBodyId = qMax(nextBodyId, feature.modelBodyId + 1);
+        for (const ModelBody &model : modelBodies_) nextBodyId = qMax(nextBodyId, model.id + 1);
+        const quint64 inherited = extrusions_.at(definition.firstBody).modelBodyId;
+        const QString commonName = definition.name;
+        const int firstNew = extrusions_.size();
+        for (int component = 0; component < components.size(); ++component) {
+            ExtrusionObject result = definition;
+            result.deleteComponent = components.size() > 1 ? component : -1;
+            result.forgeBody = components.at(component);
+            result.solid = false;
+            result.error.clear();
+            result.cachedGeometry = false;
+            result.featureId = 0;
+            result.modelBodyId = component == 0 && inherited ? inherited : nextBodyId++;
+            if (components.size() > 1) result.name = QStringLiteral("%1 (%2)").arg(commonName).arg(component + 1);
+            tessellateBody(result, extrusions_.size());
+            extrusions_.append(std::move(result));
+        }
+        selection_ = {SceneObjectKind::Extrusion, firstNew, -1};
+        hover_ = {};
+        documentChanged();
+        return {};
+    }
+
     // --- Piani di costruzione e riferimenti -------------------------------------
 
     // Scelta di un riferimento nella vista (punto, retta, curva o piano secondo
@@ -3693,11 +3733,15 @@ protected:
                 selectedFace_.body = selection_.index;
                 // La parte cliccata seleziona la funzione che l'ha creata (nell'albero e per il menu).
                 selectedFeature_ = faceOwnerFeature(selection_.index, lastMousePosition_, selectedFace_.hit);
-                showStatus(QStringLiteral("%1: faccia %2%3 (%4 bordi), creata da %5")
+                QStringList edgeIds;
+                for (const EdgePoint &edge : selectedFace_.hit.edges)
+                    if (edge.subshape >= 0) edgeIds.append(QStringLiteral("E%1").arg(edge.subshape));
+                showStatus(QStringLiteral("%1: B%2:F%3%4 (%5), creata da %6")
                                .arg(extrusions_.at(selection_.index).name)
-                               .arg(selectedFace_.hit.face + 1)
+                               .arg(selection_.index)
+                               .arg(selectedFace_.hit.face)
                                .arg(selectedFace_.hit.planar ? QStringLiteral(" piana") : QString())
-                               .arg(selectedFace_.hit.edges.size())
+                               .arg(edgeIds.isEmpty() ? QStringLiteral("nessun bordo") : edgeIds.join(QStringLiteral(", ")))
                                .arg(extrusions_.at(selectedFeature_).name));
             }
             if (selectionCallback_)
@@ -6486,7 +6530,7 @@ private:
                     body.error = QStringLiteral("Il corpo da cui togliere le facce non esiste piu' o non ha geometria.");
                     return;
                 }
-                body.forgeBody = ForgeCad::forgeDeleteFaces(base->forgeBody, body.offsetFaces, &body.error);
+                body.forgeBody = ForgeCad::forgeDeleteFaces(base->forgeBody, body.offsetFaces, &body.error, body.deleteComponent);
                 body.solid = false;
                 return;
             }
@@ -7523,6 +7567,7 @@ private:
         size = referencePlaneExtents(2);
         if (isPlaneShown(2)) painter.drawText(projectWorldPoint(QVector3D(0.0f, 0.75f * float(size.width()), 0.75f * float(size.height()))), QStringLiteral("Piano YZ"));
         drawDatumLabels(painter);
+        drawTopologyLabels(painter);
         if (sketchMode_) {
             painter.setPen(QColor(255, 220, 120));
             const ForgeCad::SketchAnalysis &analysis = sketchAnalysis();
@@ -7533,6 +7578,40 @@ private:
             drawDimensions(painter);
             drawSketchConstraints(painter);
         }
+    }
+
+    void drawTopologyLabels(QPainter &painter) const {
+        if (!topologyIdsVisible_ || sketchMode_) return;
+        int onlyBody = -1;
+        if (selection_.kind == SceneObjectKind::Extrusion) onlyBody = selection_.index;
+        else if (hover_.kind == SceneObjectKind::Extrusion) onlyBody = hover_.index;
+        painter.save();
+        painter.setFont(QFont(QStringLiteral("Sans"), 8, QFont::DemiBold));
+        const auto label = [&](const QPointF &position, const QString &text, const QColor &color) {
+            const QFontMetrics metrics(painter.font());
+            QRectF box = metrics.boundingRect(text).adjusted(-3.0, -2.0, 3.0, 2.0);
+            box.moveCenter(position);
+            painter.setPen(QPen(QColor(10, 15, 22, 220), 2.0));
+            painter.setBrush(QColor(20, 29, 40, 205));
+            painter.drawRoundedRect(box, 3.0, 3.0);
+            painter.setPen(color);
+            painter.drawText(box, Qt::AlignCenter, text);
+        };
+        for (int bodyIndex = 0; bodyIndex < extrusions_.size(); ++bodyIndex) {
+            const ExtrusionObject &body = extrusions_.at(bodyIndex);
+            if (!body.visible || !isShapeBody(body) || (onlyBody >= 0 && bodyIndex != onlyBody)) continue;
+            const BodyDisplay &display = body.display;
+            for (int k = 0; k < display.faceIds.size() && k < display.faceLabelPoints.size(); ++k)
+                label(projectWorldPoint(display.faceLabelPoints.at(k)),
+                      QStringLiteral("B%1:F%2").arg(bodyIndex).arg(display.faceIds.at(k)), QColor(255, 205, 95));
+            for (int k = 0; k < display.edges.size(); ++k) {
+                const QVector<QVector3D> &edge = display.edges.at(k);
+                if (edge.isEmpty()) continue;
+                label(projectWorldPoint(edge.at(edge.size() / 2)) + QPointF(0.0, 11.0),
+                      QStringLiteral("B%1:E%2").arg(bodyIndex).arg(display.edgeIds.value(k, k)), QColor(105, 225, 255));
+            }
+        }
+        painter.restore();
     }
 
     void drawSketchDimensions(QPainter &painter) const {
@@ -8833,18 +8912,42 @@ private:
         // In modalita' schizzo gli schizzi stanno sopra i corpi: anche le entita'
         // dentro un solido (sezioni) o sugli spigoli (riferimenti) si vedono.
         if (sketchMode_) glDisable(GL_DEPTH_TEST);
-        // Entita' di costruzione: tratteggiate, in grigio azzurro.
-        const auto setConstructionStyle = [this](bool construction) {
-            if (construction) {
-                overlayRenderer_.setStipple(true, 0x00FF, 2);
-            } else {
-                overlayRenderer_.setStipple(false);
+        // Il vecchio stipple dello shader usava x+y del pixel: sulle linee
+        // inclinate a -45 gradi la coordinata resta costante e l'intera linea
+        // poteva cadere in un intervallo vuoto. Costruiamo invece i trattini
+        // lungo la polilinea, in pixel, indipendentemente dall'orientamento.
+        const auto drawDashedPolyline = [this](const QVector<QVector3D> &points, const QVector4D &color,
+                                               double dashPixels = 7.0, double gapPixels = 5.0) {
+            if (points.size() < 2) return;
+            QVector<QVector3D> dashes;
+            bool drawing = true;
+            double remaining = dashPixels;
+            for (int k = 1; k < points.size(); ++k) {
+                const QVector3D a = points.at(k - 1), b = points.at(k);
+                const double pixels = pointDistance(projectWorldPoint(a), projectWorldPoint(b));
+                if (!(pixels > 1e-9)) continue;
+                double along = 0.0;
+                while (along < pixels - 1e-9) {
+                    const double step = qMin(remaining, pixels - along);
+                    if (drawing) {
+                        dashes.append(a + float(along / pixels) * (b - a));
+                        dashes.append(a + float((along + step) / pixels) * (b - a));
+                    }
+                    along += step;
+                    remaining -= step;
+                    if (remaining <= 1e-9) {
+                        drawing = !drawing;
+                        remaining = drawing ? dashPixels : gapPixels;
+                    }
+                }
             }
-            return construction ? QVector4D(0.55f, 0.72f, 0.85f, 1.0f) : QVector4D();
+            overlayRenderer_.setStipple(false);
+            overlayRenderer_.draw(GL_LINES, dashes, color);
         };
         glLineWidth(2.0f);
         const double markerSize = pickTolerance(7.0);
-        QVector<QMatrix4x4> segmentInstances[4];  // costruzione, asse, definito, normale
+        QVector<QMatrix4x4> segmentInstances[2];  // definito, normale
+        QVector<QVector3D> constructionLines, axisLines;
         QVector<QVector3D> constructionMarkers;
         const auto lineTransform = [](const QVector3D &first, const QVector3D &second) {
             const QVector3D delta = second - first;
@@ -8872,25 +8975,26 @@ private:
                     }
                     continue;
                 }
-                const int style = sketch.symmetryAxes.contains(index) ? 1
-                    : !construction && active && analysis->segmentDefined.value(index) ? 2
-                    : construction ? 0 : 3;
-                segmentInstances[style].push_back(lineTransform(first, second));
+                if (sketch.symmetryAxes.contains(index)) axisLines += QVector<QVector3D>{first, second};
+                else if (construction) constructionLines += QVector<QVector3D>{first, second};
+                else {
+                    const int style = active && analysis->segmentDefined.value(index) ? 0 : 1;
+                    segmentInstances[style].push_back(lineTransform(first, second));
+                }
             }
         }
         const QVector<QVector3D> unitLine{QVector3D(0, 0, 0), QVector3D(1, 0, 0)};
-        const QVector4D segmentColors[] = {QVector4D(0.55f, 0.72f, 0.85f, 1.0f), QVector4D(0.35f, 0.88f, 0.78f, 1.0f),
-                                           QVector4D(0.94f, 0.96f, 1.0f, 1.0f), QVector4D(1.0f, 0.75f, 0.15f, 1.0f)};
-        for (int style = 0; style < 4; ++style) {
-            if (style == 0) overlayRenderer_.setStipple(true, 0x00FF, 2);
-            else if (style == 1) overlayRenderer_.setStipple(true, 0x27FF, 2);
-            else overlayRenderer_.setStipple(false);
-            overlayRenderer_.drawInstanced(GL_LINES, unitLine, segmentColors[style], segmentInstances[style]);
-        }
+        const QVector4D definedColor(0.94f, 0.96f, 1.0f, 1.0f), normalColor(1.0f, 0.75f, 0.15f, 1.0f);
+        overlayRenderer_.setStipple(false);
+        overlayRenderer_.drawInstanced(GL_LINES, unitLine, definedColor, segmentInstances[0]);
+        overlayRenderer_.drawInstanced(GL_LINES, unitLine, normalColor, segmentInstances[1]);
+        for (int k = 0; k + 1 < constructionLines.size(); k += 2)
+            drawDashedPolyline({constructionLines.at(k), constructionLines.at(k + 1)}, QVector4D(0.55f, 0.78f, 0.92f, 1.0f));
+        for (int k = 0; k + 1 < axisLines.size(); k += 2)
+            drawDashedPolyline({axisLines.at(k), axisLines.at(k + 1)}, QVector4D(0.35f, 0.92f, 0.82f, 1.0f), 11.0, 4.0);
         overlayRenderer_.setStipple(false);
         overlayRenderer_.draw(GL_LINES, constructionMarkers, QVector4D(0.35f, 0.92f, 0.92f, 1.0f));
-        // Il tratteggio dell'ultimo segmento di costruzione non deve restare acceso
-        // (altrimenti al disegno successivo tratteggia anche gli spigoli dei corpi).
+        // Lo stato resta pieno per tutti gli overlay disegnati dopo gli schizzi.
         overlayRenderer_.setStipple(false);
         glLineWidth(2.5f);
         for (int sketchIndex = 0; sketchIndex < sketches_.size(); ++sketchIndex) {
@@ -8899,7 +9003,7 @@ private:
             const bool active = analysis && sketchIndex == activeSketch_;
             for (int curveIndex = 0; curveIndex < sketch.curves.size(); ++curveIndex) {
                 const CurveObject &curve = sketch.curves.at(curveIndex);
-                QVector4D color = setConstructionStyle(curve.construction);
+                QVector4D color(0.55f, 0.78f, 0.92f, 1.0f);
                 if (!curve.construction) {
                     if (active && analysis->curveDefined.value(curveIndex)) color = QVector4D(0.94f, 0.96f, 1.0f, 1.0f);
                     else color = QVector4D(curve.tool == DrawingTool::Nurbs ? 0.85f : 0.95f,
@@ -8911,8 +9015,8 @@ private:
                     const QVector3D world = mapSketchPoint(sample, sketch);
                     samples.push_back(world);
                 }
-                overlayRenderer_.draw(GL_LINE_STRIP, samples, color);
-                setConstructionStyle(false);
+                if (curve.construction) drawDashedPolyline(samples, color);
+                else overlayRenderer_.draw(GL_LINE_STRIP, samples, color);
                 QVector<QVector3D> controls;
                 controls.reserve(curve.controlPoints.size());
                 for (const QPointF &control : curve.controlPoints) {
@@ -9723,7 +9827,7 @@ private:
         const auto n = [](double v) { return QString::number(v, 'g', 17); };
         QStringList parts{QString::number(index), QString::number(d.operation), QString::number(int(d.feature)), QString::number(d.sketchIndex),
                           n(d.distance), QString::number(d.revolveAxis), n(d.revolveAngle), QString::number(d.firstBody),
-                          QString::number(d.secondBody), n(d.blendSize), QString::number(d.blendChamfer), QString::number(d.trimPlane),
+                          QString::number(d.secondBody), QString::number(d.deleteComponent), n(d.blendSize), QString::number(d.blendChamfer), QString::number(d.trimPlane),
                           n(d.trimKeep.x), n(d.trimKeep.y), n(d.trimKeep.z), QString::number(d.extendLinear), n(d.scaleFactor),
                           QString::number(d.scaleCenterMode), n(d.scaleCenter.x), n(d.scaleCenter.y), n(d.scaleCenter.z),
                           QString::number(d.chamferSpec.mode), n(d.chamferSpec.second), QString::number(d.chamferSpec.flip)};
@@ -10390,6 +10494,7 @@ private:
 
     int displayMode_ = 2;
     bool hiddenEdgesVisible_ = false;  // disegno e selezione X-ray degli spigoli occultati
+    bool topologyIdsVisible_ = false;  // etichette B/F/E per l'ispezione del B-rep
     float yaw_ = -32.0f, pitch_ = 22.0f, zoom_ = 8.0f;
     float roll_ = 0.0f;  // rotazione attorno all'asse di vista (schizzi su facce inclinate)
     AxesOrientation orientation_;  // orientamento degli assi del documento (vedi basisMatrix)
@@ -16538,6 +16643,15 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
         viewport->setHiddenEdgesVisible(visible);
         QSettings().setValue(QStringLiteral("view/hiddenEdges"), visible);
     });
+    QAction *topologyIdsAction = modeMenu->addAction(QStringLiteral("Mostra ID topologici (facce e bordi)"));
+    topologyIdsAction->setCheckable(true);
+    topologyIdsAction->setToolTip(QStringLiteral("Mostra B<corpo>:F<faccia> e B<corpo>:E<bordo>; seleziona un corpo per limitarne le etichette"));
+    topologyIdsAction->setChecked(viewSettings.value(QStringLiteral("view/topologyIds"), false).toBool());
+    viewport->setTopologyIdsVisible(topologyIdsAction->isChecked());
+    connect(topologyIdsAction, &QAction::toggled, this, [viewport](bool visible) {
+        viewport->setTopologyIdsVisible(visible);
+        QSettings().setValue(QStringLiteral("view/topologyIds"), visible);
+    });
     QAction *studio = lightingMenu->addAction(QStringLiteral("Studio"));
     QAction *soft = lightingMenu->addAction(QStringLiteral("Morbida"));
     QAction *inspection = lightingMenu->addAction(QStringLiteral("Ispezione"));
@@ -17098,7 +17212,7 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
             for (const ExtrusionObject &other : viewport->extrusions()) count += other.feature == BodyFeature::DeleteFace ? 1 : 0;
             result.name = QStringLiteral("Elimina facce %1").arg(count);
             result.plane = viewport->extrusions().value(d.firstBody).plane;
-            return viewport->createBody(result);
+            return viewport->createDeleteFaces(result);
         });
     });
     connect(ruledSurfaceAction, &QAction::triggered, this, [this, viewport] {

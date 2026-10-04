@@ -37,6 +37,7 @@
 #include "fk_shell.h"
 #include "fk_step.h"
 #include "fk_tessellate.h"
+#include "fk_unify.h"
 
 namespace ForgeCad {
 namespace {
@@ -441,14 +442,15 @@ ForgeBody forgeShell(const ForgeBody &base, const QVector<EdgePoint> &points, do
     }
 }
 
-ForgeBody forgeDeleteFaces(const ForgeBody &base, const QVector<EdgePoint> &points, QString *error) {
+QVector<ForgeBody> forgeDeleteFacesSeparated(const ForgeBody &base, const QVector<EdgePoint> &points, QString *error) {
+    QVector<ForgeBody> components;
     if (!base) {
         setError(error, QStringLiteral("Il corpo di partenza non ha geometria."));
-        return nullptr;
+        return components;
     }
     if (points.isEmpty()) {
         setError(error, QStringLiteral("Nessuna faccia da eliminare."));
-        return nullptr;
+        return components;
     }
     try {
         Box box;
@@ -459,22 +461,45 @@ ForgeBody forgeDeleteFaces(const ForgeBody &base, const QVector<EdgePoint> &poin
             const FaceId f = resolveFaceReference(*base, point, reach);
             if (!f.valid()) {
                 setError(error, QStringLiteral("Una delle facce scelte non esiste piu' nel corpo."));
-                return nullptr;
+                return components;
             }
-            removed.push_back(f);
+            if (std::find(removed.begin(), removed.end(), f) == removed.end()) removed.push_back(f);
         }
         std::vector<FaceId> kept;
         for (FaceId f : base->faces())
             if (std::find(removed.begin(), removed.end(), f) == removed.end()) kept.push_back(f);
         if (kept.empty()) {
             setError(error, QStringLiteral("Non resta nessuna faccia: elimina il corpo invece delle facce."));
-            return nullptr;
+            return components;
         }
-        return std::make_shared<const Body>(facesAsSheet(*base, kept));
+        // Due patch dello stesso supporto non devono conservare un bordo
+        // puramente parametrico dopo la rimozione delle facce intermedie.
+        const double cleanupTolerance = 1e-8 * std::max(1.0, box.diagonal());
+        Body result = unifySameDomain(facesAsSheet(*base, kept), cleanupTolerance);
+        for (ShellId shell : result.shells()) {
+            const std::vector<FaceId> &faces = result.shell(shell).faces;
+            if (!faces.empty()) components.append(std::make_shared<const Body>(facesAsSheet(result, faces)));
+        }
+        if (components.isEmpty()) setError(error, QStringLiteral("Non resta nessuna componente connessa."));
     } catch (const std::exception &failure) {
         setError(error, QStringLiteral("Eliminazione delle facce non riuscita: %1").arg(QString::fromUtf8(failure.what())));
+    }
+    return components;
+}
+
+ForgeBody forgeDeleteFaces(const ForgeBody &base, const QVector<EdgePoint> &points, QString *error, int component) {
+    const QVector<ForgeBody> separated = forgeDeleteFacesSeparated(base, points, error);
+    if (separated.isEmpty()) return nullptr;
+    if (component >= 0) {
+        if (component < separated.size()) return separated.at(component);
+        setError(error, QStringLiteral("La componente %1 non esiste piu' nel risultato.").arg(component + 1));
         return nullptr;
     }
+    if (separated.size() == 1) return separated.first();
+    std::vector<const Body *> bodies;
+    bodies.reserve(std::size_t(separated.size()));
+    for (const ForgeBody &part : separated) bodies.push_back(part.get());
+    return std::make_shared<const Body>(sewSheets(bodies, 0.0, false).body);
 }
 
 ForgeBody forgeOffsetFaces(const ForgeBody &base, const QVector<EdgePoint> &points, double distance, QString *error, QString *summary) {
@@ -1010,12 +1035,28 @@ void forgeTessellate(const Body &body, int quality, BodyDisplay &display) {
     const std::unique_ptr<SurfaceBatchEvaluator> accelerator = makeTessellationAccelerator();
     options.accelerator = accelerator.get();
     const Tessellation mesh = tessellate(body, options);
-    for (const FaceMesh &face : mesh.faces)
-        for (const std::array<int, 3> &triangle : face.triangles)
+    for (const FaceMesh &face : mesh.faces) {
+        Vec3 labelPoint;
+        double largest = -1.0;
+        for (const std::array<int, 3> &triangle : face.triangles) {
+            const Vec3 &a = face.points[std::size_t(triangle[0])];
+            const Vec3 &b = face.points[std::size_t(triangle[1])];
+            const Vec3 &c = face.points[std::size_t(triangle[2])];
+            const double size = squaredNorm(cross(b - a, c - a));
+            if (size > largest) {
+                largest = size;
+                labelPoint = (a + b + c) / 3.0;
+            }
             for (int index : triangle) {
                 display.vertices.append(toDisplay(face.points[std::size_t(index)]));
                 display.normals.append(toDisplay(face.normals[std::size_t(index)]));
             }
+        }
+        if (largest >= 0.0) {
+            display.faceIds.append(face.face.index);
+            display.faceLabelPoints.append(toDisplay(labelPoint));
+        }
+    }
     std::map<int, int> edgeDisplay;
     for (std::size_t e = 0; e < mesh.edges.size(); ++e) {
         const std::vector<Vec3> &edge = mesh.edges[e];

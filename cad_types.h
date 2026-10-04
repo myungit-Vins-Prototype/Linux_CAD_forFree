@@ -232,6 +232,8 @@ struct BodyDisplay {
     QVector<QVector3D> normals;    // una normale per vertice
     QVector<QVector<QVector3D>> edges;
     QVector<int> edgeIds;               // polilinea visualizzata -> EdgeId del B-rep
+    QVector<int> faceIds;               // punto etichetta -> FaceId del B-rep
+    QVector<QVector3D> faceLabelPoints;  // posizione delle etichette topologiche delle facce
     QVector<QVector<QVector3D>> constructionCurves; // isoparametriche U/V delle anteprime
     QVector<QVector<int>> faceEdges; // faccia B-rep -> polilinee, senza ricerche geometriche durante il disegno
     std::shared_ptr<const ForgeCad::Kernel::RayFaceIndex> rayIndex;
@@ -574,6 +576,9 @@ struct ExtrusionObject {
     // SurfaceOffset: le facce scelte (vuoto: tutte le facce del corpo).
     // DeleteFace: le facce da togliere (almeno una); Shell: le facce dell'apertura.
     QVector<EdgePoint> offsetFaces;
+    // DeleteFace multi-risultato: -1 = tutte le componenti (file storici),
+    // altrimenti la componente connessa esposta da questo corpo logico.
+    int deleteComponent = -1;
     // Sew: tolleranza della cucitura e solido se il risultato e' chiuso.
     double sewTolerance = 1e-5;
     bool sewSolid = true;

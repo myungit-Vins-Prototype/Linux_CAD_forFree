@@ -79,7 +79,10 @@ ForgeBody forgeExtendSheet(const ForgeBody &sheet, const QVector<EdgePoint> &poi
 // Il corpo senza le facce scelte: lamina con le facce restanti (fk_sew facesAsSheet).
 // Guscio: il solido svuotato con lo spessore verso l'interno, le facce scelte tolte (fk_shell).
 ForgeBody forgeShell(const ForgeBody &base, const QVector<EdgePoint> &openFaces, double thickness, QString *error);
-ForgeBody forgeDeleteFaces(const ForgeBody &base, const QVector<EdgePoint> &faces, QString *error);
+// `component` -1 conserva tutte le componenti nello stesso B-rep (file
+// precedenti); un valore >= 0 restituisce una sola componente connessa.
+ForgeBody forgeDeleteFaces(const ForgeBody &base, const QVector<EdgePoint> &faces, QString *error, int component = -1);
+QVector<ForgeBody> forgeDeleteFacesSeparated(const ForgeBody &base, const QVector<EdgePoint> &faces, QString *error);
 ForgeBody forgeOffsetFaces(const ForgeBody &base, const QVector<EdgePoint> &faces, double distance, QString *error, QString *summary = nullptr);
 // Cucitura delle superfici `sheets` (anche solidi: valgono le loro facce) in
 // una sola entro `tolerance`; con `solid` e il risultato chiuso, un solido.

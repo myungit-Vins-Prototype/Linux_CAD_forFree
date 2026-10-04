@@ -2028,6 +2028,47 @@ public:
                     "il solido senza una faccia diventa una superficie di area 40");
             require(sheet.modelBodyId == v.extrusions_.at(0).modelBodyId && sheet.visible && !v.extrusions_.at(0).visible,
                     "l'eliminazione e' una feature dello stesso corpo");
+            // Se il risultato ha shell disconnesse, il comando della GUI le
+            // espone come corpi logici distinti (non come un solo multi-body).
+            {
+                CadViewport separated;
+                PrimitiveParameters left;
+                left.size[0] = left.size[1] = left.size[2] = 1.0;
+                PrimitiveParameters right = left;
+                right.origin[0] = 3.0;
+                require(separated.createPrimitive(left, QStringLiteral("Sinistro")).isEmpty()
+                            && separated.createPrimitive(right, QStringLiteral("Destro")).isEmpty(),
+                        "scatole disgiunte per elimina facce");
+                require(separated.createBoolean(::BooleanOperation::Union, 0, {1}, QStringLiteral("Due componenti")).isEmpty(),
+                        "unione disgiunta per elimina facce");
+                const Body &joined = *separated.extrusions_.at(2).forgeBody;
+                const FaceId removed = joined.faces().front();
+                const FinId sample = joined.loop(joined.face(removed).loops.front()).first;
+                ExtrusionObject deletion;
+                deletion.feature = BodyFeature::DeleteFace;
+                deletion.firstBody = 2;
+                deletion.offsetFaces = {ForgeCad::faceReference(joined, removed, joined.finPoint(sample, 0.5))};
+                deletion.name = QStringLiteral("Separato");
+                require(separated.createDeleteFaces(deletion).isEmpty(), "elimina facce separa le componenti");
+                require(separated.extrusions_.size() == 5
+                            && separated.extrusions_.at(3).modelBodyId != separated.extrusions_.at(4).modelBodyId
+                            && separated.extrusions_.at(3).visible && separated.extrusions_.at(4).visible
+                            && !separated.extrusions_.at(2).visible,
+                        "le due componenti sono due corpi visibili di storyboard");
+                require(separated.extrusions_.at(3).deleteComponent == 0 && separated.extrusions_.at(4).deleteComponent == 1
+                            && !separated.extrusions_.at(3).display.faceIds.isEmpty()
+                            && separated.extrusions_.at(3).display.faceIds.size() == separated.extrusions_.at(3).display.faceLabelPoints.size(),
+                        "componenti e ID topologici della vista");
+                QTemporaryDir directory;
+                const QString file = directory.filePath(QStringLiteral("delete-components.prt"));
+                require(saveDocumentFile(file, separated.currentDocument(), true).isEmpty(), "salvataggio elimina facce multi-corpo");
+                DocumentState reloaded;
+                require(loadDocumentFile(file, reloaded).isEmpty() && reloaded.extrusions.at(3).deleteComponent == 0
+                            && reloaded.extrusions.at(4).deleteComponent == 1
+                            && reloaded.extrusions.at(3).display.faceIds.size() == reloaded.extrusions.at(3).display.faceLabelPoints.size()
+                            && !reloaded.extrusions.at(3).display.faceIds.isEmpty(),
+                        "lettura componenti e ID topologici");
+            }
             // Guscio del blocco 4 x 3 x 2 aperto in alto, spessore 0.25: cavita' 3.5 x 2.5 x 1.75.
             {
                 CadViewport g;
