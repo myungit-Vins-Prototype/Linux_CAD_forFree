@@ -40,7 +40,10 @@ ForgeBody forgePrimitive(const PrimitiveParameters &parameters, QString *error);
 
 // Raccordo o smusso degli spigoli di `base` piu' vicini ai punti (fk_blend).
 // Smussi: `spec` (ChamferSpec) per due distanze o distanza e angolo.
-ForgeBody forgeBlend(const ForgeBody &base, const QVector<EdgePoint> &points, double size, bool chamfer, QString *error, const ChamferSpec &spec = {});
+// `sameState`: i riferimenti sono stati presi su questa base (anche rigenerata):
+// gli ID valgono piu' dei punti. Altrimenti (riordino) si cercano per geometria.
+ForgeBody forgeBlend(const ForgeBody &base, const QVector<EdgePoint> &points, double size, bool chamfer, QString *error, const ChamferSpec &spec = {},
+                     bool sameState = true);
 // Falso se il risultato conserva la topologia e area/volume della base entro
 // la tolleranza numerica: la booleana del raccordo e' stata un no-op.
 bool forgeBlendHasEffect(const ForgeBody &base, const ForgeBody &result);

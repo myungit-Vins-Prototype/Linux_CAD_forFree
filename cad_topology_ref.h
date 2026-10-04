@@ -2,6 +2,8 @@
 #define FORGECAD_TOPOLOGY_REF_H
 
 #include "cad_types.h"
+#include <vector>
+
 #include "fk_topology.h"
 
 namespace ForgeCad {
@@ -16,9 +18,26 @@ EdgePoint vertexReference(const Kernel::Body &body, Kernel::VertexId vertex);
 // ogni edge, nell'ordine della catena. Vuoto se `edge` non e' di bordo.
 QVector<EdgePoint> freeBoundaryLoop(const Kernel::Body &body, Kernel::EdgeId edge);
 
-Kernel::EdgeId resolveEdgeReference(const Kernel::Body &body, const EdgePoint &reference, double legacyTolerance);
-Kernel::FaceId resolveFaceReference(const Kernel::Body &body, const EdgePoint &reference, double legacyTolerance);
-Kernel::VertexId resolveVertexReference(const Kernel::Body &body, const EdgePoint &reference, double legacyTolerance);
+// Lo stato del corpo in cui si cerca rispetto a quello in cui il riferimento
+// e' stato preso: lo stesso (anche rigenerato con altri parametri: l'ID vale
+// piu' del punto) o diverso / non noto (un riordino della storia: l'ID vale
+// solo se contiene il punto, altrimenti si cerca per geometria).
+enum class ReferenceState { Same, Other };
+
+Kernel::EdgeId resolveEdgeReference(const Kernel::Body &body, const EdgePoint &reference, double legacyTolerance,
+                                    ReferenceState state = ReferenceState::Same);
+Kernel::FaceId resolveFaceReference(const Kernel::Body &body, const EdgePoint &reference, double legacyTolerance,
+                                    ReferenceState state = ReferenceState::Same);
+Kernel::VertexId resolveVertexReference(const Kernel::Body &body, const EdgePoint &reference, double legacyTolerance,
+                                        ReferenceState state = ReferenceState::Same);
+
+// Gli edge di tutti i loop della faccia, senza ripetizioni.
+std::vector<Kernel::EdgeId> faceBoundaryEdges(const Kernel::Body &body, Kernel::FaceId face);
+// Spigoli dei raccordi e degli smussi: i riferimenti di spigolo e, per quelli
+// di faccia (role = kEdgePointFaceBoundary), tutti i bordi della faccia nello
+// stato del corpo dato. Falso se un riferimento non si ritrova.
+bool resolveBlendEdges(const Kernel::Body &body, const QVector<EdgePoint> &references, double legacyTolerance,
+                       std::vector<Kernel::EdgeId> &edges, ReferenceState state = ReferenceState::Same);
 
 // Completa i riferimenti dei documenti precedenti usando i B-rep gia'
 // rigenerati. Non modifica la geometria e puo' essere chiamata prima del save.

@@ -112,27 +112,75 @@ void gaussKronrod(const F &f, double a, double b, Evaluation<N> &integral, Value
     }
 }
 
+// Regola 7-15 su un intervallo, con il suo errore.
+template <std::size_t N>
+struct Panel {
+    double a = 0.0, b = 0.0;
+    Evaluation<N> integral;
+    Values<N> error{};
+};
+
+template <std::size_t N, class F>
+Panel<N> panel(const F &f, double a, double b) {
+    Panel<N> p;
+    p.a = a;
+    p.b = b;
+    Values<N> absolute;
+    gaussKronrod<N>(f, a, b, p.integral, p.error, absolute);
+    return p;
+}
+
 // Accettato se per ogni componente l'errore stimato e' sotto la tolleranza
 // o sotto l'arrotondamento (`roundoff` volte l'integrale della grandezza).
+// Se la bisezione non riduce l'errore (i due figli insieme ne hanno almeno 3/4,
+// mentre su un integrando liscio cala di ordini di grandezza) e l'errore e'
+// gia' vicino all'arrotondamento, l'intervallo e' dominato dal rumore
+// dell'integrando: si prendono i figli. Il rumore puo' superare la stima
+// della grandezza, per esempio sulle B-spline con nodi molto fitti (le
+// derivate hanno l'arrotondamento dei poli diviso per il passo dei nodi), e
+// senza questo controllo la bisezione percorrerebbe l'albero intero fino alla
+// profondita' massima (2^30 intervalli).
 template <std::size_t N, class F>
-Evaluation<N> adaptiveIntegral(const F &f, double a, double b, const Values<N> &tolerance, double roundoff, int depth) {
-    Evaluation<N> integral;
-    Values<N> error, absolute;
-    gaussKronrod<N>(f, a, b, integral, error, absolute);
-    bool accepted = true;
-    for (std::size_t k = 0; k < N && accepted && depth < 30; ++k)
-        accepted = error[k] <= tolerance[k] || error[k] <= roundoff * integral.magnitude[k];
-    if (accepted) return integral;
+Evaluation<N> adaptivePanel(const F &f, const Panel<N> &p, const Values<N> &tolerance, double roundoff, int depth) {
+    bool accepted = true, nearRoundoff = true;
+    for (std::size_t k = 0; k < N && depth < 30; ++k) {
+        const double floor = roundoff * p.integral.magnitude[k];
+        if (p.error[k] <= tolerance[k] || p.error[k] <= floor) continue;
+        accepted = false;
+        nearRoundoff = nearRoundoff && p.error[k] <= 1e4 * floor;
+    }
+    if (accepted) return p.integral;
+    const double middle = 0.5 * (p.a + p.b);
+    const Panel<N> left = panel<N>(f, p.a, middle), right = panel<N>(f, middle, p.b);
+    bool noise = nearRoundoff;
+    for (std::size_t k = 0; k < N && noise; ++k) {
+        const double floor = roundoff * p.integral.magnitude[k];
+        if (p.error[k] <= tolerance[k] || p.error[k] <= floor) continue;
+        noise = left.error[k] + right.error[k] >= 0.75 * p.error[k];
+    }
+    Evaluation<N> result;
+    if (noise) {
+        result = left.integral;
+        for (std::size_t k = 0; k < N; ++k) {
+            result.value[k] += right.integral.value[k];
+            result.magnitude[k] += right.integral.magnitude[k];
+        }
+        return result;
+    }
     Values<N> halfTolerance;
     for (std::size_t k = 0; k < N; ++k) halfTolerance[k] = 0.5 * tolerance[k];
-    const double middle = 0.5 * (a + b);
-    Evaluation<N> result = adaptiveIntegral<N>(f, a, middle, halfTolerance, roundoff, depth + 1);
-    const Evaluation<N> right = adaptiveIntegral<N>(f, middle, b, halfTolerance, roundoff, depth + 1);
+    result = adaptivePanel<N>(f, left, halfTolerance, roundoff, depth + 1);
+    const Evaluation<N> second = adaptivePanel<N>(f, right, halfTolerance, roundoff, depth + 1);
     for (std::size_t k = 0; k < N; ++k) {
-        result.value[k] += right.value[k];
-        result.magnitude[k] += right.magnitude[k];
+        result.value[k] += second.value[k];
+        result.magnitude[k] += second.magnitude[k];
     }
     return result;
+}
+
+template <std::size_t N, class F>
+Evaluation<N> adaptiveIntegral(const F &f, double a, double b, const Values<N> &tolerance, double roundoff, int depth) {
+    return adaptivePanel<N>(f, panel<N>(f, a, b), tolerance, roundoff, depth);
 }
 
 // N integrali su [a, b]: errore relativo `relativeTolerance` rispetto
@@ -142,11 +190,13 @@ Evaluation<N> adaptiveIntegral(const F &f, double a, double b, const Values<N> &
 // l'integrale delle grandezze.
 template <std::size_t N, class F>
 Evaluation<N> integrateVector(const F &f, double a, double b, double relativeTolerance, double roundoff) {
-    Evaluation<N> first;
-    Values<N> error, absolute, tolerance;
-    gaussKronrod<N>(f, a, b, first, error, absolute);
+    Panel<N> first;
+    first.a = a;
+    first.b = b;
+    Values<N> absolute, tolerance;
+    gaussKronrod<N>(f, a, b, first.integral, first.error, absolute);
     for (std::size_t k = 0; k < N; ++k) tolerance[k] = relativeTolerance * absolute[k];
-    return adaptiveIntegral<N>(f, a, b, tolerance, roundoff, 0);
+    return adaptivePanel<N>(f, first, tolerance, roundoff, 0);
 }
 
 }

@@ -377,6 +377,25 @@ FK_TEST(FaceAreas) {
 
 // Vertici tolleranti (estremi dello schizzo uniti entro 1e-6) e casi non
 // gestiti, che devono essere segnalati e non dare numeri sbagliati.
+FK_TEST(QuadratureStopsOnIntegrandNoise) {
+    // Integrando costante con un rumore deterministico poco sopra la stima di
+    // arrotondamento (come le derivate di una B-spline con nodi molto fitti,
+    // 1476.prt): la bisezione non riduce l'errore e senza il controllo del
+    // rumore percorreva l'albero intero fino alla profondita' 30.
+    long evaluations = 0;
+    const auto f = [&](double s) {
+        ++evaluations;
+        detail::Evaluation<1> out;
+        const double noise = std::sin(7.3e18 * s) * std::cos(1.9e19 * s);
+        out.value[0] = 2.0 + 2e-12 * noise;
+        out.magnitude[0] = 2.0;
+        return out;
+    };
+    const detail::Evaluation<1> result = detail::integrateVector<1>(f, 0.0, 1e-10, 1e-14, 1e-15);
+    FK_CHECK_NEAR(result.value[0], 2e-10, 1e-20);
+    FK_CHECK(evaluations < 100000);
+}
+
 FK_TEST(MassEdgeCases) {
     const double gap = 5e-7;
     const std::vector<ProfileSegment> segments = {lineSegment(Vec2(0, 0), Vec2(10, 0)), lineSegment(Vec2(10, gap), Vec2(10, 10)),

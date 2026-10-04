@@ -234,7 +234,8 @@ bool forgeBlendHasEffect(const ForgeBody &base, const ForgeBody &result) {
     }
 }
 
-ForgeBody forgeBlend(const ForgeBody &base, const QVector<EdgePoint> &points, double size, bool chamfer, QString *error, const ChamferSpec &spec) {
+ForgeBody forgeBlend(const ForgeBody &base, const QVector<EdgePoint> &points, double size, bool chamfer, QString *error, const ChamferSpec &spec,
+                     bool sameState) {
     if (!base) {
         setError(error, QStringLiteral("Il corpo da raccordare non ha geometria valida."));
         return nullptr;
@@ -248,14 +249,11 @@ ForgeBody forgeBlend(const ForgeBody &base, const QVector<EdgePoint> &points, do
         for (VertexId v : base->vertices()) box.add(base->vertex(v).point);
         for (FaceId f : base->faces()) box.add(faceBox(*base, f));
         const double reach = 1e-3 * std::max(1.0, box.diagonal());
+        // Spigoli scelti e bordi delle facce scelte, nello stato attuale della base.
         std::vector<EdgeId> edges;
-        for (const EdgePoint &point : points) {
-            const EdgeId e = resolveEdgeReference(*base, point, reach);
-            if (!e.valid()) {
-                setError(error, QStringLiteral("Uno degli spigoli scelti non esiste piu' nel corpo."));
-                return nullptr;
-            }
-            if (std::find(edges.begin(), edges.end(), e) == edges.end()) edges.push_back(e);
+        if (!resolveBlendEdges(*base, points, reach, edges, sameState ? ReferenceState::Same : ReferenceState::Other)) {
+            setError(error, QStringLiteral("Uno degli spigoli o delle facce scelti non esiste in questo punto della storia: sceglili di nuovo."));
+            return nullptr;
         }
         Body result;
         if (!chamfer || spec.mode == 0) {

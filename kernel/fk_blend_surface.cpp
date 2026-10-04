@@ -113,6 +113,7 @@ HPoint operator*(double s, const HPoint &a) { return {s * a.p, s * a.w}; }
 struct Section {
     double t = 0.0;
     double residual = 0.0;               // scarto numerico delle superfici offset
+    double noise = 0.0;                  // incertezza dei contatti dovuta al residuo (condizionamento)
     double x[4] = {0.0, 0.0, 0.0, 0.0};   // (uA, vA, uB, vB)
     double dx[4] = {0.0, 0.0, 0.0, 0.0};  // derivate rispetto a t
     Vec3 center, dcenter;                 // centro della palla (raccordo)
@@ -266,12 +267,25 @@ private:
         if (!converged) return false;
         // Derivate rispetto a t: J dx = -dF/dt, solo la quarta equazione dipende da t.
         jacobian();
+        // Quanto il residuo sposta i contatti: con le facce quasi tangenti (il
+        // raccordo che svanisce dove l'angolo tra le facce va a zero) le due
+        // superfici offset si tagliano di striscio e un residuo di 1e-13 sposta
+        // la sezione di residuo / sin(angolo / 2). Il fit non puo' scendere sotto.
+        double amplification = 1.0;
+        for (int i = 0; i < 4; ++i) {
+            double copy[4][4], unit[4] = {0.0, 0.0, 0.0, 0.0};
+            std::copy(&J[0][0], &J[0][0] + 16, &copy[0][0]);
+            unit[i] = 1.0;
+            if (!solveLinear<4>(copy, unit)) return false;
+            amplification = std::max({amplification, norm(pa.su * unit[0] + pa.sv * unit[1]), norm(pb.su * unit[2] + pb.sv * unit[3])});
+        }
         const Vec3 ca = pa.p + k * pa.n, cb = pb.p + k * pb.n, center = 0.5 * (ca + cb);
         double rhs[4] = {0.0, 0.0, 0.0, dot(e[1], T) - dot(center - e[0], dT)};
         if (!solveLinear<4>(J, rhs)) return false;
         std::copy(x, x + 4, s.x);
         std::copy(rhs, rhs + 4, s.dx);
         s.residual = error;
+        s.noise = error * amplification;
         const Vec3 dpA = pa.su * rhs[0] + pa.sv * rhs[1], dpB = pb.su * rhs[2] + pb.sv * rhs[3];
         const Vec3 dc = (pa.su + k * pa.nu) * rhs[0] + (pa.sv + k * pa.nv) * rhs[1];
         s.center = center;
@@ -445,20 +459,24 @@ public:
             const Section &first = section(start.front());
             for (std::size_t r = 0; r < rows.size(); ++r) result.poles[r].push_back(first.row[rows[r]]);
         }
-        std::vector<std::pair<double, double>> pending;
-        for (std::size_t k = start.size() - 1; k > 0; --k) pending.push_back({start[k - 1], start[k]});
+        // Intervalli da interpolare con l'errore dell'intervallo padre (0: nessuno).
+        struct Span {
+            double a, b, parentError;
+        };
+        std::vector<Span> pending;
+        for (std::size_t k = start.size() - 1; k > 0; --k) pending.push_back({start[k - 1], start[k], 0.0});
         int guard = 0;
         while (!pending.empty()) {
             if (++guard > 40000) throw std::domain_error("blendEdges: spigolo troppo complesso da raccordare");
-            const auto [a, b] = pending.back();
+            const auto [a, b, parentError] = pending.back();
             pending.pop_back();
             const Section sa = section(a), sb = section(b, knots.count(b) > 0);
             const double h = b - a;
             double error = 0.0;
-            double numericalFloor = std::max(sa.residual, sb.residual);
+            double numericalFloor = std::max({sa.residual, sb.residual, sa.noise, sb.noise});
             for (double f : {0.2, 0.5, 0.8}) {
                 const Section &exact = section(a + f * h);
-                numericalFloor = std::max(numericalFloor, exact.residual);
+                numericalFloor = std::max({numericalFloor, exact.residual, exact.noise});
                 const double h00 = (1 + 2 * f) * (1 - f) * (1 - f), h10 = f * (1 - f) * (1 - f), h01 = f * f * (3 - 2 * f), h11 = f * f * (f - 1);
                 HPoint fitted[3];
                 for (int r = 0; r < 3; ++r)
@@ -471,10 +489,15 @@ public:
                 if (!(dot(exact.drow[0].p, tangent) > 0.0) || !(dot(exact.drow[2].p, tangent) > 0.0))
                     throw std::domain_error("blendEdges: raggio maggiore del raggio di curvatura delle facce lungo lo spigolo");
             }
-            if (error > std::max(kFitTolerance, numericalFloor) && h > 1e-9 * range_.length()) {
+            // Dimezzando l'intervallo l'errore della cubica cala di circa 16
+            // volte; se resta almeno la meta' di quello del padre ed e' vicino
+            // alla soglia numerica, lo scarto e' il rumore delle sezioni (la
+            // stima di Section::noise puo' essere ottimista di qualche volta).
+            const bool noise = parentError > 0.0 && error >= 0.5 * parentError && error <= 16.0 * numericalFloor;
+            if (error > std::max(kFitTolerance, numericalFloor) && !noise && h > 1e-9 * range_.length()) {
                 const double m = 0.5 * (a + b);
-                pending.push_back({m, b});
-                pending.push_back({a, m});
+                pending.push_back({m, b, error});
+                pending.push_back({a, m, error});
                 continue;
             }
             result.error = std::max(result.error, error);
@@ -2044,12 +2067,27 @@ Body blendSurfaceChains(const Body &input, const std::vector<EdgeId> &selected, 
                 if (snapA) ra = body.vertex(end.vertex).point;
                 if (snapB) rb = body.vertex(end.vertex).point;
                 const int oldVertex = model.vertexIndex.at(end.vertex.index);
-                junction.pointA = snapA ? oldVertex : model.addPoint(ra);
-                junction.pointB = snapB ? oldVertex : model.addPoint(rb);
+                // Raccordo che svanisce: nel vertice l'angolo tra A e B va a
+                // zero (la mitra di due raccordi uguali che nasce sulla faccia a
+                // cui entrambi sono tangenti), la sezione si riduce a un punto e
+                // i due contatti arrivano nel vertice stesso. Non c'e' una curva
+                // di chiusura su E: il raccordo termina nel vertice, con la
+                // tolleranza dello scarto misurato (la sezione vi e' mal
+                // condizionata, vedi Section::noise).
+                const Vec3 &vertexPoint = body.vertex(end.vertex).point;
+                const double vanishLimit = std::max(1e-5 * size, 10.0 * piece.fit.error);
+                const bool vanishing = !end.seam.valid() && distance(ra, vertexPoint) <= vanishLimit && distance(rb, vertexPoint) <= vanishLimit;
+                junction.pointA = snapA || vanishing ? oldVertex : model.addPoint(ra);
+                junction.pointB = snapB || vanishing ? oldVertex : model.addPoint(rb);
                 setEnd(aLo, aHi, end.piece, !end.atStart, tA);
                 setEnd(bLo, bHi, end.piece, !end.atStart, tB);
                 const Surface &E = *body.face(end.face).surface;
-                if (!end.seam.valid()) {
+                if (vanishing) {
+                    double gap = std::max({distance(ra, vertexPoint), distance(rb, vertexPoint),
+                                           distance(piece.surface->point(tA, 0.0), vertexPoint), distance(piece.surface->point(tB, 1.0), vertexPoint)});
+                    if (gap > 1e-7 * scale)
+                        model.pointTolerance[std::size_t(oldVertex)] = std::max(model.pointTolerance[std::size_t(oldVertex)], 1.01 * gap);
+                } else if (!end.seam.valid()) {
                     Cut kappa;
                     try { kappa = traceBetween(*piece.surface, E, ra, rb, scale, piece.fit.error); }
                     catch (const std::domain_error &failure) { throw std::domain_error(std::string("blendEdges: chiusura dell'estremo: ") + failure.what()); }
@@ -2238,7 +2276,7 @@ Body blendSurfaceChains(const Body &input, const std::vector<EdgeId> &selected, 
                 throw std::domain_error(std::string(failure.what()) + " (estremo B, bordo " + std::to_string(end.onB.index)
                                         + ", t=" + std::to_string(end.tB) + ")");
             }
-            if (!end.seam.valid()) edits[model.faceIndex.at(end.face.index)].free.push_back(junction.connector);
+            if (!end.seam.valid() && junction.connector >= 0) edits[model.faceIndex.at(end.face.index)].free.push_back(junction.connector);
         }
 
         // Contatti, facce nuove e modifiche di A e delle facce B.

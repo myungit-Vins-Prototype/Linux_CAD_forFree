@@ -39,27 +39,80 @@ int vertexContext(const Body &body, VertexId id) {
     return valence;
 }
 
-template <class Id, class Range, class Matches, class Metric>
-Id resolve(const EdgePoint &reference, const Range &range, Matches matches, Metric metric, double legacyTolerance) {
+// Dove sta il punto di riferimento rispetto a un candidato: sull'entita'
+// (lo spigolo nel suo tratto, la faccia dentro i suoi bordi), solo sul suo
+// supporto (la curva o la superficie oltre i bordi attuali) o altrove.
+enum class Placement { On = 0, OnCarrier = 1, Elsewhere = 2 };
+
+// Riferimento persistente (ID, tipo, contesto) o solo punto (documenti fino
+// al 19).
+//  - Stesso stato (`ReferenceState::Same`: la feature su cui il riferimento e'
+//    stato preso, anche rigenerata con altri parametri): l'ID con tipo e
+//    contesto uguali vale piu' del punto, che dopo una modifica parametrica
+//    puo' essere rimasto dove l'entita' non e' piu'; altrimenti la piu' vicina
+//    con tipo e contesto uguali.
+//  - Stato diverso o non noto (la feature spostata nella storia prima di
+//    quelle che hanno creato i suoi bordi, documenti senza lo stato): lo
+//    stesso indice puo' essere un'altra entita'. Vale l'ID se contiene il
+//    punto; poi, tra le entita' dello stesso tipo, quella che contiene il
+//    punto (il contesto topologico solo come preferenza); se nessuna lo
+//    contiene, l'ID con tipo e contesto uguali (la geometria si e' spostata);
+//    poi quella sul cui supporto sta il punto (una faccia rimpicciolita, uno
+//    spigolo accorciato); infine la piu' vicina entro `legacyTolerance`.
+template <class Id, class Range, class TypeMatches, class ContextMatches, class Locate, class Metric>
+Id resolve(const EdgePoint &reference, const Range &range, TypeMatches typeMatches, ContextMatches contextMatches, Locate locate,
+           Metric metric, double legacyTolerance, ReferenceState state) {
     const bool persistent = reference.subshape >= 0 && reference.geometry >= 0 && reference.context != -1;
+    const Id exact(reference.subshape);
+    bool exactMatches = false;
     if (persistent) {
-        const Id exact(reference.subshape);
         try {
-            if (matches(exact)) return exact;
+            exactMatches = typeMatches(exact) && contextMatches(exact);
+            if (exactMatches && (state == ReferenceState::Same || locate(exact) == Placement::On)) return exact;
         } catch (const std::exception &) {
+            exactMatches = false;
         }
+    }
+    if (!persistent || state == ReferenceState::Same) {
+        Id best;
+        double closest = persistent ? std::numeric_limits<double>::max() : legacyTolerance;
+        for (Id candidate : range) {
+            try {
+                if (persistent && !(typeMatches(candidate) && contextMatches(candidate))) continue;
+                const double d = metric(candidate);
+                if (d <= closest) closest = d, best = candidate;
+            } catch (const std::exception &) {
+            }
+        }
+        return best;
     }
     Id best;
-    double closest = persistent ? std::numeric_limits<double>::max() : legacyTolerance;
+    int bestTier = 3;
+    bool bestContext = false;
+    double closest = std::numeric_limits<double>::max();
     for (Id candidate : range) {
         try {
-            if (persistent && !matches(candidate)) continue;
+            if (!typeMatches(candidate)) continue;
+            const int tier = int(locate(candidate));
+            const bool context = contextMatches(candidate);
             const double d = metric(candidate);
-            if (d <= closest) closest = d, best = candidate;
+            const bool better = tier < bestTier || (tier == bestTier && context && !bestContext)
+                             || (tier == bestTier && context == bestContext && d < closest);
+            if (better) best = candidate, bestTier = tier, bestContext = context, closest = d;
         } catch (const std::exception &) {
         }
     }
+    if (bestTier == int(Placement::On)) return best;
+    if (exactMatches) return exact;
+    if (bestTier == int(Placement::Elsewhere) && !(closest <= legacyTolerance)) return Id();
     return best;
+}
+
+// Distanza alla quale il punto conta come sull'entita': i punti presi dalla
+// vista vengono dalle polilinee in float (circa 1e-7 relativo), quelli delle
+// entita' tolleranti possono stare fuori della loro tolleranza.
+double placementTolerance(const Vec3 &point, double entityTolerance) {
+    return 1e-5 * (1.0 + norm(point)) + 10.0 * entityTolerance;
 }
 
 }
@@ -124,33 +177,101 @@ QVector<EdgePoint> freeBoundaryLoop(const Body &body, EdgeId edge) {
     return result;
 }
 
-EdgeId resolveEdgeReference(const Body &body, const EdgePoint &reference, double legacyTolerance) {
+EdgeId resolveEdgeReference(const Body &body, const EdgePoint &reference, double legacyTolerance, ReferenceState state) {
     const Vec3 point(reference.x, reference.y, reference.z);
     return resolve<EdgeId>(reference, body.edges(), [&](EdgeId edge) {
+        return int(body.edge(edge).curve->type()) == reference.geometry;
+    }, [&](EdgeId edge) {
+        return edgeContext(body, edge) == reference.context;
+    }, [&](EdgeId edge) {
         const Edge &e = body.edge(edge);
-        return int(e.curve->type()) == reference.geometry && edgeContext(body, edge) == reference.context;
+        const double tolerance = placementTolerance(point, e.tolerance);
+        if (projectPoint(*e.curve, point, e.range).distance <= tolerance) return Placement::On;
+        try {
+            if (projectPoint(*e.curve, point).distance <= tolerance) return Placement::OnCarrier;
+        } catch (const std::exception &) {
+        }
+        return Placement::Elsewhere;
     }, [&](EdgeId edge) {
         const Edge &e = body.edge(edge);
         return projectPoint(*e.curve, point, e.range).distance;
-    }, legacyTolerance);
+    }, legacyTolerance, state);
 }
 
-FaceId resolveFaceReference(const Body &body, const EdgePoint &reference, double legacyTolerance) {
+FaceId resolveFaceReference(const Body &body, const EdgePoint &reference, double legacyTolerance, ReferenceState state) {
     const Vec3 point(reference.x, reference.y, reference.z);
+    // Tolleranza delle facce: quella degli edge dei loro bordi.
+    const auto faceTolerance = [&](FaceId face) {
+        double tolerance = 0.0;
+        for (LoopId loop : body.face(face).loops)
+            for (FinId fin : body.loopFins(loop)) tolerance = std::max(tolerance, body.edge(body.fin(fin).edge).tolerance);
+        return tolerance;
+    };
     return resolve<FaceId>(reference, body.faces(), [&](FaceId face) {
-        return int(body.face(face).surface->type()) == reference.geometry && faceContext(body, face) == reference.context;
+        return int(body.face(face).surface->type()) == reference.geometry;
+    }, [&](FaceId face) {
+        return faceContext(body, face) == reference.context;
+    }, [&](FaceId face) {
+        const double tolerance = placementTolerance(point, faceTolerance(face));
+        const SurfaceProjection projection = projectPoint(*body.face(face).surface, point);
+        if (projection.distance > tolerance) return Placement::Elsewhere;
+        return classifyPointOnFace(body, face, projection.point, tolerance) == PointLocation::Outside ? Placement::OnCarrier : Placement::On;
     }, [&](FaceId face) {
         const SurfaceProjection projection = projectPoint(*body.face(face).surface, point);
-        return classifyPointOnFace(body, face, projection.point, std::max(legacyTolerance, 1e-9)) == PointLocation::Outside
-            ? std::numeric_limits<double>::max() : distance(projection.point, point);
-    }, legacyTolerance);
+        const double tolerance = std::max(legacyTolerance, 1e-9);
+        if (classifyPointOnFace(body, face, projection.point, tolerance) != PointLocation::Outside) return distance(projection.point, point);
+        // Fuori dai bordi: la distanza dal bordo piu' vicino.
+        double nearest = std::numeric_limits<double>::max();
+        for (LoopId loop : body.face(face).loops)
+            for (FinId fin : body.loopFins(loop)) {
+                const Edge &e = body.edge(body.fin(fin).edge);
+                nearest = std::min(nearest, projectPoint(*e.curve, point, e.range).distance);
+            }
+        return nearest;
+    }, legacyTolerance, state);
 }
 
-VertexId resolveVertexReference(const Body &body, const EdgePoint &reference, double legacyTolerance) {
+std::vector<EdgeId> faceBoundaryEdges(const Body &body, FaceId face) {
+    std::vector<EdgeId> edges;
+    for (LoopId loop : body.face(face).loops)
+        for (FinId fin : body.loopFins(loop)) {
+            const EdgeId edge = body.fin(fin).edge;
+            if (std::find(edges.begin(), edges.end(), edge) == edges.end()) edges.push_back(edge);
+        }
+    return edges;
+}
+
+bool resolveBlendEdges(const Body &body, const QVector<EdgePoint> &references, double legacyTolerance, std::vector<EdgeId> &edges, ReferenceState state) {
+    edges.clear();
+    const auto add = [&](EdgeId edge) {
+        if (std::find(edges.begin(), edges.end(), edge) == edges.end()) edges.push_back(edge);
+    };
+    for (const EdgePoint &reference : references) {
+        if (reference.role == kEdgePointFaceBoundary) {
+            // Il contesto di una faccia (quanti bordi) cambia proprio con le
+            // feature che li toccano: la faccia si cerca sempre dalla sua
+            // superficie e dal punto, anche sulla stessa base.
+            const FaceId face = resolveFaceReference(body, reference, legacyTolerance, ReferenceState::Other);
+            if (!face.valid()) return false;
+            for (EdgeId edge : faceBoundaryEdges(body, face)) add(edge);
+        } else {
+            const EdgeId edge = resolveEdgeReference(body, reference, legacyTolerance, state);
+            if (!edge.valid()) return false;
+            add(edge);
+        }
+    }
+    return true;
+}
+
+VertexId resolveVertexReference(const Body &body, const EdgePoint &reference, double legacyTolerance, ReferenceState state) {
     const Vec3 point(reference.x, reference.y, reference.z);
-    return resolve<VertexId>(reference, body.vertices(), [&](VertexId vertex) {
-        return reference.geometry == 0 && vertexContext(body, vertex) == reference.context;
-    }, [&](VertexId vertex) { return distance(body.vertex(vertex).point, point); }, legacyTolerance);
+    return resolve<VertexId>(reference, body.vertices(), [&](VertexId) { return reference.geometry == 0; },
+                             [&](VertexId vertex) { return vertexContext(body, vertex) == reference.context; },
+                             [&](VertexId vertex) {
+                                 return distance(body.vertex(vertex).point, point) <= placementTolerance(point, body.vertex(vertex).tolerance)
+                                     ? Placement::On : Placement::Elsewhere;
+                             },
+                             [&](VertexId vertex) { return distance(body.vertex(vertex).point, point); }, legacyTolerance, state);
 }
 
 void upgradeTopologyReferences(QVector<ExtrusionObject> &features) {
@@ -186,7 +307,7 @@ void upgradeTopologyReferences(QVector<ExtrusionObject> &features) {
         for (VertexId vertex : body.vertices()) box.add(body.vertex(vertex).point);
         const double tolerance = 1e-3 * std::max(1.0, box.diagonal());
         for (EdgePoint &ref : refs) {
-            if (ref.subshape >= 0) continue;
+            if (ref.subshape >= 0 || ref.role != kEdgePointEdge) continue;
             const EdgeId edge = resolveEdgeReference(body, ref, tolerance);
             if (edge.valid()) ref = edgeReference(body, edge, Vec3(ref.x, ref.y, ref.z));
         }

@@ -279,7 +279,14 @@ struct EdgePoint {
     int subshape = -1;
     int geometry = -1;
     int context = -1;
+    // Nei raccordi e negli smussi (blendEdges): 0 = lo spigolo, 1 = tutti i
+    // bordi della faccia (riferimento di faccia). La faccia si ritrova anche
+    // dopo che altre feature ne hanno cambiato i bordi (riordino della storia),
+    // e i suoi bordi si prendono sullo stato corrente.
+    int role = 0;
 };
+inline constexpr int kEdgePointEdge = 0;
+inline constexpr int kEdgePointFaceBoundary = 1;
 
 // Faccia di un corpo sotto il puntatore (geometria esatta): per scegliere i
 // suoi bordi (raccordi e smussi) e, se e' piana, per schizzarci sopra.
@@ -500,6 +507,10 @@ struct ExtrusionObject {
     ChamferSpec chamferSpec;
     double blendSize = 1.0;
     QVector<EdgePoint> blendEdges;  // anche i bordi di SheetExtend (blendSize = distanza)
+    // Feature della base su cui sono stati scelti blendEdges (0: non nota). Se
+    // la base e' ancora quella (anche rigenerata) gli ID valgono piu' dei
+    // punti; dopo un riordino della storia si cerca per geometria.
+    quint64 blendBaseFeature = 0;
     // SheetTrim: firstBody = superficie, secondBody = corpo strumento (-1: il
     // piano di riferimento trimPlane), trimKeep un punto della parte da tenere.
     int trimPlane = 0;

@@ -658,6 +658,14 @@ public:
             require(storyboard.extrusions().at(2).visible && !storyboard.extrusions().at(3).visible
                         && storyboard.modelBodies().at(0).tipFeatureId == storyboard.extrusions().at(2).featureId,
                     "una feature fallita lascia visibile l'ultimo stadio valido");
+            // Corretta (riattivata o con un raggio che riesce): torna il tip
+            // visibile anche se il suo flag era spento mentre falliva.
+            storyboard.extrusions_[3].error.clear();
+            storyboard.extrusions_[3].forgeBody = storyboard.extrusions_.at(2).forgeBody;
+            ForgeCad::normalizeModelHistory(storyboard.extrusions_, storyboard.modelBodies_);
+            require(!storyboard.extrusions().at(2).visible && storyboard.extrusions().at(3).visible
+                        && storyboard.modelBodies().at(0).tipFeatureId == storyboard.extrusions().at(3).featureId,
+                    "una feature fallita che torna valida diventa il tip visibile");
             storyboard.extrusions_.removeLast();
             ForgeCad::normalizeModelHistory(storyboard.extrusions_, storyboard.modelBodies_);
         }
@@ -676,6 +684,59 @@ public:
         storyboard.undo();
         require(storyboard.extrusions().size() == 3 && storyboard.extrusions().at(2).visible,
                 "undo dell'eliminazione nella storyboard");
+        {
+            // Riferimenti che sopravvivono al riordino. Una faccia si ritrova dalla
+            // sua superficie anche quando altre feature ne cambiano i bordi; uno
+            // spigolo dalla sua geometria anche quando il suo ID, in un altro stato
+            // del corpo, e' un altro spigolo dello stesso tipo.
+            CadViewport reorder;
+            PrimitiveParameters block;
+            block.size[0] = 10.0;
+            block.size[1] = 8.0;
+            block.size[2] = 6.0;
+            require(reorder.createPrimitive(block, QStringLiteral("Blocco")).isEmpty(), "blocco per il riordino dei raccordi");
+            const ForgeBody boxBody = reorder.extrusions().at(0).forgeBody;
+            const Kernel::EdgeId vertical = Kernel::nearestEdge(*boxBody, Kernel::Vec3(10, 0, 3), 1e-6);
+            const Kernel::EdgeId otherVertical = Kernel::nearestEdge(*boxBody, Kernel::Vec3(0, 0, 3), 1e-6);
+            require(vertical.valid() && otherVertical.valid(), "spigoli verticali del blocco");
+            EdgePoint misleading = edgeReference(*boxBody, vertical, Kernel::Vec3(10, 0, 3));
+            misleading.subshape = otherVertical.index;  // stesso tipo e contesto, altro spigolo
+            require(ForgeCad::resolveEdgeReference(*boxBody, misleading, 1e-3, ForgeCad::ReferenceState::Other) == vertical,
+                    "dopo un riordino un ID che non passa per il punto non vale");
+            require(ForgeCad::resolveEdgeReference(*boxBody, misleading, 1e-3, ForgeCad::ReferenceState::Same) == otherVertical,
+                    "sulla stessa base l'ID vale piu' del punto");
+            require(reorder.createBlend(0, {edgeReference(*boxBody, vertical, Kernel::Vec3(10, 0, 3))}, 0.5, false, QStringLiteral("R1")).isEmpty(),
+                    "raccordo dello spigolo verticale");
+            const ForgeBody filleted = reorder.extrusions().at(1).forgeBody;
+            const auto planeAt = [](const Kernel::Body &body, int axis, double value) {
+                for (Kernel::FaceId f : body.faces()) {
+                    const auto *plane = dynamic_cast<const Kernel::Plane *>(body.face(f).surface.get());
+                    if (plane && std::fabs(plane->frame().origin()[axis] - value) < 1e-9 && std::fabs(std::fabs(plane->frame().zDir()[axis]) - 1.0) < 1e-12)
+                        return f;
+                }
+                return Kernel::FaceId();
+            };
+            const Kernel::FaceId top = planeAt(*filleted, 2, 6.0);
+            require(top.valid() && ForgeCad::faceBoundaryEdges(*filleted, top).size() == 5, "faccia superiore con l'arco del raccordo");
+            EdgePoint topFace = faceReference(*filleted, top, Kernel::Vec3(5, 4, 6));
+            topFace.role = kEdgePointFaceBoundary;
+            std::vector<Kernel::EdgeId> onBox;
+            require(ForgeCad::resolveBlendEdges(*boxBody, {topFace}, 1e-3, onBox, ForgeCad::ReferenceState::Other) && onBox.size() == 4,
+                    "la faccia si ritrova sul blocco con i suoi 4 bordi");
+            // R2: i bordi della faccia x = 0 (non toccano R1), poi R2 prima di R1.
+            const Kernel::FaceId left = planeAt(*filleted, 0, 0.0);
+            EdgePoint leftFace = faceReference(*filleted, left, Kernel::Vec3(0, 4, 3));
+            leftFace.role = kEdgePointFaceBoundary;
+            require(left.valid() && reorder.createBlend(1, {leftFace}, 1.0, false, QStringLiteral("R2")).isEmpty(), "raccordo dei bordi della faccia x = 0");
+            const double inOrder = Kernel::massProperties(*reorder.extrusions().at(2).forgeBody).volume;
+            require(reorder.moveFeature(2, -1).isEmpty(), "R2 spostato prima di R1");
+            const ExtrusionObject &first = reorder.extrusions().at(1), &second = reorder.extrusions().at(2);
+            require(first.name == QStringLiteral("R2") && first.error.isEmpty() && first.forgeBody, "R2 sul blocco dopo il riordino");
+            require(second.name == QStringLiteral("R1") && second.error.isEmpty() && second.forgeBody, "R1 dopo R2");
+            const double removed = Kernel::massProperties(*first.forgeBody).volume - Kernel::massProperties(*second.forgeBody).volume;
+            require(std::fabs(removed - 0.25 * (1.0 - M_PI / 4.0) * 6.0) < 1e-8, "R1 raccorda lo spigolo verticale giusto");
+            require(std::fabs(Kernel::massProperties(*second.forgeBody).volume - inOrder) < 1e-9 * inOrder, "stesso risultato nei due ordini");
+        }
         {
             // Storia unica: una feature si sposta anche tra feature di altri
             // corpi, mai prima della feature che crea il suo corpo.

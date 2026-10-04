@@ -477,27 +477,101 @@ Body blendPlanarChains(const Body &input, const std::vector<EdgeId> &selected, d
         // Angoli vivi concavi: le parallele in T si incontrano oltre il vertice.
         // Punto comune esatto (Gauss-Newton sulle parallele vere, prolungate), poi
         // le superfici dei due raccordi rifatte sul dominio allungato.
+        std::vector<std::vector<std::pair<double, double>>> extensions(static_cast<std::size_t>(n));  // per edge: (punto comune, vertice)
         for (int j = 0; j < vertexCount; ++j) {
             ChainVertex &cv = vertices[std::size_t(j)];
             if (cv.joint != Joint::Sharp || !cv.concave) continue;
             ChainFin &previous = chain.fins[std::size_t((j - 1 + n) % n)];
             ChainFin &next = chain.fins[std::size_t(j % n)];
+            const auto beyond = [&](double a, double b) {
+                return (previous.sense ? a > previous.endParameter : a < previous.endParameter)
+                    && (next.sense ? b < next.startParameter : b > next.startParameter);
+            };
             double ua = previous.endParameter, ub = next.startParameter;
-            double miss = 1e300;
-            for (int iteration = 0; iteration < 100; ++iteration) {
+            // Stima in forma chiusa: le parallele in T di rette e cerchi sono
+            // rette e cerchi (gli unici bordi ammessi negli angoli concavi). Fra
+            // le loro intersezioni, quella oltre il vertice su entrambi e dentro
+            // T; vicino alla tangenza delle due parallele Gauss-Newton dal
+            // vertice divergeva.
+            {
+                struct Carrier {
+                    bool circle = false;
+                    Vec3 center, point, direction;
+                    double radius = 0.0;
+                };
+                const auto carrier = [&](const ChainFin &fin, double t) {
+                    Carrier c;
+                    const Curve<3> &curve = *body.edge(fin.edge).curve;
+                    const Vec3 p = fin.geometry->sample(t, false).value[2];
+                    if (const auto *circle = dynamic_cast<const Circle<3> *>(&curve)) {
+                        c.circle = true;
+                        c.center = circle->center();
+                        c.radius = distance(p, circle->center());
+                    } else if (const auto *line = dynamic_cast<const Line<3> *>(&curve)) {
+                        c.point = p;
+                        c.direction = normalized(line->direction());
+                    }
+                    return c;
+                };
+                const auto parameterOf = [&](const ChainFin &fin, const Vec3 &m, double near) {
+                    const Curve<3> &curve = *body.edge(fin.edge).curve;
+                    if (const auto *circle = dynamic_cast<const Circle<3> *>(&curve)) {
+                        const Vec3 d = m - circle->center();
+                        double t = std::atan2(dot(d, circle->yAxis()), dot(d, circle->xAxis()));
+                        return t + kTwoPi * std::round((near - t) / kTwoPi);
+                    }
+                    const auto *line = dynamic_cast<const Line<3> *>(&curve);
+                    return dot(m - line->origin(), line->direction()) / dot(line->direction(), line->direction());
+                };
+                const Carrier a = carrier(previous, previous.endParameter), b = carrier(next, next.startParameter);
+                std::vector<Vec3> candidates;
+                const auto lineCircle = [&](const Carrier &l, const Carrier &c) {
+                    const Vec3 w = l.point - c.center;
+                    const double half = dot(w, l.direction), q = dot(w, w) - c.radius * c.radius, disc = half * half - q;
+                    if (disc < 0.0) return;
+                    for (double sign : {-1.0, 1.0}) candidates.push_back(l.point + (-half + sign * std::sqrt(disc)) * l.direction);
+                };
+                if (!a.circle && !b.circle) {
+                    const Vec3 crossed = cross(a.direction, b.direction);
+                    const double denominator = dot(crossed, crossed);
+                    if (denominator > 0.0) candidates.push_back(a.point + (dot(cross(b.point - a.point, b.direction), crossed) / denominator) * a.direction);
+                } else if (a.circle && b.circle) {
+                    const Vec3 axis = b.center - a.center;
+                    const double d = norm(axis);
+                    if (d > 0.0) {
+                        const double along = (d * d + a.radius * a.radius - b.radius * b.radius) / (2.0 * d), h2 = a.radius * a.radius - along * along;
+                        if (h2 >= 0.0) {
+                            const Vec3 x = axis / d, y = normalized(cross(D, x));
+                            for (double sign : {-1.0, 1.0}) candidates.push_back(a.center + along * x + sign * std::sqrt(h2) * y);
+                        }
+                    }
+                } else {
+                    lineCircle(a.circle ? b : a, a.circle ? a : b);
+                }
+                double best = 1e300;
+                for (const Vec3 &m : candidates) {
+                    const double ta = parameterOf(previous, m, previous.endParameter), tb = parameterOf(next, m, next.startParameter);
+                    if (!beyond(ta, tb) || classifyPointOnFace(body, chain.plane, m, tolerance) != PointLocation::Inside) continue;
+                    const double travel = std::fabs(ta - previous.endParameter) + std::fabs(tb - next.startParameter);
+                    if (travel < best) best = travel, ua = ta, ub = tb;
+                }
+            }
+            // Rifinitura sulle sezioni vere: solo i passi che riducono lo scarto.
+            double miss = distance(previous.geometry->sample(ua, false).value[2], next.geometry->sample(ub, false).value[2]);
+            for (int iteration = 0; iteration < 100 && miss > 0.0; ++iteration) {
                 const RowSample sa = previous.geometry->sample(ua, false), sb = next.geometry->sample(ub, false);
                 const Vec3 f = sa.value[2] - sb.value[2], da = sa.derivative[2], db = sb.derivative[2];
-                miss = norm(f);
                 const double a11 = dot(da, da), a12 = -dot(da, db), a22 = dot(db, db);
                 const double r1 = -dot(da, f), r2 = dot(db, f), det = a11 * a22 - a12 * a12;
                 if (!(std::fabs(det) > 0.0)) break;
                 const double du = (r1 * a22 - a12 * r2) / det, dv = (a11 * r2 - a12 * r1) / det;
-                ua += du;
-                ub += dv;
-                if (std::fabs(du) + std::fabs(dv) < 1e-15 * (1.0 + std::fabs(ua) + std::fabs(ub))) {
-                    miss = distance(previous.geometry->sample(ua, false).value[2], next.geometry->sample(ub, false).value[2]);
-                    break;
+                bool improved = false;
+                for (double lambda = 1.0; lambda > 1e-4 && !improved; lambda *= 0.5) {
+                    const double ta = ua + lambda * du, tb = ub + lambda * dv;
+                    const double trial = distance(previous.geometry->sample(ta, false).value[2], next.geometry->sample(tb, false).value[2]);
+                    if (trial < miss) ua = ta, ub = tb, miss = trial, improved = true;
                 }
+                if (!improved || std::fabs(du) + std::fabs(dv) < 1e-15 * (1.0 + std::fabs(ua) + std::fabs(ub))) break;
             }
             // Oltre il vertice su entrambi gli edge, e dentro T.
             const bool beyondPrevious = previous.sense ? ua > previous.endParameter : ua < previous.endParameter;
@@ -508,15 +582,31 @@ Body blendPlanarChains(const Body &input, const std::vector<EdgeId> &selected, d
                 throw std::domain_error("blendEdges: le parallele dei raccordi nell'angolo concavo non si incontrano (raggio troppo grande?)");
             cv.previousAt = ua;
             cv.nextAt = ub;
-            // Dominio allungato oltre il punto comune (margine per le superfici locali del tracciamento).
-            auto extend = [&](ChainFin &fin, double at, double from) {
-                const double reach = at + 0.75 * (at - from);
-                fin.span = {std::min(fin.span.lo, reach), std::max(fin.span.hi, reach)};
-                if (body.edge(fin.edge).curve->type() == CurveType::Circle && fin.span.length() >= kTwoPi - 1e-3)
-                    throw std::domain_error("blendEdges: arco troppo lungo per l'angolo concavo");
-            };
-            extend(previous, ua, previous.endParameter);
-            extend(next, ub, next.startParameter);
+            // Dominio allungato oltre il punto comune: dopo aver trovato tutti i
+            // punti comuni (un arco tra due angoli concavi si allunga dai due lati).
+            extensions[std::size_t((j - 1 + n) % n)].push_back({ua, previous.endParameter});
+            extensions[std::size_t(j % n)].push_back({ub, next.startParameter});
+        }
+        // Margine per le superfici locali del tracciamento. Sugli archi lunghi tra
+        // due angoli concavi (i lobi di un profilo) si riduce quanto serve a
+        // restare sotto il giro completo, uguale per i due estremi.
+        for (int i = 0; i < n; ++i) {
+            if (extensions[std::size_t(i)].empty()) continue;
+            ChainFin &fin = chain.fins[std::size_t(i)];
+            const bool circle = body.edge(fin.edge).curve->type() == CurveType::Circle;
+            bool fitted = false;
+            for (double margin : {0.75, 0.5, 0.25, 0.1, 0.05}) {
+                Interval span = fin.span;
+                for (const auto &[at, from] : extensions[std::size_t(i)]) {
+                    const double reach = at + margin * (at - from);
+                    span = {std::min(span.lo, reach), std::max(span.hi, reach)};
+                }
+                if (circle && span.length() >= kTwoPi - 1e-3) continue;
+                fin.span = span;
+                fitted = true;
+                break;
+            }
+            if (!fitted) throw std::domain_error("blendEdges: arco troppo lungo per l'angolo concavo");
         }
         for (ChainFin &fin : chain.fins) {
             if (fin.span.lo == body.edge(fin.edge).range.lo && fin.span.hi == body.edge(fin.edge).range.hi) continue;

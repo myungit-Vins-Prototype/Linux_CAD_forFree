@@ -936,6 +936,80 @@ FK_TEST(BlendEdgeEndingOnExistingFilletCornerPatch) {
     }
 }
 
+FK_TEST(BlendPlanarChainConcaveCornersBetweenLongArcs) {
+    // Contorno superiore dell'unione di un disco (R = 16) e di due lobi
+    // (R = 6, centri a +-d): archi lunghi (i lobi quasi 270 gradi) che si
+    // incontrano in angoli vivi concavi, come il profilo di "prova con
+    // loft-CerchiCerchio.prt" prima dei raccordi degli angoli. Con r = 1 le
+    // parallele dei due archi sono quasi tangenti (16 + 6 - 2 r appena sopra
+    // d): Gauss-Newton dal vertice divergeva e l'allungamento dei lobi dai due
+    // lati superava il giro completo.
+    const double h = 5.0, d = 19.8, R = 16.0, a = 6.0, r = 1.0;
+    Body body = makeCylinder(Frame3(Vec3(0, 0, 0), Vec3(0, 0, 1), Vec3(1, 0, 0)), R, h);
+    for (double x : {-d, d})
+        body = booleanOperation(body, makeCylinder(Frame3(Vec3(x, 0, 0), Vec3(0, 0, 1), Vec3(1, 0, 0)), a, h), BooleanOperation::Unite);
+    FaceId top;
+    for (FaceId f : body.faces()) {
+        const auto *plane = dynamic_cast<const Plane *>(body.face(f).surface.get());
+        if (plane && std::fabs(plane->frame().origin().z() - h) < 1e-9 && std::fabs(std::fabs(plane->frame().zDir().z()) - 1.0) < 1e-12) top = f;
+    }
+    FK_CHECK(top.valid());
+    if (!top.valid()) return;
+    std::vector<EdgeId> edges;
+    for (LoopId loop : body.face(top).loops)
+        for (FinId fin : body.loopFins(loop)) edges.push_back(body.fin(fin).edge);
+    FK_CHECK(edges.size() == 4);
+    try {
+        const Body result = blendPlanarChains(body, edges, r, false);
+        FK_CHECK(checkBody(result).empty());
+        TessellationOptions options;
+        options.deflection = 0.02;
+        FK_CHECK(tessellate(result, options).failedFaces == 0);
+        // La faccia superiore perde una striscia di larghezza r lungo il bordo:
+        // area tolta / r = perimetro + O(r) (angoli e curvatura).
+        const double phi = std::acos((d * d + R * R - a * a) / (2.0 * d * R)), psi = std::acos((d * d + a * a - R * R) / (2.0 * d * a));
+        const double perimeter = R * (kTwoPi - 4.0 * phi) + 2.0 * a * (kTwoPi - 2.0 * psi);
+        double topArea = 0.0;
+        for (FaceId f : result.faces()) {
+            const auto *plane = dynamic_cast<const Plane *>(result.face(f).surface.get());
+            if (plane && std::fabs(plane->frame().origin().z() - h) < 1e-9 && std::fabs(std::fabs(plane->frame().zDir().z()) - 1.0) < 1e-12)
+                topArea += faceArea(result, f);
+        }
+        FK_CHECK_NEAR((faceArea(body, top) - topArea) / r, perimeter, 0.01 * perimeter);
+        // Volume tolto: sezione r^2 (1 - pi/4) lungo il bordo, a meno degli angoli.
+        FK_CHECK_NEAR(massProperties(body).volume - massProperties(result).volume, r * r * (1.0 - kPi / 4.0) * perimeter, 0.01 * r * r * perimeter);
+    } catch (const std::exception &error) {
+        reportFailure(__FILE__, __LINE__, error.what());
+    }
+}
+
+FK_TEST(BlendVanishingAtTangentMitreEnd) {
+    // Spigolo verticale che prosegue per tangenza nella mitra di due raccordi
+    // uguali: la mitra nasce sul coperchio, dove i due raccordi sono tangenti
+    // tra loro, e li' il nuovo raccordo svanisce (1476.prt, B173:E112/E458).
+    // Prima il fit inseguiva il rumore della sezione mal condizionata e la
+    // chiusura cercava una curva tra due contatti coincidenti.
+    const double a = 10.0, b = 8.0, c = 6.0, R = 2.0;
+    const std::vector<Vec3> top{Vec3(5, 0, c), Vec3(a, 4, c)};
+    Body base = makeBox(Frame3(), a, b, c);
+    base = blendEdges(base, {nearestEdge(base, top[0], 1e-6), nearestEdge(base, top[1], 1e-6)}, R, false);
+    FK_CHECK(checkBody(base).empty());
+    const double v0 = massProperties(base).volume;
+    const TopoDS_Shape occtBase = occtBlendedShape(BRepPrimAPI_MakeBox(a, b, c).Shape(), top, R, false);
+    const double occtV0 = occtBase.IsNull() ? 0.0 : [&] { GProp_GProps p; BRepGProp::VolumeProperties(occtBase, p, 1e-12); return p.Mass(); }();
+    for (double r : {0.5, 0.1}) {
+        const double volume = blended(base, {Vec3(a, 0, 1)}, r, false, 0.0);
+        const double removed = v0 - volume, straight = r * r * (1.0 - kPi / 4.0) * (c - R);
+        // Oltre al tratto rettilineo, il tratto lungo la mitra (angolo da 90 gradi a zero).
+        FK_CHECK(removed > straight);
+        FK_CHECK(removed < straight + r * r * (1.0 - kPi / 4.0) * kPi * R);
+        if (occtV0 > 0.0) {
+            const double occt = occtBlended(occtBase, {Vec3(a, 0, 1)}, r, false);
+            if (occt > 0.0) FK_CHECK_NEAR(removed, occtV0 - occt, 1e-2 * (occtV0 - occt));
+        }
+    }
+}
+
 FK_TEST(BlendArcsMeetingSegments) {
     // Profilo estruso: tre segmenti e un arco che li incontra ad angolo vivo
     // (non tangente). Tutto il bordo in alto (catena piana con gli angoli a

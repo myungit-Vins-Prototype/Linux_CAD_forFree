@@ -49,7 +49,7 @@ constexpr char kMagic[4] = {'F', 'C', 'A', 'D'};
 // 25 svuotamento dei solidi; 26 unita' lineare preferita del documento;
 // 27 filettature parametriche su facce cilindriche o coniche; 28 componenti
 // connesse separate prodotte dall'eliminazione delle facce.
-constexpr quint16 kVersion = 28;
+constexpr quint16 kVersion = 29;
 constexpr quint8 kZlib = 1;
 
 void write(QDataStream &out, const CurveObject &curve) {
@@ -311,6 +311,10 @@ void write(QDataStream &out, const ExtrusionObject &body) {
         << t.face.x << t.face.y << t.face.z << qint32(t.face.subshape) << qint32(t.face.geometry) << qint32(t.face.context);
     // Formato 28: indice della componente prodotta da DeleteFace.
     out << qint32(body.deleteComponent);
+    // Formato 29: riferimenti di faccia dei raccordi e degli smussi (tutti i
+    // bordi) e la feature della base su cui sono stati presi.
+    for (const EdgePoint &e : body.blendEdges) out << qint32(e.role);
+    out << body.blendBaseFeature;
 }
 
 // `extras` (solo formato 5): i file scritti durante lo sviluppo del formato 5
@@ -500,6 +504,14 @@ bool read(QDataStream &in, ExtrusionObject &body, quint16 version, int extras) {
         if (component < -1) return false;
         body.deleteComponent = component;
     }
+    if (version >= 29)
+        for (EdgePoint &e : body.blendEdges) {
+            qint32 role = kEdgePointEdge;
+            in >> role;
+            if (role != kEdgePointEdge && role != kEdgePointFaceBoundary) return false;
+            e.role = role;
+        }
+    if (version >= 29) in >> body.blendBaseFeature;
     const BodyFeature last = version >= 27 ? BodyFeature::Thread : version >= 25 ? BodyFeature::Shell : BodyFeature::PlanarSurface;
     if (int(body.feature) < 0 || int(body.feature) > int(last)) return false;
     return in.status() == QDataStream::Ok;

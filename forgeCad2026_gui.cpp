@@ -19,6 +19,7 @@
 #include <QOpenGLContext>
 #include <array>
 #include "fk_classify.h"
+#include "fk_surface_algo.h"
 #include "fk_curve_algo.h"
 #include "fk_topology.h"
 #include "cad_history.h"
@@ -1074,6 +1075,10 @@ public:
         } else if (sameBlendPreview) {
             candidate.forgeBody = preview_.geometry;
             candidate.solid = true;
+            // Il candidato e' una copia della feature: se prima era fallita ne
+            // conserverebbe il messaggio, e la storyboard continuerebbe a
+            // mostrare lo stadio precedente come risultato del corpo.
+            candidate.error.clear();
             candidate.display = preview_.resultDisplay;
             if (candidate.display.vertices.isEmpty() && candidate.display.edges.isEmpty())
                 tessellateGeometry(candidate, tessellationQuality_, candidate.display);
@@ -1803,9 +1808,7 @@ public:
         selection_ = {SceneObjectKind::Extrusion, body, -1};
         selectedFace_ = {};
         if (!beginExtendPick(linear).isEmpty()) return;
-        FaceHit points;
-        points.edges = edges;
-        pickedEdges_ = faceDisplayEdges(body, points);
+        pickReferences(body, edges);
         edgePicked();
     }
     // Modifica degli spigoli del raccordo (o smusso) `blend`: la scelta riparte
@@ -1823,9 +1826,8 @@ public:
         const QString error = startEdgePick(chamfer);
         if (!error.isEmpty()) return error;
         edgePickEdit_ = blend;
-        FaceHit points;
-        points.edges = body.blendEdges;
-        pickedEdges_ = faceDisplayEdges(body.firstBody, points);
+        pickReferences(body.firstBody, body.blendEdges,
+                       body.blendBaseFeature != 0 && body.blendBaseFeature == extrusions_.at(body.firstBody).featureId);
         edgePicked();
         return {};
     }
@@ -1967,10 +1969,16 @@ public:
                               : QStringLiteral("Nella scena non ci sono solidi visibili da raccordare.");
         edgePicking_ = true;
         pickedEdges_.clear();
+        pickedFaces_.clear();
         hoverEdge_ = -1;
         hoverFaceEdges_.clear();
         // Con una faccia selezionata del corpo si parte dai suoi bordi.
-        if (edgePickBody_ >= 0 && selectedFace_.body == edgePickBody_) pickedEdges_ = faceDisplayEdges(edgePickBody_, selectedFace_.hit);
+        if (edgePickBody_ >= 0 && selectedFace_.body == edgePickBody_) {
+            pickedEdges_ = faceDisplayEdges(edgePickBody_, selectedFace_.hit);
+            ForgeCad::Kernel::Vec3 inside;
+            if (!extend && !helix && faceLabelPoint(edgePickBody_, selectedFace_.hit.face, inside))
+                pickedFaces_.append({selectedFace_.hit.face, faceBoundaryReference(edgePickBody_, selectedFace_.hit.face, inside), pickedEdges_});
+        }
         setFocus();
         edgePicked();
         return {};
@@ -1982,9 +1990,7 @@ public:
         selection_ = {SceneObjectKind::Extrusion, body, -1};
         selectedFace_ = {};
         if (!beginEdgePick(chamfer).isEmpty()) return;
-        FaceHit points;
-        points.edges = edges;
-        pickedEdges_ = faceDisplayEdges(body, points);
+        pickReferences(body, edges);
         edgePicked();
     }
     void setEdgePickCallbacks(std::function<void(const QString &)> status,
@@ -2019,6 +2025,7 @@ public:
         blend.blendChamfer = chamfer;
         blend.blendSize = size;
         blend.blendEdges = edges;
+        blend.blendBaseFeature = extrusions_.at(baseIndex).featureId;
         blend.chamferSpec = spec;
         // La stessa definizione e' gia' stata costruita dall'anteprima: il
         // B-rep immutabile si promuove direttamente. Durante l'anteprima si
@@ -3706,6 +3713,7 @@ protected:
                 if (edgeBody != edgePickBody_) {
                     edgePickBody_ = edgeBody;
                     pickedEdges_.clear();
+                    pickedFaces_.clear();
                 }
                 if (pickedEdges_.contains(edge)) pickedEdges_.removeAll(edge);
                 else pickedEdges_.append(edge);
@@ -3713,6 +3721,7 @@ protected:
                 if (faceBody != edgePickBody_) {
                     edgePickBody_ = faceBody;
                     pickedEdges_.clear();
+                    pickedFaces_.clear();
                 }
                 const QVector<int> border = faceDisplayEdges(edgePickBody_, face);
                 bool all = !border.isEmpty();
@@ -3720,6 +3729,18 @@ protected:
                 for (int index : border) {
                     pickedEdges_.removeAll(index);
                     if (!all) pickedEdges_.append(index);
+                }
+                for (int k = int(pickedFaces_.size()) - 1; k >= 0; --k)
+                    if (pickedFaces_.at(k).face == face.face) pickedFaces_.removeAt(k);
+                if (!all && face.face >= 0 && !edgePickExtend_) {
+                    // La faccia stessa, per il punto esatto lungo il raggio.
+                    QVector3D origin, direction;
+                    viewRay(lastMousePosition_, origin, direction);
+                    const double length = double(direction.length());
+                    const ForgeCad::Kernel::Vec3 point(double(origin.x()) + double(direction.x()) / length * face.distance,
+                                                       double(origin.y()) + double(direction.y()) / length * face.distance,
+                                                       double(origin.z()) + double(direction.z()) / length * face.distance);
+                    pickedFaces_.append({face.face, faceBoundaryReference(edgePickBody_, face.face, point), border});
                 }
             }
             edgePicked();
@@ -6409,8 +6430,9 @@ private:
         // Le versioni precedenti potevano salvare come raccordo riuscito una
         // booleana no-op, identica alla base. Non perpetuare quel falso
         // risultato dalla cache: rigenerandolo il kernel restituisce l'errore
-        // e la storyboard mostra l'ultimo stadio realmente valido.
-        if (usedSnapshot && body.operation < 0 && body.feature == BodyFeature::Blend
+        // e la storyboard mostra l'ultimo stadio realmente valido. Una feature
+        // soppressa e' uguale alla base per definizione: non si controlla.
+        if (usedSnapshot && !body.suppressed && body.operation < 0 && body.feature == BodyFeature::Blend
             && body.firstBody >= 0 && body.firstBody < index && body.firstBody < bodies.size()
             && bodies.at(body.firstBody).forgeBody
             && !ForgeCad::forgeBlendHasEffect(bodies.at(body.firstBody).forgeBody, body.forgeBody))
@@ -6584,7 +6606,10 @@ private:
                     body.error = QStringLiteral("Il corpo da raccordare non esiste piu'.");
                     return;
                 }
-                body.forgeBody = ForgeCad::forgeBlend(base->forgeBody, body.blendEdges, body.blendSize, body.blendChamfer, &body.error, body.chamferSpec);
+                // Gli ID dei riferimenti valgono se gli spigoli sono stati scelti su questa base.
+                const bool sameState = body.blendBaseFeature != 0 && body.blendBaseFeature == base->featureId;
+                body.forgeBody = ForgeCad::forgeBlend(base->forgeBody, body.blendEdges, body.blendSize, body.blendChamfer, &body.error, body.chamferSpec,
+                                                      sameState);
                 // Due raccordi/smussi adiacenti possono intersecare le rispettive
                 // zone. Se il secondo e' piu' grande, applicarlo sul raccordo
                 // piccolo puo' non avere una superficie offset valida. Rigenera
@@ -6597,10 +6622,10 @@ private:
                     if (source && source->forgeBody) {
                         QString reorderedError;
                         ForgeCad::ForgeBody larger = ForgeCad::forgeBlend(source->forgeBody, body.blendEdges, body.blendSize,
-                                                                          body.blendChamfer, &reorderedError, body.chamferSpec);
+                                                                          body.blendChamfer, &reorderedError, body.chamferSpec, false);
                         if (larger) {
                             ForgeCad::ForgeBody rebuilt = ForgeCad::forgeBlend(larger, base->blendEdges, base->blendSize,
-                                                                               base->blendChamfer, &reorderedError, base->chamferSpec);
+                                                                               base->blendChamfer, &reorderedError, base->chamferSpec, false);
                             if (rebuilt) {
                                 body.forgeBody = std::move(rebuilt);
                                 body.error.clear();
@@ -9178,11 +9203,23 @@ private:
     }
     // Un punto per ogni spigolo scelto: un campione interno della polilinea
     // (i campioni stanno sulla curva esatta), il punto medio se e' un segmento.
+    // Una faccia i cui bordi sono ancora tutti scelti diventa un riferimento di
+    // faccia (role = kEdgePointFaceBoundary) al posto dei suoi spigoli.
     QVector<EdgePoint> pickedEdgePoints() const {
         QVector<EdgePoint> points;
         if (edgePickBody_ < 0 || edgePickBody_ >= extrusions_.size()) return points;
         const QVector<QVector<QVector3D>> &edges = extrusions_.at(edgePickBody_).display.edges;
+        QSet<int> covered;
+        if (!edgePickExtend_)
+            for (const PickedFace &face : pickedFaces_) {
+                bool all = !face.border.isEmpty();
+                for (int index : face.border) all = all && pickedEdges_.contains(index);
+                if (!all) continue;
+                points.append(face.reference);
+                for (int index : face.border) covered.insert(index);
+            }
         for (int index : pickedEdges_) {
+            if (covered.contains(index)) continue;
             if (index < 0 || index >= edges.size() || edges.at(index).size() < 2) continue;
             const QVector<QVector3D> &polyline = edges.at(index);
             const QVector3D p = polyline.size() >= 3 ? polyline.at(polyline.size() / 2) : 0.5f * (polyline.first() + polyline.last());
@@ -9212,6 +9249,7 @@ private:
         edgePickHelix_ = false;
         hoverEdgeBody_ = -1;
         pickedEdges_.clear();
+        pickedFaces_.clear();
         hoverEdge_ = -1;
         hoverFaceEdges_.clear();
         if (edgePickStatus_) edgePickStatus_(QString());
@@ -9421,6 +9459,90 @@ private:
     }
     // Spigoli visualizzati (indici in display.edges) dei bordi della faccia:
     // per ogni suo spigolo la polilinea piu' vicina al suo punto.
+    // Riferimento di faccia (tutti i bordi) della faccia `face` del corpo `body`.
+    EdgePoint faceBoundaryReference(int body, int face, const ForgeCad::Kernel::Vec3 &point) const {
+        EdgePoint reference{point.x(), point.y(), point.z()};
+        if (body >= 0 && body < extrusions_.size() && extrusions_.at(body).forgeBody && face >= 0)
+            reference = ForgeCad::faceReference(*extrusions_.at(body).forgeBody, ForgeCad::Kernel::FaceId(face), point);
+        reference.role = kEdgePointFaceBoundary;
+        return reference;
+    }
+    // Un punto interno della faccia (quello delle etichette, dalla tassellazione).
+    bool faceLabelPoint(int body, int face, ForgeCad::Kernel::Vec3 &point) const {
+        using namespace ForgeCad::Kernel;
+        if (body < 0 || body >= extrusions_.size() || face < 0) return false;
+        const BodyDisplay &display = extrusions_.at(body).display;
+        const int k = display.faceIds.indexOf(face);
+        if (k >= 0 && k < display.faceLabelPoints.size()) {
+            const QVector3D p = display.faceLabelPoints.at(k);
+            point = Vec3(p.x(), p.y(), p.z());
+            return true;
+        }
+        // Senza tassellazione (corpo nascosto): il punto medio di un bordo,
+        // spostato verso l'interno (la faccia sta a sinistra della fin) e
+        // riportato sulla superficie.
+        const ForgeCad::ForgeBody &shape = extrusions_.at(body).forgeBody;
+        if (!shape || !shape->contains(FaceId(face))) return false;
+        const Face &data = shape->face(FaceId(face));
+        for (LoopId loop : data.loops)
+            for (FinId fin : shape->loopFins(loop)) {
+                const Edge &edge = shape->edge(shape->fin(fin).edge);
+                const double t = 0.5 * (edge.range.lo + edge.range.hi);
+                Vec3 c[2];
+                edge.curve->evaluate(t, 1, c);
+                const bool forward = shape->edge(shape->fin(fin).edge).forward == fin;
+                const Vec3 tangent = (forward ? 1.0 : -1.0) * c[1];
+                const SurfaceProjection on = projectPoint(*data.surface, c[0]);
+                const Vec3 n = data.surface->normal(on.u, on.v);
+                const Vec3 inward = cross(data.sense ? n : -n, tangent);
+                if (!(norm(inward) > 0.0)) continue;
+                const double step = 1e-2 * std::max(1e-9, norm(c[1]) * edge.range.length());
+                const Vec3 candidate = projectPoint(*data.surface, c[0] + inward * (step / norm(inward))).point;
+                if (classifyPointOnFace(*shape, FaceId(face), candidate, 1e-9) == PointLocation::Inside) {
+                    point = candidate;
+                    return true;
+                }
+            }
+        return false;
+    }
+    // Scelta degli spigoli ricostruita dai riferimenti salvati (modifica o
+    // ripresa): spigoli e facce si ritrovano sul corpo `body` come nella
+    // costruzione della feature, anche dopo un riordino della storia.
+    void pickReferences(int body, const QVector<EdgePoint> &references, bool sameState = false) {
+        pickedEdges_.clear();
+        pickedFaces_.clear();
+        if (body < 0 || body >= extrusions_.size()) return;
+        const ExtrusionObject &object = extrusions_.at(body);
+        const BodyDisplay &display = object.display;
+        const auto add = [&](int index) {
+            if (index >= 0 && !pickedEdges_.contains(index)) pickedEdges_.append(index);
+        };
+        const ForgeCad::ReferenceState state = sameState ? ForgeCad::ReferenceState::Same : ForgeCad::ReferenceState::Other;
+        double reach = std::numeric_limits<double>::max();
+        if (object.forgeBody) {
+            ForgeCad::Kernel::Box box;
+            for (ForgeCad::Kernel::VertexId v : object.forgeBody->vertices()) box.add(object.forgeBody->vertex(v).point);
+            reach = 1e-3 * std::max(1.0, box.diagonal());
+        }
+        for (const EdgePoint &reference : references) {
+            if (!object.forgeBody) {
+                FaceHit points;
+                points.edges = {reference};
+                for (int index : faceDisplayEdges(body, points)) add(index);
+                continue;
+            }
+            if (reference.role == kEdgePointFaceBoundary) {
+                const ForgeCad::Kernel::FaceId face = ForgeCad::resolveFaceReference(*object.forgeBody, reference, reach, ForgeCad::ReferenceState::Other);
+                if (!face.valid() || face.index >= display.faceEdges.size()) continue;
+                const QVector<int> &border = display.faceEdges.at(face.index);
+                for (int index : border) add(index);
+                pickedFaces_.append({face.index, reference, border});
+            } else {
+                const ForgeCad::Kernel::EdgeId edge = ForgeCad::resolveEdgeReference(*object.forgeBody, reference, reach, state);
+                if (edge.valid()) add(display.edgeIds.indexOf(edge.index));
+            }
+        }
+    }
     QVector<int> faceDisplayEdges(int index, const FaceHit &hit) const {
         QVector<int> result;
         if (index < 0 || index >= extrusions_.size()) return result;
@@ -9843,7 +9965,8 @@ private:
         parts << QString::number(int(p.kind)) << QString::number(p.plane);
         for (int k = 0; k < 3; ++k) parts << n(p.origin[k]) << n(p.size[k]);
         for (const EdgePoint &e : d.blendEdges)
-            parts << n(e.x) << n(e.y) << n(e.z) << QString::number(e.subshape) << QString::number(e.geometry) << QString::number(e.context);
+            parts << n(e.x) << n(e.y) << n(e.z) << QString::number(e.subshape) << QString::number(e.geometry) << QString::number(e.context)
+                  << QString::number(e.role);
         const HelixParameters &h = d.helix;
         parts << QString::number(h.spiral) << QString::number(h.mode) << n(h.pitch) << n(h.turns) << n(h.height) << n(h.taper) << n(h.startAngle)
               << QString::number(h.leftHanded) << QString::number(h.reverse) << QString::number(h.source) << QString::number(h.curve)
@@ -10611,6 +10734,14 @@ private:
     ChamferSpec edgePickSpec_;  // smusso: modo delle distanze per l'anteprima durante la scelta  // scelta dei bordi di una superficie da estendere
     std::function<void(int, QVector<EdgePoint>)> extendPickFinished_;
     QVector<int> pickedEdges_, hoverFaceEdges_;
+    // Facce scelte per tutti i loro bordi (raccordi e smussi): finche' i bordi
+    // restano tutti scelti, la feature salva la faccia e non gli spigoli.
+    struct PickedFace {
+        int face = -1;
+        EdgePoint reference;
+        QVector<int> border;
+    };
+    QVector<PickedFace> pickedFaces_;
     int edgePickEdit_ = -1;         // raccordo di cui si modificano gli spigoli (-1: raccordo nuovo)
     double edgePickSize_ = 0.5;     // misura dell'anteprima durante la scelta
     std::function<void(int, QVector<EdgePoint>, double, bool)> edgeEditFinished_;
@@ -15815,6 +15946,17 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
                 body.blendSize = newSize;
                 body.blendChamfer = newChamfer;
                 body.chamferSpec = spec;
+                // Spigoli scelti di nuovo: sono stati presi sulla base attuale.
+                const auto sameReferences = [](const QVector<EdgePoint> &a, const QVector<EdgePoint> &b) {
+                    if (a.size() != b.size()) return false;
+                    for (int k = 0; k < a.size(); ++k)
+                        if (a.at(k).x != b.at(k).x || a.at(k).y != b.at(k).y || a.at(k).z != b.at(k).z || a.at(k).subshape != b.at(k).subshape
+                            || a.at(k).role != b.at(k).role)
+                            return false;
+                    return true;
+                };
+                if (!sameReferences(selectedEdges, original.blendEdges) && original.firstBody >= 0 && original.firstBody < viewport->extrusions().size())
+                    body.blendBaseFeature = viewport->extrusions().at(original.firstBody).featureId;
                 body.blendEdges = selectedEdges;
                 const QString error = viewport->updateBody(index, body);
                 return error.isEmpty() ? error : error + QStringLiteral("\nIl corpo resta com'era.");

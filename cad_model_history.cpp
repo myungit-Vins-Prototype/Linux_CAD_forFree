@@ -124,6 +124,7 @@ void normalizeModelHistory(QVector<ExtrusionObject> &features, QVector<ModelBody
     for (quint64 id : ordered) {
         const bool hadBody = existing.contains(id);
         ModelBody body = existing.value(id);
+        const quint64 previousTip = body.tipFeatureId;
         body.id = id;
         if (body.name.trimmed().isEmpty()) body.name = QStringLiteral("Corpo %1").arg(number);
         int tip = -1;
@@ -162,7 +163,11 @@ void normalizeModelHistory(QVector<ExtrusionObject> &features, QVector<ModelBody
         // era ancora il tip: in quel solo caso lo stato del corpo e'
         // autorevole e va conservato.
         const bool failedTail = lastActive >= 0 && lastActive != tip && !features.at(lastActive).error.isEmpty();
-        if ((!hadBody || !failedTail) && tip >= 0) body.visible = features.at(tip).visible;
+        // Lo stesso quando il tip si sposta da solo: una feature fallita che ora
+        // riesce (riattivata, o corretta in "Modifica parametri") ha il flag
+        // spento, perche' finche' falliva si mostrava lo stadio precedente.
+        const bool tipMoved = hadBody && previousTip && tip >= 0 && features.at(tip).featureId != previousTip;
+        if ((!hadBody || (!failedTail && !tipMoved)) && tip >= 0) body.visible = features.at(tip).visible;
         for (int index = 0; index < features.size(); ++index)
             if (features.at(index).modelBodyId == id) features[index].visible = index == tip && body.visible;
         bodies.append(body);
