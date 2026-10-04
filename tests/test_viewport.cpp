@@ -842,9 +842,30 @@ public:
         QApplication::processEvents();
         translucentPanel.hide();
         FunctionDialogPanel scrollablePanel;
-        scrollablePanel.createScrollableForm()->addRow(new FeatureOperationDiagram(FeatureOperationDiagram::Extrusion, &scrollablePanel));
-        require(scrollablePanel.findChild<QScrollArea *>(QStringLiteral("functionDialogScroll")),
+        QFormLayout *scrollableForm = scrollablePanel.createScrollableForm();
+        scrollableForm->addRow(new FeatureOperationDiagram(FeatureOperationDiagram::Extrusion, &scrollablePanel));
+        QLabel *longPanelNote = wrappedNote(QStringLiteral(
+            "Questo messaggio volutamente lungo verifica che le spiegazioni delle funzioni vadano a capo, "
+            "ricevano tutta l'altezza necessaria e non finiscano dietro ai pulsanti o alle righe successive. "
+            "Il controllo deve restare leggibile anche quando il pannello viene ridotto alla sua dimensione minima."),
+            &scrollablePanel);
+        QLabel *rowAfterLongNote = new QLabel(QStringLiteral("Riga successiva"), &scrollablePanel);
+        scrollableForm->addRow(longPanelNote);
+        scrollableForm->addRow(rowAfterLongNote);
+        auto *panelScroll = scrollablePanel.findChild<QScrollArea *>(QStringLiteral("functionDialogScroll"));
+        require(panelScroll,
                 "contenuto scorrevole dei pannelli funzione");
+        scrollablePanel.setFixedSize(400, 280);
+        scrollablePanel.show();
+        QApplication::processEvents();
+        require(longPanelNote->sizePolicy().hasHeightForWidth()
+                    && longPanelNote->height() >= 3 * longPanelNote->fontMetrics().height()
+                    && longPanelNote->geometry().bottom() < rowAfterLongNote->geometry().top(),
+                "note lunghe a capo senza sovrapporre le righe successive");
+        require(panelScroll->horizontalScrollBarPolicy() == Qt::ScrollBarAlwaysOff
+                    && panelScroll->verticalScrollBarPolicy() == Qt::ScrollBarAsNeeded,
+                "pannelli funzione senza tagli orizzontali e con scorrimento verticale");
+        scrollablePanel.hide();
         FunctionDialogPanel embeddedPanel(&v);
         embeddedPanel.setWindowTitle(QStringLiteral("Pannello test"));
         require(embeddedPanel.isEmbedded() && !embeddedPanel.isWindow() && embeddedPanel.parentWidget() == &v,

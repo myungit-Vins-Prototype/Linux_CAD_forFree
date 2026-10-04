@@ -198,8 +198,16 @@ static QString featureIconName(const ExtrusionObject &body) {
 static QLabel *wrappedNote(const QString &text, QWidget *parent) {
     auto *label = new QLabel(text, parent);
     label->setWordWrap(true);
-    label->setMaximumWidth(360);
-    label->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Minimum);
+    // Non sostituire la policy con una costruita senza HeightForWidth: in quel
+    // caso QFormLayout riserva l'altezza di una sola riga e il testo va sotto
+    // ai controlli successivi. I pannelli piu' larghi possono usare piu'
+    // spazio, quelli stretti aumentano correttamente l'altezza della nota.
+    label->setMinimumWidth(0);
+    label->setMaximumWidth(560);
+    QSizePolicy policy(QSizePolicy::Expanding, QSizePolicy::Minimum);
+    policy.setHeightForWidth(true);
+    label->setSizePolicy(policy);
+    label->setTextInteractionFlags(Qt::TextSelectableByMouse);
     return label;
 }
 
@@ -11120,11 +11128,17 @@ public:
         scroll->setWidgetResizable(true);
         scroll->setFrameShape(QFrame::NoFrame);
         scroll->setSizeAdjustPolicy(QAbstractScrollArea::AdjustToContents);
+        scroll->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+        scroll->setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
         auto *contents = new QWidget(scroll);
         contents->setObjectName(QStringLiteral("functionDialogContents"));
         contents->setAutoFillBackground(false);
+        contents->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Minimum);
         scroll->viewport()->setAutoFillBackground(false);
         form_ = new QFormLayout(contents);
+        form_->setFieldGrowthPolicy(QFormLayout::AllNonFixedFieldsGrow);
+        form_->setRowWrapPolicy(QFormLayout::WrapLongRows);
+        form_->setSizeConstraint(QLayout::SetMinAndMaxSize);
         scroll->setWidget(contents);
         root->addWidget(scroll, 1);
         return form_;
