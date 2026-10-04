@@ -39,6 +39,9 @@ struct TessellationOptions {
     SurfaceBatchEvaluator *accelerator = nullptr;
     // Lotti piu' piccoli restano sulla CPU (il trasferimento costerebbe di piu').
     std::size_t acceleratorMinimumBatch = 512;
+    // Vuoto = corpo intero. Le anteprime locali possono limitare sia la
+    // triangolazione sia il campionamento dei bordi alle sole facce indicate.
+    std::vector<FaceId> faces;
 };
 
 struct FaceMesh {

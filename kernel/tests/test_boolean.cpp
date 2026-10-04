@@ -1117,8 +1117,9 @@ void checkIdentical(const Body &a, const Body &b) {
 }
 
 FK_TEST(BooleanParallelMatchesSequential) {
-    // Le intersezioni tra le coppie di facce si calcolano in parallelo: il
-    // risultato deve essere lo stesso del calcolo in sequenza. Molla (sweep
+    // Le intersezioni tra le coppie e la divisione/classificazione delle
+    // singole facce si calcolano in parallelo: il risultato deve essere lo
+    // stesso del calcolo in sequenza. Molla (sweep
     // di un cerchio lungo un'elica, facce B-spline) con un cilindro che la
     // attraversa, come un flacone con la filettatura.
     HelixSpec spec;

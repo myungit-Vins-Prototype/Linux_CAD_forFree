@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <exception>
 #include <limits>
 #include <map>
 #include <memory>
@@ -17,6 +18,7 @@
 #include "fk_intersect.h"
 #include "fk_curve_algo.h"
 #include "fk_pcurve.h"
+#include "fk_parallel.h"
 #include "fk_precision.h"
 #include "fk_surface_algo.h"
 
@@ -1386,8 +1388,22 @@ Body blendSurfaceChains(const Body &input, const std::vector<EdgeId> &selected, 
         for (int f = 0; f < n; ++f) {
             const ChainFin &cf = chain.fins[std::size_t(f)];
             pieces.push_back(makePiece(f, cf.b, cf.start, cf.end));
-            seedAt(pieces.back(), 0.5 * (cf.start + cf.end));
         }
+        // La ricerca della prima sezione e' uno dei passi piu' costosi sui
+        // raccordi tra superfici libere. I pezzi non condividono solver ne'
+        // cache: si possono inizializzare in parallelo e si rilanciano gli
+        // errori nell'ordine della catena.
+        std::vector<std::exception_ptr> seedErrors(pieces.size());
+        parallelFor(pieces.size(), threadCount(0), [&](std::size_t p) {
+            try {
+                const ChainFin &cf = chain.fins[std::size_t(pieces[p].chainFin)];
+                seedAt(pieces[p], 0.5 * (cf.start + cf.end));
+            } catch (...) {
+                seedErrors[p] = std::current_exception();
+            }
+        });
+        for (const std::exception_ptr &error : seedErrors)
+            if (error) std::rethrow_exception(error);
         // Giunti Split: il contatto su B attraversa c prima o dopo il vertice.
         const int jointCount = chain.closed ? n : n - 1;
         std::vector<int> splitAt(static_cast<std::size_t>(jointCount), -1);  // indice del pezzo che comincia sul giunto di passaggio
@@ -1630,7 +1646,18 @@ Body blendSurfaceChains(const Body &input, const std::vector<EdgeId> &selected, 
                 }
                 ends.push_back(end);
             }
-        for (Piece &piece : pieces) fitPiece(piece);
+        // L'approssimazione B-spline di ogni superficie di raccordo campiona
+        // molte sezioni numeriche ed e' indipendente dagli altri pezzi.
+        std::vector<std::exception_ptr> fitErrors(pieces.size());
+        parallelFor(pieces.size(), threadCount(0), [&](std::size_t p) {
+            try {
+                fitPiece(pieces[p]);
+            } catch (...) {
+                fitErrors[p] = std::current_exception();
+            }
+        });
+        for (const std::exception_ptr &error : fitErrors)
+            if (error) std::rethrow_exception(error);
         // Raffina i punti in cui i contatti sui fianchi raggiungono lo
         // spigolo comune. La ricerca preliminare lavora sulle sezioni non
         // ancora interpolate e sui loft può arrestarsi al vertice; ora sono

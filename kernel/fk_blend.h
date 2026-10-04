@@ -46,6 +46,9 @@
 // circolari tra facce non coassiali, estremi contro facce curve non normali
 // o non tangenti, piu' di tre spigoli in un vertice o pezze d'angolo tra
 // facce curve, raggi che non stanno nelle facce.
+// La preparazione delle sezioni, delle zone e degli utensili dei diversi
+// spigoli e' distribuita sui core; cucitura e applicazione finale restano in
+// ordine per conservare una topologia deterministica.
 namespace ForgeCad::Kernel {
 
 // `size`: raggio del raccordo o distanza dello smusso dallo spigolo su

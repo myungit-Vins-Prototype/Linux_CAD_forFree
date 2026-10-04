@@ -43,8 +43,9 @@ struct BooleanOptions {
     // Fonde facce ed edge sulla stessa geometria (fk_unify.h), come fa l'app
     // con ShapeUpgrade_UnifySameDomain dopo le booleane di OCCT.
     bool unifySameDomain = true;
-    // Thread per le intersezioni tra le coppie di facce (passo 1): 0 = i core
-    // della macchina, 1 = in sequenza. Il risultato non dipende dal numero.
+    // Thread per le intersezioni tra coppie di facce e per la successiva
+    // divisione/classificazione delle singole facce: 0 = i core della
+    // macchina, 1 = in sequenza. Il risultato non dipende dal numero.
     int threads = 0;
 };
 

@@ -1066,6 +1066,8 @@ public:
             candidate.forgeBody = preview_.geometry;
             candidate.solid = true;
             candidate.display = preview_.resultDisplay;
+            if (candidate.display.vertices.isEmpty() && candidate.display.edges.isEmpty())
+                tessellateGeometry(candidate, tessellationQuality_, candidate.display);
             candidate.display.constructionCurves.clear();
         } else {
             // La stessa definizione dell'anteprima (guscio, offset...): il suo risultato.
@@ -1866,14 +1868,25 @@ public:
             preview_.replaced.clear();  // curve e bordi scelti restano visibili
         else if (definition.mergeProbe) preview_.replaced.clear();  // i corpi fusi si sanno a calcolo finito
         else preview_.replaced = bodyOperands(definition);
-        // La fine su un altro corpo non lo nasconde (solo quelli che si fondono).
-        if (definition.operation < 0
-            && (definition.feature == BodyFeature::Extrusion || definition.feature == BodyFeature::Sweep)
-            && !definition.mergeProbe)
+        // Nell'unione la base resta opaca sotto la patch aggiunta. Nella
+        // sottrazione viene invece sostituita dalle facce conservate del
+        // risultato, gia' forate/tagliate, mentre la superficie di taglio e'
+        // la sola patch trasparente. Lo sweep conserva per ora la sostituzione
+        // completa del risultato.
+        if (definition.operation < 0 && definition.feature == BodyFeature::Extrusion) {
+            preview_.replaced.clear();
+            if (!definition.mergeProbe) {
+                if (definition.mergeOperation == 2) preview_.replaced = definition.mergeBodies;
+                else if (definition.mergeOperation == 1)
+                    for (int body : definition.mergeBodies) preview_.restored.insert(body);
+            }
+        } else if (definition.operation < 0 && definition.feature == BodyFeature::Sweep && !definition.mergeProbe) {
             preview_.replaced = definition.mergeOperation != 0 ? definition.mergeBodies : QVector<int>();
+        }
         preview_.valid = false;
         preview_.error.clear();
         preview_.geometry.reset();
+        preview_.retainedDisplay = {};
         preview_.resultDisplay = {};
         previewErrorSketch_ = -1;
         ++preview_.generation;
@@ -1914,6 +1927,7 @@ public:
         preview_.geometry.reset();
         previewErrorSketch_ = -1;
         preview_.display = {};
+        preview_.retainedDisplay = {};
         preview_.resultDisplay = {};
         update();
     }
@@ -1998,8 +2012,9 @@ public:
         blend.blendEdges = edges;
         blend.chamferSpec = spec;
         // La stessa definizione e' gia' stata costruita dall'anteprima: il
-        // B-rep e la tassellazione sono immutabili e si possono promuovere
-        // direttamente a risultato definitivo, senza ripetere il raccordo.
+        // B-rep immutabile si promuove direttamente. Durante l'anteprima si
+        // tassella soltanto la patch locale; la mesh completa si prepara una
+        // sola volta, quando l'utente conferma.
         const QString key = previewKey(blend, -1);
         if (preview_.key == key) {
             if (!preview_.valid || !preview_.geometry)
@@ -2007,6 +2022,8 @@ public:
             blend.forgeBody = preview_.geometry;
             blend.solid = true;
             blend.display = preview_.resultDisplay;
+            if (blend.display.vertices.isEmpty() && blend.display.edges.isEmpty())
+                tessellateGeometry(blend, tessellationQuality_, blend.display);
             blend.display.constructionCurves.clear();
         } else {
             rebuildBody(blend, int(extrusions_.size()));
@@ -2126,6 +2143,12 @@ public:
         body.forgeBody = preview_.geometry;
         body.solid = !preview_.geometry->isSheet();
         body.display = preview_.resultDisplay.vertices.isEmpty() && preview_.resultDisplay.edges.isEmpty() ? preview_.display : preview_.resultDisplay;
+        // Per un'estrusione fusa/sottratta preview_.display e' volutamente la
+        // sola patch locale. Alla conferma serve invece la mesh completa del
+        // risultato definitivo (senza rifare il calcolo B-rep).
+        if (body.operation < 0 && body.feature == BodyFeature::Extrusion && body.mergeOperation != 0
+            && preview_.resultDisplay.vertices.isEmpty() && preview_.resultDisplay.edges.isEmpty())
+            tessellateGeometry(body, tessellationQuality_, body.display);
         body.display.constructionCurves.clear();
         body.error.clear();
         return true;
@@ -6330,7 +6353,16 @@ private:
                           int quality) {
         QElapsedTimer timer;
         timer.start();
-        const bool usedSnapshot = body.cachedGeometry && body.forgeBody;
+        bool usedSnapshot = body.cachedGeometry && body.forgeBody;
+        // Le versioni precedenti potevano salvare come raccordo riuscito una
+        // booleana no-op, identica alla base. Non perpetuare quel falso
+        // risultato dalla cache: rigenerandolo il kernel restituisce l'errore
+        // e la storyboard mostra l'ultimo stadio realmente valido.
+        if (usedSnapshot && body.operation < 0 && body.feature == BodyFeature::Blend
+            && body.firstBody >= 0 && body.firstBody < index && body.firstBody < bodies.size()
+            && bodies.at(body.firstBody).forgeBody
+            && !ForgeCad::forgeBlendHasEffect(bodies.at(body.firstBody).forgeBody, body.forgeBody))
+            usedSnapshot = false;
         if (usedSnapshot) {
             // Appena aperto: B-rep e, nelle cache nuove, mesh salvati nel
             // documento al posto del calcolo.
@@ -9586,11 +9618,36 @@ private:
     // con isoparametriche U/V, nello stesso linguaggio visivo.
     void drawPreview() {
         const BodyDisplay &display = preview_.display;
+        const BodyDisplay &retained = preview_.retainedDisplay;
         const bool loft = preview_.definition.operation < 0 && preview_.definition.feature == BodyFeature::Loft;
         const bool blend = preview_.definition.operation < 0 && preview_.definition.feature == BodyFeature::Blend;
         const bool extrusion = preview_.definition.operation < 0 && preview_.definition.feature == BodyFeature::Extrusion;
         const bool revolution = preview_.definition.operation < 0 && preview_.definition.feature == BodyFeature::Revolution;
         const bool transparent = loft || blend || extrusion || revolution;
+        // Sottrazione mediante estrusione: il vecchio corpo non puo' restare
+        // davanti alla patch, altrimenti chiude visivamente il foro. Disegniamo
+        // opache le facce conservate del risultato, con il taglio gia' presente.
+        if (!retained.vertices.isEmpty() || !retained.edges.isEmpty()) {
+            int base = preview_.replaced.isEmpty() ? -1 : preview_.replaced.first();
+            if (base < 0 && !preview_.definition.mergeBodies.isEmpty()) base = preview_.definition.mergeBodies.first();
+            const QColor color = base >= 0 && base < extrusions_.size() ? meshColorForFeature(base) : QColor::fromRgbF(0.25, 0.65, 0.90);
+            if (displayMode_ != 0 && !retained.vertices.isEmpty()) {
+                displayCache_.setLightingEnabled(true);
+                displayCache_.setEmission(QVector4D(0.0f, 0.0f, 0.0f, 1.0f));
+                displayCache_.setColor(QVector4D(float(color.redF()), float(color.greenF()), float(color.blueF()), 1.0f));
+                glEnable(GL_POLYGON_OFFSET_FILL);
+                glPolygonOffset(1.0f, 2.0f);
+                drawDisplayFaces(retained);
+                glDisable(GL_POLYGON_OFFSET_FILL);
+            }
+            if (displayMode_ != 1 && !retained.edges.isEmpty()) {
+                displayCache_.setLightingEnabled(false);
+                displayCache_.setColor(QVector4D(0.82f, 0.91f, 0.96f, 1.0f));
+                glLineWidth(1.5f);
+                displayCache_.edges(retained);
+                glLineWidth(1.0f);
+            }
+        }
         // La superficie del raccordo e' interna al vecchio spigolo convesso:
         // in sovrapposizione alla base opaca la mostriamo come patch X-ray.
         if (blend) glDisable(GL_DEPTH_TEST);
@@ -9753,7 +9810,8 @@ private:
         QVector<int> existingMerge;
     };
     // La geometria dell'anteprima, come rebuildBody, e la sua tassellazione.
-    static bool computePreview(const PreviewInputs &in, BodyDisplay &display, BodyDisplay &resultDisplay, ForgeCad::ForgeBody &geometry,
+    static bool computePreview(const PreviewInputs &in, BodyDisplay &display, BodyDisplay &retainedDisplay,
+                               BodyDisplay &resultDisplay, ForgeCad::ForgeBody &geometry,
                                QString &error, QVector<int> *merged = nullptr) {
         ExtrusionObject body = in.definition;
         if (in.reuse) {
@@ -9772,11 +9830,21 @@ private:
         const bool blend = in.definition.operation < 0 && in.definition.feature == BodyFeature::Blend && body.forgeBody
             && in.definition.firstBody >= 0 && in.definition.firstBody < in.bodies.size()
             && in.bodies.at(in.definition.firstBody).forgeBody;
+        const bool localExtrusion = in.definition.operation < 0 && in.definition.feature == BodyFeature::Extrusion
+            && body.mergeOperation != 0 && !body.mergeBodies.isEmpty() && body.forgeBody;
         if (blend) {
             if (in.reuse) resultDisplay = in.existingDisplay;
-            else tessellateGeometry(body, in.quality, resultDisplay);
             ForgeCad::forgeBlendPreviewDisplay(*in.bodies.at(in.definition.firstBody).forgeBody, *body.forgeBody, in.quality, display,
                                                in.quality <= 0 ? 3 : in.quality == 1 ? 5 : 7);
+        } else if (localExtrusion) {
+            if (in.reuse) resultDisplay = in.existingDisplay;
+            QVector<ForgeCad::ForgeBody> bases;
+            for (int index : body.mergeBodies)
+                if (index >= 0 && index < in.bodies.size() && in.bodies.at(index).forgeBody)
+                    bases.append(in.bodies.at(index).forgeBody);
+            ForgeCad::forgeExtrusionPreviewDisplay(bases, *body.forgeBody, in.quality, display,
+                                                   in.quality <= 0 ? 3 : in.quality == 1 ? 5 : 7,
+                                                   body.mergeOperation == 2 ? &retainedDisplay : nullptr);
         } else if (in.reuse) {
             display = in.existingDisplay;
             display.constructionCurves.clear();
@@ -9787,7 +9855,8 @@ private:
             const int divisions = in.quality <= 0 ? 3 : in.quality == 1 ? 5 : 7;
             if (in.definition.feature == BodyFeature::Loft)
                 ForgeCad::forgeSurfaceConstructionCurves(*body.forgeBody, display, divisions);
-            else if (in.definition.feature == BodyFeature::Extrusion || in.definition.feature == BodyFeature::Revolution)
+            else if ((in.definition.feature == BodyFeature::Extrusion && !localExtrusion)
+                     || in.definition.feature == BodyFeature::Revolution)
                 ForgeCad::forgeSurfaceConstructionCurves(*body.forgeBody, display, divisions, true);
         }
         return true;
@@ -9855,6 +9924,7 @@ private:
         if (workCallback_) workCallback_(true, QStringLiteral("Calcolo dell'anteprima..."), true);
         QThreadPool::globalInstance()->start([this, receiver, generation, in] {
             BodyDisplay display;
+            BodyDisplay retainedDisplay;
             BodyDisplay resultDisplay;
             ForgeCad::ForgeBody geometry;
             QString error;
@@ -9862,7 +9932,7 @@ private:
             QVector<int> merged;
             const bool probe = in.definition.mergeProbe;
             try {
-                ok = computePreview(in, display, resultDisplay, geometry, error, &merged);
+                ok = computePreview(in, display, retainedDisplay, resultDisplay, geometry, error, &merged);
             } catch (const std::exception &failure) {
                 error = QString::fromUtf8(failure.what());
             } catch (...) {
@@ -9872,15 +9942,33 @@ private:
             // Il ricevitore e' figlio del viewport: se il viewport non c'e' piu', la chiamata non avviene.
             QMetaObject::invokeMethod(receiver, [this, generation, ok, error, probe, merged,
                                                  geometry = std::move(geometry), display = std::move(display),
+                                                 retainedDisplay = std::move(retainedDisplay),
                                                  resultDisplay = std::move(resultDisplay)]() mutable {
                 previewRunning_ = false;
                 if (workCallback_) workCallback_(false, QStringLiteral("Calcolo dell'anteprima..."), true);
                 if (generation == preview_.generation) {
-                    if (probe) preview_.replaced = ok ? merged : QVector<int>();
+                    if (probe) {
+                        const bool localExtrusion = preview_.definition.operation < 0
+                            && preview_.definition.feature == BodyFeature::Extrusion
+                            && preview_.definition.mergeOperation != 0;
+                        if (localExtrusion) {
+                            if (preview_.definition.mergeOperation == 2) {
+                                preview_.replaced = ok ? merged : QVector<int>();
+                                for (int body : merged) preview_.restored.remove(body);
+                            } else {
+                                preview_.replaced.clear();
+                                if (ok)
+                                    for (int body : merged) preview_.restored.insert(body);
+                            }
+                        } else {
+                            preview_.replaced = ok ? merged : QVector<int>();
+                        }
+                    }
                     preview_.valid = ok;
                     preview_.error = ok ? QString() : preparePreviewError(error);
                     preview_.geometry = std::move(geometry);
                     preview_.display = std::move(display);
+                    preview_.retainedDisplay = std::move(retainedDisplay);
                     preview_.resultDisplay = std::move(resultDisplay);
                     if (edgePicking_ && edgePickStatus_) edgePickStatus_(edgePickMessage());
                     if (previewCallback_) previewCallback_(preview_.error);
@@ -10429,7 +10517,8 @@ private:
         QString error;
         ForgeCad::ForgeBody geometry;
         BodyDisplay display;        // cio' che si disegna (per un raccordo, solo la patch)
-        BodyDisplay resultDisplay;  // tassellazione completa promossa con OK
+        BodyDisplay retainedDisplay; // sottrazione: facce conservate del risultato, opache e gia' tagliate
+        BodyDisplay resultDisplay;  // corpo esistente; per una nuova patch la mesh completa nasce con OK
         quint64 generation = 0;
     };
     Preview preview_;
@@ -14124,16 +14213,17 @@ static bool booleanDialog(QMainWindow *parent, CadViewport *viewport, const QStr
 // resta attiva per scegliere le facce. Anteprima in ambra; la conferma chiama
 // `apply` (l'errore resta nella finestra).
 // Con initial.feature == DeleteFace e' la finestra di *Elimina facce*: le facce
-// scelte (almeno una) si tolgono dal corpo, niente distanza; durante la scelta
-// si vedono solo i corpi che si possono scegliere, poi l'anteprima del risultato.
+// scelte (almeno una) si tolgono dal corpo, niente distanza. Il corpo e' quello
+// della faccia cliccata e la finestra non forza la visibilita' di alcun corpo.
 // Con initial.feature == Shell e' il *Guscio*: un solido svuotato con lo
 // spessore verso l'interno, le facce scelte (anche nessuna) tolte per l'apertura.
 static bool offsetDialog(QMainWindow *window, CadViewport *viewport, const QString &title, int replaced, const ExtrusionObject &initial,
                          const std::function<QString(const ExtrusionObject &)> &apply) {
     const QVector<ExtrusionObject> &bodies = viewport->extrusions();
     const bool shell = initial.feature == BodyFeature::Shell;
+    const bool deleteFace = initial.feature == BodyFeature::DeleteFace;
     // Eliminazione e guscio: le facce scelte si tolgono.
-    const bool removal = initial.feature == BodyFeature::DeleteFace || shell;
+    const bool removal = deleteFace || shell;
     QVector<int> candidates = viewport->resultBodiesBefore(replaced);  // solo i corpi esistenti, non gli stadi intermedi
     if (shell) candidates.erase(std::remove_if(candidates.begin(), candidates.end(), [&](int k) { return !bodies.at(k).solid; }), candidates.end());
     if (replaced >= 0 && initial.firstBody >= 0 && initial.firstBody < replaced && !candidates.contains(initial.firstBody)) {
@@ -14153,10 +14243,13 @@ static bool offsetDialog(QMainWindow *window, CadViewport *viewport, const QStri
     dialog.setWindowTitle(title);
     dialog.setModal(false);
     auto *form = dialog.createScrollableForm();
-    auto *bodyBox = new QComboBox(&dialog);
-    for (int index : candidates) bodyBox->addItem(resultBodyLabel(viewport, index, false));  // i corpi, non le funzioni
-    bodyBox->setCurrentIndex(int(candidates.indexOf(definition.firstBody)));
-    bodyBox->setEnabled(replaced < 0);
+    QComboBox *bodyBox = nullptr;
+    if (!deleteFace) {
+        bodyBox = new QComboBox(&dialog);
+        for (int index : candidates) bodyBox->addItem(resultBodyLabel(viewport, index, false));  // i corpi, non le funzioni
+        bodyBox->setCurrentIndex(int(candidates.indexOf(definition.firstBody)));
+        bodyBox->setEnabled(replaced < 0);
+    }
     auto *facesLabel = new QLabel(&dialog);
     facesLabel->setWordWrap(true);
     auto *pickButton = new QPushButton(QStringLiteral("Scegli le facce nella vista"), &dialog);
@@ -14178,7 +14271,7 @@ static bool offsetDialog(QMainWindow *window, CadViewport *viewport, const QStri
     flipButton->setCheckable(true);
     flipButton->setChecked(definition.distance < 0.0);
     flipButton->setToolTip(QStringLiteral("Spento: verso l'esterno (lungo la normale uscente); acceso: verso l'interno"));
-    form->addRow(QStringLiteral("Corpo:"), bodyBox);
+    if (bodyBox) form->addRow(QStringLiteral("Corpo:"), bodyBox);
     form->addRow(QStringLiteral("Facce:"), facesLabel);
     form->addRow(QString(), faceRow);
     if (shell) {
@@ -14218,7 +14311,7 @@ static bool offsetDialog(QMainWindow *window, CadViewport *viewport, const QStri
     };
     const auto current = [&] {
         ExtrusionObject d = definition;
-        d.firstBody = candidates.at(bodyBox->currentIndex());
+        if (bodyBox) d.firstBody = candidates.at(bodyBox->currentIndex());
         d.distance = (flipButton->isChecked() ? -1.0 : 1.0) * distanceBox->value();
         return d;
     };
@@ -14232,10 +14325,10 @@ static bool offsetDialog(QMainWindow *window, CadViewport *viewport, const QStri
         facesLabel->setText(definition.offsetFaces.isEmpty()
                                 ? (shell ? QStringLiteral("nessuna apertura") : removal ? QStringLiteral("nessuna faccia scelta") : QStringLiteral("tutte le facce del corpo"))
                                 : QStringLiteral("%1 facce scelte").arg(definition.offsetFaces.size()));
-        // Eliminazione e guscio: durante la scelta si vedono solo i corpi che si
-        // possono scegliere (le facce da togliere evidenziate); l'anteprima del
-        // risultato quando la scelta finisce.
-        if (removal) viewport->setPickBodies(picking ? candidates : QVector<int>());
+        // Il guscio conserva il vecchio isolamento dei candidati. Elimina facce
+        // lascia invece invariata la vista: i corpi nascosti restano nascosti e
+        // non intercettano il picking di un corpo visibile racchiuso al loro interno.
+        if (shell) viewport->setPickBodies(picking ? candidates : QVector<int>());
         pickButton->setChecked(picking);
         QVector<GeometryRef> marks;
         for (const EdgePoint &point : definition.offsetFaces) {
@@ -14294,8 +14387,10 @@ static bool offsetDialog(QMainWindow *window, CadViewport *viewport, const QStri
                 // Le facce di un altro corpo: la scelta riparte da li'.
                 definition.offsetFaces.clear();
                 definition.firstBody = ref.index;
-                const QSignalBlocker blocker(bodyBox);
-                bodyBox->setCurrentIndex(int(candidates.indexOf(ref.index)));
+                if (bodyBox) {
+                    const QSignalBlocker blocker(bodyBox);
+                    bodyBox->setCurrentIndex(int(candidates.indexOf(ref.index)));
+                }
             }
             const ForgeCad::Kernel::FaceId face = faceOf(ref.point);
             int existing = -1;
@@ -14322,11 +14417,12 @@ static bool offsetDialog(QMainWindow *window, CadViewport *viewport, const QStri
         definition.offsetFaces.clear();
         refresh();
     });
-    QObject::connect(bodyBox, &QComboBox::currentIndexChanged, &dialog, [&] {
-        definition.firstBody = candidates.at(bodyBox->currentIndex());
-        definition.offsetFaces.clear();
-        refresh();
-    });
+    if (bodyBox)
+        QObject::connect(bodyBox, &QComboBox::currentIndexChanged, &dialog, [&] {
+            definition.firstBody = candidates.at(bodyBox->currentIndex());
+            definition.offsetFaces.clear();
+            refresh();
+        });
     QObject::connect(flipButton, &QPushButton::toggled, &dialog, refresh);
     QObject::connect(distanceBox, &QDoubleSpinBox::valueChanged, &dialog, refresh);
     QObject::connect(buttons, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);

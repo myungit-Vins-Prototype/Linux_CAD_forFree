@@ -1626,10 +1626,11 @@ void crossingChords(const Body &body, FaceId f, const std::vector<std::vector<do
         if (marked[i]) marks.push_back({chords[i].edge, chords[i].interval});
 }
 
-void separateCrossingChords(const Body &body, std::vector<std::vector<double>> &samples, const TessellationOptions &options) {
+void separateCrossingChords(const Body &body, const std::vector<FaceId> &selectedFaces,
+                            std::vector<std::vector<double>> &samples, const TessellationOptions &options) {
     std::vector<FaceId> faces;
     std::vector<std::vector<int>> edgeFaces(samples.size());
-    for (FaceId f : body.faces()) {
+    for (FaceId f : selectedFaces) {
         if (!body.face(f).surface) continue;
         const int index = int(faces.size());
         faces.push_back(f);
@@ -1689,11 +1690,25 @@ Tessellation tessellate(const Body &input, const TessellationOptions &options) {
     const Body &body = *bodyPointer;
 
     Tessellation result;
+    std::vector<FaceId> faces = options.faces;
+    if (faces.empty())
+        for (FaceId f : body.faces()) faces.push_back(f);
+    std::size_t edgeSlots = 0;
+    for (EdgeId edge : body.edges())
+        if (edge.index >= 0) edgeSlots = std::max(edgeSlots, std::size_t(edge.index) + 1);
+    std::vector<char> selectedEdges(edgeSlots, 0);
+    for (FaceId f : faces)
+        for (LoopId loop : body.face(f).loops)
+            for (FinId fin : body.loopFins(loop)) {
+                const int edge = body.fin(fin).edge.index;
+                if (edge >= 0 && std::size_t(edge) < selectedEdges.size()) selectedEdges[std::size_t(edge)] = 1;
+            }
     std::vector<std::vector<double>> edgeSamples;
     for (EdgeId e : body.edges()) {
         const Edge &edge = body.edge(e);
         if (std::size_t(e.index) >= edgeSamples.size()) edgeSamples.resize(std::size_t(e.index) + 1);
-        if (!edge.curve) continue;
+        if (!edge.curve || e.index < 0 || std::size_t(e.index) >= selectedEdges.size()
+            || !selectedEdges[std::size_t(e.index)]) continue;
         std::vector<double> &samples = edgeSamples[std::size_t(e.index)];
         samples = sampleCurve(*edge.curve, edge.range, options);
         // Una curva con freccia sotto la deflessione diventa la sua corda: in
@@ -1704,10 +1719,11 @@ Tessellation tessellate(const Body &input, const TessellationOptions &options) {
         if (samples.size() == 2 && edge.curve->type() != CurveType::Line)
             samples.insert(samples.begin() + 1, 0.5 * (samples[0] + samples[1]));
     }
-    separateCrossingChords(body, edgeSamples, options);
+    separateCrossingChords(body, faces, edgeSamples, options);
     for (EdgeId e : body.edges()) {
         const Edge &edge = body.edge(e);
-        if (!edge.curve) continue;
+        if (!edge.curve || e.index < 0 || std::size_t(e.index) >= selectedEdges.size()
+            || !selectedEdges[std::size_t(e.index)]) continue;
         std::vector<Vec3> polyline;
         for (double t : edgeSamples[std::size_t(e.index)]) polyline.push_back(edge.curve->point(t));
         result.edges.push_back(std::move(polyline));
@@ -1715,8 +1731,6 @@ Tessellation tessellate(const Body &input, const TessellationOptions &options) {
     }
     // Facce indipendenti (leggono solo il body e i campioni degli edge): in
     // parallelo, raccolte nell'ordine delle facce.
-    std::vector<FaceId> faces;
-    for (FaceId f : body.faces()) faces.push_back(f);
     std::vector<FaceMesh> meshes(faces.size());
     std::vector<char> failed(faces.size(), 0);
     parallelFor(faces.size(), faces.size() < 4 ? 1u : threadCount(options.threads), [&](std::size_t i) {

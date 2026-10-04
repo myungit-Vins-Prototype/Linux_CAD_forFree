@@ -12,6 +12,13 @@ bool isReferenceFeature(const ExtrusionObject &feature) {
     return feature.operation < 0 && (feature.feature == BodyFeature::DatumPlane || feature.feature == BodyFeature::Helix);
 }
 
+bool isValidHistoryStage(const ExtrusionObject &feature) {
+    if (feature.suppressed || !feature.error.isEmpty()) return false;
+    if (feature.operation < 0 && feature.feature == BodyFeature::DatumPlane) return feature.datumValid;
+    if (feature.operation < 0 && feature.feature == BodyFeature::Helix) return feature.curve != nullptr;
+    return feature.forgeBody != nullptr;
+}
+
 quint64 inheritedBody(const QVector<ExtrusionObject> &features, const ExtrusionObject &feature) {
     const auto owner = [&](int index) {
         return index >= 0 && index < features.size() ? features.at(index).modelBodyId : quint64(0);
@@ -61,7 +68,7 @@ QVector<int> modelBodyFeatures(const DocumentState &state, quint64 bodyId) {
 
 int modelBodyTipIndex(const DocumentState &state, quint64 bodyId) {
     for (int index = state.extrusions.size() - 1; index >= 0; --index)
-        if (state.extrusions.at(index).modelBodyId == bodyId && !state.extrusions.at(index).suppressed) return index;
+        if (state.extrusions.at(index).modelBodyId == bodyId && isValidHistoryStage(state.extrusions.at(index))) return index;
     return -1;
 }
 
@@ -115,16 +122,47 @@ void normalizeModelHistory(QVector<ExtrusionObject> &features, QVector<ModelBody
     QVector<ModelBody> bodies;
     int number = 1;
     for (quint64 id : ordered) {
+        const bool hadBody = existing.contains(id);
         ModelBody body = existing.value(id);
         body.id = id;
         if (body.name.trimmed().isEmpty()) body.name = QStringLiteral("Corpo %1").arg(number);
         int tip = -1;
         for (int index = features.size() - 1; index >= 0; --index)
-            if (features.at(index).modelBodyId == id && !features.at(index).suppressed) { tip = index; break; }
+            if (features.at(index).modelBodyId == id && isValidHistoryStage(features.at(index))) { tip = index; break; }
+        // Durante la lettura del payload le definizioni sono gia' presenti,
+        // mentre B-rep, curve e datum della cache vengono collegati solo in
+        // seguito (o rigenerati da loadDocument). In quella finestra una
+        // feature corretta non va scambiata per una feature fallita: conserva
+        // il tip serializzato, oppure usa l'ultimo stadio senza errore per i
+        // vecchi documenti che non avevano ancora ModelBody.
+        if (tip < 0) {
+            if (hadBody && body.tipFeatureId)
+                for (int index = features.size() - 1; index >= 0; --index)
+                    if (features.at(index).modelBodyId == id && features.at(index).featureId == body.tipFeatureId
+                        && !features.at(index).suppressed && features.at(index).error.isEmpty()) {
+                        tip = index;
+                        break;
+                    }
+            if (tip < 0)
+                for (int index = features.size() - 1; index >= 0; --index)
+                    if (features.at(index).modelBodyId == id && !features.at(index).suppressed
+                        && features.at(index).error.isEmpty()) {
+                        tip = index;
+                        break;
+                    }
+        }
+        int lastActive = -1;
+        for (int index = features.size() - 1; index >= 0; --index)
+            if (features.at(index).modelBodyId == id && !features.at(index).suppressed) { lastActive = index; break; }
         body.tipFeatureId = tip >= 0 ? features.at(tip).featureId : 0;
         // Il flag storico del tip registra la visibilita' del corpo anche per
-        // i documenti precedenti al formato storyboard.
-        if (tip >= 0) body.visible = features.at(tip).visible;
+        // i documenti precedenti al formato storyboard e quando un altro
+        // corpo lo consuma. Se pero' la coda della storia e' fallita, il flag
+        // del vecchio stadio valido era stato spento quando quella feature
+        // era ancora il tip: in quel solo caso lo stato del corpo e'
+        // autorevole e va conservato.
+        const bool failedTail = lastActive >= 0 && lastActive != tip && !features.at(lastActive).error.isEmpty();
+        if ((!hadBody || !failedTail) && tip >= 0) body.visible = features.at(tip).visible;
         for (int index = 0; index < features.size(); ++index)
             if (features.at(index).modelBodyId == id) features[index].visible = index == tip && body.visible;
         bodies.append(body);

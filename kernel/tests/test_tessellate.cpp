@@ -165,6 +165,19 @@ FK_TEST(TessellatePrimitives) {
     checkMesh(makeExtrusion(Frame3(Vec3(1, 2, 3), Vec3(0.3, 0.2, 1), Vec3(1, 0, 0)), region, -4.0), 0.005);
 }
 
+FK_TEST(TessellateSelectedFaces) {
+    const Body body = makeBox(Frame3(), 4.0, 3.0, 2.0);
+    const FaceId selected = body.faces().front();
+    TessellationOptions options;
+    options.deflection = 0.01;
+    options.faces = {selected};
+    const Tessellation mesh = tessellate(body, options);
+    FK_CHECK(mesh.failedFaces == 0);
+    FK_CHECK(mesh.faces.size() == 1);
+    FK_CHECK(mesh.faces.front().face == selected);
+    FK_CHECK(mesh.edges.size() == body.loopFins(body.face(selected).loops.front()).size());
+}
+
 // La dimensione della mesh STL deve poter essere limitata indipendentemente
 // dallo scarto: su un piano la sola deflessione non aggiungerebbe triangoli.
 FK_TEST(TessellateMaximumEdgeLength) {

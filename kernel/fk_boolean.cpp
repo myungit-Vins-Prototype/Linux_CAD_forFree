@@ -5,6 +5,7 @@
 #include <exception>
 #include <cmath>
 #include <functional>
+#include <iterator>
 #include <limits>
 #include <map>
 #include <memory>
@@ -197,8 +198,8 @@ private:
     std::vector<Interval> splitRange(const Curve<3> &curve, const Interval &range, std::vector<double> parameters) const;
     std::vector<Interval> splitAtPoints(const Curve<3> &curve, const Interval &range) const;
     std::vector<SubFace> buildSubFaces(int k, FaceId f, const std::vector<Piece> &cuts) const;
-    std::vector<SubFace> buildSubFacesOnce(int k, FaceId f, const std::vector<Piece> &cuts) const;
-    void finishCycle(const Surface &surface, bool sense, Cycle &cycle) const;
+    std::vector<SubFace> buildSubFacesOnce(int k, FaceId f, const std::vector<Piece> &cuts, int polygonSamples) const;
+    void finishCycle(const Surface &surface, bool sense, Cycle &cycle, int polygonSamples) const;
     bool insideSubFace(const SubFace &subFace, const Vec2 &uv) const;
     Location classify(const SubFace &subFace, const SolidClassifier &other) const;
     bool keep(int k, Location location) const;
@@ -212,7 +213,6 @@ private:
     double vertexTolerance_ = 0.0;  // la piu' grande tolleranza dei vertici dei due body (file importati)
     bool unify_ = true, split_ = false;
     int threads_ = 0;
-    mutable int polygonSamples_ = 24;  // campioni per tratto dei poligoni (u, v) dei cicli
     std::map<int, Box> boxes_[2];
     std::vector<Arc> arcs_;
     std::vector<Vec3> vertexPoints_;
@@ -756,8 +756,7 @@ std::vector<Interval> BooleanBuilder::splitAtPoints(const Curve<3> &curve, const
 
 // --- 3. divisione delle facce -----------------------------------------------------
 
-void BooleanBuilder::finishCycle(const Surface &surface, bool sense, Cycle &cycle) const {
-    const int samples = polygonSamples_;
+void BooleanBuilder::finishCycle(const Surface &surface, bool sense, Cycle &cycle, int samples) const {
     const double period = surface.isUPeriodic() ? surface.uPeriod() : 0.0;
     const double periodV = surface.isVPeriodic() ? surface.vPeriod() : 0.0;
     std::vector<Vec2> &polygon = cycle.polygon;
@@ -949,22 +948,16 @@ bool poleAt(const Surface &surface, double v) {
 // divisione non riesce, e si ripete con poligoni via via piu' fitti.
 std::vector<SubFace> BooleanBuilder::buildSubFaces(int k, FaceId f, const std::vector<Piece> &cuts) const {
     for (int samples : {24, 96, 384, 1536}) {
-        polygonSamples_ = samples;
         try {
-            std::vector<SubFace> result = buildSubFacesOnce(k, f, cuts);
-            polygonSamples_ = 24;
-            return result;
+            return buildSubFacesOnce(k, f, cuts, samples);
         } catch (const std::domain_error &) {
-            if (samples == 1536) {
-                polygonSamples_ = 24;
-                throw;
-            }
+            if (samples == 1536) throw;
         }
     }
     return {};
 }
 
-std::vector<SubFace> BooleanBuilder::buildSubFacesOnce(int k, FaceId f, const std::vector<Piece> &cuts) const {
+std::vector<SubFace> BooleanBuilder::buildSubFacesOnce(int k, FaceId f, const std::vector<Piece> &cuts, int polygonSamples) const {
     const Body &body = bodies_[k];
     const Face &face = body.face(f);
     const Surface &surface = *face.surface;
@@ -1142,7 +1135,7 @@ std::vector<SubFace> BooleanBuilder::buildSubFacesOnce(int k, FaceId f, const st
     auto windsBothWays = [&](const std::vector<int> &sequence) {
         Cycle probe;
         for (int h : sequence) probe.pieces.push_back(halfEdges[h]);
-        finishCycle(surface, face.sense, probe);
+        finishCycle(surface, face.sense, probe, polygonSamples);
         return probe.wrap != 0 && probe.wrapV != 0;
     };
     // Nei poli un contorno che ci ripassa (i rami di un contatto di ordine
@@ -1174,7 +1167,7 @@ std::vector<SubFace> BooleanBuilder::buildSubFacesOnce(int k, FaceId f, const st
         if (slit) return;
         Cycle cycle;
         for (int h : sequence) cycle.pieces.push_back(halfEdges[h]);
-        finishCycle(surface, face.sense, cycle);
+        finishCycle(surface, face.sense, cycle, polygonSamples);
         cycles.push_back(std::move(cycle));
     };
     for (std::size_t start = 0; start < count; ++start) {
@@ -1689,18 +1682,41 @@ Body BooleanBuilder::run() {
     const bool sheetResult = sheet[0] || sheet[1];
     std::map<int, std::vector<Piece>> cuts[2];
     computeCuts(cuts);
-    std::vector<std::pair<SubFace, bool>> kept;  // pezzo e "da girare"
+    // Divisione e classificazione di ogni faccia sono indipendenti. Ogni
+    // worker conserva i pezzi localmente; il merge successivo mantiene
+    // l'ordine storico body/faccia e quindi una B-rep deterministica.
+    struct FaceResult {
+        int body = 0;
+        FaceId face;
+        std::vector<std::pair<SubFace, bool>> kept;  // pezzo e "da girare"
+        std::exception_ptr error;
+    };
+    std::vector<FaceResult> faceResults;
     for (int k = 0; k < 2; ++k) {
         if (sheetResult && !sheet[k]) continue;  // del solido non resta nulla
-        const SolidClassifier other(bodies_[1 - k], tolerance_);
-        for (FaceId f : bodies_[k].faces()) {
-            const auto found = cuts[k].find(f.index);
+        for (FaceId f : bodies_[k].faces()) faceResults.push_back({k, f, {}, {}});
+    }
+    std::unique_ptr<SolidClassifier> classifiers[2];
+    for (const FaceResult &job : faceResults)
+        if (!classifiers[job.body]) classifiers[job.body] = std::make_unique<SolidClassifier>(bodies_[1 - job.body], tolerance_);
+    parallelFor(faceResults.size(), threadCount(threads_), [&](std::size_t i) {
+        FaceResult &job = faceResults[i];
+        try {
+            const auto found = cuts[job.body].find(job.face.index);
             const std::vector<Piece> none;
-            for (SubFace &subFace : buildSubFaces(k, f, found != cuts[k].end() ? found->second : none)) {
-                const Location location = classify(subFace, other);
-                if (keep(k, location)) kept.emplace_back(std::move(subFace), operation_ == BooleanOperation::Subtract && k == 1);
+            for (SubFace &subFace : buildSubFaces(job.body, job.face, found != cuts[job.body].end() ? found->second : none)) {
+                const Location location = classify(subFace, *classifiers[job.body]);
+                if (keep(job.body, location))
+                    job.kept.emplace_back(std::move(subFace), operation_ == BooleanOperation::Subtract && job.body == 1);
             }
+        } catch (...) {
+            job.error = std::current_exception();
         }
+    });
+    std::vector<std::pair<SubFace, bool>> kept;
+    for (FaceResult &job : faceResults) {
+        if (job.error) std::rethrow_exception(job.error);
+        kept.insert(kept.end(), std::make_move_iterator(job.kept.begin()), std::make_move_iterator(job.kept.end()));
     }
     if (kept.empty()) return Body();
     return assemble(kept, sheetResult);
@@ -1710,11 +1726,27 @@ std::vector<Body> BooleanBuilder::split() {
     if (!bodies_[0].isSheet()) throw std::domain_error("splitSheet: si dividono solo le lamine");
     std::map<int, std::vector<Piece>> cuts[2];
     computeCuts(cuts);
+    struct FaceResult {
+        FaceId face;
+        std::vector<SubFace> pieces;
+        std::exception_ptr error;
+    };
+    std::vector<FaceResult> faceResults;
+    for (FaceId f : bodies_[0].faces()) faceResults.push_back({f, {}, {}});
+    parallelFor(faceResults.size(), threadCount(threads_), [&](std::size_t i) {
+        FaceResult &job = faceResults[i];
+        try {
+            const auto found = cuts[0].find(job.face.index);
+            const std::vector<Piece> none;
+            job.pieces = buildSubFaces(0, job.face, found != cuts[0].end() ? found->second : none);
+        } catch (...) {
+            job.error = std::current_exception();
+        }
+    });
     std::vector<SubFace> pieces;
-    for (FaceId f : bodies_[0].faces()) {
-        const auto found = cuts[0].find(f.index);
-        const std::vector<Piece> none;
-        for (SubFace &subFace : buildSubFaces(0, f, found != cuts[0].end() ? found->second : none)) pieces.push_back(std::move(subFace));
+    for (FaceResult &job : faceResults) {
+        if (job.error) std::rethrow_exception(job.error);
+        pieces.insert(pieces.end(), std::make_move_iterator(job.pieces.begin()), std::make_move_iterator(job.pieces.end()));
     }
     // Regioni: pezzi che si toccano lungo un tratto di bordo che non e' un taglio.
     std::vector<int> group(pieces.size());

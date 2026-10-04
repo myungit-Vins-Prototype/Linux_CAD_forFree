@@ -218,6 +218,21 @@ ForgeBody forgePrimitive(const PrimitiveParameters &parameters, QString *error) 
     }
 }
 
+bool forgeBlendHasEffect(const ForgeBody &base, const ForgeBody &result) {
+    if (!base || !result) return false;
+    const TopologyCounts a = base->counts(), b = result->counts();
+    if (a.vertices != b.vertices || a.edges != b.edges || a.faces != b.faces) return true;
+    try {
+        const MassProperties first = massProperties(*base), second = massProperties(*result);
+        const auto changed = [](double x, double y) {
+            return std::fabs(x - y) > 1e-6 * std::max({1.0, std::fabs(x), std::fabs(y)});
+        };
+        return changed(first.area, second.area) || changed(first.volume, second.volume);
+    } catch (const std::exception &) {
+        return true;
+    }
+}
+
 ForgeBody forgeBlend(const ForgeBody &base, const QVector<EdgePoint> &points, double size, bool chamfer, QString *error, const ChamferSpec &spec) {
     if (!base) {
         setError(error, QStringLiteral("Il corpo da raccordare non ha geometria valida."));
@@ -241,32 +256,43 @@ ForgeBody forgeBlend(const ForgeBody &base, const QVector<EdgePoint> &points, do
             }
             if (std::find(edges.begin(), edges.end(), e) == edges.end()) edges.push_back(e);
         }
-        if (!chamfer || spec.mode == 0) return std::make_shared<const Body>(blendEdges(*base, edges, size, chamfer));
-        // Smusso asimmetrico: le distanze di ogni spigolo con la stessa regola di buildBlend.
-        std::vector<ChamferSides> sides;
-        for (EdgeId e : edges) {
-            const Edge &edge = base->edge(e);
-            const double t = 0.5 * (edge.range.lo + edge.range.hi);
-            const Vec3 p = edge.curve->point(t);
-            double normals[2][3];
-            Vec3 outward[2];
-            int k = 0;
-            for (FinId fin : {edge.forward, edge.backward}) {
-                const Face &face = base->face(base->finFace(fin));
-                const SurfaceProjection projection = projectPoint(*face.surface, p);
-                const Vec3 n = normalAt(*face.surface, projection.u, projection.v);
-                outward[k] = face.sense ? n : -n;
-                normals[k][0] = outward[k].x();
-                normals[k][1] = outward[k].y();
-                normals[k][2] = outward[k].z();
-                ++k;
+        Body result;
+        if (!chamfer || spec.mode == 0) {
+            result = blendEdges(*base, edges, size, chamfer);
+        } else {
+            // Smusso asimmetrico: le distanze di ogni spigolo con la stessa regola di buildBlend.
+            std::vector<ChamferSides> sides;
+            for (EdgeId e : edges) {
+                const Edge &edge = base->edge(e);
+                const double t = 0.5 * (edge.range.lo + edge.range.hi);
+                const Vec3 p = edge.curve->point(t);
+                double normals[2][3];
+                Vec3 outward[2];
+                int k = 0;
+                for (FinId fin : {edge.forward, edge.backward}) {
+                    const Face &face = base->face(base->finFace(fin));
+                    const SurfaceProjection projection = projectPoint(*face.surface, p);
+                    const Vec3 n = normalAt(*face.surface, projection.u, projection.v);
+                    outward[k] = face.sense ? n : -n;
+                    normals[k][0] = outward[k].x();
+                    normals[k][1] = outward[k].y();
+                    normals[k][2] = outward[k].z();
+                    ++k;
+                }
+                bool firstIsReference = true;
+                double onReference = 0.0, onOther = 0.0;
+                if (!chamferDistances(spec, size, normals[0], normals[1], firstIsReference, onReference, onOther, error)) return nullptr;
+                sides.push_back({outward[firstIsReference ? 0 : 1], onReference, onOther});
             }
-            bool firstIsReference = true;
-            double onReference = 0.0, onOther = 0.0;
-            if (!chamferDistances(spec, size, normals[0], normals[1], firstIsReference, onReference, onOther, error)) return nullptr;
-            sides.push_back({outward[firstIsReference ? 0 : 1], onReference, onOther});
+            result = chamferEdges(*base, edges, sides);
         }
-        return std::make_shared<const Body>(chamferEdges(*base, edges, sides));
+        ForgeBody built = std::make_shared<const Body>(std::move(result));
+        if (!forgeBlendHasEffect(base, built)) {
+            setError(error, QStringLiteral("%1 non riuscito: il calcolo non modifica il corpo; lo spigolo termina contro facce incompatibili.")
+                                .arg(chamfer ? QStringLiteral("Smusso") : QStringLiteral("Raccordo")));
+            return nullptr;
+        }
+        return built;
     } catch (const std::exception &failure) {
         setError(error, QStringLiteral("%1 non riuscito: %2").arg(chamfer ? QStringLiteral("Smusso") : QStringLiteral("Raccordo"),
                                                                QString::fromUtf8(failure.what())));
@@ -1015,6 +1041,9 @@ void forgeTessellate(const Body &body, int quality, BodyDisplay &display) {
 void forgeSurfaceConstructionCurves(const Body &body, BodyDisplay &display, int divisions, bool allFaces,
                                     const QVector<int> &faceFilter) {
     divisions = std::clamp(divisions, 2, 12);
+    Box bodyBox;
+    for (VertexId vertex : body.vertices()) bodyBox.add(body.vertex(vertex).point);
+    const double trimTolerance = std::max(1e-8, bodyBox.diagonal() * 1e-8);
     const int sideFaces = allFaces ? int(body.faces().size())
                                    : int(body.faces().size()) - (body.isSheet() ? 0 : 2); // i due coperchi del loft solido sono in fondo
     int facePosition = 0;
@@ -1062,38 +1091,83 @@ void forgeSurfaceConstructionCurves(const Body &body, BodyDisplay &display, int 
             if (std::isfinite(vLo) && vHi > vLo) v = {vLo, vHi};
         }
         if (!std::isfinite(u.lo) || !std::isfinite(u.hi) || !std::isfinite(v.lo) || !std::isfinite(v.hi)) continue;
-        constexpr int samples = 32;
+        // Un'isoparametrica appartiene alla superficie infinita/sottostante,
+        // non necessariamente alla faccia trimmata. La si divide nei soli
+        // intervalli interni al dominio topologico: sui raccordi cilindrici
+        // evita che un arco di quarto venga disegnato come un cerchio intero.
+        constexpr int samples = 96;
+        const auto appendTrimmed = [&](const std::function<Vec3(double)> &point) {
+            const auto inside = [&](double t) {
+                try {
+                    return classifyPointOnFace(body, face, point(t), trimTolerance) != PointLocation::Outside;
+                } catch (const std::exception &) {
+                    return false;
+                }
+            };
+            QVector<QVector3D> piece;
+            double previousT = 0.0;
+            bool previousInside = inside(previousT);
+            if (previousInside) piece.append(toDisplay(point(previousT)));
+            for (int sample = 1; sample <= samples; ++sample) {
+                const double t = double(sample) / samples;
+                const bool currentInside = inside(t);
+                if (currentInside != previousInside) {
+                    double outsideT = previousInside ? t : previousT;
+                    double insideT = previousInside ? previousT : t;
+                    for (int refinement = 0; refinement < 18; ++refinement) {
+                        const double middle = 0.5 * (outsideT + insideT);
+                        if (inside(middle)) insideT = middle;
+                        else outsideT = middle;
+                    }
+                    const QVector3D boundary = toDisplay(point(0.5 * (outsideT + insideT)));
+                    if (previousInside) {
+                        piece.append(boundary);
+                        if (piece.size() >= 2) display.constructionCurves.append(std::move(piece));
+                        piece.clear();
+                    } else {
+                        piece.append(boundary);
+                    }
+                }
+                if (currentInside) piece.append(toDisplay(point(t)));
+                previousT = t;
+                previousInside = currentInside;
+            }
+            if (piece.size() >= 2) display.constructionCurves.append(std::move(piece));
+        };
         for (int line = 1; line < divisions; ++line) {
-            QVector<QVector3D> curve;
             const double fixed = u.lo + u.length() * line / divisions;
-            for (int sample = 0; sample <= samples; ++sample)
-                curve.append(toDisplay(surface.point(fixed, v.lo + v.length() * sample / samples)));
-            display.constructionCurves.append(std::move(curve));
+            appendTrimmed([&](double t) { return surface.point(fixed, v.lo + v.length() * t); });
         }
         for (int line = 1; line < divisions; ++line) {
-            QVector<QVector3D> curve;
             const double fixed = v.lo + v.length() * line / divisions;
-            for (int sample = 0; sample <= samples; ++sample)
-                curve.append(toDisplay(surface.point(u.lo + u.length() * sample / samples, fixed)));
-            display.constructionCurves.append(std::move(curve));
+            appendTrimmed([&](double t) { return surface.point(u.lo + u.length() * t, fixed); });
         }
     }
 }
 
-void forgeBlendPreviewDisplay(const Body &base, const Body &result, int quality, BodyDisplay &display, int divisions) {
+static void forgeLocalPreviewDisplay(const QVector<const Body *> &bases, const Body &result, int quality,
+                                     BodyDisplay &display, int divisions, BodyDisplay *retainedDisplay = nullptr) {
     display = {};
     display.quality = quality;
+    if (retainedDisplay) {
+        *retainedDisplay = {};
+        retainedDisplay->quality = quality;
+    }
     QVector<int> patchFaces;
     std::set<int> patchFaceSet, patchEdges;
     for (FaceId face : result.faces()) {
         const std::shared_ptr<const Surface> &surface = result.face(face).surface;
         bool existed = false;
-        for (FaceId old : base.faces()) {
-            const std::shared_ptr<const Surface> &candidate = base.face(old).surface;
-            if (candidate == surface || (candidate && surface && sameSurface(*candidate, *surface, 1e-6))) {
-                existed = true;
-                break;
+        for (const Body *base : bases) {
+            if (!base) continue;
+            for (FaceId old : base->faces()) {
+                const std::shared_ptr<const Surface> &candidate = base->face(old).surface;
+                if (candidate == surface || (candidate && surface && sameSurface(*candidate, *surface, 1e-6))) {
+                    existed = true;
+                    break;
+                }
             }
+            if (existed) break;
         }
         if (!existed) {
             patchFaces.append(face.index);
@@ -1110,24 +1184,43 @@ void forgeBlendPreviewDisplay(const Body &base, const Body &result, int quality,
     TessellationOptions options;
     options.deflection = diagonal * (quality <= 0 ? 4.0e-3 : quality == 1 ? 1.0e-3 : 2.0e-4);
     options.angle = quality <= 0 ? 0.5 : quality == 1 ? 0.25 : 0.1;
+    if (!retainedDisplay) {
+        options.faces.reserve(std::size_t(patchFaces.size()));
+        for (int face : patchFaces) options.faces.push_back(FaceId(face));
+    }
     const std::unique_ptr<SurfaceBatchEvaluator> accelerator = makeTessellationAccelerator();
     options.accelerator = accelerator.get();
     const Tessellation mesh = tessellate(result, options);
     for (const FaceMesh &face : mesh.faces) {
-        if (!patchFaceSet.count(face.face.index)) continue;
+        BodyDisplay *target = patchFaceSet.count(face.face.index) ? &display : retainedDisplay;
+        if (!target) continue;
         for (const std::array<int, 3> &triangle : face.triangles)
             for (int index : triangle) {
-                display.vertices.append(toDisplay(face.points[std::size_t(index)]));
-                display.normals.append(toDisplay(face.normals[std::size_t(index)]));
+                target->vertices.append(toDisplay(face.points[std::size_t(index)]));
+                target->normals.append(toDisplay(face.normals[std::size_t(index)]));
             }
     }
     for (std::size_t edgeIndex = 0; edgeIndex < mesh.edges.size(); ++edgeIndex) {
-        if (!patchEdges.count(mesh.edgeIds[edgeIndex].index)) continue;
+        BodyDisplay *target = patchEdges.count(mesh.edgeIds[edgeIndex].index) ? &display : retainedDisplay;
+        if (!target) continue;
         QVector<QVector3D> polyline;
         for (const Vec3 &point : mesh.edges[edgeIndex]) polyline.append(toDisplay(point));
-        if (polyline.size() >= 2) display.edges.append(std::move(polyline));
+        if (polyline.size() >= 2) target->edges.append(std::move(polyline));
     }
     forgeSurfaceConstructionCurves(result, display, divisions, true, patchFaces);
+}
+
+void forgeBlendPreviewDisplay(const Body &base, const Body &result, int quality, BodyDisplay &display, int divisions) {
+    forgeLocalPreviewDisplay({&base}, result, quality, display, divisions);
+}
+
+void forgeExtrusionPreviewDisplay(const QVector<ForgeBody> &bases, const Body &result, int quality,
+                                  BodyDisplay &display, int divisions, BodyDisplay *retainedDisplay) {
+    QVector<const Body *> raw;
+    raw.reserve(bases.size());
+    for (const ForgeBody &base : bases)
+        if (base) raw.append(base.get());
+    forgeLocalPreviewDisplay(raw, result, quality, display, divisions, retainedDisplay);
 }
 
 bool forgePickFace(const Body &body, const QVector3D &origin, const QVector3D &direction, FaceHit &hit, const Kernel::RayFaceIndex *index,

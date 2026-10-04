@@ -41,6 +41,9 @@ ForgeBody forgePrimitive(const PrimitiveParameters &parameters, QString *error);
 // Raccordo o smusso degli spigoli di `base` piu' vicini ai punti (fk_blend).
 // Smussi: `spec` (ChamferSpec) per due distanze o distanza e angolo.
 ForgeBody forgeBlend(const ForgeBody &base, const QVector<EdgePoint> &points, double size, bool chamfer, QString *error, const ChamferSpec &spec = {});
+// Falso se il risultato conserva la topologia e area/volume della base entro
+// la tolleranza numerica: la booleana del raccordo e' stata un no-op.
+bool forgeBlendHasEffect(const ForgeBody &base, const ForgeBody &result);
 
 struct ThreadFaceInfo {
     double diameter = 0.0;
@@ -127,6 +130,11 @@ void forgeSurfaceConstructionCurves(const Kernel::Body &body, BodyDisplay &displ
 // base, con i loro bordi e le isoparametriche. Il B-rep completo resta separato.
 void forgeBlendPreviewDisplay(const Kernel::Body &base, const Kernel::Body &result, int quality,
                               BodyDisplay &display, int divisions = 4);
+// Visualizzazione locale di un'estrusione fusa o sottratta: solo le facce del
+// risultato che non appartenevano ai corpi modificati. Questi possono cosi'
+// restare opachi sotto la patch dell'anteprima.
+void forgeExtrusionPreviewDisplay(const QVector<ForgeBody> &bases, const Kernel::Body &result, int quality,
+                                  BodyDisplay &display, int divisions = 4, BodyDisplay *retainedDisplay = nullptr);
 
 // Faccia del body colpita per prima dal raggio, con il suo piano (se e'
 // piana) e un punto interno di ogni suo spigolo.

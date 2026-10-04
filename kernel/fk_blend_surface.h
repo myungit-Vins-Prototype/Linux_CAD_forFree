@@ -43,6 +43,8 @@
 // contro facce non piane o non normali allo spigolo, raggi che fanno
 // uscire i contatti dalle facce o che superano la curvatura (la curva dei
 // centri tornerebbe indietro), facce che si ripiegano (arco vicino a 180 gradi).
+// Le sezioni iniziali e il fitting delle pezze di una catena sono calcolati
+// in parallelo; il montaggio topologico delle facce resta ordinato.
 namespace ForgeCad::Kernel {
 
 // Raccordo (o smusso di distanza `size`) delle catene formate dagli edge.

@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <exception>
 #include <functional>
 #include <map>
 #include <set>
@@ -17,6 +18,7 @@
 #include "fk_extrude.h"
 #include "fk_intersect.h"
 #include "fk_pcurve.h"
+#include "fk_parallel.h"
 #include "fk_precision.h"
 #include "fk_primitives.h"
 #include "fk_profile.h"
@@ -853,13 +855,17 @@ Body analyticBlend(const Body &body, const std::vector<EdgeId> &edges, double si
             if (edges[k] == e) return (*sides)[k];
         throw std::logic_error("blendEdges: spigolo senza distanze");
     };
-    std::vector<BlendEdge> infos;
-    for (EdgeId e : edges) {
+    std::set<int> uniqueEdges;
+    for (EdgeId e : edges)
+        if (!uniqueEdges.insert(e.index).second) throw std::domain_error("blendEdges: spigolo scelto due volte");
+    std::vector<BlendEdge> infos(edges.size());
+    std::vector<std::exception_ptr> infoErrors(edges.size());
+    parallelFor(edges.size(), threadCount(0), [&](std::size_t infoIndex) {
+      try {
+        const EdgeId e = edges[infoIndex];
         const Edge &edge = body.edge(e);
         if (!edge.curve || body.isLaminar(e)) throw std::domain_error("blendEdges: spigolo non valido");
-        for (const BlendEdge &other : infos)
-            if (other.id == e) throw std::domain_error("blendEdges: spigolo scelto due volte");
-        BlendEdge info;
+        BlendEdge &info = infos[infoIndex];
         info.id = e;
         info.faces[0] = body.finFace(edge.forward);
         info.faces[1] = body.finFace(edge.backward);
@@ -1076,8 +1082,12 @@ Body analyticBlend(const Body &body, const std::vector<EdgeId> &edges, double si
             }
             info.composite = info.support[0].size() > 1 || info.support[1].size() > 1;
         }
-        infos.push_back(std::move(info));
-    }
+      } catch (...) {
+          infoErrors[infoIndex] = std::current_exception();
+      }
+    });
+    for (const std::exception_ptr &error : infoErrors)
+        if (error) std::rethrow_exception(error);
 
     // Catene di spigoli tangenti (un segmento che prosegue in un arco): gli
     // utensili si cuciono lungo la sezione comune, perche' le superfici dei
@@ -1103,13 +1113,21 @@ Body analyticBlend(const Body &body, const std::vector<EdgeId> &edges, double si
     }
     // Zone dei raccordi. Gli spigoli circolari e quelli delle catene si
     // scostano dalle facce (vedi blendRegion): le sezioni comuni delle catene coincidono.
-    for (BlendEdge &info : infos) {
-        const bool offset = !info.straight || info.chain >= 0;
-        if (info.composite && info.chain >= 0)
-            throw std::domain_error("blendEdges: faccia piu' corta del raggio accanto a una catena di spigoli tangenti (non gestita)");
-        info.region = blendRegion(info.support[0], info.support[1], info.corner, chamfer ? info.chamfer[0] : size, chamfer, info.convex, tolerance,
-                                  offset ? 0.05 * size : 0.0, &info.extent, chamfer ? info.chamfer[1] : -1.0);
-    }
+    std::vector<std::exception_ptr> regionErrors(infos.size());
+    parallelFor(infos.size(), threadCount(0), [&](std::size_t k) {
+        try {
+            BlendEdge &info = infos[k];
+            const bool offset = !info.straight || info.chain >= 0;
+            if (info.composite && info.chain >= 0)
+                throw std::domain_error("blendEdges: faccia piu' corta del raggio accanto a una catena di spigoli tangenti (non gestita)");
+            info.region = blendRegion(info.support[0], info.support[1], info.corner, chamfer ? info.chamfer[0] : size, chamfer, info.convex, tolerance,
+                                      offset ? 0.05 * size : 0.0, &info.extent, chamfer ? info.chamfer[1] : -1.0);
+        } catch (...) {
+            regionErrors[k] = std::current_exception();
+        }
+    });
+    for (const std::exception_ptr &error : regionErrors)
+        if (error) std::rethrow_exception(error);
 
     // Vertici con tre spigoli scelti: la pezza d'angolo.
     std::map<int, std::vector<int>> perVertex;
@@ -1282,10 +1300,16 @@ Body analyticBlend(const Body &body, const std::vector<EdgeId> &edges, double si
         bool add;
         int chain;
     };
-    std::vector<Tool> tools;
-    std::vector<Body> extended;  // utensili allungati, prima dei tagli degli estremi concavi
-    for (const BlendEdge &info : infos) {
-        Tool tool;
+    std::vector<Tool> tools(infos.size());
+    std::vector<Body> extended(infos.size());  // utensili allungati, prima dei tagli degli estremi concavi
+    std::vector<std::exception_ptr> toolErrors(infos.size());
+    // Estrusione/rivoluzione e tagli terminali di ciascun utensile sono
+    // indipendenti. Le booleane interne vedono parallelDepth e non generano
+    // altri pool: un livello di worker distribuisce gli utensili sui core.
+    parallelFor(infos.size(), threadCount(0), [&](std::size_t k) {
+      try {
+        const BlendEdge &info = infos[k];
+        Tool &tool = tools[k];
         tool.add = !info.convex;
         tool.chain = info.chain;
         if (info.straight) {
@@ -1306,9 +1330,13 @@ Body analyticBlend(const Body &body, const std::vector<EdgeId> &edges, double si
             for (const auto &[point, normal] : info.trims)
                 tool.body = booleanOperation(tool.body, halfSpace(point, normal, reach), BooleanOperation::Intersect);
         }
-        extended.push_back(info.concaveEnds.empty() ? Body() : tool.body);
-        tools.push_back(std::move(tool));
-    }
+        if (!info.concaveEnds.empty()) extended[k] = tool.body;
+      } catch (...) {
+          toolErrors[k] = std::current_exception();
+      }
+    });
+    for (const std::exception_ptr &error : toolErrors)
+        if (error) std::rethrow_exception(error);
     // Estremi concavi: dell'utensile allungato resta la parte davanti a B (il
     // semispazio del piano, o il cilindro pieno o il suo complemento, con la
     // faccia esattamente sulla superficie di B). Se anche il bordo di B e'

@@ -645,6 +645,20 @@ public:
         require(storyboard.modelBodies().size() == 1 && !storyboard.extrusions().at(0).visible
                     && !storyboard.extrusions().at(1).visible && storyboard.extrusions().at(2).visible,
                 "solo il tip della storyboard e' visibile");
+        {
+            ExtrusionObject failed = storyboard.extrusions_.at(2);
+            failed.featureId = 0;
+            failed.forgeBody.reset();
+            failed.display = {};
+            failed.error = QStringLiteral("errore di rigenerazione simulato");
+            storyboard.extrusions_.append(failed);
+            ForgeCad::normalizeModelHistory(storyboard.extrusions_, storyboard.modelBodies_);
+            require(storyboard.extrusions().at(2).visible && !storyboard.extrusions().at(3).visible
+                        && storyboard.modelBodies().at(0).tipFeatureId == storyboard.extrusions().at(2).featureId,
+                    "una feature fallita lascia visibile l'ultimo stadio valido");
+            storyboard.extrusions_.removeLast();
+            ForgeCad::normalizeModelHistory(storyboard.extrusions_, storyboard.modelBodies_);
+        }
         const quint64 lastFeature = storyboard.extrusions().at(2).featureId;
         require(storyboard.moveFeature(2, -1).isEmpty() && storyboard.extrusions().at(1).featureId == lastFeature,
                 "riordino di due feature compatibili");
@@ -724,6 +738,12 @@ public:
                     && storyboardLoaded.extrusions.at(1).featureId == lastFeature
                     && storyboardLoaded.modelBodies.first().meshColor == QColor(184, 72, 116),
                 "persistenza e lettura della storyboard");
+        int loadedVisible = 0;
+        quint64 loadedVisibleId = 0;
+        for (const ExtrusionObject &feature : storyboardLoaded.extrusions)
+            if (feature.visible) ++loadedVisible, loadedVisibleId = feature.featureId;
+        require(loadedVisible == 1 && loadedVisibleId == storyboardLoaded.modelBodies.first().tipFeatureId,
+                "l'apertura senza cache conserva visibile il tip serializzato");
         require(storyboardLoaded.extrusions.at(referencedFeature).extentRef.featureId == persistentRef.featureId
                     && storyboardLoaded.extrusions.at(referencedFeature).extentRef.point.subshape == persistentEdge.index
                     && storyboardLoaded.extrusions.at(referencedFeature).blendEdges.first().context != -1,
@@ -1190,6 +1210,31 @@ public:
         forgeTessellate(previewBox, 0, extrusionDisplay);
         forgeSurfaceConstructionCurves(previewBox, extrusionDisplay, 4, true);
         require(!extrusionDisplay.constructionCurves.isEmpty(), "curve UV anche sulle facce piane dell'anteprima estrusione");
+        {
+            const Kernel::Body tool = Kernel::makeBox(
+                Kernel::Frame3(Kernel::Vec3(3.0, 0.75, 0.5), Kernel::Vec3(0, 0, 1), Kernel::Vec3(1, 0, 0)), 2.0, 1.5, 1.0);
+            const Kernel::Body merged = Kernel::booleanOperation(previewBox, tool, Kernel::BooleanOperation::Unite);
+            BodyDisplay fullMerged, localExtrusion;
+            forgeTessellate(merged, 0, fullMerged);
+            forgeExtrusionPreviewDisplay({std::make_shared<const Kernel::Body>(previewBox)}, merged, 0, localExtrusion, 4);
+            require(!localExtrusion.vertices.isEmpty() && !localExtrusion.constructionCurves.isEmpty()
+                        && localExtrusion.vertices.size() < fullMerged.vertices.size(),
+                    "l'anteprima dell'estrusione fusa contiene solo le facce che modificano la base");
+
+            const Kernel::Body cylinder = Kernel::makeCylinder(
+                Kernel::Frame3(Kernel::Vec3(), Kernel::Vec3(0, 0, 1), Kernel::Vec3(1, 0, 0)), 3.0, 4.0);
+            const Kernel::Body bore = Kernel::makeCylinder(
+                Kernel::Frame3(Kernel::Vec3(0, 0, -1), Kernel::Vec3(0, 0, 1), Kernel::Vec3(1, 0, 0)), 1.0, 6.0);
+            const Kernel::Body cut = Kernel::booleanOperation(cylinder, bore, Kernel::BooleanOperation::Subtract);
+            BodyDisplay cuttingFaces, retainedFaces;
+            forgeExtrusionPreviewDisplay({std::make_shared<const Kernel::Body>(cylinder)}, cut, 0, cuttingFaces, 4, &retainedFaces);
+            bool annularCap = false;
+            for (Kernel::FaceId face : cut.faces())
+                if (cut.face(face).surface->type() == Kernel::SurfaceType::Plane && cut.face(face).loops.size() == 2) annularCap = true;
+            require(annularCap && !cuttingFaces.vertices.isEmpty() && !cuttingFaces.constructionCurves.isEmpty()
+                        && !retainedFaces.vertices.isEmpty(),
+                    "la sottrazione mostra il corpo opaco gia' forato e la sola superficie di taglio trasparente");
+        }
         const QVector3D rayOrigin(2.0f, 1.5f, 10.0f), rayDirection(0.0f, 0.0f, -1.0f);
         require(!CadViewport::edgeOccludedByMesh(extrusionDisplay, rayOrigin, rayDirection, QVector3D(0, 0, 2), 1e-5)
                     && CadViewport::edgeOccludedByMesh(extrusionDisplay, rayOrigin, rayDirection, QVector3D(0, 0, 0), 1e-5),
@@ -1911,6 +1956,51 @@ public:
         // Eliminazione di facce (formato 25) e corpi offerti alle booleane.
         {
             using namespace ForgeCad::Kernel;
+            // Il pannello non deve isolare/riaccendere i candidati: un corpo
+            // nascosto che racchiude quello da modificare deve restare fuori
+            // sia dal disegno sia dal picking. Il corpo deriva dalla faccia,
+            // quindi nel pannello non compare alcuna combo di selezione.
+            {
+                QMainWindow window;
+                auto *picker = new CadViewport(&window);
+                window.setCentralWidget(picker);
+                PrimitiveParameters outer;
+                outer.size[0] = outer.size[1] = outer.size[2] = 4.0;
+                PrimitiveParameters inner;
+                inner.origin[0] = inner.origin[1] = inner.origin[2] = 1.0;
+                inner.size[0] = inner.size[1] = inner.size[2] = 1.0;
+                require(picker->createPrimitive(outer, QStringLiteral("Esterno")).isEmpty()
+                            && picker->createPrimitive(inner, QStringLiteral("Interno")).isEmpty(),
+                        "corpi per il pannello elimina facce");
+                picker->setModelBodyVisible(0, false);
+                ExtrusionObject definition;
+                definition.feature = BodyFeature::DeleteFace;
+                definition.firstBody = 0;
+                bool inspected = false, noBodySelector = false, visibilityPreserved = false, ownerFromFace = false;
+                QTimer::singleShot(0, &window, [&] {
+                    auto *panel = dynamic_cast<FunctionDialogPanel *>(window.findChild<QDialog *>());
+                    inspected = panel != nullptr;
+                    if (!panel) return;
+                    noBodySelector = panel->findChildren<QComboBox *>().isEmpty();
+                    visibilityPreserved = !picker->extrusions_.at(0).visible && picker->extrusions_.at(1).visible
+                        && picker->pickBodies_.isEmpty() && !picker->referenceBodyEligible(0) && picker->referenceBodyEligible(1);
+                    const Body &innerBody = *picker->extrusions_.at(1).forgeBody;
+                    const FaceId face = innerBody.faces().front();
+                    const FinId fin = innerBody.loop(innerBody.face(face).loops.front()).first;
+                    GeometryRef ref;
+                    ref.kind = 5;
+                    ref.index = 1;
+                    ref.point = ForgeCad::faceReference(innerBody, face, innerBody.finPoint(fin, 0.5));
+                    picker->refPickFinished_(true, ref);
+                    ownerFromFace = picker->refMarks_.size() == 1 && picker->refMarks_.first().index == 1;
+                    panel->reject();
+                });
+                require(!offsetDialog(&window, picker, QStringLiteral("Elimina facce"), -1, definition,
+                                      [](const ExtrusionObject &) { return QString(); }),
+                        "annullamento del pannello elimina facce");
+                require(inspected && noBodySelector && visibilityPreserved && ownerFromFace,
+                        "elimina facce conserva la visibilita' e sceglie il corpo dalla faccia");
+            }
             CadViewport v;
             PrimitiveParameters block;
             block.size[0] = 4.0;
@@ -2193,6 +2283,11 @@ public:
             cachedBlock.size[0] = 4.0; cachedBlock.size[1] = 3.0; cachedBlock.size[2] = 2.0;
             require(cachedBlend.createPrimitive(cachedBlock, QStringLiteral("Base anteprima raccordo")).isEmpty(),
                     "base dell'anteprima raccordo");
+            require(!forgeBlendHasEffect(cachedBlend.extrusions_.first().forgeBody, cachedBlend.extrusions_.first().forgeBody),
+                    "un risultato identico non e' un raccordo riuscito");
+            const ForgeBody sameTopologyChanged = std::make_shared<const Kernel::Body>(Kernel::makeBox(Kernel::Frame3(), 5.0, 3.0, 2.0));
+            require(forgeBlendHasEffect(cachedBlend.extrusions_.first().forgeBody, sameTopologyChanged),
+                    "una modifica geometrica resta riconosciuta anche a topologia invariata");
             require(foregroundStarts == foregroundEnds, "notifiche bilanciate per il calcolo sul thread principale");
             CadViewport loadedWithProgress;
             int loadedBodies = -1, totalBodies = -1;
@@ -2249,20 +2344,36 @@ public:
                     "B-rep esatto conservato dall'anteprima raccordo");
             require(!cachedBlend.preview_.display.vertices.isEmpty(),
                     "patch locale presente nell'anteprima raccordo");
-            require(cachedBlend.preview_.display.vertices.size() < cachedBlend.preview_.resultDisplay.vertices.size(),
-                    "l'anteprima mostra solo la patch e non l'intero corpo");
+            require(cachedBlend.preview_.resultDisplay.vertices.isEmpty() && cachedBlend.preview_.resultDisplay.edges.isEmpty(),
+                    "l'anteprima nuova non tassella le facce estranee alla patch");
             require(!cachedBlend.preview_.display.constructionCurves.isEmpty(),
                     "curve U/V presenti nell'anteprima raccordo");
+            for (const QVector<QVector3D> &curve : cachedBlend.preview_.display.constructionCurves)
+                require(curve.size() >= 2 && (curve.first() - curve.last()).length() > 1e-5f,
+                        "le curve U/V del raccordo sono trimmate sulla patch e non sono cerchi completi");
             require(cachedBlend.preview_.replaced.isEmpty(),
                     "la base opaca non viene sostituita dalla patch del raccordo");
             const ForgeBody previewGeometry = cachedBlend.preview_.geometry;
-            const int resultTriangles = cachedBlend.preview_.resultDisplay.vertices.size();
+            const int patchTriangles = cachedBlend.preview_.display.vertices.size();
             require(cachedBlend.createBlend(0, cachedEdge, 0.25, false, QStringLiteral("Raccordo da anteprima")).isEmpty(),
                     "conferma dell'anteprima raccordo");
             require(cachedBlend.extrusions_.back().forgeBody == previewGeometry,
                     "la conferma riusa il B-rep dell'anteprima");
-            require(cachedBlend.extrusions_.back().display.vertices.size() == resultTriangles,
-                    "la conferma riusa la tassellazione completa conservata con l'anteprima");
+            require(cachedBlend.extrusions_.back().display.vertices.size() > patchTriangles,
+                    "la conferma completa la tassellazione dell'intero risultato");
+            require(forgeBlendHasEffect(cachedBlend.extrusions_.first().forgeBody, cachedBlend.extrusions_.back().forgeBody),
+                    "il raccordo confermato modifica realmente la base");
+
+            DocumentState noOpSnapshot = cachedBlend.currentDocument();
+            noOpSnapshot.extrusions.back().forgeBody = noOpSnapshot.extrusions.first().forgeBody;
+            noOpSnapshot.extrusions.back().display = noOpSnapshot.extrusions.first().display;
+            noOpSnapshot.extrusions.back().cachedGeometry = true;
+            CadViewport repairedSnapshot;
+            repairedSnapshot.loadDocument(noOpSnapshot);
+            require(repairedSnapshot.extrusions_.back().error.isEmpty()
+                        && forgeBlendHasEffect(repairedSnapshot.extrusions_.first().forgeBody,
+                                               repairedSnapshot.extrusions_.back().forgeBody),
+                    "una cache no-op del raccordo viene scartata e rigenerata");
 
             // Modifica senza cambiare valori: l'anteprima mostra la patch con le
             // curve U/V dal body esistente (niente kernel) e la conferma lascia
