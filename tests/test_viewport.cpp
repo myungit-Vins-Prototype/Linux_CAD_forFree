@@ -12,6 +12,7 @@
 #include "fk_primitives.h"
 #include "fk_revolve.h"
 #include "fk_surface_algo.h"
+#include "fk_tessellate.h"
 #include <QGraphicsItem>
 #include <QGraphicsView>
 #include <QSurfaceFormat>
@@ -2402,6 +2403,54 @@ public:
             require(thrown, "eccezione del thread riportata al chiamante");
             ticker.stop();
             responsive.close();
+        }
+        // Regressione del documento Applicatore: la sottrazione dello sweep
+        // attraversa piu' volte la cucitura parametrica del cilindro. La mesh
+        // non deve riempire il lato opposto del trim ne' scambiare i salti di
+        // piu' periodi per lati collassati.
+        {
+            DocumentState applicator;
+            const QString path = QString::fromUtf8(FORGECAD_SOURCE_DIR) + QStringLiteral("/File_Esempio/Applicatore.prt");
+            require(loadDocumentFile(path, applicator).isEmpty() && !applicator.extrusions.isEmpty(), "lettura di Applicatore.prt");
+            const ForgeBody result = applicator.extrusions.back().forgeBody;
+            require(bool(result), "B-rep finale di Applicatore nello snapshot");
+            Kernel::TessellationOptions options;
+            options.deflection = 0.02;
+            options.angle = 0.25;
+            const Kernel::Tessellation mesh = Kernel::tessellate(*result, options);
+            require(mesh.failedFaces == 0, "tassellazione del risultato di Applicatore");
+            int sampled = 0;
+            for (const Kernel::FaceMesh &face : mesh.faces) {
+                const Kernel::Surface &surface = *result->face(face.face).surface;
+                for (std::size_t i = 0; i < face.points.size(); ++i) {
+                    const Kernel::Vec2 uv = face.parameters[i];
+                    require(Kernel::distance(face.points[i], surface.point(uv.x(), uv.y())) <= 1e-5,
+                            "Applicatore: vertice della mesh fuori dalla superficie");
+                }
+                if (surface.type() != Kernel::SurfaceType::Cylinder) continue;
+                for (std::size_t i = 0; i < face.triangles.size(); ++i) {
+                    const std::array<int, 3> &triangle = face.triangles[i];
+                    double longest = 0.0;
+                    for (int k = 0; k < 3; ++k)
+                        longest = std::max(longest, Kernel::distance(face.points[std::size_t(triangle[k])],
+                            face.points[std::size_t(triangle[(k + 1) % 3])]));
+                    if (i % 200 != 0 && longest <= 1.0) continue;
+                    const int divisions = longest > 1.0 ? 8 : 3;
+                    for (int a = 1; a < divisions; ++a)
+                        for (int b = 1; a + b < divisions; ++b) {
+                            const int c = divisions - a - b;
+                            const Kernel::Vec3 point = (a * face.points[std::size_t(triangle[0])]
+                                                      + b * face.points[std::size_t(triangle[1])]
+                                                      + c * face.points[std::size_t(triangle[2])]) / double(divisions);
+                            const Kernel::SurfaceProjection on = Kernel::projectPoint(surface, point);
+                            if (Kernel::classifyPointOnFace(*result, face.face, on.point, 1e-6) == Kernel::PointLocation::Outside)
+                                throw std::runtime_error("Applicatore: triangolo fuori dal trim della faccia "
+                                                         + std::to_string(face.face.index));
+                            ++sampled;
+                        }
+                }
+            }
+            require(sampled > 0, "facce di Applicatore campionate");
         }
         // Regressione del flacone: il contatto terminale del raccordo cade
         // presso una cucitura della superficie e Newton, con un solo seme,

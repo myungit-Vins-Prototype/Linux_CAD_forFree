@@ -675,6 +675,20 @@ void FaceTessellator::buildRings() {
                 // crescono con le coordinate); i lati collassati veri valgono
                 // decine di unita'.
                 if (distance(from, to) * speed <= tolerance) return true;
+                // Verifica anche la derivata nella direzione del salto. I
+                // soli campioni geometrici qui sotto possono aliasare un
+                // salto di piu' periodi (per esempio 4 giri su un cilindro:
+                // a 1/4, 1/2 e 3/4 si torna sempre allo stesso punto) e farlo
+                // passare per un lato collassato, aggiungendo poi punti UV
+                // lontani associati tutti allo stesso vertice 3D.
+                const Vec2 delta = to - from;
+                for (double f : {0.211324865405187, 0.5, 0.788675134594813}) {
+                    const Vec2 q = from + f * delta;
+                    surface_.evaluate(q[0], q[1], 1, d);
+                    const Vec3 along = delta[0] * d[Surface::derivativeIndex(1, 0, 1)]
+                                     + delta[1] * d[Surface::derivativeIndex(0, 1, 1)];
+                    if (norm(along) > tolerance) return false;
+                }
                 for (double f : {0.25, 0.5, 0.75})
                     if (distance(surface_.point((1.0 - f) * from[0] + f * to[0],
                                                 (1.0 - f) * from[1] + f * to[1]), point) > tolerance) return false;
@@ -1037,8 +1051,23 @@ std::vector<std::vector<BoundaryPoint>> FaceTessellator::walkChains(const std::v
                 if (used[k] && k != first) continue;
                 const Chain &candidate = chains_[chains[k]];
                 double gap = perimeter(candidate.points.front().uv, candidate.start) - sEnd;
-                if (gap <= 0.0) gap += total;
-                if (gap < best) {
+                // Due catene possono finire e cominciare nello stesso punto
+                // della cucitura. Quella distanza e' zero, non un giro intero
+                // del rettangolo: trasformarla in `total` ricomponeva anche la
+                // regione complementare e sovrapponeva piu' copie della faccia
+                // dopo sottrazioni elicoidali e filettature interne.
+                const double perimeterTolerance = 1e-12 * total;
+                if (gap < -perimeterTolerance) gap += total;
+                else if (std::fabs(gap) <= perimeterTolerance) gap = 0.0;
+                // Piu' catene possono coincidere sul bordo (per esempio le
+                // circonferenze sovrapposte alle estremita' di uno sweep
+                // elicoidale). Vanno accoppiate come parentesi, dall'ultima
+                // alla prima; se si sta tornando alla catena iniziale si
+                // chiude invece subito il poligono corrente. Scegliere sempre
+                // la prima fondeva regioni annidate e creava triangoli che
+                // attraversavano il vuoto della sottrazione.
+                const bool sameGap = std::fabs(gap - best) <= perimeterTolerance;
+                if (gap < best - perimeterTolerance || (sameGap && (k == first || next != first))) {
                     best = gap;
                     next = k;
                 }
