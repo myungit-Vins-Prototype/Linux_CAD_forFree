@@ -268,7 +268,13 @@ public:
 
     void setDisplayMode(int mode) { displayMode_ = mode; update(); }
     void setHiddenEdgesVisible(bool visible) { hiddenEdgesVisible_ = visible; update(); }
-    void setTopologyIdsVisible(bool visible) { topologyIdsVisible_ = visible; update(); }
+    void setTopologyIdsVisible(bool visible) {
+        topologyIdsVisible_ = visible;
+        if (!visible) {
+            topologyHighlightBody_ = topologyHighlightEdge_ = topologyHighlightFace_ = -1;
+        }
+        update();
+    }
     void setLightingPreset(int preset) { lightingPreset_ = preset; update(); }
     void setSnapEnabled(bool enabled) { snapEnabled_ = enabled; update(); }
     void setConstraintMode(int mode) { constraintMode_ = mode; }
@@ -3609,6 +3615,7 @@ protected:
         drawExtrusions();
         drawExportMeshPreview();
         drawPickedEdges();
+        drawTopologyHighlight();
         drawSketch();
         drawSnapMarkers();
         if (axesOnTop_) drawAxes();
@@ -3754,6 +3761,23 @@ protected:
             rightDragged_ = false;
             contextPending_ = false;
             return;
+        }
+        if (!sketchMode_ && !edgePicking_ && !refPicking_ && event->button() == Qt::LeftButton
+            && event->modifiers() == Qt::NoModifier) {
+            TopologyLabelItem item;
+            if (pickTopologyLabel(lastMousePosition_, item)) {
+                const bool alreadyHighlighted = topologyHighlightBody_ == item.body
+                    && (item.edge ? topologyHighlightEdge_ == item.subshape : topologyHighlightFace_ == item.subshape);
+                topologyHighlightBody_ = alreadyHighlighted ? -1 : item.body;
+                topologyHighlightEdge_ = !alreadyHighlighted && item.edge ? item.subshape : -1;
+                topologyHighlightFace_ = !alreadyHighlighted && !item.edge ? item.subshape : -1;
+                showStatus(alreadyHighlighted
+                    ? QStringLiteral("Evidenziazione topologica rimossa")
+                    : QStringLiteral("B%1:%2%3 evidenziato")
+                          .arg(item.body).arg(item.edge ? QChar(u'E') : QChar(u'F')).arg(item.subshape));
+                update();
+                return;
+            }
         }
         if (event->button() == Qt::LeftButton && beginPlaneResize(lastMousePosition_)) return;
         // Il piano di sezione si trascina dalla maniglia o dal bordo.
@@ -7751,36 +7775,85 @@ private:
         }
     }
 
-    void drawTopologyLabels(QPainter &painter) const {
-        if (!topologyIdsVisible_ || sketchMode_) return;
+    struct TopologyLabelItem {
+        QRectF box;
+        QPointF anchor;
+        QString text;
+        int body = -1;
+        int subshape = -1;
+        bool edge = false;
+    };
+    QVector<TopologyLabelItem> topologyLabelItems() const {
+        QVector<TopologyLabelItem> result;
+        if (!topologyIdsVisible_ || sketchMode_) return result;
         int onlyBody = -1;
         if (selection_.kind == SceneObjectKind::Extrusion) onlyBody = selection_.index;
         else if (hover_.kind == SceneObjectKind::Extrusion) onlyBody = hover_.index;
-        painter.save();
-        painter.setFont(QFont(QStringLiteral("Sans"), 8, QFont::DemiBold));
-        const auto label = [&](const QPointF &position, const QString &text, const QColor &color) {
-            const QFontMetrics metrics(painter.font());
+        const QFont font(QStringLiteral("Sans"), 8, QFont::DemiBold);
+        const QFontMetrics metrics(font);
+        const auto append = [&](const QPointF &anchor, const QPointF &offset, const QString &text,
+                                int body, int subshape, bool edge) {
             QRectF box = metrics.boundingRect(text).adjusted(-3.0, -2.0, 3.0, 2.0);
-            box.moveCenter(position);
-            painter.setPen(QPen(QColor(10, 15, 22, 220), 2.0));
-            painter.setBrush(QColor(20, 29, 40, 205));
-            painter.drawRoundedRect(box, 3.0, 3.0);
-            painter.setPen(color);
-            painter.drawText(box, Qt::AlignCenter, text);
+            box.moveCenter(anchor + offset);
+            result.append({box, anchor, text, body, subshape, edge});
         };
         for (int bodyIndex = 0; bodyIndex < extrusions_.size(); ++bodyIndex) {
             const ExtrusionObject &body = extrusions_.at(bodyIndex);
             if (!body.visible || !isShapeBody(body) || (onlyBody >= 0 && bodyIndex != onlyBody)) continue;
             const BodyDisplay &display = body.display;
             for (int k = 0; k < display.faceIds.size() && k < display.faceLabelPoints.size(); ++k)
-                label(projectWorldPoint(display.faceLabelPoints.at(k)),
-                      QStringLiteral("B%1:F%2").arg(bodyIndex).arg(display.faceIds.at(k)), QColor(255, 205, 95));
+                append(projectWorldPoint(display.faceLabelPoints.at(k)), QPointF(22.0, -18.0),
+                       QStringLiteral("B%1:F%2").arg(bodyIndex).arg(display.faceIds.at(k)),
+                       bodyIndex, display.faceIds.at(k), false);
             for (int k = 0; k < display.edges.size(); ++k) {
                 const QVector<QVector3D> &edge = display.edges.at(k);
                 if (edge.isEmpty()) continue;
-                label(projectWorldPoint(edge.at(edge.size() / 2)) + QPointF(0.0, 11.0),
-                      QStringLiteral("B%1:E%2").arg(bodyIndex).arg(display.edgeIds.value(k, k)), QColor(105, 225, 255));
+                const int edgeId = display.edgeIds.value(k, k);
+                append(projectWorldPoint(edge.at(edge.size() / 2)), QPointF(0.0, 22.0),
+                       QStringLiteral("B%1:E%2").arg(bodyIndex).arg(edgeId), bodyIndex, edgeId, true);
             }
+        }
+        return result;
+    }
+    bool pickTopologyLabel(const QPoint &position, TopologyLabelItem &hit) const {
+        const QVector<TopologyLabelItem> labels = topologyLabelItems();
+        for (int k = labels.size() - 1; k >= 0; --k)
+            if (labels.at(k).box.adjusted(-2.0, -2.0, 2.0, 2.0).contains(QPointF(position))) {
+                hit = labels.at(k);
+                return true;
+            }
+        return false;
+    }
+    void drawTopologyLabels(QPainter &painter) const {
+        const QVector<TopologyLabelItem> labels = topologyLabelItems();
+        if (labels.isEmpty()) return;
+        painter.save();
+        painter.setRenderHint(QPainter::Antialiasing);
+        painter.setFont(QFont(QStringLiteral("Sans"), 8, QFont::DemiBold));
+        for (const TopologyLabelItem &item : labels) {
+            const QColor color = item.edge ? QColor(105, 225, 255) : QColor(255, 205, 95);
+            const QPointF center = item.box.center();
+            const QPointF delta = item.anchor - center;
+            const double dx = std::fabs(delta.x()), dy = std::fabs(delta.y());
+            const double tx = dx > 1e-9 ? 0.5 * item.box.width() / dx : std::numeric_limits<double>::max();
+            const double ty = dy > 1e-9 ? 0.5 * item.box.height() / dy : std::numeric_limits<double>::max();
+            const QPointF start = center + qMin(tx, ty) * delta;
+            const double length = std::hypot(double(start.x() - item.anchor.x()), double(start.y() - item.anchor.y()));
+            painter.setPen(QPen(color, 1.4));
+            painter.setBrush(color);
+            painter.drawLine(start, item.anchor);
+            if (length > 1e-6) {
+                const QPointF back((start.x() - item.anchor.x()) / length, (start.y() - item.anchor.y()) / length);
+                const QPointF side(-back.y(), back.x());
+                QPolygonF arrow;
+                arrow << item.anchor << item.anchor + 6.0 * back + 2.8 * side << item.anchor + 6.0 * back - 2.8 * side;
+                painter.drawPolygon(arrow);
+            }
+            painter.setPen(QPen(QColor(10, 15, 22, 220), 2.0));
+            painter.setBrush(QColor(20, 29, 40, 215));
+            painter.drawRoundedRect(item.box, 3.0, 3.0);
+            painter.setPen(color);
+            painter.drawText(item.box, Qt::AlignCenter, item.text);
         }
         painter.restore();
     }
@@ -9875,6 +9948,34 @@ private:
         glLineWidth(1.0f);
         glEnable(GL_DEPTH_TEST);
     }
+    void drawTopologyHighlight() {
+        if (!topologyIdsVisible_ || topologyHighlightBody_ < 0 || topologyHighlightBody_ >= extrusions_.size()) return;
+        const BodyDisplay &display = extrusions_.at(topologyHighlightBody_).display;
+        QVector<int> indices;
+        QColor color;
+        if (topologyHighlightEdge_ >= 0) {
+            const int index = display.edgeIds.indexOf(topologyHighlightEdge_);
+            if (index >= 0) indices.append(index);
+            color = QColor(90, 245, 255);
+        } else if (topologyHighlightFace_ >= 0 && topologyHighlightFace_ < display.faceEdges.size()) {
+            indices = display.faceEdges.at(topologyHighlightFace_);
+            color = QColor(255, 220, 70);
+        }
+        if (indices.isEmpty()) return;
+        glDisable(GL_DEPTH_TEST);
+        glDisable(GL_BLEND);
+        glDepthMask(GL_FALSE);
+        const QVector4D halo(0.03f, 0.05f, 0.07f, 1.0f);
+        const QVector4D bright(float(color.redF()), float(color.greenF()), float(color.blueF()), 1.0f);
+        for (int index : indices)
+            if (index >= 0 && index < display.edges.size())
+                overlayRenderer_.drawWideLineStrip(display.edges.at(index), halo, 6.0f * float(devicePixelRatioF()));
+        for (int index : indices)
+            if (index >= 0 && index < display.edges.size())
+                overlayRenderer_.drawWideLineStrip(display.edges.at(index), bright, 3.5f * float(devicePixelRatioF()));
+        glDepthMask(GL_TRUE);
+        glEnable(GL_DEPTH_TEST);
+    }
     void drawPickedEdges() {
         drawSelectedFace();
         if (!edgePicking_) return;
@@ -10914,6 +11015,9 @@ private:
     int displayMode_ = 2;
     bool hiddenEdgesVisible_ = false;  // disegno e selezione X-ray degli spigoli occultati
     bool topologyIdsVisible_ = false;  // etichette B/F/E per l'ispezione del B-rep
+    int topologyHighlightBody_ = -1;
+    int topologyHighlightEdge_ = -1;  // EdgeId evidenziato cliccando l'etichetta
+    int topologyHighlightFace_ = -1;  // FaceId: se cliccato se ne illuminano tutti i bordi
     float yaw_ = -32.0f, pitch_ = 22.0f, zoom_ = 8.0f;
     float roll_ = 0.0f;  // rotazione attorno all'asse di vista (schizzi su facce inclinate)
     AxesOrientation orientation_;  // orientamento degli assi del documento (vedi basisMatrix)
@@ -17246,7 +17350,7 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
     });
     QAction *topologyIdsAction = modeMenu->addAction(QStringLiteral("Mostra ID topologici (facce e bordi)"));
     topologyIdsAction->setCheckable(true);
-    topologyIdsAction->setToolTip(QStringLiteral("Mostra B<corpo>:F<faccia> e B<corpo>:E<bordo>; seleziona un corpo per limitarne le etichette"));
+    topologyIdsAction->setToolTip(QStringLiteral("Mostra B<corpo>:F<faccia> e B<corpo>:E<bordo> con una freccia; clicca un nome per illuminarne il bordo o il contorno"));
     topologyIdsAction->setChecked(viewSettings.value(QStringLiteral("view/topologyIds"), false).toBool());
     viewport->setTopologyIdsVisible(topologyIdsAction->isChecked());
     connect(topologyIdsAction, &QAction::toggled, this, [viewport](bool visible) {

@@ -509,6 +509,56 @@ public:
             require(picks == 1, "clic seleziona una sola volta");
         }
         {
+            CadViewport topology;
+            topology.resize(800, 600);
+            PrimitiveParameters box;
+            box.kind = PrimitiveKind::Box;
+            box.size[0] = 4.0;
+            box.size[1] = 3.0;
+            box.size[2] = 2.0;
+            require(topology.createPrimitive(box, QStringLiteral("Blocco ID")).isEmpty(),
+                    "corpo per le etichette topologiche");
+            topology.fitAll();
+            topology.setTopologyIdsVisible(true);
+            const QVector<CadViewport::TopologyLabelItem> labels = topology.topologyLabelItems();
+            require(!labels.isEmpty(), "etichette topologiche visibili");
+            CadViewport::TopologyLabelItem edgeLabel, faceLabel;
+            bool haveEdge = false, haveFace = false;
+            for (const CadViewport::TopologyLabelItem &item : labels) {
+                require(pointDistance(item.anchor, item.box.center()) > 8.0,
+                        "spazio per la freccia dell'etichetta topologica");
+                if (item.edge && !haveEdge) edgeLabel = item, haveEdge = true;
+                if (!item.edge && !haveFace) faceLabel = item, haveFace = true;
+            }
+            require(haveEdge && haveFace, "etichette di bordi e facce");
+            const auto click = [&](const CadViewport::TopologyLabelItem &item) {
+                const QPointF p = item.box.center();
+                QMouseEvent press(QEvent::MouseButtonPress, p, p, Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+                topology.mousePressEvent(&press);
+            };
+            click(edgeLabel);
+            require(topology.topologyHighlightBody_ == edgeLabel.body
+                        && topology.topologyHighlightEdge_ == edgeLabel.subshape
+                        && topology.topologyHighlightFace_ < 0,
+                    "clic sull'ID illumina il bordo");
+            click(edgeLabel);
+            require(topology.topologyHighlightBody_ < 0, "secondo clic spegne il bordo");
+            click(faceLabel);
+            require(topology.topologyHighlightBody_ == faceLabel.body
+                        && topology.topologyHighlightFace_ == faceLabel.subshape
+                        && topology.topologyHighlightEdge_ < 0,
+                    "clic sull'ID della faccia illumina il contorno");
+            QImage topologyLabels(topology.size(), QImage::Format_ARGB32_Premultiplied);
+            topologyLabels.fill(QColor(35, 45, 58));
+            QPainter topologyPainter(&topologyLabels);
+            topology.drawTopologyLabels(topologyPainter);
+            topologyPainter.end();
+            require(topologyLabels.save(QStringLiteral("/tmp/forgecad-topology-labels.png")),
+                    "rendering delle frecce topologiche");
+            topology.setTopologyIdsVisible(false);
+            require(topology.topologyHighlightBody_ < 0, "nascondere gli ID spegne l'evidenziazione");
+        }
+        {
             // Estrusione simmetrica e nei due versi: un solo prisma dal piano
             // spostato (volumi e quote esatti); con la fine "fino a" il secondo
             // verso si unisce al primo.
