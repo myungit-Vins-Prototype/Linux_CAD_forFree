@@ -1045,6 +1045,7 @@ void forgeTessellate(const Body &body, int quality, BodyDisplay &display) {
                 largest = size;
                 labelPoint = (a + b + c) / 3.0;
             }
+            display.triangleFaces.append(face.face.index);
             for (int index : triangle) {
                 display.vertices.append(toDisplay(face.points[std::size_t(index)]));
                 display.normals.append(toDisplay(face.normals[std::size_t(index)]));
@@ -1332,6 +1333,27 @@ int forgeFaceOwner(const Body &picked, int face, const Vec3 &point, const std::v
     } catch (const std::exception &) {
     }
     return -1;
+}
+
+QVector<int> forgeFeatureFaces(const Body &result, const QVector<int> &faceIds, const QVector<QVector3D> &labelPoints,
+                               int feature, const std::vector<std::pair<int, ForgeBody>> &chain) {
+    QVector<int> faces;
+    std::vector<std::pair<int, ForgeBody>> upTo;
+    for (const auto &entry : chain)
+        if (entry.first <= feature) upTo.push_back(entry);
+    if (upTo.empty()) return faces;
+    for (qsizetype k = 0; k < faceIds.size() && k < labelPoints.size(); ++k) {
+        try {
+            const FaceId face(faceIds.at(k));
+            const Face &f = result.face(face);
+            if (!f.surface) continue;
+            const QVector3D &label = labelPoints.at(k);
+            const SurfaceProjection on = projectPoint(*f.surface, Vec3(label.x(), label.y(), label.z()));
+            if (forgeFaceOwner(result, faceIds.at(k), f.surface->point(on.u, on.v), upTo) == feature) faces.append(faceIds.at(k));
+        } catch (const std::exception &) {
+        }
+    }
+    return faces;
 }
 
 bool forgeIntersectRay(const Body &body, const QVector3D &origin, const QVector3D &direction, double &distance, const Kernel::RayFaceIndex *index) {

@@ -527,7 +527,7 @@ namespace {
 // una modifica o una rigenerazione esplicita sostituisce immediatamente lo
 // snapshot. Il tag rende leggibili anche le cache precedenti (solo B-rep).
 constexpr quint32 kBodyCacheTag = 0x46434332;  // "FCC2"
-constexpr quint32 kBodyCacheVersion = 3;
+constexpr quint32 kBodyCacheVersion = 4;
 constexpr qsizetype kMaxDisplayValues = 200000000;
 
 QByteArray definitionHash(const QByteArray &payload) { return QCryptographicHash::hash(payload, QCryptographicHash::Sha256); }
@@ -539,19 +539,20 @@ bool hasDisplaySnapshot(const BodyDisplay &display) {
 
 void writeDisplay(QDataStream &out, const BodyDisplay &display) {
     out << qint32(display.quality) << display.vertices << display.normals << display.edges << display.edgeIds
-        << display.constructionCurves << display.faceEdges << display.faceIds << display.faceLabelPoints;
+        << display.constructionCurves << display.faceEdges << display.faceIds << display.faceLabelPoints << display.triangleFaces;
 }
 
 bool reasonableDisplay(const BodyDisplay &display) {
     qsizetype values = display.vertices.size() + display.normals.size() + display.edgeIds.size()
-                     + display.faceIds.size() + display.faceLabelPoints.size();
+                     + display.faceIds.size() + display.faceLabelPoints.size() + display.triangleFaces.size();
     for (const QVector<QVector3D> &line : display.edges) values += line.size();
     for (const QVector<QVector3D> &line : display.constructionCurves) values += line.size();
     for (const QVector<int> &face : display.faceEdges) values += face.size();
     return values <= kMaxDisplayValues
         && (display.normals.isEmpty() || display.normals.size() == display.vertices.size())
         && display.edgeIds.size() <= display.edges.size()
-        && display.faceIds.size() == display.faceLabelPoints.size();
+        && display.faceIds.size() == display.faceLabelPoints.size()
+        && (display.triangleFaces.isEmpty() || display.triangleFaces.size() * 3 == display.vertices.size());
 }
 
 bool readDisplay(QDataStream &in, BodyDisplay &display, quint32 cacheVersion) {
@@ -559,6 +560,7 @@ bool readDisplay(QDataStream &in, BodyDisplay &display, quint32 cacheVersion) {
     in >> quality >> display.vertices >> display.normals >> display.edges >> display.edgeIds
        >> display.constructionCurves >> display.faceEdges;
     if (cacheVersion >= 3) in >> display.faceIds >> display.faceLabelPoints;
+    if (cacheVersion >= 4) in >> display.triangleFaces;
     display.quality = quality;
     display.rayIndex.reset();
     display.instancedBase.reset();

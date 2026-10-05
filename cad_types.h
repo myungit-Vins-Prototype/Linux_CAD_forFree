@@ -233,6 +233,7 @@ struct BodyDisplay {
     QVector<QVector<QVector3D>> edges;
     QVector<int> edgeIds;               // polilinea visualizzata -> EdgeId del B-rep
     QVector<int> faceIds;               // punto etichetta -> FaceId del B-rep
+    QVector<int> triangleFaces;         // triangolo -> FaceId del B-rep (vuoto se non noto)
     QVector<QVector3D> faceLabelPoints;  // posizione delle etichette topologiche delle facce
     QVector<QVector<QVector3D>> constructionCurves; // isoparametriche U/V delle anteprime
     QVector<QVector<int>> faceEdges; // faccia B-rep -> polilinee, senza ricerche geometriche durante il disegno

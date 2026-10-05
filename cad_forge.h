@@ -161,6 +161,13 @@ bool forgeIntersectRay(const Kernel::Body &body, const QVector3D &origin, const 
 int forgeFaceOwner(const Kernel::Body &picked, int face, const Kernel::Vec3 &point,
                    const std::vector<std::pair<int, ForgeBody>> &chain);
 
+// Facce di `result` create dalla funzione `feature` (stessa regola di
+// forgeFaceOwner, con la catena fino a `feature` compresa). Per ogni faccia si
+// usa il punto della sua etichetta (`faceIds`/`labelPoints` di BodyDisplay)
+// riportato esattamente sulla superficie. Serve solo a evidenziare a video.
+QVector<int> forgeFeatureFaces(const Kernel::Body &result, const QVector<int> &faceIds, const QVector<QVector3D> &labelPoints,
+                               int feature, const std::vector<std::pair<int, ForgeBody>> &chain);
+
 }
 
 #endif

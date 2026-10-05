@@ -378,6 +378,11 @@ public:
     void setAxesOnTop(bool onTop) { axesOnTop_ = onTop; update(); }
     bool axesOnTop() const { return axesOnTop_; }
     // Opacita' delle facce dei corpi in modalita' schizzo (0.05-1; 1 = opache).
+    QColor featureHighlightColor() const { return featureHighlightColor_; }
+    void setFeatureHighlightColor(const QColor &color) {
+        featureHighlightColor_ = color.isValid() ? color : kSelectionColor;
+        update();
+    }
     void setSketchBodyOpacity(double opacity) { sketchBodyOpacity_ = qBound(0.05, opacity, 1.0); update(); }
     double sketchBodyOpacity() const { return sketchBodyOpacity_; }
     // Estrusione o rivoluzione dallo schizzo: la vista si puo' ruotare per vedere
@@ -705,64 +710,107 @@ public:
 
     QString setFeatureSuppressed(int index, bool suppressed) {
         if (index < 0 || index >= extrusions_.size()) return QStringLiteral("Feature non valida.");
-        ExtrusionObject &feature = extrusions_[index];
-        if (!feature.modelBodyId) return QStringLiteral("Questa geometria di riferimento non appartiene a una storyboard.");
-        if (feature.suppressed == suppressed) return {};
-        const quint64 bodyId = feature.modelBodyId;
-        bool bodyVisible = true;
-        for (const ModelBody &body : modelBodies_)
-            if (body.id == bodyId) { bodyVisible = body.visible; break; }
-        recordUndo();
-        const QVector<int> consumed = hiddenOperands(feature);
-        feature.suppressed = suppressed;
-        for (int operand : consumed) {
-            if (operand < 0 || operand >= extrusions_.size() || extrusions_.at(operand).modelBodyId == bodyId) continue;
-            bool consumedElsewhere = false;
-            if (suppressed) {
-                for (int other = 0; other < extrusions_.size() && !consumedElsewhere; ++other)
-                    consumedElsewhere = other != index && !extrusions_.at(other).suppressed
-                                     && hiddenOperands(extrusions_.at(other)).contains(operand);
-            }
-            extrusions_[operand].visible = suppressed && !consumedElsewhere;
+        if (!extrusions_.at(index).modelBodyId) return QStringLiteral("Questa geometria di riferimento non appartiene a una storyboard.");
+        return setFeaturesSuppressed({index}, suppressed);
+    }
+
+    // Soppressione (o riattivazione) di piu' feature in un passo di Undo.
+    QString setFeaturesSuppressed(const QVector<int> &indices, bool suppressed) {
+        QVector<int> list;
+        for (int index : indices)
+            if (index >= 0 && index < extrusions_.size() && extrusions_.at(index).modelBodyId
+                && extrusions_.at(index).suppressed != suppressed && !list.contains(index))
+                list.append(index);
+        if (list.isEmpty()) return {};
+        std::sort(list.begin(), list.end());
+        QHash<quint64, bool> bodyVisible;
+        for (int index : list) {
+            const quint64 bodyId = extrusions_.at(index).modelBodyId;
+            bool visible = true;
+            for (const ModelBody &body : modelBodies_)
+                if (body.id == bodyId) { visible = body.visible; break; }
+            bodyVisible.insert(bodyId, visible);
         }
-        rebuildBody(feature, index);
-        regenerateAfter(index);
-        int tip = -1;
-        for (int candidate = extrusions_.size() - 1; candidate >= 0; --candidate)
-            if (extrusions_.at(candidate).modelBodyId == bodyId && !extrusions_.at(candidate).suppressed) { tip = candidate; break; }
-        for (int candidate = 0; candidate < extrusions_.size(); ++candidate)
-            if (extrusions_.at(candidate).modelBodyId == bodyId) extrusions_[candidate].visible = candidate == tip && bodyVisible;
-        selection_ = tip >= 0 ? SceneSelection{SceneObjectKind::Extrusion, tip, -1} : SceneSelection{};
+        recordUndo();
+        for (int index : list) {
+            ExtrusionObject &feature = extrusions_[index];
+            const quint64 bodyId = feature.modelBodyId;
+            const QVector<int> consumed = hiddenOperands(feature);
+            feature.suppressed = suppressed;
+            for (int operand : consumed) {
+                if (operand < 0 || operand >= extrusions_.size() || extrusions_.at(operand).modelBodyId == bodyId) continue;
+                bool consumedElsewhere = false;
+                if (suppressed) {
+                    for (int other = 0; other < extrusions_.size() && !consumedElsewhere; ++other)
+                        consumedElsewhere = other != index && !extrusions_.at(other).suppressed
+                                         && hiddenOperands(extrusions_.at(other)).contains(operand);
+                }
+                extrusions_[operand].visible = suppressed && !consumedElsewhere;
+            }
+        }
+        if (list.size() == 1) {
+            rebuildBody(extrusions_[list.first()], list.first());
+            regenerateAfter(list.first());
+        } else {
+            regenerateAll();
+        }
+        int lastTip = -1;
+        for (auto it = bodyVisible.cbegin(); it != bodyVisible.cend(); ++it) {
+            int tip = -1;
+            for (int candidate = extrusions_.size() - 1; candidate >= 0; --candidate)
+                if (extrusions_.at(candidate).modelBodyId == it.key() && !extrusions_.at(candidate).suppressed) { tip = candidate; break; }
+            for (int candidate = 0; candidate < extrusions_.size(); ++candidate)
+                if (extrusions_.at(candidate).modelBodyId == it.key()) extrusions_[candidate].visible = candidate == tip && it.value();
+            if (tip >= 0) lastTip = tip;
+        }
+        selection_ = lastTip >= 0 ? SceneSelection{SceneObjectKind::Extrusion, lastTip, -1} : SceneSelection{};
         documentChanged();
         return {};
     }
 
-    void deleteFeature(int index) {
-        if (index < 0 || index >= extrusions_.size() || !extrusions_.at(index).modelBodyId) return;
-        const quint64 bodyId = extrusions_.at(index).modelBodyId;
-        bool bodyVisible = true;
-        for (const ModelBody &body : modelBodies_)
-            if (body.id == bodyId) { bodyVisible = body.visible; break; }
-        int previous = -1;
-        for (int candidate = index - 1; candidate >= 0; --candidate)
-            if (extrusions_.at(candidate).modelBodyId == bodyId) { previous = candidate; break; }
-        recordUndo();
-        // La base implicita del ramo prosegue dallo stadio precedente. I
-        // riferimenti geometrici espliciti restano invece invalidi e vengono
-        // segnalati dalla rigenerazione, senza cancellare le feature dipendenti.
-        for (int candidate = index + 1; candidate < extrusions_.size(); ++candidate) {
-            ExtrusionObject &dependent = extrusions_[candidate];
-            if (dependent.modelBodyId != bodyId) continue;
-            if (dependent.firstBody == index) dependent.firstBody = previous;
-            for (int &merged : dependent.mergeBodies)
-                if (merged == index) merged = previous;
+    void deleteFeature(int index) { deleteFeatures({index}); }
+
+    // Elimina le feature della storia in un passo di Undo: la base implicita
+    // di quelle che seguono prosegue dallo stadio precedente.
+    void deleteFeatures(const QVector<int> &indices) {
+        QVector<int> list;
+        for (int index : indices)
+            if (index >= 0 && index < extrusions_.size() && extrusions_.at(index).modelBodyId && !list.contains(index)) list.append(index);
+        if (list.isEmpty()) return;
+        std::sort(list.begin(), list.end(), std::greater<int>());  // dall'ultima: gli indici prima non cambiano
+        QHash<quint64, bool> bodyVisible;
+        for (int index : list) {
+            const quint64 bodyId = extrusions_.at(index).modelBodyId;
+            bool visible = true;
+            for (const ModelBody &body : modelBodies_)
+                if (body.id == bodyId) { visible = body.visible; break; }
+            bodyVisible.insert(bodyId, visible);
         }
-        removeBodies({index});
-        int tip = -1;
-        for (int candidate = extrusions_.size() - 1; candidate >= 0; --candidate)
-            if (extrusions_.at(candidate).modelBodyId == bodyId && !extrusions_.at(candidate).suppressed) { tip = candidate; break; }
-        for (int candidate = 0; candidate < extrusions_.size(); ++candidate)
-            if (extrusions_.at(candidate).modelBodyId == bodyId) extrusions_[candidate].visible = candidate == tip && bodyVisible;
+        recordUndo();
+        for (int index : list) {
+            const quint64 bodyId = extrusions_.at(index).modelBodyId;
+            int previous = -1;
+            for (int candidate = index - 1; candidate >= 0; --candidate)
+                if (extrusions_.at(candidate).modelBodyId == bodyId) { previous = candidate; break; }
+            // La base implicita del ramo prosegue dallo stadio precedente. I
+            // riferimenti geometrici espliciti restano invece invalidi e vengono
+            // segnalati dalla rigenerazione, senza cancellare le feature dipendenti.
+            for (int candidate = index + 1; candidate < extrusions_.size(); ++candidate) {
+                ExtrusionObject &dependent = extrusions_[candidate];
+                if (dependent.modelBodyId != bodyId) continue;
+                if (dependent.firstBody == index) dependent.firstBody = previous;
+                for (int &merged : dependent.mergeBodies)
+                    if (merged == index) merged = previous;
+            }
+            removeBodies({index});
+        }
+        for (auto it = bodyVisible.cbegin(); it != bodyVisible.cend(); ++it) {
+            int tip = -1;
+            for (int candidate = extrusions_.size() - 1; candidate >= 0; --candidate)
+                if (extrusions_.at(candidate).modelBodyId == it.key() && !extrusions_.at(candidate).suppressed) { tip = candidate; break; }
+            for (int candidate = 0; candidate < extrusions_.size(); ++candidate)
+                if (extrusions_.at(candidate).modelBodyId == it.key()) extrusions_[candidate].visible = candidate == tip && it.value();
+        }
         regenerateAll();
         selection_ = {};
         documentChanged();
@@ -916,6 +964,25 @@ public:
         }
         documentChanged();
     }
+    // Visibilita' di piu' schizzi/corpi in un passo di Undo.
+    void setObjectsVisible(const QVector<SceneSelection> &objects, bool visible) {
+        QVector<SceneSelection> changed;
+        for (const SceneSelection &object : objects)
+            if ((object.kind == SceneObjectKind::Sketch && object.index >= 0 && object.index < sketches_.size())
+                || (object.kind == SceneObjectKind::Extrusion && object.index >= 0 && object.index < extrusions_.size()))
+                if (isObjectVisible(object.kind, object.index) != visible) changed.append(object);
+        if (changed.isEmpty()) return;
+        recordUndo();
+        for (const SceneSelection &object : changed) {
+            if (object.kind == SceneObjectKind::Sketch) sketches_[object.index].visible = visible;
+            else extrusions_[object.index].visible = visible;
+        }
+        if (!visible) {
+            if (changed.contains(selection_)) selection_ = {};
+            if (changed.contains(hover_)) hover_ = {};
+        }
+        documentChanged();
+    }
     void showAllObjects() {
         bool anyHidden = false;
         for (const SketchObject &sketch : sketches_) anyHidden = anyHidden || !sketch.visible;
@@ -930,14 +997,39 @@ public:
     SceneSelection selection() const { return selection_; }
     QVector<SceneSelection> selectedObjects() const { return selectedObjects_.isEmpty() && selection_.kind != SceneObjectKind::None
                                                                  ? QVector<SceneSelection>{selection_} : selectedObjects_; }
-    void selectObject(SceneObjectKind kind, int index) {
+    // Selezione di piu' oggetti dall'albero (Ctrl/Maiusc+clic): le funzioni
+    // scelte si evidenziano sul modello (facce che hanno creato).
+    void setSelectedObjects(const QVector<SceneSelection> &objects) {
+        if (sketchMode_) return;
+        selectedObjects_.clear();
+        for (const SceneSelection &object : objects)
+            if ((object.kind == SceneObjectKind::Sketch && object.index >= 0 && object.index < sketches_.size())
+                || (object.kind == SceneObjectKind::Extrusion && object.index >= 0 && object.index < extrusions_.size()))
+                if (!selectedObjects_.contains(object)) selectedObjects_.append(object);
+        selection_ = selectedObjects_.isEmpty() ? SceneSelection() : selectedObjects_.last();
+        if (selectedObjects_.size() < 2) selectedObjects_.clear();
+        selectedFace_ = {};
+        QVector<int> features;
+        for (const SceneSelection &object : objects)
+            if (object.kind == SceneObjectKind::Extrusion) features.append(object.index);
+        setFeatureHighlights(features);
+        if (objects.size() > 1) showStatus(QStringLiteral("%1 oggetti selezionati (Canc elimina)").arg(objects.size()));
+        update();
+    }
+    void setMultiSelectionCallback(std::function<void(const QVector<SceneSelection> &)> callback) { multiSelectionCallback_ = std::move(callback); }
+    // `wholeBody`: si evidenzia tutto il corpo (scelta di un corpo), non le
+    // sole facce create dall'ultima feature.
+    void selectObject(SceneObjectKind kind, int index, bool wholeBody = false) {
         if (activeSketchObject() && (kind == SceneObjectKind::Plane
             || (kind == SceneObjectKind::Extrusion && index >= 0 && index < extrusions_.size() && isDatumBody(extrusions_.at(index))))) {
             selectSketchReference(kind == SceneObjectKind::Plane ? 1 : 8, index);
             return;
         }
         selection_ = {kind, index, -1};
+        selectedObjects_.clear();
         if (kind == SceneObjectKind::Plane) selectedPlane_ = index;
+        if (kind == SceneObjectKind::Extrusion && wholeBody) setBodyHighlight(index);
+        else setFeatureHighlights(kind == SceneObjectKind::Extrusion ? QVector<int>{index} : QVector<int>());
         update();
     }
 
@@ -1475,13 +1567,28 @@ public:
             else deleteSketchElements();
             return;
         }
-        // Piu' oggetti scelti con il riquadro (o Maiusc+clic): tutti insieme.
+        // Piu' oggetti scelti con il riquadro (o Maiusc/Ctrl+clic): tutti insieme.
         if (selectedObjects_.size() > 1) {
-            deleteObjects(selectedObjects_);
+            deleteObjectsOrFeatures(selectedObjects_);
             return;
         }
         if (selection_.kind == SceneObjectKind::Sketch || selection_.kind == SceneObjectKind::Extrusion)
             deleteObject(selection_.kind, selection_.index);
+    }
+
+    // Solo feature della storia: si tolgono senza cancellare a cascata le
+    // successive (come una per volta); altrimenti eliminazione con i dipendenti.
+    void deleteObjectsOrFeatures(const QVector<SceneSelection> &objects) {
+        QVector<int> features;
+        bool allFeatures = !objects.isEmpty();
+        for (const SceneSelection &object : objects) {
+            if (object.kind == SceneObjectKind::Extrusion && object.index >= 0 && object.index < extrusions_.size()
+                && extrusions_.at(object.index).modelBodyId != 0)
+                features.append(object.index);
+            else allFeatures = false;
+        }
+        if (allFeatures) deleteFeatures(features);
+        else deleteObjects(objects);
     }
 
     void deleteObject(SceneObjectKind kind, int index) {
@@ -1652,7 +1759,9 @@ public:
         selectedObjects_ = found;
         selection_ = found.isEmpty() ? SceneSelection() : found.first();
         selectedFace_ = {};
+        clearFeatureHighlights();
         if (selectionCallback_) selectionCallback_(selection_);
+        if (multiSelectionCallback_ && found.size() > 1) multiSelectionCallback_(found);
         showStatus(found.size() > 1 ? QStringLiteral("%1 oggetti selezionati (Canc elimina)").arg(found.size())
                                     : found.isEmpty() ? QStringLiteral("Nessun oggetto nel riquadro") : QStringLiteral("1 oggetto selezionato"));
     }
@@ -1666,7 +1775,9 @@ public:
         else selectedObjects_.append(hit);
         selection_ = selectedObjects_.isEmpty() ? SceneSelection() : selectedObjects_.last();
         selectedFace_ = {};
+        clearFeatureHighlights();
         if (selectionCallback_) selectionCallback_(selection_);
+        if (multiSelectionCallback_ && selectedObjects_.size() > 1) multiSelectionCallback_(selectedObjects_);
         if (selectedObjects_.size() > 1) showStatus(QStringLiteral("%1 oggetti selezionati (Canc elimina)").arg(selectedObjects_.size()));
     }
     // Il riquadro mentre lo si trascina: continuo e azzurro da sinistra (oggetti dentro), tratteggiato e verde da destra (toccati).
@@ -3261,6 +3372,7 @@ public:
         activePlane_ = plane;
         selectedPlane_ = plane < 3 ? plane : -1;
         selectedFace_ = {};
+        clearFeatureHighlights();
         sketchMode_ = true;
         sketchViewUnlocked_ = false;
         sketchViewRotated_ = false;
@@ -3652,7 +3764,7 @@ protected:
         }
         if (!releasingSelection_ && event->button() == Qt::LeftButton
             && (!sketchMode_ || (sketchViewUnlocked_ && refPicking_))
-            && (edgePicking_ || refPicking_ || !(event->modifiers() & Qt::ShiftModifier))) {
+            && (edgePicking_ || refPicking_ || sketchMode_ || !(event->modifiers() & (Qt::ShiftModifier | Qt::ControlModifier)))) {
             selectionPress_ = lastMousePosition_;
             selectionPending_ = true;
             selectionDragged_ = false;
@@ -3747,8 +3859,8 @@ protected:
             return;
         }
         if (!sketchMode_ && event->button() == Qt::LeftButton) {
-            // Maiusc: riquadro trascinando, oppure un clic che aggiunge o toglie l'oggetto.
-            if (event->modifiers() & Qt::ShiftModifier) {
+            // Maiusc o Ctrl: riquadro trascinando, oppure un clic che aggiunge o toglie l'oggetto.
+            if (event->modifiers() & (Qt::ShiftModifier | Qt::ControlModifier)) {
                 armBoxSelection(lastMousePosition_, true);
                 return;
             }
@@ -3773,6 +3885,10 @@ protected:
                                .arg(edgeIds.isEmpty() ? QStringLiteral("nessun bordo") : edgeIds.join(QStringLiteral(", ")))
                                .arg(extrusions_.at(selectedFeature_).name));
             }
+            // La faccia cliccata seleziona la sua feature (anche nell'albero) e se ne
+            // colorano le facce; il corpo intero si colora solo dalla storyboard.
+            if (selectedFeature_ >= 0 && selectedFace_.body >= 0) setFeatureHighlights({selectedFeature_});
+            else clearFeatureHighlights();
             if (selectionCallback_)
                 selectionCallback_(selectedFeature_ >= 0 ? SceneSelection{SceneObjectKind::Extrusion, selectedFeature_, -1} : selection_);
             if (sketchPickCallback_ && selection_.kind == SceneObjectKind::Sketch) sketchPickCallback_(selection_.index);
@@ -4857,6 +4973,12 @@ protected:
         // la funzione che l'ha creata (come dall'albero).
         if (!sketchMode_ && event->button() == Qt::LeftButton && editBodyCallback_ && !interactionLocked_ && !refPicking_ && !edgePicking_) {
             const SceneSelection hit = pickSceneObject(event->pos());
+            if (hit.kind == SceneObjectKind::Sketch) {
+                // Doppio clic su uno schizzo: lo si apre (come dall'albero).
+                event->accept();
+                selectSketch(hit.index);
+                return;
+            }
             if (hit.kind == SceneObjectKind::Extrusion && !isDatumBody(extrusions_.at(hit.index))) {
                 FaceHit face;
                 const int feature = pickBodyFace(hit.index, event->pos(), face) ? faceOwnerFeature(hit.index, event->pos(), face) : hit.index;
@@ -5009,6 +5131,21 @@ protected:
             const SceneSelection hit = pickSceneObject(event->pos());
             if (hit.kind == SceneObjectKind::Plane && planeContextCallback_) {
                 planeContextCallback_(hit.index);
+                event->accept();
+                return;
+            }
+            if ((hit.kind == SceneObjectKind::Sketch || hit.kind == SceneObjectKind::Extrusion)
+                && selectedObjects_.size() > 1 && selectedObjects_.contains(hit)) {
+                // Piu' oggetti scelti: le operazioni comuni.
+                const QVector<SceneSelection> objects = selectedObjects_;
+                QMenu menu(this);
+                QAction *hide = menu.addAction(ForgeCad::commandIcon(QStringLiteral("visibility")),
+                                               QStringLiteral("Nascondi %1 oggetti").arg(objects.size()));
+                QAction *remove = menu.addAction(ForgeCad::commandIcon(QStringLiteral("delete")),
+                                                 QStringLiteral("Elimina %1 oggetti").arg(objects.size()));
+                const QAction *chosen = menu.exec(event->globalPos());
+                if (chosen && chosen == hide) setObjectsVisible(objects, false);
+                else if (chosen && chosen == remove) deleteObjectsOrFeatures(objects);
                 event->accept();
                 return;
             }
@@ -5938,6 +6075,7 @@ private:
         if (constraintPanelCallback_) constraintPanelCallback_();
         selectedFace_ = {};  // la geometria (e la numerazione delle facce) puo' essere cambiata
         selectedObjects_.clear();  // gli indici possono essere cambiati
+        clearFeatureHighlights();
         if (documentChangedCallback_) documentChangedCallback_();
         update();
     }
@@ -9457,6 +9595,154 @@ private:
         const int owner = ForgeCad::forgeFaceOwner(*extrusions_.at(index).forgeBody, hit.face, point, bodies);
         return owner >= 0 ? owner : index;
     }
+    // --- Evidenziazione delle feature scelte (albero o clic) ----------------------
+    // Le facce del corpo visibile create dalla feature (forgeFeatureFaces, sul
+    // B-rep esatto) si ridisegnano in magenta con i loro bordi. Il calcolo e'
+    // in un thread; vale solo l'ultima richiesta (`featureHighlightGeneration_`).
+    QSet<int> operandClosure(int body) const {
+        QSet<int> chain{body};
+        QVector<int> pending{body};
+        while (!pending.isEmpty()) {
+            const int current = pending.takeLast();
+            for (int operand : bodyOperands(extrusions_.at(current)))
+                if (operand >= 0 && operand < current && !chain.contains(operand)) {
+                    chain.insert(operand);
+                    pending.append(operand);
+                }
+        }
+        return chain;
+    }
+    void clearFeatureHighlights() {
+        ++featureHighlightGeneration_;
+        if (featureHighlights_.isEmpty() && bodyHighlight_ < 0) return;
+        featureHighlights_.clear();
+        bodyHighlight_ = -1;
+        update();
+    }
+    void setBodyHighlight(int body) {
+        clearFeatureHighlights();
+        if (sketchMode_ || body < 0 || body >= extrusions_.size() || !isShapeBody(extrusions_.at(body))) return;
+        bodyHighlight_ = body;
+        update();
+    }
+    void setFeatureHighlights(const QVector<int> &features) {
+        clearFeatureHighlights();
+        if (features.isEmpty() || sketchMode_) return;
+        const quint64 generation = featureHighlightGeneration_;
+        if (!previewReceiver_) previewReceiver_ = new QObject(this);
+        QObject *receiver = previewReceiver_;
+        // Corpi visibili con la loro catena di operandi (calcolata una volta).
+        QVector<QPair<int, QSet<int>>> shown;
+        for (int body = 0; body < extrusions_.size(); ++body) {
+            const ExtrusionObject &candidate = extrusions_.at(body);
+            if (candidate.visible && isShapeBody(candidate) && candidate.forgeBody && !candidate.display.vertices.isEmpty())
+                shown.append({body, operandClosure(body)});
+        }
+        for (int feature : features) {
+            if (feature < 0 || feature >= extrusions_.size()) continue;
+            const ExtrusionObject &definition = extrusions_.at(feature);
+            if (definition.suppressed || !isShapeBody(definition)) continue;
+            int target = -1;
+            for (const auto &entry : shown)
+                if (entry.second.contains(feature)) { target = entry.first; break; }
+            if (target < 0) continue;
+            QVector<int> ordered;
+            for (int body : operandClosure(feature)) ordered.append(body);
+            std::sort(ordered.begin(), ordered.end());
+            std::vector<std::pair<int, ForgeCad::ForgeBody>> chain;
+            for (int body : ordered) {
+                const ExtrusionObject &stage = extrusions_.at(body);
+                if (!stage.suppressed && isShapeBody(stage) && stage.forgeBody) chain.push_back({body, stage.forgeBody});
+            }
+            const ForgeCad::ForgeBody result = extrusions_.at(target).forgeBody;
+            const BodyDisplay display = extrusions_.at(target).display;
+            QThreadPool::globalInstance()->start([this, receiver, generation, feature, target, result, display, chain] {
+                BodyDisplay highlight;
+                BodyDisplay fresh;
+                QVector<int> faces;
+                try {
+                    faces = ForgeCad::forgeFeatureFaces(*result, display.faceIds, display.faceLabelPoints, feature, chain);
+                    // I documenti salvati prima del formato 4 della cache non hanno
+                    // la faccia di ogni triangolo: si ritassella (stessa qualita').
+                    const bool known = !display.triangleFaces.isEmpty() && display.triangleFaces.size() * 3 == display.vertices.size();
+                    if (!known && !faces.isEmpty()) ForgeCad::forgeTessellate(*result, qMax(0, display.quality), fresh);
+                    const BodyDisplay &mesh = known ? display : fresh;
+                    const QSet<int> chosen(faces.begin(), faces.end());
+                    for (qsizetype t = 0; t < mesh.triangleFaces.size() && 3 * t + 2 < mesh.vertices.size(); ++t) {
+                        if (!chosen.contains(mesh.triangleFaces.at(t))) continue;
+                        for (int k = 0; k < 3; ++k) {
+                            highlight.vertices.append(mesh.vertices.at(3 * t + k));
+                            highlight.normals.append(mesh.normals.value(3 * t + k));
+                        }
+                    }
+                    QSet<int> lines;
+                    for (int face : faces)
+                        for (int line : mesh.faceEdges.value(face)) lines.insert(line);
+                    for (int line : lines)
+                        if (line >= 0 && line < mesh.edges.size()) highlight.edges.append(mesh.edges.at(line));
+                    highlight.quality = display.quality;
+                } catch (...) {
+                    faces.clear();
+                }
+                QMetaObject::invokeMethod(receiver, [this, generation, feature, target, faces, previous = display.vertices,
+                                                     highlight = std::move(highlight), fresh = std::move(fresh)]() mutable {
+                    if (generation != featureHighlightGeneration_) return;
+                    if (target >= extrusions_.size() || feature >= extrusions_.size()) return;
+                    // Mesh rifatta (cache senza triangleFaces): il corpo prende la stessa
+                    // tassellazione dell'evidenziazione, cosi' le facce coincidono.
+                    BodyDisplay &shown = extrusions_[target].display;
+                    if (!fresh.vertices.isEmpty() && shown.vertices.constData() == previous.constData()
+                        && fresh.vertices.size() > 0) {
+                        fresh.rayIndex = shown.rayIndex ? shown.rayIndex : fresh.rayIndex;
+                        shown = std::move(fresh);
+                        raySelectionCache_.clear();
+                        projectedEdges_.clear();
+                    }
+                    if (faces.isEmpty()) {
+                        showStatus(QStringLiteral("%1: nessuna faccia del modello visibile appartiene a questa feature").arg(extrusions_.at(feature).name));
+                        return;
+                    }
+                    featureHighlights_.append({feature, target, std::move(highlight)});
+                    showStatus(QStringLiteral("%1: %2 %3 evidenziate su %4").arg(extrusions_.at(feature).name).arg(faces.size())
+                                   .arg(faces.size() == 1 ? QStringLiteral("faccia") : QStringLiteral("facce"), extrusions_.at(target).name));
+                    update();
+                });
+            });
+        }
+    }
+    // Facce evidenziate del corpo `index` (dopo le sue facce, con la stessa profondita').
+    void drawFeatureHighlightFaces(int index) {
+        const auto faces = [this](const BodyDisplay &display, bool whole) {
+            const QColor &color = featureHighlightColor_;
+            displayCache_.setLightingEnabled(true);
+            displayCache_.setColor(QVector4D(float(color.redF()), float(color.greenF()), float(color.blueF()), 1.0f));
+            displayCache_.setEmission(QVector4D(float(color.redF()) * 0.25f, float(color.greenF()) * 0.25f, float(color.blueF()) * 0.25f, 1.0f));
+            // Le facce dei corpi sono spostate indietro (glPolygonOffset 1, 2):
+            // senza spostamento l'evidenziazione sta sempre davanti alle facce
+            // da cui viene, e senza scrivere la profondita' gli spigoli restano visibili.
+            glDepthMask(GL_FALSE);
+            if (whole) drawDisplayFaces(display);  // anche le ripetizioni instanziate
+            else displayCache_.faces(display);
+            glDepthMask(GL_TRUE);
+            displayCache_.setEmission(QVector4D(0.0f, 0.0f, 0.0f, 1.0f));
+        };
+        if (index == bodyHighlight_) faces(extrusions_.at(index).display, true);
+        for (const FeatureHighlight &highlight : featureHighlights_)
+            if (highlight.body == index && !highlight.display.vertices.isEmpty()) faces(highlight.display, false);
+    }
+    void drawFeatureHighlightEdges(int index) {
+        const QColor edge = featureHighlightColor_.lighter(120);
+        const auto edges = [&](const auto &draw) {
+            displayCache_.setLightingEnabled(false);
+            displayCache_.setColor(QVector4D(float(edge.redF()), float(edge.greenF()), float(edge.blueF()), 1.0f));
+            glLineWidth(3.0f);
+            draw();
+            glLineWidth(1.0f);
+        };
+        if (index == bodyHighlight_) edges([&] { drawExtrusionEdges(extrusions_.at(index)); });
+        for (const FeatureHighlight &highlight : featureHighlights_)
+            if (highlight.body == index && !highlight.display.edges.isEmpty()) edges([&] { displayCache_.edges(highlight.display); });
+    }
     // Spigoli visualizzati (indici in display.edges) dei bordi della faccia:
     // per ogni suo spigolo la polilinea piu' vicina al suo punto.
     // Riferimento di faccia (tutti i bordi) della faccia `face` del corpo `body`.
@@ -9793,6 +10079,7 @@ private:
                 glPolygonOffset(1.0f, 2.0f);
                 drawExtrusionFaces(extrusion);
                 glDisable(GL_POLYGON_OFFSET_FILL);
+                if (!seeThrough) drawFeatureHighlightFaces(index);
                 if (seeThrough) {
                     glDepthMask(GL_TRUE);
                     glDisable(GL_BLEND);
@@ -9826,6 +10113,7 @@ private:
                 glLineWidth(1.0f);
                 if (hiddenEdgesVisible_) glEnable(GL_DEPTH_TEST);
             }
+            if (!isCurveBody(extrusion)) drawFeatureHighlightEdges(index);
         }
         const auto outline = [this](const SceneSelection &target, const QColor &color, float width) {
             if (target.kind != SceneObjectKind::Extrusion || target.index < 0
@@ -10637,6 +10925,16 @@ private:
     QPoint selectionPress_;
     QPoint hoverPosition_;
     int selectedFeature_ = -1;  // funzione che ha creato la parte cliccata (vedi faceOwnerFeature)
+    struct FeatureHighlight {
+        int feature = -1;
+        int body = -1;          // corpo visibile su cui si disegna
+        BodyDisplay display;    // le sue facce create dalla feature, con i bordi
+    };
+    QVector<FeatureHighlight> featureHighlights_;
+    QColor featureHighlightColor_ = kSelectionColor;  // view/featureHighlightColor
+    quint64 featureHighlightGeneration_ = 0;
+    int bodyHighlight_ = -1;  // corpo scelto (vista o voce "Corpi"): evidenziato tutto
+    std::function<void(const QVector<SceneSelection> &)> multiSelectionCallback_;
     bool hoverScheduled_ = false;
     bool selectionPending_ = false, selectionDragged_ = false, releasingSelection_ = false;
     int lightingPreset_ = 0, constraintMode_ = 0, selectedPlane_ = 0, activePlane_ = 0, activeSketch_ = -1;
@@ -10941,7 +11239,8 @@ public:
         setDropIndicatorShown(false);
         setDragDropMode(QAbstractItemView::InternalMove);
         setDefaultDropAction(Qt::MoveAction);
-        setSelectionMode(QAbstractItemView::SingleSelection);
+        // Ctrl/Maiusc+clic: piu' feature e schizzi per le operazioni comuni (Elimina, Sopprimi...).
+        setSelectionMode(QAbstractItemView::ExtendedSelection);
     }
     void setMoveFeatureCallback(std::function<QString(int, int)> callback) { moveFeature_ = std::move(callback); }
 
@@ -11244,12 +11543,31 @@ public:
         resizeGrip_->setObjectName(QStringLiteral("functionPanelResizeGrip"));
         resizeGrip_->setFixedSize(22, 22);
         resizeGrip_->installEventFilter(this);
+        // Barra d'intestazione con il nome del comando (windowTitle), disegnata
+        // in paintEvent: i layout delle finestre stanno sotto grazie al margine.
+        setContentsMargins(0, kHeaderHeight, 0, 0);
+        headerClose_ = new QToolButton(this);
+        headerClose_->setObjectName(QStringLiteral("functionPanelHeaderClose"));
+        headerClose_->setText(QStringLiteral("\u2715"));
+        headerClose_->setAutoRaise(true);
+        headerClose_->setCursor(Qt::ArrowCursor);
+        headerClose_->setFocusPolicy(Qt::NoFocus);
+        headerClose_->setToolTip(QStringLiteral("Chiudi (Esc)"));
+        headerClose_->setFixedSize(24, 22);
+        connect(headerClose_, &QToolButton::clicked, this, &QDialog::reject);
         captureTimer_.setSingleShot(true);
         connect(&captureTimer_, &QTimer::timeout, this, [this] { captureSceneBackdrop(); });
         updatePalette();
     }
     ~FunctionDialogPanel() override {
         if (viewport_) viewport_->removeGlassPanel(reinterpret_cast<quintptr>(this));
+    }
+    // FloatingPanel ha una barra del titolo propria.
+    void setHeaderVisible(bool visible) {
+        headerVisible_ = visible;
+        setContentsMargins(0, visible ? kHeaderHeight : 0, 0, 0);
+        if (headerClose_) headerClose_->setVisible(visible);
+        update();
     }
     QFormLayout *createScrollableForm() {
         if (form_) return form_;
@@ -11338,6 +11656,10 @@ protected:
         if (viewport_) viewport_->removeGlassPanel(reinterpret_cast<quintptr>(this));
         QDialog::hideEvent(event);
     }
+    void changeEvent(QEvent *event) override {
+        QDialog::changeEvent(event);
+        if (event->type() == QEvent::WindowTitleChange) update(0, 0, width(), kHeaderHeight);
+    }
     void moveEvent(QMoveEvent *event) override {
         QDialog::moveEvent(event);
         syncGpuGlass();
@@ -11349,6 +11671,10 @@ protected:
         if (resizeGrip_) {
             resizeGrip_->move(width() - resizeGrip_->width(), height() - resizeGrip_->height());
             resizeGrip_->raise();
+        }
+        if (headerClose_) {
+            headerClose_->move(width() - headerClose_->width() - 6, (kHeaderHeight - headerClose_->height()) / 2);
+            headerClose_->raise();
         }
         updateRoundedMask();
         syncGpuGlass();
@@ -11367,6 +11693,20 @@ protected:
         QColor color = panelColor_;
         color.setAlpha(qRound(255.0 * opacity_ / 100.0));
         painter.fillRect(rect(), color);
+        if (headerVisible_) {
+            // Intestazione: fondo scuro fisso (leggibile su qualsiasi scena), nome del comando, filo arancio.
+            const QRect header(0, 0, width(), kHeaderHeight);
+            painter.fillRect(header, QColor(24, 31, 40, 235));
+            painter.fillRect(QRect(0, kHeaderHeight - 2, width(), 2), QColor(255, 159, 28));
+            QFont font = this->font();
+            font.setBold(true);
+            painter.setFont(font);
+            painter.setPen(QColor(242, 246, 250));
+            const int right = headerClose_ && headerClose_->isVisible() ? headerClose_->x() - 6 : width() - 10;
+            const QRect text(12, 0, qMax(0, right - 12), kHeaderHeight - 2);
+            painter.drawText(text, Qt::AlignVCenter | Qt::AlignLeft,
+                             QFontMetrics(font).elidedText(windowTitle(), Qt::ElideRight, text.width()));
+        }
         painter.setClipping(false);
         painter.setPen(QPen(QColor(120, 165, 205, 150), 1.0));
         painter.setBrush(Qt::NoBrush);
@@ -11479,7 +11819,9 @@ private:
             scroll->updateGeometry();
         }
         if (layout()) layout()->activate();
-        return (layout() ? layout()->sizeHint() : sizeHint()).expandedTo(minimumSize());
+        const QMargins margins = contentsMargins();
+        return (layout() ? layout()->sizeHint() + QSize(margins.left() + margins.right(), margins.top() + margins.bottom()) : sizeHint())
+            .expandedTo(minimumSize());
     }
     QSize maximumPanelSize() const {
         if (embedded_ && parentWidget())
@@ -11708,6 +12050,9 @@ private:
     quint64 capturedFrameSerial_ = std::numeric_limits<quint64>::max();
     QFormLayout *form_ = nullptr;
     QSizeGrip *resizeGrip_ = nullptr;
+    static constexpr int kHeaderHeight = 30;
+    QToolButton *headerClose_ = nullptr;
+    bool headerVisible_ = true;
     QPoint dragOffset_;
     QPoint resizeStartGlobal_;
     QSize resizeStartSize_;
@@ -15749,6 +16094,7 @@ class FloatingPanel final : public FunctionDialogPanel {
 public:
     FloatingPanel(QWidget *window, const QString &title, const QString &settingsKey, const QSize &defaultSize)
         : FunctionDialogPanel(window), settingsKey_(settingsKey), defaultSize_(defaultSize) {
+        setHeaderVisible(false);
         auto *outer = new QVBoxLayout(this);
         outer->setContentsMargins(1, 1, 1, 1);
         outer->setSpacing(0);
@@ -16076,8 +16422,11 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
         }
     });
     viewport->setEditBodyCallback([editBody](int index) { (*editBody)(index); });
-    connect(modelTree, &QTreeWidget::itemDoubleClicked, this, [editBody](QTreeWidgetItem *item, int) {
-        if (item->data(0, Qt::UserRole).toInt() == kTreeExtrusion) (*editBody)(item->data(0, Qt::UserRole + 1).toInt());
+    connect(modelTree, &QTreeWidget::itemDoubleClicked, this, [this, viewport, editBody](QTreeWidgetItem *item, int) {
+        if (suppressTreeClick_) return;
+        const int type = item->data(0, Qt::UserRole).toInt();
+        if (type == kTreeExtrusion) (*editBody)(item->data(0, Qt::UserRole + 1).toInt());
+        else if (type == kTreeSketch) viewport->selectSketch(item->data(0, Qt::UserRole + 1).toInt());  // doppio clic: apre lo schizzo
     });
     viewport->setSelectionCallback([this](SceneSelection selection) {
         for (QTreeWidgetItemIterator it(modelTree_); *it; ++it) {
@@ -16094,6 +16443,18 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
             }
         }
         modelTree_->clearSelection();
+    });
+    // Selezione multipla nella vista (riquadro, Ctrl/Maiusc+clic): le stesse voci nell'albero.
+    viewport->setMultiSelectionCallback([this](const QVector<SceneSelection> &objects) {
+        modelTree_->clearSelection();
+        for (QTreeWidgetItemIterator it(modelTree_); *it; ++it) {
+            QTreeWidgetItem *item = *it;
+            const int type = item->data(0, Qt::UserRole).toInt();
+            const int itemIndex = item->data(0, Qt::UserRole + 1).toInt();
+            const SceneObjectKind kind = type == kTreeSketch ? SceneObjectKind::Sketch
+                                       : type == kTreeExtrusion ? SceneObjectKind::Extrusion : SceneObjectKind::None;
+            if (kind != SceneObjectKind::None && objects.contains(SceneSelection{kind, itemIndex, -1})) item->setSelected(true);
+        }
     });
     viewport->setDocumentChangedCallback([this] {
         if (!loadingDocument_ && !documentModified_) {
@@ -16126,16 +16487,30 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
         else if (type == kTreeExtrusion) viewport->setObjectVisible(SceneObjectKind::Extrusion, index, visible);
         else if (type == kTreeBody) viewport->setModelBodyVisible(index, visible);
     });
-    connect(modelTree, &QTreeWidget::itemClicked, this, [this, viewport](QTreeWidgetItem *item, int) {
+    connect(modelTree, &QTreeWidget::itemClicked, this, [this, viewport, modelTree](QTreeWidgetItem *item, int) {
         if (suppressTreeClick_) return;
         const int type = item->data(0, Qt::UserRole).toInt();
         const int index = item->data(0, Qt::UserRole + 1).toInt();
+        // Piu' voci scelte (Ctrl/Maiusc+clic): schizzi e feature insieme nella vista.
+        const QList<QTreeWidgetItem *> chosen = modelTree->selectedItems();
+        if (chosen.size() > 1 || (QGuiApplication::keyboardModifiers() & (Qt::ControlModifier | Qt::ShiftModifier))) {
+            QVector<SceneSelection> objects;
+            for (QTreeWidgetItem *selected : chosen) {
+                const int selectedType = selected->data(0, Qt::UserRole).toInt();
+                const int selectedIndex = selected->data(0, Qt::UserRole + 1).toInt();
+                if (selectedType == kTreeSketch) objects.append({SceneObjectKind::Sketch, selectedIndex, -1});
+                else if (selectedType == kTreeExtrusion) objects.append({SceneObjectKind::Extrusion, selectedIndex, -1});
+            }
+            viewport->setSelectedObjects(objects);
+            return;
+        }
         if (type == kTreePlane) viewport->selectPlane(index);
-        if (type == kTreeSketch) viewport->selectSketch(index);
+        // Un clic seleziona lo schizzo; si apre con il doppio clic.
+        if (type == kTreeSketch) viewport->setSelectedObjects({{SceneObjectKind::Sketch, index, -1}});
         if (type == kTreeExtrusion) viewport->selectObject(SceneObjectKind::Extrusion, index);
         if (type == kTreeBody) {
             const int tip = viewport->modelBodyTip(index);
-            if (tip >= 0) viewport->selectObject(SceneObjectKind::Extrusion, tip);
+            if (tip >= 0) viewport->selectObject(SceneObjectKind::Extrusion, tip, true);  // tutto il corpo
         }
     });
     // Rinomina (F2 o menu contestuale): schizzi e corpi.
@@ -16152,6 +16527,59 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
         const int index = item->data(0, Qt::UserRole + 1).toInt();
         QMenu menu(this);
         const QPoint globalPosition = modelTree->viewport()->mapToGlobal(position);
+        // Piu' voci scelte: le operazioni comuni a tutte.
+        const QList<QTreeWidgetItem *> chosenItems = modelTree->selectedItems();
+        if (chosenItems.size() > 1 && item->isSelected()) {
+            QVector<SceneSelection> objects;
+            QVector<int> features;
+            bool anySuppressed = false, anyActive = false, anyVisible = false;
+            for (QTreeWidgetItem *selected : chosenItems) {
+                const int selectedType = selected->data(0, Qt::UserRole).toInt();
+                const int selectedIndex = selected->data(0, Qt::UserRole + 1).toInt();
+                if (selectedType == kTreeSketch && selectedIndex >= 0 && selectedIndex < viewport->sketches().size()) {
+                    objects.append({SceneObjectKind::Sketch, selectedIndex, -1});
+                    anyVisible = anyVisible || viewport->isObjectVisible(SceneObjectKind::Sketch, selectedIndex);
+                } else if (selectedType == kTreeExtrusion && selectedIndex >= 0 && selectedIndex < viewport->extrusions().size()) {
+                    objects.append({SceneObjectKind::Extrusion, selectedIndex, -1});
+                    const ExtrusionObject &feature = viewport->extrusions().at(selectedIndex);
+                    if (feature.modelBodyId != 0) {
+                        features.append(selectedIndex);
+                        anySuppressed = anySuppressed || feature.suppressed;
+                        anyActive = anyActive || !feature.suppressed;
+                    } else {
+                        anyVisible = anyVisible || feature.visible;
+                    }
+                }
+            }
+            if (objects.isEmpty()) return;
+            viewport->setSelectedObjects(objects);
+            QAction *suppress = anyActive ? menu.addAction(ForgeCad::commandIcon(QStringLiteral("visibility")),
+                                                           QStringLiteral("Sopprimi %1 feature").arg(features.size())) : nullptr;
+            QAction *activate = anySuppressed ? menu.addAction(ForgeCad::commandIcon(QStringLiteral("visibility")),
+                                                               QStringLiteral("Riattiva %1 feature").arg(features.size())) : nullptr;
+            // La visibilita' vale per schizzi e corpi fuori dalla storia (le feature seguono il loro corpo).
+            QVector<SceneSelection> visibilityTargets;
+            for (const SceneSelection &object : objects)
+                if (object.kind == SceneObjectKind::Sketch || !features.contains(object.index)) visibilityTargets.append(object);
+            QAction *hide = !visibilityTargets.isEmpty() && anyVisible
+                ? menu.addAction(ForgeCad::commandIcon(QStringLiteral("visibility")), QStringLiteral("Nascondi")) : nullptr;
+            QAction *show = !visibilityTargets.isEmpty() && !anyVisible
+                ? menu.addAction(ForgeCad::commandIcon(QStringLiteral("visibility")), QStringLiteral("Mostra")) : nullptr;
+            menu.addSeparator();
+            QAction *remove = menu.addAction(ForgeCad::commandIcon(QStringLiteral("delete")),
+                                             QStringLiteral("Elimina %1 elementi").arg(objects.size()));
+            const QAction *chosen = menu.exec(globalPosition);
+            if (!chosen) return;
+            if (chosen == suppress || chosen == activate) {
+                const QString error = viewport->setFeaturesSuppressed(features, chosen == suppress);
+                if (!error.isEmpty()) QMessageBox::warning(this, QStringLiteral("Storyboard"), error);
+            } else if (chosen == hide || chosen == show) {
+                viewport->setObjectsVisible(visibilityTargets, chosen == show);
+            } else if (chosen == remove) {
+                viewport->deleteObjectsOrFeatures(objects);
+            }
+            return;
+        }
         if (type == kTreePlane) {
             QAction *newSketch = menu.addAction(QStringLiteral("Nuovo schizzo su questo piano"));
             QAction *normalView = menu.addAction(QStringLiteral("Vista normale al piano"));
@@ -16679,6 +17107,23 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
         applyTreeBackground(QColor());
     });
     applyTreeBackground(QSettings().value(QStringLiteral("view/treeBackground")).value<QColor>());
+    // Colore delle facce della feature scelta (QSettings view/featureHighlightColor; di
+    // default quello della selezione degli spigoli).
+    auto *highlightColorMenu = viewMenu->addMenu(QStringLiteral("Colore evidenziazione feature"));
+    QAction *highlightColorAction = highlightColorMenu->addAction(QStringLiteral("Scegli il colore..."));
+    QAction *highlightColorReset = highlightColorMenu->addAction(QStringLiteral("Colore della selezione (predefinito)"));
+    connect(highlightColorAction, &QAction::triggered, this, [this, viewport] {
+        const QColor color = QColorDialog::getColor(viewport->featureHighlightColor(), this,
+                                                    QStringLiteral("Colore delle facce della feature scelta"));
+        if (!color.isValid()) return;
+        QSettings().setValue(QStringLiteral("view/featureHighlightColor"), color);
+        viewport->setFeatureHighlightColor(color);
+    });
+    connect(highlightColorReset, &QAction::triggered, this, [viewport] {
+        QSettings().remove(QStringLiteral("view/featureHighlightColor"));
+        viewport->setFeatureHighlightColor(QColor());
+    });
+    viewport->setFeatureHighlightColor(QSettings().value(QStringLiteral("view/featureHighlightColor")).value<QColor>());
     QAction *showAllAction = viewMenu->addAction(QStringLiteral("Mostra tutti gli oggetti"));
     showAllAction->setShortcut(QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_H));
     connect(showAllAction, &QAction::triggered, this, [viewport] { viewport->showAllObjects(); });
@@ -18213,7 +18658,8 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
         for (const QString &key : {QStringLiteral("view/grid"), QStringLiteral("view/axisLength"), QStringLiteral("view/axes"), QStringLiteral("view/axesOnTop"),
                                    QStringLiteral("view/antialiasing"), QStringLiteral("view/panKey"), QStringLiteral("sketch/originSnap"),
                                    QStringLiteral("view/constraintPanel"), QStringLiteral("document/saveBodies"),
-                                   QStringLiteral("view/sketchBodyOpacity"), QStringLiteral("view/hiddenEdges")})
+                                   QStringLiteral("view/sketchBodyOpacity"), QStringLiteral("view/hiddenEdges"),
+                                   QStringLiteral("view/featureHighlightColor")})
             settings.remove(key);
         statusBar()->showMessage(QStringLiteral("Le impostazioni predefinite valgono dal prossimo avvio."), 6000);
     });

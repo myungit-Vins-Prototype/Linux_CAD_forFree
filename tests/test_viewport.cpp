@@ -591,6 +591,14 @@ public:
             require(faceAt(top) >= 0 && faceAt(bevel) >= 0, "facce del corpo smussato");
             require(forgeFaceOwner(chamfered, faceAt(top), top, chain) == 0, "faccia della base: funzione base");
             require(forgeFaceOwner(chamfered, faceAt(bevel), bevel, chain) == 1, "faccia dello smusso: lo smusso");
+            // Evidenziazione della feature scelta nell'albero: solo la faccia dello smusso.
+            BodyDisplay display;
+            forgeTessellate(chamfered, 1, display);
+            require(display.triangleFaces.size() * 3 == display.vertices.size(), "faccia di ogni triangolo della tassellazione");
+            const QVector<int> bevelFaces = forgeFeatureFaces(chamfered, display.faceIds, display.faceLabelPoints, 1, chain);
+            require(bevelFaces == QVector<int>{faceAt(bevel)}, "facce create dallo smusso");
+            const QVector<int> baseFaces = forgeFeatureFaces(chamfered, display.faceIds, display.faceLabelPoints, 0, chain);
+            require(baseFaces.size() == 6 && !baseFaces.contains(faceAt(bevel)), "facce della base dopo lo smusso");
         }
         {
             // Modifica di una funzione intermedia: la storia torna a quel punto.
