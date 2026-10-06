@@ -1212,6 +1212,38 @@ public:
         require(solveSketch(work).ok, "vincolo parallelo all'asse");
         require(work.segments.at(0) == fixed, "il riferimento resta fisso");
         require(std::fabs(work.segments.at(line).second.y() - work.segments.at(line).first.y()) < 1e-8, "segmento parallelo al riferimento");
+        {
+            // Quota d'angolo: il settore del puntatore decide tra angolo interno e supplementare.
+            SketchObject angle;
+            angle.segments = {{QPointF(0, 0), QPointF(2, 0)}, {QPointF(0, 0), QPointF(1, std::sqrt(3.0))}};
+            angle.constraints = {-1, -1}; angle.segmentLengths = {0, 0}; angle.segmentAngles = {-1, -1};
+            SketchConstraint dimension = makeConstraint(angle, ConstraintType::Angle, {{0, 0, -1}, {0, 1, -1}});
+            require(std::fabs(std::fabs(dimension.value) - 60.0) < 1e-9, "quota d'angolo iniziale");
+            require(chooseAngleSector(angle, dimension, QPointF(1.0, 0.3)) && std::fabs(std::fabs(dimension.value) - 60.0) < 1e-9, "settore interno");
+            require(chooseAngleSector(angle, dimension, QPointF(-1.0, 0.5)) && std::fabs(std::fabs(dimension.value) - 120.0) < 1e-9, "settore supplementare");
+            require(chooseAngleSector(angle, dimension, QPointF(-1.0, -0.3)) && std::fabs(std::fabs(dimension.value) - 60.0) < 1e-9, "settore opposto al vertice");
+            require(chooseAngleSector(angle, dimension, QPointF(0.5, -1.0)) && std::fabs(std::fabs(dimension.value) - 120.0) < 1e-9, "settore supplementare sotto");
+            const auto before = angle.segments;
+            angle.geometricConstraints.append(dimension);
+            require(solveSketch(angle).ok, "quota nel settore supplementare");
+            for (int k = 0; k < 2; ++k)
+                require(pointDistance(angle.segments.at(k).first, before.at(k).first) < 1e-9 && pointDistance(angle.segments.at(k).second, before.at(k).second) < 1e-9,
+                        "il settore non cambia la geometria");
+            angle.geometricConstraints.last().value = dimension.value < 0 ? -90.0 : 90.0;
+            angle.geometricConstraints.append(makeConstraint(angle, ConstraintType::Fix, {{0, 0, -1}}));
+            require(solveSketch(angle).ok, "quota supplementare a 90 gradi");
+            const QPointF d = angle.segments.at(0).second - angle.segments.at(0).first, e = angle.segments.at(1).second - angle.segments.at(1).first;
+            require(std::fabs(d.x() * e.x() + d.y() * e.y()) < 1e-8, "rette perpendicolari");
+        }
+        {
+            // Aggancio alla geometria e alla griglia indipendenti.
+            const QVector<SketchSegment> segments = {{QPointF(0.1, 0.1), QPointF(1.1, 0.1)}};
+            const QPointF raw(0.12, 0.13);
+            require(snapSegments(raw, segments, {}, true, true, 0.25, 0.05).point == QPointF(0.1, 0.1), "aggancio alla geometria");
+            require(snapSegments(raw, segments, {}, false, true, 0.25, 0.05).point == QPointF(0.0, 0.25), "solo griglia");
+            require(snapSegments(raw, segments, {}, false, false, 0.25, 0.05).point == raw, "nessun aggancio");
+            require(snapSegments(QPointF(0.6, 0.5), segments, {}, true, false, 0.25, 0.05).point == QPointF(0.6, 0.5), "geometria senza griglia");
+        }
         SketchFrame tilted;
         tilted.origin[0] = 2; tilted.normal[0] = std::sqrt(0.5); tilted.normal[2] = std::sqrt(0.5);
         QPointF point, direction;

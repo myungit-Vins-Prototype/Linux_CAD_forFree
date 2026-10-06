@@ -277,7 +277,12 @@ public:
         update();
     }
     void setLightingPreset(int preset) { lightingPreset_ = preset; update(); }
-    void setSnapEnabled(bool enabled) { snapEnabled_ = enabled; update(); }
+    // Aggancio dello schizzo: alla geometria (punti notevoli, segmenti, curve)
+    // e alla griglia, indipendenti.
+    void setGeometrySnap(bool enabled) { geometrySnap_ = enabled; update(); }
+    bool geometrySnap() const { return geometrySnap_; }
+    void setGridSnap(bool enabled) { gridSnap_ = enabled; update(); }
+    bool gridSnap() const { return gridSnap_; }
     void setConstraintMode(int mode) { constraintMode_ = mode; }
     void setLineLength(double length) { lineLength_ = qMax(0.0, length); update(); }
     void setLineAngle(double angle) { lineAngle_ = angle; update(); }
@@ -1082,13 +1087,19 @@ public:
         return {};
     }
 
-    // Candidati della fusione automatica di un'estrusione o sweep nel posto `index`:
-    // i solidi visibili che vengono prima.
+    // Candidati della fusione automatica di un'estrusione, rivoluzione o sweep
+    // nel posto `index`: i solidi (corpi visibili) che esistono in quel punto
+    // della storia, cioe' l'ultimo stadio di ciascuno, non le singole feature.
     QVector<int> mergeCandidates(int index) const {
+        QSet<quint64> hidden;
+        for (const ModelBody &model : modelBodies_)
+            if (!model.visible) hidden.insert(model.id);
         QVector<int> candidates;
-        for (int body = 0; body < index && body < extrusions_.size(); ++body) {
+        for (int body : resultBodiesBefore(index)) {
             const ExtrusionObject &other = extrusions_.at(body);
-            if (other.visible && isShapeBody(other) && other.solid) candidates.append(body);
+            if (!other.solid) continue;
+            if (other.modelBodyId ? hidden.contains(other.modelBodyId) : !other.visible) continue;
+            candidates.append(body);
         }
         return candidates;
     }
@@ -1454,7 +1465,10 @@ public:
             const QPointF d = direction(a), e = direction(b);
             const double sine = std::fabs(d.x() * e.y() - d.y() * e.x()) / std::max(pointLength(d) * pointLength(e), 1e-300);
             if (sine < 1e-9) return make(ConstraintType::Distance);
-            return make(ConstraintType::Angle);
+            if (!make(ConstraintType::Angle)) return false;
+            // Angolo interno o supplementare: quello del settore dove sta il puntatore.
+            ForgeCad::chooseAngleSector(*sketch, result, cursor);
+            return true;
         }
         return make(ConstraintType::Distance);
     }
@@ -1501,6 +1515,12 @@ public:
         update();
     }
 
+    // Valore scritto per una quota d'angolo: senza segno vale nel verso attuale
+    // della quota (come appare nel disegno), con il segno meno lo inverte.
+    static double signedAngleInput(double input, double current) {
+        return current < 0.0 ? -input : input;
+    }
+
     // Finestra del valore della quota nuova (orientamento per le quote tra due
     // punti, raggio o diametro per i cerchi), poi il vincolo con il risolutore.
     QString placeDimension(SketchConstraint constraint) {
@@ -1539,7 +1559,8 @@ public:
         valueBox->setDecimals(6);
         valueBox->setRange(constraint.type == T::Angle ? -360.0 : 1e-9, 1e6);
         if (constraint.type == T::Angle) valueBox->setSuffix(QStringLiteral(" °"));
-        valueBox->setValue(constraint.value);
+        // Angolo: il valore come appare nella quota (senza segno); il verso resta quello attuale.
+        valueBox->setValue(constraint.type == T::Angle ? std::fabs(constraint.value) : constraint.value);
         form->addRow(QStringLiteral("Valore:"), valueBox);
         const auto measureOf = [&](T type) {
             SketchConstraint probe = constraint;
@@ -1562,7 +1583,7 @@ public:
         runUntilApplied(dialog, form, buttons, [&] {
             valueBox->interpretText();
             SketchConstraint placed = constraint;
-            placed.value = valueBox->value();
+            placed.value = constraint.type == T::Angle ? signedAngleInput(valueBox->value(), constraint.value) : valueBox->value();
             const DocumentState snapshot = documentState();
             SketchObject &sketch = sketches_[activeSketch_];
             const SketchObject before = sketch;
@@ -3177,7 +3198,7 @@ public:
         valueBox->setDecimals(6);
         valueBox->setRange(type == ConstraintType::Angle ? -360.0 : 1e-9, 1e6);
         if (type == ConstraintType::Angle) valueBox->setSuffix(QStringLiteral(" °"));
-        valueBox->setValue(constraint.value);
+        valueBox->setValue(type == ConstraintType::Angle ? std::fabs(constraint.value) : constraint.value);
         form->addRow(QStringLiteral("Valore:"), valueBox);
         QPushButton *swapButton = nullptr;
         if (axial) {
@@ -3204,7 +3225,8 @@ public:
         valueBox->selectAll();
         runUntilApplied(dialog, form, buttons, [&] {
             valueBox->interpretText();
-            return setConstraintValue(index, valueBox->value(), type);
+            const double value = type == ConstraintType::Angle ? signedAngleInput(valueBox->value(), constraint.value) : valueBox->value();
+            return setConstraintValue(index, value, type);
         });
     }
     // Gradi di liberta' dello schizzo attivo (ricalcolati quando lo schizzo cambia).
@@ -4191,7 +4213,7 @@ protected:
         for (const QPointF &p : snapCandidates(sketch))
             if (pointDistance(p, pointDragPosition_) > tolerance) points.append(p);
         if (originSnap_ && pointLength(pointDragPosition_) > tolerance) points.append(QPointF(0.0, 0.0));
-        const ForgeCad::SnapResult result = ForgeCad::snapSegments(raw, segments, points, snapEnabled_, true, snapSpacing_, pickTolerance(10.0));
+        const ForgeCad::SnapResult result = ForgeCad::snapSegments(raw, segments, points, geometrySnap_, gridSnap_, snapSpacing_, pickTolerance(10.0));
         lastSnapKind_ = result.kind;
         lastSnapPoint_ = result.point;
         return result.point;
@@ -5387,8 +5409,12 @@ protected:
                     }
                     // Spostare una quota non ne cambia il tipo: raggio o diametro dall'asse
                     // si sceglie mentre la si crea, poi solo nella finestra del valore.
-                    sketch.geometricConstraints[dimensionDrag_].placement = rawPoint;
-                    sketch.geometricConstraints[dimensionDrag_].placed = true;
+                    // Una quota d'angolo passa al settore del puntatore (interno o
+                    // supplementare: stessa geometria, misura attuale).
+                    SketchConstraint &dragged = sketch.geometricConstraints[dimensionDrag_];
+                    dragged.placement = rawPoint;
+                    dragged.placed = true;
+                    if (dragged.type == ConstraintType::Angle) ForgeCad::chooseAngleSector(sketch, dragged, rawPoint);
                     analysisDirty_ = true;
                 }
                 update();
@@ -5904,14 +5930,9 @@ private:
             return true;
         }
         // Angolo: arco tra le due rette attorno al loro punto comune, dalla prima
-        // direzione per il valore del vincolo (con segno).
-        QPointF p0, p1, q0, q1;
-        if (!ForgeCad::constraintLines(sketch, c, p0, p1, q0, q1)) return false;
-        const QPointF d1 = p1 - p0, d2 = q1 - q0;
-        const double denominator = d1.x() * d2.y() - d1.y() * d2.x();
-        if (std::fabs(denominator) <= 1e-12 * pointLength(d1) * pointLength(d2)) return false;
-        const QPointF r = q0 - p0;
-        const QPointF vertex = p0 + d1 * ((r.x() * d2.y() - r.y() * d2.x()) / denominator);
+        // direzione (nel settore della quota) per il valore del vincolo (con segno).
+        QPointF p0, p1, q0, q1, vertex, d1, d2;
+        if (!ForgeCad::constraintLines(sketch, c, p0, p1, q0, q1) || !ForgeCad::angleDirections(sketch, c, vertex, d1, d2)) return false;
         const double a1 = std::atan2(d1.y(), d1.x()), sweep = c.value * M_PI / 180.0;
         double radius = 40.0 * px;
         if (c.placed && pointDistance(c.placement, vertex) > 0.0) radius = pointDistance(c.placement, vertex);
@@ -5932,7 +5953,8 @@ private:
         const auto extension = [&](const QPointF &a, const QPointF &b, double direction) {
             const QPointF u(std::cos(direction), std::sin(direction));
             const double ta = (a - vertex).x() * u.x() + (a - vertex).y() * u.y(), tb = (b - vertex).x() * u.x() + (b - vertex).y() * u.y();
-            const double near = std::max(0.0, std::min(ta, tb)), far = std::max(ta, tb);
+            // Settore dalla parte opposta al segmento: la linea parte dal vertice.
+            const double near = std::max(0.0, std::min(ta, tb)), far = std::max(0.0, std::max(ta, tb));
             if (radius > far) {
                 g.lines.moveTo(screen(vertex + (far + 3.0 * px) * u));
                 g.lines.lineTo(screen(vertex + (radius + 6.0 * px) * u));
@@ -8031,13 +8053,13 @@ private:
             if (originSnap_) points.append(QPointF(0.0, 0.0));  // origine del piano (dove passano gli assi)
         }
         const double tolerance = pickTolerance(10.0);
-        ForgeCad::SnapResult result = ForgeCad::snapSegments(point, segments, points, snapEnabled_, snapToGrid, snapSpacing_, tolerance);
+        ForgeCad::SnapResult result = ForgeCad::snapSegments(point, segments, points, geometrySnap_, snapToGrid && gridSnap_, snapSpacing_, tolerance);
         lastSnapNote_.clear();
         lastSnapCurve_ = -1;
         // Curve (cerchi, archi, poligoni, spline, NURBS): i quadranti di cerchi
         // e archi come punti; poi il punto esatto piu' vicino sulla curva, se
         // e' piu' vicino del punto trovato su un segmento. I punti vincono.
-        if (snapEnabled_ && activeSketch_ >= 0 && activeSketch_ < sketches_.size()
+        if (geometrySnap_ && activeSketch_ >= 0 && activeSketch_ < sketches_.size()
             && (result.kind == SnapKind::None || result.kind == SnapKind::Nearest)) {
             const SketchObject &sketch = sketches_.at(activeSketch_);
             QPointF quadrant;
@@ -11120,7 +11142,7 @@ private:
     double lineAngle_ = -1.0;
     int polygonSides_ = 6;
     int tessellationQuality_ = 1;
-    bool sketchMode_ = false, sketchCameraLocked_ = false, snapEnabled_ = true;
+    bool sketchMode_ = false, sketchCameraLocked_ = false, geometrySnap_ = true, gridSnap_ = true;
     bool wheelZoomEnabled_ = true;
     bool hasPendingPoint_ = false, referencePlanesVisible_ = true;
     DrawingTool drawingTool_ = DrawingTool::Select;
@@ -12827,6 +12849,55 @@ static HelixDialogResult helixDialog(QWidget *parent, CadViewport *viewport, con
     return result;
 }
 
+// Nome di un corpo risultante nelle finestre delle operazioni tra corpi: il
+// corpo logico ("Corpo 2"), non la feature che ne e' l'ultimo stadio, con
+// superficie/nascosto.
+static QString resultBodyLabel(CadViewport *viewport, int index, bool markHidden = true) {
+    const ExtrusionObject &body = viewport->extrusions().at(index);
+    QString text = body.name;
+    for (const ModelBody &model : viewport->modelBodies())
+        if (model.id == body.modelBodyId) {
+            text = model.name;
+            if (!body.solid) text += QStringLiteral(" (superficie)");
+            if (markHidden && !model.visible) text += QStringLiteral(" (nascosto)");
+            return text;
+        }
+    if (!body.solid) text += QStringLiteral(" (superficie)");
+    if (markHidden && !body.visible) text += QStringLiteral(" (nascosto)");
+    return text;
+}
+
+// Corpi da offrire come operandi a una funzione nel posto `replaced` (-1 se
+// nuova): i corpi che esistono in quel punto della storia (resultBodiesBefore:
+// l'ultimo stadio di ogni corpo, non le feature intermedie), piu' quelli gia'
+// scelti in modifica; tenuti quelli che `accept` vuole.
+static QVector<int> operandBodies(CadViewport *viewport, int replaced, const QVector<int> &used,
+                                  const std::function<bool(const ExtrusionObject &)> &accept) {
+    const QVector<ExtrusionObject> &bodies = viewport->extrusions();
+    QVector<int> indices;
+    for (int index : viewport->resultBodiesBefore(replaced))
+        if (accept(bodies.at(index))) indices.append(index);
+    for (int index : used)
+        if (index >= 0 && index < bodies.size() && (replaced < 0 || index < replaced) && !indices.contains(index) && bodies.at(index).forgeBody
+            && accept(bodies.at(index)))
+            indices.append(index);
+    std::sort(indices.begin(), indices.end());
+    return indices;
+}
+
+// Elenco dei solidi con cui fondere un'estrusione, una rivoluzione o una sweep
+// (spunte, indice in Qt::UserRole): i corpi, non le feature.
+static void fillMergeBodyList(QListWidget *list, CadViewport *viewport, int replaced, const QVector<int> &used) {
+    const auto solid = [](const ExtrusionObject &body) { return body.forgeBody && body.solid; };
+    for (int index : operandBodies(viewport, replaced, used, solid)) {
+        const bool chosen = used.contains(index);
+        auto *item = new QListWidgetItem(resultBodyLabel(viewport, index, !chosen), list);
+        item->setFlags(item->flags() | Qt::ItemIsUserCheckable);
+        item->setCheckState(chosen ? Qt::Checked : Qt::Unchecked);
+        item->setData(Qt::UserRole, index);
+    }
+}
+
 // Sweep: profilo (uno schizzo), percorso (un altro schizzo o una curva, come
 // un'elica) e orientamento del profilo lungo il percorso, con l'anteprima.
 static bool sweepDialog(QWidget *parent, CadViewport *viewport, const QString &title, int replaced, const ExtrusionObject &initial,
@@ -12873,16 +12944,7 @@ static bool sweepDialog(QWidget *parent, CadViewport *viewport, const QString &t
     autoBox->setChecked(initial.mergeAuto);
     auto *bodyList = new QListWidget(&dialog);
     bodyList->setMinimumHeight(110);
-    for (int index = 0; index < bodies.size() && (replaced < 0 || index < replaced); ++index) {
-        const ExtrusionObject &body = bodies.at(index);
-        if (!body.forgeBody || !body.solid || (body.operation < 0 && (body.feature == BodyFeature::DatumPlane || body.feature == BodyFeature::Helix)))
-            continue;
-        const bool used = initial.mergeBodies.contains(index);
-        auto *item = new QListWidgetItem(body.visible || used ? body.name : body.name + QStringLiteral(" (nascosto)"), bodyList);
-        item->setFlags(item->flags() | Qt::ItemIsUserCheckable);
-        item->setCheckState(used ? Qt::Checked : Qt::Unchecked);
-        item->setData(Qt::UserRole, index);
-    }
+    fillMergeBodyList(bodyList, viewport, replaced, initial.mergeBodies);  // i corpi, non le feature
     auto *help = new QLabel(QStringLiteral("Il profilo resta dove e' disegnato e si muove con il percorso, che parte dal punto piu' vicino al profilo "
                                            "(di solito lo si disegna sul piano normale al percorso, all'inizio). I tratti del percorso devono essere tangenti."),
                             &dialog);
@@ -14217,15 +14279,7 @@ static bool extrusionDialog(QMainWindow *window, CadViewport *viewport, const QS
     autoBox->setChecked(definition.mergeAuto);
     auto *bodyList = new QListWidget(&dialog);
     bodyList->setMinimumHeight(110);
-    for (int index = 0; index < bodies.size() && (replaced < 0 || index < replaced); ++index) {
-        const ExtrusionObject &body = bodies.at(index);
-        if (!body.forgeBody || !body.solid || (body.operation < 0 && (body.feature == BodyFeature::DatumPlane || body.feature == BodyFeature::Helix))) continue;
-        const bool used = definition.mergeBodies.contains(index);
-        auto *item = new QListWidgetItem(body.visible || used ? body.name : body.name + QStringLiteral(" (nascosto)"), bodyList);
-        item->setFlags(item->flags() | Qt::ItemIsUserCheckable);
-        item->setCheckState(used ? Qt::Checked : Qt::Unchecked);
-        item->setData(Qt::UserRole, index);
-    }
+    fillMergeBodyList(bodyList, viewport, replaced, definition.mergeBodies);  // i corpi, non le feature
     form->addRow(QStringLiteral("Versi:"), sidesBox);
     form->addRow(QStringLiteral("Fine:"), extentBox);
     form->addRow(QStringLiteral("Distanza:"), distanceBox);
@@ -14527,20 +14581,6 @@ static QString logicalBodyLabel(CadViewport *viewport, int index) {
     return text;
 }
 
-// Nome di un corpo risultante nelle finestre: il corpo logico e lo stadio
-// della storia ("Corpo 2 - Sweep 4"), con superficie/nascosto.
-static QString resultBodyLabel(CadViewport *viewport, int index, bool markHidden = true) {
-    const ExtrusionObject &body = viewport->extrusions().at(index);
-    QString text = body.name;
-    for (const ModelBody &model : viewport->modelBodies())
-        if (model.id == body.modelBodyId) {
-            text = model.name + QStringLiteral(" — ") + body.name;
-            break;
-        }
-    if (!body.solid) text += QStringLiteral(" (superficie)");
-    if (markHidden && !body.visible) text += QStringLiteral(" (nascosto)");
-    return text;
-}
 
 // Il candidato che corrisponde al corpo cliccato nella vista: lo stesso stadio
 // o lo stadio del suo corpo logico tra i candidati; -1 se non c'e'.
@@ -15935,20 +15975,15 @@ static void massPropertiesDialog(QWidget *parent, CadViewport *viewport) {
 // corpi che vengono prima. `apply` fa il comando.
 static bool trimDialog(QWidget *parent, CadViewport *viewport, const QString &title, int replaced, ExtrusionObject definition,
                        const std::function<QString(const ExtrusionObject &)> &apply) {
-    const QVector<ExtrusionObject> &bodies = viewport->extrusions();
-    const int limit = replaced >= 0 ? replaced : int(bodies.size());
-    QVector<int> sheets, tools;
-    for (int index = 0; index < limit; ++index) {
-        const ExtrusionObject &body = bodies.at(index);
-        if (!body.forgeBody) continue;
-        if (!body.solid) sheets.append(index);
-        tools.append(index);
-    }
+    // Superficie e strumento: i corpi che esistono in quel punto della storia, non le feature.
+    const QVector<int> used = {definition.firstBody, definition.secondBody};
+    const QVector<int> sheets = operandBodies(viewport, replaced, used, [](const ExtrusionObject &body) { return !body.solid; });
+    const QVector<int> tools = operandBodies(viewport, replaced, used, [](const ExtrusionObject &) { return true; });
     if (sheets.isEmpty()) {
         QMessageBox::information(parent, title, QStringLiteral("Serve una superficie (estrusione di un profilo aperto) da tagliare."));
         return false;
     }
-    const auto label = [&](int index) { return bodies.at(index).visible ? bodies.at(index).name : bodies.at(index).name + QStringLiteral(" (nascosto)"); };
+    const auto label = [&](int index) { return resultBodyLabel(viewport, index); };
     FunctionDialogPanel dialog(parent);
     dialog.setWindowTitle(title);
     auto *form = dialog.createScrollableForm();
@@ -16152,16 +16187,7 @@ static bool revolutionDialog(QWidget *parent, CadViewport *viewport, const QStri
     autoBox->setChecked(initial.mergeAuto);
     auto *bodyList = new QListWidget(&dialog);
     bodyList->setMinimumHeight(110);
-    for (int index = 0; index < bodies.size() && (replaced < 0 || index < replaced); ++index) {
-        const ExtrusionObject &body = bodies.at(index);
-        if (!body.forgeBody || !body.solid || (body.operation < 0 && (body.feature == BodyFeature::DatumPlane || body.feature == BodyFeature::Helix)))
-            continue;
-        const bool used = initial.mergeBodies.contains(index);
-        auto *item = new QListWidgetItem(body.visible || used ? body.name : body.name + QStringLiteral(" (nascosto)"), bodyList);
-        item->setFlags(item->flags() | Qt::ItemIsUserCheckable);
-        item->setCheckState(used ? Qt::Checked : Qt::Unchecked);
-        item->setData(Qt::UserRole, index);
-    }
+    fillMergeBodyList(bodyList, viewport, replaced, initial.mergeBodies);  // i corpi, non le feature
     auto *pickStatus = new QLabel(&dialog);
     pickStatus->setWordWrap(true);
     pickStatus->setMaximumWidth(360);
@@ -18410,7 +18436,12 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
         else statusBar()->showMessage(message, 6000);
     });
     sketchAction->setCheckable(true); sketchAction->setChecked(true);
-    QAction *snapAction = sketchMenu->addAction(QStringLiteral("Snap griglia e geometria")); snapAction->setCheckable(true); snapAction->setChecked(true);
+    QAction *snapAction = sketchMenu->addAction(QStringLiteral("Snap alla geometria"));
+    snapAction->setCheckable(true); snapAction->setChecked(QSettings().value(QStringLiteral("sketch/geometrySnap"), true).toBool());
+    viewport->setGeometrySnap(snapAction->isChecked());
+    QAction *gridSnapAction = sketchMenu->addAction(QStringLiteral("Snap alla griglia"));
+    gridSnapAction->setCheckable(true); gridSnapAction->setChecked(QSettings().value(QStringLiteral("sketch/gridSnap"), true).toBool());
+    viewport->setGridSnap(gridSnapAction->isChecked());
     QAction *originSnapAction = sketchMenu->addAction(QStringLiteral("Snap all'origine"));
     originSnapAction->setCheckable(true); originSnapAction->setChecked(QSettings().value(QStringLiteral("sketch/originSnap"), true).toBool());
     viewport->setOriginSnap(originSnapAction->isChecked());
@@ -18678,7 +18709,14 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
             QStringLiteral("Numero di lati:"), 6, 3, 64, 1, &accepted);
         if (accepted) viewport->setPolygonSides(sides);
     });
-    connect(snapAction, &QAction::toggled, this, [viewport](bool enabled) { viewport->setSnapEnabled(enabled); });
+    connect(snapAction, &QAction::toggled, this, [viewport](bool enabled) {
+        viewport->setGeometrySnap(enabled);
+        QSettings().setValue(QStringLiteral("sketch/geometrySnap"), enabled);
+    });
+    connect(gridSnapAction, &QAction::toggled, this, [viewport](bool enabled) {
+        viewport->setGridSnap(enabled);
+        QSettings().setValue(QStringLiteral("sketch/gridSnap"), enabled);
+    });
     connect(automaticConstraint, &QAction::triggered, this, [viewport] { viewport->setConstraintMode(0); });
     connect(freeConstraint, &QAction::triggered, this, [viewport] { viewport->setConstraintMode(-1); });
     connect(horizontalConstraint, &QAction::triggered, this, [viewport] { viewport->setConstraintMode(1); });
@@ -18752,7 +18790,7 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
         {dimensionAction, QStringLiteral("dimension")}, {automaticConstraint, QStringLiteral("constraintAuto")},
         {freeConstraint, QStringLiteral("constraintFree")}, {horizontalConstraint, QStringLiteral("constraintHorizontal")},
         {verticalConstraint, QStringLiteral("constraintVertical")}, {lengthConstraint, QStringLiteral("constraintLength")},
-        {angleConstraint, QStringLiteral("constraintAngle")}, {snapAction, QStringLiteral("snap")}, {originSnapAction, QStringLiteral("originSnap")},
+        {angleConstraint, QStringLiteral("constraintAngle")}, {snapAction, QStringLiteral("snap")}, {gridSnapAction, QStringLiteral("gridSnap")}, {originSnapAction, QStringLiteral("originSnap")},
         {exitSketch, QStringLiteral("exitSketch")}, {sketchNormalView, QStringLiteral("viewFront")}};
     for (const auto &entry : iconActions) decorate(entry.first, entry.second);
     const QStringList primitiveIcons = {QStringLiteral("box"), QStringLiteral("cylinder"), QStringLiteral("sphere"), QStringLiteral("cone"), QStringLiteral("torus")};
@@ -18854,7 +18892,7 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
            QStringLiteral("Vincolo della prossima linea: la freccia per gli altri"));
     flyout(drawingToolbar, {lengthConstraint, angleConstraint}, QStringLiteral("Quote della prossima linea: la freccia per l'altra"));
     drawingToolbar->addSeparator();
-    drawingToolbar->addAction(snapAction); drawingToolbar->addAction(originSnapAction);
+    drawingToolbar->addAction(snapAction); drawingToolbar->addAction(gridSnapAction); drawingToolbar->addAction(originSnapAction);
     drawingToolbar->addSeparator();
     drawingToolbar->addAction(extrudeAction); drawingToolbar->addAction(revolveAction);
     // In modalita' schizzo si spengono solo le viste standard (la vista resta normale
@@ -18947,6 +18985,7 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
         settings.remove(QStringLiteral("interface"));
         for (const QString &key : {QStringLiteral("view/grid"), QStringLiteral("view/axisLength"), QStringLiteral("view/axes"), QStringLiteral("view/axesOnTop"),
                                    QStringLiteral("view/antialiasing"), QStringLiteral("view/panKey"), QStringLiteral("sketch/originSnap"),
+                                   QStringLiteral("sketch/geometrySnap"), QStringLiteral("sketch/gridSnap"),
                                    QStringLiteral("view/constraintPanel"), QStringLiteral("document/saveBodies"),
                                    QStringLiteral("view/sketchBodyOpacity"), QStringLiteral("view/hiddenEdges"),
                                    QStringLiteral("view/featureHighlightColor")})

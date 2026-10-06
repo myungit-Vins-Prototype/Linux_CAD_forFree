@@ -215,6 +215,12 @@ double wrapAngle(double angle) {
     return angle;
 }
 
+// Direzioni delle due rette di una quota d'angolo nel suo settore (angleSides).
+void sectorDirections(const SketchConstraint &c, QPointF &d, QPointF &e) {
+    if (c.angleSides & 1) d = -d;
+    if (c.angleSides & 2) e = -e;
+}
+
 double pointLineDistance(const QPointF &p, const QPointF &a, const QPointF &b) {
     const double l = length(b - a);
     return l > 0.0 ? cross(b - a, p - a) / l : length(p - a);
@@ -753,7 +759,8 @@ void equations(const System &s, const SketchConstraint &c, QVector<double> &out,
         QPointF p0, p1, q0, q1;
         lineOf(c.first, p0, p1);
         lineOf(c.second, q0, q1);
-        const QPointF d = p1 - p0, e = q1 - q0;
+        QPointF d = p1 - p0, e = q1 - q0;
+        sectorDirections(c, d, e);
         const double angle = std::atan2(cross(d, e), dot(d, e));
         const double scale = 0.5 * ((c.first.kind == 2 ? 0.0 : length(d)) + (c.second.kind == 2 ? 0.0 : length(e)));
         out << wrapAngle(angle - c.value * kPi / 180.0) * std::max(scale, 1e-3);
@@ -1153,9 +1160,47 @@ double currentMeasure(const SketchObject &sketch, const SketchConstraint &constr
         QPointF p0, p1, q0, q1;
         s.line(constraint.first, p0, p1);
         s.line(constraint.second, q0, q1);
-        return std::atan2(cross(p1 - p0, q1 - q0), dot(p1 - p0, q1 - q0)) * 180.0 / kPi;
+        QPointF d = p1 - p0, e = q1 - q0;
+        sectorDirections(constraint, d, e);
+        return std::atan2(cross(d, e), dot(d, e)) * 180.0 / kPi;
     }
     return r.first();  // residuo con valore 0 = la misura
+}
+
+bool angleDirections(const SketchObject &sketch, const SketchConstraint &constraint, QPointF &vertex, QPointF &d, QPointF &e) {
+    QPointF p0, p1, q0, q1;
+    if (constraint.type != ConstraintType::Angle || !constraintLines(sketch, constraint, p0, p1, q0, q1)) return false;
+    d = p1 - p0;
+    e = q1 - q0;
+    const double denominator = cross(d, e);
+    if (std::fabs(denominator) <= 1e-12 * length(d) * length(e)) return false;
+    vertex = p0 + d * (cross(q0 - p0, e) / denominator);
+    sectorDirections(constraint, d, e);
+    return true;
+}
+
+bool chooseAngleSector(const SketchObject &sketch, SketchConstraint &constraint, const QPointF &cursor) {
+    QPointF vertex, d, e;
+    SketchConstraint probe = constraint;
+    probe.angleSides = 0;
+    if (!angleDirections(sketch, probe, vertex, d, e)) return false;
+    const QPointF v = cursor - vertex;
+    if (length(v) <= 1e-12 * std::max(length(d), length(e))) return false;
+    // Il settore che contiene il puntatore: tra le direzioni +-d e +-e che
+    // comprendono v nell'angolo minore (sotto i 180 gradi).
+    for (int sides = 0; sides < 4; ++sides) {
+        const QPointF a = (sides & 1) ? -d : d, b = (sides & 2) ? -e : e;
+        const double sector = std::atan2(cross(a, b), dot(a, b));
+        const double toCursor = std::atan2(cross(a, v), dot(a, v));
+        if (sector * toCursor >= 0.0 && std::fabs(toCursor) <= std::fabs(sector)) {
+            if (constraint.angleSides != sides) {
+                constraint.angleSides = sides;
+                constraint.value = currentMeasure(sketch, constraint);
+            }
+            return true;
+        }
+    }
+    return false;
 }
 
 double constraintError(const SketchObject &sketch, const SketchConstraint &constraint) {

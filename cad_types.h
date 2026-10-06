@@ -186,6 +186,10 @@ struct SketchConstraint {
     bool placed = false;
     SketchPatternData pattern;  // solo per Pattern
     ConstraintRef third;        // Symmetric: la retta di simmetria
+    // Angle: settore della quota tra le due rette. Bit 0: direzione della prima
+    // retta al contrario, bit 1: della seconda (0 = verso dei segmenti). L'angolo
+    // misurato e' quello tra le due direzioni risultanti: interno o supplementare.
+    int angleSides = 0;
 };
 
 struct SketchObject {

@@ -104,6 +104,12 @@ void remapConstraints(SketchObject &sketch, const QVector<int> &segmentMap, cons
 bool dimensionPoints(const SketchObject &sketch, const SketchConstraint &constraint, QPointF &p, QPointF &q);
 bool constraintLines(const SketchObject &sketch, const SketchConstraint &constraint, QPointF &p0, QPointF &p1, QPointF &q0, QPointF &q1);
 bool circleOf(const SketchObject &sketch, const ConstraintRef &ref, QPointF &center, double &radius);
+// Quota d'angolo: punto comune delle due rette e loro direzioni nel settore
+// della quota (`angleSides`); falso se le rette sono parallele.
+bool angleDirections(const SketchObject &sketch, const SketchConstraint &constraint, QPointF &vertex, QPointF &d, QPointF &e);
+// Sceglie il settore della quota d'angolo che contiene `cursor` (angolo interno
+// o supplementare) e ne prende la misura attuale; la geometria non cambia.
+bool chooseAngleSector(const SketchObject &sketch, SketchConstraint &constraint, const QPointF &cursor);
 
 // Posizione di un punto di riferimento (falso se non esiste).
 bool refPoint(const SketchObject &sketch, const ConstraintRef &ref, QPointF &point);

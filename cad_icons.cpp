@@ -364,6 +364,15 @@ std::map<QString, Draw> &registry() {
         line(p, {18, 3}, {18, 6.5}, QPen(c.ink, 3.4, Qt::SolidLine, Qt::FlatCap));
         dot(p, {12, 21.5}, c.accent, 1.6);
     };
+    icons["gridSnap"] = [](QPainter &p, const IconPalette &c) {
+        const QPen grid = stroke(c.ink, 1.0);
+        for (double x : {4.0, 12.0, 20.0}) line(p, {x, 3}, {x, 21}, grid);
+        for (double y : {4.0, 12.0, 20.0}) line(p, {3, y}, {21, y}, grid);
+        p.setPen(stroke(c.accent, 1.6));
+        p.setBrush(Qt::NoBrush);
+        p.drawEllipse(QPointF(12, 12), 4, 4);
+        dot(p, {12, 12}, c.accent, 1.8);
+    };
     icons["originSnap"] = [](QPainter &p, const IconPalette &c) {
         line(p, {12, 2.5}, {12, 21.5}, stroke(c.ink, 1.0));
         line(p, {2.5, 12}, {21.5, 12}, stroke(c.ink, 1.0));

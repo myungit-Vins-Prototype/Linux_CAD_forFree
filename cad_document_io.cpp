@@ -49,8 +49,9 @@ constexpr char kMagic[4] = {'F', 'C', 'A', 'D'};
 // 25 svuotamento dei solidi; 26 unita' lineare preferita del documento;
 // 27 filettature parametriche su facce cilindriche o coniche; 28 componenti
 // connesse separate prodotte dall'eliminazione delle facce. 29 riferimenti di
-// faccia dei raccordi; 30 asse della rivoluzione scelto nella vista.
-constexpr quint16 kVersion = 30;
+// faccia dei raccordi; 30 asse della rivoluzione scelto nella vista;
+// 31 settore delle quote d'angolo (`SketchConstraint::angleSides`).
+constexpr quint16 kVersion = 31;
 constexpr quint8 kZlib = 1;
 
 void write(QDataStream &out, const CurveObject &curve) {
@@ -150,6 +151,7 @@ void write(QDataStream &out, const SketchObject &sketch) {
         out << c.value << c.positions << c.placement << c.placed;
         if (c.type == ConstraintType::Pattern) writePattern(out, c.pattern);  // formato 11
         writeRef(out, c.third);                                               // formato 13
+        out << qint32(c.angleSides);                                          // formato 31
     }
     out << qint32(sketch.datumPlane);  // formato 8
     out << sketch.symmetryAxes;        // formato 13
@@ -197,6 +199,11 @@ bool read(QDataStream &in, SketchObject &sketch, quint16 version) {
             if (version >= 4) in >> c.placement >> c.placed;
             if (c.type == ConstraintType::Pattern && (version < 11 || !readPattern(in, c.pattern))) return false;
             if (version >= 13) readRef(in, c.third);
+            if (version >= 31) {
+                qint32 sides = 0;
+                in >> sides;
+                c.angleSides = sides & 3;
+            }
         }
     }
     if (version >= 8) {
