@@ -367,6 +367,10 @@ struct GeometryRef {
     quint64 featureId = 0;  // proprietario persistente; index e' la cache operativa
 };
 
+// Asse della rivoluzione dato da un riferimento (ExtrusionObject::revolveAxisRef):
+// -3 resta "segmento eliminato".
+constexpr int kRevolveAxisReference = -4;
+
 // Piano di costruzione. Modi (i riferimenti in `refs`, nell'ordine):
 //  0 parallelo a un piano a distanza `distance`;
 //  1 per tre punti;
@@ -461,7 +465,9 @@ struct ThreadParameters {
 //  - rivoluzione (feature Revolution): profili chiusi dello schizzo
 //    `sketchIndex` ruotati di `revolveAngle` gradi (con segno: verso
 //    destrorso attorno all'asse orientato; 360 = giro completo) attorno al
-//    segmento `revolveAxis` dello schizzo (-1 = asse X, -2 = asse Y del piano);
+//    segmento `revolveAxis` dello schizzo (-1 = asse X, -2 = asse Y del piano;
+//    kRevolveAxisReference: la retta `revolveAxisRef` scelta nella vista, che
+//    deve stare nel piano dello schizzo);
 //  - primitiva (feature Primitive): `primitive`;
 //  - raccordo o smusso (feature Blend): gli spigoli `blendEdges` del corpo
 //    `firstBody` raccordati con raggio `blendSize` (o smussati a distanza
@@ -503,6 +509,7 @@ struct ExtrusionObject {
     BodyFeature feature = BodyFeature::Extrusion;
     int revolveAxis = -1;
     double revolveAngle = 360.0;
+    GeometryRef revolveAxisRef;  // con revolveAxis == kRevolveAxisReference
     PrimitiveParameters primitive;
     bool blendChamfer = false;
     ChamferSpec chamferSpec;
@@ -571,7 +578,7 @@ struct ExtrusionObject {
     // dall'altra).
     int extrudeSides = 0;
     double distance2 = 1.0;
-    // Estrusione e sweep: fusione del risultato con altri solidi (mergeOperation 0
+    // Estrusione, rivoluzione e sweep: fusione del risultato con altri solidi (mergeOperation 0
     // corpo nuovo, 1 unione, 2 sottrazione) nei corpi `mergeBodies` (indici
     // minori, nascosti come gli operandi delle booleane); `mergeAuto` dice che
     // sono stati scelti da soli, tra quelli che hanno punti in comune con la

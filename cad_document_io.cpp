@@ -48,8 +48,9 @@ constexpr char kMagic[4] = {'F', 'C', 'A', 'D'};
 // catene di riferimenti), superficie planare (bordi scelti nella vista).
 // 25 svuotamento dei solidi; 26 unita' lineare preferita del documento;
 // 27 filettature parametriche su facce cilindriche o coniche; 28 componenti
-// connesse separate prodotte dall'eliminazione delle facce.
-constexpr quint16 kVersion = 29;
+// connesse separate prodotte dall'eliminazione delle facce. 29 riferimenti di
+// faccia dei raccordi; 30 asse della rivoluzione scelto nella vista.
+constexpr quint16 kVersion = 30;
 constexpr quint8 kZlib = 1;
 
 void write(QDataStream &out, const CurveObject &curve) {
@@ -315,6 +316,8 @@ void write(QDataStream &out, const ExtrusionObject &body) {
     // bordi) e la feature della base su cui sono stati presi.
     for (const EdgePoint &e : body.blendEdges) out << qint32(e.role);
     out << body.blendBaseFeature;
+    // Formato 30: asse della rivoluzione dato da un riferimento.
+    writeRefs(out, {body.revolveAxisRef});
 }
 
 // `extras` (solo formato 5): i file scritti durante lo sviluppo del formato 5
@@ -512,6 +515,11 @@ bool read(QDataStream &in, ExtrusionObject &body, quint16 version, int extras) {
             e.role = role;
         }
     if (version >= 29) in >> body.blendBaseFeature;
+    if (version >= 30) {
+        QVector<GeometryRef> refs;
+        if (!readRefs(in, refs, version) || refs.size() != 1) return false;
+        body.revolveAxisRef = refs.first();
+    }
     const BodyFeature last = version >= 27 ? BodyFeature::Thread : version >= 25 ? BodyFeature::Shell : BodyFeature::PlanarSurface;
     if (int(body.feature) < 0 || int(body.feature) > int(last)) return false;
     return in.status() == QDataStream::Ok;

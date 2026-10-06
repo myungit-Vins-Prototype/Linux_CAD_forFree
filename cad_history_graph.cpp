@@ -349,6 +349,9 @@ QVector<Dependency> dependencies(int index, const DocumentState &document) {
         break;
     case BodyFeature::Revolution:
         addSketchDependency(result, sketches, index, feature.sketchIndex, QStringLiteral("profilo"));
+        if (feature.revolveAxis == kRevolveAxisReference)
+            addGeometryDependency(result, feature.revolveAxisRef, sketches, features, index, QStringLiteral("asse"));
+        for (int body : feature.mergeBodies) addBodyDependency(result, features, index, body, QStringLiteral("fusione"));
         break;
     case BodyFeature::Blend:
         addBodyDependency(result, features, index, feature.firstBody,

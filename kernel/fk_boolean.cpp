@@ -680,7 +680,12 @@ void BooleanBuilder::coincidentArcs(FaceId fa, FaceId fb, PairResult &out, bool 
                 for (const Interval &range : ranges) {
                 Edge edge = fullEdge;
                 edge.range = range;
-                if (!(range.length() > 0.0) || distance(edge.curve->point(range.lo), edge.curve->point(range.hi)) <= tolerance_) continue;
+                // Tratto degenere; un edge chiuso (il cerchio intero di una
+                // rivoluzione) ha gli estremi uguali ma il punto medio lontano.
+                if (!(range.length() > 0.0)
+                    || (distance(edge.curve->point(range.lo), edge.curve->point(range.hi)) <= tolerance_
+                        && distance(edge.curve->point(range.lo), edge.curve->point(0.5 * (range.lo + range.hi))) <= tolerance_))
+                    continue;
                 CurvePtr<2> pcurve = exactPCurve(surface, edge.curve, edge.range, accept);
                 if (!pcurve && !isPlane(surface)) pcurve = fitPCurve(surface, edge.curve, edge.range, std::min(accept, kPCurveTolerance));
                 if (!pcurve) throw std::logic_error("booleanOperation: edge fuori dalla superficie coincidente");

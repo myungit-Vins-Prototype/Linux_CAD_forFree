@@ -2055,6 +2055,66 @@ public:
             require(vase.forgeBody->isSheet() && !vase.solid && std::fabs(area(vase) - 15.0 * M_PI) < 1e-8, "superficie di rivoluzione: area 15 pi");
             require(v.createRevolution(0, 0, 90.0, QStringLiteral("Quarto")).isEmpty(), "rivoluzione parziale di un profilo aperto");
             require(std::fabs(area(v.extrusions_.back()) - 15.0 * M_PI / 4.0) < 1e-8, "superficie di rivoluzione parziale");
+            // Rivoluzione con l'asse scelto nella vista (l'asse Z del modello,
+            // nel piano XZ dello schizzo) e fusa con i solidi come l'estrusione.
+            {
+                CadViewport r;
+                SketchObject ring;
+                ring.name = QStringLiteral("Anello");
+                ring.plane = 1;
+                addSegment(ring, {1, 0}, {2, 0});
+                addSegment(ring, {2, 0}, {2, 3});
+                addSegment(ring, {2, 3}, {1, 3});
+                addSegment(ring, {1, 3}, {1, 0});
+                r.sketches_.append(ring);
+                ExtrusionObject first;
+                first.name = QStringLiteral("Anello");
+                first.feature = BodyFeature::Revolution;
+                first.sketchIndex = 0;
+                first.plane = 1;
+                first.revolveAxis = kRevolveAxisReference;
+                first.revolveAxisRef.kind = 2;
+                first.revolveAxisRef.index = 2;
+                require(r.createBody(first).isEmpty(), "rivoluzione attorno a un asse del modello");
+                require(std::fabs(massProperties(*r.extrusions_.back().forgeBody).volume - 9.0 * M_PI) < 1e-8, "volume dell'anello: 9 pi");
+                ExtrusionObject outside = first;
+                outside.revolveAxisRef.index = 1;  // l'asse Y e' normale al piano dello schizzo
+                CadViewport probe;
+                probe.sketches_ = r.sketches_;
+                require(!probe.createBody(outside).isEmpty() && probe.extrusions_.isEmpty(), "un asse fuori dal piano dello schizzo e' un errore");
+                SketchObject flange;
+                flange.name = QStringLiteral("Flangia");
+                flange.plane = 1;
+                addSegment(flange, {0, 4}, {0, 5});
+                flange.constructionSegments.append(0);
+                addSegment(flange, {1.5, 1}, {3, 1});
+                addSegment(flange, {3, 1}, {3, 2});
+                addSegment(flange, {3, 2}, {1.5, 2});
+                addSegment(flange, {1.5, 2}, {1.5, 1});
+                r.sketches_.append(flange);
+                ExtrusionObject second;
+                second.name = QStringLiteral("Flangia");
+                second.feature = BodyFeature::Revolution;
+                second.sketchIndex = 1;
+                second.plane = 1;
+                second.revolveAxis = 0;
+                second.mergeOperation = 1;
+                second.mergeAuto = true;
+                require(r.createBody(second).isEmpty(), "rivoluzione unita al solido toccato");
+                const ExtrusionObject &united = r.extrusions_.back();
+                require(united.mergeBodies == QVector<int>{0} && !r.extrusions_.first().visible, "il solido unito si nasconde");
+                require(std::fabs(massProperties(*united.forgeBody).volume - 14.0 * M_PI) < 1e-8, "volume dell'unione: 14 pi");
+                require(r.bodyOperands(united).contains(0), "il solido unito e' un operando");
+                QTemporaryDir dir;
+                const QString path = dir.filePath(QStringLiteral("rivoluzione.prt"));
+                require(saveDocumentFile(path, r.currentDocument(), false).isEmpty(), "salvataggio delle rivoluzioni");
+                DocumentState loaded;
+                require(loadDocumentFile(path, loaded).isEmpty() && loaded.extrusions.size() == 2
+                            && loaded.extrusions.first().revolveAxis == kRevolveAxisReference
+                            && loaded.extrusions.first().revolveAxisRef.kind == 2 && loaded.extrusions.first().revolveAxisRef.index == 2
+                            && loaded.extrusions.back().mergeOperation == 1,
+                        "asse della vista e fusione nel documento");
+            }
             // Il bordo del quarto e' un solo loop: da uno spigolo qualsiasi tutti gli spigoli di bordo.
             const Body &quarter = *v.extrusions_.back().forgeBody;
             int laminar = 0;
@@ -2712,6 +2772,27 @@ public:
             require(cachedBlend.updateBody(blendIndex, existing).isEmpty()
                         && cachedBlend.extrusions_.at(blendIndex).forgeBody == existing.forgeBody,
                     "conferma senza modifiche: corpo invariato");
+            // La finestra passa la seconda distanza dello smusso anche per un
+            // raccordo: per i raccordi non conta.
+            ExtrusionObject fromDialog = existing;
+            fromDialog.chamferSpec.second = existing.blendSize + 1.0;
+            fromDialog.chamferSpec.flip = true;
+            require(cachedBlend.unchangedFeature(fromDialog, blendIndex), "la seconda distanza non conta per un raccordo");
+            // Gli stessi spigoli scelti di nuovo nella vista (punti diversi).
+            require(cachedBlend.beginBlendEdit(blendIndex, existing.blendSize, existing.blendChamfer).isEmpty(),
+                    "modifica degli spigoli del raccordo");
+            ExtrusionObject repicked = existing;
+            repicked.blendEdges = cachedBlend.pickedEdgePoints();
+            require(cachedBlend.unchangedFeature(repicked, blendIndex), "gli stessi spigoli scelti di nuovo non richiedono il calcolo");
+            // Durante la modifica degli spigoli l'anteprima resta quella del
+            // raccordo attuale: togliere o aggiungere spigoli non la ricalcola.
+            const QString existingKey = CadViewport::previewKey(existing, blendIndex);
+            require(cachedBlend.preview_.key == existingKey, "la modifica degli spigoli mostra il raccordo attuale");
+            cachedBlend.pickedEdges_.clear();
+            cachedBlend.pickedEdges_.append(0);
+            cachedBlend.edgePicked();
+            require(cachedBlend.preview_.key == existingKey, "un clic nella modifica degli spigoli non ricalcola");
+            cachedBlend.cancelEdgePick();
             ExtrusionObject changed = existing;
             changed.blendSize = 0.3;
             require(!cachedBlend.unchangedFeature(changed, blendIndex), "un valore cambiato richiede il calcolo");

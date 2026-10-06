@@ -946,6 +946,31 @@ FK_TEST(BooleanCoaxialRevolutions) {
     }
 }
 
+// Applicatore.prt: un utensile di rivoluzione (sotto un toro tangente al
+// piano y = 0 nel cerchio di raggio c, un disco su quel piano) sottratto dal
+// corpo di rivoluzione coassiale che ha la base sullo stesso piano. Il disco
+// dell'utensile e' delimitato da un solo edge chiuso (il cerchio intero):
+// tra le facce complanari va considerato anche se ha gli estremi uguali
+// (prima si scartava come degenere e il risultato non si chiudeva).
+FK_TEST(BooleanCoplanarClosedCircleWithTangentTorus) {
+    const Frame3 frame(Vec3(0, 0, 0), Vec3(0, 1, 0), Vec3(1, 0, 0));
+    const double R = 2.275, c = 1.14678, top = 2.35915;
+    const double rt = ((3 - c) * (3 - c) + top * top) / (2 * top);  // il toro passa per (c, 0) e (3, top)
+    const Profile pa = buildProfile({lineSegment(Vec2(0, 0), Vec2(0, 14)), lineSegment(Vec2(0, 14), Vec2(1.75, 14)), lineSegment(Vec2(1.75, 14), Vec2(R, 11.2)),
+                                     lineSegment(Vec2(R, 11.2), Vec2(R, 0)), lineSegment(Vec2(R, 0), Vec2(0, 0))}, 1e-9);
+    const Profile pb = buildProfile({lineSegment(Vec2(c, 0), Vec2(0, 0)), arcSegment(Vec2(c, rt), rt, -kHalfPi, std::atan2(top - rt, 3 - c)),
+                                     lineSegment(Vec2(3, top), Vec2(3.75, top)), lineSegment(Vec2(3.75, top), Vec2(3.75, -1)),
+                                     lineSegment(Vec2(3.75, -1), Vec2(0, -1)), lineSegment(Vec2(0, -1), Vec2(0, 0))}, 1e-9);
+    FK_CHECK(pa.regions.size() == 1 && pb.regions.size() == 1);
+    if (pa.regions.size() != 1 || pb.regions.size() != 1) return;
+    const Body body = makeRevolution(frame, pa.regions.front()), tool = makeRevolution(frame, pb.regions.front());
+    // Parte comune: 2 pi \int_c^R rho (rt - sqrt(rt^2 - (rho - c)^2)) drho, in forma chiusa.
+    const double S = R - c, root = std::sqrt(rt * rt - S * S);
+    const double common = kPi * rt * (R * R - c * c)
+        - kTwoPi * ((std::pow(rt, 3) - std::pow(root, 3)) / 3.0 + c * (0.5 * S * root + 0.5 * rt * rt * std::asin(S / rt)));
+    checkVolumes(body, tool, massProperties(body).volume, massProperties(tool).volume, common);
+}
+
 namespace {
 
 // Funzione spline Z(u, v) (grado 3 in u, 2 in v) come superficie

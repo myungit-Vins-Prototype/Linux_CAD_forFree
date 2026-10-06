@@ -1,4 +1,6 @@
 #include <cmath>
+#include <fstream>
+#include <sstream>
 #include <TopExp_Explorer.hxx>
 #include <Poly_Triangulation.hxx>
 #include <BRep_Tool.hxx>
@@ -24,6 +26,7 @@
 #include <TopoDS.hxx>
 
 #include "fk_blend.h"
+#include "fk_body_io.h"
 #include "fk_blend_loop.h"
 #include "fk_blend_surface.h"
 #include "fk_surface_algo.h"
@@ -1342,4 +1345,67 @@ FK_TEST(BlendSurfaceEndsOnConcaveCircularWall) {
             FK_CHECK(expected > 0.0);
             surfaceBlended(part.body, {point}, radius, false, expected);
         }
+}
+
+// Applicatore.prt, corpo 4: cilindro con due solchi elicoidali (sweep) che
+// partono da una parete piana (piano del profilo) e finiscono sul cono in
+// cima. Gli spigoli tra il cilindro e i fianchi si avvolgono attorno al
+// cilindro: l'attraversamento del bordo terminale si cerca dal vertice (da
+// meta' spigolo se ne trovava uno lontano, a mezzo giro); contro la parete il
+// cilindro continua oltre il vertice (angolo concavo della faccia) e il bordo
+// rettilineo si allunga; sul cono la curva di chiusura e' una parabola che non
+// avanza lungo la corda e si traccia lungo la v del raccordo.
+FK_TEST(BlendHelicalGrooveEnds) {
+    std::ifstream in(std::string(FORGECAD_SOURCE_DIR) + "/kernel/tests/data/applicatore_threads.bin", std::ios::binary);
+    std::stringstream content;
+    content << in.rdbuf();
+    const Body body = readBodyBinary(content.str());
+    const std::vector<Vec3> points{Vec3(0.90687701161201262, 5.6434640999695747, -2.0864321426261907),
+                                   Vec3(2.0380604771102773, 5.7649196926916986, -1.0109077558558131)};
+    std::vector<const Surface *> old;
+    for (FaceId f : body.faces()) old.push_back(body.face(f).surface.get());
+    for (const Vec3 &point : points)
+        for (double size : {0.1, 0.3})
+            for (bool chamfer : {false, true}) {
+                const EdgeId edge = nearestEdge(body, point, 1e-6);
+                FK_CHECK(edge.valid());
+                if (!edge.valid()) continue;
+                std::vector<const Surface *> sides;
+                for (FinId fin : {body.edge(edge).forward, body.edge(edge).backward}) sides.push_back(body.face(body.finFace(fin)).surface.get());
+                Body result;
+                try {
+                    result = blendEdges(body, {edge}, size, chamfer);
+                } catch (const std::exception &error) {
+                    reportFailure(__FILE__, __LINE__, error.what());
+                    continue;
+                }
+                FK_CHECK(checkBody(result).empty());
+                int created = 0;
+                double ball = 0.0;
+                for (FaceId f : result.faces()) {
+                    if (std::find(old.begin(), old.end(), result.face(f).surface.get()) != old.end()) continue;
+                    ++created;
+                    if (chamfer) continue;
+                    // Palla rotolante: il centro dista r da entrambe le facce dello spigolo.
+                    const Surface &surface = *result.face(f).surface;
+                    const Interval u = surface.uDomain();
+                    for (double fu : {0.1, 0.3, 0.5, 0.7, 0.9})
+                        for (double fv : {0.0, 0.5, 1.0}) {
+                            const double uu = u.lo + fu * u.length();
+                            const Vec3 p = surface.point(uu, fv), n = surface.normal(uu, fv);
+                            double best = 1e300;
+                            for (double sign : {1.0, -1.0}) {
+                                const Vec3 c = p + sign * size * n;
+                                best = std::min(best, std::max(std::fabs(projectPoint(*sides[0], c).distance - size),
+                                                               std::fabs(projectPoint(*sides[1], c).distance - size)));
+                            }
+                            ball = std::max(ball, best);
+                        }
+                }
+                FK_CHECK(created == 1);
+                FK_CHECK(ball < 1e-6 * size);
+                TessellationOptions options;
+                options.deflection = 0.01;
+                FK_CHECK(tessellate(result, options).failedFaces == 0);
+            }
 }

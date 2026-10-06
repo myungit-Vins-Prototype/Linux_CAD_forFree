@@ -139,6 +139,31 @@ ForgeBody forgeExtrusion(const SketchObject &sketch, double distance, QString *e
 ForgeBody forgeRevolution(const SketchObject &sketch, int axis, double angleDegrees, QString *error) {
     QPointF point, direction;
     if (!sketchRevolutionAxis(sketch, axis, point, direction, error)) return nullptr;
+    return forgeRevolution(sketch, point, direction, angleDegrees, error);
+}
+
+bool sketchLineFromWorld(const SketchObject &sketch, const Vec3 &point, const Vec3 &direction, QPointF &linePoint,
+                         QPointF &lineDirection, QString *error) {
+    const Frame3 axes = sketchAxes(sketch);
+    const Vec3 n = axes.zDir();
+    const double scale = std::max(1.0, norm(point - axes.origin()));
+    if (std::abs(dot(n, direction)) > 1.0e-9 || std::abs(dot(n, point - axes.origin())) > 1.0e-7 * scale) {
+        setError(error, QStringLiteral("L'asse di rivoluzione deve stare nel piano dello schizzo."));
+        return false;
+    }
+    const Vec3 xs = axes.xDir(), ys = axes.yDir();
+    const QPointF d(dot(direction, xs), dot(direction, ys));
+    const double length = std::hypot(d.x(), d.y());
+    if (!(length > 0.0)) {
+        setError(error, QStringLiteral("L'asse di rivoluzione non e' una retta valida."));
+        return false;
+    }
+    linePoint = worldToSketch(point, sketch);
+    lineDirection = d / length;
+    return true;
+}
+
+ForgeBody forgeRevolution(const SketchObject &sketch, const QPointF &point, const QPointF &direction, double angleDegrees, QString *error) {
     if (std::abs(angleDegrees) <= 1.0e-9) {
         setError(error, QStringLiteral("L'angolo di rivoluzione e' nullo."));
         return nullptr;

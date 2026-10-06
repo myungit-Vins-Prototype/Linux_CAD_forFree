@@ -18,6 +18,7 @@
 #include "cad_overlay_renderer.h"
 #include <QOpenGLContext>
 #include <array>
+#include <set>
 #include "fk_classify.h"
 #include "fk_surface_algo.h"
 #include "fk_curve_algo.h"
@@ -883,6 +884,7 @@ public:
                 for (GeometryRef &ref : *refs) remapRef(ref);
             remapRef(feature.extentRef);
             remapRef(feature.move.axis);
+            remapRef(feature.revolveAxisRef);
         }
 
         for (const ExtrusionObject &feature : reordered)
@@ -905,7 +907,7 @@ public:
                     || feature.feature == BodyFeature::Sew || feature.feature == BodyFeature::DeleteFace
                     || feature.feature == BodyFeature::Shell || feature.feature == BodyFeature::Thread) {
                     feature.firstBody = previous;
-                } else if ((feature.feature == BodyFeature::Extrusion || feature.feature == BodyFeature::Sweep) && feature.mergeOperation != 0) {
+                } else if (mergingFeature(feature) && feature.mergeOperation != 0) {
                     bool replaced = false;
                     for (int &merged : feature.mergeBodies)
                         if (merged >= 0 && reordered.at(merged).modelBodyId == bodyId) { merged = previous; replaced = true; break; }
@@ -1094,9 +1096,7 @@ public:
     // da fondere sono ancora da scegliere tra i candidati.
     ExtrusionObject withMergeCandidates(ExtrusionObject definition, int index) const {
         definition.mergeProbe = false;
-        if (definition.operation < 0
-            && (definition.feature == BodyFeature::Extrusion || definition.feature == BodyFeature::Sweep)
-            && definition.mergeOperation != 0 && definition.mergeAuto) {
+        if (mergingFeature(definition) && definition.mergeOperation != 0 && definition.mergeAuto) {
             definition.mergeBodies = mergeCandidates(index);
             definition.mergeProbe = true;
         }
@@ -1116,14 +1116,41 @@ public:
         normalized.mergeProbe = false;
         ExtrusionObject reference = existing;
         reference.mergeProbe = false;
-        return previewKey(normalized, index) == previewKey(reference, index);
+        if (previewKey(normalized, index) == previewKey(reference, index)) return true;
+        // Raccordi: gli spigoli scelti di nuovo nella vista hanno punti diversi
+        // da quelli salvati anche quando sono gli stessi spigoli; conta lo
+        // spigolo (e la faccia) che indicano sulla base.
+        if (definition.operation >= 0 || definition.feature != BodyFeature::Blend || existing.feature != BodyFeature::Blend) return false;
+        normalized.blendEdges.clear();
+        reference.blendEdges.clear();
+        if (previewKey(normalized, index) != previewKey(reference, index)) return false;
+        return sameBlendEdges(definition.blendEdges, existing);
+    }
+    // Gli spigoli `edges` (presi sulla base attuale) sono quelli del raccordo `blend`.
+    bool sameBlendEdges(const QVector<EdgePoint> &edges, const ExtrusionObject &blend) const {
+        if (blend.firstBody < 0 || blend.firstBody >= extrusions_.size() || !extrusions_.at(blend.firstBody).forgeBody) return false;
+        const ExtrusionObject &base = extrusions_.at(blend.firstBody);
+        ForgeCad::Kernel::Box box;
+        for (ForgeCad::Kernel::VertexId v : base.forgeBody->vertices()) box.add(base.forgeBody->vertex(v).point);
+        const double reach = 1e-3 * std::max(1.0, box.diagonal());
+        const bool sameState = blend.blendBaseFeature != 0 && blend.blendBaseFeature == base.featureId;
+        std::vector<ForgeCad::Kernel::EdgeId> picked, stored;
+        if (!ForgeCad::resolveBlendEdges(*base.forgeBody, edges, reach, picked, ForgeCad::ReferenceState::Same)
+            || !ForgeCad::resolveBlendEdges(*base.forgeBody, blend.blendEdges, reach, stored,
+                                            sameState ? ForgeCad::ReferenceState::Same : ForgeCad::ReferenceState::Other))
+            return false;
+        const auto indices = [](const std::vector<ForgeCad::Kernel::EdgeId> &ids) {
+            std::set<int> result;
+            for (ForgeCad::Kernel::EdgeId id : ids) result.insert(id.index);
+            return result;
+        };
+        return !picked.empty() && indices(picked) == indices(stored);
     }
 
     // Corpi che la funzione nasconde (operandi delle booleane, corpi in cui si fonde l'estrusione).
     static QVector<int> hiddenOperands(const ExtrusionObject &body) {
         if (body.operation >= 0) return QVector<int>{body.firstBody, body.secondBody} + body.booleanTools;
-        if ((body.feature == BodyFeature::Extrusion || body.feature == BodyFeature::Sweep) && body.mergeOperation != 0)
-            return body.mergeBodies;
+        if (mergingFeature(body) && body.mergeOperation != 0) return body.mergeBodies;
         if (body.feature == BodyFeature::Transform && !body.move.copy) return {body.firstBody};
         if (body.feature == BodyFeature::Sew) return QVector<int>{body.firstBody} + body.booleanTools;
         return {};
@@ -1816,6 +1843,7 @@ public:
                     if (isSketchRef(ref)) renumber(ref.index);
             if (isSketchRef(body.extentRef)) renumber(body.extentRef.index);
             if (isSketchRef(body.move.axis)) renumber(body.move.axis.index);
+            if (isSketchRef(body.revolveAxisRef)) renumber(body.revolveAxisRef.index);
         }
         if (activeSketch_ == index) activeSketch_ = -1;
         else if (activeSketch_ > index) --activeSketch_;
@@ -2001,7 +2029,7 @@ public:
         // risultato, gia' forate/tagliate, mentre la superficie di taglio e'
         // la sola patch trasparente. Lo sweep conserva per ora la sostituzione
         // completa del risultato.
-        if (definition.operation < 0 && definition.feature == BodyFeature::Extrusion) {
+        if (localMergePreview(definition)) {
             preview_.replaced.clear();
             if (!definition.mergeProbe) {
                 if (definition.mergeOperation == 2) preview_.replaced = definition.mergeBodies;
@@ -2279,7 +2307,7 @@ public:
         // Per un'estrusione fusa/sottratta preview_.display e' volutamente la
         // sola patch locale. Alla conferma serve invece la mesh completa del
         // risultato definitivo (senza rifare il calcolo B-rep).
-        if (body.operation < 0 && body.feature == BodyFeature::Extrusion && body.mergeOperation != 0
+        if (localMergePreview(body) && body.mergeOperation != 0
             && preview_.resultDisplay.vertices.isEmpty() && preview_.resultDisplay.edges.isEmpty())
             tessellateGeometry(body, tessellationQuality_, body.display);
         body.display.constructionCurves.clear();
@@ -2355,7 +2383,8 @@ public:
     // clic chiama setReferencePickCallback(true, riferimento); Esc (false, {}).
     // Senza nulla sotto il puntatore il trascinamento ruota la vista.
     QString beginReferencePick(int roles, int owner) {
-        if (sketchMode_) return QStringLiteral("Esci prima dalla modalita' schizzo.");
+        // Nello schizzo solo con la vista sbloccata (estrusione, rivoluzione): i clic scelgono, non disegnano.
+        if (sketchMode_ && !sketchViewUnlocked_) return QStringLiteral("Esci prima dalla modalita' schizzo.");
         if (edgePicking_) cancelEdgePick();
         refPicking_ = true;
         refPickRoles_ = roles;
@@ -4322,6 +4351,7 @@ protected:
                 for (GeometryRef &ref : *refs) remap(ref);
             remap(body.extentRef);
             remap(body.move.axis);
+            remap(body.revolveAxisRef);
         }
     }
 
@@ -6299,6 +6329,7 @@ private:
                     if (isBodyRef(ref)) ref.index = map.value(ref.index, -1);
             if (isBodyRef(body.extentRef)) body.extentRef.index = map.value(body.extentRef.index, -1);
             if (isBodyRef(body.move.axis)) body.move.axis.index = map.value(body.move.axis.index, -1);
+            if (isBodyRef(body.revolveAxisRef)) body.revolveAxisRef.index = map.value(body.revolveAxisRef.index, -1);
             // Strumenti e corpi fusi eliminati: escono dall'elenco.
             for (QVector<int> *list : {&body.booleanTools, &body.mergeBodies}) {
                 QVector<int> kept2;
@@ -6420,6 +6451,16 @@ private:
     }
     // Funzione curva (elica, spirale): niente solido ne' superficie, solo la curva.
     static bool isCurveBody(const ExtrusionObject &body) { return body.operation < 0 && body.feature == BodyFeature::Helix; }
+    // Funzioni che si possono fondere con i solidi (mergeOperation): estrusione, rivoluzione, sweep.
+    static bool mergingFeature(const ExtrusionObject &body) {
+        return body.operation < 0
+            && (body.feature == BodyFeature::Extrusion || body.feature == BodyFeature::Revolution || body.feature == BodyFeature::Sweep);
+    }
+    // Anteprima locale della fusione: i corpi toccati restano opachi e si
+    // disegnano solo le facce nuove (estrusione e rivoluzione).
+    static bool localMergePreview(const ExtrusionObject &body) {
+        return body.operation < 0 && (body.feature == BodyFeature::Extrusion || body.feature == BodyFeature::Revolution);
+    }
     // Piano di costruzione: niente solido, solo il piano (datumFrame).
     static bool isDatumBody(const ExtrusionObject &body) { return body.operation < 0 && body.feature == BodyFeature::DatumPlane; }
     // Corpo con una forma (solido o superficie): non una curva ne' un piano di costruzione.
@@ -6432,6 +6473,11 @@ private:
         case BodyFeature::Extrusion: {
             QVector<int> bodies = body.mergeOperation != 0 ? body.mergeBodies : QVector<int>();
             if (body.extent != 0 && isBodyRef(body.extentRef)) bodies.append(body.extentRef.index);
+            return bodies;
+        }
+        case BodyFeature::Revolution: {
+            QVector<int> bodies = body.mergeOperation != 0 ? body.mergeBodies : QVector<int>();
+            if (body.revolveAxis == kRevolveAxisReference && isBodyRef(body.revolveAxisRef)) bodies.append(body.revolveAxisRef.index);
             return bodies;
         }
         case BodyFeature::Blend:
@@ -6491,7 +6537,10 @@ private:
         case BodyFeature::Extrusion:
             if (body.extent != 0 && isSketchRef(body.extentRef) && body.extentRef.index != body.sketchIndex) return {body.sketchIndex, body.extentRef.index};
             return {body.sketchIndex};
-        case BodyFeature::Revolution: return {body.sketchIndex};
+        case BodyFeature::Revolution:
+            if (body.revolveAxis == kRevolveAxisReference && isSketchRef(body.revolveAxisRef) && body.revolveAxisRef.index != body.sketchIndex)
+                return {body.sketchIndex, body.revolveAxisRef.index};
+            return {body.sketchIndex};
         case BodyFeature::Transform: return isSketchRef(body.move.axis) ? QVector<int>{body.move.axis.index} : QVector<int>{};
         case BodyFeature::Helix: return body.helix.source == 0 ? QVector<int>{body.sketchIndex} : QVector<int>{};
         case BodyFeature::Sweep: return body.sweepPath == 0 ? QVector<int>{body.sketchIndex, body.pathSketch} : QVector<int>{body.sketchIndex};
@@ -6978,7 +7027,7 @@ private:
                         target = first ? first->forgeBody : nullptr;
                         tool = uniteBodies(QVector<int>{base->secondBody} + base->booleanTools);
                         operation = BooleanOperation(base->operation);
-                    } else if (base->operation < 0 && base->feature == BodyFeature::Extrusion && base->mergeOperation != 0 && !base->mergeBodies.isEmpty()) {
+                    } else if (mergingFeature(*base) && base->feature != BodyFeature::Sweep && base->mergeOperation != 0 && !base->mergeBodies.isEmpty()) {
                         ExtrusionObject plain = *base;
                         plain.mergeOperation = 0;
                         plain.mergeProbe = false;
@@ -6989,7 +7038,7 @@ private:
                     }
                     if (!target || !tool) {
                         if (body.error.isEmpty() || base->operation != 0)
-                            body.error = QStringLiteral("La ripetizione della funzione vale per un'unione, una differenza o un'estrusione che si unisce o sottrae.");
+                            body.error = QStringLiteral("La ripetizione della funzione vale per un'unione, una differenza o un'estrusione o rivoluzione che si unisce o sottrae.");
                         return;
                     }
                     body.forgeBody = ForgeCad::forgePatternFeature(target, tool, operation, placements, &body.error);
@@ -7009,7 +7058,23 @@ private:
                 if (!s) {
                     body.error = QStringLiteral("Lo schizzo del corpo non esiste piu'.");
                 } else if (body.feature == BodyFeature::Revolution) {
-                    body.forgeBody = ForgeCad::forgeRevolution(*s, body.revolveAxis, body.revolveAngle, &body.error);
+                    if (body.revolveAxis == kRevolveAxisReference) {
+                        // Asse scelto nella vista: una retta nel piano dello schizzo.
+                        ForgeCad::ResolvedRef axis;
+                        QPointF point, direction;
+                        if (!ForgeCad::resolveGeometryRef(body.revolveAxisRef, index, sketches, bodies, axis, &body.error)) return;
+                        if (!axis.hasLine) {
+                            body.error = QStringLiteral("Il riferimento scelto come asse non e' una retta.");
+                            return;
+                        }
+                        if (!ForgeCad::sketchLineFromWorld(*s, axis.point, axis.direction, point, direction, &body.error)) return;
+                        body.forgeBody = ForgeCad::forgeRevolution(*s, point, direction, body.revolveAngle, &body.error);
+                    } else {
+                        body.forgeBody = ForgeCad::forgeRevolution(*s, body.revolveAxis, body.revolveAngle, &body.error);
+                    }
+                    // Una superficie non si fonde con i solidi.
+                    if (body.forgeBody && !body.forgeBody->isSheet())
+                        body.forgeBody = ForgeCad::forgeMergeFeatureResult(body, body.forgeBody, index, bodies, &body.error);
                     body.solid = body.forgeBody && !body.forgeBody->isSheet();
                 } else {
                     body.forgeBody = ForgeCad::forgeExtrusionFeature(body, index, sketches, bodies, &body.error);
@@ -9446,7 +9511,14 @@ private:
     // Gli spigoli scelti sono cambiati: messaggio e anteprima.
     void edgePicked() {
         if (!edgePickPreviewEnabled_ || pickedEdges_.isEmpty() || edgePickHelix_) clearBlendPreview();
-        else if (edgePickExtend_) requestExtendPreview(edgePickBody_, pickedEdgePoints(), edgePickSize_, edgePickLinear_, edgePickEdit_);
+        else if (!edgePickExtend_ && edgePickEdit_ >= 0 && edgePickEdit_ < extrusions_.size()) {
+            // Modifica degli spigoli di un raccordo esistente: niente calcolo a
+            // ogni clic (si fa una volta, con la misura, alla conferma); resta
+            // la patch del raccordo attuale, dal body che c'e' gia'.
+            const ExtrusionObject &existing = extrusions_.at(edgePickEdit_);
+            if (unchangedFeature(existing, edgePickEdit_)) requestPreview(existing, edgePickEdit_);
+            else clearBlendPreview();
+        } else if (edgePickExtend_) requestExtendPreview(edgePickBody_, pickedEdgePoints(), edgePickSize_, edgePickLinear_, edgePickEdit_);
         else requestBlendPreview(edgePickBody_, pickedEdgePoints(), edgePickSize_, edgePickChamfer_, edgePickEdit_, edgePickSpec_);
         if (edgePickStatus_) edgePickStatus_(edgePickMessage());
         if (edgePickChanged_) edgePickChanged_(edgePickBody_, pickedEdgePoints());
@@ -10349,7 +10421,9 @@ private:
                           QString::number(d.secondBody), QString::number(d.deleteComponent), n(d.blendSize), QString::number(d.blendChamfer), QString::number(d.trimPlane),
                           n(d.trimKeep.x), n(d.trimKeep.y), n(d.trimKeep.z), QString::number(d.extendLinear), n(d.scaleFactor),
                           QString::number(d.scaleCenterMode), n(d.scaleCenter.x), n(d.scaleCenter.y), n(d.scaleCenter.z),
-                          QString::number(d.chamferSpec.mode), n(d.chamferSpec.second), QString::number(d.chamferSpec.flip)};
+                          QString::number(d.blendChamfer && d.chamferSpec.mode != 0 ? d.chamferSpec.mode : 0),
+                          n(d.blendChamfer && d.chamferSpec.mode != 0 ? d.chamferSpec.second : 0.0),
+                          QString::number(d.blendChamfer && d.chamferSpec.mode != 0 && d.chamferSpec.flip)};
         const PrimitiveParameters &p = d.primitive;
         parts << QString::number(int(p.kind)) << QString::number(p.plane);
         for (int k = 0; k < 3; ++k) parts << n(p.origin[k]) << n(p.size[k]);
@@ -10397,6 +10471,7 @@ private:
         parts << QStringLiteral("M") << n(d.move.translation[0]) << n(d.move.translation[1]) << n(d.move.translation[2]) << n(d.move.angle)
               << QString::number(d.move.copy);
         ref(d.move.axis);
+        ref(d.revolveAxisRef);
         // Offset e cucitura; loft e sweep di superficie, rigata e planare.
         parts << QStringLiteral("O");
         for (const EdgePoint &e : d.offsetFaces)
@@ -10454,7 +10529,7 @@ private:
         const bool blend = in.definition.operation < 0 && in.definition.feature == BodyFeature::Blend && body.forgeBody
             && in.definition.firstBody >= 0 && in.definition.firstBody < in.bodies.size()
             && in.bodies.at(in.definition.firstBody).forgeBody;
-        const bool localExtrusion = in.definition.operation < 0 && in.definition.feature == BodyFeature::Extrusion
+        const bool localExtrusion = localMergePreview(in.definition)
             && body.mergeOperation != 0 && !body.mergeBodies.isEmpty() && body.forgeBody;
         if (blend) {
             if (in.reuse) resultDisplay = in.existingDisplay;
@@ -10572,8 +10647,7 @@ private:
                 if (workCallback_) workCallback_(false, QStringLiteral("Calcolo dell'anteprima..."), true);
                 if (generation == preview_.generation) {
                     if (probe) {
-                        const bool localExtrusion = preview_.definition.operation < 0
-                            && preview_.definition.feature == BodyFeature::Extrusion
+                        const bool localExtrusion = localMergePreview(preview_.definition)
                             && preview_.definition.mergeOperation != 0;
                         if (localExtrusion) {
                             if (preview_.definition.mergeOperation == 2) {
@@ -14002,7 +14076,8 @@ static bool patternDialog(QMainWindow *window, CadViewport *viewport, const QStr
         p.kind = kind;
         const ExtrusionObject &base = bodies.at(candidates.at(bodyBox->currentIndex()));
         const bool feature = base.operation == 0 || base.operation == 2
-            || (base.operation < 0 && base.feature == BodyFeature::Extrusion && base.mergeOperation != 0 && !base.mergeBodies.isEmpty());
+            || (base.operation < 0 && (base.feature == BodyFeature::Extrusion || base.feature == BodyFeature::Revolution)
+                && base.mergeOperation != 0 && !base.mergeBodies.isEmpty());
         if (!feature && whatBox->currentIndex() == 1) whatBox->setCurrentIndex(0);
         whatBox->setEnabled(feature);
         refLabel->setText(kind == 0 ? QStringLiteral("Direzione:") : kind == 1 ? QStringLiteral("Asse:") : QStringLiteral("Piano di simmetria:"));
@@ -16013,22 +16088,29 @@ static ExtendDialogResult extendDialog(QWidget *parent, CadViewport *viewport, c
     return result;
 }
 
-// Finestra dei parametri della rivoluzione (anche per modificarne una: lo
-// schizzo resta quello, `fixedSketch`). Valori iniziali e risultato negli argomenti.
-// Con `apply` la conferma esegue il comando e la finestra resta aperta se fallisce.
-static bool revolutionDialog(QWidget *parent, const QVector<SketchObject> &sketches, bool fixedSketch, int &sketch, int &axis,
-                             double &angle, const std::function<QString(int, int, double)> &apply = {},
-                             const PreviewSpec<int, int, double> &preview = {}) {
+// Finestra della rivoluzione (anche per modificarne una: lo schizzo resta
+// quello, `fixedSketch`): schizzo, asse (dall'elenco o scelto nella vista: un
+// segmento o una linea di costruzione dello schizzo, gli assi del modello, uno
+// spigolo rettilineo o l'asse di una faccia cilindrica, purche' stia nel piano
+// dello schizzo), angolo con il verso, risultato (corpo nuovo, unione o
+// sottrazione con i solidi, come l'estrusione) e l'anteprima. La conferma
+// chiama `apply`; la finestra resta aperta se fallisce.
+static bool revolutionDialog(QWidget *parent, CadViewport *viewport, const QString &title, int replaced, const ExtrusionObject &initial,
+                             bool fixedSketch, const std::function<QString(const ExtrusionObject &)> &apply) {
+    const QVector<SketchObject> &sketches = viewport->sketches();
+    const QVector<ExtrusionObject> &bodies = viewport->extrusions();
     FunctionDialogPanel dialog(parent);
-    dialog.setWindowTitle(QStringLiteral("Rivoluzione"));
+    dialog.setWindowTitle(title);
     auto *form = dialog.createScrollableForm();
     form->addRow(new FeatureOperationDiagram(FeatureOperationDiagram::Revolution, &dialog));
     auto *sketchBox = new QComboBox(&dialog);
     for (const SketchObject &item : sketches) sketchBox->addItem(item.name);
-    sketchBox->setCurrentIndex(qBound(0, sketch, int(sketches.size()) - 1));
+    sketchBox->setCurrentIndex(qBound(0, initial.sketchIndex, int(sketches.size()) - 1));
     sketchBox->setEnabled(!fixedSketch);
+    GeometryRef axisRef = initial.revolveAxis == kRevolveAxisReference ? initial.revolveAxisRef : GeometryRef();
     auto *axisBox = new QComboBox(&dialog);
-    const auto fillAxes = [axisBox, &sketches](int sketchIndex) {
+    const auto fillAxes = [&, axisBox](int sketchIndex) {
+        const QSignalBlocker blocker(axisBox);
         axisBox->clear();
         if (sketchIndex < 0 || sketchIndex >= sketches.size()) return;
         const SketchObject &item = sketches.at(sketchIndex);
@@ -16039,63 +16121,170 @@ static bool revolutionDialog(QWidget *parent, const QVector<SketchObject> &sketc
             if (!item.isConstructionSegment(index)) axisBox->addItem(QStringLiteral("Segmento %1 del profilo").arg(++ordinary), index);
         axisBox->addItem(QStringLiteral("Asse X del piano"), -1);
         axisBox->addItem(QStringLiteral("Asse Y del piano"), -2);
+        if (axisRef.kind >= 0)
+            axisBox->addItem(QStringLiteral("Nella vista: ") + ForgeCad::geometryRefText(axisRef, sketches, bodies), kRevolveAxisReference);
     };
     fillAxes(sketchBox->currentIndex());
-    const int initialAxis = axisBox->findData(axis);
-    if (fixedSketch && initialAxis >= 0) axisBox->setCurrentIndex(initialAxis);
-    QObject::connect(sketchBox, &QComboBox::currentIndexChanged, &dialog, fillAxes);
+    {
+        const int initialAxis = axisBox->findData(initial.revolveAxis);
+        if (initialAxis >= 0 && (fixedSketch || initial.revolveAxis == kRevolveAxisReference)) axisBox->setCurrentIndex(initialAxis);
+    }
+    auto *pickButton = new QPushButton(QStringLiteral("Scegli l'asse nella vista"), &dialog);
+    pickButton->setCheckable(true);
+    pickButton->setToolTip(QStringLiteral("Clicca una retta: un segmento o una linea di costruzione dello schizzo, un asse del modello,\n"
+                                          "uno spigolo rettilineo o una faccia cilindrica (il suo asse). Deve stare nel piano dello schizzo."));
     auto *angleBox = new ForgeCad::ExpressionSpinBox(&dialog);
     angleBox->setDecimals(6);
     angleBox->setRange(0.000001, 360.0);
-    angleBox->setValue(std::abs(angle));
-    angleBox->setSuffix(QStringLiteral(" \u00B0"));
+    angleBox->setValue(std::abs(initial.revolveAngle));
+    angleBox->setSuffix(QStringLiteral(" °"));
     // Inverti il verso: pulsante a due stati (premuto = angolo negativo).
     auto *reverseBox = new QPushButton(ForgeCad::commandIcon(QStringLiteral("reverseDirection")), QStringLiteral("Inverti il verso"), &dialog);
     reverseBox->setCheckable(true);
     reverseBox->setToolTip(QStringLiteral("Ruota nel verso opposto attorno all'asse"));
-    reverseBox->setChecked(angle < 0.0);
+    reverseBox->setChecked(initial.revolveAngle < 0.0);
     // Come nei raccordi: l'anteprima si calcola con Invio (o con le frecce), non a ogni carattere.
     angleBox->setKeyboardTracking(false);
+    auto *operationBox = new QComboBox(&dialog);
+    operationBox->addItems({QStringLiteral("Corpo nuovo"), QStringLiteral("Unisci ai solidi"), QStringLiteral("Sottrai dai solidi")});
+    operationBox->setCurrentIndex(qBound(0, initial.mergeOperation, 2));
+    auto *autoBox = new QCheckBox(QStringLiteral("Automatico: i solidi che hanno punti in comune con la rivoluzione"), &dialog);
+    autoBox->setChecked(initial.mergeAuto);
+    auto *bodyList = new QListWidget(&dialog);
+    bodyList->setMinimumHeight(110);
+    for (int index = 0; index < bodies.size() && (replaced < 0 || index < replaced); ++index) {
+        const ExtrusionObject &body = bodies.at(index);
+        if (!body.forgeBody || !body.solid || (body.operation < 0 && (body.feature == BodyFeature::DatumPlane || body.feature == BodyFeature::Helix)))
+            continue;
+        const bool used = initial.mergeBodies.contains(index);
+        auto *item = new QListWidgetItem(body.visible || used ? body.name : body.name + QStringLiteral(" (nascosto)"), bodyList);
+        item->setFlags(item->flags() | Qt::ItemIsUserCheckable);
+        item->setCheckState(used ? Qt::Checked : Qt::Unchecked);
+        item->setData(Qt::UserRole, index);
+    }
+    auto *pickStatus = new QLabel(&dialog);
+    pickStatus->setWordWrap(true);
+    pickStatus->setMaximumWidth(360);
+    pickStatus->setStyleSheet(QStringLiteral("color: #8aa0b4;"));
     form->addRow(QStringLiteral("Schizzo:"), sketchBox);
     form->addRow(QStringLiteral("Asse:"), axisBox);
+    form->addRow(QString(), pickButton);
+    form->addRow(QString(), pickStatus);
     form->addRow(QStringLiteral("Angolo:"), angleBox);
     form->addRow(QString(), reverseBox);
-    const PreviewScope scope(preview.define ? preview.viewport : nullptr, dialog, form, preview.index);
-    if (preview.define) {
-        const auto refresh = [&scope, &preview, sketchBox, axisBox, angleBox, reverseBox] {
-            if (axisBox->currentIndex() < 0) return;
-            scope.request(preview.define(sketchBox->currentIndex(), axisBox->currentData().toInt(),
-                                         reverseBox->isChecked() ? -angleBox->value() : angleBox->value()));
-        };
-        QObject::connect(axisBox, &QComboBox::currentIndexChanged, &dialog, refresh);
-        angleBox->onReturn = refresh;
-        QObject::connect(reverseBox, &QPushButton::toggled, &dialog, refresh);
+    form->addRow(QStringLiteral("Risultato:"), operationBox);
+    form->addRow(QString(), autoBox);
+    form->addRow(QStringLiteral("Solidi:"), bodyList);
+    const PreviewScope scope(viewport, dialog, form, replaced);
+    const auto current = [&] {
+        ExtrusionObject d = initial;
+        d.operation = -1;
+        d.feature = BodyFeature::Revolution;
+        d.sketchIndex = sketchBox->currentIndex();
+        d.plane = sketches.value(d.sketchIndex).plane;
+        d.revolveAxis = axisBox->currentIndex() >= 0 ? axisBox->currentData().toInt() : -1;
+        d.revolveAxisRef = d.revolveAxis == kRevolveAxisReference ? axisRef : GeometryRef();
+        d.revolveAngle = reverseBox->isChecked() ? -angleBox->value() : angleBox->value();
+        d.mergeOperation = operationBox->currentIndex();
+        d.mergeAuto = autoBox->isChecked();
+        d.mergeBodies.clear();
+        for (int row = 0; row < bodyList->count(); ++row)
+            if (bodyList->item(row)->checkState() == Qt::Checked) d.mergeBodies.append(bodyList->item(row)->data(Qt::UserRole).toInt());
+        return d;
+    };
+    // L'asse scelto, evidenziato nella vista.
+    const auto markAxis = [&] {
+        const int axis = axisBox->currentIndex() >= 0 ? axisBox->currentData().toInt() : -1;
+        GeometryRef mark;
+        if (axis >= 0) {
+            mark.kind = 7;
+            mark.index = sketchBox->currentIndex();
+            mark.element = {0, axis, -1};
+        } else if (axis == kRevolveAxisReference) {
+            mark = axisRef;
+        }
+        viewport->setReferenceMarks(mark.kind >= 0 ? QVector<GeometryRef>{mark} : QVector<GeometryRef>());
+    };
+    const auto refresh = [&] {
+        const bool merge = operationBox->currentIndex() != 0;
+        form->setRowVisible(autoBox, merge);
+        form->setRowVisible(bodyList, merge);
+        bodyList->setEnabled(!autoBox->isChecked());
+        markAxis();
+        if (axisBox->currentIndex() < 0) return;
+        scope.request(viewport->withMergeCandidates(current(), replaced >= 0 ? replaced : int(bodies.size())));
+    };
+    const auto setPicking = [&](bool on) {
+        const QSignalBlocker blocker(pickButton);
+        pickButton->setChecked(on);
+        if (!on) {
+            viewport->cancelReferencePick();
+            pickStatus->setText(QString());
+            return;
+        }
+        const QString error = viewport->beginReferencePick(ForgeCad::DatumRoleLine, replaced);
+        if (!error.isEmpty()) {
+            pickButton->setChecked(false);
+            pickStatus->setText(error);
+            return;
+        }
+        pickStatus->setText(QStringLiteral("Clicca l'asse nella vista (Esc nella vista: annulla la scelta; lontano dagli oggetti il trascinamento ruota la vista)."));
+    };
+    viewport->setReferencePickCallback([&](bool picked, GeometryRef ref) {
+        const QSignalBlocker blocker(pickButton);
+        pickButton->setChecked(false);
+        pickStatus->setText(QString());
+        if (!picked) return;
+        // Un segmento dello schizzo stesso: l'asse e' quel segmento (segue lo schizzo).
+        if (ref.kind == 7 && ref.index == sketchBox->currentIndex() && ref.element.kind == 0) {
+            const int row = axisBox->findData(ref.element.element);
+            if (row >= 0) {
+                axisBox->setCurrentIndex(row);
+                return;
+            }
+        }
+        if (!(ForgeCad::geometryRefRoles(ref, sketches) & ForgeCad::DatumRoleLine)) {
+            pickStatus->setText(QStringLiteral("Questo riferimento non e' una retta."));
+            return;
+        }
+        axisRef = ref;
+        fillAxes(sketchBox->currentIndex());
+        axisBox->setCurrentIndex(axisBox->findData(kRevolveAxisReference));
         refresh();
-    }
+    });
+    QObject::connect(pickButton, &QPushButton::toggled, &dialog, setPicking);
+    QObject::connect(sketchBox, &QComboBox::currentIndexChanged, &dialog, [&](int index) {
+        // Un asse dell'elenco vale per lo schizzo; quello della vista resta.
+        fillAxes(index);
+        if (axisRef.kind >= 0) axisBox->setCurrentIndex(axisBox->findData(kRevolveAxisReference));
+        refresh();
+    });
+    QObject::connect(axisBox, &QComboBox::currentIndexChanged, &dialog, refresh);
+    angleBox->onReturn = refresh;
+    QObject::connect(reverseBox, &QPushButton::toggled, &dialog, refresh);
+    QObject::connect(operationBox, &QComboBox::currentIndexChanged, &dialog, refresh);
+    QObject::connect(autoBox, &QCheckBox::toggled, &dialog, refresh);
+    QObject::connect(bodyList, &QListWidget::itemChanged, &dialog, refresh);
     auto *buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dialog);
     QObject::connect(buttons, &QDialogButtonBox::accepted, &dialog, &QDialog::accept);
     QObject::connect(buttons, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
     form->addRow(buttons);
-    const auto read = [&] {
+    refresh();
+    const auto run = [&] {
         angleBox->interpretText();  // il valore scritto vale anche senza Invio
-        sketch = sketchBox->currentIndex();
-        axis = axisBox->currentData().toInt();
-        angle = reverseBox->isChecked() ? -angleBox->value() : angleBox->value();
+        if (axisBox->currentIndex() < 0) return QStringLiteral("Scegli l'asse della rivoluzione.");
+        const ExtrusionObject d = current();
+        if (d.mergeOperation != 0 && !d.mergeAuto && d.mergeBodies.isEmpty()) return QStringLiteral("Spunta almeno un solido (o scegli Automatico).");
+        return apply(d);
     };
-    if (apply) {
-        const auto run = [&] {
-            if (axisBox->currentIndex() < 0) return QStringLiteral("Scegli l'asse della rivoluzione.");
-            read();
-            return apply(sketch, axis, angle);
-        };
-        // Con l'anteprima la finestra non e' modale: la vista si puo' ruotare per vedere il verso.
-        auto *window = qobject_cast<QMainWindow *>(parent);
-        if (window && preview.viewport) return runUntilAppliedModeless(window, preview.viewport, dialog, form, buttons, run);
-        return runUntilApplied(dialog, form, buttons, run);
-    }
-    if (dialog.exec() != QDialog::Accepted || axisBox->currentIndex() < 0) return false;
-    read();
-    return true;
+    // La finestra non e' modale: la vista si puo' ruotare per vedere il verso e l'asse si sceglie cliccandolo.
+    bool applied = false;
+    if (auto *window = qobject_cast<QMainWindow *>(parent)) applied = runUntilAppliedModeless(window, viewport, dialog, form, buttons, run);
+    else applied = runUntilApplied(dialog, form, buttons, run);
+    viewport->cancelReferencePick();
+    viewport->setReferencePickCallback({});
+    viewport->setReferenceMarks({});
+    return applied;
 }
 
 static QString primitiveTitle(PrimitiveKind kind) {
@@ -16441,16 +16630,8 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
         } else if (original.feature == BodyFeature::Extrusion) {
             extrusionDialog(this, viewport, QStringLiteral("Modifica estrusione"), index, original, [&](const ExtrusionObject &values) { return update(values); });
         } else if (original.feature == BodyFeature::Revolution) {
-            int sketch = original.sketchIndex, axis = original.revolveAxis;
-            double angle = original.revolveAngle;
-            const auto define = [&](int, int axisIndex, double degrees) {
-                ExtrusionObject body = original;
-                body.revolveAxis = axisIndex;
-                body.revolveAngle = degrees;
-                return body;
-            };
-            revolutionDialog(this, viewport->sketches(), true, sketch, axis, angle,
-                             [&](int s, int a, double d) { return update(define(s, a, d)); }, {viewport, index, define});
+            revolutionDialog(this, viewport, QStringLiteral("Modifica rivoluzione"), index, original, true,
+                             [&](const ExtrusionObject &values) { return update(values); });
         } else if (original.feature == BodyFeature::Primitive) {
             PrimitiveParameters parameters = original.primitive;
             const auto define = [&](const PrimitiveParameters &values) {
@@ -17578,21 +17759,26 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
             return;
         }
         const SceneSelection selection = viewport->selection();
-        int sketch = viewport->activeSketchIndex(), axis = 0;
-        if (selection.kind == SceneObjectKind::Sketch) sketch = selection.index;
-        double angle = 360.0;
+        ExtrusionObject initial;
+        initial.feature = BodyFeature::Revolution;
+        initial.sketchIndex = viewport->activeSketchIndex();
+        if (selection.kind == SceneObjectKind::Sketch) initial.sketchIndex = selection.index;
+        initial.revolveAxis = 0;
+        initial.revolveAngle = 360.0;
+        // Come lo sweep: con un solido visibile nella scena si parte unendo
+        // (automatico: solo quelli toccati; senza contatto resta un corpo nuovo).
+        for (const ExtrusionObject &body : viewport->extrusions())
+            if (body.visible && body.solid && body.forgeBody) {
+                initial.mergeOperation = 1;
+                break;
+            }
         const QString name = QStringLiteral("Rivoluzione %1").arg(viewport->extrusions().size() + 1);
         const SketchViewUnlock unlock(viewport);  // la vista si ruota per vedere il verso della rivoluzione
-        revolutionDialog(this, sketches, false, sketch, axis, angle, [viewport, name](int sketchIndex, int axisIndex, double degrees) {
-            return viewport->createRevolution(sketchIndex, axisIndex, degrees, name);
-        }, {viewport, -1, [](int sketchIndex, int axisIndex, double degrees) {
-            ExtrusionObject body;
-            body.feature = BodyFeature::Revolution;
-            body.sketchIndex = sketchIndex;
-            body.revolveAxis = axisIndex;
-            body.revolveAngle = degrees;
-            return body;
-        }});
+        revolutionDialog(this, viewport, QStringLiteral("Rivoluzione"), -1, initial, false, [viewport, name](const ExtrusionObject &d) {
+            ExtrusionObject body = d;
+            body.name = name;
+            return viewport->createBody(body);
+        });
     });
 
     // Primitive: piano di riferimento (orientamento), origine e dimensioni.
@@ -19290,12 +19476,16 @@ void PdfWindow::rebuildModelTree() {
         // Estrusione fino a un riferimento, oppure estrusione/sweep fusa con altri solidi.
         if (body.operation < 0
             && ((body.feature == BodyFeature::Extrusion && (body.extent != 0 || body.extrudeSides != 0))
-                || ((body.feature == BodyFeature::Extrusion || body.feature == BodyFeature::Sweep)
+                || (body.feature == BodyFeature::Revolution && body.revolveAxis == kRevolveAxisReference)
+                || ((body.feature == BodyFeature::Extrusion || body.feature == BodyFeature::Revolution || body.feature == BodyFeature::Sweep)
                     && body.mergeOperation != 0 && !body.mergeBodies.isEmpty()))) {
             QStringList children;
             if (body.feature == BodyFeature::Extrusion && body.extrudeSides == 1)
                 children.append(QStringLiteral("Simmetrica: %1 in tutto").arg(ForgeCad::formatLength(body.distance)));
-            if (body.extent != 0) children.append(QStringLiteral("Fino a: ") + ForgeCad::geometryRefText(body.extentRef, sketches, extrusions));
+            if (body.feature == BodyFeature::Extrusion && body.extent != 0)
+                children.append(QStringLiteral("Fino a: ") + ForgeCad::geometryRefText(body.extentRef, sketches, extrusions));
+            if (body.feature == BodyFeature::Revolution && body.revolveAxis == kRevolveAxisReference)
+                children.append(QStringLiteral("Asse: ") + ForgeCad::geometryRefText(body.revolveAxisRef, sketches, extrusions));
             if (body.feature == BodyFeature::Extrusion && body.extrudeSides == 2)
                 children.append(QStringLiteral("Secondo verso: %1").arg(ForgeCad::formatLength(body.distance2)));
             if (body.mergeOperation != 0)

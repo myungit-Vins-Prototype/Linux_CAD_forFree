@@ -6,6 +6,6 @@
 *.stl
 *.obj
 forgecad-cuda-build/
-tests/
-kernel/tests/
+
+
 *.STEP

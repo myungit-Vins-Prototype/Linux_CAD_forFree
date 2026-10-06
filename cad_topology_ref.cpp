@@ -319,6 +319,7 @@ void upgradeTopologyReferences(QVector<ExtrusionObject> &features) {
             for (GeometryRef &ref : *refs) upgrade(ref);
         upgrade(feature.extentRef);
         upgrade(feature.move.axis);
+        upgrade(feature.revolveAxisRef);
         if (feature.feature == BodyFeature::Blend || feature.feature == BodyFeature::SheetExtend)
             upgradeEdges(feature.blendEdges, feature.firstBody);
         if ((feature.feature == BodyFeature::SurfaceOffset || feature.feature == BodyFeature::DeleteFace || feature.feature == BodyFeature::Shell) && feature.firstBody >= 0 && feature.firstBody < features.size()

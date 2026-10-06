@@ -44,6 +44,7 @@ quint64 inheritedBody(const QVector<ExtrusionObject> &features, const ExtrusionO
     case BodyFeature::BoundarySurface:
         return 0;  // superfici nuove: le curve e i bordi scelti restano dei loro corpi
     case BodyFeature::Extrusion:
+    case BodyFeature::Revolution:
     case BodyFeature::Sweep:
         if (feature.mergeOperation != 0 && !feature.mergeBodies.isEmpty()) return owner(feature.mergeBodies.first());
         return 0;
@@ -110,6 +111,7 @@ void normalizeModelHistory(QVector<ExtrusionObject> &features, QVector<ModelBody
             for (GeometryRef &ref : *refs) bindOwner(ref);
         bindOwner(feature.extentRef);
         bindOwner(feature.move.axis);
+        bindOwner(feature.revolveAxisRef);
     }
 
     QHash<quint64, ModelBody> existing;

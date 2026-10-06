@@ -34,6 +34,11 @@ ForgeBody forgeExtrusion(const SketchObject &sketch, double distance, QString *e
 // Rivoluzione dei contorni chiusi dello schizzo attorno al suo asse `axis`
 // (ExtrusionObject::revolveAxis) di `angleDegrees` gradi, come buildRevolution.
 ForgeBody forgeRevolution(const SketchObject &sketch, int axis, double angleDegrees, QString *error);
+// Lo stesso attorno alla retta (punto, direzione unitaria) nelle coordinate dello schizzo.
+ForgeBody forgeRevolution(const SketchObject &sketch, const QPointF &point, const QPointF &direction, double angleDegrees, QString *error);
+// Una retta 3D che sta nel piano dello schizzo, nelle sue coordinate (false con l'errore se esce dal piano).
+bool sketchLineFromWorld(const SketchObject &sketch, const Kernel::Vec3 &point, const Kernel::Vec3 &direction, QPointF &linePoint,
+                         QPointF &lineDirection, QString *error);
 
 // Solido elementare (parallelepipedo, cilindro, sfera, cono, toro), come buildPrimitive.
 ForgeBody forgePrimitive(const PrimitiveParameters &parameters, QString *error);
