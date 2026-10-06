@@ -10,6 +10,7 @@
 #include "cad_features.h"
 #include "cad_import.h"
 #include "cad_mass.h"
+#include "cad_measure.h"
 #include "cad_pattern.h"
 #include "cad_extrude.h"
 #include "cad_sketch_refs.h"
@@ -2436,6 +2437,44 @@ public:
         refMarks_ = marks;
         update();
     }
+    // Misura (finestra Misura): la distanza minima tra i due punti, con l'etichetta.
+    void setMeasureOverlay(bool valid, const QVector3D &from = {}, const QVector3D &to = {}, const QString &label = {}) {
+        measureValid_ = valid;
+        measureFrom_ = from;
+        measureTo_ = to;
+        measureLabel_ = label;
+        update();
+    }
+    void drawMeasureOverlay(QPainter &painter) const {
+        if (!measureValid_) return;
+        const QPointF a = projectWorldPoint(measureFrom_), b = projectWorldPoint(measureTo_);
+        painter.save();
+        painter.setRenderHint(QPainter::Antialiasing, true);
+        const QColor accent(255, 170, 60);
+        painter.setPen(QPen(QColor(0, 0, 0, 150), 4.0, Qt::SolidLine, Qt::RoundCap));
+        painter.drawLine(a, b);
+        painter.setPen(QPen(accent, 2.0, Qt::DashLine, Qt::RoundCap));
+        painter.drawLine(a, b);
+        painter.setPen(QPen(Qt::black, 1.0));
+        painter.setBrush(accent);
+        painter.drawEllipse(a, 4.5, 4.5);
+        painter.drawEllipse(b, 4.5, 4.5);
+        if (!measureLabel_.isEmpty()) {
+            QFont font(QStringLiteral("Sans"), 10, QFont::DemiBold);
+            painter.setFont(font);
+            const QFontMetricsF metrics(font);
+            const QPointF middle = 0.5 * (a + b) + QPointF(10.0, -12.0);
+            QRectF box(middle, QSizeF(metrics.horizontalAdvance(measureLabel_) + 12.0, metrics.height() + 6.0));
+            box.moveTo(qBound(2.0, box.left(), qMax(2.0, width() - box.width() - 2.0)), qBound(2.0, box.top(), qMax(2.0, height() - box.height() - 2.0)));
+            painter.setPen(QPen(accent, 1.2));
+            painter.setBrush(QColor(25, 28, 34, 225));
+            painter.drawRoundedRect(box, 4.0, 4.0);
+            painter.setPen(QColor(255, 225, 180));
+            painter.drawText(box, Qt::AlignCenter, measureLabel_);
+        }
+        painter.restore();
+    }
+
     // Anteprima del piano della finestra (al posto del piano `replaced`, se lo si modifica).
     void setDatumPreview(bool valid, const SketchFrame &frame, double size, int replaced) {
         datumPreviewValid_ = valid;
@@ -8570,6 +8609,7 @@ private:
             drawInferenceTags(painter);
             return;
         }
+        drawMeasureOverlay(painter);
         if (refPicking_ || !refMarks_.isEmpty()) {
             // Scelta dei riferimenti di un piano di costruzione: quelli scelti e quello sotto il puntatore.
             for (const GeometryRef &mark : refMarks_) drawGeometryRef(painter, mark, kSelectionColor);
@@ -8955,6 +8995,35 @@ private:
                     r.point = {point.x(), point.y(), point.z()};
                     consider(point, r);
                 }
+            if (roles & ForgeCad::kMeasureSnapRole) {
+                // Misura: anche punti medi e centri degli spigoli. A video il punto
+                // medio della polilinea; la misura li calcola sulla curva esatta.
+                for (int b = 0; b < extrusions_.size(); ++b) {
+                    if (!referenceBodyEligible(b) || !extrusions_.at(b).forgeBody) continue;
+                    const ExtrusionObject &body = extrusions_.at(b);
+                    for (int e = 0; e < body.display.edges.size(); ++e) {
+                        const int edgeId = body.display.edgeIds.value(e, -1);
+                        const QVector<QVector3D> &polyline = body.display.edges.at(e);
+                        if (edgeId < 0 || polyline.size() < 2) continue;
+                        // Il riferimento (contesto topologico) solo per il candidato che vince.
+                        const auto offer = [&](const QVector3D &at, int kind) {
+                            if (pointDistance(projectWorldPoint(at), cursor) >= best) return;
+                            const QVector3D sample = polyline.at(polyline.size() / 2);
+                            GeometryRef r;
+                            r.kind = kind;
+                            r.index = b;
+                            r.featureId = body.featureId;
+                            r.point = ForgeCad::edgeReference(*body.forgeBody, ForgeCad::Kernel::EdgeId(edgeId),
+                                                              ForgeCad::Kernel::Vec3(sample.x(), sample.y(), sample.z()));
+                            consider(at, r);
+                        };
+                        offer(polylineMidpoint(polyline), ForgeCad::kGeometryRefEdgeMidpoint);
+                        ForgeCad::Kernel::Vec3 center;
+                        if (ForgeCad::edgeCenter(*body.forgeBody, ForgeCad::Kernel::EdgeId(edgeId), center))
+                            offer(QVector3D(float(center.x()), float(center.y()), float(center.z())), ForgeCad::kGeometryRefEdgeCenter);
+                    }
+                }
+            }
             if (found) return true;
         }
         if (roles & (ForgeCad::DatumRoleLine | ForgeCad::DatumRoleCurve)) {
@@ -9116,7 +9185,16 @@ private:
             break;
         }
         case 5:
-            if (face && faceBody == ref.index) {
+            if (!face && ref.point.subshape >= 0 && ref.index >= 0 && ref.index < extrusions_.size()) {
+                // Riferimento gia' scelto: i bordi della sua faccia (BodyDisplay::faceEdges).
+                FaceHit hit;
+                hit.face = ref.point.subshape;
+                for (int e : faceDisplayEdges(ref.index, hit)) {
+                    QVector<QPointF> projected;
+                    for (const QVector3D &p : extrusions_.at(ref.index).display.edges.at(e)) projected.append(projectWorldPoint(p));
+                    strokeHighlight(painter, projected, false, color);
+                }
+            } else if (face && faceBody == ref.index) {
                 for (int e : faceDisplayEdges(ref.index, *face)) {
                     QVector<QPointF> projected;
                     for (const QVector3D &p : extrusions_.at(ref.index).display.edges.at(e)) projected.append(projectWorldPoint(p));
@@ -9160,8 +9238,50 @@ private:
             else dot(point);
             break;
         }
+        case ForgeCad::kGeometryRefEdgeMidpoint:
+        case ForgeCad::kGeometryRefEdgeCenter: {
+            QVector3D p = point;
+            if (snapRefPosition(ref, p)) {
+                const bool center = ref.kind == ForgeCad::kGeometryRefEdgeCenter;
+                dot(p);
+                const QPointF q = projectWorldPoint(p);
+                painter.setPen(color);
+                painter.drawText(q + QPointF(9.0, -7.0), center ? QStringLiteral("⊙ Centro") : QStringLiteral("◇ Punto medio"));
+            }
+            break;
+        }
         default: break;
         }
+    }
+    // Posizione a video dei punti medi e dei centri degli spigoli (misura).
+    bool snapRefPosition(const GeometryRef &ref, QVector3D &position) const {
+        if (ref.index < 0 || ref.index >= extrusions_.size() || !extrusions_.at(ref.index).forgeBody) return false;
+        const ExtrusionObject &body = extrusions_.at(ref.index);
+        const int edge = ref.point.subshape;
+        if (edge < 0 || !body.forgeBody->contains(ForgeCad::Kernel::EdgeId(edge))) return false;
+        if (ref.kind == ForgeCad::kGeometryRefEdgeCenter) {
+            ForgeCad::Kernel::Vec3 c;
+            if (!ForgeCad::edgeCenter(*body.forgeBody, ForgeCad::Kernel::EdgeId(edge), c)) return false;
+            position = QVector3D(float(c.x()), float(c.y()), float(c.z()));
+            return true;
+        }
+        const int polyline = body.display.edgeIds.indexOf(edge);
+        if (polyline < 0) return false;
+        position = polylineMidpoint(body.display.edges.at(polyline));
+        return true;
+    }
+    // Punto a meta' lunghezza di una polilinea (solo per il display e il picking).
+    static QVector3D polylineMidpoint(const QVector<QVector3D> &polyline) {
+        if (polyline.isEmpty()) return {};
+        float total = 0.0f;
+        for (int k = 1; k < polyline.size(); ++k) total += (polyline.at(k) - polyline.at(k - 1)).length();
+        float walked = 0.0f;
+        for (int k = 1; k < polyline.size(); ++k) {
+            const float step = (polyline.at(k) - polyline.at(k - 1)).length();
+            if (walked + step >= 0.5f * total && step > 0.0f) return polyline.at(k - 1) + (polyline.at(k) - polyline.at(k - 1)) * ((0.5f * total - walked) / step);
+            walked += step;
+        }
+        return polyline.last();
     }
 
     // La fusione con GL_SRC_ALPHA / GL_ONE_MINUS_SRC_ALPHA mescola anche il
@@ -11221,6 +11341,9 @@ private:
     FaceHit refHoverFace_;  // faccia sotto il puntatore (per evidenziarne i bordi)
     int refHoverFaceBody_ = -1;
     QVector<GeometryRef> refMarks_;
+    bool measureValid_ = false;  // linea della misura (finestra Misura)
+    QVector3D measureFrom_, measureTo_;
+    QString measureLabel_;
     std::function<void(bool, GeometryRef)> refPickFinished_;
     bool interactionLocked_ = false;
     // Anteprima del piano di costruzione della finestra.
@@ -15802,6 +15925,139 @@ static bool sewDialog(QWidget *parent, CadViewport *viewport, const QString &tit
     });
 }
 
+// Misura nella vista (Analisi -> Misura): si cliccano una o due entita' con gli
+// agganci della scelta dei riferimenti (vertici, punti medi e centri degli
+// spigoli, punti degli schizzi, spigoli e curve, facce, piani e assi). Una
+// entita': coordinate, lunghezza, raggio, area...; due: distanza minima con i
+// punti piu' vicini (disegnata nella vista), angolo, interasse. Il clic su
+// un'entita' gia' scelta la toglie, un terzo clic ricomincia; Esc nella vista
+// azzera. Solo lettura: il documento non cambia.
+static void measureDialog(QMainWindow *window, CadViewport *viewport) {
+    FunctionDialogPanel dialog(window);
+    dialog.setWindowTitle(QStringLiteral("Misura"));
+    dialog.setModal(false);
+    auto *form = dialog.createScrollableForm();
+    form->addRow(wrappedNote(QStringLiteral("Clicca nella vista uno o due oggetti: vertici, punti medi e centri degli spigoli, spigoli, "
+                                            "facce, piani e assi. Il clic su un oggetto scelto lo toglie; Esc nella vista azzera."), &dialog));
+    auto *first = new QLabel(&dialog), *second = new QLabel(&dialog);
+    for (QLabel *label : {first, second}) {
+        label->setWordWrap(true);
+        label->setMaximumWidth(360);
+    }
+    form->addRow(QStringLiteral("A:"), first);
+    form->addRow(QStringLiteral("B:"), second);
+    auto *results = new QLabel(&dialog);
+    results->setWordWrap(true);
+    results->setMinimumWidth(300);
+    results->setMaximumWidth(420);
+    results->setTextInteractionFlags(Qt::TextSelectableByMouse);
+    results->setStyleSheet(QStringLiteral("font-family: monospace;"));
+    form->addRow(results);
+    auto *buttons = new QDialogButtonBox(&dialog);
+    QPushButton *clearButton = buttons->addButton(QStringLiteral("Azzera"), QDialogButtonBox::ResetRole);
+    QPushButton *copyButton = buttons->addButton(QStringLiteral("Copia"), QDialogButtonBox::ActionRole);
+    buttons->addButton(QDialogButtonBox::Close);
+    form->addRow(buttons);
+
+    QVector<GeometryRef> refs;
+    QString report;
+    const auto same = [](const GeometryRef &a, const GeometryRef &b) {
+        if (a.kind != b.kind || a.index != b.index || !(a.element == b.element)) return false;
+        if (a.kind == 3 || a.kind == 4 || a.kind == 5 || a.kind == ForgeCad::kGeometryRefEdgeMidpoint || a.kind == ForgeCad::kGeometryRefEdgeCenter)
+            return a.point.subshape == b.point.subshape;
+        return true;
+    };
+    const auto refresh = [&] {
+        viewport->setReferenceMarks(refs);
+        QVector<ForgeCad::MeasureEntity> entities;
+        QStringList names;
+        QString error;
+        for (const GeometryRef &ref : refs) {
+            ForgeCad::MeasureEntity entity;
+            QString reason;
+            if (!ForgeCad::measureEntity(ref, viewport->sketches(), viewport->extrusions(), entity, &reason)) {
+                error = reason;
+                names << QStringLiteral("(non valido)");
+                continue;
+            }
+            names << entity.name;
+            entities.append(entity);
+        }
+        first->setText(names.value(0, QStringLiteral("(clicca nella vista)")));
+        second->setText(refs.size() >= 1 ? names.value(1, QStringLiteral("(facoltativo)")) : QStringLiteral("-"));
+        viewport->setMeasureOverlay(false);
+        report.clear();
+        if (!error.isEmpty()) {
+            results->setStyleSheet(QStringLiteral("font-family: monospace; color: #ff7a6a;"));
+            results->setText(error);
+            return;
+        }
+        results->setStyleSheet(QStringLiteral("font-family: monospace;"));
+        if (entities.isEmpty()) {
+            results->clear();
+            return;
+        }
+        QApplication::setOverrideCursor(Qt::WaitCursor);
+        const ForgeCad::MeasureReport measure = ForgeCad::measureEntities(entities);
+        QApplication::restoreOverrideCursor();
+        if (!measure.ok) {
+            results->setStyleSheet(QStringLiteral("font-family: monospace; color: #ff7a6a;"));
+            results->setText(measure.error);
+            return;
+        }
+        report = measure.lines.join(QLatin1Char('\n'));
+        results->setText(report);
+        if (measure.hasDistance) {
+            const auto q = [](const ForgeCad::Kernel::Vec3 &p) { return QVector3D(float(p.x()), float(p.y()), float(p.z())); };
+            viewport->setMeasureOverlay(true, q(measure.from), q(measure.to), measure.label);
+        }
+    };
+    const auto pick = [&] {
+        const QString error = viewport->beginReferencePick(ForgeCad::DatumRolePoint | ForgeCad::DatumRoleLine | ForgeCad::DatumRoleCurve
+                                                               | ForgeCad::DatumRolePlane | ForgeCad::DatumRoleFace | ForgeCad::kMeasureSnapRole,
+                                                           -1);
+        if (!error.isEmpty()) results->setText(error);
+    };
+    viewport->setReferencePickCallback([&](bool picked, GeometryRef ref) {
+        if (picked) {
+            int existing = -1;
+            for (int k = 0; k < refs.size(); ++k)
+                if (same(refs.at(k), ref)) existing = k;
+            if (existing >= 0) refs.remove(existing);
+            else if (refs.size() >= 2) refs = {ref};
+            else refs.append(ref);
+        } else {
+            refs.clear();
+        }
+        refresh();
+        pick();
+    });
+    QObject::connect(clearButton, &QPushButton::clicked, &dialog, [&] {
+        refs.clear();
+        refresh();
+        pick();
+    });
+    QObject::connect(copyButton, &QPushButton::clicked, &dialog, [&] {
+        if (!report.isEmpty()) QGuiApplication::clipboard()->setText(first->text() + QStringLiteral("\n") + second->text() + QStringLiteral("\n") + report);
+    });
+    QObject::connect(buttons, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
+    // Un oggetto selezionato prima del comando e' gia' la prima entita'? No: la
+    // selezione della vista non dice quale spigolo o faccia; si parte da zero.
+    {
+        const WindowLock lock(window, viewport, &dialog);
+        dialog.show();
+        refresh();
+        pick();
+        QEventLoop loop;
+        QObject::connect(&dialog, &QDialog::finished, &loop, &QEventLoop::quit);
+        loop.exec();
+    }
+    viewport->cancelReferencePick();
+    viewport->setReferencePickCallback(nullptr);
+    viewport->setReferenceMarks({});
+    viewport->setMeasureOverlay(false);
+}
+
 static void massPropertiesDialog(QWidget *parent, CadViewport *viewport) {
     const QVector<ExtrusionObject> &bodies = viewport->extrusions();
     QVector<int> candidates;
@@ -17370,6 +17626,9 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
     QAction *massAction = analysisMenu->addAction(QStringLiteral("Proprieta' di massa..."));
     massAction->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_M));
     massAction->setToolTip(QStringLiteral("Volume, massa, baricentro e momenti d'inerzia del corpo selezionato"));
+    QAction *measureAction = analysisMenu->addAction(QStringLiteral("Misura..."));
+    measureAction->setShortcut(QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_M));
+    measureAction->setToolTip(QStringLiteral("Misura nella vista: distanze, angoli, lunghezze, raggi e aree di punti, spigoli e facce"));
     auto *modeMenu = viewMenu->addMenu(QStringLiteral("Stile visualizzazione"));
     auto *qualityMenu = viewMenu->addMenu(QStringLiteral("Qualita tessellazione"));
     auto *qualityGroup = new QActionGroup(this); qualityGroup->setExclusive(true);
@@ -18016,6 +18275,10 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
         });
     });
     connect(massAction, &QAction::triggered, this, [this, viewport] { massPropertiesDialog(this, viewport); });
+    connect(measureAction, &QAction::triggered, this, [this, viewport] {
+        if (viewport->sketchModeActive()) viewport->endSketchMode();
+        measureDialog(this, viewport);
+    });
     connect(datumAction, &QAction::triggered, this, [this, viewport] {
         if (viewport->sketchModeActive()) viewport->endSketchMode();
         ExtrusionObject definition;
@@ -18771,7 +19034,7 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
         {datumAction, QStringLiteral("datumPlane")}, {importAction, QStringLiteral("import")},
         {linearPatternAction, QStringLiteral("patternLinear")}, {circularPatternAction, QStringLiteral("patternCircular")},
         {mirrorAction, QStringLiteral("mirror")},
-        {helixAction, QStringLiteral("helix")}, {sweepAction, QStringLiteral("sweep")}, {loftAction, QStringLiteral("loft")}, {massAction, QStringLiteral("massProperties")},
+        {helixAction, QStringLiteral("helix")}, {sweepAction, QStringLiteral("sweep")}, {loftAction, QStringLiteral("loft")}, {massAction, QStringLiteral("massProperties")}, {measureAction, QStringLiteral("measure")},
         {unionAction, QStringLiteral("union")}, {intersectionAction, QStringLiteral("intersection")}, {differenceAction, QStringLiteral("difference")},
         {resetZoomAction, QStringLiteral("zoomAll")}, {sectionAction, QStringLiteral("section")},
         {modeMenu->actions().at(0), QStringLiteral("displayWireframe")}, {modeMenu->actions().at(1), QStringLiteral("displayShaded")},
@@ -18848,7 +19111,7 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
     toolbar->addAction(helixAction); toolbar->addAction(sweepAction); toolbar->addAction(loftAction);
     toolbar->addSeparator();
     toolbar->addAction(unionAction); toolbar->addAction(intersectionAction); toolbar->addAction(differenceAction); toolbar->addSeparator();
-    toolbar->addAction(massAction); toolbar->addSeparator();
+    toolbar->addAction(massAction); toolbar->addAction(measureAction); toolbar->addSeparator();
     toolbar->addAction(resetZoomAction);
     toolbar->addAction(sectionAction);
     flyout(toolbar, *viewActions, QStringLiteral("Viste standard: la freccia per le altre"));

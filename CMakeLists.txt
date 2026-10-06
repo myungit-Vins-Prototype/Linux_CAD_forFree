@@ -73,6 +73,8 @@ add_executable(forgecad
     cad_features.cpp
     cad_mass.h
     cad_mass.cpp
+    cad_measure.h
+    cad_measure.cpp
     cad_datum.h
     cad_datum.cpp
     cad_import.h

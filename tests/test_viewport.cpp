@@ -509,6 +509,33 @@ public:
             require(picks == 1, "clic seleziona una sola volta");
         }
         {
+            // Misura: aggancio al punto medio di uno spigolo, risolto sulla curva esatta.
+            CadViewport measure;
+            measure.resize(800, 600);
+            PrimitiveParameters box;
+            box.kind = PrimitiveKind::Box;
+            box.size[0] = 4.0;
+            box.size[1] = 3.0;
+            box.size[2] = 2.0;
+            require(measure.createPrimitive(box, QStringLiteral("Blocco misura")).isEmpty(), "corpo da misurare");
+            measure.fitAll();
+            const ExtrusionObject &body = measure.extrusions_.last();
+            const Kernel::EdgeId edge = body.forgeBody->edges().front();
+            const Kernel::Vec3 middle = edgeMidpoint(*body.forgeBody, edge);
+            measure.refPickOwner_ = -1;
+            measure.refPickRoles_ = DatumRolePoint | DatumRoleCurve | DatumRoleFace | kMeasureSnapRole;
+            GeometryRef picked;
+            require(measure.pickReference(measure.projectWorldPoint(QVector3D(middle.x(), middle.y(), middle.z())).toPoint(), picked)
+                        && picked.kind == kGeometryRefEdgeMidpoint,
+                    "aggancio al punto medio dello spigolo");
+            MeasureEntity entity;
+            require(measureEntity(picked, measure.sketches_, measure.extrusions_, entity, nullptr) && entity.kind == MeasureEntity::Kind::Point,
+                    "punto medio misurabile");
+            const Kernel::Edge &exact = body.forgeBody->edge(Kernel::EdgeId(picked.point.subshape));
+            const Kernel::Vec3 expected = 0.5 * (exact.curve->point(exact.range.lo) + exact.curve->point(exact.range.hi));
+            require(distance(entity.point, expected) < 1e-12, "punto medio esatto");
+        }
+        {
             CadViewport topology;
             topology.resize(800, 600);
             PrimitiveParameters box;
@@ -1234,6 +1261,79 @@ public:
             require(solveSketch(angle).ok, "quota supplementare a 90 gradi");
             const QPointF d = angle.segments.at(0).second - angle.segments.at(0).first, e = angle.segments.at(1).second - angle.segments.at(1).first;
             require(std::fabs(d.x() * e.x() + d.y() * e.y()) < 1e-8, "rette perpendicolari");
+        }
+        {
+            // Misura: distanze minime esatte tra punti, spigoli e facce, angoli, interassi.
+            using namespace ForgeCad::Kernel;
+            using K = MeasureEntity::Kind;
+            const auto box = std::make_shared<const Body>(makeBox(Frame3(), 10.0, 20.0, 30.0));
+            const auto holeA = std::make_shared<const Body>(makeCylinder(Frame3(Vec3(50, 0, 0), Vec3(0, 0, 1), Vec3(1, 0, 0)), 5.0, 10.0));
+            const auto holeB = std::make_shared<const Body>(makeCylinder(Frame3(Vec3(80, 0, 0), Vec3(0, 0, 1), Vec3(1, 0, 0)), 3.0, 10.0));
+            const auto ball = std::make_shared<const Body>(makeSphere(Frame3(Vec3(0, 0, 60), Vec3(0, 0, 1), Vec3(1, 0, 0)), 4.0));
+            const auto faceWith = [](const ForgeBody &body, const std::function<bool(const Face &, const Vec3 &)> &test) {
+                for (FaceId f : body->faces()) {
+                    const Face &face = body->face(f);
+                    Vec3 n(0, 0, 0);
+                    if (face.surface->type() == SurfaceType::Plane) {
+                        const Vec3 z = static_cast<const Plane &>(*face.surface).frame().zDir();
+                        n = face.sense ? z : -z;
+                    }
+                    if (test(face, n)) {
+                        MeasureEntity e;
+                        e.kind = K::Face;
+                        e.body = body;
+                        e.face = f;
+                        return e;
+                    }
+                }
+                throw std::runtime_error("faccia di prova non trovata");
+            };
+            const auto planar = [&](const ForgeBody &body, const Vec3 &normal) {
+                return faceWith(body, [normal](const Face &, const Vec3 &n) { return dot(n, normal) > 1 - 1e-12; });
+            };
+            const auto ofType = [&](const ForgeBody &body, SurfaceType type) {
+                return faceWith(body, [type](const Face &face, const Vec3 &) { return face.surface->type() == type; });
+            };
+            const auto edgeThrough = [&](const Vec3 &a, const Vec3 &b) {
+                for (EdgeId e : box->edges()) {
+                    const Edge &edge = box->edge(e);
+                    const Vec3 p = edge.curve->point(edge.range.lo), q = edge.curve->point(edge.range.hi);
+                    if ((distance(p, a) < 1e-9 && distance(q, b) < 1e-9) || (distance(p, b) < 1e-9 && distance(q, a) < 1e-9)) {
+                        MeasureEntity entity;
+                        entity.kind = K::Curve;
+                        entity.segments.push_back({edge.curve, edge.range});
+                        return entity;
+                    }
+                }
+                throw std::runtime_error("spigolo di prova non trovato");
+            };
+            const auto pointAt = [](const Vec3 &p) {
+                MeasureEntity e;
+                e.kind = K::Point;
+                e.point = p;
+                return e;
+            };
+            const auto distanceOf = [](const MeasureEntity &a, const MeasureEntity &b) {
+                const MeasureReport r = measureEntities({a, b});
+                if (!r.ok || !r.hasDistance) throw std::runtime_error(r.error.toStdString());
+                return r.distance;
+            };
+            const MeasureEntity left = planar(box, Vec3(-1, 0, 0)), right = planar(box, Vec3(1, 0, 0)), top = planar(box, Vec3(0, 0, 1));
+            require(std::fabs(distanceOf(left, right) - 10.0) < 1e-9, "misura faccia-faccia parallele");
+            const MeasureReport facing = measureEntities({left, right});
+            require(facing.lines.join(QLatin1Char('\n')).contains(QStringLiteral("Angolo tra le normali: 180°")), "angolo tra le normali opposte");
+            const MeasureEntity vertical = edgeThrough(Vec3(0, 0, 0), Vec3(0, 0, 30)), across = edgeThrough(Vec3(0, 20, 30), Vec3(10, 20, 30));
+            require(std::fabs(distanceOf(vertical, across) - 20.0) < 1e-9, "misura spigolo-spigolo");
+            require(std::fabs(distanceOf(right, vertical) - 10.0) < 1e-9, "misura faccia-spigolo");
+            require(std::fabs(distanceOf(pointAt(Vec3(5, 5, 50)), top) - 20.0) < 1e-9, "misura punto-faccia interno");
+            require(std::fabs(distanceOf(pointAt(Vec3(20, 30, 40)), top) - std::sqrt(300.0)) < 1e-9, "misura punto-faccia sul bordo");
+            require(std::fabs(distanceOf(ofType(ball, SurfaceType::Sphere), top) - 26.0) < 1e-7, "misura sfera-faccia");
+            const MeasureEntity cylinderA = ofType(holeA, SurfaceType::Cylinder), cylinderB = ofType(holeB, SurfaceType::Cylinder);
+            require(std::fabs(distanceOf(cylinderA, cylinderB) - 22.0) < 1e-7, "misura cilindro-cilindro");
+            require(measureEntities({cylinderA, cylinderB}).lines.join(QLatin1Char('\n')).contains(QStringLiteral("interasse: 30")), "interasse dei cilindri");
+            const MeasureReport single = measureEntities({top});
+            require(single.ok && single.lines.first().contains(QStringLiteral("200")), "area della faccia");
+            require(measureEntities({vertical, across}).lines.join(QLatin1Char('\n')).contains(QStringLiteral("Angolo tra le rette: 90°")), "angolo tra spigoli");
         }
         {
             // Aggancio alla geometria e alla griglia indipendenti.

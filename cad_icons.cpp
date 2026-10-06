@@ -923,6 +923,20 @@ std::map<QString, Draw> &registry() {
         p.setBrush(c.faceLight);
         p.drawEllipse(QRectF(4, 14.5, 16, 5));
     };
+    icons["measure"] = [](QPainter &p, const IconPalette &c) {
+        // Calibro: righello obliquo con le tacche e la quota tra due punti.
+        QPolygonF ruler({{3, 15}, {15, 3}, {21, 9}, {9, 21}});
+        p.setPen(stroke(c.ink, 1.4));
+        p.setBrush(Qt::NoBrush);
+        p.drawPolygon(ruler);
+        for (int k = 1; k <= 4; ++k) {
+            const QPointF base(3 + 2.4 * k, 15 - 2.4 * k);
+            line(p, base, base + QPointF(k % 2 ? 1.6 : 2.8, k % 2 ? 1.6 : 2.8), stroke(c.ink, 1.1));
+        }
+        line(p, {4.5, 21}, {20, 21}, stroke(c.accent, 1.4, Qt::DashLine));
+        arrowHead(p, {3.5, 21}, {8, 21}, c.accent, 3.0);
+        arrowHead(p, {21, 21}, {16.5, 21}, c.accent, 3.0);
+    };
     icons["massProperties"] = [](QPainter &p, const IconPalette &c) {
         // Solido con il baricentro (cerchio a quarti) e il peso.
         cube(p, c);
