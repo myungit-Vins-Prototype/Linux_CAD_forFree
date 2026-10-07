@@ -6367,6 +6367,11 @@ private:
     // Toglie i corpi (gli operandi di booleane e raccordi eliminati che restano
     // tornano visibili) e rinumera i riferimenti.
     void removeBodies(const QSet<int> &removed) {
+        // La rigenerazione puo' ridisegnare la vista prima di documentChanged().
+        // Gli indici della scelta spigoli appartengono ancora alla vecchia lista:
+        // annullarla prima di eliminare o rinumerare i corpi, anche se la base
+        // selezionata sopravvive con un indice diverso.
+        if (!removed.isEmpty() && edgePicking_) cancelEdgePick();
         QVector<int> map(extrusions_.size(), -1);
         QVector<ExtrusionObject> kept;
         for (int index = 0; index < extrusions_.size(); ++index) {
@@ -10212,7 +10217,7 @@ private:
                 overlayRenderer_.draw(GL_LINE_STRIP, edges.at(index), rgba);
             }
         };
-        if (edgePickBody_ >= 0)
+        if (edgePickBody_ >= 0 && edgePickBody_ < extrusions_.size())
             for (int index = 0; index < extrusions_.at(edgePickBody_).display.edges.size(); ++index) draw(edgePickBody_, index, QColor(120, 140, 160), 1.5f);
         for (int index : hoverFaceEdges_) draw(hoverEdgeBody_, index, kHoverColor, 3.0f);
 
@@ -11728,7 +11733,7 @@ public:
         viewport_->setGridVisible(false);
         viewport_->setAxesVisible(false);
         viewport_->setDisplayMode(2);
-        message_ = new QLabel(QStringLiteral("Seleziona un documento ForgeCAD"), viewport_);
+        message_ = new QLabel(QStringLiteral("Seleziona un documento %1").arg(QGuiApplication::applicationDisplayName()), viewport_);
         message_->setAlignment(Qt::AlignCenter);
         message_->setWordWrap(true);
         message_->setStyleSheet(QStringLiteral("background:rgba(20,29,39,220); color:#d7e4ec; padding:12px;"));
@@ -16825,7 +16830,7 @@ static LengthUnit defaultLengthUnit() {
 }
 
 PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
-    setWindowTitle(QStringLiteral("ForgeCAD - Qt6"));
+    setWindowTitle(QGuiApplication::applicationDisplayName());
     qApp->installEventFilter(new DialogMover(this));
     resize(1280, 820);
     setMinimumSize(900, 600);
@@ -19117,7 +19122,7 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
     flyout(toolbar, *viewActions, QStringLiteral("Viste standard: la freccia per le altre"));
     flyout(toolbar, {modeMenu->actions().at(2), modeMenu->actions().at(1), modeMenu->actions().at(0)}, QStringLiteral("Stile di visualizzazione"));
     auto *spacer = new QWidget(toolbar); spacer->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred); toolbar->addWidget(spacer);
-    toolbar->addWidget(new QLabel(QStringLiteral("  ForgeCAD / Part Studio  ")));
+    toolbar->addWidget(new QLabel(QStringLiteral("  %1 / Part Studio  ").arg(QGuiApplication::applicationDisplayName())));
 
     // Schizzo: in modalita' schizzo prende il posto della barra di modellazione
     // (come le schede del CommandManager di SolidWorks), cosi' ci sta anche in
@@ -19289,13 +19294,13 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
 
 void PdfWindow::updateWindowTitle() {
     const QString name = documentPath_.isEmpty() ? QStringLiteral("Senza nome") : QFileInfo(documentPath_).fileName();
-    setWindowTitle(QStringLiteral("%1%2 - ForgeCAD").arg(name, documentModified_ ? QStringLiteral(" *") : QString()));
+    setWindowTitle(QStringLiteral("%1%2 - %3").arg(name, documentModified_ ? QStringLiteral(" *") : QString(), QGuiApplication::applicationDisplayName()));
 }
 
 // Chiede se salvare le modifiche; false se l'utente annulla (o il salvataggio fallisce).
 bool PdfWindow::maybeSaveChanges() {
     if (!documentModified_) return true;
-    const auto answer = QMessageBox::question(this, QStringLiteral("ForgeCAD"),
+    const auto answer = QMessageBox::question(this, QGuiApplication::applicationDisplayName(),
         QStringLiteral("Il documento e' stato modificato. Salvare le modifiche?"),
         QMessageBox::Save | QMessageBox::Discard | QMessageBox::Cancel, QMessageBox::Save);
     if (answer == QMessageBox::Cancel) return false;
@@ -19325,7 +19330,7 @@ void PdfWindow::beginForegroundProgress(const QString &message, int maximum) {
     if (!foregroundProgress_) {
         foregroundProgress_ = new QProgressDialog(this);
         foregroundProgress_->setObjectName(QStringLiteral("foregroundProgressDialog"));
-        foregroundProgress_->setWindowTitle(QStringLiteral("ForgeCAD - operazione in corso"));
+        foregroundProgress_->setWindowTitle(QStringLiteral("%1 - operazione in corso").arg(QGuiApplication::applicationDisplayName()));
         foregroundProgress_->setCancelButton(nullptr);
         foregroundProgress_->setAutoClose(false);
         foregroundProgress_->setAutoReset(false);
@@ -19393,7 +19398,7 @@ void PdfWindow::newDocument() {
 void PdfWindow::openDocument() {
     if (!maybeSaveChanges()) return;
     QFileDialog dialog(this, QStringLiteral("Apri"), QFileInfo(documentPath_).absolutePath(),
-                       QStringLiteral("Documenti ForgeCAD (*.prt);;Tutti i file (*)"));
+                       QStringLiteral("Documenti %1 (*.prt);;Tutti i file (*)").arg(QGuiApplication::applicationDisplayName()));
     dialog.setAcceptMode(QFileDialog::AcceptOpen);
     dialog.setFileMode(QFileDialog::ExistingFile);
     // I dialoghi nativi non espongono un'area portabile per un widget
@@ -19464,7 +19469,7 @@ bool PdfWindow::saveDocument(bool askPath) {
     if (askPath || path.isEmpty()) {
         path = QFileDialog::getSaveFileName(this, QStringLiteral("Salva con nome"),
                                             path.isEmpty() ? QStringLiteral("Senza nome.prt") : path,
-                                            QStringLiteral("Documenti ForgeCAD (*.prt)"));
+                                            QStringLiteral("Documenti %1 (*.prt)").arg(QGuiApplication::applicationDisplayName()));
         if (path.isEmpty()) return false;
         if (QFileInfo(path).suffix().compare(QLatin1String(ForgeCad::kDocumentSuffix), Qt::CaseInsensitive) != 0)
             path += QStringLiteral(".") + QLatin1String(ForgeCad::kDocumentSuffix);

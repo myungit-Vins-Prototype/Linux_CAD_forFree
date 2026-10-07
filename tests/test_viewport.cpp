@@ -28,6 +28,29 @@ static void require(bool ok, const char *message) {
 }
 class ViewportInteractionTest {
 public:
+    static void deletionDuringEdgePick() {
+        for (int removed : {0, 2}) {
+            CadViewport viewport;
+            viewport.extrusions_.resize(3);
+            viewport.edgePicking_ = true;
+            viewport.edgePickBody_ = 2;
+            viewport.edgePickEdit_ = 2;
+            viewport.pickedEdges_ = {0};
+            viewport.hoverEdgeBody_ = 2;
+            viewport.hoverEdge_ = 0;
+            viewport.preview_.valid = true;
+            const auto generation = viewport.preview_.generation;
+            viewport.removeBodies(QSet<int>{removed});
+            require(viewport.extrusions_.size() == 2, "rimozione corpo durante scelta spigoli");
+            require(!viewport.edgePicking_ && viewport.edgePickBody_ == -1 && viewport.edgePickEdit_ == -1,
+                    "scelta annullata prima del ricalcolo, per corpo rimosso o rinumerato");
+            require(viewport.pickedEdges_.isEmpty() && viewport.hoverEdgeBody_ == -1 && viewport.hoverEdge_ == -1,
+                    "nessun indice di spigolo residuo dopo la rimozione");
+            require(!viewport.preview_.valid && viewport.preview_.generation > generation,
+                    "anteprima invalidata anche per risultati asincroni in arrivo");
+        }
+        std::cout << "Rimozione durante scelta spigoli: OK" << std::endl;
+    }
     // Diagnostica facoltativa: --mesh-stats file.prt [lato scarto angolo].
     static void meshStats(const QStringList &args) {
         using namespace ForgeCad;
@@ -390,6 +413,7 @@ public:
         for (int i = 0; i < v.extrusions_.size(); ++i) if (v.extrusions_.at(i).visible) std::cout << "visibile " << i << " " << v.extrusions_.at(i).name.toStdString() << std::endl;
     }
     static void run(bool render) {
+        deletionDuringEdgePick();
         using namespace ForgeCad;
         CadViewport v;
         {
@@ -2944,6 +2968,11 @@ int main(int argc, char **argv) {
     QTemporaryDir settings;
     QSettings::setDefaultFormat(QSettings::IniFormat);
     QSettings::setPath(QSettings::IniFormat, QSettings::UserScope, settings.path());
+    if (app.arguments().contains(QStringLiteral("--edge-pick-deletion"))) {
+        try { ViewportInteractionTest::deletionDuringEdgePick(); }
+        catch (const std::exception &e) { std::cerr << e.what() << std::endl; return 1; }
+        return 0;
+    }
     const int benchWindow = int(app.arguments().indexOf(QStringLiteral("--bench-window")));
     if (benchWindow > 0) {
         // Le impostazioni dell'utente, copiate: la finestra non tocca le sue.

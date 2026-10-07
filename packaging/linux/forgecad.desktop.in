@@ -1,6 +1,6 @@
 [Desktop Entry]
 Type=Application
-Name=ForgeCAD
+Name=Linux Cad for free
 GenericName=CAD parametrico 3D
 Comment=Modellazione parametrica di parti con geometria esatta
 Exec=@FORGECAD_EXEC@ %f

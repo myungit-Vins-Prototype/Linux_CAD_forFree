@@ -1,6 +1,12 @@
 cmake_minimum_required(VERSION 3.21)
 project(ForgeCAD LANGUAGES CXX)
 
+if(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
+    enable_language(OBJCXX)
+    set(CMAKE_OBJCXX_STANDARD 17)
+    set(CMAKE_OBJCXX_STANDARD_REQUIRED ON)
+endif()
+
 include(CheckLanguage)
 if(NOT CMAKE_CUDA_COMPILER AND EXISTS "/opt/cuda/bin/nvcc")
     set(CMAKE_CUDA_COMPILER "/opt/cuda/bin/nvcc" CACHE FILEPATH "CUDA compiler" FORCE)
@@ -94,6 +100,17 @@ add_executable(forgecad
     icons/forgecad.qrc
 )
 
+if(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
+    target_sources(forgecad PRIVATE cad_macos_menu.h cad_macos_menu.mm)
+    find_library(FORGECAD_APPKIT_FRAMEWORK AppKit REQUIRED)
+    target_link_libraries(forgecad PRIVATE ${FORGECAD_APPKIT_FRAMEWORK})
+    # Nome nativo anche avviando il binario da terminale, senza un bundle .app.
+    set(FORGECAD_MACOS_INFO_PLIST "${PROJECT_SOURCE_DIR}/packaging/macos/Info.plist")
+    target_link_options(forgecad PRIVATE
+        "LINKER:-sectcreate,__TEXT,__info_plist,${FORGECAD_MACOS_INFO_PLIST}")
+    set_property(TARGET forgecad APPEND PROPERTY LINK_DEPENDS "${FORGECAD_MACOS_INFO_PLIST}")
+endif()
+
 # Impronta dei sorgenti della geometria per la copia dei corpi nei documenti
 # (cad_document_io): se cambia, i corpi salvati si ricalcolano all'apertura.
 file(GLOB FORGECAD_GEOMETRY_SOURCES CONFIGURE_DEPENDS
@@ -170,6 +187,7 @@ option(FORGECAD_BUILD_VIEW_TESTS "Compila i test delle interazioni del viewport"
 if(FORGECAD_BUILD_VIEW_TESTS)
     get_target_property(FORGECAD_VIEW_TEST_SOURCES forgecad SOURCES)
     list(REMOVE_ITEM FORGECAD_VIEW_TEST_SOURCES forgeCad2026.cpp forgeCad2026_gui.cpp ${FORGE_CAD_CUDA_SOURCE} ${FORGECAD_HASH_HEADER})
+    list(REMOVE_ITEM FORGECAD_VIEW_TEST_SOURCES cad_macos_menu.h cad_macos_menu.mm)
     add_executable(forgecad_view_tests tests/test_viewport.cpp cuda_support_cpu.cpp ${FORGECAD_VIEW_TEST_SOURCES})
     add_dependencies(forgecad_view_tests forgecad) # genera l'impronta una sola volta, prima dei test
     target_include_directories(forgecad_view_tests PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/generated)

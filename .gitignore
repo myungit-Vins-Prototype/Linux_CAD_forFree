@@ -6,6 +6,6 @@
 *.stl
 *.obj
 forgecad-cuda-build/
-
+.DS_Store
 
 *.STEP
