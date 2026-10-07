@@ -120,6 +120,32 @@ FK_TEST(SheetExtend) {
     const Body wider = extendSheet(flat, {edgeNear(flat, Vec3(4, 0, 1))}, d);
     checkedSheet(wider, (4.0 + d) * h);
     FK_CHECK(wider.faces().size() == 1);
+    // Piano rifilato da due archi: il bordo non segue una isoparametrica del
+    // piano. E' il caso delle facce piane offset ricavate da un loft.
+    const double diskRadius = 4.0;
+    const auto circle = std::make_shared<Circle<3>>(Vec3(), Vec3(1, 0, 0), Vec3(0, 1, 0), diskRadius);
+    std::vector<Body::BuildEdge> diskEdges{
+        {0, 1, circle, {0.0, kPi}, 0.0},
+        {1, 0, circle, {kPi, kTwoPi}, 0.0}
+    };
+    Body::BuildFace diskFace;
+    diskFace.surface = std::make_shared<Plane>(Frame3());
+    diskFace.loops.push_back({{0, true, nullptr, 0.0}, {1, true, nullptr, 0.0}});
+    const Body disk = Body::buildSheet({Vec3(diskRadius, 0, 0), Vec3(-diskRadius, 0, 0)}, diskEdges, {diskFace});
+    const Body enlargedHalf = extendSheet(disk, {disk.edges().front()}, d);
+    const double expectedDiskArea = kPi * diskRadius * diskRadius
+                                  + 0.5 * kPi * ((diskRadius + d) * (diskRadius + d) - diskRadius * diskRadius);
+    checkedSheet(enlargedHalf, expectedDiskArea, 1e-7);
+    // La seconda meta' raggiunge esattamente gli estremi della prima: i due
+    // connettori precedenti vanno consumati, senza bordi sovrapposti.
+    const Body enlargedDisk = extendSheet(enlargedHalf, {edgeNear(enlargedHalf, Vec3(0, -diskRadius, 0))}, d);
+    checkedSheet(enlargedDisk, kPi * (diskRadius + d) * (diskRadius + d), 2e-7);
+    FK_CHECK(enlargedDisk.edges().size() == 2);
+    std::vector<EdgeId> wholeBoundary;
+    for (EdgeId edge : enlargedHalf.edges())
+        if (enlargedHalf.isLaminar(edge)) wholeBoundary.push_back(edge);
+    const Body extendedWholeFace = extendSheet(enlargedHalf, wholeBoundary, d);
+    FK_CHECK(checkedSheet(extendedWholeFace, 0.0) > expectedDiskArea);
     // Cilindro (arco di 90 gradi): in alto, e all'estremo lungo l'arco o tangente (piano).
     const double R = 2.0;
     const Body arc = sheetOf({arcSegment(Vec2(0, 0), R, 0.0, kPi / 2)}, h);

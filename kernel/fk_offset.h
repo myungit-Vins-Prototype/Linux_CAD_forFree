@@ -42,7 +42,7 @@ std::shared_ptr<BSplineCurve<3>> fitCurve(const std::function<Vec3(double)> &f, 
                                           const std::vector<double> &breaks, double tolerance, double *deviation = nullptr);
 
 struct OffsetResult {
-    Body body;                       // lamina (o piu' lamine nello stesso body, una per gruppo di facce tangenti)
+    Body body;                       // lamina (o piu' lamine nello stesso body)
     int shells = 0;                  // gruppi di facce unite
     int sharpEdges = 0;              // spigoli vivi tra le facce scelte: li' le superfici restano separate
     std::vector<std::string> notes;  // correzioni (edge tolleranti)
@@ -50,15 +50,23 @@ struct OffsetResult {
 
 // Lamina a distanza `distance` dalle facce `faces` di `body`, lungo la loro
 // normale uscente (negativa: verso l'interno). Le facce che si toccano lungo un
-// edge tangente (normali parallele, entro 1e-3 radianti) restano unite lungo
+// edge tangente (entro 1e-3 radianti e scarto dell'offset entro tolleranza) restano unite lungo
 // l'edge a distanza, cucite in una sola superficie; lungo gli spigoli vivi le
 // superfici a distanza si staccano (una si allontana dall'altra o la
 // attraversa) e il risultato ha piu' shell (sharpEdges le conta).
+// Con preserveSeams=true si intersecano localmente i prolungamenti anche
+// lungo gli spigoli vivi: bordi rifilati condivisi e vertici comuni a tutte
+// le facce incidenti. Se non converge entro tolleranza, l'operazione fallisce
+// esplicitamente (non restituisce una cucitura aperta o fuori tolleranza).
+// Le facce B-spline rettangolari con discontinuita' interne vengono divise
+// in pezze regolari e i nuovi bordi partecipano allo stesso trim/cuci.
+// Il default false conserva il comportamento dei chiamanti del kernel;
+// il comando interattivo abilita la cucitura per le nuove feature.
 // Superfici, coppie adiacenti e curve dei bordi sono calcolate in parallelo su
 // un numero di worker limitato ai core; la topologia finale viene assemblata in
 // ordine deterministico dopo il completamento di ciascuna fase.
 // std::domain_error se una faccia degenera.
-OffsetResult offsetFaces(const Body &body, const std::vector<FaceId> &faces, double distance, double tolerance = 1e-7);
+OffsetResult offsetFaces(const Body &body, const std::vector<FaceId> &faces, double distance, double tolerance = 1e-7, bool preserveSeams = false);
 
 }
 

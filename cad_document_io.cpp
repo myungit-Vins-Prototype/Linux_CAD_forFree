@@ -51,7 +51,8 @@ constexpr char kMagic[4] = {'F', 'C', 'A', 'D'};
 // connesse separate prodotte dall'eliminazione delle facce. 29 riferimenti di
 // faccia dei raccordi; 30 asse della rivoluzione scelto nella vista;
 // 31 settore delle quote d'angolo (`SketchConstraint::angleSides`).
-constexpr quint16 kVersion = 31;
+// 32 mantenimento della cucitura dell’offset.
+constexpr quint16 kVersion = 33;
 constexpr quint8 kZlib = 1;
 
 void write(QDataStream &out, const CurveObject &curve) {
@@ -325,6 +326,10 @@ void write(QDataStream &out, const ExtrusionObject &body) {
     out << body.blendBaseFeature;
     // Formato 30: asse della rivoluzione dato da un riferimento.
     writeRefs(out, {body.revolveAxisRef});
+    out << body.offsetSew;
+    // Formato 33: taglio reciproco di due corpi/superfici.
+    out << body.trimBoth << body.trimToolKeep.x << body.trimToolKeep.y << body.trimToolKeep.z
+        << qint32(body.trimToolKeep.subshape) << qint32(body.trimToolKeep.geometry) << qint32(body.trimToolKeep.context);
 }
 
 // `extras` (solo formato 5): i file scritti durante lo sviluppo del formato 5
@@ -527,6 +532,11 @@ bool read(QDataStream &in, ExtrusionObject &body, quint16 version, int extras) {
         if (!readRefs(in, refs, version) || refs.size() != 1) return false;
         body.revolveAxisRef = refs.first();
     }
+    body.offsetSew = false;  // i documenti precedenti conservano il risultato originale
+    if (version >= 32) in >> body.offsetSew;
+    if (version >= 33)
+        in >> body.trimBoth >> body.trimToolKeep.x >> body.trimToolKeep.y >> body.trimToolKeep.z
+           >> body.trimToolKeep.subshape >> body.trimToolKeep.geometry >> body.trimToolKeep.context;
     const BodyFeature last = version >= 27 ? BodyFeature::Thread : version >= 25 ? BodyFeature::Shell : BodyFeature::PlanarSurface;
     if (int(body.feature) < 0 || int(body.feature) > int(last)) return false;
     return in.status() == QDataStream::Ok;

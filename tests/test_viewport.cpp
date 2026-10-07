@@ -11,6 +11,7 @@
 #include "fk_mass.h"
 #include "fk_primitives.h"
 #include "fk_revolve.h"
+#include "fk_sheet.h"
 #include "fk_surface_algo.h"
 #include "fk_tessellate.h"
 #include <QGraphicsItem>
@@ -28,6 +29,42 @@ static void require(bool ok, const char *message) {
 }
 class ViewportInteractionTest {
 public:
+    static void offsetFacePicking() {
+        using namespace ForgeCad;
+        CadViewport v;
+        v.resize(800, 600);
+        v.setViewNormal(0);
+        v.setReferencePlanesVisible(true);
+        PrimitiveParameters box;
+        require(v.createPrimitive(box, QStringLiteral("Box selezione facce")).isEmpty(), "box selezione facce");
+        ExtrusionObject datum;
+        datum.feature = BodyFeature::DatumPlane;
+        datum.name = QStringLiteral("Piano davanti al box");
+        GeometryRef xy;
+        xy.kind = 1; xy.index = 0;
+        datum.datum.refs = {xy}; datum.datum.distance = 100; datum.datum.size = 100;
+        require(v.createBody(datum).isEmpty(), "datum davanti al corpo");
+        require(v.beginReferencePick(DatumRoleFace, -1).isEmpty(), "inizio scelta facce");
+        GeometryRef picked;
+        const QPoint cursor = v.projectWorldPoint(QVector3D(0.5f, 0.5f, 0)).toPoint();
+        require(v.pickReference(cursor, picked) && picked.kind == 5 && picked.index == 0,
+                "scelta facce ignora il datum davanti al corpo");
+        v.updateHover(cursor);
+        require(v.refHoverValid_ && v.refHover_.kind == 5 && v.hover_.kind == SceneObjectKind::None,
+                "hover delle facce senza evidenziare i piani");
+        v.extrusions_[0].visible = false;
+        require(!v.pickReference(cursor, picked), "nessun piano selezionabile nella scelta facce");
+        v.refPickRoles_ = DatumRolePlane;
+        require(v.pickReference(cursor, picked) && (picked.kind == 8 || picked.kind == 1),
+                "i piani restano selezionabili quando richiesti");
+        ExtrusionObject definition;
+        definition.feature = BodyFeature::SurfaceOffset;
+        ExtrusionObject separate = definition;
+        separate.offsetSew = false;
+        require(CadViewport::previewKey(definition, -1) != CadViewport::previewKey(separate, -1),
+                "la checkbox invalida la cache dell'anteprima");
+        std::cout << "Selezione facce offset e cache cucitura: OK" << std::endl;
+    }
     static void deletionDuringEdgePick() {
         for (int removed : {0, 2}) {
             CadViewport viewport;
@@ -77,6 +114,254 @@ public:
                   << " errore=" << obj.error.toStdString() << std::endl;
         require(stl.error.isEmpty() && obj.error.isEmpty(), "costruzione mesh del documento");
         if (args.size() > 4) require(saveQuadObj(args.at(4), obj.data).isEmpty(), "salvataggio OBJ diagnostico");
+    }
+    // --offset-lofts [distanza] file.prt ...
+    static void offsetLofts(const QStringList &arguments) {
+        using namespace ForgeCad;
+        bool explicitDistance = false;
+        const double parsed = arguments.value(0).toDouble(&explicitDistance);
+        const double offsetDistance = explicitDistance ? parsed : 0.1;
+        const QStringList paths = explicitDistance ? arguments.mid(1) : arguments;
+        require(!paths.isEmpty(), "specificare un documento per la diagnostica loft");
+        for (const QString &path : paths) {
+            DocumentState document;
+            require(loadDocumentFile(path, document).isEmpty(), "lettura documento offset loft");
+            for (int i = 0; i < document.extrusions.size(); ++i) {
+                auto &feature = document.extrusions[i];
+                if (!feature.forgeBody && !feature.suppressed)
+                    CadViewport::buildGeometry(feature, i, document.sketches, document.extrusions);
+                if (feature.feature != BodyFeature::Loft || !feature.forgeBody) continue;
+                for (bool sew : {false, true}) {
+                    QString error;
+                    std::cout << path.toStdString() << " loft " << i << " tutte le facce, cucitura=" << sew << std::endl;
+                    const auto result = forgeOffsetFaces(feature.forgeBody, {}, offsetDistance, &error, nullptr, sew);
+                    std::cout << "  " << (result ? "OK" : error.toStdString()) << std::endl;
+                    require(bool(result), "offset di tutte le facce del loft del documento");
+                }
+                for (const auto face : feature.forgeBody->faces()) {
+                    if (feature.forgeBody->face(face).surface->type() != Kernel::SurfaceType::BSpline) continue;
+                    const auto surface = feature.forgeBody->face(face).surface;
+                    const auto u = surface->uDomain(), v = surface->vDomain();
+                    const auto ref = faceReference(*feature.forgeBody, face, surface->point((u.lo+u.hi)/2, (v.lo+v.hi)/2));
+                    QString error;
+                    std::cout << path.toStdString() << " loft " << i << " face " << face.index << std::endl;
+                    const auto result = forgeOffsetFaces(feature.forgeBody, {ref}, offsetDistance, &error, nullptr, false);
+                    std::cout << "  " << (result ? "OK" : error.toStdString()) << std::endl;
+                    require(bool(result), "offset della faccia loft del documento");
+                }
+            }
+        }
+    }
+    static void offsetLoftSides(const QString &path, double distance) {
+        using namespace ForgeCad;
+        DocumentState document;
+        require(loadDocumentFile(path, document).isEmpty(), "lettura documento offset laterali");
+        CadViewport viewport;
+        viewport.loadDocument(document);
+        const int count = viewport.extrusions_.size();
+        int tested = 0;
+        for (int i = 0; i < count; ++i) {
+            const auto feature = viewport.extrusions_.at(i);
+            if (feature.feature != BodyFeature::Loft || !feature.forgeBody) continue;
+            ExtrusionObject definition;
+            definition.feature = BodyFeature::SurfaceOffset;
+            definition.firstBody = i;
+            definition.distance = distance;
+            definition.name = QStringLiteral("Offset laterali regressione");
+            for (const auto face : feature.forgeBody->faces()) {
+                const auto surface = feature.forgeBody->face(face).surface;
+                if (surface->type() != Kernel::SurfaceType::BSpline) continue;
+                const auto u = surface->uDomain(), v = surface->vDomain();
+                definition.offsetFaces.push_back(faceReference(*feature.forgeBody, face,
+                    surface->point(u.lo + 0.25 * u.length(), v.lo + 0.5 * v.length())));
+            }
+            if (definition.offsetFaces.isEmpty()) continue;
+            for (bool sew : {false, true}) {
+                definition.offsetSew = sew;
+                const QString error = viewport.createBody(definition);
+                std::cout << feature.name.toStdString() << " laterali: d=" << distance << " cucitura=" << sew
+                          << " " << (error.isEmpty() ? "OK" : error.toStdString()) << std::endl;
+                require(error.isEmpty(), "creazione offset laterali dal comando dell'applicazione");
+                const auto result = viewport.extrusions_.back().forgeBody;
+                require(result && Kernel::checkBody(*result).empty(), "offset laterali valido");
+                if (sew) require(result->shells().size() == 1, "laterali dell'offset cucite");
+                Kernel::TessellationOptions options;
+                options.deflection = 0.02;
+                require(Kernel::tessellate(*result, options).failedFaces == 0, "tutte le facce dell'offset visualizzabili");
+                ++tested;
+            }
+        }
+        require(tested > 0, "almeno un loft verificato");
+    }
+    static void extendTopologyFace(const QString &path, int bodyIndex, int faceIndex, double distance) {
+        using namespace ForgeCad;
+        DocumentState document;
+        require(loadDocumentFile(path, document).isEmpty(), "lettura documento per estensione faccia");
+        CadViewport viewport;
+        viewport.loadDocument(document);
+        require(bodyIndex >= 0 && bodyIndex < viewport.extrusions_.size(), "indice corpo dell'estensione");
+        const ExtrusionObject &feature = viewport.extrusions_.at(bodyIndex);
+        require(bool(feature.forgeBody), "geometria del corpo da estendere");
+        const Kernel::Body &body = *feature.forgeBody;
+        const Kernel::FaceId face(faceIndex);
+        require(body.contains(face), "faccia da estendere");
+        const Kernel::Surface &surface = *body.face(face).surface;
+        std::cout << "B" << bodyIndex << ":F" << faceIndex << " " << feature.name.toStdString()
+                  << " feature=" << int(feature.feature) << " faces=" << body.faces().size()
+                  << " edges=" << body.edges().size()
+                  << " domain=[" << surface.uDomain().lo << "," << surface.uDomain().hi
+                  << "]x[" << surface.vDomain().lo << "," << surface.vDomain().hi << "]" << std::endl;
+        int tested = 0;
+        bool sameSurfaceFailed = false;
+        QVector<EdgePoint> allBoundaryEdges;
+        for (Kernel::LoopId loop : body.face(face).loops)
+            for (Kernel::FinId fin : body.loopFins(loop)) {
+                const Kernel::EdgeId edge = body.fin(fin).edge;
+                if (!body.isLaminar(edge)) continue;
+                const Kernel::Edge &geometry = body.edge(edge);
+                const Kernel::Fin &finGeometry = body.fin(fin);
+                if (finGeometry.pcurve) {
+                    std::cout << "  E" << edge.index << " UV";
+                    for (double fraction : {0.0, 0.25, 0.5, 0.75, 1.0}) {
+                        const Kernel::Vec2 uv = finGeometry.pcurve->point(
+                            geometry.range.lo + fraction * geometry.range.length());
+                        std::cout << " (" << uv.x() << "," << uv.y() << ")";
+                    }
+                    std::cout << std::endl;
+                }
+                const auto reference = edgeReference(body, edge,
+                    geometry.curve->point(0.5 * (geometry.range.lo + geometry.range.hi)));
+                allBoundaryEdges.append(reference);
+                for (bool linear : {false, true}) {
+                    QString error;
+                    const ForgeBody result = forgeExtendSheet(feature.forgeBody, {reference}, distance, linear, &error);
+                    std::cout << "  E" << edge.index << " linear=" << linear << ": "
+                              << (result ? "OK" : error.toStdString()) << std::endl;
+                    if (!linear && !result) sameSurfaceFailed = true;
+                    if (result) {
+                        require(Kernel::checkBody(*result).empty(), "corpo esteso valido");
+                        Kernel::TessellationOptions options;
+                        options.deflection = 0.02;
+                        const Kernel::Tessellation mesh = Kernel::tessellate(*result, options);
+                        std::size_t points = 0, triangles = 0;
+                        for (const Kernel::FaceMesh &part : mesh.faces) {
+                            points += part.points.size();
+                            triangles += part.triangles.size();
+                        }
+                        std::cout << "    result faces=" << result->faces().size()
+                                  << " meshFaces=" << mesh.faces.size() << " points=" << points
+                                  << " triangles=" << triangles << " failed=" << mesh.failedFaces << std::endl;
+                        require(mesh.failedFaces == 0 && triangles > 0, "corpo esteso visualizzabile");
+                    }
+                    CadViewport applied;
+                    applied.loadDocument(document);
+                    const QString createError = applied.createSheetExtend(
+                        bodyIndex, {reference}, distance, linear, QStringLiteral("Estensione regressione"));
+                    require(createError.isEmpty(), "applicazione dell'estensione dal pannello");
+                    const ExtrusionObject &created = applied.extrusions_.back();
+                    std::cout << "    applied visible=" << created.visible
+                              << " vertices=" << created.display.vertices.size()
+                              << " edges=" << created.display.edges.size()
+                              << " sourceVisible=" << applied.extrusions_.at(bodyIndex).visible << std::endl;
+                    require(created.visible && !created.display.vertices.isEmpty(),
+                            "la feature applicata conserva una mesh visibile");
+                    if (edge.index == 0 && !linear) {
+                        CadViewport previewed;
+                        previewed.loadDocument(document);
+                        previewed.requestExtendPreview(bodyIndex, {reference}, distance, linear, -1);
+                        QElapsedTimer timeout;
+                        timeout.start();
+                        while (!(previewed.preview_.valid || !previewed.preview_.error.isEmpty()) && timeout.elapsed() < 30000)
+                            QApplication::processEvents(QEventLoop::AllEvents, 50);
+                        require(previewed.preview_.valid && previewed.preview_.geometry,
+                                "anteprima dell'estensione pronta");
+                        const ForgeBody previewGeometry = previewed.preview_.geometry;
+                        const QString promotedError = previewed.createSheetExtend(
+                            bodyIndex, {reference}, distance, linear, QStringLiteral("Estensione da anteprima"));
+                        require(promotedError.isEmpty(), "conferma dell'estensione mostrata in anteprima");
+                        require(previewed.preview_.key.isEmpty(), "anteprima chiusa alla conferma");
+                        require(previewed.extrusions_.back().forgeBody == previewGeometry
+                                    && previewed.extrusions_.back().visible
+                                    && !previewed.extrusions_.back().display.vertices.isEmpty(),
+                                "geometria dell'anteprima promossa e visibile");
+                    }
+                }
+                ++tested;
+            }
+        for (bool linear : {false, true}) {
+            QString error;
+            const ForgeBody result = forgeExtendSheet(feature.forgeBody, allBoundaryEdges, distance, linear, &error);
+            std::cout << "  ALL linear=" << linear << ": " << (result ? "OK" : error.toStdString()) << std::endl;
+            require(bool(result), "estensione contemporanea di tutti i bordi della faccia");
+            Kernel::TessellationOptions options;
+            options.deflection = 0.02;
+            const Kernel::Tessellation mesh = Kernel::tessellate(*result, options);
+            std::size_t triangles = 0;
+            for (const Kernel::FaceMesh &part : mesh.faces) triangles += part.triangles.size();
+            std::cout << "    result faces=" << result->faces().size() << " triangles=" << triangles
+                      << " failed=" << mesh.failedFaces << std::endl;
+            require(Kernel::checkBody(*result).empty() && mesh.failedFaces == 0 && triangles > 0,
+                    "risultato visibile dell'estensione dell'intera faccia");
+            CadViewport applied;
+            applied.loadDocument(document);
+            const QString createError = applied.createSheetExtend(
+                bodyIndex, allBoundaryEdges, distance, linear, QStringLiteral("Estensione intera faccia"));
+            require(createError.isEmpty(), "applicazione dell'estensione dell'intera faccia");
+            const ExtrusionObject &created = applied.extrusions_.back();
+            std::cout << "    applied visible=" << created.visible
+                      << " vertices=" << created.display.vertices.size()
+                      << " edges=" << created.display.edges.size()
+                      << " sourceVisible=" << applied.extrusions_.at(bodyIndex).visible << std::endl;
+            require(created.visible && !created.display.vertices.isEmpty(),
+                    "feature visibile dell'estensione dell'intera faccia");
+            if (!linear) {
+                CadViewport previewed;
+                previewed.loadDocument(document);
+                previewed.requestExtendPreview(bodyIndex, allBoundaryEdges, distance, linear, -1);
+                QElapsedTimer timeout;
+                timeout.start();
+                while (!(previewed.preview_.valid || !previewed.preview_.error.isEmpty()) && timeout.elapsed() < 30000)
+                    QApplication::processEvents(QEventLoop::AllEvents, 50);
+                require(previewed.preview_.valid && previewed.preview_.geometry,
+                        "anteprima dell'estensione dell'intera faccia pronta");
+                const ForgeBody previewGeometry = previewed.preview_.geometry;
+                const QString promotedError = previewed.createSheetExtend(
+                    bodyIndex, allBoundaryEdges, distance, linear, QStringLiteral("Estensione faccia da anteprima"));
+                require(promotedError.isEmpty(), "conferma dell'estensione dell'intera faccia");
+                const ExtrusionObject &promoted = previewed.extrusions_.back();
+                require(previewed.preview_.key.isEmpty() && promoted.forgeBody == previewGeometry
+                            && promoted.visible && !promoted.display.vertices.isEmpty(),
+                        "estensione dell'intera faccia promossa e visibile");
+            }
+        }
+        require(tested > 0, "almeno un bordo libero della faccia da estendere");
+        require(!sameSurfaceFailed, "estensione B-spline lungo la stessa superficie");
+    }
+    static void trimTopologyBodies(const QString &path, int first, int second) {
+        using namespace ForgeCad;
+        DocumentState document;
+        require(loadDocumentFile(path, document).isEmpty(), "lettura documento per taglio superfici");
+        CadViewport viewport;
+        viewport.loadDocument(document);
+        for (int target : {first, second}) {
+            const int tool = target == first ? second : first;
+            require(target >= 0 && target < viewport.extrusions_.size()
+                        && tool >= 0 && tool < viewport.extrusions_.size(), "indici corpi del taglio");
+            const ExtrusionObject &a = viewport.extrusions_.at(target), &b = viewport.extrusions_.at(tool);
+            std::cout << "B" << target << " " << a.name.toStdString() << " feature=" << int(a.feature)
+                      << " solidFlag=" << a.solid << " loftSurface=" << a.loftSurface
+                      << " sheet=" << bool(a.forgeBody && a.forgeBody->isSheet())
+                      << " faces=" << (a.forgeBody ? a.forgeBody->faces().size() : 0)
+                      << " <- B" << tool << " " << b.name.toStdString() << " feature=" << int(b.feature)
+                      << " solidFlag=" << b.solid << " loftSurface=" << b.loftSurface
+                      << " sheet=" << bool(b.forgeBody && b.forgeBody->isSheet())
+                      << " faces=" << (b.forgeBody ? b.forgeBody->faces().size() : 0) << std::endl;
+            QString error;
+            const QVector<SheetPiece> pieces = forgeSheetPieces(a.forgeBody, b.forgeBody, 0, &error);
+            std::cout << "  pieces=" << pieces.size() << " error=" << error.toStdString();
+            for (const SheetPiece &piece : pieces) std::cout << " area=" << piece.area;
+            std::cout << std::endl;
+        }
     }
     static void loftCorner(const QString &path) {
         using namespace ForgeCad;
@@ -2038,7 +2323,8 @@ public:
                         && QLineF(corner.segments.at(3).first, QPointF(3.5, 0.5)).length() < 1e-12 && satisfied(corner),
                     "angolo concavo: le copie si incontrano");
         }
-        // Offset di superficie e cucitura: feature parametriche, salvate nel formato 23.
+        offsetFacePicking();
+        // Offset di superficie e cucitura: feature parametriche, salvate nel formato 32.
         {
             CadViewport surfaces;
             PrimitiveParameters ball;
@@ -2081,6 +2367,7 @@ public:
             sideOffset.feature = BodyFeature::SurfaceOffset;
             sideOffset.firstBody = cylinder;
             sideOffset.distance = -0.25;
+            sideOffset.offsetSew = false;
             sideOffset.offsetFaces = {ForgeCad::faceReference(canBody, side, ForgeCad::Kernel::Vec3(1.0, 0.0, 1.5))};
             sideOffset.name = QStringLiteral("Offset fianco");
             require(surfaces.createBody(sideOffset).isEmpty(), "offset del fianco del cilindro");
@@ -2094,11 +2381,107 @@ public:
             require(loadDocumentFile(path, reloaded).isEmpty(), "lettura di offset e cucitura");
             require(reloaded.extrusions.at(2).feature == BodyFeature::Sew && reloaded.extrusions.at(2).sewSolid
                         && reloaded.extrusions.back().feature == BodyFeature::SurfaceOffset && reloaded.extrusions.back().offsetFaces.size() == 1
-                        && reloaded.extrusions.back().distance == -0.25,
+                        && reloaded.extrusions.back().distance == -0.25
+                        && !reloaded.extrusions.back().offsetSew && reloaded.extrusions.at(1).offsetSew,
                     "parametri di offset e cucitura nel documento");
             CadViewport again;
             again.loadDocument(reloaded);
             require(again.extrusions_.at(2).solid && again.extrusions_.back().forgeBody, "offset e cucitura rigenerati");
+        }
+        // Taglio di superfici: il bersaglio puo' essere anche la pelle di un
+        // solido; gli utensili possono essere corpi, piani e schizzi.
+        {
+            using namespace ForgeCad;
+            using namespace ForgeCad::Kernel;
+            QString error;
+            const ForgeBody plate = std::make_shared<const Body>(makePlaneSheet(Frame3(), 10.0));
+            const ForgeBody cylinder = std::make_shared<const Body>(makeCylinder(
+                Frame3(Vec3(1, 2, -3), Vec3(0, 0, 1), Vec3(1, 0, 0)), 2.5, 6.0));
+            const QVector<SheetPiece> cachedPieces = forgeSheetPieces(plate, cylinder, 0, &error);
+            require(cachedPieces.size() == 2 && error.isEmpty(),
+                    "taglio di una superficie con un corpo");
+            require(cachedPieces.at(0).geometry && cachedPieces.at(1).geometry
+                        && !cachedPieces.at(0).display.vertices.isEmpty() && !cachedPieces.at(1).display.vertices.isEmpty()
+                        && forgeClosestSheetPiece(cachedPieces, cachedPieces.at(1).point) == 1,
+                    "parti del taglio riutilizzabili e selezionabili nella vista");
+            CadViewport cachedViewport;
+            ExtrusionObject cachedPlate, cachedCylinder;
+            cachedPlate.name = QStringLiteral("Lastra cache"); cachedPlate.forgeBody = plate;
+            cachedCylinder.name = QStringLiteral("Cilindro cache"); cachedCylinder.forgeBody = cylinder; cachedCylinder.solid = true;
+            cachedViewport.extrusions_ = {cachedPlate, cachedCylinder};
+            ExtrusionObject cachedDefinition;
+            cachedDefinition.feature = BodyFeature::SheetTrim;
+            cachedDefinition.firstBody = 0;
+            cachedDefinition.secondBody = 1;
+            cachedDefinition.trimKeep = cachedPieces.at(0).point;
+            cachedViewport.resize(800, 600);
+            cachedViewport.setViewNormal(0);
+            cachedViewport.setTrimPartPickCallback(0, cachedPieces, [](EdgePoint) {});
+            const EdgePoint hoverPoint = cachedPieces.at(1).point;
+            cachedViewport.updateHover(cachedViewport.projectWorldPoint(
+                QVector3D(float(hoverPoint.x), float(hoverPoint.y), float(hoverPoint.z))).toPoint());
+            require(cachedViewport.trimPartHover_ == 1, "evidenziazione della parte sotto il mouse");
+            cachedViewport.showTrimPreview(cachedDefinition, cachedPieces.at(0).geometry, cachedPieces.at(0).display);
+            const ForgeBody cachedGeometry = cachedPieces.at(0).geometry;
+            require(cachedViewport.createSheetTrim(0, 1, 0, cachedPieces.at(0).point, QStringLiteral("Taglio da cache")).isEmpty()
+                        && cachedViewport.extrusions_.back().forgeBody == cachedGeometry,
+                    "conferma del taglio senza ripetere l'intersezione");
+
+            error.clear();
+            const ForgeBody vertical = forgeTrimPlaneTool(
+                plate, Frame3(Vec3(2, 0, 0), Vec3(1, 0, 0), Vec3(0, 1, 0)), &error);
+            require(vertical && forgeSheetPieces(plate, vertical, 0, &error).size() == 2 && error.isEmpty(),
+                    "taglio di una superficie con un piano di lavoro");
+            error.clear();
+            const ForgeBody mutualTool = std::make_shared<const Body>(
+                makePlaneSheet(Frame3(Vec3(2, 0, 0), Vec3(1, 0, 0), Vec3(0, 1, 0)), 10.0));
+            const ForgeBody mutual = forgeTrimBoth(plate, mutualTool, EdgePoint{-5, 0, 0}, EdgePoint{2, 0, 5}, &error);
+            if (!mutual || !error.isEmpty()) std::cout << "Mutual trim: " << error.toStdString() << std::endl;
+            require(mutual && mutual->isSheet() && Kernel::checkBody(*mutual).empty() && error.isEmpty(),
+                    "taglio reciproco conserva una parte di entrambe le superfici");
+            CadViewport mutualViewport;
+            ExtrusionObject firstSheet, secondSheet;
+            firstSheet.name = QStringLiteral("Prima superficie");
+            firstSheet.forgeBody = plate;
+            firstSheet.visible = true;
+            secondSheet.name = QStringLiteral("Seconda superficie");
+            secondSheet.forgeBody = mutualTool;
+            secondSheet.visible = true;
+            mutualViewport.extrusions_.append(firstSheet);
+            mutualViewport.extrusions_.append(secondSheet);
+            require(mutualViewport.createSheetTrim(0, 1, 0, EdgePoint{-5, 0, 0}, QStringLiteral("Taglio reciproco"),
+                                                   -1, true, EdgePoint{2, 0, 5}).isEmpty(),
+                    "feature di taglio reciproco");
+            require(!mutualViewport.extrusions_.at(0).visible && !mutualViewport.extrusions_.at(1).visible
+                        && mutualViewport.extrusions_.back().trimBoth && mutualViewport.extrusions_.back().forgeBody,
+                    "il taglio reciproco nasconde entrambi gli originali");
+            QTemporaryDir mutualDirectory;
+            const QString mutualPath = mutualDirectory.filePath(QStringLiteral("taglio-reciproco.prt"));
+            require(saveDocumentFile(mutualPath, mutualViewport.currentDocument(), false).isEmpty(),
+                    "salvataggio del taglio reciproco");
+            DocumentState mutualDocument;
+            require(loadDocumentFile(mutualPath, mutualDocument).isEmpty() && mutualDocument.extrusions.back().trimBoth
+                        && std::fabs(mutualDocument.extrusions.back().trimToolKeep.z - 5.0) < 1e-12,
+                    "persistenza del taglio reciproco");
+
+            SketchObject line;
+            line.name = QStringLiteral("Linea di taglio");
+            line.segments.append({QPointF(-20, 0), QPointF(20, 0)});
+            line.constraints.append(-1);
+            line.segmentLengths.append(0.0);
+            line.segmentAngles.append(-1.0);
+            error.clear();
+            const ForgeBody sketchTool = forgeTrimSketchTool(plate, line, &error);
+            require(sketchTool && forgeSheetPieces(plate, sketchTool, 0, &error).size() == 2 && error.isEmpty(),
+                    "taglio di una superficie con uno schizzo aperto");
+
+            const ForgeBody box = std::make_shared<const Body>(makeBox(Frame3(), 4.0, 3.0, 2.0));
+            error.clear();
+            const ForgeBody boxPlane = forgeTrimPlaneTool(
+                box, Frame3(Vec3(2, 0, 0), Vec3(1, 0, 0), Vec3(0, 1, 0)), &error);
+            const QVector<SheetPiece> boxPieces = forgeSheetPieces(box, boxPlane, 0, &error);
+            require(boxPlane && boxPieces.size() == 2 && error.isEmpty(),
+                    "taglio della pelle di un solido con un piano");
         }
         // Superfici rigata, planare, loft e sweep di superfici (formato 24).
         {
@@ -3075,6 +3458,25 @@ int main(int argc, char **argv) {
         if (meshStats > 0) { ViewportInteractionTest::meshStats(app.arguments().mid(meshStats + 1)); return 0; }
         if (edit > 0) ViewportInteractionTest::renderEdit(app.arguments().mid(edit + 1));
         else if (step > 0) ViewportInteractionTest::renderStep(app.arguments().mid(step + 1));
+        else if (app.arguments().contains(QStringLiteral("--offset-pick")))
+            ViewportInteractionTest::offsetFacePicking();
+        else if (app.arguments().contains(QStringLiteral("--offset-loft-sides"))) {
+            const int argument = app.arguments().indexOf(QStringLiteral("--offset-loft-sides"));
+            ViewportInteractionTest::offsetLoftSides(app.arguments().value(argument + 1), app.arguments().value(argument + 2, QStringLiteral("1")).toDouble());
+        }
+        else if (app.arguments().contains(QStringLiteral("--extend-topology-face"))) {
+            const int argument = app.arguments().indexOf(QStringLiteral("--extend-topology-face"));
+            ViewportInteractionTest::extendTopologyFace(app.arguments().value(argument + 1),
+                app.arguments().value(argument + 2).toInt(), app.arguments().value(argument + 3).toInt(),
+                app.arguments().value(argument + 4, QStringLiteral("1")).toDouble());
+        }
+        else if (app.arguments().contains(QStringLiteral("--trim-topology-bodies"))) {
+            const int argument = app.arguments().indexOf(QStringLiteral("--trim-topology-bodies"));
+            ViewportInteractionTest::trimTopologyBodies(app.arguments().value(argument + 1),
+                app.arguments().value(argument + 2).toInt(), app.arguments().value(argument + 3).toInt());
+        }
+        else if (app.arguments().contains(QStringLiteral("--offset-lofts")))
+            ViewportInteractionTest::offsetLofts(app.arguments().mid(app.arguments().indexOf(QStringLiteral("--offset-lofts")) + 1));
         else if (app.arguments().contains(QStringLiteral("--loft-corner")))
             ViewportInteractionTest::loftCorner(QStringLiteral("File_Esempio/prova con loft.prt"));
         else ViewportInteractionTest::run(app.arguments().contains(QStringLiteral("--gl")));

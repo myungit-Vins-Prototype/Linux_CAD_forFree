@@ -489,11 +489,13 @@ struct ChamferSpec {
     bool flip = false;
 };
 
-// Parte di una superficie divisa da uno strumento (finestra del taglio): un
-// suo punto e la sua area.
+// Parte gia' calcolata di una superficie divisa: geometria e mesh vengono
+// riusate per la scelta nella vista e per l'anteprima, senza rifare il taglio.
 struct SheetPiece {
     EdgePoint point;
     double area = 0.0;
+    ForgeCad::ForgeBody geometry;
+    BodyDisplay display;
 };
 
 struct ExtrusionObject {
@@ -525,8 +527,11 @@ struct ExtrusionObject {
     quint64 blendBaseFeature = 0;
     // SheetTrim: firstBody = superficie, secondBody = corpo strumento (-1: il
     // piano di riferimento trimPlane), trimKeep un punto della parte da tenere.
+    // Con trimBoth si rifila anche secondBody e trimToolKeep ne sceglie la parte.
     int trimPlane = 0;
     EdgePoint trimKeep;
+    bool trimBoth = false;
+    EdgePoint trimToolKeep;
     bool extendLinear = false;  // SheetExtend: tangente (rigata) invece della stessa superficie
     // Scale: firstBody = corpo, fattore uniforme e centro (0 origine, 1 baricentro del solido, 2 il punto scaleCenter).
     double scaleFactor = 1.0;
@@ -599,6 +604,7 @@ struct ExtrusionObject {
     // SurfaceOffset: le facce scelte (vuoto: tutte le facce del corpo).
     // DeleteFace: le facce da togliere (almeno una); Shell: le facce dell'apertura.
     QVector<EdgePoint> offsetFaces;
+    bool offsetSew = true;  // estendi/rifila le facce adiacenti prima di cucirle
     // DeleteFace multi-risultato: -1 = tutte le componenti (file storici),
     // altrimenti la componente connessa esposta da questo corpo logico.
     int deleteComponent = -1;

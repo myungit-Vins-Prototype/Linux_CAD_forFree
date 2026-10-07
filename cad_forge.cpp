@@ -336,53 +336,157 @@ Body trimTool(const Body &sheet, const ForgeBody &tool, int plane) {
     return makePlaneSheet(sketchAxes(plane), reach);
 }
 
+Body trimTarget(const Body &body) {
+    if (body.isSheet()) return body;
+    return facesAsSheet(body, body.faces());
+}
+
+double trimToolReach(const Body &body, const Vec3 &origin = Vec3()) {
+    Box box;
+    for (VertexId vertex : body.vertices()) box.add(body.vertex(vertex).point);
+    for (FaceId face : body.faces()) box.add(faceBox(body, face));
+    return 10.0 * (box.diagonal() + norm(0.5 * (box.lo + box.hi) - origin)) + 10.0;
+}
+
 }
 
 ForgeBody forgeTrimSheet(const ForgeBody &sheet, const ForgeBody &tool, int plane, const EdgePoint &keep, QString *error) {
-    if (!sheet || !sheet->isSheet()) {
-        setError(error, QStringLiteral("Si tagliano solo le superfici (estrusioni di profili aperti)."));
+    if (!sheet) {
+        setError(error, QStringLiteral("Il corpo da tagliare non ha geometria valida."));
         return nullptr;
     }
     try {
-        return std::make_shared<const Body>(trimSheet(*sheet, trimTool(*sheet, tool, plane), Vec3(keep.x, keep.y, keep.z)));
+        const Body target = trimTarget(*sheet);
+        return std::make_shared<const Body>(trimSheet(target, trimTool(target, tool, plane), Vec3(keep.x, keep.y, keep.z)));
     } catch (const std::exception &failure) {
         setError(error, QStringLiteral("Taglio non riuscito: %1").arg(QString::fromUtf8(failure.what())));
+        return nullptr;
+    }
+}
+
+ForgeBody forgeTrimBoth(const ForgeBody &first, const ForgeBody &second, const EdgePoint &firstKeep,
+                        const EdgePoint &secondKeep, QString *error) {
+    if (!first || !second) {
+        setError(error, QStringLiteral("I due corpi da rifilare devono avere geometria valida."));
+        return nullptr;
+    }
+    try {
+        const Body a = trimTarget(*first), b = trimTarget(*second);
+        const Body keptA = trimSheet(a, b, Vec3(firstKeep.x, firstKeep.y, firstKeep.z));
+        const Body keptB = trimSheet(b, a, Vec3(secondKeep.x, secondKeep.y, secondKeep.z));
+        const std::vector<const Body *> parts{&keptA, &keptB};
+        return std::make_shared<const Body>(sewSheets(parts, 1e-6, false).body);
+    } catch (const std::exception &failure) {
+        setError(error, QStringLiteral("Taglio reciproco non riuscito: %1").arg(QString::fromUtf8(failure.what())));
+        return nullptr;
+    }
+}
+
+ForgeBody forgeTrimPlaneTool(const ForgeBody &target, const Frame3 &frame, QString *error) {
+    if (!target) {
+        setError(error, QStringLiteral("Il corpo da tagliare non ha geometria valida."));
+        return nullptr;
+    }
+    try {
+        return std::make_shared<const Body>(makePlaneSheet(frame, trimToolReach(*target, frame.origin())));
+    } catch (const std::exception &failure) {
+        setError(error, QStringLiteral("Piano di taglio non valido: %1").arg(QString::fromUtf8(failure.what())));
+        return nullptr;
+    }
+}
+
+ForgeBody forgeTrimSketchTool(const ForgeBody &target, const SketchObject &sketch, QString *error) {
+    if (!target) {
+        setError(error, QStringLiteral("Il corpo da tagliare non ha geometria valida."));
+        return nullptr;
+    }
+    try {
+        const std::vector<ProfileSegment> segments = forgeSketchSegments(sketch);
+        if (segments.empty()) throw std::domain_error("lo schizzo non contiene curve utilizzabili");
+        const Profile profile = buildProfile(segments, kSketchConnectionTolerance);
+        const Frame3 axes = sketchAxes(sketch);
+        const double reach = trimToolReach(*target, axes.origin());
+        const Frame3 frame(axes.origin() - reach * axes.zDir(), axes.zDir(), axes.xDir());
+        std::vector<Body> cutters;
+        for (const ProfileRegion &region : profile.regions) {
+            const Body solid = makeExtrusion(frame, region, 2.0 * reach);
+            std::vector<FaceId> sides;
+            for (FaceId face : solid.faces()) {
+                const Surface &surface = *solid.face(face).surface;
+                if (surface.type() == SurfaceType::Plane) {
+                    const Vec3 normal = static_cast<const Plane &>(surface).frame().zDir();
+                    if (std::fabs(dot(normal, axes.zDir())) > 1.0 - 1e-9) continue;
+                }
+                sides.push_back(face);
+            }
+            if (!sides.empty()) cutters.push_back(facesAsSheet(solid, sides));
+        }
+        if (!profile.chains.empty()) cutters.push_back(makeSheetExtrusion(frame, profile.chains, 2.0 * reach));
+        if (cutters.empty()) throw std::domain_error("lo schizzo non produce superfici di taglio");
+        std::vector<const Body *> pointers;
+        for (const Body &cutter : cutters) pointers.push_back(&cutter);
+        return std::make_shared<const Body>(sewSheets(pointers, 1e-6, false).body);
+    } catch (const std::exception &failure) {
+        setError(error, QStringLiteral("Schizzo di taglio non valido: %1").arg(QString::fromUtf8(failure.what())));
         return nullptr;
     }
 }
 
 QVector<SheetPiece> forgeSheetPieces(const ForgeBody &sheet, const ForgeBody &tool, int plane, QString *error) {
     QVector<SheetPiece> result;
-    if (!sheet || !sheet->isSheet()) {
-        setError(error, QStringLiteral("Si tagliano solo le superfici (estrusioni di profili aperti)."));
+    if (!sheet) {
+        setError(error, QStringLiteral("Il corpo da tagliare non ha geometria valida."));
         return result;
     }
     try {
-        for (const Body &piece : splitSheet(*sheet, trimTool(*sheet, tool, plane))) {
-            // Un punto della parte: il baricentro del triangolo piu' grande della sua tassellazione.
-            TessellationOptions options;
-            options.deflection = 1e-2;
-            const Tessellation mesh = tessellate(piece, options);
+        const Body target = trimTarget(*sheet);
+        for (const Body &piece : splitSheet(target, trimTool(target, tool, plane))) {
+            // La stessa mesh serve per punto, area approssimata e anteprima:
+            // prima si tassellava qui, si integrava anche l'area esatta e poi
+            // il pannello tassellava di nuovo la parte scelta.
             double largest = -1.0;
             SheetPiece info;
-            for (const FaceMesh &face : mesh.faces)
-                for (const auto &t : face.triangles) {
-                    const Vec3 &a = face.points[std::size_t(t[0])], &b = face.points[std::size_t(t[1])], &c = face.points[std::size_t(t[2])];
-                    const double area = norm(cross(b - a, c - a));
-                    if (area > largest) {
-                        largest = area;
-                        const Vec3 m = (a + b + c) / 3.0;
-                        info.point = {m.x(), m.y(), m.z()};
-                    }
+            info.geometry = std::make_shared<const Body>(piece);
+            forgeTessellate(piece, 0, info.display);
+            for (int k = 0; k + 2 < info.display.vertices.size(); k += 3) {
+                const QVector3D &qa = info.display.vertices.at(k), &qb = info.display.vertices.at(k + 1), &qc = info.display.vertices.at(k + 2);
+                const Vec3 a(qa.x(), qa.y(), qa.z()), b(qb.x(), qb.y(), qb.z()), c(qc.x(), qc.y(), qc.z());
+                const double twiceArea = norm(cross(b - a, c - a));
+                info.area += 0.5 * twiceArea;
+                if (twiceArea > largest) {
+                    largest = twiceArea;
+                    const Vec3 m = (a + b + c) / 3.0;
+                    info.point = {m.x(), m.y(), m.z()};
                 }
-            for (FaceId f : piece.faces()) info.area += faceArea(piece, f, 1e-9);
+            }
             result.append(info);
         }
+        if (result.size() < 2)
+            setError(error, QStringLiteral("Lo strumento non interseca il corpo da tagliare oppure non lo divide in due regioni."));
     } catch (const std::exception &failure) {
         setError(error, QStringLiteral("Taglio non riuscito: %1").arg(QString::fromUtf8(failure.what())));
         result.clear();
     }
     return result;
+}
+
+int forgeClosestSheetPiece(const QVector<SheetPiece> &pieces, const EdgePoint &point) {
+    const Vec3 p(point.x, point.y, point.z);
+    int closest = -1;
+    double best = std::numeric_limits<double>::max();
+    for (int k = 0; k < pieces.size(); ++k) {
+        if (!pieces.at(k).geometry) continue;
+        const Body &body = *pieces.at(k).geometry;
+        double distance = std::numeric_limits<double>::max();
+        for (FaceId face : body.faces()) {
+            const SurfaceProjection projection = projectPoint(*body.face(face).surface, p);
+            const double candidate = classifyPointOnFace(body, face, projection.point, 1e-7) != PointLocation::Outside
+                ? projection.distance : distanceToFaceBoundary(body, face, p);
+            distance = std::min(distance, candidate);
+        }
+        if (distance < best) best = distance, closest = k;
+    }
+    return closest;
 }
 
 ForgeBody forgeScale(const ForgeBody &base, double factor, int mode, const EdgePoint &point, QString *error) {
@@ -525,7 +629,7 @@ ForgeBody forgeDeleteFaces(const ForgeBody &base, const QVector<EdgePoint> &poin
     return std::make_shared<const Body>(sewSheets(bodies, 0.0, false).body);
 }
 
-ForgeBody forgeOffsetFaces(const ForgeBody &base, const QVector<EdgePoint> &points, double distance, QString *error, QString *summary) {
+ForgeBody forgeOffsetFaces(const ForgeBody &base, const QVector<EdgePoint> &points, double distance, QString *error, QString *summary, bool preserveSeams) {
     if (!base) {
         setError(error, QStringLiteral("Il corpo di partenza non ha geometria."));
         return nullptr;
@@ -551,7 +655,7 @@ ForgeBody forgeOffsetFaces(const ForgeBody &base, const QVector<EdgePoint> &poin
                 if (std::find(faces.begin(), faces.end(), f) == faces.end()) faces.push_back(f);
             }
         }
-        const OffsetResult result = offsetFaces(*base, faces, distance);
+        const OffsetResult result = offsetFaces(*base, faces, distance, 1e-7, preserveSeams);
         if (summary) {
             *summary = result.shells == 1 ? QStringLiteral("una superficie cucita")
                                           : QStringLiteral("%1 superfici separate").arg(result.shells);

@@ -68,13 +68,19 @@ ForgeBody forgeThread(const ForgeBody &base, const ThreadParameters &parameters,
 // Booleana esatta (con la fusione delle facce sulla stessa superficie).
 ForgeBody forgeBoolean(const ForgeBody &first, const ForgeBody &second, BooleanOperation operation, QString *error);
 
-// Superfici (lamine). Taglio: `sheet` divisa dal corpo `tool` (lamina o
-// solido) o, se `tool` e' nullo, dal piano di riferimento `plane`; resta la
-// parte piu' vicina a `keep` (fk_sheet trimSheet).
+// Taglio della pelle di `sheet` col corpo `tool` (lamina o solido) o, se
+// `tool` e' nullo, col piano `plane`; resta la parte piu' vicina a `keep`.
 ForgeBody forgeTrimSheet(const ForgeBody &sheet, const ForgeBody &tool, int plane, const EdgePoint &keep, QString *error);
+ForgeBody forgeTrimBoth(const ForgeBody &first, const ForgeBody &second, const EdgePoint &firstKeep,
+                        const EdgePoint &secondKeep, QString *error);
+// Utensili di taglio temporanei: piano illimitato oppure schizzo estruso in
+// entrambe le direzioni oltre il corpo da tagliare.
+ForgeBody forgeTrimPlaneTool(const ForgeBody &target, const Kernel::Frame3 &frame, QString *error);
+ForgeBody forgeTrimSketchTool(const ForgeBody &target, const SketchObject &sketch, QString *error);
 // Le parti in cui lo strumento divide la superficie, con un punto di ciascuna
 // (per scegliere quella da tenere) e la sua area.
 QVector<SheetPiece> forgeSheetPieces(const ForgeBody &sheet, const ForgeBody &tool, int plane, QString *error);
+int forgeClosestSheetPiece(const QVector<SheetPiece> &pieces, const EdgePoint &point);
 // Scala uniforme di `factor` attorno all'origine (mode 0), al baricentro del
 // solido (1) o a `point` (2), esatta (fk_transform scaleBody).
 ForgeBody forgeScale(const ForgeBody &base, double factor, int mode, const EdgePoint &point, QString *error);
@@ -91,7 +97,7 @@ ForgeBody forgeShell(const ForgeBody &base, const QVector<EdgePoint> &openFaces,
 // precedenti); un valore >= 0 restituisce una sola componente connessa.
 ForgeBody forgeDeleteFaces(const ForgeBody &base, const QVector<EdgePoint> &faces, QString *error, int component = -1);
 QVector<ForgeBody> forgeDeleteFacesSeparated(const ForgeBody &base, const QVector<EdgePoint> &faces, QString *error);
-ForgeBody forgeOffsetFaces(const ForgeBody &base, const QVector<EdgePoint> &faces, double distance, QString *error, QString *summary = nullptr);
+ForgeBody forgeOffsetFaces(const ForgeBody &base, const QVector<EdgePoint> &faces, double distance, QString *error, QString *summary = nullptr, bool preserveSeams = true);
 // Cucitura delle superfici `sheets` (anche solidi: valgono le loro facce) in
 // una sola entro `tolerance`; con `solid` e il risultato chiuso, un solido.
 // `summary` dice se e' chiusa e quanti bordi restano liberi.

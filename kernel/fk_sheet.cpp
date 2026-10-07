@@ -10,6 +10,9 @@
 #include "fk_boolean.h"
 #include "fk_classify.h"
 #include "fk_curve_algo.h"
+#include "fk_curve_ops.h"
+#include "fk_offset.h"
+#include "fk_planar.h"
 #include "fk_pcurve.h"
 #include "fk_precision.h"
 #include "fk_surface_algo.h"
@@ -118,6 +121,43 @@ BSplineCurve<3> extendBSpline(const BSplineCurve<3> &input, double lo, double hi
     return curve;
 }
 
+// Prolungamento tensoriale: ogni riga/colonna conserva il polinomio terminale.
+BSplineSurface extendBSplineSurface(const BSplineSurface &input, const Interval &u, const Interval &v) {
+    BSplineSurface surface = input;
+    for (int axis = 0; axis < 2; ++axis) {
+        const int count = axis == 0 ? surface.vPoleCount() : surface.uPoleCount();
+        std::vector<BSplineCurve<3>> curves;
+        for (int j = 0; j < count; ++j) {
+            std::vector<Vec3> poles;
+            std::vector<double> weights;
+            const int along = axis == 0 ? surface.uPoleCount() : surface.vPoleCount();
+            for (int i = 0; i < along; ++i) {
+                poles.push_back(axis == 0 ? surface.pole(i, j) : surface.pole(j, i));
+                if (surface.isRational()) weights.push_back(axis == 0 ? surface.weight(i, j) : surface.weight(j, i));
+            }
+            const BSplineCurve<3> curve(axis == 0 ? surface.uDegree() : surface.vDegree(),
+                                       axis == 0 ? surface.uKnots() : surface.vKnots(), poles, weights);
+            const Interval range = axis == 0 ? u : v;
+            curves.push_back(extendBSpline(curve, range.lo, range.hi));
+        }
+        const int nu = axis == 0 ? curves.front().poleCount() : count;
+        const int nv = axis == 0 ? count : curves.front().poleCount();
+        std::vector<Vec3> poles;
+        std::vector<double> weights;
+        for (int i = 0; i < nu; ++i)
+            for (int j = 0; j < nv; ++j) {
+                const auto &curve = curves[std::size_t(axis == 0 ? j : i)];
+                const int k = axis == 0 ? i : j;
+                poles.push_back(curve.poles()[std::size_t(k)]);
+                if (surface.isRational()) weights.push_back(curve.weight(k));
+            }
+        surface = BSplineSurface(surface.uDegree(), surface.vDegree(),
+                                 axis == 0 ? curves.front().knots() : surface.uKnots(),
+                                 axis == 1 ? curves.front().knots() : surface.vKnots(), nu, nv, poles, weights);
+    }
+    return surface;
+}
+
 Body makePlaneSheet(const Frame3 &frame, double halfSize) {
     const double h = halfSize;
     const std::vector<Vec3> corners{frame.toGlobal(Vec3(-h, -h, 0)), frame.toGlobal(Vec3(h, -h, 0)), frame.toGlobal(Vec3(h, h, 0)), frame.toGlobal(Vec3(-h, h, 0))};
@@ -132,6 +172,98 @@ Body makePlaneSheet(const Frame3 &frame, double halfSize) {
     Body body = Body::buildSheet(corners, edges, {face});
     computePCurves(body);
     return body;
+}
+
+// Estensione di una singola faccia piana. Ricostruire il contorno evita le
+// strisce sovrapposte quando una seconda estensione raggiunge o percorre i
+// connettori creati dalla prima.
+Body extendPlanarFace(const Body &body, const std::vector<EdgeId> &selected, double length,
+                      double scale, double tolerance) {
+    const FaceId faceId = body.faces().front();
+    const Face &face = body.face(faceId);
+    const Vec3 planeNormal = static_cast<const Plane &>(*face.surface).frame().zDir();
+    const auto chosen = [&](EdgeId edge) {
+        return std::find(selected.begin(), selected.end(), edge) != selected.end();
+    };
+    struct Piece {
+        EdgeId edge;
+        CurvePtr<3> curve;
+        Interval range;
+        bool sense = true;
+        bool selected = false;
+        Vec3 start, end;
+    };
+    std::vector<std::vector<PathSegment>> output;
+    for (LoopId loop : face.loops) {
+        std::vector<Piece> pieces;
+        for (FinId finId : body.loopFins(loop)) {
+            const Fin &fin = body.fin(finId);
+            const Edge &edge = body.edge(fin.edge);
+            Piece piece{fin.edge, edge.curve, edge.range, fin.sense, chosen(fin.edge), {}, {}};
+            const double t0 = fin.sense ? edge.range.lo : edge.range.hi;
+            const double t1 = fin.sense ? edge.range.hi : edge.range.lo;
+            if (piece.selected) {
+                const double traversal = fin.sense ? 1.0 : -1.0;
+                const double orientation = face.sense ? 1.0 : -1.0;
+                const auto parallelPoint = [&](double t) {
+                    const Vec3 tangent = traversal * edge.curve->derivative(t);
+                    return edge.curve->point(t) + length * normalized(orientation * cross(tangent, planeNormal));
+                };
+                piece.curve = fitCurve(parallelPoint, edge.range, edge.curve->breakpoints(edge.range),
+                                       std::max(tolerance, 1e-8 * scale));
+            }
+            piece.start = piece.curve->point(t0);
+            piece.end = piece.curve->point(t1);
+            pieces.push_back(std::move(piece));
+        }
+        if (pieces.empty()) continue;
+        // Se l'estremo spostato cade sul bordo adiacente non selezionato, quel
+        // bordo si rifila fino al nuovo estremo invece di aggiungere un tratto
+        // coincidente percorso due volte.
+        for (std::size_t i = 0; i < pieces.size(); ++i) {
+            const std::size_t j = (i + 1) % pieces.size();
+            Piece &a = pieces[i], &b = pieces[j];
+            if (a.selected == b.selected) continue;
+            Piece &plain = a.selected ? b : a;
+            const Vec3 target = a.selected ? a.end : b.start;
+            const CurveProjection<3> projection = projectPoint(*plain.curve, target, plain.range);
+            if (projection.distance > 1e3 * tolerance) continue;
+            const bool trimStart = &plain == &b;
+            const bool canonicalStart = trimStart ? plain.sense : !plain.sense;
+            if (canonicalStart) plain.range.lo = projection.parameter;
+            else plain.range.hi = projection.parameter;
+            if (plain.range.length() > kLinearResolution) {
+                if (trimStart) plain.start = target;
+                else plain.end = target;
+            }
+        }
+        std::vector<std::size_t> active;
+        for (std::size_t i = 0; i < pieces.size(); ++i)
+            if (pieces[i].range.length() > kLinearResolution) active.push_back(i);
+        if (active.empty()) throw std::domain_error("extendSheet: l'estensione annulla il contorno planare");
+        std::vector<PathSegment> boundary;
+        for (std::size_t k = 0; k < active.size(); ++k) {
+            Piece &piece = pieces[active[k]];
+            if (piece.sense) boundary.push_back({piece.curve, piece.range});
+            else boundary.push_back({reversedCurve<3>(piece.curve), {-piece.range.hi, -piece.range.lo}});
+            const Piece &next = pieces[active[(k + 1) % active.size()]];
+            const Vec3 a = piece.end;
+            const Vec3 b = next.start;
+            const double gap = distance(a, b);
+            if (gap > 1e3 * tolerance)
+                boundary.push_back({std::make_shared<Line<3>>(a, (b - a) / gap), {0.0, gap}});
+        }
+        output.push_back(std::move(boundary));
+    }
+    Body result = planarSheet(output, std::max(1e-6 * scale, 1e3 * tolerance));
+    const Vec3 resultNormal = static_cast<const Plane &>(*result.face(result.faces().front()).surface).frame().zDir();
+    if (dot(resultNormal, planeNormal) * (face.sense ? 1.0 : -1.0) < 0.0) {
+        // planarSheet orienta dal primo loop; la geometria e' la stessa e il
+        // verso viene corretto ricostruendo i loop nell'ordine opposto.
+        for (auto &loop : output) std::reverse(loop.begin(), loop.end());
+        result = planarSheet(output, std::max(1e-6 * scale, 1e3 * tolerance));
+    }
+    return result;
 }
 
 Body trimSheet(const Body &sheet, const Body &tool, const Vec3 &keep, double tolerance) {
@@ -158,6 +290,9 @@ Body extendSheet(const Body &input, const std::vector<EdgeId> &selected, double 
     for (VertexId v : body.vertices()) box.add(body.vertex(v).point);
     for (FaceId f : body.faces()) box.add(faceBox(body, f));
     const double scale = std::max(box.diagonal(), 1.0), tolerance = 1e-9 * scale;
+
+    if (body.faces().size() == 1 && body.face(body.faces().front()).surface->type() == SurfaceType::Plane)
+        return extendPlanarFace(body, selected, length, scale, tolerance);
 
     Model model(body);
     // Superfici prolungate (curva base estesa) per faccia del modello.
@@ -197,7 +332,9 @@ Body extendSheet(const Body &input, const std::vector<EdgeId> &selected, double 
         const double du = std::fabs(uv1.x() - uv0.x()) + std::fabs(uvm.x() - uv0.x()), dv = std::fabs(uv1.y() - uv0.y()) + std::fabs(uvm.y() - uv0.y());
         const double flat = 1e-9 * (1.0 + std::fabs(uv0.x()) + std::fabs(uv0.y()));
         const bool vIso = dv <= flat && du > flat, uIso = du <= flat && dv > flat;
-        if (!vIso && !uIso) throw std::domain_error("extendSheet: solo bordi isoparametrici (in alto, in basso o agli estremi di una superficie estrusa)");
+        const bool generalPlanar = !vIso && !uIso && face.surface->type() == SurfaceType::Plane;
+        if (!vIso && !uIso && !generalPlanar)
+            throw std::domain_error("extendSheet: solo bordi isoparametrici (in alto, in basso o agli estremi di una superficie estrusa)");
         // Lato della faccia nello spazio (u, v): a sinistra della fin se la faccia ha il verso della superficie.
         const Vec2 d = finData.sense ? uv1 - uv0 : uv0 - uv1;
         const Vec2 left(-d.y(), d.x());
@@ -212,7 +349,58 @@ Body extendSheet(const Body &input, const std::vector<EdgeId> &selected, double 
         Body::BuildFace strip;
         strip.sense = face.sense;
         int sideA = -1, sideB = -1, far = -1, farA = -1, farB = -1;
-        if (vIso) {
+        if (generalPlanar) {
+            // Un piano puo' essere prolungato anche da un bordo rifilato
+            // curvo: la nuova frontiera e' la parallela complanare del bordo.
+            // Si usa il verso della fin per scegliere il lato esterno, ma la
+            // curva conserva il parametro e il verso canonico dell'edge.
+            const Vec3 planeNormal = static_cast<const Plane &>(*surface).frame().zDir();
+            const double traversal = finData.sense ? 1.0 : -1.0;
+            const double orientation = face.sense ? 1.0 : -1.0;
+            const auto parallelPoint = [&](double t) {
+                const Vec3 tangent = traversal * edge.curve->derivative(t);
+                const Vec3 direction = normalized(orientation * cross(tangent, planeNormal));
+                return edge.curve->point(t) + length * direction;
+            };
+            const std::vector<double> breaks = edge.curve->breakpoints(edge.range);
+            const CurvePtr<3> parallel = fitCurve(parallelPoint, edge.range, breaks, std::max(tolerance, 1e-8 * scale));
+            const double parameterA = finData.sense ? edge.range.lo : edge.range.hi;
+            const double parameterB = finData.sense ? edge.range.hi : edge.range.lo;
+            farA = pointAt(parallel->point(parameterA));
+            farB = pointAt(parallel->point(parameterB));
+            const Vec3 pA = model.points[std::size_t(A)], pB = model.points[std::size_t(B)];
+            const Vec3 qA = model.points[std::size_t(farA)], qB = model.points[std::size_t(farB)];
+            sideA = edgeBetween(A, farA, std::make_shared<Line<3>>(pA, normalized(qA - pA)), {0.0, distance(pA, qA)});
+            sideB = edgeBetween(B, farB, std::make_shared<Line<3>>(pB, normalized(qB - pB)), {0.0, distance(pB, qB)});
+            far = edgeBetween(farA, farB, parallel, edge.range);
+            strip.surface = surface;
+        } else if (type == SurfaceType::BSpline && !linear) {
+            const auto &spline = static_cast<const BSplineSurface &>(*surface);
+            const double start = vIso ? uv0.y() : uv0.x();
+            CurvePtr<3> crossCurve = vIso ? surface->uIso(uvm.x()) : surface->vIso(uvm.y());
+            const double speed = norm(crossCurve->derivative(start));
+            if (!(speed > kLinearResolution)) throw std::domain_error("extendSheet: direzione di estensione singolare");
+            const double guess = start + outward * 2.0 * length / speed;
+            const auto &crossSpline = static_cast<const BSplineCurve<3> &>(*crossCurve);
+            const auto reach = extendBSpline(crossSpline, std::min(crossSpline.domain().lo, guess), std::max(crossSpline.domain().hi, guess));
+            const double end = arcParameter(reach, start, length, outward);
+            Interval ur = surface->uDomain(), vr = surface->vDomain();
+            Interval &range = vIso ? vr : ur;
+            range.lo = std::min(range.lo, end);
+            range.hi = std::max(range.hi, end);
+            surface = std::make_shared<BSplineSurface>(extendBSplineSurface(spline, ur, vr));
+            extended[modelFace] = surface;
+            model.faces[std::size_t(modelFace)].surface = surface;
+            strip.surface = surface;
+            const Interval extension{std::min(start, end), std::max(start, end)};
+            farA = pointAt(vIso ? surface->point(uvA.x(), end) : surface->point(end, uvA.y()));
+            farB = pointAt(vIso ? surface->point(uvB.x(), end) : surface->point(end, uvB.y()));
+            sideA = edgeBetween(A, farA, vIso ? surface->uIso(uvA.x()) : surface->vIso(uvA.y()), extension);
+            sideB = edgeBetween(B, farB, vIso ? surface->uIso(uvB.x()) : surface->vIso(uvB.y()), extension);
+            far = edgeBetween(farA, farB, vIso ? surface->vIso(end) : surface->uIso(end),
+                              vIso ? Interval{std::min(uvA.x(), uvB.x()), std::max(uvA.x(), uvB.x())}
+                                   : Interval{std::min(uvA.y(), uvB.y()), std::max(uvA.y(), uvB.y())});
+        } else if (vIso) {
             // Lungo v le isoparametriche sono rette con velocita' costante.
             if (type != SurfaceType::Plane && type != SurfaceType::Cylinder && type != SurfaceType::Cone && type != SurfaceType::Extrusion)
                 throw std::domain_error("extendSheet: estensione non gestita per questo tipo di superficie");

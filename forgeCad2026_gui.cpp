@@ -1165,6 +1165,9 @@ public:
         if (mergingFeature(body) && body.mergeOperation != 0) return body.mergeBodies;
         if (body.feature == BodyFeature::Transform && !body.move.copy) return {body.firstBody};
         if (body.feature == BodyFeature::Sew) return QVector<int>{body.firstBody} + body.booleanTools;
+        if (body.feature == BodyFeature::SheetTrim)
+            return body.trimBoth && body.secondBody >= 0 ? QVector<int>{body.firstBody, body.secondBody}
+                                                        : QVector<int>{body.firstBody};
         return {};
     }
 
@@ -2036,8 +2039,11 @@ public:
                         && !extrusions_.at(operand).suppressed)
                         preview_.restored.insert(operand);
         }
-        // Lo strumento del taglio resta visibile; per il resto spariscono gli operandi.
-        if (definition.operation < 0 && definition.feature == BodyFeature::SheetTrim) preview_.replaced = {definition.firstBody};
+        // Nel taglio entrambi gli originali restano visibili: si puo' cliccare
+        // anche una regione diversa da quella attualmente mostrata in ambra.
+        if (definition.operation < 0 && definition.feature == BodyFeature::SheetTrim) {
+            preview_.replaced.clear();
+        }
         else if (isCurveBody(definition) || isDatumBody(definition)) preview_.replaced.clear();  // la base dell'elica resta
         else if (definition.operation < 0 && definition.feature == BodyFeature::Blend) preview_.replaced.clear(); // la base opaca resta sotto la patch
         else if (definition.operation < 0 && definition.feature == BodyFeature::SurfaceOffset) preview_.replaced.clear();  // il corpo di partenza resta
@@ -2075,6 +2081,23 @@ public:
             previewTimer_->callOnTimeout([this] { startPreviewJob(); });
         }
         previewTimer_->start();
+        update();
+    }
+    // Il pannello del taglio ha gia' calcolato e tassellato tutte le parti.
+    // Installa direttamente quella scelta, annullando il job che rifarebbe la
+    // stessa intersezione solo per l'anteprima.
+    void showTrimPreview(const ExtrusionObject &definition, const ForgeCad::ForgeBody &geometry,
+                         const BodyDisplay &display, int index = -1) {
+        requestPreview(definition, index);
+        if (previewTimer_) previewTimer_->stop();
+        ++preview_.generation;
+        preview_.valid = bool(geometry);
+        preview_.error = geometry ? QString() : QStringLiteral("La parte scelta non ha geometria valida.");
+        preview_.geometry = geometry;
+        preview_.display = display;
+        preview_.retainedDisplay = {};
+        preview_.resultDisplay = {};
+        if (previewCallback_) previewCallback_(preview_.error);
         update();
     }
     // Raccordo o smusso degli spigoli `edges` del corpo `base` (al posto del raccordo `hidden`, se c'e').
@@ -2221,12 +2244,13 @@ public:
         return {};
     }
 
-    // Taglio della superficie `sheet` con il corpo `tool` (-1: il piano di
-    // riferimento `plane`): resta la parte che contiene `keep`. La superficie
-    // tagliata si nasconde, lo strumento resta. Restituisce l'errore.
-    QString createSheetTrim(int sheet, int tool, int plane, const EdgePoint &keep, const QString &name) {
+    // Taglio della pelle di `sheet` con `tool` (-1: piano o schizzo): resta la
+    // parte che contiene `keep`. Con `both` si rifila e conserva anche la parte
+    // dello strumento che contiene `toolKeep`.
+    QString createSheetTrim(int sheet, int tool, int plane, const EdgePoint &keep, const QString &name, int sketch = -1,
+                            bool both = false, const EdgePoint &toolKeep = {}) {
         if (sheet < 0 || sheet >= extrusions_.size() || tool >= extrusions_.size() || tool == sheet)
-            return QStringLiteral("Superficie o strumento non validi.");
+            return QStringLiteral("Corpo da tagliare o strumento non validi.");
         ExtrusionObject body;
         body.name = name;
         body.feature = BodyFeature::SheetTrim;
@@ -2234,11 +2258,23 @@ public:
         body.firstBody = sheet;
         body.secondBody = tool;
         body.trimPlane = plane;
+        body.sketchIndex = sketch;
         body.trimKeep = keep;
-        rebuildBody(body, int(extrusions_.size()));
+        body.trimBoth = both;
+        body.trimToolKeep = toolKeep;
+        const QString key = previewKey(body, -1);
+        if (preview_.key == key && preview_.valid && preview_.geometry) {
+            body.forgeBody = preview_.geometry;
+            body.display = preview_.display;
+            body.solid = false;
+        } else {
+            rebuildBody(body, int(extrusions_.size()));
+        }
         if (!hasGeometry(body)) return body.error;
+        clearPreview();
         recordUndo();
         extrusions_[sheet].visible = false;
+        if (both && tool >= 0) extrusions_[tool].visible = false;
         extrusions_.append(body);
         selection_ = {SceneObjectKind::Extrusion, int(extrusions_.size()) - 1, -1};
         hover_ = {};
@@ -2246,7 +2282,7 @@ public:
         return {};
     }
     // Le parti in cui lo strumento divide la superficie, per sceglierne una.
-    QVector<SheetPiece> sheetPieces(int sheet, int tool, int plane, QString *error) const {
+    QVector<SheetPiece> sheetPieces(int sheet, int tool, int plane, int sketch, QString *error) const {
         ScopedWork work(workCallback_, QStringLiteral("Calcolo delle parti della superficie..."));
         if (sheet < 0 || sheet >= extrusions_.size() || tool >= extrusions_.size() || tool == sheet) {
             if (error) *error = QStringLiteral("Superficie o strumento non validi.");
@@ -2254,7 +2290,20 @@ public:
         }
         const ExtrusionObject &target = extrusions_.at(sheet);
         const ExtrusionObject *cutter = tool >= 0 ? &extrusions_.at(tool) : nullptr;
-        return ForgeCad::forgeSheetPieces(target.forgeBody, cutter ? cutter->forgeBody : nullptr, plane, error);
+        ForgeCad::ForgeBody geometry;
+        if (cutter && cutter->forgeBody) geometry = cutter->forgeBody;
+        else if (cutter && cutter->feature == BodyFeature::DatumPlane && cutter->datumValid) {
+            const SketchFrame &f = cutter->datumFrame;
+            const ForgeCad::Kernel::Frame3 frame(
+                ForgeCad::Kernel::Vec3(f.origin[0], f.origin[1], f.origin[2]),
+                ForgeCad::Kernel::Vec3(f.normal[0], f.normal[1], f.normal[2]),
+                ForgeCad::Kernel::Vec3(f.xAxis[0], f.xAxis[1], f.xAxis[2]));
+            geometry = ForgeCad::forgeTrimPlaneTool(target.forgeBody, frame, error);
+        }
+        else if (sketch >= 0 && sketch < sketches_.size())
+            geometry = ForgeCad::forgeTrimSketchTool(target.forgeBody, sketches_.at(sketch), error);
+        if ((cutter || sketch >= 0) && !geometry) return {};
+        return ForgeCad::forgeSheetPieces(target.forgeBody, geometry, plane, error);
     }
     // Estensione dei bordi `edges` della superficie `sheet` (nascosta). Restituisce l'errore.
     QString createSheetExtend(int sheet, const QVector<EdgePoint> &edges, double distance, bool linear, const QString &name) {
@@ -2267,8 +2316,24 @@ public:
         body.blendEdges = edges;
         body.blendSize = distance;
         body.extendLinear = linear;
-        rebuildBody(body, int(extrusions_.size()));
+        // Se il pannello sta mostrando proprio questa estensione, promuove il
+        // B-rep e la mesh dell'anteprima. In questo modo non resta un fotogramma
+        // in cui la sorgente e' gia' nascosta ma il risultato e' ancora escluso
+        // dal disegno perche' appartiene all'anteprima attiva.
+        const QString key = previewKey(body, -1);
+        if (preview_.key == key) {
+            if (!preview_.valid || !preview_.geometry)
+                return preview_.error.isEmpty() ? QStringLiteral("Attendi che l'anteprima sia pronta.") : preview_.error;
+            body.forgeBody = preview_.geometry;
+            body.display = preview_.display;
+            body.solid = false;
+            if (body.display.vertices.isEmpty() && body.display.edges.isEmpty())
+                tessellateGeometry(body, tessellationQuality_, body.display);
+        } else {
+            rebuildBody(body, int(extrusions_.size()));
+        }
         if (!hasGeometry(body)) return body.error;
+        clearPreview();
         recordUndo();
         extrusions_[sheet].visible = false;
         extrusions_.append(body);
@@ -2432,6 +2497,17 @@ public:
     }
     bool referencePicking() const { return refPicking_; }
     void setReferencePickCallback(std::function<void(bool, GeometryRef)> callback) { refPickFinished_ = std::move(callback); }
+    // Nel pannello Taglia superficie, un clic sulla pelle originale fornisce
+    // direttamente il punto della regione da conservare. Il corpo puo' essere
+    // nascosto dall'anteprima: il picking usa comunque il suo B-rep esatto.
+    void setTrimPartPickCallback(int body, const QVector<SheetPiece> &pieces, std::function<void(EdgePoint)> callback) {
+        trimPartPickBody_ = callback ? body : -1;
+        trimPartPickDisplays_.clear();
+        for (const SheetPiece &piece : pieces) trimPartPickDisplays_.append(piece.display);
+        trimPartHover_ = -1;
+        trimPartPickFinished_ = std::move(callback);
+        update();
+    }
     // Riferimenti gia' scelti, evidenziati nella vista (finestra del piano).
     void setReferenceMarks(const QVector<GeometryRef> &marks) {
         refMarks_ = marks;
@@ -3965,6 +4041,20 @@ protected:
                 }
             }
             edgePicked();
+            return;
+        }
+        if (!sketchMode_ && event->button() == Qt::LeftButton && event->modifiers() == Qt::NoModifier
+            && trimPartPickFinished_ && trimPartPickBody_ >= 0) {
+            FaceHit face;
+            if (pickBodyFace(trimPartPickBody_, lastMousePosition_, face)) {
+                QVector3D origin, direction;
+                viewRay(lastMousePosition_, origin, direction);
+                const double length = double(direction.length());
+                const EdgePoint point{double(origin.x()) + double(direction.x()) / length * face.distance,
+                                      double(origin.y()) + double(direction.y()) / length * face.distance,
+                                      double(origin.z()) + double(direction.z()) / length * face.distance};
+                trimPartPickFinished_(point);
+            }
             return;
         }
         if (!sketchMode_ && event->button() == Qt::LeftButton) {
@@ -5571,6 +5661,27 @@ protected:
     // Evidenziazione al passaggio (riferimenti, spigoli, oggetti) nel punto `currentPosition`.
     void updateHover(const QPoint &currentPosition) {
         if (QApplication::mouseButtons() & Qt::LeftButton) return;
+        if (trimPartPickFinished_) {
+            QVector3D origin, direction;
+            viewRay(currentPosition, origin, direction);
+            int nearest = -1;
+            float best = std::numeric_limits<float>::max();
+            for (int k = 0; k < trimPartPickDisplays_.size(); ++k) {
+                float distance = 0.0f;
+                if (meshRayHit(trimPartPickDisplays_.at(k), origin, direction, distance) && distance < best)
+                    best = distance, nearest = k;
+            }
+            if (nearest != trimPartHover_) {
+                trimPartHover_ = nearest;
+                if (nearest >= 0) {
+                    setCursor(Qt::PointingHandCursor);
+                    showStatus(QStringLiteral("Parte %1: clic per mantenerla").arg(nearest + 1));
+                } else unsetCursor();
+                update();
+            }
+            hover_ = {};
+            return;
+        }
         if (refPicking_) {
             GeometryRef ref;
             FaceHit face;
@@ -5580,7 +5691,11 @@ protected:
             refHover_ = ref;
             refHoverFace_ = face;
             refHoverFaceBody_ = valid && ref.kind == 5 ? faceBody : -1;
+            // Il filtro dei riferimenti vale anche per l'evidenziazione:
+            // il picking generico della scena includerebbe di nuovo i piani.
+            hover_ = SceneSelection();
             update();
+            return;
         }
         if (edgePicking_) {
             int edgeBody = -1;
@@ -6604,6 +6719,7 @@ private:
             return {body.sketchIndex};
         case BodyFeature::Transform: return isSketchRef(body.move.axis) ? QVector<int>{body.move.axis.index} : QVector<int>{};
         case BodyFeature::Helix: return body.helix.source == 0 ? QVector<int>{body.sketchIndex} : QVector<int>{};
+        case BodyFeature::SheetTrim: return body.sketchIndex >= 0 ? QVector<int>{body.sketchIndex} : QVector<int>{};
         case BodyFeature::Sweep: return body.sweepPath == 0 ? QVector<int>{body.sketchIndex, body.pathSketch} : QVector<int>{body.sketchIndex};
         case BodyFeature::Loft: {
             QVector<int> result = body.loftSketches;
@@ -6842,7 +6958,7 @@ private:
                     body.error = QStringLiteral("Il corpo dell'offset non esiste piu' o non ha geometria.");
                     return;
                 }
-                body.forgeBody = ForgeCad::forgeOffsetFaces(base->forgeBody, body.offsetFaces, body.distance, &body.error);
+                body.forgeBody = ForgeCad::forgeOffsetFaces(base->forgeBody, body.offsetFaces, body.distance, &body.error, nullptr, body.offsetSew);
                 body.solid = false;
                 return;
             }
@@ -6867,8 +6983,36 @@ private:
                 const ExtrusionObject *tool = trim && body.secondBody >= 0 ? operand(body.secondBody) : nullptr;
                 if (!sheet) body.error = QStringLiteral("La superficie non esiste piu'.");
                 else if (trim && body.secondBody >= 0 && !tool) body.error = QStringLiteral("Lo strumento del taglio non esiste piu'.");
-                else if (tool && !hasGeometry(*tool)) body.error = QStringLiteral("Lo strumento del taglio non ha geometria valida.");
-                else if (trim) body.forgeBody = ForgeCad::forgeTrimSheet(sheet->forgeBody, tool ? tool->forgeBody : nullptr, body.trimPlane, body.trimKeep, &body.error);
+                else if (trim) {
+                    ForgeCad::ForgeBody cutter;
+                    if (tool && tool->forgeBody) cutter = tool->forgeBody;
+                    else if (tool && tool->feature == BodyFeature::DatumPlane && tool->datumValid) {
+                        const SketchFrame &f = tool->datumFrame;
+                        const ForgeCad::Kernel::Frame3 frame(
+                            ForgeCad::Kernel::Vec3(f.origin[0], f.origin[1], f.origin[2]),
+                            ForgeCad::Kernel::Vec3(f.normal[0], f.normal[1], f.normal[2]),
+                            ForgeCad::Kernel::Vec3(f.xAxis[0], f.xAxis[1], f.xAxis[2]));
+                        cutter = ForgeCad::forgeTrimPlaneTool(sheet->forgeBody, frame, &body.error);
+                    }
+                    else if (body.sketchIndex >= 0) {
+                        const SketchObject *s = sketch(body.sketchIndex);
+                        if (!s) body.error = QStringLiteral("Lo schizzo di taglio non esiste piu'.");
+                        else cutter = ForgeCad::forgeTrimSketchTool(sheet->forgeBody, *s, &body.error);
+                    }
+                    if (body.error.isEmpty() && ((tool || body.sketchIndex >= 0) && !cutter))
+                        body.error = QStringLiteral("Lo strumento del taglio non ha geometria valida.");
+                    if (body.error.isEmpty()) {
+                        if (body.trimBoth) {
+                            if (!tool || !tool->forgeBody)
+                                body.error = QStringLiteral("Il taglio reciproco richiede due corpi o superfici.");
+                            else body.forgeBody = ForgeCad::forgeTrimBoth(sheet->forgeBody, tool->forgeBody,
+                                                                         body.trimKeep, body.trimToolKeep, &body.error);
+                        } else {
+                            body.forgeBody = ForgeCad::forgeTrimSheet(sheet->forgeBody, cutter, body.trimPlane,
+                                                                     body.trimKeep, &body.error);
+                        }
+                    }
+                }
                 else body.forgeBody = ForgeCad::forgeExtendSheet(sheet->forgeBody, body.blendEdges, body.blendSize, body.extendLinear, &body.error);
                 return;
             }
@@ -9124,7 +9268,7 @@ private:
                 if (faceBody) *faceBody = b;
                 found = true;
             }
-            if (pickBodies_.isEmpty() && (roles & (ForgeCad::DatumRolePlane | ForgeCad::DatumRoleFace))) {
+            if (pickBodies_.isEmpty() && (roles & ForgeCad::DatumRolePlane)) {
                 double distance = 0.0;
                 const int datum = pickDatumPlane(position, false, &distance);
                 if (datum >= 0 && datum < owner && distance < nearest) {
@@ -10438,6 +10582,7 @@ private:
             drawExtrusionOutline(extrusion, color, width);
         };
         if (previewing && preview_.valid) drawPreview();
+        drawTrimPartHover();
         disableSectionClip();
         drawSectionCaps(sectionSolids);
         enableSectionClip();
@@ -10449,6 +10594,31 @@ private:
         }
         disableSectionClip();
         drawSectionPlane();
+    }
+
+    void drawTrimPartHover() {
+        if (trimPartHover_ < 0 || trimPartHover_ >= trimPartPickDisplays_.size()) return;
+        const BodyDisplay &display = trimPartPickDisplays_.at(trimPartHover_);
+        if (displayMode_ != 0 && !display.vertices.isEmpty()) {
+            displayCache_.setLightingEnabled(false);
+            displayCache_.setColor(QVector4D(0.25f, 1.0f, 0.42f, 0.62f));
+            glEnable(GL_BLEND);
+            glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+            glDepthMask(GL_FALSE);
+            glEnable(GL_POLYGON_OFFSET_FILL);
+            glPolygonOffset(-2.0f, -3.0f);
+            drawDisplayFaces(display);
+            glDisable(GL_POLYGON_OFFSET_FILL);
+            glDepthMask(GL_TRUE);
+            glDisable(GL_BLEND);
+        }
+        if (displayMode_ != 1 && !display.edges.isEmpty()) {
+            displayCache_.setLightingEnabled(false);
+            displayCache_.setColor(QVector4D(0.55f, 1.0f, 0.65f, 1.0f));
+            glLineWidth(3.0f);
+            displayCache_.edges(display);
+            glLineWidth(1.0f);
+        }
     }
 
     // Anteprima di loft, raccordi, estrusioni e rivoluzioni: semitrasparente
@@ -10561,7 +10731,9 @@ private:
         QStringList parts{QString::number(index), QString::number(d.operation), QString::number(int(d.feature)), QString::number(d.sketchIndex),
                           n(d.distance), QString::number(d.revolveAxis), n(d.revolveAngle), QString::number(d.firstBody),
                           QString::number(d.secondBody), QString::number(d.deleteComponent), n(d.blendSize), QString::number(d.blendChamfer), QString::number(d.trimPlane),
-                          n(d.trimKeep.x), n(d.trimKeep.y), n(d.trimKeep.z), QString::number(d.extendLinear), n(d.scaleFactor),
+                          n(d.trimKeep.x), n(d.trimKeep.y), n(d.trimKeep.z), QString::number(d.trimBoth),
+                          n(d.trimToolKeep.x), n(d.trimToolKeep.y), n(d.trimToolKeep.z),
+                          QString::number(d.extendLinear), n(d.scaleFactor),
                           QString::number(d.scaleCenterMode), n(d.scaleCenter.x), n(d.scaleCenter.y), n(d.scaleCenter.z),
                           QString::number(d.blendChamfer && d.chamferSpec.mode != 0 ? d.chamferSpec.mode : 0),
                           n(d.blendChamfer && d.chamferSpec.mode != 0 ? d.chamferSpec.second : 0.0),
@@ -10615,7 +10787,7 @@ private:
         ref(d.move.axis);
         ref(d.revolveAxisRef);
         // Offset e cucitura; loft e sweep di superficie, rigata e planare.
-        parts << QStringLiteral("O");
+        parts << QStringLiteral("O") << QString::number(d.offsetSew);
         for (const EdgePoint &e : d.offsetFaces)
             parts << n(e.x) << n(e.y) << n(e.z) << QString::number(e.subshape) << QString::number(e.geometry) << QString::number(e.context);
         parts << n(d.sewTolerance) << QString::number(d.sewSolid) << QString::number(d.loftSurface) << QString::number(d.sweepSurface);
@@ -11410,6 +11582,10 @@ private:
     std::function<void(SceneSelection)> selectionCallback_;
     std::function<void(int)> sketchPickCallback_;
     std::function<void(int, int, int)> sketchEntityPickCallback_;
+    int trimPartPickBody_ = -1;
+    QVector<BodyDisplay> trimPartPickDisplays_;
+    int trimPartHover_ = -1;
+    std::function<void(EdgePoint)> trimPartPickFinished_;
     std::function<void()> documentChangedCallback_;
     std::function<void(int)> planeContextCallback_;
     std::function<void(bool)> sketchModeCallback_;
@@ -15536,9 +15712,13 @@ static bool offsetDialog(QMainWindow *window, CadViewport *viewport, const QStri
     } else {
         form->addRow(QStringLiteral("Distanza:"), distanceBox);
         form->addRow(QString(), flipButton);
-        form->addRow(wrappedNote(QStringLiteral("Le facce tangenti tra loro restano cucite in una superficie; lungo gli spigoli vivi "
-                                               "le superfici a distanza si separano."), &dialog));
+        form->addRow(wrappedNote(QStringLiteral("Con la cucitura attiva i bordi comuni vengono estesi e rifilati. Disattivandola, "
+                                               "gli spigoli vivi si separano."), &dialog));
     }
+    auto *sewBox = new QCheckBox(QStringLiteral("Mantieni la cucitura (estendi e rifila)"), &dialog);
+    sewBox->setChecked(definition.offsetSew);
+    sewBox->setVisible(!removal);
+    if (!removal) form->addRow(sewBox);
     auto *status = new QLabel(&dialog);
     status->setWordWrap(true);
     status->setMinimumWidth(280);
@@ -15555,6 +15735,7 @@ static bool offsetDialog(QMainWindow *window, CadViewport *viewport, const QStri
     const auto current = [&] {
         ExtrusionObject d = definition;
         if (bodyBox) d.firstBody = candidates.at(bodyBox->currentIndex());
+        d.offsetSew = sewBox->isChecked();
         d.distance = (flipButton->isChecked() ? -1.0 : 1.0) * distanceBox->value();
         return d;
     };
@@ -15681,6 +15862,7 @@ static bool offsetDialog(QMainWindow *window, CadViewport *viewport, const QStri
             definition.offsetFaces.clear();
             refresh();
         });
+    QObject::connect(sewBox, &QCheckBox::toggled, &dialog, refresh);
     QObject::connect(flipButton, &QPushButton::toggled, &dialog, refresh);
     QObject::connect(distanceBox, &QDoubleSpinBox::valueChanged, &dialog, refresh);
     QObject::connect(buttons, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
@@ -16557,8 +16739,8 @@ static void massPropertiesDialog(QWidget *parent, CadViewport *viewport) {
     dialog.exec();
 }
 
-// Finestra del taglio di una superficie: la superficie, lo strumento (un corpo
-// o un piano di riferimento) e la parte da tenere, con l'anteprima dal vivo.
+// Finestra del taglio: corpo e strumento (corpo, superficie, piano o schizzo),
+// parti da tenere scelte nell'elenco o direttamente con un clic nella vista.
 // Le parti si ricalcolano a ogni cambio di superficie o di strumento; ognuna
 // e' ricordata da un suo punto (trimKeep). `definition` porta i valori
 // iniziali; `replaced` e' il corpo modificato (-1 nuovo): si scelgono solo i
@@ -16567,10 +16749,14 @@ static bool trimDialog(QWidget *parent, CadViewport *viewport, const QString &ti
                        const std::function<QString(const ExtrusionObject &)> &apply) {
     // Superficie e strumento: i corpi che esistono in quel punto della storia, non le feature.
     const QVector<int> used = {definition.firstBody, definition.secondBody};
-    const QVector<int> sheets = operandBodies(viewport, replaced, used, [](const ExtrusionObject &body) { return !body.solid; });
-    const QVector<int> tools = operandBodies(viewport, replaced, used, [](const ExtrusionObject &) { return true; });
+    const QVector<int> sheets = operandBodies(viewport, replaced, used, [](const ExtrusionObject &) { return true; });
+    QVector<int> tools = operandBodies(viewport, replaced, used, [](const ExtrusionObject &) { return true; });
+    const int historyEnd = replaced >= 0 ? replaced : int(viewport->extrusions().size());
+    for (int index = 0; index < historyEnd; ++index)
+        if (viewport->extrusions().at(index).feature == BodyFeature::DatumPlane
+            && viewport->extrusions().at(index).datumValid && !tools.contains(index)) tools.append(index);
     if (sheets.isEmpty()) {
-        QMessageBox::information(parent, title, QStringLiteral("Serve una superficie (estrusione di un profilo aperto) da tagliare."));
+        QMessageBox::information(parent, title, QStringLiteral("Serve un corpo o una superficie da tagliare."));
         return false;
     }
     const auto label = [&](int index) { return resultBodyLabel(viewport, index); };
@@ -16578,12 +16764,23 @@ static bool trimDialog(QWidget *parent, CadViewport *viewport, const QString &ti
     dialog.setWindowTitle(title);
     auto *form = dialog.createScrollableForm();
     auto *sheetBox = new QComboBox(&dialog), *toolBox = new QComboBox(&dialog), *partBox = new QComboBox(&dialog);
+    auto *bothBox = new QCheckBox(QStringLiteral("Rifila entrambi i corpi"), &dialog);
+    auto *toolPartBox = new QComboBox(&dialog), *pickSideBox = new QComboBox(&dialog);
+    bothBox->setChecked(definition.trimBoth);
+    bothBox->setToolTip(QStringLiteral("Conserva una parte di ciascun corpo e rimuove da entrambi le porzioni oltre l'intersezione."));
+    pickSideBox->addItems({QStringLiteral("Primo corpo"), QStringLiteral("Secondo corpo")});
     for (int index : sheets) sheetBox->addItem(label(index));
     for (int index : tools) toolBox->addItem(label(index));
+    const int sketchStart = int(tools.size());
+    for (const SketchObject &sketch : viewport->sketches()) toolBox->addItem(QStringLiteral("Schizzo: ") + sketch.name);
+    const int planeStart = sketchStart + int(viewport->sketches().size());
     for (const QString &plane : planeNames()) toolBox->addItem(plane);
     sheetBox->setCurrentIndex(qMax(0, int(sheets.indexOf(definition.firstBody))));
     if (definition.secondBody >= 0 && tools.contains(definition.secondBody)) toolBox->setCurrentIndex(int(tools.indexOf(definition.secondBody)));
-    else if (definition.secondBody < 0 && definition.firstBody >= 0) toolBox->setCurrentIndex(int(tools.size()) + qBound(0, definition.trimPlane, 2));
+    else if (definition.sketchIndex >= 0 && definition.sketchIndex < viewport->sketches().size())
+        toolBox->setCurrentIndex(sketchStart + definition.sketchIndex);
+    else if (definition.secondBody < 0 && definition.firstBody >= 0)
+        toolBox->setCurrentIndex(planeStart + qBound(0, definition.trimPlane, 2));
     else {
         // Il primo corpo che non e' la superficie.
         for (int k = 0; k < tools.size(); ++k)
@@ -16595,11 +16792,22 @@ static bool trimDialog(QWidget *parent, CadViewport *viewport, const QString &ti
     // Superficie e strumento si scelgono anche cliccandoli nella vista: per una
     // funzione nuova senza superficie selezionata prima la superficie, poi lo strumento.
     BodyPicker sheetPicker(dialog, viewport, replaced, sheets, sheetBox), toolPicker(dialog, viewport, replaced, tools, toolBox);
-    form->addRow(QStringLiteral("Superficie da tagliare:"), sheetPicker.row(sheetBox));
-    form->addRow(QStringLiteral("Strumento (corpo o piano):"), toolPicker.row(toolBox));
+    form->addRow(QStringLiteral("Corpo o superficie da tagliare:"), sheetPicker.row(sheetBox));
+    form->addRow(QStringLiteral("Strumento (corpo, superficie, piano o schizzo):"), toolPicker.row(toolBox));
     form->addRow(QStringLiteral("Parte da tenere:"), partBox);
+    form->addRow(QString(), bothBox);
+    form->addRow(QStringLiteral("Parte del secondo corpo:"), toolPartBox);
+    form->addRow(QStringLiteral("Il clic nella vista sceglie sul:"), pickSideBox);
+    auto *choiceHelp = new QLabel(QStringLiteral("Passa il mouse sulle regioni: quella verde verra' mantenuta con un clic."), &dialog);
+    choiceHelp->setWordWrap(true);
+    choiceHelp->setStyleSheet(QStringLiteral("color: #8ee8a2; font-weight: 600;"));
+    choiceHelp->setMaximumWidth(360);
+    form->addRow(QStringLiteral("Scelta nella vista:"), choiceHelp);
     const PreviewScope scope(viewport, dialog, form, replaced);
-    QVector<SheetPiece> pieces;
+    QVector<SheetPiece> pieces, toolPieces;
+    QString piecesKey, toolPiecesKey, piecesError, toolPiecesError;
+    EdgePoint clickedKeep, clickedToolKeep;
+    bool clickedKeepValid = false, clickedToolKeepValid = false;
     bool first = definition.firstBody >= 0 && replaced >= 0;
     const auto current = [&] {
         ExtrusionObject d = definition;
@@ -16608,16 +16816,41 @@ static bool trimDialog(QWidget *parent, CadViewport *viewport, const QString &ti
         d.firstBody = sheets.at(sheetBox->currentIndex());
         const int tool = toolBox->currentIndex();
         d.secondBody = tool < tools.size() ? tools.at(tool) : -1;
-        d.trimPlane = tool < tools.size() ? 0 : tool - int(tools.size());
-        if (partBox->currentIndex() >= 0 && partBox->currentIndex() < pieces.size()) d.trimKeep = pieces.at(partBox->currentIndex()).point;
+        d.sketchIndex = tool >= sketchStart && tool < planeStart ? tool - sketchStart : -1;
+        d.trimPlane = tool >= planeStart ? tool - planeStart : 0;
+        d.trimBoth = bothBox->isChecked() && d.secondBody >= 0;
+        if (clickedKeepValid) d.trimKeep = clickedKeep;
+        else if (partBox->currentIndex() >= 0 && partBox->currentIndex() < pieces.size())
+            d.trimKeep = pieces.at(partBox->currentIndex()).point;
+        if (clickedToolKeepValid) d.trimToolKeep = clickedToolKeep;
+        else if (toolPartBox->currentIndex() >= 0 && toolPartBox->currentIndex() < toolPieces.size())
+            d.trimToolKeep = toolPieces.at(toolPartBox->currentIndex()).point;
         return d;
     };
     const auto refreshPreview = [&] {
-        if (pieces.size() >= 2) scope.request(current());
+        const ExtrusionObject d = current();
+        const int firstPart = partBox->currentIndex();
+        if (pieces.size() < 2 || firstPart < 0 || firstPart >= pieces.size()) return;
+        ForgeCad::ForgeBody geometry = pieces.at(firstPart).geometry;
+        BodyDisplay display = pieces.at(firstPart).display;
+        if (d.trimBoth) {
+            const int secondPart = toolPartBox->currentIndex();
+            if (toolPieces.size() < 2 || secondPart < 0 || secondPart >= toolPieces.size()) return;
+            QString error;
+            geometry = ForgeCad::forgeSew({geometry, toolPieces.at(secondPart).geometry}, 1e-6, false, &error);
+            if (!geometry) {
+                scope.label->setText(error);
+                return;
+            }
+            ForgeCad::forgeTessellate(*geometry, 0, display);
+        }
+        viewport->showTrimPreview(d, geometry, display, replaced);
     };
     bool chaining = false;  // superficie scelta nella vista, lo strumento segue
+    std::function<void()> installPartPicker;
     const auto refreshPieces = [&] {
         if (chaining || sheetPicker.handling() || toolPicker.handling()) return;
+        viewport->setTrimPartPickCallback(-1, {}, {});
         if (sheetPicker.waiting() || toolPicker.waiting()) {
             viewport->clearPreview();
             scope.label->setText(sheetPicker.waiting() ? QStringLiteral("Clicca nella vista la superficie da tagliare.")
@@ -16625,13 +16858,47 @@ static bool trimDialog(QWidget *parent, CadViewport *viewport, const QString &ti
             return;
         }
         const ExtrusionObject d = current();
-        QString error;
-        QApplication::setOverrideCursor(Qt::WaitCursor);
-        pieces = viewport->sheetPieces(d.firstBody, d.secondBody, d.trimPlane, &error);
-        QApplication::restoreOverrideCursor();
+        clickedKeepValid = clickedToolKeepValid = false;
+        const bool shapeTool = d.secondBody >= 0 && d.secondBody < viewport->extrusions().size()
+            && viewport->extrusions().at(d.secondBody).forgeBody;
+        bothBox->setEnabled(shapeTool);
+        if (!shapeTool) {
+            const QSignalBlocker blocker(bothBox);
+            bothBox->setChecked(false);
+        }
+        toolPartBox->setEnabled(bothBox->isChecked());
+        pickSideBox->setEnabled(bothBox->isChecked());
+        pickSideBox->setItemText(0, QStringLiteral("%1 (primo)").arg(label(d.firstBody)));
+        if (shapeTool) pickSideBox->setItemText(1, QStringLiteral("%1 (secondo)").arg(label(d.secondBody)));
+        choiceHelp->setText(bothBox->isChecked()
+            ? QStringLiteral("1. Scegli qui sopra il primo o il secondo corpo. 2. Passa il mouse sulle sue regioni. 3. Clicca la regione verde da mantenere. Ripeti per l'altro corpo.")
+            : QStringLiteral("Passa il mouse sulle regioni del corpo: quella verde verra' mantenuta con un clic; la scelta corrente resta in ambra."));
+        const int previousPart = partBox->currentIndex();
+        const int previousToolPart = toolPartBox->currentIndex();
+        const QString splitKey = QStringLiteral("%1/%2/%3/%4").arg(d.firstBody).arg(d.secondBody).arg(d.trimPlane).arg(d.sketchIndex);
+        if (piecesKey != splitKey) {
+            QApplication::setOverrideCursor(Qt::WaitCursor);
+            piecesError.clear();
+            pieces = viewport->sheetPieces(d.firstBody, d.secondBody, d.trimPlane, d.sketchIndex, &piecesError);
+            QApplication::restoreOverrideCursor();
+            piecesKey = splitKey;
+        }
+        if (bothBox->isChecked() && shapeTool) {
+            const QString reverseKey = QStringLiteral("%1/%2").arg(d.secondBody).arg(d.firstBody);
+            if (toolPiecesKey != reverseKey) {
+                QApplication::setOverrideCursor(Qt::WaitCursor);
+                toolPiecesError.clear();
+                toolPieces = viewport->sheetPieces(d.secondBody, d.firstBody, 0, -1, &toolPiecesError);
+                QApplication::restoreOverrideCursor();
+                toolPiecesKey = reverseKey;
+            }
+        }
+        const QString error = !piecesError.isEmpty() ? piecesError : toolPiecesError;
         const QSignalBlocker blocker(partBox);
+        const QSignalBlocker toolBlocker(toolPartBox);
         partBox->clear();
-        if (pieces.size() < 2) {
+        toolPartBox->clear();
+        if (pieces.size() < 2 || (bothBox->isChecked() && toolPieces.size() < 2)) {
             viewport->clearPreview();
             scope.label->setText(error.isEmpty() ? QStringLiteral("lo strumento non divide la superficie") : error);
             return;
@@ -16645,9 +16912,53 @@ static bool trimDialog(QWidget *parent, CadViewport *viewport, const QString &ti
             const double d2 = (p.x - q.x) * (p.x - q.x) + (p.y - q.y) * (p.y - q.y) + (p.z - q.z) * (p.z - q.z);
             if (first && d2 < closest) closest = d2, chosen = k;
         }
+        if (!first && previousPart >= 0 && previousPart < pieces.size()) chosen = previousPart;
         first = false;
         partBox->setCurrentIndex(chosen);
+        int toolChosen = 0;
+        double toolClosest = 1e300;
+        for (int k = 0; k < toolPieces.size(); ++k) {
+            toolPartBox->addItem(QStringLiteral("Parte %1 (area %2)").arg(k + 1).arg(toolPieces.at(k).area, 0, 'g', 6));
+            const EdgePoint &p = toolPieces.at(k).point, &q = definition.trimToolKeep;
+            const double dx = p.x - q.x, dy = p.y - q.y, dz = p.z - q.z;
+            const double d2 = dx * dx + dy * dy + dz * dz;
+            if (definition.trimBoth && d2 < toolClosest) toolClosest = d2, toolChosen = k;
+        }
+        if (previousToolPart >= 0 && previousToolPart < toolPieces.size()) toolChosen = previousToolPart;
+        toolPartBox->setCurrentIndex(toolChosen);
+        installPartPicker();
+        scope.label->setText(bothBox->isChecked()
+            ? QStringLiteral("Scegli il corpo nel campo del clic, poi clicca nella vista la parte da tenere.")
+            : QStringLiteral("Clicca nella vista la parte da tenere, oppure sceglila nell'elenco."));
         refreshPreview();
+    };
+    installPartPicker = [&] {
+        const ExtrusionObject d = current();
+        const bool second = bothBox->isChecked() && pickSideBox->currentIndex() == 1;
+        const int pickBody = second ? d.secondBody : d.firstBody;
+        const QVector<SheetPiece> &pickPieces = second ? toolPieces : pieces;
+        viewport->setTrimPartPickCallback(pickBody, pickPieces, [&, second](EdgePoint point) {
+            QVector<SheetPiece> &selectedPieces = bothBox->isChecked() && pickSideBox->currentIndex() == 1 ? toolPieces : pieces;
+            QComboBox *selectedBox = bothBox->isChecked() && pickSideBox->currentIndex() == 1 ? toolPartBox : partBox;
+            if (selectedPieces.size() < 2) return;
+            if (selectedBox == toolPartBox) clickedToolKeep = point, clickedToolKeepValid = true;
+            else clickedKeep = point, clickedKeepValid = true;
+            const int nearest = ForgeCad::forgeClosestSheetPiece(selectedPieces, point);
+            if (nearest < 0) return;
+            {
+                const QSignalBlocker blocker(selectedBox);
+                selectedBox->setCurrentIndex(nearest);
+            }
+            scope.label->setText(QStringLiteral("Parte %1 del %2 corpo scelta nella vista.")
+                                 .arg(nearest + 1).arg(selectedBox == toolPartBox ? QStringLiteral("secondo") : QStringLiteral("primo")));
+            if (bothBox->isChecked() && !second) {
+                pickSideBox->setCurrentIndex(1);
+                choiceHelp->setText(QStringLiteral("Prima parte scelta. Ora passa il mouse sul secondo corpo e clicca la regione verde da mantenere."));
+            } else if (bothBox->isChecked()) {
+                choiceHelp->setText(QStringLiteral("Entrambe le parti sono scelte. Le regioni mantenute sono mostrate in ambra; premi OK per applicare."));
+            }
+            refreshPreview();
+        });
     };
     for (BodyPicker *picker : {&sheetPicker, &toolPicker}) {
         picker->changed = refreshPieces;
@@ -16666,7 +16977,21 @@ static bool trimDialog(QWidget *parent, CadViewport *viewport, const QString &ti
     });
     QObject::connect(sheetBox, &QComboBox::currentIndexChanged, &dialog, refreshPieces);
     QObject::connect(toolBox, &QComboBox::currentIndexChanged, &dialog, refreshPieces);
-    QObject::connect(partBox, &QComboBox::currentIndexChanged, &dialog, refreshPreview);
+    QObject::connect(bothBox, &QCheckBox::toggled, &dialog, refreshPieces);
+    QObject::connect(pickSideBox, &QComboBox::currentIndexChanged, &dialog, [&] {
+        installPartPicker();
+        scope.label->setText(pickSideBox->currentIndex() == 1
+            ? QStringLiteral("Clicca nella vista la parte del secondo corpo da tenere.")
+            : QStringLiteral("Clicca nella vista la parte del primo corpo da tenere."));
+    });
+    QObject::connect(partBox, &QComboBox::currentIndexChanged, &dialog, [&] {
+        clickedKeepValid = false;
+        refreshPreview();
+    });
+    QObject::connect(toolPartBox, &QComboBox::currentIndexChanged, &dialog, [&] {
+        clickedToolKeepValid = false;
+        refreshPreview();
+    });
     auto *buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dialog);
     QObject::connect(buttons, &QDialogButtonBox::accepted, &dialog, &QDialog::accept);
     QObject::connect(buttons, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
@@ -16677,11 +17002,14 @@ static bool trimDialog(QWidget *parent, CadViewport *viewport, const QString &ti
         sheetPicker.stop();
         toolPicker.stop();
         if (pieces.size() < 2) return QStringLiteral("Lo strumento non divide la superficie: scegline un altro.");
+        if (current().trimBoth && toolPieces.size() < 2)
+            return QStringLiteral("L'intersezione non divide il secondo corpo: non si puo' rifilare da entrambi i lati.");
         return apply(current());
     };
     bool applied = false;
     if (auto *window = qobject_cast<QMainWindow *>(parent)) applied = runUntilAppliedModeless(window, viewport, dialog, form, buttons, run);
     else applied = runUntilApplied(dialog, form, buttons, run);
+    viewport->setTrimPartPickCallback(-1, {}, {});
     viewport->setReferencePickCallback(nullptr);
     return applied;
 }
@@ -17327,8 +17655,11 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
                 ExtrusionObject body = original;
                 body.firstBody = values.firstBody;
                 body.secondBody = values.secondBody;
+                body.sketchIndex = values.sketchIndex;
                 body.trimPlane = values.trimPlane;
                 body.trimKeep = values.trimKeep;
+                body.trimBoth = values.trimBoth;
+                body.trimToolKeep = values.trimToolKeep;
                 return update(body);
             });
         } else if (original.feature == BodyFeature::Transform) {
@@ -17988,7 +18319,7 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
     extendSurfaceAction->setToolTip(QStringLiteral("Estende i bordi scelti di una superficie: clic sui bordi, Invio, poi la distanza"));
     QAction *offsetSurfaceAction = surfaceMenu->addAction(QStringLiteral("Offset superficie..."));
     offsetSurfaceAction->setToolTip(QStringLiteral("Superficie a distanza costante dalle facce scelte di un solido o di una superficie "
-                                                   "(le facce tangenti restano cucite in una)"));
+                                                   "(con estensione e rifilo opzionali dei bordi comuni)"));
     QAction *deleteFaceAction = surfaceMenu->addAction(QStringLiteral("Elimina facce..."));
     deleteFaceAction->setToolTip(QStringLiteral("Toglie le facce scelte da un solido o da una superficie: un solido diventa una superficie aperta"));
     QAction *ruledSurfaceAction = surfaceMenu->addAction(QStringLiteral("Superficie rigata..."));
@@ -18689,7 +19020,8 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
         if (selection.kind == SceneObjectKind::Extrusion) definition.firstBody = selection.index;
         const QString name = QStringLiteral("Taglio %1").arg(viewport->extrusions().size() + 1);
         trimDialog(this, viewport, QStringLiteral("Taglia superficie"), -1, definition, [viewport, name](const ExtrusionObject &d) {
-            return viewport->createSheetTrim(d.firstBody, d.secondBody, d.trimPlane, d.trimKeep, name);
+            return viewport->createSheetTrim(d.firstBody, d.secondBody, d.trimPlane, d.trimKeep, name, d.sketchIndex,
+                                             d.trimBoth, d.trimToolKeep);
         });
     });
     auto extendLinear = std::make_shared<bool>(false);
@@ -20098,8 +20430,9 @@ void PdfWindow::rebuildModelTree() {
                 static const QStringList centers = {QStringLiteral("all'origine"), QStringLiteral("al baricentro"), QStringLiteral("attorno al punto")};
                 item->setToolTip(0, QStringLiteral("Scala %1 %2").arg(body.scaleFactor).arg(centers.value(body.scaleCenterMode)));
             } else if (body.feature == BodyFeature::SheetTrim) {
-                item->setToolTip(0, QStringLiteral("Superficie tagliata da %1").arg(body.secondBody >= 0 ? extrusions.value(body.secondBody).name
-                                                                                                         : planeNames().value(body.trimPlane)));
+                const QString tool = body.secondBody >= 0 ? extrusions.value(body.secondBody).name
+                    : body.sketchIndex >= 0 ? sketches.value(body.sketchIndex).name : planeNames().value(body.trimPlane);
+                item->setToolTip(0, QStringLiteral("Superficie tagliata da %1").arg(tool));
             } else if (body.feature == BodyFeature::SurfaceOffset) {
                 item->setToolTip(0, QStringLiteral("Offset di %1 da %2 (%3)").arg(ForgeCad::formatLength(body.distance)).arg(extrusions.value(body.firstBody).name)
                     .arg(body.offsetFaces.isEmpty() ? QStringLiteral("tutte le facce") : QStringLiteral("%1 facce").arg(body.offsetFaces.size())));
@@ -20276,8 +20609,11 @@ void PdfWindow::rebuildModelTree() {
                                                                                                                                       : QStringLiteral("Superficie: ");
                 if (!previousStage(body.firstBody)) children.append(role + extrusions.value(body.firstBody).name);
             }
-            if (body.feature == BodyFeature::SheetTrim)
-                children.append(QStringLiteral("Strumento: ") + (body.secondBody >= 0 ? extrusions.value(body.secondBody).name : planeNames().value(body.trimPlane)));
+            if (body.feature == BodyFeature::SheetTrim) {
+                const QString tool = body.secondBody >= 0 ? extrusions.value(body.secondBody).name
+                    : body.sketchIndex >= 0 ? sketches.value(body.sketchIndex).name : planeNames().value(body.trimPlane);
+                children.append(QStringLiteral("Strumento: ") + tool);
+            }
             for (const QString &text : children) {
                 auto *child = new QTreeWidgetItem(item, {text});
                 child->setData(0, Qt::UserRole, kTreeInfo);

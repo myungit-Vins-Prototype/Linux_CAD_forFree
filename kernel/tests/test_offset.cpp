@@ -6,6 +6,7 @@
 #include "fk_blend.h"
 #include "fk_classify.h"
 #include "fk_body_check.h"
+#include "fk_body_io.h"
 #include "fk_bspline_surface.h"
 #include "fk_curve_algo.h"
 #include "fk_extrude.h"
@@ -19,6 +20,7 @@
 #include "fk_profile.h"
 #include "fk_revolve.h"
 #include "fk_sew.h"
+#include "fk_sheet.h"
 #include "fk_surface_algo.h"
 #include "fk_tessellate.h"
 #include "fk_test_profiles.h"
@@ -343,4 +345,156 @@ FK_TEST(OffsetFacesImportedParts) {
             fktest::reportFailure(__FILE__, __LINE__, std::string(name) + ": " + error.what());
         }
     }
+}
+
+FK_TEST(OffsetPreservesSharpSeams) {
+    const Body box = makeBox(Frame3(), 2.0, 3.0, 4.0);
+    for (double d : {0.25, -0.25}) {
+        const auto result = offsetFaces(box, box.faces(), d, 1e-7, true);
+        checkValid(result.body);
+        FK_CHECK(result.shells == 1 && result.sharpEdges == 0);
+        for (EdgeId edge : result.body.edges()) FK_CHECK(!result.body.isLaminar(edge));
+        const auto solid = sewSheets({&result.body}, 1e-6, true);
+        FK_CHECK(solid.solid);
+        FK_CHECK_NEAR(massProperties(solid.body).volume, (2 + 2*d) * (3 + 2*d) * (4 + 2*d), 1e-6);
+    }
+    const auto separate = offsetFaces(box, box.faces(), 0.25, 1e-7, false);
+    FK_CHECK(separate.shells == 6);
+    const auto partial = offsetFaces(box, {box.faces()[0], box.faces()[2]}, 0.25, 1e-7, true);
+    checkValid(partial.body);
+    FK_CHECK(partial.shells == 1);
+    const Body cylinder = makeCylinder(Frame3(), 2.0, 4.0);
+    const auto result = offsetFaces(cylinder, cylinder.faces(), 0.25, 1e-7, true);
+    checkValid(result.body);
+    FK_CHECK(result.shells == 1);
+    const auto solid = sewSheets({&result.body}, 1e-6, true);
+    FK_CHECK(solid.solid);
+    FK_CHECK_NEAR(massProperties(solid.body).volume, kPi * 2.25 * 2.25 * 4.5, 1e-5);
+}
+
+FK_TEST(OffsetLoftExtension) {
+    std::vector<LoftSection> sections;
+    for (int k = 0; k < 3; ++k) {
+        LoftSection s;
+        s.frame = Frame3(Vec3(0.2 * k, 0, 3.0 * k), Vec3(0, 0, 1), Vec3(1, 0, 0));
+        s.loop.segments = {arcSegment(Vec2(), 2.0 + 0.2 * k, 0.0, kPi)};
+        sections.push_back(s);
+    }
+    const Body loft = loftSheet(sections, false);
+    const auto offset = offsetFaces(loft, loft.faces(), 0.2);
+    checkValid(offset.body);
+    int tested = 0;
+    for (EdgeId edge : offset.body.edges()) {
+        if (!offset.body.isLaminar(edge)) continue;
+        const Body extended = extendSheet(offset.body, {edge}, 0.3);
+        checkValid(extended);
+        FK_CHECK(totalArea(extended) > totalArea(offset.body));
+        ++tested;
+    }
+    FK_CHECK(tested >= 4);
+}
+
+FK_TEST(OffsetLoftMixedSections) {
+    LoftSection square, circle;
+    square.frame = Frame3();
+    const std::vector<Vec2> points{Vec2(2,2),Vec2(-2,2),Vec2(-2,-2),Vec2(2,-2)};
+    for (int i=0;i<4;++i) square.loop.segments.push_back(lineSegment(points[i],points[(i+1)%4]));
+    circle.frame = Frame3(Vec3(0,0,5), Vec3(0,0,1), Vec3(1,0,0));
+    circle.loop.segments = {arcSegment(Vec2(), 2.0, 0.0, kTwoPi)};
+    for (bool ruled : {false,true}) {
+        const Body loft = loftSheet({square,circle},ruled);
+        for (FaceId face : loft.faces()) {
+            const auto offset = offsetFaces(loft,{face},0.1);
+            checkValid(offset.body);
+        }
+    }
+}
+
+FK_TEST(OffsetLoftSewnCaps) {
+    std::vector<LoftSection> sections;
+    for (int k = 0; k < 3; ++k) {
+        LoftSection s;
+        s.frame = Frame3(Vec3(0.1 * k, 0, 3.0 * k), Vec3(0, 0, 1), Vec3(1, 0, 0));
+        s.loop.segments = {arcSegment(Vec2(), 2.0 + 0.2 * k, 0.0, kTwoPi)};
+        sections.push_back(s);
+    }
+    const Body loft = loftSolid(sections, false);
+    for (double d : {0.1, -0.1}) {
+        const auto offset = offsetFaces(loft, loft.faces(), d, 1e-7, true);
+        checkValid(offset.body);
+        FK_CHECK(offset.shells == 1);
+        for (EdgeId edge : offset.body.edges()) FK_CHECK(!offset.body.isLaminar(edge));
+    }
+}
+
+// Una zona molto curva non e' una cuspide: la suddivisione deve scendere
+// sotto il passo usato per stimare le derivate, senza fermarsi prematuramente.
+FK_TEST(OffsetFitCurveSmallSmoothFeature) {
+    const auto point = [](double t) { return Vec3(t, std::sqrt((t - 0.5) * (t - 0.5) + 1e-12), 0); };
+    const auto curve = fitCurve(point, {0, 1}, {}, 1e-10);
+    double worst = 0;
+    for (int k = -100; k <= 100; ++k) {
+        const double t = 0.5 + 1e-7 * k;
+        worst = std::max(worst, distance(curve->point(t), point(t)));
+    }
+    FK_CHECK(worst < 1e-8);
+}
+
+FK_TEST(OffsetReportsInternalNormalDiscontinuity) {
+    // Due pezze piane cucite solo nei poli, ma dentro un'unica faccia spline.
+    // E' la stessa causa del loft del file Loft_offset.prt: non una distanza
+    // troppo grande e non un problema risolvibile infittendo la griglia.
+    const BSplineSurface creased(1, 1, {0,0,0.5,1,1}, {0,0,1,1}, 3, 2,
+        {Vec3(0,0,0),Vec3(0,1,0),Vec3(1,0,0),Vec3(1,1,0),Vec3(2,0,0.2),Vec3(2,1,0.2)});
+    for (double d : {1.0, -1.0, 0.1}) {
+        bool diagnosed = false;
+        try { offsetSurface(creased, d, {0,1}, {0,1}); }
+        catch (const std::domain_error &e) { diagnosed = std::string(e.what()).find("discontinuita della normale") != std::string::npos; }
+        FK_CHECK(diagnosed);
+    }
+    // Una selezione limitata a una sola pezza resta perfettamente valida.
+    const auto offset = offsetSurface(creased, 1.0, {0,0.4}, {0,1});
+    FK_CHECK_NEAR(distance(offset->point(0.2,0.5), Vec3(0.4,0.5,1)), 0.0, 1e-9);
+}
+
+// Geometria di Loft_offset.prt: due laterali quadratiche razionali, con
+// campate strette e salti di normale interni. Il comando deve produrre
+// geometria valida, non soltanto diagnosticare il salto.
+FK_TEST(OffsetLoftInternalCreasesOneMillimeter) {
+    std::ifstream in(std::string(FORGECAD_SOURCE_DIR) + "/kernel/tests/data/offset_loft.body", std::ios::binary);
+    FK_CHECK(bool(in));
+    if (!in) return;
+    std::stringstream data;
+    data << in.rdbuf();
+    const Body source = readBodyBinary(data.str());
+    const auto sides = facesOfType(source, SurfaceType::BSpline);
+    FK_CHECK(sides.size() == 2);
+    for (bool sew : {false, true})
+        for (double d : {1.0, -1.0}) {
+            const auto result = offsetFaces(source, sides, d, 1e-7, sew);
+            checkValid(result.body);
+            FK_CHECK(result.body.faces().size() == 6);
+            FK_CHECK(sew ? result.shells == 1 : result.shells > 1);
+            FK_CHECK(!result.notes.empty());
+            std::size_t index = 0;
+            for (FaceId original : sides) {
+                const Face &face = source.face(original);
+                const auto &spline = static_cast<const BSplineSurface &>(*face.surface);
+                for (const auto &patch : *spline.cachedBezierPatches()) {
+                    const Surface &offset = *result.body.face(result.body.faces()[index++]).surface;
+                    for (double fu : {0.25, 0.5, 0.75})
+                        for (double fv : {0.125, 0.375, 0.625, 0.875}) {
+                            const double u = patch.uDomain().lo + fu * patch.uDomain().length();
+                            const double v = patch.vDomain().lo + fv * patch.vDomain().length();
+                            const Vec3 expected = patch.point(u,v) + (face.sense ? d : -d) * patch.normal(u,v);
+                            FK_CHECK_NEAR(distance(offset.point(u,v), expected), 0.0, 2e-6);
+                        }
+                }
+            }
+            // La cucitura non deve mascherare il salto gonfiando le tolleranze.
+            for (EdgeId e : result.body.edges()) FK_CHECK(result.body.edge(e).tolerance < 5e-6);
+            if (sew && d > 0.0)
+                for (EdgeId e : result.body.edges())
+                    if (result.body.isLaminar(e)) checkValid(extendSheet(result.body, {e}, 0.2));
+        }
 }
