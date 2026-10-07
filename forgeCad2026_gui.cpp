@@ -2949,14 +2949,17 @@ public:
             if (!(element.kind == 0 && element.index == excluded)) entities.append({element.kind, element.index});
         return entities;
     }
-    // Anteprima della ripetizione (copie tratteggiate in arancio); restituisce l'errore.
-    QString previewSketchPattern(const ForgeCad::SketchPattern &pattern, int excluded) {
+    // Modifica delle entita' selezionate (ripetizione, offset, spostamento):
+    // `edit` lavora su una copia dello schizzo attivo e da' le entita' nuove o spostate.
+    using SketchEdit = std::function<ForgeCad::SketchEditResult(SketchObject &, QVector<ForgeCad::SketchEntity> *)>;
+    // Anteprima (le entita' risultanti tratteggiate in arancio); restituisce l'errore.
+    QString previewSketchEdit(const SketchEdit &edit) {
         sketchPatternPreview_.clear();
         const SketchObject *active = activeSketchObject();
         if (!active) return QStringLiteral("Entra in modalita' schizzo.");
         SketchObject work = *active;
         QVector<ForgeCad::SketchEntity> created;
-        const ForgeCad::SketchEditResult result = ForgeCad::patternSketchEntities(work, patternEntities(excluded), pattern, &created);
+        const ForgeCad::SketchEditResult result = edit(work, &created);
         if (result.error.isEmpty())
             for (const ForgeCad::SketchEntity &entity : created) {
                 if (entity.kind == 0) {
@@ -2971,34 +2974,12 @@ public:
         update();
         return result.error;
     }
-    // Anteprima dell'offset delle entita' selezionate (copie tratteggiate in arancio); restituisce l'errore.
-    QString previewSketchOffset(const ForgeCad::SketchOffset &offset) {
-        sketchPatternPreview_.clear();
-        const SketchObject *active = activeSketchObject();
-        if (!active) return QStringLiteral("Entra in modalita' schizzo.");
-        SketchObject work = *active;
-        QVector<ForgeCad::SketchEntity> created;
-        const ForgeCad::SketchEditResult result = ForgeCad::offsetSketchEntities(work, patternEntities(-1), offset, &created);
-        if (result.error.isEmpty())
-            for (const ForgeCad::SketchEntity &entity : created) {
-                if (entity.kind == 0) {
-                    const SketchSegment &segment = work.segments.at(entity.index);
-                    sketchPatternPreview_.append({segment.first, segment.second});
-                } else {
-                    CurveObject curve = work.curves.at(entity.index);
-                    ForgeCad::recalculateCurve(curve, tessellationQuality_);
-                    sketchPatternPreview_.append(curve.samples);
-                }
-            }
-        update();
-        return result.error;
-    }
-    // Offset nello schizzo attivo (un passo di Undo): le copie diventano la selezione.
-    QString applySketchOffset(const ForgeCad::SketchOffset &offset) {
+    // La modifica nello schizzo attivo (un passo di Undo): le entita' risultanti diventano la selezione.
+    QString applySketchEdit(const SketchEdit &edit) {
         if (!activeSketchObject()) return QStringLiteral("Entra in modalita' schizzo.");
         SketchObject work = sketches_.at(activeSketch_);
         QVector<ForgeCad::SketchEntity> created;
-        const ForgeCad::SketchEditResult result = ForgeCad::offsetSketchEntities(work, patternEntities(-1), offset, &created);
+        const ForgeCad::SketchEditResult result = edit(work, &created);
         if (!result.error.isEmpty()) return result.error;
         recordUndo();
         for (CurveObject &curve : work.curves)
@@ -3009,27 +2990,41 @@ public:
         sketchPatternPreview_.clear();
         sketchEdited();
         return {};
+    }
+    QString previewSketchPattern(const ForgeCad::SketchPattern &pattern, int excluded) {
+        return previewSketchEdit([&](SketchObject &work, QVector<ForgeCad::SketchEntity> *created) {
+            return ForgeCad::patternSketchEntities(work, patternEntities(excluded), pattern, created);
+        });
+    }
+    QString applySketchPattern(const ForgeCad::SketchPattern &pattern, int excluded) {
+        return applySketchEdit([&](SketchObject &work, QVector<ForgeCad::SketchEntity> *created) {
+            return ForgeCad::patternSketchEntities(work, patternEntities(excluded), pattern, created);
+        });
+    }
+    QString previewSketchOffset(const ForgeCad::SketchOffset &offset) {
+        return previewSketchEdit([&](SketchObject &work, QVector<ForgeCad::SketchEntity> *created) {
+            return ForgeCad::offsetSketchEntities(work, patternEntities(-1), offset, created);
+        });
+    }
+    QString applySketchOffset(const ForgeCad::SketchOffset &offset) {
+        return applySketchEdit([&](SketchObject &work, QVector<ForgeCad::SketchEntity> *created) {
+            return ForgeCad::offsetSketchEntities(work, patternEntities(-1), offset, created);
+        });
+    }
+    QString previewSketchMove(const ForgeCad::SketchMove &move) {
+        return previewSketchEdit([&](SketchObject &work, QVector<ForgeCad::SketchEntity> *created) {
+            return ForgeCad::moveSketchEntities(work, patternEntities(-1), move, created);
+        });
+    }
+    // I vincoli rimasti valgono gia' (moveSketchEntities toglie quelli falsi): niente risolutore.
+    QString applySketchMove(const ForgeCad::SketchMove &move) {
+        return applySketchEdit([&](SketchObject &work, QVector<ForgeCad::SketchEntity> *created) {
+            return ForgeCad::moveSketchEntities(work, patternEntities(-1), move, created);
+        });
     }
     void clearSketchPatternPreview() {
         sketchPatternPreview_.clear();
         update();
-    }
-    // Ripetizione nello schizzo attivo (un passo di Undo): le copie diventano la selezione.
-    QString applySketchPattern(const ForgeCad::SketchPattern &pattern, int excluded) {
-        if (!activeSketchObject()) return QStringLiteral("Entra in modalita' schizzo.");
-        SketchObject work = sketches_.at(activeSketch_);
-        QVector<ForgeCad::SketchEntity> created;
-        const ForgeCad::SketchEditResult result = ForgeCad::patternSketchEntities(work, patternEntities(excluded), pattern, &created);
-        if (!result.error.isEmpty()) return result.error;
-        recordUndo();
-        for (CurveObject &curve : work.curves)
-            if (curve.samples.isEmpty()) ForgeCad::recalculateCurve(curve, tessellationQuality_);
-        sketches_[activeSketch_] = work;
-        sketchSelections_.clear();
-        for (const ForgeCad::SketchEntity &entity : created) sketchSelections_.append({entity.kind, entity.index});
-        sketchPatternPreview_.clear();
-        sketchEdited();
-        return {};
     }
 
     // --- Vincoli geometrici (oggetti) -------------------------------------------
@@ -12727,6 +12722,122 @@ static BlendDialogResult blendDialog(QWidget *parent, CadViewport *viewport, con
     return result;
 }
 
+static int resultBodyForPick(CadViewport *viewport, const QVector<int> &candidates, int picked);
+
+// Scelta dei corpi nella vista per le finestre con un elenco di corpi: come per
+// i raccordi, il corpo lo da' la faccia cliccata. Con un elenco a tendina il
+// clic sceglie il corpo e la scelta finisce; con un elenco a spunte il clic
+// accende o spegne il corpo e la scelta continua (Esc nella vista la chiude).
+// `start(true)` (funzione nuova senza un corpo gia' selezionato) apre la
+// finestra in attesa del clic: `waiting()` finche' non si sceglie un corpo,
+// nella vista o nell'elenco, e intanto l'anteprima aspetta. Le finestre che
+// scelgono anche altri riferimenti nella vista passano prima i clic a
+// `handle`; le altre usano `install`. `changed` aggiorna la finestra.
+class BodyPicker {
+public:
+    BodyPicker(QDialog &dialog, CadViewport *viewport, int replaced, const QVector<int> &candidates, QComboBox *combo,
+               QListWidget *list = nullptr)
+        : viewport_(viewport), replaced_(replaced), candidates_(candidates), combo_(combo), list_(list) {
+        button_ = new QPushButton(QStringLiteral("Dalla vista"), &dialog);
+        button_->setCheckable(true);
+        button_->setToolTip(list ? QStringLiteral("Clicca i corpi nella vista per spuntarli o toglierli; Esc nella vista termina")
+                                 : QStringLiteral("Clicca una faccia del corpo nella vista"));
+        QObject::connect(button_, &QPushButton::clicked, &dialog, [this] {
+            if (active_) stop();
+            else start();
+            if (changed) changed();
+        });
+        if (combo_) QObject::connect(combo_, &QComboBox::currentIndexChanged, &dialog, [this] { waiting_ = false; });
+        if (list_) QObject::connect(list_, &QListWidget::itemChanged, &dialog, [this] { waiting_ = false; });
+        if (replaced_ >= 0 && combo_ && !combo_->isEnabled()) button_->setEnabled(false);
+    }
+    ~BodyPicker() {
+        if (active_) viewport_->cancelReferencePick();
+        if (installed_) viewport_->setReferencePickCallback(nullptr);
+    }
+    BodyPicker(const BodyPicker &) = delete;
+    BodyPicker &operator=(const BodyPicker &) = delete;
+
+    // L'elenco con il pulsante accanto.
+    QWidget *row(QWidget *field) const {
+        auto *row = new QWidget(field->parentWidget());
+        auto *layout = new QHBoxLayout(row);
+        layout->setContentsMargins(0, 0, 0, 0);
+        layout->addWidget(field, 1);
+        layout->addWidget(button_, 0, list_ ? Qt::AlignTop : Qt::Alignment());
+        return row;
+    }
+    bool active() const { return active_; }
+    bool waiting() const { return waiting_; }
+    // Dentro `handle`: il cambio dell'elenco viene dal clic, la finestra si
+    // aggiorna una volta sola alla fine (`changed`).
+    bool handling() const { return handling_; }
+    QString hint() const {
+        return list_ ? QStringLiteral("Clicca i corpi nella vista (di nuovo per toglierli); Esc nella vista termina.")
+                     : QStringLiteral("Clicca nella vista una faccia del corpo.");
+    }
+    void start(bool waiting = false) {
+        if (!button_->isEnabled()) return;
+        if (starting) starting();  // la finestra lascia la sua scelta nella vista
+        const QString error = viewport_->beginReferencePick(ForgeCad::DatumRoleFace, replaced_);
+        active_ = error.isEmpty();
+        waiting_ = active_ && waiting;
+        button_->setChecked(active_);
+        if (!active_ && message) message(error, true);
+    }
+    void stop() {
+        if (active_) viewport_->cancelReferencePick();
+        active_ = false;
+        button_->setChecked(false);
+    }
+    // Il clic nella vista: vero se riguardava la scelta del corpo.
+    bool handle(bool picked, const GeometryRef &ref) {
+        if (!active_) return false;
+        if (!picked) {  // Esc nella vista
+            stop();
+            if (changed) changed();
+            return true;
+        }
+        const int body = ref.kind == 5 ? resultBodyForPick(viewport_, candidates_, ref.index) : -1;
+        handling_ = true;
+        if (body < 0) {
+            if (message) message(QStringLiteral("Quel corpo non si puo' usare qui (o non esiste in questo punto della storia)."), true);
+        } else if (combo_) {
+            waiting_ = false;
+            combo_->setCurrentIndex(int(candidates_.indexOf(body)));
+            stop();
+        } else {
+            waiting_ = false;
+            for (int row = 0; row < list_->count(); ++row) {
+                QListWidgetItem *item = list_->item(row);
+                if (item->data(Qt::UserRole).toInt() == body && (item->flags() & Qt::ItemIsEnabled))
+                    item->setCheckState(item->checkState() == Qt::Checked ? Qt::Unchecked : Qt::Checked);
+            }
+        }
+        handling_ = false;
+        if (active_) start();  // l'elenco a spunte (o un corpo non valido): si continua
+        if (changed) changed();
+        return true;
+    }
+    // Per le finestre che non scelgono altro nella vista.
+    void install() {
+        installed_ = true;
+        viewport_->setReferencePickCallback([this](bool picked, GeometryRef ref) { handle(picked, ref); });
+    }
+
+    std::function<void()> changed, starting;
+    std::function<void(const QString &, bool)> message;
+
+private:
+    CadViewport *viewport_;
+    int replaced_;
+    QVector<int> candidates_;
+    QComboBox *combo_;
+    QListWidget *list_;
+    QPushButton *button_ = nullptr;
+    bool active_ = false, waiting_ = false, installed_ = false, handling_ = false;
+};
+
 // Finestra della scala: corpo, fattore uniforme e centro (origine, baricentro
 // del solido o un punto), con l'anteprima. `definition` porta i valori
 // iniziali; `replaced` e' il corpo modificato (-1 nuovo).
@@ -12745,6 +12856,7 @@ static bool scaleDialog(QWidget *parent, CadViewport *viewport, const QString &t
     for (int index : candidates) bodyBox->addItem(logicalBodyLabel(viewport, index));
     bodyBox->setCurrentIndex(qMax(0, int(candidates.indexOf(definition.firstBody))));
     bodyBox->setEnabled(replaced < 0);
+    BodyPicker picker(dialog, viewport, replaced, candidates, bodyBox);
     auto *factorBox = new ForgeCad::ExpressionSpinBox(&dialog);
     factorBox->setLengthMeasurement(false);
     factorBox->setDecimals(6);
@@ -12766,7 +12878,7 @@ static bool scaleDialog(QWidget *parent, CadViewport *viewport, const QString &t
         coordinates[k]->setPrefix(QStringList{QStringLiteral("X "), QStringLiteral("Y "), QStringLiteral("Z ")}.at(k));
         pointLayout->addWidget(coordinates[k]);
     }
-    form->addRow(QStringLiteral("Corpo:"), bodyBox);
+    form->addRow(QStringLiteral("Corpo:"), picker.row(bodyBox));
     form->addRow(QStringLiteral("Fattore di scala:"), factorBox);
     form->addRow(QStringLiteral("Centro:"), centerBox);
     form->addRow(QStringLiteral("Punto:"), pointRow);
@@ -12783,8 +12895,15 @@ static bool scaleDialog(QWidget *parent, CadViewport *viewport, const QString &t
     };
     const auto refresh = [&] {
         pointRow->setEnabled(centerBox->currentIndex() == 2);
+        if (picker.waiting()) {
+            scope.label->setText(picker.hint());
+            viewport->clearPreview();
+            return;
+        }
         scope.request(current());
     };
+    picker.changed = refresh;
+    picker.install();
     QObject::connect(bodyBox, &QComboBox::currentIndexChanged, &dialog, refresh);
     QObject::connect(centerBox, &QComboBox::currentIndexChanged, &dialog, refresh);
     QObject::connect(factorBox, &QDoubleSpinBox::valueChanged, &dialog, refresh);
@@ -12793,9 +12912,17 @@ static bool scaleDialog(QWidget *parent, CadViewport *viewport, const QString &t
     QObject::connect(buttons, &QDialogButtonBox::accepted, &dialog, &QDialog::accept);
     QObject::connect(buttons, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
     form->addRow(buttons);
+    // Senza un corpo selezionato prima del comando lo si sceglie nella vista.
+    if (replaced < 0 && !candidates.contains(definition.firstBody)) picker.start(true);
     refresh();
     factorBox->selectAll();
-    return runUntilApplied(dialog, form, buttons, [&] { return apply(current()); });
+    const auto run = [&] {
+        if (picker.waiting()) return picker.hint();
+        picker.stop();
+        return apply(current());
+    };
+    if (auto *window = qobject_cast<QMainWindow *>(parent)) return runUntilAppliedModeless(window, viewport, dialog, form, buttons, run);
+    return runUntilApplied(dialog, form, buttons, run);
 }
 
 // Elica e spirale: base (cerchio o arco di uno schizzo, o lo spigolo / la
@@ -13014,16 +13141,18 @@ static QVector<int> operandBodies(CadViewport *viewport, int replaced, const QVe
 }
 
 // Elenco dei solidi con cui fondere un'estrusione, una rivoluzione o una sweep
-// (spunte, indice in Qt::UserRole): i corpi, non le feature.
-static void fillMergeBodyList(QListWidget *list, CadViewport *viewport, int replaced, const QVector<int> &used) {
+// (spunte, indice in Qt::UserRole): i corpi, non le feature. Restituisce gli indici.
+static QVector<int> fillMergeBodyList(QListWidget *list, CadViewport *viewport, int replaced, const QVector<int> &used) {
     const auto solid = [](const ExtrusionObject &body) { return body.forgeBody && body.solid; };
-    for (int index : operandBodies(viewport, replaced, used, solid)) {
+    const QVector<int> indices = operandBodies(viewport, replaced, used, solid);
+    for (int index : indices) {
         const bool chosen = used.contains(index);
         auto *item = new QListWidgetItem(resultBodyLabel(viewport, index, !chosen), list);
         item->setFlags(item->flags() | Qt::ItemIsUserCheckable);
         item->setCheckState(chosen ? Qt::Checked : Qt::Unchecked);
         item->setData(Qt::UserRole, index);
     }
+    return indices;
 }
 
 // Sweep: profilo (uno schizzo), percorso (un altro schizzo o una curva, come
@@ -13072,7 +13201,8 @@ static bool sweepDialog(QWidget *parent, CadViewport *viewport, const QString &t
     autoBox->setChecked(initial.mergeAuto);
     auto *bodyList = new QListWidget(&dialog);
     bodyList->setMinimumHeight(110);
-    fillMergeBodyList(bodyList, viewport, replaced, initial.mergeBodies);  // i corpi, non le feature
+    BodyPicker picker(dialog, viewport, replaced, fillMergeBodyList(bodyList, viewport, replaced, initial.mergeBodies), nullptr, bodyList);
+    QWidget *bodyRow = picker.row(bodyList);
     auto *help = new QLabel(QStringLiteral("Il profilo resta dove e' disegnato e si muove con il percorso, che parte dal punto piu' vicino al profilo "
                                            "(di solito lo si disegna sul piano normale al percorso, all'inizio). I tratti del percorso devono essere tangenti."),
                             &dialog);
@@ -13093,7 +13223,7 @@ static bool sweepDialog(QWidget *parent, CadViewport *viewport, const QString &t
     form->addRow(QString(), surfaceBox);
     form->addRow(QStringLiteral("Risultato:"), operationBox);
     form->addRow(QString(), autoBox);
-    form->addRow(QStringLiteral("Solidi:"), bodyList);
+    form->addRow(QStringLiteral("Solidi:"), bodyRow);
     form->addRow(help);
     const PreviewScope scope(viewport, dialog, form, replaced);
     QVector<SketchPathRef> pathComponents;
@@ -13145,8 +13275,9 @@ static bool sweepDialog(QWidget *parent, CadViewport *viewport, const QString &t
         operationBox->setEnabled(!surfaceBox->isChecked());
         const bool merge = !surfaceBox->isChecked() && operationBox->currentIndex() != 0;
         form->setRowVisible(autoBox, merge);
-        form->setRowVisible(bodyList, merge);
-        bodyList->setEnabled(!autoBox->isChecked());
+        form->setRowVisible(bodyRow, merge);
+        bodyRow->setEnabled(!autoBox->isChecked());
+        if (!merge || autoBox->isChecked()) picker.stop();
         scope.request(viewport->withMergeCandidates(current(), replaced >= 0 ? replaced : int(bodies.size())));
     };
     QObject::connect(pathSketchBox, &QComboBox::currentIndexChanged, &dialog, [&](int) { refillPaths(); refresh(); });
@@ -13154,7 +13285,12 @@ static bool sweepDialog(QWidget *parent, CadViewport *viewport, const QString &t
         QObject::connect(box, &QComboBox::currentIndexChanged, &dialog, refresh);
     QObject::connect(autoBox, &QCheckBox::toggled, &dialog, refresh);
     QObject::connect(surfaceBox, &QCheckBox::toggled, &dialog, refresh);
-    QObject::connect(bodyList, &QListWidget::itemChanged, &dialog, refresh);
+    QObject::connect(bodyList, &QListWidget::itemChanged, &dialog, [&] {
+        if (!picker.handling()) refresh();
+    });
+    picker.changed = refresh;
+    picker.message = [&](const QString &text, bool) { scope.label->setText(text); };
+    picker.install();
     bool pathPicking = false;
     QObject::connect(pickPath, &QPushButton::clicked, &dialog, [&] {
         pathPicking = true;
@@ -14132,6 +14268,129 @@ static bool sketchOffsetDialog(QWidget *parent, CadViewport *viewport) {
     return applied;
 }
 
+// Sposta / ruota / copia le entita' selezionate nello schizzo attivo:
+// traslazione, rotazione attorno a un centro (il punto scelto con Ctrl+clic,
+// il centro della selezione o l'origine) e copia, con l'anteprima arancio.
+static bool sketchMoveDialog(QWidget *parent, CadViewport *viewport) {
+    const QString title = QStringLiteral("Sposta entita'");
+    const SketchObject *sketch = viewport->activeSketchObject();
+    if (!sketch) {
+        QMessageBox::information(parent, title, QStringLiteral("Entra in modalita' schizzo e seleziona le entita' da spostare."));
+        return false;
+    }
+    const QVector<SketchElementSelection> selection = viewport->sketchSelection();
+    if (selection.isEmpty()) {
+        QMessageBox::information(parent, title, QStringLiteral("Seleziona prima le entita' (clic, Maiusc+clic o il riquadro)."));
+        return false;
+    }
+    // Centro del riquadro delle entita' scelte (punti esatti, non i campioni).
+    QRectF box;
+    const auto add = [&box](const QPointF &p) { box = box.isNull() ? QRectF(p, QSizeF(0, 0)) : box.united(QRectF(p, QSizeF(0, 0))); };
+    for (const SketchElementSelection &element : selection) {
+        if (element.kind == 0 && element.index >= 0 && element.index < sketch->segments.size()) {
+            add(sketch->segments.at(element.index).first);
+            add(sketch->segments.at(element.index).second);
+        } else if (element.kind == 1 && element.index >= 0 && element.index < sketch->curves.size()) {
+            for (const QPointF &p : sketch->curves.at(element.index).controlPoints) add(p);
+        }
+    }
+    const QPointF selectionCenter = box.center();
+    const QVector<QPointF> points = viewport->selectedSketchPoints();
+    static ForgeCad::SketchMove last;
+    FunctionDialogPanel dialog(parent);
+    dialog.setWindowTitle(title);
+    auto *form = dialog.createScrollableForm();
+    form->addRow(wrappedNote(QStringLiteral("%1 entita' selezionate. Prima la rotazione attorno al centro (antiorario), poi la traslazione. "
+                                            "Le entita' spostate perdono i vincoli che non valgono piu' (verso le entita' rimaste ferme, fissi).")
+                                 .arg(selection.size()), &dialog));
+    const auto spin = [&dialog](double value, double lo, double hi, const QString &prefix, bool lengthMeasure = true) {
+        auto *box = new ForgeCad::ExpressionSpinBox(&dialog);
+        box->setLengthMeasurement(lengthMeasure);
+        box->setDecimals(6);
+        box->setRange(lo, hi);
+        box->setValue(value);
+        box->setPrefix(prefix);
+        box->setKeyboardTracking(false);
+        return box;
+    };
+    const auto pair = [&dialog](QWidget *a, QWidget *b) {
+        auto *row = new QWidget(&dialog);
+        auto *layout = new QHBoxLayout(row);
+        layout->setContentsMargins(0, 0, 0, 0);
+        layout->addWidget(a);
+        layout->addWidget(b);
+        return row;
+    };
+    QDoubleSpinBox *dx = spin(last.translation.x(), -1e6, 1e6, QStringLiteral("ΔX ")), *dy = spin(last.translation.y(), -1e6, 1e6, QStringLiteral("ΔY "));
+    QDoubleSpinBox *angleBox = spin(last.angle, -360.0, 360.0, QString(), false);
+    angleBox->setSuffix(QStringLiteral(" °"));
+    const QPointF center = points.isEmpty() ? selectionCenter : points.first();
+    QDoubleSpinBox *cx = spin(center.x(), -1e6, 1e6, QStringLiteral("X ")), *cy = spin(center.y(), -1e6, 1e6, QStringLiteral("Y "));
+    auto *centerBox = new QComboBox(&dialog);
+    centerBox->addItem(QStringLiteral("Centro della selezione"));
+    centerBox->addItem(QStringLiteral("Origine"));
+    if (!points.isEmpty()) centerBox->addItem(QStringLiteral("Punto scelto (Ctrl+clic)"));
+    centerBox->addItem(QStringLiteral("Coordinate"));
+    centerBox->setCurrentIndex(points.isEmpty() ? 0 : 2);
+    auto *copyBox = new QCheckBox(QStringLiteral("Copia (le entita' di partenza restano)"), &dialog);
+    copyBox->setChecked(last.copy);
+    form->addRow(QStringLiteral("Traslazione:"), pair(dx, dy));
+    form->addRow(QStringLiteral("Rotazione:"), angleBox);
+    form->addRow(QStringLiteral("Centro:"), centerBox);
+    form->addRow(QString(), pair(cx, cy));
+    form->addRow(QString(), copyBox);
+    auto *status = new QLabel(&dialog);
+    status->setWordWrap(true);
+    form->addRow(status);
+    const auto current = [&] {
+        ForgeCad::SketchMove move;
+        move.translation = QPointF(dx->value(), dy->value());
+        move.angle = angleBox->value();
+        move.center = QPointF(cx->value(), cy->value());
+        move.copy = copyBox->isChecked();
+        return move;
+    };
+    const auto refresh = [&] {
+        const QString error = viewport->previewSketchMove(current());
+        status->setStyleSheet(error.isEmpty() ? QStringLiteral("color: #9fc6e8;") : QStringLiteral("color: #ff7a6a;"));
+        status->setText(error.isEmpty() ? QStringLiteral("la posizione nuova in arancio nella vista") : error);
+    };
+    QObject::connect(centerBox, &QComboBox::currentIndexChanged, &dialog, [&] {
+        const QString choice = centerBox->currentText();
+        const bool manual = choice == QStringLiteral("Coordinate");
+        QPointF c(cx->value(), cy->value());
+        if (choice == QStringLiteral("Centro della selezione")) c = selectionCenter;
+        else if (choice == QStringLiteral("Origine")) c = QPointF();
+        else if (!manual && !points.isEmpty()) c = points.first();
+        {
+            const QSignalBlocker bx(cx), by(cy);
+            cx->setValue(c.x());
+            cy->setValue(c.y());
+        }
+        cx->setEnabled(manual);
+        cy->setEnabled(manual);
+        refresh();
+    });
+    cx->setEnabled(false);
+    cy->setEnabled(false);
+    for (QDoubleSpinBox *box : {dx, dy, angleBox, cx, cy}) QObject::connect(box, &QDoubleSpinBox::valueChanged, &dialog, refresh);
+    QObject::connect(copyBox, &QCheckBox::toggled, &dialog, refresh);
+    auto *buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dialog);
+    QObject::connect(buttons, &QDialogButtonBox::accepted, &dialog, &QDialog::accept);
+    QObject::connect(buttons, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
+    form->addRow(buttons);
+    refresh();
+    const bool applied = runUntilApplied(dialog, form, buttons, [&] {
+        for (QDoubleSpinBox *box : {dx, dy, angleBox, cx, cy}) box->interpretText();
+        const ForgeCad::SketchMove move = current();
+        const QString error = viewport->applySketchMove(move);
+        if (error.isEmpty()) last = move;
+        return error;
+    });
+    viewport->clearSketchPatternPreview();
+    return applied;
+}
+
 // Ripetizione di un corpo o di una funzione (nuova, o al posto del corpo
 // `replaced`): corpo, tipo (lineare, circolare, specchio), cosa si ripete,
 // riferimenti scelti nella vista come per i piani di costruzione (direzione,
@@ -14149,7 +14408,8 @@ static bool patternDialog(QMainWindow *window, CadViewport *viewport, const QStr
     definition.feature = BodyFeature::Pattern;
     definition.operation = -1;
     PatternParameters &p = definition.pattern;
-    if (!candidates.contains(definition.firstBody)) definition.firstBody = candidates.last();
+    const bool preselected = candidates.contains(definition.firstBody);
+    if (!preselected) definition.firstBody = candidates.last();
     // Riferimenti di partenza: asse X (lineare), asse Z (circolare), piano YZ (specchio).
     const auto defaultRef = [](int kind) {
         GeometryRef ref;
@@ -14172,13 +14432,14 @@ static bool patternDialog(QMainWindow *window, CadViewport *viewport, const QStr
     for (int index : candidates) bodyBox->addItem(logicalBodyLabel(viewport, index));
     bodyBox->setCurrentIndex(int(candidates.indexOf(definition.firstBody)));
     bodyBox->setEnabled(replaced < 0);
+    BodyPicker picker(dialog, viewport, replaced, candidates, bodyBox);
     auto *kindBox = new QComboBox(&dialog);
     kindBox->addItems({QStringLiteral("Lineare"), QStringLiteral("Circolare"), QStringLiteral("Specchio")});
     kindBox->setCurrentIndex(qBound(0, p.kind, 2));
     auto *whatBox = new QComboBox(&dialog);
     whatBox->addItems({QStringLiteral("Il corpo intero"), QStringLiteral("La funzione (lo strumento dell'unione o della differenza)")});
     whatBox->setCurrentIndex(p.featureOnly ? 1 : 0);
-    form->addRow(QStringLiteral("Corpo:"), bodyBox);
+    form->addRow(QStringLiteral("Corpo:"), picker.row(bodyBox));
     form->addRow(QStringLiteral("Tipo:"), kindBox);
     form->addRow(QStringLiteral("Ripeti:"), whatBox);
     auto *refLabel = new QLabel(&dialog), *refLabel2 = new QLabel(QStringLiteral("Direzione 2:"), &dialog);
@@ -14294,10 +14555,19 @@ static bool patternDialog(QMainWindow *window, CadViewport *viewport, const QStr
         if (grid) marks.append(p.refs.at(1));
         viewport->setReferenceMarks(marks);
         if (active >= 0) setStatus(QStringLiteral("Clicca nella vista il riferimento (Esc nella vista: annulla la scelta; trascinando lontano dagli oggetti la vista ruota)."), false);
-        else setStatus(QString(), false);
+        else setStatus(picker.active() ? picker.hint() : QString(), false);
+        if (picker.waiting()) {
+            scope->label->setText(picker.hint());
+            viewport->clearPreview();
+            return;
+        }
         scope->request(current());
     };
+    picker.changed = refresh;
+    picker.message = setStatus;
+    picker.starting = [&] { active = -1; };
     const auto pick = [&](int slot) {
+        picker.stop();
         active = slot;
         const QString error = viewport->beginReferencePick(roles(slot), replaced);
         if (!error.isEmpty()) {
@@ -14308,6 +14578,7 @@ static bool patternDialog(QMainWindow *window, CadViewport *viewport, const QStr
         refresh();
     };
     viewport->setReferencePickCallback([&](bool picked, GeometryRef ref) {
+        if (picker.handle(picked, ref)) return;
         if (picked && active >= 0) {
             if (ForgeCad::geometryRefRoles(ref, viewport->sketches()) & roles(active)) p.refs[active] = ref;
             else setStatus(QStringLiteral("Questo riferimento non va bene qui."), true);
@@ -14321,7 +14592,7 @@ static bool patternDialog(QMainWindow *window, CadViewport *viewport, const QStr
         // Il riferimento che non vale per il tipo nuovo torna quello di partenza.
         if (!(ForgeCad::geometryRefRoles(p.refs.at(0), viewport->sketches()) & (kind == 0 ? int(ForgeCad::DatumRoleLine | ForgeCad::DatumRolePlane) : kind == 1 ? int(ForgeCad::DatumRoleLine) : int(ForgeCad::DatumRolePlane))))
             p.refs[0] = defaultRef(kind);
-        viewport->cancelReferencePick();
+        if (active >= 0) viewport->cancelReferencePick();  // la scelta del corpo invece continua
         active = -1;
         refresh();
     });
@@ -14332,6 +14603,7 @@ static bool patternDialog(QMainWindow *window, CadViewport *viewport, const QStr
     for (QDoubleSpinBox *box : {spacingBox, angleBox, spacingBox2}) QObject::connect(box, &QDoubleSpinBox::valueChanged, &dialog, refresh);
     QObject::connect(buttons, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
     QObject::connect(buttons, &QDialogButtonBox::accepted, &dialog, [&] {
+        if (picker.waiting()) return setStatus(picker.hint(), true);
         QApplication::setOverrideCursor(Qt::WaitCursor);
         const QString error = apply(current());
         QApplication::restoreOverrideCursor();
@@ -14342,6 +14614,7 @@ static bool patternDialog(QMainWindow *window, CadViewport *viewport, const QStr
     {
         const WindowLock lock(window, viewport, &dialog);
         dialog.show();
+        if (replaced < 0 && !preselected) picker.start(true);
         refresh();
         QEventLoop loop;
         QObject::connect(&dialog, &QDialog::finished, &loop, &QEventLoop::quit);
@@ -14407,7 +14680,8 @@ static bool extrusionDialog(QMainWindow *window, CadViewport *viewport, const QS
     autoBox->setChecked(definition.mergeAuto);
     auto *bodyList = new QListWidget(&dialog);
     bodyList->setMinimumHeight(110);
-    fillMergeBodyList(bodyList, viewport, replaced, definition.mergeBodies);  // i corpi, non le feature
+    BodyPicker picker(dialog, viewport, replaced, fillMergeBodyList(bodyList, viewport, replaced, definition.mergeBodies), nullptr, bodyList);
+    QWidget *bodyRow = picker.row(bodyList);
     form->addRow(QStringLiteral("Versi:"), sidesBox);
     form->addRow(QStringLiteral("Fine:"), extentBox);
     form->addRow(QStringLiteral("Distanza:"), distanceBox);
@@ -14416,7 +14690,7 @@ static bool extrusionDialog(QMainWindow *window, CadViewport *viewport, const QS
     form->addRow(QString(), flipButton);
     form->addRow(QStringLiteral("Risultato:"), operationBox);
     form->addRow(QString(), autoBox);
-    form->addRow(QStringLiteral("Solidi:"), bodyList);
+    form->addRow(QStringLiteral("Solidi:"), bodyRow);
     auto *status = new QLabel(&dialog);
     status->setWordWrap(true);
     status->setMinimumWidth(280);
@@ -14468,21 +14742,27 @@ static bool extrusionDialog(QMainWindow *window, CadViewport *viewport, const QS
         flipButton->setEnabled(extent == 0 && sides != 1);
         const bool merge = operationBox->currentIndex() != 0;
         form->setRowVisible(autoBox, merge);
-        form->setRowVisible(bodyList, merge);
-        bodyList->setEnabled(!autoBox->isChecked());
+        form->setRowVisible(bodyRow, merge);
+        bodyRow->setEnabled(!autoBox->isChecked());
+        if (!merge || autoBox->isChecked()) picker.stop();
         QString text = definition.extentRef.kind >= 0 ? ForgeCad::geometryRefText(definition.extentRef, viewport->sketches(), viewport->extrusions())
                                                       : QStringLiteral("(da scegliere)");
         if (picking) text = QStringLiteral("▶ ") + text + QStringLiteral("  - clicca nella vista");
         refButton->setText(text);
         viewport->setReferenceMarks(extent != 0 && definition.extentRef.kind >= 0 ? QVector<GeometryRef>{definition.extentRef} : QVector<GeometryRef>());
         if (picking) setStatus(QStringLiteral("Clicca nella vista il riferimento (Esc nella vista: annulla la scelta)."), false);
+        else if (picker.active()) setStatus(picker.hint(), false);
         else if (extent != 0 && definition.extentRef.kind < 0) setStatus(QStringLiteral("Scegli nella vista dove finisce l'estrusione."), false);
         else setStatus(QString(), false);
         ExtrusionObject d = current();
         if (extent != 0 && d.extentRef.kind < 0) return;
         scope->request(viewport->withMergeCandidates(d, replaced >= 0 ? replaced : int(bodies.size())));
     };
+    picker.changed = refresh;
+    picker.message = setStatus;
+    picker.starting = [&] { picking = false; };
     const auto pick = [&] {
+        picker.stop();
         picking = true;
         const QString error = viewport->beginReferencePick(roles(), replaced);
         if (!error.isEmpty()) {
@@ -14493,6 +14773,7 @@ static bool extrusionDialog(QMainWindow *window, CadViewport *viewport, const QS
         refresh();
     };
     viewport->setReferencePickCallback([&](bool picked, GeometryRef ref) {
+        if (picker.handle(picked, ref)) return;
         if (picked && picking) {
             if (ForgeCad::geometryRefRoles(ref, viewport->sketches()) & roles()) definition.extentRef = ref;
             else setStatus(QStringLiteral("Questo riferimento non va bene qui."), true);
@@ -14502,7 +14783,7 @@ static bool extrusionDialog(QMainWindow *window, CadViewport *viewport, const QS
     });
     QObject::connect(refButton, &QPushButton::clicked, &dialog, pick);
     QObject::connect(extentBox, &QComboBox::currentIndexChanged, &dialog, [&](int extent) {
-        viewport->cancelReferencePick();
+        if (picking) viewport->cancelReferencePick();
         picking = false;
         // Il riferimento che non vale per la fine nuova si sceglie di nuovo.
         if (definition.extentRef.kind >= 0 && !(ForgeCad::geometryRefRoles(definition.extentRef, viewport->sketches()) & roles())) definition.extentRef = GeometryRef();
@@ -14511,7 +14792,9 @@ static bool extrusionDialog(QMainWindow *window, CadViewport *viewport, const QS
     });
     QObject::connect(operationBox, &QComboBox::currentIndexChanged, &dialog, refresh);
     QObject::connect(autoBox, &QCheckBox::toggled, &dialog, refresh);
-    QObject::connect(bodyList, &QListWidget::itemChanged, &dialog, refresh);
+    QObject::connect(bodyList, &QListWidget::itemChanged, &dialog, [&] {
+        if (!picker.handling()) refresh();
+    });
     QObject::connect(sidesBox, &QComboBox::currentIndexChanged, &dialog, refresh);
     QObject::connect(flipButton, &QPushButton::clicked, &dialog, [&] {
         distanceBox->interpretText();
@@ -14583,7 +14866,8 @@ static bool transformDialog(QMainWindow *window, CadViewport *viewport, const QS
     ExtrusionObject definition = initial;
     definition.operation = -1;
     definition.feature = BodyFeature::Transform;
-    if (!candidates.contains(definition.firstBody)) definition.firstBody = candidates.last();
+    const bool preselected = candidates.contains(definition.firstBody);
+    if (!preselected) definition.firstBody = candidates.last();
     FunctionDialogPanel dialog(window);
     dialog.setWindowTitle(title);
     dialog.setModal(false);
@@ -14592,6 +14876,7 @@ static bool transformDialog(QMainWindow *window, CadViewport *viewport, const QS
     for (int index : candidates) bodyBox->addItem(logicalBodyLabel(viewport, index));
     bodyBox->setCurrentIndex(int(candidates.indexOf(definition.firstBody)));
     bodyBox->setEnabled(replaced < 0);
+    BodyPicker picker(dialog, viewport, replaced, candidates, bodyBox);
     const auto spin = [&dialog](double value, double lo, double hi, const QString &prefix, const QString &suffix = QString()) {
         auto *box = new ForgeCad::ExpressionSpinBox(&dialog);
         box->setDecimals(6);
@@ -14613,7 +14898,7 @@ static bool transformDialog(QMainWindow *window, CadViewport *viewport, const QS
     axisButton->setToolTip(QStringLiteral("Scegli nella vista una retta: asse, spigolo, faccia cilindrica, segmento"));
     auto *copyBox = new QCheckBox(QStringLiteral("Copia (il corpo di partenza resta)"), &dialog);
     copyBox->setChecked(definition.move.copy);
-    form->addRow(QStringLiteral("Corpo:"), bodyBox);
+    form->addRow(QStringLiteral("Corpo:"), picker.row(bodyBox));
     form->addRow(QStringLiteral("Traslazione:"), translation);
     form->addRow(QStringLiteral("Rotazione:"), angleBox);
     form->addRow(QStringLiteral("Asse:"), axisButton);
@@ -14647,10 +14932,20 @@ static bool transformDialog(QMainWindow *window, CadViewport *viewport, const QS
         if (picking) text = QStringLiteral("▶ ") + text + QStringLiteral("  - clicca nella vista");
         axisButton->setText(text);
         viewport->setReferenceMarks(std::fabs(angleBox->value()) > 0.0 ? QVector<GeometryRef>{definition.move.axis} : QVector<GeometryRef>());
-        setStatus(picking ? QStringLiteral("Clicca nella vista la retta dell'asse (Esc nella vista: annulla la scelta).") : QString(), false);
+        setStatus(picking ? QStringLiteral("Clicca nella vista la retta dell'asse (Esc nella vista: annulla la scelta).")
+                          : picker.active() ? picker.hint() : QString(), false);
+        if (picker.waiting()) {
+            scope->label->setText(picker.hint());
+            viewport->clearPreview();
+            return;
+        }
         scope->request(current());
     };
+    picker.changed = refresh;
+    picker.message = setStatus;
+    picker.starting = [&] { picking = false; };
     viewport->setReferencePickCallback([&](bool picked, GeometryRef ref) {
+        if (picker.handle(picked, ref)) return;
         if (picked && picking) {
             if (ForgeCad::geometryRefRoles(ref, viewport->sketches()) & ForgeCad::DatumRoleLine) definition.move.axis = ref;
             else setStatus(QStringLiteral("Serve una retta."), true);
@@ -14659,6 +14954,7 @@ static bool transformDialog(QMainWindow *window, CadViewport *viewport, const QS
         refresh();
     });
     QObject::connect(axisButton, &QPushButton::clicked, &dialog, [&] {
+        picker.stop();
         picking = true;
         const QString error = viewport->beginReferencePick(ForgeCad::DatumRoleLine, replaced);
         if (!error.isEmpty()) {
@@ -14673,6 +14969,7 @@ static bool transformDialog(QMainWindow *window, CadViewport *viewport, const QS
     for (QDoubleSpinBox *box : {dx, dy, dz, angleBox}) QObject::connect(box, &QDoubleSpinBox::valueChanged, &dialog, refresh);
     QObject::connect(buttons, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
     QObject::connect(buttons, &QDialogButtonBox::accepted, &dialog, [&] {
+        if (picker.waiting()) return setStatus(picker.hint(), true);
         QApplication::setOverrideCursor(Qt::WaitCursor);
         const QString error = apply(current());
         QApplication::restoreOverrideCursor();
@@ -14683,6 +14980,7 @@ static bool transformDialog(QMainWindow *window, CadViewport *viewport, const QS
     {
         const WindowLock lock(window, viewport, &dialog);
         dialog.show();
+        if (replaced < 0 && !preselected) picker.start(true);
         refresh();
         QEventLoop loop;
         QObject::connect(&dialog, &QDialog::finished, &loop, &QEventLoop::quit);
@@ -15180,7 +15478,10 @@ static bool offsetDialog(QMainWindow *window, CadViewport *viewport, const QStri
     ExtrusionObject definition = initial;
     definition.operation = -1;
     definition.feature = shell ? BodyFeature::Shell : removal ? BodyFeature::DeleteFace : BodyFeature::SurfaceOffset;
-    if (!candidates.contains(definition.firstBody)) definition.firstBody = candidates.last();
+    // Senza un corpo selezionato prima del comando lo da' la prima faccia
+    // cliccata (come per i raccordi): fino ad allora niente anteprima.
+    bool waiting = replaced < 0 && !candidates.contains(definition.firstBody);
+    if (waiting) definition.firstBody = candidates.last();
     FunctionDialogPanel dialog(window);
     dialog.setWindowTitle(title);
     dialog.setModal(false);
@@ -15264,6 +15565,16 @@ static bool offsetDialog(QMainWindow *window, CadViewport *viewport, const QStri
         return ForgeCad::resolveFaceReference(*body.forgeBody, point, 1e-6);
     };
     const auto refresh = [&] {
+        if (waiting) {
+            if (shell) viewport->setPickBodies(picking ? candidates : QVector<int>());
+            facesLabel->setText(QStringLiteral("clicca nella vista una faccia del corpo"));
+            pickButton->setChecked(picking);
+            viewport->setReferenceMarks({});
+            if (picking) setStatus(QStringLiteral("Clicca una faccia: sceglie anche il corpo. Esc nella vista termina la scelta."), false);
+            scope->label->setText(QStringLiteral("scegli il corpo cliccandone una faccia"));
+            viewport->clearPreview();
+            return;
+        }
         facesLabel->setText(definition.offsetFaces.isEmpty()
                                 ? (shell ? QStringLiteral("nessuna apertura") : removal ? QStringLiteral("nessuna faccia scelta") : QStringLiteral("tutte le facce del corpo"))
                                 : QStringLiteral("%1 facce scelte").arg(definition.offsetFaces.size()));
@@ -15316,9 +15627,13 @@ static bool offsetDialog(QMainWindow *window, CadViewport *viewport, const QStri
             refresh();
             return;
         }
-        if (ref.kind != 5 || !candidates.contains(ref.index)) {
-            setStatus(QStringLiteral("Serve una faccia di un corpo."), true);
+        const int body = ref.kind == 5 ? resultBodyForPick(viewport, candidates, ref.index) : -1;
+        if (body < 0) {
+            setStatus(QStringLiteral("Serve una faccia di un corpo adatto (in questo punto della storia)."), true);
         } else {
+            ref.index = body;
+            if (waiting) definition.offsetFaces.clear();
+            waiting = false;
             if (ref.index != definition.firstBody && replaced >= 0) {
                 setStatus(QStringLiteral("In modifica il corpo resta quello della funzione."), true);
                 startPicking();
@@ -15361,6 +15676,7 @@ static bool offsetDialog(QMainWindow *window, CadViewport *viewport, const QStri
     });
     if (bodyBox)
         QObject::connect(bodyBox, &QComboBox::currentIndexChanged, &dialog, [&] {
+            waiting = false;
             definition.firstBody = candidates.at(bodyBox->currentIndex());
             definition.offsetFaces.clear();
             refresh();
@@ -15369,6 +15685,10 @@ static bool offsetDialog(QMainWindow *window, CadViewport *viewport, const QStri
     QObject::connect(distanceBox, &QDoubleSpinBox::valueChanged, &dialog, refresh);
     QObject::connect(buttons, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
     QObject::connect(buttons, &QDialogButtonBox::accepted, &dialog, [&] {
+        if (waiting) {
+            setStatus(QStringLiteral("Clicca prima nella vista una faccia del corpo."), true);
+            return;
+        }
         if (removal && !shell && definition.offsetFaces.isEmpty()) {
             setStatus(QStringLiteral("Scegli almeno una faccia da eliminare."), true);
             return;
@@ -15886,7 +16206,8 @@ static bool sewDialog(QWidget *parent, CadViewport *viewport, const QString &tit
     toleranceBox->setToolTip(QStringLiteral("Distanza massima tra i bordi e i vertici da unire"));
     auto *solidBox = new QCheckBox(QStringLiteral("Crea un solido (le superfici devono chiudere un volume)"), &dialog);
     solidBox->setChecked(initial.sewSolid);
-    form->addRow(QStringLiteral("Superfici:"), list);
+    BodyPicker picker(dialog, viewport, replaced, indices, nullptr, list);
+    form->addRow(QStringLiteral("Superfici:"), picker.row(list));
     form->addRow(QStringLiteral("Tolleranza:"), toleranceBox);
     form->addRow(QString(), solidBox);
     form->addRow(wrappedNote(QStringLiteral("I bordi comuni (stessi estremi e stessa curva entro la tolleranza) si uniscono; un "
@@ -15915,7 +16236,12 @@ static bool sewDialog(QWidget *parent, CadViewport *viewport, const QString &tit
         }
         scope.request(body);
     };
-    QObject::connect(list, &QListWidget::itemChanged, &dialog, refresh);
+    picker.changed = refresh;
+    picker.message = [&](const QString &text, bool) { scope.label->setText(text); };
+    picker.install();
+    QObject::connect(list, &QListWidget::itemChanged, &dialog, [&] {
+        if (!picker.handling()) refresh();
+    });
     QObject::connect(toleranceBox, &QDoubleSpinBox::valueChanged, &dialog, refresh);
     QObject::connect(solidBox, &QCheckBox::toggled, &dialog, refresh);
     refresh();
@@ -15923,11 +16249,14 @@ static bool sewDialog(QWidget *parent, CadViewport *viewport, const QString &tit
     QObject::connect(buttons, &QDialogButtonBox::accepted, &dialog, &QDialog::accept);
     QObject::connect(buttons, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
     form->addRow(buttons);
-    return runUntilApplied(dialog, form, buttons, [&] {
+    const auto run = [&] {
+        picker.stop();
         const ExtrusionObject body = current();
         if (body.firstBody < 0) return QStringLiteral("Spunta le superfici da cucire.");
         return apply(body);
-    });
+    };
+    if (auto *window = qobject_cast<QMainWindow *>(parent)) return runUntilAppliedModeless(window, viewport, dialog, form, buttons, run);
+    return runUntilApplied(dialog, form, buttons, run);
 }
 
 // Misura nella vista (Analisi -> Misura): si cliccano una o due entita' con gli
@@ -16263,8 +16592,11 @@ static bool trimDialog(QWidget *parent, CadViewport *viewport, const QString &ti
                 break;
             }
     }
-    form->addRow(QStringLiteral("Superficie da tagliare:"), sheetBox);
-    form->addRow(QStringLiteral("Strumento (corpo o piano):"), toolBox);
+    // Superficie e strumento si scelgono anche cliccandoli nella vista: per una
+    // funzione nuova senza superficie selezionata prima la superficie, poi lo strumento.
+    BodyPicker sheetPicker(dialog, viewport, replaced, sheets, sheetBox), toolPicker(dialog, viewport, replaced, tools, toolBox);
+    form->addRow(QStringLiteral("Superficie da tagliare:"), sheetPicker.row(sheetBox));
+    form->addRow(QStringLiteral("Strumento (corpo o piano):"), toolPicker.row(toolBox));
     form->addRow(QStringLiteral("Parte da tenere:"), partBox);
     const PreviewScope scope(viewport, dialog, form, replaced);
     QVector<SheetPiece> pieces;
@@ -16283,7 +16615,15 @@ static bool trimDialog(QWidget *parent, CadViewport *viewport, const QString &ti
     const auto refreshPreview = [&] {
         if (pieces.size() >= 2) scope.request(current());
     };
+    bool chaining = false;  // superficie scelta nella vista, lo strumento segue
     const auto refreshPieces = [&] {
+        if (chaining || sheetPicker.handling() || toolPicker.handling()) return;
+        if (sheetPicker.waiting() || toolPicker.waiting()) {
+            viewport->clearPreview();
+            scope.label->setText(sheetPicker.waiting() ? QStringLiteral("Clicca nella vista la superficie da tagliare.")
+                                                       : QStringLiteral("Clicca nella vista il corpo che taglia (o scegli un piano nell'elenco)."));
+            return;
+        }
         const ExtrusionObject d = current();
         QString error;
         QApplication::setOverrideCursor(Qt::WaitCursor);
@@ -16309,6 +16649,21 @@ static bool trimDialog(QWidget *parent, CadViewport *viewport, const QString &ti
         partBox->setCurrentIndex(chosen);
         refreshPreview();
     };
+    for (BodyPicker *picker : {&sheetPicker, &toolPicker}) {
+        picker->changed = refreshPieces;
+        picker->message = [&](const QString &text, bool) { scope.label->setText(text); };
+    }
+    viewport->setReferencePickCallback([&](bool picked, GeometryRef ref) {
+        if (sheetPicker.active()) {
+            chaining = sheetPicker.waiting();
+            sheetPicker.handle(picked, ref);
+            if (chaining && picked && !sheetPicker.active()) toolPicker.start(true);  // poi lo strumento
+            chaining = false;
+            refreshPieces();
+            return;
+        }
+        toolPicker.handle(picked, ref);
+    });
     QObject::connect(sheetBox, &QComboBox::currentIndexChanged, &dialog, refreshPieces);
     QObject::connect(toolBox, &QComboBox::currentIndexChanged, &dialog, refreshPieces);
     QObject::connect(partBox, &QComboBox::currentIndexChanged, &dialog, refreshPreview);
@@ -16316,11 +16671,19 @@ static bool trimDialog(QWidget *parent, CadViewport *viewport, const QString &ti
     QObject::connect(buttons, &QDialogButtonBox::accepted, &dialog, &QDialog::accept);
     QObject::connect(buttons, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
     form->addRow(buttons);
+    if (replaced < 0 && !sheets.contains(definition.firstBody)) sheetPicker.start(true);
     refreshPieces();
-    return runUntilApplied(dialog, form, buttons, [&] {
+    const auto run = [&] {
+        sheetPicker.stop();
+        toolPicker.stop();
         if (pieces.size() < 2) return QStringLiteral("Lo strumento non divide la superficie: scegline un altro.");
         return apply(current());
-    });
+    };
+    bool applied = false;
+    if (auto *window = qobject_cast<QMainWindow *>(parent)) applied = runUntilAppliedModeless(window, viewport, dialog, form, buttons, run);
+    else applied = runUntilApplied(dialog, form, buttons, run);
+    viewport->setReferencePickCallback(nullptr);
+    return applied;
 }
 
 // Finestra dell'estensione di una superficie: distanza e tipo (stessa
@@ -16448,7 +16811,8 @@ static bool revolutionDialog(QWidget *parent, CadViewport *viewport, const QStri
     autoBox->setChecked(initial.mergeAuto);
     auto *bodyList = new QListWidget(&dialog);
     bodyList->setMinimumHeight(110);
-    fillMergeBodyList(bodyList, viewport, replaced, initial.mergeBodies);  // i corpi, non le feature
+    BodyPicker picker(dialog, viewport, replaced, fillMergeBodyList(bodyList, viewport, replaced, initial.mergeBodies), nullptr, bodyList);
+    QWidget *bodyRow = picker.row(bodyList);
     auto *pickStatus = new QLabel(&dialog);
     pickStatus->setWordWrap(true);
     pickStatus->setMaximumWidth(360);
@@ -16461,7 +16825,7 @@ static bool revolutionDialog(QWidget *parent, CadViewport *viewport, const QStri
     form->addRow(QString(), reverseBox);
     form->addRow(QStringLiteral("Risultato:"), operationBox);
     form->addRow(QString(), autoBox);
-    form->addRow(QStringLiteral("Solidi:"), bodyList);
+    form->addRow(QStringLiteral("Solidi:"), bodyRow);
     const PreviewScope scope(viewport, dialog, form, replaced);
     const auto current = [&] {
         ExtrusionObject d = initial;
@@ -16495,15 +16859,24 @@ static bool revolutionDialog(QWidget *parent, CadViewport *viewport, const QStri
     const auto refresh = [&] {
         const bool merge = operationBox->currentIndex() != 0;
         form->setRowVisible(autoBox, merge);
-        form->setRowVisible(bodyList, merge);
-        bodyList->setEnabled(!autoBox->isChecked());
+        form->setRowVisible(bodyRow, merge);
+        bodyRow->setEnabled(!autoBox->isChecked());
+        if (!merge || autoBox->isChecked()) picker.stop();
         markAxis();
         if (axisBox->currentIndex() < 0) return;
         scope.request(viewport->withMergeCandidates(current(), replaced >= 0 ? replaced : int(bodies.size())));
     };
+    picker.changed = refresh;
+    picker.message = [&](const QString &text, bool) { pickStatus->setText(text); };
+    picker.starting = [&] {
+        const QSignalBlocker blocker(pickButton);
+        pickButton->setChecked(false);
+        pickStatus->setText(picker.hint());
+    };
     const auto setPicking = [&](bool on) {
         const QSignalBlocker blocker(pickButton);
         pickButton->setChecked(on);
+        if (on) picker.stop();
         if (!on) {
             viewport->cancelReferencePick();
             pickStatus->setText(QString());
@@ -16518,6 +16891,7 @@ static bool revolutionDialog(QWidget *parent, CadViewport *viewport, const QStri
         pickStatus->setText(QStringLiteral("Clicca l'asse nella vista (Esc nella vista: annulla la scelta; lontano dagli oggetti il trascinamento ruota la vista)."));
     };
     viewport->setReferencePickCallback([&](bool picked, GeometryRef ref) {
+        if (picker.handle(picked, ref)) return;
         const QSignalBlocker blocker(pickButton);
         pickButton->setChecked(false);
         pickStatus->setText(QString());
@@ -16551,7 +16925,9 @@ static bool revolutionDialog(QWidget *parent, CadViewport *viewport, const QStri
     QObject::connect(reverseBox, &QPushButton::toggled, &dialog, refresh);
     QObject::connect(operationBox, &QComboBox::currentIndexChanged, &dialog, refresh);
     QObject::connect(autoBox, &QCheckBox::toggled, &dialog, refresh);
-    QObject::connect(bodyList, &QListWidget::itemChanged, &dialog, refresh);
+    QObject::connect(bodyList, &QListWidget::itemChanged, &dialog, [&] {
+        if (!picker.handling()) refresh();
+    });
     auto *buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dialog);
     QObject::connect(buttons, &QDialogButtonBox::accepted, &dialog, &QDialog::accept);
     QObject::connect(buttons, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
@@ -18334,10 +18710,18 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
         if (result.reselect) viewport->resumeExtendPick(body, edges, result.linear);
     });
     connect(offsetSurfaceAction, &QAction::triggered, this, [this, viewport] {
+        if (viewport->sketchModeActive()) viewport->endSketchMode();
         ExtrusionObject definition;
         definition.distance = 1.0;
-        const SceneSelection selection = viewport->selection();
-        if (selection.kind == SceneObjectKind::Extrusion) definition.firstBody = selection.index;
+        // Di partenza il corpo e la faccia selezionati nella vista.
+        int body = -1;
+        EdgePoint face;
+        if (viewport->selectedFaceReference(body, face)) {
+            definition.firstBody = body;
+            definition.offsetFaces = {face};
+        } else if (viewport->selection().kind == SceneObjectKind::Extrusion) {
+            definition.firstBody = viewport->selection().index;
+        }
         offsetDialog(this, viewport, QStringLiteral("Offset superficie"), -1, definition, [viewport](const ExtrusionObject &d) {
             ExtrusionObject body = d;
             body.name = QStringLiteral("Offset %1").arg(viewport->extrusions().size() + 1);
@@ -18744,6 +19128,9 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
     QAction *sketchOffsetAction = sketchMenu->addAction(QStringLiteral("Offset entita'..."));
     sketchOffsetAction->setToolTip(QStringLiteral("Copia a distanza costante le entita' selezionate (le catene restano collegate)"));
     connect(sketchOffsetAction, &QAction::triggered, this, [this, viewport] { sketchOffsetDialog(this, viewport); });
+    QAction *sketchMoveAction = sketchMenu->addAction(QStringLiteral("Sposta / ruota / copia entita'..."));
+    sketchMoveAction->setToolTip(QStringLiteral("Sposta, ruota o copia le entita' selezionate dello schizzo"));
+    connect(sketchMoveAction, &QAction::triggered, this, [this, viewport] { sketchMoveDialog(this, viewport); });
     auto *sketchPatternMenu = sketchMenu->addMenu(QStringLiteral("Ripetizione"));
     QAction *sketchLinearPattern = sketchPatternMenu->addAction(QStringLiteral("Ripetizione lineare..."));
     QAction *sketchCircularPattern = sketchPatternMenu->addAction(QStringLiteral("Ripetizione circolare..."));
@@ -19053,7 +19440,7 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
         {sketchFilletTool, QStringLiteral("sketchFillet")}, {sketchChamferTool, QStringLiteral("sketchChamfer")},
         {toggleConstruction, QStringLiteral("toggleConstruction")}, {symmetryAxisAction, QStringLiteral("symmetryAxis")}, {constraintsAction, QStringLiteral("constraints")},
         {sketchLinearPattern, QStringLiteral("sketchPatternLinear")}, {sketchCircularPattern, QStringLiteral("sketchPatternCircular")},
-        {sketchMirror, QStringLiteral("sketchMirror")}, {convertTool, QStringLiteral("convertEdges")}, {sketchOffsetAction, QStringLiteral("sketchOffset")},
+        {sketchMirror, QStringLiteral("sketchMirror")}, {convertTool, QStringLiteral("convertEdges")}, {sketchOffsetAction, QStringLiteral("sketchOffset")}, {sketchMoveAction, QStringLiteral("sketchMove")},
         {sectionReferences, QStringLiteral("sectionCurves")},
         {dimensionAction, QStringLiteral("dimension")}, {automaticConstraint, QStringLiteral("constraintAuto")},
         {freeConstraint, QStringLiteral("constraintFree")}, {horizontalConstraint, QStringLiteral("constraintHorizontal")},
@@ -19152,6 +19539,7 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
     flyout(drawingToolbar, {sketchFilletTool, sketchChamferTool}, QStringLiteral("Raccordo e smusso: la freccia per l'altro"));
     drawingToolbar->addAction(toggleConstruction); drawingToolbar->addAction(symmetryAxisAction);
     drawingToolbar->addAction(sketchOffsetAction);
+    drawingToolbar->addAction(sketchMoveAction);
     flyout(drawingToolbar, {sketchLinearPattern, sketchCircularPattern, sketchMirror}, QStringLiteral("Ripetizioni: la freccia per le altre"));
     flyout(drawingToolbar, {convertTool, sectionReferences}, QStringLiteral("Riferimenti dai corpi: la freccia per la sezione"));
     drawingToolbar->addSeparator();

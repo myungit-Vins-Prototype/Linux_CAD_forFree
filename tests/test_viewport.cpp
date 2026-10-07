@@ -555,6 +555,26 @@ public:
             MeasureEntity entity;
             require(measureEntity(picked, measure.sketches_, measure.extrusions_, entity, nullptr) && entity.kind == MeasureEntity::Kind::Point,
                     "punto medio misurabile");
+            {
+                // Scelta del corpo dalla faccia cliccata (finestre con l'elenco dei corpi).
+                require(measure.createPrimitive(box, QStringLiteral("Secondo blocco")).isEmpty(), "secondo corpo");
+                QDialog dialog;
+                auto *combo = new QComboBox(&dialog);
+                const QVector<int> candidates = measure.resultBodiesBefore(-1);
+                for (int index : candidates) combo->addItem(QString::number(index));
+                combo->setCurrentIndex(int(candidates.size()) - 1);
+                BodyPicker picker(dialog, &measure, -1, candidates, combo);
+                int changes = 0;
+                picker.changed = [&] { ++changes; };
+                picker.start(true);
+                require(picker.active() && picker.waiting(), "scelta del corpo in attesa");
+                GeometryRef face;
+                face.kind = 5;
+                face.index = candidates.first();
+                require(picker.handle(true, face) && combo->currentIndex() == 0 && !picker.active() && !picker.waiting() && changes == 1,
+                        "la faccia cliccata sceglie il corpo");
+                require(!picker.handle(true, face), "clic fuori dalla scelta del corpo");
+            }
             const Kernel::Edge &exact = body.forgeBody->edge(Kernel::EdgeId(picked.point.subshape));
             const Kernel::Vec3 expected = 0.5 * (exact.curve->point(exact.range.lo) + exact.curve->point(exact.range.hi));
             require(distance(entity.point, expected) < 1e-12, "punto medio esatto");
@@ -1358,6 +1378,44 @@ public:
             const MeasureReport single = measureEntities({top});
             require(single.ok && single.lines.first().contains(QStringLiteral("200")), "area della faccia");
             require(measureEntities({vertical, across}).lines.join(QLatin1Char('\n')).contains(QStringLiteral("Angolo tra le rette: 90°")), "angolo tra spigoli");
+        }
+        {
+            // Sposta / copia entita' dello schizzo: i vincoli verso le entita' ferme spariscono, quelli interni restano.
+            SketchObject moving;
+            moving.segments = {{QPointF(0, 0), QPointF(4, 0)}, {QPointF(4, 0), QPointF(4, 3)}, {QPointF(10, 0), QPointF(12, 0)}};
+            moving.constraints = {-1, -1, -1}; moving.segmentLengths = {0, 0, 0}; moving.segmentAngles = {-1, -1, -1};
+            moving.geometricConstraints.append(makeConstraint(moving, ConstraintType::Coincident, {{0, 0, 1}, {0, 1, 0}}));
+            moving.geometricConstraints.append(makeConstraint(moving, ConstraintType::Horizontal, {{0, 0, -1}}));
+            moving.geometricConstraints.append(makeConstraint(moving, ConstraintType::Parallel, {{0, 0, -1}, {0, 2, -1}}));
+            moving.geometricConstraints.append(makeConstraint(moving, ConstraintType::Distance, {{0, 0, -1}}));
+            SketchObject moved = moving;
+            SketchMove shift;
+            shift.translation = QPointF(1, 2);
+            QVector<SketchEntity> created;
+            require(moveSketchEntities(moved, {{0, 0}}, shift, &created).error.isEmpty() && created.size() == 1, "spostamento di un segmento");
+            require(moved.segments.at(0).first == QPointF(1, 2) && moved.segments.at(1) == moving.segments.at(1), "solo il segmento scelto si sposta");
+            bool coincident = false, horizontal = false, parallel = false, length = false;
+            for (const SketchConstraint &c : moved.geometricConstraints) {
+                coincident = coincident || (c.type == ConstraintType::Coincident && (c.first.element == 1 || c.second.element == 1));
+                horizontal = horizontal || c.type == ConstraintType::Horizontal;
+                parallel = parallel || c.type == ConstraintType::Parallel;
+                length = length || c.type == ConstraintType::Distance;
+            }
+            require(!coincident && horizontal && parallel && length, "vincoli dopo lo spostamento");
+            require(solveSketch(moved).ok, "schizzo spostato coerente");
+            SketchObject copied = moving;
+            SketchMove turn;
+            turn.angle = 90.0;
+            turn.copy = true;
+            require(moveSketchEntities(copied, {{0, 0}, {0, 1}}, turn, &created).error.isEmpty() && created.size() == 2, "copia ruotata");
+            require(copied.segments.size() == 5 && pointDistance(copied.segments.at(3).second, QPointF(0, 4)) < 1e-12, "copia ruotata di 90 gradi");
+            bool copiedCoincident = false, copiedHorizontal = false;
+            for (const SketchConstraint &c : copied.geometricConstraints) {
+                copiedCoincident = copiedCoincident || (c.type == ConstraintType::Coincident && c.first.element >= 3 && c.second.element >= 3);
+                copiedHorizontal = copiedHorizontal || (c.type == ConstraintType::Horizontal && c.first.element >= 3);
+            }
+            require(copiedCoincident && !copiedHorizontal, "vincoli copiati con la rotazione");
+            require(solveSketch(copied).ok, "schizzo con la copia coerente");
         }
         {
             // Aggancio alla geometria e alla griglia indipendenti.

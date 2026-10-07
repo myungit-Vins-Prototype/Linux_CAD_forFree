@@ -726,6 +726,13 @@ std::map<QString, Draw> &registry() {
         p.drawEllipse(QRectF(0.8, 15.5, 6.4, 6.4));
         p.drawEllipse(QRectF(16.8, 2.8, 6.4, 6.4));
     };
+    icons["sketchMove"] = [](QPainter &p, const IconPalette &c) {
+        // Un segmento (grigio) e la sua posizione nuova (arancio), con la freccia dello spostamento.
+        line(p, {3, 20}, {10, 13}, stroke(c.ink, 1.8));
+        line(p, {13, 11}, {20, 4}, stroke(c.accent, 1.8, Qt::DashLine));
+        line(p, {8, 21}, {18, 11}, stroke(c.ink, 1.2));
+        arrowHead(p, {19.5, 9.5}, {15, 14}, c.accent, 3.4);
+    };
     icons["sketchOffset"] = [](QPainter &p, const IconPalette &c) {
         // Una catena di segmenti e la sua parallela tratteggiata.
         p.setBrush(Qt::NoBrush);

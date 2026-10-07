@@ -805,11 +805,8 @@ CurveObject mappedCurve(const CurveObject &curve, const PlaneMap &m) {
     return copy;
 }
 
-}
-
-SketchEditResult patternSketchEntities(SketchObject &sketch, const QVector<SketchEntity> &entities, const SketchPattern &pattern,
-                                       QVector<SketchEntity> *created) {
-    SketchEditResult result;
+// Le entita' valide della scelta, senza ripetizioni.
+QVector<SketchEntity> validEntities(const SketchObject &sketch, const QVector<SketchEntity> &entities) {
     QVector<SketchEntity> selected;
     for (const SketchEntity &e : entities) {
         const bool valid = (e.kind == 0 && e.index >= 0 && e.index < sketch.segments.size()) || (e.kind == 1 && e.index >= 0 && e.index < sketch.curves.size());
@@ -817,6 +814,77 @@ SketchEditResult patternSketchEntities(SketchObject &sketch, const QVector<Sketc
         for (const SketchEntity &s2 : selected) seen = seen || (s2.kind == e.kind && s2.index == e.index);
         if (valid && !seen) selected.append(e);
     }
+    return selected;
+}
+
+bool isEntityOf(const QVector<SketchEntity> &entities, const ConstraintRef &r) {
+    for (const SketchEntity &e : entities)
+        if (e.kind == r.kind && e.index == r.element) return true;
+    return false;
+}
+
+// Vincoli da copiare con le entita': solo tra entita' copiate e invarianti per
+// il movimento (non i fissi, ne' orizzontale/verticale se si ruota, ne' gli
+// angoli nello specchio).
+QVector<SketchConstraint> copiableConstraints(const SketchObject &sketch, const QVector<SketchEntity> &selected, bool rotates, bool mirror) {
+    QVector<SketchConstraint> copied;
+    for (const SketchConstraint &c : sketch.geometricConstraints) {
+        if (!isEntityOf(selected, c.first) || (c.second.kind >= 0 && !isEntityOf(selected, c.second))) continue;
+        if (c.type == ConstraintType::Fix || c.type == ConstraintType::Pattern) continue;
+        if (rotates && (c.type == ConstraintType::Horizontal || c.type == ConstraintType::Vertical)) continue;
+        if (mirror && c.type == ConstraintType::Angle) continue;
+        copied.append(c);
+    }
+    return copied;
+}
+
+// Copie delle entita' `selected` di `sketch` per ogni movimento di `maps`,
+// aggiunte in fondo a `work` con i vincoli `copied` rinumerati. Restituisce le copie.
+QVector<SketchEntity> appendMappedCopies(SketchObject &work, const SketchObject &sketch, const QVector<SketchEntity> &selected,
+                                         const QVector<PlaneMap> &maps, const QVector<SketchConstraint> &copied, bool rotates) {
+    QVector<SketchEntity> touched;
+    for (const PlaneMap &m : maps) {
+        QVector<QPair<SketchEntity, SketchEntity>> remap;
+        for (const SketchEntity &e : selected) {
+            SketchEntity n;
+            if (e.kind == 0) {
+                const SketchSegment &segment = sketch.segments.at(e.index);
+                // I codici H/V valgono ancora solo per le traslazioni.
+                const int code = rotates ? -1 : sketch.constraints.value(e.index, -1);
+                appendSegment(work, {m.apply(segment.first), m.apply(segment.second)}, code == 1 || code == 2 ? code : -1, -1.0,
+                              sketch.isConstructionSegment(e.index));
+                n = {0, int(work.segments.size()) - 1};
+            } else {
+                work.curves.append(mappedCurve(sketch.curves.at(e.index), m));
+                n = {1, int(work.curves.size()) - 1};
+            }
+            remap.append({e, n});
+            touched.append(n);
+        }
+        const auto mapped = [&](ConstraintRef r) {
+            for (const auto &[from, to] : remap)
+                if (from.kind == r.kind && from.index == r.element) {
+                    r.element = to.index;
+                    break;
+                }
+            return r;
+        };
+        for (SketchConstraint c : copied) {
+            c.first = mapped(c.first);
+            if (c.second.kind >= 0) c.second = mapped(c.second);
+            c.placed = false;  // le quote delle copie nella posizione di default
+            work.geometricConstraints.append(c);
+        }
+    }
+    return touched;
+}
+
+}
+
+SketchEditResult patternSketchEntities(SketchObject &sketch, const QVector<SketchEntity> &entities, const SketchPattern &pattern,
+                                       QVector<SketchEntity> *created) {
+    SketchEditResult result;
+    const QVector<SketchEntity> selected = validEntities(sketch, entities);
     if (selected.isEmpty()) return {QStringLiteral("Ripetizione: scegli prima le entita' da ripetere."), {}};
     QVector<PlaneMap> maps;
     bool rotates = false;
@@ -854,55 +922,9 @@ SketchEditResult patternSketchEntities(SketchObject &sketch, const QVector<Sketc
     if (maps.size() > 1000) return {QStringLiteral("Ripetizione: troppe istanze (al massimo 1000)."), {}};
 
     SketchObject work = sketch;
-    const auto isSelected = [&](const ConstraintRef &r) {
-        for (const SketchEntity &e : selected)
-            if (e.kind == r.kind && e.index == r.element) return true;
-        return false;
-    };
-    // Vincoli da copiare: solo tra entita' ripetute e invarianti per il movimento
-    // (nella ripetizione parametrica le copie sono gia' determinate).
-    QVector<SketchConstraint> copied;
-    for (const SketchConstraint &c : pattern.parametric ? QVector<SketchConstraint>() : sketch.geometricConstraints) {
-        if (!isSelected(c.first) || (c.second.kind >= 0 && !isSelected(c.second))) continue;
-        if (c.type == ConstraintType::Fix) continue;
-        if (rotates && (c.type == ConstraintType::Horizontal || c.type == ConstraintType::Vertical)) continue;
-        if (pattern.kind == 2 && c.type == ConstraintType::Angle) continue;
-        copied.append(c);
-    }
-    QVector<SketchEntity> touched;
-    for (const PlaneMap &m : maps) {
-        QVector<QPair<SketchEntity, SketchEntity>> remap;
-        for (const SketchEntity &e : selected) {
-            SketchEntity n;
-            if (e.kind == 0) {
-                const SketchSegment &segment = sketch.segments.at(e.index);
-                // I codici H/V valgono ancora solo per le traslazioni.
-                const int code = rotates ? -1 : sketch.constraints.value(e.index, -1);
-                appendSegment(work, {m.apply(segment.first), m.apply(segment.second)}, code == 1 || code == 2 ? code : -1, -1.0,
-                              sketch.isConstructionSegment(e.index));
-                n = {0, int(work.segments.size()) - 1};
-            } else {
-                work.curves.append(mappedCurve(sketch.curves.at(e.index), m));
-                n = {1, int(work.curves.size()) - 1};
-            }
-            remap.append({e, n});
-            touched.append(n);
-        }
-        const auto mapped = [&](ConstraintRef r) {
-            for (const auto &[from, to] : remap)
-                if (from.kind == r.kind && from.index == r.element) {
-                    r.element = to.index;
-                    break;
-                }
-            return r;
-        };
-        for (SketchConstraint c : copied) {
-            c.first = mapped(c.first);
-            if (c.second.kind >= 0) c.second = mapped(c.second);
-            c.placed = false;  // le quote delle copie nella posizione di default
-            work.geometricConstraints.append(c);
-        }
-    }
+    // Nella ripetizione parametrica niente vincoli copiati: le copie sono gia' determinate.
+    const QVector<SketchConstraint> copied = pattern.parametric ? QVector<SketchConstraint>() : copiableConstraints(sketch, selected, rotates, pattern.kind == 2);
+    const QVector<SketchEntity> touched = appendMappedCopies(work, sketch, selected, maps, copied, rotates);
     if (pattern.parametric) {
         SketchConstraint c;
         c.type = ConstraintType::Pattern;
@@ -950,6 +972,47 @@ SketchEditResult patternSketchEntities(SketchObject &sketch, const QVector<Sketc
     sketch = work;
     if (created) *created = touched;
     return result;
+}
+
+SketchEditResult moveSketchEntities(SketchObject &sketch, const QVector<SketchEntity> &entities, const SketchMove &move,
+                                    QVector<SketchEntity> *created) {
+    const QVector<SketchEntity> selected = validEntities(sketch, entities);
+    if (selected.isEmpty()) return {QStringLiteral("Sposta: scegli prima le entita'."), {}};
+    if (!std::isfinite(move.angle) || !std::isfinite(move.translation.x()) || !std::isfinite(move.translation.y()))
+        return {QStringLiteral("Sposta: valori non validi."), {}};
+    const bool rotates = std::fabs(std::remainder(move.angle, 360.0)) > 1e-12;
+    PlaneMap m = rotationMap(move.center, move.angle * M_PI / 180.0);  // prima la rotazione, poi la traslazione
+    m.t += move.translation;
+    if (!rotates && !(length(move.translation) > 0.0) && !move.copy) return {QStringLiteral("Sposta: indica uno spostamento o una rotazione."), {}};
+    SketchObject work = sketch;
+    QVector<SketchEntity> touched;
+    if (move.copy) {
+        touched = appendMappedCopies(work, sketch, selected, {m}, copiableConstraints(sketch, selected, rotates, false), rotates);
+    } else {
+        // Le entita' stesse: quelle ancorate dove erano (vincoli verso le altre
+        // entita', fissi, orizzontali/verticali dopo una rotazione) perdono i
+        // vincoli che non valgono piu' (refreshCoincidences).
+        for (const SketchEntity &e : selected) {
+            if (e.kind == 0) {
+                SketchSegment &segment = work.segments[e.index];
+                segment = {m.apply(segment.first), m.apply(segment.second)};
+                if (rotates) {
+                    work.constraints[e.index] = -1;
+                    work.segmentAngles[e.index] = -1.0;
+                }
+            } else {
+                work.curves[e.index] = mappedCurve(work.curves.at(e.index), m);
+            }
+            touched.append(e);
+        }
+        // Le quote delle entita' spostate si spostano con loro.
+        for (SketchConstraint &c : work.geometricConstraints)
+            if (c.placed && isEntityOf(selected, c.first) && (c.second.kind < 0 || isEntityOf(selected, c.second))) c.placement = m.apply(c.placement);
+    }
+    refreshCoincidences(work, touched);
+    sketch = work;
+    if (created) *created = touched;
+    return {};
 }
 
 SketchEditResult editSketchPattern(SketchObject &sketch, int constraint, const SketchPatternData &values) {
