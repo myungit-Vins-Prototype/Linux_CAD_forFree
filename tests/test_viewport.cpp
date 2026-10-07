@@ -270,7 +270,7 @@ public:
             }
         }
     }
-    static void offsetLoftSides(const QString &path, double distance) {
+    static void offsetLoftSides(const QString &path, double distance, bool rebuild = false, const QString &output = {}) {
         using namespace ForgeCad;
         DocumentState document;
         require(loadDocumentFile(path, document).isEmpty(), "lettura documento offset laterali");
@@ -279,8 +279,14 @@ public:
         const int count = viewport.extrusions_.size();
         int tested = 0;
         for (int i = 0; i < count; ++i) {
-            const auto feature = viewport.extrusions_.at(i);
+            auto feature = viewport.extrusions_.at(i);
             if (feature.feature != BodyFeature::Loft || !feature.forgeBody) continue;
+            if (rebuild) {
+                feature.cachedGeometry = false;
+                CadViewport::buildGeometry(feature, i, viewport.sketches_, viewport.extrusions_);
+                require(feature.error.isEmpty() && bool(feature.forgeBody), "rigenerazione loft dalle sezioni");
+                viewport.extrusions_[i] = feature;
+            }
             ExtrusionObject definition;
             definition.feature = BodyFeature::SurfaceOffset;
             definition.firstBody = i;
@@ -294,7 +300,15 @@ public:
                     surface->point(u.lo + 0.25 * u.length(), v.lo + 0.5 * v.length())));
             }
             if (definition.offsetFaces.isEmpty()) continue;
+            if (!output.isEmpty()) {
+                require(rebuild, "salvare la variante solo dopo la rigenerazione");
+                require(QFileInfo(path).absoluteFilePath() != QFileInfo(output).absoluteFilePath(), "salvare una copia separata");
+                viewport.extrusions_.resize(i + 1);
+                for (auto &body : viewport.extrusions_) body.visible = false;
+                for (auto &sketch : viewport.sketches_) sketch.visible = false;
+            }
             for (bool sew : {false, true}) {
+                if (!output.isEmpty() && !sew) continue;
                 definition.offsetSew = sew;
                 const QString error = viewport.createBody(definition);
                 std::cout << feature.name.toStdString() << " laterali: d=" << distance << " cucitura=" << sew
@@ -302,11 +316,19 @@ public:
                 require(error.isEmpty(), "creazione offset laterali dal comando dell'applicazione");
                 const auto result = viewport.extrusions_.back().forgeBody;
                 require(result && Kernel::checkBody(*result).empty(), "offset laterali valido");
+                std::cout << "  laterali loft=" << definition.offsetFaces.size() << " facce offset=" << result->faces().size() << std::endl;
                 if (sew) require(result->shells().size() == 1, "laterali dell'offset cucite");
                 Kernel::TessellationOptions options;
                 options.deflection = 0.02;
                 require(Kernel::tessellate(*result, options).failedFaces == 0, "tutte le facce dell'offset visualizzabili");
                 ++tested;
+                if (!output.isEmpty()) {
+                    require(saveDocumentFile(output, viewport.documentState()).isEmpty(), "salvataggio variante loft e offset rigenerati");
+                    DocumentState saved;
+                    require(loadDocumentFile(output, saved).isEmpty() && saved.extrusions.back().forgeBody
+                            && Kernel::checkBody(*saved.extrusions.back().forgeBody).empty(), "rilettura della variante rigenerata");
+                    return;
+                }
             }
         }
         require(tested > 0, "almeno un loft verificato");
@@ -604,6 +626,59 @@ public:
             }
             require(closed, "almeno una scelta produce il loft chiuso dal piano");
         }
+    }
+    // Riproduzione del raccordo sui contorni delle facce di un documento.
+    // Salva solo dopo aver verificato risultato, chiusura e rilettura della copia.
+    static void blendDocumentFaces(const QStringList &args) {
+        using namespace ForgeCad;
+        using namespace ForgeCad::Kernel;
+        require(args.size() >= 5, "uso: --blend-document-faces input output corpo raggio facce...");
+        require(QFileInfo(args[0]).absoluteFilePath() != QFileInfo(args[1]).absoluteFilePath(),
+                "il risultato deve essere una copia del documento");
+        bool validBody = false, validRadius = false;
+        const int baseIndex = args[2].toInt(&validBody);
+        const double radius = args[3].toDouble(&validRadius);
+        require(validBody && validRadius && std::isfinite(radius) && radius > 0.0, "corpo e raggio validi");
+        DocumentState state;
+        require(loadDocumentFile(args[0], state).isEmpty(), "lettura documento da raccordare");
+        require(baseIndex >= 0 && baseIndex < state.extrusions.size(), "indice del corpo da raccordare");
+        const auto base = state.extrusions.at(baseIndex).forgeBody;
+        require(bool(base), "geometria del corpo da raccordare disponibile");
+        QVector<EdgePoint> references;
+        std::set<int> selected;
+        const auto faces = base->faces();
+        for (const auto &value : args.mid(4)) {
+            bool valid = false;
+            const FaceId face(value.toInt(&valid));
+            require(valid && std::find(faces.begin(), faces.end(), face) != faces.end(), "indice faccia valido");
+            for (const auto edge : faceBoundaryEdges(*base, face)) {
+                if (!selected.insert(edge.index).second) continue;
+                const auto &e = base->edge(edge);
+                references.append(edgeReference(*base, edge, e.curve->point(0.5 * (e.range.lo + e.range.hi))));
+            }
+        }
+        require(!references.isEmpty(), "contorni delle facce selezionati");
+        // La copia conserva la storia originale; mostra soltanto la nuova variante.
+        for (auto &feature : state.extrusions) feature.visible = false;
+        for (auto &sketch : state.sketches) sketch.visible = false;
+        CadViewport viewport;
+        viewport.loadDocument(state);
+        const QString error = viewport.createBlend(baseIndex, references, radius, false,
+            QStringLiteral("Raccordi facce loft R%1 mm").arg(radius));
+        std::cout << "R=" << radius << " mm: " << error.toStdString() << std::endl;
+        require(error.isEmpty(), "creazione raccordi sui contorni delle facce");
+        const auto result = viewport.extrusions_.back().forgeBody;
+        require(bool(result) && forgeBlendHasEffect(base, result), "raccordi effettivamente costruiti");
+        require(checkBody(*result).empty(), "B-rep raccordato valido");
+        for (const auto edge : result->edges()) require(!result->isLaminar(edge), "corpo raccordato chiuso");
+        require(saveDocumentFile(args[1], viewport.documentState()).isEmpty(), "salvataggio copia raccordata");
+        DocumentState saved;
+        require(loadDocumentFile(args[1], saved).isEmpty(), "rilettura copia raccordata");
+        require(saved.extrusions.back().forgeBody
+                    && checkBody(*saved.extrusions.back().forgeBody).empty()
+                    && saved.extrusions.back().forgeBody->faces().size() == result->faces().size(),
+                "raccordi conservati nella copia salvata");
+        std::cout << "Copia verificata: " << args[1].toStdString() << ", facce=" << result->faces().size() << std::endl;
     }
     static void loftCorner(const QString &path) {
         using namespace ForgeCad;
@@ -3721,13 +3796,19 @@ int main(int argc, char **argv) {
             ViewportInteractionTest::offsetFacePicking();
         else if (app.arguments().contains(QStringLiteral("--offset-loft-sides"))) {
             const int argument = app.arguments().indexOf(QStringLiteral("--offset-loft-sides"));
-            ViewportInteractionTest::offsetLoftSides(app.arguments().value(argument + 1), app.arguments().value(argument + 2, QStringLiteral("1")).toDouble());
+            ViewportInteractionTest::offsetLoftSides(app.arguments().value(argument + 1), app.arguments().value(argument + 2, QStringLiteral("1")).toDouble(), app.arguments().contains(QStringLiteral("--rebuild-lofts")),
+                app.arguments().contains(QStringLiteral("--save-rebuilt-loft"))
+                    ? app.arguments().value(app.arguments().indexOf(QStringLiteral("--save-rebuilt-loft")) + 1) : QString());
         }
         else if (app.arguments().contains(QStringLiteral("--extend-topology-face"))) {
             const int argument = app.arguments().indexOf(QStringLiteral("--extend-topology-face"));
             ViewportInteractionTest::extendTopologyFace(app.arguments().value(argument + 1),
                 app.arguments().value(argument + 2).toInt(), app.arguments().value(argument + 3).toInt(),
                 app.arguments().value(argument + 4, QStringLiteral("1")).toDouble());
+        }
+        else if (app.arguments().contains(QStringLiteral("--blend-document-faces"))) {
+            const int argument = app.arguments().indexOf(QStringLiteral("--blend-document-faces"));
+            ViewportInteractionTest::blendDocumentFaces(app.arguments().mid(argument + 1));
         }
         else if (app.arguments().contains(QStringLiteral("--repair-extension-contours"))) {
             const int argument = app.arguments().indexOf(QStringLiteral("--repair-extension-contours"));

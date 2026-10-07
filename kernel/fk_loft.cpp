@@ -586,15 +586,17 @@ Body loftCore(const std::vector<Section> &sections, const LoftOptions &options, 
         std::vector<double> interior;
         for (std::size_t i = 0; i < n; ++i) {
             bezier[i] = standardBezierPieces(*split[i][m].curve, split[i][m].range, degree);
-            double total = 0.0;
-            std::vector<double> lengths;
-            for (const BSplineCurve<3> &b : bezier[i]) lengths.push_back(arcLength(b, b.domain(), 1e-13)), total += lengths.back();
-            double cumulative = 0.0;
+            // Conserva il parametro delle sezioni: ripartire i nodi secondo
+            // la lunghezza delle pezze cambia le velocita' ai loro confini.
+            // Su cerchi/ellissi cio' crea salti di normale nel loft anche
+            // quando ogni sezione e' geometricamente liscia.
+            const double start = bezier[i].front().domain().lo;
+            const double span = bezier[i].back().domain().hi - start;
             breaks[i].push_back(0.0);
-            for (std::size_t k = 0; k < lengths.size(); ++k) {
-                cumulative += lengths[k];
-                breaks[i].push_back(k + 1 == lengths.size() ? 1.0 : cumulative / total);
-                if (k + 1 < lengths.size()) interior.push_back(breaks[i].back());
+            for (std::size_t k = 0; k < bezier[i].size(); ++k) {
+                breaks[i].push_back(k + 1 == bezier[i].size() ? 1.0 :
+                    (bezier[i][k].domain().hi - start) / span);
+                if (k + 1 < bezier[i].size()) interior.push_back(breaks[i].back());
             }
         }
         std::sort(interior.begin(), interior.end());

@@ -2,6 +2,8 @@
 #define FORGECAD_FK_BLEND_MODEL_H
 
 #include <map>
+#include <algorithm>
+#include <limits>
 #include <stdexcept>
 #include <vector>
 
@@ -130,6 +132,74 @@ struct BlendModel {
             e.end = point;
         } else {
             throw std::logic_error("blendEdges: edge senza il vertice");
+        }
+    }
+    // Una cucitura puo' essere suddivisa in piu' edge dopo un'estensione.
+    // Attraversa solo vertici di grado due e continuazioni tangenti: non
+    // supera angoli o biforcazioni della topologia.
+    std::vector<std::pair<int, int>> edgeChain(int edge, int vertex) const {
+        std::vector<std::pair<int, int>> chain;
+        for (std::size_t guard = 0; guard < edges.size(); ++guard) {
+            const auto &e = edges[std::size_t(edge)];
+            if (!edgeAlive[std::size_t(edge)] || (e.start != vertex && e.end != vertex)) break;
+            chain.push_back({edge, vertex});
+            const int far = e.start == vertex ? e.end : e.start;
+            int next = -1, count = 0;
+            for (std::size_t k = 0; k < edges.size(); ++k) {
+                if (!edgeAlive[k] || int(k) == edge) continue;
+                if (edges[k].start == far || edges[k].end == far) { next = int(k); ++count; }
+            }
+            if (count != 1) break;
+            const auto &n = edges[std::size_t(next)];
+            const auto tangent = [](const Body::BuildEdge &edge, bool end) {
+                Vec3 values[2];
+                if (end) edge.curve->evaluateLeft(edge.range.hi, 1, values);
+                else edge.curve->evaluate(edge.range.lo, 1, values);
+                return values[1];
+            };
+            const Vec3 arriving = (e.end == far ? 1.0 : -1.0) * tangent(e, e.end == far);
+            const Vec3 leaving = (n.start == far ? 1.0 : -1.0) * tangent(n, n.end == far);
+            if (dot(normalized(arriving), normalized(leaving)) < 1.0 - 1e-6) break;
+            if (next == chain.front().first) break;
+            edge = next;
+            vertex = far;
+        }
+        return chain;
+    }
+    Vec3 projectOnEdgeChain(int edge, int vertex, const Vec3 &p) const {
+        Vec3 best = p;
+        double gap = std::numeric_limits<double>::infinity();
+        for (const auto &step : edgeChain(edge, vertex)) {
+            const auto &e = edges[std::size_t(step.first)];
+            const auto q = projectPoint(*e.curve, p, e.range);
+            if (q.distance < gap) { gap = q.distance; best = q.point; }
+        }
+        return best;
+    }
+    void moveEndAlongChain(int edge, int vertex, int point) {
+        const auto chain = edgeChain(edge, vertex);
+        std::size_t best = 0;
+        double gap = std::numeric_limits<double>::infinity();
+        for (std::size_t k = 0; k < chain.size(); ++k) {
+            const auto &e = edges[std::size_t(chain[k].first)];
+            const auto q = projectPoint(*e.curve, points[std::size_t(point)], e.range);
+            if (q.parameter > e.range.lo && q.parameter < e.range.hi && q.distance < gap) {
+                best = k; gap = q.distance;
+            }
+        }
+        if (best == 0 || gap > std::max(1e-7, pointTolerance[std::size_t(point)])) {
+            moveEnd(edge, vertex, point);
+            return;
+        }
+        // Verifica e accorcia prima di rimuovere gli edge interamente consumati.
+        moveEnd(chain[best].first, chain[best].second, point);
+        for (std::size_t k = 0; k < best; ++k) {
+            const int consumed = chain[k].first;
+            edgeAlive[std::size_t(consumed)] = false;
+            for (auto &face : faces) for (auto &loop : face.loops)
+                loop.erase(std::remove_if(loop.begin(), loop.end(), [&](const Body::BuildFin &fin) {
+                    return fin.edge == consumed;
+                }), loop.end());
         }
     }
     // Sostituisce l'edge `from` con `to` (stesso verso) nelle fin della faccia.

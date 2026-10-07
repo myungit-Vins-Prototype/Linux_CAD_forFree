@@ -29,6 +29,7 @@
 #include "fk_body_io.h"
 #include "fk_blend_loop.h"
 #include "fk_blend_surface.h"
+#include "fk_blend_model.h"
 #include "fk_surface_algo.h"
 #include "fk_classify.h"
 #include "fk_curve_algo.h"
@@ -1408,4 +1409,121 @@ FK_TEST(BlendHelicalGrooveEnds) {
                 options.deflection = 0.01;
                 FK_CHECK(tessellate(result, options).failedFaces == 0);
             }
+}
+
+// Un'estensione lascia un vertice di grado due poco sotto il coperchio.
+// Il raccordo deve consumare tutto il tratto corto e continuare sul bordo
+// precedente, senza considerare il vertice una limitazione del raggio.
+FK_TEST(BlendSurfaceAcrossSplitSeam) {
+    const Body base = loftSolid({splitCircleAt(0.0, 5.0), splitCircleAt(10.0, 5.0)}, false);
+    detail::BlendModel model(base);
+    for (EdgeId id : base.edges()) {
+        const Edge &edge = base.edge(id);
+        const Vec3 a = edge.curve->point(edge.range.lo), b = edge.curve->point(edge.range.hi);
+        if (std::fabs(a.z() - b.z()) < 9.0) continue;
+        const int index = model.edgeIndex.at(id.index);
+        const auto original = model.edges[std::size_t(index)];
+        const double t = edge.range.lo + (a.z() < b.z() ? 0.98 : 0.02) * edge.range.length();
+        const int vertex = model.addPoint(edge.curve->point(t));
+        const int next = model.addEdge(vertex, original.end, edge.curve, {t, edge.range.hi});
+        model.edges[std::size_t(index)].end = vertex;
+        model.edges[std::size_t(index)].range.hi = t;
+        for (auto &face : model.faces) for (auto &loop : face.loops) {
+            std::vector<Body::BuildFin> divided;
+            for (const auto &fin : loop) {
+                if (fin.edge != index) { divided.push_back(fin); continue; }
+                auto added = fin;
+                added.edge = next;
+                if (fin.sense) { divided.push_back(fin); divided.push_back(added); }
+                else { divided.push_back(added); divided.push_back(fin); }
+            }
+            loop = std::move(divided);
+        }
+    }
+    const Body divided = model.build();
+    FK_CHECK(checkBody(divided).empty());
+    FK_CHECK(divided.edges().size() > base.edges().size());
+    const auto roundTop = [](const Body &body) {
+        std::vector<EdgeId> selected;
+        for (EdgeId id : body.edges()) {
+            const Edge &edge = body.edge(id);
+            if (std::fabs(edge.curve->point(edge.range.lo).z() - 10.0) < 1e-8
+                && std::fabs(edge.curve->point(edge.range.hi).z() - 10.0) < 1e-8) selected.push_back(id);
+        }
+        return blendSurfaceChains(body, selected, 1.0, false);
+    };
+    const Body expected = roundTop(base), result = roundTop(divided);
+    FK_CHECK(checkBody(result).empty());
+    for (EdgeId edge : result.edges()) FK_CHECK(!result.isLaminar(edge));
+    FK_CHECK(result.faces().size() == expected.faces().size());
+    FK_CHECK_NEAR(massProperties(result).volume, massProperties(expected).volume, 1e-7);
+}
+
+// Corpo finale di Loft_offset.prt: offset, estensioni e tagli. Il contorno
+// superiore attraversa cuciture segmentate e raccordi quasi tangenti.
+FK_TEST(BlendOffsetLoftTrimmedTopOneMillimeter) {
+    std::ifstream in(std::string(FORGECAD_SOURCE_DIR) + "/kernel/tests/data/loft_offset_trimmed.body", std::ios::binary);
+    FK_CHECK(bool(in));
+    if (!in) return;
+    std::stringstream content;
+    content << in.rdbuf();
+    const Body body = readBodyBinary(content.str());
+    FK_CHECK(checkBody(body).empty());
+    std::vector<EdgeId> selected;
+    for (LoopId loop : body.face(FaceId(7)).loops)
+        for (FinId fin : body.loopFins(loop)) selected.push_back(body.fin(fin).edge);
+    FK_CHECK(selected.size() == 6);
+    const Body result = blendEdges(body, selected, 1.0, false);
+    FK_CHECK(checkBody(result).empty());
+    FK_CHECK(result.faces().size() > body.faces().size());
+    for (EdgeId edge : result.edges()) {
+        FK_CHECK(!result.isLaminar(edge));
+        FK_CHECK(result.edge(edge).tolerance < 5e-5);
+    }
+    // Verifica geometrica del raggio sulle nuove superfici: il centro
+    // della sfera tangente deve distare 1 mm dal coperchio e da un fianco.
+    int patches = 0;
+    for (FaceId f : result.faces()) {
+        const auto surface = result.face(f).surface;
+        bool original = false;
+        for (FaceId old : body.faces()) original = original || body.face(old).surface == surface;
+        if (original) continue;
+        ++patches;
+        const Interval u = surface->uDomain();
+        for (double fraction : {0.25, 0.5, 0.75}) {
+            const double t = u.lo + fraction * u.length();
+            const Vec3 p = surface->point(t, 0.5), normal = surface->normal(t, 0.5);
+            double error = 1e300;
+            for (double sign : {-1.0, 1.0}) {
+                const Vec3 center = p + sign * normal;
+                const double cap = std::fabs(projectPoint(*body.face(FaceId(7)).surface, center).distance - 1.0);
+                double side = 1e300;
+                for (int index = 0; index < 6; ++index)
+                    side = std::min(side, std::fabs(projectPoint(*body.face(FaceId(index)).surface, center).distance - 1.0));
+                error = std::min(error, std::max(cap, side));
+            }
+            FK_CHECK(error < 1e-4);
+        }
+    }
+    FK_CHECK(patches > 0);
+}
+
+// Due edge possono usare la stessa spline senza essere tangenti al nodo.
+// La continuazione non deve prendere la derivata destra su entrambi.
+FK_TEST(BlendSplitSeamPreservesKnotCorner) {
+    const std::vector<Vec3> points{Vec3(0,0,0), Vec3(1,0,0), Vec3(1,1,0)};
+    const auto curve = std::make_shared<BSplineCurve<3>>(1, std::vector<double>{0,0,1,2,2}, points);
+    const std::vector<Body::BuildEdge> edges{{0,1,curve,{0,1},0}, {1,2,curve,{1,2},0},
+        {2,0,std::make_shared<Line<3>>(points[2],points[0]-points[2]),{0,norm(points[0]-points[2])},0}};
+    Body::BuildFace face;
+    face.surface = std::make_shared<Plane>(Frame3());
+    face.sense = true;
+    face.loops = {{{0,true,nullptr,0},{1,true,nullptr,0},{2,true,nullptr,0}}};
+    const Body body = Body::buildSheet(points, edges, {face});
+    FK_CHECK(checkBody(body).empty());
+    detail::BlendModel model(body);
+    const EdgeId first = nearestEdge(body, Vec3(0.5,0,0), 1e-7);
+    FK_CHECK(first.valid());
+    const auto chain = model.edgeChain(model.edgeIndex.at(first.index), model.vertexIndex.at(body.edgeStart(first).index));
+    FK_CHECK(chain.size() == 1);
 }

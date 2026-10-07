@@ -19,6 +19,7 @@
 #include "fk_curve_algo.h"
 #include "fk_pcurve.h"
 #include "fk_parallel.h"
+#include "fk_offset.h"
 #include "fk_precision.h"
 #include "fk_surface_algo.h"
 
@@ -874,6 +875,50 @@ struct Cut {
 // tangenti ad A) e il sistema degenera: l'ultimo tratto va fino al punto
 // esatto e il suo scarto (misurato) diventa la tolleranza della curva.
 Cut traceMitre(const Surface &S, const Surface &T, double t0, double s0, const double X[4], double scale, double fitTolerance) {
+    // Fra raccordi quasi tangenti il sistema d'intersezione e' mal
+    // condizionato. Prima verifica una curva comune entro la risoluzione
+    // geometrica, senza aumentare le tolleranze delle facce di appoggio.
+    const auto pointOn = [&](const Surface &surface, double start, double end, double v, double f) {
+        return surface.point(start + f * (end - start), f * v);
+    };
+    bool coincident = true;
+    for (int i = 0; i <= 64 && coincident; ++i) {
+        const double f = i / 64.0;
+        const Vec3 a = pointOn(S, t0, X[0], X[1], f), b = pointOn(T, s0, X[2], X[3], f);
+        coincident = isFinite(a) && isFinite(b) && distance(a, b) <= kLinearResolution;
+        if (coincident) {
+            try {
+                const Vec3 na = S.normal(t0 + f * (X[0] - t0), f * X[1]);
+                const Vec3 nb = T.normal(s0 + f * (X[2] - s0), f * X[3]);
+                coincident = norm(cross(na, nb)) <= 1e-5;
+            } catch (const std::domain_error &) { coincident = false; }
+        }
+    }
+    if (coincident) {
+        try {
+            const auto curve = fitCurve([&](double f) {
+                return 0.5 * (pointOn(S, t0, X[0], X[1], f) + pointOn(T, s0, X[2], X[3], f));
+            }, {0.0, 1.0}, {}, kFitTolerance);
+            double gap = 0.0;
+            for (int i = 0; i <= 128; ++i) {
+                const double f = i / 128.0;
+                const Vec3 p = curve->point(f);
+                if (!isFinite(p)) { gap = std::numeric_limits<double>::infinity(); break; }
+                gap = std::max({gap, distance(p, pointOn(S, t0, X[0], X[1], f)),
+                                   distance(p, pointOn(T, s0, X[2], X[3], f))});
+            }
+            if (gap <= kLinearResolution) {
+                Cut cut;
+                cut.curve = curve;
+                cut.range = {0.0, 1.0};
+                cut.forward = true;
+                cut.gap = gap;
+                return cut;
+            }
+        } catch (const std::domain_error &) {
+            // La stima non e' approssimabile: usa la continuazione esatta.
+        }
+    }
     struct Node {
         double g = 0.0, x[4] = {0, 0, 0, 0}, dx[4] = {0, 0, 0, 0};
         Vec3 p, dp;
@@ -964,7 +1009,9 @@ Cut traceMitre(const Surface &S, const Surface &T, double t0, double s0, const d
     double approximationGap = 0.0;
     int guard = 0;
     while (!pending.empty()) {
-        if (++guard > 20000) throw std::domain_error("blendEdges: curva dei raccordi nell'angolo troppo complessa");
+        // La soglia minima 1e-4 consente fino a 2^14 foglie: il limite
+        // deve contenere anche tutti i nodi interni dell'albero di raffinamento.
+        if (++guard > 32767) throw std::domain_error("blendEdges: curva dei raccordi nell'angolo troppo complessa");
         const auto [ga, gb] = pending.back();
         pending.pop_back();
         const Node &a = nodes.at(ga), &b = nodes.at(gb);
@@ -1951,12 +1998,12 @@ Body blendSurfaceChains(const Body &input, const std::vector<EdgeId> &selected, 
         };
 
         // Giunti di sezione (Smooth, Split, e i passaggi Split sulla stessa fin): punti e arco.
-        const auto sectionJunction = [&](Junction &junction, const Piece &piece, double t, bool onC, EdgeId c) {
+        const auto sectionJunction = [&](Junction &junction, const Piece &piece, double t, bool onC, EdgeId c, VertexId vertex) {
             const bool left = t == piece.rangeOf().hi && t == body.edge(chain.fins[std::size_t(piece.chainFin)].edge).range.hi;
             const Section &s = piece.blend->section(t, left);
             junction.pointA = model.addPoint(s.row[0].p);
             Vec3 pb = s.row[2].p;
-            if (onC) pb = projectPoint(*body.edge(c).curve, pb, body.edge(c).range).point;
+            if (onC) pb = model.projectOnEdgeChain(model.edgeIndex.at(c.index), model.vertexIndex.at(vertex.index), pb);
             junction.pointB = model.addPoint(pb);
             if (onC && distance(pb, s.row[2].p) > 1e-9 * scale) model.pointTolerance[std::size_t(junction.pointB)] = 2.0 * distance(pb, s.row[2].p);
             junction.connector = model.addEdge(junction.pointA, junction.pointB, std::make_shared<BSplineCurve<3>>(piece.surface->uIsoCurve(t)), {0.0, 1.0},
@@ -1984,7 +2031,7 @@ Body blendSurfaceChains(const Body &input, const std::vector<EdgeId> &selected, 
                 }
                 if (a.chainFin != b.chainFin && chain.joints[std::size_t(a.chainFin)] == Joint::Cross) {
                     // Stessa sezione sulle due coppie di facce: gli spigoli tra A e A' e tra B e B' vi si accorciano.
-                    sectionJunction(junction, a, a.to, false, EdgeId());
+                    sectionJunction(junction, a, a.to, false, EdgeId(), VertexId());
                     const Section &sa = a.blend->section(a.to), &sb = b.blend->section(b.from);
                     junction.toleranceA = distance(sa.row[0].p, sb.row[0].p);
                     junction.toleranceB = distance(sa.row[2].p, sb.row[2].p);
@@ -2011,8 +2058,8 @@ Body blendSurfaceChains(const Body &input, const std::vector<EdgeId> &selected, 
                     }
                     continue;
                 }
-                sectionJunction(junction, a, a.to, c.valid(), c);
-                if (c.valid()) model.moveEnd(model.edgeIndex.at(c.index), model.vertexIndex.at(v.index), junction.pointB);
+                sectionJunction(junction, a, a.to, c.valid(), c, v);
+                if (c.valid()) model.moveEndAlongChain(model.edgeIndex.at(c.index), model.vertexIndex.at(v.index), junction.pointB);
                 continue;
             }
             // Angolo a mitra.
@@ -2102,7 +2149,7 @@ Body blendSurfaceChains(const Body &input, const std::vector<EdgeId> &selected, 
             Junction &junction = junctions[std::size_t(end.atStart ? 0 : pieceCount)];
             Piece &piece = pieces[std::size_t(end.piece)];
             if (end.normal) {
-                sectionJunction(junction, piece, end.atStart ? piece.from : piece.to, false, EdgeId());
+                sectionJunction(junction, piece, end.atStart ? piece.from : piece.to, false, EdgeId(), VertexId());
             } else {
                 // Le intersezioni preliminari danno i punti esatti sugli edge
                 // terminali. Dopo il fit, riallinea separatamente i due

@@ -1,0 +1,141 @@
+CONFRONTO RACCORDI LOFT — OCCT 7.9.3
+
+Metodo: B-rep ForgeCAD esportato in STEP AP242 e riletto da OCCT.
+Bordi corrispondenti individuati con tre campioni per bordo; scarto massimo ammesso 1e-5 mm.
+Controllo BRepCheck_Analyzer prima e dopo il raccordo.
+BRepFilletAPI_MakeFillet con parametri predefiniti, raggio costante, entrambi i contorni.
+Nessuna unificazione preventiva delle facce.
+
+Corpo finale originale: snapshot B15 di /Users/myungit/Loft_offset.prt.
+Ingresso OCCT valido, 8 facce e 22 bordi, invariati rispetto al B-rep esportato.
+R1: risultato valido, 20 facce.
+R2 e R3: Build completato ma risultato NON valido; SelfIntersectingWire e UnorientableShape.
+Un ulteriore ShapeFix_Shape predefinito rende il risultato valido per BRepCheck_Analyzer,
+ma con tolleranza massima degli edge di 0.00386118 mm (R2) e 0.000776962 mm (R3).
+Questa riparazione non dimostra da sola il rispetto della geometria e della precisione richieste.
+
+Loft corretto, prima di offset e tagli: B2 di Loft_offset_facce_intere.prt.
+Ingresso OCCT valido, 4 facce e 6 bordi, invariati rispetto al B-rep esportato.
+R1 su entrambi: valido; R2 e R3 su entrambi: Build fallito.
+Facce separate: inferiore R1/R2 validi, R3 fallito; superiore R1 valido, R2/R3 falliti.
+
+API: OCCT costruisce contorni di spigoli tangenti, non richiede di unire tutte le facce.
+Nel corpo finale riconosce due contorni dai dodici spigoli selezionati.
+La prova valida R1 e' il caso concreto in cui OCCT riesce mentre ForgeCAD falliva.
+Non e' una prova che R2/R3 siano geometricamente impossibili.
+
+LOG ORIGINALI
+
+occt-final-r1.log
+INPUT valid=1 faces=8 edges=22 sourceFaces=8 sourceEdges=22 maxEdgeTolerance=1e-07 volume=2641.5
+MATCH sourceEdge=13 occtEdge=14 distance=4.57757e-16
+MATCH sourceEdge=9 occtEdge=10 distance=1.01854e-10
+MATCH sourceEdge=19 occtEdge=20 distance=8.88178e-16
+MATCH sourceEdge=21 occtEdge=22 distance=9.17195e-16
+MATCH sourceEdge=5 occtEdge=6 distance=8.89912e-16
+MATCH sourceEdge=15 occtEdge=16 distance=6.37775e-16
+MATCH sourceEdge=2 occtEdge=3 distance=3.66205e-15
+MATCH sourceEdge=20 occtEdge=21 distance=4.07014e-15
+MATCH sourceEdge=16 occtEdge=17 distance=9.15513e-16
+MATCH sourceEdge=7 occtEdge=8 distance=3.66205e-15
+MATCH sourceEdge=12 occtEdge=13 distance=3.68888e-15
+MATCH sourceEdge=14 occtEdge=15 distance=3.66205e-15
+START radius=1 selected=12 contours=2
+RESULT done=1 faultyContours=0 valid=1 faces=20 volume=2628.75
+
+occt-final-r2-checked.log
+INPUT valid=1 faces=8 edges=22 sourceFaces=8 sourceEdges=22 maxEdgeTolerance=1e-07 volume=2641.5
+MATCH sourceEdge=13 occtEdge=14 distance=4.57757e-16
+MATCH sourceEdge=9 occtEdge=10 distance=1.01854e-10
+MATCH sourceEdge=19 occtEdge=20 distance=8.88178e-16
+MATCH sourceEdge=21 occtEdge=22 distance=9.17195e-16
+MATCH sourceEdge=5 occtEdge=6 distance=8.89912e-16
+MATCH sourceEdge=15 occtEdge=16 distance=6.37775e-16
+MATCH sourceEdge=2 occtEdge=3 distance=3.66205e-15
+MATCH sourceEdge=20 occtEdge=21 distance=4.07014e-15
+MATCH sourceEdge=16 occtEdge=17 distance=9.15513e-16
+MATCH sourceEdge=7 occtEdge=8 distance=3.66205e-15
+MATCH sourceEdge=12 occtEdge=13 distance=3.68888e-15
+MATCH sourceEdge=14 occtEdge=15 distance=3.66205e-15
+START radius=2 selected=12 contours=2
+RESULT done=1 faultyContours=0 valid=0 faces=20 volume=2591.63 checkStatus=18 checkStatus=27 repairedValid=1 repairedMaxEdgeTolerance=0.00386118
+
+occt-final-r3-checked.log
+INPUT valid=1 faces=8 edges=22 sourceFaces=8 sourceEdges=22 maxEdgeTolerance=1e-07 volume=2641.5
+MATCH sourceEdge=13 occtEdge=14 distance=4.57757e-16
+MATCH sourceEdge=9 occtEdge=10 distance=1.01854e-10
+MATCH sourceEdge=19 occtEdge=20 distance=8.88178e-16
+MATCH sourceEdge=21 occtEdge=22 distance=9.17195e-16
+MATCH sourceEdge=5 occtEdge=6 distance=8.89912e-16
+MATCH sourceEdge=15 occtEdge=16 distance=6.37775e-16
+MATCH sourceEdge=2 occtEdge=3 distance=3.66205e-15
+MATCH sourceEdge=20 occtEdge=21 distance=4.07014e-15
+MATCH sourceEdge=16 occtEdge=17 distance=9.15513e-16
+MATCH sourceEdge=7 occtEdge=8 distance=3.66205e-15
+MATCH sourceEdge=12 occtEdge=13 distance=3.68888e-15
+MATCH sourceEdge=14 occtEdge=15 distance=3.66205e-15
+START radius=3 selected=12 contours=2
+RESULT done=1 faultyContours=0 valid=0 faces=20 volume=2532.11 checkStatus=18 checkStatus=27 repairedValid=1 repairedMaxEdgeTolerance=0.000776962
+
+occt-smooth-r1.log
+INPUT valid=1 faces=4 edges=6 sourceFaces=4 sourceEdges=6 maxEdgeTolerance=1e-07 volume=687.651
+MATCH sourceEdge=4 occtEdge=5 distance=0
+MATCH sourceEdge=0 occtEdge=1 distance=0
+MATCH sourceEdge=2 occtEdge=3 distance=1.60119e-15
+MATCH sourceEdge=5 occtEdge=6 distance=9.93014e-16
+START radius=1 selected=4 contours=2
+RESULT done=1 faultyContours=0 valid=1 faces=8 volume=681.501
+
+occt-smooth-r2.log
+INPUT valid=1 faces=4 edges=6 sourceFaces=4 sourceEdges=6 maxEdgeTolerance=1e-07 volume=687.651
+MATCH sourceEdge=4 occtEdge=5 distance=0
+MATCH sourceEdge=0 occtEdge=1 distance=0
+MATCH sourceEdge=2 occtEdge=3 distance=1.60119e-15
+MATCH sourceEdge=5 occtEdge=6 distance=9.93014e-16
+START radius=2 selected=4 contours=2
+RESULT done=0 faultyContours=1 status=1
+
+occt-smooth-r3.log
+INPUT valid=1 faces=4 edges=6 sourceFaces=4 sourceEdges=6 maxEdgeTolerance=1e-07 volume=687.651
+MATCH sourceEdge=4 occtEdge=5 distance=0
+MATCH sourceEdge=0 occtEdge=1 distance=0
+MATCH sourceEdge=2 occtEdge=3 distance=1.60119e-15
+MATCH sourceEdge=5 occtEdge=6 distance=9.93014e-16
+START radius=3 selected=4 contours=2
+RESULT done=0 faultyContours=2 status=1 status=1
+
+AGGIORNAMENTO FORGECAD — raccordo superiore R1 sul corpo finale
+Correzioni nel kernel proprietario:
+- continuazione dell'accorciamento sulle cuciture tangenti divise da vertici di grado due;
+- curva comune verificata entro 1e-7 mm per i giunti quasi tangenti;
+- limite di visita coerente con la profondita' massima del raffinamento della mitra.
+
+Il raccordo superiore R1 adesso produce 20 facce, corpo chiuso e checkBody senza errori.
+Tolleranza massima misurata degli edge: 0.0000249358 mm.
+Test permanente: BlendOffsetLoftTrimmedTopOneMillimeter,
+fixture kernel/tests/data/loft_offset_trimmed.body.
+Verifica del raggio tramite i centri delle sfere tangenti ai supporti (errore < 1e-4 mm),
+controllo topologico e tolleranze degli edge < 5e-5 mm.
+Test ridotto BlendSurfaceAcrossSplitSeam: stesso volume prima/dopo la suddivisione dei bordi.
+Il confronto integrale del volume sul corpo finale completo e' stato interrotto per costo elevato;
+non viene dichiarato verificato. Il riferimento OCCT per la sola faccia superiore e' 2634.096440051475 mm^3.
+
+Copia verificata: Loft_offset_raccordo_superiore_R1.prt.
+STEP originale per il confronto in SolidWorks: Loft_offset_confronto_SW.step.
+Il raccordo inferiore e il raccordo simultaneo sopra/sotto sul corpo finale NON sono ancora risolti.
+Un tentativo di trattare direttamente come mitra il piccolo angolo concavo inferiore e' stato scartato.
+
+Riferimento SolidWorks: Heal Edges unisce bordi secondo soglie angolari e di lunghezza.
+https://help.solidworks.com/2019/english/SolidWorks/sldworks/t_heal_edges.htm
+La documentazione pubblica non specifica l'algoritmo interno di ricostruzione.
+
+Verifica conclusiva di questa modifica:
+- BlendSurfaceAcrossSplitSeam: PASS.
+- BlendSplitSeamPreservesKnotCorner: PASS (non attraversare un vero angolo interno alla spline).
+- BlendOffsetLoftTrimmedTopOneMillimeter: PASS (corpo finale reale, solo contorno superiore).
+- Compilazione dell'app e dei test: completata.
+La suite Blend ha evidenziato un fallimento preesistente in BlendGeneralMatchesAnalytic:
+volume generale 11.279881760709664 contro 11.279881782264924,
+scarto 2.1555260687478039e-08 oltre la soglia 1.1279881782264925e-08.
+Ripetuto rimettendo fk_blend_surface.cpp da HEAD: identico fallimento.
+La soglia di quel test non e' stata modificata.

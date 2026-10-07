@@ -8,6 +8,7 @@
 #include "fk_bspline_surface.h"
 #include "fk_loft.h"
 #include "fk_mass.h"
+#include "fk_offset.h"
 #include "fk_tessellate.h"
 #include "fk_test_profiles.h"
 
@@ -81,6 +82,43 @@ FK_TEST(LoftSmoothThroughCircles) {
     FK_CHECK_NEAR(m.centroid.z(), 2.0, 1e-10);
     // Due sezioni lisce = rigate.
     FK_CHECK_NEAR(checkedSolid(loftSolid({circleAt(0.0, 2.0), circleAt(3.0, 1.0)}, false)).volume, kPi * (4.0 + 2.0 + 1.0), 1e-10 * 22.0);
+}
+
+// Le campate razionali di un'ellisse ruotata hanno lunghezze diverse.
+// Usarle come nuovi intervalli parametrici introduceva spigoli interni
+// nel loft e trasformava due facce laterali in sei durante l'offset.
+FK_TEST(LoftEllipsePreservesSmoothOffsetFaces) {
+    auto middle = circleAt(10.0, 1.0);
+    const auto ellipse = std::make_shared<Ellipse<2>>(Vec2(), Vec2(1,0), Vec2(0,1), 5.0, 2.5);
+    middle.loop.segments = {{ellipse, {0.17, 0.17 + kTwoPi}}};
+    const Body body = loftSolid({circleAt(0.0, 2.5), middle, circleAt(20.0, 4.0)}, false);
+    checkedSolid(body);
+    std::vector<FaceId> sides;
+    for (FaceId f : body.faces()) {
+        const auto &surface = *body.face(f).surface;
+        if (surface.type() != SurfaceType::BSpline) continue;
+        sides.push_back(f);
+        const auto &spline = static_cast<const BSplineSurface &>(surface);
+        const auto patches = spline.cachedBezierPatches();
+        const auto us = spline.uBreakpoints(spline.uDomain());
+        const auto vs = spline.vBreakpoints(spline.vDomain());
+        const std::size_t nv = vs.size() - 1;
+        for (std::size_t i = 1; i + 1 < us.size(); ++i)
+            for (std::size_t j = 0; j < nv; ++j)
+                for (double fraction : {0.25, 0.5, 0.75}) {
+                    const double v = vs[j] + fraction * (vs[j+1] - vs[j]);
+                    FK_CHECK_NEAR(distance((*patches)[(i-1)*nv+j].normal(us[i],v),
+                                           (*patches)[i*nv+j].normal(us[i],v)), 0.0, 1e-8);
+                }
+    }
+    FK_CHECK(sides.size() == 2);
+    for (double d : {-0.5, 1.0}) {
+        const auto result = offsetFaces(body, sides, d, 1e-7, true);
+        FK_CHECK(result.body.faces().size() == sides.size());
+        FK_CHECK(checkBody(result.body).empty());
+        FK_CHECK(result.notes.empty());
+
+    }
 }
 
 FK_TEST(LoftCircleToSquare) {
