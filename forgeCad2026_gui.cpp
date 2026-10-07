@@ -9189,25 +9189,25 @@ private:
             }
             break;
         }
-        case 5:
-            if (!face && ref.point.subshape >= 0 && ref.index >= 0 && ref.index < extrusions_.size()) {
-                // Riferimento gia' scelto: i bordi della sua faccia (BodyDisplay::faceEdges).
-                FaceHit hit;
-                hit.face = ref.point.subshape;
-                for (int e : faceDisplayEdges(ref.index, hit)) {
-                    QVector<QPointF> projected;
-                    for (const QVector3D &p : extrusions_.at(ref.index).display.edges.at(e)) projected.append(projectWorldPoint(p));
-                    strokeHighlight(painter, projected, false, color);
-                }
-            } else if (face && faceBody == ref.index) {
-                for (int e : faceDisplayEdges(ref.index, *face)) {
-                    QVector<QPointF> projected;
-                    for (const QVector3D &p : extrusions_.at(ref.index).display.edges.at(e)) projected.append(projectWorldPoint(p));
-                    strokeHighlight(painter, projected, false, color);
-                }
+        case 5: {
+            // La faccia sotto il puntatore, oppure (riferimento gia' scelto) quella
+            // ritrovata come nella risoluzione: l'indice salvato puo' essere vecchio.
+            FaceHit resolved;
+            const FaceHit *edgesOf = face && faceBody == ref.index ? face : nullptr;
+            if (!face && ref.index >= 0 && ref.index < extrusions_.size() && extrusions_.at(ref.index).forgeBody) {
+                resolved.face = ForgeCad::resolveFaceReference(*extrusions_.at(ref.index).forgeBody, ref.point,
+                                                               std::numeric_limits<double>::max()).index;
+                edgesOf = &resolved;
             }
+            if (edgesOf)
+                for (int e : faceDisplayEdges(ref.index, *edgesOf)) {
+                    QVector<QPointF> projected;
+                    for (const QVector3D &p : extrusions_.at(ref.index).display.edges.at(e)) projected.append(projectWorldPoint(p));
+                    strokeHighlight(painter, projected, false, color);
+                }
             dot(point);
             break;
+        }
         case 6:
             if (ref.index >= 0 && ref.index < sketches_.size()) {
                 const SketchObject &sketch = sketches_.at(ref.index);

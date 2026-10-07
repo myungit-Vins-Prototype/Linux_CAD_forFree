@@ -19,7 +19,7 @@ namespace {
 using namespace Kernel;
 
 constexpr double kInfinity = std::numeric_limits<double>::infinity();
-constexpr double kDegrees = 180.0 / 3.14159265358979323846;
+constexpr double kDegrees = 180.0 / kPi;
 
 void setError(QString *error, const QString &message) {
     if (error) *error = message;
@@ -248,7 +248,8 @@ Prepared prepare(const MeasureEntity &entity) {
     case MeasureEntity::Kind::Line:
     case MeasureEntity::Kind::Plane: seeds.push_back(entity.point); break;
     case MeasureEntity::Kind::Curve: {
-        const int perSegment = std::max(4, 256 / std::max<int>(1, int(entity.segments.size())));
+        // Circa 256 semi in tutto (almeno 2 per tratto).
+        const int perSegment = std::max(2, 256 / std::max<int>(1, int(entity.segments.size())));
         for (const PathSegment &s : entity.segments) {
             if (!s.range.isFinite()) continue;
             for (int k = 0; k <= perSegment; ++k) seeds.push_back(s.curve->point(s.range.lo + s.range.length() * k / perSegment));
@@ -257,7 +258,7 @@ Prepared prepare(const MeasureEntity &entity) {
     }
     case MeasureEntity::Kind::Face: {
         prepareFace(p);
-        const int perEdge = std::max(3, 192 / std::max<int>(1, int(p.boundary.size())));
+        const int perEdge = std::max(2, 192 / std::max<int>(1, int(p.boundary.size())));
         for (const PathSegment &s : p.boundary)
             for (int k = 0; k <= perEdge; ++k) seeds.push_back(s.curve->point(s.range.lo + s.range.length() * k / perEdge));
         if (p.u.isFinite() && p.v.isFinite()) {
@@ -309,7 +310,7 @@ bool minimumDistance(const Prepared &a, const Prepared &b, Vec3 &pa, Vec3 &pb) {
             return true;
         }
         const MeasureEntity &plane = ea.kind == K::Plane ? ea : eb, &other = ea.kind == K::Plane ? eb : ea;
-        const Prepared &planePrepared = ea.kind == K::Plane ? a : b, &otherPrepared = ea.kind == K::Plane ? b : a;
+        const Prepared &planePrepared = ea.kind == K::Plane ? a : b;
         Vec3 onOther, onPlane;
         if (other.kind == K::Line) {
             const double along = dot(other.direction, plane.direction);
@@ -326,12 +327,11 @@ bool minimumDistance(const Prepared &a, const Prepared &b, Vec3 &pa, Vec3 &pb) {
                 onOther = other.point;
                 onPlane = closest(planePrepared, onOther);
             } else {
-                // Punto della retta comune piu' vicino al punto del primo piano.
+                // Punto della retta comune dei due piani (il piu' vicino all'origine).
                 const double h1 = dot(plane.direction, plane.point), h2 = dot(other.direction, other.point);
                 const Vec3 common = (h1 * cross(other.direction, line) + h2 * cross(line, plane.direction)) / dot(line, line);
                 onOther = onPlane = common;
             }
-            (void)otherPrepared;
         }
         pa = ea.kind == K::Plane ? onPlane : onOther;
         pb = ea.kind == K::Plane ? onOther : onPlane;
@@ -343,10 +343,24 @@ bool minimumDistance(const Prepared &a, const Prepared &b, Vec3 &pa, Vec3 &pb) {
     };
     std::vector<Candidate> candidates;
     if (a.finite() && b.finite()) {
-        // Coppie di semi piu' vicine (punti esatti delle due entita'): le
-        // proiezioni, care sulle facce, solo per quelle che si raffinano.
-        for (const Vec3 &s : a.seeds)
-            for (const Vec3 &t : b.seeds) candidates.push_back({s, t, distance(s, t)});
+        // Per ogni seme il seme piu' vicino dell'altra entita' (punti esatti):
+        // le proiezioni, care sulle facce, solo per le coppie che si raffinano.
+        const auto nearestSeed = [](const Vec3 &s, const std::vector<Vec3> &others) {
+            const Vec3 *best = &others.front();
+            for (const Vec3 &t : others)
+                if (distance(s, t) < distance(s, *best)) best = &t;
+            return *best;
+        };
+        if (!a.seeds.empty() && !b.seeds.empty()) {
+            for (const Vec3 &s : a.seeds) {
+                const Vec3 t = nearestSeed(s, b.seeds);
+                candidates.push_back({s, t, distance(s, t)});
+            }
+            for (const Vec3 &t : b.seeds) {
+                const Vec3 s = nearestSeed(t, a.seeds);
+                candidates.push_back({s, t, distance(s, t)});
+            }
+        }
     } else if (a.finite()) {
         for (const Vec3 &s : a.seeds) {
             const Vec3 q = closest(b, s);
@@ -526,7 +540,7 @@ void describe(const MeasureEntity &e, QStringList &lines, QString &label) {
                 lines << QStringLiteral("Segmento, direzione %1").arg(vector(direction))
                       << QStringLiteral("ΔX: %1   ΔY: %2   ΔZ: %3").arg(length(std::fabs(d.x())), length(std::fabs(d.y())), length(std::fabs(d.z())));
             } else if (c.ok && c.circle) {
-                const bool full = s.range.length() >= 2.0 * 3.14159265358979323846 - 1e-9;
+                const bool full = s.range.length() >= kTwoPi - 1e-9;
                 lines << (full ? QStringLiteral("Cerchio") : QStringLiteral("Arco di %1").arg(angle(s.range.length())))
                       << QStringLiteral("Raggio: %1").arg(length(c.r1)) << QStringLiteral("Diametro: %1").arg(length(2.0 * c.r1))
                       << QStringLiteral("Centro: %1").arg(point(c.center)) << QStringLiteral("Normale: %1").arg(vector(c.normal));
@@ -682,8 +696,7 @@ MeasureReport measureEntities(const QVector<MeasureEntity> &entities) {
         const MeasureEntity &a = entities.at(0), &b = entities.at(1);
         const Prepared pa = prepare(a), pb = prepare(b);
         Vec3 from, to;
-        const bool okDistance = minimumDistance(pa, pb, from, to);
-        if (!okDistance) {
+        if (!minimumDistance(pa, pb, from, to)) {
             report.error = QStringLiteral("Distanza non calcolabile.");
             return report;
         }
@@ -701,18 +714,16 @@ MeasureReport measureEntities(const QVector<MeasureEntity> &entities) {
         const bool lineA = lineOf(a, la), lineB = lineOf(b, lb), planeA = planeOf(a, na), planeB = planeOf(b, nb);
         if (lineA && lineB) {
             const double t = lineAngle(la, lb);
-            report.lines << QStringLiteral("Angolo tra le rette: %1 (supplementare %2)").arg(angle(t), angle(3.14159265358979323846 - t));
+            report.lines << QStringLiteral("Angolo tra le rette: %1 (supplementare %2)").arg(angle(t), angle(kPi - t));
         } else if (planeA && planeB) {
             const double between = std::atan2(norm(cross(na, nb)), dot(na, nb));
             report.lines << QStringLiteral("Angolo tra i piani: %1").arg(angle(lineAngle(na, nb)))
                          << QStringLiteral("Angolo tra le normali: %1").arg(angle(between));
-            if (norm(cross(na, nb)) < 1e-12) {
-                Vec3 pointA = a.kind == MeasureEntity::Kind::Plane ? a.point : from, pointB = b.kind == MeasureEntity::Kind::Plane ? b.point : to;
-                report.lines << QStringLiteral("Piani paralleli, distanza: %1").arg(length(std::fabs(dot(pointB - pointA, na))));
-            }
+            if (norm(cross(na, nb)) < 1e-12)  // from e to stanno sui due piani
+                report.lines << QStringLiteral("Piani paralleli, distanza: %1").arg(length(std::fabs(dot(to - from, na))));
         } else if ((lineA && planeB) || (planeA && lineB)) {
             const Vec3 line = lineA ? la : lb, normal = planeA ? na : nb;
-            report.lines << QStringLiteral("Angolo retta-piano: %1").arg(angle(3.14159265358979323846 / 2.0 - lineAngle(line, normal)));
+            report.lines << QStringLiteral("Angolo retta-piano: %1").arg(angle(0.5 * kPi - lineAngle(line, normal)));
         }
         // Assi e centri: interassi dei fori, centro dall'asse.
         Vec3 ap, ad, bp, bd, ca, cb;
