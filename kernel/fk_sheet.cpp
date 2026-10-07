@@ -281,6 +281,170 @@ Body trimSheet(const Body &sheet, const Body &tool, const Vec3 &keep, double tol
     return pieces[best];
 }
 
+namespace {
+
+// Lati delle strisce spline: due facce adiacenti devono proseguire lungo
+// un'unica intersezione, anche quando le distanze d'arco danno estremi diversi.
+struct SplineExtensionSide {
+    int vertex, farVertex, edge, farEdge, face;
+    bool vIso;
+    Vec2 start;
+    double end;
+};
+
+void joinSplineExtensions(Model &model, const Body &body, const std::vector<SplineExtensionSide> &sides,
+                          double scale) {
+    const double tolerance = std::max(1e-7, 1e-9 * scale);
+    for (std::size_t i = 0; i < sides.size(); ++i)
+        for (std::size_t j = i + 1; j < sides.size(); ++j) {
+            const auto &a = sides[i], &b = sides[j];
+            if (a.vertex != b.vertex || a.face == b.face || a.edge == b.edge) continue;
+            bool adjacent = false;
+            for (EdgeId e : body.edges()) {
+                const auto &edge = body.edge(e);
+                if (!edge.forward.valid() || !edge.backward.valid()) continue;
+                const int f = model.faceIndex.at(body.finFace(edge.forward).index);
+                const int g = model.faceIndex.at(body.finFace(edge.backward).index);
+                if (!((f == a.face && g == b.face) || (f == b.face && g == a.face))) continue;
+                adjacent = adjacent || model.vertexIndex.at(body.edgeStart(e).index) == a.vertex
+                                    || model.vertexIndex.at(body.edgeEnd(e).index) == a.vertex;
+            }
+            if (!adjacent) continue;
+            const SurfacePtr sa = model.faces[a.face].surface, sb = model.faces[b.face].surface;
+            const int da = a.vIso ? 1 : 0, db = b.vIso ? 1 : 0;
+            const double sign = a.end > a.start[da] ? 1.0 : -1.0;
+            const double signB = b.end > b.start[db] ? 1.0 : -1.0;
+            const double endA = std::fabs(a.end - a.start[da]);
+            Vec3 startA[4], startB[4];
+            sa->evaluate(a.start.x(), a.start.y(), 1, startA);
+            sb->evaluate(b.start.x(), b.start.y(), 1, startB);
+            const double rate = norm(startA[da == 1 ? 1 : 2]) / norm(startB[db == 1 ? 1 : 2]);
+            if (!(rate > 0.0) || !std::isfinite(rate))
+                throw std::domain_error("extendSheet: giunzione su una superficie singolare");
+            struct Sample { Vec2 a, b; Vec3 point; };
+            const auto sample = [&](double t) {
+                Sample q{a.start, b.start, {}};
+                q.a[da] += sign * t;
+                q.b[db] += signB * rate * t;
+                for (int iteration = 0; iteration < 32; ++iteration) {
+                    Vec3 ja[4], jb[4];
+                    sa->evaluate(q.a.x(), q.a.y(), 1, ja);
+                    sb->evaluate(q.b.x(), q.b.y(), 1, jb);
+                    const Vec3 r = jb[0] - ja[0];
+                    const Vec3 x = ja[da == 1 ? 2 : 1], y = -jb[2], z = -jb[1];
+                    const double nx = norm(x), ny = norm(y), nz = norm(z);
+                    if (!(nx > 0 && ny > 0 && nz > 0)) break;
+                    const Vec3 columns[3] = {x / nx, y / ny, z / nz};
+                    // Regolarizzazione vicino alla tangenza: l'intersezione
+                    // delle approssimazioni non deve amplificare il rumore UV.
+                    Vec3 m[3];
+                    for (int row = 0; row < 3; ++row)
+                        for (int col = 0; col < 3; ++col) {
+                            m[col][row] = row == col ? (iteration < 16 ? 1e-8 : 1e-12) : 0.0;
+                            for (const auto &c : columns) m[col][row] += c[row] * c[col];
+                        }
+                    const double det = dot(m[0], cross(m[1], m[2]));
+                    if (!(std::fabs(det) > 1e-24)) break;
+                    const Vec3 correction(dot(r, cross(m[1], m[2])) / det,
+                                          dot(m[0], cross(r, m[2])) / det,
+                                          dot(m[0], cross(m[1], r)) / det);
+                    q.a[1 - da] += dot(columns[0], correction) / nx;
+                    q.b[0] += dot(columns[1], correction) / ny;
+                    q.b[1] += dot(columns[2], correction) / nz;
+                    if (!isFinite(q.a) || !isFinite(q.b)) break;
+                    if (iteration == 31) {
+                        const Vec3 pa = sa->point(q.a.x(), q.a.y()), pb = sb->point(q.b.x(), q.b.y());
+                        if (distance(pa, pb) <= tolerance) { q.point = 0.5 * (pa + pb); return q; }
+                    }
+                }
+                throw std::domain_error("extendSheet: impossibile prolungare la giunzione tra le facce "
+                                        + std::to_string(a.face) + " e " + std::to_string(b.face));
+            };
+            // Estremo della seconda faccia sulla stessa curva. Il parametro
+            // cresce sempre verso l'esterno, anche all'estremita' iniziale.
+            double lo = 0.0, hi = endA;
+            const auto beyondB = [&](double t) { return signB * (sample(t).b[db] - b.end) >= 0.0; };
+            for (int k = 0; !beyondB(hi); ++k) {
+                if (k == 12) throw std::domain_error("extendSheet: giunzione fuori dalla regione di estensione");
+                hi *= 1.25;
+            }
+            for (int k = 0; k < 45; ++k) {
+                const double mid = 0.5 * (lo + hi);
+                if (beyondB(mid)) hi = mid; else lo = mid;
+            }
+            double endB = 0.5 * (lo + hi);
+            if (distance(sample(endA).point, sample(endB).point) <= tolerance) endB = endA;
+            const double end = std::max(endA, endB);
+            CurvePtr<3> curve;
+            try {
+                curve = fitCurve([&](double t) { return sample(t).point; }, {0.0, end},
+                                 {0.0, std::min(endA, endB), end}, tolerance);
+            } catch (const std::exception &failure) {
+                throw std::domain_error("extendSheet: giunzione facce " + std::to_string(a.face) + "/" + std::to_string(b.face) + ": " + failure.what());
+            }
+            // Le superfici restano identiche sul dominio originale. Espandiamo
+            // solo il loro dominio per includere il nuovo bordo rifilato.
+            Interval au = sa->uDomain(), av = sa->vDomain(), bu = sb->uDomain(), bv = sb->vDomain();
+            for (int k = 0; k <= 64; ++k) {
+                const auto q = sample(end * k / 64.0);
+                au.lo = std::min(au.lo, q.a.x()); au.hi = std::max(au.hi, q.a.x());
+                av.lo = std::min(av.lo, q.a.y()); av.hi = std::max(av.hi, q.a.y());
+                bu.lo = std::min(bu.lo, q.b.x()); bu.hi = std::max(bu.hi, q.b.x());
+                bv.lo = std::min(bv.lo, q.b.y()); bv.hi = std::max(bv.hi, q.b.y());
+            }
+            const SurfacePtr newA = std::make_shared<BSplineSurface>(extendBSplineSurface(static_cast<const BSplineSurface &>(*sa), au, av));
+            const SurfacePtr newB = std::make_shared<BSplineSurface>(extendBSplineSurface(static_cast<const BSplineSurface &>(*sb), bu, bv));
+            for (auto &face : model.faces) {
+                if (face.surface == sa) face.surface = newA;
+                else if (face.surface == sb) face.surface = newB;
+            }
+            const auto setFar = [&](const SplineExtensionSide &side, const Sample &q, double t, bool first) {
+                model.points[side.farVertex] = curve->point(t);
+                auto &far = model.edges[side.farEdge];
+                const Vec2 uv = first ? q.a : q.b;
+                const double parameter = uv[side.vIso ? 0 : 1];
+                if (far.start == side.farVertex) far.range.lo = parameter;
+                else far.range.hi = parameter;
+                const auto &surface = model.faces[side.face].surface;
+                far.curve = side.vIso ? surface->vIso(side.end) : surface->uIso(side.end);
+            };
+            setFar(a, sample(endA), endA, true);
+            setFar(b, sample(endB), endB, false);
+            const double startError = distance(curve->point(0.0), model.points[a.vertex]);
+            if (startError > std::max(10.0 * tolerance, 1.01 * model.pointTolerance[a.vertex]))
+                throw std::domain_error("extendSheet: il prolungamento non incontra la giunzione originale");
+            model.pointTolerance[a.vertex] = std::max(model.pointTolerance[a.vertex], 1.01 * startError);
+            const auto &shorter = endA <= endB ? a : b;
+            const auto &longer = endA <= endB ? b : a;
+            const double shortEnd = std::min(endA, endB);
+            const int common = model.addEdge(a.vertex, shorter.farVertex, curve, {0.0, shortEnd}, tolerance);
+            const int extra = endA == endB ? -1 : model.addEdge(shorter.farVertex, longer.farVertex, curve, {shortEnd, end}, tolerance);
+            if (extra < 0 && a.farVertex != b.farVertex) {
+                for (auto &edge : model.edges) {
+                    if (edge.start == b.farVertex) edge.start = a.farVertex;
+                    if (edge.end == b.farVertex) edge.end = a.farVertex;
+                }
+            }
+            for (const auto *side : {&a, &b}) {
+                const bool fromBase = model.edges[side->edge].start == a.vertex;
+                for (auto &face : model.faces)
+                    for (auto &loop : face.loops) {
+                        std::vector<Body::BuildFin> rebuilt;
+                        for (const auto &fin : loop) {
+                            if (fin.edge != side->edge) { rebuilt.push_back(fin); continue; }
+                            const bool forward = fin.sense == fromBase;
+                            if (side == &longer && extra >= 0 && !forward) rebuilt.push_back({extra, false, nullptr, 0.0});
+                            rebuilt.push_back({common, forward, nullptr, 0.0});
+                            if (side == &longer && extra >= 0 && forward) rebuilt.push_back({extra, true, nullptr, 0.0});
+                        }
+                        loop = std::move(rebuilt);
+                    }
+            }
+        }
+}
+
+}
+
 Body extendSheet(const Body &input, const std::vector<EdgeId> &selected, double length, bool linear) {
     if (!input.isSheet()) throw std::domain_error("extendSheet: si estendono solo le superfici (lamine)");
     if (!(length > kLinearResolution)) throw std::domain_error("extendSheet: distanza non valida");
@@ -297,6 +461,7 @@ Body extendSheet(const Body &input, const std::vector<EdgeId> &selected, double 
     Model model(body);
     // Superfici prolungate (curva base estesa) per faccia del modello.
     std::map<int, SurfacePtr> extended;
+    std::vector<SplineExtensionSide> splineSides;
     std::vector<int> newPoints;
     auto pointAt = [&](const Vec3 &p) {
         for (int index : newPoints)
@@ -349,6 +514,7 @@ Body extendSheet(const Body &input, const std::vector<EdgeId> &selected, double 
         Body::BuildFace strip;
         strip.sense = face.sense;
         int sideA = -1, sideB = -1, far = -1, farA = -1, farB = -1;
+        double splineEnd = 0.0;
         if (generalPlanar) {
             // Un piano puo' essere prolungato anche da un bordo rifilato
             // curvo: la nuova frontiera e' la parallela complanare del bordo.
@@ -384,6 +550,7 @@ Body extendSheet(const Body &input, const std::vector<EdgeId> &selected, double 
             const auto &crossSpline = static_cast<const BSplineCurve<3> &>(*crossCurve);
             const auto reach = extendBSpline(crossSpline, std::min(crossSpline.domain().lo, guess), std::max(crossSpline.domain().hi, guess));
             const double end = arcParameter(reach, start, length, outward);
+            splineEnd = end;
             Interval ur = surface->uDomain(), vr = surface->vDomain();
             Interval &range = vIso ? vr : ur;
             range.lo = std::min(range.lo, end);
@@ -480,7 +647,12 @@ Body extendSheet(const Body &input, const std::vector<EdgeId> &selected, double 
         const int oldEdge = model.edgeIndex.at(e.index);
         strip.loops.push_back({{oldEdge, !finData.sense, nullptr, 0.0}, finFrom(sideA, A), finFrom(far, farA), finFrom(sideB, farB)});
         model.faces.push_back(std::move(strip));
+        if (type == SurfaceType::BSpline && !linear) {
+            splineSides.push_back({A, farA, sideA, far, modelFace, vIso, uvA, splineEnd});
+            splineSides.push_back({B, farB, sideB, far, modelFace, vIso, uvB, splineEnd});
+        }
     }
+    joinSplineExtensions(model, body, splineSides, scale);
     Body result = model.build();
     computePCurves(result);
     result = unifySameDomain(result);

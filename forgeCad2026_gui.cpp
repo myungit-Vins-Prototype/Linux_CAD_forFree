@@ -2520,6 +2520,8 @@ public:
             append(secondBody, secondPieces, 1);
         }
         trimPartHover_ = -1;
+        hover_ = {};
+        unsetCursor();
         trimPartPickFinished_ = std::move(callback);
         update();
     }
@@ -3938,7 +3940,7 @@ protected:
             contextPending_ = false;
             return;
         }
-        if (!sketchMode_ && !edgePicking_ && !refPicking_ && event->button() == Qt::LeftButton
+        if (!sketchMode_ && !edgePicking_ && !refPicking_ && !trimPartPickFinished_ && event->button() == Qt::LeftButton
             && event->modifiers() == Qt::NoModifier) {
             TopologyLabelItem item;
             if (pickTopologyLabel(lastMousePosition_, item)) {
@@ -3955,9 +3957,9 @@ protected:
                 return;
             }
         }
-        if (event->button() == Qt::LeftButton && beginPlaneResize(lastMousePosition_)) return;
+        if (!trimPartPickFinished_ && event->button() == Qt::LeftButton && beginPlaneResize(lastMousePosition_)) return;
         // Il piano di sezione si trascina dalla maniglia o dal bordo.
-        if (!sketchMode_ && !refPicking_ && !edgePicking_ && event->button() == Qt::LeftButton && sectionHandleAt(lastMousePosition_)) {
+        if (!sketchMode_ && !refPicking_ && !edgePicking_ && !trimPartPickFinished_ && event->button() == Qt::LeftButton && sectionHandleAt(lastMousePosition_)) {
             sectionDragging_ = true;
             setCursor(Qt::SizeAllCursor);
             return;
@@ -4058,19 +4060,26 @@ protected:
             edgePicked();
             return;
         }
-        if (!sketchMode_ && event->button() == Qt::LeftButton && event->modifiers() == Qt::NoModifier
-            && trimPartPickFinished_ && trimPartHover_ >= 0 && trimPartHover_ < trimPartPickBodies_.size()) {
-            const int body = trimPartPickBodies_.at(trimPartHover_);
-            FaceHit face;
-            if (pickBodyFace(body, lastMousePosition_, face)) {
+        if (!sketchMode_ && event->button() == Qt::LeftButton && trimPartPickFinished_) {
+            // Il clic usa le regioni, anche senza un precedente mouseMove e
+            // quando il corpo originale e' nascosto dall'anteprima.
+            if (event->modifiers() == Qt::NoModifier) {
                 QVector3D origin, direction;
                 viewRay(lastMousePosition_, origin, direction);
-                const double length = double(direction.length());
-                const EdgePoint point{double(origin.x()) + double(direction.x()) / length * face.distance,
-                                      double(origin.y()) + double(direction.y()) / length * face.distance,
-                                      double(origin.z()) + double(direction.z()) / length * face.distance};
-                trimPartPickFinished_(trimPartPickSides_.at(trimPartHover_), trimPartPickIndices_.at(trimPartHover_), point);
+                int nearest = -1;
+                float best = std::numeric_limits<float>::max();
+                for (int k = 0; k < trimPartPickDisplays_.size(); ++k) {
+                    float distance = 0.0f;
+                    if (meshRayHit(trimPartPickDisplays_.at(k), origin, direction, distance) && distance < best)
+                        best = distance, nearest = k;
+                }
+                if (nearest >= 0) {
+                    const QVector3D hit = origin + best * direction.normalized();
+                    trimPartPickFinished_(trimPartPickSides_.at(nearest), trimPartPickIndices_.at(nearest),
+                                          EdgePoint{hit.x(), hit.y(), hit.z()});
+                }
             }
+            // Nessuna regione disponibile: non ricadere nella selezione scena.
             return;
         }
         if (!sketchMode_ && event->button() == Qt::LeftButton) {
@@ -5187,7 +5196,7 @@ protected:
         if (sketchMode_ && sketchViewUnlocked_) return;
         // Fuori dallo schizzo, doppio clic su una parte del modello: si modifica
         // la funzione che l'ha creata (come dall'albero).
-        if (!sketchMode_ && event->button() == Qt::LeftButton && editBodyCallback_ && !interactionLocked_ && !refPicking_ && !edgePicking_) {
+        if (!sketchMode_ && event->button() == Qt::LeftButton && editBodyCallback_ && !interactionLocked_ && !refPicking_ && !edgePicking_ && !trimPartPickFinished_) {
             const SceneSelection hit = pickSceneObject(event->pos());
             if (hit.kind == SceneObjectKind::Sketch) {
                 // Doppio clic su uno schizzo: lo si apre (come dall'albero).
@@ -16870,9 +16879,9 @@ static bool trimDialog(QWidget *parent, CadViewport *viewport, const QString &ti
     const auto refreshPieces = [&] {
         if (chaining || sheetPicker.handling() || toolPicker.handling()) return;
         viewport->setTrimPartPickCallback(-1, {}, -1, {}, {});
-        if (sheetPicker.waiting() || toolPicker.waiting()) {
+        if (sheetPicker.active() || toolPicker.active() || sheetPicker.waiting() || toolPicker.waiting()) {
             viewport->clearPreview();
-            scope.label->setText(sheetPicker.waiting() ? QStringLiteral("Clicca nella vista la superficie da tagliare.")
+            scope.label->setText((sheetPicker.active() || sheetPicker.waiting()) ? QStringLiteral("Clicca nella vista la superficie da tagliare.")
                                                        : QStringLiteral("Clicca nella vista il corpo che taglia (o scegli un piano nell'elenco)."));
             return;
         }
@@ -16909,19 +16918,20 @@ static bool trimDialog(QWidget *parent, CadViewport *viewport, const QString &ti
                 toolPiecesKey = reverseKey;
             }
         }
-        const QString error = !piecesError.isEmpty() ? piecesError : toolPiecesError;
+        QStringList errors;
+        if (pieces.size() < 2)
+            errors.append(QStringLiteral("Primo corpo: %1").arg(piecesError.isEmpty()
+                ? QStringLiteral("lo strumento non divide la superficie.") : piecesError));
+        if (bothBox->isChecked() && toolPieces.size() < 2)
+            errors.append(QStringLiteral("Secondo corpo: %1").arg(toolPiecesError.isEmpty()
+                ? QStringLiteral("l'intersezione non divide la superficie.") : toolPiecesError));
         const QSignalBlocker blocker(partBox);
         const QSignalBlocker toolBlocker(toolPartBox);
         partBox->clear();
         toolPartBox->clear();
-        if (pieces.size() < 2 || (bothBox->isChecked() && toolPieces.size() < 2)) {
-            viewport->clearPreview();
-            scope.label->setText(error.isEmpty() ? QStringLiteral("lo strumento non divide la superficie") : error);
-            return;
-        }
         int chosen = 0;
         double closest = 1e300;
-        for (int k = 0; k < pieces.size(); ++k) {
+        for (int k = 0; pieces.size() >= 2 && k < pieces.size(); ++k) {
             partBox->addItem(QStringLiteral("Parte %1 (area %2)").arg(k + 1).arg(pieces.at(k).area, 0, 'g', 6));
             // Modifica: la parte piu' vicina al punto di prima.
             const EdgePoint &p = pieces.at(k).point, &q = definition.trimKeep;
@@ -16933,7 +16943,7 @@ static bool trimDialog(QWidget *parent, CadViewport *viewport, const QString &ti
         partBox->setCurrentIndex(chosen);
         int toolChosen = 0;
         double toolClosest = 1e300;
-        for (int k = 0; k < toolPieces.size(); ++k) {
+        for (int k = 0; bothBox->isChecked() && toolPieces.size() >= 2 && k < toolPieces.size(); ++k) {
             toolPartBox->addItem(QStringLiteral("Parte %1 (area %2)").arg(k + 1).arg(toolPieces.at(k).area, 0, 'g', 6));
             const EdgePoint &p = toolPieces.at(k).point, &q = definition.trimToolKeep;
             const double dx = p.x - q.x, dy = p.y - q.y, dz = p.z - q.z;
@@ -16943,15 +16953,22 @@ static bool trimDialog(QWidget *parent, CadViewport *viewport, const QString &ti
         if (previousToolPart >= 0 && previousToolPart < toolPieces.size()) toolChosen = previousToolPart;
         toolPartBox->setCurrentIndex(toolChosen);
         installPartPicker();
+        if (!errors.isEmpty()) {
+            viewport->clearPreview();
+            scope.label->setText(errors.join(QLatin1Char('\n')));
+            choiceHelp->setText(QStringLiteral("Taglio non pronto: verifica che i corpi si intersechino e che l'intersezione divida ciascuno in almeno due regioni. Le eventuali regioni disponibili restano selezionabili."));
+            return;
+        }
         scope.label->setText(bothBox->isChecked()
-            ? QStringLiteral("Scegli il corpo nel campo del clic, poi clicca nella vista la parte da tenere.")
+            ? QStringLiteral("Clicca nella vista una parte da tenere per ciascun corpo.")
             : QStringLiteral("Clicca nella vista la parte da tenere, oppure sceglila nell'elenco."));
         refreshPreview();
     };
     installPartPicker = [&] {
         const ExtrusionObject d = current();
         const bool both = bothBox->isChecked();
-        viewport->setTrimPartPickCallback(d.firstBody, pieces, both ? d.secondBody : -1, both ? toolPieces : QVector<SheetPiece>{},
+        viewport->setTrimPartPickCallback(d.firstBody, pieces.size() >= 2 ? pieces : QVector<SheetPiece>{},
+                                          both ? d.secondBody : -1, both && toolPieces.size() >= 2 ? toolPieces : QVector<SheetPiece>{},
                                           [&](int side, int piece, EdgePoint point) {
             QVector<SheetPiece> &selectedPieces = side == 1 ? toolPieces : pieces;
             QComboBox *selectedBox = side == 1 ? toolPartBox : partBox;
@@ -16962,6 +16979,7 @@ static bool trimDialog(QWidget *parent, CadViewport *viewport, const QString &ti
                 const QSignalBlocker blocker(selectedBox);
                 selectedBox->setCurrentIndex(piece);
             }
+            if (pieces.size() < 2 || (bothBox->isChecked() && toolPieces.size() < 2)) return;
             scope.label->setText(QStringLiteral("Parte %1 del %2 corpo scelta nella vista.")
                                  .arg(piece + 1).arg(side == 1 ? QStringLiteral("secondo") : QStringLiteral("primo")));
             if (bothBox->isChecked() && clickedKeepValid && clickedToolKeepValid) {
@@ -17023,13 +17041,35 @@ static bool trimDialog(QWidget *parent, CadViewport *viewport, const QString &ti
 // Finestra dell'estensione di una superficie: distanza e tipo (stessa
 // superficie o lineare), con l'anteprima; "Bordi..." (se `allowReselect`)
 // torna alla scelta dei bordi.
+static QVector<EdgePoint> completeExtensionContours(const ForgeCad::ForgeBody &body, const QVector<EdgePoint> &edges) {
+    if (!body) return {};
+    ForgeCad::Kernel::Box box;
+    for (auto vertex : body->vertices()) box.add(body->vertex(vertex).point);
+    const double reach = 1e-3 * std::max(1.0, box.diagonal());
+    QVector<EdgePoint> result;
+    QSet<int> included;
+    for (const auto &reference : edges) {
+        const auto edge = ForgeCad::resolveEdgeReference(*body, reference, reach);
+        if (!edge.valid()) return {};
+        const auto loop = ForgeCad::freeBoundaryLoop(*body, edge);
+        if (loop.isEmpty()) return {};
+        for (const auto &part : loop) {
+            if (included.contains(part.subshape)) continue;
+            included.insert(part.subshape);
+            result.append(part);
+        }
+    }
+    return result;
+}
+
 struct ExtendDialogResult {
+    QVector<EdgePoint> edges;
     bool applied = false, reselect = false;
     double distance = 0.0;
     bool linear = false;
 };
 static ExtendDialogResult extendDialog(QWidget *parent, CadViewport *viewport, const QString &title, int base, int hidden, const QVector<EdgePoint> &edges,
-                                       double distance, bool linear, bool allowReselect, const std::function<QString(double, bool)> &apply) {
+                                       double distance, bool linear, bool allowReselect, const std::function<QString(const QVector<EdgePoint> &, double, bool)> &apply) {
     ExtendDialogResult result;
     FunctionDialogPanel dialog(parent);
     dialog.setWindowTitle(title);
@@ -17045,7 +17085,14 @@ static ExtendDialogResult extendDialog(QWidget *parent, CadViewport *viewport, c
                                        "Lineare: una striscia tangente alla superficie lungo il bordo."));
     form->addRow(QStringLiteral("Distanza lungo la superficie:"), distanceBox);
     form->addRow(QStringLiteral("Tipo:"), typeBox);
-    form->addRow(QStringLiteral("Bordi: %1").arg(edges.size()), new QLabel(&dialog));
+    const QVector<EdgePoint> complete = completeExtensionContours(viewport->extrusions().value(base).forgeBody, edges);
+    auto *completeBox = new QCheckBox(QStringLiteral("Estendi i contorni completi"), &dialog);
+    completeBox->setEnabled(!complete.isEmpty());
+    completeBox->setToolTip(QStringLiteral("Include tutti i bordi collegati ai bordi scelti, anche quelli delle facce molto sottili."));
+    form->addRow(QString(), completeBox);
+    auto *edgeCount = new QLabel(&dialog);
+    form->addRow(QStringLiteral("Bordi:"), edgeCount);
+    const auto selectedEdges = [&] { return completeBox->isChecked() ? complete : edges; };
     auto *previewLabel = new QLabel(QStringLiteral("in calcolo..."), &dialog);
     previewLabel->setWordWrap(true);
     previewLabel->setMaximumWidth(360);
@@ -17062,9 +17109,11 @@ static ExtendDialogResult extendDialog(QWidget *parent, CadViewport *viewport, c
     QObject::connect(buttons, &QDialogButtonBox::accepted, &dialog, &QDialog::accept);
     QObject::connect(buttons, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
     form->addRow(buttons);
-    const auto refresh = [=] {
+    const auto refresh = [&] {
+        const auto selected = selectedEdges();
+        edgeCount->setText(QString::number(selected.size()));
         previewLabel->setText(QStringLiteral("in calcolo..."));
-        viewport->requestExtendPreview(base, edges, distanceBox->value(), typeBox->currentIndex() == 1, hidden);
+        viewport->requestExtendPreview(base, selected, distanceBox->value(), typeBox->currentIndex() == 1, hidden);
     };
     viewport->setPreviewCallback([previewLabel](const QString &error) {
         previewLabel->setText(error.isEmpty() ? QStringLiteral("pronta (in ambra nella vista)") : QStringLiteral("non riuscita: ") + error);
@@ -17073,7 +17122,9 @@ static ExtendDialogResult extendDialog(QWidget *parent, CadViewport *viewport, c
     QObject::connect(typeBox, &QComboBox::currentIndexChanged, &dialog, refresh);
     refresh();
     distanceBox->selectAll();
-    result.applied = runUntilApplied(dialog, form, buttons, [&] { return apply(distanceBox->value(), typeBox->currentIndex() == 1); });
+    QObject::connect(completeBox, &QCheckBox::toggled, &dialog, refresh);
+    result.applied = runUntilApplied(dialog, form, buttons, [&] { return apply(selectedEdges(), distanceBox->value(), typeBox->currentIndex() == 1); });
+    result.edges = selectedEdges();
     viewport->setPreviewCallback({});
     viewport->clearPreview();
     result.distance = distanceBox->value();
@@ -17698,8 +17749,9 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
             sewDialog(this, viewport, QStringLiteral("Modifica cucitura"), index, original, [&](const ExtrusionObject &values) { return update(values); });
         } else if (original.feature == BodyFeature::SheetExtend) {
             extendDialog(this, viewport, QStringLiteral("Modifica estensione"), original.firstBody, index, original.blendEdges, original.blendSize,
-                         original.extendLinear, false, [&](double distance, bool linear) {
+                         original.extendLinear, false, [&](const QVector<EdgePoint> &selected, double distance, bool linear) {
                              ExtrusionObject body = original;
+                             body.blendEdges = selected;
                              body.blendSize = distance;
                              body.extendLinear = linear;
                              return update(body);
@@ -19039,13 +19091,13 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
     viewport->setExtendPickCallback([this, viewport, extendLinear](int body, QVector<EdgePoint> edges) {
         const QString name = QStringLiteral("Estensione %1").arg(viewport->extrusions().size() + 1);
         const ExtendDialogResult result = extendDialog(this, viewport, QStringLiteral("Estendi superficie"), body, -1, edges, viewport->edgePickSize(),
-                                                       *extendLinear, true, [&](double distance, bool linear) {
-                                                           return viewport->createSheetExtend(body, edges, distance, linear, name);
+                                                       *extendLinear, true, [&](const QVector<EdgePoint> &selected, double distance, bool linear) {
+                                                           return viewport->createSheetExtend(body, selected, distance, linear, name);
                                                        });
         *extendLinear = result.linear;
         viewport->setEdgePickSize(result.distance);
         if (pickSizeBox_) pickSizeBox_->setValue(result.distance);
-        if (result.reselect) viewport->resumeExtendPick(body, edges, result.linear);
+        if (result.reselect) viewport->resumeExtendPick(body, result.edges, result.linear);
     });
     connect(offsetSurfaceAction, &QAction::triggered, this, [this, viewport] {
         if (viewport->sketchModeActive()) viewport->endSketchMode();

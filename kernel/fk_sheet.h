@@ -38,7 +38,9 @@ Body makePlaneSheet(const Frame3 &frame, double halfSize);
 // isoparametrici nella loro faccia (i bordi delle lamine estruse: in alto, in
 // basso e agli estremi del profilo), con velocita' costante lungo la direzione
 // dell'estensione. Estendendo edge consecutivi di facce vicine le strisce si
-// uniscono lungo lo spigolo comune.
+// uniscono lungo lo spigolo comune. Per le pezze B-spline adiacenti la
+// giunzione viene ricalcolata sulle superfici prolungate: se gli estremi
+// sono diversi, il bordo comune termina sul piu' vicino e prosegue libero.
 Body extendSheet(const Body &sheet, const std::vector<EdgeId> &edges, double distance, bool linear = false);
 
 // B-spline uguale alla curva sul suo dominio e prolungata (stesso polinomio

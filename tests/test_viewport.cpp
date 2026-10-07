@@ -29,6 +29,124 @@ static void require(bool ok, const char *message) {
 }
 class ViewportInteractionTest {
 public:
+    static void extensionContourPicking() {
+        using namespace ForgeCad;
+        using namespace ForgeCad::Kernel;
+        const ForgeBody plate = std::make_shared<const Body>(makePlaneSheet(Frame3(), 10.0));
+        const auto edge = plate->edges().front();
+        const auto &e = plate->edge(edge);
+        const QVector<EdgePoint> selected{edgeReference(*plate, edge, e.curve->point(0.5 * (e.range.lo + e.range.hi)))};
+        require(completeExtensionContours(plate, selected).size() == 4, "completamento del contorno libero");
+        require(completeExtensionContours(plate, selected + selected).size() == 4, "contorno senza bordi duplicati");
+        CadViewport viewport;
+        ExtrusionObject feature;
+        feature.forgeBody = plate;
+        forgeTessellate(*plate, 0, feature.display);
+        viewport.extrusions_ = {feature};
+        QWidget parent;
+        int appliedEdges = 0;
+        QTimer::singleShot(0, [&] {
+            auto *dialog = parent.findChild<QDialog *>();
+            if (!dialog) return;
+            dialog->findChild<QCheckBox *>()->setChecked(true);
+            dialog->findChild<QDialogButtonBox *>()->button(QDialogButtonBox::Ok)->click();
+        });
+        const auto result = extendDialog(&parent, &viewport, QStringLiteral("Test contorni estensione"), 0, -1,
+            selected, 1.0, false, true, [&](const QVector<EdgePoint> &edges, double, bool) {
+                appliedEdges = edges.size();
+                return QString();
+            });
+        require(result.applied && appliedEdges == 4 && result.edges.size() == 4,
+                "conferma e riselezione usano il contorno completo");
+        std::cout << "Estensione: scelta del contorno completo OK" << std::endl;
+    }
+    static void trimPartPicking() {
+        using namespace ForgeCad;
+        using namespace ForgeCad::Kernel;
+        CadViewport v;
+        v.resize(800, 600);
+        v.setViewNormal(0);
+        v.setReferencePlanesVisible(false);
+        const ForgeBody plate = std::make_shared<const Body>(makePlaneSheet(Frame3(), 10));
+        const ForgeBody wall = std::make_shared<const Body>(makePlaneSheet(
+            Frame3(Vec3(), Vec3(1, 0, 0), Vec3(0, 1, 0)), 5));
+        ExtrusionObject a, b;
+        a.name = QStringLiteral("Lastra"); a.forgeBody = plate;
+        b.name = QStringLiteral("Parete"); b.forgeBody = wall;
+        forgeTessellate(*plate, 0, a.display);
+        forgeTessellate(*wall, 1, b.display);
+        v.extrusions_ = {a, b};
+        QString error;
+        const auto regions = forgeSheetPieces(wall, plate, 0, &error);
+        require(regions.size() == 2, "regioni della parete");
+        int side = -1, part = -1;
+        // Selezione sul secondo corpo, anche se il primo non ha regioni.
+        v.setViewNormal(2);
+        v.setTrimPartPickCallback(0, {}, 1, regions,
+            [&](int s, int p, EdgePoint) { side = s; part = p; });
+        const auto point = regions.at(0).point;
+        const QPoint cursor = v.projectWorldPoint(QVector3D(point.x, point.y, point.z)).toPoint();
+        v.updateHover(cursor);
+        require(v.trimPartHover_ == 0, "hover delle regioni disponibili del secondo corpo");
+        v.trimPartHover_ = -1;
+        v.extrusions_[1].visible = false;
+        const auto click = [&](Qt::KeyboardModifiers modifiers = Qt::NoModifier) {
+            QMouseEvent press(QEvent::MouseButtonPress, QPointF(cursor), QPointF(cursor), Qt::LeftButton, Qt::LeftButton, modifiers);
+            v.mousePressEvent(&press);
+            QMouseEvent release(QEvent::MouseButtonRelease, QPointF(cursor), QPointF(cursor), Qt::LeftButton, Qt::NoButton, modifiers);
+            v.mouseReleaseEvent(&release);
+        };
+        click();
+        require(side == 1 && part == 0, "clic senza hover sul corpo nascosto dall'anteprima");
+        v.selection_ = {SceneObjectKind::Extrusion, 0};
+        v.setTrimPartPickCallback(0, {}, 1, {}, [](int, int, EdgePoint) {});
+        click(); click(Qt::ControlModifier);
+        require(v.selection_.kind == SceneObjectKind::Extrusion && v.selection_.index == 0 && !v.boxSelecting_,
+                "taglio senza regioni non seleziona la scena");
+        v.setTrimPartPickCallback(-1, {}, -1, {}, {});
+        v.extrusions_[1].visible = true;
+        for (bool reverse : {false, true}) {
+            QWidget parent;
+            ExtrusionObject definition;
+            definition.firstBody = reverse ? 1 : 0;
+            definition.secondBody = reverse ? 0 : 1;
+            definition.trimBoth = true;
+            std::exception_ptr failure;
+            bool inspected = false;
+            QTimer::singleShot(0, [&] {
+                auto *dialog = parent.findChild<QDialog *>();
+                if (!dialog) return;
+                try {
+                    const auto boxes = dialog->findChildren<QComboBox *>();
+                    require(boxes.size() == 4 && boxes.at(2)->count() == (reverse ? 2 : 0)
+                                && boxes.at(3)->count() == (reverse ? 0 : 2),
+                            "pannello conserva le regioni quando un solo corpo si divide");
+                    require(bool(v.trimPartPickFinished_) && v.trimPartPickDisplays_.size() == 2,
+                            "pannello mantiene attiva la scelta delle regioni disponibili");
+                    QPushButton *pick = nullptr;
+                    for (auto *button : dialog->findChildren<QPushButton *>())
+                        if (button->text() == QStringLiteral("Dalla vista")) { pick = button; break; }
+                    require(pick != nullptr, "pulsante scelta corpo");
+                    pick->click();
+                    require(v.refPicking_ && !v.trimPartPickFinished_, "Dalla vista sospende la scelta delle parti");
+                    pick->click();
+                    require(!v.refPicking_ && bool(v.trimPartPickFinished_), "ritorno alla scelta delle parti");
+                    if (reverse) {
+                        dialog->findChild<QCheckBox *>()->setChecked(false);
+                        require(boxes.at(2)->count() == 2 && boxes.at(3)->count() == 0 && v.preview_.valid,
+                                "taglio singolo disponibile dopo errore del secondo corpo");
+                    }
+                    inspected = true;
+                } catch (...) { failure = std::current_exception(); }
+                dialog->reject();
+            });
+            trimDialog(&parent, &v, QStringLiteral("Test taglio"), -1, definition,
+                       [](const ExtrusionObject &) { return QString(); });
+            if (failure) std::rethrow_exception(failure);
+            require(inspected && !v.trimPartPickFinished_, "chiusura pannello ripristina la selezione normale");
+        }
+        std::cout << "Taglio: hover, clic e regioni parziali OK" << std::endl;
+    }
     static void offsetFacePicking() {
         using namespace ForgeCad;
         CadViewport v;
@@ -337,12 +455,114 @@ public:
         require(tested > 0, "almeno un bordo libero della faccia da estendere");
         require(!sameSurfaceFailed, "estensione B-spline lungo la stessa superficie");
     }
-    static void trimTopologyBodies(const QString &path, int first, int second) {
+    static void repairExtensionContours(const QString &path, const QString &output, const QStringList &indices) {
+        using namespace ForgeCad;
+        using namespace ForgeCad::Kernel;
+        DocumentState state;
+        require(loadDocumentFile(path, state).isEmpty(), "lettura modello da rigenerare");
+        QSet<int> changed;
+        for (const auto &index : indices) changed.insert(index.toInt());
+        const auto original = state.extrusions;
+        int first = state.extrusions.size();
+        for (int index : changed) {
+            require(index >= 0 && index < state.extrusions.size(), "indice estensione");
+            auto &feature = state.extrusions[index];
+            require(feature.feature == BodyFeature::SheetExtend && feature.firstBody >= 0, "feature di estensione");
+            feature.blendEdges = completeExtensionContours(original.at(feature.firstBody).forgeBody, feature.blendEdges);
+            require(!feature.blendEdges.isEmpty(), "contorni dell'estensione completi");
+            first = std::min(first, index);
+        }
+        for (int index = first; index < state.extrusions.size(); ++index) {
+            auto &feature = state.extrusions[index];
+            const auto remap = [&](int base, EdgePoint &point, int kind) {
+                if (base < first || base >= index || !state.extrusions.at(base).forgeBody) return;
+                const auto &body = *state.extrusions.at(base).forgeBody;
+                Box box;
+                for (auto v : body.vertices()) box.add(body.vertex(v).point);
+                const double reach = 1e-3 * std::max(1.0, box.diagonal());
+                const Vec3 p(point.x, point.y, point.z);
+                if (kind == 4) {
+                    const auto e = resolveEdgeReference(body, point, reach, ReferenceState::Other);
+                    require(e.valid(), "riferimento allo spigolo dopo rigenerazione");
+                    point = edgeReference(body, e, projectPoint(*body.edge(e).curve, p, body.edge(e).range).point);
+                } else if (kind == 5) {
+                    const auto f = resolveFaceReference(body, point, reach, ReferenceState::Other);
+                    require(f.valid(), "riferimento alla faccia dopo rigenerazione");
+                    point = faceReference(body, f, p);
+                }
+            };
+            for (auto &point : feature.blendEdges) remap(feature.firstBody, point, 4);
+            for (auto *refs : {&feature.planarRefs, &feature.datum.refs})
+                for (auto &ref : *refs) remap(ref.index, ref.point, ref.kind);
+            feature.cachedGeometry = false;
+            CadViewport::buildGeometry(feature, index, state.sketches, state.extrusions);
+            std::cout << index << " " << feature.name.toStdString() << ": " << feature.error.toStdString() << std::endl;
+            require(feature.error.isEmpty(), "rigenerazione della storia dopo estensione");
+            CadViewport::tessellateGeometry(feature, 0, feature.display);
+        }
+        require(saveDocumentFile(output, state).isEmpty(), "salvataggio modello con contorni completi");
+    }
+    static void auditSheetHistory(const QString &path, const QString &outputDirectory) {
+        using namespace ForgeCad;
+        using namespace ForgeCad::Kernel;
+        DocumentState document;
+        require(loadDocumentFile(path, document).isEmpty(), "lettura documento per controllo superfici");
+        if (!outputDirectory.isEmpty())
+            require(QDir().mkpath(outputDirectory), "cartella di esportazione della geometria diagnostica");
+        CadViewport viewport;
+        viewport.loadDocument(document);
+        for (int i = 0; i < viewport.extrusions_.size(); ++i) {
+            const auto &feature = viewport.extrusions_.at(i);
+            std::cout << "B" << i << " " << feature.name.toStdString() << " base=" << feature.firstBody
+                      << " second=" << feature.secondBody << " length=" << feature.blendSize
+                      << " linear=" << feature.extendLinear << " sewTol=" << feature.sewTolerance << std::endl;
+            if (!feature.forgeBody) continue;
+            const auto &body = *feature.forgeBody;
+            if (!outputDirectory.isEmpty()) {
+                std::ofstream file((outputDirectory + QStringLiteral("/B%1.body").arg(i)).toStdString(), std::ios::binary);
+                file << writeBodyBinary(body);
+                require(bool(file), "scrittura della geometria diagnostica");
+            }
+            const auto issues = checkBody(body);
+            int free = 0;
+            for (auto e : body.edges()) free += body.isLaminar(e);
+            std::cout << " faces=" << body.faces().size() << " free=" << free << " issues=" << issues.size() << std::endl;
+            for (const auto &issue : issues) std::cout << " ISSUE " << issue.message << std::endl;
+            for (auto f : body.faces()) {
+                const auto box = faceBox(body, f);
+                std::cout << " F" << f.index << " y=" << box.lo.y() << ".." << box.hi.y() << " free:";
+                for (auto e : faceBoundaryEdges(body, f)) if (body.isLaminar(e)) {
+                    const auto &edge = body.edge(e);
+                    const auto a = edge.curve->point(edge.range.lo), b = edge.curve->point(edge.range.hi);
+                    std::cout << " E" << e.index << "(" << a.x() << "," << a.y() << "," << a.z()
+                              << " -> " << b.x() << "," << b.y() << "," << b.z() << ")";
+                }
+                std::cout << std::endl;
+            }
+            if (feature.feature == BodyFeature::SheetExtend && feature.firstBody >= 0) {
+                require(feature.firstBody < viewport.extrusions_.size()
+                            && bool(viewport.extrusions_.at(feature.firstBody).forgeBody), "base dell'estensione disponibile");
+                const auto &base = *viewport.extrusions_.at(feature.firstBody).forgeBody;
+                for (const auto &ref : feature.blendEdges) {
+                    const auto edge = resolveEdgeReference(base, ref, 0.1);
+                    std::cout << " selected=" << edge.index << " stored=" << ref.subshape;
+                    if (edge.valid()) {
+                        const auto &e = base.edge(edge);
+                        const auto mid = e.curve->point((e.range.lo + e.range.hi) * 0.5);
+                        std::cout << " midpoint=" << mid.x() << "," << mid.y() << "," << mid.z();
+                    }
+                    std::cout << std::endl;
+                }
+            }
+        }
+    }
+    static void trimTopologyBodies(const QString &path, int first, int second, bool verifyClosed = false) {
         using namespace ForgeCad;
         DocumentState document;
         require(loadDocumentFile(path, document).isEmpty(), "lettura documento per taglio superfici");
         CadViewport viewport;
         viewport.loadDocument(document);
+        QVector<SheetPiece> regions[2];
         for (int target : {first, second}) {
             const int tool = target == first ? second : first;
             require(target >= 0 && target < viewport.extrusions_.size()
@@ -356,11 +576,33 @@ public:
                       << " solidFlag=" << b.solid << " loftSurface=" << b.loftSurface
                       << " sheet=" << bool(b.forgeBody && b.forgeBody->isSheet())
                       << " faces=" << (b.forgeBody ? b.forgeBody->faces().size() : 0) << std::endl;
+            require(bool(a.forgeBody) && bool(b.forgeBody), "geometria dei corpi del taglio disponibile");
+            for (auto face : a.forgeBody->faces()) {
+                const auto box = Kernel::faceBox(*a.forgeBody, face);
+                std::cout << "  F" << face.index << " type=" << int(a.forgeBody->face(face).surface->type())
+                          << " box=" << box.lo.x() << "," << box.lo.y() << "," << box.lo.z()
+                          << " / " << box.hi.x() << "," << box.hi.y() << "," << box.hi.z() << std::endl;
+            }
             QString error;
             const QVector<SheetPiece> pieces = forgeSheetPieces(a.forgeBody, b.forgeBody, 0, &error);
+            regions[target == first ? 0 : 1] = pieces;
             std::cout << "  pieces=" << pieces.size() << " error=" << error.toStdString();
             for (const SheetPiece &piece : pieces) std::cout << " area=" << piece.area;
             std::cout << std::endl;
+        }
+        if (verifyClosed) {
+            require(regions[0].size() == 2 && regions[1].size() == 2, "due regioni su entrambi i corpi");
+            bool closed = false;
+            for (const auto &a : regions[0]) for (const auto &b : regions[1]) {
+                QString error;
+                const auto joined = forgeSew({a.geometry, b.geometry}, 1e-6, false, &error);
+                require(bool(joined) && error.isEmpty() && Kernel::checkBody(*joined).empty(), "applicazione del taglio reciproco");
+                int free = 0;
+                for (auto e : joined->edges()) free += joined->isLaminar(e);
+                closed = closed || free == 0;
+                std::cout << "  taglio reciproco: bordi liberi=" << free << std::endl;
+            }
+            require(closed, "almeno una scelta produce il loft chiuso dal piano");
         }
     }
     static void loftCorner(const QString &path) {
@@ -698,6 +940,8 @@ public:
         for (int i = 0; i < v.extrusions_.size(); ++i) if (v.extrusions_.at(i).visible) std::cout << "visibile " << i << " " << v.extrusions_.at(i).name.toStdString() << std::endl;
     }
     static void run(bool render) {
+        extensionContourPicking();
+        trimPartPicking();
         deletionDuringEdgePick();
         using namespace ForgeCad;
         CadViewport v;
@@ -3469,6 +3713,10 @@ int main(int argc, char **argv) {
         if (meshStats > 0) { ViewportInteractionTest::meshStats(app.arguments().mid(meshStats + 1)); return 0; }
         if (edit > 0) ViewportInteractionTest::renderEdit(app.arguments().mid(edit + 1));
         else if (step > 0) ViewportInteractionTest::renderStep(app.arguments().mid(step + 1));
+        else if (app.arguments().contains(QStringLiteral("--extend-contour-pick")))
+            ViewportInteractionTest::extensionContourPicking();
+        else if (app.arguments().contains(QStringLiteral("--trim-pick")))
+            ViewportInteractionTest::trimPartPicking();
         else if (app.arguments().contains(QStringLiteral("--offset-pick")))
             ViewportInteractionTest::offsetFacePicking();
         else if (app.arguments().contains(QStringLiteral("--offset-loft-sides"))) {
@@ -3480,6 +3728,20 @@ int main(int argc, char **argv) {
             ViewportInteractionTest::extendTopologyFace(app.arguments().value(argument + 1),
                 app.arguments().value(argument + 2).toInt(), app.arguments().value(argument + 3).toInt(),
                 app.arguments().value(argument + 4, QStringLiteral("1")).toDouble());
+        }
+        else if (app.arguments().contains(QStringLiteral("--repair-extension-contours"))) {
+            const int argument = app.arguments().indexOf(QStringLiteral("--repair-extension-contours"));
+            ViewportInteractionTest::repairExtensionContours(app.arguments().value(argument + 1), app.arguments().value(argument + 2),
+                                                            app.arguments().mid(argument + 3));
+        }
+        else if (app.arguments().contains(QStringLiteral("--audit-sheet-history"))) {
+            const int argument = app.arguments().indexOf(QStringLiteral("--audit-sheet-history"));
+            ViewportInteractionTest::auditSheetHistory(app.arguments().value(argument + 1), app.arguments().value(argument + 2));
+        }
+        else if (app.arguments().contains(QStringLiteral("--verify-mutual-trim"))) {
+            const int argument = app.arguments().indexOf(QStringLiteral("--verify-mutual-trim"));
+            ViewportInteractionTest::trimTopologyBodies(app.arguments().value(argument + 1),
+                app.arguments().value(argument + 2).toInt(), app.arguments().value(argument + 3).toInt(), true);
         }
         else if (app.arguments().contains(QStringLiteral("--trim-topology-bodies"))) {
             const int argument = app.arguments().indexOf(QStringLiteral("--trim-topology-bodies"));

@@ -4,6 +4,7 @@
 #include <cmath>
 
 #include "fk_blend.h"
+#include "fk_boolean.h"
 #include "fk_classify.h"
 #include "fk_body_check.h"
 #include "fk_body_io.h"
@@ -497,4 +498,35 @@ FK_TEST(OffsetLoftInternalCreasesOneMillimeter) {
                 for (EdgeId e : result.body.edges())
                     if (result.body.isLaminar(e)) checkValid(extendSheet(result.body, {e}, 0.2));
         }
+}
+
+// Lo stesso loft del documento: tutte le sei pezze dell'offset devono
+// restare collegate anche oltre i bordi originali, non solo valide da sole.
+FK_TEST(OffsetLoftExtendedSeamsTrimBoth) {
+    std::ifstream in(std::string(FORGECAD_SOURCE_DIR) + "/kernel/tests/data/offset_loft.body", std::ios::binary);
+    FK_CHECK(bool(in));
+    if (!in) return;
+    std::stringstream data;
+    data << in.rdbuf();
+    const Body source = readBodyBinary(data.str());
+    Body sheet = offsetFaces(source, facesOfType(source, SurfaceType::BSpline), 1.0, 1e-7, true).body;
+    for (bool upper : {true, false}) {
+        std::vector<EdgeId> ring;
+        for (EdgeId e : sheet.edges()) {
+            if (!sheet.isLaminar(e)) continue;
+            const Edge &edge = sheet.edge(e);
+            const Vec3 mid = edge.curve->point(0.5 * (edge.range.lo + edge.range.hi));
+            if (upper ? mid.y() > 15.0 : mid.y() < 0.0) ring.push_back(e);
+        }
+        FK_CHECK(ring.size() == 6);
+        sheet = extendSheet(sheet, ring, upper ? 3.0 : 2.0);
+        checkValid(sheet);
+    }
+    const Body plane = makePlaneSheet(Frame3(Vec3(0,21,0), Vec3(0,1,0), Vec3(1,0,0)), 12.0);
+    const auto planePieces = splitSheet(plane, sheet);
+    const auto sheetPieces = splitSheet(sheet, plane);
+    FK_CHECK(planePieces.size() == 2);
+    FK_CHECK(sheetPieces.size() == 2);
+    for (const auto &piece : planePieces) checkValid(piece);
+    for (const auto &piece : sheetPieces) checkValid(piece);
 }
