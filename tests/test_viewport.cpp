@@ -2416,7 +2416,7 @@ public:
             cachedDefinition.trimKeep = cachedPieces.at(0).point;
             cachedViewport.resize(800, 600);
             cachedViewport.setViewNormal(0);
-            cachedViewport.setTrimPartPickCallback(0, cachedPieces, [](EdgePoint) {});
+            cachedViewport.setTrimPartPickCallback(0, cachedPieces, -1, {}, [](int, int, EdgePoint) {});
             const EdgePoint hoverPoint = cachedPieces.at(1).point;
             cachedViewport.updateHover(cachedViewport.projectWorldPoint(
                 QVector3D(float(hoverPoint.x), float(hoverPoint.y), float(hoverPoint.z))).toPoint());
@@ -2435,6 +2435,17 @@ public:
             error.clear();
             const ForgeBody mutualTool = std::make_shared<const Body>(
                 makePlaneSheet(Frame3(Vec3(2, 0, 0), Vec3(1, 0, 0), Vec3(0, 1, 0)), 10.0));
+            error.clear();
+            const QVector<SheetPiece> mutualFirstPieces = forgeSheetPieces(plate, mutualTool, 0, &error);
+            const QVector<SheetPiece> mutualSecondPieces = forgeSheetPieces(mutualTool, plate, 0, &error);
+            int pickedSide = -1, pickedPart = -1;
+            cachedViewport.setTrimPartPickCallback(0, mutualFirstPieces, 1, mutualSecondPieces,
+                [&](int side, int part, EdgePoint) { pickedSide = side; pickedPart = part; });
+            require(cachedViewport.trimPartPickDisplays_.size() == mutualFirstPieces.size() + mutualSecondPieces.size()
+                        && cachedViewport.trimPartPickSides_.value(mutualFirstPieces.size()) == 1,
+                    "hover simultaneo delle parti di entrambi i corpi");
+            cachedViewport.trimPartPickFinished_(1, 0, mutualSecondPieces.at(0).point);
+            require(pickedSide == 1 && pickedPart == 0, "il clic conserva corpo e indice della parte illuminata");
             const ForgeBody mutual = forgeTrimBoth(plate, mutualTool, EdgePoint{-5, 0, 0}, EdgePoint{2, 0, 5}, &error);
             if (!mutual || !error.isEmpty()) std::cout << "Mutual trim: " << error.toStdString() << std::endl;
             require(mutual && mutual->isSheet() && Kernel::checkBody(*mutual).empty() && error.isEmpty(),

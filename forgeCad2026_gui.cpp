@@ -2497,13 +2497,28 @@ public:
     }
     bool referencePicking() const { return refPicking_; }
     void setReferencePickCallback(std::function<void(bool, GeometryRef)> callback) { refPickFinished_ = std::move(callback); }
-    // Nel pannello Taglia superficie, un clic sulla pelle originale fornisce
-    // direttamente il punto della regione da conservare. Il corpo puo' essere
-    // nascosto dall'anteprima: il picking usa comunque il suo B-rep esatto.
-    void setTrimPartPickCallback(int body, const QVector<SheetPiece> &pieces, std::function<void(EdgePoint)> callback) {
-        trimPartPickBody_ = callback ? body : -1;
+    // Tutte le regioni dei due operandi partecipano insieme al picking: il
+    // passaggio del mouse deduce corpo e parte, senza una scelta separata.
+    void setTrimPartPickCallback(int firstBody, const QVector<SheetPiece> &firstPieces,
+                                 int secondBody, const QVector<SheetPiece> &secondPieces,
+                                 std::function<void(int, int, EdgePoint)> callback) {
+        trimPartPickBodies_.clear();
         trimPartPickDisplays_.clear();
-        for (const SheetPiece &piece : pieces) trimPartPickDisplays_.append(piece.display);
+        trimPartPickSides_.clear();
+        trimPartPickIndices_.clear();
+        const auto append = [&](int body, const QVector<SheetPiece> &pieces, int side) {
+            if (body < 0) return;
+            for (int k = 0; k < pieces.size(); ++k) {
+                trimPartPickBodies_.append(body);
+                trimPartPickDisplays_.append(pieces.at(k).display);
+                trimPartPickSides_.append(side);
+                trimPartPickIndices_.append(k);
+            }
+        };
+        if (callback) {
+            append(firstBody, firstPieces, 0);
+            append(secondBody, secondPieces, 1);
+        }
         trimPartHover_ = -1;
         trimPartPickFinished_ = std::move(callback);
         update();
@@ -4044,16 +4059,17 @@ protected:
             return;
         }
         if (!sketchMode_ && event->button() == Qt::LeftButton && event->modifiers() == Qt::NoModifier
-            && trimPartPickFinished_ && trimPartPickBody_ >= 0) {
+            && trimPartPickFinished_ && trimPartHover_ >= 0 && trimPartHover_ < trimPartPickBodies_.size()) {
+            const int body = trimPartPickBodies_.at(trimPartHover_);
             FaceHit face;
-            if (pickBodyFace(trimPartPickBody_, lastMousePosition_, face)) {
+            if (pickBodyFace(body, lastMousePosition_, face)) {
                 QVector3D origin, direction;
                 viewRay(lastMousePosition_, origin, direction);
                 const double length = double(direction.length());
                 const EdgePoint point{double(origin.x()) + double(direction.x()) / length * face.distance,
                                       double(origin.y()) + double(direction.y()) / length * face.distance,
                                       double(origin.z()) + double(direction.z()) / length * face.distance};
-                trimPartPickFinished_(point);
+                trimPartPickFinished_(trimPartPickSides_.at(trimPartHover_), trimPartPickIndices_.at(trimPartHover_), point);
             }
             return;
         }
@@ -5675,7 +5691,9 @@ protected:
                 trimPartHover_ = nearest;
                 if (nearest >= 0) {
                     setCursor(Qt::PointingHandCursor);
-                    showStatus(QStringLiteral("Parte %1: clic per mantenerla").arg(nearest + 1));
+                    showStatus(QStringLiteral("%1 corpo, parte %2: clic per mantenerla")
+                                   .arg(trimPartPickSides_.at(nearest) == 0 ? QStringLiteral("Primo") : QStringLiteral("Secondo"))
+                                   .arg(trimPartPickIndices_.at(nearest) + 1));
                 } else unsetCursor();
                 update();
             }
@@ -5833,9 +5851,11 @@ protected:
     }
 
     void leaveEvent(QEvent *event) override {
-        if (hover_.kind != SceneObjectKind::None || sketchHover_.kind >= 0) {
+        if (hover_.kind != SceneObjectKind::None || sketchHover_.kind >= 0 || trimPartHover_ >= 0) {
             hover_ = {};
             sketchHover_ = {};
+            trimPartHover_ = -1;
+            unsetCursor();
             update();
         }
         QOpenGLWidget::leaveEvent(event);
@@ -11582,10 +11602,11 @@ private:
     std::function<void(SceneSelection)> selectionCallback_;
     std::function<void(int)> sketchPickCallback_;
     std::function<void(int, int, int)> sketchEntityPickCallback_;
-    int trimPartPickBody_ = -1;
+    QVector<int> trimPartPickBodies_;
     QVector<BodyDisplay> trimPartPickDisplays_;
+    QVector<int> trimPartPickSides_, trimPartPickIndices_;
     int trimPartHover_ = -1;
-    std::function<void(EdgePoint)> trimPartPickFinished_;
+    std::function<void(int, int, EdgePoint)> trimPartPickFinished_;
     std::function<void()> documentChangedCallback_;
     std::function<void(int)> planeContextCallback_;
     std::function<void(bool)> sketchModeCallback_;
@@ -16765,10 +16786,9 @@ static bool trimDialog(QWidget *parent, CadViewport *viewport, const QString &ti
     auto *form = dialog.createScrollableForm();
     auto *sheetBox = new QComboBox(&dialog), *toolBox = new QComboBox(&dialog), *partBox = new QComboBox(&dialog);
     auto *bothBox = new QCheckBox(QStringLiteral("Rifila entrambi i corpi"), &dialog);
-    auto *toolPartBox = new QComboBox(&dialog), *pickSideBox = new QComboBox(&dialog);
+    auto *toolPartBox = new QComboBox(&dialog);
     bothBox->setChecked(definition.trimBoth);
     bothBox->setToolTip(QStringLiteral("Conserva una parte di ciascun corpo e rimuove da entrambi le porzioni oltre l'intersezione."));
-    pickSideBox->addItems({QStringLiteral("Primo corpo"), QStringLiteral("Secondo corpo")});
     for (int index : sheets) sheetBox->addItem(label(index));
     for (int index : tools) toolBox->addItem(label(index));
     const int sketchStart = int(tools.size());
@@ -16797,7 +16817,6 @@ static bool trimDialog(QWidget *parent, CadViewport *viewport, const QString &ti
     form->addRow(QStringLiteral("Parte da tenere:"), partBox);
     form->addRow(QString(), bothBox);
     form->addRow(QStringLiteral("Parte del secondo corpo:"), toolPartBox);
-    form->addRow(QStringLiteral("Il clic nella vista sceglie sul:"), pickSideBox);
     auto *choiceHelp = new QLabel(QStringLiteral("Passa il mouse sulle regioni: quella verde verra' mantenuta con un clic."), &dialog);
     choiceHelp->setWordWrap(true);
     choiceHelp->setStyleSheet(QStringLiteral("color: #8ee8a2; font-weight: 600;"));
@@ -16850,7 +16869,7 @@ static bool trimDialog(QWidget *parent, CadViewport *viewport, const QString &ti
     std::function<void()> installPartPicker;
     const auto refreshPieces = [&] {
         if (chaining || sheetPicker.handling() || toolPicker.handling()) return;
-        viewport->setTrimPartPickCallback(-1, {}, {});
+        viewport->setTrimPartPickCallback(-1, {}, -1, {}, {});
         if (sheetPicker.waiting() || toolPicker.waiting()) {
             viewport->clearPreview();
             scope.label->setText(sheetPicker.waiting() ? QStringLiteral("Clicca nella vista la superficie da tagliare.")
@@ -16867,11 +16886,8 @@ static bool trimDialog(QWidget *parent, CadViewport *viewport, const QString &ti
             bothBox->setChecked(false);
         }
         toolPartBox->setEnabled(bothBox->isChecked());
-        pickSideBox->setEnabled(bothBox->isChecked());
-        pickSideBox->setItemText(0, QStringLiteral("%1 (primo)").arg(label(d.firstBody)));
-        if (shapeTool) pickSideBox->setItemText(1, QStringLiteral("%1 (secondo)").arg(label(d.secondBody)));
         choiceHelp->setText(bothBox->isChecked()
-            ? QStringLiteral("1. Scegli qui sopra il primo o il secondo corpo. 2. Passa il mouse sulle sue regioni. 3. Clicca la regione verde da mantenere. Ripeti per l'altro corpo.")
+            ? QStringLiteral("Passa il mouse sulle regioni di entrambi i corpi: il viewport riconosce automaticamente a quale corpo appartengono. Clicca in verde una parte per ciascun corpo.")
             : QStringLiteral("Passa il mouse sulle regioni del corpo: quella verde verra' mantenuta con un clic; la scelta corrente resta in ambra."));
         const int previousPart = partBox->currentIndex();
         const int previousToolPart = toolPartBox->currentIndex();
@@ -16934,28 +16950,24 @@ static bool trimDialog(QWidget *parent, CadViewport *viewport, const QString &ti
     };
     installPartPicker = [&] {
         const ExtrusionObject d = current();
-        const bool second = bothBox->isChecked() && pickSideBox->currentIndex() == 1;
-        const int pickBody = second ? d.secondBody : d.firstBody;
-        const QVector<SheetPiece> &pickPieces = second ? toolPieces : pieces;
-        viewport->setTrimPartPickCallback(pickBody, pickPieces, [&, second](EdgePoint point) {
-            QVector<SheetPiece> &selectedPieces = bothBox->isChecked() && pickSideBox->currentIndex() == 1 ? toolPieces : pieces;
-            QComboBox *selectedBox = bothBox->isChecked() && pickSideBox->currentIndex() == 1 ? toolPartBox : partBox;
-            if (selectedPieces.size() < 2) return;
-            if (selectedBox == toolPartBox) clickedToolKeep = point, clickedToolKeepValid = true;
+        const bool both = bothBox->isChecked();
+        viewport->setTrimPartPickCallback(d.firstBody, pieces, both ? d.secondBody : -1, both ? toolPieces : QVector<SheetPiece>{},
+                                          [&](int side, int piece, EdgePoint point) {
+            QVector<SheetPiece> &selectedPieces = side == 1 ? toolPieces : pieces;
+            QComboBox *selectedBox = side == 1 ? toolPartBox : partBox;
+            if (piece < 0 || piece >= selectedPieces.size()) return;
+            if (side == 1) clickedToolKeep = point, clickedToolKeepValid = true;
             else clickedKeep = point, clickedKeepValid = true;
-            const int nearest = ForgeCad::forgeClosestSheetPiece(selectedPieces, point);
-            if (nearest < 0) return;
             {
                 const QSignalBlocker blocker(selectedBox);
-                selectedBox->setCurrentIndex(nearest);
+                selectedBox->setCurrentIndex(piece);
             }
             scope.label->setText(QStringLiteral("Parte %1 del %2 corpo scelta nella vista.")
-                                 .arg(nearest + 1).arg(selectedBox == toolPartBox ? QStringLiteral("secondo") : QStringLiteral("primo")));
-            if (bothBox->isChecked() && !second) {
-                pickSideBox->setCurrentIndex(1);
-                choiceHelp->setText(QStringLiteral("Prima parte scelta. Ora passa il mouse sul secondo corpo e clicca la regione verde da mantenere."));
-            } else if (bothBox->isChecked()) {
+                                 .arg(piece + 1).arg(side == 1 ? QStringLiteral("secondo") : QStringLiteral("primo")));
+            if (bothBox->isChecked() && clickedKeepValid && clickedToolKeepValid) {
                 choiceHelp->setText(QStringLiteral("Entrambe le parti sono scelte. Le regioni mantenute sono mostrate in ambra; premi OK per applicare."));
+            } else if (bothBox->isChecked()) {
+                choiceHelp->setText(QStringLiteral("Parte scelta. Passa ora il mouse sulle regioni dell'altro corpo e clicca quella verde da mantenere."));
             }
             refreshPreview();
         });
@@ -16978,12 +16990,6 @@ static bool trimDialog(QWidget *parent, CadViewport *viewport, const QString &ti
     QObject::connect(sheetBox, &QComboBox::currentIndexChanged, &dialog, refreshPieces);
     QObject::connect(toolBox, &QComboBox::currentIndexChanged, &dialog, refreshPieces);
     QObject::connect(bothBox, &QCheckBox::toggled, &dialog, refreshPieces);
-    QObject::connect(pickSideBox, &QComboBox::currentIndexChanged, &dialog, [&] {
-        installPartPicker();
-        scope.label->setText(pickSideBox->currentIndex() == 1
-            ? QStringLiteral("Clicca nella vista la parte del secondo corpo da tenere.")
-            : QStringLiteral("Clicca nella vista la parte del primo corpo da tenere."));
-    });
     QObject::connect(partBox, &QComboBox::currentIndexChanged, &dialog, [&] {
         clickedKeepValid = false;
         refreshPreview();
@@ -17009,7 +17015,7 @@ static bool trimDialog(QWidget *parent, CadViewport *viewport, const QString &ti
     bool applied = false;
     if (auto *window = qobject_cast<QMainWindow *>(parent)) applied = runUntilAppliedModeless(window, viewport, dialog, form, buttons, run);
     else applied = runUntilApplied(dialog, form, buttons, run);
-    viewport->setTrimPartPickCallback(-1, {}, {});
+    viewport->setTrimPartPickCallback(-1, {}, -1, {}, {});
     viewport->setReferencePickCallback(nullptr);
     return applied;
 }
