@@ -139,3 +139,70 @@ volume generale 11.279881760709664 contro 11.279881782264924,
 scarto 2.1555260687478039e-08 oltre la soglia 1.1279881782264925e-08.
 Ripetuto rimettendo fk_blend_surface.cpp da HEAD: identico fallimento.
 La soglia di quel test non e' stata modificata.
+
+PROVA DI ASSORBIMENTO DELLA PICCOLA CONCAVITA' INFERIORE
+Caso: fixture loft_offset_trimmed.body, contorno F6, raggio 1 mm.
+Il giunto E9/E19 presenta coseno delle tangenti 0.998645241701
+(circa 2.98 gradi); E9 misura circa 0.00778 mm fra gli estremi.
+
+Sono stati provati due percorsi sperimentali, poi rimossi:
+- prosecuzione come giunto Split: fallisce la soluzione della sezione;
+- prosecuzione come Mitre: con fit sperimentale a 1e-6 mm arriva al
+  montaggio, ma il controllo del corpo rifiuta un estremo distante 0.037046 mm.
+Il fit ordinario a 1e-9 mm si arresta prima su un tratto dell'altro bordo
+corto (E5, con supporto F5), per eccessivo raffinamento.
+Non sono state mantenute tolleranze allargate o permissivita' sui giunti concavi.
+
+Nel secondo esperimento e' emerso un difetto indipendente: setEnd limitava
+un estremo usando l'altro ancora provvisorio. Se entrambi si spostano oltre
+il vecchio tratto, questo introduce uno scarto artificiale. Ora gli estremi
+sono assegnati indipendentemente; l'ordine e' verificato dopo tutti i giunti.
+Nel prototipo questa correzione elimina lo scarto da 0.037046 mm ma rende
+esplicito un intervallo invertito, cioe' un tratto consumato dai raccordi vicini.
+Il kernel ora rifiuta esplicitamente tale intervallo prima di costruire l'edge.
+
+Esito: NON esiste ancora un raccordo inferiore valido prodotto da questa prova.
+Per assorbire la striscia serve ricostruire il contatto fra le facce che restano,
+eliminando il tratto consumato e aggiornando i loop; dichiarare tangente il
+giunto o aumentare le tolleranze non realizza questa operazione.
+La sola costruzione di una superficie liscia non dimostra che l'irregolarita'
+sia interamente nella zona rimossa o che le facce conservate siano invariate.
+Verifica delle modifiche mantenute: build completa riuscita, git diff --check
+senza errori, suite Blend 37/38. Unico fallimento: BlendGeneralMatchesAnalytic,
+con gli stessi valori numerici preesistenti riportati sopra. Il raccordo
+superiore reale R1 e i test sulle cuciture divise continuano a passare.
+
+RICERCA ALTERNATIVA DI CONTATTI — 2026-10-08
+Probe autonomo: kernel/tests/probe_blend_candidates.cpp; comandi e registro
+completo in CLAUDE.md. Semi UV pseudocasuali sulle superfici, con verifica
+deterministica dei residui e classificazione dei contatti nei trim.
+La ricerca raffinata aveva due sezioni senza contatto su facce (180 e 262).
+Il nuovo solver sfera-spigolo trova in entrambe due candidati, E6 ed E8,
+con residui inferiori a 8e-11 mm. E6 collide con F1 per circa 0.00054 mm;
+E8 non ha collisioni accertate ma resta Unknown: distanze complete dalle
+facce rifilate non certificate. E8 fornisce candidati anche nelle sezioni
+vicine 181-183 e 263, dove i contatti su F2 risultavano in collisione.
+Non e' ancora dimostrata una curva continua di transizione fra i supporti.
+Self-test del solver su retta e cerchio, due rami e limite del trim: PASS.
+Nessun raccordo inferiore B-rep valido prodotto; algoritmo di produzione
+invariato in questa fase. I risultati numerici non autorizzano a cancellare F1.
+
+AGGIORNAMENTO CONTROLLO DEI TRIM — 2026-10-08
+Il probe ora e' compilato come forgekernel_blend_probe; il relativo self-test
+CTest passa. Nessun collegamento all'applicazione o a OCCT.
+La suddivisione delle pezze B-spline, con limiti dai poli e controllo del
+dominio rifilato, risolve le precedenti incertezze su E8 nei campioni 180,
+183 e 262. Nel giro da 106 sezioni: esattamente un candidato Clear per
+sezione, 6 ulteriori candidati in collisione, nessun Unknown. Questi sono
+controlli discreti, non una verifica dell'intero raccordo.
+Localizzata la transizione E8/F2 fra i campioni 183/184: angolo circa
+1.55231093 rad, sfera senza collisioni alla tolleranza 1e-7 mm, contatti
+distanti 0.0361333 mm. Due semi diversi danno gap tridimensionali dei centri
+di circa 3.1e-12 e 2.5e-9 mm. Coincidenza dei centri non significa
+coincidenza dei contatti ne' ricostruzione dei loop della faccia consumata.
+Produzione: suite Blend 37/38 con il fallimento numerico preesistente;
+raccordo superiore reale ancora PASS. Raccordo inferiore reale R1 ancora
+FAIL, "spigolo troppo complesso da raccordare". Nessun B-rep inferiore
+valido o nuova copia .prt prodotta. L'implementazione richiesta resta
+incompleta: mancano pezze di raccordo e ricostruzione topologica non locale.
+Registro, limiti e comandi riproducibili aggiornati in CLAUDE.md.

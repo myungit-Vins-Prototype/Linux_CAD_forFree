@@ -176,3 +176,14 @@ target_compile_definitions(forgekernel_tests PRIVATE FORGECAD_SOURCE_DIR="${PROJ
 set_target_properties(forgekernel_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
 
 add_test(NAME forgekernel_tests COMMAND forgekernel_tests)
+
+# Diagnostica del raccordo non locale: non e' collegata all'applicazione.
+# Il self-test controlla casi geometrici analitici, senza dipendere da OCCT.
+add_executable(forgekernel_blend_probe
+    tests/probe_blend_candidates.cpp
+    tests/probe_trimmed_sphere.h
+)
+target_link_libraries(forgekernel_blend_probe PRIVATE forgekernel)
+target_compile_options(forgekernel_blend_probe PRIVATE -Wall -Wextra -Wpedantic -O2 -g)
+set_target_properties(forgekernel_blend_probe PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
+add_test(NAME forgekernel_blend_probe_self_test COMMAND forgekernel_blend_probe --self-test)

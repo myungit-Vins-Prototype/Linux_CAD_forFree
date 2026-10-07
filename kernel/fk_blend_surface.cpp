@@ -1991,10 +1991,13 @@ Body blendSurfaceChains(const Body &input, const std::vector<EdgeId> &selected, 
         const auto setEnd = [&](std::vector<double> &lo, std::vector<double> &hi, int p, bool atChainEnd, double t) {
             const Piece &piece = pieces[std::size_t(p)];
             const bool increasing = piece.to > piece.from;
-            const double epsilon = 1e-12 * std::max(1.0, piece.fitHi - piece.fitLo);
+            // I due estremi si calcolano indipendentemente: entrambi possono
+            // avanzare oltre il vecchio tratto di un bordo corto. Confrontarli
+            // qui con l'altro estremo, ancora provvisorio, sposta il taglio.
+            // Un intervallo consumato si riconosce solo dopo tutti i giunti.
             t = std::clamp(t, piece.fitLo, piece.fitHi);
-            if (atChainEnd == increasing) hi[std::size_t(p)] = std::max(t, lo[std::size_t(p)] + epsilon);
-            else lo[std::size_t(p)] = std::min(t, hi[std::size_t(p)] - epsilon);
+            if (atChainEnd == increasing) hi[std::size_t(p)] = t;
+            else lo[std::size_t(p)] = t;
         };
 
         // Giunti di sezione (Smooth, Split, e i passaggi Split sulla stessa fin): punti e arco.
@@ -2438,6 +2441,10 @@ Body blendSurfaceChains(const Body &input, const std::vector<EdgeId> &selected, 
             if (startMitre && startJ.deep == -1) bStart = startJ.deepPoint;
             if (endMitre && endJ.deep == -1) bEnd = endJ.deepPoint;
             const Interval ra{aLo[std::size_t(p)], aHi[std::size_t(p)]}, rb{bLo[std::size_t(p)], bHi[std::size_t(p)]};
+            if (!(ra.hi > ra.lo) || !(rb.hi > rb.lo))
+                throw std::domain_error("blendEdges: tratto interamente consumato dai raccordi vicini; "
+                                        "serve ricostruire il contatto oltre la piccola faccia (bordo "
+                                        + std::to_string(cf.edge.index) + ")");
             const double fitSlack = piece.fit.error > 1e-8 ? 2.0 * piece.fit.error : 0.0;
             const double slackA = std::max({fitSlack, startJ.toleranceA, endJ.toleranceA});
             const double slackB = std::max({fitSlack, startJ.toleranceB, endJ.toleranceB});
