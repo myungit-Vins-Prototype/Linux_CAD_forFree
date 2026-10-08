@@ -153,6 +153,14 @@ void forgeBlendPreviewDisplay(const Kernel::Body &base, const Kernel::Body &resu
 void forgeExtrusionPreviewDisplay(const QVector<ForgeBody> &bases, const Kernel::Body &result, int quality,
                                   BodyDisplay &display, int divisions = 4, BodyDisplay *retainedDisplay = nullptr);
 
+// Prepara le cache che la selezione esatta usa sulle facce B-spline (pezze di
+// Bezier, gerarchia dei loro box, linee di nodo non C1). Le superfici sono
+// immutabili e le cache atomiche: si puo' chiamare da un altro thread.
+// Sulle superfici a distanza con centinaia di migliaia di poli la prima
+// costruzione prende alcune centinaia di ms, che altrimenti cadrebbero sul
+// primo clic.
+void forgeWarmPickCaches(const Kernel::Body &body);
+
 // Faccia del body colpita per prima dal raggio, con il suo piano (se e'
 // piana) e un punto interno di ogni suo spigolo.
 // `window`: vedi firstRayHit (la zona del punto colpito sulla tassellazione).

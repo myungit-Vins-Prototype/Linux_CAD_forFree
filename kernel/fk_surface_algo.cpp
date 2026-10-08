@@ -348,10 +348,13 @@ void projectOnBSplineSurface(const BSplineSurface &surface, const Vec3 &p, const
 
     // Best-first: si esplora prima la pezza con il limite inferiore piu' basso,
     // cosi' il minimo si trova presto e il resto viene scartato subito.
+    // tree >= 0: nodo della gerarchia dei box delle pezze non ancora aperto
+    // (patch vuota); altrimenti una pezza o un suo pezzo.
     struct Node {
         double lowerBound;
         BezierPatch patch;
         int depth;
+        int tree = -1;
         bool operator<(const Node &other) const { return lowerBound > other.lowerBound; }
     };
     std::priority_queue<Node> queue;
@@ -359,24 +362,45 @@ void projectOnBSplineSurface(const BSplineSurface &surface, const Vec3 &p, const
     // Le pezze si calcolano una volta per superficie: la proiezione si ripete
     // per ogni raggio della selezione a video e per ogni punto delle SP-curve.
     const auto patches = surface.cachedBezierPatches();
-    // Gli angoli delle pezze intere sono i loro poli d'angolo (punti della
-    // superficie): il piu' vicino si sceglie dai poli e si valuta una volta.
-    double nearestCorner = std::numeric_limits<double>::infinity(), cornerU = 0.0, cornerV = 0.0;
-    for (const BSplineSurface &piece : *patches) {
+    const auto tree = surface.cachedPatchTree();
+    const auto overlaps = [&](const Interval &u, const Interval &v) {
+        return !(u.hi < uRange.lo || u.lo > uRange.hi || v.hi < vRange.lo || v.lo > vRange.hi);
+    };
+    // Una pezza intera entra nella coda; i suoi angoli sono poli d'angolo
+    // (punti della superficie): il piu' vicino migliora subito il limite superiore.
+    const auto pushPatch = [&](const BSplineSurface &piece) {
         BezierPatch patch = toPatch(piece);
-        if (patch.u.hi < uRange.lo || patch.u.lo > uRange.hi || patch.v.hi < vRange.lo || patch.v.lo > vRange.hi) continue;
+        if (!overlaps(patch.u, patch.v)) return;
         const PatchBounds bounds = patchBounds(patch, p);
-        rootDiagonal = std::max(rootDiagonal, bounds.diagonal);
         const bool whole = patch.u.lo >= uRange.lo && patch.u.hi <= uRange.hi && patch.v.lo >= vRange.lo && patch.v.hi <= vRange.hi;
-        if (whole)
+        if (whole) {
+            double nearestCorner = std::numeric_limits<double>::infinity(), cornerU = 0.0, cornerV = 0.0;
             for (int a = 0; a < 2; ++a)
                 for (int b = 0; b < 2; ++b) {
                     const double d = distance(patch.pole(a * patch.uDegree, b * patch.vDegree), p);
                     if (d < nearestCorner) nearestCorner = d, cornerU = a ? patch.u.hi : patch.u.lo, cornerV = b ? patch.v.hi : patch.v.lo;
                 }
+            if (nearestCorner < candidates.bestDistance()) candidates.consider(cornerU, cornerV);
+        }
         queue.push({bounds.lowerBound, std::move(patch), 0});
+    };
+    const auto boxDistance = [&](const BSplineSurface::PatchTree::Node &node) {
+        Vec3 outside;
+        for (int c = 0; c < 3; ++c) outside[c] = std::max({node.lo[c] - p[c], 0.0, p[c] - node.hi[c]});
+        return norm(outside);
+    };
+    if (!tree->nodes.empty()) {
+        // La soglia delle foglie resta quella della pezza piu' grande, come
+        // quando le pezze si mettevano tutte in coda.
+        rootDiagonal = tree->largestPatchDiagonal;
+        if (overlaps(tree->nodes.front().u, tree->nodes.front().v)) queue.push({boxDistance(tree->nodes.front()), {}, 0, 0});
+    } else {
+        for (const BSplineSurface &piece : *patches) {
+            const BezierPatch patch = toPatch(piece);
+            if (overlaps(patch.u, patch.v)) rootDiagonal = std::max(rootDiagonal, patchBounds(patch, p).diagonal);
+        }
+        for (const BSplineSurface &piece : *patches) pushPatch(piece);
     }
-    if (std::isfinite(nearestCorner)) candidates.consider(cornerU, cornerV);
     // Lati di una pezza intera che sono linee di nodo interne in cui la
     // superficie non e' C1 (altrove il minimo e' stazionario e lo trova Newton).
     const auto sharp = surface.cachedSharpKnotLines();
@@ -397,6 +421,18 @@ void projectOnBSplineSurface(const BSplineSurface &surface, const Vec3 &p, const
         const double best = candidates.bestDistance();
         const double margin = 1.0e-12 * std::max(1.0, best);
         if (node.lowerBound >= best - margin) break;  // tutte le altre hanno un limite ancora piu' alto
+        if (node.tree >= 0) {
+            const auto &treeNode = tree->nodes[std::size_t(node.tree)];
+            if (treeNode.leaf >= 0) {
+                pushPatch((*patches)[std::size_t(treeNode.leaf)]);
+                continue;
+            }
+            for (int child : {treeNode.first, treeNode.second}) {
+                const auto &childNode = tree->nodes[std::size_t(child)];
+                if (overlaps(childNode.u, childNode.v)) queue.push({std::max(node.lowerBound, boxDistance(childNode)), {}, 0, child});
+            }
+            continue;
+        }
         const Interval uBox{std::max(node.patch.u.lo, uRange.lo), std::min(node.patch.u.hi, uRange.hi)};
         const Interval vBox{std::max(node.patch.v.lo, vRange.lo), std::min(node.patch.v.hi, vRange.hi)};
         if (!(uBox.lo <= uBox.hi && vBox.lo <= vBox.hi)) continue;

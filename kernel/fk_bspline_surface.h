@@ -52,6 +52,21 @@ public:
         std::vector<double> u, v;
     };
     std::shared_ptr<const SharpKnotLines> cachedSharpKnotLines() const;
+    // Gerarchia dei box dei poli delle pezze di Bezier (rettangoli della
+    // griglia delle pezze divisi a meta' lungo il lato piu' lungo), calcolata
+    // una volta: la proiezione di un punto scende dai box invece di guardare
+    // tutte le pezze (le superfici a distanza delle B-spline ne hanno
+    // decine di migliaia). leaf = indice della pezza nelle foglie, -1 altrove.
+    struct PatchTree {
+        struct Node {
+            Vec3 lo, hi;     // box dei poli euclidei delle pezze del nodo
+            Interval u, v;   // rettangolo dei parametri
+            int leaf = -1, first = -1, second = -1;
+        };
+        std::vector<Node> nodes;  // nodes[0] = radice (vuoto senza pezze)
+        double largestPatchDiagonal = 0.0;
+    };
+    std::shared_ptr<const PatchTree> cachedPatchTree() const;
 
 private:
     int uDegree_, vDegree_;
@@ -61,6 +76,7 @@ private:
     std::vector<double> weights_;
     mutable std::shared_ptr<const std::vector<BSplineSurface>> patchCache_;
     mutable std::shared_ptr<const SharpKnotLines> sharpCache_;
+    mutable std::shared_ptr<const PatchTree> treeCache_;
     // Isoparametriche ai nodi (le linee delle pezze), calcolate una volta: la
     // proiezione di un punto le prova tutte, e con le curve rifatte a ogni
     // chiamata costava millisecondi per punto (selezione a video, SP-curve).

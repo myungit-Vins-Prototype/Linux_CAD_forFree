@@ -366,6 +366,37 @@ public:
         }
         std::cout << "Rimozione durante scelta spigoli: OK" << std::endl;
     }
+    // Diagnostica facoltativa: --display-stats file.prt. Dimensioni della
+    // visualizzazione salvata (o ricalcolata) di ogni corpo e del suo B-rep.
+    static void displayStats(const QString &path) {
+        using namespace ForgeCad;
+        DocumentState document;
+        QElapsedTimer timer;
+        timer.start();
+        require(loadDocumentFile(path, document).isEmpty(), "lettura documento");
+        std::cout << "lettura " << timer.elapsed() << " ms" << std::endl;
+        timer.restart();
+        CadViewport viewport;
+        viewport.loadDocument(document);
+        std::cout << "loadDocument " << timer.elapsed() << " ms" << std::endl;
+        for (int i = 0; i < viewport.extrusions_.size(); ++i) {
+            const ExtrusionObject &body = viewport.extrusions_.at(i);
+            qsizetype edgePoints = 0;
+            for (const auto &edge : body.display.edges) edgePoints += edge.size();
+            std::cout << "B" << i << " " << body.name.toStdString() << " visibile=" << body.visible
+                      << " cache=" << body.cachedGeometry << " qualita'=" << body.display.quality
+                      << " triangoli=" << body.display.vertices.size() / 3 << " polilinee=" << body.display.edges.size()
+                      << " punti spigoli=" << edgePoints << " triangleFaces=" << body.display.triangleFaces.size();
+            if (body.forgeBody) {
+                std::size_t poles = 0;
+                for (auto f : body.forgeBody->faces())
+                    if (auto spline = std::dynamic_pointer_cast<const Kernel::BSplineSurface>(body.forgeBody->face(f).surface))
+                        poles += std::size_t(spline->uPoleCount()) * std::size_t(spline->vPoleCount());
+                std::cout << " facce=" << body.forgeBody->faces().size() << " poli B-spline=" << poles;
+            }
+            std::cout << std::endl;
+        }
+    }
     // Diagnostica facoltativa: --mesh-stats file.prt [lato scarto angolo].
     static void meshStats(const QStringList &args) {
         using namespace ForgeCad;
@@ -869,6 +900,9 @@ public:
             QStringLiteral("Raccordi facce loft R%1 mm").arg(radius));
         std::cout << "R=" << radius << " mm: " << error.toStdString() << std::endl;
         require(error.isEmpty(), "creazione raccordi sui contorni delle facce");
+        // Il corpo logico era nascosto con gli altri: la variante nuova deve vedersi all'apertura.
+        viewport.setObjectVisible(SceneObjectKind::Extrusion, int(viewport.extrusions_.size()) - 1, true);
+        require(viewport.extrusions_.back().visible, "raccordo visibile nella copia");
         const auto result = viewport.extrusions_.back().forgeBody;
         require(bool(result) && forgeBlendHasEffect(base, result), "raccordi effettivamente costruiti");
         require(checkBody(*result).empty(), "B-rep raccordato valido");
@@ -1102,7 +1136,17 @@ public:
             t.start();
             while (frames == start && t.elapsed() < 2000) QApplication::processEvents(QEventLoop::AllEvents, 5);
         };
+        if (!qEnvironmentVariableIsEmpty("FORGECAD_BENCH_SHOW")) {
+            v->setObjectVisible(SceneObjectKind::Extrusion, qEnvironmentVariableIntValue("FORGECAD_BENCH_SHOW"), true);
+            v->fitAll();
+            for (int i = 0; i < 20; ++i) QApplication::processEvents();
+        }
         const QPointF center(v->width() / 2.0, v->height() / 2.0);
+        if (!qEnvironmentVariableIsEmpty("FORGECAD_BENCH_SHOT")) v->grabFramebuffer().save(qEnvironmentVariable("FORGECAD_BENCH_SHOT"));
+        {
+            const SceneSelection hit = v->pickSceneObject(center.toPoint(), false);
+            std::cout << "al centro: tipo " << int(hit.kind) << " indice " << hit.index << std::endl;
+        }
         QElapsedTimer t;
         t.start();
         for (int i = 0; i < count; ++i) {
@@ -1113,16 +1157,31 @@ public:
         }
         std::cout << "rotella -> fotogramma: " << double(t.nsecsElapsed()) / 1e6 / count << " ms" << std::endl;
         QPointF p = center;
+        // Hover sul corpo prima del clic, poi il primo fotogramma dell'orbita
+        // a parte: e' l'attesa che si nota prima che la vista cominci a girare.
+        t.restart();
+        {
+            QMouseEvent hover(QEvent::MouseMove, p, v->mapToGlobal(p), Qt::NoButton, Qt::NoButton, Qt::NoModifier);
+            QApplication::sendEvent(v, &hover);
+            waitFrame();
+        }
+        std::cout << "primo hover -> fotogramma: " << double(t.nsecsElapsed()) / 1e6 << " ms" << std::endl;
+        t.restart();
         QMouseEvent press(QEvent::MouseButtonPress, p, v->mapToGlobal(p), Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
         QApplication::sendEvent(v, &press);
+        std::cout << "pressione: " << double(t.nsecsElapsed()) / 1e6 << " ms" << std::endl;
         t.restart();
         for (int i = 0; i < count; ++i) {
             p += QPointF(8, 3);
             QMouseEvent move(QEvent::MouseMove, p, v->mapToGlobal(p), Qt::NoButton, Qt::LeftButton, Qt::NoModifier);
             QApplication::sendEvent(v, &move);
             waitFrame();
+            if (i == 0) {
+                std::cout << "primo fotogramma dell'orbita: " << double(t.nsecsElapsed()) / 1e6 << " ms" << std::endl;
+                t.restart();
+            }
         }
-        std::cout << "orbita -> fotogramma: " << double(t.nsecsElapsed()) / 1e6 / count << " ms" << std::endl;
+        std::cout << "orbita -> fotogramma: " << double(t.nsecsElapsed()) / 1e6 / std::max(1, count - 1) << " ms" << std::endl;
         QMouseEvent release(QEvent::MouseButtonRelease, p, v->mapToGlobal(p), Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
         QApplication::sendEvent(v, &release);
         t.restart();
@@ -1133,6 +1192,45 @@ public:
             waitFrame();
         }
         std::cout << "hover -> fotogramma: " << double(t.nsecsElapsed()) / 1e6 / count << " ms" << std::endl;
+        if (!qEnvironmentVariableIsEmpty("FORGECAD_BENCH_IDLE")) {
+            QElapsedTimer idle;
+            idle.start();
+            while (idle.elapsed() < qEnvironmentVariableIntValue("FORGECAD_BENCH_IDLE")) QApplication::processEvents(QEventLoop::AllEvents, 20);
+        }
+        // Clic semplice sul corpo (selezione al rilascio): tempo sincrono, poi il primo fotogramma dell'orbita successiva.
+        for (int i = 0; i < 3; ++i) {
+            const QPointF c = center + QPointF(20 * i, 10 * i);
+            t.restart();
+            QMouseEvent clickPress(QEvent::MouseButtonPress, c, v->mapToGlobal(c), Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+            QApplication::sendEvent(v, &clickPress);
+            QMouseEvent clickRelease(QEvent::MouseButtonRelease, c, v->mapToGlobal(c), Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
+            QApplication::sendEvent(v, &clickRelease);
+            std::cout << "clic " << i << ": " << double(t.nsecsElapsed()) / 1e6 << " ms";
+            t.restart();
+            QPointF q = c;
+            QMouseEvent orbitPress(QEvent::MouseButtonPress, q, v->mapToGlobal(q), Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+            QApplication::sendEvent(v, &orbitPress);
+            for (int k = 0; k < 3; ++k) {
+                q += QPointF(8, 3);
+                QMouseEvent move(QEvent::MouseMove, q, v->mapToGlobal(q), Qt::NoButton, Qt::LeftButton, Qt::NoModifier);
+                QApplication::sendEvent(v, &move);
+            }
+            waitFrame();
+            std::cout << ", poi orbita al primo fotogramma " << double(t.nsecsElapsed()) / 1e6 << " ms" << std::endl;
+            QMouseEvent orbitRelease(QEvent::MouseButtonRelease, q, v->mapToGlobal(q), Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
+            QApplication::sendEvent(v, &orbitRelease);
+        }
+        // Lavoro sincrono di ogni movimento senza tasti (hover), senza aspettare i fotogrammi.
+        for (int i = 0; i < 6; ++i) {
+            p += QPointF(i % 2 ? -15 : 12, 6);
+            t.restart();
+            QMouseEvent move(QEvent::MouseMove, p, v->mapToGlobal(p), Qt::NoButton, Qt::NoButton, Qt::NoModifier);
+            QApplication::sendEvent(v, &move);
+            const double sent = double(t.nsecsElapsed()) / 1e6;
+            QApplication::processEvents(QEventLoop::AllEvents, 5);
+            QApplication::processEvents(QEventLoop::AllEvents, 5);
+            std::cout << "hover " << i << ": evento " << sent << " ms, con il timer " << double(t.nsecsElapsed()) / 1e6 << " ms" << std::endl;
+        }
         window.close();
     }
     // Funzioni proprietarie delle facce cliccate su una griglia di pixel:
@@ -3998,6 +4096,8 @@ int main(int argc, char **argv) {
         const int bench = int(app.arguments().indexOf(QStringLiteral("--bench-view")));
         if (bench > 0) { ViewportInteractionTest::benchView(app.arguments().mid(bench + 1)); return 0; }
         const int edit = int(app.arguments().indexOf(QStringLiteral("--render-edit")));
+        const int displayStatsArg = int(app.arguments().indexOf(QStringLiteral("--display-stats")));
+        if (displayStatsArg > 0) { ViewportInteractionTest::displayStats(app.arguments().value(displayStatsArg + 1)); return 0; }
         const int meshStats = int(app.arguments().indexOf(QStringLiteral("--mesh-stats")));
         if (meshStats > 0) { ViewportInteractionTest::meshStats(app.arguments().mid(meshStats + 1)); return 0; }
         if (edit > 0) ViewportInteractionTest::renderEdit(app.arguments().mid(edit + 1));

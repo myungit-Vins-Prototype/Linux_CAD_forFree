@@ -1392,6 +1392,14 @@ void forgeExtrusionPreviewDisplay(const QVector<ForgeBody> &bases, const Body &r
     forgeLocalPreviewDisplay(raw, result, quality, display, divisions, retainedDisplay);
 }
 
+void forgeWarmPickCaches(const Body &body) {
+    for (FaceId face : body.faces())
+        if (const auto *spline = dynamic_cast<const BSplineSurface *>(body.face(face).surface.get())) {
+            spline->cachedPatchTree();
+            spline->cachedSharpKnotLines();
+        }
+}
+
 bool forgePickFace(const Body &body, const QVector3D &origin, const QVector3D &direction, FaceHit &hit, const Kernel::RayFaceIndex *index,
                    const Kernel::Interval *window) {
     try {

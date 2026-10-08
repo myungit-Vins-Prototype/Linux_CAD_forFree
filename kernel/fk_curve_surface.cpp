@@ -227,8 +227,24 @@ struct NumericSearch {
     // tutti non sta sulla superficie, senza proiettarlo (la proiezione su una
     // B-spline con molti nodi costa millisecondi).
     std::vector<Box> boxes;
+    // Per le B-spline la gerarchia dei box delle pezze sostituisce `boxes`.
+    std::shared_ptr<const BSplineSurface::PatchTree> tree;
 
     bool maybeOnSurface(const Vec3 &x) const {
+        if (tree && !tree->nodes.empty()) {
+            std::vector<int> stack{0};
+            while (!stack.empty()) {
+                const auto &node = tree->nodes[std::size_t(stack.back())];
+                stack.pop_back();
+                bool inside = true;
+                for (int k = 0; k < 3 && inside; ++k) inside = x[k] >= node.lo[k] - tolerance && x[k] <= node.hi[k] + tolerance;
+                if (!inside) continue;
+                if (node.leaf >= 0) return true;
+                stack.push_back(node.first);
+                stack.push_back(node.second);
+            }
+            return false;
+        }
         if (boxes.empty()) return true;
         for (const Box &box : boxes) {
             bool inside = true;
@@ -422,21 +438,35 @@ CurveSurfaceIntersection numericCurveSurface(const Curve<3> &curve, const Interv
     CurveSurfaceIntersection out;
     const Interval u = surface.uDomain(), v = surface.vDomain();
     if (!u.isFinite() || !v.isFinite()) throw std::domain_error("numericCurveSurface: superficie illimitata");
-    const BSplineSurface nurbs = toBSplineSurface(surface, u, v);
     const std::vector<BSplineCurve<3>> pieces = rationalBezierPieces(curve, range);
-    Box all, onSurface;
-    for (int i = 0; i < nurbs.uPoleCount(); ++i)
-        for (int j = 0; j < nurbs.vPoleCount(); ++j) onSurface.add(nurbs.pole(i, j));
-    all = onSurface;
+    // Le pezze di una B-spline (sull'intero dominio) e la gerarchia dei loro
+    // box sono in cache nella superficie: la selezione a video ripete
+    // l'intersezione a ogni clic, e le superfici a distanza hanno decine di
+    // migliaia di pezze (copiarle e guardarle tutte costava centinaia di ms).
+    std::shared_ptr<const std::vector<BSplineSurface>> patches;
+    std::shared_ptr<const BSplineSurface::PatchTree> tree;
+    Box onSurface;
+    if (surface.type() == SurfaceType::BSpline) {
+        const auto &spline = static_cast<const BSplineSurface &>(surface);
+        patches = spline.cachedBezierPatches();
+        tree = spline.cachedPatchTree();
+        if (tree->nodes.empty()) tree = nullptr;
+    }
+    if (tree) {
+        onSurface.add(tree->nodes.front().lo);
+        onSurface.add(tree->nodes.front().hi);
+    } else {
+        const BSplineSurface nurbs = toBSplineSurface(surface, u, v);
+        for (int i = 0; i < nurbs.uPoleCount(); ++i)
+            for (int j = 0; j < nurbs.vPoleCount(); ++j) onSurface.add(nurbs.pole(i, j));
+        if (!patches) patches = std::make_shared<const std::vector<BSplineSurface>>(nurbs.bezierPatches());
+    }
+    Box all = onSurface;
     for (const BSplineCurve<3> &piece : pieces)
         for (const Vec3 &p : piece.poles()) all.add(p);
-    NumericSearch search{curve, range, surface, tolerance, std::max(all.diagonal(), 1e-9), out, false, 0, {}, {}};
-    // Le pezze di una B-spline (sull'intero dominio) sono in cache nella
-    // superficie: la selezione a video ripete l'intersezione a ogni clic.
-    std::shared_ptr<const std::vector<BSplineSurface>> patches;
-    if (surface.type() == SurfaceType::BSpline) patches = static_cast<const BSplineSurface &>(surface).cachedBezierPatches();
-    else patches = std::make_shared<const std::vector<BSplineSurface>>(nurbs.bezierPatches());
-    for (const BSplineSurface &patch : *patches) search.boxes.push_back(patchBox(patch));
+    NumericSearch search{curve, range, surface, tolerance, std::max(all.diagonal(), 1e-9), out, false, 0, {}, tree, {}};
+    if (!tree)
+        for (const BSplineSurface &patch : *patches) search.boxes.push_back(patchBox(patch));
     for (const BSplineCurve<3> &piece : pieces) {
         // Tratto che giace sulla superficie: la suddivisione non finirebbe mai.
         const Interval dom = piece.domain();
@@ -445,7 +475,32 @@ CurveSurfaceIntersection numericCurveSurface(const Curve<3> &curve, const Interv
             out.coincident.push_back({std::min(a, b), std::max(a, b)});
             continue;
         }
-        for (const BSplineSurface &patch : *patches) search.search(piece, patch, 0);
+        if (!tree) {
+            for (const BSplineSurface &patch : *patches) search.search(piece, patch, 0);
+            continue;
+        }
+        // Solo le pezze il cui box tocca quello del tratto (search lo
+        // scarterebbe comunque al primo controllo), nell'ordine delle pezze.
+        Box pieceBox;
+        for (const Vec3 &p : piece.poles()) pieceBox.add(p);
+        const Box padded = pieceBox.padded(tolerance);
+        std::vector<int> leaves, stack{0};
+        while (!stack.empty()) {
+            const auto &node = tree->nodes[std::size_t(stack.back())];
+            stack.pop_back();
+            Box box;
+            box.add(node.lo);
+            box.add(node.hi);
+            if (!padded.overlaps(box)) continue;
+            if (node.leaf >= 0) {
+                leaves.push_back(node.leaf);
+                continue;
+            }
+            stack.push_back(node.first);
+            stack.push_back(node.second);
+        }
+        std::sort(leaves.begin(), leaves.end());
+        for (int leaf : leaves) search.search(piece, (*patches)[std::size_t(leaf)], 0);
     }
     // Tratti sulla superficie trovati: estremi esatti (i tratti della
     // suddivisione finiscono in punti qualsiasi), e le radici che vi cadono

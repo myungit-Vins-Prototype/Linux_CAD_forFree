@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <atomic>
+#include <functional>
 #include <memory>
 
 #include "fk_bspline_basis.h"
@@ -144,6 +145,71 @@ std::shared_ptr<const std::vector<BSplineSurface>> BSplineSurface::cachedBezierP
         std::atomic_store(&patchCache_, patches);
     }
     return patches;
+}
+
+std::shared_ptr<const BSplineSurface::PatchTree> BSplineSurface::cachedPatchTree() const {
+    std::shared_ptr<const PatchTree> tree = std::atomic_load(&treeCache_);
+    if (tree) return tree;
+    const std::shared_ptr<const std::vector<BSplineSurface>> patches = cachedBezierPatches();
+    auto result = std::make_shared<PatchTree>();
+    // Griglia delle pezze: [iu * nv + iv], nv = pezze con lo stesso intervallo u della prima.
+    std::size_t nv = 0;
+    while (nv < patches->size() && (*patches)[nv].uDomain().lo == patches->front().uDomain().lo) ++nv;
+    if (nv > 0 && patches->size() % nv == 0) {
+        const std::size_t nu = patches->size() / nv;
+        std::vector<PatchTree::Node> leaves(patches->size());
+        for (std::size_t k = 0; k < patches->size(); ++k) {
+            const BSplineSurface &patch = (*patches)[k];
+            PatchTree::Node &node = leaves[k];
+            node.lo = node.hi = patch.pole(0, 0);
+            for (int i = 0; i < patch.uPoleCount(); ++i)
+                for (int j = 0; j < patch.vPoleCount(); ++j)
+                    for (int c = 0; c < 3; ++c) {
+                        node.lo[c] = std::min(node.lo[c], patch.pole(i, j)[c]);
+                        node.hi[c] = std::max(node.hi[c], patch.pole(i, j)[c]);
+                    }
+            node.u = patch.uDomain();
+            node.v = patch.vDomain();
+            node.leaf = int(k);
+            result->largestPatchDiagonal = std::max(result->largestPatchDiagonal, distance(node.lo, node.hi));
+        }
+        // Rettangolo [u0, u1) x [v0, v1) di pezze: foglia o due meta'.
+        std::function<int(std::size_t, std::size_t, std::size_t, std::size_t)> build =
+            [&](std::size_t u0, std::size_t u1, std::size_t v0, std::size_t v1) -> int {
+            const int index = int(result->nodes.size());
+            if (u1 - u0 == 1 && v1 - v0 == 1) {
+                result->nodes.push_back(leaves[u0 * nv + v0]);
+                return index;
+            }
+            result->nodes.emplace_back();
+            int first, second;
+            if (u1 - u0 >= v1 - v0) {
+                const std::size_t m = (u0 + u1) / 2;
+                first = build(u0, m, v0, v1);
+                second = build(m, u1, v0, v1);
+            } else {
+                const std::size_t m = (v0 + v1) / 2;
+                first = build(u0, u1, v0, m);
+                second = build(u0, u1, m, v1);
+            }
+            PatchTree::Node &node = result->nodes[std::size_t(index)];
+            const PatchTree::Node &a = result->nodes[std::size_t(first)], &b = result->nodes[std::size_t(second)];
+            for (int c = 0; c < 3; ++c) {
+                node.lo[c] = std::min(a.lo[c], b.lo[c]);
+                node.hi[c] = std::max(a.hi[c], b.hi[c]);
+            }
+            node.u = {std::min(a.u.lo, b.u.lo), std::max(a.u.hi, b.u.hi)};
+            node.v = {std::min(a.v.lo, b.v.lo), std::max(a.v.hi, b.v.hi)};
+            node.first = first;
+            node.second = second;
+            return index;
+        };
+        result->nodes.reserve(2 * patches->size());
+        build(0, nu, 0, nv);
+    }
+    tree = result;
+    std::atomic_store(&treeCache_, tree);
+    return tree;
 }
 
 std::shared_ptr<const BSplineSurface::SharpKnotLines> BSplineSurface::cachedSharpKnotLines() const {

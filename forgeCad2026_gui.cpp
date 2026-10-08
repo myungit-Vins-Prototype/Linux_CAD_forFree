@@ -6345,8 +6345,46 @@ private:
         selectedFace_ = {};  // la geometria (e la numerazione delle facce) puo' essere cambiata
         selectedObjects_.clear();  // gli indici possono essere cambiati
         clearFeatureHighlights();
+        warmPickCaches();
         if (documentChangedCallback_) documentChangedCallback_();
         update();
+    }
+
+    // Cache della selezione esatta dei corpi visibili preparate in un thread
+    // (forgeWarmPickCaches), una volta per B-rep: altrimenti la prima
+    // costruzione bloccava il primo clic su un corpo con superfici a distanza
+    // molto fitte (Loft_offset: mezzo secondo prima che la vista rispondesse).
+    void warmPickCaches() {
+        for (auto it = warmedBodies_.begin(); it != warmedBodies_.end();)
+            it = it->expired() ? warmedBodies_.erase(it) : std::next(it);
+        // I corpi visibili e la catena dei loro operandi: il clic cerca la
+        // feature proprietaria della faccia anche sugli stadi precedenti
+        // (faceOwnerFeature), che proiettano sulle loro superfici.
+        QSet<int> chain;
+        QVector<int> pending;
+        for (int index = 0; index < extrusions_.size(); ++index)
+            if (extrusions_.at(index).visible) pending.append(index), chain.insert(index);
+        while (!pending.isEmpty()) {
+            const int index = pending.takeLast();
+            for (int operand : bodyOperands(extrusions_.at(index)))
+                if (operand >= 0 && operand < index && !chain.contains(operand)) chain.insert(operand), pending.append(operand);
+        }
+        for (int index : chain) {
+            const ExtrusionObject &body = extrusions_.at(index);
+            if (body.suppressed || !body.forgeBody || !isShapeBody(body)) continue;
+            const ForgeCad::ForgeBody forgeBody = body.forgeBody;
+            const bool warmed = std::any_of(warmedBodies_.begin(), warmedBodies_.end(), [&](const std::weak_ptr<const ForgeCad::Kernel::Body> &known) {
+                return !known.owner_before(forgeBody) && !forgeBody.owner_before(known);
+            });
+            if (warmed) continue;
+            warmedBodies_.push_back(forgeBody);
+            QThreadPool::globalInstance()->start([forgeBody] {
+                try {
+                    ForgeCad::forgeWarmPickCaches(*forgeBody);
+                } catch (const std::exception &) {
+                }
+            });
+        }
     }
 
     // Modifica allo schizzo attivo: rigenera i corpi che ne dipendono.
@@ -11732,6 +11770,7 @@ private:
     mutable std::unique_ptr<QOpenGLFramebufferObject> pickingBuffer_;
     mutable quint64 pickingBufferSerial_ = std::numeric_limits<quint64>::max();
     mutable QVector<RaySelectionCache> raySelectionCache_;
+    std::vector<std::weak_ptr<const ForgeCad::Kernel::Body>> warmedBodies_;  // B-rep con le cache di selezione gia' preparate
     mutable QVector<ProjectedEdges> projectedEdges_;
     mutable std::array<double, 18> projectionKey_{};
     mutable QMatrix4x4 projectionMatrix_;
