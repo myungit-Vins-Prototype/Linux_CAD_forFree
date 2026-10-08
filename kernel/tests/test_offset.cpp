@@ -530,3 +530,33 @@ FK_TEST(OffsetLoftExtendedSeamsTrimBoth) {
     for (const auto &piece : planePieces) checkValid(piece);
     for (const auto &piece : sheetPieces) checkValid(piece);
 }
+
+// Fianco del loft di Loft_offset.prt (B-spline 5 x 3 poli) a distanza 3 sulla
+// finestra allargata dalla cucitura mantenuta: la bicubica di Hermite aveva
+// 1180 x 520 poli. Le superfici cosi' fitte si danno come bicubica C2 (nodi
+// semplici dentro i tratti lisci): stessa tolleranza, circa un ottavo dei poli.
+FK_TEST(OffsetDenseBSplineIsC2) {
+    std::ifstream in(std::string(FORGECAD_SOURCE_DIR) + "/kernel/tests/data/loft_offset_base.body", std::ios::binary);
+    FK_CHECK(bool(in));
+    if (!in) return;
+    std::stringstream data;
+    data << in.rdbuf();
+    const Body loft = readBodyBinary(data.str());
+    const auto side = std::dynamic_pointer_cast<const BSplineSurface>(loft.face(FaceId(0)).surface);
+    FK_CHECK(bool(side));
+    if (!side) return;
+    const Interval u{-0.179, 1.179}, v{-0.315, 1.315};
+    const auto offset = std::dynamic_pointer_cast<const BSplineSurface>(offsetSurface(*side, 3.0, u, v, 1e-7));
+    FK_CHECK(bool(offset));
+    if (!offset) return;
+    FK_CHECK(std::size_t(offset->uPoleCount()) * std::size_t(offset->vPoleCount()) < 120000);
+    FK_CHECK(offset->uDegree() == 3 && offset->vDegree() == 3);
+    // Scarto da S + d N nello stesso (u, v), su punti indipendenti dalla griglia.
+    double worst = 0.0;
+    for (int i = 0; i <= 60; ++i)
+        for (int j = 0; j <= 60; ++j) {
+            const double a = u.lo + u.length() * (i + 0.37) / 61.0, b = v.lo + v.length() * (j + 0.61) / 61.0;
+            worst = std::max(worst, distance(offset->point(a, b), side->point(a, b) + 3.0 * side->normal(a, b)));
+        }
+    FK_CHECK(worst < 1e-7);
+}

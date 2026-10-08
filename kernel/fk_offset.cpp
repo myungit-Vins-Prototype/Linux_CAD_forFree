@@ -9,7 +9,9 @@
 #include <set>
 #include <stdexcept>
 #include <string>
+#include <tuple>
 
+#include "fk_bspline_basis.h"
 #include "fk_bspline_surface.h"
 #include "fk_exchange.h"
 #include "fk_intersect.h"
@@ -131,6 +133,298 @@ void requireContinuousNormals(const BSplineSurface &surface, double d, const Int
             if (j + 1 < nv && std::find(sharp->v.begin(), sharp->v.end(), vs[j + 1]) != sharp->v.end())
                 check((*patches)[i * nv + j], (*patches)[i * nv + j + 1], false, vs[j + 1], {us[i], us[i + 1]});
         }
+}
+
+// Interpolazione cubica C2 con le derivate agli estremi (de Boor, "clamped"):
+// nodi x_0..x_n semplici all'interno, quadrupli agli estremi; n + 3 poli,
+// il primo e l'ultimo nei punti, il secondo e il penultimo dalle derivate.
+// La matrice di collocazione delle B-spline e' totalmente positiva:
+// eliminazione a banda senza pivot (de Boor, A Practical Guide to Splines).
+std::vector<double> clampedKnots(const std::vector<double> &x) {
+    std::vector<double> knots(4, x.front());
+    knots.insert(knots.end(), x.begin() + 1, x.end() - 1);
+    knots.insert(knots.end(), 4, x.back());
+    return knots;
+}
+
+std::vector<Vec3> clampedCubic(const std::vector<double> &x, const std::vector<double> &knots, const std::vector<Vec3> &values,
+                               const Vec3 &startSlope, const Vec3 &endSlope) {
+    const std::size_t n = x.size() - 1;
+    std::vector<Vec3> poles(n + 3);
+    poles[0] = values.front();
+    poles[1] = values.front() + ((x[1] - x[0]) / 3.0) * startSlope;
+    poles[n + 2] = values.back();
+    poles[n + 1] = values.back() - ((x[n] - x[n - 1]) / 3.0) * endSlope;
+    if (n < 2) return poles;
+    // Incognite: poli 2..n (n - 1). Riga r: il nodo x_{r+1}, al piu' tre poli non nulli.
+    const std::size_t m = n - 1;
+    std::vector<std::array<double, 3>> band(m);  // coefficienti dei poli r+1, r+2, r+3 (colonne r-1, r, r+1)
+    std::vector<Vec3> rhs(m);
+    const int poleCount = int(n + 3);
+    for (std::size_t r = 0; r < m; ++r) {
+        const double t = x[r + 1];
+        const int span = detail::findSpan(knots, 3, poleCount, t);
+        double basis[4];
+        detail::basisFunctionDerivatives(knots, span, t, 3, 0, basis);
+        band[r] = {0.0, 0.0, 0.0};
+        rhs[r] = values[r + 1];
+        for (int k = 0; k < 4; ++k) {
+            const int pole = span - 3 + k;
+            const double b = basis[k];
+            if (b == 0.0) continue;
+            if (pole < 2 || pole > int(n)) {
+                rhs[r] -= b * poles[std::size_t(pole)];
+                continue;
+            }
+            const int column = pole - 2;  // incognita
+            const int offset = column - int(r) + 1;
+            if (offset < 0 || offset > 2) throw std::logic_error("offset: interpolazione cubica fuori banda");
+            band[r][std::size_t(offset)] = b;
+        }
+    }
+    // Thomas (tridiagonale: sotto, diagonale, sopra).
+    for (std::size_t r = 1; r < m; ++r) {
+        const double factor = band[r][0] / band[r - 1][1];
+        band[r][1] -= factor * band[r - 1][2];
+        rhs[r] -= factor * rhs[r - 1];
+    }
+    std::vector<Vec3> unknown(m);
+    unknown[m - 1] = rhs[m - 1] / band[m - 1][1];
+    for (std::size_t r = m - 1; r-- > 0;) unknown[r] = (rhs[r] - band[r][2] * unknown[r + 1]) / band[r][1];
+    for (std::size_t r = 0; r < m; ++r) poles[r + 2] = unknown[r];
+    return poles;
+}
+
+// Superficie a distanza di una B-spline come bicubica C2: interpolazione
+// tensoriale dei punti di O = S + d N sulla griglia (derivate O_u, O_v, O_uv
+// esatte solo sui bordi), divisa nei tratti in cui S e' liscia. Sulle linee di
+// nodo di S (dove O e' solo G1) i nodi sono tripli e le derivate si prendono
+// dalla parte di ciascun tratto, come nella Hermite. Rispetto alla Hermite
+// (nodi interni tripli, 3 n + 1 poli per direzione) i poli sono circa un terzo
+// per direzione: sulle superfici a distanza dei loft con la cucitura
+// mantenuta erano oltre un milione. Griglia infittita finche' lo scarto da O
+// nello stesso (u, v) e' sotto la tolleranza; nullptr se non converge (si
+// ripiega sulla Hermite).
+// Poli della Hermite oltre i quali si tiene la C2 (circa un terzo per direzione).
+constexpr std::size_t kDenseOffsetPoles = 200000;
+
+SurfacePtr offsetBSplineC2(const Surface &surface, double d, const Interval &uw, const Interval &vw, double tolerance) {
+    requireContinuousNormals(static_cast<const BSplineSurface &>(surface), d, uw, vw, tolerance);
+    const std::vector<double> uSegments = sortedBreaks(uw, surface.uBreakpoints(uw), 1e-9 * uw.length());
+    const std::vector<double> vSegments = sortedBreaks(vw, surface.vBreakpoints(vw), 1e-9 * vw.length());
+    const auto O = [&](double u, double v) { return surface.point(u, v) + d * surface.normal(u, v); };
+    std::vector<double> us = uSegments, vs = vSegments;
+    // Nodi della griglia per tratto: [inizio, fine) degli indici in us/vs.
+    // La prima e l'ultima cella di ogni tratto restano cubiche di Hermite
+    // (nodi tripli, derivate esatte ai due estremi): i prolungamenti delle
+    // superfici (extendSheet, cucitura dell'offset) estrapolano proprio
+    // quel polinomio, e con la sola derivata prima imposta al bordo la
+    // seconda derivata dell'interpolante C2 li faceva divergere tra le due
+    // meta' di un loft.
+    const auto pieces = [](const std::vector<double> &grid, const std::vector<double> &segments) {
+        std::vector<std::pair<std::size_t, std::size_t>> result;
+        std::size_t start = 0;
+        for (std::size_t k = 1; k < segments.size(); ++k) {
+            const std::size_t end = std::size_t(std::lower_bound(grid.begin(), grid.end(), segments[k]) - grid.begin());
+            if (end - start >= 3) {
+                result.push_back({start, start + 1});
+                result.push_back({start + 1, end - 1});
+                result.push_back({end - 1, end});
+            } else {
+                result.push_back({start, end});
+            }
+            start = end;
+        }
+        return result;
+    };
+    const unsigned threads = threadCount(0);
+    // Derivate di O nei nodi, conservate tra un giro e l'altro (la griglia
+    // cresce soltanto): chiave = (u, v, lato in u, lato in v).
+    using JetKey = std::tuple<double, double, int, int>;
+    std::map<JetKey, OffsetJet> jetCache;
+    const auto build = [&]() -> SurfacePtr {
+        const auto uPieces = pieces(us, uSegments), vPieces = pieces(vs, vSegments);
+        {
+            // I nodi di ogni rettangolo, con il lato dei tratti; nuovi in parallelo.
+            std::vector<std::pair<JetKey, std::pair<double, double>>> missing;
+            std::set<JetKey> queued;
+            for (const auto &[ua, ub] : uPieces)
+                for (const auto &[va, vb] : vPieces) {
+                    const double eu = 1e-9 * (us[ub] - us[ua]), ev = 1e-9 * (vs[vb] - vs[va]);
+                    for (std::size_t i = ua; i <= ub; ++i)
+                        for (std::size_t j = va; j <= vb; ++j) {
+                            const JetKey key{us[i], vs[j], i == ub ? -1 : 1, j == vb ? -1 : 1};
+                            if (!jetCache.count(key) && queued.insert(key).second) missing.push_back({key, {eu, ev}});
+                        }
+                }
+            std::vector<OffsetJet> computed(missing.size());
+            std::vector<std::string> failure(missing.size());
+            parallelFor(missing.size(), threads, [&](std::size_t k) {
+                const auto &[key, steps] = missing[k];
+                try {
+                    computed[k] = offsetJet(surface, d, std::get<0>(key), std::get<1>(key), std::get<2>(key), std::get<3>(key), steps.first, steps.second);
+                } catch (const std::exception &e) {
+                    failure[k] = e.what();
+                }
+            });
+            for (const std::string &message : failure)
+                if (!message.empty()) throw std::domain_error(message);
+            for (std::size_t k = 0; k < missing.size(); ++k) jetCache.emplace(missing[k].first, computed[k]);
+        }
+        // Poli globali: tratti consecutivi condividono la riga del nodo triplo.
+        std::vector<std::size_t> uStart, vStart;
+        std::size_t uCount = 1, vCount = 1;
+        for (const auto &[a, b] : uPieces) uStart.push_back(uCount - 1), uCount += (b - a) + 2;
+        for (const auto &[a, b] : vPieces) vStart.push_back(vCount - 1), vCount += (b - a) + 2;
+        std::vector<Vec3> poles(uCount * vCount);
+        std::vector<std::string> failure(uPieces.size() * vPieces.size());
+        parallelFor(uPieces.size() * vPieces.size(), threads, [&](std::size_t job) {
+            const std::size_t pu = job / vPieces.size(), pv = job % vPieces.size();
+            try {
+                const auto [ua, ub] = uPieces[pu];
+                const auto [va, vb] = vPieces[pv];
+                const std::vector<double> x(us.begin() + std::ptrdiff_t(ua), us.begin() + std::ptrdiff_t(ub) + 1);
+                const std::vector<double> y(vs.begin() + std::ptrdiff_t(va), vs.begin() + std::ptrdiff_t(vb) + 1);
+                const std::size_t n = x.size() - 1, m = y.size() - 1;
+                const auto jet = [&](std::size_t i, std::size_t j) -> const OffsetJet & {
+                    return jetCache.at(JetKey{x[i], y[j], i == n ? -1 : 1, j == m ? -1 : 1});
+                };
+                const std::vector<double> xKnots = clampedKnots(x), yKnots = clampedKnots(y);
+                // Righe in u dei punti, poi dei O_v sui due bordi in v, poi colonne in v.
+                std::vector<std::vector<Vec3>> rows(m + 1);
+                for (std::size_t j = 0; j <= m; ++j) {
+                    std::vector<Vec3> values(n + 1);
+                    for (std::size_t i = 0; i <= n; ++i) values[i] = jet(i, j).p;
+                    rows[j] = clampedCubic(x, xKnots, values, jet(0, j).pu, jet(n, j).pu);
+                }
+                std::vector<Vec3> slopes[2];
+                for (int side = 0; side < 2; ++side) {
+                    const std::size_t j = side ? m : 0;
+                    std::vector<Vec3> values(n + 1);
+                    for (std::size_t i = 0; i <= n; ++i) values[i] = jet(i, j).pv;
+                    slopes[side] = clampedCubic(x, xKnots, values, jet(0, j).puv, jet(n, j).puv);
+                }
+                for (std::size_t k = 0; k < n + 3; ++k) {
+                    std::vector<Vec3> values(m + 1);
+                    for (std::size_t j = 0; j <= m; ++j) values[j] = rows[j][k];
+                    const std::vector<Vec3> column = clampedCubic(y, yKnots, values, slopes[0][k], slopes[1][k]);
+                    // Le righe comuni ai tratti le scrive il primo (stesse curve di bordo).
+                    for (std::size_t l = 0; l < m + 3; ++l) {
+                        if ((pu > 0 && k == 0) || (pv > 0 && l == 0)) continue;
+                        poles[(uStart[pu] + k) * vCount + vStart[pv] + l] = column[l];
+                    }
+                }
+            } catch (const std::exception &e) {
+                failure[job] = e.what();
+            }
+        });
+        for (const std::string &message : failure)
+            if (!message.empty()) throw std::domain_error(message);
+        const auto knots = [](const std::vector<double> &grid, const std::vector<std::pair<std::size_t, std::size_t>> &parts) {
+            std::vector<double> result(4, grid.front());
+            for (std::size_t p = 0; p < parts.size(); ++p) {
+                for (std::size_t k = parts[p].first + 1; k < parts[p].second; ++k) result.push_back(grid[k]);
+                if (p + 1 < parts.size()) result.insert(result.end(), 3, grid[parts[p].second]);
+            }
+            result.insert(result.end(), 4, grid.back());
+            return result;
+        };
+        return std::make_shared<BSplineSurface>(3, 3, knots(us, uPieces), knots(vs, vPieces), int(uCount), int(vCount), std::move(poles));
+    };
+    // Punti di controllo di una cella (3 per lato interno ai lati e 3 x 3 dentro): i
+    // valori di O non cambiano da un giro all'altro, solo l'interpolante.
+    static constexpr double kQ[3] = {0.25, 0.5, 0.75};
+    struct CellSamples {
+        std::array<Vec3, 21> o;
+    };
+    std::map<std::array<double, 4>, CellSamples> sampleCache;
+    const auto samplePoint = [&](std::size_t i, std::size_t j, int k, double &u, double &v) {
+        // k: 0..5 lati u (q, 0/1), 6..11 lati v (0/1, q), 12..20 interno.
+        double s, t;
+        if (k < 6) s = kQ[k / 2], t = double(k % 2);
+        else if (k < 12) s = double((k - 6) % 2), t = kQ[(k - 6) / 2];
+        else s = kQ[(k - 12) / 3], t = kQ[(k - 12) % 3];
+        u = us[i] + s * (us[i + 1] - us[i]);
+        v = vs[j] + t * (vs[j + 1] - vs[j]);
+    };
+    for (int round = 0;; ++round) {
+        const SurfacePtr fitted = build();
+        const std::size_t nu = us.size() - 1, nv = vs.size() - 1;
+        {
+            std::vector<std::size_t> missing;
+            std::vector<std::array<double, 4>> keys(nu * nv);
+            for (std::size_t c = 0; c < nu * nv; ++c) {
+                const std::size_t i = c / nv, j = c % nv;
+                keys[c] = {us[i], us[i + 1], vs[j], vs[j + 1]};
+                if (!sampleCache.count(keys[c])) missing.push_back(c);
+            }
+            std::vector<CellSamples> computed(missing.size());
+            parallelFor(missing.size(), threads, [&](std::size_t m) {
+                const std::size_t c = missing[m], i = c / nv, j = c % nv;
+                for (int k = 0; k < 21; ++k) {
+                    double u, v;
+                    samplePoint(i, j, k, u, v);
+                    computed[m].o[std::size_t(k)] = O(u, v);
+                }
+            });
+            for (std::size_t m = 0; m < missing.size(); ++m) sampleCache.emplace(keys[missing[m]], computed[m]);
+        }
+        std::vector<int> split(nu * nv, 0);
+        std::vector<std::string> failure(nu * nv);
+        parallelFor(nu * nv, threads, [&](std::size_t c) {
+            const std::size_t i = c / nv, j = c % nv;
+            try {
+                const CellSamples &exact = sampleCache.at({us[i], us[i + 1], vs[j], vs[j + 1]});
+                const auto error = [&](int k) {
+                    double u, v;
+                    samplePoint(i, j, k, u, v);
+                    return distance(fitted->point(u, v), exact.o[std::size_t(k)]);
+                };
+                double alongU = 0.0, alongV = 0.0, inside = 0.0;
+                for (int k = 0; k < 6; ++k) alongU = std::max(alongU, error(k));
+                for (int k = 6; k < 12; ++k) alongV = std::max(alongV, error(k));
+                for (int k = 12; k < 21; ++k) inside = std::max(inside, error(k));
+                if (inside <= tolerance && alongU <= tolerance && alongV <= tolerance) return;
+                const int mask = (alongU > 0.5 * tolerance ? 1 : 0) | (alongV > 0.5 * tolerance ? 2 : 0);
+                split[c] = mask ? mask : 3;
+            } catch (const std::exception &e) {
+                failure[c] = e.what();
+            }
+        });
+        for (const std::string &message : failure)
+            if (!message.empty()) throw std::domain_error(message);
+        std::set<std::size_t> splitU, splitV;
+        for (std::size_t c = 0; c < split.size(); ++c) {
+            if (split[c] & 1) splitU.insert(c / nv);
+            if (split[c] & 2) splitV.insert(c % nv);
+        }
+        if (splitU.empty() && splitV.empty()) {
+            // Solo le superfici molto fitte: sulle altre la Hermite resta (i
+            // prolungamenti e le giunzioni di extendSheet sulle meta' dei loft
+            // sono verificati su quella; con la C2 la giunzione quasi tangente
+            // di OffsetLoftExtendedSeamsTrimBoth non si approssima piu').
+            if ((3 * nu + 1) * (3 * nv + 1) < kDenseOffsetPoles) return nullptr;
+            return fitted;
+        }
+        // L'errore di un'interpolazione globale non dipende solo dalla cella:
+        // pochi giri in piu' della Hermite, poi si rinuncia (la Hermite resta).
+        if (round >= 20 || us.size() + splitU.size() > 4097 || vs.size() + splitV.size() > 4097
+            || (us.size() + splitU.size()) * (vs.size() + splitV.size()) > 400000)
+            return nullptr;
+        std::vector<double> nextU, nextV;
+        for (std::size_t i = 0; i + 1 < us.size(); ++i) {
+            nextU.push_back(us[i]);
+            if (splitU.count(i)) nextU.push_back(0.5 * (us[i] + us[i + 1]));
+        }
+        nextU.push_back(us.back());
+        for (std::size_t j = 0; j + 1 < vs.size(); ++j) {
+            nextV.push_back(vs[j]);
+            if (splitV.count(j)) nextV.push_back(0.5 * (vs[j] + vs[j + 1]));
+        }
+        nextV.push_back(vs.back());
+        us = std::move(nextU);
+        vs = std::move(nextV);
+    }
 }
 
 // Superficie a distanza di una B-spline: bicubica di Hermite a tratti sulla
@@ -611,7 +905,8 @@ SurfacePtr offsetSurface(const Surface &surface, double d, const Interval &uw, c
     }
     case SurfaceType::BSpline:
         if (!uw.isFinite() || !vw.isFinite()) throw std::domain_error("offset: finestra della B-spline non limitata");
-        result = offsetBSpline(surface, d, uw, vw, tolerance);
+        result = offsetBSplineC2(surface, d, uw, vw, tolerance);
+        if (!result) result = offsetBSpline(surface, d, uw, vw, tolerance);
         break;
     }
     if (!result) throw std::domain_error("offset: superficie non gestita");
