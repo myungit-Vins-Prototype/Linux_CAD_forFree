@@ -24,6 +24,7 @@
 #include "fk_surface_algo.h"
 #include "fk_curve_algo.h"
 #include "fk_topology.h"
+#include "fk_micro.h"
 #include "cad_history.h"
 #include "cad_history_graph.h"
 #include "cad_model_history.h"
@@ -16698,6 +16699,82 @@ static void measureDialog(QMainWindow *window, CadViewport *viewport) {
     viewport->setMeasureOverlay(false);
 }
 
+// Analisi -> Micro-geometrie: facce sottili, spigoli corti e quasi tangenti
+// del corpo selezionato (o del primo solido visibile), segnati nella vista
+// finche' la finestra resta aperta. Sono le geometrie di rumore che fanno
+// fallire raccordi e offset: si correggono nella feature che le crea.
+// Segni nella vista e righe del rapporto per le micro-geometrie del corpo `index`.
+static QVector<GeometryRef> microFeatureMarks(const ExtrusionObject &body, int index, QStringList &lines) {
+    QVector<GeometryRef> marks;
+    const ForgeCad::Kernel::Body &brep = *body.forgeBody;
+    for (const auto &feature : ForgeCad::Kernel::findMicroFeatures(brep)) {
+        GeometryRef ref;
+        ref.index = index;
+        ref.featureId = body.featureId;
+        if (feature.kind == ForgeCad::Kernel::MicroFeature::Kind::ThinFace) {
+            // La faccia si segna con i suoi bordi (i segni di faccia valgono
+            // solo per le facce piane e di rivoluzione).
+            for (const ForgeCad::Kernel::EdgeId edge : ForgeCad::faceBoundaryEdges(brep, ForgeCad::Kernel::FaceId(feature.index))) {
+                GeometryRef border = ref;
+                border.kind = 4;
+                const auto &geometry = brep.edge(edge);
+                border.point = ForgeCad::edgeReference(brep, edge, geometry.curve->point(0.5 * (geometry.range.lo + geometry.range.hi)));
+                marks.append(border);
+            }
+            lines << QStringLiteral("Faccia sottile F%1: larghezza circa %2 mm").arg(feature.index).arg(feature.measure, 0, 'g', 3);
+            continue;
+        } else {
+            ref.kind = 4;
+            ref.point = ForgeCad::edgeReference(brep, ForgeCad::Kernel::EdgeId(feature.index), feature.location);
+            if (feature.kind == ForgeCad::Kernel::MicroFeature::Kind::ShortEdge)
+                lines << QStringLiteral("Spigolo corto E%1: %2 mm").arg(feature.index).arg(feature.measure, 0, 'g', 3);
+            else
+                lines << QStringLiteral("Spigolo quasi tangente E%1: %2 gradi tra le facce").arg(feature.index)
+                             .arg(feature.measure * 180.0 / M_PI, 0, 'g', 3);
+        }
+        marks.append(ref);
+    }
+    return marks;
+}
+
+static void microFeaturesDialog(QWidget *parent, CadViewport *viewport) {
+    const QVector<ExtrusionObject> &bodies = viewport->extrusions();
+    int index = -1;
+    const SceneSelection selection = viewport->selection();
+    if (selection.kind == SceneObjectKind::Extrusion && selection.index >= 0 && selection.index < bodies.size()
+        && bodies.at(selection.index).forgeBody)
+        index = selection.index;
+    for (int k = bodies.size() - 1; k >= 0 && index < 0; --k)
+        if (bodies.at(k).visible && bodies.at(k).forgeBody) index = k;
+    if (index < 0) {
+        QMessageBox::information(parent, QStringLiteral("Micro-geometrie"), QStringLiteral("Nella scena non ci sono corpi."));
+        return;
+    }
+    const ExtrusionObject &body = bodies.at(index);
+    QStringList lines;
+    QVector<GeometryRef> marks;
+    try {
+        marks = microFeatureMarks(body, index, lines);
+    } catch (const std::exception &failure) {
+        QMessageBox::warning(parent, QStringLiteral("Micro-geometrie"), QString::fromUtf8(failure.what()));
+        return;
+    }
+    QMessageBox box(parent);
+    box.setWindowTitle(QStringLiteral("Micro-geometrie di %1").arg(body.name));
+    if (lines.isEmpty()) {
+        box.setText(QStringLiteral("Nessuna faccia sottile (sotto 0,05 mm), nessuno spigolo corto (sotto 0,05 mm) "
+                                   "e nessuno spigolo quasi tangente (tra 0,06 e 10 gradi)."));
+    } else {
+        box.setText(QStringLiteral("%1 micro-geometrie, segnate nella vista. Di solito sono rumore di una feature a monte "
+                                   "(loft, offset, estensioni) e fanno fallire raccordi e offset: conviene correggerle li'.")
+                        .arg(lines.size()));
+        box.setDetailedText(lines.join(QLatin1Char('\n')));
+    }
+    viewport->setReferenceMarks(marks);
+    box.exec();
+    viewport->setReferenceMarks({});
+}
+
 static void massPropertiesDialog(QWidget *parent, CadViewport *viewport) {
     const QVector<ExtrusionObject> &bodies = viewport->extrusions();
     QVector<int> candidates;
@@ -18490,6 +18567,9 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
     QAction *massAction = analysisMenu->addAction(QStringLiteral("Proprieta' di massa..."));
     massAction->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_M));
     massAction->setToolTip(QStringLiteral("Volume, massa, baricentro e momenti d'inerzia del corpo selezionato"));
+    QAction *microAction = analysisMenu->addAction(QStringLiteral("Micro-geometrie..."));
+    microAction->setToolTip(QStringLiteral("Facce sottili, spigoli corti e quasi tangenti del corpo selezionato: il rumore che fa fallire raccordi e offset"));
+    connect(microAction, &QAction::triggered, this, [this, viewport] { microFeaturesDialog(this, viewport); });
     QAction *measureAction = analysisMenu->addAction(QStringLiteral("Misura..."));
     measureAction->setShortcut(QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_M));
     measureAction->setToolTip(QStringLiteral("Misura nella vista: distanze, angoli, lunghezze, raggi e aree di punti, spigoli e facce"));

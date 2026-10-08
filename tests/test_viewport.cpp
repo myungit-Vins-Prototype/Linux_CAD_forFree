@@ -5,6 +5,7 @@
 #include "fk_body_check.h"
 #include "fk_boolean.h"
 #include "fk_body_io.h"
+#include "fk_step.h"
 #include "fk_classify.h"
 #include "fk_sew.h"
 #include "fk_helix.h"
@@ -29,6 +30,49 @@ static void require(bool ok, const char *message) {
 }
 class ViewportInteractionTest {
 public:
+    // Analisi -> Micro-geometrie sul vecchio corpo finale di Loft_offset
+    // (importato da STEP): le due strisce sottili, i quattro spigoli corti e i
+    // due giunti quasi tangenti, tutti ritrovati come riferimenti nella vista.
+    static void microFeatureMarksTest() {
+        using namespace ForgeCad;
+        std::ifstream in(std::string(FORGECAD_SOURCE_DIR) + "/kernel/tests/data/loft_offset_trimmed.body", std::ios::binary);
+        require(bool(in), "fixture del corpo rumoroso");
+        std::stringstream content;
+        content << in.rdbuf();
+        const Kernel::Body noisy = Kernel::readBodyBinary(content.str());
+        DocumentState state;
+        ExtrusionObject body;
+        body.feature = BodyFeature::Imported;
+        body.name = QStringLiteral("Corpo finale rumoroso");
+        body.importSource = QStringLiteral("loft_offset_trimmed.body");
+        Kernel::ExchangeBody exchange;
+        exchange.name = "corpo";
+        exchange.body = noisy;
+        body.importData = QByteArray::fromStdString(Kernel::writeStep({exchange}));
+        state.extrusions.append(body);
+        CadViewport viewport;
+        viewport.loadDocument(state);
+        require(viewport.extrusions_.size() == 1 && viewport.extrusions_.front().forgeBody, "corpo importato");
+        QStringList lines;
+        const QVector<GeometryRef> marks = microFeatureMarks(viewport.extrusions_.front(), 0, lines);
+        int thin = 0, shortEdges = 0, nearTangent = 0;
+        for (const QString &line : lines) {
+            thin += line.startsWith(QStringLiteral("Faccia sottile"));
+            shortEdges += line.startsWith(QStringLiteral("Spigolo corto"));
+            nearTangent += line.startsWith(QStringLiteral("Spigolo quasi tangente"));
+        }
+        std::cout << lines.join(QLatin1Char('\n')).toStdString() << std::endl;
+        require(thin == 2 && shortEdges == 4 && nearTangent == 2, "micro-geometrie del corpo rumoroso");
+        for (const GeometryRef &mark : marks) {
+            ResolvedRef resolved;
+            QString reason;
+            if (!resolveGeometryRef(mark, 1, viewport.sketches_, viewport.extrusions_, resolved, &reason))
+                std::cout << "tipo " << mark.kind << " id " << mark.point.subshape << ": " << reason.toStdString() << std::endl;
+            require(reason.isEmpty(), "segno risolto nella vista");
+        }
+        viewport.setReferenceMarks(marks);
+        require(viewport.refMarks_.size() == marks.size(), "segni nella vista");
+    }
     static void automaticSnapConstraints() {
         using namespace ForgeCad;
         const auto has = [](const SketchObject &sketch, ConstraintType type, ConstraintRef a, ConstraintRef b) {
@@ -4043,6 +4087,12 @@ int main(int argc, char **argv) {
         try { ViewportInteractionTest::automaticSnapConstraints(); }
         catch (const std::exception &e) { std::cerr << e.what() << std::endl; return 1; }
         std::cout << "PASS automatic snap constraints" << std::endl;
+        return 0;
+    }
+    if (app.arguments().contains(QStringLiteral("--micro-features"))) {
+        try { ViewportInteractionTest::microFeatureMarksTest(); }
+        catch (const std::exception &e) { std::cerr << e.what() << std::endl; return 1; }
+        std::cout << "PASS micro features" << std::endl;
         return 0;
     }
     if (app.arguments().contains(QStringLiteral("--ellipse-trim"))) {

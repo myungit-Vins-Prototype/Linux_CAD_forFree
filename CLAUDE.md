@@ -8,6 +8,12 @@ Contesto del progetto per Claude Code. La lingua di lavoro è l'italiano (UI, co
 
 ## Stato corrente: loft, estensioni e raccordi (2026-10-07)
 
+### Marcatori delle micro-geometrie (2026-10-08)
+
+- Richiesta iniziale dell'utente: "mettere dei marcatori" sui micro-flessi di rumore. Nuovo modulo `kernel/fk_micro.h/.cpp`: `findMicroFeatures(body, opzioni)` riporta facce sottili (almeno meta' del bordo, in lunghezza, a meno di `thinWidth` = 0.05 mm da uno spigolo non adiacente della stessa faccia; larghezza = mediana), spigoli corti (sotto `shortEdge` = 0.05 mm, lunghezza d'arco) e spigoli quasi tangenti (angolo massimo tra le normali uscenti delle due facce su 9 campioni, dalle SP-curve, tra `minAngle` = 1e-3 rad e `maxAngle` = 10 gradi). Solo diagnostica, il body non cambia.
+- App: *Analisi -> Micro-geometrie...* (`microFeaturesDialog`, `microFeatureMarks`): corpo selezionato o ultimo visibile, rapporto con le misure e segni nella vista (`setReferenceMarks`: spigoli; le facce sottili con i loro bordi, perche' i segni di faccia valgono solo per piani e rivoluzioni) finche' la finestra e' aperta.
+- Verificato: sul vecchio corpo finale `loft_offset_trimmed.body` F0 e F1 sottili (0.0088 e 0.0094 mm), E2/E5/E7/E9 corti (0.0078–0.0087 mm), E6/E8 quasi tangenti (4.87 gradi); niente sui corpi rigenerati (`loft_offset_regenerated.body`, B4 di `Loft_offset_rigenerato.prt`); 4–35 ms. Test `MicroFeaturesOfLoftOffsetBodies` (kernel) e `forgecad_micro_feature_tests` (`forgecad_view_tests --micro-features`: corpo importato da STEP, rapporto e segni risolti). Non verificato a video il disegno dei segni (stesso percorso dei riferimenti dei piani di costruzione).
+
 ### Estensione degli offset delle meta' di un loft: giunzione lungo la cucitura (2026-10-08)
 
 - Riprodotto (anche prima dell'offset C2, con la Hermite): offset 3 con cucitura delle due meta' del loft di `Loft_offset.prt`, poi `extendSheet` del contorno superiore: "giunzione facce 0/1: curva a distanza non approssimabile". Le meta' sono unite tangenti; oltre la cucitura la loro intersezione e' mal condizionata e i punti di `joinSplineExtensions` seguono lo scarto delle approssimazioni (seconde differenze della curva fino a 8e-6), `fitCurve` a 1e-7 non converge. Scartata la prova di fermare prima il Newton dell'intersezione: risolveva questo caso ma rompeva il loft a sei facce di `OffsetLoftExtendedSeamsTrimBoth`.

@@ -1,5 +1,6 @@
 #include <cmath>
 #include <fstream>
+#include <set>
 #include <sstream>
 #include <TopExp_Explorer.hxx>
 #include <Poly_Triangulation.hxx>
@@ -26,6 +27,7 @@
 #include <TopoDS.hxx>
 
 #include "fk_blend.h"
+#include "fk_micro.h"
 #include "fk_body_io.h"
 #include "fk_blend_loop.h"
 #include "fk_blend_surface.h"
@@ -1562,6 +1564,35 @@ FK_TEST(BlendRegeneratedLoftOffsetCaps) {
         }
         FK_CHECK(patches >= 4);
     }
+}
+
+// Le micro-geometrie che impedivano il raccordo inferiore del vecchio corpo
+// finale di Loft_offset: le due strisce larghe circa 0.008 mm (F0, F1) tra le
+// meta' dell'offset, i loro lati corti sui coperchi e i giunti a circa 3
+// gradi tra F1 e le facce vicine. Il corpo rigenerato con il loft corretto
+// non ne ha.
+FK_TEST(MicroFeaturesOfLoftOffsetBodies) {
+    const auto load = [](const char *name) {
+        std::ifstream in(std::string(FORGECAD_SOURCE_DIR) + "/kernel/tests/data/" + name, std::ios::binary);
+        std::stringstream content;
+        content << in.rdbuf();
+        return readBodyBinary(content.str());
+    };
+    const Body noisy = load("loft_offset_trimmed.body");
+    std::set<int> thin, shortEdges, nearTangent;
+    double thinWidth = 0.0;
+    for (const MicroFeature &feature : findMicroFeatures(noisy)) {
+        if (feature.kind == MicroFeature::Kind::ThinFace) thin.insert(feature.index), thinWidth = std::max(thinWidth, feature.measure);
+        if (feature.kind == MicroFeature::Kind::ShortEdge) shortEdges.insert(feature.index);
+        if (feature.kind == MicroFeature::Kind::NearTangentEdge) nearTangent.insert(feature.index);
+    }
+    FK_CHECK(thin == std::set<int>({0, 1}));
+    FK_CHECK(thinWidth > 0.005 && thinWidth < 0.01);
+    FK_CHECK(shortEdges == std::set<int>({2, 5, 7, 9}));
+    // I giunti di F1 con F2 e F4 (E6, E8) e quelli del fondo con E9 vicini.
+    FK_CHECK(nearTangent.count(6) == 1 && nearTangent.count(8) == 1);
+    const Body clean = load("loft_offset_regenerated.body");
+    FK_CHECK(findMicroFeatures(clean).empty());
 }
 
 // Due edge possono usare la stessa spline senza essere tangenti al nodo.

@@ -37,6 +37,8 @@ add_library(forgekernel STATIC
     fk_primitives.cpp
     fk_pcurve.h
     fk_pcurve.cpp
+    fk_micro.h
+    fk_micro.cpp
     fk_mass.h
     fk_mass.cpp
     fk_intersect.h
