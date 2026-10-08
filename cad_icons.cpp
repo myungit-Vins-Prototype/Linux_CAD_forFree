@@ -439,6 +439,16 @@ std::map<QString, Draw> &registry() {
     };
     icons["undo"] = curvedArrow(false);
     icons["redo"] = curvedArrow(true);
+    icons["rebuild"] = [](QPainter &p, const IconPalette &c) {
+        // Due frecce in cerchio (ricalcolo) attorno a un cubo (in arancio).
+        polygon(p, QPolygonF({{9, 10}, {15, 10}, {15, 16}, {9, 16}}), c.faceMid, stroke(c.accent, 1.4));
+        p.setBrush(Qt::NoBrush);
+        p.setPen(stroke(c.ink, 1.7));
+        p.drawArc(QRectF(3.5, 3.5, 17, 17), 30 * 16, 150 * 16);
+        p.drawArc(QRectF(3.5, 3.5, 17, 17), 210 * 16, 150 * 16);
+        polygon(p, QPolygonF({{19.8, 5.2}, {20.8, 10.5}, {15.6, 9.2}}), c.ink, Qt::NoPen);
+        polygon(p, QPolygonF({{4.2, 18.8}, {3.2, 13.5}, {8.4, 14.8}}), c.ink, Qt::NoPen);
+    };
     icons["delete"] = [](QPainter &p, const IconPalette &c) {
         line(p, {4, 6}, {20, 6}, stroke(c.ink, 1.6));
         line(p, {9.5, 6}, {10, 3.5}, stroke(c.ink, 1.4));

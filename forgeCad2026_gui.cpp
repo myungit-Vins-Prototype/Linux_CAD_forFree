@@ -486,6 +486,20 @@ public:
     // cronologia riparte da zero; i corpi usano lo snapshot salvato quando e'
     // presente, altrimenti si rigenerano dalla definizione.
     DocumentState currentDocument() const { return documentState(); }
+    // Rigenerazione manuale (Modifica -> Rigenera tutto): ogni feature si
+    // ricalcola con il kernel attuale, anche quelle che vengono dallo snapshot
+    // salvato nel documento. Un passo di Undo. Restituisce quante falliscono.
+    int rebuildAllFeatures() {
+        if (extrusions_.isEmpty()) return 0;
+        recordUndo();
+        for (ExtrusionObject &body : extrusions_) body.cachedGeometry = false;
+        regenerateAll();
+        documentChanged();
+        int failed = 0;
+        for (const ExtrusionObject &body : extrusions_) failed += !body.suppressed && !body.error.isEmpty() ? 1 : 0;
+        return failed;
+    }
+
     LengthUnit lengthUnit() const { return lengthUnit_; }
     void setLengthUnit(LengthUnit unit) {
         if (unit == lengthUnit_) return;
@@ -18749,6 +18763,17 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
     QAction *deleteAction = editMenu->addAction(QStringLiteral("Elimina"));
     deleteAction->setShortcut(QKeySequence::Delete);
     connect(deleteAction, &QAction::triggered, this, [viewport] { viewport->deleteSelection(); });
+    // Rigenera tutto: l'intera storia ricalcolata con il kernel attuale, senza
+    // usare i corpi salvati nel documento.
+    QAction *rebuildAction = editMenu->addAction(QStringLiteral("Rigenera tutto"));
+    rebuildAction->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_B));
+    rebuildAction->setToolTip(QStringLiteral("Ricalcola tutte le feature della storia con il kernel attuale (anche quelle lette dal documento)"));
+    connect(rebuildAction, &QAction::triggered, this, [this, viewport] {
+        const int failed = viewport->rebuildAllFeatures();
+        statusBar()->showMessage(failed == 0 ? QStringLiteral("Storia rigenerata.")
+                                             : QStringLiteral("Storia rigenerata: %1 feature con errori (⚠ nell'albero).").arg(failed),
+                                 8000);
+    });
     updateUndoActions();
     auto *viewMenu = menuBar()->addMenu(QStringLiteral("Visualizza"));
     auto *functionPanelMenu = viewMenu->addMenu(QStringLiteral("Pannelli delle funzioni"));
@@ -20298,6 +20323,7 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
     const QList<QPair<QAction *, QString>> iconActions = {
         {newAction, QStringLiteral("new")}, {openAction, QStringLiteral("open")}, {saveAction, QStringLiteral("save")},
         {undoAction_, QStringLiteral("undo")}, {redoAction_, QStringLiteral("redo")}, {deleteAction, QStringLiteral("delete")},
+        {rebuildAction, QStringLiteral("rebuild")},
         {newSketchAction, QStringLiteral("newSketch")}, {faceSketchAction, QStringLiteral("faceSketch")},
         {extrudeAction, QStringLiteral("extrude")}, {revolveAction, QStringLiteral("revolve")},
         {filletAction, QStringLiteral("fillet")}, {chamferAction, QStringLiteral("chamfer")}, {shellAction, QStringLiteral("shell")}, {threadAction, QStringLiteral("thread")},
@@ -20370,7 +20396,8 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
 
     auto *toolbar = iconBar(QStringLiteral("Modellazione"), QStringLiteral("modelingIconBar"));
     toolbar->addAction(newAction); toolbar->addAction(openAction); toolbar->addAction(saveAction); toolbar->addSeparator();
-    toolbar->addAction(undoAction_); toolbar->addAction(redoAction_); toolbar->addAction(deleteAction); toolbar->addSeparator();
+    toolbar->addAction(undoAction_); toolbar->addAction(redoAction_); toolbar->addAction(deleteAction); toolbar->addAction(rebuildAction);
+    toolbar->addSeparator();
     toolbar->addAction(importAction); toolbar->addSeparator();
     toolbar->addAction(newSketchAction); toolbar->addAction(faceSketchAction); toolbar->addAction(datumAction); toolbar->addSeparator();
     toolbar->addAction(extrudeAction); toolbar->addAction(revolveAction);

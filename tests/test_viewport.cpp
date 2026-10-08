@@ -98,7 +98,7 @@ public:
     // Rivoluzione 1 (rilevata dal bordo libero).
     static void fillDocument(const QStringList &args) {
         using namespace ForgeCad;
-        const QString path = args.value(0, QStringLiteral(FORGECAD_SOURCE_DIR "/File_Esempio/superfice piana influenzata.prt"));
+        const QString path = args.value(0, QStringLiteral(FORGECAD_SOURCE_DIR "/tests/data/superfice_piana_influenzata.prt"));
         DocumentState document;
         require(loadDocumentFile(path, document).isEmpty(), "lettura documento riempimento");
         for (int i = 0; i < document.extrusions.size(); ++i)
@@ -168,6 +168,48 @@ public:
                         && reloaded.extrusions.back().ruledSecond.size() == 1 && reloaded.extrusions.back().fillContinuity == 1,
                     "rilettura del riempimento");
         }
+    }
+    // --rebuild-document in.prt out.prt [da]: ricalcola le feature da `da` in
+    // poi con il kernel attuale (senza toccare i riferimenti) e salva la copia
+    // con lo snapshot nuovo.
+    static void rebuildDocument(const QStringList &args) {
+        using namespace ForgeCad;
+        require(args.size() >= 2, "uso: --rebuild-document in.prt out.prt [da]");
+        DocumentState state;
+        require(loadDocumentFile(args.at(0), state).isEmpty(), "lettura documento da ricalcolare");
+        const int from = args.value(2, QStringLiteral("0")).toInt();
+        for (int index = 0; index < state.extrusions.size(); ++index) {
+            ExtrusionObject &feature = state.extrusions[index];
+            if (index < from && feature.forgeBody) continue;
+            if (feature.suppressed) continue;
+            feature.cachedGeometry = false;
+            CadViewport::buildGeometry(feature, index, state.sketches, state.extrusions);
+            std::cout << index << " " << feature.name.toStdString() << ": " << (feature.error.isEmpty() ? "ok" : feature.error.toStdString()) << std::endl;
+        }
+        CadViewport viewport;
+        viewport.loadDocument(state);
+        require(saveDocumentFile(args.at(1), viewport.currentDocument(), true).isEmpty(), "salvataggio copia ricalcolata");
+    }
+    // Modifica -> Rigenera tutto (Ctrl+B): anche le feature lette dallo
+    // snapshot del documento si ricalcolano; un passo di Undo.
+    static void rebuildAllCommand() {
+        using namespace ForgeCad;
+        CadViewport viewport;
+        ExtrusionObject box;
+        box.name = QStringLiteral("Parallelepipedo");
+        box.feature = BodyFeature::Primitive;
+        box.primitive.size[0] = 2.0;
+        box.primitive.size[1] = 3.0;
+        box.primitive.size[2] = 4.0;
+        require(viewport.createBody(box).isEmpty(), "creazione del parallelepipedo");
+        require(std::fabs(Kernel::massProperties(*viewport.extrusions_.at(0).forgeBody).volume - 24.0) < 1e-9, "volume iniziale");
+        // Snapshot superato (come un documento salvato da un kernel precedente).
+        viewport.extrusions_[0].forgeBody = std::make_shared<const Kernel::Body>(Kernel::makeBox(Kernel::Frame3(), 1.0, 1.0, 1.0));
+        viewport.extrusions_[0].cachedGeometry = true;
+        require(viewport.rebuildAllFeatures() == 0, "rigenerazione senza errori");
+        require(std::fabs(Kernel::massProperties(*viewport.extrusions_.at(0).forgeBody).volume - 24.0) < 1e-9, "corpo ricalcolato");
+        viewport.undo();
+        require(std::fabs(Kernel::massProperties(*viewport.extrusions_.at(0).forgeBody).volume - 1.0) < 1e-9, "annulla la rigenerazione");
     }
     static void extrusionSurfaceOnly() {
         using namespace ForgeCad;
@@ -4302,6 +4344,18 @@ int main(int argc, char **argv) {
     QTemporaryDir settings;
     QSettings::setDefaultFormat(QSettings::IniFormat);
     QSettings::setPath(QSettings::IniFormat, QSettings::UserScope, settings.path());
+    if (app.arguments().contains(QStringLiteral("--rebuild-all"))) {
+        try { ViewportInteractionTest::rebuildAllCommand(); }
+        catch (const std::exception &e) { std::cerr << e.what() << std::endl; return 1; }
+        std::cout << "PASS rebuild all" << std::endl;
+        return 0;
+    }
+    const int rebuildArg = int(app.arguments().indexOf(QStringLiteral("--rebuild-document")));
+    if (rebuildArg > 0) {
+        try { ViewportInteractionTest::rebuildDocument(app.arguments().mid(rebuildArg + 1)); }
+        catch (const std::exception &e) { std::cerr << e.what() << std::endl; return 1; }
+        return 0;
+    }
     const int fillArg = int(app.arguments().indexOf(QStringLiteral("--fill-document")));
     if (fillArg > 0) {
         try { ViewportInteractionTest::fillDocument(app.arguments().mid(fillArg + 1)); }

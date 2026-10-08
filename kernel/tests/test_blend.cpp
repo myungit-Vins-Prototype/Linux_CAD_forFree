@@ -1614,3 +1614,40 @@ FK_TEST(BlendSplitSeamPreservesKnotCorner) {
     const auto chain = model.edgeChain(model.edgeIndex.at(first.index), model.vertexIndex.at(body.edgeStart(first).index));
     FK_CHECK(chain.size() == 1);
 }
+
+// TaglioSuperfici.prt, Raccordo 22: raccordo R 0.5 del bordo della faccia
+// piana y = 0 di un cilindro (asse y, R 1.1536) la cui fascia (y < 0.5)
+// invade il raccordo R 0.5 della tasca (Raccordo 21, contatto fino a
+// y = 0.11). Le due fasce si rifilano a vicenda: nei due punti in cui i
+// contatti si incrociano sul cilindro le tre superfici sono tangenti e le
+// curve toro/raccordo vi arrivano solo entro qualche tolleranza. Prima la
+// booleana falliva e la chirurgia lasciava due loop del cilindro sovrapposti.
+FK_TEST(BlendCapOverlappingPocketFillet) {
+    std::ifstream in(std::string(FORGECAD_SOURCE_DIR) + "/kernel/tests/data/taglio_superfici_b20.body", std::ios::binary);
+    FK_CHECK(bool(in));
+    if (!in) return;
+    std::stringstream content;
+    content << in.rdbuf();
+    const Body body = readBodyBinary(content.str());
+    const EdgeId cap = nearestEdge(body, Vec3(2.864466571, 0.0, -0.03534507751), 1e-6);
+    FK_CHECK(cap.valid());
+    Body result;
+    try {
+        result = blendEdges(body, {cap}, 0.5, false);
+    } catch (const std::exception &failure) {
+        fktest::reportFailure(__FILE__, __LINE__, failure.what());
+        return;
+    }
+    CheckOptions options;
+    options.loopCrossings = true;
+    for (const CheckIssue &issue : checkBody(result, options)) fktest::reportFailure(__FILE__, __LINE__, describe(issue.code) + ": " + issue.message);
+    for (EdgeId e : result.edges()) FK_CHECK(result.edge(e).tolerance < 2e-5);
+    // Il volume tolto e' l'unione delle due zone: piu' della zona del bordo
+    // da sola sul corpo con la tasca gia' raccordata non puo' essere.
+    const double before = massProperties(body).volume, after = massProperties(result).volume;
+    FK_CHECK(after < before);
+    FK_CHECK_NEAR(after, 17.6649, 2e-3);
+    TessellationOptions tessellation;
+    tessellation.deflection = 1e-3;
+    FK_CHECK(tessellate(result, tessellation).failedFaces == 0);
+}

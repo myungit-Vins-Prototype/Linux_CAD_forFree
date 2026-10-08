@@ -184,6 +184,8 @@ private:
     };
     // Tagli di ogni faccia (pezzi degli archi d'intersezione) dopo il passo 1.
     void computeCuts(std::map<int, std::vector<Piece>> (&cuts)[2]);
+    // Estremi quasi coincidenti degli archi resi un vertice tollerante.
+    void snapNearEnds();
     // Passo 5: cucitura dei pezzi tenuti ("da girare" se il secondo e' vero).
     Body assemble(const std::vector<std::pair<SubFace, bool>> &kept, bool sheetResult);
     void pairArcs(FaceId fa, FaceId fb, PairResult &out) const;
@@ -1619,6 +1621,7 @@ void BooleanBuilder::computeCuts(std::map<int, std::vector<Piece>> (&cuts)[2]) {
         partial_.insert(result.partial.begin(), result.partial.end());
         partialCuts_.insert(partialCuts_.end(), result.partialCuts.begin(), result.partialCuts.end());
     }
+    snapNearEnds();
 
     for (const Arc &arc : arcs_) {
         vertexPoints_.push_back(arc.loTolerance > 0.0 ? arc.loPoint : arc.curve->point(arc.range.lo));
@@ -1673,6 +1676,84 @@ void BooleanBuilder::computeCuts(std::map<int, std::vector<Piece>> (&cuts)[2]) {
             }
         }
 
+}
+
+// Dove tre superfici sono tangenti nello stesso punto (due raccordi che si
+// incrociano sulla faccia che entrambi toccano, e la faccia stessa) le curve
+// d'intersezione che vi arrivano si fermano con la sola precisione del
+// secondo ordine: gli estremi distano qualche tolleranza invece di
+// coincidere, e la vicinanza di superfici tangenti lascia archi cortissimi.
+// Gli estremi di archi diversi entro kEndSnap volte la tolleranza diventano
+// un vertice tollerante (il punto piu' centrale del gruppo, preferendo gli
+// estremi delle curve esatte); gli archi piu' corti del raggio con i due
+// estremi nello stesso gruppo spariscono.
+void BooleanBuilder::snapNearEnds() {
+    constexpr double kEndSnap = 20.0;
+    const double radius = kEndSnap * tolerance_;
+    const std::size_t n = arcs_.size();
+    if (n < 2) return;
+    struct End {
+        std::size_t arc;
+        bool hi;
+        Vec3 point;
+    };
+    std::vector<End> ends;
+    for (std::size_t i = 0; i < n; ++i) {
+        const Arc &arc = arcs_[i];
+        ends.push_back({i, false, arc.loTolerance > 0.0 ? arc.loPoint : arc.curve->point(arc.range.lo)});
+        ends.push_back({i, true, arc.hiTolerance > 0.0 ? arc.hiPoint : arc.curve->point(arc.range.hi)});
+    }
+    std::vector<std::size_t> parent(ends.size());
+    for (std::size_t i = 0; i < parent.size(); ++i) parent[i] = i;
+    const std::function<std::size_t(std::size_t)> root = [&](std::size_t i) { return parent[i] == i ? i : parent[i] = root(parent[i]); };
+    bool spread = false;
+    for (std::size_t i = 0; i < ends.size(); ++i)
+        for (std::size_t j = i + 1; j < ends.size(); ++j) {
+            if (ends[i].arc == ends[j].arc) continue;
+            const double d = distance(ends[i].point, ends[j].point);
+            if (d > radius) continue;
+            parent[root(i)] = root(j);
+            if (d > tolerance_) spread = true;
+        }
+    if (!spread) return;  // gia' tutti entro la tolleranza: niente da fare
+    std::map<std::size_t, std::vector<std::size_t>> groups;
+    for (std::size_t i = 0; i < ends.size(); ++i) groups[root(i)].push_back(i);
+    std::vector<bool> removed(n, false);
+    for (const auto &[key, members] : groups) {
+        if (members.size() < 2) continue;
+        double width = 0.0;
+        for (std::size_t a : members)
+            for (std::size_t b : members) width = std::max(width, distance(ends[a].point, ends[b].point));
+        if (width <= tolerance_) continue;
+        // Archi cortissimi chiusi nel gruppo (contatti tra superfici tangenti).
+        for (std::size_t a : members)
+            for (std::size_t b : members)
+                if (a < b && ends[a].arc == ends[b].arc) removed[ends[a].arc] = true;
+        // Il punto del gruppo: tra gli estremi delle curve esatte, se ce ne sono, il piu' centrale.
+        std::size_t best = members.front();
+        double bestScore = std::numeric_limits<double>::infinity();
+        for (std::size_t a : members) {
+            if (removed[ends[a].arc]) continue;
+            const CurveType type = arcs_[ends[a].arc].curve->type();
+            const bool exact = type == CurveType::Line || type == CurveType::Circle || type == CurveType::Ellipse;
+            double score = exact ? 0.0 : 1e3 * radius;
+            for (std::size_t b : members) score += distance(ends[a].point, ends[b].point);
+            if (score < bestScore) bestScore = score, best = a;
+        }
+        const Vec3 point = ends[best].point;
+        for (std::size_t a : members) {
+            const double gap = distance(point, ends[a].point);
+            Arc &arc = arcs_[ends[a].arc];
+            Vec3 &target = ends[a].hi ? arc.hiPoint : arc.loPoint;
+            double &tolerance = ends[a].hi ? arc.hiTolerance : arc.loTolerance;
+            target = point;
+            tolerance = std::max({tolerance, 1.01 * gap, tolerance_}) + (gap > 0.0 ? tolerance_ : 0.0);
+        }
+    }
+    std::vector<Arc> kept;
+    for (std::size_t i = 0; i < n; ++i)
+        if (!removed[i]) kept.push_back(arcs_[i]);
+    arcs_ = std::move(kept);
 }
 
 Body BooleanBuilder::run() {
