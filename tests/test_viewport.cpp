@@ -72,6 +72,25 @@ public:
         }
         viewport.setReferenceMarks(marks);
         require(viewport.refMarks_.size() == marks.size(), "segni nella vista");
+        // Il raccordo inferiore R1 fallisce ancora su questo corpo: l'errore
+        // indica le micro-geometrie vicine agli spigoli scelti.
+        const ForgeBody base = viewport.extrusions_.front().forgeBody;
+        QVector<EdgePoint> bottom;
+        for (Kernel::FaceId face : base->faces()) {
+            if (base->face(face).surface->type() != Kernel::SurfaceType::Plane) continue;
+            const auto box = Kernel::faceBox(*base, face);
+            if (std::fabs(box.lo.y() + 0.5) > 1e-6 || std::fabs(box.hi.y() + 0.5) > 1e-6) continue;
+            for (Kernel::EdgeId edge : faceBoundaryEdges(*base, face)) {
+                const auto &geometry = base->edge(edge);
+                bottom.append(edgeReference(*base, edge, geometry.curve->point(0.5 * (geometry.range.lo + geometry.range.hi))));
+            }
+        }
+        require(bottom.size() == 6, "contorno del fondo");
+        QString error;
+        const ForgeBody blended = forgeBlend(base, bottom, 1.0, false, &error);
+        std::cout << error.toStdString() << std::endl;
+        require(!blended && error.contains(QStringLiteral("micro-geometrie")) && error.contains(QStringLiteral("faccia sottile")),
+                "errore del raccordo con le micro-geometrie vicine");
     }
     static void automaticSnapConstraints() {
         using namespace ForgeCad;

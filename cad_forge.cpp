@@ -30,6 +30,7 @@
 #include "fk_surface_algo.h"
 #include "fk_transform.h"
 #include "fk_mass.h"
+#include "fk_micro.h"
 #include "fk_offset.h"
 #include "fk_planar.h"
 #include "fk_sew.h"
@@ -259,6 +260,65 @@ bool forgeBlendHasEffect(const ForgeBody &base, const ForgeBody &result) {
     }
 }
 
+namespace {
+
+// Micro-geometrie (fk_micro) attorno agli spigoli di un raccordo fallito:
+// facce dei loro lati o che toccano i loro vertici, spigoli scelti o che ne
+// toccano i vertici. Testo da aggiungere all'errore, vuoto se non ce ne sono.
+QString microFeatureHint(const Body &body, const std::vector<EdgeId> &edges) {
+    // Anche l'anteprima passa di qui a ogni clic: sui corpi grandi (STEP con
+    // migliaia di facce) l'analisi non e' gratuita, si lascia al comando.
+    if (edges.empty() || body.faces().size() > 500) return {};
+    std::set<int> faces, vertices, selected;
+    for (EdgeId e : edges) {
+        selected.insert(e.index);
+        vertices.insert(body.edgeStart(e).index);
+        vertices.insert(body.edgeEnd(e).index);
+        for (FinId fin : {body.edge(e).forward, body.edge(e).backward})
+            if (fin.valid()) faces.insert(body.finFace(fin).index);
+    }
+    const auto touches = [&](EdgeId e) { return vertices.count(body.edgeStart(e).index) || vertices.count(body.edgeEnd(e).index); };
+    QStringList found;
+    std::vector<MicroFeature> features;
+    try {
+        features = findMicroFeatures(body);
+    } catch (const std::exception &) {
+        return {};
+    }
+    // Prima le facce sottili, poi i giunti quasi tangenti, poi gli spigoli corti
+    // (di solito i lati corti delle stesse facce sottili).
+    std::stable_sort(features.begin(), features.end(), [](const MicroFeature &a, const MicroFeature &b) {
+        const auto rank = [](MicroFeature::Kind kind) {
+            return kind == MicroFeature::Kind::ThinFace ? 0 : kind == MicroFeature::Kind::NearTangentEdge ? 1 : 2;
+        };
+        return rank(a.kind) < rank(b.kind);
+    });
+    for (const MicroFeature &feature : features) {
+        bool near = false;
+        if (feature.kind == MicroFeature::Kind::ThinFace) {
+            near = faces.count(feature.index) > 0;
+            for (EdgeId e : faceBoundaryEdges(body, FaceId(feature.index))) near = near || touches(e) || selected.count(e.index);
+            if (near) found << QStringLiteral("faccia sottile F%1 (%2 mm)").arg(feature.index).arg(feature.measure, 0, 'g', 2);
+        } else {
+            const EdgeId e(feature.index);
+            near = selected.count(e.index) || touches(e);
+            for (FinId fin : {body.edge(e).forward, body.edge(e).backward})
+                near = near || (fin.valid() && faces.count(body.finFace(fin).index));
+            if (!near) continue;
+            if (feature.kind == MicroFeature::Kind::ShortEdge) found << QStringLiteral("spigolo corto E%1 (%2 mm)").arg(feature.index).arg(feature.measure, 0, 'g', 2);
+            else found << QStringLiteral("spigolo quasi tangente E%1 (%2 gradi)").arg(feature.index).arg(feature.measure * 180.0 / M_PI, 0, 'g', 2);
+        }
+    }
+    if (found.isEmpty()) return {};
+    const int shown = std::min<int>(4, int(found.size()));
+    QString list = found.mid(0, shown).join(QStringLiteral(", "));
+    if (found.size() > shown) list += QStringLiteral(" e altre %1").arg(found.size() - shown);
+    return QStringLiteral(". Vicino agli spigoli ci sono micro-geometrie, di solito rumore di una feature a monte: %1. "
+                          "Analisi -> Micro-geometrie le segna nella vista.").arg(list);
+}
+
+}
+
 ForgeBody forgeBlend(const ForgeBody &base, const QVector<EdgePoint> &points, double size, bool chamfer, QString *error, const ChamferSpec &spec,
                      bool sameState) {
     if (!base) {
@@ -269,13 +329,13 @@ ForgeBody forgeBlend(const ForgeBody &base, const QVector<EdgePoint> &points, do
         setError(error, QStringLiteral("Nessuno spigolo scelto."));
         return nullptr;
     }
+    std::vector<EdgeId> edges;
     try {
         Box box;
         for (VertexId v : base->vertices()) box.add(base->vertex(v).point);
         for (FaceId f : base->faces()) box.add(faceBox(*base, f));
         const double reach = 1e-3 * std::max(1.0, box.diagonal());
         // Spigoli scelti e bordi delle facce scelte, nello stato attuale della base.
-        std::vector<EdgeId> edges;
         if (!resolveBlendEdges(*base, points, reach, edges, sameState ? ReferenceState::Same : ReferenceState::Other)) {
             setError(error, QStringLiteral("Uno degli spigoli o delle facce scelti non esiste in questo punto della storia: sceglili di nuovo."));
             return nullptr;
@@ -318,8 +378,8 @@ ForgeBody forgeBlend(const ForgeBody &base, const QVector<EdgePoint> &points, do
         }
         return built;
     } catch (const std::exception &failure) {
-        setError(error, QStringLiteral("%1 non riuscito: %2").arg(chamfer ? QStringLiteral("Smusso") : QStringLiteral("Raccordo"),
-                                                               QString::fromUtf8(failure.what())));
+        setError(error, QStringLiteral("%1 non riuscito: %2%3").arg(chamfer ? QStringLiteral("Smusso") : QStringLiteral("Raccordo"),
+                                                                 QString::fromUtf8(failure.what()), microFeatureHint(*base, edges)));
         return nullptr;
     }
 }
