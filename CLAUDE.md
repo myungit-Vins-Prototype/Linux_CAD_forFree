@@ -12,6 +12,7 @@ Contesto del progetto per Claude Code. La lingua di lavoro è l'italiano (UI, co
 
 - `offsetFaces(loft, tutte, -3, cucitura)` sul loft di `Loft_offset.prt` falliva con "vettore nullo o non finito" (Newton di `projectLocal` divergente, u ~ 1e16). Causa geometrica: raggio di curvatura minimo delle meta' del loft 1.42 mm (misurato su griglia 201 x 201, vicino a u = 1, v = 1), quindi a -3 la superficie a distanza si ripiega.
 - `kernel/fk_offset.cpp`: `requireOffsetBelowCurvature` (curvature principali da prima e seconda forma fondamentale su 65 x 65 campioni piu' le linee di nodo, solo dentro il dominio della superficie, non nel prolungamento della finestra) prima del fit delle B-spline: errore "distanza d oltre il raggio di curvatura della faccia (minimo R da quella parte)". `projectLocal` ora e' Gauss-Newton con ricerca lineare (non diverge piu' sulle superfici molto curve).
+- Artefatto: `File_Esempio/Loft_offset_rigenerato.prt` (8.8 MB), copia del documento dell'utente con la storia rigenerata da `Offset 4` con l'offset C2; l'originale non e' stato toccato.
 - Verificato: -3 e -1.5 respinti con R = 1.425, -1.4 e -1 riusciti, +3 invariato. Test `OffsetInwardBeyondCurvatureIsExplained`. Suite kernel 275/275, ctest dell'app 5/5.
 
 ### Superfici a distanza C2 per le B-spline molto fitte (2026-10-08)
