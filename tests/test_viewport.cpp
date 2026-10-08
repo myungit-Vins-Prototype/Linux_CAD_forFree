@@ -600,7 +600,7 @@ public:
     }
     // Diagnostica facoltativa: --dump-document file.prt. Schizzi (piano,
     // entita' in coordinate del modello) e corpi (feature, facce, bordi liberi).
-    static void dumpDocument(const QString &path) {
+    static void dumpDocument(const QString &path, int detail = -1) {
         using namespace ForgeCad;
         DocumentState document;
         require(loadDocumentFile(path, document).isEmpty(), "lettura documento");
@@ -628,14 +628,31 @@ public:
         for (int i = 0; i < document.extrusions.size(); ++i) {
             ExtrusionObject &body = document.extrusions[i];
             if (!body.forgeBody && !body.suppressed) CadViewport::buildGeometry(body, i, document.sketches, document.extrusions);
+            if (i == detail) {
+                std::cout << "  raccordo: misura=" << body.blendSize << " smusso=" << body.blendChamfer << " base=" << body.blendBaseFeature << " spigoli:";
+                for (const EdgePoint &e : body.blendEdges) std::cout << " (" << e.x << ", " << e.y << ", " << e.z << " id=" << e.subshape << " ruolo=" << e.role << ")";
+                std::cout << std::endl;
+            }
             std::cout << "B" << i << " " << body.name.toStdString() << " feature=" << int(body.feature) << " op=" << body.operation
                       << " schizzo=" << body.sketchIndex << " first=" << body.firstBody << " distanza=" << body.distance
                       << " superficie=" << body.extrudeSurface << " visibile=" << body.visible << " errore=" << body.error.toStdString() << std::endl;
             if (!body.forgeBody) continue;
             const Kernel::Body &b = *body.forgeBody;
+            if (i == detail && qEnvironmentVariableIsSet("DUMP_BODY_OUT")) {
+                std::ofstream file(qEnvironmentVariable("DUMP_BODY_OUT").toStdString(), std::ios::binary);
+                file << Kernel::writeBodyBinary(b);
+            }
             std::cout << "  sheet=" << b.isSheet() << " facce=" << b.faces().size() << " edge=" << b.edges().size() << std::endl;
-            for (Kernel::FaceId f : b.faces())
-                std::cout << "  F" << f.index << " tipo=" << int(b.face(f).surface->type()) << std::endl;
+            for (Kernel::FaceId f : b.faces()) {
+                std::cout << "  F" << f.index << " tipo=" << int(b.face(f).surface->type());
+                if (i == detail)
+                    for (Kernel::LoopId l : b.face(f).loops) {
+                        std::cout << " [";
+                        for (Kernel::FinId fin : b.loopFins(l)) std::cout << " " << (b.fin(fin).sense ? "+" : "-") << "E" << b.fin(fin).edge.index;
+                        std::cout << " ]";
+                    }
+                std::cout << std::endl;
+            }
             for (Kernel::EdgeId e : b.edges()) {
                 const Kernel::Edge &g = b.edge(e);
                 std::cout << "  E" << e.index << (b.isLaminar(e) ? " libero" : "") << " tipo=" << int(g.curve->type()) << " "
@@ -4366,7 +4383,7 @@ int main(int argc, char **argv) {
         const int meshStats = int(app.arguments().indexOf(QStringLiteral("--mesh-stats")));
         const int dumpArg = int(app.arguments().indexOf(QStringLiteral("--dump-document")));
         if (dumpArg > 0) {
-            try { ViewportInteractionTest::dumpDocument(app.arguments().value(dumpArg + 1)); }
+            try { ViewportInteractionTest::dumpDocument(app.arguments().value(dumpArg + 1), app.arguments().value(dumpArg + 2, QStringLiteral("-1")).toInt()); }
             catch (const std::exception &e) { std::cerr << e.what() << std::endl; return 1; }
             return 0;
         }

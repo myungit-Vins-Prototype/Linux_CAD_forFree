@@ -26,6 +26,7 @@ enum class CheckCode {
     EdgeOffFace,       // curva dell'edge lontana dalla superficie di una faccia adiacente
     LoopOrientation,   // loop di una faccia piana orientato al contrario
     PCurveOffEdge,     // SP-curve di una fin che non ricade sulla curva dell'edge
+    LoopsCross,        // due loop della stessa faccia si toccano o si incrociano (solo con CheckOptions::loopCrossings)
 };
 
 struct CheckIssue {
@@ -35,6 +36,12 @@ struct CheckIssue {
 
 struct CheckOptions {
     bool geometry = true;  // anche i controlli geometrici (richiedono curve e superfici)
+    // Anche i loop della stessa faccia che si toccano o si incrociano nello
+    // spazio (u, v) (dalle SP-curve, a meno di periodi interi). Non e' di
+    // default: le operazioni locali (raccordi) lo chiedono sulle facce che
+    // accorciano, dove un raccordo che invade un altro contorno lascerebbe
+    // altrimenti un body con i loop sovrapposti che i controlli non vedono.
+    bool loopCrossings = false;
 };
 
 std::vector<CheckIssue> checkBody(const Body &body, const CheckOptions &options = {});

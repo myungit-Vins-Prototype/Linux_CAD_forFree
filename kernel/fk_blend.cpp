@@ -12,6 +12,7 @@
 #include "fk_blend_loop.h"
 #include "fk_blend_surface.h"
 #include "fk_blend_model.h"
+#include "fk_body_check.h"
 #include "fk_boolean.h"
 #include "fk_classify.h"
 #include "fk_curve_algo.h"
@@ -830,6 +831,13 @@ Body blendEdgesWith(const Body &body, const std::vector<EdgeId> &selected, doubl
             throw std::domain_error(failure.what());
         }
     } catch (const std::domain_error &) {
+        // Un raccordo locale che invade un altro contorno della faccia (i
+        // contatti incrociano i bordi di un raccordo vicino): si spiega questo
+        // invece dell'errore della booleana.
+        std::string crossing;
+        const auto note = [&](const std::domain_error &failure) {
+            if (crossing.empty() && std::string(failure.what()).find(describe(CheckCode::LoopsCross)) != std::string::npos) crossing = failure.what();
+        };
         bool planar = true;
         for (EdgeId e : edges) planar = planar && isPlanarChainEdge(body, e);
         std::vector<ChamferSides> allSides;
@@ -858,7 +866,8 @@ Body blendEdgesWith(const Body &body, const std::vector<EdgeId> &selected, doubl
                     }
                     if (common.valid()) return blendPlanarChains(body, edges, size, chamfer, sides ? &allSides : nullptr, common);
                 }
-            } catch (const std::domain_error &) {
+            } catch (const std::domain_error &failure) {
+                note(failure);
             }
         }
         // Ultimo tentativo: la palla rotolante tra superfici qualsiasi (angoli
@@ -866,8 +875,12 @@ Body blendEdgesWith(const Body &body, const std::vector<EdgeId> &selected, doubl
         try {
             (void)surfaceChainRuns(body, edges, edges);  // eccezione se le catene non sono gestite
             return blendSurfaceChains(body, edges, size, chamfer, sides ? &allSides : nullptr);
-        } catch (const std::domain_error &) {
+        } catch (const std::domain_error &failure) {
+            note(failure);
         }
+        if (!crossing.empty())
+            throw std::domain_error("blendEdges: il raccordo arriva su un altro contorno della faccia (per esempio un raccordo vicino) e i "
+                                    "due andrebbero rifilati l'uno sull'altro: non ancora gestito. " + crossing);
         throw;
     }
 }

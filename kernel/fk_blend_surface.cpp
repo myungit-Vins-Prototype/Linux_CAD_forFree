@@ -2719,7 +2719,9 @@ Body blendSurfaceChains(const Body &input, const std::vector<EdgeId> &selected, 
         if (gap > std::max(kLinearResolution, edge.tolerance) && gap <= admissible)
             edge.tolerance = 1.01 * gap;
     }
-    const std::vector<CheckIssue> issues = checkBody(result);
+    CheckOptions checks;
+    checks.loopCrossings = true;  // un raccordo che invade un altro contorno della faccia
+    const std::vector<CheckIssue> issues = checkBody(result, checks);
     if (!issues.empty()) throw std::domain_error("blendEdges: raccordo non valido (" + describe(issues.front().code) + ": " + issues.front().message + ")");
     return result;
 }

@@ -851,7 +851,9 @@ Body blendPlanarChains(const Body &input, const std::vector<EdgeId> &selected, d
     }
     Body result = model.build();
     computePCurves(result);
-    const std::vector<CheckIssue> issues = checkBody(result);
+    CheckOptions checks;
+    checks.loopCrossings = true;  // un raccordo che invade un altro contorno della faccia
+    const std::vector<CheckIssue> issues = checkBody(result, checks);
     if (!issues.empty()) throw std::domain_error("blendEdges: raccordo non valido (" + describe(issues.front().code) + ": " + issues.front().message + ")");
     return result;
 }
