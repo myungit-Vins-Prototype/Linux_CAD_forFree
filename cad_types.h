@@ -271,11 +271,15 @@ struct BodyDisplay {
 // facce restanti: un solido diventa una superficie aperta).
 // BoundarySurface: superficie tra curve (patch di Coons) delimitata dal
 // contorno chiuso dei riferimenti curva planarRefs (3 o 4 lati).
+// FillSurface: superficie di riempimento (fk_fill) del contorno chiuso
+// planarRefs, che passa per le curve guida ruledFirst e continua le facce
+// ruledSecond (riferimenti di faccia) dove il contorno sta sul loro bordo:
+// fillContinuity 0 contatto, 1 tangenza, 2 curvatura.
 // Shell: il solido firstBody svuotato con pareti di spessore `distance` verso
 // l'interno, le facce offsetFaces tolte per l'apertura (nessuna: cavita' chiusa).
 enum class BodyFeature { Extrusion = 0, Revolution = 1, Primitive = 2, Blend = 3, SheetTrim = 4, SheetExtend = 5, Scale = 6, Helix = 7, Sweep = 8, Loft = 9,
                          Imported = 10, DatumPlane = 11, Pattern = 12, Transform = 13, SurfaceOffset = 14, Sew = 15, Ruled = 16, PlanarSurface = 17,
-                         DeleteFace = 18, BoundarySurface = 19, Shell = 20, Thread = 21 };
+                         DeleteFace = 18, BoundarySurface = 19, Shell = 20, Thread = 21, FillSurface = 22 };
 
 // Riferimento leggero a una sotto-entita' del B-rep. `subshape` e' l'ID
 // topologico al momento della scelta, `geometry` il tipo di curva/superficie.
@@ -588,6 +592,14 @@ struct ExtrusionObject {
     // dall'altra).
     int extrudeSides = 0;
     double distance2 = 1.0;
+    // Extrusion: solo superficie, anche dai contorni chiusi (tubi senza base
+    // e coperchio); niente fusione con i solidi.
+    bool extrudeSurface = false;
+    // FillSurface: continuita' con le facce adiacenti, lunghezza della
+    // tangente trasversale (1 naturale) e peso delle guide.
+    int fillContinuity = 1;
+    double fillInfluence = 1.0;
+    double fillGuideWeight = 1.0;
     // Estrusione, rivoluzione e sweep: fusione del risultato con altri solidi (mergeOperation 0
     // corpo nuovo, 1 unione, 2 sottrazione) nei corpi `mergeBodies` (indici
     // minori, nascosti come gli operandi delle booleane); `mergeAuto` dice che
@@ -628,6 +640,9 @@ struct ExtrusionObject {
     ForgeCad::ForgeCurve curve;  // funzioni curva (Helix): la curva esatta
     ForgeCad::ForgeBody forgeBody;
     QString error;
+    // Esito non bloccante del calcolo (scarti della superficie di
+    // riempimento); non si salva.
+    QString notice;
     BodyDisplay display;
     // forgeBody, display ed error vengono dallo snapshot salvato: alla prima
     // apertura si usano invece di ricalcolare e ritassellare il corpo.

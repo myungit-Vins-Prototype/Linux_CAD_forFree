@@ -42,6 +42,7 @@ quint64 inheritedBody(const QVector<ExtrusionObject> &features, const ExtrusionO
     case BodyFeature::Ruled:
     case BodyFeature::PlanarSurface:
     case BodyFeature::BoundarySurface:
+    case BodyFeature::FillSurface:
         return 0;  // superfici nuove: le curve e i bordi scelti restano dei loro corpi
     case BodyFeature::Extrusion:
     case BodyFeature::Revolution:

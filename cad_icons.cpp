@@ -645,6 +645,35 @@ std::map<QString, Draw> &registry() {
         p.setPen(stroke(c.ink, 0.9));
         p.drawPath(iso);
     };
+    icons["fillSurface"] = [](QPainter &p, const IconPalette &c) {
+        // Bordo di una superficie esistente (in basso) chiuso da una calotta
+        // (in arancio) che passa per due curve guida incrociate.
+        QPainterPath wall;
+        wall.moveTo(3, 15);
+        wall.cubicTo(3, 18, 4, 20, 5, 22);
+        wall.lineTo(19, 22);
+        wall.cubicTo(20, 20, 21, 18, 21, 15);
+        p.setPen(stroke(c.ink, 1.0));
+        p.setBrush(c.faceDark);
+        p.drawPath(wall);
+        QPainterPath cap;
+        cap.moveTo(3, 15);
+        cap.cubicTo(3, 6, 21, 6, 21, 15);
+        cap.cubicTo(17, 18, 7, 18, 3, 15);
+        p.setPen(Qt::NoPen);
+        p.setBrush(c.faceMid);
+        p.drawPath(cap);
+        p.setBrush(Qt::NoBrush);
+        p.setPen(stroke(c.accent, 1.8));
+        p.drawPath(cap);
+        QPainterPath guides;
+        guides.moveTo(5.5, 13);
+        guides.cubicTo(9, 7.5, 15, 7.5, 18.5, 13);
+        guides.moveTo(12, 16.7);
+        guides.cubicTo(11.5, 13, 11.5, 10, 12, 8.3);
+        p.setPen(stroke(c.ink, 0.9));
+        p.drawPath(guides);
+    };
     icons["deleteFace"] = [](QPainter &p, const IconPalette &c) {
         // Un cubo aperto: la faccia superiore tolta (tratteggiata in rosso) e la croce.
         polygon(p, QPolygonF({{3, 9}, {12, 13}, {12, 22}, {3, 18}}), c.faceMid, stroke(c.ink, 1.0));

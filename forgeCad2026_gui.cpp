@@ -190,6 +190,7 @@ static QString featureIconName(const ExtrusionObject &body) {
     if (body.feature == BodyFeature::Shell) return QStringLiteral("shell");
     if (body.feature == BodyFeature::Thread) return QStringLiteral("thread");
     if (body.feature == BodyFeature::BoundarySurface) return QStringLiteral("boundarySurface");
+    if (body.feature == BodyFeature::FillSurface) return QStringLiteral("fillSurface");
     if (body.feature == BodyFeature::Sew) return QStringLiteral("sewSurfaces");
     if (body.feature == BodyFeature::Primitive)
         return QStringList{QStringLiteral("box"), QStringLiteral("cylinder"), QStringLiteral("sphere"),
@@ -2026,6 +2027,7 @@ public:
             return;
         }
         preview_.key = key;
+        preview_.notice.clear();
         preview_.definition = definition;
         preview_.index = index;
         preview_.replaced.clear();
@@ -2049,7 +2051,8 @@ public:
         else if (definition.operation < 0 && definition.feature == BodyFeature::Blend) preview_.replaced.clear(); // la base opaca resta sotto la patch
         else if (definition.operation < 0 && definition.feature == BodyFeature::SurfaceOffset) preview_.replaced.clear();  // il corpo di partenza resta
         else if (definition.operation < 0 && (definition.feature == BodyFeature::Ruled || definition.feature == BodyFeature::PlanarSurface
-                                              || definition.feature == BodyFeature::BoundarySurface))
+                                              || definition.feature == BodyFeature::BoundarySurface
+                                              || definition.feature == BodyFeature::FillSurface))
             preview_.replaced.clear();  // curve e bordi scelti restano visibili
         else if (definition.mergeProbe) preview_.replaced.clear();  // i corpi fusi si sanno a calcolo finito
         else preview_.replaced = bodyOperands(definition);
@@ -2137,6 +2140,7 @@ public:
     // Errore dell'anteprima (vuoto se riuscita o in calcolo), anche a ogni risultato nuovo.
     QString previewError() const { return preview_.error; }
     void setPreviewCallback(std::function<void(const QString &)> callback) { previewCallback_ = std::move(callback); }
+    const QString &previewNotice() const { return preview_.notice; }
 
     // Non serve scegliere prima il corpo: se quello selezionato va bene si parte
     // da lui, altrimenti lo decide il primo spigolo cliccato (su qualsiasi
@@ -2400,6 +2404,7 @@ public:
             tessellateGeometry(body, tessellationQuality_, body.display);
         body.display.constructionCurves.clear();
         body.error.clear();
+        body.notice = preview_.notice;
         return true;
     }
 
@@ -6773,7 +6778,8 @@ private:
         }
         case BodyFeature::Ruled:
         case BodyFeature::PlanarSurface:
-        case BodyFeature::BoundarySurface: {
+        case BodyFeature::BoundarySurface:
+        case BodyFeature::FillSurface: {
             QVector<int> bodies;
             for (const QVector<GeometryRef> *refs : {&body.ruledFirst, &body.ruledSecond, &body.planarRefs})
                 for (const GeometryRef &ref : *refs)
@@ -6821,7 +6827,8 @@ private:
         }
         case BodyFeature::Ruled:
         case BodyFeature::PlanarSurface:
-        case BodyFeature::BoundarySurface: {
+        case BodyFeature::BoundarySurface:
+        case BodyFeature::FillSurface: {
             QVector<int> sketches;
             if (body.feature == BodyFeature::PlanarSurface && body.planarRefs.isEmpty()) sketches.append(body.sketchIndex);
             for (const QVector<GeometryRef> *refs : {&body.ruledFirst, &body.ruledSecond, &body.planarRefs})
@@ -6952,6 +6959,7 @@ private:
     }
     static void buildGeometry(ExtrusionObject &body, int index, const QVector<SketchObject> &sketches, const QVector<ExtrusionObject> &bodies) {
         body.error.clear();
+        body.notice.clear();
         body.forgeBody.reset();
         body.curve.reset();
         body.datumValid = false;
@@ -7262,6 +7270,35 @@ private:
                     appendDistinctSegments(segments, pieces);
                 }
                 body.forgeBody = ForgeCad::forgeBoundarySurface(segments, &body.error);
+                body.solid = false;
+                return;
+            }
+            case BodyFeature::FillSurface: {
+                const auto paths = [&](const QVector<GeometryRef> &refs, const QString &what, std::vector<ForgeCad::Kernel::PathSegment> &segments) {
+                    for (const GeometryRef &ref : refs) {
+                        std::vector<ForgeCad::Kernel::PathSegment> pieces;
+                        QString reason;
+                        if (!ForgeCad::geometryRefPath(ref, index, sketches, bodies, pieces, &reason)) {
+                            body.error = QStringLiteral("%1: %2.").arg(what, reason);
+                            return false;
+                        }
+                        appendDistinctSegments(segments, pieces);
+                    }
+                    return true;
+                };
+                std::vector<ForgeCad::Kernel::PathSegment> boundary, guides;
+                if (!paths(body.planarRefs, QStringLiteral("Curva del contorno"), boundary)) return;
+                if (!paths(body.ruledFirst, QStringLiteral("Curva guida"), guides)) return;
+                QVector<QPair<ForgeCad::ForgeBody, EdgePoint>> contacts;
+                for (const GeometryRef &ref : body.ruledSecond) {
+                    if (ref.kind != 5 || ref.index < 0 || ref.index >= index || ref.index >= bodies.size() || !bodies.at(ref.index).forgeBody) {
+                        body.error = QStringLiteral("Una faccia adiacente non esiste piu'.");
+                        return;
+                    }
+                    contacts.append({bodies.at(ref.index).forgeBody, ref.point});
+                }
+                body.forgeBody = ForgeCad::forgeFillSurface(boundary, guides, contacts, body.fillContinuity, body.fillInfluence,
+                                                            body.fillGuideWeight, &body.error, &body.notice);
                 body.solid = false;
                 return;
             }
@@ -10900,7 +10937,8 @@ private:
               << QString::number(r.featureOnly);
         for (const GeometryRef &g : r.refs) ref(g);
         parts << QStringLiteral("E") << QString::number(d.extent) << QString::number(d.mergeOperation) << QString::number(d.mergeAuto)
-              << QString::number(d.mergeProbe) << QString::number(d.extrudeSides) << n(d.distance2);
+              << QString::number(d.mergeProbe) << QString::number(d.extrudeSides) << n(d.distance2)
+              << QString::number(d.extrudeSurface);
         ref(d.extentRef);
         for (int body : d.mergeBodies) parts << QString::number(body);
         parts << QStringLiteral("T");
@@ -10914,6 +10952,7 @@ private:
         for (const EdgePoint &e : d.offsetFaces)
             parts << n(e.x) << n(e.y) << n(e.z) << QString::number(e.subshape) << QString::number(e.geometry) << QString::number(e.context);
         parts << n(d.sewTolerance) << QString::number(d.sewSolid) << QString::number(d.loftSurface) << QString::number(d.sweepSurface);
+        parts << QStringLiteral("FS") << QString::number(d.fillContinuity) << n(d.fillInfluence) << n(d.fillGuideWeight);
         parts << QStringLiteral("R1");
         for (const GeometryRef &g : d.ruledFirst) ref(g);
         parts << QStringLiteral("R2");
@@ -10948,7 +10987,7 @@ private:
     // La geometria dell'anteprima, come rebuildBody, e la sua tassellazione.
     static bool computePreview(const PreviewInputs &in, BodyDisplay &display, BodyDisplay &retainedDisplay,
                                BodyDisplay &resultDisplay, ForgeCad::ForgeBody &geometry,
-                               QString &error, QVector<int> *merged = nullptr) {
+                               QString &error, QVector<int> *merged = nullptr, QString *notice = nullptr) {
         ExtrusionObject body = in.definition;
         if (in.reuse) {
             body.forgeBody = in.existing;
@@ -10958,6 +10997,7 @@ private:
             buildGeometry(body, in.index, in.sketches, in.bodies);
         }
         if (merged && body.mergeProbe) *merged = body.mergeBodies;  // i corpi toccati dalla fusione automatica
+        if (notice) *notice = body.notice;
         if (!hasGeometry(body)) {
             error = body.error;
             return false;
@@ -11063,12 +11103,12 @@ private:
             BodyDisplay retainedDisplay;
             BodyDisplay resultDisplay;
             ForgeCad::ForgeBody geometry;
-            QString error;
+            QString error, notice;
             bool ok = false;
             QVector<int> merged;
             const bool probe = in.definition.mergeProbe;
             try {
-                ok = computePreview(in, display, retainedDisplay, resultDisplay, geometry, error, &merged);
+                ok = computePreview(in, display, retainedDisplay, resultDisplay, geometry, error, &merged, &notice);
             } catch (const std::exception &failure) {
                 error = QString::fromUtf8(failure.what());
             } catch (...) {
@@ -11076,7 +11116,7 @@ private:
             }
             if (!ok && error.isEmpty()) error = QStringLiteral("costruzione non riuscita");
             // Il ricevitore e' figlio del viewport: se il viewport non c'e' piu', la chiamata non avviene.
-            QMetaObject::invokeMethod(receiver, [this, generation, ok, error, probe, merged,
+            QMetaObject::invokeMethod(receiver, [this, generation, ok, error, notice, probe, merged,
                                                  geometry = std::move(geometry), display = std::move(display),
                                                  retainedDisplay = std::move(retainedDisplay),
                                                  resultDisplay = std::move(resultDisplay)]() mutable {
@@ -11101,6 +11141,7 @@ private:
                     }
                     preview_.valid = ok;
                     preview_.error = ok ? QString() : preparePreviewError(error);
+                    preview_.notice = ok ? notice : QString();
                     preview_.geometry = std::move(geometry);
                     preview_.display = std::move(display);
                     preview_.retainedDisplay = std::move(retainedDisplay);
@@ -11675,6 +11716,7 @@ private:
         QSet<int> later, restored;
         bool valid = false;
         QString error;
+        QString notice;  // esito non bloccante (ExtrusionObject::notice)
         ForgeCad::ForgeBody geometry;
         BodyDisplay display;        // cio' che si disegna (per un raccordo, solo la patch)
         BodyDisplay retainedDisplay; // sottrazione: facce conservate del risultato, opache e gia' tagliate
@@ -14977,6 +15019,10 @@ static bool extrusionDialog(QMainWindow *window, CadViewport *viewport, const QS
     auto *operationBox = new QComboBox(&dialog);
     operationBox->addItems({QStringLiteral("Corpo nuovo"), QStringLiteral("Unisci ai solidi"), QStringLiteral("Sottrai dai solidi")});
     operationBox->setCurrentIndex(qBound(0, definition.mergeOperation, 2));
+    auto *surfaceBox = new QCheckBox(QStringLiteral("Solo superficie (senza base e coperchio)"), &dialog);
+    surfaceBox->setChecked(definition.extrudeSurface);
+    surfaceBox->setToolTip(QStringLiteral("Una lamina: un contorno chiuso diventa un tubo aperto alle estremita', un profilo aperto una superficie; "
+                                          "non si fonde con i solidi"));
     auto *autoBox = new QCheckBox(QStringLiteral("Automatico: i solidi che hanno punti in comune con l'estrusione"), &dialog);
     autoBox->setChecked(definition.mergeAuto);
     auto *bodyList = new QListWidget(&dialog);
@@ -14989,6 +15035,7 @@ static bool extrusionDialog(QMainWindow *window, CadViewport *viewport, const QS
     form->addRow(QStringLiteral("Fino a:"), refButton);
     form->addRow(QStringLiteral("Secondo verso:"), distance2Box);
     form->addRow(QString(), flipButton);
+    form->addRow(QString(), surfaceBox);
     form->addRow(QStringLiteral("Risultato:"), operationBox);
     form->addRow(QString(), autoBox);
     form->addRow(QStringLiteral("Solidi:"), bodyRow);
@@ -15017,10 +15064,12 @@ static bool extrusionDialog(QMainWindow *window, CadViewport *viewport, const QS
         d.distance = distanceBox->value();
         d.extrudeSides = sidesBox->currentIndex();
         d.distance2 = distance2Box->value();
-        d.mergeOperation = operationBox->currentIndex();
+        // La superficie non si fonde con i solidi.
+        d.extrudeSurface = surfaceBox->isChecked();
+        d.mergeOperation = d.extrudeSurface ? 0 : operationBox->currentIndex();
         d.mergeAuto = autoBox->isChecked();
         d.mergeBodies.clear();
-        for (int row = 0; row < bodyList->count(); ++row)
+        for (int row = 0; row < bodyList->count() && !d.extrudeSurface; ++row)
             if (bodyList->item(row)->checkState() == Qt::Checked) d.mergeBodies.append(bodyList->item(row)->data(Qt::UserRole).toInt());
         return d;
     };
@@ -15041,7 +15090,8 @@ static bool extrusionDialog(QMainWindow *window, CadViewport *viewport, const QS
             label->setText(sides == 1 ? QStringLiteral("Distanza totale:") : QStringLiteral("Distanza:"));
         // La simmetrica non ha verso; con la fine "fino a" lo decide il riferimento.
         flipButton->setEnabled(extent == 0 && sides != 1);
-        const bool merge = operationBox->currentIndex() != 0;
+        operationBox->setEnabled(!surfaceBox->isChecked());
+        const bool merge = !surfaceBox->isChecked() && operationBox->currentIndex() != 0;
         form->setRowVisible(autoBox, merge);
         form->setRowVisible(bodyRow, merge);
         bodyRow->setEnabled(!autoBox->isChecked());
@@ -15092,6 +15142,7 @@ static bool extrusionDialog(QMainWindow *window, CadViewport *viewport, const QS
         if (extent != 0 && definition.extentRef.kind < 0) pick();
     });
     QObject::connect(operationBox, &QComboBox::currentIndexChanged, &dialog, refresh);
+    QObject::connect(surfaceBox, &QCheckBox::toggled, &dialog, refresh);
     QObject::connect(autoBox, &QCheckBox::toggled, &dialog, refresh);
     QObject::connect(bodyList, &QListWidget::itemChanged, &dialog, [&] {
         if (!picker.handling()) refresh();
@@ -16054,6 +16105,16 @@ struct CurvePicker {
     std::function<void(const QString &, bool)> status;
     std::function<void()> changed;
     QCheckBox *wholeLoop = nullptr;  // acceso: un bordo libero di una superficie porta con se' tutto il suo loop
+    QVector<GeometryRef> *faceList = nullptr;  // lista di facce (riferimenti kind 5) invece che di curve
+
+    // Stessa faccia dello stesso corpo.
+    bool sameFace(const GeometryRef &a, const GeometryRef &b) const {
+        if (a.kind != 5 || b.kind != 5 || a.index != b.index) return false;
+        if (a.index < 0 || a.index >= viewport->extrusions().size() || !viewport->extrusions().at(a.index).forgeBody) return false;
+        const ForgeCad::Kernel::Body &body = *viewport->extrusions().at(a.index).forgeBody;
+        const double far = std::numeric_limits<double>::max();
+        return ForgeCad::resolveFaceReference(body, a.point, far) == ForgeCad::resolveFaceReference(body, b.point, far);
+    }
 
     // Il loop di bordo libero dello spigolo `ref` (kind 4) di una lamina, con
     // almeno due tratti; vuoto altrimenti.
@@ -16084,10 +16145,13 @@ struct CurvePicker {
     }
     void start(QVector<GeometryRef> *list) {
         active = list;
-        const QString error = viewport->beginReferencePick(ForgeCad::DatumRoleCurve | ForgeCad::DatumRoleLine, owner);
+        const bool faces = list && list == faceList;
+        const QString error = viewport->beginReferencePick(faces ? int(ForgeCad::DatumRoleFace) : ForgeCad::DatumRoleCurve | ForgeCad::DatumRoleLine, owner);
         if (!error.isEmpty()) {
             active = nullptr;
             status(error, true);
+        } else if (faces) {
+            status(QStringLiteral("Clicca le facce (di nuovo per toglierle); Esc nella vista termina."), false);
         } else {
             status(QStringLiteral("Clicca gli spigoli o le entita' degli schizzi (di nuovo per toglierli); Esc nella vista termina."), false);
         }
@@ -16101,6 +16165,22 @@ struct CurvePicker {
             if (!picked || !active) {
                 active = nullptr;
                 status(QString(), false);
+                changed();
+                return;
+            }
+            if (active == faceList) {
+                if (ref.kind != 5) {
+                    status(QStringLiteral("Scegli una faccia di un corpo."), true);
+                } else {
+                    int existing = -1;
+                    for (int k = 0; k < active->size(); ++k)
+                        if (sameFace(active->at(k), ref)) existing = k;
+                    if (existing >= 0) active->remove(existing);
+                    else active->append(ref);
+                    status(QString(), false);
+                }
+                QVector<GeometryRef> *list = active;
+                start(list);
                 changed();
                 return;
             }
@@ -16319,6 +16399,229 @@ static bool boundaryDialog(QMainWindow *window, CadViewport *viewport, const QSt
     });
     QObject::connect(buttons, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
     QObject::connect(buttons, &QDialogButtonBox::accepted, &dialog, [&] {
+        if (definition.planarRefs.isEmpty()) {
+            setStatus(QStringLiteral("Scegli le curve del contorno."), true);
+            return;
+        }
+        QApplication::setOverrideCursor(Qt::WaitCursor);
+        const QString error = apply(definition);
+        QApplication::restoreOverrideCursor();
+        if (error.isEmpty()) dialog.accept();
+        else setStatus(error, true);
+    });
+    bool accepted = false;
+    {
+        const WindowLock lock(window, viewport, &dialog);
+        dialog.show();
+        if (definition.planarRefs.isEmpty() && replaced < 0) picker.start(&definition.planarRefs);
+        refresh();
+        QEventLoop loop;
+        QObject::connect(&dialog, &QDialog::finished, &loop, &QEventLoop::quit);
+        loop.exec();
+        accepted = dialog.result() == QDialog::Accepted;
+    }
+    viewport->cancelReferencePick();
+    viewport->setReferencePickCallback(nullptr);
+    viewport->setReferenceMarks({});
+    scope.reset();
+    return accepted;
+}
+
+// Superficie di riempimento (nuova, o al posto del corpo `replaced`): un
+// contorno chiuso di curve, curve guida interne e le facce adiacenti dei
+// corpi da continuare in tangenza o curvatura (proposte da sole: le facce con
+// un bordo libero sul contorno).
+static bool fillDialog(QMainWindow *window, CadViewport *viewport, const QString &title, int replaced, const ExtrusionObject &initial,
+                       const std::function<QString(const ExtrusionObject &)> &apply) {
+    ExtrusionObject definition = initial;
+    definition.operation = -1;
+    definition.feature = BodyFeature::FillSurface;
+    FunctionDialogPanel dialog(window);
+    dialog.setWindowTitle(title);
+    dialog.setModal(false);
+    auto *form = dialog.createScrollableForm();
+    // Tre liste scelte nella vista: contorno, guide, facce adiacenti.
+    struct ListRow {
+        QLabel *label;
+        QPushButton *pick;
+        QPushButton *clear;
+        QWidget *row;
+    };
+    const auto listRow = [&](const QString &pickText) {
+        ListRow r{new QLabel(&dialog), new QPushButton(pickText, &dialog), new QPushButton(QStringLiteral("Azzera"), &dialog), new QWidget(&dialog)};
+        r.label->setWordWrap(true);
+        r.pick->setCheckable(true);
+        auto *layout = new QHBoxLayout(r.row);
+        layout->setContentsMargins(0, 0, 0, 0);
+        layout->addWidget(r.pick, 1);
+        layout->addWidget(r.clear);
+        return r;
+    };
+    const ListRow boundaryRow = listRow(QStringLiteral("Scegli il contorno")), guideRow = listRow(QStringLiteral("Scegli le guide")),
+                  faceRow = listRow(QStringLiteral("Scegli le facce"));
+    auto *detectButton = new QPushButton(QStringLiteral("Rileva"), &dialog);
+    detectButton->setToolTip(QStringLiteral("Le facce dei corpi che hanno un bordo libero sul contorno"));
+    faceRow.row->layout()->addWidget(detectButton);
+    auto *loopBox = new QCheckBox(QStringLiteral("Bordo libero intero delle superfici"), &dialog);
+    loopBox->setChecked(true);
+    loopBox->setToolTip(QStringLiteral("Un clic su un bordo libero di una superficie sceglie (o toglie) tutto il suo loop"));
+    auto *continuityBox = new QComboBox(&dialog);
+    continuityBox->addItems({QStringLiteral("Contatto (G0)"), QStringLiteral("Tangenza (G1)"), QStringLiteral("Curvatura (G2)")});
+    continuityBox->setCurrentIndex(qBound(0, definition.fillContinuity, 2));
+    continuityBox->setToolTip(QStringLiteral("Raccordo con le facce adiacenti lungo i tratti del contorno che stanno sul loro bordo"));
+    auto *influenceBox = new ForgeCad::ExpressionSpinBox(&dialog);
+    influenceBox->setDecimals(3);
+    influenceBox->setRange(0.05, 20.0);
+    influenceBox->setSingleStep(0.1);
+    influenceBox->setValue(definition.fillInfluence);
+    influenceBox->setKeyboardTracking(false);
+    influenceBox->setToolTip(QStringLiteral("Quanto a lungo la superficie segue la direzione delle facce adiacenti (1 naturale)"));
+    auto *weightBox = new ForgeCad::ExpressionSpinBox(&dialog);
+    weightBox->setDecimals(3);
+    weightBox->setRange(0.0, 100.0);
+    weightBox->setSingleStep(0.1);
+    weightBox->setValue(definition.fillGuideWeight);
+    weightBox->setKeyboardTracking(false);
+    weightBox->setToolTip(QStringLiteral("1: la superficie passa per le guide; meno di 1: le guide la attirano soltanto; 0: ignorate"));
+    form->addRow(QStringLiteral("Contorno:"), boundaryRow.label);
+    form->addRow(QString(), boundaryRow.row);
+    form->addRow(QString(), loopBox);
+    form->addRow(QStringLiteral("Guide:"), guideRow.label);
+    form->addRow(QString(), guideRow.row);
+    form->addRow(QStringLiteral("Facce adiacenti:"), faceRow.label);
+    form->addRow(QString(), faceRow.row);
+    form->addRow(QStringLiteral("Continuita':"), continuityBox);
+    form->addRow(QStringLiteral("Influenza tangente:"), influenceBox);
+    form->addRow(QStringLiteral("Peso delle guide:"), weightBox);
+    form->addRow(wrappedNote(QStringLiteral("Il contorno chiuso (in qualsiasi ordine) delimita la superficie, che passa per le curve guida "
+                                           "interne. Dove il contorno sta sul bordo di una faccia adiacente la superficie la continua in "
+                                           "tangenza o in curvatura; vicino a quei bordi le guide pesano meno, cosi' una guida che arriva "
+                                           "con un'altra pendenza non crea una piega."), &dialog));
+    auto *result = new QLabel(&dialog);
+    result->setWordWrap(true);
+    result->setMaximumWidth(360);
+    result->setStyleSheet(QStringLiteral("color: #9fc6e8;"));
+    form->addRow(QStringLiteral("Esito:"), result);
+    auto *status = new QLabel(&dialog);
+    status->setWordWrap(true);
+    status->setMinimumWidth(280);
+    status->setMaximumWidth(360);
+    form->addRow(status);
+    auto *buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dialog);
+    form->addRow(buttons);
+    auto scope = std::make_unique<PreviewScope>(viewport, dialog, form, replaced);
+    QLabel *previewLabel = scope->label;
+    viewport->setPreviewCallback([previewLabel, result, viewport](const QString &error) {
+        previewLabel->setText(error.isEmpty() ? QStringLiteral("pronta (in ambra nella vista)") : QStringLiteral("non riuscita: ") + error);
+        result->setText(error.isEmpty() ? viewport->previewNotice() : QString());
+    });
+    const auto setStatus = [status](const QString &text, bool error) {
+        status->setStyleSheet(error ? QStringLiteral("color: #ff7a6a;") : QStringLiteral("color: #9fc6e8;"));
+        status->setText(text);
+    };
+    CurvePicker picker;
+    picker.viewport = viewport;
+    picker.owner = replaced;
+    picker.status = setStatus;
+    picker.wholeLoop = loopBox;
+    picker.faceList = &definition.ruledSecond;
+    // Facce adiacenti proposte finche' non si scelgono a mano.
+    bool autoFaces = replaced < 0 && definition.ruledSecond.isEmpty();
+    const auto detect = [&] {
+        definition.ruledSecond.clear();
+        const int limit = replaced < 0 ? int(viewport->extrusions().size()) : replaced;
+        std::vector<ForgeCad::Kernel::PathSegment> boundary;
+        for (const GeometryRef &ref : definition.planarRefs) {
+            std::vector<ForgeCad::Kernel::PathSegment> pieces;
+            if (ForgeCad::geometryRefPath(ref, limit, viewport->sketches(), viewport->extrusions(), pieces, nullptr))
+                boundary.insert(boundary.end(), pieces.begin(), pieces.end());
+        }
+        if (boundary.empty()) return;
+        for (int b : viewport->resultBodiesBefore(limit)) {
+            const ExtrusionObject &body = viewport->extrusions().at(b);
+            if (!body.forgeBody) continue;
+            for (const EdgePoint &point : ForgeCad::forgeFillContactFaces(boundary, *body.forgeBody)) {
+                GeometryRef ref;
+                ref.kind = 5;
+                ref.index = b;
+                ref.featureId = body.featureId;
+                ref.point = point;
+                definition.ruledSecond.append(ref);
+            }
+        }
+    };
+    const auto refresh = [&] {
+        boundaryRow.label->setText(picker.text(definition.planarRefs));
+        guideRow.label->setText(definition.ruledFirst.isEmpty() ? QStringLiteral("nessuna") : picker.text(definition.ruledFirst));
+        QStringList faceNames;
+        for (const GeometryRef &ref : definition.ruledSecond) faceNames.append(ForgeCad::geometryRefText(ref, viewport->sketches(), viewport->extrusions()));
+        faceRow.label->setText(faceNames.isEmpty() ? QStringLiteral("nessuna (solo contatto)") : faceNames.join(QStringLiteral(", ")));
+        boundaryRow.pick->setChecked(picker.active == &definition.planarRefs);
+        guideRow.pick->setChecked(picker.active == &definition.ruledFirst);
+        faceRow.pick->setChecked(picker.active == &definition.ruledSecond);
+        viewport->setReferenceMarks(definition.planarRefs + definition.ruledFirst + definition.ruledSecond);
+        definition.fillContinuity = continuityBox->currentIndex();
+        definition.fillInfluence = influenceBox->value();
+        definition.fillGuideWeight = weightBox->value();
+        influenceBox->setEnabled(definition.fillContinuity > 0);
+        if (definition.planarRefs.isEmpty()) {
+            previewLabel->setText(QStringLiteral("scegli le curve del contorno"));
+            result->clear();
+            viewport->clearPreview();
+            return;
+        }
+        result->setText(QStringLiteral("in calcolo..."));
+        scope->request(definition);
+    };
+    picker.changed = [&] {
+        if (picker.active == &definition.planarRefs && autoFaces) detect();
+        refresh();
+    };
+    picker.install();
+    const auto toggle = [&](QVector<GeometryRef> *list) {
+        if (picker.active == list) picker.stop();
+        else {
+            if (picker.active) picker.stop();
+            picker.start(list);
+        }
+        refresh();
+    };
+    QObject::connect(boundaryRow.pick, &QPushButton::clicked, &dialog, [&] { toggle(&definition.planarRefs); });
+    QObject::connect(guideRow.pick, &QPushButton::clicked, &dialog, [&] { toggle(&definition.ruledFirst); });
+    QObject::connect(faceRow.pick, &QPushButton::clicked, &dialog, [&] {
+        autoFaces = false;
+        toggle(&definition.ruledSecond);
+    });
+    QObject::connect(boundaryRow.clear, &QPushButton::clicked, &dialog, [&] {
+        definition.planarRefs.clear();
+        if (autoFaces) definition.ruledSecond.clear();
+        refresh();
+    });
+    QObject::connect(guideRow.clear, &QPushButton::clicked, &dialog, [&] {
+        definition.ruledFirst.clear();
+        refresh();
+    });
+    QObject::connect(faceRow.clear, &QPushButton::clicked, &dialog, [&] {
+        autoFaces = false;
+        definition.ruledSecond.clear();
+        refresh();
+    });
+    QObject::connect(detectButton, &QPushButton::clicked, &dialog, [&] {
+        autoFaces = true;
+        detect();
+        if (definition.ruledSecond.isEmpty()) setStatus(QStringLiteral("Nessuna faccia ha un bordo libero sul contorno."), false);
+        refresh();
+    });
+    QObject::connect(continuityBox, &QComboBox::currentIndexChanged, &dialog, refresh);
+    influenceBox->onReturn = refresh;
+    weightBox->onReturn = refresh;
+    QObject::connect(buttons, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
+    QObject::connect(buttons, &QDialogButtonBox::accepted, &dialog, [&] {
+        influenceBox->interpretText();
+        weightBox->interpretText();
+        definition.fillContinuity = continuityBox->currentIndex();
+        definition.fillInfluence = influenceBox->value();
+        definition.fillGuideWeight = weightBox->value();
         if (definition.planarRefs.isEmpty()) {
             setStatus(QStringLiteral("Scegli le curve del contorno."), true);
             return;
@@ -17905,6 +18208,9 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
         } else if (original.feature == BodyFeature::BoundarySurface) {
             boundaryDialog(this, viewport, QStringLiteral("Modifica superficie tra curve"), index, original,
                            [&](const ExtrusionObject &values) { return update(values); });
+        } else if (original.feature == BodyFeature::FillSurface) {
+            fillDialog(this, viewport, QStringLiteral("Modifica riempimento"), index, original,
+                       [&](const ExtrusionObject &values) { return update(values); });
         } else if (original.feature == BodyFeature::Shell) {
             offsetDialog(this, viewport, QStringLiteral("Modifica svuota"), index, original, [&](const ExtrusionObject &values) { return update(values); });
         } else if (original.feature == BodyFeature::Thread) {
@@ -18555,6 +18861,9 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
     ruledSurfaceAction->setToolTip(QStringLiteral("Superficie di rette tra due curve scelte nella vista (spigoli, entita' degli schizzi, eliche)"));
     QAction *boundarySurfaceAction = surfaceMenu->addAction(QStringLiteral("Superficie tra curve..."));
     boundarySurfaceAction->setToolTip(QStringLiteral("Superficie delimitata da un contorno chiuso di curve, anche sghembo (3 o 4 lati: patch di Coons)"));
+    QAction *fillSurfaceAction = surfaceMenu->addAction(QStringLiteral("Superficie di riempimento..."));
+    fillSurfaceAction->setToolTip(QStringLiteral("Superficie in un contorno chiuso che passa per curve guida e continua in tangenza o "
+                                                 "curvatura le facce adiacenti"));
     QAction *planarSurfaceAction = surfaceMenu->addAction(QStringLiteral("Superficie planare..."));
     planarSurfaceAction->setToolTip(QStringLiteral("Superficie piana delimitata dai contorni chiusi di uno schizzo o da bordi complanari"));
     QAction *loftSurfaceAction = surfaceMenu->addAction(QStringLiteral("Loft di superfici..."));
@@ -19326,6 +19635,16 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
             return viewport->createBody(body);
         });
     });
+    connect(fillSurfaceAction, &QAction::triggered, this, [this, viewport] {
+        if (viewport->sketchModeActive()) viewport->endSketchMode();
+        fillDialog(this, viewport, QStringLiteral("Superficie di riempimento"), -1, ExtrusionObject(), [viewport](const ExtrusionObject &d) {
+            ExtrusionObject body = d;
+            int count = 1;
+            for (const ExtrusionObject &other : viewport->extrusions()) count += other.feature == BodyFeature::FillSurface ? 1 : 0;
+            body.name = QStringLiteral("Riempimento %1").arg(count);
+            return viewport->createBody(body);
+        });
+    });
     connect(deleteFaceAction, &QAction::triggered, this, [this, viewport] {
         if (viewport->sketchModeActive()) viewport->endSketchMode();
         ExtrusionObject definition;
@@ -19984,7 +20303,7 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
         {filletAction, QStringLiteral("fillet")}, {chamferAction, QStringLiteral("chamfer")}, {shellAction, QStringLiteral("shell")}, {threadAction, QStringLiteral("thread")},
         {trimSurfaceAction, QStringLiteral("trimSurface")}, {extendSurfaceAction, QStringLiteral("extendSurface")},
         {offsetSurfaceAction, QStringLiteral("offsetSurface")}, {sewSurfacesAction, QStringLiteral("sewSurfaces")},
-        {deleteFaceAction, QStringLiteral("deleteFace")}, {boundarySurfaceAction, QStringLiteral("boundarySurface")},
+        {deleteFaceAction, QStringLiteral("deleteFace")}, {boundarySurfaceAction, QStringLiteral("boundarySurface")}, {fillSurfaceAction, QStringLiteral("fillSurface")},
         {ruledSurfaceAction, QStringLiteral("ruledSurface")}, {planarSurfaceAction, QStringLiteral("planarSurface")},
         {loftSurfaceAction, QStringLiteral("loftSurface")}, {sweepSurfaceAction, QStringLiteral("sweepSurface")}, {scaleAction, QStringLiteral("scale")}, {moveAction, QStringLiteral("move")},
         {datumAction, QStringLiteral("datumPlane")}, {importAction, QStringLiteral("import")},
@@ -20057,7 +20376,7 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
     toolbar->addAction(extrudeAction); toolbar->addAction(revolveAction);
     flyout(toolbar, primitiveActions, QStringLiteral("Primitive: la freccia per le altre"));
     toolbar->addAction(filletAction); toolbar->addAction(chamferAction); toolbar->addAction(shellAction); toolbar->addAction(threadAction);
-    flyout(toolbar, {trimSurfaceAction, extendSurfaceAction, offsetSurfaceAction, deleteFaceAction, ruledSurfaceAction, boundarySurfaceAction, planarSurfaceAction, loftSurfaceAction,
+    flyout(toolbar, {trimSurfaceAction, extendSurfaceAction, offsetSurfaceAction, deleteFaceAction, ruledSurfaceAction, boundarySurfaceAction, fillSurfaceAction, planarSurfaceAction, loftSurfaceAction,
                      sweepSurfaceAction, sewSurfacesAction},
            QStringLiteral("Superfici: la freccia per gli altri comandi"));
     toolbar->addAction(moveAction);
@@ -20678,6 +20997,11 @@ void PdfWindow::rebuildModelTree() {
                          body.thread.leftHanded ? QStringLiteral(", sinistrorsa") : QString()));
             } else if (body.feature == BodyFeature::BoundarySurface) {
                 item->setToolTip(0, QStringLiteral("Superficie tra %1 curve").arg(body.planarRefs.size()));
+            } else if (body.feature == BodyFeature::FillSurface) {
+                item->setToolTip(0, QStringLiteral("Riempimento di %1 curve, %2 guide, %3 facce adiacenti (%4)%5")
+                    .arg(body.planarRefs.size()).arg(body.ruledFirst.size()).arg(body.ruledSecond.size())
+                    .arg(QStringList{QStringLiteral("contatto"), QStringLiteral("tangenza"), QStringLiteral("curvatura")}.value(body.fillContinuity))
+                    .arg(body.notice.isEmpty() ? QString() : QStringLiteral("\n") + body.notice));
             } else if (body.feature == BodyFeature::DeleteFace) {
                 item->setToolTip(0, QStringLiteral("%1 facce tolte da %2").arg(body.offsetFaces.size()).arg(extrusions.value(body.firstBody).name));
             } else if (body.feature == BodyFeature::Ruled) {
@@ -20767,6 +21091,7 @@ void PdfWindow::rebuildModelTree() {
                                || body.feature == BodyFeature::SurfaceOffset || body.feature == BodyFeature::Sew
                                || body.feature == BodyFeature::Ruled || body.feature == BodyFeature::PlanarSurface
                                || body.feature == BodyFeature::DeleteFace || body.feature == BodyFeature::BoundarySurface
+                               || body.feature == BodyFeature::FillSurface
                                || body.feature == BodyFeature::Shell || body.feature == BodyFeature::Thread;
         if (body.operation < 0 && withChildren) {
             QStringList children;
@@ -20784,6 +21109,10 @@ void PdfWindow::rebuildModelTree() {
                 children.append(QStringLiteral("Lunghezza: %1").arg(ForgeCad::formatLength(body.thread.length)));
             } else if (body.feature == BodyFeature::BoundarySurface) {
                 for (const GeometryRef &ref : body.planarRefs) children.append(QStringLiteral("Curva: ") + ForgeCad::geometryRefText(ref, sketches, extrusions));
+            } else if (body.feature == BodyFeature::FillSurface) {
+                for (const GeometryRef &ref : body.planarRefs) children.append(QStringLiteral("Contorno: ") + ForgeCad::geometryRefText(ref, sketches, extrusions));
+                for (const GeometryRef &ref : body.ruledFirst) children.append(QStringLiteral("Guida: ") + ForgeCad::geometryRefText(ref, sketches, extrusions));
+                for (const GeometryRef &ref : body.ruledSecond) children.append(QStringLiteral("Faccia adiacente: ") + ForgeCad::geometryRefText(ref, sketches, extrusions));
             } else if (body.feature == BodyFeature::DeleteFace) {
                 if (!previousStage(body.firstBody)) children.append(QStringLiteral("Corpo: ") + extrusions.value(body.firstBody).name);
                 children.append(QStringLiteral("Facce tolte: %1").arg(body.offsetFaces.size()));

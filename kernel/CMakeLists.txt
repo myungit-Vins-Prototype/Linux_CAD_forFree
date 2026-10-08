@@ -79,6 +79,8 @@ add_library(forgekernel STATIC
     fk_planar.cpp
     fk_boundary.h
     fk_boundary.cpp
+    fk_fill.h
+    fk_fill.cpp
     fk_shell.h
     fk_shell.cpp
     fk_transform.h
@@ -161,6 +163,7 @@ add_executable(forgekernel_tests
     tests/test_offset.cpp
     tests/test_planar.cpp
     tests/test_boundary.cpp
+    tests/test_fill.cpp
     tests/test_shell.cpp
     tests/test_loft_surfaces.cpp
     tests/test_sweep_surfaces.cpp

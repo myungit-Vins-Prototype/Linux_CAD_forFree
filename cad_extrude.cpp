@@ -164,13 +164,17 @@ ForgeBody forgeExtrusionFeature(ExtrusionObject &body, int index, const QVector<
         return nullptr;
     }
     const SketchObject &sketch = sketches.at(body.sketchIndex);
+    // Con "Solo superficie" anche i contorni chiusi danno una lamina.
+    const auto extrude = [&](double d, QString *why, double start = 0.0) {
+        return forgeExtrusion(sketch, d, why, start, body.extrudeSurface);
+    };
     ForgeBody result;
     try {
         if (body.extent == 0) {
             const double d = body.distance;
             if (body.extrudeSides == 1) {
                 // Simmetrica: meta' per parte del piano dello schizzo.
-                result = forgeExtrusion(sketch, d, error, -0.5 * d);
+                result = extrude(d, error, -0.5 * d);
             } else if (body.extrudeSides == 2) {
                 if (std::fabs(d) <= 1e-7) {
                     setError(error, QStringLiteral("La distanza di estrusione e' nulla."));
@@ -182,9 +186,9 @@ ForgeBody forgeExtrusionFeature(ExtrusionObject &body, int index, const QVector<
                 }
                 // Un solo prisma dal piano spostato di distance2 all'indietro.
                 const double s = d > 0.0 ? 1.0 : -1.0;
-                result = forgeExtrusion(sketch, d + s * body.distance2, error, -s * body.distance2);
+                result = extrude(d + s * body.distance2, error, -s * body.distance2);
             } else {
-                result = forgeExtrusion(sketch, d, error);
+                result = extrude(d, error);
             }
         } else {
             if (body.extrudeSides == 1) {
@@ -208,7 +212,7 @@ ForgeBody forgeExtrusionFeature(ExtrusionObject &body, int index, const QVector<
                     return nullptr;
                 }
                 body.distance = d;  // la distanza che ne viene (si vede nella finestra)
-                return forgeExtrusion(sketch, d, error);
+                return extrude(d, error);
             };
             if (body.extent == 1) {
                 if (!target.hasPoint) {
@@ -227,7 +231,7 @@ ForgeBody forgeExtrusionFeature(ExtrusionObject &body, int index, const QVector<
             } else {
                 const bool curvedFace = body.extentRef.kind == 5 && !target.hasPlane;
                 // Box del profilo: dall'estrusione di altezza unitaria (esatto, dalle facce).
-                const ForgeBody unit = forgeExtrusion(sketch, 1.0, error);
+                const ForgeBody unit = extrude(1.0, error);
                 if (!unit) return nullptr;
                 const Box profile = bodyBox(*unit);
                 const double size = std::max(1.0, profile.diagonal());
@@ -253,7 +257,7 @@ ForgeBody forgeExtrusionFeature(ExtrusionObject &body, int index, const QVector<
                         const double reach = hi > 0.0 ? hi : lo;
                         body.distance = reach;  // il verso (e la portata) per il secondo verso
                         const double length = (reach > 0.0 ? 1.0 : -1.0) * (std::fabs(hi > 0.0 ? hi : lo) * 1.05 + 1e-3 * size);
-                        const ForgeBody longer = forgeExtrusion(sketch, length, error);
+                        const ForgeBody longer = extrude(length, error);
                         if (!longer) return nullptr;
                         Vec3 z = n;
                         if (dot(origin - q, z) < 0.0) z = -z;
@@ -280,7 +284,7 @@ ForgeBody forgeExtrusionFeature(ExtrusionObject &body, int index, const QVector<
                         setError(error, QStringLiteral("La faccia sta dall'altra parte dello schizzo."));
                         return nullptr;
                     }
-                    const ForgeBody longer = forgeExtrusion(sketch, side * (reach * 1.05 + 1e-3 * size), error);
+                    const ForgeBody longer = extrude(side * (reach * 1.05 + 1e-3 * size), error);
                     if (!longer) return nullptr;
                     const auto base = [&](const Body &b, ShellId shell) { return touchesPlane(b, shell, origin, e, 1e-7 * size); };
                     for (const Kernel::BooleanOperation op : {Kernel::BooleanOperation::Subtract, Kernel::BooleanOperation::Intersect}) {
@@ -304,10 +308,10 @@ ForgeBody forgeExtrusionFeature(ExtrusionObject &body, int index, const QVector<
                     return nullptr;
                 }
                 const double s = body.distance > 0.0 ? 1.0 : -1.0;
-                const ForgeBody back = forgeExtrusion(sketch, -s * body.distance2, error);
+                const ForgeBody back = extrude(-s * body.distance2, error);
                 if (!back) return nullptr;
                 if (result->isSheet() || back->isSheet()) {
-                    setError(error, QStringLiteral("Un profilo aperto nei due versi si estrude solo a distanza."));
+                    setError(error, QStringLiteral("Una superficie nei due versi si estrude solo a distanza."));
                     return nullptr;
                 }
                 result = std::make_shared<const Body>(booleanOperation(*result, *back, Kernel::BooleanOperation::Unite));

@@ -212,7 +212,7 @@ QString featureType(const ExtrusionObject &feature) {
         return QStringList{QStringLiteral("Unione"), QStringLiteral("Intersezione"), QStringLiteral("Differenza")}.value(feature.operation,
                                                                                                                             QStringLiteral("Booleana"));
     switch (feature.feature) {
-    case BodyFeature::Extrusion: return QStringLiteral("Estrusione");
+    case BodyFeature::Extrusion: return feature.extrudeSurface ? QStringLiteral("Estrusione di superficie") : QStringLiteral("Estrusione");
     case BodyFeature::Revolution: return QStringLiteral("Rivoluzione");
     case BodyFeature::Primitive: return QStringLiteral("Primitiva");
     case BodyFeature::Blend: return feature.blendChamfer ? QStringLiteral("Smusso") : QStringLiteral("Raccordo");
@@ -232,6 +232,7 @@ QString featureType(const ExtrusionObject &feature) {
     case BodyFeature::PlanarSurface: return QStringLiteral("Superficie planare");
     case BodyFeature::DeleteFace: return QStringLiteral("Elimina facce");
     case BodyFeature::BoundarySurface: return QStringLiteral("Superficie tra curve");
+    case BodyFeature::FillSurface: return QStringLiteral("Superficie di riempimento");
     case BodyFeature::Shell: return QStringLiteral("Guscio");
     case BodyFeature::Thread: return QStringLiteral("Filettatura");
     }
@@ -432,6 +433,14 @@ QVector<Dependency> dependencies(int index, const DocumentState &document) {
     case BodyFeature::BoundarySurface:
         for (int k = 0; k < feature.planarRefs.size(); ++k)
             addGeometryDependency(result, feature.planarRefs.at(k), sketches, features, index, QStringLiteral("curva %1").arg(k + 1));
+        break;
+    case BodyFeature::FillSurface:
+        for (int k = 0; k < feature.planarRefs.size(); ++k)
+            addGeometryDependency(result, feature.planarRefs.at(k), sketches, features, index, QStringLiteral("contorno %1").arg(k + 1));
+        for (int k = 0; k < feature.ruledFirst.size(); ++k)
+            addGeometryDependency(result, feature.ruledFirst.at(k), sketches, features, index, QStringLiteral("guida %1").arg(k + 1));
+        for (int k = 0; k < feature.ruledSecond.size(); ++k)
+            addGeometryDependency(result, feature.ruledSecond.at(k), sketches, features, index, QStringLiteral("faccia adiacente %1").arg(k + 1));
         break;
     case BodyFeature::Transform:
         addBodyDependency(result, features, index, feature.firstBody, feature.move.copy ? QStringLiteral("corpo copiato") : QStringLiteral("corpo"));

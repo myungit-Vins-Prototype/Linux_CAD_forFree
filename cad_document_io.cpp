@@ -52,7 +52,7 @@ constexpr char kMagic[4] = {'F', 'C', 'A', 'D'};
 // faccia dei raccordi; 30 asse della rivoluzione scelto nella vista;
 // 31 settore delle quote d'angolo (`SketchConstraint::angleSides`).
 // 32 mantenimento della cucitura dell’offset.
-constexpr quint16 kVersion = 33;
+constexpr quint16 kVersion = 35;
 constexpr quint8 kZlib = 1;
 
 void write(QDataStream &out, const CurveObject &curve) {
@@ -330,6 +330,10 @@ void write(QDataStream &out, const ExtrusionObject &body) {
     // Formato 33: taglio reciproco di due corpi/superfici.
     out << body.trimBoth << body.trimToolKeep.x << body.trimToolKeep.y << body.trimToolKeep.z
         << qint32(body.trimToolKeep.subshape) << qint32(body.trimToolKeep.geometry) << qint32(body.trimToolKeep.context);
+    // Formato 34: estrusione di sola superficie.
+    out << body.extrudeSurface;
+    // Formato 35: superficie di riempimento.
+    out << qint32(body.fillContinuity) << body.fillInfluence << body.fillGuideWeight;
 }
 
 // `extras` (solo formato 5): i file scritti durante lo sviluppo del formato 5
@@ -537,7 +541,14 @@ bool read(QDataStream &in, ExtrusionObject &body, quint16 version, int extras) {
     if (version >= 33)
         in >> body.trimBoth >> body.trimToolKeep.x >> body.trimToolKeep.y >> body.trimToolKeep.z
            >> body.trimToolKeep.subshape >> body.trimToolKeep.geometry >> body.trimToolKeep.context;
-    const BodyFeature last = version >= 27 ? BodyFeature::Thread : version >= 25 ? BodyFeature::Shell : BodyFeature::PlanarSurface;
+    if (version >= 34) in >> body.extrudeSurface;
+    if (version >= 35) {
+        qint32 continuity = 1;
+        in >> continuity >> body.fillInfluence >> body.fillGuideWeight;
+        if (continuity < 0 || continuity > 2 || !std::isfinite(body.fillInfluence) || !std::isfinite(body.fillGuideWeight)) return false;
+        body.fillContinuity = continuity;
+    }
+    const BodyFeature last = version >= 35 ? BodyFeature::FillSurface : version >= 27 ? BodyFeature::Thread : version >= 25 ? BodyFeature::Shell : BodyFeature::PlanarSurface;
     if (int(body.feature) < 0 || int(body.feature) > int(last)) return false;
     return in.status() == QDataStream::Ok;
 }

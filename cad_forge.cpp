@@ -35,6 +35,7 @@
 #include "fk_planar.h"
 #include "fk_sew.h"
 #include "fk_boundary.h"
+#include "fk_fill.h"
 #include "fk_shell.h"
 #include "fk_step.h"
 #include "fk_tessellate.h"
@@ -107,7 +108,7 @@ void forgeSketchFrame(const SketchObject &sketch, double distance, Frame3 &frame
     height = dot(extrusionVector(sketch, distance), frame.zDir());
 }
 
-ForgeBody forgeExtrusion(const SketchObject &sketch, double distance, QString *error, double start) {
+ForgeBody forgeExtrusion(const SketchObject &sketch, double distance, QString *error, double start, bool surfaceOnly) {
     if (std::abs(distance) <= 1.0e-7) {
         setError(error, QStringLiteral("La distanza di estrusione e' nulla."));
         return nullptr;
@@ -126,6 +127,31 @@ ForgeBody forgeExtrusion(const SketchObject &sketch, double distance, QString *e
         // Nessun contorno chiuso: le catene aperte diventano una superficie
         // (lamina).
         if (profile.regions.empty()) return std::make_shared<const Body>(makeSheetExtrusion(frame, profile.chains, height));
+        if (surfaceOnly) {
+            // Solo superficie: i fianchi dei prismi senza le facce piane di
+            // base e coperchio (i contorni chiusi diventano tubi aperti) piu'
+            // le catene aperte, cuciti in una lamina.
+            std::vector<Body> sheets;
+            for (const ProfileRegion &region : profile.regions) {
+                const Body solid = makeExtrusion(frame, region, height);
+                std::vector<FaceId> sides;
+                for (FaceId face : solid.faces()) {
+                    const Surface &surface = *solid.face(face).surface;
+                    if (surface.type() == SurfaceType::Plane) {
+                        const Vec3 normal = static_cast<const Plane &>(surface).frame().zDir();
+                        if (std::fabs(dot(normal, frame.zDir())) > 1.0 - 1e-9) continue;
+                    }
+                    sides.push_back(face);
+                }
+                if (!sides.empty()) sheets.push_back(facesAsSheet(solid, sides));
+            }
+            if (!profile.chains.empty()) sheets.push_back(makeSheetExtrusion(frame, profile.chains, height));
+            if (sheets.empty()) throw std::domain_error("lo schizzo non produce superfici");
+            if (sheets.size() == 1) return std::make_shared<const Body>(std::move(sheets.front()));
+            std::vector<const Body *> pointers;
+            for (const Body &sheet : sheets) pointers.push_back(&sheet);
+            return std::make_shared<const Body>(sewSheets(pointers, kSketchConnectionTolerance, false).body);
+        }
         // Piu' regioni: unione (disgiunta) dei loro prismi.
         Body result = makeExtrusion(frame, profile.regions.front(), height);
         for (std::size_t i = 1; i < profile.regions.size(); ++i)
@@ -1148,6 +1174,83 @@ ForgeBody forgeBoundarySurface(const std::vector<PathSegment> &segments, QString
         setError(error, QStringLiteral("Superficie tra curve non riuscita: %1").arg(QString::fromUtf8(failure.what())));
         return nullptr;
     }
+}
+
+ForgeBody forgeFillSurface(const std::vector<PathSegment> &boundary, const std::vector<PathSegment> &guides,
+                           const QVector<QPair<ForgeBody, EdgePoint>> &contacts, int continuity, double influence, double guideWeight,
+                           QString *error, QString *notice) {
+    if (boundary.empty()) {
+        setError(error, QStringLiteral("Scegli le curve del contorno."));
+        return nullptr;
+    }
+    try {
+        std::vector<FillContact> faces;
+        for (const auto &[body, reference] : contacts) {
+            if (!body) {
+                setError(error, QStringLiteral("Il corpo di una faccia adiacente non ha geometria."));
+                return nullptr;
+            }
+            Box box;
+            for (VertexId v : body->vertices()) box.add(body->vertex(v).point);
+            const FaceId face = resolveFaceReference(*body, reference, 1e-3 * std::max(1.0, box.diagonal()));
+            if (!face.valid()) {
+                setError(error, QStringLiteral("Una delle facce adiacenti non esiste piu'."));
+                return nullptr;
+            }
+            faces.push_back({body, face});
+        }
+        FillOptions options;
+        options.continuity = continuity;
+        options.influence = influence;
+        options.guideWeight = guideWeight;
+        FillReport report;
+        Body result = fillSurface(boundary, guides, faces, options, &report);
+        if (notice) {
+            QStringList parts;
+            parts << QStringLiteral("contorno entro %1 mm").arg(report.boundaryDeviation, 0, 'g', 2);
+            if (!guides.empty() && guideWeight > 0.0) {
+                parts << QStringLiteral("guide entro %1 mm").arg(report.guideDeviation, 0, 'g', 2);
+                if (report.contactPieces > 0 && report.guideBlendDeviation > 0.0)
+                    parts << QStringLiteral("%1 mm vicino ai bordi in tangenza").arg(report.guideBlendDeviation, 0, 'g', 2);
+            }
+            if (report.contactPieces > 0 && continuity > 0) {
+                parts << QStringLiteral("tangenza entro %1°").arg(report.tangentAngle * 180.0 / kPi, 0, 'g', 2);
+                if (continuity > 1) parts << QStringLiteral("curvatura entro %1 1/mm").arg(report.curvatureDeviation, 0, 'g', 2);
+            } else if (!contacts.isEmpty() && continuity > 0) {
+                parts << QStringLiteral("nessun tratto del contorno sta sul bordo delle facce adiacenti");
+            }
+            QString text = parts.join(QStringLiteral(", ")) + QStringLiteral(".");
+            for (const std::string &note : report.notes) text += QStringLiteral("\n") + QString::fromUtf8(note.c_str());
+            *notice = text;
+        }
+        return std::make_shared<const Body>(std::move(result));
+    } catch (const std::exception &failure) {
+        setError(error, QStringLiteral("Superficie di riempimento non riuscita: %1").arg(QString::fromUtf8(failure.what())));
+        return nullptr;
+    }
+}
+
+QVector<EdgePoint> forgeFillContactFaces(const std::vector<PathSegment> &boundary, const Body &body) {
+    QVector<EdgePoint> result;
+    double scale = 1.0;
+    for (const PathSegment &segment : boundary) scale = std::max(scale, norm(segment.curve->point(segment.range.lo)));
+    const double tolerance = 1e-5 * scale;
+    QVector<int> faces;
+    for (EdgeId e : body.edges()) {
+        if (!body.isLaminar(e)) continue;
+        const Edge &edge = body.edge(e);
+        const Vec3 mid = edge.curve->point(0.5 * (edge.range.lo + edge.range.hi));
+        bool onBoundary = false;
+        for (const PathSegment &segment : boundary)
+            if (projectPoint(*segment.curve, mid, segment.range).distance <= tolerance) onBoundary = true;
+        if (!onBoundary) continue;
+        const FinId fin = edge.forward.valid() ? edge.forward : edge.backward;
+        const FaceId face = body.loop(body.fin(fin).loop).face;
+        if (faces.contains(face.index)) continue;
+        faces.append(face.index);
+        result.append(faceReference(body, face, mid));
+    }
+    return result;
 }
 
 ForgeBody forgePlanarSketch(const SketchObject &sketch, QString *error) {

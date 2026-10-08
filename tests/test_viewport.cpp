@@ -92,6 +92,144 @@ public:
         require(!blended && error.contains(QStringLiteral("micro-geometrie")) && error.contains(QStringLiteral("faccia sottile")),
                 "errore del raccordo con le micro-geometrie vicine");
     }
+    // --fill-document [file.prt [copia.prt]]: superficie di riempimento di
+    // "superfice piana influenzata.prt": contorno = cerchio dello Schizzo 4,
+    // guide = archi degli Schizzi 2 e 3, faccia adiacente = il cono della
+    // Rivoluzione 1 (rilevata dal bordo libero).
+    static void fillDocument(const QStringList &args) {
+        using namespace ForgeCad;
+        const QString path = args.value(0, QStringLiteral(FORGECAD_SOURCE_DIR "/File_Esempio/superfice piana influenzata.prt"));
+        DocumentState document;
+        require(loadDocumentFile(path, document).isEmpty(), "lettura documento riempimento");
+        for (int i = 0; i < document.extrusions.size(); ++i)
+            if (!document.extrusions[i].forgeBody) CadViewport::buildGeometry(document.extrusions[i], i, document.sketches, document.extrusions);
+        require(document.sketches.size() >= 4 && !document.extrusions.isEmpty() && document.extrusions.first().forgeBody, "documento atteso");
+        const auto entity = [](int sketch) {
+            GeometryRef ref;
+            ref.kind = 7;
+            ref.index = sketch;
+            ref.element = {1, 0, -1};
+            return ref;
+        };
+        ExtrusionObject fill;
+        fill.feature = BodyFeature::FillSurface;
+        fill.operation = -1;
+        fill.name = QStringLiteral("Riempimento 1");
+        fill.planarRefs = {entity(3)};
+        fill.ruledFirst = {entity(1), entity(2)};
+        const int index = int(document.extrusions.size());
+        std::vector<Kernel::PathSegment> boundary;
+        require(geometryRefPath(fill.planarRefs.first(), index, document.sketches, document.extrusions, boundary, nullptr), "contorno");
+        const QVector<EdgePoint> faces = forgeFillContactFaces(boundary, *document.extrusions.first().forgeBody);
+        require(faces.size() == 1, "faccia adiacente rilevata sul bordo libero della rivoluzione");
+        GeometryRef face;
+        face.kind = 5;
+        face.index = 0;
+        face.featureId = document.extrusions.first().featureId;
+        face.point = faces.first();
+        fill.ruledSecond = {face};
+        for (int continuity : {0, 1, 2}) {
+            ExtrusionObject body = fill;
+            body.fillContinuity = continuity;
+            if (qEnvironmentVariableIsSet("FILL_INFLUENCE")) body.fillInfluence = qEnvironmentVariable("FILL_INFLUENCE").toDouble();
+            if (qEnvironmentVariableIsSet("FILL_STEP_CONTINUITY") && args.size() > 2 && continuity == qEnvironmentVariableIntValue("FILL_STEP_CONTINUITY")) {
+                CadViewport::buildGeometry(body, index, document.sketches, document.extrusions);
+                std::ofstream step(args.at(2).toStdString());
+                step << Kernel::writeStep({{"riempimento", Kernel::sewSheets({document.extrusions.first().forgeBody.get(), body.forgeBody.get()}, 1e-6, true).body}});
+            }
+            QElapsedTimer timer;
+            timer.start();
+            CadViewport::buildGeometry(body, index, document.sketches, document.extrusions);
+            std::cout << "continuita' " << continuity << ": " << timer.elapsed() << " ms, " << body.error.toStdString() << body.notice.toStdString() << std::endl;
+            require(body.forgeBody && body.forgeBody->isSheet() && Kernel::checkBody(*body.forgeBody).empty(), "riempimento valido");
+            require(continuity == 0 || body.notice.contains(QStringLiteral("non sono compatibili")), "conflitto guide/tangenza segnalato");
+            const Kernel::SewResult sewn = Kernel::sewSheets({document.extrusions.first().forgeBody.get(), body.forgeBody.get()}, 1e-6, true);
+            require(sewn.closed && sewn.solid, "riempimento e rivoluzione cuciti in un solido");
+            if (continuity == 1) {
+                fill = body;
+                if (args.size() > 2 && !qEnvironmentVariableIsSet("FILL_STEP_CONTINUITY")) {
+                    std::ofstream step(args.at(2).toStdString());
+                    step << Kernel::writeStep({{"riempimento", sewn.body}});
+                }
+            }
+        }
+        if (args.size() > 1 && !args.at(1).isEmpty()) {
+            // Come dal comando: la feature nuova con identita' e corpo logico propri.
+            DocumentState original;
+            require(loadDocumentFile(path, original).isEmpty(), "rilettura documento");
+            CadViewport viewport;
+            viewport.loadDocument(original);
+            fill.forgeBody.reset();
+            fill.display = {};
+            require(viewport.createBody(fill).isEmpty(), "creazione del riempimento");
+            require(saveDocumentFile(args.at(1), viewport.currentDocument(), true).isEmpty(), "salvataggio copia");
+            DocumentState reloaded;
+            require(loadDocumentFile(args.at(1), reloaded).isEmpty() && reloaded.extrusions.back().feature == BodyFeature::FillSurface
+                        && reloaded.extrusions.back().ruledSecond.size() == 1 && reloaded.extrusions.back().fillContinuity == 1,
+                    "rilettura del riempimento");
+        }
+    }
+    static void extrusionSurfaceOnly() {
+        using namespace ForgeCad;
+        // Quadrato 2 x 2 con un foro circolare di raggio 0.5 e un segmento aperto a parte.
+        SketchObject sketch;
+        sketch.name = QStringLiteral("Profilo");
+        const QPointF a(0, 0), b(2, 0), c(2, 2), d(0, 2);
+        sketch.segments = {{a, b}, {b, c}, {c, d}, {d, a}, {QPointF(4, 0), QPointF(4, 1.5)}};
+        sketch.constraints = QVector<int>(sketch.segments.size(), 0);
+        sketch.segmentLengths = QVector<double>(sketch.segments.size(), 0.0);
+        sketch.segmentAngles = QVector<double>(sketch.segments.size(), 0.0);
+        CurveObject circle;
+        circle.tool = DrawingTool::Circle;
+        circle.controlPoints = {QPointF(1, 1), QPointF(1.5, 1)};
+        sketch.curves = {circle};
+        const double h = 3.0;
+        const auto build = [&](ExtrusionObject body, QString &error) {
+            body.feature = BodyFeature::Extrusion;
+            body.operation = -1;
+            body.sketchIndex = 0;
+            return forgeExtrusionFeature(body, 0, {sketch}, {}, &error);
+        };
+        const auto totalArea = [](const Kernel::Body &body) {
+            double area = 0.0;
+            for (Kernel::FaceId face : body.faces()) area += Kernel::faceArea(body, face);
+            return area;
+        };
+        ExtrusionObject body;
+        body.distance = h;
+        QString error;
+        const ForgeBody solid = build(body, error);
+        require(solid && !solid->isSheet(), "estrusione solida");
+        body.extrudeSurface = true;
+        const ForgeBody sheet = build(body, error);
+        require(sheet && sheet->isSheet(), ("estrusione di superficie: " + error).toStdString().c_str());
+        require(Kernel::checkBody(*sheet).empty(), "lamina non valida");
+        const double expected = (8.0 + Kernel::kPi + 1.5) * h;
+        require(std::fabs(totalArea(*sheet) - expected) < 1e-7 * expected, "area dei fianchi");
+        for (Kernel::FaceId face : sheet->faces()) {
+            const Kernel::Surface &surface = *sheet->face(face).surface;
+            if (surface.type() == Kernel::SurfaceType::Plane)
+                require(std::fabs(static_cast<const Kernel::Plane &>(surface).frame().zDir().z()) < 1e-9, "coperchio rimasto");
+        }
+        // Simmetrica: stessa area, meta' sotto il piano.
+        body.extrudeSides = 1;
+        const ForgeBody symmetric = build(body, error);
+        require(symmetric && symmetric->isSheet() && std::fabs(totalArea(*symmetric) - expected) < 1e-7 * expected, "superficie simmetrica");
+        // Salvataggio e rilettura del flag.
+        QTemporaryDir dir;
+        DocumentState state;
+        state.sketches = {sketch};
+        ExtrusionObject saved = body;
+        saved.feature = BodyFeature::Extrusion;
+        saved.operation = -1;
+        saved.name = QStringLiteral("Estrusione 1");
+        state.extrusions = {saved};
+        const QString path = dir.filePath(QStringLiteral("superficie.prt"));
+        require(saveDocumentFile(path, state, false).isEmpty(), "salvataggio");
+        DocumentState loaded;
+        require(loadDocumentFile(path, loaded).isEmpty() && loaded.extrusions.size() == 1 && loaded.extrusions.first().extrudeSurface,
+                "rilettura del flag di superficie");
+    }
     static void automaticSnapConstraints() {
         using namespace ForgeCad;
         const auto has = [](const SketchObject &sketch, ConstraintType type, ConstraintRef a, ConstraintRef b) {
@@ -458,6 +596,51 @@ public:
                 std::cout << " facce=" << body.forgeBody->faces().size() << " poli B-spline=" << poles;
             }
             std::cout << std::endl;
+        }
+    }
+    // Diagnostica facoltativa: --dump-document file.prt. Schizzi (piano,
+    // entita' in coordinate del modello) e corpi (feature, facce, bordi liberi).
+    static void dumpDocument(const QString &path) {
+        using namespace ForgeCad;
+        DocumentState document;
+        require(loadDocumentFile(path, document).isEmpty(), "lettura documento");
+        const auto v3 = [](const Kernel::Vec3 &p) {
+            return QStringLiteral("(%1, %2, %3)").arg(p.x(), 0, 'g', 10).arg(p.y(), 0, 'g', 10).arg(p.z(), 0, 'g', 10).toStdString();
+        };
+        for (int i = 0; i < document.sketches.size(); ++i) {
+            const SketchObject &sketch = document.sketches.at(i);
+            const Kernel::Frame3 frame = sketchAxes(sketch);
+            std::cout << "S" << i << " " << sketch.name.toStdString() << " piano=" << sketch.plane << " datum=" << sketch.datumPlane
+                      << " origine=" << v3(frame.origin()) << " x=" << v3(frame.xDir()) << " n=" << v3(frame.zDir())
+                      << " segmenti=" << sketch.segments.size() << " curve=" << sketch.curves.size()
+                      << " vincoli=" << sketch.geometricConstraints.size() << std::endl;
+            for (int k = 0; k < sketch.segments.size(); ++k)
+                std::cout << "  seg" << k << (sketch.constructionSegments.contains(k) ? " [costr]" : "") << " "
+                          << v3(sketchToWorld(sketch.segments[k].first, sketch)) << " -> " << v3(sketchToWorld(sketch.segments[k].second, sketch)) << std::endl;
+            for (int k = 0; k < sketch.curves.size(); ++k) {
+                const CurveObject &curve = sketch.curves.at(k);
+                std::cout << "  curva" << k << " tool=" << int(curve.tool) << (curve.construction ? " [costr]" : "") << " grado=" << curve.degree
+                          << " nodi=" << curve.knots.size() << " punti:";
+                for (const QPointF &q : curve.controlPoints) std::cout << " " << v3(sketchToWorld(q, sketch));
+                std::cout << std::endl;
+            }
+        }
+        for (int i = 0; i < document.extrusions.size(); ++i) {
+            ExtrusionObject &body = document.extrusions[i];
+            if (!body.forgeBody && !body.suppressed) CadViewport::buildGeometry(body, i, document.sketches, document.extrusions);
+            std::cout << "B" << i << " " << body.name.toStdString() << " feature=" << int(body.feature) << " op=" << body.operation
+                      << " schizzo=" << body.sketchIndex << " first=" << body.firstBody << " distanza=" << body.distance
+                      << " superficie=" << body.extrudeSurface << " visibile=" << body.visible << " errore=" << body.error.toStdString() << std::endl;
+            if (!body.forgeBody) continue;
+            const Kernel::Body &b = *body.forgeBody;
+            std::cout << "  sheet=" << b.isSheet() << " facce=" << b.faces().size() << " edge=" << b.edges().size() << std::endl;
+            for (Kernel::FaceId f : b.faces())
+                std::cout << "  F" << f.index << " tipo=" << int(b.face(f).surface->type()) << std::endl;
+            for (Kernel::EdgeId e : b.edges()) {
+                const Kernel::Edge &g = b.edge(e);
+                std::cout << "  E" << e.index << (b.isLaminar(e) ? " libero" : "") << " tipo=" << int(g.curve->type()) << " "
+                          << v3(g.curve->point(g.range.lo)) << " -> " << v3(g.curve->point(g.range.hi)) << std::endl;
+            }
         }
     }
     // Diagnostica facoltativa: --mesh-stats file.prt [lato scarto angolo].
@@ -4102,6 +4285,19 @@ int main(int argc, char **argv) {
     QTemporaryDir settings;
     QSettings::setDefaultFormat(QSettings::IniFormat);
     QSettings::setPath(QSettings::IniFormat, QSettings::UserScope, settings.path());
+    const int fillArg = int(app.arguments().indexOf(QStringLiteral("--fill-document")));
+    if (fillArg > 0) {
+        try { ViewportInteractionTest::fillDocument(app.arguments().mid(fillArg + 1)); }
+        catch (const std::exception &e) { std::cerr << e.what() << std::endl; return 1; }
+        std::cout << "PASS fill surface" << std::endl;
+        return 0;
+    }
+    if (app.arguments().contains(QStringLiteral("--extrude-surface"))) {
+        try { ViewportInteractionTest::extrusionSurfaceOnly(); }
+        catch (const std::exception &e) { std::cerr << e.what() << std::endl; return 1; }
+        std::cout << "PASS extrusion surface only" << std::endl;
+        return 0;
+    }
     if (app.arguments().contains(QStringLiteral("--automatic-snaps"))) {
         try { ViewportInteractionTest::automaticSnapConstraints(); }
         catch (const std::exception &e) { std::cerr << e.what() << std::endl; return 1; }
@@ -4168,6 +4364,12 @@ int main(int argc, char **argv) {
         const int displayStatsArg = int(app.arguments().indexOf(QStringLiteral("--display-stats")));
         if (displayStatsArg > 0) { ViewportInteractionTest::displayStats(app.arguments().value(displayStatsArg + 1)); return 0; }
         const int meshStats = int(app.arguments().indexOf(QStringLiteral("--mesh-stats")));
+        const int dumpArg = int(app.arguments().indexOf(QStringLiteral("--dump-document")));
+        if (dumpArg > 0) {
+            try { ViewportInteractionTest::dumpDocument(app.arguments().value(dumpArg + 1)); }
+            catch (const std::exception &e) { std::cerr << e.what() << std::endl; return 1; }
+            return 0;
+        }
         if (meshStats > 0) { ViewportInteractionTest::meshStats(app.arguments().mid(meshStats + 1)); return 0; }
         if (edit > 0) ViewportInteractionTest::renderEdit(app.arguments().mid(edit + 1));
         else if (step > 0) ViewportInteractionTest::renderStep(app.arguments().mid(step + 1));

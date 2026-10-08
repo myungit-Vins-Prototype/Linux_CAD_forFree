@@ -29,7 +29,8 @@ void forgeSketchFrame(const SketchObject &sketch, double distance, Kernel::Frame
 // Body::isSheet). nullptr e messaggio in `error` se non riesce.
 // `start`: la base parte dal piano dello schizzo spostato di `start` nel verso
 // di extrusionVector (estrusioni simmetriche o nei due versi).
-ForgeBody forgeExtrusion(const SketchObject &sketch, double distance, QString *error, double start = 0.0);
+// surfaceOnly: anche i contorni chiusi danno una lamina (fianchi senza base e coperchio).
+ForgeBody forgeExtrusion(const SketchObject &sketch, double distance, QString *error, double start = 0.0, bool surfaceOnly = false);
 
 // Rivoluzione dei contorni chiusi dello schizzo attorno al suo asse `axis`
 // (ExtrusionObject::revolveAxis) di `angleDegrees` gradi, come buildRevolution.
@@ -131,6 +132,16 @@ ForgeBody forgePlanarSketch(const SketchObject &sketch, QString *error);
 // Superficie tra curve (patch di Coons, fk_boundary) del contorno chiuso dei tratti.
 ForgeBody forgeBoundarySurface(const std::vector<Kernel::PathSegment> &segments, QString *error);
 ForgeBody forgePlanarCurves(const std::vector<Kernel::PathSegment> &segments, QString *error);
+// Superficie di riempimento (fk_fill): contorno chiuso, curve guida e facce
+// adiacenti dei corpi (`contacts`: corpo e riferimento della faccia) con
+// cui continuare in tangenza (continuity 1) o curvatura (2). `notice`: gli
+// scarti ottenuti e le incompatibilita' tra guide e tangenza.
+ForgeBody forgeFillSurface(const std::vector<Kernel::PathSegment> &boundary, const std::vector<Kernel::PathSegment> &guides,
+                           const QVector<QPair<ForgeBody, EdgePoint>> &contacts, int continuity, double influence, double guideWeight,
+                           QString *error, QString *notice = nullptr);
+// Facce del corpo con un bordo libero su cui sta un tratto del contorno (le
+// facce adiacenti proposte per la superficie di riempimento).
+QVector<EdgePoint> forgeFillContactFaces(const std::vector<Kernel::PathSegment> &boundary, const Kernel::Body &body);
 inline ForgeBody forgeLoft(const QVector<SketchObject> &sections, bool ruled, QString *error) {
     return forgeLoft(sections, {}, ruled, 0, 0, 1, 1.0, 1.0, 1.0, error);
 }
