@@ -7,6 +7,7 @@
 #include <map>
 #include <numeric>
 #include <set>
+#include <sstream>
 #include <stdexcept>
 #include <string>
 #include <tuple>
@@ -133,6 +134,48 @@ void requireContinuousNormals(const BSplineSurface &surface, double d, const Int
             if (j + 1 < nv && std::find(sharp->v.begin(), sharp->v.end(), vs[j + 1]) != sharp->v.end())
                 check((*patches)[i * nv + j], (*patches)[i * nv + j + 1], false, vs[j + 1], {us[i], us[i + 1]});
         }
+}
+
+// La superficie a distanza si ripiega dove d supera il raggio di curvatura
+// dalla parte verso cui ci si sposta: lungo una direzione principale
+// O_u = (1 - d k) S_u (k con il segno di S_uu . N). Campioni sulla finestra e
+// sulle linee di nodo; senza, il fit convergeva su una superficie con le
+// cuspidi e il rifilo della cucitura falliva con "vettore nullo".
+void requireOffsetBelowCurvature(const Surface &surface, double d, const Interval &window, const Interval &vWindow) {
+    // Solo dentro il dominio: la finestra puo' prolungare la superficie per il
+    // rifilo della cucitura, e il polinomio estrapolato si curva di piu'
+    // (quel tratto si taglia via).
+    const Interval ud = surface.uDomain(), vd = surface.vDomain();
+    const Interval uw{std::max(window.lo, ud.lo), std::min(window.hi, ud.hi)}, vw{std::max(vWindow.lo, vd.lo), std::min(vWindow.hi, vd.hi)};
+    if (!(uw.lo < uw.hi && vw.lo < vw.hi)) return;
+    std::vector<double> us = surface.uBreakpoints(uw), vs = surface.vBreakpoints(vw);
+    for (int k = 0; k <= 64; ++k) us.push_back(uw.lo + uw.length() * k / 64.0), vs.push_back(vw.lo + vw.length() * k / 64.0);
+    double worst = 0.0;
+    for (double u : us)
+        for (double v : vs) {
+            Vec3 s[9];
+            surface.evaluate(u, v, 2, s);
+            const auto at = [&](int a, int b) { return s[Surface::derivativeIndex(a, b, 2)]; };
+            const Vec3 su = at(1, 0), sv = at(0, 1), m = cross(su, sv);
+            const double length = norm(m);
+            if (!(length > 0.0)) continue;  // punti singolari: li tratta il fit
+            const Vec3 n = m / length;
+            const double E = dot(su, su), F = dot(su, sv), G = dot(sv, sv);
+            const double L = dot(at(2, 0), n), M = dot(at(1, 1), n), N = dot(at(0, 2), n);
+            const double area = E * G - F * F;
+            if (!(area > 0.0)) continue;
+            const double K = (L * N - M * M) / area, H = (E * N - 2.0 * F * M + G * L) / (2.0 * area);
+            const double root = std::sqrt(std::max(0.0, H * H - K));
+            for (double k : {H + root, H - root}) worst = std::max(worst, d * k);
+        }
+    // worst = |d| / raggio minimo dalla parte dello spostamento.
+    if (worst >= 1.0) {
+        std::ostringstream message;
+        message.precision(4);
+        message << "offset: distanza " << std::fabs(d) << " oltre il raggio di curvatura della faccia (minimo " << std::fabs(d) / worst
+                << " da quella parte): la superficie a distanza si ripiega";
+        throw std::domain_error(message.str());
+    }
 }
 
 // Interpolazione cubica C2 con le derivate agli estremi (de Boor, "clamped"):
@@ -658,7 +701,16 @@ void seamJet(const Surface &surface, double d, double u, double v, Vec3 *out) {
 // Proiezione locale sul prolungamento della superficie: conserva il ramo UV
 // della faccia originale invece di saltare su un'altra parte del loft.
 Vec2 projectLocal(const Surface &surface, const Vec3 &point, Vec2 uv, double offset = 0.0) {
-    for (int iteration = 0; iteration < 40; ++iteration) {
+    // Gauss-Newton con ricerca lineare: su una superficie a distanza molto
+    // curva (offset verso l'interno vicino al raggio di curvatura) il passo
+    // pieno usciva dal ramo e divergeva (u ~ 1e16).
+    const auto distanceAt = [&](const Vec2 &at) {
+        Vec3 jet[4];
+        seamJet(surface, offset, at.x(), at.y(), jet);
+        return norm(point - jet[0]);
+    };
+    double current = distanceAt(uv);
+    for (int iteration = 0; iteration < 60; ++iteration) {
         Vec3 jet[4];
         seamJet(surface, offset, uv.x(), uv.y(), jet);
         const Vec3 a = jet[Surface::derivativeIndex(1, 0, 1)], b = jet[Surface::derivativeIndex(0, 1, 1)];
@@ -666,9 +718,20 @@ Vec2 projectLocal(const Surface &surface, const Vec3 &point, Vec2 uv, double off
         const double aa = dot(a, a), ab = dot(a, b), bb = dot(b, b), det = aa * bb - ab * ab;
         if (!(det > 1e-24 * aa * bb)) throw std::domain_error("offset: cucitura su una superficie singolare");
         const Vec2 step((bb * dot(a, r) - ab * dot(b, r)) / det, (aa * dot(b, r) - ab * dot(a, r)) / det);
-        uv += step;
-        if (!isFinite(uv)) throw std::domain_error("offset: estensione della cucitura divergente");
         if (norm(step) <= 1e-12 * (1.0 + norm(uv))) break;
+        double factor = 1.0;
+        Vec2 next = uv + step;
+        double trial = isFinite(next) ? distanceAt(next) : std::numeric_limits<double>::infinity();
+        while (!(trial < current) && factor > 1e-6) {
+            factor *= 0.5;
+            next = uv + factor * step;
+            trial = distanceAt(next);
+        }
+        // Nessun miglioramento: il punto e' gia' il piu' vicino (residuo normale).
+        if (!(trial < current)) break;
+        uv = next;
+        current = trial;
+        if (!isFinite(uv)) throw std::domain_error("offset: estensione della cucitura divergente");
     }
     return uv;
 }
@@ -905,6 +968,7 @@ SurfacePtr offsetSurface(const Surface &surface, double d, const Interval &uw, c
     }
     case SurfaceType::BSpline:
         if (!uw.isFinite() || !vw.isFinite()) throw std::domain_error("offset: finestra della B-spline non limitata");
+        requireOffsetBelowCurvature(surface, d, uw, vw);
         result = offsetBSplineC2(surface, d, uw, vw, tolerance);
         if (!result) result = offsetBSpline(surface, d, uw, vw, tolerance);
         break;

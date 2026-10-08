@@ -8,6 +8,12 @@ Contesto del progetto per Claude Code. La lingua di lavoro è l'italiano (UI, co
 
 ## Stato corrente: loft, estensioni e raccordi (2026-10-07)
 
+### Offset verso l'interno oltre il raggio di curvatura (2026-10-08)
+
+- `offsetFaces(loft, tutte, -3, cucitura)` sul loft di `Loft_offset.prt` falliva con "vettore nullo o non finito" (Newton di `projectLocal` divergente, u ~ 1e16). Causa geometrica: raggio di curvatura minimo delle meta' del loft 1.42 mm (misurato su griglia 201 x 201, vicino a u = 1, v = 1), quindi a -3 la superficie a distanza si ripiega.
+- `kernel/fk_offset.cpp`: `requireOffsetBelowCurvature` (curvature principali da prima e seconda forma fondamentale su 65 x 65 campioni piu' le linee di nodo, solo dentro il dominio della superficie, non nel prolungamento della finestra) prima del fit delle B-spline: errore "distanza d oltre il raggio di curvatura della faccia (minimo R da quella parte)". `projectLocal` ora e' Gauss-Newton con ricerca lineare (non diverge piu' sulle superfici molto curve).
+- Verificato: -3 e -1.5 respinti con R = 1.425, -1.4 e -1 riusciti, +3 invariato. Test `OffsetInwardBeyondCurvatureIsExplained`. Suite kernel 275/275, ctest dell'app 5/5.
+
 ### Superfici a distanza C2 per le B-spline molto fitte (2026-10-08)
 
 - Seguito del lag: causa a monte = `offsetBSpline` (bicubica di Hermite, nodi interni tripli, 3n+1 poli per direzione). Nuovo `offsetBSplineC2` in `kernel/fk_offset.cpp`: interpolazione tensoriale cubica C2 (`clampedCubic`: spline "clamped" di de Boor, Thomas sulla matrice di collocazione) dei punti di O = S + d N sulla stessa griglia infittita, con O_u, O_v, O_uv esatti solo ai bordi; tratti separati da nodi tripli sulle linee di nodo di S (dove O e' solo G1) e prima/ultima cella di ogni tratto come Hermite. Derivate ai nodi e campioni di O conservati tra i giri (`jetCache`, `sampleCache`), stesso criterio di divisione per cella; `requireContinuousNormals` come prima. Si usa solo se la Hermite equivalente supererebbe `kDenseOffsetPoles` = 200 000 poli; altrimenti (e se la C2 non converge) resta la Hermite.

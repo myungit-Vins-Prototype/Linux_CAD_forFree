@@ -560,3 +560,26 @@ FK_TEST(OffsetDenseBSplineIsC2) {
         }
     FK_CHECK(worst < 1e-7);
 }
+
+// Verso l'interno oltre il raggio di curvatura minimo (1.42 sulle meta' del
+// loft) la superficie a distanza si ripiega: errore esplicito con il raggio,
+// non il fallimento del rifilo della cucitura ("vettore nullo") di prima.
+// Sotto il raggio l'offset con la cucitura mantenuta riesce.
+FK_TEST(OffsetInwardBeyondCurvatureIsExplained) {
+    std::ifstream in(std::string(FORGECAD_SOURCE_DIR) + "/kernel/tests/data/loft_offset_base.body", std::ios::binary);
+    FK_CHECK(bool(in));
+    if (!in) return;
+    std::stringstream data;
+    data << in.rdbuf();
+    const Body loft = readBodyBinary(data.str());
+    std::string message;
+    try {
+        offsetFaces(loft, loft.faces(), -3.0, 1e-7, true);
+    } catch (const std::domain_error &failure) {
+        message = failure.what();
+    }
+    FK_CHECK(message.find("raggio di curvatura") != std::string::npos);
+    const OffsetResult inward = offsetFaces(loft, loft.faces(), -1.4, 1e-7, true);
+    FK_CHECK(inward.body.faces().size() == 4);
+    checkValid(inward.body);
+}
