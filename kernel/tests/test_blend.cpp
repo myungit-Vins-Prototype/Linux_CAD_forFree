@@ -1508,6 +1508,62 @@ FK_TEST(BlendOffsetLoftTrimmedTopOneMillimeter) {
     FK_CHECK(patches > 0);
 }
 
+// Corpo equivalente al finale di Loft_offset.prt rigenerato con il loft
+// corretto: due fianchi B-spline (le meta' dell'offset, cucitura tangente
+// divisa in due edge dall'estensione) tra i coperchi piani y = -0.5 e 20.5.
+// Gli spigoli dei coperchi vengono da una booleana e cominciano con un tratto
+// di Hermite di 5.6e-8 prima di un nodo; il contatto sul fianco attraversa la
+// cucitura oltre il primo dei suoi edge. Raccordi sopra e sotto, R1 e R3.
+FK_TEST(BlendRegeneratedLoftOffsetCaps) {
+    std::ifstream in(std::string(FORGECAD_SOURCE_DIR) + "/kernel/tests/data/loft_offset_regenerated.body", std::ios::binary);
+    FK_CHECK(bool(in));
+    if (!in) return;
+    std::stringstream content;
+    content << in.rdbuf();
+    const Body body = readBodyBinary(content.str());
+    FK_CHECK(checkBody(body).empty());
+    std::vector<FaceId> caps, sides;
+    for (FaceId f : body.faces()) (body.face(f).surface->type() == SurfaceType::Plane ? caps : sides).push_back(f);
+    FK_CHECK(caps.size() == 2 && sides.size() == 2);
+    std::vector<EdgeId> selected;
+    for (FaceId cap : caps)
+        for (LoopId loop : body.face(cap).loops)
+            for (FinId fin : body.loopFins(loop)) selected.push_back(body.fin(fin).edge);
+    FK_CHECK(selected.size() == 4);
+    for (double radius : {1.0, 3.0}) {
+        const Body result = blendEdges(body, selected, radius, false);
+        FK_CHECK(checkBody(result).empty());
+        for (EdgeId edge : result.edges()) {
+            FK_CHECK(!result.isLaminar(edge));
+            FK_CHECK(result.edge(edge).tolerance < 1e-6);
+        }
+        // Palla vera: il centro dista r da un coperchio e da un fianco originali.
+        int patches = 0;
+        for (FaceId f : result.faces()) {
+            const auto surface = result.face(f).surface;
+            bool original = false;
+            for (FaceId old : body.faces()) original = original || body.face(old).surface == surface;
+            if (original) continue;
+            ++patches;
+            const Interval u = surface->uDomain();
+            for (double fraction : {0.1, 0.5, 0.9}) {
+                const double t = u.lo + fraction * u.length();
+                const Vec3 p = surface->point(t, 0.5), normal = surface->normal(t, 0.5);
+                double error = 1e300;
+                for (double sign : {-1.0, 1.0}) {
+                    const Vec3 center = p + sign * radius * normal;
+                    double cap = 1e300, side = 1e300;
+                    for (FaceId c : caps) cap = std::min(cap, std::fabs(projectPoint(*body.face(c).surface, center).distance - radius));
+                    for (FaceId s : sides) side = std::min(side, std::fabs(projectPoint(*body.face(s).surface, center).distance - radius));
+                    error = std::min(error, std::max(cap, side));
+                }
+                FK_CHECK(error < 1e-6);
+            }
+        }
+        FK_CHECK(patches >= 4);
+    }
+}
+
 // Due edge possono usare la stessa spline senza essere tangenti al nodo.
 // La continuazione non deve prendere la derivata destra su entrambi.
 FK_TEST(BlendSplitSeamPreservesKnotCorner) {

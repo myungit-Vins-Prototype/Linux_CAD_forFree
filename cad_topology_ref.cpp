@@ -56,7 +56,8 @@ enum class Placement { On = 0, OnCarrier = 1, Elsewhere = 2 };
 //    stesso indice puo' essere un'altra entita'. Vale l'ID se contiene il
 //    punto; poi, tra le entita' dello stesso tipo, quella che contiene il
 //    punto (il contesto topologico solo come preferenza); se nessuna lo
-//    contiene, l'ID con tipo e contesto uguali (la geometria si e' spostata);
+//    contiene, l'ID con tipo e contesto uguali (la geometria si e' spostata),
+//    salvo che l'ID sia oltre `legacyTolerance` e un'altra entita' entro;
 //    poi quella sul cui supporto sta il punto (una faccia rimpicciolita, uno
 //    spigolo accorciato); infine la piu' vicina entro `legacyTolerance`.
 template <class Id, class Range, class TypeMatches, class ContextMatches, class Locate, class Metric>
@@ -103,7 +104,17 @@ Id resolve(const EdgePoint &reference, const Range &range, TypeMatches typeMatch
         }
     }
     if (bestTier == int(Placement::On)) return best;
-    if (exactMatches) return exact;
+    if (exactMatches) {
+        // L'ID senza il punto vale solo se nessun'altra entita' sta entro la
+        // tolleranza mentre la sua e' lontana: rigenerando la storia con una
+        // topologia diversa a monte (sei facce diventate due) lo stesso
+        // indice e' un altro spigolo, e quello giusto passa a 1e-4 dal punto.
+        try {
+            if (best != exact && closest <= legacyTolerance && !(metric(exact) <= legacyTolerance)) return best;
+        } catch (const std::exception &) {
+        }
+        return exact;
+    }
     if (bestTier == int(Placement::Elsewhere) && !(closest <= legacyTolerance)) return Id();
     return best;
 }

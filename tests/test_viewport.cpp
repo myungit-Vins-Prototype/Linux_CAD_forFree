@@ -642,10 +642,16 @@ public:
         using namespace ForgeCad::Kernel;
         DocumentState state;
         require(loadDocumentFile(path, state).isEmpty(), "lettura modello da rigenerare");
+        // "from=N": rigenera tutta la storia da N senza cambiare i contorni.
         QSet<int> changed;
-        for (const auto &index : indices) changed.insert(index.toInt());
-        const auto original = state.extrusions;
         int first = state.extrusions.size();
+        bool nearestRemap = false;
+        for (const auto &index : indices) {
+            if (index == QStringLiteral("nearest")) nearestRemap = true;
+            else if (index.startsWith(QStringLiteral("from="))) first = std::min(first, index.mid(5).toInt());
+            else changed.insert(index.toInt());
+        }
+        const auto original = state.extrusions;
         for (int index : changed) {
             require(index >= 0 && index < state.extrusions.size(), "indice estensione");
             auto &feature = state.extrusions[index];
@@ -663,7 +669,18 @@ public:
                 for (auto v : body.vertices()) box.add(body.vertex(v).point);
                 const double reach = 1e-3 * std::max(1.0, box.diagonal());
                 const Vec3 p(point.x, point.y, point.z);
-                if (kind == 4) {
+                if (kind == 4 && nearestRemap) {
+                    // Topologia cambiata a monte: gli ID non valgono piu', conta solo lo spigolo piu' vicino.
+                    EdgeId best;
+                    double bestDistance = reach * 100.0;
+                    for (auto candidate : body.edges()) {
+                        const auto &geometry = body.edge(candidate);
+                        const double distance = norm(projectPoint(*geometry.curve, p, geometry.range).point - p);
+                        if (distance < bestDistance) { bestDistance = distance; best = candidate; }
+                    }
+                    require(best.valid(), "spigolo piu' vicino dopo rigenerazione");
+                    point = edgeReference(body, best, projectPoint(*body.edge(best).curve, p, body.edge(best).range).point);
+                } else if (kind == 4) {
                     const auto e = resolveEdgeReference(body, point, reach, ReferenceState::Other);
                     require(e.valid(), "riferimento allo spigolo dopo rigenerazione");
                     point = edgeReference(body, e, projectPoint(*body.edge(e).curve, p, body.edge(e).range).point);
@@ -676,9 +693,34 @@ public:
             for (auto &point : feature.blendEdges) remap(feature.firstBody, point, 4);
             for (auto *refs : {&feature.planarRefs, &feature.datum.refs})
                 for (auto &ref : *refs) remap(ref.index, ref.point, ref.kind);
+            if (nearestRemap) {
+                // Piu' frammenti vecchi possono finire sullo stesso spigolo nuovo.
+                QSet<QPair<int, int>> seen;
+                for (int k = feature.blendEdges.size() - 1; k >= 0; --k) {
+                    const QPair<int, int> key(-1, feature.blendEdges[k].subshape);
+                    if (seen.contains(key)) feature.blendEdges.remove(k); else seen.insert(key);
+                }
+                seen.clear();
+                for (int k = feature.planarRefs.size() - 1; k >= 0; --k) {
+                    if (feature.planarRefs[k].kind != 4) continue;
+                    const QPair<int, int> key(feature.planarRefs[k].index, feature.planarRefs[k].point.subshape);
+                    if (seen.contains(key)) feature.planarRefs.remove(k); else seen.insert(key);
+                }
+            }
             feature.cachedGeometry = false;
             CadViewport::buildGeometry(feature, index, state.sketches, state.extrusions);
             std::cout << index << " " << feature.name.toStdString() << ": " << feature.error.toStdString() << std::endl;
+            if (!feature.error.isEmpty() && feature.firstBody >= 0 && state.extrusions.at(feature.firstBody).forgeBody) {
+                const auto &body = *state.extrusions.at(feature.firstBody).forgeBody;
+                for (const auto &point : feature.blendEdges)
+                    std::cout << "  rif (" << point.x << "," << point.y << "," << point.z << ") id=" << point.subshape << std::endl;
+                for (auto e : body.edges()) if (body.isLaminar(e)) {
+                    const auto &edge = body.edge(e);
+                    const auto a = edge.curve->point(edge.range.lo), m = edge.curve->point(0.5 * (edge.range.lo + edge.range.hi)), b = edge.curve->point(edge.range.hi);
+                    std::cout << "  libero E" << e.index << " (" << a.x() << "," << a.y() << "," << a.z() << ") ("
+                              << m.x() << "," << m.y() << "," << m.z() << ") (" << b.x() << "," << b.y() << "," << b.z() << ")" << std::endl;
+                }
+            }
             require(feature.error.isEmpty(), "rigenerazione della storia dopo estensione");
             CadViewport::tessellateGeometry(feature, 0, feature.display);
         }

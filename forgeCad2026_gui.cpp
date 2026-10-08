@@ -6899,6 +6899,18 @@ private:
     // Tenere tra i due marcatori tutta la logica che decide quale geometria
     // esatta costruire; le modifiche alla sola UI fuori da qui non devono
     // invalidare le anteprime salvate.
+    // Tratti dei contorni senza ripetizioni: rigenerando la storia con una
+    // topologia diversa a monte piu' riferimenti (frammenti di un vecchio
+    // bordo) possono indicare lo stesso spigolo, che nel loop va una volta.
+    static void appendDistinctSegments(std::vector<ForgeCad::Kernel::PathSegment> &segments,
+                                       const std::vector<ForgeCad::Kernel::PathSegment> &pieces) {
+        for (const auto &piece : pieces) {
+            const bool repeated = std::any_of(segments.begin(), segments.end(), [&](const ForgeCad::Kernel::PathSegment &segment) {
+                return segment.curve == piece.curve && segment.range.lo == piece.range.lo && segment.range.hi == piece.range.hi;
+            });
+            if (!repeated) segments.push_back(piece);
+        }
+    }
     static void buildGeometry(ExtrusionObject &body, int index, const QVector<SketchObject> &sketches, const QVector<ExtrusionObject> &bodies) {
         body.error.clear();
         body.forgeBody.reset();
@@ -7208,7 +7220,7 @@ private:
                         body.error = QStringLiteral("Curva del contorno: %1.").arg(reason);
                         return;
                     }
-                    segments.insert(segments.end(), pieces.begin(), pieces.end());
+                    appendDistinctSegments(segments, pieces);
                 }
                 body.forgeBody = ForgeCad::forgeBoundarySurface(segments, &body.error);
                 body.solid = false;
@@ -7231,7 +7243,7 @@ private:
                             body.error = QStringLiteral("Bordo della superficie planare: %1.").arg(reason);
                             return;
                         }
-                        segments.insert(segments.end(), pieces.begin(), pieces.end());
+                        appendDistinctSegments(segments, pieces);
                     }
                     body.forgeBody = ForgeCad::forgePlanarCurves(segments, &body.error);
                 }
