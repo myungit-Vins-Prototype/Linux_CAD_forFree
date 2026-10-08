@@ -1036,9 +1036,18 @@ QVector<ConstraintType> applicableConstraints(const SketchObject &sketch, const 
     const Shape b = shapeOf(sketch, refs.at(1));
     if (b == Shape::None || refs.at(0) == refs.at(1)) return {};
     if (refs.at(0).kind == 2 && refs.at(1).kind == 2) return {};
-    // Due punti della stessa entita' non si fanno coincidere (resta solo la distanza, o H/V per i segmenti).
+    // Gli estremi distinti di una spline possono coincidere per chiuderla;
+    // sugli altri punti della stessa entita' si evita una degenerazione.
     const bool sameEntity = refs.at(0).kind == refs.at(1).kind && refs.at(0).element == refs.at(1).element && refs.at(0).kind != 2;
     if (a == Shape::Point && b == Shape::Point) {
+        if (sameEntity && refs.at(0).kind == 1) {
+            const auto &curve = sketch.curves.at(refs.at(0).element);
+            const int last = int(curve.controlPoints.size()) - 1;
+            if (curve.tool == DrawingTool::Spline && last > 1
+                && ((refs.at(0).point == 0 && refs.at(1).point == last)
+                    || (refs.at(1).point == 0 && refs.at(0).point == last)))
+                return {T::Coincident, T::Horizontal, T::Vertical, T::Distance, T::HorizontalDistance, T::VerticalDistance};
+        }
         if (sameEntity) return {T::Horizontal, T::Vertical, T::Distance, T::HorizontalDistance, T::VerticalDistance};
         return {T::Coincident, T::Horizontal, T::Vertical, T::Distance, T::HorizontalDistance, T::VerticalDistance};
     }

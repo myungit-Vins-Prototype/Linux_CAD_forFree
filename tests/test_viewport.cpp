@@ -29,6 +29,166 @@ static void require(bool ok, const char *message) {
 }
 class ViewportInteractionTest {
 public:
+    static void automaticSnapConstraints() {
+        using namespace ForgeCad;
+        const auto has = [](const SketchObject &sketch, ConstraintType type, ConstraintRef a, ConstraintRef b) {
+            for (const auto &c : sketch.geometricConstraints)
+                if (c.type==type && c.first==a && c.second==b) return true;
+            return false;
+        };
+        for (auto tool : {DrawingTool::Circle,DrawingTool::Ellipse,DrawingTool::Arc}) {
+            CadViewport v;
+            v.sketches_={SketchObject()}; v.activeSketch_=0;
+            v.geometrySnap_=true; v.originSnap_=true;
+            v.drawingTool_=tool;
+            v.sketches_[0].segments.append({QPointF(3,0),QPointF(5,0)});
+            v.curveControlPoints_={QPointF(0,0),QPointF(3,0)};
+            if(tool==DrawingTool::Ellipse) v.curveControlPoints_.append(QPointF(0,2));
+            if(tool==DrawingTool::Arc) v.curveControlPoints_.append(QPointF(0,3));
+            v.finalizePrimitive();
+            auto &sketch=v.sketches_[0];
+            require(sketch.curves.size()==1,"creazione primitiva con snap");
+            require(has(sketch,ConstraintType::Coincident,{1,0,0},{2,0,-1}),"centro non vincolato all'origine");
+            require(has(sketch,ConstraintType::Coincident,{1,0,1},{0,0,0}),"snap primitiva non persistente");
+            sketch.curves[0].controlPoints[0]+=QPointF(0.2,0.1);
+            require(solveSketch(sketch).ok,"risoluzione vincolo origine");
+            require(QLineF(sketch.curves[0].controlPoints[0],QPointF()).length()<1e-6,"origine non mantenuta");
+        }
+        CadViewport v;
+        v.sketches_={SketchObject()}; v.activeSketch_=0;
+        v.geometrySnap_=true; v.originSnap_=true; v.gridSnap_=false;
+        v.drawingTool_=DrawingTool::Spline;
+        v.sketches_[0].segments.append({QPointF(2,2),QPointF(4,2)});
+        v.curveControlPoints_={QPointF(),QPointF(3,2),QPointF(4,-2)};
+        const QPointF closing=v.snapPoint(QPointF(0.001,0.001),false);
+        require(closing==QPointF(),"snap chiusura spline");
+        v.curveControlPoints_.append(closing);
+        v.finalizeCurve();
+        auto &sketch=v.sketches_[0];
+        require(has(sketch,ConstraintType::Midpoint,{1,0,1},{0,0,-1}),"snap punto interno spline non vincolato");
+        require(has(sketch,ConstraintType::Coincident,{1,0,0},{1,0,3}),"chiusura spline non vincolata");
+        const auto &curve=sketch.curves[0];
+        int handles=0;
+        for(int control : {0,3}) for(int side : {0,1}) handles+=CadViewport::visibleSplineHandle(curve,control,side);
+        require(handles==2 && CadViewport::visibleSplineHandle(curve,0,1)
+            && CadViewport::visibleSplineHandle(curve,3,0),"maniglie ridondanti alla chiusura");
+        const QPointF hidden=curve.tangentHandles[0].first;
+        int ci=-1,pi=-1; EditablePointKind kind=EditablePointKind::Control;
+        const bool found=v.findCurveEditPoint(hidden,ci,pi,kind);
+        require(!found || pi!=0 || kind!=EditablePointKind::TangentIn,"maniglia nascosta selezionabile");
+        sketch.curves[0].controlPoints[3]=QPointF(0.1,0.1);
+        require(solveSketch(sketch).ok && QLineF(sketch.curves[0].controlPoints[0],sketch.curves[0].controlPoints[3]).length()<1e-6,
+                "chiusura persa dopo modifica");
+
+        // La chiusura deve valere anche lontano dall'origine, senza due
+        // coincidenze all'origine che nascondano un vincolo non riconosciuto.
+        SketchObject closed;
+        closed.curves.append(sketch.curves[0]);
+        for(auto &p:closed.curves[0].controlPoints) p+=QPointF(10,10);
+        for(auto &h:closed.curves[0].tangentHandles) { h.first+=QPointF(10,10); h.second+=QPointF(10,10); }
+        SketchConstraint closure;
+        closure.type=ConstraintType::Coincident; closure.first={1,0,0}; closure.second={1,0,3};
+        closed.geometricConstraints.append(closure);
+        closed.curves[0].controlPoints[3]+=QPointF(0.3,-0.2);
+        require(applicableConstraints(closed,{closure.first,closure.second}).contains(ConstraintType::Coincident),
+            "chiusura spline rifiutata dal sistema di vincoli");
+        require(solveSketch(closed).ok && QLineF(closed.curves[0].controlPoints[0],closed.curves[0].controlPoints[3]).length()<1e-6,
+            "vincolo di chiusura inefficace fuori dall'origine");
+
+        SketchObject onCurve;
+        CurveObject ellipse;
+        ellipse.tool=DrawingTool::Ellipse; ellipse.controlPoints={QPointF(10,10),QPointF(15,10),QPointF(10,12)};
+        onCurve.curves.append(ellipse);
+        const QPointF p(10+5/std::sqrt(2.0),10+2/std::sqrt(2.0));
+        onCurve.segments.append({p,QPointF(20,20)});
+        v.recordCoincidences(onCurve,0);
+        require(has(onCurve,ConstraintType::PointOnCurve,{0,0,0},{1,0,-1}),"snap su ellisse non vincolato");
+        const int count=onCurve.geometricConstraints.size();
+        v.recordCoincidences(onCurve,0);
+        require(onCurve.geometricConstraints.size()==count,"vincoli snap duplicati");
+        onCurve.segments[0].first+=QPointF(0.05,0.03);
+        require(solveSketch(onCurve).ok,"risoluzione punto su ellisse");
+        for(const auto &c:onCurve.geometricConstraints) require(constraintError(onCurve,c)<1e-6,"snap non mantenuto dopo modifica");
+        QTemporaryDir directory;
+        DocumentState state,loaded; state.sketches={sketch,onCurve};
+        const auto path=directory.filePath(QStringLiteral("snaps.prt"));
+        require(saveDocumentFile(path,state,false).isEmpty() && loadDocumentFile(path,loaded).isEmpty(),"persistenza snap .prt");
+        require(has(loaded.sketches[0],ConstraintType::Coincident,{1,0,0},{1,0,3}),"vincolo chiusura perso alla riapertura");
+    }
+
+    static void ellipseTrim() {
+        using namespace ForgeCad;
+        for (bool rotated : {false, true}) {
+            SketchObject sketch;
+            CurveObject ellipse;
+            ellipse.tool = DrawingTool::Ellipse;
+            ellipse.construction = true;
+            const QPointF center(7,-3), axis = rotated ? QPointF(0.6,0.8) : QPointF(1,0);
+            const QPointF perpendicular(-axis.y(),axis.x());
+            ellipse.controlPoints = {center, center + 2*axis, center + 5*perpendicular};
+            sketch.curves.append(ellipse);
+            const auto original = curveGeometry(ellipse).front();
+            const auto point = [&](double t) {
+                const auto p = original.curve->point(t);
+                return QPointF(p.x(),p.y());
+            };
+            const auto diameter = [&](double t) {
+                const QPointF d = 2*(point(t)-center);
+                return SketchSegment{center-d,center+d};
+            };
+            sketch.segments.append(diameter(0));
+            const auto preview = trimPreview(sketch,{1,0},point(M_PI/2));
+            require(preview.size()>2,"anteprima taglio ellisse assente");
+            auto result = trimSketchEntity(sketch,{1,0},point(M_PI/2));
+            require(result.error.isEmpty() && sketch.curves.size()==1,"taglio ellisse fallito");
+            require(sketch.curves[0].tool==DrawingTool::Nurbs && sketch.curves[0].construction,
+                    "arco ellittico razionale e costruzione");
+            const auto verify = [&] {
+                const auto pieces = curveGeometry(sketch.curves[0]);
+                require(pieces.size()==1,"arco ellittico non valido");
+                const auto &g=pieces.front();
+                for(int i=0;i<=100;++i) {
+                    const auto p=g.curve->point(g.range.lo+g.range.length()*i/100.0);
+                    const QPointF d=QPointF(p.x(),p.y())-center;
+                    const double x=QPointF::dotProduct(d,axis)/2, y=QPointF::dotProduct(d,perpendicular)/5;
+                    require(std::fabs(x*x+y*y-1)<1e-10,"arco fuori dall'ellisse originale");
+                }
+            };
+            verify();
+            QTemporaryDir directory;
+            DocumentState state, loaded;
+            state.sketches.append(sketch);
+            const QString path=directory.filePath(QStringLiteral("ellipse.prt"));
+            require(saveDocumentFile(path,state,false).isEmpty() && loadDocumentFile(path,loaded).isEmpty(),
+                "salvataggio e riapertura arco ellittico");
+            require(loaded.sketches.size()==1 && loaded.sketches[0].curves.size()==1,
+                "arco ellittico perso alla riapertura");
+            sketch=loaded.sketches[0];
+            verify();
+            sketch.segments.append(diameter(M_PI/2));
+            result=trimSketchEntity(sketch,{1,0},point(5*M_PI/4));
+            require(result.error.isEmpty() && sketch.curves.size()==1,"secondo taglio arco ellittico fallito");
+            verify();
+            const auto kept=curveGeometry(sketch.curves[0]).front();
+            const auto expected=original.curve->point(3*M_PI/2);
+            require(Kernel::distance(kept.start(),expected)<1e-7,"secondo taglio estremo errato");
+
+            SketchObject wrap;
+            wrap.curves.append(ellipse);
+            wrap.segments.append(diameter(M_PI/2));
+            result=trimSketchEntity(wrap,{1,0},point(0));
+            require(result.error.isEmpty() && wrap.curves.size()==1,"taglio sulla chiusura ellisse");
+            const auto retained=curveGeometry(wrap.curves[0]).front();
+            require(Kernel::distance(retained.start(),original.curve->point(M_PI/2))<1e-7
+                && Kernel::distance(retained.end(),original.curve->point(3*M_PI/2))<1e-7,
+                "taglio sulla chiusura tiene il tratto sbagliato");
+            SketchObject isolated;
+            isolated.curves.append(ellipse);
+            require(trimSketchEntity(isolated,{1,0},point(0)).error.isEmpty() && isolated.curves.isEmpty(),
+                "ellisse senza intersezioni non eliminata");
+        }
+    }
+
     static void extensionContourPicking() {
         using namespace ForgeCad;
         using namespace ForgeCad::Kernel;
@@ -3739,6 +3899,18 @@ int main(int argc, char **argv) {
     QTemporaryDir settings;
     QSettings::setDefaultFormat(QSettings::IniFormat);
     QSettings::setPath(QSettings::IniFormat, QSettings::UserScope, settings.path());
+    if (app.arguments().contains(QStringLiteral("--automatic-snaps"))) {
+        try { ViewportInteractionTest::automaticSnapConstraints(); }
+        catch (const std::exception &e) { std::cerr << e.what() << std::endl; return 1; }
+        std::cout << "PASS automatic snap constraints" << std::endl;
+        return 0;
+    }
+    if (app.arguments().contains(QStringLiteral("--ellipse-trim"))) {
+        try { ViewportInteractionTest::ellipseTrim(); }
+        catch (const std::exception &e) { std::cerr << e.what() << std::endl; return 1; }
+        std::cout << "PASS ellipse trim" << std::endl;
+        return 0;
+    }
     if (app.arguments().contains(QStringLiteral("--edge-pick-deletion"))) {
         try { ViewportInteractionTest::deletionDuringEdgePick(); }
         catch (const std::exception &e) { std::cerr << e.what() << std::endl; return 1; }

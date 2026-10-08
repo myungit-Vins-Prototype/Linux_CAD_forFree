@@ -4231,7 +4231,8 @@ protected:
             const SketchElementSelection hit = findSketchElement(rawPoint);
             if (hit.kind >= 0 && !hasPendingPoint_ && curveControlPoints_.isEmpty()) {
                 snapPoint(rawPoint);
-                const bool pointSnap = lastSnapKind_ == SnapKind::Endpoint || lastSnapKind_ == SnapKind::Midpoint;
+                const bool pointSnap = lastSnapKind_ == SnapKind::Endpoint || lastSnapKind_ == SnapKind::Midpoint
+                    || lastSnapKind_ == SnapKind::Nearest;
                 if (!pointSnap) {
                     selectSketchElement(rawPoint, false);
                     return;
@@ -4710,10 +4711,16 @@ protected:
             c.type = type;
             c.first = here;
             c.second = b;
+            for (const auto &existing : sketch.geometricConstraints)
+                if (existing.type == type && existing.first == here && existing.second == b) return;
             sketch.geometricConstraints.append(c);
         };
         const auto self = [&](int kind, int element) { return here.kind == kind && here.element == element; };
         bool onPoint = false;
+        if (originSnap_ && geometrySnap_ && pointDistance(point, QPointF()) <= tolerance) {
+            add(ConstraintType::Coincident, {2, 0, -1});
+            onPoint = true;
+        }
         for (int other = 0; other < sketch.segments.size(); ++other) {
             if (self(0, other)) continue;
             const QPointF points[2] = {sketch.segments.at(other).first, sketch.segments.at(other).second};
@@ -4743,11 +4750,19 @@ protected:
         for (int curve = 0; curve < sketch.curves.size(); ++curve) {
             if (self(1, curve)) continue;
             const CurveObject &c = sketch.curves.at(curve);
-            if (c.construction && c.tool == DrawingTool::Polygon) continue;
-            if ((c.tool == DrawingTool::Circle || c.tool == DrawingTool::Arc) && c.controlPoints.size() >= 2
-                && std::abs(pointDistance(point, c.controlPoints.at(0)) - pointDistance(c.controlPoints.at(1), c.controlPoints.at(0))) <= 1e-9
-                && (c.tool != DrawingTool::Arc || onArc(c, std::atan2(point.y() - c.controlPoints.at(0).y(), point.x() - c.controlPoints.at(0).x()))))
-                add(ConstraintType::PointOnCurve, {1, curve, -1});
+            if (c.tool == DrawingTool::Polygon) continue;
+            try {
+                for (const auto &piece : ForgeCad::curveGeometry(c)) {
+                    const auto projection = ForgeCad::Kernel::projectPoint(*piece.curve,
+                        ForgeCad::Kernel::Vec2(point.x(),point.y()),piece.range);
+                    if (projection.distance <= tolerance) {
+                        add(ConstraintType::PointOnCurve, {1, curve, -1});
+                        break;
+                    }
+                }
+            } catch (const std::exception &) {
+                // Nessun vincolo su geometria non valida.
+            }
         }
     }
 
@@ -7472,6 +7487,15 @@ private:
         return pixels * 8.0 * double(zoom_) / 8.0 / double(qMax(1, height()));
     }
 
+    static bool visibleSplineHandle(const CurveObject &curve, int control, int side) {
+        const int last = int(curve.controlPoints.size()) - 1;
+        const bool closed = curve.tool == DrawingTool::Spline && last > 1
+            && pointDistance(curve.controlPoints.first(),curve.controlPoints.last()) <= ForgeCad::kSketchConnectionTolerance;
+        // Alla chiusura partecipano solo l'uscente del primo punto e
+        // l'entrante dell'ultimo: le altre due non influenzano la curva.
+        return !closed || !((control == 0 && side == 0) || (control == last && side == 1));
+    }
+
     bool findCurveEditPoint(const QPointF &point, int &curveIndex,
                             int &controlIndex, EditablePointKind &pointKind) const {
         if (activeSketch_ < 0 || activeSketch_ >= sketches_.size()) return false;
@@ -7489,6 +7513,7 @@ private:
                     hasHandles ? candidate.tangentHandles.at(control).first : candidate.controlPoints.at(control),
                     hasHandles ? candidate.tangentHandles.at(control).second : candidate.controlPoints.at(control)};
                 for (int kind = 0; kind < (hasHandles ? 3 : 1); ++kind) {
+                    if (kind > 0 && !visibleSplineHandle(candidate,control,kind-1)) continue;
                     const double distance = pointDistance(point, candidates[kind]);
                     if (distance < nearestDistance) {
                         nearestDistance = distance;
@@ -7817,6 +7842,7 @@ private:
             if (object.tool == DrawingTool::Spline && object.tangentHandles.size() == object.controlPoints.size())
                 for (int control = 0; control < object.tangentHandles.size(); ++control)
                     for (int side = 0; side < 2; ++side) {
+                        if (!visibleSplineHandle(object,control,side)) continue;
                         const QPointF handle = side == 0 ? object.tangentHandles.at(control).first : object.tangentHandles.at(control).second;
                         const double distance = pointDistance(point, handle);
                         if (distance < nearestDistance) {
@@ -7907,8 +7933,16 @@ private:
             sketch.curves.append(curve);
             // Gli estremi che cadono su punti di altre entita' diventano coincidenti (poi la tangenza si da' nel punto).
             const int index = int(sketch.curves.size()) - 1, last = int(curve.controlPoints.size()) - 1;
-            recordPointCoincidences(sketch, {1, index, 0}, curve.controlPoints.first());
-            recordPointCoincidences(sketch, {1, index, last}, curve.controlPoints.last());
+            for (int k = 0; k <= last; ++k)
+                recordPointCoincidences(sketch, {1, index, k}, curve.controlPoints.at(k));
+            if (curve.tool == DrawingTool::Spline && last > 1
+                && pointDistance(curve.controlPoints.first(),curve.controlPoints.last()) <= ForgeCad::kSketchConnectionTolerance) {
+                SketchConstraint closure;
+                closure.type = ConstraintType::Coincident;
+                closure.first = {1,index,0};
+                closure.second = {1,index,last};
+                sketch.geometricConstraints.append(closure);
+            }
             sketchEdited();
         }
         curveControlPoints_.clear();
@@ -7929,7 +7963,11 @@ private:
         ForgeCad::recalculateCurve(primitive, tessellationQuality_);
         if (primitive.numericallyValid) {
             recordUndo();
-            sketches_[activeSketch_].curves.append(primitive);
+            SketchObject &sketch = sketches_[activeSketch_];
+            sketch.curves.append(primitive);
+            const int index = int(sketch.curves.size()) - 1;
+            for (int k = 0; k < primitive.controlPoints.size(); ++k)
+                recordPointCoincidences(sketch, {1,index,k}, curveControlPoints_.at(k));
             sketchEdited();
         }
         curveControlPoints_.clear();
@@ -8262,6 +8300,8 @@ private:
         if (activeSketch_ >= 0 && activeSketch_ < sketches_.size()) {
             segments = sketches_.at(activeSketch_).segments;
             points = snapCandidates(sketches_.at(activeSketch_));
+            if (drawingTool_ == DrawingTool::Spline && curveControlPoints_.size() > 1)
+                points.append(curveControlPoints_.first());
             if (originSnap_) points.append(QPointF(0.0, 0.0));  // origine del piano (dove passano gli assi)
         }
         const double tolerance = pickTolerance(10.0);
@@ -8381,11 +8421,10 @@ private:
                 const QVector3D world = mapSketchPoint(control, sketch);
                 point(world, red, 0.35f, 0.75f);
             }
-            for (const auto &handles : curve.tangentHandles) {
-                const QVector3D first = mapSketchPoint(handles.first, sketch);
-                const QVector3D second = mapSketchPoint(handles.second, sketch);
-                point(first, red, 0.35f, 0.75f);
-                point(second, red, 0.35f, 0.75f);
+            for (int k=0; k<curve.tangentHandles.size(); ++k) {
+                const auto &handles=curve.tangentHandles.at(k);
+                if (visibleSplineHandle(curve,k,0)) point(mapSketchPoint(handles.first,sketch),red,0.35f,0.75f);
+                if (visibleSplineHandle(curve,k,1)) point(mapSketchPoint(handles.second,sketch),red,0.35f,0.75f);
             }
         }
         for (const QPointF &control : curveControlPoints_) {
@@ -8416,10 +8455,14 @@ private:
                 const auto &pair = curve.tangentHandles.at(index);
                 const QVector3D incoming = mapSketchPoint(pair.first, sketch);
                 const QVector3D outgoing = mapSketchPoint(pair.second, sketch);
-                tangentLines.push_back({incoming, handleColor});
-                tangentLines.push_back({control, handleColor});
-                tangentLines.push_back({control, handleColor});
-                tangentLines.push_back({outgoing, handleColor});
+                if (visibleSplineHandle(curve,index,0)) {
+                    tangentLines.push_back({incoming, handleColor});
+                    tangentLines.push_back({control, handleColor});
+                }
+                if (visibleSplineHandle(curve,index,1)) {
+                    tangentLines.push_back({control, handleColor});
+                    tangentLines.push_back({outgoing, handleColor});
+                }
             }
         }
         overlayRenderer_.draw(GL_LINES, tangentLines);

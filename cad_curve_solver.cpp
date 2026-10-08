@@ -42,6 +42,16 @@ CurvePtr<2> makeSpline(const CurveObject &curve) {
 CurvePtr<2> makeNurbs(const CurveObject &curve) {
     const int count = curve.controlPoints.size();
     if (count < 2) return {};
+    if (!curve.knots.isEmpty()) {
+        if (curve.degree < 1 || curve.knots.size() != count + curve.degree + 1) return {};
+        std::vector<Vec2> poles;
+        for (const auto &p : curve.controlPoints) poles.push_back(toVec(p));
+        if (!curve.weights.isEmpty() && curve.weights.size() != count) return {};
+        for (double weight : curve.weights) if (!(weight > 0.0)) return {};
+        return std::make_shared<BSplineCurve<2>>(curve.degree,
+            std::vector<double>(curve.knots.begin(), curve.knots.end()), std::move(poles),
+            std::vector<double>(curve.weights.begin(), curve.weights.end()));
+    }
     const int degree = std::min(3, count - 1);
     std::vector<Vec2> poles;
     std::vector<double> weights;

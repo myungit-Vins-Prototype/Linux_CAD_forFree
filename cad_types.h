@@ -51,7 +51,8 @@ using SketchSegment = QPair<QPointF, QPointF>;
 // Entita' curva dello schizzo, in coordinate del piano di schizzo.
 // La geometria esatta e' definita dai soli parametri:
 //  - Spline: punti di passaggio + maniglie tangenti (Bezier cubiche C1 a tratti)
-//  - Nurbs: poli, pesi (vuoto = tutti 1), nodi uniformi "clamped", grado <= 3
+//  - Nurbs: poli, pesi (vuoto = tutti 1); con knots vuoto nodi uniformi
+//    "clamped" e grado <= 3, altrimenti nodi e grado espliciti (archi ellittici)
 //  - Circle: centro, punto sulla circonferenza
 //  - Arc: centro, punto iniziale (definisce il raggio), punto finale (definisce l'angolo)
 //  - Polygon: centro, primo vertice, numero di lati
@@ -73,8 +74,8 @@ struct CurveObject {
     // opposte. Le lunghezze possono essere quotate separatamente.
     QVector<bool> tangentLinked;
     int sides = 0;
-    QVector<double> knots;  // Converted: nodi espansi (poli + grado + 1)
-    int degree = 3;         // Converted
+    QVector<double> knots;  // Nurbs / Converted: nodi espansi (poli + grado + 1)
+    int degree = 3;         // Nurbs con knots / Converted
     QVector<QPointF> samples;
     bool numericallyValid = false;
     bool construction = false;

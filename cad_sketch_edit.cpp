@@ -14,6 +14,8 @@
 #include "fk_curve.h"
 #include "fk_curve_algo.h"
 #include "fk_intersect.h"
+#include "fk_bspline.h"
+#include "fk_nurbs.h"
 
 namespace ForgeCad {
 namespace {
@@ -34,7 +36,7 @@ double wrapAngle(double angle, double base) {
     return base + a;
 }
 
-enum class Shape { Segment, Arc, Circle, Spline, Other };
+enum class Shape { Segment, Arc, Circle, Ellipse, Nurbs, Spline, Other };
 
 // Geometria esatta di un'entita' nel suo parametro naturale: lunghezza
 // d'arco sul segmento (da `start`), angolo su archi e cerchi, parametro
@@ -48,7 +50,7 @@ struct Geometry {
     double radius = 0.0;
 
     bool valid() const { return basis != nullptr; }
-    bool closed() const { return shape == Shape::Circle; }
+    bool closed() const { return shape == Shape::Circle || shape == Shape::Ellipse; }
     QPointF value(double t) const { return toPoint(basis->point(t)); }
     // Agli estremi i punti dell'entita', non ricalcolati.
     QPointF point(double t) const {
@@ -105,6 +107,17 @@ Geometry geometryOf(const SketchObject &sketch, SketchEntity entity) {
             g.last = kTwoPi;
             g.center = center;
             g.radius = r;
+            return g;
+        }
+        if (curve.tool == DrawingTool::Ellipse || curve.tool == DrawingTool::Nurbs) {
+            const auto pieces = curveGeometry(curve);
+            if (pieces.size() != 1) return g;
+            g.shape = curve.tool == DrawingTool::Ellipse ? Shape::Ellipse : Shape::Nurbs;
+            g.basis = pieces.front().curve;
+            g.first = pieces.front().range.lo;
+            g.last = pieces.front().range.hi;
+            g.start = g.value(g.first);
+            g.end = g.value(g.last);
             return g;
         }
         if (curve.tool == DrawingTool::Spline) {
@@ -278,6 +291,25 @@ Piece pieceOf(const SketchObject &sketch, SketchEntity entity, const Geometry &g
         piece.curve = splineRange(source, lo, hi);
         return piece;
     }
+    if (g.shape == Shape::Ellipse || g.shape == Shape::Nurbs) {
+        // Conica razionale esatta; nei tagli successivi si rifilano i poli
+        // omogenei senza approssimare l'arco con una spline polinomiale.
+        Kernel::BSplineCurve<2> spline = g.shape == Shape::Ellipse
+            ? Kernel::toBSpline(static_cast<const Kernel::Ellipse<2>&>(*g.basis), lo, hi)
+            : static_cast<const Kernel::BSplineCurve<2>&>(*g.basis);
+        std::vector<Kernel::Vec3> poles;
+        for (const auto &p : spline.poles()) poles.emplace_back(p.x(), p.y(), 0.0);
+        const Kernel::BSplineCurve<3> lifted(spline.degree(), spline.knots(), poles, spline.weights());
+        const auto trimmed = Kernel::joinBezierPieces(Kernel::standardBezierPieces(lifted,
+            g.shape == Shape::Ellipse ? spline.domain() : Kernel::Interval{lo, hi}));
+        piece.curve.tool = DrawingTool::Nurbs;
+        piece.curve.construction = source.construction;
+        piece.curve.degree = trimmed.degree();
+        for (const auto &p : trimmed.poles()) piece.curve.controlPoints.append(QPointF(p.x(), p.y()));
+        for (double w : trimmed.weights()) piece.curve.weights.append(w);
+        for (double t : trimmed.knots()) piece.curve.knots.append(t);
+        return piece;
+    }
     piece.curve.tool = DrawingTool::Arc;
     piece.curve.construction = source.construction;
     piece.curve.controlPoints = {g.center, g.point(lo), g.point(hi)};
@@ -374,6 +406,13 @@ QVector<int> replaceWithPieces(SketchObject &sketch, SketchEntity entity, const 
         (entity.kind == 0 ? segments : curves).insert(entity.index);
         return removeSketchEntities(sketch, segments, curves);
     }
+    if (entity.kind == 1 && pieces.front().curve.tool == DrawingTool::Nurbs) {
+        // I vecchi indici di centro/assi/poli non identificano i nuovi poli.
+        QVector<int> segments, curves;
+        for (int i = 0; i < sketch.segments.size(); ++i) segments.append(i);
+        for (int i = 0; i < sketch.curves.size(); ++i) curves.append(i == entity.index ? -1 : i);
+        remapConstraints(sketch, segments, curves);
+    }
     for (int k = 0; k < pieces.size(); ++k) {
         const Piece &piece = pieces.at(k);
         if (piece.segment) {
@@ -448,11 +487,11 @@ QString explodePolygon(SketchObject &sketch, SketchEntity &entity, const QPointF
 
 QString unsupported(const SketchObject &sketch, SketchEntity entity, const QString &operation) {
     if (entity.kind == 1 && entity.index >= 0 && entity.index < sketch.curves.size() && sketch.curves.at(entity.index).tool == DrawingTool::Nurbs)
-        return QStringLiteral("%1: le NURBS non si possono modificare (fanno solo da bordo).").arg(operation);
+        return QStringLiteral("%1: NURBS non valida.").arg(operation);
     if (entity.kind == 1 && entity.index >= 0 && entity.index < sketch.curves.size() && sketch.curves.at(entity.index).tool == DrawingTool::Converted)
         return QStringLiteral("%1: i riferimenti presi dai corpi non si modificano (fanno solo da bordo).").arg(operation);
     if (entity.kind == 1 && entity.index >= 0 && entity.index < sketch.curves.size() && sketch.curves.at(entity.index).tool == DrawingTool::Ellipse)
-        return QStringLiteral("%1: le ellissi non si possono tagliare (fanno solo da bordo).").arg(operation);
+        return QStringLiteral("%1: ellisse non valida.").arg(operation);
     return QStringLiteral("%1: entita' non valida.").arg(operation);
 }
 
@@ -573,7 +612,7 @@ SketchEditResult extendSketchEntity(SketchObject &sketch, SketchEntity entity, c
     if (!result.error.isEmpty()) return result;
     const Geometry g = geometryOf(work, entity);
     if (!g.valid()) return {unsupported(work, entity, QStringLiteral("Estendi")), {}};
-    if (g.shape == Shape::Circle || g.shape == Shape::Spline)
+    if (g.closed() || g.shape == Shape::Spline || g.shape == Shape::Nurbs)
         return {QStringLiteral("Estendi: si estendono solo segmenti e archi."), {}};
     const bool atEnd = distance(pick, g.end) < distance(pick, g.start);
     const std::vector<Kernel::ProfileSegment> others = cutters(work, entity);
