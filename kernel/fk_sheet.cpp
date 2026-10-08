@@ -322,10 +322,21 @@ void joinSplineExtensions(Model &model, const Body &body, const std::vector<Spli
             if (!(rate > 0.0) || !std::isfinite(rate))
                 throw std::domain_error("extendSheet: giunzione su una superficie singolare");
             struct Sample { Vec2 a, b; Vec3 point; };
+            // followSeam: le due facce proseguono lungo le loro isoparametriche
+            // della cucitura (vedi sotto, giunzioni quasi tangenti).
+            bool followSeam = false;
+            double seamGap = 0.0;
             const auto sample = [&](double t) {
                 Sample q{a.start, b.start, {}};
                 q.a[da] += sign * t;
                 q.b[db] += signB * rate * t;
+                if (followSeam) {
+                    const Vec3 pa = sa->point(q.a.x(), q.a.y()), pb = sb->point(q.b.x(), q.b.y());
+                    q.point = pa;
+                    // Lato B sul punto di B piu' vicino lungo la sua isoparametrica.
+                    seamGap = std::max(seamGap, distance(pa, pb));
+                    return q;
+                }
                 for (int iteration = 0; iteration < 32; ++iteration) {
                     Vec3 ja[4], jb[4];
                     sa->evaluate(q.a.x(), q.a.y(), 1, ja);
@@ -362,26 +373,53 @@ void joinSplineExtensions(Model &model, const Body &body, const std::vector<Spli
             };
             // Estremo della seconda faccia sulla stessa curva. Il parametro
             // cresce sempre verso l'esterno, anche all'estremita' iniziale.
-            double lo = 0.0, hi = endA;
-            const auto beyondB = [&](double t) { return signB * (sample(t).b[db] - b.end) >= 0.0; };
-            for (int k = 0; !beyondB(hi); ++k) {
-                if (k == 12) throw std::domain_error("extendSheet: giunzione fuori dalla regione di estensione");
-                hi *= 1.25;
-            }
-            for (int k = 0; k < 45; ++k) {
-                const double mid = 0.5 * (lo + hi);
-                if (beyondB(mid)) hi = mid; else lo = mid;
-            }
-            double endB = 0.5 * (lo + hi);
-            if (distance(sample(endA).point, sample(endB).point) <= tolerance) endB = endA;
-            const double end = std::max(endA, endB);
+            double endB = endA, end = endA;
             CurvePtr<3> curve;
-            try {
+            const auto join = [&]() {
+                double lo = 0.0, hi = endA;
+                const auto beyondB = [&](double t) { return signB * (sample(t).b[db] - b.end) >= 0.0; };
+                for (int k = 0; !beyondB(hi); ++k) {
+                    if (k == 12) throw std::domain_error("extendSheet: giunzione fuori dalla regione di estensione");
+                    hi *= 1.25;
+                }
+                for (int k = 0; k < 45; ++k) {
+                    const double mid = 0.5 * (lo + hi);
+                    if (beyondB(mid)) hi = mid; else lo = mid;
+                }
+                endB = 0.5 * (lo + hi);
+                if (distance(sample(endA).point, sample(endB).point) <= tolerance) endB = endA;
+                end = std::max(endA, endB);
                 curve = fitCurve([&](double t) { return sample(t).point; }, {0.0, end},
                                  {0.0, std::min(endA, endB), end}, tolerance);
+            };
+            try {
+                join();
             } catch (const std::exception &failure) {
-                throw std::domain_error("extendSheet: giunzione facce " + std::to_string(a.face) + "/" + std::to_string(b.face) + ": " + failure.what());
+                // Facce unite tangenti (le meta' di un loft e i loro offset): la
+                // loro intersezione oltre la cucitura e' mal condizionata e i
+                // punti seguono lo scarto delle approssimazioni, la curva non si
+                // approssima. Le due superfici prolungano la cucitura con le
+                // loro isoparametriche: se restano entro 1e-5 la giunzione e' la
+                // isoparametrica di A, con l'edge tollerante per lo scarto.
+                Vec3 na[4], nb[4];
+                sa->evaluate(a.start.x(), a.start.y(), 1, na);
+                sb->evaluate(b.start.x(), b.start.y(), 1, nb);
+                const double sine = norm(cross(normalized(cross(na[1], na[2])), normalized(cross(nb[1], nb[2]))));
+                bool joined = false;
+                if (sine < 1e-3) {
+                    followSeam = true;
+                    seamGap = 0.0;
+                    try {
+                        join();
+                        for (int k = 0; k <= 64; ++k) sample(end * k / 64.0);
+                        joined = seamGap <= 1e-5 * std::max(1.0, scale);
+                    } catch (const std::exception &) {
+                    }
+                }
+                if (!joined)
+                    throw std::domain_error("extendSheet: giunzione facce " + std::to_string(a.face) + "/" + std::to_string(b.face) + ": " + failure.what());
             }
+            const double joinTolerance = followSeam ? std::max(tolerance, 2.0 * seamGap) : tolerance;
             // Le superfici restano identiche sul dominio originale. Espandiamo
             // solo il loro dominio per includere il nuovo bordo rifilato.
             Interval au = sa->uDomain(), av = sa->vDomain(), bu = sb->uDomain(), bv = sb->vDomain();
@@ -417,8 +455,14 @@ void joinSplineExtensions(Model &model, const Body &body, const std::vector<Spli
             const auto &shorter = endA <= endB ? a : b;
             const auto &longer = endA <= endB ? b : a;
             const double shortEnd = std::min(endA, endB);
-            const int common = model.addEdge(a.vertex, shorter.farVertex, curve, {0.0, shortEnd}, tolerance);
-            const int extra = endA == endB ? -1 : model.addEdge(shorter.farVertex, longer.farVertex, curve, {shortEnd, end}, tolerance);
+            const int common = model.addEdge(a.vertex, shorter.farVertex, curve, {0.0, shortEnd}, joinTolerance);
+            const int extra = endA == endB ? -1 : model.addEdge(shorter.farVertex, longer.farVertex, curve, {shortEnd, end}, joinTolerance);
+            if (followSeam) {
+                for (int vertex : {shorter.farVertex, longer.farVertex, a.vertex})
+                    model.pointTolerance[std::size_t(vertex)] = std::max(model.pointTolerance[std::size_t(vertex)], joinTolerance);
+                for (const auto *side : {&a, &b})
+                    model.edges[std::size_t(side->farEdge)].tolerance = std::max(model.edges[std::size_t(side->farEdge)].tolerance, joinTolerance);
+            }
             if (extra < 0 && a.farVertex != b.farVertex) {
                 for (auto &edge : model.edges) {
                     if (edge.start == b.farVertex) edge.start = a.farVertex;

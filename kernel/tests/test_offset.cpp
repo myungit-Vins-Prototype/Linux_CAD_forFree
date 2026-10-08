@@ -583,3 +583,34 @@ FK_TEST(OffsetInwardBeyondCurvatureIsExplained) {
     FK_CHECK(inward.body.faces().size() == 4);
     checkValid(inward.body);
 }
+
+// Offset (3, cucitura mantenuta) delle due meta' del loft di Loft_offset.prt,
+// poi estensione dei due contorni liberi. Le meta' sono unite tangenti: oltre
+// la cucitura la loro intersezione e' mal condizionata e la giunzione in alto
+// non si approssimava ("curva a distanza non approssimabile"); ora prosegue
+// lungo le isoparametriche della cucitura, con l'edge tollerante per lo scarto.
+FK_TEST(OffsetLoftSeamExtensionFollowsTangentSeam) {
+    std::ifstream in(std::string(FORGECAD_SOURCE_DIR) + "/kernel/tests/data/loft_offset_base.body", std::ios::binary);
+    FK_CHECK(bool(in));
+    if (!in) return;
+    std::stringstream data;
+    data << in.rdbuf();
+    const Body loft = readBodyBinary(data.str());
+    std::vector<FaceId> sides;
+    for (FaceId f : loft.faces())
+        if (loft.face(f).surface->type() == SurfaceType::BSpline) sides.push_back(f);
+    Body sheet = offsetFaces(loft, sides, 3.0, 1e-7, true).body;
+    for (bool upper : {true, false}) {
+        std::vector<EdgeId> ring;
+        for (EdgeId e : sheet.edges()) {
+            if (!sheet.isLaminar(e)) continue;
+            const Edge &edge = sheet.edge(e);
+            const Vec3 mid = edge.curve->point(0.5 * (edge.range.lo + edge.range.hi));
+            if (upper ? mid.y() > 15.0 : mid.y() < 0.0) ring.push_back(e);
+        }
+        FK_CHECK(ring.size() == 2);
+        sheet = extendSheet(sheet, ring, upper ? 3.0 : 2.0);
+        checkValid(sheet);
+        for (EdgeId e : sheet.edges()) FK_CHECK(sheet.edge(e).tolerance < 1e-5);
+    }
+}
