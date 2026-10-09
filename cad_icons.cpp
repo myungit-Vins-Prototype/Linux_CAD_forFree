@@ -625,6 +625,14 @@ std::map<QString, Draw> &registry() {
         line(p, {11.5, 16.5}, {11.5, 10.5}, stroke(c.accent, 1.2));
         arrowHead(p, {11.5, 8.6}, {11.5, 13}, c.accent, 3.0);
     };
+    icons["draft"] = [](QPainter &p, const IconPalette &c) {
+        polygon(p, QPolygonF({{3, 21}, {7, 5}, {17, 5}, {21, 21}}), c.faceMid, stroke(c.ink, 1.2));
+        p.setPen(stroke(c.accent, 1.6));
+        p.drawLine(QPointF(2, 21), QPointF(22, 21));
+        p.drawLine(QPointF(12, 17), QPointF(12, 2));
+        p.drawLine(QPointF(12, 2), QPointF(9, 6));
+        p.drawLine(QPointF(12, 2), QPointF(15, 6));
+    };
     icons["shell"] = [](QPainter &p, const IconPalette &c) {
         // Scatola svuotata e aperta in alto: il bordo delle pareti in arancio.
         polygon(p, QPolygonF({{3, 9}, {12, 13}, {12, 22}, {3, 18}}), c.faceMid, stroke(c.ink, 1.0));

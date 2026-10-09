@@ -37,6 +37,7 @@
 #include "fk_boundary.h"
 #include "fk_fill.h"
 #include "fk_shell.h"
+#include "fk_draft.h"
 #include "fk_step.h"
 #include "fk_tessellate.h"
 #include "fk_unify.h"
@@ -622,6 +623,25 @@ ForgeBody forgeExtendSheet(const ForgeBody &sheet, const QVector<EdgePoint> &poi
         return std::make_shared<const Body>(extendSheet(*sheet, edges, distance, linear));
     } catch (const std::exception &failure) {
         setError(error, QStringLiteral("Estensione non riuscita: %1").arg(QString::fromUtf8(failure.what())));
+        return nullptr;
+    }
+}
+
+ForgeBody forgeDraft(const ForgeBody &base, const QVector<EdgePoint> &points, const Vec3 &origin,
+                     const Vec3 &direction, double angleDegrees, QString *error) {
+    if (!base || base->isSheet()) { setError(error, QStringLiteral("Lo sformo richiede un solido.")); return nullptr; }
+    try {
+        Box box;
+        for (VertexId v : base->vertices()) box.add(base->vertex(v).point);
+        std::vector<FaceId> faces;
+        for (const EdgePoint &point : points) {
+            const FaceId face = resolveFaceReference(*base, point, 1e-3 * std::max(1.0, box.diagonal()));
+            if (!face.valid()) throw std::domain_error("una faccia scelta non esiste piu'");
+            if (std::find(faces.begin(), faces.end(), face) == faces.end()) faces.push_back(face);
+        }
+        return std::make_shared<const Body>(draftFaces(*base, faces, origin, direction, angleDegrees * kPi / 180.0));
+    } catch (const std::exception &failure) {
+        setError(error, QStringLiteral("Sformo non riuscito: %1").arg(QString::fromUtf8(failure.what())));
         return nullptr;
     }
 }

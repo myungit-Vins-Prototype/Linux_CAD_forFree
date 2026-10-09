@@ -188,6 +188,7 @@ static QString featureIconName(const ExtrusionObject &body) {
     if (body.feature == BodyFeature::Pattern) return QStringLiteral("patternLinear");
     if (body.feature == BodyFeature::SurfaceOffset) return QStringLiteral("offsetSurface");
     if (body.feature == BodyFeature::DeleteFace) return QStringLiteral("deleteFace");
+    if (body.feature == BodyFeature::Draft) return QStringLiteral("draft");
     if (body.feature == BodyFeature::Shell) return QStringLiteral("shell");
     if (body.feature == BodyFeature::Thread) return QStringLiteral("thread");
     if (body.feature == BodyFeature::BoundarySurface) return QStringLiteral("boundarySurface");
@@ -927,6 +928,7 @@ public:
             remapRef(feature.extentRef);
             remapRef(feature.move.axis);
             remapRef(feature.revolveAxisRef);
+            remapRef(feature.draftNeutral);
         }
 
         for (const ExtrusionObject &feature : reordered)
@@ -947,7 +949,7 @@ public:
                     || feature.feature == BodyFeature::SheetExtend || feature.feature == BodyFeature::Scale
                     || (feature.feature == BodyFeature::Transform && !feature.move.copy) || feature.feature == BodyFeature::Pattern
                     || feature.feature == BodyFeature::Sew || feature.feature == BodyFeature::DeleteFace
-                    || feature.feature == BodyFeature::Shell || feature.feature == BodyFeature::Thread) {
+                    || feature.feature == BodyFeature::Draft || feature.feature == BodyFeature::Shell || feature.feature == BodyFeature::Thread) {
                     feature.firstBody = previous;
                 } else if (mergingFeature(feature) && feature.mergeOperation != 0) {
                     bool replaced = false;
@@ -1905,6 +1907,7 @@ public:
             if (isSketchRef(body.extentRef)) renumber(body.extentRef.index);
             if (isSketchRef(body.move.axis)) renumber(body.move.axis.index);
             if (isSketchRef(body.revolveAxisRef)) renumber(body.revolveAxisRef.index);
+            if (isSketchRef(body.draftNeutral)) renumber(body.draftNeutral.index);
         }
         if (activeSketch_ == index) activeSketch_ = -1;
         else if (activeSketch_ > index) --activeSketch_;
@@ -4613,6 +4616,7 @@ protected:
             remap(body.extentRef);
             remap(body.move.axis);
             remap(body.revolveAxisRef);
+            remap(body.draftNeutral);
         }
     }
 
@@ -6692,6 +6696,7 @@ private:
             if (isBodyRef(body.extentRef)) body.extentRef.index = map.value(body.extentRef.index, -1);
             if (isBodyRef(body.move.axis)) body.move.axis.index = map.value(body.move.axis.index, -1);
             if (isBodyRef(body.revolveAxisRef)) body.revolveAxisRef.index = map.value(body.revolveAxisRef.index, -1);
+            if (isBodyRef(body.draftNeutral)) body.draftNeutral.index = map.value(body.draftNeutral.index, -1);
             // Strumenti e corpi fusi eliminati: escono dall'elenco.
             for (QVector<int> *list : {&body.booleanTools, &body.mergeBodies}) {
                 QVector<int> kept2;
@@ -6842,6 +6847,11 @@ private:
             if (body.revolveAxis == kRevolveAxisReference && isBodyRef(body.revolveAxisRef)) bodies.append(body.revolveAxisRef.index);
             return bodies;
         }
+        case BodyFeature::Draft: {
+            QVector<int> refs{body.firstBody};
+            if (isBodyRef(body.draftNeutral) && !refs.contains(body.draftNeutral.index)) refs.append(body.draftNeutral.index);
+            return refs;
+        }
         case BodyFeature::Blend:
         case BodyFeature::SheetExtend:
         case BodyFeature::SurfaceOffset:
@@ -6904,6 +6914,7 @@ private:
             if (body.revolveAxis == kRevolveAxisReference && isSketchRef(body.revolveAxisRef) && body.revolveAxisRef.index != body.sketchIndex)
                 return {body.sketchIndex, body.revolveAxisRef.index};
             return {body.sketchIndex};
+        case BodyFeature::Draft: return isSketchRef(body.draftNeutral) ? QVector<int>{body.draftNeutral.index} : QVector<int>{};
         case BodyFeature::Transform: return isSketchRef(body.move.axis) ? QVector<int>{body.move.axis.index} : QVector<int>{};
         case BodyFeature::Helix: return body.helix.source == 0 ? QVector<int>{body.sketchIndex} : QVector<int>{};
         case BodyFeature::SheetTrim: return body.sketchIndex >= 0 ? QVector<int>{body.sketchIndex} : QVector<int>{};
@@ -7121,6 +7132,20 @@ private:
                 }
                 body.forgeBody = ForgeCad::forgeScale(base->forgeBody, body.scaleFactor, body.scaleCenterMode, body.scaleCenter, &body.error);
                 body.solid = base->solid && hasGeometry(body);
+                return;
+            }
+            case BodyFeature::Draft: {
+                const ExtrusionObject *base = operand(body.firstBody);
+                if (!base || !isShapeBody(*base) || !base->solid) {
+                    body.error = QStringLiteral("Il solido da sformare non esiste piu'.");
+                    return;
+                }
+                ForgeCad::ResolvedRef neutral;
+                if (!ForgeCad::resolveGeometryRef(body.draftNeutral, index, sketches, bodies, neutral, &body.error)) return;
+                if (!neutral.hasPlane) { body.error = QStringLiteral("Scegli un piano neutro o una faccia piana."); return; }
+                body.forgeBody = ForgeCad::forgeDraft(base->forgeBody, body.offsetFaces, neutral.point,
+                    neutral.direction * (body.draftReverse ? -1.0 : 1.0), body.draftAngle, &body.error);
+                body.solid = hasGeometry(body);
                 return;
             }
             case BodyFeature::Shell: {
@@ -11045,6 +11070,8 @@ private:
               << QString::number(d.move.copy);
         ref(d.move.axis);
         ref(d.revolveAxisRef);
+        ref(d.draftNeutral);
+        parts << n(d.draftAngle) << QString::number(d.draftReverse);
         // Offset e cucitura; loft e sweep di superficie, rigata e planare.
         parts << QStringLiteral("O") << QString::number(d.offsetSew);
         for (const EdgePoint &e : d.offsetFaces)
@@ -15943,6 +15970,139 @@ static bool booleanDialog(QMainWindow *parent, CadViewport *viewport, const QStr
 // della faccia cliccata e la finestra non forza la visibilita' di alcun corpo.
 // Con initial.feature == Shell e' il *Guscio*: un solido svuotato con lo
 // spessore verso l'interno, le facce scelte (anche nessuna) tolte per l'apertura.
+// Sformo con selezione multipla e piano neutro associativo.
+static bool draftDialog(QMainWindow *window, CadViewport *viewport, const QString &title, int replaced,
+                        const ExtrusionObject &initial, const std::function<QString(const ExtrusionObject &)> &apply) {
+    QVector<int> candidates = viewport->resultBodiesBefore(replaced);
+    candidates.erase(std::remove_if(candidates.begin(), candidates.end(), [&](int i) { return !viewport->extrusions().at(i).solid; }), candidates.end());
+    if (initial.firstBody >= 0 && initial.firstBody < viewport->extrusions().size()
+        && (replaced < 0 || initial.firstBody < replaced) && !candidates.contains(initial.firstBody)) candidates.append(initial.firstBody);
+    if (candidates.isEmpty()) { QMessageBox::information(window, title, QStringLiteral("Crea prima un solido da sformare.")); return false; }
+    ExtrusionObject definition = initial;
+    definition.feature = BodyFeature::Draft;
+    definition.operation = -1;
+    if (!candidates.contains(definition.firstBody)) definition.firstBody = candidates.last();
+    if (definition.draftNeutral.kind < 0) { definition.draftNeutral.kind = 1; definition.draftNeutral.index = 0; }
+    FunctionDialogPanel dialog(window);
+    dialog.setWindowTitle(title);
+    auto *form = dialog.createScrollableForm();
+    auto *bodyBox = new QComboBox(&dialog);
+    for (int i : candidates) bodyBox->addItem(logicalBodyLabel(viewport, i));
+    bodyBox->setCurrentIndex(candidates.indexOf(definition.firstBody));
+    bodyBox->setEnabled(replaced < 0);
+    auto *faces = new QPushButton(QStringLiteral("Scegli facce"), &dialog); faces->setCheckable(true);
+    auto *clear = new QPushButton(QStringLiteral("Azzera facce"), &dialog);
+    auto *faceCount = new QLabel(&dialog);
+    auto *neutralBox = new QComboBox(&dialog);
+    neutralBox->addItems({QStringLiteral("XY"), QStringLiteral("XZ"), QStringLiteral("YZ"), QStringLiteral("Riferimento nella vista")});
+    neutralBox->setCurrentIndex(definition.draftNeutral.kind == 1 ? qBound(0, definition.draftNeutral.index, 2) : 3);
+    auto *neutralPick = new QPushButton(QStringLiteral("Scegli piano / faccia neutra"), &dialog); neutralPick->setCheckable(true);
+    auto *neutralLabel = new QLabel(&dialog); neutralLabel->setWordWrap(true);
+    auto *angle = new ForgeCad::ExpressionSpinBox(&dialog);
+    angle->setDecimals(4); angle->setRange(-88.9999, 88.9999); angle->setSuffix(QStringLiteral("°"));
+    angle->setValue(definition.draftAngle); angle->setKeyboardTracking(false);
+    auto *reverse = new QCheckBox(QStringLiteral("Inverti direzione di estrazione"), &dialog); reverse->setChecked(definition.draftReverse);
+    auto *status = new QLabel(&dialog); status->setWordWrap(true); status->setMaximumWidth(360);
+    form->addRow(QStringLiteral("Corpo:"), bodyBox);
+    form->addRow(QStringLiteral("Facce:"), faces); form->addRow(faceCount); form->addRow(clear);
+    form->addRow(QStringLiteral("Piano neutro:"), neutralBox); form->addRow(neutralPick); form->addRow(neutralLabel);
+    form->addRow(QStringLiteral("Angolo:"), angle); form->addRow(reverse);
+    form->addRow(wrappedNote(QStringLiteral("Il piano neutro resta fisso. L'estrazione segue la sua normale: un angolo positivo restringe il corpo in quella direzione, uno negativo lo allarga. Supportati solidi convessi con facce piane e bordi rettilinei."), &dialog));
+    form->addRow(status);
+    auto *buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dialog); form->addRow(buttons);
+    PreviewScope scope(viewport, dialog, form, replaced);
+    int picking = 0;  // 1 facce, 2 piano neutro
+    const auto current = [&] {
+        ExtrusionObject d = definition;
+        d.draftAngle = angle->value(); d.draftReverse = reverse->isChecked();
+        return d;
+    };
+    const auto refresh = [&] {
+        faceCount->setText(QStringLiteral("%1 facce scelte").arg(definition.offsetFaces.size()));
+        neutralLabel->setText(ForgeCad::geometryRefText(definition.draftNeutral, viewport->sketches(), viewport->extrusions()));
+        faces->setChecked(picking == 1); neutralPick->setChecked(picking == 2);
+        QVector<GeometryRef> marks;
+        for (const EdgePoint &point : definition.offsetFaces) { GeometryRef r; r.kind = 5; r.index = definition.firstBody; r.point = point; marks.append(r); }
+        if (definition.draftNeutral.kind >= 0) marks.append(definition.draftNeutral);
+        viewport->setReferenceMarks(marks);
+        if (picking || definition.offsetFaces.isEmpty() || definition.draftNeutral.kind < 0) {
+            scope.label->setText(picking ? QStringLiteral("termina la scelta per vedere l'anteprima")
+                                        : QStringLiteral("scegli le facce e il piano neutro"));
+            viewport->clearPreview();
+            return;
+        }
+        scope.request(current());
+    };
+    const auto beginPick = [&](int mode) {
+        viewport->cancelReferencePick();
+        picking = mode;
+        const QString error = viewport->beginReferencePick(mode == 1 ? ForgeCad::DatumRoleFace : ForgeCad::DatumRolePlane, replaced);
+        if (!error.isEmpty()) { picking = 0; status->setText(error); }
+        else status->setText(mode == 1 ? QStringLiteral("Clicca le facce; un secondo clic le toglie. Esc termina la scelta.") : QStringLiteral("Clicca una faccia piana o un piano di costruzione."));
+        refresh();
+    };
+    viewport->setReferencePickCallback([&](bool picked, GeometryRef ref) {
+        const int mode = picking;
+        picking = 0;
+        if (!picked) { status->clear(); refresh(); return; }
+        if (mode == 2) {
+            ForgeCad::ResolvedRef resolved;
+            QString error;
+            if (ForgeCad::resolveGeometryRef(ref, replaced < 0 ? viewport->extrusions().size() : replaced, viewport->sketches(), viewport->extrusions(), resolved, &error) && resolved.hasPlane) {
+                definition.draftNeutral = ref;
+                const QSignalBlocker blocker(neutralBox); neutralBox->setCurrentIndex(ref.kind == 1 ? ref.index : 3);
+                status->clear();
+            } else status->setText(error.isEmpty() ? QStringLiteral("Il riferimento deve essere piano.") : error);
+        } else if (mode == 1) {
+            const int body = ref.kind == 5 ? resultBodyForPick(viewport, candidates, ref.index) : -1;
+            if (body != definition.firstBody) status->setText(QStringLiteral("Scegli una faccia del corpo indicato nel pannello."));
+            else {
+                const auto &shape = *viewport->extrusions().at(body).forgeBody;
+                const auto face = ForgeCad::resolveFaceReference(shape, ref.point, 1e-6);
+                int existing = -1;
+                for (int i = 0; i < definition.offsetFaces.size(); ++i)
+                    if (ForgeCad::resolveFaceReference(shape, definition.offsetFaces.at(i), 1e-6) == face) existing = i;
+                if (face.valid()) {
+                    if (existing >= 0) definition.offsetFaces.remove(existing); else definition.offsetFaces.append(ref.point);
+                }
+            }
+            // Selezione continua: l'anteprima parte alla fine della scelta.
+            picking = 1;
+            const QString error = viewport->beginReferencePick(ForgeCad::DatumRoleFace, replaced);
+            if (!error.isEmpty()) { picking = 0; status->setText(error); }
+        }
+        refresh();
+    });
+    QObject::connect(faces, &QPushButton::clicked, &dialog, [&] {
+        if (picking == 1) { viewport->cancelReferencePick(); picking = 0; status->clear(); refresh(); } else beginPick(1);
+    });
+    QObject::connect(neutralPick, &QPushButton::clicked, &dialog, [&] {
+        if (picking == 2) { viewport->cancelReferencePick(); picking = 0; refresh(); } else beginPick(2);
+    });
+    QObject::connect(clear, &QPushButton::clicked, &dialog, [&] { definition.offsetFaces.clear(); refresh(); });
+    QObject::connect(bodyBox, &QComboBox::currentIndexChanged, &dialog, [&] {
+        viewport->cancelReferencePick(); picking = 0; definition.firstBody = candidates.at(bodyBox->currentIndex()); definition.offsetFaces.clear(); refresh();
+    });
+    QObject::connect(neutralBox, &QComboBox::currentIndexChanged, &dialog, [&] {
+        if (neutralBox->currentIndex() == 3) { beginPick(2); return; }
+        viewport->cancelReferencePick(); picking = 0;
+        definition.draftNeutral = {}; definition.draftNeutral.kind = 1; definition.draftNeutral.index = neutralBox->currentIndex(); refresh();
+    });
+    QObject::connect(angle, &QDoubleSpinBox::valueChanged, &dialog, refresh);
+    QObject::connect(reverse, &QCheckBox::toggled, &dialog, refresh);
+    QObject::connect(buttons, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
+    QObject::connect(buttons, &QDialogButtonBox::accepted, &dialog, [&] {
+        viewport->cancelReferencePick(); picking = 0;
+        if (definition.offsetFaces.isEmpty()) { status->setText(QStringLiteral("Scegli almeno una faccia.")); refresh(); return; }
+        const QString error = apply(current());
+        if (error.isEmpty()) dialog.accept(); else status->setText(error);
+    });
+    QTimer::singleShot(0, &dialog, [&] { if (definition.offsetFaces.isEmpty()) beginPick(1); else refresh(); });
+    const bool accepted = runModeless(window, viewport, dialog);
+    viewport->cancelReferencePick(); viewport->setReferencePickCallback(nullptr); viewport->setReferenceMarks({});
+    return accepted;
+}
+
 static bool offsetDialog(QMainWindow *window, CadViewport *viewport, const QString &title, int replaced, const ExtrusionObject &initial,
                          const std::function<QString(const ExtrusionObject &)> &apply) {
     const QVector<ExtrusionObject> &bodies = viewport->extrusions();
@@ -18346,6 +18506,8 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
         } else if (original.feature == BodyFeature::FillSurface) {
             fillDialog(this, viewport, QStringLiteral("Modifica riempimento"), index, original,
                        [&](const ExtrusionObject &values) { return update(values); });
+        } else if (original.feature == BodyFeature::Draft) {
+            draftDialog(this, viewport, QStringLiteral("Modifica sformo"), index, original, [&](const ExtrusionObject &values) { return update(values); });
         } else if (original.feature == BodyFeature::Shell) {
             offsetDialog(this, viewport, QStringLiteral("Modifica svuota"), index, original, [&](const ExtrusionObject &values) { return update(values); });
         } else if (original.feature == BodyFeature::Thread) {
@@ -18975,6 +19137,8 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
     auto *primitiveMenu = functionsMenu->addMenu(QStringLiteral("Primitive"));
     QAction *filletAction = functionsMenu->addAction(QStringLiteral("Raccordo spigoli..."));
     QAction *chamferAction = functionsMenu->addAction(QStringLiteral("Smusso spigoli..."));
+    QAction *draftAction = functionsMenu->addAction(QStringLiteral("Sformo facce..."));
+    draftAction->setToolTip(QStringLiteral("Inclina le facce piane di un solido convesso rispetto a un piano neutro"));
     QAction *shellAction = functionsMenu->addAction(QStringLiteral("Svuota..."));
     shellAction->setToolTip(QStringLiteral("Svuota un solido lasciando pareti di spessore costante; le facce scelte si tolgono e fanno l'apertura"));
     QAction *threadAction = functionsMenu->addAction(QStringLiteral("Filettatura automatica..."));
@@ -19756,6 +19920,25 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
             return viewport->createBody(body);
         });
     });
+    connect(draftAction, &QAction::triggered, this, [this, viewport] {
+        if (viewport->sketchModeActive()) viewport->endSketchMode();
+        ExtrusionObject definition;
+        definition.feature = BodyFeature::Draft;
+        definition.draftNeutral.kind = 1;
+        definition.draftNeutral.index = 0;
+        int body = -1;
+        EdgePoint face;
+        if (viewport->selectedFaceReference(body, face)) { definition.firstBody = body; definition.offsetFaces = {face}; }
+        else if (viewport->selection().kind == SceneObjectKind::Extrusion) definition.firstBody = viewport->selection().index;
+        draftDialog(this, viewport, QStringLiteral("Sformo facce"), -1, definition, [viewport](const ExtrusionObject &d) {
+            ExtrusionObject result = d;
+            int count = 1;
+            for (const ExtrusionObject &other : viewport->extrusions()) count += other.feature == BodyFeature::Draft ? 1 : 0;
+            result.name = QStringLiteral("Sformo %1").arg(count);
+            result.plane = viewport->extrusions().value(d.firstBody).plane;
+            return viewport->createBody(result);
+        });
+    });
     connect(shellAction, &QAction::triggered, this, [this, viewport] {
         if (viewport->sketchModeActive()) viewport->endSketchMode();
         ExtrusionObject definition;
@@ -20455,7 +20638,7 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
         {rebuildAction, QStringLiteral("rebuild")},
         {newSketchAction, QStringLiteral("newSketch")}, {faceSketchAction, QStringLiteral("faceSketch")},
         {extrudeAction, QStringLiteral("extrude")}, {revolveAction, QStringLiteral("revolve")},
-        {filletAction, QStringLiteral("fillet")}, {chamferAction, QStringLiteral("chamfer")}, {shellAction, QStringLiteral("shell")}, {threadAction, QStringLiteral("thread")},
+        {filletAction, QStringLiteral("fillet")}, {chamferAction, QStringLiteral("chamfer")}, {draftAction, QStringLiteral("draft")}, {shellAction, QStringLiteral("shell")}, {threadAction, QStringLiteral("thread")},
         {trimSurfaceAction, QStringLiteral("trimSurface")}, {extendSurfaceAction, QStringLiteral("extendSurface")},
         {offsetSurfaceAction, QStringLiteral("offsetSurface")}, {sewSurfacesAction, QStringLiteral("sewSurfaces")},
         {deleteFaceAction, QStringLiteral("deleteFace")}, {boundarySurfaceAction, QStringLiteral("boundarySurface")}, {fillSurfaceAction, QStringLiteral("fillSurface")},
@@ -20531,7 +20714,7 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
     toolbar->addAction(newSketchAction); toolbar->addAction(faceSketchAction); toolbar->addAction(datumAction); toolbar->addSeparator();
     toolbar->addAction(extrudeAction); toolbar->addAction(revolveAction);
     flyout(toolbar, primitiveActions, QStringLiteral("Primitive: la freccia per le altre"));
-    toolbar->addAction(filletAction); toolbar->addAction(chamferAction); toolbar->addAction(shellAction); toolbar->addAction(threadAction);
+    toolbar->addAction(filletAction); toolbar->addAction(chamferAction); toolbar->addAction(draftAction); toolbar->addAction(shellAction); toolbar->addAction(threadAction);
     flyout(toolbar, {trimSurfaceAction, extendSurfaceAction, offsetSurfaceAction, deleteFaceAction, ruledSurfaceAction, boundarySurfaceAction, fillSurfaceAction, planarSurfaceAction, loftSurfaceAction,
                      sweepSurfaceAction, sewSurfacesAction},
            QStringLiteral("Superfici: la freccia per gli altri comandi"));
@@ -21143,6 +21326,8 @@ void PdfWindow::rebuildModelTree() {
             } else if (body.feature == BodyFeature::SurfaceOffset) {
                 item->setToolTip(0, QStringLiteral("Offset di %1 da %2 (%3)").arg(ForgeCad::formatLength(body.distance)).arg(extrusions.value(body.firstBody).name)
                     .arg(body.offsetFaces.isEmpty() ? QStringLiteral("tutte le facce") : QStringLiteral("%1 facce").arg(body.offsetFaces.size())));
+            } else if (body.feature == BodyFeature::Draft) {
+                item->setToolTip(0, QStringLiteral("Sformo di %1° su %2 facce").arg(body.draftAngle).arg(body.offsetFaces.size()));
             } else if (body.feature == BodyFeature::Shell) {
                 item->setToolTip(0, QStringLiteral("Guscio di spessore %1, %2").arg(ForgeCad::formatLength(body.distance))
                     .arg(body.offsetFaces.isEmpty() ? QStringLiteral("chiuso") : QStringLiteral("%1 facce aperte").arg(body.offsetFaces.size())));
@@ -21248,12 +21433,17 @@ void PdfWindow::rebuildModelTree() {
                                || body.feature == BodyFeature::Ruled || body.feature == BodyFeature::PlanarSurface
                                || body.feature == BodyFeature::DeleteFace || body.feature == BodyFeature::BoundarySurface
                                || body.feature == BodyFeature::FillSurface
-                               || body.feature == BodyFeature::Shell || body.feature == BodyFeature::Thread;
+                               || body.feature == BodyFeature::Draft || body.feature == BodyFeature::Shell || body.feature == BodyFeature::Thread;
         if (body.operation < 0 && withChildren) {
             QStringList children;
             if (body.feature == BodyFeature::SurfaceOffset) {
                 if (!previousStage(body.firstBody)) children.append(QStringLiteral("Corpo: ") + extrusions.value(body.firstBody).name);
                 children.append(QStringLiteral("Distanza: %1").arg(ForgeCad::formatLength(body.distance)));
+            } else if (body.feature == BodyFeature::Draft) {
+                children.append(QStringLiteral("Angolo: %1°").arg(body.draftAngle));
+                children.append(QStringLiteral("Facce: %1").arg(body.offsetFaces.size()));
+                children.append(QStringLiteral("Piano neutro: ") + ForgeCad::geometryRefText(body.draftNeutral, sketches, extrusions));
+                children.append(body.draftReverse ? QStringLiteral("Estrazione: verso invertito") : QStringLiteral("Estrazione: normale del piano"));
             } else if (body.feature == BodyFeature::Shell) {
                 if (!previousStage(body.firstBody)) children.append(QStringLiteral("Solido: ") + extrusions.value(body.firstBody).name);
                 children.append(QStringLiteral("Spessore: %1").arg(ForgeCad::formatLength(body.distance)));

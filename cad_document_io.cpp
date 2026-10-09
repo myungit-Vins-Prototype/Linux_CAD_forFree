@@ -52,7 +52,7 @@ constexpr char kMagic[4] = {'F', 'C', 'A', 'D'};
 // faccia dei raccordi; 30 asse della rivoluzione scelto nella vista;
 // 31 settore delle quote d'angolo (`SketchConstraint::angleSides`).
 // 32 mantenimento della cucitura dell’offset.
-constexpr quint16 kVersion = 35;
+constexpr quint16 kVersion = 36;
 constexpr quint8 kZlib = 1;
 
 void write(QDataStream &out, const CurveObject &curve) {
@@ -334,6 +334,9 @@ void write(QDataStream &out, const ExtrusionObject &body) {
     out << body.extrudeSurface;
     // Formato 35: superficie di riempimento.
     out << qint32(body.fillContinuity) << body.fillInfluence << body.fillGuideWeight;
+    // Formato 36: sformo parametrico a piano neutro.
+    writeRefs(out, {body.draftNeutral});
+    out << body.draftAngle << body.draftReverse;
 }
 
 // `extras` (solo formato 5): i file scritti durante lo sviluppo del formato 5
@@ -548,7 +551,14 @@ bool read(QDataStream &in, ExtrusionObject &body, quint16 version, int extras) {
         if (continuity < 0 || continuity > 2 || !std::isfinite(body.fillInfluence) || !std::isfinite(body.fillGuideWeight)) return false;
         body.fillContinuity = continuity;
     }
-    const BodyFeature last = version >= 35 ? BodyFeature::FillSurface : version >= 27 ? BodyFeature::Thread : version >= 25 ? BodyFeature::Shell : BodyFeature::PlanarSurface;
+    if (version >= 36) {
+        QVector<GeometryRef> refs;
+        if (!readRefs(in, refs, version) || refs.size() != 1) return false;
+        body.draftNeutral = refs.first();
+        in >> body.draftAngle >> body.draftReverse;
+        if (!std::isfinite(body.draftAngle)) return false;
+    }
+    const BodyFeature last = version >= 36 ? BodyFeature::Draft : version >= 35 ? BodyFeature::FillSurface : version >= 27 ? BodyFeature::Thread : version >= 25 ? BodyFeature::Shell : BodyFeature::PlanarSurface;
     if (int(body.feature) < 0 || int(body.feature) > int(last)) return false;
     return in.status() == QDataStream::Ok;
 }

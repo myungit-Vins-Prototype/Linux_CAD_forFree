@@ -32,6 +32,7 @@ quint64 inheritedBody(const QVector<ExtrusionObject> &features, const ExtrusionO
     case BodyFeature::Scale:
     case BodyFeature::Sew:
     case BodyFeature::DeleteFace:
+    case BodyFeature::Draft:
     case BodyFeature::Shell:
     case BodyFeature::Thread:
         return owner(feature.firstBody);
@@ -113,6 +114,7 @@ void normalizeModelHistory(QVector<ExtrusionObject> &features, QVector<ModelBody
         bindOwner(feature.extentRef);
         bindOwner(feature.move.axis);
         bindOwner(feature.revolveAxisRef);
+        bindOwner(feature.draftNeutral);
     }
 
     QHash<quint64, ModelBody> existing;

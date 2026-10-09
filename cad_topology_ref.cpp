@@ -331,9 +331,10 @@ void upgradeTopologyReferences(QVector<ExtrusionObject> &features) {
         upgrade(feature.extentRef);
         upgrade(feature.move.axis);
         upgrade(feature.revolveAxisRef);
+        upgrade(feature.draftNeutral);
         if (feature.feature == BodyFeature::Blend || feature.feature == BodyFeature::SheetExtend)
             upgradeEdges(feature.blendEdges, feature.firstBody);
-        if ((feature.feature == BodyFeature::SurfaceOffset || feature.feature == BodyFeature::DeleteFace || feature.feature == BodyFeature::Shell) && feature.firstBody >= 0 && feature.firstBody < features.size()
+        if ((feature.feature == BodyFeature::Draft || feature.feature == BodyFeature::SurfaceOffset || feature.feature == BodyFeature::DeleteFace || feature.feature == BodyFeature::Shell) && feature.firstBody >= 0 && feature.firstBody < features.size()
             && features.at(feature.firstBody).forgeBody) {
             const Body &body = *features.at(feature.firstBody).forgeBody;
             for (EdgePoint &ref : feature.offsetFaces) {

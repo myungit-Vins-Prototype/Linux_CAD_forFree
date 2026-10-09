@@ -31,6 +31,77 @@ static void require(bool ok, const char *message) {
 }
 class ViewportInteractionTest {
 public:
+    static void draftFeature() {
+        using namespace ForgeCad;
+        using namespace ForgeCad::Kernel;
+        CadViewport viewport;
+        PrimitiveParameters primitive;
+        primitive.size[0] = 20; primitive.size[1] = 10; primitive.size[2] = 5;
+        require(viewport.createPrimitive(primitive, QStringLiteral("Base sformo")).isEmpty(), "creazione base sformo");
+        const auto base = viewport.extrusions_.front().forgeBody;
+        ExtrusionObject draft;
+        draft.feature = BodyFeature::Draft; draft.firstBody = 0; draft.name = QStringLiteral("Sformo 1");
+        draft.draftNeutral.kind = 1; draft.draftNeutral.index = 0; draft.draftAngle = 5;
+        FaceId bottom;
+        for (FaceId f : base->faces()) {
+            const auto &frame = static_cast<const Plane &>(*base->face(f).surface).frame();
+            const auto point = faceReference(*base, f, frame.origin());
+            if (std::fabs(frame.zDir().z()) < 0.1) draft.offsetFaces.append(point);
+            else if (std::fabs(frame.origin().z()) < 1e-8) bottom = f;
+        }
+        require(draft.offsetFaces.size() == 4 && bottom.valid(), "quattro pareti e base neutra");
+        viewport.requestPreview(draft, -1);
+        QElapsedTimer timeout; timeout.start();
+        while (!viewport.preview_.valid && viewport.preview_.error.isEmpty() && timeout.elapsed() < 10000) QApplication::processEvents();
+        require(viewport.preview_.valid && viewport.preview_.geometry, "anteprima sformo valida");
+        require(viewport.createBody(draft).isEmpty(), "creazione sformo");
+        viewport.clearPreview();
+        require(viewport.extrusions_.size() == 2 && viewport.extrusions_[0].modelBodyId == viewport.extrusions_[1].modelBodyId,
+                "sformo eredita il corpo logico");
+        require(viewport.resultBodiesBefore(-1) == QVector<int>{1}, "solo lo sformo e' lo stadio finale");
+        const auto volume = [&] { return massProperties(*viewport.extrusions_.last().forgeBody).volume; };
+        const double initialVolume = volume();
+        ExtrusionObject edited = viewport.extrusions_.last(); edited.draftAngle = 8;
+        require(viewport.updateBody(1,edited).isEmpty() && volume() < initialVolume, "modifica dell'angolo rigenera lo sformo");
+        viewport.undo(); require(std::fabs(volume()-initialVolume)<1e-8, "undo modifica sformo");
+        viewport.redo(); require(volume()<initialVolume, "redo modifica sformo");
+        edited = viewport.extrusions_.last();
+        edited.draftNeutral.kind = 5; edited.draftNeutral.index = 0;
+        edited.draftNeutral.point = faceReference(*base,bottom,Vec3());
+        edited.draftReverse = true;
+        require(viewport.updateBody(1,edited).isEmpty(), "piano neutro associato alla faccia");
+        const double savedVolume = volume();
+        QTemporaryDir files;
+        const QString path = files.path()+QStringLiteral("/sformo.prt");
+        require(saveDocumentFile(path,viewport.currentDocument(),false).isEmpty(), "salvataggio sformo senza cache");
+        DocumentState loaded;
+        require(loadDocumentFile(path,loaded).isEmpty(), "lettura formato sformo");
+        require(loaded.extrusions.last().feature == BodyFeature::Draft && loaded.extrusions.last().draftAngle == 8
+                && loaded.extrusions.last().draftReverse && loaded.extrusions.last().draftNeutral.kind == 5
+                && loaded.extrusions.last().draftNeutral.featureId != 0, "parametri e riferimento persistenti");
+        CadViewport reopened; reopened.loadDocument(loaded);
+        require(reopened.extrusions_.last().forgeBody && reopened.extrusions_.last().error.isEmpty(), "rigenerazione sformo riletto");
+        require(std::fabs(massProperties(*reopened.extrusions_.last().forgeBody).volume-savedVolume)<1e-8, "volume conservato dopo riapertura");
+        const auto before = writeBodyBinary(*viewport.extrusions_.last().forgeBody);
+        edited = viewport.extrusions_.last(); edited.draftAngle = 88;
+        require(!viewport.updateBody(1,edited).isEmpty(), "rifiuto sformo che collassa il corpo");
+        require(writeBodyBinary(*viewport.extrusions_.last().forgeBody)==before, "errore non modifica il corpo");
+        // Il pannello usa lo stesso isolamento delle altre funzioni, con anteprima
+        // e chiusura tramite Annulla senza aggiungere una feature.
+        QMainWindow window;
+        auto *view = new CadViewport(&window); window.setCentralWidget(view); window.resize(1000,720);
+        view->loadDocument(loaded); window.show();
+        bool locked = false;
+        QTimer::singleShot(0, &window, [&] {
+            locked = view->interactionLocked();
+            for (QDialog *dialog : window.findChildren<QDialog *>())
+                if (dialog->windowTitle() == QStringLiteral("Test sformo")) dialog->reject();
+        });
+        require(!draftDialog(&window,view,QStringLiteral("Test sformo"),1,view->extrusions_.last(),[](const ExtrusionObject &) { return QString(); }), "annullamento pannello sformo");
+        require(locked && !view->interactionLocked() && view->extrusions_.size()==2, "pannello sformo esclusivo e ripristino");
+        std::cout << "PASS sformo: anteprima, storia, modifica, undo/redo, persistenza e pannello" << std::endl;
+    }
+
     static void workflowUi() {
         using namespace ForgeCad;
         using namespace ForgeCad::Kernel;
@@ -4459,6 +4530,11 @@ int main(int argc, char **argv) {
     QTemporaryDir settings;
     QSettings::setDefaultFormat(QSettings::IniFormat);
     QSettings::setPath(QSettings::IniFormat, QSettings::UserScope, settings.path());
+    if (app.arguments().contains(QStringLiteral("--draft"))) {
+        try { ViewportInteractionTest::draftFeature(); }
+        catch (const std::exception &e) { std::cerr << e.what() << std::endl; return 1; }
+        return 0;
+    }
     if (app.arguments().contains(QStringLiteral("--workflow-ui"))) {
         try { ViewportInteractionTest::workflowUi(); }
         catch (const std::exception &e) { std::cerr << e.what() << std::endl; return 1; }

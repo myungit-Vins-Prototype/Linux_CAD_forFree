@@ -85,6 +85,8 @@ add_library(forgekernel STATIC
     fk_shell.cpp
     fk_transform.h
     fk_transform.cpp
+    fk_draft.h
+    fk_draft.cpp
     fk_hermite.h
     fk_hermite.cpp
     fk_helix.h
@@ -152,6 +154,7 @@ add_executable(forgekernel_tests
     tests/test_blend.cpp
     tests/test_sheet.cpp
     tests/test_transform.cpp
+    tests/test_draft.cpp
     tests/test_body_io.cpp
     tests/test_helix.cpp
     tests/test_sweep.cpp

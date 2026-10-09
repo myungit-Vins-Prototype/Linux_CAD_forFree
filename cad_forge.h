@@ -93,6 +93,8 @@ ForgeBody forgeExtendSheet(const ForgeBody &sheet, const QVector<EdgePoint> &poi
 // gli spigoli vivi le superfici si separano: `summary` lo dice.
 // Il corpo senza le facce scelte: lamina con le facce restanti (fk_sew facesAsSheet).
 // Guscio: il solido svuotato con lo spessore verso l'interno, le facce scelte tolte (fk_shell).
+ForgeBody forgeDraft(const ForgeBody &base, const QVector<EdgePoint> &faces, const Kernel::Vec3 &origin,
+                     const Kernel::Vec3 &direction, double angleDegrees, QString *error);
 ForgeBody forgeShell(const ForgeBody &base, const QVector<EdgePoint> &openFaces, double thickness, QString *error);
 // `component` -1 conserva tutte le componenti nello stesso B-rep (file
 // precedenti); un valore >= 0 restituisce una sola componente connessa.

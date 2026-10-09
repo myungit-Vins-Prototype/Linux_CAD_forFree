@@ -279,7 +279,7 @@ struct BodyDisplay {
 // l'interno, le facce offsetFaces tolte per l'apertura (nessuna: cavita' chiusa).
 enum class BodyFeature { Extrusion = 0, Revolution = 1, Primitive = 2, Blend = 3, SheetTrim = 4, SheetExtend = 5, Scale = 6, Helix = 7, Sweep = 8, Loft = 9,
                          Imported = 10, DatumPlane = 11, Pattern = 12, Transform = 13, SurfaceOffset = 14, Sew = 15, Ruled = 16, PlanarSurface = 17,
-                         DeleteFace = 18, BoundarySurface = 19, Shell = 20, Thread = 21, FillSurface = 22 };
+                         DeleteFace = 18, BoundarySurface = 19, Shell = 20, Thread = 21, FillSurface = 22, Draft = 23 };
 
 // Riferimento leggero a una sotto-entita' del B-rep. `subshape` e' l'ID
 // topologico al momento della scelta, `geometry` il tipo di curva/superficie.
@@ -617,6 +617,10 @@ struct ExtrusionObject {
     // SurfaceOffset: le facce scelte (vuoto: tutte le facce del corpo).
     // DeleteFace: le facce da togliere (almeno una); Shell: le facce dell'apertura.
     QVector<EdgePoint> offsetFaces;
+    // Sformo a piano neutro: normale del riferimento = direzione di estrazione.
+    GeometryRef draftNeutral;
+    double draftAngle = 3.0;  // gradi, positivo restringe lungo la direzione
+    bool draftReverse = false;
     bool offsetSew = true;  // estendi/rifila le facce adiacenti prima di cucirle
     // DeleteFace multi-risultato: -1 = tutte le componenti (file storici),
     // altrimenti la componente connessa esposta da questo corpo logico.
