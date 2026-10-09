@@ -154,6 +154,9 @@ uniform int lightEnabled[4];
 uniform bool lightingEnabled;
 uniform vec4 specularColor;
 uniform float shininess;
+uniform bool zebra;
+uniform float zebraFrequency;
+uniform float zebraAngle;
 out vec4 fragmentColor;
 void main() {
     if (!lightingEnabled) {
@@ -161,6 +164,16 @@ void main() {
         return;
     }
     vec3 n = normalize(eyeNormal);
+    if (zebra) {
+        // Camera ortografica: direzione osservatore costante nello spazio occhio.
+        vec3 reflected = reflect(vec3(0.0, 0.0, -1.0), n);
+        float phase = dot(reflected.xy, vec2(cos(zebraAngle), sin(zebraAngle))) * zebraFrequency * 3.14159265;
+        float stripe = sin(phase);
+        float aa = max(fwidth(phase), 0.002);
+        float value = mix(0.035, 0.97, smoothstep(-aa, aa, stripe));
+        fragmentColor = vec4(vec3(value), baseColor.a);
+        return;
+    }
     vec3 rgb = ambient.rgb * baseColor.rgb + emission.rgb;
     vec3 viewDirection = normalize(-eyePosition);
     for (int i = 0; i < 4; ++i) {
@@ -233,6 +246,9 @@ void DisplayCache::setFaceUniforms() {
     faceShader_->setUniformValue("clipEnabled", clipEnabled_);
     faceShader_->setUniformValue("baseColor", color_);
     faceShader_->setUniformValue("lightingEnabled", lightingEnabled_);
+    faceShader_->setUniformValue("zebra", zebra_);
+    faceShader_->setUniformValue("zebraFrequency", zebraFrequency_);
+    faceShader_->setUniformValue("zebraAngle", zebraAngle_);
     faceShader_->setUniformValue("emission", emission_);
     if (lightingDirty_) {
         faceShader_->setUniformValue("ambient", lighting_.ambient);

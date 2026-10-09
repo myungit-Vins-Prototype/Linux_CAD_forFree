@@ -43,6 +43,8 @@ add_executable(forgecad
     forgeCad2026_gui.cpp
     forgeCad2026_gui.h
     cad_types.h
+    cad_shape_analysis.h
+    cad_shape_analysis.cpp
     cad_display_cache.h
     cad_display_cache.cpp
     cad_overlay_renderer.h
@@ -214,6 +216,10 @@ if(FORGECAD_BUILD_VIEW_TESTS)
     set_tests_properties(forgecad_rebuild_all_tests PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen;QT_QPA_PLATFORMTHEME=;QT_STYLE_OVERRIDE=Fusion")
     add_test(NAME forgecad_ellipse_trim_tests COMMAND forgecad_view_tests --ellipse-trim)
     set_tests_properties(forgecad_ellipse_trim_tests PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen;QT_QPA_PLATFORMTHEME=;QT_STYLE_OVERRIDE=Fusion")
+    add_test(NAME forgecad_sketch_comb_tests COMMAND forgecad_view_tests --sketch-comb)
+    set_tests_properties(forgecad_sketch_comb_tests PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen;QT_QPA_PLATFORMTHEME=;QT_STYLE_OVERRIDE=Fusion")
+    add_test(NAME forgecad_shape_analysis_ui_tests COMMAND forgecad_view_tests --shape-analysis)
+    set_tests_properties(forgecad_shape_analysis_ui_tests PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen;QT_QPA_PLATFORMTHEME=;QT_STYLE_OVERRIDE=Fusion")
     add_test(NAME forgecad_draft_tests COMMAND forgecad_view_tests --draft)
     set_tests_properties(forgecad_draft_tests PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen;QT_QPA_PLATFORMTHEME=;QT_STYLE_OVERRIDE=Fusion")
     add_test(NAME forgecad_workflow_ui_tests COMMAND forgecad_view_tests --workflow-ui)
@@ -221,3 +227,8 @@ if(FORGECAD_BUILD_VIEW_TESTS)
     add_test(NAME forgecad_view_tests COMMAND forgecad_view_tests)
     set_tests_properties(forgecad_view_tests PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen;QT_QPA_PLATFORMTHEME=;QT_STYLE_OVERRIDE=Fusion")
 endif()
+
+add_executable(forgecad_shape_analysis_tests tests/test_shape_analysis.cpp cad_shape_analysis.cpp)
+target_include_directories(forgecad_shape_analysis_tests PRIVATE ${PROJECT_SOURCE_DIR})
+target_link_libraries(forgecad_shape_analysis_tests PRIVATE Qt6::Widgets Qt6::OpenGL forgekernel)
+add_test(NAME forgecad_shape_analysis_tests COMMAND forgecad_shape_analysis_tests)

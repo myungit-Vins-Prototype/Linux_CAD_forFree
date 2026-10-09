@@ -16,6 +16,8 @@
 #include "cad_sketch_refs.h"
 #include "cad_forge.h"
 #include "cad_display_cache.h"
+#include "cad_shape_analysis.h"
+#include "fk_curve_ops.h"
 #include "cad_overlay_renderer.h"
 #include <QOpenGLContext>
 #include <array>
@@ -262,6 +264,15 @@ private:
 class CadViewport final : public QOpenGLWidget, protected QOpenGLFunctions {
     friend class ViewportInteractionTest;
 public:
+    int shapeAnalysisBody_ = -1;
+    int shapeAnalysisMode_ = -1;
+    int shapeAnalysisFace_ = -1;
+    BodyDisplay shapeAnalysisFaceDisplay_;
+    bool shapeAnalysisThrough_ = true;
+    float zebraFrequency_ = 12, zebraAngle_ = 0;
+    ForgeCad::ShapeAnalysis shapeAnalysis_;
+    void calculateShapeAnalysis(const std::function<void()> &work) { runWhileResponsive(work); }
+    void clearShapeAnalysis() { shapeAnalysisBody_ = -1; shapeAnalysisMode_ = -1; shapeAnalysisFace_ = -1; shapeAnalysisFaceDisplay_ = {}; shapeAnalysis_ = {}; update(); }
     explicit CadViewport(QWidget *parent = nullptr) : QOpenGLWidget(parent) {
         setFocusPolicy(Qt::StrongFocus);
         setMouseTracking(true);
@@ -3865,6 +3876,7 @@ protected:
         drawPickedEdges();
         drawTopologyHighlight();
         drawSketch();
+        drawSketchCurvature();
         drawSnapMarkers();
         if (axesOnTop_) drawAxes();
         makeOpaque();
@@ -7817,9 +7829,9 @@ private:
     // precedente, oppure -1 per un punto appena inserito.
     void commitFreeCurveEdit(int curveIndex, const CurveObject &working, const QVector<int> &origins) {
         if (activeSketch_ < 0 || activeSketch_ >= sketches_.size()) return;
-        SketchObject &sketch = sketches_[activeSketch_];
-        if (curveIndex < 0 || curveIndex >= sketch.curves.size()) return;
-        const int oldCount = sketch.curves.at(curveIndex).controlPoints.size();
+        const SketchObject &before = sketches_.at(activeSketch_);
+        if (curveIndex < 0 || curveIndex >= before.curves.size()) return;
+        const int oldCount = before.curves.at(curveIndex).controlPoints.size();
         QVector<int> map(oldCount, -1);
         for (int now = 0; now < origins.size(); ++now)
             if (origins.at(now) >= 0 && origins.at(now) < oldCount) map[origins.at(now)] = now;
@@ -7833,6 +7845,9 @@ private:
             return true;
         };
         recordUndo();
+        // Acquisire il riferimento scrivibile DOPO lo snapshot: detach del QVector
+        // esterno, altrimenti le modifiche alterano anche lo stato di Undo.
+        SketchObject &sketch = sketches_[activeSketch_];
         QVector<SketchConstraint> kept;
         for (SketchConstraint constraint : sketch.geometricConstraints)
             if (remap(constraint.first) && remap(constraint.second) && remap(constraint.third)) kept.append(std::move(constraint));
@@ -7850,6 +7865,58 @@ private:
         selectedPoints_.clear();
         selectedConstraints_.clear();
         sketchEdited();
+    }
+
+    struct SketchCombCache {
+        CurveObject source;
+        double scale = -1;
+        QVector<ForgeCad::OverlayVertex> lines;
+        bool valid = false;
+    };
+    bool sketchCombVisible_ = false;
+    double sketchCombScale_ = 0; // zero: automatica per curva; altrimenti mm²
+    QVector<SketchCombCache> sketchCombCache_;
+    int sketchCombPreviewIndex_ = -1;
+    CurveObject sketchCombPreview_;
+
+    const QVector<ForgeCad::OverlayVertex> &sketchCurveComb(int index, const CurveObject &curve) {
+        if (sketchCombCache_.size() <= index) sketchCombCache_.resize(index+1);
+        auto &cache = sketchCombCache_[index];
+        const auto &old = cache.source;
+        if (!cache.valid || cache.scale != sketchCombScale_ || old.tool != curve.tool
+            || old.controlPoints != curve.controlPoints || old.tangentHandles != curve.tangentHandles
+            || old.weights != curve.weights || old.knots != curve.knots || old.degree != curve.degree) {
+            cache.lines.clear(); cache.source=curve; cache.scale=sketchCombScale_; cache.valid=true;
+            try {
+                for (const auto &segment : ForgeCad::curveGeometry(curve)) {
+                    ExtrusionObject object;
+                    object.curve=std::make_shared<ForgeCad::Kernel::TrimmedCurve<3>>(
+                        ForgeCad::Kernel::embedCurve(segment.curve, ForgeCad::Kernel::Frame3{}), segment.range.lo, segment.range.hi);
+                    cache.lines += ForgeCad::analyzeShape(object,4,sketchCombScale_,.1,.001).lines;
+                }
+            } catch (const std::exception &) { cache.lines.clear(); }
+        }
+        return cache.lines;
+    }
+
+    void drawSketchCurvature() {
+        if (!sketchMode_ || !sketchCombVisible_ || activeSketch_ < 0 || activeSketch_ >= sketches_.size()) return;
+        const auto &sketch = sketches_.at(activeSketch_);
+        sketchCombCache_.resize(sketch.curves.size());
+        glDisable(GL_DEPTH_TEST);
+        for (int i=0; i<sketch.curves.size(); ++i) {
+            const auto &curve = i==sketchCombPreviewIndex_ ? sketchCombPreview_ : sketch.curves[i];
+            if (curve.tool!=DrawingTool::Spline && curve.tool!=DrawingTool::Nurbs) continue;
+            QVector<ForgeCad::OverlayVertex> lines = sketchCurveComb(i,curve);
+            for (auto &vertex : lines) vertex.position=mapSketchPoint(QPointF(vertex.position.x(),vertex.position.y()),sketch);
+            overlayRenderer_.draw(GL_LINES,lines);
+            if (i==sketchCombPreviewIndex_) {
+                QVector<QVector3D> path;
+                for (const QPointF &p : curve.samples) path.append(mapSketchPoint(p,sketch));
+                overlayRenderer_.draw(GL_LINE_STRIP,path,QVector4D(.2f,1,.45f,1));
+            }
+        }
+        glEnable(GL_DEPTH_TEST);
     }
 
     void editFreeCurve(int curveIndex, int initialPoint = -1) {
@@ -7883,6 +7950,7 @@ private:
             return box;
         };
         auto *x = spin(0.0), *y = spin(0.0);
+        x->setObjectName(QStringLiteral("freeCurveX")); y->setObjectName(QStringLiteral("freeCurveY"));
         auto *linked = new QCheckBox(QStringLiteral("Maniglie collegate (tangenza)"), &dialog);
         auto *inLength = spin(0.0), *outLength = spin(0.0);
         inLength->setRange(0.0, 1e9); outLength->setRange(0.0, 1e9);
@@ -7994,11 +8062,49 @@ private:
             if (work.tool == DrawingTool::Spline) { work.tangentHandles.removeAt(at); work.tangentLinked.removeAt(at); }
             initialPoint = qMin(at, work.controlPoints.size() - 1); refill(); load();
         });
+        auto *comb = new QCheckBox(QStringLiteral("Mostra pettini di curvatura nello schizzo"), &dialog);
+        comb->setObjectName(QStringLiteral("sketchCurvatureComb")); comb->setChecked(sketchCombVisible_);
+        auto *automatic = new QCheckBox(QStringLiteral("Scala automatica per curva"), &dialog);
+        automatic->setObjectName(QStringLiteral("sketchCurvatureAuto")); automatic->setChecked(sketchCombScale_==0);
+        auto *gain = new QDoubleSpinBox(&dialog);
+        gain->setDecimals(6); gain->setRange(.000001,1e9);
+        gain->setValue(sketchCombScale_>0 ? sketchCombScale_ : 100);
+        gain->setObjectName(QStringLiteral("sketchCurvatureScale"));
+        form->addRow(comb); form->addRow(automatic); form->addRow(QStringLiteral("Scala pettine (mm²):"),gain);
+        auto *combNote = new QLabel(QStringLiteral("Denti blu: più lunghi dove la curva piega di più; inviluppo arancio. "
+            "Il pettine resta su spline e NURBS dello schizzo attivo, anche dopo la chiusura. "
+            "Verde: anteprima delle modifiche; OK le applica, Annulla conserva la curva originale. "
+            "Scala automatica indipendente per curva; usa la scala manuale per confrontarle."), &dialog);
+        combNote->setWordWrap(true); combNote->setMaximumWidth(520); form->addRow(combNote);
+        const auto refreshComb = [&] {
+            if (loading) return;
+            sketchCombVisible_=comb->isChecked();
+            sketchCombScale_=automatic->isChecked()?0:gain->value();
+            automatic->setEnabled(sketchCombVisible_); gain->setEnabled(sketchCombVisible_ && !automatic->isChecked());
+            sketchCombPreviewIndex_=sketchCombVisible_?curveIndex:-1;
+            if (sketchCombVisible_) {
+                sketchCombPreview_=work;
+                ForgeCad::shapeSpline(sketchCombPreview_,{uniform->isChecked(),relaxed->isChecked(),limited->isChecked()});
+                ForgeCad::recalculateCurve(sketchCombPreview_,tessellationQuality_);
+            }
+            update();
+        };
+        // Connessioni dopo quelle di modifica: il pettine usa sempre la copia gia' aggiornata.
+        for (QCheckBox *box : {comb,automatic,uniform,relaxed,limited,linked})
+            QObject::connect(box,&QCheckBox::toggled,&dialog,[&] { refreshComb(); });
+        for (QDoubleSpinBox *box : std::array<QDoubleSpinBox *,5>{x,y,inLength,outLength,gain})
+            QObject::connect(box,qOverload<double>(&QDoubleSpinBox::valueChanged),&dialog,[&] { refreshComb(); });
+        for (QPushButton *button : {add,remove})
+            QObject::connect(button,&QPushButton::clicked,&dialog,[&] { refreshComb(); });
         auto *buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dialog);
         QObject::connect(buttons, &QDialogButtonBox::accepted, &dialog, &QDialog::accept);
         QObject::connect(buttons, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
-        form->addRow(buttons); refill(); load();
-        if (dialog.exec() == QDialog::Accepted) {
+        form->addRow(buttons); refill(); load(); refreshComb();
+        const bool accepted = dialog.exec() == QDialog::Accepted;
+        sketchCombPreviewIndex_=-1;
+        sketchCombCache_.clear();
+        update();
+        if (accepted) {
             ForgeCad::shapeSpline(work, {uniform->isChecked(), relaxed->isChecked(), limited->isChecked()});
             commitFreeCurveEdit(curveIndex, work, origins);
         }
@@ -10821,7 +10927,7 @@ private:
             if ((!extrusion.visible && !forced) || (extrusion.display.vertices.isEmpty() && extrusion.display.edges.isEmpty())) continue;
             const SceneSelection self{SceneObjectKind::Extrusion, index, -1};
             const bool hovered = hover_ == self;
-            if (displayMode_ != 0) {
+            if (displayMode_ != 0 || index == shapeAnalysisBody_) {
                 displayCache_.setLightingEnabled(true);
                 QColor color = meshColorForFeature(index);
                 QVector4D emission(0.0f, 0.0f, 0.0f, 1.0f);
@@ -10849,9 +10955,21 @@ private:
                 // schizzi che stanno sulla faccia si vedono senza spostarli.
                 glEnable(GL_POLYGON_OFFSET_FILL);
                 glPolygonOffset(1.0f, 2.0f);
-                drawExtrusionFaces(extrusion);
+                const bool analyzing = index == shapeAnalysisBody_;
+                const bool faceOnly = analyzing && shapeAnalysisFace_>=0;
+                const bool colorMap = analyzing && (shapeAnalysisMode_==1 || shapeAnalysisMode_==2);
+                displayCache_.setZebra(analyzing && !faceOnly && shapeAnalysisMode_==0, zebraFrequency_, zebraAngle_);
+                if (!colorMap || faceOnly) drawExtrusionFaces(extrusion);
+                displayCache_.setZebra(false,zebraFrequency_,zebraAngle_);
+                if (faceOnly) glPolygonOffset(0.0f,0.0f);
+                if (colorMap) overlayRenderer_.draw(GL_TRIANGLES,shapeAnalysis_.triangles);
+                else if (faceOnly && shapeAnalysisMode_==0) {
+                    displayCache_.setZebra(true,zebraFrequency_,zebraAngle_);
+                    drawDisplayFaces(shapeAnalysisFaceDisplay_);
+                    displayCache_.setZebra(false,zebraFrequency_,zebraAngle_);
+                }
                 glDisable(GL_POLYGON_OFFSET_FILL);
-                if (!seeThrough) drawFeatureHighlightFaces(index);
+                if (!seeThrough && !analyzing) drawFeatureHighlightFaces(index);
                 if (seeThrough) {
                     glDepthMask(GL_TRUE);
                     glDisable(GL_BLEND);
@@ -10885,7 +11003,17 @@ private:
                 glLineWidth(1.0f);
                 if (hiddenEdgesVisible_) glEnable(GL_DEPTH_TEST);
             }
-            if (!isCurveBody(extrusion)) drawFeatureHighlightEdges(index);
+            if (!isCurveBody(extrusion) && index != shapeAnalysisBody_) drawFeatureHighlightEdges(index);
+        }
+        if (shapeAnalysisMode_ >= 0) {
+            const bool through = shapeAnalysisThrough_ && (shapeAnalysisMode_ == 4 || shapeAnalysisMode_ == 5);
+            const bool depthEnabled = glIsEnabled(GL_DEPTH_TEST);
+            if (through) glDisable(GL_DEPTH_TEST);
+            overlayRenderer_.draw(GL_LINES, shapeAnalysis_.grid);
+            overlayRenderer_.draw(GL_LINES, shapeAnalysis_.lines);
+            if (through && depthEnabled) glEnable(GL_DEPTH_TEST);
+            for (const auto &border : shapeAnalysis_.borders)
+                overlayRenderer_.drawWideLineStrip(border.points, border.color, 4.0f);
         }
         const auto outline = [this](const SceneSelection &target, const QColor &color, float width) {
             if (target.kind != SceneObjectKind::Extrusion || target.index < 0
@@ -17365,6 +17493,205 @@ static QVector<GeometryRef> microFeatureMarks(const ExtrusionObject &body, int i
     return marks;
 }
 
+static void shapeAnalysisDialog(QMainWindow *window, CadViewport *viewport) {
+    QDialog dialog(window);
+    dialog.setWindowTitle(QStringLiteral("Curvatura, zebra e continuità"));
+    dialog.resize(660, 600);
+    auto *layout = new QVBoxLayout(&dialog);
+    auto *form = new QFormLayout;
+    auto *body = new QComboBox(&dialog);
+    body->setObjectName(QStringLiteral("shapeAnalysisBody"));
+    const auto &objects = viewport->extrusions();
+    QVector<int> candidates;
+    for (int index : viewport->resultBodiesBefore(-1))
+        if (objects[index].visible) {
+            candidates.append(index);
+            body->addItem(logicalBodyLabel(viewport,index),index);
+        }
+    // Le curve 3D sono riferimenti indipendenti, non stadi intermedi di un corpo.
+    for (int i=0; i<objects.size(); ++i)
+        if (objects[i].visible && !objects[i].modelBodyId && objects[i].curve)
+            body->addItem(QStringLiteral("Curva 3D: ")+objects[i].name,i);
+    const auto &sketches = viewport->sketches();
+    for (int i=0; i<sketches.size(); ++i)
+        if (sketches[i].visible) body->addItem(QStringLiteral("Schizzo: ") + sketches[i].name, -2-i);
+    if (!body->count()) {
+        QMessageBox::information(window, dialog.windowTitle(), QStringLiteral("Occorre un corpo, una superficie, una curva 3D o uno schizzo visibile."));
+        return;
+    }
+    const auto selection = viewport->selection();
+    if (selection.kind == SceneObjectKind::Extrusion) {
+        const int mapped = resultBodyForPick(viewport,candidates,selection.index);
+        const int row = body->findData(mapped>=0?mapped:selection.index); if (row>=0) body->setCurrentIndex(row);
+    }
+    if (selection.kind == SceneObjectKind::Sketch) {
+        const int row = body->findData(-2-selection.index); if (row>=0) body->setCurrentIndex(row);
+    }
+    auto *face = new QComboBox(&dialog);
+    face->setObjectName(QStringLiteral("shapeAnalysisFace"));
+    auto *pickFace = new QPushButton(QStringLiteral("Scegli faccia nella vista"), &dialog);
+    pickFace->setObjectName(QStringLiteral("shapeAnalysisPickFace")); pickFace->setCheckable(true);
+    auto fillFaces = [&] {
+        const QSignalBlocker blocker(face);
+        face->clear(); face->addItem(QStringLiteral("Tutte le facce"),-1);
+        const int index=body->currentData().toInt();
+        const bool hasFaces=index>=0 && objects[index].forgeBody;
+        if(hasFaces) for(auto id:objects[index].forgeBody->faces()) face->addItem(QStringLiteral("Faccia F%1").arg(id.index),id.index);
+        face->setEnabled(hasFaces); pickFace->setEnabled(hasFaces);
+    };
+    fillFaces();
+    auto *mode = new QComboBox(&dialog);
+    mode->setObjectName(QStringLiteral("shapeAnalysisMode"));
+    mode->addItems({QStringLiteral("Zebra — riflessi"), QStringLiteral("Curvatura — intensità"),
+        QStringLiteral("Forma locale — sella / piatta / doppia curvatura"), QStringLiteral("Giunzioni — semaforo"),
+        QStringLiteral("Curve e bordi — pettine"), QStringLiteral("Superfici — griglia U/V e pettini")});
+    if (body->currentData().toInt()<0 || objects[body->currentData().toInt()].curve) mode->setCurrentIndex(4);
+    auto spin = [&dialog](double lo, double hi, double value, int decimals) {
+        auto *s = new QDoubleSpinBox(&dialog); s->setDecimals(decimals); s->setRange(lo,hi); s->setValue(value); return s;
+    };
+    auto *frequency = spin(1,100,12,0), *angle = spin(0,180,0,0);
+    auto *limit = spin(.000001,1000000,.1,6), *gain = spin(.000001,1000000,100,6);
+    auto *autoGain = new QCheckBox(QStringLiteral("Adatta i denti alla dimensione della curva"), &dialog);
+    autoGain->setChecked(true);
+    auto *uLines = spin(0,40,6,0), *vLines = spin(0,40,6,0), *isoSamples = spin(4,200,32,0);
+    auto *normalOnly = new QCheckBox(QStringLiteral("Misura quanto piega la superficie"), &dialog);
+    normalOnly->setChecked(true);
+    auto *through = new QCheckBox(QStringLiteral("Mostra anche le parti nascoste dalla superficie"), &dialog);
+    through->setChecked(true);
+    through->setObjectName(QStringLiteral("shapeCombThrough"));
+    uLines->setObjectName(QStringLiteral("shapeULines")); vLines->setObjectName(QStringLiteral("shapeVLines"));
+    isoSamples->setObjectName(QStringLiteral("shapeIsoSamples"));
+    normalOnly->setObjectName(QStringLiteral("shapeNormalCurvature"));
+    auto *angleTol = spin(.001,45,.1,3), *curvTol = spin(.000001,100, .001,6);
+    form->addRow(QStringLiteral("Corpo / riferimento"),body);
+    form->addRow(QStringLiteral("Faccia da analizzare"),face); form->addRow(pickFace);
+    form->addRow(QStringLiteral("Lettura"),mode);
+    form->addRow(QStringLiteral("Densità zebra"),frequency); form->addRow(QStringLiteral("Direzione zebra (°)"),angle);
+    form->addRow(QStringLiteral("Rosso da |k| (mm⁻¹)"),limit); form->addRow(QStringLiteral("Scala pettine (mm²)"),gain);
+    form->addRow(QStringLiteral("Scala automatica pettine"),autoGain);
+    form->addRow(QStringLiteral("Linee U costante (ciano)"),uLines);
+    form->addRow(QStringLiteral("Linee V costante (magenta)"),vLines);
+    form->addRow(QStringLiteral("Denti per curva U/V (circa)"),isoSamples);
+    form->addRow(QStringLiteral("Curvatura normale"),normalOnly);
+    form->addRow(QStringLiteral("Pettini sempre visibili"),through);
+    form->addRow(QStringLiteral("Soglia tangenza (°)"),angleTol); form->addRow(QStringLiteral("Soglia curvatura (mm⁻¹)"),curvTol);
+    layout->addLayout(form);
+    auto *help = new QLabel(&dialog); help->setWordWrap(true); layout->addWidget(help);
+    auto *report = new QTextBrowser(&dialog); layout->addWidget(report,1);
+    auto *apply = new QPushButton(QStringLiteral("Aggiorna analisi"), &dialog); layout->addWidget(apply);
+    auto *buttons = new QDialogButtonBox(QDialogButtonBox::Close,&dialog); layout->addWidget(buttons);
+    QObject::connect(buttons,&QDialogButtonBox::rejected,&dialog,&QDialog::reject);
+    const QStringList guides = {
+        QStringLiteral("Ruota la vista e la direzione delle strisce. Una rottura del riflesso suggerisce un salto di tangenza; un cambio brusco di andamento suggerisce un cambio di curvatura. Zebra qualitative sulla tessellazione: non identificano da sole i flessi."),
+        QStringLiteral("Blu = curvatura zero, verde = metà scala, rosso = limite o superiore; grigio = non valutabile. Si mostra max(|k1|,|k2|), in mm⁻¹: 0,1 corrisponde a un raggio di 10 mm. Non indica il segno. Le fasce triangolari dipendono dal campionamento."),
+        QStringLiteral("Blu = sella (curvature di segno opposto); arancio = doppia curvatura dello stesso segno; verde = almeno una curvatura quasi nulla entro soglia. Un cilindro è verde senza essere piano. Il confine tra colori non è una certificazione di flesso; grigio = non valutabile."),
+        QStringLiteral("Rosso = salto di tangenza o posizione; arancio = salto di curvatura; verde = regolare entro soglia nei campioni; grigio = bordo libero o non valutabile. Controlla 31 punti per bordo condiviso nello stesso corpo: non confronta corpi separati né nodi interni alle facce. Non certifica G1/G2 sull'intero bordo."),
+        QStringLiteral("Denti blu: più lunghi dove la curva piega di più, disegnati verso l’esterno della piega. Inviluppo arancio: andamento del pettine. Su una curva piana, un flesso regolare passa per curvatura zero e cambia lato; in 3D non esiste un lato firmato unico. Pettine sulle curve dello schizzo, sui bordi del corpo o sulla curva 3D, campionato per tratti: non certifica assenza di salti."),
+        QStringLiteral("Ciano: U costante; magenta: V costante. Griglia sulla superficie e pettini lungo le sue curve U/V. Con Curvatura normale si misura la piega della superficie in quella direzione; disattivandola si misura la curvatura completa della curva U/V, che può piegare anche su un piano. Denti più lunghi = piega più stretta; scala comune alle due famiglie. Le direzioni U/V non sono necessariamente quelle di curvatura massima e minima. Ritaglio grafico sui contorni e sui fori, approssimato dalla tessellazione; analisi campionata.")};
+    auto refresh = [&] {
+        viewport->clearShapeAnalysis();
+        const int m=mode->currentIndex();
+        help->setText(guides[m]);
+        frequency->setEnabled(m==0); angle->setEnabled(m==0); limit->setEnabled(m==1);
+        const bool comb = m==4 || m==5;
+        autoGain->setEnabled(comb); gain->setEnabled(comb && !autoGain->isChecked()); angleTol->setEnabled(m==3); curvTol->setEnabled(m==2 || m==3);
+        form->setRowVisible(frequency,m==0); form->setRowVisible(angle,m==0); form->setRowVisible(limit,m==1);
+        form->setRowVisible(autoGain,comb); form->setRowVisible(gain,comb); form->setRowVisible(through,comb);
+        form->setRowVisible(angleTol,m==3); form->setRowVisible(curvTol,m==2 || m==3);
+        form->setRowVisible(uLines,m==5); form->setRowVisible(vLines,m==5);
+        form->setRowVisible(isoSamples,m==5); form->setRowVisible(normalOnly,m==5);
+        const int i=body->currentData().toInt();
+        if (m!=4 && (i<0 || !objects[i].forgeBody)) { report->setPlainText(QStringLiteral("Per uno schizzo o una curva 3D scegli Pettine.")); return; }
+        try {
+            QApplication::setOverrideCursor(Qt::WaitCursor);
+            const double scale=comb?(autoGain->isChecked()?0:gain->value()):limit->value(), at=angleTol->value(), kt=curvTol->value();
+            const int faceId=face->currentData().toInt();
+            ForgeCad::SurfaceCombOptions isoOptions; isoOptions.faceId=faceId;
+            isoOptions.uLines=int(uLines->value()); isoOptions.vLines=int(vLines->value());
+            isoOptions.samples=int(isoSamples->value()); isoOptions.normalOnly=normalOnly->isChecked();
+            ForgeCad::ShapeAnalysis result;
+            report->setPlainText(QStringLiteral("Calcolo in corso…"));
+            viewport->calculateShapeAnalysis([&] {
+                if(i>=0) result=m==5 ? ForgeCad::analyzeSurfaceComb(objects[i],scale,isoOptions) : ForgeCad::analyzeShape(objects[i],m,scale,at,kt,faceId);
+                else {
+                    const auto &sketch=sketches[-2-i];
+                    ForgeCad::Kernel::Frame3 frame; double height;
+                    ForgeCad::forgeSketchFrame(sketch,0,frame,height);
+                    std::vector<ForgeCad::ForgeCurve> curves;
+                    for(const auto &segment:ForgeCad::forgeSketchSegments(sketch))
+                        curves.push_back(std::make_shared<ForgeCad::Kernel::TrimmedCurve<3>>(
+                            ForgeCad::Kernel::embedCurve(segment.curve,frame),segment.range.lo,segment.range.hi));
+                    double sketchScale=scale;
+                    if(scale==0) {
+                        ForgeCad::Kernel::Vec3 lo,hi; bool first=true; double maxK=0;
+                        for(const auto &curve:curves) {
+                            const auto breaks=curve->breakpoints(curve->domain());
+                            for(std::size_t j=1;j<breaks.size();++j) for(int k=0;k<=24;++k) {
+                                ForgeCad::Kernel::Vec3 p,c;
+                                if(!ForgeCad::curveCurvature(*curve,breaks[j-1]+(breaks[j]-breaks[j-1])*(k+.001)/24.002,p,c)) continue;
+                                if(first) { lo=hi=p; first=false; }
+                                for(int axis=0;axis<3;++axis) { lo[axis]=std::min(lo[axis],p[axis]); hi[axis]=std::max(hi[axis],p[axis]); }
+                                maxK=std::max(maxK,ForgeCad::Kernel::norm(c));
+                            }
+                        }
+                        sketchScale=maxK>0?.15*ForgeCad::Kernel::distance(lo,hi)/maxK:1;
+                    }
+                    for(const auto &geometry:curves) {
+                        ExtrusionObject curve; curve.curve=geometry;
+                        const auto part=ForgeCad::analyzeShape(curve,4,sketchScale,at,kt);
+                        result.lines+=part.lines; result.report+=part.report;
+                    }
+                }
+            });
+            viewport->shapeAnalysis_=std::move(result);
+            viewport->shapeAnalysisFace_=faceId;
+            if(i>=0 && faceId>=0) viewport->shapeAnalysisFaceDisplay_=ForgeCad::analysisFaceDisplay(objects[i].display,faceId);
+            viewport->shapeAnalysis_.report.prepend(QStringLiteral("%1 — %2").arg(body->currentText(),face->currentText()));
+            QApplication::restoreOverrideCursor();
+            viewport->shapeAnalysisBody_=i; viewport->shapeAnalysisMode_=m; viewport->shapeAnalysisThrough_=through->isChecked();
+            viewport->zebraFrequency_=float(frequency->value()); viewport->zebraAngle_=float(angle->value()*M_PI/180);
+            report->setPlainText(viewport->shapeAnalysis_.report.join(QLatin1Char('\n')));
+            viewport->update();
+        } catch(const std::exception &e) { QApplication::restoreOverrideCursor(); report->setPlainText(QString::fromUtf8(e.what())); }
+    };
+    QObject::connect(autoGain,&QCheckBox::toggled,&dialog,[&] { gain->setEnabled((mode->currentIndex()==4 || mode->currentIndex()==5) && !autoGain->isChecked()); });
+    QObject::connect(through,&QCheckBox::toggled,&dialog,[&](bool checked) { viewport->shapeAnalysisThrough_=checked; viewport->update(); });
+    QObject::connect(apply,&QPushButton::clicked,&dialog,refresh);
+    QObject::connect(mode,qOverload<int>(&QComboBox::currentIndexChanged),&dialog,refresh);
+    QObject::connect(face,qOverload<int>(&QComboBox::currentIndexChanged),&dialog,refresh);
+    QObject::connect(body,qOverload<int>(&QComboBox::currentIndexChanged),&dialog,[&] {
+        viewport->cancelReferencePick(); pickFace->setChecked(false); fillFaces(); refresh();
+    });
+    QObject::connect(pickFace,&QPushButton::clicked,&dialog,[&](bool checked) {
+        if(!checked) { viewport->cancelReferencePick(); return; }
+        const QString error=viewport->beginReferencePick(ForgeCad::DatumRoleFace,-1);
+        if(!error.isEmpty()) { pickFace->setChecked(false); report->setPlainText(error); }
+        else report->setPlainText(QStringLiteral("Clicca una faccia del corpo nella vista. Esc termina la scelta."));
+    });
+    viewport->setReferencePickCallback([&](bool picked, GeometryRef ref) {
+        pickFace->setChecked(false); viewport->cancelReferencePick();
+        if(!picked) return;
+        // Gli ID di faccia devono riferirsi proprio alla geometria risultante.
+        if(ref.kind!=5 || !candidates.contains(ref.index)) {
+            report->setPlainText(QStringLiteral("Scegli una faccia di un corpo risultante visibile.")); return;
+        }
+        const int row=body->findData(ref.index);
+        if(row<0) return;
+        { const QSignalBlocker blocker(body); body->setCurrentIndex(row); }
+        fillFaces();
+        const int faceRow=face->findData(ref.point.subshape);
+        if(faceRow<1) { report->setPlainText(QStringLiteral("Faccia non disponibile sul corpo risultante.")); refresh(); return; }
+        face->setCurrentIndex(faceRow);
+    });
+    QObject::connect(frequency,qOverload<double>(&QDoubleSpinBox::valueChanged),&dialog,[&] { if(mode->currentIndex()==0) refresh(); });
+    QObject::connect(angle,qOverload<double>(&QDoubleSpinBox::valueChanged),&dialog,[&] { if(mode->currentIndex()==0) refresh(); });
+    refresh();
+    runModeless(window,viewport,dialog);
+    viewport->cancelReferencePick();
+    viewport->setReferencePickCallback(nullptr);
+    viewport->clearShapeAnalysis();
+}
+
 static void microFeaturesDialog(QWidget *parent, CadViewport *viewport) {
     const QVector<ExtrusionObject> &bodies = viewport->extrusions();
     int index = -1;
@@ -19222,6 +19549,8 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
     QAction *sewSurfacesAction = surfaceMenu->addAction(QStringLiteral("Cuci superfici..."));
     sewSurfacesAction->setToolTip(QStringLiteral("Unisce le superfici lungo i bordi comuni; se chiudono un volume crea un solido"));
     auto *analysisMenu = menuBar()->addMenu(QStringLiteral("Analisi"));
+    auto *shapeAction = analysisMenu->addAction(QStringLiteral("Curvatura, zebra e continuità..."));
+    connect(shapeAction, &QAction::triggered, this, [this, viewport] { shapeAnalysisDialog(this, viewport); });
     QAction *massAction = analysisMenu->addAction(QStringLiteral("Proprieta' di massa..."));
     massAction->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_M));
     massAction->setToolTip(QStringLiteral("Volume, massa, baricentro e momenti d'inerzia del corpo selezionato"));

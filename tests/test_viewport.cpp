@@ -31,6 +31,144 @@ static void require(bool ok, const char *message) {
 }
 class ViewportInteractionTest {
 public:
+    static void shapeAnalysisUi(bool render) {
+        QMainWindow window;
+        auto *v=new CadViewport(&window); window.setCentralWidget(v); window.resize(1000,750);
+        PrimitiveParameters primitive; primitive.kind=PrimitiveKind::Cylinder;
+        primitive.size[0]=2; primitive.size[1]=4;
+        require(v->createPrimitive(primitive,QStringLiteral("Cilindro analisi")).isEmpty(),"create analysis cylinder");
+        ExtrusionObject scaled; scaled.feature=BodyFeature::Scale; scaled.firstBody=0; scaled.scaleFactor=2;
+        scaled.name=QStringLiteral("Ultima lavorazione scala");
+        require(v->createBody(scaled).isEmpty(),"analysis result feature");
+        require(v->renameModelBody(0,QStringLiteral("Corpo prova analisi")).isEmpty(),"rename logical analysis body");
+        v->selection_={SceneObjectKind::Extrusion,0,-1}; // selezione di uno stadio precedente
+        SketchObject sketch; sketch.name=QStringLiteral("Cerchio test");
+        CurveObject circle; circle.tool=DrawingTool::Circle; circle.controlPoints={{0,0},{1,0}};
+        sketch.curves.append(circle);
+        CurveObject spline; spline.tool=DrawingTool::Spline; spline.controlPoints={{0,0},{1,2},{2,-1},{3,0}};
+        sketch.curves.append(spline); v->sketches_.append(sketch);
+        v->fitAll();
+        if(render) { window.show(); QApplication::processEvents(); }
+        std::exception_ptr failure;
+        QTimer::singleShot(100,[&] {
+            auto *dialog=window.findChild<QDialog *>();
+            try {
+                require(dialog!=nullptr,"analysis dialog");
+                auto *body=dialog->findChild<QComboBox *>(QStringLiteral("shapeAnalysisBody"));
+                auto *modeBox=dialog->findChild<QComboBox *>(QStringLiteral("shapeAnalysisMode"));
+                auto *face=dialog->findChild<QComboBox *>(QStringLiteral("shapeAnalysisFace"));
+                require(body && modeBox && face,"analysis selectors");
+                require(body->count()==2 && body->currentData().toInt()==1,"one result body plus sketch, old feature maps to tip");
+                require(body->currentText()==QStringLiteral("Corpo prova analisi"),"logical body name, not last feature");
+                require(face->count()==4,"all and three cylinder faces");
+                for(int mode=0;mode<6;++mode) {
+                    modeBox->setCurrentIndex(mode);
+                    require(v->shapeAnalysisMode_==mode,"analysis mode applied");
+                    if(mode==1 || mode==2) require(!v->shapeAnalysis_.triangles.empty(),"analysis map triangles");
+                    if(mode==3) require(!v->shapeAnalysis_.borders.empty(),"analysis boundary colors");
+                    if(mode==4) require(!v->shapeAnalysis_.lines.empty(),"analysis comb");
+                    if(mode==5) require(!v->shapeAnalysis_.grid.empty() && !v->shapeAnalysis_.lines.empty(),"surface UV comb");
+                    if(render) {
+                        v->makeCurrent(); require(v->displayCache_.shaderAvailable(),"zebra shader linked"); v->doneCurrent();
+                        require(v->grabFramebuffer().save(QStringLiteral("/tmp/forgecad-analysis-%1.png").arg(mode)),"analysis framebuffer");
+                    }
+                }
+                auto *pick=dialog->findChild<QPushButton *>(QStringLiteral("shapeAnalysisPickFace"));
+                pick->click(); require(v->referencePicking(),"face picking active");
+                GeometryRef ref; ref.kind=5; ref.index=1;
+                ref.point.subshape=face->itemData(1).toInt();
+                const auto picked=v->refPickFinished_; picked(true,ref);
+                require(v->shapeAnalysisFace_==ref.point.subshape && !v->referencePicking(),"picked face applied");
+                require(!v->shapeAnalysisFaceDisplay_.vertices.empty(),"face zebra mesh");
+                for(int m=0;m<6;++m) {
+                    modeBox->setCurrentIndex(m);
+                    require(v->shapeAnalysisFace_==ref.point.subshape && v->shapeAnalysisBody_==1,"face filter survives mode changes");
+                    if(m==1 || m==2) require(v->shapeAnalysis_.triangles.size()==v->shapeAnalysisFaceDisplay_.vertices.size(),"map only selected face");
+                    if(render && (m==0 || m==5))
+                        require(v->grabFramebuffer().save(QStringLiteral("/tmp/analysis-face-%1.png").arg(m)),"single face render");
+                }
+                if(render) require(dialog->grab().save(QStringLiteral("/tmp/analysis-face-panel.png")),"face panel");
+                face->setCurrentIndex(0); require(v->shapeAnalysisFace_==-1,"restore whole body");
+                auto *through=dialog->findChild<QCheckBox *>(QStringLiteral("shapeCombThrough"));
+                require(through && through->isChecked() && v->shapeAnalysisThrough_,"surface comb visible through faces");
+                through->setChecked(false); require(!v->shapeAnalysisThrough_,"surface comb depth toggle");
+                through->setChecked(true);
+                if(render) require(dialog->grab().save(QStringLiteral("/tmp/forgecad-analysis-uv-panel.png")),"UV analysis panel screenshot");
+                modeBox->setCurrentIndex(4);
+                body->setCurrentIndex(body->count()-1);
+                require(v->shapeAnalysisBody_<-1 && !v->shapeAnalysis_.lines.empty(),"sketch comb");
+                if(render) require(dialog->grab().save(QStringLiteral("/tmp/forgecad-analysis-panel.png")),"analysis panel screenshot");
+            } catch(...) { failure=std::current_exception(); }
+            if(dialog) dialog->reject();
+        });
+        shapeAnalysisDialog(&window,v);
+        if(failure) std::rethrow_exception(failure);
+        require(v->shapeAnalysisBody_==-1 && v->shapeAnalysis_.triangles.empty(),"analysis cleanup");
+        require(v->extrusions_.size()==2 && !v->referencePicking() && !v->refPickFinished_,"analysis preserves model and clears picking");
+    }
+    static void sketchCombUi(bool render) {
+        QMainWindow window;
+        auto *v=new CadViewport(&window); window.setCentralWidget(v); window.resize(1100,850);
+        v->sketches_.append(SketchObject{}); v->activeSketch_=0; v->sketchMode_=true;
+        v->setDrawingTool(DrawingTool::Select);
+        if(render) { window.show(); QApplication::processEvents(); }
+        for (DrawingTool tool : {DrawingTool::Spline,DrawingTool::Nurbs}) {
+            CurveObject curve; curve.tool=tool; curve.controlPoints={{0,0},{2,3},{4,-2},{6,0}};
+            if(tool==DrawingTool::Spline) ForgeCad::initializeTangentHandles(curve);
+            else curve.weights={1,2,1,1};
+            ForgeCad::recalculateCurve(curve);
+            v->sketches_[0].curves={curve}; v->fitAll();
+            for(bool accept : {false,true}) {
+                const auto before=v->sketches_[0].curves[0];
+                std::exception_ptr failure;
+                QTimer::singleShot(0,[&] {
+                    auto *dialog=qobject_cast<QDialog *>(QApplication::activeModalWidget());
+                    try {
+                        require(dialog!=nullptr,"free curve edit dialog");
+                        auto *comb=dialog->findChild<QCheckBox *>(QStringLiteral("sketchCurvatureComb"));
+                        auto *automatic=dialog->findChild<QCheckBox *>(QStringLiteral("sketchCurvatureAuto"));
+                        auto *gain=dialog->findChild<QDoubleSpinBox *>(QStringLiteral("sketchCurvatureScale"));
+                        auto *x=dialog->findChild<QDoubleSpinBox *>(QStringLiteral("freeCurveX"));
+                        require(comb && automatic && gain && x,"sketch comb panel controls");
+                        comb->setChecked(true);
+                        require(v->sketchCombVisible_ && v->sketchCombPreviewIndex_==0,"sketch comb live preview enabled");
+                        require(!v->sketchCurveComb(0,v->sketchCombPreview_).empty(),"spline and rational NURBS comb");
+                        x->setValue(x->value()+.5);
+                        require(v->sketchCombPreview_.controlPoints[0].x()==before.controlPoints[0].x()+.5,"comb follows point preview");
+                        require(v->sketches_[0].curves[0].controlPoints==before.controlPoints,"preview leaves model untouched");
+                        if(tool==DrawingTool::Spline) {
+                            for(auto *box:dialog->findChildren<QCheckBox *>())
+                                if(box->text()==QStringLiteral("Rilassa la curva")) box->setChecked(true);
+                            require(v->sketchCombPreview_.tangentHandles!=before.tangentHandles,"comb follows relaxation");
+                        }
+                        automatic->setChecked(false); gain->setValue(2);
+                        require(v->sketchCombScale_==2,"manual comb scale");
+                        require(gain->suffix().isEmpty(),"comb scale is not formatted as a length");
+                        automatic->setChecked(true); require(v->sketchCombScale_==0,"automatic comb scale");
+                        if(render) {
+                            require(v->grabFramebuffer().save(QStringLiteral("/tmp/sketch-comb-%1.png").arg(int(tool))),"sketch comb render");
+                            require(dialog->grab().save(QStringLiteral("/tmp/sketch-comb-panel-%1.png").arg(int(tool))),"sketch comb panel");
+                        }
+                        comb->setChecked(false); require(!v->sketchCombVisible_ && v->sketchCombPreviewIndex_==-1,"hide sketch comb");
+                        comb->setChecked(true);
+                    } catch(...) { failure=std::current_exception(); }
+                    if(dialog) { if(accept) dialog->accept(); else dialog->reject(); }
+                });
+                v->editFreeCurve(0,0);
+                if(failure) std::rethrow_exception(failure);
+                require(v->sketchCombVisible_ && v->sketchCombPreviewIndex_==-1,"comb persists without working preview");
+                require((v->sketches_[0].curves[0].controlPoints!=before.controlPoints)==accept,"accept and cancel geometry");
+                require(!v->sketchCurveComb(0,v->sketches_[0].curves[0]).empty(),"committed comb");
+                const auto old=v->sketchCurveComb(0,v->sketches_[0].curves[0]).front().position;
+                auto changed=v->sketches_[0].curves[0]; changed.controlPoints[0]+=QPointF(1,1);
+                require(v->sketchCurveComb(0,changed).front().position!=old,"comb cache follows subsequent edits");
+                if(accept) {
+                    v->undo(); require(v->sketches_[0].curves[0].controlPoints==before.controlPoints,"undo curve edit");
+                    require(!v->sketchCurveComb(0,v->sketches_[0].curves[0]).empty(),"comb after undo");
+                }
+            }
+        }
+    }
     static void splineShapeOptions() {
         using namespace ForgeCad;
         const auto near = [](QPointF a, QPointF b) { return std::hypot(a.x()-b.x(), a.y()-b.y()) < 1e-9; };
@@ -4748,6 +4886,18 @@ int main(int argc, char **argv) {
     QTemporaryDir settings;
     QSettings::setDefaultFormat(QSettings::IniFormat);
     QSettings::setPath(QSettings::IniFormat, QSettings::UserScope, settings.path());
+    if (app.arguments().contains(QStringLiteral("--sketch-comb"))) {
+        try { ViewportInteractionTest::sketchCombUi(app.arguments().contains(QStringLiteral("--gl"))); }
+        catch (const std::exception &e) { std::cerr << e.what() << std::endl; return 1; }
+        std::cout << "PASS sketch comb UI" << std::endl;
+        return 0;
+    }
+    if (app.arguments().contains(QStringLiteral("--shape-analysis"))) {
+        try { ViewportInteractionTest::shapeAnalysisUi(app.arguments().contains(QStringLiteral("--gl"))); }
+        catch (const std::exception &e) { std::cerr << e.what() << std::endl; return 1; }
+        std::cout << "PASS shape analysis UI" << std::endl;
+        return 0;
+    }
     if (app.arguments().contains(QStringLiteral("--draft"))) {
         try { ViewportInteractionTest::draftFeature(); }
         catch (const std::exception &e) { std::cerr << e.what() << std::endl; return 1; }

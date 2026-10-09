@@ -21,6 +21,7 @@ public:
         std::array<int, 4> enabled{};
         float shininess = 110.0f;
     };
+    void setZebra(bool enabled, float frequency, float angle) { zebra_ = enabled; zebraFrequency_ = frequency; zebraAngle_ = angle; }
     void beginFrame();
     void clear();
     void setMatrices(const QMatrix4x4 &projection, const QMatrix4x4 &modelView);
@@ -65,6 +66,8 @@ private:
     bool lightingDirty_ = true;
     bool lightingEnabled_ = false;
     bool clipEnabled_ = false;
+    bool zebra_ = false;
+    float zebraFrequency_ = 12, zebraAngle_ = 0;
 };
 }
 #endif
