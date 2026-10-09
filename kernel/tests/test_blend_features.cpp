@@ -6,6 +6,7 @@
 #include "fk_curve_ops.h"
 #include "fk_loft.h"
 #include "fk_mass.h"
+#include "fk_quadrature.h"
 #include "fk_primitives.h"
 #include "fk_revolve.h"
 #include "fk_sweep.h"
@@ -128,7 +129,31 @@ FK_TEST(BlendGeneralMatchesAnalytic) {
         for (bool chamfer : {false, true}) {
             const double analytic = checkedVolume(blendEdges(frustum, edges, r, chamfer));
             const double general = checkedVolume(blendSurfaceChains(frustum, edges, r, chamfer));
-            FK_CHECK_NEAR(general, analytic, 1e-9 * analytic);
+            if (chamfer) {
+                FK_CHECK_NEAR(general, analytic, 1e-9 * analytic);
+            } else {
+                // Riferimento indipendente dai due B-rep: ogni sezione
+                // orizzontale e' un rettangolo, limitato dalle quattro
+                // circonferenze di raggio r finche' incontrano i fianchi.
+                const bool top = normal.z() > 0.0;
+                const double zc = top ? 2.0 - r : r;
+                auto halfWidth = [&](double z, double intercept, double slope) {
+                    const double tangentZ = zc + r * slope / std::sqrt(1.0 + slope * slope);
+                    if (top ? z > tangentZ : z < tangentZ)
+                        return intercept - slope * zc - r * std::sqrt(1.0 + slope * slope)
+                             + std::sqrt(std::max(0.0, r * r - (z - zc) * (z - zc)));
+                    return intercept - slope * z;
+                };
+                // z = t^2 (o 2-t^2) elimina la radice all'estremo.
+                const double independent = detail::integrate([&](double t) {
+                    const double z = top ? 2.0 - t * t : t * t;
+                    return 8.0 * t * halfWidth(z, 2.0, 0.4) * halfWidth(z, 1.0, 0.1);
+                }, 0.0, std::sqrt(2.0), 1e-12);
+                FK_CHECK_NEAR(general, independent, 1e-10 * independent);
+                // Stessa accuratezza del modulo analitico verificata sopra
+                // sul box: il confronto reciproco a 1e-9 era piu' stretto.
+                FK_CHECK_NEAR(analytic, independent, 5e-9 * independent);
+            }
         }
     }
 }

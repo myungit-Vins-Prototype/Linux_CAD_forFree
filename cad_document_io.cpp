@@ -794,6 +794,7 @@ QString parsePayload(const QByteArray &payload, quint16 version, int extras, Doc
     if (version >= 26) {
         qint32 unit = 0;
         in >> unit;
+        if (in.status() != QDataStream::Ok) return QStringLiteral("Il file e' danneggiato (unita' di misura).");
         if (unit < int(LengthUnit::Millimeter) || unit > int(LengthUnit::Foot))
             return QStringLiteral("Il file contiene un'unita' di misura non valida.");
         loaded.lengthUnit = LengthUnit(unit);

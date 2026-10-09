@@ -1140,6 +1140,32 @@ std::vector<SubFace> BooleanBuilder::buildSubFacesOnce(int k, FaceId f, const st
         return best;
     };
 
+    // Ai contatti di ordine superiore due corde molto corte possono essere
+    // separate meno dell'errore della curva tracciata. L'ordine angolare puo'
+    // allora mandare due archi entranti sullo stesso uscente, pur avendo un
+    // grafo bilanciato. Allontana il campione SOLO nei nodi tangenti con una
+    // successione non biunivoca; non cambiare l'ordine dei nodi gia' regolari.
+    for (int pass = 0; pass < 5; ++pass) {
+        std::vector<int> predecessors(count, 0);
+        for (std::size_t h = 0; h < count; ++h) {
+            const int n = next(int(h));
+            if (n >= 0) ++predecessors[std::size_t(n)];
+        }
+        bool changed = false;
+        for (std::size_t v = 0; v < nodes.size(); ++v) {
+            if (!useChords[v]) continue;
+            bool ambiguous = false;
+            for (int h : outgoing[v]) ambiguous = ambiguous || predecessors[std::size_t(h)] != 1;
+            const double larger = std::min(0.1 * shortestAt[v], 4.0 * reach[v]);
+            if (ambiguous && larger > reach[v]) {
+                reach[v] = larger;
+                changed = true;
+            }
+        }
+        if (!changed) break;
+        for (std::size_t h = 0; h < count; ++h) startAngle[h] = angleOf(from[h], startDirection(int(h)));
+    }
+
     std::vector<Cycle> cycles;
     std::vector<bool> used(count, false);
     // Un ciclo che passa due volte per lo stesso nodo (due fori o due pezzi

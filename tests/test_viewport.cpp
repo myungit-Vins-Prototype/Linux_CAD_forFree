@@ -31,6 +31,102 @@ static void require(bool ok, const char *message) {
 }
 class ViewportInteractionTest {
 public:
+    static void reviewRegressions() {
+        for (bool symmetry : {false, true}) {
+            CadViewport v; v.createSketch(0, QStringLiteral("Undo"));
+            v.sketches_[0].segments.append({QPointF(0,0), QPointF(10,0)});
+            v.sketchSelections_ = {{0,0}};
+            require((symmetry ? v.toggleSymmetryAxis() : v.toggleConstruction()).isEmpty(), "toggle sketch role");
+            require(v.sketches_.at(0).constructionSegments.size() == 1, "role applied");
+            v.undo();
+            require(v.sketches_.at(0).constructionSegments.isEmpty() && v.sketches_.at(0).symmetryAxes.isEmpty(), "undo sketch role");
+            v.redo();
+            require(v.sketches_.at(0).constructionSegments.size() == 1, "redo sketch role");
+        }
+        for (DrawingTool tool : {DrawingTool::Circle, DrawingTool::Ellipse}) {
+            CadViewport v; v.createSketch(0, QStringLiteral("Quota"));
+            CurveObject c; c.tool = tool; c.controlPoints = {{0,0},{10,0}};
+            if (tool == DrawingTool::Ellipse) c.controlPoints.append(QPointF(0,5));
+            ForgeCad::recalculateCurve(c,0); v.sketches_[0].curves.append(c);
+            bool changed = false;
+            QTimer::singleShot(0,[&] {
+                auto *dialog = v.findChild<QDialog *>();
+                if (!dialog) return;
+                auto *box = dialog->findChild<QDoubleSpinBox *>();
+                if (box) { box->setValue(12); changed = true; }
+                dialog->accept();
+            });
+            require(v.editCurveDimension(0).isEmpty() && changed, "edit curve dimension");
+            require(v.sketches_.at(0).curves.at(0).controlPoints != c.controlPoints, "curve dimension changed");
+            v.undo();
+            require(v.sketches_.at(0).curves.at(0).controlPoints == c.controlPoints, "undo curve dimension");
+        }
+        {
+            CadViewport v; v.createSketch(0, QStringLiteral("Spline"));
+            CurveObject c; c.tool = DrawingTool::Spline; c.controlPoints = {{0,0},{10,0},{20,0}};
+            ForgeCad::recalculateCurve(c,0); c.tangentLinked.clear(); // documento precedente al formato 16
+            v.sketches_[0].curves.append(c);
+            SketchConstraint fix; fix.type = ConstraintType::Fix; fix.first = {1,0,2}; fix.positions = {QPointF(20,0)};
+            v.sketches_[0].geometricConstraints.append(fix);
+            v.addControlPointToCurve(QPointF(5,0));
+            const auto &after = v.sketches_.at(0);
+            require(after.curves.at(0).controlPoints.size() == 4, "insert spline point");
+            require(after.geometricConstraints.at(0).first.point == 3, "remap fixed endpoint");
+            require(after.curves.at(0).tangentHandles.last() == c.tangentHandles.last(), "preserve existing tangent handles");
+            require(after.curves.at(0).controlPoints.last() == QPointF(20,0), "fixed endpoint preserved");
+            v.undo();
+            require(v.sketches_.at(0).curves.at(0).controlPoints == c.controlPoints, "undo inserted point");
+            require(v.sketches_.at(0).geometricConstraints.at(0).first.point == 2, "undo constraint remap");
+        }
+        {
+            CadViewport v; v.createSketch(0, QStringLiteral("NURBS"));
+            CurveObject c; c.tool = DrawingTool::Nurbs; c.degree = 2;
+            c.controlPoints = {{0,0},{10,0},{20,0}}; c.knots = {0,0,0,1,1,1}; c.weights = {1,1,1};
+            ForgeCad::recalculateCurve(c,0); v.sketches_[0].curves.append(c); v.history_.clear();
+            v.addControlPointToCurve(QPointF(5,0));
+            require(v.sketches_.at(0).curves.at(0).controlPoints == c.controlPoints && !v.canUndo(), "reject unsupported NURBS insertion atomically");
+            CurveObject bad = c; bad.controlPoints.insert(1,QPointF(5,0)); bad.weights.insert(1,1);
+            v.commitFreeCurveEdit(0,bad,{0,-1,1,2});
+            require(!v.canUndo() && v.sketches_.at(0).curves.at(0).numericallyValid, "invalid NURBS commit rejected");
+            bool controlsDisabled = false;
+            QTimer::singleShot(0,[&] {
+                auto *dialog = v.findChild<QDialog *>();
+                if (!dialog) return;
+                auto *add = dialog->findChild<QPushButton *>(QStringLiteral("freeCurveAdd"));
+                auto *remove = dialog->findChild<QPushButton *>(QStringLiteral("freeCurveRemove"));
+                controlsDisabled = add && remove && !add->isEnabled() && !remove->isEnabled();
+                dialog->reject();
+            });
+            v.editFreeCurve(0);
+            require(controlsDisabled, "NURBS unsupported controls disabled");
+            CurveObject moved = c; moved.controlPoints[1] += QPointF(0,1);
+            v.commitFreeCurveEdit(0,moved,{0,1,2});
+            require(v.sketches_.at(0).curves.at(0).numericallyValid && v.sketches_.at(0).curves.at(0).knots == c.knots, "NURBS point movement supported");
+            v.undo(); require(v.sketches_.at(0).curves.at(0).controlPoints == c.controlPoints, "undo NURBS point movement");
+        }
+        {
+            QTemporaryDir directory;
+            const QString path = directory.filePath(QStringLiteral("document.prt"));
+            DocumentState state; state.lengthUnit = LengthUnit::Inch;
+            require(ForgeCad::saveDocumentFile(path,state,false).isEmpty(), "save unit regression");
+            DocumentState loaded;
+            require(ForgeCad::loadDocumentFile(path,loaded).isEmpty() && loaded.lengthUnit == LengthUnit::Inch, "valid unit round trip");
+            QFile file(path); require(file.open(QIODevice::ReadOnly), "read regression document");
+            const QByteArray data = file.readAll(); file.close();
+            const QByteArray payload = qUncompress(data.mid(11));
+            for (int missing = 1; missing <= 4; ++missing) {
+                const QByteArray compressed = qCompress(payload.left(payload.size()-missing));
+                QByteArray modified = data.left(7);
+                QDataStream out(&modified,QIODevice::Append); out << quint32(compressed.size());
+                out.writeRawData(compressed.constData(),int(compressed.size()));
+                require(file.open(QIODevice::WriteOnly), "write incomplete document");
+                require(file.write(modified) == modified.size(), "write complete test bytes"); file.close();
+                require(!ForgeCad::loadDocumentFile(path,loaded).isEmpty(), "reject incomplete unit field");
+                require(loaded.lengthUnit == LengthUnit::Inch, "failed load preserves destination");
+            }
+        }
+    }
+
     static void shapeAnalysisUi(bool render) {
         QMainWindow window;
         auto *v=new CadViewport(&window); window.setCentralWidget(v); window.resize(1000,750);
@@ -4886,6 +4982,12 @@ int main(int argc, char **argv) {
     QTemporaryDir settings;
     QSettings::setDefaultFormat(QSettings::IniFormat);
     QSettings::setPath(QSettings::IniFormat, QSettings::UserScope, settings.path());
+    if (app.arguments().contains(QStringLiteral("--review-regressions"))) {
+        try { ViewportInteractionTest::reviewRegressions(); }
+        catch (const std::exception &e) { std::cerr << e.what() << std::endl; return 1; }
+        std::cout << "PASS review regressions" << std::endl;
+        return 0;
+    }
     if (app.arguments().contains(QStringLiteral("--toolbar-restore"))) {
         try {
             {

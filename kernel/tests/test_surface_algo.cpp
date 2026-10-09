@@ -192,3 +192,27 @@ FK_TEST(ProjectOnInfiniteExtrusion) {
         FK_CHECK_NEAR(result.v, dot(p - curve->point(result.u), extrusion.direction()), 1e-9);
     }
 }
+
+// Il meridiano sghembo mantiene v nella forma NURBS, anche se la finestra
+// di proiezione ne copre solo una parte e u attraversa la cucitura.
+FK_TEST(ProjectOnSkewRevolutionWindows) {
+    auto curve = std::make_shared<BSplineCurve<3>>(3, std::vector<double>{0,0,0,0,1,1,1,1},
+        std::vector<Vec3>{{2,1,-2},{-1,3,1},{3,-2,-1},{1,2,3}});
+    const RevolutionSurface surface(curve, Vec3(), Vec3(0,0,1));
+    for (Interval u : {Interval{5.8,7.0}, Interval{-8,-8+kTwoPi}, Interval{0,kTwoPi}}) {
+        const Interval v{0.3,0.7};
+        for (int i=0; i<=8; ++i) for (int j=0; j<=8; ++j) {
+            const Vec3 p = surface.point(u.lo+u.length()*i/8.0, v.lo+v.length()*j/8.0);
+            const auto result = projectPoint(surface,p,u,v);
+            FK_CHECK(result.distance <= 1e-9);
+            FK_CHECK(u.contains(result.u) && v.contains(result.v));
+        }
+        // Un punto fuori dalla finestra: confronto con la ricerca esaustiva
+        // sui campioni, che fornisce un limite superiore alla distanza minima.
+        const Vec3 p = surface.point(u.lo+0.2,0.05);
+        const auto result = projectPoint(surface,p,u,v);
+        FK_CHECK(u.contains(result.u) && v.contains(result.v));
+        for(int i=0;i<=20;++i) for(int j=0;j<=20;++j)
+            FK_CHECK(result.distance <= distance(p,surface.point(u.lo+u.length()*i/20.0,v.lo+v.length()*j/20.0))+1e-9);
+    }
+}

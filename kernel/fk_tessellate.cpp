@@ -1266,7 +1266,21 @@ void FaceTessellator::legalize(std::vector<std::pair<int, int>> &pending) {
         if (c < 0 || d < 0 || c == d || p != p2 || q != q2) continue;
         const Vec2 P = at(p), Q = at(q), C = at(c), D = at(d);
         const double size = squaredNorm(Q - P) + squaredNorm(C - D);
-        if (inCircle(P, Q, C, D) <= 1e-12 * size * size) continue;
+        bool improve = inCircle(P, Q, C, D) > 1e-12 * size * size;
+        if (surface_.type() == SurfaceType::Sphere) {
+            // Ai poli sferici Delaunay in UV puo' invertire triangoli 3D:
+            // dai precedenza alla riduzione di queste inversioni. Non usare
+            // questo criterio sulle altre superfici: le normali medie dei
+            // quadrilateri iniziali molto grandi non ne descrivono il verso.
+            auto flipped = [&](int a, int b, int c) {
+                const Vec3 n = cross(points_[b] - points_[a], points_[c] - points_[a]);
+                return dot(n, normals_[a] + normals_[b] + normals_[c]) < 0.0;
+            };
+            const int before = int(flipped(p, q, c)) + int(flipped(q, p, d));
+            const int after = int(flipped(p, d, c)) + int(flipped(d, q, c));
+            improve = after < before || (after == before && improve);
+        }
+        if (!improve) continue;
         // Nuovi triangoli (p, d, c) e (d, q, c): devono restare antiorari.
         if (orient(P, D, C) <= 1e-12 * size || orient(D, Q, C) <= 1e-12 * size) continue;
         if (adjacency_.count(key(c, d))) continue;

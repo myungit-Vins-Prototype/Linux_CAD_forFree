@@ -2757,13 +2757,14 @@ public:
         if (!sketchMode_ || activeSketch_ < 0 || activeSketch_ >= sketches_.size())
             return QStringLiteral("Entra in modalita' schizzo e seleziona le entita' (clic o Ctrl+clic).");
         if (sketchSelections_.isEmpty()) return QStringLiteral("Seleziona prima le entita' dello schizzo (clic o Ctrl+clic).");
-        SketchObject &sketch = sketches_[activeSketch_];
+        const SketchObject &before = sketches_.at(activeSketch_);
         bool allConstruction = true;
         for (const SketchElementSelection &element : sketchSelections_) {
-            if (element.kind == 0 && element.index < sketch.segments.size()) allConstruction &= sketch.isConstructionSegment(element.index);
-            if (element.kind == 1 && element.index < sketch.curves.size()) allConstruction &= sketch.curves.at(element.index).construction;
+            if (element.kind == 0 && element.index < before.segments.size()) allConstruction &= before.isConstructionSegment(element.index);
+            if (element.kind == 1 && element.index < before.curves.size()) allConstruction &= before.curves.at(element.index).construction;
         }
         recordUndo();
+        SketchObject &sketch = sketches_[activeSketch_];
         for (const SketchElementSelection &element : sketchSelections_) {
             if (element.kind == 0 && element.index >= 0 && element.index < sketch.segments.size()) {
                 sketch.constructionSegments.removeAll(element.index);
@@ -2786,10 +2787,11 @@ public:
         for (const SketchElementSelection &element : sketchSelections_)
             if (element.kind == 0 && element.index >= 0 && element.index < sketches_.at(activeSketch_).segments.size()) segments.append(element.index);
         if (segments.isEmpty()) return QStringLiteral("Seleziona prima uno o piu' segmenti dello schizzo.");
-        SketchObject &sketch = sketches_[activeSketch_];
+        const SketchObject &before = sketches_.at(activeSketch_);
         bool all = true;
-        for (int index : segments) all = all && sketch.symmetryAxes.contains(index);
+        for (int index : segments) all = all && before.symmetryAxes.contains(index);
         recordUndo();
+        SketchObject &sketch = sketches_[activeSketch_];
         for (int index : segments) {
             sketch.symmetryAxes.removeAll(index);
             if (all) continue;
@@ -5195,8 +5197,8 @@ protected:
     // o sui punti della curva) seguono con moveSketchPoint.
     // Quote dell'ellisse: semiassi, angolo del primo semiasse e centro.
     QString editEllipseDimension(int index) {
-        SketchObject &sketch = sketches_[activeSketch_];
-        const CurveObject curve = sketch.curves.at(index);
+        const SketchObject &before = sketches_.at(activeSketch_);
+        const CurveObject curve = before.curves.at(index);
         if (curve.controlPoints.size() < 3) return QStringLiteral("Ellisse non valida.");
         const QPointF center = curve.controlPoints.at(0);
         QDialog dialog(this);
@@ -5235,6 +5237,7 @@ protected:
         ForgeCad::recalculateCurve(changed, tessellationQuality_);
         if (!changed.numericallyValid) return QStringLiteral("Ellisse non valida.");
         recordUndo();
+        SketchObject &sketch = sketches_[activeSketch_];
         const SketchObject beforeEdit = sketch;
         // I punti coincidenti con il centro lo seguono.
         if (pointDistance(center, newCenter) > 0.0) moveSketchPoint(sketch, -1, center, newCenter - center, QPointF(qQNaN(), qQNaN()));
@@ -5247,9 +5250,9 @@ protected:
 
     QString editCurveDimension(int index) {
         if (!sketchMode_ || activeSketch_ < 0 || activeSketch_ >= sketches_.size()) return QStringLiteral("Entra in modalita' schizzo.");
-        SketchObject &sketch = sketches_[activeSketch_];
-        if (index < 0 || index >= sketch.curves.size()) return QStringLiteral("Seleziona prima un cerchio, un arco o un poligono.");
-        const CurveObject curve = sketch.curves.at(index);
+        const SketchObject &before = sketches_.at(activeSketch_);
+        if (index < 0 || index >= before.curves.size()) return QStringLiteral("Seleziona prima un cerchio, un arco o un poligono.");
+        const CurveObject curve = before.curves.at(index);
         if (curve.tool == DrawingTool::Ellipse) return editEllipseDimension(index);
         const bool circle = curve.tool == DrawingTool::Circle, arc = curve.tool == DrawingTool::Arc, polygon = curve.tool == DrawingTool::Polygon;
         if (!(circle || arc || polygon) || curve.controlPoints.size() < (arc ? 3 : 2))
@@ -5297,6 +5300,7 @@ protected:
         const QPointF newCenter(centerX->value(), centerY->value());
         const double newRadius = radiusBox->value();
         recordUndo();
+        SketchObject &sketch = sketches_[activeSketch_];
         const SketchObject beforeEdit = sketch;
         const QPointF nowhere(qQNaN(), qQNaN());
         // Prima il centro (con i punti coincidenti), poi i punti sulla curva
@@ -5410,6 +5414,7 @@ protected:
                 CurveObject source = sketches_.at(activeSketch_).curves.at(curveIndex);
                 if (source.tool == DrawingTool::Spline && source.tangentHandles.size() != source.controlPoints.size())
                     ForgeCad::initializeTangentHandles(source);
+                if (source.tool == DrawingTool::Spline) source.tangentLinked.resize(source.controlPoints.size());
                 QMenu menu(this);
                 QAction *edit = menu.addAction(QStringLiteral("Modifica punti e maniglie..."));
                 QAction *insert = menu.addAction(QStringLiteral("Aggiungi punto di controllo qui"));
@@ -5422,7 +5427,8 @@ protected:
                                               : QStringLiteral("Collega le maniglie (tangenza)"));
                     if (pointKind != EditablePointKind::Control) dimension = menu.addAction(QStringLiteral("Quota lunghezza maniglia..."));
                 }
-                if (remove) remove->setEnabled(source.controlPoints.size() > (source.tool == DrawingTool::Nurbs ? 4 : 2));
+                insert->setEnabled(canChangeControlPointCount(source));
+                if (remove) remove->setEnabled(canChangeControlPointCount(source) && source.controlPoints.size() > (source.tool == DrawingTool::Nurbs ? 4 : 2));
                 const QAction *chosen = menu.exec(event->globalPos());
                 if (chosen == edit) editFreeCurve(curveIndex, onPoint ? control : -1);
                 else if (chosen == insert) {
@@ -7796,28 +7802,43 @@ private:
         return nearest;
     }
 
+    static bool canChangeControlPointCount(const CurveObject &curve) {
+        return curve.tool != DrawingTool::Nurbs || curve.knots.isEmpty();
+    }
+
     void addControlPointToCurve(const QPointF &point) {
         if (activeSketch_ < 0 || activeSketch_ >= sketches_.size()) return;
         const int curveIndex = findNearestFreeCurve(point);
         if (curveIndex >= 0) {
-            recordUndo();
-            CurveObject &curve = sketches_[activeSketch_].curves[curveIndex];
-            // Inserisce il punto nel tratto del poligono di controllo piu' vicino.
+            CurveObject curve = sketches_.at(activeSketch_).curves.at(curveIndex);
+            if (!canChangeControlPointCount(curve)) {
+                showStatus(QStringLiteral("Su una NURBS ritagliata puoi spostare i punti esistenti; aggiunta e rimozione non sono supportate."));
+                return;
+            }
+            QVector<int> origins;
+            for (int k = 0; k < curve.controlPoints.size(); ++k) origins.append(k);
             int insertIndex = curve.controlPoints.size();
             double nearestDistance = std::numeric_limits<double>::max();
             for (int index = 1; index < curve.controlPoints.size(); ++index) {
-                const double distance = distanceToSegment(point, curve.controlPoints.at(index - 1),
-                                                          curve.controlPoints.at(index));
+                const double distance = distanceToSegment(point, curve.controlPoints.at(index - 1), curve.controlPoints.at(index));
                 if (distance < nearestDistance) {
                     nearestDistance = distance;
                     insertIndex = index;
                 }
             }
+            if (curve.tool == DrawingTool::Spline && curve.tangentHandles.size() != curve.controlPoints.size())
+                ForgeCad::initializeTangentHandles(curve);
+            if (curve.tool == DrawingTool::Spline) curve.tangentLinked.resize(curve.controlPoints.size());
             curve.controlPoints.insert(insertIndex, point);
-            if (curve.weights.size() == curve.controlPoints.size() - 1) curve.weights.insert(insertIndex, 1.0);
-            ForgeCad::initializeTangentHandles(curve);
-            ForgeCad::recalculateCurve(curve, tessellationQuality_);
-            sketchEdited();
+            origins.insert(insertIndex, -1);
+            if (curve.tool == DrawingTool::Nurbs) {
+                if (curve.weights.size() != curve.controlPoints.size() - 1) curve.weights.fill(1.0, curve.controlPoints.size() - 1);
+                curve.weights.insert(insertIndex, 1.0);
+            } else {
+                curve.tangentHandles.insert(insertIndex, {point - QPointF(1, 0), point + QPointF(1, 0)});
+                curve.tangentLinked.insert(insertIndex, false);
+            }
+            commitFreeCurveEdit(curveIndex, curve, origins);
         } else {
             curveControlPoints_.append(point);
         }
@@ -7832,6 +7853,13 @@ private:
         const SketchObject &before = sketches_.at(activeSketch_);
         if (curveIndex < 0 || curveIndex >= before.curves.size()) return;
         const int oldCount = before.curves.at(curveIndex).controlPoints.size();
+        CurveObject validated = working;
+        ForgeCad::recalculateCurve(validated, tessellationQuality_);
+        if (origins.size() != validated.controlPoints.size() || !validated.numericallyValid
+            || (!canChangeControlPointCount(before.curves.at(curveIndex)) && oldCount != validated.controlPoints.size())) {
+            showStatus(QStringLiteral("Modifica non applicata: la curva risultante non e' valida o cambia i poli di una NURBS ritagliata."));
+            return;
+        }
         QVector<int> map(oldCount, -1);
         for (int now = 0; now < origins.size(); ++now)
             if (origins.at(now) >= 0 && origins.at(now) < oldCount) map[origins.at(now)] = now;
@@ -7860,8 +7888,7 @@ private:
             coincidences.append(c);
         }
         sketch.coincidentConstraints = std::move(coincidences);
-        sketch.curves[curveIndex] = working;
-        ForgeCad::recalculateCurve(sketch.curves[curveIndex], tessellationQuality_);
+        sketch.curves[curveIndex] = std::move(validated);
         selectedPoints_.clear();
         selectedConstraints_.clear();
         sketchEdited();
@@ -7956,7 +7983,14 @@ private:
         inLength->setRange(0.0, 1e9); outLength->setRange(0.0, 1e9);
         auto *row = new QWidget(&dialog); auto *rowLayout = new QHBoxLayout(row); rowLayout->setContentsMargins(0, 0, 0, 0);
         auto *add = new QPushButton(QStringLiteral("Aggiungi dopo"), row), *remove = new QPushButton(QStringLiteral("Elimina punto"), row);
+        add->setObjectName(QStringLiteral("freeCurveAdd"));
+        remove->setObjectName(QStringLiteral("freeCurveRemove"));
+        add->setEnabled(canChangeControlPointCount(work));
         rowLayout->addWidget(add); rowLayout->addWidget(remove);
+        if (!canChangeControlPointCount(work)) {
+            auto *note = new QLabel(QStringLiteral("NURBS ritagliata: puoi spostare i punti esistenti. Aggiunta e rimozione dei punti non sono supportate."), &dialog);
+            note->setWordWrap(true); form->addRow(note);
+        }
         form->addRow(QStringLiteral("Punti di controllo:"), points);
         form->addRow(QString(), row);
         form->addRow(QStringLiteral("X:"), x); form->addRow(QStringLiteral("Y:"), y);
@@ -7991,7 +8025,7 @@ private:
             const int k = points->currentRow(); if (k < 0 || k >= work.controlPoints.size()) return;
             loading = true;
             x->setValue(work.controlPoints.at(k).x()); y->setValue(work.controlPoints.at(k).y());
-            remove->setEnabled(work.controlPoints.size() > (work.tool == DrawingTool::Nurbs ? 4 : 2));
+            remove->setEnabled(canChangeControlPointCount(work) && work.controlPoints.size() > (work.tool == DrawingTool::Nurbs ? 4 : 2));
             if (work.tool == DrawingTool::Spline) {
                 linked->setChecked(work.tangentLinked.value(k));
                 inLength->setValue(pointDistance(work.controlPoints.at(k), work.tangentHandles.at(k).first));

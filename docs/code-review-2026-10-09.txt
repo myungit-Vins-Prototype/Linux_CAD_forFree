@@ -1,0 +1,227 @@
+CODE REVIEW — 2026-10-09
+Base: cafd2ee (fix su barra menù), working tree inizialmente pulito.
+
+Ambito e metodo
+Review trasversale del repository: struttura/build/packaging, storia e
+serializzazione, editing degli schizzi, import/export, concorrenza, rendering
+e percorsi del kernel. Approfondimenti guidati dai test e da riproduzioni
+minime. Non e' una verifica formale di tutte le circa 67.000 righe C++.
+Nessuna correzione applicata ai sorgenti, nessun aggiornamento del bundle
+/Applications/MacOsCad.app. Il plist aperto nell'IDE e' esterno al repository.
+
+RISULTATI CONFERMATI
+
+1. [P1] Undo conserva le modifiche alla geometria di costruzione.
+   forgeCad2026_gui.cpp:2760-2773, 2789-2798.
+   toggleConstruction e toggleSymmetryAxis acquisiscono SketchObject& prima
+   di recordUndo(). Lo snapshot condivide il QVector esterno; scrivere
+   tramite il vecchio riferimento modifica anche la copia della cronologia.
+   Riproduzione: creare un segmento, selezionarlo, convertirlo in geometria
+   di costruzione o asse di simmetria, Undo. constructionSegments.size()
+   resta 1, atteso 0. Anche alcuni editor delle quote conservano lo stesso
+   schema (5237 e 5299), non riprodotti individualmente in questa review.
+   Correzione proposta: acquisire nuovamente il riferimento scrivibile dopo
+   lo snapshot, come gia' fatto da commitFreeCurveEdit.
+
+2. [P1] Le booleane falliscono su una coppia semplice di cilindri.
+   kernel/fk_boolean.cpp:1193-1195; regressione esistente in
+   kernel/tests/test_boolean.cpp:521-538 (BooleanStressCylinderGrid).
+   Caso minimo, millimetri:
+   A: origine (0,0,0), asse +Z, raggio 5, altezza 8.
+   B: origine (3,-5,2), asse +Y, raggio 3, altezza 12, direzione X (1,0,0).
+   Unione, intersezione e sottrazione generano tutte domain_error:
+   "booleanOperation: divisione di una faccia non riuscita".
+   Riprodotto collegando solo libforgekernel, senza Qt e senza OCCT.
+   Il cammino dei semibordi non riesce a chiudere il ciclo; la causa a monte
+   nell'ordinamento/connessione dei tagli non e' stata isolata. Non basta
+   sopprimere l'eccezione: va ricostruita correttamente la topologia.
+
+3. [P2] Maiusc+clic sposta i vincoli al punto sbagliato della spline.
+   forgeCad2026_gui.cpp:7816-7820 (chiamato a 4327).
+   addControlPointToCurve inserisce un polo senza rinumerare ConstraintRef
+   e CoincidentConstraint. I riferimenti ai punti successivi all'inserimento
+   vengono cosi' interpretati come riferimenti a punti diversi; sketchEdited
+   esegue immediatamente il solver su questi riferimenti errati.
+   Riproduzione: spline (0,0),(10,0),(20,0), ultimo punto fissato (indice 2),
+   inserimento a (5,0). Il vincolo resta all'indice 2, atteso 3.
+   Correzione proposta: riusare la rimappatura di commitFreeCurveEdit anche
+   nell'inserimento rapido, conservando le maniglie non modificate.
+
+4. [P2] Aggiungere/rimuovere poli invalida le NURBS con nodi espliciti.
+   forgeCad2026_gui.cpp:8048-8052, 8057-8063 e 7816-7819;
+   cad_curve_solver.cpp:48-49; cad_sketch_edit.cpp:294-310.
+   Il taglio di ellissi/NURBS produce una NURBS con knots e degree espliciti.
+   Gli editor modificano poli e pesi senza aggiornare i nodi. Non vale piu'
+   knots.size() == controlPoints.size() + degree + 1: makeNurbs restituisce
+   geometria vuota e la curva scompare, compromettendo le feature dipendenti.
+   Riprodotto nell'inserimento rapido con una NURBS valida di grado 2,
+   tre poli, pesi unitari e nodi [0,0,0,1,1,1]: numericallyValid passa a false.
+   Lo stesso difetto e' presente staticamente nei pulsanti dell'editor e nel
+   menu contestuale. Correzione proposta: operazione coerente su poli/pesi/
+   nodi oppure disabilitazione esplicita delle modifiche non supportate;
+   validazione della copia prima del commit.
+
+5. [P2] Il lettore accetta un payload troncato sull'unita' di misura.
+   cad_document_io.cpp:794-806.
+   Dopo in >> unit non viene controllato in.status(). Se mancano i quattro
+   byte finali, unit rimane 0, il valore passa la validazione e atEnd() e'
+   vero. Il file viene dichiarato caricato correttamente in millimetri.
+   Riproduzione: salvare documento in pollici senza cache, decomprimere il
+   payload, togliere gli ultimi quattro byte e ricomprimerlo con lunghezza
+   aggiornata. loadDocumentFile restituisce errore vuoto e unita' 0.
+   Questo riguarda un payload incompleto ma con compressione valida, non
+   qualsiasi troncamento fisico del file (zlib ne rifiuta molti).
+   Correzione proposta: verificare QDataStream::Ok dopo l'ultimo campo e
+   prima di accettare il payload.
+
+VERIFICHE E ARTEFATTI
+
+- Build: cmake --build forgecad-release -j 4, PASS.
+  Log /tmp/forgecad-review-build.log.
+- CTest in sandbox: 15/17 PASS in 244,51 s. forgecad_view_tests fallisce
+  sulla fixture assente File_Esempio/Applicatore.prt (test_viewport.cpp:4597).
+  forgekernel_tests presenta fallimenti numerici e poi un segfault nel test
+  d'importazione OCCT dopo il diniego di scrittura in /var/tmp. Quel crash
+  non dimostra da solo un crash del kernel nell'applicazione.
+  Log /tmp/forgecad-review-tests.log.
+- Riesecuzione completa del kernel fuori sandbox: 287/296 PASS, 9 test
+  falliti, exit code 1; nessun segfault. Log
+  /tmp/forgecad-review-kernel-unrestricted.log. Fallimenti:
+  ConicArcsAreExact, MarchingCylindersAgainstOcct, BooleanCurvedExtrusions,
+  BooleanStressCylinderGrid, TessellatePolesAndTori, NurbsFormsOfSurfaces,
+  CurveSurfaceIntersectionsMatchOcct, BlendMouseInternalNormalJump,
+  BlendGeneralMatchesAnalytic. Alcuni test su fixture opzionali mancanti
+  ritornano senza verifiche e sono conteggiati PASS dal runner esistente.
+- Riproduzioni mirate in /tmp/forgecad-review-probe.cpp e relativo binario:
+  Undo costruzione/simmetria, rinumerazione vincoli, nodi NURBS e payload.
+  Log /tmp/forgecad-review-probe.log. Impostazioni Qt isolate in QTemporaryDir;
+  esecuzione offscreen, nessuna verifica del rendering OpenGL nativo.
+- Caso cilindri: /tmp/forgecad-review-cylinders.cpp, relativo binario e
+  /tmp/forgecad-review-cylinders.log. Prima variante esplorativa usava una
+  sequenza casuale diversa e passava; corretta ai parametri del caso 7 del
+  test esistente, riproduce tutte e tre le eccezioni.
+
+Limiti: CUDA non eseguito su questa macchina; Linux non eseguito; nessuna
+verifica interattiva dei menu nativi macOS. Gli altri fallimenti numerici
+della suite vanno analizzati singolarmente prima di attribuirli al kernel,
+al riferimento OCCT o alle tolleranze dei test. Nessun difetto qui elencato
+e' stato corretto nell'ambito della review.
+
+INTERVENTO SUCCESSIVO AUTORIZZATO — 2026-10-09
+
+Implementati:
+- Riferimenti scrivibili acquisiti dopo recordUndo per costruzione, simmetria,
+  quote di cerchi/archi/poligoni ed ellissi.
+- Inserimento rapido spline tramite commitFreeCurveEdit: rimappatura dei
+  vincoli e conservazione delle maniglie esistenti, con validazione della
+  curva prima di modificare documento e Undo.
+- NURBS con nodi espliciti: aggiunta/rimozione dei poli disabilitate nei
+  pannelli e menu, messaggio sul comando rapido e controllo nel commit.
+  Lo spostamento dei poli resta disponibile. Questa protezione non implementa
+  un algoritmo generale di inserimento/rimozione nodi delle NURBS ritagliate.
+- Rifiuto del campo unita' troncato; stato destinazione preservato.
+- Booleane: riconoscimento della successione non biunivoca dei semibordi
+  nei nodi tangenti; campioni progressivamente piu' lontani dal nodo, fino
+  al 10% del tratto minimo, solo dove l'ordine iniziale e' ambiguo.
+  Nessuna soppressione dell'eccezione o rimozione dei controlli del B-rep.
+  Un esperimento con distanza globale fissa 5% risolveva il caso, ma e'
+  stato sostituito per non modificare i nodi che gia' funzionavano.
+- Test BlendMouseInternalNormalJump: confronto di immutabilita' con la
+  serializzazione immediatamente dopo la lettura. La fixture differiva
+  gia' da questo risultato prima di eseguire il raccordo: non era una
+  modifica dell'input da parte del raccordo.
+
+Test nuovi: forgecad_review_regression_tests (--review-regressions), per
+Undo/Redo dei ruoli, Undo delle quote, punto spline con estremo fissato,
+protezione NURBS e modifica ammessa con Undo, campo unita' con 1..4 byte
+mancanti; BooleanCylinderFourthOrderCapContact, con volume analitico,
+validita' del corpo e uguaglianza fra esecuzione seriale e parallela.
+
+Diagnosi degli altri fallimenti (non corretti da questo intervento):
+- NurbsFormsOfSurfaces: errore nella proiezione sul meridiano sghembo di
+  rivoluzione, non nella conversione NURBS. Per punti con distanza dichiarata
+  fino a 1,46992, la valutazione diretta della superficie agli stessi v e
+  all'angolo ricostruito coincide entro circa 1e-14. La proiezione generica
+  sceglie un minimo sbagliato. /tmp/nurbs-projection-diagnosis.log.
+- CurveSurfaceIntersectionsMatchOcct: OCCT IntCS trova 6 punti invece di 8
+  sul cono e 1 invece di 3 sulla B-spline. Tutti i punti restituiti dal kernel
+  hanno distanza indipendente da OCCT ProjectPointOnSurf fra circa 8e-15
+  e 8,3e-13. L'uguaglianza dei conteggi con IntCS e' un oracolo inadeguato
+  in questi casi. /tmp/cs-independent-diagnosis.log.
+- TessellatePolesAndTori: triangoli invertiti nella mesh vicino al polo
+  della sfera, riprodotti; nessuna inversione forzata dei triangoli applicata.
+  /tmp/diagnosis-TessellatePolesAndTori.log.
+- ConicArcsAreExact: residui dell'identita' dell'ellisse dell'ordine di
+  1e-13..4e-13 contro soglia 1e-13; va valutato il condizionamento rispetto
+  a traslazione e semiasse minore prima di cambiare la soglia.
+- BlendGeneralMatchesAnalytic: differenza di volume 2,1555e-8 contro soglia
+  1,1280e-8; resta da attribuire ai due metodi o all'integrazione.
+- MarchingCylindersAgainstOcct e BooleanCurvedExtrusions: scarti confermati,
+  causa non ancora isolata. Nessuna tolleranza allargata per farli passare.
+
+Verifiche: build finale /tmp/review-fixes-ready-build.log; quattro test
+applicativi iniziali pertinenti 4/4 PASS (/tmp/review-fixes-tests.log).
+Suite escluso il runner kernel: 16/17 PASS, unico fallimento fixture
+Applicatore.prt assente (/tmp/review-fixes-app-full.log). Suite booleane
+precedente al nuovo test deterministico: 28/29 PASS, solo il preesistente
+BooleanCurvedExtrusions fallisce (/tmp/boolean-fix-tests.log); il nuovo
+caso deterministico PASS (/tmp/diagnosis-BooleanCylinderFourthOrderCapContact.log).
+Suite kernel finale: 290/297 PASS, 7 fallimenti (tutti preesistenti), nessun
+crash. Log /tmp/review-fixes-kernel-full.log. Risolti lo stress cilindri e
+l'oracolo del test di immutabilita'; nuovo caso cilindri PASS.
+Ultimo controllo: normalizzazione dei flag di collegamento delle maniglie
+per spline dei vecchi formati (vettore vuoto), conservando le maniglie.
+Build PASS /tmp/review-fixes-legacy-build.log; regressioni applicative
+pertinenti 4/4 PASS /tmp/review-fixes-legacy-tests.log. git diff --check pulito.
+Applicazione compilata in forgecad-release/forgecad; bundle installato non
+aggiornato. Nessun documento dell'utente modificato.
+
+
+AGGIORNAMENTO — sette fallimenti residui, 2026-10-09
+
+Due correzioni nel kernel:
+- Proiezione di rivoluzioni con meridiano B-spline sghembo tramite forma
+  razionale esatta e ricerca globale gia' disponibile per superfici NURBS.
+  Conservati i vincoli delle finestre UV; nuova regressione dedicata.
+- Scambi di diagonale della tessellazione sferica subordinati all'orientamento
+  3D, per evitare inversioni vicino ai poli. Verifica anche sulla mesh fine.
+  Variante iniziale estesa alle altre superfici scartata: su toro con
+  quadrilateri iniziali grandi alterava il segno del volume tessellato,
+  causando una regressione STEP rilevata dalla suite completa.
+  Correzione circoscritta alle sfere; StepRoundTrip e OcctImportStepRoundTrip
+  nuovamente PASS (/tmp/seven-step-regression.log).
+
+Cinque correzioni dei riferimenti numerici nei test:
+- Ellissi: soglia dimensionale basata su eps, traslazione e semiasse minore;
+  controllo aggiuntivo all'origine con la soglia originale 1e-13.
+- Intersezioni curva/superficie: proiezione indipendente OCCT di tutti i
+  risultati kernel, oltre alla copertura dei punti IntCS e all'unicita'.
+- Cilindri: correzione dei campioni OCCT sulle equazioni analitiche prima
+  del confronto bidirezionale; soglia di confronto 1e-5 invariata.
+- Raccordi: riferimento indipendente integrando sezioni orizzontali; modulo
+  generale entro circa 7,4e-11, modulo analitico entro l'accuratezza 5e-9
+  relativa gia' accettata dal test del box. Non modificato l'algoritmo
+  analitico; esperimento con tolleranza booleana ridotta scartato perche'
+  peggiorava l'errore. Test piu' rigoroso per il modulo generale (1e-10).
+- Unione spline/cilindro: OCCT mesh non converge al volume corretto neanche
+  riducendo la deflessione da 5e-4 a 5e-5. Integrale delle corde del cilindro
+  sul profilo esatto, tagliando al supporto analitico del discriminante:
+  kernel 270,590341686675; riferimento indipendente 270,590341685329.
+  Confronto 1e-9 relativo; area e baricentro ancora confrontati con OCCT.
+  Prima versione della quadratura senza divisione analitica del supporto
+  perdeva una regione sottile (errore circa 5,8e-7): scartata.
+
+Log riproduzioni e convergenza: /tmp/seven-conic.log,
+/tmp/seven-marching.log, /tmp/seven-blend.log,
+/tmp/seven-boolean.log, /tmp/seven-independent-split.log.
+Build completa finale PASS /tmp/seven-app-build-final.log.
+Regressioni applicative definitive 16/16 PASS /tmp/seven-app-tests-final.log
+(esclusi runner kernel e test viewport generale con fixture assente).
+Suite intermedie complete: 295/298 e 296/298; regressione STEP corretta
+prima dell'ultima esecuzione, log /tmp/seven-kernel-verified.log.
+Risultato definitivo: 298/298 test kernel PASS, exit 0, nessun fallimento
+(/tmp/seven-kernel-verified.log). Tutti i sette casi originali superati,
+oltre alla nuova regressione di proiezione e ai test STEP/IGES.
+git diff --check pulito. La fixture File_Esempio/Applicatore.prt resta
+assente; il test generale viewport non e' dichiarato superato.
+Nessuna modifica al bundle installato, nessun commit.

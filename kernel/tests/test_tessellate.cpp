@@ -78,6 +78,7 @@ void checkMesh(const Body &body, double deflection) {
     // Piu' fine: piu' vicino.
     options.deflection = 0.25 * deflection;
     const MeshMeasures finer = measure(body, tessellate(body, options), options.deflection);
+    FK_CHECK(finer.flipped == 0);
     FK_CHECK(std::fabs(finer.volume - exact.volume) <= std::fabs(measures.volume - exact.volume) + 1e-9 * exact.volume);
     FK_CHECK_NEAR(finer.volume, exact.volume, 0.75 * deflection * exact.area);
 }

@@ -6,6 +6,7 @@
 #include "fk_bspline_surface.h"
 #include "fk_curve_algo.h"
 #include "fk_precision.h"
+#include "fk_nurbs.h"
 
 namespace ForgeCad::Kernel {
 namespace {
@@ -566,6 +567,28 @@ bool projectOnPlanarRevolution(const RevolutionSurface &revolution, const Vec3 &
     return true;
 }
 
+// Meridiano sghembo B-spline: la griglia UV puo' perdere valli strette.
+// La forma razionale esatta permette il branch-and-bound sui poli gia'
+// usato per le B-spline. Il parametro v resta invariato; u va riconvertito
+// dalla parametrizzazione razionale del cerchio all'angolo originale.
+bool projectOnSplineRevolution(const RevolutionSurface &surface, const Vec3 &p, const Interval &uRange,
+                               const Interval &vRange, Candidates &candidates) {
+    if (surface.meridian()->type() != CurveType::BSpline || !uRange.isFinite() || !vRange.isFinite()
+        || !(uRange.length() > 0.0) || !(vRange.length() > 0.0)) return false;
+    const Interval angular{uRange.lo, std::min(uRange.hi, uRange.lo + kTwoPi)};
+    const BSplineSurface nurbs = toBSplineSurface(surface, angular, vRange);
+    const SurfaceProjection result = projectPoint(nurbs, p, nurbs.uDomain(), vRange);
+    // toBSplineSurface usa il dominio canonico quando copre un periodo.
+    const Interval circleRange = angular.length() >= kTwoPi * (1.0 - 1e-12) ? surface.uDomain() : angular;
+    const auto circle = conicArcToBSpline<2>(Vec2(), Vec2(1, 0), Vec2(0, 1), circleRange.lo, circleRange.hi);
+    const Vec2 xy = circle.point(result.u);
+    double u = std::atan2(xy.y(), xy.x());
+    u += kTwoPi * std::round((0.5 * (angular.lo + angular.hi) - u) / kTwoPi);
+    candidates.consider(angular.clamp(u), vRange.clamp(result.v));
+    projectOnBoundary(surface, p, uRange, vRange, candidates);
+    return true;
+}
+
 SurfaceProjection projectOnPlane(const Plane &plane, const Vec3 &p, const Interval &uRange, const Interval &vRange) {
     // Parametrizzazione isometrica: il problema si separa in u e v.
     const Vec3 local = plane.frame().toLocal(p);
@@ -650,7 +673,8 @@ SurfaceProjection projectPoint(const Surface &surface, const Vec3 &p, const Inte
         projectOnExtrusion(static_cast<const ExtrusionSurface &>(surface), p, uRange, vRange, candidates);
         break;
     case SurfaceType::Revolution:
-        if (!projectOnPlanarRevolution(static_cast<const RevolutionSurface &>(surface), p, uRange, vRange, candidates))
+        if (!projectOnPlanarRevolution(static_cast<const RevolutionSurface &>(surface), p, uRange, vRange, candidates)
+            && !projectOnSplineRevolution(static_cast<const RevolutionSurface &>(surface), p, uRange, vRange, candidates))
             projectGeneric(surface, p, uRange, vRange, candidates);
         break;
     default:

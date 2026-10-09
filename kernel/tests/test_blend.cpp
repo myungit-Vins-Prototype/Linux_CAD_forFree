@@ -1748,6 +1748,10 @@ FK_TEST(BlendMouseInternalNormalJump) {
     FK_CHECK(bool(in));
     std::stringstream bytes; bytes << in.rdbuf();
     const Body source = readBodyBinary(bytes.str());
+    const std::string beforeBlend = writeBodyBinary(source);
+    // Il reader ricostruisce i frame normalizzati: una fixture prodotta su
+    // un'altra piattaforma non e' necessariamente identica byte per byte.
+    // Verifica l'immutabilita' delle operazioni rispetto al body appena letto.
     FK_CHECK(checkBody(source).empty());
     FK_CHECK(tessellate(source, {}).failedFaces == 0);
     for (double radius : {1.0, 2.0}) {
@@ -1758,5 +1762,5 @@ FK_TEST(BlendMouseInternalNormalJump) {
         }
         FK_CHECK(rejected);
     }
-    FK_CHECK(writeBodyBinary(source) == bytes.str());
+    FK_CHECK(writeBodyBinary(source) == beforeBlend);
 }

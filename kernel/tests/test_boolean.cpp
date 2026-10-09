@@ -23,6 +23,7 @@
 #include "fk_pcurve.h"
 #include "fk_extrude.h"
 #include "fk_helix.h"
+#include "fk_intersect.h"
 #include "fk_sweep.h"
 #include "fk_revolve.h"
 #include "fk_marching.h"
@@ -100,7 +101,7 @@ const char *name(BooleanOperation operation) {
 // contro BRepAlgoAPI: volume, area e baricentro. `exactOcct`: facce solo
 // piane e cilindriche, dove BRepGProp e' affidabile; altrimenti area e
 // volume si confrontano con la tassellazione fine del risultato OCCT.
-void compare(const Operand &a, const Operand &b, BooleanOperation operation, bool exactOcct = true, double relative = 1e-8) {
+void compare(const Operand &a, const Operand &b, BooleanOperation operation, bool exactOcct = true, double relative = 1e-8, double independentVolume = 0.0) {
     Body result;
     try {
         result = booleanOperation(a.body, b.body, operation);
@@ -124,7 +125,11 @@ void compare(const Operand &a, const Operand &b, BooleanOperation operation, boo
     } else {
         double meshArea, meshVolume;
         meshProperties(reference, meshArea, meshVolume);
-        FK_CHECK_NEAR(ours.volume, meshVolume, 2e-4 * meshVolume);
+        if (independentVolume > 0.0) {
+            FK_CHECK_NEAR(ours.volume, independentVolume, 1e-9 * independentVolume);
+        } else {
+            FK_CHECK_NEAR(ours.volume, meshVolume, 2e-4 * meshVolume);
+        }
         FK_CHECK_NEAR(ours.area, meshArea, 5e-5 * meshArea);
         FK_CHECK(distance(ours.centroid, fromOcct(volume.CentreOfMass())) <= 1e-2 * std::cbrt(volume.Mass()));
     }
@@ -285,6 +290,59 @@ FK_TEST(BooleanCylinderCylinder) {
     FK_CHECK_NEAR(massProperties(drilled).volume, properties.Mass(), 1e-6 * properties.Mass());
 }
 
+namespace {
+
+// Volume comune indipendente dalla booleana e dalle proprieta' di massa:
+// integra le corde del cilindro lungo la direzione dell'estrusione, sul
+// profilo spline. Per questi assi non paralleli, il discriminante in x
+// delimita esattamente il supporto dell'integrando (non va campionato).
+double splineCylinderCommonVolume(const BSplineCurve<2> &profile, const Frame3 &base, double height,
+                                  const Frame3 &cylinder, double radius, double cylinderHeight) {
+    const Vec3 d = base.zDir(), n = cylinder.zDir();
+    const Vec3 dr = d - dot(d, n) * n, ex = base.xDir() - dot(base.xDir(), n) * n;
+    const double A = squaredNorm(dr), bx = dot(ex, dr), aa = bx * bx - A * squaredNorm(ex);
+    FK_CHECK(A > 1e-6 && aa < -1e-6 && std::fabs(dot(d, n)) > 1e-6);
+    auto chord = [&](double x, double y) {
+        const Vec3 q = base.toGlobal(Vec3(x, y, 0)) - cylinder.origin(), qr = q - dot(q, n) * n;
+        const double B = dot(qr, dr), C = squaredNorm(qr) - radius * radius, disc = B * B - A * C;
+        if (disc <= 0.0) return 0.0;
+        const double lo = std::max(0.0, (-B - std::sqrt(disc)) / A);
+        const double hi = std::min(height, (-B + std::sqrt(disc)) / A);
+        double cap0 = -dot(q, n) / dot(d, n), cap1 = (cylinderHeight - dot(q, n)) / dot(d, n);
+        if (cap0 > cap1) std::swap(cap0, cap1);
+        return std::max(0.0, std::min(hi, cap1) - std::max(lo, cap0));
+    };
+    auto slice = [&](double y) {
+        const Vec3 q = base.toGlobal(Vec3(0, y, 0)) - cylinder.origin(), qr = q - dot(q, n) * n;
+        const double b0 = dot(qr, dr), bb = 2.0 * (b0 * bx - A * dot(qr, ex));
+        const double cc = b0 * b0 - A * (squaredNorm(qr) - radius * radius), disc = bb * bb - 4.0 * aa * cc;
+        if (disc <= 0.0) return 0.0;
+        const double x0 = (-bb + std::sqrt(disc)) / (2.0 * aa), x1 = (-bb - std::sqrt(disc)) / (2.0 * aa);
+        const auto roots = planeRoots<2>(profile, profile.domain(), Vec2(0, 1), y, 1e-12);
+        std::vector<double> xs;
+        for (double t : roots.parameters) xs.push_back(profile.point(t).x());
+        std::sort(xs.begin(), xs.end());
+        FK_CHECK(xs.size() % 2 == 0);
+        double sum = 0.0;
+        for (std::size_t k = 0; k + 1 < xs.size(); k += 2) {
+            const double lo = std::max(xs[k], x0), hi = std::min(xs[k + 1], x1);
+            if (hi <= lo) continue;
+            for (int j = 0; j < 16; ++j)
+                sum += detail::integrate([&](double x) { return chord(x, y); },
+                                        lo + (hi - lo) * j / 16.0, lo + (hi - lo) * (j + 1) / 16.0, 1e-10);
+        }
+        return sum;
+    };
+    double y0 = profile.poles().front().y(), y1 = y0;
+    for (const Vec2 &p : profile.poles()) { y0 = std::min(y0, p.y()); y1 = std::max(y1, p.y()); }
+    double common = 0.0;
+    for (int j = 0; j < 100; ++j)
+        common += detail::integrate(slice, y0 + (y1 - y0) * j / 100.0, y0 + (y1 - y0) * (j + 1) / 100.0, 1e-10);
+    return common;
+}
+
+}
+
 // Fianchi estrusi da spline contro cilindri e contro altri fianchi estrusi in
 // un'altra direzione.
 FK_TEST(BooleanCurvedExtrusions) {
@@ -295,10 +353,25 @@ FK_TEST(BooleanCurvedExtrusions) {
     compareAll(a, cylinder(Frame3(Vec3(-14, 0.5, 4), Vec3(1, 0.1, 0.05), Vec3(0, 0, 1)), 2.5, 30), false);  // attraversa il foro a spline
     compare(a, cylinder(Frame3(Vec3(4, -9, 3.5), Vec3(0.1, 1, 0.2), Vec3(0, 0, 1)), 1.5, 20), BooleanOperation::Subtract, false);
     const ProfileSegment spline = closedSpline(Vec2(0, 0), 3.0, false);
-    const Operand b = extrusion(Frame3(Vec3(-2, 1, 4), Vec3(1, 0.2, 0.1), Vec3(0, 0, 1)), {spline}, 14.0);
+    const Frame3 base(Vec3(-2, 1, 4), Vec3(1, 0.2, 0.1), Vec3(0, 0, 1));
+    const Operand b = extrusion(base, {spline}, 14.0);
     const Operand c = extrusion(Frame3(Vec3(-12, 0, 4), Vec3(1, 0, 0), Vec3(0, 0, 1)), {spline}, 24.0);
     compare(a, c, BooleanOperation::Intersect, false);  // spigoli vivi delle due spline chiuse che si incrociano
-    compare(b, cylinder(Frame3(Vec3(3, -6, 4.5), Vec3(0, 1, 0.1), Vec3(1, 0, 0)), 1.2, 14), BooleanOperation::Unite, false);
+    const Frame3 cylinderFrame(Vec3(3, -6, 4.5), Vec3(0, 1, 0.1), Vec3(1, 0, 0));
+    // Su questa faccia spline ritagliata nemmeno la mesh OCCT converge al
+    // volume corretto (scarto > 0.08). Usa un integrale sulle geometrie di
+    // ingresso; conserva OCCT per area e baricentro, verificati separatamente.
+    double profileArea = 0.0;
+    const auto breaks = spline.curve->breakpoints(spline.range);
+    for (std::size_t k = 0; k + 1 < breaks.size(); ++k)
+        profileArea += detail::integrate([&](double t) {
+            Vec2 derivatives[2]; spline.curve->evaluate(t, 1, derivatives);
+            return 0.5 * cross(derivatives[0], derivatives[1]);
+        }, breaks[k], breaks[k + 1], 1e-12);
+    const double common = splineCylinderCommonVolume(static_cast<const BSplineCurve<2> &>(*spline.curve), base, 14.0,
+                                                     cylinderFrame, 1.2, 14.0);
+    const double independentUnion = 14.0 * profileArea + kPi * 1.2 * 1.2 * 14.0 - common;
+    compare(b, cylinder(cylinderFrame, 1.2, 14), BooleanOperation::Unite, false, 1e-8, independentUnion);
 
     // Identita' dei volumi con le nostre sole proprieta' di massa.
     const double va = massProperties(a.body).volume, vc = massProperties(c.body).volume;
@@ -518,6 +591,22 @@ FK_TEST(BooleanStressGrid) {
 // uguali (rami che si incrociano), fianchi tangenti dentro e fuori, contatti
 // in un punto, cerchi sulle facce dell'altro. Riferimento: il volume esatto;
 // nessun risultato sbagliato e nessuna eccezione.
+FK_TEST(BooleanCylinderFourthOrderCapContact) {
+    // La curva di intersezione lascia il coperchio con contatto di ordine
+    // superiore: corde troppo corte ne invertono l'ordine per arrotondamento.
+    const Operand a = cylinder(Frame3(), 5.0, 8.0);
+    const Operand b = cylinder(Frame3(Vec3(3,-5,2), Vec3(0,1,0), Vec3(1,0,0)), 3.0, 12.0);
+    const double common = crossedCylinderVolume(5,8,3,2,3,-5,7);
+    for (BooleanOperation op : {BooleanOperation::Unite, BooleanOperation::Intersect, BooleanOperation::Subtract}) {
+        const std::string problem = stressCase(a,b,op,expectedVolume(200*kPi,108*kPi,common,op));
+        if (!problem.empty()) reportFailure(__FILE__,__LINE__,problem);
+        BooleanOptions serial; serial.threads = 1;
+        const Body first = booleanOperation(a.body,b.body,op,serial);
+        const Body parallel = booleanOperation(a.body,b.body,op);
+        FK_CHECK(writeBodyBinary(first) == writeBodyBinary(parallel));
+    }
+}
+
 FK_TEST(BooleanStressCylinderGrid) {
     std::mt19937 rng(780);
     for (int trial = 0; trial < 60; ++trial) {

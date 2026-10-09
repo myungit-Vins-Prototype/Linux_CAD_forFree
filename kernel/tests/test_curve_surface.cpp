@@ -1,4 +1,5 @@
 #include <GeomAPI_IntCS.hxx>
+#include <GeomAPI_ProjectPointOnSurf.hxx>
 #include <Geom_Circle.hxx>
 #include <Geom_ConicalSurface.hxx>
 #include <Geom_Ellipse.hxx>
@@ -34,6 +35,11 @@ void compare(const Case &c, const SurfacePtr &surface, const Handle(Geom_Surface
     for (double t : ours.parameters) {
         FK_CHECK(c.range.contains(t, 1e-9));
         FK_CHECK(projectPoint(*surface, c.curve->point(t)).distance <= 1e-6);
+        // IntCS puo' perdere intersezioni: verifica indipendente di ogni
+        // punto anche sulla superficie OCCT, senza presumere completo IntCS.
+        GeomAPI_ProjectPointOnSurf projection(toPnt(c.curve->point(t)), occtSurface);
+        FK_CHECK(projection.NbPoints() > 0);
+        if (projection.NbPoints() > 0) FK_CHECK(projection.LowerDistance() <= 1e-6);
     }
     GeomAPI_IntCS reference(new Geom_TrimmedCurve(c.occt, c.range.lo, c.range.hi), occtSurface);
     FK_CHECK(reference.IsDone());
@@ -45,8 +51,10 @@ void compare(const Case &c, const SurfacePtr &surface, const Handle(Geom_Surface
         FK_CHECK(near);
         ++found;
     }
-    // OCCT non perde punti trasversali qui: stesso numero.
-    FK_CHECK(int(ours.parameters.size()) == found);
+    // I parametri restituiti devono essere distinti anche quando IntCS
+    // trova meno punti (accade con coni e pezze B-spline).
+    for (std::size_t i = 1; i < ours.parameters.size(); ++i)
+        FK_CHECK(ours.parameters[i] - ours.parameters[i - 1] > 1e-10);
     total += found;
 }
 
