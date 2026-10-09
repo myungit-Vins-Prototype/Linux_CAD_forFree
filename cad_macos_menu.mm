@@ -18,14 +18,14 @@ void showNativeImages(NSMenu *menu) {
             // NSMenuItemImageVisibilityVisible = 1 (AppKit/NSMenuItem.h).
             setVisibility(item, setter, 1);
         }
-        if (item.submenu) showNativeImages(item.submenu);
+
     }
 }
 
 void prepareMenu(QMenu *menu) {
     for (QAction *action : menu->actions()) {
         if (!action->icon().isNull()) action->setIconVisibleInMenu(true);
-        if (QMenu *submenu = action->menu()) prepareMenu(submenu);
+
     }
     showNativeImages(menu->toNSMenu());
 }
@@ -33,6 +33,7 @@ void prepareMenu(QMenu *menu) {
 void watchMenu(QMenu *menu) {
     // Non sostituisce il delegate Cocoa di Qt. Riapertura e aggiornamenti
     // delle azioni riapplicano la preferenza alle immagini native correnti.
+    prepareMenu(menu);
     QObject::connect(menu, &QMenu::aboutToShow, menu, [menu] { prepareMenu(menu); });
     for (QAction *action : menu->actions())
         if (QMenu *submenu = action->menu()) watchMenu(submenu);
@@ -44,7 +45,7 @@ void ForgeCad::enableMacMenuIcons(QMenuBar *menuBar) {
     for (QAction *action : menuBar->actions()) {
         if (QMenu *menu = action->menu()) {
             watchMenu(menu);
-            prepareMenu(menu);
+
         }
     }
 }

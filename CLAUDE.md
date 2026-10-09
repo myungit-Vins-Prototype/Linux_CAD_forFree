@@ -8,6 +8,13 @@ Contesto del progetto per Claude Code. La lingua di lavoro è l'italiano (UI, co
 
 ## Stato corrente: loft, estensioni e raccordi (2026-10-07)
 
+### Barra scomparsa e ritardo menu (2026-10-09)
+
+- Segnalazione: barra pulsanti assente e menu in ritardo. Individuato nel ripristino `interface/state` un caso concreto: salvando in schizzo si conserva la barra modellazione nascosta, poi il costruttore nasconde anche quella schizzo. `forgeCad2026_gui.cpp`: dopo restoreState ripristinata esplicitamente la barra modellazione per la modalita' iniziale.
+- `tests/test_viewport.cpp`: percorso `--toolbar-restore` con preferenze temporanee, salva lo stato con barra modellazione nascosta e schizzo visibile, ricrea la finestra e controlla entrambe le visibilita' e presenza menu.
+- `cad_macos_menu.mm`: preparazione iniziale per ciascun menu; all'apertura aggiorna soltanto il menu aperto, evitando visite ricorsive ripetute ai sottomenu che hanno gia' un proprio callback. `cad_icons.cpp`: font predefinito al posto della famiglia Sans assente su macOS (warning osservato nei precedenti test). Questi interventi rimuovono lavoro superfluo; il ritardo di alcuni secondi segnalato dall'utente non e' ancora riprodotto ne' dichiarato risolto. Chiesto se accade all'avvio o anche durante il lavoro.
+- Build Release applicazione e test completata (`/tmp/toolbar_build.log`); prova `--toolbar-restore` PASS in offscreen (`/tmp/toolbar_test.log`), preferenze utente non modificate. `git diff --check` pulito. Latenza dei menu nativi non misurata; resta da verificare nel caso segnalato. Bundle in /Applications non aggiornato.
+
 ### Analisi per corpo logico e singola faccia (2026-10-09)
 
 - Richiesta: scegliere la faccia nel pannello di analisi e presentare i corpi con il loro nome, non le ultime feature. `forgeCad2026_gui.cpp`, `shapeAnalysisDialog`: elenco da `resultBodiesBefore(-1)` filtrato sui risultati visibili; etichette da `logicalBodyLabel` (nome di `ModelBody`, suffisso superficie per le lamine). Esclusi stadi intermedi e corpi consumati; riferimenti curva 3D e schizzi conservati con etichetta esplicita. Selezione di una feature precedente rimappata al risultato dello stesso corpo logico.

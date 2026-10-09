@@ -21282,6 +21282,9 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
         }
         if (settings.contains(QStringLiteral("geometry"))) restoreGeometry(settings.value(QStringLiteral("geometry")).toByteArray());
         if (settings.contains(QStringLiteral("state"))) restoreState(settings.value(QStringLiteral("state")).toByteArray());
+        // La visibilita' delle barre dipende dalla modalita', non dallo stato
+        // salvato (che puo' provenire da una sessione in schizzo).
+        toolbar->setVisible(true);
         drawingToolbar->setVisible(false);  // compare solo in modalita' schizzo
         settings.endGroup();
     }

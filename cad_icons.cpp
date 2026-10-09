@@ -289,7 +289,7 @@ std::map<QString, Draw> &registry() {
                 p.setBrush(QColor(255, 255, 255, 18));
                 p.drawRoundedRect(QRectF(3, 3, 18, 18), 3, 3);
             }
-            QFont font(QStringLiteral("Sans"));
+            QFont font;
             font.setPixelSize(13);
             font.setBold(true);
             p.setFont(font);
@@ -309,7 +309,7 @@ std::map<QString, Draw> &registry() {
         line(p, {3, 15}, {21, 15}, stroke(c.accent, 1.8));
         dot(p, {3, 15}, c.ink, 1.6);
         dot(p, {21, 15}, c.ink, 1.6);
-        QFont font(QStringLiteral("Sans"));
+        QFont font;
         font.setPixelSize(10);
         font.setBold(true);
         p.setFont(font);
@@ -320,7 +320,7 @@ std::map<QString, Draw> &registry() {
         line(p, {9, 3}, {9, 21}, stroke(c.accent, 1.8));
         dot(p, {9, 3}, c.ink, 1.6);
         dot(p, {9, 21}, c.ink, 1.6);
-        QFont font(QStringLiteral("Sans"));
+        QFont font;
         font.setPixelSize(10);
         font.setBold(true);
         p.setFont(font);
@@ -334,7 +334,7 @@ std::map<QString, Draw> &registry() {
         arrowHead(p, {20.5, 11}, {15, 11}, c.accent, 3.2);
         line(p, {3, 8}, {3, 16}, stroke(c.ink, 1.0));
         line(p, {21, 8}, {21, 16}, stroke(c.ink, 1.0));
-        QFont font(QStringLiteral("Sans"));
+        QFont font;
         font.setPixelSize(8);
         font.setBold(true);
         p.setFont(font);
@@ -385,7 +385,7 @@ std::map<QString, Draw> &registry() {
         QPolygonF pentagon;
         for (int k = 0; k < 5; ++k) pentagon << QPointF(10 + 7.5 * std::cos(2 * M_PI / 5 * k - M_PI / 2), 11 + 7.5 * std::sin(2 * M_PI / 5 * k - M_PI / 2));
         polygon(p, pentagon, Qt::NoBrush, stroke(c.accent, 1.6));
-        QFont font(QStringLiteral("Sans"));
+        QFont font;
         font.setPixelSize(9);
         font.setBold(true);
         p.setFont(font);
@@ -1003,7 +1003,7 @@ std::map<QString, Draw> &registry() {
         p.drawPie(r, 0, 90 * 16);
         p.drawPie(r, 180 * 16, 90 * 16);
         p.setPen(c.accent);
-        QFont font(QStringLiteral("Sans"));
+        QFont font;
         font.setPixelSize(7);
         font.setBold(true);
         p.setFont(font);

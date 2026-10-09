@@ -4886,6 +4886,24 @@ int main(int argc, char **argv) {
     QTemporaryDir settings;
     QSettings::setDefaultFormat(QSettings::IniFormat);
     QSettings::setPath(QSettings::IniFormat, QSettings::UserScope, settings.path());
+    if (app.arguments().contains(QStringLiteral("--toolbar-restore"))) {
+        try {
+            {
+                PdfWindow first;
+                auto *model = first.findChild<QToolBar *>(QStringLiteral("modelingIconBar"));
+                auto *sketch = first.findChild<QToolBar *>(QStringLiteral("sketchIconBar"));
+                require(model && sketch, "toolbars exist");
+                model->hide(); sketch->show();
+                QSettings().setValue(QStringLiteral("interface/state"), first.saveState());
+            }
+            PdfWindow reopened;
+            require(!reopened.findChild<QToolBar *>(QStringLiteral("modelingIconBar"))->isHidden(), "model toolbar restored after saved sketch mode");
+            require(reopened.findChild<QToolBar *>(QStringLiteral("sketchIconBar"))->isHidden(), "sketch toolbar hidden outside sketch");
+            require(!reopened.menuBar()->actions().isEmpty(), "menus available at construction");
+        } catch (const std::exception &e) { std::cerr << e.what() << std::endl; return 1; }
+        std::cout << "PASS toolbar restore" << std::endl;
+        return 0;
+    }
     if (app.arguments().contains(QStringLiteral("--sketch-comb"))) {
         try { ViewportInteractionTest::sketchCombUi(app.arguments().contains(QStringLiteral("--gl"))); }
         catch (const std::exception &e) { std::cerr << e.what() << std::endl; return 1; }
