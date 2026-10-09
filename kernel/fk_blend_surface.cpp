@@ -572,6 +572,12 @@ public:
                 pending.push_back({a, m, error});
                 continue;
             }
+            // Un salto dei contatti non diventa rumore solo perche' il
+            // tratto e' ormai minuscolo: attraversa una piega interna della
+            // superficie. Accettarlo crea pezze con contorni non proiettabili.
+            if (h <= 1e-9 * range_.length() && error > std::max(1e-6 * solver_.size(), 16.0 * numericalFloor))
+                throw std::domain_error("blendEdges: discontinuita' interna della superficie lungo il raccordo; "
+                                        "regolarizza la tangenza della superficie o suddividila prima di raccordare");
             result.error = std::max(result.error, error);
             for (std::size_t r = 0; r < rows.size(); ++r) {
                 std::vector<HPoint> &p = result.poles[r];
@@ -767,7 +773,7 @@ FinId crossContinuation(const Body &body, FinId f, bool forward, EdgeId &jA, Edg
     const FinId twin = body.otherFin(junction);
     if (!twin.valid()) return FinId();
     const FinId g = forward ? body.fin(twin).next : body.fin(twin).previous;
-    if (g == f || body.fin(g).edge == body.fin(f).edge) return FinId();
+    if (g == f || body.fin(g).edge == body.fin(f).edge || !body.otherFin(g).valid()) return FinId();
     const Vec3 tf = finTangent(body, f, forward), tg = finTangent(body, g, !forward);
     const bool explicitlySelected = selected.count(body.fin(g).edge.index);
     if (dot(tf, tg) < 1.0 - (explicitlySelected ? kCrossSmooth : kSmooth)) return FinId();
@@ -799,6 +805,7 @@ LoopChain chainAlong(const Body &body, FinId seed, const std::set<int> &selected
     std::vector<EdgeId> thirds, fourths;
     const auto continues = [&](FinId from, FinId to, bool forward) {
         // Scelto, o tangente (propagazione: un raccordo non puo' finire in un vertice liscio).
+        if (!body.otherFin(to).valid()) return false;
         if (selected.count(body.fin(to).edge.index)) return true;
         const Vec3 a = forward ? finTangent(body, from, true) : finTangent(body, to, true);
         const Vec3 b = forward ? finTangent(body, to, false) : finTangent(body, from, false);
@@ -1510,7 +1517,7 @@ bool surfaceCurveMeet(const Surface &surface, double v, const Curve<3> &curve, c
 }  // namespace
 
 Body blendSurfaceChains(const Body &input, const std::vector<EdgeId> &selected, double size, bool chamfer, const std::vector<ChamferSides> *sides) {
-    if (input.isSheet()) throw std::domain_error("blendEdges: solo solidi");
+
     if (!(size > kLinearResolution)) throw std::domain_error("blendEdges: raggio o distanza non validi");
     Body body = input;
     std::vector<EdgeId> edges = selected;
@@ -1665,7 +1672,7 @@ Body blendSurfaceChains(const Body &input, const std::vector<EdgeId> &selected, 
                                   bool extendBoundary = false, const Interval *endWindow = nullptr,
                                   double vertex = std::numeric_limits<double>::quiet_NaN()) {
             const Edge &g = body.edge(boundary);
-            const FinId gFin = body.finFace(g.forward) == face ? g.forward : g.backward;
+            const FinId gFin = g.forward.valid() && body.finFace(g.forward) == face ? g.forward : g.backward;
             const bool gSense = body.fin(gFin).sense;
             const Edge &edge = body.edge(chain.fins[std::size_t(piece.chainFin)].edge);
             // Senza finestre speciali il bordo e' la cucitura intera (seamChain).
@@ -1991,6 +1998,7 @@ Body blendSurfaceChains(const Body &input, const std::vector<EdgeId> &selected, 
             FaceId face;
             FaceId secondFace;
             EdgeId seam;
+            bool free = false;    // i due bordi terminano sulla frontiera della lamina
             bool normal = false;  // E piana e normale allo spigolo: la sezione nel vertice
             double tA = 0.0, tB = 0.0;
             Vec3 pointA, pointB;   // intersezioni raffinate fra superficie definitiva ed edge
@@ -2012,8 +2020,14 @@ Body blendSurfaceChains(const Body &input, const std::vector<EdgeId> &selected, 
                 const FinId onB = atStart ? body.fin(finB).next : body.fin(finB).previous;
                 end.onA = body.fin(onA).edge;
                 end.onB = body.fin(onB).edge;
-                end.face = body.finFace(body.otherFin(onA));
-                end.secondFace = body.finFace(body.otherFin(onB));
+                const FinId acrossA = body.otherFin(onA), acrossB = body.otherFin(onB);
+                end.free = !acrossA.valid() && !acrossB.valid();
+                if (acrossA.valid() != acrossB.valid())
+                    throw std::domain_error("blendEdges: estremita' con un solo bordo libero non ancora supportata");
+                if (!end.free) {
+                    end.face = body.finFace(acrossA);
+                    end.secondFace = body.finFace(acrossB);
+                }
                 if (end.secondFace != end.face) {
                     if (at.size() != 4 || chamfer)
                         throw std::domain_error("blendEdges: pezza d'angolo terminale non gestita per gli smussi");
@@ -2048,6 +2062,7 @@ Body blendSurfaceChains(const Body &input, const std::vector<EdgeId> &selected, 
                     Interval window = edge.range;
                     const bool circle = edge.curve->type() == CurveType::Circle;
                     const bool spline = edge.curve->type() == CurveType::BSpline;
+                    if (body.isLaminar(id)) return window;
                     if (circle || ((!convex || reflex) && (edge.curve->type() == CurveType::Line || spline))) {
                         const bool start = body.edgeStart(id) == end.vertex;
                         const double t = start ? edge.range.lo : edge.range.hi;
@@ -2062,10 +2077,17 @@ Body blendSurfaceChains(const Body &input, const std::vector<EdgeId> &selected, 
                 };
                 end.windowA = endWindow(end.onA, reflexCorner(cf.fin, end.onA));
                 end.windowB = endWindow(end.onB, reflexCorner(finB, end.onB));
-                const Face &E = body.face(end.face);
                 const Vec3 tangent = finTangent(body, cf.fin, !atStart);
-                end.normal = end.face == end.secondFace && E.surface->type() == SurfaceType::Plane
-                          && std::fabs(dot(static_cast<const Plane &>(*E.surface).frame().zDir(), tangent)) >= 1.0 - kSmooth;
+                if (end.free) {
+                    end.normal = body.edge(end.onA).curve->type() == CurveType::Line
+                        && body.edge(end.onB).curve->type() == CurveType::Line
+                        && std::fabs(dot(finTangent(body,onA,false),tangent)) < kSmooth
+                        && std::fabs(dot(finTangent(body,onB,false),tangent)) < kSmooth;
+                } else {
+                    const Face &E = body.face(end.face);
+                    end.normal = end.face == end.secondFace && E.surface->type() == SurfaceType::Plane
+                        && std::fabs(dot(static_cast<const Plane &>(*E.surface).frame().zDir(), tangent)) >= 1.0 - kSmooth;
+                }
                 Piece &piece = pieces[std::size_t(end.piece)];
                 const double vertexParameter = atStart ? cf.start : cf.end;
                 if (end.normal) {
@@ -2462,7 +2484,16 @@ Body blendSurfaceChains(const Body &input, const std::vector<EdgeId> &selected, 
                 junction.pointB = snapB || vanishing ? oldVertex : model.addPoint(rb);
                 setEnd(aLo, aHi, end.piece, !end.atStart, tA);
                 setEnd(bLo, bHi, end.piece, !end.atStart, tB);
-                const Surface &E = *body.face(end.face).surface;
+                // Una frontiera libera termina su una sezione trasversale
+                // passante per i due contatti, senza creare una faccia tappo.
+                SurfacePtr freeSupport;
+                if (end.free && vanishing) freeSupport = piece.surface;
+                else if (end.free) {
+                    const Vec3 chord = normalized(rb-ra);
+                    const Vec3 tangent = normalized(body.edge(chain.fins[std::size_t(piece.chainFin)].edge).curve->derivative(0.5*(tA+tB)));
+                    freeSupport = std::make_shared<Plane>(Frame3(ra, tangent-dot(tangent,chord)*chord, chord));
+                }
+                const Surface &E = end.free ? *freeSupport : *body.face(end.face).surface;
                 if (vanishing) {
                     double gap = std::max({distance(ra, vertexPoint), distance(rb, vertexPoint),
                                            distance(piece.surface->point(tA, 0.0), vertexPoint), distance(piece.surface->point(tB, 1.0), vertexPoint)});
@@ -2678,7 +2709,7 @@ Body blendSurfaceChains(const Body &input, const std::vector<EdgeId> &selected, 
                 throw std::domain_error(std::string(failure.what()) + " (estremo B, bordo " + std::to_string(end.onB.index)
                                         + ", t=" + std::to_string(end.tB) + ")");
             }
-            if (!end.seam.valid() && junction.connector >= 0) edits[model.faceIndex.at(end.face.index)].free.push_back(junction.connector);
+            if (!end.free && !end.seam.valid() && junction.connector >= 0) edits[model.faceIndex.at(end.face.index)].free.push_back(junction.connector);
         }
 
         // Contatti, facce nuove e modifiche di A e delle facce B.
@@ -2732,8 +2763,10 @@ Body blendSurfaceChains(const Body &input, const std::vector<EdgeId> &selected, 
             piece.face = int(model.faces.size());
             model.faces.push_back(std::move(face));
             FaceEdit edit;
-            edit.fixed.push_back({piece.contactA, faceSense, nullptr, 0.0});
-            edit.fixed.push_back({piece.contactB, !faceSense, nullptr, 0.0});
+            // I contatti sono isocurve della pezza: il loro parametro UV e'
+            // noto esattamente, anche vicino a nodi multipli o tratti corti.
+            edit.fixed.push_back({piece.contactA, faceSense, std::make_shared<Line<2>>(Vec2(0,0),Vec2(1,0)), 0.0});
+            edit.fixed.push_back({piece.contactB, !faceSense, std::make_shared<Line<2>>(Vec2(0,1),Vec2(1,0)), 0.0});
             for (const Junction *j : {&startJ, &endJ}) {
                 if (j->gamma >= 0) {
                     edit.free.push_back(j->gamma);
@@ -2842,7 +2875,9 @@ Body blendSurfaceChains(const Body &input, const std::vector<EdgeId> &selected, 
     // prima di conoscere lo scarto misurato. Completa quelle mancanti con la
     // tolleranza dell'edge: senza di loro il solido passa checkBody ma alcune
     // facce non sono triangolabili nell'anteprima e nel risultato finale.
-    computePCurves(result);
+    if (computePCurves(result) != 0)
+        throw std::domain_error("blendEdges: impossibile ricostruire tutti i contorni del raccordo entro tolleranza; "
+                                "il risultato non sarebbe completamente visualizzabile");
     CheckOptions checks;
     checks.loopCrossings = true;  // un raccordo che invade un altro contorno della faccia
     const std::vector<CheckIssue> issues = checkBody(result, checks);

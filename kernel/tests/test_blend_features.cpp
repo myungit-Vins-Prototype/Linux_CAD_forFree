@@ -275,3 +275,16 @@ FK_TEST(BlendSmoothLoftSplitSidePatches) {
     const double filleted = checkedVolume(blendEdges(loft, cap, 0.2, false), 1e-7);
     FK_CHECK(filleted > 0.0 && filleted < full);
 }
+
+FK_TEST(SheetBlendCurvedLoft) {
+    const Body sheet = loftSheet({rectangleAt(0,6,4),rectangleAt(3,5,3),rectangleAt(6,6,4)}, false);
+    EdgeId seam;
+    for (EdgeId e : sheet.edges()) if (!sheet.isLaminar(e)) { seam = e; break; }
+    FK_CHECK(seam.valid());
+    for (bool chamfer : {false,true}) {
+        const Body result = blendEdges(sheet,{seam},0.15,chamfer);
+        FK_CHECK(result.isSheet());
+        FK_CHECK(checkBody(result,{true,true}).empty());
+        FK_CHECK(tessellate(result,{}).failedFaces == 0);
+    }
+}

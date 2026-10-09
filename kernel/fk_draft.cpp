@@ -11,8 +11,8 @@
 namespace ForgeCad::Kernel {
 Body draftFaces(const Body &input, const std::vector<FaceId> &selected,
                 const Vec3 &origin, const Vec3 &direction, double angle) {
-    if (input.isSheet() || input.shells().size() != 1 || input.faces().empty())
-        throw std::domain_error("lo sformo richiede un unico solido convesso");
+    if (input.shells().size() != 1 || input.faces().empty())
+        throw std::domain_error("lo sformo richiede un unico corpo connesso");
     if (selected.empty()) throw std::domain_error("scegli almeno una faccia da sformare");
     if (!isFinite(origin) || !isFinite(direction) || norm(direction) < 1e-12 || !std::isfinite(angle)
         || std::fabs(angle) < 1e-10 || std::fabs(angle) >= 89.0 * kPi / 180.0)
@@ -32,11 +32,11 @@ Body draftFaces(const Body &input, const std::vector<FaceId> &selected,
     for (FaceId f : input.faces()) {
         const Face &face = input.face(f);
         if (!face.surface || face.surface->type() != SurfaceType::Plane)
-            throw std::domain_error("per ora lo sformo supporta solidi convessi con sole facce piane");
+            throw std::domain_error("lo sformo supporta facce piane e bordi rettilinei");
         const Frame3 &frame = static_cast<const Plane &>(*face.surface).frame();
         Vec3 n = frame.zDir() * (face.sense ? 1.0 : -1.0);
         double offset = dot(n, frame.origin() - origin);
-        for (VertexId v : input.vertices())
+        if (!input.isSheet()) for (VertexId v : input.vertices())
             if (dot(n, input.vertex(v).point - origin) - offset > tolerance)
                 throw std::domain_error("per ora lo sformo richiede un solido convesso");
         if (chosen.count(f.index)) {
@@ -60,6 +60,30 @@ Body draftFaces(const Body &input, const std::vector<FaceId> &selected,
         const auto &ids = incident.at(v.index);
         std::vector<Support> planes;
         for (int id : ids) planes.push_back(supports.at(id));
+        // Su un bordo aperto mancano i piani di chiusura del solido.
+        // Conserva la quota lungo l'estrazione; con una sola faccia conserva
+        // anche la coordinata lungo la sua traccia sul piano neutro.
+        if (input.isSheet()) {
+            const Vec3 old = input.vertex(v).point - origin;
+            const auto independent = [&](const Vec3 &normal) {
+                std::vector<Vec3> basis;
+                for (const auto &plane : planes) {
+                    Vec3 q = plane.normal;
+                    for (const Vec3 &b : basis) q -= dot(q,b)*b;
+                    if (norm(q) > 1e-8) basis.push_back(normalized(q));
+                }
+                Vec3 q = normal;
+                for (const Vec3 &b : basis) q -= dot(q,b)*b;
+                return norm(q) > 1e-8;
+            };
+            if (independent(pull)) planes.push_back({pull, dot(pull, old)});
+            for (const Vec3 axis : {Vec3(1,0,0),Vec3(0,1,0),Vec3(0,0,1)}) {
+                Vec3 along = cross(pull, planes.front().normal);
+                if (norm(along) < 1e-8) along = axis;
+                else along = normalized(along);
+                if (independent(along)) planes.push_back({along, dot(along, old)});
+            }
+        }
         Vec3 point;
         double best = 0.0;
         for (std::size_t i = 0; i < planes.size(); ++i)
@@ -76,7 +100,7 @@ Body draftFaces(const Body &input, const std::vector<FaceId> &selected,
         for (const auto &plane : planes)
             if (std::fabs(dot(plane.normal, point) - plane.offset) > tolerance)
                 throw std::domain_error("lo sformo richiede una modifica della topologia del vertice");
-        for (const auto &entry : supports)
+        if (!input.isSheet()) for (const auto &entry : supports)
             if (dot(entry.second.normal, point) - entry.second.offset > tolerance)
                 throw std::domain_error("angolo troppo grande: le facce si incrociano");
         result.vertex(v).point = origin + point;

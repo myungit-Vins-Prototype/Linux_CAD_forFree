@@ -367,6 +367,13 @@ ForgeBody forgeBlend(const ForgeBody &base, const QVector<EdgePoint> &points, do
             setError(error, QStringLiteral("Uno degli spigoli o delle facce scelti non esiste in questo punto della storia: sceglili di nuovo."));
             return nullptr;
         }
+        if (base->isSheet()) {
+            edges.erase(std::remove_if(edges.begin(), edges.end(), [&](EdgeId e) { return base->isLaminar(e); }), edges.end());
+            if (edges.empty()) {
+                setError(error, QStringLiteral("Scegli uno spigolo condiviso da due facce cucite: i bordi liberi non sono raccordabili o smussabili."));
+                return nullptr;
+            }
+        }
         Body result;
         if (!chamfer || spec.mode == 0) {
             result = blendEdges(*base, edges, size, chamfer);
@@ -629,7 +636,7 @@ ForgeBody forgeExtendSheet(const ForgeBody &sheet, const QVector<EdgePoint> &poi
 
 ForgeBody forgeDraft(const ForgeBody &base, const QVector<EdgePoint> &points, const Vec3 &origin,
                      const Vec3 &direction, double angleDegrees, QString *error) {
-    if (!base || base->isSheet()) { setError(error, QStringLiteral("Lo sformo richiede un solido.")); return nullptr; }
+    if (!base) { setError(error, QStringLiteral("Il corpo da sformare non ha geometria valida.")); return nullptr; }
     try {
         Box box;
         for (VertexId v : base->vertices()) box.add(base->vertex(v).point);

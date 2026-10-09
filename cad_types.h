@@ -128,8 +128,9 @@ struct ConstraintRef {
 enum class ConstraintType {
     Coincident = 0, Horizontal, Vertical, Parallel, Perpendicular, Collinear, Tangent, Equal, Concentric, Midpoint,
     PointOnCurve, Fix, Distance, Angle, Radius, Diameter, Pattern, Symmetric, AxisRadius, AxisDiameter,
-    HorizontalDistance, VerticalDistance
+    HorizontalDistance, VerticalDistance, Quadrant
 };
+// Quadrant: first e un punto, second un cerchio/arco; value = 0/1/2/3 per 0/90/180/270 gradi.
 // HorizontalDistance / VerticalDistance: quota lungo l'asse X (o Y) dello
 // schizzo tra due punti (anche di entita' diverse) o tra gli estremi di un
 // segmento: |dx| (o |dy|) = value.

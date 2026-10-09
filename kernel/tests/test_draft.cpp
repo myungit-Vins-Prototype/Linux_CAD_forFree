@@ -1,5 +1,7 @@
 #include "fk_test.h"
 #include "fk_draft.h"
+#include "fk_sew.h"
+#include "fk_blend.h"
 #include "fk_primitives.h"
 #include "fk_precision.h"
 #include "fk_mass.h"
@@ -61,4 +63,51 @@ FK_TEST(DraftRotatedAndInvalid) {
         FK_CHECK_THROWS(draftFaces(box,{f},Vec3(),Vec3(0,0,1),0.1));
     const Body cylinder = makeCylinder(Frame3(),4,5);
     FK_CHECK_THROWS(draftFaces(cylinder,{cylinder.faces().front()},Vec3(),Vec3(0,0,1),0.1));
+}
+
+FK_TEST(SheetDraftAndBlend) {
+    const Body box = makeBox(Frame3(),20,10,5);
+    const auto walls = sides(box);
+    for (int count : {1,2,4}) {
+        // Una faccia isolata, una coppia cucita, un guscio laterale aperto.
+        std::vector<FaceId> selected;
+        for (int i = 0; i < count; ++i) selected.push_back(walls[std::size_t(i)]);
+        const Body sheet = facesAsSheet(box,selected);
+        const Body drafted = draftFaces(sheet,sheet.faces(),Vec3(),Vec3(0,0,1),0.1);
+        FK_CHECK(drafted.isSheet());
+        FK_CHECK(checkBody(drafted,{true,true}).empty());
+        FK_CHECK(tessellate(drafted,{}).failedFaces == 0);
+        for (VertexId v : sheet.vertices()) {
+            const Vec3 a = sheet.vertex(v).point, b = drafted.vertex(v).point;
+            FK_CHECK_NEAR(a.z(),b.z(),1e-8);
+            if (std::fabs(a.z()) < 1e-8) FK_CHECK(distance(a,b) < 1e-8);
+        }
+    }
+    const Body sheet = facesAsSheet(box,walls);
+    std::vector<EdgeId> seams;
+    for (EdgeId e : sheet.edges()) if (!sheet.isLaminar(e)) seams.push_back(e);
+    FK_CHECK(seams.size() == 4);
+    for (bool chamfer : {false,true}) {
+        const Body result = blendEdges(sheet,{seams.front()},0.5,chamfer);
+        FK_CHECK(result.isSheet());
+        FK_CHECK(checkBody(result,{true,true}).empty());
+        FK_CHECK(result.faces().size() == sheet.faces().size()+1);
+        FK_CHECK(tessellate(result,{}).failedFaces == 0);
+        int free = 0;
+        for (EdgeId e : result.edges()) if (result.isLaminar(e)) ++free;
+        FK_CHECK(free > 0);
+        const Body all = blendEdges(sheet,seams,0.5,chamfer);
+        FK_CHECK(all.isSheet() && checkBody(all,{true,true}).empty());
+        FK_CHECK(tessellate(all,{}).failedFaces == 0);
+    }
+    const Body drafted = draftFaces(sheet,sheet.faces(),Vec3(),Vec3(0,0,1),0.1);
+    for (bool chamfer : {false,true}) {
+        const Body result = blendEdges(drafted,{seams.front()},0.3,chamfer);
+        FK_CHECK(result.isSheet() && checkBody(result,{true,true}).empty());
+        FK_CHECK(tessellate(result,{}).failedFaces == 0);
+    }
+    FK_CHECK_THROWS(blendEdges(sheet,{seams.front()},100,false));
+    for (EdgeId e : sheet.edges()) if (sheet.isLaminar(e)) {
+        FK_CHECK_THROWS(blendEdges(sheet,{e},0.5,false)); break;
+    }
 }

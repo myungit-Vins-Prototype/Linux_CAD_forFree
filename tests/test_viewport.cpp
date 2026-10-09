@@ -31,6 +31,150 @@ static void require(bool ok, const char *message) {
 }
 class ViewportInteractionTest {
 public:
+    static void splineShapeOptions() {
+        using namespace ForgeCad;
+        const auto near = [](QPointF a, QPointF b) { return std::hypot(a.x()-b.x(), a.y()-b.y()) < 1e-9; };
+        CurveObject curve;
+        curve.tool = DrawingTool::Spline;
+        curve.controlPoints = {{0,0}, {1,3}, {2,3.1}, {12,4}, {13,0}};
+        const auto original = curve.controlPoints;
+        shapeSpline(curve, {true, false, false});
+        const auto secondStart = [&](int i) {
+            return 6.0 * (curve.controlPoints[i] - 2.0*curve.tangentHandles[i].second + curve.tangentHandles[i+1].first);
+        };
+        const auto secondEnd = [&](int i) {
+            return 6.0 * (curve.controlPoints[i+1] - 2.0*curve.tangentHandles[i+1].first + curve.tangentHandles[i].second);
+        };
+        require(curve.controlPoints == original, "regolarizzazione conserva i punti");
+        require(near(secondStart(0), {}) && near(secondEnd(3), {}), "estremi naturali");
+        for (int i = 1; i < 4; ++i) require(near(secondEnd(i-1), secondStart(i)), "continuita C2 interna");
+        const auto uniformHandles = curve.tangentHandles;
+        shapeSpline(curve, {true, true, false});
+        for (int i = 0; i < original.size(); ++i)
+            require(near(curve.tangentHandles[i].second-original[i], (uniformHandles[i].second-original[i])*0.5), "rilassamento tangenti");
+        for (bool uniform : {false, true}) for (bool relaxed : {false, true}) {
+            shapeSpline(curve, {uniform, relaxed, true});
+            for (int i = 0; i+1 < original.size(); ++i) {
+                const QPointF a = original[i], b = original[i+1];
+                QPointF previous = a;
+                for (int k = 1; k <= 100; ++k) {
+                    const double t = k/100.0, u = 1.0-t;
+                    const QPointF q = u*u*u*a + 3*u*u*t*curve.tangentHandles[i].second
+                        + 3*u*t*t*curve.tangentHandles[i+1].first + t*t*t*b;
+                    require(q.x() >= std::min(a.x(),b.x())-1e-9 && q.x() <= std::max(a.x(),b.x())+1e-9
+                        && q.y() >= std::min(a.y(),b.y())-1e-9 && q.y() <= std::max(a.y(),b.y())+1e-9, "nessun overshoot");
+                    require((q.x()-previous.x())*(b.x()-a.x()) >= -1e-9
+                        && (q.y()-previous.y())*(b.y()-a.y()) >= -1e-9, "nessuna inversione interna");
+                    previous = q;
+                }
+            }
+        }
+        curve.controlPoints = {{0,0},{2,0},{2,2},{0,2},{0,0}};
+        shapeSpline(curve, {true,false,false});
+        require(near(curve.tangentHandles.first().second, curve.tangentHandles.last().second), "chiusura C1");
+        require(near(secondStart(0), secondEnd(3)), "chiusura C2");
+        curve.controlPoints = {{0,0},{0,0},{1,0}};
+        shapeSpline(curve, {true,true,true});
+        recalculateCurve(curve);
+        require(curve.numericallyValid, "punti ripetuti gestiti");
+        curve.controlPoints = {{0,0},{2,4}};
+        shapeSpline(curve, {true,false,false});
+        require(near(curve.tangentHandles.first().second, QPointF(2.0/3.0,4.0/3.0)), "due punti: segmento rettilineo");
+
+        CadViewport viewport;
+        viewport.sketches_.append(SketchObject{}); viewport.activeSketch_ = 0;
+        viewport.setDrawingTool(DrawingTool::Spline);
+        viewport.setSplineShapeOptions({true,true,true});
+        viewport.curveControlPoints_ = original;
+        viewport.sketchMode_ = true;
+        viewport.cursorSketchPoint_ = original.last();
+        CurveObject preview;
+        require(viewport.previewCurve(preview), "anteprima spline disponibile");
+        viewport.finalizeCurve();
+        require(preview.tangentHandles == viewport.sketches_[0].curves[0].tangentHandles, "anteprima coerente con risultato");
+        require(viewport.sketches_[0].curves.size() == 1, "creazione spline regolarizzata");
+        CurveObject expected; expected.tool = DrawingTool::Spline; expected.controlPoints = original;
+        shapeSpline(expected, {true,true,true});
+        require(viewport.sketches_[0].curves[0].tangentHandles == expected.tangentHandles, "creazione usa le opzioni");
+        viewport.undo(); require(viewport.sketches_[0].curves.isEmpty(), "undo spline");
+        viewport.redo(); require(viewport.sketches_[0].curves[0].tangentHandles == expected.tangentHandles, "redo spline");
+        QTemporaryDir files;
+        const QString path = files.path()+QStringLiteral("/spline.prt");
+        require(saveDocumentFile(path,viewport.currentDocument(),false).isEmpty(), "salva spline");
+        DocumentState loaded;
+        require(loadDocumentFile(path,loaded).isEmpty(), "carica spline");
+        require(loaded.sketches[0].curves[0].tangentHandles == expected.tangentHandles, "maniglie conservate nel documento");
+        for (bool accept : {false, true}) {
+            bool found = false;
+            QTimer::singleShot(0, [&] {
+                auto *dialog = qobject_cast<QDialog *>(QApplication::activeModalWidget());
+                if (!dialog) return;
+                for (QCheckBox *box : dialog->findChildren<QCheckBox *>())
+                    if (box->text() == QStringLiteral("Uniforma la curvatura (C2)")) { box->setChecked(true); found = true; }
+                if (accept) dialog->accept(); else dialog->reject();
+            });
+            viewport.editFreeCurve(0);
+            require(found, "spunta disponibile nella modifica spline");
+            if (accept) shapeSpline(expected, {true,false,false});
+            require(viewport.sketches_[0].curves[0].tangentHandles == expected.tangentHandles, "conferma/annulla modifica spline");
+        }
+
+    }
+    static void sheetDressupFeatures() {
+        using namespace ForgeCad;
+        using namespace ForgeCad::Kernel;
+        const Body box = makeBox(Frame3(),20,10,5);
+        std::vector<FaceId> walls;
+        for (FaceId f : box.faces())
+            if (std::fabs(static_cast<const Plane &>(*box.face(f).surface).frame().zDir().z()) < 0.1) walls.push_back(f);
+        ExchangeBody exchange; exchange.name = "superfici cucite"; exchange.body = facesAsSheet(box,walls);
+        ExtrusionObject source; source.feature = BodyFeature::Imported; source.name = QStringLiteral("Superficie cucita");
+        source.importSource = QStringLiteral("superficie.step");
+        source.importData = QByteArray::fromStdString(writeStep({exchange}));
+        DocumentState state; state.extrusions = {source};
+        CadViewport v; v.loadDocument(state);
+        require(v.extrusions_[0].forgeBody && !v.extrusions_[0].solid, "importazione superficie cucita");
+        require(v.startEdgePick(false).isEmpty() && v.edgePickEligible(0), "selezione spigoli su superficie");
+        v.cancelEdgePick();
+        const auto base = v.extrusions_[0].forgeBody;
+        ExtrusionObject draft; draft.feature = BodyFeature::Draft; draft.firstBody = 0;
+        draft.draftNeutral.kind = 1; draft.draftNeutral.index = 0; draft.draftAngle = 5;
+        for (FaceId f : base->faces()) draft.offsetFaces.append(faceReference(*base,f,static_cast<const Plane &>(*base->face(f).surface).frame().origin()));
+        require(v.createBody(draft).isEmpty(), "sformo della superficie");
+        require(!v.extrusions_.last().solid && v.extrusions_.last().forgeBody->isSheet(), "sformo resta superficie");
+        v.undo(); require(v.extrusions_.size() == 1, "undo sformo superficie");
+        v.redo(); require(v.extrusions_.size() == 2 && !v.extrusions_.last().solid, "redo sformo superficie");
+        for (bool chamfer : {false,true}) {
+            const int at = v.extrusions_.size()-1;
+            const auto body = v.extrusions_[at].forgeBody;
+            EdgeId edge;
+            for (EdgeId e : body->edges()) if (!body->isLaminar(e)) { edge = e; break; }
+            require(edge.valid(), "spigolo cucito disponibile");
+            const auto &geometry = body->edge(edge);
+            const QVector<EdgePoint> edges{edgeReference(*body,edge,geometry.curve->point(0.5*(geometry.range.lo+geometry.range.hi)))};
+            v.requestBlendPreview(at,edges,0.3,chamfer);
+            QElapsedTimer timeout; timeout.start();
+            while (!v.preview_.valid && v.preview_.error.isEmpty() && timeout.elapsed() < 10000) QApplication::processEvents();
+            require(v.preview_.valid && v.preview_.geometry && v.preview_.geometry->isSheet(), "anteprima finitura superficie");
+            const QString error = v.createBlend(at,edges,0.3,chamfer,QStringLiteral("Finitura superficie"));
+            require(error.isEmpty(),error.toStdString().c_str());
+            require(!v.extrusions_.last().solid && v.extrusions_.last().forgeBody->isSheet(), "finitura conserva la superficie aperta");
+            require(checkBody(*v.extrusions_.last().forgeBody).empty(), "superficie finita valida");
+            v.undo();
+            if (chamfer) {
+                v.redo();
+                require(!v.extrusions_.last().solid, "redo smusso conserva superficie");
+            }
+            v.clearPreview();
+        }
+        QTemporaryDir files;
+        const QString path = files.path()+QStringLiteral("/superficie.prt");
+        require(saveDocumentFile(path,v.currentDocument(),false).isEmpty(), "salvataggio sformo e smusso superficie");
+        DocumentState loaded;
+        require(loadDocumentFile(path,loaded).isEmpty(), "rilettura superficie");
+        v.loadDocument(loaded);
+        require(v.extrusions_.last().forgeBody && !v.extrusions_.last().solid, "rigenerazione sformo e smusso superficie");
+    }
     static void draftFeature() {
         using namespace ForgeCad;
         using namespace ForgeCad::Kernel;
@@ -442,6 +586,55 @@ public:
         DocumentState loaded;
         require(loadDocumentFile(path, loaded).isEmpty() && loaded.extrusions.size() == 1 && loaded.extrusions.first().extrudeSurface,
                 "rilettura del flag di superficie");
+    }
+    static void midpointQuadrantConstraints() {
+        using namespace ForgeCad;
+        const auto near = [](QPointF a, QPointF b) { return QLineF(a,b).length() < 1e-6; };
+        SketchObject midpoint;
+        midpoint.segments = {{QPointF(0,0),QPointF(10,0)}, {QPointF(5,0),QPointF(5,4)}};
+        require(applicableConstraints(midpoint, {{0,0,-1},{0,1,0}}).contains(ConstraintType::Midpoint), "punto medio disponibile");
+        midpoint.geometricConstraints = {makeConstraint(midpoint,ConstraintType::Midpoint,{{0,0,-1},{0,1,0}})};
+        midpoint.segments[0].second = QPointF(20,6);
+        midpoint.geometricConstraints.append(makeConstraint(midpoint,ConstraintType::Fix,{{0,0,-1}}));
+        require(solveSketch(midpoint).ok && near(midpoint.segments[1].first,QPointF(10,3)), "punto medio segue il segmento");
+        const QPointF directions[] = {{1,0},{0,1},{-1,0},{0,-1}};
+        for (int k = 0; k < 4; ++k) {
+            CadViewport v;
+            v.sketches_ = {SketchObject()}; v.activeSketch_ = 0; v.originSnap_ = false;
+            auto &sketch = v.sketches_[0];
+            CurveObject circle; circle.tool = DrawingTool::Circle;
+            circle.controlPoints = {{10,10},{15,10}}; recalculateCurve(circle);
+            sketch.curves = {circle};
+            const QPointF p = QPointF(10,10) + 5*directions[k];
+            sketch.segments = {{p,p+QPointF(2,3)}};
+            require(applicableConstraints(sketch,{{1,0,-1},{0,0,0}}).contains(ConstraintType::Quadrant), "quadrante manuale disponibile");
+            const auto manual = makeConstraint(sketch,ConstraintType::Quadrant,{{1,0,-1},{0,0,0}});
+            require(manual.value == k, "quadrante manuale piu vicino");
+            v.recordPointCoincidences(sketch,{0,0,0},p);
+            require(sketch.geometricConstraints.size() == 1 && sketch.geometricConstraints[0].type == ConstraintType::Quadrant
+                && sketch.geometricConstraints[0].value == k, "snap crea quadrante persistente anche sul punto radiale");
+            sketch.curves[0].controlPoints = {{12,13},{12,21}};
+            sketch.geometricConstraints.append(makeConstraint(sketch,ConstraintType::Fix,{{1,0,-1}}));
+            require(solveSketch(sketch).ok && near(sketch.segments[0].first,QPointF(12,13)+8*directions[k]), "quadrante segue centro e raggio senza ruotare");
+            QTemporaryDir files;
+            const QString path = files.path()+QStringLiteral("/quadrante.prt");
+            require(saveDocumentFile(path,v.currentDocument(),false).isEmpty(), "salva quadrante");
+            DocumentState loaded;
+            require(loadDocumentFile(path,loaded).isEmpty() && loaded.sketches[0].geometricConstraints[0].type == ConstraintType::Quadrant
+                && loaded.sketches[0].geometricConstraints[0].value == k, "rilettura quadrante e direzione");
+        }
+        CurveObject arc; arc.tool = DrawingTool::Arc;
+        const auto polar = [](double degrees) { const double a = degrees*M_PI/180; return QPointF(5*std::cos(a),5*std::sin(a)); };
+        arc.controlPoints = {QPointF(),polar(350),polar(100)};
+        auto quadrants = curveQuadrants(arc);
+        require(quadrants.size() == 2 && quadrants[0].first == 0 && quadrants[1].first == 1, "quadranti arco attraverso zero");
+        SketchObject sketch; sketch.curves = {arc}; sketch.segments = {{QPointF(-5,0),QPointF(-6,1)}};
+        auto c = makeConstraint(sketch,ConstraintType::Quadrant,{{0,0,0},{1,0,-1}});
+        require(c.value == 1, "quadrante manuale solo sul tratto presente");
+        sketch.geometricConstraints = {c,makeConstraint(sketch,ConstraintType::Fix,{{1,0,-1}})};
+        require(solveSketch(sketch).ok && near(sketch.segments[0].first,QPointF(0,5)), "risoluzione quadrante arco");
+        arc.controlPoints = {QPointF(),polar(10),polar(80)}; sketch.curves = {arc};
+        require(curveQuadrants(arc).isEmpty() && !applicableConstraints(sketch,{{0,0,0},{1,0,-1}}).contains(ConstraintType::Quadrant), "nessun quadrante fuori arco");
     }
     static void automaticSnapConstraints() {
         using namespace ForgeCad;
@@ -1338,6 +1531,29 @@ public:
     }
     // Riproduzione del raccordo sui contorni delle facce di un documento.
     // Salva solo dopo aver verificato risultato, chiusura e rilettura della copia.
+    static void regularizeSplineDocument(const QStringList &args) {
+        using namespace ForgeCad;
+        require(args.size() >= 2 && QFileInfo(args[0]).absoluteFilePath() != QFileInfo(args[1]).absoluteFilePath(), "input e copia distinti");
+        DocumentState state;
+        require(loadDocumentFile(args[0],state).isEmpty(), "lettura documento");
+        require(!state.sketches.isEmpty() && !state.sketches[0].curves.isEmpty(), "spline del profilo");
+        auto &sketch = state.sketches[0];
+        auto &curve = sketch.curves[0];
+        for (const auto &c : sketch.geometricConstraints) std::cout << describeConstraint(sketch,c).toStdString() << std::endl;
+        require(curve.tool == DrawingTool::Spline, "profilo spline");
+        shapeSpline(curve,{true,false,false});
+        const SolveResult solved = solveSketch(sketch);
+        require(solved.ok, "vincoli compatibili con la spline regolarizzata");
+        recalculateCurve(curve);
+        for (auto &body : state.extrusions) { body.forgeBody.reset(); body.display = {}; }
+        CadViewport v; v.loadDocument(state);
+        for (int i = 0; i < v.extrusions_.size(); ++i) {
+            const auto &body = v.extrusions_[i];
+            std::cout << "B" << i << " " << body.error.toStdString() << std::endl;
+            require(body.error.isEmpty(), "rigenerazione della storia dopo regolarizzazione");
+        }
+        require(saveDocumentFile(args[1],v.currentDocument()).isEmpty(), "salvataggio copia regolarizzata");
+    }
     static void blendDocumentFaces(const QStringList &args) {
         using namespace ForgeCad;
         using namespace ForgeCad::Kernel;
@@ -1397,6 +1613,8 @@ public:
         const auto result = viewport.extrusions_.back().forgeBody;
         require(bool(result) && forgeBlendHasEffect(base, result), "raccordi effettivamente costruiti");
         require(checkBody(*result).empty(), "B-rep raccordato valido");
+        const auto mesh = tessellate(*result, {});
+        require(mesh.failedFaces == 0 && mesh.faces.size() == result->faces().size(), "tutte le facce raccordate visualizzabili");
         for (const auto edge : result->edges()) require(!result->isLaminar(edge), "corpo raccordato chiuso");
         require(saveDocumentFile(args[1], viewport.documentState()).isEmpty(), "salvataggio copia raccordata");
         DocumentState saved;
@@ -4658,6 +4876,9 @@ int main(int argc, char **argv) {
                 app.arguments().value(argument + 2).toInt(), app.arguments().value(argument + 3).toInt(),
                 app.arguments().value(argument + 4, QStringLiteral("1")).toDouble());
         }
+        else if (app.arguments().contains(QStringLiteral("--regularize-spline-document"))) {
+            ViewportInteractionTest::regularizeSplineDocument(app.arguments().mid(app.arguments().indexOf(QStringLiteral("--regularize-spline-document")) + 1));
+        }
         else if (app.arguments().contains(QStringLiteral("--blend-document-faces"))) {
             const int argument = app.arguments().indexOf(QStringLiteral("--blend-document-faces"));
             ViewportInteractionTest::blendDocumentFaces(app.arguments().mid(argument + 1));
@@ -4685,6 +4906,9 @@ int main(int argc, char **argv) {
             ViewportInteractionTest::offsetLofts(app.arguments().mid(app.arguments().indexOf(QStringLiteral("--offset-lofts")) + 1));
         else if (app.arguments().contains(QStringLiteral("--loft-corner")))
             ViewportInteractionTest::loftCorner(QStringLiteral("File_Esempio/prova con loft.prt"));
+        else if (app.arguments().contains(QStringLiteral("--sheet-dressup"))) ViewportInteractionTest::sheetDressupFeatures();
+        else if (app.arguments().contains(QStringLiteral("--midpoint-quadrant"))) ViewportInteractionTest::midpointQuadrantConstraints();
+        else if (app.arguments().contains(QStringLiteral("--spline-shape"))) ViewportInteractionTest::splineShapeOptions();
         else ViewportInteractionTest::run(app.arguments().contains(QStringLiteral("--gl")));
     }
     catch (const std::exception &e) { std::cerr << e.what() << std::endl; return 1; }

@@ -1742,3 +1742,21 @@ FK_TEST(BlendApplicatoreRevolutionEnds) {
     }
     FK_CHECK(writeBodyBinary(body) == original);
 }
+
+FK_TEST(BlendMouseInternalNormalJump) {
+    std::ifstream in(std::string(FORGECAD_SOURCE_DIR) + "/kernel/tests/data/mouse_sewn.body", std::ios::binary);
+    FK_CHECK(bool(in));
+    std::stringstream bytes; bytes << in.rdbuf();
+    const Body source = readBodyBinary(bytes.str());
+    FK_CHECK(checkBody(source).empty());
+    FK_CHECK(tessellate(source, {}).failedFaces == 0);
+    for (double radius : {1.0, 2.0}) {
+        bool rejected = false;
+        try { (void)blendEdges(source, {EdgeId(7)}, radius, false); }
+        catch (const std::domain_error &error) {
+            rejected = std::string(error.what()).find("discontinuita' interna") != std::string::npos;
+        }
+        FK_CHECK(rejected);
+    }
+    FK_CHECK(writeBodyBinary(source) == bytes.str());
+}

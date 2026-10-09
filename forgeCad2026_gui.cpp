@@ -373,6 +373,7 @@ public:
     }
     const BackgroundSettings &background() const { return background_; }
     void setBackground(const BackgroundSettings &background) { background_ = background; update(); }
+    void setSplineShapeOptions(const ForgeCad::SplineShapeOptions &options) { splineShapeOptions_ = options; update(); }
     void setDrawingTool(DrawingTool tool) {
         const bool changed = drawingTool_ != tool;
         drawingTool_ = tool;
@@ -2192,13 +2193,13 @@ public:
         // Il corpo selezionato vale anche se nascosto (la base di un raccordo da modificare).
         if (!helix && selection_.kind == SceneObjectKind::Extrusion && selection_.index >= 0 && selection_.index < extrusions_.size()) {
             const ExtrusionObject &selected = extrusions_.at(selection_.index);
-            if (isShapeBody(selected) && selected.solid != extend) edgePickBody_ = selection_.index;
+            if (isShapeBody(selected) && (!extend || !selected.solid)) edgePickBody_ = selection_.index;
         }
         bool any = edgePickBody_ >= 0;
         for (int index = 0; index < extrusions_.size() && !any; ++index) any = edgePickEligible(index);
         if (!any) return helix ? QStringLiteral("Nella scena non ci sono corpi visibili con spigoli circolari o facce cilindriche.")
                      : extend ? QStringLiteral("Nella scena non ci sono superfici (estrusioni di profili aperti) visibili da estendere.")
-                              : QStringLiteral("Nella scena non ci sono solidi visibili da raccordare.");
+                              : QStringLiteral("Nella scena non ci sono solidi o superfici cucite visibili da raccordare.");
         edgePicking_ = true;
         pickedEdges_.clear();
         pickedFaces_.clear();
@@ -2268,7 +2269,7 @@ public:
             if (!preview_.valid || !preview_.geometry)
                 return preview_.error.isEmpty() ? QStringLiteral("Attendi che l'anteprima sia pronta.") : preview_.error;
             blend.forgeBody = preview_.geometry;
-            blend.solid = true;
+            blend.solid = !blend.forgeBody->isSheet();
             blend.display = preview_.resultDisplay;
             if (blend.display.vertices.isEmpty() && blend.display.edges.isEmpty())
                 tessellateGeometry(blend, tessellationQuality_, blend.display);
@@ -4799,17 +4800,19 @@ protected:
     // su un cerchio o arco.
     void recordPointCoincidences(SketchObject &sketch, const ConstraintRef &here, const QPointF &point) {
         const double tolerance = ForgeCad::kSketchConnectionTolerance;
-        const auto add = [&](ConstraintType type, const ConstraintRef &b) {
+        const auto add = [&](ConstraintType type, const ConstraintRef &b, double value = 0.0) {
             SketchConstraint c;
             c.type = type;
             c.first = here;
             c.second = b;
+            c.value = value;
             for (const auto &existing : sketch.geometricConstraints)
                 if (existing.type == type && existing.first == here && existing.second == b) return;
             sketch.geometricConstraints.append(c);
         };
         const auto self = [&](int kind, int element) { return here.kind == kind && here.element == element; };
         bool onPoint = false;
+        QSet<int> quadrantCurves;
         if (originSnap_ && geometrySnap_ && pointDistance(point, QPointF()) <= tolerance) {
             add(ConstraintType::Coincident, {2, 0, -1});
             onPoint = true;
@@ -4826,6 +4829,14 @@ protected:
         }
         for (int curve = 0; curve < sketch.curves.size(); ++curve) {
             if (self(1, curve)) continue;
+            for (const auto &q : ForgeCad::curveQuadrants(sketch.curves.at(curve))) {
+                if (pointDistance(point, q.second) <= tolerance) {
+                    add(ConstraintType::Quadrant, {1, curve, -1}, q.first);
+                    quadrantCurves.insert(curve);
+                    break;
+                }
+            }
+            if (quadrantCurves.contains(curve)) continue;
             for (int k = 0; k < sketch.curves.at(curve).controlPoints.size(); ++k)
                 if (pointDistance(sketch.curves.at(curve).controlPoints.at(k), point) <= tolerance) {
                     add(ConstraintType::Coincident, {1, curve, k});
@@ -4841,7 +4852,7 @@ protected:
                 {0, other, -1});
         }
         for (int curve = 0; curve < sketch.curves.size(); ++curve) {
-            if (self(1, curve)) continue;
+            if (self(1, curve) || quadrantCurves.contains(curve)) continue;
             const CurveObject &c = sketch.curves.at(curve);
             if (c.tool == DrawingTool::Polygon) continue;
             try {
@@ -5003,7 +5014,10 @@ protected:
         case DrawingTool::Spline:
         case DrawingTool::Nurbs:
             if (pointDistance(curve.controlPoints.last(), cursor) > ForgeCad::kSketchConnectionTolerance) curve.controlPoints.append(cursor);
-            if (curve.tool == DrawingTool::Spline) ForgeCad::initializeTangentHandles(curve);
+            if (curve.tool == DrawingTool::Spline) {
+                ForgeCad::initializeTangentHandles(curve);
+                ForgeCad::shapeSpline(curve, splineShapeOptions_);
+            }
             break;
         case DrawingTool::ThreePointArc:
         case DrawingTool::TangentArc: {
@@ -5515,13 +5529,13 @@ protected:
                     faceSketch = menu.addAction(QStringLiteral("Nuovo schizzo sulla faccia"));
                     faceSketch->setIcon(ForgeCad::commandIcon(QStringLiteral("faceSketch")));
                     faceSketch->setEnabled(face.planar);
-                    const bool solid = extrusions_.at(hit.index).solid && !face.edges.isEmpty() && edgePickFinished_;
+                    const bool canBlend = !face.edges.isEmpty() && edgePickFinished_;
                     faceFillet = menu.addAction(QStringLiteral("Raccordo dei bordi della faccia..."));
                     faceChamfer = menu.addAction(QStringLiteral("Smusso dei bordi della faccia..."));
                     faceFillet->setIcon(ForgeCad::commandIcon(QStringLiteral("fillet")));
                     faceChamfer->setIcon(ForgeCad::commandIcon(QStringLiteral("chamfer")));
-                    faceFillet->setEnabled(solid);
-                    faceChamfer->setEnabled(solid);
+                    faceFillet->setEnabled(canBlend);
+                    faceChamfer->setEnabled(canBlend);
                     menu.addSeparator();
                 }
                 QAction *meshColor = hit.kind == SceneObjectKind::Extrusion && modelBodyIndexForFeature(hit.index) >= 0
@@ -7136,8 +7150,8 @@ private:
             }
             case BodyFeature::Draft: {
                 const ExtrusionObject *base = operand(body.firstBody);
-                if (!base || !isShapeBody(*base) || !base->solid) {
-                    body.error = QStringLiteral("Il solido da sformare non esiste piu'.");
+                if (!base || !isShapeBody(*base)) {
+                    body.error = QStringLiteral("Il corpo da sformare non esiste piu'.");
                     return;
                 }
                 ForgeCad::ResolvedRef neutral;
@@ -7145,7 +7159,7 @@ private:
                 if (!neutral.hasPlane) { body.error = QStringLiteral("Scegli un piano neutro o una faccia piana."); return; }
                 body.forgeBody = ForgeCad::forgeDraft(base->forgeBody, body.offsetFaces, neutral.point,
                     neutral.direction * (body.draftReverse ? -1.0 : 1.0), body.draftAngle, &body.error);
-                body.solid = hasGeometry(body);
+                body.solid = body.forgeBody && !body.forgeBody->isSheet();
                 return;
             }
             case BodyFeature::Shell: {
@@ -7275,7 +7289,7 @@ private:
                         }
                     }
                 }
-                body.solid = hasGeometry(body);
+                body.solid = body.forgeBody && !body.forgeBody->isSheet();
                 return;
             }
             case BodyFeature::Primitive:
@@ -7886,6 +7900,24 @@ private:
             auto *note = new QLabel(QStringLiteral("Nelle NURBS la tangenza e' determinata dal poligono dei punti di controllo."), &dialog);
             note->setWordWrap(true); form->addRow(note);
         }
+        auto *uniform = new QCheckBox(QStringLiteral("Uniforma la curvatura (C2)"), &dialog);
+        auto *relaxed = new QCheckBox(QStringLiteral("Rilassa la curva"), &dialog);
+        auto *limited = new QCheckBox(QStringLiteral("Limita le oscillazioni"), &dialog);
+        if (work.tool == DrawingTool::Spline) {
+            form->addRow(uniform); form->addRow(relaxed); form->addRow(limited);
+            auto *note = new QLabel(QStringLiteral("Le spunte ricalcolano tutte le maniglie alla conferma, mantenendo i punti di passaggio. "
+                "Rilassamento e limitazione mantengono la tangenza, ma non la continuita' C2. "
+                "La limitazione evita inversioni di X/Y nei singoli tratti; i flessi necessari restano."), &dialog);
+            note->setWordWrap(true); form->addRow(note);
+            const auto enableManual = [=] {
+                const bool manual = !(uniform->isChecked() || relaxed->isChecked() || limited->isChecked());
+                linked->setEnabled(manual); inLength->setEnabled(manual); outLength->setEnabled(manual);
+            };
+            for (QCheckBox *box : {uniform, relaxed, limited})
+                QObject::connect(box, &QCheckBox::toggled, &dialog, enableManual);
+        } else {
+            uniform->hide(); relaxed->hide(); limited->hide();
+        }
         bool loading = false;
         const auto load = [&] {
             const int k = points->currentRow(); if (k < 0 || k >= work.controlPoints.size()) return;
@@ -7966,7 +7998,10 @@ private:
         QObject::connect(buttons, &QDialogButtonBox::accepted, &dialog, &QDialog::accept);
         QObject::connect(buttons, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
         form->addRow(buttons); refill(); load();
-        if (dialog.exec() == QDialog::Accepted) commitFreeCurveEdit(curveIndex, work, origins);
+        if (dialog.exec() == QDialog::Accepted) {
+            ForgeCad::shapeSpline(work, {uniform->isChecked(), relaxed->isChecked(), limited->isChecked()});
+            commitFreeCurveEdit(curveIndex, work, origins);
+        }
     }
 
     SketchElementSelection findSketchElement(const QPointF &point) const {
@@ -8137,6 +8172,7 @@ private:
         CurveObject curve;
         curve.tool = drawingTool_;
         curve.controlPoints = curveControlPoints_;
+        ForgeCad::shapeSpline(curve, splineShapeOptions_);
         ForgeCad::recalculateCurve(curve, tessellationQuality_);
         if (curve.numericallyValid) {
             recordUndo();
@@ -8551,17 +8587,11 @@ private:
         double best = tolerance;
         bool found = false;
         for (const CurveObject &curve : sketch.curves) {
-            if ((curve.tool != DrawingTool::Circle && curve.tool != DrawingTool::Arc) || curve.controlPoints.size() < 2) continue;
-            const QPointF center = curve.controlPoints.at(0);
-            const double r = pointDistance(center, curve.controlPoints.at(1));
-            if (r <= 0.0) continue;
-            const QPointF candidates[4] = {center + QPointF(r, 0.0), center + QPointF(0.0, r), center - QPointF(r, 0.0), center - QPointF(0.0, r)};
-            for (int k = 0; k < 4; ++k) {
-                if (curve.tool == DrawingTool::Arc && !onArc(curve, k * M_PI_2)) continue;
-                const double d = pointDistance(point, candidates[k]);
+            for (const auto &candidate : ForgeCad::curveQuadrants(curve)) {
+                const double d = pointDistance(point, candidate.second);
                 if (d < best) {
                     best = d;
-                    quadrant = candidates[k];
+                    quadrant = candidate.second;
                     found = true;
                 }
             }
@@ -10034,7 +10064,7 @@ private:
         if (edgePickBody_ < 0)
             return QStringLiteral("%1: clicca %2, Esc annulla")
                 .arg(edgePickExtend_ ? QStringLiteral("Estensione") : edgePickChamfer_ ? QStringLiteral("Smusso") : QStringLiteral("Raccordo"))
-                .arg(edgePickExtend_ ? QStringLiteral("i bordi di una superficie") : QStringLiteral("gli spigoli di un solido (o una sua faccia per tutti i suoi bordi)"));
+                .arg(edgePickExtend_ ? QStringLiteral("i bordi di una superficie") : QStringLiteral("gli spigoli di un solido o di superfici cucite (anche selezionando una faccia)"));
         if (edgePickExtend_)
             return QStringLiteral("Estensione: clicca i bordi di \"%1\" da estendere (%2 scelti), Invio conferma, Esc annulla%3")
                 .arg(extrusions_.value(edgePickBody_).name)
@@ -10132,13 +10162,13 @@ private:
         }
     }
     // Il corpo puo' dare gli spigoli della scelta: visibile (o quello gia' scelto),
-    // un solido per raccordi e smussi, una superficie per l'estensione.
+    // un solido o una superficie cucita per raccordi/smussi, una superficie per l'estensione.
     bool edgePickEligible(int index) const {
         if (index < 0 || index >= extrusions_.size()) return false;
         const ExtrusionObject &body = extrusions_.at(index);
         if (!isShapeBody(body) || (!body.visible && index != edgePickBody_)) return false;
         if (edgePickHelix_) return true;
-        return edgePickExtend_ ? !body.solid : body.solid;
+        return !edgePickExtend_ || !body.solid;
     }
     struct ProjectedEdges {
         BodyDisplay source;
@@ -11727,6 +11757,7 @@ private:
     bool wheelZoomEnabled_ = true;
     bool hasPendingPoint_ = false, referencePlanesVisible_ = true;
     DrawingTool drawingTool_ = DrawingTool::Select;
+    ForgeCad::SplineShapeOptions splineShapeOptions_;
     SnapKind lastSnapKind_ = SnapKind::None;
     QString lastSnapNote_;   // etichetta particolare dell'aggancio (origine, quadrante, su curva)
     int lastSnapCurve_ = -1; // curva su cui si e' agganciato il punto (aggancio "su curva")
@@ -15974,10 +16005,10 @@ static bool booleanDialog(QMainWindow *parent, CadViewport *viewport, const QStr
 static bool draftDialog(QMainWindow *window, CadViewport *viewport, const QString &title, int replaced,
                         const ExtrusionObject &initial, const std::function<QString(const ExtrusionObject &)> &apply) {
     QVector<int> candidates = viewport->resultBodiesBefore(replaced);
-    candidates.erase(std::remove_if(candidates.begin(), candidates.end(), [&](int i) { return !viewport->extrusions().at(i).solid; }), candidates.end());
+    candidates.erase(std::remove_if(candidates.begin(), candidates.end(), [&](int i) { return !viewport->extrusions().at(i).forgeBody; }), candidates.end());
     if (initial.firstBody >= 0 && initial.firstBody < viewport->extrusions().size()
         && (replaced < 0 || initial.firstBody < replaced) && !candidates.contains(initial.firstBody)) candidates.append(initial.firstBody);
-    if (candidates.isEmpty()) { QMessageBox::information(window, title, QStringLiteral("Crea prima un solido da sformare.")); return false; }
+    if (candidates.isEmpty()) { QMessageBox::information(window, title, QStringLiteral("Crea prima un solido o una superficie da sformare.")); return false; }
     ExtrusionObject definition = initial;
     definition.feature = BodyFeature::Draft;
     definition.operation = -1;
@@ -16007,7 +16038,7 @@ static bool draftDialog(QMainWindow *window, CadViewport *viewport, const QStrin
     form->addRow(QStringLiteral("Facce:"), faces); form->addRow(faceCount); form->addRow(clear);
     form->addRow(QStringLiteral("Piano neutro:"), neutralBox); form->addRow(neutralPick); form->addRow(neutralLabel);
     form->addRow(QStringLiteral("Angolo:"), angle); form->addRow(reverse);
-    form->addRow(wrappedNote(QStringLiteral("Il piano neutro resta fisso. L'estrazione segue la sua normale: un angolo positivo restringe il corpo in quella direzione, uno negativo lo allarga. Supportati solidi convessi con facce piane e bordi rettilinei."), &dialog));
+    form->addRow(wrappedNote(QStringLiteral("Il piano neutro resta fisso. L'estrazione segue la sua normale: un angolo positivo restringe il corpo in quella direzione, uno negativo lo allarga. Supportati solidi convessi e superfici cucite con facce piane e bordi rettilinei. I bordi aperti conservano la quota lungo l’estrazione."), &dialog));
     form->addRow(status);
     auto *buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dialog); form->addRow(buttons);
     PreviewScope scope(viewport, dialog, form, replaced);
@@ -19138,7 +19169,7 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
     QAction *filletAction = functionsMenu->addAction(QStringLiteral("Raccordo spigoli..."));
     QAction *chamferAction = functionsMenu->addAction(QStringLiteral("Smusso spigoli..."));
     QAction *draftAction = functionsMenu->addAction(QStringLiteral("Sformo facce..."));
-    draftAction->setToolTip(QStringLiteral("Inclina le facce piane di un solido convesso rispetto a un piano neutro"));
+    draftAction->setToolTip(QStringLiteral("Inclina le facce piane di solidi convessi o superfici rispetto a un piano neutro"));
     QAction *shellAction = functionsMenu->addAction(QStringLiteral("Svuota..."));
     shellAction->setToolTip(QStringLiteral("Svuota un solido lasciando pareti di spessore costante; le facce scelte si tolgono e fanno l'apertura"));
     QAction *threadAction = functionsMenu->addAction(QStringLiteral("Filettatura automatica..."));
@@ -20261,6 +20292,21 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
     QAction *lineTool = addTool(QStringLiteral("Linea"), DrawingTool::Line, false);
     QAction *polylineTool = addTool(QStringLiteral("Polilinea"), DrawingTool::Polyline, false);
     QAction *splineTool = addTool(QStringLiteral("Spline"), DrawingTool::Spline, false);
+    auto *splineOptionsMenu = toolMenu->addMenu(QStringLiteral("Opzioni spline"));
+    auto *uniformSpline = splineOptionsMenu->addAction(QStringLiteral("Uniforma la curvatura (C2)"));
+    auto *relaxedSpline = splineOptionsMenu->addAction(QStringLiteral("Rilassa la curva"));
+    auto *limitedSpline = splineOptionsMenu->addAction(QStringLiteral("Limita le oscillazioni"));
+    uniformSpline->setToolTip(QStringLiteral("Curvatura continua tra i tratti; i punti di passaggio restano fissi"));
+    relaxedSpline->setToolTip(QStringLiteral("Accorcia le tangenti per ridurre le gobbe; combinabile con le altre spunte, senza garanzia C2"));
+    limitedSpline->setToolTip(QStringLiteral("Evita inversioni di X/Y nei singoli tratti; non elimina flessi necessari e non garantisce C2"));
+    for (QAction *option : {uniformSpline, relaxedSpline, limitedSpline}) {
+        option->setCheckable(true);
+        connect(option, &QAction::toggled, this, [=] {
+            viewport->setSplineShapeOptions({uniformSpline->isChecked(), relaxedSpline->isChecked(), limitedSpline->isChecked()});
+        });
+    }
+    splineTool->setToolTip(QStringLiteral("Spline per punti. Spunte in Schizzo > Strumento geometrico > Opzioni spline; "
+                                        "per curve esistenti: Selezione, clic destro > Modifica punti e maniglie"));
     QAction *nurbsTool = addTool(QStringLiteral("NURBS"), DrawingTool::Nurbs, false);
     QAction *circleTool = addTool(QStringLiteral("Cerchio"), DrawingTool::Circle, false);
     QAction *arcTool = addTool(QStringLiteral("Arco (centro, inizio, fine)"), DrawingTool::Arc, false);
@@ -20545,6 +20591,18 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
         constraintPanel->show();
         constraintPanel->raise();
     });
+    auto *pointConstraints = sketchMenu->addMenu(QStringLiteral("Vincoli di punto"));
+    for (ConstraintType type : {ConstraintType::Midpoint, ConstraintType::Quadrant}) {
+        auto *action = pointConstraints->addAction(ForgeCad::constraintName(type));
+        const QString help = type == ConstraintType::Midpoint
+            ? QStringLiteral("Seleziona un punto con Ctrl+clic e un segmento con Maiusc+clic, poi applica Punto medio.")
+            : QStringLiteral("Seleziona un punto con Ctrl+clic e un cerchio/arco con Maiusc+clic: viene scelto il quadrante presente piu' vicino.");
+        action->setToolTip(help);
+        connect(action, &QAction::triggered, this, [this, viewport, type, help] {
+            const QString error = viewport->addConstraint(type);
+            if (!error.isEmpty()) statusBar()->showMessage(error + QLatin1Char(' ') + help, 10000);
+        });
+    }
     constraintPanel_ = constraintPanel;
     QAction *exitSketch = sketchMenu->addAction(QStringLiteral("Esci dalla modalita schizzo"));
     // Nello schizzo il tasto destro trascinato ruota la vista; questo la rimette perpendicolare al piano.

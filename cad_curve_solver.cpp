@@ -157,6 +157,28 @@ std::vector<ProfileSegment> curveGeometry(const CurveObject &curve) {
     return result;
 }
 
+QVector<QPair<int, QPointF>> curveQuadrants(const CurveObject &curve) {
+    QVector<QPair<int, QPointF>> result;
+    const auto &p = curve.controlPoints;
+    if ((curve.tool != DrawingTool::Circle && curve.tool != DrawingTool::Arc) || p.size() < 2
+        || (curve.tool == DrawingTool::Arc && p.size() < 3)) return result;
+    const double pi = 3.14159265358979323846;
+    const double r = std::hypot(p[1].x()-p[0].x(), p[1].y()-p[0].y());
+    if (!(r > 0.0)) return result;
+    const QPointF offsets[] = {{r,0},{0,r},{-r,0},{0,-r}};
+    for (int k = 0; k < 4; ++k) {
+        if (curve.tool == DrawingTool::Arc) {
+            const double start = std::atan2(p[1].y()-p[0].y(), p[1].x()-p[0].x());
+            double sweep = std::atan2(p[2].y()-p[0].y(), p[2].x()-p[0].x()) - start;
+            while (sweep <= 0.0) sweep += 2*pi;
+            double offset = std::fmod(k*pi/2-start+2*pi, 2*pi);
+            if (offset > sweep+1e-12) continue;
+        }
+        result.append({k, p[0]+offsets[k]});
+    }
+    return result;
+}
+
 void initializeTangentHandles(CurveObject &curve) {
     const QVector<bool> linked = curve.tangentLinked;
     curve.tangentHandles.clear();
@@ -170,6 +192,54 @@ void initializeTangentHandles(CurveObject &curve) {
     curve.tangentLinked.fill(false, curve.controlPoints.size());
     for (int index = 0; index < qMin(linked.size(), curve.tangentLinked.size()); ++index)
         curve.tangentLinked[index] = linked.at(index);
+}
+
+void shapeSpline(CurveObject &curve, const SplineShapeOptions &options) {
+    if (curve.tool != DrawingTool::Spline || curve.controlPoints.size() < 2
+        || !(options.uniform || options.relaxed || options.limitOvershoot)) return;
+    const auto &p = curve.controlPoints;
+    // Solo estremi esattamente coincidenti: non spostare punti o vincoli.
+    const bool closed = p.size() > 3 && p.first() == p.last();
+    const int n = int(p.size()) - (closed ? 1 : 0);
+    QVector<QPointF> d(n), rhs(n);
+    for (int i = 0; i < n; ++i) {
+        const QPointF before = p.at(closed ? (i + n - 1) % n : qMax(0, i - 1));
+        const QPointF after = p.at(closed ? (i + 1) % n : qMin(n - 1, i + 1));
+        d[i] = after - before;
+        rhs[i] = 3.0 * d[i];
+    }
+    if (options.uniform) {
+        // Sistema strettamente diagonalmente dominante: 64 iterazioni di
+        // Gauss-Seidel portano l'errore sotto la precisione double. O(n),
+        // anche per la giunzione periodica delle spline chiuse.
+        for (int pass = 0; pass < 64; ++pass)
+            for (int i = 0; i < n; ++i) {
+                QPointF value = rhs.at(i);
+                if (closed || i > 0) value -= d.at((i + n - 1) % n);
+                if (closed || i + 1 < n) value -= d.at((i + 1) % n);
+                d[i] = value / (!closed && (i == 0 || i == n - 1) ? 2.0 : 4.0);
+            }
+    }
+    if (options.relaxed) for (QPointF &tangent : d) tangent *= 0.5;
+    if (options.limitOvershoot) {
+        // Ogni coordinata dei due poli interni resta ordinata tra gli estremi:
+        // niente inversioni/overshoot di X o Y all'interno del singolo tratto.
+        const auto limit = [](double value, double delta) {
+            if (delta == 0.0 || value * delta <= 0.0) return 0.0;
+            return std::copysign(std::min(std::abs(value), 1.5 * std::abs(delta)), delta);
+        };
+        for (int i = 0; i < (closed ? n : n - 1); ++i) {
+            const int j = (i + 1) % n;
+            const QPointF delta = p.at(j) - p.at(i);
+            for (int k : {i, j}) d[k] = QPointF(limit(d.at(k).x(), delta.x()), limit(d.at(k).y(), delta.y()));
+        }
+    }
+    curve.tangentHandles.clear();
+    for (int i = 0; i < p.size(); ++i) {
+        const QPointF handle = d.at(i % n) / 3.0;
+        curve.tangentHandles.append(qMakePair(p.at(i) - handle, p.at(i) + handle));
+    }
+    curve.tangentLinked.fill(true, p.size());
 }
 
 void sampleCurve(const Curve<2> &curve, const Interval &range, double angular, double deflection, QVector<QPointF> &out) {

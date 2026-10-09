@@ -730,7 +730,9 @@ void propagateTangent(const Body &body, std::vector<EdgeId> &edges, std::vector<
 }
 
 Body blendEdgesWith(const Body &body, const std::vector<EdgeId> &selected, double size, bool chamfer, const std::vector<ChamferSides> *selectedSides) {
-    if (body.isSheet()) throw std::domain_error("blendEdges: solo solidi");
+    for (EdgeId edge : selected)
+        if (!body.contains(edge) || body.isLaminar(edge))
+            throw std::domain_error("blendEdges: scegli uno spigolo condiviso da due facce cucite, non un bordo libero");
     if (!(size > kLinearResolution)) throw std::domain_error("blendEdges: raggio o distanza non validi");
     std::vector<EdgeId> edges = selected;
     std::vector<ChamferSides> propagatedSides;
@@ -765,6 +767,10 @@ Body blendEdgesWith(const Body &body, const std::vector<EdgeId> &selected, doubl
         if (sharp.empty()) throw std::domain_error("blendEdges: gli spigoli scelti stanno tra facce tangenti (niente da raccordare)");
         if (sharp.size() < edges.size()) return blendEdgesWith(body, sharp, size, chamfer, sides ? &sharpSides : nullptr);
     }
+
+    // Le superfici aperte usano la chirurgia locale: nessuna booleana di
+    // volume e nessun coperchio aggiunto alle frontiere libere.
+    if (body.isSheet()) return blendSurfaceChains(body, edges, size, chamfer, sides);
 
     // Bordi di forma libera (ne' rette ne' cerchi): catene sulle facce piane
     // (fk_blend_loop), con i segmenti e gli archi che li continuano nel

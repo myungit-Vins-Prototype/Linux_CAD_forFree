@@ -5,7 +5,7 @@
 
 #include "fk_topology.h"
 
-// Raccordi (fillet) e smussi (chamfer) sugli spigoli di un solido.
+// Raccordi (fillet) e smussi (chamfer) sugli spigoli condivisi di solidi o superfici cucite.
 //
 // Ogni spigolo si tratta nella sua sezione: il piano normale a uno spigolo
 // rettilineo, o il semipiano per l'asse di uno spigolo circolare (chiuso o

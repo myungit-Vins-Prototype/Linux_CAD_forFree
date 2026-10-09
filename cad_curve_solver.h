@@ -22,6 +22,20 @@ std::vector<Kernel::ProfileSegment> curveGeometry(const CurveObject &curve);
 // Maniglie tangenti iniziali (solo spline): 1/3 della corda tra i vicini.
 void initializeTangentHandles(CurveObject &curve);
 
+// Quadranti esatti presenti sul cerchio/arco: indice 0..3 e posizione.
+QVector<QPair<int, QPointF>> curveQuadrants(const CurveObject &curve);
+
+struct SplineShapeOptions {
+    bool uniform = false;
+    bool relaxed = false;
+    bool limitOvershoot = false;
+};
+// Ricalcola le maniglie senza spostare i punti. Uniform: spline cubica naturale
+// (periodica se chiusa); relaxed: dimezza le tangenti; limitOvershoot: limita
+// le maniglie al rettangolo di ogni tratto. Le ultime due opzioni conservano C1,
+// ma non C2. Nessuna opzione elimina i flessi imposti dai punti di passaggio.
+void shapeSpline(CurveObject &curve, const SplineShapeOptions &options);
+
 // Punti di visualizzazione di un tratto: suddivisione finche' la corda si
 // scosta dalla curva meno di `deflection` e la tangente gira meno di `angular`.
 void sampleCurve(const Kernel::Curve<2> &curve, const Kernel::Interval &range, double angular, double deflection, QVector<QPointF> &out);

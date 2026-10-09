@@ -615,6 +615,18 @@ void equations(const System &s, const SketchConstraint &c, QVector<double> &out,
         out << d.x() << d.y();
         return;
     }
+    case ConstraintType::Quadrant: {
+        QPointF center;
+        double r;
+        s.circle(c.second, center, r);
+        const QPointF directions[] = {{1,0},{0,1},{-1,0},{0,-1}};
+        const QPointF target = center + r * directions[int(c.value)];
+        const QPointF d = s.refPoint(c.first) - target;
+        out << d.x() << d.y();
+        if (sketch.curves.at(c.second.element).tool == DrawingTool::Arc)
+            out << curveSignedDistance(s.geometry(c.second.element), target);
+        return;
+    }
     case ConstraintType::Midpoint: {
         QPointF p0, p1;
         lineOf(c.second, p0, p1);
@@ -823,6 +835,10 @@ bool wellFormed(const SketchObject &sketch, const SketchConstraint &c) {
     const Shape a = shapeOf(sketch, c.first), b = shapeOf(sketch, c.second);
     if (a == Shape::None) return false;
     if (c.second.kind >= 0 && b == Shape::None) return false;
+    if (c.type == ConstraintType::Quadrant)
+        return a == Shape::Point && b == Shape::Circle && c.second.kind == 1
+            && !(c.first.kind == c.second.kind && c.first.element == c.second.element)
+            && std::isfinite(c.value) && c.value >= 0 && c.value <= 3 && c.value == std::floor(c.value);
     if (c.type == ConstraintType::Symmetric)
         return shapeOf(sketch, c.third) == Shape::Line && a == b && (a == Shape::Point || a == Shape::Line || a == Shape::Circle) && c.first != c.second
             && !(a == Shape::Line && (c.first == c.third || c.second == c.third));
@@ -906,6 +922,7 @@ QString constraintName(ConstraintType type) {
     case ConstraintType::Tangent: return QStringLiteral("Tangente");
     case ConstraintType::Equal: return QStringLiteral("Uguale");
     case ConstraintType::Concentric: return QStringLiteral("Concentrico");
+    case ConstraintType::Quadrant: return QStringLiteral("Quadrante");
     case ConstraintType::Midpoint: return QStringLiteral("Punto medio");
     case ConstraintType::PointOnCurve: return QStringLiteral("Punto sull'entita'");
     case ConstraintType::Fix: return QStringLiteral("Fisso");
@@ -934,6 +951,7 @@ QString constraintSymbol(ConstraintType type) {
     case ConstraintType::Tangent: return QStringLiteral("T");
     case ConstraintType::Equal: return QStringLiteral("=");
     case ConstraintType::Concentric: return QStringLiteral("◎");
+    case ConstraintType::Quadrant: return QStringLiteral("Q");
     case ConstraintType::Midpoint: return QStringLiteral("M");
     case ConstraintType::PointOnCurve: return QStringLiteral("∈");
     case ConstraintType::Fix: return QStringLiteral("⚓");
@@ -1007,6 +1025,7 @@ QString describeConstraint(const SketchObject &sketch, const SketchConstraint &c
     QString text = constraintSymbol(c.type) + QLatin1Char(' ') + constraintName(c.type) + QStringLiteral(": ") + describeRef(sketch, c.first);
     if (c.second.kind >= 0) text += QStringLiteral(" · ") + describeRef(sketch, c.second);
     if (c.third.kind >= 0) text += QStringLiteral(" rispetto a ") + describeRef(sketch, c.third);
+    if (c.type == ConstraintType::Quadrant) text += QStringLiteral(" (%1°)").arg(c.value * 90.0);
     if (c.type == ConstraintType::Angle) text += QStringLiteral(" = %1°").arg(c.value, 0, 'f', 4);
     else if (isDimension(c.type)) text += QStringLiteral(" = %1").arg(c.value, 0, 'f', 4);
     return text;
@@ -1060,7 +1079,11 @@ QVector<ConstraintType> applicableConstraints(const SketchObject &sketch, const 
             if (isAxisReference(sketch, refs.at(1))) result << T::AxisRadius << T::AxisDiameter;
             return result;
         }
-        if (b == Shape::Circle || b == Shape::Ellipse) return {T::PointOnCurve};
+        if (b == Shape::Circle) {
+            if (!curveQuadrants(sketch.curves.at(refs.at(1).element)).isEmpty()) return {T::PointOnCurve, T::Quadrant};
+            return {T::PointOnCurve};
+        }
+        if (b == Shape::Ellipse) return {T::PointOnCurve};
         return {};
     }
     if (a == Shape::Line && b == Shape::Line) {
@@ -1120,7 +1143,14 @@ SketchConstraint makeConstraint(const SketchObject &sketch, ConstraintType type,
     // Quote dall'asse: l'asse va per secondo.
     if ((type == ConstraintType::AxisRadius || type == ConstraintType::AxisDiameter) && isAxisReference(sketch, c.first) && !isAxisReference(sketch, c.second))
         std::swap(c.first, c.second);
-    if (type == ConstraintType::Fix) {
+    if (type == ConstraintType::Quadrant) {
+        const System s(sketch);
+        double best = std::numeric_limits<double>::infinity();
+        for (const auto &q : curveQuadrants(sketch.curves.at(c.second.element))) {
+            const double distance = length(s.refPoint(c.first) - q.second);
+            if (distance < best) { best = distance; c.value = q.first; }
+        }
+    } else if (type == ConstraintType::Fix) {
         const System s(sketch);
         for (const ConstraintRef &point : s.entityPoints(c.first)) c.positions.append(s.refPoint(point));
     } else if (type == ConstraintType::Tangent && shapeOf(sketch, c.first) == Shape::Circle && shapeOf(sketch, c.second) == Shape::Circle) {
