@@ -1,11 +1,14 @@
 #include "fk_step.h"
 
 #include "fk_precision.h"
+#include "fk_parallel.h"
 
 #include <algorithm>
 #include <array>
 #include <cctype>
 #include <functional>
+#include <exception>
+#include <unordered_map>
 #include <set>
 #include <cmath>
 #include <cstdio>
@@ -517,7 +520,17 @@ struct Entity {
 
 class StepFile {
 public:
-    explicit StepFile(const std::string &content) : s_(content) { parse(); }
+    explicit StepFile(const std::string &content) : s_(content) {
+        parse();
+        // Indice immutabile: ofType non deve scandire tutte le entita' a ogni
+        // rappresentazione di un assieme. Conserva l'ordine degli ID STEP.
+        for (const auto &[id, k] : index_)
+            for (const auto &part : entities_[k].parts) types_[part.first].push_back(id);
+        for (auto &[name, ids] : types_) {
+            std::sort(ids.begin(), ids.end());
+            ids.erase(std::unique(ids.begin(), ids.end()), ids.end());
+        }
+    }
     const Entity *find(int id) const {
         const auto it = index_.find(id);
         return it == index_.end() ? nullptr : &entities_[it->second];
@@ -528,12 +541,10 @@ public:
         return *e;
     }
     // Istanze che hanno una parte del tipo dato.
-    std::vector<int> ofType(const std::string &name) const {
-        std::vector<int> ids;
-        for (const auto &[id, k] : index_)
-            if (entities_[k].is(name)) ids.push_back(id);
-        std::sort(ids.begin(), ids.end());
-        return ids;
+    const std::vector<int> &ofType(const std::string &name) const {
+        const auto found = types_.find(name);
+        static const std::vector<int> empty;
+        return found == types_.end() ? empty : found->second;
     }
 
 private:
@@ -736,7 +747,8 @@ private:
     const std::string &s_;
     std::size_t pos_ = 0;
     std::vector<Entity> entities_;
-    std::map<int, std::size_t> index_;
+    std::unordered_map<int, std::size_t> index_;
+    std::unordered_map<std::string, std::vector<int>> types_;
 };
 
 double number(const Param &p) {
@@ -1106,7 +1118,7 @@ bool styledColour(const StepFile &file, int psa, double rgb[3], int depth = 0) {
 
 }  // namespace
 
-StepReadResult readStep(const std::string &content) {
+StepReadResult readStep(const std::string &content, const StepReadOptions &options) {
     using namespace detail;
     const StepFile file(content);
     StepReadResult result;
@@ -1126,7 +1138,7 @@ StepReadResult readStep(const std::string &content) {
     }
 
     // Body di un solido (o di una shell) di una rappresentazione.
-    const auto buildShells = [&](const StepGeometry &geometry, const std::vector<std::pair<int, bool>> &shells, bool solid) {
+    const auto buildShells = [&](const StepGeometry &geometry, const std::vector<std::pair<int, bool>> &shells, bool solid, std::vector<std::string> &notes) {
         RawModel model;
         std::map<int, int> vertexIndex, edgeIndex;
         const auto vertexOf = [&](int id) {
@@ -1242,7 +1254,7 @@ StepReadResult readStep(const std::string &content) {
                 model.faces.push_back(std::move(face));
             }
         }
-        return assembleBody(model, solid, &result.notes);
+        return assembleBody(model, solid, &notes);
     };
 
     // Solidi e superfici di una rappresentazione (con le rappresentazioni collegate e gli oggetti mappati).
@@ -1251,6 +1263,16 @@ StepReadResult readStep(const std::string &content) {
         Transform3 transform;
         int context;
     };
+    std::map<int, std::vector<int>> relatedReps;
+    for (int id : file.ofType("SHAPE_REPRESENTATION_RELATIONSHIP")) {
+        const Entity &rel = file.at(id);
+        if (rel.is("REPRESENTATION_RELATIONSHIP_WITH_TRANSFORMATION")) continue;
+        const std::vector<Param> &a = rel.part("REPRESENTATION_RELATIONSHIP") ? *rel.part("REPRESENTATION_RELATIONSHIP") : rel.args();
+        if (a.size() < 4 || a[2].kind != Param::Ref || a[3].kind != Param::Ref || a[2].ref == a[3].ref) continue;
+        relatedReps[a[2].ref].push_back(a[3].ref);
+        const Entity *source = file.find(a[2].ref);
+        if (!source || source->type() != "SHAPE_REPRESENTATION") relatedReps[a[3].ref].push_back(a[2].ref);
+    }
     std::function<void(int, const Transform3 &, std::vector<Placed> &, int)> collect = [&](int rep, const Transform3 &transform, std::vector<Placed> &out, int depth) {
         if (depth > 32) return;
         const Entity &r = file.at(rep);
@@ -1274,15 +1296,11 @@ StepReadResult readStep(const std::string &content) {
                 collect(reference(map.args().at(1)), transform * Transform3::fromFrame(target) * Transform3::fromFrame(origin).inverted(), out, depth + 1);
             }
         }
-        // Rappresentazioni collegate senza trasformazione (la geometria sta spesso in un'altra rappresentazione).
-        for (int id : file.ofType("SHAPE_REPRESENTATION_RELATIONSHIP")) {
-            const Entity &rel = file.at(id);
-            if (rel.is("REPRESENTATION_RELATIONSHIP_WITH_TRANSFORMATION")) continue;
-            const std::vector<Param> &a = rel.part("REPRESENTATION_RELATIONSHIP") ? *rel.part("REPRESENTATION_RELATIONSHIP") : rel.args();
-            if (a.size() < 4 || a[2].kind != Param::Ref || a[3].kind != Param::Ref) continue;
-            if (a[2].ref == rep && a[3].ref != rep) collect(a[3].ref, transform, out, depth + 1);
-            else if (a[3].ref == rep && a[2].ref != rep && file.at(a[2].ref).type() != "SHAPE_REPRESENTATION") collect(a[2].ref, transform, out, depth + 1);
-        }
+        // Stesso ordine e verso delle relazioni del file, senza una scansione
+        // globale per ogni rappresentazione visitata.
+        const auto related = relatedReps.find(rep);
+        if (related != relatedReps.end())
+            for (int other : related->second) collect(other, transform, out, depth + 1);
     };
 
     // Prodotti: nome di una definizione di prodotto.
@@ -1367,6 +1385,12 @@ StepReadResult readStep(const std::string &content) {
     // Doppioni (stessa istanza trovata per due strade con la stessa trasformazione).
     std::set<std::pair<int, std::string>> seen;
 
+    struct Pending {
+        Placed placed;
+        std::string name;
+        double length, angle;
+    };
+    std::vector<Pending> pending;
     std::map<std::string, int> nameCount;
     for (const auto &[name, p] : placed) ++nameCount[name];
     std::map<std::string, int> nameIndex;
@@ -1385,49 +1409,74 @@ StepReadResult readStep(const std::string &content) {
                 break;
             }
         }
-        const StepGeometry geometry(file, length, angle);
         const Entity &item = file.at(p.item);
         std::string name = !productNameValue.empty() ? productNameValue : stringOf(item.args().at(0));
         if (name.empty()) name = "solido";
         if (nameCount[productNameValue] > 1) name += " (" + std::to_string(++nameIndex[productNameValue]) + ")";
+        pending.push_back({p, std::move(name), length, angle});
+    }
+    struct Imported {
+        ExchangeBody body;
+        std::vector<std::string> notes;
+        bool valid = false;
+        std::exception_ptr unexpected;
+    };
+    std::vector<Imported> imported(pending.size());
+    const unsigned workers = options.threads > 0 ? threadCount(options.threads) : std::min(8u, threadCount(0));
+    parallelFor(pending.size(), pending.size() >= 4 ? workers : 1u, [&](std::size_t i) {
+        Imported &output = imported[i];
+        const Pending &job = pending[i];
+        const Placed &p = job.placed;
+        const std::string &name = job.name;
+        // Le cache di StepGeometry appartengono solo a questo corpo.
         try {
-            std::vector<std::pair<int, bool>> shells;
-            bool solid = true;
-            const std::string &t = item.type();
-            if (t == "MANIFOLD_SOLID_BREP" || t == "FACETED_BREP") {
-                shells.push_back({reference(item.args().at(1)), true});
-            } else if (t == "BREP_WITH_VOIDS" || t == "FACETED_BREP_AND_BREP_WITH_VOIDS") {
-                shells.push_back({reference(item.args().at(1)), true});
-                for (const Param &v : items(item.args().at(2))) {
-                    const Entity &oriented = file.at(reference(v));
-                    if (oriented.type() == "ORIENTED_CLOSED_SHELL") shells.push_back({reference(oriented.args().at(2)), logical(oriented.args().at(3))});
-                    else shells.push_back({v.ref, false});
+            try {
+                const StepGeometry geometry(file, job.length, job.angle);
+                const Entity &item = file.at(p.item);
+                std::vector<std::pair<int, bool>> shells;
+                bool solid = true;
+                const std::string &t = item.type();
+                if (t == "MANIFOLD_SOLID_BREP" || t == "FACETED_BREP") {
+                    shells.push_back({reference(item.args().at(1)), true});
+                } else if (t == "BREP_WITH_VOIDS" || t == "FACETED_BREP_AND_BREP_WITH_VOIDS") {
+                    shells.push_back({reference(item.args().at(1)), true});
+                    for (const Param &v : items(item.args().at(2))) {
+                        const Entity &oriented = file.at(reference(v));
+                        if (oriented.type() == "ORIENTED_CLOSED_SHELL") shells.push_back({reference(oriented.args().at(2)), logical(oriented.args().at(3))});
+                        else shells.push_back({v.ref, false});
+                    }
+                } else {
+                    for (const Param &s : items(item.args().at(1))) {
+                        const Entity &shell = file.at(reference(s));
+                        if (shell.type() == "ORIENTED_CLOSED_SHELL" || shell.type() == "ORIENTED_OPEN_SHELL")
+                            shells.push_back({reference(shell.args().at(2)), logical(shell.args().at(3))});
+                        else shells.push_back({s.ref, true});
+                        if (shell.type() != "CLOSED_SHELL") solid = false;
+                    }
                 }
-            } else {
-                for (const Param &s : items(item.args().at(1))) {
-                    const Entity &shell = file.at(reference(s));
-                    if (shell.type() == "ORIENTED_CLOSED_SHELL" || shell.type() == "ORIENTED_OPEN_SHELL")
-                        shells.push_back({reference(shell.args().at(2)), logical(shell.args().at(3))});
-                    else shells.push_back({s.ref, true});
-                    if (shell.type() != "CLOSED_SHELL") solid = false;
+                Body body = buildShells(geometry, shells, solid, output.notes);
+                if (!p.transform.isSimilarity() || std::fabs(p.transform.matrix(0, 0) - 1.0) > 0.0 || std::fabs(p.transform.matrix(1, 1) - 1.0) > 0.0
+                    || std::fabs(p.transform.matrix(2, 2) - 1.0) > 0.0 || norm(p.transform.translationPart()) > 0.0)
+                    body = transformBody(body, p.transform);
+                ExchangeBody exchange;
+                exchange.name = name;
+                exchange.body = std::move(body);
+                const auto colour = colours.find(p.item);
+                if (colour != colours.end()) {
+                    exchange.hasColor = true;
+                    for (int k = 0; k < 3; ++k) exchange.color[k] = colour->second[std::size_t(k)];
                 }
+                output.body = std::move(exchange);
+                output.valid = true;
+            } catch (const std::exception &failure) {
+                output.notes.push_back(name + ": non ricostruito (" + failure.what() + ")");
             }
-            Body body = buildShells(geometry, shells, solid);
-            if (!p.transform.isSimilarity() || std::fabs(p.transform.matrix(0, 0) - 1.0) > 0.0 || std::fabs(p.transform.matrix(1, 1) - 1.0) > 0.0
-                || std::fabs(p.transform.matrix(2, 2) - 1.0) > 0.0 || norm(p.transform.translationPart()) > 0.0)
-                body = transformBody(body, p.transform);
-            ExchangeBody exchange;
-            exchange.name = name;
-            exchange.body = std::move(body);
-            const auto colour = colours.find(p.item);
-            if (colour != colours.end()) {
-                exchange.hasColor = true;
-                for (int k = 0; k < 3; ++k) exchange.color[k] = colour->second[std::size_t(k)];
-            }
-            result.bodies.push_back(std::move(exchange));
-        } catch (const std::exception &failure) {
-            result.notes.push_back(name + ": non ricostruito (" + failure.what() + ")");
-        }
+        } catch (...) { output.unexpected = std::current_exception(); }
+    });
+    for (Imported &output : imported) {
+        if (output.unexpected) std::rethrow_exception(output.unexpected);
+        result.notes.insert(result.notes.end(), output.notes.begin(), output.notes.end());
+        if (output.valid) result.bodies.push_back(std::move(output.body));
     }
     return result;
 }

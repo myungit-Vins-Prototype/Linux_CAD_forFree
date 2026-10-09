@@ -92,7 +92,16 @@ void revolveLoops(const Frame3 &frame, const std::vector<ProfileLoop> &loops, bo
             } else if (basis.type() == CurveType::Circle) {
                 const auto &c = static_cast<const Circle<2> &>(basis);
                 if (std::fabs(c.center().x()) <= tolerance) surface = std::make_shared<SphericalSurface>(Frame3(O + c.center().y() * Z, Z, X), c.radius());
-                else surface = std::make_shared<ToroidalSurface>(Frame3(O + c.center().y() * Z, Z, X), c.center().x(), c.radius());
+                else if (c.center().x() > 0.0)
+                    surface = std::make_shared<ToroidalSurface>(Frame3(O + c.center().y() * Z, Z, X), c.center().x(), c.radius());
+                else {
+                    // Un arco puo' stare nel semipiano positivo anche con il
+                    // centro oltre l'asse. Il raggio maggiore del toro sarebbe
+                    // negativo: conserva il meridiano esatto e il suo intervallo,
+                    // evitando gli altri rami del cerchio completo.
+                    surface = std::make_shared<RevolutionSurface>(
+                        embedCurve(std::make_shared<TrimmedCurve<2>>(segment.curve, segment.range.lo, segment.range.hi), Frame3(O, -Y, X)), O, Z);
+                }
             } else {
                 surface = std::make_shared<RevolutionSurface>(embedCurve(segment.curve, Frame3(O, -Y, X)), O, Z);
             }

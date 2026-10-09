@@ -6,6 +6,7 @@
 #include <cmath>
 #include <cstdio>
 #include <ctime>
+#include <exception>
 #include <functional>
 #include <limits>
 #include <map>
@@ -21,6 +22,7 @@
 #include "fk_hermite.h"
 #include "fk_intersect.h"
 #include "fk_nurbs.h"
+#include "fk_parallel.h"
 #include "fk_surface.h"
 #include "fk_surface_algo.h"
 #include "fk_tessellate.h"
@@ -1214,91 +1216,119 @@ std::string writeIges(const std::vector<ExchangeBody> &bodies, const IgesWriteOp
     return w.file(options, maxCoordinate);
 }
 
-IgesReadResult readIges(const std::string &content) {
+IgesReadResult readIges(const std::string &content, const IgesReadOptions &options) {
     using namespace detail;
     const IgesFile file(content);
     const IgesGeometry geometry(file);
     IgesReadResult result;
     const double tolerance = std::max(10.0 * file.resolution(), 1e-6);
 
-    // Solidi B-rep (186).
-    for (int de : file.ofType(186)) {
-        const Directory &msbo = file.at(de);
-        std::string name = propertyName(file, msbo, std::size_t(3 + 2 * IgesFile::integer(msbo, 2)));
-        if (name.empty()) name = "solido " + std::to_string(result.bodies.size() + 1);
+    const unsigned workers = options.threads > 0 ? threadCount(options.threads) : std::min(8u, threadCount(0));
+    struct Imported {
+        ExchangeBody body;
+        std::vector<std::string> notes;
+        std::string failure;
+        bool valid = false;
+        std::exception_ptr unexpected;
+    };
+    const auto append = [&](Imported &item, const std::string &name) {
+        if (item.unexpected) std::rethrow_exception(item.unexpected);
+        result.notes.insert(result.notes.end(), item.notes.begin(), item.notes.end());
+        if (item.valid) {
+            item.body.name = name;
+            result.bodies.push_back(std::move(item.body));
+        } else result.notes.push_back(name + ": non ricostruito (" + item.failure + ")");
+    };
+
+    // Risultati isolati per corpo, raccolti nell'ordine del file.
+    const std::vector<int> solids = file.ofType(186);
+    std::vector<Imported> imported(solids.size());
+    parallelFor(solids.size(), solids.size() >= 4 ? workers : 1u, [&](std::size_t i) {
+        Imported &item = imported[i];
         try {
-            RawModel model;
-            std::map<std::pair<int, int>, int> vertexOf, edgeOf;
-            const auto vertex = [&](int list, int index) {
-                const auto key = std::make_pair(list, index);
-                const auto it = vertexOf.find(key);
-                if (it != vertexOf.end()) return it->second;
-                const Directory &d = file.at(list);
-                Vec3 p = geometry.point(d, std::size_t(1 + 3 * (index - 1)));
-                if (d.transform > 0) p = geometry.transform(d.transform).applyToPoint(p);
-                model.points.push_back(p);
-                return vertexOf[key] = int(model.points.size()) - 1;
-            };
-            const auto edge = [&](int list, int index) {
-                const auto key = std::make_pair(list, index);
-                const auto it = edgeOf.find(key);
-                if (it != edgeOf.end()) return it->second;
-                const Directory &d = file.at(list);
-                const std::size_t at = std::size_t(1 + 5 * (index - 1));
-                const std::vector<IgesGeometry::Piece> pieces = geometry.curve(IgesFile::integer(d, at));
-                if (pieces.size() != 1) throw std::domain_error("IGES: edge con una curva composta");
-                RawEdge e;
-                e.curve = pieces[0].curve;
-                e.start = vertex(IgesFile::integer(d, at + 1), IgesFile::integer(d, at + 2));
-                e.end = vertex(IgesFile::integer(d, at + 3), IgesFile::integer(d, at + 4));
-                model.edges.push_back(e);
-                return edgeOf[key] = int(model.edges.size()) - 1;
-            };
-            const auto shell = [&](int shellDe, bool sense) {
-                const Directory &s = file.at(shellDe);
-                const int n = IgesFile::integer(s, 0);
-                for (int k = 0; k < n; ++k) {
-                    const Directory &faceEntity = file.at(IgesFile::integer(s, std::size_t(1 + 2 * k)));
-                    const bool faceOrientation = IgesFile::integer(s, std::size_t(2 + 2 * k), 1) != 0;
-                    RawFace face;
-                    bool flipped = false;
-                    face.surface = geometry.surface(IgesFile::integer(faceEntity, 0), flipped);
-                    face.sense = (faceOrientation != flipped) == sense;
-                    const int loops = IgesFile::integer(faceEntity, 1);
-                    for (int l = 0; l < loops; ++l) {
-                        const Directory &loop = file.at(IgesFile::integer(faceEntity, std::size_t(3 + l)));
-                        std::vector<RawFin> fins;
-                        const int count = IgesFile::integer(loop, 0);
-                        std::size_t at = 1;
-                        for (int k2 = 0; k2 < count; ++k2) {
-                            const int type = IgesFile::integer(loop, at), list = IgesFile::integer(loop, at + 1), index = IgesFile::integer(loop, at + 2);
-                            const bool orientation = IgesFile::integer(loop, at + 3, 1) != 0;
-                            const int curves = IgesFile::integer(loop, at + 4);
-                            at += 5 + std::size_t(2 * std::max(0, curves));
-                            if (type == 1) continue;  // vertice (polo)
-                            fins.push_back({edge(list, index), orientation});
+            const int de = solids[i];
+            const Directory &msbo = file.at(de);
+            std::string name = propertyName(file, msbo, std::size_t(3 + 2 * IgesFile::integer(msbo, 2)));
+            item.body.name = name;
+            try {
+                RawModel model;
+                std::map<std::pair<int, int>, int> vertexOf, edgeOf;
+                const auto vertex = [&](int list, int index) {
+                    const auto key = std::make_pair(list, index);
+                    const auto it = vertexOf.find(key);
+                    if (it != vertexOf.end()) return it->second;
+                    const Directory &d = file.at(list);
+                    Vec3 p = geometry.point(d, std::size_t(1 + 3 * (index - 1)));
+                    if (d.transform > 0) p = geometry.transform(d.transform).applyToPoint(p);
+                    model.points.push_back(p);
+                    return vertexOf[key] = int(model.points.size()) - 1;
+                };
+                const auto edge = [&](int list, int index) {
+                    const auto key = std::make_pair(list, index);
+                    const auto it = edgeOf.find(key);
+                    if (it != edgeOf.end()) return it->second;
+                    const Directory &d = file.at(list);
+                    const std::size_t at = std::size_t(1 + 5 * (index - 1));
+                    const std::vector<IgesGeometry::Piece> pieces = geometry.curve(IgesFile::integer(d, at));
+                    if (pieces.size() != 1) throw std::domain_error("IGES: edge con una curva composta");
+                    RawEdge e;
+                    e.curve = pieces[0].curve;
+                    e.start = vertex(IgesFile::integer(d, at + 1), IgesFile::integer(d, at + 2));
+                    e.end = vertex(IgesFile::integer(d, at + 3), IgesFile::integer(d, at + 4));
+                    model.edges.push_back(e);
+                    return edgeOf[key] = int(model.edges.size()) - 1;
+                };
+                const auto shell = [&](int shellDe, bool sense) {
+                    const Directory &s = file.at(shellDe);
+                    const int n = IgesFile::integer(s, 0);
+                    for (int k = 0; k < n; ++k) {
+                        const Directory &faceEntity = file.at(IgesFile::integer(s, std::size_t(1 + 2 * k)));
+                        const bool faceOrientation = IgesFile::integer(s, std::size_t(2 + 2 * k), 1) != 0;
+                        RawFace face;
+                        bool flipped = false;
+                        face.surface = geometry.surface(IgesFile::integer(faceEntity, 0), flipped);
+                        face.sense = (faceOrientation != flipped) == sense;
+                        const int loops = IgesFile::integer(faceEntity, 1);
+                        for (int l = 0; l < loops; ++l) {
+                            const Directory &loop = file.at(IgesFile::integer(faceEntity, std::size_t(3 + l)));
+                            std::vector<RawFin> fins;
+                            const int count = IgesFile::integer(loop, 0);
+                            std::size_t at = 1;
+                            for (int k2 = 0; k2 < count; ++k2) {
+                                const int type = IgesFile::integer(loop, at), list = IgesFile::integer(loop, at + 1), index = IgesFile::integer(loop, at + 2);
+                                const bool orientation = IgesFile::integer(loop, at + 3, 1) != 0;
+                                const int curves = IgesFile::integer(loop, at + 4);
+                                at += 5 + std::size_t(2 * std::max(0, curves));
+                                if (type == 1) continue;  // vertice (polo)
+                                fins.push_back({edge(list, index), orientation});
+                            }
+                            // I loop girano attorno alla normale della superficie: con la faccia rovesciata (e la shell) si girano.
+                            if (faceOrientation != sense) {
+                                std::reverse(fins.begin(), fins.end());
+                                for (RawFin &fin : fins) fin.sense = !fin.sense;
+                            }
+                            if (!fins.empty()) face.loops.push_back(std::move(fins));
                         }
-                        // I loop girano attorno alla normale della superficie: con la faccia rovesciata (e la shell) si girano.
-                        if (faceOrientation != sense) {
-                            std::reverse(fins.begin(), fins.end());
-                            for (RawFin &fin : fins) fin.sense = !fin.sense;
-                        }
-                        if (!fins.empty()) face.loops.push_back(std::move(fins));
+                        model.faces.push_back(std::move(face));
                     }
-                    model.faces.push_back(std::move(face));
-                }
-            };
-            shell(IgesFile::integer(msbo, 0), IgesFile::integer(msbo, 1, 1) != 0);
-            const int voids = IgesFile::integer(msbo, 2);
-            for (int k = 0; k < voids; ++k) shell(IgesFile::integer(msbo, std::size_t(3 + 2 * k)), IgesFile::integer(msbo, std::size_t(4 + 2 * k), 1) != 0);
-            ExchangeBody body;
-            body.name = name;
-            body.body = assembleBody(model, true, &result.notes);
-            body.hasColor = colourOf(file, msbo, body.color);
-            result.bodies.push_back(std::move(body));
-        } catch (const std::exception &failure) {
-            result.notes.push_back(name + ": non ricostruito (" + failure.what() + ")");
-        }
+                };
+                shell(IgesFile::integer(msbo, 0), IgesFile::integer(msbo, 1, 1) != 0);
+                const int voids = IgesFile::integer(msbo, 2);
+                for (int k = 0; k < voids; ++k) shell(IgesFile::integer(msbo, std::size_t(3 + 2 * k)), IgesFile::integer(msbo, std::size_t(4 + 2 * k), 1) != 0);
+                ExchangeBody body;
+                body.name = name;
+                body.body = assembleBody(model, true, &item.notes);
+                body.hasColor = colourOf(file, msbo, body.color);
+                item.body = std::move(body);
+                item.valid = true;
+            } catch (const std::exception &failure) {
+                item.failure = failure.what();
+            }
+        } catch (...) { item.unexpected = std::current_exception(); }
+    });
+    for (Imported &item : imported) {
+        const std::string name = item.body.name.empty() ? "solido " + std::to_string(result.bodies.size() + 1) : item.body.name;
+        append(item, name);
     }
 
     // Superfici limitate (144, 143): facce con i loro bordi, poi cucite (per nome:
@@ -1394,6 +1424,14 @@ IgesReadResult readIges(const std::string &content) {
             }
         }
     }
+    struct Component {
+        RawModel model;
+        bool closed;
+        std::string name;
+        bool hasColour;
+        std::array<double, 3> colour;
+    };
+    std::vector<Component> pending;
     int index = 0;
     for (auto &[groupName, group] : groups) {
         RawModel &loose = group.model;
@@ -1416,13 +1454,33 @@ IgesReadResult readIges(const std::string &content) {
         int part = 0;
         for (const auto &[r, faces] : components) {
             RawModel piece;
-            piece.points = loose.points;
-            piece.edges = loose.edges;
+            // Copia soltanto la topologia usata da questa componente.
+            std::map<int, int> pointOf, edgeOf;
+            const auto point = [&](int old) {
+                const auto found = pointOf.find(old);
+                if (found != pointOf.end()) return found->second;
+                const int next = int(piece.points.size());
+                piece.points.push_back(loose.points[std::size_t(old)]);
+                pointOf[old] = next;
+                return next;
+            };
             std::map<int, int> uses;
             for (std::size_t f : faces) {
                 piece.faces.push_back(loose.faces[f]);
-                for (const auto &loop : loose.faces[f].loops)
-                    for (const RawFin &fin : loop) ++uses[fin.edge];
+                for (auto &loop : piece.faces.back().loops)
+                    for (RawFin &fin : loop) {
+                        const int old = fin.edge;
+                        const auto found = edgeOf.find(old);
+                        if (found == edgeOf.end()) {
+                            RawEdge edge = loose.edges[std::size_t(old)];
+                            edge.start = point(edge.start);
+                            edge.end = point(edge.end);
+                            fin.edge = int(piece.edges.size());
+                            edgeOf[old] = fin.edge;
+                            piece.edges.push_back(std::move(edge));
+                        } else fin.edge = found->second;
+                        ++uses[fin.edge];
+                    }
             }
             bool closed = true;
             for (const auto &[edge, count] : uses) closed = closed && count == 2;
@@ -1431,8 +1489,21 @@ IgesReadResult readIges(const std::string &content) {
             std::string name = groupName;
             if (name.empty()) name = (closed ? "solido " : "superficie ") + std::to_string(++index);
             else if (components.size() > 1) name += " (" + std::to_string(++part) + ")";
+            pending.push_back({std::move(piece), closed, std::move(name), group.hasColour, group.colour});
+        }
+    }
+    // I gruppi non servono piu': libera i vettori prima dell'assemblaggio.
+    groups.clear();
+    imported.clear();
+    imported.resize(pending.size());
+    parallelFor(pending.size(), pending.size() >= 4 ? workers : 1u, [&](std::size_t i) {
+        Component &component = pending[i];
+        RawModel &piece = component.model;
+        const bool closed = component.closed;
+        Imported &item = imported[i];
+        try {
             try {
-                Body body = assembleBody(piece, closed, &result.notes);
+                Body body = assembleBody(piece, closed, &item.notes);
                 bool reoriented = false;
                 std::size_t k = 0;
                 for (FaceId f : body.faces()) {
@@ -1453,16 +1524,18 @@ IgesReadResult readIges(const std::string &content) {
                     body = assembleBody(piece, closed, nullptr);
                 }
                 ExchangeBody exchange;
-                exchange.name = name;
+                exchange.name = component.name;
                 exchange.body = std::move(body);
-                exchange.hasColor = group.hasColour;
-                for (int k = 0; k < 3; ++k) exchange.color[k] = group.colour[std::size_t(k)];
-                result.bodies.push_back(std::move(exchange));
+                exchange.hasColor = component.hasColour;
+                for (int k = 0; k < 3; ++k) exchange.color[k] = component.colour[std::size_t(k)];
+                item.body = std::move(exchange);
+                item.valid = true;
             } catch (const std::exception &failure) {
-                result.notes.push_back(name + ": non ricostruito (" + failure.what() + ")");
+                item.failure = failure.what();
             }
-        }
-    }
+        } catch (...) { item.unexpected = std::current_exception(); }
+    });
+    for (std::size_t i = 0; i < imported.size(); ++i) append(imported[i], pending[i].name);
     return result;
 }
 

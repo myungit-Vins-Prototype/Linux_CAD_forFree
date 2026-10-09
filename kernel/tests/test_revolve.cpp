@@ -77,6 +77,20 @@ void checkRevolution(const Frame3 &frame, const std::vector<ProfileSegment> &seg
 
 }
 
+FK_TEST(RevolutionArcCenterAcrossAxis) {
+    // Schizzo 4 di Applicatore.prt: l'arco resta a x > 0, ma il
+    // suo centro e' a x = -1.7. Non e' un toro di raggio maggiore positivo.
+    const double height = std::sqrt(4.0 * 4.0 - 3.65 * 3.65);
+    const auto arc = arcSegment(Vec2(-1.7, height), 4.0, -std::acos(3.65 / 4.0), 0.0);
+    const std::vector<ProfileSegment> segments{
+        lineSegment(Vec2(0, 0), arc.start()), arc,
+        lineSegment(arc.end(), Vec2(3, height)),
+        lineSegment(Vec2(3, height), Vec2(3, -2)),
+        lineSegment(Vec2(3, -2), Vec2(0, -2)),
+        lineSegment(Vec2(0, -2), Vec2(0, 0))};
+    checkRevolution(Frame3(), segments, 5, 0.0, 0.0);
+}
+
 FK_TEST(RevolutionSolids) {
     const Frame3 frame(Vec3(1, -2, 3), Vec3(0.2, 0.1, 1), Vec3(1, 0, 0));
     // Tubo, cilindro pieno (lato sull'asse), cono pieno, tronco di cono con foro.

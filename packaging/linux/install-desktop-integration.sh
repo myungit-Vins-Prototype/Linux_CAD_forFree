@@ -27,7 +27,7 @@ if [ "${1:-}" = "--uninstall" ]; then
     exec "$ROOT/packaging/linux/uninstall-desktop-integration.sh"
 fi
 
-EXEC=${1:-"$ROOT/forgecad-cuda-build/forgecad"}
+EXEC=${1:-"$ROOT/forgecad-release/forgecad"}
 EXEC=$(cd "$(dirname "$EXEC")" && pwd)/$(basename "$EXEC")
 [ -x "$EXEC" ] || { echo "Binario non trovato: $EXEC (compila prima con cmake --build forgecad-cuda-build)" >&2; exit 1; }
 

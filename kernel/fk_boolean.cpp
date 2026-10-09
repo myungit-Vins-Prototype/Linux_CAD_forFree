@@ -144,7 +144,16 @@ public:
         bodies_[1] = b;
         Box all;
         for (int k = 0; k < 2; ++k) {
-            computePCurves(bodies_[k]);
+            // Senza SP-curve una fin non si puo' tagliare ne' classificare: errore
+            // invece di dereferenziare un puntatore nullo nei passi successivi.
+            if (computePCurves(bodies_[k]) > 0)
+                for (FaceId f : bodies_[k].faces())
+                    for (LoopId l : bodies_[k].face(f).loops)
+                        for (FinId fin : bodies_[k].loopFins(l))
+                            if (!bodies_[k].fin(fin).pcurve)
+                                throw std::domain_error("booleanOperation: SP-curve non calcolabile sull'edge E"
+                                                        + std::to_string(bodies_[k].fin(fin).edge.index) + " della faccia F"
+                                                        + std::to_string(f.index) + " del corpo " + (k == 0 ? "A" : "B"));
             for (FaceId f : bodies_[k].faces()) {
                 if (!bodies_[k].face(f).surface) throw std::invalid_argument("booleanOperation: faccia senza superficie");
                 boxes_[k][f.index] = faceBox(bodies_[k], f).padded(tolerance_);

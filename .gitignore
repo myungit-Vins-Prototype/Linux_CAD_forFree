@@ -5,7 +5,6 @@
 *.igs
 *.stl
 *.obj
-forgecad-cuda-build/
+forgecad-release/
 .DS_Store
-
 *.STEP

@@ -19,6 +19,7 @@
 #include "cad_overlay_renderer.h"
 #include <QOpenGLContext>
 #include <array>
+#include <atomic>
 #include <set>
 #include "fk_classify.h"
 #include "fk_surface_algo.h"
@@ -214,6 +215,25 @@ static QLabel *wrappedNote(const QString &text, QWidget *parent) {
     label->setSizePolicy(policy);
     label->setTextInteractionFlags(Qt::TextSelectableByMouse);
     return label;
+}
+
+// I report dei file grandi possono contenere migliaia di righe: scorrono
+// nell'area di testo senza aumentare la dimensione della finestra.
+static void showImportReport(QWidget *parent, const QString &message) {
+    QDialog dialog(parent);
+    dialog.setWindowTitle(QStringLiteral("Importa STEP/IGES"));
+    auto *layout = new QVBoxLayout(&dialog);
+    auto *text = new QTextBrowser(&dialog);
+    text->setPlainText(message);
+    text->setWordWrapMode(QTextOption::WrapAtWordBoundaryOrAnywhere);
+    layout->addWidget(text, 1);
+    auto *buttons = new QDialogButtonBox(QDialogButtonBox::Close, &dialog);
+    QObject::connect(buttons, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
+    layout->addWidget(buttons);
+    QSize size(720, 420);
+    if (const QScreen *screen = dialog.screen()) size = size.boundedTo(screen->availableGeometry().size() * 0.85);
+    dialog.setFixedSize(size);
+    dialog.exec();
 }
 
 // Finestra che si chiude solo se `apply` riesce (definita piu' avanti).
@@ -2607,6 +2627,7 @@ public:
     // Finestre modali "leggere" (il piano di costruzione): la vista resta
     // attiva per la scelta dei riferimenti, ma niente menu contestuali.
     void setInteractionLocked(bool locked) { interactionLocked_ = locked; }
+    bool interactionLocked() const { return interactionLocked_; }
     // Il piano per la finestra, con il documento com'e' (il corpo `index`, -1 se nuovo).
     bool previewDatum(const DatumParameters &parameters, int index, SketchFrame &frame, QString *error) const {
         return ForgeCad::computeDatum(parameters, index < 0 ? int(extrusions_.size()) : index, sketches_, extrusions_, frame, error);
@@ -2630,25 +2651,50 @@ public:
         beginSketchMode(kFacePlane);
         return activeSketch_;
     }
-    // Corpi importati (un passo di Undo); `source` e' il nome del file. Restituisce i corpi che non si rileggono.
-    QStringList importParts(const QVector<ForgeCad::ImportedPart> &parts, const QString &source) {
+    // Lettura e geometria su dati locali; il ciclo GUI continua a disegnare.
+    QString readImportFile(const QString &path, QVector<ForgeCad::ImportedPart> &parts, QStringList &notes) {
+        QString error;
+        runWhileResponsive([&] { error = ForgeCad::importCadFile(path, parts, &notes); });
+        return error;
+    }
+    // Preparazione delle mesh fuori dal thread GUI; pubblicazione atomica
+    // nella storia solo a lavoro concluso (un solo passo di Undo).
+    QStringList importParts(const QVector<ForgeCad::ImportedPart> &parts, const QString &source,
+                            const std::function<void(int, int)> &progress = {}) {
         ScopedWork work(workCallback_, QStringLiteral("Preparazione dei corpi importati..."));
         QStringList failures;
         if (parts.isEmpty()) return failures;
+        QVector<ExtrusionObject> prepared;
+        prepared.reserve(parts.size());
+        const int quality = tessellationQuality_;
+        std::atomic<int> completed{0};
+        QTimer reporter;
+        if (progress) {
+            progress(0, int(parts.size()));
+            QObject::connect(&reporter, &QTimer::timeout, this, [&] { progress(completed.load(), int(parts.size())); });
+            reporter.start(100);
+        }
+        runWhileResponsive([&] {
+            for (const ForgeCad::ImportedPart &part : parts) {
+                ExtrusionObject body;
+                body.name = part.name;
+                body.feature = BodyFeature::Imported;
+                body.importData = part.data;
+                body.importSource = source;
+                body.forgeBody = part.body;
+                body.solid = part.solid;
+                if (!body.forgeBody) body.error = QStringLiteral("Il corpo non ha geometria.");
+                tessellateGeometry(body, quality, body.display);
+                prepared.append(std::move(body));
+                ++completed;
+            }
+        });
+        reporter.stop();
+        if (progress) progress(int(parts.size()), int(parts.size()));
         recordUndo();
-        for (const ForgeCad::ImportedPart &part : parts) {
-            ExtrusionObject body;
-            body.name = part.name;
-            body.feature = BodyFeature::Imported;
-            body.importData = part.data;
-            body.importSource = source;
-            // Il body appena letto (lo stesso che importData ridara' alla rigenerazione).
-            body.forgeBody = part.body;
-            body.solid = part.solid;
-            if (!body.forgeBody) body.error = QStringLiteral("Il corpo non ha geometria.");
-            tessellateBody(body);
+        for (ExtrusionObject &body : prepared) {
             if (!body.error.isEmpty()) failures.append(QStringLiteral("%1: %2").arg(body.name, body.error));
-            extrusions_.append(body);
+            extrusions_.append(std::move(body));
         }
         selection_ = {SceneObjectKind::Extrusion, int(extrusions_.size()) - 1, -1};
         hover_ = {};
@@ -3824,10 +3870,15 @@ protected:
             QOpenGLFramebufferObject::blitFramebuffer(nullptr, QRect(QPoint(), pixels), resolveBuffer_.get(), QRect(QPoint(), pixels));
             glViewport(viewport[0], viewport[1], viewport[2], viewport[3]);
         }
-        drawGpuGlassPanels(pixels, scene ? resolveBuffer_.get() : nullptr);
         drawReferenceLabels();
         drawSelectionHighlight();
         drawPlaneResizeHandles();
+        // Il vetro copre anche etichette e selezioni: niente overlay della
+        // scena viene disegnato sopra il fondale del pannello.
+        // QPainter puo' lasciare scissor/stencil attivi dopo gli overlay.
+        glDisable(GL_SCISSOR_TEST);
+        glDisable(GL_STENCIL_TEST);
+        drawGpuGlassPanels(pixels, nullptr);
         ++renderedFrameSerial_;
     }
 
@@ -3863,6 +3914,14 @@ protected:
                 finishEdgePick();
                 return;
             }
+        }
+        if (interactionLocked_) {
+            if (event->key() == Qt::Key_Plus || event->key() == Qt::Key_Equal) zoomIn();
+            else if (event->key() == Qt::Key_Minus) zoomOut();
+            else if (event->key() == Qt::Key_0) resetZoom();
+            else if (event->key() >= Qt::Key_1 && event->key() <= Qt::Key_6) setViewPreset(event->key() - Qt::Key_1);
+            event->accept();
+            return;
         }
         if (event->key() == Qt::Key_Escape && dimensionPlacing_ >= 0) {
             dimensionPlacing_ = -1;  // la quota resta dove e'
@@ -3953,6 +4012,16 @@ protected:
             setCursor(Qt::ClosedHandCursor);
             return;
         }
+        if (interactionLocked_ && !refPicking_ && !edgePicking_ && !trimPartPickFinished_
+            && !sketchPickCallback_ && !sketchEntityPickCallback_) {
+            if (event->button() == Qt::LeftButton && !releasingSelection_) {
+                selectionPress_ = lastMousePosition_;
+                selectionPending_ = true;
+                selectionDragged_ = false;
+            }
+            event->accept();
+            return;
+        }
         // Nello schizzo il tasto destro trascinato ruota la vista (un clic resta il menu / la chiusura della spline).
         if (sketchMode_ && event->button() == Qt::RightButton) {
             rightPressPosition_ = lastMousePosition_;
@@ -3977,9 +4046,9 @@ protected:
                 return;
             }
         }
-        if (!trimPartPickFinished_ && event->button() == Qt::LeftButton && beginPlaneResize(lastMousePosition_)) return;
+        if (!interactionLocked_ && !trimPartPickFinished_ && event->button() == Qt::LeftButton && beginPlaneResize(lastMousePosition_)) return;
         // Il piano di sezione si trascina dalla maniglia o dal bordo.
-        if (!sketchMode_ && !refPicking_ && !edgePicking_ && !trimPartPickFinished_ && event->button() == Qt::LeftButton && sectionHandleAt(lastMousePosition_)) {
+        if (!interactionLocked_ && !sketchMode_ && !refPicking_ && !edgePicking_ && !trimPartPickFinished_ && event->button() == Qt::LeftButton && sectionHandleAt(lastMousePosition_)) {
             sectionDragging_ = true;
             setCursor(Qt::SizeAllCursor);
             return;
@@ -5228,10 +5297,12 @@ protected:
 
     // Doppio clic su un segmento dello schizzo: la sua quota.
     void mouseDoubleClickEvent(QMouseEvent *event) override {
+        if (interactionLocked_) { event->accept(); return; }
         if (sketchMode_ && sketchViewUnlocked_) return;
         // Fuori dallo schizzo, doppio clic su una parte del modello: si modifica
         // la funzione che l'ha creata (come dall'albero).
-        if (!sketchMode_ && event->button() == Qt::LeftButton && editBodyCallback_ && !interactionLocked_ && !refPicking_ && !edgePicking_ && !trimPartPickFinished_) {
+        if (!sketchMode_ && event->button() == Qt::LeftButton && editBodyCallback_ && !interactionLocked_ && !refPicking_ && !edgePicking_ && !trimPartPickFinished_
+            && !sketchPickCallback_ && !sketchEntityPickCallback_) {
             const SceneSelection hit = pickSceneObject(event->pos());
             if (hit.kind == SceneObjectKind::Sketch) {
                 // Doppio clic su uno schizzo: lo si apre (come dall'albero).
@@ -5526,6 +5597,17 @@ protected:
             update();
             return;
         }
+        if (interactionLocked_ && !refPicking_ && !edgePicking_ && !trimPartPickFinished_
+            && !sketchPickCallback_ && !sketchEntityPickCallback_) {
+            if (event->buttons() & Qt::LeftButton) {
+                autoFit_ = false;
+                orbitView(currentPosition - lastMousePosition_);
+            }
+            lastMousePosition_ = currentPosition;
+            hover_ = {};
+            update();
+            return;
+        }
         if (boxArmed_ && (event->buttons() & Qt::LeftButton)) {
             // Riquadro di selezione (dopo qualche pixel: un clic resta un clic).
             boxEnd_ = currentPosition;
@@ -5720,6 +5802,8 @@ protected:
 
     // Evidenziazione al passaggio (riferimenti, spigoli, oggetti) nel punto `currentPosition`.
     void updateHover(const QPoint &currentPosition) {
+        if (interactionLocked_ && !refPicking_ && !edgePicking_ && !trimPartPickFinished_
+            && !sketchPickCallback_ && !sketchEntityPickCallback_) { hover_ = {}; return; }
         if (QApplication::mouseButtons() & Qt::LeftButton) return;
         if (trimPartPickFinished_) {
             QVector3D origin, direction;
@@ -12197,10 +12281,52 @@ private:
 // Aspetto comune delle finestre delle funzioni. Il fondale arriva direttamente
 // dal framebuffer del viewport CAD, quindi non dipende da cio' che Wayland
 // considera dietro la finestra e segue ogni nuovo frame della scena.
+struct WindowLock {
+    QList<QPointer<QWidget>> widgets;
+    QList<QPointer<QAction>> actions;
+    CadViewport *viewport = nullptr;
+    bool previousLock = false;
+    WindowLock(QMainWindow *window, CadViewport *target, QWidget *keep) : viewport(target), previousLock(target->interactionLocked()) {
+        QList<QWidget *> candidates{window->menuBar()};
+        for (QToolBar *bar : window->findChildren<QToolBar *>()) candidates.append(bar);
+        for (QDockWidget *dock : window->findChildren<QDockWidget *>()) candidates.append(dock);
+        for (QWidget *widget : candidates)
+            if (widget && widget->isEnabled()) {
+                widget->setEnabled(false);
+                widgets.append(widget);
+            }
+        for (QDialog *dialog : window->findChildren<QDialog *>())
+            if (dialog != keep && dialog->isVisible() && !dialog->isAncestorOf(keep) && !keep->isAncestorOf(dialog)
+                && dialog->isEnabled()) {
+                dialog->setEnabled(false);
+                widgets.append(dialog);
+            }
+        const auto inside = [keep](const QObject *object) {
+            for (; object; object = object->parent())
+                if (object == keep) return true;
+            return false;
+        };
+        for (QAction *action : window->findChildren<QAction *>())
+            if (action->isEnabled() && !inside(action)) {
+                action->setEnabled(false);
+                actions.append(action);
+            }
+        viewport->setInteractionLocked(true);
+    }
+    ~WindowLock() {
+        for (const QPointer<QWidget> &widget : widgets)
+            if (widget) widget->setEnabled(true);
+        for (const QPointer<QAction> &action : actions)
+            if (action) action->setEnabled(true);
+        viewport->setInteractionLocked(previousLock);
+    }
+};
+
 class FunctionDialogPanel : public QDialog {
 public:
-    explicit FunctionDialogPanel(QWidget *parent = nullptr)
-        : QDialog(overlayParent(parent)), panelColor_(palette().color(QPalette::Window)), captureTimer_(this) {
+    explicit FunctionDialogPanel(QWidget *parent = nullptr, bool exclusive = true)
+        : QDialog(overlayParent(parent)), exclusive_(exclusive), panelColor_(palette().color(QPalette::Window)), captureTimer_(this) {
+        setAttribute(Qt::WA_NoMousePropagation);
         embedded_ = dynamic_cast<CadViewport *>(parentWidget()) != nullptr;
         if (embedded_) {
             setWindowFlags(Qt::Widget);
@@ -12322,9 +12448,17 @@ public:
         setCornerRadius(settings.value(QStringLiteral("view/functionPanelCornerRadius"), 10).toInt());
     }
 protected:
+    void mousePressEvent(QMouseEvent *event) override { raise(); event->accept(); }
+    void mouseReleaseEvent(QMouseEvent *event) override { event->accept(); }
+    void mouseDoubleClickEvent(QMouseEvent *event) override { event->accept(); }
+    void wheelEvent(QWheelEvent *event) override { event->accept(); }
+    void contextMenuEvent(QContextMenuEvent *event) override { event->accept(); }
     void showEvent(QShowEvent *event) override {
         QDialog::showEvent(event);
         locateViewport();
+        if (exclusive_ && viewport_ && !windowLock_)
+            if (auto *window = qobject_cast<QMainWindow *>(viewport_->window()))
+                windowLock_ = std::make_unique<WindowLock>(window, viewport_, this);
         initializePanelSize();
         if (embedded_ && !placed_) placeAtLeft();
         raise();
@@ -12334,6 +12468,7 @@ protected:
     }
     void hideEvent(QHideEvent *event) override {
         if (viewport_) viewport_->removeGlassPanel(reinterpret_cast<quintptr>(this));
+        windowLock_.reset();
         QDialog::hideEvent(event);
     }
     void changeEvent(QEvent *event) override {
@@ -12420,10 +12555,25 @@ protected:
                 return true;
             }
         }
+        if (embedded_ && watched == parentWidget() && isVisible() && isEnabled()) {
+            QPoint position;
+            bool pointer = false;
+            if (event->type() == QEvent::MouseButtonPress || event->type() == QEvent::MouseButtonRelease
+                || event->type() == QEvent::MouseButtonDblClick || event->type() == QEvent::MouseMove) {
+                position = static_cast<QMouseEvent *>(event)->position().toPoint();
+                pointer = true;
+            } else if (event->type() == QEvent::Wheel) {
+                position = static_cast<QWheelEvent *>(event)->position().toPoint();
+                pointer = true;
+            }
+            if (pointer && geometry().contains(position)) { raise(); event->accept(); return true; }
+        }
         if (embedded_ && watched == parentWidget() && event->type() == QEvent::Resize) keepInsideViewport();
         return QDialog::eventFilter(watched, event);
     }
 private:
+    bool exclusive_ = true;
+    std::unique_ptr<WindowLock> windowLock_;
     static QWidget *overlayParent(QWidget *requested) {
         if (!requested) return nullptr;
         QWidget *root = requested->window();
@@ -14074,41 +14224,11 @@ static bool loftDialog(QWidget *parent, CadViewport *viewport, const QString &ti
 // Blocco dell'interfaccia durante una finestra "leggera" (non modale, per
 // lasciare la vista attiva alla scelta dei riferimenti): menu, barre, albero e
 // tutte le azioni (anche le scorciatoie) spenti; la vista senza menu contestuali.
-struct WindowLock {
-    QList<QPointer<QWidget>> widgets;
-    QList<QPointer<QAction>> actions;
-    CadViewport *viewport = nullptr;
-    WindowLock(QMainWindow *window, CadViewport *target, QWidget *keep) : viewport(target) {
-        QList<QWidget *> candidates{window->menuBar()};
-        for (QToolBar *bar : window->findChildren<QToolBar *>()) candidates.append(bar);
-        for (QDockWidget *dock : window->findChildren<QDockWidget *>()) candidates.append(dock);
-        for (QWidget *widget : candidates)
-            if (widget && widget->isEnabled()) {
-                widget->setEnabled(false);
-                widgets.append(widget);
-            }
-        const auto inside = [keep](const QObject *object) {
-            for (; object; object = object->parent())
-                if (object == keep) return true;
-            return false;
-        };
-        for (QAction *action : window->findChildren<QAction *>())
-            if (action->isEnabled() && !inside(action)) {
-                action->setEnabled(false);
-                actions.append(action);
-            }
-        viewport->setInteractionLocked(true);
-    }
-    ~WindowLock() {
-        for (const QPointer<QWidget> &widget : widgets)
-            if (widget) widget->setEnabled(true);
-        for (const QPointer<QAction> &action : actions)
-            if (action) action->setEnabled(true);
-        viewport->setInteractionLocked(false);
-    }
-};
 
 static bool runModeless(QMainWindow *window, CadViewport *viewport, QDialog &dialog) {
+    // Le opzioni non incorporate (STL/OBJ) restano sopra la finestra madre
+    // anche quando il viewport riceve il focus per ruotare la vista.
+    if (dialog.isWindow()) dialog.setWindowFlag(Qt::Tool, true);
     dialog.setModal(false);
     const WindowLock lock(window, viewport, &dialog);
     dialog.show();
@@ -17922,7 +18042,7 @@ static bool primitiveDialog(QWidget *parent, PrimitiveParameters &parameters,
 class FloatingPanel final : public FunctionDialogPanel {
 public:
     FloatingPanel(QWidget *window, const QString &title, const QString &settingsKey, const QSize &defaultSize)
-        : FunctionDialogPanel(window), settingsKey_(settingsKey), defaultSize_(defaultSize) {
+        : FunctionDialogPanel(window, false), settingsKey_(settingsKey), defaultSize_(defaultSize) {
         setHeaderVisible(false);
         auto *outer = new QVBoxLayout(this);
         outer->setContentsMargins(1, 1, 1, 1);
@@ -18145,6 +18265,7 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
         (*editBlend)(index, edges, size, chamfer);
     });
     auto editBody = std::make_shared<std::function<void(int)>>([this, viewport, editBlend](int index) {
+        if (viewport->interactionLocked()) return;
         const QVector<ExtrusionObject> &bodies = viewport->extrusions();
         if (index < 0 || index >= bodies.size()) return;
         // Ogni finestra si chiude solo se il corpo si rigenera con i valori nuovi
@@ -18519,11 +18640,19 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
         beginForegroundProgress(QStringLiteral("Importazione di %1...").arg(QFileInfo(path).fileName()));
         QVector<ForgeCad::ImportedPart> parts;
         QStringList notes;
-        const QString error = ForgeCad::importCadFile(path, parts, &notes);
-        const QStringList failures = error.isEmpty() ? viewport->importParts(parts, QFileInfo(path).fileName()) : QStringList();
+        QString error;
+        QStringList failures;
+        try {
+            error = viewport->readImportFile(path, parts, notes);
+            if (error.isEmpty()) failures = viewport->importParts(parts, QFileInfo(path).fileName(), [this](int done, int total) {
+                updateForegroundProgress(QStringLiteral("Preparazione della vista: %1 / %2 corpi").arg(done).arg(total), done, total);
+            });
+        } catch (const std::exception &failure) {
+            error = QStringLiteral("Importazione non riuscita: %1").arg(QString::fromUtf8(failure.what()));
+        }
         endForegroundProgress();
         if (!error.isEmpty()) {
-            QMessageBox::warning(this, QStringLiteral("Importa"), error);
+            showImportReport(this, error);
             return;
         }
         int solids = 0;
@@ -18534,7 +18663,7 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
             QString text = summary;
             if (!failures.isEmpty()) text += QStringLiteral("\n\nNon costruiti:\n  ") + failures.join(QStringLiteral("\n  "));
             if (!notes.isEmpty()) text += QStringLiteral("\n\nAvvisi:\n  ") + notes.join(QStringLiteral("\n  "));
-            QMessageBox::information(this, QStringLiteral("Importa"), text);
+            showImportReport(this, text);
         }
     });
     // Esportazione per altri CAD (cad_export): corpi visibili, B-rep esatti in mm.
@@ -18668,9 +18797,9 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
             else viewport->setExportMeshPreview(quadrangular ? builtObj.preview : built.preview, quadrangular,
                                                 quadrangular ? builtObj.previewLimited : built.previewLimited);
         });
-        const int dialogResult = dialog.exec();
+        const bool accepted = runModeless(this, viewport, dialog);
         viewport->clearExportMeshPreview();
-        if (dialogResult != QDialog::Accepted) return;
+        if (!accepted) return;
 
         const ForgeCad::StlExportOptions requested = currentOptions();
         settings.setValue(QStringLiteral("export/stlMaxEdge"), requested.maxEdgeLength);
@@ -20790,7 +20919,7 @@ bool PdfWindow::saveDocument(bool askPath) {
 void PdfWindow::closeEvent(QCloseEvent *event) {
     // Durante un calcolo il ciclo di eventi gira ancora (runWhileResponsive):
     // la chiusura aspetta la fine.
-    if (foregroundProgressDepth_ > 0) {
+    if (foregroundProgressDepth_ > 0 || (viewport_ && viewport_->interactionLocked())) {
         event->ignore();
         return;
     }

@@ -206,18 +206,32 @@ public:
         : surface_(surface), curve_(curve), range_(range), tolerance_(tolerance), scale_(scale), poles_(surfacePoles(surface)),
           sides_(degenerateSides(surface)) {}
 
-    bool node(double t, Vec2 uv, HermiteNode &out) const {
+    bool node(double t, Vec2 uv, HermiteNode &out, bool recoverPole = true) const {
         Vec3 c[2];
         curve_.evaluate(t, 1, c);
         const int pole = poleIndex(poles_, c[0], tolerance_);
         if (pole >= 0) {
+            if (!recoverPole) return false;
             // Nel polo u e' quello della stima (il limite lungo la curva) e la
-            // derivata e' quella di un punto appena dentro il tratto.
-            const double inside = t + (t < 0.5 * (range_.lo + range_.hi) ? 1.0 : -1.0) * 1e-7 * range_.length();
-            HermiteNode near;
-            if (!node(inside, uv, near)) return false;
-            out = {t, Vec2(uv[0], poles_[pole].v), near.derivative};
-            return true;
+            // derivata e' quella di un punto dentro il tratto. Se anche quel
+            // punto e' entro la tolleranza del polo, allontanati con passi
+            // crescenti: la ricorsione a passo fisso esauriva lo stack sugli
+            // edge STEP quasi degeneri. Al massimo un livello di ricorsione.
+            const bool forward = t < 0.5 * (range_.lo + range_.hi);
+            const double available = forward ? range_.hi - t : t - range_.lo;
+            double step = 1e-7 * range_.length();
+            for (int attempt = 0; attempt < 24; ++attempt, step *= 2.0) {
+                const double travel = std::min(step, 0.5 * available);
+                const double inside = t + (forward ? travel : -travel);
+                if (inside == t) return false;
+                HermiteNode near;
+                if (node(inside, uv, near, false)) {
+                    out = {t, Vec2(uv[0], poles_[pole].v), near.derivative};
+                    return true;
+                }
+                if (travel == 0.5 * available) break;
+            }
+            return false;
         }
         const int side = sideIndex(sides_, c[0], tolerance_);
         if (side >= 0) {

@@ -16,6 +16,7 @@
 #include "fk_boolean.h"
 #include "fk_classify.h"
 #include "fk_curve_algo.h"
+#include "fk_curve_ops.h"
 #include "fk_extrude.h"
 #include "fk_intersect.h"
 #include "fk_pcurve.h"
@@ -499,6 +500,38 @@ Body sewBodies(const std::vector<const Body *> &bodies, double tolerance) {
             if (found < 0) {
                 edges.push_back({{start, end, edge.curve, edge.range, edge.tolerance}, middle});
                 found = int(edges.size()) - 1;
+            } else {
+                // Resta una delle due curve: lo scarto dall'altra diventa
+                // tolleranza dell'edge (sta sulla superficie dell'altro pezzo solo
+                // entro quello).
+                Body::BuildEdge &kept = edges[std::size_t(found)].edge;
+                double gap = 0.0;
+                for (int k = 0; k <= 8; ++k) {
+                    const Vec3 q = edge.curve->point(edge.range.lo + edge.range.length() * k / 8.0);
+                    gap = std::max(gap, distance(q, projectPoint(*kept.curve, q, kept.range).point));
+                }
+                if (gap > kLinearResolution) {
+                    // Se questa arriva nel polo di una sua faccia (il meridiano di
+                    // una sfera, quando il raggio del raccordo e' uguale a quello
+                    // dell'arco) e l'altra gli passa solo accanto, resta questa: un
+                    // edge accanto al polo vi gira in u di mezzo giro e la sua
+                    // SP-curve sulla sfera non si calcola.
+                    bool atPole = false, keptAtPole = false;
+                    for (FinId fin : {edge.forward, edge.backward}) {
+                        if (!fin.valid()) continue;
+                        const std::vector<SurfacePole> poles = surfacePoles(*body.face(body.finFace(fin)).surface);
+                        for (const Vec3 &end : {edge.curve->point(edge.range.lo), edge.curve->point(edge.range.hi)})
+                            atPole = atPole || poleIndex(poles, end, kLinearResolution) >= 0;
+                        for (const Vec3 &end : {kept.curve->point(kept.range.lo), kept.curve->point(kept.range.hi)})
+                            keptAtPole = keptAtPole || poleIndex(poles, end, kLinearResolution) >= 0;
+                    }
+                    if (atPole && !keptAtPole) {
+                        const bool reverse = kept.start != start;
+                        kept.curve = reverse ? reversedCurve(edge.curve) : edge.curve;
+                        kept.range = reverse ? Interval{-edge.range.hi, -edge.range.lo} : edge.range;
+                    }
+                    kept.tolerance = std::max({kept.tolerance, edge.tolerance, 1.01 * gap});
+                }
             }
             edgeMap[e.index] = {found, reversed};
         }
@@ -546,6 +579,21 @@ Body sewBodies(const std::vector<const Body *> &bodies, double tolerance) {
         buildFaces.push_back(std::move(face));
     }
     Body sewn = Body::build(points, buildEdges, buildFaces);
+    // Vertici fusi entro la tolleranza della cucitura: le curve che vi arrivano
+    // possono fermarsi poco lontano (pezzi costruiti da spigoli della base che
+    // si toccano solo entro la loro precisione). Edge e vertici diventano
+    // tolleranti per lo scarto, come nelle booleane: senza, l'SP-curve di un
+    // meridiano che arriva accanto al polo di una sfera (raggio del raccordo
+    // uguale a quello dell'arco) non si calcola.
+    for (EdgeId e : sewn.edges()) {
+        Edge &edge = sewn.edge(e);
+        for (const auto &[v, t] : {std::pair<VertexId, double>{sewn.edgeStart(e), edge.range.lo}, {sewn.edgeEnd(e), edge.range.hi}}) {
+            const double gap = distance(sewn.vertex(v).point, edge.curve->point(t));
+            if (gap <= kLinearResolution) continue;
+            edge.tolerance = std::max(edge.tolerance, 1.01 * gap);
+            sewn.vertex(v).tolerance = std::max(sewn.vertex(v).tolerance, 1.01 * gap);
+        }
+    }
     computePCurves(sewn);
     return unifySameDomain(sewn);
 }

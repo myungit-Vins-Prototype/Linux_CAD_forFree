@@ -246,6 +246,9 @@ FaceIntegrator::FaceIntegrator(const Body &body, FaceId faceId, const Vec3 &refe
             if (!fin.sense) std::reverse(ts.begin(), ts.end());
 
             std::vector<Sample> samples;
+            // Fine della fin precedente: `previous` segue i campioni di questa,
+            // ma il cammino lungo il polo parte da li'.
+            const Vec2 previousEnd = previous;
             for (double t : ts) {
                 const Vec3 p = edge.curve->point(t);
                 Sample sample{t, Vec2()};
@@ -274,8 +277,8 @@ FaceIntegrator::FaceIntegrator(const Body &body, FaceId faceId, const Vec3 &refe
             if (!tracks.empty()) {
                 double target = samples.front().uv[0];
                 if (startPole >= 0 && startPole == previousPole && uPeriod > 0.0) {
-                    target = poleWalk(previous[0], target, uPeriod, previousTop, sense_, previousNear, startNear);
-                    walks.push_back({poles[startPole].v, previous[0], target});
+                    target = poleWalk(previousEnd[0], target, uPeriod, previousTop, sense_, previousNear, startNear);
+                    walks.push_back({poles[startPole].v, previousEnd[0], target});
                 }
                 const double delta = target - samples.front().uv[0];
                 if (delta != 0.0)

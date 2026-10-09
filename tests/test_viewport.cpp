@@ -6,6 +6,7 @@
 #include "fk_boolean.h"
 #include "fk_body_io.h"
 #include "fk_step.h"
+#include "fk_iges.h"
 #include "fk_classify.h"
 #include "fk_sew.h"
 #include "fk_helix.h"
@@ -30,6 +31,105 @@ static void require(bool ok, const char *message) {
 }
 class ViewportInteractionTest {
 public:
+    static void workflowUi() {
+        using namespace ForgeCad;
+        using namespace ForgeCad::Kernel;
+        QMainWindow window;
+        auto *viewport = new CadViewport(&window);
+        window.setCentralWidget(viewport);
+        window.resize(1000, 720);
+        window.show();
+        auto *action = window.menuBar()->addAction(QStringLiteral("Modifica"));
+        {
+            QDialog keep(&window);
+            WindowLock outer(&window, viewport, &keep);
+            { WindowLock inner(&window, viewport, &keep); }
+            require(viewport->interactionLocked(), "un blocco annidato non sblocca quello esterno");
+        }
+        require(!viewport->interactionLocked() && action->isEnabled(), "blocco ripristinato");
+        {
+            FunctionDialogPanel panel(&window);
+            panel.setPanelOpacity(45);
+            panel.show();
+            require(viewport->interactionLocked() && !action->isEnabled(), "ogni pannello funzione blocca gli altri comandi");
+            viewport->lastMousePosition_ = QPoint(-100, -100);
+            const QPoint pos = panel.pos() + QPoint(3, 3);
+            QMouseEvent press(QEvent::MouseButtonPress, pos, viewport->mapToGlobal(pos), Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+            QApplication::sendEvent(viewport, &press);
+            QMouseEvent twice(QEvent::MouseButtonDblClick, pos, viewport->mapToGlobal(pos), Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+            QApplication::sendEvent(viewport, &twice);
+            require(viewport->lastMousePosition_ == QPoint(-100, -100), "la zona trasparente del pannello intercetta i clic");
+            require(panel.testAttribute(Qt::WA_NoMousePropagation), "sfondo pannello senza propagazione al viewport");
+            panel.hide();
+            require(!viewport->interactionLocked() && action->isEnabled(), "chiusura pannello ripristina comandi");
+        }
+        // Lo stesso percorso usato dalle opzioni STL e OBJ: la finestra resta
+        // aperta durante l'orbita, senza selezionare o modificare la scena.
+        for (int format = 0; format < 2; ++format) {
+            QDialog options(&window);
+            bool locked = false, rotated = false, selected = false;
+            QTimer::singleShot(0, &options, [&] {
+                locked = viewport->interactionLocked() && !options.isModal();
+                const float beforeYaw = viewport->yaw_, beforePitch = viewport->pitch_;
+                const SceneSelection selection = viewport->selection_;
+                const QPoint from(800, 400), to(860, 430);
+                QMouseEvent press(QEvent::MouseButtonPress, from, viewport->mapToGlobal(from), Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+                QApplication::sendEvent(viewport, &press);
+                QMouseEvent move(QEvent::MouseMove, to, viewport->mapToGlobal(to), Qt::NoButton, Qt::LeftButton, Qt::NoModifier);
+                QApplication::sendEvent(viewport, &move);
+                QMouseEvent release(QEvent::MouseButtonRelease, to, viewport->mapToGlobal(to), Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
+                QApplication::sendEvent(viewport, &release);
+                rotated = viewport->yaw_ != beforeYaw || viewport->pitch_ != beforePitch;
+                selected = viewport->selection_ == selection;
+                options.accept();
+            });
+            require(runModeless(&window, viewport, options), "opzioni esportazione confermate");
+            require(locked && rotated && selected, "orbita consentita senza selezione durante esportazione");
+            require(!viewport->interactionLocked(), "esportazione ripristina interazione");
+        }
+        QTemporaryDir files;
+        std::vector<ExchangeBody> bodies;
+        for (int i = 0; i < 200; ++i) {
+            ExchangeBody body;
+            body.name = "corpo " + std::to_string(i);
+            body.body = makeBox(Frame3(Vec3(0, i * 5, 0), Vec3(0, 0, 1), Vec3(1, 0, 0)), 4, 3, 2);
+            bodies.push_back(std::move(body));
+        }
+        for (bool iges : {false, true}) {
+            const QString path = files.path() + (iges ? QStringLiteral("/test.igs") : QStringLiteral("/test.step"));
+            const std::string content = iges ? writeIges(bodies) : writeStep(bodies);
+            QFile file(path);
+            require(file.open(QIODevice::WriteOnly), "file import di prova");
+            file.write(content.data(), qsizetype(content.size())); file.close();
+            QTimer heartbeat;
+            int ticks = 0;
+            QObject::connect(&heartbeat, &QTimer::timeout, [&] { ++ticks; });
+            heartbeat.start(1);
+            QVector<ImportedPart> parts;
+            QStringList notes;
+            require(viewport->readImportFile(path, parts, notes).isEmpty(), "importazione dal worker");
+            require(parts.size() == 200 && ticks > 0, "GUI attiva durante lettura STEP/IGES");
+            int last = -1;
+            bool mainThread = true, monotonic = true;
+            const int meshTicks = ticks;
+            const QStringList failures = viewport->importParts(parts, path, [&](int done, int total) {
+                mainThread = mainThread && QThread::currentThread() == qApp->thread();
+                monotonic = monotonic && done >= last && done <= total;
+                last = done;
+            });
+            heartbeat.stop();
+            require(failures.empty() && last == 200 && mainThread && monotonic, "avanzamento mesh sul thread GUI fino al totale");
+            require(ticks > meshTicks && viewport->extrusions_.size() == 200, "GUI attiva durante mesh e pubblicazione completa");
+            viewport->undo();
+            require(viewport->extrusions_.isEmpty(), "importazione annullabile in un solo passo");
+        }
+        QVector<ImportedPart> parts;
+        QStringList notes;
+        require(!viewport->readImportFile(files.path() + "/assente.step", parts, notes).isEmpty(), "errore import riportato dal worker");
+        require(viewport->extrusions_.isEmpty(), "errore import non modifica il documento");
+        std::cout << "PASS workflow UI: import responsive, orbita export, pannelli esclusivi" << std::endl;
+    }
+
     // Analisi -> Micro-geometrie sul vecchio corpo finale di Loft_offset
     // (importato da STEP): le due strisce sottili, i quattro spigoli corti e i
     // due giunti quasi tangenti, tutti ritrovati come riferimenti nella vista.
@@ -1170,7 +1270,7 @@ public:
     static void blendDocumentFaces(const QStringList &args) {
         using namespace ForgeCad;
         using namespace ForgeCad::Kernel;
-        require(args.size() >= 5, "uso: --blend-document-faces input output corpo raggio facce...");
+        require(args.size() >= 5, "uso: --blend-document-faces input output corpo raggio facce... (o E<spigolo>)");
         require(QFileInfo(args[0]).absoluteFilePath() != QFileInfo(args[1]).absoluteFilePath(),
                 "il risultato deve essere una copia del documento");
         bool validBody = false, validRadius = false;
@@ -1187,6 +1287,16 @@ public:
         const auto faces = base->faces();
         for (const auto &value : args.mid(4)) {
             bool valid = false;
+            // "E<n>": un solo spigolo invece dei bordi di una faccia.
+            if (value.startsWith(QLatin1Char('E'))) {
+                const EdgeId edge(value.mid(1).toInt(&valid));
+                const auto edges = base->edges();
+                require(valid && std::find(edges.begin(), edges.end(), edge) != edges.end(), "indice spigolo valido");
+                if (!selected.insert(edge.index).second) continue;
+                const auto &e = base->edge(edge);
+                references.append(edgeReference(*base, edge, e.curve->point(0.5 * (e.range.lo + e.range.hi))));
+                continue;
+            }
             const FaceId face(value.toInt(&valid));
             require(valid && std::find(faces.begin(), faces.end(), face) != faces.end(), "indice faccia valido");
             for (const auto edge : faceBoundaryEdges(*base, face)) {
@@ -1201,6 +1311,11 @@ public:
         for (auto &sketch : state.sketches) sketch.visible = false;
         CadViewport viewport;
         viewport.loadDocument(state);
+        // Prima il percorso dell'anteprima (thread, tassellazione della patch), come nell'app.
+        viewport.requestBlendPreview(baseIndex, references, radius, false);
+        viewport.startPreviewJob();
+        while (viewport.previewRunning_) QApplication::processEvents(QEventLoop::AllEvents, 50);
+        std::cout << "anteprima: " << (viewport.preview_.valid ? std::string("riuscita") : viewport.preview_.error.toStdString()) << std::endl;
         const QString error = viewport.createBlend(baseIndex, references, radius, false,
             QStringLiteral("Raccordi facce loft R%1 mm").arg(radius));
         std::cout << "R=" << radius << " mm: " << error.toStdString() << std::endl;
@@ -4344,6 +4459,11 @@ int main(int argc, char **argv) {
     QTemporaryDir settings;
     QSettings::setDefaultFormat(QSettings::IniFormat);
     QSettings::setPath(QSettings::IniFormat, QSettings::UserScope, settings.path());
+    if (app.arguments().contains(QStringLiteral("--workflow-ui"))) {
+        try { ViewportInteractionTest::workflowUi(); }
+        catch (const std::exception &e) { std::cerr << e.what() << std::endl; return 1; }
+        return 0;
+    }
     if (app.arguments().contains(QStringLiteral("--rebuild-all"))) {
         try { ViewportInteractionTest::rebuildAllCommand(); }
         catch (const std::exception &e) { std::cerr << e.what() << std::endl; return 1; }

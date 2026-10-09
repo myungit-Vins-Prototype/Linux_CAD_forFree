@@ -1,6 +1,9 @@
 #include "fk_exchange.h"
 
 #include <charconv>
+#include <array>
+#include <cstdint>
+#include <unordered_map>
 
 #include <algorithm>
 #include <cmath>
@@ -436,13 +439,54 @@ bool sewModel(RawModel &model, double tolerance) {
     std::vector<int> order(n), target(n);
     for (std::size_t k = 0; k < n; ++k) order[k] = int(k), target[k] = int(k);
     std::sort(order.begin(), order.end(), [&](int a, int b) { return model.points[std::size_t(a)].x() < model.points[std::size_t(b)].x(); });
-    for (std::size_t i = 0; i < n; ++i) {
-        const int a = order[i];
-        if (target[std::size_t(a)] != a) continue;
-        for (std::size_t j = i + 1; j < n; ++j) {
-            const int b = order[j];
-            if (model.points[std::size_t(b)].x() - model.points[std::size_t(a)].x() > tolerance) break;
-            if (target[std::size_t(b)] == b && distance(model.points[std::size_t(a)], model.points[std::size_t(b)]) <= tolerance) target[std::size_t(b)] = a;
+    // Celle 3D: evita la scansione quadratica dei punti con la stessa x.
+    // Mantieni ordine e rappresentanti della precedente fusione greedy.
+    using Cell = std::array<std::int64_t, 3>;
+    struct CellHash {
+        std::size_t operator()(const Cell &cell) const {
+            std::size_t h = 0;
+            for (std::int64_t c : cell) h ^= std::hash<std::int64_t>{}(c) + std::size_t(0x9e3779b9) + (h << 6) + (h >> 2);
+            return h;
+        }
+    };
+    std::vector<Cell> cells(n);
+    bool spatial = tolerance > 0.0 && std::isfinite(tolerance);
+    for (std::size_t i = 0; spatial && i < n; ++i) {
+        for (int axis = 0; axis < 3; ++axis) {
+            // Celle larghe 2*tolleranza lasciano margine agli arrotondamenti.
+            const long double c = std::floor(static_cast<long double>(model.points[i][axis]) / (2.0L * tolerance));
+            if (!std::isfinite(c) || std::fabs(c) > 0x1p50L) { spatial = false; break; }
+            cells[i][std::size_t(axis)] = static_cast<std::int64_t>(c);
+        }
+    }
+    if (spatial) {
+        std::unordered_map<Cell, std::vector<int>, CellHash> buckets;
+        buckets.reserve(n);
+        for (std::size_t i = 0; i < n; ++i) buckets[cells[i]].push_back(int(i));
+        for (int a : order) {
+            if (target[std::size_t(a)] != a) continue;
+            const Cell &cell = cells[std::size_t(a)];
+            for (int dx = -1; dx <= 1; ++dx)
+                for (int dy = -1; dy <= 1; ++dy)
+                    for (int dz = -1; dz <= 1; ++dz) {
+                        const auto found = buckets.find({cell[0] + dx, cell[1] + dy, cell[2] + dz});
+                        if (found == buckets.end()) continue;
+                        for (int b : found->second)
+                            if (target[std::size_t(b)] == b && distance(model.points[std::size_t(a)], model.points[std::size_t(b)]) <= tolerance)
+                                target[std::size_t(b)] = a;
+                    }
+        }
+    } else {
+        // Coordinate estreme o tolleranza non positiva: nessuna conversione
+        // fuori intervallo, stesso percorso precedente.
+        for (std::size_t i = 0; i < n; ++i) {
+            const int a = order[i];
+            if (target[std::size_t(a)] != a) continue;
+            for (std::size_t j = i + 1; j < n; ++j) {
+                const int b = order[j];
+                if (model.points[std::size_t(b)].x() - model.points[std::size_t(a)].x() > tolerance) break;
+                if (target[std::size_t(b)] == b && distance(model.points[std::size_t(a)], model.points[std::size_t(b)]) <= tolerance) target[std::size_t(b)] = a;
+            }
         }
     }
     for (RawEdge &e : model.edges) {

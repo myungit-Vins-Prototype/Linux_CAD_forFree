@@ -366,3 +366,17 @@ FK_TEST(MassWithAndWithoutPCurves) {
     for (int i = 0; i < 3; ++i)
         for (int j = 0; j < 3; ++j) FK_CHECK_NEAR(a.inertia[i][j], b.inertia[i][j], 1e-11 * std::fabs(b.inertia[2][2]));
 }
+
+FK_TEST(PCurveExtendedPoleNeighbourhood) {
+    const auto sphere = std::make_shared<SphericalSurface>(Frame3(Vec3(0, 0, 0), Vec3(0, 0, 1), Vec3(1, 0, 0)), 1.0);
+    // v = pi/2 - t^2: una porzione lunga del parametro resta vicina al polo.
+    // La ricerca ricorsiva a passo fisso poteva esaurire lo stack.
+    const auto q = std::make_shared<BSplineCurve<2>>(2, std::vector<double>{0, 0, 0, 1, 1, 1},
+        std::vector<Vec2>{Vec2(0.3, kHalfPi), Vec2(0.3, kHalfPi), Vec2(0.3, kHalfPi - 1.0)});
+    const auto curve = std::make_shared<CurveOnSurface>(sphere, q);
+    const double tolerance = 1e-3;
+    const auto fitted = fitPCurve(*sphere, curve, {0, 1}, tolerance);
+    // Il fit puo' rifiutare questo caso singolare (nullptr): deve terminare
+    // senza ricorsione illimitata; se riesce, deve rispettare la tolleranza.
+    if (fitted) FK_CHECK(pcurveDeviation(*sphere, *curve, *fitted, {0, 1}, 128) <= tolerance);
+}

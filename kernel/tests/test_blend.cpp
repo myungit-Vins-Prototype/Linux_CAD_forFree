@@ -2,6 +2,7 @@
 #include <fstream>
 #include <set>
 #include <sstream>
+#include <tuple>
 #include <TopExp_Explorer.hxx>
 #include <Poly_Triangulation.hxx>
 #include <BRep_Tool.hxx>
@@ -325,6 +326,21 @@ FK_TEST(BlendTangentChains) {
     FK_CHECK(rim.size() == 8 && floor.size() == 8);
     blended(pocket, rim, r, false, vPocket - waste * straight - ringVolume(R, r, false));
     blended(pocket, floor, r, false, vPocket + waste * straight + ringVolume(R, r, true));
+}
+
+FK_TEST(BlendRadiusEqualsCornerRadius) {
+    // Raggio del raccordo uguale a quello degli angoli arrotondati: negli
+    // angoli il toro degenera in una sfera (centro sull'asse dell'arco) e le
+    // sezioni dei segmenti arrivano nel suo polo. Da 1476.prt (bordo superiore,
+    // angoli R 7 e raccordo R 7): la booleana con l'utensile cucito andava in
+    // crash (SP-curve mancante dereferenziata).
+    const double w = 10.0, d = 6.0, R = 1.5, h = 3.0;
+    const Operand slab = extrusion(roundedRectangle(Vec2(0, 0), w, d, R), h);
+    const double straight = 2.0 * (w - 2.0 * R) + 2.0 * (d - 2.0 * R);
+    const double vSlab = (w * d - (4.0 - kPi) * R * R) * h;
+    const std::vector<Vec3> top = edgesAtHeight(slab.body, h);
+    FK_CHECK(top.size() == 8);
+    blended(slab.body, top, R, false, vSlab - (1.0 - kPi / 4.0) * R * R * straight - ringVolume(R, R, true));
 }
 
 FK_TEST(BlendOpenArcsAndObliqueEnds) {
@@ -1622,6 +1638,39 @@ FK_TEST(BlendSplitSeamPreservesKnotCorner) {
 // contatti si incrociano sul cilindro le tre superfici sono tangenti e le
 // curve toro/raccordo vi arrivano solo entro qualche tolleranza. Prima la
 // booleana falliva e la chirurgia lasciava due loop del cilindro sovrapposti.
+FK_TEST(BlendTopContourWithCornerRadiusEqualToFillet) {
+    // 1476.prt, corpo B175: bordo superiore (46 spigoli tangenti, archi R 7, 10
+    // e 25) raccordato. Con R 7 gli archi convessi danno sfere; nella cucitura
+    // degli utensili un meridiano della sezione di un segmento passava a 2.3e-7
+    // dal polo (base tangente solo entro quella precisione): SP-curve mancante e
+    // crash nella booleana. Poi il volume: il cammino lungo il polo delle fin
+    // senza SP-curve esatta partiva dal punto sbagliato (una faccia contava come
+    // la sfera intera). Riferimenti: OCCT 7.9.3 (BRepFilletAPI_MakeFillet sullo
+    // STEP del corpo) toglie 3845.5484 (R 4) e 11721.471 (R 7); il volume di OCCT
+    // del nostro R 7 coincide con il nostro entro 1e-3.
+    std::ifstream in(std::string(FORGECAD_SOURCE_DIR) + "/kernel/tests/data/1476_b175.body", std::ios::binary);
+    FK_CHECK(bool(in));
+    if (!in) return;
+    std::stringstream content;
+    content << in.rdbuf();
+    const Body body = readBodyBinary(content.str());
+    const EdgeId top = nearestEdge(body, Vec3(0.0, 148.0, 54.0), 1e-6);
+    FK_CHECK(top.valid());
+    const double before = massProperties(body).volume;
+    for (const auto &[radius, occt, relative] : {std::tuple<double, double, double>{4.0, 3845.5484, 1e-6}, {7.0, 11721.471, 2e-3}}) {
+        Body result;
+        try {
+            result = blendEdges(body, {top}, radius, false);
+        } catch (const std::exception &failure) {
+            fktest::reportFailure(__FILE__, __LINE__, failure.what());
+            continue;
+        }
+        for (const CheckIssue &issue : checkBody(result)) fktest::reportFailure(__FILE__, __LINE__, describe(issue.code) + ": " + issue.message);
+        for (EdgeId e : result.edges()) FK_CHECK(result.edge(e).tolerance < 1e-6);
+        FK_CHECK_NEAR(before - massProperties(result).volume, occt, relative * occt);
+    }
+}
+
 FK_TEST(BlendCapOverlappingPocketFillet) {
     std::ifstream in(std::string(FORGECAD_SOURCE_DIR) + "/kernel/tests/data/taglio_superfici_b20.body", std::ios::binary);
     FK_CHECK(bool(in));
@@ -1650,4 +1699,46 @@ FK_TEST(BlendCapOverlappingPocketFillet) {
     TessellationOptions tessellation;
     tessellation.deflection = 1e-3;
     FK_CHECK(tessellate(result, tessellation).failedFaces == 0);
+}
+
+// B6 di Applicatore.prt: estremi concavi su bordi B-spline ottenuti per
+// intersezione. La continuazione polinomiale del trim non segue gli appoggi.
+FK_TEST(BlendApplicatoreRevolutionEnds) {
+    std::ifstream in(std::string(FORGECAD_SOURCE_DIR) + "/kernel/tests/data/applicatore_revolution_blend.body", std::ios::binary);
+    std::stringstream content;
+    content << in.rdbuf();
+    const Body body = readBodyBinary(content.str());
+    const std::string original = writeBodyBinary(body);
+    struct Case { std::vector<EdgeId> edges; double radius; int faces; };
+    const std::vector<Case> cases{
+        {{EdgeId(17), EdgeId(20)}, 0.01, 17},
+        {{EdgeId(17), EdgeId(20)}, 0.05, 17},
+        {{EdgeId(17), EdgeId(20)}, 0.1, 17},
+        {{EdgeId(17)}, 0.01, 16}, {{EdgeId(20)}, 0.01, 16},
+        {{EdgeId(17)}, 0.05, 16}, {{EdgeId(20)}, 0.05, 16},
+        {{EdgeId(17)}, 0.1, 16}, {{EdgeId(20)}, 0.1, 16},
+        {{EdgeId(27), EdgeId(3)}, 0.1, 21},
+        {{EdgeId(3), EdgeId(27)}, 0.1, 21},
+        {{EdgeId(3)}, 0.1, 20}, {{EdgeId(5)}, 0.1, 20}};
+    for (const Case &test : cases) {
+        Body result;
+        try { result = blendEdges(body, test.edges, test.radius, false); }
+        catch (const std::exception &error) {
+            reportFailure(__FILE__, __LINE__, "E" + std::to_string(test.edges.front().index)
+                          + " R" + std::to_string(test.radius) + ": " + error.what());
+            continue;
+        }
+        FK_CHECK(result.counts().faces == test.faces);
+        CheckOptions checks;
+        checks.loopCrossings = true;
+        FK_CHECK(checkBody(result, checks).empty());
+        for (EdgeId edge : result.edges()) {
+            FK_CHECK(!result.isLaminar(edge));
+            FK_CHECK(result.edge(edge).tolerance <= 1e-4 * test.radius);
+        }
+        TessellationOptions options;
+        options.deflection = 0.01;
+        FK_CHECK(tessellate(result, options).failedFaces == 0);
+    }
+    FK_CHECK(writeBodyBinary(body) == original);
 }

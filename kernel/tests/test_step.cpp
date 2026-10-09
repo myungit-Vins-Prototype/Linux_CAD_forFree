@@ -9,6 +9,7 @@
 #include <cmath>
 #include <cstdio>
 #include <fstream>
+#include <sstream>
 
 #include "fk_blend.h"
 #include "fk_body_check.h"
@@ -197,7 +198,12 @@ FK_TEST(StepRoundTrip) {
         e.body = body;
         bodies.push_back(e);
     }
-    const StepReadResult read = readStep(writeStep(bodies));
+    const std::string content = writeStep(bodies);
+    const StepReadResult read = readStep(content);
+    const StepReadResult serial = readStep(content, {1});
+    FK_CHECK(read.notes == serial.notes && read.bodies.size() == serial.bodies.size());
+    for (std::size_t i = 0; i < std::min(read.bodies.size(), serial.bodies.size()); ++i)
+        FK_CHECK(writeBodyBinary(read.bodies[i].body) == writeBodyBinary(serial.bodies[i].body));
     FK_CHECK(read.bodies.size() == bodies.size());
     for (std::size_t k = 0; k < read.bodies.size() && k < bodies.size(); ++k) {
         FK_CHECK(read.bodies[k].name == bodies[k].name);
@@ -239,7 +245,7 @@ FK_TEST(StepReadOcctFiles) {
 }
 
 FK_TEST(StepReadAssembly) {
-    // Assieme XCAF con due istanze posizionate dello stesso cilindro e un box.
+    // Assieme XCAF con tre istanze posizionate dello stesso cilindro e un box.
     const Handle(XCAFApp_Application) application = XCAFApp_Application::GetApplication();
     Handle(TDocStd_Document) document;
     application->NewDocument(TCollection_ExtendedString("MDTV-XCAF"), document);
@@ -250,12 +256,14 @@ FK_TEST(StepReadAssembly) {
     TDataStd_Name::Set(pin, "perno");
     const TDF_Label block = tool->AddShape(BRepPrimAPI_MakeBox(3.0, 2.0, 1.0).Shape(), false);
     TDataStd_Name::Set(block, "blocco");
-    gp_Trsf a, b;
+    gp_Trsf a, b, c;
     a.SetTranslation(gp_Vec(10, 0, 0));
     b.SetRotation(gp_Ax1(gp_Pnt(0, 0, 0), gp_Dir(1, 0, 0)), kHalfPi);
     b.SetTranslationPart(gp_Vec(0, 7, 0));
+    c.SetTranslation(gp_Vec(0, -7, 0));
     tool->AddComponent(assembly, pin, TopLoc_Location(a));
     tool->AddComponent(assembly, pin, TopLoc_Location(b));
+    tool->AddComponent(assembly, pin, TopLoc_Location(c));
     tool->AddComponent(assembly, block, TopLoc_Location());
     tool->UpdateAssemblies();
     const std::string path = std::string(P_tmpdir) + "/forgekernel_step_assembly.step";
@@ -267,22 +275,26 @@ FK_TEST(StepReadAssembly) {
     const std::string content((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
     std::remove(path.c_str());
     const StepReadResult read = readStep(content);
-    FK_CHECK(read.bodies.size() == 3);
+    const StepReadResult serial = readStep(content, {1});
+    FK_CHECK(read.notes == serial.notes && read.bodies.size() == serial.bodies.size());
+    for (std::size_t i = 0; i < std::min(read.bodies.size(), serial.bodies.size()); ++i)
+        FK_CHECK(writeBodyBinary(read.bodies[i].body) == writeBodyBinary(serial.bodies[i].body));
+    FK_CHECK(read.bodies.size() == 4);
     int pins = 0;
     for (const ExchangeBody &body : read.bodies) {
         const MassProperties m = massProperties(body.body, 1e-10);
         if (body.name.find("perno") == 0) {
             ++pins;
             FK_CHECK_NEAR(m.volume, kPi * 0.25 * 2.0, 1e-10);
-            // Le due istanze: (10, 0, 1) e ruotata attorno a X di 90 gradi: (0, 7 - 1, 0).
+            // Le tre istanze: traslazioni e una rotazione attorno a X.
             const bool first = distance(m.centroid, Vec3(10, 0, 1)) < 1e-9, second = distance(m.centroid, Vec3(0, 6, 0)) < 1e-9;
-            FK_CHECK(first || second);
+            FK_CHECK(first || second || distance(m.centroid, Vec3(0, -7, 1)) < 1e-9);
         } else {
             FK_CHECK(body.name == "blocco");
             FK_CHECK_NEAR(m.volume, 6.0, 1e-10);
         }
     }
-    FK_CHECK(pins == 2);
+    FK_CHECK(pins == 3);
 }
 
 #include <GCPnts_AbscissaPoint.hxx>
@@ -565,4 +577,48 @@ FK_TEST(StepReadL407SolidWorksFile) {
     FK_CHECK_NEAR(mass.volume, 16379.15, 0.1);
     FK_CHECK_NEAR(mass.area, 33614.33, 0.05);
     FK_CHECK(tessellate(body, {}).failedFaces == 0);
+}
+
+FK_TEST(StepParallelBodiesAndEntityOrder) {
+    std::vector<ExchangeBody> bodies;
+    for (int i = 0; i < 16; ++i) {
+        ExchangeBody b;
+        b.name = "gruppo";
+        b.body = makeBox(Frame3(Vec3(i * 5, 0, 0), Vec3(0, 0, 1), Vec3(1, 0, 0)), 4, 3, 2);
+        b.hasColor = true;
+        b.color[0] = 0.25; b.color[1] = 0.5; b.color[2] = 0.75;
+        bodies.push_back(std::move(b));
+    }
+    const std::string content = writeStep(bodies);
+    const auto compare = [&](const StepReadResult &a, const StepReadResult &b) {
+        FK_CHECK(a.notes == b.notes);
+        FK_CHECK(a.bodies.size() == b.bodies.size());
+        for (std::size_t i = 0; i < std::min(a.bodies.size(), b.bodies.size()); ++i) {
+            FK_CHECK(a.bodies[i].name == b.bodies[i].name);
+            FK_CHECK(a.bodies[i].hasColor == b.bodies[i].hasColor);
+            for (int k = 0; k < 3; ++k) FK_CHECK(a.bodies[i].color[k] == b.bodies[i].color[k]);
+            FK_CHECK(writeBodyBinary(a.bodies[i].body) == writeBodyBinary(b.bodies[i].body));
+        }
+    };
+    const auto serial = readStep(content, {1});
+    FK_CHECK(serial.bodies.size() == bodies.size() && serial.notes.empty());
+    compare(serial, readStep(content, {4}));
+    // ID in ordine fisico inverso: la tabella hash non deve cambiare l'ordine
+    // dei prodotti o delle istanze rispetto agli ID STEP.
+    const std::size_t start = content.find("DATA;\n") + 6, end = content.find("ENDSEC;", start);
+    std::istringstream stream(content.substr(start, end - start));
+    std::vector<std::string> records;
+    for (std::string line; std::getline(stream, line);) records.push_back(line);
+    std::string reversed = content.substr(0, start);
+    for (auto it = records.rbegin(); it != records.rend(); ++it) reversed += *it + "\n";
+    reversed += content.substr(end);
+    compare(serial, readStep(reversed, {4}));
+    // Shell inesistente: le altre istanze restano importabili, avvisi in ordine.
+    std::string broken = content;
+    const std::size_t solid = broken.find("MANIFOLD_SOLID_BREP(");
+    const std::size_t shell = broken.find('#', solid), close = broken.find(')', shell);
+    broken.replace(shell + 1, close - shell - 1, "0");
+    const auto failed = readStep(broken, {1});
+    FK_CHECK(failed.bodies.size() == bodies.size() - 1 && !failed.notes.empty());
+    compare(failed, readStep(broken, {4}));
 }
