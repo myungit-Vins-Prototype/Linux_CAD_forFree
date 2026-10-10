@@ -23,6 +23,7 @@
 #include <QGraphicsView>
 #include <QSurfaceFormat>
 #include <QTemporaryDir>
+#include <QSemaphore>
 #include <QtEndian>
 #include <fstream>
 #include <cstring>
@@ -34,6 +35,39 @@ static void require(bool ok, const char *message) {
 }
 class ViewportInteractionTest {
 public:
+    static void asyncLifetimeRegressions() {
+        QThreadPool *pool = QThreadPool::globalInstance();
+        require(pool->waitForDone(10000), "background pool initially idle");
+        const int previousLimit = pool->maxThreadCount();
+        pool->setMaxThreadCount(1);
+        for (bool destroy : {false, true}) {
+            auto viewport = std::make_unique<CadViewport>();
+            PrimitiveParameters primitive;
+            primitive.size[0] = primitive.size[1] = primitive.size[2] = 4;
+            require(viewport->createPrimitive(primitive, QStringLiteral("Base")).isEmpty(), "lifetime test base");
+            int finished = 0;
+            viewport->workCallback_ = [&](bool active, const QString &, bool) { if (!active) ++finished; };
+            QSemaphore entered, release;
+            pool->start([&] { entered.release(); release.acquire(); });
+            entered.acquire();
+            viewport->requestPreview(viewport->extrusions().first(), 0);
+            viewport->startPreviewJob();
+            viewport->previewTimer_->stop();
+            viewport->setFeatureHighlights({0});
+            if (destroy) viewport.reset();  // i due worker sono ancora in coda
+            release.release();
+            const bool completed = pool->waitForDone(10000);
+            QCoreApplication::processEvents();
+            if (!completed) { pool->setMaxThreadCount(previousLimit); require(false, "lifetime workers completed"); }
+            require(finished == (destroy ? 0 : 1), "deliver result only to living viewport");
+            if (viewport) {
+                require(viewport->preview_.valid && viewport->preview_.geometry, "living viewport receives preview");
+                require(viewport->featureHighlights_.size() == 1 && !viewport->featureHighlights_.first().display.vertices.isEmpty(),
+                        "living viewport receives feature highlight");
+            }
+        }
+        pool->setMaxThreadCount(previousLimit);
+    }
     static void historyPositionRegressions() {
         {
             CadViewport timeline;
@@ -44,15 +78,48 @@ public:
             const quint64 laterId = timeline.extrusions().at(1).featureId;
             timeline.setHistoryPosition(0);
             require(!timeline.extrusions().at(0).visible && !timeline.extrusions().at(1).visible, "timeline start empty");
+            require(timeline.modelBodyTip(0) == -1, "body does not exist before its first feature");
             timeline.setHistoryPosition(1);
             require(timeline.extrusions().at(0).visible && !timeline.extrusions().at(1).visible, "timeline rollback");
-            require(timeline.createScale(0, 1.5, 0, {}, QStringLiteral("Inserted")).isEmpty(), "timeline insertion");
+            require(timeline.modelBodyTip(0) == 0, "body selection follows rollback");
+            require(timeline.createScale(timeline.modelBodyTip(0), 1.5, 0, {}, QStringLiteral("Inserted")).isEmpty(), "timeline insertion from selected body");
             require(timeline.extrusions().at(2).featureId == laterId && timeline.extrusions().at(2).firstBody == 1
                         && timeline.extrusions().at(2).error.isEmpty(), "timeline downstream recalculated");
             timeline.setHistoryPosition(3);
             require(timeline.extrusions().at(2).visible && !timeline.extrusions().at(1).visible, "timeline forward to end");
+            require(timeline.modelBodyTip(0) == 2, "body selection returns to final tip");
             timeline.undo();
             require(timeline.extrusions().size() == 2 && timeline.extrusions().at(1).featureId == laterId, "timeline undo insertion");
+        }
+        {
+            CadViewport timeline;
+            PrimitiveParameters primitive;
+            primitive.size[0] = primitive.size[1] = primitive.size[2] = 4;
+            require(timeline.createPrimitive(primitive, QStringLiteral("Base")).isEmpty()
+                        && timeline.createScale(0, 2, 0, {}, QStringLiteral("Intermedia")).isEmpty()
+                        && timeline.createScale(1, 2, 0, {}, QStringLiteral("Finale")).isEmpty(), "failed stage timeline");
+            timeline.extrusions_[1].error = QStringLiteral("Errore di rigenerazione");
+            timeline.setHistoryPosition(2);
+            require(timeline.modelBodyTip(0) == 0 && timeline.extrusions_[0].visible, "rollback skips failed stage");
+            timeline.extrusions_[1].error.clear();
+            timeline.extrusions_[1].suppressed = true;
+            timeline.setHistoryPosition(2);
+            require(timeline.modelBodyTip(0) == 0 && timeline.extrusions_[0].visible, "rollback skips suppressed stage");
+        }
+        {
+            CadViewport timeline;
+            PrimitiveParameters base;
+            base.size[0] = 4; base.size[1] = 3; base.size[2] = 2;
+            PrimitiveParameters tool = base;
+            tool.origin[0] = 3;
+            require(timeline.createPrimitive(base, QStringLiteral("Base")).isEmpty()
+                        && timeline.createPrimitive(tool, QStringLiteral("Utensile")).isEmpty()
+                        && timeline.createBoolean(::BooleanOperation::Difference, 0, {1}, QStringLiteral("Differenza")).isEmpty(), "consumed body timeline");
+            const quint64 a = timeline.modelBodies_[0].id, b = timeline.modelBodies_[1].id;
+            require(timeline.storyboardRoots().value(b) == a, "tool belongs to final boolean history");
+            timeline.setHistoryPosition(2);
+            require(timeline.storyboardRoots().value(b) == b && timeline.modelBodyTip(1) == 1,
+                    "rollback restores independent tool history branch");
         }
         {
             PdfWindow window;
@@ -6192,6 +6259,11 @@ int main(int argc, char **argv) {
     QTemporaryDir settings;
     QSettings::setDefaultFormat(QSettings::IniFormat);
     QSettings::setPath(QSettings::IniFormat, QSettings::UserScope, settings.path());
+    if (app.arguments().contains(QStringLiteral("--async-lifetime"))) {
+        try { ViewportInteractionTest::asyncLifetimeRegressions(); }
+        catch (const std::exception &e) { std::cerr << e.what() << std::endl; return 1; }
+        return 0;
+    }
     if (app.arguments().contains(QStringLiteral("--history-position"))) {
         try { ViewportInteractionTest::historyPositionRegressions(); }
         catch (const std::exception &e) { std::cerr << e.what() << std::endl; return 1; }

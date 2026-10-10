@@ -281,6 +281,14 @@ private:
 
 class CadViewport final : public QOpenGLWidget, protected QOpenGLFunctions {
     friend class ViewportInteractionTest;
+    template<class Callback>
+    static void deliverResult(QPointer<CadViewport> guard, Callback callback) {
+        // Il worker non usa il viewport. Solo il thread GUI puo' controllare
+        // la sua esistenza e applicare il risultato, anche dopo una chiusura.
+        QMetaObject::invokeMethod(qApp, [guard, callback = std::move(callback)]() mutable {
+            if (guard) callback();
+        }, Qt::QueuedConnection);
+    }
 public:
     int shapeAnalysisBody_ = -1;
     int shapeAnalysisMode_ = -1;
@@ -719,7 +727,8 @@ public:
 
     QHash<quint64, quint64> storyboardRoots() const {
         QHash<quint64, quint64> parent;
-        for (const ExtrusionObject &feature : extrusions_) {
+        for (int index = 0; index < historyPosition(); ++index) {
+            const ExtrusionObject &feature = extrusions_.at(index);
             if (!feature.modelBodyId || feature.suppressed) continue;
             for (int operand : hiddenOperands(feature)) {
                 if (operand < 0 || operand >= extrusions_.size()) continue;
@@ -798,6 +807,14 @@ public:
 
     int modelBodyTip(int index) const {
         if (index < 0 || index >= modelBodies_.size()) return -1;
+        if (historyPosition_ >= 0) {
+            const quint64 bodyId = modelBodies_.at(index).id;
+            for (int feature = historyPosition() - 1; feature >= 0; --feature) {
+                const ExtrusionObject &stage = extrusions_.at(feature);
+                if (stage.modelBodyId == bodyId && !stage.suppressed && stage.error.isEmpty() && stage.forgeBody) return feature;
+            }
+            return -1;
+        }
         const quint64 featureId = modelBodies_.at(index).tipFeatureId;
         for (int feature = 0; feature < extrusions_.size(); ++feature)
             if (extrusions_.at(feature).featureId == featureId) return feature;
@@ -10826,8 +10843,7 @@ private:
         clearFeatureHighlights();
         if (features.isEmpty() || sketchMode_) return;
         const quint64 generation = featureHighlightGeneration_;
-        if (!previewReceiver_) previewReceiver_ = new QObject(this);
-        QObject *receiver = previewReceiver_;
+        const QPointer<CadViewport> guard(this);
         // Corpi visibili con la loro catena di operandi (calcolata una volta).
         QVector<QPair<int, QSet<int>>> shown;
         for (int body = 0; body < extrusions_.size(); ++body) {
@@ -10853,7 +10869,7 @@ private:
             }
             const ForgeCad::ForgeBody result = extrusions_.at(target).forgeBody;
             const BodyDisplay display = extrusions_.at(target).display;
-            QThreadPool::globalInstance()->start([this, receiver, generation, feature, target, result, display, chain] {
+            QThreadPool::globalInstance()->start([this, guard, generation, feature, target, result, display, chain] {
                 BodyDisplay highlight;
                 BodyDisplay fresh;
                 QVector<int> faces;
@@ -10881,7 +10897,7 @@ private:
                 } catch (...) {
                     faces.clear();
                 }
-                QMetaObject::invokeMethod(receiver, [this, generation, feature, target, faces, previous = display.vertices,
+                deliverResult(guard, [this, generation, feature, target, faces, previous = display.vertices,
                                                      highlight = std::move(highlight), fresh = std::move(fresh)]() mutable {
                     if (generation != featureHighlightGeneration_) return;
                     if (target >= extrusions_.size() || feature >= extrusions_.size()) return;
@@ -11728,12 +11744,11 @@ private:
             update();
             return;
         }
-        if (!previewReceiver_) previewReceiver_ = new QObject(this);
-        QObject *receiver = previewReceiver_;
+        const QPointer<CadViewport> guard(this);
         previewRunning_ = true;
         const QString workText = in.reuse ? QStringLiteral("Preparazione della visualizzazione...") : QStringLiteral("Calcolo dell'anteprima...");
         if (workCallback_) workCallback_(true, workText, true);
-        QThreadPool::globalInstance()->start([this, receiver, generation, in, workText] {
+        QThreadPool::globalInstance()->start([this, guard, generation, in, workText] {
             BodyDisplay display;
             BodyDisplay retainedDisplay;
             BodyDisplay resultDisplay;
@@ -11750,8 +11765,7 @@ private:
                 error = QStringLiteral("errore imprevisto");
             }
             if (!ok && error.isEmpty()) error = QStringLiteral("costruzione non riuscita");
-            // Il ricevitore e' figlio del viewport: se il viewport non c'e' piu', la chiamata non avviene.
-            QMetaObject::invokeMethod(receiver, [this, generation, ok, error, notice, probe, merged, workText,
+            deliverResult(guard, [this, generation, ok, error, notice, probe, merged, workText,
                                                  geometry = std::move(geometry), display = std::move(display),
                                                  retainedDisplay = std::move(retainedDisplay),
                                                  resultDisplay = std::move(resultDisplay)]() mutable {
@@ -11789,7 +11803,7 @@ private:
                     previewRerun_ = false;
                     startPreviewJob();
                 }
-            }, Qt::QueuedConnection);
+            });
         });
     }
 
@@ -12368,7 +12382,6 @@ private:
     LengthUnit lengthUnit_ = LengthUnit::Millimeter;
     int previewErrorSketch_ = -1;  // sezione della loft evidenziata quando una guida non la incontra
     QTimer *previewTimer_ = nullptr;
-    QObject *previewReceiver_ = nullptr;
     bool previewRunning_ = false, previewRerun_ = false;
     std::function<void(const QString &)> previewCallback_;
     // Faccia selezionata con il clic su un corpo (schizzo su faccia, bordi da raccordare).
@@ -22986,13 +22999,14 @@ void PdfWindow::rebuildModelTree() {
         historyRoot->setData(0, Qt::UserRole, kTreeInfo);
         historyRoot->setToolTip(0, QStringLiteral("Le feature nell'ordine in cui sono calcolate, dall'alto verso il basso"));
         restore(historyRoot, QStringLiteral("H"), true);
-        // Solo i corpi che esistono alla fine della storia: quelli consumati da
+        // Solo i corpi che esistono nella posizione corrente: quelli consumati da
         // una booleana, una fusione o una cucitura fanno parte di un altro.
         for (int index = 0; index < modelBodies.size(); ++index) {
             const ModelBody &body = modelBodies.at(index);
             if (roots.value(body.id, body.id) != body.id) continue;
             QString label = body.name;
             const int tip = viewport_->modelBodyTip(index);
+            if (viewport_->historyPosition() < extrusions.size() && tip < 0) continue;
             if (tip >= 0) {
                 const QPair<int, int> parts = viewport_->bodyComponents(tip);
                 if (parts.first > 1) label += QStringLiteral("  (%1 solidi)").arg(parts.first);

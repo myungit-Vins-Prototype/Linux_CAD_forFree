@@ -323,6 +323,13 @@ struct BSplineSurface::IsoCache {
 CurvePtr<3> BSplineSurface::knotIso(bool fixedU, double value) const {
     std::shared_ptr<const IsoCache> cache = std::atomic_load(&isoCache_);
     if (!cache) {
+        // Un parametro interno a un tratto non usa la cache dei nodi: non
+        // costruire tutte le isoparametriche per una curva che non vi compare.
+        // A cache pronta il percorso di lookup resta quello originale.
+        const std::vector<double> &knots = fixedU ? uKnots_ : vKnots_;
+        const auto knot = std::lower_bound(knots.begin(), knots.end(), value);
+        const Interval domain = fixedU ? uDomain() : vDomain();
+        if (knot == knots.end() || *knot != value || value < domain.lo || value > domain.hi) return nullptr;
         auto built = std::make_shared<IsoCache>();
         built->uValues = uBreakpoints(uDomain());
         built->vValues = vBreakpoints(vDomain());

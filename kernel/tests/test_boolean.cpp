@@ -1263,6 +1263,34 @@ FK_TEST(BooleanParallelMatchesSequential) {
         checkIdentical(booleanOperation(slabA, slabB, op, sequential), booleanOperation(slabA, slabB, op, parallel));
 }
 
+FK_TEST(BooleanDisjointValidationAndUnification) {
+    const Body a = makeBox(Frame3(), 4, 4, 4);
+    const Body b = makeBox(Frame3(Vec3(4, 0, 0), Vec3(0, 0, 1), Vec3(1, 0, 0)), 4, 4, 4);
+    const Body far = makeBox(Frame3(Vec3(100, 0, 0), Vec3(0, 0, 1), Vec3(1, 0, 0)), 4, 4, 4);
+    BooleanOptions raw;
+    raw.unifySameDomain = false;
+    const Body split = booleanOperation(a, b, BooleanOperation::Unite, raw);
+    FK_CHECK(split.faces().size() > 6);
+    const Body preserved = booleanOperation(split, far, BooleanOperation::Subtract, raw);
+    FK_CHECK(preserved.faces().size() == split.faces().size());
+    FK_CHECK(checkBody(preserved).empty());
+    const Body unified = booleanOperation(split, far, BooleanOperation::Subtract);
+    FK_CHECK(unified.faces().size() == 6);
+    FK_CHECK(checkBody(unified).empty());
+    FK_CHECK_NEAR(massProperties(unified).volume, 128, 1e-10);
+    FK_CHECK(booleanOperation(a, far, BooleanOperation::Intersect).faces().empty());
+    const Body united = booleanOperation(a, far, BooleanOperation::Unite);
+    FK_CHECK(checkBody(united).empty());
+    FK_CHECK_NEAR(massProperties(united).volume, 128, 1e-10);
+    Body invalid = a;
+    invalid.vertex(invalid.vertices().front()).point += Vec3(0, 0, 0.01);
+    FK_CHECK_THROWS(booleanOperation(invalid, far, BooleanOperation::Subtract, raw));
+    BooleanOptions sequential, parallel;
+    sequential.threads = 1; parallel.threads = 8;
+    checkIdentical(booleanOperation(a, b, BooleanOperation::Unite, sequential),
+                   booleanOperation(a, b, BooleanOperation::Unite, parallel));
+}
+
 // Vertici tolleranti come nei file STEP di CATIA: le curve degli edge si
 // fermano 3e-4 prima del vertice (tolleranza 5e-4). Le booleane uniscono gli
 // estremi con la tolleranza dei vertici, non con quella della booleana.

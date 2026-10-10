@@ -138,6 +138,60 @@ Vec3 faceNormal(const Surface &surface, bool sense, const Vec3 &x, double tolera
     return sense ? n : -n;
 }
 
+// Indice immutabile dei box delle facce. Le query restituiscono gli id
+// nell'ordine storico: il culling non cambia l'ordine di tagli e classificazione.
+class FaceBoxIndex {
+public:
+    void build(const std::map<int, Box> &boxes) {
+        entries_.clear(); nodes_.clear();
+        for (const auto &[id, box] : boxes) entries_.push_back({FaceId(id), box});
+        nodes_.reserve(2 * entries_.size());
+        if (!entries_.empty()) buildNode(0, entries_.size());
+    }
+    std::vector<FaceId> query(const Box &box) const {
+        std::vector<FaceId> result;
+        if (!nodes_.empty() && !box.isEmpty()) queryNode(0, box, result);
+        std::sort(result.begin(), result.end(), [](FaceId a, FaceId b) { return a.index < b.index; });
+        return result;
+    }
+private:
+    struct Entry { FaceId id; Box box; };
+    struct Node { Box box; std::size_t begin = 0, end = 0; int left = -1, right = -1; };
+    int buildNode(std::size_t begin, std::size_t end) {
+        const int index = int(nodes_.size());
+        nodes_.push_back({});
+        for (std::size_t i = begin; i < end; ++i) nodes_[index].box.add(entries_[i].box);
+        if (end - begin <= 8) {
+            nodes_[index].begin = begin; nodes_[index].end = end;
+        } else {
+            const Vec3 span = nodes_[index].box.hi - nodes_[index].box.lo;
+            int axis = 0;
+            for (int c = 1; c < 3; ++c) if (span[c] > span[axis]) axis = c;
+            const std::size_t middle = begin + (end - begin) / 2;
+            std::nth_element(entries_.begin() + std::ptrdiff_t(begin), entries_.begin() + std::ptrdiff_t(middle),
+                             entries_.begin() + std::ptrdiff_t(end), [axis](const Entry &a, const Entry &b) {
+                const double ca = a.box.lo[axis] + a.box.hi[axis], cb = b.box.lo[axis] + b.box.hi[axis];
+                return ca == cb ? a.id.index < b.id.index : ca < cb;
+            });
+            const int left = buildNode(begin, middle), right = buildNode(middle, end);
+            nodes_[index].left = left; nodes_[index].right = right;
+        }
+        return index;
+    }
+    void queryNode(int index, const Box &box, std::vector<FaceId> &result) const {
+        const Node &node = nodes_[index];
+        if (!node.box.overlaps(box)) return;
+        if (node.left >= 0) {
+            queryNode(node.left, box, result); queryNode(node.right, box, result);
+        } else {
+            for (std::size_t i = node.begin; i < node.end; ++i)
+                if (entries_[i].box.overlaps(box)) result.push_back(entries_[i].id);
+        }
+    }
+    std::vector<Entry> entries_;
+    std::vector<Node> nodes_;
+};
+
 class BooleanBuilder {
 public:
     BooleanBuilder(const Body &a, const Body &b, BooleanOperation operation, const BooleanOptions &options, bool split = false)
@@ -160,9 +214,14 @@ public:
                 if (!bodies_[k].face(f).surface) throw std::invalid_argument("booleanOperation: faccia senza superficie");
                 boxes_[k][f.index] = faceBox(bodies_[k], f).padded(tolerance_);
                 all.add(boxes_[k][f.index]);
+                bounds_[k].add(boxes_[k][f.index]);
+                planarOnly_ = planarOnly_ && isPlane(*bodies_[k].face(f).surface);
             }
             for (VertexId v : bodies_[k].vertices()) vertexTolerance_ = std::max(vertexTolerance_, bodies_[k].vertex(v).tolerance);
-            for (EdgeId e : bodies_[k].edges()) vertexTolerance_ = std::max(vertexTolerance_, bodies_[k].edge(e).tolerance);
+            const std::vector<EdgeId> edges = bodies_[k].edges();
+            edgeCount_ += edges.size();
+            for (EdgeId e : edges) vertexTolerance_ = std::max(vertexTolerance_, bodies_[k].edge(e).tolerance);
+            faceIndex_[k].build(boxes_[k]);
         }
         scale_ = std::max(all.diagonal(), 1.0);
     }
@@ -175,6 +234,12 @@ public:
     Body imprint(const std::vector<ImprintCurve> &curves, const std::function<bool(FaceId, const Vec3 &)> &remove, int *removed);
 
 private:
+    unsigned workers(std::size_t count) const {
+        // I piccoli lavori fra piani non ammortizzano il lancio dei thread.
+        // Le richieste esplicite e le superfici curve conservano il parallelismo.
+        if (threads_ <= 0 && planarOnly_ && edgeCount_ <= 128 && count < 32) return 1;
+        return threadCount(threads_);
+    }
     // SP-curve delle curve d'intersezione approssimate, per curva e superficie.
     struct PCurves {
         const Surface *surface[2];
@@ -235,6 +300,10 @@ private:
     bool unify_ = true, split_ = false;
     int threads_ = 0;
     std::map<int, Box> boxes_[2];
+    Box bounds_[2];
+    FaceBoxIndex faceIndex_[2];
+    bool planarOnly_ = true;
+    std::size_t edgeCount_ = 0;
     std::vector<Arc> arcs_;
     std::vector<Vec3> vertexPoints_;
     std::map<const Curve<3> *, PCurves> pcurves_;
@@ -1448,7 +1517,7 @@ Location BooleanBuilder::classify(const SubFace &subFace, const SolidClassifier 
     // Facce dell'altro body sulla stessa superficie: prima di tutto si guarda
     // se il pezzo ci sta sopra (le regole locali darebbero dentro/fuori a caso).
     std::vector<FaceId> coplanar;
-    for (FaceId g : otherBody.faces())
+    for (FaceId g : faceIndex_[1 - subFace.body].query(boxes_[subFace.body].at(subFace.face.index).padded(vertexTolerance_)))
         if (coincident(surface, *otherBody.face(g).surface) || partial_.count({&surface, otherBody.face(g).surface.get()}))
             coplanar.push_back(g);
 
@@ -1642,8 +1711,7 @@ void BooleanBuilder::computeCuts(std::map<int, std::vector<Piece>> (&cuts)[2]) {
     // B-spline puo' prendere secondi per coppia).
     std::vector<std::pair<FaceId, FaceId>> pairs;
     for (FaceId fa : bodies_[0].faces())
-        for (FaceId fb : bodies_[1].faces())
-            if (boxes_[0].at(fa.index).overlaps(boxes_[1].at(fb.index))) pairs.emplace_back(fa, fb);
+        for (FaceId fb : faceIndex_[1].query(boxes_[0].at(fa.index))) pairs.emplace_back(fa, fb);
     std::vector<PairResult> results(pairs.size());
     const auto compute = [&](std::size_t i) {
         try {
@@ -1652,7 +1720,7 @@ void BooleanBuilder::computeCuts(std::map<int, std::vector<Piece>> (&cuts)[2]) {
             results[i].error = std::current_exception();
         }
     };
-    parallelFor(pairs.size(), threadCount(threads_), compute);
+    parallelFor(pairs.size(), workers(pairs.size()), compute);
     // Unione nell'ordine delle coppie. Una coppia che ha usato i tagli delle
     // zone comuni delle precedenti (B-spline coincidenti in parte) senza
     // vederli, perche' calcolata in parallelo, si rifa' con quelli: il
@@ -1665,10 +1733,14 @@ void BooleanBuilder::computeCuts(std::map<int, std::vector<Piece>> (&cuts)[2]) {
             compute(i);
         }
         if (result.error) std::rethrow_exception(result.error);
-        arcs_.insert(arcs_.end(), result.arcs.begin(), result.arcs.end());
-        for (const auto &[curve, entry] : result.pcurves) pcurves_[curve] = entry;
-        partial_.insert(result.partial.begin(), result.partial.end());
-        partialCuts_.insert(partialCuts_.end(), result.partialCuts.begin(), result.partialCuts.end());
+        arcs_.insert(arcs_.end(), std::make_move_iterator(result.arcs.begin()), std::make_move_iterator(result.arcs.end()));
+        pcurves_.merge(result.pcurves);
+        // Una curva presente in piu' coppie conserva la regola originale:
+        // l'ultima voce nell'ordine delle coppie sostituisce la precedente.
+        for (auto &[curve, entry] : result.pcurves) pcurves_[curve] = std::move(entry);
+        partial_.merge(result.partial);
+        partialCuts_.insert(partialCuts_.end(), std::make_move_iterator(result.partialCuts.begin()), std::make_move_iterator(result.partialCuts.end()));
+        result = PairResult();
     }
     collectCuts(cuts);
 }
@@ -1820,6 +1892,16 @@ Body BooleanBuilder::run() {
     if (sheet[1] && operation_ == BooleanOperation::Subtract)
         throw std::domain_error("booleanOperation: sottrarre una lamina da un solido non ne cambia il volume");
     const bool sheetResult = sheet[0] || sheet[1];
+    if (!sheetResult && !bounds_[0].overlaps(bounds_[1])) {
+        if (operation_ == BooleanOperation::Intersect) return Body();
+        if (operation_ == BooleanOperation::Subtract) {
+            Body result = unify_ ? unifySameDomain(bodies_[0], tolerance_) : bodies_[0];
+            const std::vector<CheckIssue> issues = checkBody(result);
+            if (!issues.empty())
+                throw std::domain_error("booleanOperation: risultato non valido (" + describe(issues.front().code) + ": " + issues.front().message + ")");
+            return result;
+        }
+    }
     std::map<int, std::vector<Piece>> cuts[2];
     computeCuts(cuts);
     // Divisione e classificazione di ogni faccia sono indipendenti. Ogni
@@ -1839,7 +1921,7 @@ Body BooleanBuilder::run() {
     std::unique_ptr<SolidClassifier> classifiers[2];
     for (const FaceResult &job : faceResults)
         if (!classifiers[job.body]) classifiers[job.body] = std::make_unique<SolidClassifier>(bodies_[1 - job.body], tolerance_);
-    parallelFor(faceResults.size(), threadCount(threads_), [&](std::size_t i) {
+    parallelFor(faceResults.size(), workers(faceResults.size()), [&](std::size_t i) {
         FaceResult &job = faceResults[i];
         try {
             const auto found = cuts[job.body].find(job.face.index);
@@ -1873,7 +1955,7 @@ std::vector<Body> BooleanBuilder::split() {
     };
     std::vector<FaceResult> faceResults;
     for (FaceId f : bodies_[0].faces()) faceResults.push_back({f, {}, {}});
-    parallelFor(faceResults.size(), threadCount(threads_), [&](std::size_t i) {
+    parallelFor(faceResults.size(), workers(faceResults.size()), [&](std::size_t i) {
         FaceResult &job = faceResults[i];
         try {
             const auto found = cuts[0].find(job.face.index);
@@ -1948,7 +2030,7 @@ Body BooleanBuilder::imprint(const std::vector<ImprintCurve> &curves, const std:
     };
     std::vector<FaceResult> faceResults;
     for (FaceId f : bodies_[0].faces()) faceResults.push_back({f, {}, 0, {}});
-    parallelFor(faceResults.size(), threadCount(threads_), [&](std::size_t i) {
+    parallelFor(faceResults.size(), workers(faceResults.size()), [&](std::size_t i) {
         FaceResult &job = faceResults[i];
         try {
             const auto found = cuts[0].find(job.face.index);
