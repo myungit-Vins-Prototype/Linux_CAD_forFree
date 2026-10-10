@@ -2,9 +2,11 @@
 #define FORGECAD2026_GUI_H
 
 #include <QMainWindow>
+#include "cad_document_io.h"
 
 class CadViewport;
 class QAction;
+class QMenu;
 class QDoubleSpinBox;
 class QLabel;
 class QProgressBar;
@@ -23,10 +25,14 @@ public:
 protected:
     void closeEvent(QCloseEvent *event) override;
 private:
+    friend class ViewportInteractionTest;
     // Documento su file (.prt, vedi cad_document_io).
     void newDocument();
     void openDocument();
     bool saveDocument(bool askPath);
+    bool saveDocumentPath(const QString &path);
+    void rememberRecentDocument(const QString &path);
+    void refreshRecentDocuments();
     bool maybeSaveChanges();
     void updateWindowTitle();
     void beginForegroundProgress(const QString &message, int maximum = 0);
@@ -53,6 +59,8 @@ private:
     bool treeRebuildPending_ = false;
     bool suppressTreeClick_ = false;
     QString documentPath_;
+    std::unique_ptr<ForgeCad::DocumentFileLock> documentLock_;
+    QMenu *recentDocumentsMenu_ = nullptr;
     QString glRenderer_ = QStringLiteral("in avvio");  // GL_RENDERER per la barra di stato
     QString gpuStatusText() const;
     bool documentModified_ = false;

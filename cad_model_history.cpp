@@ -114,7 +114,7 @@ void normalizeModelHistory(QVector<ExtrusionObject> &features, QVector<ModelBody
     for (ExtrusionObject &feature : features) {
         for (GeometryRef &ref : feature.datum.refs) bindOwner(ref);
         for (GeometryRef &ref : feature.pattern.refs) bindOwner(ref);
-        for (QVector<GeometryRef> *refs : {&feature.ruledFirst, &feature.ruledSecond, &feature.planarRefs})
+        for (QVector<GeometryRef> *refs : {&feature.ruledFirst, &feature.ruledSecond, &feature.planarRefs, &feature.loftStartFaces, &feature.loftEndFaces})
             for (GeometryRef &ref : *refs) bindOwner(ref);
         bindOwner(feature.extentRef);
         bindOwner(feature.move.axis);

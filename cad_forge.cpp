@@ -1216,9 +1216,38 @@ ForgeBody forgeSweep(const SketchObject &profileSketch, const std::vector<PathSe
     }
 }
 
+static std::vector<LoftContact> loftContacts(const QVector<QPair<ForgeBody, EdgePoint>> &references) {
+    std::vector<LoftContact> contacts;
+    for (const auto &[body, reference] : references) {
+        if (!body) throw std::domain_error("il corpo della faccia adiacente non esiste");
+        Box box;
+        for (VertexId vertex : body->vertices()) box.add(body->vertex(vertex).point);
+        const FaceId face = resolveFaceReference(*body, reference, 1e-3 * std::max(1.0, box.diagonal()));
+        if (!face.valid()) throw std::domain_error("una faccia adiacente non esiste piu'");
+        contacts.push_back({body, face});
+    }
+    return contacts;
+}
+
+static void loftEndConditions(LoftOptions &options, int start, int end, double startInfluence, double endInfluence,
+                             const QVector<QPair<ForgeBody, EdgePoint>> &startFaces,
+                             const QVector<QPair<ForgeBody, EdgePoint>> &endFaces) {
+    if (start < 0 || start > 3 || end < 0 || end > 3) throw std::domain_error("continuita' dei profili non valida");
+    if ((start == 3 && startFaces.isEmpty()) || (end == 3 && endFaces.isEmpty()))
+        throw std::domain_error("scegli le facce adiacenti per la tangenza al profilo");
+    options.startContinuity = start == 3 ? 1 : start;
+    options.endContinuity = end == 3 ? 1 : end;
+    options.startInfluence = startInfluence;
+    options.endInfluence = endInfluence;
+    if (start == 3) options.startFaces = loftContacts(startFaces);
+    if (end == 3) options.endFaces = loftContacts(endFaces);
+}
+
 ForgeBody forgeLoft(const QVector<SketchObject> &sketches, const QVector<SketchObject> &guideSketches, bool ruled,
                     int startContinuity, int endContinuity, int guideContinuity, double guideInfluence, double startInfluence,
-                    double endInfluence, QString *error, bool surface) {
+                    double endInfluence, QString *error, bool surface,
+                    const QVector<QPair<ForgeBody, EdgePoint>> &startFaces,
+                    const QVector<QPair<ForgeBody, EdgePoint>> &endFaces) {
     if (sketches.size() < 2) {
         setError(error, QStringLiteral("Il loft richiede almeno due sezioni."));
         return nullptr;
@@ -1248,8 +1277,7 @@ ForgeBody forgeLoft(const QVector<SketchObject> &sketches, const QVector<SketchO
         }
         LoftOptions options;
         options.ruled = ruled;
-        options.startContinuity = startContinuity;
-        options.endContinuity = endContinuity;
+        loftEndConditions(options, startContinuity, endContinuity, startInfluence, endInfluence, startFaces, endFaces);
         options.guideContinuity = guideContinuity;
         options.guideInfluence = guideInfluence;
         options.startInfluence = startInfluence;
@@ -1297,13 +1325,18 @@ ForgeBody forgeLoft(const QVector<SketchObject> &sketches, const QVector<SketchO
     }
 }
 
-ForgeBody forgeRuledSurface(const std::vector<PathSegment> &first, const std::vector<PathSegment> &second, QString *error) {
+ForgeBody forgeRuledSurface(const std::vector<PathSegment> &first, const std::vector<PathSegment> &second, QString *error,
+                           int startContinuity, int endContinuity, double startInfluence, double endInfluence,
+                           const QVector<QPair<ForgeBody, EdgePoint>> &startFaces,
+                           const QVector<QPair<ForgeBody, EdgePoint>> &endFaces) {
     if (first.empty() || second.empty()) {
         setError(error, QStringLiteral("Scegli le due curve della superficie rigata."));
         return nullptr;
     }
     try {
-        return std::make_shared<const Body>(ruledSurface(first, second));
+        LoftOptions options;
+        loftEndConditions(options, startContinuity, endContinuity, startInfluence, endInfluence, startFaces, endFaces);
+        return std::make_shared<const Body>(ruledSurface(first, second, options));
     } catch (const std::exception &failure) {
         setError(error, QStringLiteral("Superficie rigata non riuscita: %1").arg(QString::fromUtf8(failure.what())));
         return nullptr;

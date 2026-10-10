@@ -189,7 +189,7 @@ void initializeTangentHandles(CurveObject &curve) {
         const QPointF tangent = (next - previous) / 3.0;
         curve.tangentHandles.append(qMakePair(curve.controlPoints.at(index) - tangent, curve.controlPoints.at(index) + tangent));
     }
-    curve.tangentLinked.fill(false, curve.controlPoints.size());
+    curve.tangentLinked.fill(true, curve.controlPoints.size());
     for (int index = 0; index < qMin(linked.size(), curve.tangentLinked.size()); ++index)
         curve.tangentLinked[index] = linked.at(index);
 }

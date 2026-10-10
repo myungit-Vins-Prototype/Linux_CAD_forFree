@@ -10,6 +10,8 @@
 #include <QCryptographicHash>
 #include <QDataStream>
 #include <QFile>
+#include <QFileInfo>
+#include <QDir>
 #include <QSaveFile>
 
 #include "cad_constraints.h"
@@ -56,7 +58,8 @@ constexpr char kMagic[4] = {'F', 'C', 'A', 'D'};
 // 37 quota associativa degli offset di schizzo.
 // 38 taglio superficie con la proiezione di uno schizzo e curve proiettate.
 // 39 spessore delle superfici (lato e direzione).
-constexpr quint16 kVersion = 39;
+// 40 facce adiacenti e continuita' dei profili per loft e superficie rigata.
+constexpr quint16 kVersion = 40;
 constexpr quint8 kZlib = 1;
 
 void write(QDataStream &out, const CurveObject &curve) {
@@ -364,6 +367,8 @@ void write(QDataStream &out, const ExtrusionObject &body) {
     // Formato 39: spessore delle superfici.
     out << qint32(body.thickenSide);
     writeRefs(out, {body.thickenDirection});
+    writeRefs(out, body.loftStartFaces);
+    writeRefs(out, body.loftEndFaces);
 }
 
 // `extras` (solo formato 5): i file scritti durante lo sviluppo del formato 5
@@ -483,7 +488,7 @@ bool read(QDataStream &in, ExtrusionObject &body, quint16 version, int extras) {
         in >> start >> end >> body.loftGuideInfluence >> body.loftStartInfluence >> body.loftEndInfluence;
         body.loftStartContinuity = start;
         body.loftEndContinuity = end;
-        if (start < 0 || start > 2 || end < 0 || end > 2 || body.loftGuideInfluence < 0.0 || body.loftGuideInfluence > 1.0
+        if (start < 0 || start > (version >= 40 ? 3 : 2) || end < 0 || end > (version >= 40 ? 3 : 2) || body.loftGuideInfluence < 0.0 || body.loftGuideInfluence > 1.0
             || body.loftStartInfluence < 0.0 || body.loftStartInfluence > 1.0 || body.loftEndInfluence < 0.0 || body.loftEndInfluence > 1.0)
             return false;
     }
@@ -599,6 +604,7 @@ bool read(QDataStream &in, ExtrusionObject &body, quint16 version, int extras) {
         body.thickenSide = side;
         body.thickenDirection = refs.first();
     }
+    if (version >= 40 && (!readRefs(in, body.loftStartFaces, version) || !readRefs(in, body.loftEndFaces, version))) return false;
     const BodyFeature last = version >= 39 ? BodyFeature::Thicken : version >= 38 ? BodyFeature::ProjectedCurve : version >= 36 ? BodyFeature::Draft : version >= 35 ? BodyFeature::FillSurface : version >= 27 ? BodyFeature::Thread : version >= 25 ? BodyFeature::Shell : BodyFeature::PlanarSurface;
     if (int(body.feature) < 0 || int(body.feature) > int(last)) return false;
     return in.status() == QDataStream::Ok;
@@ -785,7 +791,53 @@ void applyBodyCache(const QByteArray &compressed, const QByteArray &payload, Doc
 
 }
 
-QString saveDocumentFile(const QString &path, const DocumentState &state, bool bodies) {
+QString canonicalDocumentPath(const QString &path) {
+    const QFileInfo info(path);
+    const QString existing = info.canonicalFilePath();
+    if (!existing.isEmpty()) return existing;
+    const QString parent = info.dir().canonicalPath();
+    return QDir::cleanPath(parent.isEmpty() ? info.absoluteFilePath() : QDir(parent).filePath(info.fileName()));
+}
+
+DocumentFileLock::DocumentFileLock(const QString &path)
+    : path_(canonicalDocumentPath(path)), lock_(path_ + QStringLiteral(".lock")) {
+    lock_.setStaleLockTime(0);
+}
+
+QString DocumentFileLock::acquire() {
+    if (lock_.isLocked()) return owns(path_) ? QString() : QStringLiteral("Il blocco esclusivo del documento e' stato perso.");
+    if (!lock_.tryLock(0)) {
+        if (lock_.error() == QLockFile::LockFailedError) {
+            qint64 pid = 0; QString host, app;
+            const bool known = lock_.getLockInfo(&pid, &host, &app);
+            return QStringLiteral("Il documento e' gia' aperto o bloccato da un'altra sessione.\n%1%2")
+                .arg(path_, known ? QStringLiteral("\nComputer: %1 — Applicazione: %2 — Processo: %3").arg(host, app).arg(pid) : QString());
+        }
+        return QStringLiteral("Impossibile ottenere l'accesso esclusivo a %1.\nVerifica la connessione e i permessi di scrittura nella cartella del documento.").arg(path_);
+    }
+    QFile marker(lock_.fileName());
+    if (!marker.open(QIODevice::ReadOnly) || (identity_ = marker.readAll()).isEmpty()) {
+        lock_.unlock();
+        return QStringLiteral("Impossibile verificare il blocco esclusivo di %1.").arg(path_);
+    }
+    return {};
+}
+
+bool DocumentFileLock::owns(const QString &path) const {
+    if (!lock_.isLocked() || identity_.isEmpty() || canonicalDocumentPath(path) != path_) return false;
+    QFile marker(lock_.fileName());
+    return marker.open(QIODevice::ReadOnly) && marker.readAll() == identity_;
+}
+
+QString saveDocumentFile(const QString &path, const DocumentState &state, bool bodies, const DocumentFileLock *lock) {
+    std::unique_ptr<DocumentFileLock> temporary;
+    if (!lock) {
+        temporary = std::make_unique<DocumentFileLock>(path);
+        const QString error = temporary->acquire();
+        if (!error.isEmpty()) return error;
+        lock = temporary.get();
+    }
+    if (!lock->owns(path)) return QStringLiteral("Salvataggio annullato: il documento non ha piu' un blocco esclusivo valido.");
     DocumentState normalized = state;
     normalizeModelHistory(normalized);
     upgradeTopologyReferences(normalized.extrusions);
@@ -807,7 +859,7 @@ QString saveDocumentFile(const QString &path, const DocumentState &state, bool b
             out << body.id << body.name << body.visible << body.tipFeatureId << body.meshColor;
         out << qint32(normalized.lengthUnit);
     }
-    QSaveFile file(path);
+    QSaveFile file(lock->path());
     if (!file.open(QIODevice::WriteOnly)) return QStringLiteral("Impossibile scrivere %1: %2").arg(path, file.errorString());
     QDataStream out(&file);
     out.writeRawData(kMagic, 4);
@@ -818,6 +870,10 @@ QString saveDocumentFile(const QString &path, const DocumentState &state, bool b
     if (bodies) {
         const QByteArray cache = bodyCache(payload, normalized);
         out.writeRawData(cache.constData(), int(cache.size()));
+    }
+    if (!lock->owns(path)) {
+        file.cancelWriting();
+        return QStringLiteral("Salvataggio annullato: il blocco esclusivo del documento e' stato perso.");
     }
     if (out.status() != QDataStream::Ok || !file.commit()) return QStringLiteral("Errore di scrittura su %1: %2").arg(path, file.errorString());
     return {};

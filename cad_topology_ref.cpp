@@ -326,7 +326,7 @@ void upgradeTopologyReferences(QVector<ExtrusionObject> &features) {
     for (ExtrusionObject &feature : features) {
         for (GeometryRef &ref : feature.datum.refs) upgrade(ref);
         for (GeometryRef &ref : feature.pattern.refs) upgrade(ref);
-        for (QVector<GeometryRef> *refs : {&feature.ruledFirst, &feature.ruledSecond, &feature.planarRefs})
+        for (QVector<GeometryRef> *refs : {&feature.ruledFirst, &feature.ruledSecond, &feature.planarRefs, &feature.loftStartFaces, &feature.loftEndFaces})
             for (GeometryRef &ref : *refs) upgrade(ref);
         upgrade(feature.extentRef);
         upgrade(feature.move.axis);

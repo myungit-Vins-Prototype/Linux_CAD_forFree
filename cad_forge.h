@@ -138,11 +138,16 @@ ForgeBody forgeSweep(const SketchObject &profile, const std::vector<Kernel::Path
 // Con `surface` le sezioni chiuse danno il tubo senza coperchi (loftSheet).
 ForgeBody forgeLoft(const QVector<SketchObject> &sections, const QVector<SketchObject> &guides, bool ruled,
                     int startContinuity, int endContinuity, int guideContinuity, double guideInfluence, double startInfluence,
-                    double endInfluence, QString *error, bool surface = false);
+                    double endInfluence, QString *error, bool surface = false,
+                    const QVector<QPair<ForgeBody, EdgePoint>> &startFaces = {},
+                    const QVector<QPair<ForgeBody, EdgePoint>> &endFaces = {});
 // Superficie rigata tra due catene di curve 3D (fk_loft ruledSurface): le
 // catene sono entrambe aperte o entrambe chiuse; verso e partenza della
 // seconda si accordano alla prima.
-ForgeBody forgeRuledSurface(const std::vector<Kernel::PathSegment> &first, const std::vector<Kernel::PathSegment> &second, QString *error);
+ForgeBody forgeRuledSurface(const std::vector<Kernel::PathSegment> &first, const std::vector<Kernel::PathSegment> &second, QString *error,
+                           int startContinuity = 0, int endContinuity = 0, double startInfluence = 1.0, double endInfluence = 1.0,
+                           const QVector<QPair<ForgeBody, EdgePoint>> &startFaces = {},
+                           const QVector<QPair<ForgeBody, EdgePoint>> &endFaces = {});
 // Superficie planare dei contorni chiusi dello schizzo (come la base di
 // un'estrusione, normale lungo quella dello schizzo; fk_planar planarSheet).
 ForgeBody forgePlanarSketch(const SketchObject &sketch, QString *error);

@@ -40,6 +40,12 @@ struct LoftSection {
     ProfileLoop loop;  // chiuso (solidi) o catena aperta (lamine)
 };
 
+// Facce da continuare lungo il bordo della prima/ultima sezione.
+struct LoftContact {
+    std::shared_ptr<const Body> body;
+    FaceId face;
+};
+
 // Una guida e' una catena 3D che deve attraversare una volta ogni sezione.
 // La prima guida fissa la cucitura/corrispondenza dei contorni chiusi; le
 // altre sono validate come riferimenti trasversali e saranno usate dalle
@@ -53,6 +59,7 @@ struct LoftOptions {
     double guideInfluence = 1.0;
     double startInfluence = 1.0;
     double endInfluence = 1.0;
+    std::vector<LoftContact> startFaces, endFaces;
 };
 
 // Solido: tutte le sezioni chiuse, facce di testa piane.
@@ -82,6 +89,9 @@ Body loftSheet(const std::vector<LoftSection> &sections, const LoftOptions &opti
 // (piano esatto dove le pezze sono piane). Lamina: spigoli = le due curve
 // (stesso tipo) e le rette nei vertici corrispondenti.
 Body ruledSurface(const std::vector<PathSegment> &first, const std::vector<PathSegment> &second);
+// Con condizioni alle estremita' costruisce una superficie raccordata:
+// i profili restano esatti, i collegamenti possono diventare curvi.
+Body ruledSurface(const std::vector<PathSegment> &first, const std::vector<PathSegment> &second, const LoftOptions &options);
 
 }
 

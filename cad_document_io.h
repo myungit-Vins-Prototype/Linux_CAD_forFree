@@ -2,6 +2,8 @@
 #define FORGECAD_DOCUMENT_IO_H
 
 #include <QString>
+#include <QLockFile>
+#include <memory>
 
 #include "cad_types.h"
 
@@ -31,9 +33,26 @@ namespace ForgeCad {
 
 inline constexpr const char *kDocumentSuffix = "prt";
 
+// Il lock vive accanto al documento, anche su una condivisione di rete.
+// Non scade per anzianita': un documento puo' restare aperto indefinitamente.
+QString canonicalDocumentPath(const QString &path);
+class DocumentFileLock final {
+public:
+    explicit DocumentFileLock(const QString &path);
+    QString acquire();
+    bool owns(const QString &path) const;
+    QString path() const { return path_; }
+private:
+    QString path_;
+    QLockFile lock_;
+    QByteArray identity_;
+};
+
 // Restituisce l'errore (vuoto se riuscito). Il salvataggio e' atomico (QSaveFile).
 // Con `bodies` si salva anche la copia dei corpi calcolati.
-QString saveDocumentFile(const QString &path, const DocumentState &state, bool bodies = true);
+// Senza lock del documento aperto, acquisisce un lock per tutta la scrittura.
+QString saveDocumentFile(const QString &path, const DocumentState &state, bool bodies = true,
+                         const DocumentFileLock *lock = nullptr);
 // `previewCache` e' conservato per compatibilita' con il chiamante: gli
 // snapshot moderni e storici della stessa definizione sono validi anche dopo
 // un aggiornamento del kernel e vengono ricalcolati alla prima modifica.

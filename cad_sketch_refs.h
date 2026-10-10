@@ -17,6 +17,11 @@
 // nodi: la stessa curva proiettata; le eliche passano per la B-spline entro 1e-9).
 namespace ForgeCad {
 
+// Proietta l'entita' scelta di un altro schizzo lungo la normale del piano
+// destinazione, anche quando i due piani non si intersecano.
+QString appendProjectedSketchEntity(SketchObject &sketch, const SketchObject &source, SketchEntity entity,
+                                    bool construction, QVector<SketchEntity> *created = nullptr);
+
 // Retta di riferimento nel piano dello schizzo: traccia di un piano oppure
 // proiezione di un asse. Coordinate esatte; i casi degeneri danno un errore.
 QString sketchPlaneReference(const SketchObject &sketch, const SketchFrame &plane, QPointF &point, QPointF &direction);
@@ -44,8 +49,7 @@ QString appendSectionCurves(SketchObject &sketch, const Kernel::Body &body, bool
 // entita' dello schizzo sorgente attraversano il piano. I loro estremi sono
 // normali ConstraintRef e accettano Coincident e PointOnCurve.
 QString appendSketchContactReferences(SketchObject &sketch, const SketchObject &source, QVector<SketchEntity> *created = nullptr);
-// Variante usata dal comando grafico: importa soltanto il bordo/curva scelto
-// nello schizzo sorgente.
+// Variante dei contatti limitata al bordo/curva scelto nello schizzo sorgente.
 QString appendSketchContactReference(SketchObject &sketch, const SketchObject &source, SketchEntity entity,
                                      QVector<SketchEntity> *created = nullptr);
 

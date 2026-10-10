@@ -164,6 +164,8 @@ void main() {
         return;
     }
     vec3 n = normalize(eyeNormal);
+    // Le lamine sono visibili da entrambi i lati: illumina il lato osservato.
+    if (!gl_FrontFacing) n = -n;
     if (zebra) {
         // Camera ortografica: direzione osservatore costante nello spazio occhio.
         vec3 reflected = reflect(vec3(0.0, 0.0, -1.0), n);
@@ -175,7 +177,9 @@ void main() {
         return;
     }
     vec3 rgb = ambient.rgb * baseColor.rgb + emission.rgb;
-    vec3 viewDirection = normalize(-eyePosition);
+    // Il viewport usa una proiezione ortografica: i raggi non convergono
+    // verso l'origine della camera, come accadrebbe in prospettiva.
+    vec3 viewDirection = vec3(0.0, 0.0, 1.0);
     for (int i = 0; i < 4; ++i) {
         if (lightEnabled[i] == 0) continue;
         vec3 lightDirection = lightPosition[i].w == 0.0

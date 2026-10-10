@@ -18,12 +18,15 @@
 #include "fk_sheet.h"
 #include "fk_surface_algo.h"
 #include "fk_tessellate.h"
+#include "fk_loft.h"
 #include "fk_project.h"
 #include "fk_parallel.h"
 #include <QGraphicsItem>
 #include <QGraphicsView>
 #include <QSurfaceFormat>
 #include <QTemporaryDir>
+#include <QProcess>
+#include <QDateTime>
 #include <QSemaphore>
 #include <QtEndian>
 #include <fstream>
@@ -36,6 +39,357 @@ static void require(bool ok, const char *message) {
 }
 class ViewportInteractionTest {
 public:
+    static void documentAccess() {
+        using namespace ForgeCad;
+        QTemporaryDir directory;
+        require(directory.isValid(), "document lock test directory");
+        const QString a=directory.filePath("a.prt"), b=directory.filePath("b.prt");
+        DocumentState empty;
+        require(saveDocumentFile(a,empty,false).isEmpty(), "create document with temporary lock");
+        require(!QFileInfo::exists(a+".lock"), "temporary writer releases lock");
+        {
+            DocumentFileLock owner(a), other(a);
+            require(owner.acquire().isEmpty() && owner.owns(a), "exclusive document lock");
+            require(!other.acquire().isEmpty(), "second session rejected");
+            require(!saveDocumentFile(a,empty,false).isEmpty(), "unowned writer rejected");
+            require(saveDocumentFile(a,empty,false,&owner).isEmpty() && owner.owns(a), "atomic save retains lock");
+            const QString alias=directory.filePath("alias.prt");
+            if(QFile::link(a,alias) && QFileInfo(alias).isSymLink()) {
+                DocumentFileLock aliased(alias);
+                require(!aliased.acquire().isEmpty(), "symbolic alias cannot bypass lock");
+                require(saveDocumentFile(alias,empty,false,&owner).isEmpty() && QFileInfo(alias).isSymLink(),
+                        "save through alias preserves symbolic link");
+            }
+        }
+        require(!QFileInfo::exists(a+".lock"), "document lifetime releases lock");
+        {
+            // Simula il marker di un altro computer, vecchio di un giorno:
+            // non deve essere sottratto anche senza un lock nativo del server.
+            QFile marker(b+".lock"); require(marker.open(QIODevice::WriteOnly), "remote lock fixture");
+            marker.write("12345\nForgeCAD\nremote-forgecad-test.invalid\nremote-machine\nremote-boot\n");
+            require(marker.flush() && marker.setFileTime(QDateTime::currentDateTimeUtc().addDays(-1),QFileDevice::FileModificationTime),
+                    "remote marker older than default timeout"); marker.close();
+            DocumentFileLock remote(b); require(!remote.acquire().isEmpty(), "remote lock never expires by age");
+            require(QFileInfo::exists(b+".lock"), "remote marker preserved");
+            require(QFile::remove(b+".lock"), "remove test remote marker");
+        }
+        {
+            QProcess worker;
+            worker.start(QCoreApplication::applicationFilePath(), {"--document-lock-worker",a});
+            require(worker.waitForStarted(5000) && worker.waitForReadyRead(5000)
+                    && worker.readAllStandardOutput().contains("READY"), "independent process holds lock");
+            DocumentFileLock competing(a);
+            require(!competing.acquire().isEmpty(), "cross process exclusion");
+            QProcess writer;
+            writer.start(QCoreApplication::applicationFilePath(), {"--document-lock-worker",a,"--save"});
+            require(writer.waitForFinished(5000) && writer.exitCode()==2, "independent writer cannot overwrite open file");
+            worker.write("\n"); require(worker.waitForFinished(5000) && worker.exitCode()==0, "worker releases normally");
+            require(competing.acquire().isEmpty(), "lock available after independent process closes");
+        }
+        {
+            QProcess worker;
+            worker.start(QCoreApplication::applicationFilePath(), {"--document-lock-worker",a});
+            require(worker.waitForStarted(5000) && worker.waitForReadyRead(5000)
+                    && worker.readAllStandardOutput().contains("READY"), "crash worker holds lock");
+            worker.kill(); require(worker.waitForFinished(5000), "simulated local process crash");
+            DocumentFileLock recovered(a); require(recovered.acquire().isEmpty(), "dead local owner can be recovered");
+        }
+        QSettings().remove("document/recentFiles");
+        PdfWindow first, second;
+        auto *menu=first.findChild<QMenu *>("recentDocumentsMenu");
+        require(menu && menu->actions().size()==1 && !menu->actions().first()->isEnabled(), "empty recent menu");
+        require(first.openDocumentPath(a), "window opens and holds document");
+        const auto dismiss=[](int result=QMessageBox::Ok) {
+            auto *timer=new QTimer(qApp);
+            QObject::connect(timer,&QTimer::timeout,qApp,[timer,result] {
+                for(QWidget *widget:QApplication::topLevelWidgets())
+                    if(auto *box=qobject_cast<QMessageBox *>(widget); box && box->isVisible()) {
+                        timer->stop(); timer->deleteLater();
+                        if(auto *button=box->button(QMessageBox::StandardButton(result))) button->click();
+                        else box->reject();
+                        return;
+                    }
+            });
+            timer->start(5);
+        };
+        dismiss(); require(!second.openDocumentPath(a), "second window refuses owned document");
+        require(first.documentLock_ && first.documentLock_->owns(a) && second.documentPath_.isEmpty(), "failed open preserves owners");
+        require(first.openDocumentPath(a), "reopening same document preserves current session");
+        require(QSettings().value("document/recentFiles").toStringList()==QStringList{canonicalDocumentPath(a)}, "recent files deduplicate");
+        {
+            DocumentFileLock blocked(b); require(blocked.acquire().isEmpty(), "save as target owned elsewhere");
+            dismiss(); require(!first.saveDocumentPath(b) && first.documentLock_->owns(a), "failed save as preserves original lock");
+            require(!QFileInfo::exists(b), "failed save as does not create file");
+        }
+        require(first.saveDocumentPath(b), "save as new file");
+        require(first.documentLock_->owns(b) && !QFileInfo::exists(a+".lock"), "save as transfers lock after success");
+        dismiss(); require(!first.saveDocumentPath(directory.path()) && first.documentLock_->owns(b), "write failure preserves previous session");
+        const QString invalid=directory.filePath("invalid.prt");
+        {QFile file(invalid); require(file.open(QIODevice::WriteOnly),"invalid document fixture"); file.write("invalid");}
+        dismiss(); require(!first.openDocumentPath(invalid) && first.documentLock_->owns(b)
+                           && !QFileInfo::exists(invalid+".lock"), "load failure preserves old lock and releases candidate");
+        first.documentModified_=true;
+        require(first.openDocumentPath(b) && first.documentModified_, "same recent document preserves unsaved edits");
+        dismiss(QMessageBox::Cancel);
+        require(!first.openDocumentPath(a) && first.documentLock_->owns(b) && !QFileInfo::exists(a+".lock"),
+                "cancel open preserves original session and releases candidate");
+        dismiss(QMessageBox::Cancel); first.newDocument();
+        require(first.documentLock_->owns(b) && first.documentModified_, "cancel new keeps document lock");
+        dismiss(QMessageBox::Cancel); require(!first.close() && first.documentLock_->owns(b), "cancel close keeps lock");
+        first.documentModified_=false;
+        first.newDocument(); require(!first.documentLock_ && !QFileInfo::exists(b+".lock"), "new document releases lock");
+        require(second.openDocumentPath(b), "released document opens in other window");
+        require(second.close() && !QFileInfo::exists(b+".lock"), "accepted close releases lock");
+        first.refreshRecentDocuments();
+        require(menu->actions().first()->data().toString()==canonicalDocumentPath(b), "most recent file first");
+        // L'azione del menu usa il normale percorso di apertura esclusiva.
+        menu->actions().first()->trigger();
+        require(first.documentLock_ && first.documentLock_->owns(b), "recent action opens protected document");
+        menu->popup(QPoint(20,20)); QApplication::processEvents();
+        require(menu->grab().save(QStringLiteral("/tmp/forgecad-file-recent-menu.png")), "recent menu visual snapshot");
+        menu->hide();
+        for(int i=0;i<12;++i) first.rememberRecentDocument(directory.filePath(QString("recent%1.prt").arg(i)));
+        require(QSettings().value("document/recentFiles").toStringList().size()==10, "recent list bounded at ten");
+        PdfWindow restored;
+        require(restored.recentDocumentsMenu_->actions().first()->data().toString().endsWith("recent11.prt"), "recent menu persists across windows");
+        menu->findChild<QAction *>("clearRecentDocuments")->trigger();
+        require(QSettings().value("document/recentFiles").toStringList().isEmpty()
+                && menu->actions().size()==1 && !menu->actions().first()->isEnabled(), "clear recent menu");
+        first.documentLock_.reset();
+        {
+            DocumentFileLock missing(a); require(missing.acquire().isEmpty(), "lost lock fixture");
+            QFile before(a); require(before.open(QIODevice::ReadOnly),"read before lost lock save"); const QByteArray bytes=before.readAll(); before.close();
+            require(QFile::remove(a+".lock"),"simulate lost sidecar");
+            require(!saveDocumentFile(a,empty,false,&missing).isEmpty(), "lost lock prevents save");
+            QFile after(a); require(after.open(QIODevice::ReadOnly) && after.readAll()==bytes,"lost lock save preserves document bytes");
+        }
+        std::cout<<"PASS document locks and recent files"<<std::endl;
+    }
+    static void openLoftTangency(const QString &documentPath) {
+        using namespace ForgeCad;
+        using namespace ForgeCad::Kernel;
+        const auto line = [](Vec3 a, Vec3 b) -> PathSegment {
+            return {std::make_shared<Line<3>>(a, normalized(b - a)), {0.0, distance(a, b)}};
+        };
+        const auto section = [](double z) {
+            LoftSection s;
+            s.frame = Frame3(Vec3(0, 0, z), Vec3(0, 0, 1), Vec3(1, 0, 0));
+            s.loop.segments = {{std::make_shared<Line<2>>(Vec2(), Vec2(1, 0)), {0, 10}}};
+            return s;
+        };
+        const auto checked = [](const Body &body) {
+            require(body.isSheet() && checkBody(body).empty(), "valid sheet topology");
+            TessellationOptions o; o.deflection = 0.05;
+            const auto mesh=tessellate(body, o);
+            require(mesh.failedFaces == 0, "all sheet faces tessellate");
+            for (const auto &faceMesh : mesh.faces) {
+                const Face &face=body.face(faceMesh.face);
+                int regularNormals=0;
+                const auto uRange=face.surface->uDomain(),vRange=face.surface->vDomain();
+                const auto uBreaks=face.surface->uBreakpoints(uRange),vBreaks=face.surface->vBreakpoints(vRange);
+                for (std::size_t k=0;k<faceMesh.normals.size();++k) {
+                    const auto uv=faceMesh.parameters[k];
+                    Vec3 d[4]; face.surface->evaluate(uv.x(),uv.y(),1,d);
+                    // Negli angoli singolari la mesh usa il limite interno:
+                    // il prodotto vettoriale al punto e' numericamente instabile.
+                    if (norm(cross(d[1],d[2])) <= 1e-5*norm(d[1])*norm(d[2])) continue;
+                    const Vec3 expected=normalAt(*face.surface,uv.x(),uv.y())*(face.sense?1.0:-1.0);
+                    double agreement=dot(normalized(faceMesh.normals[k]),normalized(expected));
+                    bool onKnot=false;
+                    for(double knot:uBreaks)onKnot=onKnot||std::fabs(uv.x()-knot)<1e-7;
+                    for(double knot:vBreaks)onKnot=onKnot||std::fabs(uv.y()-knot)<1e-7;
+                    // Su un nodo C0 la mesh usa la normale dal lato della
+                    // cella triangolata, mentre normalAt sceglie il lato destro.
+                    if(onKnot && agreement<=1.0-1e-6)
+                        for(double du:{-1e-8,0.0,1e-8})for(double dv:{-1e-8,0.0,1e-8}) {
+                            const double u=uv.x()+du,v=uv.y()+dv;
+                            if(u<uRange.lo||u>uRange.hi||v<vRange.lo||v>vRange.hi)continue;
+                            const Vec3 sided=normalAt(*face.surface,u,v)*(face.sense?1.0:-1.0);
+                            agreement=std::max(agreement,dot(normalized(faceMesh.normals[k]),normalized(sided)));
+                        }
+                    require(agreement>1.0-1e-6,"mesh normals agree with exact face orientation");
+                    ++regularNormals;
+                }
+                require(regularNormals>0,"regular mesh normals verified on every face");
+            }
+        };
+        for (double x : {0.0, 3.0, 10.0}) {
+            LoftOptions o;
+            o.guides = {{line(Vec3(x, 0, 0), Vec3(x, 0, 10))}};
+            const Body b = loftSheet({section(0), section(10)}, o);
+            checked(b);
+            bool found = false;
+            for (EdgeId e : b.edges()) {
+                const auto &edge = b.edge(e);
+                if (distance(edge.curve->point(edge.range.lo), Vec3(x, 0, 0)) < 1e-6
+                    && distance(edge.curve->point(edge.range.hi), Vec3(x, 0, 10)) < 1e-6) found = true;
+            }
+            // Le pezze complanari vengono unificate: la guida interna puo'
+            // appartenere alla faccia senza diventare uno spigolo visibile.
+            for (FaceId f : b.faces())
+                if (projectPoint(*b.face(f).surface, Vec3(x,0,5)).distance < 1e-6) found = true;
+            require(found, "guide on first/interior/last open-section vertex");
+            checked(loftSheet({section(10), section(0)}, o));
+        }
+        LoftOptions multiple;
+        multiple.guides = {{line(Vec3(3, 0, 0), Vec3(4, 0, 10))}, {line(Vec3(7, 0, 0), Vec3(8, 0, 10))}};
+        checked(loftSheet({section(0), section(10)}, multiple));
+        multiple.guides[1] = {line(Vec3(7, 0, 0), Vec3(2, 0, 10))};
+        bool rejected = false;
+        try { loftSheet({section(0), section(10)}, multiple); } catch (const std::domain_error &) { rejected = true; }
+        require(rejected, "crossing open-section guides rejected");
+        multiple.guides = {{line(Vec3(12, 0, 0), Vec3(12, 0, 10))}};
+        rejected = false;
+        try { loftSheet({section(0), section(10)}, multiple); } catch (const std::domain_error &) { rejected = true; }
+        require(rejected, "guide missing section rejected");
+
+        const std::vector<PathSegment> first{line(Vec3(0, 0, 0), Vec3(10, 0, 0))};
+        const std::vector<PathSegment> second{line(Vec3(0, 10, 5), Vec3(10, 10, 5))};
+        auto adjacent = std::make_shared<const Body>(ruledSurface(first, {line(Vec3(0, -5, 0), Vec3(10, -5, 0))}));
+        auto adjacentEnd = std::make_shared<const Body>(ruledSurface(second, {line(Vec3(0, 15, 10), Vec3(10, 15, 10))}));
+        const auto face = adjacent->faces().front(), endFace = adjacentEnd->faces().front();
+        const QVector<QPair<ForgeBody, EdgePoint>> startRefs{{adjacent, faceReference(*adjacent, face, Vec3(5, 0, 0))}};
+        const QVector<QPair<ForgeBody, EdgePoint>> endRefs{{adjacentEnd, faceReference(*adjacentEnd, endFace, Vec3(5, 10, 5))}};
+        QString error;
+        auto free = forgeRuledSurface(first, second, &error);
+        require(bool(free), "unconstrained ruled surface"); checked(*free);
+        for (const auto &strength : {QPair<double,double>(1.0,1.0), QPair<double,double>(0.35,0.7)}) {
+            auto tangent = forgeRuledSurface(first, second, &error, 3, 3, strength.first, strength.second, startRefs, endRefs);
+            if (!tangent) throw std::runtime_error(error.toStdString());
+            checked(*tangent);
+            const Surface &s = *tangent->face(tangent->faces().front()).surface;
+            for (double u : {0.0, 0.17, 0.5, 0.83, 1.0}) {
+                Vec3 d[4]; s.evaluate(u, 0, 1, d);
+                require(std::fabs(normalized(d[1]).z()) < 1e-6, "start derivative tangent to adjacent plane");
+                s.evaluate(u, 1, 1, d);
+                require(std::fabs(normalized(d[1]).y() - normalized(d[1]).z()) < 1e-6, "end derivative tangent to inclined adjacent plane");
+                require(distance(s.point(u,0), Vec3(10*u,0,0)) < 1e-6 && distance(s.point(u,1),Vec3(10*u,10,5)) < 1e-6,
+                        "tangency preserves exact boundary profiles");
+            }
+        }
+        require(!forgeRuledSurface(first, second, &error, 3, 0), "missing tangent face rejected");
+        require(!forgeRuledSurface(first, second, &error, 3, 0, 1, 1, endRefs), "non-adjacent face rejected");
+        auto startSection = section(0), endSection = section(5);
+        endSection.frame = Frame3(Vec3(0,10,5),Vec3(0,0,1),Vec3(1,0,0));
+        LoftOptions tangentOptions;
+        tangentOptions.startContinuity = tangentOptions.endContinuity = 1;
+        tangentOptions.startFaces = {{adjacent, face}}; tangentOptions.endFaces = {{adjacentEnd, endFace}};
+        checked(loftSheet({startSection,endSection},tangentOptions));
+        tangentOptions.ruled = true;
+        checked(loftSheet({startSection,endSection},tangentOptions));
+
+        const auto ring = [](double radius, double z) {
+            auto circle = std::make_shared<Circle<3>>(Vec3(0,0,z),Vec3(1,0,0),Vec3(0,1,0),radius);
+            return std::vector<PathSegment>{{circle,circle->domain()}};
+        };
+        auto cylinder = std::make_shared<const Body>(ruledSurface(ring(2,0),ring(2,-5)));
+        QVector<QPair<ForgeBody,EdgePoint>> cylinderRefs;
+        for (FaceId f : cylinder->faces()) cylinderRefs.append({cylinder,faceReference(*cylinder,f,Vec3(2,0,0))});
+        auto roundBlend = forgeRuledSurface(ring(2,0),ring(3,5),&error,3,0,1,1,cylinderRefs);
+        if (!roundBlend) throw std::runtime_error(error.toStdString());
+        checked(*roundBlend);
+        for (FaceId f : roundBlend->faces()) {
+            const Surface &surface = *roundBlend->face(f).surface;
+            for (double u : {0.0,0.25,0.5,0.75,1.0})
+                require(std::fabs(normalAt(surface,u,0).z()) < 1e-4,"G1 to cylindrical neighbor along rational circular profile");
+        }
+
+        DocumentState saved;
+        ExtrusionObject definition; definition.feature=BodyFeature::Ruled; definition.operation=-1;
+        definition.loftStartContinuity=definition.loftEndContinuity=3;
+        definition.loftStartInfluence=0.35; definition.loftEndInfluence=0.7;
+        GeometryRef r; r.kind=5; r.index=0; r.featureId=123; r.point=startRefs[0].second;
+        definition.loftStartFaces={r}; r.index=1; r.featureId=124; r.point=endRefs[0].second; definition.loftEndFaces={r};
+        saved.extrusions={definition};
+        QTemporaryDir dir;
+        require(saveDocumentFile(dir.filePath("tangent.prt"),saved,false).isEmpty(),"save tangent parameters");
+        DocumentState loaded;
+        require(loadDocumentFile(dir.filePath("tangent.prt"),loaded).isEmpty(),"reload format 40");
+        const auto &read=loaded.extrusions.front();
+        require(read.loftStartContinuity==3 && read.loftEndContinuity==3 && read.loftStartFaces.size()==1 && read.loftEndFaces.size()==1
+                && read.loftStartFaces[0].featureId==123 && read.loftEndInfluence==0.7,"tangent modes faces influences persist");
+        {
+            CadViewport view;
+            ExtrusionObject a,b;
+            a.name="Piano iniziale"; a.forgeBody=adjacent; b.name="Piano finale"; b.forgeBody=adjacentEnd;
+            view.extrusions_={a,b};
+            ExtrusionObject dependent=definition;
+            dependent.feature=BodyFeature::Loft;
+            view.extrusions_.append(dependent);
+            require(CadViewport::bodyOperands(dependent).contains(0) && CadViewport::bodyOperands(dependent).contains(1),
+                    "loft tracks both adjacent face owners");
+            require(view.withDependentBodies({0}).contains(2),"adjacent face change reaches dependent loft");
+            view.requestPreview(dependent);
+            require(view.preview_.replaced.isEmpty(),"loft preview keeps adjacent faces visible for picking");
+            view.clearPreview();
+            ExtrusionObject controlsDefinition;
+            QDialog dialog;
+            auto *form=new QFormLayout(&dialog);
+            {
+                SurfaceEndControls controls(dialog,*form,&view,-1,controlsDefinition);
+                auto *mode=dialog.findChild<QComboBox *>("surfaceStartContinuity");
+                auto *end=dialog.findChild<QComboBox *>("surfaceEndContinuity");
+                require(mode && end && mode->count()==4 && end->count()==4,"independent surface continuity controls");
+                mode->setCurrentIndex(3); end->setCurrentIndex(1);
+                auto *pick=dialog.findChild<QPushButton *>("surfaceStartFacesPick");
+                require(pick && pick->isEnabled(),"adjacent face picking enabled for G1 face mode");
+                pick->click();
+                require(view.referencePicking(),"surface face pick starts");
+                GeometryRef faceRef; faceRef.kind=5; faceRef.index=0; faceRef.point=startRefs[0].second;
+                view.refPickFinished_(true,faceRef);
+                require(controlsDefinition.loftStartFaces.size()==1 && controlsDefinition.loftStartContinuity==3
+                        && controlsDefinition.loftEndContinuity==1,"face pick updates independent endpoint definitions");
+                view.refPickFinished_(true,faceRef);
+                require(controlsDefinition.loftStartFaces.isEmpty(),"repeat face pick removes face");
+            }
+            require(!view.referencePicking() && !view.refPickFinished_,"surface controls release callback on close");
+        }
+        if (!documentPath.isEmpty()) {
+            DocumentState doc;
+            require(loadDocumentFile(documentPath,doc).isEmpty(),"load mouse2 read only");
+            require(doc.sketches.size()>=4,"mouse2 sections and guide");
+            for (bool reversed : {false,true}) {
+                QVector<SketchObject> sections{doc.sketches[reversed?1:0],doc.sketches[reversed?0:1]};
+                auto unguided=forgeLoft(sections,{},false,0,0,1,1,1,1,&error,true);
+                require(bool(unguided),"mouse2 original loft without guide"); checked(*unguided);
+                auto guided=forgeLoft(sections,{doc.sketches[3]},false,0,0,1,1,1,1,&error,true);
+                if (!guided) throw std::runtime_error(error.toStdString());
+                checked(*guided);
+                std::cout<<"PASS mouse2 open guided loft order="<<reversed<<" faces="<<guided->faces().size()<<std::endl;
+            }
+            if (QApplication::arguments().contains(QStringLiteral("--render"))) {
+                QMainWindow window;
+                auto *view=new CadViewport(&window); window.setCentralWidget(view); window.resize(1100,850);
+                doc.extrusions.clear(); doc.modelBodies.clear();
+                view->loadDocument(doc);
+                ExtrusionObject loft; loft.operation=-1; loft.feature=BodyFeature::Loft; loft.loftSketches={1,0}; loft.loftSurface=true;
+                require(view->createBody(loft).isEmpty(),"mouse2 original loft for shading verification");
+                window.show(); view->fitAll();
+                for (bool back : {false,true}) {
+                    if (back) view->yaw_+=180.0f;
+                    view->update(); QEventLoop loop; QTimer::singleShot(250,&loop,&QEventLoop::quit); loop.exec();
+                    require(view->grabFramebuffer().save(back?"/tmp/forgecad-mouse2-loft-back.png":"/tmp/forgecad-mouse2-loft-front.png"),"mouse2 shading screenshot");
+                }
+                loft.loftGuides={3};
+                require(view->updateBody(0,loft).isEmpty(),"mouse2 guided loft in viewport");
+                view->yaw_-=180.0f; view->update(); QEventLoop loop; QTimer::singleShot(250,&loop,&QEventLoop::quit); loop.exec();
+                require(view->grabFramebuffer().save("/tmp/forgecad-mouse2-loft-guided.png"),"mouse2 guided loft screenshot");
+                std::exception_ptr uiFailure;
+                QTimer::singleShot(100,&window,[&] {
+                    auto *dialog=window.findChild<QDialog *>("loftDialog");
+                    try {
+                        require(dialog && dialog->findChild<QComboBox *>("surfaceStartContinuity")
+                                && dialog->findChild<QComboBox *>("surfaceEndContinuity"),"loft exposes both tangent controls");
+                        require(dialog->grab().save("/tmp/forgecad-loft-tangency-panel.png"),"loft controls screenshot");
+                    } catch (...) { uiFailure=std::current_exception(); }
+                    if(dialog) dialog->reject();
+                });
+                loftDialog(&window,view,QStringLiteral("Loft con guida e tangenza"),0,loft,[](const ExtrusionObject &){return QString();});
+                if(uiFailure)std::rethrow_exception(uiFailure);
+            }
+        }
+        std::cout<<"PASS open loft and surface tangency"<<std::endl;
+    }
     static void asyncLifetimeRegressions() {
         QThreadPool *pool = QThreadPool::globalInstance();
         require(pool->waitForDone(10000), "background pool initially idle");
@@ -426,6 +780,39 @@ public:
 
     static void sketchReferenceWorkflow() {
         using namespace ForgeCad;
+        {
+            SketchObject source;
+            CurveObject spline; spline.tool = DrawingTool::Spline;
+            spline.controlPoints = {{-6,0},{-2,3},{2,-1},{6,0}};
+            recalculateCurve(spline); source.curves.append(spline);
+            source.segments.append({QPointF(-2,1),QPointF(3,2)});
+            for (bool construction : {false,true}) {
+                SketchObject target; target.customFrame = true; target.frame.origin[2] = 25;
+                require(!appendSketchContactReference(target,source,{1,0}).isEmpty(), "parallel planes have no contacts");
+                require(appendProjectedSketchEntity(target,source,{1,0},construction).isEmpty(), "convert spline onto offset plane");
+                require(target.curves.size()==1 && target.segments.isEmpty()
+                        && target.curves[0].construction==construction, "selected spline and construction setting preserved");
+                const auto before=curveGeometry(spline),after=curveGeometry(target.curves[0]);
+                require(before.size()==after.size(),"projected spline pieces");
+                for(int i=0;i<before.size();++i) for(int k=0;k<=30;++k) {
+                    const auto a=before[i].curve->point(before[i].range.lo+before[i].range.length()*k/30.0);
+                    const auto b=after[i].curve->point(after[i].range.lo+after[i].range.length()*k/30.0);
+                    require(Kernel::distance(a,b)<1e-8,"parallel projection preserves spline exactly");
+                }
+                require(solveSketch(target).ok,"projected spline fixed constraints valid");
+                require(appendProjectedSketchEntity(target,source,{0,0},construction).isEmpty()
+                        && target.segments.size()==1 && target.isConstructionSegment(0)==construction,
+                        "convert selected segment and respect construction setting");
+            }
+            CadViewport view; view.resize(800,600);
+            SketchObject target; target.customFrame=true; target.frame.origin[2]=25;
+            view.sketches_={source,target}; view.activeSketch_=1; view.sketchMode_=true;
+            view.referencesConstruction_=false;
+            const QPoint click=view.projectWorldPoint(sketchToDisplay(spline.samples.at(spline.samples.size()/2),source)).toPoint();
+            require(view.convertReferenceAt(click).isEmpty(),"viewport converts spline from parallel sketch");
+            require(view.sketches_[1].curves.size()==1 && !view.sketches_[1].curves[0].construction,
+                    "viewport uses projection and respects reference setting");
+        }
         CurveObject reference;
         reference.tool = DrawingTool::Converted;
         reference.construction = true;
@@ -1060,6 +1447,7 @@ public:
             v.addControlPointToCurve(QPointF(5,0));
             const auto &after = v.sketches_.at(0);
             require(after.curves.at(0).controlPoints.size() == 4, "insert spline point");
+            require(after.curves.at(0).tangentLinked.at(1), "nuovo nodo inserito con tangenza");
             require(after.geometricConstraints.at(0).first.point == 3, "remap fixed endpoint");
             require(after.curves.at(0).tangentHandles.last() == c.tangentHandles.last(), "preserve existing tangent handles");
             require(after.curves.at(0).controlPoints.last() == QPointF(20,0), "fixed endpoint preserved");
@@ -1254,6 +1642,107 @@ public:
             }
         }
     }
+    static void splineSelectionClicks(const QString &path) {
+        using namespace ForgeCad;
+        if (QApplication::arguments().contains(QStringLiteral("--user-settings"))) {
+            QSettings settings;
+            QDir().mkpath(QFileInfo(settings.fileName()).absolutePath());
+            QFile::copy(QDir::homePath()+QStringLiteral("/.config/ForgeCAD/ForgeCAD.conf"), settings.fileName());
+        }
+        DocumentState state;
+        if (path.isEmpty()) {
+            for (int plane : {0,2}) {
+                SketchObject sketch;
+                sketch.plane = plane;
+                sketch.name = QStringLiteral("Spline con offset %1").arg(plane);
+                CurveObject curve;
+                curve.tool = DrawingTool::Spline;
+                curve.controlPoints = {{0,0},{5,3},{10,0}};
+                recalculateCurve(curve);
+                sketch.curves.append(curve);
+                SketchOffset offset;
+                offset.distance = 0.5;
+                offset.dimensioned = true;
+                require(offsetSketchEntities(sketch,{{1,0}},offset).error.isEmpty(), "offset associativo della spline");
+                state.sketches.append(sketch);
+            }
+        } else require(loadDocumentFile(path, state).isEmpty(), "lettura del documento per i clic spline");
+        for (SketchObject &sketch : state.sketches)
+            for (CurveObject &curve : sketch.curves) recalculateCurve(curve);
+        PdfWindow window;
+        auto *viewport = dynamic_cast<CadViewport *>(window.centralWidget());
+        require(viewport != nullptr, "viewport della finestra completa");
+        window.resize(1200,900);
+        window.show();
+        viewport->loadDocument(state);
+        QTimer dismissDialogs;
+        QObject::connect(&dismissDialogs,&QTimer::timeout,&window,[] {
+            if (auto *dialog = qobject_cast<QDialog *>(QApplication::activeModalWidget())) dialog->reject();
+        });
+        dismissDialogs.start(20);
+        const auto settle = [] {
+            QEventLoop loop;
+            QTimer::singleShot(30,&loop,&QEventLoop::quit);
+            loop.exec();
+        };
+        const auto click = [&](QPoint pixel, bool doubleClick = false, QPoint movement = {}) {
+            const QPointF local(pixel), global(viewport->mapToGlobal(pixel));
+            QMouseEvent hover(QEvent::MouseMove, local, global, Qt::NoButton, Qt::NoButton, Qt::NoModifier);
+            QApplication::sendEvent(viewport, &hover);
+            QMouseEvent press(doubleClick ? QEvent::MouseButtonDblClick : QEvent::MouseButtonPress,
+                              local, global, Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+            QApplication::sendEvent(viewport, &press);
+            if (!movement.isNull()) {
+                const QPointF end = local + QPointF(movement);
+                QMouseEvent drag(QEvent::MouseMove, end, global + QPointF(movement), Qt::NoButton, Qt::LeftButton, Qt::NoModifier);
+                QApplication::sendEvent(viewport, &drag);
+            }
+            QMouseEvent release(QEvent::MouseButtonRelease, local, global, Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
+            QApplication::sendEvent(viewport, &release);
+            settle();
+        };
+        for (int sketch = 0; sketch < state.sketches.size(); ++sketch) {
+            viewport->selectSketch(sketch);
+            viewport->setDrawingTool(DrawingTool::Select);
+            viewport->fitAll();
+            settle();
+            for (const CurveObject &curve : state.sketches[sketch].curves) {
+                if (curve.tool != DrawingTool::Spline) continue;
+                for (int fraction : {2,4,6,8}) {
+                    const QPointF sample = curve.samples.value(curve.samples.size()*fraction/10);
+                    const QPoint pixel = viewport->projectWorldPoint(viewport->mapSketchPoint(sample,state.sketches[sketch])).toPoint();
+                    if (!viewport->rect().contains(pixel)) continue;
+                    for (const QPoint offset : {QPoint(3,0),QPoint(0,8),QPoint(16,0),QPoint(0,-16)}) {
+                        std::cerr << "spline clicks sketch=" << sketch << " sample=" << fraction
+                                  << " offset=" << offset.x() << ',' << offset.y() << std::endl;
+                        click(pixel);
+                        click(pixel+offset);
+                        click(pixel);
+                        click(pixel+offset,true);
+                    }
+                }
+                for (int control = 0; control < curve.controlPoints.size(); ++control) {
+                    const QPoint pixel = viewport->projectWorldPoint(viewport->mapSketchPoint(curve.controlPoints[control],state.sketches[sketch])).toPoint();
+                    std::cerr << "spline node click sketch=" << sketch << " control=" << control << std::endl;
+                    click(pixel,false,QPoint(1,1));
+                    click(pixel+QPoint(8,0));
+                }
+                viewport->draggingControlPoint_ = true;
+                viewport->draggingCurveIndex_ = 0;
+                viewport->draggingControlIndex_ = 1;
+                viewport->draggingPointKind_ = EditablePointKind::Control;
+                viewport->dragSnapshot_ = viewport->currentDocument();
+                const QPoint pixel = viewport->projectWorldPoint(viewport->mapSketchPoint(
+                    viewport->sketches_[sketch].curves[0].controlPoints[1],state.sketches[sketch])).toPoint();
+                const QPointF local(pixel), global(viewport->mapToGlobal(pixel));
+                QMouseEvent drag(QEvent::MouseMove,local,global,Qt::NoButton,Qt::LeftButton,Qt::NoModifier);
+                std::cerr << "spline forced drag sketch=" << sketch << std::endl;
+                QApplication::sendEvent(viewport,&drag);
+            }
+            viewport->endSketchMode();
+        }
+        std::cout << "PASS spline selection clicks" << std::endl;
+    }
     static void splineShapeOptions() {
         using namespace ForgeCad;
         const auto near = [](QPointF a, QPointF b) { return std::hypot(a.x()-b.x(), a.y()-b.y()) < 1e-9; };
@@ -1261,6 +1750,69 @@ public:
         curve.tool = DrawingTool::Spline;
         curve.controlPoints = {{0,0}, {1,3}, {2,3.1}, {12,4}, {13,0}};
         const auto original = curve.controlPoints;
+        initializeTangentHandles(curve);
+        for (bool linked : curve.tangentLinked) require(linked, "tangenza predefinita dei nuovi nodi");
+        curve.tangentLinked[2] = false;
+        initializeTangentHandles(curve);
+        require(!curve.tangentLinked[2] && curve.tangentLinked[1], "inizializzazione conserva lo svincolo esplicito");
+        {
+            CadViewport insert;
+            insert.createSketch(0, QStringLiteral("Spline"));
+            CurveObject initial;
+            initial.tool = DrawingTool::Spline;
+            initial.controlPoints = {{0,0},{10,0},{20,0}};
+            recalculateCurve(initial);
+            insert.sketches_[0].curves.append(initial);
+            insert.addControlPointToCurve(QPointF(5,0));
+            require(insert.sketches_[0].curves[0].controlPoints.size() == 4
+                && insert.sketches_[0].curves[0].tangentLinked[1], "inserimento di un nodo con tangenza predefinita");
+        }
+        // Trascinamento reale di un nodo: gli offset delle maniglie non cambiano.
+        for (bool linked : {false, true}) {
+            CadViewport drag;
+            drag.resize(800,600);
+            drag.createSketch(0, QStringLiteral("Spline"));
+            drag.setDrawingTool(DrawingTool::Select);
+            CurveObject initial;
+            initial.tool = DrawingTool::Spline;
+            initial.controlPoints = {{0,0},{1,2},{3,0}};
+            recalculateCurve(initial);
+            initial.tangentLinked[1] = linked;
+            drag.sketches_[0].curves.append(initial);
+            drag.draggingControlPoint_ = true;
+            drag.draggingCurveIndex_ = 0;
+            drag.draggingControlIndex_ = 1;
+            drag.draggingPointKind_ = EditablePointKind::Control;
+            drag.dragSnapshot_ = drag.currentDocument();
+            const QPoint pixel(470,210);
+            const QPointF target = drag.screenToSketchPoint(pixel);
+            QMouseEvent move(QEvent::MouseMove, QPointF(pixel), QPointF(pixel), Qt::NoButton, Qt::LeftButton, Qt::NoModifier);
+            drag.mouseMoveEvent(&move);
+            const CurveObject moved = drag.sketches_[0].curves[0];
+            const QPointF delta = target - initial.controlPoints[1];
+            require(pointLength(delta) > 0.1 && near(moved.controlPoints[1],target), "nodo segue il trascinamento");
+            require(near(moved.tangentHandles[1].first,initial.tangentHandles[1].first+delta)
+                && near(moved.tangentHandles[1].second,initial.tangentHandles[1].second+delta), "maniglie seguono il nodo anche svincolate");
+            drag.undo();
+            require(drag.sketches_[0].curves[0].tangentHandles == initial.tangentHandles, "undo ripristina le maniglie del nodo");
+            drag.redo();
+            require(drag.sketches_[0].curves[0].tangentHandles == moved.tangentHandles, "redo ripristina le maniglie traslate");
+            if (linked) {
+                drag.sketches_[0].curves[0] = initial;
+                drag.draggingControlPoint_ = true;
+                drag.draggingCurveIndex_ = 0;
+                drag.draggingControlIndex_ = 1;
+                drag.draggingPointKind_ = EditablePointKind::TangentOut;
+                drag.mouseMoveEvent(&move);
+                const CurveObject tangent = drag.sketches_[0].curves[0];
+                const QPointF in = tangent.tangentHandles[1].first - tangent.controlPoints[1];
+                const QPointF out = tangent.tangentHandles[1].second - tangent.controlPoints[1];
+                require(std::abs(in.x()*out.y()-in.y()*out.x()) < 1e-9
+                    && QPointF::dotProduct(in,out) < 0.0, "trascinamento della maniglia mantiene la tangenza opposta");
+                require(std::abs(pointLength(in)-pointLength(initial.tangentHandles[1].first-initial.controlPoints[1])) < 1e-9,
+                    "tangenza conserva la lunghezza della maniglia opposta");
+            }
+        }
         shapeSpline(curve, {true, false, false});
         const auto secondStart = [&](int i) {
             return 6.0 * (curve.controlPoints[i] - 2.0*curve.tangentHandles[i].second + curve.tangentHandles[i+1].first);
@@ -1327,6 +1879,7 @@ public:
         DocumentState loaded;
         require(loadDocumentFile(path,loaded).isEmpty(), "carica spline");
         require(loaded.sketches[0].curves[0].tangentHandles == expected.tangentHandles, "maniglie conservate nel documento");
+        require(loaded.sketches[0].curves[0].tangentLinked == expected.tangentLinked, "tangenza conservata nel documento");
         for (bool accept : {false, true}) {
             bool found = false;
             QTimer::singleShot(0, [&] {
@@ -1341,7 +1894,15 @@ public:
             if (accept) shapeSpline(expected, {true,false,false});
             require(viewport.sketches_[0].curves[0].tangentHandles == expected.tangentHandles, "conferma/annulla modifica spline");
         }
-
+        if (QApplication::arguments().contains(QStringLiteral("--render"))) {
+            viewport.resize(1000,750);
+            viewport.setDrawingTool(DrawingTool::Select);
+            viewport.setViewNormal(0);
+            viewport.fitAll();
+            viewport.show();
+            QApplication::processEvents();
+            require(viewport.grabFramebuffer().save(QStringLiteral("/tmp/forgecad-spline-handles.png")), "immagine curva e maniglie");
+        }
     }
     static void sheetDressupFeatures() {
         using namespace ForgeCad;
@@ -6378,6 +6939,23 @@ int main(int argc, char **argv) {
     QTemporaryDir settings;
     QSettings::setDefaultFormat(QSettings::IniFormat);
     QSettings::setPath(QSettings::IniFormat, QSettings::UserScope, settings.path());
+    if (app.arguments().contains(QStringLiteral("--document-lock-worker"))) {
+        const int index=app.arguments().indexOf(QStringLiteral("--document-lock-worker"));
+        const QString path=app.arguments().value(index+1);
+        if(app.arguments().contains(QStringLiteral("--save")))
+            return ForgeCad::saveDocumentFile(path,DocumentState{},false).isEmpty() ? 0 : 2;
+        ForgeCad::DocumentFileLock lock(path);
+        const QString error=lock.acquire();
+        if(!error.isEmpty()) {std::cout<<"LOCKED"<<std::endl;return 2;}
+        std::cout<<"READY"<<std::endl;
+        std::cin.get();
+        return 0;
+    }
+    if (app.arguments().contains(QStringLiteral("--document-access"))) {
+        try { ViewportInteractionTest::documentAccess(); }
+        catch(const std::exception &e) {std::cerr<<e.what()<<std::endl;return 1;}
+        return 0;
+    }
     if (app.arguments().contains(QStringLiteral("--async-lifetime"))) {
         try { ViewportInteractionTest::asyncLifetimeRegressions(); }
         catch (const std::exception &e) { std::cerr << e.what() << std::endl; return 1; }
@@ -6831,6 +7409,10 @@ int main(int argc, char **argv) {
             ViewportInteractionTest::loftCorner(QStringLiteral("File_Esempio/prova con loft.prt"));
         else if (app.arguments().contains(QStringLiteral("--sheet-dressup"))) ViewportInteractionTest::sheetDressupFeatures();
         else if (app.arguments().contains(QStringLiteral("--midpoint-quadrant"))) ViewportInteractionTest::midpointQuadrantConstraints();
+        else if (app.arguments().contains(QStringLiteral("--open-loft-tangency")))
+            ViewportInteractionTest::openLoftTangency(app.arguments().value(app.arguments().indexOf(QStringLiteral("--open-loft-tangency"))+1));
+        else if (app.arguments().contains(QStringLiteral("--spline-clicks")))
+            ViewportInteractionTest::splineSelectionClicks(app.arguments().value(app.arguments().indexOf(QStringLiteral("--spline-clicks"))+1));
         else if (app.arguments().contains(QStringLiteral("--spline-shape"))) ViewportInteractionTest::splineShapeOptions();
         else ViewportInteractionTest::run(app.arguments().contains(QStringLiteral("--gl")));
     }

@@ -345,6 +345,10 @@ QVector<Dependency> dependencies(int index, const DocumentState &document) {
             addBodyDependency(result, features, index, feature.booleanTools.at(k), QStringLiteral("strumento %1").arg(k + 1));
         return result;
     }
+    for (int k = 0; k < feature.loftStartFaces.size(); ++k)
+        addGeometryDependency(result, feature.loftStartFaces.at(k), sketches, features, index, QStringLiteral("faccia tangente iniziale %1").arg(k + 1));
+    for (int k = 0; k < feature.loftEndFaces.size(); ++k)
+        addGeometryDependency(result, feature.loftEndFaces.at(k), sketches, features, index, QStringLiteral("faccia tangente finale %1").arg(k + 1));
     switch (feature.feature) {
     case BodyFeature::Extrusion:
         addSketchDependency(result, sketches, index, feature.sketchIndex, QStringLiteral("profilo"));

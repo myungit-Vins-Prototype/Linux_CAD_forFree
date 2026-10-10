@@ -330,6 +330,37 @@ QString appendSectionCurves(SketchObject &sketch, const Body &body, bool constru
     return {};
 }
 
+QString appendProjectedSketchEntity(SketchObject &sketch, const SketchObject &source, SketchEntity entity,
+                                    bool construction, QVector<SketchEntity> *created) {
+    try {
+        const Frame3 from = sketchAxes(source);
+        std::vector<ProfileSegment> pieces;
+        if (entity.kind == 0 && entity.index >= 0 && entity.index < source.segments.size()) {
+            const SketchSegment &segment = source.segments.at(entity.index);
+            const Vec2 a(segment.first.x(), segment.first.y()), b(segment.second.x(), segment.second.y());
+            const double length = distance(a, b);
+            if (length <= kSketchConnectionTolerance) return QStringLiteral("Il segmento sorgente e' un punto.");
+            pieces.push_back({std::make_shared<Line<2>>(a, (b - a) / length), {0.0, length}});
+        } else if (entity.kind == 1 && entity.index >= 0 && entity.index < source.curves.size()) {
+            const auto geometry = curveGeometry(source.curves.at(entity.index));
+            for (const auto &piece : geometry) pieces.push_back(piece);
+        } else return QStringLiteral("Entita' dello schizzo sorgente non valida.");
+        if (pieces.empty()) return QStringLiteral("La curva sorgente non contiene geometria utilizzabile.");
+        SketchObject work = sketch;
+        QVector<SketchEntity> made;
+        for (const ProfileSegment &piece : pieces) {
+            const QString error = appendProjectedCurve(work, embedCurve(piece.curve, from), piece.range,
+                                                       construction, true, &made);
+            if (!error.isEmpty()) return error;
+        }
+        sketch = std::move(work);
+        if (created) *created += made;
+        return {};
+    } catch (const std::exception &failure) {
+        return QStringLiteral("Proiezione dello schizzo non riuscita: %1").arg(QString::fromUtf8(failure.what()));
+    }
+}
+
 QString appendSketchContactReferences(SketchObject &sketch, const SketchObject &source, QVector<SketchEntity> *created) {
     try {
         const Frame3 target = sketchAxes(sketch), from = sketchAxes(source);

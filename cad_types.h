@@ -590,6 +590,8 @@ struct ExtrusionObject {
     double loftGuideInfluence = 1.0;
     double loftStartInfluence = 1.0;
     double loftEndInfluence = 1.0;
+    // Modalita' 3: G1 alle facce scelte; condiviso dalla superficie rigata.
+    QVector<GeometryRef> loftStartFaces, loftEndFaces;
     // Loft di superficie: lamina senza coperchi (sezioni chiuse: un tubo).
     bool loftSurface = false;
     // Imported: il body letto dal file come testo STEP scritto dal kernel

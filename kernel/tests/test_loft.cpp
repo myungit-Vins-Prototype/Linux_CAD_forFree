@@ -230,6 +230,64 @@ FK_TEST(LoftTangencyAppliesToEveryGuide) {
     }
 }
 
+FK_TEST(LoftOpenGuidesAndNeighborFaces) {
+    LoftSection first, last;
+    first.frame=Frame3(Vec3(),Vec3(0,0,1),Vec3(1,0,0));
+    last.frame=Frame3(Vec3(0,10,5),Vec3(0,0,1),Vec3(1,0,0));
+    first.loop.segments=last.loop.segments={lineSegment(Vec2(-5,0),Vec2(5,0))};
+    const auto line=[](Vec3 a,Vec3 b)->PathSegment {
+        return {std::make_shared<Line<3>>(a,b-a),{0,distance(a,b)}};
+    };
+    auto adjacent=std::make_shared<const Body>(ruledSurface({line({-5,-5,0},{5,-5,0})},{line({-5,0,0},{5,0,0})}));
+    auto end=std::make_shared<const Body>(ruledSurface({line({-5,10,5},{5,10,5})},{line({-5,15,10},{5,15,10})}));
+    auto guide=std::make_shared<BSplineCurve<3>>(3,std::vector<double>{0,0,0,0,1,1,1,1},
+        std::vector<Vec3>{{0,0,0},{1,3,0},{1,7,2},{0,10,5}});
+    LoftOptions options;
+    options.startContinuity=options.endContinuity=1;
+    options.startFaces={{adjacent,adjacent->faces().front()}};
+    options.endFaces={{end,end->faces().front()}};
+    options.guides={{{guide,guide->domain()}}};
+    const Body body=loftSheet({first,last},options);
+    FK_CHECK(checkBody(body).empty());
+    bool found=false;
+    for(EdgeId id:body.edges()) {
+        const Edge &edge=body.edge(id);
+        if(distance(edge.curve->point(edge.range.lo),Vec3())>1e-6
+           ||distance(edge.curve->point(edge.range.hi),Vec3(0,10,5))>1e-6)continue;
+        found=true;
+        // La guida ha anche una componente lungo il profilo: il vincolo di
+        // faccia non deve cancellarla quando impone il piano tangente.
+        FK_CHECK(norm(cross(normalized(edge.curve->derivative(edge.range.lo)),normalized(guide->derivative(0))))<1e-8);
+        FK_CHECK(norm(cross(normalized(edge.curve->derivative(edge.range.hi)),normalized(guide->derivative(1))))<1e-8);
+    }
+    FK_CHECK(found);
+    guide=std::make_shared<BSplineCurve<3>>(3,std::vector<double>{0,0,0,0,1,1,1,1},
+        std::vector<Vec3>{{0,0,0},{1,3,1},{1,7,2},{0,10,5}});
+    options.guides={{{guide,guide->domain()}}};
+    FK_CHECK_THROWS(loftSheet({first,last},options));
+}
+
+FK_TEST(LoftOpenGuideNearPlaneEndpoint) {
+    // Estremo positivo di pochi ulp: non c'e' cambio di segno, ma la guida
+    // e' gia' sul profilo entro la tolleranza. Non va persa l'intersezione.
+    LoftSection first, second;
+    first.frame = Frame3(Vec3(), Vec3(0,0,1), Vec3(1,0,0));
+    second.frame = Frame3(Vec3(0,0,3), Vec3(0,0,1), Vec3(1,0,0));
+    first.loop.segments = second.loop.segments = {lineSegment(Vec2(-1,0),Vec2(1,0))};
+    auto guide = std::make_shared<BSplineCurve<3>>(3,std::vector<double>{0,0,0,0,1,1,1,1},
+        std::vector<Vec3>{{0,0,1e-30},{0,0.4,1},{0,0.4,2},{0,0,3}});
+    LoftOptions options;
+    options.guides = {{{guide,guide->domain()}}};
+    for (bool reverse : {false,true}) {
+        const Body body = loftSheet(reverse ? std::vector<LoftSection>{second,first} : std::vector<LoftSection>{first,second},options);
+        FK_CHECK(body.isSheet());
+        FK_CHECK(checkBody(body).empty());
+        TessellationOptions mesh;
+        mesh.deflection=0.02;
+        FK_CHECK(tessellate(body,mesh).failedFaces==0);
+    }
+}
+
 FK_TEST(LoftSheet) {
     // Due segmenti paralleli: rettangolo; con una catena girata al contrario si riallinea.
     LoftSection a, b;

@@ -313,6 +313,9 @@ public:
         for (double &scale : referencePlaneScales_) scale = sharedPlaneScale;
     }
     ~CadViewport() override {
+        // I pannelli figli si deregistrano da glassPanels_: devono sparire
+        // mentre i membri del viewport esistono ancora, prima della classe base.
+        qDeleteAll(findChildren<QDialog *>(QString(), Qt::FindDirectChildrenOnly));
         // I framebuffer vanno distrutti con il loro contesto corrente.
         // Il contesto puo' emettere aboutToBeDestroyed dal distruttore della
         // classe base, quando i nostri membri non esistono piu'.
@@ -1006,7 +1009,7 @@ public:
             for (int &merged : feature.mergeBodies) merged = mapped(merged);
             for (GeometryRef &ref : feature.datum.refs) remapRef(ref);
             for (GeometryRef &ref : feature.pattern.refs) remapRef(ref);
-            for (QVector<GeometryRef> *refs : {&feature.ruledFirst, &feature.ruledSecond, &feature.planarRefs})
+            for (QVector<GeometryRef> *refs : {&feature.ruledFirst, &feature.ruledSecond, &feature.planarRefs, &feature.loftStartFaces, &feature.loftEndFaces})
                 for (GeometryRef &ref : *refs) remapRef(ref);
             remapRef(feature.extentRef);
             remapRef(feature.move.axis);
@@ -1986,7 +1989,7 @@ public:
             for (int &section : body.loftSketches) renumber(section);
             for (int &guide : body.loftGuides) renumber(guide);
             for (SketchPathRef &guide : body.loftGuidePaths) renumber(guide.sketch);
-            for (QVector<GeometryRef> *refs : {&body.datum.refs, &body.pattern.refs, &body.ruledFirst, &body.ruledSecond, &body.planarRefs})
+            for (QVector<GeometryRef> *refs : {&body.datum.refs, &body.pattern.refs, &body.ruledFirst, &body.ruledSecond, &body.planarRefs, &body.loftStartFaces, &body.loftEndFaces})
                 for (GeometryRef &ref : *refs)
                     if (isSketchRef(ref)) renumber(ref.index);
             if (isSketchRef(body.extentRef)) renumber(body.extentRef.index);
@@ -2173,7 +2176,7 @@ public:
         else if (isCurveBody(definition) || isDatumBody(definition)) preview_.replaced.clear();  // la base dell'elica resta
         else if (definition.operation < 0 && definition.feature == BodyFeature::Blend) preview_.replaced.clear(); // la base opaca resta sotto la patch
         else if (definition.operation < 0 && definition.feature == BodyFeature::SurfaceOffset) preview_.replaced.clear();  // il corpo di partenza resta
-        else if (definition.operation < 0 && (definition.feature == BodyFeature::Ruled || definition.feature == BodyFeature::PlanarSurface
+        else if (definition.operation < 0 && (definition.feature == BodyFeature::Loft || definition.feature == BodyFeature::Ruled || definition.feature == BodyFeature::PlanarSurface
                                               || definition.feature == BodyFeature::BoundarySurface
                                               || definition.feature == BodyFeature::FillSurface))
             preview_.replaced.clear();  // curve e bordi scelti restano visibili
@@ -3098,7 +3101,7 @@ public:
         SketchReferenceHit hit;
         if (!pickSketchReference(position, hit)) return QStringLiteral("Clicca uno spigolo del modello o una curva visibile.");
         if (hit.sketch >= 0)
-            return ForgeCad::appendSketchContactReference(work, sketches_.at(hit.sketch), {hit.entityKind, hit.entity});
+            return ForgeCad::appendProjectedSketchEntity(work, sketches_.at(hit.sketch), {hit.entityKind, hit.entity}, construction);
         const ExtrusionObject &body = extrusions_.at(hit.body);
         ForgeCad::Kernel::CurvePtr<3> curve;
         ForgeCad::Kernel::Interval range;
@@ -4800,7 +4803,7 @@ protected:
             ref.element.element = map.value(ref.element.element, -1);
         };
         for (ExtrusionObject &body : extrusions_) {
-            for (QVector<GeometryRef> *refs : {&body.datum.refs, &body.pattern.refs, &body.ruledFirst, &body.ruledSecond, &body.planarRefs})
+            for (QVector<GeometryRef> *refs : {&body.datum.refs, &body.pattern.refs, &body.ruledFirst, &body.ruledSecond, &body.planarRefs, &body.loftStartFaces, &body.loftEndFaces})
                 for (GeometryRef &ref : *refs) remap(ref);
             remap(body.extentRef);
             remap(body.move.axis);
@@ -5312,7 +5315,9 @@ protected:
                              projectWorldPoint(mapSketchPoint(cursorSketchPoint_, sketch)));
         }
         const bool radiusOnly = drawingTool_ == DrawingTool::Arc && curveControlPoints_.size() == 1;
-        painter.setPen(QPen(QColor(255, 150, 60, radiusOnly ? 110 : 230), 2.0, radiusOnly ? Qt::DotLine : Qt::DashLine, Qt::RoundCap));
+        const bool spline = curve.tool == DrawingTool::Spline;
+        painter.setPen(QPen(spline ? QColor(242, 166, 255) : QColor(255, 150, 60, radiusOnly ? 110 : 230),
+                            spline ? 3.5 : 2.0, radiusOnly ? Qt::DotLine : Qt::DashLine, Qt::RoundCap));
         const QVector<QPointF> screen = projectSketchPolyline(curve.samples, sketch);
         painter.drawPolyline(screen.data(), int(screen.size()));
     }
@@ -5622,7 +5627,7 @@ protected:
                     }
                     else {
                         source.tangentHandles.insert(at, {point - QPointF(1.0, 0.0), point + QPointF(1.0, 0.0)});
-                        source.tangentLinked.insert(at, false);
+                        source.tangentLinked.insert(at, true);
                     }
                     commitFreeCurveEdit(curveIndex, source, origins);
                 } else if (chosen == remove) {
@@ -5949,6 +5954,11 @@ protected:
                         if (l > 0.0) position = c + r * (radius / l);
                     }
                     curve.controlPoints[draggingControlIndex_] = position;
+                    if (curve.tool == DrawingTool::Spline && curve.tangentHandles.size() == curve.controlPoints.size()) {
+                        const QPointF delta = position - before;
+                        curve.tangentHandles[draggingControlIndex_].first += delta;
+                        curve.tangentHandles[draggingControlIndex_].second += delta;
+                    }
                     normalizeEllipse(curve, draggingControlIndex_, before);
                     SketchObject &sketch = sketches_[activeSketch_];
                     if (!solveActive({{{1, draggingCurveIndex_, draggingControlIndex_}, curve.controlPoints.at(draggingControlIndex_)}}, sketchBefore)) {
@@ -5976,7 +5986,8 @@ protected:
                         return;
                     }
                 }
-                ForgeCad::recalculateCurve(curve, tessellationQuality_);
+                // solveActive ricampiona gia' le curve. Con gli offset puo'
+                // sostituire lo schizzo: il riferimento `curve` non e' piu' valido.
             } else {
                 snapPoint(rawPoint, drawingTool_ != DrawingTool::Spline
                     && drawingTool_ != DrawingTool::Nurbs);
@@ -6686,7 +6697,7 @@ private:
                 for (int &merged : feature.mergeBodies) merged = mapped(merged);
                 for (GeometryRef &ref : feature.datum.refs) remapRef(ref);
                 for (GeometryRef &ref : feature.pattern.refs) remapRef(ref);
-                for (QVector<GeometryRef> *refs : {&feature.ruledFirst, &feature.ruledSecond, &feature.planarRefs})
+                for (QVector<GeometryRef> *refs : {&feature.ruledFirst, &feature.ruledSecond, &feature.planarRefs, &feature.loftStartFaces, &feature.loftEndFaces})
                     for (GeometryRef &ref : *refs) remapRef(ref);
                 remapRef(feature.extentRef);
                 remapRef(feature.move.axis);
@@ -6977,7 +6988,7 @@ private:
         for (ExtrusionObject &body : kept) {
             if (body.firstBody >= 0) body.firstBody = map.value(body.firstBody, -1);
             if (body.secondBody >= 0) body.secondBody = map.value(body.secondBody, -1);
-            for (QVector<GeometryRef> *refs : {&body.datum.refs, &body.pattern.refs, &body.ruledFirst, &body.ruledSecond, &body.planarRefs})
+            for (QVector<GeometryRef> *refs : {&body.datum.refs, &body.pattern.refs, &body.ruledFirst, &body.ruledSecond, &body.planarRefs, &body.loftStartFaces, &body.loftEndFaces})
                 for (GeometryRef &ref : *refs)
                     if (isBodyRef(ref)) ref.index = map.value(ref.index, -1);
             if (isBodyRef(body.extentRef)) body.extentRef.index = map.value(body.extentRef.index, -1);
@@ -7182,12 +7193,13 @@ private:
             if (isBodyRef(body.move.axis)) bodies.append(body.move.axis.index);
             return bodies;
         }
+        case BodyFeature::Loft:
         case BodyFeature::Ruled:
         case BodyFeature::PlanarSurface:
         case BodyFeature::BoundarySurface:
         case BodyFeature::FillSurface: {
             QVector<int> bodies;
-            for (const QVector<GeometryRef> *refs : {&body.ruledFirst, &body.ruledSecond, &body.planarRefs})
+            for (const QVector<GeometryRef> *refs : {&body.ruledFirst, &body.ruledSecond, &body.planarRefs, &body.loftStartFaces, &body.loftEndFaces})
                 for (const GeometryRef &ref : *refs)
                     if (isBodyRef(ref) && !bodies.contains(ref.index)) bodies.append(ref.index);
             return bodies;
@@ -7240,7 +7252,7 @@ private:
         case BodyFeature::FillSurface: {
             QVector<int> sketches;
             if (body.feature == BodyFeature::PlanarSurface && body.planarRefs.isEmpty()) sketches.append(body.sketchIndex);
-            for (const QVector<GeometryRef> *refs : {&body.ruledFirst, &body.ruledSecond, &body.planarRefs})
+            for (const QVector<GeometryRef> *refs : {&body.ruledFirst, &body.ruledSecond, &body.planarRefs, &body.loftStartFaces, &body.loftEndFaces})
                 for (const GeometryRef &ref : *refs)
                     if (isSketchRef(ref) && !sketches.contains(ref.index)) sketches.append(ref.index);
             return sketches;
@@ -7680,6 +7692,16 @@ private:
             }
             case BodyFeature::Loft: {
                 QVector<SketchObject> sections, guides;
+                QVector<QPair<ForgeCad::ForgeBody, EdgePoint>> startFaces, endFaces;
+                const QVector<GeometryRef> *faceRefs[2] = {&body.loftStartFaces, &body.loftEndFaces};
+                for (int side = 0; side < 2; ++side)
+                    for (const GeometryRef &ref : *faceRefs[side]) {
+                        if ((side == 0 ? body.loftStartContinuity : body.loftEndContinuity) != 3) continue;
+                        if (ref.kind != 5 || ref.index < 0 || ref.index >= index || !bodies.at(ref.index).forgeBody) {
+                            body.error = QStringLiteral("Una faccia tangente del loft non esiste piu'."); return;
+                        }
+                        (side == 0 ? startFaces : endFaces).append({bodies.at(ref.index).forgeBody, ref.point});
+                    }
                 for (int i : body.loftSketches) {
                     const SketchObject *s = sketch(i);
                     if (!s) {
@@ -7700,7 +7722,7 @@ private:
                 }
                 body.forgeBody = ForgeCad::forgeLoft(sections, guides, body.loftRuled, body.loftStartContinuity,
                                                      body.loftEndContinuity, body.loftGuideContinuity, body.loftGuideInfluence,
-                                                     body.loftStartInfluence, body.loftEndInfluence, &body.error, body.loftSurface);
+                                                     body.loftStartInfluence, body.loftEndInfluence, &body.error, body.loftSurface, startFaces, endFaces);
                 body.solid = body.forgeBody && !body.forgeBody->isSheet();
                 return;
             }
@@ -7723,7 +7745,19 @@ private:
                         chains[k].insert(chains[k].end(), pieces.begin(), pieces.end());
                     }
                 }
-                body.forgeBody = ForgeCad::forgeRuledSurface(chains[0], chains[1], &body.error);
+                QVector<QPair<ForgeCad::ForgeBody, EdgePoint>> startFaces, endFaces;
+                const QVector<GeometryRef> *faceRefs[2] = {&body.loftStartFaces, &body.loftEndFaces};
+                for (int side = 0; side < 2; ++side)
+                    for (const GeometryRef &ref : *faceRefs[side]) {
+                        if ((side == 0 ? body.loftStartContinuity : body.loftEndContinuity) != 3) continue;
+                        if (ref.kind != 5 || ref.index < 0 || ref.index >= index || !bodies.at(ref.index).forgeBody) {
+                            body.error = QStringLiteral("Una faccia tangente della superficie non esiste piu'."); return;
+                        }
+                        (side == 0 ? startFaces : endFaces).append({bodies.at(ref.index).forgeBody, ref.point});
+                    }
+                body.forgeBody = ForgeCad::forgeRuledSurface(chains[0], chains[1], &body.error, body.loftStartContinuity,
+                                                           body.loftEndContinuity, body.loftStartInfluence, body.loftEndInfluence,
+                                                           startFaces, endFaces);
                 body.solid = false;
                 return;
             }
@@ -8160,7 +8194,7 @@ private:
                 curve.weights.insert(insertIndex, 1.0);
             } else {
                 curve.tangentHandles.insert(insertIndex, {point - QPointF(1, 0), point + QPointF(1, 0)});
-                curve.tangentLinked.insert(insertIndex, false);
+                curve.tangentLinked.insert(insertIndex, true);
             }
             commitFreeCurveEdit(curveIndex, curve, origins);
         } else {
@@ -8409,7 +8443,7 @@ private:
                     work.weights.fill(1.0, work.controlPoints.size() - 1);
                 work.weights.insert(at, 1.0);
             }
-            else { work.tangentHandles.insert(at, {work.controlPoints.at(at) - QPointF(1.0, 0.0), work.controlPoints.at(at) + QPointF(1.0, 0.0)}); work.tangentLinked.insert(at, false); }
+            else { work.tangentHandles.insert(at, {work.controlPoints.at(at) - QPointF(1.0, 0.0), work.controlPoints.at(at) + QPointF(1.0, 0.0)}); work.tangentLinked.insert(at, true); }
             initialPoint = at; refill(); load();
         });
         QObject::connect(remove, &QPushButton::clicked, &dialog, [&] {
@@ -9125,6 +9159,7 @@ private:
         const SketchObject &sketch = sketches_.at(activeSketch_);
         glPointSize(9.0f);
         QVector<ForgeCad::OverlayVertex> points;
+        QVector<ForgeCad::OverlayVertex> handlePoints;
         const auto point = [&points](const QVector3D &position, float r, float g, float b) {
             points.push_back({position, QVector4D(r, g, b, 1.0f)});
         };
@@ -9144,8 +9179,9 @@ private:
             }
             for (int k=0; k<curve.tangentHandles.size(); ++k) {
                 const auto &handles=curve.tangentHandles.at(k);
-                if (visibleSplineHandle(curve,k,0)) point(mapSketchPoint(handles.first,sketch),red,0.35f,0.75f);
-                if (visibleSplineHandle(curve,k,1)) point(mapSketchPoint(handles.second,sketch),red,0.35f,0.75f);
+                const QVector4D color(0.20f,0.75f,1.0f,1.0f);
+                if (visibleSplineHandle(curve,k,0)) handlePoints.push_back({mapSketchPoint(handles.first,sketch),color});
+                if (visibleSplineHandle(curve,k,1)) handlePoints.push_back({mapSketchPoint(handles.second,sketch),color});
             }
         }
         for (const QPointF &control : curveControlPoints_) {
@@ -9167,9 +9203,11 @@ private:
             else point(world, 1.0f, 0.85f, 0.15f);
         }
         overlayRenderer_.draw(GL_POINTS, points);
+        glPointSize(5.0f);
+        overlayRenderer_.draw(GL_POINTS, handlePoints);
         glLineWidth(1.0f);
         QVector<ForgeCad::OverlayVertex> tangentLines;
-        const QVector4D handleColor(0.35f, 0.75f, 1.0f, 1.0f);
+        const QVector4D handleColor(0.35f, 0.55f, 0.65f, 1.0f);
         for (const CurveObject &curve : sketch.curves) {
             for (int index = 0; index < curve.tangentHandles.size(); ++index) {
                 const QVector3D control = mapSketchPoint(curve.controlPoints.at(index), sketch);
@@ -10405,8 +10443,10 @@ private:
                     samples.push_back(world);
                 }
                 if (curve.construction) drawDashedPolyline(samples, color);
+                else if (curve.tool == DrawingTool::Spline) overlayRenderer_.drawWideLineStrip(samples, color, 3.5f);
                 else overlayRenderer_.draw(GL_LINE_STRIP, samples, color);
-                if (curve.construction || curve.tool == DrawingTool::Converted) continue;
+                // Le spline interpolano i nodi: la spezzata fra i nodi non e' una guida tangente.
+                if (curve.construction || curve.tool == DrawingTool::Converted || curve.tool == DrawingTool::Spline) continue;
                 QVector<QVector3D> controls;
                 controls.reserve(curve.controlPoints.size());
                 for (const QPointF &control : curve.controlPoints) {
@@ -11614,6 +11654,10 @@ private:
             parts << n(e.x) << n(e.y) << n(e.z) << QString::number(e.subshape) << QString::number(e.geometry) << QString::number(e.context);
         parts << n(d.sewTolerance) << QString::number(d.sewSolid) << QString::number(d.loftSurface) << QString::number(d.sweepSurface);
         parts << QStringLiteral("FS") << QString::number(d.fillContinuity) << n(d.fillInfluence) << n(d.fillGuideWeight);
+        parts << QStringLiteral("TF1");
+        for (const GeometryRef &g : d.loftStartFaces) ref(g);
+        parts << QStringLiteral("TF2");
+        for (const GeometryRef &g : d.loftEndFaces) ref(g);
         parts << QStringLiteral("R1");
         for (const GeometryRef &g : d.ruledFirst) ref(g);
         parts << QStringLiteral("R2");
@@ -14801,6 +14845,104 @@ protected:
 
 // Loft: sezioni ordinate, guide trasversali e condizioni delle estremita',
 // con anteprima della stessa definizione che viene salvata nel documento.
+// Controlli condivisi dai loft e dalle superfici tra due profili.
+class SurfaceEndControls {
+public:
+    SurfaceEndControls(QDialog &dialog, QFormLayout &form, CadViewport *viewport, int owner, ExtrusionObject &definition)
+        : viewport_(viewport), owner_(owner), definition_(definition) {
+        const QStringList modes{QStringLiteral("G0 — libero"), QStringLiteral("G1 — normale al profilo"),
+                                QStringLiteral("G2 — normale, curvatura nulla"), QStringLiteral("G1 — tangente a facce adiacenti")};
+        for (int side = 0; side < 2; ++side) {
+            modes_[side] = new QComboBox(&dialog);
+            modes_[side]->setObjectName(side == 0 ? QStringLiteral("surfaceStartContinuity") : QStringLiteral("surfaceEndContinuity"));
+            modes_[side]->addItems(modes);
+            modes_[side]->setCurrentIndex(qBound(0, side == 0 ? definition.loftStartContinuity : definition.loftEndContinuity, 3));
+            influences_[side] = new QDoubleSpinBox(&dialog);
+            influences_[side]->setRange(0.0, 100.0);
+            influences_[side]->setSuffix(QStringLiteral(" %"));
+            influences_[side]->setValue(100.0 * (side == 0 ? definition.loftStartInfluence : definition.loftEndInfluence));
+            faces_[side] = new QLabel(&dialog);
+            faces_[side]->setWordWrap(true);
+            picks_[side] = new QPushButton(QStringLiteral("Scegli facce nella vista"), &dialog);
+            picks_[side]->setObjectName(side == 0 ? QStringLiteral("surfaceStartFacesPick") : QStringLiteral("surfaceEndFacesPick"));
+            picks_[side]->setCheckable(true);
+            auto *clear = new QPushButton(QStringLiteral("Azzera facce"), &dialog);
+            auto *row = new QWidget(&dialog);
+            auto *layout = new QHBoxLayout(row);
+            layout->setContentsMargins(0, 0, 0, 0);
+            layout->addWidget(picks_[side]); layout->addWidget(clear);
+            form.addRow(side == 0 ? QStringLiteral("Primo profilo:") : QStringLiteral("Ultimo profilo:"), modes_[side]);
+            form.addRow(QStringLiteral("Influenza:"), influences_[side]);
+            form.addRow(QStringLiteral("Facce adiacenti:"), faces_[side]);
+            form.addRow(row);
+            QObject::connect(modes_[side], &QComboBox::currentIndexChanged, &dialog, [this] { sync(); });
+            QObject::connect(influences_[side], &QDoubleSpinBox::valueChanged, &dialog, [this] { sync(); });
+            QObject::connect(picks_[side], &QPushButton::clicked, &dialog, [this, side] {
+                if (active_ == side) stop(); else start(side);
+                sync();
+            });
+            QObject::connect(clear, &QPushButton::clicked, &dialog, [this, side] { refs(side).clear(); sync(); });
+        }
+        status_ = new QLabel(&dialog);
+        status_->setWordWrap(true);
+        form.addRow(status_);
+        auto *note = new QLabel(QStringLiteral("La tangenza alle facce richiede che il profilo coincida con il loro bordo. "
+                                              "Con tangenza attiva i collegamenti tra i profili diventano curvi. "
+                                              "Per G1 alle facce l'influenza regola la lunghezza della tangente."), &dialog);
+        note->setWordWrap(true); form.addRow(note);
+        sync();
+    }
+    ~SurfaceEndControls() { viewport_->cancelReferencePick(); viewport_->setReferencePickCallback({}); viewport_->setReferenceMarks({}); }
+    std::function<void()> changed;
+    void stop() { viewport_->cancelReferencePick(); active_ = -1; }
+    void copyTo(ExtrusionObject &d) const {
+        d.loftStartContinuity = definition_.loftStartContinuity; d.loftEndContinuity = definition_.loftEndContinuity;
+        d.loftStartInfluence = definition_.loftStartInfluence; d.loftEndInfluence = definition_.loftEndInfluence;
+        d.loftStartFaces = definition_.loftStartFaces; d.loftEndFaces = definition_.loftEndFaces;
+    }
+private:
+    QVector<GeometryRef> &refs(int side) { return side == 0 ? definition_.loftStartFaces : definition_.loftEndFaces; }
+    void sync() {
+        definition_.loftStartContinuity = modes_[0]->currentIndex(); definition_.loftEndContinuity = modes_[1]->currentIndex();
+        for (int side = 0; side < 2; ++side) {
+            const bool contact = modes_[side]->currentIndex() == 3;
+            influences_[side]->setMinimum(contact ? 1.0 : 0.0);
+            influences_[side]->setEnabled(modes_[side]->currentIndex() > 0);
+            picks_[side]->setEnabled(contact); picks_[side]->setChecked(active_ == side);
+            QStringList names;
+            for (const auto &ref : refs(side)) names.append(ForgeCad::geometryRefText(ref, viewport_->sketches(), viewport_->extrusions()));
+            faces_[side]->setText(names.isEmpty() ? QStringLiteral("nessuna faccia") : names.join(QStringLiteral(", ")));
+        }
+        definition_.loftStartInfluence = influences_[0]->value() / 100.0; definition_.loftEndInfluence = influences_[1]->value() / 100.0;
+        if (changed) changed();
+    }
+    void start(int side) {
+        active_ = side;
+        viewport_->setReferencePickCallback([this](bool picked, GeometryRef ref) {
+            if (!picked || active_ < 0) { active_ = -1; sync(); return; }
+            if (ref.kind != 5) { status_->setText(QStringLiteral("Scegli una faccia.")); return; }
+            auto &list = refs(active_);
+            int existing = -1;
+            for (int k = 0; k < list.size(); ++k)
+                if (list[k].index == ref.index && list[k].point.subshape == ref.point.subshape) existing = k;
+            if (existing < 0) list.append(ref); else list.removeAt(existing);
+            viewport_->setReferenceMarks(definition_.loftStartFaces + definition_.loftEndFaces);
+            sync();
+            viewport_->beginReferencePick(ForgeCad::DatumRoleFace, owner_);
+        });
+        const QString error = viewport_->beginReferencePick(ForgeCad::DatumRoleFace, owner_);
+        status_->setText(error.isEmpty() ? QStringLiteral("Clicca le facce adiacenti; un secondo clic le toglie. Esc termina la scelta.") : error);
+        if (!error.isEmpty()) active_ = -1;
+    }
+    CadViewport *viewport_;
+    int owner_, active_ = -1;
+    ExtrusionObject &definition_;
+    QComboBox *modes_[2]{};
+    QDoubleSpinBox *influences_[2]{};
+    QLabel *faces_[2]{}, *status_ = nullptr;
+    QPushButton *picks_[2]{};
+};
+
 static bool loftDialog(QWidget *parent, CadViewport *viewport, const QString &title, int replaced, const ExtrusionObject &initial,
                        const std::function<QString(const ExtrusionObject &)> &apply) {
     const QVector<SketchObject> &sketches = viewport->sketches();
@@ -14881,12 +15023,6 @@ static bool loftDialog(QWidget *parent, CadViewport *viewport, const QString &ti
     auto *pickGuides = new QPushButton(QStringLiteral("Scegli guide nella vista"), &dialog);
     auto *pickStatus = new QLabel(QStringLiteral("Premi uno dei pulsanti e clicca gli schizzi direttamente nella scena; un secondo clic li toglie."), &dialog);
     pickStatus->setWordWrap(true);
-    auto *startContinuity = new QComboBox(&dialog), *endContinuity = new QComboBox(&dialog);
-    const QStringList continuity{QStringLiteral("G0 — posizione"), QStringLiteral("G1 — normale alla sezione"), QStringLiteral("G2 — curvatura continua")};
-    startContinuity->addItems(continuity);
-    endContinuity->addItems(continuity);
-    startContinuity->setCurrentIndex(qBound(0, initial.loftStartContinuity, 2));
-    endContinuity->setCurrentIndex(qBound(0, initial.loftEndContinuity, 2));
     const auto influence = [&](double value) {
         auto *spin = new QDoubleSpinBox(&dialog);
         spin->setRange(0.0, 100.0);
@@ -14900,8 +15036,6 @@ static bool loftDialog(QWidget *parent, CadViewport *viewport, const QString &ti
     guideContinuity->addItems({QStringLiteral("G0 — solo attraversamento"), QStringLiteral("G1 — segue la tangente (consigliato)"),
                                QStringLiteral("G2 — segue tangente e curvatura")});
     guideContinuity->setCurrentIndex(qBound(0, initial.loftGuideContinuity, 2));
-    QDoubleSpinBox *startInfluence = influence(initial.loftStartInfluence);
-    QDoubleSpinBox *endInfluence = influence(initial.loftEndInfluence);
     auto *help = new QLabel(QStringLiteral("Le sezioni vanno ordinate. Ogni guida deve essere una catena aperta e attraversare una sola volta ogni sezione; "
                                            "non può essere usata anche come sezione. Per le guide, G1 segue la tangente senza trasferire la curvatura che può creare flessi; G2 la trasferisce."),
                             &dialog);
@@ -14917,10 +15051,8 @@ static bool loftDialog(QWidget *parent, CadViewport *viewport, const QString &ti
     form->addRow(QString(), pickStatus);
     form->addRow(QStringLiteral("Tangenza guide:"), guideContinuity);
     form->addRow(QStringLiteral("Influenza guide:"), guideInfluence);
-    form->addRow(QStringLiteral("Inizio:"), startContinuity);
-    form->addRow(QStringLiteral("Influenza iniziale:"), startInfluence);
-    form->addRow(QStringLiteral("Fine:"), endContinuity);
-    form->addRow(QStringLiteral("Influenza finale:"), endInfluence);
+    ExtrusionObject endpointDefinition = initial;
+    SurfaceEndControls endControls(dialog, *form, viewport, replaced, endpointDefinition);
     form->addRow(QString(), ruledBox);
     form->addRow(QString(), surfaceBox);
     form->addRow(help);
@@ -14944,12 +15076,9 @@ static bool loftDialog(QWidget *parent, CadViewport *viewport, const QString &ti
         d.loftGuidePaths = partialSelections;
         d.loftRuled = ruledBox->isChecked();
         d.loftSurface = surfaceBox->isChecked();
-        d.loftStartContinuity = d.loftRuled ? 0 : startContinuity->currentIndex();
-        d.loftEndContinuity = d.loftRuled ? 0 : endContinuity->currentIndex();
+        endControls.copyTo(d);
         d.loftGuideContinuity = guideContinuity->currentIndex();
         d.loftGuideInfluence = guideInfluence->value() / 100.0;
-        d.loftStartInfluence = startInfluence->value() / 100.0;
-        d.loftEndInfluence = endInfluence->value() / 100.0;
         d.sketchIndex = d.loftSketches.value(0, -1);
         d.plane = sketches.value(d.sketchIndex).plane;
         return d;
@@ -14959,6 +15088,7 @@ static bool loftDialog(QWidget *parent, CadViewport *viewport, const QString &ti
         if (d.loftSketches.size() >= 2) scope.request(d);
         else viewport->clearPreview();
     };
+    endControls.changed = refresh;
     const auto move = [&](int step) {
         const int row = list->currentRow();
         if (row < 0 || row + step < 0 || row + step >= list->count()) return;
@@ -14976,6 +15106,7 @@ static bool loftDialog(QWidget *parent, CadViewport *viewport, const QString &ti
     });
     int graphicalTarget = 0;  // 1 sezioni, 2 guide
     const auto armGraphicalPick = [&](int target) {
+        endControls.stop();
         graphicalTarget = target;
         pickSections->setChecked(target == 1); pickGuides->setChecked(target == 2);
         pickStatus->setText(target == 1 ? QStringLiteral("Scelta sezioni attiva: clicca gli schizzi nella vista.")
@@ -15019,20 +15150,10 @@ static bool loftDialog(QWidget *parent, CadViewport *viewport, const QString &ti
     });
     QObject::connect(list, &QListWidget::itemChanged, &dialog, refresh);
     QObject::connect(guides, &QListWidget::itemChanged, &dialog, refresh);
-    const auto updateContinuityAvailability = [&](bool ruled) {
-        for (QWidget *control : {static_cast<QWidget *>(startContinuity), static_cast<QWidget *>(endContinuity),
-                                 static_cast<QWidget *>(startInfluence), static_cast<QWidget *>(endInfluence)})
-            control->setEnabled(!ruled);
-        refresh();
-    };
-    QObject::connect(ruledBox, &QCheckBox::toggled, &dialog, updateContinuityAvailability);
+    QObject::connect(ruledBox, &QCheckBox::toggled, &dialog, refresh);
     QObject::connect(surfaceBox, &QCheckBox::toggled, &dialog, refresh);
-    QObject::connect(startContinuity, &QComboBox::currentIndexChanged, &dialog, refresh);
-    QObject::connect(endContinuity, &QComboBox::currentIndexChanged, &dialog, refresh);
     QObject::connect(guideContinuity, &QComboBox::currentIndexChanged, &dialog, refresh);
-    for (QDoubleSpinBox *spin : {guideInfluence, startInfluence, endInfluence})
-        QObject::connect(spin, &QDoubleSpinBox::valueChanged, &dialog, refresh);
-    updateContinuityAvailability(ruledBox->isChecked());
+    QObject::connect(guideInfluence, &QDoubleSpinBox::valueChanged, &dialog, refresh);
     auto *buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, footer);
     QObject::connect(buttons, &QDialogButtonBox::accepted, &dialog, &QDialog::accept);
     QObject::connect(buttons, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
@@ -17688,6 +17809,7 @@ static bool ruledDialog(QMainWindow *window, CadViewport *viewport, const QStrin
     form->addRow(QString(), row(firstButton, firstClear));
     form->addRow(QStringLiteral("Seconda curva:"), secondLabel);
     form->addRow(QString(), row(secondButton, secondClear));
+    SurfaceEndControls endControls(dialog, *form, viewport, replaced, definition);
     auto *loopBox = new QCheckBox(QStringLiteral("Bordo libero intero delle superfici"), &dialog);
     loopBox->setChecked(true);
     loopBox->setToolTip(QStringLiteral("Un clic su un bordo libero di una superficie sceglie (o toglie) tutto il suo loop"));
@@ -17716,7 +17838,7 @@ static bool ruledDialog(QMainWindow *window, CadViewport *viewport, const QStrin
         secondLabel->setText(picker.text(definition.ruledSecond));
         firstButton->setChecked(picker.active == &definition.ruledFirst);
         secondButton->setChecked(picker.active == &definition.ruledSecond);
-        viewport->setReferenceMarks(definition.ruledFirst + definition.ruledSecond);
+        viewport->setReferenceMarks(definition.ruledFirst + definition.ruledSecond + definition.loftStartFaces + definition.loftEndFaces);
         if (definition.ruledFirst.isEmpty() || definition.ruledSecond.isEmpty()) {
             scope->label->setText(QStringLiteral("scegli le due curve"));
             viewport->clearPreview();
@@ -17725,10 +17847,13 @@ static bool ruledDialog(QMainWindow *window, CadViewport *viewport, const QStrin
         scope->request(definition);
     };
     picker.changed = refresh;
+    endControls.changed = refresh;
     picker.install();
     for (int k = 0; k < 2; ++k) {
         QVector<GeometryRef> *list = k == 0 ? &definition.ruledFirst : &definition.ruledSecond;
         QObject::connect(k == 0 ? firstButton : secondButton, &QPushButton::clicked, &dialog, [&, list] {
+            endControls.stop();
+            picker.install();
             if (picker.active == list) picker.stop();
             else picker.start(list);
             refresh();
@@ -20199,6 +20324,10 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
     QAction *saveAsAction = fileMenu->addAction(QStringLiteral("Salva con nome..."));
     saveAsAction->setShortcut(QKeySequence::SaveAs);
     connect(saveAsAction, &QAction::triggered, this, [this] { saveDocument(true); });
+    recentDocumentsMenu_ = fileMenu->addMenu(QStringLiteral("File recenti"));
+    recentDocumentsMenu_->setObjectName(QStringLiteral("recentDocumentsMenu"));
+    connect(recentDocumentsMenu_, &QMenu::aboutToShow, this, &PdfWindow::refreshRecentDocuments);
+    refreshRecentDocuments();
     fileMenu->addSeparator();
     // Importazione da altri CAD (cad_import): STEP e IGES, B-rep esatti in mm, un corpo per solido.
     QAction *importAction = fileMenu->addAction(QStringLiteral("Importa STEP/IGES..."));
@@ -21917,7 +22046,7 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
     convertTool->setCheckable(true);
     toolGroup->addAction(convertTool);
     convertTool->setData(int(DrawingTool::ConvertEdges));
-    convertTool->setToolTip(QStringLiteral("Clic su uno spigolo di un corpo o su una curva (elica, spirale): la sua proiezione esatta entra nello schizzo"));
+    convertTool->setToolTip(QStringLiteral("Clic su uno spigolo, una curva o un'entita' di un altro schizzo visibile: proietta lungo la normale al piano dello schizzo attivo"));
     connect(convertTool, &QAction::triggered, this, [viewport] { viewport->setDrawingTool(DrawingTool::ConvertEdges); });
     QAction *sectionReferences = referenceMenu->addAction(QStringLiteral("Sezione dei solidi nel piano dello schizzo"));
     sectionReferences->setToolTip(QStringLiteral("Le curve esatte in cui il piano dello schizzo taglia i solidi visibili"));
@@ -22676,6 +22805,42 @@ void PdfWindow::updateWindowTitle() {
     setWindowTitle(QStringLiteral("%1%2 - %3").arg(name, documentModified_ ? QStringLiteral(" *") : QString(), QGuiApplication::applicationDisplayName()));
 }
 
+void PdfWindow::rememberRecentDocument(const QString &path) {
+    QSettings settings;
+    QStringList paths = settings.value(QStringLiteral("document/recentFiles")).toStringList();
+    const QString canonical = ForgeCad::canonicalDocumentPath(path);
+    for (int i = paths.size() - 1; i >= 0; --i)
+        if (ForgeCad::canonicalDocumentPath(paths.at(i)) == canonical) paths.removeAt(i);
+    paths.prepend(canonical);
+    while (paths.size() > 10) paths.removeLast();
+    settings.setValue(QStringLiteral("document/recentFiles"), paths);
+    refreshRecentDocuments();
+}
+
+void PdfWindow::refreshRecentDocuments() {
+    if (!recentDocumentsMenu_) return;
+    recentDocumentsMenu_->clear();
+    const QStringList paths = QSettings().value(QStringLiteral("document/recentFiles")).toStringList();
+    if (paths.isEmpty()) {
+        recentDocumentsMenu_->addAction(QStringLiteral("Nessun file recente"))->setEnabled(false);
+        return;
+    }
+    for (int i = 0; i < qMin(10, int(paths.size())); ++i) {
+        const QString path = paths.at(i);
+        auto *action = recentDocumentsMenu_->addAction(QStringLiteral("&%1 %2").arg(i + 1).arg(QString(path).replace('&', QStringLiteral("&&"))));
+        action->setData(path);
+        action->setToolTip(path);
+        connect(action, &QAction::triggered, this, [this, path] { openDocumentPath(path); });
+    }
+    recentDocumentsMenu_->addSeparator();
+    auto *clear = recentDocumentsMenu_->addAction(QStringLiteral("Svuota elenco"));
+    clear->setObjectName(QStringLiteral("clearRecentDocuments"));
+    connect(clear, &QAction::triggered, this, [this] {
+        QSettings().remove(QStringLiteral("document/recentFiles"));
+        refreshRecentDocuments();
+    });
+}
+
 // Chiede se salvare le modifiche; false se l'utente annulla (o il salvataggio fallisce).
 bool PdfWindow::maybeSaveChanges() {
     if (!documentModified_) return true;
@@ -22769,13 +22934,13 @@ void PdfWindow::newDocument() {
     empty.lengthUnitSet = true;
     viewport_->loadDocument(empty);
     loadingDocument_ = false;
+    documentLock_.reset();
     documentPath_.clear();
     documentModified_ = false;
     updateWindowTitle();
 }
 
 void PdfWindow::openDocument() {
-    if (!maybeSaveChanges()) return;
     QFileDialog dialog(this, QStringLiteral("Apri"), QFileInfo(documentPath_).absolutePath(),
                        QStringLiteral("Documenti %1 (*.prt);;Tutti i file (*)").arg(QGuiApplication::applicationDisplayName()));
     dialog.setAcceptMode(QFileDialog::AcceptOpen);
@@ -22806,11 +22971,23 @@ QString PdfWindow::gpuStatusText() const {
 }
 
 bool PdfWindow::openDocumentPath(const QString &path) {
+    const QString resolved = ForgeCad::canonicalDocumentPath(path);
+    if (documentLock_ && documentLock_->owns(resolved)) {
+        rememberRecentDocument(resolved);
+        return true;
+    }
+    auto candidate = std::make_unique<ForgeCad::DocumentFileLock>(resolved);
+    const QString lockError = candidate->acquire();
+    if (!lockError.isEmpty()) {
+        QMessageBox::warning(this, QStringLiteral("Apri — accesso esclusivo"), lockError);
+        return false;
+    }
+    if (!maybeSaveChanges()) return false;
     const QString fileName = QFileInfo(path).fileName();
     beginForegroundProgress(QStringLiteral("Lettura di %1... 0%").arg(fileName), 100);
     updateForegroundProgress(QStringLiteral("Lettura del file %1... 5%").arg(fileName), 5);
     DocumentState state;
-    const QString error = ForgeCad::loadDocumentFile(path, state);
+    const QString error = ForgeCad::loadDocumentFile(resolved, state);
     if (!error.isEmpty()) {
         endForegroundProgress();
         QMessageBox::warning(this, QStringLiteral("Apri"), error);
@@ -22833,8 +23010,10 @@ bool PdfWindow::openDocumentPath(const QString &path) {
     updateForegroundProgress(QStringLiteral("Completamento della vista... 98%"), 98);
     updateForegroundProgress(QStringLiteral("Documento caricato. 100%"), 100);
     endForegroundProgress();
-    documentPath_ = path;
+    documentLock_ = std::move(candidate);
+    documentPath_ = resolved;
     documentModified_ = false;
+    rememberRecentDocument(resolved);
     updateWindowTitle();
     int failed = 0;
     for (const ExtrusionObject &body : viewport_->extrusions()) failed += body.error.isEmpty() ? 0 : 1;
@@ -22853,16 +23032,34 @@ bool PdfWindow::saveDocument(bool askPath) {
         if (QFileInfo(path).suffix().compare(QLatin1String(ForgeCad::kDocumentSuffix), Qt::CaseInsensitive) != 0)
             path += QStringLiteral(".") + QLatin1String(ForgeCad::kDocumentSuffix);
     }
+    return saveDocumentPath(path);
+}
+
+bool PdfWindow::saveDocumentPath(const QString &path) {
+    const QString resolved = ForgeCad::canonicalDocumentPath(path);
+    std::unique_ptr<ForgeCad::DocumentFileLock> candidate;
+    const ForgeCad::DocumentFileLock *lock = documentLock_.get();
+    if (!lock || lock->path() != resolved) {
+        candidate = std::make_unique<ForgeCad::DocumentFileLock>(resolved);
+        const QString error = candidate->acquire();
+        if (!error.isEmpty()) {
+            QMessageBox::warning(this, QStringLiteral("Salva — accesso esclusivo"), error);
+            return false;
+        }
+        lock = candidate.get();
+    }
     beginForegroundProgress(QStringLiteral("Salvataggio di %1...").arg(QFileInfo(path).fileName()));
-    const QString error = ForgeCad::saveDocumentFile(path, viewport_->currentDocument(),
-                                                     QSettings().value(QStringLiteral("document/saveBodies"), true).toBool());
+    const QString error = ForgeCad::saveDocumentFile(resolved, viewport_->currentDocument(),
+                                                     QSettings().value(QStringLiteral("document/saveBodies"), true).toBool(), lock);
     endForegroundProgress();
     if (!error.isEmpty()) {
         QMessageBox::warning(this, QStringLiteral("Salva"), error);
         return false;
     }
-    documentPath_ = path;
+    if (candidate) documentLock_ = std::move(candidate);
+    documentPath_ = resolved;
     documentModified_ = false;
+    rememberRecentDocument(resolved);
     updateWindowTitle();
     statusBar()->showMessage(QStringLiteral("Salvato %1 (%2 byte)").arg(path).arg(QFileInfo(path).size()), 6000);
     return true;
@@ -22875,7 +23072,10 @@ void PdfWindow::closeEvent(QCloseEvent *event) {
         event->ignore();
         return;
     }
-    if (maybeSaveChanges()) event->accept();
+    if (maybeSaveChanges()) {
+        documentLock_.reset();
+        event->accept();
+    }
     else event->ignore();
 }
 
@@ -23123,7 +23323,9 @@ void PdfWindow::rebuildModelTree() {
             } else if (body.feature == BodyFeature::DeleteFace) {
                 item->setToolTip(0, QStringLiteral("%1 facce tolte da %2").arg(body.offsetFaces.size()).arg(extrusions.value(body.firstBody).name));
             } else if (body.feature == BodyFeature::Ruled) {
-                item->setToolTip(0, QStringLiteral("Superficie rigata tra %1 e %2 tratti").arg(body.ruledFirst.size()).arg(body.ruledSecond.size()));
+                item->setToolTip(0, QStringLiteral("Superficie %1 tra %2 e %3 tratti")
+                    .arg(body.loftStartContinuity || body.loftEndContinuity ? QStringLiteral("raccordata") : QStringLiteral("rigata"))
+                    .arg(body.ruledFirst.size()).arg(body.ruledSecond.size()));
             } else if (body.feature == BodyFeature::PlanarSurface) {
                 item->setToolTip(0, body.planarRefs.isEmpty() ? QStringLiteral("Superficie planare dello schizzo %1").arg(sketches.value(body.sketchIndex).name)
                                                               : QStringLiteral("Superficie planare da %1 bordi").arg(body.planarRefs.size()));
@@ -23147,9 +23349,10 @@ void PdfWindow::rebuildModelTree() {
             } else if (body.feature == BodyFeature::Loft) {
                 const int guideCount = body.loftGuides.size() + body.loftGuidePaths.size();
                 item->setToolTip(0, QStringLiteral("Loft %1: %2 sezioni, %3 guide, estremità G%4/G%5, guide G%6")
-                                        .arg(body.loftRuled ? QStringLiteral("rigato") : QStringLiteral("liscio"))
+                                        .arg(body.loftRuled && !body.loftStartContinuity && !body.loftEndContinuity ? QStringLiteral("rigato") : QStringLiteral("liscio"))
                                         .arg(body.loftSketches.size()).arg(guideCount)
-                                        .arg(body.loftRuled ? 0 : body.loftStartContinuity).arg(body.loftRuled ? 0 : body.loftEndContinuity)
+                                        .arg(body.loftStartContinuity == 3 ? QStringLiteral("1 (facce)") : QString::number(body.loftStartContinuity))
+                                        .arg(body.loftEndContinuity == 3 ? QStringLiteral("1 (facce)") : QString::number(body.loftEndContinuity))
                                         .arg(body.loftGuideContinuity));
             } else if (body.feature == BodyFeature::Imported) {
                 item->setToolTip(0, QStringLiteral("%1 importato da %2").arg(body.solid ? QStringLiteral("Solido") : QStringLiteral("Superficie"), body.importSource));
