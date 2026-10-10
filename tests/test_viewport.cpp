@@ -6,6 +6,7 @@
 #include "fk_body_check.h"
 #include "fk_boolean.h"
 #include "fk_body_io.h"
+#include "../cad_snapshot_chunks.h"
 #include "fk_step.h"
 #include "fk_iges.h"
 #include "fk_classify.h"
@@ -68,6 +69,90 @@ public:
         }
         pool->setMaxThreadCount(previousLimit);
     }
+    static void mouseSnapshotRegression(const QString &output = {}) {
+        using namespace ForgeCad;
+        const QString input = QStringLiteral(FORGECAD_SOURCE_DIR "/File_Esempio/Mouse.prt");
+        DocumentState original;
+        require(loadDocumentFile(input, original).isEmpty(), "lettura Mouse cache precedente");
+        QVector<std::string> geometry;
+        for (const auto &feature : original.extrusions)
+            geometry.append(feature.forgeBody ? Kernel::writeBodyBinary(*feature.forgeBody) : std::string());
+        QByteArray sharedGeometry;
+        QDataStream geometryOut(&sharedGeometry, QIODevice::WriteOnly);
+        SnapshotChunkWriter geometryWriter(geometryOut);
+        for (const auto &binary : geometry) geometryWriter.write(QByteArray(binary.data(), qsizetype(binary.size())));
+        QDataStream geometryIn(sharedGeometry);
+        SnapshotChunkReader geometryReader(geometryIn);
+        for (const auto &binary : geometry)
+            require(geometryReader.read() == QByteArray(binary.data(), qsizetype(binary.size()))
+                    && geometryIn.status() == QDataStream::Ok, "blocchi B-rep Mouse identici byte per byte");
+        DocumentState clean = original;
+        for (auto &feature : clean.extrusions) feature.display = {};
+        CadViewport viewport;
+        viewport.setTessellationQuality(2);
+        viewport.loadDocument(clean);
+        int planar = -1;
+        for (int i = 0; i < clean.extrusions.size(); ++i)
+            if (clean.extrusions[i].name == QStringLiteral("Superficie planare 1")
+                || clean.extrusions[i].name == QStringLiteral("Superficie planare1")) planar = i;
+        require(planar >= 0 && planar + 1 < clean.extrusions.size(), "superficie planare Mouse");
+        const quint64 id = viewport.extrusions_[planar].modelBodyId;
+        int bodyIndex = -1;
+        for (int i = 0; i < viewport.modelBodies_.size(); ++i)
+            if (viewport.modelBodies_[i].id == id) bodyIndex = i;
+        require(bodyIndex >= 0, "corpo superficie planare Mouse");
+        const bool preference = viewport.modelBodies_[bodyIndex].visible;
+        viewport.setHistoryPosition(planar + 1);
+        viewport.setModelBodyVisible(bodyIndex, true);
+        for (int repeat = 0; repeat < 5; ++repeat) {
+            require(viewport.extrusions_[planar].visible, "planare visibile prima della cucitura");
+            viewport.setHistoryPosition(planar + 2);
+            require(!viewport.extrusions_[planar].visible && viewport.storyboardRoots().value(id) != id,
+                    "cucitura nasconde il corpo consumato Mouse");
+            viewport.setHistoryPosition(planar + 1);
+        }
+        viewport.setModelBodyVisible(bodyIndex, preference);
+        viewport.setHistoryPosition(viewport.extrusions_.size());
+        const auto state = viewport.currentDocument();
+        QTemporaryDir temporary;
+        require(temporary.isValid(), "directory cache Mouse");
+        const QString path = output.isEmpty() ? temporary.filePath(QStringLiteral("Mouse.prt")) : output;
+        require(saveDocumentFile(path, state).isEmpty(), "salvataggio Mouse compatto");
+        DocumentState loaded;
+        require(loadDocumentFile(path, loaded).isEmpty(), "rilettura cache compatta");
+        require(loaded.extrusions.size() == geometry.size() && loaded.sketches.size() == original.sketches.size(),
+                "storia parametrica Mouse conservata");
+        for (int i = 0; i < geometry.size(); ++i) {
+            const auto &feature = loaded.extrusions[i];
+            require(bool(feature.forgeBody) == !geometry[i].empty(), "snapshot Mouse conservato");
+            if (feature.forgeBody) {
+                require(Kernel::writeBodyBinary(*state.extrusions[i].forgeBody) == geometry[i], "tassellazione non modifica il B-rep Mouse");
+                // Anche la lettura binaria ordinaria normalizza i frame analitici:
+                // il riferimento compie lo stesso ciclo, senza la nuova cache.
+                const auto reference = Kernel::readBodyBinary(geometry[i]);
+                require(Kernel::writeBodyBinary(*feature.forgeBody) == Kernel::writeBodyBinary(reference),
+                        "B-rep Mouse come nel round trip binario ordinario");
+            }
+            require(feature.featureId == original.extrusions[i].featureId
+                    && feature.modelBodyId == original.extrusions[i].modelBodyId, "identita' storia Mouse");
+            if (feature.visible && !state.extrusions[i].display.vertices.isEmpty()) {
+                const auto &expected = state.extrusions[i].display;
+                require(feature.display.vertices == expected.vertices && feature.display.normals == expected.normals
+                        && feature.display.edges == expected.edges && feature.display.faceLabelPoints == expected.faceLabelPoints
+                        && feature.display.triangleFaces == expected.triangleFaces, "mesh float conservata senza perdita");
+            }
+        }
+        require(QFileInfo(path).size() < QFileInfo(input).size() / 2, "riduzione dimensioni Mouse");
+        CadViewport reopened;
+        reopened.setTessellationQuality(2);
+        reopened.loadDocument(loaded);
+        reopened.setHistoryPosition(planar + 1);
+        reopened.setModelBodyVisible(bodyIndex, true);
+        reopened.setHistoryPosition(planar + 2);
+        require(!reopened.extrusions_[planar].visible, "visibilita' Mouse dopo riapertura");
+        std::cout << "Mouse original=" << QFileInfo(input).size() << " compact=" << QFileInfo(path).size()
+                  << " stages=" << geometry.size() << " exact_geometry=standard_binary_round_trip" << std::endl;
+    }
     static void historyPositionRegressions() {
         {
             CadViewport timeline;
@@ -120,6 +205,38 @@ public:
             timeline.setHistoryPosition(2);
             require(timeline.storyboardRoots().value(b) == b && timeline.modelBodyTip(1) == 1,
                     "rollback restores independent tool history branch");
+            timeline.setModelBodyVisible(1, true);
+            require(timeline.extrusions().at(1).visible, "tool can be shown before consumption");
+            for (int repeat = 0; repeat < 3; ++repeat) {
+                timeline.setHistoryPosition(3);
+                require(!timeline.extrusions().at(1).visible && timeline.extrusions().at(2).visible,
+                        "consumed tool cannot remain visible without a body row");
+                timeline.setHistoryPosition(2);
+                require(timeline.extrusions().at(1).visible, "rollback preserves shown tool preference");
+            }
+            timeline.setHistoryPosition(3);
+            timeline.setModelBodyMeshColor(0, QColor(Qt::green));
+            require(timeline.documentState().modelBodies.at(1).visible, "shown consumed body preference survives document change");
+            CadViewport restored;
+            restored.loadDocument(timeline.documentState());
+            restored.setHistoryPosition(2);
+            require(restored.extrusions().at(1).visible, "shown consumed body preference survives reload");
+            timeline.setHistoryPosition(2);
+            timeline.setModelBodyVisible(1, false);
+            timeline.setHistoryPosition(3);
+            timeline.setHistoryPosition(2);
+            require(!timeline.extrusions().at(1).visible, "hidden tool remains hidden after cursor changes");
+            timeline.setHistoryPosition(3);
+            require(timeline.setFeatureSuppressed(2, true).isEmpty()
+                    && timeline.extrusions().at(0).visible && timeline.extrusions().at(1).visible,
+                    "suppression restores operands despite consumed scene filter");
+            require(timeline.setFeatureSuppressed(2, false).isEmpty()
+                    && !timeline.extrusions().at(1).visible && timeline.extrusions().at(2).visible,
+                    "reactivation consumes restored operand again");
+            timeline.extrusions_[2].error = QStringLiteral("Booleana fallita");
+            timeline.setHistoryPosition(3);
+            require(timeline.storyboardRoots().value(b) == b && timeline.resultBodiesBefore(-1).contains(1),
+                    "failed operation cannot consume a body");
         }
         {
             PdfWindow window;
@@ -3667,7 +3784,9 @@ public:
             box.size[2] = 2.0;
             require(measure.createPrimitive(box, QStringLiteral("Blocco misura")).isEmpty(), "corpo da misurare");
             measure.fitAll();
-            const ExtrusionObject &body = measure.extrusions_.last();
+            // Il test aggiunge un secondo corpo piu' avanti: il vettore puo'
+            // riallocarsi o fare detach, quindi la misura conserva una copia.
+            const ExtrusionObject body = measure.extrusions_.last();
             const Kernel::EdgeId edge = body.forgeBody->edges().front();
             const Kernel::Vec3 middle = edgeMidpoint(*body.forgeBody, edge);
             measure.refPickOwner_ = -1;
@@ -6261,6 +6380,11 @@ int main(int argc, char **argv) {
     QSettings::setPath(QSettings::IniFormat, QSettings::UserScope, settings.path());
     if (app.arguments().contains(QStringLiteral("--async-lifetime"))) {
         try { ViewportInteractionTest::asyncLifetimeRegressions(); }
+        catch (const std::exception &e) { std::cerr << e.what() << std::endl; return 1; }
+        return 0;
+    }
+    if (app.arguments().contains(QStringLiteral("--mouse-snapshot"))) {
+        try { ViewportInteractionTest::mouseSnapshotRegression(app.arguments().value(app.arguments().indexOf(QStringLiteral("--mouse-snapshot")) + 1)); }
         catch (const std::exception &e) { std::cerr << e.what() << std::endl; return 1; }
         return 0;
     }

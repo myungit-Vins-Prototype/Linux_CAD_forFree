@@ -14,6 +14,7 @@
 
 #include "cad_constraints.h"
 #include "cad_model_history.h"
+#include "cad_snapshot_chunks.h"
 #include "cad_topology_ref.h"
 #include "fk_body_io.h"
 #include "fk_classify.h"
@@ -613,7 +614,7 @@ namespace {
 // una modifica o una rigenerazione esplicita sostituisce immediatamente lo
 // snapshot. Il tag rende leggibili anche le cache precedenti (solo B-rep).
 constexpr quint32 kBodyCacheTag = 0x46434332;  // "FCC2"
-constexpr quint32 kBodyCacheVersion = 4;
+constexpr quint32 kBodyCacheVersion = 5;
 constexpr qsizetype kMaxDisplayValues = 200000000;
 
 QByteArray definitionHash(const QByteArray &payload) { return QCryptographicHash::hash(payload, QCryptographicHash::Sha256); }
@@ -624,8 +625,11 @@ bool hasDisplaySnapshot(const BodyDisplay &display) {
 }
 
 void writeDisplay(QDataStream &out, const BodyDisplay &display) {
+    const auto precision = out.floatingPointPrecision();
+    out.setFloatingPointPrecision(QDataStream::SinglePrecision); // QVector3D contiene float: stessi bit, meno byte.
     out << qint32(display.quality) << display.vertices << display.normals << display.edges << display.edgeIds
         << display.constructionCurves << display.faceEdges << display.faceIds << display.faceLabelPoints << display.triangleFaces;
+    out.setFloatingPointPrecision(precision);
 }
 
 bool reasonableDisplay(const BodyDisplay &display) {
@@ -643,10 +647,13 @@ bool reasonableDisplay(const BodyDisplay &display) {
 
 bool readDisplay(QDataStream &in, BodyDisplay &display, quint32 cacheVersion) {
     qint32 quality = -1;
+    const auto precision = in.floatingPointPrecision();
+    if (cacheVersion >= 5) in.setFloatingPointPrecision(QDataStream::SinglePrecision);
     in >> quality >> display.vertices >> display.normals >> display.edges >> display.edgeIds
        >> display.constructionCurves >> display.faceEdges;
     if (cacheVersion >= 3) in >> display.faceIds >> display.faceLabelPoints;
     if (cacheVersion >= 4) in >> display.triangleFaces;
+    in.setFloatingPointPrecision(precision);
     display.quality = quality;
     display.rayIndex.reset();
     display.instancedBase.reset();
@@ -662,6 +669,7 @@ QByteArray bodyCache(const QByteArray &payload, const DocumentState &state) {
     out.setVersion(QDataStream::Qt_6_0);
     out << QByteArray(FORGECAD_SOURCE_HASH) << definitionHash(payload) << kBodyCacheTag << kBodyCacheVersion
         << quint32(state.extrusions.size());
+    SnapshotChunkWriter chunks(out);
     for (const ExtrusionObject &body : state.extrusions) {
         std::string data;
         if (body.forgeBody) {
@@ -672,12 +680,17 @@ QByteArray bodyCache(const QByteArray &payload, const DocumentState &state) {
             }
         }
         out << quint8(data.empty() ? 0 : 1);
-        if (!data.empty()) out << body.error << QByteArray(data.data(), qsizetype(data.size()));
-        const bool display = hasDisplaySnapshot(body.display);
+        if (!data.empty()) {
+            out << body.error;
+            chunks.write(QByteArray(data.data(), qsizetype(data.size())));
+        }
+        // Gli stadi nascosti conservano il B-rep esatto; la loro mesh si
+        // rigenera rapidamente se servira' alla vista durante il rollback.
+        const bool display = body.visible && hasDisplaySnapshot(body.display);
         out << quint8(display ? 1 : 0);
         if (display) writeDisplay(out, body.display);
     }
-    return qCompress(cache, 6);
+    return out.status() == QDataStream::Ok ? qCompress(cache, 6) : QByteArray();
 }
 
 void applyBodyCache(const QByteArray &compressed, const QByteArray &payload, DocumentState &state, bool previewCache) {
@@ -704,16 +717,28 @@ void applyBodyCache(const QByteArray &compressed, const QByteArray &payload, Doc
         bool hasDisplay = false;
     };
     std::vector<CachedBody> records(count);
+    SnapshotChunkReader chunks(in);
     for (quint32 i = 0; i < count; ++i) {
         quint8 has = 0;
         in >> has;
         records[i].hasBody = has != 0;
-        if (has) in >> records[i].error >> records[i].data;
+        if (has) {
+            in >> records[i].error;
+            if (cacheVersion >= 5) records[i].data = chunks.read();
+            else in >> records[i].data;
+        }
         if (cacheVersion >= 2) {
             quint8 hasDisplay = 0;
             in >> hasDisplay;
             records[i].hasDisplay = hasDisplay != 0;
             if (records[i].hasDisplay && !readDisplay(in, records[i].display, cacheVersion)) return;
+            // Le mesh precedenti possono contenere vertici prodotti mentre
+            // l'upload CUDA era ancora in corso. Conservare i B-rep esatti,
+            // rigenerando solo il display al primo caricamento.
+            if (cacheVersion < 5) {
+                records[i].hasDisplay = false;
+                records[i].display = {};
+            }
         }
         if (in.status() != QDataStream::Ok) return;
     }

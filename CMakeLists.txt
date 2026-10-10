@@ -59,6 +59,8 @@ add_executable(forgecad
     cad_expression.cpp
     cad_document_io.h
     cad_document_io.cpp
+    cad_snapshot_chunks.h
+    cad_snapshot_chunks.cpp
     cad_sketch_edit.h
     cad_sketch_edit.cpp
     cad_constraints.h
@@ -198,6 +200,8 @@ if(FORGECAD_BUILD_VIEW_TESTS)
     target_compile_definitions(forgecad_view_tests PRIVATE FORGECAD_HAS_CUDA=0 FORGECAD_SOURCE_DIR="${PROJECT_SOURCE_DIR}")
     add_executable(forgecad_selection_benchmark tests/benchmark_selection.cpp)
     target_link_libraries(forgecad_selection_benchmark PRIVATE forgekernel)
+    add_test(NAME forgecad_mouse_snapshot_tests COMMAND forgecad_view_tests --mouse-snapshot)
+    set_tests_properties(forgecad_mouse_snapshot_tests PROPERTIES TIMEOUT 120 ENVIRONMENT "QT_QPA_PLATFORM=offscreen;QT_QPA_PLATFORMTHEME=;QT_STYLE_OVERRIDE=Fusion")
     add_test(NAME forgecad_sketch_reference_workflow_tests COMMAND forgecad_view_tests --sketch-reference-workflow)
     set_tests_properties(forgecad_sketch_reference_workflow_tests PROPERTIES TIMEOUT 30 ENVIRONMENT "QT_QPA_PLATFORM=offscreen;QT_QPA_PLATFORMTHEME=;QT_STYLE_OVERRIDE=Fusion")
     add_test(NAME forgecad_dense_fixed_sketch_tests COMMAND forgecad_view_tests --dense-fixed-sketch)
@@ -250,3 +254,8 @@ add_executable(forgecad_shape_analysis_tests tests/test_shape_analysis.cpp cad_s
 target_include_directories(forgecad_shape_analysis_tests PRIVATE ${PROJECT_SOURCE_DIR})
 target_link_libraries(forgecad_shape_analysis_tests PRIVATE Qt6::Widgets Qt6::OpenGL forgekernel)
 add_test(NAME forgecad_shape_analysis_tests COMMAND forgecad_shape_analysis_tests)
+
+add_executable(forgecad_snapshot_chunks_tests tests/test_snapshot_chunks.cpp cad_snapshot_chunks.cpp)
+target_include_directories(forgecad_snapshot_chunks_tests PRIVATE ${PROJECT_SOURCE_DIR})
+target_link_libraries(forgecad_snapshot_chunks_tests PRIVATE Qt6::Core)
+add_test(NAME forgecad_snapshot_chunks_tests COMMAND forgecad_snapshot_chunks_tests)

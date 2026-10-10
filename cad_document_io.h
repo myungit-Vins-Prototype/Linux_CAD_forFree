@@ -10,7 +10,10 @@
 // parametri), in binario compresso. La definizione basta sempre a rigenerare
 // tutto. Dal formato 14 c'e' anche uno snapshot dei corpi calcolati (B-rep
 // esatti); le cache nuove comprendono inoltre la tassellazione pronta per il
-// viewport, cosi' l'apertura non ripete calcolo e meshing. Fanno eccezione i
+// viewport. La cache 5 condivide senza perdita i blocchi B-rep fra gli stadi
+// e salva i vettori float della mesh a 32 bit. Le mesh delle cache precedenti
+// si rigenerano per eliminare eventuali artefatti del vecchio upload CUDA.
+// Fanno eccezione i
 // corpi importati, che non
 // hanno una definizione: il loro body e' in `importData` come testo STEP del
 // kernel (dal formato 9; nel formato 8 era un B-rep OpenCASCADE, che non si

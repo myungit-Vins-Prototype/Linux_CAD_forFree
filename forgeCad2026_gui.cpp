@@ -678,12 +678,23 @@ public:
     const QVector<ModelBody> &modelBodies() const { return modelBodies_; }
     int historyPosition() const { return historyPosition_ < 0 ? int(extrusions_.size()) : historyPosition_; }
     void applyHistoryPosition() {
-        if (historyPosition_ < 0) return;
-        QVector<ExtrusionObject> prefix = extrusions_.mid(0, historyPosition());
-        QVector<ModelBody> bodies = modelBodies_;
-        ForgeCad::normalizeModelHistory(prefix, bodies);
-        for (int i = 0; i < extrusions_.size(); ++i)
-            extrusions_[i].visible = i < prefix.size() && prefix.at(i).visible;
+        if (historyPosition_ >= 0) {
+            QVector<ExtrusionObject> prefix = extrusions_.mid(0, historyPosition());
+            QVector<ModelBody> bodies = modelBodies_;
+            ForgeCad::normalizeModelHistory(prefix, bodies);
+            for (int i = 0; i < extrusions_.size(); ++i)
+                extrusions_[i].visible = i < prefix.size() && prefix.at(i).visible;
+        }
+        // Un operando consumato resta nella storia, ma non e' un corpo
+        // indipendente nella posizione corrente. Nasconderlo anche se l'utente
+        // lo aveva mostrato durante il rollback, senza perdere la preferenza.
+        const auto roots = storyboardRoots();
+        consumedBodies_.clear();
+        for (ExtrusionObject &feature : extrusions_)
+            if (feature.modelBodyId && roots.value(feature.modelBodyId, feature.modelBodyId) != feature.modelBodyId) {
+                consumedBodies_.insert(feature.modelBodyId);
+                feature.visible = false;
+            }
     }
     void setHistoryPosition(int position) {
         for (ExtrusionObject &feature : extrusions_)
@@ -711,7 +722,7 @@ public:
         QSet<quint64> consumed;
         for (int index = 0; index < end; ++index) {
             const ExtrusionObject &feature = extrusions_.at(index);
-            if (!feature.modelBodyId || feature.suppressed) continue;
+            if (!feature.modelBodyId || feature.suppressed || !feature.error.isEmpty() || !feature.forgeBody) continue;
             for (int operand : hiddenOperands(feature))
                 if (operand >= 0 && operand < extrusions_.size() && extrusions_.at(operand).modelBodyId != feature.modelBodyId)
                     consumed.insert(extrusions_.at(operand).modelBodyId);
@@ -729,7 +740,7 @@ public:
         QHash<quint64, quint64> parent;
         for (int index = 0; index < historyPosition(); ++index) {
             const ExtrusionObject &feature = extrusions_.at(index);
-            if (!feature.modelBodyId || feature.suppressed) continue;
+            if (!feature.modelBodyId || feature.suppressed || !feature.error.isEmpty() || !feature.forgeBody) continue;
             for (int operand : hiddenOperands(feature)) {
                 if (operand < 0 || operand >= extrusions_.size()) continue;
                 const quint64 consumed = extrusions_.at(operand).modelBodyId;
@@ -6207,10 +6218,11 @@ private:
         state.sketches = sketches_;
         state.extrusions = extrusions_;
         state.modelBodies = modelBodies_;
-        if (historyPosition_ >= 0)
-            for (ExtrusionObject &feature : state.extrusions)
-                for (const ModelBody &body : state.modelBodies)
-                    if (feature.modelBodyId == body.id) feature.visible = feature.featureId == body.tipFeatureId && body.visible;
+        // La visibilita' del documento conserva la preferenza del corpo;
+        // il filtro dei corpi consumati riguarda soltanto la scena corrente.
+        for (ExtrusionObject &feature : state.extrusions)
+            for (const ModelBody &body : state.modelBodies)
+                if (feature.modelBodyId == body.id) feature.visible = feature.featureId == body.tipFeatureId && body.visible;
         state.orientation = orientation_;
         state.orientationSet = true;
         state.lengthUnit = lengthUnit_;
@@ -6646,8 +6658,8 @@ private:
 
     void documentChanged() {
 
-        if (historyPosition_ >= 0)
-            for (ExtrusionObject &feature : extrusions_)
+        for (ExtrusionObject &feature : extrusions_)
+            if (historyPosition_ >= 0 || (consumedBodies_.contains(feature.modelBodyId) && !feature.visible))
                 for (const ModelBody &body : modelBodies_)
                     if (feature.modelBodyId == body.id && feature.featureId == body.tipFeatureId) feature.visible = body.visible;
         // Creation paths append their results. Insert that entire batch at the
@@ -12307,6 +12319,7 @@ private:
     std::function<void()> constraintPanelCallback_;
     QVector<SketchObject> sketches_;
     int historyPosition_ = -1;
+    QSet<quint64> consumedBodies_; // corpi nascosti dal filtro della scena, preferenza conservata
     int insertionSourceSize_ = -1;
     QVector<ExtrusionObject> extrusions_;
     QVector<ModelBody> modelBodies_;

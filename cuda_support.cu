@@ -187,7 +187,11 @@ void *forgecad_cuda_upload_surface(const ForgeCudaBSplineSurface &surface) {
     device->surface.vKnots = copy(surface.vKnots, vKnots);
     device->surface.poles = copy(surface.poles, 3 * poles);
     device->surface.weights = surface.weights ? copy(surface.weights, poles) : nullptr;
-    if (!device->surface.uKnots || !device->surface.vKnots || !device->surface.poles || (surface.weights && !device->surface.weights)) {
+    // Le copie da memoria host paginabile possono tornare prima del completamento
+    // sulla GPU. Gli slot usano stream non bloccanti: prima di pubblicare il
+    // handle devono essere disponibili anche tutti i poli delle superfici grandi.
+    if (!device->surface.uKnots || !device->surface.vKnots || !device->surface.poles || (surface.weights && !device->surface.weights)
+        || cudaStreamSynchronize(nullptr) != cudaSuccess) {
         forgecad_cuda_release_surface(device);
         fail();
         return nullptr;

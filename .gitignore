@@ -9,3 +9,4 @@ forgecad-release/
 .DS_Store
 *.STEP
 .vscode/
+docs/benchmarks/

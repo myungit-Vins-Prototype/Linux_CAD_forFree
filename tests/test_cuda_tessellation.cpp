@@ -7,6 +7,8 @@
 #include <memory>
 #include <random>
 #include <vector>
+#include <thread>
+#include <atomic>
 
 #include "cad_cuda_tessellation.h"
 #include "cuda_support.h"
@@ -89,6 +91,7 @@ int main() {
         for (int i = 0; i < surface->uPoleCount(); ++i)
             for (int j = 0; j < surface->vPoleCount(); ++j) scale = std::max(scale, norm(surface->pole(i, j)));
         for (std::size_t i = 0; i < uv.size(); ++i) {
+            check(isFinite(points[i]) && isFinite(normals[i]), "punti e normali GPU finiti");
             worstPoint = std::max(worstPoint, distance(points[i], surface->point(uv[i][0], uv[i][1])) / scale);
             if (squaredNorm(normals[i]) == 0.0) continue;
             try {
@@ -101,6 +104,43 @@ int main() {
     std::printf("scarto massimo GPU-CPU: punti %.3g (relativo), normali %.3g\n", worstPoint, worstNormal);
     check(worstPoint < 1e-13, "punti come sulla CPU");
     check(worstNormal < 1e-9, "normali come sulla CPU");
+
+    // Upload da host paginabile seguito subito da valutazione su uno stream
+    // non bloccante. Superfici grandi come i raccordi Mouse: i poli in fondo
+    // al buffer devono essere disponibili anche con upload concorrenti.
+    {
+        std::atomic<int> uploadErrors{0};
+        std::vector<std::thread> workers;
+        for (int worker = 0; worker < 4; ++worker) workers.emplace_back([&, worker] {
+            for (int repeat = 0; repeat < 8; ++repeat) {
+                const int nu = 1200, nv = 31, degree = 3;
+                const auto uniformKnots = [](int poles) {
+                    std::vector<double> values(4, 0.0);
+                    for (int i = 1; i < poles - 3; ++i) values.push_back(double(i) / (poles - 3));
+                    values.insert(values.end(), 4, 1.0);
+                    return values;
+                };
+                std::vector<Vec3> poles;
+                for (int i = 0; i < nu; ++i)
+                    for (int j = 0; j < nv; ++j) poles.emplace_back(100.0 + worker + i * 0.1, j * 0.3, std::sin(i * 0.01 + j));
+                BSplineSurface surface(degree, degree, uniformKnots(nu), uniformKnots(nv), nu, nv, std::move(poles));
+                auto evaluator = ForgeCad::makeTessellationAccelerator();
+                std::vector<Vec2> uv;
+                for (int i = 0; i < 1024; ++i) uv.emplace_back(double(i) / 1023, double((i * 37) % 1024) / 1023);
+                std::vector<Vec3> points(uv.size()), normals(uv.size());
+                if (!evaluator || !evaluator->evaluate(surface, uv.data(), uv.size(), points.data(), normals.data())) {
+                    ++uploadErrors;
+                    continue;
+                }
+                for (std::size_t i = 0; i < uv.size(); ++i)
+                    if (!isFinite(points[i]) || !isFinite(normals[i])
+                        || distance(points[i], surface.point(uv[i][0], uv[i][1])) > 1e-10) ++uploadErrors;
+            }
+        });
+        for (auto &worker : workers) worker.join();
+        std::printf("upload concorrenti superfici grandi: errori %d\n", uploadErrors.load());
+        check(uploadErrors == 0, "poli disponibili prima della valutazione concorrente");
+    }
 
     // Grado oltre il limite: resta alla CPU.
     {
