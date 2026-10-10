@@ -13,6 +13,7 @@
 #include "fk_mass.h"
 #include "fk_parallel.h"
 #include "fk_surface_algo.h"
+#include "fk_timing.h"
 
 namespace ForgeCad::Kernel {
 
@@ -299,9 +300,12 @@ SewResult sewSheets(const std::vector<const Body *> &bodies, double tolerance, b
     std::vector<int> faceBody;
     detail::RawModel model = rawModel(bodies, edgeBody, boundary, nullptr, &faceBody);
     if (model.faces.empty()) throw std::domain_error("cucitura: nessuna faccia");
-    splitAtJunctions(model, edgeBody, boundary, tolerance);
     SewResult result;
-    result.closed = detail::sewModel(model, tolerance);
+    {
+        const detail::PhaseTimer timer("cucitura: giunzioni a T e unione di vertici ed edge");
+        splitAtJunctions(model, edgeBody, boundary, tolerance);
+        result.closed = detail::sewModel(model, tolerance);
+    }
     if (makeSolid && !result.closed) {
         edgeBody.clear();
         boundary.clear();
@@ -319,8 +323,17 @@ SewResult sewSheets(const std::vector<const Body *> &bodies, double tolerance, b
             for (const detail::RawFin &fin : loop) ++uses[fin.edge];
     for (const auto &[edge, n] : uses)
         if (n == 1) ++result.freeEdges;
-    result.body = detail::assembleBody(model, result.solid, &result.notes);
-    if (result.solid && massProperties(result.body).volume < 0.0) {
+    {
+        const detail::PhaseTimer timer("cucitura: assemblaggio");
+        result.body = detail::assembleBody(model, result.solid, &result.notes);
+    }
+    bool inverted = false;
+    if (result.solid) {
+        const detail::PhaseTimer timer("cucitura: verso del solido (volume)");
+        inverted = massProperties(result.body).volume < 0.0;
+    }
+    if (inverted) {
+        const detail::PhaseTimer timer("cucitura: facce girate e nuovo assemblaggio");
         // Normali verso l'interno: tutte le facce si girano.
         for (detail::RawFace &face : model.faces) {
             face.sense = !face.sense;

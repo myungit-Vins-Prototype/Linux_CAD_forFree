@@ -175,3 +175,30 @@ FK_TEST(ThickenTrimmedFaceWithInternalCrease) {
     checkSolid(solid);
     FK_CHECK(std::fabs(massProperties(solid).volume - area * 0.4) < 1e-3 * area * 0.4);
 }
+
+// B-spline liscia senza pieghe: striscia parabolica sviluppabile. Per lo
+// spessore simmetrico il volume e' esattamente area della lamina x spessore.
+FK_TEST(ThickenSmoothBSplineSheet) {
+    const auto surface = std::make_shared<BSplineSurface>(2, 1,
+        std::vector<double>{0, 0, 0, 1, 1, 1}, std::vector<double>{0, 0, 1, 1}, 3, 2,
+        std::vector<Vec3>{{-2, 0, 1}, {-2, 3, 1}, {0, 0, -1}, {0, 3, -1}, {2, 0, 1}, {2, 3, 1}});
+    const std::vector<Vec3> corners{surface->point(0, 0), surface->point(1, 0), surface->point(1, 1), surface->point(0, 1)};
+    const std::vector<Body::BuildEdge> edges{
+        {0, 1, surface->vIso(0), {0, 1}, 0}, {1, 2, surface->uIso(1), {0, 1}, 0},
+        {3, 2, surface->vIso(1), {0, 1}, 0}, {0, 3, surface->uIso(0), {0, 1}, 0}};
+    Body::BuildFace face;
+    face.surface = surface;
+    face.loops = {{{0, true, std::make_shared<Line<2>>(Vec2(0, 0), Vec2(1, 0)), 0},
+                   {1, true, std::make_shared<Line<2>>(Vec2(1, 0), Vec2(0, 1)), 0},
+                   {2, false, std::make_shared<Line<2>>(Vec2(0, 1), Vec2(1, 0)), 0},
+                   {3, false, std::make_shared<Line<2>>(Vec2(0, 0), Vec2(0, 1)), 0}}};
+    const Body sheet = Body::buildSheet(corners, edges, {face});
+    ThickenOptions options;
+    options.thickness = 0.2;
+    options.offsetTolerance = 1e-7;
+    options.side = ThickenSide::Both;
+    const Body solid = thickenSheet(sheet, {}, options);
+    checkSolid(solid);
+    const double area = 6.0 * (std::sqrt(2.0) + std::asinh(1.0));
+    FK_CHECK_NEAR(massProperties(solid).volume, area * options.thickness, 1e-5);
+}

@@ -21,6 +21,7 @@
 #include "cad_cuda_tessellation.h"
 #include "fk_curve.h"
 #include "fk_iges.h"
+#include "fk_intersect.h"
 #include "fk_step.h"
 #include "fk_tessellate.h"
 #include "fk_topology.h"
@@ -89,6 +90,138 @@ void appendPreviewPolygon(BodyDisplay &preview, const QVector<QVector3D> &polygo
     else preview.edges[int(slot)] = std::move(closed);
 }
 
+struct ExportMeshes {
+    std::vector<Kernel::Tessellation> bodies;
+    StlExportOptions options;
+    int attempts = 0;
+    QString error;
+};
+
+bool validMeshOptions(const StlExportOptions &options) {
+    return std::isfinite(options.deflection) && options.deflection > 0.0
+        && std::isfinite(options.angle) && options.angle > 0.0 && options.angle <= 180.0
+        && std::isfinite(options.maxEdgeLength) && options.maxEdgeLength >= 0.0;
+}
+
+// Dimensione del corpo piu' grande, indipendente dalla sua posizione nella
+// scena. Include i box delle curve, anche dei bordi chiusi con un solo vertice.
+double exportModelSize(const QVector<ExportBody> &bodies) {
+    double size = 0.0;
+    for (const ExportBody &body : bodies) {
+        if (!body.body) continue;
+        Kernel::Box box;
+        for (Kernel::VertexId vertex : body.body->vertices()) box.add(body.body->vertex(vertex).point);
+        for (Kernel::EdgeId id : body.body->edges()) {
+            const Kernel::Edge &edge = body.body->edge(id);
+            if (!edge.curve) continue;
+            box.add(Kernel::curveBox(*edge.curve, edge.range));
+        }
+        size = std::max(size, box.diagonal());
+    }
+    return size;
+}
+
+// La mesh riuscita passa direttamente agli scrittori e all'anteprima: non
+// si tassella di nuovo dopo la ricerca dei parametri. Tutte le facce di un
+// corpo usano gli stessi campioni dei bordi, anche nei tentativi successivi.
+ExportMeshes prepareExportMeshes(const QVector<ExportBody> &bodies, const StlExportOptions &requested,
+                                 Kernel::SurfaceBatchEvaluator *accelerator) {
+    ExportMeshes result;
+    result.options = requested;
+    if (!validMeshOptions(requested)) {
+        result.error = QStringLiteral("Parametri della mesh non validi.");
+        return result;
+    }
+    bool found = false;
+    for (const ExportBody &body : bodies) found = found || bool(body.body);
+    if (!found) {
+        result.error = QStringLiteral("Non ci sono solidi o superfici da esportare.");
+        return result;
+    }
+    StlExportOptions base = requested;
+    if (requested.automaticRefinement) {
+        const double size = exportModelSize(bodies);
+        // Evita di saturare il limite di vertici prima di poter cercare una
+        // mesh valida, anche con valori salvati da un documento molto piccolo.
+        if (base.maxEdgeLength > 0.0) base.maxEdgeLength = std::max(base.maxEdgeLength, size / 100.0);
+        base.deflection = std::max(base.deflection, size / 100000.0);
+    }
+    bool densityLimited = false;
+    const int limit = requested.automaticRefinement ? 9 : 1;
+    for (int attempt = 0; attempt < limit; ++attempt) {
+        // Le triangolazioni dei contorni sottili non sono monotone rispetto
+        // alla densita': prova sia piu' fine sia piu' grossolano. Per un limite
+        // di vertici/lato, invece, passa direttamente al tentativo piu' largo.
+        if (attempt % 2 == 1 && densityLimited) continue;
+        const bool finer = attempt % 2 == 1;
+        const double factor = attempt == 0 ? 1.0 : std::pow(2.0, (attempt + 1) / 2);
+        result.options = base;
+        if (attempt > 0) {
+            result.options.deflection = base.deflection * (finer ? 1.0 / factor : factor);
+            // Raffinare lo scarto basta a recuperare contorni sottili senza
+            // imporre triangoli enormemente piu' numerosi sui piani.
+            if (!finer) result.options.maxEdgeLength = base.maxEdgeLength * factor;
+            result.options.angle = std::min(90.0, base.angle * (finer ? 1.0 / std::sqrt(factor) : std::sqrt(factor)));
+        }
+        Kernel::TessellationOptions tessellation;
+        tessellation.deflection = result.options.deflection;
+        tessellation.angle = result.options.angle * M_PI / 180.0;
+        tessellation.maxEdgeLength = result.options.maxEdgeLength;
+        tessellation.accelerator = accelerator;
+        ++result.attempts;
+        result.bodies.clear();
+        result.error.clear();
+        densityLimited = false;
+        for (const ExportBody &body : bodies) {
+            if (!body.body) continue;
+            Kernel::Tessellation mesh;
+            try {
+                mesh = Kernel::tessellate(*body.body, tessellation);
+            } catch (const std::bad_alloc &) {
+                throw;
+            } catch (const std::exception &failure) {
+                result.error = QStringLiteral("Tassellazione non riuscita su %1: %2.")
+                    .arg(body.name, QString::fromUtf8(failure.what()));
+                break;
+            }
+            if (mesh.failedFaces > 0 || mesh.faces.size() != body.body->faces().size()) {
+                result.error = QStringLiteral("Tassellazione non riuscita per %1 facce del corpo %2.")
+                    .arg(std::max(1, mesh.failedFaces)).arg(body.name);
+                break;
+            }
+            for (const Kernel::FaceMesh &face : mesh.faces) {
+                if (face.triangles.empty()) {
+                    result.error = QStringLiteral("La faccia F%1 del corpo %2 non contiene triangoli.").arg(face.face.index).arg(body.name);
+                    break;
+                }
+                for (const auto &triangle : face.triangles) {
+                    const Kernel::Vec3 &a = face.points[std::size_t(triangle[0])];
+                    const Kernel::Vec3 &b = face.points[std::size_t(triangle[1])];
+                    const Kernel::Vec3 &c = face.points[std::size_t(triangle[2])];
+                    const double longest = std::max({Kernel::distance(a, b), Kernel::distance(b, c), Kernel::distance(c, a)});
+                    if (!std::isfinite(longest)) {
+                        result.error = QStringLiteral("Coordinate della mesh non valide sul corpo %1.").arg(body.name);
+                        break;
+                    }
+                    if (tessellation.maxEdgeLength > 0.0 && longest > tessellation.maxEdgeLength * (1.0 + 1e-9)) {
+                        densityLimited = true;
+                        result.error = QStringLiteral("La densita' richiesta supera il limite di raffinamento su %1; aumentare il lato massimo.").arg(body.name);
+                        break;
+                    }
+                }
+                if (!result.error.isEmpty()) break;
+            }
+            if (!result.error.isEmpty()) break;
+            result.bodies.push_back(std::move(mesh));
+        }
+        if (result.error.isEmpty()) return result;
+    }
+    result.bodies.clear();
+    if (requested.automaticRefinement)
+        result.error = QStringLiteral("Raffinamento automatico non riuscito dopo %1 tentativi. %2").arg(result.attempts).arg(result.error);
+    return result;
+}
+
 }
 
 QString exportSuffix(ExportFormat format) {
@@ -148,8 +281,7 @@ QString exportBodies(const QString &path, const QVector<ExportBody> &bodies, Exp
 
 StlBuildResult buildBinaryStl(const QVector<ExportBody> &bodies, const StlExportOptions &options) {
     StlBuildResult result;
-    if (!(options.deflection > 0.0) || !(options.angle > 0.0 && options.angle <= 180.0)
-        || options.maxEdgeLength < 0.0) {
+    if (!validMeshOptions(options)) {
         result.error = QStringLiteral("Parametri della mesh STL non validi.");
         return result;
     }
@@ -165,25 +297,24 @@ StlBuildResult buildBinaryStl(const QVector<ExportBody> &bodies, const StlExport
     stream.writeRawData(header.constData(), header.size());
     stream << quint32(0); // aggiornato quando il conteggio e' noto
 
-    Kernel::TessellationOptions tessellation;
-    tessellation.deflection = options.deflection;
-    tessellation.angle = options.angle * M_PI / 180.0;
-    tessellation.maxEdgeLength = options.maxEdgeLength;
     const std::unique_ptr<Kernel::SurfaceBatchEvaluator> accelerator = makeTessellationAccelerator();
-    tessellation.accelerator = accelerator.get();
     int solidBodies = 0;
     quint64 previewTrianglesSeen = 0, previewPolygonsSeen = 0;
     try {
+        ExportMeshes prepared = prepareExportMeshes(bodies, options, accelerator.get());
+        result.usedOptions = prepared.options;
+        result.tessellationAttempts = prepared.attempts;
+        if (!prepared.error.isEmpty()) {
+            result.error = prepared.error;
+            result.data.clear();
+            return result;
+        }
+        std::size_t meshIndex = 0;
         for (const ExportBody &body : bodies) {
             if (!body.body) continue;
             ++solidBodies;
-            const Kernel::Tessellation mesh = Kernel::tessellate(*body.body, tessellation);
-            if (mesh.failedFaces > 0) {
-                result.error = QStringLiteral("Tassellazione STL non riuscita per %1 facce del corpo %2.")
-                    .arg(mesh.failedFaces).arg(body.name);
-                result.data.clear();
-                return result;
-            }
+            const Kernel::Tessellation &mesh = prepared.bodies[meshIndex++];
+
             for (const Kernel::FaceMesh &face : mesh.faces)
                 for (const std::array<int, 3> &triangle : face.triangles) {
                     if (result.triangleCount >= std::numeric_limits<quint32>::max()) {
@@ -194,15 +325,6 @@ StlBuildResult buildBinaryStl(const QVector<ExportBody> &bodies, const StlExport
                     const Kernel::Vec3 &a = face.points[std::size_t(triangle[0])];
                     const Kernel::Vec3 &b = face.points[std::size_t(triangle[1])];
                     const Kernel::Vec3 &c = face.points[std::size_t(triangle[2])];
-                    if (options.maxEdgeLength > 0.0) {
-                        const double longest = std::max({Kernel::distance(a, b), Kernel::distance(b, c), Kernel::distance(c, a)});
-                        if (longest > options.maxEdgeLength * (1.0 + 1e-9)) {
-                            result.error = QStringLiteral(
-                                "La densita' richiesta supera il limite di raffinamento su %1; aumentare il lato massimo.").arg(body.name);
-                            result.data.clear();
-                            return result;
-                        }
-                    }
                     Kernel::Vec3 normal = Kernel::cross(b - a, c - a);
                     const double length = Kernel::norm(normal);
                     if (length <= 1e-20) continue; // gli STL non devono contenere faccette degeneri ai poli
@@ -321,8 +443,7 @@ std::vector<QuadCandidate> quadCandidates(const Kernel::FaceMesh &face) {
 }
 
 QString validateMeshOptions(const StlExportOptions &options) {
-    if (!(options.deflection > 0.0) || !(options.angle > 0.0 && options.angle <= 180.0)
-        || options.maxEdgeLength < 0.0)
+    if (!validMeshOptions(options))
         return QStringLiteral("Parametri della mesh non validi.");
     return {};
 }
@@ -340,17 +461,29 @@ ObjBuildResult buildQuadObj(const QVector<ExportBody> &bodies, const StlExportOp
     stream.setRealNumberNotation(QTextStream::FixedNotation);
     stream.setRealNumberPrecision(12);
     stream << "# ForgeCAD quad-dominant OBJ\n# units: millimeter\n";
+    const auto discard = [&] {
+        // QTextStream puo' avere ancora testo in attesa: svuotalo e chiudi
+        // il buffer prima di eliminare i dati, altrimenti il distruttore
+        // riscriverebbe un OBJ parziale dopo un fallimento.
+        stream.flush();
+        buffer.close();
+        result.data.clear();
+    };
 
-    Kernel::TessellationOptions tessellation;
-    tessellation.deflection = options.deflection;
-    tessellation.angle = options.angle * M_PI / 180.0;
-    tessellation.maxEdgeLength = options.maxEdgeLength;
     const std::unique_ptr<Kernel::SurfaceBatchEvaluator> accelerator = makeTessellationAccelerator();
-    tessellation.accelerator = accelerator.get();
     quint64 nextVertex = 1, nextNormal = 1;
     quint64 previewTrianglesSeen = 0, previewPolygonsSeen = 0;
     int meshBodies = 0;
     try {
+        ExportMeshes prepared = prepareExportMeshes(bodies, options, accelerator.get());
+        result.usedOptions = prepared.options;
+        result.tessellationAttempts = prepared.attempts;
+        if (!prepared.error.isEmpty()) {
+            result.error = prepared.error;
+            discard();
+            return result;
+        }
+        std::size_t meshIndex = 0;
         for (const ExportBody &body : bodies) {
             if (!body.body) continue;
             ++meshBodies;
@@ -359,18 +492,13 @@ ObjBuildResult buildQuadObj(const QVector<ExportBody> &bodies, const StlExportOp
             name.replace(QLatin1Char('\r'), QLatin1Char('_'));
             name.replace(QLatin1Char('#'), QLatin1Char('_'));
             stream << "o " << name << '\n';
-            const Kernel::Tessellation mesh = Kernel::tessellate(*body.body, tessellation);
-            if (mesh.failedFaces > 0) {
-                result.error = QStringLiteral("Tassellazione OBJ non riuscita per %1 facce del corpo %2.")
-                    .arg(mesh.failedFaces).arg(body.name);
-                result.data.clear();
-                return result;
-            }
+            const Kernel::Tessellation &mesh = prepared.bodies[meshIndex++];
+
             // I punti dello stesso edge valutati dalle due superfici possono
             // differire entro la tolleranza B-rep. Si saldano spazialmente;
             // le normali restano per-corner, quindi gli spigoli vivi non
             // vengono visualmente smussati in Blender.
-            double weldTolerance = std::max(1e-10, options.deflection * 1e-7);
+            double weldTolerance = std::max(1e-10, result.usedOptions.deflection * 1e-7);
             for (Kernel::EdgeId edge : body.body->edges())
                 weldTolerance = std::max(weldTolerance, 1.01 * body.body->edge(edge).tolerance);
             using Cell = std::array<qint64, 3>;
@@ -407,19 +535,6 @@ ObjBuildResult buildQuadObj(const QVector<ExportBody> &bodies, const StlExportOp
                 return index;
             };
             for (const Kernel::FaceMesh &face : mesh.faces) {
-                if (options.maxEdgeLength > 0.0)
-                    for (const std::array<int, 3> &triangle : face.triangles) {
-                        const Kernel::Vec3 &a = face.points[std::size_t(triangle[0])];
-                        const Kernel::Vec3 &b = face.points[std::size_t(triangle[1])];
-                        const Kernel::Vec3 &c = face.points[std::size_t(triangle[2])];
-                        if (std::max({Kernel::distance(a, b), Kernel::distance(b, c), Kernel::distance(c, a)})
-                            > options.maxEdgeLength * (1.0 + 1e-9)) {
-                            result.error = QStringLiteral(
-                                "La densita' richiesta supera il limite di raffinamento su %1; aumentare il lato massimo.").arg(body.name);
-                            result.data.clear();
-                            return result;
-                        }
-                    }
                 for (const std::array<int, 3> &triangle : face.triangles) {
                     const Kernel::Vec3 &a = face.points[std::size_t(triangle[0])];
                     const Kernel::Vec3 &b = face.points[std::size_t(triangle[1])];
@@ -533,17 +648,17 @@ ObjBuildResult buildQuadObj(const QVector<ExportBody> &bodies, const StlExportOp
         }
     } catch (const std::exception &failure) {
         result.error = QStringLiteral("Tassellazione OBJ non riuscita: %1").arg(QString::fromUtf8(failure.what()));
-        result.data.clear();
+        discard();
         return result;
     }
     stream.flush();
     buffer.close();
     if (stream.status() != QTextStream::Ok) {
         result.error = QStringLiteral("Memoria insufficiente durante la costruzione della mesh OBJ.");
-        result.data.clear();
+        discard();
     } else if (meshBodies == 0 || result.quadCount + result.triangleCount == 0) {
         result.error = QStringLiteral("Non ci sono solidi o superfici esportabili in OBJ.");
-        result.data.clear();
+        discard();
     }
     return result;
 }

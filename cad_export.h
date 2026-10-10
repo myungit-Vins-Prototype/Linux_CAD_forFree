@@ -41,6 +41,9 @@ struct StlExportOptions {
     double maxEdgeLength = 1.0; // mm; 0 = nessun limite esplicito
     double deflection = 0.05;   // scarto cordale massimo, mm
     double angle = 10.0;        // variazione massima delle normali, gradi
+    // Ricerca un raffinamento completo e sostenibile, senza esportare facce
+    // mancanti. False conserva esattamente i parametri manuali.
+    bool automaticRefinement = false;
 };
 
 struct StlBuildResult {
@@ -48,6 +51,8 @@ struct StlBuildResult {
     quint64 triangleCount = 0;
     BodyDisplay preview;        // stessa mesh, alleggerita solo per la vista
     bool previewLimited = false;
+    StlExportOptions usedOptions; // parametri della mesh effettivamente esportata
+    int tessellationAttempts = 0;
     QString error;
 };
 
@@ -57,6 +62,8 @@ struct ObjBuildResult {
     quint64 triangleCount = 0; // triangoli non accoppiabili (poli, fori, transizioni)
     BodyDisplay preview;       // facce triangolate e griglia quad-dominant
     bool previewLimited = false;
+    StlExportOptions usedOptions; // parametri della mesh effettivamente esportata
+    int tessellationAttempts = 0;
     QString error;
 };
 

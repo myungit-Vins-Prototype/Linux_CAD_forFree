@@ -1,6 +1,7 @@
 #include "fk_offset.h"
 
 #include <algorithm>
+#include <optional>
 #include <array>
 #include <cmath>
 #include <limits>
@@ -26,6 +27,7 @@
 #include "fk_sew.h"
 #include "fk_surface_algo.h"
 #include "fk_transform.h"
+#include "fk_timing.h"
 
 namespace ForgeCad::Kernel {
 
@@ -1180,15 +1182,28 @@ SurfacePtr offsetSurface(const Surface &surface, double d, const Interval &uw, c
 OffsetResult offsetFaces(const Body &input, const std::vector<FaceId> &faces, double distanceValue, double tolerance, bool preserveSeams, double joinAngle) {
     if (faces.empty()) throw std::domain_error("offset: nessuna faccia scelta");
     if (!(std::fabs(distanceValue) > 0.0)) throw std::domain_error("offset: distanza nulla");
+    const detail::PhaseTimer total("offset: totale");
     Body body = input;
-    if (computePCurves(body) > 0) throw std::domain_error("offset: SP-curve non calcolabili");
+    {
+        const detail::PhaseTimer timer("offset: SP-curve iniziali");
+        if (computePCurves(body) > 0) throw std::domain_error("offset: SP-curve non calcolabili");
+    }
     Body split;
-    if (splitOffsetFaces(body, faces, distanceValue, tolerance, split)) {
+    bool splitPatches = false, splitCreases = false;
+    {
+        const detail::PhaseTimer timer("offset: divisione in pezze (facce rettangolari)");
+        splitPatches = splitOffsetFaces(body, faces, distanceValue, tolerance, split);
+    }
+    if (!splitPatches) {
+        const detail::PhaseTimer timer("offset: divisione sulle pieghe (facce rifilate)");
+        splitCreases = splitTrimmedCreases(body, faces, distanceValue, tolerance, split);
+    }
+    if (splitPatches) {
         OffsetResult result = offsetFaces(split, split.faces(), distanceValue, tolerance, preserveSeams, joinAngle);
         result.notes.push_back("Facce del loft divise sulle discontinuita interne prima dell'offset");
         return result;
     }
-    if (splitTrimmedCreases(body, faces, distanceValue, tolerance, split)) {
+    if (splitCreases) {
         OffsetResult result = offsetFaces(split, split.faces(), distanceValue, tolerance, preserveSeams, joinAngle);
         result.notes.push_back("Facce divise sulle pieghe interne (normale discontinua lungo una linea di nodo) prima dell'offset");
         return result;
@@ -1311,6 +1326,8 @@ OffsetResult offsetFaces(const Body &input, const std::vector<FaceId> &faces, do
         v = widen(v, surface.vDomain(), surface.isVPeriodic(), seamV);
         surfaceJobs.push_back({index, u, v, nullptr, {}});
     }
+    std::optional<detail::PhaseTimer> surfaceTimer;
+    surfaceTimer.emplace("offset: superfici a distanza");
     parallelFor(surfaceJobs.size(), threadCount(0), [&](std::size_t k) {
         SurfaceJob &job = surfaceJobs[k];
         const Face &face = body.face(FaceId{job.index});
@@ -1325,6 +1342,9 @@ OffsetResult offsetFaces(const Body &input, const std::vector<FaceId> &faces, do
         offsets[job.index] = job.result;
     }
 
+    surfaceTimer.reset();
+    std::optional<detail::PhaseTimer> edgeTimer;
+    edgeTimer.emplace("offset: adiacenze, vertici ed edge a distanza");
     // Edge delle facce scelte: tangenti (normali parallele) o spigoli vivi.
     struct EdgeInfo {
         std::vector<FinId> fins;
@@ -1599,7 +1619,11 @@ OffsetResult offsetFaces(const Body &input, const std::vector<FaceId> &faces, do
         }
         result.sharpEdges = 0;
     }
-    result.body = detail::assembleBody(model, false, &result.notes);
+    edgeTimer.reset();
+    {
+        const detail::PhaseTimer timer("offset: assemblaggio");
+        result.body = detail::assembleBody(model, false, &result.notes);
+    }
     for (ShellId s : result.body.shells()) {
         (void)s;
         ++result.shells;

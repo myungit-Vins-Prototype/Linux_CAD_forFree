@@ -6,6 +6,7 @@
 #include <unordered_map>
 
 #include <algorithm>
+#include <optional>
 #include <cmath>
 #include <exception>
 #include <map>
@@ -18,6 +19,7 @@
 #include "fk_parallel.h"
 #include "fk_pcurve.h"
 #include "fk_surface_algo.h"
+#include "fk_timing.h"
 
 namespace ForgeCad::Kernel::detail {
 
@@ -396,6 +398,8 @@ Body assembleBody(const RawModel &input, bool solid, std::vector<std::string> *n
         }
         deviations[i] = deviation;
     };
+    std::optional<detail::PhaseTimer> measureTimer;
+    measureTimer.emplace("assemblaggio: scarti degli edge");
     parallelFor(edgeIds.size(), edgeIds.size() >= 8 ? threadCount(0) : 1u, [&](std::size_t i) {
         try {
             measure(i);
@@ -423,13 +427,21 @@ Body assembleBody(const RawModel &input, bool solid, std::vector<std::string> *n
         for (VertexId v : {body.edgeStart(e), body.edgeEnd(e)})
             if (body.edge(e).tolerance > 0.0) body.vertex(v).tolerance = std::max(body.vertex(v).tolerance, body.edge(e).tolerance);
     if (worst > 1e-6) note("edge tolleranti fino a " + std::to_string(worst) + " (precisione del file)");
-    int missing = computePCurves(body);
+    measureTimer.reset();
+    std::optional<detail::PhaseTimer> pcurveTimer;
+    pcurveTimer.emplace("assemblaggio: SP-curve");
+    int missing = 0;
+    {
+        const detail::PhaseTimer timer("assemblaggio: SP-curve, primo calcolo");
+        missing = computePCurves(body);
+    }
     // Gli edge con piu' di 64 tratti si misurano sopra con pochi campioni, che
     // possono cadere tutti nei punti esatti (i nodi di una curva tracciata) e
     // non vedere lo scarto tra l'uno e l'altro: l'SP-curve si cerca allora
     // entro la risoluzione e non si trova. Per gli edge senza SP-curve lo
     // scarto si rimisura con campioni in ogni tratto e si riprova.
     if (missing > 0) {
+        const detail::PhaseTimer timer("assemblaggio: SP-curve, ripieghi");
         bool raised = false;
         std::vector<EdgeId> failed;
         for (FinId f : body.fins())
@@ -474,10 +486,15 @@ Body assembleBody(const RawModel &input, bool solid, std::vector<std::string> *n
         }
     }
     if (missing > 0 && reorientSpheres(body)) missing = computePCurves(body);
+    pcurveTimer.reset();
     if (missing > 0) throw std::domain_error(std::to_string(missing) + " SP-curve non calcolabili");
     if (const int flipped = repairFaceSenses(body))
         note(std::to_string(flipped) + " facce con il verso (same_sense) opposto ai loop: corretto");
-    const std::vector<CheckIssue> issues = checkBody(body);
+ std::vector<CheckIssue> issues;
+    {
+        const detail::PhaseTimer timer("assemblaggio: controllo del corpo");
+        issues = checkBody(body);
+    }
     if (!issues.empty()) throw std::domain_error("corpo non valido: " + describe(issues.front().code) + " (" + issues.front().message + ")");
     return body;
 }

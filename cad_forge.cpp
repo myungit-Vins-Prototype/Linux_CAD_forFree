@@ -39,6 +39,7 @@
 #include "fk_fill.h"
 #include "fk_curve_ops.h"
 #include "fk_project.h"
+#include "fk_parallel.h"
 #include "fk_thicken.h"
 #include "fk_shell.h"
 #include "fk_draft.h"
@@ -1516,8 +1517,8 @@ void forgeTessellate(const Body &body, int quality, BodyDisplay &display) {
     }
 }
 
-void forgeSurfaceConstructionCurves(const Body &body, BodyDisplay &display, int divisions, bool allFaces,
-                                    const QVector<int> &faceFilter) {
+static void surfaceConstructionCurvesSerial(const Body &body, BodyDisplay &display, int divisions, bool allFaces,
+                                            const QVector<int> &faceFilter) {
     divisions = std::clamp(divisions, 2, 12);
     Box bodyBox;
     for (VertexId vertex : body.vertices()) bodyBox.add(body.vertex(vertex).point);
@@ -1623,6 +1624,32 @@ void forgeSurfaceConstructionCurves(const Body &body, BodyDisplay &display, int 
     }
 }
 
+// Le U/V delle facce sono indipendenti. Prepara ogni gruppo in parallelo
+// e riuniscilo nello stesso ordine topologico del percorso seriale.
+void forgeSurfaceConstructionCurves(const Body &body, BodyDisplay &display, int divisions, bool allFaces,
+                                    const QVector<int> &faceFilter) {
+    const auto bodyFaces = body.faces();
+    const int sideFaces = allFaces ? int(bodyFaces.size()) : int(bodyFaces.size()) - (body.isSheet() ? 0 : 2);
+    std::vector<FaceId> faces;
+    for (int i = 0; i < sideFaces; ++i)
+        if (faceFilter.isEmpty() || faceFilter.contains(bodyFaces[std::size_t(i)].index)) faces.push_back(bodyFaces[std::size_t(i)]);
+    if (faces.size() < 2 || parallelDepth != 0) {
+        surfaceConstructionCurvesSerial(body, display, divisions, allFaces, faceFilter);
+        return;
+    }
+    std::vector<BodyDisplay> pieces(faces.size());
+    std::vector<std::exception_ptr> errors(faces.size());
+    parallelFor(faces.size(), std::min(8u, threadCount(0)), [&](std::size_t i) {
+        try {
+            surfaceConstructionCurvesSerial(body, pieces[i], divisions, allFaces, {faces[i].index});
+        } catch (...) {
+            errors[i] = std::current_exception();
+        }
+    });
+    for (const auto &error : errors) if (error) std::rethrow_exception(error);
+    for (const BodyDisplay &piece : pieces) display.constructionCurves += piece.constructionCurves;
+}
+
 // Le cache B-rep delle funzioni si rileggono separatamente: le superfici
 // NURBS conservate non condividono piu' il puntatore con quelle della base.
 // sameSurface riconosce le forme analitiche, ma non le B-spline. Per la
@@ -1646,7 +1673,8 @@ static bool samePreviewSurface(const Surface &a, const Surface &b) {
 }
 
 static void forgeLocalPreviewDisplay(const QVector<const Body *> &bases, const Body &result, int quality,
-                                     BodyDisplay &display, int divisions, BodyDisplay *retainedDisplay = nullptr) {
+                                     BodyDisplay &display, int divisions, BodyDisplay *retainedDisplay = nullptr,
+                                     const BodyDisplay *existingDisplay = nullptr) {
     display = {};
     display.quality = quality;
     if (retainedDisplay) {
@@ -1677,6 +1705,40 @@ static void forgeLocalPreviewDisplay(const QVector<const Body *> &bases, const B
         }
     }
     if (patchFaces.isEmpty()) return;
+
+    // In modifica la mesh dell'esatto stesso body e' gia' visualizzata.
+    // Estrai la patch tramite gli ID topologici, senza proiezioni dei vertici
+    // o nuova tassellazione. Cache vecchie senza ID usano il percorso normale.
+    if (existingDisplay && !retainedDisplay
+        && existingDisplay->vertices.size() % 3 == 0
+        && existingDisplay->normals.size() == existingDisplay->vertices.size()
+        && existingDisplay->triangleFaces.size() == existingDisplay->vertices.size() / 3
+        && existingDisplay->edgeIds.size() == existingDisplay->edges.size()) {
+        std::set<int> availableFaces(existingDisplay->triangleFaces.begin(), existingDisplay->triangleFaces.end());
+        std::set<int> availableEdges(existingDisplay->edgeIds.begin(), existingDisplay->edgeIds.end());
+        const bool complete = std::includes(availableFaces.begin(), availableFaces.end(), patchFaceSet.begin(), patchFaceSet.end())
+            && std::includes(availableEdges.begin(), availableEdges.end(), patchEdges.begin(), patchEdges.end());
+        if (complete) {
+            display.quality = existingDisplay->quality;
+            for (qsizetype triangle = 0; triangle < existingDisplay->triangleFaces.size(); ++triangle) {
+                const int face = existingDisplay->triangleFaces[triangle];
+                if (!patchFaceSet.count(face)) continue;
+                display.triangleFaces.append(face);
+                for (int corner = 0; corner < 3; ++corner) {
+                    const qsizetype vertex = 3 * triangle + corner;
+                    display.vertices.append(existingDisplay->vertices[vertex]);
+                    display.normals.append(existingDisplay->normals[vertex]);
+                }
+            }
+            for (qsizetype edge = 0; edge < existingDisplay->edgeIds.size(); ++edge) {
+                if (!patchEdges.count(existingDisplay->edgeIds[edge])) continue;
+                display.edgeIds.append(existingDisplay->edgeIds[edge]);
+                display.edges.append(existingDisplay->edges[edge]);
+            }
+            forgeSurfaceConstructionCurves(result, display, divisions, true, patchFaces);
+            return;
+        }
+    }
 
     Box box;
     for (VertexId vertex : result.vertices()) box.add(result.vertex(vertex).point);
@@ -1710,8 +1772,9 @@ static void forgeLocalPreviewDisplay(const QVector<const Body *> &bases, const B
     forgeSurfaceConstructionCurves(result, display, divisions, true, patchFaces);
 }
 
-void forgeBlendPreviewDisplay(const Body &base, const Body &result, int quality, BodyDisplay &display, int divisions) {
-    forgeLocalPreviewDisplay({&base}, result, quality, display, divisions);
+void forgeBlendPreviewDisplay(const Body &base, const Body &result, int quality, BodyDisplay &display, int divisions,
+                             const BodyDisplay *existingDisplay) {
+    forgeLocalPreviewDisplay({&base}, result, quality, display, divisions, nullptr, existingDisplay);
 }
 
 void forgeExtrusionPreviewDisplay(const QVector<ForgeBody> &bases, const Body &result, int quality,

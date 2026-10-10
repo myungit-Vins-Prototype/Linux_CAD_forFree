@@ -1,8 +1,11 @@
 #include "fk_thicken.h"
 
 #include <algorithm>
+#include <optional>
 #include <cmath>
 #include <limits>
+#include <map>
+#include <exception>
 #include <stdexcept>
 #include <string>
 
@@ -12,10 +15,12 @@
 #include "fk_exchange.h"
 #include "fk_offset.h"
 #include "fk_pcurve.h"
+#include "fk_parallel.h"
 #include "fk_sew.h"
 #include "fk_surface.h"
 #include "fk_surface_algo.h"
 #include "fk_transform.h"
+#include "fk_timing.h"
 
 namespace ForgeCad::Kernel {
 namespace {
@@ -23,6 +28,10 @@ namespace {
 // Normale della faccia (con il suo verso) nel punto della superficie piu' vicino a p.
 Vec3 faceNormalAt(const Body &body, FaceId f, const Vec3 &p) {
     const Face &face = body.face(f);
+    if (face.surface->type() == SurfaceType::Plane) {
+        const Vec3 n = static_cast<const Plane &>(*face.surface).frame().zDir();
+        return face.sense ? n : -n;
+    }
     const SurfaceProjection at = projectPoint(*face.surface, p);
     const Vec3 n = normalAt(*face.surface, at.u, at.v);
     return face.sense ? n : -n;
@@ -118,6 +127,7 @@ std::vector<std::pair<FaceId, Vec3>> facePoints(const Body &body, const std::vec
 }
 
 Body sewSolid(std::vector<const Body *> sheets, double tolerance, const char *what) {
+    const detail::PhaseTimer timer("spessore: cucitura finale");
     SewResult sewn = sewSheets(sheets, tolerance, true);
     if (!sewn.solid)
         throw std::domain_error(std::string("spessore: ") + what + " non si chiude in un solido (" + std::to_string(sewn.freeEdges) + " bordi liberi)");
@@ -128,9 +138,26 @@ Body sewSolid(std::vector<const Body *> sheets, double tolerance, const char *wh
 // (il bordo attraversa una piega della superficie fuori dai nodi della sua
 // curva): rotture per l'approssimazione delle pareti.
 std::vector<double> normalBreaks(const Body &sheet, FaceId face, const Edge &edge, const Interval &range, double *largest = nullptr) {
+    // Un piano non ha salti di normale, neppure sui bordi rifilati.
+    if (sheet.face(face).surface->type() == SurfaceType::Plane) return {};
+    if (sheet.face(face).surface->type() == SurfaceType::BSpline) {
+        const auto sharp = static_cast<const BSplineSurface &>(*sheet.face(face).surface).cachedSharpKnotLines();
+        if (sharp->u.empty() && sharp->v.empty()) return {};
+    }
     constexpr int kSamples = 256;
     std::vector<Vec3> normals(kSamples + 1);
-    for (int k = 0; k <= kSamples; ++k) normals[std::size_t(k)] = faceNormalAt(sheet, face, edge.curve->point(range.lo + range.length() * k / kSamples));
+    // Le proiezioni sono indipendenti; conserva l'ordine dei campioni e degli
+    // errori anche quando la superficie con pieghe richiede ricerca numerica.
+    std::vector<std::exception_ptr> errors(kSamples + 1);
+    const unsigned workers = sheet.face(face).surface->type() == SurfaceType::BSpline ? std::min(8u, threadCount(0)) : 1u;
+    parallelFor(normals.size(), workers, [&](std::size_t k) {
+        try {
+            normals[k] = faceNormalAt(sheet, face, edge.curve->point(range.lo + range.length() * k / kSamples));
+        } catch (...) {
+            errors[k] = std::current_exception();
+        }
+    });
+    for (const auto &error : errors) if (error) std::rethrow_exception(error);
     const auto angle = [](const Vec3 &a, const Vec3 &b) { return std::asin(std::min(1.0, norm(cross(a, b)))); };
     std::vector<double> breaks;
     for (int k = 0; k < kSamples; ++k) {
@@ -162,6 +189,8 @@ Body thickenAlongNormal(const Body &sheet, const std::vector<FreeEdge> &free, do
     // gradi (le pieghe di uno sweep lungo una spline solo C1) lo scarto si
     // assorbe nella cucitura; oltre, errore.
     double crease = 0.0;
+    std::optional<detail::PhaseTimer> creaseTimer;
+    creaseTimer.emplace("spessore: pieghe tra le facce");
     for (EdgeId e : sheet.edges()) {
         if (sheet.isLaminar(e)) continue;
         const Edge &edge = sheet.edge(e);
@@ -176,8 +205,10 @@ Body thickenAlongNormal(const Body &sheet, const std::vector<FreeEdge> &free, do
                                     + "); usa lo spessore lungo una direzione o separa le facce");
         crease = std::max(crease, angle);
     }
+    creaseTimer.reset();
     const auto side = [&](double s, double accuracy) -> Body {
         if (s == 0.0) return sheet;
+        const detail::PhaseTimer timer("spessore: una superficie a distanza");
         return offsetFaces(sheet, faces, s, accuracy, false, 2.0 * M_PI / 180.0).body;
     };
     Body lower, upper;
@@ -199,6 +230,8 @@ Body thickenAlongNormal(const Body &sheet, const std::vector<FreeEdge> &free, do
     }
     std::vector<Body> walls;
     double wallAccuracy = 0.0;
+    std::optional<detail::PhaseTimer> wallTimer;
+    wallTimer.emplace("spessore: pareti");
     for (const FreeEdge &item : free) {
         const Edge &edge = sheet.edge(item.edge);
         // Tratti del bordo tra le pieghe che attraversa: una parete per tratto
@@ -221,10 +254,37 @@ Body thickenAlongNormal(const Body &sheet, const std::vector<FreeEdge> &free, do
             const double inset = 1e-7 * range.length();
             const auto onCrease = [&](double t) { return std::find(creaseAt.begin(), creaseAt.end(), t) != creaseAt.end(); };
             const double from = onCrease(range.lo) ? range.lo + inset : range.lo, to = onCrease(range.hi) ? range.hi - inset : range.hi;
+            // Bordo di una retta con la normale costante: la parete e' un piano.
+            if (edge.curve->type() == CurveType::Line) {
+                const Vec3 pa = edge.curve->point(range.lo), pb = edge.curve->point(range.hi);
+                const Vec3 na = faceNormalAt(sheet, item.face, pa), nb = faceNormalAt(sheet, item.face, pb);
+                if (norm(cross(na, nb)) <= 1e-12) {
+                    const auto shifted = [&](double s) -> CurvePtr<3> {
+                        if (s == 0.0) return edge.curve;
+                        return std::make_shared<Line<3>>(edge.curve->point(0.0) + s * na, edge.curve->derivative(0.0));
+                    };
+                    const Vec3 direction = normalized(pb - pa);
+                    walls.push_back(wall(shifted(s0), shifted(s1), range,
+                                         std::make_shared<Plane>(Frame3(pa, normalized(cross(direction, na)), direction))));
+                    continue;
+                }
+            }
+            // I due fit adattivi visitano spesso gli stessi parametri. Conserva
+            // le normali per tratto: la proiezione sulla superficie e' il costo
+            // dominante e non dipende dal lato o dalla tolleranza del fit.
+            std::map<double, Vec3> normalCache;
+            const auto cachedNormal = [&](double t) -> const Vec3 & {
+                const double parameter = std::clamp(t, from, to);
+                auto found = normalCache.find(parameter);
+                if (found == normalCache.end())
+                    found = normalCache.emplace(parameter, faceNormalAt(sheet, item.face, edge.curve->point(parameter))).first;
+                return found->second;
+            };
             const auto at = [&](double s) {
-                return [&, s, from, to](double t) {
+                return [&, s](double t) {
                     const Vec3 p = edge.curve->point(t);
-                    return p + s * faceNormalAt(sheet, item.face, edge.curve->point(std::clamp(t, from, to)));
+                    if (s == 0.0) return p;
+                    return p + s * cachedNormal(t);
                 };
             };
             std::vector<double> breaks = edge.curve->breakpoints(range);
@@ -246,21 +306,6 @@ Body thickenAlongNormal(const Body &sheet, const std::vector<FreeEdge> &free, do
                 }
             }
             BSplineCurve<3> c0 = *f0, c1 = *f1;
-            // Bordo di una retta con la normale costante: la parete e' un piano.
-            if (edge.curve->type() == CurveType::Line) {
-                const Vec3 pa = edge.curve->point(range.lo), pb = edge.curve->point(range.hi);
-                const Vec3 na = faceNormalAt(sheet, item.face, pa), nb = faceNormalAt(sheet, item.face, pb);
-                if (norm(cross(na, nb)) <= 1e-12) {
-                    const auto shifted = [&](double s) -> CurvePtr<3> {
-                        if (s == 0.0) return edge.curve;
-                        return std::make_shared<Line<3>>(edge.curve->point(0.0) + s * na, edge.curve->derivative(0.0));
-                    };
-                    const Vec3 direction = normalized(pb - pa);
-                    walls.push_back(wall(shifted(s0), shifted(s1), range,
-                                         std::make_shared<Plane>(Frame3(pa, normalized(cross(direction, na)), direction))));
-                    continue;
-                }
-            }
             makeCompatible(c0, c1);
             const int n = c0.poleCount();
             std::vector<Vec3> poles(std::size_t(2 * n));
@@ -274,10 +319,14 @@ Body thickenAlongNormal(const Body &sheet, const std::vector<FreeEdge> &free, do
             walls.push_back(wall(a, b, range, ruled));
         }
     }
+    wallTimer.reset();
     // Pieghe tra le facce o dentro una faccia (dove un bordo le attraversa):
     // le parti a distanza si scostano al piu' di spessore x angolo.
     const double sewTolerance = 10.0 * tolerance + 1.5 * std::max(std::fabs(s0), std::fabs(s1)) * crease + 2.0 * wallAccuracy;
-    std::vector<const Body *> sheets{&lower, &upper};
+    // La pelle superiore ha gia' la normale uscente. Usarla come prima
+    // lamina orienta la cucitura nel verso corretto e evita di rimontare
+    // tutto il solido per girare le facce dopo il controllo del volume.
+    std::vector<const Body *> sheets{&upper, &lower};
     for (const Body &w : walls) sheets.push_back(&w);
     return sewSolid(sheets, sewTolerance, "la superficie ispessita lungo la normale");
 }
@@ -322,6 +371,7 @@ Body thickenAlongDirection(const Body &sheet, const std::vector<FreeEdge> &free,
 }
 
 Body thickenSheet(const Body &body, const std::vector<FaceId> &faces, const ThickenOptions &options) {
+    const detail::PhaseTimer total("spessore: totale");
     if (!(options.thickness > 0.0) || !std::isfinite(options.thickness)) throw std::domain_error("spessore: il valore deve essere positivo");
     std::vector<FaceId> chosen = faces.empty() ? body.faces() : faces;
     if (chosen.empty()) throw std::domain_error("spessore: nessuna faccia");

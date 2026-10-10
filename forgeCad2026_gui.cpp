@@ -118,6 +118,7 @@
 #include <QWheelEvent>
 #include <QWindow>
 #include <QGuiApplication>
+#include <QFontDatabase>
 #include <QStandardItemModel>
 #include <algorithm>
 #include <cmath>
@@ -130,6 +131,17 @@
 #include <optional>
 #include <qnamespace.h>
 #include <utility>
+
+// Font delle scritte disegnate a mano (etichette, quote, pannelli): quello
+// di sistema dell'applicazione con la dimensione e il peso chiesti. Una
+// famiglia per nome ("Sans") che non esiste su macOS fa costruire a Qt la
+// tabella degli alias dei font (decine di millisecondi e un avviso).
+static QFont uiFont(int pointSize, QFont::Weight weight) {
+    QFont font = QGuiApplication::font();
+    font.setPointSize(pointSize);
+    font.setWeight(weight);
+    return font;
+}
 
 struct SelectedPoint {
     int kind = 0;
@@ -2635,7 +2647,7 @@ public:
         painter.drawEllipse(a, 4.5, 4.5);
         painter.drawEllipse(b, 4.5, 4.5);
         if (!measureLabel_.isEmpty()) {
-            QFont font(QStringLiteral("Sans"), 10, QFont::DemiBold);
+            QFont font = uiFont(10, QFont::DemiBold);
             painter.setFont(font);
             const QFontMetricsF metrics(font);
             const QPointF middle = 0.5 * (a + b) + QPointF(10.0, -12.0);
@@ -5282,7 +5294,7 @@ protected:
                              projectWorldPoint(mapSketchPoint(segment.second, sketch)));
         }
         if (labels.isEmpty()) return;
-        painter.setFont(QFont(QStringLiteral("Sans"), 9, QFont::DemiBold));
+        painter.setFont(uiFont(9, QFont::DemiBold));
         const QFontMetrics metrics(painter.font());
         QPointF position = QPointF(lastMousePosition_) + QPointF(18.0, 22.0);
         // Etichette dentro la vista: vicino al bordo destro o in basso vanno dall'altra parte del cursore.
@@ -6247,7 +6259,7 @@ private:
         if (!ForgeCad::isDimension(c.type)) return false;
         const double px = double(zoom_) / double(qMax(1, height()));  // unita' dello schizzo per pixel
         const auto screen = [&](const QPointF &p) { return projectWorldPoint(mapSketchPoint(p, sketch)); };
-        const QFontMetricsF metrics(QFont(QStringLiteral("Sans"), 9, QFont::DemiBold));
+        const QFontMetricsF metrics(uiFont(9, QFont::DemiBold));
         g.text = dimensionText(c);
         const double textWidth = metrics.horizontalAdvance(g.text), textHeight = metrics.height();
         const auto readable = [](double degrees) {
@@ -6435,7 +6447,7 @@ private:
         const SketchObject *sketch = activeSketchObject();
         if (!sketch || !constraintsVisible_) return;
         painter.save();
-        painter.setFont(QFont(QStringLiteral("Sans"), 9, QFont::DemiBold));
+        painter.setFont(uiFont(9, QFont::DemiBold));
         // Strumento Quota: il punto che si sceglierebbe e la quota in anteprima (arancio).
         if (drawingTool_ == DrawingTool::Dimension) {
             QPointF hovered;
@@ -6490,7 +6502,7 @@ private:
         QVector<ConstraintGlyph> glyphs;
         const SketchObject *sketch = activeSketchObject();
         if (!sketch || !constraintsVisible_) return glyphs;
-        const QFontMetricsF metrics(QFont(QStringLiteral("Sans"), 8, QFont::DemiBold));
+        const QFontMetricsF metrics(uiFont(8, QFont::DemiBold));
         QHash<QString, int> stacked;  // quante etichette ci sono gia' accanto allo stesso punto
         for (int index = 0; index < sketch->geometricConstraints.size(); ++index) {
             const SketchConstraint &c = sketch->geometricConstraints.at(index);
@@ -6542,7 +6554,7 @@ private:
     }
     void drawSketchConstraints(QPainter &painter) const {
         painter.save();
-        painter.setFont(QFont(QStringLiteral("Sans"), 8, QFont::DemiBold));
+        painter.setFont(uiFont(8, QFont::DemiBold));
         for (const ConstraintGlyph &glyph : constraintGlyphs()) {
             const bool selected = selectedConstraints_.contains(glyph.constraint), hovered = glyph.constraint == constraintHover_;
             const QColor color = selected ? kSelectionColor : hovered ? kHoverColor : QColor(150, 200, 235);
@@ -8650,7 +8662,7 @@ private:
         QPainter painter(this);
         painter.setRenderHint(QPainter::Antialiasing);
         // Lettere degli assi oltre la punta delle frecce.
-        painter.setFont(QFont(QStringLiteral("Sans"), 12, QFont::Bold));
+        painter.setFont(uiFont(12, QFont::Bold));
         const float tipDistance = float(axisDisplayLength()) * 1.1f;
         const QPointF origin = projectWorldPoint(QVector3D());
         for (int axis = 0; axis < 3 && axesVisible_; ++axis) {
@@ -8663,7 +8675,7 @@ private:
             painter.drawText(QRectF(position - QPointF(10.0, 10.0), QSizeF(20.0, 20.0)), Qt::AlignCenter,
                              QString(QChar(u'X' + axis)));
         }
-        painter.setFont(QFont(QStringLiteral("Sans"), 10, QFont::DemiBold));
+        painter.setFont(uiFont(10, QFont::DemiBold));
         painter.setPen(QColor(150, 200, 255));
         QSizeF size = referencePlaneExtents(0);
         if (isPlaneShown(0)) painter.drawText(projectWorldPoint(QVector3D(0.75f * float(size.width()), 0.75f * float(size.height()), 0.0f)), QStringLiteral("Piano XY"));
@@ -8701,7 +8713,7 @@ private:
         int onlyBody = -1;
         if (selection_.kind == SceneObjectKind::Extrusion) onlyBody = selection_.index;
         else if (hover_.kind == SceneObjectKind::Extrusion) onlyBody = hover_.index;
-        const QFont font(QStringLiteral("Sans"), 8, QFont::DemiBold);
+        const QFont font = uiFont(8, QFont::DemiBold);
         const QFontMetrics metrics(font);
         const auto append = [&](const QPointF &anchor, const QPointF &offset, const QString &text,
                                 int body, int subshape, bool edge) {
@@ -8741,7 +8753,7 @@ private:
         if (labels.isEmpty()) return;
         painter.save();
         painter.setRenderHint(QPainter::Antialiasing);
-        painter.setFont(QFont(QStringLiteral("Sans"), 8, QFont::DemiBold));
+        painter.setFont(uiFont(8, QFont::DemiBold));
         for (const TopologyLabelItem &item : labels) {
             const QColor color = item.edge ? QColor(105, 225, 255) : QColor(255, 205, 95);
             const QPointF center = item.box.center();
@@ -8773,7 +8785,7 @@ private:
     void drawSketchDimensions(QPainter &painter) const {
         if (activeSketch_ < 0 || activeSketch_ >= sketches_.size()) return;
         const SketchObject &sketch = sketches_.at(activeSketch_);
-        painter.setFont(QFont(QStringLiteral("Sans"), 9, QFont::DemiBold));
+        painter.setFont(uiFont(9, QFont::DemiBold));
         for (int index = 0; index < sketch.segments.size(); ++index) {
             const auto &segment = sketch.segments.at(index);
             const QVector3D first = mapSketchPoint(segment.first, sketch);
@@ -9690,7 +9702,7 @@ private:
         glEnable(GL_DEPTH_TEST);
     }
     void drawDatumLabels(QPainter &painter) const {
-        painter.setFont(QFont(QStringLiteral("Sans"), 9, QFont::DemiBold));
+        painter.setFont(uiFont(9, QFont::DemiBold));
         painter.setPen(QColor(205, 180, 255));
         for (int index = 0; index < extrusions_.size(); ++index) {
             if (!isDatumShown(index)) continue;
@@ -11528,7 +11540,8 @@ private:
         if (blend) {
             if (in.reuse) resultDisplay = in.existingDisplay;
             ForgeCad::forgeBlendPreviewDisplay(*in.bodies.at(in.definition.firstBody).forgeBody, *body.forgeBody, in.quality, display,
-                                               in.quality <= 0 ? 3 : in.quality == 1 ? 5 : 7);
+                                               in.quality <= 0 ? 3 : in.quality == 1 ? 5 : 7,
+                                               in.reuse ? &in.existingDisplay : nullptr);
         } else if (localExtrusion) {
             if (in.reuse) resultDisplay = in.existingDisplay;
             QVector<ForgeCad::ForgeBody> bases;
@@ -11614,8 +11627,9 @@ private:
         if (!previewReceiver_) previewReceiver_ = new QObject(this);
         QObject *receiver = previewReceiver_;
         previewRunning_ = true;
-        if (workCallback_) workCallback_(true, QStringLiteral("Calcolo dell'anteprima..."), true);
-        QThreadPool::globalInstance()->start([this, receiver, generation, in] {
+        const QString workText = in.reuse ? QStringLiteral("Preparazione della visualizzazione...") : QStringLiteral("Calcolo dell'anteprima...");
+        if (workCallback_) workCallback_(true, workText, true);
+        QThreadPool::globalInstance()->start([this, receiver, generation, in, workText] {
             BodyDisplay display;
             BodyDisplay retainedDisplay;
             BodyDisplay resultDisplay;
@@ -11633,12 +11647,12 @@ private:
             }
             if (!ok && error.isEmpty()) error = QStringLiteral("costruzione non riuscita");
             // Il ricevitore e' figlio del viewport: se il viewport non c'e' piu', la chiamata non avviene.
-            QMetaObject::invokeMethod(receiver, [this, generation, ok, error, notice, probe, merged,
+            QMetaObject::invokeMethod(receiver, [this, generation, ok, error, notice, probe, merged, workText,
                                                  geometry = std::move(geometry), display = std::move(display),
                                                  retainedDisplay = std::move(retainedDisplay),
                                                  resultDisplay = std::move(resultDisplay)]() mutable {
                 previewRunning_ = false;
-                if (workCallback_) workCallback_(false, QStringLiteral("Calcolo dell'anteprima..."), true);
+                if (workCallback_) workCallback_(false, workText, true);
                 if (generation == preview_.generation) {
                     if (probe) {
                         const bool localExtrusion = localMergePreview(preview_.definition)
@@ -15976,7 +15990,7 @@ protected:
         p.setBrush(Qt::NoBrush);
         p.drawRoundedRect(rect().adjusted(1, 1, -1, -1), 7, 7);
         const QColor ink(220, 234, 244), accent(255, 166, 70), material(105, 137, 174, 180);
-        p.setFont(QFont(QStringLiteral("Sans"), 8, QFont::DemiBold));
+        p.setFont(uiFont(8, QFont::DemiBold));
         if (phase_ == Surface) {
             p.setPen(QPen(ink, 1.3)); p.setBrush(material);
             p.drawRoundedRect(QRectF(45, 17, 190, 54), 24, 24);
@@ -17925,7 +17939,7 @@ static void measureDialog(QMainWindow *window, CadViewport *viewport) {
     results->setMinimumWidth(300);
     results->setMaximumWidth(420);
     results->setTextInteractionFlags(Qt::TextSelectableByMouse);
-    results->setStyleSheet(QStringLiteral("font-family: monospace;"));
+    results->setFont(QFontDatabase::systemFont(QFontDatabase::FixedFont));
     form->addRow(results);
     auto *buttons = new QDialogButtonBox(&dialog);
     QPushButton *clearButton = buttons->addButton(QStringLiteral("Azzera"), QDialogButtonBox::ResetRole);
@@ -17962,11 +17976,11 @@ static void measureDialog(QMainWindow *window, CadViewport *viewport) {
         viewport->setMeasureOverlay(false);
         report.clear();
         if (!error.isEmpty()) {
-            results->setStyleSheet(QStringLiteral("font-family: monospace; color: #ff7a6a;"));
+            results->setStyleSheet(QStringLiteral("color: #ff7a6a;"));
             results->setText(error);
             return;
         }
-        results->setStyleSheet(QStringLiteral("font-family: monospace;"));
+        results->setStyleSheet(QString());
         if (entities.isEmpty()) {
             results->clear();
             return;
@@ -17975,7 +17989,7 @@ static void measureDialog(QMainWindow *window, CadViewport *viewport) {
         const ForgeCad::MeasureReport measure = ForgeCad::measureEntities(entities);
         QApplication::restoreOverrideCursor();
         if (!measure.ok) {
-            results->setStyleSheet(QStringLiteral("font-family: monospace; color: #ff7a6a;"));
+            results->setStyleSheet(QStringLiteral("color: #ff7a6a;"));
             results->setText(measure.error);
             return;
         }
@@ -19854,6 +19868,10 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
                              "Lo scarto cordale e l'angolo controllano l'approssimazione di raggi e superfici curve."), &dialog);
         description->setWordWrap(true);
         layout->addWidget(description);
+        auto *automaticMesh = new QCheckBox(QStringLiteral("Calcola automaticamente il raffinamento migliore"), &dialog);
+        automaticMesh->setChecked(settings.value(QStringLiteral("export/automaticMeshRefinement"), true).toBool());
+        automaticMesh->setToolTip(QStringLiteral("Parte dalle dimensioni del modello e cerca parametri che triangolino tutte le facce. I valori riusciti sono mostrati nel risultato."));
+        layout->addWidget(automaticMesh);
         auto *form = new QFormLayout;
         const auto distanceBox = [&](double value, bool allowZero) {
             auto *box = new ForgeCad::ExpressionSpinBox(&dialog);
@@ -19864,18 +19882,22 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
             if (allowZero) box->setSpecialValueText(QStringLiteral("Nessun limite"));
             return box;
         };
-        auto *edgeSize = distanceBox(settings.value(QStringLiteral("export/stlMaxEdge"), suggested.maxEdgeLength).toDouble(), true);
-        auto *deflection = distanceBox(settings.value(QStringLiteral("export/stlDeflection"), suggested.deflection).toDouble(), false);
+        auto *edgeSize = distanceBox(automaticMesh->isChecked() ? suggested.maxEdgeLength : settings.value(QStringLiteral("export/stlMaxEdge"), suggested.maxEdgeLength).toDouble(), true);
+        auto *deflection = distanceBox(automaticMesh->isChecked() ? suggested.deflection : settings.value(QStringLiteral("export/stlDeflection"), suggested.deflection).toDouble(), false);
         auto *angle = new QDoubleSpinBox(&dialog);
         angle->setDecimals(2); angle->setRange(0.1, 90.0); angle->setSingleStep(1.0); angle->setSuffix(QStringLiteral(" °"));
-        angle->setValue(settings.value(QStringLiteral("export/stlAngle"), suggested.angle).toDouble());
+        angle->setValue(automaticMesh->isChecked() ? suggested.angle : settings.value(QStringLiteral("export/stlAngle"), suggested.angle).toDouble());
         edgeSize->setToolTip(QStringLiteral("Lunghezza massima di ogni lato dei triangoli; zero lascia decidere allo scarto e all'angolo"));
         deflection->setToolTip(QStringLiteral("Distanza massima ammessa tra la mesh e la geometria esatta"));
         angle->setToolTip(QStringLiteral("Variazione massima della normale tra punti vicini sulle superfici curve"));
         form->addRow(QStringLiteral("Lato massimo triangolo:"), edgeSize);
         form->addRow(QStringLiteral("Scarto cordale massimo:"), deflection);
         form->addRow(QStringLiteral("Angolo massimo superfici:"), angle);
+        edgeSize->setEnabled(!automaticMesh->isChecked());
+        deflection->setEnabled(!automaticMesh->isChecked());
+        angle->setEnabled(!automaticMesh->isChecked());
         auto *count = new QLabel(QStringLiteral("Non ancora calcolato"), &dialog);
+        count->setWordWrap(true);
         form->addRow(QStringLiteral("Risultato:"), count);
         layout->addLayout(form);
         auto *showPreview = new QCheckBox(QStringLiteral("Mostra anteprima della mesh nella vista"), &dialog);
@@ -19898,10 +19920,12 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
             options.maxEdgeLength = edgeSize->value();
             options.deflection = deflection->value();
             options.angle = angle->value();
+            options.automaticRefinement = automaticMesh->isChecked();
             return options;
         };
         const auto sameOptions = [](const ForgeCad::StlExportOptions &a, const ForgeCad::StlExportOptions &b) {
-            return a.maxEdgeLength == b.maxEdgeLength && a.deflection == b.deflection && a.angle == b.angle;
+            return a.maxEdgeLength == b.maxEdgeLength && a.deflection == b.deflection && a.angle == b.angle
+                && a.automaticRefinement == b.automaticRefinement;
         };
         const auto build = [&] {
             builtOptions = currentOptions();
@@ -19936,6 +19960,18 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
                              QLocale().formattedDataSize(built.data.size()),
                              limited ? QStringLiteral(" — anteprima alleggerita") : QString()));
                 }
+                const auto &used = quadrangular ? builtObj.usedOptions : built.usedOptions;
+                if (automaticMesh->isChecked()) {
+                    const QSignalBlocker edgeBlock(edgeSize), deflectionBlock(deflection), angleBlock(angle);
+                    edgeSize->setValue(used.maxEdgeLength);
+                    deflection->setValue(used.deflection);
+                    angle->setValue(used.angle);
+                    builtOptions = currentOptions();
+                }
+                count->setText(count->text() + QStringLiteral("\nLato %1 mm · scarto %2 mm · angolo %3° · %4 tentativi")
+                    .arg(QLocale().toString(used.maxEdgeLength, 'g', 6), QLocale().toString(used.deflection, 'g', 6),
+                         QLocale().toString(used.angle, 'g', 4))
+                    .arg(quadrangular ? builtObj.tessellationAttempts : built.tessellationAttempts));
                 if (showPreview->isChecked())
                     viewport->setExportMeshPreview(quadrangular ? builtObj.preview : built.preview, quadrangular, limited);
                 else viewport->clearExportMeshPreview();
@@ -19950,6 +19986,18 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
             count->setStyleSheet(QString());
             count->setText(QStringLiteral("Parametri modificati — ricalcolare"));
         };
+        connect(automaticMesh, &QCheckBox::toggled, &dialog, [&](bool automatic) {
+            settings.setValue(QStringLiteral("export/automaticMeshRefinement"), automatic);
+            edgeSize->setEnabled(!automatic);
+            deflection->setEnabled(!automatic);
+            angle->setEnabled(!automatic);
+            if (automatic) {
+                edgeSize->setValue(suggested.maxEdgeLength);
+                deflection->setValue(suggested.deflection);
+                angle->setValue(suggested.angle);
+            }
+            invalidate();
+        });
         connect(edgeSize, &QDoubleSpinBox::valueChanged, &dialog, [invalidate](double) { invalidate(); });
         connect(deflection, &QDoubleSpinBox::valueChanged, &dialog, [invalidate](double) { invalidate(); });
         connect(angle, &QDoubleSpinBox::valueChanged, &dialog, [invalidate](double) { invalidate(); });

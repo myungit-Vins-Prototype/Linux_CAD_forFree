@@ -18,6 +18,7 @@
 #include "fk_surface_algo.h"
 #include "fk_tessellate.h"
 #include "fk_project.h"
+#include "fk_parallel.h"
 #include <QGraphicsItem>
 #include <QGraphicsView>
 #include <QSurfaceFormat>
@@ -616,6 +617,75 @@ public:
                 "dopo rilettura si evidenzia soltanto lo stesso nuovo raccordo");
         for (const auto &p : reopened.vertices)
             require(p.y() > 9.0f && p.z() < 1.0f, "il raccordo preesistente resta fuori dall'anteprima");
+        BodyDisplay existingMesh, reused;
+        forgeTessellate(savedResult, 0, existingMesh);
+        forgeBlendPreviewDisplay(savedBase, savedResult, 0, reused, 3, &existingMesh);
+        require(!reused.vertices.isEmpty() && !reused.constructionCurves.isEmpty(), "patch e U/V dalla mesh gia' presente");
+        require(reused.constructionCurves == reopened.constructionCurves, "il riuso conserva il taglio delle U/V sulla faccia");
+        QVector<QVector3D> expectedVertices, expectedNormals;
+        for (qsizetype triangle = 0; triangle < existingMesh.triangleFaces.size(); ++triangle) {
+            if (!reused.triangleFaces.contains(existingMesh.triangleFaces[triangle])) continue;
+            for (int corner = 0; corner < 3; ++corner) {
+                expectedVertices.append(existingMesh.vertices[3 * triangle + corner]);
+                expectedNormals.append(existingMesh.normals[3 * triangle + corner]);
+            }
+        }
+        require(reused.vertices == expectedVertices && reused.normals == expectedNormals,
+                "vertici e normali riutilizzati esattamente, senza nuova tassellazione");
+        for (const auto &p : reused.vertices)
+            require(p.y() > 9.0f && p.z() < 1.0f, "il riuso evidenzia soltanto il raccordo modificato");
+        BodyDisplay legacy = existingMesh, fallback;
+        legacy.triangleFaces.clear();
+        forgeBlendPreviewDisplay(savedBase, savedResult, 0, fallback, 3, &legacy);
+        require(fallback.vertices == reopened.vertices && fallback.constructionCurves == reopened.constructionCurves,
+                "le cache precedenti senza ID conservano l'anteprima corretta");
+    }
+
+    // --bench-blend-edit file.prt indice: confronto della sola vista di un
+    // raccordo esistente, senza ricostruirne la geometria.
+    static void benchmarkBlendEdit(const QString &path, int index) {
+        using namespace ForgeCad;
+        DocumentState document;
+        require(loadDocumentFile(path, document).isEmpty(), "lettura del documento raccordo");
+        CadViewport viewport;
+        viewport.loadDocument(document);
+        require(index >= 0 && index < viewport.extrusions_.size(), "indice raccordo");
+        const ExtrusionObject &feature = viewport.extrusions_.at(index);
+        require(feature.feature == BodyFeature::Blend && feature.forgeBody && feature.firstBody >= 0,
+                "raccordo esistente disponibile");
+        require(viewport.unchangedFeature(feature, index), "definizione invariata");
+        const Kernel::Body &base = *viewport.extrusions_.at(feature.firstBody).forgeBody;
+        BodyDisplay recalculated, reused;
+        QElapsedTimer timer;
+        timer.start();
+        forgeBlendPreviewDisplay(base, *feature.forgeBody, feature.display.quality, recalculated, 3);
+        const auto before = timer.elapsed();
+        timer.restart();
+        forgeBlendPreviewDisplay(base, *feature.forgeBody, feature.display.quality, reused, 3, &feature.display);
+        const auto after = timer.elapsed();
+        require(!reused.vertices.isEmpty() && !reused.triangleFaces.isEmpty(), "mesh esistente riutilizzata");
+        require(reused.constructionCurves == recalculated.constructionCurves, "stesse U/V trimmate");
+        BodyDisplay serialCurves;
+        QVector<int> patchFaces = reused.triangleFaces;
+        std::sort(patchFaces.begin(), patchFaces.end());
+        patchFaces.erase(std::unique(patchFaces.begin(), patchFaces.end()), patchFaces.end());
+        {
+            struct SerialScope {
+                SerialScope() { ++Kernel::parallelDepth; }
+                ~SerialScope() { --Kernel::parallelDepth; }
+            } serialScope;
+            forgeSurfaceConstructionCurves(*feature.forgeBody, serialCurves, 3, true, patchFaces);
+        }
+        require(serialCurves.constructionCurves == reused.constructionCurves,
+                "curve U/V identiche nel percorso seriale e parallelo");
+        std::cout << feature.name.toStdString() << ": vista precedente " << before << " ms, riuso " << after
+                  << " ms, triangoli " << reused.vertices.size() / 3 << ", curve U/V " << reused.constructionCurves.size() << std::endl;
+        viewport.requestBlendPreview(feature.firstBody, feature.blendEdges, feature.blendSize, feature.blendChamfer, index, feature.chamferSpec);
+        viewport.startPreviewJob();
+        timer.restart();
+        while (viewport.previewRunning_ && timer.elapsed() < 30000) QApplication::processEvents();
+        require(viewport.preview_.valid && viewport.preview_.geometry == feature.forgeBody
+                    && viewport.preview_.display.vertices == reused.vertices, "apertura modifica conserva il corpo e riusa la mesh");
     }
 
     static void reviewRegressions() {
@@ -2228,6 +2298,66 @@ public:
             }
         }
     }
+    static void meshExportAutomatic() {
+        using namespace ForgeCad;
+        const QVector<ExportBody> bodies{{QStringLiteral("Blocco"),
+            std::make_shared<const Kernel::Body>(Kernel::makeBox(Kernel::Frame3(), 10, 6, 2)), {}, QColor()}};
+        StlExportOptions manual;
+        manual.maxEdgeLength = 2.0;
+        const auto strict = buildBinaryStl(bodies, manual);
+        require(strict.error.isEmpty() && strict.tessellationAttempts == 1
+                    && strict.usedOptions.maxEdgeLength == manual.maxEdgeLength, "esportazione manuale invariata");
+        StlExportOptions automatic = manual;
+        automatic.maxEdgeLength = 1e-8; // impossibile da rispettare con il limite del tessellatore
+        automatic.automaticRefinement = true;
+        const auto stl = buildBinaryStl(bodies, automatic);
+        const auto obj = buildQuadObj(bodies, automatic);
+        require(stl.error.isEmpty() && obj.error.isEmpty() && stl.triangleCount > 0 && obj.quadCount > 0,
+                "raffinamento automatico recupera una densita' irrealizzabile per entrambi i formati");
+        require(stl.usedOptions.maxEdgeLength > automatic.maxEdgeLength
+                    && stl.usedOptions.maxEdgeLength == obj.usedOptions.maxEdgeLength
+                    && stl.usedOptions.deflection == obj.usedOptions.deflection
+                    && stl.usedOptions.angle == obj.usedOptions.angle, "STL e OBJ scelgono lo stesso raffinamento valido");
+        StlExportOptions selected = stl.usedOptions;
+        selected.automaticRefinement = false;
+        require(buildBinaryStl(bodies, selected).data == stl.data && buildQuadObj(bodies, selected).data == obj.data,
+                "i parametri dichiarati riproducono esattamente i file esportati");
+        require(stl.data.size() == 84 + 50 * qint64(stl.triangleCount), "STL completo senza facce omesse");
+        for (int i = 0; i + 2 < stl.preview.vertices.size(); i += 3) {
+            const auto &a = stl.preview.vertices[i], &b = stl.preview.vertices[i + 1], &c = stl.preview.vertices[i + 2];
+            require(std::max({double((a-b).length()), double((b-c).length()), double((c-a).length())})
+                        <= stl.usedOptions.maxEdgeLength * (1.0 + 1e-5), "mesh entro il lato massimo effettivo");
+        }
+        QTemporaryDir directory;
+        require(saveBinaryStl(directory.filePath(QStringLiteral("auto.stl")), stl.data).isEmpty()
+                    && saveQuadObj(directory.filePath(QStringLiteral("auto.obj")), obj.data).isEmpty(), "scrittura delle mesh automatiche");
+        StlExportOptions invalid = automatic;
+        invalid.deflection = std::numeric_limits<double>::infinity();
+        require(!buildBinaryStl(bodies, invalid).error.isEmpty() && !buildQuadObj(bodies, invalid).error.isEmpty(),
+                "parametri non finiti rifiutati anche in automatico");
+        require(!buildBinaryStl({}, automatic).error.isEmpty() && !buildQuadObj({}, automatic).error.isEmpty(),
+                "nessuna esportazione vuota in automatico");
+        Kernel::Body damaged = *bodies.first().body;
+        damaged.face(damaged.faces().front()).loops.clear(); // una faccia non triangolabile
+        QVector<ExportBody> incomplete = bodies;
+        incomplete.append({QStringLiteral("Corpo incompleto"), std::make_shared<const Kernel::Body>(damaged), {}, QColor()});
+        automatic.maxEdgeLength = 2;
+        const auto failedStl = buildBinaryStl(incomplete, automatic);
+        const auto failedObj = buildQuadObj(incomplete, automatic);
+        std::cout << "ricerca senza soluzione STL=" << failedStl.tessellationAttempts << " OBJ=" << failedObj.tessellationAttempts
+                  << " errori: " << failedStl.error.toStdString() << " / " << failedObj.error.toStdString() << std::endl;
+        require(!failedStl.error.isEmpty() && !failedObj.error.isEmpty() && failedStl.data.isEmpty() && failedObj.data.isEmpty()
+                    && failedStl.tessellationAttempts == 9 && failedObj.tessellationAttempts == 9,
+                "ricerca limitata: una faccia mancante impedisce anche l'esportazione parziale degli altri corpi");
+        const QVector<ExportBody> sphere{{QStringLiteral("Sfera"),
+            std::make_shared<const Kernel::Body>(Kernel::makeSphere(Kernel::Frame3(), 5)), {}, QColor()}};
+        automatic.maxEdgeLength = 2;
+        const auto curvedStl = buildBinaryStl(sphere, automatic);
+        const auto curvedObj = buildQuadObj(sphere, automatic);
+        require(curvedStl.error.isEmpty() && curvedObj.error.isEmpty() && curvedObj.quadCount > 0,
+                "raffinamento automatico delle superfici curve e periodiche");
+        std::cout << "PASS export mesh: automatico STL/OBJ, parametri riproducibili, lato massimo, scrittura, manuale e input invalidi" << std::endl;
+    }
     // Diagnostica facoltativa: --mesh-stats file.prt [lato scarto angolo].
     static void meshStats(const QStringList &args) {
         using namespace ForgeCad;
@@ -2247,11 +2377,15 @@ public:
         options.maxEdgeLength = args.size() > 1 ? args.at(1).toDouble() : 1.0;
         options.deflection = args.size() > 2 ? args.at(2).toDouble() : 0.05;
         options.angle = args.size() > 3 ? args.at(3).toDouble() : 10.0;
+        options.automaticRefinement = qEnvironmentVariableIsSet("MESH_AUTO_REFINE");
         const StlBuildResult stl = buildBinaryStl(bodies, options);
         const ObjBuildResult obj = buildQuadObj(bodies, options);
         std::cout << "STL triangoli=" << stl.triangleCount << " errore=" << stl.error.toStdString() << '\n'
                   << "OBJ quad=" << obj.quadCount << " triangoli=" << obj.triangleCount
                   << " errore=" << obj.error.toStdString() << std::endl;
+        std::cout << "raffinamento STL: " << stl.usedOptions.maxEdgeLength << " " << stl.usedOptions.deflection << " " << stl.usedOptions.angle
+                  << " tentativi=" << stl.tessellationAttempts << "\nraffinamento OBJ: " << obj.usedOptions.maxEdgeLength << " "
+                  << obj.usedOptions.deflection << " " << obj.usedOptions.angle << " tentativi=" << obj.tessellationAttempts << std::endl;
         require(stl.error.isEmpty() && obj.error.isEmpty(), "costruzione mesh del documento");
         if (args.size() > 4) require(saveQuadObj(args.at(4), obj.data).isEmpty(), "salvataggio OBJ diagnostico");
     }
@@ -5910,6 +6044,11 @@ int main(int argc, char **argv) {
     QTemporaryDir settings;
     QSettings::setDefaultFormat(QSettings::IniFormat);
     QSettings::setPath(QSettings::IniFormat, QSettings::UserScope, settings.path());
+    if (app.arguments().contains(QStringLiteral("--mesh-export-tests"))) {
+        try { ViewportInteractionTest::meshExportAutomatic(); }
+        catch (const std::exception &e) { std::cerr << e.what() << std::endl; return 1; }
+        return 0;
+    }
     if (app.arguments().contains(QStringLiteral("--sketch-reference-workflow"))) {
         try { ViewportInteractionTest::sketchReferenceWorkflow(); ViewportInteractionTest::derivedCurveEntity(); ViewportInteractionTest::associativeOffset(); ViewportInteractionTest::inwardOffsetAndProjection(); }
         catch(const std::exception &e) { std::cerr<<e.what()<<std::endl;return 1; }
@@ -5942,6 +6081,12 @@ int main(int argc, char **argv) {
     }
     if (app.arguments().contains(QStringLiteral("--profile-sketch-interaction"))) {
         try { ViewportInteractionTest::profileSketchInteraction(app.arguments().value(app.arguments().indexOf(QStringLiteral("--profile-sketch-interaction"))+1)); }
+        catch (const std::exception &e) { std::cerr << e.what() << std::endl; return 1; }
+        return 0;
+    }
+    if (app.arguments().contains(QStringLiteral("--bench-blend-edit"))) {
+        const int argument = app.arguments().indexOf(QStringLiteral("--bench-blend-edit"));
+        try { ViewportInteractionTest::benchmarkBlendEdit(app.arguments().value(argument + 1), app.arguments().value(argument + 2).toInt()); }
         catch (const std::exception &e) { std::cerr << e.what() << std::endl; return 1; }
         return 0;
     }

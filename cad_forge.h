@@ -176,7 +176,7 @@ void forgeSurfaceConstructionCurves(const Kernel::Body &body, BodyDisplay &displ
 // Visualizzazione locale del raccordo: solo le superfici nuove rispetto alla
 // base, con i loro bordi e le isoparametriche. Il B-rep completo resta separato.
 void forgeBlendPreviewDisplay(const Kernel::Body &base, const Kernel::Body &result, int quality,
-                              BodyDisplay &display, int divisions = 4);
+                              BodyDisplay &display, int divisions = 4, const BodyDisplay *existingDisplay = nullptr);
 // Visualizzazione locale di un'estrusione fusa o sottratta: solo le facce del
 // risultato che non appartenevano ai corpi modificati. Questi possono cosi'
 // restare opachi sotto la patch dell'anteprima.
