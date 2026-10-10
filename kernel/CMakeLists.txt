@@ -83,6 +83,8 @@ add_library(forgekernel STATIC
     fk_fill.cpp
     fk_project.h
     fk_project.cpp
+    fk_thicken.h
+    fk_thicken.cpp
     fk_shell.h
     fk_shell.cpp
     fk_transform.h
@@ -170,6 +172,7 @@ add_executable(forgekernel_tests
     tests/test_boundary.cpp
     tests/test_fill.cpp
     tests/test_project.cpp
+    tests/test_thicken.cpp
     tests/test_shell.cpp
     tests/test_loft_surfaces.cpp
     tests/test_sweep_surfaces.cpp

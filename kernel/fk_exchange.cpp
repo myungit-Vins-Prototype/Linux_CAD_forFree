@@ -424,6 +424,55 @@ Body assembleBody(const RawModel &input, bool solid, std::vector<std::string> *n
             if (body.edge(e).tolerance > 0.0) body.vertex(v).tolerance = std::max(body.vertex(v).tolerance, body.edge(e).tolerance);
     if (worst > 1e-6) note("edge tolleranti fino a " + std::to_string(worst) + " (precisione del file)");
     int missing = computePCurves(body);
+    // Gli edge con piu' di 64 tratti si misurano sopra con pochi campioni, che
+    // possono cadere tutti nei punti esatti (i nodi di una curva tracciata) e
+    // non vedere lo scarto tra l'uno e l'altro: l'SP-curve si cerca allora
+    // entro la risoluzione e non si trova. Per gli edge senza SP-curve lo
+    // scarto si rimisura con campioni in ogni tratto e si riprova.
+    if (missing > 0) {
+        bool raised = false;
+        std::vector<EdgeId> failed;
+        for (FinId f : body.fins())
+            if (!body.fin(f).pcurve && std::find(failed.begin(), failed.end(), body.fin(f).edge) == failed.end()) failed.push_back(body.fin(f).edge);
+        for (EdgeId e : failed) {
+            Edge &edge = body.edge(e);
+            std::vector<double> breaks = edge.curve->breakpoints(edge.range);
+            if (breaks.size() < 2) breaks = {edge.range.lo, edge.range.hi};
+            const std::size_t spans = breaks.size() - 1;
+            const int perSpan = int(std::max<std::size_t>(2, std::min<std::size_t>(16, 4096 / spans)));
+            double deviation = 0.0;
+            for (FinId fin : {edge.forward, edge.backward}) {
+                if (!fin.valid()) continue;
+                const Surface &surface = *body.face(body.finFace(fin)).surface;
+                // Anche nei nodi della curva: lo scarto puo' essere un picco proprio li'.
+                for (std::size_t b = 0; b < spans; ++b)
+                    for (int k = 0; k <= perSpan; ++k)
+                        deviation = std::max(deviation, projectPoint(surface, edge.curve->point(breaks[b] + (breaks[b + 1] - breaks[b]) * k / perSpan)).distance);
+            }
+            if (deviation > 1e-7 && 1.5 * deviation > edge.tolerance) {
+                edge.tolerance = 1.5 * deviation;
+                for (VertexId v : {body.edgeStart(e), body.edgeEnd(e)}) body.vertex(v).tolerance = std::max(body.vertex(v).tolerance, edge.tolerance);
+                worst = std::max(worst, deviation);
+                raised = true;
+            }
+        }
+        if (raised) missing = computePCurves(body);
+        // Curve che stanno sulla superficie ma la cui SP-curve non scende alla
+        // risoluzione (inversioni al limite dell'arrotondamento su superfici
+        // con centinaia di tratti): edge tollerante 1e-6 e un ultimo tentativo.
+        if (missing > 0) {
+            bool loosened = false;
+            for (FinId f : body.fins())
+                if (!body.fin(f).pcurve) {
+                    Edge &edge = body.edge(body.fin(f).edge);
+                    if (edge.tolerance < 1e-6) {
+                        edge.tolerance = 1e-6;
+                        loosened = true;
+                    }
+                }
+            if (loosened) missing = computePCurves(body);
+        }
+    }
     if (missing > 0 && reorientSpheres(body)) missing = computePCurves(body);
     if (missing > 0) throw std::domain_error(std::to_string(missing) + " SP-curve non calcolabili");
     if (const int flipped = repairFaceSenses(body))

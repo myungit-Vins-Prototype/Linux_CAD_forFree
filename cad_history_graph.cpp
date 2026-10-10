@@ -237,6 +237,7 @@ QString featureType(const ExtrusionObject &feature) {
     case BodyFeature::Shell: return QStringLiteral("Guscio");
     case BodyFeature::Thread: return QStringLiteral("Filettatura");
     case BodyFeature::ProjectedCurve: return QStringLiteral("Curva proiettata");
+    case BodyFeature::Thicken: return QStringLiteral("Spessore");
     }
     return QStringLiteral("Feature");
 }
@@ -375,6 +376,12 @@ QVector<Dependency> dependencies(int index, const DocumentState &document) {
     case BodyFeature::Draft:
         addBodyDependency(result, features, index, feature.firstBody, QStringLiteral("%1 facce • %2°").arg(feature.offsetFaces.size()).arg(feature.draftAngle));
         addGeometryDependency(result, feature.draftNeutral, sketches, features, index, QStringLiteral("piano neutro"));
+        break;
+    case BodyFeature::Thicken:
+        addBodyDependency(result, features, index, feature.firstBody,
+                          QStringLiteral("superficie • spessore %1%2").arg(feature.distance)
+                              .arg(feature.offsetFaces.isEmpty() ? QString() : QStringLiteral(" • %1 facce").arg(feature.offsetFaces.size())));
+        if (feature.thickenDirection.kind >= 0) addGeometryDependency(result, feature.thickenDirection, sketches, features, index, QStringLiteral("direzione"));
         break;
     case BodyFeature::ProjectedCurve:
         addBodyDependency(result, features, index, feature.firstBody, QStringLiteral("corpo"));

@@ -294,10 +294,15 @@ struct BodyDisplay {
 // lungo la normale e resta la parte che contiene trimKeep.
 // ProjectedCurve: le entita' dello schizzo sketchIndex proiettate sul corpo
 // firstBody (curve 3D, una per catena continua: `curves`).
+// Thicken: spessore `distance` delle facce offsetFaces del corpo firstBody
+// (vuoto: tutta la superficie, che diventa un solido nello stesso corpo
+// logico; altrimenti un corpo nuovo), lungo la normale o lungo la direzione
+// del riferimento thickenDirection (retta o normale di un piano/faccia);
+// thickenSide 0 nel verso, 1 nel verso opposto, 2 meta' per parte (fk_thicken).
 enum class BodyFeature { Extrusion = 0, Revolution = 1, Primitive = 2, Blend = 3, SheetTrim = 4, SheetExtend = 5, Scale = 6, Helix = 7, Sweep = 8, Loft = 9,
                          Imported = 10, DatumPlane = 11, Pattern = 12, Transform = 13, SurfaceOffset = 14, Sew = 15, Ruled = 16, PlanarSurface = 17,
                          DeleteFace = 18, BoundarySurface = 19, Shell = 20, Thread = 21, FillSurface = 22, Draft = 23,
-                         ProjectedCurve = 24 };
+                         ProjectedCurve = 24, Thicken = 25 };
 
 // Riferimento leggero a una sotto-entita' del B-rep. `subshape` e' l'ID
 // topologico al momento della scelta, `geometry` il tipo di curva/superficie.
@@ -645,6 +650,9 @@ struct ExtrusionObject {
     bool trimProject = false;
     int projectionMode = 0;
     bool projectionReverse = false;
+    // Thicken: lato dello spessore e direzione (kind < 0: la normale delle facce).
+    int thickenSide = 0;
+    GeometryRef thickenDirection;
     bool offsetSew = true;  // estendi/rifila le facce adiacenti prima di cucirle
     // DeleteFace multi-risultato: -1 = tutte le componenti (file storici),
     // altrimenti la componente connessa esposta da questo corpo logico.

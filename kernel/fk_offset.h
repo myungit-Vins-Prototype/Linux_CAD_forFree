@@ -66,7 +66,12 @@ struct OffsetResult {
 // un numero di worker limitato ai core; la topologia finale viene assemblata in
 // ordine deterministico dopo il completamento di ciascuna fase.
 // std::domain_error se una faccia degenera.
-OffsetResult offsetFaces(const Body &body, const std::vector<FaceId> &faces, double distance, double tolerance = 1e-7, bool preserveSeams = false);
+// `joinAngle` > 0: gli edge con le normali delle due facce entro questo
+// angolo (radianti) restano condivisi come quelli tangenti, con la normale
+// media; l'edge a distanza diventa tollerante per lo scarto misurato (le pieghe
+// piccole di uno sweep lungo una spline solo C1). 0: solo gli edge tangenti.
+OffsetResult offsetFaces(const Body &body, const std::vector<FaceId> &faces, double distance, double tolerance = 1e-7, bool preserveSeams = false,
+                         double joinAngle = 0.0);
 
 }
 

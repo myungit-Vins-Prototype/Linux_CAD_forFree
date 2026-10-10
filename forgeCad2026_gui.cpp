@@ -104,6 +104,7 @@
 #include <QStatusBar>
 #include <QStringList>
 #include <QToolBar>
+#include "toolbar_editor.h"
 #include <QToolButton>
 #include <QTimer>
 #include <QStyledItemDelegate>
@@ -192,6 +193,7 @@ static QString featureIconName(const ExtrusionObject &body) {
     if (body.feature == BodyFeature::DeleteFace) return QStringLiteral("deleteFace");
     if (body.feature == BodyFeature::Draft) return QStringLiteral("draft");
     if (body.feature == BodyFeature::ProjectedCurve) return QStringLiteral("projectedCurve");
+    if (body.feature == BodyFeature::Thicken) return QStringLiteral("thicken");
     if (body.feature == BodyFeature::Shell) return QStringLiteral("shell");
     if (body.feature == BodyFeature::Thread) return QStringLiteral("thread");
     if (body.feature == BodyFeature::BoundarySurface) return QStringLiteral("boundarySurface");
@@ -945,6 +947,7 @@ public:
             remapRef(feature.move.axis);
             remapRef(feature.revolveAxisRef);
             remapRef(feature.draftNeutral);
+            remapRef(feature.thickenDirection);
         }
 
         for (const ExtrusionObject &feature : reordered)
@@ -965,7 +968,8 @@ public:
                     || feature.feature == BodyFeature::SheetExtend || feature.feature == BodyFeature::Scale
                     || (feature.feature == BodyFeature::Transform && !feature.move.copy) || feature.feature == BodyFeature::Pattern
                     || feature.feature == BodyFeature::Sew || feature.feature == BodyFeature::DeleteFace
-                    || feature.feature == BodyFeature::Draft || feature.feature == BodyFeature::Shell || feature.feature == BodyFeature::Thread) {
+                    || feature.feature == BodyFeature::Draft || feature.feature == BodyFeature::Shell || feature.feature == BodyFeature::Thread
+                    || (feature.feature == BodyFeature::Thicken && feature.offsetFaces.isEmpty())) {
                     feature.firstBody = previous;
                 } else if (mergingFeature(feature) && feature.mergeOperation != 0) {
                     bool replaced = false;
@@ -1924,6 +1928,7 @@ public:
             if (isSketchRef(body.move.axis)) renumber(body.move.axis.index);
             if (isSketchRef(body.revolveAxisRef)) renumber(body.revolveAxisRef.index);
             if (isSketchRef(body.draftNeutral)) renumber(body.draftNeutral.index);
+            if (isSketchRef(body.thickenDirection)) renumber(body.thickenDirection.index);
         }
         if (activeSketch_ == index) activeSketch_ = -1;
         else if (activeSketch_ > index) --activeSketch_;
@@ -4736,6 +4741,7 @@ protected:
             remap(body.move.axis);
             remap(body.revolveAxisRef);
             remap(body.draftNeutral);
+            remap(body.thickenDirection);
         }
     }
 
@@ -6835,6 +6841,7 @@ private:
             if (isBodyRef(body.move.axis)) body.move.axis.index = map.value(body.move.axis.index, -1);
             if (isBodyRef(body.revolveAxisRef)) body.revolveAxisRef.index = map.value(body.revolveAxisRef.index, -1);
             if (isBodyRef(body.draftNeutral)) body.draftNeutral.index = map.value(body.draftNeutral.index, -1);
+            if (isBodyRef(body.thickenDirection)) body.thickenDirection.index = map.value(body.thickenDirection.index, -1);
             // Strumenti e corpi fusi eliminati: escono dall'elenco.
             for (QVector<int> *list : {&body.booleanTools, &body.mergeBodies}) {
                 QVector<int> kept2;
@@ -6989,6 +6996,11 @@ private:
             if (body.revolveAxis == kRevolveAxisReference && isBodyRef(body.revolveAxisRef)) bodies.append(body.revolveAxisRef.index);
             return bodies;
         }
+        case BodyFeature::Thicken: {
+            QVector<int> refs{body.firstBody};
+            if (isBodyRef(body.thickenDirection) && !refs.contains(body.thickenDirection.index)) refs.append(body.thickenDirection.index);
+            return refs;
+        }
         case BodyFeature::Draft: {
             QVector<int> refs{body.firstBody};
             if (isBodyRef(body.draftNeutral) && !refs.contains(body.draftNeutral.index)) refs.append(body.draftNeutral.index);
@@ -7058,6 +7070,7 @@ private:
                 return {body.sketchIndex, body.revolveAxisRef.index};
             return {body.sketchIndex};
         case BodyFeature::Draft: return isSketchRef(body.draftNeutral) ? QVector<int>{body.draftNeutral.index} : QVector<int>{};
+        case BodyFeature::Thicken: return isSketchRef(body.thickenDirection) ? QVector<int>{body.thickenDirection.index} : QVector<int>{};
         case BodyFeature::Transform: return isSketchRef(body.move.axis) ? QVector<int>{body.move.axis.index} : QVector<int>{};
         case BodyFeature::Helix: return body.helix.source == 0 ? QVector<int>{body.sketchIndex} : QVector<int>{};
         case BodyFeature::SheetTrim: return body.sketchIndex >= 0 ? QVector<int>{body.sketchIndex} : QVector<int>{};
@@ -7291,6 +7304,28 @@ private:
                 if (!neutral.hasPlane) { body.error = QStringLiteral("Scegli un piano neutro o una faccia piana."); return; }
                 body.forgeBody = ForgeCad::forgeDraft(base->forgeBody, body.offsetFaces, neutral.point,
                     neutral.direction * (body.draftReverse ? -1.0 : 1.0), body.draftAngle, &body.error);
+                body.solid = body.forgeBody && !body.forgeBody->isSheet();
+                return;
+            }
+            case BodyFeature::Thicken: {
+                const ExtrusionObject *base = operand(body.firstBody);
+                if (!base || !isShapeBody(*base)) {
+                    body.error = QStringLiteral("La superficie da ispessire non esiste piu'.");
+                    return;
+                }
+                ForgeCad::Kernel::Vec3 direction;
+                const ForgeCad::Kernel::Vec3 *along = nullptr;
+                if (body.thickenDirection.kind >= 0) {
+                    ForgeCad::ResolvedRef resolved;
+                    if (!ForgeCad::resolveGeometryRef(body.thickenDirection, index, sketches, bodies, resolved, &body.error)) return;
+                    if (!resolved.hasLine && !resolved.hasPlane) {
+                        body.error = QStringLiteral("La direzione dello spessore deve essere una retta, un asse, un piano o una faccia piana.");
+                        return;
+                    }
+                    direction = resolved.direction;  // retta: la sua direzione; piano: la normale
+                    along = &direction;
+                }
+                body.forgeBody = ForgeCad::forgeThicken(base->forgeBody, body.offsetFaces, body.distance, body.thickenSide, along, &body.error);
                 body.solid = body.forgeBody && !body.forgeBody->isSheet();
                 return;
             }
@@ -11426,6 +11461,8 @@ private:
         ref(d.revolveAxisRef);
         ref(d.draftNeutral);
         parts << n(d.draftAngle) << QString::number(d.draftReverse);
+        parts << QStringLiteral("TK") << QString::number(d.thickenSide);
+        ref(d.thickenDirection);
         parts << QStringLiteral("PJ") << QString::number(d.trimProject) << QString::number(d.projectionMode) << QString::number(d.projectionReverse);
         // Offset e cucitura; loft e sweep di superficie, rigata e planare.
         parts << QStringLiteral("O") << QString::number(d.offsetSew);
@@ -16568,6 +16605,240 @@ static bool projectionDialog(QMainWindow *window, CadViewport *viewport, const Q
     return runModeless(window, viewport, dialog);
 }
 
+// Spessore (Thicken): superficie (o facce scelte di un corpo), spessore, lato
+// e direzione (normale delle facce, un asse o un riferimento della vista).
+static bool thickenDialog(QMainWindow *window, CadViewport *viewport, const QString &title, int replaced, const ExtrusionObject &initial,
+                          const std::function<QString(const ExtrusionObject &)> &apply) {
+    QVector<int> candidates = viewport->resultBodiesBefore(replaced);
+    candidates.erase(std::remove_if(candidates.begin(), candidates.end(), [&](int i) { return !viewport->extrusions().at(i).forgeBody; }), candidates.end());
+    if (initial.firstBody >= 0 && initial.firstBody < viewport->extrusions().size() && viewport->extrusions().at(initial.firstBody).forgeBody
+        && (replaced < 0 || initial.firstBody < replaced) && !candidates.contains(initial.firstBody))
+        candidates.append(initial.firstBody);
+    if (candidates.isEmpty()) {
+        QMessageBox::information(window, title, QStringLiteral("Crea prima una superficie da ispessire."));
+        return false;
+    }
+    ExtrusionObject definition = initial;
+    definition.operation = -1;
+    definition.feature = BodyFeature::Thicken;
+    if (!candidates.contains(definition.firstBody)) {
+        // Di partenza l'ultima superficie, altrimenti l'ultimo corpo.
+        definition.firstBody = candidates.last();
+        for (int i : candidates)
+            if (viewport->extrusions().at(i).forgeBody->isSheet()) definition.firstBody = i;
+    }
+    if (!(definition.distance > 0.0)) definition.distance = 1.0;
+    FunctionDialogPanel dialog(window);
+    dialog.setWindowTitle(title);
+    auto *form = dialog.createScrollableForm();
+    auto *bodyBox = new QComboBox(&dialog);
+    for (int i : candidates) bodyBox->addItem(logicalBodyLabel(viewport, i));
+    bodyBox->setCurrentIndex(candidates.indexOf(definition.firstBody));
+    auto *faces = new QPushButton(QStringLiteral("Scegli facce"), &dialog);
+    faces->setCheckable(true);
+    auto *all = new QPushButton(QStringLiteral("Tutta la superficie"), &dialog);
+    auto *faceCount = new QLabel(&dialog);
+    auto *thickness = new ForgeCad::ExpressionSpinBox(&dialog);
+    thickness->setDecimals(6);
+    thickness->setRange(1e-6, 1e6);
+    thickness->setValue(definition.distance);
+    thickness->setKeyboardTracking(false);
+    auto *sideBox = new QComboBox(&dialog);
+    sideBox->addItems({QStringLiteral("Nel verso della direzione"), QStringLiteral("Nel verso opposto"), QStringLiteral("Meta' per parte")});
+    sideBox->setCurrentIndex(qBound(0, definition.thickenSide, 2));
+    auto *directionBox = new QComboBox(&dialog);
+    directionBox->addItems({QStringLiteral("Normale della superficie"), QStringLiteral("Asse X"), QStringLiteral("Asse Y"), QStringLiteral("Asse Z"),
+                            QStringLiteral("Riferimento nella vista")});
+    const GeometryRef &startDirection = definition.thickenDirection;
+    directionBox->setCurrentIndex(startDirection.kind < 0 ? 0 : startDirection.kind == 2 ? 1 + qBound(0, startDirection.index, 2) : 4);
+    auto *directionPick = new QPushButton(QStringLiteral("Scegli retta, piano o faccia"), &dialog);
+    directionPick->setCheckable(true);
+    auto *directionLabel = new QLabel(&dialog);
+    directionLabel->setWordWrap(true);
+    directionLabel->setMaximumWidth(360);
+    auto *status = new QLabel(&dialog);
+    status->setWordWrap(true);
+    status->setMaximumWidth(360);
+    form->addRow(QStringLiteral("Corpo:"), bodyBox);
+    form->addRow(QStringLiteral("Facce:"), faces);
+    form->addRow(faceCount);
+    form->addRow(all);
+    form->addRow(QStringLiteral("Spessore:"), thickness);
+    form->addRow(QStringLiteral("Direzione:"), directionBox);
+    form->addRow(directionPick);
+    form->addRow(directionLabel);
+    form->addRow(QStringLiteral("Lato:"), sideBox);
+    form->addRow(wrappedNote(QStringLiteral("Lungo la normale: superficie a distanza e pareti lungo la normale ai bordi; le facce devono essere unite da "
+                                            "spigoli tangenti e lo spessore non puo' superare il raggio di curvatura. Lungo una direzione (asse, retta, "
+                                            "normale di un piano o di una faccia piana): copia traslata e pareti estruse, esatte, anche con spigoli vivi; "
+                                            "ogni retta parallela alla direzione deve incontrare la superficie una volta sola. Tutta la superficie diventa "
+                                            "un solido nello stesso corpo; facce scelte di un corpo danno un corpo nuovo."), &dialog));
+    form->addRow(status);
+    auto *buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dialog);
+    form->addRow(buttons);
+    PreviewScope scope(viewport, dialog, form, replaced);
+    int picking = 0;  // 1 facce, 2 direzione
+    const auto current = [&] {
+        ExtrusionObject d = definition;
+        d.firstBody = candidates.at(bodyBox->currentIndex());
+        d.distance = thickness->value();
+        d.thickenSide = sideBox->currentIndex();
+        return d;
+    };
+    const auto refresh = [&] {
+        faceCount->setText(definition.offsetFaces.isEmpty() ? QStringLiteral("tutta la superficie")
+                                                            : QStringLiteral("%1 facce scelte").arg(definition.offsetFaces.size()));
+        faces->setChecked(picking == 1);
+        directionPick->setChecked(picking == 2);
+        directionPick->setVisible(directionBox->currentIndex() == 4);
+        directionLabel->setText(definition.thickenDirection.kind < 0 ? QStringLiteral("normale delle facce")
+                                                                     : ForgeCad::geometryRefText(definition.thickenDirection, viewport->sketches(), viewport->extrusions()));
+        QVector<GeometryRef> marks;
+        for (const EdgePoint &point : definition.offsetFaces) {
+            GeometryRef r;
+            r.kind = 5;
+            r.index = candidates.at(bodyBox->currentIndex());
+            r.point = point;
+            marks.append(r);
+        }
+        if (definition.thickenDirection.kind >= 0) marks.append(definition.thickenDirection);
+        viewport->setReferenceMarks(marks);
+        if (picking) {
+            scope.label->setText(QStringLiteral("termina la scelta per vedere l'anteprima"));
+            viewport->clearPreview();
+            return;
+        }
+        if (directionBox->currentIndex() == 4 && definition.thickenDirection.kind < 0) {
+            scope.label->setText(QStringLiteral("scegli la direzione nella vista"));
+            viewport->clearPreview();
+            return;
+        }
+        scope.request(current());
+    };
+    const auto beginPick = [&](int mode) {
+        viewport->cancelReferencePick();
+        picking = mode;
+        const int roles = mode == 1 ? ForgeCad::DatumRoleFace : ForgeCad::DatumRoleLine | ForgeCad::DatumRolePlane | ForgeCad::DatumRoleFace;
+        const QString error = viewport->beginReferencePick(roles, replaced);
+        if (!error.isEmpty()) {
+            picking = 0;
+            status->setText(error);
+        } else {
+            status->setText(mode == 1 ? QStringLiteral("Clicca le facce; un secondo clic le toglie. Esc termina la scelta.")
+                                      : QStringLiteral("Clicca una retta, un asse, un piano o una faccia piana: la direzione e' la retta o la normale."));
+        }
+        refresh();
+    };
+    viewport->setReferencePickCallback([&](bool picked, GeometryRef ref) {
+        const int mode = picking;
+        picking = 0;
+        if (!picked) {
+            status->clear();
+            refresh();
+            return;
+        }
+        if (mode == 2) {
+            ForgeCad::ResolvedRef resolved;
+            QString error;
+            if (ForgeCad::resolveGeometryRef(ref, replaced < 0 ? viewport->extrusions().size() : replaced, viewport->sketches(), viewport->extrusions(),
+                                             resolved, &error)
+                && (resolved.hasLine || resolved.hasPlane)) {
+                definition.thickenDirection = ref;
+                status->clear();
+            } else {
+                status->setText(error.isEmpty() ? QStringLiteral("Il riferimento deve essere una retta, un piano o una faccia piana.") : error);
+            }
+        } else if (mode == 1) {
+            const int body = ref.kind == 5 ? resultBodyForPick(viewport, candidates, ref.index) : -1;
+            if (body != candidates.at(bodyBox->currentIndex())) {
+                status->setText(QStringLiteral("Scegli una faccia del corpo indicato nel pannello."));
+            } else {
+                const auto &shape = *viewport->extrusions().at(body).forgeBody;
+                const auto face = ForgeCad::resolveFaceReference(shape, ref.point, 1e-6);
+                int existing = -1;
+                for (int i = 0; i < definition.offsetFaces.size(); ++i)
+                    if (ForgeCad::resolveFaceReference(shape, definition.offsetFaces.at(i), 1e-6) == face) existing = i;
+                if (face.valid()) {
+                    if (existing >= 0) definition.offsetFaces.remove(existing);
+                    else definition.offsetFaces.append(ref.point);
+                }
+            }
+            // Scelta continua: l'anteprima parte alla fine.
+            picking = 1;
+            const QString error = viewport->beginReferencePick(ForgeCad::DatumRoleFace, replaced);
+            if (!error.isEmpty()) {
+                picking = 0;
+                status->setText(error);
+            }
+        }
+        refresh();
+    });
+    QObject::connect(faces, &QPushButton::clicked, &dialog, [&] {
+        if (picking == 1) {
+            viewport->cancelReferencePick();
+            picking = 0;
+            status->clear();
+            refresh();
+        } else {
+            beginPick(1);
+        }
+    });
+    QObject::connect(directionPick, &QPushButton::clicked, &dialog, [&] {
+        if (picking == 2) {
+            viewport->cancelReferencePick();
+            picking = 0;
+            refresh();
+        } else {
+            beginPick(2);
+        }
+    });
+    QObject::connect(all, &QPushButton::clicked, &dialog, [&] {
+        definition.offsetFaces.clear();
+        refresh();
+    });
+    QObject::connect(bodyBox, &QComboBox::currentIndexChanged, &dialog, [&] {
+        viewport->cancelReferencePick();
+        picking = 0;
+        definition.offsetFaces.clear();
+        refresh();
+    });
+    QObject::connect(directionBox, &QComboBox::currentIndexChanged, &dialog, [&] {
+        const int index = directionBox->currentIndex();
+        if (index == 4) {
+            beginPick(2);
+            return;
+        }
+        viewport->cancelReferencePick();
+        picking = 0;
+        definition.thickenDirection = {};
+        if (index >= 1) {
+            definition.thickenDirection.kind = 2;
+            definition.thickenDirection.index = index - 1;
+        }
+        refresh();
+    });
+    QObject::connect(thickness, &QDoubleSpinBox::valueChanged, &dialog, refresh);
+    QObject::connect(sideBox, &QComboBox::currentIndexChanged, &dialog, refresh);
+    QObject::connect(buttons, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
+    QObject::connect(buttons, &QDialogButtonBox::accepted, &dialog, [&] {
+        viewport->cancelReferencePick();
+        picking = 0;
+        if (directionBox->currentIndex() == 4 && definition.thickenDirection.kind < 0) {
+            status->setText(QStringLiteral("Scegli la direzione nella vista."));
+            return;
+        }
+        const QString error = apply(current());
+        if (error.isEmpty()) dialog.accept();
+        else status->setText(error);
+    });
+    QTimer::singleShot(0, &dialog, refresh);
+    const bool accepted = runModeless(window, viewport, dialog);
+    viewport->cancelReferencePick();
+    viewport->setReferencePickCallback(nullptr);
+    viewport->setReferenceMarks({});
+    return accepted;
+}
+
 static bool offsetDialog(QMainWindow *window, CadViewport *viewport, const QString &title, int replaced, const ExtrusionObject &initial,
                          const std::function<QString(const ExtrusionObject &)> &apply) {
     const QVector<ExtrusionObject> &bodies = viewport->extrusions();
@@ -19232,6 +19503,8 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
                        [&](const ExtrusionObject &values) { return update(values); });
         } else if (original.feature == BodyFeature::Draft) {
             draftDialog(this, viewport, QStringLiteral("Modifica sformo"), index, original, [&](const ExtrusionObject &values) { return update(values); });
+        } else if (original.feature == BodyFeature::Thicken) {
+            thickenDialog(this, viewport, QStringLiteral("Modifica spessore"), index, original, [&](const ExtrusionObject &values) { return update(values); });
         } else if (original.feature == BodyFeature::ProjectedCurve) {
             projectionDialog(this, viewport, QStringLiteral("Modifica curva proiettata"), index, original,
                              [&](const ExtrusionObject &values) { return update(values); });
@@ -19909,6 +20182,8 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
     QAction *fillSurfaceAction = surfaceMenu->addAction(QStringLiteral("Superficie di riempimento..."));
     fillSurfaceAction->setToolTip(QStringLiteral("Superficie in un contorno chiuso che passa per curve guida e continua in tangenza o "
                                                  "curvatura le facce adiacenti"));
+    QAction *thickenAction = surfaceMenu->addAction(QStringLiteral("Spessore..."));
+    thickenAction->setToolTip(QStringLiteral("Da' spessore a una superficie (o a facce scelte) lungo la normale o lungo una direzione scelta"));
     QAction *projectedCurveAction = surfaceMenu->addAction(QStringLiteral("Curva proiettata..."));
     projectedCurveAction->setToolTip(QStringLiteral("Curve 3D: lo schizzo proiettato lungo la normale del suo piano sulla prima faccia del corpo"));
     QAction *planarSurfaceAction = surfaceMenu->addAction(QStringLiteral("Superficie planare..."));
@@ -20678,6 +20953,30 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
             return viewport->createBody(result);
         });
     });
+    connect(thickenAction, &QAction::triggered, this, [this, viewport] {
+        if (viewport->sketchModeActive()) viewport->endSketchMode();
+        ExtrusionObject definition;
+        definition.feature = BodyFeature::Thicken;
+        definition.distance = 1.0;
+        // Di partenza la superficie selezionata (tutta) o il corpo e la faccia selezionati.
+        int body = -1;
+        EdgePoint face;
+        if (viewport->selectedFaceReference(body, face)) {
+            definition.firstBody = body;
+            const ExtrusionObject &chosen = viewport->extrusions().at(body);
+            if (!(chosen.forgeBody && chosen.forgeBody->isSheet())) definition.offsetFaces = {face};
+        } else if (viewport->selection().kind == SceneObjectKind::Extrusion) {
+            definition.firstBody = viewport->selection().index;
+        }
+        thickenDialog(this, viewport, QStringLiteral("Spessore"), -1, definition, [viewport](const ExtrusionObject &d) {
+            ExtrusionObject result = d;
+            int count = 1;
+            for (const ExtrusionObject &other : viewport->extrusions()) count += other.feature == BodyFeature::Thicken ? 1 : 0;
+            result.name = QStringLiteral("Spessore %1").arg(count);
+            result.plane = viewport->extrusions().value(d.firstBody).plane;
+            return viewport->createBody(result);
+        });
+    });
     connect(projectedCurveAction, &QAction::triggered, this, [this, viewport] {
         if (viewport->sketchModeActive()) viewport->endSketchMode();
         ExtrusionObject definition;
@@ -21425,7 +21724,7 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
         {rebuildAction, QStringLiteral("rebuild")},
         {newSketchAction, QStringLiteral("newSketch")}, {faceSketchAction, QStringLiteral("faceSketch")},
         {extrudeAction, QStringLiteral("extrude")}, {revolveAction, QStringLiteral("revolve")},
-        {filletAction, QStringLiteral("fillet")}, {chamferAction, QStringLiteral("chamfer")}, {draftAction, QStringLiteral("draft")}, {projectedCurveAction, QStringLiteral("projectedCurve")}, {shellAction, QStringLiteral("shell")}, {threadAction, QStringLiteral("thread")},
+        {filletAction, QStringLiteral("fillet")}, {chamferAction, QStringLiteral("chamfer")}, {draftAction, QStringLiteral("draft")}, {thickenAction, QStringLiteral("thicken")}, {projectedCurveAction, QStringLiteral("projectedCurve")}, {shellAction, QStringLiteral("shell")}, {threadAction, QStringLiteral("thread")},
         {trimSurfaceAction, QStringLiteral("trimSurface")}, {extendSurfaceAction, QStringLiteral("extendSurface")},
         {offsetSurfaceAction, QStringLiteral("offsetSurface")}, {sewSurfacesAction, QStringLiteral("sewSurfaces")},
         {deleteFaceAction, QStringLiteral("deleteFace")}, {boundarySurfaceAction, QStringLiteral("boundarySurface")}, {fillSurfaceAction, QStringLiteral("fillSurface")},
@@ -21487,7 +21786,9 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
     const auto iconBar = [this](const QString &title, const QString &name) {
         auto *bar = addToolBar(title);
         bar->setObjectName(name);
-        bar->setMovable(false);
+        bar->setProperty("toolbarManagedVisibility", true);
+        bar->setMovable(!QSettings().value(QStringLiteral("toolbar/locked"), false).toBool());
+        bar->setFloatable(bar->isMovable());
         bar->setIconSize(QSize(24, 24));
         bar->setToolButtonStyle(Qt::ToolButtonIconOnly);
         return bar;
@@ -21502,9 +21803,6 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
     toolbar->addAction(extrudeAction); toolbar->addAction(revolveAction);
     flyout(toolbar, primitiveActions, QStringLiteral("Primitive: la freccia per le altre"));
     toolbar->addAction(filletAction); toolbar->addAction(chamferAction); toolbar->addAction(draftAction); toolbar->addAction(shellAction); toolbar->addAction(threadAction);
-    flyout(toolbar, {trimSurfaceAction, extendSurfaceAction, offsetSurfaceAction, deleteFaceAction, ruledSurfaceAction, boundarySurfaceAction, fillSurfaceAction, planarSurfaceAction, loftSurfaceAction,
-                     sweepSurfaceAction, sewSurfacesAction},
-           QStringLiteral("Superfici: la freccia per gli altri comandi"));
     toolbar->addAction(moveAction);
     toolbar->addAction(scaleAction);
     flyout(toolbar, {linearPatternAction, circularPatternAction, mirrorAction}, QStringLiteral("Ripetizioni: la freccia per le altre"));
@@ -21517,8 +21815,7 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
     toolbar->addAction(sectionAction);
     flyout(toolbar, *viewActions, QStringLiteral("Viste standard: la freccia per le altre"));
     flyout(toolbar, {modeMenu->actions().at(2), modeMenu->actions().at(1), modeMenu->actions().at(0)}, QStringLiteral("Stile di visualizzazione"));
-    auto *spacer = new QWidget(toolbar); spacer->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred); toolbar->addWidget(spacer);
-    toolbar->addWidget(new QLabel(QStringLiteral("  %1 / Part Studio  ").arg(QGuiApplication::applicationDisplayName())));
+    statusBar()->addPermanentWidget(new QLabel(QStringLiteral("  %1 / Part Studio  ").arg(QGuiApplication::applicationDisplayName()), this));
 
     // Schizzo: in modalita' schizzo prende il posto della barra di modellazione
     // (come le schede del CommandManager di SolidWorks), cosi' ci sta anche in
@@ -21530,7 +21827,129 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
         lineModeGroup->addAction(action);
     }
     automaticConstraint->setChecked(true);
+    // Superfici: tutti i comandi come pulsanti diretti (prima erano dietro la
+    // freccia di un solo pulsante nella barra di modellazione).
+    auto *surfaceToolbar = iconBar(QStringLiteral("Superfici"), QStringLiteral("surfaceIconBar"));
+    for (QAction *action : {trimSurfaceAction, extendSurfaceAction, offsetSurfaceAction, thickenAction, deleteFaceAction, sewSurfacesAction})
+        surfaceToolbar->addAction(action);
+    surfaceToolbar->addSeparator();
+    for (QAction *action : {ruledSurfaceAction, boundarySurfaceAction, fillSurfaceAction, planarSurfaceAction, loftSurfaceAction, sweepSurfaceAction})
+        surfaceToolbar->addAction(action);
+    surfaceToolbar->addSeparator();
+    surfaceToolbar->addAction(projectedCurveAction);
+    // Barra personalizzata: i comandi scelti in Opzioni -> Personalizza barra
+    // degli strumenti (chiavi "Menu/Sottomenu/Comando" in QSettings).
+    auto *customToolbar = iconBar(QStringLiteral("Personalizzata"), QStringLiteral("customIconBar"));
+    customToolbar->setProperty("toolbarHideWhenEmpty", true);
+    const auto menuCommands = [this] {
+        QVector<QPair<QString, QAction *>> commands;
+        const std::function<void(QMenu *, const QString &)> visit = [&](QMenu *menu, const QString &path) {
+            for (QAction *action : menu->actions()) {
+                if (action->isSeparator() || action->property("toolbarConfiguration").toBool()) continue;
+                QString text = action->text();
+                text.remove(QLatin1Char('&'));
+                if (action->menu()) { visit(action->menu(), path + text + QLatin1Char('/')); continue; }
+                if (!text.isEmpty()) commands.append({path + text, action});
+            }
+        };
+        for (QAction *top : menuBar()->actions())
+            if (top->menu()) visit(top->menu(), top->text().remove(QLatin1Char('&')) + QLatin1Char('/'));
+        return commands;
+    };
+    const auto fillCustomToolbar = [customToolbar, menuCommands, flyout] {
+        // clear() removes widget actions but does not destroy them.
+        const auto oldActions = customToolbar->actions();
+        customToolbar->clear();
+        for (QAction *action : oldActions)
+            if (action->parent() == customToolbar) delete action;
+        const QStringList keys = QSettings().value(QStringLiteral("toolbar/custom")).toStringList();
+        const auto commands = menuCommands();
+        QList<QAction *> selected;
+        for (const QString &key : keys)
+            for (const auto &command : commands)
+                if (command.first == key) { selected.append(command.second); break; }
+        if (!selected.isEmpty() && QSettings().value(QStringLiteral("toolbar/customDropdown"), false).toBool()) {
+            auto *button = flyout(customToolbar, selected, QStringLiteral("Comandi personalizzati"));
+            button->setObjectName(QStringLiteral("customToolbarDropdown"));
+        } else {
+            for (QAction *action : selected) customToolbar->addAction(action);
+        }
+        ToolbarEditor::refreshVisibility(customToolbar);
+    };
+    auto *toolbarsMenu = optionsMenu->addMenu(QStringLiteral("Barre degli strumenti"));
+    toolbarsMenu->setObjectName(QStringLiteral("toolbarsMenu"));
+    toolbarsMenu->menuAction()->setProperty("toolbarConfiguration", true);
+    QAction *customizeAction = toolbarsMenu->addAction(QStringLiteral("Personalizza barra Personalizzata..."));
+    customizeAction->setProperty("toolbarConfiguration", true);
+    customizeAction->setToolTip(QStringLiteral("Sceglie i comandi dei menu da mettere nella barra Personalizzata, e il loro ordine"));
+    connect(customizeAction, &QAction::triggered, this, [this, menuCommands, fillCustomToolbar] {
+        QDialog dialog(this);
+        dialog.setWindowTitle(QStringLiteral("Personalizza barra degli strumenti"));
+        auto *layout = new QVBoxLayout(&dialog);
+        layout->addWidget(new QLabel(QStringLiteral("Spunta i comandi da mettere nella barra Personalizzata; Su e Giu' cambiano l'ordine."), &dialog));
+        auto *dropdown = new QCheckBox(QStringLiteral("Raggruppa i comandi in un menu a discesa"), &dialog);
+        dropdown->setChecked(QSettings().value(QStringLiteral("toolbar/customDropdown"), false).toBool());
+        layout->addWidget(dropdown);
+        auto *hint = new QLabel(QStringLiteral("Per spostare la barra, trascina la maniglia sul bordo.\nIn Opzioni puoi bloccare posizione e personalizzazione delle barre."), &dialog);
+        hint->setWordWrap(true);
+        layout->addWidget(hint);
+        auto *filter = new QLineEdit(&dialog);
+        filter->setPlaceholderText(QStringLiteral("Cerca un comando..."));
+        layout->addWidget(filter);
+        auto *list = new QListWidget(&dialog);
+        list->setObjectName(QStringLiteral("customToolbarCommands"));
+        list->setIconSize(QSize(20, 20));
+        layout->addWidget(list, 1);
+        const QStringList chosen = QSettings().value(QStringLiteral("toolbar/custom")).toStringList();
+        const auto commands = menuCommands();
+        // Prima i comandi scelti nel loro ordine, poi gli altri nell'ordine dei menu.
+        for (const QString &key : chosen)
+            for (const auto &command : commands)
+                if (command.first == key) {
+                    auto *item = new QListWidgetItem(command.second->icon(), command.first, list);
+                    item->setCheckState(Qt::Checked);
+                    break;
+                }
+        for (const auto &command : commands) {
+            if (chosen.contains(command.first)) continue;
+            auto *item = new QListWidgetItem(command.second->icon(), command.first, list);
+            item->setCheckState(Qt::Unchecked);
+        }
+        auto *moves = new QHBoxLayout;
+        auto *up = new QPushButton(QStringLiteral("Su"), &dialog), *down = new QPushButton(QStringLiteral("Giu'"), &dialog);
+        moves->addWidget(up);
+        moves->addWidget(down);
+        moves->addStretch(1);
+        layout->addLayout(moves);
+        const auto move = [list](int step) {
+            const int row = list->currentRow(), target = row + step;
+            if (row < 0 || target < 0 || target >= list->count()) return;
+            QListWidgetItem *item = list->takeItem(row);
+            list->insertItem(target, item);
+            list->setCurrentRow(target);
+        };
+        connect(up, &QPushButton::clicked, &dialog, [move] { move(-1); });
+        connect(down, &QPushButton::clicked, &dialog, [move] { move(1); });
+        connect(filter, &QLineEdit::textChanged, &dialog, [list](const QString &text) {
+            for (int row = 0; row < list->count(); ++row)
+                list->item(row)->setHidden(!text.isEmpty() && !list->item(row)->text().contains(text, Qt::CaseInsensitive));
+        });
+        auto *buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dialog);
+        layout->addWidget(buttons);
+        connect(buttons, &QDialogButtonBox::accepted, &dialog, &QDialog::accept);
+        connect(buttons, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
+        dialog.resize(520, 560);
+        if (dialog.exec() != QDialog::Accepted) return;
+        QStringList keys;
+        for (int row = 0; row < list->count(); ++row)
+            if (list->item(row)->checkState() == Qt::Checked) keys.append(list->item(row)->text());
+        QSettings().setValue(QStringLiteral("toolbar/custom"), keys);
+        QSettings().remove(QStringLiteral("toolbar/layout/customIconBar"));
+        QSettings().setValue(QStringLiteral("toolbar/customDropdown"), dropdown->isChecked());
+        fillCustomToolbar();
+    });
     auto *drawingToolbar = iconBar(QStringLiteral("Strumenti schizzo"), QStringLiteral("sketchIconBar"));
+    drawingToolbar->setProperty("toolbarModeHidden", true);
     drawingToolbar->setVisible(false);
     drawingToolbar->addAction(exitSketch); drawingToolbar->addAction(sketchNormalView); drawingToolbar->addSeparator();
     drawingToolbar->addAction(undoAction_); drawingToolbar->addAction(redoAction_); drawingToolbar->addSeparator();
@@ -21562,10 +21981,12 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
     drawingToolbar->addAction(extrudeAction); drawingToolbar->addAction(revolveAction);
     // In modalita' schizzo si spengono solo le viste standard (la vista resta normale
     // al piano); il resto del menu Visualizza (trasparenza dei corpi, zoom...) resta attivo.
-    viewport->setSketchModeCallback([this, viewActions, drawingToolbar, toolbar](bool active) {
+    viewport->setSketchModeCallback([this, viewActions, drawingToolbar, toolbar, surfaceToolbar](bool active) {
         for (QAction *action : *viewActions) action->setEnabled(!active);
-        toolbar->setVisible(!active);
-        drawingToolbar->setVisible(active);
+        toolbar->setProperty("toolbarModeHidden", active);
+        surfaceToolbar->setProperty("toolbarModeHidden", active);
+        drawingToolbar->setProperty("toolbarModeHidden", !active);
+        for (auto *bar : {toolbar, surfaceToolbar, drawingToolbar}) ToolbarEditor::refreshVisibility(bar);
         // La finestra dei vincoli accompagna la modalita' schizzo.
         if (constraintPanel_) constraintPanel_->setVisible(active);
     });
@@ -21685,8 +22106,75 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
         // La visibilita' delle barre dipende dalla modalita', non dallo stato
         // salvato (che puo' provenire da una sessione in schizzo).
         toolbar->setVisible(true);
+        surfaceToolbar->setVisible(true);
         drawingToolbar->setVisible(false);  // compare solo in modalita' schizzo
         settings.endGroup();
+    }
+    auto *lockToolbars = toolbarsMenu->addAction(QStringLiteral("Blocca barre degli strumenti"));
+    lockToolbars->setObjectName(QStringLiteral("lockToolbarsAction"));
+    lockToolbars->setProperty("toolbarConfiguration", true);
+    lockToolbars->setCheckable(true);
+    lockToolbars->setToolTip(QStringLiteral("Blocca lo spostamento delle barre e la modifica dei comandi personalizzati"));
+    const auto applyToolbarLock = [this, customizeAction](bool locked) {
+        for (auto *bar : findChildren<QToolBar *>()) {
+            bar->setMovable(!locked);
+            bar->setFloatable(!locked);
+        }
+        customizeAction->setEnabled(!locked);
+        for (auto *action : findChildren<QAction *>())
+            if (action->property("toolbarEditorAction").toBool()) action->setEnabled(!locked);
+    };
+    lockToolbars->setChecked(QSettings().value(QStringLiteral("toolbar/locked"), false).toBool());
+    applyToolbarLock(lockToolbars->isChecked());
+    connect(lockToolbars, &QAction::toggled, this, [this, applyToolbarLock](bool locked) {
+        QSettings().setValue(QStringLiteral("toolbar/locked"), locked);
+        applyToolbarLock(locked);
+        if (locked) QSettings().setValue(QStringLiteral("interface/state"), saveState());
+    });
+    fillCustomToolbar();  // dopo lo stato salvato: visibile se ha dei comandi
+    const auto toolbarCommands = menuCommands();
+    auto *editBarsMenu = toolbarsMenu->addMenu(QStringLiteral("Personalizza pulsanti delle barre"));
+    editBarsMenu->menuAction()->setProperty("toolbarConfiguration", true);
+    toolbarsMenu->addSeparator();
+    for (auto *bar : {toolbar, surfaceToolbar, customToolbar, drawingToolbar}) {
+        const auto saveCustomOrder = [customToolbar, toolbarCommands] {
+            if (QSettings().value(QStringLiteral("toolbar/customDropdown"), false).toBool()) return;
+            QStringList keys;
+            for (auto *action : customToolbar->actions())
+                for (const auto &command : toolbarCommands)
+                    if (command.second == action) { keys.append(command.first); break; }
+            QSettings().setValue(QStringLiteral("toolbar/custom"), keys);
+        };
+        auto *editor = new ToolbarEditor(bar, toolbarCommands, [lockToolbars] { return lockToolbars->isChecked(); },
+                                        bar == customToolbar ? std::function<void()>(saveCustomOrder) : std::function<void()>());
+        auto *editAction = editBarsMenu->addAction(bar->windowTitle() + QStringLiteral("..."));
+        editAction->setObjectName(bar->objectName() + QStringLiteral("EditorAction"));
+        editAction->setProperty("toolbarEditorAction", true);
+        editAction->setProperty("toolbarConfiguration", true);
+        editAction->setEnabled(!lockToolbars->isChecked());
+        connect(editAction, &QAction::triggered, editor, [editor] { editor->edit(); });
+        auto *visibleAction = toolbarsMenu->addAction(bar->windowTitle());
+        visibleAction->setObjectName(bar->objectName() + QStringLiteral("VisibleAction"));
+        visibleAction->setProperty("toolbarConfiguration", true);
+        visibleAction->setCheckable(true);
+        const QString visibilityKey = QStringLiteral("toolbar/visible/") + bar->objectName();
+        visibleAction->setChecked(QSettings().value(visibilityKey, true).toBool());
+        if (bar == drawingToolbar) visibleAction->setToolTip(QStringLiteral("Mostra la barra quando è attiva la modalità schizzo"));
+        connect(visibleAction, &QAction::toggled, bar, [bar, visibilityKey](bool visible) {
+            QSettings().setValue(visibilityKey, visible);
+            ToolbarEditor::refreshVisibility(bar);
+        });
+        ToolbarEditor::refreshVisibility(bar);
+        bar->setContextMenuPolicy(Qt::CustomContextMenu);
+        connect(bar, &QWidget::customContextMenuRequested, this, [this, bar, lockToolbars, editAction, toolbarsMenu](const QPoint &point) {
+            QMenu menu(this);
+            menu.addAction(editAction);
+            menu.addSeparator();
+            menu.addAction(lockToolbars);
+            menu.addSeparator();
+            menu.addMenu(toolbarsMenu);
+            menu.exec(bar->mapToGlobal(point));
+        });
     }
     updateWindowTitle();
     setTheme(true);
@@ -22118,6 +22606,10 @@ void PdfWindow::rebuildModelTree() {
                     .arg(body.offsetFaces.isEmpty() ? QStringLiteral("tutte le facce") : QStringLiteral("%1 facce").arg(body.offsetFaces.size())));
             } else if (body.feature == BodyFeature::Draft) {
                 item->setToolTip(0, QStringLiteral("Sformo di %1° su %2 facce").arg(body.draftAngle).arg(body.offsetFaces.size()));
+            } else if (body.feature == BodyFeature::Thicken) {
+                static const char *sides[] = {"nel verso", "nel verso opposto", "meta' per parte"};
+                item->setToolTip(0, QStringLiteral("Spessore %1 %2 lungo %3").arg(ForgeCad::formatLength(body.distance), QString::fromLatin1(sides[qBound(0, body.thickenSide, 2)]),
+                    body.thickenDirection.kind < 0 ? QStringLiteral("la normale") : ForgeCad::geometryRefText(body.thickenDirection, sketches, extrusions)));
             } else if (body.feature == BodyFeature::ProjectedCurve) {
                 item->setToolTip(0, QStringLiteral("Proiezione di %1 su %2%3").arg(sketches.value(body.sketchIndex).name, extrusions.value(body.firstBody).name,
                                                                                     body.notice.isEmpty() ? QString() : QStringLiteral("\n") + body.notice));
@@ -22227,12 +22719,21 @@ void PdfWindow::rebuildModelTree() {
                                || body.feature == BodyFeature::DeleteFace || body.feature == BodyFeature::BoundarySurface
                                || body.feature == BodyFeature::FillSurface
                                || body.feature == BodyFeature::Draft || body.feature == BodyFeature::Shell || body.feature == BodyFeature::Thread
-                               || body.feature == BodyFeature::ProjectedCurve;
+                               || body.feature == BodyFeature::ProjectedCurve || body.feature == BodyFeature::Thicken;
         if (body.operation < 0 && withChildren) {
             QStringList children;
             if (body.feature == BodyFeature::SurfaceOffset) {
                 if (!previousStage(body.firstBody)) children.append(QStringLiteral("Corpo: ") + extrusions.value(body.firstBody).name);
                 children.append(QStringLiteral("Distanza: %1").arg(ForgeCad::formatLength(body.distance)));
+            } else if (body.feature == BodyFeature::Thicken) {
+                if (!body.offsetFaces.isEmpty() || !previousStage(body.firstBody))
+                    children.append(QStringLiteral("Corpo: ") + extrusions.value(body.firstBody).name);
+                children.append(QStringLiteral("Spessore: %1").arg(ForgeCad::formatLength(body.distance)));
+                children.append(body.offsetFaces.isEmpty() ? QStringLiteral("Facce: tutta la superficie") : QStringLiteral("Facce: %1").arg(body.offsetFaces.size()));
+                children.append(QStringLiteral("Direzione: ") + (body.thickenDirection.kind < 0 ? QStringLiteral("normale della superficie")
+                                                                   : ForgeCad::geometryRefText(body.thickenDirection, sketches, extrusions)));
+                static const char *sides[] = {"nel verso", "nel verso opposto", "meta' per parte"};
+                children.append(QStringLiteral("Lato: ") + QString::fromLatin1(sides[qBound(0, body.thickenSide, 2)]));
             } else if (body.feature == BodyFeature::ProjectedCurve) {
                 children.append(QStringLiteral("Corpo: ") + extrusions.value(body.firstBody).name);
                 children.append(QStringLiteral("Schizzo: ") + sketches.value(body.sketchIndex).name);
@@ -22485,10 +22986,17 @@ void PdfWindow::setTheme(bool dark) {
         "QToolBar { spacing: 1px; padding: 2px 4px; border: none; }"
         "QToolBar::separator { background: #34444f; width: 1px; margin: 5px 3px; }"
         "QToolBar QToolButton { border: 1px solid transparent; border-radius: 4px; padding: 2px; }"
-        "QToolBar QToolButton:hover { background: #2a3a46; border-color: #3d5566; }"
-        "QToolBar QToolButton:pressed { background: #1f4258; }"
         "QToolBar QToolButton:checked { background: #24495f; border-color: #4f9fd0; }"
+        "QToolButton:enabled:hover, QToolBar QToolButton:enabled:hover { background: #365d78; border-color: #80c8f0; color: #ffffff; }"
+        "QToolButton:enabled:pressed, QToolBar QToolButton:enabled:pressed { background: #1f4258; border-color: #80c8f0; }"
         "QToolBar QToolButton[popupMode=\"1\"] { padding-right: 11px; }"
         "QToolBar QToolButton::menu-button { border: none; width: 10px; }"
-        "QToolBar QToolButton::menu-button:hover { background: #34505f; border-radius: 3px; }"));
+        "QToolButton::menu-button:enabled:hover { background: #5089ad; }"
+        "QToolButton::menu-button:enabled:pressed { background: #1f4258; }"
+        "QPushButton:enabled:hover { background: #365d78; border-color: #80c8f0; color: #ffffff; }"
+        "QPushButton:enabled:pressed { background: #1f4258; border-color: #80c8f0; }"
+        "QMenuBar::item:selected:enabled { background: #365d78; border-color: #80c8f0; color: #ffffff; }"
+        "QMenuBar::item:pressed:enabled { background: #1f4258; border-color: #80c8f0; color: #ffffff; }"
+        "QMenu::item:selected:enabled { background: #365d78; border-color: #80c8f0; color: #ffffff; }"
+        "QMenu::item:disabled { color: #788995; }"));
 }

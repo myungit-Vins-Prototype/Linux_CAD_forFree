@@ -1,6 +1,7 @@
 #include "fk_pcurve.h"
 
 #include <algorithm>
+#include <functional>
 #include <cmath>
 #include <exception>
 #include <limits>
@@ -349,8 +350,9 @@ CurvePtr<2> exactPCurve(const Surface &surface, const CurvePtr<3> &curve, const 
     return candidate;
 }
 
-CurvePtr<2> fitPCurve(const Surface &surface, const CurvePtr<3> &curve, const Interval &range, double tolerance,
-                      double *deviation) {
+namespace {
+
+CurvePtr<2> fitHermitePCurve(const Surface &surface, const CurvePtr<3> &curve, const Interval &range, double tolerance, double *deviation) {
     if (!curve || !range.isFinite() || !(range.lo < range.hi)) return nullptr;
     const double scale = modelScale(*curve, range);
     const std::vector<double> ts = sampleParametersOf(*curve, range, 4);
@@ -391,6 +393,69 @@ CurvePtr<2> fitPCurve(const Surface &surface, const CurvePtr<3> &curve, const In
     if (!(measured <= tolerance)) return nullptr;
     if (deviation) *deviation = measured;
     return fitted;
+}
+
+
+// Ripiego: SP-curve lineare a tratti (grado 1), infittita finche' lo scarto
+// 3D sta entro la tolleranza. Segue anche gli angoli della corrispondenza
+// t -> (u, v) (micro-pieghe ai nodi delle superfici approssimate), dove
+// l'Hermite C1 non converge. Dove la superficie si ripiega su se stessa per
+// pochi centesimi di micron (offset dalla parte concava di un micro-salto di
+// normale) la corrispondenza salta: un salto isolato fino a 50 volte la
+// tolleranza si accetta e lo scarto misurato diventa la tolleranza
+// dichiarata dell'SP-curve. Nessun polo ne' lato degenere.
+CurvePtr<2> fitLinearPCurve(const Surface &surface, const CurvePtr<3> &curve, const Interval &range, double tolerance, double *deviation) {
+    if (!surfacePoles(surface).empty() || !degenerateSides(surface).empty()) return nullptr;
+    const double scale = modelScale(*curve, range);
+    const std::vector<double> ts = sampleParametersOf(*curve, range, 4);
+    std::vector<Vec2> uvs;
+    if (!sampleParameters(surface, *curve, ts, tolerance, scale, uvs)) return nullptr;
+    std::vector<double> nodesT{ts.front()};
+    std::vector<Vec2> nodesUv{uvs.front()};
+    std::size_t budget = 200000;
+    const std::function<bool(double, Vec2, double, Vec2, int)> refine = [&](double ta, Vec2 a, double tb, Vec2 b, int depth) {
+        if (budget-- == 0) return false;
+        double worst = 0.0;
+        for (double s : {0.25, 0.5, 0.75}) {
+            const Vec2 uv = a + s * (b - a);
+            worst = std::max(worst, distance(surface.point(uv[0], uv[1]), curve->point(ta + s * (tb - ta))));
+        }
+        if (worst <= 0.5 * tolerance || depth >= 40) {
+            if (worst > 50.0 * tolerance) return false;
+            nodesT.push_back(tb);
+            nodesUv.push_back(b);
+            return true;
+        }
+        const double tm = 0.5 * (ta + tb);
+        Vec2 m = 0.5 * (a + b);
+        if (!invertPoint(surface, curve->point(tm), m, tolerance, scale)) return false;
+        return refine(ta, a, tm, m, depth + 1) && refine(tm, m, tb, b, depth + 1);
+    };
+    for (std::size_t i = 1; i < ts.size(); ++i)
+        if (!refine(ts[i - 1], uvs[i - 1], ts[i], uvs[i], 0)) return nullptr;
+    const Vec2 shift = baseShift(surface, nodesUv.front());
+    std::vector<double> knots{nodesT.front()};
+    std::vector<Vec2> poles;
+    for (std::size_t i = 0; i < nodesT.size(); ++i) {
+        if (i > 0 && !(nodesT[i] > nodesT[i - 1])) continue;
+        knots.push_back(nodesT[i]);
+        poles.push_back(nodesUv[i] + shift);
+    }
+    knots.push_back(nodesT.back());
+    if (poles.size() < 2) return nullptr;
+    auto fitted = std::make_shared<BSplineCurve<2>>(1, std::move(knots), std::move(poles));
+    const double measured = pcurveDeviation(surface, *curve, *fitted, range);
+    if (!(measured <= 50.0 * tolerance)) return nullptr;
+    if (deviation) *deviation = measured;
+    return fitted;
+}
+
+}
+
+CurvePtr<2> fitPCurve(const Surface &surface, const CurvePtr<3> &curve, const Interval &range, double tolerance, double *deviation) {
+    if (CurvePtr<2> fitted = fitHermitePCurve(surface, curve, range, tolerance, deviation)) return fitted;
+    if (!curve || !range.isFinite() || !(range.lo < range.hi)) return nullptr;
+    return fitLinearPCurve(surface, curve, range, tolerance, deviation);
 }
 
 int computePCurves(Body &body, double tolerance) {

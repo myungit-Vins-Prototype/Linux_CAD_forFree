@@ -42,6 +42,9 @@ quint64 inheritedBody(const QVector<ExtrusionObject> &features, const ExtrusionO
         return feature.move.copy ? 0 : owner(feature.firstBody);
     case BodyFeature::Pattern:
         return owner(feature.firstBody);
+    case BodyFeature::Thicken:
+        // Tutta la superficie diventa un solido: lo stesso corpo; facce scelte: un corpo nuovo.
+        return feature.offsetFaces.isEmpty() ? owner(feature.firstBody) : 0;
     case BodyFeature::Ruled:
     case BodyFeature::PlanarSurface:
     case BodyFeature::BoundarySurface:
@@ -117,6 +120,7 @@ void normalizeModelHistory(QVector<ExtrusionObject> &features, QVector<ModelBody
         bindOwner(feature.move.axis);
         bindOwner(feature.revolveAxisRef);
         bindOwner(feature.draftNeutral);
+        bindOwner(feature.thickenDirection);
     }
 
     QHash<quint64, ModelBody> existing;

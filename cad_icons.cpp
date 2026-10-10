@@ -633,6 +633,33 @@ std::map<QString, Draw> &registry() {
         p.drawLine(QPointF(12, 2), QPointF(9, 6));
         p.drawLine(QPointF(12, 2), QPointF(15, 6));
     };
+    icons["thicken"] = [](QPainter &p, const IconPalette &c) {
+        // Superficie curva (sotto) e la sua copia sopra: la lastra tra le due, con la freccia dello spessore.
+        QPainterPath slab;
+        slab.moveTo(2, 19);
+        slab.cubicTo(8, 13, 15, 22, 22, 15);
+        slab.lineTo(22, 9);
+        slab.cubicTo(15, 16, 8, 7, 2, 13);
+        slab.closeSubpath();
+        p.setPen(Qt::NoPen);
+        p.setBrush(QColor(255, 176, 74, 70));
+        p.drawPath(slab);
+        QPainterPath base;
+        base.moveTo(2, 19);
+        base.cubicTo(8, 13, 15, 22, 22, 15);
+        p.setBrush(Qt::NoBrush);
+        p.setPen(stroke(c.ink, 1.8));
+        p.drawPath(base);
+        QPainterPath top;
+        top.moveTo(2, 13);
+        top.cubicTo(8, 7, 15, 16, 22, 9);
+        p.setPen(stroke(c.accent, 1.8));
+        p.drawPath(top);
+        line(p, {2, 13}, {2, 19}, stroke(c.accent, 1.2));
+        line(p, {22, 9}, {22, 15}, stroke(c.accent, 1.2));
+        line(p, {12, 16.5}, {12, 7}, stroke(c.accent, 1.2));
+        arrowHead(p, {12, 4.6}, {12, 9}, c.accent, 3.0);
+    };
     icons["projectedCurve"] = [](QPainter &p, const IconPalette &c) {
         // Curva dello schizzo in alto proiettata sulla superficie (arancio).
         QPainterPath sketch;

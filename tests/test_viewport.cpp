@@ -421,6 +421,71 @@ public:
         }
     }
 
+    // Diagnostica: Spessore sul corpo del documento, come nell'app (env
+    // THICKEN_CUT_SKETCH=nome: prima il taglio con lo schizzo proiettato;
+    // THICKEN_DOC=copia.prt salva la copia). Nessuna modifica all'originale.
+    static void profileThicken(const QString &path, int bodyIndex, double thickness, int side) {
+        using namespace ForgeCad;
+        DocumentState document;
+        require(loadDocumentFile(path, document).isEmpty(), "lettura del documento");
+        CadViewport viewport;
+        viewport.loadDocument(document);
+        int base = bodyIndex;
+        QElapsedTimer timer;
+        if (qEnvironmentVariableIsSet("THICKEN_CUT_SKETCH")) {
+            int sketch = -1;
+            for (int i = 0; i < viewport.sketches_.size(); ++i)
+                if (viewport.sketches_[i].name == qEnvironmentVariable("THICKEN_CUT_SKETCH")) sketch = i;
+            require(sketch >= 0, "schizzo del taglio");
+            ExtrusionObject cut;
+            cut.firstBody = bodyIndex; cut.sketchIndex = sketch; cut.trimProject = true;
+            timer.start();
+            const QString error = viewport.createSheetTrim(cut, QStringLiteral("Taglio proiettato 1"));
+            std::cout << "taglio proiettato " << timer.elapsed() << " ms " << (error.isEmpty() ? std::string("riuscito") : error.toStdString()) << std::endl;
+            require(error.isEmpty(), "taglio");
+            base = int(viewport.extrusions_.size()) - 1;
+        }
+        ExtrusionObject thick;
+        thick.feature = BodyFeature::Thicken; thick.firstBody = base; thick.distance = thickness; thick.thickenSide = side;
+        thick.name = QStringLiteral("Spessore 1");
+        timer.start();
+        const QString error = viewport.createBody(thick);
+        std::cout << "spessore " << thickness << " lato " << side << ": " << timer.elapsed() << " ms " << (error.isEmpty() ? std::string("riuscito") : error.toStdString()) << std::endl;
+        require(error.isEmpty(), "spessore");
+        const ExtrusionObject &result = viewport.extrusions_.last();
+        const Kernel::Body &solid = *result.forgeBody;
+        double tolerance = 0.0;
+        for (Kernel::EdgeId e : solid.edges()) tolerance = std::max(tolerance, solid.edge(e).tolerance);
+        Kernel::TessellationOptions options;
+        options.deflection = 1e-2;
+        std::cout << "solido " << result.solid << " facce " << solid.faces().size() << " controlli " << Kernel::checkBody(solid).size()
+                  << " tolleranza edge " << tolerance << " tassellazione fallita " << Kernel::tessellate(solid, options).failedFaces
+                  << " stesso corpo logico " << (result.modelBodyId == viewport.extrusions_.at(base).modelBodyId) << std::endl;
+        // Coerenza: dal centro delle facce della superficie, a meta' spessore dentro, oltre fuori.
+        const Kernel::Body &sheet = *viewport.extrusions_.at(base).forgeBody;
+        Kernel::SolidClassifier classifier(solid, 1e-7);
+        int ok = 0, bad = 0;
+        const double sign = side == 1 ? -1.0 : 1.0, offset = side == 2 ? 0.0 : 0.5;
+        for (Kernel::FaceId f : sheet.faces()) {
+            const Kernel::Surface &surface = *sheet.face(f).surface;
+            const Kernel::Interval U = surface.uDomain(), V = surface.vDomain();
+            for (int i = 1; i < 6; ++i)
+                for (int j = 1; j < 6; ++j) {
+                    const double u = U.lo + U.length() * i / 6.0, v = V.lo + V.length() * j / 6.0;
+                    const Kernel::Vec3 p = surface.point(u, v);
+                    if (Kernel::classifyPointOnFace(sheet, f, p, 1e-7) != Kernel::PointLocation::Inside) continue;
+                    Kernel::Vec3 n = Kernel::normalAt(surface, u, v);
+                    if (!sheet.face(f).sense) n = -1.0 * n;
+                    const bool inside = classifier.classify(p + sign * offset * thickness * n) == Kernel::PointLocation::Inside;
+                    const bool beyond = classifier.classify(p + sign * (side == 2 ? 0.7 : 1.2) * thickness * n) == Kernel::PointLocation::Outside;
+                    (inside && beyond) ? ++ok : ++bad;
+                }
+        }
+        std::cout << "campioni coerenti " << ok << ", incoerenti " << bad << std::endl;
+        if (qEnvironmentVariableIsSet("THICKEN_DOC"))
+            require(saveDocumentFile(qEnvironmentVariable("THICKEN_DOC"), viewport.currentDocument(), true).isEmpty(), "copia salvata");
+    }
+
     static void profileMouseOffset(const QString &path) {
         using namespace ForgeCad;
         DocumentState document;
@@ -1067,6 +1132,112 @@ public:
         require(std::fabs(totalArea(view->extrusions_.last().forgeBody) - 668.0) < 1e-8 && view->extrusions_.last().notice.contains(QStringLiteral("0 tratti impressi")),
                 "regione delimitata solo da edge esistenti");
         std::cout << "PASS proiezione: taglio, modi, curva, riferimenti, undo/redo, persistenza e pannello" << std::endl;
+    }
+
+    // Spessore: facce di un solido (corpo nuovo), lato e direzione, Undo/Redo,
+    // errore senza modifiche, persistenza (formato 39) e pannello con anteprima.
+    static void thickenFeature() {
+        using namespace ForgeCad;
+        using namespace ForgeCad::Kernel;
+        CadViewport viewport;
+        PrimitiveParameters primitive;
+        primitive.size[0] = 20; primitive.size[1] = 10; primitive.size[2] = 5;
+        require(viewport.createPrimitive(primitive, QStringLiteral("Blocco")).isEmpty(), "blocco per lo spessore");
+        const auto base = viewport.extrusions_.front().forgeBody;
+        FaceId top;
+        for (FaceId f : base->faces()) {
+            const Frame3 &frame = static_cast<const Plane &>(*base->face(f).surface).frame();
+            if (std::fabs(frame.origin().z() - 5.0) < 1e-9 && std::fabs(frame.zDir().z()) > 0.99) top = f;
+        }
+        require(top.valid(), "faccia superiore");
+        ExtrusionObject thicken;
+        thicken.feature = BodyFeature::Thicken; thicken.firstBody = 0; thicken.distance = 1.5; thicken.name = QStringLiteral("Spessore 1");
+        thicken.offsetFaces = {faceReference(*base, top, Vec3(10.0, 5.0, 5.0))};
+        require(viewport.createBody(thicken).isEmpty(), "spessore della faccia superiore");
+        const auto volume = [&] { return massProperties(*viewport.extrusions_.at(1).forgeBody).volume; };
+        const auto zmin = [&] {
+            double z = 1e300;
+            for (VertexId v : viewport.extrusions_.at(1).forgeBody->vertices()) z = std::min(z, viewport.extrusions_.at(1).forgeBody->vertex(v).point.z());
+            return z;
+        };
+        require(viewport.extrusions_.at(1).solid && std::fabs(volume() - 300.0) < 1e-9 && std::fabs(zmin() - 5.0) < 1e-12, "lastra sopra la faccia");
+        require(viewport.extrusions_.at(1).modelBodyId != viewport.extrusions_.at(0).modelBodyId && viewport.extrusions_.at(0).visible,
+                "facce di un solido: corpo nuovo, il solido resta");
+        ExtrusionObject edited = viewport.extrusions_.at(1);
+        edited.thickenSide = 2;
+        edited.thickenDirection.kind = 2; edited.thickenDirection.index = 2;  // asse Z
+        require(viewport.updateBody(1, edited).isEmpty() && std::fabs(volume() - 300.0) < 1e-9 && std::fabs(zmin() - 4.25) < 1e-12,
+                "meta' per parte lungo l'asse Z");
+        viewport.undo(); require(std::fabs(zmin() - 5.0) < 1e-12, "undo dello spessore");
+        viewport.redo(); require(std::fabs(zmin() - 4.25) < 1e-12, "redo dello spessore");
+        const auto before = writeBodyBinary(*viewport.extrusions_.at(1).forgeBody);
+        edited = viewport.extrusions_.at(1);
+        edited.thickenDirection.index = 0;  // asse X: parallelo alla faccia
+        require(!viewport.updateBody(1, edited).isEmpty(), "direzione parallela alla superficie rifiutata");
+        require(writeBodyBinary(*viewport.extrusions_.at(1).forgeBody) == before, "errore non modifica lo spessore");
+
+        // Tutta una lamina (la sola faccia superiore rimasta): solido nello stesso corpo logico.
+        {
+            CadViewport plate;
+            require(plate.createPrimitive(primitive, QStringLiteral("Lastra")).isEmpty(), "blocco per la lamina");
+            const auto block = plate.extrusions_.front().forgeBody;
+            ExtrusionObject keepTop;
+            keepTop.feature = BodyFeature::DeleteFace; keepTop.firstBody = 0; keepTop.name = QStringLiteral("Solo la faccia superiore");
+            for (FaceId f : block->faces())
+                if (f != top) keepTop.offsetFaces.append(faceReference(*block, f, block->finPoint(block->loop(block->face(f).loops.front()).first, 0.5)));
+            require(plate.createBody(keepTop).isEmpty() && plate.extrusions_.at(1).forgeBody->isSheet(), "lamina della faccia superiore");
+            ExtrusionObject whole;
+            whole.feature = BodyFeature::Thicken; whole.firstBody = 1; whole.distance = 2.0; whole.thickenSide = 1; whole.name = QStringLiteral("Spessore lamina");
+            require(plate.createBody(whole).isEmpty(), "spessore di tutta la lamina");
+            const ExtrusionObject &solid = plate.extrusions_.at(2);
+            require(solid.solid && std::fabs(massProperties(*solid.forgeBody).volume - 400.0) < 1e-9, "lamina ispessita verso il basso");
+            require(solid.modelBodyId == plate.extrusions_.at(1).modelBodyId && plate.resultBodiesBefore(-1) == QVector<int>{2},
+                    "tutta la superficie: stesso corpo logico, lo spessore e' lo stadio finale");
+        }
+        QTemporaryDir files;
+        const QString path = files.path() + QStringLiteral("/spessore.prt");
+        require(saveDocumentFile(path, viewport.currentDocument(), false).isEmpty(), "salvataggio dello spessore");
+        DocumentState loaded;
+        require(loadDocumentFile(path, loaded).isEmpty(), "lettura formato 39");
+        require(loaded.extrusions.at(1).feature == BodyFeature::Thicken && loaded.extrusions.at(1).thickenSide == 2
+                && loaded.extrusions.at(1).thickenDirection.kind == 2 && loaded.extrusions.at(1).thickenDirection.index == 2
+                && loaded.extrusions.at(1).offsetFaces.size() == 1, "parametri dello spessore persistenti");
+        CadViewport reopened; reopened.loadDocument(loaded);
+        require(reopened.extrusions_.at(1).forgeBody && std::fabs(massProperties(*reopened.extrusions_.at(1).forgeBody).volume - 300.0) < 1e-9,
+                "rigenerazione dello spessore riletto");
+
+        // Pannello: tutta la faccia laterale di un'altra lastra, con anteprima e OK.
+        QMainWindow window;
+        auto *view = new CadViewport(&window); window.setCentralWidget(view); window.resize(1000, 720);
+        view->loadDocument(loaded); window.show();
+        bool previewReady = false;
+        QTimer poll;
+        poll.setInterval(20);
+        QObject::connect(&poll, &QTimer::timeout, &window, [&] {
+            QDialog *dialog = nullptr;
+            for (QDialog *candidate : window.findChildren<QDialog *>())
+                if (candidate->windowTitle() == QStringLiteral("Test spessore") && candidate->isVisible()) dialog = candidate;
+            if (!dialog) return;
+            poll.stop();
+            QElapsedTimer wait; wait.start();
+            while (!view->preview_.valid && view->preview_.error.isEmpty() && wait.elapsed() < 20000) QApplication::processEvents();
+            previewReady = view->preview_.valid;
+            for (QDialogButtonBox *buttons : dialog->findChildren<QDialogButtonBox *>()) buttons->button(QDialogButtonBox::Ok)->click();
+            QTimer::singleShot(2000, dialog, [dialog] { if (dialog->isVisible()) dialog->reject(); });
+        });
+        poll.start();
+        ExtrusionObject start;
+        start.feature = BodyFeature::Thicken; start.firstBody = 0; start.distance = 0.5;
+        start.offsetFaces = {faceReference(*view->extrusions_.at(0).forgeBody, top, Vec3(10.0, 5.0, 5.0))};
+        const bool made = thickenDialog(&window, view, QStringLiteral("Test spessore"), -1, start, [view](const ExtrusionObject &d) {
+            ExtrusionObject result = d;
+            result.name = QStringLiteral("Spessore dal pannello");
+            return view->createBody(result);
+        });
+        require(previewReady, "anteprima dello spessore nel pannello");
+        require(made && view->extrusions_.size() == 3 && std::fabs(massProperties(*view->extrusions_.last().forgeBody).volume - 100.0) < 1e-9
+                && !view->interactionLocked(), "spessore creato dal pannello");
+        std::cout << "PASS spessore: facce, lato, direzione, undo/redo, errore, persistenza e pannello" << std::endl;
     }
 
     static void draftFeature() {
@@ -5745,6 +5916,14 @@ int main(int argc, char **argv) {
         std::cout<<"PASS sketch reference workflow"<<std::endl;
         return 0;
     }
+    if (app.arguments().contains(QStringLiteral("--profile-thicken"))) {
+        const int argument = int(app.arguments().indexOf(QStringLiteral("--profile-thicken")));
+        try {
+            ViewportInteractionTest::profileThicken(app.arguments().value(argument + 1), app.arguments().value(argument + 2).toInt(),
+                                                    app.arguments().value(argument + 3).toDouble(), app.arguments().value(argument + 4).toInt());
+        } catch (const std::exception &e) { std::cerr << e.what() << std::endl; return 1; }
+        return 0;
+    }
     if (app.arguments().contains(QStringLiteral("--profile-projection"))) {
         const int argument = int(app.arguments().indexOf(QStringLiteral("--profile-projection")));
         try { ViewportInteractionTest::profileProjection(app.arguments().value(argument + 1), app.arguments().value(argument + 2), app.arguments().value(argument + 3).toInt()); }
@@ -5792,6 +5971,186 @@ int main(int argc, char **argv) {
             require(!reopened.findChild<QToolBar *>(QStringLiteral("modelingIconBar"))->isHidden(), "model toolbar restored after saved sketch mode");
             require(reopened.findChild<QToolBar *>(QStringLiteral("sketchIconBar"))->isHidden(), "sketch toolbar hidden outside sketch");
             require(!reopened.menuBar()->actions().isEmpty(), "menus available at construction");
+            // Barra Superfici: i comandi delle superfici come pulsanti diretti.
+            auto *surfaces = reopened.findChild<QToolBar *>(QStringLiteral("surfaceIconBar"));
+            require(surfaces && !surfaces->isHidden(), "barra Superfici visibile");
+            QStringList texts;
+            for (QAction *action : surfaces->actions()) texts.append(action->text());
+            for (const QString &command : {QStringLiteral("Taglia superficie..."), QStringLiteral("Spessore..."), QStringLiteral("Offset superficie..."),
+                                           QStringLiteral("Cuci superfici..."), QStringLiteral("Superficie di riempimento..."), QStringLiteral("Curva proiettata...")})
+                require(texts.contains(command), "comando nella barra Superfici");
+            // Barra personalizzata: vuota e nascosta, poi i comandi scelti nell'ordine dato.
+            auto *custom = reopened.findChild<QToolBar *>(QStringLiteral("customIconBar"));
+            require(custom && custom->isHidden() && custom->actions().isEmpty(), "barra personalizzata vuota all'inizio");
+            QSettings().setValue(QStringLiteral("toolbar/custom"),
+                                 QStringList{QStringLiteral("Funzioni/Superfici/Spessore..."), QStringLiteral("Analisi/Misura..."), QStringLiteral("Comando inesistente")});
+            PdfWindow customized;
+            auto *chosen = customized.findChild<QToolBar *>(QStringLiteral("customIconBar"));
+            require(chosen && !chosen->isHidden() && chosen->actions().size() == 2 && chosen->actions().at(0)->text() == QStringLiteral("Spessore...")
+                        && chosen->actions().at(1)->text() == QStringLiteral("Misura..."),
+                    "barra personalizzata con i comandi scelti");
+            QSettings().remove(QStringLiteral("toolbar/custom"));
+            QSettings().setValue(QStringLiteral("toolbar/custom"), QStringList{QStringLiteral("Analisi/Misura...")});
+            QSettings().setValue(QStringLiteral("toolbar/customDropdown"), true);
+            QSettings().setValue(QStringLiteral("toolbar/locked"), false);
+            {
+                PdfWindow dropdownWindow;
+                auto *bar = dropdownWindow.findChild<QToolBar *>(QStringLiteral("customIconBar"));
+                require(bar && bar->actions().size() == 1 && bar->isMovable(), "custom dropdown toolbar movable");
+                require(bar->findChild<QToolButton *>(QStringLiteral("customToolbarDropdown")), "custom dropdown created");
+                dropdownWindow.addToolBar(Qt::LeftToolBarArea, bar);
+                auto *lock = dropdownWindow.findChild<QAction *>(QStringLiteral("lockToolbarsAction"));
+                require(lock, "toolbar lock action exists");
+                lock->setChecked(true);
+                for (auto *toolbar : dropdownWindow.findChildren<QToolBar *>())
+                    require(!toolbar->isMovable() && !toolbar->isFloatable(), "all toolbars locked");
+            }
+            {
+                PdfWindow restored;
+                auto *bar = restored.findChild<QToolBar *>(QStringLiteral("customIconBar"));
+                require(restored.toolBarArea(bar) == Qt::LeftToolBarArea, "custom toolbar position restored");
+                require(!bar->isMovable(), "toolbar lock restored");
+                restored.findChild<QAction *>(QStringLiteral("lockToolbarsAction"))->setChecked(false);
+                require(bar->isMovable() && bar->isFloatable(), "toolbar unlocked again");
+            }
+            QSettings().remove(QStringLiteral("toolbar/custom"));
+            QSettings().remove(QStringLiteral("toolbar/customDropdown"));
+            QSettings().remove(QStringLiteral("toolbar/locked"));
+            {
+                PdfWindow editable;
+                auto *model = editable.findChild<QToolBar *>(QStringLiteral("modelingIconBar"));
+                auto *edit = editable.findChild<QAction *>(QStringLiteral("modelingIconBarEditorAction"));
+                require(model && edit && edit->isEnabled(), "main toolbar editor available when unlocked");
+                bool edited = false;
+                QTimer::singleShot(0, &editable, [&edited] {
+                    auto *dialog = qobject_cast<QDialog *>(QApplication::activeModalWidget());
+                    if (!dialog) return;
+                    auto *list = dialog->findChild<QListWidget *>(QStringLiteral("toolbarEditorCommands"));
+                    if (list) for (int row = 0; row < list->count(); ++row) {
+                        if (list->item(row)->data(Qt::UserRole).toString() != QStringLiteral("command/Funzioni/Superfici/Offset superficie...")) continue;
+                        auto *item = list->takeItem(row);
+                        item->setCheckState(Qt::Checked);
+                        list->insertItem(0, item);
+                        edited = true;
+                        break;
+                    }
+                    dialog->accept();
+                });
+                edit->trigger();
+                require(edited && model->actions().first()->text() == QStringLiteral("Offset superficie..."), "main toolbar command reordered through editor");
+                editable.findChild<QAction *>(QStringLiteral("lockToolbarsAction"))->setChecked(true);
+                require(!edit->isEnabled(), "locking disables main toolbar editor");
+            }
+            {
+                PdfWindow restored;
+                auto *model = restored.findChild<QToolBar *>(QStringLiteral("modelingIconBar"));
+                require(model->actions().first()->text() == QStringLiteral("Offset superficie..."), "main toolbar button order restored");
+            }
+            {
+                QToolBar bar;
+                bar.setObjectName(QStringLiteral("testToolbarEditor"));
+                QAction first(QStringLiteral("First")), extra(QStringLiteral("Extra"));
+                bar.addAction(&first);
+                auto *button = new QToolButton;
+                button->setDefaultAction(&extra);
+                auto *group = bar.addWidget(button);
+                bool locked = false;
+                ToolbarEditor editor(&bar, {{QStringLiteral("First"), &first}, {QStringLiteral("Extra"), &extra}}, [&locked] { return locked; });
+                require(editor.moveAction(group, &first), "flyout can move before a command");
+                require(bar.actions().first() == group && bar.widgetForAction(group) == button, "flyout widget preserved when moving");
+                locked = true;
+                require(!editor.moveAction(group, nullptr) && bar.actions().first() == group, "lock prevents button reordering");
+                locked = false;
+                require(editor.moveAction(group, nullptr) && bar.actions().last() == group, "flyout can move to end");
+            }
+            {
+                QToolBar bar;
+                bar.setObjectName(QStringLiteral("testToolbarGroups"));
+                QAction first(QStringLiteral("First")), second(QStringLiteral("Second"));
+                bar.addAction(&first); bar.addAction(&second);
+                bool locked = false;
+                ToolbarEditor editor(&bar, {{QStringLiteral("First"), &first}, {QStringLiteral("Second"), &second}}, [&locked] { return locked; });
+                bool grouped = false;
+                const auto stageGroup = [&grouped](bool accept) {
+                    auto *dialog = qobject_cast<QDialog *>(QApplication::activeModalWidget());
+                    if (!dialog) return;
+                    auto *list = dialog->findChild<QListWidget *>(QStringLiteral("toolbarEditorCommands"));
+                    list->selectAll();
+                    dialog->findChild<QLineEdit *>(QStringLiteral("toolbarGroupName"))->setText(QStringLiteral("Preferiti"));
+                    dialog->findChild<QPushButton *>(QStringLiteral("toolbarGroupCreate"))->click();
+                    grouped = list->count() == 1;
+                    if (accept) dialog->accept(); else dialog->reject();
+                };
+                QTimer::singleShot(0, &bar, [stageGroup] { stageGroup(false); });
+                editor.edit();
+                require(grouped && bar.actions().size() == 2, "cancel grouping leaves toolbar unchanged");
+                require(!QSettings().contains(QStringLiteral("toolbar/layout/testToolbarGroups")), "cancel grouping does not save");
+                QTimer::singleShot(0, &bar, [stageGroup] { stageGroup(true); });
+                editor.edit();
+                require(grouped && bar.actions().size() == 1, "two commands occupy one toolbar button");
+                auto *button = qobject_cast<QToolButton *>(bar.widgetForAction(bar.actions().first()));
+                require(button && button->menu() && button->menu()->actions() == QList<QAction *>{&first, &second}, "group uses original command actions in order");
+                int triggered = 0;
+                QObject::connect(&first, &QAction::triggered, &bar, [&triggered] { ++triggered; });
+                button->click();
+                require(triggered == 1, "group primary button executes the original action once");
+                first.setEnabled(false);
+                require(button->isEnabled(), "group menu remains accessible when another command is enabled");
+                button->click();
+                require(triggered == 1, "disabled primary command is not executed");
+                second.setEnabled(false);
+                require(!button->isEnabled(), "group disabled when all its commands are disabled");
+                first.setEnabled(true); second.setEnabled(true);
+                locked = true;
+                editor.edit();
+                require(bar.actions().size() == 1, "locked grouping editor cannot modify toolbar");
+                QToolBar reopened;
+                reopened.setObjectName(bar.objectName());
+                reopened.addAction(&first); reopened.addAction(&second);
+                ToolbarEditor restored(&reopened, {{QStringLiteral("First"), &first}, {QStringLiteral("Second"), &second}}, [] { return false; });
+                require(reopened.actions().size() == 1, "group restored after reopening");
+                auto *restoredButton = qobject_cast<QToolButton *>(reopened.widgetForAction(reopened.actions().first()));
+                require(restoredButton && restoredButton->menu()->actions().size() == 2 && reopened.actions().first()->text() == QStringLiteral("Preferiti"), "group name and members restored");
+                QTimer::singleShot(0, &reopened, [] {
+                    auto *dialog = qobject_cast<QDialog *>(QApplication::activeModalWidget());
+                    if (!dialog) return;
+                    auto *list = dialog->findChild<QListWidget *>(QStringLiteral("toolbarEditorCommands"));
+                    list->setCurrentRow(0);
+                    dialog->findChild<QPushButton *>(QStringLiteral("toolbarGroupSeparate"))->click();
+                    dialog->accept();
+                });
+                restored.edit();
+                require(reopened.actions() == QList<QAction *>{&first, &second}, "separate group restores individual buttons in order");
+            }
+            {
+                PdfWindow window;
+                auto *menu = window.findChild<QMenu *>(QStringLiteral("toolbarsMenu"));
+                auto *bar = window.findChild<QToolBar *>(QStringLiteral("modelingIconBar"));
+                auto *visible = window.findChild<QAction *>(QStringLiteral("modelingIconBarVisibleAction"));
+                require(menu && visible && menu->actions().contains(visible), "toolbar visibility is in unified options group");
+                require(menu->actions().contains(window.findChild<QAction *>(QStringLiteral("lockToolbarsAction"))), "toolbar lock is in unified group");
+                require(visible->isChecked() && !bar->isHidden(), "model toolbar visible by default");
+                visible->setChecked(false);
+                require(bar->isHidden(), "toolbar can be hidden");
+                bar->setProperty("toolbarModeHidden", true);
+                ToolbarEditor::refreshVisibility(bar);
+                bar->setProperty("toolbarModeHidden", false);
+                ToolbarEditor::refreshVisibility(bar);
+                require(bar->isHidden(), "mode changes preserve hidden preference");
+                PdfWindow reopened;
+                auto *restored = reopened.findChild<QToolBar *>(QStringLiteral("modelingIconBar"));
+                auto *toggle = reopened.findChild<QAction *>(QStringLiteral("modelingIconBarVisibleAction"));
+                require(restored->isHidden() && !toggle->isChecked(), "hidden toolbar preference restored");
+                toggle->setChecked(true);
+                require(!restored->isHidden(), "hidden toolbar can be shown from options");
+                auto *sketch = reopened.findChild<QToolBar *>(QStringLiteral("sketchIconBar"));
+                auto *sketchToggle = reopened.findChild<QAction *>(QStringLiteral("sketchIconBarVisibleAction"));
+                sketchToggle->setChecked(false); sketchToggle->setChecked(true);
+                require(sketch->isHidden(), "sketch toolbar still waits for sketch mode");
+            }
+            QSettings().remove(QStringLiteral("toolbar/visible"));
+            QSettings().remove(QStringLiteral("toolbar/layout"));
+            QSettings().remove(QStringLiteral("toolbar/locked"));
         } catch (const std::exception &e) { std::cerr << e.what() << std::endl; return 1; }
         std::cout << "PASS toolbar restore" << std::endl;
         return 0;
@@ -5806,6 +6165,11 @@ int main(int argc, char **argv) {
         try { ViewportInteractionTest::shapeAnalysisUi(app.arguments().contains(QStringLiteral("--gl"))); }
         catch (const std::exception &e) { std::cerr << e.what() << std::endl; return 1; }
         std::cout << "PASS shape analysis UI" << std::endl;
+        return 0;
+    }
+    if (app.arguments().contains(QStringLiteral("--thicken"))) {
+        try { ViewportInteractionTest::thickenFeature(); }
+        catch (const std::exception &e) { std::cerr << e.what() << std::endl; return 1; }
         return 0;
     }
     if (app.arguments().contains(QStringLiteral("--projection-features"))) {

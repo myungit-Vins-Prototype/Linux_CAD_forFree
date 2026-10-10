@@ -107,6 +107,11 @@ ForgeBody forgeExtendSheet(const ForgeBody &sheet, const QVector<EdgePoint> &poi
 // Guscio: il solido svuotato con lo spessore verso l'interno, le facce scelte tolte (fk_shell).
 ForgeBody forgeDraft(const ForgeBody &base, const QVector<EdgePoint> &faces, const Kernel::Vec3 &origin,
                      const Kernel::Vec3 &direction, double angleDegrees, QString *error);
+// Spessore (fk_thicken): le facce scelte del corpo (nessuna: tutta la
+// superficie) ispessite di `thickness`; side 0 nel verso, 1 opposto, 2 meta'
+// per parte; `direction` nullo: lungo la normale delle facce.
+ForgeBody forgeThicken(const ForgeBody &base, const QVector<EdgePoint> &faces, double thickness, int side, const Kernel::Vec3 *direction,
+                       QString *error);
 ForgeBody forgeShell(const ForgeBody &base, const QVector<EdgePoint> &openFaces, double thickness, QString *error);
 // `component` -1 conserva tutte le componenti nello stesso B-rep (file
 // precedenti); un valore >= 0 restituisce una sola componente connessa.

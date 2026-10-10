@@ -54,7 +54,8 @@ constexpr char kMagic[4] = {'F', 'C', 'A', 'D'};
 // 32 mantenimento della cucitura dell’offset.
 // 37 quota associativa degli offset di schizzo.
 // 38 taglio superficie con la proiezione di uno schizzo e curve proiettate.
-constexpr quint16 kVersion = 38;
+// 39 spessore delle superfici (lato e direzione).
+constexpr quint16 kVersion = 39;
 constexpr quint8 kZlib = 1;
 
 void write(QDataStream &out, const CurveObject &curve) {
@@ -359,6 +360,9 @@ void write(QDataStream &out, const ExtrusionObject &body) {
     out << body.draftAngle << body.draftReverse;
     // Formato 38: proiezione di uno schizzo (taglio e curve).
     out << body.trimProject << qint32(body.projectionMode) << body.projectionReverse;
+    // Formato 39: spessore delle superfici.
+    out << qint32(body.thickenSide);
+    writeRefs(out, {body.thickenDirection});
 }
 
 // `extras` (solo formato 5): i file scritti durante lo sviluppo del formato 5
@@ -586,7 +590,15 @@ bool read(QDataStream &in, ExtrusionObject &body, quint16 version, int extras) {
         if (mode < 0 || mode > 2) return false;
         body.projectionMode = mode;
     }
-    const BodyFeature last = version >= 38 ? BodyFeature::ProjectedCurve : version >= 36 ? BodyFeature::Draft : version >= 35 ? BodyFeature::FillSurface : version >= 27 ? BodyFeature::Thread : version >= 25 ? BodyFeature::Shell : BodyFeature::PlanarSurface;
+    if (version >= 39) {
+        qint32 side = 0;
+        in >> side;
+        QVector<GeometryRef> refs;
+        if (side < 0 || side > 2 || !readRefs(in, refs, version) || refs.size() != 1) return false;
+        body.thickenSide = side;
+        body.thickenDirection = refs.first();
+    }
+    const BodyFeature last = version >= 39 ? BodyFeature::Thicken : version >= 38 ? BodyFeature::ProjectedCurve : version >= 36 ? BodyFeature::Draft : version >= 35 ? BodyFeature::FillSurface : version >= 27 ? BodyFeature::Thread : version >= 25 ? BodyFeature::Shell : BodyFeature::PlanarSurface;
     if (int(body.feature) < 0 || int(body.feature) > int(last)) return false;
     return in.status() == QDataStream::Ok;
 }

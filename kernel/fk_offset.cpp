@@ -13,7 +13,10 @@
 #include <tuple>
 
 #include "fk_bspline_basis.h"
+#include "fk_boolean.h"
 #include "fk_bspline_surface.h"
+#include "fk_classify.h"
+#include "fk_curve_algo.h"
 #include "fk_exchange.h"
 #include "fk_intersect.h"
 #include "fk_parallel.h"
@@ -101,15 +104,21 @@ public:
 // produce due offset distinti: nessuna griglia continua puo' approssimarli.
 // Valutiamo i due limiti sulle pezze di Bezier, senza epsilon che confondano
 // uno spigolo con una zona liscia molto curva o con una campata stretta.
-void requireContinuousNormals(const BSplineSurface &surface, double d, const Interval &uw, const Interval &vw, double tolerance) {
+// Linee di nodo (u = costante se il primo e' vero) dove la normale salta
+// dentro la finestra; `first` si ferma alla prima.
+std::vector<std::pair<bool, double>> creasedKnotLines(const BSplineSurface &surface, double d, const Interval &uw, const Interval &vw, double tolerance,
+                                                      bool first = false) {
+    std::vector<std::pair<bool, double>> found;
     const auto sharp = surface.cachedSharpKnotLines();
-    if (sharp->u.empty() && sharp->v.empty()) return;
+    if (sharp->u.empty() && sharp->v.empty()) return found;
     const auto patches = surface.cachedBezierPatches();
     const auto us = surface.uBreakpoints(surface.uDomain()), vs = surface.vBreakpoints(surface.vDomain());
     const std::size_t nu = us.size() - 1, nv = vs.size() - 1;
     const auto check = [&](const BSplineSurface &a, const BSplineSurface &b, bool fixedU, double knot, Interval range) {
         const Interval window = fixedU ? uw : vw;
         if (!(knot > window.lo && knot < window.hi)) return;
+        if (std::find(found.begin(), found.end(), std::make_pair(fixedU, knot)) != found.end()) return;
+        if (first && !found.empty()) return;
         const Interval transverse = fixedU ? vw : uw;
         range.lo = std::max(range.lo, transverse.lo), range.hi = std::min(range.hi, transverse.hi);
         if (!(range.hi > range.lo)) return;
@@ -121,10 +130,10 @@ void requireContinuousNormals(const BSplineSurface &surface, double d, const Int
                 nb = b.normal(fixedU ? knot : t, fixedU ? t : knot);
             } catch (const std::domain_error &) { continue; } // i poli si trattano nel calcolo della superficie
             const double jump = norm(na - nb);
-            if (jump > 1e-7 && std::fabs(d) * jump > 10.0 * tolerance)
-                throw InternalNormalDiscontinuity("offset: discontinuita della normale interna alla faccia lungo "
-                    + std::string(fixedU ? "u=" : "v=") + std::to_string(knot)
-                    + "; dividere la faccia sugli spigoli interni o ricostruire il loft con continuita tangente");
+            if (jump > 1e-7 && std::fabs(d) * jump > 10.0 * tolerance) {
+                found.emplace_back(fixedU, knot);
+                return;
+            }
         }
     };
     for (std::size_t i = 0; i < nu; ++i)
@@ -134,6 +143,15 @@ void requireContinuousNormals(const BSplineSurface &surface, double d, const Int
             if (j + 1 < nv && std::find(sharp->v.begin(), sharp->v.end(), vs[j + 1]) != sharp->v.end())
                 check((*patches)[i * nv + j], (*patches)[i * nv + j + 1], false, vs[j + 1], {us[i], us[i + 1]});
         }
+    return found;
+}
+
+void requireContinuousNormals(const BSplineSurface &surface, double d, const Interval &uw, const Interval &vw, double tolerance) {
+    const auto found = creasedKnotLines(surface, d, uw, vw, tolerance, true);
+    if (!found.empty())
+        throw InternalNormalDiscontinuity("offset: discontinuita della normale interna alla faccia lungo "
+            + std::string(found.front().first ? "u=" : "v=") + std::to_string(found.front().second)
+            + "; dividere la faccia sugli spigoli interni o ricostruire il loft con continuita tangente");
 }
 
 // La superficie a distanza si ripiega dove d supera il raggio di curvatura
@@ -845,6 +863,172 @@ bool splitOffsetFaces(const Body &body, const std::vector<FaceId> &faces, double
     return true;
 }
 
+// Tratti di una B-spline tra le linee di nodo `cuts` nella direzione u
+// (fixedU) o v, dove la superficie e' C0 (nodo di molteplicita' pari almeno al
+// grado): poli e nodi del tratto, stesso parametro. Vuoto se un taglio non
+// ha la molteplicita' richiesta.
+std::vector<std::pair<Interval, SurfacePtr>> splitAtC0Knots(const BSplineSurface &s, bool fixedU, std::vector<double> cuts) {
+    const int p = fixedU ? s.uDegree() : s.vDegree();
+    const std::vector<double> &K = fixedU ? s.uKnots() : s.vKnots();
+    const Interval domain = fixedU ? s.uDomain() : s.vDomain();
+    std::sort(cuts.begin(), cuts.end());
+    std::vector<double> bounds{domain.lo};
+    for (double c : cuts) {
+        if (!(c > domain.lo && c < domain.hi)) continue;
+        if (std::count(K.begin(), K.end(), c) < p) return {};
+        bounds.push_back(c);
+    }
+    bounds.push_back(domain.hi);
+    std::vector<std::pair<Interval, SurfacePtr>> result;
+    const int nu = s.uPoleCount(), nv = s.vPoleCount();
+    for (std::size_t b = 0; b + 1 < bounds.size(); ++b) {
+        const double a = bounds[b], z = bounds[b + 1];
+        std::vector<double> knots(std::size_t(p + 1), a);
+        for (double k : K)
+            if (k > a && k < z) knots.push_back(k);
+        knots.insert(knots.end(), std::size_t(p + 1), z);
+        const int count = int(knots.size()) - p - 1;
+        int start = 0;
+        if (b > 0) {
+            int last = -1;
+            for (int i = 0; i < int(K.size()); ++i)
+                if (K[std::size_t(i)] == a) last = i;
+            start = last - p;
+        }
+        std::vector<Vec3> poles;
+        std::vector<double> weights;
+        const int su = fixedU ? count : nu, sv = fixedU ? nv : count;
+        for (int i = 0; i < su; ++i)
+            for (int j = 0; j < sv; ++j) {
+                const int pi = fixedU ? start + i : i, pj = fixedU ? j : start + j;
+                poles.push_back(s.pole(pi, pj));
+                if (s.isRational()) weights.push_back(s.weight(pi, pj));
+            }
+        auto piece = fixedU ? std::make_shared<BSplineSurface>(s.uDegree(), s.vDegree(), knots, s.vKnots(), su, sv, std::move(poles), std::move(weights))
+                            : std::make_shared<BSplineSurface>(s.uDegree(), s.vDegree(), s.uKnots(), knots, su, sv, std::move(poles), std::move(weights));
+        result.emplace_back(Interval{a, z}, piece);
+    }
+    return result;
+}
+
+// Facce B-spline rifilate con pieghe interne (una linea di nodo dove la
+// normale salta: lo sweep lungo una spline solo C1, lontano dal percorso):
+// le isoparametriche esatte delle pieghe, nei tratti dentro la faccia, si
+// imprimono (imprintCurves) e la faccia si divide. Le pieghe diventano edge
+// tra facce, che l'offset tratta come gli altri spigoli. `split` comprende le
+// sole facce scelte; falso se non c'e' niente da dividere.
+bool splitTrimmedCreases(const Body &body, const std::vector<FaceId> &faces, double d, double tolerance, Body &split) {
+    std::set<int> chosen;
+    for (FaceId f : faces) chosen.insert(f.index);
+    const bool all = body.isSheet() && chosen.size() == body.faces().size();
+    Body sheet = all ? body : facesAsSheet(body, faces);
+    computePCurves(sheet);
+    std::vector<ImprintCurve> curves;
+    std::map<const BSplineSurface *, std::vector<std::pair<bool, double>>> creases;
+    for (FaceId f : sheet.faces()) {
+        const auto &surface = sheet.face(f).surface;
+        if (surface->type() != SurfaceType::BSpline || fullSplineRectangle(sheet, f)) continue;
+        // Finestra (u, v) dei loop.
+        Interval uw{1e300, -1e300}, vw{1e300, -1e300};
+        for (LoopId l : sheet.face(f).loops)
+            for (FinId fin : sheet.loopFins(l)) {
+                const Fin &data = sheet.fin(fin);
+                if (!data.pcurve) continue;
+                const Edge &edge = sheet.edge(data.edge);
+                for (int k = 0; k <= 32; ++k) {
+                    const Vec2 uv = data.pcurve->point(edge.range.lo + edge.range.length() * k / 32.0);
+                    uw.lo = std::min(uw.lo, uv.x()), uw.hi = std::max(uw.hi, uv.x()), vw.lo = std::min(vw.lo, uv.y()), vw.hi = std::max(vw.hi, uv.y());
+                }
+            }
+        if (!(uw.lo < uw.hi && vw.lo < vw.hi)) continue;
+        const auto &spline = static_cast<const BSplineSurface &>(*surface);
+        for (const auto &[fixedU, knot] : creasedKnotLines(spline, d, uw, vw, tolerance)) {
+            std::vector<std::pair<bool, double>> &known = creases[&spline];
+            if (std::find(known.begin(), known.end(), std::make_pair(fixedU, knot)) == known.end()) known.emplace_back(fixedU, knot);
+            const CurvePtr<3> iso = fixedU ? spline.uIso(knot) : spline.vIso(knot);
+            if (!iso) continue;
+            const Interval range = fixedU ? vw : uw;
+            const auto inside = [&](double t) { return classifyPointOnFace(sheet, f, iso->point(t), 1e-7) == PointLocation::Inside; };
+            // Estremo sul bordo tra un campione dentro e uno fuori, poi il punto dell'edge piu' vicino.
+            const auto boundary = [&](double in, double out, Vec3 &foot) {
+                for (int k = 0; k < 60 && std::fabs(in - out) > 1e-13 * std::max(1.0, range.length()); ++k) {
+                    const double mid = 0.5 * (in + out);
+                    (inside(mid) ? in : out) = mid;
+                }
+                const double t = 0.5 * (in + out);
+                const Vec3 p = iso->point(t);
+                double best = std::numeric_limits<double>::infinity();
+                for (LoopId l : sheet.face(f).loops)
+                    for (FinId fin : sheet.loopFins(l)) {
+                        const Edge &edge = sheet.edge(sheet.fin(fin).edge);
+                        const CurveProjection<3> projection = projectPoint(*edge.curve, p, edge.range);
+                        if (projection.distance < best) best = projection.distance, foot = projection.point;
+                    }
+                return t;
+            };
+            constexpr int kSamples = 512;
+            std::vector<bool> flags(kSamples + 1);
+            for (int k = 0; k <= kSamples; ++k) flags[std::size_t(k)] = inside(range.lo + range.length() * k / kSamples);
+            for (int k = 0; k <= kSamples;) {
+                if (!flags[std::size_t(k)]) { ++k; continue; }
+                int last = k;
+                while (last + 1 <= kSamples && flags[std::size_t(last + 1)]) ++last;
+                ImprintCurve curve;
+                curve.face = f;
+                curve.curve = iso;
+                const auto param = [&](int i) { return range.lo + range.length() * i / kSamples; };
+                double lo = param(k), hi = param(last);
+                if (k > 0) lo = boundary(param(k), param(k - 1), curve.loPoint), curve.loOnEdge = true;
+                if (last < kSamples) hi = boundary(param(last), param(last + 1), curve.hiPoint), curve.hiOnEdge = true;
+                if (hi - lo > 1e-9 * range.length()) {
+                    curve.range = {lo, hi};
+                    curves.push_back(curve);
+                }
+                k = last + 1;
+            }
+        }
+    }
+    if (curves.empty()) return false;
+    BooleanOptions options;
+    options.unifySameDomain = false;
+    split = imprintCurves(sheet, curves, {}, options);
+    // Ogni pezzo prende la sotto-superficie del suo tratto tra le pieghe: le
+    // finestre prolungate dell'offset continuano il polinomio del tratto
+    // invece di attraversare la piega. Stesso parametro: le SP-curve valgono.
+    for (const auto &[surface, lines] : creases) {
+        std::vector<double> cutsU, cutsV;
+        for (const auto &[fixedU, knot] : lines) (fixedU ? cutsU : cutsV).push_back(knot);
+        std::vector<std::pair<Interval, SurfacePtr>> piecesU, piecesV;
+        if (!cutsU.empty()) piecesU = splitAtC0Knots(*surface, true, cutsU);
+        if (!cutsV.empty()) piecesV = splitAtC0Knots(*surface, false, cutsV);
+        if (piecesU.empty() == !cutsU.empty() || piecesV.empty() == !cutsV.empty())
+            throw std::domain_error("offset: piega interna su un nodo che non separa la superficie (molteplicita' minore del grado)");
+        if (!cutsU.empty() && !cutsV.empty()) throw std::domain_error("offset: pieghe interne nelle due direzioni della stessa faccia non gestite");
+        const auto &pieces = cutsU.empty() ? piecesV : piecesU;
+        const bool alongU = !cutsU.empty();
+        for (FaceId f : split.faces()) {
+            if (split.face(f).surface.get() != static_cast<const Surface *>(surface)) continue;
+            // Il tratto che contiene il centro della finestra della faccia.
+            double lo = 1e300, hi = -1e300;
+            for (LoopId l : split.face(f).loops)
+                for (FinId fin : split.loopFins(l)) {
+                    const Fin &data = split.fin(fin);
+                    if (!data.pcurve) continue;
+                    const Edge &edge = split.edge(data.edge);
+                    for (int k = 0; k <= 16; ++k) {
+                        const Vec2 uv = data.pcurve->point(edge.range.lo + edge.range.length() * k / 16.0);
+                        const double t = alongU ? uv.x() : uv.y();
+                        lo = std::min(lo, t), hi = std::max(hi, t);
+                    }
+                }
+            const double middle = 0.5 * (lo + hi);
+            for (const auto &[range, piece] : pieces)
+                if (middle >= range.lo && middle <= range.hi) split.face(f).surface = piece;
+        }
+    }
+    return true;
+}
+
 }  // namespace
 
 std::shared_ptr<BSplineCurve<3>> fitCurve(const std::function<Vec3(double)> &f, const Interval &range, const std::vector<double> &breaks,
@@ -993,15 +1177,20 @@ SurfacePtr offsetSurface(const Surface &surface, double d, const Interval &uw, c
     return result;
 }
 
-OffsetResult offsetFaces(const Body &input, const std::vector<FaceId> &faces, double distanceValue, double tolerance, bool preserveSeams) {
+OffsetResult offsetFaces(const Body &input, const std::vector<FaceId> &faces, double distanceValue, double tolerance, bool preserveSeams, double joinAngle) {
     if (faces.empty()) throw std::domain_error("offset: nessuna faccia scelta");
     if (!(std::fabs(distanceValue) > 0.0)) throw std::domain_error("offset: distanza nulla");
     Body body = input;
     if (computePCurves(body) > 0) throw std::domain_error("offset: SP-curve non calcolabili");
     Body split;
     if (splitOffsetFaces(body, faces, distanceValue, tolerance, split)) {
-        OffsetResult result = offsetFaces(split, split.faces(), distanceValue, tolerance, preserveSeams);
+        OffsetResult result = offsetFaces(split, split.faces(), distanceValue, tolerance, preserveSeams, joinAngle);
         result.notes.push_back("Facce del loft divise sulle discontinuita interne prima dell'offset");
+        return result;
+    }
+    if (splitTrimmedCreases(body, faces, distanceValue, tolerance, split)) {
+        OffsetResult result = offsetFaces(split, split.faces(), distanceValue, tolerance, preserveSeams, joinAngle);
+        result.notes.push_back("Facce divise sulle pieghe interne (normale discontinua lungo una linea di nodo) prima dell'offset");
         return result;
     }
     Box box;
@@ -1170,8 +1359,8 @@ OffsetResult offsetFaces(const Body &input, const std::vector<FaceId> &faces, do
                 const double t = edge.range.lo + edge.range.length() * (k + 0.5) / 9.0;
                 const Vec3 a = faceNormal(body, body.finFace(info.fins[0]), body.fin(info.fins[0]).pcurve->point(t));
                 const Vec3 b = faceNormal(body, body.finFace(info.fins[1]), body.fin(info.fins[1]).pcurve->point(t));
-                job.tangent = dot(a, b) > std::cos(kTangentAngle)
-                    && std::fabs(distanceValue) * norm(a - b) <= 2.0 * tolerance;
+                job.tangent = joinAngle > 0.0 ? dot(a, b) > std::cos(joinAngle)
+                                              : dot(a, b) > std::cos(kTangentAngle) && std::fabs(distanceValue) * norm(a - b) <= 2.0 * tolerance;
             }
         } catch (const std::exception &e) {
             job.failure = e.what();

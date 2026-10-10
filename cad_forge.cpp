@@ -39,6 +39,7 @@
 #include "fk_fill.h"
 #include "fk_curve_ops.h"
 #include "fk_project.h"
+#include "fk_thicken.h"
 #include "fk_shell.h"
 #include "fk_draft.h"
 #include "fk_step.h"
@@ -735,6 +736,38 @@ ForgeBody forgeDraft(const ForgeBody &base, const QVector<EdgePoint> &points, co
         return std::make_shared<const Body>(draftFaces(*base, faces, origin, direction, angleDegrees * kPi / 180.0));
     } catch (const std::exception &failure) {
         setError(error, QStringLiteral("Sformo non riuscito: %1").arg(QString::fromUtf8(failure.what())));
+        return nullptr;
+    }
+}
+
+ForgeBody forgeThicken(const ForgeBody &base, const QVector<EdgePoint> &faces, double thickness, int side, const Vec3 *direction, QString *error) {
+    if (!base) {
+        setError(error, QStringLiteral("La superficie da ispessire non ha geometria valida."));
+        return nullptr;
+    }
+    try {
+        Box box;
+        for (VertexId v : base->vertices()) box.add(base->vertex(v).point);
+        const double reach = 1e-3 * std::max(1.0, box.diagonal());
+        std::vector<FaceId> chosen;
+        for (const EdgePoint &point : faces) {
+            const FaceId f = resolveFaceReference(*base, point, reach);
+            if (!f.valid()) {
+                setError(error, QStringLiteral("Una delle facce scelte non esiste piu' nel corpo."));
+                return nullptr;
+            }
+            if (std::find(chosen.begin(), chosen.end(), f) == chosen.end()) chosen.push_back(f);
+        }
+        ThickenOptions options;
+        options.thickness = thickness;
+        options.side = side == 1 ? ThickenSide::Backward : side == 2 ? ThickenSide::Both : ThickenSide::Forward;
+        if (direction) {
+            options.useDirection = true;
+            options.direction = *direction;
+        }
+        return std::make_shared<const Body>(thickenSheet(*base, chosen, options));
+    } catch (const std::exception &failure) {
+        setError(error, QStringLiteral("Spessore non riuscito: %1").arg(QString::fromUtf8(failure.what())));
         return nullptr;
     }
 }
