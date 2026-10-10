@@ -34,6 +34,154 @@ static void require(bool ok, const char *message) {
 }
 class ViewportInteractionTest {
 public:
+    static void historyPositionRegressions() {
+        {
+            CadViewport timeline;
+            PrimitiveParameters primitive;
+            primitive.size[0] = primitive.size[1] = primitive.size[2] = 4;
+            require(timeline.createPrimitive(primitive, QStringLiteral("Base")).isEmpty(), "timeline base");
+            require(timeline.createScale(0, 2, 0, {}, QStringLiteral("Later")).isEmpty(), "timeline later");
+            const quint64 laterId = timeline.extrusions().at(1).featureId;
+            timeline.setHistoryPosition(0);
+            require(!timeline.extrusions().at(0).visible && !timeline.extrusions().at(1).visible, "timeline start empty");
+            timeline.setHistoryPosition(1);
+            require(timeline.extrusions().at(0).visible && !timeline.extrusions().at(1).visible, "timeline rollback");
+            require(timeline.createScale(0, 1.5, 0, {}, QStringLiteral("Inserted")).isEmpty(), "timeline insertion");
+            require(timeline.extrusions().at(2).featureId == laterId && timeline.extrusions().at(2).firstBody == 1
+                        && timeline.extrusions().at(2).error.isEmpty(), "timeline downstream recalculated");
+            timeline.setHistoryPosition(3);
+            require(timeline.extrusions().at(2).visible && !timeline.extrusions().at(1).visible, "timeline forward to end");
+            timeline.undo();
+            require(timeline.extrusions().size() == 2 && timeline.extrusions().at(1).featureId == laterId, "timeline undo insertion");
+        }
+        {
+            PdfWindow window;
+            auto *model = dynamic_cast<CadViewport *>(window.centralWidget());
+            auto *tree = dynamic_cast<StoryboardTree *>(window.findChild<QTreeWidget *>());
+            require(model && tree, "storyboard UI available");
+            QMenu *viewMenu = nullptr;
+            for (QAction *action : window.menuBar()->actions())
+                if (action->text() == QStringLiteral("Visualizza")) viewMenu = action->menu();
+            require(viewMenu, "view menu available");
+            int viewIcons = 0;
+            const std::function<void(QMenu *)> checkViewIcons = [&](QMenu *menu) {
+                for (QAction *action : menu->actions()) {
+                    if (action->isSeparator()) continue;
+                    require(!action->icon().isNull() && action->isIconVisibleInMenu(), "all view commands have visible icons");
+                    ++viewIcons;
+                    if (action->menu()) checkViewIcons(action->menu());
+                }
+            };
+            checkViewIcons(viewMenu);
+            require(viewIcons > 40, "view submenu icon coverage");
+            viewMenu->ensurePolished();
+            viewMenu->adjustSize();
+            require(viewMenu->grab().save(QStringLiteral("/tmp/forgecad-view-menu-icons.png")), "view menu icon snapshot");
+            PrimitiveParameters box;
+            box.size[0] = box.size[1] = box.size[2] = 4;
+            require(model->createPrimitive(box, QStringLiteral("Base")).isEmpty()
+                        && model->createScale(0, 2, 0, {}, QStringLiteral("Later")).isEmpty(), "storyboard UI model");
+            const auto history = [&]() -> QTreeWidgetItem * {
+                for (int i = 0; i < tree->topLevelItemCount(); ++i)
+                    if (tree->topLevelItem(i)->data(0, Qt::UserRole + 2).toString() == QStringLiteral("H")) return tree->topLevelItem(i);
+                return nullptr;
+            };
+            QApplication::processEvents();
+            auto *root = history();
+            require(root && root->childCount() == 3 && StoryboardTree::isHistoryCursor(root->child(2)), "cursor inside tree at end");
+            model->setHistoryPosition(1);
+            QApplication::processEvents();
+            root = history();
+            require(StoryboardTree::isHistoryCursor(root->child(1)) && root->child(2)->font(0).italic(), "cursor separates active and future rows");
+            require(root->child(0)->text(0).contains(QStringLiteral("risultato"))
+                        && !root->child(2)->text(0).contains(QStringLiteral("risultato")), "result badge follows cursor");
+            tree->setCurrentItem(root->child(1));
+            QKeyEvent end(QEvent::KeyPress, Qt::Key_End, Qt::NoModifier);
+            QApplication::sendEvent(tree, &end);
+            QApplication::processEvents();
+            require(model->historyPosition() == 2 && StoryboardTree::isHistoryCursor(history()->child(2)), "cursor keyboard end");
+            tree->resize(400, 500);
+            tree->show();
+            QApplication::processEvents();
+            root = history();
+            const QPointF from(tree->visualItemRect(root->child(2)).center());
+            const QPointF to(tree->visualItemRect(root->child(1)).topLeft() + QPoint(30, 1));
+            QMouseEvent press(QEvent::MouseButtonPress, from, from, Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+            QMouseEvent move(QEvent::MouseMove, to, to, Qt::NoButton, Qt::LeftButton, Qt::NoModifier);
+            QMouseEvent release(QEvent::MouseButtonRelease, to, to, Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
+            QApplication::sendEvent(tree->viewport(), &press);
+            QApplication::sendEvent(tree->viewport(), &move);
+            QApplication::sendEvent(tree->viewport(), &release);
+            QApplication::processEvents();
+            require(model->historyPosition() == 1 && StoryboardTree::isHistoryCursor(history()->child(1)), "cursor drag between features");
+            require(tree->grab().save(QStringLiteral("/tmp/forgecad-storyboard-cursor.png")), "cursor visual snapshot");
+            for (int mode : {1, 2}) {
+                auto *action = window.findChild<QAction *>(QStringLiteral("storyboardCursorMode%1").arg(mode));
+                require(action, "cursor mode menu option");
+                action->trigger();
+                QApplication::processEvents();
+                require(int(tree->cursorMode()) == mode && model->historyPosition() == 1,
+                        "mode change preserves calculation position");
+                auto *rail = tree->historyRail();
+                require(!rail->isHidden() && QSettings().value(QStringLiteral("view/storyboardCursorMode")).toInt() == mode,
+                        "vertical rail enabled and preference saved");
+                require((mode == 1 && rail->geometry().right() <= tree->viewport()->geometry().left())
+                            || (mode == 2 && rail->geometry().left() > tree->viewport()->geometry().right()),
+                        "vertical handle occupies side gutter");
+                rail->triggerAction(QAbstractSlider::SliderToMinimum);
+                QApplication::processEvents();
+                require(model->historyPosition() == 0, "vertical cursor beginning");
+                rail->triggerAction(QAbstractSlider::SliderToMaximum);
+                QApplication::processEvents();
+                require(model->historyPosition() == 2, "vertical cursor end");
+                // Move the native handle to the gap before the second feature.
+                model->setHistoryPosition(1);
+                QApplication::processEvents();
+                rail->setSliderDown(true);
+                rail->setSliderPosition(rail->value());
+                rail->sliderMoved(rail->value());
+                rail->setSliderDown(false);
+                QApplication::processEvents();
+                require(model->historyPosition() == 1, "vertical drag retains insertion boundary");
+                const QPalette originalPalette = rail->palette();
+                for (const QColor highlight : {QColor(12, 116, 168), QColor(112, 204, 245)}) {
+                    QPalette theme = originalPalette;
+                    theme.setColor(QPalette::Highlight, highlight);
+                    rail->setPalette(theme);
+                    QApplication::processEvents();
+                    const QImage handleImage = rail->grab().toImage();
+                    bool foundHighlight = false;
+                    for (int y = 0; y < handleImage.height() && !foundHighlight; ++y)
+                        for (int x = 0; x < handleImage.width(); ++x)
+                            if (handleImage.pixelColor(x, y).rgb() == highlight.rgb()) { foundHighlight = true; break; }
+                    require(foundHighlight, "handle renders highlight from current theme");
+                }
+                rail->setPalette(originalPalette);
+                auto *checkpointRail = static_cast<StoryboardPositionSlider *>(rail);
+                require(checkpointRail->checkpoints.size() == 2, "one checkpoint for each feature");
+                const auto checkpoint = checkpointRail->checkpoints.last();
+                const QPointF point(rail->width() / 2.0, checkpoint.first);
+                QMouseEvent click(QEvent::MouseButtonPress, point, point, Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+                QApplication::sendEvent(rail, &click);
+                QApplication::processEvents();
+                require(model->historyPosition() == checkpoint.second, "click checkpoint moves calculation after its feature");
+                model->setHistoryPosition(1);
+                QApplication::processEvents();
+                require(tree->grab().save(QStringLiteral("/tmp/forgecad-storyboard-mode%1.png").arg(mode)), "vertical cursor visual snapshot");
+            }
+            {
+                PdfWindow restored;
+                auto *restoredTree = dynamic_cast<StoryboardTree *>(restored.findChild<QTreeWidget *>());
+                require(restoredTree && restoredTree->cursorMode() == StoryboardTree::CursorMode::Right,
+                        "cursor preference restored in new window");
+            }
+            window.findChild<QAction *>(QStringLiteral("storyboardCursorMode0"))->trigger();
+            QApplication::processEvents();
+            require(tree->cursorMode() == StoryboardTree::CursorMode::Horizontal && tree->historyRail()->isHidden(),
+                        "original horizontal mode restored");
+        }
+    }
+
     static void denseFixedSketchRegressions() {
         using namespace ForgeCad;
         SketchObject original;
@@ -6044,6 +6192,11 @@ int main(int argc, char **argv) {
     QTemporaryDir settings;
     QSettings::setDefaultFormat(QSettings::IniFormat);
     QSettings::setPath(QSettings::IniFormat, QSettings::UserScope, settings.path());
+    if (app.arguments().contains(QStringLiteral("--history-position"))) {
+        try { ViewportInteractionTest::historyPositionRegressions(); }
+        catch (const std::exception &e) { std::cerr << e.what() << std::endl; return 1; }
+        return 0;
+    }
     if (app.arguments().contains(QStringLiteral("--mesh-export-tests"))) {
         try { ViewportInteractionTest::meshExportAutomatic(); }
         catch (const std::exception &e) { std::cerr << e.what() << std::endl; return 1; }

@@ -27,6 +27,39 @@ B-rep intermedio, ma possiede un `featureId` persistente e un `modelBodyId`.
 - La geometria di riferimento precede i corpi nell'albero; datum ed eliche non
   partecipano al riordino delle feature dei corpi.
 
+## Posizione di calcolo
+
+Nell'albero **Storia delle feature**, la barra azzurra **Inserisci qui** separa
+gli stadi attivi da quelli successivi, mostrati attenuati e in corsivo.
+Trascinare la barra tra le feature per scegliere il punto di calcolo e
+inserimento. Con la barra selezionata, le frecce su/giù spostano di un passo;
+Home porta all'inizio, End alla fine. A posizione zero nessun corpo è mostrato;
+alla fine sono mostrati i risultati completi.
+
+Una nuova funzione creata durante il rollback viene inserita alla posizione
+scelta. Le funzioni successive restano nella storia: le basi implicite dello
+stesso corpo vengono ricollegate e la sequenza viene rigenerata. I riferimenti
+espliciti che non sono più risolvibili producono il normale errore della
+feature. Per vedere il risultato completo dopo l'inserimento, avanzare alla
+fine. Il salvataggio conserva tutta la storia; riapertura e Undo/Redo riportano
+la vista alla fine della sequenza.
+
+Dal menu **Visualizza → Barra di posizione storyboard** si sceglie tra
+**Orizzontale nell'albero**, **Verticale a sinistra** e **Verticale a destra**.
+La preferenza viene conservata per le aperture successive. Cambiare modalità
+non sposta la posizione di calcolo. Nelle modalità verticali la maniglia occupa
+una corsia accanto alle feature; il suo colore segue la palette del tema.
+La dicitura *Inserisci qui* resta nel punto della storia selezionato.
+La maniglia è compatta; un pallino sulla guida identifica ogni feature visibile.
+Cliccando sul pallino si porta il calcolo subito dopo quella feature. La guida e tutti i pallini
+usano lo stesso azzurro della scritta *Inserisci qui*, così restano visibili
+anche con palette poco contrastate. I pallini attivi sono pieni, quelli
+successivi sono vuoti; la maniglia continua a seguire il colore del tema.
+La guida è interrotta con un piccolo spazio prima e dopo ogni pallino, per
+separarlo visivamente; i bordi dei segmenti sfumano nell'azzurro trasparente.
+
+
+
 ## File e compatibilita'
 
 Il formato `.prt` 20 salva gli identificatori, la soppressione, i corpi logici

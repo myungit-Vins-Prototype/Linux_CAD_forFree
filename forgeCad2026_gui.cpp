@@ -82,6 +82,7 @@
 #include <QLocale>
 #include <QListWidget>
 #include <QSlider>
+#include <QScrollBar>
 #include <QVBoxLayout>
 #include <QMenu>
 #include <QMenuBar>
@@ -93,6 +94,7 @@
 #include <QOpenGLShaderProgram>
 #include <QOpenGLWidget>
 #include <QPainter>
+#include <QLinearGradient>
 #include <QPainterPath>
 #include <QPushButton>
 #include <QProgressBar>
@@ -108,6 +110,7 @@
 #include <QToolButton>
 #include <QTimer>
 #include <QStyledItemDelegate>
+#include <QStyleOptionSlider>
 #include <QTreeWidget>
 #include <QTreeWidgetItemIterator>
 #include <QVector>
@@ -567,6 +570,8 @@ public:
         ForgeCad::setDisplayLengthUnit(lengthUnit_);
         ForgeCad::normalizeModelHistory(state);
         sketches_ = std::move(state.sketches);
+        historyPosition_ = -1;
+        insertionSourceSize_ = -1;
         extrusions_ = std::move(state.extrusions);
         modelBodies_ = std::move(state.modelBodies);
         std::vector<CurveObject *> curveJobs;
@@ -594,6 +599,8 @@ public:
         lengthUnit_ = state.lengthUnitSet ? state.lengthUnit : LengthUnit::Millimeter;
         ForgeCad::normalizeModelHistory(state);
         sketches_ = std::move(state.sketches);
+        historyPosition_ = -1;
+        insertionSourceSize_ = -1;
         extrusions_ = std::move(state.extrusions);
         modelBodies_ = std::move(state.modelBodies);
         for (SketchObject &sketch : sketches_)
@@ -661,6 +668,24 @@ public:
     const QVector<SketchObject> &sketches() const { return sketches_; }
     const QVector<ExtrusionObject> &extrusions() const { return extrusions_; }
     const QVector<ModelBody> &modelBodies() const { return modelBodies_; }
+    int historyPosition() const { return historyPosition_ < 0 ? int(extrusions_.size()) : historyPosition_; }
+    void applyHistoryPosition() {
+        if (historyPosition_ < 0) return;
+        QVector<ExtrusionObject> prefix = extrusions_.mid(0, historyPosition());
+        QVector<ModelBody> bodies = modelBodies_;
+        ForgeCad::normalizeModelHistory(prefix, bodies);
+        for (int i = 0; i < extrusions_.size(); ++i)
+            extrusions_[i].visible = i < prefix.size() && prefix.at(i).visible;
+    }
+    void setHistoryPosition(int position) {
+        for (ExtrusionObject &feature : extrusions_)
+            for (const ModelBody &body : modelBodies_)
+                if (feature.modelBodyId == body.id) feature.visible = feature.featureId == body.tipFeatureId && body.visible;
+        historyPosition_ = position >= extrusions_.size() ? -1 : qMax(0, position);
+        selection_ = {};
+        documentChanged();
+    }
+
     // Corpo della storyboard in cui confluisce ogni corpo logico: un corpo
     // consumato da una booleana, da una fusione o da una cucitura di un altro
     // corpo non esiste piu' da solo, le sue feature sono un ramo della storia
@@ -673,7 +698,7 @@ public:
     // feature intermedie e i corpi spariti non ci sono: e' l'elenco da offrire
     // come operandi.
     QVector<int> resultBodiesBefore(int position) const {
-        const int end = position < 0 ? int(extrusions_.size()) : std::min(position, int(extrusions_.size()));
+        const int end = position < 0 ? historyPosition() : std::min(position, historyPosition());
         QHash<quint64, int> last;
         QSet<quint64> consumed;
         for (int index = 0; index < end; ++index) {
@@ -6165,6 +6190,10 @@ private:
         state.sketches = sketches_;
         state.extrusions = extrusions_;
         state.modelBodies = modelBodies_;
+        if (historyPosition_ >= 0)
+            for (ExtrusionObject &feature : state.extrusions)
+                for (const ModelBody &body : state.modelBodies)
+                    if (feature.modelBodyId == body.id) feature.visible = feature.featureId == body.tipFeatureId && body.visible;
         state.orientation = orientation_;
         state.orientationSet = true;
         state.lengthUnit = lengthUnit_;
@@ -6596,10 +6625,83 @@ private:
 
     // Salva lo stato corrente nella cronologia: va chiamata subito prima di
     // una modifica al documento, seguita da documentChanged() a modifica fatta.
-    void recordUndo() { history_.record(documentState()); }
+    void recordUndo() { insertionSourceSize_ = extrusions_.size(); history_.record(documentState()); }
 
     void documentChanged() {
+
+        if (historyPosition_ >= 0)
+            for (ExtrusionObject &feature : extrusions_)
+                for (const ModelBody &body : modelBodies_)
+                    if (feature.modelBodyId == body.id && feature.featureId == body.tipFeatureId) feature.visible = body.visible;
+        // Creation paths append their results. Insert that entire batch at the
+        // rollback cursor, preserving persistent IDs and remapping vector indices.
+        if (historyPosition_ >= 0 && insertionSourceSize_ >= 0 && extrusions_.size() > insertionSourceSize_) {
+            const int start = qMin(historyPosition_, insertionSourceSize_);
+            const int added = extrusions_.size() - insertionSourceSize_;
+            ForgeCad::normalizeModelHistory(extrusions_, modelBodies_);
+            QVector<int> order;
+            for (int i = 0; i < start; ++i) order.append(i);
+            for (int i = insertionSourceSize_; i < extrusions_.size(); ++i) order.append(i);
+            for (int i = start; i < insertionSourceSize_; ++i) order.append(i);
+            QVector<int> map(extrusions_.size(), -1);
+            QVector<ExtrusionObject> reordered;
+            for (int old : order) { map[old] = reordered.size(); reordered.append(extrusions_.at(old)); }
+            const auto mapped = [&](int old) { return old >= 0 ? map.value(old, -1) : old; };
+            const auto remapRef = [&](GeometryRef &ref) {
+                if (isBodyRef(ref)) ref.index = mapped(ref.index);
+            };
+            for (ExtrusionObject &feature : reordered) {
+                feature.firstBody = mapped(feature.firstBody);
+                feature.secondBody = mapped(feature.secondBody);
+                for (int &tool : feature.booleanTools) tool = mapped(tool);
+                for (int &merged : feature.mergeBodies) merged = mapped(merged);
+                for (GeometryRef &ref : feature.datum.refs) remapRef(ref);
+                for (GeometryRef &ref : feature.pattern.refs) remapRef(ref);
+                for (QVector<GeometryRef> *refs : {&feature.ruledFirst, &feature.ruledSecond, &feature.planarRefs})
+                    for (GeometryRef &ref : *refs) remapRef(ref);
+                remapRef(feature.extentRef);
+                remapRef(feature.move.axis);
+                remapRef(feature.revolveAxisRef);
+                remapRef(feature.draftNeutral);
+                remapRef(feature.thickenDirection);
+            }
+            QSet<quint64> changedBodies;
+            for (int i = start; i < start + added; ++i) changedBodies.insert(reordered.at(i).modelBodyId);
+            for (quint64 bodyId : changedBodies) {
+                if (!bodyId) continue;
+                int previous = -1;
+                for (int current = 0; current < reordered.size(); ++current) {
+                    ExtrusionObject &feature = reordered[current];
+                    if (feature.modelBodyId != bodyId) continue;
+                    if (previous >= 0) {
+                        if (feature.operation >= 0 || feature.feature == BodyFeature::Blend || feature.feature == BodyFeature::SheetTrim
+                            || feature.feature == BodyFeature::SheetExtend || feature.feature == BodyFeature::Scale
+                            || (feature.feature == BodyFeature::Transform && !feature.move.copy) || feature.feature == BodyFeature::Pattern
+                            || feature.feature == BodyFeature::Sew || feature.feature == BodyFeature::DeleteFace
+                            || feature.feature == BodyFeature::Draft || feature.feature == BodyFeature::Shell || feature.feature == BodyFeature::Thread
+                            || (feature.feature == BodyFeature::Thicken && feature.offsetFaces.isEmpty())) {
+                            feature.firstBody = previous;
+                        } else if (mergingFeature(feature) && feature.mergeOperation != 0) {
+                            bool replaced = false;
+                            for (int &merged : feature.mergeBodies)
+                                if (merged >= 0 && reordered.at(merged).modelBodyId == bodyId) { merged = previous; replaced = true; break; }
+                            if (!replaced) feature.mergeBodies.prepend(previous);
+                        }
+                    }
+                    previous = current;
+                }
+            }
+            for (SketchObject &sketch : sketches_)
+                if (sketch.datumPlane >= 0) sketch.datumPlane = mapped(sketch.datumPlane);
+            if (selection_.kind == SceneObjectKind::Extrusion) selection_.index = mapped(selection_.index);
+            extrusions_ = std::move(reordered);
+            historyPosition_ = start + added;
+            regenerateAll();
+        }
+        insertionSourceSize_ = -1;
+        if (historyPosition_ > extrusions_.size()) historyPosition_ = extrusions_.size();
         ForgeCad::normalizeModelHistory(extrusions_, modelBodies_);
+        applyHistoryPosition();
         sceneBoundsDirty_ = true;
         raySelectionCache_.clear();
         projectedEdges_.clear();
@@ -7850,6 +7952,8 @@ private:
         dimensionPlacing_ = -1;
         ForgeCad::normalizeModelHistory(state);
         sketches_ = std::move(state.sketches);
+        historyPosition_ = -1;
+        insertionSourceSize_ = -1;
         extrusions_ = std::move(state.extrusions);
         modelBodies_ = std::move(state.modelBodies);
         for (SketchObject &sketch : sketches_) {
@@ -12188,6 +12292,8 @@ private:
     bool constraintsVisible_ = true;
     std::function<void()> constraintPanelCallback_;
     QVector<SketchObject> sketches_;
+    int historyPosition_ = -1;
+    int insertionSourceSize_ = -1;
     QVector<ExtrusionObject> extrusions_;
     QVector<ModelBody> modelBodies_;
     ForgeCad::History history_;
@@ -12430,6 +12536,71 @@ public:
     }
 };
 
+const QColor kStoryboardPositionColor(70, 205, 255);
+
+// Use the live palette when painting the handle: stylesheet palette colors
+// can remain cached after the application switches its appearance.
+class StoryboardPositionSlider final : public QSlider {
+public:
+    using QSlider::QSlider;
+    QVector<QPair<int, int>> checkpoints;
+    int activePosition = 0;
+    std::function<void(int)> checkpointSelected;
+protected:
+    void mousePressEvent(QMouseEvent *event) override {
+        if (event->button() == Qt::LeftButton && std::abs(event->position().x() - width() / 2) <= 10)
+            for (const auto &checkpoint : checkpoints)
+                if (std::abs(event->position().y() - checkpoint.first) <= 6) {
+                    event->accept();
+                    if (checkpointSelected) checkpointSelected(checkpoint.second);
+                    return;
+                }
+        QSlider::mousePressEvent(event);
+    }
+    void paintEvent(QPaintEvent *event) override {
+        QSlider::paintEvent(event);
+        QStyleOptionSlider option;
+        initStyleOption(&option);
+        const QRect handle = style()->subControlRect(QStyle::CC_Slider, &option, QStyle::SC_SliderHandle, this);
+        QPainter painter(this);
+        painter.setRenderHint(QPainter::Antialiasing);
+        // Guida azzurra con bordo sfumato; piccoli intervalli isolano i checkpoint.
+        const double centerX = width() / 2.0;
+        QLinearGradient edge(centerX - 4, 0, centerX + 4, 0);
+        for (const auto &stop : {qMakePair(0.0, 0), qMakePair(0.2, 30), qMakePair(0.4, 160),
+                                 qMakePair(0.5, 255), qMakePair(0.6, 160), qMakePair(0.8, 30), qMakePair(1.0, 0)}) {
+            QColor color = kStoryboardPositionColor;
+            color.setAlpha(stop.second);
+            edge.setColorAt(stop.first, color);
+        }
+        const auto drawSegment = [&](double begin, double end) {
+            if (end <= begin) return;
+            painter.fillRect(QRectF(centerX - 4, begin, 8, end - begin), edge);
+            painter.setPen(QPen(kStoryboardPositionColor, 1.5, Qt::SolidLine, Qt::RoundCap));
+            painter.drawLine(QPointF(centerX, begin), QPointF(centerX, end));
+        };
+        // Nessun frammento terminale: sembrerebbe un checkpoint aggiuntivo.
+        if (checkpoints.isEmpty()) {
+            drawSegment(6, qMax(6, height() - 6));
+        } else {
+            for (int index = 1; index < checkpoints.size(); ++index)
+                drawSegment(checkpoints.at(index - 1).first + 6.0, checkpoints.at(index).first - 6.0);
+        }
+        for (const auto &checkpoint : checkpoints) {
+            const QColor color = kStoryboardPositionColor;
+            painter.setPen(QPen(color, 1));
+            painter.setBrush(checkpoint.second <= activePosition ? color : palette().color(QPalette::Window));
+            painter.drawEllipse(QPointF(width() / 2.0, checkpoint.first), 2.5, 2.5);
+        }
+        painter.setBrush(palette().color(QPalette::Highlight));
+        painter.setPen(QPen(palette().color(hasFocus() ? QPalette::HighlightedText : QPalette::Light), 1));
+        painter.drawRoundedRect(handle.adjusted(1, 1, -1, -1), 3, 3);
+        painter.setPen(QPen(palette().color(QPalette::HighlightedText), 1));
+        for (int offset : {-2, 2})
+            painter.drawLine(handle.center() + QPoint(-4, offset), handle.center() + QPoint(4, offset));
+    }
+};
+
 class StoryboardTree final : public QTreeWidget {
 public:
     explicit StoryboardTree(QWidget *parent = nullptr) : QTreeWidget(parent) {
@@ -12443,10 +12614,145 @@ public:
         setDefaultDropAction(Qt::MoveAction);
         // Ctrl/Maiusc+clic: piu' feature e schizzi per le operazioni comuni (Elimina, Sopprimi...).
         setSelectionMode(QAbstractItemView::ExtendedSelection);
+        historyRail_ = new StoryboardPositionSlider(Qt::Vertical, this);
+        static_cast<StoryboardPositionSlider *>(historyRail_)->checkpointSelected = [this](int position) {
+            if (historyPositionChanged_) historyPositionChanged_(position);
+        };
+        historyRail_->setObjectName(QStringLiteral("storyboardVerticalRail"));
+        historyRail_->setStyleSheet(QStringLiteral(
+            "QSlider::groove:vertical { background: transparent; width: 4px; border-radius: 2px; }"
+            "QSlider::handle:vertical { background: palette(highlight); border: 1px solid palette(light);"
+            " height: 12px; margin: 0 -6px; border-radius: 3px; }"
+            "QSlider::handle:vertical:hover { border: 2px solid palette(highlighted-text); }"
+            "QSlider::handle:vertical:focus { border: 2px solid palette(highlighted-text); }"));
+        historyRail_->setInvertedAppearance(true);
+        historyRail_->setInvertedControls(true);
+        historyRail_->setToolTip(QStringLiteral("Trascina la maniglia per scegliere la posizione di calcolo e inserimento"));
+        historyRail_->hide();
+        connect(historyRail_, &QSlider::sliderPressed, this, [this] { pendingHistoryPosition_ = historyPosition_; });
+        connect(historyRail_, &QSlider::sliderMoved, this, [this](int value) {
+            pendingHistoryPosition_ = historyPositionAtY(railTop_ + value);
+            setInsertionLine(railTop_ + value, 22);
+        });
+        connect(historyRail_, &QSlider::sliderReleased, this, [this] {
+            clearInsertionLine();
+            if (historyPositionChanged_) historyPositionChanged_(pendingHistoryPosition_);
+        });
+        connect(historyRail_, &QSlider::actionTriggered, this, [this](int action) {
+            if (historyRail_->isSliderDown() || updatingRail_ || !historyPositionChanged_) return;
+            int position = historyPosition_;
+            if (action == QAbstractSlider::SliderToMinimum) position = 0;
+            else if (action == QAbstractSlider::SliderToMaximum) position = historyCount_;
+            else if (action == QAbstractSlider::SliderSingleStepAdd || action == QAbstractSlider::SliderPageStepAdd) ++position;
+            else if (action == QAbstractSlider::SliderSingleStepSub || action == QAbstractSlider::SliderPageStepSub) --position;
+            else position = historyPositionAtY(railTop_ + historyRail_->sliderPosition());
+            historyPositionChanged_(qBound(0, position, historyCount_));
+        });
+        connect(verticalScrollBar(), &QScrollBar::valueChanged, this, [this] { updateHistoryRail(); });
     }
     void setMoveFeatureCallback(std::function<QString(int, int)> callback) { moveFeature_ = std::move(callback); }
+    void setHistoryPositionCallback(std::function<void(int)> callback) { historyPositionChanged_ = std::move(callback); }
+    enum class CursorMode { Horizontal, Left, Right };
+    CursorMode cursorMode() const { return cursorMode_; }
+    void setCursorMode(CursorMode mode) {
+        cursorMode_ = mode;
+        const QMargins margins = viewportMargins();
+        setViewportMargins(mode == CursorMode::Left ? 30 : 0, margins.top(),
+                           mode == CursorMode::Right ? 30 : 0, margins.bottom());
+        updateHistoryRail();
+        viewport()->update();
+    }
+    QSlider *historyRail() const { return historyRail_; }
+    void setHistoryRange(int position, int count) {
+        historyPosition_ = position; historyCount_ = count;
+        updateHistoryRail();
+        viewport()->update();
+    }
+    static bool isHistoryCursor(QTreeWidgetItem *item) {
+        return item && item->data(0, Qt::UserRole + 2).toString() == QStringLiteral("historyCursor");
+    }
+
 
 protected:
+    void updateGeometries() override {
+        QTreeWidget::updateGeometries();
+        const QMargins margins = viewportMargins();
+        const int left = cursorMode_ == CursorMode::Left ? 30 : 0;
+        const int right = cursorMode_ == CursorMode::Right ? 30 : 0;
+        if (margins.left() != left || margins.right() != right)
+            setViewportMargins(left, margins.top(), right, margins.bottom());
+        if (historyRail_) updateHistoryRail();
+    }
+    void mousePressEvent(QMouseEvent *event) override {
+        if (event->button() == Qt::LeftButton && isHistoryCursor(itemAt(event->position().toPoint()))) {
+            movingHistoryCursor_ = true;
+            pendingHistoryPosition_ = historyPosition_;
+            setCurrentItem(itemAt(event->position().toPoint()));
+            event->accept();
+            return;
+        }
+        QTreeWidget::mousePressEvent(event);
+    }
+    void mouseMoveEvent(QMouseEvent *event) override {
+        if (movingHistoryCursor_) {
+            // Snap to gaps between direct feature rows, including their details.
+            int position = historyCount_;
+            int lineY = -1;
+            QTreeWidgetItem *history = nullptr;
+            for (int i = 0; i < topLevelItemCount(); ++i)
+                if (topLevelItem(i)->data(0, Qt::UserRole + 2).toString() == QStringLiteral("H")) history = topLevelItem(i);
+            if (history) {
+                for (int i = 0; i < history->childCount(); ++i) {
+                    auto *item = history->child(i);
+                    if (item->data(0, Qt::UserRole).toInt() != kTreeExtrusion) continue;
+                    const QRect rect = visualItemRect(item);
+                    if (!rect.isEmpty() && event->position().y() <= rect.center().y()) {
+                        position = item->data(0, Qt::UserRole + 1).toInt();
+                        lineY = rect.top();
+                        break;
+                    }
+                }
+                if (lineY < 0 && history->childCount()) {
+                    auto *last = history->child(history->childCount() - 1);
+                    while (last->isExpanded() && last->childCount()) last = last->child(last->childCount() - 1);
+                    lineY = visualItemRect(last).bottom() + 1;
+                }
+            }
+            pendingHistoryPosition_ = position;
+            setInsertionLine(lineY, 22);
+            if (event->position().y() < 20) verticalScrollBar()->setValue(verticalScrollBar()->value() - 1);
+            if (event->position().y() > viewport()->height() - 20) verticalScrollBar()->setValue(verticalScrollBar()->value() + 1);
+            event->accept();
+            return;
+        }
+        QTreeWidget::mouseMoveEvent(event);
+    }
+    void mouseReleaseEvent(QMouseEvent *event) override {
+        if (movingHistoryCursor_ && event->button() == Qt::LeftButton) {
+            movingHistoryCursor_ = false;
+            clearInsertionLine();
+            const int position = pendingHistoryPosition_;
+            event->accept();
+            // The callback rebuilds the tree. Do not retain or use row pointers.
+            if (historyPositionChanged_) historyPositionChanged_(position);
+            return;
+        }
+        QTreeWidget::mouseReleaseEvent(event);
+    }
+    void keyPressEvent(QKeyEvent *event) override {
+        if (isHistoryCursor(currentItem()) && historyPositionChanged_) {
+            int position = historyPosition_;
+            if (event->key() == Qt::Key_Home) position = 0;
+            else if (event->key() == Qt::Key_End) position = historyCount_;
+            else if (event->key() == Qt::Key_Up) --position;
+            else if (event->key() == Qt::Key_Down) ++position;
+            else { QTreeWidget::keyPressEvent(event); return; }
+            event->accept();
+            historyPositionChanged_(qBound(0, position, historyCount_));
+            return;
+        }
+        QTreeWidget::keyPressEvent(event);
+    }
     void startDrag(Qt::DropActions actions) override {
         draggedItem_ = currentItem();
         if (!isMovableFeature(draggedItem_)) {
@@ -12496,11 +12802,12 @@ protected:
     }
 
     void paintEvent(QPaintEvent *event) override {
+        updateHistoryRail();
         QTreeWidget::paintEvent(event);
         if (insertionLineY_ < 0) return;
         QPainter painter(viewport());
         painter.setRenderHint(QPainter::Antialiasing, false);
-        const QColor color(70, 205, 255);
+        const QColor color = kStoryboardPositionColor;
         painter.setPen(QPen(color, 2.0));
         const int right = viewport()->width() - 5;
         painter.drawLine(insertionLineLeft_, insertionLineY_, right, insertionLineY_);
@@ -12512,6 +12819,61 @@ protected:
     }
 
 private:
+    QTreeWidgetItem *historyRootItem() const {
+        for (int i = 0; i < topLevelItemCount(); ++i)
+            if (topLevelItem(i)->data(0, Qt::UserRole + 2).toString() == QStringLiteral("H")) return topLevelItem(i);
+        return nullptr;
+    }
+    int historyPositionAtY(int y) const {
+        auto *root = historyRootItem();
+        if (!root) return historyPosition_;
+        bool first = true;
+        for (int row = 0; row < root->childCount(); ++row) {
+            auto *item = root->child(row);
+            if (item->data(0, Qt::UserRole).toInt() != kTreeExtrusion) continue;
+            const QRect rect = visualItemRect(item);
+            if (!rect.isEmpty() && y <= rect.center().y())
+                return first ? 0 : item->data(0, Qt::UserRole + 1).toInt();
+            first = false;
+        }
+        return historyCount_;
+    }
+    void updateHistoryRail() {
+        auto *root = historyRootItem();
+        if (cursorMode_ == CursorMode::Horizontal || !root || !root->isExpanded() || !root->childCount()) {
+            historyRail_->hide();
+            return;
+        }
+        if (historyRail_->isSliderDown()) return;
+        auto *last = root->child(root->childCount() - 1);
+        while (last->isExpanded() && last->childCount()) last = last->child(last->childCount() - 1);
+        const int top = qMax(8, visualItemRect(root->child(0)).top());
+        const int bottom = qMin(viewport()->height() - 8, visualItemRect(last).bottom());
+        if (bottom <= top) { historyRail_->hide(); return; }
+        int cursorY = top;
+        for (int row = 0; row < root->childCount(); ++row)
+            if (isHistoryCursor(root->child(row))) cursorY = visualItemRect(root->child(row)).center().y();
+        railTop_ = top;
+        updatingRail_ = true;
+        const QSignalBlocker blocker(historyRail_);
+        historyRail_->setGeometry(cursorMode_ == CursorMode::Left ? 2 : viewport()->geometry().right() + 3,
+                                  viewport()->geometry().top() + top - 6, 26, bottom - top + 12);
+        auto *slider = static_cast<StoryboardPositionSlider *>(historyRail_);
+        slider->checkpoints.clear();
+        slider->activePosition = historyPosition_;
+        for (int row = 0; row < root->childCount(); ++row) {
+            auto *item = root->child(row);
+            if (item->data(0, Qt::UserRole).toInt() != kTreeExtrusion) continue;
+            const QRect rect = visualItemRect(item);
+            if (!rect.isEmpty() && rect.center().y() >= top && rect.center().y() <= bottom)
+                slider->checkpoints.append({rect.center().y() - top + 6, item->data(0, Qt::UserRole + 1).toInt() + 1});
+        }
+        historyRail_->setRange(0, bottom - top);
+        historyRail_->setValue(qBound(0, cursorY - top, bottom - top));
+        historyRail_->show();
+        historyRail_->raise();
+        updatingRail_ = false;
+    }
     void setInsertionLine(int y, int left) {
         if (insertionLineY_ == y && insertionLineLeft_ == left) return;
         insertionLineY_ = y;
@@ -12573,6 +12935,15 @@ private:
         return nullptr;
     }
 
+    QSlider *historyRail_ = nullptr;
+    CursorMode cursorMode_ = CursorMode::Horizontal;
+    int railTop_ = 0;
+    bool updatingRail_ = false;
+    std::function<void(int)> historyPositionChanged_;
+    bool movingHistoryCursor_ = false;
+    int pendingHistoryPosition_ = 0;
+    int historyPosition_ = 0;
+    int historyCount_ = 0;
     std::function<QString(int, int)> moveFeature_;
     QTreeWidgetItem *draggedItem_ = nullptr;
     int insertionLineY_ = -1;
@@ -19384,6 +19755,9 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
     modelTree->setHeaderLabel(QStringLiteral("Oggetti scena"));
     modelTree->setMinimumWidth(220);
     modelTree->setContextMenuPolicy(Qt::CustomContextMenu);
+    modelTree->setHistoryPositionCallback([viewport](int position) { viewport->setHistoryPosition(position); });
+    modelTree->setCursorMode(static_cast<StoryboardTree::CursorMode>(qBound(0,
+        QSettings().value(QStringLiteral("view/storyboardCursorMode"), 0).toInt(), 2)));
     modelDock->setWidget(modelTree);
     addDockWidget(Qt::LeftDockWidgetArea, modelDock);
     rebuildModelTree();
@@ -20115,6 +20489,22 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
     });
     updateUndoActions();
     auto *viewMenu = menuBar()->addMenu(QStringLiteral("Visualizza"));
+    auto *storyboardCursorMenu = viewMenu->addMenu(QStringLiteral("Barra di posizione storyboard"));
+    auto *storyboardCursorGroup = new QActionGroup(this);
+    storyboardCursorGroup->setExclusive(true);
+    const QStringList cursorModes = {QStringLiteral("Orizzontale nell'albero"), QStringLiteral("Verticale a sinistra"), QStringLiteral("Verticale a destra")};
+    for (int mode = 0; mode < cursorModes.size(); ++mode) {
+        auto *action = storyboardCursorMenu->addAction(cursorModes.at(mode));
+        action->setObjectName(QStringLiteral("storyboardCursorMode%1").arg(mode));
+        action->setCheckable(true);
+        action->setChecked(int(modelTree->cursorMode()) == mode);
+        storyboardCursorGroup->addAction(action);
+        connect(action, &QAction::triggered, this, [this, modelTree, mode] {
+            QSettings().setValue(QStringLiteral("view/storyboardCursorMode"), mode);
+            modelTree->setCursorMode(static_cast<StoryboardTree::CursorMode>(mode));
+            rebuildModelTree();
+        });
+    }
     auto *functionPanelMenu = viewMenu->addMenu(QStringLiteral("Pannelli delle funzioni"));
     auto *functionPanelOpacityAction = functionPanelMenu->addAction(QString());
     auto *functionPanelBlurAction = functionPanelMenu->addAction(QString());
@@ -21803,6 +22193,33 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
         {angleConstraint, QStringLiteral("constraintAngle")}, {snapAction, QStringLiteral("snap")}, {gridSnapAction, QStringLiteral("gridSnap")}, {originSnapAction, QStringLiteral("originSnap")},
         {exitSketch, QStringLiteral("exitSketch")}, {sketchNormalView, QStringLiteral("viewFront")}};
     for (const auto &entry : iconActions) decorate(entry.first, entry.second);
+    const QList<QPair<QAction *, QString>> viewIconActions = {
+        {viewMenu->menuAction(), "viewOptions"}, {storyboardCursorMenu->menuAction(), "storyboard"},
+        {storyboardCursorMenu->actions().at(0), "storyboardHorizontal"},
+        {storyboardCursorMenu->actions().at(1), "storyboardLeft"}, {storyboardCursorMenu->actions().at(2), "storyboardRight"},
+        {functionPanelMenu->menuAction(), "panelCorners"}, {modeMenu->menuAction(), "displayShadedEdges"},
+        {qualityMenu->menuAction(), "viewQuality"}, {lightingMenu->menuAction(), "viewLight"},
+        {studio, "viewLight"}, {soft, "panelBlur"}, {inspection, "viewInspect"},
+        {backgroundAction, "viewBackground"}, {historyGraphAction, "storyboard"},
+        {treeColorMenu->menuAction(), "viewColor"}, {treeColorAction, "viewColor"}, {treeColorReset, "viewTheme"},
+        {highlightColorMenu->menuAction(), "viewHighlight"}, {highlightColorAction, "viewHighlight"}, {highlightColorReset, "viewTheme"},
+        {showAllAction, "viewOptions"}, {planesAction, "datumPlane"}, {gridAction, "viewGrid"},
+        {axesMenu->menuAction(), "viewAxes"}, {axesVisibleAction, "viewAxes"}, {axesOnTopAction, "viewLayers"}, {axisLengthAction, "dimension"},
+        {sketchOpacityAction, "panelOpacity"}, {antialiasingMenu->menuAction(), "viewAntialias"},
+        {wheelZoomAction, "viewWheel"}, {zoomInAction, "zoomIn"}, {zoomOutAction, "zoomOut"},
+        {hiddenEdgesAction, "displayWireframe"}, {topologyIdsAction, "viewTopology"}, {sectionParameters, "section"}
+    };
+    for (const auto &entry : viewIconActions) decorate(entry.first, entry.second);
+    // Dynamic choices inherit the meaningful icon of their submenu.
+    const std::function<void(QMenu *)> completeViewIcons = [&](QMenu *menu) {
+        for (QAction *action : menu->actions()) {
+            if (action->isSeparator()) continue;
+            action->setIconVisibleInMenu(true);
+            if (action->icon().isNull()) action->setIcon(menu->menuAction()->icon());
+            if (action->menu()) completeViewIcons(action->menu());
+        }
+    };
+    completeViewIcons(viewMenu);
     const QStringList primitiveIcons = {QStringLiteral("box"), QStringLiteral("cylinder"), QStringLiteral("sphere"), QStringLiteral("cone"), QStringLiteral("torus")};
     for (int k = 0; k < primitiveActions.size() && k < primitiveIcons.size(); ++k) decorate(primitiveActions.at(k), primitiveIcons.at(k));
     const QStringList viewIcons = {QStringLiteral("viewFront"), QStringLiteral("viewRear"), QStringLiteral("viewRight"),
@@ -22513,6 +22930,7 @@ void PdfWindow::rebuildModelTree() {
     const int fixedItems = 1 + planeNames().size();
     const SceneSelection selection = viewport_->selection();
     // Stato aperto/chiuso delle voci, ripreso dopo la ricostruzione (chiave in UserRole + 2).
+    const bool cursorSelected = StoryboardTree::isHistoryCursor(modelTree_->currentItem());
     QHash<QString, bool> expanded;
     const std::function<void(QTreeWidgetItem *)> remember = [&](QTreeWidgetItem *item) {
         const QString key = item->data(0, Qt::UserRole + 2).toString();
@@ -22598,8 +23016,7 @@ void PdfWindow::rebuildModelTree() {
         // Il corpo in cui finisce la feature (anche attraverso una booleana).
         const quint64 root = roots.value(body.modelBodyId, body.modelBodyId);
         const ModelBody owner = modelBodies.value(bodyIndex.value(root, -1));
-        const bool tip = !reference && modelBodies.value(bodyIndex.value(body.modelBodyId, -1)).tipFeatureId == body.featureId
-                      && root == body.modelBodyId;
+        const bool tip = !reference && body.visible && index < viewport_->historyPosition();
         // Le feature sono passi della storia, non solidi: il numero di solidi
         // o superfici separati sta nel gruppo dei corpi.
         // Con piu' corpi si dice in quale finisce la feature.
@@ -22909,6 +23326,49 @@ void PdfWindow::rebuildModelTree() {
         if (selection.kind == SceneObjectKind::Extrusion && selection.index == index) modelTree_->setCurrentItem(item);
     }
     QTreeWidgetItem *sketchRoot = nullptr;
+    if (!historyRoot) {
+        historyRoot = new QTreeWidgetItem(modelTree_, {QStringLiteral("Storia delle feature")});
+        historyRoot->setData(0, Qt::UserRole, kTreeInfo);
+        restore(historyRoot, QStringLiteral("H"), true);
+    }
+    const int position = viewport_->historyPosition();
+    int cursorRow = historyRoot->childCount();
+    for (int row = 0; row < historyRoot->childCount(); ++row) {
+        auto *item = historyRoot->child(row);
+        if (item->data(0, Qt::UserRole).toInt() != kTreeExtrusion) continue;
+        if (item->data(0, Qt::UserRole + 1).toInt() >= position) {
+            cursorRow = row;
+            // Keep the next feature's profile together with that feature.
+            while (cursorRow > 0 && historyRoot->child(cursorRow - 1)->data(0, Qt::UserRole).toInt() == kTreeSketch) --cursorRow;
+            break;
+        }
+    }
+    const bool horizontalCursor = static_cast<StoryboardTree *>(modelTree_)->cursorMode() == StoryboardTree::CursorMode::Horizontal;
+    auto *cursor = new QTreeWidgetItem(QStringList{(horizontalCursor
+        ? QStringLiteral("━━━━  Inserisci qui  %1 / %2  ━━━━")
+        : QStringLiteral("Inserisci qui  %1 / %2")).arg(position).arg(extrusions.size())});
+    cursor->setData(0, Qt::UserRole, kTreeInfo);
+    cursor->setData(0, Qt::UserRole + 2, QStringLiteral("historyCursor"));
+    cursor->setFlags(Qt::ItemIsEnabled | Qt::ItemIsSelectable);
+    cursor->setForeground(0, kStoryboardPositionColor);
+    if (horizontalCursor) cursor->setBackground(0, QColor(25, 65, 85));
+    QFont cursorFont = cursor->font(0);
+    cursorFont.setBold(true);
+    cursor->setFont(0, cursorFont);
+    cursor->setToolTip(0, QStringLiteral("Trascina la barra tra le feature per scegliere la posizione di calcolo e inserimento. Frecce su/giù: un passo; Home: inizio; End: fine."));
+    historyRoot->insertChild(cursorRow, cursor);
+    static_cast<StoryboardTree *>(modelTree_)->setHistoryRange(position, extrusions.size());
+    for (int row = cursorRow + 1; row < historyRoot->childCount(); ++row) {
+        auto *item = historyRoot->child(row);
+        item->setForeground(0, QColor(110, 120, 130));
+        QFont font = item->font(0);
+        font.setItalic(true);
+        item->setFont(0, font);
+    }
+    if (cursorSelected) {
+        modelTree_->setCurrentItem(cursor);
+        modelTree_->scrollToItem(cursor);
+    }
     for (int index = 0; index < sketches.size(); ++index) {
         if (shownSketches.contains(index)) continue;
         if (!sketchRoot) {

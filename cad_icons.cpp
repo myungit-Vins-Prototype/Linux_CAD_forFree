@@ -1,6 +1,8 @@
 #include "cad_icons.h"
 
 #include <QFont>
+#include <QApplication>
+#include <QPalette>
 #include <QIconEngine>
 #include <QImage>
 #include <QPainter>
@@ -26,7 +28,7 @@ IconPalette palette(QIcon::Mode mode) {
         const QColor grey(110, 120, 128);
         return {grey, grey, grey, grey, grey, QColor(90, 98, 105), QColor(75, 82, 88), QColor(62, 68, 74)};
     }
-    return {QColor(216, 228, 234), QColor(255, 176, 74), QColor(96, 170, 255), QColor(255, 104, 96),
+    return {QApplication::palette().color(QPalette::WindowText), QColor(255, 176, 74), QColor(96, 170, 255), QColor(255, 104, 96),
             QColor(96, 214, 138), QColor(150, 186, 212), QColor(104, 140, 168), QColor(72, 102, 128)};
 }
 
@@ -1212,6 +1214,59 @@ std::map<QString, Draw> &registry() {
         dot(p, {8, 8.5}, c.construction, 1.3);
         dot(p, {16, 15.5}, c.construction, 1.3);
     };
+    icons["viewOptions"] = [](QPainter &p, const IconPalette &c) {
+        QPainterPath eye({2,12}); eye.cubicTo({7,3},{17,3},{22,12}); eye.cubicTo({17,21},{7,21},{2,12});
+        p.setPen(stroke(c.ink,1.5)); p.setBrush(Qt::NoBrush); p.drawPath(eye); dot(p,{12,12},c.accent,3);
+    };
+    icons["viewGrid"] = [](QPainter &p, const IconPalette &c) {
+        for(int i=4;i<=20;i+=4){line(p,{double(i),4},{double(i),20},stroke(c.ink,1));line(p,{4,double(i)},{20,double(i)},stroke(c.ink,1));}
+        dot(p,{12,12},c.accent,2);
+    };
+    icons["viewAxes"] = [](QPainter &p, const IconPalette &c) {
+        for(QPointF tip : {QPointF(20,18),QPointF(4,4),QPointF(14,3)}) {line(p,{8,17},tip,stroke(c.ink,1.5));arrowHead(p,tip,{8,17},c.accent,3);}
+    };
+    icons["viewLight"] = [](QPainter &p, const IconPalette &c) {
+        dot(p,{12,12},c.accent,4);for(int i=0;i<8;++i){double a=i*3.141592653589793/4;line(p,{12+7*cos(a),12+7*sin(a)},{12+10*cos(a),12+10*sin(a)},stroke(c.ink,1.5));}
+    };
+    icons["viewQuality"] = [](QPainter &p, const IconPalette &c) {
+        for(int i=0;i<3;++i){p.setPen(Qt::NoPen);p.setBrush(i==2?c.accent:c.ink);p.drawRect(QRectF(4+i*6,16-i*5,4,5+i*5));}
+    };
+    icons["viewColor"] = [](QPainter &p, const IconPalette &c) {
+        p.setPen(stroke(c.ink,1.4));p.setBrush(c.faceDark);p.drawEllipse(QRectF(3,3,18,18));
+        dot(p,{8,8},c.accent,2);dot(p,{16,8},c.construction,2);dot(p,{8,16},c.confirm,2);dot(p,{16,16},c.remove,2);
+    };
+    icons["viewBackground"] = [](QPainter &p, const IconPalette &c) {
+        p.setPen(stroke(c.ink,1.3));p.setBrush(c.faceDark);p.drawRect(QRectF(3,4,18,16));
+        p.setBrush(c.faceLight);p.drawPolygon(QPolygonF({{4,19},{10,11},{14,16},{17,12},{20,19}}));dot(p,{17,8},c.accent,2);
+    };
+    icons["viewTheme"] = [](QPainter &p, const IconPalette &c) {
+        p.setPen(stroke(c.ink,1.5));p.setBrush(c.faceDark);p.drawEllipse(QRectF(4,4,16,16));p.setBrush(c.accent);p.drawPie(QRectF(4,4,16,16),90*16,180*16);
+    };
+    icons["viewHighlight"] = [](QPainter &p, const IconPalette &c) {cube(p,c,-1,true,true);dot(p,{16,8},c.accent,3);};
+    icons["viewLayers"] = [](QPainter &p, const IconPalette &c) {
+        for(int i=2;i>=0;--i){p.setPen(stroke(i==0?c.accent:c.ink,1.4));p.setBrush(c.faceDark);p.drawPolygon(QPolygonF({{3,7.0+i*4},{12,3.0+i*4},{21,7.0+i*4},{12,11.0+i*4}}));}
+    };
+    icons["viewAntialias"] = [](QPainter &p, const IconPalette &c) {
+        p.setPen(stroke(c.ink,1.5));p.drawPolyline(QPolygonF({{3,19},{8,19},{8,14},{13,14},{13,9},{18,9},{18,4}}));line(p,{4,20},{20,4},stroke(c.accent,2));
+    };
+    icons["viewTopology"] = [](QPainter &p, const IconPalette &c) {
+        line(p,{5,18},{12,5},stroke(c.ink,1.4));line(p,{12,5},{20,18},stroke(c.ink,1.4));line(p,{5,18},{20,18},stroke(c.ink,1.4));
+        for(QPointF point : {QPointF(5,18),QPointF(12,5),QPointF(20,18)})dot(p,point,c.accent,2);
+    };
+    icons["viewWheel"] = [](QPainter &p, const IconPalette &c) {
+        p.setPen(stroke(c.ink,1.5));p.setBrush(c.faceDark);p.drawRoundedRect(QRectF(6,2,12,20),6,6);p.setBrush(c.accent);p.drawRoundedRect(QRectF(10,5,4,6),2,2);
+    };
+    for(bool plus : {false,true}) icons[plus?"zoomIn":"zoomOut"] = [plus](QPainter &p,const IconPalette &c){
+        p.setPen(stroke(c.ink,1.6));p.setBrush(Qt::NoBrush);p.drawEllipse(QRectF(3,3,12,12));line(p,{14,14},{21,21},stroke(c.ink,2));
+        line(p,{6,9},{12,9},stroke(c.accent,1.8));if(plus)line(p,{9,6},{9,12},stroke(c.accent,1.8));
+    };
+    icons["viewInspect"] = icons["zoomIn"];
+    for(int mode=0;mode<3;++mode) icons[mode==0?"storyboardHorizontal":mode==1?"storyboardLeft":"storyboardRight"] = [mode](QPainter &p,const IconPalette &c){
+        for(int y : {5,12,19})line(p,{7,double(y)},{20,double(y)},stroke(c.ink,1.4));
+        if(mode==0)line(p,{3,15},{21,15},stroke(c.accent,2));
+        else {const double x=mode==1?3:22;line(p,{x,3},{x,21},stroke(c.construction,1.2));dot(p,{x,12},c.accent,2);}
+    };
+    icons["storyboard"] = icons["storyboardLeft"];
     return icons;
 }
 
