@@ -299,7 +299,7 @@ bool resolveGeometryRef(const GeometryRef &ref, int owner, const QVector<SketchO
                 setError(error, QStringLiteral("la curva del riferimento non esiste piu'"));
                 return false;
             }
-            const ForgeCurve curve = bodies.at(bodyIndex).curve;
+            const ForgeCurve curve = bodyCurveNear(bodies.at(bodyIndex), ref.point);
             r.hasCurve = true;
             r.nearest = [curve](const Vec3 &q, Vec3 &foot, Vec3 &tangent) { return nearestOnForgeCurve(*curve, curve->domain(), q, foot, tangent); };
             return true;
@@ -315,7 +315,7 @@ bool resolveGeometryRef(const GeometryRef &ref, int owner, const QVector<SketchO
                 setError(error, QStringLiteral("la curva del punto di riferimento non esiste piu'"));
                 return false;
             }
-            const ForgeCurve curve = bodies.at(bodyIndex).curve;
+            const ForgeCurve curve = bodyCurveNear(bodies.at(bodyIndex), ref.point);
             const Interval domain = curve->domain();
             const double parameter = ref.element.point == 1 ? domain.hi : domain.lo;
             r.hasPoint = true;
@@ -332,6 +332,19 @@ bool resolveGeometryRef(const GeometryRef &ref, int owner, const QVector<SketchO
     return false;
 }
 
+ForgeCurve bodyCurveNear(const ExtrusionObject &body, const EdgePoint &point) {
+    if (body.curves.size() <= 1) return body.curve;
+    const Vec3 p(point.x, point.y, point.z);
+    ForgeCurve best = body.curve;
+    double distance = std::numeric_limits<double>::infinity();
+    for (const ForgeCurve &curve : body.curves) {
+        if (!curve) continue;
+        const double d = projectPoint(*curve, p, curve->domain()).distance;
+        if (d < distance) distance = d, best = curve;
+    }
+    return best;
+}
+
 bool geometryRefPath(const GeometryRef &ref, int owner, const QVector<SketchObject> &sketches, const QVector<ExtrusionObject> &bodies,
                      std::vector<PathSegment> &segments, QString *error) {
     segments.clear();
@@ -343,7 +356,8 @@ bool geometryRefPath(const GeometryRef &ref, int owner, const QVector<SketchObje
             const ExtrusionObject &body = bodies.at(bodyIndex);
             if (ref.kind == 9) {
                 if (!body.curve) return setError(error, QStringLiteral("la curva \"%1\" non e' valida").arg(body.name)), false;
-                segments.push_back({body.curve, body.curve->domain()});
+                const ForgeCurve curve = bodyCurveNear(body, ref.point);
+                segments.push_back({curve, curve->domain()});
                 return true;
             }
             if (!body.forgeBody) return setError(error, QStringLiteral("il corpo \"%1\" non ha geometria").arg(body.name)), false;

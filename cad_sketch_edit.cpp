@@ -109,7 +109,7 @@ Geometry geometryOf(const SketchObject &sketch, SketchEntity entity) {
             g.radius = r;
             return g;
         }
-        if (curve.tool == DrawingTool::Ellipse || curve.tool == DrawingTool::Nurbs) {
+        if (curve.tool == DrawingTool::Ellipse || curve.tool == DrawingTool::Nurbs || curve.tool == DrawingTool::Converted) {
             const auto pieces = curveGeometry(curve);
             if (pieces.size() != 1) return g;
             g.shape = curve.tool == DrawingTool::Ellipse ? Shape::Ellipse : Shape::Nurbs;
@@ -302,7 +302,8 @@ Piece pieceOf(const SketchObject &sketch, SketchEntity entity, const Geometry &g
         const Kernel::BSplineCurve<3> lifted(spline.degree(), spline.knots(), poles, spline.weights());
         const auto trimmed = Kernel::joinBezierPieces(Kernel::standardBezierPieces(lifted,
             g.shape == Shape::Ellipse ? spline.domain() : Kernel::Interval{lo, hi}));
-        piece.curve.tool = DrawingTool::Nurbs;
+        // Il tratto di una curva derivata resta una curva derivata (poli nascosti).
+        piece.curve.tool = source.tool == DrawingTool::Converted ? DrawingTool::Converted : DrawingTool::Nurbs;
         piece.curve.construction = source.construction;
         piece.curve.degree = trimmed.degree();
         for (const auto &p : trimmed.poles()) piece.curve.controlPoints.append(QPointF(p.x(), p.y()));
@@ -382,8 +383,10 @@ void refreshCoincidences(SketchObject &sketch, const QVector<SketchEntity> &touc
             for (int other = 0; other < sketch.curves.size(); ++other) {
                 if (entity.kind == 1 && other == entity.index) continue;
                 const QVector<QPointF> &points = sketch.curves.at(other).controlPoints;
+                // Delle curve derivate contano solo gli estremi (i poli interni non stanno sulla curva).
+                const bool derived = sketch.curves.at(other).tool == DrawingTool::Converted;
                 for (int k = 0; k < points.size(); ++k)
-                    if (distance(p, points.at(k)) <= kTolerance) add({1, other, k});
+                    if ((!derived || k == 0 || k == points.size() - 1) && distance(p, points.at(k)) <= kTolerance) add({1, other, k});
             }
         }
     }
@@ -406,7 +409,7 @@ QVector<int> replaceWithPieces(SketchObject &sketch, SketchEntity entity, const 
         (entity.kind == 0 ? segments : curves).insert(entity.index);
         return removeSketchEntities(sketch, segments, curves);
     }
-    if (entity.kind == 1 && pieces.front().curve.tool == DrawingTool::Nurbs) {
+    if (entity.kind == 1 && (pieces.front().curve.tool == DrawingTool::Nurbs || pieces.front().curve.tool == DrawingTool::Converted)) {
         // I vecchi indici di centro/assi/poli non identificano i nuovi poli.
         QVector<int> segments, curves;
         for (int i = 0; i < sketch.segments.size(); ++i) segments.append(i);
@@ -489,7 +492,7 @@ QString unsupported(const SketchObject &sketch, SketchEntity entity, const QStri
     if (entity.kind == 1 && entity.index >= 0 && entity.index < sketch.curves.size() && sketch.curves.at(entity.index).tool == DrawingTool::Nurbs)
         return QStringLiteral("%1: NURBS non valida.").arg(operation);
     if (entity.kind == 1 && entity.index >= 0 && entity.index < sketch.curves.size() && sketch.curves.at(entity.index).tool == DrawingTool::Converted)
-        return QStringLiteral("%1: i riferimenti presi dai corpi non si modificano (fanno solo da bordo).").arg(operation);
+        return QStringLiteral("%1: curva derivata non valida.").arg(operation);
     if (entity.kind == 1 && entity.index >= 0 && entity.index < sketch.curves.size() && sketch.curves.at(entity.index).tool == DrawingTool::Ellipse)
         return QStringLiteral("%1: ellisse non valida.").arg(operation);
     return QStringLiteral("%1: entita' non valida.").arg(operation);

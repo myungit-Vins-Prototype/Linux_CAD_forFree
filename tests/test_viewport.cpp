@@ -2,6 +2,7 @@
 // test lo include per verificare interazioni e rendering senza esportare API di test.
 #include "../forgeCad2026_gui.cpp"
 #include "fk_blend.h"
+#include "fk_blend_surface.h"
 #include "fk_body_check.h"
 #include "fk_boolean.h"
 #include "fk_body_io.h"
@@ -16,6 +17,7 @@
 #include "fk_sheet.h"
 #include "fk_surface_algo.h"
 #include "fk_tessellate.h"
+#include "fk_project.h"
 #include <QGraphicsItem>
 #include <QGraphicsView>
 #include <QSurfaceFormat>
@@ -31,6 +33,526 @@ static void require(bool ok, const char *message) {
 }
 class ViewportInteractionTest {
 public:
+    static void denseFixedSketchRegressions() {
+        using namespace ForgeCad;
+        SketchObject original;
+        for (int c = 0; c < 6; ++c) {
+            CurveObject curve; curve.tool = DrawingTool::Converted; curve.degree = 1;
+            curve.knots.append(0.0);
+            for (int i = 0; i < 1200; ++i) {
+                curve.controlPoints.append(QPointF(i * 0.1, c * 10.0 + std::sin(i * 0.01)));
+                curve.knots.append(i);
+            }
+            curve.knots.append(1199.0);
+            original.curves.append(curve);
+            SketchConstraint fixed; fixed.type = ConstraintType::Fix; fixed.first = {1,c,-1};
+            fixed.positions = curve.controlPoints; original.geometricConstraints.append(fixed);
+        }
+        QElapsedTimer timer; timer.start();
+        SketchObject work = original;
+        work.segments.append({QPointF(0,5),QPointF(100,5.2)});
+        SketchConstraint horizontal; horizontal.type = ConstraintType::Horizontal; horizontal.first = {0,0,-1};
+        work.geometricConstraints.append(horizontal);
+        require(solveSketch(work).ok, "segmento libero con migliaia di poli fissi");
+        require(std::abs(work.segments[0].first.y()-work.segments[0].second.y()) < 1e-8, "orizzontalita' risolta");
+        // Aggancio alla curva copiata: sia soluzione sia analisi devono
+        // derivare solo le coordinate libere del segmento.
+        const QPointF onCurve = work.curves[0].controlPoints[500];
+        work.segments[0] = {onCurve + QPointF(0,0.2), onCurve + QPointF(5,0.1)};
+        SketchConstraint on; on.type = ConstraintType::PointOnCurve; on.first = {0,0,0}; on.second = {1,0,-1};
+        work.geometricConstraints.append(on);
+        require(solveSketch(work).ok, "aggancio su curva copiata fissa");
+        const auto analysis = analyzeSketch(work);
+        require(analysis.degreesOfFreedom == 2, "gradi di liberta' del segmento agganciato");
+        for (int c = 0; c < original.curves.size(); ++c)
+            require(work.curves[c].controlPoints == original.curves[c].controlPoints, "curve fisse conservate esattamente");
+        const auto before = work;
+        require(!solveSketch(work, {{{1,0,500},onCurve+QPointF(1,1)}}).ok, "trascinamento di un polo fisso rifiutato");
+        require(work.curves[0].controlPoints == before.curves[0].controlPoints && work.segments == before.segments,
+                "conflitto non modifica lo schizzo");
+        work.geometricConstraints.append(work.geometricConstraints.first());
+        work.geometricConstraints.last().positions[0] += QPointF(1,0);
+        require(!solveSketch(work).ok, "Fix contraddittori rifiutati");
+        require(timer.elapsed() < 3000, "curve fisse non devono bloccare l'interfaccia");
+        std::cout << "dense fixed interactions ms=" << timer.elapsed() << std::endl;
+        // Un Fix deve anche ripristinare una coordinata alterata prima della
+        // chiamata, senza ritornare prima di scrivere i punti risolti.
+        auto restore = original; restore.curves[0].controlPoints[10] += QPointF(1,1);
+        require(solveSketch(restore).ok && restore.curves[0].controlPoints == original.curves[0].controlPoints,
+                "ripristino diretto dei poli fissi");
+        SketchObject handles;
+        CurveObject spline; spline.tool = DrawingTool::Spline;
+        spline.controlPoints = {{0,0},{10,2},{20,0}}; recalculateCurve(spline,0); handles.curves.append(spline);
+        SketchConstraint fix; fix.type = ConstraintType::Fix; fix.first = {1,0,-1}; fix.positions = spline.controlPoints;
+        for (const auto &pair : spline.tangentHandles) fix.positions << pair.first << pair.second;
+        handles.geometricConstraints.append(fix);
+        handles.curves[0].controlPoints[0] += QPointF(2,1);
+        require(solveSketch(handles).ok && handles.curves[0].controlPoints == spline.controlPoints
+                    && handles.curves[0].tangentHandles == spline.tangentHandles, "Fix di spline e maniglie");
+    }
+
+    static void sketchReferenceWorkflow() {
+        using namespace ForgeCad;
+        CurveObject reference;
+        reference.tool = DrawingTool::Converted;
+        reference.construction = true;
+        reference.degree = 3;
+        reference.controlPoints = {QPointF(-6,0),QPointF(-2,0),QPointF(2,0),QPointF(6,0)};
+        reference.knots = {0,0,0,0,1,1,1,1};
+        for (bool arcCutter : {false,true}) {
+            SketchObject sketch;
+            sketch.curves.append(reference);
+            sketch.geometricConstraints.append(makeConstraint(sketch,ConstraintType::Fix,{{1,0,-1}}));
+            if (arcCutter) {
+                CurveObject arc; arc.tool=DrawingTool::Arc;
+                arc.controlPoints={QPointF(0,0),QPointF(0,-2),QPointF(0,2)};
+                sketch.curves.append(arc);
+            } else sketch.segments.append({QPointF(2,-3),QPointF(2,3)});
+            require(!trimPreview(sketch,{1,0},QPointF(5,0)).isEmpty(),"anteprima taglio riferimento");
+            require(trimSketchEntity(sketch,{1,0},QPointF(5,0)).error.isEmpty(),"taglio riferimento con segmento/arco");
+            require(sketch.curves[0].tool==DrawingTool::Converted && sketch.curves[0].construction,
+                    "riferimento tagliato come curva derivata di costruzione");
+            const auto g=curveGeometry(sketch.curves[0]).front();
+            require(Kernel::distance(g.start(),Kernel::Vec2(-6,0))<1e-7 && Kernel::distance(g.end(),Kernel::Vec2(2,0))<1e-7,
+                    "estremi esatti del riferimento tagliato");
+            for(const auto &c:sketch.geometricConstraints) require(c.type!=ConstraintType::Fix,"Fix obsoleto dopo taglio");
+        }
+        // Lo stesso bordo copiato due volte non e' un anello con inversione a U.
+        SketchObject duplicates; duplicates.curves={reference,reference};
+        SketchOffset duplicateOffset;duplicateOffset.distance=0.5;
+        QVector<SketchEntity> duplicateMade;
+        require(offsetSketchEntities(duplicates,{{1,0},{1,1}},duplicateOffset,&duplicateMade).error.isEmpty()
+                && duplicateMade.size()==1 && duplicates.curves.size()==3,"offset riferimenti duplicati");
+        require(duplicates.curves[0].controlPoints==reference.controlPoints
+                && duplicates.curves[1].controlPoints==reference.controlPoints,"riferimenti duplicati conservati");
+        SketchObject sketch; sketch.curves.append(reference);
+        SketchOffset offset; offset.distance=0.5;
+        QVector<SketchEntity> made;
+        require(offsetSketchEntities(sketch,{{1,0}},offset,&made).error.isEmpty() && made.size()==1,"offset riferimento 0,5 mm");
+        require(sketch.curves[0].construction && !sketch.curves[1].construction && sketch.curves[1].tool==DrawingTool::Converted,
+                "offset come curva derivata e riferimento di costruzione conservato");
+        const auto g=curveGeometry(sketch.curves[1]).front();
+        for(int k=0;k<=40;++k) require(std::fabs(g.curve->point(g.range.lo+g.range.length()*k/40.0).y()-0.5)<1e-7,"distanza offset");
+        sketch.segments.append({QPointF(2,-3),QPointF(2,3)});
+        require(trimSketchEntity(sketch,{1,1},QPointF(5,0.5)).error.isEmpty(),"taglio offset");
+        // Completa il contorno con segmenti: il riferimento di costruzione
+        // deve restare escluso dall'utensile di modellazione.
+        sketch.segments.clear();
+        sketch.segments.append({QPointF(2,0.5),QPointF(2,3)});
+        sketch.segments.append({QPointF(2,3),QPointF(-6,3)});
+        sketch.segments.append({QPointF(-6,3),QPointF(-6,0.5)});
+        require(forgeSketchSegments(sketch).size()==4,"profilo utensile senza riferimenti di costruzione");
+        QString extrusionError;
+        const auto tool=forgeExtrusion(sketch,5,&extrusionError);
+        require(tool && extrusionError.isEmpty() && !tool->isSheet(),"profilo composto utilizzabile per estrusione");
+        QTemporaryDir directory;
+        DocumentState state,loaded;state.sketches={sketch};
+        const QString path=directory.filePath(QStringLiteral("references.prt"));
+        require(saveDocumentFile(path,state,false).isEmpty() && loadDocumentFile(path,loaded).isEmpty(),"persistenza riferimenti e offset");
+        require(loaded.sketches[0].curves[0].construction && !loaded.sketches[0].curves[1].construction
+                && loaded.sketches[0].curves[1].tool==DrawingTool::Converted,"tipo e costruzione dopo riapertura");
+    }
+
+    static void inwardOffsetAndProjection() {
+        using namespace ForgeCad;
+        using namespace ForgeCad::Kernel;
+        SketchObject sketch;
+        CurveObject parabola;parabola.tool=DrawingTool::Converted;parabola.degree=2;parabola.construction=true;
+        parabola.knots={0,0,0,1,1,1};parabola.controlPoints={{-2,4},{0,-4},{2,4}};
+        sketch.curves={parabola};
+        const auto source=curveGeometry(parabola).front();
+        SketchOffset options;options.distance=1;options.dimensioned=true;
+        require(offsetSketchEntities(sketch,{{1,0}},options).error.isEmpty(),"offset interno oltre il minimo raggio locale");
+        const auto check=[&](double distance) {
+            const auto result=curveGeometry(sketch.curves[1]).front();
+            double previous=-1e300;
+            for(int k=0;k<=500;++k) {
+                const auto point=result.curve->point(result.range.lo+result.range.length()*k/500.0);
+                require(point.x()>=previous-1e-8,"offset interno senza anello ripiegato");previous=point.x();
+                require(point.y()>=distance*distance+0.25-1e-6,"anello oltre le cuspidi rimosso");
+                require(std::fabs(projectPoint(*source.curve,point,source.range).distance-distance)<2e-7,"distanza vera dell'offset rifilato");
+            }
+        };
+        check(1);
+        {
+            SketchObject collapsed;CurveObject circle;circle.tool=DrawingTool::Converted;
+            const auto rational=toBSpline(makeCircle(Vec2(),0.5),0,2*M_PI);
+            circle.degree=rational.degree();
+            for(const auto &p:rational.poles()) circle.controlPoints.append(QPointF(p.x(),p.y()));
+            for(double t:rational.knots()) circle.knots.append(t);
+            for(double w:rational.weights()) circle.weights.append(w);
+            collapsed.curves={circle};auto inward=options;inward.reverse=true;
+            require(!offsetSketchEntities(collapsed,{{1,0}},inward).error.isEmpty() && collapsed.curves.size()==1,
+                    "offset NURBS collassato non riappare dal lato opposto");
+        }
+        sketch.geometricConstraints.last().value=1.1;
+        require(solveSketch(sketch).ok,"quota dell'offset interno con cuspidi");check(1.1);
+        // Curva spaziale procedurale senza forma razionale esposta dal tipo.
+        struct Procedural final : Curve<3> {
+            CurveType type() const override{return CurveType::Other;}
+            Interval domain() const override{return {-1,1};}
+            void evaluate(double t,int order,Vec3 *out) const override {
+                out[0]=Vec3(t,t*t,t*t*t);
+                if(order>=1)out[1]=Vec3(1,2*t,3*t*t);
+                if(order>=2)out[2]=Vec3(0,2,6*t);
+                if(order>=3)out[3]=Vec3(0,0,6);
+                for(int i=4;i<=order;++i)out[i]=Vec3();
+            }
+        };
+        const auto basis=std::make_shared<Procedural>();
+        const auto moved=std::make_shared<TransformedCurve>(basis,Transform3::translation(Vec3(3,5,7)));
+        for(const CurvePtr<3> &curve:{CurvePtr<3>(basis),CurvePtr<3>(moved)}) for(int plane:{0,1,2,3}) {
+            SketchObject projection;projection.plane=plane;
+            if(plane==3){projection.customFrame=true;projection.frame=faceSketchFrame(Vec3(1,2,3),normalized(Vec3(1,1,1)),Vec3(0,0,1));}
+            require(appendProjectedCurve(projection,curve,curve->domain(),true,true).isEmpty(),"proiezione di curva procedurale complessa");
+            require(projection.curves.size()==1 && projection.curves[0].construction,"riferimento proiettato di costruzione");
+            const auto projected=curveGeometry(projection.curves[0]).front();
+            for(int k=0;k<=100;++k) {
+                const auto world=curve->point(-1+2*k/100.0);
+                const auto p=worldToSketch(world,projection);
+                require(projectPoint(*projected.curve,Vec2(p.x(),p.y()),projected.range).distance<2e-7,"curva nel piano: proiezione ortogonale corretta");
+            }
+        }
+    }
+
+    // Copia di offset di un bordo copiato: curva derivata con molti poli,
+    // usata come un'unica entita'. Ctrl+clic e snap non vedono i poli interni,
+    // la curva resta rigida nel risolutore e un segmento che termina su di essa
+    // (punto sulla curva) la taglia proprio li'.
+    static void derivedCurveEntity() {
+        using namespace ForgeCad;
+        CurveObject reference;
+        reference.tool = DrawingTool::Converted; reference.construction = true; reference.degree = 3;
+        // Bordo ondulato: la copia a distanza richiede molti poli.
+        const int poles = 40;
+        for (int k = 0; k < poles; ++k) reference.controlPoints.append(QPointF(-10.0 + 20.0 * k / (poles - 1), 0.6 * std::sin(k * 0.7)));
+        reference.knots = {0, 0, 0, 0};
+        for (int k = 1; k <= poles - 4; ++k) reference.knots.append(double(k));
+        for (int k = 0; k < 4; ++k) reference.knots.append(double(poles - 3));
+        CadViewport v; v.createSketch(0, QStringLiteral("Derivata"));
+        v.sketchMode_ = true; v.activeSketch_ = 0;
+        SketchObject &sketch = v.sketches_[0];
+        sketch.curves.append(reference);
+        sketch.geometricConstraints.append(makeConstraint(sketch, ConstraintType::Fix, {{1, 0, -1}}));
+        SketchOffset offset; offset.distance = 0.5;
+        QVector<SketchEntity> made;
+        require(offsetSketchEntities(sketch, {{1, 0}}, offset, &made).error.isEmpty() && made.size() == 1, "offset del bordo copiato");
+        const int copy = made.first().index;
+        CurveObject &derived = sketch.curves[copy];
+        derived.samples.clear(); recalculateCurve(derived, 2);
+        require(derived.tool == DrawingTool::Converted && derived.controlPoints.size() > 8, "copia come curva derivata con molti poli");
+        const QVector<QPointF> shape = derived.controlPoints;
+        const int last = int(shape.size()) - 1;
+        // Ctrl+clic su un polo interno: nessun punto (si sceglie l'entita'); sull'estremo: il punto.
+        const QPointF interior = shape.at(last / 2);
+        v.selectedPoints_.clear();
+        const bool pickedInterior = v.selectPointWithControl(interior);
+        require(!pickedInterior || v.selectedPoints_.isEmpty() || v.selectedPoints_.first().element != copy
+                    || v.selectedPoints_.first().point == 0 || v.selectedPoints_.first().point == last,
+                "Ctrl+clic non sceglie i poli interni della curva derivata");
+        v.selectedPoints_.clear();
+        require(v.selectPointWithControl(shape.first()) && v.selectedPoints_.size() == 1
+                    && v.selectedPoints_.first().element == copy && v.selectedPoints_.first().point == 0,
+                "Ctrl+clic sceglie l'estremo della curva derivata");
+        v.selectedPoints_.clear();
+        // Lo snap non propone i poli interni.
+        for (const QPointF &p : v.snapCandidates(sketch))
+            for (int k = 1; k < last; ++k)
+                require(pointDistance(p, shape.at(k)) > 1e-12, "snap su un polo interno della curva derivata");
+        // Gradi di liberta': la curva derivata non ne aggiunge.
+        require(analyzeSketch(sketch).degreesOfFreedom == 0, "curva derivata rigida: nessun grado di liberta'");
+        // Segmento che parte nel vuoto e finisce sulla curva (punto sulla curva):
+        // il risolutore muove il segmento, non la curva.
+        const auto g = curveGeometry(derived).front();
+        const auto mid = g.curve->point(g.range.lo + 0.37 * g.range.length());
+        const QPointF foot(mid.x(), mid.y());
+        sketch.segments.append({foot + QPointF(0.3, 4.0), foot + QPointF(0.05, 0.02)});
+        sketch.constraints.append(-1); sketch.segmentLengths.append(0.0); sketch.segmentAngles.append(-1.0);
+        const int segment = int(sketch.segments.size()) - 1;
+        SketchConstraint on; on.type = ConstraintType::PointOnCurve; on.first = {0, segment, 1}; on.second = {1, copy, -1};
+        sketch.geometricConstraints.append(on);
+        const SolveResult solved = solveSketch(sketch, {});
+        require(solved.ok, "punto sulla curva derivata risolto");
+        require(sketch.curves[copy].controlPoints == shape, "la curva derivata non si deforma");
+        const auto onCurve = Kernel::projectPoint(*g.curve, Kernel::Vec2(sketch.segments[segment].second.x(), sketch.segments[segment].second.y()), g.range);
+        require(onCurve.distance < 1e-9, "estremo del segmento sulla curva derivata");
+        require(analyzeSketch(sketch).degreesOfFreedom == 3, "gradi di liberta' del solo segmento");
+        // Taglio della curva derivata contro il segmento che vi termina.
+        const QPointF cut = sketch.segments[segment].second;
+        const auto right = g.curve->point(g.range.lo + 0.8 * g.range.length());
+        require(trimSketchEntity(sketch, {1, copy}, QPointF(right.x(), right.y())).error.isEmpty(), "taglio nel punto del segmento");
+        int piece = -1;
+        for (int k = 0; k < sketch.curves.size(); ++k)
+            if (sketch.curves[k].tool == DrawingTool::Converted && !sketch.curves[k].construction) piece = k;
+        require(piece >= 0, "il tratto tagliato resta una curva derivata");
+        const auto trimmed = curveGeometry(sketch.curves[piece]).front();
+        const Kernel::Vec2 c(cut.x(), cut.y());
+        require(std::min(Kernel::distance(trimmed.start(), c), Kernel::distance(trimmed.end(), c)) < 1e-7, "estremo del tratto nel punto di taglio");
+        // Il trascinamento di un estremo coincidente non sposta i poli della curva derivata.
+        const QVector<QPointF> before = sketch.curves[piece].controlPoints;
+        v.moveSketchPoint(sketch, -1, cut, QPointF(1.0, 1.0), QPointF(qQNaN(), qQNaN()));
+        require(sketch.curves[piece].controlPoints == before, "la curva derivata non segue il trascinamento");
+    }
+
+    static void associativeOffset() {
+        using namespace ForgeCad;
+        SketchObject sketch;
+        CurveObject reference;reference.tool=DrawingTool::Converted;reference.degree=3;reference.construction=true;
+        reference.controlPoints={{-6,0},{-2,0},{2,0},{6,0}};reference.knots={0,0,0,0,1,1,1,1};
+        sketch.curves={reference};
+        sketch.geometricConstraints.append(makeConstraint(sketch,ConstraintType::Fix,{{1,0,-1}}));
+        SketchOffset offset;offset.distance=.5;offset.dimensioned=true;
+        QVector<SketchEntity> made;
+        require(offsetSketchEntities(sketch,{{1,0}},offset,&made).error.isEmpty(),"creazione quota offset");
+        const int dimension=sketch.geometricConstraints.size()-1;
+        require(sketch.geometricConstraints[dimension].type==ConstraintType::Offset,"vincolo Offset persistente");
+        require(solveSketch(sketch).ok,"risoluzione offset associativo");
+        sketch.geometricConstraints[dimension].value=.8;
+        require(solveSketch(sketch).ok,"modifica distanza offset");
+        for(const auto &p:sketch.curves[1].controlPoints) require(std::fabs(p.y()-.8)<1e-7,"offset aggiornato alla quota");
+        QPointF a,b;
+        require(dimensionPoints(sketch,sketch.geometricConstraints[dimension],a,b) && std::fabs(QLineF(a,b).length()-.8)<1e-7,"freccia della quota offset");
+        require(analyzeSketch(sketch).degreesOfFreedom==0,"offset determinato dal riferimento fisso");
+        const auto before=sketch;
+        require(!solveSketch(sketch,{{{1,1,0},QPointF(-6,2)}}).ok && sketch.curves[1].controlPoints==before.curves[1].controlPoints,
+                "trascinamento incompatibile rifiutato senza deformare offset");
+        QTemporaryDir directory;DocumentState state,loaded;state.sketches={sketch};
+        const auto file=directory.filePath(QStringLiteral("offset-quota.prt"));
+        require(saveDocumentFile(file,state,false).isEmpty() && loadDocumentFile(file,loaded).isEmpty(),"persistenza quota offset");
+        sketch=loaded.sketches[0];sketch.geometricConstraints[dimension].value=1.2;
+        require(solveSketch(sketch).ok && std::fabs(sketch.curves[1].controlPoints[0].y()-1.2)<1e-7,"quota offset modificabile dopo riapertura");
+        // Sorgente libera modificata: la relazione rigenera la copia.
+        sketch.geometricConstraints.removeFirst();
+        for(auto &p:sketch.curves[0].controlPoints) p+=QPointF(0,2);
+        require(solveSketch(sketch).ok && std::fabs(sketch.curves[1].controlPoints[0].y()-3.2)<1e-7,"offset segue sorgente modificata");
+        require(constraintError(sketch,sketch.geometricConstraints[0])<1e-7,"residuo offset");
+        // Fallimento atomico quando un cerchio collassa.
+        SketchObject circular;CurveObject circle;circle.tool=DrawingTool::Circle;circle.controlPoints={{0,0},{2,0}};circular.curves={circle};
+        offset.reverse=true;offset.distance=.5;
+        require(offsetSketchEntities(circular,{{1,0}},offset).error.isEmpty(),"offset parametrico cerchio");
+        const auto saved=circular.curves[1].controlPoints;
+        circular.geometricConstraints.last().value=3;
+        require(!solveSketch(circular).ok && circular.curves[1].controlPoints==saved,"offset impossibile atomico");
+    }
+
+    // Diagnostica: taglio e curve con la proiezione di uno schizzo su un corpo
+    // del documento (nessun salvataggio). PROJECTION_OUT=prefisso salva i body.
+    static void profileProjection(const QString &path, const QString &sketchName, int bodyIndex) {
+        using namespace ForgeCad;
+        DocumentState document;
+        require(loadDocumentFile(path, document).isEmpty(), "lettura del documento");
+        int sketch = -1;
+        for (int i = 0; i < document.sketches.size(); ++i)
+            if (document.sketches[i].name == sketchName) sketch = i;
+        require(sketch >= 0, "schizzo presente");
+        require(bodyIndex >= 0 && bodyIndex < document.extrusions.size() && document.extrusions[bodyIndex].forgeBody, "corpo con geometria");
+        const ForgeBody body = document.extrusions[bodyIndex].forgeBody;
+        double area0 = 0.0;
+        for (Kernel::FaceId f : body->faces()) area0 += Kernel::faceArea(*body, f, 1e-9);
+        std::cout << "corpo " << bodyIndex << " facce " << body->faces().size() << " area " << area0 << std::endl;
+        {
+            const Kernel::Profile profile = Kernel::buildProfile(forgeSketchSegments(document.sketches[sketch]), kSketchConnectionTolerance);
+            double planArea = 0.0;
+            for (const auto &region : profile.regions) planArea += Kernel::area(region);
+            std::cout << "regioni " << profile.regions.size() << " area in pianta della regione " << planArea << std::endl;
+        }
+        const QStringList modes = qEnvironmentVariable("PROJECTION_MODES", QStringLiteral("0,1,2")).split(QLatin1Char(','));
+        for (const QString &modeText : modes) {
+            const int mode = modeText.toInt();
+            QElapsedTimer timer;
+            timer.start();
+            QString error, summary;
+            const ForgeBody result = forgeProjectedCut(body, document.sketches[sketch], mode, false, &error, &summary);
+            std::cout << "modo " << mode << " " << timer.elapsed() << " ms ";
+            if (!result) {
+                std::cout << "ERRORE " << error.toStdString() << std::endl;
+                continue;
+            }
+            double area = 0.0;
+            for (Kernel::FaceId f : result->faces()) area += Kernel::faceArea(*result, f, 1e-9);
+            double tolerance = 0.0;
+            for (Kernel::EdgeId e : result->edges()) tolerance = std::max(tolerance, result->edge(e).tolerance);
+            const auto issues = Kernel::checkBody(*result);
+            Kernel::TessellationOptions options;
+            options.deflection = 1e-2;
+            std::cout << "facce " << result->faces().size() << " area " << area << " (tolta " << area0 - area << ") tolleranza edge " << tolerance
+                      << " controlli " << issues.size() << " tassellazione fallita " << Kernel::tessellate(*result, options).failedFaces << " | "
+                      << summary.toStdString() << std::endl;
+            if (qEnvironmentVariableIsSet("PROJECTION_OUT")) {
+                std::ofstream file(qEnvironmentVariable("PROJECTION_OUT").toStdString() + QString::number(mode).toStdString() + ".body", std::ios::binary);
+                file << Kernel::writeBodyBinary(*result);
+            }
+        }
+        // Copia del documento con il taglio aggiunto dal viewport (nessuna modifica all'originale).
+        if (qEnvironmentVariableIsSet("PROJECTION_DOC")) {
+            CadViewport viewport;
+            viewport.loadDocument(document);
+            ExtrusionObject cut;
+            cut.feature = BodyFeature::SheetTrim;
+            cut.firstBody = bodyIndex;
+            cut.sketchIndex = sketch;
+            cut.trimProject = true;
+            const QString error = viewport.createSheetTrim(cut, QStringLiteral("Taglio proiettato 1"));
+            std::cout << "feature nel documento: " << (error.isEmpty() ? std::string("riuscita") : error.toStdString()) << std::endl;
+            require(error.isEmpty() && saveDocumentFile(qEnvironmentVariable("PROJECTION_DOC"), viewport.currentDocument(), true).isEmpty(), "copia con il taglio");
+            if (qEnvironmentVariableIsSet("PROJECTION_STEP")) {
+                std::ofstream file(qEnvironmentVariable("PROJECTION_STEP").toStdString());
+                file << Kernel::writeStep({{"taglio", *viewport.extrusions_.last().forgeBody}});
+            }
+        }
+        QElapsedTimer timer;
+        timer.start();
+        QString error, summary;
+        const QVector<ForgeCurve> curves = forgeProjectedCurves(body, document.sketches[sketch], false, &error, &summary);
+        std::cout << "curve " << timer.elapsed() << " ms " << curves.size() << " " << error.toStdString() << summary.toStdString() << std::endl;
+        for (const ForgeCurve &curve : curves) {
+            double worst = 0.0;
+            const auto domain = curve->domain();
+            for (int k = 0; k <= 400; ++k) {
+                const Kernel::Vec3 p = curve->point(domain.lo + domain.length() * k / 400.0);
+                double best = 1e300;
+                for (Kernel::FaceId f : body->faces()) {
+                    if (Kernel::classifyPointOnFace(*body, f, p, 1e-6) == Kernel::PointLocation::Outside) continue;
+                    best = std::min(best, Kernel::projectPoint(*body->face(f).surface, p).distance);
+                }
+                worst = std::max(worst, best);
+            }
+            std::cout << "  curva lunghezza " << Kernel::arcLength(*curve, domain, 1e-9) << " distanza massima dal corpo " << worst << std::endl;
+        }
+    }
+
+    static void profileMouseOffset(const QString &path) {
+        using namespace ForgeCad;
+        DocumentState document;
+        require(loadDocumentFile(path,document).isEmpty(),"lettura Mouse");
+        int index=-1;
+        for(int i=0;i<document.sketches.size();++i)
+            if(document.sketches[i].name==QStringLiteral("Schizzo 4")) index=i;
+        require(index>=0,"Schizzo 4 presente");
+        const auto original=document.sketches[index];
+        for(int i=0;i<original.curves.size();++i) {
+            const auto geometry=curveGeometry(original.curves[i]);
+            require(!geometry.empty(),"geometria curva");
+            const auto g=geometry.front();
+            double curvature=0;
+            for(int k=0;k<=1024;++k) {
+                Kernel::Vec2 d[3];g.curve->evaluate(g.range.lo+g.range.length()*k/1024.0,2,d);
+                const double speed=Kernel::norm(d[1]);
+                curvature=std::max(curvature,std::fabs(Kernel::cross(d[1],d[2]))/(speed*speed*speed));
+            }
+            std::cout<<"CURVE "<<i<<" minimo raggio campionato="<<1/curvature<<std::endl;
+        }
+        for(int i=0;i<=original.curves.size();++i) for(bool reverse:{false,true}) {
+            auto work=original; SketchOffset offset; offset.distance=0.5; offset.reverse=reverse;
+            QElapsedTimer timer;timer.start();
+            QVector<SketchEntity> selected;
+            if(i==original.curves.size()) for(int j=0;j<i;++j) selected.append({1,j});
+            else selected.append({1,i});
+            std::cout<<"START offset "<<i<<" reverse="<<reverse<<std::endl;
+            QVector<SketchEntity> made;
+            const auto result=offsetSketchEntities(work,selected,offset,&made);
+            std::cout<<"DONE "<<timer.elapsed()<<" ms error="<<result.error.toStdString()<<" made="<<made.size()<<std::endl;
+        }
+        // Offset dei soli riferimenti copiati: copie come curve derivate rigide.
+        auto work=original; SketchOffset offset; offset.distance=0.5; offset.reverse=true;
+        QVector<SketchEntity> selected, made;
+        for(int j=0;j<original.curves.size();++j) if(original.curves[j].tool==DrawingTool::Converted) selected.append({1,j});
+        require(offsetSketchEntities(work,selected,offset,&made).error.isEmpty(),"offset dei riferimenti");
+        int poles=0;
+        for(const auto &e:made) {
+            require(e.kind==0 || work.curves[e.index].tool!=DrawingTool::Nurbs,"copia di offset come curva derivata");
+            if(e.kind==1) poles+=work.curves[e.index].controlPoints.size();
+        }
+        QElapsedTimer timer;timer.start();
+        const auto analysis=analyzeSketch(work);
+        std::cout<<"DERIVED copies="<<made.size()<<" poles="<<poles<<" dof="<<analysis.degreesOfFreedom
+                 <<" analysis ms="<<timer.elapsed()<<std::endl;
+        timer.restart();
+        const auto solved=solveSketch(work,{});
+        std::cout<<"DERIVED solve ok="<<solved.ok<<" ms="<<timer.elapsed()<<std::endl;
+    }
+
+    static void profileSketchInteraction(const QString &path) {
+        using namespace ForgeCad;
+        DocumentState document;
+        require(loadDocumentFile(path, document).isEmpty(), "lettura documento");
+        int index = -1;
+        for (int i = 0; i < document.sketches.size(); ++i)
+            if (document.sketches.at(i).name == QStringLiteral("Schizzo 4")) index = i;
+        require(index >= 0, "Schizzo 4 presente");
+        CadViewport v;
+        v.sketches_ = document.sketches; v.activeSketch_ = index;
+        const SketchObject original = v.sketches_.at(index);
+        for (const auto &c : original.geometricConstraints)
+            std::cout << "constraint " << int(c.type) << " curve=" << c.first.element << " point=" << c.first.point
+                      << " positions=" << c.positions.size() << std::endl;
+        auto measure = [&](const char *name, auto action) {
+            std::cout << "START " << name << std::endl;
+            QElapsedTimer timer; timer.start(); action();
+            std::cout << "DONE " << name << " ms=" << timer.elapsed() << std::endl;
+        };
+        measure("snap", [&] { for (int i=0;i<4;++i) v.snapPoint(QPointF(50+i,26)); });
+        measure("analysis", [&] { (void)analyzeSketch(original); });
+        measure("solve unchanged", [&] { auto copy=original; require(solveSketch(copy).ok,"solve unchanged"); });
+        measure("drag fixed pole", [&] {
+            auto copy=original;
+            require(!solveSketch(copy, {{{1,0,0},copy.curves[0].controlPoints[0]+QPointF(1,1)}}).ok,"polo fisso");
+        });
+        measure("crossing segment horizontal", [&] {
+            auto copy=original; copy.segments.append({QPointF(0,5),QPointF(100,6)});
+            SketchConstraint horizontal; horizontal.type=ConstraintType::Horizontal; horizontal.first={0,0,-1};
+            copy.geometricConstraints.append(horizontal);
+            require(solveSketch(copy).ok,"solve horizontal");
+        });
+        auto onCopy = original;
+        const auto piece = curveGeometry(onCopy.curves[0]).front();
+        const auto point = piece.curve->point(0.5*(piece.range.lo+piece.range.hi));
+        const QPointF q(point.x(),point.y());
+        onCopy.segments.append({q+QPointF(0,0.05),q+QPointF(5,0.1)});
+        SketchConstraint on; on.type=ConstraintType::PointOnCurve; on.first={0,0,0}; on.second={1,0,-1};
+        onCopy.geometricConstraints.append(on);
+        measure("solve point on copied curve", [&] { require(solveSketch(onCopy).ok,"solve point on copied curve"); });
+        measure("analysis point on copied curve", [&] { (void)analyzeSketch(onCopy); });
+        measure("viewport solve and display curves", [&] {
+            v.sketches_[index]=onCopy;
+            require(v.solveActive({},onCopy),"viewport solve");
+        });
+    }
+
+    static void blendPreviewReload() {
+        using namespace ForgeCad;
+        using namespace ForgeCad::Kernel;
+        std::ifstream file(std::string(FORGECAD_SOURCE_DIR) + "/kernel/tests/data/mouse_sewn.body", std::ios::binary);
+        require(bool(file), "fixture mouse disponibile");
+        std::stringstream bytes; bytes << file.rdbuf();
+        const Body mouse = readBodyBinary(bytes.str());
+        const Body mouseReloaded = readBodyBinary(writeBodyBinary(mouse));
+        BodyDisplay unchanged;
+        forgeBlendPreviewDisplay(mouse, mouseReloaded, 0, unchanged, 3);
+        std::cout << "mouse invariato: " << unchanged.vertices.size() << " vertici evidenziati" << std::endl;
+        require(unchanged.vertices.isEmpty() && unchanged.edges.isEmpty() && unchanged.constructionCurves.isEmpty(),
+                "nessuna faccia invariata del mouse deve accendersi dopo rilettura");
+
+        const Body box = makeBox(Frame3(), 10, 10, 10);
+        const EdgeId first = nearestEdge(box, Vec3(5,0,10), 1e-8);
+        require(first.valid(), "primo spigolo valido");
+        const Body base = blendSurfaceChains(box, {first}, 0.5, false);
+        const EdgeId second = nearestEdge(base, Vec3(5,10,0), 1e-8);
+        require(second.valid(), "secondo spigolo valido");
+        const Body result = blendSurfaceChains(base, {second}, 0.75, false);
+        BodyDisplay fresh, reopened;
+        forgeBlendPreviewDisplay(base, result, 0, fresh, 3);
+        const Body savedBase = readBodyBinary(writeBodyBinary(base));
+        const Body savedResult = readBodyBinary(writeBodyBinary(result));
+        forgeBlendPreviewDisplay(savedBase, savedResult, 0, reopened, 3);
+        require(!fresh.vertices.isEmpty() && !fresh.constructionCurves.isEmpty(), "nuovo raccordo evidenziato");
+        require(fresh.vertices.size() == reopened.vertices.size() && fresh.edges.size() == reopened.edges.size()
+                    && fresh.constructionCurves.size() == reopened.constructionCurves.size(),
+                "dopo rilettura si evidenzia soltanto lo stesso nuovo raccordo");
+        for (const auto &p : reopened.vertices)
+            require(p.y() > 9.0f && p.z() < 1.0f, "il raccordo preesistente resta fuori dall'anteprima");
+    }
+
     static void reviewRegressions() {
         for (bool symmetry : {false, true}) {
             CadViewport v; v.createSketch(0, QStringLiteral("Undo"));
@@ -409,6 +931,144 @@ public:
         v.loadDocument(loaded);
         require(v.extrusions_.last().forgeBody && !v.extrusions_.last().solid, "rigenerazione sformo e smusso superficie");
     }
+    // Taglio con schizzo proiettato e curva proiettata: anteprima, storia,
+    // modi, verso, Undo/Redo, riferimenti, persistenza e pannello.
+    static void projectionFeatures() {
+        using namespace ForgeCad;
+        using namespace ForgeCad::Kernel;
+        CadViewport viewport;
+        PrimitiveParameters primitive;
+        primitive.size[0] = 20; primitive.size[1] = 10; primitive.size[2] = 5;
+        require(viewport.createPrimitive(primitive, QStringLiteral("Base proiezione")).isEmpty(), "creazione base proiezione");
+        SketchObject sketch;
+        sketch.name = QStringLiteral("Profilo sopra");
+        sketch.plane = kFacePlane;
+        sketch.frame.origin[2] = 12.0;
+        const QPointF a(4, 2), b(12, 2), c(12, 6), d(4, 6);
+        sketch.segments = {{a, b}, {b, c}, {c, d}, {d, a}};
+        sketch.constraints = {-1, -1, -1, -1};
+        sketch.segmentLengths = {0, 0, 0, 0};
+        sketch.segmentAngles = {-1, -1, -1, -1};
+        viewport.sketches_.append(sketch);
+        const auto totalArea = [](const ForgeBody &body) {
+            double area = 0.0;
+            for (FaceId f : body->faces()) area += faceArea(*body, f, 1e-11);
+            return area;
+        };
+        ExtrusionObject cut;
+        cut.feature = BodyFeature::SheetTrim; cut.firstBody = 0; cut.sketchIndex = 0; cut.trimProject = true;
+        viewport.requestPreview(cut, -1);
+        QElapsedTimer timeout; timeout.start();
+        while (!viewport.preview_.valid && viewport.preview_.error.isEmpty() && timeout.elapsed() < 20000) QApplication::processEvents();
+        require(viewport.preview_.valid && viewport.preview_.geometry, "anteprima taglio proiettato");
+        require(viewport.preview_.replaced.contains(0), "l'anteprima della proiezione nasconde la superficie di partenza");
+        require(viewport.createSheetTrim(cut, QStringLiteral("Taglio 2")).isEmpty(), "creazione taglio proiettato");
+        require(viewport.extrusions_.at(1).feature == BodyFeature::SheetTrim && viewport.extrusions_.at(1).trimProject, "taglio superficie con schizzo proiettato");
+        viewport.clearPreview();
+        require(viewport.extrusions_.size() == 2 && viewport.extrusions_[0].modelBodyId == viewport.extrusions_[1].modelBodyId,
+                "il taglio resta nello stesso corpo logico");
+        const auto last = [&] { return viewport.extrusions_.at(1).forgeBody; };
+        require(last() && last()->isSheet() && std::fabs(totalArea(last()) - 668.0) < 1e-8, "foro nella faccia superiore, pareti intere");
+        require(viewport.extrusions_.at(1).notice.contains(QStringLiteral("4 tratti impressi")), "esito del taglio");
+        ExtrusionObject edited = viewport.extrusions_.at(1);
+        edited.projectionMode = 1;
+        require(viewport.updateBody(1, edited).isEmpty() && std::fabs(totalArea(last()) - 32.0) < 1e-8, "modo: tiene solo la regione");
+        viewport.undo(); require(std::fabs(totalArea(last()) - 668.0) < 1e-8, "undo modo del taglio");
+        viewport.redo(); require(std::fabs(totalArea(last()) - 32.0) < 1e-8, "redo modo del taglio");
+        edited = viewport.extrusions_.at(1); edited.projectionMode = 2;
+        require(viewport.updateBody(1, edited).isEmpty() && !last()->isSheet() && last()->faces().size() == 7
+                && std::fabs(massProperties(*last()).volume - 1000.0) < 1e-8, "linea di divisione su un solido");
+        const auto before = writeBodyBinary(*last());
+        edited = viewport.extrusions_.at(1); edited.projectionReverse = true;
+        require(!viewport.updateBody(1, edited).isEmpty(), "verso opposto: la proiezione non incontra il corpo");
+        require(writeBodyBinary(*last()) == before, "errore non modifica il taglio");
+
+        ExtrusionObject curves;
+        curves.feature = BodyFeature::ProjectedCurve; curves.firstBody = 1; curves.sketchIndex = 0; curves.name = QStringLiteral("Curva proiettata 1");
+        require(viewport.createBody(curves).isEmpty(), "creazione curva proiettata");
+        const ExtrusionObject &curveBody = viewport.extrusions_.last();
+        require(curveBody.curves.size() == 1 && curveBody.curve == curveBody.curves.first(), "una curva per il contorno chiuso");
+        const Interval domain = curveBody.curve->domain();
+        require(std::fabs(arcLength(*curveBody.curve, domain, 1e-10) - 24.0) < 1e-7, "lunghezza del contorno proiettato");
+        for (int k = 0; k <= 50; ++k) require(std::fabs(curveBody.curve->point(domain.lo + domain.length() * k / 50).z() - 5.0) < 1e-8, "curva sulla faccia superiore");
+        require(!curveBody.display.edges.isEmpty(), "curva visibile");
+        GeometryRef ref; ref.kind = 9; ref.index = 2; ref.featureId = curveBody.featureId;
+        std::vector<PathSegment> path;
+        QString error;
+        require(geometryRefPath(ref, 3, viewport.sketches_, viewport.extrusions_, path, &error) && path.size() == 1, "curva proiettata come riferimento");
+
+        QTemporaryDir files;
+        const QString path2 = files.path() + QStringLiteral("/proiezione.prt");
+        require(saveDocumentFile(path2, viewport.currentDocument(), false).isEmpty(), "salvataggio proiezione senza cache");
+        DocumentState loaded;
+        require(loadDocumentFile(path2, loaded).isEmpty(), "lettura formato 38");
+        require(loaded.extrusions.at(1).feature == BodyFeature::SheetTrim && loaded.extrusions.at(1).trimProject && loaded.extrusions.at(1).projectionMode == 2
+                && !loaded.extrusions.at(1).projectionReverse && loaded.extrusions.at(2).feature == BodyFeature::ProjectedCurve,
+                "parametri della proiezione persistenti");
+        CadViewport reopened; reopened.loadDocument(loaded);
+        require(reopened.extrusions_.at(1).forgeBody && reopened.extrusions_.at(1).error.isEmpty() && reopened.extrusions_.at(1).forgeBody->faces().size() == 7,
+                "rigenerazione del taglio riletto");
+        require(reopened.extrusions_.at(2).curves.size() == 1 && reopened.extrusions_.at(2).error.isEmpty(), "rigenerazione della curva riletta");
+
+        QMainWindow window;
+        auto *view = new CadViewport(&window); window.setCentralWidget(view); window.resize(1000, 720);
+        view->loadDocument(loaded); window.show();
+        bool locked = false;
+        QTimer::singleShot(0, &window, [&] {
+            locked = view->interactionLocked();
+            for (QDialog *dialog : window.findChildren<QDialog *>())
+                if (dialog->windowTitle() == QStringLiteral("Test proiezione")) dialog->reject();
+        });
+        require(!projectionDialog(&window, view, QStringLiteral("Test proiezione"), 1, view->extrusions_.at(1), [](const ExtrusionObject &) { return QString(); }),
+                "annullamento pannello proiezione");
+        require(locked && !view->interactionLocked() && view->extrusions_.size() == 3, "pannello proiezione esclusivo e ripristino");
+        // Taglia superficie: lo schizzo si sceglie cliccandolo nella vista e si
+        // proietta di default. Sul solido gia' diviso i quattro lati seguono
+        // edge esistenti: si toglie la faccia della regione senza nuovi tagli.
+        bool sketchChosen = false, projectionRows = false, previewReady = false;
+        QTimer poll;
+        poll.setInterval(20);
+        QObject::connect(&poll, &QTimer::timeout, &window, [&] {
+            QDialog *dialog = nullptr;
+            for (QDialog *candidate : window.findChildren<QDialog *>())
+                if (candidate->windowTitle() == QStringLiteral("Test taglio") && candidate->isVisible()) dialog = candidate;
+            if (!dialog) return;
+            poll.stop();
+            QVector<QPushButton *> pickers;
+            for (QPushButton *button : dialog->findChildren<QPushButton *>())
+                if (button->text() == QStringLiteral("Dalla vista")) pickers.append(button);
+            if (pickers.size() == 2) {
+                pickers.at(1)->click();
+                GeometryRef ref; ref.kind = 7; ref.index = 0; ref.element.kind = 0; ref.element.element = 0;
+                if (view->refPickFinished_) view->refPickFinished_(true, ref);
+            }
+            for (QComboBox *box : dialog->findChildren<QComboBox *>()) {
+                if (box->currentText() == QStringLiteral("Schizzo: Profilo sopra")) sketchChosen = true;
+                if (box->currentText() == QStringLiteral("Proiezione sulla prima faccia incontrata")) projectionRows = box->isVisibleTo(dialog);
+            }
+            QElapsedTimer wait; wait.start();
+            while (!view->preview_.valid && view->preview_.error.isEmpty() && wait.elapsed() < 20000) QApplication::processEvents();
+            previewReady = view->preview_.valid;
+            for (QDialogButtonBox *buttons : dialog->findChildren<QDialogButtonBox *>()) buttons->button(QDialogButtonBox::Ok)->click();
+            // Se il taglio non si applica il pannello resta aperto: si chiude per non bloccare il test.
+            QTimer::singleShot(2000, dialog, [dialog] { if (dialog->isVisible()) dialog->reject(); });
+        });
+        poll.start();
+        ExtrusionObject start;
+        start.firstBody = 1;  // la superficie da tagliare: lo schizzo si sceglie come strumento
+        const bool trimmed = trimDialog(&window, view, QStringLiteral("Test taglio"), -1, start, [view](const ExtrusionObject &d) {
+            return view->createSheetTrim(d, QStringLiteral("Taglio dal pannello"));
+        });
+        if (!(sketchChosen && projectionRows && previewReady))
+            std::cerr << "schizzo " << sketchChosen << " righe " << projectionRows << " anteprima " << previewReady << " errore " << view->preview_.error.toStdString() << std::endl;
+        require(sketchChosen && projectionRows && previewReady, "schizzo scelto nella vista, proiezione di default e anteprima");
+        require(trimmed && view->extrusions_.size() == 4 && view->extrusions_.last().trimProject && view->extrusions_.last().sketchIndex == 0,
+                "taglio dal pannello con lo schizzo proiettato");
+        require(std::fabs(totalArea(view->extrusions_.last().forgeBody) - 668.0) < 1e-8 && view->extrusions_.last().notice.contains(QStringLiteral("0 tratti impressi")),
+                "regione delimitata solo da edge esistenti");
+        std::cout << "PASS proiezione: taglio, modi, curva, riferimenti, undo/redo, persistenza e pannello" << std::endl;
+    }
+
     static void draftFeature() {
         using namespace ForgeCad;
         using namespace ForgeCad::Kernel;
@@ -481,6 +1141,102 @@ public:
     }
 
     static void workflowUi() {
+        {
+            QMainWindow window;
+            CadViewport viewport(&window);
+            viewport.resize(800,600);
+            viewport.createSketch(0,QStringLiteral("Offset senza preselezione"));
+            CurveObject curve;curve.tool=DrawingTool::Converted;curve.degree=3;curve.construction=true;
+            curve.controlPoints={{-30,0},{-10,0},{10,0},{30,0}};
+            curve.knots={0,0,0,0,1,1,1,1};
+            ForgeCad::recalculateCurve(curve,0);
+            viewport.sketches_[0].curves.append(curve);
+            int ci=-1,pi=-1;EditablePointKind kind;
+            require(!viewport.findCurveEditPoint(QPointF(-10,0),ci,pi,kind),"poli Converted non intercettano il clic");
+            viewport.setSketchViewUnlocked(true);
+            bool opened=false, selected=false, toggled=false, preview=false;
+            QTimer::singleShot(0,&window,[&] {
+                auto *dialog=window.findChild<QDialog *>();
+                if(!dialog) { for(auto *w:QApplication::topLevelWidgets()) if(auto *d=qobject_cast<QDialog *>(w)) d->reject();return; }
+                auto *buttons=dialog->findChild<QDialogButtonBox *>();
+                opened=viewport.sketchSelection().isEmpty() && buttons && !buttons->button(QDialogButtonBox::Ok)->isEnabled() && !dialog->isModal() && !viewport.sketchViewUnlocked_;
+                const QPointF cursor=viewport.projectWorldPoint(viewport.mapSketchPoint(QPointF(-10,0),viewport.sketches_[0]));
+                const auto click=[&] {
+                    QMouseEvent press(QEvent::MouseButtonPress,cursor,cursor,Qt::LeftButton,Qt::LeftButton,Qt::NoModifier);
+                    viewport.mousePressEvent(&press);
+                    QMouseEvent release(QEvent::MouseButtonRelease,cursor,cursor,Qt::LeftButton,Qt::NoButton,Qt::NoModifier);
+                    viewport.mouseReleaseEvent(&release);
+                };
+                click();
+                selected=viewport.sketchSelection().size()==1 && !viewport.draggingControlPoint_;
+                preview=!viewport.sketchPatternPreview_.isEmpty() && buttons->button(QDialogButtonBox::Ok)->isEnabled();
+                click();
+                toggled=viewport.sketchSelection().isEmpty() && viewport.sketchPatternPreview_.isEmpty() && !buttons->button(QDialogButtonBox::Ok)->isEnabled();
+                // Anche il riquadro deve selezionare, senza avviare l'orbita.
+                const QPointF from=viewport.projectWorldPoint(viewport.mapSketchPoint(QPointF(-35,5),viewport.sketches_[0]));
+                const QPointF to=viewport.projectWorldPoint(viewport.mapSketchPoint(QPointF(35,-5),viewport.sketches_[0]));
+                QMouseEvent press(QEvent::MouseButtonPress,from,from,Qt::LeftButton,Qt::LeftButton,Qt::NoModifier);
+                viewport.mousePressEvent(&press);
+                QMouseEvent move(QEvent::MouseMove,to,to,Qt::NoButton,Qt::LeftButton,Qt::NoModifier);
+                viewport.mouseMoveEvent(&move);
+                QMouseEvent release(QEvent::MouseButtonRelease,to,to,Qt::LeftButton,Qt::NoButton,Qt::NoModifier);
+                viewport.mouseReleaseEvent(&release);
+                selected=selected && viewport.sketchSelection().size()==1;
+                dialog->reject();
+            });
+            require(!sketchOffsetDialog(&window,&viewport),"annulla offset");
+            require(opened && selected && preview && toggled,"pannello offset immediato e selezione per clic");
+            require(!viewport.sketchOffsetSelectionCallback_ && viewport.sketchPatternPreview_.isEmpty()
+                    && viewport.sketches_[0].curves.size()==1,"annulla ripulisce selezione offset e anteprima");
+            viewport.sketchSelections_={{1,0}};
+            QTimer::singleShot(0,&window,[&] {
+                if(auto *dialog=window.findChild<QDialog *>())
+                    if(auto *buttons=dialog->findChild<QDialogButtonBox *>()) buttons->button(QDialogButtonBox::Ok)->click();
+            });
+            require(sketchOffsetDialog(&window,&viewport),"conferma offset con preselezione");
+            require(viewport.sketches_[0].curves.size()==2 && !viewport.sketchOffsetSelectionCallback_
+                    && viewport.sketchPatternPreview_.isEmpty(),"offset confermato e callback rimossa");
+            viewport.undo();
+            require(viewport.sketches_[0].curves.size()==1,"undo offset da pannello");
+        }
+
+        {
+            using namespace ForgeCad;
+            QMainWindow window;
+            CadViewport viewport(&window);viewport.resize(800,600);
+            ExtrusionObject block;block.feature=BodyFeature::Imported;
+            block.forgeBody=std::make_shared<const Kernel::Body>(Kernel::makeBox(Kernel::Frame3(),20,10,5));
+            forgeTessellate(*block.forgeBody,0,block.display);
+            viewport.extrusions_={block};
+            viewport.createSketch(0,QStringLiteral("Offset bordo diretto"));
+            bool picked=false;
+            const auto schedule=[&](bool accept) {
+                QTimer::singleShot(0,&window,[&,accept] {
+                    auto *dialog=window.findChild<QDialog *>();if(!dialog)return;
+                    const QPointF cursor=viewport.projectWorldPoint(QVector3D(10,0,5));
+                    QMouseEvent press(QEvent::MouseButtonPress,cursor,cursor,Qt::LeftButton,Qt::LeftButton,Qt::NoModifier);
+                    viewport.mousePressEvent(&press);
+                    QMouseEvent release(QEvent::MouseButtonRelease,cursor,cursor,Qt::LeftButton,Qt::NoButton,Qt::NoModifier);
+                    viewport.mouseReleaseEvent(&release);
+                    picked=viewport.sketchSelection().size()==1 && viewport.sketches_[0].segments.size()==1
+                        && viewport.sketches_[0].isConstructionSegment(0);
+                    auto *buttons=dialog->findChild<QDialogButtonBox *>();
+                    if(accept && buttons && buttons->button(QDialogButtonBox::Ok)->isEnabled()) buttons->button(QDialogButtonBox::Ok)->click();
+                    else dialog->reject();
+                });
+            };
+            schedule(false);
+            require(!sketchOffsetDialog(&window,&viewport) && picked && viewport.sketches_[0].segments.isEmpty(),"annulla copia bordo provvisoria");
+            schedule(true);
+            require(sketchOffsetDialog(&window,&viewport) && picked && viewport.sketches_[0].segments.size()==2,"copia bordo e offset in un comando");
+            const int ci=viewport.sketches_[0].geometricConstraints.size()-1;
+            require(viewport.sketches_[0].geometricConstraints[ci].type==ConstraintType::Offset,"quota del bordo copiato");
+            require(viewport.setConstraintValue(ci,0.5).isEmpty(),"modifica quota offset da viewport");
+            require(std::fabs(std::fabs(viewport.sketches_[0].segments[1].first.y())-0.5)<1e-7,"distanza aggiornata da pannello quote");
+            viewport.undo();viewport.undo();
+            require(viewport.sketches_[0].segments.isEmpty(),"undo unico per bordo e offset");
+        }
+
         using namespace ForgeCad;
         using namespace ForgeCad::Kernel;
         QMainWindow window;
@@ -1118,9 +1874,10 @@ public:
                 auto *dialog = parent.findChild<QDialog *>();
                 if (!dialog) return;
                 try {
-                    const auto boxes = dialog->findChildren<QComboBox *>();
-                    require(boxes.size() == 4 && boxes.at(2)->count() == (reverse ? 2 : 0)
-                                && boxes.at(3)->count() == (reverse ? 0 : 2),
+                    auto *partBox = dialog->findChild<QComboBox *>(QStringLiteral("trimPart"));
+                    auto *toolPartBox = dialog->findChild<QComboBox *>(QStringLiteral("trimToolPart"));
+                    require(partBox && toolPartBox && partBox->count() == (reverse ? 2 : 0)
+                                && toolPartBox->count() == (reverse ? 0 : 2),
                             "pannello conserva le regioni quando un solo corpo si divide");
                     require(bool(v.trimPartPickFinished_) && v.trimPartPickDisplays_.size() == 2,
                             "pannello mantiene attiva la scelta delle regioni disponibili");
@@ -1133,8 +1890,8 @@ public:
                     pick->click();
                     require(!v.refPicking_ && bool(v.trimPartPickFinished_), "ritorno alla scelta delle parti");
                     if (reverse) {
-                        dialog->findChild<QCheckBox *>()->setChecked(false);
-                        require(boxes.at(2)->count() == 2 && boxes.at(3)->count() == 0 && v.preview_.valid,
+                        dialog->findChild<QCheckBox *>(QStringLiteral("trimBoth"))->setChecked(false);
+                        require(partBox->count() == 2 && toolPartBox->count() == 0 && v.preview_.valid,
                                 "taglio singolo disponibile dopo errore del secondo corpo");
                     }
                     inspected = true;
@@ -3829,7 +4586,7 @@ public:
             free.curves.append(spline);
             require(ForgeCad::offsetSketchEntities(free, all(free), offset, &created).error.isEmpty() && created.size() == 1
                         && free.curves.last().tool == DrawingTool::Converted,
-                    "NURBS a distanza come curva convertita");
+                    "NURBS a distanza come curva derivata");
             const auto original = ForgeCad::curveGeometry(free.curves.first()).front();
             const auto copy = ForgeCad::curveGeometry(free.curves.last()).front();
             double worst = 0.0;
@@ -4982,6 +5739,39 @@ int main(int argc, char **argv) {
     QTemporaryDir settings;
     QSettings::setDefaultFormat(QSettings::IniFormat);
     QSettings::setPath(QSettings::IniFormat, QSettings::UserScope, settings.path());
+    if (app.arguments().contains(QStringLiteral("--sketch-reference-workflow"))) {
+        try { ViewportInteractionTest::sketchReferenceWorkflow(); ViewportInteractionTest::derivedCurveEntity(); ViewportInteractionTest::associativeOffset(); ViewportInteractionTest::inwardOffsetAndProjection(); }
+        catch(const std::exception &e) { std::cerr<<e.what()<<std::endl;return 1; }
+        std::cout<<"PASS sketch reference workflow"<<std::endl;
+        return 0;
+    }
+    if (app.arguments().contains(QStringLiteral("--profile-projection"))) {
+        const int argument = int(app.arguments().indexOf(QStringLiteral("--profile-projection")));
+        try { ViewportInteractionTest::profileProjection(app.arguments().value(argument + 1), app.arguments().value(argument + 2), app.arguments().value(argument + 3).toInt()); }
+        catch (const std::exception &e) { std::cerr << e.what() << std::endl; return 1; }
+        return 0;
+    }
+    if (app.arguments().contains(QStringLiteral("--profile-mouse-offset"))) {
+        try { ViewportInteractionTest::profileMouseOffset(app.arguments().value(app.arguments().indexOf(QStringLiteral("--profile-mouse-offset"))+1)); }
+        catch(const std::exception &e) { std::cerr<<e.what()<<std::endl;return 1; }
+        return 0;
+    }
+    if (app.arguments().contains(QStringLiteral("--dense-fixed-sketch"))) {
+        try { ViewportInteractionTest::denseFixedSketchRegressions(); }
+        catch (const std::exception &e) { std::cerr << e.what() << std::endl; return 1; }
+        return 0;
+    }
+    if (app.arguments().contains(QStringLiteral("--profile-sketch-interaction"))) {
+        try { ViewportInteractionTest::profileSketchInteraction(app.arguments().value(app.arguments().indexOf(QStringLiteral("--profile-sketch-interaction"))+1)); }
+        catch (const std::exception &e) { std::cerr << e.what() << std::endl; return 1; }
+        return 0;
+    }
+    if (app.arguments().contains(QStringLiteral("--blend-preview-reload"))) {
+        try { ViewportInteractionTest::blendPreviewReload(); }
+        catch (const std::exception &e) { std::cerr << e.what() << std::endl; return 1; }
+        std::cout << "PASS blend preview reload" << std::endl;
+        return 0;
+    }
     if (app.arguments().contains(QStringLiteral("--review-regressions"))) {
         try { ViewportInteractionTest::reviewRegressions(); }
         catch (const std::exception &e) { std::cerr << e.what() << std::endl; return 1; }
@@ -5016,6 +5806,11 @@ int main(int argc, char **argv) {
         try { ViewportInteractionTest::shapeAnalysisUi(app.arguments().contains(QStringLiteral("--gl"))); }
         catch (const std::exception &e) { std::cerr << e.what() << std::endl; return 1; }
         std::cout << "PASS shape analysis UI" << std::endl;
+        return 0;
+    }
+    if (app.arguments().contains(QStringLiteral("--projection-features"))) {
+        try { ViewportInteractionTest::projectionFeatures(); }
+        catch (const std::exception &e) { std::cerr << e.what() << std::endl; return 1; }
         return 0;
     }
     if (app.arguments().contains(QStringLiteral("--draft"))) {

@@ -12,7 +12,7 @@
 //    archi e cerchi -> archi e cerchi concentrici (vincolo Concentrico), con
 //    il raggio R -/+ d: esatti.
 //  - Spline, NURBS, ellissi e riferimenti convertiti -> B-spline cubiche C1
-//    (curve "Converted") nello stesso parametro entro 1e-7 dalla curva a
+//    (curve NURBS modificabili) nello stesso parametro entro 1e-7 dalla curva a
 //    distanza vera (come le parallele dei raccordi del kernel): la curva a
 //    distanza di una spline non e' una spline.
 //  - Negli angoli vivi della catena le copie si prolungano o si accorciano
@@ -23,9 +23,9 @@
 //  - Verso: le catene chiuse vanno verso l'esterno, quelle aperte a
 //    sinistra del primo tratto scelto; `reverse` gira il verso, `bothSides`
 //    le copia dalle due parti.
-// Errore (lo schizzo non cambia) se una copia degenera: raggio nullo o
-// negativo, distanza oltre il raggio di curvatura (cuspidi), angolo concavo
-// piu' profondo dei tratti.
+// Le auto-intersezioni locali della parallela vengono rifilate: una
+// cuspide non fa rifiutare tutta la curva. Errore atomico se una copia
+// collassa (raggio nullo/negativo) o un giunto non conserva tratti utili.
 namespace ForgeCad {
 
 struct SketchOffset {
@@ -33,11 +33,17 @@ struct SketchOffset {
     bool reverse = false;
     bool bothSides = false;
     bool roundCorners = false;
+    bool dimensioned = false;  // conserva la relazione e la quota di offset
     bool construction = false;  // le entita' di partenza diventano di costruzione
 };
 
 SketchEditResult offsetSketchEntities(SketchObject &sketch, const QVector<SketchEntity> &entities, const SketchOffset &offset,
                                       QVector<SketchEntity> *created = nullptr);
+
+// Aggiorna in ordine le copie associative. Errore atomico se la nuova
+// distanza cambia il numero/tipo dei tratti o invalida riferimenti a poli.
+bool validSketchOffset(const SketchObject &sketch, const SketchConstraint &constraint);
+QString refreshSketchOffsets(SketchObject &sketch);
 
 }
 

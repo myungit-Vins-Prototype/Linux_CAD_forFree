@@ -38,6 +38,8 @@ struct Arc {
     // il punto sull'edge, che fa da vertice, e lo scarto dalla curva. 0: nessuno.
     Vec3 loPoint, hiPoint;
     double loTolerance = 0.0, hiTolerance = 0.0;
+    // Scarto della curva dalla faccia (curve impresse approssimate, imprintCurves).
+    double tolerance = 0.0;
 };
 
 // Punto di divisione di una curva d'intersezione preso su un edge tollerante:
@@ -168,6 +170,9 @@ public:
     Body run();
     // Divisione della lamina (body 0) lungo le curve in cui la attraversa il body 1: un body per regione connessa.
     std::vector<Body> split();
+    // Divisione delle facce del body 0 lungo curve date (il body 1 e' vuoto)
+    // e scelta dei pezzi da togliere.
+    Body imprint(const std::vector<ImprintCurve> &curves, const std::function<bool(FaceId, const Vec3 &)> &remove, int *removed);
 
 private:
     // SP-curve delle curve d'intersezione approssimate, per curva e superficie.
@@ -193,6 +198,11 @@ private:
     };
     // Tagli di ogni faccia (pezzi degli archi d'intersezione) dopo il passo 1.
     void computeCuts(std::map<int, std::vector<Piece>> (&cuts)[2]);
+    // Dagli archi di arcs_ ai tagli di ogni faccia (seconda parte di computeCuts).
+    void collectCuts(std::map<int, std::vector<Piece>> (&cuts)[2]);
+    // Un punto interno del pezzo di faccia accettato da `accept`, vicino ai
+    // tratti piu' lunghi del bordo; falso se nessuno va bene.
+    bool interiorPoint(const SubFace &subFace, const std::function<bool(const Vec3 &)> &accept) const;
     // Estremi quasi coincidenti degli archi resi un vertice tollerante.
     void snapNearEnds();
     // Passo 5: cucitura dei pezzi tenuti ("da girare" se il secondo e' vero).
@@ -1384,6 +1394,46 @@ std::vector<SubFace> BooleanBuilder::buildSubFacesOnce(int k, FaceId f, const st
 
 // --- 4. classificazione --------------------------------------------------------------
 
+bool BooleanBuilder::interiorPoint(const SubFace &subFace, const std::function<bool(const Vec3 &)> &accept) const {
+    const Face &face = bodies_[subFace.body].face(subFace.face);
+    const Surface &surface = *face.surface;
+    // Punti interni vicino ai tratti del bordo, dai piu' lunghi, a varie
+    // frazioni del tratto: se uno cade su un contatto con l'altro solido (una
+    // retta di tangenza, un bordo complanare) si prova il successivo.
+    std::vector<std::pair<double, const Piece *>> pieces;
+    for (const Cycle &cycle : subFace.cycles)
+        for (const Piece &piece : cycle.pieces)
+            pieces.emplace_back(distance(piece.start(), piece.middle()) + distance(piece.middle(), piece.end()), &piece);
+    std::sort(pieces.begin(), pieces.end(), [](const auto &a, const auto &b) { return a.first > b.first; });
+    if (pieces.size() > 4) pieces.resize(4);
+    if (pieces.empty()) {
+        // Superficie intera senza bordo: punti qualsiasi della superficie.
+        const Interval u = surface.uDomain(), v = surface.vDomain();
+        for (double a : {0.13, 0.51, 0.77, 0.29})
+            for (double b : {0.37, 0.61, 0.19}) {
+                const Vec3 x = surface.point(u.lo + a * u.length(), v.lo + b * v.length());
+                if (accept(x)) return true;
+            }
+        return false;
+    }
+    for (const auto &[length, piece] : pieces)
+        for (double fraction : {0.5, 0.31, 0.69, 0.17, 0.83}) {
+            const double t = piece->forward ? piece->range.lo + fraction * piece->range.length() : piece->range.hi - fraction * piece->range.length();
+            const Vec3 x = piece->curve->point(t);
+            const Vec3 w = normalized(cross(faceNormal(surface, face.sense, x), normalized(piece->tangentAt(t))));
+            for (double epsilon = std::min(0.05 * length, 1e-2 * scale_); epsilon > 2.0 * tolerance_; epsilon *= 0.25) {
+                const SurfaceProjection projection = projectPoint(surface, x + epsilon * w);
+                Vec2 uv(projection.u, projection.v);
+                if (isPlane(surface)) {
+                    const Vec3 local = static_cast<const Plane &>(surface).frame().toLocal(projection.point);
+                    uv = Vec2(local.x(), local.y());
+                }
+                if (insideSubFace(subFace, uv) && accept(projection.point)) return true;
+            }
+        }
+    return false;
+}
+
 Location BooleanBuilder::classify(const SubFace &subFace, const SolidClassifier &other) const {
     const Body &body = bodies_[subFace.body], &otherBody = bodies_[1 - subFace.body];
     const Face &face = body.face(subFace.face);
@@ -1402,43 +1452,7 @@ Location BooleanBuilder::classify(const SubFace &subFace, const SolidClassifier 
         if (coincident(surface, *otherBody.face(g).surface) || partial_.count({&surface, otherBody.face(g).surface.get()}))
             coplanar.push_back(g);
 
-    // Punti interni vicino ai tratti del bordo, dai piu' lunghi, a varie
-    // frazioni del tratto: se uno cade su un contatto con l'altro solido (una
-    // retta di tangenza, un bordo complanare) si prova il successivo.
-    std::vector<std::pair<double, const Piece *>> pieces;
-    for (const Cycle &cycle : subFace.cycles)
-        for (const Piece &piece : cycle.pieces)
-            pieces.emplace_back(distance(piece.start(), piece.middle()) + distance(piece.middle(), piece.end()), &piece);
-    std::sort(pieces.begin(), pieces.end(), [](const auto &a, const auto &b) { return a.first > b.first; });
-    if (pieces.size() > 4) pieces.resize(4);
-    auto interiorPoints = [&](const std::function<bool(const Vec3 &)> &accept) {
-        if (pieces.empty()) {
-            // Superficie intera senza bordo: punti qualsiasi della superficie.
-            const Interval u = surface.uDomain(), v = surface.vDomain();
-            for (double a : {0.13, 0.51, 0.77, 0.29})
-                for (double b : {0.37, 0.61, 0.19}) {
-                    const Vec3 x = surface.point(u.lo + a * u.length(), v.lo + b * v.length());
-                    if (accept(x)) return true;
-                }
-            return false;
-        }
-        for (const auto &[length, piece] : pieces)
-            for (double fraction : {0.5, 0.31, 0.69, 0.17, 0.83}) {
-                const double t = piece->forward ? piece->range.lo + fraction * piece->range.length() : piece->range.hi - fraction * piece->range.length();
-                const Vec3 x = piece->curve->point(t);
-                const Vec3 w = normalized(cross(faceNormal(surface, face.sense, x), normalized(piece->tangentAt(t))));
-                for (double epsilon = std::min(0.05 * length, 1e-2 * scale_); epsilon > 2.0 * tolerance_; epsilon *= 0.25) {
-                    const SurfaceProjection projection = projectPoint(surface, x + epsilon * w);
-                    Vec2 uv(projection.u, projection.v);
-                    if (isPlane(surface)) {
-                        const Vec3 local = static_cast<const Plane &>(surface).frame().toLocal(projection.point);
-                        uv = Vec2(local.x(), local.y());
-                    }
-                    if (insideSubFace(subFace, uv) && accept(projection.point)) return true;
-                }
-            }
-        return false;
-    };
+    auto interiorPoints = [&](const std::function<bool(const Vec3 &)> &accept) { return interiorPoint(subFace, accept); };
 
     if (!coplanar.empty()) {
         Location on = Location::Out;
@@ -1656,6 +1670,10 @@ void BooleanBuilder::computeCuts(std::map<int, std::vector<Piece>> (&cuts)[2]) {
         partial_.insert(result.partial.begin(), result.partial.end());
         partialCuts_.insert(partialCuts_.end(), result.partialCuts.begin(), result.partialCuts.end());
     }
+    collectCuts(cuts);
+}
+
+void BooleanBuilder::collectCuts(std::map<int, std::vector<Piece>> (&cuts)[2]) {
     snapNearEnds();
 
     for (const Arc &arc : arcs_) {
@@ -1677,6 +1695,7 @@ void BooleanBuilder::computeCuts(std::map<int, std::vector<Piece>> (&cuts)[2]) {
                 Piece piece;
                 piece.curve = arc.curve;
                 piece.range = range;
+                piece.tolerance = arc.tolerance;
                 piece.cut = true;
                 piece.partner = arc.face[1 - k];
                 piece.partnerCrosses = arc.cut[1 - k];
@@ -1898,6 +1917,71 @@ std::vector<Body> BooleanBuilder::split() {
     return result;
 }
 
+Body BooleanBuilder::imprint(const std::vector<ImprintCurve> &curves, const std::function<bool(FaceId, const Vec3 &)> &remove, int *removed) {
+    for (const ImprintCurve &curve : curves) {
+        if (!curve.curve || !bodies_[0].contains(curve.face)) throw std::invalid_argument("imprintCurves: curva o faccia non valida");
+        Arc arc;
+        arc.curve = curve.curve;
+        arc.range = curve.range;
+        arc.face[0] = curve.face;
+        arc.cut[0] = true;
+        arc.tolerance = curve.tolerance;
+        // Estremo su un edge: il punto dell'edge fa da vertice (tollerante se la curva vi arriva solo vicino).
+        const auto attach = [&](bool onEdge, const Vec3 &point, double t, Vec3 &target, double &tolerance) {
+            if (!onEdge) return;
+            const double gap = distance(point, curve.curve->point(t));
+            if (gap <= 0.1 * tolerance_) return;
+            target = point;
+            tolerance = std::max(1.01 * gap, tolerance_) + tolerance_;
+        };
+        attach(curve.loOnEdge, curve.loPoint, curve.range.lo, arc.loPoint, arc.loTolerance);
+        attach(curve.hiOnEdge, curve.hiPoint, curve.range.hi, arc.hiPoint, arc.hiTolerance);
+        arcs_.push_back(arc);
+    }
+    std::map<int, std::vector<Piece>> cuts[2];
+    collectCuts(cuts);
+    struct FaceResult {
+        FaceId face;
+        std::vector<std::pair<SubFace, bool>> kept;
+        int removed = 0;
+        std::exception_ptr error;
+    };
+    std::vector<FaceResult> faceResults;
+    for (FaceId f : bodies_[0].faces()) faceResults.push_back({f, {}, 0, {}});
+    parallelFor(faceResults.size(), threadCount(threads_), [&](std::size_t i) {
+        FaceResult &job = faceResults[i];
+        try {
+            const auto found = cuts[0].find(job.face.index);
+            const std::vector<Piece> none;
+            for (SubFace &subFace : buildSubFaces(0, job.face, found != cuts[0].end() ? found->second : none)) {
+                bool drop = false;
+                if (remove) {
+                    // Il punto interno non deve stare a ridosso del bordo del pezzo.
+                    if (!interiorPoint(subFace, [&](const Vec3 &z) {
+                            drop = remove(job.face, z);
+                            return true;
+                        }))
+                        throw std::domain_error("imprintCurves: punto interno di un pezzo di faccia non trovato");
+                }
+                if (drop) ++job.removed;
+                else job.kept.emplace_back(std::move(subFace), false);
+            }
+        } catch (...) {
+            job.error = std::current_exception();
+        }
+    });
+    std::vector<std::pair<SubFace, bool>> kept;
+    int count = 0;
+    for (FaceResult &job : faceResults) {
+        if (job.error) std::rethrow_exception(job.error);
+        count += job.removed;
+        kept.insert(kept.end(), std::make_move_iterator(job.kept.begin()), std::make_move_iterator(job.kept.end()));
+    }
+    if (removed) *removed = count;
+    if (kept.empty()) throw std::domain_error("imprintCurves: non resta nessuna faccia");
+    return assemble(kept, bodies_[0].isSheet() || count > 0);
+}
+
 Body BooleanBuilder::assemble(const std::vector<std::pair<SubFace, bool>> &kept, bool sheetResult) {
     std::vector<Vec3> vertices;
     std::vector<double> vertexTolerances;
@@ -2067,6 +2151,11 @@ Body booleanOperation(const Body &a, const Body &b, BooleanOperation operation, 
 
 std::vector<Body> splitSheet(const Body &sheet, const Body &tool, const BooleanOptions &options) {
     return BooleanBuilder(sheet, tool, BooleanOperation::Intersect, options, true).split();
+}
+
+Body imprintCurves(const Body &body, const std::vector<ImprintCurve> &curves, const std::function<bool(FaceId, const Vec3 &)> &remove,
+                   const BooleanOptions &options, int *removed) {
+    return BooleanBuilder(body, Body(), BooleanOperation::Intersect, options).imprint(curves, remove, removed);
 }
 
 }

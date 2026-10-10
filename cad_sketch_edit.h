@@ -14,7 +14,7 @@
 // (rette e cerchi in forma chiusa); un tratto di segmento o d'arco resta un segmento o un arco
 // dello stesso cerchio, un tratto di spline e' fatto dei tratti di Bezier
 // esatti (de Casteljau). Gli archi ellittici restano NURBS razionali esatte;
-// ellissi e NURBS si possono tagliare e spezzare. Un poligono si
+// ellissi, NURBS e riferimenti copiati si possono tagliare e spezzare. Un poligono si
 // scompone prima nei suoi lati.
 //
 // Le funzioni lavorano su una copia: se falliscono lo schizzo non cambia.

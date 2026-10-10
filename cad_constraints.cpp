@@ -1,4 +1,5 @@
 #include "cad_constraints.h"
+#include "cad_sketch_offset.h"
 
 #include <QHash>
 #include <QSet>
@@ -786,6 +787,7 @@ void equations(const System &s, const SketchConstraint &c, QVector<double> &out,
         out << (c.type == ConstraintType::Radius ? r : 2.0 * r) - c.value;
         return;
     }
+    case ConstraintType::Offset: return; // geometria governata dalla rigenerazione
     case ConstraintType::Pattern:
         patternEquations(s, c, out);
         return;
@@ -831,6 +833,7 @@ void equations(const System &s, const SketchConstraint &c, QVector<double> &out,
 
 // Il vincolo e' ben formato per lo schizzo (riferimenti validi e delle forme giuste).
 bool wellFormed(const SketchObject &sketch, const SketchConstraint &c) {
+    if (c.type == ConstraintType::Offset) return validSketchOffset(sketch,c);
     if (c.type == ConstraintType::Pattern) return patternWellFormed(sketch, c.pattern);
     const Shape a = shapeOf(sketch, c.first), b = shapeOf(sketch, c.second);
     if (a == Shape::None) return false;
@@ -872,7 +875,7 @@ QString curveName(const CurveObject &curve) {
     case DrawingTool::Polygon: return QStringLiteral("Poligono");
     case DrawingTool::Ellipse: return QStringLiteral("Ellisse");
     case DrawingTool::Nurbs: return QStringLiteral("NURBS");
-    case DrawingTool::Converted: return QStringLiteral("Riferimento");
+    case DrawingTool::Converted: return QStringLiteral("Curva derivata");
     default: return QStringLiteral("Spline");
     }
 }
@@ -930,6 +933,7 @@ QString constraintName(ConstraintType type) {
     case ConstraintType::Angle: return QStringLiteral("Angolo");
     case ConstraintType::Radius: return QStringLiteral("Raggio");
     case ConstraintType::Diameter: return QStringLiteral("Diametro");
+    case ConstraintType::Offset: return QStringLiteral("Offset");
     case ConstraintType::Pattern: return QStringLiteral("Ripetizione");
     case ConstraintType::Symmetric: return QStringLiteral("Simmetrico");
     case ConstraintType::AxisRadius: return QStringLiteral("Raggio dall'asse");
@@ -959,6 +963,7 @@ QString constraintSymbol(ConstraintType type) {
     case ConstraintType::Angle: return QStringLiteral("∠");
     case ConstraintType::Radius: return QStringLiteral("R");
     case ConstraintType::Diameter: return QStringLiteral("⌀");
+    case ConstraintType::Offset: return QStringLiteral("↔");
     case ConstraintType::Pattern: return QStringLiteral("⁂");
     case ConstraintType::Symmetric: return QStringLiteral("⇹");
     case ConstraintType::AxisRadius: return QStringLiteral("R");
@@ -970,7 +975,7 @@ QString constraintSymbol(ConstraintType type) {
 }
 
 bool isDimension(ConstraintType type) {
-    return type == ConstraintType::Distance || type == ConstraintType::Angle || type == ConstraintType::Radius || type == ConstraintType::Diameter
+    return type == ConstraintType::Offset || type == ConstraintType::Distance || type == ConstraintType::Angle || type == ConstraintType::Radius || type == ConstraintType::Diameter
         || type == ConstraintType::AxisRadius || type == ConstraintType::AxisDiameter || type == ConstraintType::HorizontalDistance
         || type == ConstraintType::VerticalDistance;
 }
@@ -1188,6 +1193,7 @@ SketchConstraint makeConstraint(const SketchObject &sketch, ConstraintType type,
 }
 
 double currentMeasure(const SketchObject &sketch, const SketchConstraint &constraint) {
+    if(constraint.type==ConstraintType::Offset) return constraint.value;
     if (constraint.type == ConstraintType::Pattern) return System::storedParameter(constraint.pattern);
     SketchConstraint probe = constraint;
     probe.value = 0.0;
@@ -1243,6 +1249,22 @@ bool chooseAngleSector(const SketchObject &sketch, SketchConstraint &constraint,
 }
 
 double constraintError(const SketchObject &sketch, const SketchConstraint &constraint) {
+    if(constraint.type==ConstraintType::Offset) {
+        SketchObject expected=sketch;expected.geometricConstraints={constraint};
+        if(!refreshSketchOffsets(expected).isEmpty()) return std::numeric_limits<double>::infinity();
+        double worst=0;
+        for(const auto &r:constraint.offset.copies) {
+            if(r.kind==0) {
+                worst=std::max({worst,length(sketch.segments[r.element].first-expected.segments[r.element].first),
+                    length(sketch.segments[r.element].second-expected.segments[r.element].second)});
+            } else {
+                const auto &a=sketch.curves[r.element], &b=expected.curves[r.element];
+                if(a.controlPoints.size()!=b.controlPoints.size() || a.knots!=b.knots) return std::numeric_limits<double>::infinity();
+                for(int k=0;k<a.controlPoints.size();++k) worst=std::max(worst,length(a.controlPoints[k]-b.controlPoints[k]));
+            }
+        }
+        return worst;
+    }
     if (!wellFormed(sketch, constraint)) return 0.0;
     const System s(sketch);
     QVector<double> r;
@@ -1253,6 +1275,11 @@ double constraintError(const SketchObject &sketch, const SketchConstraint &const
 }
 
 bool refersTo(const SketchConstraint &c, int kind, int element) {
+    if(c.type==ConstraintType::Offset) {
+        for(const auto *refs:{&c.offset.sources,&c.offset.copies}) for(const auto &r:*refs)
+            if(r.kind==kind && r.element==element) return true;
+        return false;
+    }
     if (c.type == ConstraintType::Pattern) {
         for (const QVector<ConstraintRef> *refs : {&c.pattern.sources, &c.pattern.copies})
             for (const ConstraintRef &r : *refs)
@@ -1366,6 +1393,28 @@ double sketchScale(const System &system) {
 bool directFix(const SketchConstraint &constraint) {
     return constraint.type == ConstraintType::Fix
         && !(constraint.first.kind == 1 && isHandlePoint(constraint.first.point));
+}
+
+// Curve derivate (Converted: bordi copiati, copie di offset e loro tratti):
+// B-spline esatte con molti poli, che non sono gradi di liberta'. Sono rigide:
+// i poli restano dove sono e non entrano nel Jacobiano; gli altri punti si
+// adattano a loro (estremi coincidenti, punti sulla curva). Fanno eccezione le
+// copie di una ripetizione, determinate dalla ripetizione stessa.
+QSet<int> rigidCurvePoints(const System &system, const SketchObject &sketch) {
+    QSet<int> copies;
+    for (const SketchConstraint &c : sketch.geometricConstraints)
+        if (c.type == ConstraintType::Pattern)
+            for (const ConstraintRef &r : c.pattern.copies)
+                if (r.kind == 1) copies.insert(r.element);
+    QSet<int> points;
+    for (int curve = 0; curve < sketch.curves.size(); ++curve) {
+        if (sketch.curves.at(curve).tool != DrawingTool::Converted || copies.contains(curve)) continue;
+        for (int k = 0; k < sketch.curves.at(curve).controlPoints.size(); ++k) {
+            const int point = system.curvePoint(curve, k);
+            if (point >= 0) points.insert(point);
+        }
+    }
+    return points;
 }
 
 QVector<Block> buildBlocks(const System &system, const SketchObject &sketch, const QVector<PointTarget> &targets,
@@ -1494,8 +1543,9 @@ QVector<Block> buildBlocks(const System &system, const SketchObject &sketch, con
 }
 
 // Jacobiano (m x n, per righe) per differenze centrali, blocco per blocco.
-QVector<double> jacobian(const QVector<Block> &blocks, QVector<double> &x, int m, double step) {
-    const int n = x.size();
+QVector<double> jacobian(const QVector<Block> &blocks, QVector<double> &x, int m, double step,
+                         const QVector<int> *columns = nullptr, int freeCount = 0) {
+    const int n = columns ? freeCount : int(x.size());
     QVector<double> J(m * n, 0.0);
     int row = 0;
     QVector<double> base, plus, minus;
@@ -1505,6 +1555,8 @@ QVector<double> jacobian(const QVector<Block> &blocks, QVector<double> &x, int m
         for (int point : block.points)
             for (int axis = 0; axis < 2; ++axis) {
                 const int column = 2 * point + axis;
+                const int targetColumn = columns ? columns->at(column) : column;
+                if (targetColumn < 0) continue;
                 const double saved = x[column];
                 x[column] = saved + step;
                 plus.clear();
@@ -1513,7 +1565,7 @@ QVector<double> jacobian(const QVector<Block> &blocks, QVector<double> &x, int m
                 minus.clear();
                 block.evaluate(minus);
                 x[column] = saved;
-                for (int k = 0; k < base.size(); ++k) J[(row + k) * n + column] = (plus.at(k) - minus.at(k)) / (2.0 * step);
+                for (int k = 0; k < base.size(); ++k) J[(row + k) * n + targetColumn] = (plus.at(k) - minus.at(k)) / (2.0 * step);
             }
         row += base.size();
     }
@@ -1523,6 +1575,31 @@ QVector<double> jacobian(const QVector<Block> &blocks, QVector<double> &x, int m
 }
 
 bool dimensionPoints(const SketchObject &sketch, const SketchConstraint &c, QPointF &p, QPointF &q) {
+    if(c.type==ConstraintType::Offset && validSketchOffset(sketch,c)) {
+        // Freccia fra il punto medio della prima copia e la sua sorgente
+        // piu' vicina; i giunti non spostano la quota sugli estremi tagliati.
+        const auto r=c.offset.copies.first();
+        if(r.kind==0) q=0.5*(sketch.segments[r.element].first+sketch.segments[r.element].second);
+        else {
+            const auto g=curveGeometry(sketch.curves[r.element]);
+            if(g.empty()) return false;
+            const auto v=g.front().curve->point(0.5*(g.front().range.lo+g.front().range.hi));q=QPointF(v.x(),v.y());
+        }
+        double best=std::numeric_limits<double>::infinity();
+        for(const auto &source:c.offset.sources) {
+            if(source.kind==0) {
+                const auto &line=sketch.segments[source.element];
+                const QPointF direction=line.second-line.first;
+                const double squared=dot(direction,direction);
+                const QPointF candidate=squared>0 ? line.first+direction*(dot(q-line.first,direction)/squared) : line.first;
+                const double d=length(candidate-q);if(d<best){best=d;p=candidate;}
+            } else for(const auto &g:curveGeometry(sketch.curves[source.element])) {
+                const auto hit=Kernel::projectPoint(*g.curve,Kernel::Vec2(q.x(),q.y()),g.range);
+                if(hit.distance<best){best=hit.distance;p=QPointF(hit.point.x(),hit.point.y());}
+            }
+        }
+        return std::isfinite(best);
+    }
     const bool axial = c.type == ConstraintType::AxisRadius || c.type == ConstraintType::AxisDiameter;
     const bool projected = c.type == ConstraintType::HorizontalDistance || c.type == ConstraintType::VerticalDistance;
     if ((c.type != ConstraintType::Distance && !axial && !projected) || !wellFormed(sketch, c)) return false;
@@ -1595,6 +1672,15 @@ bool circleOf(const SketchObject &sketch, const ConstraintRef &ref, QPointF &cen
 }
 
 SketchAnalysis analyzeSketch(const SketchObject &sketch) {
+    if(std::any_of(sketch.geometricConstraints.begin(),sketch.geometricConstraints.end(),[](const auto &c){return c.type==ConstraintType::Offset;})) {
+        SketchObject fixed=sketch;fixed.geometricConstraints.clear();
+        for(const auto &c:sketch.geometricConstraints) {
+            if(c.type!=ConstraintType::Offset) fixed.geometricConstraints.append(c);
+            else if(validSketchOffset(sketch,c)) for(const auto &r:c.offset.copies)
+                fixed.geometricConstraints.append(makeConstraint(fixed,ConstraintType::Fix,{r}));
+        }
+        return analyzeSketch(fixed);
+    }
     SketchAnalysis analysis;
     analysis.segmentDefined.fill(false, sketch.segments.size());
     analysis.curveDefined.fill(false, sketch.curves.size());
@@ -1617,17 +1703,18 @@ SketchAnalysis analyzeSketch(const SketchObject &sketch) {
             for (int dependency : dependencies) fixedPoints.insert(dependency);
         }
     }
+    fixedPoints.unite(rigidCurvePoints(system, sketch));
     const QVector<Block> blocks = buildBlocks(system, sketch, {}, true, true);
     QVector<double> r;
     for (const Block &block : blocks) block.evaluate(r);
     const int m = r.size();
     QVector<double> &x = const_cast<QVector<double> &>(system.values());
-    QVector<double> J = jacobian(blocks, x, m, step);
-    for (int point : fixedPoints)
-        for (int row = 0; row < m; ++row) {
-            J[row * n + 2 * point] = 0.0;
-            J[row * n + 2 * point + 1] = 0.0;
-        }
+    QVector<int> columns(n, -1);
+    for (int k = 0; k < n; ++k)
+        if (!fixedPoints.contains(k / 2)) columns[k] = k;
+    // Non perturbare le coordinate fisse: azzerarle dopo le differenze
+    // finite calcolava comunque migliaia di proiezioni su curve copiate.
+    QVector<double> J = jacobian(blocks, x, m, step, &columns, n);
     // Base ortonormale dello spazio delle righe (Gram-Schmidt modificato, due
     // passate): la sua dimensione e' il rango; una coordinata e' determinata se
     // il suo versore sta nello spazio delle righe (norma della sua proiezione 1).
@@ -1677,17 +1764,101 @@ SketchAnalysis analyzeSketch(const SketchObject &sketch) {
 }
 
 SolveResult solveSketch(SketchObject &sketch, const QVector<PointTarget> &targets) {
+    if(std::any_of(sketch.geometricConstraints.begin(),sketch.geometricConstraints.end(),[](const auto &c){return c.type==ConstraintType::Offset;})) {
+        SketchObject work=sketch;
+        SolveResult result;
+        for(int pass=0;pass<8;++pass) {
+            const QString error=refreshSketchOffsets(work);
+            if(!error.isEmpty()){result.ok=false;result.error=error;return result;}
+            auto constraints=work.geometricConstraints;
+            work.geometricConstraints.clear();
+            for(const auto &c:constraints) if(c.type!=ConstraintType::Offset) work.geometricConstraints.append(c);
+            const int ordinary=work.geometricConstraints.size();
+            for(const auto &c:constraints) if(c.type==ConstraintType::Offset)
+                for(const auto &r:c.offset.copies) work.geometricConstraints.append(makeConstraint(work,ConstraintType::Fix,{r}));
+            result=solveSketch(work,targets);
+            if(!result.ok) return result;
+            int at=0;
+            for(auto &c:constraints) if(c.type!=ConstraintType::Offset && at<ordinary) c=work.geometricConstraints[at++];
+            work.geometricConstraints=constraints;
+            SketchObject updated=work;
+            const auto refreshed=refreshSketchOffsets(updated);
+            if(!refreshed.isEmpty()){result.ok=false;result.error=refreshed;return result;}
+            bool changed=false;
+            for(const auto &c:constraints) if(c.type==ConstraintType::Offset) for(const auto &r:c.offset.copies) {
+                if(r.kind==0) changed=changed || work.segments[r.element].first!=updated.segments[r.element].first
+                    || work.segments[r.element].second!=updated.segments[r.element].second;
+                else changed=changed || work.curves[r.element].controlPoints!=updated.curves[r.element].controlPoints
+                    || work.curves[r.element].knots!=updated.curves[r.element].knots;
+            }
+            if(!changed){sketch=work;return result;}
+            work=updated;
+        }
+        result.ok=false;result.error=QStringLiteral("I vincoli collegati all'offset non convergono.");return result;
+    }
     SolveResult result;
     System system(sketch);
-    const int n = system.values().size();
-    if (n == 0) return result;
+    if (system.values().isEmpty()) return result;
     const double scale = sketchScale(system);
     const double tolerance = 1e-13 * scale, step = 1e-6 * scale;
-    const QVector<Block> blocks = buildBlocks(system, sketch, targets, false);
-    if (blocks.isEmpty()) return result;
-
     QVector<double> &x = system.values();
     const QVector<double> original = x;
+    const auto conflict = [&] {
+        result.ok = false;
+        result.error = QStringLiteral("I vincoli non si possono soddisfare insieme (sono in conflitto).");
+        return result;
+    };
+    // I Fix determinano direttamente le coordinate: non sono migliaia di
+    // equazioni da fattorizzare quando si aggiunge una sola linea. Prima i
+    // punti, poi gli scarti delle maniglie rispetto ai punti gia' fissati.
+    QSet<int> fixed;
+    for (bool handles : {false, true}) {
+        for (const SketchConstraint &constraint : sketch.geometricConstraints) {
+            if (!directFix(constraint) || !wellFormed(sketch, constraint)) continue;
+            const auto points = system.entityPoints(constraint.first);
+            for (int k = 0; k < points.size() && k < constraint.positions.size(); ++k) {
+                const ConstraintRef &ref = points.at(k);
+                if (isHandlePoint(ref.point) != handles) continue;
+                const int point = handles ? system.handleIndex(ref) : system.pointIndex(ref);
+                if (point < 0) continue;
+                QPointF goal = constraint.positions.at(k);
+                if (handles) goal -= system.point(system.curvePoint(ref.element, (ref.point - kHandlePoint) / 2));
+                if (fixed.contains(point) && length(system.point(point) - goal) > 1e-9 * scale) return conflict();
+                x[2 * point] = goal.x(); x[2 * point + 1] = goal.y();
+                fixed.insert(point);
+            }
+        }
+    }
+    // Le curve derivate restano nella posizione attuale (rigide).
+    QSet<int> rigid;
+    for (int point : rigidCurvePoints(system, sketch))
+        if (!fixed.contains(point)) { fixed.insert(point); rigid.insert(point); }
+    QVector<int> freeColumns, columnMap(x.size(), -1);
+    for (int k = 0; k < x.size(); ++k)
+        if (!fixed.contains(k / 2)) { columnMap[k] = int(freeColumns.size()); freeColumns.append(k); }
+    const int n = int(freeColumns.size());
+    QVector<Block> blocks;
+    const QVector<Block> all = buildBlocks(system, sketch, targets, false, true);
+    // I bersagli del trascinamento sono in fondo (buildBlocks senza gauge).
+    const int constraintBlocks = int(buildBlocks(system, sketch, {}, false, true).size());
+    for (int b = 0; b < all.size(); ++b) {
+        const Block &block = all.at(b);
+        bool variable = false, touchesRigid = false;
+        for (int point : block.points) {
+            variable = variable || !fixed.contains(point);
+            touchesRigid = touchesRigid || rigid.contains(point);
+        }
+        if (variable) blocks.append(block);
+        // Un vincolo tra curve rigide non si puo' correggere muovendo altro:
+        // resta com'e' (non soddisfatto lo mostra la finestra Vincoli) e non
+        // impedisce di modificare il resto dello schizzo.
+        else if (touchesRigid && b < constraintBlocks) continue;
+        else {
+            QVector<double> values; block.evaluate(values);
+            for (double value : values)
+                if (std::fabs(value) > 1e-9 * scale) return conflict();
+        }
+    }
     const auto residuals = [&](QVector<double> &r) {
         r.clear();
         for (const Block &block : blocks) block.evaluate(r);
@@ -1707,7 +1878,7 @@ SolveResult solveSketch(SketchObject &sketch, const QVector<PointTarget> &target
             result.residual = current;
             break;
         }
-        const QVector<double> J = jacobian(blocks, x, m, step);
+        const QVector<double> J = jacobian(blocks, x, m, step, &columnMap, n);
         // Passo di norma minima: dx = -J^T (J J^T + mu I)^-1 r.
         QVector<double> A(m * m, 0.0);
         double trace = 0.0;
@@ -1761,7 +1932,7 @@ SolveResult solveSketch(SketchObject &sketch, const QVector<PointTarget> &target
         bool improved = false;
         QVector<double> trial;
         for (int attempt = 0; attempt < 12; ++attempt) {
-            for (int k = 0; k < n; ++k) x[k] = before[k] + lambda * dx[k];
+            for (int k = 0; k < n; ++k) x[freeColumns[k]] = before[freeColumns[k]] + lambda * dx[k];
             residuals(trial);
             if (norm(trial) < current) {
                 improved = true;
@@ -1882,6 +2053,14 @@ void remapConstraints(SketchObject &sketch, const QVector<int> &segmentMap, cons
     };
     QVector<SketchConstraint> kept;
     for (SketchConstraint c : sketch.geometricConstraints) {
+        if(c.type==ConstraintType::Offset) {
+            bool valid=true;
+            for(auto &r:c.offset.sources) valid=remap(r) && valid;
+            for(auto &r:c.offset.copies) valid=remap(r) && valid;
+            if(!valid) continue;
+            c.first=c.offset.sources.first();c.second=c.offset.copies.first();
+            kept.append(c);continue;
+        }
         if (c.type == ConstraintType::Pattern) {
             // Senza una sorgente o un riferimento la ripetizione sparisce (le
             // copie restano entita' libere); una copia eliminata esce dalla ripetizione.

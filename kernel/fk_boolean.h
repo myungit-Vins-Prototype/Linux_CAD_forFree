@@ -1,6 +1,8 @@
 #ifndef FORGECAD_FK_BOOLEAN_H
 #define FORGECAD_FK_BOOLEAN_H
 
+#include <functional>
+
 #include "fk_topology.h"
 
 // Booleane tra solidi B-rep esatti (unione, intersezione, differenza).
@@ -59,6 +61,29 @@ Body booleanOperation(const Body &a, const Body &b, BooleanOperation operation, 
 // Se lo strumento non la attraversa del tutto (un taglio che finisce dentro
 // una faccia) la regione resta una sola.
 std::vector<Body> splitSheet(const Body &sheet, const Body &tool, const BooleanOptions &options = {});
+
+// Curva da imprimere su una faccia (imprintCurves): il tratto `range` di
+// `curve`, che giace sulla faccia `face` entro `tolerance`. Un estremo su un
+// edge del body (loOnEdge/hiOnEdge) diventa il punto dell'edge
+// loPoint/hiPoint, che divide l'edge (anche se la curva vi arriva solo entro
+// uno scarto piccolo: il vertice diventa tollerante).
+struct ImprintCurve {
+    FaceId face;
+    CurvePtr<3> curve;
+    Interval range;
+    double tolerance = 0.0;
+    bool loOnEdge = false, hiOnEdge = false;
+    Vec3 loPoint, hiPoint;
+};
+
+// Divide le facce del body lungo le curve (come le facce delle booleane lungo
+// le curve d'intersezione, ma con curve date) e toglie i pezzi di faccia per
+// cui `remove(faccia di partenza, punto interno)` e' vero. Se toglie qualcosa
+// il risultato e' una lamina. `removed` riceve il numero dei pezzi tolti.
+// Le facce sulla stessa superficie si fondono solo con options.unifySameDomain
+// (spento, i pezzi divisi restano facce distinte).
+Body imprintCurves(const Body &body, const std::vector<ImprintCurve> &curves, const std::function<bool(FaceId, const Vec3 &)> &remove = {},
+                   const BooleanOptions &options = {}, int *removed = nullptr);
 
 }
 

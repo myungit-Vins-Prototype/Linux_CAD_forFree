@@ -17,6 +17,7 @@
 #include "fk_blend.h"
 #include "fk_boolean.h"
 #include "fk_bspline.h"
+#include "fk_bspline_surface.h"
 #include "fk_classify.h"
 #include "fk_extrude.h"
 #include "fk_curve_algo.h"
@@ -36,6 +37,8 @@
 #include "fk_sew.h"
 #include "fk_boundary.h"
 #include "fk_fill.h"
+#include "fk_curve_ops.h"
+#include "fk_project.h"
 #include "fk_shell.h"
 #include "fk_draft.h"
 #include "fk_step.h"
@@ -524,6 +527,89 @@ ForgeBody forgeTrimSketchTool(const ForgeBody &target, const SketchObject &sketc
         setError(error, QStringLiteral("Schizzo di taglio non valido: %1").arg(QString::fromUtf8(failure.what())));
         return nullptr;
     }
+}
+
+Vec3 forgeProjectionDirection(const Body &target, const SketchObject &sketch, bool reverse) {
+    const Frame3 axes = sketchAxes(sketch);
+    Box box;
+    for (VertexId vertex : target.vertices()) box.add(target.vertex(vertex).point);
+    for (FaceId face : target.faces()) box.add(faceBox(target, face));
+    // Verso il corpo: dalla parte del piano dove sta il centro del suo box.
+    const double side = dot(0.5 * (box.lo + box.hi) - axes.origin(), axes.zDir());
+    Vec3 direction = side > 0.0 ? axes.zDir() : -1.0 * axes.zDir();
+    return reverse ? -1.0 * direction : direction;
+}
+
+ForgeBody forgeProjectedCut(const ForgeBody &target, const SketchObject &sketch, int mode, bool reverse, QString *error, QString *summary) {
+    if (!target) {
+        setError(error, QStringLiteral("Il corpo da tagliare non ha geometria valida."));
+        return nullptr;
+    }
+    try {
+        const std::vector<ProfileSegment> segments = forgeSketchSegments(sketch);
+        if (segments.empty()) throw std::domain_error("lo schizzo non contiene curve utilizzabili");
+        const Profile profile = buildProfile(segments, kSketchConnectionTolerance);
+        const Frame3 axes = sketchAxes(sketch);
+        ProjectedCutReport report;
+        const ProjectedCutMode cutMode = mode == 1 ? ProjectedCutMode::KeepInside : (mode == 2 ? ProjectedCutMode::SplitOnly : ProjectedCutMode::RemoveInside);
+        Body result = projectedProfileCut(*target, axes, profile.regions, profile.chains, forgeProjectionDirection(*target, sketch, reverse),
+                                          cutMode, &report);
+        if (summary) {
+            *summary = QStringLiteral("%1 tratti impressi, %2 su bordi esistenti (entro %5 mm), %3 pezzi di faccia tolti; scarto massimo %4 mm.")
+                           .arg(report.cuts)
+                           .arg(report.followedEdges)
+                           .arg(report.removed)
+                           .arg(report.deviation, 0, 'g', 3)
+                           .arg(report.followedGap, 0, 'g', 3);
+        }
+        return std::make_shared<const Body>(std::move(result));
+    } catch (const std::exception &failure) {
+        setError(error, QStringLiteral("Taglio con la proiezione dello schizzo non riuscito: %1").arg(QString::fromUtf8(failure.what())));
+        return nullptr;
+    }
+}
+
+QVector<ForgeCurve> forgeProjectedCurves(const ForgeBody &target, const SketchObject &sketch, bool reverse, QString *error, QString *summary) {
+    QVector<ForgeCurve> result;
+    if (!target) {
+        setError(error, QStringLiteral("Il corpo su cui proiettare non ha geometria valida."));
+        return result;
+    }
+    try {
+        const std::vector<ProfileSegment> segments = forgeSketchSegments(sketch);
+        if (segments.empty()) throw std::domain_error("lo schizzo non contiene curve utilizzabili");
+        const Profile profile = buildProfile(segments, kSketchConnectionTolerance);
+        const Frame3 axes = sketchAxes(sketch);
+        const Vec3 direction = forgeProjectionDirection(*target, sketch, reverse);
+        std::vector<const ProfileLoop *> loops;
+        for (const ProfileRegion &region : profile.regions) {
+            loops.push_back(&region.outer);
+            for (const ProfileLoop &hole : region.holes) loops.push_back(&hole);
+        }
+        for (const ProfileLoop &chain : profile.chains) loops.push_back(&chain);
+        std::vector<CurveSpan> spans;
+        std::vector<std::size_t> loopEnd;  // primo tratto del loop successivo
+        for (const ProfileLoop *loop : loops) {
+            for (const ProfileSegment &segment : loop->segments) spans.push_back({embedCurve(segment.curve, axes), segment.range});
+            loopEnd.push_back(spans.size());
+        }
+        const std::vector<std::vector<ProjectedPiece>> projected = projectCurves(*target, spans, direction);
+        double deviation = 0.0;
+        std::size_t next = 0;
+        for (std::size_t end : loopEnd) {
+            std::vector<ProjectedPiece> pieces;
+            for (; next < end; ++next) pieces.insert(pieces.end(), projected[next].begin(), projected[next].end());
+            for (const ProjectedPiece &piece : pieces) deviation = std::max(deviation, piece.deviation);
+            for (const ProjectedChain &chain : joinProjectedPieces(pieces)) result.append(chain.curve);
+        }
+        if (result.isEmpty()) throw std::domain_error("la proiezione dello schizzo non incontra il corpo");
+        if (summary)
+            *summary = QStringLiteral("%1 curve proiettate; scarto massimo %2 mm.").arg(result.size()).arg(deviation, 0, 'g', 3);
+    } catch (const std::exception &failure) {
+        result.clear();
+        setError(error, QStringLiteral("Proiezione dello schizzo non riuscita: %1").arg(QString::fromUtf8(failure.what())));
+    }
+    return result;
 }
 
 QVector<SheetPiece> forgeSheetPieces(const ForgeBody &sheet, const ForgeBody &tool, int plane, QString *error) {
@@ -1504,6 +1590,28 @@ void forgeSurfaceConstructionCurves(const Body &body, BodyDisplay &display, int 
     }
 }
 
+// Le cache B-rep delle funzioni si rileggono separatamente: le superfici
+// NURBS conservate non condividono piu' il puntatore con quelle della base.
+// sameSurface riconosce le forme analitiche, ma non le B-spline. Per la
+// sola anteprima confrontiamo la rappresentazione esatta, senza campioni
+// o tolleranze che potrebbero nascondere una superficie appena modificata.
+static bool samePreviewSurface(const Surface &a, const Surface &b) {
+    if (sameSurface(a, b, 1e-6)) return true;
+    if (a.type() != SurfaceType::BSpline || b.type() != SurfaceType::BSpline) return false;
+    const auto &sa = static_cast<const BSplineSurface &>(a);
+    const auto &sb = static_cast<const BSplineSurface &>(b);
+    if (sa.uDegree() != sb.uDegree() || sa.vDegree() != sb.vDegree()
+        || sa.uPoleCount() != sb.uPoleCount() || sa.vPoleCount() != sb.vPoleCount()
+        || sa.uKnots() != sb.uKnots() || sa.vKnots() != sb.vKnots()) return false;
+    for (int i = 0; i < sa.uPoleCount(); ++i)
+        for (int j = 0; j < sa.vPoleCount(); ++j) {
+            if (sa.weight(i, j) != sb.weight(i, j)) return false;
+            for (int axis = 0; axis < 3; ++axis)
+                if (sa.pole(i, j)[axis] != sb.pole(i, j)[axis]) return false;
+        }
+    return true;
+}
+
 static void forgeLocalPreviewDisplay(const QVector<const Body *> &bases, const Body &result, int quality,
                                      BodyDisplay &display, int divisions, BodyDisplay *retainedDisplay = nullptr) {
     display = {};
@@ -1521,7 +1629,7 @@ static void forgeLocalPreviewDisplay(const QVector<const Body *> &bases, const B
             if (!base) continue;
             for (FaceId old : base->faces()) {
                 const std::shared_ptr<const Surface> &candidate = base->face(old).surface;
-                if (candidate == surface || (candidate && surface && sameSurface(*candidate, *surface, 1e-6))) {
+                if (candidate == surface || (candidate && surface && samePreviewSurface(*candidate, *surface))) {
                     existed = true;
                     break;
                 }

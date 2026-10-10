@@ -52,7 +52,9 @@ constexpr char kMagic[4] = {'F', 'C', 'A', 'D'};
 // faccia dei raccordi; 30 asse della rivoluzione scelto nella vista;
 // 31 settore delle quote d'angolo (`SketchConstraint::angleSides`).
 // 32 mantenimento della cucitura dell’offset.
-constexpr quint16 kVersion = 36;
+// 37 quota associativa degli offset di schizzo.
+// 38 taglio superficie con la proiezione di uno schizzo e curve proiettate.
+constexpr quint16 kVersion = 38;
 constexpr quint8 kZlib = 1;
 
 void write(QDataStream &out, const CurveObject &curve) {
@@ -153,6 +155,13 @@ void write(QDataStream &out, const SketchObject &sketch) {
         if (c.type == ConstraintType::Pattern) writePattern(out, c.pattern);  // formato 11
         writeRef(out, c.third);                                               // formato 13
         out << qint32(c.angleSides);                                          // formato 31
+        if (c.type == ConstraintType::Offset) {
+            out << quint32(c.offset.sources.size());
+            for (const auto &r : c.offset.sources) writeRef(out, r);
+            out << quint32(c.offset.copies.size());
+            for (const auto &r : c.offset.copies) writeRef(out, r);
+            out << c.offset.reverse << c.offset.bothSides << c.offset.roundCorners;
+        }
     }
     out << qint32(sketch.datumPlane);  // formato 8
     out << sketch.symmetryAxes;        // formato 13
@@ -204,6 +213,17 @@ bool read(QDataStream &in, SketchObject &sketch, quint16 version) {
                 qint32 sides = 0;
                 in >> sides;
                 c.angleSides = sides & 3;
+            }
+            if (c.type == ConstraintType::Offset) {
+                if (version < 37) return false;
+                quint32 n = 0;
+                if (!readCount(in,n)) return false;
+                c.offset.sources.resize(int(n));
+                for (auto &r : c.offset.sources) readRef(in,r);
+                if (!readCount(in,n)) return false;
+                c.offset.copies.resize(int(n));
+                for (auto &r : c.offset.copies) readRef(in,r);
+                in >> c.offset.reverse >> c.offset.bothSides >> c.offset.roundCorners;
             }
         }
     }
@@ -337,6 +357,8 @@ void write(QDataStream &out, const ExtrusionObject &body) {
     // Formato 36: sformo parametrico a piano neutro.
     writeRefs(out, {body.draftNeutral});
     out << body.draftAngle << body.draftReverse;
+    // Formato 38: proiezione di uno schizzo (taglio e curve).
+    out << body.trimProject << qint32(body.projectionMode) << body.projectionReverse;
 }
 
 // `extras` (solo formato 5): i file scritti durante lo sviluppo del formato 5
@@ -558,7 +580,13 @@ bool read(QDataStream &in, ExtrusionObject &body, quint16 version, int extras) {
         in >> body.draftAngle >> body.draftReverse;
         if (!std::isfinite(body.draftAngle)) return false;
     }
-    const BodyFeature last = version >= 36 ? BodyFeature::Draft : version >= 35 ? BodyFeature::FillSurface : version >= 27 ? BodyFeature::Thread : version >= 25 ? BodyFeature::Shell : BodyFeature::PlanarSurface;
+    if (version >= 38) {
+        qint32 mode = 0;
+        in >> body.trimProject >> mode >> body.projectionReverse;
+        if (mode < 0 || mode > 2) return false;
+        body.projectionMode = mode;
+    }
+    const BodyFeature last = version >= 38 ? BodyFeature::ProjectedCurve : version >= 36 ? BodyFeature::Draft : version >= 35 ? BodyFeature::FillSurface : version >= 27 ? BodyFeature::Thread : version >= 25 ? BodyFeature::Shell : BodyFeature::PlanarSurface;
     if (int(body.feature) < 0 || int(body.feature) > int(last)) return false;
     return in.status() == QDataStream::Ok;
 }

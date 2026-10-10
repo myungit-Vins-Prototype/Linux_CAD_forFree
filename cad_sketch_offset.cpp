@@ -11,6 +11,8 @@
 #include "fk_curve.h"
 #include "fk_intersect.h"
 #include "fk_offset.h"
+#include "fk_nurbs.h"
+#include "fk_curve_algo.h"
 
 namespace ForgeCad {
 
@@ -42,7 +44,7 @@ struct Piece {
     Vec2 at(double t) const { return curve->point(t); }
     Vec2 tangent(double t) const {
         Vec2 d[2];
-        curve->evaluate(t, 1, d);
+        if(t==range.hi) curve->evaluateLeft(t,1,d);else curve->evaluate(t, 1, d);
         const Vec2 unit = d[1] / norm(d[1]);
         return forward ? unit : -unit;
     }
@@ -64,6 +66,8 @@ struct OffsetPiece {
     Vec2 p, q;                  // Line: inizio e fine
     Vec2 center;                // Arc, Circle
     double radius = 0.0, a0 = 0.0, a1 = 0.0;  // Arc: angoli di inizio e fine (a1 - a0 con segno: il verso)
+    Kernel::CurvePtr<2> sourceCurve;
+    double distance = 0.0;
     std::function<Vec2(double)> f;            // Free: la curva a distanza
     std::vector<double> breaks;
     double t0 = 0.0, t1 = 0.0;                // Free: parametri di inizio e fine
@@ -89,6 +93,7 @@ struct OffsetPiece {
 
 std::vector<Piece> piecesOf(const SketchObject &sketch, const QVector<SketchEntity> &entities) {
     std::vector<Piece> pieces;
+    QVector<int> copiedReferences;
     for (const SketchEntity &entity : entities) {
         if (entity.kind == 0 && entity.index >= 0 && entity.index < sketch.segments.size()) {
             const Vec2 a = vec(sketch.segments.at(entity.index).first), b = vec(sketch.segments.at(entity.index).second);
@@ -96,8 +101,35 @@ std::vector<Piece> piecesOf(const SketchObject &sketch, const QVector<SketchEnti
             if (length <= kSketchConnectionTolerance) continue;
             pieces.push_back({entity, std::make_shared<Kernel::Line<2>>(a, (b - a) / length), {0.0, length}});
         } else if (entity.kind == 1 && entity.index >= 0 && entity.index < sketch.curves.size()) {
-            for (const Kernel::ProfileSegment &segment : curveGeometry(sketch.curves.at(entity.index)))
-                pieces.push_back({entity, segment.curve, segment.range});
+            const CurveObject &curve = sketch.curves.at(entity.index);
+            if (curve.tool == DrawingTool::Converted) {
+                // Lo stesso bordo puo' essere copiato da entrambe le facce
+                // adiacenti. Due copie identiche non formano una catena chiusa:
+                // produrre una sola copia a distanza, conservando i riferimenti.
+                bool duplicate = false;
+                for (int previous : copiedReferences) {
+                    const CurveObject &other = sketch.curves.at(previous);
+                    if (curve.degree == other.degree && curve.controlPoints == other.controlPoints
+                        && curve.knots == other.knots && curve.weights == other.weights) {
+                        duplicate = true;
+                        break;
+                    }
+                }
+                if (duplicate) continue;
+                copiedReferences.append(entity.index);
+            }
+            for (const Kernel::ProfileSegment &segment : curveGeometry(curve)) {
+                double start=segment.range.lo;
+                for(double t:segment.curve->breakpoints(segment.range)) {
+                    if(t<=start || t>=segment.range.hi) continue;
+                    Vec2 left[2],right[2];segment.curve->evaluateLeft(t,1,left);segment.curve->evaluate(t,1,right);
+                    const double a=norm(left[1]),b=norm(right[1]);
+                    if(a>0 && b>0 && norm(left[1]/a-right[1]/b)>1e-8) {
+                        pieces.push_back({entity,segment.curve,{start,t}});start=t;
+                    }
+                }
+                pieces.push_back({entity, segment.curve, {start,segment.range.hi}});
+            }
         }
     }
     return pieces;
@@ -199,29 +231,154 @@ OffsetPiece offsetOf(const SketchObject &sketch, const Piece &piece, double s) {
         result.kind = piece.closed() ? OffsetPiece::Circle : OffsetPiece::Arc;
         return result;
     }
-    // Curve libere: f(t) = C(t) + s N(t), senza cuspidi (1 - s k > 0).
+    // Curva parallela parametrica; gli anelli oltre le cuspidi vengono
+    // rifilati dopo l'approssimazione, senza rifiutare l'intera curva.
     const Kernel::CurvePtr<2> curve = piece.curve;
     const bool forward = piece.forward;
     result.kind = OffsetPiece::Free;
-    result.f = [curve, forward, s](double t) {
+    result.sourceCurve=curve;result.distance=std::fabs(s);
+    const double end=piece.range.hi;
+    result.f = [curve, forward, s, end](double t) {
         Vec2 d[2];
-        curve->evaluate(t, 1, d);
-        const Vec2 unit = (forward ? 1.0 : -1.0) * d[1] / norm(d[1]);
+        if(t==end) curve->evaluateLeft(t,1,d);else curve->evaluate(t, 1, d);
+        const double speed=norm(d[1]);
+        if(!(speed>0) || !std::isfinite(speed)) throw std::domain_error("tangente nulla nella curva da offsettare");
+        const Vec2 unit = (forward ? 1.0 : -1.0) * d[1] / speed;
         return d[0] + s * leftOf(unit);
     };
     result.breaks = curve->breakpoints(piece.range);
     result.t0 = piece.start();
     result.t1 = piece.end();
-    for (int k = 0; k <= 64; ++k) {
-        const double t = piece.range.lo + piece.range.length() * k / 64.0;
-        Vec2 d[3];
-        curve->evaluate(t, 2, d);
-        const double speed = norm(d[1]);
-        const double curvature = (forward ? 1.0 : -1.0) * cross(d[1], d[2]) / (speed * speed * speed);
-        if (!(1.0 - s * curvature > 1e-6))
-            throw std::domain_error("la distanza supera il raggio di curvatura di una curva (la copia avrebbe una cuspide)");
-    }
     return result;
+}
+
+// Rimuove gli anelli della parallela: suddivide in Bezier monotoni,
+// trova le auto-intersezioni sulle curve (non sulle corde visualizzate) e
+// conserva i tratti esterni agli intervalli che tornano sullo stesso punto.
+std::shared_ptr<Kernel::BSplineCurve<3>> trimOffsetLoops(const std::shared_ptr<Kernel::BSplineCurve<3>> &curve) {
+    struct Span { Kernel::BSplineCurve<2> curve; Kernel::Box box; };
+    std::vector<Span> spans;
+    std::function<void(const Kernel::BSplineCurve<3> &,int)> append;
+    append=[&](const Kernel::BSplineCurve<3> &piece,int depth) {
+        bool monotone=false;
+        for(int axis=0;axis<2;++axis) {
+            bool positive=true,negative=true;
+            for(int i=1;i<piece.poleCount();++i) {
+                const double d=piece.poles()[i][axis]-piece.poles()[i-1][axis];
+                positive=positive && d>=0;negative=negative && d<=0;
+            }
+            monotone=monotone || positive || negative;
+        }
+        const auto range=piece.domain();
+        if(!monotone && depth<24) {
+            const double mid=0.5*(range.lo+range.hi);
+            for(const auto &part:Kernel::rationalBezierPieces(piece,{range.lo,mid})) append(part,depth+1);
+            for(const auto &part:Kernel::rationalBezierPieces(piece,{mid,range.hi})) append(part,depth+1);
+            return;
+        }
+        Kernel::Box box;std::vector<Vec2> poles;
+        for(const auto &p:piece.poles()){box.add(p);poles.emplace_back(p.x(),p.y());}
+        spans.push_back({Kernel::BSplineCurve<2>(piece.degree(),piece.knots(),poles,piece.weights()),box.padded(1e-9)});
+    };
+    for(const auto &piece:curve->bezierSegments()) append(piece,0);
+    std::vector<Kernel::Interval> loops;
+    const auto range=curve->domain();
+    const double parameterTolerance=1e-10*range.length();
+    Kernel::Box bounds;
+    std::vector<std::size_t> order;
+    for(std::size_t i=0;i<spans.size();++i){bounds.add(spans[i].box);order.push_back(i);}
+    const int axis=bounds.hi.x()-bounds.lo.x()>=bounds.hi.y()-bounds.lo.y()?0:1;
+    std::sort(order.begin(),order.end(),[&](auto a,auto b){return spans[a].box.lo[axis]<spans[b].box.lo[axis];});
+    for(std::size_t u=0;u<order.size();++u) for(std::size_t v=u+1;v<order.size();++v) {
+        if(spans[order[v]].box.lo[axis]>spans[order[u]].box.hi[axis]) break;
+        const auto i=std::min(order[u],order[v]),j=std::max(order[u],order[v]);
+        const auto &a=spans[i], &b=spans[j];
+        if(!a.box.overlaps(b.box)) continue;
+        if(j==i+1) {
+            bool ordered=false;
+            for(int axis=0;axis<2;++axis) for(double sign:{-1.0,1.0}) {
+                const double join=sign*a.curve.poles().back()[axis];
+                if(join!=sign*b.curve.poles().front()[axis]) continue;
+                bool separated=sign*a.curve.poles().front()[axis]<join && sign*b.curve.poles().back()[axis]>join;
+                for(const auto &p:a.curve.poles()) separated=separated && sign*p[axis]<=join;
+                for(const auto &p:b.curve.poles()) separated=separated && sign*p[axis]>=join;
+                ordered=ordered || separated;
+            }
+            if(ordered) continue; // unico punto comune: il nodo condiviso
+        }
+        // I box assiali si sovrappongono anche per due tratti quasi
+        // paralleli: separazione dei gusci convessi dei poli prima del root finder.
+        bool separated=false;
+        for(const auto *poles:{&a.curve.poles(),&b.curve.poles()})
+            for(std::size_t u=0;u<poles->size() && !separated;++u) for(std::size_t v=u+1;v<poles->size() && !separated;++v) {
+                const Vec2 axis=leftOf((*poles)[v]-(*poles)[u]);
+                double alo=1e300,ahi=-1e300,blo=1e300,bhi=-1e300;
+                for(const auto &p:a.curve.poles()){const double x=dot(p-a.curve.poles().front(),axis);alo=std::min(alo,x);ahi=std::max(ahi,x);}
+                for(const auto &p:b.curve.poles()){const double x=dot(p-a.curve.poles().front(),axis);blo=std::min(blo,x);bhi=std::max(bhi,x);}
+                const double margin=1e-13*norm(axis);
+                separated=ahi<blo-margin || bhi<alo-margin;
+            }
+        if(separated) continue;
+        Kernel::CurveCurveIntersection hits;
+        int visits=0;
+        std::function<void(const Kernel::BSplineCurve<2>&,const Kernel::BSplineCurve<2>&,int)> intersect;
+        intersect=[&](const auto &pa,const auto &pb,int depth) {
+            if(++visits>20000) throw std::domain_error("offset: auto-intersezione non risolta entro il limite di suddivisione");
+            Kernel::Box ba,bb;
+            for(const auto &p:pa.poles()) ba.add(Vec3(p.x(),p.y(),0));
+            for(const auto &p:pb.poles()) bb.add(Vec3(p.x(),p.y(),0));
+            if(!ba.padded(1e-10).overlaps(bb)) return;
+            // Scala assoluta della tolleranza di modellazione: la scala
+            // relativa di due micro-tratti causava migliaia di suddivisioni.
+            if((ba.diagonal()<10*kFitTolerance && bb.diagonal()<10*kFitTolerance) || depth>=40) {
+                const auto ra=pa.domain(),rb=pb.domain();
+                double x=0.5*(ra.lo+ra.hi),y=0.5*(rb.lo+rb.hi);
+                for(int n=0;n<30;++n) {
+                    Vec2 da[2],db[2];a.curve.evaluate(x,1,da);b.curve.evaluate(y,1,db);
+                    const auto f=da[0]-db[0];const double det=cross(da[1],-db[1]);
+                    if(std::fabs(det)<1e-30) break;
+                    const double dx=cross(-f,-db[1])/det,dy=cross(da[1],-f)/det;
+                    const double nx=ra.clamp(x+dx),ny=rb.clamp(y+dy);
+                    if(nx==x && ny==y) break;
+                    x=nx;y=ny;
+                }
+                if(distance(a.curve.point(x),b.curve.point(y))<=1e-9) hits.points.push_back({x,y,a.curve.point(x)});
+                return;
+            }
+            if(ba.diagonal()>=bb.diagonal()) {
+                const auto r=pa.domain();const auto parts=pa.insertKnot(0.5*(r.lo+r.hi),pa.degree()).bezierSegments();
+                intersect(parts.front(),pb,depth+1);intersect(parts.back(),pb,depth+1);
+            } else {
+                const auto r=pb.domain();const auto parts=pb.insertKnot(0.5*(r.lo+r.hi),pb.degree()).bezierSegments();
+                intersect(pa,parts.front(),depth+1);intersect(pa,parts.back(),depth+1);
+            }
+        };
+        intersect(a.curve,b.curve,0);
+        for(const auto &hit:hits.points) {
+            if(hit.t-hit.s<=parameterTolerance) continue;
+            // La chiusura di una curva non e' un anello da cancellare.
+            if(hit.s<=range.lo+parameterTolerance && hit.t>=range.hi-parameterTolerance) continue;
+            loops.push_back({hit.s,hit.t});
+        }
+    }
+    if(loops.empty()) return curve;
+    std::sort(loops.begin(),loops.end(),[](const auto &a,const auto &b){return a.lo<b.lo || (a.lo==b.lo && a.hi>b.hi);});
+    std::vector<Kernel::BSplineCurve<3>> retained;
+    double begin=range.lo;
+    for(const auto &loop:loops) {
+        if(loop.lo<begin-parameterTolerance) continue;
+        if(loop.lo>begin+parameterTolerance) {
+            const auto parts=Kernel::rationalBezierPieces(*curve,{begin,loop.lo});
+            retained.insert(retained.end(),parts.begin(),parts.end());
+        }
+        begin=loop.hi;
+    }
+    if(begin<range.hi-parameterTolerance) {
+        const auto parts=Kernel::rationalBezierPieces(*curve,{begin,range.hi});
+        retained.insert(retained.end(),parts.begin(),parts.end());
+    }
+    if(retained.empty()) throw std::domain_error("l'offset interno non conserva un tratto utilizzabile");
+    return std::make_shared<Kernel::BSplineCurve<3>>(Kernel::joinBezierPieces(retained));
 }
 
 // Curva del kernel della copia (per le intersezioni negli angoli concavi),
@@ -442,7 +599,21 @@ SketchEditResult offsetSketchEntities(SketchObject &sketch, const QVector<Sketch
                             const Vec2 p = copy.f(t);
                             return Vec3(p.x(), p.y(), 0.0);
                         };
-                        const auto fitted = Kernel::fitCurve(f3, range, breaks, kFitTolerance);
+                        const auto fitted = trimOffsetLoops(Kernel::fitCurve(f3, range, breaks, kFitTolerance));
+                        // Un offset completamente collassato puo' riapparire
+                        // dall'altra parte della sorgente senza auto-intersezioni
+                        // (es. un cerchio rappresentato come NURBS): non e' un
+                        // risultato a distanza d e non va accettato.
+                        const auto domain=fitted->domain();
+                        for(int k=0;k<=32;++k) {
+                            const auto p=fitted->point(domain.lo+domain.length()*k/32.0);
+                            const auto projected=Kernel::projectPoint(*copy.sourceCurve,Vec2(p.x(),p.y()),copy.sourceCurve->domain());
+                            if(projected.distance<copy.distance-10*kFitTolerance)
+                                throw std::domain_error("l'offset interno collassa o conserva tratti piu' vicini della distanza richiesta");
+                        }
+                        // Curva derivata (Converted): B-spline esatta entro
+                        // kFitTolerance, ma un'entita' unica: poli nascosti e
+                        // rigidi, solo gli estremi come punti dei vincoli.
                         CurveObject curve;
                         curve.tool = DrawingTool::Converted;
                         curve.degree = 3;
@@ -476,9 +647,72 @@ SketchEditResult offsetSketchEntities(SketchObject &sketch, const QVector<Sketch
             if (entity.kind == 0 && !work.constructionSegments.contains(entity.index)) work.constructionSegments.append(entity.index);
             if (entity.kind == 1 && entity.index >= 0 && entity.index < work.curves.size()) work.curves[entity.index].construction = true;
         }
+    if (offset.dimensioned) {
+        // L'offset governa l'intera forma: evita vincoli duplicati sui giunti.
+        work.geometricConstraints = sketch.geometricConstraints;
+        SketchConstraint c; c.type = ConstraintType::Offset; c.value = offset.distance;
+        for (const auto &e : entities) c.offset.sources.append({e.kind,e.index,-1});
+        for (const auto &e : made) c.offset.copies.append({e.kind,e.index,-1});
+        c.offset.reverse=offset.reverse; c.offset.bothSides=offset.bothSides; c.offset.roundCorners=offset.roundCorners;
+        c.first=c.offset.sources.first(); c.second=c.offset.copies.first();
+        work.geometricConstraints.append(c);
+    }
     sketch = work;
     if (created) *created = made;
     return result;
+}
+
+bool validSketchOffset(const SketchObject &sketch, const SketchConstraint &c) {
+    if(c.type!=ConstraintType::Offset || !std::isfinite(c.value) || c.value<=0
+        || c.offset.sources.isEmpty() || c.offset.copies.isEmpty()) return false;
+    const auto valid=[&](const ConstraintRef &r) {
+        return r.point==-1 && r.element>=0 && ((r.kind==0 && r.element<sketch.segments.size())
+            || (r.kind==1 && r.element<sketch.curves.size()));
+    };
+    for(const auto &r:c.offset.sources) if(!valid(r)) return false;
+    for(const auto &r:c.offset.copies) if(!valid(r) || c.offset.sources.contains(r)) return false;
+    return true;
+}
+
+QString refreshSketchOffsets(SketchObject &sketch) {
+    SketchObject work=sketch;
+    for(int ci=0;ci<work.geometricConstraints.size();++ci) {
+        const SketchConstraint c=work.geometricConstraints[ci];
+        if(c.type!=ConstraintType::Offset) continue;
+        if(!validSketchOffset(work,c)) return QStringLiteral("Offset: riferimenti o distanza non validi.");
+        SketchOffset options;options.distance=c.value;options.reverse=c.offset.reverse;
+        options.bothSides=c.offset.bothSides;options.roundCorners=c.offset.roundCorners;
+        QVector<SketchEntity> sources, made;
+        for(const auto &r:c.offset.sources) sources.append({r.kind,r.element});
+        SketchObject generated=work;
+        const auto result=offsetSketchEntities(generated,sources,options,&made);
+        if(!result.error.isEmpty()) return result.error;
+        if(made.size()!=c.offset.copies.size()) return QStringLiteral("Offset: la nuova distanza cambia il numero di tratti.");
+        for(int k=0;k<made.size();++k) {
+            const auto target=c.offset.copies[k]; const auto from=made[k];
+            if(target.kind!=from.kind) return QStringLiteral("Offset: la nuova distanza cambia il tipo di un tratto.");
+            if(target.kind==0) work.segments[target.element]=generated.segments[from.index];
+            else {
+                const auto &old=work.curves[target.element];
+                auto replacement=generated.curves[from.index];
+                replacement.construction=old.construction;
+                const int oldLast=old.controlPoints.size()-1, newLast=replacement.controlPoints.size()-1;
+                if(oldLast!=newLast) {
+                    // Gli estremi sopravvivono; un vincolo su un polo interno
+                    // non ha un'identita' affidabile dopo una nuova approssimazione.
+                    for(auto &other:work.geometricConstraints) {
+                        for(auto *r:{&other.first,&other.second,&other.third}) if(r->kind==1 && r->element==target.element && r->point>=0) {
+                            if(r->point==oldLast) r->point=newLast;
+                            else if(r->point!=0) return QStringLiteral("Offset: un vincolo su un polo interno impedisce la rigenerazione.");
+                        }
+                    }
+                }
+                work.curves[target.element]=replacement;
+            }
+        }
+    }
+    sketch=work;
+    return {};
 }
 
 }

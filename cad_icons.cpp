@@ -633,6 +633,32 @@ std::map<QString, Draw> &registry() {
         p.drawLine(QPointF(12, 2), QPointF(9, 6));
         p.drawLine(QPointF(12, 2), QPointF(15, 6));
     };
+    icons["projectedCurve"] = [](QPainter &p, const IconPalette &c) {
+        // Curva dello schizzo in alto proiettata sulla superficie (arancio).
+        QPainterPath sketch;
+        sketch.moveTo(4, 5);
+        sketch.cubicTo(8, 1.5, 15, 7.5, 20, 3.5);
+        p.setBrush(Qt::NoBrush);
+        p.setPen(stroke(c.construction, 1.3, Qt::DashLine));
+        p.drawPath(sketch);
+        QPainterPath surface;
+        surface.moveTo(2, 18);
+        surface.cubicTo(7, 12, 17, 12, 22, 18);
+        surface.lineTo(22, 22);
+        surface.lineTo(2, 22);
+        surface.closeSubpath();
+        p.setPen(stroke(c.ink, 1.0));
+        p.setBrush(c.faceMid);
+        p.drawPath(surface);
+        QPainterPath curve;
+        curve.moveTo(4, 16.3);
+        curve.cubicTo(8, 12.4, 15, 15.4, 20, 15.2);
+        p.setBrush(Qt::NoBrush);
+        p.setPen(stroke(c.accent, 2.0));
+        p.drawPath(curve);
+        line(p, {12, 6.5}, {12, 12}, stroke(c.accent, 1.1));
+        arrowHead(p, {12, 13.4}, {12, 9}, c.accent, 2.6);
+    };
     icons["shell"] = [](QPainter &p, const IconPalette &c) {
         // Scatola svuotata e aperta in alto: il bordo delle pareti in arancio.
         polygon(p, QPolygonF({{3, 9}, {12, 13}, {12, 22}, {3, 18}}), c.faceMid, stroke(c.ink, 1.0));

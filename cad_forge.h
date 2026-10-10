@@ -78,6 +78,18 @@ ForgeBody forgeTrimBoth(const ForgeBody &first, const ForgeBody &second, const E
 // entrambe le direzioni oltre il corpo da tagliare.
 ForgeBody forgeTrimPlaneTool(const ForgeBody &target, const Kernel::Frame3 &frame, QString *error);
 ForgeBody forgeTrimSketchTool(const ForgeBody &target, const SketchObject &sketch, QString *error);
+// Proiezione di uno schizzo sul corpo lungo la normale del suo piano, sulla
+// prima faccia incontrata (fk_project). Il verso di default va verso il
+// corpo; `reverse` lo inverte.
+Kernel::Vec3 forgeProjectionDirection(const Kernel::Body &target, const SketchObject &sketch, bool reverse);
+// Taglio superficie con schizzo proiettato (SheetTrim, trimProject): mode 0 toglie le parti dentro i
+// contorni chiusi, 1 tiene solo quelle, 2 divide soltanto le facce.
+ForgeBody forgeProjectedCut(const ForgeBody &target, const SketchObject &sketch, int mode, bool reverse, QString *error,
+                            QString *summary = nullptr);
+// Curve proiettate (BodyFeature::ProjectedCurve): una curva per ogni catena
+// continua della proiezione.
+QVector<ForgeCurve> forgeProjectedCurves(const ForgeBody &target, const SketchObject &sketch, bool reverse, QString *error,
+                                         QString *summary = nullptr);
 // Le parti in cui lo strumento divide la superficie, con un punto di ciascuna
 // (per scegliere quella da tenere) e la sua area.
 QVector<SheetPiece> forgeSheetPieces(const ForgeBody &sheet, const ForgeBody &tool, int plane, QString *error);

@@ -9,13 +9,15 @@ namespace ForgeCad {
 namespace {
 
 bool isReferenceFeature(const ExtrusionObject &feature) {
-    return feature.operation < 0 && (feature.feature == BodyFeature::DatumPlane || feature.feature == BodyFeature::Helix);
+    return feature.operation < 0
+        && (feature.feature == BodyFeature::DatumPlane || feature.feature == BodyFeature::Helix || feature.feature == BodyFeature::ProjectedCurve);
 }
 
 bool isValidHistoryStage(const ExtrusionObject &feature) {
     if (feature.suppressed || !feature.error.isEmpty()) return false;
     if (feature.operation < 0 && feature.feature == BodyFeature::DatumPlane) return feature.datumValid;
-    if (feature.operation < 0 && feature.feature == BodyFeature::Helix) return feature.curve != nullptr;
+    if (feature.operation < 0 && (feature.feature == BodyFeature::Helix || feature.feature == BodyFeature::ProjectedCurve))
+        return feature.curve != nullptr;
     return feature.forgeBody != nullptr;
 }
 

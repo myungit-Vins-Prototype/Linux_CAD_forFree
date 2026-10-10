@@ -46,6 +46,10 @@ bool resolveGeometryRef(const GeometryRef &ref, int owner, const QVector<SketchO
 // segmento, o i tratti di curveGeometry portati nel piano dello schizzo), la
 // curva di un corpo curva (elica, spirale) sul suo dominio. Gli assi del
 // modello e gli altri riferimenti non sono curve limitate: false con l'errore.
+// Curva di un corpo curva (eliche, curve proiettate) per un riferimento:
+// con piu' curve (ProjectedCurve) quella piu' vicina al punto del riferimento.
+ForgeCurve bodyCurveNear(const ExtrusionObject &body, const EdgePoint &point);
+
 bool geometryRefPath(const GeometryRef &ref, int owner, const QVector<SketchObject> &sketches, const QVector<ExtrusionObject> &bodies,
                      std::vector<Kernel::PathSegment> &segments, QString *error);
 

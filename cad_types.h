@@ -128,7 +128,7 @@ struct ConstraintRef {
 enum class ConstraintType {
     Coincident = 0, Horizontal, Vertical, Parallel, Perpendicular, Collinear, Tangent, Equal, Concentric, Midpoint,
     PointOnCurve, Fix, Distance, Angle, Radius, Diameter, Pattern, Symmetric, AxisRadius, AxisDiameter,
-    HorizontalDistance, VerticalDistance, Quadrant
+    HorizontalDistance, VerticalDistance, Quadrant, Offset
 };
 // Quadrant: first e un punto, second un cerchio/arco; value = 0/1/2/3 per 0/90/180/270 gradi.
 // HorizontalDistance / VerticalDistance: quota lungo l'asse X (o Y) dello
@@ -175,6 +175,13 @@ struct SketchPatternData {
     int instances() const { return kind == 2 ? 1 : kind == 1 ? count - 1 : count * qMax(1, count2) - 1; }
 };
 
+// Offset diretto: value contiene la distanza; sorgenti e copie sono
+// entita' intere. Le copie vengono rigenerate prima di risolvere i vincoli.
+struct SketchOffsetData {
+    QVector<ConstraintRef> sources, copies;
+    bool reverse = false, bothSides = false, roundCorners = false;
+};
+
 // Vincolo geometrico dello schizzo, mantenuto dal risolutore (cad_constraints).
 struct SketchConstraint {
     ConstraintType type = ConstraintType::Coincident;
@@ -186,6 +193,7 @@ struct SketchConstraint {
     // dell'arco dell'angolo); se non e' stata spostata, una posizione di default.
     QPointF placement;
     bool placed = false;
+    SketchOffsetData offset;    // solo per Offset
     SketchPatternData pattern;  // solo per Pattern
     ConstraintRef third;        // Symmetric: la retta di simmetria
     // Angle: settore della quota tra le due rette. Bit 0: direzione della prima
@@ -278,9 +286,18 @@ struct BodyDisplay {
 // fillContinuity 0 contatto, 1 tangenza, 2 curvatura.
 // Shell: il solido firstBody svuotato con pareti di spessore `distance` verso
 // l'interno, le facce offsetFaces tolte per l'apertura (nessuna: cavita' chiusa).
+// SheetTrim con uno schizzo (sketchIndex) e trimProject: il corpo firstBody
+// tagliato dalla proiezione dello schizzo lungo la normale del suo piano,
+// sulla prima faccia incontrata (fk_project): projectionMode 0 toglie le
+// parti dentro i contorni chiusi, 1 tiene solo quelle, 2 divide soltanto le
+// facce. Senza trimProject (file precedenti) lo schizzo taglia tutte le facce
+// lungo la normale e resta la parte che contiene trimKeep.
+// ProjectedCurve: le entita' dello schizzo sketchIndex proiettate sul corpo
+// firstBody (curve 3D, una per catena continua: `curves`).
 enum class BodyFeature { Extrusion = 0, Revolution = 1, Primitive = 2, Blend = 3, SheetTrim = 4, SheetExtend = 5, Scale = 6, Helix = 7, Sweep = 8, Loft = 9,
                          Imported = 10, DatumPlane = 11, Pattern = 12, Transform = 13, SurfaceOffset = 14, Sew = 15, Ruled = 16, PlanarSurface = 17,
-                         DeleteFace = 18, BoundarySurface = 19, Shell = 20, Thread = 21, FillSurface = 22, Draft = 23 };
+                         DeleteFace = 18, BoundarySurface = 19, Shell = 20, Thread = 21, FillSurface = 22, Draft = 23,
+                         ProjectedCurve = 24 };
 
 // Riferimento leggero a una sotto-entita' del B-rep. `subshape` e' l'ID
 // topologico al momento della scelta, `geometry` il tipo di curva/superficie.
@@ -622,6 +639,12 @@ struct ExtrusionObject {
     GeometryRef draftNeutral;
     double draftAngle = 3.0;  // gradi, positivo restringe lungo la direzione
     bool draftReverse = false;
+    // SheetTrim con schizzo proiettato e ProjectedCurve: proiezione sulla
+    // prima faccia (trimProject), modo del taglio e verso (di default verso il
+    // corpo; vero: il verso opposto).
+    bool trimProject = false;
+    int projectionMode = 0;
+    bool projectionReverse = false;
     bool offsetSew = true;  // estendi/rifila le facce adiacenti prima di cucirle
     // DeleteFace multi-risultato: -1 = tutte le componenti (file storici),
     // altrimenti la componente connessa esposta da questo corpo logico.
@@ -642,7 +665,9 @@ struct ExtrusionObject {
     bool datumValid = false;
     int firstBody = -1;
     int secondBody = -1;
-    ForgeCad::ForgeCurve curve;  // funzioni curva (Helix): la curva esatta
+    ForgeCad::ForgeCurve curve;  // funzioni curva (Helix, ProjectedCurve): la curva esatta (la prima)
+    // ProjectedCurve: tutte le curve (curves.first() == curve); non si salva.
+    QVector<ForgeCad::ForgeCurve> curves;
     ForgeCad::ForgeBody forgeBody;
     QString error;
     // Esito non bloccante del calcolo (scarti della superficie di

@@ -17,6 +17,7 @@
 #include "fk_intersect.h"
 #include "fk_nurbs.h"
 #include "fk_precision.h"
+#include "fk_offset.h"
 #include "fk_sheet.h"
 
 namespace ForgeCad {
@@ -112,6 +113,12 @@ bool onOneSide(const Body &body, const Vec3 &origin, const Vec3 &n, double toler
 }
 
 // Toglie i livelli di TrimmedCurve (il tratto resta quello dato).
+bool needsProjectionFit(const Curve<3> &curve) {
+    if(curve.type()==CurveType::Trimmed) return needsProjectionFit(*static_cast<const TrimmedCurve<3>&>(curve).basis());
+    if(curve.type()==CurveType::Transformed) return needsProjectionFit(*static_cast<const TransformedCurve&>(curve).basis());
+    return curve.type()==CurveType::Other;
+}
+
 const Curve<3> *basisOf(const Curve<3> *curve) {
     while (curve && curve->type() == CurveType::Trimmed) curve = static_cast<const TrimmedCurve<3> *>(curve)->basis().get();
     return curve;
@@ -180,6 +187,11 @@ QString appendProjectedCurve(SketchObject &sketch, const CurvePtr<3> &curve, con
                 } else {
                     spline = joinBezierPieces(standardBezierPieces(full, range));
                 }
+            } else if (needsProjectionFit(*curve)) {
+                // Le curve procedurali (ad esempio isoparametriche) non
+                // hanno necessariamente una forma razionale: le approssima
+                // il fitter adattivo, poi la proiezione affine dei poli.
+                spline=*fitCurve([&](double t){return curve->point(t);},range,curve->breakpoints(range),kLinearResolution);
             } else {
                 std::vector<BSplineCurve<3>> pieces = standardBezierPieces(*curve, range);
                 int degree = 1;
@@ -194,9 +206,17 @@ QString appendProjectedCurve(SketchObject &sketch, const CurvePtr<3> &curve, con
             for (const Vec3 &p : spline.poles()) projected.push_back(local(p));
             QPointF a = projected.front(), b = projected.front();
             double span = 0.0;
-            for (const QPointF &p : projected)
-                for (const QPointF &q : projected)
-                    if (std::hypot(p.x() - q.x(), p.y() - q.y()) > span) span = std::hypot(p.x() - q.x(), p.y() - q.y()), a = p, b = q;
+            // Due scansioni lineari bastano a scegliere una direzione:
+            // non serve cercare la coppia piu' lontana fra tutti i poli.
+            for (const QPointF &p : projected) {
+                const double d=std::hypot(p.x()-a.x(),p.y()-a.y());
+                if(d>span){span=d;b=p;}
+            }
+            a=b;span=0;
+            for (const QPointF &p : projected) {
+                const double d=std::hypot(p.x()-a.x(),p.y()-a.y());
+                if(d>span){span=d;b=p;}
+            }
             bool collinear = span > kSketchConnectionTolerance;
             for (const QPointF &p : projected) {
                 const QPointF d = b - a, r = p - a;
