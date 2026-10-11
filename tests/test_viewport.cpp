@@ -4656,6 +4656,308 @@ public:
                   << "), peggiore " << worst << " ms" << std::endl;
         for (int i = 0; i < v.extrusions_.size(); ++i) if (v.extrusions_.at(i).visible) std::cout << "visibile " << i << " " << v.extrusions_.at(i).name.toStdString() << std::endl;
     }
+    static void spatialSketch(bool gl=false) {
+        using namespace ForgeCad;using namespace ForgeCad::Kernel;
+        SpatialSketchParameters p;SpatialCurve3D first;first.id=1;first.spline=true;
+        first.points={{0,0,0},{3,2,4},{7,-1,-2},{10,0,5}};p.entities={first};p.nextId=2;
+        QString error;auto curves=buildSpatialSketch(p,&error);
+        require(error.isEmpty() && curves.size()==1,"costruzione spline libera spaziale");
+        for(int i=0;i<first.points.size();++i){const auto &q=first.points[i];require(distance(curves[0]->point(i),{q.x,q.y,q.z})<1e-10,"spline 3D interpola punti XYZ esatti");}
+        for(int i=1;i<3;++i)require(distance(curves[0]->derivative(i),curves[0]->derivative(i-1e-8))<1e-6,"spline 3D continua nelle tangenti");
+        p.entities[0].spline=false;curves=buildSpatialSketch(p,&error);
+        require(error.isEmpty() && curves[0]->type()==CurveType::BSpline,"polilinea 3D mantiene le pieghe");
+        p.entities[0].closed=true;curves=buildSpatialSketch(p,&error);
+        require(error.isEmpty() && distance(curves[0]->point(0),curves[0]->point(4))<1e-10,"polilinea spaziale chiusa");
+        p.entities[0].spline=true;curves=buildSpatialSketch(p,&error);
+        require(error.isEmpty() && distance(curves[0]->derivative(0),curves[0]->derivative(4))<1e-10,"spline chiusa continua alla cucitura");
+        p.entities[0]=first;
+        SpatialCurve3D second;second.id=2;second.points={{0,20,0},{10,20,5}};p.entities.append(second);p.nextId=3;
+        ExtrusionObject sketch;sketch.feature=BodyFeature::SpatialSketch;sketch.featureId=701;sketch.name="Schizzo 3D";sketch.spatialSketch=p;
+        buildBody(sketch,0,{}, {},0);
+        require(sketch.error.isEmpty() && sketch.curves.size()==2 && sketch.display.edges.size()==2 && isCurveBody(sketch),"entita' multiple visualizzate in schizzo 3D");
+        require(bodyOperands(sketch).isEmpty() && sketchesOf(sketch).isEmpty(),"nessun legame a un piano per schizzo spaziale");
+        GeometryRef ref;ref.kind=9;ref.index=0;ref.featureId=701;ref.point.geometry=kSpatialCurveReference;ref.point.subshape=2;
+        std::vector<PathSegment> path;QVector<ExtrusionObject> bodies{sketch};
+        require(geometryRefPath(ref,1,{},bodies,path,&error) && distance(path[0].curve->point(0),{0,20,0})<1e-10,"riferimento a entita' spaziale per ID");
+        GeometryRef endpoint=ref;endpoint.kind=10;endpoint.element.point=1;ResolvedRef resolved;
+        require(resolveGeometryRef(endpoint,1,{},bodies,resolved,&error) && distance(resolved.point,{10,20,5})<1e-10,"estremo di seconda entita' 3D");
+        bodies[0].spatialSketch.entities.removeFirst();buildBody(bodies[0],0,{}, {},0);
+        require(geometryRefPath(ref,1,{},bodies,path,&error) && distance(path[0].curve->point(0),{0,20,0})<1e-10,"eliminazione di altra entita' non cambia riferimento");
+        bodies[0].spatialSketch.entities[0].points[0]={0,30,7};buildBody(bodies[0],0,{}, {},0);
+        require(geometryRefPath(ref,1,{},bodies,path,&error) && distance(path[0].curve->point(0),{0,30,7})<1e-10,"riferimento segue entita' spostata lontano dal vecchio punto");
+        bodies[0].spatialSketch.entities[0].id=1;
+        require(!geometryRefPath(ref,1,{},bodies,path,&error),"entita' eliminata rifiutata senza scegliere curva vicina");
+        bodies={sketch};
+        // Collegamento con le funzioni esistenti e taglio di una spline libera.
+        ref.point.subshape=1;
+        SketchObject cutter;cutter.segments={{{5,-10},{5,10}}};cutter.constraints={-1};cutter.segmentLengths={0};cutter.segmentAngles={-1};
+        CurveExtractionParameters trim;trim.source=ref;trim.trimmed=true;trim.projected=true;trim.tool.kind=7;trim.tool.index=0;trim.tool.element={0,0,-1};
+        auto cut=extractCurves3D(trim,1,{cutter},bodies,&error);
+        require(error.isEmpty() && cut.size()==1 && cut[0]->domain().hi>1 && cut[0]->domain().hi<2,"taglio proiettato di spline libera 3D");
+        SketchObject end;end.customFrame=true;end.frame.origin[1]=10;end.frame.origin[2]=10;
+        end.segments={{{0,0},{10,0}}};end.constraints={-1};end.segmentLengths={0};end.segmentAngles={-1};
+        GeometryRef endRef;endRef.kind=7;endRef.index=0;endRef.element={-1,-1,-1};
+        ExtrusionObject loft;loft.feature=BodyFeature::Loft;loft.loftSurface=true;loft.loftSections={ref,endRef};
+        auto sheet=forgeReferencedLoft(loft,1,{end},bodies,&error);
+        require(sheet && checkBody(*sheet).empty(),"schizzo 3D libero come sezione loft");
+        ExtrusionObject ruled;ruled.feature=BodyFeature::Ruled;ruled.ruledFirst={ref};endRef.element={0,0,-1};ruled.ruledSecond={endRef};
+        buildGeometry(ruled,1,{end},bodies);require(ruled.forgeBody && ruled.error.isEmpty(),"schizzo 3D libero come bordo rigata");
+        DocumentState state;state.extrusions={sketch};QTemporaryDir dir;const auto file=dir.filePath("spatial.prt");
+        require(saveDocumentFile(file,state,false).isEmpty(),"salvataggio schizzo 3D formato 45");
+        DocumentState loaded;require(loadDocumentFile(file,loaded).isEmpty(),"riapertura schizzo 3D");
+        require(loaded.extrusions[0].spatialSketch.entities.size()==2 && loaded.extrusions[0].spatialSketch.nextId==3
+            && loaded.extrusions[0].spatialSketch.entities[0].points[2].z==-2,"persistenza entita' e coordinate spaziali");
+        CadViewport view;view.tessellationQuality_=0;view.restoreDocument(loaded);view.regenerateAll();
+        require(view.extrusions_[0].curves.size()==2 && view.extrusions_[0].error.isEmpty(),"rigenerazione schizzo 3D senza cache");
+        auto invalid=p;invalid.entities[0].points[1]=invalid.entities[0].points[0];
+        require(buildSpatialSketch(invalid,&error).isEmpty() && !error.isEmpty(),"punti consecutivi coincidenti rifiutati");
+        invalid=p;invalid.entities[0].points[0].z=qQNaN();require(buildSpatialSketch(invalid,&error).isEmpty(),"coordinate non finite rifiutate");
+        invalid=p;invalid.entities[1].id=1;require(buildSpatialSketch(invalid,&error).isEmpty(),"ID di entita' duplicati rifiutati");
+        // Clic a profondita' diversa, aggancio esatto e trascinamento per ruotare.
+        CadViewport drawing;drawing.resize(800,600);drawing.setViewNormal(0);drawing.zoom_=40;drawing.autoFit_=false;
+        QVector<SpatialPoint> picked;bool stopped=false;
+        drawing.configureSpatialDrawing(1,4,{}, {},false);drawing.setSpatialDrawing([&](SpatialPoint q){picked.append(q);},[&]{stopped=true;});
+        drawing.setInteractionLocked(true);
+        const auto click=[&](const QPoint &at){
+            QMouseEvent press(QEvent::MouseButtonPress,at,at,Qt::LeftButton,Qt::LeftButton,Qt::NoModifier);drawing.mousePressEvent(&press);
+            QMouseEvent release(QEvent::MouseButtonRelease,at,at,Qt::LeftButton,Qt::NoButton,Qt::NoModifier);drawing.mouseReleaseEvent(&release);
+        };
+        click(drawing.projectWorldPoint({2,3,4}).toPoint());require(picked.size()==1 && std::fabs(picked[0].z-4)<1e-8,"clic inserisce XYZ sul piano temporaneo a quota 4");
+        drawing.configureSpatialDrawing(1,-3,{}, {},false);click(drawing.projectWorldPoint({8,5,-3}).toPoint());
+        require(picked.size()==2 && std::fabs(picked[1].z+3)<1e-8,"clic successivo puo' cambiare profondita'");
+        const SpatialPoint precise{2.123456789,3.987654321,11.123456789};
+        drawing.configureSpatialDrawing(1,0,{}, {precise},true);SpatialPoint snapped;
+        require(drawing.spatialPointAt(drawing.projectWorldPoint(QVector3D(precise.x,precise.y,precise.z)).toPoint(),snapped)
+            && snapped.x==precise.x && snapped.y==precise.y && snapped.z==precise.z,"snap mantiene double e profondita' originale");
+        const QPoint a(100,100),b(130,115);const float yaw=drawing.yaw_;
+        QMouseEvent press(QEvent::MouseButtonPress,a,a,Qt::LeftButton,Qt::LeftButton,Qt::NoModifier);drawing.mousePressEvent(&press);
+        QMouseEvent move(QEvent::MouseMove,b,b,Qt::NoButton,Qt::LeftButton,Qt::NoModifier);drawing.mouseMoveEvent(&move);
+        QMouseEvent release(QEvent::MouseButtonRelease,b,b,Qt::LeftButton,Qt::NoButton,Qt::NoModifier);drawing.mouseReleaseEvent(&release);
+        require(picked.size()==2 && drawing.yaw_!=yaw,"trascinamento ruota senza aggiungere punti");
+        QKeyEvent escape(QEvent::KeyPress,Qt::Key_Escape,Qt::NoModifier);drawing.keyPressEvent(&escape);require(stopped,"Esc interrompe inserimento spaziale");
+        drawing.setSpatialDrawing({},{});require(!drawing.spatialAdd_ && !drawing.spatialFinish_,"callback disegno puliti");
+        // Il pannello crea e modifica entita', mantiene un undo locale e chiude.
+        CadViewport editor;editor.tessellationQuality_=0;editor.resize(800,600);editor.setViewNormal(0);
+        QMainWindow window;std::exception_ptr failure;bool applied=false;
+        QTimer::singleShot(0,&window,[&]{auto *dialog=window.findChild<QDialog*>("spatialSketchDialog");
+            try {
+                require(dialog && editor.spatialAdd_,"pannello 3D e disegno attivi");
+                auto add=editor.spatialAdd_;add({0,0,0});add({3,2,4});
+                auto *table=dialog->findChild<QTableWidget*>("spatialPoints");require(table->rowCount()==2,"punti inseriti nella vista compaiono nella tabella");
+                table->item(1,2)->setText("7.125");
+                require(table->item(1,2)->text().startsWith("7.125"),"modifica XYZ nella tabella");
+                QKeyEvent undoKey(QEvent::KeyPress,Qt::Key_Z,Qt::ControlModifier);editor.keyPressEvent(&undoKey);
+                require(table->item(1,2)->text().startsWith("4"),"Ctrl Z locale ripristina quota");
+                dialog->findChild<QPushButton*>("spatialRedo")->click();require(table->item(1,2)->text().startsWith("7.125"),"redo locale");
+                dialog->findChild<QPushButton*>("spatialNewSpline")->click();add=editor.spatialAdd_;add({0,10,0});add({5,10,3});add({10,10,0});
+                require(dialog->findChild<QComboBox*>("spatialEntities")->count()==2,"seconda entita' spline");
+                dialog->findChild<QDialogButtonBox*>()->button(QDialogButtonBox::Ok)->click();
+            }catch(...){failure=std::current_exception();if(dialog)dialog->reject();}
+        });
+        const bool accepted=spatialSketchDialog(&window,&editor,"Nuovo schizzo 3D",-1,{},[&](const ExtrusionObject &d){applied=true;return editor.createBody(d);});
+        if(failure)std::rethrow_exception(failure);
+        require(accepted && applied && editor.extrusions_.size()==1 && editor.extrusions_[0].curves.size()==2,"pannello applica schizzo multientita'");
+        require(!editor.spatialAdd_ && !editor.spatialUndo_ && !editor.spatialRedo_,"chiusura pannello elimina callback");
+        editor.undo();require(editor.extrusions_.isEmpty(),"undo documento dopo schizzo 3D");editor.redo();require(editor.extrusions_.size()==1,"redo documento dopo schizzo 3D");
+        QTimer::singleShot(0,&window,[&]{auto *dialog=window.findChild<QDialog*>("spatialSketchDialog");
+            dialog->findChild<QDialogButtonBox*>()->button(QDialogButtonBox::Cancel)->click();});
+        require(!spatialSketchDialog(&window,&editor,"Annulla",0,editor.extrusions_[0],[&](const ExtrusionObject &){return QString();})
+            && !editor.spatialAdd_ && !editor.spatialUndo_ && editor.extrusions_.size()==1,"Annulla modifica conserva storia e pulisce callback");
+        // Il picker riconosce anche la seconda entita' e i suoi estremi.
+        editor.setViewNormal(0);editor.autoFit_=false;editor.zoom_=40;
+        require(editor.beginReferencePick(DatumRoleCurve,-1).isEmpty(),"picker curve 3D attivo");GeometryRef pickedRef;
+        require(editor.pickReference(editor.projectWorldPoint({5,10,3}).toPoint(),pickedRef)
+            && pickedRef.kind==9 && pickedRef.point.geometry==kSpatialCurveReference && pickedRef.point.subshape==2,"picker identifica seconda curva per ID");
+        editor.cancelReferencePick();editor.beginReferencePick(DatumRolePoint,-1);
+        require(editor.pickReference(editor.projectWorldPoint({10,10,0}).toPoint(),pickedRef) && pickedRef.kind==10 && pickedRef.point.subshape==2,"picker estremo seconda curva");editor.cancelReferencePick();
+        if(gl){view.resize(900,650);view.setViewPreset(4);view.fitAll();view.show();QApplication::processEvents();view.repaint();QApplication::processEvents();
+            for(const auto &line:view.extrusions_[0].display.edges)for(const auto &point:line)
+                require(QRectF(view.rect()).contains(view.projectWorldPoint(point)),"curve 3D interamente inquadrate");
+            require(view.isValid(),"contesto GL per schizzo 3D");require(view.grabFramebuffer().save("/tmp/forgecad-spatial-sketch.png"),"immagine schizzo 3D");view.close();}
+    }
+
+    static void curveExtraction() {
+        using namespace ForgeCad;
+        using namespace ForgeCad::Kernel;
+        const auto line=[](Vec3 a,Vec3 b)->PathSegment{return {std::make_shared<Line<3>>(a,b-a),{0,distance(a,b)}};};
+        const auto spatial=std::make_shared<BSplineCurve<3>>(3,std::vector<double>{0,0,0,0,1,1,1,1},
+            std::vector<Vec3>{{0,0,2},{3,2,5},{7,-1,3},{10,0,4}});
+        auto sheet=std::make_shared<const Body>(ruledSurface({{spatial,{0,1}}},{line({0,-5,0},{10,-5,0})}));
+        EdgeId selected;
+        for(EdgeId e:sheet->edges()) if(projectPoint(*sheet->edge(e).curve,spatial->point(.5),sheet->edge(e).range).distance<1e-8){selected=e;break;}
+        require(selected.valid(),"bordo spaziale sorgente individuato");
+        ExtrusionObject source;source.feature=BodyFeature::Imported;source.featureId=701;source.name="Superficie";
+        source.forgeBody=sheet;source.importData=QByteArray::fromStdString(writeStep({{"Superficie",*sheet}}));
+        GeometryRef edge;edge.kind=4;edge.index=0;edge.featureId=701;edge.point=edgeReference(*sheet,selected,spatial->point(.5));
+        QVector<ExtrusionObject> bodies{source};QString error;QVector<double> cuts;
+        CurveExtractionParameters p;p.source=edge;
+        auto extracted=extractCurves3D(p,1,{},bodies,&error);
+        require(error.isEmpty() && extracted.size()==1,"estrazione esatta bordo 3D");
+        for(int i=0;i<=20;++i)require(distance(extracted[0]->point(i/20.),spatial->point(i/20.))<1e-8,"estrazione conserva forma e profondita'");
+        const Vec3 middle=spatial->point(.5);
+        SketchObject cutter;cutter.name="Segmento";cutter.customFrame=true;cutter.frame.origin[2]=middle.z()+8;
+        cutter.segments={{{middle.x(),-8},{middle.x(),8}}};cutter.constraints={-1};cutter.segmentLengths={0};cutter.segmentAngles={-1};
+        QVector<SketchObject> sketches{cutter};p.tool.kind=7;p.tool.index=0;p.tool.element={0,0,-1};p.trimmed=true;
+        require(extractCurves3D(p,1,sketches,bodies,&error).isEmpty() && !error.isEmpty(),"intersezione reale rifiuta segmento a profondita' diversa");
+        p.projected=true;
+        extracted=extractCurves3D(p,1,sketches,bodies,&error,&cuts);
+        require(error.isEmpty() && extracted.size()==1 && cuts.size()==1,"taglio proiettato senza intersezione reale");
+        require(std::fabs(extracted[0]->domain().hi-.5)<1e-7 && distance(extracted[0]->point(.5),middle)<1e-7,"taglio proiettato conserva punto sulla curva 3D");
+        p.keepStart=false;extracted=extractCurves3D(p,1,sketches,bodies,&error);
+        require(error.isEmpty() && std::fabs(extracted[0]->domain().lo-.5)<1e-7,"parte finale della curva");
+        sketches[0].frame.origin[2]=middle.z();p.projected=false;
+        extracted=extractCurves3D(p,1,sketches,bodies,&error);
+        require(error.isEmpty() && std::fabs(extracted[0]->domain().lo-.5)<1e-7,"intersezione reale su curva spaziale");
+        p.projected=true;p.keepStart=true;
+        ExtrusionObject definition;definition.feature=BodyFeature::ExtractedCurve;definition.featureId=702;definition.name="Curva tagliata";definition.curveExtraction=p;
+        buildGeometry(definition,1,sketches,bodies);
+        require(definition.error.isEmpty() && hasGeometry(definition) && isCurveBody(definition),"feature di curva estratta valida");
+        require(bodyOperands(definition)==QVector<int>{0} && sketchesOf(definition)==QVector<int>{0},"dipendenze di sorgente e segmento");
+        bodies.append(definition);
+        GeometryRef extractedRef;extractedRef.kind=9;extractedRef.index=1;extractedRef.featureId=702;
+        SketchObject end;end.customFrame=true;end.frame.origin[1]=10;end.frame.origin[2]=5;
+        end.segments={{{0,0},{5,0}}};end.constraints={-1};end.segmentLengths={0};end.segmentAngles={-1};sketches.append(end);
+        GeometryRef endRef;endRef.kind=7;endRef.index=1;endRef.element={-1,-1,-1};
+        ExtrusionObject loft;loft.feature=BodyFeature::Loft;loft.loftSurface=true;loft.loftSections={extractedRef,endRef};
+        auto result=forgeReferencedLoft(loft,2,sketches,bodies,&error);
+        require(result && checkBody(*result).empty(),"curva estratta e tagliata usabile come sezione loft");
+        ExtrusionObject ruled;ruled.feature=BodyFeature::Ruled;ruled.ruledFirst={extractedRef};endRef.element={0,0,-1};ruled.ruledSecond={endRef};
+        buildGeometry(ruled,2,sketches,bodies);
+        require(ruled.forgeBody && ruled.error.isEmpty(),"curva tagliata usabile per superficie tra curve");
+        DocumentState state;state.sketches=sketches;state.extrusions=bodies;
+        QTemporaryDir dir;const QString path=dir.filePath("extracted.prt");
+        require(saveDocumentFile(path,state,false).isEmpty(),"salva definizione associativa formato 44");
+        DocumentState loaded;require(loadDocumentFile(path,loaded).isEmpty(),"riapre curva estratta");
+        const auto &saved=loaded.extrusions[1].curveExtraction;
+        require(saved.source.featureId==701 && saved.source.point.subshape==p.source.point.subshape && saved.tool.element.element==0
+            && saved.projected && saved.trimmed && saved.keepStart && saved.view.normal[2]==p.view.normal[2],"persistenza riferimenti e vista");
+        CadViewport view;view.tessellationQuality_=0;view.restoreDocument(loaded);view.regenerateAll();
+        require(view.extrusions_[1].curve && view.extrusions_[1].error.isEmpty(),"rigenerazione dopo riapertura");
+        require(view.withDependentBodies({0}).contains(1),"modifiche del bordo propagano alla curva");
+        view.sketches_[0].segments[0]={{3,-8},{3,8}};view.regenerateAll();
+        const double shorter=view.extrusions_[1].curve->domain().hi;
+        require(shorter<.4 && shorter>.2,"taglio si aggiorna quando cambia il segmento");
+        auto shiftedCurve=std::make_shared<BSplineCurve<3>>(3,std::vector<double>{0,0,0,0,1,1,1,1},
+            std::vector<Vec3>{{0,0,12},{3,2,15},{7,-1,13},{10,0,14}});
+        auto shifted=std::make_shared<const Body>(ruledSurface({{shiftedCurve,{0,1}}},{line({0,-5,10},{10,-5,10})}));
+        view.extrusions_[0].forgeBody=shifted;view.extrusions_[0].importData=QByteArray::fromStdString(writeStep({{"Superficie",*shifted}}));
+        view.regenerateAfter(0);
+        require(view.extrusions_[1].curve && view.extrusions_[1].error.isEmpty()
+            && distance(view.extrusions_[1].curve->point(shorter),shiftedCurve->point(shorter))<1e-6,"taglio segue bordo rigenerato senza perdere profondita'");
+        auto bad=p;bad.source.featureId=99999;
+        require(extractCurves3D(bad,1,sketches,bodies,&error).isEmpty(),"riferimento persistente mancante segnalato");
+        bad=p;bad.tool.index=99;
+        require(extractCurves3D(bad,1,sketches,bodies,&error).isEmpty(),"segmento mancante segnalato");
+        bad=p;for(double &v:bad.view.normal)v=0;
+        require(extractCurves3D(bad,1,sketches,bodies,&error).isEmpty(),"vista non valida segnalata");
+        // Una curva con due incroci consente di scegliere l'intersezione.
+        ExtrusionObject arc;arc.feature=BodyFeature::Helix;arc.curve=std::make_shared<BSplineCurve<3>>(2,
+            std::vector<double>{0,0,0,1,1,1},std::vector<Vec3>{{0,0,2},{10,4,3},{0,8,4}});arc.curves={arc.curve};
+        CurveExtractionParameters multi;multi.source.kind=9;multi.source.index=0;multi.trimmed=true;multi.projected=true;multi.tool=p.tool;multi.cutHint=.9;
+        sketches[0].segments[0]={{3,-1},{3,9}};
+        auto twice=extractCurves3D(multi,1,sketches,{arc},&error,&cuts);
+        require(error.isEmpty() && cuts.size()==2 && twice[0]->domain().hi>.5,"scelta del secondo incrocio proiettato");
+        multi.cutHint=.1;twice=extractCurves3D(multi,1,sketches,{arc},&error);
+        require(error.isEmpty() && twice[0]->domain().hi<.5,"scelta del primo incrocio proiettato");
+        arc.curve=std::make_shared<TrimmedCurve<3>>(std::make_shared<Line<3>>(Vec3(0,0,0),Vec3(1,0,0)),0,100);arc.curves={arc.curve};
+        sketches[0].frame.origin[2]=0;sketches[0].segments[0]={{3,0},{4,0}};multi.projected=false;
+        require(extractCurves3D(multi,1,sketches,{arc},&error).isEmpty() && error.contains("sovrappone"),"sovrapposizione corta interna rifiutata");
+        multi.projected=true;
+        require(extractCurves3D(multi,1,sketches,{arc},&error).isEmpty() && error.contains("sovrappongono"),"sovrapposizione proiettata rifiutata");
+        // Il dialogo sceglie sorgente e segmento, applica e ripulisce i callback.
+        CadViewport dialogView;dialogView.tessellationQuality_=0;dialogView.sketches_=state.sketches;dialogView.extrusions_={source};dialogView.setViewNormal(0);
+        QMainWindow window;std::exception_ptr failure;bool applied=false;
+        QTimer::singleShot(0,&window,[&]{
+            auto *dialog=window.findChild<QDialog*>("extractedCurveDialog");
+            try{
+                require(dialog,"dialogo estrazione aperto");
+                dialog->findChild<QPushButton*>("extractSourceButton")->click();
+                auto cb=dialogView.refPickFinished_;cb(true,edge);
+                dialog->findChild<QPushButton*>("extractToolButton")->click();
+                cb=dialogView.refPickFinished_;cb(true,p.tool);
+                require(dialog->findChild<QComboBox*>("extractCutBox")->count()>=1,"incroci disponibili nel dialogo");
+                dialog->findChild<QDialogButtonBox*>()->button(QDialogButtonBox::Ok)->click();
+            }catch(...){failure=std::current_exception();if(dialog)dialog->reject();}
+        });
+        ExtrusionObject empty;empty.curveExtraction.trimmed=true;empty.curveExtraction.projected=true;
+        require(extractedCurveDialog(&window,&dialogView,"Estrai",-1,empty,[&](const ExtrusionObject &d){applied=true;return dialogView.createBody(d);}),"dialogo applicato");
+        if(failure)std::rethrow_exception(failure);
+        require(applied && !dialogView.referencePicking() && !dialogView.refPickFinished_ && dialogView.extrusions_.size()==2,"applicazione e pulizia dialogo");
+        const auto preservedView=dialogView.extrusions_[1].curveExtraction.view;
+        dialogView.setViewNormal(1);dialogView.regenerateAll();
+        require(dialogView.extrusions_[1].curve && dialogView.extrusions_[1].curveExtraction.view.normal[2]==preservedView.normal[2],"rotazione della camera non modifica vista del taglio");
+        dialogView.undo();require(dialogView.extrusions_.size()==1,"undo curva estratta");
+        dialogView.redo();require(dialogView.extrusions_.size()==2 && dialogView.extrusions_[1].curve,"redo curva estratta");
+        QTimer::singleShot(0,&window,[&]{
+            auto *dialog=window.findChild<QDialog*>("extractedCurveDialog");
+            if(dialog)dialog->findChild<QDialogButtonBox*>()->button(QDialogButtonBox::Cancel)->click();
+        });
+        require(!extractedCurveDialog(&window,&dialogView,"Annulla estrazione",-1,empty,[&](const ExtrusionObject &){return QString();}),"Annulla chiude dialogo estrazione");
+        require(!dialogView.referencePicking() && !dialogView.refPickFinished_ && dialogView.extrusions_.size()==2,"annullamento ripulisce callback senza modificare storia");
+    }
+
+    static void handleConstraints() {
+        using namespace ForgeCad;
+        SketchObject original;
+        CurveObject spline;
+        spline.tool = DrawingTool::Spline;
+        spline.controlPoints = {{0,0},{3,1},{6,0}};
+        initializeTangentHandles(spline);
+        spline.tangentLinked[1] = true;
+        original.curves.append(spline);
+        for (int k=0;k<3;++k)
+            original.geometricConstraints.append(makeConstraint(original,ConstraintType::Fix,{{1,0,k}}));
+        require(analyzeSketch(original).fullyDefined(),"maniglie non vincolate escluse dal conteggio");
+        const ConstraintRef handle{1,0,handlePoint(1,1)};
+        for (bool reverse : {false,true}) {
+            auto sketch=original;
+            const ConstraintRef axis{2,1,-1};
+            const QVector<ConstraintRef> refs=reverse ? QVector<ConstraintRef>{axis,handle} : QVector<ConstraintRef>{handle,axis};
+            require(applicableConstraints(sketch,refs).contains(ConstraintType::Angle),"quota angolare maniglia asse in entrambi gli ordini");
+            auto c=makeConstraint(sketch,ConstraintType::Angle,refs);
+            c.value=-35;
+            sketch.geometricConstraints.append(c);
+            require(solveSketch(sketch).ok,"angolo aggiunto a schizzo completamente definito");
+            require(std::fabs(currentMeasure(sketch,c)+35)<1e-6,"misura angolare maniglia risolta");
+            QPointF vertex,d,e;
+            require(angleDirections(sketch,c,vertex,d,e),"geometria grafica quota maniglia");
+            auto placed=c;
+            require(chooseAngleSector(sketch,placed,vertex+d+e),"settore della quota maniglia");
+            const auto &curve=sketch.curves[0];
+            require(curve.controlPoints==spline.controlPoints,"quota conserva nodi fissi");
+            const QPointF in=curve.tangentHandles[1].first-curve.controlPoints[1];
+            const QPointF out=curve.tangentHandles[1].second-curve.controlPoints[1];
+            require(std::fabs(in.x()*out.y()-in.y()*out.x())<1e-8 && QPointF::dotProduct(in,out)<0,"maniglia opposta ruota e conserva verso");
+            require(pointDistance(in,{0,0})>0.1 && pointDistance(out,{0,0})>0.1,"maniglie non collassano");
+            DocumentState state;state.sketches.append(sketch);
+            QTemporaryDir dir;const QString path=dir.filePath("angle.prt");
+            require(saveDocumentFile(path,state).isEmpty(),"salvataggio quota maniglia");
+            DocumentState loaded;require(loadDocumentFile(path,loaded).isEmpty(),"riapertura quota maniglia");
+            require(std::fabs(currentMeasure(loaded.sketches[0],loaded.sketches[0].geometricConstraints.last())+35)<1e-6,"quota maniglia persistente");
+        }
+        for (int reference=0;reference<3;++reference) {
+            auto sketch=original;
+            ConstraintRef ref;
+            if(reference==0) {
+                sketch.segments.append({{-1,-2},{5,4}});
+                ref={0,0,-1};
+            } else {
+                CurveObject curve;
+                curve.tool=reference==1 ? DrawingTool::Circle : DrawingTool::Converted;
+                if(reference==1) curve.controlPoints={{3,-2},{6,-2}};
+                else {curve.degree=1;curve.controlPoints={{0,0},{6,2}};curve.knots={0,0,1,1};}
+                recalculateCurve(curve);
+                sketch.curves.append(curve);ref={1,1,-1};
+            }
+            sketch.geometricConstraints.append(makeConstraint(sketch,ConstraintType::Fix,{ref}));
+            require(applicableConstraints(sketch,{handle,ref}).contains(ConstraintType::Tangent),"tangenza maniglia con retta cerchio o curva derivata");
+            auto tangent=makeConstraint(sketch,ConstraintType::Tangent,{ref,handle});
+            sketch.geometricConstraints.append(tangent);
+            require(solveSketch(sketch).ok && constraintError(sketch,tangent)<1e-7,"soluzione tangenza maniglia con riferimento fisso");
+            require(sketch.curves[0].controlPoints==spline.controlPoints,"tangenza conserva nodi fissi");
+        }
+    }
+
     static void run(bool render) {
         extensionContourPicking();
         trimPartPicking();
@@ -7418,6 +7720,23 @@ int main(int argc, char **argv) {
     if (app.arguments().contains(QStringLiteral("--mesh-export-tests"))) {
         try { ViewportInteractionTest::meshExportAutomatic(); }
         catch (const std::exception &e) { std::cerr << e.what() << std::endl; return 1; }
+        return 0;
+    }
+    if (app.arguments().contains(QStringLiteral("--spatial-sketch"))) {
+        try { ViewportInteractionTest::spatialSketch(app.arguments().contains(QStringLiteral("--gl"))); }
+        catch(const std::exception &e){std::cerr<<e.what()<<std::endl;return 1;}
+        std::cout<<"spatial sketch PASS"<<std::endl;return 0;
+    }
+    if (app.arguments().contains(QStringLiteral("--curve-extraction"))) {
+        try { ViewportInteractionTest::curveExtraction(); }
+        catch (const std::exception &e) { std::cerr << e.what() << std::endl; return 1; }
+        std::cout << "curve extraction PASS" << std::endl;
+        return 0;
+    }
+    if (app.arguments().contains(QStringLiteral("--handle-constraints"))) {
+        try { ViewportInteractionTest::handleConstraints(); }
+        catch (const std::exception &e) { std::cerr << e.what() << std::endl; return 1; }
+        std::cout << "handle constraints PASS" << std::endl;
         return 0;
     }
     if (app.arguments().contains(QStringLiteral("--sketch-reference-workflow"))) {

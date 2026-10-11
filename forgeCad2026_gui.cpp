@@ -1,3 +1,7 @@
+#include "cad_curve_extract.h"
+#include "cad_spatial_sketch.h"
+#include <QTableWidget>
+#include <QHeaderView>
 #include "forgeCad2026_gui.h"
 #include "cuda_support.h"
 #include "cad_cuda_tessellation.h"
@@ -209,6 +213,8 @@ static QString featureIconName(const ExtrusionObject &body) {
     if (body.feature == BodyFeature::SurfaceOffset) return QStringLiteral("offsetSurface");
     if (body.feature == BodyFeature::DeleteFace) return QStringLiteral("deleteFace");
     if (body.feature == BodyFeature::Draft) return QStringLiteral("draft");
+    if (body.feature == BodyFeature::SpatialSketch) return QStringLiteral("newSketch");
+    if (body.feature == BodyFeature::ExtractedCurve) return QStringLiteral("convertEdges");
     if (body.feature == BodyFeature::ProjectedCurve) return QStringLiteral("projectedCurve");
     if (body.feature == BodyFeature::Thicken) return QStringLiteral("thicken");
     if (body.feature == BodyFeature::Shell) return QStringLiteral("shell");
@@ -1018,6 +1024,8 @@ public:
             remapRef(feature.revolveAxisRef);
             remapRef(feature.draftNeutral);
             remapRef(feature.thickenDirection);
+            remapRef(feature.curveExtraction.source);
+            remapRef(feature.curveExtraction.tool);
         }
 
         for (const ExtrusionObject &feature : reordered)
@@ -1987,6 +1995,8 @@ public:
             if (ForgeCad::isSketchRef(body.revolveAxisRef)) renumber(body.revolveAxisRef.index);
             if (ForgeCad::isSketchRef(body.draftNeutral)) renumber(body.draftNeutral.index);
             if (ForgeCad::isSketchRef(body.thickenDirection)) renumber(body.thickenDirection.index);
+            if (ForgeCad::isSketchRef(body.curveExtraction.source)) renumber(body.curveExtraction.source.index);
+            if (ForgeCad::isSketchRef(body.curveExtraction.tool)) renumber(body.curveExtraction.tool.index);
         }
         if (activeSketch_ == index) activeSketch_ = -1;
         else if (activeSketch_ > index) --activeSketch_;
@@ -3787,6 +3797,68 @@ public:
         viewRay(QPoint(width() / 2, height() / 2), origin, direction);
         return -direction.normalized();
     }
+    SketchFrame curveTrimView() const {
+        QVector3D a, b, d;
+        viewRay(QPoint(width()/2, height()/2), a, d);
+        viewRay(QPoint(width()/2+100, height()/2), b, d);
+        const QVector3D x=(b-a).normalized(), n=-d.normalized();
+        SketchFrame frame;
+        for (int k=0;k<3;++k) {frame.origin[k]=0;frame.xAxis[k]=x[k];frame.normal[k]=n[k];}
+        return frame;
+    }
+    // Inserimento libero: il piano e' soltanto uno strumento temporaneo per
+    // determinare la profondita' del clic; i punti memorizzati restano XYZ.
+    void setSpatialEditHistory(std::function<void()> undo,std::function<void()> redo) {spatialUndo_=std::move(undo);spatialRedo_=std::move(redo);}
+    void setSpatialDrawing(std::function<void(SpatialPoint)> add, std::function<void()> finish, int owner=-1) {
+        spatialAdd_=std::move(add);spatialFinish_=std::move(finish);spatialOwner_=owner;
+        spatialPressed_=false;spatialHoverValid_=false;selectionPending_=false;
+        if(spatialAdd_){cancelReferencePick();cancelEdgePick();setCursor(Qt::CrossCursor);}
+        else {spatialNodes_.clear();unsetCursor();}
+        update();
+    }
+    void configureSpatialDrawing(int plane,double depth,const SpatialPoint &anchor,const QVector<SpatialPoint> &nodes,bool snap) {
+        spatialPlane_=plane;spatialDepth_=depth;spatialAnchor_=anchor;spatialNodes_=nodes;spatialSnap_=snap;update();
+    }
+    bool spatialPointAt(const QPoint &position,SpatialPoint &point,bool allowSnap=true) const {
+        using namespace ForgeCad::Kernel;
+        double best=9;bool found=false;
+        const auto consider=[&](const Vec3 &q){
+            const double d=pointDistance(projectWorldPoint(QVector3D(float(q.x()),float(q.y()),float(q.z()))),QPointF(position));
+            if(d<best){best=d;point={q.x(),q.y(),q.z()};found=true;}
+        };
+        if(allowSnap && spatialSnap_) {
+            for(const auto &p:spatialNodes_)consider({p.x,p.y,p.z});
+            for(const auto &sketch:sketches_)if(sketch.visible && (spatialOwner_<0 || sketch.datumPlane<spatialOwner_)) {
+                for(const auto &s:sketch.segments){consider(ForgeCad::sketchToWorld(s.first,sketch));consider(ForgeCad::sketchToWorld(s.second,sketch));}
+                for(const auto &c:sketch.curves)for(const auto &p:c.controlPoints)consider(ForgeCad::sketchToWorld(p,sketch));
+            }
+            for(int i=0;i<extrusions_.size();++i) {
+                const auto &body=extrusions_[i];
+                if(!body.visible || body.suppressed || (spatialOwner_>=0 && i>=spatialOwner_))continue;
+                if(body.forgeBody)for(auto id:body.forgeBody->vertices())consider(body.forgeBody->vertex(id).point);
+                if(body.curve) {
+                    const auto curves=body.curves.isEmpty()?QVector<ForgeCad::ForgeCurve>{body.curve}:body.curves;
+                    for(const auto &c:curves)if(c){consider(c->point(c->domain().lo));consider(c->point(c->domain().hi));}
+                }
+                if(body.feature==BodyFeature::SpatialSketch)
+                    for(const auto &e:body.spatialSketch.entities)for(const auto &p:e.points)consider({p.x,p.y,p.z});
+            }
+            if(found)return true;
+        }
+        QVector3D rayOrigin,rayDirection;viewRay(position,rayOrigin,rayDirection);
+        Vec3 origin(rayOrigin.x(),rayOrigin.y(),rayOrigin.z()),direction(rayDirection.x(),rayDirection.y(),rayDirection.z());
+        Vec3 normal,anchor(spatialAnchor_.x,spatialAnchor_.y,spatialAnchor_.z);
+        if(spatialPlane_==1){normal={0,0,1};anchor={0,0,spatialDepth_};}
+        else if(spatialPlane_==2){normal={0,1,0};anchor={0,spatialDepth_,0};}
+        else if(spatialPlane_==3){normal={1,0,0};anchor={spatialDepth_,0,0};}
+        else {const auto frame=curveTrimView();normal={frame.normal[0],frame.normal[1],frame.normal[2]};anchor=anchor+spatialDepth_*normal;}
+        const double denominator=dot(direction,normal);
+        if(std::fabs(denominator)<1e-8)return false;
+        const Vec3 q=origin+(dot(anchor-origin,normal)/denominator)*direction;
+        if(!std::isfinite(norm(q)))return false;
+        point={q.x(),q.y(),q.z()};return true;
+    }
+
     // Chiamato quando il documento cambia (il piano della sezione puo' essersi spostato).
     void setSectionRefreshCallback(std::function<void()> callback) { sectionRefresh_ = std::move(callback); }
     // Estensione della geometria visibile lungo `normal` dal punto `point` (per il cursore della posizione).
@@ -4140,6 +4212,9 @@ protected:
     }
 
     void keyPressEvent(QKeyEvent *event) override {
+        if(spatialUndo_ && event->matches(QKeySequence::Undo)){auto undo=spatialUndo_;undo();return;}
+        if(spatialRedo_ && event->matches(QKeySequence::Redo)){auto redo=spatialRedo_;redo();return;}
+        if(spatialAdd_ && event->key()==Qt::Key_Escape){auto finish=spatialFinish_;if(finish)finish();return;}
         if (planeResizing_ && event->key() == Qt::Key_Escape) { finishPlaneResize(true); return; }
         if (event->key() == panKey_) {
             panKeyHeld_ = true;
@@ -4268,6 +4343,10 @@ protected:
             panning_ = true;
             setCursor(Qt::ClosedHandCursor);
             return;
+        }
+        if(spatialAdd_) {
+            if(event->button()==Qt::LeftButton){spatialPressed_=true;spatialDragged_=false;spatialPress_=lastMousePosition_;}
+            event->accept();return;
         }
         if (interactionLocked_ && !refPicking_ && !edgePicking_ && !trimPartPickFinished_
             && !sketchPickCallback_ && !sketchEntityPickCallback_ && !sketchOffsetSelectionCallback_) {
@@ -4881,6 +4960,8 @@ protected:
             remap(body.revolveAxisRef);
             remap(body.draftNeutral);
             remap(body.thickenDirection);
+            remap(body.curveExtraction.source);
+            remap(body.curveExtraction.tool);
         }
     }
 
@@ -5885,6 +5966,17 @@ protected:
             update();
             return;
         }
+        if(spatialAdd_) {
+            if(event->buttons() & (Qt::LeftButton|Qt::RightButton)) {
+                if((currentPosition-spatialPress_).manhattanLength()>=QApplication::startDragDistance())spatialDragged_=true;
+                if(event->buttons() & Qt::RightButton || spatialDragged_) {
+                    autoFit_=false;orbitView(currentPosition-lastMousePosition_);
+                }
+            }
+            lastMousePosition_=currentPosition;
+            spatialHoverValid_=spatialPointAt(currentPosition,spatialHover_);
+            setCursor(Qt::CrossCursor);update();event->accept();return;
+        }
         if (interactionLocked_ && !refPicking_ && !edgePicking_ && !trimPartPickFinished_
             && !sketchPickCallback_ && !sketchEntityPickCallback_ && !sketchOffsetSelectionCallback_) {
             if (event->buttons() & Qt::LeftButton) {
@@ -6197,6 +6289,17 @@ protected:
     }
 
     void mouseReleaseEvent(QMouseEvent *event) override {
+        if(spatialAdd_ && !panning_) {
+            if(event->button()==Qt::LeftButton && spatialPressed_) {
+                spatialPressed_=false;
+                if(!spatialDragged_ && (event->position().toPoint()-spatialPress_).manhattanLength()<QApplication::startDragDistance()) {
+                    SpatialPoint point;
+                    if(spatialPointAt(event->position().toPoint(),point)){auto add=spatialAdd_;add(point);}
+                    else showStatus(QStringLiteral("Il piano temporaneo e' visto di taglio: ruota la vista o cambia piano."));
+                }
+            }
+            event->accept();return;
+        }
         if (selectionPending_ && event->button() == Qt::LeftButton) {
             selectionPending_ = false;
             if (!selectionDragged_
@@ -6775,6 +6878,8 @@ private:
                 remapRef(feature.revolveAxisRef);
                 remapRef(feature.draftNeutral);
                 remapRef(feature.thickenDirection);
+                remapRef(feature.curveExtraction.source);
+                remapRef(feature.curveExtraction.tool);
             }
             QSet<quint64> changedBodies;
             for (int i = start; i < start + added; ++i) changedBodies.insert(reordered.at(i).modelBodyId);
@@ -7111,6 +7216,8 @@ private:
             if (ForgeCad::isBodyRef(body.revolveAxisRef)) body.revolveAxisRef.index = map.value(body.revolveAxisRef.index, -1);
             if (ForgeCad::isBodyRef(body.draftNeutral)) body.draftNeutral.index = map.value(body.draftNeutral.index, -1);
             if (ForgeCad::isBodyRef(body.thickenDirection)) body.thickenDirection.index = map.value(body.thickenDirection.index, -1);
+            if (ForgeCad::isBodyRef(body.curveExtraction.source)) body.curveExtraction.source.index = map.value(body.curveExtraction.source.index, -1);
+            if (ForgeCad::isBodyRef(body.curveExtraction.tool)) body.curveExtraction.tool.index = map.value(body.curveExtraction.tool.index, -1);
             // Strumenti e corpi fusi eliminati: escono dall'elenco.
             for (QVector<int> *list : {&body.booleanTools, &body.mergeBodies}) {
                 QVector<int> kept2;
@@ -8911,6 +9018,18 @@ private:
             drawInferenceTags(painter);
             return;
         }
+        if(spatialAdd_) {
+            painter.save();painter.setRenderHint(QPainter::Antialiasing);
+            painter.setPen(QPen(QColor(130,220,255),2));painter.setBrush(QColor(35,105,145));
+            for(const auto &p:spatialNodes_)painter.drawEllipse(projectWorldPoint(QVector3D(p.x,p.y,p.z)),5,5);
+            if(spatialHoverValid_) {
+                const QPointF cursor=projectWorldPoint(QVector3D(spatialHover_.x,spatialHover_.y,spatialHover_.z));
+                painter.setPen(QPen(QColor(255,195,90),2,Qt::DashLine));
+                if(!spatialNodes_.isEmpty()){const auto &p=spatialNodes_.last();painter.drawLine(projectWorldPoint(QVector3D(p.x,p.y,p.z)),cursor);}
+                painter.drawEllipse(cursor,5,5);
+            }
+            painter.restore();
+        }
         drawMeasureOverlay(painter);
         if (refPicking_ || !refMarks_.isEmpty()) {
             // Scelta dei riferimenti di un piano di costruzione: quelli scelti e quello sotto il puntatore.
@@ -8921,9 +9040,10 @@ private:
                 painter.setPen(QPen(QColor(130, 215, 255, 210), 1.5));
                 painter.setBrush(QColor(35, 105, 145, 210));
                 for (int body = 0; body < extrusions_.size(); ++body)
+                    for(int entity=0;entity<qMax(1,int(extrusions_[body].curves.size()));++entity)
                     for (int end = 0; end < 2; ++end) {
                         QVector3D point;
-                        if (curveBodyEndpoint(body, end, point)) painter.drawEllipse(projectWorldPoint(point), 4.5, 4.5);
+                        if (curveBodyEndpoint(body, end, point,entity)) painter.drawEllipse(projectWorldPoint(point), 4.5, 4.5);
                     }
             }
             if (refPicking_ && refHoverValid_) drawGeometryRef(painter, refHover_, kHoverColor, &refHoverFace_, refHoverFaceBody_);
@@ -9225,13 +9345,15 @@ private:
         const int datum = sketches_.at(index).datumPlane;
         return datum < 0 || refPickOwner_ < 0 || datum < refPickOwner_;
     }
-    bool curveBodyEndpoint(int index, int end, QVector3D &point) const {
+    bool curveBodyEndpoint(int index, int end, QVector3D &point, int entity=0) const {
         const int owner = refPickOwner_ < 0 ? int(extrusions_.size()) : refPickOwner_;
         if (index < 0 || index >= owner || index >= extrusions_.size()) return false;
         const ExtrusionObject &body = extrusions_.at(index);
         if (!body.visible || !ForgeCad::isCurveBody(body) || !body.curve) return false;
-        const ForgeCad::Kernel::Interval domain = body.curve->domain();
-        const ForgeCad::Kernel::Vec3 p = body.curve->point(end == 1 ? domain.hi : domain.lo);
+        const auto curve=body.curves.isEmpty()?body.curve:body.curves.value(entity);
+        if(!curve)return false;
+        const ForgeCad::Kernel::Interval domain = curve->domain();
+        const ForgeCad::Kernel::Vec3 p = curve->point(end == 1 ? domain.hi : domain.lo);
         point = QVector3D(float(p.x()), float(p.y()), float(p.z()));
         return true;
     }
@@ -9286,15 +9408,19 @@ private:
                     }
             }
             for (int b = 0; b < extrusions_.size(); ++b)
+                for(int entity=0;entity<qMax(1,int(extrusions_[b].curves.size()));++entity)
                 for (int end = 0; end < 2; ++end) {
                     QVector3D point;
-                    if (!curveBodyEndpoint(b, end, point)) continue;
+                    if (!curveBodyEndpoint(b, end, point,entity)) continue;
                     GeometryRef r;
                     r.kind = 10;
                     r.index = b;
                     r.featureId = extrusions_.at(b).featureId;
                     r.element = {-1, -1, end};
                     r.point = {point.x(), point.y(), point.z()};
+                    if(extrusions_[b].feature==BodyFeature::SpatialSketch && entity<extrusions_[b].spatialSketch.entities.size()) {
+                        r.point.geometry=ForgeCad::kSpatialCurveReference;r.point.subshape=extrusions_[b].spatialSketch.entities[entity].id;
+                    }
                     consider(point, r);
                 }
             if (roles & ForgeCad::kMeasureSnapRole) {
@@ -9370,7 +9496,14 @@ private:
                     r.kind = 9;
                     r.featureId = body.featureId;
                     // Il punto sulla polilinea dice quale curva (ProjectedCurve ne ha piu' di una).
-                    for (const QVector<QVector3D> &polyline : body.display.edges) considerPolyline(polyline, r, true);
+                    for(int entity=0;entity<body.display.edges.size();++entity) {
+                        auto candidate=r;
+                        if(body.feature==BodyFeature::SpatialSketch && entity<body.spatialSketch.entities.size()) {
+                            candidate.point.geometry=ForgeCad::kSpatialCurveReference;
+                            candidate.point.subshape=body.spatialSketch.entities[entity].id;
+                        }
+                        considerPolyline(body.display.edges[entity],candidate,true);
+                    }
                 }
             }
             for (int s = 0; s < sketches_.size(); ++s) {
@@ -9537,7 +9670,7 @@ private:
             break;
         case 10: {
             QVector3D endpoint;
-            if (curveBodyEndpoint(ref.index, ref.element.point, endpoint)) dot(endpoint);
+            if (snapRefPosition(ref, endpoint)) dot(endpoint);
             else dot(point);
             break;
         }
@@ -10725,8 +10858,13 @@ private:
                 displayCache_.setColor(hovered
                     ? QVector4D(float(kHoverColor.redF()), float(kHoverColor.greenF()), float(kHoverColor.blueF()), 1.0f)
                     : QVector4D(1.0f, 0.69f, 0.29f, 1.0f));
-                glLineWidth(hovered ? 3.0f : 2.2f);
-                drawExtrusionEdges(extrusion);
+                const bool spatial=extrusion.feature==BodyFeature::SpatialSketch || extrusion.feature==BodyFeature::ExtractedCurve;
+                glLineWidth(spatial ? (hovered ? 5.0f : 3.5f) : (hovered ? 3.0f : 2.2f));
+                if(spatial) {
+                    const QVector4D color=hovered ? QVector4D(float(kHoverColor.redF()),float(kHoverColor.greenF()),float(kHoverColor.blueF()),1)
+                                                  : QVector4D(1,.69f,.29f,1);
+                    for(const auto &line:extrusion.display.edges)overlayRenderer_.drawWideLineStrip(line,color,(hovered?5.0f:3.5f)*float(devicePixelRatioF()));
+                } else drawExtrusionEdges(extrusion);
                 glLineWidth(1.0f);
             } else if (displayMode_ != 1) {
                 displayCache_.setLightingEnabled(false);
@@ -10862,7 +11000,9 @@ private:
         displayCache_.setLightingEnabled(false);
         displayCache_.setColor(QVector4D(1.0f, 0.88f, 0.62f, 1.0f));
         glLineWidth(1.5f);
-        if (preview_.definition.feature == BodyFeature::Thread && displayMode_ != 0)
+        if(preview_.definition.feature==BodyFeature::SpatialSketch || preview_.definition.feature==BodyFeature::ExtractedCurve) {
+            for(const auto &line:display.edges)overlayRenderer_.drawWideLineStrip(line,QVector4D(1,.88f,.62f,1),3.5f*float(devicePixelRatioF()));
+        } else if (preview_.definition.feature == BodyFeature::Thread && displayMode_ != 0)
             drawThreadProfileEdges(display, QVector4D(1.0f, 0.88f, 0.62f, 1.0f));
         else
             displayCache_.edges(display);
@@ -10975,6 +11115,16 @@ private:
         parts << n(d.draftAngle) << QString::number(d.draftReverse);
         parts << QStringLiteral("TK") << QString::number(d.thickenSide);
         ref(d.thickenDirection);
+        parts << QStringLiteral("S3D") << QString::number(d.spatialSketch.nextId);
+        for(const auto &e:d.spatialSketch.entities){parts << QString::number(e.id) << QString::number(e.spline) << QString::number(e.closed);
+            for(const auto &p:e.points)parts << n(p.x) << n(p.y) << n(p.z);}
+        ref(d.curveExtraction.source);
+        ref(d.curveExtraction.tool);
+        parts << QString::number(d.curveExtraction.trimmed) << QString::number(d.curveExtraction.projected)
+              << QString::number(d.curveExtraction.keepStart) << n(d.curveExtraction.cutHint);
+        for (double v : d.curveExtraction.view.origin) parts << n(v);
+        for (double v : d.curveExtraction.view.normal) parts << n(v);
+        for (double v : d.curveExtraction.view.xAxis) parts << n(v);
         parts << QStringLiteral("PJ") << QString::number(d.trimProject) << QString::number(d.projectionMode) << QString::number(d.projectionReverse);
         // Offset e cucitura; loft e sweep di superficie, rigata e planare.
         parts << QStringLiteral("O") << QString::number(d.offsetSew);
@@ -11712,6 +11862,14 @@ private:
     bool edgePickHelix_ = false;  // scelta della base di un'elica (un clic su uno spigolo o una faccia)
     bool edgePickPreviewEnabled_ = true;  // falso finche' il pannello del raccordo non e' apparso
     // Scelta dei riferimenti dei piani di costruzione (beginReferencePick).
+    std::function<void(SpatialPoint)> spatialAdd_;
+    std::function<void()> spatialFinish_,spatialUndo_,spatialRedo_;
+    int spatialOwner_=-1,spatialPlane_=0;
+    double spatialDepth_=0;
+    SpatialPoint spatialAnchor_,spatialHover_;
+    QVector<SpatialPoint> spatialNodes_;
+    bool spatialSnap_=true,spatialPressed_=false,spatialDragged_=false,spatialHoverValid_=false;
+    QPoint spatialPress_;
     bool refPicking_ = false;
     QVector<int> pickBodies_;
     int refPickRoles_ = 0;
@@ -17217,6 +17375,218 @@ struct CurvePicker {
     }
 };
 
+// Curva 3D associativa e suo intervallo tagliato: la proiezione serve solo
+// a individuare il taglio, mai a sostituire la geometria spaziale.
+static bool spatialSketchDialog(QMainWindow *window,CadViewport *viewport,const QString &title,int replaced,
+    const ExtrusionObject &initial,const std::function<QString(const ExtrusionObject &)> &apply) {
+    ExtrusionObject definition=initial;definition.feature=BodyFeature::SpatialSketch;definition.operation=-1;definition.sketchIndex=-1;
+    auto &p=definition.spatialSketch;
+    if(p.entities.isEmpty()){SpatialCurve3D e;e.id=p.nextId++;p.entities.append(e);}
+    FunctionDialogPanel dialog(window);dialog.setObjectName(QStringLiteral("spatialSketchDialog"));dialog.setWindowTitle(title);
+    auto *form=dialog.createScrollableForm();
+    auto *entities=new QComboBox(&dialog);entities->setObjectName(QStringLiteral("spatialEntities"));
+    auto *newLine=new QPushButton(QStringLiteral("Nuova polilinea"),&dialog),*newSpline=new QPushButton(QStringLiteral("Nuova spline"),&dialog);
+    newLine->setObjectName(QStringLiteral("spatialNewLine"));newSpline->setObjectName(QStringLiteral("spatialNewSpline"));
+    auto *removeEntity=new QPushButton(QStringLiteral("Elimina entita'"),&dialog);
+    auto *kind=new QComboBox(&dialog);kind->addItems({QStringLiteral("Polilinea"),QStringLiteral("Spline interpolante")});
+    auto *closed=new QCheckBox(QStringLiteral("Chiusa"),&dialog);closed->setObjectName(QStringLiteral("spatialClosed"));
+    auto *points=new QTableWidget(0,3,&dialog);points->setObjectName(QStringLiteral("spatialPoints"));
+    points->setHorizontalHeaderLabels({QStringLiteral("X"),QStringLiteral("Y"),QStringLiteral("Z")});
+    points->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);points->setSelectionBehavior(QAbstractItemView::SelectRows);
+    points->setSelectionMode(QAbstractItemView::SingleSelection);points->setMinimumHeight(150);
+    std::array<ForgeCad::ExpressionSpinBox*,3> xyz;
+    for(int i=0;i<3;++i){xyz[i]=new ForgeCad::ExpressionSpinBox(&dialog);xyz[i]->setDecimals(9);xyz[i]->setRange(-1e9,1e9);xyz[i]->setObjectName(QStringLiteral("spatial%1").arg(QStringLiteral("XYZ")[i]));}
+    auto *addXYZ=new QPushButton(QStringLiteral("Aggiungi punto XYZ"),&dialog);addXYZ->setObjectName(QStringLiteral("spatialAddXYZ"));
+    auto *changePoint=new QPushButton(QStringLiteral("Aggiorna punto selezionato"),&dialog);
+    auto *removePoint=new QPushButton(QStringLiteral("Elimina punto selezionato"),&dialog);
+    auto *plane=new QComboBox(&dialog);plane->setObjectName(QStringLiteral("spatialPlane"));
+    plane->addItems({QStringLiteral("Vista, attraverso l'ultimo punto"),QStringLiteral("XY: profondita' Z"),QStringLiteral("XZ: profondita' Y"),QStringLiteral("YZ: profondita' X")});
+    auto *depth=new ForgeCad::ExpressionSpinBox(&dialog);depth->setObjectName(QStringLiteral("spatialDepth"));depth->setDecimals(9);depth->setRange(-1e9,1e9);
+    auto *snap=new QCheckBox(QStringLiteral("Aggancia ai punti esistenti"),&dialog);snap->setChecked(true);
+    auto *draw=new QPushButton(QStringLiteral("Inserisci punti nella vista"),&dialog);draw->setObjectName(QStringLiteral("spatialDraw"));draw->setCheckable(true);
+    auto *undo=new QPushButton(QStringLiteral("Annulla modifica"),&dialog),*redo=new QPushButton(QStringLiteral("Ripristina modifica"),&dialog);
+    undo->setObjectName(QStringLiteral("spatialUndo"));redo->setObjectName(QStringLiteral("spatialRedo"));
+    form->addRow(QStringLiteral("Entita':"),entities);form->addRow(newLine,newSpline);form->addRow(removeEntity);
+    form->addRow(QStringLiteral("Tipo:"),kind);form->addRow(closed);form->addRow(points);
+    for(int i=0;i<3;++i)form->addRow(QStringLiteral("%1:").arg(QStringLiteral("XYZ")[i]),xyz[i]);
+    form->addRow(addXYZ);form->addRow(changePoint);form->addRow(removePoint);form->addRow(undo,redo);
+    form->addRow(QStringLiteral("Piano temporaneo:"),plane);form->addRow(QStringLiteral("Profondita':"),depth);form->addRow(snap);form->addRow(draw);
+    form->addRow(wrappedNote(QStringLiteral("Clic: aggiungi un punto. Trascina con il destro: ruota; tasto centrale: sposta la vista. "
+        "Esc interrompe l'inserimento. Puoi cambiare piano e profondita' per ogni punto, oppure modificare XYZ nella tabella. "
+        "Le curve non sono vincolate al piano temporaneo."),&dialog));
+    auto *status=new QLabel(&dialog);status->setWordWrap(true);form->addRow(status);
+    auto *buttons=new QDialogButtonBox(QDialogButtonBox::Ok|QDialogButtonBox::Cancel,&dialog);form->addRow(buttons);
+    QObject::connect(buttons,&QDialogButtonBox::rejected,&dialog,&QDialog::reject);
+    auto scope=std::make_unique<PreviewScope>(viewport,dialog,form,replaced);
+    QVector<SpatialSketchParameters> undos,redos;int active=0;
+    std::function<void()> refresh;
+    const auto remember=[&]{undos.append(p);redos.clear();};
+    const auto configure=[&]{
+        const QVector<SpatialPoint> nodes=active>=0 && active<p.entities.size()?p.entities[active].points:QVector<SpatialPoint>{};
+        viewport->configureSpatialDrawing(plane->currentIndex(),depth->value(),nodes.isEmpty()?SpatialPoint{}:nodes.last(),nodes,snap->isChecked());
+    };
+    refresh=[&]{
+        active=qBound(0,active,qMax(0,int(p.entities.size())-1));
+        const QSignalBlocker be(entities),bk(kind),bc(closed),bp(points);
+        entities->clear();
+        for(const auto &e:p.entities)entities->addItem(QStringLiteral("%1 %2 (%3 punti)").arg(e.spline?QStringLiteral("Spline"):QStringLiteral("Polilinea")).arg(e.id).arg(e.points.size()));
+        entities->setCurrentIndex(p.entities.isEmpty()?-1:active);points->setRowCount(0);
+        if(!p.entities.isEmpty()){
+            const auto &e=p.entities[active];kind->setCurrentIndex(e.spline?1:0);closed->setChecked(e.closed);points->setRowCount(e.points.size());
+            for(int row=0;row<e.points.size();++row){const auto &q=e.points[row];const double v[3]={q.x,q.y,q.z};
+                for(int col=0;col<3;++col)points->setItem(row,col,new QTableWidgetItem(ForgeCad::formatLength(v[col],9,false)));}
+        }
+        kind->setEnabled(!p.entities.isEmpty());closed->setEnabled(!p.entities.isEmpty());undo->setEnabled(!undos.isEmpty());redo->setEnabled(!redos.isEmpty());
+        configure();
+        auto preview=definition;
+        // Un punto in corso resta visibile come nodo; non e' ancora una curva.
+        for(int i=preview.spatialSketch.entities.size()-1;i>=0;--i)
+            if(preview.spatialSketch.entities[i].points.size()<2)preview.spatialSketch.entities.removeAt(i);
+        if(preview.spatialSketch.entities.isEmpty()){viewport->clearPreview();scope->label->setText(QStringLiteral("aggiungi almeno due punti"));}
+        else scope->request(preview);
+    };
+    const auto addPoint=[&](SpatialPoint q){
+        if(p.entities.isEmpty()){remember();SpatialCurve3D e;e.id=p.nextId++;p.entities.append(e);active=0;}
+        else remember();
+        const auto &old=p.entities[active].points;
+        if(!old.isEmpty()){const auto &last=old.last();const double dx=q.x-last.x,dy=q.y-last.y,dz=q.z-last.z;
+            if(dx*dx+dy*dy+dz*dz<1e-18){undos.removeLast();status->setText(QStringLiteral("Il nuovo punto coincide con l'ultimo."));return;}}
+        p.entities[active].points.append(q);xyz[0]->setValue(q.x);xyz[1]->setValue(q.y);xyz[2]->setValue(q.z);status->clear();refresh();
+    };
+    QObject::connect(draw,&QPushButton::toggled,&dialog,[&](bool enabled){
+        if(enabled){configure();viewport->setSpatialDrawing(addPoint,[&]{draw->setChecked(false);},replaced);}
+        else viewport->setSpatialDrawing({},{});
+    });
+    const auto newEntity=[&](bool spline){remember();
+        if(!p.entities.isEmpty() && p.entities[active].points.isEmpty())p.entities[active].spline=spline;
+        else {SpatialCurve3D e;e.id=p.nextId++;e.spline=spline;p.entities.append(e);active=p.entities.size()-1;}
+        refresh();draw->setChecked(true);
+    };
+    QObject::connect(newLine,&QPushButton::clicked,&dialog,[&]{newEntity(false);});
+    QObject::connect(newSpline,&QPushButton::clicked,&dialog,[&]{newEntity(true);});
+    QObject::connect(entities,&QComboBox::currentIndexChanged,&dialog,[&](int index){if(index>=0){active=index;refresh();}});
+    QObject::connect(removeEntity,&QPushButton::clicked,&dialog,[&]{if(!p.entities.isEmpty()){remember();p.entities.removeAt(active);refresh();}});
+    QObject::connect(kind,&QComboBox::currentIndexChanged,&dialog,[&](int index){if(!p.entities.isEmpty()){remember();p.entities[active].spline=index==1;refresh();}});
+    QObject::connect(closed,&QCheckBox::toggled,&dialog,[&](bool value){if(!p.entities.isEmpty()){remember();p.entities[active].closed=value;refresh();}});
+    QObject::connect(addXYZ,&QPushButton::clicked,&dialog,[&]{addPoint({xyz[0]->value(),xyz[1]->value(),xyz[2]->value()});});
+    QObject::connect(points,&QTableWidget::itemSelectionChanged,&dialog,[&]{const int row=points->currentRow();
+        if(active<p.entities.size() && row>=0 && row<p.entities[active].points.size()){const auto &q=p.entities[active].points[row];xyz[0]->setValue(q.x);xyz[1]->setValue(q.y);xyz[2]->setValue(q.z);}});
+    QObject::connect(points,&QTableWidget::cellChanged,&dialog,[&](int row,int col){
+        if(active>=p.entities.size() || row<0 || row>=p.entities[active].points.size())return;
+        double value;if(!ForgeCad::evaluateExpression(points->item(row,col)->text(),value) || !std::isfinite(value)){
+            status->setText(QStringLiteral("Coordinata non valida."));refresh();return;}
+        remember();value*=ForgeCad::millimetersPerUnit(viewport->lengthUnit());auto &q=p.entities[active].points[row];
+        if(col==0)q.x=value;else if(col==1)q.y=value;else q.z=value;status->clear();refresh();
+    });
+    QObject::connect(changePoint,&QPushButton::clicked,&dialog,[&]{int row=points->currentRow();if(active<p.entities.size() && row>=0 && row<p.entities[active].points.size()){
+        remember();p.entities[active].points[row]={xyz[0]->value(),xyz[1]->value(),xyz[2]->value()};refresh();}});
+    QObject::connect(removePoint,&QPushButton::clicked,&dialog,[&]{int row=points->currentRow();if(active<p.entities.size() && row>=0 && row<p.entities[active].points.size()){
+        remember();p.entities[active].points.removeAt(row);refresh();}});
+    QObject::connect(undo,&QPushButton::clicked,&dialog,[&]{if(!undos.isEmpty()){redos.append(p);p=undos.takeLast();refresh();}});
+    QObject::connect(redo,&QPushButton::clicked,&dialog,[&]{if(!redos.isEmpty()){undos.append(p);p=redos.takeLast();refresh();}});
+    QObject::connect(plane,&QComboBox::currentIndexChanged,&dialog,[&](int index){
+        SpatialPoint anchor;if(active<p.entities.size() && !p.entities[active].points.isEmpty())anchor=p.entities[active].points.last();
+        depth->setValue(index==1?anchor.z:index==2?anchor.y:index==3?anchor.x:0);configure();
+    });
+    QObject::connect(depth,&QDoubleSpinBox::valueChanged,&dialog,[&]{configure();});
+    QObject::connect(snap,&QCheckBox::toggled,&dialog,[&]{configure();});
+    auto *undoKey=new QShortcut(QKeySequence::Undo,&dialog),*redoKey=new QShortcut(QKeySequence::Redo,&dialog);
+    undoKey->setContext(Qt::WidgetWithChildrenShortcut);redoKey->setContext(Qt::WidgetWithChildrenShortcut);
+    QObject::connect(undoKey,&QShortcut::activated,undo,&QPushButton::click);QObject::connect(redoKey,&QShortcut::activated,redo,&QPushButton::click);
+    viewport->setSpatialEditHistory([&]{undo->click();},[&]{redo->click();});
+    refresh();draw->setChecked(true);
+    const bool accepted=runUntilAppliedModeless(window,viewport,dialog,form,buttons,[&]{
+        QString error;ForgeCad::buildSpatialSketch(p,&error);if(!error.isEmpty())return error;return apply(definition);
+    });
+    viewport->setSpatialDrawing({},{});viewport->setSpatialEditHistory({},{});scope.reset();return accepted;
+}
+
+static bool extractedCurveDialog(QMainWindow *window, CadViewport *viewport, const QString &title, int replaced,
+    const ExtrusionObject &initial, const std::function<QString(const ExtrusionObject &)> &apply) {
+    ExtrusionObject definition=initial;
+    definition.operation=-1;definition.feature=BodyFeature::ExtractedCurve;definition.sketchIndex=-1;
+    auto &p=definition.curveExtraction;
+    if(replaced<0) p.view=viewport->curveTrimView();
+    FunctionDialogPanel dialog(window);dialog.setObjectName(QStringLiteral("extractedCurveDialog"));dialog.setWindowTitle(title);dialog.setModal(false);
+    auto *form=dialog.createScrollableForm();
+    auto *sourceLabel=new QLabel(&dialog),*toolLabel=new QLabel(&dialog);
+    sourceLabel->setWordWrap(true);toolLabel->setWordWrap(true);
+    auto *sourceButton=new QPushButton(QStringLiteral("Scegli bordo o curva"),&dialog);
+    auto *toolButton=new QPushButton(QStringLiteral("Scegli segmento"),&dialog);
+    sourceButton->setObjectName(QStringLiteral("extractSourceButton"));toolButton->setObjectName(QStringLiteral("extractToolButton"));
+    sourceButton->setCheckable(true);toolButton->setCheckable(true);
+    auto *trimBox=new QCheckBox(QStringLiteral("Taglia la curva"),&dialog);trimBox->setChecked(p.trimmed);
+    auto *modeBox=new QComboBox(&dialog);modeBox->addItems({QStringLiteral("Intersezione reale 3D"),QStringLiteral("Proiezione nella vista salvata")});modeBox->setCurrentIndex(p.projected?1:0);
+    auto *viewButton=new QPushButton(QStringLiteral("Usa vista corrente"),&dialog);
+    auto *sideBox=new QComboBox(&dialog);sideBox->addItems({QStringLiteral("Mantieni dall'inizio al taglio"),QStringLiteral("Mantieni dal taglio alla fine")});sideBox->setCurrentIndex(p.keepStart?0:1);
+    auto *cutBox=new QComboBox(&dialog);cutBox->setObjectName(QStringLiteral("extractCutBox"));
+    form->addRow(QStringLiteral("Sorgente:"),sourceLabel);form->addRow(sourceButton);
+    form->addRow(trimBox);form->addRow(QStringLiteral("Segmento:"),toolLabel);form->addRow(toolButton);
+    form->addRow(QStringLiteral("Metodo:"),modeBox);form->addRow(viewButton);
+    form->addRow(QStringLiteral("Intersezione:"),cutBox);form->addRow(QStringLiteral("Parte:"),sideBox);
+    form->addRow(wrappedNote(QStringLiteral("La curva resta legata alla sorgente e conserva la sua forma 3D. "
+        "Il segmento e la vista del taglio vengono conservati per la rigenerazione."),&dialog));
+    auto *status=new QLabel(&dialog);status->setWordWrap(true);form->addRow(status);
+    auto *buttons=new QDialogButtonBox(QDialogButtonBox::Ok|QDialogButtonBox::Cancel,&dialog);form->addRow(buttons);
+    QObject::connect(buttons,&QDialogButtonBox::rejected,&dialog,&QDialog::reject);
+    auto scope=std::make_unique<PreviewScope>(viewport,dialog,form,replaced);
+    int picking=0;
+    const auto refresh=[&]{
+        sourceLabel->setText(p.source.kind<0 ? QStringLiteral("nessuna curva") : ForgeCad::geometryRefText(p.source,viewport->sketches(),viewport->extrusions()));
+        toolLabel->setText(p.tool.kind<0 ? QStringLiteral("nessun segmento") : ForgeCad::geometryRefText(p.tool,viewport->sketches(),viewport->extrusions()));
+        sourceButton->setChecked(picking==1);toolButton->setChecked(picking==2);
+        for(QWidget *w:QList<QWidget*>{toolButton,toolLabel,modeBox,cutBox,sideBox})w->setEnabled(p.trimmed);
+        viewButton->setEnabled(p.trimmed && p.projected);
+        viewport->setReferenceMarks(p.trimmed ? QVector<GeometryRef>{p.source,p.tool}:QVector<GeometryRef>{p.source});
+        if(p.source.kind<0 || (p.trimmed && p.tool.kind<0)){viewport->clearPreview();scope->label->setText(QStringLiteral("scegli i riferimenti"));return;}
+        scope->request(definition);
+    };
+    const auto updateCuts=[&]{
+        QVector<double> cuts;QString reason;
+        if(p.trimmed && p.source.kind>=0 && p.tool.kind>=0)
+            ForgeCad::extractCurves3D(p,replaced<0?viewport->extrusions().size():replaced,viewport->sketches(),viewport->extrusions(),&reason,&cuts);
+        const QSignalBlocker blocked(cutBox);cutBox->clear();
+        int selected=-1;double best=2;
+        for(int k=0;k<cuts.size();++k){
+            cutBox->addItem(QStringLiteral("Taglio %1").arg(k+1),cuts[k]);
+            if(std::fabs(cuts[k]-p.cutHint)<best){best=std::fabs(cuts[k]-p.cutHint);selected=k;}
+        }
+        if(selected>=0){cutBox->setCurrentIndex(selected);p.cutHint=cuts[selected];}
+        refresh();
+    };
+    const auto startPick=[&](int target){
+        if(picking==target){viewport->cancelReferencePick();picking=0;refresh();return;}
+        const QString error=viewport->beginReferencePick(ForgeCad::DatumRoleCurve|ForgeCad::DatumRoleLine,replaced);
+        picking=error.isEmpty()?target:0;status->setText(error);refresh();
+    };
+    viewport->setReferencePickCallback([&](bool picked,GeometryRef ref){
+        if(!picked){picking=0;refresh();return;}
+        if(!picking)return;
+        std::vector<ForgeCad::Kernel::PathSegment> path;QString reason;
+        if(!ForgeCad::geometryRefPath(ref,replaced<0?viewport->extrusions().size():replaced,viewport->sketches(),viewport->extrusions(),path,&reason)){
+            status->setText(reason);return;
+        }
+        if(picking==1)p.source=ref;else p.tool=ref;
+        viewport->cancelReferencePick();picking=0;status->clear();updateCuts();
+    });
+    QObject::connect(sourceButton,&QPushButton::clicked,&dialog,[&]{startPick(1);});
+    QObject::connect(toolButton,&QPushButton::clicked,&dialog,[&]{startPick(2);});
+    QObject::connect(trimBox,&QCheckBox::toggled,&dialog,[&](bool value){p.trimmed=value;updateCuts();});
+    QObject::connect(modeBox,&QComboBox::currentIndexChanged,&dialog,[&](int index){p.projected=index==1;if(p.projected)p.view=viewport->curveTrimView();updateCuts();});
+    QObject::connect(viewButton,&QPushButton::clicked,&dialog,[&]{p.view=viewport->curveTrimView();updateCuts();});
+    QObject::connect(sideBox,&QComboBox::currentIndexChanged,&dialog,[&](int index){p.keepStart=index==0;refresh();});
+    QObject::connect(cutBox,&QComboBox::currentIndexChanged,&dialog,[&](int index){if(index>=0)p.cutHint=cutBox->itemData(index).toDouble();refresh();});
+    if(p.source.kind<0)QTimer::singleShot(0,&dialog,[&]{startPick(1);});
+    updateCuts();
+    const bool accepted=runUntilAppliedModeless(window,viewport,dialog,form,buttons,[&]{
+        if(p.source.kind<0)return QStringLiteral("Scegli il bordo o la curva sorgente.");
+        if(p.trimmed && p.tool.kind<0)return QStringLiteral("Scegli il segmento di taglio.");
+        return apply(definition);
+    });
+    viewport->cancelReferencePick();viewport->setReferencePickCallback(nullptr);viewport->setReferenceMarks({});scope.reset();
+    return accepted;
+}
+
 // Superficie rigata (nuova, o al posto del corpo `replaced`) tra due catene di
 // curve scelte nella vista. Finestra non modale come l'offset; anteprima in ambra.
 static bool ruledDialog(QMainWindow *window, CadViewport *viewport, const QString &title, int replaced, const ExtrusionObject &initial,
@@ -19481,6 +19851,12 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
             draftDialog(this, viewport, QStringLiteral("Modifica sformo"), index, original, [&](const ExtrusionObject &values) { return update(values); });
         } else if (original.feature == BodyFeature::Thicken) {
             thickenDialog(this, viewport, QStringLiteral("Modifica spessore"), index, original, [&](const ExtrusionObject &values) { return update(values); });
+        } else if (original.feature == BodyFeature::SpatialSketch) {
+            spatialSketchDialog(this,viewport,QStringLiteral("Modifica schizzo 3D"),index,original,
+                [viewport,index](const ExtrusionObject &d){return viewport->updateBody(index,d);});
+        } else if (original.feature == BodyFeature::ExtractedCurve) {
+            extractedCurveDialog(this, viewport, QStringLiteral("Modifica curva estratta 3D"), index, original,
+                                 [&](const ExtrusionObject &values) { return update(values); });
         } else if (original.feature == BodyFeature::ProjectedCurve) {
             projectionDialog(this, viewport, QStringLiteral("Modifica curva proiettata"), index, original,
                              [&](const ExtrusionObject &values) { return update(values); });
@@ -20214,6 +20590,10 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
                                                  "curvatura le facce adiacenti"));
     QAction *thickenAction = surfaceMenu->addAction(QStringLiteral("Spessore..."));
     thickenAction->setToolTip(QStringLiteral("Da' spessore a una superficie (o a facce scelte) lungo la normale o lungo una direzione scelta"));
+    QAction *extractedCurveAction = surfaceMenu->addAction(QStringLiteral("Estrai bordo 3D..."));
+    extractedCurveAction->setToolTip(QStringLiteral("Curva esatta associativa dal bordo originale, senza proiezione su un piano"));
+    QAction *trimCurve3DAction = surfaceMenu->addAction(QStringLiteral("Taglia curva 3D..."));
+    trimCurve3DAction->setToolTip(QStringLiteral("Taglia una curva con un segmento mantenendo il legame con la sorgente"));
     QAction *projectedCurveAction = surfaceMenu->addAction(QStringLiteral("Curva proiettata..."));
     projectedCurveAction->setToolTip(QStringLiteral("Curve 3D: lo schizzo proiettato lungo la normale del suo piano sulla prima faccia del corpo"));
     QAction *planarSurfaceAction = surfaceMenu->addAction(QStringLiteral("Superficie planare..."));
@@ -21007,6 +21387,25 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
             return viewport->createBody(result);
         });
     });
+    const auto createExtractedCurve = [this, viewport](bool trim) {
+        if (viewport->sketchModeActive()) viewport->endSketchMode();
+        ExtrusionObject definition; definition.feature=BodyFeature::ExtractedCurve; definition.sketchIndex=-1;
+        definition.curveExtraction.trimmed=trim; definition.curveExtraction.projected=true;
+        const auto selection=viewport->selection();
+        if(selection.kind==SceneObjectKind::Extrusion && selection.index>=0 && selection.index<viewport->extrusions().size()
+            && ForgeCad::isCurveBody(viewport->extrusions().at(selection.index))) {
+            auto &source=definition.curveExtraction.source;source.kind=9;source.index=selection.index;
+            source.featureId=viewport->extrusions().at(selection.index).featureId;
+        }
+        extractedCurveDialog(this,viewport,trim?QStringLiteral("Taglia curva 3D"):QStringLiteral("Estrai bordo 3D"),-1,definition,[viewport,trim](const ExtrusionObject &d){
+            auto result=d;int count=1;
+            for(const auto &body:viewport->extrusions()) count+=body.feature==BodyFeature::ExtractedCurve?1:0;
+            result.name=QStringLiteral("%1 %2").arg(trim?QStringLiteral("Curva tagliata 3D"):QStringLiteral("Curva estratta 3D")).arg(count);
+            return viewport->createBody(result);
+        });
+    };
+    connect(extractedCurveAction,&QAction::triggered,this,[createExtractedCurve]{createExtractedCurve(false);});
+    connect(trimCurve3DAction,&QAction::triggered,this,[createExtractedCurve]{createExtractedCurve(true);});
     connect(projectedCurveAction, &QAction::triggered, this, [this, viewport] {
         if (viewport->sketchModeActive()) viewport->endSketchMode();
         ExtrusionObject definition;
@@ -21326,6 +21725,16 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
     });
     auto *sketchMenu = menuBar()->addMenu(QStringLiteral("Schizzo"));
     QAction *newSketchAction = sketchMenu->addAction(QStringLiteral("Nuovo schizzo..."));
+    QAction *spatialSketchAction=sketchMenu->addAction(QStringLiteral("Nuovo schizzo 3D..."));
+    spatialSketchAction->setToolTip(QStringLiteral("Disegna polilinee e spline nello spazio con punti XYZ liberi"));
+    connect(spatialSketchAction,&QAction::triggered,this,[this,viewport]{
+        if(viewport->sketchModeActive())viewport->endSketchMode();
+        ExtrusionObject definition;definition.feature=BodyFeature::SpatialSketch;
+        spatialSketchDialog(this,viewport,QStringLiteral("Nuovo schizzo 3D"),-1,definition,[viewport](const ExtrusionObject &d){
+            auto result=d;int count=1;for(const auto &b:viewport->extrusions())count+=b.feature==BodyFeature::SpatialSketch?1:0;
+            result.name=QStringLiteral("Schizzo 3D %1").arg(count);return viewport->createBody(result);
+        });
+    });
     QAction *faceSketchAction = sketchMenu->addAction(QStringLiteral("Nuovo schizzo sulla faccia selezionata"));
     faceSketchAction->setToolTip(QStringLiteral("Clic su una faccia piana di un corpo, poi questo comando (anche dal menu contestuale della faccia)"));
     connect(faceSketchAction, &QAction::triggered, this, [this, viewport] {
@@ -21758,9 +22167,9 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
         {newAction, QStringLiteral("new")}, {openAction, QStringLiteral("open")}, {saveAction, QStringLiteral("save")},
         {undoAction_, QStringLiteral("undo")}, {redoAction_, QStringLiteral("redo")}, {deleteAction, QStringLiteral("delete")},
         {rebuildAction, QStringLiteral("rebuild")},
-        {newSketchAction, QStringLiteral("newSketch")}, {faceSketchAction, QStringLiteral("faceSketch")},
+        {newSketchAction, QStringLiteral("newSketch")}, {spatialSketchAction, QStringLiteral("newSketch")}, {faceSketchAction, QStringLiteral("faceSketch")},
         {extrudeAction, QStringLiteral("extrude")}, {revolveAction, QStringLiteral("revolve")},
-        {filletAction, QStringLiteral("fillet")}, {chamferAction, QStringLiteral("chamfer")}, {draftAction, QStringLiteral("draft")}, {thickenAction, QStringLiteral("thicken")}, {projectedCurveAction, QStringLiteral("projectedCurve")}, {shellAction, QStringLiteral("shell")}, {threadAction, QStringLiteral("thread")},
+        {filletAction, QStringLiteral("fillet")}, {chamferAction, QStringLiteral("chamfer")}, {draftAction, QStringLiteral("draft")}, {thickenAction, QStringLiteral("thicken")}, {projectedCurveAction, QStringLiteral("projectedCurve")}, {extractedCurveAction, QStringLiteral("convertEdges")}, {trimCurve3DAction, QStringLiteral("trim")}, {shellAction, QStringLiteral("shell")}, {threadAction, QStringLiteral("thread")},
         {trimSurfaceAction, QStringLiteral("trimSurface")}, {extendSurfaceAction, QStringLiteral("extendSurface")},
         {offsetSurfaceAction, QStringLiteral("offsetSurface")}, {sewSurfacesAction, QStringLiteral("sewSurfaces")},
         {deleteFaceAction, QStringLiteral("deleteFace")}, {boundarySurfaceAction, QStringLiteral("boundarySurface")}, {fillSurfaceAction, QStringLiteral("fillSurface")},
@@ -21864,7 +22273,7 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
     toolbar->addAction(undoAction_); toolbar->addAction(redoAction_); toolbar->addAction(deleteAction); toolbar->addAction(rebuildAction);
     toolbar->addSeparator();
     toolbar->addAction(importAction); toolbar->addSeparator();
-    toolbar->addAction(newSketchAction); toolbar->addAction(faceSketchAction); toolbar->addAction(datumAction); toolbar->addSeparator();
+    toolbar->addAction(newSketchAction); toolbar->addAction(spatialSketchAction); toolbar->addAction(faceSketchAction); toolbar->addAction(datumAction); toolbar->addSeparator();
     toolbar->addAction(extrudeAction); toolbar->addAction(revolveAction);
     flyout(toolbar, primitiveActions, QStringLiteral("Primitive: la freccia per le altre"));
     toolbar->addAction(filletAction); toolbar->addAction(chamferAction); toolbar->addAction(draftAction); toolbar->addAction(shellAction); toolbar->addAction(threadAction);
@@ -21901,6 +22310,8 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
     for (QAction *action : {ruledSurfaceAction, boundarySurfaceAction, fillSurfaceAction, planarSurfaceAction, loftSurfaceAction, sweepSurfaceAction})
         surfaceToolbar->addAction(action);
     surfaceToolbar->addSeparator();
+    surfaceToolbar->addAction(extractedCurveAction);
+    surfaceToolbar->addAction(trimCurve3DAction);
     surfaceToolbar->addAction(projectedCurveAction);
     // Barra personalizzata: i comandi scelti in Opzioni -> Personalizza barra
     // degli strumenti (chiavi "Menu/Sottomenu/Comando" in QSettings).
@@ -22747,6 +23158,12 @@ void PdfWindow::rebuildModelTree() {
                 static const char *sides[] = {"nel verso", "nel verso opposto", "meta' per parte"};
                 item->setToolTip(0, QStringLiteral("Spessore %1 %2 lungo %3").arg(ForgeCad::formatLength(body.distance), QString::fromLatin1(sides[qBound(0, body.thickenSide, 2)]),
                     body.thickenDirection.kind < 0 ? QStringLiteral("la normale") : ForgeCad::geometryRefText(body.thickenDirection, sketches, extrusions)));
+            } else if (body.feature == BodyFeature::SpatialSketch) {
+                item->setToolTip(0,QStringLiteral("Schizzo 3D libero: %1 entita'").arg(body.spatialSketch.entities.size()));
+            } else if (body.feature == BodyFeature::ExtractedCurve) {
+                item->setToolTip(0, QStringLiteral("Curva 3D associativa da %1%2").arg(
+                    ForgeCad::geometryRefText(body.curveExtraction.source, sketches, extrusions),
+                    body.curveExtraction.trimmed ? QStringLiteral("; taglio tramite segmento") : QString()));
             } else if (body.feature == BodyFeature::ProjectedCurve) {
                 item->setToolTip(0, QStringLiteral("Proiezione di %1 su %2%3").arg(sketches.value(body.sketchIndex).name, extrusions.value(body.firstBody).name,
                                                                                     body.notice.isEmpty() ? QString() : QStringLiteral("\n") + body.notice));
@@ -22859,7 +23276,7 @@ void PdfWindow::rebuildModelTree() {
                                || body.feature == BodyFeature::DeleteFace || body.feature == BodyFeature::BoundarySurface
                                || body.feature == BodyFeature::FillSurface
                                || body.feature == BodyFeature::Draft || body.feature == BodyFeature::Shell || body.feature == BodyFeature::Thread
-                               || body.feature == BodyFeature::ProjectedCurve || body.feature == BodyFeature::Thicken;
+                               || body.feature == BodyFeature::ProjectedCurve || body.feature == BodyFeature::Thicken || body.feature == BodyFeature::ExtractedCurve || body.feature == BodyFeature::SpatialSketch;
         if (body.operation < 0 && withChildren) {
             QStringList children;
             if (body.feature == BodyFeature::SurfaceOffset) {
@@ -22874,6 +23291,15 @@ void PdfWindow::rebuildModelTree() {
                                                                    : ForgeCad::geometryRefText(body.thickenDirection, sketches, extrusions)));
                 static const char *sides[] = {"nel verso", "nel verso opposto", "meta' per parte"};
                 children.append(QStringLiteral("Lato: ") + QString::fromLatin1(sides[qBound(0, body.thickenSide, 2)]));
+            } else if (body.feature == BodyFeature::SpatialSketch) {
+                for(const auto &e:body.spatialSketch.entities)children.append(QStringLiteral("%1 %2: %3 punti%4").arg(e.spline?QStringLiteral("Spline"):QStringLiteral("Polilinea")).arg(e.id).arg(e.points.size()).arg(e.closed?QStringLiteral(" (chiusa)"):QString()));
+            } else if (body.feature == BodyFeature::ExtractedCurve) {
+                children.append(QStringLiteral("Sorgente: ") + ForgeCad::geometryRefText(body.curveExtraction.source, sketches, extrusions));
+                if (body.curveExtraction.trimmed) {
+                    children.append(QStringLiteral("Segmento: ") + ForgeCad::geometryRefText(body.curveExtraction.tool, sketches, extrusions));
+                    children.append(body.curveExtraction.projected ? QStringLiteral("Taglio: vista salvata") : QStringLiteral("Taglio: intersezione 3D"));
+                    children.append(body.curveExtraction.keepStart ? QStringLiteral("Parte: inizio") : QStringLiteral("Parte: fine"));
+                }
             } else if (body.feature == BodyFeature::ProjectedCurve) {
                 children.append(QStringLiteral("Corpo: ") + extrusions.value(body.firstBody).name);
                 children.append(QStringLiteral("Schizzo: ") + sketches.value(body.sketchIndex).name);

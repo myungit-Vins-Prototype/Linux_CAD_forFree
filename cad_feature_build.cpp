@@ -1,4 +1,6 @@
 #include "cad_feature_build.h"
+#include "cad_curve_extract.h"
+#include "cad_spatial_sketch.h"
 #include "cad_feature_dependencies.h"
 #include "cad_constraints.h"
 #include "cad_cuda_tessellation.h"
@@ -185,6 +187,16 @@ void buildGeometry(ExtrusionObject &body, int index, const QVector<SketchObject>
             }
             body.forgeBody = ForgeCad::forgeThicken(base->forgeBody, body.offsetFaces, body.distance, body.thickenSide, along, &body.error);
             body.solid = body.forgeBody && !body.forgeBody->isSheet();
+            return;
+        }
+        case BodyFeature::SpatialSketch: {
+            body.curves=buildSpatialSketch(body.spatialSketch,&body.error);
+            if(!body.curves.isEmpty())body.curve=body.curves.first();
+            return;
+        }
+        case BodyFeature::ExtractedCurve: {
+            body.curves = extractCurves3D(body.curveExtraction, index, sketches, bodies, &body.error);
+            if (!body.curves.isEmpty()) body.curve = body.curves.first();
             return;
         }
         case BodyFeature::ProjectedCurve: {

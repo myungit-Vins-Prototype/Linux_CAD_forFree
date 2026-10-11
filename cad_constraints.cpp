@@ -56,6 +56,17 @@ Shape shapeOf(const SketchObject &sketch, const ConstraintRef &ref) {
     }
 }
 
+// Una maniglia resta un punto per coincidenza e distanze, ma offre anche
+// la direzione dal nodo al punto maniglia per tangenze e quote angolari.
+bool handleDirection(const SketchObject &sketch, const ConstraintRef &ref) {
+    return ref.kind == 1 && isHandlePoint(ref.point) && shapeOf(sketch, ref) == Shape::Point;
+}
+bool directionReference(const SketchObject &sketch, const ConstraintRef &ref) {
+    const Shape shape = shapeOf(sketch, ref);
+    return shape == Shape::Line || shape == Shape::Curve || shape == Shape::Circle || shape == Shape::Ellipse
+        || handleDirection(sketch, ref);
+}
+
 // Coordinate delle incognite in un vettore (x0, y0, x1, y1...): prima gli
 // estremi dei segmenti, poi i punti di controllo delle curve (i "punti veri"),
 // poi le maniglie delle spline come scarti dal loro punto (spostando il punto
@@ -164,6 +175,11 @@ public:
         if (ref.kind == 2) {
             a = QPointF(0.0, 0.0);
             b = ref.element == 1 ? QPointF(1.0, 0.0) : QPointF(0.0, 1.0);
+            return;
+        }
+        if (handleIndex(ref) >= 0) {
+            a = point(curvePoint(ref.element, (ref.point - kHandlePoint) / 2));
+            b = refPoint(ref);
             return;
         }
         a = point(segmentBase_.at(ref.element));
@@ -334,6 +350,27 @@ bool curveFoot(const Geometry &geometry, const QPointF &p, QPointF &foot, QPoint
         tangent = QPointF(d.x(), d.y());
     }
     return std::isfinite(best);
+}
+
+// Su una curva di riferimento usa la tangente nel piede del nodo della
+// maniglia. La posizione del nodo si vincola separatamente (coincidenza/Pierce).
+bool directionLines(const System &s, const SketchConstraint &c, QPointF &p0, QPointF &p1, QPointF &q0, QPointF &q1) {
+    QPointF anchor;
+    const auto &sketch = s.sketch();
+    for (const auto &r : {c.first, c.second})
+        if (handleDirection(sketch, r))
+            anchor = s.refPoint({1, r.element, (r.point - kHandlePoint) / 2});
+    const auto resolve = [&](const ConstraintRef &r, QPointF &a, QPointF &b) {
+        if (shapeOf(sketch, r) == Shape::Line || handleDirection(sketch, r)) {
+            s.line(r, a, b);
+            return length(b - a) > 1e-12;
+        }
+        QPointF tangent;
+        if (!curveFoot(s.geometry(r.element), anchor, a, tangent) || length(tangent) < 1e-12) return false;
+        b = a + tangent / length(tangent);
+        return true;
+    };
+    return resolve(c.first, p0, p1) && resolve(c.second, q0, q1);
 }
 
 // Distanza con segno di p dalla curva (positiva a sinistra della tangente nel piede).
@@ -684,6 +721,14 @@ void equations(const System &s, const SketchConstraint &c, QVector<double> &out,
         return;
     }
     case ConstraintType::Tangent: {
+        if (handleDirection(sketch, c.first) || handleDirection(sketch, c.second)) {
+            QPointF p0, p1, q0, q1;
+            if (!directionLines(s, c, p0, p1, q0, q1)) { out << 1.0; return; }
+            const QPointF d = p1 - p0, e = q1 - q0;
+            const double angle = std::atan2(cross(d, e), dot(d, e));
+            out << wrapAngle(angle - (c.value < 0 ? kPi : 0.0));
+            return;
+        }
         const TangentContact found = contact ? *contact : tangentContact(sketch, c);
         if (a == Shape::Curve || b == Shape::Curve) {
             if (found.found) {
@@ -794,8 +839,7 @@ void equations(const System &s, const SketchConstraint &c, QVector<double> &out,
     }
     case ConstraintType::Angle: {
         QPointF p0, p1, q0, q1;
-        lineOf(c.first, p0, p1);
-        lineOf(c.second, q0, q1);
+        if (!directionLines(s, c, p0, p1, q0, q1)) { out << 1.0; return; }
         QPointF d = p1 - p0, e = q1 - q0;
         sectorDirections(c, d, e);
         const double angle = std::atan2(cross(d, e), dot(d, e));
@@ -1097,6 +1141,24 @@ QVector<ConstraintType> applicableConstraints(const SketchObject &sketch, const 
     // Gli estremi distinti di una spline possono coincidere per chiuderla;
     // sugli altri punti della stessa entita' si evita una degenerazione.
     const bool sameEntity = refs.at(0).kind == refs.at(1).kind && refs.at(0).element == refs.at(1).element && refs.at(0).kind != 2;
+    if ((handleDirection(sketch, refs.at(0)) || handleDirection(sketch, refs.at(1)))
+        && directionReference(sketch, refs.at(0)) && directionReference(sketch, refs.at(1))) {
+        if (sameEntity && (a != Shape::Point || b != Shape::Point)) return {};
+        QVector<T> result{T::Tangent, T::Angle};
+        // Conserva i vincoli dei punti quando entrambe sono maniglie.
+        if (a == Shape::Point && b == Shape::Point)
+            result << T::Horizontal << T::Vertical << T::Distance << T::HorizontalDistance << T::VerticalDistance;
+        else if (b == Shape::Line) {
+            result << T::PointOnCurve << T::Distance;
+            if (refs.at(1).kind == 0) result << T::Midpoint;
+            if (isAxisReference(sketch, refs.at(1))) result << T::AxisRadius << T::AxisDiameter;
+        } else {
+            result << T::PointOnCurve;
+            if (b == Shape::Circle && !curveQuadrants(sketch.curves.at(refs.at(1).element)).isEmpty()) result << T::Quadrant;
+        }
+        if (a == Shape::Point && b == Shape::Point && !sameEntity) result << T::Coincident;
+        return result;
+    }
     if (a == Shape::Point && b == Shape::Point) {
         if (sameEntity && refs.at(0).kind == 1) {
             const auto &curve = sketch.curves.at(refs.at(0).element);
@@ -1189,6 +1251,11 @@ SketchConstraint makeConstraint(const SketchObject &sketch, ConstraintType type,
             const double distance = length(s.refPoint(c.first) - q.second);
             if (distance < best) { best = distance; c.value = q.first; }
         }
+    } else if (type == ConstraintType::Tangent && (handleDirection(sketch, c.first) || handleDirection(sketch, c.second))) {
+        const System s(sketch);
+        QPointF p0, p1, q0, q1;
+        if (directionLines(s, c, p0, p1, q0, q1))
+            c.value = dot(p1 - p0, q1 - q0) < 0 ? -1.0 : 1.0;
     } else if (type == ConstraintType::Fix) {
         const System s(sketch);
         for (const ConstraintRef &point : s.entityPoints(c.first)) c.positions.append(s.refPoint(point));
@@ -1200,6 +1267,7 @@ SketchConstraint makeConstraint(const SketchObject &sketch, ConstraintType type,
         s.circle(c.second, c2, r2);
         c.value = length(c1 - c2) < std::max(r1, r2) ? 1.0 : 0.0;
     } else if (type == ConstraintType::Tangent && (shapeOf(sketch, c.first) == Shape::Curve || shapeOf(sketch, c.second) == Shape::Curve)
+               && !handleDirection(sketch, c.first) && !handleDirection(sketch, c.second)
                && !tangentContact(sketch, c).found) {
         // Da che parte della retta o del cerchio sta la curva: quella dove e' piu' vicina.
         const System s(sketch);
@@ -1237,8 +1305,7 @@ double currentMeasure(const SketchObject &sketch, const SketchConstraint &constr
     if (r.isEmpty()) return 0.0;
     if (constraint.type == ConstraintType::Angle) {
         QPointF p0, p1, q0, q1;
-        s.line(constraint.first, p0, p1);
-        s.line(constraint.second, q0, q1);
+        if (!directionLines(s, constraint, p0, p1, q0, q1)) return 0.0;
         QPointF d = p1 - p0, e = q1 - q0;
         sectorDirections(constraint, d, e);
         return std::atan2(cross(d, e), dot(d, e)) * 180.0 / kPi;
@@ -1553,6 +1620,12 @@ QVector<Block> buildBlocks(const System &system, const SketchObject &sketch, con
                         usedHandles << QPair<int, int>{r.element, 2 * r.point} << QPair<int, int>{r.element, 2 * r.point + 1};
             }
         }
+        // Un vincolo direzionale libera anche la maniglia opposta collegata:
+        // fissarla come gauge impedirebbe di ruotare la tangente comune.
+        const auto explicitlyUsed = usedHandles;
+        for (const auto &h : explicitlyUsed)
+            if (sketch.curves.at(h.first).tangentLinked.value(h.second / 2))
+                usedHandles.insert({h.first, h.second ^ 1});
         for (int curve = 0; curve < sketch.curves.size(); ++curve) {
             const int base = system.handleBase(curve);
             if (base < 0 || copies.contains(curve)) continue;
@@ -1692,11 +1765,9 @@ bool dimensionPoints(const SketchObject &sketch, const SketchConstraint &c, QPoi
 }
 
 bool constraintLines(const SketchObject &sketch, const SketchConstraint &c, QPointF &p0, QPointF &p1, QPointF &q0, QPointF &q1) {
-    if (!wellFormed(sketch, c) || shapeOf(sketch, c.first) != Shape::Line || shapeOf(sketch, c.second) != Shape::Line) return false;
+    if (!wellFormed(sketch, c) || !directionReference(sketch, c.first) || !directionReference(sketch, c.second)) return false;
     const System s(sketch);
-    s.line(c.first, p0, p1);
-    s.line(c.second, q0, q1);
-    return true;
+    return directionLines(s, c, p0, p1, q0, q1);
 }
 
 bool circleOf(const SketchObject &sketch, const ConstraintRef &ref, QPointF &center, double &radius) {

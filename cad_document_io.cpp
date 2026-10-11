@@ -7,6 +7,7 @@
 #include <vector>
 
 #include <QBuffer>
+#include <QSet>
 #include <QCryptographicHash>
 #include <QDataStream>
 #include <QFile>
@@ -60,7 +61,10 @@ constexpr char kMagic[4] = {'F', 'C', 'A', 'D'};
 // 39 spessore delle superfici (lato e direzione).
 // 40 facce adiacenti e continuita' dei profili per loft e superficie rigata.
 // 41 vincolo Pierce associativo a una faccia esterna.
-constexpr quint16 kVersion = 43;
+// 42 sezioni e guide loft da bordi; 43 ordine delle guide.
+// 44 estrazione associativa di curve 3D, segmento e vista salvata del taglio.
+// 45 schizzi spaziali con entita' e punti XYZ in double.
+constexpr quint16 kVersion = 45;
 constexpr quint8 kZlib = 1;
 
 void write(QDataStream &out, const CurveObject &curve) {
@@ -401,6 +405,17 @@ void write(QDataStream &out, const ExtrusionObject &body) {
     writeRefs(out, body.loftEdgeGuides);
     out << quint32(body.loftGuideOrder.size());
     for (int index : body.loftGuideOrder) out << qint32(index);
+    const auto &c = body.curveExtraction;
+    writeRefs(out, {c.source, c.tool});
+    out << c.trimmed << c.projected << c.keepStart << c.cutHint;
+    for (double v : c.view.origin) out << v;
+    for (double v : c.view.normal) out << v;
+    for (double v : c.view.xAxis) out << v;
+    out << qint32(body.spatialSketch.nextId) << quint32(body.spatialSketch.entities.size());
+    for(const auto &entity:body.spatialSketch.entities) {
+        out << qint32(entity.id) << entity.spline << entity.closed << quint32(entity.points.size());
+        for(const auto &point:entity.points)out << point.x << point.y << point.z;
+    }
 }
 
 // `extras` (solo formato 5): i file scritti durante lo sviluppo del formato 5
@@ -650,7 +665,35 @@ bool read(QDataStream &in, ExtrusionObject &body, quint16 version, int extras) {
             seen[index] = true; body.loftGuideOrder.append(index);
         }
     }
-    const BodyFeature last = version >= 39 ? BodyFeature::Thicken : version >= 38 ? BodyFeature::ProjectedCurve : version >= 36 ? BodyFeature::Draft : version >= 35 ? BodyFeature::FillSurface : version >= 27 ? BodyFeature::Thread : version >= 25 ? BodyFeature::Shell : BodyFeature::PlanarSurface;
+    if (version >= 44) {
+        auto &c = body.curveExtraction;
+        QVector<GeometryRef> refs;
+        if (!readRefs(in, refs, version) || refs.size() != 2) return false;
+        c.source = refs[0]; c.tool = refs[1];
+        in >> c.trimmed >> c.projected >> c.keepStart >> c.cutHint;
+        if (!std::isfinite(c.cutHint) || c.cutHint < 0 || c.cutHint > 1) return false;
+        for (double &v : c.view.origin) { in >> v; if (!std::isfinite(v)) return false; }
+        for (double &v : c.view.normal) { in >> v; if (!std::isfinite(v)) return false; }
+        for (double &v : c.view.xAxis) { in >> v; if (!std::isfinite(v)) return false; }
+    }
+    if(version>=45) {
+        qint32 next;quint32 count;
+        in >> next;if(next<1 || !readCount(in,count))return false;
+        body.spatialSketch.nextId=next;QSet<int> ids;
+        for(quint32 k=0;k<count;++k) {
+            SpatialCurve3D entity;qint32 id;quint32 points;
+            in >> id >> entity.spline >> entity.closed;
+            if(id<=0 || id>=next || ids.contains(id) || !readCount(in,points))return false;
+            ids.insert(id);entity.id=id;
+            for(quint32 j=0;j<points;++j) {
+                SpatialPoint point;in >> point.x >> point.y >> point.z;
+                if(!std::isfinite(point.x) || !std::isfinite(point.y) || !std::isfinite(point.z))return false;
+                entity.points.append(point);
+            }
+            body.spatialSketch.entities.append(entity);
+        }
+    }
+    const BodyFeature last = version >= 45 ? BodyFeature::SpatialSketch : version >= 44 ? BodyFeature::ExtractedCurve : version >= 39 ? BodyFeature::Thicken : version >= 38 ? BodyFeature::ProjectedCurve : version >= 36 ? BodyFeature::Draft : version >= 35 ? BodyFeature::FillSurface : version >= 27 ? BodyFeature::Thread : version >= 25 ? BodyFeature::Shell : BodyFeature::PlanarSurface;
     if (int(body.feature) < 0 || int(body.feature) > int(last)) return false;
     return in.status() == QDataStream::Ok;
 }

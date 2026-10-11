@@ -10,6 +10,7 @@
 #include "fk_surface_algo.h"
 #include "fk_bspline_surface.h"
 #include "fk_loft.h"
+#include "fk_nurbs.h"
 #include "fk_mass.h"
 #include "fk_offset.h"
 #include "fk_tessellate.h"
@@ -472,6 +473,76 @@ FK_TEST(LoftMultipleGuidesDoNotCreateRibbons) {
             FK_CHECK(norm(cross(normalAt(a,0.95,v),normalAt(a,0.5,v)))<1e-5);
         }
         if(contact) for(FaceId f:body.faces()) for(double u:{0.1,0.5,0.9})
+            FK_CHECK(std::fabs(normalAt(*body.face(f).surface,u,reverse?1:0).z())>1-1e-4);
+    }
+}
+
+
+FK_TEST(LoftFollowsEntireCircularGuides) {
+    const auto line=[](Vec3 a,Vec3 b)->PathSegment {return {std::make_shared<Line<3>>(a,normalized(b-a)),{0,distance(a,b)}};};
+    LoftSection first,last;
+    first.path={line({0,0,0},{10,0,0})};last.path={line({0,10,10},{10,10,10})};
+    auto neighbor=std::make_shared<const Body>(ruledSurface({line({0,-5,0},{10,-5,0})},first.path));
+    for(bool reverse:{false,true}) for(int continuity:{1,2}) for(bool rational:{false,true}) for(bool middle:{false,true}) {
+        LoftOptions options;options.guideContinuity=continuity;
+        for(double x:{0.0,5.0,10.0}) {
+            auto curve=std::make_shared<Circle<3>>(Vec3(x,0,10),Vec3(0,1,0),Vec3(0,0,1),10);
+            if(rational) {
+                auto nurbs=std::make_shared<BSplineCurve<3>>(toBSpline(*curve,-kPi/2,0));
+                options.guides.push_back({{nurbs,nurbs->domain()}});
+            } else options.guides.push_back({{curve,{-kPi/2,0}}});
+        }
+        if(reverse) {options.endContinuity=1;options.endFaces={{neighbor,neighbor->faces().front()}};}
+        else {options.startContinuity=1;options.startFaces={{neighbor,neighbor->faces().front()}};}
+        std::vector<LoftSection> sections{first};
+        if(middle) {
+            const double y=10/std::sqrt(2.0),z=10-y;
+            LoftSection mid;mid.path={line({0,y,z},{10,y,z})};sections.push_back(mid);
+        }
+        sections.push_back(last);if(reverse)std::reverse(sections.begin(),sections.end());
+        const Body body=loftSheet(sections,options);
+        FK_CHECK(checkBody(body).empty());
+        FK_CHECK(body.faces().size()==2);
+        for(const auto &guide:options.guides) {
+            const auto &original=guide.front();
+            EdgeId edge;
+            for(EdgeId id:body.edges()) {
+                const auto &e=body.edge(id);
+                if(distance(e.curve->point(e.range.lo),original.curve->point(original.range.lo))<1e-7
+                    && distance(e.curve->point(e.range.hi),original.curve->point(original.range.hi))<1e-7) edge=id;
+                if(distance(e.curve->point(e.range.hi),original.curve->point(original.range.lo))<1e-7
+                    && distance(e.curve->point(e.range.lo),original.curve->point(original.range.hi))<1e-7) edge=id;
+            }
+            FK_CHECK(edge.valid());if(!edge.valid())continue;
+            const auto &e=body.edge(edge);
+            for(int k=0;k<=128;++k) {
+                const Vec3 p=e.curve->point(e.range.lo+e.range.length()*k/128.0);
+                FK_CHECK(projectPoint(*original.curve,p,original.range).distance<1e-8);
+                if(continuity==2 && (k==0 || k==128)) {
+                    const double t=e.range.lo+e.range.length()*k/128.0;
+                    const double u=projectPoint(*original.curve,p,original.range).parameter;
+                    const auto curvature=[](const Curve<3> &c,double at) {
+                        const Vec3 d1=c.derivative(at),d2=c.derivative(at,2),tangent=normalized(d1);
+                        return (d2-dot(d2,tangent)*tangent)/dot(d1,d1);
+                    };
+                    FK_CHECK(norm(curvature(*e.curve,t)-curvature(*original.curve,u))<1e-7);
+                }
+                const Vec3 q=original.curve->point(original.range.lo+original.range.length()*k/128.0);
+                FK_CHECK(projectPoint(*e.curve,q,e.range).distance<1e-8);
+            }
+        }
+        const auto &a=*body.face(body.faces()[0]).surface,&b=*body.face(body.faces()[1]).surface;
+        for(int k=1;k<40;++k) {
+            const double v=k/40.0;
+            FK_CHECK(distance(a.point(1,v),b.point(0,v))<1e-8);
+            FK_CHECK(norm(cross(normalAt(a,1,v),normalAt(b,0,v)))<1e-6);
+        }
+        if(middle) for(FaceId f:body.faces()) for(double u:{0.1,0.5,0.9}) {
+            const auto &surface=*body.face(f).surface;
+            FK_CHECK_NEAR(surface.point(u,0.5).y(),10/std::sqrt(2.0),1e-8);
+            FK_CHECK_NEAR(surface.point(u,0.5).z(),10-10/std::sqrt(2.0),1e-8);
+        }
+        for(FaceId f:body.faces()) for(double u:{0.1,0.5,0.9})
             FK_CHECK(std::fabs(normalAt(*body.face(f).surface,u,reverse?1:0).z())>1-1e-4);
     }
 }

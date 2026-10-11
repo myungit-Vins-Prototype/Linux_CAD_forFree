@@ -50,8 +50,11 @@ struct LoftContact {
 
 // Una guida e' una catena 3D che deve attraversare una volta ogni sezione.
 // La prima guida fissa la cucitura/corrispondenza dei contorni chiusi; le
-// altre sono validate come riferimenti trasversali e saranno usate dalle
-// condizioni di forma del loft liscio.
+// altre fissano ulteriori righe longitudinali. Il loft liscio con G1/G2 e
+// influenza 1 segue tutta la guida entro 1e-9 mm (quintiche adattive),
+// conservando i profili di sezione e verificando lo scarto. Influenze
+// intermedie miscelano il percorso guidato con quello libero; G0 mantiene
+// il solo attraversamento delle sezioni.
 struct LoftOptions {
     bool ruled = false;
     std::vector<std::vector<PathSegment>> guides;

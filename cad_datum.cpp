@@ -1,4 +1,5 @@
 #include "cad_datum.h"
+#include "cad_spatial_sketch.h"
 
 #include <cmath>
 #include <limits>
@@ -300,6 +301,7 @@ bool resolveGeometryRef(const GeometryRef &ref, int owner, const QVector<SketchO
                 return false;
             }
             const ForgeCurve curve = bodyCurveNear(bodies.at(bodyIndex), ref.point);
+            if(!curve)return setError(error,QStringLiteral("l'entita' dello schizzo 3D non esiste piu'")),false;
             r.hasCurve = true;
             r.nearest = [curve](const Vec3 &q, Vec3 &foot, Vec3 &tangent) { return nearestOnForgeCurve(*curve, curve->domain(), q, foot, tangent); };
             return true;
@@ -316,6 +318,7 @@ bool resolveGeometryRef(const GeometryRef &ref, int owner, const QVector<SketchO
                 return false;
             }
             const ForgeCurve curve = bodyCurveNear(bodies.at(bodyIndex), ref.point);
+            if(!curve)return setError(error,QStringLiteral("l'entita' dello schizzo 3D non esiste piu'")),false;
             const Interval domain = curve->domain();
             const double parameter = ref.element.point == 1 ? domain.hi : domain.lo;
             r.hasPoint = true;
@@ -333,6 +336,11 @@ bool resolveGeometryRef(const GeometryRef &ref, int owner, const QVector<SketchO
 }
 
 ForgeCurve bodyCurveNear(const ExtrusionObject &body, const EdgePoint &point) {
+    if(body.feature==BodyFeature::SpatialSketch && point.geometry==kSpatialCurveReference) {
+        for(int i=0;i<body.spatialSketch.entities.size();++i)
+            if(body.spatialSketch.entities[i].id==point.subshape)return body.curves.value(i);
+        return {};
+    }
     if (body.curves.size() <= 1) return body.curve;
     const Vec3 p(point.x, point.y, point.z);
     ForgeCurve best = body.curve;
@@ -357,6 +365,7 @@ bool geometryRefPath(const GeometryRef &ref, int owner, const QVector<SketchObje
             if (ref.kind == 9) {
                 if (!body.curve) return setError(error, QStringLiteral("la curva \"%1\" non e' valida").arg(body.name)), false;
                 const ForgeCurve curve = bodyCurveNear(body, ref.point);
+                if(!curve)return setError(error,QStringLiteral("l'entita' dello schizzo 3D non esiste piu'")),false;
                 segments.push_back({curve, curve->domain()});
                 return true;
             }

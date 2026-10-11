@@ -333,6 +333,8 @@ void upgradeTopologyReferences(QVector<ExtrusionObject> &features) {
         upgrade(feature.revolveAxisRef);
         upgrade(feature.draftNeutral);
         upgrade(feature.thickenDirection);
+        upgrade(feature.curveExtraction.source);
+        upgrade(feature.curveExtraction.tool);
         if (feature.feature == BodyFeature::Blend || feature.feature == BodyFeature::SheetExtend)
             upgradeEdges(feature.blendEdges, feature.firstBody);
         if ((feature.feature == BodyFeature::Draft || feature.feature == BodyFeature::Thicken || feature.feature == BodyFeature::SurfaceOffset || feature.feature == BodyFeature::DeleteFace || feature.feature == BodyFeature::Shell) && feature.firstBody >= 0 && feature.firstBody < features.size()

@@ -1888,6 +1888,43 @@ std::vector<BodySectionCurve> BooleanBuilder::section() {
     for (FaceId a : bodies_[0].faces()) {
         for (FaceId b : faceIndex_[1].query(boxes_[0].at(a.index))) {
             PairResult pair;
+            // Un bordo gia' nel piano e' una sezione esatta. Inserirlo prima
+            // del marching evita frammenti sovrapposti e lacune ai nodi spline.
+            // Rifilarlo alla faccia piana conserva anche strumenti finiti.
+            const Surface &sa = *bodies_[0].face(a).surface;
+            const Surface &sb = *bodies_[1].face(b).surface;
+            if (!coincident(sa, sb) && (isPlane(sa) || isPlane(sb))) {
+                const int k = isPlane(sa) ? 0 : 1;
+                const Body &planarBody = bodies_[k], &otherBody = bodies_[1 - k];
+                const FaceId planarFace = k == 0 ? a : b, otherFace = k == 0 ? b : a;
+                const Plane &plane = static_cast<const Plane &>(*planarBody.face(planarFace).surface);
+                const Vec3 normal = plane.frame().zDir();
+                const double offset = dot(normal, plane.frame().origin());
+                for (LoopId loop : otherBody.face(otherFace).loops)
+                    for (FinId fin : otherBody.loopFins(loop)) {
+                        const Edge &edge = otherBody.edge(otherBody.fin(fin).edge);
+                        const auto roots = planeRoots<3>(*edge.curve, edge.range, normal, offset, tolerance_);
+                        std::vector<Interval> ranges;
+                        for (const Interval &piece : roots.coincident) {
+                            if (!ranges.empty() && ranges.back().hi == piece.lo)
+                                ranges.back().hi = piece.hi;
+                            else ranges.push_back(piece);
+                        }
+                        for (const Interval &range : ranges) {
+                            const auto planar = exactPCurve(plane, edge.curve, range, tolerance_);
+                            if (!planar) continue;
+                            std::vector<double> splits;
+                            for (LoopId pl : planarBody.face(planarFace).loops)
+                                for (FinId pf : planarBody.loopFins(pl)) {
+                                    const Edge &pe = planarBody.edge(planarBody.fin(pf).edge);
+                                    for (const auto &hit : intersectCurves(*planar, range, *planarBody.fin(pf).pcurve,
+                                                                         pe.range, tolerance_).points)
+                                        splits.push_back(hit.s);
+                                }
+                            addArcs(edge.curve, range, splits, a, b, pair);
+                        }
+                    }
+            }
             pairArcs(a, b, pair);
             for (const Arc &arc : pair.arcs) {
                 // Il bordo comune di due facce complanari e' interno alla

@@ -11,13 +11,13 @@ namespace {
 
 bool isReferenceFeature(const ExtrusionObject &feature) {
     return feature.operation < 0
-        && (feature.feature == BodyFeature::DatumPlane || feature.feature == BodyFeature::Helix || feature.feature == BodyFeature::ProjectedCurve);
+        && (feature.feature == BodyFeature::DatumPlane || feature.feature == BodyFeature::Helix || feature.feature == BodyFeature::ProjectedCurve || feature.feature == BodyFeature::ExtractedCurve || feature.feature == BodyFeature::SpatialSketch);
 }
 
 bool isValidHistoryStage(const ExtrusionObject &feature) {
     if (feature.suppressed || !feature.error.isEmpty()) return false;
     if (feature.operation < 0 && feature.feature == BodyFeature::DatumPlane) return feature.datumValid;
-    if (feature.operation < 0 && (feature.feature == BodyFeature::Helix || feature.feature == BodyFeature::ProjectedCurve))
+    if (feature.operation < 0 && (feature.feature == BodyFeature::Helix || feature.feature == BodyFeature::ProjectedCurve || feature.feature == BodyFeature::ExtractedCurve || feature.feature == BodyFeature::SpatialSketch))
         return feature.curve != nullptr;
     return feature.forgeBody != nullptr;
 }
@@ -121,6 +121,8 @@ void normalizeModelHistory(QVector<ExtrusionObject> &features, QVector<ModelBody
         bindOwner(feature.revolveAxisRef);
         bindOwner(feature.draftNeutral);
         bindOwner(feature.thickenDirection);
+        bindOwner(feature.curveExtraction.source);
+        bindOwner(feature.curveExtraction.tool);
     }
 
     QHash<quint64, ModelBody> existing;

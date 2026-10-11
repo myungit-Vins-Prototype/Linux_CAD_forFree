@@ -305,7 +305,7 @@ struct BodyDisplay {
 enum class BodyFeature { Extrusion = 0, Revolution = 1, Primitive = 2, Blend = 3, SheetTrim = 4, SheetExtend = 5, Scale = 6, Helix = 7, Sweep = 8, Loft = 9,
                          Imported = 10, DatumPlane = 11, Pattern = 12, Transform = 13, SurfaceOffset = 14, Sew = 15, Ruled = 16, PlanarSurface = 17,
                          DeleteFace = 18, BoundarySurface = 19, Shell = 20, Thread = 21, FillSurface = 22, Draft = 23,
-                         ProjectedCurve = 24, Thicken = 25 };
+                         ProjectedCurve = 24, Thicken = 25, ExtractedCurve = 26, SpatialSketch = 27 };
 
 // Riferimento leggero a una sotto-entita' del B-rep. `subshape` e' l'ID
 // topologico al momento della scelta, `geometry` il tipo di curva/superficie.
@@ -538,6 +538,28 @@ struct SheetPiece {
     BodyDisplay display;
 };
 
+// Curva spaziale ricavata da un riferimento persistente. Il taglio mantiene
+// il bordo originale e ricalcola il suo intervallo ad ogni rigenerazione.
+struct SpatialPoint { double x=0, y=0, z=0; };
+struct SpatialCurve3D {
+    int id=0; // persistente anche quando si riordina o elimina un'altra entita'
+    bool spline=false, closed=false;
+    QVector<SpatialPoint> points;
+};
+struct SpatialSketchParameters {
+    int nextId=1;
+    QVector<SpatialCurve3D> entities;
+};
+
+struct CurveExtractionParameters {
+    GeometryRef source, tool;
+    bool trimmed = false;
+    bool projected = false;
+    bool keepStart = true;
+    double cutHint = 0.5; // frazione del dominio, selezione fra piu' intersezioni
+    SketchFrame view; // direzione di proiezione congelata, indipendente dalla camera
+};
+
 struct ExtrusionObject {
     // Identita' persistente della feature e del corpo logico a cui appartiene.
     // Gli indici nel vettore restano il formato operativo delle dipendenze;
@@ -693,6 +715,8 @@ struct ExtrusionObject {
     bool datumValid = false;
     int firstBody = -1;
     int secondBody = -1;
+    CurveExtractionParameters curveExtraction;
+    SpatialSketchParameters spatialSketch;
     ForgeCad::ForgeCurve curve;  // funzioni curva (Helix, ProjectedCurve): la curva esatta (la prima)
     // ProjectedCurve: tutte le curve (curves.first() == curve); non si salva.
     QVector<ForgeCad::ForgeCurve> curves;

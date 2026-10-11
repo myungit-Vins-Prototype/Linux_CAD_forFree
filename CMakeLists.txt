@@ -51,6 +51,10 @@ add_executable(forgecad
     cad_overlay_renderer.cpp
     cad_curve_solver.h
     cad_curve_solver.cpp
+    cad_curve_extract.h
+    cad_spatial_sketch.h
+    cad_spatial_sketch.cpp
+    cad_curve_extract.cpp
     cad_snap.h
     cad_snap.cpp
     cad_export.h
@@ -215,6 +219,12 @@ if(FORGECAD_BUILD_VIEW_TESTS)
     set_tests_properties(forgecad_sketch_reference_workflow_tests PROPERTIES TIMEOUT 30)
     forgecad_add_view_test(forgecad_document_access_tests --document-access)
     set_tests_properties(forgecad_document_access_tests PROPERTIES TIMEOUT 60)
+    forgecad_add_view_test(forgecad_spatial_sketch_tests --spatial-sketch)
+    set_tests_properties(forgecad_spatial_sketch_tests PROPERTIES TIMEOUT 60)
+    forgecad_add_view_test(forgecad_curve_extraction_tests --curve-extraction)
+    set_tests_properties(forgecad_curve_extraction_tests PROPERTIES TIMEOUT 60)
+    forgecad_add_view_test(forgecad_handle_constraints_tests --handle-constraints)
+    set_tests_properties(forgecad_handle_constraints_tests PROPERTIES TIMEOUT 30)
     forgecad_add_view_test(forgecad_dense_fixed_sketch_tests --dense-fixed-sketch)
     set_tests_properties(forgecad_dense_fixed_sketch_tests PROPERTIES TIMEOUT 15)
     forgecad_add_view_test(forgecad_blend_preview_reload_tests --blend-preview-reload)

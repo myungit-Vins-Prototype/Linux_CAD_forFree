@@ -9,7 +9,7 @@ bool hasGeometry(const ExtrusionObject &body) {
 }
 // Funzione curva (elica, spirale): niente solido ne' superficie, solo la curva.
 bool isCurveBody(const ExtrusionObject &body) {
-    return body.operation < 0 && (body.feature == BodyFeature::Helix || body.feature == BodyFeature::ProjectedCurve);
+    return body.operation < 0 && (body.feature == BodyFeature::Helix || body.feature == BodyFeature::ProjectedCurve || body.feature == BodyFeature::ExtractedCurve || body.feature == BodyFeature::SpatialSketch);
 }
 // Funzioni che si possono fondere con i solidi (mergeOperation): estrusione, rivoluzione, sweep.
 bool mergingFeature(const ExtrusionObject &body) {
@@ -34,6 +34,13 @@ QVector<int> bodyOperands(const ExtrusionObject &body) {
         QVector<int> bodies = body.mergeOperation != 0 ? body.mergeBodies : QVector<int>();
         if (body.revolveAxis == kRevolveAxisReference && isBodyRef(body.revolveAxisRef)) bodies.append(body.revolveAxisRef.index);
         return bodies;
+    }
+    case BodyFeature::ExtractedCurve: {
+        QVector<int> result;
+        const auto &p = body.curveExtraction;
+        for (const auto &ref : {p.source, p.trimmed ? p.tool : GeometryRef{}})
+            if (isBodyRef(ref) && !result.contains(ref.index)) result.append(ref.index);
+        return result;
     }
     case BodyFeature::Thicken: {
         QVector<int> refs{body.firstBody};
@@ -109,6 +116,13 @@ QVector<int> sketchesOf(const ExtrusionObject &body) {
         if (body.revolveAxis == kRevolveAxisReference && isSketchRef(body.revolveAxisRef) && body.revolveAxisRef.index != body.sketchIndex)
             return {body.sketchIndex, body.revolveAxisRef.index};
         return {body.sketchIndex};
+    case BodyFeature::ExtractedCurve: {
+        QVector<int> result;
+        const auto &p = body.curveExtraction;
+        for (const auto &ref : {p.source, p.trimmed ? p.tool : GeometryRef{}})
+            if (isSketchRef(ref) && !result.contains(ref.index)) result.append(ref.index);
+        return result;
+    }
     case BodyFeature::Draft: return isSketchRef(body.draftNeutral) ? QVector<int>{body.draftNeutral.index} : QVector<int>{};
     case BodyFeature::Thicken: return isSketchRef(body.thickenDirection) ? QVector<int>{body.thickenDirection.index} : QVector<int>{};
     case BodyFeature::Transform: return isSketchRef(body.move.axis) ? QVector<int>{body.move.axis.index} : QVector<int>{};
@@ -153,6 +167,8 @@ bool usesSketch(const ExtrusionObject &body) { return !sketchesOf(body).isEmpty(
 // Corpi che la funzione nasconde (operandi delle booleane, corpi in cui si fonde l'estrusione).
 QVector<int> hiddenOperands(const ExtrusionObject &body) {
     if (body.operation >= 0) return QVector<int>{body.firstBody, body.secondBody} + body.booleanTools;
+    if (body.feature == BodyFeature::ExtractedCurve && body.curveExtraction.trimmed && body.curveExtraction.source.kind == 9)
+        return {body.curveExtraction.source.index};
     if (mergingFeature(body) && body.mergeOperation != 0) return body.mergeBodies;
     if (body.feature == BodyFeature::Transform && !body.move.copy) return {body.firstBody};
     if (body.feature == BodyFeature::Sew) return QVector<int>{body.firstBody} + body.booleanTools;

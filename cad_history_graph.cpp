@@ -240,6 +240,8 @@ QString featureType(const ExtrusionObject &feature) {
     case BodyFeature::Thread: return QStringLiteral("Filettatura");
     case BodyFeature::ProjectedCurve: return QStringLiteral("Curva proiettata");
     case BodyFeature::Thicken: return QStringLiteral("Spessore");
+    case BodyFeature::SpatialSketch: return QStringLiteral("Schizzo 3D");
+    case BodyFeature::ExtractedCurve: return QStringLiteral("Curva estratta 3D");
     }
     return QStringLiteral("Feature");
 }
@@ -388,6 +390,11 @@ QVector<Dependency> dependencies(int index, const DocumentState &document) {
                           QStringLiteral("superficie • spessore %1%2").arg(feature.distance)
                               .arg(feature.offsetFaces.isEmpty() ? QString() : QStringLiteral(" • %1 facce").arg(feature.offsetFaces.size())));
         if (feature.thickenDirection.kind >= 0) addGeometryDependency(result, feature.thickenDirection, sketches, features, index, QStringLiteral("direzione"));
+        break;
+    case BodyFeature::ExtractedCurve:
+        addGeometryDependency(result, feature.curveExtraction.source, sketches, features, index, QStringLiteral("bordo sorgente"));
+        if (feature.curveExtraction.trimmed)
+            addGeometryDependency(result, feature.curveExtraction.tool, sketches, features, index, QStringLiteral("segmento di taglio"));
         break;
     case BodyFeature::ProjectedCurve:
         addBodyDependency(result, features, index, feature.firstBody, QStringLiteral("corpo"));
