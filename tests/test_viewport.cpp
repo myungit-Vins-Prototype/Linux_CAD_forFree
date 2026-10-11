@@ -218,7 +218,7 @@ public:
         for(FaceId f:result->faces()) for(double u:{0.15,0.5,0.85})
             require(std::fabs(normalAt(*result->face(f).surface,u,0).z())>1.0-1e-4,"G1 edge contact normal equals adjacent plane normal");
         require(view.createBody(loft).isEmpty(),"create associative edge loft in viewport");
-        require(CadViewport::bodyOperands(view.extrusions_[1]).contains(0) && CadViewport::sketchesOf(view.extrusions_[1]).contains(0),"edge and sketch dependencies tracked");
+        require(ForgeCad::bodyOperands(view.extrusions_[1]).contains(0) && ForgeCad::sketchesOf(view.extrusions_[1]).contains(0),"edge and sketch dependencies tracked");
         require(view.withDependentBodies({0}).contains(1),"source sheet changes reach loft");
         // Saved references can rebuild without display cache; reordering remaps persistent owners.
         QTemporaryDir dir; DocumentState loaded;
@@ -535,7 +535,7 @@ public:
             ExtrusionObject dependent=definition;
             dependent.feature=BodyFeature::Loft;
             view.extrusions_.append(dependent);
-            require(CadViewport::bodyOperands(dependent).contains(0) && CadViewport::bodyOperands(dependent).contains(1),
+            require(ForgeCad::bodyOperands(dependent).contains(0) && ForgeCad::bodyOperands(dependent).contains(1),
                     "loft tracks both adjacent face owners");
             require(view.withDependentBodies({0}).contains(2),"adjacent face change reaches dependent loft");
             view.requestPreview(dependent);
@@ -1793,6 +1793,65 @@ public:
     }
 
     static void reviewRegressions() {
+        {
+            // La costruzione del modello e' utilizzabile senza un CadViewport.
+            QVector<ExtrusionObject> bodies;
+            ExtrusionObject base;
+            base.feature = BodyFeature::Primitive;
+            base.primitive.kind = PrimitiveKind::Box;
+            base.primitive.size[0] = 4.0;
+            base.primitive.size[1] = 3.0;
+            base.primitive.size[2] = 2.0;
+            base.modelBodyId = 1;
+            ForgeCad::buildBody(base, 0, {}, bodies, 0);
+            require(base.error.isEmpty() && base.forgeBody && base.solid && !base.display.vertices.isEmpty(),
+                    "modulo feature costruisce geometria e mesh senza viewport");
+            const ForgeCad::ForgeBody geometry = base.forgeBody;
+            const auto *vertices = base.display.vertices.constData();
+            base.cachedGeometry = true;
+            ForgeCad::buildBody(base, 0, {}, bodies, 0);
+            require(base.forgeBody == geometry && base.display.vertices.constData() == vertices && !base.cachedGeometry,
+                    "modulo feature riusa snapshot e mesh alla stessa qualita'");
+            bodies.append(base);
+            ExtrusionObject scale;
+            scale.feature = BodyFeature::Scale;
+            scale.modelBodyId = 1;
+            scale.firstBody = 0;
+            scale.scaleFactor = 2.0;
+            ForgeCad::buildGeometry(scale, 1, {}, bodies);
+            require(scale.error.isEmpty() && scale.forgeBody
+                        && std::fabs(ForgeCad::Kernel::massProperties(*scale.forgeBody).volume - 192.0) < 1e-8,
+                    "modulo feature risolve lo stadio precedente e scala il corpo");
+            scale.suppressed = true;
+            ForgeCad::buildGeometry(scale, 1, {}, bodies);
+            require(scale.error.isEmpty() && scale.forgeBody == geometry,
+                    "modulo feature conserva la base per uno stadio soppresso");
+            scale.suppressed = false;
+            scale.firstBody = 1;
+            ForgeCad::buildGeometry(scale, 1, {}, bodies);
+            require(!scale.error.isEmpty() && !scale.forgeBody,
+                    "modulo feature rifiuta una base futura e rimuove il risultato precedente");
+        }
+        {
+            ForgeCad::HistoryGraphDialog historyGraph;
+            DocumentState trimGraph;
+            trimGraph.sketches.append(SketchObject{});
+            ExtrusionObject base;
+            base.feature = BodyFeature::Imported;
+            trimGraph.extrusions.append(base);
+            ExtrusionObject trim;
+            trim.feature = BodyFeature::SheetTrim;
+            trim.firstBody = 0;
+            trim.sketchIndex = 0;
+            trimGraph.extrusions.append(trim);
+            historyGraph.setDocument(trimGraph);
+            require(historyGraph.edgeCount() == 2 && historyGraph.invalidDependencyCount() == 0,
+                    "grafo taglio superficie include lo schizzo strumento");
+            trimGraph.extrusions[1].sketchIndex = 3;
+            historyGraph.setDocument(trimGraph);
+            require(historyGraph.edgeCount() == 2 && historyGraph.invalidDependencyCount() == 1,
+                    "grafo taglio superficie segnala schizzo strumento mancante");
+        }
         for (bool symmetry : {false, true}) {
             CadViewport v; v.createSketch(0, QStringLiteral("Undo"));
             v.sketches_[0].segments.append({QPointF(0,0), QPointF(10,0)});
@@ -2926,7 +2985,7 @@ public:
         DocumentState document;
         require(loadDocumentFile(path, document).isEmpty(), "lettura documento riempimento");
         for (int i = 0; i < document.extrusions.size(); ++i)
-            if (!document.extrusions[i].forgeBody) CadViewport::buildGeometry(document.extrusions[i], i, document.sketches, document.extrusions);
+            if (!document.extrusions[i].forgeBody) ForgeCad::buildGeometry(document.extrusions[i], i, document.sketches, document.extrusions);
         require(document.sketches.size() >= 4 && !document.extrusions.isEmpty() && document.extrusions.first().forgeBody, "documento atteso");
         const auto entity = [](int sketch) {
             GeometryRef ref;
@@ -2957,13 +3016,13 @@ public:
             body.fillContinuity = continuity;
             if (qEnvironmentVariableIsSet("FILL_INFLUENCE")) body.fillInfluence = qEnvironmentVariable("FILL_INFLUENCE").toDouble();
             if (qEnvironmentVariableIsSet("FILL_STEP_CONTINUITY") && args.size() > 2 && continuity == qEnvironmentVariableIntValue("FILL_STEP_CONTINUITY")) {
-                CadViewport::buildGeometry(body, index, document.sketches, document.extrusions);
+                ForgeCad::buildGeometry(body, index, document.sketches, document.extrusions);
                 std::ofstream step(args.at(2).toStdString());
                 step << Kernel::writeStep({{"riempimento", Kernel::sewSheets({document.extrusions.first().forgeBody.get(), body.forgeBody.get()}, 1e-6, true).body}});
             }
             QElapsedTimer timer;
             timer.start();
-            CadViewport::buildGeometry(body, index, document.sketches, document.extrusions);
+            ForgeCad::buildGeometry(body, index, document.sketches, document.extrusions);
             std::cout << "continuita' " << continuity << ": " << timer.elapsed() << " ms, " << body.error.toStdString() << body.notice.toStdString() << std::endl;
             require(body.forgeBody && body.forgeBody->isSheet() && Kernel::checkBody(*body.forgeBody).empty(), "riempimento valido");
             require(continuity == 0 || body.notice.contains(QStringLiteral("non sono compatibili")), "conflitto guide/tangenza segnalato");
@@ -3007,7 +3066,7 @@ public:
             if (index < from && feature.forgeBody) continue;
             if (feature.suppressed) continue;
             feature.cachedGeometry = false;
-            CadViewport::buildGeometry(feature, index, state.sketches, state.extrusions);
+            ForgeCad::buildGeometry(feature, index, state.sketches, state.extrusions);
             std::cout << index << " " << feature.name.toStdString() << ": " << (feature.error.isEmpty() ? "ok" : feature.error.toStdString()) << std::endl;
         }
         CadViewport viewport;
@@ -3543,7 +3602,7 @@ public:
         }
         for (int i = 0; i < document.extrusions.size(); ++i) {
             ExtrusionObject &body = document.extrusions[i];
-            if (!body.forgeBody && !body.suppressed) CadViewport::buildGeometry(body, i, document.sketches, document.extrusions);
+            if (!body.forgeBody && !body.suppressed) ForgeCad::buildGeometry(body, i, document.sketches, document.extrusions);
             if (i == detail) {
                 std::cout << "  raccordo: misura=" << body.blendSize << " smusso=" << body.blendChamfer << " base=" << body.blendBaseFeature << " spigoli:";
                 for (const EdgePoint &e : body.blendEdges) std::cout << " (" << e.x << ", " << e.y << ", " << e.z << " id=" << e.subshape << " ruolo=" << e.role << ")";
@@ -3645,7 +3704,7 @@ public:
         for (int i = 0; i < document.extrusions.size(); ++i) {
             ExtrusionObject &feature = document.extrusions[i];
             if (!feature.forgeBody && !feature.suppressed)
-                CadViewport::buildGeometry(feature, i, document.sketches, document.extrusions);
+                ForgeCad::buildGeometry(feature, i, document.sketches, document.extrusions);
             if (feature.visible && feature.error.isEmpty() && feature.forgeBody) {
                 std::cout << "corpo " << feature.name.toStdString() << " sheet=" << feature.forgeBody->isSheet() << std::endl;
                 bodies.append({feature.name, feature.forgeBody, {}, QColor()});
@@ -3681,7 +3740,7 @@ public:
             for (int i = 0; i < document.extrusions.size(); ++i) {
                 auto &feature = document.extrusions[i];
                 if (!feature.forgeBody && !feature.suppressed)
-                    CadViewport::buildGeometry(feature, i, document.sketches, document.extrusions);
+                    ForgeCad::buildGeometry(feature, i, document.sketches, document.extrusions);
                 if (feature.feature != BodyFeature::Loft || !feature.forgeBody) continue;
                 for (bool sew : {false, true}) {
                     QString error;
@@ -3717,7 +3776,7 @@ public:
             if (feature.feature != BodyFeature::Loft || !feature.forgeBody) continue;
             if (rebuild) {
                 feature.cachedGeometry = false;
-                CadViewport::buildGeometry(feature, i, viewport.sketches_, viewport.extrusions_);
+                ForgeCad::buildGeometry(feature, i, viewport.sketches_, viewport.extrusions_);
                 require(feature.error.isEmpty() && bool(feature.forgeBody), "rigenerazione loft dalle sezioni");
                 viewport.extrusions_[i] = feature;
             }
@@ -3982,7 +4041,7 @@ public:
                 }
             }
             feature.cachedGeometry = false;
-            CadViewport::buildGeometry(feature, index, state.sketches, state.extrusions);
+            ForgeCad::buildGeometry(feature, index, state.sketches, state.extrusions);
             std::cout << index << " " << feature.name.toStdString() << ": " << feature.error.toStdString() << std::endl;
             if (!feature.error.isEmpty() && feature.firstBody >= 0 && state.extrusions.at(feature.firstBody).forgeBody) {
                 const auto &body = *state.extrusions.at(feature.firstBody).forgeBody;
@@ -3996,7 +4055,7 @@ public:
                 }
             }
             require(feature.error.isEmpty(), "rigenerazione della storia dopo estensione");
-            CadViewport::tessellateGeometry(feature, 0, feature.display);
+            ForgeCad::tessellateGeometry(feature, 0, feature.display);
         }
         require(saveDocumentFile(output, state).isEmpty(), "salvataggio modello con contorni completi");
     }
@@ -4206,7 +4265,7 @@ public:
         for (int i = 0; i < document.extrusions.size(); ++i) {
             auto &feature = document.extrusions[i];
             feature.cachedGeometry = false;
-            CadViewport::buildGeometry(feature, i, document.sketches, document.extrusions);
+            ForgeCad::buildGeometry(feature, i, document.sketches, document.extrusions);
             std::cout << i << " " << feature.name.toStdString() << std::endl;
         }
         const auto body = document.extrusions.back().forgeBody;
@@ -4265,7 +4324,7 @@ public:
             const ExtrusionObject &e = v.extrusions_.at(i);
             std::cout << i << " " << e.name.toStdString() << " visible=" << e.visible << " feature=" << int(e.feature)
                       << " body=" << e.modelBodyId << " suppressed=" << e.suppressed << " ops=";
-            for (int o : CadViewport::bodyOperands(e)) std::cout << o << ",";
+            for (int o : ForgeCad::bodyOperands(e)) std::cout << o << ",";
             std::cout << " err=" << e.error.toStdString() << std::endl;
         }
         require(v.grabFramebuffer().save(args.at(2)), "immagine prima");
@@ -4950,7 +5009,7 @@ public:
         require(sweepUnited && sweepMergeError.isEmpty() && sweepMerge.mergeBodies == QVector<int>{0}
                     && sweepUnited->shells().size() == 1,
                 "unione automatica del risultato sweep");
-        require(CadViewport::hiddenOperands(sweepMerge).contains(0), "bersaglio della sweep unita nascosto");
+        require(ForgeCad::hiddenOperands(sweepMerge).contains(0), "bersaglio della sweep unita nascosto");
         CadViewport storyboard;
         PrimitiveParameters box;
         box.size[0] = 4.0;
@@ -6616,7 +6675,7 @@ public:
                 const ExtrusionObject &united = r.extrusions_.back();
                 require(united.mergeBodies == QVector<int>{0} && !r.extrusions_.first().visible, "il solido unito si nasconde");
                 require(std::fabs(massProperties(*united.forgeBody).volume - 14.0 * M_PI) < 1e-8, "volume dell'unione: 14 pi");
-                require(r.bodyOperands(united).contains(0), "il solido unito e' un operando");
+                require(ForgeCad::bodyOperands(united).contains(0), "il solido unito e' un operando");
                 QTemporaryDir dir;
                 const QString path = dir.filePath(QStringLiteral("rivoluzione.prt"));
                 require(saveDocumentFile(path, r.currentDocument(), false).isEmpty(), "salvataggio delle rivoluzioni");

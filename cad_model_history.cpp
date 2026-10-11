@@ -1,4 +1,5 @@
 #include "cad_model_history.h"
+#include "cad_feature_dependencies.h"
 
 #include <algorithm>
 
@@ -107,8 +108,7 @@ void normalizeModelHistory(QVector<ExtrusionObject> &features, QVector<ModelBody
     // la cache usata dal grafo, l'ID impedisce che un riordino li leghi a una
     // feature diversa.
     const auto bindOwner = [&](GeometryRef &ref) {
-        const bool bodyRef = ref.kind == 3 || ref.kind == 4 || ref.kind == 5 || ref.kind == 8 || ref.kind == 9 || ref.kind == 10;
-        if (bodyRef && !ref.featureId && ref.index >= 0 && ref.index < features.size())
+        if (isBodyRef(ref) && !ref.featureId && ref.index >= 0 && ref.index < features.size())
             ref.featureId = features.at(ref.index).featureId;
     };
     for (ExtrusionObject &feature : features) {
@@ -126,9 +126,20 @@ void normalizeModelHistory(QVector<ExtrusionObject> &features, QVector<ModelBody
     QHash<quint64, ModelBody> existing;
     for (const ModelBody &body : modelBodies)
         if (body.id && bodyIds.contains(body.id)) existing.insert(body.id, body);
+    // Raggruppa una volta gli stadi: evita di scandire l'intera storia per
+    // ogni corpo e conserva l'ordine della prima apparizione nel documento.
     QVector<quint64> ordered;
-    for (const ExtrusionObject &feature : features)
-        if (feature.modelBodyId && !ordered.contains(feature.modelBodyId)) ordered.append(feature.modelBodyId);
+    QHash<quint64, QVector<int>> stages;
+    for (int index = 0; index < features.size(); ++index) {
+        const quint64 id = features.at(index).modelBodyId;
+        if (!id) continue;
+        auto found = stages.find(id);
+        if (found == stages.end()) {
+            ordered.append(id);
+            found = stages.insert(id, {});
+        }
+        found.value().append(index);
+    }
 
     QVector<ModelBody> bodies;
     int number = 1;
@@ -138,34 +149,21 @@ void normalizeModelHistory(QVector<ExtrusionObject> &features, QVector<ModelBody
         const quint64 previousTip = body.tipFeatureId;
         body.id = id;
         if (body.name.trimmed().isEmpty()) body.name = QStringLiteral("Corpo %1").arg(number);
-        int tip = -1;
-        for (int index = features.size() - 1; index >= 0; --index)
-            if (features.at(index).modelBodyId == id && isValidHistoryStage(features.at(index))) { tip = index; break; }
-        // Durante la lettura del payload le definizioni sono gia' presenti,
-        // mentre B-rep, curve e datum della cache vengono collegati solo in
-        // seguito (o rigenerati da loadDocument). In quella finestra una
-        // feature corretta non va scambiata per una feature fallita: conserva
-        // il tip serializzato, oppure usa l'ultimo stadio senza errore per i
-        // vecchi documenti che non avevano ancora ModelBody.
-        if (tip < 0) {
-            if (hadBody && body.tipFeatureId)
-                for (int index = features.size() - 1; index >= 0; --index)
-                    if (features.at(index).modelBodyId == id && features.at(index).featureId == body.tipFeatureId
-                        && !features.at(index).suppressed && features.at(index).error.isEmpty()) {
-                        tip = index;
-                        break;
-                    }
-            if (tip < 0)
-                for (int index = features.size() - 1; index >= 0; --index)
-                    if (features.at(index).modelBodyId == id && !features.at(index).suppressed
-                        && features.at(index).error.isEmpty()) {
-                        tip = index;
-                        break;
-                    }
+        const QVector<int> &indices = stages[id];
+        int tip = -1, lastActive = -1, lastWithoutError = -1, savedTip = -1;
+        for (int index : indices) {
+            const ExtrusionObject &feature = features.at(index);
+            if (feature.suppressed) continue;
+            lastActive = index;
+            if (!feature.error.isEmpty()) continue;
+            lastWithoutError = index;
+            if (feature.featureId == previousTip) savedTip = index;
+            if (isValidHistoryStage(feature)) tip = index;
         }
-        int lastActive = -1;
-        for (int index = features.size() - 1; index >= 0; --index)
-            if (features.at(index).modelBodyId == id && !features.at(index).suppressed) { lastActive = index; break; }
+        // Durante la lettura le definizioni precedono la cache geometrica:
+        // conserva il tip serializzato, o l'ultimo stadio senza errore dei
+        // vecchi documenti, quando la geometria non e' ancora disponibile.
+        if (tip < 0) tip = savedTip >= 0 ? savedTip : lastWithoutError;
         body.tipFeatureId = tip >= 0 ? features.at(tip).featureId : 0;
         // Il flag storico del tip registra la visibilita' del corpo anche per
         // i documenti precedenti al formato storyboard e quando un altro
@@ -179,8 +177,7 @@ void normalizeModelHistory(QVector<ExtrusionObject> &features, QVector<ModelBody
         // spento, perche' finche' falliva si mostrava lo stadio precedente.
         const bool tipMoved = hadBody && previousTip && tip >= 0 && features.at(tip).featureId != previousTip;
         if ((!hadBody || (!failedTail && !tipMoved)) && tip >= 0) body.visible = features.at(tip).visible;
-        for (int index = 0; index < features.size(); ++index)
-            if (features.at(index).modelBodyId == id) features[index].visible = index == tip && body.visible;
+        for (int index : indices) features[index].visible = index == tip && body.visible;
         bodies.append(body);
         ++number;
     }

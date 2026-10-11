@@ -8,6 +8,8 @@
 #include "cad_expression.h"
 #include "cad_datum.h"
 #include "cad_features.h"
+#include "cad_feature_dependencies.h"
+#include "cad_feature_build.h"
 #include "cad_import.h"
 #include "cad_mass.h"
 #include "cad_measure.h"
@@ -619,7 +621,7 @@ public:
         for (ExtrusionObject &body : extrusions_) {
             if (body.forgeBody) {
                 body.solid = !body.forgeBody->isSheet();
-                if (body.display.quality != 0) tessellateGeometry(body, 0, body.display);
+                if (body.display.quality != 0) ForgeCad::tessellateGeometry(body, 0, body.display);
             } else {
                 body.display = {};
             }
@@ -726,14 +728,14 @@ public:
         for (int index = 0; index < end; ++index) {
             const ExtrusionObject &feature = extrusions_.at(index);
             if (!feature.modelBodyId || feature.suppressed || !feature.error.isEmpty() || !feature.forgeBody) continue;
-            for (int operand : hiddenOperands(feature))
+            for (int operand : ForgeCad::hiddenOperands(feature))
                 if (operand >= 0 && operand < extrusions_.size() && extrusions_.at(operand).modelBodyId != feature.modelBodyId)
                     consumed.insert(extrusions_.at(operand).modelBodyId);
             last.insert(feature.modelBodyId, index);
         }
         QVector<int> result;
         for (auto it = last.cbegin(); it != last.cend(); ++it)
-            if (!consumed.contains(it.key()) && extrusions_.at(it.value()).forgeBody && isShapeBody(extrusions_.at(it.value())))
+            if (!consumed.contains(it.key()) && extrusions_.at(it.value()).forgeBody && ForgeCad::isShapeBody(extrusions_.at(it.value())))
                 result.append(it.value());
         std::sort(result.begin(), result.end());
         return result;
@@ -744,7 +746,7 @@ public:
         for (int index = 0; index < historyPosition(); ++index) {
             const ExtrusionObject &feature = extrusions_.at(index);
             if (!feature.modelBodyId || feature.suppressed || !feature.error.isEmpty() || !feature.forgeBody) continue;
-            for (int operand : hiddenOperands(feature)) {
+            for (int operand : ForgeCad::hiddenOperands(feature)) {
                 if (operand < 0 || operand >= extrusions_.size()) continue;
                 const quint64 consumed = extrusions_.at(operand).modelBodyId;
                 if (consumed && consumed != feature.modelBodyId && !parent.contains(consumed)) parent.insert(consumed, feature.modelBodyId);
@@ -759,7 +761,7 @@ public:
         return roots;
     }
     QVector<int> featureSketches(int index) const {
-        return index >= 0 && index < extrusions_.size() ? sketchesOf(extrusions_.at(index)) : QVector<int>();
+        return index >= 0 && index < extrusions_.size() ? ForgeCad::sketchesOf(extrusions_.at(index)) : QVector<int>();
     }
 
     void setModelBodyVisible(int index, bool visible) {
@@ -871,7 +873,7 @@ public:
         for (int index : list) {
             ExtrusionObject &feature = extrusions_[index];
             const quint64 bodyId = feature.modelBodyId;
-            const QVector<int> consumed = hiddenOperands(feature);
+            const QVector<int> consumed = ForgeCad::hiddenOperands(feature);
             feature.suppressed = suppressed;
             for (int operand : consumed) {
                 if (operand < 0 || operand >= extrusions_.size() || extrusions_.at(operand).modelBodyId == bodyId) continue;
@@ -879,7 +881,7 @@ public:
                 if (suppressed) {
                     for (int other = 0; other < extrusions_.size() && !consumedElsewhere; ++other)
                         consumedElsewhere = other != index && !extrusions_.at(other).suppressed
-                                         && hiddenOperands(extrusions_.at(other)).contains(operand);
+                                         && ForgeCad::hiddenOperands(extrusions_.at(other)).contains(operand);
                 }
                 extrusions_[operand].visible = suppressed && !consumedElsewhere;
             }
@@ -1000,7 +1002,7 @@ public:
         }
         const auto mapped = [&](int old) { return old >= 0 ? map.value(old, -1) : old; };
         const auto remapRef = [&](GeometryRef &ref) {
-            if (isBodyRef(ref)) ref.index = mapped(ref.index);
+            if (ForgeCad::isBodyRef(ref)) ref.index = mapped(ref.index);
         };
         for (ExtrusionObject &feature : reordered) {
             feature.firstBody = mapped(feature.firstBody);
@@ -1039,7 +1041,7 @@ public:
                     || feature.feature == BodyFeature::Draft || feature.feature == BodyFeature::Shell || feature.feature == BodyFeature::Thread
                     || (feature.feature == BodyFeature::Thicken && feature.offsetFaces.isEmpty())) {
                     feature.firstBody = previous;
-                } else if (mergingFeature(feature) && feature.mergeOperation != 0) {
+                } else if (ForgeCad::mergingFeature(feature) && feature.mergeOperation != 0) {
                     bool replaced = false;
                     for (int &merged : feature.mergeBodies)
                         if (merged >= 0 && reordered.at(merged).modelBodyId == bodyId) { merged = previous; replaced = true; break; }
@@ -1049,7 +1051,7 @@ public:
             previous = current;
         }
         for (int current = 0; current < reordered.size(); ++current)
-            for (int operand : bodyOperands(reordered.at(current)))
+            for (int operand : ForgeCad::bodyOperands(reordered.at(current)))
                 if (operand >= current)
                     return QStringLiteral("Spostamento non consentito: \"%1\" deve restare dopo una feature da cui dipende.")
                         .arg(reordered.at(current).name);
@@ -1161,7 +1163,7 @@ public:
     // sole facce create dall'ultima feature.
     void selectObject(SceneObjectKind kind, int index, bool wholeBody = false) {
         if (activeSketchObject() && (kind == SceneObjectKind::Plane
-            || (kind == SceneObjectKind::Extrusion && index >= 0 && index < extrusions_.size() && isDatumBody(extrusions_.at(index))))) {
+            || (kind == SceneObjectKind::Extrusion && index >= 0 && index < extrusions_.size() && ForgeCad::isDatumBody(extrusions_.at(index))))) {
             selectSketchReference(kind == SceneObjectKind::Plane ? 1 : 8, index);
             return;
         }
@@ -1203,7 +1205,7 @@ public:
         result.secondBody = tools.first();
         result.booleanTools = tools.mid(1);
         rebuildBody(result, int(extrusions_.size()));
-        if (!hasGeometry(result)) return result.error;
+        if (!ForgeCad::hasGeometry(result)) return result.error;
         recordUndo();
         extrusions_[firstIndex].visible = false;
         for (int tool : tools) extrusions_[tool].visible = false;
@@ -1234,7 +1236,7 @@ public:
     // da fondere sono ancora da scegliere tra i candidati.
     ExtrusionObject withMergeCandidates(ExtrusionObject definition, int index) const {
         definition.mergeProbe = false;
-        if (mergingFeature(definition) && definition.mergeOperation != 0 && definition.mergeAuto) {
+        if (ForgeCad::mergingFeature(definition) && definition.mergeOperation != 0 && definition.mergeAuto) {
             definition.mergeBodies = mergeCandidates(index);
             definition.mergeProbe = true;
         }
@@ -1247,7 +1249,7 @@ public:
     bool unchangedFeature(const ExtrusionObject &definition, int index) const {
         if (index < 0 || index >= extrusions_.size()) return false;
         const ExtrusionObject &existing = extrusions_.at(index);
-        if (existing.suppressed || !existing.error.isEmpty() || !existing.forgeBody || isCurveBody(existing) || isDatumBody(existing))
+        if (existing.suppressed || !existing.error.isEmpty() || !existing.forgeBody || ForgeCad::isCurveBody(existing) || ForgeCad::isDatumBody(existing))
             return false;
         ExtrusionObject normalized = definition;
         if (normalized.mergeProbe) normalized.mergeBodies = existing.mergeBodies;
@@ -1283,18 +1285,6 @@ public:
             return result;
         };
         return !picked.empty() && indices(picked) == indices(stored);
-    }
-
-    // Corpi che la funzione nasconde (operandi delle booleane, corpi in cui si fonde l'estrusione).
-    static QVector<int> hiddenOperands(const ExtrusionObject &body) {
-        if (body.operation >= 0) return QVector<int>{body.firstBody, body.secondBody} + body.booleanTools;
-        if (mergingFeature(body) && body.mergeOperation != 0) return body.mergeBodies;
-        if (body.feature == BodyFeature::Transform && !body.move.copy) return {body.firstBody};
-        if (body.feature == BodyFeature::Sew) return QVector<int>{body.firstBody} + body.booleanTools;
-        if (body.feature == BodyFeature::SheetTrim)
-            return body.trimBoth && body.secondBody >= 0 ? QVector<int>{body.firstBody, body.secondBody}
-                                                        : QVector<int>{body.firstBody};
-        return {};
     }
 
     // Una superficie (lamina) si puo' intersecare con un solido o tagliare con
@@ -1347,7 +1337,7 @@ public:
             candidate.error.clear();
             candidate.display = preview_.resultDisplay;
             if (candidate.display.vertices.isEmpty() && candidate.display.edges.isEmpty())
-                tessellateGeometry(candidate, tessellationQuality_, candidate.display);
+                ForgeCad::tessellateGeometry(candidate, tessellationQuality_, candidate.display);
             candidate.display.constructionCurves.clear();
         } else {
             // La stessa definizione dell'anteprima (guscio, offset...): il suo risultato.
@@ -1361,10 +1351,10 @@ public:
             }
         }
         candidate.mergeProbe = false;
-        if (!hasGeometry(candidate)) return candidate.error;
+        if (!ForgeCad::hasGeometry(candidate)) return candidate.error;
         recordUndo();
         // Gli operandi che la funzione non usa piu' tornano visibili, quelli nuovi si nascondono.
-        const QVector<int> before = hiddenOperands(extrusions_.at(index)), after = hiddenOperands(candidate);
+        const QVector<int> before = ForgeCad::hiddenOperands(extrusions_.at(index)), after = ForgeCad::hiddenOperands(candidate);
         for (int body : before)
             if (!after.contains(body) && body >= 0 && body < extrusions_.size()) extrusions_[body].visible = true;
         for (int body : after)
@@ -1736,7 +1726,7 @@ public:
         for (int index = 0; index < extrusions_.size(); ++index) {
             const ExtrusionObject &body = extrusions_.at(index);
             bool depends = false;
-            for (int operand : bodyOperands(body)) depends = depends || removed.contains(operand);
+            for (int operand : ForgeCad::bodyOperands(body)) depends = depends || removed.contains(operand);
             if (depends) removed.insert(index);
         }
         return removed;
@@ -1801,7 +1791,7 @@ public:
         if (sketchSet.isEmpty() && chosenBodies.isEmpty()) return;
         QSet<int> bodies = chosenBodies;
         for (int body = 0; body < extrusions_.size(); ++body)
-            for (int sketch : sketchesOf(extrusions_.at(body)))
+            for (int sketch : ForgeCad::sketchesOf(extrusions_.at(body)))
                 if (sketchSet.contains(sketch)) bodies.insert(body);
         bodies = withDependentBodies(bodies);
         QSet<int> dependents = bodies;
@@ -1919,7 +1909,7 @@ public:
             const ExtrusionObject &body = extrusions_.at(index);
             if (!body.visible) continue;
             QVector<QVector<QPointF>> polylines;
-            if (isDatumBody(body)) {
+            if (ForgeCad::isDatumBody(body)) {
                 if (!body.datumValid) continue;
                 QVector<QPointF> corners;
                 for (const QVector3D &corner : datumCorners(body.datumFrame, body.datum.size)) corners.append(projectWorldPoint(corner));
@@ -1991,12 +1981,12 @@ public:
             for (SketchPathRef &guide : body.loftGuidePaths) renumber(guide.sketch);
             for (QVector<GeometryRef> *refs : {&body.datum.refs, &body.pattern.refs, &body.ruledFirst, &body.ruledSecond, &body.planarRefs, &body.loftStartFaces, &body.loftEndFaces, &body.loftSections, &body.loftEdgeGuides})
                 for (GeometryRef &ref : *refs)
-                    if (isSketchRef(ref)) renumber(ref.index);
-            if (isSketchRef(body.extentRef)) renumber(body.extentRef.index);
-            if (isSketchRef(body.move.axis)) renumber(body.move.axis.index);
-            if (isSketchRef(body.revolveAxisRef)) renumber(body.revolveAxisRef.index);
-            if (isSketchRef(body.draftNeutral)) renumber(body.draftNeutral.index);
-            if (isSketchRef(body.thickenDirection)) renumber(body.thickenDirection.index);
+                    if (ForgeCad::isSketchRef(ref)) renumber(ref.index);
+            if (ForgeCad::isSketchRef(body.extentRef)) renumber(body.extentRef.index);
+            if (ForgeCad::isSketchRef(body.move.axis)) renumber(body.move.axis.index);
+            if (ForgeCad::isSketchRef(body.revolveAxisRef)) renumber(body.revolveAxisRef.index);
+            if (ForgeCad::isSketchRef(body.draftNeutral)) renumber(body.draftNeutral.index);
+            if (ForgeCad::isSketchRef(body.thickenDirection)) renumber(body.thickenDirection.index);
         }
         if (activeSketch_ == index) activeSketch_ = -1;
         else if (activeSketch_ > index) --activeSketch_;
@@ -2025,9 +2015,9 @@ public:
         extrusion.plane = sketches_.at(sketch).plane;
         rebuildBody(extrusion, int(extrusions_.size()));
         extrusion.mergeProbe = false;
-        if (!hasGeometry(extrusion)) return extrusion.error;
+        if (!ForgeCad::hasGeometry(extrusion)) return extrusion.error;
         recordUndo();
-        for (int body : hiddenOperands(extrusion))
+        for (int body : ForgeCad::hiddenOperands(extrusion))
             if (body >= 0 && body < extrusions_.size()) extrusions_[body].visible = false;
         extrusions_.append(extrusion);
         selection_ = {SceneObjectKind::Extrusion, int(extrusions_.size()) - 1, -1};
@@ -2048,7 +2038,7 @@ public:
         revolution.revolveAxis = axis;
         revolution.revolveAngle = angle;
         rebuildBody(revolution, int(extrusions_.size()));
-        if (!hasGeometry(revolution)) return revolution.error;
+        if (!ForgeCad::hasGeometry(revolution)) return revolution.error;
         recordUndo();
         extrusions_.append(revolution);
         selection_ = {SceneObjectKind::Extrusion, int(extrusions_.size()) - 1, -1};
@@ -2064,7 +2054,7 @@ public:
         primitive.plane = parameters.plane;
         primitive.primitive = parameters;
         rebuildBody(primitive, int(extrusions_.size()));
-        if (!hasGeometry(primitive)) return primitive.error;
+        if (!ForgeCad::hasGeometry(primitive)) return primitive.error;
         recordUndo();
         extrusions_.append(primitive);
         selection_ = {SceneObjectKind::Extrusion, int(extrusions_.size()) - 1, -1};
@@ -2163,7 +2153,7 @@ public:
             preview_.later = withDependentBodies({index});
             preview_.later.remove(index);
             for (int body : preview_.later)
-                for (int operand : bodyOperands(extrusions_.at(body)))
+                for (int operand : ForgeCad::bodyOperands(extrusions_.at(body)))
                     if (operand != index && !preview_.later.contains(operand) && operand >= 0 && operand < extrusions_.size()
                         && !extrusions_.at(operand).suppressed)
                         preview_.restored.insert(operand);
@@ -2173,7 +2163,7 @@ public:
         if (definition.operation < 0 && definition.feature == BodyFeature::SheetTrim && !definition.trimProject) {
             preview_.replaced.clear();
         }
-        else if (isCurveBody(definition) || isDatumBody(definition)) preview_.replaced.clear();  // la base dell'elica resta
+        else if (ForgeCad::isCurveBody(definition) || ForgeCad::isDatumBody(definition)) preview_.replaced.clear();  // la base dell'elica resta
         else if (definition.operation < 0 && definition.feature == BodyFeature::Blend) preview_.replaced.clear(); // la base opaca resta sotto la patch
         else if (definition.operation < 0 && definition.feature == BodyFeature::SurfaceOffset) preview_.replaced.clear();  // il corpo di partenza resta
         else if (definition.operation < 0 && (definition.feature == BodyFeature::Loft || definition.feature == BodyFeature::Ruled || definition.feature == BodyFeature::PlanarSurface
@@ -2181,7 +2171,7 @@ public:
                                               || definition.feature == BodyFeature::FillSurface))
             preview_.replaced.clear();  // curve e bordi scelti restano visibili
         else if (definition.mergeProbe) preview_.replaced.clear();  // i corpi fusi si sanno a calcolo finito
-        else preview_.replaced = bodyOperands(definition);
+        else preview_.replaced = ForgeCad::bodyOperands(definition);
         // Nell'unione la base resta opaca sotto la patch aggiunta. Nella
         // sottrazione viene invece sostituita dalle facce conservate del
         // risultato, gia' forate/tagliate, mentre la superficie di taglio e'
@@ -2281,7 +2271,7 @@ public:
         // Il corpo selezionato vale anche se nascosto (la base di un raccordo da modificare).
         if (!helix && selection_.kind == SceneObjectKind::Extrusion && selection_.index >= 0 && selection_.index < extrusions_.size()) {
             const ExtrusionObject &selected = extrusions_.at(selection_.index);
-            if (isShapeBody(selected) && (!extend || !selected.solid)) edgePickBody_ = selection_.index;
+            if (ForgeCad::isShapeBody(selected) && (!extend || !selected.solid)) edgePickBody_ = selection_.index;
         }
         bool any = edgePickBody_ >= 0;
         for (int index = 0; index < extrusions_.size() && !any; ++index) any = edgePickEligible(index);
@@ -2360,11 +2350,11 @@ public:
             blend.solid = !blend.forgeBody->isSheet();
             blend.display = preview_.resultDisplay;
             if (blend.display.vertices.isEmpty() && blend.display.edges.isEmpty())
-                tessellateGeometry(blend, tessellationQuality_, blend.display);
+                ForgeCad::tessellateGeometry(blend, tessellationQuality_, blend.display);
             blend.display.constructionCurves.clear();
         } else {
             rebuildBody(blend, int(extrusions_.size()));
-            if (!hasGeometry(blend)) return blend.error;
+            if (!ForgeCad::hasGeometry(blend)) return blend.error;
         }
         recordUndo();
         extrusions_[baseIndex].visible = false;
@@ -2419,7 +2409,7 @@ public:
         } else {
             rebuildBody(body, int(extrusions_.size()));
         }
-        if (!hasGeometry(body)) return body.error;
+        if (!ForgeCad::hasGeometry(body)) return body.error;
         clearPreview();
         recordUndo();
         extrusions_[sheet].visible = false;
@@ -2477,11 +2467,11 @@ public:
             body.display = preview_.display;
             body.solid = false;
             if (body.display.vertices.isEmpty() && body.display.edges.isEmpty())
-                tessellateGeometry(body, tessellationQuality_, body.display);
+                ForgeCad::tessellateGeometry(body, tessellationQuality_, body.display);
         } else {
             rebuildBody(body, int(extrusions_.size()));
         }
-        if (!hasGeometry(body)) return body.error;
+        if (!ForgeCad::hasGeometry(body)) return body.error;
         clearPreview();
         recordUndo();
         extrusions_[sheet].visible = false;
@@ -2504,7 +2494,7 @@ public:
         body.scaleCenterMode = mode;
         body.scaleCenter = center;
         rebuildBody(body, int(extrusions_.size()));
-        if (!hasGeometry(body)) return body.error;
+        if (!ForgeCad::hasGeometry(body)) return body.error;
         recordUndo();
         extrusions_[base].visible = false;
         extrusions_.append(body);
@@ -2545,7 +2535,7 @@ public:
         // risultato definitivo (senza rifare il calcolo B-rep).
         if (localMergePreview(body) && body.mergeOperation != 0
             && preview_.resultDisplay.vertices.isEmpty() && preview_.resultDisplay.edges.isEmpty())
-            tessellateGeometry(body, tessellationQuality_, body.display);
+            ForgeCad::tessellateGeometry(body, tessellationQuality_, body.display);
         body.display.constructionCurves.clear();
         body.error.clear();
         body.notice = preview_.notice;
@@ -2561,9 +2551,9 @@ public:
             rebuildBody(body, int(extrusions_.size()));
         }
         body.mergeProbe = false;
-        if (!hasGeometry(body)) return body.error;
+        if (!ForgeCad::hasGeometry(body)) return body.error;
         recordUndo();
-        QVector<int> hidden = hide + hiddenOperands(body);
+        QVector<int> hidden = hide + ForgeCad::hiddenOperands(body);
         for (int index : hidden)
             if (index >= 0 && index < extrusions_.size()) extrusions_[index].visible = false;
         extrusions_.append(body);
@@ -2744,7 +2734,7 @@ public:
     }
     // Nuovo schizzo sul piano di costruzione `body` (lo segue quando si rigenera).
     int createDatumSketch(int body, const QString &name) {
-        if (body < 0 || body >= extrusions_.size() || !isDatumBody(extrusions_.at(body)) || !extrusions_.at(body).datumValid) return -1;
+        if (body < 0 || body >= extrusions_.size() || !ForgeCad::isDatumBody(extrusions_.at(body)) || !extrusions_.at(body).datumValid) return -1;
         if (sketchMode_) endSketchMode();
         if (edgePicking_) cancelEdgePick();
         SketchObject sketch;
@@ -2794,7 +2784,7 @@ public:
                 body.forgeBody = part.body;
                 body.solid = part.solid;
                 if (!body.forgeBody) body.error = QStringLiteral("Il corpo non ha geometria.");
-                tessellateGeometry(body, quality, body.display);
+                ForgeCad::tessellateGeometry(body, quality, body.display);
                 prepared.append(std::move(body));
                 ++completed;
             }
@@ -2817,12 +2807,12 @@ public:
     ForgeCad::MassReport massReport(int index) const {
         ScopedWork work(workCallback_, QStringLiteral("Calcolo delle proprieta' di massa..."));
         ForgeCad::MassReport report;
-        if (index < 0 || index >= extrusions_.size() || !hasGeometry(extrusions_.at(index))) {
+        if (index < 0 || index >= extrusions_.size() || !ForgeCad::hasGeometry(extrusions_.at(index))) {
             report.error = QStringLiteral("il corpo non ha geometria");
             return report;
         }
         const ExtrusionObject &body = extrusions_.at(index);
-        if (isDatumBody(body)) {
+        if (ForgeCad::isDatumBody(body)) {
             report.error = QStringLiteral("e' un piano di costruzione");
             return report;
         }
@@ -2936,7 +2926,7 @@ public:
 
     // Solidi e superfici separati del corpo (in cache per body: il B-rep e' immutabile).
     QPair<int, int> bodyComponents(int index) const {
-        if (index < 0 || index >= extrusions_.size() || !isShapeBody(extrusions_.at(index))) return {0, 0};
+        if (index < 0 || index >= extrusions_.size() || !ForgeCad::isShapeBody(extrusions_.at(index))) return {0, 0};
         const ForgeCad::ForgeBody &body = extrusions_.at(index).forgeBody;
         const auto found = componentCache_.find(body.get());
         if (found != componentCache_.end() && found->second.first.lock() == body) return found->second.second;
@@ -2983,7 +2973,7 @@ public:
             if (kind == 1 && index >= 0 && index < 3) {
                 plane = ForgeCad::referenceSketchFrame(index, orientation_);
                 name = QStringLiteral("Piano %1").arg(index == 0 ? QStringLiteral("XY") : index == 1 ? QStringLiteral("XZ") : QStringLiteral("YZ"));
-            } else if (kind == 8 && index >= 0 && index < extrusions_.size() && isDatumBody(extrusions_.at(index)) && extrusions_.at(index).datumValid) {
+            } else if (kind == 8 && index >= 0 && index < extrusions_.size() && ForgeCad::isDatumBody(extrusions_.at(index)) && extrusions_.at(index).datumValid) {
                 plane = extrusions_.at(index).datumFrame;
                 name = extrusions_.at(index).name;
             } else return;
@@ -3045,7 +3035,7 @@ public:
         double best = 8.0;
         for (int b = 0; b < extrusions_.size(); ++b) {
             const ExtrusionObject &body = extrusions_.at(b);
-            if (!body.visible || !(isShapeBody(body) || (isCurveBody(body) && body.curve))) continue;
+            if (!body.visible || !(ForgeCad::isShapeBody(body) || (ForgeCad::isCurveBody(body) && body.curve))) continue;
             const QVector<QVector<QVector3D>> &edges = body.display.edges;
             for (int e = 0; e < edges.size(); ++e)
                 for (int k = 1; k < edges.at(e).size(); ++k) {
@@ -3110,7 +3100,7 @@ public:
         const ExtrusionObject &body = extrusions_.at(hit.body);
         ForgeCad::Kernel::CurvePtr<3> curve;
         ForgeCad::Kernel::Interval range;
-        if (isCurveBody(body)) {
+        if (ForgeCad::isCurveBody(body)) {
             EdgePoint near; near.x = hit.point.x(); near.y = hit.point.y(); near.z = hit.point.z();
             curve = ForgeCad::bodyCurveNear(body, near); range = curve->domain();
         }
@@ -3165,7 +3155,7 @@ public:
         QString last;
         QApplication::setOverrideCursor(Qt::WaitCursor);
         for (const ExtrusionObject &body : extrusions_) {
-            if (!body.visible || !isShapeBody(body)) continue;
+            if (!body.visible || !ForgeCad::isShapeBody(body)) continue;
             SketchObject attempt = work;
             const QString error = ForgeCad::appendSectionCurves(attempt, *body.forgeBody, referencesConstruction_, true);
             if (error.isEmpty()) {
@@ -3413,17 +3403,17 @@ public:
         std::function<bool(int)> cyclic=[&](int index) {
             if (index<0 || index>=extrusions_.size() || visited.contains(index)) return false;
             visited.insert(index);
-            for (int sketch : sketchesOf(extrusions_.at(index))) {
+            for (int sketch : ForgeCad::sketchesOf(extrusions_.at(index))) {
                 if (sketch==activeSketch_) return true;
                 if (sketch<0 || sketch>=sketches_.size()) continue;
                 for (const auto &c : sketches_.at(sketch).geometricConstraints)
                     if (c.type==ConstraintType::Pierce && c.pierce && cyclic(pierceSourceIndex(c.pierce->surface))) return true;
             }
-            for (int operand : bodyOperands(extrusions_.at(index))) if (cyclic(operand)) return true;
+            for (int operand : ForgeCad::bodyOperands(extrusions_.at(index))) if (cyclic(operand)) return true;
             return false;
         };
         if (cyclic(owner)) return QStringLiteral("Pierce creerebbe una dipendenza circolare con lo schizzo.");
-        for (int i=0;i<=owner;++i) if (sketchesOf(extrusions_.at(i)).contains(activeSketch_))
+        for (int i=0;i<=owner;++i) if (ForgeCad::sketchesOf(extrusions_.at(i)).contains(activeSketch_))
             return QStringLiteral("La superficie Pierce deve precedere le funzioni che usano questo schizzo.");
         for (const auto &c : active->geometricConstraints)
             if (c.type==ConstraintType::Pierce && c.first==point && c.pierce
@@ -4878,7 +4868,7 @@ protected:
     void remapSketchReferences(int sketchIndex, const QVector<int> &segmentMap, const QVector<int> &curveMap = {}) {
         if (!segmentMap.isEmpty()) remapRevolutionAxes(sketchIndex, segmentMap);
         const auto remap = [&](GeometryRef &ref) {
-            if (!isSketchRef(ref) || ref.index != sketchIndex || ref.element.element < 0) return;
+            if (!ForgeCad::isSketchRef(ref) || ref.index != sketchIndex || ref.element.element < 0) return;
             const QVector<int> &map = ref.element.kind == 0 ? segmentMap : curveMap;
             if ((ref.element.kind != 0 && ref.element.kind != 1) || map.isEmpty()) return;
             ref.element.element = map.value(ref.element.element, -1);
@@ -5606,7 +5596,7 @@ protected:
                 selectSketch(hit.index);
                 return;
             }
-            if (hit.kind == SceneObjectKind::Extrusion && !isDatumBody(extrusions_.at(hit.index))) {
+            if (hit.kind == SceneObjectKind::Extrusion && !ForgeCad::isDatumBody(extrusions_.at(hit.index))) {
                 FaceHit face;
                 const int feature = pickBodyFace(hit.index, event->pos(), face) ? faceOwnerFeature(hit.index, event->pos(), face) : hit.index;
                 event->accept();
@@ -5780,7 +5770,7 @@ protected:
             }
             if (hit.kind == SceneObjectKind::Sketch || hit.kind == SceneObjectKind::Extrusion) {
                 QMenu menu(this);
-                const bool datum = hit.kind == SceneObjectKind::Extrusion && isDatumBody(extrusions_.at(hit.index));
+                const bool datum = hit.kind == SceneObjectKind::Extrusion && ForgeCad::isDatumBody(extrusions_.at(hit.index));
                 // Faccia sotto il puntatore: la funzione che l'ha creata (si
                 // modifica quella), schizzo sul suo piano, raccordo o smusso dei suoi bordi.
                 FaceHit face;
@@ -6769,7 +6759,7 @@ private:
             for (int old : order) { map[old] = reordered.size(); reordered.append(extrusions_.at(old)); }
             const auto mapped = [&](int old) { return old >= 0 ? map.value(old, -1) : old; };
             const auto remapRef = [&](GeometryRef &ref) {
-                if (isBodyRef(ref)) ref.index = mapped(ref.index);
+                if (ForgeCad::isBodyRef(ref)) ref.index = mapped(ref.index);
             };
             for (ExtrusionObject &feature : reordered) {
                 feature.firstBody = mapped(feature.firstBody);
@@ -6802,7 +6792,7 @@ private:
                             || feature.feature == BodyFeature::Draft || feature.feature == BodyFeature::Shell || feature.feature == BodyFeature::Thread
                             || (feature.feature == BodyFeature::Thicken && feature.offsetFaces.isEmpty())) {
                             feature.firstBody = previous;
-                        } else if (mergingFeature(feature) && feature.mergeOperation != 0) {
+                        } else if (ForgeCad::mergingFeature(feature) && feature.mergeOperation != 0) {
                             bool replaced = false;
                             for (int &merged : feature.mergeBodies)
                                 if (merged >= 0 && reordered.at(merged).modelBodyId == bodyId) { merged = previous; replaced = true; break; }
@@ -6853,12 +6843,12 @@ private:
             if (extrusions_.at(index).visible) pending.append(index), chain.insert(index);
         while (!pending.isEmpty()) {
             const int index = pending.takeLast();
-            for (int operand : bodyOperands(extrusions_.at(index)))
+            for (int operand : ForgeCad::bodyOperands(extrusions_.at(index)))
                 if (operand >= 0 && operand < index && !chain.contains(operand)) chain.insert(operand), pending.append(operand);
         }
         for (int index : chain) {
             const ExtrusionObject &body = extrusions_.at(index);
-            if (body.suppressed || !body.forgeBody || !isShapeBody(body)) continue;
+            if (body.suppressed || !body.forgeBody || !ForgeCad::isShapeBody(body)) continue;
             const ForgeCad::ForgeBody forgeBody = body.forgeBody;
             const bool warmed = std::any_of(warmedBodies_.begin(), warmedBodies_.end(), [&](const std::weak_ptr<const ForgeCad::Kernel::Body> &known) {
                 return !known.owner_before(forgeBody) && !forgeBody.owner_before(known);
@@ -6962,11 +6952,11 @@ private:
         for (int index = qMax(0, from); index < extrusions_.size(); ++index) {
             const ExtrusionObject &body = extrusions_.at(index);
             bool depends = all;
-            for (int sketch : sketchesOf(body)) depends = depends || dirtySketches.contains(sketch);
-            for (int operand : bodyOperands(body)) depends = depends || (operand >= 0 && operand < index && dirty.at(operand));
+            for (int sketch : ForgeCad::sketchesOf(body)) depends = depends || dirtySketches.contains(sketch);
+            for (int operand : ForgeCad::bodyOperands(body)) depends = depends || (operand >= 0 && operand < index && dirty.at(operand));
             if (!depends) continue;
             dirty[index] = true;
-            if (!isDatumBody(body)) {
+            if (!ForgeCad::isDatumBody(body)) {
                 pending.append(index);
                 if (hasSurfacePierceSource(index)) {
                     flush();
@@ -7004,7 +6994,7 @@ private:
         int levels = 0;
         for (int index : indices) {
             int l = 0;
-            for (int operand : bodyOperands(extrusions_.at(index)))
+            for (int operand : ForgeCad::bodyOperands(extrusions_.at(index)))
                 if (level.contains(operand)) l = qMax(l, level.value(operand) + 1);
             level.insert(index, l);
             levels = qMax(levels, l + 1);
@@ -7027,7 +7017,7 @@ private:
                 runWhileResponsive([&] {
                     ForgeCad::Kernel::parallelFor(count, ForgeCad::Kernel::threadCount(0), [&](std::size_t k) {
                         const int index = batch[offset + k];
-                        buildBody(bodies[index], index, sketches, all, quality);
+                        ForgeCad::buildBody(bodies[index], index, sketches, all, quality);
                     });
                 });
                 if (advanced) advanced(int(count), next.at(batch[offset + count - 1]).name);
@@ -7102,7 +7092,7 @@ private:
                 const ExtrusionObject &body = extrusions_.at(index);
                 QVector<int> hidden{body.firstBody, body.secondBody};
                 hidden += body.booleanTools;
-                hidden += hiddenOperands(body);
+                hidden += ForgeCad::hiddenOperands(body);
                 for (int operand : hidden)
                     if (operand >= 0 && operand < extrusions_.size() && !removed.contains(operand)) extrusions_[operand].visible = true;
                 continue;
@@ -7115,12 +7105,12 @@ private:
             if (body.secondBody >= 0) body.secondBody = map.value(body.secondBody, -1);
             for (QVector<GeometryRef> *refs : {&body.datum.refs, &body.pattern.refs, &body.ruledFirst, &body.ruledSecond, &body.planarRefs, &body.loftStartFaces, &body.loftEndFaces, &body.loftSections, &body.loftEdgeGuides})
                 for (GeometryRef &ref : *refs)
-                    if (isBodyRef(ref)) ref.index = map.value(ref.index, -1);
-            if (isBodyRef(body.extentRef)) body.extentRef.index = map.value(body.extentRef.index, -1);
-            if (isBodyRef(body.move.axis)) body.move.axis.index = map.value(body.move.axis.index, -1);
-            if (isBodyRef(body.revolveAxisRef)) body.revolveAxisRef.index = map.value(body.revolveAxisRef.index, -1);
-            if (isBodyRef(body.draftNeutral)) body.draftNeutral.index = map.value(body.draftNeutral.index, -1);
-            if (isBodyRef(body.thickenDirection)) body.thickenDirection.index = map.value(body.thickenDirection.index, -1);
+                    if (ForgeCad::isBodyRef(ref)) ref.index = map.value(ref.index, -1);
+            if (ForgeCad::isBodyRef(body.extentRef)) body.extentRef.index = map.value(body.extentRef.index, -1);
+            if (ForgeCad::isBodyRef(body.move.axis)) body.move.axis.index = map.value(body.move.axis.index, -1);
+            if (ForgeCad::isBodyRef(body.revolveAxisRef)) body.revolveAxisRef.index = map.value(body.revolveAxisRef.index, -1);
+            if (ForgeCad::isBodyRef(body.draftNeutral)) body.draftNeutral.index = map.value(body.draftNeutral.index, -1);
+            if (ForgeCad::isBodyRef(body.thickenDirection)) body.thickenDirection.index = map.value(body.thickenDirection.index, -1);
             // Strumenti e corpi fusi eliminati: escono dall'elenco.
             for (QVector<int> *list : {&body.booleanTools, &body.mergeBodies}) {
                 QVector<int> kept2;
@@ -7230,7 +7220,7 @@ private:
         QSet<int> sketches;
         if (changed >= 0 && changed < dirty.size()) {
             dirty[changed] = true;
-            if (isDatumBody(extrusions_.at(changed))) { followDatum(changed, sketches); refreshSurfacePierceSketches(-1,sketches); }
+            if (ForgeCad::isDatumBody(extrusions_.at(changed))) { followDatum(changed, sketches); refreshSurfacePierceSketches(-1,sketches); }
             else refreshSurfacePierceSketches(changed,sketches);
         }
         regenerateFrom(changed + 1, dirty, sketches);
@@ -7241,158 +7231,11 @@ private:
         regenerateFrom(0, {}, {}, true, progress);
     }
 
-    static bool hasGeometry(const ExtrusionObject &body) {
-        if (isCurveBody(body)) return body.curve != nullptr;
-        if (isDatumBody(body)) return body.datumValid;
-        return body.forgeBody != nullptr;
-    }
-    // Funzione curva (elica, spirale): niente solido ne' superficie, solo la curva.
-    static bool isCurveBody(const ExtrusionObject &body) {
-        return body.operation < 0 && (body.feature == BodyFeature::Helix || body.feature == BodyFeature::ProjectedCurve);
-    }
-    // Funzioni che si possono fondere con i solidi (mergeOperation): estrusione, rivoluzione, sweep.
-    static bool mergingFeature(const ExtrusionObject &body) {
-        return body.operation < 0
-            && (body.feature == BodyFeature::Extrusion || body.feature == BodyFeature::Revolution || body.feature == BodyFeature::Sweep);
-    }
     // Anteprima locale della fusione: i corpi toccati restano opachi e si
     // disegnano solo le facce nuove (estrusione e rivoluzione).
     static bool localMergePreview(const ExtrusionObject &body) {
         return body.operation < 0 && (body.feature == BodyFeature::Extrusion || body.feature == BodyFeature::Revolution);
     }
-    // Piano di costruzione: niente solido, solo il piano (datumFrame).
-    static bool isDatumBody(const ExtrusionObject &body) { return body.operation < 0 && body.feature == BodyFeature::DatumPlane; }
-    // Corpo con una forma (solido o superficie): non una curva ne' un piano di costruzione.
-    static bool isShapeBody(const ExtrusionObject &body) { return hasGeometry(body) && !isCurveBody(body) && !isDatumBody(body); }
-    // Corpi da cui dipende il corpo: operandi delle booleane, base dei raccordi,
-    // superficie (e strumento) dei tagli e delle estensioni. Hanno indice minore.
-    static QVector<int> bodyOperands(const ExtrusionObject &body) {
-        if (body.operation >= 0) return QVector<int>{body.firstBody, body.secondBody} + body.booleanTools;
-        switch (body.feature) {
-        case BodyFeature::Extrusion: {
-            QVector<int> bodies = body.mergeOperation != 0 ? body.mergeBodies : QVector<int>();
-            if (body.extent != 0 && isBodyRef(body.extentRef)) bodies.append(body.extentRef.index);
-            return bodies;
-        }
-        case BodyFeature::Revolution: {
-            QVector<int> bodies = body.mergeOperation != 0 ? body.mergeBodies : QVector<int>();
-            if (body.revolveAxis == kRevolveAxisReference && isBodyRef(body.revolveAxisRef)) bodies.append(body.revolveAxisRef.index);
-            return bodies;
-        }
-        case BodyFeature::Thicken: {
-            QVector<int> refs{body.firstBody};
-            if (isBodyRef(body.thickenDirection) && !refs.contains(body.thickenDirection.index)) refs.append(body.thickenDirection.index);
-            return refs;
-        }
-        case BodyFeature::Draft: {
-            QVector<int> refs{body.firstBody};
-            if (isBodyRef(body.draftNeutral) && !refs.contains(body.draftNeutral.index)) refs.append(body.draftNeutral.index);
-            return refs;
-        }
-        case BodyFeature::Blend:
-        case BodyFeature::SheetExtend:
-        case BodyFeature::SurfaceOffset:
-        case BodyFeature::DeleteFace:
-        case BodyFeature::Shell:
-        case BodyFeature::Thread:
-        case BodyFeature::ProjectedCurve:
-        case BodyFeature::Scale: return {body.firstBody};
-        case BodyFeature::Sew: return QVector<int>{body.firstBody} + body.booleanTools;
-        case BodyFeature::SheetTrim: return body.secondBody >= 0 ? QVector<int>{body.firstBody, body.secondBody} : QVector<int>{body.firstBody};
-        case BodyFeature::Helix: return body.helix.source != 0 ? QVector<int>{body.firstBody} : QVector<int>{};
-        case BodyFeature::Sweep: {
-            QVector<int> result = body.sweepPath == 1 ? QVector<int>{body.firstBody} : QVector<int>();
-            if (body.mergeOperation != 0) result += body.mergeBodies;
-            return result;
-        }
-        case BodyFeature::DatumPlane: {
-            QVector<int> bodies;
-            for (const GeometryRef &ref : body.datum.refs)
-                if (isBodyRef(ref)) bodies.append(ref.index);
-            return bodies;
-        }
-        case BodyFeature::Pattern: {
-            QVector<int> bodies{body.firstBody};
-            for (const GeometryRef &ref : body.pattern.refs)
-                if (isBodyRef(ref)) bodies.append(ref.index);
-            return bodies;
-        }
-        case BodyFeature::Transform: {
-            QVector<int> bodies{body.firstBody};
-            if (isBodyRef(body.move.axis)) bodies.append(body.move.axis.index);
-            return bodies;
-        }
-        case BodyFeature::Loft:
-        case BodyFeature::Ruled:
-        case BodyFeature::PlanarSurface:
-        case BodyFeature::BoundarySurface:
-        case BodyFeature::FillSurface: {
-            QVector<int> bodies;
-            for (const QVector<GeometryRef> *refs : {&body.ruledFirst, &body.ruledSecond, &body.planarRefs, &body.loftStartFaces, &body.loftEndFaces, &body.loftSections, &body.loftEdgeGuides})
-                for (const GeometryRef &ref : *refs)
-                    if (isBodyRef(ref) && !bodies.contains(ref.index)) bodies.append(ref.index);
-            return bodies;
-        }
-        default: return {};
-        }
-    }
-    // Riferimento a un corpo (vertice, spigolo, faccia, piano di costruzione, curva) o a uno schizzo (punto, entita').
-    static bool isBodyRef(const GeometryRef &ref) {
-        return ref.kind == 3 || ref.kind == 4 || ref.kind == 5 || ref.kind == 8 || ref.kind == 9 || ref.kind == 10;
-    }
-    static bool isSketchRef(const GeometryRef &ref) { return ref.kind == 6 || ref.kind == 7; }
-    // Schizzi da cui nasce il corpo: estrusione, rivoluzione, base dell'elica,
-    // profilo e percorso dello sweep, sezioni e guide del loft.
-    static QVector<int> sketchesOf(const ExtrusionObject &body) {
-        if (body.operation >= 0) return {};
-        switch (body.feature) {
-        case BodyFeature::Extrusion:
-            if (body.extent != 0 && isSketchRef(body.extentRef) && body.extentRef.index != body.sketchIndex) return {body.sketchIndex, body.extentRef.index};
-            return {body.sketchIndex};
-        case BodyFeature::Revolution:
-            if (body.revolveAxis == kRevolveAxisReference && isSketchRef(body.revolveAxisRef) && body.revolveAxisRef.index != body.sketchIndex)
-                return {body.sketchIndex, body.revolveAxisRef.index};
-            return {body.sketchIndex};
-        case BodyFeature::Draft: return isSketchRef(body.draftNeutral) ? QVector<int>{body.draftNeutral.index} : QVector<int>{};
-        case BodyFeature::Thicken: return isSketchRef(body.thickenDirection) ? QVector<int>{body.thickenDirection.index} : QVector<int>{};
-        case BodyFeature::Transform: return isSketchRef(body.move.axis) ? QVector<int>{body.move.axis.index} : QVector<int>{};
-        case BodyFeature::Helix: return body.helix.source == 0 ? QVector<int>{body.sketchIndex} : QVector<int>{};
-        case BodyFeature::SheetTrim: return body.sketchIndex >= 0 ? QVector<int>{body.sketchIndex} : QVector<int>{};
-        case BodyFeature::ProjectedCurve: return {body.sketchIndex};
-        case BodyFeature::Sweep: return body.sweepPath == 0 ? QVector<int>{body.sketchIndex, body.pathSketch} : QVector<int>{body.sketchIndex};
-        case BodyFeature::Loft: {
-            QVector<int> result = body.loftSections.isEmpty() ? body.loftSketches : QVector<int>{};
-            for (const auto *refs : {&body.loftSections,&body.loftEdgeGuides})
-                for (const auto &ref : *refs)
-                    if (isSketchRef(ref) && !result.contains(ref.index)) result.append(ref.index);
-            for (int guide : body.loftGuides)
-                if (!result.contains(guide)) result.append(guide);
-            for (const SketchPathRef &guide : body.loftGuidePaths)
-                if (!result.contains(guide.sketch)) result.append(guide.sketch);
-            return result;
-        }
-        case BodyFeature::DatumPlane:
-        case BodyFeature::Pattern: {
-            QVector<int> sketches;
-            for (const GeometryRef &ref : body.feature == BodyFeature::Pattern ? body.pattern.refs : body.datum.refs)
-                if (isSketchRef(ref)) sketches.append(ref.index);
-            return sketches;
-        }
-        case BodyFeature::Ruled:
-        case BodyFeature::PlanarSurface:
-        case BodyFeature::BoundarySurface:
-        case BodyFeature::FillSurface: {
-            QVector<int> sketches;
-            if (body.feature == BodyFeature::PlanarSurface && body.planarRefs.isEmpty()) sketches.append(body.sketchIndex);
-            for (const QVector<GeometryRef> *refs : {&body.ruledFirst, &body.ruledSecond, &body.planarRefs, &body.loftStartFaces, &body.loftEndFaces, &body.loftSections, &body.loftEdgeGuides})
-                for (const GeometryRef &ref : *refs)
-                    if (isSketchRef(ref) && !sketches.contains(ref.index)) sketches.append(ref.index);
-            return sketches;
-        }
-        default: return {};
-        }
-    }
-    static bool usesSketch(const ExtrusionObject &body) { return !sketchesOf(body).isEmpty(); }
 
     // Geometria esatta del corpo `index` (estrusione o booleana) con il kernel
     // attivo, poi la sua tassellazione. Gli operandi di una booleana hanno
@@ -7409,7 +7252,7 @@ private:
         const QVector<SketchObject> sketches = sketches_;
         const QVector<ExtrusionObject> bodies = extrusions_;
         const int quality = tessellationQuality_;
-        runWhileResponsive([&] { buildBody(result, index, sketches, bodies, quality); });
+        runWhileResponsive([&] { ForgeCad::buildBody(result, index, sketches, bodies, quality); });
         body = std::move(result);
     }
 
@@ -7452,674 +7295,10 @@ private:
         --responsiveWork_;
         if (failure) std::rethrow_exception(failure);
     }
-    // Geometria e tassellazione di un corpo (anche da un thread: non tocca il viewport).
-    static void buildBody(ExtrusionObject &body, int index, const QVector<SketchObject> &sketches, const QVector<ExtrusionObject> &bodies,
-                          int quality) {
-        QElapsedTimer timer;
-        timer.start();
-        bool usedSnapshot = body.cachedGeometry && body.forgeBody;
-        // Le versioni precedenti potevano salvare come raccordo riuscito una
-        // booleana no-op, identica alla base. Non perpetuare quel falso
-        // risultato dalla cache: rigenerandolo il kernel restituisce l'errore
-        // e la storyboard mostra l'ultimo stadio realmente valido. Una feature
-        // soppressa e' uguale alla base per definizione: non si controlla.
-        if (usedSnapshot && !body.suppressed && body.operation < 0 && body.feature == BodyFeature::Blend
-            && body.firstBody >= 0 && body.firstBody < index && body.firstBody < bodies.size()
-            && bodies.at(body.firstBody).forgeBody
-            && !ForgeCad::forgeBlendHasEffect(bodies.at(body.firstBody).forgeBody, body.forgeBody))
-            usedSnapshot = false;
-        if (usedSnapshot) {
-            // Appena aperto: B-rep e, nelle cache nuove, mesh salvati nel
-            // documento al posto del calcolo.
-            body.cachedGeometry = false;
-            body.curve.reset();
-            body.datumValid = false;
-            body.solid = !body.forgeBody->isSheet();
-        } else {
-            body.cachedGeometry = false;
-            buildGeometry(body, index, sketches, bodies);
-        }
-        const qint64 built = timer.elapsed();
-        if (!usedSnapshot || body.display.quality != quality) tessellateGeometry(body, quality, body.display);
-        configurePatternInstances(body, index, sketches, bodies);
-        if (qEnvironmentVariableIsSet("FORGECAD_PROFILE"))
-            std::fprintf(stderr, "PROFILO corpo %d \"%s\": costruzione %lld ms, tassellazione %lld ms (punti valutati con CUDA dall'avvio: %llu)\n",
-                         index, qPrintable(body.name), built, timer.elapsed() - built,
-                         (unsigned long long)ForgeCad::cudaTessellationPoints());
-    }
-
-    // Geometria esatta del corpo `index` (kernel ForgeCAD): gli schizzi e gli
-    // operandi (indici minori, gia' costruiti) vengono da `sketches` e
-    // `bodies`. In caso d'errore il corpo resta senza geometria con il
-    // messaggio in `error`. Usata dalla rigenerazione e dalle anteprime (in un
-    // thread, su copie).
-    // FORGECAD_GEOMETRY_HASH_BEGIN
-    // Questa sezione entra nell'impronta delle cache B-rep dei documenti.
-    // Tenere tra i due marcatori tutta la logica che decide quale geometria
-    // esatta costruire; le modifiche alla sola UI fuori da qui non devono
-    // invalidare le anteprime salvate.
-    // Tratti dei contorni senza ripetizioni: rigenerando la storia con una
-    // topologia diversa a monte piu' riferimenti (frammenti di un vecchio
-    // bordo) possono indicare lo stesso spigolo, che nel loop va una volta.
-    static void appendDistinctSegments(std::vector<ForgeCad::Kernel::PathSegment> &segments,
-                                       const std::vector<ForgeCad::Kernel::PathSegment> &pieces) {
-        for (const auto &piece : pieces) {
-            const bool repeated = std::any_of(segments.begin(), segments.end(), [&](const ForgeCad::Kernel::PathSegment &segment) {
-                return segment.curve == piece.curve && segment.range.lo == piece.range.lo && segment.range.hi == piece.range.hi;
-            });
-            if (!repeated) segments.push_back(piece);
-        }
-    }
-    static void buildGeometry(ExtrusionObject &body, int index, const QVector<SketchObject> &sketches, const QVector<ExtrusionObject> &bodies) {
-        body.error.clear();
-        body.notice.clear();
-        body.forgeBody.reset();
-        body.curve.reset();
-        for (int sketch : sketchesOf(body)) if (sketch>=0 && sketch<sketches.size())
-            for (const auto &c : sketches.at(sketch).geometricConstraints)
-                if (c.type==ConstraintType::Pierce && (!c.pierce || !c.pierce->error.isEmpty()
-                    || ForgeCad::constraintError(sketches.at(sketch),c)>1e-7)) {
-                    body.error=QStringLiteral("Vincolo Pierce non risolto nello schizzo %1: %2").arg(sketches.at(sketch).name,
-                        c.pierce ? (c.pierce->error.isEmpty() ? QStringLiteral("punto fuori dalla superficie") : c.pierce->error) : QStringLiteral("riferimento mancante"));
-                    return;
-                }
-        body.curves.clear();
-        body.datumValid = false;
-        body.solid = false;
-        const auto operand = [&](int i) -> const ExtrusionObject * {
-            return i >= 0 && i < index && i < bodies.size() ? &bodies.at(i) : nullptr;
-        };
-        const auto sketch = [&](int i) -> const SketchObject * { return i >= 0 && i < sketches.size() ? &sketches.at(i) : nullptr; };
-        if (body.suppressed) {
-            // Una feature soppressa e' un passaggio trasparente nella catena:
-            // conserva un risultato intermedio valido per le feature seguenti.
-            const ExtrusionObject *previous = nullptr;
-            for (int candidate = index - 1; candidate >= 0; --candidate)
-                if (bodies.at(candidate).modelBodyId == body.modelBodyId) { previous = &bodies.at(candidate); break; }
-            if (previous) {
-                body.forgeBody = previous->forgeBody;
-                body.curve = previous->curve;
-                body.curves = previous->curves;
-                body.solid = previous->solid;
-            }
-            return;
-        }
-        try {
-            if (body.operation >= 0) {
-                const ExtrusionObject *first = operand(body.firstBody), *second = operand(body.secondBody);
-                if (!first || !second) {
-                    body.error = QStringLiteral("Operandi della booleana non validi.");
-                    return;
-                }
-                // A op B, poi op con gli altri strumenti uno dopo l'altro.
-                body.forgeBody = ForgeCad::forgeBoolean(first->forgeBody, second->forgeBody, BooleanOperation(body.operation), &body.error);
-                for (int tool : body.booleanTools) {
-                    if (!body.forgeBody) break;
-                    const ExtrusionObject *other = operand(tool);
-                    if (!other) {
-                        body.forgeBody.reset();
-                        body.error = QStringLiteral("Uno degli strumenti della booleana non esiste piu'.");
-                        break;
-                    }
-                    body.forgeBody = ForgeCad::forgeBoolean(body.forgeBody, other->forgeBody, BooleanOperation(body.operation), &body.error);
-                    if (!body.forgeBody) body.error = QStringLiteral("Con \"%1\": %2").arg(other->name, body.error);
-                }
-                body.solid = body.forgeBody && !body.forgeBody->isSheet();
-                return;
-            }
-            switch (body.feature) {
-            case BodyFeature::Transform: {
-                const ExtrusionObject *base = operand(body.firstBody);
-                if (!base || !isShapeBody(*base)) {
-                    body.error = QStringLiteral("Il corpo da spostare non esiste piu' o non ha geometria.");
-                    return;
-                }
-                body.forgeBody = ForgeCad::forgeMoveBody(base->forgeBody, body.move, index, sketches, bodies, &body.error);
-                body.solid = base->solid && hasGeometry(body);
-                return;
-            }
-            case BodyFeature::Scale: {
-                const ExtrusionObject *base = operand(body.firstBody);
-                if (!base) {
-                    body.error = QStringLiteral("Il corpo da scalare non esiste piu'.");
-                    return;
-                }
-                body.forgeBody = ForgeCad::forgeScale(base->forgeBody, body.scaleFactor, body.scaleCenterMode, body.scaleCenter, &body.error);
-                body.solid = base->solid && hasGeometry(body);
-                return;
-            }
-            case BodyFeature::Draft: {
-                const ExtrusionObject *base = operand(body.firstBody);
-                if (!base || !isShapeBody(*base)) {
-                    body.error = QStringLiteral("Il corpo da sformare non esiste piu'.");
-                    return;
-                }
-                ForgeCad::ResolvedRef neutral;
-                if (!ForgeCad::resolveGeometryRef(body.draftNeutral, index, sketches, bodies, neutral, &body.error)) return;
-                if (!neutral.hasPlane) { body.error = QStringLiteral("Scegli un piano neutro o una faccia piana."); return; }
-                body.forgeBody = ForgeCad::forgeDraft(base->forgeBody, body.offsetFaces, neutral.point,
-                    neutral.direction * (body.draftReverse ? -1.0 : 1.0), body.draftAngle, &body.error);
-                body.solid = body.forgeBody && !body.forgeBody->isSheet();
-                return;
-            }
-            case BodyFeature::Thicken: {
-                const ExtrusionObject *base = operand(body.firstBody);
-                if (!base || !isShapeBody(*base)) {
-                    body.error = QStringLiteral("La superficie da ispessire non esiste piu'.");
-                    return;
-                }
-                ForgeCad::Kernel::Vec3 direction;
-                const ForgeCad::Kernel::Vec3 *along = nullptr;
-                if (body.thickenDirection.kind >= 0) {
-                    ForgeCad::ResolvedRef resolved;
-                    if (!ForgeCad::resolveGeometryRef(body.thickenDirection, index, sketches, bodies, resolved, &body.error)) return;
-                    if (!resolved.hasLine && !resolved.hasPlane) {
-                        body.error = QStringLiteral("La direzione dello spessore deve essere una retta, un asse, un piano o una faccia piana.");
-                        return;
-                    }
-                    direction = resolved.direction;  // retta: la sua direzione; piano: la normale
-                    along = &direction;
-                }
-                body.forgeBody = ForgeCad::forgeThicken(base->forgeBody, body.offsetFaces, body.distance, body.thickenSide, along, &body.error);
-                body.solid = body.forgeBody && !body.forgeBody->isSheet();
-                return;
-            }
-            case BodyFeature::ProjectedCurve: {
-                const ExtrusionObject *base = operand(body.firstBody);
-                const SketchObject *profile = sketch(body.sketchIndex);
-                if (!base || !isShapeBody(*base)) {
-                    body.error = QStringLiteral("Il corpo su cui proiettare non esiste piu'.");
-                    return;
-                }
-                if (!profile) {
-                    body.error = QStringLiteral("Lo schizzo da proiettare non esiste piu'.");
-                    return;
-                }
-                body.curves = ForgeCad::forgeProjectedCurves(base->forgeBody, *profile, body.projectionReverse, &body.error, &body.notice);
-                if (!body.curves.isEmpty()) body.curve = body.curves.first();
-                return;
-            }
-            case BodyFeature::Shell: {
-                const ExtrusionObject *base = operand(body.firstBody);
-                if (!base || !isShapeBody(*base) || !base->solid) {
-                    body.error = QStringLiteral("Il solido da svuotare non esiste piu' o non e' un solido.");
-                    return;
-                }
-                body.forgeBody = ForgeCad::forgeShell(base->forgeBody, body.offsetFaces, body.distance, &body.error);
-                body.solid = hasGeometry(body);
-                return;
-            }
-            case BodyFeature::Thread: {
-                const ExtrusionObject *base = operand(body.firstBody);
-                if (!base || !isShapeBody(*base) || !base->solid) {
-                    body.error = QStringLiteral("Il solido da filettare non esiste piu' o non e' un solido.");
-                    return;
-                }
-                body.forgeBody = ForgeCad::forgeThread(base->forgeBody, body.thread, &body.error);
-                body.solid = hasGeometry(body);
-                return;
-            }
-            case BodyFeature::DeleteFace: {
-                const ExtrusionObject *base = operand(body.firstBody);
-                if (!base || !isShapeBody(*base)) {
-                    body.error = QStringLiteral("Il corpo da cui togliere le facce non esiste piu' o non ha geometria.");
-                    return;
-                }
-                body.forgeBody = ForgeCad::forgeDeleteFaces(base->forgeBody, body.offsetFaces, &body.error, body.deleteComponent);
-                body.solid = false;
-                return;
-            }
-            case BodyFeature::SurfaceOffset: {
-                const ExtrusionObject *base = operand(body.firstBody);
-                if (!base || !isShapeBody(*base)) {
-                    body.error = QStringLiteral("Il corpo dell'offset non esiste piu' o non ha geometria.");
-                    return;
-                }
-                body.forgeBody = ForgeCad::forgeOffsetFaces(base->forgeBody, body.offsetFaces, body.distance, &body.error, nullptr, body.offsetSew);
-                body.solid = false;
-                return;
-            }
-            case BodyFeature::Sew: {
-                QVector<ForgeCad::ForgeBody> sheets;
-                for (int input : QVector<int>{body.firstBody} + body.booleanTools) {
-                    const ExtrusionObject *sheet = operand(input);
-                    if (!sheet || !isShapeBody(*sheet)) {
-                        body.error = QStringLiteral("Una delle superfici da cucire non esiste piu' o non ha geometria.");
-                        return;
-                    }
-                    sheets.append(sheet->forgeBody);
-                }
-                body.forgeBody = ForgeCad::forgeSew(sheets, body.sewTolerance, body.sewSolid, &body.error);
-                body.solid = body.forgeBody && !body.forgeBody->isSheet();
-                return;
-            }
-            case BodyFeature::SheetTrim:
-            case BodyFeature::SheetExtend: {
-                const bool trim = body.feature == BodyFeature::SheetTrim;
-                const ExtrusionObject *sheet = operand(body.firstBody);
-                const ExtrusionObject *tool = trim && body.secondBody >= 0 ? operand(body.secondBody) : nullptr;
-                if (!sheet) body.error = QStringLiteral("La superficie non esiste piu'.");
-                else if (trim && body.secondBody >= 0 && !tool) body.error = QStringLiteral("Lo strumento del taglio non esiste piu'.");
-                else if (trim) {
-                    ForgeCad::ForgeBody cutter;
-                    if (tool && tool->forgeBody) cutter = tool->forgeBody;
-                    else if (tool && tool->feature == BodyFeature::DatumPlane && tool->datumValid) {
-                        const SketchFrame &f = tool->datumFrame;
-                        const ForgeCad::Kernel::Frame3 frame(
-                            ForgeCad::Kernel::Vec3(f.origin[0], f.origin[1], f.origin[2]),
-                            ForgeCad::Kernel::Vec3(f.normal[0], f.normal[1], f.normal[2]),
-                            ForgeCad::Kernel::Vec3(f.xAxis[0], f.xAxis[1], f.xAxis[2]));
-                        cutter = ForgeCad::forgeTrimPlaneTool(sheet->forgeBody, frame, &body.error);
-                    }
-                    else if (body.sketchIndex >= 0) {
-                        const SketchObject *s = sketch(body.sketchIndex);
-                        if (!s) body.error = QStringLiteral("Lo schizzo di taglio non esiste piu'.");
-                        else if (body.trimProject) {
-                            // Proiezione sulla prima faccia incontrata: niente lame, niente parte da scegliere.
-                            body.forgeBody = ForgeCad::forgeProjectedCut(sheet->forgeBody, *s, body.projectionMode, body.projectionReverse,
-                                                                         &body.error, &body.notice);
-                            body.solid = body.forgeBody && !body.forgeBody->isSheet();
-                            return;
-                        }
-                        else cutter = ForgeCad::forgeTrimSketchTool(sheet->forgeBody, *s, &body.error);
-                    }
-                    if (body.error.isEmpty() && ((tool || body.sketchIndex >= 0) && !cutter))
-                        body.error = QStringLiteral("Lo strumento del taglio non ha geometria valida.");
-                    if (body.error.isEmpty()) {
-                        if (body.trimBoth) {
-                            if (!tool || !tool->forgeBody)
-                                body.error = QStringLiteral("Il taglio reciproco richiede due corpi o superfici.");
-                            else body.forgeBody = ForgeCad::forgeTrimBoth(sheet->forgeBody, tool->forgeBody,
-                                                                         body.trimKeep, body.trimToolKeep, &body.error);
-                        } else {
-                            body.forgeBody = ForgeCad::forgeTrimSheet(sheet->forgeBody, cutter, body.trimPlane,
-                                                                     body.trimKeep, &body.error);
-                        }
-                    }
-                }
-                else body.forgeBody = ForgeCad::forgeExtendSheet(sheet->forgeBody, body.blendEdges, body.blendSize, body.extendLinear, &body.error);
-                return;
-            }
-            case BodyFeature::Blend: {
-                const ExtrusionObject *base = operand(body.firstBody);
-                if (!base) {
-                    body.error = QStringLiteral("Il corpo da raccordare non esiste piu'.");
-                    return;
-                }
-                // Gli ID dei riferimenti valgono se gli spigoli sono stati scelti su questa base.
-                const bool sameState = body.blendBaseFeature != 0 && body.blendBaseFeature == base->featureId;
-                body.forgeBody = ForgeCad::forgeBlend(base->forgeBody, body.blendEdges, body.blendSize, body.blendChamfer, &body.error, body.chamferSpec,
-                                                      sameState);
-                // Due raccordi/smussi adiacenti possono intersecare le rispettive
-                // zone. Se il secondo e' piu' grande, applicarlo sul raccordo
-                // piccolo puo' non avere una superficie offset valida. Rigenera
-                // allora dalla base comune in ordine decrescente di misura: la
-                // lavorazione grande consuma la zona d'intersezione e quella
-                // piccola viene rifatta sugli spigoli rimasti.
-                if (!body.forgeBody && base->feature == BodyFeature::Blend
-                    && body.blendSize > base->blendSize + 1e-12 * qMax(body.blendSize, base->blendSize)) {
-                    const ExtrusionObject *source = operand(base->firstBody);
-                    if (source && source->forgeBody) {
-                        QString reorderedError;
-                        ForgeCad::ForgeBody larger = ForgeCad::forgeBlend(source->forgeBody, body.blendEdges, body.blendSize,
-                                                                          body.blendChamfer, &reorderedError, body.chamferSpec, false);
-                        if (larger) {
-                            ForgeCad::ForgeBody rebuilt = ForgeCad::forgeBlend(larger, base->blendEdges, base->blendSize,
-                                                                               base->blendChamfer, &reorderedError, base->chamferSpec, false);
-                            if (rebuilt) {
-                                body.forgeBody = std::move(rebuilt);
-                                body.error.clear();
-                            }
-                        }
-                    }
-                }
-                body.solid = body.forgeBody && !body.forgeBody->isSheet();
-                return;
-            }
-            case BodyFeature::Primitive:
-                body.forgeBody = ForgeCad::forgePrimitive(body.primitive, &body.error);
-                body.solid = hasGeometry(body);
-                return;
-            case BodyFeature::Helix: {
-                ForgeCad::HelixBase base;
-                bool ok = false;
-                if (body.helix.source == 0) {
-                    const SketchObject *s = sketch(body.sketchIndex);
-                    if (!s) body.error = QStringLiteral("Lo schizzo della base dell'elica non esiste piu'.");
-                    else ok = ForgeCad::helixBaseFromSketch(*s, body.helix.curve, base, &body.error);
-                } else {
-                    const ExtrusionObject *b = operand(body.firstBody);
-                    if (!b || !isShapeBody(*b)) body.error = QStringLiteral("Il corpo della base dell'elica non esiste piu'.");
-                    else ok = ForgeCad::forgeHelixBase(*b->forgeBody, body.helix.source, body.helix.reference, base, &body.error);
-                }
-                if (ok) body.curve = ForgeCad::helixCurve(body.helix, base, &body.error);
-                return;
-            }
-            case BodyFeature::Sweep: {
-                const SketchObject *profile = sketch(body.sketchIndex);
-                if (!profile) {
-                    body.error = QStringLiteral("Lo schizzo del profilo non esiste piu'.");
-                    return;
-                }
-                std::vector<ForgeCad::Kernel::PathSegment> path;
-                if (body.sweepPath == 0) {
-                    const SketchObject *pathSketch = sketch(body.pathSketch);
-                    if (!pathSketch) {
-                        body.error = QStringLiteral("Lo schizzo del percorso non esiste piu'.");
-                        return;
-                    }
-                    if (body.pathSketch == body.sketchIndex) {
-                        body.error = QStringLiteral("Profilo e percorso devono stare in schizzi diversi.");
-                        return;
-                    }
-                    SketchPathRef selection{body.pathSketch, body.pathSegments, body.pathCurves};
-                    const SketchObject selected = ForgeCad::sketchPathSubset(*pathSketch, selection);
-                    if (!ForgeCad::sketchPath(selected, path, &body.error)) return;
-                } else {
-                    const ExtrusionObject *curve = operand(body.firstBody);
-                    if (!curve || !curve->curve) {
-                        body.error = QStringLiteral("La curva del percorso non esiste piu' o non e' valida.");
-                        return;
-                    }
-                    path = ForgeCad::curvePath(curve->curve);
-                }
-                path = ForgeCad::alignPath(path, *profile);
-                body.forgeBody = ForgeCad::forgeSweep(*profile, path, body.sweepMode, &body.error, body.sweepSurface);
-                // Una superficie non si fonde con i solidi.
-                if (!body.sweepSurface) body.forgeBody = ForgeCad::forgeMergeFeatureResult(body, body.forgeBody, index, bodies, &body.error);
-                body.solid = body.forgeBody && !body.forgeBody->isSheet();
-                return;
-            }
-            case BodyFeature::Loft: {
-                body.forgeBody = ForgeCad::forgeReferencedLoft(body,index,sketches,bodies,&body.error);
-                body.solid = body.forgeBody && !body.forgeBody->isSheet();
-                return;
-            }
-            case BodyFeature::Ruled: {
-                // Le due catene dai riferimenti, ognuno usato per intero.
-                std::vector<ForgeCad::Kernel::PathSegment> chains[2];
-                const QVector<GeometryRef> *refs[2] = {&body.ruledFirst, &body.ruledSecond};
-                for (int k = 0; k < 2; ++k) {
-                    if (refs[k]->isEmpty()) {
-                        body.error = k == 0 ? QStringLiteral("Scegli la prima curva.") : QStringLiteral("Scegli la seconda curva.");
-                        return;
-                    }
-                    for (const GeometryRef &ref : *refs[k]) {
-                        std::vector<ForgeCad::Kernel::PathSegment> pieces;
-                        QString reason;
-                        if (!ForgeCad::geometryRefPath(ref, index, sketches, bodies, pieces, &reason)) {
-                            body.error = QStringLiteral("%1: %2.").arg(k == 0 ? QStringLiteral("Prima curva") : QStringLiteral("Seconda curva"), reason);
-                            return;
-                        }
-                        chains[k].insert(chains[k].end(), pieces.begin(), pieces.end());
-                    }
-                }
-                QVector<QPair<ForgeCad::ForgeBody, EdgePoint>> startFaces, endFaces;
-                const QVector<GeometryRef> *faceRefs[2] = {&body.loftStartFaces, &body.loftEndFaces};
-                for (int side = 0; side < 2; ++side)
-                    for (const GeometryRef &ref : *faceRefs[side]) {
-                        if ((side == 0 ? body.loftStartContinuity : body.loftEndContinuity) != 3) continue;
-                        if (ref.kind != 5 || ref.index < 0 || ref.index >= index || !bodies.at(ref.index).forgeBody) {
-                            body.error = QStringLiteral("Una faccia tangente della superficie non esiste piu'."); return;
-                        }
-                        (side == 0 ? startFaces : endFaces).append({bodies.at(ref.index).forgeBody, ref.point});
-                    }
-                body.forgeBody = ForgeCad::forgeRuledSurface(chains[0], chains[1], &body.error, body.loftStartContinuity,
-                                                           body.loftEndContinuity, body.loftStartInfluence, body.loftEndInfluence,
-                                                           startFaces, endFaces);
-                body.solid = false;
-                return;
-            }
-            case BodyFeature::BoundarySurface: {
-                std::vector<ForgeCad::Kernel::PathSegment> segments;
-                for (const GeometryRef &ref : body.planarRefs) {
-                    std::vector<ForgeCad::Kernel::PathSegment> pieces;
-                    QString reason;
-                    if (!ForgeCad::geometryRefPath(ref, index, sketches, bodies, pieces, &reason)) {
-                        body.error = QStringLiteral("Curva del contorno: %1.").arg(reason);
-                        return;
-                    }
-                    appendDistinctSegments(segments, pieces);
-                }
-                body.forgeBody = ForgeCad::forgeBoundarySurface(segments, &body.error);
-                body.solid = false;
-                return;
-            }
-            case BodyFeature::FillSurface: {
-                const auto paths = [&](const QVector<GeometryRef> &refs, const QString &what, std::vector<ForgeCad::Kernel::PathSegment> &segments) {
-                    for (const GeometryRef &ref : refs) {
-                        std::vector<ForgeCad::Kernel::PathSegment> pieces;
-                        QString reason;
-                        if (!ForgeCad::geometryRefPath(ref, index, sketches, bodies, pieces, &reason)) {
-                            body.error = QStringLiteral("%1: %2.").arg(what, reason);
-                            return false;
-                        }
-                        appendDistinctSegments(segments, pieces);
-                    }
-                    return true;
-                };
-                std::vector<ForgeCad::Kernel::PathSegment> boundary, guides;
-                if (!paths(body.planarRefs, QStringLiteral("Curva del contorno"), boundary)) return;
-                if (!paths(body.ruledFirst, QStringLiteral("Curva guida"), guides)) return;
-                QVector<QPair<ForgeCad::ForgeBody, EdgePoint>> contacts;
-                for (const GeometryRef &ref : body.ruledSecond) {
-                    if (ref.kind != 5 || ref.index < 0 || ref.index >= index || ref.index >= bodies.size() || !bodies.at(ref.index).forgeBody) {
-                        body.error = QStringLiteral("Una faccia adiacente non esiste piu'.");
-                        return;
-                    }
-                    contacts.append({bodies.at(ref.index).forgeBody, ref.point});
-                }
-                body.forgeBody = ForgeCad::forgeFillSurface(boundary, guides, contacts, body.fillContinuity, body.fillInfluence,
-                                                            body.fillGuideWeight, &body.error, &body.notice);
-                body.solid = false;
-                return;
-            }
-            case BodyFeature::PlanarSurface: {
-                if (body.planarRefs.isEmpty()) {
-                    const SketchObject *s = sketch(body.sketchIndex);
-                    if (!s) {
-                        body.error = QStringLiteral("Lo schizzo della superficie planare non esiste piu'.");
-                        return;
-                    }
-                    body.forgeBody = ForgeCad::forgePlanarSketch(*s, &body.error);
-                } else {
-                    std::vector<ForgeCad::Kernel::PathSegment> segments;
-                    for (const GeometryRef &ref : body.planarRefs) {
-                        std::vector<ForgeCad::Kernel::PathSegment> pieces;
-                        QString reason;
-                        if (!ForgeCad::geometryRefPath(ref, index, sketches, bodies, pieces, &reason)) {
-                            body.error = QStringLiteral("Bordo della superficie planare: %1.").arg(reason);
-                            return;
-                        }
-                        appendDistinctSegments(segments, pieces);
-                    }
-                    body.forgeBody = ForgeCad::forgePlanarCurves(segments, &body.error);
-                }
-                body.solid = false;
-                return;
-            }
-            case BodyFeature::Imported: {
-                if (body.importData.isEmpty()) {
-                    // Documento del formato 8 (B-rep OpenCASCADE, non piu' letto).
-                    body.error = QStringLiteral("Il corpo va importato di nuovo da %1 (documento di una versione precedente).").arg(body.importSource);
-                    return;
-                }
-                body.forgeBody = ForgeCad::forgeImported(body.importData, &body.error);
-                body.solid = body.forgeBody && !body.forgeBody->isSheet();
-                return;
-            }
-            case BodyFeature::Pattern: {
-                const ExtrusionObject *base = operand(body.firstBody);
-                if (!base || !isShapeBody(*base)) {
-                    body.error = QStringLiteral("Il corpo da ripetere non esiste piu' o non ha geometria.");
-                    return;
-                }
-                std::vector<ForgeCad::Kernel::Transform3> placements;
-                if (!ForgeCad::patternPlacements(body.pattern, index, sketches, bodies, placements, &body.error)) return;
-                if (body.pattern.featureOnly) {
-                    // Lo strumento della booleana (o l'estrusione che si unisce o
-                    // sottrae) ripetuto, l'operazione una volta sola.
-                    ForgeCad::ForgeBody target, tool;
-                    BooleanOperation operation = BooleanOperation::Union;
-                    const auto uniteBodies = [&](QVector<int> list) -> ForgeCad::ForgeBody {
-                        ForgeCad::ForgeBody united;
-                        for (int i : list) {
-                            const ExtrusionObject *b = operand(i);
-                            if (!b || !b->forgeBody) return nullptr;
-                            united = united ? ForgeCad::forgeBoolean(united, b->forgeBody, BooleanOperation::Union, &body.error) : b->forgeBody;
-                            if (!united) return nullptr;
-                        }
-                        return united;
-                    };
-                    if (base->operation == 0 || base->operation == 2) {
-                        const ExtrusionObject *first = operand(base->firstBody);
-                        target = first ? first->forgeBody : nullptr;
-                        tool = uniteBodies(QVector<int>{base->secondBody} + base->booleanTools);
-                        operation = BooleanOperation(base->operation);
-                    } else if (mergingFeature(*base) && base->feature != BodyFeature::Sweep && base->mergeOperation != 0 && !base->mergeBodies.isEmpty()) {
-                        ExtrusionObject plain = *base;
-                        plain.mergeOperation = 0;
-                        plain.mergeProbe = false;
-                        buildGeometry(plain, body.firstBody, sketches, bodies);
-                        tool = plain.forgeBody;
-                        target = uniteBodies(base->mergeBodies);
-                        operation = base->mergeOperation == 2 ? BooleanOperation::Difference : BooleanOperation::Union;
-                    }
-                    if (!target || !tool) {
-                        if (body.error.isEmpty() || base->operation != 0)
-                            body.error = QStringLiteral("La ripetizione della funzione vale per un'unione, una differenza o un'estrusione o rivoluzione che si unisce o sottrae.");
-                        return;
-                    }
-                    body.forgeBody = ForgeCad::forgePatternFeature(target, tool, operation, placements, &body.error);
-                } else {
-                    body.forgeBody = ForgeCad::forgePattern(base->forgeBody, placements, body.pattern.kind != 2 || body.pattern.keepOriginal, &body.error);
-                }
-                body.solid = body.forgeBody && !body.forgeBody->isSheet();
-                return;
-            }
-            case BodyFeature::DatumPlane:
-                // I riferimenti si risolvono sulla geometria esatta dei corpi.
-                body.datumValid = ForgeCad::computeDatum(body.datum, index, sketches, bodies, body.datumFrame, &body.error);
-                return;
-            case BodyFeature::Extrusion:
-            case BodyFeature::Revolution: {
-                const SketchObject *s = sketch(body.sketchIndex);
-                if (!s) {
-                    body.error = QStringLiteral("Lo schizzo del corpo non esiste piu'.");
-                } else if (body.feature == BodyFeature::Revolution) {
-                    if (body.revolveAxis == kRevolveAxisReference) {
-                        // Asse scelto nella vista: una retta nel piano dello schizzo.
-                        ForgeCad::ResolvedRef axis;
-                        QPointF point, direction;
-                        if (!ForgeCad::resolveGeometryRef(body.revolveAxisRef, index, sketches, bodies, axis, &body.error)) return;
-                        if (!axis.hasLine) {
-                            body.error = QStringLiteral("Il riferimento scelto come asse non e' una retta.");
-                            return;
-                        }
-                        if (!ForgeCad::sketchLineFromWorld(*s, axis.point, axis.direction, point, direction, &body.error)) return;
-                        body.forgeBody = ForgeCad::forgeRevolution(*s, point, direction, body.revolveAngle, &body.error);
-                    } else {
-                        body.forgeBody = ForgeCad::forgeRevolution(*s, body.revolveAxis, body.revolveAngle, &body.error);
-                    }
-                    // Una superficie non si fonde con i solidi.
-                    if (body.forgeBody && !body.forgeBody->isSheet())
-                        body.forgeBody = ForgeCad::forgeMergeFeatureResult(body, body.forgeBody, index, bodies, &body.error);
-                    body.solid = body.forgeBody && !body.forgeBody->isSheet();
-                } else {
-                    body.forgeBody = ForgeCad::forgeExtrusionFeature(body, index, sketches, bodies, &body.error);
-                    body.solid = body.forgeBody && !body.forgeBody->isSheet();
-                }
-                return;
-            }
-            }
-        } catch (const std::exception &failure) {
-            body.error = QString::fromUtf8(failure.what());
-        }
-        if (body.error.isEmpty() && !hasGeometry(body)) body.error = QStringLiteral("Costruzione non riuscita.");
-    }
-
-    // FORGECAD_GEOMETRY_HASH_END
-
     void tessellateBody(ExtrusionObject &body, int index = -1) const {
-        tessellateGeometry(body, tessellationQuality_, body.display);
-        if (index >= 0) configurePatternInstances(body, index, sketches_, extrusions_);
+        ForgeCad::tessellateGeometry(body, tessellationQuality_, body.display);
+        if (index >= 0) ForgeCad::configurePatternInstances(body, index, sketches_, extrusions_);
     }
-    static void tessellateGeometry(const ExtrusionObject &body, int quality, BodyDisplay &display) {
-        if (isDatumBody(body)) {
-            display = {};  // disegnato come piano (drawDatumPlanes)
-            display.quality = quality;
-        } else if (body.curve) {
-            ForgeCad::curveDisplay(*body.curve, quality, display);
-            // Una polilinea per curva, nell'ordine di body.curves.
-            for (int k = 1; k < body.curves.size(); ++k) {
-                BodyDisplay more;
-                ForgeCad::curveDisplay(*body.curves.at(k), quality, more);
-                display.edges += more.edges;
-            }
-        } else if (body.forgeBody) ForgeCad::forgeTessellate(*body.forgeBody, quality, display);
-        else display = {};
-    }
-
-    // Le copie separate di una ripetizione condividono la stessa mesh sulla
-    // GPU. Se le bounding box si toccano o si sovrappongono, il risultato
-    // booleano puo' avere facce diverse e resta la tassellazione finale.
-    static void configurePatternInstances(ExtrusionObject &body, int index, const QVector<SketchObject> &sketches,
-                                          const QVector<ExtrusionObject> &bodies) {
-        body.display.instancedBase.reset();
-        body.display.instanceTransforms.clear();
-        if (body.operation >= 0 || body.feature != BodyFeature::Pattern || body.pattern.featureOnly
-            || body.firstBody < 0 || body.firstBody >= index || body.firstBody >= bodies.size()) return;
-        const BodyDisplay &base = bodies.at(body.firstBody).display;
-        if (base.vertices.isEmpty()) return;
-        std::vector<ForgeCad::Kernel::Transform3> placements;
-        QString error;
-        if (!ForgeCad::patternPlacements(body.pattern, index, sketches, bodies, placements, &error)) return;
-        const bool keepOriginal = body.pattern.kind != 2 || body.pattern.keepOriginal;
-        QVector<QMatrix4x4> transforms;
-        if (keepOriginal) transforms.append(QMatrix4x4());
-        for (const ForgeCad::Kernel::Transform3 &t : placements) {
-            const ForgeCad::Kernel::Vec3 p = t.translationPart();
-            transforms.append(QMatrix4x4(
-                float(t.matrix(0, 0)), float(t.matrix(0, 1)), float(t.matrix(0, 2)), float(p.x()),
-                float(t.matrix(1, 0)), float(t.matrix(1, 1)), float(t.matrix(1, 2)), float(p.y()),
-                float(t.matrix(2, 0)), float(t.matrix(2, 1)), float(t.matrix(2, 2)), float(p.z()),
-                0.0f, 0.0f, 0.0f, 1.0f));
-        }
-        if (transforms.size() < 2) return;
-        QVector3D lo = base.vertices.first(), hi = lo;
-        for (const QVector3D &point : base.vertices) {
-            lo.setX(qMin(lo.x(), point.x())); lo.setY(qMin(lo.y(), point.y())); lo.setZ(qMin(lo.z(), point.z()));
-            hi.setX(qMax(hi.x(), point.x())); hi.setY(qMax(hi.y(), point.y())); hi.setZ(qMax(hi.z(), point.z()));
-        }
-        struct Bounds { QVector3D lo, hi; };
-        QVector<Bounds> boxes;
-        for (const QMatrix4x4 &matrix : transforms) {
-            Bounds box;
-            box.lo = QVector3D(std::numeric_limits<float>::max(), std::numeric_limits<float>::max(), std::numeric_limits<float>::max());
-            box.hi = -box.lo;
-            for (int mask = 0; mask < 8; ++mask) {
-                const QVector3D corner(mask & 1 ? hi.x() : lo.x(), mask & 2 ? hi.y() : lo.y(), mask & 4 ? hi.z() : lo.z());
-                const QVector3D point = matrix.map(corner);
-                box.lo.setX(qMin(box.lo.x(), point.x())); box.lo.setY(qMin(box.lo.y(), point.y())); box.lo.setZ(qMin(box.lo.z(), point.z()));
-                box.hi.setX(qMax(box.hi.x(), point.x())); box.hi.setY(qMax(box.hi.y(), point.y())); box.hi.setZ(qMax(box.hi.z(), point.z()));
-            }
-            boxes.append(box);
-        }
-        const float tolerance = 1e-5f * qMax(1.0f, (hi - lo).length());
-        for (int i = 0; i < boxes.size(); ++i)
-            for (int j = i + 1; j < boxes.size(); ++j) {
-                const bool separated = boxes.at(i).hi.x() < boxes.at(j).lo.x() - tolerance || boxes.at(j).hi.x() < boxes.at(i).lo.x() - tolerance
-                    || boxes.at(i).hi.y() < boxes.at(j).lo.y() - tolerance || boxes.at(j).hi.y() < boxes.at(i).lo.y() - tolerance
-                    || boxes.at(i).hi.z() < boxes.at(j).lo.z() - tolerance || boxes.at(j).hi.z() < boxes.at(i).lo.z() - tolerance;
-                if (!separated) return;
-            }
-        auto shared = std::make_shared<BodyDisplay>(base);
-        shared->instancedBase.reset();
-        shared->instanceTransforms.clear();
-        body.display.instancedBase = std::move(shared);
-        body.display.instanceTransforms = std::move(transforms);
-    }
-
     void restoreDocument(DocumentState state) {
         dimensionPlacing_ = -1;
         ForgeCad::normalizeModelHistory(state);
@@ -9026,7 +8205,7 @@ private:
         };
         for (int bodyIndex = 0; bodyIndex < extrusions_.size(); ++bodyIndex) {
             const ExtrusionObject &body = extrusions_.at(bodyIndex);
-            if (!body.visible || !isShapeBody(body) || (onlyBody >= 0 && bodyIndex != onlyBody)) continue;
+            if (!body.visible || !ForgeCad::isShapeBody(body) || (onlyBody >= 0 && bodyIndex != onlyBody)) continue;
             const BodyDisplay &display = body.display;
             for (int k = 0; k < display.faceIds.size() && k < display.faceLabelPoints.size(); ++k)
                 append(projectWorldPoint(display.faceLabelPoints.at(k)), QPointF(22.0, -18.0),
@@ -9454,7 +8633,7 @@ private:
             displayCache_.setMatrices(sceneProjectionMatrix(), sceneModelViewMatrix());
             for (int index = 0; index < extrusions_.size(); ++index) {
                 const ExtrusionObject &body = extrusions_.at(index);
-                if (!body.visible || !isShapeBody(body) || body.display.vertices.isEmpty()) continue;
+                if (!body.visible || !ForgeCad::isShapeBody(body) || body.display.vertices.isEmpty()) continue;
                 if (!pickBodies_.isEmpty() && !pickBodies_.contains(index)) continue;
                 const unsigned id = unsigned(index + 1);
                 const QVector4D identifier(float(id & 0xFFu) / 255.0f, float((id >> 8) & 0xFFu) / 255.0f,
@@ -9518,7 +8697,7 @@ private:
         // Curve (eliche): vicinanza alla polilinea in pixel, come gli schizzi.
         for (int index = 0; index < extrusions_.size(); ++index) {
             const ExtrusionObject &body = extrusions_.at(index);
-            if (!body.visible || !isCurveBody(body)) continue;
+            if (!body.visible || !ForgeCad::isCurveBody(body)) continue;
             for (const QVector<QVector3D> &polyline : body.display.edges)
                 for (int k = 1; k < polyline.size(); ++k) {
                     const float before = nearestDistance;
@@ -9550,7 +8729,7 @@ private:
         const bool reaches = sectionRay(origin, direction, skipped);
         for (int index = 0; index < extrusions_.size() && reaches; ++index) {
             const ExtrusionObject &extrusion = extrusions_.at(index);
-            if (!extrusion.visible || !isShapeBody(extrusion)) continue;
+            if (!extrusion.visible || !ForgeCad::isShapeBody(extrusion)) continue;
             FaceHit face;
             bool hit = false;
             double distance = 0.0;
@@ -9949,7 +9128,7 @@ private:
     bool isDatumShown(int index) const {
         if (index < 0 || index >= extrusions_.size()) return false;
         const ExtrusionObject &body = extrusions_.at(index);
-        return isDatumBody(body) && body.visible && body.datumValid && index != datumPreviewIndex_;
+        return ForgeCad::isDatumBody(body) && body.visible && body.datumValid && index != datumPreviewIndex_;
     }
     // Piano di costruzione sotto il puntatore: il bordo entro qualche pixel
     // (`border`) o l'interno lungo il raggio (`distance`); -1 se nessuno.
@@ -10038,8 +9217,8 @@ private:
     bool referenceBodyEligible(int index) const {
         const int owner = refPickOwner_ < 0 ? int(extrusions_.size()) : refPickOwner_;
         if (!pickBodies_.isEmpty())
-            return pickBodies_.contains(index) && index < owner && index < extrusions_.size() && isShapeBody(extrusions_.at(index));
-        return index >= 0 && index < owner && index < extrusions_.size() && extrusions_.at(index).visible && isShapeBody(extrusions_.at(index));
+            return pickBodies_.contains(index) && index < owner && index < extrusions_.size() && ForgeCad::isShapeBody(extrusions_.at(index));
+        return index >= 0 && index < owner && index < extrusions_.size() && extrusions_.at(index).visible && ForgeCad::isShapeBody(extrusions_.at(index));
     }
     bool referenceSketchEligible(int index) const {
         if (index < 0 || index >= sketches_.size() || !sketches_.at(index).visible) return false;
@@ -10050,7 +9229,7 @@ private:
         const int owner = refPickOwner_ < 0 ? int(extrusions_.size()) : refPickOwner_;
         if (index < 0 || index >= owner || index >= extrusions_.size()) return false;
         const ExtrusionObject &body = extrusions_.at(index);
-        if (!body.visible || !isCurveBody(body) || !body.curve) return false;
+        if (!body.visible || !ForgeCad::isCurveBody(body) || !body.curve) return false;
         const ForgeCad::Kernel::Interval domain = body.curve->domain();
         const ForgeCad::Kernel::Vec3 p = body.curve->point(end == 1 ? domain.hi : domain.lo);
         point = QVector3D(float(p.x()), float(p.y()), float(p.z()));
@@ -10187,7 +9366,7 @@ private:
                         }
                         considerPolyline(polyline, candidate, true);
                     }
-                } else if (b < owner && body.visible && isCurveBody(body) && body.curve) {
+                } else if (b < owner && body.visible && ForgeCad::isCurveBody(body) && body.curve) {
                     r.kind = 9;
                     r.featureId = body.featureId;
                     // Il punto sulla polilinea dice quale curva (ProjectedCurve ne ha piu' di una).
@@ -10697,7 +9876,7 @@ private:
         // Una curva non ha una sagoma di facce: lo stencil e il doppio passaggio
         // servono solo ai corpi. Evidenziarla direttamente evita lavoro inutile
         // durante la navigazione con un'elica selezionata.
-        if (isCurveBody(extrusion)) {
+        if (ForgeCad::isCurveBody(extrusion)) {
             glLineWidth(width);
             drawExtrusionEdges(extrusion);
             glDepthMask(GL_TRUE);
@@ -10836,7 +10015,7 @@ private:
     bool edgePickEligible(int index) const {
         if (index < 0 || index >= extrusions_.size()) return false;
         const ExtrusionObject &body = extrusions_.at(index);
-        if (!isShapeBody(body) || (!body.visible && index != edgePickBody_)) return false;
+        if (!ForgeCad::isShapeBody(body) || (!body.visible && index != edgePickBody_)) return false;
         if (edgePickHelix_) return true;
         return !edgePickExtend_ || !body.solid;
     }
@@ -10965,7 +10144,7 @@ private:
     }
     // Faccia del corpo `index` sotto il pixel (geometria esatta).
     bool pickBodyFace(int index, const QPoint &position, FaceHit &hit) const {
-        if (index < 0 || index >= extrusions_.size() || !isShapeBody(extrusions_.at(index))) return false;
+        if (index < 0 || index >= extrusions_.size() || !ForgeCad::isShapeBody(extrusions_.at(index))) return false;
         QVector3D origin, direction;
         viewRay(position, origin, direction);
         double skipped = 0.0;
@@ -10992,7 +10171,7 @@ private:
         QVector<int> pending{index};
         while (!pending.isEmpty()) {
             const int body = pending.takeLast();
-            for (int operand : bodyOperands(extrusions_.at(body)))
+            for (int operand : ForgeCad::bodyOperands(extrusions_.at(body)))
                 if (operand >= 0 && operand < body && !chain.contains(operand)) {
                     chain.insert(operand);
                     pending.append(operand);
@@ -11003,7 +10182,7 @@ private:
         std::vector<std::pair<int, ForgeCad::ForgeBody>> bodies;
         for (int body : ordered) {
             const ExtrusionObject &feature = extrusions_.at(body);
-            if (feature.suppressed || !isShapeBody(feature) || !feature.forgeBody) continue;
+            if (feature.suppressed || !ForgeCad::isShapeBody(feature) || !feature.forgeBody) continue;
             bodies.push_back({body, feature.forgeBody});
         }
         const int owner = ForgeCad::forgeFaceOwner(*extrusions_.at(index).forgeBody, hit.face, point, bodies);
@@ -11018,7 +10197,7 @@ private:
         QVector<int> pending{body};
         while (!pending.isEmpty()) {
             const int current = pending.takeLast();
-            for (int operand : bodyOperands(extrusions_.at(current)))
+            for (int operand : ForgeCad::bodyOperands(extrusions_.at(current)))
                 if (operand >= 0 && operand < current && !chain.contains(operand)) {
                     chain.insert(operand);
                     pending.append(operand);
@@ -11035,7 +10214,7 @@ private:
     }
     void setBodyHighlight(int body) {
         clearFeatureHighlights();
-        if (sketchMode_ || body < 0 || body >= extrusions_.size() || !isShapeBody(extrusions_.at(body))) return;
+        if (sketchMode_ || body < 0 || body >= extrusions_.size() || !ForgeCad::isShapeBody(extrusions_.at(body))) return;
         bodyHighlight_ = body;
         update();
     }
@@ -11048,13 +10227,13 @@ private:
         QVector<QPair<int, QSet<int>>> shown;
         for (int body = 0; body < extrusions_.size(); ++body) {
             const ExtrusionObject &candidate = extrusions_.at(body);
-            if (candidate.visible && isShapeBody(candidate) && candidate.forgeBody && !candidate.display.vertices.isEmpty())
+            if (candidate.visible && ForgeCad::isShapeBody(candidate) && candidate.forgeBody && !candidate.display.vertices.isEmpty())
                 shown.append({body, operandClosure(body)});
         }
         for (int feature : features) {
             if (feature < 0 || feature >= extrusions_.size()) continue;
             const ExtrusionObject &definition = extrusions_.at(feature);
-            if (definition.suppressed || !isShapeBody(definition)) continue;
+            if (definition.suppressed || !ForgeCad::isShapeBody(definition)) continue;
             int target = -1;
             for (const auto &entry : shown)
                 if (entry.second.contains(feature)) { target = entry.first; break; }
@@ -11065,7 +10244,7 @@ private:
             std::vector<std::pair<int, ForgeCad::ForgeBody>> chain;
             for (int body : ordered) {
                 const ExtrusionObject &stage = extrusions_.at(body);
-                if (!stage.suppressed && isShapeBody(stage) && stage.forgeBody) chain.push_back({body, stage.forgeBody});
+                if (!stage.suppressed && ForgeCad::isShapeBody(stage) && stage.forgeBody) chain.push_back({body, stage.forgeBody});
             }
             const ForgeCad::ForgeBody result = extrusions_.at(target).forgeBody;
             const BodyDisplay display = extrusions_.at(target).display;
@@ -11540,7 +10719,7 @@ private:
                 displayCache_.setEmission(QVector4D(0.0f, 0.0f, 0.0f, 1.0f));
             }
             if (section_.enabled && extrusion.solid && displayMode_ != 0 && !extrusion.display.vertices.isEmpty()) sectionSolids.append(index);
-            if (isCurveBody(extrusion)) {
+            if (ForgeCad::isCurveBody(extrusion)) {
                 // Curve (eliche): sempre, in arancio, piu' spesse sotto il puntatore.
                 displayCache_.setLightingEnabled(false);
                 displayCache_.setColor(hovered
@@ -11566,7 +10745,7 @@ private:
                 glLineWidth(1.0f);
                 if (hiddenEdgesVisible_) glEnable(GL_DEPTH_TEST);
             }
-            if (!isCurveBody(extrusion) && index != shapeAnalysisBody_) drawFeatureHighlightEdges(index);
+            if (!ForgeCad::isCurveBody(extrusion) && index != shapeAnalysisBody_) drawFeatureHighlightEdges(index);
         }
         if (shapeAnalysisMode_ >= 0) {
             const bool through = shapeAnalysisThrough_ && (shapeAnalysisMode_ == 4 || shapeAnalysisMode_ == 5);
@@ -11852,11 +11031,11 @@ private:
             body.mergeBodies = in.existingMerge;
             body.error.clear();
         } else {
-            buildGeometry(body, in.index, in.sketches, in.bodies);
+            ForgeCad::buildGeometry(body, in.index, in.sketches, in.bodies);
         }
         if (merged && body.mergeProbe) *merged = body.mergeBodies;  // i corpi toccati dalla fusione automatica
         if (notice) *notice = body.notice;
-        if (!hasGeometry(body)) {
+        if (!ForgeCad::hasGeometry(body)) {
             error = body.error;
             return false;
         }
@@ -11884,7 +11063,7 @@ private:
             display = in.existingDisplay;
             display.constructionCurves.clear();
         } else {
-            tessellateGeometry(body, in.quality, display);
+            ForgeCad::tessellateGeometry(body, in.quality, display);
         }
         if (in.definition.operation < 0 && body.forgeBody) {
             const int divisions = in.quality <= 0 ? 3 : in.quality == 1 ? 5 : 7;
@@ -11925,12 +11104,12 @@ private:
         const ExtrusionObject &d = in.definition;
         QString invalid;
         // Operandi: i body e le curve del kernel sono immutabili, si condividono.
-        QVector<int> operands = bodyOperands(d);
+        QVector<int> operands = ForgeCad::bodyOperands(d);
         // Ripetizione della funzione: servono anche gli operandi della booleana.
         if (d.operation < 0 && d.feature == BodyFeature::Pattern && d.pattern.featureOnly && d.firstBody >= 0 && d.firstBody < extrusions_.size())
-            operands += bodyOperands(extrusions_.at(d.firstBody));
+            operands += ForgeCad::bodyOperands(extrusions_.at(d.firstBody));
         for (int body : operands) {
-            if (body < 0 || body >= in.index || !hasGeometry(extrusions_.at(body))) {
+            if (body < 0 || body >= in.index || !ForgeCad::hasGeometry(extrusions_.at(body))) {
                 invalid = QStringLiteral("operandi non validi");
                 break;
             }
@@ -11943,7 +11122,7 @@ private:
         if (d.operation >= 0 && d.firstBody == d.secondBody) invalid = QStringLiteral("scegli due oggetti diversi");
         if (d.operation < 0 && d.feature == BodyFeature::SheetTrim && d.firstBody == d.secondBody)
             invalid = QStringLiteral("scegli uno strumento diverso dalla superficie");
-        for (int sketch : sketchesOf(d))
+        for (int sketch : ForgeCad::sketchesOf(d))
             if (sketch < 0 || sketch >= sketches_.size()) invalid = QStringLiteral("nessuno schizzo");
         const quint64 generation = preview_.generation;
         if (!invalid.isEmpty()) {
@@ -12061,7 +11240,7 @@ private:
             if (isSketchDrawn(index)) points += sketchGeometryPoints(sketches_.at(index));
         // Piani di costruzione: il centro (la misura automatica dipende dalla scena), gli angoli se la misura e' data.
         for (const ExtrusionObject &body : extrusions_) {
-            if (!isDatumBody(body) || !body.visible || !body.datumValid) continue;
+            if (!ForgeCad::isDatumBody(body) || !body.visible || !body.datumValid) continue;
             points.append(QVector3D(float(body.datumFrame.origin[0]), float(body.datumFrame.origin[1]), float(body.datumFrame.origin[2])));
             if (datumSizes && body.datum.size > 0.0) points += datumCorners(body.datumFrame, body.datum.size);
         }

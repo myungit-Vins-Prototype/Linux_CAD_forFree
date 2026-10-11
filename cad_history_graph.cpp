@@ -34,6 +34,7 @@
 #include "cad_datum.h"
 #include "cad_constraints.h"
 #include "cad_model_history.h"
+#include "cad_feature_dependencies.h"
 #include "fk_topology.h"
 
 namespace ForgeCad {
@@ -308,14 +309,14 @@ void addGeometryDependency(QVector<Dependency> &result, const GeometryRef &ref, 
     dependency.detail = geometryRefText(ref, sketches, features)
         + QStringLiteral("\nkind=%1, featureId=%2, subshape=%3, geometry=%4, context=%5")
               .arg(ref.kind).arg(ref.featureId).arg(ref.point.subshape).arg(ref.point.geometry).arg(ref.point.context);
-    if ((ref.kind >= 3 && ref.kind <= 5) || (ref.kind >= 8 && ref.kind <= 10)) {
+    if (isBodyRef(ref)) {
         const int index = featureOwner(ref, features);
         dependency.source = index >= 0 && index < features.size() ? Dependency::Source::Feature : Dependency::Source::Missing;
         dependency.index = index;
         dependency.key = dependency.source == Dependency::Source::Feature ? QStringLiteral("f:%1").arg(index)
                                                                           : QStringLiteral("missing:r:%1:%2").arg(owner).arg(ref.featureId);
         dependency.valid = index >= 0 && index < owner && index < features.size();
-    } else if (ref.kind == 6 || ref.kind == 7) {
+    } else if (isSketchRef(ref)) {
         dependency.source = ref.index >= 0 && ref.index < sketches.size() ? Dependency::Source::Sketch : Dependency::Source::Missing;
         dependency.index = ref.index;
         dependency.key = dependency.source == Dependency::Source::Sketch ? QStringLiteral("s:%1").arg(ref.index)
@@ -411,6 +412,7 @@ QVector<Dependency> dependencies(int index, const DocumentState &document) {
     case BodyFeature::SheetTrim:
         addBodyDependency(result, features, index, feature.firstBody, QStringLiteral("superficie"));
         if (feature.secondBody >= 0) addBodyDependency(result, features, index, feature.secondBody, QStringLiteral("strumento"));
+        if (feature.sketchIndex >= 0) addSketchDependency(result, sketches, index, feature.sketchIndex, QStringLiteral("schizzo di taglio"));
         break;
     case BodyFeature::Helix:
         if (feature.helix.source == 0) addSketchDependency(result, sketches, index, feature.sketchIndex, QStringLiteral("base"));
