@@ -213,8 +213,8 @@ static QString featureIconName(const ExtrusionObject &body) {
     if (body.feature == BodyFeature::SurfaceOffset) return QStringLiteral("offsetSurface");
     if (body.feature == BodyFeature::DeleteFace) return QStringLiteral("deleteFace");
     if (body.feature == BodyFeature::Draft) return QStringLiteral("draft");
-    if (body.feature == BodyFeature::SpatialSketch) return QStringLiteral("newSketch");
-    if (body.feature == BodyFeature::ExtractedCurve) return QStringLiteral("convertEdges");
+    if (body.feature == BodyFeature::SpatialSketch) return QStringLiteral("newSketch3D");
+    if (body.feature == BodyFeature::ExtractedCurve) return body.curveExtraction.trimmed ? QStringLiteral("trimEdge3D") : QStringLiteral("extractEdge3D");
     if (body.feature == BodyFeature::ProjectedCurve) return QStringLiteral("projectedCurve");
     if (body.feature == BodyFeature::Thicken) return QStringLiteral("thicken");
     if (body.feature == BodyFeature::Shell) return QStringLiteral("shell");
@@ -12226,6 +12226,7 @@ public:
         viewport()->update();
     }
     QSlider *historyRail() const { return historyRail_; }
+    int historyPosition() const { return historyPosition_; }
     void setHistoryRange(int position, int count) {
         historyPosition_ = position; historyCount_ = count;
         updateHistoryRail();
@@ -22167,9 +22168,9 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
         {newAction, QStringLiteral("new")}, {openAction, QStringLiteral("open")}, {saveAction, QStringLiteral("save")},
         {undoAction_, QStringLiteral("undo")}, {redoAction_, QStringLiteral("redo")}, {deleteAction, QStringLiteral("delete")},
         {rebuildAction, QStringLiteral("rebuild")},
-        {newSketchAction, QStringLiteral("newSketch")}, {spatialSketchAction, QStringLiteral("newSketch")}, {faceSketchAction, QStringLiteral("faceSketch")},
+        {newSketchAction, QStringLiteral("newSketch")}, {spatialSketchAction, QStringLiteral("newSketch3D")}, {faceSketchAction, QStringLiteral("faceSketch")},
         {extrudeAction, QStringLiteral("extrude")}, {revolveAction, QStringLiteral("revolve")},
-        {filletAction, QStringLiteral("fillet")}, {chamferAction, QStringLiteral("chamfer")}, {draftAction, QStringLiteral("draft")}, {thickenAction, QStringLiteral("thicken")}, {projectedCurveAction, QStringLiteral("projectedCurve")}, {extractedCurveAction, QStringLiteral("convertEdges")}, {trimCurve3DAction, QStringLiteral("trim")}, {shellAction, QStringLiteral("shell")}, {threadAction, QStringLiteral("thread")},
+        {filletAction, QStringLiteral("fillet")}, {chamferAction, QStringLiteral("chamfer")}, {draftAction, QStringLiteral("draft")}, {thickenAction, QStringLiteral("thicken")}, {projectedCurveAction, QStringLiteral("projectedCurve")}, {extractedCurveAction, QStringLiteral("extractEdge3D")}, {trimCurve3DAction, QStringLiteral("trimEdge3D")}, {shellAction, QStringLiteral("shell")}, {threadAction, QStringLiteral("thread")},
         {trimSurfaceAction, QStringLiteral("trimSurface")}, {extendSurfaceAction, QStringLiteral("extendSurface")},
         {offsetSurfaceAction, QStringLiteral("offsetSurface")}, {sewSurfacesAction, QStringLiteral("sewSurfaces")},
         {deleteFaceAction, QStringLiteral("deleteFace")}, {boundarySurfaceAction, QStringLiteral("boundarySurface")}, {fillSurfaceAction, QStringLiteral("fillSurface")},
@@ -22992,6 +22993,11 @@ void PdfWindow::applyTreeBackground(const QColor &color) {
 }
 
 void PdfWindow::rebuildModelTree() {
+    // Ricreare le voci azzera temporaneamente i range e puo' far scorrere
+    // l'albero verso la selezione: conserva la posizione prima di cancellarle.
+    const int verticalPosition=modelTree_->verticalScrollBar()->value();
+    const int horizontalPosition=modelTree_->horizontalScrollBar()->value();
+    const int previousHistoryPosition=static_cast<StoryboardTree *>(modelTree_)->historyPosition();
     rebuildingTree_ = true;
     const auto addObject = [this](const QString &name, int type, int index, int checkState, QTreeWidgetItem *parent = nullptr) {
         auto *item = parent ? new QTreeWidgetItem(parent, {name}) : new QTreeWidgetItem(modelTree_, {name});
@@ -23474,10 +23480,6 @@ void PdfWindow::rebuildModelTree() {
         font.setItalic(true);
         item->setFont(0, font);
     }
-    if (cursorSelected) {
-        modelTree_->setCurrentItem(cursor);
-        modelTree_->scrollToItem(cursor);
-    }
     for (int index = 0; index < sketches.size(); ++index) {
         if (shownSketches.contains(index)) continue;
         if (!sketchRoot) {
@@ -23500,6 +23502,15 @@ void PdfWindow::rebuildModelTree() {
         }
         counts->setText(QStringLiteral("Solidi: %1 · Superfici: %2 · Corpi visibili: %3").arg(solids).arg(sheets).arg(visible));
     }
+    // Aggiorna prima il layout completo: ripristinare mentre il range e'
+    // ancora vuoto troncherebbe lo scorrimento a zero.
+    // Gli schizzi non utilizzati sono aggiunti dopo il cursore: ripristina
+    // la sua selezione per ultima, cosi' non viene sostituita da uno schizzo.
+    if(cursorSelected)modelTree_->setCurrentItem(cursor);
+    modelTree_->doItemsLayout();
+    if(cursorSelected && position!=previousHistoryPosition)modelTree_->scrollToItem(cursor);
+    else modelTree_->verticalScrollBar()->setValue(verticalPosition);
+    modelTree_->horizontalScrollBar()->setValue(horizontalPosition);
     rebuildingTree_ = false;
 }
 

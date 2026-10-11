@@ -726,6 +726,56 @@ public:
         std::cout << "Mouse original=" << QFileInfo(input).size() << " compact=" << QFileInfo(path).size()
                   << " stages=" << geometry.size() << " exact_geometry=standard_binary_round_trip" << std::endl;
     }
+    static void storyboardScroll() {
+        PdfWindow window;auto *view=window.viewport_;auto *tree=window.modelTree_;
+        require(view && tree,"storyboard disponibile");view->tessellationQuality_=0;
+        DocumentState state;
+        for(int i=0;i<120;++i){SketchObject sketch;sketch.name=QStringLiteral("Schizzo lungo %1 per verifica dello scorrimento orizzontale").arg(i);
+            sketch.segments={{{0,0},{1,0}}};state.sketches.append(sketch);}
+        for(int i=0;i<20;++i){ExtrusionObject curve;curve.feature=BodyFeature::SpatialSketch;curve.name=QStringLiteral("Schizzo 3D %1").arg(i);
+            curve.spatialSketch.nextId=2;SpatialCurve3D e;e.id=1;e.points={{0,0,double(i)},{1,1,double(i)}};curve.spatialSketch.entities={e};
+            ForgeCad::buildBody(curve,i,state.sketches,state.extrusions,0);state.extrusions.append(curve);}
+        view->restoreDocument(state);
+        const auto settle=[&]{for(int i=0;i<4;++i)QApplication::processEvents();tree->doItemsLayout();QApplication::processEvents();};
+        settle();tree->resize(260,180);
+        tree->setVerticalScrollMode(QAbstractItemView::ScrollPerPixel);tree->setHorizontalScrollMode(QAbstractItemView::ScrollPerPixel);
+        tree->header()->setStretchLastSection(false);tree->header()->setSectionResizeMode(0,QHeaderView::Interactive);tree->setColumnWidth(0,900);settle();
+        require(tree->verticalScrollBar()->maximum()>300 && tree->horizontalScrollBar()->maximum()>100,"storyboard con entrambi gli scorrimenti");
+        const auto item=[&](int type,int index)->QTreeWidgetItem*{
+            for(QTreeWidgetItemIterator it(tree);*it;++it)
+                if((*it)->data(0,Qt::UserRole).toInt()==type && (*it)->data(0,Qt::UserRole+1).toInt()==index)return *it;
+            return nullptr;
+        };
+        // La selezione del viewport e' lontana dalla zona letta dall'utente:
+        // ricostruire e riselezionare quella voce non deve spostare la vista.
+        view->selectObject(SceneObjectKind::Sketch,0);settle();
+        for(int offset:{1,2,3}) {
+            for(bool checked:{false,true}) {
+                tree->verticalScrollBar()->setValue(tree->verticalScrollBar()->maximum()*offset/4);
+                tree->horizontalScrollBar()->setValue(tree->horizontalScrollBar()->maximum()/2);
+                const int vertical=tree->verticalScrollBar()->value(),horizontal=tree->horizontalScrollBar()->value();
+                auto *row=item(kTreeSketch,85);require(row,"voce dello schizzo presente");row->setCheckState(0,checked?Qt::Checked:Qt::Unchecked);settle();
+                require(view->sketches_[85].visible==checked,"casella modifica visibilita' schizzo");
+                require(tree->verticalScrollBar()->value()==vertical && tree->horizontalScrollBar()->value()==horizontal,"cambio visibilita' conserva scorrimento verticale e orizzontale");
+            }
+        }
+        tree->verticalScrollBar()->setValue(tree->verticalScrollBar()->maximum()*3/4);const int before=tree->verticalScrollBar()->value();
+        auto *curve=item(kTreeExtrusion,15);require(curve,"voce curva 3D presente");curve->setCheckState(0,Qt::Unchecked);settle();
+        require(!view->extrusions_[15].visible && tree->verticalScrollBar()->value()==before,"visibilita' curva conserva posizione");
+        // Anche con il cursore selezionato, un refresh di visibilita' non
+        // richiede di raggiungerlo. Il suo spostamento esplicito invece si'.
+        QTreeWidgetItem *cursor=nullptr;
+        for(QTreeWidgetItemIterator it(tree);*it;++it)if(StoryboardTree::isHistoryCursor(*it)){cursor=*it;break;}
+        require(cursor,"cursore della storia presente");tree->setCurrentItem(cursor);settle();
+        tree->verticalScrollBar()->setValue(tree->verticalScrollBar()->maximum());const int cursorBefore=tree->verticalScrollBar()->value();
+        item(kTreeSketch,85)->setCheckState(0,Qt::Unchecked);settle();
+        require(tree->verticalScrollBar()->value()==cursorBefore,"refresh con cursore selezionato conserva posizione");
+        require(StoryboardTree::isHistoryCursor(tree->currentItem()),"refresh mantiene cursore selezionato anche con schizzo fuori vista");
+        view->setHistoryPosition(0);settle();
+        require(tree->verticalScrollBar()->value()<cursorBefore,"spostamento esplicito segue cursore della storia");
+        view->setHistoryPosition(state.extrusions.size());settle();
+    }
+
     static void historyPositionRegressions() {
         {
             CadViewport timeline;
@@ -7711,6 +7761,11 @@ int main(int argc, char **argv) {
         try { ViewportInteractionTest::mouseSnapshotRegression(app.arguments().value(app.arguments().indexOf(QStringLiteral("--mouse-snapshot")) + 1)); }
         catch (const std::exception &e) { std::cerr << e.what() << std::endl; return 1; }
         return 0;
+    }
+    if (app.arguments().contains(QStringLiteral("--storyboard-scroll"))) {
+        try { ViewportInteractionTest::storyboardScroll(); }
+        catch(const std::exception &e){std::cerr<<e.what()<<std::endl;return 1;}
+        std::cout<<"storyboard scroll PASS"<<std::endl;return 0;
     }
     if (app.arguments().contains(QStringLiteral("--history-position"))) {
         try { ViewportInteractionTest::historyPositionRegressions(); }

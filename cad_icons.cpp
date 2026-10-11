@@ -41,6 +41,18 @@ QPen stroke(const QColor &color, double width = 1.6, Qt::PenStyle style = Qt::So
     return pen;
 }
 
+// Badge comune ai comandi spaziali, con contrasto per entrambi i temi.
+void badge3D(QPainter &p,const IconPalette &c) {
+        p.save();
+        p.setPen(stroke(c.accent,0.7));
+        p.setBrush(c.ink.lightness()<128 ? QColor(225,235,245) : QColor(24,39,52));
+        p.drawRoundedRect(QRectF(8.5,13,15,10.5),1.5,1.5);
+        QFont font=QApplication::font();font.setBold(true);font.setPixelSize(9);
+        p.setFont(font);p.setPen(c.ink);
+        p.drawText(QRectF(8.5,13,15,10.5),Qt::AlignCenter,QStringLiteral("3D"));
+        p.restore();
+}
+
 void dot(QPainter &p, const QPointF &center, const QColor &color, double radius = 1.9) {
     p.save();
     p.setPen(Qt::NoPen);
@@ -500,6 +512,11 @@ std::map<QString, Draw> &registry() {
         polygon(p, QPolygonF({{-1.8, -9}, {1.8, -9}, {1.8, 3}, {0, 6}, {-1.8, 3}}), c.accent, stroke(QColor(40, 30, 20), 0.8));
         p.restore();
         dot(p, {9.3, 15.5}, c.ink, 1.1);
+    };
+    // Etichetta distinta per lo schizzo spaziale, leggibile anche nell'albero.
+    icons["newSketch3D"] = [sketch=icons["newSketch"]](QPainter &p, const IconPalette &c) {
+        sketch(p,c);
+        badge3D(p,c);
     };
     icons["faceSketch"] = [](QPainter &p, const IconPalette &c) {
         cube(p, c, 0, true, true, 0.85, QPointF(-2, 2));
@@ -1266,6 +1283,8 @@ std::map<QString, Draw> &registry() {
         if(mode==0)line(p,{3,15},{21,15},stroke(c.accent,2));
         else {const double x=mode==1?3:22;line(p,{x,3},{x,21},stroke(c.construction,1.2));dot(p,{x,12},c.accent,2);}
     };
+    icons["extractEdge3D"] = [base=icons["convertEdges"]](QPainter &p,const IconPalette &c){base(p,c);badge3D(p,c);};
+    icons["trimEdge3D"] = [base=icons["trim"]](QPainter &p,const IconPalette &c){base(p,c);badge3D(p,c);};
     icons["storyboard"] = icons["storyboardLeft"];
     return icons;
 }

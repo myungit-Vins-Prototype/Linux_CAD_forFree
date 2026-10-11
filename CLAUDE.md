@@ -4,6 +4,29 @@ Contesto del progetto per Claude Code. La lingua di lavoro è l'italiano (UI, co
 
 ## Registro del lavoro — istruzione dell'utente
 
+### Scritta 3D sulle icone di estrazione e taglio bordo (2026-10-12)
+
+- Richiesta: aggiungere 3D anche alle icone di Estrai bordo 3D e Taglia curva 3D.
+- cad_icons.cpp: estratto badge3D comune dall'icona newSketch3D; nuove icone vettoriali extractEdge3D e trimEdge3D, basate rispettivamente su convertEdges e trim, con badge a contrasto chiaro/scuro. Icone 2D originali conservate.
+- forgeCad2026_gui.cpp: nuove icone su menu/toolbar; nell'albero le feature ExtractedCurve mostrano l'icona di estrazione o taglio in base a curveExtraction.trimmed.
+- Verifiche: build Release app PASS (/tmp/forgecad-edge3d-icon-build.log); probe Qt offscreen e ispezione di tutte e tre le icone 3D a 16/24/32 pixel e nelle palette chiara/scura PASS (/tmp/edge3d-icon-preview.cpp, /tmp/forgecad-edge3d-icons.png); git diff --check PASS. Nessun nuovo test unitario per questa modifica grafica locale. Modifiche e lock del documento utente preservati, nessun commit/push. Eseguibile forgecad-release/forgecad aggiornato, riavvio necessario.
+
+### Storyboard: scorrimento conservato dopo cambio di visibilita' (2026-10-12)
+
+- Richiesta: su una storyboard lunga, spuntare o togliere una casella non deve resettare la posizione della barra di scorrimento.
+- Causa: rebuildModelTree cancella e ricrea le voci; il range delle barre viene temporaneamente svuotato e il ripristino della selezione puo' portare la vista lontano dalla zona letta. La ricostruzione resta differita, per non distruggere le voci durante itemChanged.
+- forgeCad2026_gui.cpp: salva posizione verticale/orizzontale prima della ricostruzione; completa il layout prima di ripristinare entrambi i valori. StoryboardTree espone la posizione precedente della storia: si raggiunge il cursore selezionato solo se la posizione di calcolo cambia esplicitamente, mentre un normale refresh di visibilita' conserva lo scorrimento anche con il cursore selezionato. Apertura/chiusura dei rami conservata tramite meccanismo esistente.
+- tests/test_viewport.cpp e CMakeLists.txt: nuova suite --storyboard-scroll / forgecad_storyboard_scroll_tests. Fixture 120 schizzi e 20 curve 3D; flag on/off a un quarto, meta' e tre quarti della lista con selezione del viewport lontana, entrambe le barre, visibilita' di una curva, refresh con cursore selezionato e navigazione esplicita nella storia.
+- Prima esecuzione 2/3 PASS: falliva solo la navigazione esplicita, perche' gli schizzi non utilizzati aggiunti dopo il cursore ne sostituivano la selezione. Ripristino del cursore spostato alla fine della ricostruzione; aggiunta verifica esplicita che la selezione rimanga sul cursore. Nessuna verifica rimossa.
+- Verifiche finali: build Release app e runner PASS (/tmp/forgecad-storyboard-scroll-build-final.log); CTest storyboard_scroll, history_position e workflow_ui 3/3 PASS (/tmp/forgecad-storyboard-scroll-ctest-final.log); git diff --check PASS. Nessuna modifica ai documenti utente, nessun commit/push. Eseguibile forgecad-release/forgecad aggiornato, riavvio necessario.
+
+### Icona distinta con scritta 3D per lo schizzo spaziale (2026-10-12)
+
+- Richiesta: aggiungere la scritta 3D all'icona dello schizzo 3D per distinguerla dallo schizzo piano.
+- cad_icons.cpp: nuova icona vettoriale newSketch3D, matita/piano esistenti con badge 3D in grassetto. Sfondo del badge scelto in base al colore del testo per mantenere contrasto in temi chiari/scuri; scala tramite PaintedIconEngine, anche HiDPI.
+- forgeCad2026_gui.cpp: nuova icona nell'azione di menu/toolbar Nuovo schizzo 3D e nelle feature SpatialSketch dell'albero; icona degli schizzi piani invariata.
+- Verifiche: build Release app PASS (/tmp/forgecad-sketch3d-icon-build-final.log), git diff --check PASS. Probe Qt offscreen e ispezione delle icone a 16/24/32 pixel, palette chiara e scura, PASS (/tmp/sketch3d-icon-preview.cpp, /tmp/forgecad-sketch3d-icons.png, /tmp/forgecad-sketch3d-icons-dark.png); corretta nella QA la combinazione iniziale di testo scuro/sfondo scuro. Nessun nuovo test unitario per questa modifica grafica locale, nessun documento utente modificato, nessun commit/push. Eseguibile forgecad-release/forgecad aggiornato, riavvio necessario.
+
 ### Disegno libero di schizzi 3D e tratto piu' visibile (2026-10-12)
 
 - Richiesta esplicita: implementare anche il disegno libero nello spazio e aumentare lo spessore delle linee degli schizzi 3D. Implementato Schizzo 3D come feature spaziale senza associazione a un piano: piu' entita' polilinea/spline interpolante, aperte o chiuse, punti XYZ in double. Non introdotto un risolutore di vincoli dimensionali/geometrici 3D; le coordinate sono libere ed editabili.
