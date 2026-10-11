@@ -38,6 +38,8 @@ namespace ForgeCad::Kernel {
 struct LoftSection {
     Frame3 frame;
     ProfileLoop loop;  // chiuso (solidi) o catena aperta (lamine)
+    // Alternativa esatta 3D, senza proiezione sul piano del frame.
+    std::vector<PathSegment> path;
 };
 
 // Facce da continuare lungo il bordo della prima/ultima sezione.

@@ -3,8 +3,11 @@
 #include <GProp_GProps.hxx>
 
 #include <cmath>
+#include <limits>
 
 #include "fk_body_check.h"
+#include "fk_curve_algo.h"
+#include "fk_surface_algo.h"
 #include "fk_bspline_surface.h"
 #include "fk_loft.h"
 #include "fk_mass.h"
@@ -288,6 +291,91 @@ FK_TEST(LoftOpenGuideNearPlaneEndpoint) {
     }
 }
 
+FK_TEST(LoftContactAtCoincidentEndpoint) {
+    // Due profili condividono un vertice: il lato longitudinale collassa,
+    // ma il piano tangente resta definito come limite geometrico.
+    const auto pathLine = [](Vec3 a, Vec3 b) -> PathSegment {
+        return {std::make_shared<Line<3>>(a, normalized(b-a)), {0,distance(a,b)}};
+    };
+    auto adjacent = std::make_shared<const Body>(ruledSurface(
+        {pathLine({0,-5,0},{10,-5,0})}, {pathLine({0,0,0},{10,0,0})}));
+    for (bool reverse : {false,true}) {
+        LoftSection first, last;
+        first.frame = Frame3(Vec3(),Vec3(0,0,1),Vec3(1,0,0));
+        last.frame = Frame3(Vec3(),Vec3(1,0,0),Vec3(0,1,0));
+        first.loop.segments = last.loop.segments = {lineSegment({0,0},{10,0})};
+        if (reverse) { first.loop = reversed(first.loop); last.loop = reversed(last.loop); }
+        LoftOptions options;
+        options.startContinuity = 1;
+        options.startFaces = {{adjacent,adjacent->faces().front()}};
+        const Body body = loftSheet({first,last},options);
+        FK_CHECK(checkBody(body).empty());
+        TessellationOptions mesh; mesh.deflection = 0.05;
+        const auto tessellation = tessellate(body,mesh);
+        FK_CHECK(tessellation.failedFaces == 0);
+        FK_CHECK(!tessellation.faces.empty() && !tessellation.faces.front().triangles.empty());
+        for (const auto &face : tessellation.faces)
+            for (const Vec3 &normal : face.normals)
+                FK_CHECK(std::fabs(normalized(normal).z()) > 1-1e-8);
+    }
+    // Un'intersezione interna dei profili non va scambiata per un estremo
+    // collassato: la derivata trasversale nulla resta un errore.
+    auto wide = std::make_shared<const Body>(ruledSurface(
+        {pathLine({-5,-5,0},{5,-5,0})}, {pathLine({-5,0,0},{5,0,0})}));
+    LoftSection a,b;
+    a.frame = Frame3(Vec3(),Vec3(0,0,1),Vec3(1,0,0));
+    b.frame = Frame3(Vec3(),Vec3(1,0,0),Vec3(0,1,0));
+    a.loop.segments = b.loop.segments = {lineSegment({-5,0},{5,0})};
+    LoftOptions options; options.startContinuity=1;
+    options.startFaces={{wide,wide->faces().front()}};
+    FK_CHECK_THROWS(loftSheet({a,b},options));
+}
+
+FK_TEST(LoftNonparallelLongitudinalParameters) {
+    // Sezioni su YZ e XY: la guida piega i bordi longitudinali. La mappa
+    // deve conservare il parametro del bordo anche dove la proiezione
+    // numerica sulla superficie puo' scegliere un altro ramo.
+    LoftSection first, last;
+    first.frame = Frame3(Vec3(), Vec3(1,0,0), Vec3(0,1,0));
+    last.frame = Frame3(Vec3(0,0,25), Vec3(0,0,1), Vec3(1,0,0));
+    const std::vector<double> knots{0,0,0,0,1,1,1,1};
+    first.loop.segments = {{std::make_shared<BSplineCurve<2>>(3, knots,
+        std::vector<Vec2>{{0,0},{3,5},{7,6},{10,0}}), {0,1}}};
+    last.loop.segments = {{std::make_shared<BSplineCurve<2>>(3, knots,
+        std::vector<Vec2>{{5,0},{8,3},{12,4},{15,0}}), {0,1}}};
+    const auto guide = std::make_shared<BSplineCurve<3>>(3, knots,
+        std::vector<Vec3>{{0,5,4.125},{2,5,6},{12,2.625,17},{10,2.625,25}});
+    for (int continuity : {0,1}) {
+        LoftOptions options; options.guideContinuity = continuity;
+        options.guides = {{{guide,{0,1}}}};
+        const Body body = loftSheet({first,last}, options);
+        FK_CHECK(checkBody(body).empty());
+        int longitudinal = 0;
+        for (FaceId id : body.faces()) {
+            const auto &face = body.face(id);
+            if (face.surface->type() != SurfaceType::BSpline) continue;
+            for (LoopId loop : face.loops) for (FinId fid : body.loopFins(loop)) {
+                const auto &fin = body.fin(fid);
+                const auto &edge = body.edge(fin.edge);
+                if (distance(edge.curve->point(edge.range.lo), edge.curve->point(edge.range.hi)) < 20) continue;
+                ++longitudinal;
+                for (int i = 0; i <= 100; ++i) {
+                    const double t = i / 100.0;
+                    const Vec2 uv = fin.pcurve->point(t);
+                    FK_CHECK_NEAR(uv.y(), t, 1e-12);
+                    FK_CHECK(std::min(std::fabs(uv.x()),std::fabs(uv.x()-1)) < 1e-12);
+                    FK_CHECK(distance(face.surface->point(uv.x(),uv.y()),edge.curve->point(t)) < 1e-8);
+                }
+            }
+        }
+        FK_CHECK(longitudinal == 4);
+        TessellationOptions mesh; mesh.deflection = 0.1;
+        const auto tessellation = tessellate(body,mesh);
+        FK_CHECK(tessellation.failedFaces == 0);
+        FK_CHECK(!tessellation.faces.empty() && !tessellation.faces.front().triangles.empty());
+    }
+}
+
 FK_TEST(LoftSheet) {
     // Due segmenti paralleli: rettangolo; con una catena girata al contrario si riallinea.
     LoftSection a, b;
@@ -301,4 +389,89 @@ FK_TEST(LoftSheet) {
     double area = 0.0;
     for (FaceId f : sheet.faces()) area += faceArea(sheet, f);
     FK_CHECK_NEAR(area, 6.0, 1e-10);
+}
+
+FK_TEST(LoftPreservesDistinctNearbyKnots) {
+    // These two internal breaks must never be coalesced: each has degree
+    // multiplicity, so merging them produces multiplicity > degree+1.
+    for (double offset : {1e-10, 4*std::numeric_limits<double>::epsilon()}) {
+        const double a=0.5,b=a+offset;
+        const std::vector<double> knots{0,0,0,0,a,a,a,b,b,b,1,1,1,1};
+        std::vector<Vec3> poles;
+        for (std::size_t i=0;i+4<knots.size();++i)
+            poles.push_back({10*((knots[i+1]+knots[i+2]+knots[i+3])/3),0,0});
+        auto curve=std::make_shared<BSplineCurve<3>>(3,knots,poles);
+        LoftSection first,last; first.path={{curve,{0,1}}};
+        last.path={{std::make_shared<Line<3>>(Vec3(0,0,10),Vec3(1,0,0)),{0,10}}};
+        for (bool reverse : {false,true}) {
+            const auto body=loftSheet(reverse?std::vector<LoftSection>{last,first}:std::vector<LoftSection>{first,last});
+            FK_CHECK(checkBody(body).empty());
+            for (double x : {0.0,2.5,5.0,7.5,10.0}) {
+                double closest=1e300;
+                for (EdgeId id : body.edges()) {
+                    const auto &edge=body.edge(id);
+                    closest=std::min(closest,projectPoint(*edge.curve,{x,0,0},edge.range).distance);
+                }
+                FK_CHECK(closest<1e-7);
+            }
+        }
+    }
+}
+
+FK_TEST(LoftG1RoundoffTrimPiece) {
+    const auto line=[](Vec3 a,Vec3 b)->PathSegment {
+        return {std::make_shared<Line<3>>(a,normalized(b-a)),{0,distance(a,b)}};
+    };
+    auto source=std::make_shared<const Body>(ruledSurface({line({0,0,0},{10,0,0})},{line({0,-5,0},{10,-5,0})}));
+    const double last=std::nextafter(1.0,0.0);
+    auto curve=std::make_shared<BSplineCurve<3>>(3,std::vector<double>{0,0,0,0,last,last,last,1,1,1,1},
+        std::vector<Vec3>{{0,0,0},{3,0,0},{7,0,0},{10,0,0},{10,0,0},{10,0,0},{10,0,0}});
+    LoftSection first,second; first.path={{curve,{0,1}}}; second.path={line({0,10,5},{10,10,5})};
+    for(bool reverse:{false,true}) {
+        LoftOptions options;
+        if(reverse) {options.endContinuity=1;options.endFaces={{source,source->faces().front()}};}
+        else {options.startContinuity=1;options.startFaces={{source,source->faces().front()}};}
+        const auto body=loftSheet(reverse?std::vector<LoftSection>{second,first}:std::vector<LoftSection>{first,second},options);
+        FK_CHECK(checkBody(body).empty());
+        for(FaceId face:body.faces()) for(double u:{0.1,0.5,0.9})
+            FK_CHECK(std::fabs(normalAt(*body.face(face).surface,u,reverse?1:0).z())>1-1e-4);
+    }
+}
+
+FK_TEST(LoftMultipleGuidesDoNotCreateRibbons) {
+    const auto line=[](Vec3 a,Vec3 b)->PathSegment {return {std::make_shared<Line<3>>(a,normalized(b-a)),{0,distance(a,b)}};};
+    // Dense exact section: modifying only the endpoint poles confines a
+    // guide to a tiny strip and leaves a visible crease at the middle guide.
+    std::vector<double> knots{0,0,0,0};
+    for(int k=1;k<80;++k) knots.insert(knots.end(),3,k/80.0);
+    knots.insert(knots.end(),4,1);
+    std::vector<Vec3> poles;
+    for(std::size_t j=0;j+4<knots.size();++j) poles.push_back({10*(knots[j+1]+knots[j+2]+knots[j+3])/3,0,0});
+    auto profile=std::make_shared<BSplineCurve<3>>(3,knots,poles);
+    LoftSection first,last; first.path={{profile,{0,1}}}; last.path={line({0,10,5},{10,10,5})};
+    auto neighbor=std::make_shared<const Body>(ruledSurface({line({0,-5,0},{10,-5,0})},{line({0,0,0},{10,0,0})}));
+    for(bool reverse:{false,true}) for(int continuity:{1,2}) for(bool contact:{false,true}) {
+        LoftOptions options;options.guideContinuity=continuity;
+        for(double x:{0.0,5.0,10.0}) {
+            auto guide=std::make_shared<BSplineCurve<3>>(3,std::vector<double>{0,0,0,0,1,1,1,1},
+                std::vector<Vec3>{{x,0,0},{x,4,0},{x,7,4},{x,10,5}});
+            options.guides.push_back({{guide,{0,1}}});
+        }
+        if(contact) {
+            if(reverse){options.endContinuity=1;options.endFaces={{neighbor,neighbor->faces().front()}};}
+            else {options.startContinuity=1;options.startFaces={{neighbor,neighbor->faces().front()}};}
+        }
+        const auto body=loftSheet(reverse?std::vector<LoftSection>{last,first}:std::vector<LoftSection>{first,last},options);
+        FK_CHECK(checkBody(body).empty());FK_CHECK(body.faces().size()==2);
+        const auto &a=*body.face(body.faces()[0]).surface,&b=*body.face(body.faces()[1]).surface;
+        for(int k=1;k<40;++k) {
+            const double v=k/40.0;
+            FK_CHECK(distance(a.point(1,v),b.point(0,v))<1e-8);
+            FK_CHECK(norm(cross(normalAt(a,1,v),normalAt(b,0,v)))<1e-6);
+            // No concentrated change between the guide and the interior.
+            FK_CHECK(norm(cross(normalAt(a,0.95,v),normalAt(a,0.5,v)))<1e-5);
+        }
+        if(contact) for(FaceId f:body.faces()) for(double u:{0.1,0.5,0.9})
+            FK_CHECK(std::fabs(normalAt(*body.face(f).surface,u,reverse?1:0).z())>1-1e-4);
+    }
 }

@@ -635,6 +635,30 @@ void equations(const System &s, const SketchConstraint &c, QVector<double> &out,
         out << d.x() << d.y();
         return;
     }
+    case ConstraintType::Pierce: {
+        const QPointF point = s.refPoint(c.first);
+        QPointF foot;
+        double best = std::numeric_limits<double>::infinity();
+        for (const auto &segment : c.pierce->segments) {
+            const QPointF direction = segment.second-segment.first;
+            const double size = dot(direction,direction);
+            const double t = size>0 ? std::clamp(dot(point-segment.first,direction)/size,0.0,1.0) : 0;
+            const QPointF candidate = segment.first+t*direction;
+            const double gap = length(point-candidate);
+            if (gap<best) { best=gap; foot=candidate; }
+        }
+        for (const auto &curve : c.pierce->curves) {
+            QPointF candidate,tangent;
+            if (curveFoot(curveGeometry(curve),point,candidate,tangent) && length(point-candidate)<best) {
+                best=length(point-candidate); foot=candidate;
+            }
+        }
+        // Due componenti, rango uno all'interno del tratto e due agli estremi:
+        // il punto non puo' continuare sulla superficie oltre il bordo rifilato.
+        const QPointF residual = point-foot;
+        out << residual.x() << residual.y();
+        return;
+    }
     case ConstraintType::PointOnCurve: {
         const QPointF p = s.refPoint(c.first);
         if (b == Shape::Line) {
@@ -833,6 +857,10 @@ void equations(const System &s, const SketchConstraint &c, QVector<double> &out,
 
 // Il vincolo e' ben formato per lo schizzo (riferimenti validi e delle forme giuste).
 bool wellFormed(const SketchObject &sketch, const SketchConstraint &c) {
+    if (c.type == ConstraintType::Pierce)
+        return shapeOf(sketch,c.first)==Shape::Point && c.first.kind!=2 && c.second.kind<0
+            && c.pierce && c.pierce->surface.kind==5 && c.pierce->error.isEmpty()
+            && (!c.pierce->segments.isEmpty() || !c.pierce->curves.isEmpty());
     if (c.type == ConstraintType::Offset) return validSketchOffset(sketch,c);
     if (c.type == ConstraintType::Pattern) return patternWellFormed(sketch, c.pattern);
     const Shape a = shapeOf(sketch, c.first), b = shapeOf(sketch, c.second);
@@ -927,6 +955,7 @@ QString constraintName(ConstraintType type) {
     case ConstraintType::Concentric: return QStringLiteral("Concentrico");
     case ConstraintType::Quadrant: return QStringLiteral("Quadrante");
     case ConstraintType::Midpoint: return QStringLiteral("Punto medio");
+    case ConstraintType::Pierce: return QStringLiteral("Pierce su superficie");
     case ConstraintType::PointOnCurve: return QStringLiteral("Punto sull'entita'");
     case ConstraintType::Fix: return QStringLiteral("Fisso");
     case ConstraintType::Distance: return QStringLiteral("Distanza");
@@ -957,6 +986,7 @@ QString constraintSymbol(ConstraintType type) {
     case ConstraintType::Concentric: return QStringLiteral("◎");
     case ConstraintType::Quadrant: return QStringLiteral("Q");
     case ConstraintType::Midpoint: return QStringLiteral("M");
+    case ConstraintType::Pierce: return QStringLiteral("P");
     case ConstraintType::PointOnCurve: return QStringLiteral("∈");
     case ConstraintType::Fix: return QStringLiteral("⚓");
     case ConstraintType::Distance: return QStringLiteral("↔");
@@ -1029,6 +1059,10 @@ QString describeConstraint(const SketchObject &sketch, const SketchConstraint &c
     }
     QString text = constraintSymbol(c.type) + QLatin1Char(' ') + constraintName(c.type) + QStringLiteral(": ") + describeRef(sketch, c.first);
     if (c.second.kind >= 0) text += QStringLiteral(" · ") + describeRef(sketch, c.second);
+    if (c.type==ConstraintType::Pierce && c.pierce) {
+        text += QStringLiteral(" · ")+c.pierce->name;
+        if (!c.pierce->error.isEmpty()) text += QStringLiteral(" — ")+c.pierce->error;
+    }
     if (c.third.kind >= 0) text += QStringLiteral(" rispetto a ") + describeRef(sketch, c.third);
     if (c.type == ConstraintType::Quadrant) text += QStringLiteral(" (%1°)").arg(c.value * 90.0);
     if (c.type == ConstraintType::Angle) text += QStringLiteral(" = %1°").arg(c.value, 0, 'f', 4);
@@ -1049,7 +1083,7 @@ QVector<ConstraintType> applicableConstraints(const SketchObject &sketch, const 
     if (refs.size() == 1) {
         if (refs.at(0).kind == 2) return {};
         switch (a) {
-        case Shape::Point: return {T::Fix};
+        case Shape::Point: return {T::Fix,T::Pierce};
         case Shape::Line:
             if (refs.at(0).kind == 0) return {T::Horizontal, T::Vertical, T::Distance, T::HorizontalDistance, T::VerticalDistance, T::Fix};
             return {T::Horizontal, T::Vertical, T::Distance, T::Fix};
@@ -1265,7 +1299,7 @@ double constraintError(const SketchObject &sketch, const SketchConstraint &const
         }
         return worst;
     }
-    if (!wellFormed(sketch, constraint)) return 0.0;
+    if (!wellFormed(sketch, constraint)) return constraint.type==ConstraintType::Pierce ? std::numeric_limits<double>::infinity() : 0.0;
     const System s(sketch);
     QVector<double> r;
     equations(s, constraint, r);
@@ -1764,6 +1798,13 @@ SketchAnalysis analyzeSketch(const SketchObject &sketch) {
 }
 
 SolveResult solveSketch(SketchObject &sketch, const QVector<PointTarget> &targets) {
+    for (const auto &constraint : sketch.geometricConstraints)
+        if (constraint.type==ConstraintType::Pierce && !wellFormed(sketch,constraint)) {
+            SolveResult result; result.ok=false;
+            result.error=constraint.pierce && !constraint.pierce->error.isEmpty() ? constraint.pierce->error
+                : QStringLiteral("Il vincolo Pierce non ha un riferimento di superficie valido.");
+            return result;
+        }
     if(std::any_of(sketch.geometricConstraints.begin(),sketch.geometricConstraints.end(),[](const auto &c){return c.type==ConstraintType::Offset;})) {
         SketchObject work=sketch;
         SolveResult result;
@@ -2031,10 +2072,12 @@ void migrateLegacyConstraints(SketchObject &sketch) {
     // Via i vincoli non validi e quelli ripetuti.
     QVector<SketchConstraint> kept;
     for (const SketchConstraint &c : sketch.geometricConstraints) {
-        if (!wellFormed(sketch, c)) continue;
+        if (!wellFormed(sketch, c) && !(c.type==ConstraintType::Pierce && shapeOf(sketch,c.first)==Shape::Point)) continue;
         bool duplicate = false;
         for (const SketchConstraint &k : kept)
-            duplicate = duplicate || (k.type == c.type && ((k.first == c.first && k.second == c.second) || (k.first == c.second && k.second == c.first)));
+            duplicate = duplicate || (k.type == c.type && ((k.first == c.first && k.second == c.second) || (k.first == c.second && k.second == c.first))
+                && (c.type!=ConstraintType::Pierce || (c.pierce && k.pierce && c.pierce->surface.featureId==k.pierce->surface.featureId
+                    && c.pierce->surface.point.subshape==k.pierce->surface.point.subshape)));
         if (!duplicate) kept.append(c);
     }
     sketch.geometricConstraints = kept;

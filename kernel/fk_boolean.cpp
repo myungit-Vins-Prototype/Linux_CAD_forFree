@@ -227,6 +227,7 @@ public:
     }
 
     Body run();
+    std::vector<BodySectionCurve> section();
     // Divisione della lamina (body 0) lungo le curve in cui la attraversa il body 1: un body per regione connessa.
     std::vector<Body> split();
     // Divisione delle facce del body 0 lungo curve date (il body 1 e' vuoto)
@@ -1882,6 +1883,41 @@ void BooleanBuilder::snapNearEnds() {
     arcs_ = std::move(kept);
 }
 
+std::vector<BodySectionCurve> BooleanBuilder::section() {
+    std::vector<BodySectionCurve> result;
+    for (FaceId a : bodies_[0].faces()) {
+        for (FaceId b : faceIndex_[1].query(boxes_[0].at(a.index))) {
+            PairResult pair;
+            pairArcs(a, b, pair);
+            for (const Arc &arc : pair.arcs) {
+                // Il bordo comune di due facce complanari e' interno alla
+                // superficie: non fa parte del contorno della sezione.
+                bool internal = false;
+                if (arc.coplanar) for (EdgeId id : bodies_[1].edges()) {
+                    const Edge &edge = bodies_[1].edge(id);
+                    if (edge.curve != arc.curve || bodies_[1].isLaminar(id)) continue;
+                    const Surface &front = *bodies_[1].face(bodies_[1].finFace(edge.forward)).surface;
+                    const Surface &back = *bodies_[1].face(bodies_[1].finFace(edge.backward)).surface;
+                    if (coincident(*bodies_[0].face(a).surface, front)
+                        && coincident(*bodies_[0].face(a).surface, back)) { internal = true; break; }
+                }
+                if (internal) continue;
+                bool duplicate = false;
+                for (const auto &existing : result) {
+                    bool same = true;
+                    for (double fraction : {0.0, 0.25, 0.5, 0.75, 1.0}) {
+                        const Vec3 point = arc.curve->point(arc.range.lo + fraction * arc.range.length());
+                        if (projectPoint(*existing.curve, point, existing.range).distance > tolerance_) { same = false; break; }
+                    }
+                    if (same) { duplicate = true; break; }
+                }
+                if (!duplicate) result.push_back({arc.curve, arc.range});
+            }
+        }
+    }
+    return result;
+}
+
 Body BooleanBuilder::run() {
     // Lamine: solo con un solido, e il risultato e' la parte della lamina
     // dentro (intersezione) o fuori (differenza, lamina meno solido) del solido.
@@ -2225,6 +2261,10 @@ Body BooleanBuilder::assemble(const std::vector<std::pair<SubFace, bool>> &kept,
     return result;
 }
 
+}
+
+std::vector<BodySectionCurve> bodySectionCurves(const Body &a, const Body &b, const BooleanOptions &options) {
+    return BooleanBuilder(a, b, BooleanOperation::Intersect, options).section();
 }
 
 Body booleanOperation(const Body &a, const Body &b, BooleanOperation operation, const BooleanOptions &options) {

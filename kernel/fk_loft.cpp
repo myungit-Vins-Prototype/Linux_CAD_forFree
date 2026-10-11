@@ -4,6 +4,7 @@
 #include <array>
 #include <cmath>
 #include <map>
+#include <limits>
 #include <stdexcept>
 
 #include "fk_body_check.h"
@@ -31,6 +32,7 @@ struct Section {
     std::vector<Piece> pieces;
     Vec3 centroid, normal;
     Frame3 frame;
+    bool spatial = false;
 };
 
 struct GuideHit {
@@ -39,6 +41,51 @@ struct GuideHit {
     Vec3 tangent;
     Vec3 curvature;
 };
+
+std::vector<double> spatialGuideParameters(const PathSegment &guide, const Section &section, double tolerance) {
+    std::vector<double> result;
+    const auto add = [&](double t) {
+        const Vec3 p = guide.curve->point(t);
+        double nearest = 1e300;
+        for (const Piece &piece : section.pieces)
+            nearest = std::min(nearest, projectPoint(*piece.curve, p, piece.range).distance);
+        if (nearest <= tolerance) result.push_back(t);
+    };
+    add(guide.range.lo); add(guide.range.hi);
+    // Ogni intersezione spaziale compare nelle immagini piane; la verifica
+    // 3D scarta le intersezioni apparenti. Tre direzioni evitano immagini
+    // degeneri o sovrapposte. Nessuna discretizzazione della curva finale.
+    for (const Piece &piece : section.pieces) {
+        bool isolated = false;
+        for (const Vec3 &normal : {Vec3(0,0,1), Vec3(0,1,0), Vec3(1,0,0)}) {
+            const Frame3 frame = normalFrame(normal, Vec3());
+            const auto a = planarImage(*guide.curve, guide.range, frame);
+            const auto b = planarImage(*piece.curve, piece.range, frame);
+            if (!a.curve || !b.curve) continue;
+            const auto hits = intersectCurves(*a.curve, a.range, *b.curve, b.range, tolerance, true);
+            if (hits.overlap) continue;
+            isolated = true;
+            for (const auto &hit : hits.points) {
+                const double t = a.toCurve(hit.s), u = b.toCurve(hit.t);
+                if (distance(guide.curve->point(t), piece.curve->point(u)) <= tolerance) add(t);
+            }
+            break;
+        }
+        if (!isolated) {
+            // Una guida sovrapposta al profilo non determina un attraversamento.
+            int matching = 0;
+            for (int k=0; k<=8; ++k)
+                if (projectPoint(*piece.curve, guide.curve->point(guide.range.lo+guide.range.length()*k/8.0), piece.range).distance <= tolerance) ++matching;
+            if (matching > 2) throw std::domain_error("loft: una curva guida si sovrappone a una sezione");
+            // Casi degeneri delle immagini: estremi della sezione sul tratto guida.
+            for (double u : {piece.range.lo, piece.range.hi}) {
+                const auto q = projectPoint(*guide.curve, piece.curve->point(u), guide.range);
+                if (q.distance <= tolerance) add(q.parameter);
+            }
+        }
+    }
+    return result;
+}
 
 GuideHit guideHit(const std::vector<PathSegment> &guide, const Section &section, double tolerance) {
     std::vector<GuideHit> hits;
@@ -52,15 +99,15 @@ GuideHit guideHit(const std::vector<PathSegment> &guide, const Section &section,
     if (!(total > tolerance)) throw std::domain_error("loft: curva guida troppo corta");
     for (std::size_t segmentIndex = 0; segmentIndex < guide.size(); ++segmentIndex) {
         const PathSegment &segment = guide[segmentIndex];
-        const PlaneRoots<3> roots = planeRoots<3>(*segment.curve, segment.range, section.normal,
+        const PlaneRoots<3> roots = section.spatial ? PlaneRoots<3>{} : planeRoots<3>(*segment.curve, segment.range, section.normal,
                                                    dot(section.normal, section.frame.origin()), tolerance);
         if (!roots.coincident.empty()) throw std::domain_error("loft: una curva guida giace nel piano di una sezione");
-        std::vector<double> parameters = roots.parameters;
+        std::vector<double> parameters = section.spatial ? spatialGuideParameters(segment, section, tolerance) : roots.parameters;
         // Una guida termina spesso sulla sezione. Il residuo di un estremo
         // puo' essere positivo di pochi ulp senza attraversare lo zero: in
         // quel caso il cercatore di radici non restituisce l'estremo.
         for (double t : {segment.range.lo, segment.range.hi})
-            if (std::fabs(dot(section.normal, segment.curve->point(t) - section.frame.origin())) <= tolerance)
+            if (!section.spatial && std::fabs(dot(section.normal, segment.curve->point(t) - section.frame.origin())) <= tolerance)
                 parameters.push_back(t);
         for (double t : parameters) {
             const Vec3 p = segment.curve->point(t);
@@ -243,15 +290,49 @@ std::vector<Homogeneous> contactDerivatives(const std::vector<BSplineCurve<3>> &
     const auto &boundary = atEnd ? curves.back() : curves.front();
     const auto &neighbor = atEnd ? curves[curves.size() - 2] : curves[1];
     const int count = boundary.poleCount(), degree = boundary.degree();
+    // Le guide agiscono su un campo continuo, non soltanto nelle ascisse
+    // di collocazione vicine al loro punto: quelle correzioni isolate
+    // creavano creste e oscillazioni della derivata di contatto.
+    std::vector<std::pair<double,GuideHit>> localGuides;
+    if (guideContinuity > 0 && guideInfluence > 0)
+        for(const auto &guide:guides) {
+            const auto &hit=atEnd?guide.back():guide.front();
+            const auto projected=projectPoint(boundary,hit.point,boundary.domain());
+            if(projected.distance<=1e-6*scale)
+                localGuides.push_back({(projected.parameter-boundary.domain().lo)/boundary.domain().length(),hit});
+        }
+    std::sort(localGuides.begin(),localGuides.end(),[](const auto &a,const auto &b){return a.first<b.first;});
+    std::array<bool, 2> collapsedEndpoints{false, false};
     std::vector<std::vector<double>> matrix(count, std::vector<double>(count));
     std::vector<std::vector<double>> rhs(count, std::vector<double>(4));
     for (int j = 0; j < count; ++j) {
-        double t = 0.0;
-        for (int k = 1; k <= degree; ++k) t += boundary.knots()[j + k];
-        t /= degree;
-        const int knotSpan = detail::findSpan(boundary.knots(), degree, count, t);
-        std::vector<double> basis(degree + 1);
-        detail::basisFunctionDerivatives(boundary.knots(), knotSpan, t, degree, 0, basis.data());
+        // Media rispetto al primo nodo: sommando direttamente nodi vicini
+        // a 1 si possono ottenere due ascisse uguali su una campata di pochi
+        // ulp, rendendo singolare una collocazione altrimenti valida.
+        const double anchor = boundary.knots()[j + 1];
+        long double delta = 0.0L;
+        for (int k = 1; k <= degree; ++k) delta += static_cast<long double>(boundary.knots()[j + k]) - anchor;
+        const long double location = static_cast<long double>(anchor) + delta / degree;
+        const double t = static_cast<double>(location);
+        // Anche la base deve usare l'ascissa non arrotondata: una campata
+        // di un solo ulp non contiene abbastanza double per degree+1 righe.
+        int knotSpan = degree;
+        while (knotSpan + 1 < count && boundary.knots()[knotSpan + 1] <= location) ++knotSpan;
+        std::vector<long double> precise(degree+1),left(degree+1),right(degree+1);
+        precise[0]=1;
+        for(int jBasis=1; jBasis<=degree; ++jBasis) {
+            left[jBasis]=location-boundary.knots()[knotSpan+1-jBasis];
+            right[jBasis]=boundary.knots()[knotSpan+jBasis]-location;
+            long double saved=0;
+            for(int r=0;r<jBasis;++r) {
+                const long double denominator=right[r+1]+left[jBasis-r];
+                const long double term=denominator!=0?precise[r]/denominator:0;
+                precise[r]=saved+right[r+1]*term;
+                saved=left[jBasis-r]*term;
+            }
+            precise[jBasis]=saved;
+        }
+        std::vector<double> basis(precise.begin(),precise.end());
         Vec3 homogeneousPoint, homogeneousNeighbor;
         double w = 0.0, wn = 0.0;
         for (int k = 0; k <= degree; ++k) {
@@ -267,33 +348,44 @@ std::vector<Homogeneous> contactDerivatives(const std::vector<BSplineCurve<3>> &
         const double dw = sign * (wn - w) / span;
         Vec3 natural = (sign * (homogeneousNeighbor - homogeneousPoint) / span - dw * p) / w;
         const double speed = norm(natural);
-        if (guideContinuity > 0 && guideInfluence > 0.0)
-            for (const auto &guide : guides) {
-                const auto &hit = atEnd ? guide.back() : guide.front();
-                if (distance(p, hit.point) > 1e-6 * scale) continue;
-                if (std::fabs(dot(normal, hit.tangent)) > 1e-4)
-                    throw std::domain_error("loft: tangente della guida incompatibile con la faccia adiacente");
-                Vec3 tangent = hit.tangent;
-                if (dot(tangent, natural) < 0.0) tangent = -tangent;
-                natural = (1.0 - guideInfluence) * natural + guideInfluence * speed * tangent;
+        for (const auto &entry:localGuides) {
+            const auto &hit=entry.second;
+            if(distance(p,hit.point)<=1e-6*scale && std::fabs(dot(normal,hit.tangent))>1e-4)
+                throw std::domain_error("loft: tangente della guida incompatibile con la faccia adiacente");
+        }
+        if(!localGuides.empty()) {
+            const double u=std::clamp((t-boundary.domain().lo)/boundary.domain().length(),0.0,1.0);
+            const double right=u*u*(3-2*u);
+            const Vec3 original=natural;
+            for(const auto &entry:localGuides) {
+                Vec3 tangent=entry.second.tangent;
+                if(dot(tangent,original)<0) tangent=-tangent;
+                const double weight=entry.first<0.5?1-right:right;
+                natural+=guideInfluence*weight*(speed*tangent-original);
             }
+        }
         Vec3 direction = natural - dot(natural, normal) * normal;
         const Vec3 tangent = boundary.derivative(t);
         if (!(norm(cross(direction, tangent)) > 1e-10 * std::max(1.0, norm(natural) * norm(tangent)))) {
             direction = cross(normal, tangent);
             if (dot(direction, natural) < 0.0) direction = -direction;
         }
-        if (!(norm(direction) > 1e-12) || !(norm(natural) > 1e-12))
+        const bool endpoint = j == 0 || j + 1 == count;
+        const bool collapsed = endpoint && speed <= 1e-12
+            && distance(p, neighbor.point(t)) <= 1e-12 * scale;
+        if (!(norm(direction) > 1e-12) || (!(norm(natural) > 1e-12) && !collapsed))
             throw std::domain_error("loft: derivata trasversale non determinabile sul bordo");
-        const Vec3 derivative = influence * speed * normalized(direction);
+        if (collapsed) collapsedEndpoints[j == 0 ? 0 : 1] = true;
+        // Un vertice comune ai due profili ha derivata trasversale nulla:
+        // la tangenza geometrica si verifica tramite il limite sul bordo.
+        const Vec3 derivative = collapsed ? Vec3() : influence * speed * normalized(direction);
         const Vec3 h = w * derivative + dw * p;
         rhs[j] = {h.x(), h.y(), h.z(), dw};
     }
     solveDense(matrix, rhs);
     std::vector<Homogeneous> result;
     for (const auto &r : rhs) result.push_back({r[0], r[1], r[2], r[3]});
-    for (int sample = 0; sample <= 128; ++sample) {
-        const double t = boundary.domain().lo + boundary.domain().length() * sample / 128.0;
+    const auto verifyTangent = [&](double t) {
         const int knotSpan = detail::findSpan(boundary.knots(), degree, count, t);
         std::vector<double> basis(degree + 1);
         detail::basisFunctionDerivatives(boundary.knots(), knotSpan, t, degree, 0, basis.data());
@@ -304,6 +396,23 @@ std::vector<Homogeneous> contactDerivatives(const std::vector<BSplineCurve<3>> &
         const Vec3 faceNormal = cross(boundary.derivative(t), d);
         if (!(norm(faceNormal) > 1e-12) || norm(cross(normalized(faceNormal), normal)) > 1e-4)
             throw std::domain_error("loft: tangenza alla faccia non risolta entro la tolleranza angolare");
+    };
+    for (int sample = 0; sample <= 128; ++sample) {
+        if ((sample == 0 && collapsedEndpoints[0]) || (sample == 128 && collapsedEndpoints[1])) continue;
+        verifyTangent(boundary.domain().lo + boundary.domain().length() * sample / 128.0);
+    }
+    // Non saltare semplicemente il vertice singolare: controllare il limite
+    // da dentro la prima/ultima campata, con la stessa tolleranza angolare.
+    for (int end = 0; end < 2; ++end) {
+        if (!collapsedEndpoints[end]) continue;
+        const double t = end == 0 ? boundary.domain().lo : boundary.domain().hi;
+        double adjacent = end == 0 ? boundary.domain().hi : boundary.domain().lo;
+        for (double knot : boundary.knots()) {
+            if (end == 0 && knot > t) adjacent = std::min(adjacent, knot);
+            if (end == 1 && knot < t) adjacent = std::max(adjacent, knot);
+        }
+        for (double fraction : {1e-2, 1e-3, 1e-4, 1e-5, 1e-6})
+            verifyTangent(t + fraction * (adjacent - t));
     }
     return result;
 }
@@ -447,6 +556,9 @@ void alignStart(Section &s, const Vec3 &reference) {
     }
 }
 
+std::vector<Piece> chainPieces(const std::vector<PathSegment> &chain, double tolerance);
+Vec3 newellNormal(const std::vector<Piece> &pieces, const Vec3 &centroid);
+
 Body loft(const std::vector<LoftSection> &input, const LoftOptions &options, bool closed, bool caps) {
     const std::size_t n = input.size();
     if (n < 2) throw std::domain_error("loft: servono almeno due sezioni");
@@ -454,8 +566,11 @@ Body loft(const std::vector<LoftSection> &input, const LoftOptions &options, boo
     // Sezioni nello spazio, baricentri.
     for (std::size_t i = 0; i < n; ++i) {
         const LoftSection &s = input[i];
-        if (s.loop.segments.empty()) throw std::domain_error("loft: sezione vuota");
-        for (const ProfileSegment &segment : s.loop.segments) sections[i].pieces.push_back({embedCurve(segment.curve, s.frame), segment.range});
+        if (s.loop.segments.empty() && s.path.empty()) throw std::domain_error("loft: sezione vuota");
+        if (!s.path.empty()) {
+            sections[i].pieces = chainPieces(s.path, 1e-6);
+            sections[i].spatial = true;
+        } else for (const ProfileSegment &segment : s.loop.segments) sections[i].pieces.push_back({embedCurve(segment.curve, s.frame), segment.range});
         sections[i].centroid = sectionCentroid(sections[i].pieces);
         sections[i].frame = s.frame;
     }
@@ -476,13 +591,20 @@ Body loft(const std::vector<LoftSection> &input, const LoftOptions &options, boo
     // Verso dei loop: attorno alla direzione del loft. Catene: inizio dalla stessa parte.
     for (std::size_t i = 0; i < n; ++i) {
         const Vec3 direction = i + 1 < n ? sections[i + 1].centroid - sections[i].centroid : sections[i].centroid - sections[i - 1].centroid;
-        const Vec3 z = input[i].frame.zDir();
         Section &s = sections[i];
+        Vec3 z = input[i].frame.zDir();
+        if (s.spatial) {
+            z = newellNormal(s.pieces, s.centroid);
+            if (norm(z) <= 1e-12 * scale * scale) z = direction;
+            z = normalized(z);
+            s.frame = normalFrame(z, s.centroid);
+        }
         s.normal = dot(direction, z) >= 0.0 ? z : -z;
         if (closed) {
-            if (std::fabs(dot(normalized(direction), z)) < 1e-6) throw std::domain_error("loft: il piano di una sezione contiene la direzione del loft");
+            if (!s.spatial && std::fabs(dot(normalized(direction), z)) < 1e-6) throw std::domain_error("loft: il piano di una sezione contiene la direzione del loft");
             s.normal = dot(direction, z) > 0.0 ? z : -z;
-            const bool counterclockwise = (signedArea(input[i].loop) > 0.0) == (dot(s.normal, z) > 0.0);
+            const bool counterclockwise = s.spatial ? dot(newellNormal(s.pieces, s.centroid), s.normal) > 0.0
+                : (signedArea(input[i].loop) > 0.0) == (dot(s.normal, z) > 0.0);
             if (!counterclockwise) {
                 std::vector<Piece> reversedPieces;
                 for (auto it = s.pieces.rbegin(); it != s.pieces.rend(); ++it)
@@ -552,7 +674,16 @@ Body loft(const std::vector<LoftSection> &input, const LoftOptions &options, boo
     std::vector<Frame3> capPlanes;
     if (closed && caps)
         for (std::size_t i : {std::size_t(0), n - 1})
-            capPlanes.push_back(Frame3(input[i].frame.origin(), sections[i].normal, input[i].frame.xDir()));
+        {
+            const Frame3 frame = sections[i].frame;
+            if (sections[i].spatial)
+                for (const Piece &piece : sections[i].pieces)
+                    for (const auto &bezier : rationalBezierPieces(*piece.curve,piece.range))
+                        for(const Vec3 &pole : bezier.poles())
+                            if (std::fabs(dot(sections[i].normal,pole-frame.origin())) > 1e-6*scale)
+                                throw std::domain_error("loft: una sezione di testa non e' piana; scegli Solo superficie");
+            capPlanes.push_back(Frame3(frame.origin(), sections[i].normal, frame.xDir()));
+        }
     return loftCore(sections, options, closed, capPlanes, scale, guideParameters, guideHits);
 }
 
@@ -695,14 +826,31 @@ Body loftCore(const std::vector<Section> &sections, const LoftOptions &options, 
     // nurbs[m][i]
     std::vector<std::vector<BSplineCurve<3>>> nurbs(M);
     for (std::size_t m = 0; m < M; ++m) {
-        int degree = options.startFaces.empty() && options.endFaces.empty() ? 1 : 3;
+        const bool spreadGuides=guideHits.size()>1 && options.guideContinuity>0 && options.guideInfluence>0;
+        int degree = options.startFaces.empty() && options.endFaces.empty() && !spreadGuides ? 1 : 3;
         for (std::size_t i = 0; i < n; ++i)
             for (const BSplineCurve<3> &b : rationalBezierPieces(*split[i][m].curve, split[i][m].range)) degree = std::max(degree, b.degree());
         std::vector<std::vector<BSplineCurve<3>>> bezier(n);
         std::vector<std::vector<double>> breaks(n);
-        std::vector<double> interior;
         for (std::size_t i = 0; i < n; ++i) {
             bezier[i] = standardBezierPieces(*split[i][m].curve, split[i][m].range, degree);
+            // Il taglio nel punto di una guida puo' lasciare una pezza di
+            // pochi ulp con tutti i poli coincidenti alla precisione macchina.
+            // Non e' una campata geometrica: rende nulla la tangente al bordo.
+            // Elimina solo residui terminali minuscoli sia in parametro sia
+            // in coordinate; conserva campate strette con geometria distinta.
+            const double originalSpan = bezier[i].back().domain().hi - bezier[i].front().domain().lo;
+            const auto roundoffPiece = [&](const BSplineCurve<3> &piece) {
+                const double eps = std::numeric_limits<double>::epsilon();
+                if (piece.domain().length() > 128*eps*originalSpan) return false;
+                const Vec3 first = piece.poles().front();
+                const double tolerance = 8*eps*std::max(1.0,norm(first));
+                for (const Vec3 &pole : piece.poles()) if (distance(pole,first) > tolerance) return false;
+                return true;
+            };
+            while (bezier[i].size()>1 && roundoffPiece(bezier[i].front())) bezier[i].erase(bezier[i].begin());
+            while (bezier[i].size()>1 && roundoffPiece(bezier[i].back())) bezier[i].pop_back();
+
             // Conserva il parametro delle sezioni: ripartire i nodi secondo
             // la lunghezza delle pezze cambia le velocita' ai loro confini.
             // Su cerchi/ellissi cio' crea salti di normale nel loft anche
@@ -710,23 +858,42 @@ Body loftCore(const std::vector<Section> &sections, const LoftOptions &options, 
             const double start = bezier[i].front().domain().lo;
             const double span = bezier[i].back().domain().hi - start;
             breaks[i].push_back(0.0);
-            for (std::size_t k = 0; k < bezier[i].size(); ++k) {
+            for (std::size_t k = 0; k < bezier[i].size(); ++k)
                 breaks[i].push_back(k + 1 == bezier[i].size() ? 1.0 :
                     (bezier[i][k].domain().hi - start) / span);
-                if (k + 1 < bezier[i].size()) interior.push_back(breaks[i].back());
-            }
+            // La normalizzazione puo' arrotondare un nodo interno su 0/1
+            // o su quello adiacente. Mantieni campate strettamente positive,
+            // muovendo soltanto il parametro normalizzato di pochi ulp;
+            // i poli/pesi delle pezze, e quindi la geometria, restano esatti.
+            for (std::size_t k=1;k+1<breaks[i].size();++k)
+                breaks[i][k]=std::max(breaks[i][k],std::nextafter(breaks[i][k-1],1.0));
+            for (std::size_t k=breaks[i].size()-2;k>0;--k)
+                breaks[i][k]=std::min(breaks[i][k],std::nextafter(breaks[i][k+1],0.0));
         }
-        std::sort(interior.begin(), interior.end());
+        // Allinea gli arrotondamenti fra sezioni diverse, senza mai
+        // accorpare due nodi distinti appartenenti alla stessa sezione.
+        // L'unione di nodi quasi uguali senza allineamento introdurrebbe
+        // campate spurie e salti di normale sui profili conici lisci.
+        struct Break { double value; std::size_t section, index; };
+        std::vector<Break> entries;
+        for(std::size_t i=0;i<n;++i)
+            for(std::size_t k=1;k+1<breaks[i].size();++k) entries.push_back({breaks[i][k],i,k});
+        std::sort(entries.begin(),entries.end(),[](const Break &a,const Break &b) {
+            if(a.value!=b.value) return a.value<b.value;
+            return a.section<b.section;
+        });
         std::vector<double> knots;
-        for (double k : interior)
-            if (knots.empty() || k - knots.back() > 1e-9) knots.push_back(k);
-        const auto representative = [&](double k) {
-            for (double r : knots)
-                if (std::fabs(r - k) <= 1e-9) return r;
-            return k;
-        };
+        std::vector<bool> used(n,false);
+        for(const auto &entry:entries) {
+            if(knots.empty() || entry.value-knots.back()>1e-9 || used[entry.section]) {
+                if(knots.empty() || entry.value!=knots.back()) {
+                    knots.push_back(entry.value); std::fill(used.begin(),used.end(),false);
+                }
+            }
+            breaks[entry.section][entry.index]=knots.back();
+            used[entry.section]=true;
+        }
         for (std::size_t i = 0; i < n; ++i) {
-            for (std::size_t k = 1; k + 1 < breaks[i].size(); ++k) breaks[i][k] = representative(breaks[i][k]);
             BSplineCurve<3> curve = joinBezierPieces(bezier[i], breaks[i]);
             for (double k : knots)
                 if (curve.multiplicity(k) < degree) curve = curve.insertKnot(k, degree - curve.multiplicity(k));
@@ -879,7 +1046,7 @@ Body loftCore(const std::vector<Section> &sections, const LoftOptions &options, 
                     endDerivatives[m] = contactDerivatives(nurbs[m], options.endFaces, true, v[n - 1] - v[n - 2], options.endInfluence, scale,
                                                           guideHits, options.guideContinuity, options.guideInfluence);
             }
-            const auto interpolate = [&](std::size_t m, int j, std::vector<Vec3> &poles, std::vector<double> &weights) {
+            const auto interpolate = [&](std::size_t m, int j, std::vector<Vec3> &poles, std::vector<double> &weights, bool useGuide=true) {
                 std::vector<Homogeneous> values(n);
                 for (std::size_t i = 0; i < n; ++i) {
                     Vec3 p;
@@ -893,6 +1060,7 @@ Body loftCore(const std::vector<Section> &sections, const LoftOptions &options, 
                 // tra le righe dei vertici: limitarla alla riga di passaggio
                 // creerebbe una cresta artificiale su un profilo liscio.
                 if (!closed && guideHits.size() == 1) guide = &guideHits.front();
+                if(!useGuide) guide=nullptr;
                 if (guide && options.guideContinuity > 0 && options.guideInfluence > 0.0) {
                     for (bool atEnd : {false, true}) {
                         const auto &contacts = atEnd ? options.endFaces : options.startFaces;
@@ -936,6 +1104,12 @@ Body loftCore(const std::vector<Section> &sections, const LoftOptions &options, 
             for (std::size_t m = 0; m < M; ++m) {
                 const BSplineCurve<3> &c = nurbs[m][0];
                 const int uCount = c.poleCount();
+                const bool spreadGuides=guideHits.size()>1 && options.guideContinuity>0 && options.guideInfluence>0;
+                std::vector<Vec3> baseLeft,baseRight;std::vector<double> weightLeft,weightRight;
+                if(spreadGuides) {
+                    interpolate(m,0,baseLeft,weightLeft,false);
+                    interpolate(m,uCount-1,baseRight,weightRight,false);
+                }
                 std::vector<Vec3> poles(std::size_t(uCount * vCount));
                 std::vector<double> weights(poles.size());
                 bool rational = false;
@@ -944,7 +1118,28 @@ Body loftCore(const std::vector<Section> &sections, const LoftOptions &options, 
                     std::vector<double> rowWeights;
                     if (j == 0) row = vertexRows[m], rowWeights = vertexWeights[m];
                     else if (j + 1 == uCount) row = vertexRows[nextVertex(m)], rowWeights = vertexWeights[nextVertex(m)];
-                    else interpolate(m, j, row, rowWeights);
+                    else {
+                        interpolate(m,j,row,rowWeights,!spreadGuides);
+                        if(spreadGuides) {
+                            // Coefficienti esatti del raccordo cubico 3*u^2-2*u^3
+                            // nella base B-spline. La correzione ha derivata U
+                            // nulla sulle guide; conserva i profili e distribuisce
+                            // l’influenza su tutta la pezza senza alette locali.
+                            long double sum=0,square=0,cube=0;
+                            for(int k=1;k<=c.degree();++k) {
+                                const long double u=(c.knots()[j+k]-c.domain().lo)/c.domain().length();
+                                sum+=u;square+=u*u;cube+=u*u*u;
+                            }
+                            const long double p=c.degree();
+                            const double right=double(3*(sum*sum-square)/(p*(p-1))
+                                -2*(sum*sum*sum-3*sum*square+2*cube)/(p*(p-1)*(p-2)));
+                            for(int i=0;i<vCount;++i) {
+                                const Vec3 left=vertexWeights[m][i]*vertexRows[m][i]-weightLeft[i]*baseLeft[i];
+                                const Vec3 delta=vertexWeights[nextVertex(m)][i]*vertexRows[nextVertex(m)][i]-weightRight[i]*baseRight[i];
+                                row[i]+=((1-right)*left+right*delta)/rowWeights[i];
+                            }
+                        }
+                    }
                     for (int i = 0; i < vCount; ++i) {
                         poles[std::size_t(j * vCount + i)] = row[std::size_t(i)];
                         weights[std::size_t(j * vCount + i)] = rowWeights[std::size_t(i)];
@@ -956,8 +1151,14 @@ Body loftCore(const std::vector<Section> &sections, const LoftOptions &options, 
                                                                 rational ? weights : std::vector<double>{});
                 if (SurfacePtr plane = planarEquivalent(*face.surface)) face.surface = plane;
                 face.sense = true;
-                face.loops.push_back({{sectionEdge.at({0, m}), true, nullptr, 0.0}, {longitudinal[nextVertex(m)], true, nullptr, 0.0},
-                                      {sectionEdge.at({n - 1, m}), false, nullptr, 0.0}, {longitudinal[m], false, nullptr, 0.0}});
+                // Le righe longitudinali condividono il parametro v della
+                // superficie: conservarlo evita una riproiezione ambigua su
+                // bordi che ripiegano o hanno una tangente quasi nulla.
+                const bool splineSurface = face.surface->type() == SurfaceType::BSpline;
+                const CurvePtr<2> right = splineSurface ? std::make_shared<Line<2>>(Vec2(1, 0), Vec2(0, 1)) : nullptr;
+                const CurvePtr<2> left = splineSurface ? std::make_shared<Line<2>>(Vec2(0, 0), Vec2(0, 1)) : nullptr;
+                face.loops.push_back({{sectionEdge.at({0, m}), true, nullptr, 0.0}, {longitudinal[nextVertex(m)], true, right, 0.0},
+                                          {sectionEdge.at({n - 1, m}), false, nullptr, 0.0}, {longitudinal[m], false, left, 0.0}});
                 faces.push_back(std::move(face));
             }
         } else {
@@ -977,7 +1178,7 @@ Body loftCore(const std::vector<Section> &sections, const LoftOptions &options, 
             detail::basisFunctionDerivatives(vKnots, span, v[k], q, 0, ders.data());
             for (int j = 0; j <= q; ++j) basis[k][std::size_t(span - q + j)] = ders[std::size_t(j)];
         }
-        const auto interpolate = [&](std::size_t m, int j, std::vector<Vec3> &poles, std::vector<double> &weights) {
+        const auto interpolate = [&](std::size_t m, int j, std::vector<Vec3> &poles, std::vector<double> &weights, bool useGuide=true) {
             std::vector<std::vector<double>> rhs(n, std::vector<double>(4));
             for (std::size_t i = 0; i < n; ++i) {
                 Vec3 p;
@@ -1031,8 +1232,14 @@ Body loftCore(const std::vector<Section> &sections, const LoftOptions &options, 
             face.surface = std::make_shared<BSplineSurface>(c.degree(), q, c.knots(), vKnots, uCount, int(n), poles, rational ? weights : std::vector<double>{});
             if (SurfacePtr plane = planarEquivalent(*face.surface)) face.surface = plane;
             face.sense = true;
-            face.loops.push_back({{sectionEdge.at({0, m}), true, nullptr, 0.0}, {longitudinal[nextVertex(m)], true, nullptr, 0.0},
-                                  {sectionEdge.at({n - 1, m}), false, nullptr, 0.0}, {longitudinal[m], false, nullptr, 0.0}});
+            // Le righe longitudinali condividono il parametro v della
+            // superficie: conservarlo evita una riproiezione ambigua su
+            // bordi che ripiegano o hanno una tangente quasi nulla.
+            const bool splineSurface = face.surface->type() == SurfaceType::BSpline;
+            const CurvePtr<2> right = splineSurface ? std::make_shared<Line<2>>(Vec2(1, 0), Vec2(0, 1)) : nullptr;
+            const CurvePtr<2> left = splineSurface ? std::make_shared<Line<2>>(Vec2(0, 0), Vec2(0, 1)) : nullptr;
+            face.loops.push_back({{sectionEdge.at({0, m}), true, nullptr, 0.0}, {longitudinal[nextVertex(m)], true, right, 0.0},
+                                  {sectionEdge.at({n - 1, m}), false, nullptr, 0.0}, {longitudinal[m], false, left, 0.0}});
             faces.push_back(std::move(face));
         }
         }
@@ -1066,6 +1273,11 @@ Body loftCore(const std::vector<Section> &sections, const LoftOptions &options, 
 
 // Chiusura di una sezione piana (stessa regola di loftSolid).
 bool sectionClosed(const LoftSection &s) {
+    if (!s.path.empty()) {
+        const auto pieces = chainPieces(s.path, 1e-6);
+        const Vec3 a = pieces.front().curve->point(pieces.front().range.lo), b = pieces.back().curve->point(pieces.back().range.hi);
+        return distance(a,b) <= 1e-6 * std::max(1.0,norm(a));
+    }
     if (s.loop.segments.empty()) throw std::domain_error("loft: sezione vuota");
     const ProfileSegment &a = s.loop.segments.front(), &b = s.loop.segments.back();
     return distance(a.start(), b.end()) <= 1e-6 * std::max(1.0, norm(a.start()));
@@ -1136,8 +1348,7 @@ Body loftSolid(const std::vector<LoftSection> &sections, bool ruled) {
 
 Body loftSolid(const std::vector<LoftSection> &sections, const LoftOptions &options) {
     for (const LoftSection &s : sections) {
-        const ProfileSegment &a = s.loop.segments.front(), &b = s.loop.segments.back();
-        if (distance(a.start(), b.end()) > 1e-6 * std::max(1.0, norm(a.start()))) throw std::domain_error("loft: una sezione non e' un contorno chiuso");
+        if (!sectionClosed(s)) throw std::domain_error("loft: una sezione non e' un contorno chiuso");
     }
     return loft(sections, options, true, true);
 }

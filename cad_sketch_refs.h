@@ -10,7 +10,7 @@
 #include "fk_topology.h"
 
 // Riferimenti esterni dello schizzo: spigoli e curve dei corpi (anche eliche
-// e spirali) e le sezioni dei solidi con il piano dello schizzo, portati nel
+// e spirali) e le sezioni di solidi e superfici con il piano dello schizzo, portati nel
 // piano come entita' esatte. La proiezione lungo la normale e' affine: rette
 // -> segmenti, cerchi in piani paralleli -> cerchi o archi, il resto -> curva
 // `Converted` (B-spline razionale con i poli proiettati e gli stessi pesi e
@@ -39,9 +39,14 @@ QString appendProjectedCurve(SketchObject &sketch, const Kernel::CurvePtr<3> &cu
 // Spigolo del body piu' vicino a `point` (la sua curva e il suo tratto).
 bool nearestBodyEdge(const Kernel::Body &body, const Kernel::Vec3 &point, Kernel::CurvePtr<3> &curve, Kernel::Interval &range);
 
-// Le curve della sezione del solido con il piano dello schizzo (esatte: i
-// bordi della parte del piano dentro il solido), aggiunte come sopra.
+// Curve di sezione di solidi e superfici con il piano dello schizzo,
+// limitate ai bordi delle facce e aggiunte come sopra.
 QString appendSectionCurves(SketchObject &sketch, const Kernel::Body &body, bool construction, bool fixed, QVector<SketchEntity> *created = nullptr);
+
+// Aggiorna la cache del vincolo Pierce dalla faccia corrente, senza
+// aggiungere entita' allo schizzo. Rifiuta facce complanari o senza sezione.
+QString refreshSurfacePierce(const SketchObject &sketch, SketchConstraint &constraint,
+                            const Kernel::Body &body, const GeometryRef &surface, const QString &name);
 
 // Geometria di contatto tra un altro schizzo e il piano di `sketch`.
 // Se i piani coincidono copia le entita' come costruzione fissa; altrimenti

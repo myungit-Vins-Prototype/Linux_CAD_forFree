@@ -1,4 +1,5 @@
 #include "cad_history_graph.h"
+#include "cad_forge.h"
 
 #include <algorithm>
 #include <cmath>
@@ -422,15 +423,24 @@ QVector<Dependency> dependencies(int index, const DocumentState &document) {
         else addBodyDependency(result, features, index, feature.firstBody, QStringLiteral("curva percorso"));
         for (int body : feature.mergeBodies) addBodyDependency(result, features, index, body, QStringLiteral("fusione"));
         break;
-    case BodyFeature::Loft:
-        for (int k = 0; k < feature.loftSketches.size(); ++k)
+    case BodyFeature::Loft: {
+        for (int k=0; k<feature.loftSections.size(); ++k) {
+            const auto &ref=feature.loftSections.at(k);
+            if(ref.kind==7 && ref.element.kind==-1) addSketchDependency(result,sketches,index,ref.index,QStringLiteral("sezione %1").arg(k+1));
+            else addGeometryDependency(result,ref,sketches,features,index,QStringLiteral("sezione %1").arg(k+1));
+        }
+        for (int k = 0; feature.loftSections.isEmpty() && k < feature.loftSketches.size(); ++k)
             addSketchDependency(result, sketches, index, feature.loftSketches.at(k), QStringLiteral("sezione %1").arg(k + 1));
-        for (int k = 0; k < feature.loftGuides.size(); ++k)
-            addSketchDependency(result, sketches, index, feature.loftGuides.at(k), QStringLiteral("guida %1").arg(k + 1));
-        for (int k = 0; k < feature.loftGuidePaths.size(); ++k)
-            addSketchDependency(result, sketches, index, feature.loftGuidePaths.at(k).sketch,
-                                QStringLiteral("guida parziale %1").arg(k + 1));
+        const auto order = loftGuideSequence(feature);
+        for(int k=0;k<order.size();++k) {
+            int guide=order.at(k); const QString role=QStringLiteral("guida %1").arg(k+1);
+            if(guide<feature.loftGuides.size()) addSketchDependency(result,sketches,index,feature.loftGuides.at(guide),role);
+            else if((guide-=feature.loftGuides.size())<feature.loftGuidePaths.size())
+                addSketchDependency(result,sketches,index,feature.loftGuidePaths.at(guide).sketch,role);
+            else addGeometryDependency(result,feature.loftEdgeGuides.at(guide-feature.loftGuidePaths.size()),sketches,features,index,role);
+        }
         break;
+    }
     case BodyFeature::DatumPlane:
         for (int k = 0; k < feature.datum.refs.size(); ++k)
             addGeometryDependency(result, feature.datum.refs.at(k), sketches, features, index, QStringLiteral("riferimento %1").arg(k + 1));

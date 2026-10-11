@@ -19,6 +19,8 @@
 #include "fk_precision.h"
 #include "fk_offset.h"
 #include "fk_sheet.h"
+#include "fk_sew.h"
+#include "cad_topology_ref.h"
 
 namespace ForgeCad {
 namespace {
@@ -278,13 +280,22 @@ QString appendProjectedCurve(SketchObject &sketch, const CurvePtr<3> &curve, con
 }
 
 QString appendSectionCurves(SketchObject &sketch, const Body &body, bool construction, bool fixed, QVector<SketchEntity> *created) {
-    if (body.isSheet()) return QStringLiteral("La sezione vale per i solidi.");
     try {
         const Frame3 frame = sketchAxes(sketch);
         Box box;
         for (FaceId f : body.faces()) box.add(faceBox(body, f));
         const Vec3 middle = 0.5 * (box.lo + box.hi);
         const double half = 2.0 * std::max(1.0, box.diagonal()) + distance(frame.origin(), middle);
+        if (body.isSheet()) {
+            const Body plane = makePlaneSheet(frame, half);
+            const auto curves = bodySectionCurves(plane, body);
+            if (curves.empty()) return QStringLiteral("Il piano dello schizzo non interseca la superficie.");
+            for (const auto &section : curves) {
+                const QString error = appendProjectedCurve(sketch, section.curve, section.range, construction, fixed, created);
+                if (!error.isEmpty()) return error;
+            }
+            return {};
+        }
         // Piano d'appoggio (il solido tutto da una parte: lo schizzo su una sua
         // faccia piana): la sezione sono le facce piane che stanno nel piano, e le
         // curve i loro bordi, gli edge esatti del corpo (quelli tra due facce del
@@ -328,6 +339,44 @@ QString appendSectionCurves(SketchObject &sketch, const Body &body, bool constru
         return QStringLiteral("Sezione non riuscita: %1").arg(QString::fromUtf8(failure.what()));
     }
     return {};
+}
+
+QString refreshSurfacePierce(const SketchObject &sketch, SketchConstraint &constraint,
+                            const Body &body, const GeometryRef &surface, const QString &name) {
+    auto data = std::make_shared<SketchPierceData>();
+    data->surface = surface;
+    data->name = name;
+    const auto fail = [&](const QString &error) {
+        data->error = error;
+        constraint.pierce = data;
+        return error;
+    };
+    try {
+        if (surface.kind != 5) return fail(QStringLiteral("Scegli una faccia della superficie o del solido."));
+        const FaceId face = resolveFaceReference(body, surface.point, 1e-6);
+        if (!face.valid()) return fail(QStringLiteral("La faccia del vincolo Pierce non esiste piu'."));
+        const Frame3 frame = sketchAxes(sketch);
+        const Surface &geometry = *body.face(face).surface;
+        if (geometry.type() == SurfaceType::Plane) {
+            const Frame3 &plane = static_cast<const Plane &>(geometry).frame();
+            if (norm(cross(plane.zDir(),frame.zDir())) <= 1e-12
+                && std::fabs(dot(plane.origin()-frame.origin(),frame.zDir())) <= kLinearResolution)
+                return fail(QStringLiteral("La faccia e' complanare allo schizzo: non definisce un'intersezione Pierce."));
+        }
+        SketchObject section;
+        section.plane = sketch.plane;
+        section.frame = sketch.frame;
+        section.customFrame = sketch.customFrame;
+        const Body sheet = facesAsSheet(body,{face});
+        const QString error = appendSectionCurves(section,sheet,true,false);
+        if (!error.isEmpty()) return fail(error);
+        data->segments = std::move(section.segments);
+        data->curves = std::move(section.curves);
+        constraint.pierce = data;
+        return {};
+    } catch (const std::exception &error) {
+        return fail(QStringLiteral("Pierce non riuscito: %1").arg(QString::fromUtf8(error.what())));
+    }
 }
 
 QString appendProjectedSketchEntity(SketchObject &sketch, const SketchObject &source, SketchEntity entity,

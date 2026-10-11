@@ -13,6 +13,7 @@
 #include "cad_cuda_tessellation.h"
 #include "cad_curve_solver.h"
 #include "cad_kernel.h"
+#include "cad_datum.h"
 #include "cad_topology_ref.h"
 #include "fk_blend.h"
 #include "fk_boolean.h"
@@ -1247,8 +1248,10 @@ ForgeBody forgeLoft(const QVector<SketchObject> &sketches, const QVector<SketchO
                     int startContinuity, int endContinuity, int guideContinuity, double guideInfluence, double startInfluence,
                     double endInfluence, QString *error, bool surface,
                     const QVector<QPair<ForgeBody, EdgePoint>> &startFaces,
-                    const QVector<QPair<ForgeBody, EdgePoint>> &endFaces) {
-    if (sketches.size() < 2) {
+                    const QVector<QPair<ForgeBody, EdgePoint>> &endFaces,
+                    const std::vector<LoftSection> &exactSections,
+                    const std::vector<std::vector<PathSegment>> &exactGuides) {
+    if (exactSections.empty() && sketches.size() < 2) {
         setError(error, QStringLiteral("Il loft richiede almeno due sezioni."));
         return nullptr;
     }
@@ -1270,6 +1273,17 @@ ForgeBody forgeLoft(const QVector<SketchObject> &sketches, const QVector<SketchO
                 return nullptr;
             }
             sections.push_back(std::move(section));
+        }
+        if (!exactSections.empty()) {
+            sections = exactSections;
+            closedCount = 0;
+            for (const auto &section : sections) {
+                if (!section.path.empty()) {
+                    const auto &a=section.path.front(), &b=section.path.back();
+                    if (distance(a.curve->point(a.range.lo),b.curve->point(b.range.hi)) <= kSketchConnectionTolerance) ++closedCount;
+                } else if (!section.loop.segments.empty()
+                    && distance(section.loop.segments.front().start(),section.loop.segments.back().end()) <= kSketchConnectionTolerance) ++closedCount;
+            }
         }
         if (closedCount != 0 && closedCount != int(sections.size())) {
             setError(error, QStringLiteral("Le sezioni del loft devono essere tutte chiuse o tutte aperte."));
@@ -1296,6 +1310,7 @@ ForgeBody forgeLoft(const QVector<SketchObject> &sketches, const QVector<SketchO
             }
             options.guides.push_back(std::move(path));
         }
+        options.guides.insert(options.guides.end(),exactGuides.begin(),exactGuides.end());
         return std::make_shared<const Body>(closedCount > 0 && !surface ? loftSolid(sections, options) : loftSheet(sections, options));
     } catch (const std::exception &failure) {
         QString detail = QString::fromUtf8(failure.what());
@@ -1323,6 +1338,100 @@ ForgeBody forgeLoft(const QVector<SketchObject> &sketches, const QVector<SketchO
         setError(error, QStringLiteral("Loft non riuscito: %1").arg(detail));
         return nullptr;
     }
+}
+
+QVector<int> loftGuideSequence(const ExtrusionObject &d) {
+    const int total = d.loftGuides.size() + d.loftGuidePaths.size() + d.loftEdgeGuides.size();
+    QVector<int> order = d.loftGuideOrder;
+    if (order.isEmpty()) { for (int i = 0; i < total; ++i) order.append(i); return order; }
+    if (order.size() != total) return {};
+    QVector<bool> seen(total, false);
+    for (int i : order) {
+        if (i < 0 || i >= total || seen[i]) return {};
+        seen[i] = true;
+    }
+    return order;
+}
+
+ForgeBody forgeReferencedLoft(const ExtrusionObject &d, int owner, const QVector<SketchObject> &sketches,
+                              const QVector<ExtrusionObject> &bodies, QString *error) {
+    try {
+    if(owner<0) owner=bodies.size();
+    QVector<SketchObject> legacySections, guides;
+    std::vector<LoftSection> sections;
+    std::vector<std::vector<PathSegment>> edgeGuides;
+    QVector<QPair<ForgeBody, EdgePoint>> faces[2];
+    const auto getSketch = [&](int i) -> const SketchObject * {
+        if (i < 0 || i >= sketches.size()) { setError(error,QStringLiteral("Uno schizzo del loft non esiste piu'.")); return nullptr; }
+        return &sketches.at(i);
+    };
+    if (d.loftSections.isEmpty()) {
+        for (int i : d.loftSketches) { const auto *s=getSketch(i); if (!s) return nullptr; legacySections.append(*s); }
+    } else for (int k=0; k<d.loftSections.size(); ++k) {
+        const GeometryRef &ref=d.loftSections.at(k);
+        LoftSection section;
+        if (ref.kind==7 && ref.element.kind==-1) {
+            const auto *s=getSketch(ref.index); if (!s) return nullptr;
+            if (s->datumPlane >= owner) { setError(error,QStringLiteral("Una sezione sta su un piano successivo.")); return nullptr; }
+            const Profile profile=buildProfile(forgeSketchSegments(*s),kSketchConnectionTolerance);
+            double height; forgeSketchFrame(*s,0.0,section.frame,height);
+            if (profile.regions.size()==1 && profile.regions.front().holes.empty() && profile.chains.empty()) section.loop=profile.regions.front().outer;
+            else if (profile.regions.empty() && profile.chains.size()==1) section.loop=profile.chains.front();
+            else { setError(error,QStringLiteral("Sezione %1: serve un solo contorno o una sola catena.").arg(k+1)); return nullptr; }
+        } else {
+            QString reason;
+            if (!geometryRefPath(ref,owner,sketches,bodies,section.path,&reason)) {
+                setError(error,QStringLiteral("Sezione %1: %2.").arg(k+1).arg(reason)); return nullptr;
+            }
+        }
+        sections.push_back(std::move(section));
+    }
+    for (int i : d.loftGuides) { const auto *s=getSketch(i); if (!s) return nullptr; guides.append(*s); }
+    for (const auto &path : d.loftGuidePaths) {
+        const auto *s=getSketch(path.sketch); if (!s) return nullptr;
+        guides.append(sketchPathSubset(*s,path));
+    }
+    for (const auto &ref : d.loftEdgeGuides) {
+        std::vector<PathSegment> path; QString reason;
+        if (!geometryRefPath(ref,owner,sketches,bodies,path,&reason)) { setError(error,QStringLiteral("Guida: %1.").arg(reason)); return nullptr; }
+        if (path.empty() || distance(path.front().curve->point(path.front().range.lo),path.back().curve->point(path.back().range.hi))<=kSketchConnectionTolerance) {
+            setError(error,QStringLiteral("Una guida da bordo deve essere una catena aperta.")); return nullptr;
+        }
+        edgeGuides.push_back(std::move(path));
+    }
+    if (!d.loftGuideOrder.isEmpty()) {
+        const auto order = loftGuideSequence(d);
+        if (order.size() != guides.size() + int(edgeGuides.size())) {
+            setError(error,QStringLiteral("L’ordine delle guide non è valido.")); return nullptr;
+        }
+        std::vector<std::vector<PathSegment>> all;
+        for (const auto &guide : guides) {
+            std::vector<PathSegment> path; QString reason;
+            if (!sketchPath(guide, path, &reason)) { setError(error,reason); return nullptr; }
+            if (path.empty() || distance(path.front().curve->point(path.front().range.lo),path.back().curve->point(path.back().range.hi)) <= kSketchConnectionTolerance) {
+                setError(error,QStringLiteral("Ogni guida deve essere una catena aperta.")); return nullptr;
+            }
+            all.push_back(std::move(path));
+        }
+        for (auto &path : edgeGuides) all.push_back(std::move(path));
+        edgeGuides.clear();
+        for (int index : order) edgeGuides.push_back(std::move(all[index]));
+        guides.clear();
+    }
+    for (int side=0; side<2; ++side) {
+        if ((side==0?d.loftStartContinuity:d.loftEndContinuity)!=3) continue;
+        for (const auto &ref : side==0?d.loftStartFaces:d.loftEndFaces) {
+            int i=ref.index;
+            if (ref.featureId) { i=-1; for(int j=0;j<owner && j<bodies.size();++j) if(bodies.at(j).featureId==ref.featureId) {i=j;break;} }
+            if (ref.kind!=5 || i<0 || i>=owner || i>=bodies.size() || !bodies.at(i).forgeBody) {
+                setError(error,QStringLiteral("Una faccia tangente del loft non esiste piu'.")); return nullptr;
+            }
+            faces[side].append({bodies.at(i).forgeBody,ref.point});
+        }
+    }
+        return forgeLoft(legacySections,guides,d.loftRuled,d.loftStartContinuity,d.loftEndContinuity,d.loftGuideContinuity,
+                         d.loftGuideInfluence,d.loftStartInfluence,d.loftEndInfluence,error,d.loftSurface,faces[0],faces[1],sections,edgeGuides);
+    } catch (const std::exception &failure) { setError(error,QString::fromUtf8(failure.what())); return nullptr; }
 }
 
 ForgeBody forgeRuledSurface(const std::vector<PathSegment> &first, const std::vector<PathSegment> &second, QString *error,

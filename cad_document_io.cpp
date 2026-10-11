@@ -59,7 +59,8 @@ constexpr char kMagic[4] = {'F', 'C', 'A', 'D'};
 // 38 taglio superficie con la proiezione di uno schizzo e curve proiettate.
 // 39 spessore delle superfici (lato e direzione).
 // 40 facce adiacenti e continuita' dei profili per loft e superficie rigata.
-constexpr quint16 kVersion = 40;
+// 41 vincolo Pierce associativo a una faccia esterna.
+constexpr quint16 kVersion = 43;
 constexpr quint8 kZlib = 1;
 
 void write(QDataStream &out, const CurveObject &curve) {
@@ -141,6 +142,9 @@ bool readPattern(QDataStream &in, SketchPatternData &p) {
     return in.status() == QDataStream::Ok;
 }
 
+void writeRefs(QDataStream &out, const QVector<GeometryRef> &refs);
+bool readRefs(QDataStream &in, QVector<GeometryRef> &refs, quint16 version);
+
 void write(QDataStream &out, const SketchObject &sketch) {
     out << sketch.name << qint32(sketch.plane) << sketch.segments << sketch.constraints << sketch.segmentLengths
         << sketch.segmentAngles << sketch.visible << sketch.constructionSegments;
@@ -157,6 +161,14 @@ void write(QDataStream &out, const SketchObject &sketch) {
         out << qint32(c.type);
         for (const ConstraintRef &r : {c.first, c.second}) out << qint32(r.kind) << qint32(r.element) << qint32(r.point);
         out << c.value << c.positions << c.placement << c.placed;
+        if (c.type == ConstraintType::Pierce) {
+            out << bool(c.pierce);
+            if (c.pierce) {
+                writeRefs(out,{c.pierce->surface});
+                out << c.pierce->name << c.pierce->error << c.pierce->segments << quint32(c.pierce->curves.size());
+                for (const auto &curve : c.pierce->curves) write(out,curve);
+            }
+        }
         if (c.type == ConstraintType::Pattern) writePattern(out, c.pattern);  // formato 11
         writeRef(out, c.third);                                               // formato 13
         out << qint32(c.angleSides);                                          // formato 31
@@ -212,6 +224,22 @@ bool read(QDataStream &in, SketchObject &sketch, quint16 version) {
             }
             in >> c.value >> c.positions;
             if (version >= 4) in >> c.placement >> c.placed;
+            if (c.type == ConstraintType::Pierce) {
+                if (version<41) return false;
+                bool present=false; in >> present;
+                if (present) {
+                    auto data=std::make_shared<SketchPierceData>();
+                    QVector<GeometryRef> refs;
+                    if (!readRefs(in,refs,version) || refs.size()!=1) return false;
+                    data->surface=refs.first();
+                    quint32 n=0;
+                    in >> data->name >> data->error >> data->segments;
+                    if (!readCount(in,n)) return false;
+                    data->curves.resize(int(n));
+                    for (auto &curve : data->curves) read(in,curve,version);
+                    c.pierce=data;
+                }
+            }
             if (c.type == ConstraintType::Pattern && (version < 11 || !readPattern(in, c.pattern))) return false;
             if (version >= 13) readRef(in, c.third);
             if (version >= 31) {
@@ -369,6 +397,10 @@ void write(QDataStream &out, const ExtrusionObject &body) {
     writeRefs(out, {body.thickenDirection});
     writeRefs(out, body.loftStartFaces);
     writeRefs(out, body.loftEndFaces);
+    writeRefs(out, body.loftSections);
+    writeRefs(out, body.loftEdgeGuides);
+    out << quint32(body.loftGuideOrder.size());
+    for (int index : body.loftGuideOrder) out << qint32(index);
 }
 
 // `extras` (solo formato 5): i file scritti durante lo sviluppo del formato 5
@@ -605,6 +637,19 @@ bool read(QDataStream &in, ExtrusionObject &body, quint16 version, int extras) {
         body.thickenDirection = refs.first();
     }
     if (version >= 40 && (!readRefs(in, body.loftStartFaces, version) || !readRefs(in, body.loftEndFaces, version))) return false;
+    if (version >= 42 && (!readRefs(in, body.loftSections, version) || !readRefs(in, body.loftEdgeGuides, version))) return false;
+    if (version >= 43) {
+        quint32 count;
+        if (!readCount(in, count)) return false;
+        const int total = body.loftGuides.size() + body.loftGuidePaths.size() + body.loftEdgeGuides.size();
+        if (count && count != quint32(total)) return false;
+        QVector<bool> seen(total, false);
+        for (quint32 k = 0; k < count; ++k) {
+            qint32 index; in >> index;
+            if (index < 0 || index >= total || seen[index]) return false;
+            seen[index] = true; body.loftGuideOrder.append(index);
+        }
+    }
     const BodyFeature last = version >= 39 ? BodyFeature::Thicken : version >= 38 ? BodyFeature::ProjectedCurve : version >= 36 ? BodyFeature::Draft : version >= 35 ? BodyFeature::FillSurface : version >= 27 ? BodyFeature::Thread : version >= 25 ? BodyFeature::Shell : BodyFeature::PlanarSurface;
     if (int(body.feature) < 0 || int(body.feature) > int(last)) return false;
     return in.status() == QDataStream::Ok;

@@ -128,7 +128,7 @@ struct ConstraintRef {
 enum class ConstraintType {
     Coincident = 0, Horizontal, Vertical, Parallel, Perpendicular, Collinear, Tangent, Equal, Concentric, Midpoint,
     PointOnCurve, Fix, Distance, Angle, Radius, Diameter, Pattern, Symmetric, AxisRadius, AxisDiameter,
-    HorizontalDistance, VerticalDistance, Quadrant, Offset
+    HorizontalDistance, VerticalDistance, Quadrant, Offset, Pierce
 };
 // Quadrant: first e un punto, second un cerchio/arco; value = 0/1/2/3 per 0/90/180/270 gradi.
 // HorizontalDistance / VerticalDistance: quota lungo l'asse X (o Y) dello
@@ -182,8 +182,11 @@ struct SketchOffsetData {
     bool reverse = false, bothSides = false, roundCorners = false;
 };
 
+struct SketchPierceData;
+
 // Vincolo geometrico dello schizzo, mantenuto dal risolutore (cad_constraints).
 struct SketchConstraint {
+    std::shared_ptr<const SketchPierceData> pierce; // solo Pierce: riferimento esterno e sezione esatta
     ConstraintType type = ConstraintType::Coincident;
     ConstraintRef first, second;  // second.kind < 0: vincolo su un solo riferimento
     double value = 0.0;           // quote; Tangent tra cerchi: 0 esterna, 1 interna
@@ -399,6 +402,15 @@ struct GeometryRef {
     quint64 featureId = 0;  // proprietario persistente; index e' la cache operativa
 };
 
+// Pierce: punto dello schizzo sulla sezione della faccia esterna.
+// Cache immutabile condivisa con Undo; viene sostituita alla rigenerazione.
+struct SketchPierceData {
+    GeometryRef surface;
+    QString name, error;
+    QVector<SketchSegment> segments;
+    QVector<CurveObject> curves;
+};
+
 // Asse della rivoluzione dato da un riferimento (ExtrusionObject::revolveAxisRef):
 // -3 resta "segmento eliminato".
 constexpr int kRevolveAxisReference = -4;
@@ -580,9 +592,15 @@ struct ExtrusionObject {
     bool sweepSurface = false;
     // Loft: sezioni e curve guida (schizzi, nell'ordine), rigato o liscio.
     // La continuita' 0/1/2 corrisponde a G0/G1/G2; le influenze sono [0, 1].
+    // Se presenti, sostituiscono loftSketches: ogni riferimento e’ una sezione.
+    // kind 7 / element.kind -1 indica un intero schizzo.
+    QVector<GeometryRef> loftSections, loftEdgeGuides;
     QVector<int> loftSketches;
     QVector<int> loftGuides;
     QVector<SketchPathRef> loftGuidePaths;
+    // Permutazione di schizzi interi, percorsi parziali e bordi concatenati.
+    // Vuota conserva l’ordine dei documenti precedenti.
+    QVector<int> loftGuideOrder;
     bool loftRuled = false;
     int loftStartContinuity = 0;
     int loftEndContinuity = 0;

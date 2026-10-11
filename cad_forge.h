@@ -11,6 +11,7 @@
 #include "fk_math.h"
 #include "fk_profile.h"
 #include "fk_sweep.h"
+#include "fk_loft.h"
 
 // Modellazione con il kernel proprio (kernel/, ForgeCad::Kernel): la geometria
 // esatta dello schizzo (le curve di cad_curve_solver), il collegamento degli
@@ -140,7 +141,14 @@ ForgeBody forgeLoft(const QVector<SketchObject> &sections, const QVector<SketchO
                     int startContinuity, int endContinuity, int guideContinuity, double guideInfluence, double startInfluence,
                     double endInfluence, QString *error, bool surface = false,
                     const QVector<QPair<ForgeBody, EdgePoint>> &startFaces = {},
-                    const QVector<QPair<ForgeBody, EdgePoint>> &endFaces = {});
+                    const QVector<QPair<ForgeBody, EdgePoint>> &endFaces = {},
+                    const std::vector<Kernel::LoftSection> &exactSections = {},
+                    const std::vector<std::vector<Kernel::PathSegment>> &exactGuides = {});
+// Risolve sezioni/guide associative e facce di contatto della feature.
+QVector<int> loftGuideSequence(const ExtrusionObject &definition);
+
+ForgeBody forgeReferencedLoft(const ExtrusionObject &definition, int owner, const QVector<SketchObject> &sketches,
+                              const QVector<ExtrusionObject> &bodies, QString *error);
 // Superficie rigata tra due catene di curve 3D (fk_loft ruledSurface): le
 // catene sono entrambe aperte o entrambe chiuse; verso e partenza della
 // seconda si accordano alla prima.

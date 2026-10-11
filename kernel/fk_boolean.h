@@ -54,6 +54,11 @@ struct BooleanOptions {
 
 Body booleanOperation(const Body &a, const Body &b, BooleanOperation operation, const BooleanOptions &options = {});
 
+// Curve comuni alle facce dei due corpi, limitate ai loro bordi.
+// Include sezioni aperte e bordi complanari; non costruisce un solido.
+struct BodySectionCurve { CurvePtr<3> curve; Interval range; };
+std::vector<BodySectionCurve> bodySectionCurves(const Body &a, const Body &b, const BooleanOptions &options = {});
+
 // Divide la lamina lungo le curve in cui la attraversa `tool` (una lamina o
 // un solido: le sue facce fanno da lame, anche oltre la lamina) e ne
 // restituisce le regioni separate dai tagli, ognuna come lamina (i tagli

@@ -1009,7 +1009,7 @@ public:
             for (int &merged : feature.mergeBodies) merged = mapped(merged);
             for (GeometryRef &ref : feature.datum.refs) remapRef(ref);
             for (GeometryRef &ref : feature.pattern.refs) remapRef(ref);
-            for (QVector<GeometryRef> *refs : {&feature.ruledFirst, &feature.ruledSecond, &feature.planarRefs, &feature.loftStartFaces, &feature.loftEndFaces})
+            for (QVector<GeometryRef> *refs : {&feature.ruledFirst, &feature.ruledSecond, &feature.planarRefs, &feature.loftStartFaces, &feature.loftEndFaces, &feature.loftSections, &feature.loftEdgeGuides})
                 for (GeometryRef &ref : *refs) remapRef(ref);
             remapRef(feature.extentRef);
             remapRef(feature.move.axis);
@@ -1989,7 +1989,7 @@ public:
             for (int &section : body.loftSketches) renumber(section);
             for (int &guide : body.loftGuides) renumber(guide);
             for (SketchPathRef &guide : body.loftGuidePaths) renumber(guide.sketch);
-            for (QVector<GeometryRef> *refs : {&body.datum.refs, &body.pattern.refs, &body.ruledFirst, &body.ruledSecond, &body.planarRefs, &body.loftStartFaces, &body.loftEndFaces})
+            for (QVector<GeometryRef> *refs : {&body.datum.refs, &body.pattern.refs, &body.ruledFirst, &body.ruledSecond, &body.planarRefs, &body.loftStartFaces, &body.loftEndFaces, &body.loftSections, &body.loftEdgeGuides})
                 for (GeometryRef &ref : *refs)
                     if (isSketchRef(ref)) renumber(ref.index);
             if (isSketchRef(body.extentRef)) renumber(body.extentRef.index);
@@ -3100,8 +3100,13 @@ public:
     QString appendReferenceAt(const QPoint &position, SketchObject &work, bool construction) {
         SketchReferenceHit hit;
         if (!pickSketchReference(position, hit)) return QStringLiteral("Clicca uno spigolo del modello o una curva visibile.");
-        if (hit.sketch >= 0)
-            return ForgeCad::appendProjectedSketchEntity(work, sketches_.at(hit.sketch), {hit.entityKind, hit.entity}, construction);
+        if (hit.sketch >= 0) {
+            const SketchObject &source = sketches_.at(hit.sketch);
+            const auto targetAxes = ForgeCad::sketchAxes(work), sourceAxes = ForgeCad::sketchAxes(source);
+            if (ForgeCad::Kernel::norm(ForgeCad::Kernel::cross(targetAxes.zDir(), sourceAxes.zDir())) > 1e-10)
+                return ForgeCad::appendSketchContactReference(work, source, {hit.entityKind, hit.entity});
+            return ForgeCad::appendProjectedSketchEntity(work, source, {hit.entityKind, hit.entity}, construction);
+        }
         const ExtrusionObject &body = extrusions_.at(hit.body);
         ForgeCad::Kernel::CurvePtr<3> curve;
         ForgeCad::Kernel::Interval range;
@@ -3150,7 +3155,7 @@ public:
         sketches_[activeSketch_]=work;
         selectionChanged();update();return true;
     }
-    // Le sezioni dei solidi visibili con il piano dello schizzo attivo (un passo di Undo).
+    // Le sezioni dei solidi e delle superfici visibili con il piano dello schizzo attivo (un passo di Undo).
     QString addSectionReferences(int *added = nullptr) {
         ScopedWork progressWork(workCallback_, QStringLiteral("Calcolo delle sezioni sul piano di schizzo..."));
         if (!activeSketchObject()) return QStringLiteral("Entra in modalita' schizzo.");
@@ -3160,7 +3165,7 @@ public:
         QString last;
         QApplication::setOverrideCursor(Qt::WaitCursor);
         for (const ExtrusionObject &body : extrusions_) {
-            if (!body.visible || !isShapeBody(body) || !body.solid) continue;
+            if (!body.visible || !isShapeBody(body)) continue;
             SketchObject attempt = work;
             const QString error = ForgeCad::appendSectionCurves(attempt, *body.forgeBody, referencesConstruction_, true);
             if (error.isEmpty()) {
@@ -3171,7 +3176,7 @@ public:
             }
         }
         QApplication::restoreOverrideCursor();
-        if (cut == 0) return last.isEmpty() ? QStringLiteral("Nessun solido visibile.") : last;
+        if (cut == 0) return last.isEmpty() ? QStringLiteral("Nessun solido o superficie visibile.") : last;
         if (added) *added = work.segments.size() + work.curves.size() - entitiesBefore;
         recordUndo();
         sketches_[activeSketch_] = work;
@@ -3385,8 +3390,84 @@ public:
         for (const SketchElementSelection &element : sketchSelections_) refs.append({element.kind, element.index, -1});
         return refs;
     }
+    int pierceSourceIndex(const GeometryRef &source) const {
+        if (source.featureId) {
+            for (int i=0;i<extrusions_.size();++i) if (extrusions_.at(i).featureId==source.featureId) return i;
+            return -1;
+        }
+        return source.index>=0 && source.index<extrusions_.size() ? source.index : -1;
+    }
+    // Applica Pierce a un punto e alla faccia scelta, senza copie nello schizzo.
+    QString addSurfacePierce(const ConstraintRef &point, GeometryRef source) {
+        const SketchObject *active=activeSketchObject();
+        if (!active || !ForgeCad::applicableConstraints(*active,{point}).contains(ConstraintType::Pierce))
+            return QStringLiteral("Seleziona un punto dello schizzo con Ctrl+clic.");
+        ForgeCad::normalizeModelHistory(extrusions_,modelBodies_);
+        const int owner=pierceSourceIndex(source);
+        if (source.kind!=5 || owner<0 || !extrusions_.at(owner).forgeBody)
+            return QStringLiteral("Scegli una faccia della superficie o del solido.");
+        source.index=owner; source.featureId=extrusions_.at(owner).featureId;
+        // Un corpo generato da questo schizzo creerebbe un ciclo. Seguire
+        // anche le dipendenze Pierce degli schizzi intermedi.
+        QSet<int> visited;
+        std::function<bool(int)> cyclic=[&](int index) {
+            if (index<0 || index>=extrusions_.size() || visited.contains(index)) return false;
+            visited.insert(index);
+            for (int sketch : sketchesOf(extrusions_.at(index))) {
+                if (sketch==activeSketch_) return true;
+                if (sketch<0 || sketch>=sketches_.size()) continue;
+                for (const auto &c : sketches_.at(sketch).geometricConstraints)
+                    if (c.type==ConstraintType::Pierce && c.pierce && cyclic(pierceSourceIndex(c.pierce->surface))) return true;
+            }
+            for (int operand : bodyOperands(extrusions_.at(index))) if (cyclic(operand)) return true;
+            return false;
+        };
+        if (cyclic(owner)) return QStringLiteral("Pierce creerebbe una dipendenza circolare con lo schizzo.");
+        for (int i=0;i<=owner;++i) if (sketchesOf(extrusions_.at(i)).contains(activeSketch_))
+            return QStringLiteral("La superficie Pierce deve precedere le funzioni che usano questo schizzo.");
+        for (const auto &c : active->geometricConstraints)
+            if (c.type==ConstraintType::Pierce && c.first==point && c.pierce
+                && c.pierce->surface.featureId==source.featureId && c.pierce->surface.point.subshape==source.point.subshape)
+                return QStringLiteral("Il vincolo Pierce su questa faccia c'e' gia'.");
+        SketchObject work=*active;
+        SketchConstraint constraint; constraint.type=ConstraintType::Pierce; constraint.first=point;
+        const QString error=ForgeCad::refreshSurfacePierce(work,constraint,*extrusions_.at(owner).forgeBody,source,extrusions_.at(owner).name);
+        if (!error.isEmpty()) return error;
+        work.geometricConstraints.append(constraint);
+        const auto solved=ForgeCad::solveSketch(work);
+        if (!solved.ok) return solved.error;
+        recordUndo();
+        sketches_[activeSketch_]=std::move(work);
+        selectedConstraints_={int(sketches_.at(activeSketch_).geometricConstraints.size()-1)};
+        sketchEdited();
+        return {};
+    }
+    QString beginSurfacePierce() {
+        const auto refs=constraintSelection();
+        if (!activeSketchObject() || refs.size()!=1
+            || !ForgeCad::applicableConstraints(*activeSketchObject(),refs).contains(ConstraintType::Pierce))
+            return QStringLiteral("Seleziona un solo punto dello schizzo con Ctrl+clic, poi Pierce su superficie.");
+        if (refPicking_ || edgePicking_ || sketchViewUnlocked_)
+            return QStringLiteral("Termina prima la scelta corrente.");
+        const ConstraintRef point=refs.first();
+        const int sketch=activeSketch_;
+        setSketchViewUnlocked(true);
+        setReferencePickCallback([this,point,sketch](bool picked,GeometryRef ref) {
+            setReferencePickCallback(nullptr);
+            setSketchViewUnlocked(false);
+            if (!picked) { showStatus(QStringLiteral("Pierce annullato.")); return; }
+            if (activeSketch_!=sketch) { showStatus(QStringLiteral("Lo schizzo attivo e' cambiato.")); return; }
+            const QString error=addSurfacePierce(point,ref);
+            showStatus(error.isEmpty() ? QStringLiteral("Vincolo Pierce sulla superficie aggiunto.") : error);
+        });
+        const QString error=beginReferencePick(ForgeCad::DatumRoleFace,-1);
+        if (!error.isEmpty()) { setReferencePickCallback(nullptr); setSketchViewUnlocked(false); return error; }
+        showStatus(QStringLiteral("Pierce: scegli una faccia; trascina per ruotare la vista, Esc annulla."));
+        return {};
+    }
     // Vincolo del tipo dato sui riferimenti scelti; le quote con `value` (NaN: la misura attuale).
     QString addConstraint(ConstraintType type, double value = qQNaN()) {
+        if (type==ConstraintType::Pierce) return beginSurfacePierce();
         const SketchObject *active = activeSketchObject();
         if (!active) return QStringLiteral("Entra in modalita' schizzo.");
         const QVector<ConstraintRef> refs = constraintSelection();
@@ -4803,7 +4884,7 @@ protected:
             ref.element.element = map.value(ref.element.element, -1);
         };
         for (ExtrusionObject &body : extrusions_) {
-            for (QVector<GeometryRef> *refs : {&body.datum.refs, &body.pattern.refs, &body.ruledFirst, &body.ruledSecond, &body.planarRefs, &body.loftStartFaces, &body.loftEndFaces})
+            for (QVector<GeometryRef> *refs : {&body.datum.refs, &body.pattern.refs, &body.ruledFirst, &body.ruledSecond, &body.planarRefs, &body.loftStartFaces, &body.loftEndFaces, &body.loftSections, &body.loftEdgeGuides})
                 for (GeometryRef &ref : *refs) remap(ref);
             remap(body.extentRef);
             remap(body.move.axis);
@@ -6697,7 +6778,7 @@ private:
                 for (int &merged : feature.mergeBodies) merged = mapped(merged);
                 for (GeometryRef &ref : feature.datum.refs) remapRef(ref);
                 for (GeometryRef &ref : feature.pattern.refs) remapRef(ref);
-                for (QVector<GeometryRef> *refs : {&feature.ruledFirst, &feature.ruledSecond, &feature.planarRefs, &feature.loftStartFaces, &feature.loftEndFaces})
+                for (QVector<GeometryRef> *refs : {&feature.ruledFirst, &feature.ruledSecond, &feature.planarRefs, &feature.loftStartFaces, &feature.loftEndFaces, &feature.loftSections, &feature.loftEdgeGuides})
                     for (GeometryRef &ref : *refs) remapRef(ref);
                 remapRef(feature.extentRef);
                 remapRef(feature.move.axis);
@@ -6819,6 +6900,40 @@ private:
         regenerateFrom(0, QVector<bool>(extrusions_.size(), false), {sketchIndex});
     }
 
+    bool hasSurfacePierceSource(int index) const {
+        for (const auto &sketch : sketches_) for (const auto &c : sketch.geometricConstraints)
+            if (c.type==ConstraintType::Pierce && c.pierce && pierceSourceIndex(c.pierce->surface)==index) return true;
+        return false;
+    }
+    void refreshSurfacePierceSketches(int sourceIndex,QSet<int> &changed,int targetSketch=-1) {
+        for (int index=0;index<sketches_.size();++index) {
+            if (targetSketch>=0 && index!=targetSketch) continue;
+            SketchObject work=sketches_.at(index);
+            bool touched=false;
+            for (auto &c : work.geometricConstraints) {
+                if (c.type!=ConstraintType::Pierce || !c.pierce) continue;
+                const int owner=pierceSourceIndex(c.pierce->surface);
+                if (sourceIndex>=0 && owner!=sourceIndex) continue;
+                if (sourceIndex==-2 && owner>=0) continue;
+                touched=true;
+                if (owner<0 || !extrusions_.at(owner).forgeBody) {
+                    auto data=std::make_shared<SketchPierceData>(*c.pierce);
+                    data->segments.clear(); data->curves.clear();
+                    data->error=QStringLiteral("La superficie del vincolo Pierce non e' disponibile.");
+                    c.pierce=data;
+                    continue;
+                }
+                GeometryRef ref=c.pierce->surface; ref.index=owner;
+                ForgeCad::refreshSurfacePierce(work,c,*extrusions_.at(owner).forgeBody,ref,extrusions_.at(owner).name);
+            }
+            if (!touched) continue;
+            const auto solved=ForgeCad::solveSketch(work);
+            if (!solved.ok) showStatus(solved.error);
+            sketches_[index]=std::move(work);
+            changed.insert(index);
+            analysisDirty_=true;
+        }
+    }
     // Rigenera da `from` in poi i corpi che dipendono da corpi `dirty` o da
     // schizzi `dirtySketches` (tutti con `all`). Un piano di costruzione
     // rigenerato porta con se' gli schizzi che vi stanno sopra (followDatum),
@@ -6830,6 +6945,9 @@ private:
     void regenerateFrom(int from, QVector<bool> dirty, QSet<int> dirtySketches, bool all = false,
                         const std::function<void(int, int, const QString &)> &progress = {}) {
         dirty.resize(extrusions_.size());
+        refreshSurfacePierceSketches(-2,dirtySketches);
+        const QSet<int> targets=dirtySketches;
+        for (int sketch : targets) refreshSurfacePierceSketches(-1,dirtySketches,sketch);
         int completed = 0;
         const int total = all ? qMax(1, int(extrusions_.size())) : 0;
         const auto advanced = [&](int count, const QString &name) {
@@ -6850,12 +6968,19 @@ private:
             dirty[index] = true;
             if (!isDatumBody(body)) {
                 pending.append(index);
+                if (hasSurfacePierceSource(index)) {
+                    flush();
+                    refreshSurfacePierceSketches(index,dirtySketches);
+                }
                 continue;
             }
             flush();
             rebuildBody(extrusions_[index], index);
             advanced(1, extrusions_.at(index).name);
             followDatum(index, dirtySketches);
+            const QSet<int> moved=dirtySketches;
+            for (int s : moved) if (s>=0 && s<sketches_.size() && sketches_.at(s).datumPlane==index)
+                refreshSurfacePierceSketches(-1,dirtySketches,s);
         }
         flush();
     }
@@ -6988,7 +7113,7 @@ private:
         for (ExtrusionObject &body : kept) {
             if (body.firstBody >= 0) body.firstBody = map.value(body.firstBody, -1);
             if (body.secondBody >= 0) body.secondBody = map.value(body.secondBody, -1);
-            for (QVector<GeometryRef> *refs : {&body.datum.refs, &body.pattern.refs, &body.ruledFirst, &body.ruledSecond, &body.planarRefs, &body.loftStartFaces, &body.loftEndFaces})
+            for (QVector<GeometryRef> *refs : {&body.datum.refs, &body.pattern.refs, &body.ruledFirst, &body.ruledSecond, &body.planarRefs, &body.loftStartFaces, &body.loftEndFaces, &body.loftSections, &body.loftEdgeGuides})
                 for (GeometryRef &ref : *refs)
                     if (isBodyRef(ref)) ref.index = map.value(ref.index, -1);
             if (isBodyRef(body.extentRef)) body.extentRef.index = map.value(body.extentRef.index, -1);
@@ -7008,6 +7133,9 @@ private:
         for (SketchObject &sketch : sketches_)
             if (sketch.datumPlane >= 0) sketch.datumPlane = map.value(sketch.datumPlane, -1);
         extrusions_ = std::move(kept);
+        QSet<int> changed;
+        refreshSurfacePierceSketches(-1,changed);
+        if (!changed.isEmpty()) regenerateFrom(0,QVector<bool>(extrusions_.size(),false),changed);
     }
 
     // Elimina le entita' selezionate dello schizzo attivo, con i loro vincoli;
@@ -7102,7 +7230,8 @@ private:
         QSet<int> sketches;
         if (changed >= 0 && changed < dirty.size()) {
             dirty[changed] = true;
-            if (isDatumBody(extrusions_.at(changed))) followDatum(changed, sketches);
+            if (isDatumBody(extrusions_.at(changed))) { followDatum(changed, sketches); refreshSurfacePierceSketches(-1,sketches); }
+            else refreshSurfacePierceSketches(changed,sketches);
         }
         regenerateFrom(changed + 1, dirty, sketches);
     }
@@ -7199,7 +7328,7 @@ private:
         case BodyFeature::BoundarySurface:
         case BodyFeature::FillSurface: {
             QVector<int> bodies;
-            for (const QVector<GeometryRef> *refs : {&body.ruledFirst, &body.ruledSecond, &body.planarRefs, &body.loftStartFaces, &body.loftEndFaces})
+            for (const QVector<GeometryRef> *refs : {&body.ruledFirst, &body.ruledSecond, &body.planarRefs, &body.loftStartFaces, &body.loftEndFaces, &body.loftSections, &body.loftEdgeGuides})
                 for (const GeometryRef &ref : *refs)
                     if (isBodyRef(ref) && !bodies.contains(ref.index)) bodies.append(ref.index);
             return bodies;
@@ -7232,7 +7361,10 @@ private:
         case BodyFeature::ProjectedCurve: return {body.sketchIndex};
         case BodyFeature::Sweep: return body.sweepPath == 0 ? QVector<int>{body.sketchIndex, body.pathSketch} : QVector<int>{body.sketchIndex};
         case BodyFeature::Loft: {
-            QVector<int> result = body.loftSketches;
+            QVector<int> result = body.loftSections.isEmpty() ? body.loftSketches : QVector<int>{};
+            for (const auto *refs : {&body.loftSections,&body.loftEdgeGuides})
+                for (const auto &ref : *refs)
+                    if (isSketchRef(ref) && !result.contains(ref.index)) result.append(ref.index);
             for (int guide : body.loftGuides)
                 if (!result.contains(guide)) result.append(guide);
             for (const SketchPathRef &guide : body.loftGuidePaths)
@@ -7252,7 +7384,7 @@ private:
         case BodyFeature::FillSurface: {
             QVector<int> sketches;
             if (body.feature == BodyFeature::PlanarSurface && body.planarRefs.isEmpty()) sketches.append(body.sketchIndex);
-            for (const QVector<GeometryRef> *refs : {&body.ruledFirst, &body.ruledSecond, &body.planarRefs, &body.loftStartFaces, &body.loftEndFaces})
+            for (const QVector<GeometryRef> *refs : {&body.ruledFirst, &body.ruledSecond, &body.planarRefs, &body.loftStartFaces, &body.loftEndFaces, &body.loftSections, &body.loftEdgeGuides})
                 for (const GeometryRef &ref : *refs)
                     if (isSketchRef(ref) && !sketches.contains(ref.index)) sketches.append(ref.index);
             return sketches;
@@ -7383,6 +7515,14 @@ private:
         body.notice.clear();
         body.forgeBody.reset();
         body.curve.reset();
+        for (int sketch : sketchesOf(body)) if (sketch>=0 && sketch<sketches.size())
+            for (const auto &c : sketches.at(sketch).geometricConstraints)
+                if (c.type==ConstraintType::Pierce && (!c.pierce || !c.pierce->error.isEmpty()
+                    || ForgeCad::constraintError(sketches.at(sketch),c)>1e-7)) {
+                    body.error=QStringLiteral("Vincolo Pierce non risolto nello schizzo %1: %2").arg(sketches.at(sketch).name,
+                        c.pierce ? (c.pierce->error.isEmpty() ? QStringLiteral("punto fuori dalla superficie") : c.pierce->error) : QStringLiteral("riferimento mancante"));
+                    return;
+                }
         body.curves.clear();
         body.datumValid = false;
         body.solid = false;
@@ -7691,38 +7831,7 @@ private:
                 return;
             }
             case BodyFeature::Loft: {
-                QVector<SketchObject> sections, guides;
-                QVector<QPair<ForgeCad::ForgeBody, EdgePoint>> startFaces, endFaces;
-                const QVector<GeometryRef> *faceRefs[2] = {&body.loftStartFaces, &body.loftEndFaces};
-                for (int side = 0; side < 2; ++side)
-                    for (const GeometryRef &ref : *faceRefs[side]) {
-                        if ((side == 0 ? body.loftStartContinuity : body.loftEndContinuity) != 3) continue;
-                        if (ref.kind != 5 || ref.index < 0 || ref.index >= index || !bodies.at(ref.index).forgeBody) {
-                            body.error = QStringLiteral("Una faccia tangente del loft non esiste piu'."); return;
-                        }
-                        (side == 0 ? startFaces : endFaces).append({bodies.at(ref.index).forgeBody, ref.point});
-                    }
-                for (int i : body.loftSketches) {
-                    const SketchObject *s = sketch(i);
-                    if (!s) {
-                        body.error = QStringLiteral("Una sezione del loft non esiste piu'.");
-                        return;
-                    }
-                    sections.append(*s);
-                }
-                for (int i : body.loftGuides) {
-                    const SketchObject *s = sketch(i);
-                    if (!s) { body.error = QStringLiteral("Una curva guida del loft non esiste piu'."); return; }
-                    guides.append(*s);
-                }
-                for (const SketchPathRef &path : body.loftGuidePaths) {
-                    const SketchObject *s = sketch(path.sketch);
-                    if (!s) { body.error = QStringLiteral("Una curva guida del loft non esiste piu'."); return; }
-                    guides.append(ForgeCad::sketchPathSubset(*s, path));
-                }
-                body.forgeBody = ForgeCad::forgeLoft(sections, guides, body.loftRuled, body.loftStartContinuity,
-                                                     body.loftEndContinuity, body.loftGuideContinuity, body.loftGuideInfluence,
-                                                     body.loftStartInfluence, body.loftEndInfluence, &body.error, body.loftSurface, startFaces, endFaces);
+                body.forgeBody = ForgeCad::forgeReferencedLoft(body,index,sketches,bodies,&body.error);
                 body.solid = body.forgeBody && !body.forgeBody->isSheet();
                 return;
             }
@@ -8556,6 +8665,22 @@ private:
         update();
     }
 
+    // Il punto medio resta un riferimento al segmento: il solver applica
+    // Punto medio al punto scelto e al segmento, senza creare geometria fittizia.
+    int segmentMidpointAt(const QPointF &point) const {
+        const SketchObject *sketch = activeSketchObject();
+        if (!sketch) return -1;
+        double best = pickTolerance();
+        int result = -1;
+        for (int i = 0; i < sketch->segments.size(); ++i) {
+            const auto &segment = sketch->segments.at(i);
+            if (pointDistance(segment.first, segment.second) <= ForgeCad::kSketchConnectionTolerance) continue;
+            const double distance = pointDistance(point, 0.5 * (segment.first + segment.second));
+            if (distance < best) { best = distance; result = i; }
+        }
+        return result;
+    }
+
     // Ctrl+clic su due punti: vincolo di coincidenza (i punti vengono uniti
     // nel punto medio, calcolato in double).
     bool selectPointWithControl(const QPointF &point) {
@@ -8600,6 +8725,17 @@ private:
         }
         // L'origine del piano si sceglie come un punto (per i vincoli).
         if (pointLength(point) < nearestDistance) selected = {2, 0, -1};
+        const int midpoint = segmentMidpointAt(point);
+        if (midpoint >= 0 && pointDistance(point, 0.5 * (sketch.segments.at(midpoint).first
+                + sketch.segments.at(midpoint).second)) < nearestDistance && selected.kind != 2) {
+            const SketchElementSelection entity{0, midpoint};
+            const int existing = sketchSelections_.indexOf(entity);
+            if (existing >= 0) sketchSelections_.removeAt(existing);
+            else sketchSelections_.append(entity);
+            selectionChanged();
+            update();
+            return true;
+        }
         if (selected.kind < 0) return false;
         // Ctrl+clic sceglie o toglie il punto (per i vincoli: la finestra Vincoli li propone).
         for (int k = 0; k < selectedPoints_.size(); ++k)
@@ -9563,6 +9699,18 @@ private:
             }
             if (blendFirst_ >= 0 && blendFirst_ < sketch.segments.size())
                 highlightSketchElement(painter, sketch, {0, blendFirst_}, kSelectionColor);
+            if (drawingTool_ == DrawingTool::Select) {
+                const int midpoint = segmentMidpointAt(screenToSketchPoint(lastMousePosition_));
+                for (int i = 0; i < sketch.segments.size(); ++i) {
+                    if (i != midpoint && !sketchSelections_.contains({0, i})) continue;
+                    const QPointF center = projectWorldPoint(mapSketchPoint(
+                        0.5 * (sketch.segments.at(i).first + sketch.segments.at(i).second), sketch));
+                    painter.setPen(QPen(i == midpoint ? kHoverColor : kSelectionColor, 2.0));
+                    painter.setBrush(Qt::NoBrush);
+                    painter.drawPolygon(QPolygonF({center + QPointF(0,-5), center + QPointF(5,4), center + QPointF(-5,4)}));
+                    if (i == midpoint) painter.drawText(center + QPointF(9,-7), QStringLiteral("Punto medio"));
+                }
+            }
             // Punti scelti (Ctrl+clic) e entita' dei vincoli selezionati o sotto il puntatore.
             painter.setPen(QPen(kSelectionColor, 2.0));
             painter.setBrush(Qt::NoBrush);
@@ -11611,6 +11759,7 @@ private:
         for (int section : d.loftSketches) parts << QString::number(section);
         parts << QStringLiteral("G");
         for (int guide : d.loftGuides) parts << QString::number(guide);
+        for (int index : d.loftGuideOrder) parts << QStringLiteral("GO%1").arg(index);
         for (const SketchPathRef &guide : d.loftGuidePaths) {
             parts << QStringLiteral("gp%1").arg(guide.sketch);
             for (int segment : guide.segments) parts << QStringLiteral("s%1").arg(segment);
@@ -11654,6 +11803,10 @@ private:
             parts << n(e.x) << n(e.y) << n(e.z) << QString::number(e.subshape) << QString::number(e.geometry) << QString::number(e.context);
         parts << n(d.sewTolerance) << QString::number(d.sewSolid) << QString::number(d.loftSurface) << QString::number(d.sweepSurface);
         parts << QStringLiteral("FS") << QString::number(d.fillContinuity) << n(d.fillInfluence) << n(d.fillGuideWeight);
+        parts << QStringLiteral("LS");
+        for (const GeometryRef &g : d.loftSections) ref(g);
+        parts << QStringLiteral("LG");
+        for (const GeometryRef &g : d.loftEdgeGuides) ref(g);
         parts << QStringLiteral("TF1");
         for (const GeometryRef &g : d.loftStartFaces) ref(g);
         parts << QStringLiteral("TF2");
@@ -11869,7 +12022,10 @@ private:
         const QRegularExpressionMatch match = marker.match(error);
         if (match.hasMatch()) {
             const int section = match.captured(1).toInt();
-            if (section >= 0 && section < preview_.definition.loftSketches.size())
+            if (!preview_.definition.loftSections.isEmpty()) {
+                if(section>=0 && section<preview_.definition.loftSections.size() && preview_.definition.loftSections.at(section).kind==7)
+                    previewErrorSketch_=preview_.definition.loftSections.at(section).index;
+            } else if (section >= 0 && section < preview_.definition.loftSketches.size())
                 previewErrorSketch_ = preview_.definition.loftSketches.at(section);
             error.remove(marker);
         }
@@ -14946,10 +15102,6 @@ private:
 static bool loftDialog(QWidget *parent, CadViewport *viewport, const QString &title, int replaced, const ExtrusionObject &initial,
                        const std::function<QString(const ExtrusionObject &)> &apply) {
     const QVector<SketchObject> &sketches = viewport->sketches();
-    if (sketches.size() < 2) {
-        QMessageBox::information(parent, title, QStringLiteral("Servono almeno due schizzi, uno per sezione."));
-        return false;
-    }
     FunctionDialogPanel dialog(parent);
     dialog.setObjectName(QStringLiteral("loftDialog"));
     dialog.setWindowTitle(title);
@@ -14971,16 +15123,43 @@ static bool loftDialog(QWidget *parent, CadViewport *viewport, const QString &ti
     dialogLayout->addWidget(scroll, 1);
     auto *list = new QListWidget(&dialog);
     list->setMinimumHeight(160);
+    list->setObjectName(QStringLiteral("loftSections"));
+    QVector<GeometryRef> sectionRefs = initial.loftSections;
+    QVector<GeometryRef> edgeGuides = initial.loftEdgeGuides;
+    const auto sameRef = [](const GeometryRef &a,const GeometryRef &b) {
+        if(a.kind!=b.kind || a.index!=b.index || a.element!=b.element) return false;
+        if(a.kind!=4 && a.kind!=9) return true;
+        if(a.point.subshape>=0 || b.point.subshape>=0) return a.point.subshape==b.point.subshape;
+        return std::hypot(a.point.x-b.point.x,std::hypot(a.point.y-b.point.y,a.point.z-b.point.z))<1e-9;
+    };
+    const auto sectionText = [&](const GeometryRef &ref) {
+        if(ref.kind==7 && ref.element.kind==-1) return sketches.value(ref.index).name;
+        return ForgeCad::geometryRefText(ref,sketches,viewport->extrusions());
+    };
+    const auto appendSection = [&](const GeometryRef &ref,bool checked) {
+        int pos=-1;
+        for(int k=0;k<sectionRefs.size();++k) if(sameRef(sectionRefs.at(k),ref)) {pos=k;break;}
+        if(pos<0) {pos=sectionRefs.size();sectionRefs.append(ref);}
+        auto *item=new QListWidgetItem(sectionText(ref),list);
+        item->setData(Qt::UserRole,ref.kind==7 && ref.element.kind==-1?ref.index:-1);
+        item->setData(Qt::UserRole+1,pos);
+        item->setFlags(item->flags()|Qt::ItemIsUserCheckable);
+        item->setCheckState(checked?Qt::Checked:Qt::Unchecked);
+        return item;
+    };
+    for(const GeometryRef &ref : initial.loftSections) appendSection(ref,true);
     QVector<int> order = initial.loftSketches;
     for (int index = 0; index < sketches.size(); ++index)
         if (!order.contains(index)) order.append(index);
     for (int index : order) {
         if (index < 0 || index >= sketches.size()) continue;
-        auto *item = new QListWidgetItem(sketches.at(index).name, list);
-        item->setData(Qt::UserRole, index);
-        item->setFlags(item->flags() | Qt::ItemIsUserCheckable);
-        item->setCheckState(initial.loftSketches.contains(index) ? Qt::Checked : Qt::Unchecked);
+        GeometryRef ref; ref.kind=7; ref.index=index; ref.element={-1,-1,-1};
+        bool present=false;
+        for(const auto &existing: initial.loftSections) if(sameRef(existing,ref)) present=true;
+        if(!present) appendSection(ref,initial.loftSections.isEmpty() && initial.loftSketches.contains(index));
     }
+    auto *removeSection=new QPushButton(QStringLiteral("Rimuovi sezione"),&dialog);
+    removeSection->setObjectName(QStringLiteral("loftRemoveSection"));
     auto *moveRow = new QWidget(&dialog);
     auto *moveLayout = new QHBoxLayout(moveRow);
     moveLayout->setContentsMargins(0, 0, 0, 0);
@@ -14989,6 +15168,8 @@ static bool loftDialog(QWidget *parent, CadViewport *viewport, const QString &ti
     moveLayout->addWidget(up);
     moveLayout->addWidget(down);
     moveLayout->addWidget(pickSections);
+    moveLayout->addWidget(removeSection);
+    pickSections->setObjectName(QStringLiteral("loftPickSections"));
     moveLayout->addStretch(1);
     auto *ruledBox = new QCheckBox(QStringLiteral("Rigato (superfici rigate tra sezioni consecutive)"), &dialog);
     ruledBox->setChecked(initial.loftRuled);
@@ -14996,32 +15177,46 @@ static bool loftDialog(QWidget *parent, CadViewport *viewport, const QString &ti
     surfaceBox->setChecked(initial.loftSurface);
     surfaceBox->setToolTip(QStringLiteral("Una lamina: con sezioni chiuse il tubo che passa per le sezioni, aperto alle estremita'"));
     auto *guides = new QListWidget(&dialog);
-    guides->setMinimumHeight(105);
-    for (int index = 0; index < sketches.size(); ++index) {
-        auto *item = new QListWidgetItem(sketches.at(index).name, guides);
-        item->setData(Qt::UserRole, index);
-        item->setFlags(item->flags() | Qt::ItemIsUserCheckable);
-        item->setCheckState(initial.loftGuides.contains(index) ? Qt::Checked : Qt::Unchecked);
-    }
+    guides->setObjectName(QStringLiteral("loftGuides"));
+    guides->setMinimumHeight(160);
     QVector<SketchPathRef> partialSelections = initial.loftGuidePaths;
-    auto *partialGuides = new QListWidget(&dialog);
-    partialGuides->setMinimumHeight(85);
-    auto *removePartial = new QPushButton(QStringLiteral("Rimuovi selezione parziale"), &dialog);
-    const auto refillPartial = [&] {
-        const int current = partialGuides->currentRow();
-        partialGuides->clear();
-        QVector<int> counters(sketches.size(), 0);
-        for (const SketchPathRef &path : partialSelections) {
-            const int number = path.sketch >= 0 && path.sketch < counters.size() ? ++counters[path.sketch] : 1;
-            partialGuides->addItem(QStringLiteral("%1 — selezione %2 (%3 entità)")
-                .arg(sketches.value(path.sketch).name).arg(number).arg(path.segments.size() + path.curves.size()));
-        }
-        if (partialGuides->count()) partialGuides->setCurrentRow(qBound(0, current, partialGuides->count() - 1));
-        removePartial->setEnabled(partialGuides->count() > 0);
+    const auto appendGuide = [&](int kind, int index, bool checked) {
+        QString text;
+        if (kind == 0) text = sketches.value(index).name;
+        else if (kind == 1) {
+            const auto &path = partialSelections.at(index);
+            text = QStringLiteral("%1 — selezione parziale (%2 entità)")
+                .arg(sketches.value(path.sketch).name).arg(path.segments.size() + path.curves.size());
+        } else text = ForgeCad::geometryRefText(edgeGuides.at(index), sketches, viewport->extrusions());
+        auto *item = new QListWidgetItem(text, guides);
+        item->setData(Qt::UserRole, kind);
+        item->setData(Qt::UserRole + 1, index);
+        item->setFlags(item->flags() | Qt::ItemIsUserCheckable);
+        item->setCheckState(checked ? Qt::Checked : Qt::Unchecked);
+        return item;
     };
-    refillPartial();
+    for (int index : ForgeCad::loftGuideSequence(initial)) {
+        if (index < initial.loftGuides.size()) appendGuide(0, initial.loftGuides.at(index), true);
+        else if (index < initial.loftGuides.size() + partialSelections.size())
+            appendGuide(1, index - initial.loftGuides.size(), true);
+        else appendGuide(2, index - initial.loftGuides.size() - partialSelections.size(), true);
+    }
+    for (int index = 0; index < sketches.size(); ++index)
+        if (!initial.loftGuides.contains(index)) appendGuide(0, index, false);
+    auto *guideButtons = new QWidget(&dialog);
+    auto *guideButtonsLayout = new QHBoxLayout(guideButtons);
+    guideButtonsLayout->setContentsMargins(0,0,0,0);
+    auto *guideUp = new QPushButton(QStringLiteral("↑ Su"), guideButtons);
+    auto *guideDown = new QPushButton(QStringLiteral("↓ Giu'"), guideButtons);
+    auto *removeGuide = new QPushButton(QStringLiteral("Rimuovi guida"), guideButtons);
+    guideUp->setObjectName(QStringLiteral("loftGuideUp"));
+    guideDown->setObjectName(QStringLiteral("loftGuideDown"));
+    removeGuide->setObjectName(QStringLiteral("loftRemoveGuide"));
+    guideButtonsLayout->addWidget(guideUp); guideButtonsLayout->addWidget(guideDown);
+    guideButtonsLayout->addWidget(removeGuide); guideButtonsLayout->addStretch(1);
     auto *pickGuides = new QPushButton(QStringLiteral("Scegli guide nella vista"), &dialog);
-    auto *pickStatus = new QLabel(QStringLiteral("Premi uno dei pulsanti e clicca gli schizzi direttamente nella scena; un secondo clic li toglie."), &dialog);
+    pickGuides->setObjectName(QStringLiteral("loftPickGuides"));
+    auto *pickStatus = new QLabel(QStringLiteral("Spunta gli schizzi interi oppure scegli bordi e curve nella vista; un secondo clic li toglie."), &dialog);
     pickStatus->setWordWrap(true);
     const auto influence = [&](double value) {
         auto *spin = new QDoubleSpinBox(&dialog);
@@ -15046,8 +15241,7 @@ static bool loftDialog(QWidget *parent, CadViewport *viewport, const QString &ti
     form->addRow(QString(), moveRow);
     form->addRow(QStringLiteral("Curve guida:"), guides);
     form->addRow(QString(), pickGuides);
-    form->addRow(QStringLiteral("Selezioni parziali:"), partialGuides);
-    form->addRow(QString(), removePartial);
+    form->addRow(QString(), guideButtons);
     form->addRow(QString(), pickStatus);
     form->addRow(QStringLiteral("Tangenza guide:"), guideContinuity);
     form->addRow(QStringLiteral("Influenza guide:"), guideInfluence);
@@ -15066,14 +15260,26 @@ static bool loftDialog(QWidget *parent, CadViewport *viewport, const QString &ti
         d.operation = -1;
         d.feature = BodyFeature::Loft;
         d.loftSketches.clear();
+        d.loftSections.clear();
         for (int row = 0; row < list->count(); ++row)
-            if (list->item(row)->checkState() == Qt::Checked) d.loftSketches.append(list->item(row)->data(Qt::UserRole).toInt());
-        d.loftGuides.clear();
+            if (list->item(row)->checkState() == Qt::Checked) {
+                const GeometryRef &ref=sectionRefs.at(list->item(row)->data(Qt::UserRole+1).toInt());
+                d.loftSections.append(ref);
+                if(ref.kind==7 && ref.element.kind==-1) d.loftSketches.append(ref.index);
+            }
+        d.loftEdgeGuides.clear(); d.loftGuides.clear(); d.loftGuidePaths.clear(); d.loftGuideOrder.clear();
+        QVector<QPair<int,int>> selected;
         for (int row = 0; row < guides->count(); ++row) {
-            const int sketch = guides->item(row)->data(Qt::UserRole).toInt();
-            if (guides->item(row)->checkState() == Qt::Checked && !d.loftSketches.contains(sketch)) d.loftGuides.append(sketch);
+            const auto *item = guides->item(row);
+            if (item->checkState() != Qt::Checked) continue;
+            const int kind = item->data(Qt::UserRole).toInt(), index = item->data(Qt::UserRole+1).toInt();
+            if (kind == 0) { selected.append({kind,d.loftGuides.size()}); d.loftGuides.append(index); }
+            else if (kind == 1) { selected.append({kind,d.loftGuidePaths.size()}); d.loftGuidePaths.append(partialSelections.at(index)); }
+            else { selected.append({kind,d.loftEdgeGuides.size()}); d.loftEdgeGuides.append(edgeGuides.at(index)); }
         }
-        d.loftGuidePaths = partialSelections;
+        for (const auto &entry : selected)
+            d.loftGuideOrder.append(entry.second + (entry.first > 0 ? d.loftGuides.size() : 0)
+                + (entry.first > 1 ? d.loftGuidePaths.size() : 0));
         d.loftRuled = ruledBox->isChecked();
         d.loftSurface = surfaceBox->isChecked();
         endControls.copyTo(d);
@@ -15085,7 +15291,7 @@ static bool loftDialog(QWidget *parent, CadViewport *viewport, const QString &ti
     };
     const auto refresh = [&] {
         const ExtrusionObject d = current();
-        if (d.loftSketches.size() >= 2) scope.request(d);
+        if (d.loftSections.size() >= 2) scope.request(d);
         else viewport->clearPreview();
     };
     endControls.changed = refresh;
@@ -15099,19 +15305,61 @@ static bool loftDialog(QWidget *parent, CadViewport *viewport, const QString &ti
     };
     QObject::connect(up, &QPushButton::clicked, &dialog, [&] { move(-1); });
     QObject::connect(down, &QPushButton::clicked, &dialog, [&] { move(1); });
-    QObject::connect(removePartial, &QPushButton::clicked, &dialog, [&] {
-        const int row = partialGuides->currentRow();
-        if (row < 0 || row >= partialSelections.size()) return;
-        partialSelections.removeAt(row); refillPartial(); refresh();
+    const auto moveGuide = [&](int step) {
+        const int row = guides->currentRow();
+        if (row < 0 || row + step < 0 || row + step >= guides->count()) return;
+        auto *item = guides->takeItem(row);
+        guides->insertItem(row + step, item); guides->setCurrentRow(row + step); refresh();
+    };
+    QObject::connect(guideUp, &QPushButton::clicked, &dialog, [&] { moveGuide(-1); });
+    QObject::connect(guideDown, &QPushButton::clicked, &dialog, [&] { moveGuide(1); });
+    QObject::connect(removeGuide, &QPushButton::clicked, &dialog, [&] {
+        if (guides->currentItem()) guides->currentItem()->setCheckState(Qt::Unchecked);
+    });
+    QObject::connect(removeSection,&QPushButton::clicked,&dialog,[&] {
+        if(list->currentRow()<0) return;
+        delete list->takeItem(list->currentRow()); refresh();
     });
     int graphicalTarget = 0;  // 1 sezioni, 2 guide
     const auto armGraphicalPick = [&](int target) {
         endControls.stop();
         graphicalTarget = target;
         pickSections->setChecked(target == 1); pickGuides->setChecked(target == 2);
-        pickStatus->setText(target == 1 ? QStringLiteral("Scelta sezioni attiva: clicca gli schizzi nella vista.")
-                                        : QStringLiteral("Scelta guide attiva: clicca gli schizzi nella vista."));
+        viewport->cancelReferencePick();
+        viewport->setReferencePickCallback([&](bool picked,GeometryRef ref) {
+            if(!picked) {graphicalTarget=0;pickSections->setChecked(false);pickGuides->setChecked(false);return;}
+            std::vector<ForgeCad::Kernel::PathSegment> path; QString reason;
+            const int owner=replaced<0?viewport->extrusions().size():replaced;
+            if(!ForgeCad::geometryRefPath(ref,owner,sketches,viewport->extrusions(),path,&reason)) {
+                pickStatus->setText(reason);
+            } else if(graphicalTarget==1) {
+                QListWidgetItem *item=nullptr;
+                for(int row=0;row<list->count();++row)
+                    if(sameRef(sectionRefs.at(list->item(row)->data(Qt::UserRole+1).toInt()),ref)) {item=list->item(row);break;}
+                if(item) item->setCheckState(item->checkState()==Qt::Checked?Qt::Unchecked:Qt::Checked);
+                else item=appendSection(ref,true);
+                list->setCurrentItem(item);
+                refresh();
+            } else if(graphicalTarget==2) {
+                int existing=-1;
+                for(int k=0;k<edgeGuides.size();++k) if(sameRef(edgeGuides.at(k),ref)) {existing=k;break;}
+                if(existing<0) { existing=edgeGuides.size(); edgeGuides.append(ref); }
+                QListWidgetItem *item=nullptr;
+                for(int row=0;row<guides->count();++row)
+                    if(guides->item(row)->data(Qt::UserRole).toInt()==2 && guides->item(row)->data(Qt::UserRole+1).toInt()==existing) {item=guides->item(row);break;}
+                if(item) item->setCheckState(item->checkState()==Qt::Checked?Qt::Unchecked:Qt::Checked);
+                else item=appendGuide(2,existing,true);
+                guides->setCurrentItem(item); refresh();
+            }
+            if(graphicalTarget) viewport->beginReferencePick(ForgeCad::DatumRoleCurve|ForgeCad::DatumRoleLine,replaced);
+        });
+        const QString reason=viewport->beginReferencePick(ForgeCad::DatumRoleCurve|ForgeCad::DatumRoleLine,replaced);
+        pickStatus->setText(reason.isEmpty()?QStringLiteral("Clicca un bordo o una curva; Esc termina la scelta. Gli schizzi interi si spuntano nell’elenco."):reason);
     };
+    for(const QString &name : {QStringLiteral("surfaceStartFacesPick"),QStringLiteral("surfaceEndFacesPick")})
+        QObject::connect(dialog.findChild<QPushButton *>(name),&QPushButton::clicked,&dialog,[&] {
+            graphicalTarget=0; pickSections->setChecked(false);pickGuides->setChecked(false);
+        });
     pickSections->setCheckable(true); pickGuides->setCheckable(true);
     QObject::connect(pickSections, &QPushButton::clicked, &dialog, [&] { armGraphicalPick(1); });
     QObject::connect(pickGuides, &QPushButton::clicked, &dialog, [&] { armGraphicalPick(2); });
@@ -15132,20 +15380,27 @@ static bool loftDialog(QWidget *parent, CadViewport *viewport, const QString &ti
         for (SketchPathRef &path : components) path.sketch = sketch;
         for (const SketchPathRef &path : components) {
             if (!(kind == 0 ? path.segments : path.curves).contains(entity)) continue;
-            const int existing = partialSelections.indexOf(path);
-            if (existing >= 0) partialSelections.removeAt(existing);
-            else {
-                partialSelections.append(path);
-                for (int row = 0; row < guides->count(); ++row)
-                    if (guides->item(row)->data(Qt::UserRole).toInt() == sketch) guides->item(row)->setCheckState(Qt::Unchecked);
+            int existing = partialSelections.indexOf(path);
+            if (existing < 0) { existing=partialSelections.size(); partialSelections.append(path); }
+            QListWidgetItem *item=nullptr;
+            for (int row=0;row<guides->count();++row) {
+                auto *candidate=guides->item(row);
+                if(candidate->data(Qt::UserRole).toInt()==1 && candidate->data(Qt::UserRole+1).toInt()==existing) item=candidate;
             }
-            refillPartial(); refresh();
-            pickStatus->setText(existing >= 0 ? QStringLiteral("Selezione parziale rimossa.")
-                                               : QStringLiteral("Selezione parziale aggiunta alle curve guida."));
+            if(item) item->setCheckState(item->checkState()==Qt::Checked?Qt::Unchecked:Qt::Checked);
+            else item=appendGuide(1,existing,true);
+            if(item->checkState()==Qt::Checked)
+                for(int row=0;row<guides->count();++row)
+                    if(guides->item(row)->data(Qt::UserRole).toInt()==0 && guides->item(row)->data(Qt::UserRole+1).toInt()==sketch)
+                        guides->item(row)->setCheckState(Qt::Unchecked);
+            guides->setCurrentItem(item); refresh();
+            pickStatus->setText(QStringLiteral("Elenco delle guide aggiornato."));
             break;
         }
     });
     QObject::connect(&dialog, &QDialog::finished, viewport, [viewport] {
+        viewport->cancelReferencePick(); viewport->setReferencePickCallback({});
+        viewport->setReferenceMarks({});
         viewport->setSketchPickCallback({}); viewport->setSketchEntityPickCallback({});
     });
     QObject::connect(list, &QListWidget::itemChanged, &dialog, refresh);
@@ -15181,10 +15436,13 @@ static bool loftDialog(QWidget *parent, CadViewport *viewport, const QString &ti
     refresh();
     const auto validate = [&] {
         const ExtrusionObject d = current();
-        if (d.loftSketches.size() < 2) return QStringLiteral("Spunta almeno due schizzi.");
-        for (int row = 0; row < guides->count(); ++row)
-            if (guides->item(row)->checkState() == Qt::Checked
-                && d.loftSketches.contains(guides->item(row)->data(Qt::UserRole).toInt()))
+        if (d.loftSections.size() < 2) return QStringLiteral("Scegli almeno due sezioni (schizzi o bordi).");
+        for(const auto &section : d.loftSections)
+            for(const auto &guide : d.loftEdgeGuides)
+                if(sameRef(section,guide) || (section.kind==7 && section.element.kind==-1 && guide.kind==7 && section.index==guide.index))
+                    return QStringLiteral("Una curva non può essere insieme sezione e guida.");
+        for (int sketch : d.loftGuides)
+            if (d.loftSketches.contains(sketch))
                 return QStringLiteral("Uno schizzo non può essere insieme sezione e curva guida.");
         for (const SketchPathRef &path : d.loftGuidePaths)
             if (d.loftSketches.contains(path.sketch)) return QStringLiteral("Uno schizzo non può essere insieme sezione e curva guida.");
@@ -22048,8 +22306,8 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
     convertTool->setData(int(DrawingTool::ConvertEdges));
     convertTool->setToolTip(QStringLiteral("Clic su uno spigolo, una curva o un'entita' di un altro schizzo visibile: proietta lungo la normale al piano dello schizzo attivo"));
     connect(convertTool, &QAction::triggered, this, [viewport] { viewport->setDrawingTool(DrawingTool::ConvertEdges); });
-    QAction *sectionReferences = referenceMenu->addAction(QStringLiteral("Sezione dei solidi nel piano dello schizzo"));
-    sectionReferences->setToolTip(QStringLiteral("Le curve esatte in cui il piano dello schizzo taglia i solidi visibili"));
+    QAction *sectionReferences = referenceMenu->addAction(QStringLiteral("Sezione di solidi e superfici nel piano dello schizzo"));
+    sectionReferences->setToolTip(QStringLiteral("Le curve esatte in cui il piano dello schizzo interseca i solidi e le superfici visibili"));
     connect(sectionReferences, &QAction::triggered, this, [this, viewport] {
         int added = 0;
         const QString error = viewport->addSectionReferences(&added);
@@ -22213,10 +22471,16 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
         constraintPanel->raise();
     });
     auto *pointConstraints = sketchMenu->addMenu(QStringLiteral("Vincoli di punto"));
+    auto *pierceAction=pointConstraints->addAction(QStringLiteral("Pierce su superficie..."));
+    pierceAction->setToolTip(QStringLiteral("Seleziona un punto con Ctrl+clic, poi scegli la faccia: il punto resta sulla sua intersezione con il piano dello schizzo e segue la superficie."));
+    connect(pierceAction,&QAction::triggered,this,[this,viewport] {
+        const QString error=viewport->beginSurfacePierce();
+        if (!error.isEmpty()) statusBar()->showMessage(error,8000);
+    });
     for (ConstraintType type : {ConstraintType::Midpoint, ConstraintType::Quadrant}) {
         auto *action = pointConstraints->addAction(ForgeCad::constraintName(type));
         const QString help = type == ConstraintType::Midpoint
-            ? QStringLiteral("Seleziona un punto con Ctrl+clic e un segmento con Maiusc+clic, poi applica Punto medio.")
+            ? QStringLiteral("Seleziona un punto con Ctrl+clic e il punto medio di un segmento con Ctrl+clic (oppure il segmento con Maiusc+clic), poi applica Punto medio.")
             : QStringLiteral("Seleziona un punto con Ctrl+clic e un cerchio/arco con Maiusc+clic: viene scelto il quadrante presente piu' vicino.");
         action->setToolTip(help);
         connect(action, &QAction::triggered, this, [this, viewport, type, help] {
@@ -22375,6 +22639,8 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
         }
     };
     completeViewIcons(viewMenu);
+    // Il menu generale resta testuale; le voci interne conservano le icone.
+    viewMenu->menuAction()->setIcon(QIcon());
     const QStringList primitiveIcons = {QStringLiteral("box"), QStringLiteral("cylinder"), QStringLiteral("sphere"), QStringLiteral("cone"), QStringLiteral("torus")};
     for (int k = 0; k < primitiveActions.size() && k < primitiveIcons.size(); ++k) decorate(primitiveActions.at(k), primitiveIcons.at(k));
     const QStringList viewIcons = {QStringLiteral("viewFront"), QStringLiteral("viewRear"), QStringLiteral("viewRight"),
@@ -23347,10 +23613,10 @@ void PdfWindow::rebuildModelTree() {
                 static const QStringList modes = {QStringLiteral("torsione minima"), QStringLiteral("Frenet"), QStringLiteral("orientamento costante")};
                 item->setToolTip(0, QStringLiteral("Sweep (%1)").arg(modes.value(body.sweepMode)));
             } else if (body.feature == BodyFeature::Loft) {
-                const int guideCount = body.loftGuides.size() + body.loftGuidePaths.size();
+                const int guideCount = body.loftGuides.size() + body.loftGuidePaths.size() + body.loftEdgeGuides.size();
                 item->setToolTip(0, QStringLiteral("Loft %1: %2 sezioni, %3 guide, estremità G%4/G%5, guide G%6")
                                         .arg(body.loftRuled && !body.loftStartContinuity && !body.loftEndContinuity ? QStringLiteral("rigato") : QStringLiteral("liscio"))
-                                        .arg(body.loftSketches.size()).arg(guideCount)
+                                        .arg(body.loftSections.isEmpty()?body.loftSketches.size():body.loftSections.size()).arg(guideCount)
                                         .arg(body.loftStartContinuity == 3 ? QStringLiteral("1 (facce)") : QString::number(body.loftStartContinuity))
                                         .arg(body.loftEndContinuity == 3 ? QStringLiteral("1 (facce)") : QString::number(body.loftEndContinuity))
                                         .arg(body.loftGuideContinuity));
@@ -23497,14 +23763,22 @@ void PdfWindow::rebuildModelTree() {
                     ? sketches.value(body.pathSketch).name + (entities ? QStringLiteral(" (%1 entità)").arg(entities) : QString())
                     : extrusions.value(body.firstBody).name));
             } else if (body.feature == BodyFeature::Loft) {
-                for (int k = 0; k < body.loftSketches.size(); ++k)
-                    children.append(QStringLiteral("Sezione %1: %2").arg(k + 1).arg(sketches.value(body.loftSketches.at(k)).name));
-                for (int k = 0; k < body.loftGuides.size(); ++k)
-                    children.append(QStringLiteral("Guida %1: %2").arg(k + 1).arg(sketches.value(body.loftGuides.at(k)).name));
-                for (int k = 0; k < body.loftGuidePaths.size(); ++k) {
-                    const SketchPathRef &path = body.loftGuidePaths.at(k);
-                    children.append(QStringLiteral("Guida %1: %2 (%3 entità)").arg(body.loftGuides.size() + k + 1)
-                        .arg(sketches.value(path.sketch).name).arg(path.segments.size() + path.curves.size()));
+                if(body.loftSections.isEmpty()) {
+                    for (int k = 0; k < body.loftSketches.size(); ++k)
+                        children.append(QStringLiteral("Sezione %1: %2").arg(k + 1).arg(sketches.value(body.loftSketches.at(k)).name));
+                } else for(int k=0;k<body.loftSections.size();++k) {
+                    const auto &ref=body.loftSections.at(k);
+                    children.append(QStringLiteral("Sezione %1: %2").arg(k+1).arg(ref.kind==7 && ref.element.kind==-1?sketches.value(ref.index).name:ForgeCad::geometryRefText(ref,sketches,extrusions)));
+                }
+                const auto guideOrder = ForgeCad::loftGuideSequence(body);
+                for (int k=0;k<guideOrder.size();++k) {
+                    int index=guideOrder.at(k); QString text;
+                    if(index<body.loftGuides.size()) text=sketches.value(body.loftGuides.at(index)).name;
+                    else if((index-=body.loftGuides.size())<body.loftGuidePaths.size()) {
+                        const auto &path=body.loftGuidePaths.at(index);
+                        text=QStringLiteral("%1 (%2 entità)").arg(sketches.value(path.sketch).name).arg(path.segments.size()+path.curves.size());
+                    } else text=ForgeCad::geometryRefText(body.loftEdgeGuides.at(index-body.loftGuidePaths.size()),sketches,extrusions);
+                    children.append(QStringLiteral("Guida %1: %2").arg(k+1).arg(text));
                 }
             } else {
                 const QString role = body.feature == BodyFeature::Blend ? QStringLiteral("Base: ") : body.feature == BodyFeature::Scale ? QStringLiteral("Corpo: ")

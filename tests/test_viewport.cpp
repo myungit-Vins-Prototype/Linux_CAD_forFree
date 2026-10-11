@@ -165,6 +165,225 @@ public:
         }
         std::cout<<"PASS document locks and recent files"<<std::endl;
     }
+    static void edgeLoftWorkflow() {
+        using namespace ForgeCad;
+        using namespace ForgeCad::Kernel;
+        const auto line=[](Vec3 a,Vec3 b)->PathSegment {return {std::make_shared<Line<3>>(a,b-a),{0,distance(a,b)}};};
+        // Exact spatial profiles, including a nonplanar curve, with endpoint and interior guides.
+        auto curve=std::make_shared<BSplineCurve<3>>(3,std::vector<double>{0,0,0,0,1,1,1,1},
+            std::vector<Vec3>{{0,0,10},{3,2,12},{7,-1,11},{10,0,10}});
+        LoftSection top,bottom; top.path={{curve,{0,1}}}; bottom.path={line({0,0,0},{10,0,0})};
+        LoftOptions options;
+        for(double u : {0.0,0.5,1.0}) options.guides.push_back({line({10*u,0,0},curve->point(u))});
+        auto sheet=loftSheet({top,bottom},options);
+        require(sheet.isSheet() && checkBody(sheet).empty(),"spatial sections with three guides build");
+        for(int k=0;k<=32;++k) {
+            const Vec3 p=curve->point(k/32.0); double nearest=1e300;
+            for(EdgeId e:sheet.edges()) nearest=std::min(nearest,projectPoint(*sheet.edge(e).curve,p,sheet.edge(e).range).distance);
+            require(nearest<1e-7,"spatial section remains exact on loft boundary");
+        }
+        require(checkBody(loftSheet({bottom,top},options)).empty(),"reversed spatial sections and guides");
+        options.guides={{line({20,0,0},{20,0,10})}};
+        bool rejected=false; try {loftSheet({top,bottom},options);} catch(const std::domain_error &) {rejected=true;}
+        require(rejected,"spatial guide missing section rejected");
+        // Associate a section to a sheet edge, and continuation to its adjacent face.
+        const std::vector<PathSegment> first{line({0,0,0},{10,0,0})};
+        auto source=std::make_shared<const Body>(ruledSurface(first,{line({0,-5,0},{10,-5,0})}));
+        ExtrusionObject body; body.feature=BodyFeature::Imported; body.name="Superficie sorgente"; body.featureId=701;
+        body.forgeBody=source; body.importData=QByteArray::fromStdString(writeStep({{"Superficie",*source}}));
+        EdgeId selected;
+        for(EdgeId e:source->edges()) if(projectPoint(*source->edge(e).curve,{5,0,0},source->edge(e).range).distance<1e-8) {selected=e;break;}
+        require(selected.valid(),"source section edge found");
+        GeometryRef edge; edge.kind=4; edge.index=0; edge.featureId=701; edge.point=edgeReference(*source,selected,{5,0,0});
+        GeometryRef face; face.kind=5; face.index=0; face.featureId=701; face.point=faceReference(*source,source->faces().front(),{5,-2,0});
+        SketchObject end; end.name="Sezione finale"; end.customFrame=true; end.frame.origin[1]=10; end.frame.origin[2]=5;
+        end.segments={{{0,0},{10,0}}}; end.constraints={-1}; end.segmentLengths={0}; end.segmentAngles={-1};
+        GeometryRef sketch; sketch.kind=7; sketch.index=0; sketch.element={-1,-1,-1};
+        ExtrusionObject loft; loft.feature=BodyFeature::Loft; loft.loftSurface=true; loft.name="Loft da bordo";
+        loft.loftSections={edge,sketch}; loft.loftStartContinuity=3; loft.loftStartFaces={face};
+        CadViewport view; view.sketches_={end}; view.extrusions_={body}; view.tessellationQuality_=0;
+        QString error;
+        auto result=forgeReferencedLoft(loft,1,view.sketches_,view.extrusions_,&error);
+        if(!result) throw std::runtime_error(error.toStdString());
+        require(checkBody(*result).empty(),"edge section with G1 contact builds");
+        // A trimmed edge may leave a last Bezier span only a few ulp wide.
+        // Its Greville coordinates must remain distinct for G1 collocation.
+        const double last=std::nextafter(1.0,0.0);
+        auto narrow=std::make_shared<BSplineCurve<3>>(3,std::vector<double>{0,0,0,0,last,last,last,1,1,1,1},
+            std::vector<Vec3>{{0,0,0},{3,0,0},{6,0,0},{9,0,0},{9+1.0/3,0,0},{9+2.0/3,0,0},{10,0,0}});
+        LoftSection tinySection,other; tinySection.path={{narrow,{0,1}}}; other.path={line({0,10,5},{10,10,5})};
+        LoftOptions tangent; tangent.startContinuity=1; tangent.startFaces={{source,source->faces().front()}};
+        require(checkBody(loftSheet({tinySection,other},tangent)).empty(),"G1 on an exact edge with an ulp-sized final span");
+
+        for(FaceId f:result->faces()) for(double u:{0.15,0.5,0.85})
+            require(std::fabs(normalAt(*result->face(f).surface,u,0).z())>1.0-1e-4,"G1 edge contact normal equals adjacent plane normal");
+        require(view.createBody(loft).isEmpty(),"create associative edge loft in viewport");
+        require(CadViewport::bodyOperands(view.extrusions_[1]).contains(0) && CadViewport::sketchesOf(view.extrusions_[1]).contains(0),"edge and sketch dependencies tracked");
+        require(view.withDependentBodies({0}).contains(1),"source sheet changes reach loft");
+        // Saved references can rebuild without display cache; reordering remaps persistent owners.
+        QTemporaryDir dir; DocumentState loaded;
+        require(saveDocumentFile(dir.filePath("edge-loft.prt"),view.documentState(),false).isEmpty(),"save edge loft format 42");
+        require(loadDocumentFile(dir.filePath("edge-loft.prt"),loaded).isEmpty(),"reopen edge loft format 42");
+        require(loaded.extrusions[1].loftSections.size()==2 && loaded.extrusions[1].loftSections[0].featureId==701,"edge loft references persist");
+        CadViewport reopened; reopened.restoreDocument(loaded); reopened.regenerateAll();
+        require(reopened.extrusions_[1].forgeBody && reopened.extrusions_[1].error.isEmpty(),"full edge loft regeneration after reopen");
+        auto bad=loft; bad.loftSections[0].featureId=99999;
+        require(!forgeReferencedLoft(bad,1,view.sketches_,view.extrusions_,&error),"missing persistent owner is rejected");
+        bad=loft; bad.loftSections[0].index=1; bad.loftSections[0].featureId=0;
+        require(!forgeReferencedLoft(bad,1,view.sketches_,view.extrusions_,&error),"forward edge reference rejected");
+        const auto oldGeometry=reopened.extrusions_[1].forgeBody;
+        auto shifted=std::make_shared<const Body>(ruledSurface({line({0,0,1},{10,0,1})},{line({0,-5,1},{10,-5,1})}));
+        reopened.extrusions_[0].forgeBody=shifted;
+        reopened.extrusions_[0].importData=QByteArray::fromStdString(writeStep({{"Superficie",*shifted}}));
+        reopened.regenerateAfter(0);
+        require(reopened.extrusions_[1].forgeBody && reopened.extrusions_[1].forgeBody!=oldGeometry
+                && reopened.extrusions_[1].error.isEmpty(),"source surface change actually rebuilds associative edge loft");
+        bool follows=false;
+        for(EdgeId e:reopened.extrusions_[1].forgeBody->edges()) {
+            const auto &r=reopened.extrusions_[1].forgeBody->edge(e);
+            if(projectPoint(*r.curve,{5,0,1},r.range).distance<1e-7) follows=true;
+        }
+        require(follows,"regenerated loft follows the moved source edge");
+        // UI accepts a body edge in either selector and clears callbacks on close.
+        QMainWindow window;
+        std::exception_ptr failure;
+        QTimer::singleShot(0,&window,[&] {
+            auto *dialog=window.findChild<QDialog *>("loftDialog");
+            try {
+                require(dialog,"loft dialog open");
+                auto *list=dialog->findChild<QListWidget *>("loftSections");
+                require(list && list->count()==2,"mixed edge and sketch sections restored in order");
+                dialog->findChild<QPushButton *>("loftPickSections")->click();
+                require(view.referencePicking(),"edge section picker armed");
+                auto callback=view.refPickFinished_; callback(true,edge);
+                require(list->item(0)->checkState()==Qt::Unchecked,"second click toggles body edge section");
+                callback=view.refPickFinished_; callback(true,edge);
+                require(list->item(0)->checkState()==Qt::Checked,"body edge section selected again");
+                dialog->findChild<QPushButton *>("loftPickGuides")->click();
+                callback=view.refPickFinished_; callback(true,edge);
+                auto *guideList=dialog->findChild<QListWidget *>("loftGuides");
+                require(guideList && guideList->count()==2 && guideList->item(1)->data(Qt::UserRole).toInt()==2
+                    && guideList->item(1)->checkState()==Qt::Checked,"body edge added to unified guides");
+                guideList->setCurrentRow(1);
+                dialog->findChild<QPushButton *>("loftGuideUp")->click();
+                require(guideList->item(0)->data(Qt::UserRole).toInt()==2,"edge guide moves before whole sketch guide");
+                callback=view.refPickFinished_; callback(false,{});
+                require(!dialog->findChild<QPushButton *>("loftPickGuides")->isChecked(),"Esc ends guide selection");
+            } catch(...) {failure=std::current_exception();}
+            if(dialog) dialog->reject();
+        });
+        loftDialog(&window,&view,QStringLiteral("Loft da bordi"),1,loft,[](const ExtrusionObject &){return QString();});
+        if(failure) std::rethrow_exception(failure);
+        require(!view.referencePicking() && !view.refPickFinished_,"loft dialog releases picker callbacks");
+
+        // The first selected guide determines the seam of a closed loft.
+        // Verify the actual kernel result when all three guide types mix.
+        auto guideSheet=std::make_shared<const Body>(ruledSurface({line({0,2,0},{0,2,3})},{line({0,3,0},{0,3,3})}));
+        ExtrusionObject guideBody; guideBody.feature=BodyFeature::Imported; guideBody.featureId=802;
+        guideBody.name="Superficie guida"; guideBody.forgeBody=guideSheet;
+        guideBody.importData=QByteArray::fromStdString(writeStep({{"guida",*guideSheet}}));
+        GeometryRef edgeGuide; edgeGuide.kind=4; edgeGuide.index=0; edgeGuide.featureId=802;
+        for(EdgeId id:guideSheet->edges()) if(projectPoint(*guideSheet->edge(id).curve,{0,2,1.5},guideSheet->edge(id).range).distance<1e-8)
+            edgeGuide.point=edgeReference(*guideSheet,id,{0,2,1.5});
+        CurveObject circle; circle.tool=DrawingTool::Circle; circle.controlPoints={{0,0},{2,0}};
+        SketchObject c0; c0.name="Cerchio iniziale"; c0.curves={circle};
+        SketchObject c1=c0; c1.name="Cerchio finale"; c1.customFrame=true; c1.frame.origin[2]=3;
+        const auto verticalSketch=[](double x) {
+            SketchObject guide; guide.customFrame=true;
+            guide.frame.origin[0]=x; guide.frame.normal[1]=-1; guide.frame.normal[2]=0;
+            guide.segments={{{0,0},{0,3}}}; guide.constraints={-1}; guide.segmentLengths={0}; guide.segmentAngles={-1};
+            return guide;
+        };
+        auto wholeGuide=verticalSketch(2); wholeGuide.name="Guida intera";
+        auto partialGuide=verticalSketch(-2); partialGuide.name="Guida parziale";
+        partialGuide.segments.append({{10,0},{10,3}}); // excluded disconnected component
+        CadViewport orderedView; orderedView.sketches_={c0,c1,wholeGuide,partialGuide};
+        orderedView.extrusions_={guideBody}; orderedView.tessellationQuality_=0;
+        ExtrusionObject ordered; ordered.feature=BodyFeature::Loft; ordered.loftSurface=true;
+        ordered.loftSketches={0,1}; ordered.loftGuides={2}; ordered.loftGuidePaths={{3,{0},{}}};
+        ordered.loftEdgeGuides={edgeGuide}; ordered.loftGuideContinuity=0;
+        const Vec3 starts[3]={{2,0,0},{-2,0,0},{0,2,0}};
+        for (const QVector<int> &sequence : {QVector<int>{2,1,0},QVector<int>{1,0,2},QVector<int>{0,2,1}}) {
+            ordered.loftGuideOrder=sequence;
+            auto shape=forgeReferencedLoft(ordered,1,orderedView.sketches_,orderedView.extrusions_,&error);
+            if(!shape) throw std::runtime_error(error.toStdString());
+            require(checkBody(*shape).empty(),"mixed ordered guides build valid loft");
+            require(distance(shape->face(shape->faces().front()).surface->point(0,0),starts[sequence.front()])<1e-6,
+                "first mixed guide actually sets loft seam");
+        }
+        auto invalidOrder=ordered; invalidOrder.loftGuideOrder={0,0,2};
+        require(!forgeReferencedLoft(invalidOrder,1,orderedView.sketches_,orderedView.extrusions_,&error),"duplicate guide order rejected");
+        ordered.loftGuideOrder={2,1,0};
+        require(orderedView.createBody(ordered).isEmpty(),"create mixed ordered guide loft");
+        DocumentState orderedLoaded;
+        require(saveDocumentFile(dir.filePath("ordered-guides.prt"),orderedView.documentState(),false).isEmpty(),"save mixed guide order");
+        require(loadDocumentFile(dir.filePath("ordered-guides.prt"),orderedLoaded).isEmpty(),"reopen mixed guide order");
+        require(orderedLoaded.extrusions[1].loftGuideOrder==QVector<int>({2,1,0}),"mixed guide order survives serialization");
+        CadViewport orderedReopened; orderedReopened.restoreDocument(orderedLoaded); orderedReopened.regenerateAll();
+        require(orderedReopened.extrusions_[1].forgeBody && orderedReopened.extrusions_[1].error.isEmpty(),"regenerate mixed guides after reopen");
+        ExtrusionObject submitted; failure={};
+        QTimer::singleShot(0,&window,[&] {
+            auto *dialog=window.findChild<QDialog *>("loftDialog");
+            try {
+                auto *guideList=dialog->findChild<QListWidget *>("loftGuides");
+                require(guideList && guideList->item(0)->data(Qt::UserRole).toInt()==2
+                    && guideList->item(1)->data(Qt::UserRole).toInt()==1
+                    && guideList->item(2)->data(Qt::UserRole).toInt()==0,"unified guide list restores mixed saved order");
+                guideList->setCurrentRow(1); dialog->findChild<QPushButton *>("loftGuideUp")->click();
+                require(guideList->item(0)->data(Qt::UserRole).toInt()==1,"partial guide moves before edge guide");
+                dialog->findChild<QDialogButtonBox *>()->button(QDialogButtonBox::Ok)->click();
+            } catch(...) {failure=std::current_exception(); if(dialog)dialog->reject();}
+        });
+        loftDialog(&window,&orderedView,QStringLiteral("Guide ordinate"),1,ordered,[&](const ExtrusionObject &d){submitted=d;return QString();});
+        if(failure)std::rethrow_exception(failure);
+        require(submitted.loftGuideOrder==QVector<int>({1,2,0}) && submitted.loftGuides==QVector<int>({2})
+            && submitted.loftGuidePaths.size()==1 && submitted.loftEdgeGuides.size()==1,"dialog submits mixed visible order and all guide types");
+        std::cout<<"PASS exact spatial edge loft, guides, tangency, persistence, dependencies and UI selection"<<std::endl;
+    }
+    static void savedLoftSurface(const QString &path) {
+        using namespace ForgeCad;using namespace ForgeCad::Kernel;
+        DocumentState document;QString error=loadDocumentFile(path,document);
+        if(!error.isEmpty())throw std::runtime_error(error.toStdString());
+        int owner=-1;
+        for(int k=0;k<document.extrusions.size();++k)if(document.extrusions[k].feature==BodyFeature::Loft){owner=k;break;}
+        require(owner>=0,"saved loft exists");
+        auto definition=document.extrusions[owner];
+        require(!definition.loftSections.isEmpty() && definition.loftSections.back().kind==4,"last section is surface edge");
+        const auto section=definition.loftSections.back();const auto &source=document.extrusions[section.index];
+        GeometryRef face;face.kind=5;face.index=section.index;face.featureId=source.featureId;
+        const auto &edge=source.forgeBody->edge(EdgeId(section.point.subshape));
+        face.point=faceReference(*source.forgeBody,source.forgeBody->faces().front(),edge.curve->point((edge.range.lo+edge.range.hi)/2));
+        CadViewport view;view.restoreDocument(document);view.tessellationQuality_=0;
+        QMainWindow window;std::exception_ptr failure;QString applyError;bool applied=false;
+        QTimer::singleShot(0,&window,[&] {
+            auto *dialog=window.findChild<QDialog *>("loftDialog");
+            try {
+                require(dialog,"saved loft panel open");
+                dialog->findChild<QComboBox *>("surfaceEndContinuity")->setCurrentIndex(3);
+                dialog->findChild<QPushButton *>("surfaceEndFacesPick")->click();
+                require(view.referencePicking(),"adjacent face picker active");
+                auto callback=view.refPickFinished_;callback(true,face);
+                callback=view.refPickFinished_;callback(false,{});
+                dialog->findChild<QDialogButtonBox *>()->button(QDialogButtonBox::Ok)->click();
+                if(!applyError.isEmpty())throw std::runtime_error(applyError.toStdString());
+            }catch(...){failure=std::current_exception();if(dialog)dialog->reject();}
+        });
+        loftDialog(&window,&view,QStringLiteral("Tangenza Loft salvato"),owner,definition,[&](const ExtrusionObject &d){
+            applyError=view.updateBody(owner,d);applied=applyError.isEmpty();return applyError;
+        });
+        if(failure)std::rethrow_exception(failure);
+        require(applied && view.extrusions_[owner].loftEndContinuity==3 && view.extrusions_[owner].loftEndFaces.size()==1,
+            "face tangency applies and panel closes");
+        const auto shape=view.extrusions_[owner].forgeBody;require(shape && checkBody(*shape).empty(),"saved loft tangency valid");
+        for(FaceId f:shape->faces())for(int k=1;k<40;++k){
+            const auto &surface=*shape->face(f).surface;const double u=surface.uDomain().lo+surface.uDomain().length()*k/40.0;
+            const Vec3 p=surface.point(u,1),n=normalAt(surface,u,1);
+            const auto projected=projectPoint(*source.forgeBody->face(source.forgeBody->faces().front()).surface,p);
+            const auto expected=normalAt(*source.forgeBody->face(source.forgeBody->faces().front()).surface,projected.u,projected.v);
+            require(norm(cross(n,expected))<1e-4,"actual adjacent face normals agree");
+        }
+        std::cout<<"PASS saved Loft panel: adjacent face pick, apply, close, mesh and normals"<<std::endl;
+    }
     static void openLoftTangency(const QString &documentPath) {
         using namespace ForgeCad;
         using namespace ForgeCad::Kernel;
@@ -781,6 +1000,139 @@ public:
     static void sketchReferenceWorkflow() {
         using namespace ForgeCad;
         {
+            using namespace Kernel;
+            const auto wall=[](double x) { return makePlaneSheet(Frame3(Vec3(x,0,0),Vec3(1,0,0),Vec3(0,1,0)),4); };
+            const Body surface=wall(2);
+            const auto ref=[](const Body &body,int owner,quint64 id) {
+                GeometryRef r; r.kind=5; r.index=owner; r.featureId=id;
+                r.point=faceReference(body,body.faces().front(),Vec3(2,0,0)); return r;
+            };
+            SketchObject sketch; sketch.name=QStringLiteral("Pierce"); sketch.segments={{{5,1},{8,1}}};
+            sketch.constraints={-1}; sketch.segmentLengths={0}; sketch.segmentAngles={-1};
+            SketchConstraint pierce; pierce.type=ConstraintType::Pierce; pierce.first={0,0,0};
+            require(refreshSurfacePierce(sketch,pierce,surface,ref(surface,0,123),"Parete").isEmpty(),"cache Pierce sulla faccia piana");
+            sketch.geometricConstraints.append(pierce);
+            require(solveSketch(sketch).ok && pointDistance(sketch.segments[0].first,QPointF(2,1))<1e-8,
+                    "Pierce sposta il punto sulla superficie");
+            require(analyzeSketch(sketch).degreesOfFreedom==3,"Pierce lascia libero lo scorrimento sulla sezione");
+            require(solveSketch(sketch,{{{0,0,0},QPointF(2,3)}}).ok,"punto Pierce scorre sulla sezione");
+            const auto before=sketch;
+            require(!solveSketch(sketch,{{{0,0,0},QPointF(2,7)}}).ok && sketch.segments==before.segments,
+                    "Pierce non prosegue oltre il bordo rifilato");
+            sketch.segments[0].first={5,8};
+            require(solveSketch(sketch).ok && pointDistance(sketch.segments[0].first,QPointF(2,4))<1e-7,
+                    "Pierce converge al bordo della faccia");
+            SketchConstraint invalid=pierce;
+            require(!refreshSurfacePierce(sketch,invalid,makePlaneSheet(Frame3(),4),ref(makePlaneSheet(Frame3(),4),0,123),"Piano").isEmpty(),
+                    "Pierce complanare rifiutato");
+            SketchObject missing=sketch; missing.geometricConstraints={invalid};
+            require(!solveSketch(missing).ok && !std::isfinite(constraintError(missing,invalid)),"Pierce non valido non viene ignorato");
+            const auto ring=[](double z) {
+                auto circle=std::make_shared<Circle<3>>(Vec3(0,0,z),Vec3(1,0,0),Vec3(0,1,0),2);
+                return std::vector<PathSegment>{{circle,circle->domain()}};
+            };
+            const Body tube=ruledSurface(ring(-3),ring(3));
+            SketchObject round; round.segments={{{4,1},{6,1}}};
+            SketchConstraint curved=pierce;
+            require(refreshSurfacePierce(round,curved,tube,ref(tube,0,124),"Cilindro").isEmpty(),"Pierce su superficie curva");
+            round.geometricConstraints={curved};
+            require(solveSketch(round).ok && std::fabs(pointLength(round.segments[0].first)-2)<1e-7,
+                    "punto Pierce sulla sezione circolare");
+            require(analyzeSketch(round).degreesOfFreedom==3,"gradi di liberta' Pierce curvo");
+            CadViewport view;
+            view.sketches_.append(before); view.sketches_[0].geometricConstraints.clear();
+            view.activeSketch_=0; view.sketchMode_=true;
+            ExtrusionObject body; body.name="Parete"; body.feature=BodyFeature::Imported; body.featureId=123;
+            body.forgeBody=std::make_shared<const Body>(surface);
+            body.importData=QByteArray::fromStdString(writeStep({{"Parete",surface}}));
+            view.extrusions_.append(body);
+            const GeometryRef picked=ref(surface,0,123);
+            require(view.addSurfacePierce({0,0,0},picked).isEmpty(),"vincolo Pierce dal viewport");
+            require(view.sketches_[0].segments.size()==1 && view.sketches_[0].curves.isEmpty()
+                    && view.sketches_[0].geometricConstraints.size()==1,"Pierce non aggiunge copie di geometria allo schizzo");
+            ExtrusionObject dependent; dependent.feature=BodyFeature::Extrusion; dependent.sketchIndex=0;
+            dependent.extrudeSurface=true; dependent.distance=2; dependent.name="Superficie dipendente";
+            view.extrusions_.append(dependent);
+            view.regenerateDependents(0);
+            require(view.extrusions_[1].forgeBody && view.extrusions_[1].error.isEmpty(),"superficie generata dallo schizzo Pierce");
+            const auto previousBody=view.extrusions_[1].forgeBody;
+            const auto oldCache=view.sketches_[0].geometricConstraints[0].pierce;
+            view.extrusions_[0].forgeBody=std::make_shared<const Body>(wall(3));
+            view.extrusions_[0].importData=QByteArray::fromStdString(writeStep({{"Parete",wall(3)}}));
+            view.regenerateAfter(0);
+            require(std::fabs(view.sketches_[0].segments[0].first.x()-3)<1e-8,"Pierce segue la superficie modificata");
+            require(oldCache->segments[0].first.x()==2,"cache Pierce delle istantanee immutabile");
+            require(view.extrusions_[1].forgeBody && view.extrusions_[1].forgeBody!=previousBody
+                    && view.extrusions_[1].error.isEmpty(),"rigenerazione a cascata dal vincolo Pierce");
+            QTemporaryDir dir; DocumentState loaded;
+            const QString path=dir.filePath("pierce.prt");
+            require(saveDocumentFile(path,view.documentState(),false).isEmpty() && loadDocumentFile(path,loaded).isEmpty(),"persistenza Pierce formato 41");
+            require(loaded.sketches[0].geometricConstraints.size()==1 && loaded.sketches[0].geometricConstraints[0].type==ConstraintType::Pierce
+                    && loaded.sketches[0].geometricConstraints[0].pierce->surface.featureId==123
+                    && solveSketch(loaded.sketches[0]).ok,"riferimento e sezione Pierce dopo riapertura");
+            CadViewport reloaded;
+            reloaded.restoreDocument(loaded); reloaded.regenerateAll();
+            require(reloaded.extrusions_[1].forgeBody && reloaded.extrusions_[1].error.isEmpty()
+                    && constraintError(reloaded.sketches_[0],reloaded.sketches_[0].geometricConstraints[0])<1e-8,
+                    "rigenerazione completa Pierce dopo riapertura");
+            reloaded.sketches_[0].customFrame=true; reloaded.sketches_[0].frame.origin[0]=1;
+            reloaded.regenerateDependents(0);
+            require(std::fabs(reloaded.sketches_[0].segments[0].first.x()-2)<1e-8,"Pierce segue il piano dello schizzo modificato");
+            view.undo();
+            require(view.sketches_[0].geometricConstraints.isEmpty(),"Undo aggiunta Pierce");
+            view.redo();
+            require(view.sketches_[0].geometricConstraints.size()==1 && view.sketches_[0].geometricConstraints[0].type==ConstraintType::Pierce,
+                    "Redo aggiunta Pierce");
+            view.selectedPoints_={{0,0,0}};
+            require(view.beginSurfacePierce().isEmpty() && view.referencePicking() && view.sketchViewUnlocked_,"selezione faccia Pierce nello schizzo");
+            QKeyEvent escape(QEvent::KeyPress,Qt::Key_Escape,Qt::NoModifier);
+            QApplication::sendEvent(&view,&escape);
+            require(!view.referencePicking() && !view.sketchViewUnlocked_ && !view.refPickFinished_,"Esc Pierce ripristina la vista");
+            view.extrusions_[0].sketchIndex=0; view.extrusions_[0].feature=BodyFeature::Extrusion;
+            require(!view.addSurfacePierce({0,0,1},picked).isEmpty(),"dipendenza circolare Pierce rifiutata");
+            view.extrusions_[0].sketchIndex=-1; view.extrusions_[0].feature=BodyFeature::Imported;
+            view.removeBodies({0});
+            require(!view.sketches_[0].geometricConstraints[0].pierce->error.isEmpty()
+                    && !solveSketch(view.sketches_[0]).ok,"superficie Pierce eliminata segnalata");
+        }
+        {
+            using namespace Kernel;
+            const Body wall = makePlaneSheet(Frame3(Vec3(), Vec3(1,0,0), Vec3(0,1,0)), 4);
+            SketchObject section;
+            require(appendSectionCurves(section, wall, true, true).isEmpty(), "sezione aperta della superficie");
+            require(section.segments.size()==1 && section.curves.isEmpty(), "sezione limitata ai bordi della superficie");
+            require(std::fabs(pointDistance(section.segments[0].first, section.segments[0].second)-8)<1e-7,
+                    "lunghezza esatta della sezione aperta");
+            require(section.constructionSegments.size()==1 && section.geometricConstraints.size()==1,
+                    "sezione superficie di costruzione e fissa");
+            SketchObject coplanar;
+            require(appendSectionCurves(coplanar, makePlaneSheet(Frame3(),4), false, true).isEmpty()
+                    && coplanar.segments.size()==4, "contorno superficie complanare");
+            SketchObject outside; outside.customFrame=true; outside.frame.origin[2]=10;
+            require(!appendSectionCurves(outside,wall,true,true).isEmpty() && outside.segments.isEmpty(),
+                    "superficie fuori dal piano senza riferimenti");
+            const auto ring = [](double z) {
+                auto circle=std::make_shared<Circle<3>>(Vec3(0,0,z),Vec3(1,0,0),Vec3(0,1,0),2);
+                return std::vector<PathSegment>{{circle,circle->domain()}};
+            };
+            const Body cylinder=ruledSurface(ring(-3),ring(3));
+            SketchObject curved;
+            require(appendSectionCurves(curved,cylinder,false,true).isEmpty() && !curved.curves.isEmpty(),
+                    "sezione circolare della superficie curva");
+            for(const auto &curve : curved.curves) for(const auto &piece : curveGeometry(curve))
+                for(int k=0;k<=20;++k) {
+                    const auto point=piece.curve->point(piece.range.lo+piece.range.length()*k/20.0);
+                    require(std::fabs(norm(point)-2)<1e-7,"raggio della sezione curva");
+                }
+            CadViewport viewport;
+            viewport.sketches_.append(SketchObject()); viewport.activeSketch_=0; viewport.sketchMode_=true;
+            ExtrusionObject sheet; sheet.feature=BodyFeature::Ruled; sheet.solid=false; sheet.visible=true;
+            sheet.forgeBody=std::make_shared<const Body>(wall); viewport.extrusions_.append(sheet);
+            int added=0;
+            require(viewport.addSectionReferences(&added).isEmpty() && added==1,
+                    "comando viewport include le superfici visibili");
+        }
+        {
             SketchObject source;
             CurveObject spline; spline.tool = DrawingTool::Spline;
             spline.controlPoints = {{-6,0},{-2,3},{2,-1},{6,0}};
@@ -812,6 +1164,39 @@ public:
             require(view.convertReferenceAt(click).isEmpty(),"viewport converts spline from parallel sketch");
             require(view.sketches_[1].curves.size()==1 && !view.sketches_[1].curves[0].construction,
                     "viewport uses projection and respects reference setting");
+        }
+        {
+            CadViewport view; view.resize(800,600);
+            SketchObject source, target;
+            source.customFrame = true;
+            source.frame.normal[0]=0; source.frame.normal[1]=1; source.frame.normal[2]=0;
+            source.frame.xAxis[0]=1; source.frame.xAxis[1]=0; source.frame.xAxis[2]=0;
+            CurveObject circle; circle.tool=DrawingTool::Circle;
+            circle.controlPoints={{5,0},{8,0}}; recalculateCurve(circle);
+            source.curves.append(circle);
+            view.sketches_={source,target}; view.activeSketch_=1; view.sketchMode_=true;
+            const QPoint click=view.projectWorldPoint(sketchToDisplay(QPointF(8,0),source)).toPoint();
+            require(view.convertReferenceAt(click).isEmpty(), "convert crossing circle contacts");
+            const auto &contacts=view.sketches_[1];
+            require(contacts.curves.isEmpty() && contacts.segments.size()==2, "circle produces two intersection points rather than projection");
+            for(const auto &segment:contacts.segments)
+                require(segment.first==segment.second && std::abs(segment.first.y())<1e-8
+                        && (std::abs(segment.first.x()-2)<1e-8 || std::abs(segment.first.x()-8)<1e-8), "exact circle intersections");
+        }
+        {
+            CadViewport view; view.resize(800,600);
+            SketchObject sketch;
+            sketch.segments={{{2,3},{12,3}},{{6,5},{7,8}}};
+            sketch.constraints={-1,-1}; sketch.segmentLengths={0,0}; sketch.segmentAngles={-1,-1};
+            sketch.geometricConstraints.append(makeConstraint(sketch,ConstraintType::Fix,{{0,0,-1}}));
+            view.sketches_={sketch}; view.activeSketch_=0; view.sketchMode_=true;
+            require(view.segmentMidpointAt({7,3})==0, "midpoint hover identifies segment");
+            require(view.selectPointWithControl({6,5}), "select endpoint with Ctrl");
+            require(view.selectPointWithControl({7,3}), "select midpoint with Ctrl");
+            require(applicableConstraints(view.sketches_[0],view.constraintSelection()).contains(ConstraintType::Midpoint), "Ctrl midpoint selection offers midpoint constraint");
+            require(view.addConstraint(ConstraintType::Midpoint).isEmpty(), "apply midpoint constraint");
+            require(pointDistance(view.sketches_[0].segments[1].first,QPointF(7,3))<1e-8, "solver places endpoint at fixed segment midpoint");
+            require(view.selectPointWithControl({7,3}), "midpoint selection remains usable after solve");
         }
         CurveObject reference;
         reference.tool = DrawingTool::Converted;
@@ -7409,6 +7794,9 @@ int main(int argc, char **argv) {
             ViewportInteractionTest::loftCorner(QStringLiteral("File_Esempio/prova con loft.prt"));
         else if (app.arguments().contains(QStringLiteral("--sheet-dressup"))) ViewportInteractionTest::sheetDressupFeatures();
         else if (app.arguments().contains(QStringLiteral("--midpoint-quadrant"))) ViewportInteractionTest::midpointQuadrantConstraints();
+        else if (app.arguments().contains(QStringLiteral("--saved-loft-surface")))
+            ViewportInteractionTest::savedLoftSurface(app.arguments().value(app.arguments().indexOf(QStringLiteral("--saved-loft-surface"))+1));
+        else if (app.arguments().contains(QStringLiteral("--edge-loft"))) ViewportInteractionTest::edgeLoftWorkflow();
         else if (app.arguments().contains(QStringLiteral("--open-loft-tangency")))
             ViewportInteractionTest::openLoftTangency(app.arguments().value(app.arguments().indexOf(QStringLiteral("--open-loft-tangency"))+1));
         else if (app.arguments().contains(QStringLiteral("--spline-clicks")))
