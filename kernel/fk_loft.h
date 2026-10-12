@@ -55,9 +55,16 @@ struct LoftContact {
 // conservando i profili di sezione e verificando lo scarto. Influenze
 // intermedie miscelano il percorso guidato con quello libero; G0 mantiene
 // il solo attraversamento delle sezioni.
+struct LoftGuideCondition {
+    int continuity = 1;
+    double influence = 1.0;
+};
+
 struct LoftOptions {
     bool ruled = false;
     std::vector<std::vector<PathSegment>> guides;
+    // Un elemento per guides; vuoto eredita guideContinuity/guideInfluence.
+    std::vector<LoftGuideCondition> guideConditions;
     int startContinuity = 0;  // 0 G0, 1 G1, 2 G2
     int endContinuity = 0;
     int guideContinuity = 1;  // G0 solo attraversamento, G1 tangente, G2 anche curvatura

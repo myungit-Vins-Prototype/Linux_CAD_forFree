@@ -64,7 +64,7 @@ constexpr char kMagic[4] = {'F', 'C', 'A', 'D'};
 // 42 sezioni e guide loft da bordi; 43 ordine delle guide.
 // 44 estrazione associativa di curve 3D, segmento e vista salvata del taglio.
 // 45 schizzi spaziali con entita' e punti XYZ in double.
-constexpr quint16 kVersion = 45;
+constexpr quint16 kVersion = 47;
 constexpr quint8 kZlib = 1;
 
 void write(QDataStream &out, const CurveObject &curve) {
@@ -416,6 +416,15 @@ void write(QDataStream &out, const ExtrusionObject &body) {
         out << qint32(entity.id) << entity.spline << entity.closed << quint32(entity.points.size());
         for(const auto &point:entity.points)out << point.x << point.y << point.z;
     }
+    // Formato 46: condizioni per guida loft e influenza per faccia fill.
+    out << quint32(body.loftGuideContinuities.size());
+    for (int value : body.loftGuideContinuities) out << qint32(value);
+    out << quint32(body.loftGuideInfluences.size());
+    for (double value : body.loftGuideInfluences) out << value;
+    out << quint32(body.fillFaceInfluences.size());
+    for (double value : body.fillFaceInfluences) out << value;
+    out << qint32(body.fillShapeFace) << body.fillShapeWeight;
+    writeRefs(out,body.curveExtraction.sources);
 }
 
 // `extras` (solo formato 5): i file scritti durante lo sviluppo del formato 5
@@ -692,6 +701,21 @@ bool read(QDataStream &in, ExtrusionObject &body, quint16 version, int extras) {
             }
             body.spatialSketch.entities.append(entity);
         }
+    }
+    if (version >= 46) {
+        const int total = body.loftGuides.size() + body.loftGuidePaths.size() + body.loftEdgeGuides.size();
+        quint32 count;
+        if (!readCount(in, count) || (count && count != quint32(total))) return false;
+        for (quint32 i = 0; i < count; ++i) { qint32 value; in >> value; if (value < 0 || value > 2) return false; body.loftGuideContinuities.append(value); }
+        if (!readCount(in, count) || (count && count != quint32(total))) return false;
+        for (quint32 i = 0; i < count; ++i) { double value; in >> value; if (!std::isfinite(value) || value < 0 || value > 1) return false; body.loftGuideInfluences.append(value); }
+        if (!readCount(in, count) || (count && count != quint32(body.ruledSecond.size()))) return false;
+        for (quint32 i = 0; i < count; ++i) { double value; in >> value; if (!std::isfinite(value) || value <= 0) return false; body.fillFaceInfluences.append(value); }
+    }
+    if(version>=47){qint32 face;in>>face>>body.fillShapeWeight;
+        if(face < -1 || face>=body.ruledSecond.size() || !std::isfinite(body.fillShapeWeight) || body.fillShapeWeight<0)return false;
+        body.fillShapeFace=face;
+        if(!readRefs(in,body.curveExtraction.sources,version))return false;
     }
     const BodyFeature last = version >= 45 ? BodyFeature::SpatialSketch : version >= 44 ? BodyFeature::ExtractedCurve : version >= 39 ? BodyFeature::Thicken : version >= 38 ? BodyFeature::ProjectedCurve : version >= 36 ? BodyFeature::Draft : version >= 35 ? BodyFeature::FillSurface : version >= 27 ? BodyFeature::Thread : version >= 25 ? BodyFeature::Shell : BodyFeature::PlanarSurface;
     if (int(body.feature) < 0 || int(body.feature) > int(last)) return false;

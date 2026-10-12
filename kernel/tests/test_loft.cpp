@@ -546,3 +546,63 @@ FK_TEST(LoftFollowsEntireCircularGuides) {
             FK_CHECK(std::fabs(normalAt(*body.face(f).surface,u,reverse?1:0).z())>1-1e-4);
     }
 }
+
+// Tre guide sulla stessa loft con condizioni diverse e influenza indipendente.
+FK_TEST(LoftIndependentGuideConditions) {
+    const auto line = [](Vec3 a, Vec3 b) -> PathSegment { return {std::make_shared<Line<3>>(a, normalized(b-a)), {0, distance(a,b)}}; };
+    LoftSection first, last;
+    first.path = {line({0,0,0},{10,0,0})}; last.path = {line({0,10,5},{10,10,5})};
+    LoftOptions options;
+    for (double x : {0.0, 5.0, 10.0}) {
+        auto guide = std::make_shared<BSplineCurve<3>>(3, std::vector<double>{0,0,0,0,1,1,1,1},
+            std::vector<Vec3>{{x,0,0},{x,4,0},{x,7,4},{x,10,5}});
+        options.guides.push_back({{guide,{0,1}}});
+    }
+    options.guideConditions = {{0,1.0},{1,0.5},{2,1.0}};
+    const Body body = loftSheet({first,last},options);
+    FK_CHECK(checkBody(body).empty());
+    const auto longitudinal = [&](const Body &shape, double x) -> const Edge * {
+        for (auto id : shape.edges()) {
+            const auto &edge = shape.edge(id);
+            if (distance(edge.curve->point(edge.range.lo),{x,0,0}) < 1e-8 && distance(edge.curve->point(edge.range.hi),{x,10,5}) < 1e-8) return &edge;
+        }
+        return nullptr;
+    };
+    const Edge *free = longitudinal(body,0), *partial = longitudinal(body,5), *full = longitudinal(body,10);
+    FK_CHECK(free && partial && full);
+    if (!free || !partial || !full) return;
+    const auto guide0 = options.guides[0][0].curve, guide1 = options.guides[1][0].curve, guide2 = options.guides[2][0].curve;
+    const double gap0 = projectPoint(*free->curve,guide0->point(0.37),free->range).distance;
+    const double gap1 = projectPoint(*partial->curve,guide1->point(0.37),partial->range).distance;
+    FK_CHECK(gap0 > 0.1); FK_CHECK(gap1 > 1e-3 && gap1 < gap0);
+    FK_CHECK(projectPoint(*full->curve,guide2->point(0.37),full->range).distance < 5e-9);
+    FK_CHECK(norm(cross(normalized(full->curve->derivative(full->range.lo)), normalized(guide2->derivative(0)))) < 1e-8);
+    // Riordino della lista: le condizioni seguono la propria curva.
+    std::swap(options.guides[0],options.guides[2]); std::swap(options.guideConditions[0],options.guideConditions[2]);
+    const Body reordered = loftSheet({first,last},options);
+    FK_CHECK(checkBody(reordered).empty());
+    for (double x : {0.0,5.0,10.0}) {
+        const Edge *a = longitudinal(body,x), *b = longitudinal(reordered,x);
+        FK_CHECK(a && b); if (!a || !b) continue;
+        for (int i=0;i<=16;++i) FK_CHECK(projectPoint(*b->curve,a->curve->point(a->range.lo+i*a->range.length()/16.0),b->range).distance < 1e-8);
+    }
+    auto disabled = options;
+    for (auto &condition : disabled.guideConditions) condition.influence = 0.0;
+    const Body noInfluence=loftSheet({first,last},disabled);
+    FK_CHECK(checkBody(noInfluence).empty());
+    for (double x : {0.0,5.0,10.0}) {
+        // La pezza piana puo' essere unificata: non pretendere un edge interno
+        // a x=5. Verifica invece posizione e piano tangente del loft libero.
+        const Vec3 point(x,3.7,1.85), expected=normalized(cross(Vec3(1,0,0),Vec3(0,10,5)));
+        double gap=1e100; Vec3 normal;
+        for (auto face : noInfluence.faces()) {
+            const auto &surface=*noInfluence.face(face).surface;
+            const auto near=projectPoint(surface,point);
+            if(near.distance<gap) {gap=near.distance;normal=normalAt(surface,near.u,near.v);}
+        }
+        FK_CHECK(gap < 1e-8);FK_CHECK(std::fabs(dot(normal,expected)) > 1-1e-10);
+    }
+    auto invalid = options; invalid.guideConditions.pop_back();
+    bool rejected = false; try { (void)loftSheet({first,last},invalid); } catch (const std::domain_error &) { rejected=true; }
+    FK_CHECK(rejected);
+}

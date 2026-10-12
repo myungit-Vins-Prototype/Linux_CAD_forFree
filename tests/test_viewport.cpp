@@ -302,6 +302,11 @@ public:
         ExtrusionObject ordered; ordered.feature=BodyFeature::Loft; ordered.loftSurface=true;
         ordered.loftSketches={0,1}; ordered.loftGuides={2}; ordered.loftGuidePaths={{3,{0},{}}};
         ordered.loftEdgeGuides={edgeGuide}; ordered.loftGuideContinuity=0;
+        ordered.loftGuideContinuities={0,1,2}; ordered.loftGuideInfluences={0.15,0.55,0.85};
+        auto previewChanged=ordered;previewChanged.loftGuideContinuities[1]=2;
+        require(CadViewport::previewKey(previewChanged,1)!=CadViewport::previewKey(ordered,1),"guide continuity invalidates preview cache");
+        previewChanged=ordered;previewChanged.loftGuideInfluences[2]=0.5;
+        require(CadViewport::previewKey(previewChanged,1)!=CadViewport::previewKey(ordered,1),"guide influence invalidates preview cache");
         const Vec3 starts[3]={{2,0,0},{-2,0,0},{0,2,0}};
         for (const QVector<int> &sequence : {QVector<int>{2,1,0},QVector<int>{1,0,2},QVector<int>{0,2,1}}) {
             ordered.loftGuideOrder=sequence;
@@ -319,6 +324,8 @@ public:
         require(saveDocumentFile(dir.filePath("ordered-guides.prt"),orderedView.documentState(),false).isEmpty(),"save mixed guide order");
         require(loadDocumentFile(dir.filePath("ordered-guides.prt"),orderedLoaded).isEmpty(),"reopen mixed guide order");
         require(orderedLoaded.extrusions[1].loftGuideOrder==QVector<int>({2,1,0}),"mixed guide order survives serialization");
+        require(orderedLoaded.extrusions[1].loftGuideContinuities==ordered.loftGuideContinuities
+            && orderedLoaded.extrusions[1].loftGuideInfluences==ordered.loftGuideInfluences,"individual guide conditions survive serialization");
         CadViewport orderedReopened; orderedReopened.restoreDocument(orderedLoaded); orderedReopened.regenerateAll();
         require(orderedReopened.extrusions_[1].forgeBody && orderedReopened.extrusions_[1].error.isEmpty(),"regenerate mixed guides after reopen");
         ExtrusionObject submitted; failure={};
@@ -329,7 +336,13 @@ public:
                 require(guideList && guideList->item(0)->data(Qt::UserRole).toInt()==2
                     && guideList->item(1)->data(Qt::UserRole).toInt()==1
                     && guideList->item(2)->data(Qt::UserRole).toInt()==0,"unified guide list restores mixed saved order");
-                guideList->setCurrentRow(1); dialog->findChild<QPushButton *>("loftGuideUp")->click();
+                guideList->setCurrentRow(1);
+                auto *mode=dialog->findChild<QComboBox *>("loftGuideContinuity");
+                auto *influence=dialog->findChild<QDoubleSpinBox *>("loftGuideInfluence");
+                require(mode && influence && mode->currentIndex()==1 && influence->value()==55,"selected guide restores its own controls");
+                mode->setCurrentIndex(2); influence->setValue(25);
+                dialog->findChild<QPushButton *>("loftGuideUp")->click();
+                require(mode->currentIndex()==2 && influence->value()==25,"guide controls follow reordered item");
                 require(guideList->item(0)->data(Qt::UserRole).toInt()==1,"partial guide moves before edge guide");
                 dialog->findChild<QDialogButtonBox *>()->button(QDialogButtonBox::Ok)->click();
             } catch(...) {failure=std::current_exception(); if(dialog)dialog->reject();}
@@ -338,7 +351,68 @@ public:
         if(failure)std::rethrow_exception(failure);
         require(submitted.loftGuideOrder==QVector<int>({1,2,0}) && submitted.loftGuides==QVector<int>({2})
             && submitted.loftGuidePaths.size()==1 && submitted.loftEdgeGuides.size()==1,"dialog submits mixed visible order and all guide types");
+        require(submitted.loftGuideContinuities==QVector<int>({0,2,2})
+            && submitted.loftGuideInfluences==QVector<double>({0.15,0.25,0.85}),"editing and reordering one guide keeps other conditions intact");
         std::cout<<"PASS exact spatial edge loft, guides, tangency, persistence, dependencies and UI selection"<<std::endl;
+    }
+    static void individualFillControls() {
+        using namespace ForgeCad; using namespace ForgeCad::Kernel;
+        const auto line=[](Vec3 a,Vec3 b)->PathSegment{return {std::make_shared<Line<3>>(a,normalized(b-a)),{0,distance(a,b)}};};
+        const Vec3 a[4]={{0,0,0},{10,0,0},{10,10,0},{0,10,0}};
+        const Vec3 offset[4]={{0,-3,0},{3,0,0},{0,3,0},{-3,0,0}};
+        CadViewport view; QMainWindow window; view.tessellationQuality_=0;
+        ExtrusionObject fill;fill.feature=BodyFeature::FillSurface;fill.operation=-1;fill.name="Riempimento locale";
+        for(int i=0;i<4;++i) {
+            const Vec3 start=a[i],end=a[(i+1)%4],mid=(start+end)/2;
+            auto body=std::make_shared<const Body>(ruledSurface({line(start,end)},{line(start+offset[i],end+offset[i])}));
+            ExtrusionObject source;source.feature=BodyFeature::Imported;source.featureId=900+i;source.forgeBody=body;
+            source.importData=QByteArray::fromStdString(writeStep({{"Supporto",*body}}));source.name=QStringLiteral("Supporto %1").arg(i+1);
+            view.extrusions_.append(source);
+            GeometryRef edge;edge.kind=4;edge.index=i;edge.featureId=source.featureId;
+            bool found=false;for(EdgeId e:body->edges())if(projectPoint(*body->edge(e).curve,mid,body->edge(e).range).distance<1e-8){edge.point=edgeReference(*body,e,mid);found=true;break;}
+            require(found,"boundary edge exists");fill.planarRefs.append(edge);
+            GeometryRef face;face.kind=5;face.index=i;face.featureId=source.featureId;face.point=faceReference(*body,body->faces().front(),mid);
+            fill.ruledSecond.append(face);
+        }
+        const auto originalFaces=fill.ruledSecond;
+        auto shapeChanged=fill;shapeChanged.fillShapeFace=1;require(CadViewport::previewKey(shapeChanged,4)!=CadViewport::previewKey(fill,4),"shape reference invalidates preview");
+        fill.fillFaceInfluences={0.4,1.2,2.3,3.4};
+        auto changed=fill;changed.fillFaceInfluences[1]=2.0;
+        require(CadViewport::previewKey(changed,4)!=CadViewport::previewKey(fill,4),"individual face influence invalidates preview cache");
+        ExtrusionObject submitted;std::exception_ptr failure;
+        QTimer::singleShot(0,&window,[&]{
+            auto *dialog=window.findChild<QDialog *>("fillDialog");
+            try {
+                require(dialog,"fill dialog open");
+                auto *list=dialog->findChild<QListWidget *>("fillContactFaces");
+                auto *influence=dialog->findChild<QDoubleSpinBox *>("fillFaceInfluence");
+                require(list && influence && list->count()==4,"four independently editable supports");
+                list->setCurrentRow(1);require(std::fabs(influence->value()-1.2)<1e-9,"selected face restores its value");
+                influence->setValue(2.5);
+                auto *shape=dialog->findChild<QCheckBox *>("fillShapeFace");require(shape,"directional shape control exists");shape->setChecked(true);
+                list->setCurrentRow(2);require(!shape->isChecked(),"selecting another face does not transfer shape reference");list->setCurrentRow(1);require(shape->isChecked(),"shape face remains selected by identity");
+                dialog->findChild<QPushButton *>("fillPickFaces")->click();
+                auto callback=view.refPickFinished_; callback(true,originalFaces[0]);
+                require(list->count()==3 && std::fabs(influence->value()-2.5)<1e-9,"removing another face preserves selection and influence");
+                callback=view.refPickFinished_; callback(true,originalFaces[0]);
+                require(list->count()==4,"removed face can be added again");
+                dialog->findChild<QDialogButtonBox *>()->button(QDialogButtonBox::Ok)->click();
+            } catch(...) {failure=std::current_exception();if(dialog)dialog->reject();}
+        });
+        require(fillDialog(&window,&view,"Riempimento",4,fill,[&](const ExtrusionObject &d){submitted=d;return QString();}),"accept individual fill definition");
+        if(failure)std::rethrow_exception(failure);
+        require(submitted.fillFaceInfluences==QVector<double>({2.5,2.3,3.4,1.0}),"face influence follows identity after remove/add");
+        require(submitted.fillShapeFace==0&&submitted.fillShapeWeight==1,"shape reference remaps across removed face");
+        buildGeometry(submitted,4,view.sketches_,view.extrusions_);require(submitted.forgeBody && submitted.error.isEmpty(),"fill built with individual support influences");
+        require(checkBody(*submitted.forgeBody).empty(),"individual fill body valid");
+        DocumentState document;document.extrusions=view.extrusions_;document.extrusions.append(submitted);
+        QTemporaryDir dir;DocumentState loaded;const QString path=dir.filePath("individual.prt");
+        require(saveDocumentFile(path,document,false).isEmpty() && loadDocumentFile(path,loaded).isEmpty(),"save and reopen individual fill");
+        require(loaded.extrusions.last().fillFaceInfluences==submitted.fillFaceInfluences,"individual influences survive serialization");
+        require(loaded.extrusions.last().fillShapeFace==submitted.fillShapeFace&&loaded.extrusions.last().fillShapeWeight==submitted.fillShapeWeight,"directional shape condition survives serialization");
+        loaded.extrusions.last().fillFaceInfluences={1.0};
+        require(saveDocumentFile(path,loaded,false).isEmpty() && !loadDocumentFile(path,document).isEmpty(),"reject mismatched face influence count in document");
+        std::cout<<"PASS individual fill influence, picking identity and persistence"<<std::endl;
     }
     static void savedLoftSurface(const QString &path) {
         using namespace ForgeCad;using namespace ForgeCad::Kernel;
@@ -4368,6 +4442,7 @@ public:
         v.loadDocument(document);
         v.show();
         for (int i = 0; i < 8; ++i) QApplication::processEvents();
+        if (qEnvironmentVariableIsSet("FORGECAD_RENDER_VIEW")) v.setViewFrame(QVector3D(0, -1, 0), QVector3D(-1, 0, 0));
         v.fitAll();
         for (int i = 0; i < 8; ++i) QApplication::processEvents();
         for (int i = 0; i < v.extrusions_.size(); ++i) {
@@ -4914,6 +4989,50 @@ public:
         require(extractCurves3D(multi,1,sketches,{arc},&error).isEmpty() && error.contains("sovrappone"),"sovrapposizione corta interna rifiutata");
         multi.projected=true;
         require(extractCurves3D(multi,1,sketches,{arc},&error).isEmpty() && error.contains("sovrappongono"),"sovrapposizione proiettata rifiutata");
+        CurveExtractionParameters joined;
+        GeometryRef top=edge;
+        QVector<GeometryRef> others;
+        for(EdgeId id:sheet->edges())if(id!=selected){GeometryRef ref=top;ref.point=edgeReference(*sheet,id,sheet->edge(id).curve->point((sheet->edge(id).range.lo+sheet->edge(id).range.hi)/2));others.append(ref);}
+        GeometryRef sideA,sideB,bottom;
+        for(const auto &ref:others){const auto &e=sheet->edge(EdgeId(ref.point.subshape));const auto a=e.curve->point(e.range.lo),b=e.curve->point(e.range.hi);
+            if(distance(a,spatial->point(0))<1e-7||distance(b,spatial->point(0))<1e-7)sideA=ref;
+            else if(distance(a,spatial->point(1))<1e-7||distance(b,spatial->point(1))<1e-7)sideB=ref;
+            else bottom=ref;
+        }
+        require(sideA.kind>=0&&sideB.kind>=0&&bottom.kind>=0,"three adjacent edges for unified extraction");
+        joined.source=top;joined.sources={top,sideB,sideA};
+        auto united=extractCurves3D(joined,1,{},bodies,&error);require(error.isEmpty()&&united.size()==1&&united[0]->type()==CurveType::BSpline,"adjacent unordered sources yield one NURBS");
+        for(const auto &ref:joined.sources){const auto &e=sheet->edge(EdgeId(ref.point.subshape));for(int i=0;i<=24;++i)require(projectPoint(*united[0],e.curve->point(e.range.lo+e.range.length()*i/24.)).distance<1e-6,"unified curve preserves original edges exactly");}
+        auto trimmedJoin=joined;trimmedJoin.trimmed=true;trimmedJoin.projected=true;trimmedJoin.tool=p.tool;trimmedJoin.view=p.view;
+        auto partialJoin=extractCurves3D(trimmedJoin,1,{cutter},bodies,&error,&cuts);require(error.isEmpty()&&partialJoin.size()==1&&!cuts.isEmpty(),"unified chain supports trimming");
+        auto badJoin=joined;badJoin.sources={top,bottom};require(extractCurves3D(badJoin,1,{},bodies,&error).isEmpty()&&!error.isEmpty(),"disconnected edges rejected");
+        badJoin.sources={top,top};require(extractCurves3D(badJoin,1,{},bodies,&error).isEmpty()&&!error.isEmpty(),"duplicate edge rejected");
+        DocumentState joinState;joinState.extrusions={source};ExtrusionObject unifiedFeature;unifiedFeature.feature=BodyFeature::ExtractedCurve;unifiedFeature.curveExtraction=joined;
+        buildGeometry(unifiedFeature,1,{},joinState.extrusions);require(unifiedFeature.curve&&unifiedFeature.curves.size()==1,"unified extraction feature built");joinState.extrusions.append(unifiedFeature);
+        QTemporaryDir joinDir;const QString joinFile=joinDir.filePath("joined.prt");require(saveDocumentFile(joinFile,joinState).isEmpty(),"save unified source chain");DocumentState joinLoaded;
+        require(loadDocumentFile(joinFile,joinLoaded).isEmpty()&&joinLoaded.extrusions[1].curveExtraction.sources.size()==3,"multi-source references round trip");
+        buildGeometry(joinLoaded.extrusions[1],1,{},joinLoaded.extrusions);require(joinLoaded.extrusions[1].curve&&joinLoaded.extrusions[1].error.isEmpty(),"multi-source curve regenerates after reopening");
+        ExtrusionObject circular;circular.curve=std::make_shared<TrimmedCurve<3>>(std::make_shared<Circle<3>>(Vec3(),Vec3(1,0,0),Vec3(0,1,0),1),0,kPi/2);circular.curves={circular.curve};
+        ExtrusionObject straightPiece;straightPiece.curve=std::make_shared<TrimmedCurve<3>>(std::make_shared<Line<3>>(Vec3(0,2,0),Vec3(0,-1,0)),0,1);straightPiece.curves={straightPiece.curve};
+        CurveExtractionParameters rationalJoin;GeometryRef circleRef;circleRef.kind=9;circleRef.index=0;GeometryRef lineRef=circleRef;lineRef.index=1;rationalJoin.source=circleRef;rationalJoin.sources={lineRef,circleRef};
+        auto rational=extractCurves3D(rationalJoin,2,{}, {circular,straightPiece},&error);require(error.isEmpty()&&rational.size()==1,"rational arc and reversed line unified");
+        for(int i=0;i<=48;++i)require(projectPoint(*rational[0],circular.curve->point(kPi*i/96.)).distance<1e-7,"rational circle geometry preserved");
+        ExtrusionObject branchPiece;branchPiece.curve=std::make_shared<TrimmedCurve<3>>(std::make_shared<Line<3>>(Vec3(0,1,0),Vec3(1,0,0)),0,1);branchPiece.curves={branchPiece.curve};
+        auto branchJoin=rationalJoin;GeometryRef branchRef=circleRef;branchRef.index=2;branchJoin.sources.append(branchRef);
+        require(extractCurves3D(branchJoin,3,{}, {circular,straightPiece,branchPiece},&error).isEmpty()&&error.contains("diramazione"),"branched source network rejected");
+
+        CadViewport joinView;joinView.tessellationQuality_=0;joinView.extrusions_={source};QMainWindow joinWindow;std::exception_ptr joinFailure;ExtrusionObject joinSubmitted;
+        QTimer::singleShot(0,&joinWindow,[&]{auto *dialog=joinWindow.findChild<QDialog *>("extractedCurveDialog");try{
+            require(dialog,"multi-source dialog open");auto *box=dialog->findChild<QCheckBox *>("extractJoinBox");require(box,"join control available");box->setChecked(true);
+            dialog->findChild<QPushButton *>("extractSourceButton")->click();
+            auto callback=joinView.refPickFinished_;joinView.cancelReferencePick();callback(true,sideB);require(joinView.referencePicking(),"picker rearmed after source click");
+            callback=joinView.refPickFinished_;joinView.cancelReferencePick();callback(true,sideA);
+            require(dialog->findChild<QListWidget *>("extractSources")->count()==3,"three source edges visible");
+            dialog->findChild<QDialogButtonBox *>()->button(QDialogButtonBox::Ok)->click();
+        }catch(...){joinFailure=std::current_exception();if(dialog)dialog->reject();}});
+        ExtrusionObject joinInitial;joinInitial.curveExtraction.source=top;
+        require(extractedCurveDialog(&joinWindow,&joinView,"Unisci bordi",-1,joinInitial,[&](const ExtrusionObject &d){joinSubmitted=d;return joinView.createBody(d);}),"multi-source dialog applied");if(joinFailure)std::rethrow_exception(joinFailure);
+        require(joinSubmitted.curveExtraction.sources.size()==3&&joinView.extrusions_.last().curves.size()==1&&!joinView.referencePicking(),"dialog creates one curve and clears picker");
         // Il dialogo sceglie sorgente e segmento, applica e ripulisce i callback.
         CadViewport dialogView;dialogView.tessellationQuality_=0;dialogView.sketches_=state.sketches;dialogView.extrusions_={source};dialogView.setViewNormal(0);
         QMainWindow window;std::exception_ptr failure;bool applied=false;
@@ -8087,6 +8206,11 @@ int main(int argc, char **argv) {
     if (rebuildArg > 0) {
         try { ViewportInteractionTest::rebuildDocument(app.arguments().mid(rebuildArg + 1)); }
         catch (const std::exception &e) { std::cerr << e.what() << std::endl; return 1; }
+        return 0;
+    }
+    if (app.arguments().contains(QStringLiteral("--individual-fill"))) {
+        try { ViewportInteractionTest::individualFillControls(); }
+        catch (const std::exception &e) { std::cerr<<e.what()<<std::endl; return 1; }
         return 0;
     }
     const int fillArg = int(app.arguments().indexOf(QStringLiteral("--fill-document")));

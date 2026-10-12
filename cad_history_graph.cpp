@@ -392,7 +392,8 @@ QVector<Dependency> dependencies(int index, const DocumentState &document) {
         if (feature.thickenDirection.kind >= 0) addGeometryDependency(result, feature.thickenDirection, sketches, features, index, QStringLiteral("direzione"));
         break;
     case BodyFeature::ExtractedCurve:
-        addGeometryDependency(result, feature.curveExtraction.source, sketches, features, index, QStringLiteral("bordo sorgente"));
+        for(const auto &ref:feature.curveExtraction.sources.isEmpty()?QVector<GeometryRef>{feature.curveExtraction.source}:feature.curveExtraction.sources)
+            addGeometryDependency(result, ref, sketches, features, index, QStringLiteral("bordo sorgente"));
         if (feature.curveExtraction.trimmed)
             addGeometryDependency(result, feature.curveExtraction.tool, sketches, features, index, QStringLiteral("segmento di taglio"));
         break;

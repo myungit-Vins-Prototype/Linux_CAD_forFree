@@ -485,7 +485,7 @@ void buildGeometry(ExtrusionObject &body, int index, const QVector<SketchObject>
                 contacts.append({bodies.at(ref.index).forgeBody, ref.point});
             }
             body.forgeBody = ForgeCad::forgeFillSurface(boundary, guides, contacts, body.fillContinuity, body.fillInfluence,
-                                                        body.fillGuideWeight, &body.error, &body.notice);
+                                                        body.fillGuideWeight, &body.error, &body.notice, body.fillFaceInfluences, body.fillShapeFace, body.fillShapeWeight);
             body.solid = false;
             return;
         }

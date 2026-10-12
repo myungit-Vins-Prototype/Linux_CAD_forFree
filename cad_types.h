@@ -553,6 +553,7 @@ struct SpatialSketchParameters {
 
 struct CurveExtractionParameters {
     GeometryRef source, tool;
+    QVector<GeometryRef> sources; // vuoto: sorgente singola precedente; altrimenti catena unificata
     bool trimmed = false;
     bool projected = false;
     bool keepStart = true;
@@ -626,6 +627,10 @@ struct ExtrusionObject {
     bool loftRuled = false;
     int loftStartContinuity = 0;
     int loftEndContinuity = 0;
+    // Condizioni per guida, nell'ordine canonico: schizzi, percorsi, bordi.
+    // Vettori vuoti: eredita i valori globali dei documenti precedenti.
+    QVector<int> loftGuideContinuities;
+    QVector<double> loftGuideInfluences;
     int loftGuideContinuity = 1;
     double loftGuideInfluence = 1.0;
     double loftStartInfluence = 1.0;
@@ -660,8 +665,12 @@ struct ExtrusionObject {
     // Extrusion: solo superficie, anche dai contorni chiusi (tubi senza base
     // e coperchio); niente fusione con i solidi.
     bool extrudeSurface = false;
-    // FillSurface: continuita' con le facce adiacenti, lunghezza della
-    // tangente trasversale (1 naturale) e peso delle guide.
+    // FillSurface: continuita' comune con le facce adiacenti, influenza
+    // locale del raccordo (1 naturale) e peso delle guide.
+    // Un valore per ruledSecond; vuoto eredita fillInfluence.
+    QVector<double> fillFaceInfluences;
+    int fillShapeFace = -1; // indice di ruledSecond, -1 forma libera
+    double fillShapeWeight = 1.0;
     int fillContinuity = 1;
     double fillInfluence = 1.0;
     double fillGuideWeight = 1.0;

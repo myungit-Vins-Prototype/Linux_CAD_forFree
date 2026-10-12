@@ -334,6 +334,7 @@ void upgradeTopologyReferences(QVector<ExtrusionObject> &features) {
         upgrade(feature.draftNeutral);
         upgrade(feature.thickenDirection);
         upgrade(feature.curveExtraction.source);
+        for(auto &ref:feature.curveExtraction.sources)upgrade(ref);
         upgrade(feature.curveExtraction.tool);
         if (feature.feature == BodyFeature::Blend || feature.feature == BodyFeature::SheetExtend)
             upgradeEdges(feature.blendEdges, feature.firstBody);

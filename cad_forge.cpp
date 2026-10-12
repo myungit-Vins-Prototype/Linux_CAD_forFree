@@ -1250,7 +1250,8 @@ ForgeBody forgeLoft(const QVector<SketchObject> &sketches, const QVector<SketchO
                     const QVector<QPair<ForgeBody, EdgePoint>> &startFaces,
                     const QVector<QPair<ForgeBody, EdgePoint>> &endFaces,
                     const std::vector<LoftSection> &exactSections,
-                    const std::vector<std::vector<PathSegment>> &exactGuides) {
+                    const std::vector<std::vector<PathSegment>> &exactGuides,
+                    const std::vector<LoftGuideCondition> &guideConditions) {
     if (exactSections.empty() && sketches.size() < 2) {
         setError(error, QStringLiteral("Il loft richiede almeno due sezioni."));
         return nullptr;
@@ -1292,6 +1293,7 @@ ForgeBody forgeLoft(const QVector<SketchObject> &sketches, const QVector<SketchO
         LoftOptions options;
         options.ruled = ruled;
         loftEndConditions(options, startContinuity, endContinuity, startInfluence, endInfluence, startFaces, endFaces);
+        options.guideConditions = guideConditions;
         options.guideContinuity = guideContinuity;
         options.guideInfluence = guideInfluence;
         options.startInfluence = startInfluence;
@@ -1399,6 +1401,16 @@ ForgeBody forgeReferencedLoft(const ExtrusionObject &d, int owner, const QVector
         }
         edgeGuides.push_back(std::move(path));
     }
+    const auto conditionOrder = loftGuideSequence(d);
+    const int guideCount = d.loftGuides.size() + d.loftGuidePaths.size() + d.loftEdgeGuides.size();
+    if (conditionOrder.size() != guideCount || (!d.loftGuideContinuities.isEmpty() && d.loftGuideContinuities.size() != guideCount)
+        || (!d.loftGuideInfluences.isEmpty() && d.loftGuideInfluences.size() != guideCount)) {
+        setError(error, QStringLiteral("Le condizioni o l'ordine delle guide non sono validi.")); return nullptr;
+    }
+    std::vector<LoftGuideCondition> guideConditions;
+    for (int index : conditionOrder)
+        guideConditions.push_back({d.loftGuideContinuities.isEmpty() ? d.loftGuideContinuity : d.loftGuideContinuities[index],
+                                   d.loftGuideInfluences.isEmpty() ? d.loftGuideInfluence : d.loftGuideInfluences[index]});
     if (!d.loftGuideOrder.isEmpty()) {
         const auto order = loftGuideSequence(d);
         if (order.size() != guides.size() + int(edgeGuides.size())) {
@@ -1430,7 +1442,7 @@ ForgeBody forgeReferencedLoft(const ExtrusionObject &d, int owner, const QVector
         }
     }
         return forgeLoft(legacySections,guides,d.loftRuled,d.loftStartContinuity,d.loftEndContinuity,d.loftGuideContinuity,
-                         d.loftGuideInfluence,d.loftStartInfluence,d.loftEndInfluence,error,d.loftSurface,faces[0],faces[1],sections,edgeGuides);
+                         d.loftGuideInfluence,d.loftStartInfluence,d.loftEndInfluence,error,d.loftSurface,faces[0],faces[1],sections,edgeGuides,guideConditions);
     } catch (const std::exception &failure) { setError(error,QString::fromUtf8(failure.what())); return nullptr; }
 }
 
@@ -1467,12 +1479,15 @@ ForgeBody forgeBoundarySurface(const std::vector<PathSegment> &segments, QString
 
 ForgeBody forgeFillSurface(const std::vector<PathSegment> &boundary, const std::vector<PathSegment> &guides,
                            const QVector<QPair<ForgeBody, EdgePoint>> &contacts, int continuity, double influence, double guideWeight,
-                           QString *error, QString *notice) {
+                           QString *error, QString *notice, const QVector<double> &faceInfluences, int shapeFace, double shapeWeight) {
     if (boundary.empty()) {
         setError(error, QStringLiteral("Scegli le curve del contorno."));
         return nullptr;
     }
     try {
+        if (!faceInfluences.isEmpty() && faceInfluences.size() != contacts.size()) {
+            setError(error, QStringLiteral("Numero di influenze diverso dal numero di facce adiacenti.")); return nullptr;
+        }
         std::vector<FillContact> faces;
         for (const auto &[body, reference] : contacts) {
             if (!body) {
@@ -1486,12 +1501,13 @@ ForgeBody forgeFillSurface(const std::vector<PathSegment> &boundary, const std::
                 setError(error, QStringLiteral("Una delle facce adiacenti non esiste piu'."));
                 return nullptr;
             }
-            faces.push_back({body, face});
+            faces.push_back({body, face, faceInfluences.isEmpty() ? -1.0 : faceInfluences[int(faces.size())]});
         }
         FillOptions options;
         options.continuity = continuity;
         options.influence = influence;
         options.guideWeight = guideWeight;
+        options.shapeContact = shapeFace; options.shapeWeight = shapeWeight;
         FillReport report;
         Body result = fillSurface(boundary, guides, faces, options, &report);
         if (notice) {

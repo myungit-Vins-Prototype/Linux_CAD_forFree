@@ -282,13 +282,28 @@ Vec3 contactNormal(const std::vector<LoftContact> &contacts, const Vec3 &point, 
     return normal;
 }
 
+LoftGuideCondition guideCondition(const LoftOptions &options, std::size_t index) {
+    return options.guideConditions.empty() ? LoftGuideCondition{options.guideContinuity, options.guideInfluence}
+                                          : options.guideConditions.at(index);
+}
+
+bool activeGuide(const LoftOptions &options, std::size_t index) {
+    const auto condition = guideCondition(options, index);
+    return condition.continuity > 0 && condition.influence > 0.0;
+}
+
+bool anyActiveGuide(const LoftOptions &options) {
+    for (std::size_t i = 0; i < options.guides.size(); ++i) if (activeGuide(options, i)) return true;
+    return false;
+}
+
 // Interpola la derivata trasversale nello stesso spazio B-spline del bordo,
 // mantenendo esatte posizione e pesi del profilo. La tangenza e' verificata
 // anche fra i punti di collocazione: non si accetta una faccia incompatibile.
 std::vector<Homogeneous> contactDerivatives(const std::vector<BSplineCurve<3>> &curves,
                                           const std::vector<LoftContact> &contacts, bool atEnd,
                                           double span, double influence, double scale,
-                                          const std::vector<std::vector<GuideHit>> &guides, int guideContinuity, double guideInfluence) {
+                                          const std::vector<std::vector<GuideHit>> &guides, const LoftOptions &options) {
     if (contacts.empty() || influence <= 0.0) return {};
     const auto &boundary = atEnd ? curves.back() : curves.front();
     const auto &neighbor = atEnd ? curves[curves.size() - 2] : curves[1];
@@ -296,13 +311,15 @@ std::vector<Homogeneous> contactDerivatives(const std::vector<BSplineCurve<3>> &
     // Le guide agiscono su un campo continuo, non soltanto nelle ascisse
     // di collocazione vicine al loro punto: quelle correzioni isolate
     // creavano creste e oscillazioni della derivata di contatto.
-    std::vector<std::pair<double,GuideHit>> localGuides;
-    if (guideContinuity > 0 && guideInfluence > 0)
-        for(const auto &guide:guides) {
+    struct LocalGuide { double first; GuideHit second; double influence; };
+    std::vector<LocalGuide> localGuides;
+    for (std::size_t i = 0; i < guides.size(); ++i) {
+            if (!activeGuide(options, i)) continue;
+            const auto &guide = guides[i];
             const auto &hit=atEnd?guide.back():guide.front();
             const auto projected=projectPoint(boundary,hit.point,boundary.domain());
             if(projected.distance<=1e-6*scale)
-                localGuides.push_back({(projected.parameter-boundary.domain().lo)/boundary.domain().length(),hit});
+                localGuides.push_back({(projected.parameter-boundary.domain().lo)/boundary.domain().length(),hit,guideCondition(options, i).influence});
         }
     std::sort(localGuides.begin(),localGuides.end(),[](const auto &a,const auto &b){return a.first<b.first;});
     std::array<bool, 2> collapsedEndpoints{false, false};
@@ -364,7 +381,7 @@ std::vector<Homogeneous> contactDerivatives(const std::vector<BSplineCurve<3>> &
                 Vec3 tangent=entry.second.tangent;
                 if(dot(tangent,original)<0) tangent=-tangent;
                 const double weight=entry.first<0.5?1-right:right;
-                natural+=guideInfluence*weight*(speed*tangent-original);
+                natural+=entry.influence*weight*(speed*tangent-original);
             }
         }
         Vec3 direction = natural - dot(natural, normal) * normal;
@@ -713,6 +730,13 @@ Body loft(const std::vector<LoftSection> &input, const LoftOptions &options, boo
         || options.endInfluence < 0.0 || options.endInfluence > 1.0)
         throw std::domain_error("loft: opzioni di continuita' non valide");
 
+    if (!options.guideConditions.empty() && options.guideConditions.size() != options.guides.size())
+        throw std::domain_error("loft: numero di condizioni diverso dal numero di guide");
+    for (const auto &condition : options.guideConditions)
+        if (condition.continuity < 0 || condition.continuity > 2 || !std::isfinite(condition.influence)
+            || condition.influence < 0.0 || condition.influence > 1.0)
+            throw std::domain_error("loft: condizione di una guida non valida");
+
     // Verso dei loop: attorno alla direzione del loft. Catene: inizio dalla stessa parte.
     for (std::size_t i = 0; i < n; ++i) {
         const Vec3 direction = i + 1 < n ? sections[i + 1].centroid - sections[i].centroid : sections[i].centroid - sections[i - 1].centroid;
@@ -951,7 +975,7 @@ Body loftCore(const std::vector<Section> &sections, const LoftOptions &options, 
     // nurbs[m][i]
     std::vector<std::vector<BSplineCurve<3>>> nurbs(M);
     for (std::size_t m = 0; m < M; ++m) {
-        const bool spreadGuides=!guideHits.empty() && options.guideContinuity>0 && options.guideInfluence>0;
+        const bool spreadGuides=anyActiveGuide(options);
         int degree = options.startFaces.empty() && options.endFaces.empty() && !spreadGuides ? 1 : 3;
         for (std::size_t i = 0; i < n; ++i)
             for (const BSplineCurve<3> &b : rationalBezierPieces(*split[i][m].curve, split[i][m].range)) degree = std::max(degree, b.degree());
@@ -1056,7 +1080,7 @@ Body loftCore(const std::vector<Section> &sections, const LoftOptions &options, 
             if (error < bestError) bestError = error, bestVertex = m;
         }
         if (bestError <= 2e-6 * scale) vertexGuide[bestVertex] = &guideHits[guide];
-        else if (options.guideContinuity > 0 && options.guideInfluence > 0.0)
+        else if (activeGuide(options, guide))
             throw std::domain_error("loft: la posizione relativa di una curva guida cambia tra le sezioni; impossibile applicarne la tangenza");
     }
 
@@ -1069,12 +1093,16 @@ Body loftCore(const std::vector<Section> &sections, const LoftOptions &options, 
     } else if (!ruled) {
         throw std::domain_error("loft: due sezioni consecutive hanno lo stesso baricentro");
     }
-    if (!guideParameters.empty() && options.guideInfluence > 0.0) {
-        for (std::size_t i = 1; i + 1 < n; ++i) {
+    if (!guideParameters.empty()) {
+        // La riparametrizzazione eredita esattamente il comportamento storico
+        // con condizioni uniformi, ma pesa ogni guida con la propria influenza.
+        double total = 0.0;
+        for (std::size_t g = 0; g < guideParameters.size(); ++g) total += guideCondition(options, g).influence;
+        const double blend = total / double(guideParameters.size());
+        if (total > 0.0) for (std::size_t i = 1; i + 1 < n; ++i) {
             double guided = 0.0;
-            for (const std::vector<double> &parameters : guideParameters) guided += parameters[i];
-            guided /= double(guideParameters.size());
-            v[i] = (1.0 - options.guideInfluence) * v[i] + options.guideInfluence * guided;
+            for (std::size_t g = 0; g < guideParameters.size(); ++g) guided += guideCondition(options, g).influence * guideParameters[g][i];
+            v[i] = (1.0 - blend) * v[i] + blend * guided / total;
         }
         for (std::size_t i = 1; i < n; ++i)
             if (v[i] <= v[i - 1] + 1e-8) throw std::domain_error("loft: l'influenza delle guide comprime due sezioni nello stesso parametro");
@@ -1154,7 +1182,7 @@ Body loftCore(const std::vector<Section> &sections, const LoftOptions &options, 
         // anche senza alcun vincolo di derivata era la causa dei rientri vicino
         // alla cucitura mostrati dai loft guidati.
         const bool endpointControlled = options.startContinuity != 0 || options.endContinuity != 0
-                                     || (!guideHits.empty() && options.guideContinuity > 0 && options.guideInfluence > 0.0);
+                                     || anyActiveGuide(options);
         if (endpointControlled) {
             constexpr int q = 5;
             std::vector<double> vKnots(6, 0.0);
@@ -1167,10 +1195,10 @@ Body loftCore(const std::vector<Section> &sections, const LoftOptions &options, 
             for (std::size_t m = 0; m < M; ++m) {
                 if (options.startContinuity == 1)
                     startDerivatives[m] = contactDerivatives(nurbs[m], options.startFaces, false, v[1] - v[0], options.startInfluence, scale,
-                                                            guideHits, options.guideContinuity, options.guideInfluence);
+                                                            guideHits, options);
                 if (options.endContinuity == 1)
                     endDerivatives[m] = contactDerivatives(nurbs[m], options.endFaces, true, v[n - 1] - v[n - 2], options.endInfluence, scale,
-                                                          guideHits, options.guideContinuity, options.guideInfluence);
+                                                          guideHits, options);
             }
             const auto interpolate = [&](std::size_t m, int j, std::vector<Vec3> &poles, std::vector<double> &weights, bool useGuide=true) {
                 std::vector<Homogeneous> values(n);
@@ -1187,7 +1215,8 @@ Body loftCore(const std::vector<Section> &sections, const LoftOptions &options, 
                 // creerebbe una cresta artificiale su un profilo liscio.
                 if (!closed && guideHits.size() == 1) guide = &guideHits.front();
                 if(!useGuide) guide=nullptr;
-                if (guide && options.guideContinuity > 0 && options.guideInfluence > 0.0) {
+                const auto condition = guide ? guideCondition(options, std::size_t(guide - guideHits.data())) : LoftGuideCondition{0, 0.0};
+                if (guide && condition.continuity > 0 && condition.influence > 0.0) {
                     for (bool atEnd : {false, true}) {
                         const auto &contacts = atEnd ? options.endFaces : options.startFaces;
                         if (contacts.empty()) continue;
@@ -1200,7 +1229,7 @@ Body loftCore(const std::vector<Section> &sections, const LoftOptions &options, 
                                                                  options.startFaces.empty() ? options.startContinuity : 0,
                                                                  options.endFaces.empty() ? options.endContinuity : 0,
                                                                  options.startInfluence, options.endInfluence,
-                                                                 guide, options.guideInfluence, options.guideContinuity,
+                                                                 guide, condition.influence, condition.continuity,
                                                                  startDerivatives[m].empty() ? nullptr : &startDerivatives[m][j],
                                                                  endDerivatives[m].empty() ? nullptr : &endDerivatives[m][j]);
                 poles.clear();
@@ -1219,13 +1248,13 @@ Body loftCore(const std::vector<Section> &sections, const LoftOptions &options, 
             std::vector<std::vector<double>> vertexWeights(V);
             std::vector<BSplineCurvePtr<3>> followed(V);
             std::vector<double> commonBreaks = v;
-            for (std::size_t m=0;m<V;++m) if (vertexGuide[m] && options.guideContinuity>0 && options.guideInfluence>0) {
+            for (std::size_t m=0;m<V;++m) if (vertexGuide[m] && activeGuide(options, std::size_t(vertexGuide[m] - guideHits.data()))) {
                 std::vector<Vec3> row;std::vector<double> weights;
                 if(m<M) interpolate(m,0,row,weights);
                 else interpolate(M-1,nurbs[M-1][0].poleCount()-1,row,weights);
                 const BSplineCurve<3> base(q,originalVKnots,row,weights);
                 const std::size_t guide=std::size_t(vertexGuide[m]-guideHits.data());
-                auto curve=followingGuide(options.guides[guide],guideHits[guide],v,base,options.guideInfluence,1e-9);
+                auto curve=followingGuide(options.guides[guide],guideHits[guide],v,base,guideCondition(options, guide).influence,1e-9);
                 for(double knot:curve.knots()) commonBreaks.push_back(knot);
                 followed[m]=std::make_shared<BSplineCurve<3>>(std::move(curve));
             }
@@ -1256,7 +1285,7 @@ Body loftCore(const std::vector<Section> &sections, const LoftOptions &options, 
             for (std::size_t m = 0; m < M; ++m) {
                 const BSplineCurve<3> &c = nurbs[m][0];
                 const int uCount = c.poleCount();
-                const bool spreadGuides=options.guideContinuity>0 && options.guideInfluence>0
+                const bool spreadGuides=anyActiveGuide(options)
                     && (guideHits.size()>1 || followed[m] || followed[nextVertex(m)]);
                 const bool originalSpread=guideHits.size()>1;
                 std::vector<Vec3> baseLeft,baseRight;std::vector<double> weightLeft,weightRight;

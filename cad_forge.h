@@ -143,7 +143,8 @@ ForgeBody forgeLoft(const QVector<SketchObject> &sections, const QVector<SketchO
                     const QVector<QPair<ForgeBody, EdgePoint>> &startFaces = {},
                     const QVector<QPair<ForgeBody, EdgePoint>> &endFaces = {},
                     const std::vector<Kernel::LoftSection> &exactSections = {},
-                    const std::vector<std::vector<Kernel::PathSegment>> &exactGuides = {});
+                    const std::vector<std::vector<Kernel::PathSegment>> &exactGuides = {},
+                    const std::vector<Kernel::LoftGuideCondition> &guideConditions = {});
 // Risolve sezioni/guide associative e facce di contatto della feature.
 QVector<int> loftGuideSequence(const ExtrusionObject &definition);
 
@@ -170,7 +171,7 @@ ForgeBody forgePlanarCurves(const std::vector<Kernel::PathSegment> &segments, QS
 // scarti ottenuti e le incompatibilita' tra guide e tangenza.
 ForgeBody forgeFillSurface(const std::vector<Kernel::PathSegment> &boundary, const std::vector<Kernel::PathSegment> &guides,
                            const QVector<QPair<ForgeBody, EdgePoint>> &contacts, int continuity, double influence, double guideWeight,
-                           QString *error, QString *notice = nullptr);
+                           QString *error, QString *notice = nullptr, const QVector<double> &faceInfluences = {}, int shapeFace = -1, double shapeWeight = 1.0);
 // Facce del corpo con un bordo libero su cui sta un tratto del contorno (le
 // facce adiacenti proposte per la superficie di riempimento).
 QVector<EdgePoint> forgeFillContactFaces(const std::vector<Kernel::PathSegment> &boundary, const Kernel::Body &body);

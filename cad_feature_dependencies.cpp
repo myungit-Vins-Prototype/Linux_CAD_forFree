@@ -38,7 +38,7 @@ QVector<int> bodyOperands(const ExtrusionObject &body) {
     case BodyFeature::ExtractedCurve: {
         QVector<int> result;
         const auto &p = body.curveExtraction;
-        for (const auto &ref : {p.source, p.trimmed ? p.tool : GeometryRef{}})
+        for (const auto &ref : (p.sources.isEmpty()?QVector<GeometryRef>{p.source}:p.sources)+QVector<GeometryRef>{p.trimmed?p.tool:GeometryRef{}})
             if (isBodyRef(ref) && !result.contains(ref.index)) result.append(ref.index);
         return result;
     }
@@ -119,7 +119,7 @@ QVector<int> sketchesOf(const ExtrusionObject &body) {
     case BodyFeature::ExtractedCurve: {
         QVector<int> result;
         const auto &p = body.curveExtraction;
-        for (const auto &ref : {p.source, p.trimmed ? p.tool : GeometryRef{}})
+        for (const auto &ref : (p.sources.isEmpty()?QVector<GeometryRef>{p.source}:p.sources)+QVector<GeometryRef>{p.trimmed?p.tool:GeometryRef{}})
             if (isSketchRef(ref) && !result.contains(ref.index)) result.append(ref.index);
         return result;
     }
@@ -167,8 +167,12 @@ bool usesSketch(const ExtrusionObject &body) { return !sketchesOf(body).isEmpty(
 // Corpi che la funzione nasconde (operandi delle booleane, corpi in cui si fonde l'estrusione).
 QVector<int> hiddenOperands(const ExtrusionObject &body) {
     if (body.operation >= 0) return QVector<int>{body.firstBody, body.secondBody} + body.booleanTools;
-    if (body.feature == BodyFeature::ExtractedCurve && body.curveExtraction.trimmed && body.curveExtraction.source.kind == 9)
-        return {body.curveExtraction.source.index};
+    if (body.feature == BodyFeature::ExtractedCurve && body.curveExtraction.trimmed) {
+        QVector<int> replaced;
+        for(const auto &ref:body.curveExtraction.sources.isEmpty()?QVector<GeometryRef>{body.curveExtraction.source}:body.curveExtraction.sources)
+            if(ref.kind==9&&!replaced.contains(ref.index))replaced.append(ref.index);
+        return replaced;
+    }
     if (mergingFeature(body) && body.mergeOperation != 0) return body.mergeBodies;
     if (body.feature == BodyFeature::Transform && !body.move.copy) return {body.firstBody};
     if (body.feature == BodyFeature::Sew) return QVector<int>{body.firstBody} + body.booleanTools;
