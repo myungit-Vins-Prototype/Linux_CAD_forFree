@@ -10,3 +10,4 @@ forgecad-release/
 *.STEP
 .vscode/
 docs/benchmarks/
+*.lock

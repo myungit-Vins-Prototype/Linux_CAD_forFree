@@ -91,6 +91,7 @@
 #include <QScrollBar>
 #include <QVBoxLayout>
 #include <QMenu>
+#include "cad_menu.h"
 #include <QMenuBar>
 #include <QMessageBox>
 #include <QMatrix4x4>
@@ -5748,7 +5749,7 @@ protected:
                 if (source.tool == DrawingTool::Spline && source.tangentHandles.size() != source.controlPoints.size())
                     ForgeCad::initializeTangentHandles(source);
                 if (source.tool == DrawingTool::Spline) source.tangentLinked.resize(source.controlPoints.size());
-                QMenu menu(this);
+                CadMenu menu(this);
                 QAction *edit = menu.addAction(QStringLiteral("Modifica punti e maniglie..."));
                 QAction *insert = menu.addAction(QStringLiteral("Aggiungi punto di controllo qui"));
                 QAction *remove = onPoint && pointKind == EditablePointKind::Control
@@ -5838,7 +5839,7 @@ protected:
                 && selectedObjects_.size() > 1 && selectedObjects_.contains(hit)) {
                 // Piu' oggetti scelti: le operazioni comuni.
                 const QVector<SceneSelection> objects = selectedObjects_;
-                QMenu menu(this);
+                CadMenu menu(this);
                 QAction *hide = menu.addAction(ForgeCad::commandIcon(QStringLiteral("visibility")),
                                                QStringLiteral("Nascondi %1 oggetti").arg(objects.size()));
                 QAction *remove = menu.addAction(ForgeCad::commandIcon(QStringLiteral("delete")),
@@ -5850,7 +5851,7 @@ protected:
                 return;
             }
             if (hit.kind == SceneObjectKind::Sketch || hit.kind == SceneObjectKind::Extrusion) {
-                QMenu menu(this);
+                CadMenu menu(this);
                 const bool datum = hit.kind == SceneObjectKind::Extrusion && ForgeCad::isDatumBody(extrusions_.at(hit.index));
                 // Faccia sotto il puntatore: la funzione che l'ha creata (si
                 // modifica quella), schizzo sul suo piano, raccordo o smusso dei suoi bordi.
@@ -20087,7 +20088,7 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
             static_cast<ForgeCad::HistoryGraphDialog *>(historyGraphDialog_)->setDocument(viewport_->currentDocument());
     });
     viewport->setPlaneContextCallback([this, viewport, createSketchOnPlane](int plane) {
-        QMenu menu(this);
+        CadMenu menu(this);
         QAction *newSketch = menu.addAction(QStringLiteral("Nuovo schizzo su questo piano"));
         QAction *normalView = menu.addAction(QStringLiteral("Vista normale al piano"));
         const QAction *chosen = menu.exec(QCursor::pos());
@@ -20145,7 +20146,7 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
         if (!item) return;
         const int type = item->data(0, Qt::UserRole).toInt();
         const int index = item->data(0, Qt::UserRole + 1).toInt();
-        QMenu menu(this);
+        CadMenu menu(this);
         const QPoint globalPosition = modelTree->viewport()->mapToGlobal(position);
         // Piu' voci scelte: le operazioni comuni a tutte.
         const QList<QTreeWidgetItem *> chosenItems = modelTree->selectedItems();
@@ -20281,7 +20282,7 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
         }
     });
 
-    auto *fileMenu = menuBar()->addMenu(QStringLiteral("File"));
+    auto *fileMenu = addCadMenu(menuBar(), QStringLiteral("File"));
     QAction *newAction = fileMenu->addAction(QStringLiteral("Nuovo"));
     newAction->setShortcut(QKeySequence::New);
     connect(newAction, &QAction::triggered, this, &PdfWindow::newDocument);
@@ -20294,7 +20295,7 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
     QAction *saveAsAction = fileMenu->addAction(QStringLiteral("Salva con nome..."));
     saveAsAction->setShortcut(QKeySequence::SaveAs);
     connect(saveAsAction, &QAction::triggered, this, [this] { saveDocument(true); });
-    recentDocumentsMenu_ = fileMenu->addMenu(QStringLiteral("File recenti"));
+    recentDocumentsMenu_ = addCadMenu(fileMenu, QStringLiteral("File recenti"));
     recentDocumentsMenu_->setObjectName(QStringLiteral("recentDocumentsMenu"));
     connect(recentDocumentsMenu_, &QMenu::aboutToShow, this, &PdfWindow::refreshRecentDocuments);
     refreshRecentDocuments();
@@ -20342,7 +20343,7 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
         }
     });
     // Esportazione per altri CAD (cad_export): corpi visibili, B-rep esatti in mm.
-    auto *exportMenu = fileMenu->addMenu(QStringLiteral("Esporta"));
+    auto *exportMenu = addCadMenu(fileMenu, QStringLiteral("Esporta"));
     const auto exportMesh = [this, viewport](bool quadrangular) {
         const QVector<ForgeCad::ExportBody> bodies = viewport->exportableBodies();
         bool hasBody = false;
@@ -20588,7 +20589,7 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
         });
     }
     fileMenu->addSeparator();
-    auto *editMenu = menuBar()->addMenu(QStringLiteral("Modifica"));
+    auto *editMenu = addCadMenu(menuBar(), QStringLiteral("Modifica"));
     undoAction_ = editMenu->addAction(QStringLiteral("Annulla"));
     undoAction_->setShortcut(QKeySequence::Undo);
     redoAction_ = editMenu->addAction(QStringLiteral("Ripeti"));
@@ -20613,8 +20614,8 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
                                  8000);
     });
     updateUndoActions();
-    auto *viewMenu = menuBar()->addMenu(QStringLiteral("Visualizza"));
-    auto *storyboardCursorMenu = viewMenu->addMenu(QStringLiteral("Barra di posizione storyboard"));
+    auto *viewMenu = addCadMenu(menuBar(), QStringLiteral("Visualizza"));
+    auto *storyboardCursorMenu = addCadMenu(viewMenu, QStringLiteral("Barra di posizione storyboard"));
     auto *storyboardCursorGroup = new QActionGroup(this);
     storyboardCursorGroup->setExclusive(true);
     const QStringList cursorModes = {QStringLiteral("Orizzontale nell'albero"), QStringLiteral("Verticale a sinistra"), QStringLiteral("Verticale a destra")};
@@ -20630,7 +20631,7 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
             rebuildModelTree();
         });
     }
-    auto *functionPanelMenu = viewMenu->addMenu(QStringLiteral("Pannelli delle funzioni"));
+    auto *functionPanelMenu = addCadMenu(viewMenu, QStringLiteral("Pannelli delle funzioni"));
     auto *functionPanelOpacityAction = functionPanelMenu->addAction(QString());
     auto *functionPanelBlurAction = functionPanelMenu->addAction(QString());
     auto *functionPanelRadiusAction = functionPanelMenu->addAction(QString());
@@ -20688,16 +20689,16 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
         refreshFunctionPanels();
     });
     updateFunctionPanelActions();
-    auto *functionsMenu = menuBar()->addMenu(QStringLiteral("Funzioni"));
+    auto *functionsMenu = addCadMenu(menuBar(), QStringLiteral("Funzioni"));
     QAction *extrudeAction = functionsMenu->addAction(QStringLiteral("Estrusione..."));
     extrudeAction->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_E));
-    auto *booleanMenu = functionsMenu->addMenu(QStringLiteral("Booleane"));
+    auto *booleanMenu = addCadMenu(functionsMenu, QStringLiteral("Booleane"));
     QAction *unionAction = booleanMenu->addAction(QStringLiteral("Unione..."));
     QAction *intersectionAction = booleanMenu->addAction(QStringLiteral("Intersezione..."));
     QAction *differenceAction = booleanMenu->addAction(QStringLiteral("Differenza A - B..."));
     QAction *revolveAction = functionsMenu->addAction(QStringLiteral("Rivoluzione..."));
      revolveAction->setShortcut(QKeySequence(Qt::CTRL | Qt::Key_R));
-    auto *primitiveMenu = functionsMenu->addMenu(QStringLiteral("Primitive"));
+    auto *primitiveMenu = addCadMenu(functionsMenu, QStringLiteral("Primitive"));
     QAction *filletAction = functionsMenu->addAction(QStringLiteral("Raccordo spigoli..."));
     QAction *chamferAction = functionsMenu->addAction(QStringLiteral("Smusso spigoli..."));
     QAction *draftAction = functionsMenu->addAction(QStringLiteral("Sformo facce..."));
@@ -20709,7 +20710,7 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
     QAction *datumAction = functionsMenu->addAction(QStringLiteral("Piano di costruzione..."));
     datumAction->setShortcut(QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_P));
     datumAction->setToolTip(QStringLiteral("Piano parallelo a distanza, per tre punti, normale a una curva, per una retta e un punto, ad angolo, medio"));
-    auto *patternMenu = functionsMenu->addMenu(QStringLiteral("Ripetizione"));
+    auto *patternMenu = addCadMenu(functionsMenu, QStringLiteral("Ripetizione"));
     QAction *linearPatternAction = patternMenu->addAction(QStringLiteral("Ripetizione lineare..."));
     QAction *circularPatternAction = patternMenu->addAction(QStringLiteral("Ripetizione circolare..."));
     QAction *mirrorAction = patternMenu->addAction(QStringLiteral("Specchio..."));
@@ -20728,7 +20729,7 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
     QAction *loftAction = functionsMenu->addAction(QStringLiteral("Loft..."));
     loftAction->setToolTip(QStringLiteral("Solido o superficie che passa per le sezioni di piu' schizzi"));
     functionsMenu->addSeparator();
-    auto *surfaceMenu = functionsMenu->addMenu(QStringLiteral("Superfici"));
+    auto *surfaceMenu = addCadMenu(functionsMenu, QStringLiteral("Superfici"));
     QAction *trimSurfaceAction = surfaceMenu->addAction(QStringLiteral("Taglia superficie..."));
     trimSurfaceAction->setToolTip(QStringLiteral("Taglia una superficie con un corpo (superficie o solido) o un piano e ne tiene una parte"));
     QAction *extendSurfaceAction = surfaceMenu->addAction(QStringLiteral("Estendi superficie..."));
@@ -20761,7 +20762,7 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
     sweepSurfaceAction->setToolTip(QStringLiteral("Sweep che resta una superficie: con un profilo chiuso un tubo senza coperchi"));
     QAction *sewSurfacesAction = surfaceMenu->addAction(QStringLiteral("Cuci superfici..."));
     sewSurfacesAction->setToolTip(QStringLiteral("Unisce le superfici lungo i bordi comuni; se chiudono un volume crea un solido"));
-    auto *analysisMenu = menuBar()->addMenu(QStringLiteral("Analisi"));
+    auto *analysisMenu = addCadMenu(menuBar(), QStringLiteral("Analisi"));
     auto *shapeAction = analysisMenu->addAction(QStringLiteral("Curvatura, zebra e continuità..."));
     connect(shapeAction, &QAction::triggered, this, [this, viewport] { shapeAnalysisDialog(this, viewport); });
     QAction *massAction = analysisMenu->addAction(QStringLiteral("Proprieta' di massa..."));
@@ -20773,8 +20774,8 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
     QAction *measureAction = analysisMenu->addAction(QStringLiteral("Misura..."));
     measureAction->setShortcut(QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_M));
     measureAction->setToolTip(QStringLiteral("Misura nella vista: distanze, angoli, lunghezze, raggi e aree di punti, spigoli e facce"));
-    auto *modeMenu = viewMenu->addMenu(QStringLiteral("Stile visualizzazione"));
-    auto *qualityMenu = viewMenu->addMenu(QStringLiteral("Qualita tessellazione"));
+    auto *modeMenu = addCadMenu(viewMenu, QStringLiteral("Stile visualizzazione"));
+    auto *qualityMenu = addCadMenu(viewMenu, QStringLiteral("Qualita tessellazione"));
     auto *qualityGroup = new QActionGroup(this); qualityGroup->setExclusive(true);
     QAction *lowQuality = qualityMenu->addAction(QStringLiteral("Bassa"));
     QAction *mediumQuality = qualityMenu->addAction(QStringLiteral("Media"));
@@ -20782,7 +20783,7 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
     lowQuality->setCheckable(true); mediumQuality->setCheckable(true); highQuality->setCheckable(true);
     mediumQuality->setChecked(true);
     qualityGroup->addAction(lowQuality); qualityGroup->addAction(mediumQuality); qualityGroup->addAction(highQuality);
-    auto *lightingMenu = viewMenu->addMenu(QStringLiteral("Luci scena"));
+    auto *lightingMenu = addCadMenu(viewMenu, QStringLiteral("Luci scena"));
     QAction *backgroundAction = viewMenu->addAction(QStringLiteral("Sfondo e luce ambiente..."));
     connect(backgroundAction, &QAction::triggered, this, &PdfWindow::editBackground);
     QAction *historyGraphAction = viewMenu->addAction(QStringLiteral("Debug history / storyboard..."));
@@ -20804,7 +20805,7 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
         dialog->activateWindow();
     });
     // Sfondo dell'albero modello (QSettings view/treeBackground; vuoto = quello del tema).
-    auto *treeColorMenu = viewMenu->addMenu(QStringLiteral("Sfondo dell'albero"));
+    auto *treeColorMenu = addCadMenu(viewMenu, QStringLiteral("Sfondo dell'albero"));
     QAction *treeColorAction = treeColorMenu->addAction(QStringLiteral("Scegli il colore..."));
     QAction *treeColorReset = treeColorMenu->addAction(QStringLiteral("Colore del tema"));
     connect(treeColorAction, &QAction::triggered, this, [this] {
@@ -20823,7 +20824,7 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
     applyTreeBackground(QSettings().value(QStringLiteral("view/treeBackground")).value<QColor>());
     // Colore delle facce della feature scelta (QSettings view/featureHighlightColor; di
     // default quello della selezione degli spigoli).
-    auto *highlightColorMenu = viewMenu->addMenu(QStringLiteral("Colore evidenziazione feature"));
+    auto *highlightColorMenu = addCadMenu(viewMenu, QStringLiteral("Colore evidenziazione feature"));
     QAction *highlightColorAction = highlightColorMenu->addAction(QStringLiteral("Scegli il colore..."));
     QAction *highlightColorReset = highlightColorMenu->addAction(QStringLiteral("Colore della selezione (predefinito)"));
     connect(highlightColorAction, &QAction::triggered, this, [this, viewport] {
@@ -20852,7 +20853,7 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
         QSettings().setValue(QStringLiteral("view/grid"), visible);
     });
     // Assi: visibili o no, sopra gli oggetti o sotto, lunghezza.
-    auto *axesMenu = viewMenu->addMenu(QStringLiteral("Assi"));
+    auto *axesMenu = addCadMenu(viewMenu, QStringLiteral("Assi"));
     auto *axesVisibleAction = axesMenu->addAction(QStringLiteral("Mostra gli assi"));
     axesVisibleAction->setCheckable(true); axesVisibleAction->setChecked(viewSettings.value(QStringLiteral("view/axes"), true).toBool());
     viewport->setAxesVisible(axesVisibleAction->isChecked());
@@ -20915,7 +20916,7 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
         QSettings().setValue(QStringLiteral("view/sketchBodyOpacity"), viewport->sketchBodyOpacity());
     });
     // Antialiasing (MSAA) delle linee degli schizzi, degli spigoli e dei contorni dei solidi.
-    auto *antialiasingMenu = viewMenu->addMenu(QStringLiteral("Antialiasing"));
+    auto *antialiasingMenu = addCadMenu(viewMenu, QStringLiteral("Antialiasing"));
     auto *antialiasingGroup = new QActionGroup(this); antialiasingGroup->setExclusive(true);
     const int savedSamples = viewSettings.value(QStringLiteral("view/antialiasing"), 4).toInt();
     viewport->setAntialiasing(savedSamples);
@@ -21716,8 +21717,8 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
 
     // Opzioni: kernel geometrico con cui si costruiscono i corpi. La scelta
     // resta per gli avvii successivi (QSettings).
-    auto *optionsMenu = menuBar()->addMenu(QStringLiteral("Opzioni"));
-    auto *unitsMenu = optionsMenu->addMenu(QStringLiteral("Unita' di misura del documento"));
+    auto *optionsMenu = addCadMenu(menuBar(), QStringLiteral("Opzioni"));
+    auto *unitsMenu = addCadMenu(optionsMenu, QStringLiteral("Unita' di misura del documento"));
     auto *unitsGroup = new QActionGroup(unitsMenu);
     unitsGroup->setExclusive(true);
     const QList<LengthUnit> units = {LengthUnit::Millimeter, LengthUnit::Centimeter, LengthUnit::Meter,
@@ -21880,7 +21881,7 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
         QSettings().setValue(QStringLiteral("view/panKey"), key);
         statusBar()->showMessage(QStringLiteral("Pan: tieni premuto %1 e trascina").arg(panKeyName(key)), 5000);
     });
-    auto *sketchMenu = menuBar()->addMenu(QStringLiteral("Schizzo"));
+    auto *sketchMenu = addCadMenu(menuBar(), QStringLiteral("Schizzo"));
     QAction *newSketchAction = sketchMenu->addAction(QStringLiteral("Nuovo schizzo..."));
     QAction *spatialSketchAction=sketchMenu->addAction(QStringLiteral("Nuovo schizzo 3D..."));
     spatialSketchAction->setToolTip(QStringLiteral("Disegna polilinee e spline nello spazio con punti XYZ liberi"));
@@ -21899,7 +21900,7 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
         if (!error.isEmpty()) QMessageBox::information(this, QStringLiteral("Schizzo sulla faccia"), error);
     });
     QAction *sketchAction = sketchMenu->addAction(QStringLiteral("Disegna segmenti"));
-    auto *toolMenu = sketchMenu->addMenu(QStringLiteral("Strumento geometrico"));
+    auto *toolMenu = addCadMenu(sketchMenu, QStringLiteral("Strumento geometrico"));
     auto *toolGroup = new QActionGroup(this); toolGroup->setExclusive(true);
     auto addTool = [this, toolMenu, toolGroup, viewport](const QString &text, DrawingTool tool, bool checked) {
         auto *action = toolMenu->addAction(text); action->setCheckable(true); action->setChecked(checked); toolGroup->addAction(action);
@@ -21916,7 +21917,7 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
     QAction *lineTool = addTool(QStringLiteral("Linea"), DrawingTool::Line, false);
     QAction *polylineTool = addTool(QStringLiteral("Polilinea"), DrawingTool::Polyline, false);
     QAction *splineTool = addTool(QStringLiteral("Spline"), DrawingTool::Spline, false);
-    auto *splineOptionsMenu = toolMenu->addMenu(QStringLiteral("Opzioni spline"));
+    auto *splineOptionsMenu = addCadMenu(toolMenu, QStringLiteral("Opzioni spline"));
     auto *uniformSpline = splineOptionsMenu->addAction(QStringLiteral("Uniforma la curvatura (C2)"));
     auto *relaxedSpline = splineOptionsMenu->addAction(QStringLiteral("Rilassa la curva"));
     auto *limitedSpline = splineOptionsMenu->addAction(QStringLiteral("Limita le oscillazioni"));
@@ -21947,7 +21948,7 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
     ellipseTool->setToolTip(QStringLiteral("Ellisse: centro, estremo del primo semiasse, punto per il secondo semiasse"));
     QAction *constructionTool = addTool(QStringLiteral("Linea di costruzione"), DrawingTool::ConstructionLine, false);
     QAction *polygonSidesAction = toolMenu->addAction(QStringLiteral("Numero lati poligono..."));
-    auto *editToolMenu = sketchMenu->addMenu(QStringLiteral("Modifica entita'"));
+    auto *editToolMenu = addCadMenu(sketchMenu, QStringLiteral("Modifica entita'"));
     auto addEditTool = [this, editToolMenu, toolGroup, viewport](const QString &text, DrawingTool tool, Qt::Key key) {
         auto *action = editToolMenu->addAction(text); action->setCheckable(true); toolGroup->addAction(action);
         action->setData(int(tool));
@@ -22021,7 +22022,7 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
     QAction *sketchMoveAction = sketchMenu->addAction(QStringLiteral("Sposta / ruota / copia entita'..."));
     sketchMoveAction->setToolTip(QStringLiteral("Sposta, ruota o copia le entita' selezionate dello schizzo"));
     connect(sketchMoveAction, &QAction::triggered, this, [this, viewport] { sketchMoveDialog(this, viewport); });
-    auto *sketchPatternMenu = sketchMenu->addMenu(QStringLiteral("Ripetizione"));
+    auto *sketchPatternMenu = addCadMenu(sketchMenu, QStringLiteral("Ripetizione"));
     QAction *sketchLinearPattern = sketchPatternMenu->addAction(QStringLiteral("Ripetizione lineare..."));
     QAction *sketchCircularPattern = sketchPatternMenu->addAction(QStringLiteral("Ripetizione circolare..."));
     QAction *sketchMirror = sketchPatternMenu->addAction(QStringLiteral("Specchio..."));
@@ -22033,13 +22034,13 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
         connect(action, &QAction::triggered, this, [this, viewport, kind] { sketchPatternDialog(this, viewport, kind); });
     }
     // Riferimenti esterni: spigoli e curve dei corpi, sezioni dei solidi nel piano dello schizzo.
-    auto *referenceMenu = sketchMenu->addMenu(QStringLiteral("Riferimenti esterni"));
-    auto *axisReferences = referenceMenu->addMenu(QStringLiteral("Assi del modello"));
+    auto *referenceMenu = addCadMenu(sketchMenu, QStringLiteral("Riferimenti esterni"));
+    auto *axisReferences = addCadMenu(referenceMenu, QStringLiteral("Assi del modello"));
     for (int axis = 0; axis < 3; ++axis) {
         QAction *action = axisReferences->addAction(QStringLiteral("Asse %1").arg(QStringLiteral("XYZ").at(axis)));
         connect(action, &QAction::triggered, this, [viewport, axis] { viewport->selectSketchReference(2, axis); });
     }
-    auto *planeReferences = referenceMenu->addMenu(QStringLiteral("Piani di riferimento"));
+    auto *planeReferences = addCadMenu(referenceMenu, QStringLiteral("Piani di riferimento"));
     for (int plane = 0; plane < 3; ++plane) {
         QAction *action = planeReferences->addAction(plane == 0 ? QStringLiteral("XY") : plane == 1 ? QStringLiteral("XZ") : QStringLiteral("YZ"));
         connect(action, &QAction::triggered, this, [viewport, plane] { viewport->selectSketchReference(1, plane); });
@@ -22215,7 +22216,7 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
         constraintPanel->show();
         constraintPanel->raise();
     });
-    auto *pointConstraints = sketchMenu->addMenu(QStringLiteral("Vincoli di punto"));
+    auto *pointConstraints = addCadMenu(sketchMenu, QStringLiteral("Vincoli di punto"));
     auto *pierceAction=pointConstraints->addAction(QStringLiteral("Pierce su superficie..."));
     pierceAction->setToolTip(QStringLiteral("Seleziona un punto con Ctrl+clic, poi scegli la faccia: il punto resta sulla sua intersezione con il piano dello schizzo e segue la superficie."));
     connect(pierceAction,&QAction::triggered,this,[this,viewport] {
@@ -22394,7 +22395,7 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
     exitSketch->setToolTip(QStringLiteral("Chiudi lo schizzo"));
     const auto flyout = [](QToolBar *bar, const QList<QAction *> &actions, const QString &tip) {
         auto *button = new QToolButton(bar);
-        auto *menu = new QMenu(button);
+        auto *menu = new CadMenu(button);
         for (QAction *action : actions) menu->addAction(action);
         button->setMenu(menu);
         button->setPopupMode(QToolButton::MenuButtonPopup);
@@ -22509,7 +22510,7 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
         }
         ToolbarEditor::refreshVisibility(customToolbar);
     };
-    auto *toolbarsMenu = optionsMenu->addMenu(QStringLiteral("Barre degli strumenti"));
+    auto *toolbarsMenu = addCadMenu(optionsMenu, QStringLiteral("Barre degli strumenti"));
     toolbarsMenu->setObjectName(QStringLiteral("toolbarsMenu"));
     toolbarsMenu->menuAction()->setProperty("toolbarConfiguration", true);
     QAction *customizeAction = toolbarsMenu->addAction(QStringLiteral("Personalizza barra Personalizzata..."));
@@ -22766,7 +22767,7 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
     });
     fillCustomToolbar();  // dopo lo stato salvato: visibile se ha dei comandi
     const auto toolbarCommands = menuCommands();
-    auto *editBarsMenu = toolbarsMenu->addMenu(QStringLiteral("Personalizza pulsanti delle barre"));
+    auto *editBarsMenu = addCadMenu(toolbarsMenu, QStringLiteral("Personalizza pulsanti delle barre"));
     editBarsMenu->menuAction()->setProperty("toolbarConfiguration", true);
     toolbarsMenu->addSeparator();
     for (auto *bar : {toolbar, surfaceToolbar, customToolbar, drawingToolbar}) {
@@ -22800,7 +22801,7 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
         ToolbarEditor::refreshVisibility(bar);
         bar->setContextMenuPolicy(Qt::CustomContextMenu);
         connect(bar, &QWidget::customContextMenuRequested, this, [this, bar, lockToolbars, editAction, toolbarsMenu](const QPoint &point) {
-            QMenu menu(this);
+            CadMenu menu(this);
             menu.addAction(editAction);
             menu.addSeparator();
             menu.addAction(lockToolbars);

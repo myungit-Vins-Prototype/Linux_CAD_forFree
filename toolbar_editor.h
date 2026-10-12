@@ -1,4 +1,5 @@
 #pragma once
+#include "cad_menu.h"
 
 #include <QApplication>
 #include <QDialog>
@@ -307,7 +308,7 @@ private:
             const auto members = groupMembers(key);
             if (members.isEmpty()) continue;
             auto *button = new QToolButton(bar_);
-            auto *menu = new QMenu(button);
+            auto *menu = new CadMenu(button);
             for (const auto &member : members) menu->addAction(resolveCommand(member));
             button->setMenu(menu);
             button->setPopupMode(QToolButton::MenuButtonPopup);
