@@ -28,6 +28,9 @@
 // attenuato vicino ai vertici, distinto dalla continuita' G2. Aggiornamenti
 // duali limitati privilegiano posizione del bordo e G1 rispetto alla forma;
 // scarti e incompatibilita' restano misurati, non si promette un fit esatto.
+// Il contorno ha priorita' sulla G1; conflitti dei piani tangenti ai vertici
+// e tangenti dei bordi fuori da tali piani sono segnalati nel rapporto.
+// Il campionamento segue le lunghezze delle singole campate delle curve.
 //
 // Forma direzionale opzionale: shapeContact sceglie un supporto; il campo di
 // curvatura del suo profilo viene trasportato fino ai bordi opposti lungo il

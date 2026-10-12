@@ -607,7 +607,30 @@ BSplineCurve<3> followingGuide(const std::vector<PathSegment> &path, const std::
             }
         }
     }
-    std::sort(breaks.begin(),breaks.end());breaks.erase(std::unique(breaks.begin(),breaks.end()),breaks.end());
+    // L'inversione del parametro guida puo' lasciare nodi a pochi ulp dalla
+    // sezione, destabilizzando le derivate della superficie raffinata.
+    // Conservare le sezioni esatte e verificare i dettagli eliminati sotto.
+    auto originalBreaks = breaks;
+    std::sort(originalBreaks.begin(),originalBreaks.end());
+    originalBreaks.erase(std::unique(originalBreaks.begin(),originalBreaks.end()),originalBreaks.end());
+    const double parameterTolerance = std::max(1e-12 * (v.back()-v.front()),
+        64*std::numeric_limits<double>::epsilon()*std::max(std::fabs(v.front()),std::fabs(v.back())));
+    for(double &knot : breaks)
+        for(double section : v)
+            if(std::fabs(knot-section)<=parameterTolerance) { knot=section; break; }
+    std::sort(breaks.begin(),breaks.end());
+    std::vector<double> stableBreaks;
+    for(double knot : breaks) {
+        const bool anchor = std::find(v.begin(),v.end(),knot)!=v.end();
+        if(stableBreaks.empty() || knot-stableBreaks.back()>parameterTolerance)
+            stableBreaks.push_back(knot);
+        else if(knot!=stableBreaks.back() && anchor) {
+            if(std::find(v.begin(),v.end(),stableBreaks.back())!=v.end())
+                stableBreaks.push_back(knot); // Non eliminare mai una sezione distinta.
+            else stableBreaks.back()=knot;
+        }
+    }
+    breaks=std::move(stableBreaks);
     const auto sample = [&](double at, bool left, Vec3 *out) {
         std::size_t i=0;
         while(i+1<maps.size() && (at>v[i+1] || (!left && at==v[i+1]))) ++i;
@@ -636,6 +659,17 @@ BSplineCurve<3> followingGuide(const std::vector<PathSegment> &path, const std::
             if(distance(result.point(at),exact[0])>4*tolerance)
                 throw std::domain_error("loft: verifica della guida fuori tolleranza");
         }
+    // Un piccolo intervallo parametrico puo' contenere dettagli geometrici
+    // significativi. Verificare entrambi i lati dei nodi originali.
+    const auto verifyDetail = [&](double at,bool left) {
+        Vec3 exact[3];sample(at,left,exact);
+        if(distance(result.point(at),exact[0])>4*tolerance)
+            throw std::domain_error("loft: dettaglio della guida non rappresentabile alla precisione numerica");
+    };
+    for(double at : originalBreaks) for(bool left : {false,true}) verifyDetail(at,left);
+    for(std::size_t i=1;i<originalBreaks.size();++i)
+        for(double fraction : {0.25,0.5,0.75})
+            verifyDetail(originalBreaks[i-1]+fraction*(originalBreaks[i]-originalBreaks[i-1]),false);
     return result;
 }
 
@@ -1332,6 +1366,24 @@ Body loftCore(const std::vector<Section> &sections, const LoftOptions &options, 
                 Body::BuildFace face;
                 face.surface = std::make_shared<BSplineSurface>(c.degree(), q, c.knots(), vKnots, uCount, vCount, poles,
                                                                 rational ? weights : std::vector<double>{});
+                // Verificare la superficie assemblata: inseguimento e
+                // raffinamento delle guide possono alterare la G1 iniziale.
+                for(bool end : {false,true}) {
+                    const auto &contacts=end?options.endFaces:options.startFaces;
+                    if(contacts.empty())continue;
+                    const double at=end?v.back():v.front();
+                    for(int sample=0;sample<=128;++sample) {
+                        const double u=c.domain().lo+c.domain().length()*sample/128.0;
+                        Vec3 d[4];face.surface->evaluate(u,at,1,d);
+                        const Vec3 normal=cross(d[Surface::derivativeIndex(1,0,1)],d[Surface::derivativeIndex(0,1,1)]);
+                        // Ai vertici collassati il piano tangente e' un
+                        // limite; si verificano i campioni regolari vicini.
+                        if(norm(normal)<=1e-12 && (sample==0 || sample==128))continue;
+                        const Vec3 target=contactNormal(contacts,d[0],1e-6*scale);
+                        if(!(norm(normal)>1e-12) || norm(cross(normalized(normal),target))>1e-4)
+                            throw std::domain_error("loft: tangenza alla faccia non conservata dopo l'inseguimento delle guide");
+                    }
+                }
                 if (SurfacePtr plane = planarEquivalent(*face.surface)) face.surface = plane;
                 face.sense = true;
                 // Le righe longitudinali condividono il parametro v della

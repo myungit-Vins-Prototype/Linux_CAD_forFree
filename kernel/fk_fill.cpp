@@ -29,10 +29,11 @@ constexpr double kSmoothing = 1e-6;
 constexpr double kFairSmoothing = 1e-2;
 constexpr double kCurvatureBias = 0.03;
 constexpr int kConstraintSteps = 80;
-// Pesi del contorno e della tangenza (le guide hanno guideWeight). Pesi molto
-// diversi tra loro rendono il sistema mal condizionato: le priorita' tra i
-// vincoli incompatibili si ottengono con la zona di raccordo delle guide.
-constexpr double kBoundaryWeight = 1.0;
+// Nel raccordo proiettabile il contorno ha priorita' sulle derivate quando
+// griglia finita o getti incompatibili impediscono di soddisfare entrambi.
+// La traccia dell'energia e' senza pesi: il campo di forma non si rafforza.
+// Rapporto limitato, per evitare penalita' quasi infinite mal condizionate.
+constexpr double kBoundaryWeight = 100.0;
 constexpr double kTangentWeight = 1.0;
 // Vicino ai tratti in tangenza le guide pesano meno (fino a zero sul bordo),
 // in una fascia larga questa frazione del contorno: la superficie passa dalla
@@ -57,6 +58,30 @@ struct Piece {
         return forward ? d[1] : -d[1];
     }
 };
+
+// Campionare ogni campata secondo la sua lunghezza fisica: i parametri
+// uniformi diradano troppo i tratti lunghi nelle curve estratte da piu' bordi.
+std::vector<double> pieceSamples(const Piece &piece, double h, bool midpoints = false) {
+    auto breaks=piece.curve->breakpoints(piece.range);
+    breaks.push_back(piece.range.lo);breaks.push_back(piece.range.hi);
+    std::sort(breaks.begin(),breaks.end());
+    breaks.erase(std::unique(breaks.begin(),breaks.end()),breaks.end());
+    std::vector<double> result;
+    for(std::size_t k=1;k<breaks.size();++k) {
+        const Interval range{breaks[k-1],breaks[k]};
+        if(range.lo<piece.range.lo || range.hi>piece.range.hi || !(range.length()>0))continue;
+        const double length=arcLength(*piece.curve,range);
+        const int count=std::max(2,int(std::ceil(std::max(4.0*length/h,8.0*length/piece.length))))*(midpoints?2:1);
+        for(int i=0;i<(midpoints?count:count+1);++i) {
+            if(!midpoints && k>1 && i==0)continue;
+            const double t=range.lo+range.length()*(i+(midpoints?0.5:0.0))/count;
+            const double s=(t-piece.range.lo)/piece.range.length();
+            result.push_back(piece.forward?s:1-s);
+        }
+    }
+    std::sort(result.begin(),result.end());
+    return result;
+}
 
 std::vector<Piece> chainLoop(const std::vector<PathSegment> &input, double tolerance) {
     std::vector<Piece> pieces;
@@ -591,6 +616,24 @@ Body fillSurface(const std::vector<PathSegment> &boundary, const std::vector<Pat
         return sample;
     };
 
+    // Una patch regolare G1 ha un solo piano tangente al vertice. Anche la
+    // tangente dell'altro bordo deve giacervi, pur senza un proprio supporto.
+    // Diagnosticare la geometria originale prima dell'approssimazione.
+    if(options.continuity>0) for(int k=0;k<pieceCount;++k) {
+        const int next=(k+1)%pieceCount;
+        const Sample a=boundarySample(k,1), b=boundarySample(next,0);
+        double worst=0;
+        if(a.contact.valid && norm(loop[std::size_t(next)].tangent(0))>0)
+            worst=std::max(worst,std::asin(std::clamp(std::fabs(dot(a.contact.normal,normalized(loop[std::size_t(next)].tangent(0)))),0.0,1.0)));
+        if(b.contact.valid && norm(loop[std::size_t(k)].tangent(1))>0)
+            worst=std::max(worst,std::asin(std::clamp(std::fabs(dot(b.contact.normal,normalized(loop[std::size_t(k)].tangent(1)))),0.0,1.0)));
+        if(a.contact.valid && b.contact.valid)
+            worst=std::max(worst,std::acos(std::clamp(std::fabs(dot(a.contact.normal,b.contact.normal)),0.0,1.0)));
+        if(worst>0.5*kPi/180)
+            out.notes.push_back("al vertice fra i tratti "+std::to_string(k+1)+" e "+std::to_string(next+1)
+                +" bordo e piani tangenti non sono compatibili ("+degrees(worst)+" gradi): posizione e G1 esatte richiedono una modifica della geometria");
+    }
+
     // Rete direzionale originale dal bordo della faccia scelta al primo
     // bordo opposto. Trasporta la seconda forma fondamentale lungo il flusso
     // del supporto, senza extrapolarne la superficie o cambiare i bordi/G1.
@@ -692,14 +735,15 @@ Body fillSurface(const std::vector<PathSegment> &boundary, const std::vector<Pat
     // Soluzione su griglie sempre piu' fitte.
     std::shared_ptr<BSplineSurface> surface;
     int spans = std::min(8, options.maxSpans);
+    double finalH=width;
     for (;;) {
         const int uSpans = std::max(4, int(std::lround(spans * (u1 - u0) / width))), vSpans = std::max(4, int(std::lround(spans * (v1 - v0) / width)));
         const Grid grid(u0, u1, uSpans, v0, v1, vSpans);
         const double h = grid.h;
+        finalH=h;
         std::vector<Sample> edgeSamples, guideSamples;
         for (int k = 0; k < pieceCount; ++k) {
-            const int count = std::max(8, int(std::ceil(4.0 * loop[std::size_t(k)].length / h)));
-            for (int i = 0; i <= count; ++i) edgeSamples.push_back(boundarySample(k, double(i) / count));
+            for(double s : pieceSamples(loop[std::size_t(k)],h)) edgeSamples.push_back(boundarySample(k,s));
         }
         // Ricontrolla anche i campioni della griglia raffinata: un contatto
         // ripido molto localizzato puo' sfuggire alla preselezione a 64 punti.
@@ -733,7 +777,7 @@ Body fillSurface(const std::vector<PathSegment> &boundary, const std::vector<Pat
                 system.add(r, local, w, p);
                 hard.push_back({r, local, w});
             };
-            for (const Sample &s : edgeSamples) addHard(rowAt(grid, s.uv.x(), s.uv.y(), {{0, 0, 1.0}}), s.point, kBoundaryWeight, true);
+            for (const Sample &s : edgeSamples) addHard(rowAt(grid, s.uv.x(), s.uv.y(), {{0, 0, 1.0}}), s.point, graph ? kBoundaryWeight : 1.0, true);
             for (const Sample &s : guideSamples) {
                 const Row row = rowAt(grid, s.uv.x(), s.uv.y(), {{0, 0, 1.0}});
                 if (s.weight >= 1.0) addHard(row, s.point, s.weight, true);
@@ -920,9 +964,8 @@ Body fillSurface(const std::vector<PathSegment> &boundary, const std::vector<Pat
         // Scarti sui punti di mezzo dei campioni.
         double boundaryError = 0.0, guideError = 0.0, blendError = 0.0;
         for (int k = 0; k < pieceCount; ++k) {
-            const int count = 2 * std::max(8, int(std::ceil(4.0 * loop[std::size_t(k)].length / h)));
-            for (int i = 0; i < count; ++i) {
-                const Vec3 p = loop[std::size_t(k)].at((i + 0.5) / count);
+            for(double s : pieceSamples(loop[std::size_t(k)],h,true)) {
+                const Vec3 p = loop[std::size_t(k)].at(s);
                 const Vec2 q = project(p);
                 boundaryError = std::max(boundaryError, distance(surface->point(q.x(), q.y()), p));
             }
@@ -951,8 +994,12 @@ Body fillSurface(const std::vector<PathSegment> &boundary, const std::vector<Pat
     // Tangenza e curvatura ottenute.
     for (int k = 0; k < pieceCount; ++k) {
         if (pieceContact[std::size_t(k)] < 0) continue;
-        for (int i = 0; i <= 64; ++i) {
-            const Sample s = boundarySample(k, i / 64.0);
+        auto samples=pieceSamples(loop[std::size_t(k)],finalH/2);
+        for(int i=0;i<=64;++i)samples.push_back(i/64.0);
+        std::sort(samples.begin(),samples.end());
+        samples.erase(std::unique(samples.begin(),samples.end()),samples.end());
+        for(double at : samples) {
+            const Sample s = boundarySample(k,at);
             if (!s.contact.valid) continue;
             Vec3 d[9];
             surface->evaluate(s.uv.x(), s.uv.y(), 2, d);
@@ -998,6 +1045,9 @@ Body fillSurface(const std::vector<PathSegment> &boundary, const std::vector<Pat
     if (foldsBack)
         out.notes.push_back("in qualche punto la faccia adiacente prosegue verso l'esterno del contorno (visto dalla sua normale media): "
                             "la tangenza obbliga la superficie a ripiegarsi");
+    if(options.continuity>0 && out.tangentAngle>0.5*kPi/180)
+        out.notes.push_back("la tangenza ottenuta si discosta di "+degrees(out.tangentAngle)
+            +" gradi dalle facce adiacenti: risultato approssimato");
     if (out.boundaryDeviation > tolerance)
         out.notes.push_back("il contorno resta a " + std::to_string(out.boundaryDeviation) + " mm dalla superficie (edge tolleranti)");
 

@@ -606,3 +606,52 @@ FK_TEST(LoftIndependentGuideConditions) {
     bool rejected = false; try { (void)loftSheet({first,last},invalid); } catch (const std::domain_error &) { rejected=true; }
     FK_CHECK(rejected);
 }
+
+// Un nodo guida vicino alla sezione entro l'arrotondamento non deve alterare
+// la normale della superficie, anche se posizione e tangente guida sono esatte.
+FK_TEST(LoftGuideNearSectionPreservesContactPlane) {
+    const auto profile=[](double x) -> PathSegment {
+        auto c=std::make_shared<BSplineCurve<3>>(3,std::vector<double>{0,0,0,0,1,1,1,1},
+            std::vector<Vec3>{{x,0,0},{x,3,0},{x,7,2},{x,10,2}});
+        return {c,{0,1}};
+    };
+    LoftSection first,last;
+    for(auto *section : {&first,&last}) {
+        const double x=section==&first?0:20;
+        section->frame=Frame3(Vec3(x,0,0),Vec3(1,0,0),Vec3(0,1,0));
+        auto c=std::make_shared<BSplineCurve<2>>(3,std::vector<double>{0,0,0,0,1,1,1,1},
+            std::vector<Vec2>{{0,0},{3,0},{7,2},{10,2}});
+        section->loop.segments={{c,{0,1}}};
+    }
+    auto support=std::make_shared<const Body>(ruledSurface({profile(20)},{profile(25)}));
+    for(int continuity:{1,2}) for(bool reverse:{false,true}) {
+        LoftOptions options;options.guideContinuity=continuity;
+        const double split=std::nextafter(std::nextafter(20.0,0.0),0.0);
+        for(Vec3 origin:{Vec3(0,0,0),Vec3(0,10,2)}) {
+            auto c=std::make_shared<BSplineCurve<3>>(1,std::vector<double>{-5,-5,split,25,25},
+                std::vector<Vec3>{origin+Vec3(-5,0,0),origin+Vec3(split,0,0),origin+Vec3(25,0,0)});
+            options.guides.push_back({{c,{-5,25}}});
+        }
+        if(reverse) {options.startContinuity=1;options.startFaces={{support,support->faces().front()}};}
+        else {options.endContinuity=1;options.endFaces={{support,support->faces().front()}};}
+        const auto body=loftSheet(reverse?std::vector<LoftSection>{last,first}:std::vector<LoftSection>{first,last},options);
+        FK_CHECK(checkBody(body).empty());
+        for(FaceId f:body.faces()) {
+            const auto &surface=*body.face(f).surface;
+            const auto breaks=surface.vBreakpoints(surface.vDomain());
+            for(std::size_t k=1;k<breaks.size();++k) FK_CHECK(breaks[k]-breaks[k-1]>1e-12);
+            for(double u:{0.0,0.1,0.5,0.9,1.0}) {
+                const Vec3 point=surface.point(u,reverse?0:1);
+                const auto projected=projectPoint(*support->face(support->faces().front()).surface,point);
+                FK_CHECK(projected.distance<1e-8);
+                const Vec3 expected=normalAt(*support->face(support->faces().front()).surface,projected.u,projected.v);
+                FK_CHECK(norm(cross(normalAt(surface,u,reverse?0:1),expected))<1e-7);
+            }
+            for(double v:{0.0,0.17,0.51,0.83,1.0}) for(double u:{0.0,1.0}) {
+                const auto point=surface.point(u,v);
+                FK_CHECK_NEAR(point.y(),u==0?0.0:10.0,1e-8);
+                FK_CHECK_NEAR(point.z(),u==0?0.0:2.0,1e-8);
+            }
+        }
+    }
+}

@@ -397,3 +397,40 @@ FK_TEST(FillDirectionalProfileRejectsInvalidSelection) {
     for(int selected:{-2,3}){FillOptions options;options.shapeContact=selected;bool caught=false;try{fillSurface(fixture.boundary,{},fixture.contacts,options);}catch(const std::domain_error&){caught=true;}FK_CHECK(caught);}
     FillOptions options;options.shapeContact=0;options.continuity=0;bool caught=false;try{fillSurface(fixture.boundary,{},fixture.contacts,options);}catch(const std::domain_error&){caught=true;}FK_CHECK(caught);
 }
+
+// Una curva estratta puo' assegnare quasi tutto il dominio al tratto corto.
+// Verificare il tratto lungo curvo indipendentemente dal rapporto del fill.
+FK_TEST(FillUnequalCompoundBoundarySpans) {
+    const double split=0.999;
+    const auto z=[](double x){return 0.05*x*(10-x);};
+    std::vector<Vec3> poles;
+    for(const auto interval : {Interval{0,1},Interval{1,10}}) {
+        const double a=interval.lo,b=interval.hi,h=b-a;
+        std::vector<Vec3> part{{a,5,z(a)},{a+h/3,5,z(a)+h*(0.5-0.1*a)/3},
+            {b-h/3,5,z(b)-h*(0.5-0.1*b)/3},{b,5,z(b)}};
+        if(!poles.empty())part.erase(part.begin());
+        poles.insert(poles.end(),part.begin(),part.end());
+    }
+    auto curve=std::make_shared<BSplineCurve<3>>(3,std::vector<double>{0,0,0,0,split,split,split,1,1,1,1},poles);
+    std::vector<PathSegment> boundary{line({0,0,0},{10,0,0}),line({10,0,0},{10,5,0}),
+        {curve,{0,1}},line({0,5,0},{0,0,0})};
+    FillOptions options;options.continuity=0;options.maxSpans=32;
+    FillReport report;const auto body=fillSurface(boundary,{}, {},options,&report);
+    checkValid(body);
+    FK_CHECK(report.boundaryDeviation<1e-4);
+    for(int i=0;i<=64;++i) FK_CHECK(surfaceDistance(body,Vec3(1+9*i/64.0,5,z(1+9*i/64.0)))<1e-4);
+}
+
+FK_TEST(FillReportsBoundaryContactConflictAtCorner) {
+    FillSaddleFixture fixture;
+    // Vertici invariati, ma tangente del bordo libero sinistro fuori dal
+    // piano del supporto inferiore nel vertice comune.
+    auto curve=std::make_shared<BSplineCurve<3>>(3,std::vector<double>{0,0,0,0,1,1,1,1},
+        std::vector<Vec3>{fixture.point(0,0),fixture.point(0,4)+fixture.frame.zDir(),fixture.point(0,9),fixture.point(0,13)});
+    fixture.boundary[3]={curve,{0,1}};
+    FillOptions options;options.maxSpans=16;
+    FillReport report;fillSurface(fixture.boundary,{},fixture.contacts,options,&report);
+    bool found=false;for(const auto &note:report.notes)
+        found=found || (note.find("al vertice")!=std::string::npos && note.find("non sono compatibili")!=std::string::npos);
+    FK_CHECK(found);
+}
