@@ -560,13 +560,46 @@ BSplineCurve<3> followingGuide(const std::vector<PathSegment> &path, const std::
     std::vector<double> offsets{0.0};
     for (const auto &piece : path) offsets.push_back(offsets.back() + piece.range.length());
     const auto coordinate = [&](const GuideHit &hit) { return offsets[hit.segment] + hit.parameter - path[hit.segment].range.lo; };
+    struct SourceNode {double at; std::size_t piece; double parameter;};
+    std::vector<SourceNode> sourceNodes;
+    for(std::size_t k=0;k<path.size();++k) {
+        auto nodes=path[k].curve->breakpoints(path[k].range);
+        nodes.push_back(path[k].range.lo);nodes.push_back(path[k].range.hi);
+        for(double u:nodes)sourceNodes.push_back({offsets[k]+u-path[k].range.lo,k,u});
+    }
+    std::sort(sourceNodes.begin(),sourceNodes.end(),[](const SourceNode&a,const SourceNode&b){return a.at<b.at;});
+    const auto segmentAt = [&](double t,bool left) {
+        std::size_t k=0;
+        while(k+1<path.size() && (t>offsets[k+1] || (!left && t==offsets[k+1])))++k;
+        return k;
+    };
     const auto evaluate = [&](double t, bool left, Vec3 *out) {
-        std::size_t k = 0;
-        while (k + 1 < path.size() && (t > offsets[k + 1] || (!left && t == offsets[k + 1]))) ++k;
-        const auto &piece = path[k];
-        double u = std::clamp(piece.range.lo + t - offsets[k], piece.range.lo, piece.range.hi);
-        if (left && u > piece.range.lo) u = std::nextafter(u, piece.range.lo);
-        piece.curve->evaluate(u, 2, out);
+        std::size_t k=segmentAt(t,left);
+        double u=std::clamp(path[k].range.lo+t-offsets[k],path[k].range.lo,path[k].range.hi);
+        const double eps=64*std::numeric_limits<double>::epsilon()*std::max(1.0,std::fabs(offsets.back()));
+        auto node=std::lower_bound(sourceNodes.begin(),sourceNodes.end(),t,
+            [](const SourceNode&n,double at){return n.at<at;});
+        if(node==sourceNodes.end() || (node!=sourceNodes.begin() && std::fabs(std::prev(node)->at-t)<std::fabs(node->at-t)))
+            if(node!=sourceNodes.begin())--node;
+        // La bisezione puo' finire a pochi ulp dal nodo. Conservare il nodo
+        // originale e il suo lato, senza cancellare dettagli geometrici.
+        if(node!=sourceNodes.end() && std::fabs(node->at-t)<=eps) {
+            const double at=node->at;
+            const std::size_t piece=segmentAt(at,left);
+            auto exact=std::lower_bound(sourceNodes.begin(),sourceNodes.end(),at,
+                [](const SourceNode&n,double value){return n.at<value;});
+            for(;exact!=sourceNodes.end() && exact->at==at;++exact)if(exact->piece==piece) {
+                if(distance(path[k].curve->point(u),path[piece].curve->point(exact->parameter))<=tolerance/16) {
+                    k=piece;u=exact->parameter;
+                }
+                break;
+            }
+        }
+        const auto &piece=path[k];
+        if(left && u>piece.range.lo) {
+            if(piece.curve->type()==CurveType::BSpline)piece.curve->evaluateLeft(u,2,out);
+            else piece.curve->evaluate(std::nextafter(u,piece.range.lo),2,out);
+        } else piece.curve->evaluate(u,2,out);
     };
     std::vector<BSplineCurve<3>> maps;
     std::vector<double> breaks = v;

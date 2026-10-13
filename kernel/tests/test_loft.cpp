@@ -655,3 +655,48 @@ FK_TEST(LoftGuideNearSectionPreservesContactPlane) {
         }
     }
 }
+
+// Stessa guida circolare, con campate di lunghezze molto diverse. I nodi
+// invertiti del parametro devono conservare il getto dal lato corretto.
+FK_TEST(LoftUnequalGuideSpansPreserveGeometryAndContact) {
+    const auto line=[](Vec3 a,Vec3 b)->PathSegment {
+        return {std::make_shared<Line<3>>(a,normalized(b-a)),{0,distance(a,b)}};
+    };
+    LoftSection first,last;first.path={line({0,0,0},{10,0,0})};last.path={line({0,10,10},{10,10,10})};
+    const auto support=std::make_shared<const Body>(ruledSurface({line({0,-5,0},{10,-5,0})},first.path));
+    for(bool reverse:{false,true})for(int continuity:{1,2}) {
+        LoftOptions options;options.guideContinuity=continuity;
+        for(double x:{0.0,10.0}) {
+            const Circle<3> circle(Vec3(x,0,10),Vec3(0,1,0),Vec3(0,0,1),10);
+            const std::vector<double> angles{-kPi/2,-1.53,-1.17,-0.71,-0.04,0};
+            std::vector<BSplineCurve<3>> pieces;
+            for(std::size_t k=1;k<angles.size();++k) {
+                const auto segment=toBSpline(circle,angles[k-1],angles[k]);
+                const auto exact=standardBezierPieces(segment,segment.domain());
+                pieces.insert(pieces.end(),exact.begin(),exact.end());
+            }
+            auto curve=std::make_shared<BSplineCurve<3>>(joinBezierPieces(pieces));
+            options.guides.push_back({{curve,curve->domain()}});
+        }
+        if(reverse){options.endFaces={{support,support->faces().front()}};options.endContinuity=1;}
+        else {options.startFaces={{support,support->faces().front()}};options.startContinuity=1;}
+        const auto body=loftSheet(reverse?std::vector<LoftSection>{last,first}:std::vector<LoftSection>{first,last},options);
+        FK_CHECK(checkBody(body).empty());
+        for(const auto &path:options.guides) {
+            const auto &guide=path.front();const Vec3 a=guide.curve->point(guide.range.lo),b=guide.curve->point(guide.range.hi);EdgeId match;
+            for(EdgeId id:body.edges()) {
+                const auto &e=body.edge(id);const Vec3 p=e.curve->point(e.range.lo),q=e.curve->point(e.range.hi);
+                if((distance(p,a)<1e-8&&distance(q,b)<1e-8)||(distance(p,b)<1e-8&&distance(q,a)<1e-8))match=id;
+            }
+            FK_CHECK(match.valid());if(!match.valid())continue;const auto &edge=body.edge(match);
+            // Controllo indipendente sulla circonferenza esatta, non sul fit.
+            for(int sample=0;sample<=128;++sample) {
+                const double angle=-kPi/2+(kPi/2)*sample/128.0;
+                const Vec3 p(a.x(),10*std::cos(angle),10+10*std::sin(angle));
+                FK_CHECK(projectPoint(*edge.curve,p,edge.range).distance<1e-8);
+            }
+        }
+        for(FaceId f:body.faces())for(double u:{0.0,0.23,0.61,1.0})
+            FK_CHECK(std::fabs(normalAt(*body.face(f).surface,u,reverse?1:0).z())>1-1e-7);
+    }
+}

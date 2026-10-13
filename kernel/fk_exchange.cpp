@@ -654,28 +654,65 @@ bool sewModel(RawModel &model, double tolerance) {
     std::vector<int> edgeTarget(model.edges.size());
     std::vector<bool> reversed(model.edges.size(), false);
     for (std::size_t k = 0; k < edgeTarget.size(); ++k) edgeTarget[k] = int(k);
-    // Punto della curva alla frazione f del tratto (nel verso della curva).
-    const auto at = [&](const RawEdge &e, double f) {
-        if (e.hasRange) return e.curve->point(e.range.lo + f * e.range.length());
-        // Senza tratto: tra le proiezioni degli estremi.
-        double a = projectPoint(*e.curve, model.points[std::size_t(e.start)]).parameter, b = projectPoint(*e.curve, model.points[std::size_t(e.end)]).parameter;
-        if (e.curve->isPeriodic() && b <= a) b += e.curve->period();
-        return e.curve->point(a + f * (b - a));
+    // Il confronto e' geometrico: la stessa frazione di parametro puo'
+    // individuare punti diversi su curve coincidenti.
+    const auto rangeOf = [&](const RawEdge &e) {
+        if (e.hasRange) return e.range;
+        double a=projectPoint(*e.curve,model.points[std::size_t(e.start)]).parameter;
+        double b=projectPoint(*e.curve,model.points[std::size_t(e.end)]).parameter;
+        if(e.curve->isPeriodic() && b<=a)b+=e.curve->period();
+        else if(e.start==e.end && e.curve->domain().isFinite())return e.curve->domain();
+        return Interval{std::min(a,b),std::max(a,b)};
     };
-    const auto middle = [&](const RawEdge &e) { return at(e, 0.5); };
+    const auto matching = [&](const RawEdge &a,const Interval &ra,const RawEdge &b,const Interval &rb) {
+        if(!ra.isFinite() || !rb.isFinite() || !(ra.length()>0) || !(rb.length()>0))return false;
+        const double limit=10.0*tolerance;
+        if(projectPoint(*b.curve,a.curve->point((ra.lo+ra.hi)/2),rb).distance>limit)return false;
+        for(const auto pair : {std::pair<const RawEdge*,Interval>{&a,ra},{&b,rb}}) {
+            const RawEdge &other=pair.first==&a?b:a;
+            const Interval otherRange=pair.first==&a?rb:ra;
+            const auto nodes=pair.first->curve->breakpoints(pair.second);
+            const auto near = [&](double t) {
+                const double gap=projectPoint(*other.curve,pair.first->curve->point(t),otherRange).distance;
+                return std::isfinite(gap) && gap<=limit;
+            };
+            // Campioni uniformi aggiuntivi per campate analitiche o di grado alto.
+            for(int sample=0;sample<=16;++sample)
+                if(!near(pair.second.lo+pair.second.length()*sample/16.0))return false;
+            for(std::size_t k=1;k<nodes.size();++k)
+                for(double f : {0.0,0.25,0.5,0.75,1.0}) {
+                    cancellationPoint();
+                    if(!near(nodes[k-1]+f*(nodes[k]-nodes[k-1])))return false;
+                }
+        }
+        return true;
+    };
+    const auto closedReversed = [&](const RawEdge &a,const Interval &ra,const RawEdge &b,const Interval &rb) {
+        const auto nodes=a.curve->breakpoints(ra);
+        for(std::size_t k=1;k<nodes.size();++k)for(double f : {0.17,0.37,0.71}) {
+            const double t=nodes[k-1]+f*(nodes[k]-nodes[k-1]);
+            const Vec3 tangent=a.curve->derivative(t);
+            const auto q=projectPoint(*b.curve,a.curve->point(t),rb);
+            const Vec3 other=b.curve->derivative(q.parameter);
+            if(norm(tangent)>0 && norm(other)>0) {
+                const double agree=dot(normalized(tangent),normalized(other));
+                if(std::fabs(agree)>0.5)return agree<0;
+            }
+        }
+        throw std::domain_error("cucitura: verso del bordo chiuso non determinabile");
+    };
     for (const auto &[ends, list] : byEnds)
         for (std::size_t i = 0; i < list.size(); ++i) {
             if (edgeTarget[std::size_t(list[i])] != list[i]) continue;
             const RawEdge &a = model.edges[std::size_t(list[i])];
-            const Vec3 ma = middle(a);
+            const Interval ra=rangeOf(a);
             for (std::size_t j = i + 1; j < list.size(); ++j) {
                 if (edgeTarget[std::size_t(list[j])] != list[j]) continue;
                 const RawEdge &b = model.edges[std::size_t(list[j])];
-                if (distance(ma, middle(b)) > 10.0 * tolerance) continue;
+                const Interval rb=rangeOf(b);
+                if (!matching(a,ra,b,rb)) continue;
                 edgeTarget[std::size_t(list[j])] = list[i];
-                // Il verso: dagli estremi, o per un edge chiuso da un punto a un quarto del tratto.
-                if (a.start != a.end) reversed[std::size_t(list[j])] = a.start != b.start;
-                else reversed[std::size_t(list[j])] = distance(at(a, 0.25), at(b, 0.25)) > distance(at(a, 0.25), at(b, 0.75));
+                reversed[std::size_t(list[j])] = a.start!=a.end ? a.start!=b.start : closedReversed(a,ra,b,rb);
             }
         }
     for (RawFace &face : model.faces)

@@ -333,7 +333,21 @@ SewResult sewSheets(const std::vector<const Body *> &bodies, double tolerance, b
     bool inverted = false;
     if (result.solid) {
         const detail::PhaseTimer timer("cucitura: verso del solido (volume)");
-        inverted = massProperties(result.body).volume < 0.0;
+        // Serve il segno, non il tensore di inerzia alla massima precisione.
+        // Per volumi piccoli rispetto alla scala geometrica (gusci sottili,
+        // cancellazioni fra cavita') si ripete con la precisione originale.
+        Box bounds;
+        for(VertexId v:result.body.vertices())bounds.add(result.body.vertex(v).point);
+        for(EdgeId e:result.body.edges()) {
+            const auto &edge=result.body.edge(e);
+            const Box box=curveBox(*edge.curve,edge.range);bounds.add(box.lo);bounds.add(box.hi);
+        }
+        double volume=massProperties(result.body,1e-5).volume;
+        const double scale=std::pow(bounds.diagonal(),3);
+        if(!std::isfinite(volume) || !std::isfinite(scale) || std::fabs(volume)<=1e-3*scale)
+            volume=massProperties(result.body).volume;
+        if(!std::isfinite(volume))throw std::domain_error("cucitura: volume non finito");
+        inverted = volume < 0.0;
     }
     if (inverted) {
         const detail::PhaseTimer timer("cucitura: facce girate e nuovo assemblaggio");

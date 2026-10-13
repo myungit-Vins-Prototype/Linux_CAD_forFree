@@ -10,6 +10,8 @@
 #include "fk_body_io.h"
 #include "fk_bspline_surface.h"
 #include "fk_curve_algo.h"
+#include "fk_curve_ops.h"
+#include "fk_nurbs.h"
 #include "fk_extrude.h"
 #include "fk_helix.h"
 #include "fk_step.h"
@@ -656,7 +658,7 @@ FK_TEST(SewPreservesBoundaryWithDifferentParameters) {
             if(right && i==3) {
                 range={10,20};const int degree=nonlinear?3:1;
                 std::vector<double> knots(degree+1,10);knots.insert(knots.end(),degree+1,20);
-                std::vector<Vec3> poles=nonlinear?std::vector<Vec3>{{1,1,0},{1,0.9,0},{1,0.1,0},{1,0,0}}:std::vector<Vec3>{a,b};
+                std::vector<Vec3> poles=nonlinear?std::vector<Vec3>{{1,1,0},{1,0.98,0},{1,0.8,0},{1,0,0}}:std::vector<Vec3>{a,b};
                 std::vector<Vec2> planar;for(Vec3 p:poles)planar.emplace_back(p.x()-x,p.y());
                 curve=std::make_shared<BSplineCurve<3>>(degree,knots,poles);
                 uv=std::make_shared<BSplineCurve<2>>(degree,knots,planar);
@@ -681,5 +683,65 @@ FK_TEST(SewPreservesBoundaryWithDifferentParameters) {
                 FK_CHECK(pcurveDeviation(*result.body.face(result.body.finFace(f)).surface,*edge.curve,*fin.pcurve,edge.range,64)<1e-7);
             }
         }
+    }
+}
+
+// Due archi chiusi coincidenti, ma con campate razionali non uniformi e
+// orientamento invertito: nessun confronto a meta' parametro e' valido.
+FK_TEST(SewClosedEdgesWithUnequalParameters) {
+    const Body cylinder=makeCylinder(Frame3(),1,2);
+    const auto sides=facesOfType(cylinder,SurfaceType::Cylinder);
+    const Body wall=facesAsSheet(cylinder,sides);
+    const Circle<3> circle(Vec3(0,0,2),Vec3(1,0,0),Vec3(0,1,0),1);
+    std::vector<BSplineCurve<3>> pieces;
+    for(int i=0;i<4;++i){const auto curve=toBSpline(circle,i*kPi/2,(i+1)*kPi/2);const auto part=standardBezierPieces(curve,curve.domain());pieces.insert(pieces.end(),part.begin(),part.end());}
+    for(bool reversed:{false,true})for(bool capFirst:{false,true}) {
+        CurvePtr<3> curve=std::make_shared<BSplineCurve<3>>(joinBezierPieces(pieces,{0,0.1,0.2,1,10}));
+        if(reversed)curve=reversedCurve(curve);
+        const auto &spline=static_cast<const BSplineCurve<3>&>(*curve);
+        std::vector<Vec2> poles;for(Vec3 p:spline.poles())poles.emplace_back(p.x(),p.y());
+        const auto uv=std::make_shared<BSplineCurve<2>>(spline.degree(),spline.knots(),poles,spline.weights());
+        auto plane=std::make_shared<Plane>(Frame3(Vec3(0,0,2),Vec3(0,0,1),Vec3(1,0,0)));
+        const Body cap=Body::buildSheet({Vec3(1,0,2)},{{0,0,curve,curve->domain()}},{{plane,true,{{{0,!reversed,uv}}}}});
+        const auto result=sewSheets(capFirst?std::vector<const Body*>{&cap,&wall}:std::vector<const Body*>{&wall,&cap},1e-6,false);
+        FK_CHECK(result.shells==1 && result.freeEdges==1);
+        FK_CHECK(checkBody(result.body).empty());
+    }
+}
+
+FK_TEST(SewDoesNotMergeDifferentCurvesWithSameMidpoint) {
+    const auto make=[](bool upper) {
+        const double y=upper?1:-1;
+        const std::vector<Vec3> p{{0,0,0},{1,0,0},{1,y,0},{0,y,0}};
+        std::vector<Body::BuildEdge> edges;std::vector<Body::BuildFin> fins;
+        for(int i=0;i<4;++i) {
+            const Vec3 a=p[i],b=p[(i+1)%4];CurvePtr<3> curve;CurvePtr<2> uv;Interval range;
+            if(i==0 && upper) {
+                range={0,1};const std::vector<double> knots{0,0,0,0,1,1,1,1};
+                curve=std::make_shared<BSplineCurve<3>>(3,knots,std::vector<Vec3>{{0,0,0},{1.0/3,0.1,0},{2.0/3,-0.1,0},{1,0,0}});
+                uv=std::make_shared<BSplineCurve<2>>(3,knots,std::vector<Vec2>{{0,0},{1.0/3,0.1},{2.0/3,-0.1},{1,0}});
+            } else {
+                range={0,distance(a,b)};curve=std::make_shared<Line<3>>(a,b-a);
+                uv=std::make_shared<BSplineCurve<2>>(1,std::vector<double>{0,0,range.hi,range.hi},std::vector<Vec2>{{a.x(),a.y()},{b.x(),b.y()}});
+            }
+            edges.push_back({i,(i+1)%4,curve,range});fins.push_back({i,true,uv});
+        }
+        if(!upper){std::reverse(fins.begin(),fins.end());for(auto &fin:fins)fin.sense=false;}
+        return Body::buildSheet(p,edges,{{std::make_shared<Plane>(Frame3()),true,{fins}}});
+    };
+    const Body a=make(false),b=make(true);
+    const auto result=sewSheets({&a,&b},1e-6,false);
+    FK_CHECK(result.shells==2 && result.freeEdges==8);
+    FK_CHECK(checkBody(result.body).empty());
+}
+
+FK_TEST(SewThinSolidRetainsOutwardOrientation) {
+    const Body box=makeBox(Frame3(),2,3,1e-5);
+    std::vector<FaceId> a,b;for(FaceId f:box.faces())(f.index%2?a:b).push_back(f);
+    const Body first=facesAsSheet(box,a),last=facesAsSheet(box,b);
+    for(bool reverse:{false,true}) {
+        const auto result=sewSheets(reverse?std::vector<const Body*>{&last,&first}:std::vector<const Body*>{&first,&last},1e-7,true);
+        FK_CHECK(result.solid && result.closed);FK_CHECK(checkBody(result.body).empty());
+        FK_CHECK_NEAR(massProperties(result.body).volume,6e-5,1e-12);
     }
 }
