@@ -18,6 +18,7 @@
 #include "fk_curve_ops.h"
 #include "fk_parallel.h"
 #include "fk_pcurve.h"
+#include "fk_offset.h"
 #include "fk_surface_algo.h"
 #include "fk_timing.h"
 
@@ -499,6 +500,91 @@ Body assembleBody(const RawModel &input, bool solid, std::vector<std::string> *n
     return body;
 }
 
+namespace {
+
+// La fin deve usare il parametro della curva rappresentativa dopo l'unione.
+// Conservare il ramo UV originale evita una nuova inversione della superficie.
+CurvePtr<2> sewnPCurve(const RawEdge &source, const RawEdge &target,
+                       const RawFace &face, const RawFin &fin, bool reverse, double tolerance) {
+    if (!fin.pcurve) return nullptr;
+    if (!source.hasRange || !target.hasRange || !source.range.isFinite() || !target.range.isFinite()
+        || !(source.range.length()>0) || !(target.range.length()>0)) return nullptr;
+    if (source.curve == target.curve && !reverse) return fin.pcurve;
+    const double original = pcurveDeviation(*face.surface, *source.curve, *fin.pcurve, source.range, 16);
+    if (!std::isfinite(original)) throw std::domain_error("cucitura: SP-curve sorgente non valida");
+    const double budget = original + std::max(1e-7, 10.0 * tolerance);
+    const auto acceptable = [&](const CurvePtr<2> &curve) {
+        const double error = pcurveDeviation(*face.surface, *target.curve, *curve, target.range, 16);
+        return std::isfinite(error) && error <= budget;
+    };
+    // Stesso parametro, anche per copie geometricamente equivalenti.
+    if (!reverse && source.range.lo == target.range.lo && source.range.hi == target.range.hi
+        && acceptable(fin.pcurve)) return fin.pcurve;
+    const double first = reverse ? source.range.hi : source.range.lo;
+    const double slope = (reverse ? -1 : 1) * source.range.length() / target.range.length();
+    CurvePtr<2> affine;
+    if (const auto *spline = dynamic_cast<const BSplineCurve<2> *>(fin.pcurve.get())) {
+        auto knots = spline->knots(); auto poles = spline->poles(); auto weights = spline->weights();
+        for (double &t : knots) t = target.range.lo + (t - first) / slope;
+        if (slope < 0) {
+            std::reverse(knots.begin(), knots.end()); std::reverse(poles.begin(), poles.end());
+            std::reverse(weights.begin(), weights.end());
+        }
+        affine = std::make_shared<BSplineCurve<2>>(spline->degree(), std::move(knots), std::move(poles), std::move(weights));
+    } else if (fin.pcurve->type() == CurveType::Line) {
+        affine = std::make_shared<BSplineCurve<2>>(1,
+            std::vector<double>{target.range.lo,target.range.lo,target.range.hi,target.range.hi},
+            std::vector<Vec2>{fin.pcurve->point(first),fin.pcurve->point(first+slope*target.range.length())});
+    }
+    if (affine && acceptable(affine)) return affine;
+
+    // Parametrizzazioni non affini: proiezione sulla curva 3D sorgente,
+    // composizione con la sua SP-curve, poi verifica indipendente in 3D.
+    const auto parameter = [&](double t) {
+        if (t == target.range.lo) return first;
+        if (t == target.range.hi) return first+slope*target.range.length();
+        const Vec3 point = target.curve->point(t);
+        const auto candidates = projectPointCandidates(*source.curve, point, source.range);
+        double best = std::numeric_limits<double>::infinity(), chosen = first;
+        for (const auto &q : candidates) best = std::min(best, q.distance);
+        if (best>std::max(1e-7,10.0*tolerance))
+            throw std::domain_error("cucitura: bordi uniti non coincidenti nella rimappatura");
+        const double expected = first+slope*(t-target.range.lo);
+        double near = std::numeric_limits<double>::infinity();
+        for (const auto &q : candidates)
+            if (q.distance <= best+1e-10 && std::fabs(q.parameter-expected)<near) {
+                chosen=q.parameter; near=std::fabs(q.parameter-expected);
+            }
+        if (!std::isfinite(near)) throw std::domain_error("cucitura: parametro sorgente non determinabile");
+        return chosen;
+    };
+    auto breaks = target.curve->breakpoints(target.range);
+    auto nodes = source.curve->breakpoints(source.range);
+    const auto uvNodes = fin.pcurve->breakpoints(source.range);
+    nodes.insert(nodes.end(),uvNodes.begin(),uvNodes.end());
+    for (double t : nodes) {
+        const auto q = projectPoint(*target.curve, source.curve->point(t), target.range);
+        if (q.parameter>target.range.lo && q.parameter<target.range.hi) breaks.push_back(q.parameter);
+    }
+    std::sort(breaks.begin(),breaks.end());
+    breaks.erase(std::unique(breaks.begin(),breaks.end()),breaks.end());
+    double speed=1.0;
+    for(int i=0;i<=16;++i) {
+        const Vec2 uv=fin.pcurve->point(first+slope*target.range.length()*i/16.0);
+        Vec3 d[4];face.surface->evaluate(uv.x(),uv.y(),1,d);
+        speed=std::max({speed,norm(d[Surface::derivativeIndex(1,0,1)]),norm(d[Surface::derivativeIndex(0,1,1)])});
+    }
+    const auto fitted=fitCurve([&](double t) {
+        const Vec2 uv=fin.pcurve->point(parameter(t));return Vec3(uv.x(),uv.y(),0);
+    },target.range,breaks,1e-8/speed);
+    std::vector<Vec2> poles;for(const Vec3 &p:fitted->poles())poles.emplace_back(p.x(),p.y());
+    auto result=std::make_shared<BSplineCurve<2>>(fitted->degree(),fitted->knots(),std::move(poles),fitted->weights());
+    if(!acceptable(result))throw std::domain_error("cucitura: rimappatura SP-curve fuori tolleranza");
+    return result;
+}
+
+} // namespace
+
 bool sewModel(RawModel &model, double tolerance) {
     // Vertici uniti: ordinati in x, confronti solo vicini.
     const std::size_t n = model.points.size();
@@ -595,8 +681,12 @@ bool sewModel(RawModel &model, double tolerance) {
     for (RawFace &face : model.faces)
         for (auto &loop : face.loops)
             for (RawFin &fin : loop) {
-                if (reversed[std::size_t(fin.edge)]) fin.sense = !fin.sense;
-                fin.edge = edgeTarget[std::size_t(fin.edge)];
+                const int oldEdge = fin.edge, newEdge = edgeTarget[std::size_t(oldEdge)];
+                if (oldEdge != newEdge && fin.pcurve)
+                    fin.pcurve = sewnPCurve(model.edges[std::size_t(oldEdge)], model.edges[std::size_t(newEdge)],
+                                            face, fin, reversed[std::size_t(oldEdge)], tolerance);
+                if (reversed[std::size_t(oldEdge)]) fin.sense = !fin.sense;
+                fin.edge = newEdge;
             }
     // Versi coerenti: le due facce di un edge lo percorrono in versi opposti.
     std::map<int, std::vector<std::pair<std::size_t, bool>>> finsOf;  // edge -> (faccia, verso)

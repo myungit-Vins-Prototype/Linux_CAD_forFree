@@ -54,7 +54,10 @@ detail::RawModel rawModel(const std::vector<const Body *> &bodies, std::vector<i
             raw.sense = face.sense;
             for (LoopId l : face.loops) {
                 std::vector<detail::RawFin> loop;
-                for (FinId fin : body.loopFins(l)) loop.push_back({edgeOf.at(body.fin(fin).edge.index), body.fin(fin).sense});
+                for (FinId fin : body.loopFins(l)) {
+                    const Fin &source = body.fin(fin);
+                    loop.push_back({edgeOf.at(source.edge.index), source.sense, source.pcurve, source.pcurveTolerance});
+                }
                 if (!loop.empty()) raw.loops.push_back(std::move(loop));
             }
             model.faces.push_back(std::move(raw));
@@ -251,9 +254,9 @@ void splitAtJunctions(detail::RawModel &model, const std::vector<int> &edgeBody,
                     continue;
                 }
                 if (fin.sense)
-                    for (int piece : found->second) fins.push_back({piece, true});
+                    for (int piece : found->second) fins.push_back({piece, true, fin.pcurve, fin.pcurveTolerance});
                 else
-                    for (auto it = found->second.rbegin(); it != found->second.rend(); ++it) fins.push_back({*it, false});
+                    for (auto it = found->second.rbegin(); it != found->second.rend(); ++it) fins.push_back({*it, false, fin.pcurve, fin.pcurveTolerance});
             }
             loop = std::move(fins);
         }

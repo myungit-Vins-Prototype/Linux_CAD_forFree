@@ -21,6 +21,7 @@
 #include "fk_profile.h"
 #include "fk_revolve.h"
 #include "fk_sew.h"
+#include "fk_pcurve.h"
 #include "fk_sheet.h"
 #include "fk_surface_algo.h"
 #include "fk_tessellate.h"
@@ -612,5 +613,73 @@ FK_TEST(OffsetLoftSeamExtensionFollowsTangentSeam) {
         sheet = extendSheet(sheet, ring, upper ? 3.0 : 2.0);
         checkValid(sheet);
         for (EdgeId e : sheet.edges()) FK_CHECK(sheet.edge(e).tolerance < 1e-5);
+    }
+}
+
+// Patch reale valida con SP-curve note: la sola copia delle facce deve
+// conservarne la geometria, anche quando una nuova inversione UV fallirebbe.
+FK_TEST(SewFillPreservesKnownBoundaryCurves) {
+    std::ifstream in(std::string(FORGECAD_SOURCE_DIR)+"/kernel/tests/data/fill_sew.body",std::ios::binary);
+    FK_CHECK(bool(in));if(!in)return;
+    std::stringstream data;data<<in.rdbuf();const Body patch=readBodyBinary(data.str());
+    FK_CHECK(checkBody(patch).empty());
+    const auto verify=[&](const Body &copy) {
+        FK_CHECK(checkBody(copy).empty());FK_CHECK(copy.faces().size()==1);
+        const auto &original=*patch.face(patch.faces().front()).surface;
+        const auto &surface=*copy.face(copy.faces().front()).surface;
+        for(int i=0;i<=8;++i)for(int j=0;j<=8;++j) {
+            const double u=original.uDomain().lo+original.uDomain().length()*i/8.0;
+            const double v=original.vDomain().lo+original.vDomain().length()*j/8.0;
+            FK_CHECK_NEAR(distance(surface.point(u,v),original.point(u,v)),0,1e-12);
+        }
+        for(auto id:copy.edges())for(FinId f:{copy.edge(id).forward,copy.edge(id).backward})if(f.valid()) {
+            FK_CHECK(bool(copy.fin(f).pcurve));
+            FK_CHECK(pcurveDeviation(*copy.face(copy.finFace(f)).surface,*copy.edge(id).curve,*copy.fin(f).pcurve,copy.edge(id).range,32)<=copy.edge(id).tolerance+copy.fin(f).pcurveTolerance);
+        }
+    };
+    verify(facesAsSheet(patch,patch.faces()));
+    const auto sewn=sewSheets({&patch},1e-6,false);verify(sewn.body);
+    FK_CHECK(sewn.shells==1 && sewn.freeEdges==4);
+}
+
+// Due rettangoli sullo stesso piano: il bordo comune del secondo usa
+// dominio 10..20, verso inverso e, opzionalmente, velocita' non uniforme.
+FK_TEST(SewPreservesBoundaryWithDifferentParameters) {
+    const auto rectangle=[](bool right,bool nonlinear) {
+        const double x=right?1:0;
+        auto surface=std::make_shared<BSplineSurface>(1,1,std::vector<double>{0,0,1,1},
+            std::vector<double>{0,0,1,1},2,2,std::vector<Vec3>{{x,0,0},{x,1,0},{x+1,0,0},{x+1,1,0}});
+        const std::vector<Vec3> vertices{{x,0,0},{x+1,0,0},{x+1,1,0},{x,1,0}};
+        std::vector<Body::BuildEdge> edges;std::vector<Body::BuildFin> fins;
+        for(int i=0;i<4;++i) {
+            const Vec3 a=vertices[i],b=vertices[(i+1)%4];CurvePtr<3> curve;CurvePtr<2> uv;Interval range;
+            if(right && i==3) {
+                range={10,20};const int degree=nonlinear?3:1;
+                std::vector<double> knots(degree+1,10);knots.insert(knots.end(),degree+1,20);
+                std::vector<Vec3> poles=nonlinear?std::vector<Vec3>{{1,1,0},{1,0.9,0},{1,0.1,0},{1,0,0}}:std::vector<Vec3>{a,b};
+                std::vector<Vec2> planar;for(Vec3 p:poles)planar.emplace_back(p.x()-x,p.y());
+                curve=std::make_shared<BSplineCurve<3>>(degree,knots,poles);
+                uv=std::make_shared<BSplineCurve<2>>(degree,knots,planar);
+            } else {
+                range={0,distance(a,b)};curve=std::make_shared<Line<3>>(a,b-a);
+                uv=std::make_shared<BSplineCurve<2>>(1,std::vector<double>{0,0,range.hi,range.hi},
+                    std::vector<Vec2>{{a.x()-x,a.y()},{b.x()-x,b.y()}});
+            }
+            edges.push_back({i,(i+1)%4,curve,range});fins.push_back({i,true,uv});
+        }
+        return Body::buildSheet(vertices,edges,{{surface,true,{fins}}});
+    };
+    for(bool nonlinear:{false,true})for(bool reverse:{false,true}) {
+        const Body a=rectangle(false,false),b=rectangle(true,nonlinear);
+        auto result=sewSheets(reverse?std::vector<const Body*>{&b,&a}:std::vector<const Body*>{&a,&b},1e-6,false);
+        FK_CHECK(result.shells==1 && result.freeEdges==6);
+        FK_CHECK(result.body.edges().size()==7);FK_CHECK(checkBody(result.body).empty());
+        for(EdgeId id:result.body.edges()) {
+            const auto &edge=result.body.edge(id);if(!edge.forward.valid()||!edge.backward.valid())continue;
+            for(FinId f:{edge.forward,edge.backward}) {
+                const auto &fin=result.body.fin(f);FK_CHECK(bool(fin.pcurve));
+                FK_CHECK(pcurveDeviation(*result.body.face(result.body.finFace(f)).surface,*edge.curve,*fin.pcurve,edge.range,64)<1e-7);
+            }
+        }
     }
 }
