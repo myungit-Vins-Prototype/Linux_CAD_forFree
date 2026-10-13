@@ -6,7 +6,9 @@
 // Trasformazioni rigide e scale uniformi dei body, esatte: ogni curva e ogni
 // superficie resta del suo tipo (un cilindro scalato e' un cilindro di raggio
 // s R, una B-spline ha i poli trasformati), le curve e le superfici condivise
-// restano condivise, le SP-curve si ricalcolano.
+// restano condivise. Nella simmetria si conservano le SP-curve delle
+// superfici B-spline se il parametro dell'edge resta invariato; le altre
+// si ricalcolano.
 namespace ForgeCad::Kernel {
 
 // `transform` deve essere una similitudine (rotazione, traslazione, scala

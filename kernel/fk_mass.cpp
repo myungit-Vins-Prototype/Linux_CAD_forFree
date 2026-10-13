@@ -419,7 +419,9 @@ LoopValues FaceIntegrator::finIntegral(const FinTrack &track) const {
         if (const auto *line = dynamic_cast<const Line<2> *>(track.pcurve.get())) {
             vertical = line->direction().x() == 0.0;
         } else if (const auto *spline = dynamic_cast<const BSplineCurve<2> *>(track.pcurve.get())) {
-            vertical = spline->degree() == 1 && !spline->isRational();
+            // U e' identicamente costante quando lo sono tutti i poli,
+            // anche per spline di grado superiore o razionali.
+            vertical = true;
             for (const Vec2 &pole : spline->poles()) vertical = vertical && pole.x() == spline->poles().front().x();
         }
         if (vertical) {

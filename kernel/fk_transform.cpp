@@ -218,6 +218,15 @@ Body mirroredBody(const Body &input, Transformer &t) {
                 Body::BuildFin fin;
                 fin.edge = edgeIndex.at(input.fin(*it).edge.index);
                 fin.sense = !input.fin(*it).sense;
+                // La simmetria dei poli B-spline lascia invariati U e V.
+                // Riutilizzare la SP-curve evita di approssimare di nuovo
+                // bordi esatti. Se cambia il parametro 3D si ricalcola.
+                const Fin &source = input.fin(*it);
+                if (face.surface->type() == SurfaceType::BSpline
+                    && t.curve(input.edge(source.edge).curve).second == 1.0) {
+                    fin.pcurve = source.pcurve;
+                    fin.pcurveTolerance = source.pcurveTolerance * t.scale();
+                }
                 loop.push_back(fin);
             }
             b.loops.push_back(std::move(loop));

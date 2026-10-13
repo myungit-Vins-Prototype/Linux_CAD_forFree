@@ -8,6 +8,7 @@
 #include <gp_Mat.hxx>
 
 #include "fk_body_check.h"
+#include "fk_bspline.h"
 #include "fk_extrude.h"
 #include "fk_mass.h"
 #include "fk_pcurve.h"
@@ -412,4 +413,38 @@ FK_TEST(MassEdgeCases) {
     Body noSurface = makeBox(Frame3(), 1, 1, 1);
     noSurface.face(noSurface.faces().front()).surface = nullptr;
     FK_CHECK_THROWS(massProperties(noSurface));
+}
+
+// Una guida UV verticale puo' essere razionale e avere molte campate:
+// il suo contributo -G du resta nullo, senza valutazioni ripetute in 3D.
+FK_TEST(MassVerticalSplineSkipsNullFlux) {
+    class CountedEdge final : public Curve<3> {
+    public:
+        CountedEdge(CurvePtr<2> uv,int &calls):uv_(std::move(uv)),calls_(calls){}
+        CurveType type() const override{return CurveType::Other;}
+        Interval domain() const override{return uv_->domain();}
+        std::vector<double> breakpoints(const Interval&r) const override{return uv_->breakpoints(r);}
+        void evaluate(double t,int order,Vec3*out) const override {
+            ++calls_;std::vector<Vec2> p(order+1);uv_->evaluate(t,order,p.data());
+            for(int i=0;i<=order;++i)out[i]=Vec3(p[i].x(),p[i].y(),0);
+        }
+    private:CurvePtr<2> uv_;int &calls_;
+    };
+    for(bool rational:{false,true}) {
+        const int count=64;std::vector<double> knots(4,0);
+        for(int i=1;i<count;++i)knots.push_back(double(i)/count);
+        knots.insert(knots.end(),4,1);
+        const int n=int(knots.size())-4;std::vector<Vec2> poles;std::vector<double> weights;
+        for(int i=0;i<n;++i){poles.emplace_back(1,double(i)/(n-1));if(rational)weights.push_back(i%2?2.:1.);}
+        auto vertical=std::make_shared<BSplineCurve<2>>(3,knots,poles,weights);int calls=0;
+        const std::vector<Vec3> points{{0,0,0},{1,0,0},{1,1,0},{0,1,0}};
+        std::vector<Body::BuildEdge> edges;std::vector<Body::BuildFin> fins;
+        for(int i=0;i<4;++i){CurvePtr<2> uv;CurvePtr<3> curve;
+            if(i==1){uv=vertical;curve=std::make_shared<CountedEdge>(uv,calls);}
+            else {uv=std::make_shared<BSplineCurve<2>>(1,std::vector<double>{0,0,1,1},std::vector<Vec2>{{points[i].x(),points[i].y()},{points[(i+1)%4].x(),points[(i+1)%4].y()}});curve=std::make_shared<Line<3>>(points[i],points[(i+1)%4]-points[i]);}
+            edges.push_back({i,(i+1)%4,curve,{0,1}});fins.push_back({i,true,uv});}
+        const Body body=Body::buildSheet(points,edges,{{std::make_shared<Plane>(Frame3()),true,{fins}}});
+        calls=0;FK_CHECK_NEAR(faceArea(body,body.faces().front()),1.,1e-12);
+        FK_CHECK(calls<30);
+    }
 }

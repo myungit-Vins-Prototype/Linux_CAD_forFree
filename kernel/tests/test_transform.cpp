@@ -1,6 +1,8 @@
 #include <cmath>
 
 #include "fk_blend.h"
+#include "fk_bspline_surface.h"
+#include "fk_pcurve.h"
 #include "fk_body_check.h"
 #include "fk_boolean.h"
 #include "fk_extrude.h"
@@ -113,4 +115,47 @@ FK_TEST(TransformMirrorBodies) {
     const Body both = booleanOperation(block, mirrorBody(block, Vec3(0, 0, 0), Vec3(1, 0, 0)), BooleanOperation::Unite);
     FK_CHECK(checkBody(both).empty());
     FK_CHECK_NEAR(massProperties(both).volume, 4.0 * 2.0 * 1.0, 1e-9);
+}
+
+FK_TEST(TransformMirrorRetainsSplineBoundaryParameters) {
+    // Pezza curva, anche razionale: parametri UV invariati dalla simmetria.
+    for(bool rational:{false,true}) {
+        std::vector<Vec3> poles{{0,0,0},{0,1,0},{0,2,0},{1,0,0},{1,1,1},{1,2,0},{2,0,0},{2,1,0},{2,2,0}};
+        std::vector<double> weights;if(rational)weights={1,1,1,1,2,1,1,1,1};
+        auto surface=std::make_shared<BSplineSurface>(2,2,std::vector<double>{0,0,0,1,1,1},std::vector<double>{0,0,0,1,1,1},3,3,poles,weights);
+        const std::vector<Vec2> corners{{0,0},{1,0},{1,1},{0,1}};std::vector<Vec3> points;
+        for(Vec2 uv:corners)points.push_back(surface->point(uv.x(),uv.y()));
+        std::vector<Body::BuildEdge> edges;std::vector<Body::BuildFin> fins;
+        for(int i=0;i<4;++i){auto uv=std::make_shared<BSplineCurve<2>>(3,std::vector<double>{0,0,0,0,1,1,1,1},std::vector<Vec2>{corners[i],corners[i]+(corners[(i+1)%4]-corners[i])/3.,corners[i]+2.*(corners[(i+1)%4]-corners[i])/3.,corners[(i+1)%4]});
+            CurvePtr<3> curve=i==0?surface->vIso(0):i==1?surface->uIso(1):i==2?surface->vIso(1):surface->uIso(0);
+            const bool sense=i<2;edges.push_back({sense?i:(i+1)%4,sense?(i+1)%4:i,curve,{0,1}});
+            // Il parametro dell'edge segue l'isoparametrica, non il loop.
+            if(!sense)uv=std::make_shared<BSplineCurve<2>>(3,std::vector<double>{0,0,0,0,1,1,1,1},std::vector<Vec2>{corners[(i+1)%4],corners[(i+1)%4]+(corners[i]-corners[(i+1)%4])/3.,corners[(i+1)%4]+2.*(corners[i]-corners[(i+1)%4])/3.,corners[i]});
+            fins.push_back({i,sense,uv,1e-10});}
+        const Body source=Body::buildSheet(points,edges,{{surface,true,{fins}}});
+        for(double scale:{1.,2.}) {
+            const Transform3 transform=Transform3::scaling(Vec3(),scale)*Transform3::reflection({0.3,0,0},normalized(Vec3(1,0.2,0.1)));
+            const Body image=transformBody(source,transform);FK_CHECK(checkBody(image).empty());
+            for(FinId id:image.fins()){auto &fin=image.fin(id);bool retained=false;
+                for(FinId original:source.fins())retained=retained||fin.pcurve==source.fin(original).pcurve;
+                FK_CHECK(retained);FK_CHECK_NEAR(fin.pcurveTolerance,scale*1e-10,1e-15);
+                FK_CHECK(pcurveDeviation(*image.face(image.finFace(id)).surface,*image.edge(fin.edge).curve,*fin.pcurve,image.edge(fin.edge).range,16)<1e-10);}
+        }
+    }
+}
+
+FK_TEST(TransformMirrorRecalculatesScaledLineParameters) {
+    auto surface=std::make_shared<BSplineSurface>(1,1,std::vector<double>{0,0,1,1},std::vector<double>{0,0,1,1},2,2,std::vector<Vec3>{{0,0,0},{0,1,0},{1,0,0},{1,1,0}});
+    const std::vector<Vec3> points{{0,0,0},{1,0,0},{1,1,0},{0,1,0}};
+    std::vector<Body::BuildEdge> edges;std::vector<Body::BuildFin> fins;
+    for(int i=0;i<4;++i){const Vec3 a=points[i],b=points[(i+1)%4];
+        auto uv=std::make_shared<BSplineCurve<2>>(1,std::vector<double>{0,0,1,1},std::vector<Vec2>{{a.x(),a.y()},{b.x(),b.y()}});
+        edges.push_back({i,(i+1)%4,std::make_shared<Line<3>>(a,b-a),{0,1}});fins.push_back({i,true,uv});}
+    const Body source=Body::buildSheet(points,edges,{{surface,true,{fins}}});
+    const Body image=transformBody(source,Transform3::scaling(Vec3(),2)*Transform3::reflection(Vec3(),Vec3(1,0,0)));
+    FK_CHECK(checkBody(image).empty());
+    for(FinId id:image.fins()){const auto &fin=image.fin(id);const auto &edge=image.edge(fin.edge);
+        FK_CHECK_NEAR(edge.range.length(),2.,1e-12);
+        for(FinId old:source.fins())FK_CHECK(fin.pcurve!=source.fin(old).pcurve);
+        FK_CHECK(pcurveDeviation(*image.face(image.finFace(id)).surface,*edge.curve,*fin.pcurve,edge.range,16)<1e-10);}
 }
