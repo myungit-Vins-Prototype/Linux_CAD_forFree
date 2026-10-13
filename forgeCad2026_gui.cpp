@@ -4070,6 +4070,7 @@ public:
     }
 
     void setViewPreset(int preset) {
+        orbitPivotValid_ = false;
         roll_ = 0.0f;
         switch (preset) {
         case 0: yaw_ = 0.0f; pitch_ = 0.0f; break;
@@ -4087,6 +4088,7 @@ public:
     // parte di `normal` (terna destrorsa): la rotazione Rz(roll) Rx(pitch)
     // Ry(yaw) ha per righe x, y, normal.
     void setViewFrame(const QVector3D &worldX, const QVector3D &worldNormal) {
+        orbitPivotValid_ = false;
         // Le direzioni del modello nello spazio della vista standard (orientamento degli assi).
         const QMatrix4x4 basis = basisMatrix();
         const QVector3D x = basis.mapVector(worldX), normal = basis.mapVector(worldNormal);
@@ -4109,16 +4111,49 @@ public:
                      QVector3D(float(frame.normal[0]), float(frame.normal[1]), float(frame.normal[2])));
     }
 
-    // Orbita libera: trascinando in orizzontale o verticale si puo' completare
-    // un giro intero. La normalizzazione evita angoli sempre piu' grandi senza
-    // introdurre arresti ai poli della vista.
+    // Sensibilita' della rotazione classica, indipendente dalla dimensione della vista.
+    static constexpr float kOrbitDegreesPerPixel = 0.5f;
     static float normalizedViewAngle(float degrees) {
         return std::remainder(degrees, 360.0f);
     }
+
+    // Il pivot viene scelto solo quando comincia realmente l'orbita.
+    QVector3D orbitPointAt(const QPoint &position) const {
+        QVector3D origin, direction;
+        viewRay(position, origin, direction);
+        direction.normalize();
+        double skipped = 0.0;
+        const bool reaches = sectionRay(origin, direction, skipped);
+        float nearest = std::numeric_limits<float>::max();
+        if (reaches) for (const ExtrusionObject &body : extrusions_) {
+            if (!body.visible || !ForgeCad::isShapeBody(body)) continue;
+            float distance = 0.0f;
+            if (meshRayHit(body.display, origin, direction, distance) && distance < nearest
+                && !sectionRemoves(origin + distance*direction)) nearest = distance;
+        }
+        if (nearest < std::numeric_limits<float>::max()) return origin + nearest*direction;
+        // Sullo sfondo usa il piano parallelo allo schermo che passa per
+        // il centro del box della scena, alla stessa posizione del mouse.
+        updateSceneBounds();
+        const QVector3D center = (sceneMin_ + sceneMax_)*0.5f;
+        return origin + QVector3D::dotProduct(center-origin, direction)*direction;
+    }
+
     void orbitView(const QPoint &delta) {
-        yaw_ = normalizedViewAngle(yaw_ + delta.x() * 0.5f);
-        pitch_ = normalizedViewAngle(pitch_ + delta.y() * 0.5f);
+        if (delta.isNull()) return;
+        if (!orbitPivotValid_) {
+            orbitPivot_ = orbitPointAt(lastMousePosition_);
+            orbitPivotValid_ = true;
+        }
+        const QVector3D previousPivot = sceneModelViewMatrix().map(orbitPivot_);
+        yaw_ = normalizedViewAngle(yaw_ + delta.x()*kOrbitDegreesPerPixel);
+        pitch_ = normalizedViewAngle(pitch_ + delta.y()*kOrbitDegreesPerPixel);
         roll_ *= 0.9f;
+        // Compensa la traslazione: il punto scelto resta nello stesso pixel.
+        // La proiezione ortografica non richiede una compensazione in Z.
+        const QVector3D movedPivot = sceneModelViewMatrix().map(orbitPivot_);
+        panX_ += previousPivot.x() - movedPivot.x();
+        panY_ += previousPivot.y() - movedPivot.y();
     }
 
     // Orientamento degli assi del documento (non e' una modifica annullabile).
@@ -4365,6 +4400,7 @@ protected:
     }
 
     void mousePressEvent(QMouseEvent *event) override {
+        orbitPivotValid_ = false;
         lastMousePosition_ = event->position().toPoint();
         if (event->button() == Qt::MiddleButton || (event->button() == Qt::LeftButton && panKeyHeld_)) {
             panning_ = true;
@@ -6317,6 +6353,7 @@ protected:
     }
 
     void mouseReleaseEvent(QMouseEvent *event) override {
+        orbitPivotValid_ = false;
         if(spatialAdd_ && !panning_) {
             if(event->button()==Qt::LeftButton && spatialPressed_) {
                 spatialPressed_=false;
@@ -11819,6 +11856,8 @@ private:
     float panX_ = 0.0f, panY_ = 0.0f;  // spostamento della vista (unita' della vista)
     int panKey_ = Qt::Key_Space;
     bool panKeyHeld_ = false, panning_ = false;
+    QVector3D orbitPivot_;
+    bool orbitPivotValid_ = false;
     QPoint lastMousePosition_;
     QPoint selectionPress_;
     QPoint hoverPosition_;

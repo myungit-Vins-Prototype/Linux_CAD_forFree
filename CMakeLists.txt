@@ -262,6 +262,7 @@ if(FORGECAD_BUILD_VIEW_TESTS)
     forgecad_add_view_test(forgecad_history_position_tests --history-position)
     forgecad_add_view_test(forgecad_async_lifetime_tests --async-lifetime)
     forgecad_add_view_test(forgecad_view_tests)
+    forgecad_add_view_test(forgecad_orbit_pivot_tests --orbit-pivot)
 endif()
 
 add_executable(forgecad_shape_analysis_tests tests/test_shape_analysis.cpp cad_shape_analysis.cpp)

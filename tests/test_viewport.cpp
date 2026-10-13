@@ -5571,7 +5571,7 @@ public:
         }
     }
 
-    static void run(bool render) {
+    static void run(bool render, bool orbitOnly = false) {
         extensionContourPicking();
         trimPartPicking();
         deletionDuringEdgePick();
@@ -6309,12 +6309,62 @@ public:
         v.zoom_ = 20;
         v.yaw_ = 0.0f;
         v.pitch_ = 0.0f;
-        v.orbitView(QPoint(360, 360));
-        require(std::fabs(v.yaw_) == 180.0f && std::fabs(v.pitch_) == 180.0f,
-                "orbita orizzontale e verticale oltre i vecchi limiti");
-        v.orbitView(QPoint(360, 360));
+        v.roll_ = 0.0f;
+        v.lastMousePosition_ = QPoint(450,325);
+        v.orbitView(QPoint(100,70));
+        require(std::fabs(v.yaw_-50.0f) < 1e-6f && std::fabs(v.pitch_-35.0f) < 1e-6f,
+                "rotazione classica a mezzo grado per pixel");
+        v.lastMousePosition_ += QPoint(100,70);
+        v.orbitView(QPoint(-100,-70));
         require(std::fabs(v.yaw_) < 1e-6f && std::fabs(v.pitch_) < 1e-6f,
-                "giro completo di 360 gradi sui due assi della vista");
+                "gesto inverso recupera orientamento");
+        v.orbitView(QPoint(360,360));
+        require(std::fabs(v.yaw_) == 180.0f && std::fabs(v.pitch_) == 180.0f,
+                "orbita libera oltre i poli");
+        v.orbitView(QPoint(360,360));
+        require(std::fabs(v.yaw_) < 1e-6f && std::fabs(v.pitch_) < 1e-6f,
+                "giro completo sui due assi");
+        v.resize(1200,800);
+        v.orbitView(QPoint(100,70));
+        require(std::fabs(v.yaw_-50.0f) < 1e-6f && std::fabs(v.pitch_-35.0f) < 1e-6f,
+                "sensibilita' indipendente dalla dimensione del viewport");
+        v.resize(900,650);
+        {
+            CadViewport pivotView;
+            pivotView.resize(900,650);
+            pivotView.setViewPreset(0);
+            pivotView.zoom_ = 20;
+            ExtrusionObject body;
+            body.forgeBody = std::make_shared<const ForgeCad::Kernel::Body>();
+            body.display.vertices = {QVector3D(-4,-3,-4), QVector3D(4,-3,-4), QVector3D(0,-3,4)};
+            pivotView.extrusions_.append(body);
+            const QPoint press(450,325);
+            const QVector3D hit = pivotView.orbitPointAt(press);
+            require((hit-QVector3D(0,-3,0)).length() < 1e-4f,
+                    "pivot sulla superficie sotto il mouse");
+            const QPointF fixedPixel = pivotView.projectWorldPoint(hit);
+            pivotView.lastMousePosition_ = press;
+            pivotView.orbitView(QPoint(80,30));
+            require((pivotView.projectWorldPoint(hit)-fixedPixel).manhattanLength() < 1e-3,
+                    "pivot resta nello stesso pixel durante orbita");
+            pivotView.lastMousePosition_ += QPoint(80,30);
+            pivotView.orbitView(QPoint(20,40));
+            require((pivotView.orbitPivot_-hit).length() < 1e-6f
+                    && (pivotView.projectWorldPoint(hit)-fixedPixel).manhattanLength() < 1e-3,
+                    "pivot stabile per tutto il trascinamento");
+            QMouseEvent release(QEvent::MouseButtonRelease, QPointF(550,395), QPointF(550,395),
+                                Qt::RightButton, Qt::NoButton, Qt::NoModifier);
+            pivotView.mouseReleaseEvent(&release);
+            require(!pivotView.orbitPivotValid_, "rilascio libera il pivot");
+            const QPoint background(850,40);
+            const QVector3D fallback = pivotView.orbitPointAt(background);
+            require((pivotView.projectWorldPoint(fallback)-QPointF(background)).manhattanLength() < 1e-3,
+                    "pivot sullo sfondo segue il pixel del mouse");
+        }
+        if (orbitOnly) {
+            std::cout << "PASS orbita classica: sensibilita, giri completi e pivot mouse" << std::endl;
+            return;
+        }
         v.setViewNormal(0);
         v.selectPlane(0);
         const auto dragPlane = [&](bool cancel) {
@@ -8811,7 +8861,8 @@ int main(int argc, char **argv) {
         else if (app.arguments().contains(QStringLiteral("--spline-clicks")))
             ViewportInteractionTest::splineSelectionClicks(app.arguments().value(app.arguments().indexOf(QStringLiteral("--spline-clicks"))+1));
         else if (app.arguments().contains(QStringLiteral("--spline-shape"))) ViewportInteractionTest::splineShapeOptions();
-        else ViewportInteractionTest::run(app.arguments().contains(QStringLiteral("--gl")));
+        else ViewportInteractionTest::run(app.arguments().contains(QStringLiteral("--gl")),
+            app.arguments().contains(QStringLiteral("--orbit-pivot")));
     }
     catch (const std::exception &e) { std::cerr << e.what() << std::endl; return 1; }
 }
