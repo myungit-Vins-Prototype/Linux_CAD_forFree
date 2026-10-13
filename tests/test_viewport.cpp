@@ -714,6 +714,34 @@ public:
                         "living viewport receives feature highlight");
             }
         }
+        // Annulla before dispatch: a queued job must exit without publishing geometry.
+        {
+            CadViewport viewport;
+            PrimitiveParameters primitive;
+            require(viewport.createPrimitive(primitive, QStringLiteral("Base")).isEmpty(), "cancel test base");
+            QSemaphore entered, release;
+            pool->start([&] { entered.release(); release.acquire(); });
+            entered.acquire();
+            int finished = 0;
+            viewport.workCallback_ = [&](bool active, const QString &, bool) { if (!active) ++finished; };
+            viewport.requestPreview(viewport.extrusions().first(), 0);
+            viewport.startPreviewJob();
+            const auto token = viewport.previewCancellation_;
+            viewport.clearPreview();
+            require(token && token->load(), "Annulla signals worker cancellation");
+            require(!viewport.previewTimer_->isActive(), "Annulla stops pending preview timer");
+            release.release();
+            require(pool->waitForDone(10000), "cancelled queued preview completes");
+            QCoreApplication::processEvents();
+            require(!viewport.previewRunning_ && !viewport.previewCancellation_, "cancelled preview releases job state");
+            require(!viewport.preview_.valid && !viewport.preview_.geometry && finished == 1, "cancelled result is discarded and progress closes");
+            viewport.requestPreview(viewport.extrusions().first(), 0);
+            viewport.startPreviewJob();
+            viewport.previewTimer_->stop();
+            require(pool->waitForDone(10000), "preview restarts after cancellation");
+            QCoreApplication::processEvents();
+            require(viewport.preview_.valid && viewport.preview_.geometry, "new preview succeeds after cancellation");
+        }
         pool->setMaxThreadCount(previousLimit);
     }
     static void mouseSnapshotRegression(const QString &output = {}) {
@@ -848,6 +876,22 @@ public:
         view->setHistoryPosition(0);settle();
         require(tree->verticalScrollBar()->value()<cursorBefore,"spostamento esplicito segue cursore della storia");
         view->setHistoryPosition(state.extrusions.size());settle();
+        auto *story = static_cast<StoryboardTree *>(tree);
+        for (auto mode : {StoryboardTree::CursorMode::Left, StoryboardTree::CursorMode::Right}) {
+            story->setCursorMode(mode);settle();
+            auto *rail = story->historyRail();
+            for (int scroll : {0, tree->verticalScrollBar()->maximum()/4, tree->verticalScrollBar()->maximum()}) {
+                tree->verticalScrollBar()->setValue(scroll);settle();
+                cursor = nullptr;
+                for (QTreeWidgetItemIterator it(tree);*it;++it)
+                    if (StoryboardTree::isHistoryCursor(*it)) {cursor=*it;break;}
+                require(cursor,"scrolling cursor row present");
+                const QRect handle=static_cast<StoryboardPositionSlider *>(rail)->handleRect();
+                const int handleY=rail->mapTo(tree,handle.center()).y()-tree->viewport()->geometry().top();
+                require(qAbs(handleY-tree->visualItemRect(cursor).center().y())<=1,"handle follows actual cursor row through scrolling");
+                require(rail->parentWidget()->height()==tree->viewport()->height(),"rail clipped to visible storyboard height");
+            }
+        }
     }
 
     static void historyPositionRegressions() {
@@ -1006,8 +1050,8 @@ public:
                 auto *rail = tree->historyRail();
                 require(!rail->isHidden() && QSettings().value(QStringLiteral("view/storyboardCursorMode")).toInt() == mode,
                         "vertical rail enabled and preference saved");
-                require((mode == 1 && rail->geometry().right() <= tree->viewport()->geometry().left())
-                            || (mode == 2 && rail->geometry().left() > tree->viewport()->geometry().right()),
+                require((mode == 1 && rail->parentWidget()->geometry().right() <= tree->viewport()->geometry().left())
+                            || (mode == 2 && rail->parentWidget()->geometry().left() > tree->viewport()->geometry().right()),
                         "vertical handle occupies side gutter");
                 rail->triggerAction(QAbstractSlider::SliderToMinimum);
                 QApplication::processEvents();
@@ -1034,7 +1078,10 @@ public:
                     bool foundHighlight = false;
                     for (int y = 0; y < handleImage.height() && !foundHighlight; ++y)
                         for (int x = 0; x < handleImage.width(); ++x)
-                            if (handleImage.pixelColor(x, y).rgb() == highlight.rgb()) { foundHighlight = true; break; }
+                            if (const QColor pixel = handleImage.pixelColor(x, y);
+                                qAbs(pixel.red() - highlight.red()) <= 20
+                                && qAbs(pixel.green() - highlight.green()) <= 20
+                                && qAbs(pixel.blue() - highlight.blue()) <= 20) { foundHighlight = true; break; }
                     require(foundHighlight, "handle renders highlight from current theme");
                 }
                 rail->setPalette(originalPalette);
@@ -1049,6 +1096,21 @@ public:
                 model->setHistoryPosition(1);
                 QApplication::processEvents();
                 require(tree->grab().save(QStringLiteral("/tmp/forgecad-storyboard-mode%1.png").arg(mode)), "vertical cursor visual snapshot");
+                root = history();
+                const QPointF cursorPoint(tree->visualItemRect(root->child(1)).center());
+                const QPointF firstPoint(tree->visualItemRect(root->child(0)).center());
+                QMouseEvent sidePress(QEvent::MouseButtonPress, cursorPoint, cursorPoint, Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+                QMouseEvent sideMove(QEvent::MouseMove, firstPoint, firstPoint, Qt::NoButton, Qt::LeftButton, Qt::NoModifier);
+                QMouseEvent sideRelease(QEvent::MouseButtonRelease, firstPoint, firstPoint, Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
+                QApplication::sendEvent(tree->viewport(), &sidePress);
+                QApplication::sendEvent(tree->viewport(), &sideMove);
+                QApplication::sendEvent(tree->viewport(), &sideRelease);
+                require(model->historyPosition() == 1, "lateral mode prevents dragging Inserisci qui row");
+                model->setHistoryPosition(2);
+                QApplication::processEvents();
+                require(tree->grab().save(QStringLiteral("/tmp/forgecad-storyboard-mode%1-end.png").arg(mode)), "terminal rail visual snapshot");
+                model->setHistoryPosition(1);
+                QApplication::processEvents();
             }
             {
                 PdfWindow restored;

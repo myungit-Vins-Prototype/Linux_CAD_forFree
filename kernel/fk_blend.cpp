@@ -1,5 +1,7 @@
 #include "fk_blend.h"
 
+#include "fk_cancel.h"
+
 #include <algorithm>
 #include <array>
 #include <cmath>
@@ -144,6 +146,7 @@ bool filletCenter(const SectionSupport &s1, const SectionSupport &s2, const Vec2
     const bool composite = s1.size() > 1 || s2.size() > 1;
     bool found = false;
     for (const Vec2 &c : centers) {
+        cancellationPoint();
         if (composite && (travel(f1, foot(f1, c)) < -tolerance || travel(f2, foot(f2, c)) < -tolerance)) continue;
         if (!found || distance(c, corner) < distance(center, corner)) center = c;
         found = true;
@@ -165,6 +168,7 @@ std::vector<Vec2> supportSamples(const SectionFace &face, const Vec2 &from, cons
     const int n = std::max(1, int(std::ceil(std::fabs(delta) / std::max(step, 1e-3))));
     std::vector<Vec2> points{from};
     for (int i = 1; i < n; ++i) {
+        cancellationPoint();
         const double a = a0 + delta * double(i) / double(n);
         points.push_back(face.center + face.radius * Vec2(std::cos(a), std::sin(a)));
     }
@@ -254,6 +258,7 @@ ProfileRegion blendRegion(const SectionSupport &s1, const SectionSupport &s2, co
         for (const SectionSupport *support : {&s1, &s2})
             for (std::size_t i = 1; i < support->size(); ++i) extent->push_back((*support)[i].base);
         for (const std::vector<ProfileSegment> *pieces : {static_cast<const std::vector<ProfileSegment> *>(&segments), &path1, &path2}) {
+            cancellationPoint();
             if (pieces != &segments && !composite) continue;
             for (const ProfileSegment &segment : *pieces) extent->push_back(segment.curve->point(0.5 * (segment.range.lo + segment.range.hi)));
         }
@@ -278,6 +283,7 @@ Vec3 anyPerpendicular(const Vec3 &n) { return normalized(cross(n, std::fabs(n.x(
 std::vector<FaceId> facesAround(const Body &body, VertexId v) {
     std::vector<FaceId> result;
     for (FinId fin : body.fins()) {
+        cancellationPoint();
         if (body.finStart(fin) != v) continue;
         const FaceId f = body.finFace(fin);
         if (std::find(result.begin(), result.end(), f) == result.end()) result.push_back(f);
@@ -306,10 +312,12 @@ Body buildPiece(const std::vector<Vec3> &points, const std::vector<PieceEdge> &e
     for (const PieceEdge &e : edges) buildEdges.push_back({e.a, e.b, e.curve, e.range, 0.0});
     std::vector<Body::BuildFace> buildFaces;
     for (const PieceFace &face : faces) {
+        cancellationPoint();
         std::vector<Body::BuildFin> fins;
         std::vector<Vec3> samples;
         const std::size_t n = face.cycle.size();
         for (std::size_t k = 0; k < n; ++k) {
+            cancellationPoint();
             const int a = face.cycle[k], b = face.cycle[(k + 1) % n];
             int index = -1;
             bool sense = true;
@@ -380,6 +388,7 @@ Body filletCorner(const Corner &c, double r, double inset[3]) {
     const Vec3 x = solvePlanes(c.n, b), center = c.vertex + x;
     std::vector<Vec3> points{c.vertex};
     for (int k = 0; k < 3; ++k) {
+        cancellationPoint();
         inset[k] = dot(x, c.d[k]);
         if (!(inset[k] > 0.0)) throw std::domain_error("blendEdges: angolo non convesso");
         points.push_back(c.vertex + inset[k] * c.d[k]);  // 1 + k: E_k
@@ -387,6 +396,7 @@ Body filletCorner(const Corner &c, double r, double inset[3]) {
     for (int i = 0; i < 3; ++i) points.push_back(center + r * c.n[i]);  // 4 + i: T_i
     std::vector<PieceEdge> edges;
     for (int k = 0; k < 3; ++k) {
+        cancellationPoint();
         edges.push_back(lineEdge(points, 0, 1 + k));
         for (int i : c.edgeFaces[k]) edges.push_back(lineEdge(points, 1 + k, 4 + i));
         // Arco della sfera nel piano per C normale allo spigolo.
@@ -397,6 +407,7 @@ Body filletCorner(const Corner &c, double r, double inset[3]) {
     }
     std::vector<PieceFace> faces;
     for (int i = 0; i < 3; ++i) {
+        cancellationPoint();
         int k, l;
         c.edgesOf(i, k, l);
         faces.push_back({std::make_shared<Plane>(Frame3(c.vertex, c.n[i], c.d[k])), true, {0, 1 + k, 4 + i, 1 + l}, c.n[i]});
@@ -420,6 +431,7 @@ Body chamferCorner(const Corner &c, const double (&dist)[3][2]) {
     Vec3 u[3][2];
     for (int k = 0; k < 3; ++k)
         for (int s = 0; s < 2; ++s) {
+            cancellationPoint();
             const int i = c.edgeFaces[k][s];
             int a, b;
             c.edgesOf(i, a, b);
@@ -431,6 +443,7 @@ Body chamferCorner(const Corner &c, const double (&dist)[3][2]) {
     auto distanceOn = [&](int k, int i) { return c.edgeFaces[k][0] == i ? dist[k][0] : dist[k][1]; };
     std::vector<Vec3> points;
     for (int i = 0; i < 3; ++i) {
+        cancellationPoint();
         int k, l;
         c.edgesOf(i, k, l);
         // Punto della faccia i in cui si incontrano i bordi degli smussi di k e di l.
@@ -440,6 +453,7 @@ Body chamferCorner(const Corner &c, const double (&dist)[3][2]) {
     Vec3 m[3];
     double offsets[3];
     for (int k = 0; k < 3; ++k) {
+        cancellationPoint();
         // Piano dello smusso di k: per i suoi due bordi, paralleli allo spigolo.
         const Vec3 a = dist[k][0] * u[k][0], b = dist[k][1] * u[k][1];
         m[k] = normalized(cross(c.d[k], b - a));
@@ -452,6 +466,7 @@ Body chamferCorner(const Corner &c, const double (&dist)[3][2]) {
         for (int b = a + 1; b < 4; ++b) edges.push_back(lineEdge(points, a, b));
     std::vector<PieceFace> faces;
     for (const auto &[a, b, e] : {std::array<int, 3>{0, 1, 2}, {0, 1, 3}, {0, 2, 3}, {1, 2, 3}}) {
+        cancellationPoint();
         const Vec3 &p = points[std::size_t(a)];
         Vec3 normal = normalized(cross(points[std::size_t(b)] - p, points[std::size_t(e)] - p));
         if (dot(normal, p - centroid) < 0.0) normal = -normal;
@@ -483,9 +498,11 @@ Body sewBodies(const std::vector<const Body *> &bodies, double tolerance) {
     };
     std::vector<SewnFace> faces;
     for (std::size_t b = 0; b < bodies.size(); ++b) {
+        cancellationPoint();
         const Body &body = *bodies[b];
         std::map<int, std::pair<int, bool>> edgeMap;  // edge del body -> (edge cucito, invertito)
         for (EdgeId e : body.edges()) {
+            cancellationPoint();
             const Edge &edge = body.edge(e);
             const int start = vertexIndex(body.vertex(body.edgeStart(e)).point), end = vertexIndex(body.vertex(body.edgeEnd(e)).point);
             const Vec3 middle = edge.curve->point(0.5 * (edge.range.lo + edge.range.hi));
@@ -536,6 +553,7 @@ Body sewBodies(const std::vector<const Body *> &bodies, double tolerance) {
             edgeMap[e.index] = {found, reversed};
         }
         for (FaceId f : body.faces()) {
+            cancellationPoint();
             const Face &face = body.face(f);
             SewnFace sewn;
             sewn.body = int(b);
@@ -566,6 +584,7 @@ Body sewBodies(const std::vector<const Body *> &bodies, double tolerance) {
     std::vector<Body::BuildEdge> buildEdges;
     std::vector<Body::BuildFace> buildFaces;
     for (std::size_t f = 0; f < faces.size(); ++f) {
+        cancellationPoint();
         if (removed[f]) continue;
         Body::BuildFace face = faces[f].face;
         for (auto &loop : face.loops)
@@ -586,8 +605,10 @@ Body sewBodies(const std::vector<const Body *> &bodies, double tolerance) {
     // meridiano che arriva accanto al polo di una sfera (raggio del raccordo
     // uguale a quello dell'arco) non si calcola.
     for (EdgeId e : sewn.edges()) {
+        cancellationPoint();
         Edge &edge = sewn.edge(e);
         for (const auto &[v, t] : {std::pair<VertexId, double>{sewn.edgeStart(e), edge.range.lo}, {sewn.edgeEnd(e), edge.range.hi}}) {
+            cancellationPoint();
             const double gap = distance(sewn.vertex(v).point, edge.curve->point(t));
             if (gap <= kLinearResolution) continue;
             edge.tolerance = std::max(edge.tolerance, 1.01 * gap);
@@ -641,6 +662,7 @@ EdgeId nearestEdge(const Body &body, const Vec3 &point, double tolerance) {
     EdgeId best;
     double closest = tolerance;
     for (EdgeId e : body.edges()) {
+        cancellationPoint();
         const Edge &edge = body.edge(e);
         if (!edge.curve) continue;
         const double d = projectPoint(*edge.curve, point, edge.range).distance;
@@ -667,6 +689,7 @@ Body chamferEdges(const Body &body, const std::vector<EdgeId> &edges, const std:
     if (sides.size() != edges.size()) throw std::invalid_argument("chamferEdges: una coppia di distanze per spigolo");
     double size = 0.0;
     for (const ChamferSides &side : sides) {
+        cancellationPoint();
         if (!(side.onReference > kLinearResolution) || !(side.onOther > kLinearResolution)) throw std::domain_error("blendEdges: distanze dello smusso non valide");
         size = std::max({size, side.onReference, side.onOther});
     }
@@ -700,10 +723,12 @@ void propagateTangent(const Body &body, std::vector<EdgeId> &edges, std::vector<
         return atStart ? t : -t;
     };
     for (std::size_t k = 0; k < edges.size(); ++k) {
+        cancellationPoint();
         const EdgeId e = edges[k];
         const Edge &edge = body.edge(e);
         if (!edge.curve || body.isLaminar(e)) continue;
         for (VertexId v : {body.edgeStart(e), body.edgeEnd(e)}) {
+            cancellationPoint();
             if (body.edgeStart(e) == body.edgeEnd(e)) break;  // edge chiuso
             const Vec3 p = body.vertex(v).point;
             const Vec3 te = into(e, v);
@@ -777,6 +802,7 @@ Body blendEdgesWith(const Body &body, const std::vector<EdgeId> &selected, doubl
     // contorno; gli altri spigoli poi, sul risultato.
     std::vector<EdgeId> freeform;
     for (EdgeId e : edges) {
+        cancellationPoint();
         const Edge &edge = body.edge(e);
         if (!edge.curve) continue;
         const Vec3 start = edge.curve->point(edge.range.lo), end = edge.curve->point(edge.range.hi);
@@ -799,6 +825,7 @@ Body blendEdgesWith(const Body &body, const std::vector<EdgeId> &selected, doubl
             || type == SurfaceType::Torus;
     };
     for (EdgeId e : edges) {
+        cancellationPoint();
         if (std::find(freeform.begin(), freeform.end(), e) != freeform.end() || body.isLaminar(e)) continue;
         if ((!analyticFace(body.edge(e).forward) || !analyticFace(body.edge(e).backward)) && !isPlanarChainEdge(body, e)) general.push_back(e);
     }
@@ -814,6 +841,7 @@ Body blendEdgesWith(const Body &body, const std::vector<EdgeId> &selected, doubl
         std::vector<Vec3> others;
         std::vector<ChamferSides> otherSides, runSides;
         for (EdgeId e : edges) {
+            cancellationPoint();
             if (std::find(runs.begin(), runs.end(), e) != runs.end()) continue;
             others.push_back(body.edge(e).curve->point(0.5 * (body.edge(e).range.lo + body.edge(e).range.hi)));
             if (sides) otherSides.push_back(sidesOf(e));
@@ -824,6 +852,7 @@ Body blendEdgesWith(const Body &body, const std::vector<EdgeId> &selected, doubl
         if (others.empty()) return result;
         std::vector<EdgeId> rest;
         for (const Vec3 &p : others) {
+            cancellationPoint();
             const EdgeId e = nearestEdge(result, p, 1e-7 * scale);
             if (!e.valid()) throw std::domain_error(message);
             rest.push_back(e);
@@ -1177,7 +1206,7 @@ Body analyticBlend(const Body &body, const std::vector<EdgeId> &edges, double si
             }
             info.composite = info.support[0].size() > 1 || info.support[1].size() > 1;
         }
-      } catch (...) {
+      } catch (const OperationCancelled &) { throw; } catch (...) {
           infoErrors[infoIndex] = std::current_exception();
       }
     });
@@ -1196,12 +1225,14 @@ Body analyticBlend(const Body &body, const std::vector<EdgeId> &edges, double si
     std::function<int(int)> root = [&](int k) { return parent[std::size_t(k)] == k ? k : parent[std::size_t(k)] = root(parent[std::size_t(k)]); };
     for (std::size_t a = 0; a < infos.size(); ++a)
         for (std::size_t b = a + 1; b < infos.size(); ++b) {
+            cancellationPoint();
             if (infos[a].full || infos[b].full || infos[a].convex != infos[b].convex) continue;
             for (VertexId v : {body.edgeStart(infos[a].id), body.edgeEnd(infos[a].id)})
                 if (v == body.edgeStart(infos[b].id) || v == body.edgeEnd(infos[b].id))
                     if (std::fabs(dot(tangentAt(infos[a], v), tangentAt(infos[b], v))) >= 1.0 - normalTolerance) parent[std::size_t(root(int(a)))] = root(int(b));
         }
     for (std::size_t k = 0; k < infos.size(); ++k) {
+        cancellationPoint();
         int members = 0;
         for (std::size_t j = 0; j < infos.size(); ++j) members += root(int(j)) == root(int(k));
         if (members > 1) infos[k].chain = root(int(k));
@@ -1217,7 +1248,7 @@ Body analyticBlend(const Body &body, const std::vector<EdgeId> &edges, double si
                 throw std::domain_error("blendEdges: faccia piu' corta del raggio accanto a una catena di spigoli tangenti (non gestita)");
             info.region = blendRegion(info.support[0], info.support[1], info.corner, chamfer ? info.chamfer[0] : size, chamfer, info.convex, tolerance,
                                       offset ? 0.05 * size : 0.0, &info.extent, chamfer ? info.chamfer[1] : -1.0);
-        } catch (...) {
+        } catch (const OperationCancelled &) { throw; } catch (...) {
             regionErrors[k] = std::current_exception();
         }
     });
@@ -1227,6 +1258,7 @@ Body analyticBlend(const Body &body, const std::vector<EdgeId> &edges, double si
     // Vertici con tre spigoli scelti: la pezza d'angolo.
     std::map<int, std::vector<int>> perVertex;
     for (int k = 0; k < int(infos.size()); ++k) {
+        cancellationPoint();
         if (infos[std::size_t(k)].full) continue;
         const VertexId a = body.edgeStart(infos[std::size_t(k)].id), b = body.edgeEnd(infos[std::size_t(k)].id);
         perVertex[a.index].push_back(k);
@@ -1235,6 +1267,7 @@ Body analyticBlend(const Body &body, const std::vector<EdgeId> &edges, double si
     std::vector<Body> corners;
     std::vector<int> filletCorners;  // vertici in cui i raccordi finiscono contro la sfera
     for (const auto &[vertexIndex, list] : perVertex) {
+        cancellationPoint();
         if (list.size() < 3) continue;
         if (list.size() > 3) throw std::domain_error("blendEdges: piu' di tre spigoli in un vertice");
         const VertexId v(vertexIndex);
@@ -1243,11 +1276,13 @@ Body analyticBlend(const Body &body, const std::vector<EdgeId> &edges, double si
         Corner c;
         c.vertex = body.vertex(v).point;
         for (int i = 0; i < 3; ++i) {
+            cancellationPoint();
             if (body.face(around[std::size_t(i)]).surface->type() != SurfaceType::Plane)
                 throw std::domain_error("blendEdges: pezza d'angolo solo tra facce piane");
             c.n[i] = outwardNormal(body, around[std::size_t(i)], c.vertex);
         }
         for (int k = 0; k < 3; ++k) {
+            cancellationPoint();
             const BlendEdge &info = infos[std::size_t(list[std::size_t(k)])];
             if (!info.straight) throw std::domain_error("blendEdges: pezza d'angolo solo tra spigoli rettilinei");
             if (!info.convex) throw std::domain_error("blendEdges: pezza d'angolo solo su angoli convessi");
@@ -1266,6 +1301,7 @@ Body analyticBlend(const Body &body, const std::vector<EdgeId> &edges, double si
         corners.push_back(filletCorner(c, size, inset));
         filletCorners.push_back(vertexIndex);
         for (int k = 0; k < 3; ++k) {
+            cancellationPoint();
             BlendEdge &info = infos[std::size_t(list[std::size_t(k)])];
             if (body.edgeStart(info.id) == v) info.from += inset[k];
             else info.to -= inset[k];
@@ -1280,9 +1316,11 @@ Body analyticBlend(const Body &body, const std::vector<EdgeId> &edges, double si
     // zona di uno spigolo rettilineo si allunga oltre il vertice e si taglia
     // con il semispazio della faccia.
     for (BlendEdge &info : infos) {
+        cancellationPoint();
         if (info.full) continue;
         const Edge &edge = body.edge(info.id);
         for (int end = 0; end < 2; ++end) {
+            cancellationPoint();
             const VertexId v = end == 0 ? body.edgeStart(info.id) : body.edgeEnd(info.id);
             if (std::find(filletCorners.begin(), filletCorners.end(), v.index) != filletCorners.end()) continue;
             const Vec3 p = body.vertex(v).point;
@@ -1435,7 +1473,7 @@ Body analyticBlend(const Body &body, const std::vector<EdgeId> &edges, double si
                 tool.body = booleanOperation(tool.body, halfSpace(point, normal, reach), BooleanOperation::Intersect);
         }
         if (!info.concaveEnds.empty()) extended[k] = tool.body;
-      } catch (...) {
+      } catch (const OperationCancelled &) { throw; } catch (...) {
           toolErrors[k] = std::current_exception();
       }
     });
@@ -1452,7 +1490,9 @@ Body analyticBlend(const Body &body, const std::vector<EdgeId> &edges, double si
     // (i raccordi tangenti alle pareti nello spigolo verticale), le catene
     // piane di fk_blend_loop fanno lo stesso senza booleane.
     for (std::size_t k = 0; k < infos.size(); ++k) {
+        cancellationPoint();
         for (const BlendEdge::ConcaveEnd &ce : infos[k].concaveEnds) {
+            cancellationPoint();
             Body &toolBody = tools[k].body;
             const Surface &surface = *body.face(ce.face).surface;
             // Il taglio vale solo vicino al vertice (la superficie di B puo'
@@ -1516,6 +1556,7 @@ Body analyticBlend(const Body &body, const std::vector<EdgeId> &edges, double si
     }
     // Gli utensili di ogni catena diventano uno.
     for (std::size_t k = 0; k < tools.size(); ++k) {
+        cancellationPoint();
         if (tools[k].chain < 0) continue;
         std::vector<const Body *> pieces{&tools[k].body};
         for (std::size_t j = k + 1; j < tools.size(); ++j)

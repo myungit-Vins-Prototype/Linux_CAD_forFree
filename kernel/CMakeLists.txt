@@ -47,6 +47,7 @@ add_library(forgekernel STATIC
     fk_marching.cpp
     fk_classify.h
     fk_classify.cpp
+    fk_cancel.h
     fk_parallel.h
     fk_body_io.h
     fk_body_io.cpp
@@ -133,6 +134,7 @@ add_executable(forgekernel_tests
     tests/fk_test_main.cpp
     tests/fk_test_util.h
     tests/fk_test_profiles.h
+    tests/test_cancel.cpp
     tests/test_math.cpp
     tests/test_predicates.cpp
     tests/test_bernstein.cpp

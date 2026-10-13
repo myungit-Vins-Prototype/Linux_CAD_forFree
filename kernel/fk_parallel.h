@@ -4,6 +4,10 @@
 #include <algorithm>
 #include <atomic>
 #include <cstddef>
+#include <exception>
+#include <mutex>
+
+#include "fk_cancel.h"
 #include <thread>
 #include <vector>
 
@@ -25,27 +29,48 @@ inline unsigned threadCount(int requested) {
 
 // Chiama task(i) per i in [0, count) su al piu' `threads` thread (il chiamante
 // e' uno di loro). I compiti si prendono in ordine da un contatore comune:
-// quelli lunghi non bloccano gli altri. `task` non deve lanciare eccezioni
-// (chi puo' fallire le raccoglie per indice e le rilancia dopo, in ordine).
+// quelli lunghi non bloccano gli altri. Le eccezioni si rilanciano sul
+// chiamante solo dopo aver fermato e raggiunto tutti i worker.
 template <class Task>
 void parallelFor(std::size_t count, unsigned threads, const Task &task) {
     if (parallelDepth != 0) threads = 1;
     threads = unsigned(std::min<std::size_t>(threads, count));
     if (threads <= 1) {
-        for (std::size_t i = 0; i < count; ++i) task(i);
+        for (std::size_t i = 0; i < count; ++i) { cancellationPoint(); task(i); }
         return;
     }
     std::atomic<std::size_t> next{0};
+    const auto cancellation = currentCancellation;
+    std::atomic<bool> stopped{false};
+    std::mutex failureMutex;
+    std::exception_ptr failure;
     const auto work = [&] {
+        CancellationScope scope(cancellation);
         ++parallelDepth;
-        for (std::size_t i = next++; i < count; i = next++) task(i);
+        try {
+            for (std::size_t i = next++; i < count && !stopped.load(std::memory_order_relaxed); i = next++) {
+                cancellationPoint();
+                task(i);
+            }
+        } catch (...) {
+            stopped.store(true, std::memory_order_relaxed);
+            std::lock_guard<std::mutex> lock(failureMutex);
+            if (!failure) failure = std::current_exception();
+        }
         --parallelDepth;
     };
     std::vector<std::thread> pool;
     pool.reserve(threads - 1);
-    for (unsigned k = 1; k < threads; ++k) pool.emplace_back(work);
+    try {
+        for (unsigned k = 1; k < threads; ++k) pool.emplace_back(work);
+    } catch (...) {
+        stopped.store(true, std::memory_order_relaxed);
+        for (std::thread &thread : pool) thread.join();
+        throw;
+    }
     work();
     for (std::thread &thread : pool) thread.join();
+    if (failure) std::rethrow_exception(failure);
 }
 
 }

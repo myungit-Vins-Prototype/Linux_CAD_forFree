@@ -1,5 +1,7 @@
 #include "fk_surface.h"
 
+#include "fk_cancel.h"
+
 #include <algorithm>
 
 #include "fk_precision.h"
@@ -51,12 +53,14 @@ CurvePtr<3> signedCircle(const Vec3 &center, const Vec3 &x, const Vec3 &y, doubl
 }
 
 Vec3 Surface::point(double u, double v) const {
+    cancellationPoint();
     Vec3 result;
     evaluate(u, v, 0, &result);
     return result;
 }
 
 Vec3 Surface::normal(double u, double v) const {
+    cancellationPoint();
     Vec3 d[4];
     evaluate(u, v, 1, d);
     const Vec3 &su = d[derivativeIndex(1, 0, 1)];

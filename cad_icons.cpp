@@ -24,11 +24,19 @@ struct IconPalette {
 };
 
 IconPalette palette(QIcon::Mode mode) {
+    const QPalette theme = QApplication::palette();
+    const bool dark = theme.color(QPalette::Window).lightness() < 128;
     if (mode == QIcon::Disabled) {
-        const QColor grey(110, 120, 128);
-        return {grey, grey, grey, grey, grey, QColor(90, 98, 105), QColor(75, 82, 88), QColor(62, 68, 74)};
+        const QColor grey = theme.color(QPalette::Disabled, QPalette::WindowText);
+        return {grey, grey, grey, grey, grey,
+                dark ? QColor(90, 98, 105) : QColor(211, 218, 224),
+                dark ? QColor(75, 82, 88) : QColor(187, 196, 205),
+                dark ? QColor(62, 68, 74) : QColor(161, 174, 186)};
     }
-    return {QApplication::palette().color(QPalette::WindowText), QColor(255, 176, 74), QColor(96, 170, 255), QColor(255, 104, 96),
+    if (!dark)
+        return {theme.color(QPalette::WindowText), QColor(184, 106, 12), QColor(36, 112, 188), QColor(194, 58, 50),
+                QColor(32, 139, 70), QColor(211, 232, 247), QColor(158, 198, 226), QColor(109, 160, 199)};
+    return {theme.color(QPalette::WindowText), QColor(255, 176, 74), QColor(96, 170, 255), QColor(255, 104, 96),
             QColor(96, 214, 138), QColor(150, 186, 212), QColor(104, 140, 168), QColor(72, 102, 128)};
 }
 

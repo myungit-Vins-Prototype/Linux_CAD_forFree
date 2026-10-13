@@ -1,5 +1,7 @@
 #include "fk_tessellate.h"
 
+#include "fk_cancel.h"
+
 #include <algorithm>
 #include <cmath>
 #include <deque>
@@ -128,6 +130,7 @@ private:
         if (!ear) return;
         EarNode *stop = ear;
         while (ear->prev != ear->next) {
+            cancellationPoint();
             EarNode *prev = ear->prev, *next = ear->next;
             if (isEar(ear)) {
                 triangles.push_back({prev->index, ear->index, next->index});
@@ -159,6 +162,7 @@ private:
         const double ab = std::hypot(b->x - a->x, b->y - a->y), bc = std::hypot(c->x - b->x, c->y - b->y);
         if (orient(a, b, c) <= 1e-10 * ab * bc) return false;
         for (const EarNode *p = c->next; p != a; p = p->next) {
+            cancellationPoint();
             if (equals(p, a) || equals(p, b) || equals(p, c)) continue;
             if (pointInTriangle(a->x, a->y, b->x, b->y, c->x, c->y, p->x, p->y) && orient(p->prev, p, p->next) <= 0.0)
                 return false;
@@ -394,6 +398,7 @@ std::vector<double> sampleCurve(const Curve<3> &curve, const Interval &range, co
     // Si parte solo dai nodi in cui la tangente gira (spigoli della curva).
     std::vector<double> hard{breaks.front()};
     for (std::size_t i = 1; i + 1 < breaks.size(); ++i) {
+        cancellationPoint();
         Vec3 left[2], right[2];
         curve.evaluateLeft(breaks[i], 1, left);
         curve.evaluate(breaks[i], 1, right);
@@ -402,6 +407,7 @@ std::vector<double> sampleCurve(const Curve<3> &curve, const Interval &range, co
     hard.push_back(breaks.back());
     std::vector<double> ts{hard.front()};
     for (std::size_t i = 0; i + 1 < hard.size(); ++i) {
+        cancellationPoint();
         if (hard[i + 1] <= hard[i]) continue;
         subdivideCurve(curve, hard[i], hard[i + 1], curve.point(hard[i]), curve.point(hard[i + 1]), options, breaks, 0, ts);
     }
@@ -509,6 +515,7 @@ private:
     std::size_t locate(std::uint64_t packed) const {
         if (keys_.empty()) return kNone;
         for (std::size_t slot = start(packed);; slot = (slot + 1) & mask_) {
+            cancellationPoint();
             if (keys_[slot] == packed) return slot;
             if (keys_[slot] == kEmpty) return kNone;
         }
@@ -523,6 +530,7 @@ private:
         mask_ = capacity - 1;
         used_ = size_;
         for (std::size_t i = 0; i < keys.size(); ++i) {
+            cancellationPoint();
             if (keys[i] == kEmpty || keys[i] == kDeleted) continue;
             std::size_t slot = start(keys[i]);
             while (keys_[slot] != kEmpty) slot = (slot + 1) & mask_;
@@ -617,6 +625,7 @@ private:
 // vertice del cono), un po' piu' dentro.
 Vec3 FaceTessellator::surfaceNormal(const Vec2 &uv, const Vec2 &center) const {
     for (double step : {1e-9, 1e-7, 1e-5, 1e-3, 1e-2}) {
+        cancellationPoint();
         try {
             const Vec2 q = uv + (center - uv) * step;
             return surface_.normal(q[0], q[1]);
@@ -631,6 +640,7 @@ void FaceTessellator::buildRings() {
     // rettilinei in (u, v), infittiti con l'angolo) fino alla fin successiva.
     const std::vector<SurfacePole> poles = periodic_[0] ? surfacePoles(surface_) : std::vector<SurfacePole>();
     for (LoopId l : face_.loops) {
+        cancellationPoint();
         const std::vector<FinId> fins = body_.loopFins(l);
         if (fins.empty()) continue;
         LoopRing ring;
@@ -708,6 +718,7 @@ void FaceTessellator::buildRings() {
             return true;
         };
         for (FinId f : fins) {
+            cancellationPoint();
             const Fin &fin = body_.fin(f);
             const Edge &edge = body_.edge(fin.edge);
             if (!fin.pcurve) throw std::logic_error("tessellate: fin senza SP-curve");
@@ -783,9 +794,11 @@ std::vector<double> FaceTessellator::creases(int d) const {
     }
     const double h = 1e-7 * width;
     for (double b : breaks) {
+        cancellationPoint();
         if (b <= lo_[d] + 1e-9 * width || b >= hi_[d] - 1e-9 * width) continue;
         bool crease = false;
         for (double s : {0.2, 0.5, 0.8}) {
+            cancellationPoint();
             const double other = lo_[o] + s * (hi_[o] - lo_[o]);
             try {
                 Vec2 left, right;
@@ -808,6 +821,7 @@ std::vector<double> FaceTessellator::creases(int d) const {
 // piu' grande intervallo libero dai campioni (il taglio non passa per un campione).
 void FaceTessellator::chooseWindow() {
     for (int d = 0; d < 2; ++d) {
+        cancellationPoint();
         const Interval domain = d == 0 ? surface_.uDomain() : surface_.vDomain();
         std::vector<double> values;
         for (const LoopRing &ring : rings_)
@@ -844,6 +858,7 @@ void FaceTessellator::chooseWindow() {
         }
     }
     for (int d = 0; d < 2; ++d) {
+        cancellationPoint();
         cuts_[d] = {lo_[d]};
         for (double c : creases(d)) cuts_[d].push_back(c);
         cuts_[d].push_back(hi_[d]);
@@ -861,6 +876,7 @@ double FaceTessellator::crossingParameter(const LoopSample &sample, int dimensio
     double a = sample.t, b = sample.tNext;
     double fa = pcurve.point(a)[dimension] + sample.shift[dimension] - line;
     for (int i = 0; i < 60; ++i) {
+        cancellationPoint();
         const double m = 0.5 * (a + b);
         const double fm = pcurve.point(m)[dimension] + sample.shift[dimension] - line;
         if ((fm < 0.0) == (fa < 0.0)) {
@@ -880,6 +896,7 @@ void FaceTessellator::cutRing(const LoopRing &ring) {
     int strip[2];
     double period[2];  // periodi interi tra le coordinate srotolate e quelle della finestra
     for (int d = 0; d < 2; ++d) {
+        cancellationPoint();
         const double x = ring.samples[0].uv[d];
         period[d] = periodic_[d] ? std::floor((x - lo_[d]) / period_[d]) : 0.0;
         const double r = x - period[d] * period_[d];
@@ -892,6 +909,7 @@ void FaceTessellator::cutRing(const LoopRing &ring) {
     std::vector<Chain> pieces;
     Chain current;
     for (std::size_t i = 0; i < n; ++i) {
+        cancellationPoint();
         const LoopSample &sample = ring.samples[i];
         if (current.points.empty() || distance(current.points.back().p, sample.p) != 0.0 || distance(current.points.back().uv, local(sample.uv)) > 1e-12)
             current.points.push_back({local(sample.uv), sample.p});
@@ -905,6 +923,7 @@ void FaceTessellator::cutRing(const LoopRing &ring) {
         };
         std::vector<Crossing> crossings;
         for (int d = 0; d < 2; ++d) {
+            cancellationPoint();
             const double lower = std::min(a[d], b[d]), upper = std::max(a[d], b[d]);
             if (upper <= lower) continue;
             // Un campione sul bordo di una cella (i nodi della superficie sono
@@ -927,6 +946,7 @@ void FaceTessellator::cutRing(const LoopRing &ring) {
         }
         std::sort(crossings.begin(), crossings.end(), [](const Crossing &x, const Crossing &y) { return x.fraction < y.fraction; });
         for (const Crossing &crossing : crossings) {
+            cancellationPoint();
             const int d = crossing.dimension;
             Vec2 uv;
             Vec3 p;
@@ -995,6 +1015,7 @@ void FaceTessellator::subdividePath(const Vec2 &a, const Vec2 &b, const Vec3 &pa
                                 || angleBetween(surfaceNormal(m, center), surfaceNormal(b, center)) > 0.5 * options_.angle);
     if (!split && depth < 14) {
         for (double s : {0.25, 0.75}) {
+            cancellationPoint();
             const Vec2 q = a + s * (b - a);
             if (distanceToSegment(surface_.point(q[0], q[1]), pa, pb) > options_.deflection) split = true;
         }
@@ -1036,11 +1057,13 @@ std::vector<std::vector<BoundaryPoint>> FaceTessellator::walkChains(const std::v
     };
     std::vector<bool> used(chains.size(), false);
     for (std::size_t first = 0; first < chains.size(); ++first) {
+        cancellationPoint();
         if (used[first]) continue;
         std::vector<BoundaryPoint> polygon;
         std::size_t current = first;
         used[first] = true;
         for (std::size_t guard = 0; guard <= chains.size(); ++guard) {
+            cancellationPoint();
             const Chain &chain = chains_[chains[current]];
             polygon.insert(polygon.end(), chain.points.begin(), chain.points.end());
             const double sEnd = perimeter(chain.points.back().uv, chain.end);
@@ -1098,6 +1121,7 @@ std::vector<BoundaryPoint> FaceTessellator::rectangle(const Cell &box) {
     const Vec2 corners[4] = {box.lo, Vec2(box.hi[0], box.lo[1]), box.hi, Vec2(box.lo[0], box.hi[1])};
     std::vector<BoundaryPoint> polygon;
     for (int c = 0; c < 4; ++c) {
+        cancellationPoint();
         polygon.push_back({corners[c], surface_.point(corners[c][0], corners[c][1])});
         appendPath(polygon, corners[c], corners[(c + 1) % 4], box.center());
     }
@@ -1113,6 +1137,7 @@ double signedArea(const std::vector<BoundaryPoint> &polygon) {
 bool insidePolygon(const std::vector<BoundaryPoint> &polygon, const Vec2 &q) {
     bool inside = false;
     for (std::size_t i = 0, j = polygon.size() - 1; i < polygon.size(); j = i++) {
+        cancellationPoint();
         const Vec2 &a = polygon[i].uv, &b = polygon[j].uv;
         if ((a[1] > q[1]) != (b[1] > q[1]) && q[0] < (b[0] - a[0]) * (q[1] - a[1]) / (b[1] - a[1]) + a[0]) inside = !inside;
     }
@@ -1152,12 +1177,14 @@ void FaceTessellator::triangulate(const std::vector<std::vector<BoundaryPoint>> 
     std::vector<std::size_t> outers, holes;
     std::vector<double> areas;
     for (std::size_t i = 0; i < polygons.size(); ++i) {
+        cancellationPoint();
         areas.push_back(polygons[i].size() >= 3 ? signedArea(polygons[i]) : 0.0);
         if (areas[i] > 0.0) outers.push_back(i);
         else if (areas[i] < 0.0) holes.push_back(i);
     }
     std::vector<std::vector<std::size_t>> holesOf(polygons.size());
     for (std::size_t hole : holes) {
+        cancellationPoint();
         std::size_t owner = polygons.size();
         for (std::size_t outer : outers)
             if (insidePolygon(polygons[outer], polygons[hole].front().uv) && (owner == polygons.size() || areas[outer] < areas[owner]))
@@ -1168,6 +1195,7 @@ void FaceTessellator::triangulate(const std::vector<std::vector<BoundaryPoint>> 
     }
     auto scaled = [&](const Vec2 &uv) { return Vec2(uv[0] * scale_[0], uv[1] * scale_[1]); };
     for (std::size_t outer : outers) {
+        cancellationPoint();
         std::vector<int> ids;
         std::vector<Vec2> outerRing;
         std::vector<std::vector<Vec2>> holeRings;
@@ -1183,6 +1211,7 @@ void FaceTessellator::triangulate(const std::vector<std::vector<BoundaryPoint>> 
         };
         addRing(polygons[outer], outerRing);
         for (std::size_t hole : holesOf[outer]) {
+            cancellationPoint();
             holeRings.emplace_back();
             addRing(polygons[hole], holeRings.back());
         }
@@ -1214,6 +1243,7 @@ void FaceTessellator::evaluateBatch(const std::vector<Vec2> &uv, std::vector<Vec
 
 void FaceTessellator::link(int t) {
     for (int k = 0; k < 3; ++k) {
+        cancellationPoint();
         const int a = triangles_[std::size_t(t)][std::size_t(k)], b = triangles_[std::size_t(t)][std::size_t((k + 1) % 3)];
         std::array<int, 2> &sides = adjacency_.tryEmplace(key(a, b), std::array<int, 2>{-1, -1});
         (sides[0] < 0 ? sides[0] : sides[1]) = t;
@@ -1223,6 +1253,7 @@ void FaceTessellator::link(int t) {
 
 void FaceTessellator::unlink(int t) {
     for (int k = 0; k < 3; ++k) {
+        cancellationPoint();
         const int a = triangles_[std::size_t(t)][std::size_t(k)], b = triangles_[std::size_t(t)][std::size_t((k + 1) % 3)];
         std::array<int, 2> *found = adjacency_.find(key(a, b));
         if (!found) continue;
@@ -1245,6 +1276,7 @@ void FaceTessellator::legalize(std::vector<std::pair<int, int>> &pending) {
     };
     std::size_t budget = 50 * (triangles_.size() + 16);
     while (!pending.empty() && budget-- > 0) {
+        cancellationPoint();
         const std::pair<int, int> edge = pending.back();
         pending.pop_back();
         if (fixed_.count(edge)) continue;
@@ -1326,6 +1358,7 @@ void FaceTessellator::refine() {
     std::vector<Vec2> samples;
     std::vector<Vec3> evaluated, evaluatedNormals;
     for (int round = 0; round < 60 && uv_.size() < kMaxVertices; ++round) {
+        cancellationPoint();
         std::vector<Candidate> edges;
         std::vector<std::pair<int, std::size_t>> faces;
         std::vector<Candidate> candidates;
@@ -1337,6 +1370,7 @@ void FaceTessellator::refine() {
         work.swap(fresh_);
         EdgeTable<char> queued;
         for (const std::pair<int, int> &edge : work) {
+            cancellationPoint();
             const std::array<int, 2> *found = adjacency_.find(edge);
             if (!found || (*found)[1] < 0 || fixed_.count(edge) || accepted.count(edge) || queued.count(edge)) continue;
             queued.insert(edge);
@@ -1357,6 +1391,7 @@ void FaceTessellator::refine() {
         // I triangoli di soli lati del bordo vengono dalla triangolazione
         // iniziale (i lati nuovi sono interni): si provano al primo giro.
         for (std::size_t t = 0; round == 0 && t < triangles_.size(); ++t) {
+            cancellationPoint();
             const std::array<int, 3> &tri = triangles_[t];
             if (!fixed_.count(key(tri[0], tri[1])) || !fixed_.count(key(tri[1], tri[2])) || !fixed_.count(key(tri[2], tri[0]))) continue;
             faces.push_back({int(t), samples.size()});
@@ -1366,6 +1401,7 @@ void FaceTessellator::refine() {
         evaluateBatch(samples, evaluated, evaluatedNormals);
 
         for (const Candidate &edge : edges) {
+            cancellationPoint();
             const int a = edge.edge.first, b = edge.edge.second;
             if ((options_.maxEdgeLength > 0.0 && edge.length > options_.maxEdgeLength) ||
                 distanceToSegment(evaluated[edge.sample], points_[std::size_t(a)], points_[std::size_t(b)]) > options_.deflection ||
@@ -1378,6 +1414,7 @@ void FaceTessellator::refine() {
         }
         std::vector<std::pair<int, std::size_t>> centroids;
         for (const std::pair<int, std::size_t> &face : faces) {
+            cancellationPoint();
             // Distanza dal piano del triangolo.
             const std::array<int, 3> &tri = triangles_[std::size_t(face.first)];
             const Vec3 &a = points_[std::size_t(tri[0])], &b = points_[std::size_t(tri[1])], &d = points_[std::size_t(tri[2])];
@@ -1391,6 +1428,7 @@ void FaceTessellator::refine() {
         });
         std::vector<bool> touched(triangles_.size(), false);
         for (const std::pair<int, std::size_t> &centroid : centroids) {
+            cancellationPoint();
             const int t = centroid.first;
             const std::array<int, 3> tri = triangles_[std::size_t(t)];
             const int m = addRefined(samples[centroid.second], evaluated[centroid.second], evaluatedNormals[centroid.second]);
@@ -1405,6 +1443,7 @@ void FaceTessellator::refine() {
             for (int k = 0; k < 3; ++k) pending.push_back(key(tri[std::size_t(k)], tri[std::size_t((k + 1) % 3)]));
         }
         for (const Candidate &candidate : candidates) {
+            cancellationPoint();
             const std::array<int, 2> *found = adjacency_.find(candidate.edge);
             if (!found || (*found)[1] < 0) continue;
             const int t1 = (*found)[0], t2 = (*found)[1];
@@ -1444,6 +1483,7 @@ FaceMesh FaceTessellator::run() {
     // opposta a Su x Sv i loop si girano.
     if (!face_.sense) {
         for (Chain &chain : chains_) {
+            cancellationPoint();
             std::reverse(chain.points.begin(), chain.points.end());
             std::swap(chain.start, chain.end);
         }
@@ -1458,6 +1498,7 @@ FaceMesh FaceTessellator::run() {
         if (!closedU && !closedV) throw std::domain_error("tessellate: faccia senza contorno esterno");
     }
     for (int c = 0; c < cellCount(); ++c) {
+        cancellationPoint();
         const Cell box = cell(c);
         std::vector<std::size_t> chains;
         for (std::size_t k = 0; k < chains_.size(); ++k)
@@ -1537,9 +1578,11 @@ void crossingChords(const Body &body, FaceId f, const std::vector<std::vector<do
     const double period[2] = {periodic[0] ? surface.uPeriod() : 0.0, periodic[1] ? surface.vPeriod() : 0.0};
     std::vector<UVChord> chords;
     for (LoopId l : face.loops) {
+        cancellationPoint();
         Vec2 previous;
         bool start = true;
         for (FinId fi : body.loopFins(l)) {
+            cancellationPoint();
             const Fin &fin = body.fin(fi);
             if (!fin.pcurve) return;
             const std::vector<double> &ts = samples.at(std::size_t(fin.edge.index));
@@ -1573,11 +1616,13 @@ void crossingChords(const Body &body, FaceId f, const std::vector<std::vector<do
     Vec2 lo, hi;
     bool cyclic[2] = {false, false};
     for (int d = 0; d < 2; ++d) {
+        cancellationPoint();
         if (!periodic[d]) continue;
         const double P = period[d];
         std::vector<double> values;
         double extent = 0.0;  // ampiezza massima di una corda in questa direzione
         for (const UVChord &c : chords) {
+            cancellationPoint();
             for (const Vec2 &p : {c.a, c.b, c.m}) values.push_back(p[d] - P * std::floor(p[d] / P));
             extent = std::max(extent, std::max({c.a[d], c.b[d], c.m[d]}) - std::min({c.a[d], c.b[d], c.m[d]}));
         }
@@ -1590,6 +1635,7 @@ void crossingChords(const Body &body, FaceId f, const std::vector<std::vector<do
             begin = values.front();
         }
         for (UVChord &c : chords) {
+            cancellationPoint();
             const double k = std::floor((c.a[d] - begin) / P) * P;
             c.a[d] -= k, c.b[d] -= k, c.m[d] -= k;
         }
@@ -1605,6 +1651,7 @@ void crossingChords(const Body &body, FaceId f, const std::vector<std::vector<do
     const int cells =std::clamp(int(std::sqrt(double(chords.size()))), 1, 512);
     Vec2 size;
     for (int d = 0; d < 2; ++d) {
+        cancellationPoint();
         if (cyclic[d]) lo[d] = std::min(lo[d], hi[d] - period[d]), hi[d] = lo[d] + period[d];
         size[d] = std::max(hi[d] - lo[d], 1e-300) / cells;
     }
@@ -1621,6 +1668,7 @@ void crossingChords(const Body &body, FaceId f, const std::vector<std::vector<do
         long long i[2], e[2];
         int step[2];
         for (int d = 0; d < 2; ++d) {
+            cancellationPoint();
             x0[d] = (p[d] - lo[d]) / size[d], x1[d] = (q[d] - lo[d]) / size[d];
             if (!cyclic[d]) x0[d] = std::clamp(x0[d], 0.0, double(cells) - 1e-9), x1[d] = std::clamp(x1[d], 0.0, double(cells) - 1e-9);
             i[d] = (long long)std::floor(x0[d]), e[d] = (long long)std::floor(x1[d]);
@@ -1632,6 +1680,7 @@ void crossingChords(const Body &body, FaceId f, const std::vector<std::vector<do
         }
         long long guard = std::llabs(e[0] - i[0]) + std::llabs(e[1] - i[1]) + 2;
         for (;;) {
+            cancellationPoint();
             out.push_back(index(i[0], 0) * cells + index(i[1], 1));
             if ((i[0] == e[0] && i[1] == e[1]) || guard-- <= 0) break;
             const int d = tMax[0] < tMax[1] ? 0 : 1;
@@ -1640,6 +1689,7 @@ void crossingChords(const Body &body, FaceId f, const std::vector<std::vector<do
         }
     };
     for (std::size_t c = 0; c < chords.size(); ++c) {
+        cancellationPoint();
         std::vector<int> &list = chordCells[c];
         traverse(chords[c].a, chords[c].m, list);
         traverse(chords[c].m, chords[c].b, list);
@@ -1674,6 +1724,7 @@ void separateCrossingChords(const Body &body, const std::vector<FaceId> &selecte
     std::vector<FaceId> faces;
     std::vector<std::vector<int>> edgeFaces(samples.size());
     for (FaceId f : selectedFaces) {
+        cancellationPoint();
         if (!body.face(f).surface) continue;
         const int index = int(faces.size());
         faces.push_back(f);
@@ -1685,8 +1736,10 @@ void separateCrossingChords(const Body &body, const std::vector<FaceId> &selecte
     }
     std::vector<char> dirty(faces.size(), 1);
     for (int round = 0; round < 12; ++round) {
+        cancellationPoint();
         std::vector<std::pair<int, std::size_t>> marks;
         for (std::size_t k = 0; k < faces.size(); ++k) {
+            cancellationPoint();
             if (!dirty[k]) continue;
             try {
                 crossingChords(body, faces[k], samples, marks);
@@ -1702,6 +1755,7 @@ void separateCrossingChords(const Body &body, const std::vector<FaceId> &selecte
         marks.erase(std::unique(marks.begin(), marks.end()), marks.end());
         bool changed = false;
         for (const auto &[e, interval] : marks) {
+            cancellationPoint();
             const Edge &edge = body.edge(EdgeId(e));
             std::vector<double> &ts = samples[std::size_t(e)];
             const double a = ts[interval], b = ts[interval + 1];
@@ -1748,6 +1802,7 @@ Tessellation tessellate(const Body &input, const TessellationOptions &options) {
             }
     std::vector<std::vector<double>> edgeSamples;
     for (EdgeId e : body.edges()) {
+        cancellationPoint();
         const Edge &edge = body.edge(e);
         if (std::size_t(e.index) >= edgeSamples.size()) edgeSamples.resize(std::size_t(e.index) + 1);
         if (!edge.curve || e.index < 0 || std::size_t(e.index) >= selectedEdges.size()
@@ -1764,6 +1819,7 @@ Tessellation tessellate(const Body &input, const TessellationOptions &options) {
     }
     separateCrossingChords(body, faces, edgeSamples, options);
     for (EdgeId e : body.edges()) {
+        cancellationPoint();
         const Edge &edge = body.edge(e);
         if (!edge.curve || e.index < 0 || std::size_t(e.index) >= selectedEdges.size()
             || !selectedEdges[std::size_t(e.index)]) continue;
@@ -1785,6 +1841,7 @@ Tessellation tessellate(const Body &input, const TessellationOptions &options) {
         }
     });
     for (std::size_t i = 0; i < faces.size(); ++i) {
+        cancellationPoint();
         if (failed[i]) ++result.failedFaces;
         else result.faces.push_back(std::move(meshes[i]));
     }

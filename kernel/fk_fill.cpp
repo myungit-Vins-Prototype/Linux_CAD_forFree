@@ -1,5 +1,7 @@
 #include "fk_fill.h"
 
+#include "fk_cancel.h"
+
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
@@ -86,6 +88,7 @@ std::vector<double> pieceSamples(const Piece &piece, double h, bool midpoints = 
 std::vector<Piece> chainLoop(const std::vector<PathSegment> &input, double tolerance) {
     std::vector<Piece> pieces;
     for (const PathSegment &segment : input) {
+        cancellationPoint();
         if (!segment.curve || !(segment.range.length() > 0.0)) throw std::domain_error("riempimento: tratto del contorno non valido");
         Piece piece{segment.curve, segment.range, true, arcLength(*segment.curve, segment.range)};
         if (!(piece.length > tolerance)) throw std::domain_error("riempimento: tratto del contorno di lunghezza nulla");
@@ -96,10 +99,12 @@ std::vector<Piece> chainLoop(const std::vector<PathSegment> &input, double toler
     std::vector<Piece> loop{pieces.front()};
     used[0] = true;
     while (loop.size() < pieces.size()) {
+        cancellationPoint();
         const Vec3 end = loop.back().end();
         int found = -1;
         bool forward = true;
         for (std::size_t j = 0; j < pieces.size(); ++j) {
+            cancellationPoint();
             if (used[j]) continue;
             const bool head = distance(pieces[j].start(), end) <= tolerance, tail = distance(pieces[j].end(), end) <= tolerance;
             if (!head && !tail) continue;
@@ -150,6 +155,7 @@ public:
         double bestAlignment = -1.0;
         double best = std::numeric_limits<double>::infinity();
         for (FinId f : fins_) {
+            cancellationPoint();
             const Edge &edge = body_->edge(body_->fin(f).edge);
             const CurveProjection<3> projection = projectPoint(*edge.curve, p, edge.range);
             double alignment = 0.0;
@@ -235,6 +241,7 @@ public:
     // Cholesky in place; falso se la matrice non e' definita positiva.
     bool factor() {
         for (int i = 0; i < n_; ++i) {
+            cancellationPoint();
             const int first = std::max(0, i - b_);
             for (int j = first; j <= i; ++j) {
                 double sum = at(i, j);
@@ -251,11 +258,13 @@ public:
     }
     void solve(std::vector<double> &x) {
         for (int i = 0; i < n_; ++i) {
+            cancellationPoint();
             double sum = x[std::size_t(i)];
             for (int k = std::max(0, i - b_); k < i; ++k) sum -= at(i, k) * x[std::size_t(k)];
             x[std::size_t(i)] = sum / at(i, i);
         }
         for (int i = n_ - 1; i >= 0; --i) {
+            cancellationPoint();
             double sum = x[std::size_t(i)];
             for (int k = i + 1; k <= std::min(n_ - 1, i + b_); ++k) sum -= at(k, i) * x[std::size_t(k)];
             x[std::size_t(i)] = sum / at(i, i);
@@ -317,6 +326,7 @@ Row rowAt(const Grid &grid, double u, double v, std::initializer_list<std::tuple
     Row row;
     for (int a = 0; a <= kDegree; ++a)
         for (int b = 0; b <= kDegree; ++b) {
+            cancellationPoint();
             const int k = a * (kDegree + 1) + b;
             row.index[k] = (bu.span - kDegree + a) * grid.nv + (bv.span - kDegree + b);
             double sum = 0.0;
@@ -341,6 +351,7 @@ struct NormalSystem {
         if (position)
             for (int p = 0; p < m; ++p) positionTrace += row.value[p] * row.value[p];
         for (int p = 0; p < m; ++p) {
+            cancellationPoint();
             const int i = row.index[p];
             const double wi = weight * row.value[p];
             for (int c = 0; c < 3; ++c) rhs[c][std::size_t(i)] += wi * target[c];
@@ -358,9 +369,11 @@ std::vector<double> gram(const std::vector<double> &knots, int poles, int k) {
     static const double x[4] = {-0.8611363115940526, -0.3399810435848563, 0.3399810435848563, 0.8611363115940526};
     static const double w[4] = {0.3478548451374538, 0.6521451548625461, 0.6521451548625461, 0.3478548451374538};
     for (std::size_t s = std::size_t(kDegree); s + 1 + std::size_t(kDegree) < knots.size(); ++s) {
+        cancellationPoint();
         const double a = knots[s], b = knots[s + 1];
         if (!(b > a)) continue;
         for (int q = 0; q < 4; ++q) {
+            cancellationPoint();
             const double t = 0.5 * (a + b) + 0.5 * (b - a) * x[q], weight = 0.5 * (b - a) * w[q];
             const Basis basis = basisAt(knots, poles, t);
             for (int i = 0; i <= kDegree; ++i)
@@ -384,6 +397,7 @@ void addEnergy(const Grid &grid, NormalSystem &system, double alpha, double vari
     const int width = 2 * kDegree + 1;
     for (int i = 0; i < grid.nu; ++i)
         for (int j = 0; j < grid.nv; ++j) {
+            cancellationPoint();
             const int row = i * grid.nv + j;
             for (int di = -kDegree; di <= 0; ++di) {
                 const int k = i + di;
@@ -425,6 +439,7 @@ bool segmentsCross(const Vec2 &a, const Vec2 &b, const Vec2 &c, const Vec2 &d) {
 int winding(const std::vector<Vec2> &polygon, const Vec2 &p) {
     int count = 0;
     for (std::size_t k = 0; k < polygon.size(); ++k) {
+        cancellationPoint();
         const Vec2 &a = polygon[k], &b = polygon[(k + 1) % polygon.size()];
         if (a.y() <= p.y()) {
             if (b.y() > p.y() && cross(b - a, p - a) > 0) ++count;
@@ -438,6 +453,7 @@ int winding(const std::vector<Vec2> &polygon, const Vec2 &p) {
 double polygonDistance(const std::vector<Vec2> &polygon, const Vec2 &p) {
     double best = std::numeric_limits<double>::infinity();
     for (std::size_t k = 0; k < polygon.size(); ++k) {
+        cancellationPoint();
         const Vec2 &a = polygon[k], &b = polygon[(k + 1) % polygon.size()];
         const Vec2 ab = b - a;
         const double t = std::clamp(dot(p - a, ab) / std::max(squaredNorm(ab), 1e-300), 0.0, 1.0);
@@ -450,6 +466,7 @@ double polygonDistance(const std::vector<Vec2> &polygon, const Vec2 &p) {
 double polylineDistance(const std::vector<Vec2> &segments, const Vec2 &p) {
     double best = std::numeric_limits<double>::infinity();
     for (std::size_t k = 0; k + 1 < segments.size(); k += 2) {
+        cancellationPoint();
         const Vec2 &a = segments[k], ab = segments[k + 1] - segments[k];
         const double t = std::clamp(dot(p - a, ab) / std::max(squaredNorm(ab), 1e-300), 0.0, 1.0);
         best = std::min(best, norm(p - (a + t * ab)));
@@ -505,6 +522,7 @@ Body fillSurface(const std::vector<PathSegment> &boundary, const std::vector<Pat
     for (const Vec3 &p : polygon3) polygon.push_back(project(p));
     for (std::size_t a = 0; a < polygon.size(); ++a)
         for (std::size_t b = a + 2; b < polygon.size(); ++b) {
+            cancellationPoint();
             if (a == 0 && b + 1 == polygon.size()) continue;
             if (segmentsCross(polygon[a], polygon[a + 1], polygon[b], polygon[(b + 1) % polygon.size()]))
                 throw std::domain_error("riempimento: il contorno, visto dalla sua normale media, si sovrappone a se stesso");
@@ -516,9 +534,11 @@ Body fillSurface(const std::vector<PathSegment> &boundary, const std::vector<Pat
 
     // Guide: dentro il contorno.
     for (std::size_t g = 0; g < guides.size(); ++g) {
+        cancellationPoint();
         const PathSegment &guide = guides[g];
         if (!guide.curve || !(guide.range.length() > 0.0)) throw std::domain_error("riempimento: curva guida non valida");
         for (int k = 0; k <= 32; ++k) {
+            cancellationPoint();
             const Vec2 q = project(guide.curve->point(guide.range.lo + guide.range.length() * k / 32.0));
             if (polygonDistance(polygon, q) > 1e-3 * width && winding(polygon, q) == 0)
                 throw std::domain_error("riempimento: la curva guida " + std::to_string(g + 1) + " esce dal contorno");
@@ -530,6 +550,7 @@ Body fillSurface(const std::vector<PathSegment> &boundary, const std::vector<Pat
     std::vector<double> faceInfluences;
     int shapeFace = -1;
     for (std::size_t contactIndex = 0; contactIndex < contacts.size(); ++contactIndex) {
+        cancellationPoint();
         const FillContact &contact = contacts[contactIndex];
         const double influence = contact.influence == -1.0 ? options.influence : contact.influence;
         if (!std::isfinite(influence) || influence <= 0.0) throw std::domain_error("riempimento: influenza di una faccia non valida");
@@ -543,6 +564,7 @@ Body fillSurface(const std::vector<PathSegment> &boundary, const std::vector<Pat
     std::vector<int> pieceContact(std::size_t(pieceCount), -1);
     for (int k = 0; k < pieceCount && options.continuity > 0; ++k)
         for (std::size_t f = 0; f < faces.size() && pieceContact[std::size_t(k)] < 0; ++f) {
+            cancellationPoint();
             bool all = true;
             for (double s : {0.2, 0.5, 0.8}) {
                 FinId fin;
@@ -644,6 +666,7 @@ Body fillSurface(const std::vector<PathSegment> &boundary, const std::vector<Pat
         if (shapeFace < 0 || options.continuity == 0)
             throw std::domain_error("riempimento: la faccia guida della forma richiede un contatto G1/G2 valido");
         for (int k = 0; k < pieceCount; ++k) {
+            cancellationPoint();
             if (pieceContact[std::size_t(k)] != shapeFace) continue;
             for (int i = 1; i < 96; ++i) {
                 const Sample start = boundarySample(k, i / 96.0);
@@ -688,6 +711,7 @@ Body fillSurface(const std::vector<PathSegment> &boundary, const std::vector<Pat
     // loro fin percorrono il bordo comune al contrario).
     int agree = 0, disagree = 0;
     for (int k = 0; k < pieceCount; ++k) {
+        cancellationPoint();
         if (pieceContact[std::size_t(k)] < 0) continue;
         const Sample sample = boundarySample(k, 0.5);
         if (!sample.contact.valid) continue;
@@ -699,6 +723,7 @@ Body fillSurface(const std::vector<PathSegment> &boundary, const std::vector<Pat
     // Conflitti tra le guide e la tangenza nei punti in cui arrivano sul bordo.
     if (options.continuity > 0)
         for (std::size_t g = 0; g < guides.size(); ++g) {
+            cancellationPoint();
             double worst = 0.0;
             for (int end = 0; end < 2; ++end) {
                 const PathSegment &guide = guides[g];
@@ -728,6 +753,7 @@ Body fillSurface(const std::vector<PathSegment> &boundary, const std::vector<Pat
     bool graph = true;
     for (int k = 0; k < pieceCount; ++k)
         for (int i = 0; i <= 64; ++i) {
+            cancellationPoint();
             const Sample s = boundarySample(k, i / 64.0);
             if (s.contact.valid && (std::fabs(dot(s.contact.normal, normal)) < 0.05
                 || dot(s.contact.continuation, s.inward.x() * frame.xDir() + s.inward.y() * frame.yDir()) <= 0.0)) graph = false;
@@ -737,12 +763,14 @@ Body fillSurface(const std::vector<PathSegment> &boundary, const std::vector<Pat
     int spans = std::min(8, options.maxSpans);
     double finalH=width;
     for (;;) {
+        cancellationPoint();
         const int uSpans = std::max(4, int(std::lround(spans * (u1 - u0) / width))), vSpans = std::max(4, int(std::lround(spans * (v1 - v0) / width)));
         const Grid grid(u0, u1, uSpans, v0, v1, vSpans);
         const double h = grid.h;
         finalH=h;
         std::vector<Sample> edgeSamples, guideSamples;
         for (int k = 0; k < pieceCount; ++k) {
+            cancellationPoint();
             for(double s : pieceSamples(loop[std::size_t(k)],h)) edgeSamples.push_back(boundarySample(k,s));
         }
         // Ricontrolla anche i campioni della griglia raffinata: un contatto
@@ -964,6 +992,7 @@ Body fillSurface(const std::vector<PathSegment> &boundary, const std::vector<Pat
         // Scarti sui punti di mezzo dei campioni.
         double boundaryError = 0.0, guideError = 0.0, blendError = 0.0;
         for (int k = 0; k < pieceCount; ++k) {
+            cancellationPoint();
             for(double s : pieceSamples(loop[std::size_t(k)],h,true)) {
                 const Vec3 p = loop[std::size_t(k)].at(s);
                 const Vec2 q = project(p);
@@ -971,6 +1000,7 @@ Body fillSurface(const std::vector<PathSegment> &boundary, const std::vector<Pat
             }
         }
         for (const PathSegment &guide : guides) {
+            cancellationPoint();
             const int count = 2 * std::max(8, int(std::ceil(4.0 * arcLength(*guide.curve, guide.range) / h)));
             for (int i = 0; i < count; ++i) {
                 const Vec3 p = guide.curve->point(guide.range.lo + guide.range.length() * (i + 0.5) / count);
@@ -993,6 +1023,7 @@ Body fillSurface(const std::vector<PathSegment> &boundary, const std::vector<Pat
 
     // Tangenza e curvatura ottenute.
     for (int k = 0; k < pieceCount; ++k) {
+        cancellationPoint();
         if (pieceContact[std::size_t(k)] < 0) continue;
         auto samples=pieceSamples(loop[std::size_t(k)],finalH/2);
         for(int i=0;i<=64;++i)samples.push_back(i/64.0);
@@ -1059,6 +1090,7 @@ Body fillSurface(const std::vector<PathSegment> &boundary, const std::vector<Pat
     std::vector<detail::RawFin> fins;
     for (int k = 0; k < pieceCount; ++k) model.points.push_back(loop[std::size_t(k)].start());
     for (int k = 0; k < pieceCount; ++k) {
+        cancellationPoint();
         const Piece &piece = loop[std::size_t(k)];
         detail::RawEdge edge;
         const int a = k, b = (k + 1) % pieceCount;

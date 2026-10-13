@@ -1,4 +1,6 @@
 #include "fk_blend_loop.h"
+
+#include "fk_cancel.h"
 #include "fk_blend_model.h"
 
 #include <algorithm>
@@ -57,6 +59,7 @@ std::vector<FaceId> planarSides(const Body &body, EdgeId e) {
     const FaceId faces[2] = {body.finFace(edge.forward), body.finFace(edge.backward)};
     if (faces[0] == faces[1]) return result;
     for (int k = 0; k < 2; ++k) {
+        cancellationPoint();
         Vec3 normal;
         if (planeNormal(body, faces[k], normal) && parallelWall(*body.face(faces[1 - k]).surface, normal)) result.push_back(faces[k]);
     }
@@ -112,6 +115,7 @@ public:
         // Almeno 8 tratti, poi si dividono quelli che si scostano troppo.
         std::vector<double> start;
         for (std::size_t k = 0; k + 1 < breaks.size(); ++k) {
+            cancellationPoint();
             const double a = breaks[k], b = breaks[k + 1];
             const int pieces = std::max(1, int(std::ceil(8.0 * (b - a) / span.length())));
             for (int j = 0; j < pieces; ++j) start.push_back(a + (b - a) * j / pieces);
@@ -128,6 +132,7 @@ public:
         for (std::size_t k = start.size() - 1; k > 0; --k) pending.push_back({start[k - 1], start[k]});
         int guard = 0;
         while (!pending.empty()) {
+            cancellationPoint();
             if (++guard > 20000) throw std::domain_error("blendEdges: bordo troppo complesso da raccordare");
             const auto [a, b] = pending.back();
             pending.pop_back();
@@ -168,6 +173,7 @@ public:
     std::shared_ptr<BSplineSurface> surface(const RowFit &fit) const {
         std::vector<double> uKnots;
         for (std::size_t k = 0; k < fit.breaks.size(); ++k) {
+            cancellationPoint();
             const int multiplicity = (k == 0 || k + 1 == fit.breaks.size()) ? 4 : 3;
             for (int j = 0; j < multiplicity; ++j) uKnots.push_back(fit.breaks[k]);
         }
@@ -252,6 +258,7 @@ std::vector<EdgeId> planarChainRuns(const Body &body, const std::vector<EdgeId> 
     std::set<int> chosen, result;
     for (EdgeId e : selected) chosen.insert(e.index);
     for (EdgeId seed : seeds) {
+        cancellationPoint();
         const std::vector<FaceId> sides = planarSides(body, seed);
         if (sides.size() != 1)
             throw std::domain_error("blendEdges: bordo di forma libera non tra una faccia piana e un fianco normale ad essa");
@@ -279,6 +286,7 @@ Body blendPlanarChains(const Body &input, const std::vector<EdgeId> &selected, d
         for (std::size_t k = 0; k < selected.size() && k < sides->size(); ++k) sideOf[selected[k].index] = (*sides)[k];
     // Un loop fatto di un solo edge chiuso si divide in due (i raccordi sono pezze aperte).
     for (std::size_t k = 0; k < edges.size(); ++k) {
+        cancellationPoint();
         const EdgeId e = edges[k];
         if (body.edgeStart(e) != body.edgeEnd(e)) continue;
         const Edge &edge = body.edge(e);
@@ -309,10 +317,12 @@ Body blendPlanarChains(const Body &input, const std::vector<EdgeId> &selected, d
     };
     std::vector<Chain> chains;
     while (!pending.empty()) {
+        cancellationPoint();
         // Prima gli edge con una sola faccia piana possibile (spline, archi): fissano la faccia della catena.
         int seed = -1;
         FaceId plane;
         for (int index : pending) {
+            cancellationPoint();
             const std::vector<FaceId> sides = planarSides(body, EdgeId(index));
             if (sides.empty()) throw std::domain_error("blendEdges: spigolo non tra una faccia piana e un fianco normale ad essa");
             if (preferredPlane.valid() && std::find(sides.begin(), sides.end(), preferredPlane) != sides.end()) {
@@ -340,6 +350,7 @@ Body blendPlanarChains(const Body &input, const std::vector<EdgeId> &selected, d
         while (count < n && chosen(first + count)) ++count;
         chain.closed = count == n;
         for (int k = 0; k < count; ++k) {
+            cancellationPoint();
             ChainFin fin;
             fin.fin = loop[std::size_t(((first + k) % n + n) % n)];
             fin.edge = body.fin(fin.fin).edge;
@@ -359,11 +370,13 @@ Body blendPlanarChains(const Body &input, const std::vector<EdgeId> &selected, d
     Model model(body);
     std::set<int> usedVertices;
     for (Chain &chain : chains) {
+        cancellationPoint();
         const Vec3 D = chain.normal;
         const int n = int(chain.fins.size());
         // Verso della parallela in T e del fianco (dall'edge verso la faccia), convessita'.
         int convexity = 0;
         for (ChainFin &fin : chain.fins) {
+            cancellationPoint();
             const Edge &edge = body.edge(fin.edge);
             const double middle = 0.5 * (edge.range.lo + edge.range.hi);
             const Vec3 p = edge.curve->point(middle), across = normalized(cross(D, edge.curve->derivative(middle)));
@@ -404,6 +417,7 @@ Body blendPlanarChains(const Body &input, const std::vector<EdgeId> &selected, d
         const int vertexCount = chain.closed ? n : n + 1;
         std::vector<ChainVertex> vertices(static_cast<std::size_t>(vertexCount));
         for (int j = 0; j < vertexCount; ++j) {
+            cancellationPoint();
             ChainVertex &cv = vertices[std::size_t(j)];
             cv.vertex = j < n ? body.finStart(chain.fins[std::size_t(j)].fin) : body.finEnd(chain.fins[std::size_t(n - 1)].fin);
             if (!usedVertices.insert(cv.vertex.index).second) throw std::domain_error("blendEdges: catene di raccordi che si toccano");
@@ -478,6 +492,7 @@ Body blendPlanarChains(const Body &input, const std::vector<EdgeId> &selected, d
         // le superfici dei due raccordi rifatte sul dominio allungato.
         std::vector<std::vector<std::pair<double, double>>> extensions(static_cast<std::size_t>(n));  // per edge: (punto comune, vertice)
         for (int j = 0; j < vertexCount; ++j) {
+            cancellationPoint();
             ChainVertex &cv = vertices[std::size_t(j)];
             if (cv.joint != Joint::Sharp || !cv.concave) continue;
             ChainFin &previous = chain.fins[std::size_t((j - 1 + n) % n)];
@@ -590,6 +605,7 @@ Body blendPlanarChains(const Body &input, const std::vector<EdgeId> &selected, d
         // due angoli concavi (i lobi di un profilo) si riduce quanto serve a
         // restare sotto il giro completo, uguale per i due estremi.
         for (int i = 0; i < n; ++i) {
+            cancellationPoint();
             if (extensions[std::size_t(i)].empty()) continue;
             ChainFin &fin = chain.fins[std::size_t(i)];
             const bool circle = body.edge(fin.edge).curve->type() == CurveType::Circle;
@@ -617,7 +633,7 @@ Body blendPlanarChains(const Body &input, const std::vector<EdgeId> &selected, d
                     const RowFit fit = fin.geometry->fit(fin.span);
                     fin.fitError = fit.error;
                     fin.surface = fin.geometry->surface(fit);
-                } catch (...) {
+                } catch (const OperationCancelled &) { throw; } catch (...) {
                     errors[i] = std::current_exception();
                 }
             });
@@ -627,6 +643,7 @@ Body blendPlanarChains(const Body &input, const std::vector<EdgeId> &selected, d
 
         // Facce e edge nuovi dei raccordi.
         for (int i = 0; i < n; ++i) {
+            cancellationPoint();
             ChainFin &fin = chain.fins[std::size_t(i)];
             fin.face = int(model.faces.size());
             Body::BuildFace face;
@@ -774,7 +791,7 @@ Body blendPlanarChains(const Body &input, const std::vector<EdgeId> &selected, d
                 cut.wallAtStart = atWall.parameter < atTop.parameter;
                 cut.range = {std::min(atWall.parameter, atTop.parameter), std::max(atWall.parameter, atTop.parameter)};
                 cut.slack = std::max(2.0 * gap, 2.0 * best->deviation);
-              } catch (...) {
+              } catch (const OperationCancelled &) { throw; } catch (...) {
                 errors[jj] = std::current_exception();
               }
             });
@@ -783,6 +800,7 @@ Body blendPlanarChains(const Body &input, const std::vector<EdgeId> &selected, d
         }
         // Connettori nei vertici: arco (o segmento) della sezione, o curva d'intersezione negli angoli vivi.
         for (int j = 0; j < vertexCount; ++j) {
+            cancellationPoint();
             ChainVertex &cv = vertices[std::size_t(j)];
             const bool hasNext = chain.closed || j < n;
             const ChainFin &adjacent = hasNext ? chain.fins[std::size_t(j % n)] : chain.fins[std::size_t(n - 1)];
@@ -815,6 +833,7 @@ Body blendPlanarChains(const Body &input, const std::vector<EdgeId> &selected, d
         // Topologia: T e fianchi accorciati, spigoli verticali e di estremita' accorciati, facce nuove.
         const int planeFace = model.faceIndex.at(chain.plane.index);
         for (int i = 0; i < n; ++i) {
+            cancellationPoint();
             const ChainFin &fin = chain.fins[std::size_t(i)];
             const int old = model.edgeIndex.at(fin.edge.index);
             model.replaceFin(planeFace, old, fin.inPlaneEdge);
@@ -822,6 +841,7 @@ Body blendPlanarChains(const Body &input, const std::vector<EdgeId> &selected, d
             model.edgeAlive[std::size_t(old)] = false;
         }
         for (int j = 0; j < vertexCount; ++j) {
+            cancellationPoint();
             ChainVertex &cv = vertices[std::size_t(j)];
             const int vertex = model.vertexIndex.at(cv.vertex.index);
             if (cv.vertical >= 0) model.moveEnd(cv.vertical, vertex, cv.wallPoint);
@@ -838,6 +858,7 @@ Body blendPlanarChains(const Body &input, const std::vector<EdgeId> &selected, d
             }
         }
         for (int i = 0; i < n; ++i) {
+            cancellationPoint();
             const ChainFin &fin = chain.fins[std::size_t(i)];
             const ChainVertex &a = vertices[std::size_t(i)], &b = vertices[std::size_t((i + 1) % vertexCount)];
             // Loop: parallela all'indietro, connettore all'inizio (da T al fianco), traslata in avanti, connettore alla fine.

@@ -1,4 +1,6 @@
 #include "cad_curve_extract.h"
+
+#include "kernel/fk_cancel.h"
 #include "cad_spatial_sketch.h"
 #include <QTableWidget>
 #include <QHeaderView>
@@ -118,6 +120,7 @@
 #include <QTimer>
 #include <QStyledItemDelegate>
 #include <QStyleOptionSlider>
+#include <QStyleOptionButton>
 #include <QTreeWidget>
 #include <QTreeWidgetItemIterator>
 #include <QVector>
@@ -322,6 +325,7 @@ public:
         for (double &scale : referencePlaneScales_) scale = sharedPlaneScale;
     }
     ~CadViewport() override {
+        if (previewCancellation_) previewCancellation_->store(true, std::memory_order_relaxed);
         // I pannelli figli si deregistrano da glassPanels_: devono sparire
         // mentre i membri del viewport esistono ancora, prima della classe base.
         qDeleteAll(findChildren<QDialog *>(QString(), Qt::FindDirectChildrenOnly));
@@ -2153,6 +2157,7 @@ public:
             if ((preview_.valid || !preview_.error.isEmpty()) && previewCallback_) previewCallback_(preview_.error);
             return;
         }
+        if (previewCancellation_) previewCancellation_->store(true, std::memory_order_relaxed);
         preview_.key = key;
         preview_.notice.clear();
         preview_.definition = definition;
@@ -2248,6 +2253,11 @@ public:
         requestPreview(blend, hidden);
     }
     void clearPreview() {
+        // Il risultato viene invalidato subito; il worker esce al prossimo
+        // checkpoint e solo allora libera previewRunning_ e la barra di lavoro.
+        if (previewTimer_) previewTimer_->stop();
+        if (previewCancellation_) previewCancellation_->store(true, std::memory_order_relaxed);
+        previewRerun_ = false;
         ++preview_.generation;
         preview_.key.clear();
         preview_.index = -1;
@@ -11290,9 +11300,12 @@ private:
         }
         const QPointer<CadViewport> guard(this);
         previewRunning_ = true;
+        const auto cancellation = std::make_shared<std::atomic<bool>>(false);
+        previewCancellation_ = cancellation;
         const QString workText = in.reuse ? QStringLiteral("Preparazione della visualizzazione...") : QStringLiteral("Calcolo dell'anteprima...");
         if (workCallback_) workCallback_(true, workText, true);
-        QThreadPool::globalInstance()->start([this, guard, generation, in, workText] {
+        QThreadPool::globalInstance()->start([this, guard, generation, in, workText, cancellation] {
+            ForgeCad::Kernel::CancellationScope cancellationScope(cancellation);
             BodyDisplay display;
             BodyDisplay retainedDisplay;
             BodyDisplay resultDisplay;
@@ -11302,7 +11315,11 @@ private:
             QVector<int> merged;
             const bool probe = in.definition.mergeProbe;
             try {
+                ForgeCad::Kernel::cancellationPoint();
                 ok = computePreview(in, display, retainedDisplay, resultDisplay, geometry, error, &merged, &notice);
+                ForgeCad::Kernel::cancellationPoint();
+            } catch (const ForgeCad::Kernel::OperationCancelled &) {
+                ok = false;
             } catch (const std::exception &failure) {
                 error = QString::fromUtf8(failure.what());
             } catch (...) {
@@ -11314,6 +11331,7 @@ private:
                                                  retainedDisplay = std::move(retainedDisplay),
                                                  resultDisplay = std::move(resultDisplay)]() mutable {
                 previewRunning_ = false;
+                previewCancellation_.reset();
                 if (workCallback_) workCallback_(false, workText, true);
                 if (generation == preview_.generation) {
                     if (probe) {
@@ -11938,6 +11956,7 @@ private:
     LengthUnit lengthUnit_ = LengthUnit::Millimeter;
     int previewErrorSketch_ = -1;  // sezione della loft evidenziata quando una guida non la incontra
     QTimer *previewTimer_ = nullptr;
+    ForgeCad::Kernel::CancellationToken previewCancellation_;
     bool previewRunning_ = false, previewRerun_ = false;
     std::function<void(const QString &)> previewCallback_;
     // Faccia selezionata con il clic su un corpo (schizzo su faccia, bordi da raccordare).
@@ -12072,12 +12091,32 @@ public:
 
     void paint(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const override {
         QStyledItemDelegate::paint(painter, option, index);
-        const QString badge = index.data(kTreeBadgeRole).toString();
-        if (badge.isEmpty()) return;
         QStyleOptionViewItem item = option;
         initStyleOption(&item, index);
         const QWidget *widget = option.widget;
         QStyle *style = widget ? widget->style() : QApplication::style();
+#ifdef Q_OS_MACOS
+        // Il percorso nativo delle righe puo' omettere l'indicatore pur
+        // mantenendo la sua area cliccabile. Disegna il normale checkbox
+        // macOS nella geometria usata anche dal delegate per l'interazione.
+        if (item.features.testFlag(QStyleOptionViewItem::HasCheckIndicator)) {
+            QStyleOptionButton check;
+            if (widget) check.initFrom(widget);
+            check.rect = style->subElementRect(QStyle::SE_ItemViewItemCheckIndicator, &item, widget);
+            check.state = item.state & ~(QStyle::State_On | QStyle::State_Off | QStyle::State_NoChange);
+            check.state |= item.checkState == Qt::Checked ? QStyle::State_On
+                : item.checkState == Qt::PartiallyChecked ? QStyle::State_NoChange : QStyle::State_Off;
+            check.palette = item.palette;
+            painter->save();
+            // Il controllo Cocoa viene dipinto rispetto all'origine del painter.
+            painter->translate(check.rect.topLeft());
+            check.rect.moveTopLeft(QPoint(0, 0));
+            style->drawPrimitive(QStyle::PE_IndicatorCheckBox, &check, painter, widget);
+            painter->restore();
+        }
+#endif
+        const QString badge = index.data(kTreeBadgeRole).toString();
+        if (badge.isEmpty()) return;
         const QRect text = style->subElementRect(QStyle::SE_ItemViewItemText, &item, widget);
         const int textWidth = item.fontMetrics.horizontalAdvance(item.text);
         QFont font = item.font;
@@ -12115,6 +12154,11 @@ public:
     QVector<QPair<int, int>> checkpoints;
     int activePosition = 0;
     std::function<void(int)> checkpointSelected;
+    QRect handleRect() const {
+        QStyleOptionSlider option;
+        initStyleOption(&option);
+        return style()->subControlRect(QStyle::CC_Slider, &option, QStyle::SC_SliderHandle, this);
+    }
 protected:
     void mousePressEvent(QMouseEvent *event) override {
         if (event->button() == Qt::LeftButton && std::abs(event->position().x() - width() / 2) <= 10)
@@ -12127,11 +12171,17 @@ protected:
         QSlider::mousePressEvent(event);
     }
     void paintEvent(QPaintEvent *event) override {
-        QSlider::paintEvent(event);
+        Q_UNUSED(event);
         QStyleOptionSlider option;
         initStyleOption(&option);
         const QRect handle = style()->subControlRect(QStyle::CC_Slider, &option, QStyle::SC_SliderHandle, this);
         QPainter painter(this);
+        const QWidget *owner = parentWidget();
+        if (owner && !qobject_cast<const QAbstractScrollArea *>(owner)) owner = owner->parentWidget();
+        const auto *tree = qobject_cast<const QAbstractScrollArea *>(owner);
+        const QBrush background = tree ? tree->viewport()->palette().brush(QPalette::Base)
+                                      : palette().brush(QPalette::Base);
+        painter.fillRect(rect(), background);
         painter.setRenderHint(QPainter::Antialiasing);
         // Guida azzurra con bordo sfumato; piccoli intervalli isolano i checkpoint.
         const double centerX = width() / 2.0;
@@ -12142,37 +12192,65 @@ protected:
             color.setAlpha(stop.second);
             edge.setColorAt(stop.first, color);
         }
-        const auto drawSegment = [&](double begin, double end) {
+        const auto paintSegment = [&](double begin, double end) {
             if (end <= begin) return;
             painter.fillRect(QRectF(centerX - 4, begin, 8, end - begin), edge);
             painter.setPen(QPen(kStoryboardPositionColor, 1.5, Qt::SolidLine, Qt::RoundCap));
             painter.drawLine(QPointF(centerX, begin), QPointF(centerX, end));
         };
-        // Nessun frammento terminale: sembrerebbe un checkpoint aggiuntivo.
+        const auto drawSegment = [&](double begin, double end) {
+            // La guida resta appena staccata anche dalla maniglia bombata.
+            paintSegment(begin, qMin(end, handle.top() - 3.0));
+            paintSegment(qMax(begin, handle.bottom() + 3.0), end);
+        };
         if (checkpoints.isEmpty()) {
             drawSegment(6, qMax(6, height() - 6));
         } else {
             for (int index = 1; index < checkpoints.size(); ++index)
                 drawSegment(checkpoints.at(index - 1).first + 6.0, checkpoints.at(index).first - 6.0);
+            if (handle.center().y() < checkpoints.first().first)
+                drawSegment(handle.bottom() + 3.0, checkpoints.first().first - 6.0);
+            if (handle.center().y() > checkpoints.last().first)
+                drawSegment(checkpoints.last().first + 6.0, handle.top() - 3.0);
         }
         for (const auto &checkpoint : checkpoints) {
             const QColor color = kStoryboardPositionColor;
             painter.setPen(QPen(color, 1));
-            painter.setBrush(checkpoint.second <= activePosition ? color : palette().color(QPalette::Window));
+            painter.setBrush(checkpoint.second <= activePosition ? QBrush(color) : background);
             painter.drawEllipse(QPointF(width() / 2.0, checkpoint.first), 2.5, 2.5);
         }
-        painter.setBrush(palette().color(QPalette::Highlight));
-        painter.setPen(QPen(palette().color(hasFocus() ? QPalette::HighlightedText : QPalette::Light), 1));
-        painter.drawRoundedRect(handle.adjusted(1, 1, -1, -1), 3, 3);
-        painter.setPen(QPen(palette().color(QPalette::HighlightedText), 1));
-        for (int offset : {-2, 2})
-            painter.drawLine(handle.center() + QPoint(-4, offset), handle.center() + QPoint(4, offset));
+        const QRectF cap = QRectF(handle).adjusted(1, 1, -1, -1);
+        const QColor base = palette().color(QPalette::Highlight);
+        painter.setPen(Qt::NoPen);
+        painter.setBrush(QColor(0, 0, 0, 65));
+        painter.drawRoundedRect(cap.translated(0, 1.5), 4, 4);
+        QLinearGradient dome(cap.topLeft(), cap.bottomLeft());
+        dome.setColorAt(0.0, base.lighter(145));
+        dome.setColorAt(0.25, base.lighter(120));
+        dome.setColorAt(0.5, base);
+        dome.setColorAt(1.0, base.darker(165));
+        painter.setBrush(dome);
+        painter.setPen(QPen(hasFocus() ? palette().color(QPalette::HighlightedText) : base.darker(165), 1));
+        painter.drawRoundedRect(cap, 4, 4);
+        painter.setPen(QPen(QColor(255, 255, 255, 150), 1, Qt::SolidLine, Qt::RoundCap));
+        painter.drawLine(cap.topLeft() + QPointF(4, 1.5), cap.topRight() + QPointF(-4, 1.5));
+        for (int offset : {-2, 2}) {
+            const QPointF start = QPointF(handle.center()) + QPointF(-4, offset);
+            const QPointF end = start + QPointF(8, 0);
+            painter.setPen(QPen(base.darker(190), 1, Qt::SolidLine, Qt::RoundCap));
+            painter.drawLine(start, end);
+            painter.setPen(QPen(QColor(255, 255, 255, 160), 1, Qt::SolidLine, Qt::RoundCap));
+            painter.drawLine(start + QPointF(0, 1), end + QPointF(0, 1));
+        }
     }
 };
 
 class StoryboardTree final : public QTreeWidget {
 public:
     explicit StoryboardTree(QWidget *parent = nullptr) : QTreeWidget(parent) {
+        // Anche i margini laterali seguono il colore di fondo delle righe.
+        setBackgroundRole(QPalette::Base);
+        setAutoFillBackground(true);
         setDragEnabled(true);
         setAcceptDrops(true);
         // L'indicatore Qt standard tende a evidenziare l'intera voce. Qui la
@@ -12183,7 +12261,10 @@ public:
         setDefaultDropAction(Qt::MoveAction);
         // Ctrl/Maiusc+clic: piu' feature e schizzi per le operazioni comuni (Elimina, Sopprimi...).
         setSelectionMode(QAbstractItemView::ExtendedSelection);
-        historyRail_ = new StoryboardPositionSlider(Qt::Vertical, this);
+        historyRailViewport_ = new QWidget(this);
+        historyRailViewport_->setObjectName(QStringLiteral("storyboardRailViewport"));
+        historyRailViewport_->hide();
+        historyRail_ = new StoryboardPositionSlider(Qt::Vertical, historyRailViewport_);
         static_cast<StoryboardPositionSlider *>(historyRail_)->checkpointSelected = [this](int position) {
             if (historyPositionChanged_) historyPositionChanged_(position);
         };
@@ -12254,7 +12335,8 @@ protected:
         if (historyRail_) updateHistoryRail();
     }
     void mousePressEvent(QMouseEvent *event) override {
-        if (event->button() == Qt::LeftButton && isHistoryCursor(itemAt(event->position().toPoint()))) {
+        if (cursorMode_ == CursorMode::Horizontal && event->button() == Qt::LeftButton
+            && isHistoryCursor(itemAt(event->position().toPoint()))) {
             movingHistoryCursor_ = true;
             pendingHistoryPosition_ = historyPosition_;
             setCurrentItem(itemAt(event->position().toPoint()));
@@ -12412,23 +12494,28 @@ private:
         auto *root = historyRootItem();
         if (cursorMode_ == CursorMode::Horizontal || !root || !root->isExpanded() || !root->childCount()) {
             historyRail_->hide();
+            historyRailViewport_->hide();
             return;
         }
-        if (historyRail_->isSliderDown()) return;
         auto *last = root->child(root->childCount() - 1);
         while (last->isExpanded() && last->childCount()) last = last->child(last->childCount() - 1);
-        const int top = qMax(8, visualItemRect(root->child(0)).top());
-        const int bottom = qMin(viewport()->height() - 8, visualItemRect(last).bottom());
-        if (bottom <= top) { historyRail_->hide(); return; }
+        // Coordinate dell'intera storia: scorrono con le righe, senza fissare
+        // la maniglia ai bordi quando la sua posizione e' fuori vista.
+        const int top = visualItemRect(root->child(0)).top();
+        const int bottom = visualItemRect(last).bottom();
+        if (bottom <= top) { historyRail_->hide(); historyRailViewport_->hide(); return; }
         int cursorY = top;
         for (int row = 0; row < root->childCount(); ++row)
             if (isHistoryCursor(root->child(row))) cursorY = visualItemRect(root->child(row)).center().y();
         railTop_ = top;
         updatingRail_ = true;
         const QSignalBlocker blocker(historyRail_);
-        historyRail_->setGeometry(cursorMode_ == CursorMode::Left ? 2 : viewport()->geometry().right() + 3,
-                                  viewport()->geometry().top() + top - 6, 26, bottom - top + 12);
         auto *slider = static_cast<StoryboardPositionSlider *>(historyRail_);
+        const int handleHeight = slider->handleRect().height();
+        const int handleOffset = (handleHeight - 1) / 2;
+        historyRailViewport_->setGeometry(cursorMode_ == CursorMode::Left ? 2 : viewport()->geometry().right() + 3,
+                                          viewport()->geometry().top(), 26, viewport()->height());
+        historyRail_->setGeometry(0, top - handleOffset, 26, bottom - top + handleHeight);
         slider->checkpoints.clear();
         slider->activePosition = historyPosition_;
         for (int row = 0; row < root->childCount(); ++row) {
@@ -12436,12 +12523,13 @@ private:
             if (item->data(0, Qt::UserRole).toInt() != kTreeExtrusion) continue;
             const QRect rect = visualItemRect(item);
             if (!rect.isEmpty() && rect.center().y() >= top && rect.center().y() <= bottom)
-                slider->checkpoints.append({rect.center().y() - top + 6, item->data(0, Qt::UserRole + 1).toInt() + 1});
+                slider->checkpoints.append({rect.center().y() - top + handleOffset, item->data(0, Qt::UserRole + 1).toInt() + 1});
         }
         historyRail_->setRange(0, bottom - top);
-        historyRail_->setValue(qBound(0, cursorY - top, bottom - top));
+        if (!historyRail_->isSliderDown()) historyRail_->setValue(cursorY - top);
         historyRail_->show();
-        historyRail_->raise();
+        historyRailViewport_->show();
+        historyRailViewport_->raise();
         updatingRail_ = false;
     }
     void setInsertionLine(int y, int left) {
@@ -12505,6 +12593,7 @@ private:
         return nullptr;
     }
 
+    QWidget *historyRailViewport_ = nullptr;
     QSlider *historyRail_ = nullptr;
     CursorMode cursorMode_ = CursorMode::Horizontal;
     int railTop_ = 0;
@@ -22811,7 +22900,12 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
         });
     }
     updateWindowTitle();
-    setTheme(true);
+    setTheme(QApplication::palette().color(QPalette::Window).lightness() < 128);
+    connect(qApp, &QGuiApplication::paletteChanged, this, [this](const QPalette &palette) {
+        setTheme(palette.color(QPalette::Window).lightness() < 128);
+        // Le icone vettoriali leggono la palette corrente al ridisegno.
+        for (auto *bar : findChildren<QToolBar *>()) bar->update();
+    });
 }
 
 void PdfWindow::updateWindowTitle() {
@@ -23637,7 +23731,9 @@ void PdfWindow::rebuildModelTree() {
     QFont cursorFont = cursor->font(0);
     cursorFont.setBold(true);
     cursor->setFont(0, cursorFont);
-    cursor->setToolTip(0, QStringLiteral("Trascina la barra tra le feature per scegliere la posizione di calcolo e inserimento. Frecce su/giù: un passo; Home: inizio; End: fine."));
+    cursor->setToolTip(0, horizontalCursor
+        ? QStringLiteral("Trascina la barra tra le feature per scegliere la posizione di calcolo e inserimento. Frecce su/giù: un passo; Home: inizio; End: fine.")
+        : QStringLiteral("Trascina la maniglia laterale per scegliere la posizione di calcolo e inserimento. Frecce su/giù: un passo; Home: inizio; End: fine."));
     historyRoot->insertChild(cursorRow, cursor);
     static_cast<StoryboardTree *>(modelTree_)->setHistoryRange(position, extrusions.size());
     for (int row = cursorRow + 1; row < historyRoot->childCount(); ++row) {
@@ -23777,7 +23873,8 @@ void PdfWindow::setDisplayMode(int mode) {
 
 void PdfWindow::setTheme(bool dark) {
     auto *application = qobject_cast<QApplication *>(QCoreApplication::instance());
-    if (dark && application) application->setStyleSheet(QStringLiteral("QMainWindow { background: #111820; color: #d8e4ea; }QMenuBar,QToolBar,QStatusBar { background: #1b2730; color: #d8e4ea; }QMenu { background: #202d36; color: #d8e4ea; }"
+    if (!application) return;
+    const QString sheet = dark ? QStringLiteral("QMainWindow { background: #111820; color: #d8e4ea; }QMenuBar,QToolBar,QStatusBar { background: #1b2730; color: #d8e4ea; }QMenu { background: #202d36; color: #d8e4ea; }"
         "QToolBar { spacing: 1px; padding: 2px 4px; border: none; }"
         "QToolBar::separator { background: #34444f; width: 1px; margin: 5px 3px; }"
         "QToolBar QToolButton { border: 1px solid transparent; border-radius: 4px; padding: 2px; }"
@@ -23793,5 +23890,21 @@ void PdfWindow::setTheme(bool dark) {
         "QMenuBar::item:selected:enabled { background: #365d78; border-color: #80c8f0; color: #ffffff; }"
         "QMenuBar::item:pressed:enabled { background: #1f4258; border-color: #80c8f0; color: #ffffff; }"
         "QMenu::item:selected:enabled { background: #365d78; border-color: #80c8f0; color: #ffffff; }"
-        "QMenu::item:disabled { color: #788995; }"));
+        "QMenu::item:disabled { color: #788995; }") : QStringLiteral(
+        "QMainWindow { background: palette(window); color: palette(window-text); }"
+        "QMenuBar,QToolBar,QStatusBar,QMenu { background: palette(window); color: palette(window-text); }"
+        "QToolBar { spacing: 1px; padding: 2px 4px; border: none; }"
+        "QToolBar::separator { background: #c3cbd2; width: 1px; margin: 5px 3px; }"
+        "QToolBar QToolButton { background: transparent; border: 1px solid transparent; border-radius: 4px; padding: 2px; }"
+        "QToolBar QToolButton:checked { background: #d6eafb; border-color: #659dca; }"
+        "QToolButton:enabled:hover, QToolBar QToolButton:enabled:hover { background: #e2eff9; border-color: #659dca; }"
+        "QToolButton:enabled:pressed, QToolBar QToolButton:enabled:pressed { background: #c1dcf1; border-color: #427fab; }"
+        "QToolBar QToolButton[popupMode=\"1\"] { padding-right: 11px; }"
+        "QToolBar QToolButton::menu-button { border: none; width: 10px; }"
+        "QToolButton::menu-button:enabled:hover { background: #c1dcf1; }"
+        "QToolButton::menu-button:enabled:pressed { background: #a9cee9; }"
+        "QMenuBar::item:selected:enabled,QMenu::item:selected:enabled { background: #d6eafb; color: palette(window-text); }"
+        "QMenuBar::item:pressed:enabled { background: #c1dcf1; }"
+        "QMenu::item:disabled { color: palette(disabled, window-text); }");
+    if (application->styleSheet() != sheet) application->setStyleSheet(sheet);
 }
