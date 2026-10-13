@@ -772,6 +772,16 @@ std::map<QString, Draw> &registry() {
         p.setPen(stroke(c.ink, 0.9));
         p.drawPath(guides);
     };
+    icons["copyFaces"] = [](QPainter &p, const IconPalette &c) {
+        // Stesso cubo di Elimina facce, con la faccia originale colorata
+        // e una seconda faccia uguale sollevata sopra il corpo.
+        polygon(p, QPolygonF({{3, 11}, {12, 15}, {12, 22}, {3, 18}}), c.faceMid, stroke(c.ink, 1.0));
+        polygon(p, QPolygonF({{12, 15}, {21, 11}, {21, 18}, {12, 22}}), c.faceDark, stroke(c.ink, 1.0));
+        polygon(p, QPolygonF({{3, 11}, {12, 7}, {21, 11}, {12, 15}}), c.accent.lighter(125), stroke(c.ink, 1.0));
+        line(p, {3, 11}, {3, 5}, stroke(c.construction, 0.8, Qt::DashLine));
+        line(p, {21, 11}, {21, 5}, stroke(c.construction, 0.8, Qt::DashLine));
+        polygon(p, QPolygonF({{3, 5}, {12, 1}, {21, 5}, {12, 9}}), c.accent, stroke(c.ink, 1.0));
+    };
     icons["deleteFace"] = [](QPainter &p, const IconPalette &c) {
         // Un cubo aperto: la faccia superiore tolta (tratteggiata in rosso) e la croce.
         polygon(p, QPolygonF({{3, 9}, {12, 13}, {12, 22}, {3, 18}}), c.faceMid, stroke(c.ink, 1.0));

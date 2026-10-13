@@ -214,7 +214,7 @@ static QString featureIconName(const ExtrusionObject &body) {
     if (body.feature == BodyFeature::Imported) return QStringLiteral("import");
     if (body.feature == BodyFeature::Transform) return QStringLiteral("move");
     if (body.feature == BodyFeature::Pattern) return QStringLiteral("patternLinear");
-    if (body.feature == BodyFeature::SurfaceOffset) return QStringLiteral("offsetSurface");
+    if (body.feature == BodyFeature::SurfaceOffset) return body.distance == 0.0 ? QStringLiteral("copyFaces") : QStringLiteral("offsetSurface");
     if (body.feature == BodyFeature::DeleteFace) return QStringLiteral("deleteFace");
     if (body.feature == BodyFeature::Draft) return QStringLiteral("draft");
     if (body.feature == BodyFeature::SpatialSketch) return QStringLiteral("newSketch3D");
@@ -22624,7 +22624,7 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
         {extrudeAction, QStringLiteral("extrude")}, {revolveAction, QStringLiteral("revolve")},
         {filletAction, QStringLiteral("fillet")}, {chamferAction, QStringLiteral("chamfer")}, {draftAction, QStringLiteral("draft")}, {thickenAction, QStringLiteral("thicken")}, {projectedCurveAction, QStringLiteral("projectedCurve")}, {extractedCurveAction, QStringLiteral("extractEdge3D")}, {trimCurve3DAction, QStringLiteral("trimEdge3D")}, {shellAction, QStringLiteral("shell")}, {threadAction, QStringLiteral("thread")},
         {trimSurfaceAction, QStringLiteral("trimSurface")}, {extendSurfaceAction, QStringLiteral("extendSurface")},
-        {copyFacesAction, QStringLiteral("offsetSurface")}, {offsetSurfaceAction, QStringLiteral("offsetSurface")}, {sewSurfacesAction, QStringLiteral("sewSurfaces")},
+        {copyFacesAction, QStringLiteral("copyFaces")}, {offsetSurfaceAction, QStringLiteral("offsetSurface")}, {sewSurfacesAction, QStringLiteral("sewSurfaces")},
         {deleteFaceAction, QStringLiteral("deleteFace")}, {boundarySurfaceAction, QStringLiteral("boundarySurface")}, {fillSurfaceAction, QStringLiteral("fillSurface")},
         {ruledSurfaceAction, QStringLiteral("ruledSurface")}, {planarSurfaceAction, QStringLiteral("planarSurface")},
         {loftSurfaceAction, QStringLiteral("loftSurface")}, {sweepSurfaceAction, QStringLiteral("sweepSurface")}, {scaleAction, QStringLiteral("scale")}, {moveAction, QStringLiteral("move")},
