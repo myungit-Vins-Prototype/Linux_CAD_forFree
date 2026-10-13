@@ -728,6 +728,27 @@ bool invertPoint(const Surface &surface, const Vec3 &p, Vec2 &uv, double toleran
             return false;
         }
     }
+    // Bordi coincidenti di una B-spline non periodica: a parita' di
+    // precisione mantieni il ramo della stima, evitando salti tra i due
+    // estremi del dominio durante la costruzione delle SP-curve.
+    if (surface.type() == SurfaceType::BSpline) {
+        for (int axis = 0; axis < 2; ++axis) {
+            const Interval domain = axis == 0 ? uDomain : vDomain;
+            if (std::fabs(uv[axis] - guess[axis]) <= 0.5 * domain.length()) continue;
+            Vec2 low = uv, high = uv;
+            low[axis] = domain.lo;
+            high[axis] = domain.hi;
+            const Vec3 a = surface.point(low[0], low[1]), b = surface.point(high[0], high[1]);
+            if (distance(a, b) > 1e-12 * std::max({1.0, norm(a), norm(b)})) continue;
+            Interval local = domain;
+            const double middle = 0.5 * (domain.lo + domain.hi);
+            if (guess[axis] < middle) local.hi = middle;
+            else local.lo = middle;
+            const SurfaceProjection nearby = axis == 0 ? projectPoint(surface, p, local, vDomain)
+                                                       : projectPoint(surface, p, uDomain, local);
+            if (nearby.distance <= tolerance) uv = Vec2(nearby.u, nearby.v);
+        }
+    }
     unwrapNear(surface, uv, guess);
     return true;
 }

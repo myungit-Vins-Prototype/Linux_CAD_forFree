@@ -1,8 +1,34 @@
 # CLAUDE.md
 
-Contesto del progetto per Claude Code. La lingua di lavoro è l'italiano (UI, commenti, messaggi).
+Contesto condiviso del progetto per Claude Code e Codex. La lingua di lavoro è l'italiano (UI, commenti, messaggi).
+
+## Regola permanente — tutte le chat del progetto
+
+Per istruzione esplicita dell'utente, leggere questo registro all'inizio di ogni chat e **aggiornare sempre `CLAUDE.md` prima della risposta finale di ogni intervento**, comprese indagini e modifiche alla documentazione. La regola vale anche per le chat già aperte quando riprendono il lavoro. `AGENTS.md` nella radice richiama questa istruzione per Codex. Conservare gli aggiornamenti delle altre chat e distinguere risultati verificati, proposte e lavoro ancora aperto.
 
 ## Registro del lavoro — istruzione dell'utente
+
+### Registro condiviso obbligatorio in tutte le chat (2026-10-13)
+
+- Richiesta: aggiornare sempre CLAUDE.md per questo progetto in ogni chat aperta. La regola era già presente più avanti nel file, ma non era stata applicata ai due interventi STEP di questa chat.
+- Portata la regola in apertura e creato AGENTS.md nella radice affinché le chat Codex leggano il registro e lo aggiornino prima della risposta finale di ogni intervento. Aggiunti qui i risultati dei due fix STEP. Preservate le voci esistenti e le modifiche al kernel; nessun commit/push o messaggio inviato ad altre chat. Verifica documentale e git diff --check PASS.
+
+### Importazione D260320.STEP: raffinamento SP-curve eccessivo (2026-10-13)
+
+- Richiesta: analizzare File_Esempio/D260320.STEP, la cui importazione non terminava dopo un'ora secondo l'utente. File AP214 SolidWorks 2023, circa 3,59 MB, sei componenti e 290 facce: cinque solidi e un corpo di superfici. File dell'utente letto soltanto.
+- Riprodotto il rallentamento nel kernel aggiornato. Profilazione FK_PROFILE e campionamento dello stack in /tmp/d260320-stack.txt: cinque componenti completano rapidamente, mentre D260325 (134 facce) resta in Fitter::refine di fk_pcurve.cpp. Quattro bordi sulle facce 79, 81, 95 e 116 sono vicini a lati degeneri delle B-spline. Le derivate smorzate rendono il fit cubico mal condizionato; il limite di profondità 24 consente comunque milioni di suddivisioni. La prova diagnostica precedente è stata interrotta: non misurata un'ora di esecuzione locale.
+- kernel/fk_pcurve.cpp: budget complessivo di 16384 raffinamenti per fit cubico, quindi ripiego lineare verificato anche sulle B-spline con lati degeneri, usando i limiti parametrici degli estremi già calcolati da sampleParameters. Il ripiego tiene conto dello scarto geometrico preesistente degli edge tolleranti, evitando suddivisioni inutili; aggiunti punti di annullamento e rimosso il decremento unsigned oltre zero nel budget lineare. Restano i controlli dello scarto SP-curve e checkBody; nessuna rimozione di facce o disattivazione delle verifiche.
+- Misura locale della lettura readStep: 8,86645 s, tutti e sei i componenti importati; D260325 incluso, cinque solidi e una lamina, tutte le 290 facce triangolate, checkBody zero problemi. Scrittura STEP per conservazione nel documento: circa 0,003–0,100 s per componente. Queste misure riguardano il kernel, non il tempo completo della GUI.
+- Regressioni: FittedPCurveNearCollapsedSplineSide, sfera NURBS con curva vicina al lato collassato, verifica ripiego di grado 1, scarto <=1e-8 e budget di valutazioni; collegando il sorgente precedente supera 200000 valutazioni e fallisce, con il fix termina in 122985 valutazioni. StepReadD260320SolidWorksAssembly verifica componenti/facce, solidi, validità, triangolazione, esportazione/rilettura e volume aggregato della mesh fine rispetto ai solidi OCCT entro 0,1%. La mesh standard aveva scarto circa 0,34%: per questo confronto usate deflection=0,001 mm e angle=0,05 rad, senza cambiare i valori predefiniti del prodotto.
+- Validazione finale: build Release forgekernel_tests PASS; STEP 16/16, SP-curve 9/9, IGES 6/6, annullamento 2/2, git diff --check PASS. Log /tmp/d260320-step-tests.log, /tmp/d260320-iges-tests.log e /tmp/d260320-timing.log. Anche D250227-REV00.step passa nella suite finale. Compilati kernel e runner in /tmp/forgecad-step-build; applicazione installata non ricompilata in questa chat. Nessun commit/push.
+
+### Importazione D250227-REV00.step: B-spline chiuse e continuità dei loop (2026-10-13)
+
+- Richiesta: analizzare File_Esempio/D250227-REV00.step e correggere il kernel per importarne la B-rep. Riprodotto l'errore «8 SP-curve non calcolabili». Il file contiene un solido AP214 con 33 facce e 80 bordi; i tori hanno raggi positivi, quindi il fix precedente dei tori a raggio negativo non è pertinente. File dell'utente letto soltanto.
+- kernel/fk_surface_algo.cpp::invertPoint: sulle B-spline non periodiche con bordi coincidenti, se la proiezione cambia ramo di oltre metà dominio, cerca sul semidominio vicino alla stima e accetta soltanto entro la tolleranza geometrica. Evita salti fra i due estremi della superficie durante il fit delle SP-curve.
+- kernel/fk_exchange.cpp::alignClosedSplineSeams: prima di repairFaceSenses, allinea le SP-curve dei bordi sulla chiusura al ramo coerente con le fin adiacenti. Verifica coincidenza dei bordi e scarto della curva candidata. La sola correzione dell'inversione permetteva l'importazione ma lasciava contorni UV incoerenti: volume del kernel circa 3132,13 mm³ contro circa 5029,76 mm³ OCCT. Non considerata soluzione definitiva; corretto anche l'allineamento dei loop.
+- Risultato finale: un solido, 33 facce, 80 bordi, checkBody zero problemi, tutte le facce triangolate. Test StepReadD250227SolidWorksFile verifica volume geometrico rispetto a OCCT entro 0,01%, volume della mesh entro 0,1%, esportazione/rilettura e validità. Test sintetici InvertPointKeepsClosedBSplineBranch per entrambi gli assi e i rami, e ExchangeClosedSplineSeamClosesFaceDomain per continuità UV e area esatta del mezzo cilindro. Il probe collegato al sorgente precedente seleziona il ramo opposto della stima.
+- Prima validazione: STEP 15/15, SP-curve 8/8, proiezioni 11/11, IGES 6/6 PASS; confermata successivamente nella suite del fix D260320. Prototipi del ripiego lineare scartati in questa prima indagine; fk_pcurve.cpp modificato soltanto nel successivo intervento D260320. Build e log diagnostici in /tmp/forgecad-step-build, /tmp/forgecad-step-tests.log e /tmp/uv_probe.log. Applicazione installata non ricompilata in questa chat; nessun commit/push.
 
 ### Indagine Specchio 28 e tempi di Solido cucito 30 (2026-10-13)
 

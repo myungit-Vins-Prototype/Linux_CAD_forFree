@@ -265,6 +265,9 @@ public:
     // punto della superficie piu' vicino alla curva, entro max(tol/2 - d, tol/4)
     // (lo scarto totale resta sotto la tolleranza se d <= 2/3 tol).
     bool refine(const HermiteNode &a, const HermiteNode &b, int depth, std::vector<HermiteNode> &out) const {
+        cancellationPoint();
+        if (budget_ == 0) return false;
+        --budget_;
         double worst = 0.0;
         bool close = true;
         for (double s : {0.1, 0.25, 0.4, 0.5, 0.6, 0.75, 0.9}) {
@@ -301,6 +304,10 @@ private:
     double tolerance_, scale_;
     std::vector<SurfacePole> poles_;
     std::vector<DegenerateSide> sides_;
+    // Il limite di profondita' da solo consente milioni di suddivisioni.
+    // Sui lati degeneri le derivate smorzate possono impedire la convergenza
+    // cubica: limita il lavoro dell'intera curva e passa al ripiego lineare.
+    mutable std::size_t budget_ = 16384;
 };
 
 }
@@ -403,9 +410,11 @@ CurvePtr<2> fitHermitePCurve(const Surface &surface, const CurvePtr<3> &curve, c
 // pochi centesimi di micron (offset dalla parte concava di un micro-salto di
 // normale) la corrispondenza salta: un salto isolato fino a 50 volte la
 // tolleranza si accetta e lo scarto misurato diventa la tolleranza
-// dichiarata dell'SP-curve. Nessun polo ne' lato degenere.
+// dichiarata dell'SP-curve. I lati degeneri B-spline sono gestiti dai limiti
+// parametrici degli estremi in sampleParameters, senza usare derivate.
+// Restano esclusi i poli delle superfici analitiche.
 CurvePtr<2> fitLinearPCurve(const Surface &surface, const CurvePtr<3> &curve, const Interval &range, double tolerance, double *deviation) {
-    if (!surfacePoles(surface).empty() || !degenerateSides(surface).empty()) return nullptr;
+    if (!surfacePoles(surface).empty()) return nullptr;
     const double scale = modelScale(*curve, range);
     const std::vector<double> ts = sampleParametersOf(*curve, range, 4);
     std::vector<Vec2> uvs;
@@ -414,13 +423,27 @@ CurvePtr<2> fitLinearPCurve(const Surface &surface, const CurvePtr<3> &curve, co
     std::vector<Vec2> nodesUv{uvs.front()};
     std::size_t budget = 200000;
     const std::function<bool(double, Vec2, double, Vec2, int)> refine = [&](double ta, Vec2 a, double tb, Vec2 b, int depth) {
-        if (budget-- == 0) return false;
+        cancellationPoint();
+        if (budget == 0) return false;
+        --budget;
         double worst = 0.0;
+        bool close = true;
         for (double s : {0.25, 0.5, 0.75}) {
             const Vec2 uv = a + s * (b - a);
-            worst = std::max(worst, distance(surface.point(uv[0], uv[1]), curve->point(ta + s * (tb - ta))));
+            const Vec3 onSurface = surface.point(uv[0], uv[1]), point = curve->point(ta + s * (tb - ta));
+            const double gap = distance(onSurface, point);
+            worst = std::max(worst, gap);
+            if (!close || gap <= 0.5 * tolerance) continue;
+            Vec2 foot = uv;
+            if (!invertPoint(surface, point, foot, tolerance, scale)) {
+                close = false;
+                continue;
+            }
+            const Vec3 nearest = surface.point(foot[0], foot[1]);
+            const double offset = distance(nearest, point);
+            close = distance(onSurface, nearest) <= std::max(0.5 * tolerance - offset, 0.25 * tolerance);
         }
-        if (worst <= 0.5 * tolerance || depth >= 40) {
+        if (worst <= 0.5 * tolerance || (close && worst <= tolerance) || depth >= 40) {
             if (worst > 50.0 * tolerance) return false;
             nodesT.push_back(tb);
             nodesUv.push_back(b);

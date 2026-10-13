@@ -16,9 +16,11 @@
 #include "fk_body_io.h"
 #include "fk_boolean.h"
 #include "fk_curve_ops.h"
+#include "fk_exchange.h"
 #include "fk_helix.h"
 #include "fk_loft.h"
 #include "fk_mass.h"
+#include "fk_nurbs.h"
 #include "fk_primitives.h"
 #include "fk_revolve.h"
 #include "fk_step.h"
@@ -375,6 +377,118 @@ FK_TEST(StepReadSolidWorksFile) {
     GProp_GProps props;
     BRepGProp::VolumeProperties(shape, props, 1e-9);
     FK_CHECK_NEAR(massProperties(body, 1e-9).volume, props.Mass(), 1e-6 * props.Mass());
+}
+
+FK_TEST(ExchangeClosedSplineSeamClosesFaceDomain) {
+    // Mezzo cilindro delimitato da due semicerchi e due generatrici. La
+    // generatrice sul seam puo' essere proiettata a u=0, mentre gli archi
+    // terminano a u=2*pi: il loop deve usare quest'ultimo ramo.
+    detail::RawModel model;
+    model.points = {Vec3(-3, 0, 0), Vec3(3, 0, 0), Vec3(3, 0, 2), Vec3(-3, 0, 2)};
+    const auto bottom = std::make_shared<Circle<3>>(Vec3(), Vec3(1, 0, 0), Vec3(0, 1, 0), 3.0);
+    const auto top = std::make_shared<Circle<3>>(Vec3(0, 0, 2), Vec3(1, 0, 0), Vec3(0, 1, 0), 3.0);
+    model.edges = {{0, 1, bottom, true, {kPi, kTwoPi}},
+                   {1, 2, std::make_shared<Line<3>>(Vec3(3, 0, 0), Vec3(0, 0, 1)), true, {0, 2}},
+                   {3, 2, top, true, {kPi, kTwoPi}},
+                   {0, 3, std::make_shared<Line<3>>(Vec3(-3, 0, 0), Vec3(0, 0, 1)), true, {0, 2}}};
+    detail::RawFace face;
+    face.surface = std::make_shared<BSplineSurface>(
+        toBSplineSurface(CylindricalSurface(Frame3(), 3.0), {0, kTwoPi}, {0, 2}));
+    face.loops = {{{0, true}, {1, true}, {2, false}, {3, false}}};
+    model.faces.push_back(face);
+    const Body body = detail::assembleBody(model, false);
+    FK_CHECK(checkBody(body).empty());
+    FK_CHECK_NEAR(faceArea(body, body.faces().front(), 1e-9), 6.0 * kPi, 1e-6);
+    const auto fins = body.loopFins(body.face(body.faces().front()).loops.front());
+    for (std::size_t i = 0; i < fins.size(); ++i) {
+        const Fin &a = body.fin(fins[i]), &b = body.fin(fins[(i + 1) % fins.size()]);
+        const Edge &ea = body.edge(a.edge), &eb = body.edge(b.edge);
+        FK_CHECK_NEAR(distance(a.pcurve->point(a.sense ? ea.range.hi : ea.range.lo),
+                               b.pcurve->point(b.sense ? eb.range.lo : eb.range.hi)), 0.0, 1e-6);
+    }
+}
+
+FK_TEST(StepReadD250227SolidWorksFile) {
+    const std::string path = std::string(FORGECAD_SOURCE_DIR) + "/File_Esempio/D250227-REV00.step";
+    std::ifstream file(path, std::ios::binary);
+    if (!file) return;  // file reale facoltativo; caso sintetico sempre eseguito
+    const std::string content((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+    const auto read = readStep(content);
+    for (const auto &note : read.notes)
+        if (note.find("non ricostruito") != std::string::npos) fktest::reportFailure(__FILE__, __LINE__, note);
+    FK_CHECK(read.bodies.size() == 1);
+    if (read.bodies.empty()) return;
+    const Body &body = read.bodies.front().body;
+    FK_CHECK(!body.isSheet());
+    FK_CHECK(body.faces().size() == 33);
+    FK_CHECK(body.edges().size() == 80);
+    FK_CHECK(checkBody(body).empty());
+    const auto mesh = tessellate(body, {});
+    FK_CHECK(mesh.failedFaces == 0);
+    FK_CHECK(mesh.faces.size() == body.faces().size());
+    for (const auto &face : mesh.faces) FK_CHECK(!face.triangles.empty());
+    const TopoDS_Shape reference = readWithOcct(content);
+    FK_CHECK(BRepCheck_Analyzer(reference).IsValid());
+    GProp_GProps props;
+    BRepGProp::VolumeProperties(reference, props, 1e-9);
+    FK_CHECK_NEAR(massProperties(body, 1e-9).volume, props.Mass(), 1e-4 * props.Mass());
+    double meshVolume = 0.0;
+    for (const auto &face : mesh.faces)
+        for (const auto &triangle : face.triangles)
+            meshVolume += dot(face.points[std::size_t(triangle[0])],
+                              cross(face.points[std::size_t(triangle[1])], face.points[std::size_t(triangle[2])])) / 6.0;
+    FK_CHECK_NEAR(meshVolume, props.Mass(), 1e-3 * props.Mass());
+    const auto restored = readStep(writeStep(read.bodies));
+    FK_CHECK(restored.bodies.size() == 1);
+    if (!restored.bodies.empty()) FK_CHECK(checkBody(restored.bodies.front().body).empty());
+}
+
+FK_TEST(StepReadD260320SolidWorksAssembly) {
+    const std::string path = std::string(FORGECAD_SOURCE_DIR) + "/File_Esempio/D260320.STEP";
+    std::ifstream file(path, std::ios::binary);
+    if (!file) return;  // fixture reale facoltativa
+    const std::string content((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+    const auto read = readStep(content);
+    for (const auto &note : read.notes)
+        if (note.find("non ricostruito") != std::string::npos) fktest::reportFailure(__FILE__, __LINE__, note);
+    FK_CHECK(read.bodies.size() == 6);
+    std::size_t faces = 0;
+    int solids = 0;
+    double meshVolume = 0.0;
+    TessellationOptions meshOptions;
+    meshOptions.deflection = 0.001;
+    meshOptions.angle = 0.05;
+    for (const auto &part : read.bodies) {
+        const Body &body = part.body;
+        faces += body.faces().size();
+        if (!body.isSheet()) ++solids;
+        FK_CHECK(checkBody(body).empty());
+        const auto mesh = tessellate(body, meshOptions);
+        FK_CHECK(mesh.failedFaces == 0);
+        FK_CHECK(mesh.faces.size() == body.faces().size());
+        for (const auto &face : mesh.faces) FK_CHECK(!face.triangles.empty());
+        if (!body.isSheet())
+            for (const auto &face : mesh.faces)
+                for (const auto &triangle : face.triangles)
+                    meshVolume += dot(face.points[std::size_t(triangle[0])],
+                        cross(face.points[std::size_t(triangle[1])], face.points[std::size_t(triangle[2])])) / 6.0;
+    }
+    FK_CHECK(faces == 290);
+    FK_CHECK(solids == 5);
+    const TopoDS_Shape reference = readWithOcct(content);
+    double referenceVolume = 0.0;
+    int referenceSolids = 0;
+    for (TopExp_Explorer ex(reference, TopAbs_SOLID); ex.More(); ex.Next()) {
+        GProp_GProps props;
+        BRepGProp::VolumeProperties(ex.Current(), props, 1e-9);
+        referenceVolume += props.Mass();
+        ++referenceSolids;
+    }
+    FK_CHECK(referenceSolids == solids);
+    FK_CHECK_NEAR(meshVolume, referenceVolume, 1e-3 * referenceVolume);
+    const auto restored = readStep(writeStep(read.bodies));
+    FK_CHECK(restored.bodies.size() == read.bodies.size());
+    for (const auto &part : restored.bodies) FK_CHECK(checkBody(part.body).empty());
 }
 
 FK_TEST(StepReadSignedMajorTorus) {

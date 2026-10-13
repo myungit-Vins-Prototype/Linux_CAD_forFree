@@ -149,6 +149,60 @@ static bool reorientSpheres(Body &body) {
     return changed;
 }
 
+// Un bordo sulla chiusura di una B-spline ha due immagini parametriche.
+// Scegli quella che chiude il loop con le fin adiacenti, prima di dedurne
+// il verso o di integrare/triangolare il dominio della faccia.
+static int alignClosedSplineSeams(Body &body) {
+    int changed = 0;
+    for (FaceId id : body.faces()) {
+        const Face &face = body.face(id);
+        if (face.surface->type() != SurfaceType::BSpline) continue;
+        const Surface &surface = *face.surface;
+        for (LoopId loop : face.loops) {
+            const auto fins = body.loopFins(loop);
+            if (fins.size() < 2) continue;
+            const auto endPoint = [&](FinId id, bool start) {
+                const Fin &fin = body.fin(id);
+                const Edge &edge = body.edge(fin.edge);
+                return fin.pcurve->point(start == fin.sense ? edge.range.lo : edge.range.hi);
+            };
+            for (std::size_t i = 0; i < fins.size(); ++i) {
+                Fin &fin = body.fin(fins[i]);
+                const Edge &edge = body.edge(fin.edge);
+                const Vec2 previous = endPoint(fins[(i + fins.size() - 1) % fins.size()], false);
+                const Vec2 next = endPoint(fins[(i + 1) % fins.size()], true);
+                for (int axis = 0; axis < 2; ++axis) {
+                    const Interval domain = axis == 0 ? surface.uDomain() : surface.vDomain();
+                    const Vec2 a = endPoint(fins[i], true), b = endPoint(fins[i], false);
+                    const double middle = fin.pcurve->point(0.5 * (edge.range.lo + edge.range.hi))[axis];
+                    const bool low = std::fabs(middle - domain.lo) < std::fabs(middle - domain.hi);
+                    const double boundary = low ? domain.lo : domain.hi;
+                    if (std::max({std::fabs(a[axis] - boundary), std::fabs(b[axis] - boundary),
+                                  std::fabs(middle - boundary)}) > 1e-6 * domain.length()) continue;
+                    Vec2 lowUV = fin.pcurve->point(0.5 * (edge.range.lo + edge.range.hi)), highUV = lowUV;
+                    lowUV[axis] = domain.lo;
+                    highUV[axis] = domain.hi;
+                    const Vec3 lowPoint = surface.point(lowUV[0], lowUV[1]), highPoint = surface.point(highUV[0], highUV[1]);
+                    if (distance(lowPoint, highPoint) > 1e-12 * std::max({1.0, norm(lowPoint), norm(highPoint)})) continue;
+                    Vec2 shift;
+                    shift[axis] = low ? domain.length() : -domain.length();
+                    const double before = std::fabs(a[axis] - previous[axis]) + std::fabs(b[axis] - next[axis]);
+                    const double after = std::fabs(a[axis] + shift[axis] - previous[axis]) +
+                                         std::fabs(b[axis] + shift[axis] - next[axis]);
+                    if (before - after < domain.length()) continue;
+                    const auto candidate = translatedCurve(fin.pcurve, shift);
+                    const double deviation = pcurveDeviation(surface, *edge.curve, *candidate, edge.range, 32);
+                    if (!(deviation <= std::max({kPCurveTolerance, edge.tolerance, fin.pcurveTolerance}))) continue;
+                    fin.pcurve = candidate;
+                    fin.pcurveTolerance = std::max(fin.pcurveTolerance, deviation);
+                    ++changed;
+                }
+            }
+        }
+    }
+    return changed;
+}
+
 // Verso delle facce su superfici non periodiche: la faccia sta a sinistra dei
 // suoi loop rispetto alla sua normale, quindi nello spazio (u, v) l'area con
 // segno dei loop e' positiva se la normale della faccia e' quella della
@@ -489,6 +543,8 @@ Body assembleBody(const RawModel &input, bool solid, std::vector<std::string> *n
     if (missing > 0 && reorientSpheres(body)) missing = computePCurves(body);
     pcurveTimer.reset();
     if (missing > 0) throw std::domain_error(std::to_string(missing) + " SP-curve non calcolabili");
+    if (const int aligned = alignClosedSplineSeams(body))
+        note(std::to_string(aligned) + " SP-curve sulla chiusura delle B-spline allineate ai loop");
     if (const int flipped = repairFaceSenses(body))
         note(std::to_string(flipped) + " facce con il verso (same_sense) opposto ai loop: corretto");
  std::vector<CheckIssue> issues;

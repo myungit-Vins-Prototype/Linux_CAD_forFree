@@ -7,9 +7,44 @@
 #include <gp_Ax1.hxx>
 
 #include "fk_surface_algo.h"
+#include "fk_nurbs.h"
 #include "fk_test_util.h"
 
 using namespace fktest;
+
+FK_TEST(InvertPointKeepsClosedBSplineBranch) {
+    const CylindricalSurface cylinder(Frame3(), 3.0);
+    const BSplineSurface source = toBSplineSurface(cylinder, {0.0, kTwoPi}, {0.0, 2.0});
+    // Stesso cilindro, prima chiuso in u e poi in v. Le B-spline restano
+    // non periodiche: entrambi i bordi sono rappresentazioni valide del seam.
+    std::vector<Vec3> poles;
+    std::vector<double> weights;
+    for (int j = 0; j < source.vPoleCount(); ++j)
+        for (int i = 0; i < source.uPoleCount(); ++i) {
+            poles.push_back(source.pole(i, j));
+            weights.push_back(source.weight(i, j));
+        }
+    const BSplineSurface transposed(source.vDegree(), source.uDegree(), source.vKnots(), source.uKnots(),
+                                    source.vPoleCount(), source.uPoleCount(), poles, weights);
+    for (int axis : {0, 1}) {
+        const BSplineSurface &surface = axis == 0 ? source : transposed;
+        const Interval domain = axis == 0 ? surface.uDomain() : surface.vDomain();
+        for (bool high : {false, true}) {
+            // Punto appena oltre il seam rispetto al ramo della stima. La
+            // proiezione globale preferisce l'altro bordo; quello vicino
+            // alla stima e' comunque entro la tolleranza dell'edge.
+            Vec2 target(1.0, 1.0), guess(1.0, 1.0);
+            target[axis] = high ? domain.lo + 1e-8 : domain.hi - 1e-8;
+            guess[axis] = high ? domain.hi - 0.1 : domain.lo + 0.1;
+            Vec3 point = surface.point(target[0], target[1]);
+            point[0] *= 1.0001;
+            point[1] *= 1.0001;
+            FK_CHECK(invertPoint(surface, point, guess, 1e-3, 3.0));
+            FK_CHECK(high ? guess[axis] > domain.hi - 0.01 : guess[axis] < domain.lo + 0.01);
+            FK_CHECK(distance(point, surface.point(guess[0], guess[1])) <= 1e-3);
+        }
+    }
+}
 
 namespace {
 

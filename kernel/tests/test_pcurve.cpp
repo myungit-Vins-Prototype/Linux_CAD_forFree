@@ -9,6 +9,7 @@
 #include "fk_body_check.h"
 #include "fk_extrude.h"
 #include "fk_mass.h"
+#include "fk_nurbs.h"
 #include "fk_pcurve.h"
 #include "fk_primitives.h"
 #include "fk_test_profiles.h"
@@ -326,6 +327,42 @@ FK_TEST(FittedPCurvesFromDegenerateSide) {
             }
         }
     }
+}
+
+// Una sfera NURBS ha un lato collassato. Il fit cubico vicino a quel lato
+// deve passare al ripiego lineare senza esplorare milioni di intervalli.
+FK_TEST(FittedPCurveNearCollapsedSplineSide) {
+    const auto surface = std::make_shared<BSplineSurface>(
+        toBSplineSurface(SphericalSurface(Frame3(), 3.0), {0.0, 1.8}, {0.0, 0.5 * kPi}));
+    const Interval u = surface->uDomain(), v = surface->vDomain();
+    const double nearSide = v.hi - 1e-3 * v.length();
+    const auto q = std::make_shared<BSplineCurve<2>>(1, std::vector<double>{0, 0, 1, 1},
+        std::vector<Vec2>{Vec2(u.lo + 0.2 * u.length(), nearSide), Vec2(u.lo + 0.8 * u.length(), nearSide)});
+    class CountedCurve final : public Curve<3> {
+        CurvePtr<3> base_;
+    public:
+        mutable std::size_t evaluations = 0;
+        explicit CountedCurve(CurvePtr<3> base) : base_(std::move(base)) {}
+        CurveType type() const override { return CurveType::Other; }
+        Interval domain() const override { return base_->domain(); }
+        std::vector<double> breakpoints(const Interval &range) const override { return base_->breakpoints(range); }
+        void evaluate(double t, int order, Vec3 *out) const override {
+            if (++evaluations > 200000) throw std::runtime_error("fit SP-curve: raffinamento non limitato");
+            base_->evaluate(t, order, out);
+        }
+    };
+    const auto curve = std::make_shared<CountedCurve>(std::make_shared<CurveOnSurface>(surface, q));
+    double deviation = -1.0;
+    const double tolerance = 1e-8;
+    const auto fitted = fitPCurve(*surface, curve, {0, 1}, tolerance, &deviation);
+    FK_CHECK(fitted != nullptr);
+    if (!fitted) return;
+    FK_CHECK(fitted->type() == CurveType::BSpline);
+    FK_CHECK(static_cast<const BSplineCurve<2> &>(*fitted).degree() == 1);
+    FK_CHECK(deviation >= 0.0 && deviation <= tolerance);
+    FK_CHECK(pcurveDeviation(*surface, *curve, *fitted, {0, 1}, 64) <= tolerance);
+    FK_CHECK_NEAR(fitted->point(1.0)[1], nearSide, 1e-8);
+    FK_CHECK(curve->evaluations < 200000);
 }
 
 // Gli operatori che cambiano gli edge mantengono le SP-curve coerenti.
