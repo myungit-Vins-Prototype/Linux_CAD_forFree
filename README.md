@@ -381,4 +381,4 @@ Per segnalare un problema su GitHub indicare sistema operativo, architettura, ve
 
 Le operazioni geometriche e lo scambio STEP/IGES dipendono dalle entità supportate dal kernel proprio; non è garantita la compatibilità con ogni file o configurazione geometrica. Le istruzioni di installazione sono ricavate dalla configurazione del progetto e non certificano il funzionamento su tutte le versioni di Linux e macOS.
 
-Nel repository attuale non è presente un file `LICENSE`. Il termine «for free» nel nome non specifica una licenza di riuso o redistribuzione del codice. Le dipendenze mantengono le rispettive licenze.
+Il progetto è distribuito con licenza **GNU General Public License v3 (GPLv3)**. Il testo completo è nel file [LICENSE](LICENSE), identico a quello del branch `main`. Le dipendenze mantengono le rispettive licenze.
