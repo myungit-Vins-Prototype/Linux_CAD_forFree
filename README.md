@@ -1,5 +1,7 @@
 # ForgeCAD — Linux CAD for Free / macOS CAD for Free
 
+**Lingua / Language:** Italiano · [English](README.en.md)
+
 CAD parametrico 3D per Linux e macOS, scritto in **C++17** con **Qt 6**, viewport **OpenGL 3.3 Core** e un **kernel geometrico proprio** basato su rappresentazione B-rep. Permette di costruire solidi e superfici a partire da schizzi, modificarne i parametri e ricostruire il modello attraverso uno storyboard delle operazioni.
 
 L'interfaccia è in italiano. Il progetto è sviluppato con l'aiuto dell'intelligenza artificiale ed è in evoluzione.
