@@ -333,6 +333,8 @@ void upgradeTopologyReferences(QVector<ExtrusionObject> &features) {
         upgrade(feature.revolveAxisRef);
         upgrade(feature.draftNeutral);
         upgrade(feature.thickenDirection);
+        upgrade(feature.sweepProfileRef);
+        upgrade(feature.sweepPathRef);
         upgrade(feature.curveExtraction.source);
         for(auto &ref:feature.curveExtraction.sources)upgrade(ref);
         upgrade(feature.curveExtraction.tool);

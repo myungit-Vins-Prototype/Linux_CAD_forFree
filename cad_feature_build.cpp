@@ -372,18 +372,20 @@ void buildGeometry(ExtrusionObject &body, int index, const QVector<SketchObject>
         }
         case BodyFeature::Sweep: {
             const SketchObject *profile = sketch(body.sketchIndex);
-            if (!profile) {
+            if (!profile && body.sweepProfileRef.kind < 0) {
                 body.error = QStringLiteral("Lo schizzo del profilo non esiste piu'.");
                 return;
             }
             std::vector<ForgeCad::Kernel::PathSegment> path;
-            if (body.sweepPath == 0) {
+            if (body.sweepPathRef.kind >= 0) {
+                if (!geometryRefPath(body.sweepPathRef, index, sketches, bodies, path, &body.error)) return;
+            } else if (body.sweepPath == 0) {
                 const SketchObject *pathSketch = sketch(body.pathSketch);
                 if (!pathSketch) {
                     body.error = QStringLiteral("Lo schizzo del percorso non esiste piu'.");
                     return;
                 }
-                if (body.pathSketch == body.sketchIndex) {
+                if (body.sweepProfileRef.kind < 0 && body.pathSketch == body.sketchIndex) {
                     body.error = QStringLiteral("Profilo e percorso devono stare in schizzi diversi.");
                     return;
                 }
@@ -398,8 +400,14 @@ void buildGeometry(ExtrusionObject &body, int index, const QVector<SketchObject>
                 }
                 path = ForgeCad::curvePath(curve->curve);
             }
-            path = ForgeCad::alignPath(path, *profile);
-            body.forgeBody = ForgeCad::forgeSweep(*profile, path, body.sweepMode, &body.error, body.sweepSurface);
+            if (body.sweepProfileRef.kind >= 0) {
+                std::vector<ForgeCad::Kernel::PathSegment> section;
+                if (!geometryRefPath(body.sweepProfileRef, index, sketches, bodies, section, &body.error)) return;
+                body.forgeBody = ForgeCad::forgeSweep(section, path, body.sweepMode, &body.error, body.sweepSurface);
+            } else {
+                path = ForgeCad::alignPath(path, *profile);
+                body.forgeBody = ForgeCad::forgeSweep(*profile, path, body.sweepMode, &body.error, body.sweepSurface);
+            }
             // Una superficie non si fonde con i solidi.
             if (!body.sweepSurface) body.forgeBody = ForgeCad::forgeMergeFeatureResult(body, body.forgeBody, index, bodies, &body.error);
             body.solid = body.forgeBody && !body.forgeBody->isSheet();

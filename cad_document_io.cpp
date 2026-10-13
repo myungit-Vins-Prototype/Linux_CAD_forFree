@@ -64,7 +64,7 @@ constexpr char kMagic[4] = {'F', 'C', 'A', 'D'};
 // 42 sezioni e guide loft da bordi; 43 ordine delle guide.
 // 44 estrazione associativa di curve 3D, segmento e vista salvata del taglio.
 // 45 schizzi spaziali con entita' e punti XYZ in double.
-constexpr quint16 kVersion = 47;
+constexpr quint16 kVersion = 48;
 constexpr quint8 kZlib = 1;
 
 void write(QDataStream &out, const CurveObject &curve) {
@@ -425,6 +425,8 @@ void write(QDataStream &out, const ExtrusionObject &body) {
     for (double value : body.fillFaceInfluences) out << value;
     out << qint32(body.fillShapeFace) << body.fillShapeWeight;
     writeRefs(out,body.curveExtraction.sources);
+    // Formato 48: sezione e percorso sweep da bordi e curve 3D.
+    writeRefs(out, {body.sweepProfileRef, body.sweepPathRef});
 }
 
 // `extras` (solo formato 5): i file scritti durante lo sviluppo del formato 5
@@ -716,6 +718,11 @@ bool read(QDataStream &in, ExtrusionObject &body, quint16 version, int extras) {
         if(face < -1 || face>=body.ruledSecond.size() || !std::isfinite(body.fillShapeWeight) || body.fillShapeWeight<0)return false;
         body.fillShapeFace=face;
         if(!readRefs(in,body.curveExtraction.sources,version))return false;
+    }
+    if (version >= 48) {
+        QVector<GeometryRef> refs;
+        if (!readRefs(in, refs, version) || refs.size() != 2) return false;
+        body.sweepProfileRef = refs[0]; body.sweepPathRef = refs[1];
     }
     const BodyFeature last = version >= 45 ? BodyFeature::SpatialSketch : version >= 44 ? BodyFeature::ExtractedCurve : version >= 39 ? BodyFeature::Thicken : version >= 38 ? BodyFeature::ProjectedCurve : version >= 36 ? BodyFeature::Draft : version >= 35 ? BodyFeature::FillSurface : version >= 27 ? BodyFeature::Thread : version >= 25 ? BodyFeature::Shell : BodyFeature::PlanarSurface;
     if (int(body.feature) < 0 || int(body.feature) > int(last)) return false;

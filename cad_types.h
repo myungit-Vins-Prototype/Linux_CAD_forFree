@@ -273,7 +273,8 @@ struct BodyDisplay {
 // Pattern: ripetizione (lineare, circolare, specchio) di un corpo o di una funzione.
 // Transform: spostamento e rotazione di un corpo (o di una sua copia).
 // SurfaceOffset: lamina a distanza `distance` dalle facce `offsetFaces` del
-// corpo firstBody (vuoto: tutte), le facce tangenti cucite in una superficie.
+// corpo firstBody (vuoto: tutte); distanza zero: copia esatta con i bordi comuni.
+// Il corpo originale resta disponibile e la copia e' un corpo logico separato.
 // Sew: cucitura delle superfici firstBody + booleanTools in una (solido se
 // chiusa e sewSolid), entro sewTolerance.
 // Ruled: superficie rigata tra le catene di curve ruledFirst e ruledSecond.
@@ -605,6 +606,8 @@ struct ExtrusionObject {
     // Sweep: profilo dello schizzo sketchIndex lungo il percorso: lo schizzo
     // pathSketch (sweepPath 0) o la curva firstBody (1, un'elica). sweepMode: 0
     // torsione minima, 1 Frenet, 2 orientamento costante.
+    // Riferimenti associativi opzionali: sezione piana e percorso dalla vista.
+    GeometryRef sweepProfileRef, sweepPathRef;
     int sweepPath = 0;
     int pathSketch = -1;
     QVector<int> pathSegments;

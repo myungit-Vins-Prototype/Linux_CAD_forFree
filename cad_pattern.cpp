@@ -3,6 +3,8 @@
 #include <cmath>
 #include <exception>
 #include <memory>
+#include <map>
+#include <set>
 
 #include "cad_datum.h"
 #include "fk_boolean.h"
@@ -16,6 +18,53 @@ using namespace Kernel;
 
 void setError(QString *error, const QString &message) {
     if (error) *error = message;
+}
+
+// Le copie delle superfici restano shell indipendenti, anche se coincidenti.
+// La cucitura cambierebbe i bordi e potrebbe creare una topologia non manifold.
+Body collectSheets(const std::vector<Body> &bodies) {
+    std::vector<Vec3> points;
+    std::vector<double> tolerances;
+    std::vector<Body::BuildEdge> edges;
+    std::vector<Body::BuildFace> faces;
+    for (const Body &body : bodies) {
+        std::map<int, int> pointOf, edgeOf;
+        std::set<int> used;
+        for (EdgeId e : body.edges()) used.insert({body.edgeStart(e).index, body.edgeEnd(e).index});
+        for (VertexId v : body.vertices()) {
+            if (!used.count(v.index)) continue;
+            pointOf[v.index] = int(points.size());
+            points.push_back(body.vertex(v).point);
+            tolerances.push_back(body.vertex(v).tolerance);
+        }
+        for (EdgeId e : body.edges()) {
+            const Edge &edge = body.edge(e);
+            edgeOf[e.index] = int(edges.size());
+            edges.push_back({pointOf.at(body.edgeStart(e).index), pointOf.at(body.edgeEnd(e).index),
+                             edge.curve, edge.range, edge.tolerance});
+        }
+        for (FaceId f : body.faces()) {
+            const Face &face = body.face(f);
+            Body::BuildFace copy;
+            copy.surface = face.surface;
+            copy.sense = face.sense;
+            for (LoopId l : face.loops) {
+                std::vector<Body::BuildFin> loop;
+                for (FinId id : body.loopFins(l)) {
+                    const Fin &fin = body.fin(id);
+                    loop.push_back({edgeOf.at(fin.edge.index), fin.sense, fin.pcurve, fin.pcurveTolerance});
+                }
+                if (!loop.empty()) copy.loops.push_back(std::move(loop));
+            }
+            faces.push_back(std::move(copy));
+        }
+    }
+    Body result = Body::buildSheet(points, edges, faces);
+    // I vertici isolati delle facce senza bordo sono aggiunti dopo i punti.
+    std::size_t k = 0;
+    for (VertexId v : result.vertices())
+        if (k < tolerances.size()) result.vertex(v).tolerance = tolerances[k++];
+    return result;
 }
 
 // Unione a coppie (albero bilanciato): le booleane restano tra corpi piccoli.
@@ -104,8 +153,8 @@ ForgeBody forgePattern(const ForgeBody &base, const std::vector<Transform3> &pla
         if (keepOriginal) copies.push_back(*base);
         for (const Transform3 &t : placements) copies.push_back(transformBody(*base, t));
         if (copies.empty()) return setError(error, QStringLiteral("Nessuna istanza.")), nullptr;
-        if (copies.size() > 1 && base->isSheet())
-            return setError(error, QStringLiteral("Si ripetono solo i solidi (le superfici non si uniscono).")), nullptr;
+        if (copies.size() == 1) return std::make_shared<const Body>(std::move(copies.front()));
+        if (base->isSheet()) return std::make_shared<const Body>(collectSheets(copies));
         return std::make_shared<const Body>(uniteAll(std::move(copies)));
     } catch (const std::exception &failure) {
         setError(error, QStringLiteral("Ripetizione non riuscita: %1").arg(QString::fromUtf8(failure.what())));

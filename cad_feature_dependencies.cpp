@@ -64,7 +64,9 @@ QVector<int> bodyOperands(const ExtrusionObject &body) {
     case BodyFeature::SheetTrim: return body.secondBody >= 0 ? QVector<int>{body.firstBody, body.secondBody} : QVector<int>{body.firstBody};
     case BodyFeature::Helix: return body.helix.source != 0 ? QVector<int>{body.firstBody} : QVector<int>{};
     case BodyFeature::Sweep: {
-        QVector<int> result = body.sweepPath == 1 ? QVector<int>{body.firstBody} : QVector<int>();
+        QVector<int> result = body.sweepPathRef.kind < 0 && body.sweepPath == 1 ? QVector<int>{body.firstBody} : QVector<int>();
+        for (const auto &ref : {body.sweepProfileRef, body.sweepPathRef})
+            if (isBodyRef(ref) && !result.contains(ref.index)) result.append(ref.index);
         if (body.mergeOperation != 0) result += body.mergeBodies;
         return result;
     }
@@ -129,7 +131,14 @@ QVector<int> sketchesOf(const ExtrusionObject &body) {
     case BodyFeature::Helix: return body.helix.source == 0 ? QVector<int>{body.sketchIndex} : QVector<int>{};
     case BodyFeature::SheetTrim: return body.sketchIndex >= 0 ? QVector<int>{body.sketchIndex} : QVector<int>{};
     case BodyFeature::ProjectedCurve: return {body.sketchIndex};
-    case BodyFeature::Sweep: return body.sweepPath == 0 ? QVector<int>{body.sketchIndex, body.pathSketch} : QVector<int>{body.sketchIndex};
+    case BodyFeature::Sweep: {
+        QVector<int> result;
+        if (body.sweepProfileRef.kind < 0) result.append(body.sketchIndex);
+        if (body.sweepPathRef.kind < 0 && body.sweepPath == 0) result.append(body.pathSketch);
+        for (const auto &ref : {body.sweepProfileRef, body.sweepPathRef})
+            if (isSketchRef(ref) && !result.contains(ref.index)) result.append(ref.index);
+        return result;
+    }
     case BodyFeature::Loft: {
         QVector<int> result = body.loftSections.isEmpty() ? body.loftSketches : QVector<int>{};
         for (const auto *refs : {&body.loftSections,&body.loftEdgeGuides})

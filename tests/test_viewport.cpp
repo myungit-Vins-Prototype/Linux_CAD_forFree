@@ -39,6 +39,388 @@ static void require(bool ok, const char *message) {
 }
 class ViewportInteractionTest {
 public:
+    static void copyFaces() {
+        using namespace ForgeCad;
+        using namespace ForgeCad::Kernel;
+        const Body box = makeBox(Frame3(), 4, 5, 6);
+        const auto faces = box.faces();
+        const auto edgesOf = [](const Body &body, FaceId face) {
+            std::vector<EdgeId> edges;
+            for (LoopId loop : body.face(face).loops)
+                for (FinId fin : body.loopFins(loop)) edges.push_back(body.fin(fin).edge);
+            return edges;
+        };
+        const auto firstEdges = edgesOf(box, faces.front());
+        FaceId adjacent;
+        for (FaceId f : faces) {
+            if (f == faces.front()) continue;
+            const auto edges = edgesOf(box,f);
+            for (EdgeId edge : edges)
+                if (std::find(firstEdges.begin(),firstEdges.end(),edge)!=firstEdges.end()) adjacent=f;
+            if (adjacent.valid()) break;
+        }
+        require(adjacent.valid(), "due facce adiacenti per la copia cucita");
+        const Body sheet = facesAsSheet(box, {faces.front(), adjacent});
+        const auto base = std::make_shared<const Body>(sheet);
+        QVector<EdgePoint> points;
+        for(FaceId f : sheet.faces()) {
+            const auto &face = sheet.face(f);
+            const FinId fin=sheet.loop(face.loops.front()).first;
+            points.append(faceReference(sheet,f,sheet.finPoint(fin,0.5)));
+        }
+        QString error;
+        for(const auto &selection : {QVector<EdgePoint>{points.front()}, points, QVector<EdgePoint>{}}) {
+            const auto copied=forgeOffsetFaces(base,selection,0,&error);
+            require(copied && copied.get()!=base.get() && copied->isSheet() && error.isEmpty()
+                && checkBody(*copied).empty(), "copia esatta di una faccia o superficie cucita");
+            require(copied->faces().size()==(selection.size()==1 ? 1u : 2u), "copia contiene tutte e sole le facce scelte");
+            require(copied->shells().size()==1, "facce adiacenti restano cucite");
+            double area=0;for(FaceId f:copied->faces())area+=faceArea(*copied,f);
+            double expected=0;
+            for(int i=0;i<(selection.size()==1?1:points.size());++i)expected+=faceArea(sheet,sheet.faces()[i]);
+            require(std::abs(area-expected)<1e-9, "copia conserva area e trim delle facce");
+        }
+        const auto solid=std::make_shared<const Body>(box);
+        const auto surfaceCopy=forgeOffsetFaces(solid,{},0,&error);
+        require(surfaceCopy && surfaceCopy->isSheet() && surfaceCopy->faces().size()==6 && checkBody(*surfaceCopy).empty(),
+            "copia delle facce di un solido crea una superficie");
+        const auto sphere=std::make_shared<const Body>(makeSphere(Frame3(),2));
+        const auto sphereCopy=forgeOffsetFaces(sphere,{},0,&error);
+        require(sphereCopy && sphereCopy->isSheet() && checkBody(*sphereCopy).empty()
+            && std::abs(faceArea(*sphereCopy,sphereCopy->faces().front())-16*M_PI)<1e-8,
+            "copia di superficie periodica senza bordo conserva geometria");
+        const auto offset=forgeOffsetFaces(base,{points.front()},1,&error);
+        require(offset && checkBody(*offset).empty(), "offset non nullo continua a funzionare");
+
+        ExchangeBody exchange;exchange.name="Superficie cucita";exchange.body=sheet;
+        ExtrusionObject imported;imported.feature=BodyFeature::Imported;
+        imported.importData=QByteArray::fromStdString(writeStep({exchange}));
+        imported.name=QStringLiteral("Superficie originale");
+        DocumentState source;source.extrusions={imported};
+        CadViewport view;view.loadDocument(source);
+        const auto original=view.extrusions_[0].forgeBody;
+        ExtrusionObject definition;definition.feature=BodyFeature::SurfaceOffset;definition.firstBody=0;definition.distance=0;
+        QMainWindow window;std::exception_ptr failure;
+        QTimer::singleShot(0,&window,[&] {
+            auto *dialog=window.findChild<QDialog *>();
+            try {
+                require(dialog && dialog->findChild<QDoubleSpinBox *>("offsetDistance")->value()==0,
+                    "pannello copia facce parte a distanza zero");
+                dialog->findChild<QDialogButtonBox *>()->button(QDialogButtonBox::Ok)->click();
+                require(dialog->result()==QDialog::Accepted, "copia accettata nel pannello");
+            } catch(...) {failure=std::current_exception();if(dialog)dialog->reject();}
+        });
+        require(offsetDialog(&window,&view,QStringLiteral("Copia facce"),-1,definition,
+            [&](const ExtrusionObject &d){return view.createBody(d);}), "comando copia facce riuscito");
+        if(failure)std::rethrow_exception(failure);
+        require(view.extrusions_.size()==2 && view.extrusions_[0].forgeBody==original && view.extrusions_[0].visible
+            && view.extrusions_[1].visible && view.extrusions_[1].forgeBody->isSheet(), "copia e originale restano disponibili");
+        require(view.extrusions_[0].modelBodyId!=view.extrusions_[1].modelBodyId && view.resultBodiesBefore(-1)==QVector<int>({0,1}),
+            "copia e originale sono corpi logici distinti");
+        auto edited=view.extrusions_[1];edited.distance=1;
+        require(view.updateBody(1,edited).isEmpty(), "copia modificabile come offset");
+        view.undo();require(view.extrusions_[1].distance==0 && view.extrusions_[0].visible, "annulla offset ripristina copia");
+        QTemporaryDir directory;const auto file=directory.filePath(QStringLiteral("copy-faces.prt"));
+        DocumentState document;document.extrusions=view.extrusions_;
+        require(saveDocumentFile(file,document).isEmpty(), "salvataggio copia facce");
+        DocumentState loaded;require(loadDocumentFile(file,loaded).isEmpty(), "riapertura copia facce");
+        for(int i=0;i<loaded.extrusions.size();++i) {
+            loaded.extrusions[i].cachedGeometry=false;
+            buildBody(loaded.extrusions[i],i,loaded.sketches,loaded.extrusions,0);
+            require(loaded.extrusions[i].error.isEmpty() && loaded.extrusions[i].forgeBody, "rigenerazione originale e copia");
+        }
+        require(loaded.extrusions[1].distance==0 && loaded.extrusions[1].forgeBody->shells().size()==1
+            && loaded.extrusions[1].forgeBody->faces().size()==2 && loaded.extrusions[0].visible,
+            "riapertura conserva copia cucita e originale");
+        std::cout << "Copy faces PASS\n";
+    }
+
+    static void referenceListHighlight() {
+        using namespace ForgeCad;
+        using namespace ForgeCad::Kernel;
+        DocumentState source;
+        ExtrusionObject box; box.feature = BodyFeature::Primitive; box.name = QStringLiteral("Base");
+        box.primitive.size[0] = box.primitive.size[1] = box.primitive.size[2] = 10;
+        source.extrusions = {box};
+        CadViewport view; view.loadDocument(source); view.resize(800,600);
+        const auto geometry = view.extrusions_[0].forgeBody;
+        QVector<GeometryRef> refs;
+        for (EdgeId edge : geometry->edges()) {
+            GeometryRef ref; ref.kind = 4; ref.index = 0;
+            const auto &e = geometry->edge(edge);
+            ref.point = edgeReference(*geometry, edge, e.curve->point((e.range.lo + e.range.hi) / 2));
+            refs.append(ref);
+        }
+        const auto focused = [&](const GeometryRef &ref) {
+            require(view.referenceListMarks_.size() == 1 && view.referenceListMarks_[0].kind == ref.kind
+                && view.referenceListMarks_[0].index == ref.index && view.referenceListMarks_[0].point.subshape == ref.point.subshape,
+                "la voce scelta evidenzia esattamente il bordo corrispondente");
+            FaceHit hit; hit.edges = {ref.point};
+            const auto displayEdges = view.faceDisplayEdges(ref.index, hit);
+            require(displayEdges.size() == 1 && view.extrusions_[ref.index].display.edgeIds[displayEdges[0]] == ref.point.subshape,
+                "evidenziazione risolta sul bordo della mesh");
+            QImage image(800,600,QImage::Format_ARGB32); image.fill(Qt::transparent);
+            { QPainter painter(&image); view.drawGeometryRef(painter, view.referenceListMarks_[0], kHoverColor); }
+            int pixels = 0;
+            for (int y=0;y<image.height();++y) for(int x=0;x<image.width();++x)
+                if (image.pixelColor(x,y).alpha()) ++pixels;
+            require(pixels > 10, "bordo selezionato realmente disegnato nell'overlay");
+        };
+        // Navigazione della lista, cambio elenco, aggiornamento e rimozione.
+        {
+            QDialog dialog;
+            auto *first = new GeometryReferenceList(dialog, &view, QStringLiteral("first"));
+            auto *second = new GeometryReferenceList(dialog, &view, QStringLiteral("second"));
+            first->setReferences(refs); second->setReferences({refs[3]});
+            first->setCurrentRow(1); focused(refs[1]);
+            QKeyEvent down(QEvent::KeyPress, Qt::Key_Down, Qt::NoModifier);
+            QApplication::sendEvent(first, &down); focused(refs[2]);
+            const auto shape = view.extrusions_[0].forgeBody;
+            second->setCurrentRow(0); focused(refs[3]);
+            first->setReferences(refs); focused(refs[3]);
+            first->itemClicked(first->item(2)); focused(refs[2]);
+            first->setReferences({refs[2], refs[1]}); focused(refs[2]);
+            require(first->currentRow() == 0, "selezione segue lo stesso bordo dopo riordino");
+            first->setReferences({refs[1]}); require(view.referenceListMarks_.isEmpty(), "rimozione bordo azzera evidenziazione");
+            first->setCurrentRow(0); first->setEnabled(false);
+            require(view.referenceListMarks_.isEmpty(), "lista disabilitata non lascia bordi evidenziati");
+            second->itemClicked(second->item(0)); focused(refs[3]);
+            require(view.extrusions_[0].forgeBody == shape, "selezione della lista non modifica il modello");
+            dialog.reject(); require(view.referenceListMarks_.isEmpty(), "chiusura pannello pulisce evidenziazione");
+        }
+        {
+            QDialog dialog;
+            auto *list = new GeometryReferenceList(dialog, &view, QStringLiteral("destroyed"));
+            list->setReferences(refs); list->setCurrentRow(0); focused(refs[0]);
+            delete list; require(view.referenceListMarks_.isEmpty(), "distruzione elenco pulisce evidenziazione");
+        }
+        // Verifica i pannelli reali che prima mostravano solo testo.
+        for (int kind=0;kind<4;++kind) {
+            QMainWindow window; std::exception_ptr failure;
+            ExtrusionObject initial;
+            initial.planarRefs = refs.mid(0,4); initial.ruledFirst = {refs[0]}; initial.ruledSecond = {refs[1]};
+            QTimer::singleShot(0,&window,[&] {
+                auto *dialog = window.findChild<QDialog *>();
+                try {
+                    const QString name = kind==0 ? "boundaryEdges" : kind==1 ? "planarEdges" : kind==2 ? "ruledFirstEdges" : "fillBoundaryEdges";
+                    auto *list = dialog ? dialog->findChild<QListWidget *>(name) : nullptr;
+                    require(list && list->count() == (kind==2 ? 1 : 4), "pannello mostra tutti i bordi selezionabili");
+                    list->setCurrentRow(0); focused(refs[0]);
+                    if(kind==2) {
+                        auto *other = dialog->findChild<QListWidget *>("ruledSecondEdges");
+                        other->setCurrentRow(0); focused(refs[1]);
+                    }
+                    dialog->reject();
+                } catch(...) { failure=std::current_exception(); if(dialog) dialog->reject(); }
+            });
+            const auto apply=[](const ExtrusionObject &){return QString();};
+            if(kind==0) boundaryDialog(&window,&view,"Bordi",-1,initial,apply);
+            else if(kind==1) planarDialog(&window,&view,"Bordi",-1,initial,apply);
+            else if(kind==2) ruledDialog(&window,&view,"Bordi",-1,initial,apply);
+            else fillDialog(&window,&view,"Bordi",-1,initial,apply);
+            if(failure) std::rethrow_exception(failure);
+            require(view.referenceListMarks_.isEmpty(), "chiusura funzione rimuove il bordo evidenziato");
+        }
+        std::cout << "Reference list highlight PASS\n";
+    }
+
+    static void surfacePatterns() {
+        using namespace ForgeCad;
+        using namespace ForgeCad::Kernel;
+        ExtrusionObject base;
+        base.feature = BodyFeature::Imported;
+        base.modelBodyId = 1;
+        base.name = QStringLiteral("Superficie");
+        base.forgeBody = std::make_shared<const Body>(makePlaneSheet(Frame3({3,0,0}, {0,0,1}, {1,0,0}), 1));
+        ExchangeBody exchange; exchange.name = "Superficie"; exchange.body = *base.forgeBody;
+        base.importData = QByteArray::fromStdString(writeStep({exchange}));
+        base.solid = false;
+        QVector<ExtrusionObject> bodies{base};
+        const auto check = [&](const ExtrusionObject &body, int count) {
+            require(body.error.isEmpty() && body.forgeBody && !body.solid && body.forgeBody->isSheet(), "ripetizione resta superficie valida");
+            require(body.forgeBody->faces().size() == base.forgeBody->faces().size() * count, "tutte le facce delle copie conservate");
+            require(body.forgeBody->shells().size() == base.forgeBody->shells().size() * count, "copie restano shell separate");
+            require(checkBody(*body.forgeBody).empty(), "topologia e geometria delle copie valide");
+            double area = 0;
+            for (auto face : body.forgeBody->faces()) area += faceArea(*body.forgeBody, face);
+            require(std::abs(area - 4.0 * count) < 1e-8, "area delle superfici conservata");
+        };
+        ExtrusionObject pattern;
+        pattern.feature = BodyFeature::Pattern;
+        pattern.firstBody = 0;
+        pattern.modelBodyId = 1;
+        pattern.pattern.count = 4;
+        GeometryRef ref; ref.kind = 2; ref.index = 0;
+        pattern.pattern.refs = {ref};
+        for (double spacing : {5.0, 2.0, 0.5}) {
+            pattern.pattern.spacing = spacing; // separate, a contatto, sovrapposte
+            buildBody(pattern, 1, {}, bodies, 0);
+            check(pattern, 4);
+            require(!pattern.display.vertices.isEmpty(), "ripetizione superficie tassellata");
+        }
+        GeometryRef y; y.kind = 2; y.index = 1;
+        pattern.pattern.count2 = 3;
+        pattern.pattern.spacing2 = 3;
+        pattern.pattern.refs.append(y);
+        buildBody(pattern, 1, {}, bodies, 0); check(pattern, 12);
+        pattern.pattern.count2 = 1;
+        pattern.pattern.refs.resize(1);
+        pattern.pattern.kind = 1;
+        pattern.pattern.refs[0].index = 2;
+        pattern.pattern.angle = 360;
+        pattern.pattern.spread = true;
+        buildBody(pattern, 1, {}, bodies, 0); check(pattern, 4);
+        pattern.pattern.kind = 2;
+        pattern.pattern.refs[0].kind = 1; // piano YZ
+        for (bool keep : {false, true}) {
+            pattern.pattern.keepOriginal = keep;
+            buildBody(pattern, 1, {}, bodies, 0); check(pattern, keep ? 2 : 1);
+            bool reflected = false;
+            for (auto vertex : pattern.forgeBody->vertices())
+                reflected = reflected || pattern.forgeBody->vertex(vertex).point.x() < -1;
+            require(reflected, "specchio trasforma la superficie rispetto al piano YZ");
+        }
+        // Originale sul piano: copie coincidenti non cucite ne' eliminate.
+        pattern.pattern.refs[0].index = 0; // piano XY
+        buildBody(pattern, 1, {}, bodies, 0); check(pattern, 2);
+        // Anche superfici periodiche senza bordo e con piu' facce.
+        for (const Body &solid : {makeSphere(Frame3(), 2), makeBox(Frame3(), 2, 3, 4)}) {
+            const auto sheet = std::make_shared<const Body>(facesAsSheet(solid, solid.faces()));
+            QString error;
+            const auto copies = forgePattern(sheet, {Transform3::translation({6,0,0})}, true, &error);
+            require(copies && error.isEmpty() && copies->isSheet() && checkBody(*copies).empty(), "ripetizione superfici curve e multifaccia");
+            require(copies->faces().size() == sheet->faces().size() * 2, "facce curve conservate");
+        }
+        // Il comportamento dei solidi rimane una vera unione, anche a contatto.
+        QString error;
+        const auto box = std::make_shared<const Body>(makeBox(Frame3(), 2, 3, 4));
+        const auto united = forgePattern(box, {Transform3::translation({2,0,0})}, true, &error);
+        require(united && !united->isSheet() && checkBody(*united).empty(), "ripetizione dei solidi valida");
+        require(std::abs(massProperties(*united).volume - 48) < 1e-8, "volume unione dei solidi conservato");
+        // I comandi esistenti accettano superfici e restano modificabili nella storia.
+        for (int kind = 0; kind < 3; ++kind) {
+            CadViewport view;
+            DocumentState source; source.extrusions = bodies;
+            view.loadDocument(source);
+            require(view.resultBodiesBefore(-1) == QVector<int>{0}, "superficie disponibile nel selettore corpi");
+            ExtrusionObject initial;
+            initial.feature = BodyFeature::Pattern; initial.firstBody = 0; initial.pattern.kind = kind;
+            initial.pattern.count = 4;
+            QMainWindow window;
+            std::exception_ptr failure;
+            QTimer::singleShot(0, &window, [&] {
+                auto *dialog = window.findChild<QDialog *>();
+                try {
+                    require(dialog, "pannello ripetizione superficie aperto");
+                    dialog->findChild<QDialogButtonBox *>()->button(QDialogButtonBox::Ok)->click();
+                    require(dialog->result() == QDialog::Accepted, "pannello accetta la superficie");
+                } catch (...) { failure = std::current_exception(); if (dialog) dialog->reject(); }
+            });
+            patternDialog(&window, &view, QStringLiteral("Ripetizione superficie"), -1, initial,
+                [&](const ExtrusionObject &d) { return view.createBody(d, {d.firstBody}); });
+            if (failure) std::rethrow_exception(failure);
+            require(view.extrusions_.size() == 2, "comando crea ripetizione superficie");
+            check(view.extrusions_.last(), kind == 2 ? 2 : 4);
+            ExtrusionObject edited = view.extrusions_.last();
+            if (kind == 2) edited.pattern.keepOriginal = false;
+            else edited.pattern.count = 3;
+            require(view.updateBody(1, edited).isEmpty(), "modifica ripetizione superficie");
+            check(view.extrusions_.last(), kind == 2 ? 1 : 3);
+            view.undo(); check(view.extrusions_.last(), kind == 2 ? 2 : 4);
+        }
+        // Salvataggio e rigenerazione mantengono tipo e copie.
+        DocumentState document; document.extrusions = bodies; document.extrusions.append(pattern);
+        QTemporaryDir directory; const auto file = directory.filePath(QStringLiteral("surface-pattern.prt"));
+        require(saveDocumentFile(file, document).isEmpty(), "salva ripetizione superficie");
+        DocumentState loaded; require(loadDocumentFile(file, loaded).isEmpty(), "riapre ripetizione superficie");
+        loaded.extrusions[1].cachedGeometry = false;
+        buildBody(loaded.extrusions[1], 1, loaded.sketches, loaded.extrusions, 0);
+        check(loaded.extrusions[1], 2);
+        std::cout << "Surface patterns PASS\n";
+    }
+
+    static void sweepReferences() {
+        using namespace ForgeCad;
+        using namespace ForgeCad::Kernel;
+        SketchObject circle;
+        circle.name = QStringLiteral("Sezione");
+        CurveObject ring; ring.tool = DrawingTool::Circle; ring.controlPoints = {QPointF(0, 0), QPointF(1, 0)};
+        circle.curves = {ring};
+        QVector<SketchObject> sketches{circle};
+        GeometryRef source; source.kind = 7; source.index = 0; source.element = {1, 0, -1};
+        ExtrusionObject extracted; extracted.feature = BodyFeature::ExtractedCurve; extracted.name = QStringLiteral("Cerchio estratto");
+        extracted.curveExtraction.source = source;
+        buildGeometry(extracted, 0, sketches, {});
+        require(extracted.curve && extracted.error.isEmpty(), "sezione circolare estratta");
+        ExtrusionObject spatial; spatial.feature = BodyFeature::SpatialSketch; spatial.name = QStringLiteral("Percorsi 3D");
+        spatial.spatialSketch.nextId = 3;
+        SpatialCurve3D wrong; wrong.id = 1; wrong.points = {{20,0,0}, {30,0,0}};
+        SpatialCurve3D right; right.id = 2; right.points = {{0,0,0}, {0,0,8}};
+        spatial.spatialSketch.entities = {wrong, right};
+        buildGeometry(spatial, 1, sketches, {extracted});
+        require(spatial.curves.size() == 2, "schizzo 3D con due entita'");
+        QVector<ExtrusionObject> bodies{extracted, spatial};
+        GeometryRef profile; profile.kind = 9; profile.index = 0;
+        GeometryRef path; path.kind = 9; path.index = 1; path.point.subshape = 2; path.point.geometry = kSpatialCurveReference; path.point.x = 20;
+        ExtrusionObject sweep; sweep.feature = BodyFeature::Sweep; sweep.sketchIndex = -1;
+        sweep.sweepProfileRef = profile; sweep.sweepPathRef = path;
+        buildGeometry(sweep, 2, sketches, bodies);
+        require(sweep.forgeBody && sweep.solid && sweep.error.isEmpty(), "sweep: curva estratta e seconda entita' dello schizzo 3D");
+        require(std::abs(massProperties(*sweep.forgeBody).volume - 8 * M_PI) < 1e-7, "volume sweep lungo entita' 3D scelta");
+        // Anche un bordo di faccia mantiene la sua geometria e il suo intervallo.
+        ExtrusionObject box; box.feature = BodyFeature::Primitive; box.primitive.size[0] = 5; box.primitive.size[1] = 5; box.primitive.size[2] = 8;
+        buildGeometry(box, 2, sketches, bodies); bodies.append(box);
+        GeometryRef edge; edge.kind = 4; edge.index = 2;
+        for (auto id : box.forgeBody->edges()) {
+            const auto &e = box.forgeBody->edge(id);
+            if (std::abs(normalized(e.curve->derivative((e.range.lo + e.range.hi) / 2)).z()) > 0.99) {
+                edge.point = edgeReference(*box.forgeBody, id, e.curve->point((e.range.lo + e.range.hi) / 2)); break;
+            }
+        }
+        sweep.sweepPathRef = edge; buildGeometry(sweep, 3, sketches, bodies);
+        require(sweep.forgeBody && sweep.error.isEmpty() && std::abs(massProperties(*sweep.forgeBody).volume - 8 * M_PI) < 1e-7,
+                "sweep lungo bordo di faccia");
+        // Sezione non piana rifiutata, senza proiettarla silenziosamente.
+        auto nonplanar = std::make_shared<BSplineCurve<3>>(1, std::vector<double>{0,0,1,2,3,3},
+            std::vector<Vec3>{{0,0,0},{1,0,0},{1,1,0},{0,1,1}});
+        QString error;
+        require(!forgeSweep(curvePath(nonplanar), curvePath(spatial.curves[1]), 0, &error) && error.contains(QStringLiteral("piana")),
+                "sezione non piana rifiutata");
+        sweep.sweepPathRef = path; buildGeometry(sweep, 3, sketches, bodies); bodies.append(sweep);
+        QTemporaryDir folder; DocumentState document; document.sketches = sketches; document.extrusions = bodies;
+        const QString file = folder.filePath(QStringLiteral("sweep.prt"));
+        require(saveDocumentFile(file, document).isEmpty(), "salva sweep con riferimenti");
+        DocumentState loaded; require(loadDocumentFile(file, loaded).isEmpty(), "riapre sweep con riferimenti");
+        for (int i = 0; i < 3; ++i) buildGeometry(loaded.extrusions[i], i, loaded.sketches, loaded.extrusions);
+        auto restored = loaded.extrusions.back(); restored.cachedGeometry = false;
+        require(restored.sweepProfileRef.kind == 9 && restored.sweepPathRef.point.subshape == 2, "riferimenti sweep conservati");
+        buildGeometry(restored, 3, loaded.sketches, loaded.extrusions);
+        require(restored.forgeBody && restored.error.isEmpty(), "sweep riaperta rigenera");
+        // Il grab e' attivo subito, passa al percorso, poi termina e libera i callback.
+        CadViewport view; view.sketches_ = sketches; view.extrusions_ = bodies.mid(0, 3);
+        QMainWindow window; std::exception_ptr failure; ExtrusionObject submitted;
+        QTimer::singleShot(0, &window, [&] {
+            auto *dialog = window.findChild<QDialog *>("sweepDialog");
+            try {
+                require(dialog && view.referencePicking(), "sweep: grab attivo all'apertura");
+                require(dialog->findChild<QComboBox *>("sweepProfileSource")->currentIndex() == 1
+                    && dialog->findChild<QComboBox *>("sweepPathSource")->currentIndex() == 2, "selettori predefiniti dalla vista");
+                auto callback = view.refPickFinished_; callback(true, profile);
+                require(dialog->findChild<QPushButton *>("sweepPickPath")->isChecked(), "passaggio automatico al percorso");
+                view.cancelReferencePick(); callback = view.refPickFinished_; callback(true, path);
+                require(!dialog->findChild<QPushButton *>("sweepPickPath")->isChecked(), "scelta percorso completata");
+                dialog->grab().save(QStringLiteral("/tmp/sweep-panel.png"));
+                dialog->findChild<QDialogButtonBox *>()->button(QDialogButtonBox::Ok)->click();
+            } catch (...) { failure = std::current_exception(); if (dialog) dialog->reject(); }
+        });
+        ExtrusionObject initial; initial.feature = BodyFeature::Sweep;
+        sweepDialog(&window, &view, QStringLiteral("Sweep"), -1, initial, [&](const ExtrusionObject &d) {submitted = d; return QString();});
+        if (failure) std::rethrow_exception(failure);
+        require(submitted.sweepProfileRef.kind == 9 && submitted.sweepPathRef.point.subshape == 2, "pannello restituisce i riferimenti scelti");
+        require(!view.referencePicking() && !view.refPickFinished_, "sweep libera i callback alla chiusura");
+        std::cout << "Sweep references PASS\n";
+    }
+
     static void documentAccess() {
         using namespace ForgeCad;
         QTemporaryDir directory;
@@ -7928,6 +8310,11 @@ int main(int argc, char **argv) {
         std::cin.get();
         return 0;
     }
+    if (app.arguments().contains(QStringLiteral("--sweep-references"))) {
+        try { ViewportInteractionTest::sweepReferences(); }
+        catch (const std::exception &e) { std::cerr << e.what() << std::endl; return 1; }
+        return 0;
+    }
     if (app.arguments().contains(QStringLiteral("--document-access"))) {
         try { ViewportInteractionTest::documentAccess(); }
         catch(const std::exception &e) {std::cerr<<e.what()<<std::endl;return 1;}
@@ -8411,6 +8798,9 @@ int main(int argc, char **argv) {
             ViewportInteractionTest::offsetLofts(app.arguments().mid(app.arguments().indexOf(QStringLiteral("--offset-lofts")) + 1));
         else if (app.arguments().contains(QStringLiteral("--loft-corner")))
             ViewportInteractionTest::loftCorner(QStringLiteral("File_Esempio/prova con loft.prt"));
+        else if (app.arguments().contains(QStringLiteral("--copy-faces"))) ViewportInteractionTest::copyFaces();
+        else if (app.arguments().contains(QStringLiteral("--reference-list-highlight"))) ViewportInteractionTest::referenceListHighlight();
+        else if (app.arguments().contains(QStringLiteral("--surface-patterns"))) ViewportInteractionTest::surfacePatterns();
         else if (app.arguments().contains(QStringLiteral("--sheet-dressup"))) ViewportInteractionTest::sheetDressupFeatures();
         else if (app.arguments().contains(QStringLiteral("--midpoint-quadrant"))) ViewportInteractionTest::midpointQuadrantConstraints();
         else if (app.arguments().contains(QStringLiteral("--saved-loft-surface")))

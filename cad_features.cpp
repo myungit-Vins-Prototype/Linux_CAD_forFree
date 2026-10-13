@@ -253,6 +253,11 @@ std::vector<PathSegment> alignPath(const std::vector<PathSegment> &path, const S
         }
     if (count == 0) return path;
     center /= double(count);
+    return alignPath(path, center);
+}
+
+std::vector<PathSegment> alignPath(const std::vector<PathSegment> &path, const Vec3 &center) {
+    if (path.empty()) return path;
     const Vec3 start = path.front().curve->point(path.front().range.lo), end = path.back().curve->point(path.back().range.hi);
     const bool closed = distance(start, end) <= 1e-6 * std::max(1.0, norm(start));
     const auto reversible = [&] {

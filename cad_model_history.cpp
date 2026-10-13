@@ -121,6 +121,8 @@ void normalizeModelHistory(QVector<ExtrusionObject> &features, QVector<ModelBody
         bindOwner(feature.revolveAxisRef);
         bindOwner(feature.draftNeutral);
         bindOwner(feature.thickenDirection);
+        bindOwner(feature.sweepProfileRef);
+        bindOwner(feature.sweepPathRef);
         bindOwner(feature.curveExtraction.source);
         for(auto &ref:feature.curveExtraction.sources)bindOwner(ref);
         bindOwner(feature.curveExtraction.tool);

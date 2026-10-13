@@ -118,6 +118,7 @@ ForgeBody forgeShell(const ForgeBody &base, const QVector<EdgePoint> &openFaces,
 // precedenti); un valore >= 0 restituisce una sola componente connessa.
 ForgeBody forgeDeleteFaces(const ForgeBody &base, const QVector<EdgePoint> &faces, QString *error, int component = -1);
 QVector<ForgeBody> forgeDeleteFacesSeparated(const ForgeBody &base, const QVector<EdgePoint> &faces, QString *error);
+// Distanza zero: copia esatta delle facce come superficie, conservando i bordi comuni.
 ForgeBody forgeOffsetFaces(const ForgeBody &base, const QVector<EdgePoint> &faces, double distance, QString *error, QString *summary = nullptr, bool preserveSeams = true);
 // Cucitura delle superfici `sheets` (anche solidi: valgono le loro facce) in
 // una sola entro `tolerance`; con `solid` e il risultato chiuso, un solido.
@@ -132,6 +133,7 @@ bool forgeHelixBase(const Kernel::Body &body, int source, const EdgePoint &point
 // minima, 1 Frenet, 2 orientamento costante): solido dai contorni chiusi,
 // lamina dalle catene aperte. Con `surface` sempre una lamina senza coperchi
 // (fk_sweep sweepSheet: un contorno chiuso da' un tubo aperto).
+ForgeBody forgeSweep(const std::vector<Kernel::PathSegment> &section, const std::vector<Kernel::PathSegment> &path, int mode, QString *error, bool surface = false);
 ForgeBody forgeSweep(const SketchObject &profile, const std::vector<Kernel::PathSegment> &path, int mode, QString *error, bool surface = false);
 // Loft per le sezioni (fk_loft): un contorno chiuso per schizzo (solido) o
 // una catena aperta (lamina). Le guide sono catene 3D che attraversano tutte

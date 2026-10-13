@@ -24,6 +24,8 @@
 #include "fk_curve_algo.h"
 #include "fk_helix.h"
 #include "fk_loft.h"
+#include "fk_nurbs.h"
+#include "cad_features.h"
 #include "fk_sweep.h"
 #include "fk_intersect.h"
 #include "fk_primitives.h"
@@ -868,8 +870,8 @@ ForgeBody forgeOffsetFaces(const ForgeBody &base, const QVector<EdgePoint> &poin
         setError(error, QStringLiteral("Il corpo di partenza non ha geometria."));
         return nullptr;
     }
-    if (!(std::fabs(distance) > 0.0)) {
-        setError(error, QStringLiteral("La distanza dell'offset deve essere diversa da zero."));
+    if (!std::isfinite(distance)) {
+        setError(error, QStringLiteral("La distanza dell'offset deve essere finita."));
         return nullptr;
     }
     try {
@@ -888,6 +890,13 @@ ForgeBody forgeOffsetFaces(const ForgeBody &base, const QVector<EdgePoint> &poin
                 }
                 if (std::find(faces.begin(), faces.end(), f) == faces.end()) faces.push_back(f);
             }
+        }
+        // Distanza zero: estrazione esatta delle facce, con i bordi comuni
+        // ancora condivisi. Nessuna approssimazione o rifilatura dell'offset.
+        if (distance == 0.0) {
+            Body copy = facesAsSheet(*base, faces);
+            if (summary) *summary = QStringLiteral("%1 facce copiate").arg(faces.size());
+            return std::make_shared<const Body>(std::move(copy));
         }
         const OffsetResult result = offsetFaces(*base, faces, distance, 1e-7, preserveSeams);
         if (summary) {
@@ -1207,6 +1216,70 @@ ForgeBody forgeSweep(const SketchObject &profileSketch, const std::vector<PathSe
                 for (const ProfileLoop &hole : region.holes) loops.push_back(hole);
             }
             for (const ProfileLoop &chain : profile.chains) loops.push_back(chain);
+            return std::make_shared<const Body>(sweepSheet(frame, loops, path, orientation));
+        }
+        if (!profile.regions.empty()) return std::make_shared<const Body>(sweepRegions(frame, profile.regions, path, orientation));
+        return std::make_shared<const Body>(sweepChains(frame, profile.chains, path, orientation));
+    } catch (const std::exception &failure) {
+        setError(error, QStringLiteral("Sweep non riuscito: %1").arg(QString::fromUtf8(failure.what())));
+        return nullptr;
+    }
+}
+
+// Sezione estratta: conserva le curve esatte e rifiuta una sezione non piana.
+ForgeBody forgeSweep(const std::vector<PathSegment> &section, const std::vector<PathSegment> &inputPath, int mode, QString *error, bool surface) {
+    try {
+        if (section.empty() || inputPath.empty()) throw std::domain_error("scegli sezione e percorso");
+        std::vector<Vec3> poles;
+        Vec3 center;
+        int count = 0;
+        for (const auto &piece : section) {
+            for (const auto &bezier : rationalBezierPieces(*piece.curve, piece.range))
+                for (const auto &pole : bezier.poles()) poles.push_back(pole);
+            for (int i = 0; i < 16; ++i) {
+                center += piece.curve->point(piece.range.lo + piece.range.length() * i / 16.0);
+                ++count;
+            }
+        }
+        center /= double(count);
+        auto path = alignPath(inputPath, center);
+        const Vec3 origin = poles.front();
+        Vec3 x, normal;
+        double span = 0.0, area = 0.0;
+        for (const auto &pole : poles) {
+            const double length = norm(pole - origin);
+            if (length > span) { span = length; x = pole - origin; }
+        }
+        if (span < 1e-9) throw std::domain_error("sezione degenere");
+        x = normalized(x);
+        for (const auto &pole : poles) {
+            const Vec3 candidate = cross(x, pole - origin);
+            if (norm(candidate) > area) { area = norm(candidate); normal = candidate; }
+        }
+        if (area < 1e-9 * std::max(1.0, span)) {
+            const Vec3 tangent = normalized(path.front().curve->derivative(path.front().range.lo));
+            normal = tangent - dot(tangent, x) * x;
+            if (norm(normal) < 1e-9) throw std::domain_error("sezione parallela al percorso");
+        }
+        normal = normalized(normal);
+        for (const auto &pole : poles)
+            if (std::abs(dot(normal, pole - origin)) > 1e-6 * std::max(1.0, span))
+                throw std::domain_error("la sezione deve essere piana; il percorso puo' essere 3D");
+        const Frame3 frame(origin, normal, x);
+        std::vector<ProfileSegment> segments;
+        for (const auto &piece : section) {
+            const auto image = planarImage(*piece.curve, piece.range, frame);
+            if (!image.curve) throw std::domain_error("sezione degenere");
+            segments.push_back({image.curve, image.range});
+        }
+        const Profile profile = buildProfile(segments, kSketchConnectionTolerance);
+        const SweepOrientation orientation = mode == 1 ? SweepOrientation::Frenet : mode == 2 ? SweepOrientation::Fixed : SweepOrientation::MinimalTwist;
+        if (surface) {
+            std::vector<ProfileLoop> loops = profile.chains;
+            for (const auto &region : profile.regions) {
+                loops.push_back(region.outer);
+                for (const auto &hole : region.holes) loops.push_back(hole);
+            }
             return std::make_shared<const Body>(sweepSheet(frame, loops, path, orientation));
         }
         if (!profile.regions.empty()) return std::make_shared<const Body>(sweepRegions(frame, profile.regions, path, orientation));

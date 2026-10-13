@@ -30,6 +30,18 @@ int main() {
         loft.loftSketches = {1, 2};
         require(sketchesOf(loft) == QVector<int>({1, 2, 3, 4, 6}), "loft: sezioni dei documenti precedenti conservate");
 
+        ExtrusionObject sweep;
+        sweep.feature = BodyFeature::Sweep;
+        sweep.sweepProfileRef = reference(9, 2);
+        sweep.sweepPathRef = reference(4, 5);
+        require(bodyOperands(sweep) == QVector<int>({2, 5}) && sketchesOf(sweep).isEmpty(),
+                "sweep: sezione estratta e bordo con dipendenze associative");
+        sweep.sweepProfileRef = reference(7, 3);
+        require(sketchesOf(sweep) == QVector<int>({3}), "sweep: sezione da entita' di schizzo");
+        sweep.sweepProfileRef = {}; sweep.sweepPathRef = {};
+        sweep.sketchIndex = 1; sweep.pathSketch = 4;
+        require(sketchesOf(sweep) == QVector<int>({1, 4}), "sweep: compatibilita' con schizzi dei documenti precedenti");
+
         ExtrusionObject move;
         move.feature = BodyFeature::Transform;
         move.firstBody = 2;

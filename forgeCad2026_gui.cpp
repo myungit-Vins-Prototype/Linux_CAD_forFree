@@ -2000,6 +2000,8 @@ public:
             if (ForgeCad::isSketchRef(body.revolveAxisRef)) renumber(body.revolveAxisRef.index);
             if (ForgeCad::isSketchRef(body.draftNeutral)) renumber(body.draftNeutral.index);
             if (ForgeCad::isSketchRef(body.thickenDirection)) renumber(body.thickenDirection.index);
+            for (GeometryRef *ref : {&body.sweepProfileRef, &body.sweepPathRef})
+                if (ForgeCad::isSketchRef(*ref)) renumber(ref->index);
             if (ForgeCad::isSketchRef(body.curveExtraction.source)) renumber(body.curveExtraction.source.index);
             if (ForgeCad::isSketchRef(body.curveExtraction.tool)) renumber(body.curveExtraction.tool.index);
         }
@@ -2691,6 +2693,20 @@ public:
         refMarks_ = marks;
         update();
     }
+    // La voce attiva di un elenco ha un colore distinto dai riferimenti scelti.
+    void setReferenceListHighlight(QObject *owner, const QVector<GeometryRef> &refs) {
+        if (refs.isEmpty()) { clearReferenceListHighlight(owner); return; }
+        referenceListOwner_ = owner;
+        referenceListMarks_ = refs;
+        update();
+    }
+    void clearReferenceListHighlight(QObject *owner) {
+        if (referenceListOwner_ && referenceListOwner_ != owner) return;
+        referenceListOwner_.clear();
+        referenceListMarks_.clear();
+        update();
+    }
+    bool referenceListHighlighted(QObject *owner) const { return referenceListOwner_ == owner; }
     // Misura (finestra Misura): la distanza minima tra i due punti, con l'etichetta.
     void setMeasureOverlay(bool valid, const QVector3D &from = {}, const QVector3D &to = {}, const QString &label = {}) {
         measureValid_ = valid;
@@ -4971,6 +4987,7 @@ protected:
             remap(body.revolveAxisRef);
             remap(body.draftNeutral);
             remap(body.thickenDirection);
+            remap(body.sweepProfileRef); remap(body.sweepPathRef);
             remap(body.curveExtraction.source);
             remap(body.curveExtraction.tool);
         }
@@ -6889,6 +6906,7 @@ private:
                 remapRef(feature.revolveAxisRef);
                 remapRef(feature.draftNeutral);
                 remapRef(feature.thickenDirection);
+                remapRef(feature.sweepProfileRef); remapRef(feature.sweepPathRef);
                 remapRef(feature.curveExtraction.source);
                 remapRef(feature.curveExtraction.tool);
             }
@@ -7226,6 +7244,8 @@ private:
             if (ForgeCad::isBodyRef(body.move.axis)) body.move.axis.index = map.value(body.move.axis.index, -1);
             if (ForgeCad::isBodyRef(body.revolveAxisRef)) body.revolveAxisRef.index = map.value(body.revolveAxisRef.index, -1);
             if (ForgeCad::isBodyRef(body.draftNeutral)) body.draftNeutral.index = map.value(body.draftNeutral.index, -1);
+            for (GeometryRef *ref : {&body.sweepProfileRef, &body.sweepPathRef})
+                if (ForgeCad::isBodyRef(*ref)) ref->index = map.value(ref->index, -1);
             if (ForgeCad::isBodyRef(body.thickenDirection)) body.thickenDirection.index = map.value(body.thickenDirection.index, -1);
             if (ForgeCad::isBodyRef(body.curveExtraction.source)) body.curveExtraction.source.index = map.value(body.curveExtraction.source.index, -1);
             if (ForgeCad::isBodyRef(body.curveExtraction.tool)) body.curveExtraction.tool.index = map.value(body.curveExtraction.tool.index, -1);
@@ -9042,7 +9062,7 @@ private:
             painter.restore();
         }
         drawMeasureOverlay(painter);
-        if (refPicking_ || !refMarks_.isEmpty()) {
+        if (refPicking_ || !refMarks_.isEmpty() || !referenceListMarks_.isEmpty()) {
             // Scelta dei riferimenti di un piano di costruzione: quelli scelti e quello sotto il puntatore.
             for (const GeometryRef &mark : refMarks_) drawGeometryRef(painter, mark, kSelectionColor);
             // Le curve 3D autonome non hanno vertici di un B-rep: quando si
@@ -9058,6 +9078,7 @@ private:
                     }
             }
             if (refPicking_ && refHoverValid_) drawGeometryRef(painter, refHover_, kHoverColor, &refHoverFace_, refHoverFaceBody_);
+            for (const GeometryRef &mark : referenceListMarks_) drawGeometryRef(painter, mark, kHoverColor);
             return;
         }
         if (hover_ != selection_ && !selectedObjects_.contains(hover_)) highlightSceneObject(painter, hover_, kHoverColor);
@@ -9661,7 +9682,13 @@ private:
             }
             break;
         case 7:
-            if (ref.index >= 0 && ref.index < sketches_.size()) highlightSketchElement(painter, sketches_.at(ref.index), {ref.element.kind, ref.element.element}, color);
+            if (ref.index >= 0 && ref.index < sketches_.size()) {
+                const SketchObject &sketch = sketches_.at(ref.index);
+                if (ref.element.kind < 0) {
+                    for (int i = 0; i < sketch.segments.size(); ++i) highlightSketchElement(painter, sketch, {0, i}, color);
+                    for (int i = 0; i < sketch.curves.size(); ++i) highlightSketchElement(painter, sketch, {1, i}, color);
+                } else highlightSketchElement(painter, sketch, {ref.element.kind, ref.element.element}, color);
+            }
             break;
         case 8:
             if (ref.index >= 0 && ref.index < extrusions_.size() && extrusions_.at(ref.index).datumValid) {
@@ -11128,6 +11155,7 @@ private:
         parts << n(d.draftAngle) << QString::number(d.draftReverse);
         parts << QStringLiteral("TK") << QString::number(d.thickenSide);
         ref(d.thickenDirection);
+        ref(d.sweepProfileRef); ref(d.sweepPathRef);
         parts << QStringLiteral("S3D") << QString::number(d.spatialSketch.nextId);
         for(const auto &e:d.spatialSketch.entities){parts << QString::number(e.id) << QString::number(e.spline) << QString::number(e.closed);
             for(const auto &p:e.points)parts << n(p.x) << n(p.y) << n(p.z);}
@@ -11903,6 +11931,8 @@ private:
     FaceHit refHoverFace_;  // faccia sotto il puntatore (per evidenziarne i bordi)
     int refHoverFaceBody_ = -1;
     QVector<GeometryRef> refMarks_;
+    QPointer<QObject> referenceListOwner_;
+    QVector<GeometryRef> referenceListMarks_;
     bool measureValid_ = false;  // linea della misura (finestra Misura)
     QVector3D measureFrom_, measureTo_;
     QString measureLabel_;
@@ -13359,7 +13389,7 @@ private:
 
 class FeatureOperationDiagram final : public QWidget {
 public:
-    enum Kind { Extrusion, Revolution };
+    enum Kind { Extrusion, Revolution, Sweep };
     explicit FeatureOperationDiagram(Kind kind, QWidget *parent = nullptr) : QWidget(parent), kind_(kind) {
         setMinimumSize(390, 180);
         setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
@@ -13372,6 +13402,17 @@ protected:
         const QColor profile(90, 205, 255), result(58, 164, 220, 95), arrow(255, 196, 80), text(225, 232, 240);
         p.setPen(text);
         QFont title = p.font(); title.setBold(true); title.setPixelSize(13); p.setFont(title);
+        if (kind_ == Sweep) {
+            p.drawText(QRectF(14, 9, width() - 28, 24), QStringLiteral("SWEEP — SEZIONE LUNGO UN PERCORSO"));
+            QPainterPath path; path.moveTo(80, 125); path.cubicTo(150, 125, 150, 60, 290, 60);
+            p.setPen(QPen(result, 30, Qt::SolidLine, Qt::RoundCap)); p.drawPath(path);
+            p.setPen(QPen(arrow, 2.5, Qt::DashLine)); p.drawPath(path);
+            p.setPen(QPen(profile, 2.5)); p.setBrush(QColor(90, 205, 255, 45));
+            p.drawEllipse(QRectF(68, 108, 24, 34)); p.drawEllipse(QRectF(278, 43, 24, 34));
+            p.setPen(text); QFont steps = p.font(); steps.setPixelSize(11); steps.setBold(false); p.setFont(steps);
+            p.drawText(QRectF(14, 145, width() - 28, 30), Qt::AlignCenter, QStringLiteral("1 Sezione nella vista  →  2 Percorso  →  3 Orientamento e conferma"));
+            return;
+        }
         p.drawText(QRectF(14, 9, width() - 28, 24), kind_ == Extrusion ? QStringLiteral("ESTRUSIONE DEL PROFILO")
                                                                        : QStringLiteral("RIVOLUZIONE ATTORNO ALL'ASSE"));
         if (kind_ == Extrusion) {
@@ -13523,6 +13564,82 @@ struct PreviewSpec {
     std::function<ExtrusionObject(Values...)> define;
 };
 
+// Selezionare una riga identifica il riferimento senza cambiare gli operandi
+// della funzione o ricalcolarne l'anteprima. Vale anche per liste con checkbox.
+static void connectReferenceList(QListWidget *list, QDialog &dialog, CadViewport *viewport,
+                                 std::function<QVector<GeometryRef>(QListWidgetItem *)> references) {
+    const auto highlight = [list, viewport, references] {
+        QVector<GeometryRef> refs;
+        if (list->isEnabled())
+            for (QListWidgetItem *item : list->selectedItems()) refs += references(item);
+        viewport->setReferenceListHighlight(list, refs);
+    };
+    QObject::connect(list, &QListWidget::itemSelectionChanged, &dialog, highlight);
+    QObject::connect(list, &QListWidget::itemClicked, &dialog, [highlight](QListWidgetItem *) { highlight(); });
+    QObject::connect(&dialog, &QDialog::finished, viewport, [viewport, list] { viewport->clearReferenceListHighlight(list); });
+    QObject::connect(list, &QObject::destroyed, viewport, [viewport, list] { viewport->clearReferenceListHighlight(list); });
+}
+
+class GeometryReferenceList final : public QListWidget {
+public:
+    GeometryReferenceList(QDialog &dialog, CadViewport *viewport, const QString &name)
+        : QListWidget(&dialog), viewport_(viewport) {
+        setObjectName(name);
+        setMinimumHeight(60);
+        setMaximumHeight(120);
+        setToolTip(QStringLiteral("Seleziona una voce per evidenziarla nella vista"));
+        connectReferenceList(this, dialog, viewport, [this](QListWidgetItem *item) {
+            const int index = row(item);
+            return index >= 0 && index < refs_.size() ? QVector<GeometryRef>{refs_.at(index)} : QVector<GeometryRef>();
+        });
+    }
+    void setReferences(const QVector<GeometryRef> &refs) {
+        const bool highlighted = viewport_->referenceListHighlighted(this);
+        const int oldRow = currentRow();
+        const bool selected = oldRow >= 0 && oldRow < refs_.size() && currentItem()->isSelected();
+        const GeometryRef previous = selected ? refs_.at(oldRow) : GeometryRef();
+        const QSignalBlocker blocker(this);
+        refs_ = refs;
+        clear();
+        int selectedRow = -1;
+        for (int i = 0; i < refs.size(); ++i) {
+            const GeometryRef &ref = refs.at(i);
+            QString label = ForgeCad::geometryRefText(ref, viewport_->sketches(), viewport_->extrusions());
+            if (ref.kind == 4 && ref.point.subshape >= 0) label += QStringLiteral(" — E%1").arg(ref.point.subshape);
+            addItem(QStringLiteral("%1. %2").arg(i + 1).arg(label));
+            if (selected && sameReference(previous, ref)) selectedRow = i;
+        }
+        setCurrentRow(selectedRow);
+        if (highlighted)
+            viewport_->setReferenceListHighlight(this, isEnabled() && selectedRow >= 0
+                ? QVector<GeometryRef>{refs.at(selectedRow)} : QVector<GeometryRef>());
+    }
+    void setEdges(int body, const QVector<EdgePoint> &edges) {
+        QVector<GeometryRef> refs;
+        for (const EdgePoint &point : edges) {
+            GeometryRef ref;
+            ref.kind = point.role == kEdgePointFaceBoundary ? 5 : 4;
+            ref.index = body;
+            ref.point = point;
+            refs.append(ref);
+        }
+        setReferences(refs);
+    }
+protected:
+    void changeEvent(QEvent *event) override {
+        QListWidget::changeEvent(event);
+        if (event->type() == QEvent::EnabledChange && !isEnabled()) viewport_->clearReferenceListHighlight(this);
+    }
+private:
+    static bool sameReference(const GeometryRef &a, const GeometryRef &b) {
+        return a.kind == b.kind && a.index == b.index && a.element == b.element
+            && a.point.subshape == b.point.subshape && a.point.geometry == b.point.geometry
+            && a.point.role == b.point.role && a.point.x == b.point.x && a.point.y == b.point.y && a.point.z == b.point.z;
+    }
+    CadViewport *viewport_;
+    QVector<GeometryRef> refs_;
+};
+
 // Finestra della misura di un raccordo o smusso con l'anteprima dal vivo
 // (CadViewport::requestBlendPreview dopo Invio nel campo). `edgesLabel` descrive gli
 // spigoli; `chamferBox` (facoltativa) permette di passare da raccordo a
@@ -13610,7 +13727,7 @@ static BlendDialogResult blendDialog(QWidget *parent, CadViewport *viewport, con
         return spec;
     };
     describe();
-    auto *edgesLabel = new QLabel(&dialog);
+    auto *edgesLabel = new GeometryReferenceList(dialog, viewport, QStringLiteral("blendEdges"));
     form->addRow(QStringLiteral("Spigoli:"), edgesLabel);
     auto *previewLabel = new QLabel(pickInView ? QStringLiteral("seleziona almeno uno spigolo nella vista")
                                                : QStringLiteral("Anteprima in calcolo..."), &dialog);
@@ -13629,9 +13746,7 @@ static BlendDialogResult blendDialog(QWidget *parent, CadViewport *viewport, con
     QObject::connect(buttons, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
     form->addRow(buttons);
     const auto refresh = [&] {
-        edgesLabel->setText(selectedEdges.isEmpty()
-                                ? QStringLiteral("nessuno — clicca nella vista")
-                                : QStringLiteral("%1 selezionati — clicca per aggiungere o togliere").arg(selectedEdges.size()));
+        edgesLabel->setEdges(selectedBase, selectedEdges);
         if (!previewStarted || selectedBase < 0 || selectedEdges.isEmpty()) {
             previewLabel->setText(QStringLiteral("seleziona almeno uno spigolo nella vista"));
             viewport->clearBlendPreview();
@@ -14159,14 +14274,21 @@ static bool sweepDialog(QWidget *parent, CadViewport *viewport, const QString &t
     const int limit = replaced >= 0 ? replaced : int(bodies.size());
     QVector<int> curves;
     for (int index = 0; index < limit; ++index)
-        if (bodies.at(index).feature == BodyFeature::Helix && bodies.at(index).operation < 0 && bodies.at(index).curve) curves.append(index);
-    if (sketches.isEmpty() || (sketches.size() < 2 && curves.isEmpty())) {
-        QMessageBox::information(parent, title, QStringLiteral("Servono uno schizzo con il profilo e un percorso: un altro schizzo o una curva (elica)."));
-        return false;
-    }
+        if (ForgeCad::isCurveBody(bodies.at(index)) && bodies.at(index).curve) curves.append(index);
     FunctionDialogPanel dialog(parent);
     dialog.setWindowTitle(title);
+    dialog.setObjectName(QStringLiteral("sweepDialog"));
     auto *form = dialog.createScrollableForm();
+    form->addRow(new FeatureOperationDiagram(FeatureOperationDiagram::Sweep, &dialog));
+    GeometryRef profileRef = initial.sweepProfileRef, pathRef = initial.sweepPathRef;
+    auto *profileSource = new QComboBox(&dialog);
+    profileSource->setObjectName(QStringLiteral("sweepProfileSource"));
+    profileSource->addItems({QStringLiteral("Schizzo"), QStringLiteral("Dalla vista (bordo o curva estratta / 3D)")});
+    profileSource->setCurrentIndex(replaced < 0 || profileRef.kind >= 0 || sketches.isEmpty() ? 1 : 0);
+    auto *pickProfile = new QPushButton(QStringLiteral("Seleziona sezione nella vista"), &dialog);
+    pickProfile->setObjectName(QStringLiteral("sweepPickProfile"));
+    pickProfile->setCheckable(true);
+    auto *profileStatus = new QLabel(&dialog); profileStatus->setWordWrap(true);
     auto *profileBox = new QComboBox(&dialog), *pathTypeBox = new QComboBox(&dialog), *pathSketchBox = new QComboBox(&dialog),
          *pathChainBox = new QComboBox(&dialog), *curveBox = new QComboBox(&dialog);
     for (const SketchObject &sketch : sketches) {
@@ -14174,12 +14296,14 @@ static bool sweepDialog(QWidget *parent, CadViewport *viewport, const QString &t
         pathSketchBox->addItem(sketch.name);
     }
     for (int index : curves) curveBox->addItem(bodies.at(index).name);
-    pathTypeBox->addItems({QStringLiteral("Schizzo (catena o contorno chiuso di entita' tangenti)"), QStringLiteral("Curva (elica o spirale)")});
-    profileBox->setCurrentIndex(qBound(0, initial.sketchIndex, int(sketches.size()) - 1));
+    pathTypeBox->addItems({QStringLiteral("Schizzo (catena o contorno chiuso di entita' tangenti)"), QStringLiteral("Curva 3D (elica, estratta o schizzo 3D)"), QStringLiteral("Dalla vista (bordo di faccia o curva 3D)")});
+    profileBox->setCurrentIndex(sketches.isEmpty() ? -1 : qBound(0, initial.sketchIndex, int(sketches.size()) - 1));
     int pathSketch = initial.pathSketch;
     if (pathSketch < 0 || pathSketch >= sketches.size()) pathSketch = profileBox->currentIndex() == 0 && sketches.size() > 1 ? 1 : 0;
     pathSketchBox->setCurrentIndex(pathSketch);
     pathTypeBox->setCurrentIndex(initial.sweepPath == 1 && !curves.isEmpty() ? 1 : (initial.sweepPath == 0 && sketches.size() > 1 ? 0 : (curves.isEmpty() ? 0 : 1)));
+    if (replaced < 0 || pathRef.kind >= 0) pathTypeBox->setCurrentIndex(2);
+    pathTypeBox->setObjectName(QStringLiteral("sweepPathSource"));
     curveBox->setCurrentIndex(qMax(0, int(curves.indexOf(initial.firstBody))));
     auto *modeBox = new QComboBox(&dialog);
     modeBox->addItems({QStringLiteral("Torsione minima (segue il percorso senza ruotare attorno)"),
@@ -14205,13 +14329,20 @@ static bool sweepDialog(QWidget *parent, CadViewport *viewport, const QString &t
     help->setMaximumWidth(360);
     help->setStyleSheet(QStringLiteral("color: #8aa0b4;"));
     auto *pickPath = new QPushButton(QStringLiteral("Seleziona percorso nella vista"), &dialog);
+    auto *pathStatus = new QLabel(&dialog); pathStatus->setWordWrap(true);
     auto *pickStatus = new QLabel(QStringLiteral("Puoi scegliere una singola catena cliccando una sua entità nella scena."), &dialog);
     pickStatus->setWordWrap(true); pickStatus->setStyleSheet(QStringLiteral("color: #8aa0b4;"));
-    form->addRow(QStringLiteral("Profilo:"), profileBox);
+    pickPath->setObjectName(QStringLiteral("sweepPickPath"));
+    pickPath->setCheckable(true);
+    form->addRow(QStringLiteral("Sezione:"), profileSource);
+    form->addRow(QStringLiteral("Schizzo della sezione:"), profileBox);
+    form->addRow(QString(), pickProfile);
+    form->addRow(QString(), profileStatus);
     form->addRow(QStringLiteral("Percorso:"), pathTypeBox);
     form->addRow(QStringLiteral("Schizzo del percorso:"), pathSketchBox);
     form->addRow(QStringLiteral("Catena nello schizzo:"), pathChainBox);
     form->addRow(QString(), pickPath);
+    form->addRow(QString(), pathStatus);
     form->addRow(QString(), pickStatus);
     form->addRow(QStringLiteral("Curva del percorso:"), curveBox);
     form->addRow(QStringLiteral("Orientamento:"), modeBox);
@@ -14241,16 +14372,19 @@ static bool sweepDialog(QWidget *parent, CadViewport *viewport, const QString &t
         ExtrusionObject d = initial;
         d.operation = -1;
         d.feature = BodyFeature::Sweep;
-        d.sketchIndex = profileBox->currentIndex();
+        d.sweepProfileRef = profileSource->currentIndex() == 1 ? profileRef : GeometryRef{};
+        d.sweepPathRef = pathTypeBox->currentIndex() == 2 ? pathRef : GeometryRef{};
+        d.sketchIndex = d.sweepProfileRef.kind >= 0 ? -1 : profileBox->currentIndex();
         d.plane = sketches.value(d.sketchIndex).plane;
-        d.sweepPath = pathTypeBox->currentIndex();
+        d.sweepPath = pathTypeBox->currentIndex() == 1 ? 1 : 0;
         d.pathSketch = pathSketchBox->currentIndex();
         d.pathSegments.clear(); d.pathCurves.clear();
         if (d.sweepPath == 0 && pathChainBox->currentIndex() >= 0 && pathChainBox->currentIndex() < pathComponents.size()) {
             d.pathSegments = pathComponents.at(pathChainBox->currentIndex()).segments;
             d.pathCurves = pathComponents.at(pathChainBox->currentIndex()).curves;
         }
-        d.firstBody = d.sweepPath == 1 && !curves.isEmpty() ? curves.at(qMax(0, curveBox->currentIndex())) : -1;
+        d.firstBody = d.sweepPathRef.kind >= 0 && ForgeCad::isBodyRef(d.sweepPathRef) ? d.sweepPathRef.index
+            : d.sweepPath == 1 && !curves.isEmpty() ? curves.at(qMax(0, curveBox->currentIndex())) : -1;
         d.sweepMode = modeBox->currentIndex();
         d.sweepSurface = surfaceBox->isChecked();
         d.mergeOperation = d.sweepSurface ? 0 : operationBox->currentIndex();
@@ -14262,10 +14396,26 @@ static bool sweepDialog(QWidget *parent, CadViewport *viewport, const QString &t
         return d;
     };
     const auto refresh = [&] {
+        profileBox->setEnabled(profileSource->currentIndex() == 0 && !sketches.isEmpty());
+        profileStatus->setText(profileSource->currentIndex() == 1
+            ? profileRef.kind >= 0 ? ForgeCad::geometryRefText(profileRef, sketches, bodies) : QStringLiteral("Scegli una sezione piana nella vista.")
+            : sketches.value(profileBox->currentIndex()).name);
+        form->setRowVisible(profileBox, profileSource->currentIndex() == 0);
+        form->setRowVisible(pathSketchBox, pathTypeBox->currentIndex() == 0);
+        form->setRowVisible(pathChainBox, pathTypeBox->currentIndex() == 0);
+        form->setRowVisible(curveBox, pathTypeBox->currentIndex() == 1);
         pathSketchBox->setEnabled(pathTypeBox->currentIndex() == 0);
         pathChainBox->setEnabled(pathTypeBox->currentIndex() == 0);
-        pickPath->setEnabled(pathTypeBox->currentIndex() == 0);
+        pickPath->setEnabled(true);
         curveBox->setEnabled(pathTypeBox->currentIndex() == 1 && !curves.isEmpty());
+        pathStatus->setText(pathTypeBox->currentIndex() == 2
+            ? pathRef.kind >= 0 ? ForgeCad::geometryRefText(pathRef, sketches, bodies) : QStringLiteral("Scegli il percorso nella vista.")
+            : pathTypeBox->currentIndex() == 1 ? curveBox->currentText() : pathSketchBox->currentText() + QStringLiteral(" / ") + pathChainBox->currentText());
+        QVector<GeometryRef> marks;
+        const auto definition = current();
+        if (definition.sweepProfileRef.kind >= 0) marks.append(definition.sweepProfileRef);
+        if (definition.sweepPathRef.kind >= 0) marks.append(definition.sweepPathRef);
+        viewport->setReferenceMarks(marks);
         // La superficie non si fonde con i solidi.
         operationBox->setEnabled(!surfaceBox->isChecked());
         const bool merge = !surfaceBox->isChecked() && operationBox->currentIndex() != 0;
@@ -14276,7 +14426,7 @@ static bool sweepDialog(QWidget *parent, CadViewport *viewport, const QString &t
         scope.request(viewport->withMergeCandidates(current(), replaced >= 0 ? replaced : int(bodies.size())));
     };
     QObject::connect(pathSketchBox, &QComboBox::currentIndexChanged, &dialog, [&](int) { refillPaths(); refresh(); });
-    for (QComboBox *box : {profileBox, pathTypeBox, pathChainBox, curveBox, modeBox, operationBox})
+    for (QComboBox *box : {profileSource, profileBox, pathTypeBox, pathChainBox, curveBox, modeBox, operationBox})
         QObject::connect(box, &QComboBox::currentIndexChanged, &dialog, refresh);
     QObject::connect(autoBox, &QCheckBox::toggled, &dialog, refresh);
     QObject::connect(surfaceBox, &QCheckBox::toggled, &dialog, refresh);
@@ -14285,36 +14435,71 @@ static bool sweepDialog(QWidget *parent, CadViewport *viewport, const QString &t
     });
     picker.changed = refresh;
     picker.message = [&](const QString &text, bool) { scope.label->setText(text); };
-    picker.install();
-    bool pathPicking = false;
-    QObject::connect(pickPath, &QPushButton::clicked, &dialog, [&] {
-        pathPicking = true;
-        pickStatus->setText(QStringLiteral("Scelta attiva: clicca un segmento o una curva del percorso nella vista."));
-    });
-    viewport->setSketchEntityPickCallback([&](int sketchIndex, int kind, int entity) {
-        if (!pathPicking || pathTypeBox->currentIndex() != 0) return;
-        pathSketchBox->setCurrentIndex(sketchIndex);
-        for (int k = 0; k < pathComponents.size(); ++k) {
-            const SketchPathRef &path = pathComponents.at(k);
-            if ((kind == 0 ? path.segments : path.curves).contains(entity)) {
-                pathChainBox->setCurrentIndex(k);
-                pickStatus->setText(QStringLiteral("Selezionato %1 / percorso %2.").arg(sketches.at(sketchIndex).name).arg(k + 1));
-                pathPicking = false;
-                break;
+    int graphicalTarget = 0;  // 1 sezione, 2 percorso
+    const auto armPick = [&](int target) {
+        picker.stop();
+        viewport->cancelReferencePick();
+        graphicalTarget = target;
+        pickProfile->setChecked(target == 1); pickPath->setChecked(target == 2);
+        const QString reason = viewport->beginReferencePick(ForgeCad::DatumRoleCurve | ForgeCad::DatumRoleLine, replaced);
+        if (!reason.isEmpty()) { graphicalTarget = 0; pickProfile->setChecked(false); pickPath->setChecked(false); }
+        pickStatus->setText(reason.isEmpty() ? target == 1
+            ? QStringLiteral("1. Clicca la sezione: schizzo, bordo o curva piana. Poi scegli il percorso.")
+            : QStringLiteral("2. Clicca il percorso: bordo di faccia, curva estratta, curva o entità di schizzo 3D.") : reason);
+    };
+    picker.starting = [&] { graphicalTarget = 0; pickProfile->setChecked(false); pickPath->setChecked(false); };
+    QObject::connect(pickProfile, &QPushButton::clicked, &dialog, [&] { armPick(1); });
+    QObject::connect(pickPath, &QPushButton::clicked, &dialog, [&] { armPick(2); });
+    viewport->setReferencePickCallback([&](bool picked, GeometryRef ref) {
+        if (picker.handle(picked, ref)) return;
+        if (!picked) {
+            graphicalTarget = 0; pickProfile->setChecked(false); pickPath->setChecked(false);
+            return;
+        }
+        if (!graphicalTarget) return;
+        std::vector<ForgeCad::Kernel::PathSegment> pieces; QString reason;
+        if (!ForgeCad::geometryRefPath(ref, limit, sketches, bodies, pieces, &reason)) {
+            pickStatus->setText(reason);
+            viewport->beginReferencePick(ForgeCad::DatumRoleCurve | ForgeCad::DatumRoleLine, replaced);
+            return;
+        }
+        if (graphicalTarget == 1) {
+            if (ref.kind == 7) {
+                profileRef = {};
+                profileBox->setCurrentIndex(ref.index); profileSource->setCurrentIndex(0);
+            } else {
+                profileRef = ref; profileSource->setCurrentIndex(1);
             }
+            refresh(); armPick(2);
+        } else {
+            if (ref.kind == 7) {
+                pathRef = {}; pathTypeBox->setCurrentIndex(0); pathSketchBox->setCurrentIndex(ref.index);
+                for (int k = 0; k < pathComponents.size(); ++k)
+                    if ((ref.element.kind == 0 ? pathComponents.at(k).segments : pathComponents.at(k).curves).contains(ref.element.element)) {
+                        pathChainBox->setCurrentIndex(k); break;
+                    }
+            } else { pathRef = ref; pathTypeBox->setCurrentIndex(2); }
+            graphicalTarget = 0; pickProfile->setChecked(false); pickPath->setChecked(false);
+            pickStatus->setText(QStringLiteral("Sezione e percorso selezionati. Regola l'orientamento e verifica l'anteprima."));
+            refresh();
         }
     });
-    QObject::connect(&dialog, &QDialog::finished, viewport, [viewport] { viewport->setSketchEntityPickCallback({}); });
+    QObject::connect(&dialog, &QDialog::finished, viewport, [viewport] {
+        viewport->cancelReferencePick(); viewport->setReferencePickCallback({}); viewport->setReferenceMarks({});
+    });
     auto *buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dialog);
     QObject::connect(buttons, &QDialogButtonBox::accepted, &dialog, &QDialog::accept);
     QObject::connect(buttons, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
     form->addRow(buttons);
     refresh();
+    armPick(1);
     const auto validate = [&] {
         const ExtrusionObject d = current();
-        if (d.sweepPath == 1 && d.firstBody < 0) return QStringLiteral("Nella scena non ci sono curve (eliche) da usare come percorso.");
-        if (d.sweepPath == 0 && d.pathSegments.isEmpty() && d.pathCurves.isEmpty()) return QStringLiteral("Seleziona una catena valida nello schizzo del percorso.");
-        if (d.sweepPath == 0 && d.pathSketch == d.sketchIndex) return QStringLiteral("Profilo e percorso devono stare in schizzi diversi.");
+        if (d.sweepProfileRef.kind < 0 && (profileSource->currentIndex() == 1 || d.sketchIndex < 0)) return QStringLiteral("Seleziona la sezione nella vista o scegli uno schizzo.");
+        if (pathTypeBox->currentIndex() == 2 && d.sweepPathRef.kind < 0) return QStringLiteral("Seleziona il percorso nella vista.");
+        if (d.sweepPathRef.kind < 0 && d.sweepPath == 1 && d.firstBody < 0) return QStringLiteral("Nella scena non ci sono curve 3D da usare come percorso.");
+        if (d.sweepPathRef.kind < 0 && d.sweepPath == 0 && d.pathSegments.isEmpty() && d.pathCurves.isEmpty()) return QStringLiteral("Seleziona una catena valida nello schizzo del percorso.");
+        if (d.sweepPathRef.kind < 0 && d.sweepProfileRef.kind < 0 && d.sweepPath == 0 && d.pathSketch == d.sketchIndex) return QStringLiteral("Profilo e percorso devono stare in schizzi diversi.");
         if (d.mergeOperation != 0 && !d.mergeAuto && d.mergeBodies.isEmpty())
             return QStringLiteral("Spunta almeno un solido (o scegli Automatico).");
         return apply(d);
@@ -14559,6 +14744,10 @@ static bool loftDialog(QWidget *parent, CadViewport *viewport, const QString &ti
     list->setObjectName(QStringLiteral("loftSections"));
     QVector<GeometryRef> sectionRefs = initial.loftSections;
     QVector<GeometryRef> edgeGuides = initial.loftEdgeGuides;
+    connectReferenceList(list, dialog, viewport, [&](QListWidgetItem *item) {
+        const int pos = item->data(Qt::UserRole + 1).toInt();
+        return pos >= 0 && pos < sectionRefs.size() ? QVector<GeometryRef>{sectionRefs.at(pos)} : QVector<GeometryRef>();
+    });
     const auto sameRef = [](const GeometryRef &a,const GeometryRef &b) {
         if(a.kind!=b.kind || a.index!=b.index || a.element!=b.element) return false;
         if(a.kind!=4 && a.kind!=9) return true;
@@ -14613,6 +14802,20 @@ static bool loftDialog(QWidget *parent, CadViewport *viewport, const QString &ti
     guides->setObjectName(QStringLiteral("loftGuides"));
     guides->setMinimumHeight(160);
     QVector<SketchPathRef> partialSelections = initial.loftGuidePaths;
+    connectReferenceList(guides, dialog, viewport, [&](QListWidgetItem *item) {
+        const int kind = item->data(Qt::UserRole).toInt(), index = item->data(Qt::UserRole + 1).toInt();
+        if (kind == 2 && index >= 0 && index < edgeGuides.size()) return QVector<GeometryRef>{edgeGuides.at(index)};
+        QVector<GeometryRef> refs;
+        if (kind == 0 && index >= 0 && index < sketches.size()) {
+            GeometryRef ref; ref.kind = 7; ref.index = index; ref.element = {-1, -1, -1}; refs.append(ref);
+        }
+        if (kind == 1 && index >= 0 && index < partialSelections.size()) {
+            const auto &path = partialSelections.at(index);
+            for (int segment : path.segments) { GeometryRef ref; ref.kind = 7; ref.index = path.sketch; ref.element = {0, segment, -1}; refs.append(ref); }
+            for (int curve : path.curves) { GeometryRef ref; ref.kind = 7; ref.index = path.sketch; ref.element = {1, curve, -1}; refs.append(ref); }
+        }
+        return refs;
+    });
     const auto appendGuide = [&](int kind, int index, bool checked) {
         const QSignalBlocker block(guides);
         QString text;
@@ -17161,7 +17364,8 @@ static bool offsetDialog(QMainWindow *window, CadViewport *viewport, const QStri
     auto *distanceBox = new ForgeCad::ExpressionSpinBox(&dialog);
     distanceBox->setDecimals(6);
     distanceBox->setRange(0.0, 100000.0);
-    distanceBox->setValue(std::fabs(definition.distance) > 0.0 ? std::fabs(definition.distance) : 1.0);
+    distanceBox->setObjectName(QStringLiteral("offsetDistance"));
+    distanceBox->setValue(removal && definition.distance == 0.0 ? 1.0 : std::fabs(definition.distance));
     distanceBox->setKeyboardTracking(false);
     auto *flipButton = new QPushButton(ForgeCad::commandIcon(QStringLiteral("reverseDirection")), QStringLiteral("Inverti il verso"), &dialog);
     flipButton->setCheckable(true);
@@ -17187,10 +17391,11 @@ static bool offsetDialog(QMainWindow *window, CadViewport *viewport, const QStri
                                                 "(le facce restanti, cucite lungo gli spigoli comuni). "
                                                 "Clicca un altro corpo nella vista per cambiarlo."), &dialog));
     } else {
-        form->addRow(QStringLiteral("Distanza:"), distanceBox);
+        form->addRow(QStringLiteral("Distanza (0 = copia):"), distanceBox);
         form->addRow(QString(), flipButton);
-        form->addRow(wrappedNote(QStringLiteral("Con la cucitura attiva i bordi comuni vengono estesi e rifilati. Disattivandola, "
-                                               "gli spigoli vivi si separano."), &dialog));
+        form->addRow(wrappedNote(QStringLiteral("A distanza zero si copiano esattamente le facce, conservando i bordi comuni. "
+                                               "Il corpo originale resta disponibile. Per l'offset, con la cucitura attiva "
+                                               "i bordi comuni vengono estesi e rifilati; disattivandola gli spigoli vivi si separano."), &dialog));
     }
     auto *sewBox = new QCheckBox(QStringLiteral("Mantieni la cucitura (estendi e rifila)"), &dialog);
     sewBox->setChecked(definition.offsetSew);
@@ -17223,6 +17428,8 @@ static bool offsetDialog(QMainWindow *window, CadViewport *viewport, const QStri
         return ForgeCad::resolveFaceReference(*body.forgeBody, point, 1e-6);
     };
     const auto refresh = [&] {
+        sewBox->setEnabled(removal || distanceBox->value() != 0.0);
+        flipButton->setEnabled(removal || distanceBox->value() != 0.0);
         if (waiting) {
             if (shell) viewport->setPickBodies(picking ? candidates : QVector<int>());
             facesLabel->setText(QStringLiteral("clicca nella vista una faccia del corpo"));
@@ -17264,11 +17471,6 @@ static bool offsetDialog(QMainWindow *window, CadViewport *viewport, const QStri
             } else {
                 scope->request(current());
             }
-            return;
-        }
-        if (!(distanceBox->value() > 0.0)) {
-            setStatus(QStringLiteral("La distanza deve essere maggiore di zero."), true);
-            viewport->clearPreview();
             return;
         }
         scope->request(current());
@@ -17357,8 +17559,8 @@ static bool offsetDialog(QMainWindow *window, CadViewport *viewport, const QStri
             picking = false;
             refresh();
         }
-        if ((!removal || shell) && !(distanceBox->value() > 0.0)) {
-            setStatus(shell ? QStringLiteral("Lo spessore deve essere maggiore di zero.") : QStringLiteral("La distanza deve essere maggiore di zero."), true);
+        if (shell && !(distanceBox->value() > 0.0)) {
+            setStatus(QStringLiteral("Lo spessore deve essere maggiore di zero."), true);
             return;
         }
         QApplication::setOverrideCursor(Qt::WaitCursor);
@@ -17661,7 +17863,7 @@ static bool extractedCurveDialog(QMainWindow *window, CadViewport *viewport, con
     sourceButton->setCheckable(true);toolButton->setCheckable(true);
     auto *joinBox=new QCheckBox(QStringLiteral("Unisci piu' bordi adiacenti in una curva"),&dialog);
     joinBox->setObjectName(QStringLiteral("extractJoinBox"));joinBox->setChecked(!p.sources.isEmpty());
-    auto *sourceList=new QListWidget(&dialog);sourceList->setObjectName(QStringLiteral("extractSources"));sourceList->setMaximumHeight(120);
+    auto *sourceList=new GeometryReferenceList(dialog, viewport, QStringLiteral("extractSources"));
     auto *removeSource=new QPushButton(QStringLiteral("Rimuovi bordo selezionato"),&dialog);removeSource->setObjectName(QStringLiteral("extractRemoveSource"));
     auto *trimBox=new QCheckBox(QStringLiteral("Taglia la curva"),&dialog);trimBox->setChecked(p.trimmed);
     auto *modeBox=new QComboBox(&dialog);modeBox->addItems({QStringLiteral("Intersezione reale 3D"),QStringLiteral("Proiezione nella vista salvata")});modeBox->setCurrentIndex(p.projected?1:0);
@@ -17682,9 +17884,7 @@ static bool extractedCurveDialog(QMainWindow *window, CadViewport *viewport, con
     int picking=0;
     const auto refresh=[&]{
         sourceLabel->setText(p.source.kind<0 ? QStringLiteral("nessuna curva") : ForgeCad::geometryRefText(p.source,viewport->sketches(),viewport->extrusions()));
-        {const QSignalBlocker block(sourceList);const int row=sourceList->currentRow();sourceList->clear();
-            for(const auto &ref:p.sources)sourceList->addItem(ForgeCad::geometryRefText(ref,viewport->sketches(),viewport->extrusions()));
-            sourceList->setCurrentRow(sourceList->count()?qBound(0,row,sourceList->count()-1):-1);}
+        sourceList->setReferences(p.sources);
         sourceList->setVisible(joinBox->isChecked());removeSource->setVisible(joinBox->isChecked());
         sourceButton->setText(joinBox->isChecked()?QStringLiteral("Scegli o togli bordi adiacenti"):QStringLiteral("Scegli bordo o curva"));
         toolLabel->setText(p.tool.kind<0 ? QStringLiteral("nessun segmento") : ForgeCad::geometryRefText(p.tool,viewport->sketches(),viewport->extrusions()));
@@ -17771,8 +17971,8 @@ static bool ruledDialog(QMainWindow *window, CadViewport *viewport, const QStrin
     auto *firstButton = new QPushButton(QStringLiteral("Scegli nella vista"), &dialog);
     auto *secondButton = new QPushButton(QStringLiteral("Scegli nella vista"), &dialog);
     for (QPushButton *button : {firstButton, secondButton}) button->setCheckable(true);
-    auto *firstLabel = new QLabel(&dialog), *secondLabel = new QLabel(&dialog);
-    for (QLabel *label : {firstLabel, secondLabel}) label->setWordWrap(true);
+    auto *firstLabel = new GeometryReferenceList(dialog, viewport, QStringLiteral("ruledFirstEdges"));
+    auto *secondLabel = new GeometryReferenceList(dialog, viewport, QStringLiteral("ruledSecondEdges"));
     auto *firstClear = new QPushButton(QStringLiteral("Azzera"), &dialog), *secondClear = new QPushButton(QStringLiteral("Azzera"), &dialog);
     const auto row = [&](QPushButton *pick, QPushButton *clear) {
         auto *widget = new QWidget(&dialog);
@@ -17811,8 +18011,8 @@ static bool ruledDialog(QMainWindow *window, CadViewport *viewport, const QStrin
     picker.status = setStatus;
     picker.wholeLoop = loopBox;
     const auto refresh = [&] {
-        firstLabel->setText(picker.text(definition.ruledFirst));
-        secondLabel->setText(picker.text(definition.ruledSecond));
+        firstLabel->setReferences(definition.ruledFirst);
+        secondLabel->setReferences(definition.ruledSecond);
         firstButton->setChecked(picker.active == &definition.ruledFirst);
         secondButton->setChecked(picker.active == &definition.ruledSecond);
         viewport->setReferenceMarks(definition.ruledFirst + definition.ruledSecond + definition.loftStartFaces + definition.loftEndFaces);
@@ -17882,8 +18082,7 @@ static bool boundaryDialog(QMainWindow *window, CadViewport *viewport, const QSt
     dialog.setWindowTitle(title);
     dialog.setModal(false);
     auto *form = dialog.createScrollableForm();
-    auto *curvesLabel = new QLabel(&dialog);
-    curvesLabel->setWordWrap(true);
+    auto *curvesLabel = new GeometryReferenceList(dialog, viewport, QStringLiteral("boundaryEdges"));
     auto *pickButton = new QPushButton(QStringLiteral("Scegli nella vista"), &dialog);
     pickButton->setCheckable(true);
     auto *clearButton = new QPushButton(QStringLiteral("Azzera"), &dialog);
@@ -17919,7 +18118,7 @@ static bool boundaryDialog(QMainWindow *window, CadViewport *viewport, const QSt
     picker.status = setStatus;
     picker.wholeLoop = loopBox;
     const auto refresh = [&] {
-        curvesLabel->setText(picker.text(definition.planarRefs));
+        curvesLabel->setReferences(definition.planarRefs);
         pickButton->setChecked(picker.active != nullptr);
         viewport->setReferenceMarks(definition.planarRefs);
         if (definition.planarRefs.isEmpty()) {
@@ -17986,14 +18185,16 @@ static bool fillDialog(QMainWindow *window, CadViewport *viewport, const QString
     auto *form = dialog.createScrollableForm();
     // Tre liste scelte nella vista: contorno, guide, facce adiacenti.
     struct ListRow {
-        QLabel *label;
+        QWidget *label;
         QPushButton *pick;
         QPushButton *clear;
         QWidget *row;
     };
-    const auto listRow = [&](const QString &pickText) {
-        ListRow r{new QLabel(&dialog), new QPushButton(pickText, &dialog), new QPushButton(QStringLiteral("Azzera"), &dialog), new QWidget(&dialog)};
-        r.label->setWordWrap(true);
+    const auto listRow = [&](const QString &pickText, const QString &listName = QString()) {
+        QWidget *label;
+        if (!listName.isEmpty()) label = new GeometryReferenceList(dialog, viewport, listName);
+        else { auto *summary = new QLabel(&dialog); summary->setWordWrap(true); label = summary; }
+        ListRow r{label, new QPushButton(pickText, &dialog), new QPushButton(QStringLiteral("Azzera"), &dialog), new QWidget(&dialog)};
         r.pick->setCheckable(true);
         auto *layout = new QHBoxLayout(r.row);
         layout->setContentsMargins(0, 0, 0, 0);
@@ -18001,7 +18202,8 @@ static bool fillDialog(QMainWindow *window, CadViewport *viewport, const QString
         layout->addWidget(r.clear);
         return r;
     };
-    const ListRow boundaryRow = listRow(QStringLiteral("Scegli il contorno")), guideRow = listRow(QStringLiteral("Scegli le guide")),
+    const ListRow boundaryRow = listRow(QStringLiteral("Scegli il contorno"), QStringLiteral("fillBoundaryEdges")),
+                  guideRow = listRow(QStringLiteral("Scegli le guide"), QStringLiteral("fillGuideEdges")),
                   faceRow = listRow(QStringLiteral("Scegli le facce"));
     auto *faceList = new QListWidget(&dialog);
     faceList->setObjectName(QStringLiteral("fillContactFaces"));
@@ -18154,11 +18356,11 @@ static bool fillDialog(QMainWindow *window, CadViewport *viewport, const QString
             }
             faceList->setCurrentRow(selectedRow >= 0 ? selectedRow : faceList->count() ? 0 : -1);
         }
-        boundaryRow.label->setText(picker.text(definition.planarRefs));
-        guideRow.label->setText(definition.ruledFirst.isEmpty() ? QStringLiteral("nessuna") : picker.text(definition.ruledFirst));
+        static_cast<GeometryReferenceList *>(boundaryRow.label)->setReferences(definition.planarRefs);
+        static_cast<GeometryReferenceList *>(guideRow.label)->setReferences(definition.ruledFirst);
         QStringList faceNames;
         for (const GeometryRef &ref : definition.ruledSecond) faceNames.append(ForgeCad::geometryRefText(ref, viewport->sketches(), viewport->extrusions()));
-        faceRow.label->setText(faceNames.isEmpty() ? QStringLiteral("nessuna (solo contatto)") : faceNames.join(QStringLiteral(", ")));
+        static_cast<QLabel *>(faceRow.label)->setText(faceNames.isEmpty() ? QStringLiteral("nessuna (solo contatto)") : faceNames.join(QStringLiteral(", ")));
         boundaryRow.pick->setChecked(picker.active == &definition.planarRefs);
         guideRow.pick->setChecked(picker.active == &definition.ruledFirst);
         faceRow.pick->setChecked(picker.active == &definition.ruledSecond);
@@ -18289,8 +18491,7 @@ static bool planarDialog(QMainWindow *window, CadViewport *viewport, const QStri
     sourceBox->setCurrentIndex(!definition.planarRefs.isEmpty() || definition.sketchIndex < 0 || definition.sketchIndex >= sketches.size()
                                    ? edgesItem
                                    : definition.sketchIndex);
-    auto *edgesLabel = new QLabel(&dialog);
-    edgesLabel->setWordWrap(true);
+    auto *edgesLabel = new GeometryReferenceList(dialog, viewport, QStringLiteral("planarEdges"));
     auto *pickButton = new QPushButton(QStringLiteral("Scegli i bordi nella vista"), &dialog);
     pickButton->setCheckable(true);
     auto *clearButton = new QPushButton(QStringLiteral("Azzera"), &dialog);
@@ -18338,7 +18539,7 @@ static bool planarDialog(QMainWindow *window, CadViewport *viewport, const QStri
         const bool edges = sourceBox->currentIndex() == edgesItem;
         for (QWidget *w : {static_cast<QWidget *>(edgesLabel), static_cast<QWidget *>(pickButton), static_cast<QWidget *>(clearButton), static_cast<QWidget *>(loopBox)}) w->setEnabled(edges);
         if (!edges && picker.active) picker.stop();
-        edgesLabel->setText(picker.text(definition.planarRefs));
+        edgesLabel->setReferences(definition.planarRefs);
         pickButton->setChecked(picker.active != nullptr);
         viewport->setReferenceMarks(edges ? definition.planarRefs : QVector<GeometryRef>());
         if (edges && definition.planarRefs.isEmpty()) {
@@ -19440,7 +19641,7 @@ static ExtendDialogResult extendDialog(QWidget *parent, CadViewport *viewport, c
     completeBox->setEnabled(!complete.isEmpty());
     completeBox->setToolTip(QStringLiteral("Include tutti i bordi collegati ai bordi scelti, anche quelli delle facce molto sottili."));
     form->addRow(QString(), completeBox);
-    auto *edgeCount = new QLabel(&dialog);
+    auto *edgeCount = new GeometryReferenceList(dialog, viewport, QStringLiteral("extendEdges"));
     form->addRow(QStringLiteral("Bordi:"), edgeCount);
     const auto selectedEdges = [&] { return completeBox->isChecked() ? complete : edges; };
     auto *previewLabel = new QLabel(QStringLiteral("in calcolo..."), &dialog);
@@ -19461,7 +19662,7 @@ static ExtendDialogResult extendDialog(QWidget *parent, CadViewport *viewport, c
     form->addRow(buttons);
     const auto refresh = [&] {
         const auto selected = selectedEdges();
-        edgeCount->setText(QString::number(selected.size()));
+        edgeCount->setEdges(base, selected);
         previewLabel->setText(QStringLiteral("in calcolo..."));
         viewport->requestExtendPreview(base, selected, distanceBox->value(), typeBox->currentIndex() == 1, hidden);
     };
@@ -20087,7 +20288,7 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
                                                                          "Si puo' usare nelle altre funzioni (booleane, raccordi, schizzi sulle facce...).")
                                                               .arg(original.importSource));
         } else if (original.feature == BodyFeature::SurfaceOffset) {
-            offsetDialog(this, viewport, QStringLiteral("Modifica offset"), index, original, [&](const ExtrusionObject &values) { return update(values); });
+            offsetDialog(this, viewport, original.distance == 0.0 ? QStringLiteral("Modifica copia facce") : QStringLiteral("Modifica offset"), index, original, [&](const ExtrusionObject &values) { return update(values); });
         } else if (original.feature == BodyFeature::BoundarySurface) {
             boundaryDialog(this, viewport, QStringLiteral("Modifica superficie tra curve"), index, original,
                            [&](const ExtrusionObject &values) { return update(values); });
@@ -20803,9 +21004,9 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
     QAction *linearPatternAction = patternMenu->addAction(QStringLiteral("Ripetizione lineare..."));
     QAction *circularPatternAction = patternMenu->addAction(QStringLiteral("Ripetizione circolare..."));
     QAction *mirrorAction = patternMenu->addAction(QStringLiteral("Specchio..."));
-    linearPatternAction->setToolTip(QStringLiteral("Copie di un corpo o di una funzione (foro, sporgenza) lungo una o due direzioni"));
-    circularPatternAction->setToolTip(QStringLiteral("Copie di un corpo o di una funzione attorno a un asse"));
-    mirrorAction->setToolTip(QStringLiteral("Immagine speculare di un corpo o di una funzione rispetto a un piano"));
+    linearPatternAction->setToolTip(QStringLiteral("Copie di un corpo solido, di superficie o di una funzione (foro, sporgenza) lungo una o due direzioni"));
+    circularPatternAction->setToolTip(QStringLiteral("Copie di un corpo solido, di superficie o di una funzione attorno a un asse"));
+    mirrorAction->setToolTip(QStringLiteral("Immagine speculare di un corpo solido, di superficie o di una funzione rispetto a un piano"));
     QAction *moveAction = functionsMenu->addAction(QStringLiteral("Sposta / ruota corpo..."));
     moveAction->setToolTip(QStringLiteral("Traslazione e rotazione esatte del corpo selezionato (anche come copia)"));
     QAction *scaleAction = functionsMenu->addAction(QStringLiteral("Scala..."));
@@ -20814,7 +21015,7 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
     QAction *helixAction = functionsMenu->addAction(QStringLiteral("Elica e spirale..."));
     helixAction->setToolTip(QStringLiteral("Elica (cilindrica o conica) o spirale piana da un cerchio di uno schizzo, uno spigolo circolare o una faccia cilindrica"));
     QAction *sweepAction = functionsMenu->addAction(QStringLiteral("Sweep (estrusione lungo un percorso)..."));
-    sweepAction->setToolTip(QStringLiteral("Profilo di uno schizzo trascinato lungo un percorso: un altro schizzo o un'elica"));
+    sweepAction->setToolTip(QStringLiteral("Sezione piana trascinata lungo un percorso: schizzo, bordo di faccia o curva 3D"));
     QAction *loftAction = functionsMenu->addAction(QStringLiteral("Loft..."));
     loftAction->setToolTip(QStringLiteral("Solido o superficie che passa per le sezioni di piu' schizzi"));
     functionsMenu->addSeparator();
@@ -20823,6 +21024,8 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
     trimSurfaceAction->setToolTip(QStringLiteral("Taglia una superficie con un corpo (superficie o solido) o un piano e ne tiene una parte"));
     QAction *extendSurfaceAction = surfaceMenu->addAction(QStringLiteral("Estendi superficie..."));
     extendSurfaceAction->setToolTip(QStringLiteral("Estende i bordi scelti di una superficie: clic sui bordi, Invio, poi la distanza"));
+    QAction *copyFacesAction = surfaceMenu->addAction(QStringLiteral("Copia facce..."));
+    copyFacesAction->setToolTip(QStringLiteral("Copia una faccia, piu' facce o tutta una superficie cucita, mantenendo il corpo originale"));
     QAction *offsetSurfaceAction = surfaceMenu->addAction(QStringLiteral("Offset superficie..."));
     offsetSurfaceAction->setToolTip(QStringLiteral("Superficie a distanza costante dalle facce scelte di un solido o di una superficie "
                                                    "(con estensione e rifilo opzionali dei bordi comuni)"));
@@ -21496,7 +21699,7 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
         sweepDialog(this, viewport, QStringLiteral("Sweep"), -1, definition, [viewport](const ExtrusionObject &d) {
             ExtrusionObject body = d;
             body.name = QStringLiteral("Sweep %1").arg(viewport->extrusions().size() + 1);
-            return viewport->createBody(body, d.sweepPath == 1 ? QVector<int>{d.firstBody} : QVector<int>{});
+            return viewport->createBody(body, d.sweepPathRef.kind < 0 && d.sweepPath == 1 ? QVector<int>{d.firstBody} : QVector<int>{});
         });
     });
     connect(loftAction, &QAction::triggered, this, [this, viewport] {
@@ -21571,26 +21774,29 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
         if (pickSizeBox_) pickSizeBox_->setValue(result.distance);
         if (result.reselect) viewport->resumeExtendPick(body, result.edges, result.linear);
     });
-    connect(offsetSurfaceAction, &QAction::triggered, this, [this, viewport] {
-        if (viewport->sketchModeActive()) viewport->endSketchMode();
-        ExtrusionObject definition;
-        definition.distance = 1.0;
-        // Di partenza il corpo e la faccia selezionati nella vista.
-        int body = -1;
-        EdgePoint face;
-        if (viewport->selectedFaceReference(body, face)) {
-            definition.firstBody = body;
-            definition.offsetFaces = {face};
-        } else if (viewport->selection().kind == SceneObjectKind::Extrusion) {
-            definition.firstBody = viewport->selection().index;
-        }
-        offsetDialog(this, viewport, QStringLiteral("Offset superficie"), -1, definition, [viewport](const ExtrusionObject &d) {
-            ExtrusionObject body = d;
-            body.name = QStringLiteral("Offset %1").arg(viewport->extrusions().size() + 1);
-            body.plane = viewport->extrusions().value(d.firstBody).plane;
-            return viewport->createBody(body);
+    for (QAction *action : {copyFacesAction, offsetSurfaceAction}) {
+        connect(action, &QAction::triggered, this, [this, viewport, action, copyFacesAction] {
+            if (viewport->sketchModeActive()) viewport->endSketchMode();
+            ExtrusionObject definition;
+            definition.feature = BodyFeature::SurfaceOffset;
+            definition.distance = action == copyFacesAction ? 0.0 : 1.0;
+            // Di partenza il corpo e la faccia selezionati nella vista.
+            int body = -1;
+            EdgePoint face;
+            if (viewport->selectedFaceReference(body, face)) {
+                definition.firstBody = body;
+                definition.offsetFaces = {face};
+            } else if (viewport->selection().kind == SceneObjectKind::Extrusion) {
+                definition.firstBody = viewport->selection().index;
+            }
+            offsetDialog(this, viewport, action == copyFacesAction ? QStringLiteral("Copia facce") : QStringLiteral("Offset superficie"), -1, definition, [viewport](const ExtrusionObject &d) {
+                ExtrusionObject body = d;
+                body.name = (d.distance == 0.0 ? QStringLiteral("Copia facce %1") : QStringLiteral("Offset %1")).arg(viewport->extrusions().size() + 1);
+                body.plane = viewport->extrusions().value(d.firstBody).plane;
+                return viewport->createBody(body);
+            });
         });
-    });
+    }
     connect(draftAction, &QAction::triggered, this, [this, viewport] {
         if (viewport->sketchModeActive()) viewport->endSketchMode();
         ExtrusionObject definition;
@@ -21786,7 +21992,7 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
         sweepDialog(this, viewport, QStringLiteral("Sweep di superfici"), -1, definition, [viewport](const ExtrusionObject &d) {
             ExtrusionObject body = d;
             body.name = QStringLiteral("Sweep %1").arg(viewport->extrusions().size() + 1);
-            return viewport->createBody(body, d.sweepPath == 1 ? QVector<int>{d.firstBody} : QVector<int>{});
+            return viewport->createBody(body, d.sweepPathRef.kind < 0 && d.sweepPath == 1 ? QVector<int>{d.firstBody} : QVector<int>{});
         });
     });
     connect(sewSurfacesAction, &QAction::triggered, this, [this, viewport] {
@@ -22418,7 +22624,7 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
         {extrudeAction, QStringLiteral("extrude")}, {revolveAction, QStringLiteral("revolve")},
         {filletAction, QStringLiteral("fillet")}, {chamferAction, QStringLiteral("chamfer")}, {draftAction, QStringLiteral("draft")}, {thickenAction, QStringLiteral("thicken")}, {projectedCurveAction, QStringLiteral("projectedCurve")}, {extractedCurveAction, QStringLiteral("extractEdge3D")}, {trimCurve3DAction, QStringLiteral("trimEdge3D")}, {shellAction, QStringLiteral("shell")}, {threadAction, QStringLiteral("thread")},
         {trimSurfaceAction, QStringLiteral("trimSurface")}, {extendSurfaceAction, QStringLiteral("extendSurface")},
-        {offsetSurfaceAction, QStringLiteral("offsetSurface")}, {sewSurfacesAction, QStringLiteral("sewSurfaces")},
+        {copyFacesAction, QStringLiteral("offsetSurface")}, {offsetSurfaceAction, QStringLiteral("offsetSurface")}, {sewSurfacesAction, QStringLiteral("sewSurfaces")},
         {deleteFaceAction, QStringLiteral("deleteFace")}, {boundarySurfaceAction, QStringLiteral("boundarySurface")}, {fillSurfaceAction, QStringLiteral("fillSurface")},
         {ruledSurfaceAction, QStringLiteral("ruledSurface")}, {planarSurfaceAction, QStringLiteral("planarSurface")},
         {loftSurfaceAction, QStringLiteral("loftSurface")}, {sweepSurfaceAction, QStringLiteral("sweepSurface")}, {scaleAction, QStringLiteral("scale")}, {moveAction, QStringLiteral("move")},
@@ -22551,7 +22757,7 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
     // Superfici: tutti i comandi come pulsanti diretti (prima erano dietro la
     // freccia di un solo pulsante nella barra di modellazione).
     auto *surfaceToolbar = iconBar(QStringLiteral("Superfici"), QStringLiteral("surfaceIconBar"));
-    for (QAction *action : {trimSurfaceAction, extendSurfaceAction, offsetSurfaceAction, thickenAction, deleteFaceAction, sewSurfacesAction})
+    for (QAction *action : {trimSurfaceAction, extendSurfaceAction, copyFacesAction, offsetSurfaceAction, thickenAction, deleteFaceAction, sewSurfacesAction})
         surfaceToolbar->addAction(action);
     surfaceToolbar->addSeparator();
     for (QAction *action : {ruledSurfaceAction, boundarySurfaceAction, fillSurfaceAction, planarSurfaceAction, loftSurfaceAction, sweepSurfaceAction})
@@ -23407,7 +23613,9 @@ void PdfWindow::rebuildModelTree() {
                     : body.sketchIndex >= 0 ? sketches.value(body.sketchIndex).name : planeNames().value(body.trimPlane);
                 item->setToolTip(0, QStringLiteral("Superficie tagliata da %1%2").arg(tool, body.notice.isEmpty() ? QString() : QStringLiteral("\n") + body.notice));
             } else if (body.feature == BodyFeature::SurfaceOffset) {
-                item->setToolTip(0, QStringLiteral("Offset di %1 da %2 (%3)").arg(ForgeCad::formatLength(body.distance)).arg(extrusions.value(body.firstBody).name)
+                const QString operation = body.distance == 0.0 ? QStringLiteral("Copia facce")
+                                                               : QStringLiteral("Offset di %1").arg(ForgeCad::formatLength(body.distance));
+                item->setToolTip(0, QStringLiteral("%1 da %2 (%3)").arg(operation, extrusions.value(body.firstBody).name)
                     .arg(body.offsetFaces.isEmpty() ? QStringLiteral("tutte le facce") : QStringLiteral("%1 facce").arg(body.offsetFaces.size())));
             } else if (body.feature == BodyFeature::Draft) {
                 item->setToolTip(0, QStringLiteral("Sformo di %1° su %2 facce").arg(body.draftAngle).arg(body.offsetFaces.size()));
@@ -23627,9 +23835,11 @@ void PdfWindow::rebuildModelTree() {
                                 : QStringLiteral("Base: %1 di %2").arg(body.helix.source == 1 ? QStringLiteral("spigolo") : QStringLiteral("faccia"),
                                                                        extrusions.value(body.firstBody).name));
             } else if (body.feature == BodyFeature::Sweep) {
-                children.append(QStringLiteral("Profilo: ") + sketches.value(body.sketchIndex).name);
+                children.append(QStringLiteral("Profilo: ") + (body.sweepProfileRef.kind >= 0
+                    ? ForgeCad::geometryRefText(body.sweepProfileRef, sketches, extrusions) : sketches.value(body.sketchIndex).name));
                 const int entities = body.pathSegments.size() + body.pathCurves.size();
-                children.append(QStringLiteral("Percorso: ") + (body.sweepPath == 0
+                children.append(QStringLiteral("Percorso: ") + (body.sweepPathRef.kind >= 0
+                    ? ForgeCad::geometryRefText(body.sweepPathRef, sketches, extrusions) : body.sweepPath == 0
                     ? sketches.value(body.pathSketch).name + (entities ? QStringLiteral(" (%1 entità)").arg(entities) : QString())
                     : extrusions.value(body.firstBody).name));
             } else if (body.feature == BodyFeature::Loft) {

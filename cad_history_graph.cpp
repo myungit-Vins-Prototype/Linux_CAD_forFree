@@ -228,7 +228,7 @@ QString featureType(const ExtrusionObject &feature) {
     case BodyFeature::DatumPlane: return QStringLiteral("Piano datum");
     case BodyFeature::Pattern: return QStringLiteral("Ripetizione");
     case BodyFeature::Transform: return QStringLiteral("Trasformazione");
-    case BodyFeature::SurfaceOffset: return QStringLiteral("Offset superficie");
+    case BodyFeature::SurfaceOffset: return feature.distance == 0.0 ? QStringLiteral("Copia facce") : QStringLiteral("Offset superficie");
     case BodyFeature::Sew: return QStringLiteral("Cucitura");
     case BodyFeature::Ruled: return QStringLiteral("Superficie rigata");
     case BodyFeature::PlanarSurface: return QStringLiteral("Superficie planare");
@@ -428,8 +428,10 @@ QVector<Dependency> dependencies(int index, const DocumentState &document) {
                                feature.helix.source == 1 ? QStringLiteral("spigolo base") : QStringLiteral("faccia base"));
         break;
     case BodyFeature::Sweep:
-        addSketchDependency(result, sketches, index, feature.sketchIndex, QStringLiteral("profilo"));
-        if (feature.sweepPath == 0) addSketchDependency(result, sketches, index, feature.pathSketch, QStringLiteral("percorso"));
+        if (feature.sweepProfileRef.kind >= 0) addGeometryDependency(result, feature.sweepProfileRef, sketches, features, index, QStringLiteral("profilo"));
+        else addSketchDependency(result, sketches, index, feature.sketchIndex, QStringLiteral("profilo"));
+        if (feature.sweepPathRef.kind >= 0) addGeometryDependency(result, feature.sweepPathRef, sketches, features, index, QStringLiteral("percorso"));
+        else if (feature.sweepPath == 0) addSketchDependency(result, sketches, index, feature.pathSketch, QStringLiteral("percorso"));
         else addBodyDependency(result, features, index, feature.firstBody, QStringLiteral("curva percorso"));
         for (int body : feature.mergeBodies) addBodyDependency(result, features, index, body, QStringLiteral("fusione"));
         break;

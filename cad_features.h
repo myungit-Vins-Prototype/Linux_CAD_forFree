@@ -49,6 +49,7 @@ SketchObject sketchPathSubset(const SketchObject &sketch, const SketchPathRef &s
 std::vector<Kernel::PathSegment> curvePath(const ForgeCurve &curve);
 // Il percorso orientato perche' parta vicino al profilo: una catena si gira se
 // il profilo sta alla sua fine, un contorno chiuso parte dal punto piu' vicino.
+std::vector<Kernel::PathSegment> alignPath(const std::vector<Kernel::PathSegment> &path, const Kernel::Vec3 &center);
 std::vector<Kernel::PathSegment> alignPath(const std::vector<Kernel::PathSegment> &path, const SketchObject &profile);
 
 }
