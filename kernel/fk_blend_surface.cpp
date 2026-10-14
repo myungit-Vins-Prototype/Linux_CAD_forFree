@@ -2410,6 +2410,17 @@ Body blendSurfaceChains(const Body &input, const std::vector<EdgeId> &selected, 
                 const Vec3 end = gamma.curve->point(gamma.range.hi), begin = gamma.curve->point(gamma.range.lo);
                 gamma.gap = std::max({gamma.gap, distance(end, X), distance(begin, pA)});
             }
+            // Lo scarto gia' misurato dalla continuazione non deve diventare
+            // una tolleranza arbitraria dell'edge. Una cubica instabile vicino
+            // alla tangenza puo' passare checkBody con quella tolleranza e
+            // produrre SP-curve fuori dalla pezza e triangoli attraverso il
+            // modello. Applica anche qui il limite relativo al raggio usato
+            // per gli altri contatti approssimati, prima di costruire il B-rep.
+            const double admissibleMitreGap = std::max(kLinearResolution, 0.01 * size);
+            if (!std::isfinite(gamma.gap) || gamma.gap > admissibleMitreGap)
+                throw std::domain_error("blendEdges: raccordo non valido nell'angolo: scarto "
+                    + std::to_string(gamma.gap) + " mm oltre il limite "
+                    + std::to_string(admissibleMitreGap) + " mm; scegliere un raggio diverso");
             junction.gamma = model.addEdge(junction.pointA, junction.pointB, gamma.curve, gamma.range, gamma.gap > 1e-7 ? 2.0 * gamma.gap : 0.0);
             if (gamma.gap > 1e-7) model.pointTolerance[std::size_t(junction.pointA)] = std::max(model.pointTolerance[std::size_t(junction.pointA)], 2.0 * gamma.gap);
             if (junction.deep >= 0 && junction.deepPoint != junction.pointB) {

@@ -9,6 +9,7 @@
 #include <QCheckBox>
 #include <QApplication>
 #include <QGraphicsPathItem>
+#include <QFontMetrics>
 #include <QGraphicsPolygonItem>
 #include <QGraphicsRectItem>
 #include <QGraphicsScene>
@@ -36,6 +37,8 @@
 #include "cad_model_history.h"
 #include "cad_feature_dependencies.h"
 #include "fk_topology.h"
+#include "cad_element_names.h"
+#include "cad_topology_ref.h"
 
 namespace ForgeCad {
 namespace {
@@ -112,6 +115,7 @@ public:
         if (target_ && target_ != source_) target_->removeEdge(this);
     }
 
+    void setDiagnosticText(const QString &text) { diagnosticText_ = text; }
     void updateGeometry() {
         const QRectF a = source_->sceneBoundingRect(), b = target_->sceneBoundingRect();
         QPointF start, end;
@@ -140,7 +144,7 @@ public:
               << end - QPointF(std::cos(angle + 0.48) * 11.0, std::sin(angle + 0.48) * 11.0);
         head_->setPolygon(arrow);
         label_->setPos(route.pointAtPercent(0.52) + QPointF(6.0, -label_->boundingRect().height() - 3.0));
-        setToolTip(label_->text());
+        setToolTip(label_->text() + (diagnosticText_.isEmpty() ? QString() : QChar(u'\n') + diagnosticText_));
     }
 
 protected:
@@ -166,6 +170,7 @@ private:
     QGraphicsPolygonItem *head_ = nullptr;
     QGraphicsSimpleTextItem *label_ = nullptr;
     bool showLabel_ = false;
+    QString diagnosticText_;
 };
 
 QVariant HistoryGraphNode::itemChange(GraphicsItemChange change, const QVariant &value) {
@@ -270,6 +275,7 @@ struct Dependency {
     QString label;
     QString detail;
     bool valid = true;
+    GeometryRef topologyRef;
 };
 
 void addBodyDependency(QVector<Dependency> &result, const QVector<ExtrusionObject> &features, int owner, int index, const QString &label) {
@@ -308,6 +314,7 @@ void addGeometryDependency(QVector<Dependency> &result, const GeometryRef &ref, 
                            const QVector<ExtrusionObject> &features, int owner, const QString &label) {
     Dependency dependency;
     dependency.label = label + QStringLiteral(" • ") + geometryKind(ref.kind);
+    dependency.topologyRef = ref;
     dependency.detail = geometryRefText(ref, sketches, features)
         + QStringLiteral("\nkind=%1, featureId=%2, subshape=%3, geometry=%4, context=%5")
               .arg(ref.kind).arg(ref.featureId).arg(ref.point.subshape).arg(ref.point.geometry).arg(ref.point.context);
@@ -495,6 +502,94 @@ QVector<Dependency> dependencies(int index, const DocumentState &document) {
     return result;
 }
 
+QVector<TopologyReferenceResolution> diagnosticReferences(int index, const DocumentState &document, const QVector<Dependency> &deps) {
+    const auto &feature = document.extrusions.at(index);
+    if (feature.suppressed) return {};
+    if (!feature.referenceResolutions.isEmpty()) {
+        auto records = feature.referenceResolutions;
+        // Gli ID rimangono validi quando la storyboard cambia gli indici.
+        for (auto &record : records) if (record.sourceFeatureId) {
+            record.sourceIndex = -1;
+            for (int i = 0; i < document.extrusions.size(); ++i)
+                if (document.extrusions.at(i).featureId == record.sourceFeatureId) { record.sourceIndex = i; break; }
+        }
+        return records;
+    }
+    QVector<TopologyReferenceResolution> result;
+    const auto inspect = [&](int owner, int kind, const EdgePoint &ref, ReferenceState state) {
+        TopologyReferenceResolution info;
+        info.kind = kind;
+        info.reference = ref;
+        info.currentCheck = true;
+        info.sourceIndex = owner;
+        if (owner >= 0 && owner < index && owner < document.extrusions.size() && document.extrusions.at(owner).forgeBody) {
+            const auto &source = document.extrusions.at(owner);
+            const auto &body = *source.forgeBody;
+            const double tolerance = 1e-3;
+            if (kind == 3) resolveVertexReference(body, ref, tolerance, state, &info);
+            else if (kind == 4) resolveEdgeReference(body, ref, tolerance, state, &info);
+            else resolveFaceReference(body, ref, tolerance, state, &info);
+            info.sourceFeatureId = source.featureId;
+        } else info.warning = QStringLiteral("Sorgente del riferimento assente o non precedente alla feature.");
+        // recordResolution riempie i campi topologici, non quelli del grafo.
+        info.sourceIndex = owner;
+        info.currentCheck = true;
+        result.append(info);
+    };
+    for (const auto &dependency : deps) {
+        const auto &ref = dependency.topologyRef;
+        if (ref.kind >= 3 && ref.kind <= 5) inspect(dependency.index, ref.kind, ref.point, ReferenceState::Same);
+    }
+    if (feature.feature == BodyFeature::Blend || feature.feature == BodyFeature::SheetExtend) {
+        const bool same = feature.firstBody >= 0 && feature.firstBody < document.extrusions.size()
+            && (!feature.blendBaseFeature || feature.blendBaseFeature == document.extrusions.at(feature.firstBody).featureId);
+        for (const auto &ref : feature.blendEdges)
+            inspect(feature.firstBody, ref.role == kEdgePointFaceBoundary ? 5 : 4, ref,
+                ref.role == kEdgePointFaceBoundary || !same ? ReferenceState::Other : ReferenceState::Same);
+    }
+    if (feature.feature == BodyFeature::Draft || feature.feature == BodyFeature::Thicken || feature.feature == BodyFeature::SurfaceOffset
+        || feature.feature == BodyFeature::DeleteFace || feature.feature == BodyFeature::Shell)
+        for (const auto &ref : feature.offsetFaces) inspect(feature.firstBody, 5, ref, ReferenceState::Same);
+    if (feature.feature == BodyFeature::Thread) inspect(feature.firstBody, 5, feature.thread.face, ReferenceState::Same);
+    if (feature.feature == BodyFeature::Helix && feature.helix.source != 0)
+        inspect(feature.firstBody, feature.helix.source == 1 ? 4 : 5, feature.helix.reference, ReferenceState::Same);
+    return result;
+}
+
+QString referenceBadge(const QVector<TopologyReferenceResolution> &records) {
+    if (records.isEmpty()) return {};
+    int names = 0, ids = 0, geometry = 0, ambiguous = 0, missing = 0;
+    bool current = false;
+    for (const auto &r : records) {
+        current = current || r.currentCheck;
+        switch (r.method) {
+        case TopologyResolutionMethod::Name: ++names; break;
+        case TopologyResolutionMethod::Identity: ++ids; break;
+        case TopologyResolutionMethod::Geometry: ++geometry; break;
+        case TopologyResolutionMethod::Ambiguous: ++ambiguous; break;
+        case TopologyResolutionMethod::Missing: ++missing; break;
+        }
+    }
+    QStringList parts;
+    if (missing) parts << QStringLiteral("NON RISOLTI %1").arg(missing);
+    if (ambiguous) parts << QStringLiteral("AMBIGUI %1").arg(ambiguous);
+    if (geometry) parts << QStringLiteral("geometria %1").arg(geometry);
+    if (names) parts << QStringLiteral("nome %1").arg(names);
+    if (ids) parts << QStringLiteral("ID %1").arg(ids);
+    return (current ? QStringLiteral("Verifica attuale: ") : QStringLiteral("Riferimenti: ")) + parts.join(QStringLiteral(" • "));
+}
+
+QColor referenceColor(const QVector<TopologyReferenceResolution> &records) {
+    int severity = 0;
+    for (const auto &r : records) {
+        const int value = r.method == TopologyResolutionMethod::Missing ? 4 : r.method == TopologyResolutionMethod::Ambiguous ? 3
+            : r.method == TopologyResolutionMethod::Geometry ? 2 : r.method == TopologyResolutionMethod::Name ? 1 : 0;
+        severity = std::max(severity, value);
+    }
+    return severity == 4 ? QColor(255, 76, 76) : severity == 3 ? QColor(255, 154, 60)
+        : severity == 2 ? QColor(240, 204, 90) : severity == 1 ? QColor(93, 207, 147) : QColor(104, 165, 207);
+}
+
 QString featureDetails(int index, const DocumentState &document, const QVector<Dependency> &deps) {
     const ExtrusionObject &feature = document.extrusions.at(index);
     QStringList text{
@@ -517,6 +612,7 @@ QString featureDetails(int index, const DocumentState &document, const QVector<D
         text << QStringLiteral("Geometria: nessun risultato");
     }
     if (!feature.error.isEmpty()) text << QStringLiteral("\nErrore:\n%1").arg(feature.error);
+    if (!feature.notice.isEmpty()) text << QStringLiteral("\nAvvisi del calcolo:\n%1").arg(feature.notice);
     text << QStringLiteral("\nDipendenze:");
     if (deps.isEmpty()) text << QStringLiteral("- nessuna");
     for (const Dependency &dependency : deps)
@@ -624,9 +720,9 @@ HistoryGraphDialog::HistoryGraphDialog(QWidget *parent) : QDialog(parent) {
         const QList<QGraphicsItem *> selected = scene_->selectedItems();
         if (selected.isEmpty()) return;
         QGraphicsItem *item = selected.first();
-        details_->setPlainText(item->data(kNodeDetailsRole).toString());
         const int kind = item->data(kNodeKindRole).toInt();
         const int index = item->data(kNodeIndexRole).toInt();
+        details_->setPlainText(kind == 1 && index >= 0 ? featureDiagnostics(index) : item->data(kNodeDetailsRole).toString());
         if (selectionCallback_ && (kind == 0 || kind == 1) && index >= 0) selectionCallback_(kind, index);
     });
 }
@@ -681,10 +777,29 @@ double HistoryGraphDialog::zoomFactor() const {
     return view_ ? view_->transform().m11() : 1.0;
 }
 
+QVector<TopologyReferenceResolution> HistoryGraphDialog::referenceDiagnostics(int index) const {
+    return index >= 0 && index < referenceDiagnostics_.size() ? referenceDiagnostics_.at(index) : QVector<TopologyReferenceResolution>();
+}
+
+QString HistoryGraphDialog::featureDiagnostics(int index) const {
+    if (index < 0 || index >= document_.extrusions.size()) return {};
+    QString text = featureDetails(index, document_, dependencies(index, document_));
+    const auto records = referenceDiagnostics(index);
+    if (!records.isEmpty()) {
+        text += QStringLiteral("\n\nRisoluzione dei riferimenti:\n");
+        for (const auto &record : records) text += topologyResolutionText(record) + QChar(u'\n');
+    }
+    const auto &feature = document_.extrusions.at(index);
+    if (feature.suppressed) text += QStringLiteral("\nFeature soppressa: conserva il risultato della base, nessuna evoluzione propria.");
+    else if (feature.forgeBody) text += QStringLiteral("\n\n") + featureEvolutionText(*feature.forgeBody);
+    return text;
+}
+
 void HistoryGraphDialog::rebuild() {
     clearHistoryGraphScene(scene_);
     details_->clear();
     nodeCount_ = edgeCount_ = invalidDependencies_ = 0;
+    referenceDiagnostics_.clear();
     const QVector<ExtrusionObject> &features = document_.extrusions;
     const QVector<SketchObject> &sketches = document_.sketches;
     QHash<quint64, int> lanes;
@@ -754,13 +869,25 @@ void HistoryGraphDialog::rebuild() {
         QString state = feature.suppressed ? QStringLiteral("SOPPRESSA")
                       : !feature.error.isEmpty() ? QStringLiteral("ERRORE: %1").arg(feature.error.left(64))
                       : tip ? QStringLiteral("RISULTATO DEL CORPO") : QStringLiteral("stadio intermedio");
+        const auto records = diagnosticReferences(index, document_, allDependencies.at(index));
+        referenceDiagnostics_.append(records);
+        const QString badge = referenceBadge(records);
         const QString operation = featureType(feature);
         const QString featureName = feature.name.trimmed().isEmpty()
             ? QStringLiteral("%1 %2").arg(operation).arg(index + 1) : feature.name;
-        addNode(QStringLiteral("f:%1").arg(index), QPointF(index * xStep, lane * yStep),
+        auto *featureNode = addNode(QStringLiteral("f:%1").arg(index), QPointF(index * xStep, lane * yStep),
                 QStringLiteral("#%1  %2").arg(index).arg(featureName),
                 QStringLiteral("Lavorazione: %1\n%2").arg(operation, state),
                 featureDetails(index, document_, allDependencies.at(index)), nodeColor(feature, tip), 1, index);
+        if (!records.isEmpty()) {
+            featureNode->setPen(QPen(feature.error.isEmpty() ? referenceColor(records) : QColor(255, 76, 76), 3.0));
+            auto *status = new QGraphicsSimpleTextItem(featureNode);
+            status->setBrush(referenceColor(records));
+            QFont font; font.setPointSizeF(8.0); font.setBold(true); status->setFont(font);
+            status->setText(QFontMetrics(font).elidedText(badge, Qt::ElideRight, int(width - 20)));
+            status->setPos(10, 89);
+            featureNode->setToolTip(featureNode->toolTip() + QChar(u'\n') + badge);
+        }
     }
 
     if (showSketches_->isChecked()) {
@@ -824,11 +951,19 @@ void HistoryGraphDialog::rebuild() {
         for (const Dependency &dependency : allDependencies.at(owner)) {
             HistoryGraphNode *source = nodes.value(dependency.key, nullptr);
             if (!source) continue;
-            const QColor color = dependency.valid ? QColor(104, 165, 207) : QColor(255, 76, 76);
-            auto *edge = new HistoryGraphEdge(source, target, dependency.label, color,
+            QVector<TopologyReferenceResolution> sourceRecords;
+            for (const auto &record : referenceDiagnostics_.at(owner))
+                if (dependency.source == Dependency::Source::Feature && record.sourceIndex == dependency.index) sourceRecords.append(record);
+            const QString badge = referenceBadge(sourceRecords);
+            const QColor color = dependency.valid ? referenceColor(sourceRecords) : QColor(255, 76, 76);
+            auto *edge = new HistoryGraphEdge(source, target, dependency.label + (badge.isEmpty() ? QString() : QStringLiteral(" • ") + badge), color,
                                               dependency.valid, showLabels_->isChecked());
             scene_->addItem(edge);
             edge->updateGeometry();
+            QString hoverText = dependency.detail;
+            for (const auto &record : sourceRecords) hoverText += QChar(u'\n') + topologyResolutionText(record);
+            edge->setDiagnosticText(hoverText);
+            edge->setToolTip(hoverText);
             if (!dependency.valid) ++invalidDependencies_;
             ++edgeCount_;
         }

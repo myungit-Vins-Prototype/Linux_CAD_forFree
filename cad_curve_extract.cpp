@@ -36,7 +36,9 @@ ForgeCurve joinedSource(const std::vector<PathSegment> &source) {
         if(n+1==source.size())break;
         const Vec3 tip=end(current,!reversed);int next=-1;bool reverse=false;
         for(int j=0;j<int(source.size());++j)if(!used[j])for(bool e:{false,true})if(distance(tip,end(j,e))<=join){
-            if(next>=0)throw std::domain_error("Connessione ambigua fra i bordi selezionati.");next=j;reverse=e;
+            if (next >= 0) throw std::domain_error("Connessione ambigua fra i bordi selezionati.");
+            next = j;
+            reverse = e;
         }
         if(next<0)throw std::domain_error("I bordi selezionati non sono tutti adiacenti: la catena e' interrotta.");
         current=next;reversed=reverse;

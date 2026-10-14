@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <exception>
 #include <limits>
+#include <QThreadStorage>
 
 #include "cad_element_names.h"
 #include "fk_classify.h"
@@ -13,6 +14,23 @@ namespace ForgeCad {
 namespace {
 
 using namespace Kernel;
+
+struct RecordedResolution {
+    const Body *body = nullptr;  // usato soltanto per associare l'operando a fine calcolo
+    TopologyReferenceResolution resolution;
+};
+using ResolutionFrame = QVector<RecordedResolution>;
+QThreadStorage<std::vector<ResolutionFrame>> resolutionFrames;
+
+void recordResolution(const Body &body, int kind, const EdgePoint &reference,
+                      TopologyReferenceResolution info, TopologyReferenceResolution *output) {
+    info.kind = kind;
+    info.reference = reference;
+    if (output) *output = info;
+    else if (!info.warning.isEmpty()) addReferenceWarning(info.warning);
+    auto &frames = resolutionFrames.localData();
+    if (!frames.empty()) frames.back().append({&body, info});
+}
 
 int edgeContext(const Body &body, EdgeId id) {
     const Edge &edge = body.edge(id);
@@ -63,7 +81,24 @@ enum class Placement { On = 0, OnCarrier = 1, Elsewhere = 2 };
 //    spigolo accorciato); infine la piu' vicina entro `legacyTolerance`.
 template <class Id, class Range, class TypeMatches, class ContextMatches, class Locate, class Metric>
 Id resolve(const EdgePoint &reference, const Range &range, TypeMatches typeMatches, ContextMatches contextMatches, Locate locate,
-           Metric metric, double legacyTolerance, ReferenceState state, const std::vector<Id> *named = nullptr) {
+           Metric metric, double legacyTolerance, ReferenceState state, const std::vector<Id> *named, TopologyReferenceResolution &info) {
+    const auto finish = [&](Id id, TopologyResolutionMethod method, int candidates = 1, const QString &warning = QString()) {
+        if (method == TopologyResolutionMethod::Geometry && candidates > 1) method = TopologyResolutionMethod::Ambiguous;
+        info.method = id.valid() ? method : TopologyResolutionMethod::Missing;
+        info.resolvedSubshape = id.index;
+        info.candidates = id.valid() ? candidates : 0;
+        info.warning = warning;
+        if (method == TopologyResolutionMethod::Ambiguous && warning.isEmpty())
+            info.warning = QStringLiteral("Riferimento ambiguo per geometria: %1 entita' ugualmente vicine al punto salvato.").arg(candidates);
+        if (!id.valid()) info.warning = QStringLiteral("Riferimento non risolto: nessuna entita' compatibile.");
+        else if (method == TopologyResolutionMethod::Geometry)
+            info.warning = reference.name.isEmpty()
+                ? QStringLiteral("Riferimento risolto per geometria: nome topologico assente.")
+                : QStringLiteral("Riferimento risolto per geometria: nome \"%1\" non ritrovato.").arg(reference.name);
+        else if (method == TopologyResolutionMethod::Identity && !reference.name.isEmpty())
+            info.warning = QStringLiteral("Nome \"%1\" non ritrovato: riferimento risolto per ID.").arg(reference.name);
+        return id;
+    };
     const bool persistent = reference.subshape >= 0 && reference.geometry >= 0 && reference.context != -1;
     const Id exact(reference.subshape);
     // Nome topologico (genealogia): vale piu' dell'indice e del punto in ogni
@@ -78,15 +113,8 @@ Id resolve(const EdgePoint &reference, const Range &range, TypeMatches typeMatch
             } catch (const std::exception &) {
             }
         }
-        if (candidates.size() == 1) return candidates.front();
+        if (candidates.size() == 1) return finish(candidates.front(), TopologyResolutionMethod::Name);
         if (candidates.size() > 1) {
-            if (state == ReferenceState::Same && persistent
-                && std::find(candidates.begin(), candidates.end(), exact) != candidates.end()) {
-                try {
-                    if (contextMatches(exact) && locate(exact) == Placement::On) return exact;
-                } catch (const std::exception &) {
-                }
-            }
             Id best;
             int bestTier = 3, onCount = 0;
             double closest = std::numeric_limits<double>::max();
@@ -100,10 +128,11 @@ Id resolve(const EdgePoint &reference, const Range &range, TypeMatches typeMatch
                 }
             }
             if (best.valid()) {
-                if (onCount != 1)
-                    addReferenceWarning(QStringLiteral("Riferimento ambiguo \"%1\": %2 entita' con lo stesso nome, scelta la piu' vicina al punto salvato.")
-                                            .arg(reference.name).arg(candidates.size()));
-                return best;
+                const QString warning = onCount != 1
+                    ? QStringLiteral("Riferimento ambiguo \"%1\": %2 entita' con lo stesso nome, scelta la piu' vicina al punto salvato.")
+                        .arg(reference.name).arg(candidates.size()) : QString();
+                return finish(best, onCount == 1 ? TopologyResolutionMethod::Name : TopologyResolutionMethod::Ambiguous,
+                              int(candidates.size()), warning);
             }
         }
     }
@@ -111,7 +140,7 @@ Id resolve(const EdgePoint &reference, const Range &range, TypeMatches typeMatch
     if (persistent) {
         try {
             exactMatches = typeMatches(exact) && contextMatches(exact);
-            if (exactMatches && (state == ReferenceState::Same || locate(exact) == Placement::On)) return exact;
+            if (exactMatches && (state == ReferenceState::Same || locate(exact) == Placement::On)) return finish(exact, TopologyResolutionMethod::Identity);
         } catch (const std::exception &) {
             exactMatches = false;
         }
@@ -119,19 +148,23 @@ Id resolve(const EdgePoint &reference, const Range &range, TypeMatches typeMatch
     if (!persistent || state == ReferenceState::Same) {
         Id best;
         double closest = persistent ? std::numeric_limits<double>::max() : legacyTolerance;
+        int closestCount = 0;
         for (Id candidate : range) {
             try {
                 if (persistent && !(typeMatches(candidate) && contextMatches(candidate))) continue;
                 const double d = metric(candidate);
-                if (d <= closest) closest = d, best = candidate;
+                const bool tied = best.valid() && std::fabs(d - closest) <= 1e-9 * (1.0 + std::fabs(d));
+                if (d <= closest) { closestCount = tied ? closestCount + 1 : 1; closest = d; best = candidate; }
+                else if (tied) ++closestCount;
             } catch (const std::exception &) {
             }
         }
-        return best;
+        return finish(best, TopologyResolutionMethod::Geometry, closestCount);
     }
     Id best;
     int bestTier = 3;
     bool bestContext = false;
+    int closestCount = 0;
     double closest = std::numeric_limits<double>::max();
     for (Id candidate : range) {
         try {
@@ -141,24 +174,27 @@ Id resolve(const EdgePoint &reference, const Range &range, TypeMatches typeMatch
             const double d = metric(candidate);
             const bool better = tier < bestTier || (tier == bestTier && context && !bestContext)
                              || (tier == bestTier && context == bestContext && d < closest);
-            if (better) best = candidate, bestTier = tier, bestContext = context, closest = d;
+            const bool tied = best.valid() && tier == bestTier && context == bestContext
+                && std::fabs(d - closest) <= 1e-9 * (1.0 + std::fabs(d));
+            if (better) { closestCount = tied ? closestCount + 1 : 1; best = candidate; bestTier = tier; bestContext = context; closest = d; }
+            else if (tied) ++closestCount;
         } catch (const std::exception &) {
         }
     }
-    if (bestTier == int(Placement::On)) return best;
+    if (bestTier == int(Placement::On)) return finish(best, TopologyResolutionMethod::Geometry, closestCount);
     if (exactMatches) {
         // L'ID senza il punto vale solo se nessun'altra entita' sta entro la
         // tolleranza mentre la sua e' lontana: rigenerando la storia con una
         // topologia diversa a monte (sei facce diventate due) lo stesso
         // indice e' un altro spigolo, e quello giusto passa a 1e-4 dal punto.
         try {
-            if (best != exact && closest <= legacyTolerance && !(metric(exact) <= legacyTolerance)) return best;
+            if (best != exact && closest <= legacyTolerance && !(metric(exact) <= legacyTolerance)) return finish(best, TopologyResolutionMethod::Geometry, closestCount);
         } catch (const std::exception &) {
         }
-        return exact;
+        return finish(exact, TopologyResolutionMethod::Identity);
     }
-    if (bestTier == int(Placement::Elsewhere) && !(closest <= legacyTolerance)) return Id();
-    return best;
+    if (bestTier == int(Placement::Elsewhere) && !(closest <= legacyTolerance)) return finish(Id(), TopologyResolutionMethod::Missing, 0);
+    return finish(best, TopologyResolutionMethod::Geometry, closestCount);
 }
 
 // Distanza alla quale il punto conta come sull'entita': i punti presi dalla
@@ -252,10 +288,11 @@ QVector<EdgePoint> freeBoundaryLoop(const Body &body, EdgeId edge) {
     return result;
 }
 
-EdgeId resolveEdgeReference(const Body &body, const EdgePoint &reference, double legacyTolerance, ReferenceState state) {
+EdgeId resolveEdgeReference(const Body &body, const EdgePoint &reference, double legacyTolerance, ReferenceState state, TopologyReferenceResolution *resolution) {
     const Vec3 point(reference.x, reference.y, reference.z);
     const std::vector<EdgeId> named = namedEntities<EdgeId>(body, EntityKind::Edge, reference);
-    return resolve<EdgeId>(reference, body.edges(), [&](EdgeId edge) {
+    TopologyReferenceResolution info;
+    const EdgeId result = resolve<EdgeId>(reference, body.edges(), [&](EdgeId edge) {
         return int(body.edge(edge).curve->type()) == reference.geometry;
     }, [&](EdgeId edge) {
         return edgeContext(body, edge) == reference.context;
@@ -271,10 +308,12 @@ EdgeId resolveEdgeReference(const Body &body, const EdgePoint &reference, double
     }, [&](EdgeId edge) {
         const Edge &e = body.edge(edge);
         return projectPoint(*e.curve, point, e.range).distance;
-    }, legacyTolerance, state, &named);
+    }, legacyTolerance, state, &named, info);
+    recordResolution(body, 4, reference, info, resolution);
+    return result;
 }
 
-FaceId resolveFaceReference(const Body &body, const EdgePoint &reference, double legacyTolerance, ReferenceState state) {
+FaceId resolveFaceReference(const Body &body, const EdgePoint &reference, double legacyTolerance, ReferenceState state, TopologyReferenceResolution *resolution) {
     const Vec3 point(reference.x, reference.y, reference.z);
     const std::vector<FaceId> named = namedEntities<FaceId>(body, EntityKind::Face, reference);
     // Tolleranza delle facce: quella degli edge dei loro bordi.
@@ -284,7 +323,8 @@ FaceId resolveFaceReference(const Body &body, const EdgePoint &reference, double
             for (FinId fin : body.loopFins(loop)) tolerance = std::max(tolerance, body.edge(body.fin(fin).edge).tolerance);
         return tolerance;
     };
-    return resolve<FaceId>(reference, body.faces(), [&](FaceId face) {
+    TopologyReferenceResolution info;
+    const FaceId result = resolve<FaceId>(reference, body.faces(), [&](FaceId face) {
         return int(body.face(face).surface->type()) == reference.geometry;
     }, [&](FaceId face) {
         return faceContext(body, face) == reference.context;
@@ -305,7 +345,9 @@ FaceId resolveFaceReference(const Body &body, const EdgePoint &reference, double
                 nearest = std::min(nearest, projectPoint(*e.curve, point, e.range).distance);
             }
         return nearest;
-    }, legacyTolerance, state, &named);
+    }, legacyTolerance, state, &named, info);
+    recordResolution(body, 5, reference, info, resolution);
+    return result;
 }
 
 std::vector<EdgeId> faceBoundaryEdges(const Body &body, FaceId face) {
@@ -340,16 +382,66 @@ bool resolveBlendEdges(const Body &body, const QVector<EdgePoint> &references, d
     return true;
 }
 
-VertexId resolveVertexReference(const Body &body, const EdgePoint &reference, double legacyTolerance, ReferenceState state) {
+VertexId resolveVertexReference(const Body &body, const EdgePoint &reference, double legacyTolerance, ReferenceState state, TopologyReferenceResolution *resolution) {
     const Vec3 point(reference.x, reference.y, reference.z);
     const std::vector<VertexId> named = namedEntities<VertexId>(body, EntityKind::Vertex, reference);
-    return resolve<VertexId>(reference, body.vertices(), [&](VertexId) { return reference.geometry == 0; },
+    TopologyReferenceResolution info;
+    const VertexId result = resolve<VertexId>(reference, body.vertices(), [&](VertexId) { return reference.geometry == 0; },
                              [&](VertexId vertex) { return vertexContext(body, vertex) == reference.context; },
                              [&](VertexId vertex) {
                                  return distance(body.vertex(vertex).point, point) <= placementTolerance(point, body.vertex(vertex).tolerance)
                                      ? Placement::On : Placement::Elsewhere;
                              },
-                             [&](VertexId vertex) { return distance(body.vertex(vertex).point, point); }, legacyTolerance, state, &named);
+                             [&](VertexId vertex) { return distance(body.vertex(vertex).point, point); }, legacyTolerance, state, &named, info);
+    recordResolution(body, 3, reference, info, resolution);
+    return result;
+}
+
+void beginTopologyResolutionCapture() { resolutionFrames.localData().emplace_back(); }
+
+QVector<TopologyReferenceResolution> endTopologyResolutionCapture(const QVector<ExtrusionObject> &features) {
+    auto &frames = resolutionFrames.localData();
+    if (frames.empty()) return {};
+    const auto records = std::move(frames.back());
+    frames.pop_back();
+    if (!frames.empty()) frames.back() += records;
+    QVector<TopologyReferenceResolution> result;
+    for (const auto &record : records) {
+        auto info = record.resolution;
+        for (int index = 0; index < features.size(); ++index) if (features.at(index).forgeBody.get() == record.body) {
+            info.sourceIndex = index;
+            info.sourceFeatureId = features.at(index).featureId;
+            break;
+        }
+        const auto same = [&](const TopologyReferenceResolution &old) {
+            const auto &a = old.reference;
+            const auto &b = info.reference;
+            return old.sourceIndex == info.sourceIndex && old.kind == info.kind && old.method == info.method
+                && old.resolvedSubshape == info.resolvedSubshape && a.name == b.name && a.subshape == b.subshape
+                && a.geometry == b.geometry && a.context == b.context && a.role == b.role
+                && a.x == b.x && a.y == b.y && a.z == b.z && old.warning == info.warning;
+        };
+        if (std::none_of(result.begin(), result.end(), same)) result.append(info);
+    }
+    return result;
+}
+
+QString topologyResolutionText(const TopologyReferenceResolution &info) {
+    QString method;
+    switch (info.method) {
+    case TopologyResolutionMethod::Name: method = QStringLiteral("per nome"); break;
+    case TopologyResolutionMethod::Identity: method = QStringLiteral("per ID"); break;
+    case TopologyResolutionMethod::Geometry: method = QStringLiteral("per geometria"); break;
+    case TopologyResolutionMethod::Ambiguous: method = QStringLiteral("AMBIGUO"); break;
+    case TopologyResolutionMethod::Missing: method = QStringLiteral("NON RISOLTO"); break;
+    }
+    const QChar prefix = info.kind == 5 ? QChar(u'F') : info.kind == 4 ? QChar(u'E') : QChar(u'V');
+    QString text = QStringLiteral("%1%2 [%3] -> %1%4: %5; %6 candidati; sorgente #%7, ID %8")
+        .arg(prefix).arg(info.reference.subshape).arg(info.reference.name).arg(info.resolvedSubshape)
+        .arg(method).arg(info.candidates).arg(info.sourceIndex).arg(info.sourceFeatureId);
+    if (info.currentCheck) text += QStringLiteral(" (verifica sullo stato corrente; audit del calcolo non disponibile)");
+    if (!info.warning.isEmpty()) text += QStringLiteral("\nAvviso: ") + info.warning;
+    return text;
 }
 
 void upgradeTopologyReferences(QVector<ExtrusionObject> &features) {
@@ -380,19 +472,24 @@ void upgradeTopologyReferences(QVector<ExtrusionObject> &features) {
             if (face.valid()) ref.point = faceReference(body, face, Vec3(ref.point.x, ref.point.y, ref.point.z));
         }
     };
-    const auto upgradeEdges = [&](QVector<EdgePoint> &refs, int base, bool sameBase) {
+    const auto upgradeEdges = [&](QVector<EdgePoint> &refs, int base, bool sameBase, ReferenceState state) {
         if (base < 0 || base >= features.size() || !features.at(base).forgeBody) return;
         const Body &body = *features.at(base).forgeBody;
         Box box;
         for (VertexId vertex : body.vertices()) box.add(body.vertex(vertex).point);
         const double tolerance = 1e-3 * std::max(1.0, box.diagonal());
         for (EdgePoint &ref : refs) {
-            if (ref.role != kEdgePointEdge) continue;
             // Un riferimento persistente si completa con il nome solo sulla
             // base su cui e' stato preso (dopo un riordino l'indice e' un altro).
             if (ref.subshape >= 0 && (!ref.name.isEmpty() || !sameBase)) continue;
-            const EdgeId edge = resolveEdgeReference(body, ref, tolerance);
-            if (edge.valid()) ref = edgeReference(body, edge, Vec3(ref.x, ref.y, ref.z));
+            const Vec3 point(ref.x,ref.y,ref.z);
+            if(ref.role==kEdgePointFaceBoundary){
+                const FaceId face=resolveFaceReference(body,ref,tolerance,state);
+                if(face.valid()){ref=faceReference(body,face,point);ref.role=kEdgePointFaceBoundary;}
+            }else if(ref.role==kEdgePointEdge){
+                const EdgeId edge=resolveEdgeReference(body,ref,tolerance,state);
+                if(edge.valid())ref=edgeReference(body,edge,point);
+            }
         }
     };
     for (ExtrusionObject &feature : features) {
@@ -413,7 +510,12 @@ void upgradeTopologyReferences(QVector<ExtrusionObject> &features) {
         if (feature.feature == BodyFeature::Blend || feature.feature == BodyFeature::SheetExtend) {
             const bool sameBase = feature.firstBody >= 0 && feature.firstBody < features.size()
                                && (feature.blendBaseFeature == 0 || feature.blendBaseFeature == features.at(feature.firstBody).featureId);
-            upgradeEdges(feature.blendEdges, feature.firstBody, sameBase);
+            // Come buildGeometry: una base sconosciuta (ID zero) usa la
+            // geometria, non l'indice. La migrazione deve nominare proprio
+            // l'entita' usata dal calcolo, senza cambiarne il significato.
+            const ReferenceState state=feature.feature==BodyFeature::Blend&&feature.blendBaseFeature==0
+                ? ReferenceState::Other : ReferenceState::Same;
+            upgradeEdges(feature.blendEdges, feature.firstBody, sameBase,state);
         }
         if ((feature.feature == BodyFeature::Draft || feature.feature == BodyFeature::Thicken || feature.feature == BodyFeature::SurfaceOffset || feature.feature == BodyFeature::DeleteFace || feature.feature == BodyFeature::Shell) && feature.firstBody >= 0 && feature.firstBody < features.size()
             && features.at(feature.firstBody).forgeBody) {

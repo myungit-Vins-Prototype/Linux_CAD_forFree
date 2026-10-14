@@ -337,9 +337,17 @@ ForgeBody forgeMergeFeatureResult(ExtrusionObject &body, const ForgeBody &result
     const bool subtract = body.mergeOperation == 2;
     QVector<int> targets;
     for (int target : body.mergeBodies) {
-        if (target < 0 || target >= index || target >= bodies.size()) continue;
+        // I bersagli gia' associati sono dipendenze della storyboard. Se
+        // falliscono non si puo' restituire soltanto il nuovo prisma come se
+        // l'unione fosse riuscita, ne' unire solo gli altri bersagli validi.
+        const bool inRange=target>=0&&target<index&&target<bodies.size();
+        if(!inRange||!bodies.at(target).forgeBody||bodies.at(target).forgeBody->isSheet()){
+            if(body.mergeProbe)continue;  // ricerca dei candidati di una nuova fusione automatica
+            const QString name=inRange?bodies.at(target).name:QString::number(target);
+            setError(error,QStringLiteral("Il corpo associato alla fusione \"%1\" non ha geometria solida valida.").arg(name));
+            return nullptr;
+        }
         const ExtrusionObject &other = bodies.at(target);
-        if (!other.forgeBody || other.forgeBody->isSheet()) continue;
         if (body.mergeProbe && !forgeSharesMaterial(result, other.forgeBody, subtract)) continue;
         targets.append(target);
     }

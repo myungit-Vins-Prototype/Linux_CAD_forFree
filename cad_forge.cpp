@@ -32,6 +32,7 @@
 #include "fk_revolve.h"
 #include "fk_sheet.h"
 #include "fk_surface_algo.h"
+#include "fk_stored_surface.h"
 #include "fk_transform.h"
 #include "fk_mass.h"
 #include "fk_micro.h"
@@ -1881,27 +1882,6 @@ void forgeSurfaceConstructionCurves(const Body &body, BodyDisplay &display, int 
     for (const BodyDisplay &piece : pieces) display.constructionCurves += piece.constructionCurves;
 }
 
-// Le cache B-rep delle funzioni si rileggono separatamente: le superfici
-// NURBS conservate non condividono piu' il puntatore con quelle della base.
-// sameSurface riconosce le forme analitiche, ma non le B-spline. Per la
-// sola anteprima confrontiamo la rappresentazione esatta, senza campioni
-// o tolleranze che potrebbero nascondere una superficie appena modificata.
-static bool samePreviewSurface(const Surface &a, const Surface &b) {
-    if (sameSurface(a, b, 1e-6)) return true;
-    if (a.type() != SurfaceType::BSpline || b.type() != SurfaceType::BSpline) return false;
-    const auto &sa = static_cast<const BSplineSurface &>(a);
-    const auto &sb = static_cast<const BSplineSurface &>(b);
-    if (sa.uDegree() != sb.uDegree() || sa.vDegree() != sb.vDegree()
-        || sa.uPoleCount() != sb.uPoleCount() || sa.vPoleCount() != sb.vPoleCount()
-        || sa.uKnots() != sb.uKnots() || sa.vKnots() != sb.vKnots()) return false;
-    for (int i = 0; i < sa.uPoleCount(); ++i)
-        for (int j = 0; j < sa.vPoleCount(); ++j) {
-            if (sa.weight(i, j) != sb.weight(i, j)) return false;
-            for (int axis = 0; axis < 3; ++axis)
-                if (sa.pole(i, j)[axis] != sb.pole(i, j)[axis]) return false;
-        }
-    return true;
-}
 
 static void forgeLocalPreviewDisplay(const QVector<const Body *> &bases, const Body &result, int quality,
                                      BodyDisplay &display, int divisions, BodyDisplay *retainedDisplay = nullptr,
@@ -1921,7 +1901,7 @@ static void forgeLocalPreviewDisplay(const QVector<const Body *> &bases, const B
             if (!base) continue;
             for (FaceId old : base->faces()) {
                 const std::shared_ptr<const Surface> &candidate = base->face(old).surface;
-                if (candidate == surface || (candidate && surface && samePreviewSurface(*candidate, *surface))) {
+                if (candidate == surface || (candidate && surface && sameStoredSurface(*candidate, *surface))) {
                     existed = true;
                     break;
                 }
@@ -1987,18 +1967,23 @@ static void forgeLocalPreviewDisplay(const QVector<const Body *> &bases, const B
     for (const FaceMesh &face : mesh.faces) {
         BodyDisplay *target = patchFaceSet.count(face.face.index) ? &display : retainedDisplay;
         if (!target) continue;
-        for (const std::array<int, 3> &triangle : face.triangles)
+        for (const std::array<int, 3> &triangle : face.triangles) {
+            target->triangleFaces.append(face.face.index);
             for (int index : triangle) {
                 target->vertices.append(toDisplay(face.points[std::size_t(index)]));
                 target->normals.append(toDisplay(face.normals[std::size_t(index)]));
             }
+        }
     }
     for (std::size_t edgeIndex = 0; edgeIndex < mesh.edges.size(); ++edgeIndex) {
         BodyDisplay *target = patchEdges.count(mesh.edgeIds[edgeIndex].index) ? &display : retainedDisplay;
         if (!target) continue;
         QVector<QVector3D> polyline;
         for (const Vec3 &point : mesh.edges[edgeIndex]) polyline.append(toDisplay(point));
-        if (polyline.size() >= 2) target->edges.append(std::move(polyline));
+        if (polyline.size() >= 2) {
+            target->edges.append(std::move(polyline));
+            target->edgeIds.append(mesh.edgeIds[edgeIndex].index);
+        }
     }
     forgeSurfaceConstructionCurves(result, display, divisions, true, patchFaces);
 }

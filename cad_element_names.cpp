@@ -23,6 +23,7 @@ using Labeler = std::function<FaceLabels(const Body &, const BodyHistory &)>;
 
 struct Entry {
     std::weak_ptr<const Body> body;
+    QVector<GenealogyOperand> operandInfo;
     std::vector<ForgeBody> operands;  // tengono in vita gli operandi finche' serve la genealogia
     bool sameIndex = false;
     std::string tag;
@@ -236,7 +237,10 @@ void registerFeatureGenealogy(const ExtrusionObject &body, int index, const QVec
     for (int operand : historyOperands(body)) {
         if (operand < 0 || operand >= index || operand >= bodies.size()) continue;
         const ForgeBody &geometry = bodies.at(operand).forgeBody;
-        if (geometry && geometry != body.forgeBody) entry->operands.push_back(geometry);
+        if (geometry && geometry != body.forgeBody) {
+            entry->operands.push_back(geometry);
+            entry->operandInfo.append({operand, bodies.at(operand).featureId, bodies.at(operand).name, geometry});
+        }
     }
     entry->sameIndex = body.feature == BodyFeature::Transform || body.feature == BodyFeature::Scale || body.feature == BodyFeature::Draft;
     entry->tag = body.featureId ? "f" + std::to_string(body.featureId) : "i" + std::to_string(index);
@@ -277,6 +281,85 @@ std::shared_ptr<const BodyHistory> featureHistoryOf(const Body &body) {
 QString elementName(const Body &body, EntityKind kind, int index) {
     const std::shared_ptr<const ElementNames> names = elementNamesOf(body);
     return names ? QString::fromStdString(names->primary(kind, index)) : QString();
+}
+
+QVector<GenealogyOperand> genealogyOperandsOf(const Body &body) {
+    const auto entry = entryOf(body);
+    return entry ? entry->operandInfo : QVector<GenealogyOperand>();
+}
+
+namespace {
+QString entityId(EntityKind kind, int index) {
+    return QStringLiteral("%1%2").arg(kind == EntityKind::Face ? QChar(u'F') : kind == EntityKind::Edge ? QChar(u'E') : QChar(u'V')).arg(index);
+}
+QString evolutionLabel(Evolution value, int pieces) {
+    switch (value) {
+    case Evolution::Unchanged: return QStringLiteral("invariata");
+    case Evolution::Modified: return QStringLiteral("modificata");
+    case Evolution::Split: return QStringLiteral("divisa (%1 pezzi)").arg(pieces);
+    case Evolution::Merged: return QStringLiteral("unita");
+    case Evolution::Deleted: return QStringLiteral("eliminata");
+    }
+    return {};
+}
+QString originLabel(const HistoryLink &link, const QVector<GenealogyOperand> &operands) {
+    QString text = entityId(link.kind, link.index);
+    if (link.operand < 0 || link.operand >= operands.size()) return text + QStringLiteral(" (operando non disponibile)");
+    const auto &operand = operands.at(link.operand);
+    if (const auto body = operand.body.lock()) {
+        const QString name = elementName(*body, link.kind, link.index);
+        if (!name.isEmpty()) text += QStringLiteral(" [%1]").arg(name);
+    }
+    return QStringLiteral("%1 di %2 (feature #%3, ID %4)").arg(text, operand.name).arg(operand.index).arg(operand.featureId);
+}
+}
+
+QString entityEvolutionText(const Body &body, EntityKind kind, int index) {
+    const auto history = featureHistoryOf(body);
+    const auto operands = genealogyOperandsOf(body);
+    QString text = entityId(kind, index);
+    const QString name = elementName(body, kind, index);
+    if (!name.isEmpty()) text += QStringLiteral(" [%1]").arg(name);
+    if (!history) return text + QStringLiteral(": genealogia non disponibile");
+    const auto &origins = history->origins(kind, index);
+    if (origins.empty()) return text + QStringLiteral(": generata (nessuna provenienza identificata)");
+    QStringList inherited, generated;
+    for (const auto &link : origins) {
+        const QString source = originLabel(link, operands);
+        if (link.relation == HistoryRelation::Generated) {
+            const QString type = link.kind == EntityKind::Edge ? QStringLiteral("spigolo")
+                : link.kind == EntityKind::Face ? QStringLiteral("faccia") : QStringLiteral("vertice");
+            generated << type + QChar(u' ') + source;
+        } else {
+            const auto descendants = history->descendants(link.kind, link.operand, link.index);
+            inherited << QStringLiteral("%1 da %2").arg(evolutionLabel(history->evolution(link.kind, link.operand, link.index), int(descendants.size())), source);
+        }
+    }
+    if (!inherited.isEmpty()) text += QStringLiteral(": ") + inherited.join(QStringLiteral("; "));
+    if (!generated.isEmpty()) text += (inherited.isEmpty() ? QStringLiteral(": generata da ") : QStringLiteral("; generata anche da ")) + generated.join(QStringLiteral("; "));
+    return text;
+}
+
+QString featureEvolutionText(const Body &body) {
+    const auto history = featureHistoryOf(body);
+    if (!history) return QStringLiteral("Evoluzione delle entita': genealogia non disponibile.");
+    QStringList text{QStringLiteral("Evoluzione delle entita' rispetto agli operandi precedenti:")};
+    for (const auto face : body.faces()) text << entityEvolutionText(body, EntityKind::Face, face.index);
+    for (const auto edge : body.edges()) text << entityEvolutionText(body, EntityKind::Edge, edge.index);
+    for (const auto vertex : body.vertices()) text << entityEvolutionText(body, EntityKind::Vertex, vertex.index);
+    const auto operands = genealogyOperandsOf(body);
+    for (int operand = 0; operand < operands.size(); ++operand) {
+        const auto source = operands.at(operand).body.lock();
+        if (!source) continue;
+        const auto deleted = [&](EntityKind kind, int index) {
+            if (history->deleted(kind, operand, index))
+                text << QStringLiteral("%1: eliminata / consumata").arg(originLabel({operand, kind, index, HistoryRelation::Same}, operands));
+        };
+        for (const auto face : source->faces()) deleted(EntityKind::Face, face.index);
+        for (const auto edge : source->edges()) deleted(EntityKind::Edge, edge.index);
+        for (const auto vertex : source->vertices()) deleted(EntityKind::Vertex, vertex.index);
+    }
+    return text.join(QChar(u'\n'));
 }
 
 void clearReferenceWarnings() { warnings.localData().clear(); }

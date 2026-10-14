@@ -40,6 +40,9 @@
 #include "cad_history_graph.h"
 #include "cad_model_history.h"
 #include "cad_topology_ref.h"
+#include "cad_element_names.h"
+#include <QHelpEvent>
+#include <QToolTip>
 #include "cad_icons.h"
 #include "cad_kernel.h"
 #include "cad_sketch_edit.h"
@@ -4439,8 +4442,7 @@ protected:
                 topologyHighlightFace_ = !alreadyHighlighted && !item.edge ? item.subshape : -1;
                 showStatus(alreadyHighlighted
                     ? QStringLiteral("Evidenziazione topologica rimossa")
-                    : QStringLiteral("B%1:%2%3 evidenziato")
-                          .arg(item.body).arg(item.edge ? QChar(u'E') : QChar(u'F')).arg(item.subshape));
+                    : QStringLiteral("%1 evidenziato").arg(QString(item.text).replace(QChar(u'\n'), QStringLiteral(" — "))));
                 update();
                 return;
             }
@@ -6320,6 +6322,17 @@ protected:
 
     // Il tasto del pan vince sulle scorciatoie dei menu (per esempio una lettera).
     bool event(QEvent *event) override {
+        if (event->type() == QEvent::ToolTip && topologyIdsVisible_ && !sketchMode_) {
+            const auto *help = static_cast<QHelpEvent *>(event);
+            TopologyLabelItem label;
+            if (pickTopologyLabel(help->pos(), label) && extrusions_.at(label.body).forgeBody) {
+                const QString evolution = ForgeCad::entityEvolutionText(*extrusions_.at(label.body).forgeBody,
+                    label.edge ? ForgeCad::Kernel::EntityKind::Edge : ForgeCad::Kernel::EntityKind::Face, label.subshape);
+                QToolTip::showText(help->globalPos(), evolution, this);
+            } else QToolTip::hideText();
+            event->accept();
+            return true;
+        }
         if (event->type() == QEvent::ShortcutOverride && static_cast<QKeyEvent *>(event)->key() == panKey_) {
             event->accept();
             return true;
@@ -8372,26 +8385,52 @@ private:
         else if (hover_.kind == SceneObjectKind::Extrusion) onlyBody = hover_.index;
         const QFont font = uiFont(8, QFont::DemiBold);
         const QFontMetrics metrics(font);
-        const auto append = [&](const QPointF &anchor, const QPointF &offset, const QString &text,
+        // Raggio attraverso il punto 3D, senza arrotondarlo al pixel: sui bordi
+        // di sagoma l'arrotondamento potrebbe passare fuori dal corpo.
+        const QVector3D towardScene = sceneModelViewMatrix().inverted().mapVector(QVector3D(0, 0, -1)).normalized();
+        const float rayReach = float(2.0 * sceneDepth());
+        const double visibilityTolerance = qMax(1e-6, 1e-5 * double((sceneMax_ - sceneMin_).length()));
+        const auto append = [&](const QVector3D &point, const QPointF &offset, const QString &text,
                                 int body, int subshape, bool edge) {
-            QRectF box = metrics.boundingRect(text).adjusted(-3.0, -2.0, 3.0, 2.0);
+            const QPointF anchor = projectWorldPoint(point);
+            if (!QRectF(rect()).contains(anchor) || sectionRemoves(point)) return;
+            QVector3D origin = point - rayReach * towardScene;
+            double skipped = 0.0;
+            if (!sectionRay(origin, towardScene, skipped)) return;
+            // Anche un altro corpo visibile puo' coprire l'etichetta, compresi
+            // quelli esclusi dal filtro delle etichette per selezione/hover.
+            for (const ExtrusionObject &occluder : extrusions_)
+                if (occluder.visible && ForgeCad::isShapeBody(occluder)
+                    && edgeOccludedByMesh(occluder.display, origin, towardScene, point, visibilityTolerance)) return;
+            QRectF box = metrics.boundingRect(QRect(0, 0, 10000, 10000), Qt::AlignCenter, text).adjusted(-3.0, -2.0, 3.0, 2.0);
             box.moveCenter(anchor + offset);
+            // Le due righe restano leggibili anche lungo il bordo del viewport.
+            box.moveLeft(qBound(4.0, box.left(), qMax(4.0, width() - box.width() - 4.0)));
+            box.moveTop(qBound(4.0, box.top(), qMax(4.0, height() - box.height() - 4.0)));
             result.append({box, anchor, text, body, subshape, edge});
         };
         for (int bodyIndex = 0; bodyIndex < extrusions_.size(); ++bodyIndex) {
             const ExtrusionObject &body = extrusions_.at(bodyIndex);
             if (!body.visible || !ForgeCad::isShapeBody(body) || (onlyBody >= 0 && bodyIndex != onlyBody)) continue;
             const BodyDisplay &display = body.display;
+            const auto names = body.forgeBody ? ForgeCad::elementNamesOf(*body.forgeBody) : nullptr;
+            const auto labelText = [&](bool edge, int index) {
+                const QString id = QStringLiteral("B%1:%2%3").arg(bodyIndex)
+                    .arg(edge ? QChar(u'E') : QChar(u'F')).arg(index);
+                const QString name = names ? QString::fromStdString(names->primary(
+                    edge ? ForgeCad::Kernel::EntityKind::Edge : ForgeCad::Kernel::EntityKind::Face, index)) : QString();
+                return name.isEmpty() ? id : id + QChar(u'\n') + name;
+            };
             for (int k = 0; k < display.faceIds.size() && k < display.faceLabelPoints.size(); ++k)
-                append(projectWorldPoint(display.faceLabelPoints.at(k)), QPointF(22.0, -18.0),
-                       QStringLiteral("B%1:F%2").arg(bodyIndex).arg(display.faceIds.at(k)),
+                append(display.faceLabelPoints.at(k), QPointF(22.0, -18.0),
+                       labelText(false, display.faceIds.at(k)),
                        bodyIndex, display.faceIds.at(k), false);
             for (int k = 0; k < display.edges.size(); ++k) {
                 const QVector<QVector3D> &edge = display.edges.at(k);
                 if (edge.isEmpty()) continue;
                 const int edgeId = display.edgeIds.value(k, k);
-                append(projectWorldPoint(edge.at(edge.size() / 2)), QPointF(0.0, 22.0),
-                       QStringLiteral("B%1:E%2").arg(bodyIndex).arg(edgeId), bodyIndex, edgeId, true);
+                append(polylineMidpoint(edge), QPointF(0.0, 22.0),
+                       labelText(true, edgeId), bodyIndex, edgeId, true);
             }
         }
         return result;
@@ -16652,7 +16691,9 @@ static bool threadDialog(QMainWindow *window, CadViewport *viewport, const QStri
         const double a = angle(), p = pitchBox->value(), l = lengthBox->value();
         for (ThreadDiagram *diagram : {surfaceDiagram, profileDiagram, extentDiagram}) diagram->setValues(faceInfo.internal, a, p, l, handBox->currentIndex() == 1);
         faceButton->setChecked(picking);
-        viewport->setReferenceMarks(faceValid ? QVector<GeometryRef>{GeometryRef{5, candidates.at(bodyBox->currentIndex()), {}, definition.thread.face}} : QVector<GeometryRef>());
+        QVector<GeometryRef> marks;
+        if (faceValid) marks.append(GeometryRef{5, candidates.at(bodyBox->currentIndex()), {}, definition.thread.face});
+        viewport->setReferenceMarks(marks);
         if (picking) { setStatus(QStringLiteral("Clicca la faccia cilindrica o conica del foro o dell'albero; Esc annulla la scelta."), false); viewport->clearPreview(); return; }
         if (!faceValid) { setStatus(QStringLiteral("Seleziona una faccia cilindrica o conica."), true); viewport->clearPreview(); return; }
         setStatus(QString(), false);
@@ -21290,9 +21331,9 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
         viewport->setHiddenEdgesVisible(visible);
         QSettings().setValue(QStringLiteral("view/hiddenEdges"), visible);
     });
-    QAction *topologyIdsAction = modeMenu->addAction(QStringLiteral("Mostra ID topologici (facce e bordi)"));
+    QAction *topologyIdsAction = modeMenu->addAction(QStringLiteral("Mostra nomi e ID topologici (facce e bordi)"));
     topologyIdsAction->setCheckable(true);
-    topologyIdsAction->setToolTip(QStringLiteral("Mostra B<corpo>:F<faccia> e B<corpo>:E<bordo> con una freccia; clicca un nome per illuminarne il bordo o il contorno"));
+    topologyIdsAction->setToolTip(QStringLiteral("Mostra il nome persistente e l’ID di facce e bordi con una freccia; clicca un’etichetta per illuminarne il bordo o il contorno"));
     topologyIdsAction->setChecked(viewSettings.value(QStringLiteral("view/topologyIds"), false).toBool());
     viewport->setTopologyIdsVisible(topologyIdsAction->isChecked());
     connect(topologyIdsAction, &QAction::toggled, this, [viewport](bool visible) {
@@ -23146,11 +23187,16 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
     }
     updateWindowTitle();
     setTheme(QApplication::palette().color(QPalette::Window).lightness() < 128);
-    connect(qApp, &QGuiApplication::paletteChanged, this, [this](const QPalette &palette) {
-        setTheme(palette.color(QPalette::Window).lightness() < 128);
+}
+
+bool PdfWindow::event(QEvent *event) {
+    const bool handled = QMainWindow::event(event);
+    if (event->type() == QEvent::ApplicationPaletteChange) {
+        setTheme(QApplication::palette().color(QPalette::Window).lightness() < 128);
         // Le icone vettoriali leggono la palette corrente al ridisegno.
         for (auto *bar : findChildren<QToolBar *>()) bar->update();
-    });
+    }
+    return handled;
 }
 
 void PdfWindow::updateWindowTitle() {

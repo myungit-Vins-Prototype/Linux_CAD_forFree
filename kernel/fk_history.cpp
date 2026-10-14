@@ -12,6 +12,7 @@
 #include "fk_curve_algo.h"
 #include "fk_intersect.h"
 #include "fk_surface_algo.h"
+#include "fk_stored_surface.h"
 
 namespace ForgeCad::Kernel {
 
@@ -275,7 +276,7 @@ bool surfacesMatch(const Surface &a, const Surface &b, double tolerance) {
     if (&a == &b) return true;
     if (a.type() != b.type()) return false;
     try {
-        return sameSurface(a, b, tolerance);
+        return sameStoredSurface(a, b, tolerance);
     } catch (const std::exception &) {
         return false;
     }
@@ -333,6 +334,18 @@ bool samePointSets(const std::vector<Vec3> &a, const std::vector<Vec3> &b, doubl
 }
 
 BodyHistory inferHistory(const std::vector<const Body *> &operands, const Body &result, const HistoryOptions &options) {
+    cancellationPoint();
+    // Una radice (in particolare un corpo importato) non ha operandi da
+    // cui ereditare entita'. Non cercare punti interni/proiezioni sulle sue
+    // facce: bastano gli indici vivi per una genealogia senza origini.
+    if(std::none_of(operands.begin(),operands.end(),[](const Body *body){return body!=nullptr;})){
+        int faces=0,edges=0,vertices=0;
+        for(auto id:result.faces())faces=std::max(faces,id.index+1);
+        for(auto id:result.edges())edges=std::max(edges,id.index+1);
+        for(auto id:result.vertices())vertices=std::max(vertices,id.index+1);
+        const std::vector<int> empty(operands.size(),0);
+        return BodyHistory(int(operands.size()),empty,empty,empty,faces,edges,vertices);
+    }
     const double tol = std::max(options.tolerance, 0.0);
     std::vector<BodyCache> caches;
     caches.reserve(operands.size());

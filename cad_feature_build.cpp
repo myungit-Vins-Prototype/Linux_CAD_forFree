@@ -1,5 +1,6 @@
 #include "cad_feature_build.h"
 #include "cad_element_names.h"
+#include "cad_topology_ref.h"
 #include "cad_curve_extract.h"
 #include "cad_spatial_sketch.h"
 #include "cad_feature_dependencies.h"
@@ -86,9 +87,15 @@ void buildGeometryImpl(ExtrusionObject &body, int index, const QVector<SketchObj
 // avvisi della risoluzione dei riferimenti (ambigui) vanno nell'esito.
 void buildGeometry(ExtrusionObject &body, int index, const QVector<SketchObject> &sketches, const QVector<ExtrusionObject> &bodies) {
     clearReferenceWarnings();
-    buildGeometryImpl(body, index, sketches, bodies);
+    body.referenceResolutions.clear();
+    beginTopologyResolutionCapture();
+    try { buildGeometryImpl(body, index, sketches, bodies); }
+    catch (...) { endTopologyResolutionCapture(bodies); throw; }
+    body.referenceResolutions = endTopologyResolutionCapture(bodies);
     if (body.forgeBody) registerFeatureGenealogy(body, index, sketches, bodies);
-    const QStringList warnings = takeReferenceWarnings();
+    QStringList warnings = takeReferenceWarnings();
+    for (const auto &resolution : body.referenceResolutions)
+        if (!resolution.warning.isEmpty() && !warnings.contains(resolution.warning)) warnings.append(resolution.warning);
     if (!warnings.isEmpty())
         body.notice = body.notice.isEmpty() ? warnings.join(QLatin1Char('\n')) : body.notice + QLatin1Char('\n') + warnings.join(QLatin1Char('\n'));
 }

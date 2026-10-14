@@ -24,6 +24,7 @@ public:
     bool openDocumentPath(const QString &path);
 protected:
     void closeEvent(QCloseEvent *event) override;
+    bool event(QEvent *event) override;
 private:
     friend class ViewportInteractionTest;
     // Documento su file (.prt, vedi cad_document_io).

@@ -1500,7 +1500,7 @@ Body loftCore(const std::vector<Section> &sections, const LoftOptions &options, 
             detail::basisFunctionDerivatives(vKnots, span, v[k], q, 0, ders.data());
             for (int j = 0; j <= q; ++j) basis[k][std::size_t(span - q + j)] = ders[std::size_t(j)];
         }
-        const auto interpolate = [&](std::size_t m, int j, std::vector<Vec3> &poles, std::vector<double> &weights, bool useGuide=true) {
+        const auto interpolate = [&](std::size_t m, int j, std::vector<Vec3> &poles, std::vector<double> &weights) {
             std::vector<std::vector<double>> rhs(n, std::vector<double>(4));
             for (std::size_t i = 0; i < n; ++i) {
                 Vec3 p;

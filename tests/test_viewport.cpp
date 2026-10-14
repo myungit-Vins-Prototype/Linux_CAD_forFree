@@ -38,6 +38,7 @@
 static void require(bool ok, const char *message) {
     if (!ok) throw std::runtime_error(message);
 }
+#include "document_regression.h"
 class ViewportInteractionTest {
 public:
     static void copyFaces() {
@@ -573,7 +574,7 @@ public:
         const std::vector<PathSegment> first{line({0,0,0},{10,0,0})};
         auto source=std::make_shared<const Body>(ruledSurface(first,{line({0,-5,0},{10,-5,0})}));
         ExtrusionObject body; body.feature=BodyFeature::Imported; body.name="Superficie sorgente"; body.featureId=701;
-        body.forgeBody=source; body.importData=QByteArray::fromStdString(writeStep({{"Superficie",*source}}));
+        body.forgeBody=source; body.importData=QByteArray::fromStdString(writeStep({{"Superficie",*source, false, {0.0, 0.0, 0.0}, nullptr, {}}}));
         EdgeId selected;
         for(EdgeId e:source->edges()) if(projectPoint(*source->edge(e).curve,{5,0,0},source->edge(e).range).distance<1e-8) {selected=e;break;}
         require(selected.valid(),"source section edge found");
@@ -617,7 +618,7 @@ public:
         const auto oldGeometry=reopened.extrusions_[1].forgeBody;
         auto shifted=std::make_shared<const Body>(ruledSurface({line({0,0,1},{10,0,1})},{line({0,-5,1},{10,-5,1})}));
         reopened.extrusions_[0].forgeBody=shifted;
-        reopened.extrusions_[0].importData=QByteArray::fromStdString(writeStep({{"Superficie",*shifted}}));
+        reopened.extrusions_[0].importData=QByteArray::fromStdString(writeStep({{"Superficie",*shifted, false, {0.0, 0.0, 0.0}, nullptr, {}}}));
         reopened.regenerateAfter(0);
         require(reopened.extrusions_[1].forgeBody && reopened.extrusions_[1].forgeBody!=oldGeometry
                 && reopened.extrusions_[1].error.isEmpty(),"source surface change actually rebuilds associative edge loft");
@@ -664,7 +665,7 @@ public:
         auto guideSheet=std::make_shared<const Body>(ruledSurface({line({0,2,0},{0,2,3})},{line({0,3,0},{0,3,3})}));
         ExtrusionObject guideBody; guideBody.feature=BodyFeature::Imported; guideBody.featureId=802;
         guideBody.name="Superficie guida"; guideBody.forgeBody=guideSheet;
-        guideBody.importData=QByteArray::fromStdString(writeStep({{"guida",*guideSheet}}));
+        guideBody.importData=QByteArray::fromStdString(writeStep({{"guida",*guideSheet, false, {0.0, 0.0, 0.0}, nullptr, {}}}));
         GeometryRef edgeGuide; edgeGuide.kind=4; edgeGuide.index=0; edgeGuide.featureId=802;
         for(EdgeId id:guideSheet->edges()) if(projectPoint(*guideSheet->edge(id).curve,{0,2,1.5},guideSheet->edge(id).range).distance<1e-8)
             edgeGuide.point=edgeReference(*guideSheet,id,{0,2,1.5});
@@ -749,7 +750,7 @@ public:
             const Vec3 start=a[i],end=a[(i+1)%4],mid=(start+end)/2;
             auto body=std::make_shared<const Body>(ruledSurface({line(start,end)},{line(start+offset[i],end+offset[i])}));
             ExtrusionObject source;source.feature=BodyFeature::Imported;source.featureId=900+i;source.forgeBody=body;
-            source.importData=QByteArray::fromStdString(writeStep({{"Supporto",*body}}));source.name=QStringLiteral("Supporto %1").arg(i+1);
+            source.importData=QByteArray::fromStdString(writeStep({{"Supporto",*body, false, {0.0, 0.0, 0.0}, nullptr, {}}}));source.name=QStringLiteral("Supporto %1").arg(i+1);
             view.extrusions_.append(source);
             GeometryRef edge;edge.kind=4;edge.index=i;edge.featureId=source.featureId;
             bool found=false;for(EdgeId e:body->edges())if(projectPoint(*body->edge(e).curve,mid,body->edge(e).range).distance<1e-8){edge.point=edgeReference(*body,e,mid);found=true;break;}
@@ -1613,7 +1614,7 @@ public:
             view.activeSketch_=0; view.sketchMode_=true;
             ExtrusionObject body; body.name="Parete"; body.feature=BodyFeature::Imported; body.featureId=123;
             body.forgeBody=std::make_shared<const Body>(surface);
-            body.importData=QByteArray::fromStdString(writeStep({{"Parete",surface}}));
+            body.importData=QByteArray::fromStdString(writeStep({{"Parete",surface, false, {0.0, 0.0, 0.0}, nullptr, {}}}));
             view.extrusions_.append(body);
             const GeometryRef picked=ref(surface,0,123);
             require(view.addSurfacePierce({0,0,0},picked).isEmpty(),"vincolo Pierce dal viewport");
@@ -1627,7 +1628,7 @@ public:
             const auto previousBody=view.extrusions_[1].forgeBody;
             const auto oldCache=view.sketches_[0].geometricConstraints[0].pierce;
             view.extrusions_[0].forgeBody=std::make_shared<const Body>(wall(3));
-            view.extrusions_[0].importData=QByteArray::fromStdString(writeStep({{"Parete",wall(3)}}));
+            view.extrusions_[0].importData=QByteArray::fromStdString(writeStep({{"Parete",wall(3), false, {0.0, 0.0, 0.0}, nullptr, {}}}));
             view.regenerateAfter(0);
             require(std::fabs(view.sketches_[0].segments[0].first.x()-3)<1e-8,"Pierce segue la superficie modificata");
             require(oldCache->segments[0].first.x()==2,"cache Pierce delle istantanee immutabile");
@@ -1715,7 +1716,7 @@ public:
                         && target.curves[0].construction==construction, "selected spline and construction setting preserved");
                 const auto before=curveGeometry(spline),after=curveGeometry(target.curves[0]);
                 require(before.size()==after.size(),"projected spline pieces");
-                for(int i=0;i<before.size();++i) for(int k=0;k<=30;++k) {
+                for(std::size_t i=0;i<before.size();++i) for(int k=0;k<=30;++k) {
                     const auto a=before[i].curve->point(before[i].range.lo+before[i].range.length()*k/30.0);
                     const auto b=after[i].curve->point(after[i].range.lo+after[i].range.length()*k/30.0);
                     require(Kernel::distance(a,b)<1e-8,"parallel projection preserves spline exactly");
@@ -2071,7 +2072,7 @@ public:
             require(error.isEmpty() && saveDocumentFile(qEnvironmentVariable("PROJECTION_DOC"), viewport.currentDocument(), true).isEmpty(), "copia con il taglio");
             if (qEnvironmentVariableIsSet("PROJECTION_STEP")) {
                 std::ofstream file(qEnvironmentVariable("PROJECTION_STEP").toStdString());
-                file << Kernel::writeStep({{"taglio", *viewport.extrusions_.last().forgeBody}});
+                file << Kernel::writeStep({{"taglio", *viewport.extrusions_.last().forgeBody, false, {0.0, 0.0, 0.0}, nullptr, {}}});
             }
         }
         QElapsedTimer timer;
@@ -2272,6 +2273,47 @@ public:
         require(unchanged.vertices.isEmpty() && unchanged.edges.isEmpty() && unchanged.constructionCurves.isEmpty(),
                 "nessuna faccia invariata del mouse deve accendersi dopo rilettura");
 
+        // Le cache dell'Applicatore contengono rivoluzioni con meridiani
+        // limitati: superfici invarianti anche senza puntatori condivisi.
+        std::ifstream revolutionFile(std::string(FORGECAD_SOURCE_DIR)
+                                     + "/kernel/tests/data/applicatore_revolution_blend.body", std::ios::binary);
+        require(bool(revolutionFile), "fixture rivoluzione Applicatore disponibile");
+        std::stringstream revolutionBytes; revolutionBytes << revolutionFile.rdbuf();
+        const Body revolution = readBodyBinary(revolutionBytes.str());
+        const Body revolutionReloaded = readBodyBinary(writeBodyBinary(revolution));
+        BodyDisplay revolutionPreview;
+        forgeBlendPreviewDisplay(revolution, revolutionReloaded, 0, revolutionPreview, 3);
+        require(revolutionPreview.vertices.isEmpty() && revolutionPreview.constructionCurves.isEmpty(),
+                "le rivoluzioni preesistenti non si evidenziano dopo riapertura");
+
+        // Supporto prolungato dalla mitra, ma identico sul vecchio dominio.
+        std::vector<Vec3> poles;
+        for (int i = 0; i < 4; ++i)
+            for (int j = 0; j < 4; ++j) poles.emplace_back(-1.0 + 2.0 * i / 3.0, -1.0 + 2.0 * j / 3.0, 0.0);
+        const std::vector<double> knots{-1,-1,-1,-1,1,1,1,1};
+        const BSplineSurface support(3, 3, knots, knots, 4, 4, poles);
+        Body sheet = makePlaneSheet(Frame3(), 1.0);
+        const FaceId sheetFace = sheet.faces().front();
+        sheet.face(sheetFace).surface = std::make_shared<BSplineSurface>(support);
+        Body extended = readBodyBinary(writeBodyBinary(sheet));
+        extended.face(sheetFace).surface = std::make_shared<BSplineSurface>(
+            extendBSplineSurface(support, {-1.25,1.5}, {-1.5,1.25}));
+        BodyDisplay extensionPreview;
+        forgeBlendPreviewDisplay(sheet, extended, 0, extensionPreview, 3);
+        require(extensionPreview.vertices.isEmpty() && extensionPreview.edges.isEmpty(),
+                "il prolungamento polinomiale dell'appoggio non e' una faccia di raccordo nuova");
+        // Una modifica interna reale, anche con gli stessi bordi, resta visibile.
+        poles[5][2] = 0.01;
+        const BSplineSurface changed(3, 3, knots, knots, 4, 4, poles);
+        extended.face(sheetFace).surface = std::make_shared<BSplineSurface>(
+            extendBSplineSurface(changed, {-1.25,1.5}, {-1.5,1.25}));
+        forgeBlendPreviewDisplay(sheet, extended, 0, extensionPreview, 3);
+        require(!extensionPreview.vertices.isEmpty() && !extensionPreview.triangleFaces.isEmpty(),
+                "una superficie modificata non viene nascosta dal confronto dei prolungamenti");
+        require(extensionPreview.triangleFaces.size() == extensionPreview.vertices.size() / 3
+                    && extensionPreview.edgeIds.size() == extensionPreview.edges.size(),
+                "l'anteprima appena tassellata conserva gli ID delle facce e dei bordi");
+
         const Body box = makeBox(Frame3(), 10, 10, 10);
         const EdgeId first = nearestEdge(box, Vec3(5,0,10), 1e-8);
         require(first.valid(), "primo spigolo valido");
@@ -2312,6 +2354,52 @@ public:
         forgeBlendPreviewDisplay(savedBase, savedResult, 0, fallback, 3, &legacy);
         require(fallback.vertices == reopened.vertices && fallback.constructionCurves == reopened.constructionCurves,
                 "le cache precedenti senza ID conservano l'anteprima corretta");
+    }
+
+    // Diagnostica sul documento fornito dall'utente, senza incorporarne la
+    // geometria nei dati persistenti del repository.
+    static void applicatorePreview(const QString &path) {
+        using namespace ForgeCad;
+        using namespace ForgeCad::Kernel;
+        DocumentState document;
+        require(loadDocumentFile(path, document).isEmpty(), "lettura Applicatore");
+        require(document.extrusions.size() > 9, "storia Applicatore disponibile");
+        const auto &fillet = document.extrusions[9];
+        require(fillet.forgeBody && fillet.firstBody == 8 && document.extrusions[8].forgeBody,
+                "raccordo finale e base disponibili");
+        BodyDisplay fresh, reused;
+        forgeBlendPreviewDisplay(*document.extrusions[8].forgeBody, *fillet.forgeBody, 0, fresh, 3);
+        forgeBlendPreviewDisplay(*document.extrusions[8].forgeBody, *fillet.forgeBody, 0, reused, 3, &fillet.display);
+        std::set<int> faces(fresh.triangleFaces.begin(), fresh.triangleFaces.end());
+        require(faces.size() == 20, "solo le venti facce nuove del raccordo R0,05");
+        require(faces == std::set<int>(reused.triangleFaces.begin(), reused.triangleFaces.end()),
+                "stesse facce nuove nelle anteprime fresca e da cache");
+        for (int face : faces) require(face >= 19, "nessuna faccia preesistente nell'anteprima");
+        const ForgeBody base = document.extrusions[4].forgeBody;
+        require(bool(base), "Differenza5 disponibile");
+        const std::string original = writeBodyBinary(*base);
+        QVector<EdgePoint> references;
+        for (int id : {11,15,18}) {
+            const auto &edge = base->edge(EdgeId(id));
+            const Vec3 point = edge.curve->point(0.5 * (edge.range.lo + edge.range.hi));
+            references.append(EdgePoint{point.x(),point.y(),point.z(),id});
+        }
+        QString error;
+        require(!forgeBlend(base, references, 0.3, false, &error)
+                    && error.contains(QStringLiteral("raccordo non valido nell'angolo: scarto")),
+                "R0,3 instabile rifiutato con lo scarto geometrico");
+        require(writeBodyBinary(*base) == original, "base invariata dopo il rifiuto");
+        CadViewport viewport;
+        viewport.loadDocument(document);
+        viewport.requestBlendPreview(4, references, 0.3, false, -1, {});
+        viewport.startPreviewJob();
+        QElapsedTimer timer; timer.start();
+        while (viewport.previewRunning_ && timer.elapsed() < 30000) QApplication::processEvents();
+        require(!viewport.previewRunning_ && !viewport.preview_.valid
+                    && viewport.preview_.display.vertices.isEmpty()
+                    && viewport.preview_.error.contains(QStringLiteral("scarto")),
+                "anteprima asincrona invalida, senza triangoli falsi, con errore visibile");
+        std::cout << "Applicatore: 20 facce nuove, cache/fresco coerenti, R0,3 rifiutato anche in anteprima asincrona" << std::endl;
     }
 
     // --bench-blend-edit file.prt indice: confronto della sola vista di un
@@ -3587,7 +3675,7 @@ public:
             if (qEnvironmentVariableIsSet("FILL_STEP_CONTINUITY") && args.size() > 2 && continuity == qEnvironmentVariableIntValue("FILL_STEP_CONTINUITY")) {
                 ForgeCad::buildGeometry(body, index, document.sketches, document.extrusions);
                 std::ofstream step(args.at(2).toStdString());
-                step << Kernel::writeStep({{"riempimento", Kernel::sewSheets({document.extrusions.first().forgeBody.get(), body.forgeBody.get()}, 1e-6, true).body}});
+                step << Kernel::writeStep({{"riempimento", Kernel::sewSheets({document.extrusions.first().forgeBody.get(), body.forgeBody.get()}, 1e-6, true).body, false, {0.0, 0.0, 0.0}, nullptr, {}}});
             }
             QElapsedTimer timer;
             timer.start();
@@ -3601,7 +3689,7 @@ public:
                 fill = body;
                 if (args.size() > 2 && !qEnvironmentVariableIsSet("FILL_STEP_CONTINUITY")) {
                     std::ofstream step(args.at(2).toStdString());
-                    step << Kernel::writeStep({{"riempimento", sewn.body}});
+                    step << Kernel::writeStep({{"riempimento", sewn.body, false, {0.0, 0.0, 0.0}, nullptr, {}}});
                 }
             }
         }
@@ -3642,12 +3730,150 @@ public:
         viewport.loadDocument(state);
         require(saveDocumentFile(args.at(1), viewport.currentDocument(), true).isEmpty(), "salvataggio copia ricalcolata");
     }
-    // Genealogia delle operazioni: nomi topologici dei riferimenti, scelta per
-    // nome e punto tra i pezzi di una faccia divisa, avviso dei riferimenti
-    // ambigui nell'esito della feature, persistenza nel formato 49.
+    // Nomi e ID nel viewport: rendering, clic e corpi senza nomi registrati.
+    static void topologyLabels() {
+        using namespace ForgeCad;
+        {
+            CadViewport topology;
+            topology.resize(800, 600);
+            PrimitiveParameters box;
+            box.kind = PrimitiveKind::Box;
+            box.size[0] = 4.0;
+            box.size[1] = 3.0;
+            box.size[2] = 2.0;
+            require(topology.createPrimitive(box, QStringLiteral("Blocco ID")).isEmpty(),
+                    "corpo per le etichette topologiche");
+            topology.fitAll();
+            topology.setTopologyIdsVisible(true);
+            const QVector<CadViewport::TopologyLabelItem> labels = topology.topologyLabelItems();
+            require(!labels.isEmpty(), "etichette topologiche visibili");
+            CadViewport::TopologyLabelItem edgeLabel, faceLabel;
+            bool haveEdge = false, haveFace = false;
+            for (const CadViewport::TopologyLabelItem &item : labels) {
+                require(pointDistance(item.anchor, item.box.center()) > 8.0,
+                        "spazio per la freccia dell'etichetta topologica");
+                if (item.edge && !haveEdge) edgeLabel = item, haveEdge = true;
+                if (!item.edge && !haveFace) faceLabel = item, haveFace = true;
+            }
+            require(haveEdge && haveFace, "etichette di bordi e facce");
+            const auto geometry = topology.extrusions_.first().forgeBody;
+            for (const auto &item : labels) {
+                const QString name = ForgeCad::elementName(*geometry,
+                    item.edge ? Kernel::EntityKind::Edge : Kernel::EntityKind::Face, item.subshape);
+                require(!name.isEmpty() && item.text.endsWith(QChar(u'\n') + name), "nomi topologici nelle etichette");
+                require(item.box.height() > QFontMetrics(uiFont(8, QFont::DemiBold)).height(), "riquadro per entrambe le righe");
+                require(QRectF(topology.rect()).contains(item.box), "etichette intere ai margini del viewport");
+            }
+            topology.extrusions_[0].forgeBody = std::make_shared<const Kernel::Body>(*geometry);
+            const auto unnamedLabels = topology.topologyLabelItems();
+            require(unnamedLabels.size() == labels.size(), "etichette del B-rep non registrato");
+            for (const auto &item : unnamedLabels)
+                require(!item.text.contains(QChar(u'\n')), "ripiego sull'ID in assenza di nomi");
+            topology.extrusions_[0].forgeBody = geometry;
+            const auto click = [&](const CadViewport::TopologyLabelItem &item) {
+                const QPointF p = item.box.center();
+                QMouseEvent press(QEvent::MouseButtonPress, p, p, Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+                topology.mousePressEvent(&press);
+            };
+            click(edgeLabel);
+            require(topology.topologyHighlightBody_ == edgeLabel.body
+                        && topology.topologyHighlightEdge_ == edgeLabel.subshape
+                        && topology.topologyHighlightFace_ < 0,
+                    "clic sull'ID illumina il bordo");
+            click(edgeLabel);
+            require(topology.topologyHighlightBody_ < 0, "secondo clic spegne il bordo");
+            click(faceLabel);
+            require(topology.topologyHighlightBody_ == faceLabel.body
+                        && topology.topologyHighlightFace_ == faceLabel.subshape
+                        && topology.topologyHighlightEdge_ < 0,
+                    "clic sull'ID della faccia illumina il contorno");
+            QImage topologyLabels(topology.size(), QImage::Format_ARGB32_Premultiplied);
+            topologyLabels.fill(QColor(35, 45, 58));
+            QPainter topologyPainter(&topologyLabels);
+            topology.drawTopologyLabels(topologyPainter);
+            topologyPainter.end();
+            require(topologyLabels.save(QStringLiteral("/tmp/forgecad-topology-labels.png")),
+                    "rendering delle frecce topologiche");
+            topology.setTopologyIdsVisible(false);
+            require(topology.topologyHighlightBody_ < 0, "nascondere gli ID spegne l'evidenziazione");
+        }
+    }
+
+    static void topologyLabelVisibility() {
+        using namespace ForgeCad;
+        CadViewport view;
+        view.resize(800, 600);
+        PrimitiveParameters box;
+        box.size[0] = box.size[1] = box.size[2] = 4;
+        require(view.createPrimitive(box, QStringLiteral("Visibilita' etichette")).isEmpty(), "blocco per occlusione etichette");
+        view.setViewFrame(QVector3D(1, 0, 0), QVector3D(0, 0, 1));
+        view.fitAll();
+        view.setTopologyIdsVisible(true);
+        const auto front = view.topologyLabelItems();
+        require(!front.isEmpty(), "etichette anteriori visibili");
+        int faces = 0, edges = 0;
+        for (const auto &item : front) {
+            if (item.edge) { ++edges; continue; }
+            ++faces;
+            require(item.text.endsWith(QStringLiteral(":+z")), "solo la faccia verso l'osservatore ha un'etichetta");
+        }
+        require(faces == 1 && edges == 4, "faccia e quattro bordi anteriori; etichette posteriori nascoste");
+        view.setViewFrame(QVector3D(1, 0, 0), QVector3D(0, 0, -1));
+        view.fitAll();
+        const auto back = view.topologyLabelItems();
+        faces = 0;
+        for (const auto &item : back) if (!item.edge) {
+            ++faces;
+            require(item.text.endsWith(QStringLiteral(":-z")), "ruotando compare la faccia prima nascosta");
+        }
+        require(faces == 1, "rotazione aggiorna le etichette visibili");
+        for (const auto &item : front) for (const auto &other : back)
+            require(item.edge != other.edge || item.subshape != other.subshape, "le entita' posteriori non mantengono etichette anteriori");
+        view.setViewFrame(QVector3D(1, 0, 0), QVector3D(0, 0, 1));
+        view.fitAll();
+        box.origin[2] = 8;
+        require(view.createPrimitive(box, QStringLiteral("Occludente")).isEmpty(), "secondo corpo davanti al primo");
+        view.selection_ = {SceneObjectKind::Extrusion, 0};
+        view.hover_ = {};
+        require(view.topologyLabelItems().isEmpty(), "anche un altro corpo copre le etichette del corpo selezionato");
+        view.extrusions_[1].visible = false;
+        require(view.topologyLabelItems().size() == front.size(), "un corpo nascosto non copre le etichette");
+        view.selection_ = {};
+        view.setTopologyIdsVisible(false);
+    }
+
+    // Nomi persistenti, facce divise, ambiguita' e persistenza nel formato 49.
     static void genealogyReferences() {
         using namespace ForgeCad;
         using namespace ForgeCad::Kernel;
+        // Caso legacy di 1.prt: ID e punto descrivono due spigoli diversi,
+        // ma la base non e' nota. Il save deve rispettare la stessa scelta
+        // per geometria di buildGeometry, non introdurre il nome dell'altro.
+        {
+            ExtrusionObject root;root.feature=BodyFeature::Primitive;root.featureId=100;
+            root.forgeBody=std::make_shared<const Body>(makeBox(Frame3(),10,10,10));
+            registerFeatureGenealogy(root,0,{},{});
+            const EdgeId top=nearestEdge(*root.forgeBody,Vec3(5,0,10),1e-8);
+            const EdgeId bottom=nearestEdge(*root.forgeBody,Vec3(5,0,0),1e-8);
+            auto reference=edgeReference(*root.forgeBody,top,Vec3(5,0,0));reference.name.clear();
+            ExtrusionObject legacy;legacy.feature=BodyFeature::Blend;legacy.featureId=101;
+            legacy.firstBody=0;legacy.blendSize=0.5;legacy.blendEdges={reference};
+            const auto before=forgeBlend(root.forgeBody,legacy.blendEdges,0.5,false,nullptr,{},false);
+            QVector<ExtrusionObject> migrated{root,legacy};upgradeTopologyReferences(migrated);
+            require(migrated[1].blendEdges[0].subshape==bottom.index&&!migrated[1].blendEdges[0].name.isEmpty(),
+                    "migrazione su base ignota conserva il bordo effettivamente risolto");
+            const auto after=forgeBlend(root.forgeBody,migrated[1].blendEdges,0.5,false,nullptr,{},false);
+            require(before&&after&&writeBodyBinary(*before)==writeBodyBinary(*after),
+                    "il salvataggio legacy non cambia la geometria del raccordo");
+            legacy.blendBaseFeature=root.featureId;migrated={root,legacy};upgradeTopologyReferences(migrated);
+            require(migrated[1].blendEdges[0].subshape==top.index,"sulla base nota resta autorevole l'ID");
+            EdgePoint facePoint;facePoint.x=facePoint.y=5;facePoint.z=10;
+            const FaceId topFace=resolveFaceReference(*root.forgeBody,facePoint,1e-6);
+            auto face=faceReference(*root.forgeBody,topFace,Vec3(5,5,10));face.name.clear();face.role=kEdgePointFaceBoundary;
+            legacy.blendEdges={face};migrated={root,legacy};upgradeTopologyReferences(migrated);
+            require(!migrated[1].blendEdges[0].name.isEmpty()&&migrated[1].blendEdges[0].role==kEdgePointFaceBoundary,
+                    "migrazione dei riferimenti di faccia conserva il ruolo bordi della faccia");
+        }
         DocumentState doc;
         ExtrusionObject box; box.feature = BodyFeature::Primitive; box.name = QStringLiteral("Base");
         box.primitive.size[0] = box.primitive.size[1] = box.primitive.size[2] = 10;
@@ -3685,6 +3911,64 @@ public:
         const QStringList warnings = takeReferenceWarnings();
         require(warnings.size() == 1 && warnings.at(0).contains(QStringLiteral("ambiguo")), "riferimento ambiguo segnalato");
 
+        // Anche i pezzi omonimi hanno etichette distinte e selezionabili per ID.
+        view.resize(1000, 700);
+        view.setViewFrame(QVector3D(1, 0, 0), QVector3D(0, 0, 1));
+        view.fitAll();
+        view.setTopologyIdsVisible(true);
+        const auto labels = view.topologyLabelItems();
+        int splitLabels = 0, namedEdges = 0;
+        for (const auto &item : labels) {
+            const QString name = elementName(*geometry, item.edge ? EntityKind::Edge : EntityKind::Face, item.subshape);
+            require(!name.isEmpty() && item.text.endsWith(QChar(u'\n') + name), "nome persistente nell'etichetta del viewport");
+            require(item.text.startsWith(QStringLiteral("B2:%1%2").arg(item.edge ? QChar(u'E') : QChar(u'F')).arg(item.subshape)),
+                    "ID della sotto-entita' conservato accanto al nome");
+            if (!item.edge && (item.subshape == left.index || item.subshape == right.index)) {
+                require(item.text.endsWith(ref.name), "nome ereditato della faccia divisa nel viewport");
+                ++splitLabels;
+            }
+            if (item.edge) ++namedEdges;
+        }
+        require(splitLabels == 2 && namedEdges > 0, "etichette delle due facce omonime e degli spigoli");
+        view.setTopologyIdsVisible(false);
+        require(view.topologyLabelItems().isEmpty(), "etichette disattivabili");
+
+        // Evoluzione e risoluzione strutturata, indipendenti dal testo degli avvisi.
+        require(entityEvolutionText(*geometry, EntityKind::Face, left.index).contains(QStringLiteral("divisa (2 pezzi)")),
+                "descrizione della faccia divisa con numero dei pezzi");
+        const QString cutEvolution = featureEvolutionText(*geometry);
+        require(cutEvolution.contains(QStringLiteral("invariata")) && cutEvolution.contains(QStringLiteral("modificata"))
+                && cutEvolution.contains(QStringLiteral("eliminata")), "evoluzione completa del taglio");
+        TopologyReferenceResolution report;
+        clearReferenceWarnings();
+        require(resolveFaceReference(*geometry, ref, 1e-3, ReferenceState::Other, &report) == left
+                && report.method == TopologyResolutionMethod::Name && report.candidates == 2, "esito per nome, disambiguato dal punto");
+        require(resolveFaceReference(*geometry, gap, 1e-3, ReferenceState::Other, &report).valid()
+                && report.method == TopologyResolutionMethod::Ambiguous && !report.warning.isEmpty(), "esito ambiguo con avviso");
+        EdgePoint byId = ref; byId.name.clear();
+        require(resolveFaceReference(*geometry, byId, 1e-3, ReferenceState::Same, &report) == left
+                && report.method == TopologyResolutionMethod::Identity, "risoluzione per ID distinta dalla geometria");
+        EdgePoint byGeometry = ref; byGeometry.subshape = -1; byGeometry.name = QStringLiteral("nome non presente");
+        require(resolveFaceReference(*geometry, byGeometry, 1e-3, ReferenceState::Other, &report) == left
+                && report.method == TopologyResolutionMethod::Geometry && report.warning.contains(QStringLiteral("non ritrovato")),
+                "ripiego geometrico con nome mancante");
+        byGeometry.x = byGeometry.y = byGeometry.z = 1e8;
+        require(!resolveFaceReference(*geometry, byGeometry, 1e-3, ReferenceState::Other, &report).valid()
+                && report.method == TopologyResolutionMethod::Missing, "riferimento non risolto distinto dall'ambiguita'");
+        require(takeReferenceWarnings().isEmpty(), "la diagnostica esplicita non altera gli avvisi del calcolo");
+        EdgePoint corner; corner.x = corner.y = corner.z = 0;
+        require(resolveFaceReference(*view.extrusions_.at(0).forgeBody, corner, 1e-3, ReferenceState::Other, &report).valid()
+                && report.method == TopologyResolutionMethod::Ambiguous && report.candidates == 3,
+                "anche il ripiego geometrico segnala piu' facce equivalenti");
+        beginTopologyResolutionCapture();
+        beginTopologyResolutionCapture();
+        resolveFaceReference(*geometry, ref, 1e-3, ReferenceState::Other, &report);
+        const auto nested = endTopologyResolutionCapture(view.extrusions_);
+        const auto parent = endTopologyResolutionCapture(view.extrusions_);
+        require(nested.size() == 1 && parent.size() == 1 && parent.first().sourceIndex == 2,
+                "audit annidati senza perdere i riferimenti del calcolo interno");
+
+
         // Raccordo su uno spigolo del pezzo sinistro, salvato e riletto.
         const EdgeId edge = nearestEdge(*geometry, Vec3(2, 0, 10), 1e-6);
         require(edge.valid(), "spigolo del pezzo sinistro");
@@ -3695,6 +3979,25 @@ public:
         require(view.createBody(blend).isEmpty() && view.extrusions_.size() == 4 && view.extrusions_.at(3).error.isEmpty(), "raccordo creato");
         const auto filletNames = elementNamesOf(*view.extrusions_.at(3).forgeBody);
         require(filletNames != nullptr, "nomi del raccordo");
+        require(featureEvolutionText(*view.extrusions_.at(3).forgeBody).contains(QStringLiteral("generata da spigolo")),
+                "provenienza della faccia del raccordo dallo spigolo");
+        require(!view.extrusions_.at(3).referenceResolutions.isEmpty(), "audit reale della risoluzione nel calcolo");
+        HistoryGraphDialog diagnosticGraph;
+        diagnosticGraph.setDocument(view.currentDocument());
+        require(diagnosticGraph.featureDiagnostics(2).contains(QStringLiteral("divisa (2 pezzi)"))
+                && diagnosticGraph.featureDiagnostics(3).contains(QStringLiteral("per nome")), "evoluzione e audit nei dettagli del grafo");
+        const auto recorded = diagnosticGraph.referenceDiagnostics(3);
+        require(!recorded.isEmpty() && !recorded.first().currentCheck && recorded.first().sourceIndex == 2,
+                "il grafo usa il vero esito del calcolo e il suo operando");
+        DocumentState snapshotDiagnostic = view.currentDocument();
+        snapshotDiagnostic.extrusions[3].referenceResolutions.clear();
+        addReferenceWarning(QStringLiteral("sentinella"));
+        diagnosticGraph.setDocument(snapshotDiagnostic);
+        const auto checked = diagnosticGraph.referenceDiagnostics(3);
+        require(!checked.isEmpty() && checked.first().currentCheck && checked.first().method == TopologyResolutionMethod::Name,
+                "snapshot senza audit: verifica corrente esplicitamente distinta");
+        require(takeReferenceWarnings() == QStringList{QStringLiteral("sentinella")}, "aprire il grafo non inquina gli avvisi");
+
         QTemporaryDir directory;
         const QString file = directory.filePath(QStringLiteral("genealogia.prt"));
         require(saveDocumentFile(file, view.currentDocument(), false).isEmpty(), "salvataggio formato 49");
@@ -3711,15 +4014,43 @@ public:
         require(view.updateBody(1, moved).isEmpty(), "modifica della cava");
         require(view.extrusions_.at(3).error.isEmpty() && view.extrusions_.at(3).forgeBody, "raccordo rigenerato");
         require(view.extrusions_.at(3).notice.contains(QStringLiteral("ambiguo")), "esito del raccordo con l'avviso");
+        diagnosticGraph.setDocument(view.currentDocument());
+        require(diagnosticGraph.featureDiagnostics(3).contains(QStringLiteral("AMBIGUO"))
+                && diagnosticGraph.featureDiagnostics(3).contains(QStringLiteral("Avviso:")), "grafo con ambiguita' e avviso reali");
+        bool ambiguityBadge = false;
+        for (auto *scene : diagnosticGraph.findChildren<QGraphicsScene *>())
+            for (auto *item : scene->items()) if (auto *label = dynamic_cast<QGraphicsSimpleTextItem *>(item))
+                ambiguityBadge = ambiguityBadge || label->text().contains(QStringLiteral("AMBIGUI"));
+        require(ambiguityBadge, "ambiguita' evidente sul blocco del grafo");
+
         // Tornando indietro l'avviso sparisce.
         moved.primitive.origin[0] = 4;
         require(view.updateBody(1, moved).isEmpty() && view.extrusions_.at(3).error.isEmpty(), "cava rimessa a posto");
         require(!view.extrusions_.at(3).notice.contains(QStringLiteral("ambiguo")), "nessun avviso con il riferimento univoco");
+        DocumentState unite;
+        ExtrusionObject one = box, two = box;
+        two.primitive.origin[0] = 10;
+        ExtrusionObject unionFeature; unionFeature.operation = 0; unionFeature.firstBody = 0; unionFeature.secondBody = 1;
+        unite.extrusions = {one, two, unionFeature};
+        CadViewport joined; joined.loadDocument(unite);
+        require(joined.extrusions_.at(2).forgeBody && featureEvolutionText(*joined.extrusions_.at(2).forgeBody).contains(QStringLiteral("unita")),
+                "entita' unite con provenienza da entrambi gli operandi");
     }
     // Modifica -> Rigenera tutto (Ctrl+B): anche le feature lette dallo
     // snapshot del documento si ricalcolano; un passo di Undo.
     static void rebuildAllCommand() {
         using namespace ForgeCad;
+        // Una fusione gia' associata non perde silenziosamente la base
+        // quando una feature precedente fallisce durante la rigenerazione.
+        ExtrusionObject missing;missing.name=QStringLiteral("Base fallita");missing.error=QStringLiteral("errore geometrico");
+        ExtrusionObject merged;merged.mergeOperation=1;merged.mergeBodies={0};
+        const auto tool=std::make_shared<const Kernel::Body>(Kernel::makeBox(Kernel::Frame3(),1,1,1));
+        QString mergeError;
+        require(!forgeMergeFeatureResult(merged,tool,1,{missing},&mergeError)
+                    && mergeError.contains(missing.name), "base della fusione assente segnalata, senza prisma isolato");
+        merged.mergeProbe=true;mergeError.clear();
+        require(forgeMergeFeatureResult(merged,tool,1,{missing},&mergeError)==tool&&mergeError.isEmpty(),
+                "la ricerca automatica iniziale puo' creare un corpo senza candidati");
         CadViewport viewport;
         ExtrusionObject box;
         box.name = QStringLiteral("Parallelepipedo");
@@ -5431,7 +5762,7 @@ public:
         for(EdgeId e:sheet->edges()) if(projectPoint(*sheet->edge(e).curve,spatial->point(.5),sheet->edge(e).range).distance<1e-8){selected=e;break;}
         require(selected.valid(),"bordo spaziale sorgente individuato");
         ExtrusionObject source;source.feature=BodyFeature::Imported;source.featureId=701;source.name="Superficie";
-        source.forgeBody=sheet;source.importData=QByteArray::fromStdString(writeStep({{"Superficie",*sheet}}));
+        source.forgeBody=sheet;source.importData=QByteArray::fromStdString(writeStep({{"Superficie",*sheet, false, {0.0, 0.0, 0.0}, nullptr, {}}}));
         GeometryRef edge;edge.kind=4;edge.index=0;edge.featureId=701;edge.point=edgeReference(*sheet,selected,spatial->point(.5));
         QVector<ExtrusionObject> bodies{source};QString error;QVector<double> cuts;
         CurveExtractionParameters p;p.source=edge;
@@ -5484,7 +5815,7 @@ public:
         auto shiftedCurve=std::make_shared<BSplineCurve<3>>(3,std::vector<double>{0,0,0,0,1,1,1,1},
             std::vector<Vec3>{{0,0,12},{3,2,15},{7,-1,13},{10,0,14}});
         auto shifted=std::make_shared<const Body>(ruledSurface({{shiftedCurve,{0,1}}},{line({0,-5,10},{10,-5,10})}));
-        view.extrusions_[0].forgeBody=shifted;view.extrusions_[0].importData=QByteArray::fromStdString(writeStep({{"Superficie",*shifted}}));
+        view.extrusions_[0].forgeBody=shifted;view.extrusions_[0].importData=QByteArray::fromStdString(writeStep({{"Superficie",*shifted, false, {0.0, 0.0, 0.0}, nullptr, {}}}));
         view.regenerateAfter(0);
         require(view.extrusions_[1].curve && view.extrusions_[1].error.isEmpty()
             && distance(view.extrusions_[1].curve->point(shorter),shiftedCurve->point(shorter))<1e-6,"taglio segue bordo rigenerato senza perdere profondita'");
@@ -5817,56 +6148,7 @@ public:
             const Kernel::Vec3 expected = 0.5 * (exact.curve->point(exact.range.lo) + exact.curve->point(exact.range.hi));
             require(distance(entity.point, expected) < 1e-12, "punto medio esatto");
         }
-        {
-            CadViewport topology;
-            topology.resize(800, 600);
-            PrimitiveParameters box;
-            box.kind = PrimitiveKind::Box;
-            box.size[0] = 4.0;
-            box.size[1] = 3.0;
-            box.size[2] = 2.0;
-            require(topology.createPrimitive(box, QStringLiteral("Blocco ID")).isEmpty(),
-                    "corpo per le etichette topologiche");
-            topology.fitAll();
-            topology.setTopologyIdsVisible(true);
-            const QVector<CadViewport::TopologyLabelItem> labels = topology.topologyLabelItems();
-            require(!labels.isEmpty(), "etichette topologiche visibili");
-            CadViewport::TopologyLabelItem edgeLabel, faceLabel;
-            bool haveEdge = false, haveFace = false;
-            for (const CadViewport::TopologyLabelItem &item : labels) {
-                require(pointDistance(item.anchor, item.box.center()) > 8.0,
-                        "spazio per la freccia dell'etichetta topologica");
-                if (item.edge && !haveEdge) edgeLabel = item, haveEdge = true;
-                if (!item.edge && !haveFace) faceLabel = item, haveFace = true;
-            }
-            require(haveEdge && haveFace, "etichette di bordi e facce");
-            const auto click = [&](const CadViewport::TopologyLabelItem &item) {
-                const QPointF p = item.box.center();
-                QMouseEvent press(QEvent::MouseButtonPress, p, p, Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
-                topology.mousePressEvent(&press);
-            };
-            click(edgeLabel);
-            require(topology.topologyHighlightBody_ == edgeLabel.body
-                        && topology.topologyHighlightEdge_ == edgeLabel.subshape
-                        && topology.topologyHighlightFace_ < 0,
-                    "clic sull'ID illumina il bordo");
-            click(edgeLabel);
-            require(topology.topologyHighlightBody_ < 0, "secondo clic spegne il bordo");
-            click(faceLabel);
-            require(topology.topologyHighlightBody_ == faceLabel.body
-                        && topology.topologyHighlightFace_ == faceLabel.subshape
-                        && topology.topologyHighlightEdge_ < 0,
-                    "clic sull'ID della faccia illumina il contorno");
-            QImage topologyLabels(topology.size(), QImage::Format_ARGB32_Premultiplied);
-            topologyLabels.fill(QColor(35, 45, 58));
-            QPainter topologyPainter(&topologyLabels);
-            topology.drawTopologyLabels(topologyPainter);
-            topologyPainter.end();
-            require(topologyLabels.save(QStringLiteral("/tmp/forgecad-topology-labels.png")),
-                    "rendering delle frecce topologiche");
-            topology.setTopologyIdsVisible(false);
-            require(topology.topologyHighlightBody_ < 0, "nascondere gli ID spegne l'evidenziazione");
-        }
+        topologyLabels();
         {
             // Estrusione simmetrica e nei due versi: un solo prisma dal piano
             // spostato (volumi e quote esatti); con la fine "fino a" il secondo
@@ -8532,6 +8814,22 @@ int main(int argc, char **argv) {
         catch (const std::exception &e) { std::cerr << e.what() << std::endl; return 1; }
         return 0;
     }
+    if (app.arguments().contains(QStringLiteral("--document-regression"))) {
+        try {
+            const int at=app.arguments().indexOf(QStringLiteral("--document-regression"));
+            require(at+3<app.arguments().size(), "scenario, documento e output JSON richiesti");
+            DocumentRegression::run(app.arguments()[at+1],app.arguments()[at+2],app.arguments()[at+3],4);
+        }catch(const std::exception &e){std::cerr<<e.what()<<std::endl;return 1;}
+        return 0;
+    }
+    if (app.arguments().contains(QStringLiteral("--applicatore-preview"))) {
+        try {
+            const int option = app.arguments().indexOf(QStringLiteral("--applicatore-preview"));
+            require(option + 1 < app.arguments().size(), "percorso Applicatore richiesto");
+            ViewportInteractionTest::applicatorePreview(app.arguments()[option + 1]);
+        } catch (const std::exception &error) { std::cerr << error.what() << std::endl; return 1; }
+        return 0;
+    }
     if (app.arguments().contains(QStringLiteral("--blend-preview-reload"))) {
         try { ViewportInteractionTest::blendPreviewReload(); }
         catch (const std::exception &e) { std::cerr << e.what() << std::endl; return 1; }
@@ -8774,7 +9072,13 @@ int main(int argc, char **argv) {
         catch (const std::exception &e) { std::cerr << e.what() << std::endl; return 1; }
         return 0;
     }
-    if (app.arguments().contains(QStringLiteral("--genealogy"))) {
+    if (app.arguments().contains(QStringLiteral("--topology-labels"))) {
+        try { ViewportInteractionTest::topologyLabels(); ViewportInteractionTest::topologyLabelVisibility(); }
+        catch (const std::exception &error) { std::cerr << "FAIL topology labels: " << error.what() << std::endl; return 1; }
+        std::cout << "PASS topology labels" << std::endl;
+        return 0;
+    }
+    if (app.arguments().contains(QStringLiteral("--genealogy")) || app.arguments().contains(QStringLiteral("--history-diagnostics"))) {
         try { ViewportInteractionTest::genealogyReferences(); }
         catch (const std::exception &e) { std::cerr << e.what() << std::endl; return 1; }
         std::cout << "PASS genealogy" << std::endl;

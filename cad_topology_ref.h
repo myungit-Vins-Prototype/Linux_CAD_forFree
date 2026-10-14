@@ -25,11 +25,18 @@ QVector<EdgePoint> freeBoundaryLoop(const Kernel::Body &body, Kernel::EdgeId edg
 enum class ReferenceState { Same, Other };
 
 Kernel::EdgeId resolveEdgeReference(const Kernel::Body &body, const EdgePoint &reference, double legacyTolerance,
-                                    ReferenceState state = ReferenceState::Same);
+                                    ReferenceState state = ReferenceState::Same, TopologyReferenceResolution *resolution = nullptr);
 Kernel::FaceId resolveFaceReference(const Kernel::Body &body, const EdgePoint &reference, double legacyTolerance,
-                                    ReferenceState state = ReferenceState::Same);
+                                    ReferenceState state = ReferenceState::Same, TopologyReferenceResolution *resolution = nullptr);
 Kernel::VertexId resolveVertexReference(const Kernel::Body &body, const EdgePoint &reference, double legacyTolerance,
-                                        ReferenceState state = ReferenceState::Same);
+                                        ReferenceState state = ReferenceState::Same, TopologyReferenceResolution *resolution = nullptr);
+
+// L'output opzionale restituisce metodo, candidato e avviso senza modificare
+// gli avvisi del thread. La cattura registra invece le chiamate di un calcolo;
+// e' a stack per le costruzioni annidate e separata per thread.
+void beginTopologyResolutionCapture();
+QVector<TopologyReferenceResolution> endTopologyResolutionCapture(const QVector<ExtrusionObject> &features);
+QString topologyResolutionText(const TopologyReferenceResolution &resolution);
 
 // Gli edge di tutti i loop della faccia, senza ripetizioni.
 std::vector<Kernel::EdgeId> faceBoundaryEdges(const Kernel::Body &body, Kernel::FaceId face);

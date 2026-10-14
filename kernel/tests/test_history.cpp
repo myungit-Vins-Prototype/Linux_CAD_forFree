@@ -4,6 +4,9 @@
 #include <cmath>
 
 #include "fk_blend.h"
+#include "fk_body_io.h"
+#include "fk_bspline_surface.h"
+#include "fk_sheet.h"
 #include "fk_boolean.h"
 #include "fk_classify.h"
 #include "fk_history.h"
@@ -243,4 +246,50 @@ FK_TEST(HistoryLabelledFacesAndLongNames) {
     const std::string longTag(200, 'x');
     const ElementNames hashed = baseNames(box, longTag);
     for (FaceId f : box.faces()) FK_CHECK(hashed.primary(EntityKind::Face, f.index).size() <= 220);
+}
+
+// Dopo la rilettura gli appoggi non condividono piu' i puntatori. La
+// genealogia e i nomi devono essere gli stessi anche per le facce NURBS.
+FK_TEST(HistoryPreservesNamesAfterReload) {
+    const Body box = makeBox(Frame3(), 10, 10, 10);
+    const Body first = blendEdges(box, {nearestEdge(box,Vec3(5,0,10),1e-8)},0.5,false);
+    const Body next = blendEdges(first,{nearestEdge(first,Vec3(5,10,0),1e-8)},0.75,false);
+    const Body savedFirst=readBodyBinary(writeBodyBinary(first)), savedNext=readBodyBinary(writeBodyBinary(next));
+    const auto rootHistory=inferHistory({},first);
+    const auto names=propagateNames(first,rootHistory,{},"f1");
+    const auto history=inferHistory({&first},next);
+    const auto expected=propagateNames(next,history,{&names},"f2");
+    const auto savedNames=propagateNames(savedFirst,inferHistory({},savedFirst),{},"f1");
+    const auto actual=propagateNames(savedNext,inferHistory({&savedFirst},savedNext),{&savedNames},"f2");
+    FK_CHECK(actual.faces==expected.faces);
+    FK_CHECK(actual.edges==expected.edges);
+    FK_CHECK(actual.vertices==expected.vertices);
+    // Modifiche reali non devono ereditare l'identita' dell'appoggio.
+    Body sheet=makePlaneSheet(Frame3(),1.0);
+    std::vector<Vec3> poles;
+    for(int i=0;i<4;++i)for(int j=0;j<4;++j)poles.emplace_back(-1+2.0*i/3,-1+2.0*j/3,0);
+    const std::vector<double> knots{-1,-1,-1,-1,1,1,1,1};
+    const FaceId face=sheet.faces().front();
+    sheet.face(face).surface=std::make_shared<BSplineSurface>(3,3,knots,knots,4,4,poles);
+    Body extended=sheet;
+    extended.face(face).surface=std::make_shared<BSplineSurface>(extendBSplineSurface(
+        static_cast<const BSplineSurface&>(*sheet.face(face).surface),{-1.25,1.5},{-1.5,1.25}));
+    const auto preserved=inferHistory({&sheet},extended);
+    FK_CHECK(preserved.evolution(EntityKind::Face,0,face.index)==Evolution::Unchanged);
+    poles[5][2]=0.01;
+    extended.face(face).surface=std::make_shared<BSplineSurface>(3,3,knots,knots,4,4,poles);
+    FK_CHECK(inferHistory({&sheet},extended).deleted(EntityKind::Face,0,face.index));
+}
+
+FK_TEST(HistoryRootWithNullOperands) {
+    const Body body=makeBox(Frame3(),2,3,4);
+    const auto root=inferHistory({},body), nullRoot=inferHistory({nullptr,nullptr},body);
+    FK_CHECK(nullRoot.operandCount()==2);
+    const auto names=propagateNames(body,root,{},"root");
+    const auto nullNames=propagateNames(body,nullRoot,{nullptr,nullptr},"root");
+    FK_CHECK(names.faces==nullNames.faces&&names.edges==nullNames.edges&&names.vertices==nullNames.vertices);
+    for(auto id:body.faces())FK_CHECK(nullRoot.origins(EntityKind::Face,id.index).empty());
+    CancellationScope cancelled(std::make_shared<std::atomic<bool>>(true));
+    bool stopped=false;try{inferHistory({},body);}catch(const OperationCancelled &){stopped=true;}
+    FK_CHECK(stopped);
 }

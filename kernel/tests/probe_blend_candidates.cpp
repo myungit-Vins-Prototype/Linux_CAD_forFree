@@ -1,5 +1,6 @@
 // Diagnostica sperimentale, separata dall'app e dalla suite automatica.
-// c++ -std=c++17 -O2 -I kernel kernel/tests/probe_blend_candidates.cpp \
+// Comando (unire le due righe):
+// c++ -std=c++17 -O2 -I kernel kernel/tests/probe_blend_candidates.cpp
 //   forgecad-cuda-build/kernel/libforgekernel.a -o /tmp/probe_blend_candidates
 // /tmp/probe_blend_candidates file.body capFace radius seedsPerFace randomSeed [seamHalfSamples] [sampleIndex] [transitionFace transitionEdge]
 // CSV su stdout, riepilogo su stderr. Non costruisce ne' modifica un B-rep.

@@ -4,6 +4,7 @@
 #include <QString>
 #include <QStringList>
 #include <memory>
+#include <vector>
 
 #include "cad_types.h"
 #include "fk_history.h"
@@ -24,6 +25,18 @@ namespace ForgeCad {
 // Un B-rep gia' registrato (feature soppressa: lo stesso della base) resta.
 void registerFeatureGenealogy(const ExtrusionObject &body, int index, const QVector<SketchObject> &sketches,
                               const QVector<ExtrusionObject> &bodies);
+
+// Gli operandi effettivi della genealogia, nell'ordine dei legami del kernel.
+// I puntatori deboli non prolungano la vita dei risultati precedenti.
+struct GenealogyOperand {
+    int index = -1;
+    quint64 featureId = 0;
+    QString name;
+    std::weak_ptr<const Kernel::Body> body;
+};
+QVector<GenealogyOperand> genealogyOperandsOf(const Kernel::Body &body);
+QString entityEvolutionText(const Kernel::Body &body, Kernel::EntityKind kind, int index);
+QString featureEvolutionText(const Kernel::Body &body);
 
 // Nomi delle entita' del B-rep (nullptr se non e' registrato).
 std::shared_ptr<const Kernel::ElementNames> elementNamesOf(const Kernel::Body &body);

@@ -326,6 +326,19 @@ struct EdgePoint {
     // parametri e al riordino della storia. Vuoto nei documenti fino al 48.
     QString name{};
 };
+// Esito diagnostico di una risoluzione: solo runtime, non si serializza.
+enum class TopologyResolutionMethod { Name, Identity, Geometry, Ambiguous, Missing };
+struct TopologyReferenceResolution {
+    int kind = -1;  // 3 vertice, 4 spigolo, 5 faccia (come GeometryRef)
+    EdgePoint reference;
+    int resolvedSubshape = -1;
+    int candidates = 0;
+    TopologyResolutionMethod method = TopologyResolutionMethod::Missing;
+    QString warning;
+    int sourceIndex = -1;
+    quint64 sourceFeatureId = 0;
+    bool currentCheck = false;  // verifica corrente di uno snapshot senza audit
+};
 inline constexpr int kEdgePointEdge = 0;
 inline constexpr int kEdgePointFaceBoundary = 1;
 
@@ -741,6 +754,7 @@ struct ExtrusionObject {
     // Esito non bloccante del calcolo (scarti della superficie di
     // riempimento); non si salva.
     QString notice;
+    QVector<TopologyReferenceResolution> referenceResolutions;  // audit dell'ultimo calcolo, non si salva
     BodyDisplay display;
     // forgeBody, display ed error vengono dallo snapshot salvato: alla prima
     // apertura si usano invece di ricalcolare e ritassellare il corpo.

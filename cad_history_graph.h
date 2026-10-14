@@ -29,6 +29,9 @@ public:
     void zoomBy(double factor);
     double zoomFactor() const;
 
+    QString featureDiagnostics(int index) const;
+    QVector<TopologyReferenceResolution> referenceDiagnostics(int index) const;
+
     int nodeCount() const { return nodeCount_; }
     int edgeCount() const { return edgeCount_; }
     int invalidDependencyCount() const { return invalidDependencies_; }
@@ -39,6 +42,7 @@ private:
     void rebuildWhenPointerIdle();
 
     DocumentState document_;
+    QVector<QVector<TopologyReferenceResolution>> referenceDiagnostics_;
     QGraphicsScene *scene_ = nullptr;
     QGraphicsView *view_ = nullptr;
     QTextBrowser *details_ = nullptr;
