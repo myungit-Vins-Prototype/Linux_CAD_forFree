@@ -29,6 +29,13 @@ Per istruzione esplicita dell'utente, leggere questo registro all'inizio di ogni
 - Preparazione commit autorizzato: branch feature/storyboard-history, origin allineato (fetch PASS, divergenza 0/0), identita' Git configurata. Si commettono codice, test e istruzioni di questa chat; nessun documento CAD o credenziale incluso. Push senza force; esito da registrare dopo esecuzione.
 
 
+- Commit locale eseguito su autorizzazione dell'utente: 89dd64f, 26 file di codice/test/documentazione, nessun CAD utente. Push origin feature/storyboard-history FALLITO: Git HTTPS non puo' leggere Username; gh non installato, agent SSH e credential helper non configurati. La lettura del remoto pubblico non dimostrava autenticazione di scrittura. Nessun token richiesto o registrato, nessuna modifica forzata del remoto. Sincronizzazione ancora aperta finche' l'utente configura l'autenticazione GitHub sul computer.
+
+
+- Suite kernel completa finale eseguita sull'app Release: 356/357 PASS, /tmp/forgecad-parametric-final-kernel-tests.log; unico fallimento BlendArcsMeetingSegments nel confronto di volume OCCT, preesistente. Confermata assenza di regressioni nei due nuovi test History.
+- Stato al controllo finale del commit: nessuna chiave SSH standard disponibile, oltre all'assenza di gh/agent/helper. Il push non e' stato completato. Matrice documentale ancora attiva: 19 baseline completati, 10 esclusioni, 29 originali ricontrollati con SHA256 e invariati; 1.prt ripetuto con la migrazione corretta e sei varianti stabili. Rapporto provvisorio /tmp/forgecad-parametric-report-20261014.html (rigenerabile con tests/report_document_regression.py), risultati dettagliati /tmp/forgecad-parametric-verified-20261014 e /tmp/forgecad-parametric-migration-verified-20261014. Restano da attendere/analizzare tutte le varianti di Mouse_verificato, prova con loft-CerchiCerchio, prova_ap730materozza, superifici e la ripetizione di Parallelepipedo; non dichiarare conclusa la regressione completa. Il driver restituisce ora errore anche per instabilita'/timeout/crash, oltre alla modifica degli originali.
+
+
 ### Anteprima raccordi Applicatore (2026-10-14, Codex)
 
 - Richiesta: correggere le superfici anomale nelle anteprime dei raccordi mostrate in due screenshot. Documento reale trovato nel percorso indicato dall'utente /home/myungit/Documenti/File_Esempio/Applicatore.prt, analizzato su copia /tmp/Applicatore-preview-input.prt; SHA256 originale 5a8f8f2ed6690764d71e3d0a4847058c04dd140baec7db492fff73836903181c. Nessuna modifica all'originale.

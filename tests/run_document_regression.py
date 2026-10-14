@@ -85,5 +85,7 @@ def main():
     write_manifest()
     (a.output/'integrity.json').write_text(json.dumps({'originals_unchanged':not changed,'changed':changed,'sha256':identities},indent=2)+'\n')
     print(f'Originali invariati: {not changed}. Record: {len(records)}',flush=True)
-    return 1 if changed else 0
+    failed={'unstable','exception','crash','process_error','timeout','rejected_nonatomic'}
+    failures=[row for row in records if row.get('status') in failed or any(case.get('status') in failed for case in row.get('cases',[]))]
+    return 1 if changed or failures else 0
 if __name__=='__main__':raise SystemExit(main())
