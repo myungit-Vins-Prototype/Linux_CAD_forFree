@@ -25,6 +25,7 @@
 #include <QGraphicsView>
 #include <QSurfaceFormat>
 #include <QTemporaryDir>
+#include "../cad_element_names.h"
 #include <QProcess>
 #include <QDateTime>
 #include <QSemaphore>
@@ -3641,6 +3642,80 @@ public:
         viewport.loadDocument(state);
         require(saveDocumentFile(args.at(1), viewport.currentDocument(), true).isEmpty(), "salvataggio copia ricalcolata");
     }
+    // Genealogia delle operazioni: nomi topologici dei riferimenti, scelta per
+    // nome e punto tra i pezzi di una faccia divisa, avviso dei riferimenti
+    // ambigui nell'esito della feature, persistenza nel formato 49.
+    static void genealogyReferences() {
+        using namespace ForgeCad;
+        using namespace ForgeCad::Kernel;
+        DocumentState doc;
+        ExtrusionObject box; box.feature = BodyFeature::Primitive; box.name = QStringLiteral("Base");
+        box.primitive.size[0] = box.primitive.size[1] = box.primitive.size[2] = 10;
+        ExtrusionObject slot; slot.feature = BodyFeature::Primitive; slot.name = QStringLiteral("Cava");
+        slot.primitive.origin[0] = 4; slot.primitive.origin[1] = -1; slot.primitive.origin[2] = 5;
+        slot.primitive.size[0] = 2; slot.primitive.size[1] = 12; slot.primitive.size[2] = 10;
+        ExtrusionObject cut; cut.name = QStringLiteral("Taglio"); cut.operation = 2; cut.firstBody = 0; cut.secondBody = 1;
+        doc.extrusions = {box, slot, cut};
+        CadViewport view;
+        view.loadDocument(doc);
+        require(view.extrusions_.size() == 3 && view.extrusions_.at(2).forgeBody && view.extrusions_.at(2).error.isEmpty(), "taglio costruito");
+        const ForgeBody geometry = view.extrusions_.at(2).forgeBody;
+        const auto faceThrough = [&](const Body &body, const Vec3 &p) {
+            for (FaceId f : body.faces()) {
+                const SurfaceProjection q = projectPoint(*body.face(f).surface, p);
+                if (q.distance <= 1e-9 && classifyPointOnFace(body, f, p, 1e-9) == PointLocation::Inside) return f;
+            }
+            return FaceId();
+        };
+        const FaceId left = faceThrough(*geometry, Vec3(1, 5, 10)), right = faceThrough(*geometry, Vec3(9, 5, 10));
+        require(left.valid() && right.valid() && left != right, "faccia superiore divisa in due");
+        EdgePoint ref = faceReference(*geometry, left, Vec3(1, 5, 10));
+        require(!ref.name.isEmpty() && ref.name.endsWith(QStringLiteral(":+z")), "nome semantico della faccia della primitiva");
+        require(elementNamesOf(*geometry)->find(EntityKind::Face, ref.name.toStdString()).size() == 2, "i due pezzi hanno lo stesso nome");
+        clearReferenceWarnings();
+        require(resolveFaceReference(*geometry, ref, 1e-3, ReferenceState::Other) == left, "il punto sceglie il pezzo giusto");
+        // Indice sbagliato (come dopo uno spostamento nella storia): vale il nome con il punto.
+        EdgePoint shifted = ref;
+        shifted.subshape = right.index;
+        require(resolveFaceReference(*geometry, shifted, 1e-3, ReferenceState::Same) == left, "il nome vale piu' dell'indice");
+        require(takeReferenceWarnings().isEmpty(), "nessun avviso con un solo pezzo sul punto");
+        EdgePoint gap = ref;
+        gap.x = 5;
+        require(resolveFaceReference(*geometry, gap, 1e-3, ReferenceState::Other).valid(), "riferimento ambiguo comunque risolto");
+        const QStringList warnings = takeReferenceWarnings();
+        require(warnings.size() == 1 && warnings.at(0).contains(QStringLiteral("ambiguo")), "riferimento ambiguo segnalato");
+
+        // Raccordo su uno spigolo del pezzo sinistro, salvato e riletto.
+        const EdgeId edge = nearestEdge(*geometry, Vec3(2, 0, 10), 1e-6);
+        require(edge.valid(), "spigolo del pezzo sinistro");
+        const EdgePoint edgeRef = edgeReference(*geometry, edge, Vec3(2, 0, 10));
+        require(!edgeRef.name.isEmpty(), "nome dello spigolo");
+        ExtrusionObject blend; blend.name = QStringLiteral("Raccordo"); blend.feature = BodyFeature::Blend; blend.firstBody = 2;
+        blend.blendSize = 0.5; blend.blendEdges = {edgeRef}; blend.blendBaseFeature = view.extrusions_.at(2).featureId;
+        require(view.createBody(blend).isEmpty() && view.extrusions_.size() == 4 && view.extrusions_.at(3).error.isEmpty(), "raccordo creato");
+        const auto filletNames = elementNamesOf(*view.extrusions_.at(3).forgeBody);
+        require(filletNames != nullptr, "nomi del raccordo");
+        QTemporaryDir directory;
+        const QString file = directory.filePath(QStringLiteral("genealogia.prt"));
+        require(saveDocumentFile(file, view.currentDocument(), false).isEmpty(), "salvataggio formato 49");
+        DocumentState loaded;
+        require(loadDocumentFile(file, loaded).isEmpty() && loaded.extrusions.size() == 4, "rilettura");
+        require(loaded.extrusions.at(3).blendEdges.size() == 1 && loaded.extrusions.at(3).blendEdges.at(0).name == edgeRef.name,
+                "nome del riferimento conservato nel documento");
+
+        // La cava si sposta sotto il punto del riferimento: lo spigolo con quel
+        // nome resta diviso in due pezzi e nessuno contiene il punto. Il raccordo
+        // si rigenera e l'esito dice che il riferimento era ambiguo.
+        ExtrusionObject moved = view.extrusions_.at(1);
+        moved.primitive.origin[0] = 1;
+        require(view.updateBody(1, moved).isEmpty(), "modifica della cava");
+        require(view.extrusions_.at(3).error.isEmpty() && view.extrusions_.at(3).forgeBody, "raccordo rigenerato");
+        require(view.extrusions_.at(3).notice.contains(QStringLiteral("ambiguo")), "esito del raccordo con l'avviso");
+        // Tornando indietro l'avviso sparisce.
+        moved.primitive.origin[0] = 4;
+        require(view.updateBody(1, moved).isEmpty() && view.extrusions_.at(3).error.isEmpty(), "cava rimessa a posto");
+        require(!view.extrusions_.at(3).notice.contains(QStringLiteral("ambiguo")), "nessun avviso con il riferimento univoco");
+    }
     // Modifica -> Rigenera tutto (Ctrl+B): anche le feature lette dallo
     // snapshot del documento si ricalcolano; un passo di Undo.
     static void rebuildAllCommand() {
@@ -5994,6 +6069,10 @@ public:
             require(vertical.valid() && otherVertical.valid(), "spigoli verticali del blocco");
             EdgePoint misleading = edgeReference(*boxBody, vertical, Kernel::Vec3(10, 0, 3));
             misleading.subshape = otherVertical.index;  // stesso tipo e contesto, altro spigolo
+            // Senza nome topologico (documenti fino al formato 48): qui si
+            // verifica la scelta tra ID e punto. Con il nome, che non dipende
+            // dagli indici, decide il nome (test --genealogy).
+            misleading.name.clear();
             require(ForgeCad::resolveEdgeReference(*boxBody, misleading, 1e-3, ForgeCad::ReferenceState::Other) == vertical,
                     "dopo un riordino un ID che non passa per il punto non vale");
             require(ForgeCad::resolveEdgeReference(*boxBody, misleading, 1e-3, ForgeCad::ReferenceState::Same) == otherVertical,
@@ -8693,6 +8772,12 @@ int main(int argc, char **argv) {
     if (app.arguments().contains(QStringLiteral("--workflow-ui"))) {
         try { ViewportInteractionTest::workflowUi(); }
         catch (const std::exception &e) { std::cerr << e.what() << std::endl; return 1; }
+        return 0;
+    }
+    if (app.arguments().contains(QStringLiteral("--genealogy"))) {
+        try { ViewportInteractionTest::genealogyReferences(); }
+        catch (const std::exception &e) { std::cerr << e.what() << std::endl; return 1; }
+        std::cout << "PASS genealogy" << std::endl;
         return 0;
     }
     if (app.arguments().contains(QStringLiteral("--rebuild-all"))) {

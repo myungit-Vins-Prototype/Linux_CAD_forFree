@@ -1,0 +1,44 @@
+#ifndef FORGECAD_ELEMENT_NAMES_H
+#define FORGECAD_ELEMENT_NAMES_H
+
+#include <QString>
+#include <QStringList>
+#include <memory>
+
+#include "cad_types.h"
+#include "fk_history.h"
+
+// Genealogia delle feature nell'applicazione: ogni B-rep costruito da una
+// feature viene registrato con i B-rep degli operandi e il tag della feature
+// (il suo ID persistente). La genealogia (fk_history) e i nomi topologici si
+// calcolano solo quando servono (scelta o risoluzione di un riferimento) e
+// una volta per B-rep; i B-rep sono immutabili e condivisi, per questo la
+// registrazione segue la loro vita (una voce scade con il B-rep).
+namespace ForgeCad {
+
+// Registra il risultato `body.forgeBody` della feature `index`. Gli operandi
+// sono gli stadi precedenti consumati o modificati (base dei raccordi e delle
+// altre feature dello stesso corpo, operandi delle booleane, corpi fusi). Le
+// estrusioni e le primitive danno alle loro facce nuove etichette
+// semantiche (coperchi, fianco per entita' dello schizzo, direzione).
+// Un B-rep gia' registrato (feature soppressa: lo stesso della base) resta.
+void registerFeatureGenealogy(const ExtrusionObject &body, int index, const QVector<SketchObject> &sketches,
+                              const QVector<ExtrusionObject> &bodies);
+
+// Nomi delle entita' del B-rep (nullptr se non e' registrato).
+std::shared_ptr<const Kernel::ElementNames> elementNamesOf(const Kernel::Body &body);
+// Genealogia rispetto agli operandi registrati (nullptr se non registrato).
+std::shared_ptr<const Kernel::BodyHistory> featureHistoryOf(const Kernel::Body &body);
+// Nome principale dell'entita' (vuoto se non c'e').
+QString elementName(const Kernel::Body &body, Kernel::EntityKind kind, int index);
+
+// Avvisi della risoluzione dei riferimenti nel thread corrente (riferimenti
+// ambigui o ritrovati solo per geometria): buildGeometry li raccoglie
+// nell'esito della feature.
+void clearReferenceWarnings();
+void addReferenceWarning(const QString &warning);
+QStringList takeReferenceWarnings();
+
+}
+
+#endif

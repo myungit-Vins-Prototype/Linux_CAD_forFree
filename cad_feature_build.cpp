@@ -1,4 +1,5 @@
 #include "cad_feature_build.h"
+#include "cad_element_names.h"
 #include "cad_curve_extract.h"
 #include "cad_spatial_sketch.h"
 #include "cad_feature_dependencies.h"
@@ -57,6 +58,7 @@ void buildBody(ExtrusionObject &body, int index, const QVector<SketchObject> &sk
         body.curve.reset();
         body.datumValid = false;
         body.solid = !body.forgeBody->isSheet();
+        registerFeatureGenealogy(body, index, sketches, bodies);
     } else {
         body.cachedGeometry = false;
         buildGeometry(body, index, sketches, bodies);
@@ -75,7 +77,24 @@ void buildBody(ExtrusionObject &body, int index, const QVector<SketchObject> &sk
 // `bodies`. In caso d'errore il corpo resta senza geometria con il
 // messaggio in `error`. Usata dalla rigenerazione e dalle anteprime (in un
 // thread, su copie).
+namespace {
+void buildGeometryImpl(ExtrusionObject &body, int index, const QVector<SketchObject> &sketches, const QVector<ExtrusionObject> &bodies);
+}
+
+// Costruzione con la genealogia: il risultato si registra con i suoi
+// operandi (nomi topologici calcolati quando servono, cad_element_names) e gli
+// avvisi della risoluzione dei riferimenti (ambigui) vanno nell'esito.
 void buildGeometry(ExtrusionObject &body, int index, const QVector<SketchObject> &sketches, const QVector<ExtrusionObject> &bodies) {
+    clearReferenceWarnings();
+    buildGeometryImpl(body, index, sketches, bodies);
+    if (body.forgeBody) registerFeatureGenealogy(body, index, sketches, bodies);
+    const QStringList warnings = takeReferenceWarnings();
+    if (!warnings.isEmpty())
+        body.notice = body.notice.isEmpty() ? warnings.join(QLatin1Char('\n')) : body.notice + QLatin1Char('\n') + warnings.join(QLatin1Char('\n'));
+}
+
+namespace {
+void buildGeometryImpl(ExtrusionObject &body, int index, const QVector<SketchObject> &sketches, const QVector<ExtrusionObject> &bodies) {
     body.error.clear();
     body.notice.clear();
     body.forgeBody.reset();
@@ -620,6 +639,7 @@ void buildGeometry(ExtrusionObject &body, int index, const QVector<SketchObject>
     }
     if (body.error.isEmpty() && !hasGeometry(body)) body.error = QStringLiteral("Costruzione non riuscita.");
 }
+}  // namespace
 
 
 

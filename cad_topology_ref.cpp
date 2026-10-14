@@ -4,6 +4,7 @@
 #include <exception>
 #include <limits>
 
+#include "cad_element_names.h"
 #include "fk_classify.h"
 #include "fk_curve_algo.h"
 #include "fk_surface_algo.h"
@@ -62,9 +63,50 @@ enum class Placement { On = 0, OnCarrier = 1, Elsewhere = 2 };
 //    spigolo accorciato); infine la piu' vicina entro `legacyTolerance`.
 template <class Id, class Range, class TypeMatches, class ContextMatches, class Locate, class Metric>
 Id resolve(const EdgePoint &reference, const Range &range, TypeMatches typeMatches, ContextMatches contextMatches, Locate locate,
-           Metric metric, double legacyTolerance, ReferenceState state) {
+           Metric metric, double legacyTolerance, ReferenceState state, const std::vector<Id> *named = nullptr) {
     const bool persistent = reference.subshape >= 0 && reference.geometry >= 0 && reference.context != -1;
     const Id exact(reference.subshape);
+    // Nome topologico (genealogia): vale piu' dell'indice e del punto in ogni
+    // stato, perche' non dipende dall'ordine delle entita'. Piu' entita' con
+    // lo stesso nome (una faccia divisa): decide il punto, e se non basta il
+    // riferimento e' ambiguo e lo si segnala.
+    if (named && !named->empty()) {
+        std::vector<Id> candidates;
+        for (Id id : *named) {
+            try {
+                if (typeMatches(id)) candidates.push_back(id);
+            } catch (const std::exception &) {
+            }
+        }
+        if (candidates.size() == 1) return candidates.front();
+        if (candidates.size() > 1) {
+            if (state == ReferenceState::Same && persistent
+                && std::find(candidates.begin(), candidates.end(), exact) != candidates.end()) {
+                try {
+                    if (contextMatches(exact) && locate(exact) == Placement::On) return exact;
+                } catch (const std::exception &) {
+                }
+            }
+            Id best;
+            int bestTier = 3, onCount = 0;
+            double closest = std::numeric_limits<double>::max();
+            for (Id id : candidates) {
+                try {
+                    const int tier = int(locate(id));
+                    const double d = metric(id);
+                    if (tier == int(Placement::On)) ++onCount;
+                    if (tier < bestTier || (tier == bestTier && d < closest)) best = id, bestTier = tier, closest = d;
+                } catch (const std::exception &) {
+                }
+            }
+            if (best.valid()) {
+                if (onCount != 1)
+                    addReferenceWarning(QStringLiteral("Riferimento ambiguo \"%1\": %2 entita' con lo stesso nome, scelta la piu' vicina al punto salvato.")
+                                            .arg(reference.name).arg(candidates.size()));
+                return best;
+            }
+        }
+    }
     bool exactMatches = false;
     if (persistent) {
         try {
@@ -126,20 +168,42 @@ double placementTolerance(const Vec3 &point, double entityTolerance) {
     return 1e-5 * (1.0 + norm(point)) + 10.0 * entityTolerance;
 }
 
+// Entita' vive con il nome del riferimento (vuoto: niente nome o niente genealogia).
+template <class Id>
+std::vector<Id> namedEntities(const Body &body, EntityKind kind, const EdgePoint &reference) {
+    std::vector<Id> result;
+    if (reference.name.isEmpty()) return result;
+    const std::shared_ptr<const ElementNames> names = elementNamesOf(body);
+    if (!names) return result;
+    for (int index : names->find(kind, reference.name.toStdString()))
+        if (body.contains(Id(index))) result.push_back(Id(index));
+    return result;
+}
+
+void nameReference(const Body &body, EntityKind kind, int index, EdgePoint &reference) {
+    reference.name = elementName(body, kind, index);
+}
+
 }
 
 EdgePoint edgeReference(const Body &body, EdgeId edge, const Vec3 &point) {
     const Edge &e = body.edge(edge);
-    return {point.x(), point.y(), point.z(), edge.index, int(e.curve->type()), edgeContext(body, edge)};
+    EdgePoint reference{point.x(), point.y(), point.z(), edge.index, int(e.curve->type()), edgeContext(body, edge)};
+    nameReference(body, EntityKind::Edge, edge.index, reference);
+    return reference;
 }
 
 EdgePoint faceReference(const Body &body, FaceId face, const Vec3 &point) {
-    return {point.x(), point.y(), point.z(), face.index, int(body.face(face).surface->type()), faceContext(body, face)};
+    EdgePoint reference{point.x(), point.y(), point.z(), face.index, int(body.face(face).surface->type()), faceContext(body, face)};
+    nameReference(body, EntityKind::Face, face.index, reference);
+    return reference;
 }
 
 EdgePoint vertexReference(const Body &body, VertexId vertex) {
     const Vec3 &point = body.vertex(vertex).point;
-    return {point.x(), point.y(), point.z(), vertex.index, 0, vertexContext(body, vertex)};
+    EdgePoint reference{point.x(), point.y(), point.z(), vertex.index, 0, vertexContext(body, vertex)};
+    nameReference(body, EntityKind::Vertex, vertex.index, reference);
+    return reference;
 }
 
 QVector<EdgePoint> freeBoundaryLoop(const Body &body, EdgeId edge) {
@@ -190,6 +254,7 @@ QVector<EdgePoint> freeBoundaryLoop(const Body &body, EdgeId edge) {
 
 EdgeId resolveEdgeReference(const Body &body, const EdgePoint &reference, double legacyTolerance, ReferenceState state) {
     const Vec3 point(reference.x, reference.y, reference.z);
+    const std::vector<EdgeId> named = namedEntities<EdgeId>(body, EntityKind::Edge, reference);
     return resolve<EdgeId>(reference, body.edges(), [&](EdgeId edge) {
         return int(body.edge(edge).curve->type()) == reference.geometry;
     }, [&](EdgeId edge) {
@@ -206,11 +271,12 @@ EdgeId resolveEdgeReference(const Body &body, const EdgePoint &reference, double
     }, [&](EdgeId edge) {
         const Edge &e = body.edge(edge);
         return projectPoint(*e.curve, point, e.range).distance;
-    }, legacyTolerance, state);
+    }, legacyTolerance, state, &named);
 }
 
 FaceId resolveFaceReference(const Body &body, const EdgePoint &reference, double legacyTolerance, ReferenceState state) {
     const Vec3 point(reference.x, reference.y, reference.z);
+    const std::vector<FaceId> named = namedEntities<FaceId>(body, EntityKind::Face, reference);
     // Tolleranza delle facce: quella degli edge dei loro bordi.
     const auto faceTolerance = [&](FaceId face) {
         double tolerance = 0.0;
@@ -239,7 +305,7 @@ FaceId resolveFaceReference(const Body &body, const EdgePoint &reference, double
                 nearest = std::min(nearest, projectPoint(*e.curve, point, e.range).distance);
             }
         return nearest;
-    }, legacyTolerance, state);
+    }, legacyTolerance, state, &named);
 }
 
 std::vector<EdgeId> faceBoundaryEdges(const Body &body, FaceId face) {
@@ -276,13 +342,14 @@ bool resolveBlendEdges(const Body &body, const QVector<EdgePoint> &references, d
 
 VertexId resolveVertexReference(const Body &body, const EdgePoint &reference, double legacyTolerance, ReferenceState state) {
     const Vec3 point(reference.x, reference.y, reference.z);
+    const std::vector<VertexId> named = namedEntities<VertexId>(body, EntityKind::Vertex, reference);
     return resolve<VertexId>(reference, body.vertices(), [&](VertexId) { return reference.geometry == 0; },
                              [&](VertexId vertex) { return vertexContext(body, vertex) == reference.context; },
                              [&](VertexId vertex) {
                                  return distance(body.vertex(vertex).point, point) <= placementTolerance(point, body.vertex(vertex).tolerance)
                                      ? Placement::On : Placement::Elsewhere;
                              },
-                             [&](VertexId vertex) { return distance(body.vertex(vertex).point, point); }, legacyTolerance, state);
+                             [&](VertexId vertex) { return distance(body.vertex(vertex).point, point); }, legacyTolerance, state, &named);
 }
 
 void upgradeTopologyReferences(QVector<ExtrusionObject> &features) {
@@ -292,8 +359,10 @@ void upgradeTopologyReferences(QVector<ExtrusionObject> &features) {
                 if (features.at(index).featureId == ref.featureId) return index;
         return ref.index;
     };
+    // Dal formato 49 i riferimenti hanno anche il nome topologico: quelli
+    // presi prima lo ricevono qui dall'entita' in cui si risolvono ora.
     const auto upgrade = [&](GeometryRef &ref) {
-        if (ref.kind < 3 || ref.kind > 5 || ref.point.subshape >= 0) return;
+        if (ref.kind < 3 || ref.kind > 5 || (ref.point.subshape >= 0 && !ref.point.name.isEmpty())) return;
         const int index = owner(ref);
         if (index < 0 || index >= features.size() || !features.at(index).forgeBody) return;
         const Body &body = *features.at(index).forgeBody;
@@ -311,14 +380,17 @@ void upgradeTopologyReferences(QVector<ExtrusionObject> &features) {
             if (face.valid()) ref.point = faceReference(body, face, Vec3(ref.point.x, ref.point.y, ref.point.z));
         }
     };
-    const auto upgradeEdges = [&](QVector<EdgePoint> &refs, int base) {
+    const auto upgradeEdges = [&](QVector<EdgePoint> &refs, int base, bool sameBase) {
         if (base < 0 || base >= features.size() || !features.at(base).forgeBody) return;
         const Body &body = *features.at(base).forgeBody;
         Box box;
         for (VertexId vertex : body.vertices()) box.add(body.vertex(vertex).point);
         const double tolerance = 1e-3 * std::max(1.0, box.diagonal());
         for (EdgePoint &ref : refs) {
-            if (ref.subshape >= 0 || ref.role != kEdgePointEdge) continue;
+            if (ref.role != kEdgePointEdge) continue;
+            // Un riferimento persistente si completa con il nome solo sulla
+            // base su cui e' stato preso (dopo un riordino l'indice e' un altro).
+            if (ref.subshape >= 0 && (!ref.name.isEmpty() || !sameBase)) continue;
             const EdgeId edge = resolveEdgeReference(body, ref, tolerance);
             if (edge.valid()) ref = edgeReference(body, edge, Vec3(ref.x, ref.y, ref.z));
         }
@@ -338,26 +410,29 @@ void upgradeTopologyReferences(QVector<ExtrusionObject> &features) {
         upgrade(feature.curveExtraction.source);
         for(auto &ref:feature.curveExtraction.sources)upgrade(ref);
         upgrade(feature.curveExtraction.tool);
-        if (feature.feature == BodyFeature::Blend || feature.feature == BodyFeature::SheetExtend)
-            upgradeEdges(feature.blendEdges, feature.firstBody);
+        if (feature.feature == BodyFeature::Blend || feature.feature == BodyFeature::SheetExtend) {
+            const bool sameBase = feature.firstBody >= 0 && feature.firstBody < features.size()
+                               && (feature.blendBaseFeature == 0 || feature.blendBaseFeature == features.at(feature.firstBody).featureId);
+            upgradeEdges(feature.blendEdges, feature.firstBody, sameBase);
+        }
         if ((feature.feature == BodyFeature::Draft || feature.feature == BodyFeature::Thicken || feature.feature == BodyFeature::SurfaceOffset || feature.feature == BodyFeature::DeleteFace || feature.feature == BodyFeature::Shell) && feature.firstBody >= 0 && feature.firstBody < features.size()
             && features.at(feature.firstBody).forgeBody) {
             const Body &body = *features.at(feature.firstBody).forgeBody;
             for (EdgePoint &ref : feature.offsetFaces) {
-                if (ref.subshape >= 0) continue;
+                if (ref.subshape >= 0 && !ref.name.isEmpty()) continue;
                 const FaceId face = resolveFaceReference(body, ref, std::numeric_limits<double>::max());
                 if (face.valid()) ref = faceReference(body, face, Vec3(ref.x, ref.y, ref.z));
             }
         }
         if (feature.feature == BodyFeature::Thread && feature.firstBody >= 0 && feature.firstBody < features.size()
-            && features.at(feature.firstBody).forgeBody && feature.thread.face.subshape < 0) {
+            && features.at(feature.firstBody).forgeBody && (feature.thread.face.subshape < 0 || feature.thread.face.name.isEmpty())) {
             const Body &body = *features.at(feature.firstBody).forgeBody;
             const Vec3 point(feature.thread.face.x, feature.thread.face.y, feature.thread.face.z);
             const FaceId face = resolveFaceReference(body, feature.thread.face, std::numeric_limits<double>::max());
             if (face.valid()) feature.thread.face = faceReference(body, face, point);
         }
         if (feature.feature == BodyFeature::Helix && feature.helix.source != 0 && feature.firstBody >= 0
-            && feature.firstBody < features.size() && features.at(feature.firstBody).forgeBody && feature.helix.reference.subshape < 0) {
+            && feature.firstBody < features.size() && features.at(feature.firstBody).forgeBody && (feature.helix.reference.subshape < 0 || feature.helix.reference.name.isEmpty())) {
             const Body &body = *features.at(feature.firstBody).forgeBody;
             const Vec3 point(feature.helix.reference.x, feature.helix.reference.y, feature.helix.reference.z);
             if (feature.helix.source == 1) {

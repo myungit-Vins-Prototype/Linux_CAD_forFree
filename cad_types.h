@@ -321,6 +321,10 @@ struct EdgePoint {
     // dopo che altre feature ne hanno cambiato i bordi (riordino della storia),
     // e i suoi bordi si prendono sullo stato corrente.
     int role = 0;
+    // Nome topologico persistente (genealogia delle operazioni, fk_history):
+    // non dipende dagli indici, quindi sopravvive alla rigenerazione con altri
+    // parametri e al riordino della storia. Vuoto nei documenti fino al 48.
+    QString name{};
 };
 inline constexpr int kEdgePointEdge = 0;
 inline constexpr int kEdgePointFaceBoundary = 1;

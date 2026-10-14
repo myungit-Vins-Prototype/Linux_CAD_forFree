@@ -83,6 +83,8 @@ add_executable(forgecad
     cad_model_history.cpp
     cad_topology_ref.h
     cad_topology_ref.cpp
+    cad_element_names.h
+    cad_element_names.cpp
     cad_kernel.h
     cad_kernel.cpp
     cad_forge.h
@@ -213,6 +215,8 @@ if(FORGECAD_BUILD_VIEW_TESTS)
         set_tests_properties(${name} PROPERTIES
             ENVIRONMENT "QT_QPA_PLATFORM=offscreen;QT_QPA_PLATFORMTHEME=;QT_STYLE_OVERRIDE=Fusion")
     endfunction()
+    forgecad_add_view_test(forgecad_genealogy_tests --genealogy)
+    set_tests_properties(forgecad_genealogy_tests PROPERTIES TIMEOUT 60)
     forgecad_add_view_test(forgecad_mouse_snapshot_tests --mouse-snapshot)
     set_tests_properties(forgecad_mouse_snapshot_tests PROPERTIES TIMEOUT 120)
     forgecad_add_view_test(forgecad_sketch_reference_workflow_tests --sketch-reference-workflow)

@@ -55,6 +55,8 @@ add_library(forgekernel STATIC
     fk_boolean.cpp
     fk_unify.h
     fk_unify.cpp
+    fk_history.h
+    fk_history.cpp
     fk_tessellate.h
     fk_tessellate.cpp
     fk_nurbs.h
@@ -178,6 +180,7 @@ add_executable(forgekernel_tests
     tests/test_shell.cpp
     tests/test_loft_surfaces.cpp
     tests/test_sweep_surfaces.cpp
+    tests/test_history.cpp
 )
 target_link_libraries(forgekernel_tests PRIVATE
     forgekernel
@@ -192,6 +195,18 @@ target_compile_definitions(forgekernel_tests PRIVATE FORGECAD_SOURCE_DIR="${PROJ
 set_target_properties(forgekernel_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
 
 add_test(NAME forgekernel_tests COMMAND forgekernel_tests)
+
+# Genealogia delle operazioni: solo il kernel, senza OCCT (eseguibile anche
+# dove le librerie di riferimento non ci sono).
+add_executable(forgekernel_history_tests
+    tests/fk_test.h
+    tests/fk_test_main.cpp
+    tests/test_history.cpp
+)
+target_link_libraries(forgekernel_history_tests PRIVATE forgekernel)
+target_compile_options(forgekernel_history_tests PRIVATE -Wall -Wextra -Wpedantic -O2 -g)
+set_target_properties(forgekernel_history_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
+add_test(NAME forgekernel_history_tests COMMAND forgekernel_history_tests)
 
 # Diagnostica del raccordo non locale: non e' collegata all'applicazione.
 # Il self-test controlla casi geometrici analitici, senza dipendere da OCCT.

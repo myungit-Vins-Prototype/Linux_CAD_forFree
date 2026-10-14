@@ -64,7 +64,7 @@ constexpr char kMagic[4] = {'F', 'C', 'A', 'D'};
 // 42 sezioni e guide loft da bordi; 43 ordine delle guide.
 // 44 estrazione associativa di curve 3D, segmento e vista salvata del taglio.
 // 45 schizzi spaziali con entita' e punti XYZ in double.
-constexpr quint16 kVersion = 48;
+constexpr quint16 kVersion = 49;
 constexpr quint8 kZlib = 1;
 
 void write(QDataStream &out, const CurveObject &curve) {
@@ -304,6 +304,33 @@ bool readRefs(QDataStream &in, QVector<GeometryRef> &refs, quint16 version) {
     return in.status() == QDataStream::Ok;
 }
 
+// Tutti i riferimenti a sotto-entita' B-rep della feature, in un ordine fisso
+// (formato 49: i nomi topologici si scrivono e si leggono in quest'ordine).
+template <class Body, class Visit>
+void forEachEdgePoint(Body &body, Visit visit) {
+    for (auto &e : body.blendEdges) visit(e);
+    visit(body.trimKeep);
+    visit(body.scaleCenter);
+    visit(body.helix.reference);
+    for (auto &e : body.offsetFaces) visit(e);
+    visit(body.thread.face);
+    visit(body.trimToolKeep);
+    for (auto &r : body.datum.refs) visit(r.point);
+    for (auto &r : body.pattern.refs) visit(r.point);
+    visit(body.extentRef.point);
+    visit(body.move.axis.point);
+    for (auto *refs : {&body.ruledFirst, &body.ruledSecond, &body.planarRefs, &body.loftStartFaces, &body.loftEndFaces, &body.loftSections,
+                       &body.loftEdgeGuides, &body.curveExtraction.sources})
+        for (auto &r : *refs) visit(r.point);
+    visit(body.revolveAxisRef.point);
+    visit(body.draftNeutral.point);
+    visit(body.thickenDirection.point);
+    visit(body.curveExtraction.source.point);
+    visit(body.curveExtraction.tool.point);
+    visit(body.sweepProfileRef.point);
+    visit(body.sweepPathRef.point);
+}
+
 void write(QDataStream &out, const ExtrusionObject &body) {
     out << body.name << qint32(body.sketchIndex) << qint32(body.plane) << body.distance << body.visible
         << qint32(body.operation) << qint32(body.feature) << qint32(body.revolveAxis) << body.revolveAngle;
@@ -427,6 +454,10 @@ void write(QDataStream &out, const ExtrusionObject &body) {
     writeRefs(out,body.curveExtraction.sources);
     // Formato 48: sezione e percorso sweep da bordi e curve 3D.
     writeRefs(out, {body.sweepProfileRef, body.sweepPathRef});
+    // Formato 49: nomi topologici persistenti dei riferimenti (genealogia).
+    QStringList names;
+    forEachEdgePoint(body, [&](const EdgePoint &e) { names.append(e.name); });
+    out << names;
 }
 
 // `extras` (solo formato 5): i file scritti durante lo sviluppo del formato 5
@@ -723,6 +754,15 @@ bool read(QDataStream &in, ExtrusionObject &body, quint16 version, int extras) {
         QVector<GeometryRef> refs;
         if (!readRefs(in, refs, version) || refs.size() != 2) return false;
         body.sweepProfileRef = refs[0]; body.sweepPathRef = refs[1];
+    }
+    if (version >= 49) {
+        QStringList names;
+        in >> names;
+        int count = 0;
+        forEachEdgePoint(body, [&](EdgePoint &) { ++count; });
+        if (in.status() != QDataStream::Ok || names.size() != count) return false;
+        int next = 0;
+        forEachEdgePoint(body, [&](EdgePoint &e) { e.name = names.at(next++); });
     }
     const BodyFeature last = version >= 45 ? BodyFeature::SpatialSketch : version >= 44 ? BodyFeature::ExtractedCurve : version >= 39 ? BodyFeature::Thicken : version >= 38 ? BodyFeature::ProjectedCurve : version >= 36 ? BodyFeature::Draft : version >= 35 ? BodyFeature::FillSurface : version >= 27 ? BodyFeature::Thread : version >= 25 ? BodyFeature::Shell : BodyFeature::PlanarSurface;
     if (int(body.feature) < 0 || int(body.feature) > int(last)) return false;
