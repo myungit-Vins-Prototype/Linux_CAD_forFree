@@ -277,9 +277,11 @@ std::vector<EdgeId> planarChainRuns(const Body &body, const std::vector<EdgeId> 
 }
 
 Body blendPlanarChains(const Body &input, const std::vector<EdgeId> &selected, double size, bool chamfer, const std::vector<ChamferSides> *sides,
-                       FaceId preferredPlane) {
+                       FaceId preferredPlane, BodyHistory *history) {
+    if (history) *history = BodyHistory();
     if (!(size > kLinearResolution)) throw std::domain_error("blendEdges: raggio o distanza non validi");
     Body body = input;
+    std::map<int, int> edgeSources;
     std::vector<EdgeId> edges = selected;
     std::map<int, ChamferSides> sideOf;
     if (sides)
@@ -293,6 +295,7 @@ Body blendPlanarChains(const Body &input, const std::vector<EdgeId> &selected, d
         const double middle = 0.5 * (edge.range.lo + edge.range.hi);
         const EdgeId half = body.semv(e, edge.curve->point(middle), middle).edge;
         if (sideOf.count(e.index)) sideOf[half.index] = sideOf[e.index];
+        if (history) edgeSources[half.index] = e.index;
         edges.push_back(half);
     }
     // Distanze in T e sul fianco dell'edge della fin (in T).
@@ -367,7 +370,7 @@ Body blendPlanarChains(const Body &input, const std::vector<EdgeId> &selected, d
         chains.push_back(std::move(chain));
     }
 
-    Model model(body);
+    Model model(body, history ? &input : nullptr, edgeSources);
     std::set<int> usedVertices;
     for (Chain &chain : chains) {
         cancellationPoint();
@@ -656,7 +659,7 @@ Body blendPlanarChains(const Body &input, const std::vector<EdgeId> &selected, d
             const Vec3 normal = cross(d[Surface::derivativeIndex(1, 0, 1)], d[Surface::derivativeIndex(0, 1, 1)]);
             const Vec3 towardCorner = edge.curve->point(middle) - d[0];
             face.sense = (dot(normal, towardCorner) > 0.0) == convex;
-            model.faces.push_back(std::move(face));
+            model.addGeneratedFace(std::move(face), EntityKind::Edge, edgeSources.count(fin.edge.index) ? edgeSources.at(fin.edge.index) : fin.edge.index);
             const ChainVertex &a = vertices[std::size_t(i)], &b = vertices[std::size_t((i + 1) % vertexCount)];
             const int lo = fin.sense ? a.inPlanePoint : b.inPlanePoint, hi = fin.sense ? b.inPlanePoint : a.inPlanePoint;
             const int wlo = fin.sense ? a.wallPoint : b.wallPoint, whi = fin.sense ? b.wallPoint : a.wallPoint;
@@ -870,12 +873,14 @@ Body blendPlanarChains(const Body &input, const std::vector<EdgeId> &selected, d
             model.faces[std::size_t(fin.face)].loops.push_back(std::move(loop));
         }
     }
-    Body result = model.build();
+    BodyHistory declared;
+    Body result = model.build(history ? &declared : nullptr);
     computePCurves(result);
     CheckOptions checks;
     checks.loopCrossings = true;  // un raccordo che invade un altro contorno della faccia
     const std::vector<CheckIssue> issues = checkBody(result, checks);
     if (!issues.empty()) throw std::domain_error("blendEdges: raccordo non valido (" + describe(issues.front().code) + ": " + issues.front().message + ")");
+    if (history) *history = std::move(declared);
     return result;
 }
 

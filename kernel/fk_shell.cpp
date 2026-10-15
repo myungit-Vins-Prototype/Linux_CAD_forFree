@@ -1,4 +1,5 @@
 #include "fk_shell.h"
+#include "fk_history_tools.h"
 
 #include <algorithm>
 #include <functional>
@@ -36,7 +37,7 @@ Vec3 outwardNormal(const Body &body, FaceId f, const Vec3 &p) {
 
 
 // Lastra di una faccia piana: la regione della faccia estrusa verso l'interno.
-Body planarSlab(const Body &body, FaceId f, const Plane &plane, double thickness, double tolerance) {
+Body planarSlab(const Body &body, FaceId f, const Plane &plane, double thickness, double tolerance, BodyHistory *history) {
     const Face &face = body.face(f);
     // Un punto della faccia per il verso: il primo vertice del primo loop.
     const Vec3 sample = body.finPoint(body.loop(face.loops.front()).first, 0.5);
@@ -49,11 +50,22 @@ Body planarSlab(const Body &body, FaceId f, const Plane &plane, double thickness
             const Edge &edge = body.edge(body.fin(fin).edge);
             edgeTolerance = std::max(edgeTolerance, edge.tolerance);
             const PlanarImage image = planarImage(*edge.curve, edge.range, frame);
-            if (image.curve) segments.push_back({image.curve, image.range});
+            if (image.curve) segments.push_back({image.curve, image.range, body.fin(fin).edge.index});
         }
     const Profile profile = buildProfile(segments, std::max(tolerance, 2.0 * edgeTolerance));
     if (profile.regions.size() != 1) throw std::domain_error("guscio: regione di una faccia piana non valida");
-    return makeExtrusion(frame, profile.regions.front(), thickness);
+    ExtrusionProvenance origins;
+    Body result=makeExtrusion(frame,profile.regions.front(),thickness,history?&origins:nullptr);
+    if(history) {
+        auto emitted=makeHistory({&body},result);
+        for(const auto &o:origins.faces) {
+            const bool side=o.role==ExtrusionFaceRole::Side;
+            emitted.declareOrigins(EntityKind::Face,o.face.index,{{0,side?EntityKind::Edge:EntityKind::Face,side?o.source:f.index,
+                side?HistoryRelation::Generated:o.role==ExtrusionFaceRole::Start?HistoryRelation::Same:HistoryRelation::Modified}});
+        }
+        *history=std::move(emitted);
+    }
+    return result;
 }
 
 // Coppia di curve resa compatibile: stessi nodi (stesso grado, stesso dominio).
@@ -190,11 +202,17 @@ Body rimSheet(const Body &body, FaceId f, FaceId neighbor, const Edge &edge, con
 // (offsetFaces le tiene cucite lungo gli spigoli tangenti) e le fasce lungo il
 // bordo del gruppo, cucite in un solido. Un gruppo senza bordo (tutto il corpo
 // liscio) da' direttamente il solido interno: la lastra e' il corpo meno quello.
-Body groupSlab(const Body &body, const std::vector<FaceId> &group, double thickness, double tolerance) {
+Body groupSlab(const Body &body, const std::vector<FaceId> &group, double thickness, double tolerance, BodyHistory *history) {
     const OffsetResult offset = offsetFaces(body, group, -thickness);
-    const Body original = facesAsSheet(body, group);
+    BodyHistory originalHistory;
+    const Body original = facesAsSheet(body, group, history?&originalHistory:nullptr);
     const auto inGroup = [&](FaceId f) { return std::find(group.begin(), group.end(), f) != group.end(); };
     std::vector<Body> rims;
+    std::vector<BodyHistory> rimHistories;
+    const auto addRim=[&](Body rim,EdgeId edge) {
+        if(history)rimHistories.push_back(detail::generatedFaces(body,rim,{{0,EntityKind::Edge,edge.index,HistoryRelation::Generated}}));
+        rims.push_back(std::move(rim));
+    };
     for (FaceId f : group)
         for (LoopId l : body.face(f).loops)
             for (FinId fin : body.loopFins(l)) {
@@ -206,21 +224,26 @@ Body groupSlab(const Body &body, const std::vector<FaceId> &group, double thickn
                 // Un edge chiuso in due meta' (la fascia ha quattro lati).
                 if (distance(edge.curve->point(edge.range.lo), edge.curve->point(edge.range.hi)) <= tolerance) {
                     const double mid = 0.5 * (edge.range.lo + edge.range.hi);
-                    rims.push_back(rimSheet(body, f, neighbor, edge, {edge.range.lo, mid}, thickness));
-                    rims.push_back(rimSheet(body, f, neighbor, edge, {mid, edge.range.hi}, thickness));
+                    addRim(rimSheet(body, f, neighbor, edge, {edge.range.lo, mid}, thickness),e);
+                    addRim(rimSheet(body, f, neighbor, edge, {mid, edge.range.hi}, thickness),e);
                 } else {
-                    rims.push_back(rimSheet(body, f, neighbor, edge, edge.range, thickness));
+                    addRim(rimSheet(body, f, neighbor, edge, edge.range, thickness),e);
                 }
             }
     if (rims.empty()) {
-        SewResult inner = sewSheets({&offset.body}, 10.0 * tolerance, true);
+        BodyHistory sewn,cut;
+        SewResult inner = sewSheets({&offset.body},10.0*tolerance,true,history?&sewn:nullptr);
         if (!inner.solid) throw std::domain_error("guscio: la superficie interna non si chiude");
-        return booleanOperation(body, inner.body, BooleanOperation::Subtract);
+        Body result=booleanOperation(body,inner.body,BooleanOperation::Subtract,{},history?&cut:nullptr);
+        if(history){auto innerHistory=detail::transportHistory(sewn,{&offset.history});auto original=detail::indexHistory(body,body,HistoryRelation::Same);*history=detail::transportHistory(cut,{&original,&innerHistory});}
+        return result;
     }
     std::vector<const Body *> sheets{&original, &offset.body};
     for (const Body &rim : rims) sheets.push_back(&rim);
-    SewResult sewn = sewSheets(sheets, 10.0 * tolerance, true);
+    BodyHistory stage;
+    SewResult sewn = sewSheets(sheets,10.0*tolerance,true,history?&stage:nullptr);
     if (!sewn.solid) throw std::domain_error("guscio: la lastra di un gruppo di facce non si chiude");
+    if(history){std::vector<const BodyHistory *> maps{&originalHistory,&offset.history};for(const auto &h:rimHistories)maps.push_back(&h);*history=detail::transportHistory(stage,maps);}
     return std::move(sewn.body);
 }
 
@@ -248,7 +271,8 @@ Body tube(const Edge &edge, double radius) {
 
 }
 
-Body shellBody(const Body &solid, const std::vector<FaceId> &removed, double thickness) {
+Body shellBody(const Body &solid, const std::vector<FaceId> &removed, double thickness, BodyHistory *history) {
+    if(history)*history={};
     if (solid.isSheet()) throw std::domain_error("guscio: serve un solido");
     if (!(thickness > kLinearResolution)) throw std::domain_error("guscio: lo spessore deve essere positivo");
     double scale = 1.0;
@@ -299,13 +323,16 @@ Body shellBody(const Body &solid, const std::vector<FaceId> &removed, double thi
         groups[std::size_t(groupOf[std::size_t(r)])].push_back(kept[k]);
     }
     std::vector<Body> parts;
+    std::vector<BodyHistory> partHistories;
     for (const std::vector<FaceId> &group : groups) {
         const Face &face = solid.face(group.front());
         SurfacePtr plane = face.surface->type() == SurfaceType::Plane ? face.surface : planarEquivalent(*face.surface);
+        BodyHistory emitted;
         if (group.size() == 1 && plane && plane->type() == SurfaceType::Plane)
-            parts.push_back(planarSlab(solid, group.front(), static_cast<const Plane &>(*plane), thickness, tolerance));
+            parts.push_back(planarSlab(solid,group.front(),static_cast<const Plane &>(*plane),thickness,tolerance,history?&emitted:nullptr));
         else
-            parts.push_back(groupSlab(solid, group, thickness, tolerance));
+            parts.push_back(groupSlab(solid,group,thickness,tolerance,history?&emitted:nullptr));
+        if(history)partHistories.push_back(std::move(emitted));
     }
     // Spigoli concavi tra due facce tenute: tubo di raggio pari allo spessore.
     for (EdgeId e : solid.edges()) {
@@ -320,17 +347,26 @@ Body shellBody(const Body &solid, const std::vector<FaceId> &removed, double thi
         const Vec3 turn = cross(na, nb);
         if (norm(turn) < 1e-6) continue;  // facce tangenti
         // La fin forward percorre l'edge nel verso della curva con la faccia a sinistra.
-        if (dot(turn, d[1]) < 0.0) parts.push_back(tube(edge, thickness));
+        if (dot(turn,d[1])<0.0) {
+            parts.push_back(tube(edge,thickness));
+            if(history)partHistories.push_back(detail::generatedFaces(solid,parts.back(),{{0,EntityKind::Edge,e.index,HistoryRelation::Generated}}));
+        }
     }
     // Unione ad albero bilanciato, poi la parte dentro il solido.
-    while (parts.size() > 1) {
-        std::vector<Body> next;
-        for (std::size_t k = 0; k + 1 < parts.size(); k += 2)
-            next.push_back(booleanOperation(parts[k], parts[k + 1], BooleanOperation::Unite));
-        if (parts.size() % 2 == 1) next.push_back(std::move(parts.back()));
-        parts = std::move(next);
+    while(parts.size()>1) {
+        std::vector<Body> next;std::vector<BodyHistory> nextHistories;
+        for(std::size_t k=0;k+1<parts.size();k+=2) {
+            BodyHistory stage;
+            next.push_back(booleanOperation(parts[k],parts[k+1],BooleanOperation::Unite,{},history?&stage:nullptr));
+            if(history)nextHistories.push_back(detail::transportHistory(stage,{&partHistories[k],&partHistories[k+1]}));
+        }
+        if(parts.size()%2){next.push_back(std::move(parts.back()));if(history)nextHistories.push_back(std::move(partHistories.back()));}
+        parts=std::move(next);partHistories=std::move(nextHistories);
     }
-    return booleanOperation(solid, parts.front(), BooleanOperation::Intersect);
+    BodyHistory cut;
+    Body result=booleanOperation(solid,parts.front(),BooleanOperation::Intersect,{},history?&cut:nullptr);
+    if(history){auto original=detail::indexHistory(solid,solid,HistoryRelation::Same);*history=detail::transportHistory(cut,{&original,&partHistories.front()});}
+    return result;
 }
 
 }

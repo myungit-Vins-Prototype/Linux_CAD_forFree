@@ -818,7 +818,20 @@ bool fullSplineRectangle(const Body &body, FaceId id) {
     return corners[0] && corners[1] && corners[2] && corners[3];
 }
 
-bool splitOffsetFaces(const Body &body, const std::vector<FaceId> &faces, double d, double tolerance, Body &split) {
+// Le liste di facce di buildSheet/assembleBody conservano l'ordine di
+// costruzione. La mappa e' registrata in quel momento, senza confrontare
+// superfici o punti; sewSheets concatena le facce e ne ricuce solo i bordi.
+BodyHistory offsetFaceHistory(const Body &source, const Body &result, const std::vector<FaceId> &sources,
+                              HistoryRelation relation = HistoryRelation::Modified) {
+    const auto built = result.faces();
+    if (built.size() != sources.size()) throw std::logic_error("offset: mappa delle facce incoerente");
+    BodyHistory history = makeHistory({&source}, result);
+    for (std::size_t i = 0; i < built.size(); ++i)
+        history.declareOrigins(EntityKind::Face, built[i].index, {{0, EntityKind::Face, sources[i].index, relation}});
+    return history;
+}
+
+bool splitOffsetFaces(const Body &body, const std::vector<FaceId> &faces, double d, double tolerance, Body &split, BodyHistory &history) {
     std::set<int> divided;
     for (FaceId f : faces) {
         const auto &surface = body.face(f).surface;
@@ -831,6 +844,7 @@ bool splitOffsetFaces(const Body &body, const std::vector<FaceId> &faces, double
     }
     if (divided.empty()) return false;
     std::vector<Body> sheets;
+    std::vector<FaceId> sources;
     std::vector<FaceId> unchanged;
     std::set<int> seen;
     for (FaceId f : faces) {
@@ -856,12 +870,20 @@ bool splitOffsetFaces(const Body &body, const std::vector<FaceId> &faces, double
                 for (auto &fin : face.loops.front()) fin.sense = !fin.sense;
             }
             sheets.push_back(Body::buildSheet(points, edges, {face}));
+            sources.push_back(f);
         }
     }
-    if (!unchanged.empty()) sheets.push_back(facesAsSheet(body, unchanged));
+    if (!unchanged.empty()) {
+        sheets.push_back(facesAsSheet(body, unchanged));
+        // facesAsSheet segue l'ordine delle facce vive del body, anche se
+        // la selezione e' fornita in ordine diverso o contiene duplicati.
+        for (FaceId f : body.faces())
+            if (std::find(unchanged.begin(), unchanged.end(), f) != unchanged.end()) sources.push_back(f);
+    }
     std::vector<const Body *> parts;
     for (const Body &sheet : sheets) parts.push_back(&sheet);
     split = sewSheets(parts, tolerance, false).body;
+    history = offsetFaceHistory(body, split, sources);
     return true;
 }
 
@@ -919,7 +941,7 @@ std::vector<std::pair<Interval, SurfacePtr>> splitAtC0Knots(const BSplineSurface
 // imprimono (imprintCurves) e la faccia si divide. Le pieghe diventano edge
 // tra facce, che l'offset tratta come gli altri spigoli. `split` comprende le
 // sole facce scelte; falso se non c'e' niente da dividere.
-bool splitTrimmedCreases(const Body &body, const std::vector<FaceId> &faces, double d, double tolerance, Body &split) {
+bool splitTrimmedCreases(const Body &body, const std::vector<FaceId> &faces, double d, double tolerance, Body &split, BodyHistory &history) {
     std::set<int> chosen;
     for (FaceId f : faces) chosen.insert(f.index);
     const bool all = body.isSheet() && chosen.size() == body.faces().size();
@@ -993,7 +1015,13 @@ bool splitTrimmedCreases(const Body &body, const std::vector<FaceId> &faces, dou
     if (curves.empty()) return false;
     BooleanOptions options;
     options.unifySameDomain = false;
-    split = imprintCurves(sheet, curves, {}, options);
+    BodyHistory imprinted;
+    split = imprintCurves(sheet, curves, {}, options, nullptr, &imprinted);
+    std::vector<FaceId> sources;
+    for (FaceId f : body.faces())
+        if (chosen.count(f.index)) sources.push_back(f);
+    const BodyHistory extracted = offsetFaceHistory(body, sheet, sources, HistoryRelation::Same);
+    history = BodyHistory::compose(extracted, imprinted, 0);
     // Ogni pezzo prende la sotto-superficie del suo tratto tra le pieghe: le
     // finestre prolungate dell'offset continuano il polinomio del tratto
     // invece di attraversare la piega. Stesso parametro: le SP-curve valgono.
@@ -1189,22 +1217,25 @@ OffsetResult offsetFaces(const Body &input, const std::vector<FaceId> &faces, do
         if (computePCurves(body) > 0) throw std::domain_error("offset: SP-curve non calcolabili");
     }
     Body split;
+    BodyHistory splitHistory;
     bool splitPatches = false, splitCreases = false;
     {
         const detail::PhaseTimer timer("offset: divisione in pezze (facce rettangolari)");
-        splitPatches = splitOffsetFaces(body, faces, distanceValue, tolerance, split);
+        splitPatches = splitOffsetFaces(body, faces, distanceValue, tolerance, split, splitHistory);
     }
     if (!splitPatches) {
         const detail::PhaseTimer timer("offset: divisione sulle pieghe (facce rifilate)");
-        splitCreases = splitTrimmedCreases(body, faces, distanceValue, tolerance, split);
+        splitCreases = splitTrimmedCreases(body, faces, distanceValue, tolerance, split, splitHistory);
     }
     if (splitPatches) {
         OffsetResult result = offsetFaces(split, split.faces(), distanceValue, tolerance, preserveSeams, joinAngle);
+        result.history = BodyHistory::compose(splitHistory, result.history, 0);
         result.notes.push_back("Facce del loft divise sulle discontinuita interne prima dell'offset");
         return result;
     }
     if (splitCreases) {
         OffsetResult result = offsetFaces(split, split.faces(), distanceValue, tolerance, preserveSeams, joinAngle);
+        result.history = BodyHistory::compose(splitHistory, result.history, 0);
         result.notes.push_back("Facce divise sulle pieghe interne (normale discontinua lungo una linea di nodo) prima dell'offset");
         return result;
     }
@@ -1522,6 +1553,7 @@ OffsetResult offsetFaces(const Body &input, const std::vector<FaceId> &faces, do
         curveJobs.push_back({int(model.edges.size()) - 1, edge.curve, edge.range, f, breaks, {}});
         return rawEdge[key] = int(model.edges.size()) - 1;
     };
+    std::vector<FaceId> faceSources;
     for (int index : selected) {
         const Face &face = body.face(FaceId{index});
         detail::RawFace raw;
@@ -1557,6 +1589,7 @@ OffsetResult offsetFaces(const Body &input, const std::vector<FaceId> &faces, do
             if (!loop.empty()) raw.loops.push_back(std::move(loop));
         }
         model.faces.push_back(std::move(raw));
+        faceSources.push_back(FaceId(index));
     }
     parallelFor(curveJobs.size(), threadCount(0), [&](std::size_t k) {
         CurveJob &job = curveJobs[k];
@@ -1624,6 +1657,7 @@ OffsetResult offsetFaces(const Body &input, const std::vector<FaceId> &faces, do
         const detail::PhaseTimer timer("offset: assemblaggio");
         result.body = detail::assembleBody(model, false, &result.notes);
     }
+    result.history = offsetFaceHistory(input, result.body, faceSources);
     for (ShellId s : result.body.shells()) {
         (void)s;
         ++result.shells;

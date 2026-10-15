@@ -22,7 +22,7 @@ double integrateSegment(const ProfileSegment &segment, const F &f, double tolera
 }
 
 ProfileSegment reversed(const ProfileSegment &segment) {
-    return {reversedCurve<2>(segment.curve), {-segment.range.hi, -segment.range.lo}};
+    return {reversedCurve<2>(segment.curve), {-segment.range.hi, -segment.range.lo}, segment.source};
 }
 
 ProfileLoop reversed(const ProfileLoop &loop) {

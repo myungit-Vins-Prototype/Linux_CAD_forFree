@@ -29,6 +29,7 @@
 #include <QProcess>
 #include <QDateTime>
 #include <QSemaphore>
+#include <QCryptographicHash>
 #include <QtEndian>
 #include <fstream>
 #include <cstring>
@@ -38,9 +39,28 @@
 static void require(bool ok, const char *message) {
     if (!ok) throw std::runtime_error(message);
 }
+
+#include "test_declared_history_cache.h"
+#include "test_boolean_history.h"
+#include "test_extrusion_history.h"
+#include "test_revolution_history.h"
+#include "test_all_history.h"
 #include "document_regression.h"
 class ViewportInteractionTest {
 public:
+    static ForgeCad::ForgeBody preparedBlendHistoryPreview(CadViewport &view, const QVector<EdgePoint> &edges,
+                                                          double size, bool chamfer, const ChamferSpec &spec) {
+        view.requestBlendPreview(0, edges, size, chamfer, -1, spec);
+        view.startPreviewJob();
+        QElapsedTimer timeout; timeout.start();
+        while (view.previewRunning_ && timeout.elapsed() < 10000) QApplication::processEvents();
+        require(view.preview_.valid && view.preview_.geometry, "anteprima reale pronta per la genealogia");
+        // Forza anche il caso in cui il worker abbia gia' calcolato i nomi
+        // temporanei: la conferma deve pubblicare quelli dell'ID definitivo.
+        require(bool(ForgeCad::elementNamesOf(*view.preview_.geometry)), "nomi provvisori dell'anteprima");
+        return view.preview_.geometry;
+    }
+
     static void copyFaces() {
         using namespace ForgeCad;
         using namespace ForgeCad::Kernel;
@@ -3846,6 +3866,59 @@ public:
     static void genealogyReferences() {
         using namespace ForgeCad;
         using namespace ForgeCad::Kernel;
+        {
+            ExtrusionObject root;
+            root.feature = BodyFeature::Primitive;
+            root.featureId = 90100;
+            root.forgeBody = std::make_shared<const Body>(makeBox(Frame3(), 2, 3, 4));
+            registerFeatureGenealogy(root, 0, {}, {});
+            const auto sourceNames = elementNamesOf(*root.forgeBody);
+            require(bool(sourceNames), "nomi della base per l'offset dichiarato");
+            for (double d : {0.0, 0.2, -0.2}) {
+                QString error;
+                ExtrusionObject offset;
+                offset.feature = BodyFeature::SurfaceOffset;
+                offset.firstBody = 0;
+                offset.featureId = 90101;
+                offset.distance = d;
+                offset.forgeBody = forgeOffsetFaces(root.forgeBody, {}, d, &error);
+                require(offset.forgeBody && error.isEmpty(), "costruzione offset con genealogia dichiarata");
+                require(!featureHistoryOf(*offset.forgeBody), "una dichiarazione preparata non registra da sola la feature");
+                registerFeatureGenealogy(offset, 1, {}, {root});
+                const auto history = featureHistoryOf(*offset.forgeBody);
+                const auto names = elementNamesOf(*offset.forgeBody);
+                require(history && names, "dichiarazioni acquisite dalla registrazione della feature");
+                for (FaceId f : offset.forgeBody->faces()) {
+                    require(history->isDeclared(EntityKind::Face, f.index), "provenienza della faccia emessa dall'offset");
+                    const auto &links = history->origins(EntityKind::Face, f.index);
+                    require(links.size() == 1, "una sola faccia originale per ogni faccia a distanza");
+                    require(names->primary(EntityKind::Face, f.index) == sourceNames->primary(EntityKind::Face, links.front().index),
+                        "nome originale conservato cambiando superficie e distanza");
+                    require(links.front().relation == (d == 0 ? HistoryRelation::Same : HistoryRelation::Modified),
+                        "copia invariata e offset modificato distinti");
+                    require(entityEvolutionText(*offset.forgeBody, EntityKind::Face, f.index).contains(QStringLiteral("dichiarata")),
+                        "diagnostica distingue l'origine dichiarata");
+                }
+                // Anteprima confermata: registrare lo stesso B-rep e'
+                // idempotente, anche quando il thread ha gia' calcolato i nomi.
+                registerFeatureGenealogy(offset, 1, {}, {root});
+                require(featureHistoryOf(*offset.forgeBody) == history, "conferma anteprima conserva la storia gia' calcolata");
+            }
+            QString error;
+            ExtrusionObject mismatch;
+            mismatch.feature = BodyFeature::SurfaceOffset;
+            mismatch.firstBody = 0;
+            mismatch.featureId = 90102;
+            mismatch.forgeBody = forgeOffsetFaces(root.forgeBody, {}, 0.2, &error);
+            ExtrusionObject other = root;
+            other.forgeBody = std::make_shared<const Body>(*root.forgeBody);
+            registerFeatureGenealogy(other, 0, {}, {});
+            registerFeatureGenealogy(mismatch, 1, {}, {other});
+            const auto mismatched = featureHistoryOf(*mismatch.forgeBody);
+            require(bool(mismatched), "ripiego per operando diverso da quello della dichiarazione");
+            for (FaceId f : mismatch.forgeBody->faces())
+                require(!mismatched->isDeclared(EntityKind::Face, f.index), "nessun riuso di dichiarazioni su un altro B-rep");
+        }
         // Caso legacy di 1.prt: ID e punto descrivono due spigoli diversi,
         // ma la base non e' nota. Il save deve rispettare la stessa scelta
         // per geometria di buildGeometry, non introdurre il nome dell'altro.
@@ -8698,6 +8771,7 @@ public:
         std::cout << "Viewport: assi, piani, datum, Undo/Redo, riferimenti, vincoli, salvataggio e cache OK" << std::endl;
     }
 };
+#include "test_blend_history.h"
 int main(int argc, char **argv) {
     QSurfaceFormat format;
     format.setRenderableType(QSurfaceFormat::OpenGL); format.setVersion(3, 3);
@@ -9076,6 +9150,38 @@ int main(int argc, char **argv) {
         try { ViewportInteractionTest::topologyLabels(); ViewportInteractionTest::topologyLabelVisibility(); }
         catch (const std::exception &error) { std::cerr << "FAIL topology labels: " << error.what() << std::endl; return 1; }
         std::cout << "PASS topology labels" << std::endl;
+        return 0;
+    }
+    if (app.arguments().contains(QStringLiteral("--all-history"))) {
+        try { allHistoryTest(); }
+        catch (const std::exception &e) { std::cerr << e.what() << std::endl; return 1; }
+        return 0;
+    }
+    if (app.arguments().contains(QStringLiteral("--revolution-history"))) {
+        try { revolutionHistoryTest(); }
+        catch (const std::exception &e) { std::cerr << e.what() << std::endl; return 1; }
+        return 0;
+    }
+    if (app.arguments().contains(QStringLiteral("--extrusion-history"))) {
+        try { extrusionHistoryTest(); }
+        catch (const std::exception &e) { std::cerr << e.what() << std::endl; return 1; }
+        return 0;
+    }
+    if (app.arguments().contains(QStringLiteral("--blend-history"))) {
+        try { blendHistoryTest(); }
+        catch (const std::exception &e) { std::cerr << e.what() << std::endl; return 1; }
+        return 0;
+    }
+    if (app.arguments().contains(QStringLiteral("--boolean-history"))) {
+        try { booleanHistoryTest(); }
+        catch (const std::exception &e) { std::cerr << e.what() << std::endl; return 1; }
+        std::cout << "PASS boolean history" << std::endl;
+        return 0;
+    }
+    if (app.arguments().contains(QStringLiteral("--declared-history-cache"))) {
+        try { declaredHistoryCacheTest(); }
+        catch (const std::exception &e) { std::cerr << e.what() << std::endl; return 1; }
+        std::cout << "PASS declared history cache" << std::endl;
         return 0;
     }
     if (app.arguments().contains(QStringLiteral("--genealogy")) || app.arguments().contains(QStringLiteral("--history-diagnostics"))) {

@@ -4,24 +4,27 @@
 #include <vector>
 
 #include "fk_topology.h"
+#include "fk_history.h"
 
 // Solidi elementari: casi particolari di makeExtrusion (fk_extrude.h),
 // costruiti con operatori di Eulero e dotati di geometria esatta.
 namespace ForgeCad::Kernel {
+
+struct ExtrusionProvenance;
 
 // Prisma retto: poligono `outer` con eventuali fori `holes` (nel piano XY di
 // `frame`, qualsiasi verso di percorrenza) estruso di `height` lungo Z
 // (makeExtrusion con soli segmenti). Genere = numero di fori. Poligoni
 // semplici, fori interni e disgiunti.
 Body makePrism(const Frame3 &frame, const std::vector<Vec2> &outer, const std::vector<std::vector<Vec2>> &holes,
-               double height);
+               double height, ExtrusionProvenance *provenance = nullptr);
 
 // Parallelepipedo [0, dx] x [0, dy] x [0, dz] nel sistema `frame`.
-Body makeBox(const Frame3 &frame, double dx, double dy, double dz);
+Body makeBox(const Frame3 &frame, double dx, double dy, double dz, FaceAliases *labels = nullptr);
 
 // Cilindro di asse Z del sistema, base nell'origine. Alla Parasolid: due
 // edge circolari chiusi, il fianco ha due loop e nessuna cucitura.
-Body makeCylinder(const Frame3 &frame, double radius, double height);
+Body makeCylinder(const Frame3 &frame, double radius, double height, FaceAliases *labels = nullptr);
 
 // Geometria "poliedrica" per le entita' che ne sono prive: segmenti di retta
 // per gli edge (range = lunghezza) e piani per le facce (normale di Newell

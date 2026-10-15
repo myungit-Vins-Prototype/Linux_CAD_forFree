@@ -7,6 +7,7 @@
 
 #include "fk_sweep.h"
 #include "fk_topology.h"
+#include "fk_history.h"
 
 // Superficie originale ForgeCAD, delimitata da curve 3D esatte e vincoli
 // sulle facce adiacenti. Il contorno proiettato sul piano medio di Newell
@@ -84,7 +85,7 @@ struct FillReport {
 // std::domain_error: contorno aperto, contorno o guide che si sovrappongono
 // nella proiezione, guide fuori dal contorno, risultato non valido.
 Body fillSurface(const std::vector<PathSegment> &boundary, const std::vector<PathSegment> &guides,
-                 const std::vector<FillContact> &contacts, const FillOptions &options = {}, FillReport *report = nullptr);
+                 const std::vector<FillContact> &contacts, const FillOptions &options = {}, FillReport *report = nullptr, FaceAliases *labels = nullptr);
 
 }
 

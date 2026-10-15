@@ -5,6 +5,7 @@
 
 #include "fk_sweep.h"
 #include "fk_topology.h"
+#include "fk_history.h"
 
 // Superficie tra curve (patch di Coons bilineare): una lamina di una faccia
 // delimitata da un contorno chiuso di curve 3D qualsiasi, anche sghembo.
@@ -32,7 +33,7 @@
 // lati di lunghezza nulla, risultato non valido.
 namespace ForgeCad::Kernel {
 
-Body boundarySheet(const std::vector<PathSegment> &pieces, double tolerance = 1e-9);
+Body boundarySheet(const std::vector<PathSegment> &pieces, double tolerance = 1e-9, FaceAliases *labels = nullptr);
 
 }
 

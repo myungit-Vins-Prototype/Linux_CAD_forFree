@@ -29,6 +29,7 @@ BodyHistory::BodyHistory(int operandCount, const std::vector<int> &faceCounts, c
     links_[int(EntityKind::Face)].resize(std::size_t(std::max(0, resultFaces)));
     links_[int(EntityKind::Edge)].resize(std::size_t(std::max(0, resultEdges)));
     links_[int(EntityKind::Vertex)].resize(std::size_t(std::max(0, resultVertices)));
+    for (int k = 0; k < 3; ++k) declared_[k].resize(links_[k].size(), false);
 }
 
 int BodyHistory::operandSize(int operand, EntityKind kind) const {
@@ -52,6 +53,24 @@ void BodyHistory::addOrigin(EntityKind kind, int index, const HistoryLink &link)
             return;
         }
     list.push_back(link);
+}
+
+void BodyHistory::declareOrigins(EntityKind kind, int index, std::vector<HistoryLink> origins) {
+    const int k = int(kind);
+    if (k < 0 || k >= 3 || index < 0 || index >= int(links_[k].size()))
+        throw std::out_of_range("BodyHistory::declareOrigins: indice non valido");
+    for (const HistoryLink &link : origins)
+        if (int(link.kind) >= 3 || int(link.relation) >= 3 || link.operand < 0 || link.operand >= operands_
+            || link.index < 0 || link.index >= operandSize(link.operand, link.kind))
+            throw std::invalid_argument("BodyHistory::declareOrigins: origine non valida");
+    links_[k][std::size_t(index)].clear();
+    for (const HistoryLink &link : origins) addOrigin(kind, index, link);
+    declared_[k][std::size_t(index)] = true;
+}
+
+bool BodyHistory::isDeclared(EntityKind kind, int index) const {
+    const int k = int(kind);
+    return k >= 0 && k < 3 && index >= 0 && index < int(declared_[k].size()) && declared_[k][std::size_t(index)];
 }
 
 std::vector<int> BodyHistory::descendants(EntityKind kind, int operand, int index) const {
@@ -95,6 +114,9 @@ Evolution BodyHistory::evolution(EntityKind kind, int operand, int index) const 
 
 BodyHistory BodyHistory::compose(const BodyHistory &first, const BodyHistory &second, int secondOperand) {
     if (secondOperand < 0 || secondOperand >= second.operands_) throw std::invalid_argument("BodyHistory::compose: operando non valido");
+    for (int k = 0; k < 3; ++k)
+        if (first.resultSize(EntityKind(k)) != second.operandSize(secondOperand, EntityKind(k)))
+            throw std::invalid_argument("BodyHistory::compose: stadio intermedio incoerente");
     const int operands = first.operands_ + second.operands_ - 1;
     std::vector<int> sizes[3];
     for (int k = 0; k < 3; ++k) {
@@ -111,7 +133,8 @@ BodyHistory BodyHistory::compose(const BodyHistory &first, const BodyHistory &se
     };
     for (int k = 0; k < 3; ++k) {
         const EntityKind kind = EntityKind(k);
-        for (int r = 0; r < second.resultSize(kind); ++r)
+        for (int r = 0; r < second.resultSize(kind); ++r) {
+            bool declared = second.isDeclared(kind, r);
             for (const HistoryLink &link : second.origins(kind, r)) {
                 if (link.operand != secondOperand) {
                     HistoryLink mapped = link;
@@ -119,12 +142,15 @@ BodyHistory BodyHistory::compose(const BodyHistory &first, const BodyHistory &se
                     result.addOrigin(kind, r, mapped);
                     continue;
                 }
+                declared = declared && first.isDeclared(link.kind, link.index);
                 for (const HistoryLink &inner : first.origins(link.kind, link.index)) {
                     HistoryLink mapped = inner;
                     mapped.relation = combine(inner.relation, link.relation);
                     result.addOrigin(kind, r, mapped);
                 }
             }
+            if (declared) result.declareOrigins(kind, r, result.origins(kind, r));
+        }
     }
     return result;
 }
@@ -333,40 +359,74 @@ bool samePointSets(const std::vector<Vec3> &a, const std::vector<Vec3> &b, doubl
 
 }
 
+BodyHistory makeHistory(const std::vector<const Body *> &operands, const Body &result) {
+    const auto slots = [](const auto &ids) {
+        int count = 0;
+        for (const auto &id : ids) count = std::max(count, id.index + 1);
+        return count;
+    };
+    std::vector<int> faces, edges, vertices;
+    for (const Body *operand : operands) {
+        faces.push_back(operand ? slots(operand->faces()) : 0);
+        edges.push_back(operand ? slots(operand->edges()) : 0);
+        vertices.push_back(operand ? slots(operand->vertices()) : 0);
+    }
+    return BodyHistory(int(operands.size()), faces, edges, vertices,
+                       slots(result.faces()), slots(result.edges()), slots(result.vertices()));
+}
+
 BodyHistory inferHistory(const std::vector<const Body *> &operands, const Body &result, const HistoryOptions &options) {
+    return resolveHistory(operands, result, nullptr, options);
+}
+
+BodyHistory resolveHistory(const std::vector<const Body *> &operands, const Body &result,
+                           const BodyHistory *declared, const HistoryOptions &options) {
     cancellationPoint();
+    BodyHistory history = makeHistory(operands, result);
+    if (declared) {
+        if (declared->operandCount() != history.operandCount())
+            throw std::invalid_argument("resolveHistory: operandi incoerenti");
+        const auto alive = [](const Body &body, EntityKind kind, int index) {
+            if (kind == EntityKind::Face) return body.contains(FaceId(index));
+            if (kind == EntityKind::Edge) return body.contains(EdgeId(index));
+            return body.contains(VertexId(index));
+        };
+        for (int k = 0; k < 3; ++k) {
+            const EntityKind kind = EntityKind(k);
+            if (declared->resultSize(kind) != history.resultSize(kind))
+                throw std::invalid_argument("resolveHistory: risultato incoerente");
+            for (int o = 0; o < history.operandCount(); ++o)
+                if (declared->operandSize(o, kind) != history.operandSize(o, kind))
+                    throw std::invalid_argument("resolveHistory: dimensioni operando incoerenti");
+            for (int r = 0; r < history.resultSize(kind); ++r) {
+                if (!declared->isDeclared(kind, r)) continue;
+                if (!alive(result, kind, r)) throw std::invalid_argument("resolveHistory: entita' dichiarata non viva");
+                for (const HistoryLink &link : declared->origins(kind, r))
+                    if (int(link.kind) >= 3 || int(link.relation) >= 3 || link.operand < 0
+                        || link.operand >= history.operandCount() || !operands[std::size_t(link.operand)]
+                        || !alive(*operands[std::size_t(link.operand)], link.kind, link.index))
+                        throw std::invalid_argument("resolveHistory: origine dichiarata non viva");
+                history.declareOrigins(kind, r, declared->origins(kind, r));
+            }
+        }
+    }
     // Una radice (in particolare un corpo importato) non ha operandi da
     // cui ereditare entita'. Non cercare punti interni/proiezioni sulle sue
     // facce: bastano gli indici vivi per una genealogia senza origini.
     if(std::none_of(operands.begin(),operands.end(),[](const Body *body){return body!=nullptr;})){
-        int faces=0,edges=0,vertices=0;
-        for(auto id:result.faces())faces=std::max(faces,id.index+1);
-        for(auto id:result.edges())edges=std::max(edges,id.index+1);
-        for(auto id:result.vertices())vertices=std::max(vertices,id.index+1);
-        const std::vector<int> empty(operands.size(),0);
-        return BodyHistory(int(operands.size()),empty,empty,empty,faces,edges,vertices);
+        return history;
     }
     const double tol = std::max(options.tolerance, 0.0);
     std::vector<BodyCache> caches;
     caches.reserve(operands.size());
-    std::vector<int> faceCounts, edgeCounts, vertexCounts;
     for (const Body *operand : operands) {
         caches.emplace_back(operand);
-        faceCounts.push_back(operand ? int(caches.back().faceBoxes.size()) : 0);
-        edgeCounts.push_back(operand ? int(caches.back().edgeBoxes.size()) : 0);
-        int vertexSlots = 0;
-        if (operand)
-            for (VertexId v : operand->vertices()) vertexSlots = std::max(vertexSlots, v.index + 1);
-        vertexCounts.push_back(vertexSlots);
     }
     BodyCache own(&result);
-    int resultVertexSlots = 0;
-    for (VertexId v : result.vertices()) resultVertexSlots = std::max(resultVertexSlots, v.index + 1);
-    BodyHistory history(int(operands.size()), faceCounts, edgeCounts, vertexCounts, int(own.faceBoxes.size()), int(own.edgeBoxes.size()),
-                        resultVertexSlots);
 
     // Facce: stessa superficie e punto interno di una dentro l'altra.
     for (FaceId r : own.faces) {
+        if (history.isDeclared(EntityKind::Face, r.index)) continue;
         const Face &rf = result.face(r);
         if (!rf.surface) continue;
         const Box rBox = own.faceBoxes[std::size_t(r.index)];
@@ -400,6 +460,7 @@ BodyHistory inferHistory(const std::vector<const Body *> &operands, const Body &
 
     // Edge: tre punti interni di uno sull'altro (in un verso o nell'altro).
     for (EdgeId r : own.edges) {
+        if (history.isDeclared(EntityKind::Edge, r.index)) continue;
         const Edge &re = result.edge(r);
         if (!re.curve) continue;
         const Box rBox = own.edgeBoxes[std::size_t(r.index)];
@@ -432,6 +493,7 @@ BodyHistory inferHistory(const std::vector<const Body *> &operands, const Body &
 
     // Vertici: stesso punto.
     for (VertexId r : own.vertices) {
+        if (history.isDeclared(EntityKind::Vertex, r.index)) continue;
         const Vertex &rv = result.vertex(r);
         for (std::size_t o = 0; o < caches.size(); ++o) {
             const BodyCache &cache = caches[o];
@@ -458,7 +520,7 @@ BodyHistory inferHistory(const std::vector<const Body *> &operands, const Body &
     // comuni a quegli spigoli (pezze d'angolo).
     std::vector<FaceId> fresh;
     for (FaceId r : own.faces)
-        if (!inherited(EntityKind::Face, r.index)) fresh.push_back(r);
+        if (!history.isDeclared(EntityKind::Face, r.index) && !inherited(EntityKind::Face, r.index)) fresh.push_back(r);
     std::vector<std::vector<std::pair<int, int>>> freshEdges(own.faceBoxes.size());  // faccia nuova -> (operando, edge)
     for (FaceId r : fresh) {
         std::vector<FaceId> neighbors;
@@ -519,6 +581,7 @@ BodyHistory inferHistory(const std::vector<const Body *> &operands, const Body &
 
     // Edge nuovi: le facce degli operandi su cui giacciono.
     for (EdgeId r : own.edges) {
+        if (history.isDeclared(EntityKind::Edge, r.index)) continue;
         if (inherited(EntityKind::Edge, r.index)) continue;
         const Edge &re = result.edge(r);
         const Vec3 middle = own.edgeSamples[std::size_t(r.index)][2];
@@ -540,6 +603,7 @@ BodyHistory inferHistory(const std::vector<const Body *> &operands, const Body &
 
     // Vertici nuovi: gli edge degli operandi su cui giacciono.
     for (VertexId r : own.vertices) {
+        if (history.isDeclared(EntityKind::Vertex, r.index)) continue;
         if (inherited(EntityKind::Vertex, r.index)) continue;
         const Vertex &rv = result.vertex(r);
         for (std::size_t o = 0; o < caches.size(); ++o) {
@@ -634,7 +698,7 @@ std::string joined(std::vector<std::string> parts, const char *separator) {
 }
 
 ElementNames propagateNames(const Body &result, const BodyHistory &history, const std::vector<const ElementNames *> &operandNames,
-                            const std::string &tag, const FaceLabels *labels) {
+                            const std::string &tag, const FaceLabels *labels, const FaceAliases *declaredLabels) {
     ElementNames names;
     names.body = &result;
     const auto slots = [](const auto &ids) {
@@ -664,6 +728,11 @@ ElementNames propagateNames(const Body &result, const BodyHistory &history, cons
         auto &list = names.faces[std::size_t(f.index)];
         list = inheritedNames(EntityKind::Face, f.index);
         if (!list.empty()) continue;
+        if (declaredLabels && f.index < int(declaredLabels->size()) && !(*declaredLabels)[std::size_t(f.index)].empty()) {
+            for (const auto &label : (*declaredLabels)[std::size_t(f.index)]) list.push_back(compact(tag, tag + ":" + label));
+            normalize(list);
+            continue;
+        }
         if (labels && f.index < int(labels->size()) && !(*labels)[std::size_t(f.index)].empty()) {
             list.push_back(compact(tag, tag + ":" + (*labels)[std::size_t(f.index)]));
             continue;

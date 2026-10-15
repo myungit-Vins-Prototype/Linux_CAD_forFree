@@ -41,6 +41,14 @@ void buildBody(ExtrusionObject &body, int index, const QVector<SketchObject> &sk
                       int quality) {
     QElapsedTimer timer;
     timer.start();
+    // Le feature nuove vengono costruite prima di entrare nella storyboard:
+    // riserva lo stesso ID che assegnera' normalizeModelHistory, prima che
+    // la genealogia generi nomi persistenti. Le anteprime usano buildGeometry
+    // direttamente e restano provvisorie fino alla conferma.
+    if (!body.featureId) {
+        body.featureId = 1;
+        for (const auto &feature : bodies) body.featureId = std::max(body.featureId, feature.featureId + 1);
+    }
     bool usedSnapshot = body.cachedGeometry && body.forgeBody;
     // Le versioni precedenti potevano salvare come raccordo riuscito una
     // booleana no-op, identica alla base. Non perpetuare quel falso

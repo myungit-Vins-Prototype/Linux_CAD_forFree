@@ -15,6 +15,10 @@
 // viewport. La cache 5 condivide senza perdita i blocchi B-rep fra gli stadi
 // e salva i vettori float della mesh a 32 bit. Le mesh delle cache precedenti
 // si rigenerano per eliminare eventuali artefatti del vecchio upload CUDA.
+// La cache 6 aggiunge le origini dichiarate dagli algoritmi, con gli operandi
+// identificati da indice e ID della feature; la definizione resta formato 49.
+// La cache 7 conserva anche le etichette delle facce emesse dalla costruzione
+// (coperchi e tratti dello schizzo), leggendo ancora le cache precedenti.
 // Fanno eccezione i
 // corpi importati, che non
 // hanno una definizione: il loro body e' in `importData` come testo STEP del

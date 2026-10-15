@@ -68,6 +68,7 @@ bool resolveForgeBody(const Body &body, int kind, const EdgePoint &reference, Re
     const double tolerance = 1e-6 * std::max(1.0, box.diagonal());
     const FaceId best = resolveFaceReference(body, reference, 1e3 * tolerance);
     if (!best.valid()) return setError(error, QStringLiteral("il punto non sta piu' su una faccia del corpo")), false;
+    r.face = best.index;
     const Face &face = body.face(best);
     const Surface &surface = *face.surface;
     if (surface.type() == SurfaceType::Plane) {

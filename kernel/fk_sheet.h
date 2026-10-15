@@ -10,11 +10,12 @@
 // Operazioni sulle lamine (superfici aperte, Body::isSheet): taglio con uno
 // strumento ed estensione oltre i bordi.
 namespace ForgeCad::Kernel {
+class BodyHistory;
 
 // Taglio: la lamina si divide lungo le curve in cui la attraversa `tool`
 // (un'altra lamina o un solido, vedi splitSheet) e resta la regione piu'
 // vicina a `keep`. std::domain_error se lo strumento non la divide.
-Body trimSheet(const Body &sheet, const Body &tool, const Vec3 &keep, double tolerance = 1e-6);
+Body trimSheet(const Body &sheet, const Body &tool, const Vec3 &keep, double tolerance = 1e-6, BodyHistory *history = nullptr);
 
 // Lamina piana quadrata di lato 2 `halfSize` nel piano XY di `frame`, centrata
 // nell'origine (strumento di taglio per i piani di riferimento), con la
@@ -41,7 +42,7 @@ Body makePlaneSheet(const Frame3 &frame, double halfSize);
 // uniscono lungo lo spigolo comune. Per le pezze B-spline adiacenti la
 // giunzione viene ricalcolata sulle superfici prolungate: se gli estremi
 // sono diversi, il bordo comune termina sul piu' vicino e prosegue libero.
-Body extendSheet(const Body &sheet, const std::vector<EdgeId> &edges, double distance, bool linear = false);
+Body extendSheet(const Body &sheet, const std::vector<EdgeId> &edges, double distance, bool linear = false, BodyHistory *history = nullptr);
 
 // B-spline uguale alla curva sul suo dominio e prolungata (stesso polinomio
 // del primo e dell'ultimo tratto, anche razionale) fino a [lo, hi].

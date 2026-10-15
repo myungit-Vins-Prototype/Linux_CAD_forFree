@@ -10,6 +10,8 @@
 // chiuso, in un solido.
 namespace ForgeCad::Kernel {
 
+class BodyHistory;
+
 struct SewResult {
     Body body;
     bool closed = false;   // ogni edge in due facce
@@ -31,10 +33,10 @@ struct SewResult {
 // uscente (se il volume viene negativo le facce si girano); altrimenti una
 // lamina. Gli edge che si toccano solo entro la tolleranza diventano
 // tolleranti. std::domain_error se il body non e' valido.
-SewResult sewSheets(const std::vector<const Body *> &bodies, double tolerance, bool makeSolid);
+SewResult sewSheets(const std::vector<const Body *> &bodies, double tolerance, bool makeSolid, BodyHistory *history = nullptr);
 
 // Le facce `faces` di `body` come lamina a parte (con gli edge comuni tra loro).
-Body facesAsSheet(const Body &body, const std::vector<FaceId> &faces);
+Body facesAsSheet(const Body &body, const std::vector<FaceId> &faces, BodyHistory *history = nullptr);
 
 }
 

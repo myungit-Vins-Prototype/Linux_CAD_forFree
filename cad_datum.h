@@ -30,6 +30,7 @@ const QVector<DatumMode> &datumModes();
 
 // Riferimento risolto: cosa puo' fare (punto, retta, piano, curva) e la sua geometria.
 struct ResolvedRef {
+    int face = -1; // faccia effettiva risolta, quando il riferimento e' una faccia del corpo
     bool hasPoint = false, hasLine = false, hasPlane = false, hasCurve = false;
     Kernel::Vec3 point;      // il punto; per retta e piano un loro punto
     Kernel::Vec3 direction;  // retta: direzione unitaria; piano: normale unitaria

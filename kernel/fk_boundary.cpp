@@ -117,7 +117,8 @@ std::vector<double> greville(const BSplineCurve<3> &c) {
 
 }
 
-Body boundarySheet(const std::vector<PathSegment> &input, double tolerance) {
+Body boundarySheet(const std::vector<PathSegment> &input, double tolerance, FaceAliases *labels) {
+    if(labels)labels->clear();
     // Scala del contorno per le tolleranze di collegamento.
     double scale = 1.0;
     for (const PathSegment &segment : input)
@@ -267,7 +268,9 @@ Body boundarySheet(const std::vector<PathSegment> &input, double tolerance) {
     }
     face.loops.push_back(fins);
     model.faces.push_back(face);
-    return detail::assembleBody(model, false);
+    Body result=detail::assembleBody(model,false);
+    if(labels)*labels={{"patch"}};
+    return result;
 }
 
 }

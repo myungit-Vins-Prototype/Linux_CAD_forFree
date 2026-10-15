@@ -13,6 +13,7 @@ namespace ForgeCad::Kernel {
 struct ProfileSegment {
     CurvePtr<2> curve;
     Interval range;
+    int source = -1; // identificatore opaco del tratto sorgente, conservato dai riordini
 
     Vec2 start() const { return curve->point(range.lo); }
     Vec2 end() const { return curve->point(range.hi); }

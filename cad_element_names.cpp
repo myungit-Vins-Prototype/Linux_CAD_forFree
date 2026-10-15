@@ -7,6 +7,7 @@
 #include <functional>
 #include <map>
 #include <mutex>
+#include <set>
 
 #include "cad_curve_solver.h"
 #include "cad_feature_dependencies.h"
@@ -23,6 +24,10 @@ using Labeler = std::function<FaceLabels(const Body &, const BodyHistory &)>;
 
 struct Entry {
     std::weak_ptr<const Body> body;
+    bool registered = false;
+    quint64 featureId = 0; // zero: registrazione provvisoria di un'anteprima
+    std::shared_ptr<const BodyHistory> declared;
+    std::shared_ptr<const FaceAliases> declaredLabels;
     QVector<GenealogyOperand> operandInfo;
     std::vector<ForgeBody> operands;  // tengono in vita gli operandi finche' serve la genealogia
     bool sameIndex = false;
@@ -36,10 +41,101 @@ struct Entry {
 std::mutex registryMutex;
 std::map<const Body *, std::shared_ptr<Entry>> registry;
 
+// Sotto registryMutex. Dopo la registrazione operands viene svuotato dal
+// worker: operandInfo resta invece immutabile per tutta la vita della voce.
+std::vector<ForgeBody> operationOperands(const Entry &entry) {
+    if (!entry.registered) return entry.operands;
+    std::vector<ForgeBody> operands;
+    for (const auto &operand : entry.operandInfo) operands.push_back(operand.body.lock());
+    return operands;
+}
+
+// Espande solo dichiarazioni gia' emesse dai risultati intermedi, fermandosi
+// ai B-rep degli operandi della feature. Non confronta geometria e non entra
+// nella storia di una feature che e' gia' un operando effettivo.
+std::shared_ptr<const BodyHistory> rebaseDeclaredHistory(const Entry &entry, const Body &result, const std::vector<ForgeBody> &expected,
+                                                      FaceAliases *labels = nullptr) {
+    if (!entry.declared) return nullptr;
+    const auto operands = operationOperands(entry);
+    if (operands == expected) {
+        if (labels && entry.declaredLabels) *labels = *entry.declaredLabels;
+        return entry.declared;
+    }
+    if (operands.size() != std::size_t(entry.declared->operandCount())) return nullptr;
+    std::vector<const Body *> raw;
+    for (const auto &operand : expected) raw.push_back(operand.get());
+    BodyHistory rebased = makeHistory(raw, result);
+    std::set<const Body *> path{&result};
+    std::function<bool(const ForgeBody &, EntityKind, int, HistoryRelation, std::vector<HistoryLink> &, std::vector<std::string> &)> follow;
+    follow = [&](const ForgeBody &operand, EntityKind kind, int index, HistoryRelation relation, std::vector<HistoryLink> &links,
+                 std::vector<std::string> &aliases) {
+        if (!operand) return false;
+        bool matched = false;
+        for (std::size_t i = 0; i < expected.size(); ++i)
+            if (operand == expected[i]) {
+                links.push_back({int(i), kind, index, relation});
+                matched = true;
+            }
+        if (matched) return true;
+        if (!path.insert(operand.get()).second) return false;
+        bool complete = false;
+        const auto found = registry.find(operand.get());
+        if (found != registry.end() && found->second->body.lock() == operand && found->second->declared
+            && found->second->declared->isDeclared(kind, index)) {
+            if (labels && kind == EntityKind::Face && relation != HistoryRelation::Generated && found->second->declaredLabels
+                && index < int(found->second->declaredLabels->size())) {
+                const auto &emitted = found->second->declaredLabels->at(std::size_t(index));
+                aliases.insert(aliases.end(), emitted.begin(), emitted.end());
+            }
+            const auto sources = operationOperands(*found->second);
+            complete = true;
+            for (const auto &link : found->second->declared->origins(kind, index)) {
+                if (link.operand < 0 || link.operand >= int(sources.size())
+                    || !follow(sources[std::size_t(link.operand)], link.kind, link.index, std::max(relation, link.relation), links, aliases)) {
+                    complete = false;
+                    break;
+                }
+            }
+        }
+        path.erase(operand.get());
+        return complete;
+    };
+    bool any = false;
+    for (int k = 0; k < 3; ++k) {
+        const auto kind = EntityKind(k);
+        for (int r = 0; r < rebased.resultSize(kind); ++r) {
+            if (!entry.declared->isDeclared(kind, r)) continue;
+            std::vector<HistoryLink> links;
+            std::vector<std::string> aliases;
+            if (labels && kind == EntityKind::Face && entry.declaredLabels && r < int(entry.declaredLabels->size()))
+                aliases = entry.declaredLabels->at(std::size_t(r));
+            bool complete = true;
+            for (const auto &link : entry.declared->origins(kind, r))
+                if (link.operand < 0 || link.operand >= int(operands.size())
+                    || !follow(operands[std::size_t(link.operand)], link.kind, link.index, link.relation, links, aliases)) {
+                    complete = false;
+                    break;
+                }
+            if (complete) {
+                rebased.declareOrigins(kind, r, std::move(links));
+                if (labels && kind == EntityKind::Face && !aliases.empty()) {
+                    std::sort(aliases.begin(), aliases.end());
+                    aliases.erase(std::unique(aliases.begin(), aliases.end()), aliases.end());
+                    if (labels->size() <= std::size_t(r)) labels->resize(std::size_t(r) + 1);
+                    labels->at(std::size_t(r)) = std::move(aliases);
+                }
+                any = true;
+            }
+        }
+    }
+    return any ? std::make_shared<const BodyHistory>(std::move(rebased)) : nullptr;
+}
+
 std::shared_ptr<Entry> entryOf(const Body &body) {
     std::lock_guard<std::mutex> lock(registryMutex);
     const auto it = registry.find(&body);
     if (it == registry.end()) return nullptr;
+    if (!it->second->registered) return nullptr;
     // Un indirizzo riusato da un B-rep nuovo non eredita la voce di uno morto.
     const std::shared_ptr<const Body> alive = it->second->body.lock();
     if (alive.get() != &body) return nullptr;
@@ -57,18 +153,21 @@ void compute(Entry &entry) {
     }
     std::shared_ptr<const BodyHistory> history;
     try {
-        if (entry.sameIndex && operands.size() == 1 && operands[0])
+        if (!entry.declared && entry.sameIndex && operands.size() == 1 && operands[0])
             history = std::make_shared<BodyHistory>(sameIndexHistory(*operands[0], *body));
     } catch (const std::exception &) {
         history.reset();
     }
     try {
-        if (!history) history = std::make_shared<BodyHistory>(inferHistory(operands, *body));
+        if (!history) history = std::make_shared<BodyHistory>(resolveHistory(operands, *body, entry.declared.get()));
         FaceLabels labels;
-        if (entry.labeler) labels = entry.labeler(*body, *history);
+        const auto faces = body->faces();
+        if (entry.labeler && std::any_of(faces.begin(), faces.end(), [&](FaceId f) { return !history->isDeclared(EntityKind::Face, f.index); }))
+            labels = entry.labeler(*body, *history);
         std::vector<const ElementNames *> raw;
         for (const auto &names : operandNames) raw.push_back(names.get());
-        auto names = std::make_shared<ElementNames>(propagateNames(*body, *history, raw, entry.tag, labels.empty() ? nullptr : &labels));
+        auto names = std::make_shared<ElementNames>(propagateNames(*body, *history, raw, entry.tag, labels.empty() ? nullptr : &labels,
+                                                                 entry.declaredLabels.get()));
         names->body = body.get();
         entry.history = history;
         entry.names = names;
@@ -101,6 +200,10 @@ QVector<int> historyOperands(const ExtrusionObject &body) {
     }
     switch (body.feature) {
     case BodyFeature::Extrusion:
+        if (body.extent != 0 && body.extentRef.kind == 5) add(body.extentRef.index);
+        if (mergingFeature(body) && body.mergeOperation != 0)
+            for (int merged : body.mergeBodies) add(merged);
+        return operands;
     case BodyFeature::Revolution:
     case BodyFeature::Sweep:
     case BodyFeature::Loft:
@@ -166,6 +269,7 @@ Labeler extrusionLabeler(const SketchObject &sketch, double extrusionDistance) {
     return [keyed, frame, direction](const Body &body, const BodyHistory &history) {
         FaceLabels labels;
         for (FaceId face : body.faces()) {
+            if (history.isDeclared(EntityKind::Face, face.index)) continue;
             if (!history.origins(EntityKind::Face, face.index).empty()) continue;  // ereditata
             Vec3 point;
             Vec2 uv;
@@ -229,32 +333,101 @@ QThreadStorage<QStringList> warnings;
 
 }
 
+void registerDeclaredHistory(const ForgeBody &result, const std::vector<ForgeBody> &operands, BodyHistory history, FaceAliases labels) {
+    if (!result) return;
+    auto entry = std::make_shared<Entry>();
+    entry->body = result;
+    entry->operands = operands;
+    entry->declared = std::make_shared<const BodyHistory>(std::move(history));
+    if (!labels.empty()) entry->declaredLabels = std::make_shared<const FaceAliases>(std::move(labels));
+    std::lock_guard<std::mutex> lock(registryMutex);
+    for (auto it = registry.begin(); it != registry.end();)
+        it = it->second->body.expired() ? registry.erase(it) : std::next(it);
+    // I risultati gia' registrati sono immutabili, anche durante il calcolo
+    // asincrono. Non sostituirne le dichiarazioni a posteriori.
+    registry.emplace(result.get(), std::move(entry));
+}
+
+void registerImportedHistory(const ForgeBody &body) {
+    if(!body)return;
+    auto history=makeHistory({},*body);FaceAliases labels(std::size_t(history.resultSize(EntityKind::Face)));
+    for(FaceId f:body->faces()){history.declareOrigins(EntityKind::Face,f.index,{});labels[std::size_t(f.index)]={"F"+std::to_string(f.index)};}
+    for(EdgeId e:body->edges())history.declareOrigins(EntityKind::Edge,e.index,{});
+    for(VertexId v:body->vertices())history.declareOrigins(EntityKind::Vertex,v.index,{});
+    registerDeclaredHistory(body,{},std::move(history),std::move(labels));
+}
+
+QVector<int> featureGenealogyOperandIndices(const ExtrusionObject &body, int index, const QVector<ExtrusionObject> &bodies) {
+    QVector<int> indices;
+    if (!body.forgeBody) return indices;
+    QVector<int> operands=historyOperands(body);
+    // La ripetizione della funzione ricostruisce target e utensile dagli
+    // operandi della funzione originale, prima di ripetere lo strumento.
+    if(body.operation<0&&body.feature==BodyFeature::Pattern&&body.pattern.featureOnly
+       &&body.firstBody>=0&&body.firstBody<index&&body.firstBody<bodies.size())
+        operands=historyOperands(bodies.at(body.firstBody));
+    for (int operand : operands) {
+        if (operand < 0 || operand >= index || operand >= bodies.size()) continue;
+        const ForgeBody &geometry = bodies.at(operand).forgeBody;
+        if (geometry && geometry != body.forgeBody) indices.append(operand);
+    }
+    return indices;
+}
+
+DeclaredHistorySnapshot declaredHistorySnapshot(const ExtrusionObject &body, int index, const QVector<ExtrusionObject> &bodies) {
+    DeclaredHistorySnapshot snapshot;
+    if (!body.forgeBody) return snapshot;
+    const QVector<int> indices = featureGenealogyOperandIndices(body, index, bodies);
+    std::lock_guard<std::mutex> lock(registryMutex);
+    const auto found = registry.find(body.forgeBody.get());
+    if (found == registry.end()) return snapshot;
+    const Entry &entry = *found->second;
+    if (entry.body.lock() != body.forgeBody || !entry.declared) return snapshot;
+    std::vector<ForgeBody> expected;
+    for (int operand : indices) expected.push_back(bodies.at(operand).forgeBody);
+    FaceAliases labels;
+    snapshot.history = rebaseDeclaredHistory(entry, *body.forgeBody, expected, &labels);
+    if (!labels.empty()) snapshot.labels = std::make_shared<const FaceAliases>(std::move(labels));
+    snapshot.operandIndices = indices;
+    return snapshot;
+}
+
 void registerFeatureGenealogy(const ExtrusionObject &body, int index, const QVector<SketchObject> &sketches,
                               const QVector<ExtrusionObject> &bodies) {
     if (!body.forgeBody) return;
     auto entry = std::make_shared<Entry>();
     entry->body = body.forgeBody;
-    for (int operand : historyOperands(body)) {
-        if (operand < 0 || operand >= index || operand >= bodies.size()) continue;
+    entry->registered = true;
+    entry->featureId = body.featureId;
+    for (int operand : featureGenealogyOperandIndices(body, index, bodies)) {
         const ForgeBody &geometry = bodies.at(operand).forgeBody;
-        if (geometry && geometry != body.forgeBody) {
-            entry->operands.push_back(geometry);
-            entry->operandInfo.append({operand, bodies.at(operand).featureId, bodies.at(operand).name, geometry});
-        }
+        entry->operands.push_back(geometry);
+        entry->operandInfo.append({operand, bodies.at(operand).featureId, bodies.at(operand).name, geometry});
     }
     entry->sameIndex = body.feature == BodyFeature::Transform || body.feature == BodyFeature::Scale || body.feature == BodyFeature::Draft;
     entry->tag = body.featureId ? "f" + std::to_string(body.featureId) : "i" + std::to_string(index);
     if (!body.suppressed) {
         if (body.operation < 0 && body.feature == BodyFeature::Extrusion && body.sketchIndex >= 0 && body.sketchIndex < sketches.size())
-            entry->labeler = extrusionLabeler(sketches.at(body.sketchIndex), body.distance);
+            entry->labeler = [sketch = sketches.at(body.sketchIndex), distance = body.distance](const Body &shape, const BodyHistory &history) {
+                return extrusionLabeler(sketch, distance)(shape, history);
+            };
         else if (body.operation < 0 && body.feature == BodyFeature::Primitive)
             entry->labeler = primitiveLabeler(body.primitive);
     }
     std::lock_guard<std::mutex> lock(registryMutex);
     for (auto it = registry.begin(); it != registry.end();)
         it = it->second->body.expired() ? registry.erase(it) : std::next(it);
-    // Lo stesso B-rep (feature soppressa, anteprima confermata) tiene la voce che ha.
-    if (!registry.emplace(body.forgeBody.get(), std::move(entry)).second) return;
+    const auto found = registry.find(body.forgeBody.get());
+    if (found != registry.end()) {
+        // Una feature con ID persistente resta immutabile. La conferma di
+        // un'anteprima senza ID sostituisce invece la registrazione temporanea:
+        // nessuna feature della storia ha ancora consumato quei nomi.
+        if (found->second->registered && (found->second->featureId || !body.featureId)) return;
+        FaceAliases labels;
+        entry->declared = rebaseDeclaredHistory(*found->second, *body.forgeBody, entry->operands, &labels);
+        if (!labels.empty()) entry->declaredLabels = std::make_shared<const FaceAliases>(std::move(labels));
+        found->second = std::move(entry);
+    } else registry.emplace(body.forgeBody.get(), std::move(entry));
     // La genealogia si prepara in sottofondo (un solo thread a bassa priorita',
     // per non togliere tempo alle anteprime): alla prima scelta di un
     // riferimento i nomi sono gia' pronti. Le anteprime scartate nel frattempo
@@ -321,8 +494,22 @@ QString entityEvolutionText(const Body &body, EntityKind kind, int index) {
     const QString name = elementName(body, kind, index);
     if (!name.isEmpty()) text += QStringLiteral(" [%1]").arg(name);
     if (!history) return text + QStringLiteral(": genealogia non disponibile");
+    if (history->isDeclared(kind, index)) text += QStringLiteral(" (origine dichiarata dall'algoritmo)");
     const auto &origins = history->origins(kind, index);
-    if (origins.empty()) return text + QStringLiteral(": generata (nessuna provenienza identificata)");
+    if (origins.empty()) {
+        const auto entry = entryOf(body);
+        if (kind == EntityKind::Face && entry && entry->declaredLabels && index >= 0 && index < int(entry->declaredLabels->size())) {
+            QStringList roles;
+            for (const auto &label : entry->declaredLabels->at(std::size_t(index))) {
+                if (label == "cap.start") roles << QStringLiteral("coperchio iniziale");
+                else if (label == "cap.end") roles << QStringLiteral("coperchio finale");
+                else if (label.rfind("side.", 0) == 0) roles << QStringLiteral("fianco dal tratto %1").arg(QString::fromStdString(label.substr(5)));
+                else roles << QString::fromStdString(label);
+            }
+            if (!roles.isEmpty()) return text + QStringLiteral(": generata, ") + roles.join(QStringLiteral("; "));
+        }
+        return text + QStringLiteral(": generata (nessuna provenienza identificata)");
+    }
     QStringList inherited, generated;
     for (const auto &link : origins) {
         const QString source = originLabel(link, operands);

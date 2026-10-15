@@ -1,4 +1,5 @@
 #include "fk_boolean.h"
+#include "fk_history.h"
 
 #include "fk_cancel.h"
 #include "fk_curve_surface.h"
@@ -14,6 +15,7 @@
 #include <mutex>
 #include <set>
 #include <stdexcept>
+#include <tuple>
 
 #include "fk_body_check.h"
 #include "fk_classify.h"
@@ -54,6 +56,7 @@ struct Snap {
 
 // Tratto di curva percorso in un verso: pezzo di bordo o taglio.
 struct Piece {
+    EdgeId source;  // bordo originale, noto durante la suddivisione (invalido per i tagli nuovi)
     CurvePtr<3> curve;
     Interval range;
     bool forward = true;
@@ -118,6 +121,8 @@ struct SubFace {
     // Senza contorno esterno: tutta la superficie chiusa (sfera, toro) meno
     // gli eventuali fori; nessun ciclo: la superficie intera.
     bool whole = false;
+    bool unchanged = false;
+    std::vector<FaceId> coincidentFaces; // sorgenti dell'altro operando riconosciute dalla classificazione
 };
 
 bool isPlane(const Surface &s) { return s.type() == SurfaceType::Plane; }
@@ -229,13 +234,14 @@ public:
         scale_ = std::max(all.diagonal(), 1.0);
     }
 
-    Body run();
+    Body run(BodyHistory *history);
     std::vector<BodySectionCurve> section();
     // Divisione della lamina (body 0) lungo le curve in cui la attraversa il body 1: un body per regione connessa.
-    std::vector<Body> split();
+    std::vector<Body> split(std::vector<BodyHistory> *histories);
     // Divisione delle facce del body 0 lungo curve date (il body 1 e' vuoto)
     // e scelta dei pezzi da togliere.
-    Body imprint(const std::vector<ImprintCurve> &curves, const std::function<bool(FaceId, const Vec3 &)> &remove, int *removed);
+    Body imprint(const std::vector<ImprintCurve> &curves, const std::function<bool(FaceId, const Vec3 &)> &remove, int *removed,
+                 BodyHistory *history);
 
 private:
     unsigned workers(std::size_t count) const {
@@ -275,7 +281,7 @@ private:
     // Estremi quasi coincidenti degli archi resi un vertice tollerante.
     void snapNearEnds();
     // Passo 5: cucitura dei pezzi tenuti ("da girare" se il secondo e' vero).
-    Body assemble(const std::vector<std::pair<SubFace, bool>> &kept, bool sheetResult);
+    Body assemble(const std::vector<std::pair<SubFace, bool>> &kept, bool sheetResult, BodyHistory *history = nullptr, int operands = 2);
     void pairArcs(FaceId fa, FaceId fb, PairResult &out) const;
     bool coincident(const Surface &a, const Surface &b) const;
     void coincidentArcs(FaceId fa, FaceId fb, PairResult &out, bool partial = false) const;
@@ -291,7 +297,7 @@ private:
     std::vector<SubFace> buildSubFacesOnce(int k, FaceId f, const std::vector<Piece> &cuts, int polygonSamples) const;
     void finishCycle(const Surface &surface, bool sense, Cycle &cycle, int polygonSamples) const;
     bool insideSubFace(const SubFace &subFace, const Vec2 &uv) const;
-    Location classify(const SubFace &subFace, const SolidClassifier &other) const;
+    Location classify(const SubFace &subFace, const SolidClassifier &other, std::vector<FaceId> *coincidentFaces = nullptr) const;
     bool keep(int k, Location location) const;
     void pairRadially(const std::vector<Vec3> &vertices, std::vector<Body::BuildEdge> &edges, std::vector<Vec3> &middles,
                       std::vector<Body::BuildFace> &faces) const;
@@ -302,6 +308,7 @@ private:
     double tolerance_, scale_ = 1.0;
     double vertexTolerance_ = 0.0;  // la piu' grande tolleranza dei vertici dei due body (file importati)
     bool unify_ = true;
+    bool recordHistory_ = false;
     int threads_ = 0;
     std::map<int, Box> boxes_[2];
     Box bounds_[2];
@@ -1067,7 +1074,25 @@ std::vector<SubFace> BooleanBuilder::buildSubFaces(int k, FaceId f, const std::v
     for (int samples : {24, 96, 384, 1536}) {
         cancellationPoint();
         try {
-            return buildSubFacesOnce(k, f, cuts, samples);
+            auto result = buildSubFacesOnce(k, f, cuts, samples);
+            if (recordHistory_ && result.size() == 1) {
+                // Il bordo resta esattamente quello originale: identita' degli
+                // edge, verso e intervalli noti durante il taglio, senza
+                // riconoscere geometricamente il corpo gia' costruito.
+                using Boundary = std::tuple<int, bool, double, double>;
+                std::multiset<Boundary> before, after;
+                for (LoopId loop : bodies_[k].face(f).loops)
+                    for (FinId id : bodies_[k].loopFins(loop)) {
+                        const Fin &fin = bodies_[k].fin(id);
+                        const auto &range = bodies_[k].edge(fin.edge).range;
+                        before.emplace(fin.edge.index, fin.sense, range.lo, range.hi);
+                    }
+                for (const Cycle &cycle : result.front().cycles)
+                    for (const Piece &piece : cycle.pieces)
+                        after.emplace(piece.source.index, piece.forward, piece.range.lo, piece.range.hi);
+                result.front().unchanged = before == after;
+            }
+            return result;
         } catch (const std::domain_error &) {
             if (samples == 1536) throw;
         }
@@ -1094,6 +1119,7 @@ std::vector<SubFace> BooleanBuilder::buildSubFacesOnce(int k, FaceId f, const st
             const double endTolerance = std::max({endVertex.tolerance, edge.tolerance, 1.01 * distance(endVertex.point, edge.curve->point(edge.range.hi))});
             for (const Interval &range : splitAtPoints(*edge.curve, edge.range)) {
                 Piece piece;
+                piece.source = fin.edge;
                 piece.curve = edge.curve;
                 piece.range = range;
                 piece.forward = fin.sense;
@@ -1547,7 +1573,8 @@ bool BooleanBuilder::interiorPoint(const SubFace &subFace, const std::function<b
     return false;
 }
 
-Location BooleanBuilder::classify(const SubFace &subFace, const SolidClassifier &other) const {
+Location BooleanBuilder::classify(const SubFace &subFace, const SolidClassifier &other, std::vector<FaceId> *coincidentFaces) const {
+    if (coincidentFaces) coincidentFaces->clear();
     const Body &body = bodies_[subFace.body], &otherBody = bodies_[1 - subFace.body];
     const Face &face = body.face(subFace.face);
     const Surface &surface = *face.surface;
@@ -1571,6 +1598,7 @@ Location BooleanBuilder::classify(const SubFace &subFace, const SolidClassifier 
         Location on = Location::Out;
         bool found = false;
         const bool ok = interiorPoints([&](const Vec3 &z) {
+            std::vector<FaceId> origins;
             for (FaceId g : coplanar) {
                 // Coincidenza in parte: il punto deve stare anche sull'altra superficie.
                 if (partial_.count({&surface, otherBody.face(g).surface.get()}) && projectPoint(*otherBody.face(g).surface, z).distance > tolerance_)
@@ -1582,8 +1610,10 @@ Location BooleanBuilder::classify(const SubFace &subFace, const SolidClassifier 
                     const double d = dot(faceNormal(*gface.surface, gface.sense, z), faceNormal(surface, face.sense, z));
                     on = d > 0.0 ? Location::OnSame : Location::OnOpposite;
                     found = true;
+                    if (coincidentFaces) origins.push_back(g);
                 }
             }
+            if (coincidentFaces) *coincidentFaces = std::move(origins);
             return true;
         });
         if (!ok) throw std::domain_error("booleanOperation: classificazione di un pezzo complanare non riuscita");
@@ -2016,7 +2046,8 @@ std::vector<BodySectionCurve> BooleanBuilder::section() {
     return result;
 }
 
-Body BooleanBuilder::run() {
+Body BooleanBuilder::run(BodyHistory *history) {
+    recordHistory_ = history != nullptr;
     // Lamine: solo con un solido, e il risultato e' la parte della lamina
     // dentro (intersezione) o fuori (differenza, lamina meno solido) del solido.
     const bool sheet[2] = {bodies_[0].isSheet(), bodies_[1].isSheet()};
@@ -2027,12 +2058,25 @@ Body BooleanBuilder::run() {
         throw std::domain_error("booleanOperation: sottrarre una lamina da un solido non ne cambia il volume");
     const bool sheetResult = sheet[0] || sheet[1];
     if (!sheetResult && !bounds_[0].overlaps(bounds_[1])) {
-        if (operation_ == BooleanOperation::Intersect) return Body();
+        if (operation_ == BooleanOperation::Intersect) {
+            Body empty;
+            if (history) *history = makeHistory({&bodies_[0], &bodies_[1]}, empty);
+            return empty;
+        }
         if (operation_ == BooleanOperation::Subtract) {
-            Body result = unify_ ? unifySameDomain(bodies_[0], tolerance_) : bodies_[0];
+            BodyHistory unified;
+            Body result = unify_ ? unifySameDomain(bodies_[0], tolerance_, history ? &unified : nullptr) : bodies_[0];
             const std::vector<CheckIssue> issues = checkBody(result);
             if (!issues.empty())
                 throw std::domain_error("booleanOperation: risultato non valido (" + describe(issues.front().code) + ": " + issues.front().message + ")");
+            if (history) {
+                BodyHistory declared = makeHistory({&bodies_[0], &bodies_[1]}, result);
+                for (FaceId f : result.faces()) {
+                    if (unify_) declared.declareOrigins(EntityKind::Face, f.index, unified.origins(EntityKind::Face, f.index));
+                    else declared.declareOrigins(EntityKind::Face, f.index, {{0, EntityKind::Face, f.index, HistoryRelation::Same}});
+                }
+                *history = std::move(declared);
+            }
             return result;
         }
     }
@@ -2062,7 +2106,7 @@ Body BooleanBuilder::run() {
             const auto found = cuts[job.body].find(job.face.index);
             const std::vector<Piece> none;
             for (SubFace &subFace : buildSubFaces(job.body, job.face, found != cuts[job.body].end() ? found->second : none)) {
-                const Location location = classify(subFace, *classifiers[job.body]);
+                const Location location = classify(subFace, *classifiers[job.body], history ? &subFace.coincidentFaces : nullptr);
                 if (keep(job.body, location))
                     job.kept.emplace_back(std::move(subFace), operation_ == BooleanOperation::Subtract && job.body == 1);
             }
@@ -2076,11 +2120,16 @@ Body BooleanBuilder::run() {
         if (job.error) std::rethrow_exception(job.error);
         kept.insert(kept.end(), std::make_move_iterator(job.kept.begin()), std::make_move_iterator(job.kept.end()));
     }
-    if (kept.empty()) return Body();
-    return assemble(kept, sheetResult);
+    if (kept.empty()) {
+        Body empty;
+        if (history) *history = makeHistory({&bodies_[0], &bodies_[1]}, empty);
+        return empty;
+    }
+    return assemble(kept, sheetResult, history);
 }
 
-std::vector<Body> BooleanBuilder::split() {
+std::vector<Body> BooleanBuilder::split(std::vector<BodyHistory> *histories) {
+    recordHistory_=histories!=nullptr;
     if (!bodies_[0].isSheet()) throw std::domain_error("splitSheet: si dividono solo le lamine");
     std::map<int, std::vector<Piece>> cuts[2];
     computeCuts(cuts);
@@ -2133,11 +2182,18 @@ std::vector<Body> BooleanBuilder::split() {
     std::map<int, std::vector<std::pair<SubFace, bool>>> regions;
     for (std::size_t i = 0; i < pieces.size(); ++i) regions[root(int(i))].emplace_back(pieces[i], false);
     std::vector<Body> result;
-    for (const auto &[index, kept] : regions) result.push_back(assemble(kept, true));
+    std::vector<BodyHistory> emitted;
+    for (const auto &[index, kept] : regions) {
+        BodyHistory h;result.push_back(assemble(kept, true, histories?&h:nullptr));
+        if(histories)emitted.push_back(std::move(h));
+    }
+    if(histories)*histories=std::move(emitted);
     return result;
 }
 
-Body BooleanBuilder::imprint(const std::vector<ImprintCurve> &curves, const std::function<bool(FaceId, const Vec3 &)> &remove, int *removed) {
+Body BooleanBuilder::imprint(const std::vector<ImprintCurve> &curves, const std::function<bool(FaceId, const Vec3 &)> &remove, int *removed,
+                            BodyHistory *history) {
+    recordHistory_ = history != nullptr;
     for (const ImprintCurve &curve : curves) {
         cancellationPoint();
         if (!curve.curve || !bodies_[0].contains(curve.face)) throw std::invalid_argument("imprintCurves: curva o faccia non valida");
@@ -2201,10 +2257,10 @@ Body BooleanBuilder::imprint(const std::vector<ImprintCurve> &curves, const std:
     }
     if (removed) *removed = count;
     if (kept.empty()) throw std::domain_error("imprintCurves: non resta nessuna faccia");
-    return assemble(kept, bodies_[0].isSheet() || count > 0);
+    return assemble(kept, bodies_[0].isSheet() || count > 0, history, 1);
 }
 
-Body BooleanBuilder::assemble(const std::vector<std::pair<SubFace, bool>> &kept, bool sheetResult) {
+Body BooleanBuilder::assemble(const std::vector<std::pair<SubFace, bool>> &kept, bool sheetResult, BodyHistory *history, int operandCount) {
     std::vector<Vec3> vertices;
     std::vector<double> vertexTolerances;
     auto vertexOf = [&](const Vec3 &p, double tolerance) {
@@ -2323,6 +2379,22 @@ Body BooleanBuilder::assemble(const std::vector<std::pair<SubFace, bool>> &kept,
     } catch (const std::invalid_argument &error) {
         throw std::domain_error(std::string("booleanOperation: risultato non chiuso (") + error.what() + ")");
     }
+    BodyHistory declared;
+    if (history) {
+        std::vector<const Body *> operands{&bodies_[0]};
+        if (operandCount == 2) operands.push_back(&bodies_[1]);
+        declared = makeHistory(operands, result);
+        const auto built = result.faces();
+        if (built.size() != kept.size()) throw std::logic_error("booleanOperation: mappa delle facce incoerente");
+        for (std::size_t i = 0; i < built.size(); ++i) {
+            const auto &source = kept[i].first;
+            const auto relation = source.unchanged && !kept[i].second ? HistoryRelation::Same : HistoryRelation::Modified;
+            std::vector<HistoryLink> origins{{source.body, EntityKind::Face, source.face.index, relation}};
+            for (FaceId other : source.coincidentFaces)
+                origins.push_back({1 - source.body, EntityKind::Face, other.index, HistoryRelation::Modified});
+            declared.declareOrigins(EntityKind::Face, built[i].index, std::move(origins));
+        }
+    }
     // SP-curve approssimate delle curve tracciate (le altre le calcola computePCurves).
     for (FinId f : result.fins()) {
         cancellationPoint();
@@ -2362,11 +2434,16 @@ Body BooleanBuilder::assemble(const std::vector<std::pair<SubFace, bool>> &kept,
     };
     tolerantEnds(result);
     computePCurves(result);
-    if (unify_) result = unifySameDomain(result, tolerance_);
+    if (unify_) {
+        BodyHistory unified;
+        result = unifySameDomain(result, tolerance_, history ? &unified : nullptr);
+        if (history) declared = BodyHistory::compose(declared, unified, 0);
+    }
     tolerantEnds(result);
     const std::vector<CheckIssue> issues = checkBody(result);
     if (!issues.empty())
         throw std::domain_error("booleanOperation: risultato non valido (" + describe(issues.front().code) + ": " + issues.front().message + ")");
+    if (history) *history = std::move(declared);
     return result;
 }
 
@@ -2376,17 +2453,20 @@ std::vector<BodySectionCurve> bodySectionCurves(const Body &a, const Body &b, co
     return BooleanBuilder(a, b, BooleanOperation::Intersect, options).section();
 }
 
-Body booleanOperation(const Body &a, const Body &b, BooleanOperation operation, const BooleanOptions &options) {
-    return BooleanBuilder(a, b, operation, options).run();
+Body booleanOperation(const Body &a, const Body &b, BooleanOperation operation, const BooleanOptions &options, BodyHistory *history) {
+    if (history) *history = BodyHistory();
+    return BooleanBuilder(a, b, operation, options).run(history);
 }
 
-std::vector<Body> splitSheet(const Body &sheet, const Body &tool, const BooleanOptions &options) {
-    return BooleanBuilder(sheet, tool, BooleanOperation::Intersect, options).split();
+std::vector<Body> splitSheet(const Body &sheet, const Body &tool, const BooleanOptions &options, std::vector<BodyHistory> *histories) {
+    if(histories)histories->clear();
+    return BooleanBuilder(sheet, tool, BooleanOperation::Intersect, options).split(histories);
 }
 
 Body imprintCurves(const Body &body, const std::vector<ImprintCurve> &curves, const std::function<bool(FaceId, const Vec3 &)> &remove,
-                   const BooleanOptions &options, int *removed) {
-    return BooleanBuilder(body, Body(), BooleanOperation::Intersect, options).imprint(curves, remove, removed);
+                   const BooleanOptions &options, int *removed, BodyHistory *history) {
+    if (history) *history = BodyHistory();
+    return BooleanBuilder(body, Body(), BooleanOperation::Intersect, options).imprint(curves, remove, removed, history);
 }
 
 }

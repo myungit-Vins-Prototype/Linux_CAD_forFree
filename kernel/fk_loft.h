@@ -75,16 +75,16 @@ struct LoftOptions {
 };
 
 // Solido: tutte le sezioni chiuse, facce di testa piane.
-Body loftSolid(const std::vector<LoftSection> &sections, bool ruled = false);
-Body loftSolid(const std::vector<LoftSection> &sections, const LoftOptions &options);
+Body loftSolid(const std::vector<LoftSection> &sections, bool ruled = false, FaceAliases *labels = nullptr);
+Body loftSolid(const std::vector<LoftSection> &sections, const LoftOptions &options, FaceAliases *labels = nullptr);
 
 // Lamina (Body::buildSheet). Sezioni tutte aperte: superficie tra le catene.
 // Sezioni tutte chiuse: tubo senza coperchi, con la stessa corrispondenza dei
 // loop del solido (verso, partenza, guide, continuita' G0/G1/G2); le sue facce
 // laterali coincidono con quelle di loftSolid sulle stesse sezioni. Sezioni
 // miste (chiuse e aperte): std::domain_error.
-Body loftSheet(const std::vector<LoftSection> &sections, bool ruled = false);
-Body loftSheet(const std::vector<LoftSection> &sections, const LoftOptions &options);
+Body loftSheet(const std::vector<LoftSection> &sections, bool ruled = false, FaceAliases *labels = nullptr);
+Body loftSheet(const std::vector<LoftSection> &sections, const LoftOptions &options, FaceAliases *labels = nullptr);
 
 // Superficie rigata tra due catene 3D qualsiasi (spigoli, curve di schizzi su
 // piani diversi, eliche: le HelixCurve si usano come la loro B-spline entro
@@ -100,10 +100,10 @@ Body loftSheet(const std::vector<LoftSection> &sections, const LoftOptions &opti
 // Superficie esatta: lineare in v tra le righe dei poli omogenei dei tratti
 // (piano esatto dove le pezze sono piane). Lamina: spigoli = le due curve
 // (stesso tipo) e le rette nei vertici corrispondenti.
-Body ruledSurface(const std::vector<PathSegment> &first, const std::vector<PathSegment> &second);
+Body ruledSurface(const std::vector<PathSegment> &first, const std::vector<PathSegment> &second, FaceAliases *labels = nullptr);
 // Con condizioni alle estremita' costruisce una superficie raccordata:
 // i profili restano esatti, i collegamenti possono diventare curvi.
-Body ruledSurface(const std::vector<PathSegment> &first, const std::vector<PathSegment> &second, const LoftOptions &options);
+Body ruledSurface(const std::vector<PathSegment> &first, const std::vector<PathSegment> &second, const LoftOptions &options, FaceAliases *labels = nullptr);
 
 }
 

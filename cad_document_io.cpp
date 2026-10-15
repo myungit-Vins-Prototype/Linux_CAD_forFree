@@ -17,6 +17,7 @@
 
 #include "cad_constraints.h"
 #include "cad_model_history.h"
+#include "cad_element_names.h"
 #include "cad_snapshot_chunks.h"
 #include "cad_topology_ref.h"
 #include "fk_body_io.h"
@@ -779,7 +780,7 @@ namespace {
 // una modifica o una rigenerazione esplicita sostituisce immediatamente lo
 // snapshot. Il tag rende leggibili anche le cache precedenti (solo B-rep).
 constexpr quint32 kBodyCacheTag = 0x46434332;  // "FCC2"
-constexpr quint32 kBodyCacheVersion = 5;
+constexpr quint32 kBodyCacheVersion = 7;
 constexpr qsizetype kMaxDisplayValues = 200000000;
 
 QByteArray definitionHash(const QByteArray &payload) { return QCryptographicHash::hash(payload, QCryptographicHash::Sha256); }
@@ -826,6 +827,128 @@ bool readDisplay(QDataStream &in, BodyDisplay &display, quint32 cacheVersion) {
     return in.status() == QDataStream::Ok && quality >= 0 && reasonableDisplay(display);
 }
 
+// Solo copertura e origini dichiarate: nessuna inferenza al salvataggio.
+// Le dimensioni delle tabelle si ricavano dai B-rep al caricamento.
+QByteArray writeDeclaredHistory(const DeclaredHistorySnapshot &snapshot, const QVector<ExtrusionObject> &bodies) {
+    if (!snapshot.history) return {};
+    const auto &history = *snapshot.history;
+    bool any = false;
+    for (int k = 0; k < 3; ++k)
+        for (int r = 0; r < history.resultSize(Kernel::EntityKind(k)); ++r)
+            any = any || history.isDeclared(Kernel::EntityKind(k), r);
+    if (!any || history.operandCount() != snapshot.operandIndices.size()) return {};
+    QByteArray data;
+    QDataStream out(&data, QIODevice::WriteOnly);
+    out.setVersion(QDataStream::Qt_6_0);
+    const bool hasLabels = snapshot.labels && std::any_of(snapshot.labels->begin(), snapshot.labels->end(),
+        [](const auto &labels) { return !labels.empty(); });
+    out << quint32(hasLabels ? 2 : 1) << quint32(snapshot.operandIndices.size()); // schema 1 rimane leggibile anche nelle cache 6
+    for (int operand : snapshot.operandIndices) out << qint32(operand) << quint64(bodies.at(operand).featureId);
+    for (int k = 0; k < 3; ++k) {
+        const auto kind = Kernel::EntityKind(k);
+        QVector<int> covered;
+        for (int r = 0; r < history.resultSize(kind); ++r)
+            if (history.isDeclared(kind, r)) covered.append(r);
+        out << quint32(covered.size());
+        for (int r : covered) {
+            const auto &links = history.origins(kind, r);
+            out << qint32(r) << quint32(links.size());
+            for (const auto &link : links)
+                out << qint32(link.operand) << quint8(link.kind) << qint32(link.index) << quint8(link.relation);
+        }
+    }
+    if (hasLabels) {
+        QVector<int> faces;
+        for (std::size_t f = 0; f < snapshot.labels->size(); ++f) if (!snapshot.labels->at(f).empty()) faces.append(int(f));
+        out << quint32(faces.size());
+        for (int face : faces) {
+            const auto &labels = snapshot.labels->at(std::size_t(face));
+            out << qint32(face) << quint32(labels.size());
+            for (const auto &label : labels) out << QString::fromStdString(label);
+        }
+    }
+    return out.status() == QDataStream::Ok ? data : QByteArray();
+}
+
+bool readDeclaredHistory(const QByteArray &data, int index, const QVector<ExtrusionObject> &bodies, DeclaredHistorySnapshot &snapshot) {
+    if (data.isEmpty()) return true;
+    const auto &body = bodies.at(index);
+    if (!body.forgeBody) return false;
+    QDataStream in(data);
+    in.setVersion(QDataStream::Qt_6_0);
+    quint32 version = 0, count = 0;
+    in >> version >> count;
+    const auto expected = featureGenealogyOperandIndices(body, index, bodies);
+    if (in.status() != QDataStream::Ok || (version != 1 && version != 2) || count != quint32(expected.size())) return false;
+    std::vector<const Kernel::Body *> operands;
+    for (int operand : expected) {
+        qint32 savedIndex = -1;
+        quint64 savedId = 0;
+        in >> savedIndex >> savedId;
+        if (in.status() != QDataStream::Ok || savedIndex != operand || savedId != bodies.at(operand).featureId) return false;
+        operands.push_back(bodies.at(operand).forgeBody.get());
+    }
+    const auto alive = [](const Kernel::Body &shape, Kernel::EntityKind kind, int entity) {
+        if (kind == Kernel::EntityKind::Face) return shape.contains(Kernel::FaceId(entity));
+        if (kind == Kernel::EntityKind::Edge) return shape.contains(Kernel::EdgeId(entity));
+        return shape.contains(Kernel::VertexId(entity));
+    };
+    Kernel::BodyHistory history = Kernel::makeHistory(operands, *body.forgeBody);
+    for (int k = 0; k < 3; ++k) {
+        const auto kind = Kernel::EntityKind(k);
+        quint32 entities = 0;
+        in >> entities;
+        if (in.status() != QDataStream::Ok || entities > quint32(history.resultSize(kind))
+            || quint64(entities) * 8 > quint64(in.device()->bytesAvailable())) return false;
+        for (quint32 r = 0; r < entities; ++r) {
+            qint32 entity = -1;
+            quint32 origins = 0;
+            in >> entity >> origins;
+            if (in.status() != QDataStream::Ok || !alive(*body.forgeBody, kind, entity) || history.isDeclared(kind, entity)
+                || quint64(origins) * 10 > quint64(in.device()->bytesAvailable())) return false;
+            std::vector<Kernel::HistoryLink> links;
+            for (quint32 l = 0; l < origins; ++l) {
+                qint32 operand = -1, source = -1;
+                quint8 sourceKind = 255, relation = 255;
+                in >> operand >> sourceKind >> source >> relation;
+                if (in.status() != QDataStream::Ok || operand < 0 || operand >= int(operands.size()) || sourceKind > 2 || relation > 2
+                    || !alive(*operands[std::size_t(operand)], Kernel::EntityKind(sourceKind), source)) return false;
+                links.push_back({operand, Kernel::EntityKind(sourceKind), source, Kernel::HistoryRelation(relation)});
+            }
+            history.declareOrigins(kind, entity, std::move(links));
+            if (history.origins(kind, entity).size() != origins) return false; // origini duplicate
+        }
+    }
+    Kernel::FaceAliases labels;
+    if (version == 2) {
+        quint32 faces = 0;
+        in >> faces;
+        if (in.status() != QDataStream::Ok || faces > quint32(history.resultSize(Kernel::EntityKind::Face))
+            || quint64(faces) * 8 > quint64(in.device()->bytesAvailable())) return false;
+        labels.resize(std::size_t(history.resultSize(Kernel::EntityKind::Face)));
+        for (quint32 f = 0; f < faces; ++f) {
+            qint32 face = -1; quint32 aliases = 0;
+            in >> face >> aliases;
+            if (in.status() != QDataStream::Ok || !body.forgeBody->contains(Kernel::FaceId(face))
+                || !history.isDeclared(Kernel::EntityKind::Face, face) || !labels[std::size_t(face)].empty()
+                || aliases == 0 || quint64(aliases) * 4 > quint64(in.device()->bytesAvailable())) return false;
+            auto &cell = labels[std::size_t(face)];
+            for (quint32 a = 0; a < aliases; ++a) {
+                QString label; in >> label;
+                if (in.status() != QDataStream::Ok || label.isEmpty() || label.size() > 4096) return false;
+                const auto text = label.toStdString();
+                if (std::find(cell.begin(), cell.end(), text) != cell.end()) return false;
+                cell.push_back(text);
+            }
+        }
+    }
+    if (in.status() != QDataStream::Ok || !in.atEnd()) return false;
+    snapshot.history = std::make_shared<const Kernel::BodyHistory>(std::move(history));
+    snapshot.operandIndices = expected;
+    if (!labels.empty()) snapshot.labels = std::make_shared<const Kernel::FaceAliases>(std::move(labels));
+    return true;
+}
+
 QByteArray bodyCache(const QByteArray &payload, const DocumentState &state) {
     QByteArray cache;
     QBuffer buffer(&cache);
@@ -835,7 +958,8 @@ QByteArray bodyCache(const QByteArray &payload, const DocumentState &state) {
     out << QByteArray(FORGECAD_SOURCE_HASH) << definitionHash(payload) << kBodyCacheTag << kBodyCacheVersion
         << quint32(state.extrusions.size());
     SnapshotChunkWriter chunks(out);
-    for (const ExtrusionObject &body : state.extrusions) {
+    for (int index = 0; index < state.extrusions.size(); ++index) {
+        const ExtrusionObject &body = state.extrusions.at(index);
         std::string data;
         if (body.forgeBody) {
             try {
@@ -854,6 +978,8 @@ QByteArray bodyCache(const QByteArray &payload, const DocumentState &state) {
         const bool display = body.visible && hasDisplaySnapshot(body.display);
         out << quint8(display ? 1 : 0);
         if (display) writeDisplay(out, body.display);
+        const auto declared = data.empty() ? DeclaredHistorySnapshot() : declaredHistorySnapshot(body, index, state.extrusions);
+        chunks.write(writeDeclaredHistory(declared, state.extrusions));
     }
     return out.status() == QDataStream::Ok ? qCompress(cache, 6) : QByteArray();
 }
@@ -877,6 +1003,7 @@ void applyBodyCache(const QByteArray &compressed, const QByteArray &payload, Doc
     struct CachedBody {
         QString error;
         QByteArray data;
+        QByteArray declared;
         BodyDisplay display;
         bool hasBody = false;
         bool hasDisplay = false;
@@ -905,8 +1032,10 @@ void applyBodyCache(const QByteArray &compressed, const QByteArray &payload, Doc
                 records[i].display = {};
             }
         }
+        if (cacheVersion >= 6) records[i].declared = chunks.read();
         if (in.status() != QDataStream::Ok) return;
     }
+    if (!in.atEnd()) return;
 
     // I body sono indipendenti nello snapshot: lettura binaria e indici per il
     // picking vengono ricostruiti su tutti i core. Eventuali record non piu'
@@ -931,6 +1060,14 @@ void applyBodyCache(const QByteArray &compressed, const QByteArray &payload, Doc
     });
     for (quint32 i = 0; i < count; ++i)
         if (records[i].hasBody && !bodies[i]) return;  // snapshot atomico: niente dipendenze miste
+    // Si validano anche tutte le dichiarazioni prima di applicare lo snapshot
+    // o di registrarle. Una cache incoerente ricade nella rigenerazione dalla
+    // definizione, evitando B-rep salvati con nomi di provenienza sbagliati.
+    QVector<ExtrusionObject> snapshotBodies = state.extrusions;
+    for (quint32 i = 0; i < count; ++i) snapshotBodies[int(i)].forgeBody = bodies[i];
+    std::vector<DeclaredHistorySnapshot> histories(count);
+    for (quint32 i = 0; i < count; ++i)
+        if (!readDeclaredHistory(records[i].declared, int(i), snapshotBodies, histories[i])) return;
     for (quint32 i = 0; i < count; ++i) {
         ExtrusionObject &body = state.extrusions[int(i)];
         if (!bodies[i]) continue;
@@ -945,6 +1082,12 @@ void applyBodyCache(const QByteArray &compressed, const QByteArray &payload, Doc
         // Alla prima modifica della storia cachedGeometry viene azzerato e il
         // corpo torna a essere calcolato dalla definizione parametrica.
         body.cachedGeometry = true;
+        if (histories[i].history) {
+            std::vector<ForgeBody> operands;
+            for (int operand : histories[i].operandIndices) operands.push_back(snapshotBodies.at(operand).forgeBody);
+            registerDeclaredHistory(body.forgeBody, operands, *histories[i].history,
+                                   histories[i].labels ? *histories[i].labels : Kernel::FaceAliases{});
+        }
     }
 }
 

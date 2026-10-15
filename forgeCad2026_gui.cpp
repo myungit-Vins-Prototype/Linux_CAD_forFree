@@ -2355,6 +2355,8 @@ public:
     QString createBlend(int baseIndex, const QVector<EdgePoint> &edges, double size, bool chamfer, const QString &name, const ChamferSpec &spec = {}) {
         if (baseIndex < 0 || baseIndex >= extrusions_.size()) return QStringLiteral("Corpo non valido.");
         ExtrusionObject blend;
+        blend.featureId = 1;
+        for (const auto &feature : extrusions_) blend.featureId = std::max(blend.featureId, feature.featureId + 1);
         blend.name = name;
         blend.feature = BodyFeature::Blend;
         blend.plane = extrusions_.at(baseIndex).plane;
@@ -2382,6 +2384,9 @@ public:
             rebuildBody(blend, int(extrusions_.size()));
             if (!ForgeCad::hasGeometry(blend)) return blend.error;
         }
+        // Anche il B-rep promosso dall'anteprima riceve il tag persistente,
+        // conservando le dichiarazioni gia' preparate dal kernel.
+        ForgeCad::registerFeatureGenealogy(blend, int(extrusions_.size()), sketches_, extrusions_);
         recordUndo();
         extrusions_[baseIndex].visible = false;
         extrusions_.append(blend);
@@ -2807,6 +2812,8 @@ public:
         QVector<ExtrusionObject> prepared;
         prepared.reserve(parts.size());
         const int quality = tessellationQuality_;
+        quint64 nextFeatureId=1;
+        for(const auto &existing:extrusions_)nextFeatureId=std::max(nextFeatureId,existing.featureId+1);
         std::atomic<int> completed{0};
         QTimer reporter;
         if (progress) {
@@ -2819,11 +2826,20 @@ public:
                 ExtrusionObject body;
                 body.name = part.name;
                 body.feature = BodyFeature::Imported;
+                body.featureId=nextFeatureId++;
                 body.importData = part.data;
                 body.importSource = source;
                 body.forgeBody = part.body;
                 body.solid = part.solid;
                 if (!body.forgeBody) body.error = QStringLiteral("Il corpo non ha geometria.");
+                else {
+                    // Un secondo inserimento delle stesse parti deve avere
+                    // nomi propri; la registrazione dei B-rep e' immutabile.
+                    if(ForgeCad::featureHistoryOf(*body.forgeBody))
+                        body.forgeBody=std::make_shared<const ForgeCad::Kernel::Body>(*body.forgeBody);
+                    ForgeCad::registerImportedHistory(body.forgeBody);
+                    ForgeCad::registerFeatureGenealogy(body,int(extrusions_.size()+prepared.size()),sketches_,extrusions_);
+                }
                 ForgeCad::tessellateGeometry(body, quality, body.display);
                 prepared.append(std::move(body));
                 ++completed;

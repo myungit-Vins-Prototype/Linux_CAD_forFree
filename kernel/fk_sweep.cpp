@@ -324,6 +324,7 @@ struct ProfilePiece {
     CurvePtr<3> curve;
     Interval range;
     int start = -1, end = -1;  // vertici del profilo
+    int source = -1, loop = -1;
 };
 
 struct ProfileData {
@@ -334,13 +335,18 @@ struct ProfileData {
     std::vector<double> gaps;             // distanza tra la fine del tratto precedente e il vertice
 };
 
+ProfileLoop keyedLoop(ProfileLoop loop) {
+    for(std::size_t i=0;i<loop.segments.size();++i)if(loop.segments[i].source<0)loop.segments[i].source=int(i);
+    return loop;
+}
 void addLoop(ProfileData &data, const Frame3 &frame, const ProfileLoop &loop, bool closed, int region) {
     std::vector<ProfileSegment> segments = loop.segments;
+    for (std::size_t j=0;j<segments.size();++j)if(segments[j].source<0)segments[j].source=int(j);
     // Un loop di una sola curva chiusa si divide in due tratti.
     if (closed && segments.size() == 1) {
         const ProfileSegment s = segments.front();
         const double m = 0.5 * (s.range.lo + s.range.hi);
-        segments = {{s.curve, {s.range.lo, m}}, {s.curve, {m, s.range.hi}}};
+        segments = {{s.curve, {s.range.lo, m}, s.source}, {s.curve, {m, s.range.hi}, s.source}};
     }
     const int first = int(data.vertices.size());
     const int m = int(segments.size());
@@ -358,6 +364,7 @@ void addLoop(ProfileData &data, const Frame3 &frame, const ProfileLoop &loop, bo
         ProfilePiece piece;
         piece.curve = embedCurve(segments[std::size_t(j)].curve, frame);
         piece.range = segments[std::size_t(j)].range;
+        piece.source = segments[std::size_t(j)].source;piece.loop = int(data.loops.size());
         piece.start = first + j;
         piece.end = closed ? first + (j + 1) % m : first + j + 1;
         indices.push_back(int(data.pieces.size()));
@@ -367,7 +374,7 @@ void addLoop(ProfileData &data, const Frame3 &frame, const ProfileLoop &loop, bo
     data.region.push_back(region);
 }
 
-Body sweep(const Frame3 &profileFrame, const ProfileData &profile, bool sheet, const std::vector<PathSegment> &path, SweepOrientation orientation) {
+Body sweep(const Frame3 &profileFrame, const ProfileData &profile, bool sheet, const std::vector<PathSegment> &path, SweepOrientation orientation, FaceAliases *labels) {
     const PathFrames frames(path, orientation, profileFrame.zDir());
     const int K = frames.count();
     const bool closedPath = frames.closed();
@@ -631,6 +638,7 @@ Body sweep(const Frame3 &profileFrame, const ProfileData &profile, bool sheet, c
             const int first = longitudinal[std::size_t(piece.start)], last = longitudinal[std::size_t(piece.end)];
             if (sp > 0.0) face.loops.push_back({{lower, true, nullptr, 0.0}, {last, true, nullptr, 0.0}, {upper, false, nullptr, 0.0}, {first, false, nullptr, 0.0}});
             else face.loops.push_back({{first, true, nullptr, 0.0}, {upper, true, nullptr, 0.0}, {last, false, nullptr, 0.0}, {lower, false, nullptr, 0.0}});
+            if(labels)labels->push_back({"side.L"+std::to_string(piece.loop)+".P"+std::to_string(piece.source)+".path"+std::to_string(k)});
             faces.push_back(std::move(face));
         }
     }
@@ -656,7 +664,10 @@ Body sweep(const Frame3 &profileFrame, const ProfileData &profile, bool sheet, c
                     for (auto it = loop.rbegin(); it != loop.rend(); ++it) fins.push_back({sectionEdge[std::size_t(joint * P + *it)], false, nullptr, 0.0});
                 face.loops.push_back(std::move(fins));
             }
-            for (auto &entry : byRegion) faces.push_back(std::move(entry.second));
+            for (auto &entry : byRegion) {
+                if(labels)labels->push_back({std::string(cap==0?"cap.start.R":"cap.end.R")+std::to_string(entry.first)});
+                faces.push_back(std::move(entry.second));
+            }
         }
     }
 
@@ -672,28 +683,40 @@ Body sweep(const Frame3 &profileFrame, const ProfileData &profile, bool sheet, c
 
 }
 
-Body sweepRegions(const Frame3 &profileFrame, const std::vector<ProfileRegion> &regions, const std::vector<PathSegment> &path, SweepOrientation orientation) {
+Body sweepRegions(const Frame3 &profileFrame, const std::vector<ProfileRegion> &regions, const std::vector<PathSegment> &path, SweepOrientation orientation, FaceAliases *labels) {
+    if(labels)labels->clear();
+    FaceAliases emitted;
     if (regions.empty()) throw std::domain_error("sweep: profilo senza regioni chiuse");
     ProfileData data;
     for (std::size_t r = 0; r < regions.size(); ++r) {
-        const ProfileRegion &region = regions[r];
+        ProfileRegion region=regions[r];region.outer=keyedLoop(region.outer);
+        for(auto &hole:region.holes)hole=keyedLoop(hole);
         addLoop(data, profileFrame, signedArea(region.outer) > 0.0 ? region.outer : reversed(region.outer), true, int(r));
         for (const ProfileLoop &hole : region.holes) addLoop(data, profileFrame, signedArea(hole) < 0.0 ? hole : reversed(hole), true, int(r));
     }
-    return sweep(profileFrame, data, false, path, orientation);
+    Body result=sweep(profileFrame, data, false, path, orientation, labels?&emitted:nullptr);
+    if(labels)*labels=std::move(emitted);
+    return result;
 }
 
-Body sweepChains(const Frame3 &profileFrame, const std::vector<ProfileLoop> &chains, const std::vector<PathSegment> &path, SweepOrientation orientation) {
+Body sweepChains(const Frame3 &profileFrame, const std::vector<ProfileLoop> &chains, const std::vector<PathSegment> &path, SweepOrientation orientation, FaceAliases *labels) {
+    if(labels)labels->clear();
+    FaceAliases emitted;
     if (chains.empty()) throw std::domain_error("sweep: profilo vuoto");
     ProfileData data;
     for (const ProfileLoop &chain : chains) addLoop(data, profileFrame, chain, false, -1);
-    return sweep(profileFrame, data, true, path, orientation);
+    Body result=sweep(profileFrame, data, true, path, orientation, labels?&emitted:nullptr);
+    if(labels)*labels=std::move(emitted);
+    return result;
 }
 
-Body sweepSheet(const Frame3 &profileFrame, const std::vector<ProfileLoop> &loops, const std::vector<PathSegment> &path, SweepOrientation orientation) {
+Body sweepSheet(const Frame3 &profileFrame, const std::vector<ProfileLoop> &loops, const std::vector<PathSegment> &path, SweepOrientation orientation, FaceAliases *labels) {
+    if(labels)labels->clear();
+    FaceAliases emitted;
     if (loops.empty()) throw std::domain_error("sweep: profilo vuoto");
     ProfileData data;
-    for (const ProfileLoop &loop : loops) {
+    for (const auto &inputLoop : loops) {
+        const auto loop=keyedLoop(inputLoop);
         if (loop.segments.empty()) throw std::domain_error("sweep: profilo con un loop vuoto");
         // Chiuso se la fine dell'ultimo tratto torna all'inizio del primo
         // (entro la tolleranza di connessione degli schizzi, relativa alla misura del loop).
@@ -710,7 +733,9 @@ Body sweepSheet(const Frame3 &profileFrame, const std::vector<ProfileLoop> &loop
             addLoop(data, profileFrame, loop, false, -1);
         }
     }
-    return sweep(profileFrame, data, true, path, orientation);
+    Body result=sweep(profileFrame, data, true, path, orientation, labels?&emitted:nullptr);
+    if(labels)*labels=std::move(emitted);
+    return result;
 }
 
 }

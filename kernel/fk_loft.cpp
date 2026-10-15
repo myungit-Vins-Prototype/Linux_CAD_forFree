@@ -22,6 +22,7 @@
 #include "fk_precision.h"
 #include "fk_surface_algo.h"
 #include "fk_unify.h"
+#include "fk_history_tools.h"
 
 namespace ForgeCad::Kernel {
 namespace {
@@ -29,6 +30,7 @@ namespace {
 struct Piece {
     CurvePtr<3> curve;
     Interval range;
+    int source = -1;
 };
 
 struct Section {
@@ -157,10 +159,10 @@ void startAtGuide(Section &section, const Vec3 &hit, double tolerance) {
     const double epsilon = 1e-9 * std::max(1.0, selected.range.length());
     std::vector<Piece> ordered;
     if (best.parameter > selected.range.lo + epsilon && best.parameter < selected.range.hi - epsilon) {
-        ordered.push_back({selected.curve, {best.parameter, selected.range.hi}});
+        ordered.push_back({selected.curve, {best.parameter, selected.range.hi}, selected.source});
         for (std::size_t offset = 1; offset < section.pieces.size(); ++offset)
             ordered.push_back(section.pieces[(bestPiece + offset) % section.pieces.size()]);
-        ordered.push_back({selected.curve, {selected.range.lo, best.parameter}});
+        ordered.push_back({selected.curve, {selected.range.lo, best.parameter}, selected.source});
     } else {
         if (best.parameter >= selected.range.hi - epsilon) bestPiece = (bestPiece + 1) % section.pieces.size();
         for (std::size_t offset = 0; offset < section.pieces.size(); ++offset)
@@ -746,7 +748,7 @@ BSplineCurve<3> refineLoftRow(BSplineCurve<3> curve, const std::vector<double> &
 }
 
 Body loftCore(const std::vector<Section> &sections, const LoftOptions &options, bool closed, const std::vector<Frame3> &capPlanes,
-              double scale, const std::vector<std::vector<double>> &guideParameters, const std::vector<std::vector<GuideHit>> &guideHits);
+              double scale, const std::vector<std::vector<double>> &guideParameters, const std::vector<std::vector<GuideHit>> &guideHits, FaceAliases *labels);
 
 // Loft di sezioni piane: corrispondenza (verso, partenza, guide), poi loftCore.
 // `closed`: loop chiusi; `caps`: con le facce di testa (solido), altrimenti
@@ -780,11 +782,11 @@ void alignStart(Section &s, const Vec3 &reference) {
         }
         double t = 0.5 * (a + b);
         if (p.curve->isPeriodic()) {
-            s.pieces = {{p.curve, {t, t + p.range.length()}}};
+            s.pieces = {{p.curve, {t, t + p.range.length()}, p.source}};
         } else {
             t = std::clamp(t, p.range.lo, p.range.hi);
             if (t - p.range.lo > 1e-9 * p.range.length() && p.range.hi - t > 1e-9 * p.range.length())
-                s.pieces = {{p.curve, {t, p.range.hi}}, {p.curve, {p.range.lo, t}}};
+                s.pieces = {{p.curve, {t, p.range.hi}, p.source}, {p.curve, {p.range.lo, t}, p.source}};
         }
     } else {
         std::size_t bestIndex = 0;
@@ -801,7 +803,7 @@ void alignStart(Section &s, const Vec3 &reference) {
 std::vector<Piece> chainPieces(const std::vector<PathSegment> &chain, double tolerance);
 Vec3 newellNormal(const std::vector<Piece> &pieces, const Vec3 &centroid);
 
-Body loft(const std::vector<LoftSection> &input, const LoftOptions &options, bool closed, bool caps) {
+Body loft(const std::vector<LoftSection> &input, const LoftOptions &options, bool closed, bool caps, FaceAliases *labels) {
     const std::size_t n = input.size();
     if (n < 2) throw std::domain_error("loft: servono almeno due sezioni");
     std::vector<Section> sections(n);
@@ -813,7 +815,7 @@ Body loft(const std::vector<LoftSection> &input, const LoftOptions &options, boo
         if (!s.path.empty()) {
             sections[i].pieces = chainPieces(s.path, 1e-6);
             sections[i].spatial = true;
-        } else for (const ProfileSegment &segment : s.loop.segments) sections[i].pieces.push_back({embedCurve(segment.curve, s.frame), segment.range});
+        } else for (const ProfileSegment &segment : s.loop.segments) sections[i].pieces.push_back({embedCurve(segment.curve, s.frame), segment.range, segment.source<0?int(sections[i].pieces.size()):segment.source});
         sections[i].centroid = sectionCentroid(sections[i].pieces);
         sections[i].frame = s.frame;
     }
@@ -859,7 +861,7 @@ Body loft(const std::vector<LoftSection> &input, const LoftOptions &options, boo
             if (!counterclockwise) {
                 std::vector<Piece> reversedPieces;
                 for (auto it = s.pieces.rbegin(); it != s.pieces.rend(); ++it)
-                    reversedPieces.push_back({reversedCurve(it->curve), {-it->range.hi, -it->range.lo}});
+                    reversedPieces.push_back({reversedCurve(it->curve), {-it->range.hi, -it->range.lo}, it->source});
                 s.pieces = std::move(reversedPieces);
             }
         } else if (i > 0) {
@@ -871,7 +873,7 @@ Body loft(const std::vector<LoftSection> &input, const LoftOptions &options, boo
                 > distance(a - s.centroid, pb - previous.centroid) + distance(b - s.centroid, pa - previous.centroid)) {
                 std::vector<Piece> reversedPieces;
                 for (auto it = s.pieces.rbegin(); it != s.pieces.rend(); ++it)
-                    reversedPieces.push_back({reversedCurve(it->curve), {-it->range.hi, -it->range.lo}});
+                    reversedPieces.push_back({reversedCurve(it->curve), {-it->range.hi, -it->range.lo}, it->source});
                 s.pieces = std::move(reversedPieces);
             }
         }
@@ -937,7 +939,7 @@ Body loft(const std::vector<LoftSection> &input, const LoftOptions &options, boo
                                 throw std::domain_error("loft: una sezione di testa non e' piana; scegli Solo superficie");
             capPlanes.push_back(Frame3(frame.origin(), sections[i].normal, frame.xDir()));
         }
-    return loftCore(sections, options, closed, capPlanes, scale, guideParameters, guideHits);
+    return loftCore(sections, options, closed, capPlanes, scale, guideParameters, guideHits, labels);
 }
 
 // Parte comune del loft e della superficie rigata: sezioni gia' nello spazio,
@@ -947,7 +949,7 @@ Body loft(const std::vector<LoftSection> &input, const LoftOptions &options, boo
 // vuoto: lamina; altrimenti i piani delle facce di testa della prima e
 // dell'ultima sezione (solido, solo con `closed`).
 Body loftCore(const std::vector<Section> &sections, const LoftOptions &options, bool closed, const std::vector<Frame3> &capPlanes,
-              double scale, const std::vector<std::vector<double>> &guideParameters, const std::vector<std::vector<GuideHit>> &guideHits) {
+              double scale, const std::vector<std::vector<double>> &guideParameters, const std::vector<std::vector<GuideHit>> &guideHits, FaceAliases *labels) {
     const bool ruled = options.ruled && options.startContinuity == 0 && options.endContinuity == 0;
     const std::size_t n = sections.size();
     // Sezioni con lo stesso numero di tratti (piu' di uno): tratto con tratto,
@@ -1076,11 +1078,19 @@ Body loftCore(const std::vector<Section> &sections, const LoftOptions &options, 
             cancellationPoint();
             const auto [k0, t0] = at[m];
             const auto [k1, t1] = at[m + 1];
-            if (k0 == k1) split[i].push_back({pieces[k0].curve, {t0, t1}});
-            else if (k1 == k0 + 1 && t1 == pieces[k1].range.lo) split[i].push_back({pieces[k0].curve, {t0, pieces[k0].range.hi}});
+            if (k0 == k1) split[i].push_back({pieces[k0].curve, {t0, t1}, pieces[k0].source});
+            else if (k1 == k0 + 1 && t1 == pieces[k1].range.lo) split[i].push_back({pieces[k0].curve, {t0, pieces[k0].range.hi}, pieces[k0].source});
             else throw std::logic_error("loft: divisione delle sezioni non riuscita");
         }
     }
+
+    FaceAliases emitted;
+    const auto sideLabels=[&](std::size_t m,std::size_t first,std::size_t last) {
+        if(!labels)return;
+        std::vector<std::string> aliases;
+        for(std::size_t i=first;i<=last;++i)aliases.push_back("side.S"+std::to_string(i)+".P"+std::to_string(split[i][m].source));
+        emitted.push_back(std::move(aliases));
+    };
 
     // NURBS compatibili per ogni tratto m: stesso grado, stessi nodi.
     // nurbs[m][i]
@@ -1294,7 +1304,8 @@ Body loftCore(const std::vector<Section> &sections, const LoftOptions &options, 
                 face.sense = true;
                 face.loops.push_back({{sectionEdge.at({i, m}), true, nullptr, 0.0}, {longitudinal[i][nextVertex(m)], true, nullptr, 0.0},
                                       {sectionEdge.at({i + 1, m}), false, nullptr, 0.0}, {longitudinal[i][m], false, nullptr, 0.0}});
-                faces.push_back(std::move(face));
+                sideLabels(m,i,i+1);
+            faces.push_back(std::move(face));
             }
     } else {
         // G0 usa la normale interpolazione del loft. Attivare qui le quintiche
@@ -1479,7 +1490,8 @@ Body loftCore(const std::vector<Section> &sections, const LoftOptions &options, 
                 const CurvePtr<2> left = splineSurface ? std::make_shared<Line<2>>(Vec2(0, 0), Vec2(0, 1)) : nullptr;
                 face.loops.push_back({{sectionEdge.at({0, m}), true, nullptr, 0.0}, {longitudinal[nextVertex(m)], true, right, 0.0},
                                           {sectionEdge.at({n - 1, m}), false, nullptr, 0.0}, {longitudinal[m], false, left, 0.0}});
-                faces.push_back(std::move(face));
+                sideLabels(m,0,n-1);
+            faces.push_back(std::move(face));
             }
         } else {
         // Interpolazione di grado q con i nodi per media (NURBS Book, A9.1), in coordinate omogenee.
@@ -1564,6 +1576,7 @@ Body loftCore(const std::vector<Section> &sections, const LoftOptions &options, 
             const CurvePtr<2> left = splineSurface ? std::make_shared<Line<2>>(Vec2(0, 0), Vec2(0, 1)) : nullptr;
             face.loops.push_back({{sectionEdge.at({0, m}), true, nullptr, 0.0}, {longitudinal[nextVertex(m)], true, right, 0.0},
                                   {sectionEdge.at({n - 1, m}), false, nullptr, 0.0}, {longitudinal[m], false, left, 0.0}});
+            sideLabels(m,0,n-1);
             faces.push_back(std::move(face));
         }
         }
@@ -1582,6 +1595,7 @@ Body loftCore(const std::vector<Section> &sections, const LoftOptions &options, 
             else
                 for (std::size_t m = M; m-- > 0;) fins.push_back({sectionEdge.at({i, m}), false, nullptr, 0.0});
             face.loops.push_back(std::move(fins));
+            if(labels)emitted.push_back({cap==0?"cap.start":"cap.end"});
             faces.push_back(std::move(face));
         }
     }
@@ -1592,7 +1606,10 @@ Body loftCore(const std::vector<Section> &sections, const LoftOptions &options, 
     // Pezze sulla stessa superficie (i lati piani di un loft rigato divisi dalle
     // frazioni di lunghezza delle altre sezioni) e spigoli allineati: una faccia e
     // un edge (come dopo le booleane).
-    return unifySameDomain(body);
+    BodyHistory unified;
+    Body result=unifySameDomain(body,1e-6,labels?&unified:nullptr);
+    if(labels)*labels=detail::transportLabels(emitted,unified);
+    return result;
 }
 
 
@@ -1608,7 +1625,7 @@ bool sectionClosed(const LoftSection &s) {
     return distance(a.start(), b.end()) <= 1e-6 * std::max(1.0, norm(a.start()));
 }
 
-Piece reversedPiece(const Piece &p) { return {reversedCurve(p.curve), {-p.range.hi, -p.range.lo}}; }
+Piece reversedPiece(const Piece &p) { return {reversedCurve(p.curve), {-p.range.hi, -p.range.lo}, p.source}; }
 
 void reverseChain(std::vector<Piece> &pieces) {
     std::vector<Piece> result;
@@ -1634,7 +1651,7 @@ std::vector<Piece> chainPieces(const std::vector<PathSegment> &chain, double tol
             if (!helix) throw std::domain_error("superficie rigata: tipo di curva non gestito");
             curve = std::make_shared<BSplineCurve<3>>(helixBSpline(*helix, 1e-9));
         }
-        pieces.push_back({curve, segment.range});
+        pieces.push_back({curve, segment.range, int(pieces.size())});
     }
     const auto start = [](const Piece &p) { return p.curve->point(p.range.lo); };
     const auto end = [](const Piece &p) { return p.curve->point(p.range.hi); };
@@ -1667,42 +1684,48 @@ Vec3 newellNormal(const std::vector<Piece> &pieces, const Vec3 &centroid) {
 
 }
 
-Body loftSolid(const std::vector<LoftSection> &sections, bool ruled) {
+Body loftSolid(const std::vector<LoftSection> &sections, bool ruled, FaceAliases *labels) {
+    if(labels)labels->clear();
     LoftOptions options;
     options.ruled = ruled;
-    return loftSolid(sections, options);
+    return loftSolid(sections, options, labels);
 }
 
-Body loftSolid(const std::vector<LoftSection> &sections, const LoftOptions &options) {
+Body loftSolid(const std::vector<LoftSection> &sections, const LoftOptions &options, FaceAliases *labels) {
+    if(labels)labels->clear();
     for (const LoftSection &s : sections) {
         cancellationPoint();
         if (!sectionClosed(s)) throw std::domain_error("loft: una sezione non e' un contorno chiuso");
     }
-    return loft(sections, options, true, true);
+    return loft(sections, options, true, true, labels);
 }
 
-Body loftSheet(const std::vector<LoftSection> &sections, bool ruled) {
+Body loftSheet(const std::vector<LoftSection> &sections, bool ruled, FaceAliases *labels) {
+    if(labels)labels->clear();
     LoftOptions options;
     options.ruled = ruled;
-    return loftSheet(sections, options);
+    return loftSheet(sections, options, labels);
 }
 
-Body loftSheet(const std::vector<LoftSection> &sections, const LoftOptions &options) {
+Body loftSheet(const std::vector<LoftSection> &sections, const LoftOptions &options, FaceAliases *labels) {
+    if(labels)labels->clear();
     if (sections.empty()) throw std::domain_error("loft: servono almeno due sezioni");
     const bool closed = sectionClosed(sections.front());
     for (const LoftSection &s : sections)
         if (sectionClosed(s) != closed)
             throw std::domain_error("loft: le sezioni di una lamina devono essere tutte chiuse (tubo) o tutte aperte");
-    return loft(sections, options, closed, false);
+    return loft(sections, options, closed, false, labels);
 }
 
-Body ruledSurface(const std::vector<PathSegment> &first, const std::vector<PathSegment> &second) {
+Body ruledSurface(const std::vector<PathSegment> &first, const std::vector<PathSegment> &second, FaceAliases *labels) {
+    if(labels)labels->clear();
     LoftOptions options;
     options.ruled = true;
-    return ruledSurface(first, second, options);
+    return ruledSurface(first, second, options, labels);
 }
 
-Body ruledSurface(const std::vector<PathSegment> &first, const std::vector<PathSegment> &second, const LoftOptions &inputOptions) {
+Body ruledSurface(const std::vector<PathSegment> &first, const std::vector<PathSegment> &second, const LoftOptions &inputOptions, FaceAliases *labels) {
+    if(labels)labels->clear();
     // Scala dai campioni delle due catene (prima di concatenarle: serve alla tolleranza).
     Vec3 lo(1e300, 1e300, 1e300), hi(-1e300, -1e300, -1e300);
     for (const std::vector<PathSegment> *chain : {&first, &second})
@@ -1757,7 +1780,7 @@ Body ruledSurface(const std::vector<PathSegment> &first, const std::vector<PathS
         if (dot(normal, sections[1].centroid - sections[0].centroid) < 0.0) normal = -normal;
         sections[i].normal = normalized(normal);
     }
-    return loftCore(sections, options, closed, {}, scale, {}, {});
+    return loftCore(sections, options, closed, {}, scale, {}, {}, labels);
 }
 
 }

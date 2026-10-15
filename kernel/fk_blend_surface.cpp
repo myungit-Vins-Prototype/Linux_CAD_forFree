@@ -1516,10 +1516,12 @@ bool surfaceCurveMeet(const Surface &surface, double v, const Curve<3> &curve, c
 
 }  // namespace
 
-Body blendSurfaceChains(const Body &input, const std::vector<EdgeId> &selected, double size, bool chamfer, const std::vector<ChamferSides> *sides) {
+Body blendSurfaceChains(const Body &input, const std::vector<EdgeId> &selected, double size, bool chamfer, const std::vector<ChamferSides> *sides, BodyHistory *history) {
 
+    if (history) *history = BodyHistory();
     if (!(size > kLinearResolution)) throw std::domain_error("blendEdges: raggio o distanza non validi");
     Body body = input;
+    std::map<int, int> edgeSources;
     std::vector<EdgeId> edges = selected;
     std::map<int, ChamferSides> sideOf;
     if (sides)
@@ -1531,6 +1533,7 @@ Body blendSurfaceChains(const Body &input, const std::vector<EdgeId> &selected, 
         const Edge &edge = body.edge(e);
         const double middle = 0.5 * (edge.range.lo + edge.range.hi);
         const EdgeId half = body.semv(e, edge.curve->point(middle), middle).edge;
+        if (history) edgeSources[half.index] = e.index;
         edges.push_back(half);
         if (sides) sideOf[half.index] = sideOf.at(e.index);
     }
@@ -1548,7 +1551,7 @@ Body blendSurfaceChains(const Body &input, const std::vector<EdgeId> &selected, 
         for (const ChainFin &f : chain.fins) pending.erase(f.edge.index);
         chains.push_back(std::move(chain));
     }
-    Model model(body);
+    Model model(body, history ? &input : nullptr, edgeSources);
     // Modifiche delle facce esistenti: edge tolti, fin nuove (con il verso) e
     // edge nuovi senza verso; alla fine i loop si ricollegano per i vertici.
     struct FaceEdit {
@@ -2689,7 +2692,7 @@ Body blendSurfaceChains(const Body &input, const std::vector<EdgeId> &selected, 
                     // triangolare nel dominio (u,v).
                     corner.sense = !firstSenseInOldFace;
                     const int cornerFace = int(model.faces.size());
-                    model.faces.push_back(std::move(corner));
+                    model.addGeneratedFace(std::move(corner), EntityKind::Vertex, end.vertex.index);
                     FaceEdit cornerEdit;
                     // Il triangolo percorre il primo lato nel verso opposto
                     // alla faccia che prima usava la cucitura rimossa.
@@ -2772,7 +2775,7 @@ Body blendSurfaceChains(const Body &input, const std::vector<EdgeId> &selected, 
             face.surface = piece.surface;
             face.sense = faceSense;
             piece.face = int(model.faces.size());
-            model.faces.push_back(std::move(face));
+            model.addGeneratedFace(std::move(face), EntityKind::Edge, edgeSources.count(cf.edge.index) ? edgeSources.at(cf.edge.index) : cf.edge.index);
             FaceEdit edit;
             // I contatti sono isocurve della pezza: il loro parametro UV e'
             // noto esattamente, anche vicino a nodi multipli o tratti corti.
@@ -2860,7 +2863,8 @@ Body blendSurfaceChains(const Body &input, const std::vector<EdgeId> &selected, 
         relink(face, fixed, edit.free);
     }
     for (auto &[face, edit] : newFaces) relink(face, edit.fixed, edit.free);
-    Body result = model.build();
+    BodyHistory declared;
+    Body result = model.build(history ? &declared : nullptr);
     computePCurves(result);
     // Le curve di mitra tra due raccordi su pezze B-spline quasi singolari
     // sono approssimate. Registra sul B-rep lo scarto effettivo, come edge
@@ -2893,6 +2897,7 @@ Body blendSurfaceChains(const Body &input, const std::vector<EdgeId> &selected, 
     checks.loopCrossings = true;  // un raccordo che invade un altro contorno della faccia
     const std::vector<CheckIssue> issues = checkBody(result, checks);
     if (!issues.empty()) throw std::domain_error("blendEdges: raccordo non valido (" + describe(issues.front().code) + ": " + issues.front().message + ")");
+    if (history) *history = std::move(declared);
     return result;
 }
 

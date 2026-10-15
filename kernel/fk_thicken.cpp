@@ -1,4 +1,5 @@
 #include "fk_thicken.h"
+#include "fk_history_tools.h"
 
 #include <algorithm>
 #include <optional>
@@ -126,11 +127,13 @@ std::vector<std::pair<FaceId, Vec3>> facePoints(const Body &body, const std::vec
     return result;
 }
 
-Body sewSolid(std::vector<const Body *> sheets, double tolerance, const char *what) {
+Body sewSolid(std::vector<const Body *> sheets, double tolerance, const char *what, const std::vector<const BodyHistory *> &sources, BodyHistory *history) {
     const detail::PhaseTimer timer("spessore: cucitura finale");
-    SewResult sewn = sewSheets(sheets, tolerance, true);
+    BodyHistory stage;
+    SewResult sewn = sewSheets(sheets, tolerance, true, history?&stage:nullptr);
     if (!sewn.solid)
         throw std::domain_error(std::string("spessore: ") + what + " non si chiude in un solido (" + std::to_string(sewn.freeEdges) + " bordi liberi)");
+    if(history)*history=detail::transportHistory(stage,sources);
     return std::move(sewn.body);
 }
 
@@ -182,7 +185,7 @@ std::vector<double> normalBreaks(const Body &sheet, FaceId face, const Edge &edg
 
 // Lungo la normale: le due superfici a distanza s0 < s1 (0 = la superficie
 // stessa) e le pareti rigate lungo la normale ai bordi liberi.
-Body thickenAlongNormal(const Body &sheet, const std::vector<FreeEdge> &free, double s0, double s1, double tolerance, double offsetTolerance) {
+Body thickenAlongNormal(const Body &sheet, const std::vector<FreeEdge> &free, double s0, double s1, double tolerance, double offsetTolerance, BodyHistory *history) {
     std::vector<FaceId> faces = sheet.faces();
     // Facce unite da spigoli tangenti o quasi: lungo una piega le superfici a
     // distanza si staccano o si attraversano di spessore x angolo. Fino a 2
@@ -206,10 +209,13 @@ Body thickenAlongNormal(const Body &sheet, const std::vector<FreeEdge> &free, do
         crease = std::max(crease, angle);
     }
     creaseTimer.reset();
-    const auto side = [&](double s, double accuracy) -> Body {
-        if (s == 0.0) return sheet;
+    BodyHistory lowerHistory,upperHistory;
+    const auto side = [&](double s, double accuracy, BodyHistory &emitted) -> Body {
+        if (s == 0.0) {if(history)emitted=detail::indexHistory(sheet,sheet,HistoryRelation::Same);return sheet;}
         const detail::PhaseTimer timer("spessore: una superficie a distanza");
-        return offsetFaces(sheet, faces, s, accuracy, false, 2.0 * M_PI / 180.0).body;
+        auto offset=offsetFaces(sheet, faces, s, accuracy, false, 2.0 * M_PI / 180.0);
+        if(history)emitted=std::move(offset.history);
+        return std::move(offset.body);
     };
     Body lower, upper;
     double accuracy = 0.0;  // quella usata per le superfici a distanza
@@ -220,8 +226,8 @@ Body thickenAlongNormal(const Body &sheet, const std::vector<FreeEdge> &free, do
                                                                  : std::vector<double>{5e-5 * scale, 2e-5 * scale, 1e-5, 1e-6, 1e-7};
     for (std::size_t k = 0; k < accuracies.size(); ++k) {
         try {
-            lower = side(s0, accuracies[k]);
-            upper = side(s1, accuracies[k]);
+            lower = side(s0, accuracies[k], lowerHistory);
+            upper = side(s1, accuracies[k], upperHistory);
             accuracy = accuracies[k];
             break;
         } catch (const std::domain_error &) {
@@ -229,6 +235,11 @@ Body thickenAlongNormal(const Body &sheet, const std::vector<FreeEdge> &free, do
         }
     }
     std::vector<Body> walls;
+    std::vector<BodyHistory> wallHistories;
+    const auto addWall=[&](Body piece,EdgeId edge) {
+        if(history)wallHistories.push_back(detail::generatedFaces(sheet,piece,{{0,EntityKind::Edge,edge.index,HistoryRelation::Generated}}));
+        walls.push_back(std::move(piece));
+    };
     double wallAccuracy = 0.0;
     std::optional<detail::PhaseTimer> wallTimer;
     wallTimer.emplace("spessore: pareti");
@@ -264,8 +275,8 @@ Body thickenAlongNormal(const Body &sheet, const std::vector<FreeEdge> &free, do
                         return std::make_shared<Line<3>>(edge.curve->point(0.0) + s * na, edge.curve->derivative(0.0));
                     };
                     const Vec3 direction = normalized(pb - pa);
-                    walls.push_back(wall(shifted(s0), shifted(s1), range,
-                                         std::make_shared<Plane>(Frame3(pa, normalized(cross(direction, na)), direction))));
+                    addWall(wall(shifted(s0), shifted(s1), range,
+                                         std::make_shared<Plane>(Frame3(pa, normalized(cross(direction, na)), direction))),item.edge);
                     continue;
                 }
             }
@@ -316,7 +327,7 @@ Body thickenAlongNormal(const Body &sheet, const std::vector<FreeEdge> &free, do
             const auto ruled = std::make_shared<BSplineSurface>(3, 1, c0.knots(), std::vector<double>{0.0, 0.0, 1.0, 1.0}, n, 2, std::move(poles));
             const CurvePtr<3> a = s0 == 0.0 ? edge.curve : CurvePtr<3>(std::make_shared<BSplineCurve<3>>(c0));
             const CurvePtr<3> b = s1 == 0.0 ? edge.curve : CurvePtr<3>(std::make_shared<BSplineCurve<3>>(c1));
-            walls.push_back(wall(a, b, range, ruled));
+            addWall(wall(a, b, range, ruled),item.edge);
         }
     }
     wallTimer.reset();
@@ -328,12 +339,13 @@ Body thickenAlongNormal(const Body &sheet, const std::vector<FreeEdge> &free, do
     // tutto il solido per girare le facce dopo il controllo del volume.
     std::vector<const Body *> sheets{&upper, &lower};
     for (const Body &w : walls) sheets.push_back(&w);
-    return sewSolid(sheets, sewTolerance, "la superficie ispessita lungo la normale");
+    std::vector<const BodyHistory *> sources{&upperHistory,&lowerHistory};for(const auto &h:wallHistories)sources.push_back(&h);
+    return sewSolid(sheets,sewTolerance,"la superficie ispessita lungo la normale",sources,history);
 }
 
 // Lungo una direzione w: la superficie traslata di s0 w e di s1 w e le pareti
 // estruse lungo w dai bordi liberi.
-Body thickenAlongDirection(const Body &sheet, const std::vector<FreeEdge> &free, const Vec3 &w, double s0, double s1, double tolerance) {
+Body thickenAlongDirection(const Body &sheet, const std::vector<FreeEdge> &free, const Vec3 &w, double s0, double s1, double tolerance, BodyHistory *history) {
     // Ogni retta parallela a w incontra la superficie una volta: n . w lontano
     // da zero e sempre dello stesso segno.
     double lo = 1e300, hi = -1e300;
@@ -346,7 +358,14 @@ Body thickenAlongDirection(const Body &sheet, const std::vector<FreeEdge> &free,
                                               : "spessore lungo la direzione: la superficie e' quasi parallela alla direzione in qualche punto");
     const auto moved = [&](double s) -> Body { return s == 0.0 ? sheet : transformBody(sheet, Transform3::translation(s * w)); };
     const Body lower = moved(s0), upper = moved(s1);
+    BodyHistory lowerHistory,upperHistory;
+    if(history){lowerHistory=detail::indexHistory(sheet,lower,s0==0?HistoryRelation::Same:HistoryRelation::Modified);upperHistory=detail::indexHistory(sheet,upper,s1==0?HistoryRelation::Same:HistoryRelation::Modified);}
     std::vector<Body> walls;
+    std::vector<BodyHistory> wallHistories;
+    const auto addWall=[&](Body piece,EdgeId edge) {
+        if(history)wallHistories.push_back(detail::generatedFaces(sheet,piece,{{0,EntityKind::Edge,edge.index,HistoryRelation::Generated}}));
+        walls.push_back(std::move(piece));
+    };
     for (const FreeEdge &item : free) {
         const Edge &edge = sheet.edge(item.edge);
         const auto shifted = [&](double s) -> CurvePtr<3> { return s == 0.0 ? edge.curve : transformCurve(edge.curve, Transform3::translation(s * w)); };
@@ -360,24 +379,29 @@ Body thickenAlongDirection(const Body &sheet, const std::vector<FreeEdge> &free,
             } else {
                 surface = std::make_shared<ExtrusionSurface>(base, w);
             }
-            walls.push_back(wall(base, top, range, surface));
+            addWall(wall(base, top, range, surface),item.edge);
         }
     }
     std::vector<const Body *> sheets{&lower, &upper};
     for (const Body &w2 : walls) sheets.push_back(&w2);
-    return sewSolid(sheets, 10.0 * tolerance, "la superficie ispessita lungo la direzione");
+    std::vector<const BodyHistory *> sources{&lowerHistory,&upperHistory};for(const auto &h:wallHistories)sources.push_back(&h);
+    return sewSolid(sheets,10.0*tolerance,"la superficie ispessita lungo la direzione",sources,history);
 }
 
 }
 
-Body thickenSheet(const Body &body, const std::vector<FaceId> &faces, const ThickenOptions &options) {
+Body thickenSheet(const Body &body, const std::vector<FaceId> &faces, const ThickenOptions &options, BodyHistory *history) {
+    if(history)*history={};
     const detail::PhaseTimer total("spessore: totale");
     if (!(options.thickness > 0.0) || !std::isfinite(options.thickness)) throw std::domain_error("spessore: il valore deve essere positivo");
     std::vector<FaceId> chosen = faces.empty() ? body.faces() : faces;
     if (chosen.empty()) throw std::domain_error("spessore: nessuna faccia");
     // Tutta una lamina: il body com'e' (rimontarne le facce ricalcolerebbe le
     // SP-curve, che sugli edge tolleranti dei file possono non tornare).
-    Body sheet = body.isSheet() && chosen.size() == body.faces().size() ? body : facesAsSheet(body, chosen);
+    BodyHistory extracted,stage;
+    const bool entire=body.isSheet() && chosen.size()==body.faces().size();
+    Body sheet=entire?body:facesAsSheet(body,chosen,history?&extracted:nullptr);
+    if(history&&entire)extracted=detail::indexHistory(body,sheet,HistoryRelation::Same);
     computePCurves(sheet);
     std::vector<FreeEdge> free;
     for (EdgeId e : sheet.edges())
@@ -392,9 +416,13 @@ Body thickenSheet(const Body &body, const std::vector<FaceId> &faces, const Thic
     else if (options.side == ThickenSide::Both) s0 = -0.5 * t, s1 = 0.5 * t;
     if (options.useDirection) {
         if (!(norm(options.direction) > 0.0)) throw std::domain_error("spessore: direzione nulla");
-        return thickenAlongDirection(sheet, free, normalized(options.direction), s0, s1, options.tolerance);
+        Body result=thickenAlongDirection(sheet,free,normalized(options.direction),s0,s1,options.tolerance,history?&stage:nullptr);
+        if(history)*history=BodyHistory::compose(extracted,stage,0);
+        return result;
     }
-    return thickenAlongNormal(sheet, free, s0, s1, options.tolerance, options.offsetTolerance);
+    Body result=thickenAlongNormal(sheet,free,s0,s1,options.tolerance,options.offsetTolerance,history?&stage:nullptr);
+    if(history)*history=BodyHistory::compose(extracted,stage,0);
+    return result;
 }
 
 }

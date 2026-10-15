@@ -1,4 +1,5 @@
 #include "fk_sheet.h"
+#include "fk_history_tools.h"
 
 #include <algorithm>
 #include <cmath>
@@ -266,11 +267,13 @@ Body extendPlanarFace(const Body &body, const std::vector<EdgeId> &selected, dou
     return result;
 }
 
-Body trimSheet(const Body &sheet, const Body &tool, const Vec3 &keep, double tolerance) {
+Body trimSheet(const Body &sheet, const Body &tool, const Vec3 &keep, double tolerance, BodyHistory *history) {
+    if(history)*history={};
     if (!sheet.isSheet()) throw std::domain_error("trimSheet: si tagliano solo le superfici (lamine)");
     BooleanOptions options;
     options.tolerance = tolerance;
-    const std::vector<Body> pieces = splitSheet(sheet, tool, options);
+    std::vector<BodyHistory> emitted;
+    const std::vector<Body> pieces = splitSheet(sheet, tool, options, history?&emitted:nullptr);
     if (pieces.size() < 2) throw std::domain_error("trimSheet: lo strumento non divide la superficie");
     std::size_t best = 0;
     double closest = 1e300;
@@ -278,6 +281,7 @@ Body trimSheet(const Body &sheet, const Body &tool, const Vec3 &keep, double tol
         const double d = distanceToSheet(pieces[i], keep);
         if (d < closest) closest = d, best = i;
     }
+    if(history)*history=std::move(emitted[best]);
     return pieces[best];
 }
 
@@ -489,7 +493,8 @@ void joinSplineExtensions(Model &model, const Body &body, const std::vector<Spli
 
 }
 
-Body extendSheet(const Body &input, const std::vector<EdgeId> &selected, double length, bool linear) {
+Body extendSheet(const Body &input, const std::vector<EdgeId> &selected, double length, bool linear, BodyHistory *history) {
+    if(history)*history={};
     if (!input.isSheet()) throw std::domain_error("extendSheet: si estendono solo le superfici (lamine)");
     if (!(length > kLinearResolution)) throw std::domain_error("extendSheet: distanza non valida");
     Body body = input;
@@ -499,10 +504,13 @@ Body extendSheet(const Body &input, const std::vector<EdgeId> &selected, double 
     for (FaceId f : body.faces()) box.add(faceBox(body, f));
     const double scale = std::max(box.diagonal(), 1.0), tolerance = 1e-9 * scale;
 
-    if (body.faces().size() == 1 && body.face(body.faces().front()).surface->type() == SurfaceType::Plane)
-        return extendPlanarFace(body, selected, length, scale, tolerance);
+    if (body.faces().size() == 1 && body.face(body.faces().front()).surface->type() == SurfaceType::Plane) {
+        Body result=extendPlanarFace(body, selected, length, scale, tolerance);
+        if(history)*history=detail::generatedFaces(input,result,{{0,EntityKind::Face,body.faces().front().index,HistoryRelation::Modified}});
+        return result;
+    }
 
-    Model model(body);
+    Model model(body,history?&input:nullptr);
     // Superfici prolungate (curva base estesa) per faccia del modello.
     std::map<int, SurfacePtr> extended;
     std::vector<SplineExtensionSide> splineSides;
@@ -690,18 +698,20 @@ Body extendSheet(const Body &input, const std::vector<EdgeId> &selected, double 
         // Loop: l'edge al contrario (da B ad A), poi il lato in A, il bordo nuovo, il lato in B.
         const int oldEdge = model.edgeIndex.at(e.index);
         strip.loops.push_back({{oldEdge, !finData.sense, nullptr, 0.0}, finFrom(sideA, A), finFrom(far, farA), finFrom(sideB, farB)});
-        model.faces.push_back(std::move(strip));
+        model.addGeneratedFace(std::move(strip),EntityKind::Edge,e.index);
         if (type == SurfaceType::BSpline && !linear) {
             splineSides.push_back({A, farA, sideA, far, modelFace, vIso, uvA, splineEnd});
             splineSides.push_back({B, farB, sideB, far, modelFace, vIso, uvB, splineEnd});
         }
     }
     joinSplineExtensions(model, body, splineSides, scale);
-    Body result = model.build();
+    BodyHistory built,unified;
+    Body result = model.build(history?&built:nullptr);
     computePCurves(result);
-    result = unifySameDomain(result);
+    result = unifySameDomain(result,1e-6,history?&unified:nullptr);
     const std::vector<CheckIssue> issues = checkBody(result);
     if (!issues.empty()) throw std::domain_error("extendSheet: superficie estesa non valida (" + describe(issues.front().code) + ": " + issues.front().message + ")");
+    if(history)*history=BodyHistory::compose(built,unified,0);
     return result;
 }
 

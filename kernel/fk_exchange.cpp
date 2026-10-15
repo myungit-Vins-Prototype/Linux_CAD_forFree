@@ -256,7 +256,8 @@ static int repairFaceSenses(Body &body) {
     return flipped;
 }
 
-Body assembleBody(const RawModel &input, bool solid, std::vector<std::string> *notes) {
+Body assembleBody(const RawModel &input, bool solid, std::vector<std::string> *notes, AssemblyMap *map) {
+    if(map)*map={};
     RawModel model = input;
     const auto note = [&](const std::string &text) {
         if (notes) notes->push_back(text);
@@ -553,6 +554,13 @@ Body assembleBody(const RawModel &input, bool solid, std::vector<std::string> *n
         issues = checkBody(body);
     }
     if (!issues.empty()) throw std::domain_error("corpo non valido: " + describe(issues.front().code) + " (" + issues.front().message + ")");
+    if(map) {
+        AssemblyMap emitted;emitted.points.resize(input.points.size());emitted.edges.resize(input.edges.size());
+        const auto vs=body.vertices();const auto es=body.edges();
+        for(std::size_t i=0;i<pointIndex.size();++i)if(pointIndex[i]>=0)emitted.points[i]=vs.at(std::size_t(pointIndex[i]));
+        for(std::size_t i=0;i<edgeIndex.size();++i)if(edgeIndex[i]>=0)emitted.edges[i]=es.at(std::size_t(edgeIndex[i]));
+        emitted.faces=body.faces();*map=std::move(emitted);
+    }
     return body;
 }
 

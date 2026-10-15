@@ -26,6 +26,29 @@ namespace ForgeCad {
 void registerFeatureGenealogy(const ExtrusionObject &body, int index, const QVector<SketchObject> &sketches,
                               const QVector<ExtrusionObject> &bodies);
 
+// Provenienza emessa dal kernel durante la costruzione, prima della
+// registrazione della feature. Si usa solo se risultato e operandi sono gli
+// stessi B-rep: anteprime scartate e indirizzi riutilizzati non la ereditano.
+// Non calcola nomi e non registra da sola una feature. Le dichiarazioni
+// vengono anche ripristinate dalla cache del documento prima della feature.
+void registerDeclaredHistory(const ForgeBody &result, const std::vector<ForgeBody> &operands, Kernel::BodyHistory history,
+                             Kernel::FaceAliases labels = {});
+
+// Entita' del documento importato: nessun genitore B-rep locale, nomi F<indice> storici.
+void registerImportedHistory(const ForgeBody &body);
+
+// Operandi validi della definizione corrente, nell'ordine usato dal kernel.
+QVector<int> featureGenealogyOperandIndices(const ExtrusionObject &body, int index, const QVector<ExtrusionObject> &bodies);
+
+struct DeclaredHistorySnapshot {
+    std::shared_ptr<const Kernel::BodyHistory> history;
+    std::shared_ptr<const Kernel::FaceAliases> labels;
+    QVector<int> operandIndices;
+};
+// Solo le dichiarazioni gia' emesse, senza calcolare nomi o inferenza.
+// Vuoto se il risultato o gli operandi non coincidono con i B-rep correnti.
+DeclaredHistorySnapshot declaredHistorySnapshot(const ExtrusionObject &body, int index, const QVector<ExtrusionObject> &bodies);
+
 // Gli operandi effettivi della genealogia, nell'ordine dei legami del kernel.
 // I puntatori deboli non prolungano la vita dei risultati precedenti.
 struct GenealogyOperand {

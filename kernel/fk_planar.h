@@ -6,6 +6,7 @@
 #include "fk_profile.h"
 #include "fk_sweep.h"
 #include "fk_topology.h"
+#include "fk_history.h"
 
 // Superfici planari: lamine piane delimitate da curve (il "riempimento" di un
 // contorno chiuso). Geometria esatta: la faccia e' un Plane, gli edge sono le
@@ -31,13 +32,13 @@ namespace ForgeCad::Kernel {
 //    loop esterno e' antiorario attorno a lei, i fori orari.
 // std::domain_error se un loop non si chiude, se le curve non stanno in un
 // piano o se un loop e' degenere (area nulla).
-Body planarSheet(const std::vector<std::vector<PathSegment>> &loops, double tolerance = 1e-6);
+Body planarSheet(const std::vector<std::vector<PathSegment>> &loops, double tolerance = 1e-6, FaceAliases *labels = nullptr);
 
 // Lamina piana delle regioni di un profilo (piano XY di `frame`): una faccia
 // per regione, come la base di un'estrusione ma con la normale lungo +Z del
 // sistema. Contorni antiorari e fori orari (come da buildProfile); un loop
 // con il verso sbagliato si gira.
-Body planarSheet(const Frame3 &frame, const std::vector<ProfileRegion> &regions);
+Body planarSheet(const Frame3 &frame, const std::vector<ProfileRegion> &regions, FaceAliases *labels = nullptr);
 
 }
 

@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "fk_bspline.h"
+#include "fk_history.h"
 #include "fk_topology.h"
 
 // Superfici a distanza costante (offset) e lamine a distanza dalle facce di un
@@ -43,6 +44,8 @@ std::shared_ptr<BSplineCurve<3>> fitCurve(const std::function<Vec3(double)> &f, 
 
 struct OffsetResult {
     Body body;                       // lamina (o piu' lamine nello stesso body)
+    BodyHistory history;             // facce dichiarate rispetto al body di ingresso;
+                                     // edge/vertici non ancora coperti: ripiego geometrico
     int shells = 0;                  // gruppi di facce unite
     int sharpEdges = 0;              // spigoli vivi tra le facce scelte: li' le superfici restano separate
     std::vector<std::string> notes;  // correzioni (edge tolleranti)

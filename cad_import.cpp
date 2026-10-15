@@ -1,4 +1,5 @@
 #include "cad_import.h"
+#include "cad_element_names.h"
 
 #include <QFile>
 #include <QDateTime>
@@ -67,6 +68,7 @@ QString importCadFile(const QString &path, QVector<ImportedPart> &parts, QString
                 return;
             }
             part.body = std::make_shared<const Kernel::Body>(std::move(b.body));
+            registerImportedHistory(part.body);
         } catch (...) { unexpected[i] = std::current_exception(); }
     });
     for (std::size_t i = 0; i < converted.size(); ++i) {

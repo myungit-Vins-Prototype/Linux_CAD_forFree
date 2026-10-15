@@ -1,4 +1,5 @@
 #include "fk_draft.h"
+#include "fk_history_tools.h"
 #include "fk_body_check.h"
 #include "fk_pcurve.h"
 #include "fk_precision.h"
@@ -10,7 +11,8 @@
 
 namespace ForgeCad::Kernel {
 Body draftFaces(const Body &input, const std::vector<FaceId> &selected,
-                const Vec3 &origin, const Vec3 &direction, double angle) {
+                const Vec3 &origin, const Vec3 &direction, double angle, BodyHistory *history) {
+    if(history)*history={};
     if (input.shells().size() != 1 || input.faces().empty())
         throw std::domain_error("lo sformo richiede un unico corpo connesso");
     if (selected.empty()) throw std::domain_error("scegli almeno una faccia da sformare");
@@ -128,6 +130,7 @@ Body draftFaces(const Body &input, const std::vector<FaceId> &selected,
     check.loopCrossings = true;
     const auto issues = checkBody(result, check);
     if (!issues.empty()) throw std::domain_error("sformo non valido: " + issues.front().message);
+    if(history)*history=detail::indexHistory(input,result);
     return result;
 }
 }

@@ -8,6 +8,7 @@
 // Spessore di una superficie (lamina): il solido tra la superficie e una sua
 // copia a distanza, chiuso dalle pareti lungo i bordi liberi.
 namespace ForgeCad::Kernel {
+class BodyHistory;
 
 // Da che parte va lo spessore rispetto al verso di riferimento (la normale
 // delle facce, o la direzione data): tutto da quella parte, tutto dalla parte
@@ -42,7 +43,7 @@ struct ThickenOptions {
 // `faces`: le facce del body da ispessire (vuoto: tutte); possono essere anche
 // facce di un solido. Il risultato e' un solido. std::domain_error con il
 // motivo se non si puo' costruire.
-Body thickenSheet(const Body &body, const std::vector<FaceId> &faces, const ThickenOptions &options);
+Body thickenSheet(const Body &body, const std::vector<FaceId> &faces, const ThickenOptions &options, BodyHistory *history = nullptr);
 
 }
 

@@ -8,6 +8,7 @@
 #include <string>
 
 #include "fk_curve_algo.h"
+#include "fk_history.h"
 #include "fk_exchange.h"
 #include "fk_intersect.h"
 #include "fk_mass.h"
@@ -22,7 +23,8 @@ namespace {
 // Le facce come modello grezzo: punti, edge con tratto e loop, come nei file.
 // `only` (facoltativo) limita le facce del primo body a quelle indicate.
 detail::RawModel rawModel(const std::vector<const Body *> &bodies, std::vector<int> &edgeBody, std::vector<bool> &boundary,
-                          const std::vector<FaceId> *only = nullptr, std::vector<int> *faceBody = nullptr) {
+                          const std::vector<FaceId> *only = nullptr, std::vector<int> *faceBody = nullptr,
+                          std::vector<HistoryLink> *faceOrigins = nullptr) {
     detail::RawModel model;
     for (std::size_t b = 0; b < bodies.size(); ++b) {
         const Body &body = *bodies[b];
@@ -62,6 +64,7 @@ detail::RawModel rawModel(const std::vector<const Body *> &bodies, std::vector<i
             }
             model.faces.push_back(std::move(raw));
             if (faceBody) faceBody->push_back(int(b));
+            if (faceOrigins) faceOrigins->push_back({int(b), EntityKind::Face, f.index, HistoryRelation::Modified});
         }
     }
     return model;
@@ -264,11 +267,13 @@ void splitAtJunctions(detail::RawModel &model, const std::vector<int> &edgeBody,
 
 }  // namespace
 
-Body facesAsSheet(const Body &body, const std::vector<FaceId> &faces) {
+Body facesAsSheet(const Body &body, const std::vector<FaceId> &faces, BodyHistory *history) {
+    if (history) *history = {};
     if (faces.empty()) throw std::domain_error("nessuna faccia scelta");
     std::vector<int> edgeBody;
     std::vector<bool> boundary;
-    detail::RawModel model = rawModel({&body}, edgeBody, boundary, &faces);
+    std::vector<HistoryLink> origins;
+    detail::RawModel model = rawModel({&body}, edgeBody, boundary, &faces, nullptr, history ? &origins : nullptr);
     // Solo i punti e gli edge delle facce scelte (gli altri restano sciolti nel modello e si scartano).
     detail::RawModel used;
     std::map<int, int> pointOf, edgeOf;
@@ -293,15 +298,39 @@ Body facesAsSheet(const Body &body, const std::vector<FaceId> &faces) {
             }
         used.faces.push_back(std::move(face));
     }
-    return detail::assembleBody(used, false);
+    detail::AssemblyMap assembled;
+    Body result = detail::assembleBody(used,false,nullptr,history?&assembled:nullptr);
+    if (history) {
+        BodyHistory declared = makeHistory({&body}, result);
+        const auto built = result.faces();
+        if (built.size() != origins.size()) throw std::logic_error("facesAsSheet: mappa delle facce incoerente");
+        for (std::size_t i = 0; i < built.size(); ++i) {
+            origins[i].relation = HistoryRelation::Same;
+            declared.declareOrigins(EntityKind::Face, built[i].index, {origins[i]});
+        }
+        const auto vertices=body.vertices();std::vector<EdgeId> edges;
+        for(EdgeId e:body.edges())if(body.edge(e).curve)edges.push_back(e);
+        for(const auto &[raw,kept]:edgeOf) {
+            const EdgeId target=assembled.edges.at(std::size_t(kept));
+            if(target.valid())declared.declareOrigins(EntityKind::Edge,target.index,{{0,EntityKind::Edge,edges.at(std::size_t(raw)).index,HistoryRelation::Same}});
+        }
+        for(const auto &[raw,kept]:pointOf) {
+            const VertexId target=assembled.points.at(std::size_t(kept));
+            if(target.valid())declared.declareOrigins(EntityKind::Vertex,target.index,{{0,EntityKind::Vertex,vertices.at(std::size_t(raw)).index,HistoryRelation::Same}});
+        }
+        *history = std::move(declared);
+    }
+    return result;
 }
 
-SewResult sewSheets(const std::vector<const Body *> &bodies, double tolerance, bool makeSolid) {
+SewResult sewSheets(const std::vector<const Body *> &bodies, double tolerance, bool makeSolid, BodyHistory *history) {
+    if (history) *history = {};
     if (bodies.empty()) throw std::domain_error("cucitura: nessuna superficie");
     std::vector<int> edgeBody;
     std::vector<bool> boundary;
     std::vector<int> faceBody;
-    detail::RawModel model = rawModel(bodies, edgeBody, boundary, nullptr, &faceBody);
+    std::vector<HistoryLink> origins;
+    detail::RawModel model = rawModel(bodies, edgeBody, boundary, nullptr, &faceBody, history ? &origins : nullptr);
     if (model.faces.empty()) throw std::domain_error("cucitura: nessuna faccia");
     SewResult result;
     {
@@ -365,6 +394,16 @@ SewResult sewSheets(const std::vector<const Body *> &bodies, double tolerance, b
     for (ShellId s : result.body.shells()) {
         (void)s;
         ++result.shells;
+    }
+    if (history) {
+        BodyHistory declared = makeHistory(bodies, result.body);
+        const auto faces = result.body.faces();
+        {
+            // Il rimpiazzo cambia i contorni in loco, conservando ordine e supporto delle facce.
+            if (faces.size() != origins.size()) throw std::logic_error("sewSheets: mappa delle facce incoerente");
+            for (std::size_t i = 0; i < faces.size(); ++i) declared.declareOrigins(EntityKind::Face, faces[i].index, {origins[i]});
+        }
+        *history = std::move(declared);
     }
     return result;
 }

@@ -64,8 +64,11 @@ struct RawModel {
 std::string formatReal(double x);
 std::size_t parseReal(const char *begin, const char *end, double &value);
 
+// Identita' emesse dall'assemblaggio: uno slot per entita' del modello grezzo;
+// gli edge di cucitura eliminati e i punti inutilizzati restano non validi.
+struct AssemblyMap { std::vector<VertexId> points; std::vector<EdgeId> edges; std::vector<FaceId> faces; };
 // Solido (solid) o lamina. `notes` riceve le correzioni fatte.
-Body assembleBody(const RawModel &model, bool solid, std::vector<std::string> *notes = nullptr);
+Body assembleBody(const RawModel &model, bool solid, std::vector<std::string> *notes = nullptr, AssemblyMap *map = nullptr);
 
 // Facce sciolte (IGES 144, superfici senza topologia): vertici uniti entro
 // `tolerance`, edge con gli stessi estremi e la stessa geometria condivisi, versi

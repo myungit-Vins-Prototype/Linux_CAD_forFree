@@ -31,7 +31,7 @@ void forgeSketchFrame(const SketchObject &sketch, double distance, Kernel::Frame
 // `start`: la base parte dal piano dello schizzo spostato di `start` nel verso
 // di extrusionVector (estrusioni simmetriche o nei due versi).
 // surfaceOnly: anche i contorni chiusi danno una lamina (fianchi senza base e coperchio).
-ForgeBody forgeExtrusion(const SketchObject &sketch, double distance, QString *error, double start = 0.0, bool surfaceOnly = false);
+ForgeBody forgeExtrusion(const SketchObject &sketch, double distance, QString *error, double start = 0.0, bool surfaceOnly = false, bool reverseCaps = false);
 
 // Rivoluzione dei contorni chiusi dello schizzo attorno al suo asse `axis`
 // (ExtrusionObject::revolveAxis) di `angleDegrees` gradi, come buildRevolution.
@@ -56,6 +56,7 @@ ForgeBody forgeBlend(const ForgeBody &base, const QVector<EdgePoint> &points, do
 bool forgeBlendHasEffect(const ForgeBody &base, const ForgeBody &result);
 
 struct ThreadFaceInfo {
+    int face = -1;  // faccia realmente risolta, riusata per la genealogia
     double diameter = 0.0;
     double length = 0.0;
     double taper = 0.0;  // angolo del raggio rispetto all'asse, radianti

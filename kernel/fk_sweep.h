@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "fk_profile.h"
+#include "fk_history.h"
 #include "fk_topology.h"
 
 // Sweep: un profilo piano trascinato lungo un percorso (estrusione su un
@@ -53,11 +54,11 @@ struct PathSegment {
 
 // Solido: le regioni (nel piano XY di `profileFrame`) lungo il percorso.
 Body sweepRegions(const Frame3 &profileFrame, const std::vector<ProfileRegion> &regions, const std::vector<PathSegment> &path,
-                  SweepOrientation orientation = SweepOrientation::MinimalTwist);
+                  SweepOrientation orientation = SweepOrientation::MinimalTwist, FaceAliases *labels = nullptr);
 
 // Lamina: catene aperte (profilo che non si chiude) lungo il percorso.
 Body sweepChains(const Frame3 &profileFrame, const std::vector<ProfileLoop> &chains, const std::vector<PathSegment> &path,
-                 SweepOrientation orientation = SweepOrientation::MinimalTwist);
+                 SweepOrientation orientation = SweepOrientation::MinimalTwist, FaceAliases *labels = nullptr);
 
 // Lamina generale: loop chiusi e catene aperte, anche insieme, lungo il
 // percorso; mai coperchi. Un loop e' chiuso se la fine dell'ultimo tratto
@@ -73,7 +74,7 @@ Body sweepChains(const Frame3 &profileFrame, const std::vector<ProfileLoop> &cha
 // std::domain_error come gli altri sweep; inoltre con loop chiusi il percorso
 // deve uscire dal piano del profilo e il loop deve avere area non nulla.
 Body sweepSheet(const Frame3 &profileFrame, const std::vector<ProfileLoop> &loops, const std::vector<PathSegment> &path,
-                SweepOrientation orientation = SweepOrientation::MinimalTwist);
+                SweepOrientation orientation = SweepOrientation::MinimalTwist, FaceAliases *labels = nullptr);
 
 }
 

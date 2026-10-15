@@ -39,6 +39,8 @@
 // contatti di ordine superiore (rami tangenti tra loro).
 namespace ForgeCad::Kernel {
 
+class BodyHistory;
+
 // Stessa numerazione dell'app: 0 unione, 1 intersezione, 2 differenza.
 enum class BooleanOperation { Unite = 0, Intersect = 1, Subtract = 2 };
 
@@ -54,7 +56,11 @@ struct BooleanOptions {
     int threads = 0;
 };
 
-Body booleanOperation(const Body &a, const Body &b, BooleanOperation operation, const BooleanOptions &options = {});
+// history facoltativa: facce dichiarate rispetto ad A/B, anche dopo la
+// fusione dei domini, con provenienza da entrambi per i pezzi coincidenti.
+// Edge/vertici non ancora coperti conservano il ripiego geometrico.
+Body booleanOperation(const Body &a, const Body &b, BooleanOperation operation, const BooleanOptions &options = {},
+                      BodyHistory *history = nullptr);
 
 // Curve comuni alle facce dei due corpi, limitate ai loro bordi.
 // Include sezioni aperte e bordi complanari; non costruisce un solido.
@@ -68,7 +74,7 @@ std::vector<BodySectionCurve> bodySectionCurves(const Body &a, const Body &b, co
 // booleane; i pezzi si raggruppano attraverso gli edge che non sono tagli.
 // Se lo strumento non la attraversa del tutto (un taglio che finisce dentro
 // una faccia) la regione resta una sola.
-std::vector<Body> splitSheet(const Body &sheet, const Body &tool, const BooleanOptions &options = {});
+std::vector<Body> splitSheet(const Body &sheet, const Body &tool, const BooleanOptions &options = {}, std::vector<BodyHistory> *histories = nullptr);
 
 // Curva da imprimere su una faccia (imprintCurves): il tratto `range` di
 // `curve`, che giace sulla faccia `face` entro `tolerance`. Un estremo su un
@@ -90,8 +96,10 @@ struct ImprintCurve {
 // il risultato e' una lamina. `removed` riceve il numero dei pezzi tolti.
 // Le facce sulla stessa superficie si fondono solo con options.unifySameDomain
 // (spento, i pezzi divisi restano facce distinte).
+// `history` facoltativa: facce dichiarate rispetto al body di ingresso,
+// composte con le origini della fusione quando unifySameDomain=true.
 Body imprintCurves(const Body &body, const std::vector<ImprintCurve> &curves, const std::function<bool(FaceId, const Vec3 &)> &remove = {},
-                   const BooleanOptions &options = {}, int *removed = nullptr);
+                   const BooleanOptions &options = {}, int *removed = nullptr, BodyHistory *history = nullptr);
 
 }
 

@@ -25,8 +25,9 @@
 // tolte, spessore oltre il raggio di curvatura di una faccia, booleane non
 // riuscite.
 namespace ForgeCad::Kernel {
+class BodyHistory;
 
-Body shellBody(const Body &solid, const std::vector<FaceId> &removed, double thickness);
+Body shellBody(const Body &solid, const std::vector<FaceId> &removed, double thickness, BodyHistory *history = nullptr);
 
 }
 

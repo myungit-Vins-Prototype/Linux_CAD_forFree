@@ -1,4 +1,5 @@
 #include "fk_project.h"
+#include "fk_history.h"
 
 #include <algorithm>
 #include <cmath>
@@ -576,7 +577,8 @@ std::vector<ProjectedChain> joinProjectedPieces(const std::vector<ProjectedPiece
 
 Body projectedProfileCut(const Body &body, const Frame3 &frame, const std::vector<ProfileRegion> &regions,
                          const std::vector<ProfileLoop> &chains, const Vec3 &direction, ProjectedCutMode mode,
-                         ProjectedCutReport *report, const ProjectionOptions &options) {
+                         ProjectedCutReport *report, const ProjectionOptions &options, BodyHistory *history) {
+    if(history)*history={};
     if (!(norm(direction) > 0.0)) throw std::invalid_argument("projectedProfileCut: direzione nulla");
     if (mode != ProjectedCutMode::SplitOnly && regions.empty())
         throw std::domain_error("il profilo non ha contorni chiusi: si puo' solo dividere le facce");
@@ -652,11 +654,13 @@ Body projectedProfileCut(const Body &body, const Frame3 &frame, const std::vecto
     booleanOptions.threads = options.threads;
     booleanOptions.unifySameDomain = mode != ProjectedCutMode::SplitOnly;
     if (curves.empty() && mode == ProjectedCutMode::SplitOnly) throw std::domain_error("la proiezione non divide nessuna faccia");
-    Body result = imprintCurves(body, curves, remove, booleanOptions, &out.removed);
+    BodyHistory emitted;
+    Body result=imprintCurves(body,curves,remove,booleanOptions,&out.removed,history?&emitted:nullptr);
     if (mode != ProjectedCutMode::SplitOnly && out.removed == 0) throw std::domain_error("nessuna parte del corpo cade dentro il profilo proiettato");
     if (out.followedEdges > 0)
         out.notes.push_back(std::to_string(out.followedEdges) + " tratti del profilo seguono bordi esistenti (scarto massimo "
                             + std::to_string(out.followedGap) + " mm): delimitano la regione senza nuovi tagli");
+    if(history)*history=std::move(emitted);
     return result;
 }
 

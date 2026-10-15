@@ -49,7 +49,7 @@ namespace ForgeCad::Kernel {
 
 // Raccordo (o smusso di distanza `size`) delle catene formate dagli edge.
 // `sides` (facoltativo, uno per edge): smussi asimmetrici, vedi chamferEdges.
-Body blendSurfaceChains(const Body &body, const std::vector<EdgeId> &edges, double size, bool chamfer, const std::vector<ChamferSides> *sides = nullptr);
+Body blendSurfaceChains(const Body &body, const std::vector<EdgeId> &edges, double size, bool chamfer, const std::vector<ChamferSides> *sides = nullptr, BodyHistory *history = nullptr);
 
 // Edge di `selected` nelle catene (tratti lisci tra le stesse due facce) che
 // contengono un edge di `seeds`.

@@ -147,7 +147,8 @@ struct PlanarFace {
 };
 
 // Lamina dalle facce gia' orientate (esterni antiorari attorno a plane.zDir(), fori orari).
-Body buildSheet(const Frame3 &plane, const std::vector<PlanarFace> &faces) {
+Body buildSheet(const Frame3 &plane, const std::vector<PlanarFace> &faces, FaceAliases *labels) {
+    FaceAliases emitted;
     detail::RawModel model;
     const auto surface = std::make_shared<Plane>(plane);
     for (const PlanarFace &face : faces) {
@@ -174,14 +175,18 @@ Body buildSheet(const Frame3 &plane, const std::vector<PlanarFace> &faces) {
             }
             raw.loops.push_back(fins);
         }
+        if(labels)emitted.push_back({"region."+std::to_string(model.faces.size())});
         model.faces.push_back(raw);
     }
-    return detail::assembleBody(model, false);
+    Body result=detail::assembleBody(model,false);
+    if(labels)*labels=std::move(emitted);
+    return result;
 }
 
 }
 
-Body planarSheet(const std::vector<std::vector<PathSegment>> &input, double tolerance) {
+Body planarSheet(const std::vector<std::vector<PathSegment>> &input, double tolerance, FaceAliases *labels) {
+    if(labels)labels->clear();
     if (input.empty()) throw std::domain_error("superficie planare: nessun loop");
     std::vector<OrientedLoop> loops;
     std::vector<std::vector<Vec3>> samples;
@@ -266,10 +271,11 @@ Body planarSheet(const std::vector<std::vector<PathSegment>> &input, double tole
         if (owner < 0) throw std::domain_error("superficie planare: loop intrecciati");
         faces[std::size_t(owner)].holes.push_back(signedAreas[i] < 0.0 ? loops[i] : reversedLoop(loops[i]));
     }
-    return buildSheet(plane, faces);
+    return buildSheet(plane, faces, labels);
 }
 
-Body planarSheet(const Frame3 &frame, const std::vector<ProfileRegion> &regions) {
+Body planarSheet(const Frame3 &frame, const std::vector<ProfileRegion> &regions, FaceAliases *labels) {
+    if(labels)labels->clear();
     if (regions.empty()) throw std::domain_error("superficie planare: nessuna regione");
     const auto convert = [&](const ProfileLoop &profile, bool counterclockwise) {
         if (profile.segments.empty()) throw std::domain_error("superficie planare: loop vuoto");
@@ -289,7 +295,7 @@ Body planarSheet(const Frame3 &frame, const std::vector<ProfileRegion> &regions)
         for (const ProfileLoop &hole : region.holes) face.holes.push_back(convert(hole, false));
         faces.push_back(std::move(face));
     }
-    return buildSheet(Frame3(frame.origin(), frame.zDir(), frame.xDir()), faces);
+    return buildSheet(Frame3(frame.origin(), frame.zDir(), frame.xDir()), faces, labels);
 }
 
 }

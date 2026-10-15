@@ -16,6 +16,7 @@
 // superficie); la curva risultante e' una cubica di Hermite C1 nello stesso
 // parametro della curva di partenza, entro la tolleranza.
 namespace ForgeCad::Kernel {
+class BodyHistory;
 
 struct ProjectionOptions {
     double tolerance = 1e-8;      // scarto massimo delle curve proiettate dalla proiezione vera
@@ -94,7 +95,7 @@ struct ProjectedCutReport {
 
 Body projectedProfileCut(const Body &body, const Frame3 &frame, const std::vector<ProfileRegion> &regions,
                          const std::vector<ProfileLoop> &chains, const Vec3 &direction, ProjectedCutMode mode,
-                         ProjectedCutReport *report = nullptr, const ProjectionOptions &options = {});
+                         ProjectedCutReport *report = nullptr, const ProjectionOptions &options = {}, BodyHistory *history = nullptr);
 
 }
 

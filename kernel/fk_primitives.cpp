@@ -81,24 +81,39 @@ ProfileLoop polygonLoop(const std::vector<Vec2> &polygon) {
 }
 
 Body makePrism(const Frame3 &frame, const std::vector<Vec2> &outerPolygon, const std::vector<std::vector<Vec2>> &holePolygons,
-               double height) {
+               double height, ExtrusionProvenance *provenance) {
+    if (provenance) *provenance = {};
     ProfileRegion region;
     region.outer = polygonLoop(counterClockwise(outerPolygon));
     for (const std::vector<Vec2> &hole : holePolygons) region.holes.push_back(reversed(polygonLoop(counterClockwise(hole))));
-    return makeExtrusion(frame, region, height);
+    return makeExtrusion(frame, region, height, provenance);
 }
 
-Body makeBox(const Frame3 &frame, double dx, double dy, double dz) {
+Body makeBox(const Frame3 &frame, double dx, double dy, double dz, FaceAliases *labels) {
+    if(labels)labels->clear();
     if (!(dx > kLinearResolution && dy > kLinearResolution)) throw std::invalid_argument("makeBox: dimensioni non valide");
-    return makePrism(frame, {Vec2(0, 0), Vec2(dx, 0), Vec2(dx, dy), Vec2(0, dy)}, {}, dz);
+    ExtrusionProvenance origins;
+    Body result=makePrism(frame,{Vec2(0,0),Vec2(dx,0),Vec2(dx,dy),Vec2(0,dy)},{},dz,labels?&origins:nullptr);
+    if(labels) {
+        labels->resize(result.faces().size());const char *sides[]={"-y","+x","+y","-x"};
+        for(const auto &o:origins.faces)(*labels)[std::size_t(o.face.index)]={o.role==ExtrusionFaceRole::Side?sides[o.segment]:o.role==ExtrusionFaceRole::Start?(dz>0?"-z":"+z"):(dz>0?"+z":"-z")};
+    }
+    return result;
 }
 
 // Un cerchio come unico tratto: il fianco resta senza cucitura.
-Body makeCylinder(const Frame3 &frame, double radius, double height) {
+Body makeCylinder(const Frame3 &frame, double radius, double height, FaceAliases *labels) {
+    if(labels)labels->clear();
     if (!(radius > kLinearResolution)) throw std::invalid_argument("makeCylinder: raggio non valido");
     ProfileRegion region;
     region.outer.segments.push_back({std::make_shared<Circle<2>>(makeCircle(Vec2(), radius)), {0.0, kTwoPi}});
-    return makeExtrusion(frame, region, height);
+    ExtrusionProvenance origins;
+    Body result=makeExtrusion(frame,region,height,labels?&origins:nullptr);
+    if(labels) {
+        labels->resize(result.faces().size());
+        for(const auto &o:origins.faces)(*labels)[std::size_t(o.face.index)]={o.role==ExtrusionFaceRole::Side?"cylinder":o.role==ExtrusionFaceRole::Start?(height>0?"-z":"+z"):(height>0?"+z":"-z")};
+    }
+    return result;
 }
 
 }

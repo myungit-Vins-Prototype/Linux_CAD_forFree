@@ -483,7 +483,8 @@ std::string degrees(double radians) {
 }
 
 Body fillSurface(const std::vector<PathSegment> &boundary, const std::vector<PathSegment> &guides,
-                 const std::vector<FillContact> &contacts, const FillOptions &options, FillReport *report) {
+                 const std::vector<FillContact> &contacts, const FillOptions &options, FillReport *report, FaceAliases *labels) {
+    if(labels)labels->clear();
     if (options.continuity < 0 || options.continuity > 2 || !std::isfinite(options.influence) || options.influence <= 0.0
         || !std::isfinite(options.guideWeight) || options.guideWeight < 0.0 || !std::isfinite(options.tolerance)
         || options.tolerance <= 0.0 || options.maxSpans < 4 || options.shapeContact < -1
@@ -1122,7 +1123,9 @@ Body fillSurface(const std::vector<PathSegment> &boundary, const std::vector<Pat
     }
     face.loops.push_back(fins);
     model.faces.push_back(face);
-    return detail::assembleBody(model, false, &out.notes);
+    Body result=detail::assembleBody(model,false,&out.notes);
+    if(labels)*labels={{"patch"}};
+    return result;
 }
 
 }
