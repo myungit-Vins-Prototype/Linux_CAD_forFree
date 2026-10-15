@@ -1,6 +1,7 @@
 #ifndef FORGECAD_DRAWING_EDITOR_H
 #define FORGECAD_DRAWING_EDITOR_H
 #include "cad_drawing_sheet.h"
+#include "cad_drawing_dimension.h"
 #include <QHash>
 #include <QWidget>
 #include <functional>
@@ -38,6 +39,8 @@ public:
     bool canRedo() const;
     void markSaved();
     bool isModified() const;
+    QString addDimension(DrawingDimension dimension,const QPointF &position);
+    QString updateDimension(DrawingDimension dimension);
     QString addSelectedDimension(DrawingMeasure measure);
     QString updateModel(DrawingEditorModel model);
     void setChangedCallback(std::function<void(const DrawingSheet &)> callback);

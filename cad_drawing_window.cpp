@@ -71,7 +71,9 @@ void DrawingWindow::installEditor(){
     const auto populate=[next](QMenu *menu,std::initializer_list<const char *> names){menu->clear();for(auto name:names)menu->addAction(next->findChild<QAction *>(name));};
     populate(editMenu_,{"drawingUndoAction","drawingRedoAction","drawingEditViewAction","drawingAlignViewAction","drawingDeleteSelectionAction"});
     populate(insertMenu_,{"drawingAddProjectionAction","drawingAddViewAction"});
-    populate(dimensionMenu_,{"drawingEndpointDimensionAction","drawingHorizontalDimensionAction","drawingVerticalDimensionAction","drawingLengthDimensionAction"});
+    populate(dimensionMenu_,{"drawingSmartDimensionAction","drawingEditDimensionAction","drawingEndpointDimensionAction","drawingHorizontalDimensionAction","drawingVerticalDimensionAction","drawingLengthDimensionAction"});
+    auto *references=addCadMenu(dimensionMenu_,QStringLiteral("Riferimenti del piano"));
+    for(auto name:{"drawingOriginReferenceAction","drawingAxisXReferenceAction","drawingAxisYReferenceAction"})references->addAction(next->findChild<QAction *>(name));
     populate(viewMenu_,{"drawingFitAction"});viewMenu_->addSeparator();viewMenu_->addAction(next->findChild<QDockWidget *>("drawingTreeDock")->toggleViewAction());
     viewMenu_->addAction(next->findChild<QToolBar *>("drawingCommandBar")->toggleViewAction());viewMenu_->addAction(findChild<QToolBar *>("drawingDocumentBar")->toggleViewAction());
     updateAction_->setEnabled(drawing_.sheet.drawing.version.checkinId.isNull());

@@ -19,6 +19,7 @@
 #include <QPushButton>
 #include <QTimer>
 #include <QToolBar>
+#include <QWidgetAction>
 #include <QTreeWidget>
 #include <QTreeWidgetItemIterator>
 #include <cmath>
@@ -51,7 +52,7 @@ int main(int argc,char **argv){
         selectCurve(editor,top.id,section);ok(editor.addSelectedDimension(DrawingMeasure::HorizontalDistance));
         auto *tree=editor.findChild<QTreeWidget *>("drawingTree");auto *bar=editor.findChild<QToolBar *>("drawingCommandBar");require(tree&&editor.findChild<QDockWidget *>("drawingTreeDock"),"albero agganciabile disponibile");
         require(bar&&bar->toolButtonStyle()==Qt::ToolButtonIconOnly&&bar->iconSize()==QSize(24,24),"densita' e icone condivise con il 3D");
-        for(auto *action:bar->actions())if(!action->isSeparator())require(!action->icon().isNull(),"tutti i comandi hanno un'icona");
+        for(auto *action:bar->actions())if(!action->isSeparator()&&!qobject_cast<QWidgetAction *>(action))require(!action->icon().isNull(),"tutti i comandi hanno un'icona");
         tree->setCurrentItem(itemFor(tree,dimension));const auto selected=editor.canvas()->scene()->selectedItems();
         require(selected.size()==1&&selected[0]->data(3).toUuid()==dimension,"selezione quota albero -> foglio");
         selectCurve(editor,top.id,horizontal);require(tree->currentItem()&&tree->currentItem()->data(0,Qt::UserRole+1).toUuid()==top.id,"selezione bordo foglio -> vista nell'albero");

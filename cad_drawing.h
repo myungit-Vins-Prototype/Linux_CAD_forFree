@@ -52,6 +52,7 @@ struct DrawingCurve {
     DrawingCurveKind kind = DrawingCurveKind::Section;
     Kernel::EdgeId sourceEdge{};
     std::string edgeName{};
+    Kernel::CurvePtr<3> sourceGeometry; // geometria esatta prima della proiezione, solo cache
 };
 using DrawingSection = DrawingCurve;
 
@@ -65,12 +66,27 @@ struct DrawingSectionReference {
     DrawingCurveKind kind = DrawingCurveKind::Section;
     QString edgeName{};
 };
-enum class DrawingMeasure { SectionLength, EndpointDistance, HorizontalDistance, VerticalDistance };
+enum class DrawingMeasure { SectionLength, EndpointDistance, HorizontalDistance, VerticalDistance,
+    Distance, Angle, Radius, Diameter, AxisRadius, AxisDiameter };
+enum class DrawingPointRole { Curve, Start, End, Midpoint, Center, Nearest, Origin, AxisX, AxisY,
+    Quadrant0, Quadrant1, Quadrant2, Quadrant3 };
+struct DrawingAttachment {
+    DrawingSectionReference curve;
+    DrawingPointRole role=DrawingPointRole::Curve;
+    double fraction=0; // frazione di lunghezza, non parametro della curva
+    QString supportFace;
+    int curveSide=0,anchorSide=0; // lati UV esatti: Umin/Umax/Vmin/Vmax
+    bool polar=false; // frazione angolare nel piano, per punti sulle coniche
+    QString vertexName, boundaryName; // origine topologica e orientamento del tratto
+};
 struct DrawingDimension {
     QUuid id = QUuid::createUuid();
     QUuid viewId;
     DrawingSectionReference section;
     DrawingMeasure measure = DrawingMeasure::SectionLength;
+    std::vector<DrawingAttachment> references; // vuoto: quota legacy su una curva
+    int angleSides=0;
+    int decimals=2;
 };
 struct DrawingDocument {
     DrawingDocumentVersion version{QUuid::createUuid(), {}};
@@ -84,6 +100,9 @@ struct DrawingDimensionResult {
     DrawingDimensionStatus status = DrawingDimensionStatus::Invalid;
     double value = std::numeric_limits<double>::quiet_NaN();
     QString message;
+    enum class Geometry { None, Linear, Radius, Diameter, Angle } geometry=Geometry::None;
+    Kernel::Vec2 first{},second{},vertex{},firstDirection{},secondDirection{};
+    double sweep=0; // radianti con segno, solo per l'arco della quota angolare
 };
 
 // Output sostituito solo al successo. Nessuna mesh, nessun requisito di volume.

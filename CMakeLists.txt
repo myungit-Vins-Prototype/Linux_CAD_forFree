@@ -65,6 +65,8 @@ add_executable(forgecad
     cad_document_io.cpp
     cad_drawing.h
     cad_drawing.cpp
+    cad_drawing_dimension.h
+    cad_drawing_dimension.cpp
     cad_drawing_sheet.h
     cad_drawing_sheet.cpp
     cad_drawing_editor.h
@@ -326,7 +328,7 @@ target_link_libraries(forgecad_snapshot_chunks_tests PRIVATE Qt6::Core)
 add_test(NAME forgecad_snapshot_chunks_tests COMMAND forgecad_snapshot_chunks_tests)
 
 # Sezioni e quote associative: modulo geometrico autonomo, senza GUI o GL.
-add_executable(forgecad_drawing_tests tests/test_drawing.cpp cad_drawing.cpp)
+add_executable(forgecad_drawing_tests tests/test_drawing.cpp cad_drawing.cpp cad_drawing_dimension.cpp)
 target_include_directories(forgecad_drawing_tests PRIVATE ${PROJECT_SOURCE_DIR})
 target_link_libraries(forgecad_drawing_tests PRIVATE Qt6::Core forgekernel)
 target_compile_options(forgecad_drawing_tests PRIVATE -Wall -Wextra -Wpedantic)
@@ -356,30 +358,45 @@ add_test(NAME forgecad_workspace_tests COMMAND forgecad_workspace_tests)
 set_tests_properties(forgecad_workspace_tests PROPERTIES TIMEOUT 60)
 
 # Primo editor del foglio: prova GUI autonoma senza nuovo contenitore nativo.
-add_executable(forgecad_drawing_editor_tests cad_icons.cpp tests/test_drawing_editor.cpp cad_drawing_editor.cpp cad_drawing_sheet.cpp cad_drawing.cpp)
+add_executable(forgecad_drawing_editor_tests cad_icons.cpp tests/test_drawing_editor.cpp cad_drawing_editor.cpp cad_drawing_sheet.cpp cad_drawing.cpp cad_drawing_dimension.cpp)
 target_include_directories(forgecad_drawing_editor_tests PRIVATE ${PROJECT_SOURCE_DIR})
 target_link_libraries(forgecad_drawing_editor_tests PRIVATE Qt6::Widgets forgekernel)
 target_compile_options(forgecad_drawing_editor_tests PRIVATE -Wall -Wextra -Wpedantic)
 add_test(NAME forgecad_drawing_editor_tests COMMAND forgecad_drawing_editor_tests)
 set_tests_properties(forgecad_drawing_editor_tests PROPERTIES TIMEOUT 60 ENVIRONMENT "QT_QPA_PLATFORM=offscreen;QT_QPA_PLATFORMTHEME=;QT_STYLE_OVERRIDE=Fusion")
 
-add_executable(forgecad_projected_drawing_tests cad_icons.cpp tests/test_projected_drawing.cpp cad_drawing_editor.cpp cad_drawing_sheet.cpp cad_drawing.cpp)
+add_executable(forgecad_projected_drawing_tests cad_icons.cpp tests/test_projected_drawing.cpp cad_drawing_editor.cpp cad_drawing_sheet.cpp cad_drawing.cpp cad_drawing_dimension.cpp)
 target_include_directories(forgecad_projected_drawing_tests PRIVATE ${PROJECT_SOURCE_DIR})
 target_link_libraries(forgecad_projected_drawing_tests PRIVATE Qt6::Widgets forgekernel)
 target_compile_options(forgecad_projected_drawing_tests PRIVATE -Wall -Wextra -Wpedantic)
 add_test(NAME forgecad_projected_drawing_tests COMMAND forgecad_projected_drawing_tests)
 set_tests_properties(forgecad_projected_drawing_tests PROPERTIES TIMEOUT 60 ENVIRONMENT "QT_QPA_PLATFORM=offscreen;QT_QPA_PLATFORMTHEME=;QT_STYLE_OVERRIDE=Fusion")
 
-add_executable(forgecad_drawing_view_edit_tests tests/test_drawing_view_edit.cpp cad_drawing_editor.cpp cad_drawing_sheet.cpp cad_drawing.cpp cad_icons.cpp)
+add_executable(forgecad_drawing_view_edit_tests tests/test_drawing_view_edit.cpp cad_drawing_editor.cpp cad_drawing_sheet.cpp cad_drawing.cpp cad_drawing_dimension.cpp cad_icons.cpp)
 target_include_directories(forgecad_drawing_view_edit_tests PRIVATE ${PROJECT_SOURCE_DIR})
 target_link_libraries(forgecad_drawing_view_edit_tests PRIVATE Qt6::Widgets forgekernel)
 target_compile_options(forgecad_drawing_view_edit_tests PRIVATE -Wall -Wextra -Wpedantic)
 add_test(NAME forgecad_drawing_view_edit_tests COMMAND forgecad_drawing_view_edit_tests)
 set_tests_properties(forgecad_drawing_view_edit_tests PROPERTIES TIMEOUT 60 ENVIRONMENT "QT_QPA_PLATFORM=offscreen;QT_QPA_PLATFORMTHEME=;QT_STYLE_OVERRIDE=Fusion")
 
-add_executable(forgecad_drawing_layout_history_tests tests/test_drawing_layout_history.cpp cad_drawing_editor.cpp cad_drawing_sheet.cpp cad_drawing.cpp cad_icons.cpp)
+add_executable(forgecad_drawing_layout_history_tests tests/test_drawing_layout_history.cpp cad_drawing_editor.cpp cad_drawing_sheet.cpp cad_drawing.cpp cad_drawing_dimension.cpp cad_icons.cpp)
 target_include_directories(forgecad_drawing_layout_history_tests PRIVATE ${PROJECT_SOURCE_DIR})
 target_link_libraries(forgecad_drawing_layout_history_tests PRIVATE Qt6::Widgets forgekernel)
 target_compile_options(forgecad_drawing_layout_history_tests PRIVATE -Wall -Wextra -Wpedantic)
 add_test(NAME forgecad_drawing_layout_history_tests COMMAND forgecad_drawing_layout_history_tests)
 set_tests_properties(forgecad_drawing_layout_history_tests PROPERTIES TIMEOUT 60 ENVIRONMENT "QT_QPA_PLATFORM=offscreen;QT_QPA_PLATFORMTHEME=;QT_STYLE_OVERRIDE=Fusion")
+
+# Quote associative complete e interazione degli snap, senza includere la GUI 3D.
+add_executable(forgecad_drawing_dimensions_tests tests/test_drawing_dimensions.cpp cad_drawing.cpp cad_drawing_dimension.cpp cad_drawing_sheet.cpp)
+target_include_directories(forgecad_drawing_dimensions_tests PRIVATE ${PROJECT_SOURCE_DIR})
+target_link_libraries(forgecad_drawing_dimensions_tests PRIVATE Qt6::Core forgekernel)
+target_compile_options(forgecad_drawing_dimensions_tests PRIVATE -Wall -Wextra -Wpedantic)
+add_test(NAME forgecad_drawing_dimensions_tests COMMAND forgecad_drawing_dimensions_tests)
+set_tests_properties(forgecad_drawing_dimensions_tests PROPERTIES TIMEOUT 60)
+
+add_executable(forgecad_drawing_dimensions_gui_tests tests/test_drawing_dimensions_gui.cpp cad_drawing.cpp cad_drawing_dimension.cpp cad_drawing_sheet.cpp cad_drawing_editor.cpp cad_icons.cpp)
+target_include_directories(forgecad_drawing_dimensions_gui_tests PRIVATE ${PROJECT_SOURCE_DIR})
+target_link_libraries(forgecad_drawing_dimensions_gui_tests PRIVATE Qt6::Widgets forgekernel)
+target_compile_options(forgecad_drawing_dimensions_gui_tests PRIVATE -Wall -Wextra -Wpedantic)
+add_test(NAME forgecad_drawing_dimensions_gui_tests COMMAND forgecad_drawing_dimensions_gui_tests)
+set_tests_properties(forgecad_drawing_dimensions_gui_tests PROPERTIES TIMEOUT 60 ENVIRONMENT "QT_QPA_PLATFORM=offscreen;QT_QPA_PLATFORMTHEME=;QT_STYLE_OVERRIDE=Fusion")

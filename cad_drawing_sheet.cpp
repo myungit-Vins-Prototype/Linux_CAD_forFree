@@ -1,4 +1,5 @@
 #include "cad_drawing_sheet.h"
+#include "cad_drawing_dimension.h"
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
@@ -36,6 +37,7 @@ void validate(const DrawingSheet &sheet){
     for(const auto &dimension:sheet.drawing.dimensions){
         const auto layout=std::find_if(sheet.views.cbegin(),sheet.views.cend(),[&](const auto &view){return view.viewId==dimension.viewId;});
         require(layout!=sheet.views.cend()&&layout->features.contains(dimension.section.featureId),"La quota riferisce un corpo estraneo alla vista.");
+        for(const auto &ref:dimension.references)if(!drawingDatum(ref.role))require(layout->features.contains(ref.curve.featureId),"Un aggancio della quota riferisce un corpo estraneo alla vista.");
     }
 }
 }
