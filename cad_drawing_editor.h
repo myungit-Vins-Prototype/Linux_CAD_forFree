@@ -25,6 +25,10 @@ public:
     const std::vector<DrawingSection> &sections(const QUuid &viewId) const;
     DrawingDimensionResult dimensionResult(const QUuid &id) const;
     QString insertView(DrawingView view,DrawingViewLayout layout);
+    // Anteprima transitoria: segue il mouse, clic inserisce, Esc annulla.
+    QString beginViewPlacement(DrawingView view,DrawingViewLayout layout);
+    bool hasViewPlacement() const;
+    void cancelViewPlacement();
     // Modifica atomica: ID di vista e quote conservati; ricalcolo della sola vista.
     QString updateView(DrawingView view,DrawingViewLayout layout);
     enum class ViewAlignment { SameRow, SameColumn };

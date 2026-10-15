@@ -19,6 +19,7 @@
 #include <QJsonDocument>
 #include <QJsonArray>
 #include <QJsonObject>
+#include <QMouseEvent>
 #include <QTimer>
 #include <iostream>
 #include <algorithm>
@@ -85,7 +86,9 @@ int main(int argc,char **argv){
         // Dialogo reale, selezione, nuove quote e schema del foglio.
         DrawingSheet page;page.drawing.model=model.version;DrawingEditorModel editorModel{model,{{1,"Corpo"}},{}};DrawingSheetEditor editor(page,editorModel);editor.resize(1450,850);editor.show();QApplication::processEvents();bool dialogSeen=false;
         QTimer::singleShot(0,[&]{auto *dialog=editor.findChild<QDialog *>("drawingViewDialog");if(!dialog)return;dialog->findChild<QComboBox *>("drawingViewPlane")->setCurrentIndex(0);dialog->findChild<QCheckBox *>("drawingSectionReferences")->setChecked(true);dialog->findChild<QDoubleSpinBox *>("drawingViewDepth")->setValue(2);dialog->findChild<QDoubleSpinBox *>("drawingViewScale")->setValue(4);dialogSeen=true;dialog->findChild<QDialogButtonBox *>()->button(QDialogButtonBox::Ok)->click();});
-        editor.findChild<QAction *>("drawingAddProjectionAction")->trigger();require(dialogSeen&&editor.sheet().drawing.views.size()==1,"dialogo proiezione reale");const auto id=editor.sheet().drawing.views[0].id;
+        editor.findChild<QAction *>("drawingAddProjectionAction")->trigger();require(dialogSeen&&editor.hasViewPlacement()&&editor.sheet().drawing.views.empty(),"dialogo proiezione prepara l'anteprima");
+        {auto *canvas=editor.canvas();const QPointF local=canvas->mapFromScene(QPointF(140,100)),global=canvas->viewport()->mapToGlobal(local.toPoint());QMouseEvent press(QEvent::MouseButtonPress,local,global,Qt::LeftButton,Qt::LeftButton,Qt::NoModifier),release(QEvent::MouseButtonRelease,local,global,Qt::LeftButton,Qt::NoButton,Qt::NoModifier);QApplication::sendEvent(canvas->viewport(),&press);QApplication::sendEvent(canvas->viewport(),&release);}
+        require(!editor.hasViewPlacement()&&editor.sheet().drawing.views.size()==1,"clic conferma la proiezione");const auto id=editor.sheet().drawing.views[0].id;
         require(editor.curves(id).size()==12&&editor.sections(id).size()==4,"sezioni e bordi distinti nell'editor");int index=-1;const auto &display=editor.curves(id);
         for(std::size_t i=0;i<display.size();++i)if(display[i].kind==DrawingCurveKind::ProjectedEdge&&std::abs(arcLength(*display[i].curve,display[i].range)-10)<1e-7){index=int(i);break;}
         select(editor,id,index);editor.findChild<QAction *>("drawingHorizontalDimensionAction")->trigger();require(editor.sheet().drawing.dimensions.size()==1,"quota orizzontale dalla toolbar");const auto dimensionId=editor.sheet().drawing.dimensions[0].id;near(editor.dimensionResult(dimensionId).value,10,"quota GUI nel piano");

@@ -50,6 +50,7 @@ static void require(bool ok, const char *message) {
 #include "test_linked_drawing.h"
 #include "test_drawing_revisions.h"
 #include "test_projected_drawing_file.h"
+#include "test_drawing_mouse.h"
 #include "document_regression.h"
 class ViewportInteractionTest {
 public:
@@ -9321,6 +9322,11 @@ int main(int argc, char **argv) {
         catch (const std::exception &e) { std::cerr << e.what() << std::endl; return 1; }
         std::cout << "PASS fill surface" << std::endl;
         return 0;
+    }
+    if (app.arguments().contains(QStringLiteral("--drawing-mouse"))) {
+        try { drawingMouseProfileTests(app.arguments().value(app.arguments().indexOf(QStringLiteral("--drawing-mouse"))+1)); }
+        catch (const std::exception &e) { std::cerr << e.what() << std::endl; return 1; }
+        std::cout << "PASS real Mouse drawing profile and interactive placement" << std::endl;return 0;
     }
     if (app.arguments().contains(QStringLiteral("--extrude-surface"))) {
         try { ViewportInteractionTest::extrusionSurfaceOnly(); }

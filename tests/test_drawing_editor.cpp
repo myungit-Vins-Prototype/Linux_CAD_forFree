@@ -46,7 +46,8 @@ int main(int argc,char **argv){
             dialog->findChild<QDoubleSpinBox *>("drawingViewScale")->setValue(2);
             dialog->findChild<QLineEdit *>("drawingViewTitle")->setText("Sezione A-A");dialogSeen=true;dialog->findChild<QDialogButtonBox *>()->button(QDialogButtonBox::Ok)->click();});
         editor.findChild<QAction *>("drawingAddViewAction")->trigger();
-        require(dialogSeen&&editor.sheet().drawing.views.size()==1,"inserimento reale della vista");
+        require(dialogSeen&&editor.hasViewPlacement()&&editor.sheet().drawing.views.empty()&&!editor.isModified(),"dialogo prepara l'anteprima senza modificare il foglio");
+        click(editor.canvas(),QPointF(145,100));require(!editor.hasViewPlacement()&&editor.sheet().drawing.views.size()==1,"clic inserisce realmente la vista");
         const auto viewId=editor.sheet().drawing.views[0].id;
         require(editor.sections(viewId).size()==1,"sezione interna di superficie aperta");
         QGraphicsPathItem *curve=nullptr;for(auto *item:editor.canvas()->scene()->items())if(item->data(0).toString()=="section")curve=dynamic_cast<QGraphicsPathItem *>(item);
