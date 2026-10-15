@@ -1,6 +1,8 @@
 #ifndef FORGECAD_FK_BOOLEAN_H
 #define FORGECAD_FK_BOOLEAN_H
 
+#include "fk_precision.h"
+
 #include <functional>
 
 #include "fk_topology.h"
@@ -41,7 +43,7 @@ namespace ForgeCad::Kernel {
 enum class BooleanOperation { Unite = 0, Intersect = 1, Subtract = 2 };
 
 struct BooleanOptions {
-    double tolerance = 1e-6;  // distanza sotto la quale due punti sono lo stesso vertice
+    double tolerance = kBooleanConnectionTolerance;  // distanza sotto la quale due punti sono lo stesso vertice
     // Fonde facce ed edge sulla stessa geometria (fk_unify.h), come fa l'app
     // con ShapeUpgrade_UnifySameDomain dopo le booleane di OCCT.
     bool unifySameDomain = true;

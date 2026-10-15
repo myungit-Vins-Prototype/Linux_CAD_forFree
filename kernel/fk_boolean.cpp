@@ -196,8 +196,8 @@ private:
 
 class BooleanBuilder {
 public:
-    BooleanBuilder(const Body &a, const Body &b, BooleanOperation operation, const BooleanOptions &options, bool split = false)
-        : operation_(operation), tolerance_(options.tolerance), unify_(options.unifySameDomain), split_(split), threads_(options.threads) {
+    BooleanBuilder(const Body &a, const Body &b, BooleanOperation operation, const BooleanOptions &options)
+        : operation_(operation), tolerance_(options.tolerance), unify_(options.unifySameDomain), threads_(options.threads) {
         bodies_[0] = a;
         bodies_[1] = b;
         Box all;
@@ -301,7 +301,7 @@ private:
     BooleanOperation operation_;
     double tolerance_, scale_ = 1.0;
     double vertexTolerance_ = 0.0;  // la piu' grande tolleranza dei vertici dei due body (file importati)
-    bool unify_ = true, split_ = false;
+    bool unify_ = true;
     int threads_ = 0;
     std::map<int, Box> boxes_[2];
     Box bounds_[2];
@@ -2381,7 +2381,7 @@ Body booleanOperation(const Body &a, const Body &b, BooleanOperation operation, 
 }
 
 std::vector<Body> splitSheet(const Body &sheet, const Body &tool, const BooleanOptions &options) {
-    return BooleanBuilder(sheet, tool, BooleanOperation::Intersect, options, true).split();
+    return BooleanBuilder(sheet, tool, BooleanOperation::Intersect, options).split();
 }
 
 Body imprintCurves(const Body &body, const std::vector<ImprintCurve> &curves, const std::function<bool(FaceId, const Vec3 &)> &remove,

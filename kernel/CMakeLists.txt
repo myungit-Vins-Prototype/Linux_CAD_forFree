@@ -146,6 +146,7 @@ add_executable(forgekernel_tests
     tests/test_surfaces.cpp
     tests/test_bspline_surface.cpp
     tests/test_surface_algo.cpp
+    tests/test_tolerance.cpp
     tests/test_topology.cpp
     tests/test_primitives.cpp
     tests/test_extrude.cpp
@@ -218,3 +219,13 @@ target_link_libraries(forgekernel_blend_probe PRIVATE forgekernel)
 target_compile_options(forgekernel_blend_probe PRIVATE -Wall -Wextra -Wpedantic -O2 -g)
 set_target_properties(forgekernel_blend_probe PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
 add_test(NAME forgekernel_blend_probe_self_test COMMAND forgekernel_blend_probe --self-test)
+
+# Politica delle tolleranze: collegamento al solo kernel proprio.
+add_executable(forgekernel_tolerance_tests
+    tests/fk_test_main.cpp
+    tests/test_tolerance.cpp
+)
+target_link_libraries(forgekernel_tolerance_tests PRIVATE forgekernel)
+target_compile_options(forgekernel_tolerance_tests PRIVATE -Wall -Wextra -Wpedantic)
+set_target_properties(forgekernel_tolerance_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
+add_test(NAME forgekernel_tolerance_tests COMMAND forgekernel_tolerance_tests)

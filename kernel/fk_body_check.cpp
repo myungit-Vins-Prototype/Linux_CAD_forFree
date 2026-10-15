@@ -1,6 +1,7 @@
 #include "fk_body_check.h"
 
 #include <algorithm>
+#include <cmath>
 #include <exception>
 #include <set>
 #include <sstream>
@@ -159,6 +160,20 @@ void checkTopology(const Body &body, Report &report) {
         if (body.loop(l).isolatedVertex.valid()) usedVertices.insert(body.loop(l).isolatedVertex.index);
     for (VertexId v : body.vertices())
         if (!usedVertices.count(v.index)) report.add(CheckCode::DanglingVertex, "vertice ", v.index, " non usato");
+}
+
+// Metadati sempre validi, anche quando si richiede la sola topologia.
+void checkTolerances(const Body &body, Report &report) {
+    const auto valid = [](double value) { return std::isfinite(value) && value >= 0.0; };
+    for (VertexId v : body.vertices())
+        if (!valid(body.vertex(v).tolerance))
+            report.add(CheckCode::InvalidTolerance, "vertice ", v.index, ": tolleranza non valida ", body.vertex(v).tolerance);
+    for (EdgeId e : body.edges())
+        if (!valid(body.edge(e).tolerance))
+            report.add(CheckCode::InvalidTolerance, "edge ", e.index, ": tolleranza non valida ", body.edge(e).tolerance);
+    for (FinId f : body.fins())
+        if (!valid(body.fin(f).pcurveTolerance))
+            report.add(CheckCode::InvalidTolerance, "fin ", f.index, ": tolleranza SP-curve non valida ", body.fin(f).pcurveTolerance);
 }
 
 void checkEuler(const Body &body, Report &report) {
@@ -383,6 +398,8 @@ std::vector<CheckIssue> checkBody(const Body &body, const CheckOptions &options)
     Report report(issues);
     checkTopology(body, report);
     if (!issues.empty()) return issues;  // i controlli successivi presuppongono una topologia sana
+    checkTolerances(body, report);
+    if (!issues.empty()) return issues;  // non usare budget numericamente invalidi
     checkEuler(body, report);
     if (options.geometry) checkGeometry(body, report);
     if (options.geometry && options.loopCrossings && issues.empty()) checkLoopCrossings(body, report);
@@ -403,6 +420,7 @@ std::string describe(CheckCode code) {
     case CheckCode::EdgeOffFace: return "edge lontano dalla superficie";
     case CheckCode::LoopOrientation: return "orientamento dei loop";
     case CheckCode::PCurveOffEdge: return "SP-curve lontana dall'edge";
+    case CheckCode::InvalidTolerance: return "tolleranza locale non valida";
     case CheckCode::LoopsCross: return "loop della faccia che si incrociano";
     }
     return "?";

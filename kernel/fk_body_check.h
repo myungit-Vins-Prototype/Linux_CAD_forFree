@@ -27,6 +27,7 @@ enum class CheckCode {
     LoopOrientation,   // loop di una faccia piana orientato al contrario
     PCurveOffEdge,     // SP-curve di una fin che non ricade sulla curva dell'edge
     LoopsCross,        // due loop della stessa faccia si toccano o si incrociano (solo con CheckOptions::loopCrossings)
+    InvalidTolerance,  // tolleranza locale negativa o non finita (anche senza geometry)
 };
 
 struct CheckIssue {

@@ -402,9 +402,9 @@ std::vector<QuadCandidate> quadCandidates(const Kernel::FaceMesh &face) {
     std::vector<QuadCandidate> result;
     for (const auto &[shared, triangles] : owners) {
         if (triangles.size() != 2) continue;
-        const auto opposite = [&](int triangle) {
+        const auto opposite = [&face, sharedEdge = shared](int triangle) {
             for (int vertex : face.triangles[std::size_t(triangle)])
-                if (vertex != shared.first && vertex != shared.second) return vertex;
+                if (vertex != sharedEdge.first && vertex != sharedEdge.second) return vertex;
             return -1;
         };
         const int a = opposite(triangles[0]), b = opposite(triangles[1]);

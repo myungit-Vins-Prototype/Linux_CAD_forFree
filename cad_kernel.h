@@ -8,6 +8,7 @@
 // (la geometria la costruisce cad_forge con il kernel proprio, kernel/).
 namespace ForgeCad {
 
+// Politica: docs/tolerance-policy.md. Budget applicativo distinto dalla risoluzione.
 // Tolleranza con cui gli estremi di due entita' dello schizzo sono considerati
 // coincidenti quando si formano i contorni.
 constexpr double kSketchConnectionTolerance = 1.0e-6;

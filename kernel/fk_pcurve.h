@@ -22,9 +22,6 @@
 // d'intersezione.
 namespace ForgeCad::Kernel {
 
-// Scarto di default delle SP-curve approssimate.
-constexpr double kPCurveTolerance = 1e-7;
-
 // SP-curve esatta, o nullptr se la curva non sta sulla superficie entro
 // `tolerance` o non ha una forma esatta riconosciuta. Sulle superfici
 // periodiche u(range.lo) cade nel dominio di base.

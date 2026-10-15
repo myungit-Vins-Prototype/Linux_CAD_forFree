@@ -185,7 +185,7 @@ void OverlayRenderer::draw(GLenum primitive, const QVector<OverlayVertex> &verti
     buffer_.bind();
     buffer_.setUsagePattern(QOpenGLBuffer::DynamicDraw);
     buffer_.allocate(vertices.constData(), int(vertices.size() * sizeof(OverlayVertex)));
-    glDrawArrays(primitive, 0, vertices.size());
+    QOpenGLContext::currentContext()->functions()->glDrawArrays(primitive, 0, vertices.size());
     buffer_.release();
     shader_->release();
 }
@@ -220,7 +220,7 @@ void OverlayRenderer::drawWideLineStrip(const QVector<QVector3D> &positions, con
     buffer_.bind();
     buffer_.setUsagePattern(QOpenGLBuffer::DynamicDraw);
     buffer_.allocate(vertices.constData(), int(vertices.size() * sizeof(OverlayVertex)));
-    glDrawArrays(GL_LINE_STRIP, 0, vertices.size());
+    QOpenGLContext::currentContext()->functions()->glDrawArrays(GL_LINE_STRIP, 0, vertices.size());
     buffer_.release();
     wideShader_->release();
 }
@@ -267,7 +267,7 @@ void OverlayRenderer::drawTextured(QOpenGLShaderProgram &shader, GLenum primitiv
     shader.setAttributeBuffer(0, GL_FLOAT, offsetof(TexturedOverlayVertex, position), 3, sizeof(TexturedOverlayVertex));
     shader.enableAttributeArray(1);
     shader.setAttributeBuffer(1, GL_FLOAT, offsetof(TexturedOverlayVertex, texCoord), 2, sizeof(TexturedOverlayVertex));
-    glDrawArrays(primitive, 0, vertices.size());
+    QOpenGLContext::currentContext()->functions()->glDrawArrays(primitive, 0, vertices.size());
     buffer_.release();
 }
 

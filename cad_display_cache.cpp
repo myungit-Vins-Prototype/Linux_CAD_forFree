@@ -273,7 +273,7 @@ void DisplayCache::faces(const BodyDisplay &display) {
     faceShader_->setUniformValue("useInstances", false);
     {
         QOpenGLVertexArrayObject::Binder array(&entry.faceArray);
-        glDrawArrays(GL_TRIANGLES, 0, int(display.vertices.size()));
+        QOpenGLContext::currentContext()->functions()->glDrawArrays(GL_TRIANGLES, 0, int(display.vertices.size()));
     }
     faceShader_->release();
 }
@@ -296,7 +296,7 @@ void DisplayCache::edges(const BodyDisplay &display) {
         entry.lineIndices.bind();
         glEnable(GL_PRIMITIVE_RESTART);
         setPrimitiveRestartIndex(std::numeric_limits<GLuint>::max());
-        glDrawElements(GL_LINE_STRIP, entry.lineIndicesCount, GL_UNSIGNED_INT, nullptr);
+        QOpenGLContext::currentContext()->functions()->glDrawElements(GL_LINE_STRIP, entry.lineIndicesCount, GL_UNSIGNED_INT, nullptr);
         glDisable(GL_PRIMITIVE_RESTART);
         entry.lineIndices.release();
     }
@@ -367,7 +367,7 @@ void DisplayCache::pickingFaces(const BodyDisplay &display, const QVector4D &ide
     faceShader_->setUniformValue("useInstances", false);
     {
         QOpenGLVertexArrayObject::Binder array(&entry.faceArray);
-        glDrawArrays(GL_TRIANGLES, 0, int(display.vertices.size()));
+        QOpenGLContext::currentContext()->functions()->glDrawArrays(GL_TRIANGLES, 0, int(display.vertices.size()));
     }
     faceShader_->release();
 }

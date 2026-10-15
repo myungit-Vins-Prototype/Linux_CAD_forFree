@@ -351,6 +351,8 @@ La stessa opzione può essere aggiunta alla configurazione macOS mantenendo i pa
 | `docs/` | Note tecniche e documentazione delle prestazioni |
 | `File_Esempio/` | Modelli di esempio |
 
+La [politica delle tolleranze](docs/tolerance-policy.md) definisce risoluzione, budget di connessione e approssimazione, tolleranze locali e controlli di validita'.
+
 ## Risoluzione dei problemi
 
 **CMake non trova Qt 6 o OpenCASCADE.** Installare i pacchetti di sviluppo. Per percorsi personalizzati passare `-DCMAKE_PREFIX_PATH="/prefisso/qt;/prefisso/occt"`, oppure `Qt6_DIR` e `OpenCASCADE_DIR` con le directory contenenti i rispettivi `*Config.cmake`. Su macOS usare la configurazione Homebrew sopra.

@@ -21425,7 +21425,7 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
             normal = QVector3D(float(resolved.direction.x()), float(resolved.direction.y()), float(resolved.direction.z()));
             return true;
         };
-        const auto apply = [viewport, panel, basePlane, offsetBox, flipBox, capsBox, planeVisible, info, planeBox, state] {
+        const auto apply = [viewport, basePlane, offsetBox, flipBox, capsBox, planeVisible, info, planeBox, state] {
             QVector3D point, normal;
             if (!state->active || !basePlane(point, normal)) {
                 viewport->setSection(false);
@@ -22623,7 +22623,7 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
     lengthConstraint->setShortcut(QKeySequence(Qt::Key_L));
     angleConstraint->setShortcut(QKeySequence(Qt::Key_G));
 
-    *createSketchOnPlane = [this, viewport](int plane) {
+    *createSketchOnPlane = [viewport](int plane) {
         if (plane < 0 || plane >= planeNames().size()) return;
         // La voce nell'albero viene creata (e resa corrente) dalla ricostruzione differita.
         viewport->createSketch(plane, QStringLiteral("Schizzo %1").arg(viewport->sketches().size() + 1));
