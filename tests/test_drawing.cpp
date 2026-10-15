@@ -214,7 +214,7 @@ int main() {
         ready(drawing(solidModel, middle, solidSections[0]), solidModel, 4, "quota su sezione del solido");
 
         // Errori del codec e della geometria non pubblicano uno stato parziale.
-        auto invalid = QJsonDocument::fromJson(encoded).object(); invalid["schema"] = 2;
+        auto invalid = QJsonDocument::fromJson(encoded).object(); invalid["schema"] = 3;
         const auto previousId = restored.version.documentId;
         require(!decodeDrawingDocument(QJsonDocument(invalid).toJson(), restored).isEmpty()
                 && restored.version.documentId == previousId, "schema sconosciuto rifiutato atomicamente");

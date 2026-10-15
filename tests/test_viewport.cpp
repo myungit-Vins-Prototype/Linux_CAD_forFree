@@ -48,6 +48,8 @@ static void require(bool ok, const char *message) {
 #include "test_native_revisions.h"
 #include "test_workspace_revisions.h"
 #include "test_linked_drawing.h"
+#include "test_drawing_revisions.h"
+#include "test_projected_drawing_file.h"
 #include "document_regression.h"
 class ViewportInteractionTest {
 public:
@@ -8880,6 +8882,16 @@ int main(int argc, char **argv) {
         try { ViewportInteractionTest::sweepReferences(); }
         catch (const std::exception &e) { std::cerr << e.what() << std::endl; return 1; }
         return 0;
+    }
+    if (app.arguments().contains(QStringLiteral("--projected-drawings"))) {
+        try { projectedDrawingFileTests(); }
+        catch(const std::exception &e) {std::cerr<<e.what()<<std::endl;return 1;}
+        std::cout<<"PASS projected drawing files and revisions"<<std::endl;return 0;
+    }
+    if (app.arguments().contains(QStringLiteral("--drawing-revisions"))) {
+        try { drawingRevisionTests();drawingRevisionUiTests(); }
+        catch(const std::exception &e) {std::cerr<<e.what()<<std::endl;return 1;}
+        std::cout<<"PASS drawing revisions, recovery and historical GUI"<<std::endl;return 0;
     }
     if (app.arguments().contains(QStringLiteral("--linked-drawings"))) {
         try { linkedDrawingTests(); ViewportInteractionTest::linkedDrawingUi(); }

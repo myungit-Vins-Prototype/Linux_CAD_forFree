@@ -304,6 +304,8 @@ std::map<QString, Draw> &registry() {
         arrowHead(p, {19.2, 11}, {14, 11}, c.accent);
         line(p, {4.5, 17}, {19.5, 17}, stroke(c.ink, 1.8));
     };
+    icons["dimensionVertical"] = [base=icons["dimension"]](QPainter &p,const IconPalette &c){p.save();p.translate(24,0);p.rotate(90);base(p,c);p.restore();};
+    icons["dimensionAligned"] = [base=icons["dimension"]](QPainter &p,const IconPalette &c){p.save();p.translate(12,12);p.rotate(-30);p.translate(-12,-12);base(p,c);p.restore();};
     const auto letter = [](const QString &text, bool framed) {
         return [text, framed](QPainter &p, const IconPalette &c) {
             if (framed) {

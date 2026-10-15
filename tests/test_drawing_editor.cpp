@@ -5,6 +5,8 @@
 #include <QApplication>
 #include <QComboBox>
 #include <QDialog>
+#include <QDialogButtonBox>
+#include <QPushButton>
 #include <QDoubleSpinBox>
 #include <QGraphicsPathItem>
 #include <QGraphicsScene>
@@ -42,7 +44,7 @@ int main(int argc,char **argv){
             dialog->findChild<QComboBox *>("drawingViewPlane")->setCurrentIndex(1);
             dialog->findChild<QDoubleSpinBox *>("drawingViewDepth")->setValue(0);
             dialog->findChild<QDoubleSpinBox *>("drawingViewScale")->setValue(2);
-            dialog->findChild<QLineEdit *>("drawingViewTitle")->setText("Sezione A-A");dialogSeen=true;dialog->accept();});
+            dialog->findChild<QLineEdit *>("drawingViewTitle")->setText("Sezione A-A");dialogSeen=true;dialog->findChild<QDialogButtonBox *>()->button(QDialogButtonBox::Ok)->click();});
         editor.findChild<QAction *>("drawingAddViewAction")->trigger();
         require(dialogSeen&&editor.sheet().drawing.views.size()==1,"inserimento reale della vista");
         const auto viewId=editor.sheet().drawing.views[0].id;

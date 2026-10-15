@@ -20,9 +20,12 @@ public:
     ~DrawingSheetEditor() override;
     const DrawingSheet &sheet() const;
     QGraphicsView *canvas() const;
+    const std::vector<DrawingCurve> &curves(const QUuid &viewId) const;
     const std::vector<DrawingSection> &sections(const QUuid &viewId) const;
     DrawingDimensionResult dimensionResult(const QUuid &id) const;
     QString insertView(DrawingView view,DrawingViewLayout layout);
+    // Modifica atomica: ID di vista e quote conservati; ricalcolo della sola vista.
+    QString updateView(DrawingView view,DrawingViewLayout layout);
     QString addSelectedDimension(DrawingMeasure measure);
     QString updateModel(DrawingEditorModel model);
     void setChangedCallback(std::function<void(const DrawingSheet &)> callback);

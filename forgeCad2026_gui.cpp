@@ -1,4 +1,5 @@
 #include "cad_drawing_window.h"
+#include "cad_toolbar.h"
 #include "cad_curve_extract.h"
 
 #include "kernel/fk_cancel.h"
@@ -22889,10 +22890,7 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
         auto *bar = addToolBar(title);
         bar->setObjectName(name);
         bar->setProperty("toolbarManagedVisibility", true);
-        bar->setMovable(!QSettings().value(QStringLiteral("toolbar/locked"), false).toBool());
-        bar->setFloatable(bar->isMovable());
-        bar->setIconSize(QSize(24, 24));
-        bar->setToolButtonStyle(Qt::ToolButtonIconOnly);
+        ForgeCad::configureCommandBar(bar);
         return bar;
     };
 
@@ -23431,7 +23429,7 @@ void PdfWindow::openDrawing() {
     const auto path=QFileDialog::getOpenFileName(this,QStringLiteral("Apri tavola 2D"),QFileInfo(documentPath_).absolutePath(),QStringLiteral("Tavola ForgeCAD (*.drw)"));
     if (path.isEmpty()) return;
     for (auto *child:children()) if (auto *drawing=dynamic_cast<ForgeCad::DrawingWindow *>(child))
-        if (drawing->filePath()==ForgeCad::canonicalDocumentPath(path)) { drawing->show(); drawing->raise(); drawing->activateWindow(); return; }
+        if (drawing->filePath()==ForgeCad::canonicalDocumentPath(path) && drawing->document().sheet.drawing.version.checkinId.isNull()) { drawing->show(); drawing->raise(); drawing->activateWindow(); return; }
     auto *drawing=new ForgeCad::DrawingWindow(this); const auto error=drawing->openPath(path);
     if (!error.isEmpty()) { delete drawing; QMessageBox::warning(this,QStringLiteral("Apri tavola 2D"),error); return; }
     drawing->setAttribute(Qt::WA_DeleteOnClose); drawing->show();

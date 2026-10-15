@@ -1,14 +1,20 @@
 #ifndef FORGECAD_DRAWING_WINDOW_H
 #define FORGECAD_DRAWING_WINDOW_H
-#include "cad_drawing_file.h"
+#include "cad_drawing_revisions.h"
 #include <QMainWindow>
 class QLabel;
 class QAction;
+class QMenu;
 namespace ForgeCad {
 // Documento tavola autonomo: il modello viene letto dal file salvato.
 class DrawingWindow final:public QMainWindow {
 public:
     explicit DrawingWindow(QWidget *parent=nullptr);
+    enum class RevisionAction {Checkout,Checkin,CompletePending,CancelCheckout};
+    QString runRevisionAction(RevisionAction action,const QString &first={},const QString &second={});
+    QString pinModelRevision(const DocumentVersion &version);
+    QString useWorkingModel();
+    QString openRevision(const QString &workingPath,const DocumentVersion &version);
     QString createFromModel(const QString &modelPath);
     QString openPath(const QString &path);
     QString savePath(const QString &path);
@@ -21,6 +27,11 @@ protected:
     void closeEvent(QCloseEvent *event)override;
 private:
     void installEditor();
+    void loadContents(const QString &path,DrawingFile drawing);
+    QString applySource(DrawingFile drawing,DocumentState source);
+    void addRevisionMenus(QMenu *file);
+    void showModelRevisions();
+    void showDrawingHistory();
     void refreshTitle();
     bool save(bool askPath);
     void report(const QString &error);
@@ -31,7 +42,9 @@ private:
     DrawingSheetEditor *editor_=nullptr;
     QLabel *sourceStatus_=nullptr;
     QAction *updateAction_=nullptr;
-    bool modified_=false,sourceReady_=false;
+    QMenu *editMenu_=nullptr,*insertMenu_=nullptr,*dimensionMenu_=nullptr,*viewMenu_=nullptr;
+    QVector<QAction *> revisionMutationActions_;
+    bool modified_=false,sourceReady_=false,busy_=false;
 };
 }
 #endif

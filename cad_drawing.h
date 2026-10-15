@@ -28,14 +28,18 @@ struct DrawingModelSnapshot {
     std::vector<DrawingSourceBody> bodies;
 };
 
+enum class DrawingViewKind { Section, ProjectedEdges };
+enum class DrawingCurveKind { Section, ProjectedEdge };
 struct DrawingView {
     QUuid id = QUuid::createUuid();
     Kernel::Frame3 plane;
     double scale = 1.0; // presentazione: nessun effetto sulle misure
     double tolerance = Kernel::kBooleanConnectionTolerance;
+    DrawingViewKind kind = DrawingViewKind::Section;
+    bool sectionReferences = false; // sezioni del piano quotabili nella vista dei bordi
 };
 
-struct DrawingSection {
+struct DrawingCurve {
     QUuid viewId;
     quint64 featureId = 0;
     Kernel::FaceId sourceFace;
@@ -45,7 +49,11 @@ struct DrawingSection {
     bool coincident = false;
     bool multipleBranches = false;
     bool tangent = false;
+    DrawingCurveKind kind = DrawingCurveKind::Section;
+    Kernel::EdgeId sourceEdge{};
+    std::string edgeName{};
 };
+using DrawingSection = DrawingCurve;
 
 // Il testimone e' nel piano della vista. Disambigua solo se appartiene a
 // un unico ramo; non autorizza a scegliere il ramo semplicemente piu' vicino.
@@ -54,8 +62,10 @@ struct DrawingSectionReference {
     QString faceName;
     Kernel::Vec2 witness;
     bool requiresWitness = false; // non riassociare un ramo eliminato al solo superstite
+    DrawingCurveKind kind = DrawingCurveKind::Section;
+    QString edgeName{};
 };
-enum class DrawingMeasure { SectionLength, EndpointDistance };
+enum class DrawingMeasure { SectionLength, EndpointDistance, HorizontalDistance, VerticalDistance };
 struct DrawingDimension {
     QUuid id = QUuid::createUuid();
     QUuid viewId;
@@ -79,6 +89,10 @@ struct DrawingDimensionResult {
 // Output sostituito solo al successo. Nessuna mesh, nessun requisito di volume.
 QString sectionDrawingView(const DrawingModelSnapshot &model, const DrawingView &view,
                            std::vector<DrawingSection> &sections);
+// Tutti i bordi, inclusi quelli posteriori: nessuna classificazione HLR.
+QString projectDrawingEdges(const DrawingModelSnapshot &model,const DrawingView &view,std::vector<DrawingCurve> &curves);
+QString drawingViewCurves(const DrawingModelSnapshot &model,const DrawingView &view,std::vector<DrawingCurve> &curves);
+DrawingDimension dimensionOfCurve(const DrawingView &view,const DrawingCurve &curve,DrawingMeasure measure=DrawingMeasure::SectionLength);
 DrawingDimension dimensionOfSection(const DrawingView &view, const DrawingSection &section,
                                    DrawingMeasure measure = DrawingMeasure::SectionLength);
 DrawingDimensionResult evaluateDrawingDimension(const DrawingDocument &document, const DrawingModelSnapshot &model,
