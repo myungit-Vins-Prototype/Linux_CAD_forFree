@@ -44,7 +44,7 @@ private:
     QAction *updateAction_=nullptr;
     QMenu *editMenu_=nullptr,*insertMenu_=nullptr,*dimensionMenu_=nullptr,*viewMenu_=nullptr;
     QVector<QAction *> revisionMutationActions_;
-    bool modified_=false,sourceReady_=false,busy_=false;
+    bool modified_=false,containerDirty_=false,sourceReady_=false,busy_=false;
 };
 }
 #endif

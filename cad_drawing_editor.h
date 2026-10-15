@@ -26,6 +26,18 @@ public:
     QString insertView(DrawingView view,DrawingViewLayout layout);
     // Modifica atomica: ID di vista e quote conservati; ricalcolo della sola vista.
     QString updateView(DrawingView view,DrawingViewLayout layout);
+    enum class ViewAlignment { SameRow, SameColumn };
+    QString moveView(const QUuid &id,const QPointF &position);
+    QString moveDimension(const QUuid &id,const QPointF &position);
+    // Centri sul foglio: posizionamento una tantum, senza vincoli persistenti.
+    QString alignView(const QUuid &id,const QUuid &reference,ViewAlignment alignment);
+    QString removeView(const QUuid &id);
+    QString undo();
+    QString redo();
+    bool canUndo() const;
+    bool canRedo() const;
+    void markSaved();
+    bool isModified() const;
     QString addSelectedDimension(DrawingMeasure measure);
     QString updateModel(DrawingEditorModel model);
     void setChangedCallback(std::function<void(const DrawingSheet &)> callback);

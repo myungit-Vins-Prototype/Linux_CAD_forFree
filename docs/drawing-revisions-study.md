@@ -232,3 +232,13 @@ Modifica vista cambia titolo, scala, piano e sorgenti conservando gli ID e le po
 
 
 Verifica della fase: build Release app/runner/standalone senza warning; 44/44 regressioni superate, comprese modifica della vista, quote conservate, piano arbitrario senza perdita di precisione, persistenza e storico/copia indipendente. Anteprima completa controllata dopo il contenimento delle barre di stato su una riga; testo completo nei tooltip. Prove GUI offscreen, senza benchmark rappresentativi o test manuali GPU/Windows/rete. HLR/silhouette, allineamento, quote piu' complete, cartiglio/esportazione, Undo/Redo del foglio e calcoli asincroni restano aperti.
+
+
+### Layout e cronologia locale del foglio (2026-10-15)
+
+Allinea vista posiziona una tantum i centri delle curve visibili sulla medesima riga o colonna; non crea vincoli permanenti tra viste. Spostare una vista porta con se' i suoi testi quota senza cambiare le misure. Elimina selezione agisce sui titoli delle viste o sui testi quota; un bordo selezionato da solo non cancella la vista. La cancellazione di una vista comprende le quote e viene annullata/ripristinata come un'unica operazione; la GUI chiede conferma se sono presenti quote.
+
+La cronologia conserva esclusivamente i metadati JSON del foglio, con limite di 100 passi e 16 MiB, e non viene salvata nel .drw. Layout e Undo/Redo riusano geometria e risultati delle viste invariate; una vista reinserita o con piano/sorgenti modificati viene rigenerata. Un aggiornamento esplicito del modello azzera la cronologia locale, evitando il ripristino di riferimenti a una vecchia sorgente. Salvataggio e check-in segnano il checkpoint corrente senza annullare la cronologia; Salva con nome crea un editor indipendente. Le modifiche del contenitore, come hash e collegamento del modello, restano distinte dai passi annullabili del foglio. Nessuna modifica a formati, database o protocollo delle revisioni e nessun accesso al workspace da Undo/Redo.
+
+
+Verifica della fase layout/cronologia: build Release app/runner e quattro editor standalone senza warning; suite dedicata 10/10 e regressioni estese 45/45 PASS. Coperte cancellazione e ripristino atomico, trascinamenti effettivi, allineamento fra viste a scale/orientamenti diversi, scorciatoie del canvas separate dall'Undo dei campi di testo, limite di 100 passi, checkpoint di salvataggio, cambio piano con quota mancante e cambio sorgente che conserva lo stato da salvare. Verifiche GUI offscreen e anteprime ispezionate; nessun benchmark rappresentativo o prova manuale GPU/Windows/rete. Restano HLR/silhouette, vincoli persistenti fra viste, quote piu' complete, cartiglio/esportazione e calcolo asincrono.

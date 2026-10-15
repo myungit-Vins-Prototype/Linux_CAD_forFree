@@ -64,12 +64,12 @@ void DrawingWindow::installEditor(){
         next=new DrawingSheetEditor(drawing_.sheet,model_,container);
     }
     next->setReadOnly(!sourceReady_);
-    next->setChangedCallback([this](const DrawingSheet &sheet){drawing_.sheet=sheet;modified_=true;refreshTitle();});
+    next->setChangedCallback([this](const DrawingSheet &sheet){drawing_.sheet=sheet;modified_=containerDirty_||editor_->isModified();refreshTitle();});
     // Il comando del contenitore verifica percorso, identita' e impronta.
     next->findChild<QAction *>("drawingUpdateModelAction")->setVisible(false);
     layout->addWidget(next,1);auto *previous=takeCentralWidget();setCentralWidget(container);editor_=next;delete previous;
     const auto populate=[next](QMenu *menu,std::initializer_list<const char *> names){menu->clear();for(auto name:names)menu->addAction(next->findChild<QAction *>(name));};
-    populate(editMenu_,{"drawingEditViewAction","drawingDeleteDimensionAction"});
+    populate(editMenu_,{"drawingUndoAction","drawingRedoAction","drawingEditViewAction","drawingAlignViewAction","drawingDeleteSelectionAction"});
     populate(insertMenu_,{"drawingAddProjectionAction","drawingAddViewAction"});
     populate(dimensionMenu_,{"drawingEndpointDimensionAction","drawingHorizontalDimensionAction","drawingVerticalDimensionAction","drawingLengthDimensionAction"});
     populate(viewMenu_,{"drawingFitAction"});viewMenu_->addSeparator();viewMenu_->addAction(next->findChild<QDockWidget *>("drawingTreeDock")->toggleViewAction());
@@ -89,7 +89,7 @@ QString DrawingWindow::createFromModel(const QString &modelPath){
     error=drawingModelDefinitionHash(source,prepared.modelDefinitionHash);if(!error.isEmpty())return error;
     DrawingEditorModel geometry;error=prepareDrawingEditorModel(source,geometry);if(!error.isEmpty())return error;
     if(geometry.choices.isEmpty())return QStringLiteral("Il modello non contiene corpi o superfici disponibili per una tavola.");
-    drawing_=std::move(prepared);model_=std::move(geometry);sourcePath_=resolved;sourceReady_=true;modified_=true;installEditor();refreshTitle();return {};
+    drawing_=std::move(prepared);model_=std::move(geometry);sourcePath_=resolved;sourceReady_=true;containerDirty_=true;modified_=true;installEditor();refreshTitle();return {};
 }
 QString DrawingWindow::openPath(const QString &path){
     if(editor_)return QStringLiteral("Questa finestra contiene gia' una tavola.");
@@ -107,7 +107,7 @@ void DrawingWindow::loadContents(const QString &path,DrawingFile prepared){
     drawing_=std::move(prepared);model_=std::move(geometry);path_=path;
     sourcePath_=resolved.isEmpty()?QDir(QFileInfo(path_).absolutePath()).absoluteFilePath(drawing_.modelPath):resolved;
     sourceArchivePath_=drawing_.modelArchivePath.isEmpty()?QString():QDir(QFileInfo(path_).absolutePath()).absoluteFilePath(drawing_.modelArchivePath);
-    sourceReady_=available;modified_=false;
+    sourceReady_=available;containerDirty_=false;modified_=false;
     sourceStatus_->setText(changed?QStringLiteral("Il modello salvato e' cambiato: premere Aggiorna dal .prt salvato per ricalcolare viste e quote."):
         QStringLiteral("Modello non disponibile: %1. Individuare il modello per verificare le quote.").arg(error));
     installEditor();refreshTitle();
@@ -124,7 +124,7 @@ QString DrawingWindow::updateFromSource(const QString &overridePath){
     if(!error.isEmpty()){editor_->setReadOnly(wasReadOnly);return error;}
     model_=std::move(geometry);drawing_.modelDefinitionHash=digest;sourcePath_=resolved;
     drawing_.modelPath=path_.isEmpty()?resolved:QDir(QFileInfo(path_).absolutePath()).relativeFilePath(resolved);
-    sourceReady_=true;modified_=true;
+    sourceReady_=true;containerDirty_=true;modified_=true;
     sourceStatus_->setText(QStringLiteral("Modello aggiornato da: %1").arg(sourcePath_));refreshTitle();return {};
 }
 QString DrawingWindow::savePath(const QString &path){
@@ -142,9 +142,9 @@ QString DrawingWindow::savePath(const QString &path){
     if(!lock||lock->path()!=resolved){candidate=std::make_unique<DocumentFileLock>(resolved);const auto error=candidate->acquire();if(!error.isEmpty())return error;lock=candidate.get();}
     const auto error=saveDrawingFile(resolved,prepared,lock);if(!error.isEmpty())return error;
     if(candidate)lock_=std::move(candidate);
-    drawing_=std::move(prepared);path_=resolved;modified_=false;
+    drawing_=std::move(prepared);path_=resolved;containerDirty_=false;modified_=false;
     if(different)installEditor();
-    refreshTitle();return {};
+    editor_->markSaved();refreshTitle();return {};
 }
 bool DrawingWindow::save(bool askPath){
     auto path=path_;
