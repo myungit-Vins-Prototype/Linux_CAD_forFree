@@ -47,9 +47,24 @@ static void require(bool ok, const char *message) {
 #include "test_all_history.h"
 #include "test_native_revisions.h"
 #include "test_workspace_revisions.h"
+#include "test_linked_drawing.h"
 #include "document_regression.h"
 class ViewportInteractionTest {
 public:
+    static void linkedDrawingUi() {
+        using namespace ForgeCad;
+        QTemporaryDir temporary;const auto path=temporary.filePath("modello.prt");clientOk(saveDocumentFile(path,clientModel()));
+        PdfWindow main;require(main.openDocumentPath(path),"modello aperto per nuova tavola GUI");
+        auto *action=main.findChild<QAction *>("newDrawingAction");require(action&&main.findChild<QAction *>("openDrawingAction"),"menu Tavole 2D disponibile");
+        action->trigger();DrawingWindow *drawing=nullptr;
+        for(auto *child:main.children())if(auto *window=dynamic_cast<DrawingWindow *>(child))drawing=window;
+        require(drawing&&drawing->editor()&&drawing->isModified(),"nuova tavola dal comando GUI");
+        bool cancelSeen=false;
+        QTimer::singleShot(0,[&]{for(auto *widget:QApplication::topLevelWidgets())if(auto *box=qobject_cast<QMessageBox *>(widget)){box->button(QMessageBox::Cancel)->click();cancelSeen=true;}});
+        require(!main.close()&&cancelSeen&&drawing->isVisible(),"chiusura principale rispetta Annulla per tavola non salvata");
+        clientOk(drawing->savePath(temporary.filePath("modello.drw")));
+        require(main.close(),"chiusura principale dopo salvataggio tavola");QApplication::sendPostedEvents(nullptr,QEvent::DeferredDelete);
+    }
     static void workspaceRevisionsUi() {
         using namespace ForgeCad;
         QTemporaryDir temporary;require(temporary.isValid(),"directory GUI revisioni");
@@ -8865,6 +8880,11 @@ int main(int argc, char **argv) {
         try { ViewportInteractionTest::sweepReferences(); }
         catch (const std::exception &e) { std::cerr << e.what() << std::endl; return 1; }
         return 0;
+    }
+    if (app.arguments().contains(QStringLiteral("--linked-drawings"))) {
+        try { linkedDrawingTests(); ViewportInteractionTest::linkedDrawingUi(); }
+        catch(const std::exception &e) {std::cerr<<e.what()<<std::endl;return 1;}
+        std::cout<<"PASS linked lightweight drawings and GUI"<<std::endl;return 0;
     }
     if (app.arguments().contains(QStringLiteral("--document-access"))) {
         try { ViewportInteractionTest::documentAccess(); }

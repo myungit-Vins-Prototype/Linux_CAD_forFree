@@ -65,6 +65,14 @@ add_executable(forgecad
     cad_document_io.cpp
     cad_drawing.h
     cad_drawing.cpp
+    cad_drawing_sheet.h
+    cad_drawing_sheet.cpp
+    cad_drawing_editor.h
+    cad_drawing_editor.cpp
+    cad_drawing_file.h
+    cad_drawing_file.cpp
+    cad_drawing_window.h
+    cad_drawing_window.cpp
     cad_document_version.h
     cad_revision_store.h
     cad_revision_store.cpp
@@ -212,7 +220,7 @@ if(FORGECAD_BUILD_VIEW_TESTS)
     get_target_property(FORGECAD_VIEW_TEST_SOURCES forgecad SOURCES)
     list(REMOVE_ITEM FORGECAD_VIEW_TEST_SOURCES forgeCad2026.cpp forgeCad2026_gui.cpp ${FORGE_CAD_CUDA_SOURCE} ${FORGECAD_HASH_HEADER})
     list(REMOVE_ITEM FORGECAD_VIEW_TEST_SOURCES cad_macos_menu.h cad_macos_menu.mm)
-    add_executable(forgecad_view_tests tests/test_viewport.cpp tests/test_declared_history_cache.h tests/test_boolean_history.h tests/test_blend_history.h tests/test_extrusion_history.h tests/test_revolution_history.h tests/test_all_history.h tests/test_native_revisions.h tests/test_workspace_revisions.h cuda_support_cpu.cpp ${FORGECAD_VIEW_TEST_SOURCES})
+    add_executable(forgecad_view_tests tests/test_viewport.cpp tests/test_declared_history_cache.h tests/test_boolean_history.h tests/test_blend_history.h tests/test_extrusion_history.h tests/test_revolution_history.h tests/test_all_history.h tests/test_native_revisions.h tests/test_workspace_revisions.h tests/test_linked_drawing.h cuda_support_cpu.cpp ${FORGECAD_VIEW_TEST_SOURCES})
     add_dependencies(forgecad_view_tests forgecad) # genera l'impronta una sola volta, prima dei test
     target_include_directories(forgecad_view_tests PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/generated)
     target_link_libraries(forgecad_view_tests PRIVATE Qt6::Widgets Qt6::OpenGL Qt6::OpenGLWidgets OpenGL::GL forgekernel)
@@ -235,6 +243,7 @@ if(FORGECAD_BUILD_VIEW_TESTS)
     forgecad_add_view_test(forgecad_all_history_tests --all-history)
     forgecad_add_view_test(forgecad_native_revisions_tests --native-revisions)
     forgecad_add_view_test(forgecad_workspace_revisions_tests --workspace-revisions)
+    forgecad_add_view_test(forgecad_linked_drawing_tests --linked-drawings)
     set_tests_properties(forgecad_workspace_revisions_tests PROPERTIES TIMEOUT 120)
     set_tests_properties(forgecad_native_revisions_tests PROPERTIES TIMEOUT 120)
     set_tests_properties(forgecad_all_history_tests PROPERTIES TIMEOUT 120)
@@ -337,3 +346,11 @@ target_link_libraries(forgecad_workspace_tests PRIVATE Qt6::Core)
 target_compile_options(forgecad_workspace_tests PRIVATE -Wall -Wextra -Wpedantic)
 add_test(NAME forgecad_workspace_tests COMMAND forgecad_workspace_tests)
 set_tests_properties(forgecad_workspace_tests PROPERTIES TIMEOUT 60)
+
+# Primo editor del foglio: prova GUI autonoma senza nuovo contenitore nativo.
+add_executable(forgecad_drawing_editor_tests tests/test_drawing_editor.cpp cad_drawing_editor.cpp cad_drawing_sheet.cpp cad_drawing.cpp)
+target_include_directories(forgecad_drawing_editor_tests PRIVATE ${PROJECT_SOURCE_DIR})
+target_link_libraries(forgecad_drawing_editor_tests PRIVATE Qt6::Widgets forgekernel)
+target_compile_options(forgecad_drawing_editor_tests PRIVATE -Wall -Wextra -Wpedantic)
+add_test(NAME forgecad_drawing_editor_tests COMMAND forgecad_drawing_editor_tests)
+set_tests_properties(forgecad_drawing_editor_tests PROPERTIES TIMEOUT 60 ENVIRONMENT "QT_QPA_PLATFORM=offscreen;QT_QPA_PLATFORMTHEME=;QT_STYLE_OVERRIDE=Fusion")

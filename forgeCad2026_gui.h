@@ -29,6 +29,8 @@ private:
     friend class ViewportInteractionTest;
     // Documento su file (.prt, vedi cad_document_io).
     void newDocument();
+    void newDrawing();
+    void openDrawing();
     void openDocument();
     bool saveDocument(bool askPath);
     bool saveDocumentPath(const QString &path);

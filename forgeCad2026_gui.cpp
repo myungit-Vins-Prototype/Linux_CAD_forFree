@@ -1,3 +1,4 @@
+#include "cad_drawing_window.h"
 #include "cad_curve_extract.h"
 
 #include "kernel/fk_cancel.h"
@@ -20692,6 +20693,13 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
     saveAsAction->setShortcut(QKeySequence::SaveAs);
     saveAsAction->setToolTip(QStringLiteral("Salva una copia indipendente del documento."));
     connect(saveAsAction, &QAction::triggered, this, [this] { saveDocument(true); });
+    QMenu *drawingMenu = addCadMenu(fileMenu, QStringLiteral("Tavole 2D"));
+    auto *newDrawingAction = drawingMenu->addAction(QStringLiteral("Nuova tavola dal modello..."));
+    newDrawingAction->setObjectName(QStringLiteral("newDrawingAction"));
+    connect(newDrawingAction,&QAction::triggered,this,&PdfWindow::newDrawing);
+    auto *openDrawingAction = drawingMenu->addAction(QStringLiteral("Apri tavola..."));
+    openDrawingAction->setObjectName(QStringLiteral("openDrawingAction"));
+    connect(openDrawingAction,&QAction::triggered,this,&PdfWindow::openDrawing);
     QMenu *revisionMenu = addCadMenu(fileMenu, QStringLiteral("Revisioni"));
     revisionMenu->setObjectName(QStringLiteral("documentRevisionMenu"));
     const auto reportRevisionError = [this](const QString &error) {
@@ -23410,6 +23418,25 @@ void PdfWindow::endBackgroundProgress() {
     if (backgroundProgress_) backgroundProgress_->hide();
 }
 
+void PdfWindow::newDrawing() {
+    if (foregroundProgressDepth_>0 || viewport_->interactionLocked()) return;
+    if (!saveDocument(false)) return;
+    auto *drawing = new ForgeCad::DrawingWindow(this);
+    const auto error = drawing->createFromModel(documentPath_);
+    if (!error.isEmpty()) { delete drawing; QMessageBox::warning(this,QStringLiteral("Tavola 2D"),error); return; }
+    drawing->setAttribute(Qt::WA_DeleteOnClose); drawing->show();
+}
+
+void PdfWindow::openDrawing() {
+    const auto path=QFileDialog::getOpenFileName(this,QStringLiteral("Apri tavola 2D"),QFileInfo(documentPath_).absolutePath(),QStringLiteral("Tavola ForgeCAD (*.drw)"));
+    if (path.isEmpty()) return;
+    for (auto *child:children()) if (auto *drawing=dynamic_cast<ForgeCad::DrawingWindow *>(child))
+        if (drawing->filePath()==ForgeCad::canonicalDocumentPath(path)) { drawing->show(); drawing->raise(); drawing->activateWindow(); return; }
+    auto *drawing=new ForgeCad::DrawingWindow(this); const auto error=drawing->openPath(path);
+    if (!error.isEmpty()) { delete drawing; QMessageBox::warning(this,QStringLiteral("Apri tavola 2D"),error); return; }
+    drawing->setAttribute(Qt::WA_DeleteOnClose); drawing->show();
+}
+
 void PdfWindow::newDocument() {
     if (!maybeSaveChanges()) return;
     loadingDocument_ = true;
@@ -23626,6 +23653,10 @@ void PdfWindow::closeEvent(QCloseEvent *event) {
         return;
     }
     if (maybeSaveChanges()) {
+        const auto attached=children();
+        for (auto *child:attached) if (auto *drawing=dynamic_cast<ForgeCad::DrawingWindow *>(child)) {
+            if (!drawing->close()) { event->ignore(); return; }
+        }
         documentLock_.reset();
         event->accept();
     }
