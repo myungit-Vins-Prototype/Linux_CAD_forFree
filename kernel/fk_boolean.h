@@ -64,8 +64,21 @@ Body booleanOperation(const Body &a, const Body &b, BooleanOperation operation, 
 
 // Curve comuni alle facce dei due corpi, limitate ai loro bordi.
 // Include sezioni aperte e bordi complanari; non costruisce un solido.
-struct BodySectionCurve { CurvePtr<3> curve; Interval range; };
+struct BodySectionCurve {
+    CurvePtr<3> curve;
+    Interval range;
+    FaceId firstFace, secondFace;
+    bool coincident = false;
+    bool tangent = false;
+};
 std::vector<BodySectionCurve> bodySectionCurves(const Body &a, const Body &b, const BooleanOptions &options = {});
+
+// Include anche le rette di sola tangenza (non dividono le facce).
+// Conserva separati i tratti con coppie di facce diverse, anche sovrapposti:
+// la provenienza vale sull'intero intervallo e non viene dedotta dalla geometria.
+// La versione sopra mantiene la deduplicazione storica, con una sola coppia
+// rappresentativa per ogni tratto restituito.
+std::vector<BodySectionCurve> bodySectionCurvesWithOrigins(const Body &a, const Body &b, const BooleanOptions &options = {});
 
 // Divide la lamina lungo le curve in cui la attraversa `tool` (una lamina o
 // un solido: le sue facce fanno da lame, anche oltre la lamina) e ne

@@ -38,6 +38,7 @@ struct Arc {
     FaceId face[2];
     bool cut[2] = {false, false};  // divide l'interno della faccia del body 0 / 1
     bool coplanar = false;         // viene da due facce sulla stessa superficie (complanari, cilindri coassiali, ...)
+    bool tangent = false;          // contatto senza attraversamento, solo per sezioni con provenienza
     // Estremo dove la curva attraversa un edge tollerante (file importati):
     // il punto sull'edge, che fa da vertice, e lo scarto dalla curva. 0: nessuno.
     Vec3 loPoint, hiPoint;
@@ -235,7 +236,7 @@ public:
     }
 
     Body run(BodyHistory *history);
-    std::vector<BodySectionCurve> section();
+    std::vector<BodySectionCurve> section(bool preserveFacePairs = false);
     // Divisione della lamina (body 0) lungo le curve in cui la attraversa il body 1: un body per regione connessa.
     std::vector<Body> split(std::vector<BodyHistory> *histories);
     // Divisione delle facce del body 0 lungo curve date (il body 1 e' vuoto)
@@ -282,7 +283,7 @@ private:
     void snapNearEnds();
     // Passo 5: cucitura dei pezzi tenuti ("da girare" se il secondo e' vero).
     Body assemble(const std::vector<std::pair<SubFace, bool>> &kept, bool sheetResult, BodyHistory *history = nullptr, int operands = 2);
-    void pairArcs(FaceId fa, FaceId fb, PairResult &out) const;
+    void pairArcs(FaceId fa, FaceId fb, PairResult &out, bool includeTangents = false) const;
     bool coincident(const Surface &a, const Surface &b) const;
     void coincidentArcs(FaceId fa, FaceId fb, PairResult &out, bool partial = false) const;
     std::vector<Interval> coincidentRanges(const Curve<3> &curve, const Interval &range, const Surface &surface, PairResult &out) const;
@@ -382,7 +383,7 @@ bool BooleanBuilder::coincident(const Surface &a, const Surface &b) const {
     return coincident_[key] = same;
 }
 
-void BooleanBuilder::pairArcs(FaceId fa, FaceId fb, PairResult &out) const {
+void BooleanBuilder::pairArcs(FaceId fa, FaceId fb, PairResult &out, bool includeTangents) const {
     const Surface &sa = *bodies_[0].face(fa).surface, &sb = *bodies_[1].face(fb).surface;
     if (coincident(sa, sb)) {
         coincidentArcs(fa, fb, out);
@@ -414,10 +415,15 @@ void BooleanBuilder::pairArcs(FaceId fa, FaceId fb, PairResult &out) const {
         surfaceArcs(fa, fb, out);
         return;
     }
-    const PlaneSurfaceIntersection intersection = intersectPlaneSurface(plane, curved, commonBounds(fa, fb), tolerance_);
+    PlaneSurfaceIntersection intersection = intersectPlaneSurface(plane, curved, commonBounds(fa, fb), tolerance_);
     if (intersection.coincident) throw std::domain_error("booleanOperation: superficie non piana che contiene parte di un piano");
     // Le rette di tangenza (il piano tocca la superficie senza attraversarla)
     // non dividono le facce: ogni pezzo resta tutto da una parte dell'altro solido.
+    const std::size_t crossingCount = intersection.curves.size();
+    if (includeTangents) {
+        intersection.curves.insert(intersection.curves.end(), intersection.tangentCurves.begin(), intersection.tangentCurves.end());
+        intersection.ranges.insert(intersection.ranges.end(), intersection.tangentRanges.begin(), intersection.tangentRanges.end());
+    }
 
     for (std::size_t i = 0; i < intersection.curves.size(); ++i) {
         cancellationPoint();
@@ -454,7 +460,9 @@ void BooleanBuilder::pairArcs(FaceId fa, FaceId fb, PairResult &out) const {
                         snaps.push_back({projection.parameter, x, std::max(tolerance_, 1.01 * projection.distance)});
                 }
             }
+        const std::size_t previous = out.arcs.size();
         addArcs(curve, range, parameters, fa, fb, out, nullptr, snaps);
+        if (i >= crossingCount) for (std::size_t j = previous; j < out.arcs.size(); ++j) out.arcs[j].tangent = true;
     }
 }
 
@@ -1972,7 +1980,7 @@ void BooleanBuilder::snapNearEnds() {
     arcs_ = std::move(kept);
 }
 
-std::vector<BodySectionCurve> BooleanBuilder::section() {
+std::vector<BodySectionCurve> BooleanBuilder::section(bool preserveFacePairs) {
     std::vector<BodySectionCurve> result;
     for (FaceId a : bodies_[0].faces()) {
         cancellationPoint();
@@ -2016,7 +2024,7 @@ std::vector<BodySectionCurve> BooleanBuilder::section() {
                         }
                     }
             }
-            pairArcs(a, b, pair);
+            pairArcs(a, b, pair, preserveFacePairs);
             for (const Arc &arc : pair.arcs) {
                 // Il bordo comune di due facce complanari e' interno alla
                 // superficie: non fa parte del contorno della sezione.
@@ -2032,6 +2040,7 @@ std::vector<BodySectionCurve> BooleanBuilder::section() {
                 if (internal) continue;
                 bool duplicate = false;
                 for (const auto &existing : result) {
+                    if (preserveFacePairs && (existing.firstFace != a || existing.secondFace != b)) continue;
                     bool same = true;
                     for (double fraction : {0.0, 0.25, 0.5, 0.75, 1.0}) {
                         const Vec3 point = arc.curve->point(arc.range.lo + fraction * arc.range.length());
@@ -2039,7 +2048,7 @@ std::vector<BodySectionCurve> BooleanBuilder::section() {
                     }
                     if (same) { duplicate = true; break; }
                 }
-                if (!duplicate) result.push_back({arc.curve, arc.range});
+                if (!duplicate) result.push_back({arc.curve, arc.range, a, b, arc.coplanar, arc.tangent});
             }
         }
     }
@@ -2451,6 +2460,10 @@ Body BooleanBuilder::assemble(const std::vector<std::pair<SubFace, bool>> &kept,
 
 std::vector<BodySectionCurve> bodySectionCurves(const Body &a, const Body &b, const BooleanOptions &options) {
     return BooleanBuilder(a, b, BooleanOperation::Intersect, options).section();
+}
+
+std::vector<BodySectionCurve> bodySectionCurvesWithOrigins(const Body &a, const Body &b, const BooleanOptions &options) {
+    return BooleanBuilder(a, b, BooleanOperation::Intersect, options).section(true);
 }
 
 Body booleanOperation(const Body &a, const Body &b, BooleanOperation operation, const BooleanOptions &options, BodyHistory *history) {

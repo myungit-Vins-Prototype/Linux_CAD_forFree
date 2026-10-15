@@ -63,6 +63,8 @@ add_executable(forgecad
     cad_expression.cpp
     cad_document_io.h
     cad_document_io.cpp
+    cad_drawing.h
+    cad_drawing.cpp
     cad_snapshot_chunks.h
     cad_snapshot_chunks.cpp
     cad_sketch_edit.h
@@ -292,6 +294,14 @@ add_executable(forgecad_snapshot_chunks_tests tests/test_snapshot_chunks.cpp cad
 target_include_directories(forgecad_snapshot_chunks_tests PRIVATE ${PROJECT_SOURCE_DIR})
 target_link_libraries(forgecad_snapshot_chunks_tests PRIVATE Qt6::Core)
 add_test(NAME forgecad_snapshot_chunks_tests COMMAND forgecad_snapshot_chunks_tests)
+
+# Sezioni e quote associative: modulo geometrico autonomo, senza GUI o GL.
+add_executable(forgecad_drawing_tests tests/test_drawing.cpp cad_drawing.cpp)
+target_include_directories(forgecad_drawing_tests PRIVATE ${PROJECT_SOURCE_DIR})
+target_link_libraries(forgecad_drawing_tests PRIVATE Qt6::Core forgekernel)
+target_compile_options(forgecad_drawing_tests PRIVATE -Wall -Wextra -Wpedantic)
+add_test(NAME forgecad_drawing_tests COMMAND forgecad_drawing_tests)
+set_tests_properties(forgecad_drawing_tests PROPERTIES TIMEOUT 60)
 
 # Dipendenze del modello: test autonomo, senza includere la GUI o il kernel.
 add_executable(forgecad_feature_dependencies_tests tests/test_feature_dependencies.cpp cad_feature_dependencies.cpp)
