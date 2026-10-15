@@ -65,6 +65,9 @@ add_executable(forgecad
     cad_document_io.cpp
     cad_drawing.h
     cad_drawing.cpp
+    cad_document_version.h
+    cad_revision_store.h
+    cad_revision_store.cpp
     cad_snapshot_chunks.h
     cad_snapshot_chunks.cpp
     cad_sketch_edit.h
@@ -302,6 +305,14 @@ target_link_libraries(forgecad_drawing_tests PRIVATE Qt6::Core forgekernel)
 target_compile_options(forgecad_drawing_tests PRIVATE -Wall -Wextra -Wpedantic)
 add_test(NAME forgecad_drawing_tests COMMAND forgecad_drawing_tests)
 set_tests_properties(forgecad_drawing_tests PROPERTIES TIMEOUT 60)
+
+# Archivio delle revisioni: filesystem e processi concorrenti, senza GUI/kernel.
+add_executable(forgecad_revision_store_tests tests/test_revision_store.cpp cad_revision_store.cpp)
+target_include_directories(forgecad_revision_store_tests PRIVATE ${PROJECT_SOURCE_DIR})
+target_link_libraries(forgecad_revision_store_tests PRIVATE Qt6::Core)
+target_compile_options(forgecad_revision_store_tests PRIVATE -Wall -Wextra -Wpedantic)
+add_test(NAME forgecad_revision_store_tests COMMAND forgecad_revision_store_tests)
+set_tests_properties(forgecad_revision_store_tests PROPERTIES TIMEOUT 60)
 
 # Dipendenze del modello: test autonomo, senza includere la GUI o il kernel.
 add_executable(forgecad_feature_dependencies_tests tests/test_feature_dependencies.cpp cad_feature_dependencies.cpp)

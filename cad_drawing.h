@@ -10,14 +10,12 @@
 
 #include "fk_history.h"
 #include "fk_precision.h"
+#include "cad_document_version.h"
 
 namespace ForgeCad {
 
 // Un check-in nullo identifica la copia di lavoro. Nessun percorso e' un ID.
-struct DrawingDocumentVersion {
-    QUuid documentId;
-    QUuid checkinId;
-};
+using DrawingDocumentVersion = DocumentVersion;
 
 // Snapshot immutabile preparato dal chiamante con i nomi della genealogia.
 struct DrawingSourceBody {

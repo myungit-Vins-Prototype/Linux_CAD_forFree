@@ -1,0 +1,65 @@
+#ifndef FORGECAD_REVISION_STORE_H
+#define FORGECAD_REVISION_STORE_H
+
+#include "cad_document_version.h"
+#include <QByteArray>
+#include <QDateTime>
+#include <QString>
+#include <QVector>
+
+namespace ForgeCad {
+
+struct RevisionCheckout {
+    QUuid documentId, token, baseCheckinId;
+    QString owner; // metadato dichiarato, senza autenticazione
+    QDateTime createdUtc;
+};
+struct RevisionDocumentInfo {
+    QUuid documentId, headCheckinId;
+    QString name, kind;
+    bool checkedOut = false;
+    QString checkoutOwner;
+};
+struct RevisionRecord {
+    DocumentVersion version;
+    QUuid previousCheckinId;
+    quint64 sequence = 0;
+    QString technicalRevision, author, comment;
+    QDateTime createdUtc;
+    QByteArray sha256; // digest binario di 32 byte
+    qint64 payloadSize = 0;
+    QVector<DocumentVersion> dependencies;
+};
+struct RevisionCheckinRequest {
+    RevisionCheckout checkout;
+    // Generato prima del primo tentativo e riusato soltanto per ritentare
+    // la stessa operazione. E' anche l'identita' del check-in da pubblicare.
+    QUuid checkinId;
+    QByteArray payload;
+    QString technicalRevision, comment;
+    QVector<DocumentVersion> dependencies;
+};
+
+// Archivio cooperativo su filesystem locale. Il lock breve protegge il
+// catalogo; le prenotazioni persistono nel catalogo anche dopo la chiusura.
+// Non e' un sistema di autenticazione. I filesystem di rete vanno validati.
+class RevisionStore {
+public:
+    explicit RevisionStore(QString directory);
+    QString initialize() const;
+    QString createDocument(const QString &name, const QString &kind, QUuid &documentId) const;
+    QString documents(QVector<RevisionDocumentInfo> &result) const;
+    QString history(const QUuid &documentId, QVector<RevisionRecord> &result) const;
+    QString checkout(const QUuid &documentId, const QString &owner, RevisionCheckout &result) const;
+    QString resumeCheckout(const QUuid &documentId, const QUuid &token, RevisionCheckout &result) const;
+    QString cancelCheckout(const RevisionCheckout &checkout) const;
+    // Pubblica contenuto + record e rilascia la prenotazione soltanto al
+    // successo. I ritentativi identici restituiscono il medesimo record.
+    QString checkin(const RevisionCheckinRequest &request, RevisionRecord &result) const;
+    QString read(const DocumentVersion &version, QByteArray &payload) const;
+    QString directory() const { return directory_; }
+private:
+    QString directory_;
+};
+}
+#endif
