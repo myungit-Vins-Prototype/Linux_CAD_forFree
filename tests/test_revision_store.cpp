@@ -139,6 +139,19 @@ int main(int argc, char **argv) {
         ok(store.cancelCheckout(badDependency.checkout));
         std::cout << "PASS dipendenze della tavola fissate ai check-in esatti\n";
 
+        // Un file esistente mantiene il proprio UUID nell'archivio.
+        const QUuid nativeId = QUuid::createUuid();
+        ok(store.registerDocument(nativeId,QStringLiteral("Nativo"),QStringLiteral("model")));
+        ok(store.registerDocument(nativeId,QStringLiteral("Altro percorso"),QStringLiteral("model")));
+        require(!store.registerDocument(nativeId,QStringLiteral("Tavola"),QStringLiteral("drawing")).isEmpty(), "tipo incompatibile non sovrascrive il documento");
+        require(history(store,nativeId).isEmpty(), "identita' adottata senza duplicare lo storico");
+        ok(store.checkoutAtVersion({nativeId,{}},QStringLiteral("progettista"),resumed));
+        ok(store.cancelCheckout(resumed));
+        require(!store.checkoutAtVersion(first.version,QStringLiteral("progettista"),resumed).isEmpty(), "base letta prima del check-out gia' obsoleta");
+        ok(store.checkoutAtVersion(restored.version,QStringLiteral("progettista"),resumed)); ok(store.cancelCheckout(resumed));
+        QUuid archiveId; ok(store.archiveIdentity(archiveId)); require(!archiveId.isNull(), "identita' persistente dell'archivio");
+        std::cout << "PASS identita' adottate e base controllata prima del check-out\n";
+
         // Due processi non possono ottenere entrambi la stessa prenotazione.
         QProcess a,b; const auto executable = QCoreApplication::applicationFilePath();
         const auto id = modelId.toString(QUuid::WithoutBraces);
@@ -180,6 +193,7 @@ int main(int argc, char **argv) {
         // Spostare la cartella non cambia le identita' delle copie storiche.
         const auto movedPath = temp.filePath("archivio-spostato"); require(QDir().rename(path,movedPath), "spostamento archivio");
         RevisionStore moved(movedPath); ok(moved.initialize());
+        QUuid movedId; ok(moved.archiveIdentity(movedId)); require(movedId == archiveId, "identita' archivio dopo spostamento");
         require(history(moved,modelId).size() == 4, "tutti i check-in dopo spostamento e riapertura");
         samePayload(moved,first.version,firstPayload); samePayload(moved,third.version,replacement.payload);
         samePayload(moved,drawingRecord.version,drawingRequest.payload);

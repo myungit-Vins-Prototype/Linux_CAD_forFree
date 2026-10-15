@@ -19,6 +19,8 @@
 // identificati da indice e ID della feature; la definizione resta formato 49.
 // La cache 7 conserva anche le etichette delle facce emesse dalla costruzione
 // (coperchi e tratti dello schizzo), leggendo ancora le cache precedenti.
+// Il formato 50 aggiunge identita' del documento, check-in e base della
+// copia di lavoro; la cache geometrica resta 7. Legge i formati precedenti.
 // Fanno eccezione i
 // corpi importati, che non
 // hanno una definizione: il loro body e' in `importData` come testo STEP del
@@ -36,6 +38,15 @@
 namespace ForgeCad {
 
 inline constexpr const char *kDocumentSuffix = "prt";
+inline constexpr quint16 kDocumentFormatVersion = 50;
+
+// Codec senza accesso al filesystem, usato anche dall'archivio revisioni.
+// La codifica puo' rappresentare uno snapshot archiviato; il normale Salva
+// su file richiede invece una copia di lavoro.
+QString encodeDocument(const DocumentState &state, QByteArray &bytes, bool bodies = true);
+QString decodeDocument(const QByteArray &bytes, DocumentState &state, bool previewCache = false);
+// Copia indipendente: stessi parametri/geometria, nuova identita' e nessuna base.
+void forkDocumentIdentity(DocumentState &state);
 
 // Il lock vive accanto al documento, anche su una condivisione di rete.
 // Non scade per anzianita': un documento puo' restare aperto indefinitamente.

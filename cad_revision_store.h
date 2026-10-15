@@ -48,9 +48,15 @@ public:
     explicit RevisionStore(QString directory);
     QString initialize() const;
     QString createDocument(const QString &name, const QString &kind, QUuid &documentId) const;
+    // Adotta l'identita' gia' contenuta nel file, senza creare un duplicato.
+    // Se esiste, conserva nome/storico e verifica il tipo di documento.
+    QString registerDocument(const QUuid &documentId, const QString &name, const QString &kind) const;
+    QString archiveIdentity(QUuid &archiveId) const;
     QString documents(QVector<RevisionDocumentInfo> &result) const;
     QString history(const QUuid &documentId, QVector<RevisionRecord> &result) const;
     QString checkout(const QUuid &documentId, const QString &owner, RevisionCheckout &result) const;
+    // Confronta la base sotto lock prima di creare la prenotazione.
+    QString checkoutAtVersion(const DocumentVersion &base, const QString &owner, RevisionCheckout &result) const;
     QString resumeCheckout(const QUuid &documentId, const QUuid &token, RevisionCheckout &result) const;
     QString cancelCheckout(const RevisionCheckout &checkout) const;
     // Pubblica contenuto + record e rilascia la prenotazione soltanto al

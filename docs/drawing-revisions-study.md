@@ -100,23 +100,23 @@ La sequenza proposta e': definire identita' e dipendenze dei documenti; provare 
 | Conservazione | Riapertura di ogni check-in con i contenuti e le dipendenze originali; ripristino senza sovrascrivere il passato; insieme modello/tavole sempre coerente |
 | Prestazioni | Tempi e memoria di sezione, proiezione, aggiornamento di una quota, rollback e check-in su modelli rappresentativi |
 
-Restano da concordare il contenitore operativo, l'uso multiutente, la convenzione delle revisioni e l'eventuale flusso di approvazione. Nessuno di questi punti richiede ancora la modifica del formato parametrico 49 o della cache 7.
+Restano da concordare il contenitore operativo, l'uso multiutente, la convenzione delle revisioni e l'eventuale flusso di approvazione. L'utente ha approvato il formato parametrico 50 per incorporare l'identita' del modello; la cache geometrica resta 7. Per questa fase ha scelto un workspace locale nella cartella del primo salvataggio, con metadati nascosti.
 
 ## Primo prototipo implementato
 
-Il modulo [`cad_drawing.h`](../cad_drawing.h) e [`cad_drawing.cpp`](../cad_drawing.cpp) implementa sezioni e prime quote senza dipendenze dalla GUI. Il chiamante fornisce uno snapshot immutabile dei corpi scelti, i loro nomi genealogici e l'identita' del documento/versione. La selezione dei corpi da mostrare e la gestione dell'identita' del modello nel documento `.prt` restano da collegare all'applicazione.
+Il modulo [`cad_drawing.h`](../cad_drawing.h) e [`cad_drawing.cpp`](../cad_drawing.cpp) implementa sezioni e prime quote senza dipendenze dalla GUI. Il chiamante fornisce uno snapshot immutabile dei corpi scelti, i loro nomi genealogici e l'identita' del documento/versione. Il ponte nativo descritto sotto collega l'identita' del `.prt` e prepara questi snapshot per una selezione esplicita di ID feature; la scelta interattiva dei corpi resta da realizzare nella GUI delle tavole.
 
 Le misure disponibili sono lunghezza del tratto e distanza fra i suoi estremi. La lunghezza di una curva chiusa e' distinta dalla distanza nulla fra i suoi estremi coincidenti. Il prototipo non comprende ancora quote fra due entita', quote radiali/angolari, impaginazione, rendering delle viste o interfaccia di quotatura.
 
 Un nome genealogico identifica le facce candidate. Se la sezione ha piu' rami, il testimone nel piano deve appartenere a uno solo: altrimenti la quota risulta ambigua. La regola viene salvata e impedisce anche di associare un ramo eliminato all'unico superstite. Per i rami multipli questa prima politica e' conservativa: spostamenti che portano il testimone fuori dalla curva richiedono riassociazione; non e' ancora implementata una continuita' dei rami basata sui bordi sorgenti. Per un solo ramo l'associazione segue il nome della faccia. Un errore restituisce uno stato esplicito e una misura non valida, senza conservare numeri precedenti apparentemente aggiornati.
 
-Il codec autonomo JSON schema 1 conserva identita' del disegno, viste e quote, piano completo, scala, tolleranza, feature con ID a 64 bit e riferimenti a documenti/check-in. Non sceglie il contenitore operativo finale e non cambia il formato `.prt` 49/cache 7. Il modello si aggiorna verso un altro check-in soltanto con un comando esplicito; il comando rifiuta tavole marcate come archiviate. Il controllo degli accessi resta da realizzare; il backend locale descritto sotto conserva record e contenuti storici tramite un protocollo cooperativo.
+Il codec autonomo JSON schema 1 conserva identita' del disegno, viste e quote, piano completo, scala, tolleranza, feature con ID a 64 bit e riferimenti a documenti/check-in. Non sceglie il contenitore operativo finale; l'identita' nativa del modello viene salvata separatamente nel `.prt` 50/cache 7. Il modello si aggiorna verso un altro check-in soltanto con un comando esplicito; il comando rifiuta tavole marcate come archiviate. Il controllo degli accessi resta da realizzare; il backend locale descritto sotto conserva record e contenuti storici tramite un protocollo cooperativo.
 
 I test standalone in [`tests/test_drawing.cpp`](../tests/test_drawing.cpp) verificano superfici aperte, cilindro e tangenza, vista obliqua ellittica, patch NURBS razionale, foro con piu' rami, coincidenze, associazioni perse, dimensioni e scala, riapertura del B-rep e della tavola, versioni fissate e rifiuto atomico dei dati incoerenti. La prova riguarda il modulo geometrico e il codec, non un flusso interattivo di tavola gia' disponibile nella GUI.
 
 ## Archivio locale delle revisioni implementato
 
-Il modulo [`cad_revision_store.h`](../cad_revision_store.h) e [`cad_revision_store.cpp`](../cad_revision_store.cpp) fornisce un archivio su filesystem locale, indipendente da GUI, kernel e contenitore dei documenti. [`cad_document_version.h`](../cad_document_version.h) definisce l'identita' condivisa da tavole e archivio. L'archivio assegna un UUID persistente a ogni documento logico; nomi dei file e percorsi non sono identificativi. Il formato `.prt` resta 49/cache 7: l'integrazione di questa identita' nel file nativo deve ancora essere realizzata.
+Il modulo [`cad_revision_store.h`](../cad_revision_store.h) e [`cad_revision_store.cpp`](../cad_revision_store.cpp) fornisce un archivio su filesystem locale, indipendente da GUI, kernel e contenitore dei documenti. [`cad_document_version.h`](../cad_document_version.h) definisce l'identita' condivisa da tavole e archivio. L'archivio assegna un UUID persistente a ogni documento logico; nomi dei file e percorsi non sono identificativi. Il formato `.prt` 50 incorpora questa identita', il check-in archiviato e la base della copia di lavoro; la cache resta 7. I file precedenti sono leggibili e ricevono un'identita' da conservare al successivo salvataggio.
 
 Il catalogo JSON schema 1 conserva documenti, tutte le copie di check-in e prenotazioni. Ogni check-in ha un UUID scelto prima del tentativo, predecessore, numero progressivo, revisione tecnica, autore dichiarato, data UTC, commento, impronta SHA256 e dipendenze a check-in precisi dello stesso archivio. Due check-in possono avere la medesima revisione tecnica e condividere gli stessi byte, conservando entrambi i record. Il contenuto binario viene conservato in `objects` con nome derivato dalla sua impronta; nessuna API elimina lo storico o riscrive una copia precedente.
 
@@ -126,6 +126,34 @@ Le modifiche al catalogo usano un lock breve `QLockFile` e pubblicazione tramite
 
 Le dipendenze devono riferire check-in gia' archiviati e integri, mai una copia di lavoro o l'ultimo file trovato per nome. Una tavola puo' quindi rimanere collegata al primo check-in del modello anche dopo che il modello ha raggiunto revisioni successive. Un ripristino crea un nuovo discendente usando i contenuti vecchi; le copie originali rimangono leggibili. Spostare l'intera cartella dell'archivio mantiene identita' e riferimenti.
 
-I test [`tests/test_revision_store.cpp`](../tests/test_revision_store.cpp) verificano conservazione binaria, prenotazioni persistenti, basi obsolete, risposte perse, errori di scrittura, contenuti preparati, ripristino, dipendenze, corruzioni e contesa tra due processi locali. Non sono ancora verificati filesystem di rete, perdita fisica di connessione/alimentazione e arresto forzato in ogni stadio della pubblicazione. Restano da implementare autenticazione e permessi applicativi, comandi GUI, gestione locale della copia di lavoro e del token, rilascio coordinato tramite manifesto di insieme e integrazione dei codec `.prt`/tavola per garantire snapshot completi. Il chiamante fornisce per ora il contenuto binario da conservare.
+I test [`tests/test_revision_store.cpp`](../tests/test_revision_store.cpp) verificano conservazione binaria, prenotazioni persistenti, basi obsolete, risposte perse, errori di scrittura, contenuti preparati, ripristino, dipendenze, corruzioni e contesa tra due processi locali. Non sono ancora verificati filesystem di rete, perdita fisica di connessione/alimentazione e arresto forzato in ogni stadio della pubblicazione. Restano da implementare autenticazione e permessi applicativi, comandi GUI, persistenza automatica della sessione e della copia di lavoro nel client e rilascio coordinato tramite manifesto di insieme. Il backend generico riceve byte dal chiamante; il ponte nativo descritto sotto verifica identita' e presenza della geometria degli snapshot `.prt`.
 
 I limiti iniziali sono 16 MiB per catalogo, 256 MiB per singolo contenuto, 10000 documenti, 100000 check-in e 10000 dipendenze per check-in, con il limite del catalogo che puo' essere raggiunto prima degli altri. Il superamento viene rifiutato senza troncare lo storico. Questi limiti sono del primo backend, da riesaminare con misure su archivi rappresentativi.
+
+## Workspace e collegamento ai documenti nativi
+
+Il modulo [`cad_workspace.h`](../cad_workspace.h) e [`cad_workspace.cpp`](../cad_workspace.cpp) individua il workspace piu' vicino risalendo dalla cartella del documento. Se non esiste, il primo Salva usa la cartella di destinazione. Le sottocartelle riusano il workspace antenato; un workspace gia' presente piu' vicino prevale. La ricerca e l'apertura del documento non creano file. La struttura viene preparata durante il salvataggio, prima della sostituzione atomica del `.prt`:
+
+```text
+workspace/
+  particolare.prt
+  .forgecad/
+    workspace.json
+    revisions/
+      catalog.json
+      objects/
+    sessions/
+    pending/
+```
+
+Il prefisso punto nasconde la cartella sui sistemi UNIX-like; su Windows viene impostato anche l'attributo Hidden. I dati storici restano nell'archivio `revisions`; `sessions` e `pending` sono predisposte per il recupero delle prenotazioni client e delle richieste, senza comandi GUI che le popolino automaticamente in questa fase. Il normale Salva non esegue check-in e non prenota il documento. La copia di lavoro `.prt` resta nella cartella scelta dall'utente.
+
+`workspace.json` conserva un UUID stabile per il workspace; l'archivio conserva il proprio UUID e i documenti i rispettivi ID. Spostare l'intero workspace mantiene le identita'. `workspace.lock` esiste solo durante la preparazione della struttura, distinto da `revisions/catalog.lock` e dal check-out persistente nel catalogo. Le cartelle interne non sono una destinazione valida per il normale Salva. Un marker corrotto, dati sconosciuti o un archivio incompleto causano un errore senza sostituire il `.prt` precedente. Un'inizializzazione interrotta puo' essere ripresa preservando l'archivio gia' creato; se la preparazione riesce ma il commit del `.prt` fallisce, puo' restare il workspace inizializzato senza quel documento. Le cartelle non vengono eliminate automaticamente.
+
+I salvataggi successivi verificano marker e struttura senza rileggere l'intero storico; le operazioni di revisione verificano catalogo e contenuti. Il workspace non viene consultato da Undo/Redo o dalla rigenerazione geometrica. Nessun database viene introdotto. La cartella nascosta conserva dati necessari, non soltanto cache eliminabili: per trasferire o salvaguardare lo storico occorre includerla. La replica DFS non costituisce un'autorita' unica per le prenotazioni.
+
+Il ponte [`cad_native_revisions.h`](../cad_native_revisions.h) e [`cad_native_revisions.cpp`](../cad_native_revisions.cpp) registra l'UUID nativo nell'archivio, riserva soltanto una versione di base ancora corrente, legge snapshot storici e prepara/pubblica check-in coerenti. I check-in richiedono geometria disponibile per le feature geometriche attive. Un'operazione preparata conserva UUID e byte originali in un contenitore verificato tramite SHA256, per ritentare dopo una risposta persa. Una modifica parametrica intervenuta dopo la preparazione impedisce di applicare la ricevuta come se il documento fosse gia' aggiornato. Le dipendenze native esterne non sono ancora supportate dal ponte; le tavole usano le dipendenze esatte del backend generico.
+
+Salva con nome su un percorso diverso crea un documento indipendente; soltanto il salvataggio riuscito cambia l'identita' della sessione. Undo/Redo e navigazione della storia preservano l'identita' corrente. Il normale Salva rifiuta uno snapshot marcato come archiviato; la copia indipendente azzera check-in e base. Il ponte per le tavole riusa B-rep e nomi genealogici senza ricostruirli.
+
+Le verifiche di questa fase comprendono [`tests/test_workspace.cpp`](../tests/test_workspace.cpp), [`tests/test_native_revisions.h`](../tests/test_native_revisions.h) e il flusso Salva con nome nei test di accesso al documento. Gli esiti effettivi di compilazione e test sono riportati nel registro del progetto; la presenza del codice per Windows non equivale a una verifica su quel sistema.

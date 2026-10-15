@@ -45,6 +45,7 @@ static void require(bool ok, const char *message) {
 #include "test_extrusion_history.h"
 #include "test_revolution_history.h"
 #include "test_all_history.h"
+#include "test_native_revisions.h"
 #include "document_regression.h"
 class ViewportInteractionTest {
 public:
@@ -525,9 +526,17 @@ public:
             dismiss(); require(!first.saveDocumentPath(b) && first.documentLock_->owns(a), "failed save as preserves original lock");
             require(!QFileInfo::exists(b), "failed save as does not create file");
         }
+        const auto originalId = first.viewport_->currentDocument().version.documentId;
         require(first.saveDocumentPath(b), "save as new file");
+        const auto copiedId = first.viewport_->currentDocument().version.documentId;
+        require(copiedId != originalId && !copiedId.isNull(), "save as creates independent identity");
+        DocumentState originalFile, copiedFile;
+        require(loadDocumentFile(a,originalFile).isEmpty() && loadDocumentFile(b,copiedFile).isEmpty()
+                && originalFile.version.documentId == originalId && copiedFile.version.documentId == copiedId,
+                "save as preserves source identity and stores new identity");
         require(first.documentLock_->owns(b) && !QFileInfo::exists(a+".lock"), "save as transfers lock after success");
         dismiss(); require(!first.saveDocumentPath(directory.path()) && first.documentLock_->owns(b), "write failure preserves previous session");
+        require(first.viewport_->currentDocument().version.documentId == copiedId, "failed save as preserves document identity");
         const QString invalid=directory.filePath("invalid.prt");
         {QFile file(invalid); require(file.open(QIODevice::WriteOnly),"invalid document fixture"); file.write("invalid");}
         dismiss(); require(!first.openDocumentPath(invalid) && first.documentLock_->owns(b)
@@ -8814,6 +8823,11 @@ int main(int argc, char **argv) {
         try { ViewportInteractionTest::mouseSnapshotRegression(app.arguments().value(app.arguments().indexOf(QStringLiteral("--mouse-snapshot")) + 1)); }
         catch (const std::exception &e) { std::cerr << e.what() << std::endl; return 1; }
         return 0;
+    }
+    if (app.arguments().contains(QStringLiteral("--native-revisions"))) {
+        try { nativeRevisionTests(); }
+        catch (const std::exception &e) { std::cerr << e.what() << std::endl; return 1; }
+        std::cout << "PASS native document revisions" << std::endl; return 0;
     }
     if (app.arguments().contains(QStringLiteral("--storyboard-scroll"))) {
         try { ViewportInteractionTest::storyboardScroll(); }

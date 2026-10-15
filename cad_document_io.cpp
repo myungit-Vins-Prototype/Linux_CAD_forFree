@@ -1,4 +1,5 @@
 #include "cad_document_io.h"
+#include "cad_workspace.h"
 
 #include <cmath>
 #include <exception>
@@ -65,7 +66,8 @@ constexpr char kMagic[4] = {'F', 'C', 'A', 'D'};
 // 42 sezioni e guide loft da bordi; 43 ordine delle guide.
 // 44 estrazione associativa di curve 3D, segmento e vista salvata del taglio.
 // 45 schizzi spaziali con entita' e punti XYZ in double.
-constexpr quint16 kVersion = 49;
+// 50 identita' del documento, check-in archiviato e base della copia di lavoro.
+constexpr quint16 kVersion = kDocumentFormatVersion;
 constexpr quint8 kZlib = 1;
 
 void write(QDataStream &out, const CurveObject &curve) {
@@ -1131,7 +1133,57 @@ bool DocumentFileLock::owns(const QString &path) const {
     return marker.open(QIODevice::ReadOnly) && marker.readAll() == identity_;
 }
 
+QString encodeDocument(const DocumentState &state, QByteArray &bytes, bool bodies) {
+    try {
+        if (state.version.documentId.isNull() || (!state.version.checkinId.isNull() && state.version.checkinId == state.baseCheckinId))
+            return QStringLiteral("Identita' del documento non valida.");
+        DocumentState normalized = state;
+        normalizeModelHistory(normalized);
+        upgradeTopologyReferences(normalized.extrusions);
+        QByteArray payload;
+        {
+            QBuffer buffer(&payload);
+            buffer.open(QIODevice::WriteOnly);
+            QDataStream out(&buffer);
+            out.setVersion(QDataStream::Qt_6_0);
+            out.setFloatingPointPrecision(QDataStream::DoublePrecision);
+            out << quint32(normalized.sketches.size());
+            for (const SketchObject &sketch : normalized.sketches) write(out, sketch);
+            out << quint32(normalized.extrusions.size());
+            for (const ExtrusionObject &body : normalized.extrusions) write(out, body);
+            for (const double *axis : {normalized.orientation.right, normalized.orientation.up, normalized.orientation.toward})
+                for (int k = 0; k < 3; ++k) out << axis[k];
+            out << quint32(normalized.modelBodies.size());
+            for (const ModelBody &body : normalized.modelBodies)
+                out << body.id << body.name << body.visible << body.tipFeatureId << body.meshColor;
+            out << qint32(normalized.lengthUnit);
+            out << normalized.version.documentId << normalized.version.checkinId << normalized.baseCheckinId;
+        }
+        QByteArray prepared;
+        QDataStream out(&prepared, QIODevice::WriteOnly);
+        out.writeRawData(kMagic, 4);
+        out << kVersion << kZlib;
+        const QByteArray compressed = qCompress(payload, 9);
+        out << quint32(compressed.size());
+        out.writeRawData(compressed.constData(), int(compressed.size()));
+        if (bodies) {
+            const QByteArray cache = bodyCache(payload, normalized);
+            out.writeRawData(cache.constData(), int(cache.size()));
+        }
+        if (out.status() != QDataStream::Ok) return QStringLiteral("Codifica del documento fallita.");
+        bytes = std::move(prepared);
+        return {};
+    } catch (const std::exception &error) { return QString::fromUtf8(error.what()); }
+}
+
+void forkDocumentIdentity(DocumentState &state) {
+    state.version = {QUuid::createUuid(), {}};
+    state.baseCheckinId = {};
+}
+
 QString saveDocumentFile(const QString &path, const DocumentState &state, bool bodies, const DocumentFileLock *lock) {
+    if (!state.version.checkinId.isNull())
+        return QStringLiteral("Documento archiviato: usare una copia di lavoro o Salva con nome.");
     std::unique_ptr<DocumentFileLock> temporary;
     if (!lock) {
         temporary = std::make_unique<DocumentFileLock>(path);
@@ -1140,44 +1192,21 @@ QString saveDocumentFile(const QString &path, const DocumentState &state, bool b
         lock = temporary.get();
     }
     if (!lock->owns(path)) return QStringLiteral("Salvataggio annullato: il documento non ha piu' un blocco esclusivo valido.");
-    DocumentState normalized = state;
-    normalizeModelHistory(normalized);
-    upgradeTopologyReferences(normalized.extrusions);
-    QByteArray payload;
-    {
-        QBuffer buffer(&payload);
-        buffer.open(QIODevice::WriteOnly);
-        QDataStream out(&buffer);
-        out.setVersion(QDataStream::Qt_6_0);
-        out.setFloatingPointPrecision(QDataStream::DoublePrecision);
-        out << quint32(normalized.sketches.size());
-        for (const SketchObject &sketch : normalized.sketches) write(out, sketch);
-        out << quint32(normalized.extrusions.size());
-        for (const ExtrusionObject &body : normalized.extrusions) write(out, body);
-        for (const double *axis : {normalized.orientation.right, normalized.orientation.up, normalized.orientation.toward})
-            for (int k = 0; k < 3; ++k) out << axis[k];
-        out << quint32(normalized.modelBodies.size());
-        for (const ModelBody &body : normalized.modelBodies)
-            out << body.id << body.name << body.visible << body.tipFeatureId << body.meshColor;
-        out << qint32(normalized.lengthUnit);
-    }
+    QByteArray bytes;
+    const auto error = encodeDocument(state, bytes, bodies);
+    if (!error.isEmpty()) return error;
     QSaveFile file(lock->path());
     if (!file.open(QIODevice::WriteOnly)) return QStringLiteral("Impossibile scrivere %1: %2").arg(path, file.errorString());
-    QDataStream out(&file);
-    out.writeRawData(kMagic, 4);
-    out << kVersion << kZlib;
-    const QByteArray compressed = qCompress(payload, 9);
-    out << quint32(compressed.size());
-    out.writeRawData(compressed.constData(), int(compressed.size()));
-    if (bodies) {
-        const QByteArray cache = bodyCache(payload, normalized);
-        out.writeRawData(cache.constData(), int(cache.size()));
-    }
+    if (file.write(bytes) != bytes.size()) return QStringLiteral("Errore di scrittura su %1: %2").arg(path, file.errorString());
     if (!lock->owns(path)) {
         file.cancelWriting();
         return QStringLiteral("Salvataggio annullato: il blocco esclusivo del documento e' stato perso.");
     }
-    if (out.status() != QDataStream::Ok || !file.commit()) return QStringLiteral("Errore di scrittura su %1: %2").arg(path, file.errorString());
+    WorkspacePaths workspace;
+    const auto workspaceError = ensureDocumentWorkspace(lock->path(), workspace);
+    if (!workspaceError.isEmpty()) return QStringLiteral("Salvataggio annullato: %1").arg(workspaceError);
+    if (!lock->owns(path)) return QStringLiteral("Salvataggio annullato: blocco esclusivo perso durante la preparazione del workspace.");
+    if (!file.commit()) return QStringLiteral("Errore di scrittura su %1: %2").arg(path, file.errorString());
     return {};
 }
 
@@ -1227,6 +1256,12 @@ QString parsePayload(const QByteArray &payload, quint16 version, int extras, Doc
         loaded.lengthUnit = LengthUnit::Millimeter;
         loaded.lengthUnitSet = true;
     }
+    if (version >= 50) {
+        in >> loaded.version.documentId >> loaded.version.checkinId >> loaded.baseCheckinId;
+        if (in.status() != QDataStream::Ok || loaded.version.documentId.isNull()
+            || (!loaded.version.checkinId.isNull() && loaded.version.checkinId == loaded.baseCheckinId))
+            return QStringLiteral("Il file e' danneggiato (identita' del documento).");
+    }
     if (!buffer.atEnd()) return QStringLiteral("Il file e' danneggiato (dati in piu' alla fine).");
     normalizeModelHistory(loaded);
     return {};
@@ -1238,7 +1273,11 @@ QString loadDocumentFile(const QString &path, DocumentState &state, bool preview
     QFile file(path);
     if (!file.open(QIODevice::ReadOnly)) return QStringLiteral("Impossibile aprire %1: %2").arg(path, file.errorString());
     const QByteArray data = file.readAll();
-    if (data.size() < 7 || !data.startsWith(QByteArray(kMagic, 4))) return QStringLiteral("%1 non e' un file ForgeCAD.").arg(path);
+    return decodeDocument(data, state, previewCache);
+}
+
+QString decodeDocument(const QByteArray &data, DocumentState &state, bool previewCache) {
+    if (data.size() < 7 || !data.startsWith(QByteArray(kMagic, 4))) return QStringLiteral("Dati non riconosciuti come documento ForgeCAD.");
     QDataStream header(data);
     header.skipRawData(4);
     quint16 version = 0;

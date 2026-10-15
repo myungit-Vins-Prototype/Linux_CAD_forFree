@@ -12,6 +12,8 @@
 
 #include <memory>
 
+#include "cad_document_version.h"
+
 namespace ForgeCad::Kernel {
 class Body;
 struct RayFaceIndex;
@@ -790,6 +792,11 @@ enum class LengthUnit { Millimeter = 0, Centimeter = 1, Meter = 2, Inch = 3, Foo
 // Stato del documento soggetto a Undo/Redo (l'orientamento degli assi si
 // salva con il documento ma non torna indietro con l'Undo).
 struct DocumentState {
+    DocumentState() = default;
+    // Le istantanee riusano l'identita' corrente senza generare un UUID.
+    DocumentState(const ForgeCad::DocumentVersion &identity, const QUuid &base)
+        : version(identity), baseCheckinId(base) {}
+
     QVector<SketchObject> sketches;
     QVector<ExtrusionObject> extrusions;
     QVector<ModelBody> modelBodies;
@@ -797,6 +804,9 @@ struct DocumentState {
     bool orientationSet = false;  // letto dal file (altrimenti quello predefinito delle opzioni)
     LengthUnit lengthUnit = LengthUnit::Millimeter;
     bool lengthUnitSet = false;
+    // Metadati del documento, indipendenti dalla cronologia parametrica.
+    ForgeCad::DocumentVersion version{QUuid::createUuid(), {}};
+    QUuid baseCheckinId;
 };
 
 // Sfondo della scena. Con la sfumatura attiva i due colori sono distribuiti

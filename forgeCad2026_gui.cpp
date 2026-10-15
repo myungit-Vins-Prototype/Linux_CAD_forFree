@@ -564,6 +564,9 @@ public:
     // cronologia riparte da zero; i corpi usano lo snapshot salvato quando e'
     // presente, altrimenti si rigenerano dalla definizione.
     DocumentState currentDocument() const { return documentState(); }
+    void adoptDocumentIdentity(const ForgeCad::DocumentVersion &identity, const QUuid &base) {
+        documentVersion_ = identity; documentBaseCheckinId_ = base;
+    }
     // Rigenerazione manuale (Modifica -> Rigenera tutto): ogni feature si
     // ricalcola con il kernel attuale, anche quelle che vengono dallo snapshot
     // salvato nel documento. Un passo di Undo. Restituisce quante falliscono.
@@ -592,6 +595,7 @@ public:
         activeSketch_ = -1;
         selection_ = {};
         history_.clear();
+        adoptDocumentIdentity(state.version, state.baseCheckinId);
         if (state.orientationSet) orientation_ = state.orientation;
         lengthUnit_ = state.lengthUnitSet ? state.lengthUnit : LengthUnit::Millimeter;
         ForgeCad::setDisplayLengthUnit(lengthUnit_);
@@ -622,6 +626,7 @@ public:
     void loadPreviewDocument(DocumentState state) {
         activeSketch_ = -1;
         selection_ = {};
+        adoptDocumentIdentity(state.version, state.baseCheckinId);
         if (state.orientationSet) orientation_ = state.orientation;
         lengthUnit_ = state.lengthUnitSet ? state.lengthUnit : LengthUnit::Millimeter;
         ForgeCad::normalizeModelHistory(state);
@@ -6493,7 +6498,7 @@ protected:
 
 private:
     DocumentState documentState() const {
-        DocumentState state;
+        DocumentState state(documentVersion_, documentBaseCheckinId_);
         state.sketches = sketches_;
         state.extrusions = extrusions_;
         state.modelBodies = modelBodies_;
@@ -7504,6 +7509,7 @@ private:
         if (index >= 0) ForgeCad::configurePatternInstances(body, index, sketches_, extrusions_);
     }
     void restoreDocument(DocumentState state) {
+        adoptDocumentIdentity(state.version, state.baseCheckinId);
         dimensionPlacing_ = -1;
         ForgeCad::normalizeModelHistory(state);
         sketches_ = std::move(state.sketches);
@@ -11906,6 +11912,8 @@ private:
     int topologyHighlightFace_ = -1;  // FaceId: se cliccato se ne illuminano tutti i bordi
     float yaw_ = -32.0f, pitch_ = 22.0f, zoom_ = 8.0f;
     float roll_ = 0.0f;  // rotazione attorno all'asse di vista (schizzi su facce inclinate)
+    ForgeCad::DocumentVersion documentVersion_{QUuid::createUuid(), {}};
+    QUuid documentBaseCheckinId_;
     AxesOrientation orientation_;  // orientamento degli assi del documento (vedi basisMatrix)
     bool autoFit_ = false;         // l'ultima inquadratura e' "zoom tutto" e l'utente non ha mosso la vista
     float panX_ = 0.0f, panY_ = 0.0f;  // spostamento della vista (unita' della vista)
@@ -20680,6 +20688,7 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
     connect(saveAction, &QAction::triggered, this, [this] { saveDocument(false); });
     QAction *saveAsAction = fileMenu->addAction(QStringLiteral("Salva con nome..."));
     saveAsAction->setShortcut(QKeySequence::SaveAs);
+    saveAsAction->setToolTip(QStringLiteral("Salva una copia indipendente del documento."));
     connect(saveAsAction, &QAction::triggered, this, [this] { saveDocument(true); });
     recentDocumentsMenu_ = addCadMenu(fileMenu, QStringLiteral("File recenti"));
     recentDocumentsMenu_->setObjectName(QStringLiteral("recentDocumentsMenu"));
@@ -23464,7 +23473,10 @@ bool PdfWindow::saveDocumentPath(const QString &path) {
         lock = candidate.get();
     }
     beginForegroundProgress(QStringLiteral("Salvataggio di %1...").arg(QFileInfo(path).fileName()));
-    const QString error = ForgeCad::saveDocumentFile(resolved, viewport_->currentDocument(),
+    DocumentState saved = viewport_->currentDocument();
+    if (!documentPath_.isEmpty() && ForgeCad::canonicalDocumentPath(documentPath_) != resolved)
+        ForgeCad::forkDocumentIdentity(saved);
+    const QString error = ForgeCad::saveDocumentFile(resolved, saved,
                                                      QSettings().value(QStringLiteral("document/saveBodies"), true).toBool(), lock);
     endForegroundProgress();
     if (!error.isEmpty()) {
@@ -23472,6 +23484,7 @@ bool PdfWindow::saveDocumentPath(const QString &path) {
         return false;
     }
     if (candidate) documentLock_ = std::move(candidate);
+    viewport_->adoptDocumentIdentity(saved.version, saved.baseCheckinId);
     documentPath_ = resolved;
     documentModified_ = false;
     rememberRecentDocument(resolved);

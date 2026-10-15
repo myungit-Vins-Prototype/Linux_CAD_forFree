@@ -247,6 +247,24 @@ QString RevisionStore::createDocument(const QString &name, const QString &kind, 
     return error;
 }
 
+QString RevisionStore::registerDocument(const QUuid &documentId, const QString &name, const QString &kind) const {
+    return transaction(directory_, [&](Catalog &catalog) {
+        require(!documentId.isNull(), QStringLiteral("Identita' del documento assente."));
+        string(QJsonValue(name), 4096, true); string(QJsonValue(kind), 128, true);
+        for (const auto &d : catalog.documents) if (d.info.documentId == documentId) {
+            require(d.info.kind == kind, QStringLiteral("Il documento e' gia' registrato con un altro tipo."));
+            return false;
+        }
+        StoredDocument d; d.info.documentId = documentId; d.info.name = name; d.info.kind = kind;
+        catalog.documents.append(std::move(d)); return true;
+    });
+}
+
+QString RevisionStore::archiveIdentity(QUuid &archiveId) const {
+    try { const auto catalog = loadCatalog(directory_); archiveId = catalog.archiveId; return {}; }
+    catch (const std::exception &error) { return QString::fromUtf8(error.what()); }
+}
+
 QString RevisionStore::documents(QVector<RevisionDocumentInfo> &result) const {
     try {
         const auto catalog = loadCatalog(directory_); QVector<RevisionDocumentInfo> prepared;
@@ -263,17 +281,29 @@ QString RevisionStore::history(const QUuid &documentId, QVector<RevisionRecord> 
     } catch (const std::exception &error) { return QString::fromUtf8(error.what()); }
 }
 
-QString RevisionStore::checkout(const QUuid &documentId, const QString &owner, RevisionCheckout &result) const {
+namespace {
+QString reserveDocument(const QString &directory, const QUuid &documentId, const QString &owner,
+                        const QUuid *expectedBase, RevisionCheckout &result) {
     RevisionCheckout prepared;
-    const auto error = transaction(directory_, [&](Catalog &catalog) {
+    const auto error = transaction(directory, [&](Catalog &catalog) {
         string(QJsonValue(owner), 256, true);
         auto &d = findDocument(catalog, documentId);
+        require(!expectedBase || d.info.headCheckinId == *expectedBase, QStringLiteral("Il documento e' cambiato prima del check-out."));
         require(d.checkout.token.isNull(), QStringLiteral("Documento gia' in check-out da %1.").arg(d.checkout.owner));
         prepared = {documentId, QUuid::createUuid(), d.info.headCheckinId, owner, QDateTime::currentDateTimeUtc()};
         d.checkout = prepared; return true;
     });
     if (error.isEmpty()) result = prepared;
     return error;
+}
+}
+
+QString RevisionStore::checkout(const QUuid &documentId, const QString &owner, RevisionCheckout &result) const {
+    return reserveDocument(directory_, documentId, owner, nullptr, result);
+}
+
+QString RevisionStore::checkoutAtVersion(const DocumentVersion &base, const QString &owner, RevisionCheckout &result) const {
+    return reserveDocument(directory_, base.documentId, owner, &base.checkinId, result);
 }
 
 QString RevisionStore::resumeCheckout(const QUuid &documentId, const QUuid &token, RevisionCheckout &result) const {
