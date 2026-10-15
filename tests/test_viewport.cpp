@@ -46,9 +46,66 @@ static void require(bool ok, const char *message) {
 #include "test_revolution_history.h"
 #include "test_all_history.h"
 #include "test_native_revisions.h"
+#include "test_workspace_revisions.h"
 #include "document_regression.h"
 class ViewportInteractionTest {
 public:
+    static void workspaceRevisionsUi() {
+        using namespace ForgeCad;
+        QTemporaryDir temporary;require(temporary.isValid(),"directory GUI revisioni");
+        const auto path=temporary.filePath("parte.prt");QUuid token;
+        {
+            PdfWindow window;window.viewport_->loadDocument(clientModel());require(window.saveDocumentPath(path),"salva modello GUI");
+            for(const auto &name:{"revisionCheckoutAction","revisionCheckinAction","revisionCompleteAction","revisionCancelAction","revisionHistoryAction"})
+                require(window.findChild<QAction *>(QString::fromLatin1(name)),"comando GUI revisioni presente");
+            clientOk(window.runDocumentRevisionAction(PdfWindow::DocumentRevisionAction::Checkout,"progettista"));
+            WorkspaceRevisionStatus status;clientOk(workspaceRevisionStatus(path,window.viewport_->currentDocument(),status));token=status.session.checkout.token;
+        }
+        PdfWindow reopened;require(reopened.openDocumentPath(path),"riapertura GUI della copia di lavoro");
+        bool ownerDialogSeen=false;
+        QTimer::singleShot(0,[&] {
+            auto *dialog=reopened.findChild<QInputDialog *>();if(!dialog)return;
+            dialog->setTextValue(QStringLiteral("progettista"));ownerDialogSeen=true;dialog->accept();
+        });
+        reopened.findChild<QAction *>(QStringLiteral("revisionCheckoutAction"))->trigger();
+        require(ownerDialogSeen,"dialogo proprietario check-out effettivamente utilizzato");
+        WorkspaceRevisionStatus status;clientOk(workspaceRevisionStatus(path,reopened.viewport_->currentDocument(),status));
+        require(status.session.checkout.token==token,"GUI riprende sessione persistente dopo chiusura");
+        bool dialogSeen=false;
+        QTimer::singleShot(0,[&] {
+            auto *dialog=reopened.findChild<QDialog *>(QStringLiteral("revisionCheckinDialog"));
+            if(!dialog)return;
+            auto *label=dialog->findChild<QLineEdit *>(QStringLiteral("revisionLabel"));
+            auto *comment=dialog->findChild<QTextEdit *>(QStringLiteral("revisionComment"));
+            if(!label || !comment){dialog->reject();return;}
+            label->setText("B");comment->setPlainText("verifica interattiva");dialogSeen=true;dialog->accept();
+        });
+        reopened.findChild<QAction *>(QStringLiteral("revisionCheckinAction"))->trigger();
+        require(dialogSeen,"dialogo check-in effettivamente utilizzato");
+        auto current=reopened.viewport_->currentDocument();require(!current.baseCheckinId.isNull() && !reopened.documentModified_,"GUI applica ricevuta e salva base");
+        QVector<RevisionRecord> records;clientOk(workspaceDocumentHistory(path,current,records));
+        require(records.size()==1 && records[0].technicalRevision=="B" && records[0].comment=="verifica interattiva","metadati del dialogo nel catalogo");
+        bool historySeen=false;
+        QTimer::singleShot(0,[&] {
+            auto *dialog=reopened.findChild<QDialog *>(QStringLiteral("documentRevisionHistoryDialog"));if(!dialog)return;
+            auto *table=dialog->findChild<QTableWidget *>(QStringLiteral("documentRevisionHistoryTable"));
+            historySeen=table && table->rowCount()==1 && table->item(0,1)->text()=="B" && table->editTriggers()==QAbstractItemView::NoEditTriggers;
+            dialog->reject();
+        });
+        reopened.findChild<QAction *>(QStringLiteral("revisionHistoryAction"))->trigger();require(historySeen,"GUI mostra storico in sola lettura");
+        clientOk(reopened.runDocumentRevisionAction(PdfWindow::DocumentRevisionAction::Checkout,"progettista"));
+        reopened.viewport_->setLengthUnit(LengthUnit::Inch);
+        bool cancelConfirmed=false;
+        QTimer::singleShot(0,[&] {
+            for(QWidget *widget:QApplication::topLevelWidgets())if(auto *box=qobject_cast<QMessageBox *>(widget))
+                if(auto *button=box->button(QMessageBox::Yes)){cancelConfirmed=true;button->click();}
+        });
+        reopened.findChild<QAction *>(QStringLiteral("revisionCancelAction"))->trigger();
+        require(cancelConfirmed,"pulsante di conferma annullamento effettivamente premuto");
+        clientOk(workspaceRevisionStatus(path,reopened.viewport_->currentDocument(),status));
+        require(!status.hasSession && reopened.viewport_->currentDocument().lengthUnit==LengthUnit::Inch && reopened.documentModified_,"annullamento GUI conserva modifiche non salvate");
+    }
+
     static ForgeCad::ForgeBody preparedBlendHistoryPreview(CadViewport &view, const QVector<EdgePoint> &edges,
                                                           double size, bool chamfer, const ChamferSpec &spec) {
         view.requestBlendPreview(0, edges, size, chamfer, -1, spec);
@@ -8823,6 +8880,11 @@ int main(int argc, char **argv) {
         try { ViewportInteractionTest::mouseSnapshotRegression(app.arguments().value(app.arguments().indexOf(QStringLiteral("--mouse-snapshot")) + 1)); }
         catch (const std::exception &e) { std::cerr << e.what() << std::endl; return 1; }
         return 0;
+    }
+    if (app.arguments().contains(QStringLiteral("--workspace-revisions"))) {
+        try { workspaceRevisionTests(); ViewportInteractionTest::workspaceRevisionsUi(); }
+        catch (const std::exception &e) { std::cerr << e.what() << std::endl; return 1; }
+        std::cout << "PASS workspace document revisions and GUI" << std::endl; return 0;
     }
     if (app.arguments().contains(QStringLiteral("--native-revisions"))) {
         try { nativeRevisionTests(); }

@@ -306,6 +306,27 @@ QString RevisionStore::checkoutAtVersion(const DocumentVersion &base, const QStr
     return reserveDocument(directory_, base.documentId, owner, &base.checkinId, result);
 }
 
+QString RevisionStore::checkoutWithToken(const RevisionCheckout &request, RevisionCheckout &result) const {
+    RevisionCheckout prepared;
+    const auto error = transaction(directory_, [&](Catalog &catalog) {
+        require(!request.documentId.isNull() && !request.token.isNull() && request.createdUtc.isValid()
+                && request.createdUtc.offsetFromUtc() == 0, QStringLiteral("Richiesta di check-out incompleta."));
+        string(QJsonValue(request.owner), 256, true);
+        auto &d = findDocument(catalog, request.documentId);
+        require(d.info.headCheckinId == request.baseCheckinId, QStringLiteral("La base del check-out non e' piu' corrente."));
+        if (owns(d, request)) {
+            require(d.checkout.createdUtc == request.createdUtc, QStringLiteral("Token di check-out riutilizzato con metadati diversi."));
+            prepared = d.checkout; return false;
+        }
+        require(d.checkout.token.isNull(), QStringLiteral("Documento gia' in check-out da %1.").arg(d.checkout.owner));
+        for (const auto &document : catalog.documents)
+            require(document.checkout.token != request.token, QStringLiteral("Token di check-out gia' utilizzato."));
+        d.checkout = request; prepared = request; return true;
+    });
+    if (error.isEmpty()) result = prepared;
+    return error;
+}
+
 QString RevisionStore::resumeCheckout(const QUuid &documentId, const QUuid &token, RevisionCheckout &result) const {
     try {
         auto catalog = loadCatalog(directory_); const auto &d = findDocument(catalog, documentId);

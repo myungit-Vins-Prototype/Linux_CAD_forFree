@@ -72,6 +72,21 @@ int main(int argc, char **argv) {
         require(history(store,modelId).size() == 2, "tutti i check-in conservati");
         std::cout << "PASS copie storiche, deduplicazione e ritentativi\n";
 
+        {
+        RevisionStore clientStore(temp.filePath("client-tokens"));ok(clientStore.initialize());
+        QUuid clientDocument;ok(clientStore.createDocument("Client","model",clientDocument));
+        RevisionCheckout intent{clientDocument,QUuid::createUuid(),{},"client",QDateTime::currentDateTimeUtc()},confirmed;
+        ok(clientStore.checkoutWithToken(intent,confirmed));ok(clientStore.checkoutWithToken(intent,confirmed));
+        require(confirmed.token==intent.token,"token scelto dal client e ritentativo identico");
+        auto alteredIntent=intent;alteredIntent.createdUtc=alteredIntent.createdUtc.addMSecs(1);
+        require(!clientStore.checkoutWithToken(alteredIntent,confirmed).isEmpty(),"token riutilizzato con altra data rifiutato");
+        QUuid otherClient;ok(clientStore.createDocument("Altro client","model",otherClient));
+        auto duplicateToken=intent;duplicateToken.documentId=otherClient;
+        require(!clientStore.checkoutWithToken(duplicateToken,confirmed).isEmpty(),"token attivo non condiviso fra documenti");
+        ok(clientStore.cancelCheckout(intent));
+
+        }
+
         // La prenotazione sopravvive all'istanza e puo' essere ripresa col token.
         auto pending = request(store, modelId, QByteArray("definizione-3"), QStringLiteral("B"));
         RevisionStore reopened(path); RevisionCheckout resumed;

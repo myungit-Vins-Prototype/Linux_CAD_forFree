@@ -10,6 +10,7 @@
 #include "cad_constraints.h"
 #include "cad_curve_solver.h"
 #include "cad_document_io.h"
+#include "cad_revision_client.h"
 #include "cad_export.h"
 #include "cad_expression.h"
 #include "cad_datum.h"
@@ -74,6 +75,7 @@
 #include <QScrollArea>
 #include <QScreen>
 #include <QTextBrowser>
+#include <QTextEdit>
 #include <QFrame>
 #include <QSizeGrip>
 #include <QCloseEvent>
@@ -20690,6 +20692,66 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
     saveAsAction->setShortcut(QKeySequence::SaveAs);
     saveAsAction->setToolTip(QStringLiteral("Salva una copia indipendente del documento."));
     connect(saveAsAction, &QAction::triggered, this, [this] { saveDocument(true); });
+    QMenu *revisionMenu = addCadMenu(fileMenu, QStringLiteral("Revisioni"));
+    revisionMenu->setObjectName(QStringLiteral("documentRevisionMenu"));
+    const auto reportRevisionError = [this](const QString &error) {
+        if (!error.isEmpty()) QMessageBox::warning(this, QStringLiteral("Revisioni"), error);
+    };
+    QAction *checkoutAction = revisionMenu->addAction(QStringLiteral("Esegui check-out..."));
+    checkoutAction->setObjectName(QStringLiteral("revisionCheckoutAction"));
+    connect(checkoutAction, &QAction::triggered, this, [this, reportRevisionError] {
+        bool accepted = false;
+        const auto fallback = qEnvironmentVariable("USER", qEnvironmentVariable("USERNAME"));
+        const QString owner = QInputDialog::getText(this, QStringLiteral("Check-out"), QStringLiteral("Proprietario della copia di lavoro:"),
+            QLineEdit::Normal, QSettings().value(QStringLiteral("revisions/owner"),fallback).toString(), &accepted).trimmed();
+        if (!accepted || owner.isEmpty()) return;
+        if (!saveDocument(false)) return;
+        const auto error = runDocumentRevisionAction(DocumentRevisionAction::Checkout,owner);
+        if (error.isEmpty()) QSettings().setValue(QStringLiteral("revisions/owner"),owner);
+        reportRevisionError(error);
+    });
+    QAction *checkinAction = revisionMenu->addAction(QStringLiteral("Esegui check-in..."));
+    checkinAction->setObjectName(QStringLiteral("revisionCheckinAction"));
+    connect(checkinAction, &QAction::triggered, this, [this, reportRevisionError] {
+        QDialog dialog(this); dialog.setWindowTitle(QStringLiteral("Check-in"));
+        dialog.setObjectName(QStringLiteral("revisionCheckinDialog"));
+        auto *layout = new QFormLayout(&dialog);
+        auto *revision = new QLineEdit(QSettings().value(QStringLiteral("revisions/lastLabel"),QStringLiteral("A")).toString(),&dialog);
+        revision->setObjectName(QStringLiteral("revisionLabel")); revision->setMaxLength(128);
+        auto *comment = new QTextEdit(&dialog); comment->setAcceptRichText(false); comment->setObjectName(QStringLiteral("revisionComment"));
+        layout->addRow(QStringLiteral("Revisione tecnica:"),revision); layout->addRow(QStringLiteral("Commento:"),comment);
+        auto *buttons = new QDialogButtonBox(QDialogButtonBox::Ok|QDialogButtonBox::Cancel,&dialog);
+        buttons->button(QDialogButtonBox::Ok)->setText(QStringLiteral("Esegui check-in"));
+        connect(buttons,&QDialogButtonBox::accepted,&dialog,&QDialog::accept);
+        connect(buttons,&QDialogButtonBox::rejected,&dialog,&QDialog::reject);
+        connect(revision,&QLineEdit::textChanged,&dialog,[buttons](const QString &value) {
+            buttons->button(QDialogButtonBox::Ok)->setEnabled(!value.trimmed().isEmpty());
+        });
+        buttons->button(QDialogButtonBox::Ok)->setEnabled(!revision->text().trimmed().isEmpty());
+        layout->addRow(buttons); dialog.resize(440,250);
+        if (dialog.exec()!=QDialog::Accepted || !saveDocument(false)) return;
+        const auto label = revision->text().trimmed();
+        const auto error = runDocumentRevisionAction(DocumentRevisionAction::Checkin,label,comment->toPlainText());
+        if (error.isEmpty()) QSettings().setValue(QStringLiteral("revisions/lastLabel"),label);
+        reportRevisionError(error);
+    });
+    QAction *completeAction = revisionMenu->addAction(QStringLiteral("Completa check-in pendente"));
+    completeAction->setObjectName(QStringLiteral("revisionCompleteAction"));
+    connect(completeAction,&QAction::triggered,this,[this,reportRevisionError] {
+        reportRevisionError(runDocumentRevisionAction(DocumentRevisionAction::CompletePending));
+    });
+    QAction *cancelCheckoutAction = revisionMenu->addAction(QStringLiteral("Annulla check-out..."));
+    cancelCheckoutAction->setObjectName(QStringLiteral("revisionCancelAction"));
+    connect(cancelCheckoutAction,&QAction::triggered,this,[this,reportRevisionError] {
+        if (QMessageBox::question(this,QStringLiteral("Annulla check-out"),
+            QStringLiteral("Liberare la prenotazione del documento? Le modifiche locali vengono mantenute."),
+            QMessageBox::Yes|QMessageBox::No,QMessageBox::No)!=QMessageBox::Yes) return;
+        reportRevisionError(runDocumentRevisionAction(DocumentRevisionAction::CancelCheckout));
+    });
+    revisionMenu->addSeparator();
+    QAction *historyAction = revisionMenu->addAction(QStringLiteral("Storico dei check-in..."));
+    historyAction->setObjectName(QStringLiteral("revisionHistoryAction"));
+    connect(historyAction,&QAction::triggered,this,[this] { showDocumentRevisions(); });
     recentDocumentsMenu_ = addCadMenu(fileMenu, QStringLiteral("File recenti"));
     recentDocumentsMenu_->setObjectName(QStringLiteral("recentDocumentsMenu"));
     connect(recentDocumentsMenu_, &QMenu::aboutToShow, this, &PdfWindow::refreshRecentDocuments);
@@ -23491,6 +23553,69 @@ bool PdfWindow::saveDocumentPath(const QString &path) {
     updateWindowTitle();
     statusBar()->showMessage(QStringLiteral("Salvato %1 (%2 byte)").arg(path).arg(QFileInfo(path).size()), 6000);
     return true;
+}
+
+QString PdfWindow::runDocumentRevisionAction(DocumentRevisionAction action, const QString &first, const QString &second) {
+    if (foregroundProgressDepth_>0 || viewport_->interactionLocked()) return QStringLiteral("Attendere la conclusione dell'operazione in corso.");
+    if (documentPath_.isEmpty()) return QStringLiteral("Salvare prima il documento nel workspace.");
+    if (!documentLock_ || !documentLock_->owns(documentPath_)) return QStringLiteral("Il documento non ha piu' un blocco esclusivo valido.");
+    auto working = viewport_->currentDocument();
+    const auto oldBase = working.baseCheckinId;
+    const bool bodies = QSettings().value(QStringLiteral("document/saveBodies"),true).toBool();
+    ForgeCad::RevisionRecord record; bool matchesWorking = true;
+    viewport_->setInteractionLocked(true);
+    beginForegroundProgress(QStringLiteral("Aggiornamento delle revisioni..."));
+    QString error;
+    switch (action) {
+    case DocumentRevisionAction::Checkout:
+        error = ForgeCad::checkoutWorkspaceDocument(documentPath_,working,first); break;
+    case DocumentRevisionAction::Checkin:
+        error = ForgeCad::checkinWorkspaceDocument(documentPath_,working,first,second,record,bodies,documentLock_.get()); break;
+    case DocumentRevisionAction::CompletePending:
+        error = ForgeCad::completeWorkspaceCheckin(documentPath_,working,record,matchesWorking,bodies,documentLock_.get()); break;
+    case DocumentRevisionAction::CancelCheckout:
+        error = ForgeCad::cancelWorkspaceCheckout(documentPath_,working); break;
+    }
+    endForegroundProgress(); viewport_->setInteractionLocked(false);
+    viewport_->adoptDocumentIdentity(working.version,working.baseCheckinId);
+    if (working.baseCheckinId!=oldBase && !error.isEmpty()) documentModified_=true;
+    if (error.isEmpty()) {
+        if (action==DocumentRevisionAction::Checkin || action==DocumentRevisionAction::CompletePending) {
+            documentModified_=false;
+            statusBar()->showMessage(matchesWorking
+                ? QStringLiteral("Check-in %1, revisione %2, completato.").arg(record.sequence).arg(record.technicalRevision)
+                : QStringLiteral("Check-in pendente completato. Le modifiche successive restano nella copia di lavoro."),10000);
+        } else statusBar()->showMessage(action==DocumentRevisionAction::Checkout
+                ? QStringLiteral("Check-out attivo: %1.").arg(first)
+                : QStringLiteral("Check-out annullato; modifiche locali mantenute."),6000);
+    }
+    updateWindowTitle(); return error;
+}
+
+void PdfWindow::showDocumentRevisions() {
+    QVector<ForgeCad::RevisionRecord> records;
+    const auto error = ForgeCad::workspaceDocumentHistory(documentPath_,viewport_->currentDocument(),records);
+    if (!error.isEmpty()) { QMessageBox::warning(this,QStringLiteral("Revisioni"),error); return; }
+    QDialog dialog(this); dialog.setWindowTitle(QStringLiteral("Storico dei check-in"));
+    dialog.setObjectName(QStringLiteral("documentRevisionHistoryDialog"));
+    auto *layout = new QVBoxLayout(&dialog);
+    auto *table = new QTableWidget(int(records.size()),5,&dialog);
+    table->setObjectName(QStringLiteral("documentRevisionHistoryTable"));
+    table->setHorizontalHeaderLabels({QStringLiteral("Check-in"),QStringLiteral("Revisione"),QStringLiteral("Autore"),QStringLiteral("Data"),QStringLiteral("Commento")});
+    table->setEditTriggers(QAbstractItemView::NoEditTriggers);
+    table->setSelectionBehavior(QAbstractItemView::SelectRows);
+    table->verticalHeader()->hide();
+    for (int row=0;row<records.size();++row) {
+        const auto &record=records[records.size()-1-row];
+        const QStringList values{QString::number(record.sequence),record.technicalRevision,record.author,
+            record.createdUtc.toLocalTime().toString(QStringLiteral("yyyy-MM-dd HH:mm:ss")),record.comment};
+        for (int column=0;column<values.size();++column) table->setItem(row,column,new QTableWidgetItem(values[column]));
+    }
+    table->resizeColumnsToContents();table->horizontalHeader()->setStretchLastSection(true);layout->addWidget(table);
+    if (records.isEmpty()) layout->addWidget(new QLabel(QStringLiteral("Nessun check-in archiviato per questo documento."),&dialog));
+    auto *buttons = new QDialogButtonBox(QDialogButtonBox::Close,&dialog);
+    connect(buttons,&QDialogButtonBox::rejected,&dialog,&QDialog::reject);layout->addWidget(buttons);
+    dialog.resize(760,360);dialog.exec();
 }
 
 void PdfWindow::closeEvent(QCloseEvent *event) {

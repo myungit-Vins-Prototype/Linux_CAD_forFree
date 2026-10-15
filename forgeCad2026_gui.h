@@ -32,6 +32,9 @@ private:
     void openDocument();
     bool saveDocument(bool askPath);
     bool saveDocumentPath(const QString &path);
+    enum class DocumentRevisionAction { Checkout, Checkin, CompletePending, CancelCheckout };
+    QString runDocumentRevisionAction(DocumentRevisionAction action, const QString &first = {}, const QString &second = {});
+    void showDocumentRevisions();
     void rememberRecentDocument(const QString &path);
     void refreshRecentDocuments();
     bool maybeSaveChanges();

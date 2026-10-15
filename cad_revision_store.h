@@ -57,6 +57,9 @@ public:
     QString checkout(const QUuid &documentId, const QString &owner, RevisionCheckout &result) const;
     // Confronta la base sotto lock prima di creare la prenotazione.
     QString checkoutAtVersion(const DocumentVersion &base, const QString &owner, RevisionCheckout &result) const;
+    // Token scelto e conservato dal client prima della richiesta: ritentativi
+    // identici riprendono la prenotazione senza crearne una seconda.
+    QString checkoutWithToken(const RevisionCheckout &request, RevisionCheckout &result) const;
     QString resumeCheckout(const QUuid &documentId, const QUuid &token, RevisionCheckout &result) const;
     QString cancelCheckout(const RevisionCheckout &checkout) const;
     // Pubblica contenuto + record e rilascia la prenotazione soltanto al
