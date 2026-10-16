@@ -58,6 +58,8 @@ struct DrawingSheet {
     QVector<DrawingAxis> axes;
 };
 // Solo metadati del foglio; nessuna duplicazione della geometria del modello.
+DrawingAttachmentResolver drawingSheetAttachmentResolver(const DrawingSheet &sheet,const DrawingView &view,
+    const DrawingModelSnapshot &model,const std::vector<DrawingCurve> &curves);
 QString encodeDrawingSheet(const DrawingSheet &sheet,QByteArray &bytes);
 QString decodeDrawingSheet(const QByteArray &bytes,DrawingSheet &sheet);
 }

@@ -61,6 +61,8 @@ void projectedDrawingFileTests(){
     require(window.editor()->pageContext().projectRevisions.size()==1&&window.editor()->pageContext().projectRevisions[0].version.checkinId==modelA.version.checkinId,"tabella alimentata dal modello A reale");
     DrawingRevisionTable revisionNotes;revisionNotes.visible=true;revisionNotes.notes={{modelA.version.checkinId,"Prima emissione del particolare","Verificatore A"}};clientOk(window.editor()->setRevisionTable(revisionNotes));
     DrawingAxis modelAxis;modelAxis.viewId=view.id;modelAxis.name="Asse del bordo";modelAxis.references=snapped.references;clientOk(window.editor()->addAxis(modelAxis));
+    DrawingDimension axisLength;axisLength.viewId=view.id;axisLength.measure=DrawingMeasure::Distance;DrawingAttachment axisFirst;axisFirst.axisId=modelAxis.id;axisFirst.role=DrawingPointRole::Start;auto axisLast=axisFirst;axisLast.role=DrawingPointRole::End;axisLength.references={axisFirst,axisLast};const auto axisLengthId=axisLength.id;
+    clientOk(window.editor()->addDimension(axisLength,{180,65}));require(std::abs(window.editor()->dimensionResult(axisLengthId).value-10)<1e-7,"quota asse associato sul modello A");
     clientOk(window.editor()->setCenterMarksVisible(view.id,true));
     clientOk(window.savePath(drawingPath));clientOk(window.runRevisionAction(DrawingWindow::RevisionAction::Checkout,"disegnatore"));clientOk(window.runRevisionAction(DrawingWindow::RevisionAction::Checkin,"A","vista e sezione"));
     require(window.editor()->pageContext().drawingRevision=="Lavoro (base A)"&&window.editor()->pageContext().modelRevision=="M-A","cartiglio distingue copia di lavoro della tavola e revisione del modello");
@@ -71,6 +73,7 @@ void projectedDrawingFileTests(){
     clientOk(window.runRevisionAction(DrawingWindow::RevisionAction::Checkout,"disegnatore"));
     clientOk(window.pinModelRevision(modelB.version));require(std::abs(window.editor()->dimensionResult(dimension).value-14)<1e-7,"quota del bordo segue genealogia al modello B");
     require(std::abs(window.editor()->dimensionResult(snappedId).value-14)<1e-7,"entrambi gli snap seguono la genealogia al modello B");
+    require(std::abs(window.editor()->dimensionResult(axisLengthId).value-14)<1e-7,"quota dell’asse segue il modello B");
     require(!window.editor()->canUndo()&&!window.editor()->canRedo(),"collegamento modello B separa la cronologia del layout");
     require(window.editor()->pageContext().modelRevision=="M-B","cartiglio aggiornato al modello esatto B");
     require(std::abs(window.editor()->dimensionResult(technicalDimensionId).value-14)<1e-7,"quota sulla sezione derivata segue il modello B");
@@ -97,7 +100,7 @@ void projectedDrawingFileTests(){
     if(!output.isEmpty()){window.resize(1500,950);window.show();QApplication::processEvents();window.editor()->fitSheet();require(window.grab().save(output+"/pannello-revisioni.png"),"anteprima finestra con pannello revisioni");}
     const auto modelBytes=clientRead(sourcePath);require(!window.exportPdfPath(sourcePath,pdfReport).isEmpty()&&clientRead(sourcePath)==modelBytes,"export non sovrascrive il modello");
     const auto copy=temporary.filePath("copia.drw");
-    {DrawingWindow archived;clientOk(archived.openRevision(drawingPath,first));require(archived.editor()->isReadOnly()&&std::abs(archived.editor()->dimensionResult(dimension).value-10)<1e-7,"prima proiezione archiviata resta a 10 mm");
+    {DrawingWindow archived;clientOk(archived.openRevision(drawingPath,first));require(std::abs(archived.editor()->dimensionResult(axisLengthId).value-10)<1e-7,"snapshot A conserva quota e UUID dell’asse dopo B");require(archived.editor()->isReadOnly()&&std::abs(archived.editor()->dimensionResult(dimension).value-10)<1e-7,"prima proiezione archiviata resta a 10 mm");
      require(archived.document().sheet.axes.size()==1&&archived.document().sheet.axes[0].visible&&archived.document().sheet.axes[0].extension==2,"storico A conserva asse e proprieta originali senza futuro B");
      require(archived.editor()->axisResult(modelAxis.id).status==DrawingDimensionStatus::Ready&&std::abs(Kernel::distance(archived.editor()->axisResult(modelAxis.id).first,archived.editor()->axisResult(modelAxis.id).second)-10)<1e-7,"asse storico A conserva geometria del modello A");
      require(archived.document().sheet.views[0].showCenterMarks&&!archived.document().sheet.views[0].showCenterLines,"storico A conserva centri senza assi futuri B");

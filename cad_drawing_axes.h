@@ -37,6 +37,7 @@ inline DrawingAxisResult evaluateDrawingAxis(const DrawingAxis &axis,const Drawi
     const DrawingModelSnapshot &model,const std::vector<DrawingCurve> &curves){
     using namespace Kernel;
     if(axis.viewId!=view.id||axis.references.size()!=2)return {DrawingDimensionStatus::Invalid,QStringLiteral("L'asse richiede due riferimenti della stessa vista.")};
+    for(const auto &ref:axis.references)if(!ref.axisId.isNull())return {DrawingDimensionStatus::Invalid,QStringLiteral("Un asse non puo’ dipendere da un altro asse.")};
     const auto a=resolveDrawingAttachment(view,model,curves,axis.references[0]),b=resolveDrawingAttachment(view,model,curves,axis.references[1]);
     for(const auto *ref:{&a,&b})if(ref->status!=DrawingDimensionStatus::Ready)return {ref->status,ref->message};
     DrawingAxisResult result;result.status=DrawingDimensionStatus::Ready;

@@ -145,6 +145,7 @@ double fractionParameter(const DrawingCurve &curve,double fraction){
 }
 DrawingResolvedAttachment resolve(const DrawingView &view,const DrawingModelSnapshot &model,const std::vector<DrawingCurve> &curves,const DrawingAttachment &ref){
     DrawingResolvedAttachment out;out.status=DrawingDimensionStatus::Ready;
+    if(!ref.axisId.isNull())missing(QStringLiteral("Asse associato non disponibile senza il foglio della tavola."));
     if(drawingDatum(ref.role)){out.isPoint=ref.role==DrawingPointRole::Origin;out.isLine=!out.isPoint;out.first={};out.second=ref.role==DrawingPointRole::AxisY?Vec2(0,1):Vec2(1,0);return out;}
     const auto &source=sourceFor(model,ref.curve.featureId);const auto &curve=curveFor(view,source,curves,ref);out.curve=&curve;
     out.first=local(view,curve.curve->point(curve.range.lo));out.second=local(view,curve.curve->point(curve.range.hi));
@@ -188,7 +189,10 @@ QString validateDrawingAttachments(const DrawingDimension &d,const DrawingView &
             need((r.curveSide||r.anchorSide)?!r.supportFace.isEmpty():r.supportFace.isEmpty(),"Faccia di supporto incoerente.");
             need((r.curveSide&3)!=3&&(r.curveSide&12)!=12&&(r.anchorSide&3)!=3&&(r.anchorSide&12)!=12,"Lati UV incompatibili.");
             need(r.vertexName.size()<=4096&&r.boundaryName.size()<=4096&&(r.vertexName.isEmpty()||r.boundaryName.isEmpty()),"Origine dell'aggancio non valida.");
-            if(drawingDatum(r.role))need(r.supportFace.isEmpty()&&!r.curveSide&&!r.anchorSide&&!r.polar&&r.curve.kind==DrawingCurveKind::Section&&!r.curve.requiresWitness&&norm(r.curve.witness)==0&&!r.curve.featureId&&r.curve.faceName.isEmpty()&&r.curve.edgeName.isEmpty()&&r.vertexName.isEmpty()&&r.boundaryName.isEmpty()&&r.fraction==0,"Riferimento del piano con dati topologici estranei.");
+            if(!r.axisId.isNull()){
+                need(r.role==DrawingPointRole::Curve||r.role==DrawingPointRole::Start||r.role==DrawingPointRole::End||r.role==DrawingPointRole::Midpoint||r.role==DrawingPointRole::Nearest,"Tipo di aggancio all’asse non supportato.");
+                need(!r.curve.featureId&&r.curve.kind==DrawingCurveKind::Section&&r.curve.faceName.isEmpty()&&r.curve.edgeName.isEmpty()&&!r.curve.requiresWitness&&norm(r.curve.witness)==0&&r.supportFace.isEmpty()&&!r.curveSide&&!r.anchorSide&&!r.polar&&r.vertexName.isEmpty()&&r.boundaryName.isEmpty()&&!r.clipBoundary,"Aggancio all’asse con dati topologici estranei.");
+            }else if(drawingDatum(r.role))need(r.supportFace.isEmpty()&&!r.curveSide&&!r.anchorSide&&!r.polar&&r.curve.kind==DrawingCurveKind::Section&&!r.curve.requiresWitness&&norm(r.curve.witness)==0&&!r.curve.featureId&&r.curve.faceName.isEmpty()&&r.curve.edgeName.isEmpty()&&r.vertexName.isEmpty()&&r.boundaryName.isEmpty()&&r.fraction==0,"Riferimento del piano con dati topologici estranei.");
             else{if(!primary)primary=&r;need(r.curve.featureId&&isFinite(r.curve.witness),"Sorgente dell'aggancio non valida.");
                 need((r.curve.kind==DrawingCurveKind::Section&&!r.curve.faceName.isEmpty()&&r.curve.edgeName.isEmpty())||(r.curve.kind==DrawingCurveKind::ProjectedEdge&&!r.curve.edgeName.isEmpty()&&r.curve.faceName.isEmpty()),"Origine geometrica dell'aggancio non valida.");
                 need(r.curve.faceName.size()<=4096&&r.curve.edgeName.size()<=4096,"Nome geometrico troppo lungo.");
@@ -196,7 +200,8 @@ QString validateDrawingAttachments(const DrawingDimension &d,const DrawingView &
                 if(r.role==DrawingPointRole::Start||r.role==DrawingPointRole::End||(r.role==DrawingPointRole::Nearest&&!r.polar))need(!r.vertexName.isEmpty()||!r.boundaryName.isEmpty()||r.clipBoundary,"Punto privo di ancoraggio topologico.");
                 need(r.boundaryName.isEmpty()||r.curve.kind==DrawingCurveKind::Section,"Bordo di sezione su una proiezione.");}
         }
-        need(primary&&same(primary->curve,d.section),"Il riferimento principale non corrisponde agli agganci.");
+        const bool hasAxis=std::any_of(d.references.begin(),d.references.end(),[](const auto &r){return !r.axisId.isNull();});
+        need(primary?same(primary->curve,d.section):(hasAxis&&!d.section.featureId&&d.section.faceName.isEmpty()&&d.section.edgeName.isEmpty()&&d.section.kind==DrawingCurveKind::Section&&!d.section.requiresWitness&&norm(d.section.witness)==0),"Il riferimento principale non corrisponde agli agganci.");
         const bool single=d.measure==DrawingMeasure::Radius||d.measure==DrawingMeasure::Diameter||d.measure==DrawingMeasure::SectionLength;
         need(d.references.size()==(single?1u:2u),"Numero di riferimenti incompatibile con il tipo di quota.");return {};
     }catch(const std::exception &e){return QString::fromUtf8(e.what());}
@@ -219,13 +224,20 @@ DrawingAttachment drawingAttachment(const DrawingView &view,const DrawingCurve &
         const double length=arcLength(*curve.curve,curve.range);ref.fraction=parameter<=curve.range.lo?0:parameter>=curve.range.hi?1:arcLength(*curve.curve,{curve.range.lo,parameter})/length;}
     return ref;
 }
-DrawingResolvedAttachment resolveDrawingAttachment(const DrawingView &view,const DrawingModelSnapshot &model,const std::vector<DrawingCurve> &curves,const DrawingAttachment &ref){
-    try{return resolve(view,model,curves,ref);}catch(const ReferenceError &e){DrawingResolvedAttachment out;out.status=e.status;out.message=e.message;return out;}catch(const std::exception &e){DrawingResolvedAttachment out;out.message=QString::fromUtf8(e.what());return out;}
+DrawingResolvedAttachment resolveDrawingAttachment(const DrawingView &view,const DrawingModelSnapshot &model,const std::vector<DrawingCurve> &curves,const DrawingAttachment &ref,const DrawingAttachmentResolver &axes){
+    try{return !ref.axisId.isNull()&&axes?axes(ref):resolve(view,model,curves,ref);}catch(const ReferenceError &e){DrawingResolvedAttachment out;out.status=e.status;out.message=e.message;return out;}catch(const std::exception &e){DrawingResolvedAttachment out;out.message=QString::fromUtf8(e.what());return out;}
 }
-DrawingDimensionResult evaluateDrawingAttachments(const DrawingDimension &d,const DrawingView &view,const DrawingModelSnapshot &model,const std::vector<DrawingCurve> &curves){
+namespace {
+DrawingResolvedAttachment resolved(const DrawingView &view,const DrawingModelSnapshot &model,const std::vector<DrawingCurve> &curves,const DrawingAttachment &ref,const DrawingAttachmentResolver &axes){
+    auto result=resolveDrawingAttachment(view,model,curves,ref,axes);
+    if(result.status!=DrawingDimensionStatus::Ready)throw ReferenceError{result.status,result.message};
+    return result;
+}
+}
+DrawingDimensionResult evaluateDrawingAttachments(const DrawingDimension &d,const DrawingView &view,const DrawingModelSnapshot &model,const std::vector<DrawingCurve> &curves,const DrawingAttachmentResolver &axes){
     try{
         const auto error=validateDrawingAttachments(d,view);need(error.isEmpty(),qPrintable(error));need(!d.references.empty(),"Quota legacy senza agganci.");
-        auto a=resolve(view,model,curves,d.references[0]);DrawingResolvedAttachment b;if(d.references.size()==2)b=resolve(view,model,curves,d.references[1]);
+        auto a=resolved(view,model,curves,d.references[0],axes);DrawingResolvedAttachment b;if(d.references.size()==2)b=resolved(view,model,curves,d.references[1],axes);
         DrawingDimensionResult out;out.status=DrawingDimensionStatus::Ready;out.geometry=DrawingDimensionResult::Geometry::Linear;
         using M=DrawingMeasure;
         if(d.measure==M::SectionLength){need(a.curve,"La lunghezza richiede una curva.");out.value=arcLength(*a.curve->curve,a.curve->range);out.first=a.point;out.second=a.point;}
@@ -237,7 +249,7 @@ DrawingDimensionResult evaluateDrawingAttachments(const DrawingDimension &d,cons
             if(d.angleSides&2)v=-v;
             out.firstDirection=u;out.secondDirection=v;out.sweep=std::atan2(cross2(u,v),dot(u,v));out.value=std::abs(out.sweep)*180/kPi;out.geometry=DrawingDimensionResult::Geometry::Angle;}
         else{
-            if(d.measure==M::AxisRadius||d.measure==M::AxisDiameter){need(d.references[1].role==DrawingPointRole::AxisX||d.references[1].role==DrawingPointRole::AxisY,"Scegliere un asse del piano come secondo riferimento.");}
+            if(d.measure==M::AxisRadius||d.measure==M::AxisDiameter){need((!d.references[1].axisId.isNull()&&b.isLine)||d.references[1].role==DrawingPointRole::AxisX||d.references[1].role==DrawingPointRole::AxisY,"Scegliere un asse come secondo riferimento.");}
             if(a.isPoint&&b.isPoint){out.first=a.point;out.second=b.point;}
             else if(a.isPoint!=b.isPoint){const auto &point=a.isPoint?a:b,&other=a.isPoint?b:a;out.first=point.point;
                 if(other.isLine){const auto u=normalized(other.second-other.first);out.second=other.first+u*dot(point.point-other.first,u);}
@@ -254,12 +266,12 @@ int drawingAngleSector(const DrawingDimensionResult &base,const Vec2 &cursor){
     const auto w=cursor-base.vertex;for(int side=0;side<4;++side){const auto u=side&1?-base.firstDirection:base.firstDirection,v=side&2?-base.secondDirection:base.secondDirection;
         const double sweep=std::atan2(cross2(u,v),dot(u,v)),angle=std::atan2(cross2(u,w),dot(u,w));if(sweep*angle>=0&&std::abs(angle)<=std::abs(sweep))return side;}return 0;
 }
-DrawingDimension drawingDimensionBetween(const DrawingView &view,const DrawingModelSnapshot &model,const std::vector<DrawingCurve> &curves,std::vector<DrawingAttachment> refs,DrawingMeasure measure,const Vec2 &cursor,bool automatic){
-    need(!refs.empty()&&refs.size()<=2,"Selezionare uno o due riferimenti.");using M=DrawingMeasure;auto a=resolve(view,model,curves,refs[0]);
-    if(refs.size()==1&&a.isLine&&(automatic||measure==M::Distance||measure==M::EndpointDistance||measure==M::HorizontalDistance||measure==M::VerticalDistance)){
-        refs={drawingAttachment(view,*a.curve,model,DrawingPointRole::Start),drawingAttachment(view,*a.curve,model,DrawingPointRole::End)};a=resolve(view,model,curves,refs[0]);}
-    if(refs.size()==2&&automatic){for(auto &ref:refs){auto r=resolve(view,model,curves,ref);if(!r.isPoint&&r.hasCenter){ref.role=DrawingPointRole::Center;ref.polar=false;ref.fraction=0;ref.vertexName.clear();ref.boundaryName.clear();}}}
-    a=resolve(view,model,curves,refs[0]);DrawingResolvedAttachment b;if(refs.size()==2)b=resolve(view,model,curves,refs[1]);
+DrawingDimension drawingDimensionBetween(const DrawingView &view,const DrawingModelSnapshot &model,const std::vector<DrawingCurve> &curves,std::vector<DrawingAttachment> refs,DrawingMeasure measure,const Vec2 &cursor,bool automatic,const DrawingAttachmentResolver &axes){
+    need(!refs.empty()&&refs.size()<=2,"Selezionare uno o due riferimenti.");using M=DrawingMeasure;auto a=resolved(view,model,curves,refs[0],axes);
+    if(refs.size()==1&&a.isLine&&a.curve&&(automatic||measure==M::Distance||measure==M::EndpointDistance||measure==M::HorizontalDistance||measure==M::VerticalDistance)){
+        refs={drawingAttachment(view,*a.curve,model,DrawingPointRole::Start),drawingAttachment(view,*a.curve,model,DrawingPointRole::End)};a=resolved(view,model,curves,refs[0],axes);}
+    if(refs.size()==2&&automatic){for(auto &ref:refs){auto r=resolved(view,model,curves,ref,axes);if(!r.isPoint&&r.hasCenter){ref.role=DrawingPointRole::Center;ref.polar=false;ref.fraction=0;ref.vertexName.clear();ref.boundaryName.clear();}}}
+    a=resolved(view,model,curves,refs[0],axes);DrawingResolvedAttachment b;if(refs.size()==2)b=resolved(view,model,curves,refs[1],axes);
     if(automatic){
         if(refs.size()==1){need(a.isCircle&&!a.isPoint,"Aggiungere un secondo riferimento.");measure=distance(a.first,a.second)<=view.tolerance?M::Diameter:M::Radius;}
         else if(a.isLine&&b.isLine)measure=std::abs(cross2(normalized(a.second-a.first),normalized(b.second-b.first)))<1e-9?M::Distance:M::Angle;
@@ -268,8 +280,8 @@ DrawingDimension drawingDimensionBetween(const DrawingView &view,const DrawingMo
                 insideY&&!insideX&&std::abs(a.point.y()-b.point.y())>view.tolerance?M::VerticalDistance:M::Distance;}
         else measure=M::Distance;
     }
-    DrawingDimension d;d.viewId=view.id;d.measure=measure;d.references=std::move(refs);for(const auto &r:d.references)if(!drawingDatum(r.role)){d.section=r.curve;break;}
-    auto result=evaluateDrawingAttachments(d,view,model,curves);need(result.status==DrawingDimensionStatus::Ready,qPrintable(result.message));
+    DrawingDimension d;d.viewId=view.id;d.measure=measure;d.references=std::move(refs);for(const auto &r:d.references)if(r.axisId.isNull()&&!drawingDatum(r.role)){d.section=r.curve;break;}
+    auto result=evaluateDrawingAttachments(d,view,model,curves,axes);need(result.status==DrawingDimensionStatus::Ready,qPrintable(result.message));
     if(measure==M::Angle)d.angleSides=drawingAngleSector(result,cursor);
     return d;
 }

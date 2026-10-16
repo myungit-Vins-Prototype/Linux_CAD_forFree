@@ -90,6 +90,7 @@ struct DrawingAttachment {
     bool polar=false; // frazione angolare nel piano, per punti sulle coniche
     QString vertexName, boundaryName; // origine topologica e orientamento del tratto
     int clipBoundary=0; // bit 1: piano di taglio; bit 2: asse della mezza sezione
+    QUuid axisId; // asse associato del foglio: nessun indice o coordinata grafica
 };
 struct DrawingDimension {
     QUuid id = QUuid::createUuid();
@@ -134,6 +135,7 @@ DrawingDimensionResult evaluateDrawingDimension(const DrawingDocument &document,
 QString retargetDrawingModel(DrawingDocument &document, const DrawingDocumentVersion &version);
 
 bool drawingNeedsSectionSchema(const DrawingDocument &document);
+bool drawingNeedsAxisSchema(const DrawingDocument &document);
 
 // Codec autonomo del prototipo, incorporabile in un futuro contenitore.
 // Non modifica il formato .prt e non costituisce un archivio di revisioni.

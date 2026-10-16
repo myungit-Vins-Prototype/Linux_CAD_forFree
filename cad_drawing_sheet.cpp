@@ -5,6 +5,7 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QSet>
+#include <QHash>
 #include <cmath>
 #include <algorithm>
 #include <stdexcept>
@@ -45,12 +46,14 @@ void validate(const DrawingSheet &sheet){
     require(sheet.axes.size()<=10000,"Troppi assi nella tavola.");QSet<QUuid> axisIds;
     for(const auto &v:sheet.drawing.views)axisIds.insert(v.id);
     for(const auto &d:sheet.drawing.dimensions)axisIds.insert(d.id);
+    const auto documentIds=axisIds;QHash<QUuid,QUuid> axisViews;
     for(const auto &axis:sheet.axes){
-        require(!axis.id.isNull()&&!axisIds.contains(axis.id)&&!axis.name.trimmed().isEmpty()&&axis.name.size()<=128,"Identita' o nome dell'asse non validi.");axisIds.insert(axis.id);
+        require(!axis.id.isNull()&&!axisIds.contains(axis.id)&&!axis.name.trimmed().isEmpty()&&axis.name.size()<=128,"Identita' o nome dell'asse non validi.");axisIds.insert(axis.id);axisViews.insert(axis.id,axis.viewId);
         for(const auto c:axis.name)require(c.isPrint(),"Nome dell'asse non stampabile.");
         require(std::isfinite(axis.extension)&&axis.extension>=0&&axis.extension<=1000&&(axis.kind==DrawingAxisKind::ThroughPoints||axis.kind==DrawingAxisKind::BetweenLines)&&axis.references.size()==2,"Definizione dell'asse non valida.");
         const auto layout=std::find_if(sheet.views.cbegin(),sheet.views.cend(),[&](const auto &l){return l.viewId==axis.viewId;});require(layout!=sheet.views.cend(),"Vista dell'asse assente.");
         for(const auto &ref:axis.references){
+            require(ref.axisId.isNull(),"Dipendenza ricorsiva fra assi non supportata.");
             if(!drawingDatum(ref.role))require(layout->features.contains(ref.curve.featureId),"Asse collegato a un corpo estraneo alla vista.");
             require(axis.kind==DrawingAxisKind::BetweenLines?ref.role==DrawingPointRole::Curve:(ref.role!=DrawingPointRole::Curve&&ref.role!=DrawingPointRole::AxisX&&ref.role!=DrawingPointRole::AxisY),"Tipo di aggancio incompatibile con l'asse.");
         }
@@ -67,10 +70,24 @@ void validate(const DrawingSheet &sheet){
     for(const auto &layout:sheet.dimensions)require(dimensionIds.remove(layout.dimensionId)&&finite(layout.position),"Presentazione della quota non valida.");
     for(const auto &dimension:sheet.drawing.dimensions){
         const auto layout=std::find_if(sheet.views.cbegin(),sheet.views.cend(),[&](const auto &view){return view.viewId==dimension.viewId;});
-        require(layout!=sheet.views.cend()&&layout->features.contains(dimension.section.featureId),"La quota riferisce un corpo estraneo alla vista.");
-        for(const auto &ref:dimension.references)if(!drawingDatum(ref.role))require(layout->features.contains(ref.curve.featureId),"Un aggancio della quota riferisce un corpo estraneo alla vista.");
+        require(layout!=sheet.views.cend()&&(!dimension.section.featureId||layout->features.contains(dimension.section.featureId)),"La quota riferisce un corpo estraneo alla vista.");
+        for(const auto &ref:dimension.references)if(ref.axisId.isNull()){if(!drawingDatum(ref.role))require(layout->features.contains(ref.curve.featureId),"Un aggancio della quota riferisce un corpo estraneo alla vista.");}
+            else {if(axisViews.contains(ref.axisId))require(axisViews.value(ref.axisId)==dimension.viewId,"Asse della quota appartenente a un’altra vista.");require(!documentIds.contains(ref.axisId),"Identita’ dell’asse confusa con vista o quota.");}
     }
 }
+}
+DrawingAttachmentResolver drawingSheetAttachmentResolver(const DrawingSheet &sheet,const DrawingView &view,
+    const DrawingModelSnapshot &model,const std::vector<DrawingCurve> &curves){
+    return [&sheet,&view,&model,&curves](const DrawingAttachment &ref){
+        DrawingResolvedAttachment out;out.status=DrawingDimensionStatus::Missing;out.message=QStringLiteral("Asse associato della quota non trovato.");
+        const DrawingAxis *axis=nullptr;for(const auto &candidate:sheet.axes)if(candidate.id==ref.axisId){axis=&candidate;break;}
+        if(!axis||axis->viewId!=view.id)return out;
+        const auto result=evaluateDrawingAxis(*axis,view,model,curves);out.status=result.status;out.message=result.message;
+        if(out.status!=DrawingDimensionStatus::Ready)return out;
+        out.first=result.first;out.second=result.second;out.isLine=ref.role==DrawingPointRole::Curve;out.isPoint=!out.isLine;
+        const double fraction=ref.role==DrawingPointRole::End?1:ref.role==DrawingPointRole::Midpoint?.5:ref.role==DrawingPointRole::Nearest?ref.fraction:0;
+        out.point=out.first+fraction*(out.second-out.first);return out;
+    };
 }
 QString encodeDrawingSheet(const DrawingSheet &sheet,QByteArray &bytes){
     try{
@@ -88,7 +105,7 @@ QString encodeDrawingSheet(const DrawingSheet &sheet,QByteArray &bytes){
                 {"aligned",r.aligned},{"cutStart",pointJson(r.cutStart)},{"cutEnd",pointJson(r.cutEnd)},{"reverse",r.reverse},{"hatch",r.hatch},{"label",r.label}});
             views.append(object);}
         for(const auto &dimension:sheet.dimensions)dimensions.append(QJsonObject{{"id",dimension.dimensionId.toString(QUuid::WithoutBraces)},{"position",pointJson(dimension.position)}});
-        QJsonObject object{{"format","ForgeCAD.DrawingSheet"},{"schema",!sheet.axes.isEmpty()?4:(drawingNeedsSectionSchema(sheet.drawing)||std::any_of(sheet.views.cbegin(),sheet.views.cend(),[](const auto &v){return v.relation.parentId.isNull()&&!v.relation.hatch;}))?3:std::any_of(sheet.views.cbegin(),sheet.views.cend(),[](const auto &v){return !v.relation.parentId.isNull();})?2:1},{"title",sheet.title},
+        QJsonObject object{{"format","ForgeCAD.DrawingSheet"},{"schema",drawingNeedsAxisSchema(sheet.drawing)?5:!sheet.axes.isEmpty()?4:(drawingNeedsSectionSchema(sheet.drawing)||std::any_of(sheet.views.cbegin(),sheet.views.cend(),[](const auto &v){return v.relation.parentId.isNull()&&!v.relation.hatch;}))?3:std::any_of(sheet.views.cbegin(),sheet.views.cend(),[](const auto &v){return !v.relation.parentId.isNull();})?2:1},{"title",sheet.title},
             {"size",QJsonArray{sheet.size.width(),sheet.size.height()}},{"drawing",QJsonDocument::fromJson(document).object()},
             {"views",views},{"dimensions",dimensions}};
         if(!sheet.axes.isEmpty()){
@@ -109,9 +126,10 @@ QString decodeDrawingSheet(const QByteArray &bytes,DrawingSheet &sheet){
     try{
         require(!bytes.isEmpty()&&bytes.size()<=8*1024*1024,"Dimensione del foglio non valida.");
         const auto json=QJsonDocument::fromJson(bytes);const auto object=json.object();
-        require(json.isObject()&&object["format"].toString()==QLatin1String("ForgeCAD.DrawingSheet")&&(object["schema"].toInt(-1)==1||object["schema"].toInt(-1)==2||object["schema"].toInt(-1)==3||object["schema"].toInt(-1)==4),"Formato del foglio non supportato.");
+        require(json.isObject()&&object["format"].toString()==QLatin1String("ForgeCAD.DrawingSheet")&&(object["schema"].toInt(-1)==1||object["schema"].toInt(-1)==2||object["schema"].toInt(-1)==3||object["schema"].toInt(-1)==4||object["schema"].toInt(-1)==5),"Formato del foglio non supportato.");
         const int schema=object["schema"].toInt();
-        require(schema==4||(!object.contains("axes")&&!object.contains("axisReferenceSchema")),"Assi estranei allo schema del foglio dichiarato.");
+        require(object.contains("axes")==object.contains("axisReferenceSchema"),"Metadati assi incompleti.");
+        require(schema>=4||(!object.contains("axes")&&!object.contains("axisReferenceSchema")),"Assi estranei allo schema del foglio dichiarato.");
         require(object["title"].isString()&&object["drawing"].isObject()&&object["views"].isArray()&&object["dimensions"].isArray(),"Dati del foglio incompleti.");
         DrawingSheet prepared;prepared.title=object["title"].toString();const auto size=readPoint(object["size"]);prepared.size=QSizeF(size.x(),size.y());
         if(object.contains("titleBlock")){require(object["titleBlock"].isObject(),"Cartiglio non valido.");const auto block=object["titleBlock"].toObject();require(block["visible"].isBool(),"Visibilita' del cartiglio non valida.");
@@ -122,7 +140,8 @@ QString decodeDrawingSheet(const QByteArray &bytes,DrawingSheet &sheet){
             for(const auto &value:table["notes"].toArray()){require(value.isObject(),"Riga revisioni non valida.");const auto row=value.toObject();require(row["description"].isString()&&row["verifiedBy"].isString(),"Testo della revisione non valido.");prepared.revisionTable.notes.append({readId(row["checkinId"]),row["description"].toString(),row["verifiedBy"].toString()});}
         }
         ok(decodeDrawingDocument(QJsonDocument(object["drawing"].toObject()).toJson(QJsonDocument::Compact),prepared.drawing));
-        if(schema==4){
+        require(!drawingNeedsAxisSchema(prepared.drawing)||object["schema"].toInt()>=5,"Quote sugli assi estranee allo schema del foglio.");
+        if(schema==4||object.contains("axes")){
             require(object["axes"].isArray()&&object["axes"].toArray().size()<=10000,"Elenco assi non valido.");
             const auto refSchema=object["axisReferenceSchema"].toDouble(-1);require(refSchema==3||refSchema==4,"Schema degli agganci degli assi non valido.");
             auto support=object["drawing"].toObject();support["schema"]=refSchema;QJsonArray views,definitions;

@@ -89,13 +89,16 @@ void validateDocument(const DrawingDocument &document) {
         const auto &reference=dimension.section;
         const bool edge=reference.kind==DrawingCurveKind::ProjectedEdge;
         require(reference.kind==DrawingCurveKind::Section || edge,"Tipo di riferimento non supportato.");
+        const bool axisOnly=!dimension.references.empty()&&std::all_of(dimension.references.begin(),dimension.references.end(),[](const auto &r){return !r.axisId.isNull()||drawingDatum(r.role);});
+        if(!axisOnly){
         require(reference.featureId && isFinite(reference.witness),"Riferimento geometrico non valido.");
         require(edge ? (!reference.edgeName.isEmpty() && reference.edgeName.size()<=4096 && reference.faceName.isEmpty())
                      : (!reference.faceName.isEmpty() && reference.faceName.size()<=4096 && reference.edgeName.isEmpty()),"Nome del riferimento geometrico non valido.");
         require(edge ? drawingHasProjection(*view) : (view->kind==DrawingViewKind::Section || view->sectionReferences),"Riferimento estraneo al tipo di vista.");
+        }
         require(int(dimension.measure)>=0&&int(dimension.measure)<=9,"Tipo di quota non supportato.");
         const auto attachments=validateDrawingAttachments(dimension,*view);require(attachments.isEmpty(),qPrintable(attachments));
-        for(const auto &attachment:dimension.references)if(!drawingDatum(attachment.role)){
+        for(const auto &attachment:dimension.references)if(attachment.axisId.isNull()&&!drawingDatum(attachment.role)){
             const auto &r=attachment.curve;require(r.kind==DrawingCurveKind::ProjectedEdge?drawingHasProjection(*view):(view->kind==DrawingViewKind::Section||view->sectionReferences),"Aggancio estraneo al tipo di vista.");
         }
     }
@@ -289,7 +292,7 @@ DrawingDimensionResult evaluateDrawingDimension(const DrawingDocument &document,
         const auto view = std::find_if(document.views.begin(), document.views.end(), [&](const auto &v) { return v.id == dimension->viewId; });
         if(!dimension->references.empty()){
             DrawingModelSnapshot selected;selected.version=model.version;QSet<quint64> wanted;
-            for(const auto &reference:dimension->references)if(!drawingDatum(reference.role))wanted.insert(reference.curve.featureId);
+            for(const auto &reference:dimension->references)if(reference.axisId.isNull()&&!drawingDatum(reference.role))wanted.insert(reference.curve.featureId);
             for(const auto &s:model.bodies)if(wanted.contains(s.featureId))selected.bodies.push_back(s);
             std::vector<DrawingCurve> curves;const auto generated=drawingViewCurves(selected,*view,curves);
             if(!generated.isEmpty())return failure(DrawingDimensionStatus::Invalid,generated);
@@ -341,6 +344,10 @@ QString retargetDrawingModel(DrawingDocument &document, const DrawingDocumentVer
     return {};
 }
 
+bool drawingNeedsAxisSchema(const DrawingDocument &document){
+    for(const auto &d:document.dimensions)for(const auto &r:d.references)if(!r.axisId.isNull())return true;
+    return false;
+}
 bool drawingNeedsSectionSchema(const DrawingDocument &document){
     if(std::any_of(document.views.begin(),document.views.end(),[](const auto &v){return v.sectionStyle!=DrawingSectionStyle::Removed;}))return true;
     for(const auto &d:document.dimensions)for(const auto &r:d.references)if(r.clipBoundary)return true;
@@ -349,7 +356,8 @@ bool drawingNeedsSectionSchema(const DrawingDocument &document){
 QString encodeDrawingDocument(const DrawingDocument &document, QByteArray &bytes) {
     try {
         validateDocument(document);
-        const bool technical=drawingNeedsSectionSchema(document);
+        const bool axisReferences=drawingNeedsAxisSchema(document);
+        const bool technical=axisReferences||drawingNeedsSectionSchema(document);
         const bool attachments=technical||std::any_of(document.dimensions.begin(),document.dimensions.end(),[](const auto &d){return !d.references.empty()||d.decimals!=2;});
         const bool extended=attachments||std::any_of(document.views.begin(),document.views.end(),[](const auto &view){return view.kind!=DrawingViewKind::Section;})
             ||std::any_of(document.dimensions.begin(),document.dimensions.end(),[](const auto &dimension){return int(dimension.measure)>1;});
@@ -366,10 +374,10 @@ QString encodeDrawingDocument(const DrawingDocument &document, QByteArray &bytes
             if(attachments){QJsonArray references;for(const auto &r:dimension.references){references.append(QJsonObject{
                 {"featureId",QString::number(r.curve.featureId)},{"faceName",r.curve.faceName},{"edgeName",r.curve.edgeName},{"kind",int(r.curve.kind)},
                 {"witness",QJsonArray{r.curve.witness.x(),r.curve.witness.y()}},{"requiresWitness",r.curve.requiresWitness},
-                {"role",int(r.role)},{"fraction",r.fraction},{"polar",r.polar},{"supportFace",r.supportFace},{"curveSide",r.curveSide},{"anchorSide",r.anchorSide},{"vertex",r.vertexName},{"boundary",r.boundaryName}});if(technical){auto object=references.last().toObject();object["clipBoundary"]=r.clipBoundary;references[references.size()-1]=object;}}
+                {"role",int(r.role)},{"fraction",r.fraction},{"polar",r.polar},{"supportFace",r.supportFace},{"curveSide",r.curveSide},{"anchorSide",r.anchorSide},{"vertex",r.vertexName},{"boundary",r.boundaryName}});if(technical){auto object=references.last().toObject();object["clipBoundary"]=r.clipBoundary;if(!r.axisId.isNull())object["axisId"]=uuidText(r.axisId);references[references.size()-1]=object;}}
                 object["references"]=references;object["angleSides"]=dimension.angleSides;object["decimals"]=dimension.decimals;}
             dimensions.append(object);}
-        const QByteArray prepared=QJsonDocument(QJsonObject{{"format","ForgeCAD.DrawingPrototype"},{"schema",technical?4:attachments?3:extended?2:1},
+        const QByteArray prepared=QJsonDocument(QJsonObject{{"format","ForgeCAD.DrawingPrototype"},{"schema",axisReferences?5:technical?4:attachments?3:extended?2:1},
             {"version",versionJson(document.version)},{"model",versionJson(document.model)},{"views",views},{"dimensions",dimensions}}).toJson(QJsonDocument::Compact);
         require(prepared.size() <= kMaxDrawingBytes, "Tavola troppo grande per il codec del prototipo.");
         bytes = prepared;
@@ -385,7 +393,7 @@ QString decodeDrawingDocument(const QByteArray &bytes, DrawingDocument &document
         require(parse.error == QJsonParseError::NoError && json.isObject(), "Documento tavola JSON non valido.");
         const auto root = json.object();
         const double schema=root["schema"].toDouble(-1);
-        require(root["format"].toString()==QLatin1String("ForgeCAD.DrawingPrototype")&&(schema==1||schema==2||schema==3||schema==4),"Formato o schema della tavola non supportato.");
+        require(root["format"].toString()==QLatin1String("ForgeCAD.DrawingPrototype")&&(schema==1||schema==2||schema==3||schema==4||schema==5),"Formato o schema della tavola non supportato.");
         require(root["views"].isArray() && root["dimensions"].isArray(), "Elenchi della tavola assenti.");
         const auto views = root["views"].toArray(), dimensions = root["dimensions"].toArray();
         require(views.size() <= qsizetype(kMaxRecords) && dimensions.size() <= qsizetype(kMaxRecords), "Troppi elementi nella tavola.");
@@ -400,7 +408,7 @@ QString decodeDrawingDocument(const QByteArray &bytes, DrawingDocument &document
             if(schema>=2){const double kind=v["kind"].toDouble(-1);require((kind==0||kind==1)&&v["sectionReferences"].isBool(),"Tipo o riferimenti della vista non validi.");
                 view.kind=DrawingViewKind(int(kind));view.sectionReferences=v["sectionReferences"].toBool();}
             else require(!v.contains("kind")&&!v.contains("sectionReferences"),"Estensione della vista non prevista dallo schema 1.");
-            if(schema==4){const auto style=v["sectionStyle"].toDouble(-1);require(style>=0&&style<=3&&style==std::floor(style),"Presentazione della sezione non valida.");view.sectionStyle=DrawingSectionStyle(int(style));}
+            if(schema>=4){const auto style=v["sectionStyle"].toDouble(-1);require(style>=0&&style<=3&&style==std::floor(style),"Presentazione della sezione non valida.");view.sectionStyle=DrawingSectionStyle(int(style));}
             else require(!v.contains("sectionStyle"),"Presentazione della sezione estranea allo schema dichiarato.");
             prepared.views.push_back(std::move(view));
         }
@@ -439,7 +447,8 @@ QString decodeDrawingDocument(const QByteArray &bytes, DrawingDocument &document
                     a.curve.kind=DrawingCurveKind(int(kind));a.role=DrawingPointRole(int(role));
                     const auto witness=r["witness"].toArray();require(r["witness"].isArray()&&witness.size()==2&&witness[0].isDouble()&&witness[1].isDouble()&&r["requiresWitness"].isBool()&&r["fraction"].isDouble()&&r["polar"].isBool(),"Parametri dell'aggancio non validi.");
                     a.curve.witness=Vec2(witness[0].toDouble(),witness[1].toDouble());a.curve.requiresWitness=r["requiresWitness"].toBool();
-                    if(schema==4){const auto boundary=r["clipBoundary"].toDouble(-1);require(boundary>=0&&boundary<=3&&boundary==std::floor(boundary),"Origine di taglio dell'aggancio non valida.");a.clipBoundary=int(boundary);}else require(!r.contains("clipBoundary"),"Origine di taglio estranea allo schema dichiarato.");
+                    if(schema>=4){const auto boundary=r["clipBoundary"].toDouble(-1);require(boundary>=0&&boundary<=3&&boundary==std::floor(boundary),"Origine di taglio dell'aggancio non valida.");a.clipBoundary=int(boundary);}else require(!r.contains("clipBoundary"),"Origine di taglio estranea allo schema dichiarato.");
+                    if(r.contains("axisId")){require(schema>=5,"Asse estraneo allo schema degli agganci.");a.axisId=readUuid(r["axisId"]);}
                     a.fraction=r["fraction"].toDouble();a.polar=r["polar"].toBool();dimension.references.push_back(std::move(a));
                 }
             }else require(!d.contains("references")&&!d.contains("angleSides")&&!d.contains("decimals"),"Agganci estesi non previsti dallo schema dichiarato.");

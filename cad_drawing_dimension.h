@@ -1,5 +1,6 @@
 #pragma once
 #include "cad_drawing.h"
+#include <functional>
 namespace ForgeCad {
 struct DrawingPrimitive {
     enum class Kind { Other, Line, Conic } kind=Kind::Other;
@@ -21,13 +22,14 @@ struct DrawingResolvedAttachment {
     bool isPoint=false,isLine=false,isCircle=false,hasCenter=false;
     const DrawingCurve *curve=nullptr;
 };
+using DrawingAttachmentResolver=std::function<DrawingResolvedAttachment(const DrawingAttachment &)>;
 DrawingResolvedAttachment resolveDrawingAttachment(const DrawingView &view,const DrawingModelSnapshot &model,
-    const std::vector<DrawingCurve> &curves,const DrawingAttachment &reference);
+    const std::vector<DrawingCurve> &curves,const DrawingAttachment &reference,const DrawingAttachmentResolver &axes={});
 // Riusa le curve della vista gia' calcolate; nessuna lettura del workspace.
 DrawingDimensionResult evaluateDrawingAttachments(const DrawingDimension &dimension,const DrawingView &view,
-    const DrawingModelSnapshot &model,const std::vector<DrawingCurve> &curves);
+    const DrawingModelSnapshot &model,const std::vector<DrawingCurve> &curves,const DrawingAttachmentResolver &axes={});
 DrawingDimension drawingDimensionBetween(const DrawingView &view,const DrawingModelSnapshot &model,const std::vector<DrawingCurve> &curves,
-    std::vector<DrawingAttachment> references,DrawingMeasure measure,const Kernel::Vec2 &cursor,bool automatic=false);
+    std::vector<DrawingAttachment> references,DrawingMeasure measure,const Kernel::Vec2 &cursor,bool automatic=false,const DrawingAttachmentResolver &axes={});
 int drawingAngleSector(const DrawingDimensionResult &base,const Kernel::Vec2 &cursor);
 QString drawingDimensionName(DrawingMeasure measure);
 QString drawingDimensionText(const DrawingDimension &dimension,double value);
