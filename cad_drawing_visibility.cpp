@@ -8,6 +8,7 @@
 #include <cmath>
 #include <numeric>
 #include <limits>
+#include <set>
 #include <stdexcept>
 namespace ForgeCad {
 namespace {
@@ -131,6 +132,15 @@ QString drawingViewVisibility(const DrawingModelSnapshot &model,const DrawingVie
         for(std::size_t i=0;i<curves.size();++i)eligible[i]=!next.curves[i].visible.isEmpty();
         next.visibleCenters=drawingCenterGeometry(view,curves,eligible);
         for(const auto &contour:silhouettes.paths)next.silhouettes.push_back(display(contour.points,view,index.get()));
+        std::set<std::pair<quint64,std::uint32_t>> visibleFaces;
+        for(std::size_t i=0;i<curves.size();++i)if(!next.curves[i].visible.isEmpty()){
+            const auto &curve=curves[i];if(curve.kind==DrawingCurveKind::Section)visibleFaces.emplace(curve.featureId,curve.sourceFace.index);
+            else{const auto source=std::find_if(model.bodies.begin(),model.bodies.end(),[&](const auto &s){return s.featureId==curve.featureId;});if(source==model.bodies.end())continue;
+                const auto &edge=source->body->edge(curve.sourceEdge);for(auto fin:{edge.forward,edge.backward})if(fin.valid())visibleFaces.emplace(curve.featureId,source->body->finFace(fin).index);}
+        }
+        for(std::size_t i=0;i<silhouettes.paths.size();++i)if(!next.silhouettes[i].visible.isEmpty())visibleFaces.emplace(silhouettes.paths[i].featureId,silhouettes.paths[i].sourceFace.index);
+        next.allCylinderAxes=drawingCylinderAxes(model,view,[](quint64,FaceId){return true;});
+        next.visibleCylinderAxes=drawingCylinderAxes(model,view,[&](quint64 feature,FaceId face){return visibleFaces.count({feature,face.index});});
         if(includeMesh&&drawingHasProjection(view)){renderShadedMesh(model,view,cache,next.shadedImage,next.shadedBounds);next.meshPrepared=true;}
         result=std::move(next);return {};
     }catch(const std::exception &error){return QString::fromUtf8(error.what());}

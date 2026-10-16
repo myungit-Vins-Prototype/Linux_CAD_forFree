@@ -1,6 +1,7 @@
 #ifndef FORGECAD_DRAWING_SHEET_H
 #define FORGECAD_DRAWING_SHEET_H
 #include "cad_drawing.h"
+#include "cad_drawing_axes.h"
 #include <QPointF>
 #include <QSizeF>
 #include <QVector>
@@ -28,6 +29,7 @@ struct DrawingViewLayout {
     DrawingViewRelation relation{};
     bool showMesh=false; // facce ombreggiate dalla mesh, mai riferimenti di quota
     bool showCenterMarks=false,showCenterLines=false; // cerchi/ellissi esatti della vista
+    bool showCylinderAxes=false; // asse delle superfici cilindriche, sola presentazione
 };
 struct DrawingDimensionLayout {
     QUuid dimensionId;
@@ -53,6 +55,7 @@ struct DrawingSheet {
     QVector<DrawingDimensionLayout> dimensions;
     DrawingTitleBlock titleBlock;
     DrawingRevisionTable revisionTable;
+    QVector<DrawingAxis> axes;
 };
 // Solo metadati del foglio; nessuna duplicazione della geometria del modello.
 QString encodeDrawingSheet(const DrawingSheet &sheet,QByteArray &bytes);

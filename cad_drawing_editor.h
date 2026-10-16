@@ -52,6 +52,12 @@ public:
     QString setShadedFacesVisible(const QUuid &id,bool visible);
     QString setCenterMarksVisible(const QUuid &id,bool visible);
     QString setCenterLinesVisible(const QUuid &id,bool visible);
+    QString setCylinderAxesVisible(const QUuid &id,bool visible);
+    QString beginAxis(DrawingAxisKind kind,const QUuid &existing={});
+    QString addAxis(DrawingAxis axis);
+    QString updateAxis(DrawingAxis axis);
+    QString removeAxis(const QUuid &id);
+    DrawingAxisResult axisResult(const QUuid &id)const;
     QString setRevisionTable(const DrawingRevisionTable &table);
     bool isComputing()const;
     QString setPageSettings(const QString &title,const QSizeF &size,const DrawingTitleBlock &block);

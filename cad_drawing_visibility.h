@@ -1,6 +1,7 @@
 #pragma once
 #include "cad_drawing_silhouette.h"
 #include "cad_drawing_centers.h"
+#include "cad_drawing_axes.h"
 #include <QPainterPath>
 #include <QImage>
 #include <QRectF>
@@ -11,6 +12,7 @@ struct DrawingVisiblePath {QPainterPath visible,hidden;};
 struct DrawingViewVisibility {
     std::vector<DrawingVisiblePath> curves,silhouettes;
     QPainterPath sectionHatch,sectionMaterial;
+    QPainterPath visibleCylinderAxes,allCylinderAxes;
     QImage shadedImage;
     QRectF shadedBounds;
     bool meshPrepared=false;
