@@ -1,4 +1,5 @@
 #include "cad_drawing_sheet.h"
+#include "cad_drawing_derived.h"
 #include "cad_drawing_dimension.h"
 #include <QJsonArray>
 #include <QJsonDocument>
@@ -29,6 +30,7 @@ void validate(const DrawingSheet &sheet){
     require(block.code.size()<=128&&block.organization.size()<=128&&block.author.size()<=128&&block.date.size()<=32,"Campi del cartiglio troppo lunghi.");
     for(const auto &field:{block.code,block.organization,block.author,block.date})for(const QChar c:field)require(c.isPrint(),"Il cartiglio contiene caratteri non stampabili.");
     require(!block.visible||(sheet.size.width()>=195&&sheet.size.height()>=80),"Foglio troppo piccolo per il cartiglio: minimo 195 x 80 mm.");
+    ok(validateDrawingRelations(sheet));
     QSet<QUuid> viewIds,dimensionIds;
     for(const auto &view:sheet.drawing.views)viewIds.insert(view.id);
     for(const auto &dimension:sheet.drawing.dimensions)dimensionIds.insert(dimension.id);
@@ -51,9 +53,12 @@ QString encodeDrawingSheet(const DrawingSheet &sheet,QByteArray &bytes){
         for(const auto &view:sheet.views){QJsonArray features;for(auto id:view.features)features.append(QString::number(id));
             QJsonObject object{{"id",view.viewId.toString(QUuid::WithoutBraces)},{"title",view.title},{"position",pointJson(view.position)},{"features",features}};
             if(view.showHiddenLines)object.insert("showHiddenLines",true);
+            const auto &r=view.relation;if(!r.parentId.isNull())object.insert("relation",QJsonObject{
+                {"parent",r.parentId.toString(QUuid::WithoutBraces)},{"kind",int(r.kind)},{"side",int(r.side)},{"method",int(r.method)},
+                {"aligned",r.aligned},{"cutStart",pointJson(r.cutStart)},{"cutEnd",pointJson(r.cutEnd)},{"reverse",r.reverse},{"hatch",r.hatch},{"label",r.label}});
             views.append(object);}
         for(const auto &dimension:sheet.dimensions)dimensions.append(QJsonObject{{"id",dimension.dimensionId.toString(QUuid::WithoutBraces)},{"position",pointJson(dimension.position)}});
-        QJsonObject object{{"format","ForgeCAD.DrawingSheet"},{"schema",1},{"title",sheet.title},
+        QJsonObject object{{"format","ForgeCAD.DrawingSheet"},{"schema",std::any_of(sheet.views.cbegin(),sheet.views.cend(),[](const auto &v){return !v.relation.parentId.isNull();})?2:1},{"title",sheet.title},
             {"size",QJsonArray{sheet.size.width(),sheet.size.height()}},{"drawing",QJsonDocument::fromJson(document).object()},
             {"views",views},{"dimensions",dimensions}};
         const auto &block=sheet.titleBlock;if(block.visible||!block.code.isEmpty()||!block.organization.isEmpty()||!block.author.isEmpty()||!block.date.isEmpty())object.insert("titleBlock",QJsonObject{{"visible",block.visible},{"code",block.code},{"organization",block.organization},{"author",block.author},{"date",block.date}});
@@ -65,7 +70,7 @@ QString decodeDrawingSheet(const QByteArray &bytes,DrawingSheet &sheet){
     try{
         require(!bytes.isEmpty()&&bytes.size()<=8*1024*1024,"Dimensione del foglio non valida.");
         const auto json=QJsonDocument::fromJson(bytes);const auto object=json.object();
-        require(json.isObject()&&object["format"].toString()==QLatin1String("ForgeCAD.DrawingSheet")&&object["schema"].toInt(-1)==1,"Formato del foglio non supportato.");
+        require(json.isObject()&&object["format"].toString()==QLatin1String("ForgeCAD.DrawingSheet")&&(object["schema"].toInt(-1)==1||object["schema"].toInt(-1)==2),"Formato del foglio non supportato.");
         require(object["title"].isString()&&object["drawing"].isObject()&&object["views"].isArray()&&object["dimensions"].isArray(),"Dati del foglio incompleti.");
         DrawingSheet prepared;prepared.title=object["title"].toString();const auto size=readPoint(object["size"]);prepared.size=QSizeF(size.x(),size.y());
         if(object.contains("titleBlock")){require(object["titleBlock"].isObject(),"Cartiglio non valido.");const auto block=object["titleBlock"].toObject();require(block["visible"].isBool(),"Visibilita' del cartiglio non valida.");
@@ -80,6 +85,16 @@ QString decodeDrawingSheet(const QByteArray &bytes,DrawingSheet &sheet){
             require(!view.contains("showHiddenLines")||view["showHiddenLines"].isBool(),"Visibilita' delle linee nascoste non valida.");layout.showHiddenLines=view["showHiddenLines"].toBool(false);
             const auto features=view["features"].toArray();require(features.size()<=10000,"Troppe sorgenti nella vista.");
             for(const auto &feature:features){require(feature.isString(),"ID sorgente non valido.");bool valid=false;const auto id=feature.toString().toULongLong(&valid);require(valid,"ID sorgente non valido.");layout.features.append(id);}
+            if(view.contains("relation")){
+                require(object["schema"].toInt()==2&&view["relation"].isObject(),"Relazione della vista non supportata dal formato.");
+                const auto r=view["relation"].toObject();layout.relation.parentId=readId(r["parent"]);
+                const auto integer=[&](const char *key,int lo,int hi){const auto value=r[key];const double number=value.toDouble(-100);require(value.isDouble()&&number==std::floor(number)&&number>=lo&&number<=hi,"Enumerazione della relazione non valida.");return int(number);};
+                layout.relation.kind=DrawingDerivedKind(integer("kind",1,2));layout.relation.side=DrawingProjectionSide(integer("side",0,3));layout.relation.method=DrawingProjectionMethod(integer("method",0,1));
+                for(const auto key:{"aligned","reverse","hatch"})require(r[key].isBool(),"Opzione della relazione non valida.");
+                require(r["label"].isString(),"Identificativo della sezione assente.");
+                layout.relation.aligned=r["aligned"].toBool();layout.relation.reverse=r["reverse"].toBool();layout.relation.hatch=r["hatch"].toBool();layout.relation.label=r["label"].toString();
+                layout.relation.cutStart=readPoint(r["cutStart"]);layout.relation.cutEnd=readPoint(r["cutEnd"]);
+            }
             prepared.views.append(std::move(layout));
         }
         for(const auto &value:object["dimensions"].toArray()){require(value.isObject(),"Quota del foglio non valida.");const auto dimension=value.toObject();

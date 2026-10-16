@@ -6,12 +6,26 @@
 #include <QVector>
 
 namespace ForgeCad {
+enum class DrawingDerivedKind { None, Orthographic, Section };
+enum class DrawingProjectionSide { Left, Right, Above, Below };
+enum class DrawingProjectionMethod { FirstAngle, ThirdAngle };
+struct DrawingViewRelation {
+    QUuid parentId;
+    DrawingDerivedKind kind=DrawingDerivedKind::None;
+    DrawingProjectionSide side=DrawingProjectionSide::Right;
+    DrawingProjectionMethod method=DrawingProjectionMethod::FirstAngle;
+    bool aligned=true;
+    QPointF cutStart,cutEnd; // coordinate del piano madre, mm modello, Y verso l’alto
+    bool reverse=false,hatch=true;
+    QString label;
+};
 struct DrawingViewLayout {
     QUuid viewId;
     QString title;
     QPointF position; // origine del piano sul foglio, in mm (Y verso il basso)
     QVector<quint64> features;
     bool showHiddenLines=false; // presentazione della sola vista, salvata nel .drw
+    DrawingViewRelation relation{};
 };
 struct DrawingDimensionLayout {
     QUuid dimensionId;

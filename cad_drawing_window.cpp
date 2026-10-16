@@ -74,8 +74,8 @@ void DrawingWindow::installEditor(){
     next->findChild<QAction *>("drawingUpdateModelAction")->setVisible(false);
     layout->addWidget(next,1);auto *previous=takeCentralWidget();setCentralWidget(container);editor_=next;delete previous;
     const auto populate=[next](QMenu *menu,std::initializer_list<const char *> names){menu->clear();for(auto name:names)menu->addAction(next->findChild<QAction *>(name));};
-    populate(editMenu_,{"drawingPageSettingsAction","drawingUndoAction","drawingRedoAction","drawingEditViewAction","drawingAlignViewAction","drawingDeleteSelectionAction"});
-    populate(insertMenu_,{"drawingAddProjectionAction","drawingAddViewAction"});
+    populate(editMenu_,{"drawingPageSettingsAction","drawingUndoAction","drawingRedoAction","drawingEditViewAction","drawingAlignViewAction","drawingDetachViewAction","drawingReleaseAlignmentAction","drawingEditSectionLineAction","drawingReverseSectionAction","drawingSectionHatchAction","drawingDeleteSelectionAction"});
+    populate(insertMenu_,{"drawingAddProjectionAction","drawingDerivedViewAction","drawingAddViewAction","drawingTechnicalSectionAction"});
     populate(dimensionMenu_,{"drawingSmartDimensionAction","drawingEditDimensionAction","drawingEndpointDimensionAction","drawingHorizontalDimensionAction","drawingVerticalDimensionAction","drawingLengthDimensionAction"});
     auto *references=addCadMenu(dimensionMenu_,QStringLiteral("Riferimenti del piano"));
     for(auto name:{"drawingOriginReferenceAction","drawingAxisXReferenceAction","drawingAxisYReferenceAction"})references->addAction(next->findChild<QAction *>(name));

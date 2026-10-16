@@ -28,6 +28,15 @@ public:
     QString insertView(DrawingView view,DrawingViewLayout layout);
     // Anteprima transitoria: segue il mouse, clic inserisce, Esc annulla.
     QString beginViewPlacement(DrawingView view,DrawingViewLayout layout);
+    QString beginDerivedViewPlacement(const QUuid &parent,DrawingProjectionSide side,DrawingProjectionMethod method);
+    QString beginSectionLine(const QUuid &parent,const QString &label,bool reverse=false,const QUuid &existing={});
+    QString setSectionLine(const QUuid &section,QPointF start,QPointF end);
+    QString beginSectionPlacement(const QUuid &parent,QPointF start,QPointF end,const QString &label,bool reverse=false);
+    bool hasSectionLine()const;
+    QString detachView(const QUuid &id);
+    QString setViewAlignment(const QUuid &id,bool aligned);
+    QString setSectionHatch(const QUuid &id,bool visible);
+    QString reverseSection(const QUuid &id);
     bool hasViewPlacement() const;
     void cancelViewPlacement();
     // Modifica atomica: ID di vista e quote conservati; ricalcolo della sola vista.

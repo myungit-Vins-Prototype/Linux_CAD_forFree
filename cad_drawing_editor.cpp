@@ -1,6 +1,7 @@
 #include "cad_drawing_editor.h"
 #include "cad_drawing_silhouette.h"
 #include "cad_drawing_visibility.h"
+#include "cad_drawing_derived.h"
 #include "cad_icons.h"
 #include "cad_menu.h"
 #include "cad_toolbar.h"
@@ -208,9 +209,8 @@ struct DrawingSheetEditor::Impl{
         while(history.size()>1&&(history.size()>101||size>16*1024*1024)){size-=history.front().sheet.size();history.erase(history.begin());--historyIndex;}
         refreshHistoryActions();notify();
     }
-    QString restore(std::size_t index){
+    QString replaceState(DrawingSheet next){
         try{
-            DrawingSheet next;const auto error=decodeDrawingSheet(history[index].sheet,next);if(!error.isEmpty())return error;
             std::map<QUuid,std::vector<DrawingCurve>> prepared;std::map<QUuid,DrawingSilhouetteResult> preparedSilhouettes;std::map<QUuid,std::shared_ptr<const DrawingViewVisibility>> preparedVisibility;QSet<QUuid> changedViews;
             for(const auto &definition:next.drawing.views){const auto layout=std::find_if(next.views.begin(),next.views.end(),[&](const auto &l){return l.viewId==definition.id;});
                 const auto *old=viewFor(definition.id);const auto *oldLayout=layoutFor(definition.id);const auto cached=curves.find(definition.id);
@@ -222,27 +222,73 @@ struct DrawingSheetEditor::Impl{
                 else{const auto error=drawingViewSilhouettes(sourceFor(*layout),definition,preparedSilhouettes[definition.id],silhouetteCache);if(!error.isEmpty())return error;}
                 const auto display=visibility.find(definition.id);
                 if(!changedViews.contains(definition.id)&&old&&old->scale==definition.scale&&display!=visibility.end())preparedVisibility[definition.id]=display->second;
-                else{auto result=std::make_shared<DrawingViewVisibility>();const auto error=drawingViewVisibility(sourceFor(*layout),definition,prepared[definition.id],preparedSilhouettes[definition.id],silhouetteCache,*result);if(!error.isEmpty())return error;preparedVisibility[definition.id]=std::move(result);}
+                else{auto result=std::make_shared<DrawingViewVisibility>();const auto error=displayFor(sourceFor(*layout),definition,prepared[definition.id],preparedSilhouettes[definition.id],silhouetteCache,*result);if(!error.isEmpty())return error;preparedVisibility[definition.id]=std::move(result);}
             }
             std::map<QUuid,DrawingDimensionResult> measured;
             for(const auto &dimension:next.drawing.dimensions){const auto found=results.find(dimension.id);
                 const auto old=std::find_if(state.drawing.dimensions.begin(),state.drawing.dimensions.end(),[&](const auto &d){return d.id==dimension.id;});
                 measured[dimension.id]=!changedViews.contains(dimension.viewId)&&old!=state.drawing.dimensions.end()&&sameDimension(*old,dimension)&&found!=results.end()
                     ?found->second:this->measured(next,dimension,prepared.at(dimension.viewId));}
-            state=std::move(next);curves=std::move(prepared);silhouettes=std::move(preparedSilhouettes);visibility=std::move(preparedVisibility);results=std::move(measured);cacheSections();historyIndex=index;refreshHistoryActions();notify();redraw();return {};
+            state=std::move(next);curves=std::move(prepared);silhouettes=std::move(preparedSilhouettes);visibility=std::move(preparedVisibility);results=std::move(measured);cacheSections();return {};
         }catch(const std::exception &error){return QString::fromUtf8(error.what());}
+    }
+    QString restore(std::size_t index){
+        DrawingSheet next;const auto error=decodeDrawingSheet(history[index].sheet,next);if(!error.isEmpty())return error;
+        const auto applied=replaceState(std::move(next));if(!applied.isEmpty())return applied;
+        historyIndex=index;refreshHistoryActions();notify();redraw();return {};
+    }
+    QString propagateLayout(DrawingSheet &next)const{
+        QSet<QUuid> done,visiting;
+        std::function<void(QUuid)> visit=[&](QUuid id){
+            if(done.contains(id))return;
+            if(visiting.contains(id))throw std::invalid_argument("Ciclo nelle viste derivate.");
+            if(visiting.size()>=256)throw std::invalid_argument("Gerarchia delle viste troppo profonda.");
+            visiting.insert(id);
+            auto found=std::find_if(next.views.begin(),next.views.end(),[&](const auto &l){return l.viewId==id;});if(found==next.views.end())throw std::invalid_argument("Vista madre assente.");
+            if(!found->relation.parentId.isNull()){
+                const auto parent=found->relation.parentId;visit(parent);const auto *old=layoutFor(id),*oldParent=layoutFor(parent);
+                const auto newParent=std::find_if(next.views.begin(),next.views.end(),[&](const auto &l){return l.viewId==parent;});
+                if(old&&oldParent&&old->position==found->position)found->position+=newParent->position-oldParent->position;
+                found->position=constrainDrawingViewPosition(next,*found,found->position);
+            }
+            visiting.remove(id);done.insert(id);
+        };
+        try{for(const auto &l:next.views)visit(l.viewId);}catch(const std::exception &e){return QString::fromUtf8(e.what());}
+        const auto error=synchronizeDrawingViews(next);if(!error.isEmpty())return error;
+        for(auto &p:next.dimensions){const auto d=std::find_if(next.drawing.dimensions.begin(),next.drawing.dimensions.end(),[&](const auto &d){return d.id==p.dimensionId;});
+            if(d==next.drawing.dimensions.end())continue;
+            const auto *old=layoutFor(d->viewId);if(!old)continue;
+            const auto now=std::find_if(next.views.begin(),next.views.end(),[&](const auto &l){return l.viewId==d->viewId;});if(now!=next.views.end())p.position+=now->position-old->position;
+        }
+        return {};
+    }
+    QString changeViews(DrawingSheet next,const QString &label){
+        if(readOnly)return QStringLiteral("La tavola e' in sola lettura.");
+        const auto sync=propagateLayout(next);if(!sync.isEmpty())return sync;
+        for(auto &d:next.drawing.dimensions){const auto *old=viewFor(d.viewId);const auto current=std::find_if(next.drawing.views.begin(),next.drawing.views.end(),[&](const auto &v){return v.id==d.viewId;});
+            if(!old||current==next.drawing.views.end()||sameGeometry(*old,*current))continue;
+            const auto transform=[&](DrawingSectionReference &ref){if(!ref.requiresWitness)return;const auto world=old->plane.toGlobal(Vec3(ref.witness.x(),ref.witness.y(),0));const auto local=current->plane.toLocal(world);ref.witness=Vec2(local.x(),local.y());};
+            transform(d.section);for(auto &ref:d.references)if(!drawingDatum(ref.role))transform(ref.curve);
+        }
+        for(const auto &d:next.drawing.dimensions){const auto v=std::find_if(next.drawing.views.begin(),next.drawing.views.end(),[&](const auto &v){return v.id==d.viewId;});
+            if(v==next.drawing.views.end()||v->kind!=DrawingViewKind::ProjectedEdges||v->sectionReferences)continue;
+            if(d.section.kind==DrawingCurveKind::Section)return QStringLiteral("Sono presenti quote di sezione: conservare i riferimenti del piano.");
+            for(const auto &ref:d.references)if(!drawingDatum(ref.role)&&ref.curve.kind==DrawingCurveKind::Section)return QStringLiteral("Sono presenti quote di sezione: conservare i riferimenti del piano.");
+        }
+        QByteArray bytes;const auto valid=encodeDrawingSheet(next,bytes);if(!valid.isEmpty())return valid;
+        const auto applied=replaceState(std::move(next));if(!applied.isEmpty())return applied;
+        record(label,std::move(bytes));redraw();return {};
     }
     QString applyLayout(DrawingSheet next,const QString &label){
         if(readOnly)return QStringLiteral("La tavola e' in sola lettura.");
+        const auto sync=propagateLayout(next);if(!sync.isEmpty())return sync;
         QByteArray bytes;const auto error=encodeDrawingSheet(next,bytes);if(!error.isEmpty())return error;
         if(bytes==history[historyIndex].sheet)return {};
         state=std::move(next);record(label,std::move(bytes));queueRedraw();return {};
     }
     QString moveViewTo(const QUuid &id,const QPointF &position,const QString &label){
-        const auto *layout=layoutFor(id);if(!layout)return QStringLiteral("Vista non trovata.");const auto delta=position-layout->position;
+        const auto *layout=layoutFor(id);if(!layout)return QStringLiteral("Vista non trovata.");
         auto next=state;for(auto &p:next.views)if(p.viewId==id)p.position=position;
-        for(auto &p:next.dimensions){const auto dimension=std::find_if(next.drawing.dimensions.begin(),next.drawing.dimensions.end(),[&](const auto &d){return d.id==p.dimensionId;});
-            if(dimension!=next.drawing.dimensions.end()&&dimension->viewId==id)p.position+=delta;}
         return applyLayout(std::move(next),label);
     }
     bool centerFor(const QUuid &id,QPointF &center)const{
@@ -299,6 +345,10 @@ struct DrawingSheetEditor::Impl{
         if(!hiddenAction)return;
         const auto id=selectedView();const auto *definition=viewFor(id);const auto *layout=layoutFor(id);QSignalBlocker blocker(hiddenAction);
         hiddenAction->setEnabled(!readOnly&&definition&&definition->kind==DrawingViewKind::ProjectedEdges);hiddenAction->setChecked(layout&&layout->showHiddenLines);
+        if(auto *a=owner->findChild<QAction *>("drawingDetachViewAction"))a->setEnabled(!readOnly&&layout&&layout->relation.kind==DrawingDerivedKind::Orthographic);
+        if(auto *a=owner->findChild<QAction *>("drawingReleaseAlignmentAction")){a->setEnabled(!readOnly&&layout&&layout->relation.kind==DrawingDerivedKind::Orthographic);a->setText(layout&&layout->relation.aligned?QStringLiteral("Libera allineamento"):QStringLiteral("Ripristina allineamento"));}
+        for(auto name:{"drawingSectionHatchAction","drawingEditSectionLineAction","drawingReverseSectionAction"})if(auto *a=owner->findChild<QAction *>(name))a->setEnabled(!readOnly&&layout&&layout->relation.kind==DrawingDerivedKind::Section);
+        if(auto *a=owner->findChild<QAction *>("drawingSectionHatchAction"))a->setText(layout&&layout->relation.hatch?QStringLiteral("Nascondi tratteggio"):QStringLiteral("Mostra tratteggio"));
     }
     bool pointShown(const QUuid &id,std::size_t index,QPointF point,bool center=false)const{
         const auto *layout=layoutFor(id);if(!layout)return false;if(layout->showHiddenLines)return true;const auto found=visibility.find(id);if(found==visibility.end()||index>=found->second->curves.size())return false;
@@ -330,12 +380,13 @@ struct DrawingSheetEditor::Impl{
     void refreshTree(){
         const auto *current=tree->currentItem();const auto kind=current?current->data(0,Qt::UserRole).toString():QString();
         const auto selected=current?current->data(0,Qt::UserRole+1).toUuid():QUuid();QSignalBlocker block(tree);tree->clear();
-        auto *root=new QTreeWidgetItem(tree,{state.title});root->setIcon(0,commandIcon("new"));root->setExpanded(true);
+        auto *root=new QTreeWidgetItem(tree,{state.title});root->setIcon(0,commandIcon("new"));root->setExpanded(true);QHash<QUuid,QTreeWidgetItem *> nodes;
         for(const auto &definition:state.drawing.views){const auto *layout=layoutFor(definition.id);if(!layout)continue;
             auto *item=new QTreeWidgetItem(root,{layout->title+QStringLiteral("  (%1:1)").arg(definition.scale,0,'g',4)});
             item->setIcon(0,commandIcon(definition.kind==DrawingViewKind::Section?"section":"viewFront"));
-            item->setData(0,Qt::UserRole,"view");item->setData(0,Qt::UserRole+1,definition.id);item->setExpanded(true);
-            item->setToolTip(0,QStringLiteral("Doppio clic per modificare piano, scala e sorgenti della vista."));
+            item->setData(0,Qt::UserRole,"view");item->setData(0,Qt::UserRole+1,definition.id);item->setExpanded(true);nodes.insert(definition.id,item);
+            item->setToolTip(0,QStringLiteral("Doppio clic per modificare la vista."));
+            if(!layout->relation.parentId.isNull())item->setToolTip(0,layout->relation.kind==DrawingDerivedKind::Section?QStringLiteral("Sezione associata alla linea di taglio della madre; piano, scala e sorgenti seguono la madre."):QStringLiteral("Scala, orientamento e sorgenti ereditati dalla madre. Sgancia per renderla indipendente."));
             const auto contour=silhouettes.find(definition.id);if(contour!=silhouettes.end()&&!contour->second.warnings.empty()){item->setForeground(0,QColor("#ad6d00"));item->setToolTip(0,item->toolTip(0)+QStringLiteral("\n")+contour->second.warnings.join(QStringLiteral("\n")));}
             for(const auto &dimension:state.drawing.dimensions)if(dimension.viewId==definition.id){const auto found=results.find(dimension.id);
                 const bool ready=found!=results.end()&&found->second.status==DrawingDimensionStatus::Ready;
@@ -344,10 +395,19 @@ struct DrawingSheetEditor::Impl{
                 child->setIcon(0,commandIcon("dimension"));child->setData(0,Qt::UserRole,"dimension");child->setData(0,Qt::UserRole+1,dimension.id);
                 if(!ready){child->setForeground(0,QColor("#d34b4b"));if(found!=results.end())child->setToolTip(0,found->second.message);}}
         }
+        for(const auto &l:state.views)if(!l.relation.parentId.isNull()&&nodes.contains(l.viewId)&&nodes.contains(l.relation.parentId)){
+            auto *item=nodes.value(l.viewId);auto *oldParent=item->parent();oldParent->takeChild(oldParent->indexOfChild(item));nodes.value(l.relation.parentId)->addChild(item);
+        }
         selectTreeItem(kind,selected);
     }
     void editSelectedView(){const auto id=selectedView();if(id.isNull()){say(QStringLiteral("Seleziona una vista o una sua quota nell'albero o sul foglio."));return;}
-        const auto *definition=viewFor(id);if(definition)addViewDialog(definition->kind,id);}
+        const auto *definition=viewFor(id);if(definition){if(!layoutFor(id)->relation.parentId.isNull())derivedProperties(id);else addViewDialog(definition->kind,id);}}
+    QString displayFor(const DrawingModelSnapshot &source,const DrawingView &definition,const std::vector<DrawingCurve> &pieces,
+                       const DrawingSilhouetteResult &contours,DrawingSilhouetteCache &cache,DrawingViewVisibility &display){
+        const auto error=drawingViewVisibility(source,definition,pieces,contours,cache,display);if(!error.isEmpty())return error;
+        DrawingSectionHatch hatch;const auto filled=drawingSectionHatch(source,definition,pieces,hatch);if(!filled.isEmpty())return filled;
+        display.sectionHatch=std::move(hatch.lines);display.sectionMaterial=std::move(hatch.material);display.warnings.append(hatch.warnings);return {};
+    }
     void calculate(){
         std::map<QUuid,std::vector<DrawingSection>> prepared;std::map<QUuid,DrawingSilhouetteResult> preparedSilhouettes;std::map<QUuid,std::shared_ptr<const DrawingViewVisibility>> preparedVisibility;
         for(const auto &definition:state.drawing.views){const auto *layout=layoutFor(definition.id);if(!layout)continue;
@@ -356,7 +416,7 @@ struct DrawingSheetEditor::Impl{
             for(const auto &piece:sections)sectionPath(definition,*layout,piece);
             const auto contours=drawingViewSilhouettes(sourceFor(*layout),definition,preparedSilhouettes[definition.id],silhouetteCache);if(!contours.isEmpty())throw std::runtime_error(contours.toStdString());
             for(const auto &contour:preparedSilhouettes[definition.id].paths)silhouettePath(definition,*layout,contour);
-            auto display=std::make_shared<DrawingViewVisibility>();const auto hidden=drawingViewVisibility(sourceFor(*layout),definition,sections,preparedSilhouettes[definition.id],silhouetteCache,*display);if(!hidden.isEmpty())throw std::runtime_error(hidden.toStdString());preparedVisibility[definition.id]=std::move(display);
+            auto display=std::make_shared<DrawingViewVisibility>();const auto hidden=displayFor(sourceFor(*layout),definition,sections,preparedSilhouettes[definition.id],silhouetteCache,*display);if(!hidden.isEmpty())throw std::runtime_error(hidden.toStdString());preparedVisibility[definition.id]=std::move(display);
             prepared.emplace(definition.id,std::move(sections));}
         std::map<QUuid,DrawingDimensionResult> measured;
         for(const auto &dimension:state.drawing.dimensions)measured[dimension.id]=this->measured(state,dimension,prepared.at(dimension.viewId));
@@ -370,10 +430,11 @@ struct DrawingSheetEditor::Impl{
         if(pieces.empty()&&contours.paths.empty())return definition.kind==DrawingViewKind::Section?QStringLiteral("Il piano non interseca i corpi selezionati. Modificare posizione o piano."):QStringLiteral("Nessun bordo proiettabile nei corpi selezionati.");
         for(const auto &piece:pieces)sectionPath(definition,layout,piece);
         for(const auto &contour:contours.paths)silhouettePath(definition,layout,contour);
-        if(!display){auto prepared=std::make_shared<DrawingViewVisibility>();const auto error=drawingViewVisibility(sourceFor(layout),definition,pieces,contours,silhouetteCache,*prepared);if(!error.isEmpty())return error;display=std::move(prepared);}
+        if(!display){auto prepared=std::make_shared<DrawingViewVisibility>();const auto error=displayFor(sourceFor(layout),definition,pieces,contours,silhouetteCache,*prepared);if(!error.isEmpty())return error;display=std::move(prepared);}
         state=std::move(next);curves[definition.id]=std::move(pieces);silhouettes[definition.id]=std::move(contours);visibility[definition.id]=std::move(display);cacheSections();record(QStringLiteral("Inserisci vista"),std::move(bytes));redraw();return {};
     }
     void cancelPlacement(){
+        cancelCut();
         if(!placement)return;
         delete placement->item;placement.reset();view->setCursor(quoteAction->isChecked()?Qt::CrossCursor:Qt::ArrowCursor);
     }
@@ -382,11 +443,12 @@ struct DrawingSheetEditor::Impl{
         std::vector<DrawingCurve> pieces;const auto generated=drawingViewCurves(sourceFor(layout),definition,pieces);if(!generated.isEmpty())return generated;
         DrawingSilhouetteResult contours;const auto contourError=drawingViewSilhouettes(sourceFor(layout),definition,contours,silhouetteCache);if(!contourError.isEmpty())return contourError;
         if(pieces.empty()&&contours.paths.empty())return definition.kind==DrawingViewKind::Section?QStringLiteral("Il piano non interseca i corpi selezionati. Modificare posizione o piano."):QStringLiteral("Nessuna geometria proiettabile nei corpi selezionati.");
-        auto display=std::make_shared<DrawingViewVisibility>();const auto hidden=drawingViewVisibility(sourceFor(layout),definition,pieces,contours,silhouetteCache,*display);if(!hidden.isEmpty())return hidden;
+        auto display=std::make_shared<DrawingViewVisibility>();const auto hidden=displayFor(sourceFor(layout),definition,pieces,contours,silhouetteCache,*display);if(!hidden.isEmpty())return hidden;
         std::vector<QPainterPath> paths;QRectF bounds;bool first=true;
         const auto add=[&](const DrawingVisiblePath &path){const auto all=joinedPaths(path.visible,path.hidden);bounds=first?all.boundingRect():bounds.united(all.boundingRect());first=false;paths.push_back(joinedPaths(path.visible,layout.showHiddenLines?path.hidden:QPainterPath()));};
         for(const auto &path:display->curves)add(path);
         const auto edgePaths=paths.size();for(const auto &path:display->silhouettes)add(path);
+        if(layout.relation.kind==DrawingDerivedKind::Section&&layout.relation.hatch)paths.push_back(display->sectionHatch);
         auto prepared=std::make_unique<ViewPlacement>();prepared->definition=definition;prepared->layout=layout;prepared->curves=std::move(pieces);prepared->silhouettes=std::move(contours);prepared->center=bounds.center();prepared->visibility=std::move(display);
         // La scena possiede il gruppo e i figli; rimuove prima la vecchia anteprima.
         quoteAction->setChecked(false);cancelPlacement();resetQuote();
@@ -395,10 +457,12 @@ struct DrawingSheetEditor::Impl{
             item->setPen(QPen(i<edgePaths&&prepared->curves[i].kind==DrawingCurveKind::Section?QColor("#187c59"):QColor("#1469c0"),.3,Qt::DashLine));item->setAcceptedMouseButtons(Qt::NoButton);}
         auto *label=new QGraphicsSimpleTextItem(layout.title,group);fontFor(label);label->setBrush(QColor("#1469c0"));label->setPos(bounds.bottomLeft()-prepared->center+QPointF(0,6));label->setAcceptedMouseButtons(Qt::NoButton);
         const auto mouse=view->viewport()->mapFromGlobal(QCursor::pos());const auto initial=view->viewport()->rect().contains(mouse)?view->mapToScene(mouse):QPointF(state.size.width()/2,state.size.height()/2);
-        group->setPos(initial);placement=std::move(prepared);view->setCursor(Qt::CrossCursor);view->setFocus();say(QStringLiteral("Sposta l'anteprima e fai clic sul foglio per inserire la vista. Esc o tasto destro annulla."));return {};
+        group->setPos(initial);placement=std::move(prepared);placementPointer(initial,false);view->setCursor(Qt::CrossCursor);view->setFocus();say(QStringLiteral("Sposta l'anteprima e fai clic sul foglio per inserire la vista. Esc o tasto destro annulla."));return {};
     }
     bool placementPointer(QPointF point,bool click){
         if(!placement)return false;
+        auto proposed=point-placement->center;auto layout=placement->layout;layout.position=proposed;
+        proposed=constrainDrawingViewPosition(state,layout,proposed);point=proposed+placement->center;
         placement->item->setPos(point);placement->item->setVisible(true);
         if(click){if(!QRectF(QPointF(0,0),state.size).contains(point)){say(QStringLiteral("Scegli un punto all'interno del foglio. Esc annulla."));return true;}
             auto layout=placement->layout;layout.position=point-placement->center;
@@ -435,6 +499,10 @@ struct DrawingSheetEditor::Impl{
         for(const auto &definition:state.drawing.views){const auto *layout=layoutFor(definition.id);const auto found=curves.find(definition.id);
             if(!layout||found==curves.end())continue;
             QRectF bounds;const auto display=visibility.at(definition.id);
+            if(layout->relation.kind==DrawingDerivedKind::Section&&layout->relation.hatch&&!display->sectionHatch.isEmpty()){
+                auto *hatch=scene->addPath(display->sectionHatch.translated(layout->position),QPen(QColor("#555555"),.13));hatch->setZValue(-1);hatch->setData(kindRole,"sectionHatch");hatch->setData(viewRole,definition.id);hatch->setAcceptedMouseButtons(Qt::NoButton);
+            }
+            drawCutLines(scene,definition,*layout);
             for(std::size_t i=0;i<found->second.size();++i){const auto &piece=found->second[i];const bool projected=piece.kind==DrawingCurveKind::ProjectedEdge;const auto &paths=display->curves.at(i);
                 auto visible=paths.visible.translated(layout->position),hidden=paths.hidden.translated(layout->position);if(interactive)paintedPaths[definition.id].push_back(joinedPaths(visible,layout->showHiddenLines?hidden:QPainterPath()));
                 const auto add=[&](const QPainterPath &path,bool obscured){if(path.isEmpty())return;auto *item=new SectionItem(path);item->hidden=obscured;item->sectionReference=!projected&&definition.kind==DrawingViewKind::ProjectedEdges;
@@ -445,7 +513,7 @@ struct DrawingSheetEditor::Impl{
                 const auto add=[&](QPainterPath path,bool hidden){if(path.isEmpty())return;path.translate(layout->position);auto *item=scene->addPath(path,QPen(hidden?QColor("#80858a"):QColor("#222222"),hidden?.18:.25,hidden?Qt::DashLine:Qt::SolidLine));item->setData(kindRole,"silhouette");item->setData(viewRole,definition.id);item->setData(4,hidden);item->setZValue(hidden?0:1);item->setAcceptedMouseButtons(Qt::NoButton);
                     item->setToolTip(QStringLiteral("Contorno apparente approssimato, non quotabile. Per le quote usare bordi o sezioni del piano.")+(piece.refinementLimited?QStringLiteral(" Raffinamento limitato su questo tratto."):QString()));};
                 add(paths.visible,false);if(layout->showHiddenLines)add(paths.hidden,true);const auto box=joinedPaths(paths.visible,paths.hidden).translated(layout->position).boundingRect();bounds=bounds.isNull()?box:bounds.united(box);}
-            auto *label=new MoveLabel(layout->title+QStringLiteral("  (%1:1)").arg(definition.scale,0,'g',4));fontFor(label);label->setBrush(QColor("#35495c"));
+            auto *label=new MoveLabel((layout->relation.kind==DrawingDerivedKind::Section?layout->relation.label+QStringLiteral("–")+layout->relation.label+QStringLiteral(" · "):QString())+layout->title+QStringLiteral("  (%1:1)").arg(definition.scale,0,'g',4));fontFor(label);label->setBrush(QColor("#35495c"));
             label->setPos(bounds.isNull()?layout->position:bounds.bottomLeft()+QPointF(0,6));label->setData(kindRole,"view");label->setData(viewRole,definition.id);
             label->setFlag(QGraphicsItem::ItemIsMovable,!readOnly);
             label->setToolTip(QStringLiteral("Trascina il titolo per spostare la vista. Doppio clic per modificarla."));
@@ -689,6 +757,80 @@ struct DrawingSheetEditor::Impl{
         });
         dialog.exec();if(placement)view->setFocus();
     }
+    struct CutPlacement {
+        QUuid parent,existing;QString label;bool reverse=false,started=false;QPointF first,cursor;
+        QGraphicsPathItem *item=nullptr;
+    };
+    std::unique_ptr<CutPlacement> cut;
+    void cancelCut(){if(cut){delete cut->item;cut.reset();view->setCursor(Qt::ArrowCursor);}}
+    void cutOverlay(){
+        if(!cut)return;
+        QPainterPath path;const auto a=cut->started?cut->first:cut->cursor,b=cut->cursor;path.moveTo(a);path.lineTo(b);
+        path.moveTo(b+QPointF(-2,0));path.lineTo(b+QPointF(2,0));path.moveTo(b+QPointF(0,-2));path.lineTo(b+QPointF(0,2));
+        if(cut->started&&QLineF(a,b).length()>1e-6){const auto t=(b-a)/QLineF(a,b).length();const auto n=(cut->reverse?-1:1)*QPointF(t.y(),-t.x());for(auto p:{a,b}){path.moveTo(p-n*7);path.lineTo(p);path.moveTo(p-n*2+t);path.lineTo(p);path.lineTo(p-n*2-t);}}
+        cut->item->setPath(path);cut->item->setVisible(true);
+    }
+    bool cutPointer(QPointF cursor,Qt::KeyboardModifiers modifiers,bool click){
+        if(!cut)return false;
+        const double zoom=std::abs(view->transform().m11());double gap=9;QPointF snapped=cursor;
+        if(!(modifiers&Qt::AltModifier))for(const auto &pick:notable)if(pick.view==cut->parent){const double current=QLineF(pick.paper,cursor).length()*zoom;if(current<gap){gap=current;snapped=pick.paper;}}
+        cursor=snapped;
+        if(cut->started&&(modifiers&Qt::ShiftModifier)){const auto d=cursor-cut->first;if(std::abs(d.x())>=std::abs(d.y()))cursor.setY(cut->first.y());else cursor.setX(cut->first.x());}
+        cut->cursor=cursor;cutOverlay();
+        if(!click)return true;
+        if(!QRectF(QPointF(),state.size).contains(cursor)){say(QStringLiteral("Scegli un punto sul foglio."));return true;}
+        if(!cut->started){cut->first=cursor;cut->started=true;say(QStringLiteral("Secondo punto del taglio. Maiusc: orizzontale/verticale; R: inverti frecce; Alt: senza snap; Esc: annulla."));return true;}
+        if(QLineF(cut->first,cursor).length()<1){say(QStringLiteral("Scegli un secondo punto distinto, distante almeno 1 mm sul foglio."));return true;}
+        const auto parent=cut->parent,existing=cut->existing;const auto label=cut->label;const bool reverse=cut->reverse;const auto a=localPaper(parent,cut->first),b=localPaper(parent,cursor);
+        // beginSectionPlacement prepara tutto prima di sostituire lo strumento attivo.
+        const auto error=existing.isNull()?owner->beginSectionPlacement(parent,QPointF(a.x(),a.y()),QPointF(b.x(),b.y()),label,reverse):owner->setSectionLine(existing,QPointF(a.x(),a.y()),QPointF(b.x(),b.y()));if(!error.isEmpty())say(error);
+        return true;
+    }
+    bool cutKey(int key){
+        if(!cut)return false;
+        if(key==Qt::Key_Escape){cancelCut();say(QStringLiteral("Taglio annullato."));return true;}
+        if(key==Qt::Key_R){cut->reverse=!cut->reverse;cutOverlay();return true;}
+        if(key==Qt::Key_Clear){cut->item->setVisible(false);return true;}
+        return true;
+    }
+    void drawCutLines(QGraphicsScene *target,const DrawingView &parent,const DrawingViewLayout &layout){
+        for(const auto &section:state.views){const auto &r=section.relation;if(r.kind!=DrawingDerivedKind::Section||r.parentId!=parent.id)continue;
+            const auto point=[&](QPointF p){return layout.position+QPointF(p.x()*parent.scale,-p.y()*parent.scale);};
+            auto a=point(r.cutStart),b=point(r.cutEnd);const auto t=(b-a)/QLineF(a,b).length();const auto n=(r.reverse?-1:1)*QPointF(t.y(),-t.x());a-=t*4;b+=t*4;
+            const auto add=[&](QPainterPath path,QPen pen){auto *item=target->addPath(path,pen);item->setZValue(5);item->setData(kindRole,"cuttingLine");item->setData(viewRole,parent.id);item->setData(idRole,section.viewId);item->setAcceptedMouseButtons(Qt::NoButton);};
+            QPainterPath center;center.moveTo(a);center.lineTo(b);QPen chain(QColor("#222222"),.2);chain.setDashPattern({12,2,2,2});add(center,chain);
+            for(const auto p:{a,b}){QPainterPath arrow;arrow.moveTo(p-n*8);arrow.lineTo(p);arrow.moveTo(p-n*2.5+t);arrow.lineTo(p);arrow.lineTo(p-n*2.5-t);add(arrow,QPen(QColor("#222222"),.4));
+                auto *label=target->addSimpleText(r.label);fontFor(label,.3);label->setBrush(QColor("#222222"));label->setPos(p-n*10+QPointF(1,-2));label->setZValue(6);label->setData(kindRole,"cuttingLabel");label->setData(idRole,section.viewId);label->setAcceptedMouseButtons(Qt::NoButton);}
+        }
+    }
+    void derivedDialog(bool section){
+        if(readOnly)return;
+        QDialog dialog(owner);dialog.setObjectName(section?"drawingTechnicalSectionDialog":"drawingDerivedViewDialog");dialog.setWindowTitle(section?QStringLiteral("Sezione da linea di taglio"):QStringLiteral("Vista derivata"));auto *form=new QFormLayout(&dialog);
+        auto *parent=new QComboBox(&dialog);parent->setObjectName("drawingParentView");for(const auto &l:state.views)if(viewFor(l.viewId)->kind==DrawingViewKind::ProjectedEdges)parent->addItem(l.title,l.viewId);
+        if(!parent->count()){say(QStringLiteral("Inserisci prima una vista proiettata."));return;}const auto chosen=parent->findData(selectedView());if(chosen>=0)parent->setCurrentIndex(chosen);form->addRow(QStringLiteral("Vista madre:"),parent);
+        auto *side=new QComboBox(&dialog);side->setObjectName("drawingProjectionSide");side->addItems({"A sinistra","A destra","Sopra","Sotto"});side->setCurrentIndex(1);
+        auto *method=new QComboBox(&dialog);method->setObjectName("drawingProjectionMethod");method->addItems({"Primo diedro (europeo)","Terzo diedro (americano)"});
+        auto *label=new QLineEdit(&dialog);label->setObjectName("drawingSectionIdentifier");label->setMaxLength(8);int number=0;QString identifier;do{identifier=number<26?QString(QChar('A'+number)):QStringLiteral("S%1").arg(number+1);++number;}while(std::any_of(state.views.cbegin(),state.views.cend(),[&](const auto &l){return l.relation.kind==DrawingDerivedKind::Section&&l.relation.label.compare(identifier,Qt::CaseInsensitive)==0;}));label->setText(identifier);
+        auto *reverse=new QCheckBox(QStringLiteral("Inverti verso delle frecce"),&dialog);reverse->setObjectName("drawingSectionReverse");
+        if(section){form->addRow(QStringLiteral("Identificativo:"),label);form->addRow(reverse);}else{form->addRow(QStringLiteral("Posizione sul foglio:"),side);form->addRow(QStringLiteral("Metodo:"),method);}
+        auto *note=new QLabel(section?QStringLiteral("Indica due punti sulla vista madre, poi posiziona l'anteprima. Sezione rimossa: mostra il taglio del piano, senza i bordi dietro di esso. Tratteggio solo nelle regioni solide chiuse; le superfici restano quotabili."):QStringLiteral("Scala e sorgenti sono ereditate. L'allineamento segue l'origine geometrica della madre; trascina la figlia lungo l'asse libero. Il primo diedro colloca la vista sinistra a destra e la superiore sotto."),&dialog);note->setWordWrap(true);form->addRow(note);
+        auto *error=new QLabel(&dialog);error->setWordWrap(true);form->addRow(error);auto *buttons=new QDialogButtonBox(QDialogButtonBox::Ok|QDialogButtonBox::Cancel,&dialog);form->addRow(buttons);
+        connect(buttons,&QDialogButtonBox::rejected,&dialog,&QDialog::reject);connect(buttons,&QDialogButtonBox::accepted,&dialog,[&]{const auto result=section?owner->beginSectionLine(parent->currentData().toUuid(),label->text().trimmed().toUpper(),reverse->isChecked()):owner->beginDerivedViewPlacement(parent->currentData().toUuid(),DrawingProjectionSide(side->currentIndex()),DrawingProjectionMethod(method->currentIndex()));error->setText(result);if(result.isEmpty())dialog.accept();});dialog.resize(490,280);dialog.exec();if(placement||cut)view->setFocus();
+    }
+    void derivedProperties(QUuid id){
+        const auto *v=viewFor(id);const auto *l=layoutFor(id);if(!v||!l)return;
+        auto layout=*l;const bool section=layout.relation.kind==DrawingDerivedKind::Section;
+        QDialog dialog(owner);dialog.setObjectName("drawingDerivedPropertiesDialog");dialog.setWindowTitle(QStringLiteral("Proprieta' vista derivata"));auto *form=new QFormLayout(&dialog);
+        auto *title=new QLineEdit(layout.title,&dialog);title->setObjectName("drawingDerivedTitle");title->setMaxLength(256);form->addRow(QStringLiteral("Titolo:"),title);
+        auto *label=new QLineEdit(layout.relation.label,&dialog);label->setMaxLength(8);label->setObjectName("drawingSectionIdentifier");
+        auto *flag=new QCheckBox(section?QStringLiteral("Mostra tratteggio"):QStringLiteral("Mantieni allineamento"),&dialog);flag->setChecked(section?layout.relation.hatch:layout.relation.aligned);flag->setObjectName("drawingDerivedFlag");
+        auto *reverse=new QCheckBox(QStringLiteral("Inverti verso delle frecce"),&dialog);reverse->setChecked(layout.relation.reverse);reverse->setObjectName("drawingSectionReverse");
+        if(section){form->addRow(QStringLiteral("Identificativo:"),label);form->addRow(reverse);}form->addRow(flag);
+        auto *references=new QCheckBox(QStringLiteral("Sezioni del piano come riferimenti di quota"),&dialog);references->setObjectName("drawingDerivedSectionReferences");references->setChecked(v->sectionReferences);if(!section)form->addRow(references);else references->hide();
+        auto *note=new QLabel(section?QStringLiteral("Scala, piano e corpi seguono la vista madre. Usa Ridefinisci linea di taglio per spostare il piano conservando quote e identificativo."):QStringLiteral("Scala, piano e corpi seguono la vista madre. Sgancia vista conserva l'orientamento corrente e permette modifiche indipendenti."),&dialog);note->setWordWrap(true);form->addRow(note);
+        auto *error=new QLabel(&dialog);error->setWordWrap(true);form->addRow(error);auto *buttons=new QDialogButtonBox(QDialogButtonBox::Ok|QDialogButtonBox::Cancel,&dialog);form->addRow(buttons);
+        connect(buttons,&QDialogButtonBox::rejected,&dialog,&QDialog::reject);connect(buttons,&QDialogButtonBox::accepted,&dialog,[&]{auto next=state;for(auto &p:next.views)if(p.viewId==id){p.title=title->text().trimmed();if(section){p.relation.label=label->text().trimmed().toUpper();p.relation.hatch=flag->isChecked();p.relation.reverse=reverse->isChecked();}else p.relation.aligned=flag->isChecked();}if(!section)for(auto &v:next.drawing.views)if(v.id==id)v.sectionReferences=references->isChecked();const auto result=changeViews(std::move(next),QStringLiteral("Proprieta' vista derivata"));error->setText(result);if(result.isEmpty())dialog.accept();});dialog.exec();
+    }
     void pageDialog(){
         if(readOnly)return;
         QDialog dialog(owner);dialog.setObjectName("drawingPageDialog");dialog.setWindowTitle(QStringLiteral("Formato foglio e cartiglio"));auto *form=new QFormLayout(&dialog);
@@ -735,6 +877,13 @@ DrawingSheetEditor::DrawingSheetEditor(DrawingSheet sheet,DrawingEditorModel mod
     impl_->redoAction=action(QStringLiteral("Ripristina"),"drawingRedoAction",[this]{impl_->report(redo());});toolbar->addSeparator();
     action(QStringLiteral("Inserisci vista..."),"drawingAddProjectionAction",[this]{impl_->addViewDialog(DrawingViewKind::ProjectedEdges);});
     action(QStringLiteral("Inserisci sezione..."),"drawingAddViewAction",[this]{impl_->addViewDialog();});
+    action(QStringLiteral("Vista derivata..."),"drawingDerivedViewAction",[this]{impl_->derivedDialog(false);});
+    action(QStringLiteral("Sezione da linea di taglio..."),"drawingTechnicalSectionAction",[this]{impl_->derivedDialog(true);});
+    action(QStringLiteral("Sgancia vista"),"drawingDetachViewAction",[this]{impl_->report(detachView(impl_->selectedView()));});
+    action(QStringLiteral("Libera/ripristina allineamento"),"drawingReleaseAlignmentAction",[this]{const auto *l=impl_->layoutFor(impl_->selectedView());impl_->report(setViewAlignment(impl_->selectedView(),l?!l->relation.aligned:false));});
+    action(QStringLiteral("Mostra/nascondi tratteggio"),"drawingSectionHatchAction",[this]{const auto *l=impl_->layoutFor(impl_->selectedView());impl_->report(setSectionHatch(impl_->selectedView(),l?!l->relation.hatch:false));});
+    action(QStringLiteral("Ridefinisci linea di taglio..."),"drawingEditSectionLineAction",[this]{const auto id=impl_->selectedView();const auto *l=impl_->layoutFor(id);if(l)impl_->report(beginSectionLine(l->relation.parentId,l->relation.label,l->relation.reverse,id));});
+    action(QStringLiteral("Inverti verso sezione"),"drawingReverseSectionAction",[this]{impl_->report(reverseSection(impl_->selectedView()));});
     action(QStringLiteral("Formato foglio e cartiglio..."),"drawingPageSettingsAction",[this]{impl_->pageDialog();});
     action(QStringLiteral("Modifica vista..."),"drawingEditViewAction",[this]{impl_->editSelectedView();});
     action(QStringLiteral("Allinea vista..."),"drawingAlignViewAction",[this]{impl_->alignDialog();});
@@ -753,8 +902,8 @@ DrawingSheetEditor::DrawingSheetEditor(DrawingSheet sheet,DrawingEditorModel mod
     impl_->updateAction=action(QStringLiteral("Aggiorna dal modello"),"drawingUpdateModelAction",[this]{if(impl_->provider){try{impl_->report(updateModel(impl_->provider()));}catch(const std::exception &error){impl_->report(QString::fromUtf8(error.what()));}}});
     impl_->updateAction->setEnabled(false);action(QStringLiteral("Adatta foglio"),"drawingFitAction",[this]{fitSheet();});
     impl_->scene=new QGraphicsScene(this);impl_->view=new SheetCanvas(impl_->scene,this);impl_->view->setObjectName("drawingCanvas");impl_->view->setRenderHint(QPainter::Antialiasing);impl_->view->setBackgroundRole(QPalette::Dark);impl_->view->setMouseTracking(true);impl_->view->viewport()->setMouseTracking(true);
-    impl_->view->pointer=[this](QPointF point,Qt::KeyboardModifiers modifiers,bool click){try{return impl_->placement?impl_->placementPointer(point,click):impl_->quotePointer(point,modifiers,click);}catch(const std::exception &e){impl_->say(QString::fromUtf8(e.what()));return true;}};
-    impl_->view->key=[this](int key){return impl_->placement?impl_->placementKey(key):impl_->quoteKey(key);};
+    impl_->view->pointer=[this](QPointF point,Qt::KeyboardModifiers modifiers,bool click){try{return impl_->cut?impl_->cutPointer(point,modifiers,click):impl_->placement?impl_->placementPointer(point,click):impl_->quotePointer(point,modifiers,click);}catch(const std::exception &e){impl_->say(QString::fromUtf8(e.what()));return true;}};
+    impl_->view->key=[this](int key){return impl_->cut?impl_->cutKey(key):impl_->placement?impl_->placementKey(key):impl_->quoteKey(key);};
     connect(impl_->quoteAction,&QAction::toggled,this,[this](bool checked){if(checked)impl_->cancelPlacement();impl_->resetQuote();impl_->view->setCursor(checked?Qt::CrossCursor:Qt::ArrowCursor);impl_->refreshNotable();if(checked)impl_->quoteOverlay();});
     connect(impl_->quoteType,qOverload<int>(&QComboBox::currentIndexChanged),this,[this](int){if(!impl_->quoteAction->isChecked())impl_->quoteAction->setChecked(true);impl_->quoteOverlay();});
     for(const auto &entry:{qMakePair("drawingOriginReferenceAction",DrawingPointRole::Origin),qMakePair("drawingAxisXReferenceAction",DrawingPointRole::AxisX),qMakePair("drawingAxisYReferenceAction",DrawingPointRole::AxisY)}){
@@ -769,11 +918,12 @@ DrawingSheetEditor::DrawingSheetEditor(DrawingSheet sheet,DrawingEditorModel mod
     connect(impl_->tree,&QWidget::customContextMenuRequested,this,[this](const QPoint &point){
         auto *item=impl_->tree->itemAt(point);if(!item)return;impl_->tree->setCurrentItem(item);CadMenu menu(this);
         if(item->data(0,Qt::UserRole).toString()==QLatin1String("dimension"))menu.addAction(findChild<QAction *>("drawingEditDimensionAction"));
-        else{menu.addAction(findChild<QAction *>("drawingEditViewAction"));menu.addAction(findChild<QAction *>("drawingAlignViewAction"));menu.addAction(impl_->hiddenAction);}
+        else{menu.addAction(findChild<QAction *>("drawingEditViewAction"));menu.addAction(findChild<QAction *>("drawingAlignViewAction"));menu.addAction(impl_->hiddenAction);for(auto name:{"drawingDerivedViewAction","drawingTechnicalSectionAction","drawingDetachViewAction","drawingReleaseAlignmentAction","drawingSectionHatchAction","drawingEditSectionLineAction","drawingReverseSectionAction"})menu.addAction(findChild<QAction *>(name));}
         menu.addSeparator();menu.addAction(findChild<QAction *>("drawingDeleteSelectionAction"));
         menu.exec(impl_->tree->viewport()->mapToGlobal(point));});
+    for(auto name:{"drawingDetachViewAction","drawingReleaseAlignmentAction","drawingSectionHatchAction","drawingEditSectionLineAction","drawingReverseSectionAction"})toolbar->removeAction(findChild<QAction *>(name));
     impl_->message=new QLabel(this);impl_->message->setWordWrap(false);impl_->message->setSizePolicy(QSizePolicy::Ignored,QSizePolicy::Fixed);impl_->message->setMinimumWidth(0);workspace->statusBar()->addWidget(impl_->message,1);workspace->statusBar()->setSizeGripEnabled(false);
-    const QPair<const char *,const char *> icons[]={{"drawingSmartDimensionAction","dimension"},{"drawingEditDimensionAction","edit"},{"drawingUndoAction","undo"},{"drawingRedoAction","redo"},{"drawingAlignViewAction","move"},{"drawingAddProjectionAction","viewFront"},{"drawingAddViewAction","section"},{"drawingEditViewAction","edit"},
+    const QPair<const char *,const char *> icons[]={{"drawingDerivedViewAction","viewFront"},{"drawingTechnicalSectionAction","section"},{"drawingDetachViewAction","copyFaces"},{"drawingReleaseAlignmentAction","move"},{"drawingSectionHatchAction","section"},{"drawingEditSectionLineAction","section"},{"drawingReverseSectionAction","rebuild"},{"drawingSmartDimensionAction","dimension"},{"drawingEditDimensionAction","edit"},{"drawingUndoAction","undo"},{"drawingRedoAction","redo"},{"drawingAlignViewAction","move"},{"drawingAddProjectionAction","viewFront"},{"drawingAddViewAction","section"},{"drawingEditViewAction","edit"},
         {"drawingEndpointDimensionAction","dimensionAligned"},{"drawingHorizontalDimensionAction","dimension"},{"drawingVerticalDimensionAction","dimensionVertical"},{"drawingLengthDimensionAction","measure"},
         {"drawingPageSettingsAction","drawingPage"},{"drawingHiddenLinesAction","visibility"},{"drawingDeleteSelectionAction","delete"},{"drawingUpdateModelAction","rebuild"},{"drawingFitAction","zoomAll"}};
     for(const auto &entry:icons){auto *a=findChild<QAction *>(entry.first);a->setIcon(commandIcon(entry.second));a->setIconVisibleInMenu(true);}
@@ -804,6 +954,55 @@ QString DrawingSheetEditor::beginViewPlacement(DrawingView definition,DrawingVie
     if(impl_->readOnly)return QStringLiteral("La tavola e' in sola lettura.");
     try{return impl_->startPlacement(std::move(definition),std::move(layout));}catch(const std::exception &error){return QString::fromUtf8(error.what());}
 }
+QString DrawingSheetEditor::beginDerivedViewPlacement(const QUuid &parent,DrawingProjectionSide side,DrawingProjectionMethod method){
+    const auto *base=impl_->viewFor(parent);const auto *source=impl_->layoutFor(parent);if(!base||!source||base->kind!=DrawingViewKind::ProjectedEdges)return QStringLiteral("Scegli una vista madre proiettata.");
+    DrawingView child;child.sectionReferences=base->sectionReferences;
+    DrawingViewLayout layout;layout.viewId=child.id;layout.title=QStringLiteral("Vista derivata %1").arg(impl_->state.views.size()+1);layout.features=source->features;layout.position=source->position;
+    layout.relation.parentId=parent;layout.relation.kind=DrawingDerivedKind::Orthographic;layout.relation.side=side;layout.relation.method=method;
+    auto next=impl_->state;next.drawing.views.push_back(child);next.views.append(layout);const auto error=synchronizeDrawingViews(next);if(!error.isEmpty())return error;
+    return beginViewPlacement(next.drawing.views.back(),next.views.back());
+}
+QString DrawingSheetEditor::beginSectionPlacement(const QUuid &parent,QPointF start,QPointF end,const QString &label,bool reverse){
+    const auto *base=impl_->viewFor(parent);const auto *source=impl_->layoutFor(parent);if(!base||!source||base->kind!=DrawingViewKind::ProjectedEdges)return QStringLiteral("Scegli una vista madre proiettata.");
+    DrawingView child;DrawingViewLayout layout;layout.viewId=child.id;layout.title=QStringLiteral("Sezione rimossa");layout.features=source->features;
+    layout.relation.parentId=parent;layout.relation.kind=DrawingDerivedKind::Section;layout.relation.cutStart=start;layout.relation.cutEnd=end;layout.relation.label=label;layout.relation.reverse=reverse;layout.relation.aligned=false;
+    auto next=impl_->state;next.drawing.views.push_back(child);next.views.append(layout);const auto error=synchronizeDrawingViews(next);if(!error.isEmpty())return error;
+    return beginViewPlacement(next.drawing.views.back(),next.views.back());
+}
+QString DrawingSheetEditor::beginSectionLine(const QUuid &parent,const QString &label,bool reverse,const QUuid &existing){
+    if(impl_->readOnly)return QStringLiteral("La tavola e' in sola lettura.");
+    const auto *v=impl_->viewFor(parent);if(!v||v->kind!=DrawingViewKind::ProjectedEdges)return QStringLiteral("Seleziona una vista madre proiettata.");
+    // Valida identificativo e relazione senza intersecare i corpi o mutare il foglio.
+    DrawingSheet next=impl_->state;DrawingView test;DrawingViewLayout l;l.viewId=test.id;l.title="Sezione";l.relation.parentId=parent;l.relation.kind=DrawingDerivedKind::Section;l.relation.label=label;l.relation.cutEnd={1,0};
+    if(existing.isNull()){next.drawing.views.push_back(test);next.views.append(l);}
+    else{const auto *current=impl_->layoutFor(existing);if(!current||current->relation.parentId!=parent||current->relation.kind!=DrawingDerivedKind::Section)return QStringLiteral("Sezione da ridefinire non disponibile.");}
+    const auto error=synchronizeDrawingViews(next);if(!error.isEmpty())return error;QByteArray bytes;const auto valid=encodeDrawingSheet(next,bytes);if(!valid.isEmpty())return valid;
+    impl_->quoteAction->setChecked(false);impl_->cancelPlacement();impl_->resetQuote();auto cut=std::make_unique<Impl::CutPlacement>();cut->parent=parent;cut->existing=existing;cut->label=label;cut->reverse=reverse;
+    cut->item=impl_->scene->addPath({},QPen(QColor("#1469c0"),.3,Qt::DashLine));cut->item->setZValue(50);cut->item->setData(kindRole,"cuttingPreview");cut->item->setAcceptedMouseButtons(Qt::NoButton);impl_->cut=std::move(cut);impl_->view->setCursor(Qt::CrossCursor);impl_->view->setFocus();impl_->say(QStringLiteral("Primo punto della linea di taglio sulla vista madre. Snap ai punti della vista; Esc annulla."));return {};
+}
+QString DrawingSheetEditor::setSectionLine(const QUuid &section,QPointF start,QPointF end){
+    const auto *l=impl_->layoutFor(section);if(!l||l->relation.kind!=DrawingDerivedKind::Section)return QStringLiteral("Seleziona una sezione da linea di taglio.");
+    auto next=impl_->state;for(auto &p:next.views)if(p.viewId==section){p.relation.cutStart=start;p.relation.cutEnd=end;}
+    return impl_->changeViews(std::move(next),QStringLiteral("Ridefinisci linea di taglio"));
+}
+bool DrawingSheetEditor::hasSectionLine()const{return bool(impl_->cut);}
+QString DrawingSheetEditor::detachView(const QUuid &id){
+    if(impl_->readOnly)return QStringLiteral("La tavola e' in sola lettura.");
+    const auto *layout=impl_->layoutFor(id);if(!layout||layout->relation.kind!=DrawingDerivedKind::Orthographic)return QStringLiteral("Seleziona una vista ortogonale derivata. Le sezioni mantengono il legame con la linea di taglio.");
+    auto next=impl_->state;for(auto &l:next.views)if(l.viewId==id)l.relation={};return impl_->changeViews(std::move(next),QStringLiteral("Sgancia vista"));
+}
+QString DrawingSheetEditor::setViewAlignment(const QUuid &id,bool aligned){
+    const auto *l=impl_->layoutFor(id);if(!l||l->relation.kind!=DrawingDerivedKind::Orthographic)return QStringLiteral("Seleziona una vista derivata ortogonale.");
+    auto next=impl_->state;for(auto &p:next.views)if(p.viewId==id)p.relation.aligned=aligned;return impl_->applyLayout(std::move(next),QStringLiteral("Allineamento vista derivata"));
+}
+QString DrawingSheetEditor::setSectionHatch(const QUuid &id,bool visible){
+    const auto *l=impl_->layoutFor(id);if(!l||l->relation.kind!=DrawingDerivedKind::Section)return QStringLiteral("Seleziona una sezione da linea di taglio.");
+    auto next=impl_->state;for(auto &p:next.views)if(p.viewId==id)p.relation.hatch=visible;return impl_->applyLayout(std::move(next),QStringLiteral("Tratteggio sezione"));
+}
+QString DrawingSheetEditor::reverseSection(const QUuid &id){
+    const auto *l=impl_->layoutFor(id);if(!l||l->relation.kind!=DrawingDerivedKind::Section)return QStringLiteral("Seleziona una sezione da linea di taglio.");
+    auto next=impl_->state;for(auto &p:next.views)if(p.viewId==id)p.relation.reverse=!p.relation.reverse;return impl_->changeViews(std::move(next),QStringLiteral("Inverti sezione"));
+}
 bool DrawingSheetEditor::hasViewPlacement()const{return bool(impl_->placement);}
 void DrawingSheetEditor::cancelViewPlacement(){impl_->cancelPlacement();}
 QString DrawingSheetEditor::updateView(DrawingView definition,DrawingViewLayout layout){
@@ -817,26 +1016,9 @@ QString DrawingSheetEditor::updateView(DrawingView definition,DrawingViewLayout 
             if(source.kind==DrawingCurveKind::Section&&definition.kind==DrawingViewKind::ProjectedEdges&&!definition.sectionReferences)
                 return QStringLiteral("Sono presenti quote di sezione: conservare le sezioni del piano o eliminare prima quelle quote.");}
     }
-    try{
-        auto next=impl_->state;for(auto &v:next.drawing.views)if(v.id==definition.id)v=definition;
-        for(auto &v:next.views)if(v.viewId==definition.id)v=layout;
-        QByteArray validation;const auto valid=encodeDrawingSheet(next,validation);if(!valid.isEmpty())return valid;
-        const auto *oldLayout=impl_->layoutFor(definition.id);
-        const bool geometryChanged=!sameGeometry(*old,definition)||oldLayout->features!=layout.features;
-        std::vector<DrawingCurve> pieces;
-        if(geometryChanged){const auto error=drawingViewCurves(impl_->sourceFor(layout),definition,pieces);if(!error.isEmpty())return error;}
-        else pieces=impl_->curves.at(definition.id);
-        DrawingSilhouetteResult contours;
-        if(geometryChanged||old->scale!=definition.scale){const auto error=drawingViewSilhouettes(impl_->sourceFor(layout),definition,contours,impl_->silhouetteCache);if(!error.isEmpty())return error;}
-        else contours=impl_->silhouettes.at(definition.id);
-        std::shared_ptr<const DrawingViewVisibility> display;
-        if(geometryChanged||old->scale!=definition.scale){auto prepared=std::make_shared<DrawingViewVisibility>();const auto error=drawingViewVisibility(impl_->sourceFor(layout),definition,pieces,contours,impl_->silhouetteCache,*prepared);if(!error.isEmpty())return error;display=std::move(prepared);}else display=impl_->visibility.at(definition.id);
-        // Una sezione spostata puo' non intersecare piu' il corpo: le sue quote restano, marcate mancanti.
-        for(const auto &piece:pieces)sectionPath(definition,layout,piece);
-        for(const auto &contour:contours.paths)silhouettePath(definition,layout,contour);
-        auto results=impl_->results;if(geometryChanged)for(const auto &d:next.drawing.dimensions)if(d.viewId==definition.id)results[d.id]=impl_->measured(next,d,pieces);
-        impl_->state=std::move(next);impl_->curves[definition.id]=std::move(pieces);impl_->silhouettes[definition.id]=std::move(contours);impl_->visibility[definition.id]=std::move(display);impl_->results=std::move(results);impl_->cacheSections();impl_->record(QStringLiteral("Modifica vista"),std::move(validation));impl_->redraw();return {};
-    }catch(const std::exception &error){return QString::fromUtf8(error.what());}
+    auto next=impl_->state;for(auto &v:next.drawing.views)if(v.id==definition.id)v=definition;
+    for(auto &v:next.views)if(v.viewId==definition.id)v=layout;
+    return impl_->changeViews(std::move(next),QStringLiteral("Modifica vista e derivate"));
 }
 QString DrawingSheetEditor::moveView(const QUuid &id,const QPointF &position){return impl_->moveViewTo(id,position,QStringLiteral("Sposta vista"));}
 QString DrawingSheetEditor::moveDimension(const QUuid &id,const QPointF &position){
@@ -865,6 +1047,7 @@ QString DrawingSheetEditor::alignView(const QUuid &id,const QUuid &reference,Vie
 QString DrawingSheetEditor::removeView(const QUuid &id){
     if(impl_->readOnly)return QStringLiteral("La tavola e' in sola lettura.");
     if(!impl_->viewFor(id))return QStringLiteral("Vista non trovata.");
+    for(const auto &l:impl_->state.views)if(l.relation.parentId==id)return QStringLiteral("La vista ha viste derivate: sganciarle o eliminarle prima di rimuovere la madre.");
     auto next=impl_->state;QSet<QUuid> dimensions;for(const auto &d:next.drawing.dimensions)if(d.viewId==id)dimensions.insert(d.id);
     next.drawing.views.erase(std::remove_if(next.drawing.views.begin(),next.drawing.views.end(),[&](const auto &v){return v.id==id;}),next.drawing.views.end());
     next.views.erase(std::remove_if(next.views.begin(),next.views.end(),[&](const auto &p){return p.viewId==id;}),next.views.end());
@@ -968,7 +1151,7 @@ void DrawingSheetEditor::setReadOnly(bool readOnly){
     impl_->readOnly=readOnly||!impl_->state.drawing.version.checkinId.isNull();
     if(impl_->readOnly){impl_->cancelPlacement();impl_->quoteAction->setChecked(false);}
     impl_->quoteType->setEnabled(!impl_->readOnly);
-    for(const auto &name:{"drawingPageSettingsAction","drawingSmartDimensionAction","drawingEditDimensionAction","drawingOriginReferenceAction","drawingAxisXReferenceAction","drawingAxisYReferenceAction","drawingAddProjectionAction","drawingAddViewAction","drawingEditViewAction","drawingAlignViewAction","drawingEndpointDimensionAction","drawingHorizontalDimensionAction","drawingVerticalDimensionAction","drawingLengthDimensionAction","drawingDeleteSelectionAction"})
+    for(const auto &name:{"drawingDerivedViewAction","drawingTechnicalSectionAction","drawingDetachViewAction","drawingReleaseAlignmentAction","drawingSectionHatchAction","drawingEditSectionLineAction","drawingReverseSectionAction","drawingPageSettingsAction","drawingSmartDimensionAction","drawingEditDimensionAction","drawingOriginReferenceAction","drawingAxisXReferenceAction","drawingAxisYReferenceAction","drawingAddProjectionAction","drawingAddViewAction","drawingEditViewAction","drawingAlignViewAction","drawingEndpointDimensionAction","drawingHorizontalDimensionAction","drawingVerticalDimensionAction","drawingLengthDimensionAction","drawingDeleteSelectionAction"})
         findChild<QAction *>(QString::fromLatin1(name))->setEnabled(!impl_->readOnly);
     impl_->refreshHiddenAction();impl_->refreshHistoryActions();impl_->updateAction->setEnabled(!impl_->readOnly&&bool(impl_->provider));
     for(auto *item:impl_->scene->items())if(dynamic_cast<MoveLabel *>(item))item->setFlag(QGraphicsItem::ItemIsMovable,!impl_->readOnly);

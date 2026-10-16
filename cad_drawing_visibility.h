@@ -7,6 +7,7 @@ namespace ForgeCad {
 struct DrawingVisiblePath {QPainterPath visible,hidden;};
 struct DrawingViewVisibility {
     std::vector<DrawingVisiblePath> curves,silhouettes;
+    QPainterPath sectionHatch,sectionMaterial;
     QStringList warnings;
 };
 QString drawingViewVisibility(const DrawingModelSnapshot &model,const DrawingView &view,

@@ -1,5 +1,6 @@
 #pragma once
 #include "../cad_drawing_dimension.h"
+#include "../cad_drawing_derived.h"
 namespace {
 void projectedDrawingFileTests(){
     using namespace ForgeCad;using namespace ForgeCad::Kernel;
@@ -44,6 +45,12 @@ void projectedDrawingFileTests(){
     clientOk(window.editor()->removeView(view.id));require(window.document().sheet.drawing.views.empty(),"cancellazione aggiorna documento contenitore");
     clientOk(window.editor()->undo());require(!window.isModified()&&window.document().sheet.drawing.dimensions[0].id==dimension,"ripristino vista e quota al checkpoint");
     const auto bytes=clientRead(drawingPath);require(bytes.size()<8192,"proiezioni persistite senza cache 3D duplicata");
+    // Schema 2: relazioni e tagli entrano nei medesimi snapshot, senza una seconda copia del modello.
+    auto derivedSheet=window.editor()->sheet();DrawingView derived;DrawingViewLayout derivedLayout;derivedLayout.viewId=derived.id;derivedLayout.title="Derivata destra";derivedLayout.position={220,100};derivedLayout.relation.parentId=view.id;derivedLayout.relation.kind=DrawingDerivedKind::Orthographic;
+    derivedSheet.drawing.views.push_back(derived);derivedSheet.views.append(derivedLayout);clientOk(synchronizeDrawingViews(derivedSheet));clientOk(window.editor()->insertView(derivedSheet.drawing.views.back(),derivedSheet.views.back()));const auto derivedId=derived.id;
+    auto sectionSheet=window.editor()->sheet();DrawingView technical;DrawingViewLayout technicalLayout;technicalLayout.viewId=technical.id;technicalLayout.title="Sezione rimossa";technicalLayout.position={140,150};technicalLayout.relation.parentId=view.id;technicalLayout.relation.kind=DrawingDerivedKind::Section;technicalLayout.relation.cutStart={-2,3};technicalLayout.relation.cutEnd={12,3};technicalLayout.relation.label="A";technicalLayout.relation.aligned=false;
+    sectionSheet.drawing.views.push_back(technical);sectionSheet.views.append(technicalLayout);clientOk(synchronizeDrawingViews(sectionSheet));technical=sectionSheet.drawing.views.back();clientOk(window.editor()->insertView(technical,sectionSheet.views.back()));const auto technicalId=technical.id;
+    const auto &sectionPieces=window.editor()->sections(technicalId);const auto sectionEdge=std::find_if(sectionPieces.begin(),sectionPieces.end(),[](const auto &c){return std::abs(arcLength(*c.curve,c.range)-10)<1e-7;});require(sectionEdge!=sectionPieces.end(),"taglio tecnico sul solido reale del documento");auto technicalDimension=dimensionOfCurve(technical,*sectionEdge,DrawingMeasure::SectionLength);clientOk(window.editor()->addDimension(technicalDimension,{190,155}));const auto technicalDimensionId=technicalDimension.id;
     clientOk(window.pinModelRevision(modelA.version));clientOk(window.savePath(drawingPath));clientOk(window.runRevisionAction(DrawingWindow::RevisionAction::Checkout,"disegnatore"));clientOk(window.runRevisionAction(DrawingWindow::RevisionAction::Checkin,"A","vista e sezione"));
     require(window.editor()->pageContext().drawingRevision=="Lavoro (base A)"&&window.editor()->pageContext().modelRevision=="M-A","cartiglio distingue copia di lavoro della tavola e revisione del modello");
     QVector<RevisionRecord> history;clientOk(workspaceDrawingHistory(drawingPath,window.document(),history));require(history.size()==1,"check-in della nuova vista");const auto first=history[0].version;
@@ -53,6 +60,9 @@ void projectedDrawingFileTests(){
     require(std::abs(window.editor()->dimensionResult(snappedId).value-14)<1e-7,"entrambi gli snap seguono la genealogia al modello B");
     require(!window.editor()->canUndo()&&!window.editor()->canRedo(),"collegamento modello B separa la cronologia del layout");
     require(window.editor()->pageContext().modelRevision=="M-B","cartiglio aggiornato al modello esatto B");
+    require(std::abs(window.editor()->dimensionResult(technicalDimensionId).value-14)<1e-7,"quota sulla sezione derivata segue il modello B");
+    require(window.editor()->sheet().views[1].relation.parentId==view.id&&window.editor()->sheet().views[1].position.y()==window.editor()->sheet().views[0].position.y(),"legame e allineamento conservati dopo aggiornamento del modello");
+    clientOk(window.editor()->setSectionHatch(technicalId,false));clientOk(window.editor()->reverseSection(technicalId));
     block.code="FC-B";block.author="Autore B";clientOk(window.editor()->setPageSettings(window.editor()->sheet().title,{420,297},block));
     clientOk(window.editor()->setHiddenLinesVisible(view.id,false));QApplication::processEvents();
     clientOk(window.editor()->moveView(view.id,window.editor()->sheet().views[0].position+QPointF(1,2)));clientOk(window.editor()->undo());
@@ -64,6 +74,9 @@ void projectedDrawingFileTests(){
     const auto modelBytes=clientRead(sourcePath);require(!window.exportPdfPath(sourcePath,pdfReport).isEmpty()&&clientRead(sourcePath)==modelBytes,"export non sovrascrive il modello");
     const auto copy=temporary.filePath("copia.drw");
     {DrawingWindow archived;clientOk(archived.openRevision(drawingPath,first));require(archived.editor()->isReadOnly()&&std::abs(archived.editor()->dimensionResult(dimension).value-10)<1e-7,"prima proiezione archiviata resta a 10 mm");
+     require(archived.document().sheet.views[1].viewId==derivedId&&archived.document().sheet.views[1].relation.parentId==view.id&&archived.document().sheet.views[2].viewId==technicalId,"relazioni madre/figlie persistite nello storico A");
+     require(archived.document().sheet.views[2].relation.hatch&&!archived.document().sheet.views[2].relation.reverse&&std::abs(archived.editor()->dimensionResult(technicalDimensionId).value-10)<1e-7,"sezione A mantiene verso, tratteggio e quota 10 contro B a 14");
+     require(!archived.editor()->findChild<QAction *>("drawingTechnicalSectionAction")->isEnabled(),"creazione sezioni bloccata nello storico");
      require(archived.editor()->pageContext().drawingRevision=="A"&&archived.editor()->pageContext().modelRevision=="M-A"&&archived.document().sheet.titleBlock.code=="FC-A"&&archived.document().sheet.size==QSizeF(297,210),"cartiglio storico conserva revisioni A e metadati originali");
      require(archived.findChild<QAction *>("drawingExportPdfAction")->isEnabled()&&!archived.editor()->findChild<QAction *>("drawingPageSettingsAction")->isEnabled(),"storico esportabile ma pagina non modificabile");
      const auto pdfA=output.isEmpty()?temporary.filePath("revision-a.pdf"):output+"/revision-a.pdf";clientOk(archived.exportPdfPath(pdfA,pdfReport));require(clientRead(pdfA).startsWith("%PDF-"),"PDF della revisione storica A");
@@ -71,6 +84,6 @@ void projectedDrawingFileTests(){
      require(std::abs(archived.editor()->dimensionResult(snappedId).value-10)<1e-7&&!archived.editor()->findChild<QAction *>("drawingSmartDimensionAction")->isEnabled(),"snap storici sul modello A e quotatura bloccata");
      require(!archived.editor()->findChild<QAction *>("drawingEditViewAction")->isEnabled()&&archived.document().sheet.views[0].title=="Vista superiore modificata","modifica vista conservata nello storico in sola lettura");
      clientOk(archived.savePath(copy));require(archived.editor()->findChild<QAction *>("drawingEditViewAction")->isEnabled(),"salva copia reinstalla editor e azioni modificabili");}
-    {DrawingWindow reopened;clientOk(reopened.openPath(copy));require(reopened.editor()->pageContext().drawingRevision=="Copia di lavoro"&&reopened.editor()->pageContext().modelRevision=="M-A"&&reopened.document().sheet.titleBlock.code=="FC-A","copia indipendente aggiorna solo la revisione della tavola nel cartiglio");require(reopened.document().sheet.views[0].showHiddenLines,"copia storica conserva la visibilita' della revisione A");require(reopened.document().sheet.drawing.views[0].sectionReferences&&std::abs(reopened.editor()->dimensionResult(dimension).value-10)<1e-7,"copia storica riaperta con sezioni e quote proiettate");require(reopened.document().sheet.drawing.dimensions[1].references.size()==2&&std::abs(reopened.editor()->dimensionResult(snappedId).value-10)<1e-7,"snap associativi riaperti dalla copia storica");}
+    {DrawingWindow reopened;clientOk(reopened.openPath(copy));require(reopened.document().sheet.views[2].relation.parentId==view.id&&reopened.document().sheet.views[2].relation.hatch&&std::abs(reopened.editor()->dimensionResult(technicalDimensionId).value-10)<1e-7,"copia indipendente mantiene relazioni e sezione A");require(reopened.editor()->pageContext().drawingRevision=="Copia di lavoro"&&reopened.editor()->pageContext().modelRevision=="M-A"&&reopened.document().sheet.titleBlock.code=="FC-A","copia indipendente aggiorna solo la revisione della tavola nel cartiglio");require(reopened.document().sheet.views[0].showHiddenLines,"copia storica conserva la visibilita' della revisione A");require(reopened.document().sheet.drawing.views[0].sectionReferences&&std::abs(reopened.editor()->dimensionResult(dimension).value-10)<1e-7,"copia storica riaperta con sezioni e quote proiettate");require(reopened.document().sheet.drawing.dimensions[1].references.size()==2&&std::abs(reopened.editor()->dimensionResult(snappedId).value-10)<1e-7,"snap associativi riaperti dalla copia storica");}
 }
 }
