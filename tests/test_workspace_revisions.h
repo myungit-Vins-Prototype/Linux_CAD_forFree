@@ -19,7 +19,9 @@ void workspaceRevisionTests() {
     using namespace ForgeCad;
     QTemporaryDir temporary;require(temporary.isValid(),"directory client");
     auto path=temporary.filePath("parte.prt");auto working=clientModel();const auto docId=working.version.documentId;
-    WorkspaceRevisionStatus status;
+    WorkspaceRevisionStatus status;WorkspaceEditAccess access;
+    clientOk(workspaceDocumentEditAccess({},working.version,{},access));require(!access.readOnly,"nuovo documento modificabile senza workspace");
+    clientOk(workspaceDocumentEditAccess(path,working.version,{},access));require(!access.readOnly&&!QDir(temporary.filePath(".forgecad")).exists(),"lettura accesso non crea cartelle");
     require(!workspaceRevisionStatus(path,working,status).isEmpty() && !QDir(temporary.filePath(".forgecad")).exists(),"nessuna creazione prima di Salva");
     clientOk(saveDocumentFile(path,working));WorkspacePaths workspace;clientOk(locateDocumentWorkspace(path,workspace));
     const auto stem=docId.toString(QUuid::WithoutBraces);
@@ -28,6 +30,7 @@ void workspaceRevisionTests() {
     clientOk(checkoutWorkspaceDocument(path,working,"progettista"));clientOk(workspaceRevisionStatus(path,working,status));
     require(status.hasSession && !status.hasPending && status.phase==WorkspaceCheckoutPhase::Active,"sessione attiva persistente");
     const auto firstCheckout=status.session.checkout;
+    clientOk(workspaceDocumentEditAccess(path,working.version,working.baseCheckinId,access));require(!access.readOnly,"check-out verificato sblocca modifica");
     auto object=QJsonDocument::fromJson(clientRead(sessionPath)).object();
     require(object["workingFile"].toString()=="parte.prt" && !object.contains("directory"),"sessione con percorso relativo portabile");
     DocumentState reopened;clientOk(loadDocumentFile(path,reopened));clientOk(checkoutWorkspaceDocument(path,reopened,"progettista"));
@@ -37,6 +40,7 @@ void workspaceRevisionTests() {
     require(!workspaceRevisionStatus(copy,reopened,status).isEmpty(),"stesso UUID su altro percorso non eredita prenotazione");
     // Risposta persa fra prenotazione e registrazione locale della fase attiva.
     object["phase"]="reserving";clientWrite(sessionPath,QJsonDocument(object).toJson(QJsonDocument::Compact));
+    clientOk(workspaceDocumentEditAccess(path,reopened.version,reopened.baseCheckinId,access));require(access.readOnly,"prenotazione incompleta non abilita modifiche");
     clientOk(checkoutWorkspaceDocument(path,reopened,"progettista"));clientOk(workspaceRevisionStatus(path,reopened,status));
     require(status.session.checkout.token==firstCheckout.token && status.phase==WorkspaceCheckoutPhase::Active,"richiesta di check-out ritentata con stesso token");
     auto changed=reopened;changed.lengthUnit=LengthUnit::Inch;
@@ -48,6 +52,20 @@ void workspaceRevisionTests() {
     require(first.sequence==1 && first.technicalRevision=="R00" && working.baseCheckinId==first.version.checkinId
             && !QFileInfo::exists(sessionPath) && !QFileInfo::exists(pendingPath),"check-in aggiorna file e pulisce sessione/pendente");
     clientOk(loadDocumentFile(path,reopened));require(reopened.baseCheckinId==first.version.checkinId,"base su disco dopo check-in");
+    const auto checkedInBytes=clientRead(path);
+    clientOk(workspaceDocumentEditAccess(path,reopened.version,reopened.baseCheckinId,access));require(access.readOnly&&!access.reason.isEmpty(),"riapertura dopo check-in in sola lettura");
+    clientOk(workspaceDocumentEditAccess(path,first.version,{},access));require(access.readOnly,"snapshot storico sempre protetto");
+    QTemporaryDir detached;const auto detachedPath=detached.filePath("parte.prt");require(QFile::copy(path,detachedPath),"copia di file archiviato senza workspace");
+    require(!workspaceDocumentEditAccess(detachedPath,reopened.version,reopened.baseCheckinId,access).isEmpty()&&access.readOnly&&!QDir(detached.filePath(".forgecad")).exists(),"workspace mancante non sblocca una revisione");
+    auto unrelated=reopened;forkDocumentIdentity(unrelated);const auto unrelatedPath=temporary.filePath("indipendente.prt");clientOk(saveDocumentFile(unrelatedPath,unrelated));
+    clientOk(workspaceDocumentEditAccess(unrelatedPath,unrelated.version,{},access));require(!access.readOnly,"copia indipendente senza check-in modificabile");
+    clientOk(checkoutWorkspaceDocument(path,working,"progettista"));clientOk(workspaceRevisionStatus(path,working,status));
+    const auto validSession=clientRead(sessionPath);auto forged=QJsonDocument::fromJson(validSession).object();forged["token"]=QUuid::createUuid().toString(QUuid::WithoutBraces);clientWrite(sessionPath,QJsonDocument(forged).toJson());
+    require(!workspaceDocumentEditAccess(path,working.version,working.baseCheckinId,access).isEmpty()&&access.readOnly,"token locale non verificato non sblocca modifiche");clientWrite(sessionPath,validSession);
+    clientOk(store.cancelCheckout(status.session.checkout));require(!workspaceDocumentEditAccess(path,working.version,working.baseCheckinId,access).isEmpty()&&access.readOnly,"prenotazione cancellata esternamente non eredita diritti");clientOk(cancelWorkspaceCheckout(path,working));
+    const auto catalogPath=QDir(workspace.revisions).filePath("catalog.json"),catalog=QString::fromUtf8(clientRead(catalogPath));clientWrite(catalogPath,"corrotto");
+    require(!workspaceDocumentEditAccess(path,working.version,working.baseCheckinId,access).isEmpty()&&access.readOnly,"catalogo corrotto impone sola lettura");clientWrite(catalogPath,catalog.toUtf8());
+    require(clientRead(path)==checkedInBytes,"controlli accesso non riscrivono il modello");
 
     const auto preparePending=[&](const QString &revision) {
         clientOk(checkoutWorkspaceDocument(path,working,"progettista"));clientOk(workspaceRevisionStatus(path,working,status));
@@ -55,6 +73,7 @@ void workspaceRevisionTests() {
         QByteArray pending;clientOk(encodeNativeRevisionOperation(status.session,request,pending));clientWrite(pendingPath,pending);return request;
     };
     auto pending=preparePending("R00");const auto exactBytes=clientRead(pendingPath);bool matches=false;
+    clientOk(workspaceDocumentEditAccess(path,working.version,working.baseCheckinId,access));require(access.readOnly,"pendente congela modifiche prima del completamento");
     require(!cancelWorkspaceCheckout(path,working).isEmpty(),"annullamento bloccato con operazione pendente");
     require(!checkinWorkspaceDocument(path,working,"nuova","",record).isEmpty() && clientRead(pendingPath)==exactBytes,"nuovo check-in non sovrascrive il pendente");
     clientOk(completeWorkspaceCheckin(path,working,record,matches));

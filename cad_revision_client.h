@@ -10,6 +10,13 @@ struct WorkspaceRevisionStatus {
     WorkspaceCheckoutPhase phase = WorkspaceCheckoutPhase::Active;
     NativeRevisionSession session;
 };
+// Stato applicativo: non modifica permessi del filesystem e non crea sessioni.
+struct WorkspaceEditAccess {
+    bool readOnly = true;
+    QString reason;
+};
+QString workspaceDocumentEditAccess(const QString &path,const DocumentVersion &version,
+                                   const QUuid &baseCheckinId,WorkspaceEditAccess &access);
 // Anteprima della revisione del documento registrato, senza creare cartelle.
 QString nextWorkspaceRevisionLabel(const QString &path,const QUuid &documentId,QString &label);
 // Legge lo stato locale senza creare workspace o prenotazioni.

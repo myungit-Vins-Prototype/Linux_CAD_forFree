@@ -39,6 +39,8 @@ private:
     void refreshRevisionPanel();
     void showRevisionTableDialog();
     void refreshTitle();
+    void refreshEditAccess();
+    QString requireEditAccess();
     void refreshPageContext();
     QHash<QString,QString> revisionLabels_;
     bool save(bool askPath);
@@ -61,6 +63,7 @@ private:
     WorkspaceRevisionStatus revisionStatusCache_;
     bool revisionStatusKnown_=false;
     QString revisionStateText_;
+    WorkspaceEditAccess editAccess_;
 };
 }
 #endif

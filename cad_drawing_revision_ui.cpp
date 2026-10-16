@@ -55,7 +55,7 @@ void DrawingWindow::addRevisionMenus(QMenu *file){
         bool accepted=false;const auto fallback=qEnvironmentVariable("USER",qEnvironmentVariable("USERNAME"));
         const auto owner=QInputDialog::getText(this,QStringLiteral("Check-out tavola"),QStringLiteral("Proprietario della copia di lavoro:"),QLineEdit::Normal,
             revisionStatusKnown_&&revisionStatusCache_.hasSession?revisionStatusCache_.session.checkout.owner:QSettings().value("revisions/owner",fallback).toString(),&accepted).trimmed();
-        if(!accepted||owner.isEmpty()||!save(false))return;
+        if(!accepted||owner.isEmpty()||((path_.isEmpty()||(modified_&&!editAccess_.readOnly))&&!save(false)))return;
         const auto error=runRevisionAction(RevisionAction::Checkout,owner);if(error.isEmpty())QSettings().setValue("revisions/owner",owner);report(error);
     });
     auto *checkin=revisions->addAction(QStringLiteral("Esegui check-in..."));checkin->setObjectName("drawingCheckinAction");revisionMutationActions_.append(checkin);
@@ -118,6 +118,7 @@ QString DrawingWindow::applySource(DrawingFile prepared,DocumentState source){
     refreshPageContext();refreshTitle();return {};
 }
 QString DrawingWindow::pinModelRevision(const DocumentVersion &version){
+    const auto accessError=requireEditAccess();if(!accessError.isEmpty())return accessError;
     if(busy_||(editor_&&editor_->isComputing()))return QStringLiteral("Attendere il calcolo in corso.");
     if(!editor_||!drawing_.sheet.drawing.version.checkinId.isNull())return QStringLiteral("La tavola non e' modificabile.");
     auto prepared=drawing_;auto error=pinWorkspaceDrawingModel(path_,prepared,version);if(!error.isEmpty())return error;
@@ -126,6 +127,7 @@ QString DrawingWindow::pinModelRevision(const DocumentVersion &version){
     return applySource(std::move(prepared),std::move(source));
 }
 QString DrawingWindow::useWorkingModel(){
+    const auto accessError=requireEditAccess();if(!accessError.isEmpty())return accessError;
     if(busy_||(editor_&&editor_->isComputing()))return QStringLiteral("Attendere il calcolo in corso.");
     if(!editor_||!drawing_.sheet.drawing.version.checkinId.isNull())return QStringLiteral("La tavola non e' modificabile.");
     DocumentState source;auto error=loadDocumentFile(sourcePath_,source);if(!error.isEmpty())return error;
@@ -182,7 +184,8 @@ void DrawingWindow::installRevisionPanel(){
     connect(revisionHistory_,&QTableWidget::cellDoubleClicked,this,[this](int row,int){if(busy_||!editor_||editor_->isComputing()||row<0)return;auto *item=revisionHistory_->item(row,0);if(!item)return;DocumentVersion version{item->data(Qt::UserRole+1).toUuid(),item->data(Qt::UserRole).toUuid()};auto *window=new DrawingWindow(parentWidget());const auto error=window->openRevision(path_,version);if(!error.isEmpty()){delete window;report(error);return;}window->setAttribute(Qt::WA_DeleteOnClose);window->show();});
     revisionDock_->setWidget(body);addDockWidget(Qt::RightDockWidgetArea,revisionDock_);
     auto *timer=new QTimer(this);timer->setInterval(5000);connect(timer,&QTimer::timeout,this,[this,last=QString()]()mutable{
-        if(!editor_||busy_||editor_->isComputing()||!revisionDock_->isVisible())return;
+        if(!editor_||busy_||editor_->isComputing())return;
+        refreshEditAccess();refreshTitle();
         WorkspacePaths paths;if(!locateDocumentWorkspace(path_.isEmpty()?sourcePath_:path_,paths).isEmpty())return;
         QString stamp;for(const auto &directory:{paths.revisions,sourceArchivePath_}){if(directory.isEmpty())continue;const QFileInfo catalog(QDir(directory).filePath("catalog.json"));stamp+=directory+QString::number(catalog.lastModified().toMSecsSinceEpoch())+QString::number(catalog.size());}
         if(stamp!=last){last=stamp;refreshPageContext();refreshTitle();}
@@ -210,6 +213,7 @@ void DrawingWindow::refreshRevisionPanel(){
             QString next;if(nextWorkspaceRevisionLabel(path_,drawing_.sheet.drawing.version.documentId,next).isEmpty())revisionStateText_+=QStringLiteral("\nProssima revisione automatica: %1").arg(next);
         }
     }
+    if(editAccess_.readOnly&&!historical)revisionStateText_+=QStringLiteral("\n")+editAccess_.reason;
     revisionStateText_+=QStringLiteral("\nModello: %1").arg(editor_->pageContext().modelRevision);
     if(!history.isEmpty()&&drawing_.baseCheckinId!=history.back().version.checkinId&&!historical)revisionStateText_+=QStringLiteral("\nAttenzione: la base locale non e' l'ultimo check-in.");
     const auto fill=[](QTableWidget *table,const QVector<RevisionRecord> &records){const auto selected=table->currentRow()>=0&&table->item(table->currentRow(),0)?table->item(table->currentRow(),0)->data(Qt::UserRole).toUuid():QUuid();table->setRowCount(records.size());int selection=records.size()-1;

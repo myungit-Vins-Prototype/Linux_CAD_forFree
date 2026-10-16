@@ -380,3 +380,12 @@ Gli assi manuali attivano lo **schema 4 del solo foglio .drw**, confermato dall�
 
 
 Verifica conclusiva degli assi manuali/cilindrici: app Release completa e runner dai sorgenti di produzione, 37/37 regressioni pertinenti PASS in 3,38 s, incluse proprietà e geometria degli assi negli snapshot A/B. Il vecchio test di compressione Mouse resta escluso per fixture originale assente; prova separata delle viste sul Mouse corrente PASS senza modificarlo. PDF A3 vettoriale, rendering identico al prototipo ispezionato e finestra completa controllata. Eseguibile abituale aggiornato con backup; serve riavvio. Gli assi restano annotazioni associate: la selezione come nuovi riferimenti autonomi delle quote è il prossimo passo, insieme alle annotazioni tecniche.
+
+
+## Sola lettura dopo check-in
+
+I file `.prt` e `.drw` con almeno un check-in si consultano in sola lettura finché la copia di lavoro non possiede un check-out attivo e verificato. La GUI blocca modifica, Undo/Redo e salvataggio sul file originale; navigazione, storico ed esportazione restano disponibili. **Salva con nome** crea una nuova identità indipendente modificabile, senza revisioni della copia originale. Dopo check-in o annullamento della prenotazione la protezione torna attiva, conservando eventuali modifiche locali da recuperare tramite nuovo check-out o copia indipendente. I file senza check-in restano modificabili senza obbligo di prenotazione.
+
+Lo stato continua a risiedere nel catalogo e nelle sessioni del workspace `.forgecad`: UUID del documento, base, token, archivio, proprietario e percorso devono corrispondere. Un file copiato manualmente, uno snapshot storico, una sessione incompleta, un check-in pendente o uno stato non verificabile non sbloccano le modifiche. Non si modificano i permessi dei file e non si introduce un database; restano le garanzie cooperative locali già dichiarate. Verifica all'apertura, dopo operazioni di revisione e prima di salvare l'originale; controllo periodico anche con pannello revisioni nascosto. Nessuna lettura del catalogo per ogni movimento del mouse o passo nella storia 3D. Formati invariati. Esiti reali di test e build nel registro CLAUDE.md.
+
+Il prossimo incremento geometrico della roadmap rimane la quotatura sugli assi associati, poi annotazioni tecniche, precisione HLR, viste di dettaglio e fogli multipli.

@@ -89,6 +89,7 @@ public:
         require(ownerDialogSeen,"dialogo proprietario check-out effettivamente utilizzato");
         WorkspaceRevisionStatus status;clientOk(workspaceRevisionStatus(path,reopened.viewport_->currentDocument(),status));
         require(status.session.checkout.token==token,"GUI riprende sessione persistente dopo chiusura");
+        auto beforeCheckin=reopened.viewport_->extrusions()[0];beforeCheckin.primitive.size[0]=12;clientOk(reopened.viewport_->updateBody(0,beforeCheckin));
         bool dialogSeen=false;
         QTimer::singleShot(0,[&] {
             auto *dialog=reopened.findChild<QDialog *>(QStringLiteral("revisionCheckinDialog"));
@@ -101,6 +102,18 @@ public:
         reopened.findChild<QAction *>(QStringLiteral("revisionCheckinAction"))->trigger();
         require(dialogSeen,"dialogo check-in effettivamente utilizzato");
         auto current=reopened.viewport_->currentDocument();require(!current.baseCheckinId.isNull() && !reopened.documentModified_,"GUI applica ricevuta e salva base");
+        require(reopened.viewport_->documentReadOnly()&&reopened.windowTitle().contains("sola lettura"),"modello bloccato immediatamente dopo check-in");
+        require(!reopened.findChild<QAction *>("documentSaveAction")->isEnabled()&&!reopened.findChild<QAction *>("documentImportAction")->isEnabled(),"salva/importa disabilitati anche nelle barre");
+        const auto protectedBytes=clientRead(path);auto definition=current.extrusions[0];definition.primitive.size[0]=23;
+        require(!reopened.viewport_->updateBody(0,definition).isEmpty()&&!reopened.saveDocumentPath(path),"modifica diretta e sovrascrittura rifiutate senza check-out");
+        reopened.viewport_->setLengthUnit(LengthUnit::Inch);reopened.viewport_->undo();reopened.viewport_->redo();
+        require(reopened.viewport_->lengthUnit()==current.lengthUnit&&!reopened.documentModified_&&clientRead(path)==protectedBytes,"nessuna mutazione con unità/undo/redo in sola lettura");
+        reopened.viewport_->zoomIn();reopened.viewport_->setViewPreset(2);
+        require(!reopened.viewport_->interactionLocked(),"sola lettura non impedisce navigazione e comandi revisione");
+        {PdfWindow copy;const auto copyPath=temporary.filePath("copia.prt");
+         require(reopened.saveDocumentPath(copyPath)&&!reopened.viewport_->documentReadOnly()&&reopened.viewport_->documentVersion().documentId!=current.version.documentId,"Salva con nome sblocca solo una nuova identità");
+         require(reopened.openDocumentPath(path)&&reopened.viewport_->documentReadOnly(),"riapertura originale torna in sola lettura");
+         require(clientRead(path)==protectedBytes,"copia indipendente non riscrive originale");}
         QVector<RevisionRecord> records;clientOk(workspaceDocumentHistory(path,current,records));
         require(records.size()==1 && records[0].technicalRevision=="1" && records[0].comment=="verifica interattiva","metadati del dialogo nel catalogo");
         bool historySeen=false;
@@ -112,6 +125,10 @@ public:
         });
         reopened.findChild<QAction *>(QStringLiteral("revisionHistoryAction"))->trigger();require(historySeen,"GUI mostra storico in sola lettura");
         clientOk(reopened.runDocumentRevisionAction(PdfWindow::DocumentRevisionAction::Checkout,"progettista"));
+        require(!reopened.viewport_->documentReadOnly(),"nuovo check-out sblocca il modello");
+        {CadViewport undoView;auto original=clientModel();undoView.loadDocument(original);auto body=original.extrusions[0];body.primitive.size[0]=16;clientOk(undoView.updateBody(0,body));
+         undoView.adoptDocumentIdentity(current.version,current.baseCheckinId);undoView.undo();require(undoView.currentDocument().baseCheckinId==current.baseCheckinId&&undoView.documentVersion().documentId==current.version.documentId,"undo non ripristina una vecchia base di check-in");
+         undoView.redo();require(undoView.currentDocument().baseCheckinId==current.baseCheckinId,"redo conserva ricevuta corrente");}
         reopened.viewport_->setLengthUnit(LengthUnit::Inch);
         bool cancelConfirmed=false;
         QTimer::singleShot(0,[&] {

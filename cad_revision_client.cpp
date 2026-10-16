@@ -30,6 +30,50 @@ bool finish(const Context &c,DocumentState &working,RevisionStore &store,Revisio
     removeFile(c.sessionPath);removeFile(c.pendingPath);return matches;
 }
 }
+QString workspaceDocumentEditAccess(const QString &path,const DocumentVersion &version,
+                                   const QUuid &baseCheckinId,WorkspaceEditAccess &access) {
+    access={};
+    try {
+        if(!version.checkinId.isNull()) {
+            access.reason=QStringLiteral("Copia storica in sola lettura. Usare Salva con nome per una copia indipendente.");return {};
+        }
+        const bool hasBase=!baseCheckinId.isNull();
+        if(path.isEmpty()) {
+            require(!hasBase,QStringLiteral("Workspace della revisione assente."));access.readOnly=false;return {};
+        }
+        WorkspacePaths paths;ok(locateDocumentWorkspace(path,paths));
+        if(paths.workspaceId.isNull()) {
+            require(!hasBase&&!QFileInfo::exists(paths.metadata),QStringLiteral("Workspace delle revisioni assente o incompleto."));
+            access.readOnly=false;return {};
+        }
+        const Identity identity{version,baseCheckinId};const auto c=context(path,identity);
+        const auto status=readStatus(c,identity);RevisionStore store(paths.revisions);
+        QVector<RevisionDocumentInfo> documents;ok(store.documents(documents));
+        const RevisionDocumentInfo *registered=nullptr;
+        for(const auto &document:documents)if(document.documentId==version.documentId){registered=&document;break;}
+        require(!hasBase||(registered&&!registered->headCheckinId.isNull()),QStringLiteral("Documento archiviato non trovato nel workspace."));
+        if(status.hasPending) {access.reason=QStringLiteral("Check-in pendente: completare l'operazione prima di modificare il documento.");return {};}
+        if(status.hasSession) {
+            if(status.phase!=WorkspaceCheckoutPhase::Active) {access.reason=QStringLiteral("Prenotazione da completare prima di modificare il documento.");return {};}
+            validateArchive(store,status.session);
+            const auto &expected=status.session.checkout;RevisionCheckout live;
+            ok(store.resumeCheckout(version.documentId,expected.token,live));
+            require(live.documentId==version.documentId&&live.baseCheckinId==baseCheckinId
+                    &&live.baseCheckinId==expected.baseCheckinId&&live.owner==expected.owner
+                    &&live.createdUtc==expected.createdUtc,QStringLiteral("Prenotazione e copia di lavoro non corrispondono."));
+            access.readOnly=false;return {};
+        }
+        if(hasBase||(registered&&!registered->headCheckinId.isNull())||(registered&&registered->checkedOut)) {
+            access.reason=registered&&registered->checkedOut
+                ?QStringLiteral("Sola lettura: check-out assegnato a %1. Questa copia non possiede la prenotazione.").arg(registered->checkoutOwner)
+                :QStringLiteral("Sola lettura: eseguire il check-out per modificare il documento.");
+            return {};
+        }
+        access.readOnly=false;return {};
+    } catch(const std::exception &error) {
+        access.reason=QStringLiteral("Sola lettura: stato revisioni non verificato. %1").arg(QString::fromUtf8(error.what()));return access.reason;
+    }
+}
 QString nextWorkspaceRevisionLabel(const QString &path,const QUuid &documentId,QString &label) {
     WorkspacePaths paths;const auto error=locateDocumentWorkspace(path,paths);if(!error.isEmpty())return error;
     return RevisionStore(paths.revisions).nextTechnicalRevision(documentId,label);

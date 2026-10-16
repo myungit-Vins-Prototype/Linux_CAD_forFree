@@ -575,6 +575,7 @@ public:
     // ricalcola con il kernel attuale, anche quelle che vengono dallo snapshot
     // salvato nel documento. Un passo di Undo. Restituisce quante falliscono.
     int rebuildAllFeatures() {
+        if(documentReadOnly_)return -1;
         if (extrusions_.isEmpty()) return 0;
         recordUndo();
         for (ExtrusionObject &body : extrusions_) body.cachedGeometry = false;
@@ -587,6 +588,7 @@ public:
 
     LengthUnit lengthUnit() const { return lengthUnit_; }
     void setLengthUnit(LengthUnit unit) {
+        if(documentReadOnly_)return;
         if (unit == lengthUnit_) return;
         lengthUnit_ = unit;
         ForgeCad::setDisplayLengthUnit(unit);
@@ -788,6 +790,7 @@ public:
     }
 
     void setModelBodyVisible(int index, bool visible) {
+        if(documentReadOnly_)return;
         if (index < 0 || index >= modelBodies_.size() || modelBodies_.at(index).visible == visible) return;
         recordUndo();
         ModelBody &model = modelBodies_[index];
@@ -810,6 +813,7 @@ public:
     }
 
     void setModelBodyMeshColor(int index, const QColor &color) {
+        if(documentReadOnly_)return;
         if (index < 0 || index >= modelBodies_.size() || !color.isValid()) return;
         const QColor opaque(color.red(), color.green(), color.blue());
         if (modelBodies_.at(index).meshColor == opaque) return;
@@ -834,6 +838,7 @@ public:
     }
 
     QString renameModelBody(int index, const QString &name) {
+        if(documentReadOnly_)return QStringLiteral("Documento in sola lettura: eseguire il check-out.");
         const QString clean = name.trimmed();
         if (index < 0 || index >= modelBodies_.size()) return QStringLiteral("Corpo non valido.");
         if (clean.isEmpty()) return QStringLiteral("Il nome non puo' essere vuoto.");
@@ -877,6 +882,7 @@ public:
 
     // Soppressione (o riattivazione) di piu' feature in un passo di Undo.
     QString setFeaturesSuppressed(const QVector<int> &indices, bool suppressed) {
+        if(documentReadOnly_)return QStringLiteral("Documento in sola lettura: eseguire il check-out.");
         QVector<int> list;
         for (int index : indices)
             if (index >= 0 && index < extrusions_.size() && extrusions_.at(index).modelBodyId
@@ -934,6 +940,7 @@ public:
     // Elimina le feature della storia in un passo di Undo: la base implicita
     // di quelle che seguono prosegue dallo stadio precedente.
     void deleteFeatures(const QVector<int> &indices) {
+        if(documentReadOnly_)return;
         QVector<int> list;
         for (int index : indices)
             if (index >= 0 && index < extrusions_.size() && extrusions_.at(index).modelBodyId && !list.contains(index)) list.append(index);
@@ -990,6 +997,7 @@ public:
     }
 
     QString moveFeatureTo(int index, int target) {
+        if(documentReadOnly_)return QStringLiteral("Documento in sola lettura: eseguire il check-out.");
         // La storia e' una sola sequenza: il bersaglio puo' essere una feature
         // di un altro corpo, conta solo che le dipendenze restino prima.
         if (index < 0 || index >= extrusions_.size() || target < 0 || target >= extrusions_.size()
@@ -1097,17 +1105,19 @@ public:
         return {};
     }
 
-    bool canUndo() const { return history_.canUndo(); }
-    bool canRedo() const { return history_.canRedo(); }
+    bool canUndo() const { return !documentReadOnly_&&history_.canUndo(); }
+    bool canRedo() const { return !documentReadOnly_&&history_.canRedo(); }
     void undo() {
+        if(documentReadOnly_)return;
         ScopedWork work(workCallback_, QStringLiteral("Ripristino dello stato precedente..."));
         DocumentState state = documentState();
-        if (history_.undo(state)) restoreDocument(std::move(state));
+        if (history_.undo(state)) {state.version=documentVersion_;state.baseCheckinId=documentBaseCheckinId_;restoreDocument(std::move(state));}
     }
     void redo() {
+        if(documentReadOnly_)return;
         ScopedWork work(workCallback_, QStringLiteral("Ripristino dello stato successivo..."));
         DocumentState state = documentState();
-        if (history_.redo(state)) restoreDocument(std::move(state));
+        if (history_.redo(state)) {state.version=documentVersion_;state.baseCheckinId=documentBaseCheckinId_;restoreDocument(std::move(state));}
     }
 
     bool isObjectVisible(SceneObjectKind kind, int index) const {
@@ -1118,6 +1128,7 @@ public:
         return false;
     }
     void setObjectVisible(SceneObjectKind kind, int index, bool visible) {
+        if(documentReadOnly_)return;
         if (isObjectVisible(kind, index) == visible) return;
         if (kind != SceneObjectKind::Sketch && kind != SceneObjectKind::Extrusion) return;
         if ((kind == SceneObjectKind::Sketch && (index < 0 || index >= sketches_.size()))
@@ -1133,6 +1144,7 @@ public:
     }
     // Visibilita' di piu' schizzi/corpi in un passo di Undo.
     void setObjectsVisible(const QVector<SceneSelection> &objects, bool visible) {
+        if(documentReadOnly_)return;
         QVector<SceneSelection> changed;
         for (const SceneSelection &object : objects)
             if ((object.kind == SceneObjectKind::Sketch && object.index >= 0 && object.index < sketches_.size())
@@ -1151,6 +1163,7 @@ public:
         documentChanged();
     }
     void showAllObjects() {
+        if(documentReadOnly_)return;
         bool anyHidden = false;
         for (const SketchObject &sketch : sketches_) anyHidden = anyHidden || !sketch.visible;
         for (const ExtrusionObject &extrusion : extrusions_) anyHidden = anyHidden || !extrusion.visible;
@@ -1211,6 +1224,7 @@ public:
     // conserva il riferimento agli operandi (rigenerato se cambiano); gli
     // operandi vengono nascosti ma restano nell'albero. Restituisce l'errore.
     QString createBoolean(BooleanOperation operation, int firstIndex, const QVector<int> &tools, const QString &name) {
+        if(documentReadOnly_)return QStringLiteral("Documento in sola lettura: eseguire il check-out.");
         if (firstIndex < 0 || firstIndex >= extrusions_.size() || tools.isEmpty()) return QStringLiteral("Scegli il primo oggetto e almeno uno strumento.");
         for (int tool : tools) {
             if (tool < 0 || tool >= extrusions_.size()) return QStringLiteral("Oggetti non validi.");
@@ -1328,6 +1342,7 @@ public:
     // se riesce, prende il posto del vecchio e si rigenerano i corpi che ne
     // dipendono (un passo di Undo). Restituisce l'errore.
     QString updateBody(int index, const ExtrusionObject &definition) {
+        if(documentReadOnly_)return QStringLiteral("Documento in sola lettura: eseguire il check-out.");
         if (index < 0 || index >= extrusions_.size()) return QStringLiteral("Corpo non valido.");
         if (definition.operation >= 0) {
             if (definition.firstBody < 0 || definition.secondBody < 0 || definition.firstBody >= index || definition.secondBody >= index)
@@ -1407,6 +1422,7 @@ public:
 
     // Quota del segmento selezionato nello schizzo attivo (o di `index`).
     QString editSegmentDimension(int index = -1) {
+        if(documentReadOnly_)return QStringLiteral("Documento in sola lettura: eseguire il check-out.");
         if (!sketchMode_ || activeSketch_ < 0 || activeSketch_ >= sketches_.size()) return QStringLiteral("Entra in modalita' schizzo.");
         if (index < 0)
             for (const SketchElementSelection &element : sketchSelections_)
@@ -1669,6 +1685,7 @@ public:
     // Finestra del valore della quota nuova (orientamento per le quote tra due
     // punti, raggio o diametro per i cerchi), poi il vincolo con il risolutore.
     QString placeDimension(SketchConstraint constraint) {
+        if(documentReadOnly_)return QStringLiteral("Documento in sola lettura: eseguire il check-out.");
         const SketchObject *active = activeSketchObject();
         if (!active) return QStringLiteral("Entra in modalita' schizzo.");
         for (const SketchConstraint &other : active->geometricConstraints)
@@ -1761,6 +1778,7 @@ public:
     // chiede se eliminare anche quelli (tutto in un passo di Undo). In
     // modalita' schizzo elimina le entita' selezionate dello schizzo.
     void deleteSelection() {
+        if(documentReadOnly_)return;
         if (sketchMode_) {
             if (!selectedConstraints_.isEmpty()) deleteConstraints(selectedConstraints_);
             else deleteSketchElements();
@@ -1778,6 +1796,7 @@ public:
     // Solo feature della storia: si tolgono senza cancellare a cascata le
     // successive (come una per volta); altrimenti eliminazione con i dipendenti.
     void deleteObjectsOrFeatures(const QVector<SceneSelection> &objects) {
+        if(documentReadOnly_)return;
         QVector<int> features;
         bool allFeatures = !objects.isEmpty();
         for (const SceneSelection &object : objects) {
@@ -1802,6 +1821,7 @@ public:
     // Elimina schizzi e corpi; i corpi che ne dipendono (e non sono tra quelli
     // scelti) si elencano e si eliminano solo con la conferma. Un passo di Undo.
     void deleteObjects(const QVector<SceneSelection> &objects) {
+        if(documentReadOnly_)return;
         QSet<int> sketchSet, chosenBodies;
         QStringList chosenNames;
         for (const SceneSelection &object : objects) {
@@ -2026,6 +2046,7 @@ public:
 
     // Estrusione esatta dei profili dello schizzo attivo. Restituisce l'errore.
     QString createExtrusion(double distance, const QString &name) {
+        if(documentReadOnly_)return QStringLiteral("Documento in sola lettura: eseguire il check-out.");
         ExtrusionObject extrusion;
         extrusion.distance = distance;
         extrusion.sketchIndex = activeSketch_;
@@ -2033,6 +2054,7 @@ public:
     }
     // Estrusione con condizione di fine e fusione (definition.sketchIndex; -1: lo schizzo attivo).
     QString createExtrusion(const ExtrusionObject &definition, const QString &name) {
+        if(documentReadOnly_)return QStringLiteral("Documento in sola lettura: eseguire il check-out.");
         const int sketch = definition.sketchIndex >= 0 ? definition.sketchIndex : activeSketch_;
         if (sketch < 0 || sketch >= sketches_.size())
             return QStringLiteral("Nessuno schizzo attivo.");
@@ -2058,6 +2080,7 @@ public:
     // attorno al suo asse `axis` (segmento dello schizzo, -1 asse X, -2 asse Y
     // del piano) di `angle` gradi. Restituisce l'errore.
     QString createRevolution(int sketchIndex, int axis, double angle, const QString &name) {
+        if(documentReadOnly_)return QStringLiteral("Documento in sola lettura: eseguire il check-out.");
         if (sketchIndex < 0 || sketchIndex >= sketches_.size()) return QStringLiteral("Nessuno schizzo scelto.");
         ExtrusionObject revolution;
         revolution.name = name;
@@ -2077,6 +2100,7 @@ public:
 
     // Solido elementare (parallelepipedo, cilindro, sfera, cono, toro).
     QString createPrimitive(const PrimitiveParameters &parameters, const QString &name) {
+        if(documentReadOnly_)return QStringLiteral("Documento in sola lettura: eseguire il check-out.");
         ExtrusionObject primitive;
         primitive.name = name;
         primitive.feature = BodyFeature::Primitive;
@@ -2132,6 +2156,7 @@ public:
     // sulla sua base con gli spigoli attuali; al posto del raccordo si vede
     // l'anteprima. Invio chiama il callback di setEdgeEditCallback.
     QString beginBlendEdit(int blend, double size, bool chamfer) {
+        if(documentReadOnly_)return QStringLiteral("Documento in sola lettura: eseguire il check-out.");
         if (blend < 0 || blend >= extrusions_.size() || extrusions_.at(blend).feature != BodyFeature::Blend
             || extrusions_.at(blend).operation >= 0)
             return QStringLiteral("Il corpo non e' un raccordo o uno smusso.");
@@ -2362,6 +2387,7 @@ public:
     void endEdgePick(bool keepPreview = false) { cancelEdgePick(keepPreview); }
 
     QString createBlend(int baseIndex, const QVector<EdgePoint> &edges, double size, bool chamfer, const QString &name, const ChamferSpec &spec = {}) {
+        if(documentReadOnly_)return QStringLiteral("Documento in sola lettura: eseguire il check-out.");
         if (baseIndex < 0 || baseIndex >= extrusions_.size()) return QStringLiteral("Corpo non valido.");
         ExtrusionObject blend;
         blend.featureId = 1;
@@ -2410,6 +2436,7 @@ public:
     // dello strumento che contiene `toolKeep`.
     QString createSheetTrim(int sheet, int tool, int plane, const EdgePoint &keep, const QString &name, int sketch = -1,
                             bool both = false, const EdgePoint &toolKeep = {}) {
+        if(documentReadOnly_)return QStringLiteral("Documento in sola lettura: eseguire il check-out.");
         ExtrusionObject definition;
         definition.firstBody = sheet;
         definition.secondBody = tool;
@@ -2422,6 +2449,7 @@ public:
     }
     // Come sopra, con tutti i parametri del taglio (anche la proiezione dello schizzo).
     QString createSheetTrim(const ExtrusionObject &definition, const QString &name) {
+        if(documentReadOnly_)return QStringLiteral("Documento in sola lettura: eseguire il check-out.");
         const int sheet = definition.firstBody, tool = definition.secondBody;
         const bool both = definition.trimBoth;
         if (sheet < 0 || sheet >= extrusions_.size() || tool >= extrusions_.size() || tool == sheet)
@@ -2486,6 +2514,7 @@ public:
     }
     // Estensione dei bordi `edges` della superficie `sheet` (nascosta). Restituisce l'errore.
     QString createSheetExtend(int sheet, const QVector<EdgePoint> &edges, double distance, bool linear, const QString &name) {
+        if(documentReadOnly_)return QStringLiteral("Documento in sola lettura: eseguire il check-out.");
         if (sheet < 0 || sheet >= extrusions_.size()) return QStringLiteral("Superficie non valida.");
         ExtrusionObject body;
         body.name = name;
@@ -2524,6 +2553,7 @@ public:
     // Scala uniforme del corpo `base` (nascosto): fattore e centro (0 origine,
     // 1 baricentro del solido, 2 il punto `center`). Restituisce l'errore.
     QString createScale(int base, double factor, int mode, const EdgePoint &center, const QString &name) {
+        if(documentReadOnly_)return QStringLiteral("Documento in sola lettura: eseguire il check-out.");
         if (base < 0 || base >= extrusions_.size()) return QStringLiteral("Corpo non valido.");
         ExtrusionObject body;
         body.name = name;
@@ -2583,6 +2613,7 @@ public:
     }
 
     QString createBody(ExtrusionObject body, const QVector<int> &hide = {}) {
+        if(documentReadOnly_)return QStringLiteral("Documento in sola lettura: eseguire il check-out.");
         body = withMergeCandidates(body, int(extrusions_.size()));
         QString previewError;
         if (takePreviewResult(body, -1, &previewError)) {
@@ -2608,6 +2639,7 @@ public:
     // corpo di storyboard distinto, invece di restare nascosta dentro un solo
     // ExtrusionObject multi-shell.
     QString createDeleteFaces(ExtrusionObject definition) {
+        if(documentReadOnly_)return QStringLiteral("Documento in sola lettura: eseguire il check-out.");
         if (definition.firstBody < 0 || definition.firstBody >= extrusions_.size()
             || !extrusions_.at(definition.firstBody).forgeBody)
             return QStringLiteral("Il corpo di partenza non ha geometria.");
@@ -2782,12 +2814,21 @@ public:
     // attiva per la scelta dei riferimenti, ma niente menu contestuali.
     void setInteractionLocked(bool locked) { interactionLocked_ = locked; }
     bool interactionLocked() const { return interactionLocked_; }
+    bool documentReadOnly() const { return documentReadOnly_; }
+    const ForgeCad::DocumentVersion &documentVersion() const { return documentVersion_; }
+    const QUuid &documentBaseCheckinId() const { return documentBaseCheckinId_; }
+    void setDocumentReadOnly(bool readOnly) {
+        if(documentReadOnly_==readOnly)return;
+        if(readOnly&&sketchMode_)endSketchMode();
+        documentReadOnly_=readOnly;update();
+    }
     // Il piano per la finestra, con il documento com'e' (il corpo `index`, -1 se nuovo).
     bool previewDatum(const DatumParameters &parameters, int index, SketchFrame &frame, QString *error) const {
         return ForgeCad::computeDatum(parameters, index < 0 ? int(extrusions_.size()) : index, sketches_, extrusions_, frame, error);
     }
     // Nuovo schizzo sul piano di costruzione `body` (lo segue quando si rigenera).
     int createDatumSketch(int body, const QString &name) {
+        if(documentReadOnly_)return -1;
         if (body < 0 || body >= extrusions_.size() || !ForgeCad::isDatumBody(extrusions_.at(body)) || !extrusions_.at(body).datumValid) return -1;
         if (sketchMode_) endSketchMode();
         if (edgePicking_) cancelEdgePick();
@@ -2815,6 +2856,7 @@ public:
     // nella storia solo a lavoro concluso (un solo passo di Undo).
     QStringList importParts(const QVector<ForgeCad::ImportedPart> &parts, const QString &source,
                             const std::function<void(int, int)> &progress = {}) {
+        if(documentReadOnly_)return {QStringLiteral("Documento in sola lettura: eseguire il check-out.")};
         ScopedWork work(workCallback_, QStringLiteral("Preparazione dei corpi importati..."));
         QStringList failures;
         if (parts.isEmpty()) return failures;
@@ -2904,6 +2946,7 @@ public:
     // Le entita' selezionate nello schizzo attivo diventano di costruzione
     // (o tornano normali se lo erano tutte). Restituisce l'errore.
     QString toggleConstruction() {
+        if(documentReadOnly_)return QStringLiteral("Documento in sola lettura: eseguire il check-out.");
         if (!sketchMode_ || activeSketch_ < 0 || activeSketch_ >= sketches_.size())
             return QStringLiteral("Entra in modalita' schizzo e seleziona le entita' (clic o Ctrl+clic).");
         if (sketchSelections_.isEmpty()) return QStringLiteral("Seleziona prima le entita' dello schizzo (clic o Ctrl+clic).");
@@ -2932,6 +2975,7 @@ public:
     // I segmenti selezionati diventano assi di simmetria (e di costruzione), o
     // tornano linee di costruzione se lo erano tutti. Restituisce l'errore.
     QString toggleSymmetryAxis() {
+        if(documentReadOnly_)return QStringLiteral("Documento in sola lettura: eseguire il check-out.");
         if (!activeSketchObject()) return QStringLiteral("Entra in modalita' schizzo e seleziona i segmenti.");
         QVector<int> segments;
         for (const SketchElementSelection &element : sketchSelections_)
@@ -3003,6 +3047,7 @@ public:
     }
     // Rinomina uno schizzo o un corpo (un passo di Undo).
     QString renameObject(SceneObjectKind kind, int index, const QString &name) {
+        if(documentReadOnly_)return QStringLiteral("Documento in sola lettura: eseguire il check-out.");
         const QString trimmed = name.trimmed();
         if (trimmed.isEmpty()) return QStringLiteral("Il nome non puo' essere vuoto.");
         if (kind == SceneObjectKind::Sketch && index >= 0 && index < sketches_.size()) {
@@ -3186,6 +3231,7 @@ public:
         return ForgeCad::appendProjectedCurve(work,curve,range,construction,true);
     }
     QString convertReferenceAt(const QPoint &position) {
+        if(documentReadOnly_)return QStringLiteral("Documento in sola lettura: eseguire il check-out.");
         if (!activeSketchObject()) return QStringLiteral("Entra in modalita' schizzo.");
         SketchObject work=sketches_.at(activeSketch_);
         const QString error=appendReferenceAt(position,work,referencesConstruction_);
@@ -3212,6 +3258,7 @@ public:
     }
     // Le sezioni dei solidi e delle superfici visibili con il piano dello schizzo attivo (un passo di Undo).
     QString addSectionReferences(int *added = nullptr) {
+        if(documentReadOnly_)return QStringLiteral("Documento in sola lettura: eseguire il check-out.");
         ScopedWork progressWork(workCallback_, QStringLiteral("Calcolo delle sezioni sul piano di schizzo..."));
         if (!activeSketchObject()) return QStringLiteral("Entra in modalita' schizzo.");
         const int entitiesBefore = sketches_.at(activeSketch_).segments.size() + sketches_.at(activeSketch_).curves.size();
@@ -3242,6 +3289,7 @@ public:
     // attivo. I punti sono entita' di costruzione fisse e quindi possono
     // ricevere Coincidente o imporre Punto sull'entita' a segmenti e curve.
     QString addSketchContactReferences(int *added = nullptr) {
+        if(documentReadOnly_)return QStringLiteral("Documento in sola lettura: eseguire il check-out.");
         ScopedWork progressWork(workCallback_, QStringLiteral("Calcolo dei contatti con gli altri schizzi..."));
         if (!activeSketchObject()) return QStringLiteral("Entra in modalita' schizzo.");
         SketchObject work = sketches_.at(activeSketch_);
@@ -3329,6 +3377,7 @@ public:
     }
     // La modifica nello schizzo attivo (un passo di Undo): le entita' risultanti diventano la selezione.
     QString applySketchEdit(const SketchEdit &edit) {
+        if(documentReadOnly_)return QStringLiteral("Documento in sola lettura: eseguire il check-out.");
         if (!activeSketchObject()) return QStringLiteral("Entra in modalita' schizzo.");
         SketchObject work = sketches_.at(activeSketch_);
         QVector<ForgeCad::SketchEntity> created;
@@ -3454,6 +3503,7 @@ public:
     }
     // Applica Pierce a un punto e alla faccia scelta, senza copie nello schizzo.
     QString addSurfacePierce(const ConstraintRef &point, GeometryRef source) {
+        if(documentReadOnly_)return QStringLiteral("Documento in sola lettura: eseguire il check-out.");
         const SketchObject *active=activeSketchObject();
         if (!active || !ForgeCad::applicableConstraints(*active,{point}).contains(ConstraintType::Pierce))
             return QStringLiteral("Seleziona un punto dello schizzo con Ctrl+clic.");
@@ -3522,6 +3572,7 @@ public:
     }
     // Vincolo del tipo dato sui riferimenti scelti; le quote con `value` (NaN: la misura attuale).
     QString addConstraint(ConstraintType type, double value = qQNaN()) {
+        if(documentReadOnly_)return QStringLiteral("Documento in sola lettura: eseguire il check-out.");
         if (type==ConstraintType::Pierce) return beginSurfacePierce();
         const SketchObject *active = activeSketchObject();
         if (!active) return QStringLiteral("Entra in modalita' schizzo.");
@@ -3552,6 +3603,7 @@ public:
         return {};
     }
     QString deleteConstraints(QVector<int> indices) {
+        if(documentReadOnly_)return QStringLiteral("Documento in sola lettura: eseguire il check-out.");
         if (!activeSketchObject() || indices.isEmpty()) return {};
         recordUndo();
         SketchObject &sketch = sketches_[activeSketch_];
@@ -3569,6 +3621,7 @@ public:
     // Nuovo valore di una quota: lo schizzo si adatta (se i vincoli lo permettono).
     // `type`: le quote dall'asse possono passare da raggio a diametro (e viceversa).
     QString setConstraintValue(int index, double value, std::optional<ConstraintType> type = std::nullopt) {
+        if(documentReadOnly_)return QStringLiteral("Documento in sola lettura: eseguire il check-out.");
         if (!activeSketchObject() || index < 0 || index >= activeSketchObject()->geometricConstraints.size()) return QStringLiteral("Vincolo non valido.");
         if (!ForgeCad::isDimension(activeSketchObject()->geometricConstraints.at(index).type)) return QStringLiteral("Il vincolo non ha un valore.");
         const DocumentState snapshot = documentState();
@@ -3589,6 +3642,7 @@ public:
     // entita' di partenza restano ferme se si puo', le copie si spostano (o si
     // rifanno, se cambia il numero di istanze).
     QString setSketchPatternValues(int index, const SketchPatternData &values) {
+        if(documentReadOnly_)return QStringLiteral("Documento in sola lettura: eseguire il check-out.");
         const SketchObject *active = activeSketchObject();
         if (!active || index < 0 || index >= active->geometricConstraints.size() || active->geometricConstraints.at(index).type != ConstraintType::Pattern)
             return QStringLiteral("La ripetizione non esiste piu'.");
@@ -3629,6 +3683,7 @@ public:
     }
     // Finestra dei parametri di una ripetizione dello schizzo.
     void editSketchPatternValues(int index) {
+        if(documentReadOnly_)return;
         const SketchObject *active = activeSketchObject();
         if (!active || index < 0 || index >= active->geometricConstraints.size()) return;
         SketchPatternData values = active->geometricConstraints.at(index).pattern;
@@ -3936,6 +3991,7 @@ public:
     void selectPlane(int plane) { selectObject(SceneObjectKind::Plane, plane); }
 
     int createSketch(int plane, const QString &name) {
+        if(documentReadOnly_)return -1;
         recordUndo();
         SketchObject sketch;
         sketch.name = name;
@@ -3953,6 +4009,7 @@ public:
     // Nuovo schizzo sul piano di una faccia piana del corpo `body` (il piano
     // resta quello della faccia al momento della creazione). -1 se la faccia non e' piana.
     int createFaceSketch(int body, const FaceHit &face, const QString &name) {
+        if(documentReadOnly_)return -1;
         if (!face.planar || body < 0 || body >= extrusions_.size()) return -1;
         if (sketchMode_) endSketchMode();
         if (edgePicking_) cancelEdgePick();
@@ -3996,12 +4053,14 @@ public:
     }
 
     void selectSketch(int index) {
+        if(documentReadOnly_)return;
         if (index < 0 || index >= sketches_.size()) return;
         activeSketch_ = index;
         beginSketchMode(sketches_.at(index).plane);
     }
 
     void beginSketchMode(int plane) {
+        if(documentReadOnly_)return;
         activePlane_ = plane;
         selectedPlane_ = plane < 3 ? plane : -1;
         selectedFace_ = {};
@@ -4187,6 +4246,7 @@ public:
     // Orientamento degli assi del documento (non e' una modifica annullabile).
     const AxesOrientation &orientation() const { return orientation_; }
     void setOrientation(const AxesOrientation &orientation) {
+        if(documentReadOnly_)return;
         orientation_ = orientation;
         setViewPreset(4);
         fitAll();
@@ -4337,7 +4397,7 @@ protected:
                 return;
             }
         }
-        if (interactionLocked_) {
+        if ((interactionLocked_ || documentReadOnly_)) {
             if (event->key() == Qt::Key_Plus || event->key() == Qt::Key_Equal) zoomIn();
             else if (event->key() == Qt::Key_Minus) zoomOut();
             else if (event->key() == Qt::Key_0) resetZoom();
@@ -4439,7 +4499,7 @@ protected:
             if(event->button()==Qt::LeftButton){spatialPressed_=true;spatialDragged_=false;spatialPress_=lastMousePosition_;}
             event->accept();return;
         }
-        if (interactionLocked_ && !refPicking_ && !edgePicking_ && !trimPartPickFinished_
+        if ((interactionLocked_ || documentReadOnly_) && !refPicking_ && !edgePicking_ && !trimPartPickFinished_
             && !sketchPickCallback_ && !sketchEntityPickCallback_ && !sketchOffsetSelectionCallback_) {
             if (event->button() == Qt::LeftButton && !releasingSelection_) {
                 selectionPress_ = lastMousePosition_;
@@ -4472,9 +4532,9 @@ protected:
                 return;
             }
         }
-        if (!interactionLocked_ && !trimPartPickFinished_ && event->button() == Qt::LeftButton && beginPlaneResize(lastMousePosition_)) return;
+        if (!(interactionLocked_ || documentReadOnly_) && !trimPartPickFinished_ && event->button() == Qt::LeftButton && beginPlaneResize(lastMousePosition_)) return;
         // Il piano di sezione si trascina dalla maniglia o dal bordo.
-        if (!interactionLocked_ && !sketchMode_ && !refPicking_ && !edgePicking_ && !trimPartPickFinished_ && event->button() == Qt::LeftButton && sectionHandleAt(lastMousePosition_)) {
+        if (!(interactionLocked_ || documentReadOnly_) && !sketchMode_ && !refPicking_ && !edgePicking_ && !trimPartPickFinished_ && event->button() == Qt::LeftButton && sectionHandleAt(lastMousePosition_)) {
             sectionDragging_ = true;
             setCursor(Qt::SizeAllCursor);
             return;
@@ -5755,11 +5815,11 @@ protected:
 
     // Doppio clic su un segmento dello schizzo: la sua quota.
     void mouseDoubleClickEvent(QMouseEvent *event) override {
-        if (interactionLocked_) { event->accept(); return; }
+        if ((interactionLocked_ || documentReadOnly_)) { event->accept(); return; }
         if (sketchMode_ && sketchViewUnlocked_) return;
         // Fuori dallo schizzo, doppio clic su una parte del modello: si modifica
         // la funzione che l'ha creata (come dall'albero).
-        if (!sketchMode_ && event->button() == Qt::LeftButton && editBodyCallback_ && !interactionLocked_ && !refPicking_ && !edgePicking_ && !trimPartPickFinished_
+        if (!sketchMode_ && event->button() == Qt::LeftButton && editBodyCallback_ && !(interactionLocked_ || documentReadOnly_) && !refPicking_ && !edgePicking_ && !trimPartPickFinished_
             && !sketchPickCallback_ && !sketchEntityPickCallback_ && !sketchOffsetSelectionCallback_) {
             const SceneSelection hit = pickSceneObject(event->pos());
             if (hit.kind == SceneObjectKind::Sketch) {
@@ -5914,7 +5974,7 @@ protected:
                 return;
             }
         }
-        if (interactionLocked_ || refPicking_) {
+        if ((interactionLocked_ || documentReadOnly_) || refPicking_) {
             event->accept();
             return;
         }
@@ -6068,7 +6128,7 @@ protected:
             spatialHoverValid_=spatialPointAt(currentPosition,spatialHover_);
             setCursor(Qt::CrossCursor);update();event->accept();return;
         }
-        if (interactionLocked_ && !refPicking_ && !edgePicking_ && !trimPartPickFinished_
+        if ((interactionLocked_ || documentReadOnly_) && !refPicking_ && !edgePicking_ && !trimPartPickFinished_
             && !sketchPickCallback_ && !sketchEntityPickCallback_ && !sketchOffsetSelectionCallback_) {
             if (event->buttons() & Qt::LeftButton) {
                 autoFit_ = false;
@@ -6279,7 +6339,7 @@ protected:
 
     // Evidenziazione al passaggio (riferimenti, spigoli, oggetti) nel punto `currentPosition`.
     void updateHover(const QPoint &currentPosition) {
-        if (interactionLocked_ && !refPicking_ && !edgePicking_ && !trimPartPickFinished_
+        if ((interactionLocked_ || documentReadOnly_) && !refPicking_ && !edgePicking_ && !trimPartPickFinished_
             && !sketchPickCallback_ && !sketchEntityPickCallback_ && !sketchOffsetSelectionCallback_) { hover_ = {}; return; }
         if (QApplication::mouseButtons() & Qt::LeftButton) return;
         if (trimPartPickFinished_) {
@@ -12044,6 +12104,7 @@ private:
     QString measureLabel_;
     std::function<void(bool, GeometryRef)> refPickFinished_;
     bool interactionLocked_ = false;
+    bool documentReadOnly_ = false;
     // Anteprima del piano di costruzione della finestra.
     SketchFrame datumPreviewFrame_;
     bool datumPreviewValid_ = false;
@@ -20319,7 +20380,7 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
         (*editBlend)(index, edges, size, chamfer);
     });
     auto editBody = std::make_shared<std::function<void(int)>>([this, viewport, editBlend](int index) {
-        if (viewport->interactionLocked()) return;
+        if (viewport->interactionLocked()||viewport->documentReadOnly()) return;
         const QVector<ExtrusionObject> &bodies = viewport->extrusions();
         if (index < 0 || index >= bodies.size()) return;
         // Ogni finestra si chiude solo se il corpo si rigenera con i valori nuovi
@@ -20476,7 +20537,7 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
         }
     });
     viewport->setDocumentChangedCallback([this] {
-        if (!loadingDocument_ && !documentModified_) {
+        if (!loadingDocument_ && !viewport_->documentReadOnly() && !documentModified_) {
             documentModified_ = true;
             updateWindowTitle();
         }
@@ -20495,6 +20556,7 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
     });
     connect(modelTree, &QTreeWidget::itemChanged, this, [this, viewport](QTreeWidgetItem *item, int) {
         if (rebuildingTree_) return;
+        if(viewport->documentReadOnly()){scheduleModelTreeRebuild();return;}
         // Il clic sulla casella emette anche itemClicked: non deve aprire lo schizzo.
         suppressTreeClick_ = true;
         QTimer::singleShot(0, this, [this] { suppressTreeClick_ = false; });
@@ -20540,6 +20602,7 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
     });
     connect(modelTree, &QTreeWidget::customContextMenuRequested, this,
             [this, modelTree, viewport, createSketchOnPlane, editBody](const QPoint &position) {
+        if(viewport->documentReadOnly())return;
         auto *item = modelTree->itemAt(position);
         if (!item) return;
         const int type = item->data(0, Qt::UserRole).toInt();
@@ -20714,7 +20777,7 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
         const QString owner = QInputDialog::getText(this, QStringLiteral("Check-out"), QStringLiteral("Proprietario della copia di lavoro:"),
             QLineEdit::Normal, QSettings().value(QStringLiteral("revisions/owner"),fallback).toString(), &accepted).trimmed();
         if (!accepted || owner.isEmpty()) return;
-        if (!saveDocument(false)) return;
+        if ((documentPath_.isEmpty()||(documentModified_&&!documentEditAccess_.readOnly))&&!saveDocument(false)) return;
         const auto error = runDocumentRevisionAction(DocumentRevisionAction::Checkout,owner);
         if (error.isEmpty()) QSettings().setValue(QStringLiteral("revisions/owner"),owner);
         reportRevisionError(error);
@@ -23279,12 +23342,25 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
             menu.exec(bar->mapToGlobal(point));
         });
     }
-    updateWindowTitle();
+    const auto markMutation=[this](QAction *action){if(!documentMutationActions_.contains(action))documentMutationActions_.append(action);};
+    const std::function<void(QMenu *)> markMenu=[&](QMenu *menu){for(auto *action:menu->actions()){if(action->menu())markMenu(action->menu());else if(!action->isSeparator())markMutation(action);}};
+    for(auto *menu:{editMenu,functionsMenu,sketchMenu,unitsMenu})markMenu(menu);
+    markMutation(saveAction);markMutation(importAction);markMutation(orientationAction);
+    saveAction->setObjectName("documentSaveAction");importAction->setObjectName("documentImportAction");
+    documentRevisionStatus_=new QLabel(this);documentRevisionStatus_->setObjectName("documentRevisionStatus");
+    statusBar()->addPermanentWidget(documentRevisionStatus_);
+    auto *revisionTimer=new QTimer(this);revisionTimer->setInterval(5000);
+    connect(revisionTimer,&QTimer::timeout,this,[this]{
+        if(foregroundProgressDepth_||viewport_->interactionLocked())return;
+        refreshDocumentEditAccess();updateWindowTitle();
+    });revisionTimer->start();
+    refreshDocumentEditAccess();updateWindowTitle();
     setTheme(QApplication::palette().color(QPalette::Window).lightness() < 128);
 }
 
 bool PdfWindow::event(QEvent *event) {
     const bool handled = QMainWindow::event(event);
+    if (event->type() == QEvent::WindowActivate&&viewport_&&documentRevisionStatus_) {refreshDocumentEditAccess();updateWindowTitle();}
     if (event->type() == QEvent::ApplicationPaletteChange) {
         setTheme(QApplication::palette().color(QPalette::Window).lightness() < 128);
         // Le icone vettoriali leggono la palette corrente al ridisegno.
@@ -23293,9 +23369,25 @@ bool PdfWindow::event(QEvent *event) {
     return handled;
 }
 
+void PdfWindow::refreshDocumentEditAccess(){
+    if(!viewport_||foregroundProgressDepth_||viewport_->interactionLocked())return;
+    ForgeCad::workspaceDocumentEditAccess(documentPath_,viewport_->documentVersion(),viewport_->documentBaseCheckinId(),documentEditAccess_);
+    viewport_->setDocumentReadOnly(documentEditAccess_.readOnly);
+    if(documentEditAccess_.readOnly){
+        for(const auto &action:documentMutationActions_)if(action&&action->isEnabled()){
+            action->setEnabled(false);if(!revisionDisabledActions_.contains(action))revisionDisabledActions_.append(action);
+        }
+    }else{
+        for(const auto &action:revisionDisabledActions_)if(action)action->setEnabled(true);
+        revisionDisabledActions_.clear();
+    }
+    if(documentRevisionStatus_){documentRevisionStatus_->setText(documentEditAccess_.readOnly?QStringLiteral("Sola lettura · Eseguire check-out"):QString());documentRevisionStatus_->setToolTip(documentEditAccess_.reason);}
+    updateUndoActions();
+}
 void PdfWindow::updateWindowTitle() {
     const QString name = documentPath_.isEmpty() ? QStringLiteral("Senza nome") : QFileInfo(documentPath_).fileName();
-    setWindowTitle(QStringLiteral("%1%2 - %3").arg(name, documentModified_ ? QStringLiteral(" *") : QString(), QGuiApplication::applicationDisplayName()));
+    setWindowTitle(QStringLiteral("%1%2%3 - %4").arg(name, documentModified_ ? QStringLiteral(" *") : QString(),
+        documentEditAccess_.readOnly?QStringLiteral(" [sola lettura]"):QString(),QGuiApplication::applicationDisplayName()));
 }
 
 void PdfWindow::rememberRecentDocument(const QString &path) {
@@ -23419,7 +23511,7 @@ void PdfWindow::endBackgroundProgress() {
 
 void PdfWindow::newDrawing() {
     if (foregroundProgressDepth_>0 || viewport_->interactionLocked()) return;
-    if (!saveDocument(false)) return;
+    if ((documentPath_.isEmpty()||documentModified_)&&!saveDocument(false)) return;
     auto *drawing = new ForgeCad::DrawingWindow(this);
     const auto error = drawing->createFromModel(documentPath_);
     if (!error.isEmpty()) { delete drawing; QMessageBox::warning(this,QStringLiteral("Tavola 2D"),error); return; }
@@ -23439,6 +23531,7 @@ void PdfWindow::openDrawing() {
 void PdfWindow::newDocument() {
     if (!maybeSaveChanges()) return;
     loadingDocument_ = true;
+    viewport_->setDocumentReadOnly(false);
     DocumentState empty;
     empty.orientation = defaultAxesOrientation();
     empty.orientationSet = true;
@@ -23449,6 +23542,7 @@ void PdfWindow::newDocument() {
     documentLock_.reset();
     documentPath_.clear();
     documentModified_ = false;
+    refreshDocumentEditAccess();
     updateWindowTitle();
 }
 
@@ -23512,6 +23606,7 @@ bool PdfWindow::openDocumentPath(const QString &path) {
         state.orientationSet = true;
     }
     loadingDocument_ = true;
+    viewport_->setDocumentReadOnly(false);
     viewport_->loadDocument(std::move(state), [this](int completed, int total, const QString &name) {
         const int percent = 15 + (total > 0 ? 80 * completed / total : 80);
         const QString detail = name.isEmpty() ? QStringLiteral("Costruzione della scena")
@@ -23525,6 +23620,7 @@ bool PdfWindow::openDocumentPath(const QString &path) {
     documentLock_ = std::move(candidate);
     documentPath_ = resolved;
     documentModified_ = false;
+    refreshDocumentEditAccess();
     rememberRecentDocument(resolved);
     updateWindowTitle();
     int failed = 0;
@@ -23549,6 +23645,10 @@ bool PdfWindow::saveDocument(bool askPath) {
 
 bool PdfWindow::saveDocumentPath(const QString &path) {
     const QString resolved = ForgeCad::canonicalDocumentPath(path);
+    refreshDocumentEditAccess();
+    if(!documentPath_.isEmpty()&&resolved==documentPath_&&documentEditAccess_.readOnly){
+        statusBar()->showMessage(documentEditAccess_.reason,10000);return false;
+    }
     std::unique_ptr<ForgeCad::DocumentFileLock> candidate;
     const ForgeCad::DocumentFileLock *lock = documentLock_.get();
     if (!lock || lock->path() != resolved) {
@@ -23575,6 +23675,7 @@ bool PdfWindow::saveDocumentPath(const QString &path) {
     viewport_->adoptDocumentIdentity(saved.version, saved.baseCheckinId);
     documentPath_ = resolved;
     documentModified_ = false;
+    refreshDocumentEditAccess();
     rememberRecentDocument(resolved);
     updateWindowTitle();
     statusBar()->showMessage(QStringLiteral("Salvato %1 (%2 byte)").arg(path).arg(QFileInfo(path).size()), 6000);
@@ -23615,7 +23716,7 @@ QString PdfWindow::runDocumentRevisionAction(DocumentRevisionAction action, cons
                 ? QStringLiteral("Check-out attivo: %1.").arg(first)
                 : QStringLiteral("Check-out annullato; modifiche locali mantenute."),6000);
     }
-    updateWindowTitle(); return error;
+    refreshDocumentEditAccess();updateWindowTitle(); return error;
 }
 
 void PdfWindow::showDocumentRevisions() {
@@ -23678,6 +23779,7 @@ void PdfWindow::scheduleModelTreeRebuild() {
 // Ricostruisce l'albero dallo stato del viewport: origine e piani restano fissi,
 // schizzi ed estrusioni seguono il documento (anche dopo Undo/Redo).
 void PdfWindow::renameTreeItem(QTreeWidgetItem *item) {
+    if(viewport_->documentReadOnly())return;
     if (!item) return;
     const int type = item->data(0, Qt::UserRole).toInt();
     const int index = item->data(0, Qt::UserRole + 1).toInt();

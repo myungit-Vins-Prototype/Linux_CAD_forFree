@@ -3,6 +3,8 @@
 
 #include <QMainWindow>
 #include "cad_document_io.h"
+#include "cad_revision_client.h"
+#include <QPointer>
 
 class CadViewport;
 class QAction;
@@ -41,6 +43,10 @@ private:
     void refreshRecentDocuments();
     bool maybeSaveChanges();
     void updateWindowTitle();
+    void refreshDocumentEditAccess();
+    ForgeCad::WorkspaceEditAccess documentEditAccess_;
+    QVector<QPointer<QAction>> documentMutationActions_,revisionDisabledActions_;
+    QLabel *documentRevisionStatus_=nullptr;
     void beginForegroundProgress(const QString &message, int maximum = 0);
     void updateForegroundProgress(const QString &message, int value, int maximum = 100);
     void endForegroundProgress();

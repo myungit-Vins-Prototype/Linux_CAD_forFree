@@ -49,16 +49,30 @@ DrawingWindow::DrawingWindow(QWidget *parent):QMainWindow(parent,Qt::Window){
     installRevisionPanel();refreshTitle();
 }
 void DrawingWindow::report(const QString &error){if(!error.isEmpty())QMessageBox::warning(this,QStringLiteral("Tavola 2D"),error);}
+void DrawingWindow::refreshEditAccess(){
+    if(!editor_||busy_||editor_->isComputing())return;
+    workspaceDocumentEditAccess(path_,drawing_.sheet.drawing.version,drawing_.baseCheckinId,editAccess_);
+    const bool readOnly=!sourceReady_||editAccess_.readOnly;
+    if(editor_->isReadOnly()!=readOnly)editor_->setReadOnly(readOnly);
+}
+QString DrawingWindow::requireEditAccess(){
+    refreshEditAccess();refreshTitle();
+    return editAccess_.readOnly?editAccess_.reason:QString();
+}
 void DrawingWindow::refreshTitle(){
     if(revisionStatus_)revisionStatus_->setText(revisionStateText_+(modified_?QStringLiteral("\nModifiche locali da salvare."):QString()));
     sourceStatus_->setToolTip(sourceStatus_->text());
     const auto checkin=drawing_.sheet.drawing.version.checkinId;
     setWindowTitle((path_.isEmpty()?QStringLiteral("Nuova tavola"):QFileInfo(path_).fileName())+(modified_?QStringLiteral(" *"):QString())
+        +(editAccess_.readOnly?QStringLiteral(" [sola lettura]"):QString())
         +(checkin.isNull()?QString():QStringLiteral(" [check-in %1]").arg(checkin.toString(QUuid::WithoutBraces).left(8)))+QStringLiteral(" — ForgeCAD"));
     findChild<QAction *>("drawingExportPdfAction")->setEnabled(editor_&&sourceReady_&&!busy_);
-    findChild<QAction *>("drawingSaveAction")->setEnabled(editor_&&checkin.isNull()&&!busy_);
-    findChild<QAction *>("drawingLocateSourceAction")->setEnabled(editor_&&checkin.isNull()&&!busy_);
+    findChild<QAction *>("drawingSaveAction")->setEnabled(editor_&&!editAccess_.readOnly&&!busy_);
+    findChild<QAction *>("drawingLocateSourceAction")->setEnabled(editor_&&!editAccess_.readOnly&&!busy_);
+    updateAction_->setEnabled(editor_&&!editAccess_.readOnly&&!busy_);
     for(auto *action:revisionMutationActions_)action->setEnabled(editor_&&checkin.isNull()&&!busy_);
+    for(const auto name:{"drawingPinModelAction","drawingWorkingModelAction"})
+        findChild<QAction *>(name)->setEnabled(editor_&&!editAccess_.readOnly&&!busy_);
     if(editor_&&checkin.isNull()&&!busy_&&revisionStatusKnown_){
         findChild<QAction *>("drawingCheckoutAction")->setEnabled(!revisionStatusCache_.hasPending&&(!revisionStatusCache_.hasSession||revisionStatusCache_.phase==WorkspaceCheckoutPhase::Reserving));
         findChild<QAction *>("drawingCheckinAction")->setEnabled(revisionStatusCache_.hasSession&&!revisionStatusCache_.hasPending&&revisionStatusCache_.phase==WorkspaceCheckoutPhase::Active);
@@ -78,7 +92,7 @@ void DrawingWindow::installEditor(){
         sourceStatus_->setText(QStringLiteral("Impossibile generare le viste: %1").arg(QString::fromUtf8(error.what())));
         next=new DrawingSheetEditor(drawing_.sheet,model_,container);
     }
-    next->setReadOnly(!sourceReady_);
+    next->setReadOnly(true);
     next->setChangedCallback([this](const DrawingSheet &sheet){drawing_.sheet=sheet;modified_=containerDirty_||editor_->isModified();refreshTitle();});
     // Il comando del contenitore verifica percorso, identita' e impronta.
     next->findChild<QAction *>("drawingUpdateModelAction")->setVisible(false);
@@ -93,7 +107,7 @@ void DrawingWindow::installEditor(){
     viewMenu_->addAction(revisionDock_->toggleViewAction());
     viewMenu_->addAction(next->findChild<QToolBar *>("drawingCommandBar")->toggleViewAction());viewMenu_->addAction(findChild<QToolBar *>("drawingDocumentBar")->toggleViewAction());
     busy_=oldBusy;refreshPageContext();
-    updateAction_->setEnabled(drawing_.sheet.drawing.version.checkinId.isNull());
+    refreshEditAccess();
     if(sourceReady_){
         const auto pinned=drawing_.sheet.drawing.model.checkinId;
         sourceStatus_->setText(pinned.isNull()?QStringLiteral("Modello: %1. Le modifiche al 3D vengono lette solo dopo il salvataggio e l'aggiornamento esplicito della tavola.").arg(sourcePath_)
@@ -132,6 +146,7 @@ void DrawingWindow::loadContents(const QString &path,DrawingFile prepared){
     installEditor();refreshTitle();
 }
 QString DrawingWindow::updateFromSource(const QString &overridePath){
+    const auto accessError=requireEditAccess();if(!accessError.isEmpty())return accessError;
     if(busy_||(editor_&&editor_->isComputing()))return QStringLiteral("Attendere il calcolo in corso.");
     if(!editor_||!drawing_.sheet.drawing.version.checkinId.isNull())return QStringLiteral("La tavola archiviata e' in sola lettura: creare prima una copia indipendente.");
     DocumentState source;QString resolved;bool changed=false;
@@ -154,6 +169,7 @@ QString DrawingWindow::savePath(const QString &path){
     if(resolved==canonicalDocumentPath(sourcePath_)||QFileInfo(resolved).suffix().compare("drw",Qt::CaseInsensitive)!=0)
         return QStringLiteral("La destinazione deve essere un file .drw distinto dal modello 3D.");
     const bool different=!path_.isEmpty()&&resolved!=path_;
+    if(!different){const auto accessError=requireEditAccess();if(!accessError.isEmpty())return accessError;}
     auto prepared=drawing_;
     if(different)forkDrawingIdentity(prepared);
     if(!prepared.sheet.drawing.version.checkinId.isNull())return QStringLiteral("Usare Salva con nome per una copia indipendente della tavola archiviata.");
@@ -191,7 +207,7 @@ void DrawingWindow::refreshPageContext(){
             for(const auto &record:projectRecords_)if(record.sequence<=limit)context.projectRevisions.append({record.version,record.sequence,record.technicalRevision,record.author,record.comment,record.createdUtc});
         }
     }
-    editor_->setPageContext(std::move(context));refreshRevisionPanel();
+    editor_->setPageContext(std::move(context));refreshEditAccess();refreshRevisionPanel();
 }
 QString DrawingWindow::exportPdfPath(const QString &path,DrawingPdfReport &report)const{
     if(!editor_||busy_||!sourceReady_)return QStringLiteral("Modello non verificato: aggiornare la tavola prima di esportare.");

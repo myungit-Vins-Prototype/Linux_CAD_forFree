@@ -93,6 +93,8 @@ void drawingRevisionUiTests(){
     QVector<RevisionRecord> records;clientOk(workspaceDrawingHistory(path,window.document(),records));require(records.size()==1&&records[0].technicalRevision=="1"&&records[0].comment=="tavola iniziale","campi GUI conservati in catalogo");
     source.extrusions[0].primitive.size[0]=14;source.extrusions[0].cachedGeometry=false;{CadViewport viewport;viewport.loadDocument(source);source=viewport.currentDocument();}
     clientOk(saveDocumentFile(sourcePath,source));clientOk(checkoutWorkspaceDocument(sourcePath,source,"modellatore"));RevisionRecord modelB;clientOk(checkinWorkspaceDocument(sourcePath,source,"B","",modelB));
+    require(window.editor()->isReadOnly()&&!window.savePath(path).isEmpty(),"check-in tavola blocca salvataggio originale");
+    clientOk(window.runRevisionAction(DrawingWindow::RevisionAction::Checkout,"disegnatore"));
     clientOk(window.pinModelRevision(modelB.version));require(std::abs(window.editor()->dimensionResult(dimension).value-14)<1e-7,"scelta modello B aggiorna quota a 14");
     clientOk(window.savePath(path));clientOk(window.runRevisionAction(DrawingWindow::RevisionAction::Checkout,"disegnatore"));clientOk(window.runRevisionAction(DrawingWindow::RevisionAction::Checkin,{},"tavola allungata"));
     bool historySeen=false;QTimer::singleShot(0,[&]{auto *dialog=window.findChild<QDialog *>("drawingHistoryDialog");if(dialog){auto *table=dialog->findChild<QTableWidget *>("drawingRevisionTable");historySeen=table&&table->rowCount()==2&&table->editTriggers()==QAbstractItemView::NoEditTriggers;table->selectRow(0);dialog->accept();}});
@@ -102,10 +104,28 @@ void drawingRevisionUiTests(){
     require(!historical->findChild<QAction *>("drawingCheckinAction")->isEnabled()&&!historical->savePath(path).isEmpty(),"storico non sovrascrive copia di lavoro");
     const auto preview=qEnvironmentVariable("FORGECAD_DRAWING_REVISIONS_PREVIEW");if(!preview.isEmpty()){QApplication::processEvents();require(historical->grab().save(preview),"anteprima storico tavola");}
     clientOk(historical->savePath(temporary.filePath("copia-storica.drw")));require(!historical->editor()->isReadOnly()&&historical->document().baseCheckinId.isNull(),"Salva con nome storico crea copia indipendente");delete historical;
+    require(window.editor()->isReadOnly()&&!window.findChild<QAction *>("drawingWorkingModelAction")->isEnabled(),"sorgente bloccata dopo secondo check-in");
+    clientOk(window.runRevisionAction(DrawingWindow::RevisionAction::Checkout,"disegnatore"));
     window.findChild<QAction *>("drawingWorkingModelAction")->trigger();require(window.document().sheet.drawing.model.checkinId.isNull()&&window.isModified(),"comando ritorno alla copia di lavoro");
     clientOk(window.runRevisionAction(DrawingWindow::RevisionAction::Checkout,"disegnatore"));bool cancelSeen=false;
     QTimer::singleShot(0,[&]{for(auto *widget:QApplication::topLevelWidgets())if(auto *box=qobject_cast<QMessageBox *>(widget)){box->button(QMessageBox::Yes)->click();cancelSeen=true;}});
     window.findChild<QAction *>("drawingCancelCheckoutAction")->trigger();WorkspaceRevisionStatus status;clientOk(workspaceDrawingRevisionStatus(path,window.document(),status));
-    require(cancelSeen&&!status.hasSession&&window.isModified(),"annullamento GUI conserva modifiche non salvate");
+    require(cancelSeen&&!status.hasSession&&window.isModified()&&window.editor()->isReadOnly(),"annullamento GUI conserva modifiche non salvate e blocca nuova modifica");
+    // La protezione deve sopravvivere a chiusura/riapertura, senza dipendere dal pannello.
+    const auto protectedPath=temporary.filePath("protetta.drw");
+    {DrawingWindow emitted;clientOk(emitted.createFromModel(sourcePath));clientOk(emitted.savePath(protectedPath));clientOk(emitted.pinModelRevision(modelB.version));
+     clientOk(emitted.runRevisionAction(DrawingWindow::RevisionAction::Checkout,"disegnatore"));clientOk(emitted.runRevisionAction(DrawingWindow::RevisionAction::Checkin,{},"protetta"));require(emitted.editor()->isReadOnly(),"tavola bloccata subito dopo check-in");}
+    {DrawingWindow reopened;clientOk(reopened.openPath(protectedPath));const auto before=clientRead(protectedPath);
+     require(reopened.editor()->isReadOnly()&&reopened.windowTitle().contains("sola lettura"),"riapertura tavola check-in in sola lettura");
+     require(!reopened.findChild<QAction *>("drawingSaveAction")->isEnabled()&&reopened.findChild<QAction *>("drawingCheckoutAction")->isEnabled(),"sola lettura conserva comando check-out");
+     auto block=reopened.editor()->sheet().titleBlock;block.code="vietato";
+     require(!reopened.editor()->setPageSettings("vietato",{297,210},block).isEmpty()&&!reopened.editor()->undo().isEmpty()&&!reopened.savePath(protectedPath).isEmpty(),"pagina undo e salvataggio bloccati dopo riapertura");
+     require(!reopened.pinModelRevision(modelA.version).isEmpty()&&!reopened.useWorkingModel().isEmpty()&&!reopened.updateFromSource().isEmpty(),"aggiornamento sorgente protetto anche da API");
+     DrawingPdfReport report;clientOk(reopened.exportPdfPath(temporary.filePath("protetta.pdf"),report));require(clientRead(protectedPath)==before,"esportazione non modifica tavola protetta");
+     auto *dock=reopened.findChild<QDockWidget *>("drawingRevisionDock");dock->hide();clientOk(reopened.runRevisionAction(DrawingWindow::RevisionAction::Checkout,"disegnatore"));
+     require(!reopened.editor()->isReadOnly()&&reopened.findChild<QAction *>("drawingSaveAction")->isEnabled(),"check-out sblocca senza dipendere dalla visibilità del pannello");
+     clientOk(reopened.editor()->setPageSettings("modificata",{297,210},block));clientOk(reopened.savePath(protectedPath));
+     clientOk(reopened.runRevisionAction(DrawingWindow::RevisionAction::CancelCheckout));require(reopened.editor()->isReadOnly(),"annulla check-out ripristina blocco");}
+
 }
 }
