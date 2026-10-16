@@ -75,6 +75,7 @@ add_executable(forgecad
     cad_drawing_editor.cpp
     cad_drawing_silhouette.h
     cad_drawing_silhouette.cpp
+    cad_drawing_centers.h
     cad_drawing_visibility.h
     cad_drawing_visibility.cpp
     cad_drawing_page.h
@@ -473,3 +474,10 @@ target_link_libraries(forgecad_drawing_complete_sections_tests PRIVATE Qt6::Widg
 target_compile_options(forgecad_drawing_complete_sections_tests PRIVATE -Wall -Wextra -Wpedantic)
 add_test(NAME forgecad_drawing_complete_sections_tests COMMAND forgecad_drawing_complete_sections_tests)
 set_tests_properties(forgecad_drawing_complete_sections_tests PROPERTIES TIMEOUT 120 ENVIRONMENT "QT_QPA_PLATFORM=offscreen;QT_QPA_OFFSCREEN_NO_GLX=1;QT_QPA_PLATFORMTHEME=;QT_STYLE_OVERRIDE=Fusion")
+
+add_executable(forgecad_drawing_centers_tests tests/test_drawing_centers.cpp cad_drawing_editor.cpp cad_drawing_sheet.cpp cad_drawing_derived.cpp cad_drawing_page.cpp cad_drawing.cpp cad_drawing_dimension.cpp cad_drawing_silhouette.cpp cad_drawing_visibility.cpp cad_icons.cpp)
+target_include_directories(forgecad_drawing_centers_tests PRIVATE ${PROJECT_SOURCE_DIR})
+target_link_libraries(forgecad_drawing_centers_tests PRIVATE Qt6::Widgets forgekernel)
+target_compile_options(forgecad_drawing_centers_tests PRIVATE -Wall -Wextra -Wpedantic)
+add_test(NAME forgecad_drawing_centers_tests COMMAND forgecad_drawing_centers_tests)
+set_tests_properties(forgecad_drawing_centers_tests PROPERTIES TIMEOUT 120 ENVIRONMENT "QT_QPA_PLATFORM=offscreen;QT_QPA_OFFSCREEN_NO_GLX=1;QT_QPA_PLATFORMTHEME=;QT_STYLE_OVERRIDE=Fusion")

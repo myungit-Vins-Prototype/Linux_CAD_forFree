@@ -127,6 +127,9 @@ QString drawingViewVisibility(const DrawingModelSnapshot &model,const DrawingVie
                 const auto &edge=source->body->edge(curve.sourceEdge);geometry=edge.curve;range=curve.hasSourceRange?curve.sourceRange:edge.range;}
             const auto parameters=sampleCurve(*geometry,range,options);need(parameters.size()<=200000,"Troppi campioni per la visibilita'.");std::vector<Vec3> points;points.reserve(parameters.size());for(auto parameter:parameters)points.push_back(geometry->point(parameter));
             next.curves.push_back(display(points,view,curve.kind==DrawingCurveKind::ProjectedEdge?index.get():nullptr));}
+        std::vector<bool> eligible(curves.size(),true);next.allCenters=drawingCenterGeometry(view,curves,eligible);
+        for(std::size_t i=0;i<curves.size();++i)eligible[i]=!next.curves[i].visible.isEmpty();
+        next.visibleCenters=drawingCenterGeometry(view,curves,eligible);
         for(const auto &contour:silhouettes.paths)next.silhouettes.push_back(display(contour.points,view,index.get()));
         if(includeMesh&&drawingHasProjection(view)){renderShadedMesh(model,view,cache,next.shadedImage,next.shadedBounds);next.meshPrepared=true;}
         result=std::move(next);return {};

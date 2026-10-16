@@ -50,6 +50,8 @@ public:
     QString removeView(const QUuid &id);
     QString setHiddenLinesVisible(const QUuid &id,bool visible);
     QString setShadedFacesVisible(const QUuid &id,bool visible);
+    QString setCenterMarksVisible(const QUuid &id,bool visible);
+    QString setCenterLinesVisible(const QUuid &id,bool visible);
     QString setRevisionTable(const DrawingRevisionTable &table);
     bool isComputing()const;
     QString setPageSettings(const QString &title,const QSizeF &size,const DrawingTitleBlock &block);

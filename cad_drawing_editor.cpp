@@ -160,7 +160,7 @@ struct DrawingSheetEditor::Impl{
     DrawingSilhouetteCache silhouetteCache;
     DrawingPageContext pageContext;
     std::map<QUuid,std::shared_ptr<const DrawingViewVisibility>> visibility;
-    QAction *hiddenAction=nullptr,*shadedAction=nullptr;
+    QAction *hiddenAction=nullptr,*shadedAction=nullptr,*centersAction=nullptr,*centerLinesAction=nullptr;
     bool computing=false;
     std::map<QUuid,DrawingDimensionResult> results;
     void cacheSections(){sectionCurves.clear();for(const auto &[id,pieces]:curves)for(const auto &piece:pieces)
@@ -345,6 +345,7 @@ struct DrawingSheetEditor::Impl{
         if(!hiddenAction)return;
         const auto id=selectedView();const auto *definition=viewFor(id);const auto *layout=layoutFor(id);QSignalBlocker blocker(hiddenAction);
         hiddenAction->setEnabled(!readOnly&&definition&&drawingHasProjection(*definition));hiddenAction->setChecked(layout&&layout->showHiddenLines);
+        for(auto *action:{centersAction,centerLinesAction})if(action){QSignalBlocker lock(action);action->setEnabled(!readOnly&&definition&&layout);action->setChecked(layout&&(action==centersAction?layout->showCenterMarks:layout->showCenterLines));}
         if(shadedAction){QSignalBlocker lock(shadedAction);shadedAction->setEnabled(!readOnly&&definition&&drawingHasProjection(*definition));shadedAction->setChecked(layout&&layout->showMesh);}
         if(auto *a=owner->findChild<QAction *>("drawingDetachViewAction"))a->setEnabled(!readOnly&&layout&&layout->relation.kind==DrawingDerivedKind::Orthographic);
         if(auto *a=owner->findChild<QAction *>("drawingReleaseAlignmentAction")){a->setEnabled(!readOnly&&layout&&layout->relation.kind==DrawingDerivedKind::Orthographic);a->setText(layout&&layout->relation.aligned?QStringLiteral("Libera allineamento"):QStringLiteral("Ripristina allineamento"));}
@@ -469,6 +470,9 @@ struct DrawingSheetEditor::Impl{
         }
         for(std::size_t i=0;i<paths.size();++i){paths[i].translate(-prepared->center);auto *item=new QGraphicsPathItem(paths[i],group);
             item->setPen(QPen(i<edgePaths&&prepared->curves[i].kind==DrawingCurveKind::Section?QColor("#187c59"):QColor("#1469c0"),.3,Qt::DashLine));item->setAcceptedMouseButtons(Qt::NoButton);}
+        if(layout.showCenterMarks||layout.showCenterLines){const auto &centers=layout.showHiddenLines?prepared->visibility->allCenters:prepared->visibility->visibleCenters;
+            if(layout.showCenterLines){auto *item=new QGraphicsPathItem(centers.axes.translated(-prepared->center),group);QPen pen(QColor("#1469c0"),.18);pen.setDashPattern({32,5,3,5});item->setPen(pen);item->setAcceptedMouseButtons(Qt::NoButton);}
+            auto *item=new QGraphicsPathItem(centers.crosses.translated(-prepared->center),group);item->setPen(QPen(QColor("#1469c0"),.18));item->setAcceptedMouseButtons(Qt::NoButton);}
         auto *label=new QGraphicsSimpleTextItem(layout.title,group);fontFor(label);label->setBrush(QColor("#1469c0"));label->setPos(bounds.bottomLeft()-prepared->center+QPointF(0,6));label->setAcceptedMouseButtons(Qt::NoButton);
         const auto mouse=view->viewport()->mapFromGlobal(QCursor::pos());const auto initial=view->viewport()->rect().contains(mouse)?view->mapToScene(mouse):QPointF(state.size.width()/2,state.size.height()/2);
         group->setPos(initial);placement=std::move(prepared);placementPointer(initial,false);view->setCursor(Qt::CrossCursor);view->setFocus();say(QStringLiteral("Sposta l'anteprima e fai clic sul foglio per inserire la vista. Esc o tasto destro annulla."));return {};
@@ -531,6 +535,12 @@ struct DrawingSheetEditor::Impl{
                 const auto add=[&](QPainterPath path,bool hidden){if(path.isEmpty())return;path.translate(layout->position);auto *item=scene->addPath(path,QPen(hidden?QColor("#80858a"):QColor("#222222"),hidden?.18:.25,hidden?Qt::DashLine:Qt::SolidLine));item->setData(kindRole,"silhouette");item->setData(viewRole,definition.id);item->setData(4,hidden);item->setZValue(hidden?0:1);item->setAcceptedMouseButtons(Qt::NoButton);
                     item->setToolTip(QStringLiteral("Contorno apparente approssimato, non quotabile. Per le quote usare bordi o sezioni del piano.")+(piece.refinementLimited?QStringLiteral(" Raffinamento limitato su questo tratto."):QString()));};
                 add(paths.visible,false);if(layout->showHiddenLines)add(paths.hidden,true);const auto box=joinedPaths(paths.visible,paths.hidden).translated(layout->position).boundingRect();bounds=bounds.isNull()?box:bounds.united(box);}
+            if(layout->showCenterMarks||layout->showCenterLines){
+                const auto &centers=layout->showHiddenLines?display->allCenters:display->visibleCenters;
+                const auto addCenter=[&](const QPainterPath &path,const QPen &pen,const char *kind){if(path.isEmpty())return;auto *item=scene->addPath(path,pen);item->setPos(layout->position);item->setData(kindRole,kind);item->setData(viewRole,definition.id);item->setAcceptedMouseButtons(Qt::NoButton);item->setZValue(3);};
+                if(layout->showCenterLines){QPen pen(QColor("#444444"),.18);pen.setDashPattern({32,5,3,5});addCenter(centers.axes,pen,"centerLines");}
+                addCenter(centers.crosses,QPen(QColor("#444444"),.18),"centerMarks");
+            }
             if(drawingHalfSection(definition)&&!bounds.isNull()){
                 QPen pen(QColor("#555555"),.18);pen.setDashPattern({10,2,2,2});auto *axis=scene->addLine(layout->position.x(),bounds.top()-3,layout->position.x(),bounds.bottom()+3,pen);axis->setData(kindRole,"sectionAxis");axis->setData(viewRole,definition.id);axis->setAcceptedMouseButtons(Qt::NoButton);axis->setZValue(3);
             }
@@ -913,6 +923,10 @@ DrawingSheetEditor::DrawingSheetEditor(DrawingSheet sheet,DrawingEditorModel mod
     action(QStringLiteral("Modifica vista..."),"drawingEditViewAction",[this]{impl_->editSelectedView();});
     action(QStringLiteral("Allinea vista..."),"drawingAlignViewAction",[this]{impl_->alignDialog();});
     impl_->hiddenAction=action(QStringLiteral("Mostra linee nascoste"),"drawingHiddenLinesAction",[this]{impl_->report(setHiddenLinesVisible(impl_->selectedView(),impl_->hiddenAction->isChecked()));});impl_->hiddenAction->setCheckable(true);impl_->hiddenAction->setToolTip(QStringLiteral("Mostra/nasconde i tratti coperti nella sola vista selezionata, anche per quotarli."));toolbar->addSeparator();
+    impl_->centersAction=action(QStringLiteral("Mostra centri"),"drawingCenterMarksAction",[this]{const auto error=setCenterMarksVisible(impl_->selectedView(),impl_->centersAction->isChecked());impl_->refreshHiddenAction();impl_->report(error);});
+    impl_->centersAction->setCheckable(true);impl_->centersAction->setIcon(commandIcon("drawingCenterMark"));impl_->centersAction->setIconVisibleInMenu(true);impl_->centersAction->setToolTip(QStringLiteral("Croci sui centri esatti di cerchi, archi ed ellissi della vista selezionata. Le quote usano gli snap geometrici esistenti."));
+    impl_->centerLinesAction=action(QStringLiteral("Mostra assi delle coniche"),"drawingCenterLinesAction",[this]{const auto error=setCenterLinesVisible(impl_->selectedView(),impl_->centerLinesAction->isChecked());impl_->refreshHiddenAction();impl_->report(error);});
+    impl_->centerLinesAction->setCheckable(true);impl_->centerLinesAction->setIcon(commandIcon("drawingCenterLines"));impl_->centerLinesAction->setIconVisibleInMenu(true);impl_->centerLinesAction->setToolTip(QStringLiteral("Assi a tratto-punto di cerchi ed ellissi, con prolungamento di 2 mm sul foglio; segue la geometria e la scala della vista."));
     impl_->shadedAction=action(QStringLiteral("Mostra facce ombreggiate"),"drawingShadedFacesAction",[this]{const auto error=setShadedFacesVisible(impl_->selectedView(),impl_->shadedAction->isChecked());impl_->refreshHiddenAction();impl_->report(error);});impl_->shadedAction->setCheckable(true);impl_->shadedAction->setIcon(commandIcon("viewFront"));impl_->shadedAction->setToolTip(QStringLiteral("Facce e colori del modello nella vista selezionata; bordi e quote restano esatti."));
     impl_->quoteAction=action(QStringLiteral("Quota intelligente"),"drawingSmartDimensionAction",[]{});impl_->quoteAction->setCheckable(true);
     impl_->quoteType=new QComboBox(toolbar);impl_->quoteType->setObjectName("drawingDimensionType");impl_->quoteType->setToolTip(QStringLiteral("Tipo della quota interattiva"));
@@ -944,7 +958,7 @@ DrawingSheetEditor::DrawingSheetEditor(DrawingSheet sheet,DrawingEditorModel mod
     connect(impl_->tree,&QWidget::customContextMenuRequested,this,[this](const QPoint &point){
         auto *item=impl_->tree->itemAt(point);if(!item)return;impl_->tree->setCurrentItem(item);CadMenu menu(this);
         if(item->data(0,Qt::UserRole).toString()==QLatin1String("dimension"))menu.addAction(findChild<QAction *>("drawingEditDimensionAction"));
-        else{menu.addAction(findChild<QAction *>("drawingEditViewAction"));menu.addAction(findChild<QAction *>("drawingAlignViewAction"));menu.addAction(impl_->hiddenAction);menu.addAction(impl_->shadedAction);for(auto name:{"drawingDerivedViewAction","drawingTechnicalSectionAction","drawingDetachViewAction","drawingReleaseAlignmentAction","drawingSectionHatchAction","drawingEditSectionLineAction","drawingReverseSectionAction"})menu.addAction(findChild<QAction *>(name));}
+        else{menu.addAction(findChild<QAction *>("drawingEditViewAction"));menu.addAction(findChild<QAction *>("drawingAlignViewAction"));menu.addAction(impl_->hiddenAction);menu.addAction(impl_->shadedAction);menu.addAction(impl_->centersAction);menu.addAction(impl_->centerLinesAction);for(auto name:{"drawingDerivedViewAction","drawingTechnicalSectionAction","drawingDetachViewAction","drawingReleaseAlignmentAction","drawingSectionHatchAction","drawingEditSectionLineAction","drawingReverseSectionAction"})menu.addAction(findChild<QAction *>(name));}
         menu.addSeparator();menu.addAction(findChild<QAction *>("drawingDeleteSelectionAction"));
         menu.exec(impl_->tree->viewport()->mapToGlobal(point));});
     for(auto name:{"drawingDetachViewAction","drawingReleaseAlignmentAction","drawingSectionHatchAction","drawingEditSectionLineAction","drawingReverseSectionAction"})toolbar->removeAction(findChild<QAction *>(name));
@@ -1117,6 +1131,20 @@ QString DrawingSheetEditor::setShadedFacesVisible(const QUuid &id,bool visible){
     const auto *view=impl_->viewFor(id);
     if(!view||!drawingHasProjection(*view))return QStringLiteral("Scegli una vista proiettata o una sezione completa/mezza.");
     auto next=impl_->state;for(auto &layout:next.views)if(layout.viewId==id)layout.showMesh=visible;const auto error=impl_->changeViews(std::move(next),QStringLiteral("Facce ombreggiate"));impl_->refreshHiddenAction();return error;
+}
+QString DrawingSheetEditor::setCenterMarksVisible(const QUuid &id,bool visible){
+    if(impl_->computing)return QStringLiteral("Attendere il calcolo della vista in corso.");
+    if(impl_->readOnly)return QStringLiteral("La tavola e' in sola lettura.");
+    if(!impl_->viewFor(id))return QStringLiteral("Seleziona una vista della tavola.");
+    auto next=impl_->state;for(auto &layout:next.views)if(layout.viewId==id)layout.showCenterMarks=visible;
+    const auto error=impl_->applyLayout(std::move(next),QStringLiteral("Visibilita' centri"));impl_->refreshHiddenAction();return error;
+}
+QString DrawingSheetEditor::setCenterLinesVisible(const QUuid &id,bool visible){
+    if(impl_->computing)return QStringLiteral("Attendere il calcolo della vista in corso.");
+    if(impl_->readOnly)return QStringLiteral("La tavola e' in sola lettura.");
+    if(!impl_->viewFor(id))return QStringLiteral("Seleziona una vista della tavola.");
+    auto next=impl_->state;for(auto &layout:next.views)if(layout.viewId==id)layout.showCenterLines=visible;
+    const auto error=impl_->applyLayout(std::move(next),QStringLiteral("Visibilita' assi delle coniche"));impl_->refreshHiddenAction();return error;
 }
 QString DrawingSheetEditor::setRevisionTable(const DrawingRevisionTable &table){
     if(impl_->computing)return QStringLiteral("Attendere il calcolo della vista in corso.");

@@ -1270,6 +1270,14 @@ std::map<QString, Draw> &registry() {
         for(int i=4;i<=20;i+=4){line(p,{double(i),4},{double(i),20},stroke(c.ink,1));line(p,{4,double(i)},{20,double(i)},stroke(c.ink,1));}
         dot(p,{12,12},c.accent,2);
     };
+    icons["drawingCenterMark"] = [](QPainter &p, const IconPalette &c) {
+        p.setBrush(Qt::NoBrush);p.setPen(stroke(c.ink,1.3));p.drawEllipse(QRectF(5,5,14,14));
+        line(p,{8,12},{16,12},stroke(c.accent,1.8));line(p,{12,8},{12,16},stroke(c.accent,1.8));
+    };
+    icons["drawingCenterLines"] = [](QPainter &p, const IconPalette &c) {
+        p.setBrush(Qt::NoBrush);p.setPen(stroke(c.ink,1.3));p.drawEllipse(QRectF(5,5,14,14));
+        line(p,{1,12},{23,12},stroke(c.accent,1.4,Qt::DashDotLine));line(p,{12,1},{12,23},stroke(c.accent,1.4,Qt::DashDotLine));
+    };
     icons["viewAxes"] = [](QPainter &p, const IconPalette &c) {
         for(QPointF tip : {QPointF(20,18),QPointF(4,4),QPointF(14,3)}) {line(p,{8,17},tip,stroke(c.ink,1.5));arrowHead(p,tip,{8,17},c.accent,3);}
     };

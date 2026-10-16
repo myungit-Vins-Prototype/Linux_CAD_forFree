@@ -89,7 +89,7 @@ void DrawingWindow::installEditor(){
     populate(dimensionMenu_,{"drawingSmartDimensionAction","drawingEditDimensionAction","drawingEndpointDimensionAction","drawingHorizontalDimensionAction","drawingVerticalDimensionAction","drawingLengthDimensionAction"});
     auto *references=addCadMenu(dimensionMenu_,QStringLiteral("Riferimenti del piano"));
     for(auto name:{"drawingOriginReferenceAction","drawingAxisXReferenceAction","drawingAxisYReferenceAction"})references->addAction(next->findChild<QAction *>(name));
-    populate(viewMenu_,{"drawingHiddenLinesAction","drawingShadedFacesAction","drawingFitAction"});viewMenu_->addSeparator();viewMenu_->addAction(next->findChild<QDockWidget *>("drawingTreeDock")->toggleViewAction());
+    populate(viewMenu_,{"drawingHiddenLinesAction","drawingShadedFacesAction","drawingCenterMarksAction","drawingCenterLinesAction","drawingFitAction"});viewMenu_->addSeparator();viewMenu_->addAction(next->findChild<QDockWidget *>("drawingTreeDock")->toggleViewAction());
     viewMenu_->addAction(revisionDock_->toggleViewAction());
     viewMenu_->addAction(next->findChild<QToolBar *>("drawingCommandBar")->toggleViewAction());viewMenu_->addAction(findChild<QToolBar *>("drawingDocumentBar")->toggleViewAction());
     busy_=oldBusy;refreshPageContext();

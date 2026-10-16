@@ -1,5 +1,6 @@
 #pragma once
 #include "cad_drawing_silhouette.h"
+#include "cad_drawing_centers.h"
 #include <QPainterPath>
 #include <QImage>
 #include <QRectF>
@@ -13,6 +14,7 @@ struct DrawingViewVisibility {
     QImage shadedImage;
     QRectF shadedBounds;
     bool meshPrepared=false;
+    DrawingCenterGeometry visibleCenters,allCenters; // cache dei riferimenti grafici, senza valutazioni al toggle
     QStringList warnings;
 };
 // Le sezioni con proiezione richiedono il materiale di chiusura (anche vuoto sulle superfici).

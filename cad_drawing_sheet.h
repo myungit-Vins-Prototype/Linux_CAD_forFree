@@ -27,6 +27,7 @@ struct DrawingViewLayout {
     bool showHiddenLines=false; // presentazione della sola vista, salvata nel .drw
     DrawingViewRelation relation{};
     bool showMesh=false; // facce ombreggiate dalla mesh, mai riferimenti di quota
+    bool showCenterMarks=false,showCenterLines=false; // cerchi/ellissi esatti della vista
 };
 struct DrawingDimensionLayout {
     QUuid dimensionId;

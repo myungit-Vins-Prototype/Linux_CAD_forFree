@@ -60,6 +60,8 @@ QString encodeDrawingSheet(const DrawingSheet &sheet,QByteArray &bytes){
             QJsonObject object{{"id",view.viewId.toString(QUuid::WithoutBraces)},{"title",view.title},{"position",pointJson(view.position)},{"features",features}};
             if(view.showHiddenLines)object.insert("showHiddenLines",true);
             if(view.showMesh)object.insert("showMesh",true);
+            if(view.showCenterMarks)object.insert("showCenterMarks",true);
+            if(view.showCenterLines)object.insert("showCenterLines",true);
             if(view.relation.parentId.isNull()&&!view.relation.hatch)object.insert("sectionHatch",false);
             const auto &r=view.relation;if(!r.parentId.isNull())object.insert("relation",QJsonObject{
                 {"parent",r.parentId.toString(QUuid::WithoutBraces)},{"kind",int(r.kind)},{"side",int(r.side)},{"method",int(r.method)},
@@ -100,6 +102,8 @@ QString decodeDrawingSheet(const QByteArray &bytes,DrawingSheet &sheet){
             layout.title=view["title"].toString();layout.position=readPoint(view["position"]);
             require(!view.contains("showHiddenLines")||view["showHiddenLines"].isBool(),"Visibilita' delle linee nascoste non valida.");layout.showHiddenLines=view["showHiddenLines"].toBool(false);
             require(!view.contains("showMesh")||view["showMesh"].isBool(),"Visibilita' della mesh non valida.");layout.showMesh=view["showMesh"].toBool(false);
+            for(const auto key:{"showCenterMarks","showCenterLines"})require(!view.contains(key)||view[key].isBool(),"Visibilita' di assi/centri non valida.");
+            layout.showCenterMarks=view["showCenterMarks"].toBool(false);layout.showCenterLines=view["showCenterLines"].toBool(false);
             const auto features=view["features"].toArray();require(features.size()<=10000,"Troppe sorgenti nella vista.");
             for(const auto &feature:features){require(feature.isString(),"ID sorgente non valido.");bool valid=false;const auto id=feature.toString().toULongLong(&valid);require(valid,"ID sorgente non valido.");layout.features.append(id);}
             if(view.contains("relation")){
