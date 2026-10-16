@@ -34,6 +34,7 @@ QTreeWidgetItem *itemFor(QTreeWidget *tree,const QUuid &id){for(QTreeWidgetItemI
 void selectCurve(DrawingSheetEditor &editor,const QUuid &id,int index){editor.canvas()->scene()->clearSelection();for(auto *item:editor.canvas()->scene()->items())if(item->data(1).toUuid()==id&&item->data(2).toInt()==index&&(item->data(0).toString()=="projection"||item->data(0).toString()=="section"))item->setSelected(true);}
 void confirm(QDialog *dialog){dialog->findChild<QDialogButtonBox *>()->button(QDialogButtonBox::Ok)->click();}
 }
+#include "test_drawing_view_preview.h"
 int main(int argc,char **argv){
     QApplication app(argc,argv);
     try{
@@ -89,6 +90,7 @@ int main(int argc,char **argv){
         QTimer::singleShot(0,[&]{auto *dialog=editor.findChild<QDialog *>("drawingViewDialog");if(!dialog)return;dialog->findChild<QLineEdit *>("drawingViewTitle")->setText("Piano arbitrario");confirm(dialog);});editor.findChild<QAction *>("drawingEditViewAction")->trigger();
         require(distance(editor.sheet().drawing.views[1].plane.origin(),iso.plane.origin())==0&&distance(editor.sheet().drawing.views[1].plane.xDir(),iso.plane.xDir())==0&&editor.sheet().drawing.views[1].scale==iso.scale,"rinomina conserva precisione e piano arbitrario");
         const auto preview=qEnvironmentVariable("FORGECAD_DRAWING_UI_PREVIEW");if(!preview.isEmpty()){QApplication::processEvents();require(editor.grab().save(preview),"anteprima interfaccia tavola");}
+        viewDialogPreviewTests();
         std::cout<<"PASS drawing tree, view edit, preserved references and atomic validation\n";
     }catch(const std::exception &error){std::cerr<<error.what()<<'\n';return 1;}
 }
