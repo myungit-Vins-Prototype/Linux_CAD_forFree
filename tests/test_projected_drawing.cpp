@@ -91,6 +91,8 @@ int main(int argc,char **argv){
         require(!editor.hasViewPlacement()&&editor.sheet().drawing.views.size()==1,"clic conferma la proiezione");const auto id=editor.sheet().drawing.views[0].id;
         require(editor.curves(id).size()==12&&editor.sections(id).size()==4,"sezioni e bordi distinti nell'editor");int index=-1;const auto &display=editor.curves(id);
         for(std::size_t i=0;i<display.size();++i)if(display[i].kind==DrawingCurveKind::ProjectedEdge&&std::abs(arcLength(*display[i].curve,display[i].range)-10)<1e-7){index=int(i);break;}
+        // La fixture sceglie anche bordi posteriori: mostrarli esplicitamente prima della quota.
+        ok(editor.setHiddenLinesVisible(id,true));QApplication::processEvents();
         select(editor,id,index);editor.findChild<QAction *>("drawingHorizontalDimensionAction")->trigger();require(editor.sheet().drawing.dimensions.size()==1,"quota orizzontale dalla toolbar");const auto dimensionId=editor.sheet().drawing.dimensions[0].id;near(editor.dimensionResult(dimensionId).value,10,"quota GUI nel piano");
         DrawingEditorModel changed=editorModel;changed.snapshot.bodies={source(makeBox(Frame3(),14,6,4))};ok(editor.updateModel(changed));near(editor.dimensionResult(dimensionId).value,14,"bordo proiettato associativo dopo modifica");
         ok(encodeDrawingSheet(editor.sheet(),bytes));DrawingSheet restored;ok(decodeDrawingSheet(bytes,restored));DrawingSheetEditor reopened(restored,changed);near(reopened.dimensionResult(dimensionId).value,14,"riapertura della vista proiettata e quota");

@@ -49,7 +49,8 @@ int main(int argc,char **argv){
         DrawingSheetEditor editor(sheet,source);editor.resize(1200,820);editor.show();QApplication::processEvents();
         require(!editor.canUndo()&&!editor.canRedo()&&!editor.isModified(),"editor iniziale pulito");const auto empty=encoded(editor);
         DrawingView top;top.kind=DrawingViewKind::ProjectedEdges;top.scale=3;top.plane=Frame3(Vec3(),Vec3(0,0,1),Vec3(1,0,0));
-        ok(editor.insertView(top,{top.id,"Superiore",QPointF(100,100),{1}}));const auto inserted=encoded(editor);
+        // La fixture usa tutti i bordi per verificare la cronologia delle quote.
+        ok(editor.insertView(top,{top.id,"Superiore",QPointF(100,100),{1},true}));const auto inserted=encoded(editor);
         ok(editor.undo());require(encoded(editor)==empty&&!editor.isModified()&&editor.canRedo(),"inserimento annullato senza metadati residui");ok(editor.redo());require(encoded(editor)==inserted,"vista ripristinata con stesso UUID");
         int chosen=-1;for(std::size_t i=0;i<editor.curves(top.id).size();++i){const auto &c=editor.curves(top.id)[i];if(std::abs(std::abs((c.curve->point(c.range.hi)-c.curve->point(c.range.lo)).x())-10)<1e-7){chosen=int(i);break;}}
         require(chosen>=0,"bordo orizzontale");for(auto *item:editor.canvas()->scene()->items())if(item->data(0).toString()=="projection"&&item->data(1).toUuid()==top.id&&item->data(2).toInt()==chosen)item->setSelected(true);

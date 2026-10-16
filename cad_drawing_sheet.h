@@ -11,6 +11,7 @@ struct DrawingViewLayout {
     QString title;
     QPointF position; // origine del piano sul foglio, in mm (Y verso il basso)
     QVector<quint64> features;
+    bool showHiddenLines=false; // presentazione della sola vista, salvata nel .drw
 };
 struct DrawingDimensionLayout {
     QUuid dimensionId;

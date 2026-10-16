@@ -37,6 +37,7 @@ public:
     // Centri sul foglio: posizionamento una tantum, senza vincoli persistenti.
     QString alignView(const QUuid &id,const QUuid &reference,ViewAlignment alignment);
     QString removeView(const QUuid &id);
+    QString setHiddenLinesVisible(const QUuid &id,bool visible);
     QString undo();
     QString redo();
     bool canUndo() const;

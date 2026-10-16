@@ -45,7 +45,9 @@ QString encodeDrawingSheet(const DrawingSheet &sheet,QByteArray &bytes){
     try{
         validate(sheet);QByteArray document;ok(encodeDrawingDocument(sheet.drawing,document));QJsonArray views,dimensions;
         for(const auto &view:sheet.views){QJsonArray features;for(auto id:view.features)features.append(QString::number(id));
-            views.append(QJsonObject{{"id",view.viewId.toString(QUuid::WithoutBraces)},{"title",view.title},{"position",pointJson(view.position)},{"features",features}});}
+            QJsonObject object{{"id",view.viewId.toString(QUuid::WithoutBraces)},{"title",view.title},{"position",pointJson(view.position)},{"features",features}};
+            if(view.showHiddenLines)object.insert("showHiddenLines",true);
+            views.append(object);}
         for(const auto &dimension:sheet.dimensions)dimensions.append(QJsonObject{{"id",dimension.dimensionId.toString(QUuid::WithoutBraces)},{"position",pointJson(dimension.position)}});
         auto prepared=QJsonDocument(QJsonObject{{"format","ForgeCAD.DrawingSheet"},{"schema",1},{"title",sheet.title},
             {"size",QJsonArray{sheet.size.width(),sheet.size.height()}},{"drawing",QJsonDocument::fromJson(document).object()},
@@ -66,6 +68,7 @@ QString decodeDrawingSheet(const QByteArray &bytes,DrawingSheet &sheet){
             require(value.isObject(),"Vista del foglio non valida.");const auto view=value.toObject();DrawingViewLayout layout;
             layout.viewId=readId(view["id"]);require(view["title"].isString()&&view["features"].isArray(),"Vista senza titolo o sorgenti.");
             layout.title=view["title"].toString();layout.position=readPoint(view["position"]);
+            require(!view.contains("showHiddenLines")||view["showHiddenLines"].isBool(),"Visibilita' delle linee nascoste non valida.");layout.showHiddenLines=view["showHiddenLines"].toBool(false);
             const auto features=view["features"].toArray();require(features.size()<=10000,"Troppe sorgenti nella vista.");
             for(const auto &feature:features){require(feature.isString(),"ID sorgente non valido.");bool valid=false;const auto id=feature.toString().toULongLong(&valid);require(valid,"ID sorgente non valido.");layout.features.append(id);}
             prepared.views.append(std::move(layout));

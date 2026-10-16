@@ -1,5 +1,6 @@
 #include "cad_drawing_editor.h"
 #include "cad_drawing_silhouette.h"
+#include "cad_drawing_visibility.h"
 #include "cad_icons.h"
 #include "cad_menu.h"
 #include "cad_toolbar.h"
@@ -72,12 +73,12 @@ struct SheetCanvas final:QGraphicsView{
 };
 struct SectionItem final:QGraphicsPathItem{
     using QGraphicsPathItem::QGraphicsPathItem;
-    bool sectionReference=false;
+    bool sectionReference=false,hidden=false;
     QRectF boundingRect()const override{return path().boundingRect().adjusted(-0.7,-0.7,0.7,0.7);}
     QPainterPath shape()const override{QPainterPathStroker stroke;stroke.setWidth(1.2);return stroke.createStroke(path());}
     void paint(QPainter *painter,const QStyleOptionGraphicsItem *,QWidget *)override{
-        painter->setPen(QPen(isSelected()?QColor("#1469c0"):(sectionReference?QColor("#187c59"):QColor("#222222")),isSelected()?0.65:sectionReference?0.25:0.3,
-            sectionReference?Qt::DotLine:Qt::SolidLine,Qt::RoundCap,Qt::RoundJoin));
+        painter->setPen(QPen(isSelected()?QColor("#1469c0"):(sectionReference?QColor("#187c59"):hidden?QColor("#80858a"):QColor("#222222")),isSelected()?0.65:sectionReference?0.25:hidden?0.18:0.3,
+            sectionReference?Qt::DotLine:hidden?Qt::DashLine:Qt::SolidLine,Qt::RoundCap,Qt::RoundJoin));
         painter->setBrush(Qt::NoBrush);painter->drawPath(path());
     }
 };
@@ -92,6 +93,8 @@ struct MoveLabel final:QGraphicsSimpleTextItem{
         QGraphicsSimpleTextItem::mouseReleaseEvent(event);if(moved&&pos()!=pressPosition)moved(pressPosition,pos());
     }
 };
+// addPath conserva i tratti aperti: operator+ esegue invece unione di aree.
+QPainterPath joinedPaths(const QPainterPath &a,const QPainterPath &b){auto result=a;result.addPath(b);return result;}
 QPointF paperPoint(const DrawingView &view,const DrawingViewLayout &layout,const Vec3 &point){
     const auto local=view.plane.toLocal(point);return layout.position+QPointF(local.x()*view.scale,-local.y()*view.scale);
 }
@@ -142,6 +145,8 @@ struct DrawingSheetEditor::Impl{
     std::map<QUuid,std::vector<DrawingSection>> sectionCurves;
     std::map<QUuid,DrawingSilhouetteResult> silhouettes;
     DrawingSilhouetteCache silhouetteCache;
+    std::map<QUuid,std::shared_ptr<const DrawingViewVisibility>> visibility;
+    QAction *hiddenAction=nullptr;
     std::map<QUuid,DrawingDimensionResult> results;
     void cacheSections(){sectionCurves.clear();for(const auto &[id,pieces]:curves)for(const auto &piece:pieces)
         if(piece.kind==DrawingCurveKind::Section)sectionCurves[id].push_back(piece);}
@@ -166,6 +171,7 @@ struct DrawingSheetEditor::Impl{
         std::vector<DrawingCurve> curves;
         DrawingSilhouetteResult silhouettes;
         QPointF center;
+        std::shared_ptr<const DrawingViewVisibility> visibility;
         QGraphicsItemGroup *item=nullptr;
     };
     std::unique_ptr<ViewPlacement> placement;
@@ -194,7 +200,7 @@ struct DrawingSheetEditor::Impl{
     QString restore(std::size_t index){
         try{
             DrawingSheet next;const auto error=decodeDrawingSheet(history[index].sheet,next);if(!error.isEmpty())return error;
-            std::map<QUuid,std::vector<DrawingCurve>> prepared;std::map<QUuid,DrawingSilhouetteResult> preparedSilhouettes;QSet<QUuid> changedViews;
+            std::map<QUuid,std::vector<DrawingCurve>> prepared;std::map<QUuid,DrawingSilhouetteResult> preparedSilhouettes;std::map<QUuid,std::shared_ptr<const DrawingViewVisibility>> preparedVisibility;QSet<QUuid> changedViews;
             for(const auto &definition:next.drawing.views){const auto layout=std::find_if(next.views.begin(),next.views.end(),[&](const auto &l){return l.viewId==definition.id;});
                 const auto *old=viewFor(definition.id);const auto *oldLayout=layoutFor(definition.id);const auto cached=curves.find(definition.id);
                 if(old&&oldLayout&&sameGeometry(*old,definition)&&oldLayout->features==layout->features&&cached!=curves.end())prepared[definition.id]=cached->second;
@@ -203,15 +209,16 @@ struct DrawingSheetEditor::Impl{
                 const auto contour=silhouettes.find(definition.id);
                 if(!changedViews.contains(definition.id)&&old&&old->scale==definition.scale&&contour!=silhouettes.end())preparedSilhouettes[definition.id]=contour->second;
                 else{const auto error=drawingViewSilhouettes(sourceFor(*layout),definition,preparedSilhouettes[definition.id],silhouetteCache);if(!error.isEmpty())return error;}
-                for(const auto &piece:prepared[definition.id])sectionPath(definition,*layout,piece);
-                for(const auto &contour:preparedSilhouettes[definition.id].paths)silhouettePath(definition,*layout,contour);
+                const auto display=visibility.find(definition.id);
+                if(!changedViews.contains(definition.id)&&old&&old->scale==definition.scale&&display!=visibility.end())preparedVisibility[definition.id]=display->second;
+                else{auto result=std::make_shared<DrawingViewVisibility>();const auto error=drawingViewVisibility(sourceFor(*layout),definition,prepared[definition.id],preparedSilhouettes[definition.id],silhouetteCache,*result);if(!error.isEmpty())return error;preparedVisibility[definition.id]=std::move(result);}
             }
             std::map<QUuid,DrawingDimensionResult> measured;
             for(const auto &dimension:next.drawing.dimensions){const auto found=results.find(dimension.id);
                 const auto old=std::find_if(state.drawing.dimensions.begin(),state.drawing.dimensions.end(),[&](const auto &d){return d.id==dimension.id;});
                 measured[dimension.id]=!changedViews.contains(dimension.viewId)&&old!=state.drawing.dimensions.end()&&sameDimension(*old,dimension)&&found!=results.end()
                     ?found->second:this->measured(next,dimension,prepared.at(dimension.viewId));}
-            state=std::move(next);curves=std::move(prepared);silhouettes=std::move(preparedSilhouettes);results=std::move(measured);cacheSections();historyIndex=index;refreshHistoryActions();notify();redraw();return {};
+            state=std::move(next);curves=std::move(prepared);silhouettes=std::move(preparedSilhouettes);visibility=std::move(preparedVisibility);results=std::move(measured);cacheSections();historyIndex=index;refreshHistoryActions();notify();redraw();return {};
         }catch(const std::exception &error){return QString::fromUtf8(error.what());}
     }
     QString applyLayout(DrawingSheet next,const QString &label){
@@ -228,11 +235,12 @@ struct DrawingSheetEditor::Impl{
         return applyLayout(std::move(next),label);
     }
     bool centerFor(const QUuid &id,QPointF &center)const{
-        const auto *definition=viewFor(id);const auto *layout=layoutFor(id);const auto found=curves.find(id);if(!definition||!layout||found==curves.end())return false;
-        QRectF bounds;bool first=true;for(const auto &piece:found->second){const auto box=sectionPath(*definition,*layout,piece).boundingRect();bounds=first?box:bounds.united(box);first=false;}
-        const auto contour=silhouettes.find(id);if(contour!=silhouettes.end())for(const auto &piece:contour->second.paths){const auto box=silhouettePath(*definition,*layout,piece).boundingRect();bounds=first?box:bounds.united(box);first=false;}
+        const auto *layout=layoutFor(id);const auto found=visibility.find(id);if(!layout||found==visibility.end())return false;QRectF bounds;bool first=true;
+        const auto add=[&](const DrawingVisiblePath &path){const auto box=joinedPaths(path.visible,path.hidden).boundingRect();bounds=first?box:bounds.united(box);first=false;};
+        for(const auto &path:found->second->curves)add(path);
+        for(const auto &path:found->second->silhouettes)add(path);
         if(first)return false;
-        center=bounds.center();return true;
+        center=layout->position+bounds.center();return true;
     }
     void alignDialog(){
         if(readOnly)return;
@@ -276,6 +284,15 @@ struct DrawingSheetEditor::Impl{
             if(!current.isNull()){if(!id.isNull()&&current!=id)return {};id=current;}}
         return id;
     }
+    void refreshHiddenAction(){
+        if(!hiddenAction)return;
+        const auto id=selectedView();const auto *definition=viewFor(id);const auto *layout=layoutFor(id);QSignalBlocker blocker(hiddenAction);
+        hiddenAction->setEnabled(!readOnly&&definition&&definition->kind==DrawingViewKind::ProjectedEdges);hiddenAction->setChecked(layout&&layout->showHiddenLines);
+    }
+    bool pointShown(const QUuid &id,std::size_t index,QPointF point,bool center=false)const{
+        const auto *layout=layoutFor(id);if(!layout)return false;if(layout->showHiddenLines)return true;const auto found=visibility.find(id);if(found==visibility.end()||index>=found->second->curves.size())return false;
+        const auto &path=found->second->curves[index].visible;if(path.isEmpty())return false;if(center)return true;QPainterPathStroker stroke;stroke.setWidth(.14);return stroke.createStroke(path).contains(point-layout->position);
+    }
     void selectTreeItem(const QString &kind,const QUuid &id){
         QSignalBlocker block(tree);tree->clearSelection();tree->setCurrentItem(nullptr);
         for(QTreeWidgetItemIterator it(tree);*it;++it)if((*it)->data(0,Qt::UserRole).toString()==kind&&(*it)->data(0,Qt::UserRole+1).toUuid()==id){
@@ -288,6 +305,7 @@ struct DrawingSheetEditor::Impl{
             const auto id=selected.front()->data(idRole).toUuid();selectTreeItem("dimension",id);
             const auto result=results.find(id);if(result!=results.end()&&result->second.status!=DrawingDimensionStatus::Ready)say(result->second.message);
         }else selectTreeItem("view",selectedView());
+        refreshHiddenAction();
     }
     void selectionFromTree(){
         if(rebuilding||syncingSelection)return;
@@ -320,27 +338,29 @@ struct DrawingSheetEditor::Impl{
     void editSelectedView(){const auto id=selectedView();if(id.isNull()){say(QStringLiteral("Seleziona una vista o una sua quota nell'albero o sul foglio."));return;}
         const auto *definition=viewFor(id);if(definition)addViewDialog(definition->kind,id);}
     void calculate(){
-        std::map<QUuid,std::vector<DrawingSection>> prepared;std::map<QUuid,DrawingSilhouetteResult> preparedSilhouettes;
+        std::map<QUuid,std::vector<DrawingSection>> prepared;std::map<QUuid,DrawingSilhouetteResult> preparedSilhouettes;std::map<QUuid,std::shared_ptr<const DrawingViewVisibility>> preparedVisibility;
         for(const auto &definition:state.drawing.views){const auto *layout=layoutFor(definition.id);if(!layout)continue;
             std::vector<DrawingSection> sections;const auto error=drawingViewCurves(sourceFor(*layout),definition,sections);
             if(!error.isEmpty())throw std::runtime_error(error.toStdString());
             for(const auto &piece:sections)sectionPath(definition,*layout,piece);
             const auto contours=drawingViewSilhouettes(sourceFor(*layout),definition,preparedSilhouettes[definition.id],silhouetteCache);if(!contours.isEmpty())throw std::runtime_error(contours.toStdString());
             for(const auto &contour:preparedSilhouettes[definition.id].paths)silhouettePath(definition,*layout,contour);
+            auto display=std::make_shared<DrawingViewVisibility>();const auto hidden=drawingViewVisibility(sourceFor(*layout),definition,sections,preparedSilhouettes[definition.id],silhouetteCache,*display);if(!hidden.isEmpty())throw std::runtime_error(hidden.toStdString());preparedVisibility[definition.id]=std::move(display);
             prepared.emplace(definition.id,std::move(sections));}
         std::map<QUuid,DrawingDimensionResult> measured;
         for(const auto &dimension:state.drawing.dimensions)measured[dimension.id]=this->measured(state,dimension,prepared.at(dimension.viewId));
-        curves=std::move(prepared);silhouettes=std::move(preparedSilhouettes);results=std::move(measured);cacheSections();
+        curves=std::move(prepared);silhouettes=std::move(preparedSilhouettes);visibility=std::move(preparedVisibility);results=std::move(measured);cacheSections();
     }
     QString insertionState(const DrawingView &definition,const DrawingViewLayout &layout,DrawingSheet &next,QByteArray &bytes)const{
         next=state;next.drawing.views.push_back(definition);next.views.append(layout);return encodeDrawingSheet(next,bytes);
     }
-    QString insertPrepared(DrawingView definition,DrawingViewLayout layout,std::vector<DrawingCurve> pieces,DrawingSilhouetteResult contours){
+    QString insertPrepared(DrawingView definition,DrawingViewLayout layout,std::vector<DrawingCurve> pieces,DrawingSilhouetteResult contours,std::shared_ptr<const DrawingViewVisibility> display={}){
         DrawingSheet next;QByteArray bytes;const auto error=insertionState(definition,layout,next,bytes);if(!error.isEmpty())return error;
         if(pieces.empty()&&contours.paths.empty())return definition.kind==DrawingViewKind::Section?QStringLiteral("Il piano non interseca i corpi selezionati. Modificare posizione o piano."):QStringLiteral("Nessun bordo proiettabile nei corpi selezionati.");
         for(const auto &piece:pieces)sectionPath(definition,layout,piece);
         for(const auto &contour:contours.paths)silhouettePath(definition,layout,contour);
-        state=std::move(next);curves[definition.id]=std::move(pieces);silhouettes[definition.id]=std::move(contours);cacheSections();record(QStringLiteral("Inserisci vista"),std::move(bytes));redraw();return {};
+        if(!display){auto prepared=std::make_shared<DrawingViewVisibility>();const auto error=drawingViewVisibility(sourceFor(layout),definition,pieces,contours,silhouetteCache,*prepared);if(!error.isEmpty())return error;display=std::move(prepared);}
+        state=std::move(next);curves[definition.id]=std::move(pieces);silhouettes[definition.id]=std::move(contours);visibility[definition.id]=std::move(display);cacheSections();record(QStringLiteral("Inserisci vista"),std::move(bytes));redraw();return {};
     }
     void cancelPlacement(){
         if(!placement)return;
@@ -351,10 +371,12 @@ struct DrawingSheetEditor::Impl{
         std::vector<DrawingCurve> pieces;const auto generated=drawingViewCurves(sourceFor(layout),definition,pieces);if(!generated.isEmpty())return generated;
         DrawingSilhouetteResult contours;const auto contourError=drawingViewSilhouettes(sourceFor(layout),definition,contours,silhouetteCache);if(!contourError.isEmpty())return contourError;
         if(pieces.empty()&&contours.paths.empty())return definition.kind==DrawingViewKind::Section?QStringLiteral("Il piano non interseca i corpi selezionati. Modificare posizione o piano."):QStringLiteral("Nessuna geometria proiettabile nei corpi selezionati.");
-        auto localLayout=layout;localLayout.position={};std::vector<QPainterPath> paths;QRectF bounds;bool first=true;
-        for(const auto &piece:pieces){auto path=sectionPath(definition,localLayout,piece);bounds=first?path.boundingRect():bounds.united(path.boundingRect());first=false;paths.push_back(std::move(path));}
-        const auto edgePaths=paths.size();for(const auto &contour:contours.paths){auto path=silhouettePath(definition,localLayout,contour);bounds=first?path.boundingRect():bounds.united(path.boundingRect());first=false;paths.push_back(std::move(path));}
-        auto prepared=std::make_unique<ViewPlacement>();prepared->definition=definition;prepared->layout=layout;prepared->curves=std::move(pieces);prepared->silhouettes=std::move(contours);prepared->center=bounds.center();
+        auto display=std::make_shared<DrawingViewVisibility>();const auto hidden=drawingViewVisibility(sourceFor(layout),definition,pieces,contours,silhouetteCache,*display);if(!hidden.isEmpty())return hidden;
+        std::vector<QPainterPath> paths;QRectF bounds;bool first=true;
+        const auto add=[&](const DrawingVisiblePath &path){const auto all=joinedPaths(path.visible,path.hidden);bounds=first?all.boundingRect():bounds.united(all.boundingRect());first=false;paths.push_back(joinedPaths(path.visible,layout.showHiddenLines?path.hidden:QPainterPath()));};
+        for(const auto &path:display->curves)add(path);
+        const auto edgePaths=paths.size();for(const auto &path:display->silhouettes)add(path);
+        auto prepared=std::make_unique<ViewPlacement>();prepared->definition=definition;prepared->layout=layout;prepared->curves=std::move(pieces);prepared->silhouettes=std::move(contours);prepared->center=bounds.center();prepared->visibility=std::move(display);
         // La scena possiede il gruppo e i figli; rimuove prima la vecchia anteprima.
         quoteAction->setChecked(false);cancelPlacement();resetQuote();
         auto *group=new QGraphicsItemGroup;scene->addItem(group);group->setData(kindRole,"viewPreview");group->setZValue(50);group->setOpacity(.75);group->setAcceptedMouseButtons(Qt::NoButton);prepared->item=group;
@@ -369,7 +391,7 @@ struct DrawingSheetEditor::Impl{
         placement->item->setPos(point);placement->item->setVisible(true);
         if(click){if(!QRectF(QPointF(0,0),state.size).contains(point)){say(QStringLiteral("Scegli un punto all'interno del foglio. Esc annulla."));return true;}
             auto layout=placement->layout;layout.position=point-placement->center;
-            const auto error=insertPrepared(placement->definition,layout,placement->curves,placement->silhouettes);if(!error.isEmpty())say(error);
+            const auto error=insertPrepared(placement->definition,layout,placement->curves,placement->silhouettes,placement->visibility);if(!error.isEmpty())say(error);
         }
         return true;
     }
@@ -402,17 +424,17 @@ struct DrawingSheetEditor::Impl{
         int missing=0;
         for(const auto &definition:state.drawing.views){const auto *layout=layoutFor(definition.id);const auto found=curves.find(definition.id);
             if(!layout||found==curves.end())continue;
-            QRectF bounds;
-            for(std::size_t i=0;i<found->second.size();++i){const auto path=sectionPath(definition,*layout,found->second[i]);paintedPaths[definition.id].push_back(path);auto *item=new SectionItem(path);
-                const auto &piece=found->second[i];const bool projected=piece.kind==DrawingCurveKind::ProjectedEdge;
-                item->sectionReference=!projected&&definition.kind==DrawingViewKind::ProjectedEdges;
-                item->setFlags(QGraphicsItem::ItemIsSelectable);item->setData(kindRole,projected?"projection":"section");item->setData(viewRole,definition.id);item->setData(indexRole,qulonglong(i));
-                item->setToolTip(projected?QStringLiteral("Bordo proiettato. Le quote misurano la sua immagine nel piano della vista."):
-                    QStringLiteral("Curva di sezione fra la faccia e il piano della vista."));scene->addItem(item);
-                bounds=bounds.isNull()?item->path().boundingRect():bounds.united(item->path().boundingRect());}
-            const auto contour=silhouettes.find(definition.id);if(contour!=silhouettes.end())for(const auto &piece:contour->second.paths){
-                const auto path=silhouettePath(definition,*layout,piece);auto *item=scene->addPath(path,QPen(QColor("#222222"),.25));item->setData(kindRole,"silhouette");item->setData(viewRole,definition.id);item->setAcceptedMouseButtons(Qt::NoButton);
-                item->setToolTip(QStringLiteral("Contorno apparente approssimato, non quotabile. Per le quote usare bordi o sezioni del piano.")+(piece.refinementLimited?QStringLiteral(" Raffinamento limitato su questo tratto."):QString()));bounds=bounds.isNull()?path.boundingRect():bounds.united(path.boundingRect());}
+            QRectF bounds;const auto display=visibility.at(definition.id);
+            for(std::size_t i=0;i<found->second.size();++i){const auto &piece=found->second[i];const bool projected=piece.kind==DrawingCurveKind::ProjectedEdge;const auto &paths=display->curves.at(i);
+                auto visible=paths.visible.translated(layout->position),hidden=paths.hidden.translated(layout->position);paintedPaths[definition.id].push_back(joinedPaths(visible,layout->showHiddenLines?hidden:QPainterPath()));
+                const auto add=[&](const QPainterPath &path,bool obscured){if(path.isEmpty())return;auto *item=new SectionItem(path);item->hidden=obscured;item->sectionReference=!projected&&definition.kind==DrawingViewKind::ProjectedEdges;
+                    item->setFlags(QGraphicsItem::ItemIsSelectable);item->setData(kindRole,projected?"projection":"section");item->setData(viewRole,definition.id);item->setData(indexRole,qulonglong(i));item->setData(4,obscured);item->setZValue(obscured?0:1);
+                    item->setToolTip(projected?(obscured?QStringLiteral("Bordo nascosto. Le quote usano la curva esatta proiettata."):QStringLiteral("Bordo visibile. Le quote misurano nel piano della vista.")):QStringLiteral("Curva esatta di sezione fra la faccia e il piano della vista."));scene->addItem(item);};
+                add(visible,false);if(layout->showHiddenLines)add(hidden,true);const auto box=joinedPaths(visible,hidden).boundingRect();bounds=bounds.isNull()?box:bounds.united(box);}
+            const auto contour=silhouettes.find(definition.id);if(contour!=silhouettes.end())for(std::size_t i=0;i<contour->second.paths.size();++i){const auto &piece=contour->second.paths[i];const auto &paths=display->silhouettes.at(i);
+                const auto add=[&](QPainterPath path,bool hidden){if(path.isEmpty())return;path.translate(layout->position);auto *item=scene->addPath(path,QPen(hidden?QColor("#80858a"):QColor("#222222"),hidden?.18:.25,hidden?Qt::DashLine:Qt::SolidLine));item->setData(kindRole,"silhouette");item->setData(viewRole,definition.id);item->setData(4,hidden);item->setZValue(hidden?0:1);item->setAcceptedMouseButtons(Qt::NoButton);
+                    item->setToolTip(QStringLiteral("Contorno apparente approssimato, non quotabile. Per le quote usare bordi o sezioni del piano.")+(piece.refinementLimited?QStringLiteral(" Raffinamento limitato su questo tratto."):QString()));};
+                add(paths.visible,false);if(layout->showHiddenLines)add(paths.hidden,true);const auto box=joinedPaths(paths.visible,paths.hidden).translated(layout->position).boundingRect();bounds=bounds.isNull()?box:bounds.united(box);}
             auto *label=new MoveLabel(layout->title+QStringLiteral("  (%1:1)").arg(definition.scale,0,'g',4));fontFor(label);label->setBrush(QColor("#35495c"));
             label->setPos(bounds.isNull()?layout->position:bounds.bottomLeft()+QPointF(0,6));label->setData(kindRole,"view");label->setData(viewRole,definition.id);
             label->setFlag(QGraphicsItem::ItemIsMovable,!readOnly);
@@ -446,9 +468,9 @@ struct DrawingSheetEditor::Impl{
         refreshTree();rebuilding=false;selectionFromTree();refreshNotable();
         const bool projected=std::any_of(state.drawing.views.begin(),state.drawing.views.end(),[](const auto &v){return v.kind==DrawingViewKind::ProjectedEdges;});
         say(missing?QStringLiteral("%1 quote richiedono verifica. Seleziona il testo per leggere il motivo.").arg(missing):projected?
-            QStringLiteral("Bordi e contorni apparenti (anche posteriori). Contorni approssimati non quotabili; verde: sezioni esatte del piano."):
+            QStringLiteral("Mostra linee nascoste agisce sulla vista selezionata. Bordi nascosti tratteggiati quotabili; contorni approssimati esclusi dalle quote."):
             QStringLiteral("Seleziona una curva e inserisci una quota. Trascina titoli e testi per posizionarli."));
-        QStringList warnings;for(const auto &[id,contour]:silhouettes){(void)id;warnings.append(contour.warnings);}if(!warnings.empty())say(message->text()+QStringLiteral(" · Attenzione: ")+warnings.join(QStringLiteral(" ")));
+        QStringList warnings;for(const auto &[id,contour]:silhouettes){(void)id;warnings.append(contour.warnings);}for(const auto &[id,display]:visibility){(void)id;warnings.append(display->warnings);}if(!warnings.empty())say(message->text()+QStringLiteral(" · Attenzione: ")+warnings.join(QStringLiteral(" ")));
     }
     QPointF paperLocal(const QUuid &id,Vec2 p)const{const auto *v=viewFor(id);const auto *l=layoutFor(id);return l->position+QPointF(v->scale*p.x(),-v->scale*p.y());}
     Vec2 localPaper(const QUuid &id,QPointF p)const{const auto *v=viewFor(id);const auto *l=layoutFor(id);return {(p.x()-l->position.x())/v->scale,(l->position.y()-p.y())/v->scale};}
@@ -492,7 +514,7 @@ struct DrawingSheetEditor::Impl{
         notable.clear();if(!quoteAction||!quoteAction->isChecked())return;
         for(const auto &[id,pieces]:curves){const auto *definition=viewFor(id);const auto *layout=layoutFor(id);if(!definition||!layout)continue;
             for(std::size_t i=0;i<pieces.size();++i){const auto &piece=pieces[i];const auto a=piece.curve->point(piece.range.lo),b=piece.curve->point(piece.range.hi);const auto primitive=drawingPrimitive(*definition,piece);
-                const auto add=[&](DrawingPointRole role,Vec3 point){notable.push_back({id,i,role,std::numeric_limits<double>::quiet_NaN(),paperPoint(*definition,*layout,point),0});};
+                const auto add=[&](DrawingPointRole role,Vec3 point){const auto paper=paperPoint(*definition,*layout,point);if(pointShown(id,i,paper,role==DrawingPointRole::Center))notable.push_back({id,i,role,std::numeric_limits<double>::quiet_NaN(),paper,0});};
                 if(distance(a,b)>definition->tolerance){add(DrawingPointRole::Start,a);add(DrawingPointRole::End,b);}
                 if(primitive.kind==DrawingPrimitive::Kind::Line)add(DrawingPointRole::Midpoint,.5*(a+b));
                 if(primitive.kind==DrawingPrimitive::Kind::Conic){const auto center=definition->plane.toGlobal(Vec3(primitive.center.x(),primitive.center.y(),0));add(DrawingPointRole::Center,center);
@@ -534,7 +556,7 @@ struct DrawingSheetEditor::Impl{
             for(auto *item:candidates){const auto kind=item->data(kindRole).toString();if(kind!=QLatin1String("projection")&&kind!=QLatin1String("section"))continue;
                 const auto id=item->data(viewRole).toUuid();if(!quoteView.isNull()&&id!=quoteView)continue;const auto index=item->data(indexRole).toULongLong();const auto *definition=viewFor(id);const auto *layout=layoutFor(id);const auto &piece=curves.at(id).at(index);
                 const auto p=localPaper(id,cursor);const auto found=projectPoint(*piece.curve,definition->plane.toGlobal(Vec3(p.x(),p.y(),0)),piece.range);const auto paper=paperPoint(*definition,*layout,found.point);const double gap=QLineF(cursor,paper).length()*zoom;
-                if(gap<=9)snapChoices.push_back({id,std::size_t(index),modifiers&Qt::AltModifier?DrawingPointRole::Nearest:DrawingPointRole::Curve,found.parameter,paper,gap});
+                if(gap<=9&&pointShown(id,std::size_t(index),paper))snapChoices.push_back({id,std::size_t(index),modifiers&Qt::AltModifier?DrawingPointRole::Nearest:DrawingPointRole::Curve,found.parameter,paper,gap});
             }
         }
         std::stable_sort(snapChoices.begin(),snapChoices.end(),[](const auto &a,const auto &b){if(std::abs(a.gap-b.gap)>1e-6)return a.gap<b.gap;if(a.view!=b.view)return a.view<b.view;if(a.index!=b.index)return a.index<b.index;return int(a.role)<int(b.role);});
@@ -616,7 +638,7 @@ struct DrawingSheetEditor::Impl{
         depth->setValue(dot(center,normalFor(plane->currentIndex())));depth->setEnabled(!projected);
         connect(references,&QCheckBox::toggled,depth,&QDoubleSpinBox::setEnabled);
         form->addRow(QStringLiteral("Titolo:"),title);form->addRow(QStringLiteral("Piano:"),plane);form->addRow(QStringLiteral("Posizione lungo la normale:"),depth);
-        if(projected){form->addRow(references);auto *note=new QLabel(QStringLiteral("Tutti i bordi proiettati, compresi quelli posteriori. I contorni apparenti sono approssimati e non quotabili. Usare i bordi o le sezioni del piano per le quote."),&dialog);note->setWordWrap(true);form->addRow(note);}
+        if(projected){form->addRow(references);auto *note=new QLabel(QStringLiteral("Linee nascoste escluse; il pulsante Mostra linee nascoste le rende disponibili nella vista selezionata. I contorni apparenti sono approssimati e non quotabili. Usare bordi o sezioni del piano per le quote."),&dialog);note->setWordWrap(true);form->addRow(note);}
         form->addRow(QStringLiteral("Scala foglio/modello:"),scale);form->addRow(QStringLiteral("Corpi e superfici:"),bodies);
         auto *buttons=new QDialogButtonBox(QDialogButtonBox::Ok|QDialogButtonBox::Cancel,&dialog);form->addRow(buttons);
         connect(buttons,&QDialogButtonBox::rejected,&dialog,&QDialog::reject);
@@ -681,7 +703,8 @@ DrawingSheetEditor::DrawingSheetEditor(DrawingSheet sheet,DrawingEditorModel mod
     action(QStringLiteral("Inserisci vista..."),"drawingAddProjectionAction",[this]{impl_->addViewDialog(DrawingViewKind::ProjectedEdges);});
     action(QStringLiteral("Inserisci sezione..."),"drawingAddViewAction",[this]{impl_->addViewDialog();});
     action(QStringLiteral("Modifica vista..."),"drawingEditViewAction",[this]{impl_->editSelectedView();});
-    action(QStringLiteral("Allinea vista..."),"drawingAlignViewAction",[this]{impl_->alignDialog();});toolbar->addSeparator();
+    action(QStringLiteral("Allinea vista..."),"drawingAlignViewAction",[this]{impl_->alignDialog();});
+    impl_->hiddenAction=action(QStringLiteral("Mostra linee nascoste"),"drawingHiddenLinesAction",[this]{impl_->report(setHiddenLinesVisible(impl_->selectedView(),impl_->hiddenAction->isChecked()));});impl_->hiddenAction->setCheckable(true);impl_->hiddenAction->setToolTip(QStringLiteral("Mostra/nasconde i tratti coperti nella sola vista selezionata, anche per quotarli."));toolbar->addSeparator();
     impl_->quoteAction=action(QStringLiteral("Quota intelligente"),"drawingSmartDimensionAction",[]{});impl_->quoteAction->setCheckable(true);
     impl_->quoteType=new QComboBox(toolbar);impl_->quoteType->setObjectName("drawingDimensionType");impl_->quoteType->setToolTip(QStringLiteral("Tipo della quota interattiva"));
     impl_->quoteType->addItem(QStringLiteral("Automatica"),-1);
@@ -712,13 +735,13 @@ DrawingSheetEditor::DrawingSheetEditor(DrawingSheet sheet,DrawingEditorModel mod
     connect(impl_->tree,&QWidget::customContextMenuRequested,this,[this](const QPoint &point){
         auto *item=impl_->tree->itemAt(point);if(!item)return;impl_->tree->setCurrentItem(item);CadMenu menu(this);
         if(item->data(0,Qt::UserRole).toString()==QLatin1String("dimension"))menu.addAction(findChild<QAction *>("drawingEditDimensionAction"));
-        else{menu.addAction(findChild<QAction *>("drawingEditViewAction"));menu.addAction(findChild<QAction *>("drawingAlignViewAction"));}
+        else{menu.addAction(findChild<QAction *>("drawingEditViewAction"));menu.addAction(findChild<QAction *>("drawingAlignViewAction"));menu.addAction(impl_->hiddenAction);}
         menu.addSeparator();menu.addAction(findChild<QAction *>("drawingDeleteSelectionAction"));
         menu.exec(impl_->tree->viewport()->mapToGlobal(point));});
     impl_->message=new QLabel(this);impl_->message->setWordWrap(false);impl_->message->setSizePolicy(QSizePolicy::Ignored,QSizePolicy::Fixed);impl_->message->setMinimumWidth(0);workspace->statusBar()->addWidget(impl_->message,1);workspace->statusBar()->setSizeGripEnabled(false);
     const QPair<const char *,const char *> icons[]={{"drawingSmartDimensionAction","dimension"},{"drawingEditDimensionAction","edit"},{"drawingUndoAction","undo"},{"drawingRedoAction","redo"},{"drawingAlignViewAction","move"},{"drawingAddProjectionAction","viewFront"},{"drawingAddViewAction","section"},{"drawingEditViewAction","edit"},
         {"drawingEndpointDimensionAction","dimensionAligned"},{"drawingHorizontalDimensionAction","dimension"},{"drawingVerticalDimensionAction","dimensionVertical"},{"drawingLengthDimensionAction","measure"},
-        {"drawingDeleteSelectionAction","delete"},{"drawingUpdateModelAction","rebuild"},{"drawingFitAction","zoomAll"}};
+        {"drawingHiddenLinesAction","visibility"},{"drawingDeleteSelectionAction","delete"},{"drawingUpdateModelAction","rebuild"},{"drawingFitAction","zoomAll"}};
     for(const auto &entry:icons){auto *a=findChild<QAction *>(entry.first);a->setIcon(commandIcon(entry.second));a->setIconVisibleInMenu(true);}
     const QPair<QAction *,QKeySequence> shortcuts[]={{impl_->undoAction,QKeySequence::Undo},{impl_->redoAction,QKeySequence::Redo},{findChild<QAction *>("drawingDeleteSelectionAction"),QKeySequence::Delete}};
     for(const auto &entry:shortcuts){entry.first->setShortcut(entry.second);entry.first->setShortcutContext(Qt::WidgetWithChildrenShortcut);impl_->view->addAction(entry.first);impl_->tree->addAction(entry.first);}
@@ -772,11 +795,13 @@ QString DrawingSheetEditor::updateView(DrawingView definition,DrawingViewLayout 
         DrawingSilhouetteResult contours;
         if(geometryChanged||old->scale!=definition.scale){const auto error=drawingViewSilhouettes(impl_->sourceFor(layout),definition,contours,impl_->silhouetteCache);if(!error.isEmpty())return error;}
         else contours=impl_->silhouettes.at(definition.id);
+        std::shared_ptr<const DrawingViewVisibility> display;
+        if(geometryChanged||old->scale!=definition.scale){auto prepared=std::make_shared<DrawingViewVisibility>();const auto error=drawingViewVisibility(impl_->sourceFor(layout),definition,pieces,contours,impl_->silhouetteCache,*prepared);if(!error.isEmpty())return error;display=std::move(prepared);}else display=impl_->visibility.at(definition.id);
         // Una sezione spostata puo' non intersecare piu' il corpo: le sue quote restano, marcate mancanti.
         for(const auto &piece:pieces)sectionPath(definition,layout,piece);
         for(const auto &contour:contours.paths)silhouettePath(definition,layout,contour);
         auto results=impl_->results;if(geometryChanged)for(const auto &d:next.drawing.dimensions)if(d.viewId==definition.id)results[d.id]=impl_->measured(next,d,pieces);
-        impl_->state=std::move(next);impl_->curves[definition.id]=std::move(pieces);impl_->silhouettes[definition.id]=std::move(contours);impl_->results=std::move(results);impl_->cacheSections();impl_->record(QStringLiteral("Modifica vista"),std::move(validation));impl_->redraw();return {};
+        impl_->state=std::move(next);impl_->curves[definition.id]=std::move(pieces);impl_->silhouettes[definition.id]=std::move(contours);impl_->visibility[definition.id]=std::move(display);impl_->results=std::move(results);impl_->cacheSections();impl_->record(QStringLiteral("Modifica vista"),std::move(validation));impl_->redraw();return {};
     }catch(const std::exception &error){return QString::fromUtf8(error.what());}
 }
 QString DrawingSheetEditor::moveView(const QUuid &id,const QPointF &position){return impl_->moveViewTo(id,position,QStringLiteral("Sposta vista"));}
@@ -812,8 +837,13 @@ QString DrawingSheetEditor::removeView(const QUuid &id){
     next.drawing.dimensions.erase(std::remove_if(next.drawing.dimensions.begin(),next.drawing.dimensions.end(),[&](const auto &d){return dimensions.contains(d.id);}),next.drawing.dimensions.end());
     next.dimensions.erase(std::remove_if(next.dimensions.begin(),next.dimensions.end(),[&](const auto &p){return dimensions.contains(p.dimensionId);}),next.dimensions.end());
     QByteArray bytes;const auto error=encodeDrawingSheet(next,bytes);if(!error.isEmpty())return error;
-    impl_->state=std::move(next);impl_->curves.erase(id);impl_->silhouettes.erase(id);impl_->cacheSections();for(auto dimension:dimensions)impl_->results.erase(dimension);
+    impl_->state=std::move(next);impl_->curves.erase(id);impl_->silhouettes.erase(id);impl_->visibility.erase(id);impl_->cacheSections();for(auto dimension:dimensions)impl_->results.erase(dimension);
     impl_->record(QStringLiteral("Elimina vista e quote"),std::move(bytes));impl_->redraw();return {};
+}
+QString DrawingSheetEditor::setHiddenLinesVisible(const QUuid &id,bool visible){
+    if(impl_->readOnly)return QStringLiteral("La tavola e' in sola lettura.");
+    const auto *definition=impl_->viewFor(id);if(!definition||definition->kind!=DrawingViewKind::ProjectedEdges)return QStringLiteral("Seleziona una vista proiettata.");
+    auto next=impl_->state;for(auto &layout:next.views)if(layout.viewId==id)layout.showHiddenLines=visible;const auto error=impl_->applyLayout(std::move(next),visible?QStringLiteral("Mostra linee nascoste"):QStringLiteral("Nascondi linee nascoste"));impl_->refreshHiddenAction();return error;
 }
 bool DrawingSheetEditor::canUndo()const{return !impl_->readOnly&&impl_->historyIndex>0;}
 bool DrawingSheetEditor::canRedo()const{return !impl_->readOnly&&impl_->historyIndex+1<impl_->history.size();}
@@ -880,7 +910,7 @@ void DrawingSheetEditor::setReadOnly(bool readOnly){
     impl_->quoteType->setEnabled(!impl_->readOnly);
     for(const auto &name:{"drawingSmartDimensionAction","drawingEditDimensionAction","drawingOriginReferenceAction","drawingAxisXReferenceAction","drawingAxisYReferenceAction","drawingAddProjectionAction","drawingAddViewAction","drawingEditViewAction","drawingAlignViewAction","drawingEndpointDimensionAction","drawingHorizontalDimensionAction","drawingVerticalDimensionAction","drawingLengthDimensionAction","drawingDeleteSelectionAction"})
         findChild<QAction *>(QString::fromLatin1(name))->setEnabled(!impl_->readOnly);
-    impl_->refreshHistoryActions();impl_->updateAction->setEnabled(!impl_->readOnly&&bool(impl_->provider));
+    impl_->refreshHiddenAction();impl_->refreshHistoryActions();impl_->updateAction->setEnabled(!impl_->readOnly&&bool(impl_->provider));
     for(auto *item:impl_->scene->items())if(dynamic_cast<MoveLabel *>(item))item->setFlag(QGraphicsItem::ItemIsMovable,!impl_->readOnly);
 }
 void DrawingSheetEditor::fitSheet(){impl_->view->fitInView(QRectF(QPointF(-5,-5),impl_->state.size+QSizeF(10,10)),Qt::KeepAspectRatio);}

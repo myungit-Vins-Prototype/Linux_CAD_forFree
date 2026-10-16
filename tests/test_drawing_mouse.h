@@ -16,6 +16,11 @@ void drawingMouseProfileTests(const QString &path){
         require(hasEdges&&hasContours&&contours.top()<edges.top()-.5*view.scale,"profilo superiore recuperato oltre i bordi della vista");const auto origin=editor.sheet().views[0].position;
         std::cout<<"Mouse view "<<orientation<<" prepareMs="<<preparation<<" placeMs="<<timer.elapsed()<<" contours="<<count<<" edgeUpper="<<(origin.y()-edges.top())/view.scale<<" silhouetteUpper="<<(origin.y()-contours.top())/view.scale<<'\n';
         QApplication::processEvents();const auto prefix=qEnvironmentVariable("FORGECAD_MOUSE_DRAWING_PREVIEW");if(!prefix.isEmpty())require(editor.grab().save(prefix+QString::number(orientation)+".png"),"anteprima Mouse del renderer definitivo");
+        for(auto *item:canvas->scene()->items())require(!item->data(4).toBool(),"nessun tratto nascosto mostrato per default sul Mouse");
+        timer.restart();error=editor.setHiddenLinesVisible(view.id,true);require(error.isEmpty(),qPrintable(error));QApplication::processEvents();const auto toggleMs=timer.elapsed();int hidden=0;for(auto *item:canvas->scene()->items())if(item->data(4).toBool())++hidden;require(hidden>0,"tratti nascosti disponibili su richiesta nel Mouse reale");
+        std::cout<<"Mouse view "<<orientation<<" showHiddenMs="<<toggleMs<<" hiddenItems="<<hidden<<'\n';
+        if(!prefix.isEmpty())require(editor.grab().save(prefix+QString::number(orientation)+"-hidden.png"),"anteprima Mouse con linee nascoste");
+        error=editor.setHiddenLinesVisible(view.id,false);require(error.isEmpty(),qPrintable(error));QApplication::processEvents();
         error=editor.removeView(view.id);require(error.isEmpty(),qPrintable(error));
     }
 }
