@@ -11,3 +11,5 @@ forgecad-release/
 .vscode/
 docs/benchmarks/
 *.lock
+.claude/
+

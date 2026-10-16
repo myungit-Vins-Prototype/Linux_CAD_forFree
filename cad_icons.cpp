@@ -1268,6 +1268,14 @@ std::map<QString, Draw> &registry() {
         dot(p, {8, 8.5}, c.construction, 1.3);
         dot(p, {16, 15.5}, c.construction, 1.3);
     };
+    icons["drawingOptions"] = [](QPainter &p, const IconPalette &c) {
+        p.setPen(stroke(c.ink)); p.drawRect(QRectF(3,2,18,20));
+        for(int i=0;i<3;++i){const double y=7+i*5;p.setPen(stroke(c.construction));p.drawLine(QPointF(6,y),QPointF(18,y));p.setPen(stroke(c.accent));p.setBrush(c.faceLight);p.drawRect(QRectF(i==1?13:8,y-1.5,3,3));}
+    };
+    icons["drawingResetViewTitle"] = [](QPainter &p, const IconPalette &c) {
+        p.setPen(stroke(c.ink));p.drawRect(QRectF(4,3,16,10));p.setPen(stroke(c.accent));p.drawLine(QPointF(8,19),QPointF(16,19));p.drawLine(QPointF(12,16),QPointF(12,22));
+        p.setPen(stroke(c.construction));p.drawLine(QPointF(3,20),QPointF(3,15));p.drawLine(QPointF(3,15),QPointF(7,15));p.drawLine(QPointF(3,15),QPointF(5,17));
+    };
     icons["viewOptions"] = [](QPainter &p, const IconPalette &c) {
         QPainterPath eye({2,12}); eye.cubicTo({7,3},{17,3},{22,12}); eye.cubicTo({17,21},{7,21},{2,12});
         p.setPen(stroke(c.ink,1.5)); p.setBrush(Qt::NoBrush); p.drawPath(eye); dot(p,{12,12},c.accent,3);
