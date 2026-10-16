@@ -97,7 +97,7 @@ QString DrawingWindow::runRevisionAction(RevisionAction action,const QString &fi
         containerDirty_=false;modified_=false;editor_->markSaved();statusBar()->showMessage(matches?QStringLiteral("Check-in della tavola archiviato."):
             QStringLiteral("Check-in originale completato. Le modifiche successive sono conservate nella copia di lavoro."),10000);
     }
-    refreshTitle();return error;
+    refreshPageContext();refreshTitle();return error;
 }
 QString DrawingWindow::applySource(DrawingFile prepared,DocumentState source){
     DrawingEditorModel geometry;auto error=prepareDrawingEditorModel(source,geometry);if(!error.isEmpty())return error;
@@ -107,7 +107,7 @@ QString DrawingWindow::applySource(DrawingFile prepared,DocumentState source){
     sourceArchivePath_=drawing_.modelArchivePath.isEmpty()?QString():QDir(QFileInfo(path_).absolutePath()).absoluteFilePath(drawing_.modelArchivePath);
     const auto checkin=drawing_.sheet.drawing.model.checkinId;
     sourceStatus_->setText(checkin.isNull()?QStringLiteral("Sorgente: copia di lavoro salvata %1").arg(sourcePath_):QStringLiteral("Modello fissato al check-in %1").arg(checkin.toString(QUuid::WithoutBraces)));
-    refreshTitle();return {};
+    refreshPageContext();refreshTitle();return {};
 }
 QString DrawingWindow::pinModelRevision(const DocumentVersion &version){
     if(!editor_||!drawing_.sheet.drawing.version.checkinId.isNull())return QStringLiteral("La tavola non e' modificabile.");

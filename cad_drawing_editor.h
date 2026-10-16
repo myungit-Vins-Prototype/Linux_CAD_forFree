@@ -2,6 +2,7 @@
 #define FORGECAD_DRAWING_EDITOR_H
 #include "cad_drawing_sheet.h"
 #include "cad_drawing_dimension.h"
+#include "cad_drawing_page.h"
 #include <QHash>
 #include <QWidget>
 #include <functional>
@@ -38,6 +39,10 @@ public:
     QString alignView(const QUuid &id,const QUuid &reference,ViewAlignment alignment);
     QString removeView(const QUuid &id);
     QString setHiddenLinesVisible(const QUuid &id,bool visible);
+    QString setPageSettings(const QString &title,const QSizeF &size,const DrawingTitleBlock &block);
+    void setPageContext(DrawingPageContext context);
+    DrawingPageContext pageContext()const;
+    QString exportPdf(const QString &path,DrawingPdfReport &report)const;
     QString undo();
     QString redo();
     bool canUndo() const;

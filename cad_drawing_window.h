@@ -18,6 +18,7 @@ public:
     QString createFromModel(const QString &modelPath);
     QString openPath(const QString &path);
     QString savePath(const QString &path);
+    QString exportPdfPath(const QString &path,DrawingPdfReport &report)const;
     QString updateFromSource(const QString &overridePath={});
     DrawingSheetEditor *editor()const{return editor_;}
     const DrawingFile &document()const{return drawing_;}
@@ -33,6 +34,8 @@ private:
     void showModelRevisions();
     void showDrawingHistory();
     void refreshTitle();
+    void refreshPageContext();
+    QHash<QString,QString> revisionLabels_;
     bool save(bool askPath);
     void report(const QString &error);
     DrawingFile drawing_;

@@ -2,6 +2,8 @@
 #include "cad_icons.h"
 #include "cad_menu.h"
 #include "cad_toolbar.h"
+#include "cad_workspace.h"
+#include <QDate>
 #include <QAction>
 #include <QCloseEvent>
 #include <QDir>
@@ -24,12 +26,14 @@ DrawingWindow::DrawingWindow(QWidget *parent):QMainWindow(parent,Qt::Window){
     connect(saveAction,&QAction::triggered,this,[this]{save(false);});
     auto *saveAs=file->addAction(QStringLiteral("Salva tavola con nome..."));saveAs->setShortcut(QKeySequence::SaveAs);
     connect(saveAs,&QAction::triggered,this,[this]{save(true);});
+    auto *exportPdf=file->addAction(QStringLiteral("Esporta PDF..."));exportPdf->setObjectName("drawingExportPdfAction");exportPdf->setIcon(commandIcon("drawingPdf"));exportPdf->setToolTip(QStringLiteral("Esporta il foglio in PDF vettoriale alla scala indicata, senza selezioni e anteprime."));
+    connect(exportPdf,&QAction::triggered,this,[this]{const QFileInfo source(path_.isEmpty()?sourcePath_:path_);auto path=QFileDialog::getSaveFileName(this,QStringLiteral("Esporta tavola in PDF"),source.absolutePath()+"/"+source.completeBaseName()+".pdf",QStringLiteral("Documento PDF (*.pdf)"));if(path.isEmpty())return;if(QFileInfo(path).suffix().isEmpty())path+=".pdf";DrawingPdfReport result;const auto error=exportPdfPath(path,result);if(!error.isEmpty()){report(error);return;}statusBar()->showMessage(QStringLiteral("PDF creato: %1").arg(path)+(result.warnings.isEmpty()?QString():QStringLiteral(" · ")+result.warnings.join(QStringLiteral(" "))),15000);});
     file->addSeparator();addRevisionMenus(file);
     editMenu_=addCadMenu(menuBar(),QStringLiteral("Modifica"));insertMenu_=addCadMenu(menuBar(),QStringLiteral("Inserisci"));
     dimensionMenu_=addCadMenu(menuBar(),QStringLiteral("Quote"));viewMenu_=addCadMenu(menuBar(),QStringLiteral("Visualizza"));
     auto *source=addToolBar(QStringLiteral("Documento e modello"));source->setObjectName("drawingDocumentBar");configureCommandBar(source);
     saveAction->setObjectName("drawingSaveAction");saveAction->setIcon(commandIcon("save"));saveAs->setIcon(commandIcon("save"));
-    source->addAction(saveAction);source->addSeparator();
+    source->addAction(saveAction);source->addAction(exportPdf);source->addSeparator();
     updateAction_=source->addAction(QStringLiteral("Aggiorna dal .prt salvato"));updateAction_->setObjectName("drawingReloadSourceAction");
     connect(updateAction_,&QAction::triggered,this,[this]{report(updateFromSource());});
     auto *locate=source->addAction(QStringLiteral("Individua modello..."));locate->setObjectName("drawingLocateSourceAction");
@@ -50,6 +54,7 @@ void DrawingWindow::refreshTitle(){
     const auto checkin=drawing_.sheet.drawing.version.checkinId;
     setWindowTitle((path_.isEmpty()?QStringLiteral("Nuova tavola"):QFileInfo(path_).fileName())+(modified_?QStringLiteral(" *"):QString())
         +(checkin.isNull()?QString():QStringLiteral(" [check-in %1]").arg(checkin.toString(QUuid::WithoutBraces).left(8)))+QStringLiteral(" — ForgeCAD"));
+    findChild<QAction *>("drawingExportPdfAction")->setEnabled(editor_&&sourceReady_&&!busy_);
     findChild<QAction *>("drawingSaveAction")->setEnabled(editor_&&checkin.isNull()&&!busy_);
     findChild<QAction *>("drawingLocateSourceAction")->setEnabled(editor_&&checkin.isNull()&&!busy_);
     for(auto *action:revisionMutationActions_)action->setEnabled(editor_&&checkin.isNull()&&!busy_);
@@ -69,13 +74,14 @@ void DrawingWindow::installEditor(){
     next->findChild<QAction *>("drawingUpdateModelAction")->setVisible(false);
     layout->addWidget(next,1);auto *previous=takeCentralWidget();setCentralWidget(container);editor_=next;delete previous;
     const auto populate=[next](QMenu *menu,std::initializer_list<const char *> names){menu->clear();for(auto name:names)menu->addAction(next->findChild<QAction *>(name));};
-    populate(editMenu_,{"drawingUndoAction","drawingRedoAction","drawingEditViewAction","drawingAlignViewAction","drawingDeleteSelectionAction"});
+    populate(editMenu_,{"drawingPageSettingsAction","drawingUndoAction","drawingRedoAction","drawingEditViewAction","drawingAlignViewAction","drawingDeleteSelectionAction"});
     populate(insertMenu_,{"drawingAddProjectionAction","drawingAddViewAction"});
     populate(dimensionMenu_,{"drawingSmartDimensionAction","drawingEditDimensionAction","drawingEndpointDimensionAction","drawingHorizontalDimensionAction","drawingVerticalDimensionAction","drawingLengthDimensionAction"});
     auto *references=addCadMenu(dimensionMenu_,QStringLiteral("Riferimenti del piano"));
     for(auto name:{"drawingOriginReferenceAction","drawingAxisXReferenceAction","drawingAxisYReferenceAction"})references->addAction(next->findChild<QAction *>(name));
     populate(viewMenu_,{"drawingHiddenLinesAction","drawingFitAction"});viewMenu_->addSeparator();viewMenu_->addAction(next->findChild<QDockWidget *>("drawingTreeDock")->toggleViewAction());
     viewMenu_->addAction(next->findChild<QToolBar *>("drawingCommandBar")->toggleViewAction());viewMenu_->addAction(findChild<QToolBar *>("drawingDocumentBar")->toggleViewAction());
+    refreshPageContext();
     updateAction_->setEnabled(drawing_.sheet.drawing.version.checkinId.isNull());
     if(sourceReady_){
         const auto pinned=drawing_.sheet.drawing.model.checkinId;
@@ -87,7 +93,7 @@ QString DrawingWindow::createFromModel(const QString &modelPath){
     if(editor_)return QStringLiteral("Questa finestra contiene gia' una tavola.");
     const auto resolved=canonicalDocumentPath(modelPath);DocumentState source;
     auto error=loadDocumentFile(resolved,source);if(!error.isEmpty())return error;
-    DrawingFile prepared;prepared.sheet.title=QFileInfo(resolved).completeBaseName();prepared.sheet.drawing.model=source.version;prepared.modelPath=resolved;
+    DrawingFile prepared;prepared.sheet.title=QFileInfo(resolved).completeBaseName();prepared.sheet.drawing.model=source.version;prepared.modelPath=resolved;prepared.sheet.titleBlock.visible=true;prepared.sheet.titleBlock.date=QDate::currentDate().toString(Qt::ISODate);
     error=drawingModelDefinitionHash(source,prepared.modelDefinitionHash);if(!error.isEmpty())return error;
     DrawingEditorModel geometry;error=prepareDrawingEditorModel(source,geometry);if(!error.isEmpty())return error;
     if(geometry.choices.isEmpty())return QStringLiteral("Il modello non contiene corpi o superfici disponibili per una tavola.");
@@ -127,7 +133,7 @@ QString DrawingWindow::updateFromSource(const QString &overridePath){
     model_=std::move(geometry);drawing_.modelDefinitionHash=digest;sourcePath_=resolved;
     drawing_.modelPath=path_.isEmpty()?resolved:QDir(QFileInfo(path_).absolutePath()).relativeFilePath(resolved);
     sourceReady_=true;containerDirty_=true;modified_=true;
-    sourceStatus_->setText(QStringLiteral("Modello aggiornato da: %1").arg(sourcePath_));refreshTitle();return {};
+    sourceStatus_->setText(QStringLiteral("Modello aggiornato da: %1").arg(sourcePath_));refreshPageContext();refreshTitle();return {};
 }
 QString DrawingWindow::savePath(const QString &path){
     if(!editor_)return QStringLiteral("Nessuna tavola da salvare.");
@@ -146,7 +152,30 @@ QString DrawingWindow::savePath(const QString &path){
     if(candidate)lock_=std::move(candidate);
     drawing_=std::move(prepared);path_=resolved;containerDirty_=false;modified_=false;
     if(different)installEditor();
-    editor_->markSaved();refreshTitle();return {};
+    editor_->markSaved();refreshPageContext();refreshTitle();return {};
+}
+void DrawingWindow::refreshPageContext(){
+    if(!editor_)return;
+    auto context=defaultDrawingPageContext(drawing_.sheet);context.modelName=QFileInfo(drawing_.modelPath).fileName();WorkspacePaths workspace;const auto located=locateDocumentWorkspace(path_.isEmpty()?sourcePath_:path_,workspace);
+    const auto label=[&](const DocumentVersion &version,const QString &directory,const QUuid &expectedArchive){
+        const auto fallback=QStringLiteral("Check-in %1").arg(version.checkinId.toString(QUuid::WithoutBraces));if(directory.isEmpty()||version.checkinId.isNull())return fallback;
+        const QString key=directory+"/"+version.documentId.toString()+"/"+version.checkinId.toString();if(revisionLabels_.contains(key))return revisionLabels_.value(key);RevisionStore store(directory);
+        if(!expectedArchive.isNull()){QUuid actual;if(!store.archiveIdentity(actual).isEmpty()||actual!=expectedArchive)return fallback;}
+        QVector<RevisionRecord> records;if(!store.history(version.documentId,records).isEmpty())return fallback;
+        for(const auto &record:records)if(record.version.checkinId==version.checkinId){revisionLabels_[key]=record.technicalRevision;return record.technicalRevision;}
+        return fallback;
+    };
+    const auto archive=located.isEmpty()?workspace.revisions:QString();
+    if(!context.drawingVersion.checkinId.isNull())context.drawingRevision=label(context.drawingVersion,archive,{});
+    else if(!drawing_.baseCheckinId.isNull())context.drawingRevision=QStringLiteral("Lavoro (base %1)").arg(label({context.drawingVersion.documentId,drawing_.baseCheckinId},archive,{}));
+    if(!context.modelVersion.checkinId.isNull())context.modelRevision=label(context.modelVersion,sourceArchivePath_.isEmpty()?archive:sourceArchivePath_,drawing_.modelArchiveId);
+    editor_->setPageContext(std::move(context));
+}
+QString DrawingWindow::exportPdfPath(const QString &path,DrawingPdfReport &report)const{
+    if(!editor_||busy_||!sourceReady_)return QStringLiteral("Modello non verificato: aggiornare la tavola prima di esportare.");
+    const auto destination=canonicalDocumentPath(path);
+    if(destination==canonicalDocumentPath(path_)||destination==canonicalDocumentPath(sourcePath_))return QStringLiteral("Il PDF deve essere distinto dalla tavola e dal modello sorgente.");
+    return editor_->exportPdf(path,report);
 }
 bool DrawingWindow::save(bool askPath){
     auto path=path_;

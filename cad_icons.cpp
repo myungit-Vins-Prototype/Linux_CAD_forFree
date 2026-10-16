@@ -431,6 +431,17 @@ std::map<QString, Draw> &registry() {
         line(p, {12, 11}, {12, 18}, stroke(c.accent, 1.7));
         line(p, {8.5, 14.5}, {15.5, 14.5}, stroke(c.accent, 1.7));
     };
+    icons["drawingPdf"] = [](QPainter &p, const IconPalette &c) {
+        polygon(p, QPolygonF({{4, 2}, {14, 2}, {20, 8}, {20, 22}, {4, 22}}), c.faceLight, stroke(c.ink, 1.2));
+        p.setPen(stroke(c.ink, 1)); p.drawPolyline(QPolygonF({{14, 2}, {14, 8}, {20, 8}}));
+        QFont font; font.setPixelSize(8); font.setBold(true); p.setFont(font); p.setPen(c.accent);
+        p.drawText(QRectF(4, 9, 16, 10), Qt::AlignCenter, QStringLiteral("PDF"));
+    };
+    icons["drawingPage"] = [](QPainter &p, const IconPalette &c) {
+        polygon(p, QPolygonF({{2, 4}, {22, 4}, {22, 20}, {2, 20}}), c.faceLight, stroke(c.ink, 1.2));
+        p.setPen(stroke(c.ink, .8)); p.setBrush(Qt::NoBrush); p.drawRect(QRectF(4, 6, 16, 12));
+        p.setPen(stroke(c.accent, 1.1)); p.drawRect(QRectF(11, 13, 9, 5)); p.drawLine(QPointF(11, 15.5), QPointF(20, 15.5));
+    };
     icons["open"] = [](QPainter &p, const IconPalette &c) {
         polygon(p, QPolygonF({{2.5, 5}, {9, 5}, {11, 7.5}, {20, 7.5}, {20, 19}, {2.5, 19}}), c.faceMid, stroke(c.ink, 1.2));
         polygon(p, QPolygonF({{5, 11}, {22, 11}, {19.5, 19}, {2.5, 19}}), c.accent, stroke(c.ink, 1.2));

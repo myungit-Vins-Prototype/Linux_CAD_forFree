@@ -25,6 +25,10 @@ void validate(const DrawingSheet &sheet){
     require(std::isfinite(sheet.size.width())&&std::isfinite(sheet.size.height())&&sheet.size.width()>=50&&sheet.size.height()>=50
             &&sheet.size.width()<=2000&&sheet.size.height()<=2000,"Dimensioni del foglio non valide.");
     require(sheet.views.size()==qsizetype(sheet.drawing.views.size())&&sheet.dimensions.size()==qsizetype(sheet.drawing.dimensions.size()),"Presentazione del foglio incompleta.");
+    const auto &block=sheet.titleBlock;
+    require(block.code.size()<=128&&block.organization.size()<=128&&block.author.size()<=128&&block.date.size()<=32,"Campi del cartiglio troppo lunghi.");
+    for(const auto &field:{block.code,block.organization,block.author,block.date})for(const QChar c:field)require(c.isPrint(),"Il cartiglio contiene caratteri non stampabili.");
+    require(!block.visible||(sheet.size.width()>=195&&sheet.size.height()>=80),"Foglio troppo piccolo per il cartiglio: minimo 195 x 80 mm.");
     QSet<QUuid> viewIds,dimensionIds;
     for(const auto &view:sheet.drawing.views)viewIds.insert(view.id);
     for(const auto &dimension:sheet.drawing.dimensions)dimensionIds.insert(dimension.id);
@@ -49,9 +53,11 @@ QString encodeDrawingSheet(const DrawingSheet &sheet,QByteArray &bytes){
             if(view.showHiddenLines)object.insert("showHiddenLines",true);
             views.append(object);}
         for(const auto &dimension:sheet.dimensions)dimensions.append(QJsonObject{{"id",dimension.dimensionId.toString(QUuid::WithoutBraces)},{"position",pointJson(dimension.position)}});
-        auto prepared=QJsonDocument(QJsonObject{{"format","ForgeCAD.DrawingSheet"},{"schema",1},{"title",sheet.title},
+        QJsonObject object{{"format","ForgeCAD.DrawingSheet"},{"schema",1},{"title",sheet.title},
             {"size",QJsonArray{sheet.size.width(),sheet.size.height()}},{"drawing",QJsonDocument::fromJson(document).object()},
-            {"views",views},{"dimensions",dimensions}}).toJson(QJsonDocument::Compact);
+            {"views",views},{"dimensions",dimensions}};
+        const auto &block=sheet.titleBlock;if(block.visible||!block.code.isEmpty()||!block.organization.isEmpty()||!block.author.isEmpty()||!block.date.isEmpty())object.insert("titleBlock",QJsonObject{{"visible",block.visible},{"code",block.code},{"organization",block.organization},{"author",block.author},{"date",block.date}});
+        auto prepared=QJsonDocument(object).toJson(QJsonDocument::Compact);
         require(prepared.size()<=8*1024*1024,"Foglio oltre i limiti del prototipo.");bytes=std::move(prepared);return {};
     }catch(const std::exception &error){return QString::fromUtf8(error.what());}
 }
@@ -62,6 +68,9 @@ QString decodeDrawingSheet(const QByteArray &bytes,DrawingSheet &sheet){
         require(json.isObject()&&object["format"].toString()==QLatin1String("ForgeCAD.DrawingSheet")&&object["schema"].toInt(-1)==1,"Formato del foglio non supportato.");
         require(object["title"].isString()&&object["drawing"].isObject()&&object["views"].isArray()&&object["dimensions"].isArray(),"Dati del foglio incompleti.");
         DrawingSheet prepared;prepared.title=object["title"].toString();const auto size=readPoint(object["size"]);prepared.size=QSizeF(size.x(),size.y());
+        if(object.contains("titleBlock")){require(object["titleBlock"].isObject(),"Cartiglio non valido.");const auto block=object["titleBlock"].toObject();require(block["visible"].isBool(),"Visibilita' del cartiglio non valida.");
+            for(const auto &key:{"code","organization","author","date"})require(block[key].isString(),"Dati del cartiglio incompleti.");
+            prepared.titleBlock={block["visible"].toBool(),block["code"].toString(),block["organization"].toString(),block["author"].toString(),block["date"].toString()};}
         ok(decodeDrawingDocument(QJsonDocument(object["drawing"].toObject()).toJson(QJsonDocument::Compact),prepared.drawing));
         require(object["views"].toArray().size()<=10000&&object["dimensions"].toArray().size()<=10000,"Troppi elementi nel foglio.");
         for(const auto &value:object["views"].toArray()){

@@ -17,12 +17,17 @@ struct DrawingDimensionLayout {
     QUuid dimensionId;
     QPointF position; // posizione del testo sul foglio, indipendente dalla misura
 };
+struct DrawingTitleBlock {
+    bool visible=false;
+    QString code,organization,author,date; // data dichiarata, non aggiornata all’apertura
+};
 struct DrawingSheet {
     DrawingDocument drawing;
     QString title = QStringLiteral("Tavola");
     QSizeF size{297,210};
     QVector<DrawingViewLayout> views;
     QVector<DrawingDimensionLayout> dimensions;
+    DrawingTitleBlock titleBlock;
 };
 // Solo metadati del foglio; nessuna duplicazione della geometria del modello.
 QString encodeDrawingSheet(const DrawingSheet &sheet,QByteArray &bytes);
