@@ -20725,7 +20725,10 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
         QDialog dialog(this); dialog.setWindowTitle(QStringLiteral("Check-in"));
         dialog.setObjectName(QStringLiteral("revisionCheckinDialog"));
         auto *layout = new QFormLayout(&dialog);
-        auto *revision = new QLineEdit(QSettings().value(QStringLiteral("revisions/lastLabel"),QStringLiteral("A")).toString(),&dialog);
+        QString proposed;
+        const auto proposalError=ForgeCad::nextWorkspaceRevisionLabel(documentPath_,viewport_->currentDocument().version.documentId,proposed);
+        if(!proposalError.isEmpty()){reportRevisionError(proposalError);return;}
+        auto *revision = new QLineEdit(proposed,&dialog);revision->setReadOnly(true);
         revision->setObjectName(QStringLiteral("revisionLabel")); revision->setMaxLength(128);
         auto *comment = new QTextEdit(&dialog); comment->setAcceptRichText(false); comment->setObjectName(QStringLiteral("revisionComment"));
         layout->addRow(QStringLiteral("Revisione tecnica:"),revision); layout->addRow(QStringLiteral("Commento:"),comment);
@@ -20739,9 +20742,7 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
         buttons->button(QDialogButtonBox::Ok)->setEnabled(!revision->text().trimmed().isEmpty());
         layout->addRow(buttons); dialog.resize(440,250);
         if (dialog.exec()!=QDialog::Accepted || !saveDocument(false)) return;
-        const auto label = revision->text().trimmed();
-        const auto error = runDocumentRevisionAction(DocumentRevisionAction::Checkin,label,comment->toPlainText());
-        if (error.isEmpty()) QSettings().setValue(QStringLiteral("revisions/lastLabel"),label);
+        const auto error = runDocumentRevisionAction(DocumentRevisionAction::Checkin,{},comment->toPlainText());
         reportRevisionError(error);
     });
     QAction *completeAction = revisionMenu->addAction(QStringLiteral("Completa check-in pendente"));

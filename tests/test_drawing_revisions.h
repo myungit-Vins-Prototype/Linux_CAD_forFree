@@ -46,10 +46,10 @@ void drawingRevisionTests(){
         require(!checkinWorkspaceDrawing(path,drawing,label,"interruzione simulata",record).isEmpty()&&QFileInfo::exists(pendingPath),"errore pubblicazione conserva pendente");
         DrawingRevisionOperation operation;clientOk(decodeDrawingRevisionOperation(clientRead(pendingPath),operation));return operation;
     };
-    auto pending=makePending("B");const auto originalPending=clientRead(pendingPath);
+    auto pending=makePending("B");pending.request.technicalRevision="A";QByteArray legacyPending;clientOk(encodeDrawingRevisionOperation(pending,legacyPending));clientWrite(pendingPath,legacyPending);const auto originalPending=clientRead(pendingPath);
     require(!cancelWorkspaceDrawingCheckout(path,drawing).isEmpty(),"pendente impedisce cancellazione prenotazione");
     require(!checkinWorkspaceDrawing(path,drawing,"nuovo","",record).isEmpty()&&clientRead(pendingPath)==originalPending,"nuovo tentativo non sovrascrive pendente");
-    RevisionRecord published;clientOk(store.checkin(pending.request,published));drawing.sheet.title="modifica successiva al pendente";bool matches=true;
+    RevisionRecord published;clientOk(store.checkin(pending.request,published));require(published.technicalRevision=="2","vecchio pendente tavola rinumerato senza perdere UUID o contenuto");drawing.sheet.title="modifica successiva al pendente";bool matches=true;
     clientOk(completeWorkspaceDrawingCheckin(path,drawing,record,matches));require(!matches&&drawing.sheet.title=="modifica successiva al pendente"&&record.version.checkinId==published.version.checkinId,"risposta persa conserva modifiche successive e pubblica snapshot originale");
     clientOk(readDrawingRevision(store,record.version,archived));require(archived.sheet.title==unsaved,"contenuto originale del pendente immutato");
     // Interruzione dopo la rimozione della sessione, prima di eliminare il pendente.
@@ -88,17 +88,17 @@ void drawingRevisionUiTests(){
     window.findChild<QAction *>("drawingPinModelAction")->trigger();require(pinSeen&&window.document().sheet.drawing.model.checkinId==modelA.version.checkinId,"selezione reale della revisione sorgente");
     bool checkoutSeen=false;QTimer::singleShot(0,[&]{auto *dialog=window.findChild<QInputDialog *>();if(dialog){dialog->setTextValue("disegnatore");checkoutSeen=true;dialog->accept();}});
     window.findChild<QAction *>("drawingCheckoutAction")->trigger();require(checkoutSeen,"dialogo reale proprietario check-out tavola");
-    bool checkinSeen=false;QTimer::singleShot(0,[&]{auto *dialog=window.findChild<QDialog *>("drawingCheckinDialog");if(dialog){dialog->findChild<QLineEdit *>("drawingRevisionLabel")->setText("R01");dialog->findChild<QTextEdit *>("drawingRevisionComment")->setPlainText("tavola iniziale");checkinSeen=true;dialog->accept();}});
+    bool checkinSeen=false;QTimer::singleShot(0,[&]{auto *dialog=window.findChild<QDialog *>("drawingCheckinDialog");if(dialog){require(dialog->findChild<QLineEdit *>("drawingRevisionLabel")->isReadOnly()&&dialog->findChild<QLineEdit *>("drawingRevisionLabel")->text()=="1","revisione automatica non modificabile nel dialogo tavola");dialog->findChild<QTextEdit *>("drawingRevisionComment")->setPlainText("tavola iniziale");checkinSeen=true;dialog->accept();}});
     window.findChild<QAction *>("drawingCheckinAction")->trigger();require(checkinSeen&&!window.isModified()&&!window.document().baseCheckinId.isNull(),"check-in GUI salva ricevuta della tavola");
-    QVector<RevisionRecord> records;clientOk(workspaceDrawingHistory(path,window.document(),records));require(records.size()==1&&records[0].technicalRevision=="R01"&&records[0].comment=="tavola iniziale","campi GUI conservati in catalogo");
+    QVector<RevisionRecord> records;clientOk(workspaceDrawingHistory(path,window.document(),records));require(records.size()==1&&records[0].technicalRevision=="1"&&records[0].comment=="tavola iniziale","campi GUI conservati in catalogo");
     source.extrusions[0].primitive.size[0]=14;source.extrusions[0].cachedGeometry=false;{CadViewport viewport;viewport.loadDocument(source);source=viewport.currentDocument();}
     clientOk(saveDocumentFile(sourcePath,source));clientOk(checkoutWorkspaceDocument(sourcePath,source,"modellatore"));RevisionRecord modelB;clientOk(checkinWorkspaceDocument(sourcePath,source,"B","",modelB));
     clientOk(window.pinModelRevision(modelB.version));require(std::abs(window.editor()->dimensionResult(dimension).value-14)<1e-7,"scelta modello B aggiorna quota a 14");
-    clientOk(window.savePath(path));clientOk(window.runRevisionAction(DrawingWindow::RevisionAction::Checkout,"disegnatore"));clientOk(window.runRevisionAction(DrawingWindow::RevisionAction::Checkin,"R02","tavola allungata"));
+    clientOk(window.savePath(path));clientOk(window.runRevisionAction(DrawingWindow::RevisionAction::Checkout,"disegnatore"));clientOk(window.runRevisionAction(DrawingWindow::RevisionAction::Checkin,{},"tavola allungata"));
     bool historySeen=false;QTimer::singleShot(0,[&]{auto *dialog=window.findChild<QDialog *>("drawingHistoryDialog");if(dialog){auto *table=dialog->findChild<QTableWidget *>("drawingRevisionTable");historySeen=table&&table->rowCount()==2&&table->editTriggers()==QAbstractItemView::NoEditTriggers;table->selectRow(0);dialog->accept();}});
     window.findChild<QAction *>("drawingHistoryAction")->trigger();DrawingWindow *historical=nullptr;
     for(auto *widget:QApplication::topLevelWidgets())if(auto *drawing=dynamic_cast<DrawingWindow *>(widget))if(drawing!=&window&&!drawing->document().sheet.drawing.version.checkinId.isNull())historical=drawing;
-    require(historySeen&&historical&&historical->editor()->isReadOnly()&&std::abs(historical->editor()->dimensionResult(dimension).value-10)<1e-7,"apertura GUI storico R01 con modello A");
+    require(historySeen&&historical&&historical->editor()->isReadOnly()&&std::abs(historical->editor()->dimensionResult(dimension).value-10)<1e-7,"apertura GUI storico 1 con modello A");
     require(!historical->findChild<QAction *>("drawingCheckinAction")->isEnabled()&&!historical->savePath(path).isEmpty(),"storico non sovrascrive copia di lavoro");
     const auto preview=qEnvironmentVariable("FORGECAD_DRAWING_REVISIONS_PREVIEW");if(!preview.isEmpty()){QApplication::processEvents();require(historical->grab().save(preview),"anteprima storico tavola");}
     clientOk(historical->savePath(temporary.filePath("copia-storica.drw")));require(!historical->editor()->isReadOnly()&&historical->document().baseCheckinId.isNull(),"Salva con nome storico crea copia indipendente");delete historical;

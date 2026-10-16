@@ -101,6 +101,11 @@ QString prepareDrawingEditorModel(DocumentState &document,DrawingEditorModel &mo
             ids.append(feature.featureId);tips[body.id]=feature.featureId;
             prepared.choices.append({feature.featureId,body.name.isEmpty()?feature.name:body.name});}
         if(!ids.isEmpty())ok(drawingSnapshotOfDocument(document,ids,prepared.snapshot));
+        for(auto &source:prepared.snapshot.bodies)for(const auto &feature:document.extrusions)if(feature.featureId==source.featureId){
+            QColor color=feature.solid?QColor::fromRgbF(.25,.65,.90):QColor::fromRgbF(.20,.80,.95);
+            for(const auto &body:document.modelBodies)if(body.id==feature.modelBodyId&&body.meshColor.isValid()){color=body.meshColor;break;}
+            source.color=color.rgba();break;
+        }
         for(const auto &feature:document.extrusions){const auto tip=tips.value(root(feature.modelBodyId),0);if(tip)prepared.replacements[feature.featureId]=tip;}
         model=std::move(prepared);return {};
     }catch(const std::exception &error){return QString::fromUtf8(error.what());}

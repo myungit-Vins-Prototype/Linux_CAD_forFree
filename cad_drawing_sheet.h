@@ -26,6 +26,7 @@ struct DrawingViewLayout {
     QVector<quint64> features;
     bool showHiddenLines=false; // presentazione della sola vista, salvata nel .drw
     DrawingViewRelation relation{};
+    bool showMesh=false; // facce ombreggiate dalla mesh, mai riferimenti di quota
 };
 struct DrawingDimensionLayout {
     QUuid dimensionId;
@@ -35,6 +36,14 @@ struct DrawingTitleBlock {
     bool visible=false;
     QString code,organization,author,date; // data dichiarata, non aggiornata all’apertura
 };
+struct DrawingRevisionNote {
+    QUuid checkinId;
+    QString description,verifiedBy;
+};
+struct DrawingRevisionTable {
+    bool visible=false;
+    QVector<DrawingRevisionNote> notes;
+};
 struct DrawingSheet {
     DrawingDocument drawing;
     QString title = QStringLiteral("Tavola");
@@ -42,6 +51,7 @@ struct DrawingSheet {
     QVector<DrawingViewLayout> views;
     QVector<DrawingDimensionLayout> dimensions;
     DrawingTitleBlock titleBlock;
+    DrawingRevisionTable revisionTable;
 };
 // Solo metadati del foglio; nessuna duplicazione della geometria del modello.
 QString encodeDrawingSheet(const DrawingSheet &sheet,QByteArray &bytes);

@@ -191,6 +191,24 @@ bool owns(const StoredDocument &document, const RevisionCheckout &checkout) {
         && document.checkout.token == checkout.token && document.checkout.owner == checkout.owner
         && document.checkout.baseCheckinId == checkout.baseCheckinId && document.info.headCheckinId == checkout.baseCheckinId;
 }
+QString revisionKey(QString label) {
+    label=label.normalized(QString::NormalizationForm_KC).trimmed().toCaseFolded();
+    if(!label.isEmpty()&&std::all_of(label.cbegin(),label.cend(),[](QChar c){return c>='0'&&c<='9';})){
+        qsizetype start=0;while(start+1<label.size()&&label[start]=='0')++start;label=label.mid(start);
+    }
+    return label;
+}
+QString nextRevisionLabel(const Catalog &catalog,const QUuid &document) {
+    quint64 sequence=1;QSet<QString> used;
+    for(const auto &r:catalog.revisions)if(r.record.version.documentId==document){sequence=std::max(sequence,r.record.sequence+1);used.insert(revisionKey(r.record.technicalRevision));}
+    while(used.contains(QString::number(sequence)))++sequence;
+    return QString::number(sequence);
+}
+void availableRevision(const Catalog &catalog,const QUuid &document,const QString &label) {
+    string(QJsonValue(label),128,true);const auto key=revisionKey(label);
+    for(const auto &r:catalog.revisions)if(r.record.version.documentId==document)
+        require(revisionKey(r.record.technicalRevision)!=key,QStringLiteral("La revisione %1 esiste gia' per questo documento. Aggiornare il numero proposto.").arg(label));
+}
 QString objectPath(const QString &directory, const QByteArray &sha256) {
     return QDir(directory).filePath("objects/" + QString::fromLatin1(sha256.toHex()) + ".bin");
 }
@@ -350,7 +368,7 @@ QString RevisionStore::checkin(const RevisionCheckinRequest &request, RevisionRe
                 QStringLiteral("Identita' del check-in o della prenotazione assente."));
         require(request.payload.size() <= kMaxPayloadBytes && request.dependencies.size() <= kMaxDependencies,
                 QStringLiteral("Contenuti o dipendenze oltre il limite del prototipo."));
-        string(QJsonValue(request.technicalRevision), 128, true); string(QJsonValue(request.comment), 16384);
+        string(QJsonValue(request.technicalRevision), 128); string(QJsonValue(request.comment), 16384);
         const auto sha256 = digest(request.payload), requestHash = fingerprint(request, sha256);
         for (const auto &stored : catalog.revisions) if (stored.record.version.checkinId == request.checkinId) {
             require(stored.requestHash == requestHash, QStringLiteral("Identita' del check-in gia' usata per un'altra operazione."));
@@ -358,6 +376,12 @@ QString RevisionStore::checkin(const RevisionCheckinRequest &request, RevisionRe
         }
         auto &d = findDocument(catalog, request.checkout.documentId);
         require(owns(d, request.checkout), QStringLiteral("Prenotazione persa o copia di lavoro obsoleta."));
+        auto label=request.technicalRevision.trimmed().isEmpty()?nextRevisionLabel(catalog,d.info.documentId):request.technicalRevision.trimmed();
+        // Un vecchio pendente puo' contenere un'etichetta oggi gia' assegnata.
+        // Si cambia solo la ricevuta tecnica, mantenendo UUID, payload e hash
+        // della richiesta originale: ogni ritentativo ottiene la stessa ricevuta.
+        for(const auto &r:catalog.revisions)if(r.record.version.documentId==d.info.documentId&&revisionKey(r.record.technicalRevision)==revisionKey(label)){label=nextRevisionLabel(catalog,d.info.documentId);break;}
+        availableRevision(catalog,d.info.documentId,label);
         QSet<QUuid> dependencies;
         for (const auto &dep : request.dependencies) {
             require(!dep.documentId.isNull() && !dep.checkinId.isNull() && !dependencies.contains(dep.checkinId),
@@ -371,7 +395,7 @@ QString RevisionStore::checkin(const RevisionCheckinRequest &request, RevisionRe
         prepared.version = {d.info.documentId, request.checkinId}; prepared.previousCheckinId = d.info.headCheckinId;
         prepared.sequence = 1;
         for (const auto &r : catalog.revisions) if (r.record.version.documentId == d.info.documentId) ++prepared.sequence;
-        prepared.technicalRevision = request.technicalRevision; prepared.author = d.checkout.owner; prepared.comment = request.comment;
+        prepared.technicalRevision = label; prepared.author = d.checkout.owner; prepared.comment = request.comment;
         prepared.createdUtc = QDateTime::currentDateTimeUtc(); prepared.sha256 = sha256; prepared.payloadSize = request.payload.size();
         prepared.dependencies = request.dependencies;
         const auto path = objectPath(directory_, sha256);
@@ -388,6 +412,14 @@ QString RevisionStore::checkin(const RevisionCheckinRequest &request, RevisionRe
     return error;
 }
 
+QString RevisionStore::nextTechnicalRevision(const QUuid &documentId,QString &label) const {
+    try {auto catalog=loadCatalog(directory_);findDocument(catalog,documentId);label=nextRevisionLabel(catalog,documentId);return {};}
+    catch(const std::exception &e){return QString::fromUtf8(e.what());}
+}
+QString RevisionStore::validateTechnicalRevision(const QUuid &documentId,const QString &label) const {
+    try {auto catalog=loadCatalog(directory_);findDocument(catalog,documentId);availableRevision(catalog,documentId,label.trimmed());return {};}
+    catch(const std::exception &e){return QString::fromUtf8(e.what());}
+}
 QString RevisionStore::read(const DocumentVersion &version, QByteArray &payload) const {
     try {
         const auto catalog = loadCatalog(directory_);

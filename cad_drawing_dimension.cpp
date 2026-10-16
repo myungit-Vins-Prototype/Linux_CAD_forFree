@@ -73,7 +73,7 @@ const DrawingCurve &curveFor(const DrawingView &view,const DrawingSourceBody &so
         if(attachment.curveSide&&!onSupport(source,c,attachment,attachment.curveSide))continue;
         candidates.push_back(&c);}
     if(candidates.empty())missing(QStringLiteral("Entita' o ramo geometrico non ritrovato."));
-    if(candidates.size()==1&&(!ref.requiresWitness||attachment.curveSide))return *candidates[0];
+    if(candidates.size()==1&&(!ref.requiresWitness||(attachment.curveSide&&view.sectionStyle==DrawingSectionStyle::Removed)))return *candidates[0];
     const auto witness=view.plane.toGlobal(Vec3(ref.witness.x(),ref.witness.y(),0));const DrawingCurve *chosen=nullptr;
     for(const auto *c:candidates)if(projectPoint(*c->curve,witness,c->range).distance<=view.tolerance){if(chosen)throw ReferenceError{DrawingDimensionStatus::Ambiguous,QStringLiteral("Piu' rami contengono l'ancoraggio della quota.")};chosen=c;}
     if(!chosen)throw ReferenceError{candidates.size()>1?DrawingDimensionStatus::Ambiguous:DrawingDimensionStatus::Missing,QStringLiteral("L'ancoraggio non identifica il ramo originario.")};
@@ -81,6 +81,15 @@ const DrawingCurve &curveFor(const DrawingView &view,const DrawingSourceBody &so
 }
 // L'ancoraggio segue un vertice o il bordo che termina la sezione, mai l'indice/verso del parametro.
 bool anchorAt(const DrawingView &view,const DrawingSourceBody &source,const DrawingCurve &curve,const DrawingAttachment &ref,const Vec3 &point){
+    if(ref.clipBoundary){
+        if(view.kind!=DrawingViewKind::Section||view.sectionStyle==DrawingSectionStyle::Removed)return false;
+        if((ref.clipBoundary&2)&&!drawingHalfSection(view))return false;
+        auto p=point;
+        if(curve.kind==DrawingCurveKind::ProjectedEdge){if(!curve.hasSourceRange||!curve.sourceGeometry)return false;
+            const bool first=distance(point,curve.curve->point(curve.range.lo))<=view.tolerance;p=curve.sourceGeometry->point(first?curve.sourceRange.lo:curve.sourceRange.hi);}
+        const auto q=view.plane.toLocal(p);
+        return (!(ref.clipBoundary&1)||std::abs(q.z())<=view.tolerance)&&(!(ref.clipBoundary&2)||std::abs(q.x())<=view.tolerance);
+    }
     if(!ref.vertexName.isEmpty()){
         const auto vertices=source.names->find(EntityKind::Vertex,ref.vertexName.toStdString());
         for(auto vertex:source.body->vertices())if(std::find(vertices.begin(),vertices.end(),vertex.index)!=vertices.end()){
@@ -110,7 +119,7 @@ void setAnchor(const DrawingView &view,const DrawingSourceBody &source,const Dra
         }
     }
     if(!ref.curveSide&&!ref.anchorSide)ref.supportFace.clear();
-    if(!ref.vertexName.isEmpty()||curve.kind!=DrawingCurveKind::Section)return;
+    if(ref.vertexName.isEmpty()&&curve.kind==DrawingCurveKind::Section){
     for(auto loop:source.body->face(curve.sourceFace).loops)for(auto fin:source.body->loopFins(loop)){
         const auto edge=source.body->fin(fin).edge;const auto &e=source.body->edge(edge);
         if(projectPoint(*e.curve,point,e.range).distance<=view.tolerance){const auto name=QString::fromStdString(source.names->primary(EntityKind::Edge,edge.index));
@@ -118,6 +127,12 @@ void setAnchor(const DrawingView &view,const DrawingSourceBody &source,const Dra
             ref.boundaryName=name;const auto side=edgeSide(source,curve.sourceFace,edge);
             if(side){ref.supportFace=QString::fromStdString(source.names->primary(EntityKind::Face,curve.sourceFace.index));ref.anchorSide=side;}
         }
+    }
+    }
+    if(ref.vertexName.isEmpty()&&ref.boundaryName.isEmpty()&&view.sectionStyle!=DrawingSectionStyle::Removed){
+        auto p=point;if(curve.kind==DrawingCurveKind::ProjectedEdge&&curve.hasSourceRange&&curve.sourceGeometry){const bool first=distance(point,curve.curve->point(curve.range.lo))<=view.tolerance;p=curve.sourceGeometry->point(first?curve.sourceRange.lo:curve.sourceRange.hi);}
+        const auto q=view.plane.toLocal(p);if(curve.kind==DrawingCurveKind::ProjectedEdge&&std::abs(q.z())<=view.tolerance)ref.clipBoundary|=1;
+        if(drawingHalfSection(view)&&std::abs(q.x())<=view.tolerance)ref.clipBoundary|=2;
     }
 }
 double fractionParameter(const DrawingCurve &curve,double fraction){
@@ -161,14 +176,14 @@ DrawingResolvedAttachment resolve(const DrawingView &view,const DrawingModelSnap
 }
 }
 bool drawingDatum(DrawingPointRole role){return role==DrawingPointRole::Origin||role==DrawingPointRole::AxisX||role==DrawingPointRole::AxisY;}
-QString validateDrawingAttachments(const DrawingDimension &d,const DrawingView &){
+QString validateDrawingAttachments(const DrawingDimension &d,const DrawingView &view){
     try{
         need(int(d.measure)>=0&&int(d.measure)<=9,"Tipo di quota non supportato.");
         need(d.decimals>=0&&d.decimals<=8&&d.angleSides>=0&&d.angleSides<=3,"Presentazione della quota non valida.");
         need(d.measure==DrawingMeasure::Angle||d.angleSides==0,"Settore angolare su una quota lineare.");
         if(d.references.empty()){need(int(d.measure)<=3,"Quota senza riferimenti di aggancio.");return {};}
         need(d.references.size()<=2,"Troppi riferimenti della quota.");const DrawingAttachment *primary=nullptr;
-        for(const auto &r:d.references){need(int(r.role)>=0&&int(r.role)<=12&&std::isfinite(r.fraction)&&r.fraction>=0&&r.fraction<=1,"Aggancio della quota non valido.");
+        for(const auto &r:d.references){need(r.clipBoundary>=0&&r.clipBoundary<=3&&(!r.clipBoundary||(!drawingDatum(r.role)&&r.vertexName.isEmpty()&&r.boundaryName.isEmpty()&&view.kind==DrawingViewKind::Section)),"Origine dell'aggancio di taglio non valida.");need(int(r.role)>=0&&int(r.role)<=12&&std::isfinite(r.fraction)&&r.fraction>=0&&r.fraction<=1,"Aggancio della quota non valido.");
             need(r.supportFace.size()<=4096&&r.curveSide>=0&&r.curveSide<=15&&r.anchorSide>=0&&r.anchorSide<=15,"Localizzatore della faccia non valido.");
             need((r.curveSide||r.anchorSide)?!r.supportFace.isEmpty():r.supportFace.isEmpty(),"Faccia di supporto incoerente.");
             need((r.curveSide&3)!=3&&(r.curveSide&12)!=12&&(r.anchorSide&3)!=3&&(r.anchorSide&12)!=12,"Lati UV incompatibili.");
@@ -178,7 +193,7 @@ QString validateDrawingAttachments(const DrawingDimension &d,const DrawingView &
                 need((r.curve.kind==DrawingCurveKind::Section&&!r.curve.faceName.isEmpty()&&r.curve.edgeName.isEmpty())||(r.curve.kind==DrawingCurveKind::ProjectedEdge&&!r.curve.edgeName.isEmpty()&&r.curve.faceName.isEmpty()),"Origine geometrica dell'aggancio non valida.");
                 need(r.curve.faceName.size()<=4096&&r.curve.edgeName.size()<=4096,"Nome geometrico troppo lungo.");
                 need(!r.polar||r.role==DrawingPointRole::Nearest||r.role==DrawingPointRole::Curve,"Aggancio angolare incompatibile con il tipo di punto.");
-                if(r.role==DrawingPointRole::Start||r.role==DrawingPointRole::End||(r.role==DrawingPointRole::Nearest&&!r.polar))need(!r.vertexName.isEmpty()||!r.boundaryName.isEmpty(),"Punto privo di ancoraggio topologico.");
+                if(r.role==DrawingPointRole::Start||r.role==DrawingPointRole::End||(r.role==DrawingPointRole::Nearest&&!r.polar))need(!r.vertexName.isEmpty()||!r.boundaryName.isEmpty()||r.clipBoundary,"Punto privo di ancoraggio topologico.");
                 need(r.boundaryName.isEmpty()||r.curve.kind==DrawingCurveKind::Section,"Bordo di sezione su una proiezione.");}
         }
         need(primary&&same(primary->curve,d.section),"Il riferimento principale non corrisponde agli agganci.");
@@ -198,7 +213,7 @@ DrawingAttachment drawingAttachment(const DrawingView &view,const DrawingCurve &
         throw ReferenceError{DrawingDimensionStatus::Ambiguous,QStringLiteral("Il verso della curva chiusa non e' identificabile: scegliere un riferimento geometrico univoco.")};
     if(role==DrawingPointRole::Start||role==DrawingPointRole::End||role==DrawingPointRole::Nearest||role==DrawingPointRole::Curve){
         setAnchor(view,source,curve,curve.curve->point(role==DrawingPointRole::End?curve.range.hi:curve.range.lo),ref);
-        if(role!=DrawingPointRole::Curve)need(!ref.vertexName.isEmpty()||!ref.boundaryName.isEmpty(),"L'estremo non dispone di un'origine topologica stabile.");
+        if(role!=DrawingPointRole::Curve)need(!ref.vertexName.isEmpty()||!ref.boundaryName.isEmpty()||ref.clipBoundary,"L'estremo non dispone di un'origine topologica stabile.");
     }
     if(std::isfinite(parameter)){need(parameter>=curve.range.lo&&parameter<=curve.range.hi,"Parametro dell'aggancio fuori dalla curva.");
         const double length=arcLength(*curve.curve,curve.range);ref.fraction=parameter<=curve.range.lo?0:parameter>=curve.range.hi?1:arcLength(*curve.curve,{curve.range.lo,parameter})/length;}

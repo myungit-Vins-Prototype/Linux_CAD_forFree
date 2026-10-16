@@ -5,6 +5,8 @@
 class QLabel;
 class QAction;
 class QMenu;
+class QDockWidget;
+class QTableWidget;
 namespace ForgeCad {
 // Documento tavola autonomo: il modello viene letto dal file salvato.
 class DrawingWindow final:public QMainWindow {
@@ -33,6 +35,9 @@ private:
     void addRevisionMenus(QMenu *file);
     void showModelRevisions();
     void showDrawingHistory();
+    void installRevisionPanel();
+    void refreshRevisionPanel();
+    void showRevisionTableDialog();
     void refreshTitle();
     void refreshPageContext();
     QHash<QString,QString> revisionLabels_;
@@ -48,6 +53,14 @@ private:
     QMenu *editMenu_=nullptr,*insertMenu_=nullptr,*dimensionMenu_=nullptr,*viewMenu_=nullptr;
     QVector<QAction *> revisionMutationActions_;
     bool modified_=false,containerDirty_=false,sourceReady_=false,busy_=false;
+    QUuid modelBaseCheckinId_;
+    QDockWidget *revisionDock_=nullptr;
+    QLabel *revisionStatus_=nullptr;
+    QTableWidget *revisionHistory_=nullptr,*projectHistory_=nullptr;
+    QVector<RevisionRecord> projectRecords_;
+    WorkspaceRevisionStatus revisionStatusCache_;
+    bool revisionStatusKnown_=false;
+    QString revisionStateText_;
 };
 }
 #endif

@@ -29,17 +29,18 @@ public:
     // Anteprima transitoria: segue il mouse, clic inserisce, Esc annulla.
     QString beginViewPlacement(DrawingView view,DrawingViewLayout layout);
     QString beginDerivedViewPlacement(const QUuid &parent,DrawingProjectionSide side,DrawingProjectionMethod method);
-    QString beginSectionLine(const QUuid &parent,const QString &label,bool reverse=false,const QUuid &existing={});
+    QString beginSectionLine(const QUuid &parent,const QString &label,bool reverse=false,const QUuid &existing={},DrawingSectionStyle style=DrawingSectionStyle::Removed);
     QString setSectionLine(const QUuid &section,QPointF start,QPointF end);
-    QString beginSectionPlacement(const QUuid &parent,QPointF start,QPointF end,const QString &label,bool reverse=false);
+    QString beginSectionPlacement(const QUuid &parent,QPointF start,QPointF end,const QString &label,bool reverse=false,DrawingSectionStyle style=DrawingSectionStyle::Removed);
     bool hasSectionLine()const;
     QString detachView(const QUuid &id);
     QString setViewAlignment(const QUuid &id,bool aligned);
     QString setSectionHatch(const QUuid &id,bool visible);
     QString reverseSection(const QUuid &id);
+    QString setSectionStyle(const QUuid &id,DrawingSectionStyle style);
     bool hasViewPlacement() const;
     void cancelViewPlacement();
-    // Modifica atomica: ID di vista e quote conservati; ricalcolo della sola vista.
+    // Modifica atomica: ID e quote conservati, ricalcolo delle viste dipendenti il cui piano cambia.
     QString updateView(DrawingView view,DrawingViewLayout layout);
     enum class ViewAlignment { SameRow, SameColumn };
     QString moveView(const QUuid &id,const QPointF &position);
@@ -48,6 +49,9 @@ public:
     QString alignView(const QUuid &id,const QUuid &reference,ViewAlignment alignment);
     QString removeView(const QUuid &id);
     QString setHiddenLinesVisible(const QUuid &id,bool visible);
+    QString setShadedFacesVisible(const QUuid &id,bool visible);
+    QString setRevisionTable(const DrawingRevisionTable &table);
+    bool isComputing()const;
     QString setPageSettings(const QString &title,const QSizeF &size,const DrawingTitleBlock &block);
     void setPageContext(DrawingPageContext context);
     DrawingPageContext pageContext()const;

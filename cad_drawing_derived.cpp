@@ -29,7 +29,7 @@ void derive(const DrawingView &parent,const DrawingViewRelation &r,DrawingView &
         case DrawingProjectionSide::Above:normal=sign*y;reference=x;break;
         case DrawingProjectionSide::Below:normal=-sign*y;reference=x;break;
         }
-        child.kind=DrawingViewKind::ProjectedEdges;child.plane=Frame3(parent.plane.origin(),normal,reference);
+        child.kind=DrawingViewKind::ProjectedEdges;child.sectionStyle=DrawingSectionStyle::Removed;child.plane=Frame3(parent.plane.origin(),normal,reference);
     }else{
         const auto delta=r.cutEnd-r.cutStart;const double length=std::hypot(delta.x(),delta.y());
         require(std::isfinite(length)&&length>1e-7,"La linea di taglio richiede due punti distinti.");
@@ -138,6 +138,17 @@ QString validateDrawingRelations(const DrawingSheet &sheet){
 QString drawingSectionHatch(const DrawingModelSnapshot &model,const DrawingView &view,const std::vector<DrawingCurve> &curves,DrawingSectionHatch &result){
     try{
         DrawingSectionHatch prepared;if(view.kind!=DrawingViewKind::Section){result=std::move(prepared);return {};}
+        if(drawingHalfSection(view)){
+            auto full=view;full.sectionStyle=DrawingSectionStyle::Removed;std::vector<DrawingCurve> closed;const auto cut=sectionDrawingView(model,full,closed);if(!cut.isEmpty())return cut;
+            full.sectionStyle=DrawingSectionStyle::Full;const auto error=drawingSectionHatch(model,full,closed,prepared);if(!error.isEmpty())return error;
+            const auto bounds=prepared.material.boundingRect();QPainterPath half;
+            if(view.sectionStyle==DrawingSectionStyle::HalfRight)half.addRect(QRectF(0,bounds.top()-1,std::max(1.0,bounds.right()+1),bounds.height()+2));
+            else half.addRect(QRectF(std::min(-1.0,bounds.left()-1),bounds.top()-1,std::max(1.0,-bounds.left()+1),bounds.height()+2));
+            prepared.material=prepared.material.intersected(half);QPainterPath lines;
+            for(int i=0;i+1<prepared.lines.elementCount();i+=2){const auto x=prepared.lines.elementAt(i),y=prepared.lines.elementAt(i+1);QPointF a(x.x,x.y),b(y.x,y.y);const double sign=view.sectionStyle==DrawingSectionStyle::HalfRight?1:-1;
+                const double fa=sign*a.x(),fb=sign*b.x();if(fa<0&&fb<0)continue;if(fa<0||fb<0){const auto point=a+(b-a)*(fa/(fa-fb));if(fa<0)a=point;else b=point;}lines.moveTo(a);lines.lineTo(b);}
+            prepared.lines=std::move(lines);result=std::move(prepared);return {};
+        }
         std::map<std::pair<quint64,int>,std::vector<ProfileSegment>> groups;QSet<quint64> uncertain;
         for(const auto &piece:curves){
             if(piece.kind!=DrawingCurveKind::Section)continue;
@@ -170,7 +181,7 @@ QString drawingSectionHatch(const DrawingModelSnapshot &model,const DrawingView 
                     for(const auto parameter:points){const auto q=view.plane.toLocal(world->point(parameter));const QPointF point(q.x()*view.scale,-q.y()*view.scale);if(first){path.moveTo(point);first=false;}else path.lineTo(point);}}
                 path.closeSubpath();return path;};
             for(const auto &region:profile.regions){material.addPath(loopPath(region.outer));for(const auto &hole:region.holes)material.addPath(loopPath(hole));}
-            prepared.material.addPath(material);
+            prepared.material=prepared.material.united(material);
             // Intersezione delle righe con i poligoni campionati; parita' conserva i fori. Passo fisso sul foglio.
             const bool alternate=(index++%2)!=0;const auto polygons=material.toSubpathPolygons();const auto bounds=material.boundingRect();
             const auto ordinate=[&](QPointF p){return p.y()+(alternate?p.x():-p.x());};

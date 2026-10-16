@@ -58,6 +58,7 @@ bool genericProjection(const Curve<3> &curve){
 void validateView(const DrawingView &view) {
     require(!view.id.isNull(), "Vista senza identita'.");
     require(view.kind==DrawingViewKind::Section || view.kind==DrawingViewKind::ProjectedEdges,"Tipo di vista non supportato.");
+    require(int(view.sectionStyle)>=0&&int(view.sectionStyle)<=3&&(view.kind==DrawingViewKind::Section||view.sectionStyle==DrawingSectionStyle::Removed),"Presentazione della sezione incoerente con la vista.");
     require(view.kind==DrawingViewKind::ProjectedEdges || !view.sectionReferences,"Riferimenti di sezione incoerenti con il tipo di vista.");
     require(std::isfinite(view.scale) && view.scale > 0, "Scala della vista non valida.");
     require(std::isfinite(view.tolerance) && view.tolerance > 0, "Tolleranza della vista non valida.");
@@ -91,11 +92,11 @@ void validateDocument(const DrawingDocument &document) {
         require(reference.featureId && isFinite(reference.witness),"Riferimento geometrico non valido.");
         require(edge ? (!reference.edgeName.isEmpty() && reference.edgeName.size()<=4096 && reference.faceName.isEmpty())
                      : (!reference.faceName.isEmpty() && reference.faceName.size()<=4096 && reference.edgeName.isEmpty()),"Nome del riferimento geometrico non valido.");
-        require(edge ? view->kind==DrawingViewKind::ProjectedEdges : (view->kind==DrawingViewKind::Section || view->sectionReferences),"Riferimento estraneo al tipo di vista.");
+        require(edge ? drawingHasProjection(*view) : (view->kind==DrawingViewKind::Section || view->sectionReferences),"Riferimento estraneo al tipo di vista.");
         require(int(dimension.measure)>=0&&int(dimension.measure)<=9,"Tipo di quota non supportato.");
         const auto attachments=validateDrawingAttachments(dimension,*view);require(attachments.isEmpty(),qPrintable(attachments));
         for(const auto &attachment:dimension.references)if(!drawingDatum(attachment.role)){
-            const auto &r=attachment.curve;require(r.kind==DrawingCurveKind::ProjectedEdge?view->kind==DrawingViewKind::ProjectedEdges:(view->kind==DrawingViewKind::Section||view->sectionReferences),"Aggancio estraneo al tipo di vista.");
+            const auto &r=attachment.curve;require(r.kind==DrawingCurveKind::ProjectedEdge?drawingHasProjection(*view):(view->kind==DrawingViewKind::Section||view->sectionReferences),"Aggancio estraneo al tipo di vista.");
         }
     }
 }
@@ -130,6 +131,30 @@ DrawingDimensionResult failure(DrawingDimensionStatus status, const QString &mes
 }
 }
 
+bool drawingRetainsPoint(const DrawingView &view,const Vec3 &local){
+    if(view.kind!=DrawingViewKind::Section||view.sectionStyle==DrawingSectionStyle::Removed)return true;
+    if(view.sectionStyle==DrawingSectionStyle::Full)return local.z()<=view.tolerance;
+    const double side=view.sectionStyle==DrawingSectionStyle::HalfRight?1:-1;
+    return side*local.x()<=view.tolerance||local.z()<=view.tolerance;
+}
+std::vector<Interval> drawingRetainedCurveRanges(const DrawingView &view,const Curve<3> &curve,Interval range,bool section){
+    if(view.sectionStyle==DrawingSectionStyle::Removed||(section&&!drawingHalfSection(view)))return {range};
+    std::vector<double> cuts{range.lo,range.hi};
+    const auto split=[&](const Frame3 &plane){for(double t:intersectCurveSurface(curve,range,Plane(plane),view.tolerance).parameters)if(t>range.lo&&t<range.hi)cuts.push_back(t);};
+    if(!section)split(view.plane);
+    if(drawingHalfSection(view))split(Frame3(view.plane.origin(),view.plane.xDir(),view.plane.yDir()));
+    std::sort(cuts.begin(),cuts.end());cuts.erase(std::unique(cuts.begin(),cuts.end()),cuts.end());std::vector<Interval> result;
+    for(std::size_t i=1;i<cuts.size();++i){const auto local=view.plane.toLocal(curve.point(cuts[i-1]+.5*(cuts[i]-cuts[i-1])));
+        const bool keep=section?(view.sectionStyle==DrawingSectionStyle::HalfRight?local.x()>=-view.tolerance:local.x()<=view.tolerance):drawingRetainsPoint(view,local);
+        if(!keep)continue;
+        if(!result.empty()&&result.back().hi==cuts[i-1])result.back().hi=cuts[i];else result.push_back({cuts[i-1],cuts[i]});
+    }
+    if(result.size()>1&&(curve.type()==CurveType::Circle||curve.type()==CurveType::Ellipse)&&std::abs(range.length()-curve.period())<=1e-10*curve.period()&&result.front().lo==range.lo&&result.back().hi==range.hi){
+        const Interval wrapped{result.back().lo,result.front().hi+curve.period()};result.erase(result.begin());result.pop_back();result.push_back(wrapped);
+    }
+    return result;
+}
+
 DrawingPrimitive drawingPrimitive(const DrawingView &view,const DrawingCurve &piece){
     struct Form{int kind=0;Vec3 center{},a{},b{};};
     const std::function<Form(const Curve<3> &)> form=[&](const Curve<3> &curve)->Form{
@@ -161,7 +186,7 @@ QString sectionDrawingView(const DrawingModelSnapshot &model, const DrawingView 
         validateView(view);
         require(!model.version.documentId.isNull(), "Modello senza identita'.");
         std::vector<DrawingSection> prepared;
-        std::map<std::pair<quint64, std::string>, std::size_t> counts;
+        std::map<std::pair<quint64, std::string>, std::size_t> counts,originalCounts;
         QSet<quint64> ids;
         for (const auto &source : model.bodies) {
             cancellationPoint();
@@ -181,13 +206,16 @@ QString sectionDrawingView(const DrawingModelSnapshot &model, const DrawingView 
                 require(!name.empty(), "Faccia di sezione senza nome topologico.");
                 DrawingCurve curve;curve.viewId=view.id;curve.featureId=source.featureId;curve.sourceFace=piece.secondFace;curve.faceName=name;
                 curve.curve=piece.curve;curve.range=piece.range;curve.coincident=piece.coincident;curve.tangent=piece.tangent;
-                prepared.push_back(std::move(curve));
-                // Un nome ereditato puo' essere un alias secondario sulle
-                // altre facce: anche queste appartengono ai candidati del ramo.
-                for (const auto &alias : source.names->faces.at(piece.secondFace.index)) ++counts[{source.featureId, alias}];
+                // Anche i rami esclusi dalla mezza sezione restano parte dell'origine topologica.
+                for(const auto &alias:source.names->faces.at(piece.secondFace.index))++originalCounts[{source.featureId,alias}];
+                for(const auto &range:drawingRetainedCurveRanges(view,*curve.curve,curve.range,true)){
+                    auto clipped=curve;clipped.range=range;prepared.push_back(std::move(clipped));
+                    // Tutti gli alias partecipano alla disambiguazione anche quando un ramo viene diviso.
+                    for(const auto &alias:source.names->faces.at(piece.secondFace.index))++counts[{source.featureId,alias}];
+                }
             }
         }
-        for (auto &piece : prepared) piece.multipleBranches = counts.at({piece.featureId, piece.faceName}) > 1;
+        for (auto &piece : prepared) piece.multipleBranches = counts.at({piece.featureId, piece.faceName}) > 1 || originalCounts.at({piece.featureId,piece.faceName}) > 1;
         sections = std::move(prepared);
         return {};
     } catch (const std::exception &error) { return QString::fromUtf8(error.what()); }
@@ -196,34 +224,37 @@ QString sectionDrawingView(const DrawingModelSnapshot &model, const DrawingView 
 QString projectDrawingEdges(const DrawingModelSnapshot &model,const DrawingView &view,std::vector<DrawingCurve> &curves){
     try{
         validateView(view);require(!model.version.documentId.isNull(),"Modello senza identita'.");
-        std::vector<DrawingCurve> prepared;QSet<quint64> ids;std::map<std::pair<quint64,std::string>,std::size_t> counts;
+        std::vector<DrawingCurve> prepared;QSet<quint64> ids;std::map<std::pair<quint64,std::string>,std::size_t> counts,originalCounts;
         for(const auto &source:model.bodies){
             cancellationPoint();require(source.featureId&&!ids.contains(source.featureId),"Feature sorgente nulla o duplicata.");ids.insert(source.featureId);
             require(source.body&&source.names&&source.names->body==source.body.get(),"Corpo o nomi sorgenti mancanti o incoerenti.");
             for(auto edgeId:source.body->edges()){
                 cancellationPoint();const auto &edge=source.body->edge(edgeId);require(edge.curve&&edge.range.isFinite()&&edge.range.length()>0,"Bordo sorgente non valido.");
-                CurvePtr<3> curve;Interval range=edge.range;
-                if(genericProjection(*edge.curve)){
+                for(const auto &alias:source.names->edges.at(edgeId.index))++originalCounts[{source.featureId,alias}];
+                for(const auto retained:drawingRetainedCurveRanges(view,*edge.curve,edge.range)){
+                CurvePtr<3> curve;Interval range=retained;
+                if(view.sectionStyle!=DrawingSectionStyle::Removed||genericProjection(*edge.curve)){
                     curve=std::make_shared<ProjectedCurve>(edge.curve,view.plane);
                     const double length=arcLength(*curve,range);require(std::isfinite(length),"Proiezione del bordo non finita.");if(length<=view.tolerance)continue;
                 }else{
-                    const auto image=planarImage(*edge.curve,edge.range,view.plane);if(!image.curve)continue;curve=embedCurve(image.curve,view.plane);range=image.range;
+                    const auto image=planarImage(*edge.curve,retained,view.plane);if(!image.curve)continue;curve=embedCurve(image.curve,view.plane);range=image.range;
                     const auto extent=curveBox(*curve,range).diagonal();require(std::isfinite(extent),"Limiti del bordo proiettato non finiti.");if(extent<=view.tolerance)continue;
                 }
                 const auto name=source.names->primary(EntityKind::Edge,edgeId.index);require(!name.empty(),"Bordo senza nome topologico.");
                 DrawingCurve result;result.viewId=view.id;result.featureId=source.featureId;result.kind=DrawingCurveKind::ProjectedEdge;
-                result.sourceEdge=edgeId;result.edgeName=name;result.sourceGeometry=edge.curve;result.curve=curve;result.range=range;prepared.push_back(std::move(result));
+                result.sourceEdge=edgeId;result.edgeName=name;result.sourceGeometry=edge.curve;result.sourceRange=retained;result.hasSourceRange=true;result.curve=curve;result.range=range;prepared.push_back(std::move(result));
                 for(const auto &alias:source.names->edges.at(edgeId.index))++counts[{source.featureId,alias}];
+                }
             }
         }
-        for(auto &curve:prepared)curve.multipleBranches=counts.at({curve.featureId,curve.edgeName})>1;
+        for(auto &curve:prepared)curve.multipleBranches=counts.at({curve.featureId,curve.edgeName})>1||(view.sectionStyle!=DrawingSectionStyle::Removed&&originalCounts.at({curve.featureId,curve.edgeName})>1);
         curves=std::move(prepared);return {};
     }catch(const std::exception &error){return QString::fromUtf8(error.what());}
 }
 QString drawingViewCurves(const DrawingModelSnapshot &model,const DrawingView &view,std::vector<DrawingCurve> &curves){
-    if(view.kind==DrawingViewKind::Section)return sectionDrawingView(model,view,curves);
+    if(view.kind==DrawingViewKind::Section&&!drawingHasProjection(view))return sectionDrawingView(model,view,curves);
     std::vector<DrawingCurve> prepared;auto error=projectDrawingEdges(model,view,prepared);if(!error.isEmpty())return error;
-    if(view.sectionReferences){std::vector<DrawingCurve> sections;error=sectionDrawingView(model,view,sections);if(!error.isEmpty())return error;
+    if(view.kind==DrawingViewKind::Section||view.sectionReferences){std::vector<DrawingCurve> sections;error=sectionDrawingView(model,view,sections);if(!error.isEmpty())return error;
         prepared.insert(prepared.end(),sections.begin(),sections.end());}
     curves=std::move(prepared);return {};
 }
@@ -231,7 +262,7 @@ DrawingDimension dimensionOfCurve(const DrawingView &view,const DrawingCurve &cu
     validateView(view);const bool edge=curve.kind==DrawingCurveKind::ProjectedEdge;
     require(curve.kind==DrawingCurveKind::Section||edge,"Tipo di curva non supportato.");
     require(curve.viewId==view.id&&curve.featureId&&curve.curve&&curve.range.isFinite()&&curve.range.length()>0,"Curva della quota non valida.");
-    require(edge?view.kind==DrawingViewKind::ProjectedEdges:(view.kind==DrawingViewKind::Section||view.sectionReferences),"Curva estranea alla vista.");
+    require(edge?drawingHasProjection(view):(view.kind==DrawingViewKind::Section||view.sectionReferences),"Curva estranea alla vista.");
     require(edge?!curve.edgeName.empty():!curve.faceName.empty(),"Curva senza provenienza topologica.");
     require(measure==DrawingMeasure::SectionLength||measure==DrawingMeasure::EndpointDistance||measure==DrawingMeasure::HorizontalDistance||measure==DrawingMeasure::VerticalDistance,"Tipo di quota non supportato.");
     const auto point=view.plane.toLocal(curve.curve->point(0.5*(curve.range.lo+curve.range.hi)));
@@ -310,17 +341,23 @@ QString retargetDrawingModel(DrawingDocument &document, const DrawingDocumentVer
     return {};
 }
 
+bool drawingNeedsSectionSchema(const DrawingDocument &document){
+    if(std::any_of(document.views.begin(),document.views.end(),[](const auto &v){return v.sectionStyle!=DrawingSectionStyle::Removed;}))return true;
+    for(const auto &d:document.dimensions)for(const auto &r:d.references)if(r.clipBoundary)return true;
+    return false;
+}
 QString encodeDrawingDocument(const DrawingDocument &document, QByteArray &bytes) {
     try {
         validateDocument(document);
-        const bool attachments=std::any_of(document.dimensions.begin(),document.dimensions.end(),[](const auto &d){return !d.references.empty()||d.decimals!=2;});
+        const bool technical=drawingNeedsSectionSchema(document);
+        const bool attachments=technical||std::any_of(document.dimensions.begin(),document.dimensions.end(),[](const auto &d){return !d.references.empty()||d.decimals!=2;});
         const bool extended=attachments||std::any_of(document.views.begin(),document.views.end(),[](const auto &view){return view.kind!=DrawingViewKind::Section;})
             ||std::any_of(document.dimensions.begin(),document.dimensions.end(),[](const auto &dimension){return int(dimension.measure)>1;});
         QJsonArray views,dimensions;
         for(const auto &view:document.views){QJsonObject object{
             {"id",uuidText(view.id)},{"origin",vectorJson(view.plane.origin())},{"x",vectorJson(view.plane.xDir())},
             {"y",vectorJson(view.plane.yDir())},{"z",vectorJson(view.plane.zDir())},{"scale",view.scale},{"tolerance",view.tolerance}};
-            if(extended){object["kind"]=int(view.kind);object["sectionReferences"]=view.sectionReferences;}views.append(object);}
+            if(extended){object["kind"]=int(view.kind);object["sectionReferences"]=view.sectionReferences;}if(technical)object["sectionStyle"]=int(view.sectionStyle);views.append(object);}
         for(const auto &dimension:document.dimensions){QJsonObject object{
             {"id",uuidText(dimension.id)},{"viewId",uuidText(dimension.viewId)},{"featureId",QString::number(dimension.section.featureId)},
             {"faceName",dimension.section.faceName},{"witness",QJsonArray{dimension.section.witness.x(),dimension.section.witness.y()}},
@@ -329,10 +366,10 @@ QString encodeDrawingDocument(const DrawingDocument &document, QByteArray &bytes
             if(attachments){QJsonArray references;for(const auto &r:dimension.references){references.append(QJsonObject{
                 {"featureId",QString::number(r.curve.featureId)},{"faceName",r.curve.faceName},{"edgeName",r.curve.edgeName},{"kind",int(r.curve.kind)},
                 {"witness",QJsonArray{r.curve.witness.x(),r.curve.witness.y()}},{"requiresWitness",r.curve.requiresWitness},
-                {"role",int(r.role)},{"fraction",r.fraction},{"polar",r.polar},{"supportFace",r.supportFace},{"curveSide",r.curveSide},{"anchorSide",r.anchorSide},{"vertex",r.vertexName},{"boundary",r.boundaryName}});}
+                {"role",int(r.role)},{"fraction",r.fraction},{"polar",r.polar},{"supportFace",r.supportFace},{"curveSide",r.curveSide},{"anchorSide",r.anchorSide},{"vertex",r.vertexName},{"boundary",r.boundaryName}});if(technical){auto object=references.last().toObject();object["clipBoundary"]=r.clipBoundary;references[references.size()-1]=object;}}
                 object["references"]=references;object["angleSides"]=dimension.angleSides;object["decimals"]=dimension.decimals;}
             dimensions.append(object);}
-        const QByteArray prepared=QJsonDocument(QJsonObject{{"format","ForgeCAD.DrawingPrototype"},{"schema",attachments?3:extended?2:1},
+        const QByteArray prepared=QJsonDocument(QJsonObject{{"format","ForgeCAD.DrawingPrototype"},{"schema",technical?4:attachments?3:extended?2:1},
             {"version",versionJson(document.version)},{"model",versionJson(document.model)},{"views",views},{"dimensions",dimensions}}).toJson(QJsonDocument::Compact);
         require(prepared.size() <= kMaxDrawingBytes, "Tavola troppo grande per il codec del prototipo.");
         bytes = prepared;
@@ -348,7 +385,7 @@ QString decodeDrawingDocument(const QByteArray &bytes, DrawingDocument &document
         require(parse.error == QJsonParseError::NoError && json.isObject(), "Documento tavola JSON non valido.");
         const auto root = json.object();
         const double schema=root["schema"].toDouble(-1);
-        require(root["format"].toString()==QLatin1String("ForgeCAD.DrawingPrototype")&&(schema==1||schema==2||schema==3),"Formato o schema della tavola non supportato.");
+        require(root["format"].toString()==QLatin1String("ForgeCAD.DrawingPrototype")&&(schema==1||schema==2||schema==3||schema==4),"Formato o schema della tavola non supportato.");
         require(root["views"].isArray() && root["dimensions"].isArray(), "Elenchi della tavola assenti.");
         const auto views = root["views"].toArray(), dimensions = root["dimensions"].toArray();
         require(views.size() <= qsizetype(kMaxRecords) && dimensions.size() <= qsizetype(kMaxRecords), "Troppi elementi nella tavola.");
@@ -363,6 +400,8 @@ QString decodeDrawingDocument(const QByteArray &bytes, DrawingDocument &document
             if(schema>=2){const double kind=v["kind"].toDouble(-1);require((kind==0||kind==1)&&v["sectionReferences"].isBool(),"Tipo o riferimenti della vista non validi.");
                 view.kind=DrawingViewKind(int(kind));view.sectionReferences=v["sectionReferences"].toBool();}
             else require(!v.contains("kind")&&!v.contains("sectionReferences"),"Estensione della vista non prevista dallo schema 1.");
+            if(schema==4){const auto style=v["sectionStyle"].toDouble(-1);require(style>=0&&style<=3&&style==std::floor(style),"Presentazione della sezione non valida.");view.sectionStyle=DrawingSectionStyle(int(style));}
+            else require(!v.contains("sectionStyle"),"Presentazione della sezione estranea allo schema dichiarato.");
             prepared.views.push_back(std::move(view));
         }
         for (const auto &entry : dimensions) {
@@ -380,13 +419,13 @@ QString decodeDrawingDocument(const QByteArray &bytes, DrawingDocument &document
             require(d["requiresWitness"].isBool(), "Regola di associazione del ramo assente.");
             dimension.section.requiresWitness = d["requiresWitness"].toBool();
             const double measure = d["measure"].toDouble(-1);
-            require(measure==0||measure==1||(schema>=2&&(measure==2||measure==3))||(schema==3&&measure>=4&&measure<=9&&measure==std::floor(measure)),"Tipo di quota non supportato.");
+            require(measure==0||measure==1||(schema>=2&&(measure==2||measure==3))||(schema>=3&&measure>=4&&measure<=9&&measure==std::floor(measure)),"Tipo di quota non supportato.");
             if(schema>=2){const double kind=d["referenceKind"].toDouble(-1);require(kind==0||kind==1,"Tipo di riferimento non supportato.");
                 dimension.section.kind=DrawingCurveKind(int(kind));
                 if(kind==1){require(d["edgeName"].isString(),"Nome del bordo proiettato assente.");dimension.section.edgeName=d["edgeName"].toString();}
                 else require(!d.contains("edgeName"),"Riferimento di sezione con nome di bordo estraneo.");}
             else require(!d.contains("referenceKind")&&!d.contains("edgeName"),"Estensione della quota non prevista dallo schema 1.");
-            if(schema==3){
+            if(schema>=3){
                 require(d["references"].isArray()&&d["references"].toArray().size()<=2,"Agganci della quota assenti o eccessivi.");
                 const auto sides=d["angleSides"].toDouble(-1),decimals=d["decimals"].toDouble(-1);
                 require(sides>=0&&sides<=3&&sides==std::floor(sides)&&decimals>=0&&decimals<=8&&decimals==std::floor(decimals),"Presentazione della quota non valida.");dimension.angleSides=int(sides);dimension.decimals=int(decimals);
@@ -399,7 +438,9 @@ QString decodeDrawingDocument(const QByteArray &bytes, DrawingDocument &document
                     const auto kind=r["kind"].toDouble(-1),role=r["role"].toDouble(-1);require((kind==0||kind==1)&&role>=0&&role<=12&&role==std::floor(role),"Tipo di aggancio non valido.");
                     a.curve.kind=DrawingCurveKind(int(kind));a.role=DrawingPointRole(int(role));
                     const auto witness=r["witness"].toArray();require(r["witness"].isArray()&&witness.size()==2&&witness[0].isDouble()&&witness[1].isDouble()&&r["requiresWitness"].isBool()&&r["fraction"].isDouble()&&r["polar"].isBool(),"Parametri dell'aggancio non validi.");
-                    a.curve.witness=Vec2(witness[0].toDouble(),witness[1].toDouble());a.curve.requiresWitness=r["requiresWitness"].toBool();a.fraction=r["fraction"].toDouble();a.polar=r["polar"].toBool();dimension.references.push_back(std::move(a));
+                    a.curve.witness=Vec2(witness[0].toDouble(),witness[1].toDouble());a.curve.requiresWitness=r["requiresWitness"].toBool();
+                    if(schema==4){const auto boundary=r["clipBoundary"].toDouble(-1);require(boundary>=0&&boundary<=3&&boundary==std::floor(boundary),"Origine di taglio dell'aggancio non valida.");a.clipBoundary=int(boundary);}else require(!r.contains("clipBoundary"),"Origine di taglio estranea allo schema dichiarato.");
+                    a.fraction=r["fraction"].toDouble();a.polar=r["polar"].toBool();dimension.references.push_back(std::move(a));
                 }
             }else require(!d.contains("references")&&!d.contains("angleSides")&&!d.contains("decimals"),"Agganci estesi non previsti dallo schema dichiarato.");
             dimension.measure = DrawingMeasure(int(measure));

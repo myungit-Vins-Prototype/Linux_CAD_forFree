@@ -10,6 +10,8 @@ struct WorkspaceRevisionStatus {
     WorkspaceCheckoutPhase phase = WorkspaceCheckoutPhase::Active;
     NativeRevisionSession session;
 };
+// Anteprima della revisione del documento registrato, senza creare cartelle.
+QString nextWorkspaceRevisionLabel(const QString &path,const QUuid &documentId,QString &label);
 // Legge lo stato locale senza creare workspace o prenotazioni.
 QString workspaceRevisionStatus(const QString &path, const DocumentState &working, WorkspaceRevisionStatus &status);
 // Il documento deve essere gia' salvato nel workspace. Il token viene

@@ -30,6 +30,10 @@ bool finish(const Context &c,DocumentState &working,RevisionStore &store,Revisio
     removeFile(c.sessionPath);removeFile(c.pendingPath);return matches;
 }
 }
+QString nextWorkspaceRevisionLabel(const QString &path,const QUuid &documentId,QString &label) {
+    WorkspacePaths paths;const auto error=locateDocumentWorkspace(path,paths);if(!error.isEmpty())return error;
+    return RevisionStore(paths.revisions).nextTechnicalRevision(documentId,label);
+}
 QString workspaceRevisionStatus(const QString &path,const DocumentState &working,WorkspaceRevisionStatus &status) {
     try { const auto c=context(path,identityOf(working));auto prepared=readStatus(c,identityOf(working));status=std::move(prepared);return {}; }
     catch(const std::exception &error){return QString::fromUtf8(error.what());}
@@ -48,7 +52,9 @@ QString checkinWorkspaceDocument(const QString &path,DocumentState &working,cons
         auto status=readStatus(c,identityOf(working));require(!status.hasPending,QStringLiteral("Esiste gia' un check-in pendente: completarlo prima di crearne un altro."));
         require(status.hasSession,QStringLiteral("Eseguire prima il check-out del documento."));
         RevisionStore store(c.paths.revisions);reserve(c,identityOf(working),status,store);
-        RevisionCheckinRequest request;ok(prepareNativeCheckin(working,status.session,revision,comment,request));
+        QString label=revision.trimmed();if(label.isEmpty())ok(store.nextTechnicalRevision(working.version.documentId,label));
+        ok(store.validateTechnicalRevision(working.version.documentId,label));
+        RevisionCheckinRequest request;ok(prepareNativeCheckin(working,status.session,label,comment,request));
         QByteArray bytes;ok(encodeNativeRevisionOperation(status.session,request,bytes));writeAtomic(c.pendingPath,bytes);
         finish(c,working,store,record,bodies,documentLock);return {};
     } catch(const std::exception &error){return QString::fromUtf8(error.what());}

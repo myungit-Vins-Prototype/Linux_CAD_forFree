@@ -96,18 +96,18 @@ public:
             auto *label=dialog->findChild<QLineEdit *>(QStringLiteral("revisionLabel"));
             auto *comment=dialog->findChild<QTextEdit *>(QStringLiteral("revisionComment"));
             if(!label || !comment){dialog->reject();return;}
-            label->setText("B");comment->setPlainText("verifica interattiva");dialogSeen=true;dialog->accept();
+            require(label->isReadOnly()&&label->text()=="1","revisione proposta automaticamente e non modificabile");comment->setPlainText("verifica interattiva");dialogSeen=true;dialog->accept();
         });
         reopened.findChild<QAction *>(QStringLiteral("revisionCheckinAction"))->trigger();
         require(dialogSeen,"dialogo check-in effettivamente utilizzato");
         auto current=reopened.viewport_->currentDocument();require(!current.baseCheckinId.isNull() && !reopened.documentModified_,"GUI applica ricevuta e salva base");
         QVector<RevisionRecord> records;clientOk(workspaceDocumentHistory(path,current,records));
-        require(records.size()==1 && records[0].technicalRevision=="B" && records[0].comment=="verifica interattiva","metadati del dialogo nel catalogo");
+        require(records.size()==1 && records[0].technicalRevision=="1" && records[0].comment=="verifica interattiva","metadati del dialogo nel catalogo");
         bool historySeen=false;
         QTimer::singleShot(0,[&] {
             auto *dialog=reopened.findChild<QDialog *>(QStringLiteral("documentRevisionHistoryDialog"));if(!dialog)return;
             auto *table=dialog->findChild<QTableWidget *>(QStringLiteral("documentRevisionHistoryTable"));
-            historySeen=table && table->rowCount()==1 && table->item(0,1)->text()=="B" && table->editTriggers()==QAbstractItemView::NoEditTriggers;
+            historySeen=table && table->rowCount()==1 && table->item(0,1)->text()=="1" && table->editTriggers()==QAbstractItemView::NoEditTriggers;
             dialog->reject();
         });
         reopened.findChild<QAction *>(QStringLiteral("revisionHistoryAction"))->trigger();require(historySeen,"GUI mostra storico in sola lettura");

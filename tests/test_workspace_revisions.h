@@ -54,11 +54,11 @@ void workspaceRevisionTests() {
         RevisionCheckinRequest request;clientOk(prepareNativeCheckin(working,status.session,revision,"interruzione simulata",request));
         QByteArray pending;clientOk(encodeNativeRevisionOperation(status.session,request,pending));clientWrite(pendingPath,pending);return request;
     };
-    auto pending=preparePending("R01");const auto exactBytes=clientRead(pendingPath);bool matches=false;
+    auto pending=preparePending("R00");const auto exactBytes=clientRead(pendingPath);bool matches=false;
     require(!cancelWorkspaceCheckout(path,working).isEmpty(),"annullamento bloccato con operazione pendente");
     require(!checkinWorkspaceDocument(path,working,"nuova","",record).isEmpty() && clientRead(pendingPath)==exactBytes,"nuovo check-in non sovrascrive il pendente");
     clientOk(completeWorkspaceCheckin(path,working,record,matches));
-    require(matches && record.sequence==2 && record.version.checkinId==pending.checkinId,"recupero pubblica esattamente il pendente");
+    require(matches && record.sequence==2 && record.technicalRevision=="2" && record.version.checkinId==pending.checkinId,"recupero legacy conserva snapshot/UUID e assegna numero libero");
     pending=preparePending("R02");RevisionRecord published;clientOk(store.checkin(pending,published));
     working.extrusions[0].primitive.size[0]=15;working.extrusions[0].cachedGeometry=false;
     CadViewport viewport;viewport.loadDocument(working);working=viewport.currentDocument();

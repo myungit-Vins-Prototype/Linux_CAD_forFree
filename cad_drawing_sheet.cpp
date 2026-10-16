@@ -30,6 +30,12 @@ void validate(const DrawingSheet &sheet){
     require(block.code.size()<=128&&block.organization.size()<=128&&block.author.size()<=128&&block.date.size()<=32,"Campi del cartiglio troppo lunghi.");
     for(const auto &field:{block.code,block.organization,block.author,block.date})for(const QChar c:field)require(c.isPrint(),"Il cartiglio contiene caratteri non stampabili.");
     require(!block.visible||(sheet.size.width()>=195&&sheet.size.height()>=80),"Foglio troppo piccolo per il cartiglio: minimo 195 x 80 mm.");
+    require(sheet.revisionTable.notes.size()<=1000,"Troppe annotazioni nella tabella revisioni.");QSet<QUuid> revisions;
+    for(const auto &row:sheet.revisionTable.notes){
+        require(!row.checkinId.isNull()&&!revisions.contains(row.checkinId)&&row.description.size()<=8192&&row.verifiedBy.size()<=256,"Riga della tabella revisioni non valida.");revisions.insert(row.checkinId);
+        for(const auto &field:{row.description,row.verifiedBy})for(const auto c:field)require(c.isPrint()||c=='\n'||c=='\t',"Caratteri non stampabili nella tabella revisioni.");
+    }
+    require(!sheet.revisionTable.visible||sheet.size.width()>=195,"Foglio troppo stretto per la tabella revisioni: minimo 195 mm.");
     ok(validateDrawingRelations(sheet));
     QSet<QUuid> viewIds,dimensionIds;
     for(const auto &view:sheet.drawing.views)viewIds.insert(view.id);
@@ -53,15 +59,21 @@ QString encodeDrawingSheet(const DrawingSheet &sheet,QByteArray &bytes){
         for(const auto &view:sheet.views){QJsonArray features;for(auto id:view.features)features.append(QString::number(id));
             QJsonObject object{{"id",view.viewId.toString(QUuid::WithoutBraces)},{"title",view.title},{"position",pointJson(view.position)},{"features",features}};
             if(view.showHiddenLines)object.insert("showHiddenLines",true);
+            if(view.showMesh)object.insert("showMesh",true);
+            if(view.relation.parentId.isNull()&&!view.relation.hatch)object.insert("sectionHatch",false);
             const auto &r=view.relation;if(!r.parentId.isNull())object.insert("relation",QJsonObject{
                 {"parent",r.parentId.toString(QUuid::WithoutBraces)},{"kind",int(r.kind)},{"side",int(r.side)},{"method",int(r.method)},
                 {"aligned",r.aligned},{"cutStart",pointJson(r.cutStart)},{"cutEnd",pointJson(r.cutEnd)},{"reverse",r.reverse},{"hatch",r.hatch},{"label",r.label}});
             views.append(object);}
         for(const auto &dimension:sheet.dimensions)dimensions.append(QJsonObject{{"id",dimension.dimensionId.toString(QUuid::WithoutBraces)},{"position",pointJson(dimension.position)}});
-        QJsonObject object{{"format","ForgeCAD.DrawingSheet"},{"schema",std::any_of(sheet.views.cbegin(),sheet.views.cend(),[](const auto &v){return !v.relation.parentId.isNull();})?2:1},{"title",sheet.title},
+        QJsonObject object{{"format","ForgeCAD.DrawingSheet"},{"schema",(drawingNeedsSectionSchema(sheet.drawing)||std::any_of(sheet.views.cbegin(),sheet.views.cend(),[](const auto &v){return v.relation.parentId.isNull()&&!v.relation.hatch;}))?3:std::any_of(sheet.views.cbegin(),sheet.views.cend(),[](const auto &v){return !v.relation.parentId.isNull();})?2:1},{"title",sheet.title},
             {"size",QJsonArray{sheet.size.width(),sheet.size.height()}},{"drawing",QJsonDocument::fromJson(document).object()},
             {"views",views},{"dimensions",dimensions}};
         const auto &block=sheet.titleBlock;if(block.visible||!block.code.isEmpty()||!block.organization.isEmpty()||!block.author.isEmpty()||!block.date.isEmpty())object.insert("titleBlock",QJsonObject{{"visible",block.visible},{"code",block.code},{"organization",block.organization},{"author",block.author},{"date",block.date}});
+        if(sheet.revisionTable.visible||!sheet.revisionTable.notes.isEmpty()){
+            QJsonArray notes;for(const auto &r:sheet.revisionTable.notes)notes.append(QJsonObject{{"checkinId",r.checkinId.toString(QUuid::WithoutBraces)},{"description",r.description},{"verifiedBy",r.verifiedBy}});
+            object.insert("revisionTable",QJsonObject{{"visible",sheet.revisionTable.visible},{"notes",notes}});
+        }
         auto prepared=QJsonDocument(object).toJson(QJsonDocument::Compact);
         require(prepared.size()<=8*1024*1024,"Foglio oltre i limiti del prototipo.");bytes=std::move(prepared);return {};
     }catch(const std::exception &error){return QString::fromUtf8(error.what());}
@@ -70,12 +82,16 @@ QString decodeDrawingSheet(const QByteArray &bytes,DrawingSheet &sheet){
     try{
         require(!bytes.isEmpty()&&bytes.size()<=8*1024*1024,"Dimensione del foglio non valida.");
         const auto json=QJsonDocument::fromJson(bytes);const auto object=json.object();
-        require(json.isObject()&&object["format"].toString()==QLatin1String("ForgeCAD.DrawingSheet")&&(object["schema"].toInt(-1)==1||object["schema"].toInt(-1)==2),"Formato del foglio non supportato.");
+        require(json.isObject()&&object["format"].toString()==QLatin1String("ForgeCAD.DrawingSheet")&&(object["schema"].toInt(-1)==1||object["schema"].toInt(-1)==2||object["schema"].toInt(-1)==3),"Formato del foglio non supportato.");
         require(object["title"].isString()&&object["drawing"].isObject()&&object["views"].isArray()&&object["dimensions"].isArray(),"Dati del foglio incompleti.");
         DrawingSheet prepared;prepared.title=object["title"].toString();const auto size=readPoint(object["size"]);prepared.size=QSizeF(size.x(),size.y());
         if(object.contains("titleBlock")){require(object["titleBlock"].isObject(),"Cartiglio non valido.");const auto block=object["titleBlock"].toObject();require(block["visible"].isBool(),"Visibilita' del cartiglio non valida.");
             for(const auto &key:{"code","organization","author","date"})require(block[key].isString(),"Dati del cartiglio incompleti.");
             prepared.titleBlock={block["visible"].toBool(),block["code"].toString(),block["organization"].toString(),block["author"].toString(),block["date"].toString()};}
+        if(object.contains("revisionTable")){
+            require(object["revisionTable"].isObject(),"Tabella revisioni non valida.");const auto table=object["revisionTable"].toObject();require(table["visible"].isBool()&&table["notes"].isArray()&&table["notes"].toArray().size()<=1000,"Dati della tabella revisioni non validi.");prepared.revisionTable.visible=table["visible"].toBool();
+            for(const auto &value:table["notes"].toArray()){require(value.isObject(),"Riga revisioni non valida.");const auto row=value.toObject();require(row["description"].isString()&&row["verifiedBy"].isString(),"Testo della revisione non valido.");prepared.revisionTable.notes.append({readId(row["checkinId"]),row["description"].toString(),row["verifiedBy"].toString()});}
+        }
         ok(decodeDrawingDocument(QJsonDocument(object["drawing"].toObject()).toJson(QJsonDocument::Compact),prepared.drawing));
         require(object["views"].toArray().size()<=10000&&object["dimensions"].toArray().size()<=10000,"Troppi elementi nel foglio.");
         for(const auto &value:object["views"].toArray()){
@@ -83,10 +99,11 @@ QString decodeDrawingSheet(const QByteArray &bytes,DrawingSheet &sheet){
             layout.viewId=readId(view["id"]);require(view["title"].isString()&&view["features"].isArray(),"Vista senza titolo o sorgenti.");
             layout.title=view["title"].toString();layout.position=readPoint(view["position"]);
             require(!view.contains("showHiddenLines")||view["showHiddenLines"].isBool(),"Visibilita' delle linee nascoste non valida.");layout.showHiddenLines=view["showHiddenLines"].toBool(false);
+            require(!view.contains("showMesh")||view["showMesh"].isBool(),"Visibilita' della mesh non valida.");layout.showMesh=view["showMesh"].toBool(false);
             const auto features=view["features"].toArray();require(features.size()<=10000,"Troppe sorgenti nella vista.");
             for(const auto &feature:features){require(feature.isString(),"ID sorgente non valido.");bool valid=false;const auto id=feature.toString().toULongLong(&valid);require(valid,"ID sorgente non valido.");layout.features.append(id);}
             if(view.contains("relation")){
-                require(object["schema"].toInt()==2&&view["relation"].isObject(),"Relazione della vista non supportata dal formato.");
+                require(object["schema"].toInt()>=2&&view["relation"].isObject(),"Relazione della vista non supportata dal formato.");
                 const auto r=view["relation"].toObject();layout.relation.parentId=readId(r["parent"]);
                 const auto integer=[&](const char *key,int lo,int hi){const auto value=r[key];const double number=value.toDouble(-100);require(value.isDouble()&&number==std::floor(number)&&number>=lo&&number<=hi,"Enumerazione della relazione non valida.");return int(number);};
                 layout.relation.kind=DrawingDerivedKind(integer("kind",1,2));layout.relation.side=DrawingProjectionSide(integer("side",0,3));layout.relation.method=DrawingProjectionMethod(integer("method",0,1));
@@ -95,10 +112,12 @@ QString decodeDrawingSheet(const QByteArray &bytes,DrawingSheet &sheet){
                 layout.relation.aligned=r["aligned"].toBool();layout.relation.reverse=r["reverse"].toBool();layout.relation.hatch=r["hatch"].toBool();layout.relation.label=r["label"].toString();
                 layout.relation.cutStart=readPoint(r["cutStart"]);layout.relation.cutEnd=readPoint(r["cutEnd"]);
             }
+            if(view.contains("sectionHatch")){require(object["schema"].toInt()==3&&view["sectionHatch"].isBool()&&layout.relation.parentId.isNull(),"Tratteggio indipendente non valido.");layout.relation.hatch=view["sectionHatch"].toBool();}
             prepared.views.append(std::move(layout));
         }
         for(const auto &value:object["dimensions"].toArray()){require(value.isObject(),"Quota del foglio non valida.");const auto dimension=value.toObject();
             prepared.dimensions.append({readId(dimension["id"]),readPoint(dimension["position"])});}
+        require(object["schema"].toInt()==3||!drawingNeedsSectionSchema(prepared.drawing),"Sezione estesa non prevista dallo schema del foglio.");
         validate(prepared);sheet=std::move(prepared);return {};
     }catch(const std::exception &error){return QString::fromUtf8(error.what());}
 }

@@ -22,12 +22,14 @@ struct DrawingSourceBody {
     quint64 featureId = 0;
     std::shared_ptr<const Kernel::Body> body;
     std::shared_ptr<const Kernel::ElementNames> names;
+    quint32 color=0xff40a6e6U; // ARGB del corpo per la sola presentazione
 };
 struct DrawingModelSnapshot {
     DrawingDocumentVersion version;
     std::vector<DrawingSourceBody> bodies;
 };
 
+enum class DrawingSectionStyle { Removed, Full, HalfRight, HalfLeft };
 enum class DrawingViewKind { Section, ProjectedEdges };
 enum class DrawingCurveKind { Section, ProjectedEdge };
 struct DrawingView {
@@ -37,7 +39,14 @@ struct DrawingView {
     double tolerance = Kernel::kBooleanConnectionTolerance;
     DrawingViewKind kind = DrawingViewKind::Section;
     bool sectionReferences = false; // sezioni del piano quotabili nella vista dei bordi
+    DrawingSectionStyle sectionStyle=DrawingSectionStyle::Removed;
 };
+
+inline bool drawingHasProjection(const DrawingView &v){return v.kind==DrawingViewKind::ProjectedEdges||v.sectionStyle!=DrawingSectionStyle::Removed;}
+inline bool drawingHalfSection(const DrawingView &v){return v.sectionStyle==DrawingSectionStyle::HalfRight||v.sectionStyle==DrawingSectionStyle::HalfLeft;}
+// Coordinate locali: normale verso l’osservatore, la sezione completa conserva Z <= 0.
+bool drawingRetainsPoint(const DrawingView &view,const Kernel::Vec3 &local);
+std::vector<Kernel::Interval> drawingRetainedCurveRanges(const DrawingView &view,const Kernel::Curve<3> &curve,Kernel::Interval range,bool section=false);
 
 struct DrawingCurve {
     QUuid viewId;
@@ -53,6 +62,8 @@ struct DrawingCurve {
     Kernel::EdgeId sourceEdge{};
     std::string edgeName{};
     Kernel::CurvePtr<3> sourceGeometry; // geometria esatta prima della proiezione, solo cache
+    Kernel::Interval sourceRange{};
+    bool hasSourceRange=false; // intervallo 3D trattenuto: il parametro della proiezione puo’ essere diverso
 };
 using DrawingSection = DrawingCurve;
 
@@ -78,6 +89,7 @@ struct DrawingAttachment {
     int curveSide=0,anchorSide=0; // lati UV esatti: Umin/Umax/Vmin/Vmax
     bool polar=false; // frazione angolare nel piano, per punti sulle coniche
     QString vertexName, boundaryName; // origine topologica e orientamento del tratto
+    int clipBoundary=0; // bit 1: piano di taglio; bit 2: asse della mezza sezione
 };
 struct DrawingDimension {
     QUuid id = QUuid::createUuid();
@@ -120,6 +132,8 @@ DrawingDimensionResult evaluateDrawingDimension(const DrawingDocument &document,
 // Aggiornamento esplicito della versione: aprire una tavola storica non
 // significa collegarla automaticamente all'ultimo modello disponibile.
 QString retargetDrawingModel(DrawingDocument &document, const DrawingDocumentVersion &version);
+
+bool drawingNeedsSectionSchema(const DrawingDocument &document);
 
 // Codec autonomo del prototipo, incorporabile in un futuro contenitore.
 // Non modifica il formato .prt e non costituisce un archivio di revisioni.

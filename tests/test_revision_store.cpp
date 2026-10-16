@@ -63,11 +63,11 @@ int main(int argc, char **argv) {
                 "risposta persa: ritentativo idempotente");
         auto conflicting = firstRequest; conflicting.comment = QStringLiteral("altra operazione");
         require(!store.checkin(conflicting, repeated).isEmpty(), "riuso ID per un'altra operazione rifiutato");
-        auto secondRequest = request(store, modelId, firstPayload);
+        auto secondRequest = request(store, modelId, firstPayload,QStringLiteral("2"));
         RevisionRecord second; ok(store.checkin(secondRequest, second));
         require(second.sequence == 2 && second.previousCheckinId == first.version.checkinId
-                && second.sha256 == first.sha256 && second.technicalRevision == first.technicalRevision,
-                "due check-in distinti nella stessa revisione, anche a contenuto identico");
+                && second.sha256 == first.sha256 && second.technicalRevision != first.technicalRevision,
+                "due revisioni distinte, anche a contenuto identico");
         require(QDir(path+"/objects").entryList({"*.bin"},QDir::Files).size() == 1, "contenuti identici condivisi senza perdere check-in");
         require(history(store,modelId).size() == 2, "tutti i check-in conservati");
         std::cout << "PASS copie storiche, deduplicazione e ritentativi\n";

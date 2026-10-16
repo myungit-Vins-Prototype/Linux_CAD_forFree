@@ -46,10 +46,11 @@ DrawingWindow::DrawingWindow(QWidget *parent):QMainWindow(parent,Qt::Window){
     sourceStatus_=new QLabel(this);sourceStatus_->setObjectName("drawingSourceStatus");sourceStatus_->setWordWrap(false);
     sourceStatus_->setSizePolicy(QSizePolicy::Ignored,QSizePolicy::Fixed);sourceStatus_->setMinimumWidth(0);statusBar()->addWidget(sourceStatus_,1);
     statusBar()->addPermanentWidget(new QLabel(QStringLiteral("  ForgeCAD / Tavola 2D  "),this));
-    refreshTitle();
+    installRevisionPanel();refreshTitle();
 }
 void DrawingWindow::report(const QString &error){if(!error.isEmpty())QMessageBox::warning(this,QStringLiteral("Tavola 2D"),error);}
 void DrawingWindow::refreshTitle(){
+    if(revisionStatus_)revisionStatus_->setText(revisionStateText_+(modified_?QStringLiteral("\nModifiche locali da salvare."):QString()));
     sourceStatus_->setToolTip(sourceStatus_->text());
     const auto checkin=drawing_.sheet.drawing.version.checkinId;
     setWindowTitle((path_.isEmpty()?QStringLiteral("Nuova tavola"):QFileInfo(path_).fileName())+(modified_?QStringLiteral(" *"):QString())
@@ -58,8 +59,17 @@ void DrawingWindow::refreshTitle(){
     findChild<QAction *>("drawingSaveAction")->setEnabled(editor_&&checkin.isNull()&&!busy_);
     findChild<QAction *>("drawingLocateSourceAction")->setEnabled(editor_&&checkin.isNull()&&!busy_);
     for(auto *action:revisionMutationActions_)action->setEnabled(editor_&&checkin.isNull()&&!busy_);
+    if(editor_&&checkin.isNull()&&!busy_&&revisionStatusKnown_){
+        findChild<QAction *>("drawingCheckoutAction")->setEnabled(!revisionStatusCache_.hasPending&&(!revisionStatusCache_.hasSession||revisionStatusCache_.phase==WorkspaceCheckoutPhase::Reserving));
+        findChild<QAction *>("drawingCheckinAction")->setEnabled(revisionStatusCache_.hasSession&&!revisionStatusCache_.hasPending&&revisionStatusCache_.phase==WorkspaceCheckoutPhase::Active);
+        findChild<QAction *>("drawingCompleteCheckinAction")->setEnabled(revisionStatusCache_.hasPending);
+        findChild<QAction *>("drawingCancelCheckoutAction")->setEnabled(revisionStatusCache_.hasSession&&!revisionStatusCache_.hasPending);
+    }
+    if(auto *action=findChild<QAction *>("drawingRevisionTableAction"))action->setEnabled(editor_&&!busy_);
+
 }
 void DrawingWindow::installEditor(){
+    const bool oldBusy=busy_;busy_=true;
     auto *container=new QWidget(this);auto *layout=new QVBoxLayout(container);layout->setContentsMargins(4,4,4,4);
     DrawingSheetEditor *next=nullptr;
     try { next=new DrawingSheetEditor(drawing_.sheet,model_,container); }
@@ -73,15 +83,16 @@ void DrawingWindow::installEditor(){
     // Il comando del contenitore verifica percorso, identita' e impronta.
     next->findChild<QAction *>("drawingUpdateModelAction")->setVisible(false);
     layout->addWidget(next,1);auto *previous=takeCentralWidget();setCentralWidget(container);editor_=next;delete previous;
-    const auto populate=[next](QMenu *menu,std::initializer_list<const char *> names){menu->clear();for(auto name:names)menu->addAction(next->findChild<QAction *>(name));};
-    populate(editMenu_,{"drawingPageSettingsAction","drawingUndoAction","drawingRedoAction","drawingEditViewAction","drawingAlignViewAction","drawingDetachViewAction","drawingReleaseAlignmentAction","drawingEditSectionLineAction","drawingReverseSectionAction","drawingSectionHatchAction","drawingDeleteSelectionAction"});
+    const auto populate=[next,this](QMenu *menu,std::initializer_list<const char *> names){menu->clear();for(auto name:names){auto *action=next->findChild<QAction *>(name);if(!action)action=findChild<QAction *>(name);if(action)menu->addAction(action);}};
+    populate(editMenu_,{"drawingPageSettingsAction","drawingRevisionTableAction","drawingUndoAction","drawingRedoAction","drawingEditViewAction","drawingAlignViewAction","drawingDetachViewAction","drawingReleaseAlignmentAction","drawingEditSectionLineAction","drawingReverseSectionAction","drawingSectionHatchAction","drawingDeleteSelectionAction"});
     populate(insertMenu_,{"drawingAddProjectionAction","drawingDerivedViewAction","drawingAddViewAction","drawingTechnicalSectionAction"});
     populate(dimensionMenu_,{"drawingSmartDimensionAction","drawingEditDimensionAction","drawingEndpointDimensionAction","drawingHorizontalDimensionAction","drawingVerticalDimensionAction","drawingLengthDimensionAction"});
     auto *references=addCadMenu(dimensionMenu_,QStringLiteral("Riferimenti del piano"));
     for(auto name:{"drawingOriginReferenceAction","drawingAxisXReferenceAction","drawingAxisYReferenceAction"})references->addAction(next->findChild<QAction *>(name));
-    populate(viewMenu_,{"drawingHiddenLinesAction","drawingFitAction"});viewMenu_->addSeparator();viewMenu_->addAction(next->findChild<QDockWidget *>("drawingTreeDock")->toggleViewAction());
+    populate(viewMenu_,{"drawingHiddenLinesAction","drawingShadedFacesAction","drawingFitAction"});viewMenu_->addSeparator();viewMenu_->addAction(next->findChild<QDockWidget *>("drawingTreeDock")->toggleViewAction());
+    viewMenu_->addAction(revisionDock_->toggleViewAction());
     viewMenu_->addAction(next->findChild<QToolBar *>("drawingCommandBar")->toggleViewAction());viewMenu_->addAction(findChild<QToolBar *>("drawingDocumentBar")->toggleViewAction());
-    refreshPageContext();
+    busy_=oldBusy;refreshPageContext();
     updateAction_->setEnabled(drawing_.sheet.drawing.version.checkinId.isNull());
     if(sourceReady_){
         const auto pinned=drawing_.sheet.drawing.model.checkinId;
@@ -97,7 +108,7 @@ QString DrawingWindow::createFromModel(const QString &modelPath){
     error=drawingModelDefinitionHash(source,prepared.modelDefinitionHash);if(!error.isEmpty())return error;
     DrawingEditorModel geometry;error=prepareDrawingEditorModel(source,geometry);if(!error.isEmpty())return error;
     if(geometry.choices.isEmpty())return QStringLiteral("Il modello non contiene corpi o superfici disponibili per una tavola.");
-    drawing_=std::move(prepared);model_=std::move(geometry);sourcePath_=resolved;sourceReady_=true;containerDirty_=true;modified_=true;installEditor();refreshTitle();return {};
+    modelBaseCheckinId_=source.baseCheckinId;drawing_=std::move(prepared);model_=std::move(geometry);sourcePath_=resolved;sourceReady_=true;containerDirty_=true;modified_=true;installEditor();refreshTitle();return {};
 }
 QString DrawingWindow::openPath(const QString &path){
     if(editor_)return QStringLiteral("Questa finestra contiene gia' una tavola.");
@@ -112,7 +123,7 @@ void DrawingWindow::loadContents(const QString &path,DrawingFile prepared){
     if(error.isEmpty()&&!changed)error=prepareDrawingEditorModel(source,geometry);
     const bool available=error.isEmpty()&&!changed;
     if(!available){geometry={};geometry.snapshot.version=prepared.sheet.drawing.model;}
-    drawing_=std::move(prepared);model_=std::move(geometry);path_=path;
+    modelBaseCheckinId_=available?source.baseCheckinId:QUuid();drawing_=std::move(prepared);model_=std::move(geometry);path_=path;
     sourcePath_=resolved.isEmpty()?QDir(QFileInfo(path_).absolutePath()).absoluteFilePath(drawing_.modelPath):resolved;
     sourceArchivePath_=drawing_.modelArchivePath.isEmpty()?QString():QDir(QFileInfo(path_).absolutePath()).absoluteFilePath(drawing_.modelArchivePath);
     sourceReady_=available;containerDirty_=false;modified_=false;
@@ -121,6 +132,7 @@ void DrawingWindow::loadContents(const QString &path,DrawingFile prepared){
     installEditor();refreshTitle();
 }
 QString DrawingWindow::updateFromSource(const QString &overridePath){
+    if(busy_||(editor_&&editor_->isComputing()))return QStringLiteral("Attendere il calcolo in corso.");
     if(!editor_||!drawing_.sheet.drawing.version.checkinId.isNull())return QStringLiteral("La tavola archiviata e' in sola lettura: creare prima una copia indipendente.");
     DocumentState source;QString resolved;bool changed=false;
     // Per una tavola nuova il riferimento e' assoluto; per quella salvata e' relativo.
@@ -130,12 +142,13 @@ QString DrawingWindow::updateFromSource(const QString &overridePath){
     DrawingEditorModel geometry;error=prepareDrawingEditorModel(source,geometry);if(!error.isEmpty())return error;
     const bool wasReadOnly=editor_->isReadOnly();editor_->setReadOnly(false);error=editor_->updateModel(geometry);
     if(!error.isEmpty()){editor_->setReadOnly(wasReadOnly);return error;}
-    model_=std::move(geometry);drawing_.modelDefinitionHash=digest;sourcePath_=resolved;
+    modelBaseCheckinId_=source.baseCheckinId;model_=std::move(geometry);drawing_.modelDefinitionHash=digest;sourcePath_=resolved;
     drawing_.modelPath=path_.isEmpty()?resolved:QDir(QFileInfo(path_).absolutePath()).relativeFilePath(resolved);
     sourceReady_=true;containerDirty_=true;modified_=true;
     sourceStatus_->setText(QStringLiteral("Modello aggiornato da: %1").arg(sourcePath_));refreshPageContext();refreshTitle();return {};
 }
 QString DrawingWindow::savePath(const QString &path){
+    if(busy_||(editor_&&editor_->isComputing()))return QStringLiteral("Attendere il calcolo in corso.");
     if(!editor_)return QStringLiteral("Nessuna tavola da salvare.");
     const auto resolved=canonicalDocumentPath(path);
     if(resolved==canonicalDocumentPath(sourcePath_)||QFileInfo(resolved).suffix().compare("drw",Qt::CaseInsensitive)!=0)
@@ -169,7 +182,16 @@ void DrawingWindow::refreshPageContext(){
     if(!context.drawingVersion.checkinId.isNull())context.drawingRevision=label(context.drawingVersion,archive,{});
     else if(!drawing_.baseCheckinId.isNull())context.drawingRevision=QStringLiteral("Lavoro (base %1)").arg(label({context.drawingVersion.documentId,drawing_.baseCheckinId},archive,{}));
     if(!context.modelVersion.checkinId.isNull())context.modelRevision=label(context.modelVersion,sourceArchivePath_.isEmpty()?archive:sourceArchivePath_,drawing_.modelArchiveId);
-    editor_->setPageContext(std::move(context));
+    projectRecords_.clear();const auto projectArchive=sourceArchivePath_.isEmpty()?archive:sourceArchivePath_;
+    if(!projectArchive.isEmpty()){
+        RevisionStore store(projectArchive);QUuid actual;const bool correct=drawing_.modelArchiveId.isNull()||(store.archiveIdentity(actual).isEmpty()&&actual==drawing_.modelArchiveId);
+        if(correct&&store.history(context.modelVersion.documentId,projectRecords_).isEmpty()){
+            const auto base=context.modelVersion.checkinId.isNull()?modelBaseCheckinId_:context.modelVersion.checkinId;quint64 limit=0;
+            for(const auto &record:projectRecords_)if(record.version.checkinId==base)limit=record.sequence;
+            for(const auto &record:projectRecords_)if(record.sequence<=limit)context.projectRevisions.append({record.version,record.sequence,record.technicalRevision,record.author,record.comment,record.createdUtc});
+        }
+    }
+    editor_->setPageContext(std::move(context));refreshRevisionPanel();
 }
 QString DrawingWindow::exportPdfPath(const QString &path,DrawingPdfReport &report)const{
     if(!editor_||busy_||!sourceReady_)return QStringLiteral("Modello non verificato: aggiornare la tavola prima di esportare.");
@@ -188,7 +210,7 @@ bool DrawingWindow::save(bool askPath){
     const auto error=savePath(path);report(error);return error.isEmpty();
 }
 void DrawingWindow::closeEvent(QCloseEvent *event){
-    if(busy_){event->ignore();return;}
+    if(busy_||(editor_&&editor_->isComputing())){event->ignore();return;}
     if(modified_){
         const auto choice=QMessageBox::warning(this,QStringLiteral("Tavola 2D"),QStringLiteral("Salvare le modifiche alla tavola?"),QMessageBox::Save|QMessageBox::Discard|QMessageBox::Cancel,QMessageBox::Save);
         if(choice==QMessageBox::Cancel||(choice==QMessageBox::Save&&!save(false))){event->ignore();return;}

@@ -65,6 +65,9 @@ public:
     // Pubblica contenuto + record e rilascia la prenotazione soltanto al
     // successo. I ritentativi identici restituiscono il medesimo record.
     QString checkin(const RevisionCheckinRequest &request, RevisionRecord &result) const;
+    // Anteprima senza prenotare: l'unicita' viene verificata nuovamente sotto lock.
+    QString nextTechnicalRevision(const QUuid &documentId, QString &label) const;
+    QString validateTechnicalRevision(const QUuid &documentId, const QString &label) const;
     QString read(const DocumentVersion &version, QByteArray &payload) const;
     QString directory() const { return directory_; }
 private:

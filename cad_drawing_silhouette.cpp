@@ -81,9 +81,9 @@ std::shared_ptr<const Kernel::Tessellation> DrawingSilhouetteCache::seeds(const 
     auto mesh=std::make_shared<const Kernel::Tessellation>(Kernel::tessellate(*source.body,options));entries_[source.body.get()]={source.body,mesh};return mesh;
 }
 QString drawingViewSilhouettes(const DrawingModelSnapshot &model,const DrawingView &view,DrawingSilhouetteResult &contours,DrawingSilhouetteCache &cache){
-    try{if(view.kind==DrawingViewKind::Section){contours={};return {};}
+    try{if(!drawingHasProjection(view)){contours={};return {};}
         need(!model.version.documentId.isNull()&&isFinite(view.plane.zDir())&&std::abs(norm(view.plane.zDir())-1)<1e-10,"Direzione o modello non valido per il contorno apparente.");
-        need(view.kind==DrawingViewKind::ProjectedEdges&&std::isfinite(view.scale)&&view.scale>0,"Vista non valida per i contorni apparenti.");QSet<quint64> ids;DrawingSilhouetteResult prepared;
+        need(drawingHasProjection(view)&&std::isfinite(view.scale)&&view.scale>0,"Vista non valida per i contorni apparenti.");QSet<quint64> ids;DrawingSilhouetteResult prepared;
         const double deflection=std::clamp(.02/view.scale,1e-6,1.0);
         for(const auto &source:model.bodies){cancellationPoint();need(source.featureId&&!ids.contains(source.featureId)&&source.body&&source.names&&source.names->body==source.body.get(),"Sorgente dei contorni apparenti incoerente.");ids.insert(source.featureId);
             const auto sourceFaces=source.body->faces();if(std::all_of(sourceFaces.begin(),sourceFaces.end(),[&](auto face){return source.body->face(face).surface->type()==SurfaceType::Plane;}))continue;

@@ -102,8 +102,10 @@ QString checkinWorkspaceDrawing(const QString &path,DrawingFile &drawing,const Q
         auto status=readStatus(c,identityOf(drawing));require(!status.hasPending,QStringLiteral("Completare prima il check-in pendente della tavola."));
         require(status.hasSession,QStringLiteral("Eseguire prima il check-out della tavola."));
         RevisionStore store(c.paths.revisions);reserve(c,identityOf(drawing),status,store);validateDependency(store,drawing);
+        QString label=revision.trimmed();if(label.isEmpty())ok(store.nextTechnicalRevision(drawing.sheet.drawing.version.documentId,label));
+        ok(store.validateTechnicalRevision(drawing.sheet.drawing.version.documentId,label));
         DrawingRevisionOperation operation;operation.archiveId=status.session.archiveId;operation.workingFile=c.relative;
-        auto &request=operation.request;request.checkout=status.session.checkout;request.checkinId=QUuid::createUuid();request.technicalRevision=revision;request.comment=comment;
+        auto &request=operation.request;request.checkout=status.session.checkout;request.checkinId=QUuid::createUuid();request.technicalRevision=label;request.comment=comment;
         auto snapshot=drawing;snapshot.sheet.drawing.version.checkinId=request.checkinId;request.dependencies={snapshot.sheet.drawing.model};ok(encodeDrawingFile(snapshot,request.payload));
         QByteArray bytes;ok(encodeDrawingRevisionOperation(operation,bytes));writeAtomic(c.pendingPath,bytes);finish(c,drawing,record,documentLock);return {};
     }catch(const std::exception &error){return QString::fromUtf8(error.what());}

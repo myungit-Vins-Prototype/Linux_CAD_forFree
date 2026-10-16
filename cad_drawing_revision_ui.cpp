@@ -20,6 +20,13 @@
 #include <QTableWidget>
 #include <QTextEdit>
 #include <QVBoxLayout>
+#include <QHBoxLayout>
+#include <QToolButton>
+#include <QDockWidget>
+#include <QTabWidget>
+#include <QTimer>
+#include <QCheckBox>
+#include <algorithm>
 
 namespace ForgeCad {
 namespace {
@@ -47,14 +54,16 @@ void DrawingWindow::addRevisionMenus(QMenu *file){
     connect(checkout,&QAction::triggered,this,[this]{
         bool accepted=false;const auto fallback=qEnvironmentVariable("USER",qEnvironmentVariable("USERNAME"));
         const auto owner=QInputDialog::getText(this,QStringLiteral("Check-out tavola"),QStringLiteral("Proprietario della copia di lavoro:"),QLineEdit::Normal,
-            QSettings().value("revisions/owner",fallback).toString(),&accepted).trimmed();
+            revisionStatusKnown_&&revisionStatusCache_.hasSession?revisionStatusCache_.session.checkout.owner:QSettings().value("revisions/owner",fallback).toString(),&accepted).trimmed();
         if(!accepted||owner.isEmpty()||!save(false))return;
         const auto error=runRevisionAction(RevisionAction::Checkout,owner);if(error.isEmpty())QSettings().setValue("revisions/owner",owner);report(error);
     });
     auto *checkin=revisions->addAction(QStringLiteral("Esegui check-in..."));checkin->setObjectName("drawingCheckinAction");revisionMutationActions_.append(checkin);
     connect(checkin,&QAction::triggered,this,[this]{
         QDialog dialog(this);dialog.setWindowTitle(QStringLiteral("Check-in tavola"));dialog.setObjectName("drawingCheckinDialog");auto *layout=new QFormLayout(&dialog);
-        auto *revision=new QLineEdit(QSettings().value("revisions/lastDrawingLabel","A").toString(),&dialog);revision->setObjectName("drawingRevisionLabel");revision->setMaxLength(128);
+        QString proposed;const auto proposalError=nextWorkspaceRevisionLabel(path_,drawing_.sheet.drawing.version.documentId,proposed);
+        if(!proposalError.isEmpty()){report(proposalError);return;}
+        auto *revision=new QLineEdit(proposed,&dialog);revision->setObjectName("drawingRevisionLabel");revision->setReadOnly(true);
         auto *comment=new QTextEdit(&dialog);comment->setAcceptRichText(false);comment->setObjectName("drawingRevisionComment");
         layout->addRow(QStringLiteral("Revisione tecnica:"),revision);layout->addRow(QStringLiteral("Commento:"),comment);
         auto *buttons=new QDialogButtonBox(QDialogButtonBox::Ok|QDialogButtonBox::Cancel,&dialog);layout->addRow(buttons);
@@ -62,8 +71,7 @@ void DrawingWindow::addRevisionMenus(QMenu *file){
         connect(revision,&QLineEdit::textChanged,&dialog,[buttons](const QString &value){buttons->button(QDialogButtonBox::Ok)->setEnabled(!value.trimmed().isEmpty());});
         buttons->button(QDialogButtonBox::Ok)->setEnabled(!revision->text().trimmed().isEmpty());dialog.resize(460,260);
         if(dialog.exec()!=QDialog::Accepted||!save(false))return;
-        const auto label=revision->text().trimmed();const auto error=runRevisionAction(RevisionAction::Checkin,label,comment->toPlainText());
-        if(error.isEmpty())QSettings().setValue("revisions/lastDrawingLabel",label);
+        const auto error=runRevisionAction(RevisionAction::Checkin,{},comment->toPlainText());
         report(error);
     });
     auto *complete=revisions->addAction(QStringLiteral("Completa check-in pendente"));complete->setObjectName("drawingCompleteCheckinAction");revisionMutationActions_.append(complete);
@@ -79,7 +87,7 @@ void DrawingWindow::addRevisionMenus(QMenu *file){
         action->setIcon(commandIcon(action==history||action==pin?"storyboard":action==working||action==complete?"rebuild":action==cancel?"undo":action==checkin?"save":"open"));action->setIconVisibleInMenu(true);}}
 }
 QString DrawingWindow::runRevisionAction(RevisionAction action,const QString &first,const QString &second){
-    if(!editor_||busy_)return QStringLiteral("Attendere la conclusione dell'operazione in corso.");
+    if(!editor_||busy_||(editor_&&editor_->isComputing()))return QStringLiteral("Attendere la conclusione dell'operazione in corso.");
     if(path_.isEmpty())return QStringLiteral("Salvare prima la tavola nel workspace.");
     if(!drawing_.sheet.drawing.version.checkinId.isNull())return QStringLiteral("La tavola archiviata e' in sola lettura.");
     if(!lock_||!lock_->owns(path_))return QStringLiteral("La tavola non ha piu' un blocco esclusivo valido.");
@@ -103,13 +111,14 @@ QString DrawingWindow::applySource(DrawingFile prepared,DocumentState source){
     DrawingEditorModel geometry;auto error=prepareDrawingEditorModel(source,geometry);if(!error.isEmpty())return error;
     const bool wasReadOnly=editor_->isReadOnly();editor_->setReadOnly(false);error=editor_->updateModel(geometry);
     if(!error.isEmpty()){editor_->setReadOnly(wasReadOnly);return error;}
-    prepared.sheet=editor_->sheet();drawing_=std::move(prepared);model_=std::move(geometry);sourceReady_=true;containerDirty_=true;modified_=true;
+    modelBaseCheckinId_=source.baseCheckinId;prepared.sheet=editor_->sheet();drawing_=std::move(prepared);model_=std::move(geometry);sourceReady_=true;containerDirty_=true;modified_=true;
     sourceArchivePath_=drawing_.modelArchivePath.isEmpty()?QString():QDir(QFileInfo(path_).absolutePath()).absoluteFilePath(drawing_.modelArchivePath);
     const auto checkin=drawing_.sheet.drawing.model.checkinId;
     sourceStatus_->setText(checkin.isNull()?QStringLiteral("Sorgente: copia di lavoro salvata %1").arg(sourcePath_):QStringLiteral("Modello fissato al check-in %1").arg(checkin.toString(QUuid::WithoutBraces)));
     refreshPageContext();refreshTitle();return {};
 }
 QString DrawingWindow::pinModelRevision(const DocumentVersion &version){
+    if(busy_||(editor_&&editor_->isComputing()))return QStringLiteral("Attendere il calcolo in corso.");
     if(!editor_||!drawing_.sheet.drawing.version.checkinId.isNull())return QStringLiteral("La tavola non e' modificabile.");
     auto prepared=drawing_;auto error=pinWorkspaceDrawingModel(path_,prepared,version);if(!error.isEmpty())return error;
     WorkspacePaths paths;error=locateDocumentWorkspace(path_,paths);if(!error.isEmpty())return error;
@@ -117,6 +126,7 @@ QString DrawingWindow::pinModelRevision(const DocumentVersion &version){
     return applySource(std::move(prepared),std::move(source));
 }
 QString DrawingWindow::useWorkingModel(){
+    if(busy_||(editor_&&editor_->isComputing()))return QStringLiteral("Attendere il calcolo in corso.");
     if(!editor_||!drawing_.sheet.drawing.version.checkinId.isNull())return QStringLiteral("La tavola non e' modificabile.");
     DocumentState source;auto error=loadDocumentFile(sourcePath_,source);if(!error.isEmpty())return error;
     if(source.version.documentId!=drawing_.sheet.drawing.model.documentId||!source.version.checkinId.isNull())return QStringLiteral("Il file sorgente non e' la copia di lavoro del modello della tavola.");
@@ -159,4 +169,67 @@ void DrawingWindow::showDrawingHistory(){
     if(!opened.isEmpty()){delete historical;report(opened);return;}
     historical->setAttribute(Qt::WA_DeleteOnClose);historical->show();
 }
+void DrawingWindow::installRevisionPanel(){
+    revisionDock_=new QDockWidget(QStringLiteral("Revisioni"),this);revisionDock_->setObjectName("drawingRevisionDock");revisionDock_->setMinimumWidth(300);auto *body=new QWidget(revisionDock_);auto *layout=new QVBoxLayout(body);
+    revisionStatus_=new QLabel(body);revisionStatus_->setObjectName("drawingRevisionStatus");revisionStatus_->setWordWrap(true);revisionStatus_->setTextInteractionFlags(Qt::TextSelectableByMouse);layout->addWidget(revisionStatus_);
+    auto *commands=new QHBoxLayout;
+    for(const auto name:{"drawingCheckoutAction","drawingCheckinAction","drawingCompleteCheckinAction","drawingCancelCheckoutAction"}){auto *button=new QToolButton(body);button->setDefaultAction(findChild<QAction *>(name));commands->addWidget(button);}layout->addLayout(commands);
+    auto *tabs=new QTabWidget(body);revisionHistory_=new QTableWidget(tabs);revisionHistory_->setObjectName("drawingRevisionHistory");projectHistory_=new QTableWidget(tabs);projectHistory_->setObjectName("drawingProjectHistory");
+    for(auto *table:{revisionHistory_,projectHistory_}){table->setColumnCount(5);table->setHorizontalHeaderLabels({QStringLiteral("N."),QStringLiteral("Rev."),QStringLiteral("Autore"),QStringLiteral("Data"),QStringLiteral("Commento")});table->setEditTriggers(QAbstractItemView::NoEditTriggers);table->setSelectionBehavior(QAbstractItemView::SelectRows);table->setSelectionMode(QAbstractItemView::SingleSelection);table->horizontalHeader()->setStretchLastSection(true);table->setWordWrap(true);}
+    tabs->addTab(revisionHistory_,QStringLiteral("Tavola"));tabs->addTab(projectHistory_,QStringLiteral("Modello"));layout->addWidget(tabs,1);
+    auto *refresh=new QPushButton(QStringLiteral("Aggiorna stato"),body);refresh->setObjectName("drawingRefreshRevisions");layout->addWidget(refresh);connect(refresh,&QPushButton::clicked,this,[this]{if(!busy_&&editor_&&!editor_->isComputing()){refreshPageContext();refreshTitle();}});
+    auto *edit=new QAction(commandIcon("storyboard"),QStringLiteral("Tabella revisioni..."),this);edit->setObjectName("drawingRevisionTableAction");connect(edit,&QAction::triggered,this,[this]{showRevisionTableDialog();});auto *tableButton=new QToolButton(body);tableButton->setDefaultAction(edit);tableButton->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);layout->addWidget(tableButton);
+    connect(revisionHistory_,&QTableWidget::cellDoubleClicked,this,[this](int row,int){if(busy_||!editor_||editor_->isComputing()||row<0)return;auto *item=revisionHistory_->item(row,0);if(!item)return;DocumentVersion version{item->data(Qt::UserRole+1).toUuid(),item->data(Qt::UserRole).toUuid()};auto *window=new DrawingWindow(parentWidget());const auto error=window->openRevision(path_,version);if(!error.isEmpty()){delete window;report(error);return;}window->setAttribute(Qt::WA_DeleteOnClose);window->show();});
+    revisionDock_->setWidget(body);addDockWidget(Qt::RightDockWidgetArea,revisionDock_);
+    auto *timer=new QTimer(this);timer->setInterval(5000);connect(timer,&QTimer::timeout,this,[this,last=QString()]()mutable{
+        if(!editor_||busy_||editor_->isComputing()||!revisionDock_->isVisible())return;
+        WorkspacePaths paths;if(!locateDocumentWorkspace(path_.isEmpty()?sourcePath_:path_,paths).isEmpty())return;
+        QString stamp;for(const auto &directory:{paths.revisions,sourceArchivePath_}){if(directory.isEmpty())continue;const QFileInfo catalog(QDir(directory).filePath("catalog.json"));stamp+=directory+QString::number(catalog.lastModified().toMSecsSinceEpoch())+QString::number(catalog.size());}
+        if(stamp!=last){last=stamp;refreshPageContext();refreshTitle();}
+    });timer->start();
+    revisionStateText_=QStringLiteral("Nessuna tavola aperta.");
+}
+void DrawingWindow::refreshRevisionPanel(){
+    if(!revisionDock_||!editor_||busy_||editor_->isComputing())return;
+    const bool historical=!drawing_.sheet.drawing.version.checkinId.isNull();revisionStatusKnown_=false;revisionStatusCache_={};
+    QVector<RevisionRecord> history;QString error;
+    if(path_.isEmpty())revisionStateText_=QStringLiteral("Nuova tavola: salvare nel workspace per gestire i check-in.");
+    else{
+        error=workspaceDrawingHistory(path_,drawing_,history);
+        if(historical)revisionStateText_=QStringLiteral("Copia storica in sola lettura.\nRevisione tavola: %1").arg(editor_->pageContext().drawingRevision);
+        else{
+            const auto statusError=workspaceDrawingRevisionStatus(path_,drawing_,revisionStatusCache_);revisionStatusKnown_=statusError.isEmpty();
+            if(!statusError.isEmpty())revisionStateText_=QStringLiteral("Stato revisioni non verificato: %1").arg(statusError);
+            else if(revisionStatusCache_.hasPending)revisionStateText_=QStringLiteral("Check-in pendente: completare l'operazione prima di crearne un'altra.");
+            else if(revisionStatusCache_.hasSession)revisionStateText_=QStringLiteral("Check-out: %1\n%2").arg(revisionStatusCache_.session.checkout.owner,revisionStatusCache_.phase==WorkspaceCheckoutPhase::Active?QStringLiteral("Copia di lavoro prenotata"):QStringLiteral("Prenotazione da completare"));
+            else{
+                WorkspacePaths paths;QVector<RevisionDocumentInfo> documents;bool found=false;
+                if(locateDocumentWorkspace(path_,paths).isEmpty()&&RevisionStore(paths.revisions).documents(documents).isEmpty())for(const auto &doc:documents)if(doc.documentId==drawing_.sheet.drawing.version.documentId){found=true;revisionStateText_=doc.checkedOut?QStringLiteral("Check-out assegnato a: %1").arg(doc.checkoutOwner):QStringLiteral("Nessun check-out attivo.");break;}
+                if(!found)revisionStateText_=QStringLiteral("Tavola non ancora registrata: eseguire il primo check-out.");
+            }
+            QString next;if(nextWorkspaceRevisionLabel(path_,drawing_.sheet.drawing.version.documentId,next).isEmpty())revisionStateText_+=QStringLiteral("\nProssima revisione automatica: %1").arg(next);
+        }
+    }
+    revisionStateText_+=QStringLiteral("\nModello: %1").arg(editor_->pageContext().modelRevision);
+    if(!history.isEmpty()&&drawing_.baseCheckinId!=history.back().version.checkinId&&!historical)revisionStateText_+=QStringLiteral("\nAttenzione: la base locale non e' l'ultimo check-in.");
+    const auto fill=[](QTableWidget *table,const QVector<RevisionRecord> &records){const auto selected=table->currentRow()>=0&&table->item(table->currentRow(),0)?table->item(table->currentRow(),0)->data(Qt::UserRole).toUuid():QUuid();table->setRowCount(records.size());int selection=records.size()-1;
+        for(int row=0;row<records.size();++row){const auto &r=records[row];const QStringList values{QString::number(r.sequence),r.technicalRevision,r.author,r.createdUtc.toLocalTime().toString("yyyy-MM-dd HH:mm"),r.comment};for(int column=0;column<values.size();++column)table->setItem(row,column,new QTableWidgetItem(values[column]));table->item(row,0)->setData(Qt::UserRole,r.version.checkinId);table->item(row,0)->setData(Qt::UserRole+1,r.version.documentId);if(r.version.checkinId==selected)selection=row;}
+        table->resizeColumnsToContents();table->setColumnWidth(4,200);table->resizeRowsToContents();if(selection>=0)table->selectRow(selection);
+    };
+    fill(revisionHistory_,history);fill(projectHistory_,projectRecords_);revisionStatus_->setToolTip(error);revisionStatus_->setText(revisionStateText_+(modified_?QStringLiteral("\nModifiche locali da salvare."):QString()));
+}
+void DrawingWindow::showRevisionTableDialog(){
+    if(!editor_||busy_||editor_->isComputing())return;
+    refreshPageContext();const auto context=editor_->pageContext();const auto original=editor_->sheet().revisionTable;const bool readOnly=editor_->isReadOnly();
+    QDialog dialog(this);dialog.setObjectName("drawingRevisionTableDialog");dialog.setWindowTitle(QStringLiteral("Tabella revisioni del modello"));auto *layout=new QVBoxLayout(&dialog);
+    auto *visible=new QCheckBox(QStringLiteral("Mostra la tabella sul foglio e nel PDF"),&dialog);visible->setObjectName("drawingRevisionTableVisible");visible->setChecked(original.visible);visible->setEnabled(!readOnly);layout->addWidget(visible);
+    auto *note=new QLabel(QStringLiteral("Numero, data e autore provengono dai veri check-in del modello, fino alla versione usata dalla tavola. Compila descrizione e verifica; testo a capo e altezza delle righe sono automatici."),&dialog);note->setWordWrap(true);layout->addWidget(note);
+    auto *table=new QTableWidget(context.projectRevisions.size(),5,&dialog);table->setObjectName("drawingRevisionNotes");table->setHorizontalHeaderLabels({QStringLiteral("Revisione"),QStringLiteral("Data"),QStringLiteral("Descrizione"),QStringLiteral("Autore"),QStringLiteral("Verifica")});table->setWordWrap(true);table->horizontalHeader()->setSectionResizeMode(2,QHeaderView::Stretch);table->setColumnWidth(0,80);table->setColumnWidth(1,110);table->setColumnWidth(3,100);table->setColumnWidth(4,110);
+    for(int row=0;row<context.projectRevisions.size();++row){const auto &r=context.projectRevisions[row];QString description=r.comment,verified;for(const auto &entry:original.notes)if(entry.checkinId==r.version.checkinId){description=entry.description;verified=entry.verifiedBy;break;}const QStringList cells{r.label,r.createdUtc.toLocalTime().toString("yyyy-MM-dd"),description,r.author,verified};for(int column=0;column<cells.size();++column){auto *item=new QTableWidgetItem(cells[column]);if(readOnly||(column!=2&&column!=4))item->setFlags(item->flags()&~Qt::ItemIsEditable);table->setItem(row,column,item);}}
+    connect(table,&QTableWidget::cellChanged,&dialog,[table](int,int){table->resizeRowsToContents();});table->resizeRowsToContents();layout->addWidget(table,1);
+    if(context.projectRevisions.isEmpty())layout->addWidget(new QLabel(QStringLiteral("Nessun check-in modello verificato. Archiviare il modello e aggiornare o collegare la tavola alla revisione esatta."),&dialog));
+    auto *error=new QLabel(&dialog);error->setWordWrap(true);layout->addWidget(error);auto *buttons=new QDialogButtonBox(readOnly?QDialogButtonBox::Close:QDialogButtonBox::Ok|QDialogButtonBox::Cancel,&dialog);layout->addWidget(buttons);connect(buttons,&QDialogButtonBox::rejected,&dialog,&QDialog::reject);
+    connect(buttons,&QDialogButtonBox::accepted,&dialog,[&]{auto next=original;next.visible=visible->isChecked();for(int row=0;row<context.projectRevisions.size();++row){const auto id=context.projectRevisions[row].version.checkinId;auto found=std::find_if(next.notes.begin(),next.notes.end(),[&](const auto &entry){return entry.checkinId==id;});DrawingRevisionNote entry{id,table->item(row,2)->text(),table->item(row,4)->text()};if(found==next.notes.end())next.notes.append(entry);else *found=entry;}const auto message=editor_->setRevisionTable(next);error->setText(message);if(message.isEmpty())dialog.accept();});dialog.resize(900,450);dialog.exec();
+}
+
 }
