@@ -16,7 +16,7 @@ using namespace Kernel;
 void require(bool value,const char *why){if(!value)throw std::invalid_argument(why);}
 const DrawingViewLayout &layoutFor(const DrawingSheet &s,const QUuid &id){for(const auto &l:s.views)if(l.viewId==id)return l;throw std::invalid_argument("Vista madre non disponibile.");}
 const DrawingView &viewFor(const DrawingSheet &s,const QUuid &id){for(const auto &v:s.drawing.views)if(v.id==id)return v;throw std::invalid_argument("Definizione della vista madre assente.");}
-void derive(const DrawingView &parent,const DrawingViewRelation &r,DrawingView &child){
+void derive(const DrawingView &parent,const DrawingViewRelation &r,DrawingView &child,bool preserveLegacy=true){
     const auto x=parent.plane.xDir(),y=parent.plane.yDir(),z=parent.plane.zDir();
     child.scale=parent.scale;child.tolerance=parent.tolerance;
     if(r.kind==DrawingDerivedKind::Orthographic){
@@ -34,9 +34,17 @@ void derive(const DrawingView &parent,const DrawingViewRelation &r,DrawingView &
         const auto delta=r.cutEnd-r.cutStart;const double length=std::hypot(delta.x(),delta.y());
         require(std::isfinite(length)&&length>1e-7,"La linea di taglio richiede due punti distinti.");
         const auto tangent=(delta.x()*x+delta.y()*y)/length;
-        const auto normal=(r.reverse?-1:1)*cross(tangent,z);
+        const double sign=r.reverse?-1:1;const auto normal=sign*cross(tangent,z);
+        // I vecchi file conservano il taglio lungo X. Il frame salvato basta a
+        // riconoscerli: aprire uno storico non deve cambiarne la presentazione.
+        const bool legacy=preserveLegacy&&child.kind==DrawingViewKind::Section
+            &&distance(child.plane.xDir(),tangent)<1e-10&&std::abs(dot(child.plane.yDir(),z))>1-1e-10;
+        // Ribaltamento di 90 gradi attorno alla linea di taglio, applicato anche
+        // agli assi della madre (Rodrigues). La linea mantiene la sua direzione
+        // sul foglio: verticale resta verticale, obliqua resta obliqua.
+        const auto foldedX=(delta.x()/length)*tangent-sign*(delta.y()/length)*z;
         child.kind=DrawingViewKind::Section;child.sectionReferences=false;
-        child.plane=Frame3(parent.plane.toGlobal(Vec3(r.cutStart.x(),r.cutStart.y(),0)),normal,tangent);
+        child.plane=Frame3(parent.plane.toGlobal(Vec3(r.cutStart.x(),r.cutStart.y(),0)),normal,legacy?tangent:foldedX);
     }
 }
 // Collega soltanto estremi isolati che provengono dalle due facce dello stesso edge.
@@ -107,6 +115,13 @@ QString synchronizeDrawingViews(DrawingSheet &sheet){
         };
         for(const auto &v:sheet.views)visit(v.viewId);
         return {};
+    }catch(const std::exception &e){return QString::fromUtf8(e.what());}
+}
+QString alignDrawingSectionOrientation(DrawingSheet &sheet,const QUuid &id){
+    try{
+        const auto &layout=layoutFor(sheet,id);require(layout.relation.kind==DrawingDerivedKind::Section&&!layout.relation.parentId.isNull(),"Seleziona una sezione da linea di taglio.");
+        const auto &parent=viewFor(sheet,layout.relation.parentId);require(parent.kind==DrawingViewKind::ProjectedEdges,"La vista madre deve essere una proiezione.");
+        auto prepared=viewFor(sheet,id);derive(parent,layout.relation,prepared,false);const_cast<DrawingView &>(viewFor(sheet,id))=std::move(prepared);return {};
     }catch(const std::exception &e){return QString::fromUtf8(e.what());}
 }
 QString validateDrawingRelations(const DrawingSheet &sheet){

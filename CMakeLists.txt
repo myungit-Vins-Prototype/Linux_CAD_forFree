@@ -76,6 +76,7 @@ add_executable(forgecad
     cad_drawing_silhouette.h
     cad_drawing_silhouette.cpp
     cad_drawing_axes.h
+    cad_drawing_annotations.h
     cad_drawing_centers.h
     cad_drawing_visibility.h
     cad_drawing_visibility.cpp
@@ -237,7 +238,7 @@ if(FORGECAD_BUILD_VIEW_TESTS)
     get_target_property(FORGECAD_VIEW_TEST_SOURCES forgecad SOURCES)
     list(REMOVE_ITEM FORGECAD_VIEW_TEST_SOURCES forgeCad2026.cpp forgeCad2026_gui.cpp ${FORGE_CAD_CUDA_SOURCE} ${FORGECAD_HASH_HEADER})
     list(REMOVE_ITEM FORGECAD_VIEW_TEST_SOURCES cad_macos_menu.h cad_macos_menu.mm)
-    add_executable(forgecad_view_tests tests/test_viewport.cpp tests/test_declared_history_cache.h tests/test_boolean_history.h tests/test_blend_history.h tests/test_extrusion_history.h tests/test_revolution_history.h tests/test_all_history.h tests/test_native_revisions.h tests/test_workspace_revisions.h tests/test_linked_drawing.h tests/test_drawing_revisions.h tests/test_projected_drawing_file.h tests/test_drawing_mouse.h cuda_support_cpu.cpp ${FORGECAD_VIEW_TEST_SOURCES})
+    add_executable(forgecad_view_tests tests/test_viewport.cpp tests/test_declared_history_cache.h tests/test_boolean_history.h tests/test_blend_history.h tests/test_extrusion_history.h tests/test_revolution_history.h tests/test_all_history.h tests/test_native_revisions.h tests/test_workspace_revisions.h tests/test_linked_drawing.h tests/test_drawing_revisions.h tests/test_projected_drawing_file.h tests/test_drawing_mouse.h tests/test_drawing_section_model.h cuda_support_cpu.cpp ${FORGECAD_VIEW_TEST_SOURCES})
     add_dependencies(forgecad_view_tests forgecad) # genera l'impronta una sola volta, prima dei test
     target_include_directories(forgecad_view_tests PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/generated)
     target_link_libraries(forgecad_view_tests PRIVATE Qt6::Widgets Qt6::OpenGL Qt6::OpenGLWidgets OpenGL::GL forgekernel)
@@ -483,7 +484,7 @@ target_compile_options(forgecad_drawing_centers_tests PRIVATE -Wall -Wextra -Wpe
 add_test(NAME forgecad_drawing_centers_tests COMMAND forgecad_drawing_centers_tests)
 set_tests_properties(forgecad_drawing_centers_tests PROPERTIES TIMEOUT 120 ENVIRONMENT "QT_QPA_PLATFORM=offscreen;QT_QPA_OFFSCREEN_NO_GLX=1;QT_QPA_PLATFORMTHEME=;QT_STYLE_OVERRIDE=Fusion")
 
-add_executable(forgecad_drawing_axes_tests tests/test_drawing_axes.cpp tests/test_drawing_axis_dimensions.h cad_drawing_editor.cpp cad_drawing_sheet.cpp cad_drawing_derived.cpp cad_drawing_page.cpp cad_drawing.cpp cad_drawing_dimension.cpp cad_drawing_silhouette.cpp cad_drawing_visibility.cpp cad_icons.cpp)
+add_executable(forgecad_drawing_axes_tests tests/test_drawing_axes.cpp tests/test_drawing_axis_dimensions.h tests/test_drawing_annotations.h tests/test_drawing_tolerances.h cad_drawing_tolerances.h cad_drawing_editor.cpp cad_drawing_sheet.cpp cad_drawing_derived.cpp cad_drawing_page.cpp cad_drawing.cpp cad_drawing_dimension.cpp cad_drawing_silhouette.cpp cad_drawing_visibility.cpp cad_icons.cpp)
 target_include_directories(forgecad_drawing_axes_tests PRIVATE ${PROJECT_SOURCE_DIR})
 target_link_libraries(forgecad_drawing_axes_tests PRIVATE Qt6::Widgets forgekernel)
 target_compile_options(forgecad_drawing_axes_tests PRIVATE -Wall -Wextra -Wpedantic)

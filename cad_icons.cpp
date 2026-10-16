@@ -437,6 +437,12 @@ std::map<QString, Draw> &registry() {
         QFont font; font.setPixelSize(8); font.setBold(true); p.setFont(font); p.setPen(c.accent);
         p.drawText(QRectF(4, 9, 16, 10), Qt::AlignCenter, QStringLiteral("PDF"));
     };
+    icons["drawingNote"] = [](QPainter &p, const IconPalette &c) {
+        p.setPen(QPen(c.ink,1.6));p.drawRect(QRectF(4,3,16,18));for(int y:{8,12,16})p.drawLine(QPointF(7,y),QPointF(y==16?14:17,y));
+    };
+    icons["drawingLeader"] = [](QPainter &p, const IconPalette &c) {
+        p.setPen(QPen(c.ink,1.6));p.drawLine(QPointF(3,20),QPointF(11,8));p.drawLine(QPointF(11,8),QPointF(21,8));p.drawLine(QPointF(3,20),QPointF(4,14));p.drawLine(QPointF(3,20),QPointF(9,17));p.drawLine(QPointF(14,4),QPointF(21,4));
+    };
     icons["drawingPage"] = [](QPainter &p, const IconPalette &c) {
         polygon(p, QPolygonF({{2, 4}, {22, 4}, {22, 20}, {2, 20}}), c.faceLight, stroke(c.ink, 1.2));
         p.setPen(stroke(c.ink, .8)); p.setBrush(Qt::NoBrush); p.drawRect(QRectF(4, 6, 16, 12));
@@ -1324,6 +1330,127 @@ std::map<QString, Draw> &registry() {
     };
     icons["extractEdge3D"] = [base=icons["convertEdges"]](QPainter &p,const IconPalette &c){base(p,c);badge3D(p,c);};
     icons["trimEdge3D"] = [base=icons["trim"]](QPainter &p,const IconPalette &c){base(p,c);badge3D(p,c);};
+    // --- Tavole 2D: simboli distinti anche a 24 px e in scala di grigi ---------
+    const auto sheet=[](QPainter &p,const IconPalette &c){
+        p.setBrush(c.faceLight);p.setPen(stroke(c.ink,1.2));p.drawRect(QRectF(2,4,20,16));
+        p.setBrush(Qt::NoBrush);p.setPen(stroke(c.ink,.9));p.drawRect(QRectF(13,15,7,3));
+    };
+    const auto profile=[](QPainter &p,const IconPalette &c){
+        polygon(p,QPolygonF({{3,6},{15,6},{21,12},{21,20},{3,20}}),Qt::transparent,stroke(c.ink,1.5));
+        p.setBrush(Qt::NoBrush);p.drawEllipse(QPointF(10,13),3,3);
+    };
+    const auto pencil=[](QPainter &p,const IconPalette &c){
+        polygon(p,QPolygonF({{12,22},{13,18},{20,11},{23,14},{16,21}}),c.accent,stroke(c.ink,1));
+        line(p,{13,18},{16,21},stroke(c.ink,.8));
+    };
+    icons["drawingNew"]=[sheet](QPainter &p,const IconPalette &c){
+        sheet(p,c);p.setPen(stroke(c.construction,1));p.setBrush(Qt::NoBrush);p.drawEllipse(QPointF(8,11),3,3);
+        line(p,{18,1},{18,9},stroke(c.confirm,2));line(p,{14,5},{22,5},stroke(c.confirm,2));
+    };
+    icons["drawingOpen"]=[sheet](QPainter &p,const IconPalette &c){
+        p.save();p.translate(2,-2);p.scale(.85,.85);sheet(p,c);p.restore();
+        polygon(p,QPolygonF({{2,10},{9,10},{11,13},{22,13},{19,22},{2,22}}),c.accent,stroke(c.ink,1.2));
+        line(p,{5,17},{17,17},stroke(c.ink,1));arrowHead(p,{17,17},{5,17},c.ink,3);
+    };
+    icons["drawingView"]=profile;
+    icons["drawingSection"]=[](QPainter &p,const IconPalette &c){
+        QPainterPath face;face.setFillRule(Qt::OddEvenFill);face.addRect(QRectF(3,4,18,16));face.addEllipse(QPointF(12,12),3.3,3.3);
+        p.setPen(stroke(c.ink,1.3));p.setBrush(c.faceLight);p.drawPath(face);
+        p.save();p.setClipPath(face);for(int i=-18;i<24;i+=4)line(p,{double(i),21},{double(i+18),3},stroke(c.construction,.8));p.restore();
+    };
+    icons["drawingDerivedView"]=[](QPainter &p,const IconPalette &c){
+        p.setBrush(Qt::NoBrush);p.setPen(stroke(c.ink,1.3));p.drawRect(QRectF(2,5,8,14));p.drawRect(QRectF(16,8,6,8));
+        for(double y:{8.,16.})line(p,{3,y},{22,y},stroke(c.construction,.8,Qt::DashLine));
+        line(p,{11,12},{16,12},stroke(c.accent,1.5));arrowHead(p,{16,12},{11,12},c.accent,2.5);
+    };
+    icons["drawingTechnicalSection"]=[](QPainter &p,const IconPalette &c){
+        p.setPen(stroke(c.ink,1.1));p.setBrush(Qt::NoBrush);p.drawRect(QRectF(2,6,8,14));p.drawRect(QRectF(15,8,7,12));
+        for(int i=0;i<3;++i)line(p,{15.,double(12+4*i)},{19.,double(8+4*i)},stroke(c.construction,.8));
+        line(p,{6,3},{6,22},stroke(c.accent,1.4,Qt::DashDotLine));line(p,{6,3},{12,3},stroke(c.accent,1.3));arrowHead(p,{12,3},{6,3},c.accent,2.5);
+    };
+    icons["drawingDetachView"]=[](QPainter &p,const IconPalette &c){
+        p.setPen(stroke(c.ink,1.3));p.setBrush(Qt::NoBrush);p.drawRect(QRectF(2,6,6,13));p.drawRect(QRectF(17,6,5,13));
+        line(p,{8,12},{11,12},stroke(c.construction,1.6));line(p,{14,12},{17,12},stroke(c.construction,1.6));
+        line(p,{14,7},{10,17},stroke(c.remove,1.8));
+    };
+    icons["drawingReleaseAlignment"]=[](QPainter &p,const IconPalette &c){
+        p.setPen(stroke(c.ink,1.3));p.setBrush(Qt::NoBrush);p.drawRect(QRectF(2,3,7,8));p.drawRect(QRectF(15,13,7,8));
+        line(p,{2,7},{22,7},stroke(c.construction,1,Qt::DashLine));line(p,{15,7},{15,13},stroke(c.accent,1.3));arrowHead(p,{15,13},{15,7},c.accent,3);
+    };
+    icons["drawingAlignView"]=[](QPainter &p,const IconPalette &c){
+        p.setPen(stroke(c.ink,1.3));p.setBrush(Qt::NoBrush);p.drawRect(QRectF(2,8,7,11));p.drawRect(QRectF(15,8,7,11));
+        line(p,{1,8},{23,8},stroke(c.construction,1,Qt::DashLine));line(p,{1,19},{23,19},stroke(c.construction,1,Qt::DashLine));
+        line(p,{5.5,2},{5.5,7},stroke(c.accent,1.4));arrowHead(p,{5.5,7},{5.5,2},c.accent,2.5);
+        line(p,{18.5,2},{18.5,7},stroke(c.accent,1.4));arrowHead(p,{18.5,7},{18.5,2},c.accent,2.5);
+    };
+    icons["drawingSectionHatch"]=[](QPainter &p,const IconPalette &c){
+        p.setBrush(Qt::NoBrush);p.setPen(stroke(c.ink,1.2));p.drawRect(QRectF(3,4,18,16));
+        p.save();p.setClipRect(QRectF(3.6,4.6,16.8,14.8));for(int i=-16;i<22;i+=4)line(p,{double(i),20},{double(i+16),4},stroke(c.accent,1.3));p.restore();
+    };
+    icons["drawingEditSectionLine"]=[](QPainter &p,const IconPalette &c){
+        line(p,{4,20},{19,4},stroke(c.accent,1.5,Qt::DashDotLine));square(p,{4,20},c.construction,2.2);square(p,{19,4},c.construction,2.2);
+        for(const auto &a:{QPointF(5,16),QPointF(15,5)}){line(p,a,a+QPointF(6,5),stroke(c.ink,1.2));arrowHead(p,a+QPointF(6,5),a,c.ink,3);}
+    };
+    icons["drawingAlignSectionOrientation"]=[](QPainter &p,const IconPalette &c){
+        p.setPen(stroke(c.ink,1.3));p.setBrush(Qt::NoBrush);p.drawRect(QRectF(3,16,10,5));p.drawRect(QRectF(17,3,5,10));
+        QPainterPath arc({4,12});arc.cubicTo({3,4},{11,1},{15,6});p.setPen(stroke(c.accent,1.7));p.drawPath(arc);arrowHead(p,{15,6},{11,1},c.accent,3.5);
+        line(p,{3,23},{13,23},stroke(c.construction,1,Qt::DashLine));
+    };
+    icons["drawingReverseSection"]=[](QPainter &p,const IconPalette &c){
+        line(p,{12,2},{12,22},stroke(c.construction,1.1,Qt::DashDotLine));
+        line(p,{21,7},{3,7},stroke(c.accent,1.7));arrowHead(p,{3,7},{21,7},c.accent,4);
+        line(p,{3,17},{21,17},stroke(c.accent,1.7));arrowHead(p,{21,17},{3,17},c.accent,4);
+    };
+    icons["drawingHiddenLines"]=[](QPainter &p,const IconPalette &c){
+        p.setPen(stroke(c.ink,1.4));p.setBrush(Qt::NoBrush);p.drawRect(QRectF(3,5,18,15));
+        for(double x:{9.,15.})line(p,{x,6},{x,19},stroke(c.construction,1.4,Qt::DashLine));
+        line(p,{4,12},{20,12},stroke(c.construction,1,Qt::DashLine));
+    };
+    icons["drawingShadedFaces"]=[](QPainter &p,const IconPalette &c){
+        polygon(p,QPolygonF({{3,5},{15,5},{21,11},{21,20},{3,20}}),c.faceLight,stroke(c.ink,1.3));
+        polygon(p,QPolygonF({{15,5},{21,11},{21,20},{15,14}}),c.faceDark,stroke(c.ink,.8));
+        polygon(p,QPolygonF({{3,20},{15,14},{21,20}}),c.accent,stroke(c.ink,.8));
+    };
+    icons["drawingAxisThroughPoints"]=[](QPainter &p,const IconPalette &c){
+        line(p,{2,22},{22,2},stroke(c.accent,1.4,Qt::DashDotLine));dot(p,{6,18},c.ink,2.4);dot(p,{18,6},c.ink,2.4);
+    };
+    icons["drawingAxisBetweenLines"]=[](QPainter &p,const IconPalette &c){
+        for(double x:{4.,20.})line(p,{x,3},{x,21},stroke(c.ink,1.6));
+        line(p,{12,1},{12,23},stroke(c.accent,1.4,Qt::DashDotLine));
+        line(p,{4,12},{20,12},stroke(c.construction,.8));arrowHead(p,{4,12},{12,12},c.construction,2.5);arrowHead(p,{20,12},{12,12},c.construction,2.5);
+    };
+    icons["drawingCylinderAxes"]=[](QPainter &p,const IconPalette &c){
+        p.setPen(stroke(c.ink,1.1));p.setBrush(Qt::NoBrush);p.drawEllipse(QRectF(5,4,14,5));p.drawArc(QRectF(5,15,14,5),180*16,180*16);
+        for(double x:{5.,19.})line(p,{x,6.5},{x,17.5},stroke(c.ink,1.2));
+        line(p,{12,1},{12,23},stroke(c.accent,1.5,Qt::DashDotLine));
+    };
+    icons["drawingSmartDimension"]=[base=icons["dimension"]](QPainter &p,const IconPalette &c){
+        p.save();p.translate(0,3);p.scale(.85,.85);base(p,c);p.restore();
+        polygon(p,QPolygonF({{14,1},{14,11},{17,8},{20,12},{22,10},{19,7},{23,6}}),c.construction,stroke(c.ink,.8));
+    };
+    icons["drawingCurveLength"]=[](QPainter &p,const IconPalette &c){
+        QPainterPath path({3,18});path.cubicTo({3,1},{21,23},{21,6});p.setPen(stroke(c.ink,1.5));p.setBrush(Qt::NoBrush);p.drawPath(path);
+        QPainterPath measure({3,22});measure.cubicTo({12,24},{23,20},{23,7});p.setPen(stroke(c.accent,1.3));p.drawPath(measure);arrowHead(p,{3,22},{11,22},c.accent,3);arrowHead(p,{23,7},{23,15},c.accent,3);
+    };
+    icons["drawingReferenceOrigin"]=[](QPainter &p,const IconPalette &c){
+        line(p,{3,17},{22,17},stroke(c.ink,1.1));line(p,{7,22},{7,2},stroke(c.ink,1.1));p.setPen(stroke(c.accent,1.3));p.setBrush(Qt::NoBrush);p.drawEllipse(QPointF(7,17),4,4);dot(p,{7,17},c.accent,1.8);
+    };
+    for(bool x:{true,false})icons[x?"drawingReferenceX":"drawingReferenceY"]=[x](QPainter &p,const IconPalette &c){
+        line(p,{5,19},{22,19},stroke(x?c.accent:c.ink,x?1.9:1));line(p,{5,19},{5,2},stroke(x?c.ink:c.accent,x?1:1.9));
+        arrowHead(p,x?QPointF(22,19):QPointF(5,2),{5,19},c.accent,4);dot(p,{5,19},c.ink,1.7);
+    };
+    icons["drawingRevisionTable"]=[](QPainter &p,const IconPalette &c){
+        p.setPen(stroke(c.ink,1.2));p.setBrush(Qt::NoBrush);p.drawRect(QRectF(2,3,20,18));p.fillRect(QRectF(2.6,3.6,18.8,4.4),c.accent);
+        for(double y:{9.,15.})line(p,{2,y},{22,y},stroke(c.ink,.9));
+        for(double x:{8.,16.})line(p,{x,9},{x,21},stroke(c.ink,.9));
+    };
+    icons["drawingModelUpdate"]=[](QPainter &p,const IconPalette &c){
+        cube(p,c,-1,true,true,.72,{-3,-2});QPainterPath arc({14,16});arc.cubicTo({23,12},{24,23},{15,22});p.setPen(stroke(c.accent,1.6));p.setBrush(Qt::NoBrush);p.drawPath(arc);arrowHead(p,{15,22},{21,23},c.accent,3);
+    };
+    icons["drawingLocateModel"]=[base=icons["open"]](QPainter &p,const IconPalette &c){base(p,c);cube(p,c,-1,true,true,.45,{7,6});};
+    for(const auto &entry:std::initializer_list<std::pair<const char *,const char *>>{{"drawingEditView","drawingView"},{"drawingEditAxis","drawingAxisThroughPoints"},{"drawingEditAnnotation","drawingNote"},{"drawingEditDimension","dimension"},{"drawingSaveAs","save"}})
+        icons[entry.first]=[base=icons[entry.second],pencil](QPainter &p,const IconPalette &c){base(p,c);pencil(p,c);};
+
     icons["storyboard"] = icons["storyboardLeft"];
     return icons;
 }

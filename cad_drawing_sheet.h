@@ -1,10 +1,12 @@
 #ifndef FORGECAD_DRAWING_SHEET_H
 #define FORGECAD_DRAWING_SHEET_H
 #include "cad_drawing.h"
+#include "cad_drawing_tolerances.h"
 #include "cad_drawing_axes.h"
 #include <QPointF>
 #include <QSizeF>
 #include <QVector>
+#include <optional>
 
 namespace ForgeCad {
 enum class DrawingDerivedKind { None, Orthographic, Section };
@@ -34,6 +36,7 @@ struct DrawingViewLayout {
 struct DrawingDimensionLayout {
     QUuid dimensionId;
     QPointF position; // posizione del testo sul foglio, indipendente dalla misura
+    DrawingDimensionPresentation presentation{};
 };
 struct DrawingTitleBlock {
     bool visible=false;
@@ -47,6 +50,13 @@ struct DrawingRevisionTable {
     bool visible=false;
     QVector<DrawingRevisionNote> notes;
 };
+struct DrawingAnnotation {
+    QUuid id=QUuid::createUuid(),viewId; // vista nulla per una nota libera sul foglio
+    QString text=QStringLiteral("Nota");
+    QPointF position{20,20}; // mm sul foglio, angolo superiore sinistro
+    double width=45,height=3; // larghezza di impaginazione e altezza nominale del testo, mm
+    std::optional<DrawingAttachment> reference; // punta del richiamo, mai coordinate congelate
+};
 struct DrawingSheet {
     DrawingDocument drawing;
     QString title = QStringLiteral("Tavola");
@@ -56,6 +66,7 @@ struct DrawingSheet {
     DrawingTitleBlock titleBlock;
     DrawingRevisionTable revisionTable;
     QVector<DrawingAxis> axes;
+    QVector<DrawingAnnotation> annotations;
 };
 // Solo metadati del foglio; nessuna duplicazione della geometria del modello.
 DrawingAttachmentResolver drawingSheetAttachmentResolver(const DrawingSheet &sheet,const DrawingView &view,

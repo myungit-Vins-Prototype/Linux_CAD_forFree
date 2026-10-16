@@ -1,4 +1,5 @@
 #include "cad_drawing_sheet.h"
+#include "cad_drawing_annotations.h"
 #include "cad_drawing_derived.h"
 #include "cad_drawing_dimension.h"
 #include <QJsonArray>
@@ -27,6 +28,11 @@ DrawingDocument axisSupportDocument(const DrawingSheet &sheet){
     for(const auto &axis:sheet.axes)document.dimensions.push_back(drawingAxisSupport(axis));
     return document;
 }
+DrawingDocument annotationSupportDocument(const DrawingSheet &sheet){
+    auto document=sheet.drawing;document.dimensions.clear();
+    for(const auto &note:sheet.annotations)if(note.reference)document.dimensions.push_back(drawingAnnotationSupport(note));
+    return document;
+}
 void validate(const DrawingSheet &sheet){
     require(!sheet.title.trimmed().isEmpty()&&sheet.title.size()<=256,"Titolo della tavola non valido.");
     require(std::isfinite(sheet.size.width())&&std::isfinite(sheet.size.height())&&sheet.size.width()>=50&&sheet.size.height()>=50
@@ -46,6 +52,10 @@ void validate(const DrawingSheet &sheet){
     require(sheet.axes.size()<=10000,"Troppi assi nella tavola.");QSet<QUuid> axisIds;
     for(const auto &v:sheet.drawing.views)axisIds.insert(v.id);
     for(const auto &d:sheet.drawing.dimensions)axisIds.insert(d.id);
+    require(sheet.annotations.size()<=10000,"Troppe annotazioni nella tavola.");
+    for(const auto &note:sheet.annotations){
+        require(!note.id.isNull()&&!axisIds.contains(note.id),"Identita' della nota nulla o duplicata.");axisIds.insert(note.id);
+    }
     const auto documentIds=axisIds;QHash<QUuid,QUuid> axisViews;
     for(const auto &axis:sheet.axes){
         require(!axis.id.isNull()&&!axisIds.contains(axis.id)&&!axis.name.trimmed().isEmpty()&&axis.name.size()<=128,"Identita' o nome dell'asse non validi.");axisIds.insert(axis.id);axisViews.insert(axis.id,axis.viewId);
@@ -59,6 +69,18 @@ void validate(const DrawingSheet &sheet){
         }
     }
     if(!sheet.axes.isEmpty()){QByteArray checked;ok(encodeDrawingDocument(axisSupportDocument(sheet),checked));}
+    for(const auto &note:sheet.annotations){
+        require(!note.text.trimmed().isEmpty()&&note.text.size()<=8192,"Testo della nota vuoto o troppo lungo.");
+        for(const auto c:note.text)require(c.isPrint()||c=='\n'||c=='\t',"Caratteri non stampabili nella nota.");
+        require(finite(note.position)&&std::isfinite(note.width)&&note.width>=5&&note.width<=1000&&std::isfinite(note.height)&&note.height>=1&&note.height<=20,"Impaginazione della nota non valida.");
+        require(note.reference.has_value()!=note.viewId.isNull(),"Vista e aggancio del richiamo incoerenti.");
+        if(!note.reference)continue;
+        const auto &ref=*note.reference;require(!drawingDatum(ref.role)&&ref.role!=DrawingPointRole::Curve,"Il richiamo richiede un punto geometrico.");
+        const auto layout=std::find_if(sheet.views.cbegin(),sheet.views.cend(),[&](const auto &l){return l.viewId==note.viewId;});require(layout!=sheet.views.cend(),"Vista del richiamo assente.");
+        if(ref.axisId.isNull())require(layout->features.contains(ref.curve.featureId),"Richiamo collegato a un corpo estraneo alla vista.");
+        else {require(!documentIds.contains(ref.axisId),"Identita' asse del richiamo confusa con altri elementi.");if(axisViews.contains(ref.axisId))require(axisViews.value(ref.axisId)==note.viewId,"Asse del richiamo appartenente a un'altra vista.");}
+    }
+    if(!sheet.annotations.isEmpty()){QByteArray checked;ok(encodeDrawingDocument(annotationSupportDocument(sheet),checked));}
     QSet<QUuid> viewIds,dimensionIds;
     for(const auto &view:sheet.drawing.views)viewIds.insert(view.id);
     for(const auto &dimension:sheet.drawing.dimensions)dimensionIds.insert(dimension.id);
@@ -67,7 +89,7 @@ void validate(const DrawingSheet &sheet){
                 &&!layout.features.isEmpty()&&layout.features.size()<=10000,"Presentazione della vista non valida.");
         QSet<quint64> features;for(auto id:layout.features){require(id&&!features.contains(id),"Sorgente della vista nulla o duplicata.");features.insert(id);}
     }
-    for(const auto &layout:sheet.dimensions)require(dimensionIds.remove(layout.dimensionId)&&finite(layout.position),"Presentazione della quota non valida.");
+    for(const auto &layout:sheet.dimensions){require(dimensionIds.remove(layout.dimensionId)&&finite(layout.position),"Presentazione della quota non valida.");ok(validateDrawingDimensionPresentation(layout.presentation));}
     for(const auto &dimension:sheet.drawing.dimensions){
         const auto layout=std::find_if(sheet.views.cbegin(),sheet.views.cend(),[&](const auto &view){return view.viewId==dimension.viewId;});
         require(layout!=sheet.views.cend()&&(!dimension.section.featureId||layout->features.contains(dimension.section.featureId)),"La quota riferisce un corpo estraneo alla vista.");
@@ -79,7 +101,7 @@ void validate(const DrawingSheet &sheet){
 DrawingAttachmentResolver drawingSheetAttachmentResolver(const DrawingSheet &sheet,const DrawingView &view,
     const DrawingModelSnapshot &model,const std::vector<DrawingCurve> &curves){
     return [&sheet,&view,&model,&curves](const DrawingAttachment &ref){
-        DrawingResolvedAttachment out;out.status=DrawingDimensionStatus::Missing;out.message=QStringLiteral("Asse associato della quota non trovato.");
+        DrawingResolvedAttachment out;out.status=DrawingDimensionStatus::Missing;out.message=QStringLiteral("Asse associato non trovato.");
         const DrawingAxis *axis=nullptr;for(const auto &candidate:sheet.axes)if(candidate.id==ref.axisId){axis=&candidate;break;}
         if(!axis||axis->viewId!=view.id)return out;
         const auto result=evaluateDrawingAxis(*axis,view,model,curves);out.status=result.status;out.message=result.message;
@@ -104,14 +126,21 @@ QString encodeDrawingSheet(const DrawingSheet &sheet,QByteArray &bytes){
                 {"parent",r.parentId.toString(QUuid::WithoutBraces)},{"kind",int(r.kind)},{"side",int(r.side)},{"method",int(r.method)},
                 {"aligned",r.aligned},{"cutStart",pointJson(r.cutStart)},{"cutEnd",pointJson(r.cutEnd)},{"reverse",r.reverse},{"hatch",r.hatch},{"label",r.label}});
             views.append(object);}
-        for(const auto &dimension:sheet.dimensions)dimensions.append(QJsonObject{{"id",dimension.dimensionId.toString(QUuid::WithoutBraces)},{"position",pointJson(dimension.position)}});
-        QJsonObject object{{"format","ForgeCAD.DrawingSheet"},{"schema",drawingNeedsAxisSchema(sheet.drawing)?5:!sheet.axes.isEmpty()?4:(drawingNeedsSectionSchema(sheet.drawing)||std::any_of(sheet.views.cbegin(),sheet.views.cend(),[](const auto &v){return v.relation.parentId.isNull()&&!v.relation.hatch;}))?3:std::any_of(sheet.views.cbegin(),sheet.views.cend(),[](const auto &v){return !v.relation.parentId.isNull();})?2:1},{"title",sheet.title},
+        bool styled=false;
+        for(const auto &dimension:sheet.dimensions){QJsonObject item{{"id",dimension.dimensionId.toString(QUuid::WithoutBraces)},{"position",pointJson(dimension.position)}};
+            const auto &p=dimension.presentation;if(p.active()){styled=true;item.insert("presentation",QJsonObject{{"mode",int(p.mode)},{"upper",p.upper},{"lower",p.lower},{"decimals",p.decimals},{"prefix",p.prefix},{"suffix",p.suffix}});}dimensions.append(item);}
+        QJsonObject object{{"format","ForgeCAD.DrawingSheet"},{"schema",styled?7:!sheet.annotations.isEmpty()?6:drawingNeedsAxisSchema(sheet.drawing)?5:!sheet.axes.isEmpty()?4:(drawingNeedsSectionSchema(sheet.drawing)||std::any_of(sheet.views.cbegin(),sheet.views.cend(),[](const auto &v){return v.relation.parentId.isNull()&&!v.relation.hatch;}))?3:std::any_of(sheet.views.cbegin(),sheet.views.cend(),[](const auto &v){return !v.relation.parentId.isNull();})?2:1},{"title",sheet.title},
             {"size",QJsonArray{sheet.size.width(),sheet.size.height()}},{"drawing",QJsonDocument::fromJson(document).object()},
             {"views",views},{"dimensions",dimensions}};
         if(!sheet.axes.isEmpty()){
             QByteArray encoded;ok(encodeDrawingDocument(axisSupportDocument(sheet),encoded));const auto support=QJsonDocument::fromJson(encoded).object();const auto definitions=support["dimensions"].toArray();QJsonArray axes;
             for(qsizetype i=0;i<sheet.axes.size();++i){const auto &a=sheet.axes[i];axes.append(QJsonObject{{"definition",definitions[i]},{"kind",int(a.kind)},{"name",a.name},{"extension",a.extension},{"visible",a.visible}});}
             object.insert("axes",axes);object.insert("axisReferenceSchema",support["schema"]);
+        }
+        if(!sheet.annotations.isEmpty()){
+            QByteArray encoded;ok(encodeDrawingDocument(annotationSupportDocument(sheet),encoded));const auto support=QJsonDocument::fromJson(encoded).object();const auto definitions=support["dimensions"].toArray();QJsonArray notes;qsizetype index=0;
+            for(const auto &n:sheet.annotations){QJsonObject entry{{"id",n.id.toString(QUuid::WithoutBraces)},{"text",n.text},{"position",pointJson(n.position)},{"width",n.width},{"height",n.height}};if(n.reference)entry.insert("reference",definitions[index++]);notes.append(entry);}
+            object.insert("annotations",notes);if(index)object.insert("annotationReferenceSchema",support["schema"]);
         }
         const auto &block=sheet.titleBlock;if(block.visible||!block.code.isEmpty()||!block.organization.isEmpty()||!block.author.isEmpty()||!block.date.isEmpty())object.insert("titleBlock",QJsonObject{{"visible",block.visible},{"code",block.code},{"organization",block.organization},{"author",block.author},{"date",block.date}});
         if(sheet.revisionTable.visible||!sheet.revisionTable.notes.isEmpty()){
@@ -126,8 +155,10 @@ QString decodeDrawingSheet(const QByteArray &bytes,DrawingSheet &sheet){
     try{
         require(!bytes.isEmpty()&&bytes.size()<=8*1024*1024,"Dimensione del foglio non valida.");
         const auto json=QJsonDocument::fromJson(bytes);const auto object=json.object();
-        require(json.isObject()&&object["format"].toString()==QLatin1String("ForgeCAD.DrawingSheet")&&(object["schema"].toInt(-1)==1||object["schema"].toInt(-1)==2||object["schema"].toInt(-1)==3||object["schema"].toInt(-1)==4||object["schema"].toInt(-1)==5),"Formato del foglio non supportato.");
+        require(json.isObject()&&object["format"].toString()==QLatin1String("ForgeCAD.DrawingSheet")&&(object["schema"].toInt(-1)==1||object["schema"].toInt(-1)==2||object["schema"].toInt(-1)==3||object["schema"].toInt(-1)==4||object["schema"].toInt(-1)==5||object["schema"].toInt(-1)==6||object["schema"].toInt(-1)==7),"Formato del foglio non supportato.");
         const int schema=object["schema"].toInt();
+        require(schema>=6||(!object.contains("annotations")&&!object.contains("annotationReferenceSchema")),"Annotazioni estranee allo schema dichiarato.");
+        require(schema!=6||object.contains("annotations"),"Annotazioni del foglio assenti.");
         require(object.contains("axes")==object.contains("axisReferenceSchema"),"Metadati assi incompleti.");
         require(schema>=4||(!object.contains("axes")&&!object.contains("axisReferenceSchema")),"Assi estranei allo schema del foglio dichiarato.");
         require(object["title"].isString()&&object["drawing"].isObject()&&object["views"].isArray()&&object["dimensions"].isArray(),"Dati del foglio incompleti.");
@@ -155,6 +186,26 @@ QString decodeDrawingSheet(const QByteArray &bytes,DrawingSheet &sheet){
             support["views"]=views;support["dimensions"]=definitions;DrawingDocument references;ok(decodeDrawingDocument(QJsonDocument(support).toJson(QJsonDocument::Compact),references));
             for(qsizetype i=0;i<prepared.axes.size();++i){const auto &d=references.dimensions[std::size_t(i)];require(d.measure==DrawingMeasure::Distance&&d.angleSides==0&&d.decimals==2,"Record degli agganci dell'asse incoerente.");auto &axis=prepared.axes[i];axis.id=d.id;axis.viewId=d.viewId;axis.references=d.references;}
         }
+        if(object.contains("annotations")){
+            require(object["annotations"].isArray()&&object["annotations"].toArray().size()<=10000,"Elenco note non valido.");
+            QJsonArray definitions;QVector<qsizetype> attached;
+            for(const auto &value:object["annotations"].toArray()){
+                require(value.isObject(),"Nota non valida.");const auto n=value.toObject();require(n["text"].isString()&&n["width"].isDouble()&&n["height"].isDouble(),"Dati della nota incompleti.");
+                DrawingAnnotation note;note.id=readId(n["id"]);note.text=n["text"].toString();note.position=readPoint(n["position"]);note.width=n["width"].toDouble();note.height=n["height"].toDouble();
+                if(n.contains("reference")){require(n["reference"].isObject(),"Aggancio del richiamo non valido.");definitions.append(n["reference"]);attached.append(prepared.annotations.size());}prepared.annotations.append(note);
+            }
+            require(!definitions.isEmpty()==object.contains("annotationReferenceSchema"),"Schema degli agganci delle note incoerente.");
+            if(!definitions.isEmpty()){
+                const double rs=object["annotationReferenceSchema"].toDouble(-1);require(rs==3||rs==4||rs==5,"Schema degli agganci delle note non supportato.");
+                auto support=object["drawing"].toObject();support["schema"]=rs;support["dimensions"]=definitions;
+                QJsonArray supportViews;const auto sourceViews=support["views"].toArray();
+                for(qsizetype i=0;i<sourceViews.size();++i){auto v=sourceViews[i].toObject();const auto &original=prepared.drawing.views[std::size_t(i)];v["kind"]=int(original.kind);v["sectionReferences"]=original.sectionReferences;
+                    require(rs>=4||original.sectionStyle==DrawingSectionStyle::Removed,"Schema degli agganci incompatibile con la sezione.");if(rs>=4)v["sectionStyle"]=int(original.sectionStyle);else v.remove("sectionStyle");supportViews.append(v);}
+                support["views"]=supportViews;
+                DrawingDocument refs;ok(decodeDrawingDocument(QJsonDocument(support).toJson(QJsonDocument::Compact),refs));
+                for(qsizetype i=0;i<attached.size();++i){auto &n=prepared.annotations[attached[i]];const auto &d=refs.dimensions[std::size_t(i)];require(d.id==n.id&&d.measure==DrawingMeasure::SectionLength&&d.references.size()==1&&d.decimals==2&&d.angleSides==0,"Record degli agganci della nota incoerente.");n.viewId=d.viewId;n.reference=d.references[0];}
+            }
+        }
         require(object["views"].toArray().size()<=10000&&object["dimensions"].toArray().size()<=10000,"Troppi elementi nel foglio.");
         for(const auto &value:object["views"].toArray()){
             require(value.isObject(),"Vista del foglio non valida.");const auto view=value.toObject();DrawingViewLayout layout;
@@ -181,7 +232,12 @@ QString decodeDrawingSheet(const QByteArray &bytes,DrawingSheet &sheet){
             prepared.views.append(std::move(layout));
         }
         for(const auto &value:object["dimensions"].toArray()){require(value.isObject(),"Quota del foglio non valida.");const auto dimension=value.toObject();
-            prepared.dimensions.append({readId(dimension["id"]),readPoint(dimension["position"])});}
+            DrawingDimensionLayout layout{readId(dimension["id"]),readPoint(dimension["position"])};
+            if(dimension.contains("presentation")){
+                require(schema>=7&&dimension["presentation"].isObject(),"Presentazione della quota estranea allo schema dichiarato.");const auto p=dimension["presentation"].toObject();
+                require(p.size()==6&&p["mode"].isDouble()&&p["mode"].toDouble()==p["mode"].toInt(-1)&&p["decimals"].isDouble()&&p["decimals"].toDouble()==p["decimals"].toInt(-1)&&p["upper"].isDouble()&&p["lower"].isDouble()&&p["prefix"].isString()&&p["suffix"].isString(),"Presentazione della quota incompleta.");
+                layout.presentation={DrawingToleranceMode(p["mode"].toInt()),p["upper"].toDouble(),p["lower"].toDouble(),p["decimals"].toInt(),p["prefix"].toString(),p["suffix"].toString()};
+            }prepared.dimensions.append(layout);}
         require(object["schema"].toInt()>=3||!drawingNeedsSectionSchema(prepared.drawing),"Sezione estesa non prevista dallo schema del foglio.");
         validate(prepared);sheet=std::move(prepared);return {};
     }catch(const std::exception &error){return QString::fromUtf8(error.what());}

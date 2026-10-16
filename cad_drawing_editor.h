@@ -37,6 +37,7 @@ public:
     QString setViewAlignment(const QUuid &id,bool aligned);
     QString setSectionHatch(const QUuid &id,bool visible);
     QString reverseSection(const QUuid &id);
+    QString alignSectionOrientation(const QUuid &id);
     QString setSectionStyle(const QUuid &id,DrawingSectionStyle style);
     bool hasViewPlacement() const;
     void cancelViewPlacement();
@@ -58,6 +59,12 @@ public:
     QString updateAxis(DrawingAxis axis);
     QString removeAxis(const QUuid &id);
     DrawingAxisResult axisResult(const QUuid &id)const;
+    QString beginAnnotation(bool leader,const QUuid &existing={});
+    QString addAnnotation(DrawingAnnotation note);
+    QString updateAnnotation(DrawingAnnotation note);
+    QString moveAnnotation(const QUuid &id,const QPointF &position);
+    QString removeAnnotation(const QUuid &id);
+    DrawingResolvedAttachment annotationResult(const QUuid &id)const;
     QString setRevisionTable(const DrawingRevisionTable &table);
     bool isComputing()const;
     QString setPageSettings(const QString &title,const QSizeF &size,const DrawingTitleBlock &block);
@@ -72,6 +79,7 @@ public:
     bool isModified() const;
     QString addDimension(DrawingDimension dimension,const QPointF &position);
     QString updateDimension(DrawingDimension dimension);
+    QString updateDimension(DrawingDimension dimension,DrawingDimensionPresentation presentation);
     QString addSelectedDimension(DrawingMeasure measure);
     QString updateModel(DrawingEditorModel model);
     void setChangedCallback(std::function<void(const DrawingSheet &)> callback);

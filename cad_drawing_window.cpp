@@ -32,7 +32,7 @@ DrawingWindow::DrawingWindow(QWidget *parent):QMainWindow(parent,Qt::Window){
     editMenu_=addCadMenu(menuBar(),QStringLiteral("Modifica"));insertMenu_=addCadMenu(menuBar(),QStringLiteral("Inserisci"));
     dimensionMenu_=addCadMenu(menuBar(),QStringLiteral("Quote"));viewMenu_=addCadMenu(menuBar(),QStringLiteral("Visualizza"));
     auto *source=addToolBar(QStringLiteral("Documento e modello"));source->setObjectName("drawingDocumentBar");configureCommandBar(source);
-    saveAction->setObjectName("drawingSaveAction");saveAction->setIcon(commandIcon("save"));saveAs->setIcon(commandIcon("save"));
+    saveAction->setObjectName("drawingSaveAction");saveAction->setIcon(commandIcon("save"));saveAs->setIcon(commandIcon("drawingSaveAs"));
     source->addAction(saveAction);source->addAction(exportPdf);source->addSeparator();
     updateAction_=source->addAction(QStringLiteral("Aggiorna dal .prt salvato"));updateAction_->setObjectName("drawingReloadSourceAction");
     connect(updateAction_,&QAction::triggered,this,[this]{report(updateFromSource());});
@@ -41,7 +41,7 @@ DrawingWindow::DrawingWindow(QWidget *parent):QMainWindow(parent,Qt::Window){
         const auto path=QFileDialog::getOpenFileName(this,QStringLiteral("Individua il modello della tavola"),sourcePath_,QStringLiteral("Modello ForgeCAD (*.prt)"));
         if(!path.isEmpty())report(updateFromSource(path));
     });
-    updateAction_->setIcon(commandIcon("rebuild"));updateAction_->setToolTip(QStringLiteral("Rilegge il .prt salvato e ricalcola viste e quote della tavola."));locate->setIcon(commandIcon("open"));
+    updateAction_->setIcon(commandIcon("drawingModelUpdate"));updateAction_->setToolTip(QStringLiteral("Rilegge il .prt salvato e ricalcola viste e quote della tavola."));locate->setIcon(commandIcon("drawingLocateModel"));
     auto *modelMenu=findChild<QMenu *>("drawingModelMenu");modelMenu->addSeparator();modelMenu->addAction(updateAction_);modelMenu->addAction(locate);
     sourceStatus_=new QLabel(this);sourceStatus_->setObjectName("drawingSourceStatus");sourceStatus_->setWordWrap(false);
     sourceStatus_->setSizePolicy(QSizePolicy::Ignored,QSizePolicy::Fixed);sourceStatus_->setMinimumWidth(0);statusBar()->addWidget(sourceStatus_,1);
@@ -98,8 +98,8 @@ void DrawingWindow::installEditor(){
     next->findChild<QAction *>("drawingUpdateModelAction")->setVisible(false);
     layout->addWidget(next,1);auto *previous=takeCentralWidget();setCentralWidget(container);editor_=next;delete previous;
     const auto populate=[next,this](QMenu *menu,std::initializer_list<const char *> names){menu->clear();for(auto name:names){auto *action=next->findChild<QAction *>(name);if(!action)action=findChild<QAction *>(name);if(action)menu->addAction(action);}};
-    populate(editMenu_,{"drawingPageSettingsAction","drawingRevisionTableAction","drawingUndoAction","drawingRedoAction","drawingEditViewAction","drawingAlignViewAction","drawingDetachViewAction","drawingReleaseAlignmentAction","drawingEditSectionLineAction","drawingReverseSectionAction","drawingSectionHatchAction","drawingEditAxisAction","drawingDeleteSelectionAction"});
-    populate(insertMenu_,{"drawingAddProjectionAction","drawingDerivedViewAction","drawingAddViewAction","drawingTechnicalSectionAction","drawingAxisThroughPointsAction","drawingAxisBetweenLinesAction"});
+    populate(editMenu_,{"drawingPageSettingsAction","drawingRevisionTableAction","drawingUndoAction","drawingRedoAction","drawingEditViewAction","drawingAlignViewAction","drawingDetachViewAction","drawingReleaseAlignmentAction","drawingEditSectionLineAction","drawingAlignSectionOrientationAction","drawingReverseSectionAction","drawingSectionHatchAction","drawingEditAxisAction","drawingEditAnnotationAction","drawingDeleteSelectionAction"});
+    populate(insertMenu_,{"drawingAddProjectionAction","drawingDerivedViewAction","drawingAddViewAction","drawingTechnicalSectionAction","drawingAxisThroughPointsAction","drawingAxisBetweenLinesAction","drawingAddNoteAction","drawingAddLeaderAction"});
     populate(dimensionMenu_,{"drawingSmartDimensionAction","drawingEditDimensionAction","drawingEndpointDimensionAction","drawingHorizontalDimensionAction","drawingVerticalDimensionAction","drawingLengthDimensionAction"});
     auto *references=addCadMenu(dimensionMenu_,QStringLiteral("Riferimenti del piano"));
     for(auto name:{"drawingOriginReferenceAction","drawingAxisXReferenceAction","drawingAxisYReferenceAction"})references->addAction(next->findChild<QAction *>(name));

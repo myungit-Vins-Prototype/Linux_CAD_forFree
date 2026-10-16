@@ -20760,9 +20760,11 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
     QMenu *drawingMenu = addCadMenu(fileMenu, QStringLiteral("Tavole 2D"));
     auto *newDrawingAction = drawingMenu->addAction(QStringLiteral("Nuova tavola dal modello..."));
     newDrawingAction->setObjectName(QStringLiteral("newDrawingAction"));
+    newDrawingAction->setIconVisibleInMenu(true);newDrawingAction->setToolTip(QStringLiteral("Crea una tavola 2D associata al modello salvato."));
     connect(newDrawingAction,&QAction::triggered,this,&PdfWindow::newDrawing);
     auto *openDrawingAction = drawingMenu->addAction(QStringLiteral("Apri tavola..."));
     openDrawingAction->setObjectName(QStringLiteral("openDrawingAction"));
+    openDrawingAction->setIconVisibleInMenu(true);openDrawingAction->setToolTip(QStringLiteral("Apre una tavola 2D ForgeCAD (.drw)."));
     connect(openDrawingAction,&QAction::triggered,this,&PdfWindow::openDrawing);
     QMenu *revisionMenu = addCadMenu(fileMenu, QStringLiteral("Revisioni"));
     revisionMenu->setObjectName(QStringLiteral("documentRevisionMenu"));
@@ -22858,6 +22860,7 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
     };
     const QList<QPair<QAction *, QString>> iconActions = {
         {newAction, QStringLiteral("new")}, {openAction, QStringLiteral("open")}, {saveAction, QStringLiteral("save")},
+        {newDrawingAction, QStringLiteral("drawingNew")}, {openDrawingAction, QStringLiteral("drawingOpen")},
         {undoAction_, QStringLiteral("undo")}, {redoAction_, QStringLiteral("redo")}, {deleteAction, QStringLiteral("delete")},
         {rebuildAction, QStringLiteral("rebuild")},
         {newSketchAction, QStringLiteral("newSketch")}, {spatialSketchAction, QStringLiteral("newSketch3D")}, {faceSketchAction, QStringLiteral("faceSketch")},
@@ -22960,6 +22963,7 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
 
     auto *toolbar = iconBar(QStringLiteral("Modellazione"), QStringLiteral("modelingIconBar"));
     toolbar->addAction(newAction); toolbar->addAction(openAction); toolbar->addAction(saveAction); toolbar->addSeparator();
+    toolbar->addAction(newDrawingAction);toolbar->addAction(openDrawingAction);toolbar->addSeparator();
     toolbar->addAction(undoAction_); toolbar->addAction(redoAction_); toolbar->addAction(deleteAction); toolbar->addAction(rebuildAction);
     toolbar->addSeparator();
     toolbar->addAction(importAction); toolbar->addSeparator();
