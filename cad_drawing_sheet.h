@@ -3,6 +3,7 @@
 #include "cad_drawing.h"
 #include "cad_drawing_tolerances.h"
 #include "cad_drawing_axes.h"
+#include "cad_drawing_style.h"
 #include <QPointF>
 #include <QSizeF>
 #include <QVector>
@@ -32,6 +33,7 @@ struct DrawingViewLayout {
     bool showMesh=false; // facce ombreggiate dalla mesh, mai riferimenti di quota
     bool showCenterMarks=false,showCenterLines=false; // cerchi/ellissi esatti della vista
     bool showCylinderAxes=false; // asse delle superfici cilindriche, sola presentazione
+    std::optional<QPointF> titleOffset={}; // origine del titolo rispetto alla vista, mm sul foglio
 };
 struct DrawingDimensionLayout {
     QUuid dimensionId;
@@ -67,6 +69,7 @@ struct DrawingSheet {
     DrawingRevisionTable revisionTable;
     QVector<DrawingAxis> axes;
     QVector<DrawingAnnotation> annotations;
+    DrawingStyle style;
 };
 // Solo metadati del foglio; nessuna duplicazione della geometria del modello.
 DrawingAttachmentResolver drawingSheetAttachmentResolver(const DrawingSheet &sheet,const DrawingView &view,

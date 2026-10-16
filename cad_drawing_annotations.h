@@ -12,17 +12,17 @@ inline DrawingDimension drawingAnnotationSupport(const DrawingAnnotation &note){
     if(note.reference){d.references={*note.reference};if(note.reference->axisId.isNull())d.section=note.reference->curve;}
     return d;
 }
-inline void configureDrawingAnnotation(QTextDocument &document,const DrawingAnnotation &note,const QString &text){
-    QFont font("DejaVu Sans");font.setPixelSize(12);document.setDefaultFont(font);document.setDocumentMargin(0);
+inline void configureDrawingAnnotation(QTextDocument &document,const DrawingAnnotation &note,const QString &text,const DrawingStyle &style={}){
+    const auto font=drawingFont(style);document.setDefaultFont(font);document.setDocumentMargin(0);
     QTextOption option;option.setWrapMode(QTextOption::WrapAtWordBoundaryOrAnywhere);document.setDefaultTextOption(option);
     document.setPlainText(text);document.setTextWidth(note.width*12/note.height);
 }
-inline QPainterPath drawingAnnotationLeader(QPointF anchor,const QRectF &box){
+inline QPainterPath drawingAnnotationLeader(QPointF anchor,const QRectF &box,bool includeArrow=true){
     const bool left=anchor.x()<box.center().x();
     const QPointF end(left?box.left():box.right(),std::clamp(anchor.y(),box.top(),box.bottom()));
     const QPointF elbow=end+QPointF(left?-4:4,0);QPainterPath path;path.moveTo(anchor);path.lineTo(elbow);path.lineTo(end);
     auto direction=elbow-anchor;const double length=std::hypot(direction.x(),direction.y());
-    if(length>1e-8){direction/=length;const QPointF normal(-direction.y(),direction.x());path.moveTo(anchor+2*direction+.6*normal);path.lineTo(anchor);path.lineTo(anchor+2*direction-.6*normal);}
+    if(includeArrow&&length>1e-8){direction/=length;const QPointF normal(-direction.y(),direction.x());path.moveTo(anchor+2*direction+.6*normal);path.lineTo(anchor);path.lineTo(anchor+2*direction-.6*normal);}
     return path;
 }
 inline DrawingResolvedAttachment resolveDrawingAnnotation(const DrawingSheet &sheet,const DrawingAnnotation &note,

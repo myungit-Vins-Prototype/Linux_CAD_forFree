@@ -39,6 +39,7 @@ void select(DrawingSheetEditor &e,QUuid id,const char *kind){auto *tree=e.findCh
 #include "test_drawing_axis_dimensions.h"
 #include "test_drawing_annotations.h"
 #include "test_drawing_tolerances.h"
+#include "test_drawing_options.h"
 int main(int argc,char **argv){QApplication app(argc,argv);try{
  DrawingEditorModel model;model.snapshot.version={QUuid::createUuid(),{}};model.snapshot.bodies={body(1,makeBox(Frame3(),12,8,6)),body(2,makeCylinder(Frame3(Vec3(30,0,0),Vec3(0,0,1),Vec3(1,0,0)),4,10)),body(3,makeCylinder(Frame3(Vec3(30,0,0),Vec3(0,0,1),Vec3(1,0,0)),2,10)),body(4,makeBox(Frame3(Vec3(25,-10,-2),Vec3(0,0,1),Vec3(1,0,0)),10,3,14))};model.choices={{1,"Blocco"},{2,"Cilindro"},{3,"Coassiale"},{4,"Copertura"}};
  DrawingSheet sheet;sheet.title="Assi manuali associati e cilindri";sheet.drawing.model=model.snapshot.version;sheet.size={420,297};sheet.titleBlock.visible=true;DrawingSheetEditor editor(sheet,model);editor.resize(1400,900);editor.show();QApplication::processEvents();editor.fitSheet();
@@ -65,5 +66,6 @@ int main(int argc,char **argv){QApplication app(argc,argv);try{
  axisDimensionTests();
  annotationTests();
  toleranceTests();
+ drawingOptionsTests();
  std::cout<<"PASS assi associati, mediana, superfici cilindriche, snap mouse, proprieta', codec schema 4, undo, aggiornamento, riferimenti mancanti, PDF e sola lettura\n";
 }catch(const std::exception &e){std::cerr<<e.what()<<'\n';return 1;}}
