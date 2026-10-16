@@ -1,5 +1,6 @@
 #include "cad_drawing_silhouette.h"
 #include "fk_primitives.h"
+#include "fk_blend.h"
 #include "fk_revolve.h"
 #include "fk_bspline_surface.h"
 #include "fk_pcurve.h"
@@ -18,6 +19,12 @@ Body dome(bool hole=false){
   if(inner)face.loops.push_back({{edge+3,true,left,0},{edge+2,true,top,0},{edge+1,false,right,0},{edge,false,bottom,0}});else face.loops.push_back({{edge,true,bottom,0},{edge+1,true,right,0},{edge+2,false,top,0},{edge+3,false,left,0}});};
  rectangle(0,1,false);if(hole)rectangle(.4,.6,true);return Body::buildSheet(vertices,edges,{face});
 }
+Body polarPatch(){
+ const double u0=kTwoPi,u1=kTwoPi+.7227342478;auto surface=std::make_shared<SphericalSurface>(Frame3(Vec3(),Vec3(0,0,1),Vec3(0,1,0)),.5);
+ const std::vector<Vec3> vertices={surface->point(u0,0),surface->point(u1,0),surface->point(u0,kHalfPi)};
+ const std::vector<Body::BuildEdge> edges={{0,1,surface->vIso(0),{u0,u1},0},{1,2,surface->uIso(u1),{0,kHalfPi},0},{0,2,surface->uIso(u0),{0,kHalfPi},0}};
+ Body::BuildFace face;face.surface=surface;face.loops={{{0,true,std::make_shared<Line<2>>(Vec2(0,0),Vec2(1,0)),0},{1,true,std::make_shared<Line<2>>(Vec2(u1,0),Vec2(0,1)),0},{2,false,std::make_shared<Line<2>>(Vec2(u0,0),Vec2(0,1)),0}}};return Body::buildSheet(vertices,edges,{face});
+}
 int main(){try{
  DrawingView view;view.kind=DrawingViewKind::ProjectedEdges;view.plane=Frame3(Vec3(),Vec3(0,-1,0),Vec3(1,0,0));DrawingModelSnapshot model{{QUuid::createUuid(),{}},{source(makeSphere(Frame3(),5))}};DrawingSilhouetteCache cache;DrawingSilhouetteResult contours;auto error=drawingViewSilhouettes(model,view,contours,cache);require(error.isEmpty(),qPrintable(error));require(!contours.paths.empty(),"silhouette della sfera");double height=-100;for(const auto &path:contours.paths)for(auto p:path.points){require(std::abs(norm(p)-5)<1e-7&&std::abs(p.y())<1e-6,"punti sulla superficie e sul contorno tangente");height=std::max(height,p.z());}require(height>4.99,"profilo superiore della sfera senza bordo topologico");
  const auto *firstMesh=cache.seeds(model.bodies[0]).get();view.scale=3;error=drawingViewSilhouettes(model,view,contours,cache);require(error.isEmpty()&&cache.seeds(model.bodies[0]).get()==firstMesh,"seed riusati tra scale e viste");
@@ -28,5 +35,18 @@ int main(){try{
  require(height>4.28&&height<4.286,"la cima interna supera i bordi di altezza 3 mm");
  model.bodies={source(dome(true))};error=drawingViewSilhouettes(model,view,contours,cache);require(error.isEmpty()&&contours.paths.size()>=2,"il foro interrompe il contorno apparente");for(const auto &path:contours.paths)for(auto point:path.points)require(classifyPointOnFace(*model.bodies[0].body,path.sourceFace,point,1e-5)!=PointLocation::Outside,"i contorni non attraversano il foro della superficie");
  const auto count=contours.paths.size();auto invalid=model;invalid.bodies.push_back(invalid.bodies[0]);require(!drawingViewSilhouettes(invalid,view,contours,cache).isEmpty()&&contours.paths.size()==count,"sorgente incoerente rifiutata atomicamente");
+ // Un box raccordato genera ottanti sferici con poli e longitudini oltre 2pi.
+ // L'avviso non deve scattare su archi regolari solo per la singolarita' UV.
+ model.bodies={source(polarPatch())};view.plane=Frame3(Vec3(),Vec3(-1,0,0),Vec3(0,1,0));view.scale=5;error=drawingViewSilhouettes(model,view,contours,cache);require(error.isEmpty()&&!contours.paths.empty(),"profilo di pezza sferica polare");require(contours.warnings.isEmpty(),"polo sferico e longitudine oltre2pi senza avvisi");
+ for(const auto &path:contours.paths)for(auto p:path.points){require(std::abs(norm(p)-.5)<1e-8&&std::abs(p.x())<1e-8,"polo: punti sulla sfera e tangenti alla vista");require(classifyPointOnFace(*model.bodies[0].body,path.sourceFace,p,1e-5)!=PointLocation::Outside,"polo: punti nella faccia rifilata");}
+ const auto block=makeBox(Frame3(),10,6,4);model.bodies={source(blendEdges(block,block.edges(),.5,false))};
+ for(const auto direction:{Vec3(-1,0,0),Vec3(1,0,0),Vec3(0,-1,0),Vec3(0,0,1),normalized(Vec3(1,-1,1))})for(const double scale:{1.,5.,20.}){
+  view.plane=Frame3(Vec3(),direction,std::abs(direction.x())>.9?Vec3(0,1,0):Vec3(1,0,0));view.scale=scale;error=drawingViewSilhouettes(model,view,contours,cache);require(error.isEmpty(),qPrintable(error));bool spheres=false;
+  for(const auto &path:contours.paths){const auto &surface=*model.bodies[0].body->face(path.sourceFace).surface;if(surface.type()!=SurfaceType::Sphere)continue;spheres=true;const auto &sphere=static_cast<const SphericalSurface &>(surface);require(!path.refinementLimited,"raccordo sferico al polo non deve produrre falsi avvisi");
+   for(auto p:path.points){require(std::abs(distance(p,sphere.frame().origin())-sphere.radius())<1e-8,"punto del profilo sulla sfera esatta");require(std::abs(dot(p-sphere.frame().origin(),direction))<1e-8,"profilo tangente alla direzione di vista");require(classifyPointOnFace(*model.bodies[0].body,path.sourceFace,p,1e-5)!=PointLocation::Outside,"profilo entro la faccia sferica rifilata");}
+   for(std::size_t i=1;i<path.points.size();++i){const double error=sphere.radius()-distance(.5*(path.points[i-1]+path.points[i]),sphere.frame().origin());require(error<=.02/scale+1e-8,"precisione della corda garantita anche al polo");}
+  }
+  require(spheres,"raccordi sferici presenti nelle viste di regressione");
+ }
  std::cout<<"PASS surface silhouettes, sphere/cylinder bounds, planar degeneracy and seed cache\n";
 }catch(const std::exception &e){std::cerr<<e.what()<<'\n';return 1;}}

@@ -384,7 +384,7 @@ target_compile_options(forgecad_projected_drawing_tests PRIVATE -Wall -Wextra -W
 add_test(NAME forgecad_projected_drawing_tests COMMAND forgecad_projected_drawing_tests)
 set_tests_properties(forgecad_projected_drawing_tests PROPERTIES TIMEOUT 60 ENVIRONMENT "QT_QPA_PLATFORM=offscreen;QT_QPA_OFFSCREEN_NO_GLX=1;QT_QPA_PLATFORMTHEME=;QT_STYLE_OVERRIDE=Fusion")
 
-add_executable(forgecad_drawing_view_edit_tests tests/test_drawing_view_edit.cpp tests/test_drawing_view_preview.h cad_drawing_editor.cpp cad_drawing_sheet.cpp cad_drawing_derived.cpp cad_drawing.cpp cad_drawing_dimension.cpp cad_icons.cpp cad_drawing_silhouette.cpp cad_drawing_visibility.cpp cad_drawing_page.cpp)
+add_executable(forgecad_drawing_view_edit_tests tests/test_drawing_view_edit.cpp tests/test_drawing_pan.h tests/test_drawing_view_preview.h cad_drawing_editor.cpp cad_drawing_sheet.cpp cad_drawing_derived.cpp cad_drawing.cpp cad_drawing_dimension.cpp cad_icons.cpp cad_drawing_silhouette.cpp cad_drawing_visibility.cpp cad_drawing_page.cpp)
 target_include_directories(forgecad_drawing_view_edit_tests PRIVATE ${PROJECT_SOURCE_DIR})
 target_link_libraries(forgecad_drawing_view_edit_tests PRIVATE Qt6::Widgets forgekernel)
 target_compile_options(forgecad_drawing_view_edit_tests PRIVATE -Wall -Wextra -Wpedantic)

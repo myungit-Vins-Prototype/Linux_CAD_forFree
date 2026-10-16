@@ -470,3 +470,23 @@ Trascinare la geometria o l'interno della vista mostra subito il movimento compl
 **Schema8 del solo foglio**, emesso soltanto per stile personalizzato o posizione manuale del titolo. Vecchi schemi1..7 ancora leggibili, downgrade mascherati e dati incompleti/non finiti rifiutati atomicamente. .prt50/cache7/contenitore.drw1/documento geometrico fino5 invariati. Nuove prove del dialogo reale e dei gesti, codec/Undo/sola lettura e controlli delle copie A/B; stato effettivo di build/installazione e limiti del collaudo in CLAUDE.md.
 
 Verifica conclusiva dell’incremento: build Release reale app/24target senza warning/errori,37/37regressioni PASS, prove dirette e check-in reali temporanei A/B con stili/nomi distinti, PDF e screenshot ispezionati. Copie modello e26sorgenti funzionali invariati. Eseguibile abituale aggiornato con backup verificato; riavviare ForgeCAD. Qt locale verificato in italiano/inglese/tedesco su Linux offscreen; collaudi nativi macOS/Windows e grandi tavole ancora non eseguiti. Log, impronte e limiti nel registro CLAUDE.md.
+
+
+### Pan della tavola (2026-10-17)
+
+Il canvas2D si sposta trascinando il tasto centrale oppure tenendo premuto **Spazio + sinistro**, come nel3D. Se si personalizza il tasto pan nelle opzioni3D, la tavola rilegge la stessa preferenza quando riceve il focus; il tooltip del canvas indica il tasto effettivo. Movimento in pixel dello schermo, indipendente dallo zoom, entro l'area della scena; la rotella mantiene lo zoom esistente. Cursore mano aperta/chiusa e ripristino del cursore dello strumento al rilascio.
+
+Il pan ha precedenza sulla quotatura, sulla linea di taglio e sulle anteprime: nessun clic sintetico, punto o vista inserito; al termine l'anteprima riprende nella nuova posizione del cursore. Funziona negli storici in sola lettura senza checkout. Cambia soltanto l'inquadratura, senza ricalcolare il modello o aggiungere stati Undo, modifiche al file o nuovi formati. Perdita focus, doppi clic di navigazione e rilascio perso sono gestiti per evitare gesti bloccati o apertura accidentale delle proprieta'. Stato di build, verifiche e installazione in CLAUDE.md.
+
+Verifica conclusiva pan: app Release reale aggiornata con backup,7/7suite GUI PASS in1,77s,27impronte funzionali verificate. Coperti anche accumulo HiDPI, strumenti attivi, focus, doppio clic e rilascio perso, sola lettura e trascinamento successivo; nessun file/Undo/zoom modificato dal pan. Collaudo Linux offscreen; dettagli e limiti nel registro CLAUDE.md.
+
+
+### Contorni dei raccordi sferici e avviso automatico (2026-10-17)
+
+Il file Parallelepipedo riproduceva quattro contorni marcati «raffinamento limitato» nella derivata laterale e nella sezione completa. La correzione UV del punto medio falliva vicino ai poli di quattro superfici sferiche; il messaggio appariva durante la generazione della vista, senza tentare quote. Per le sfere si usa ora il punto medio del cerchio massimo quando entrambi gli estremi sono tangenti alla direzione di vista e il risultato resta nel dominio UV della faccia, gestendo anche longitudini oltre2pi. Continuano i controlli adattivi della corda, stessa tolleranza, stessi contorni e fallback generico negli altri casi.
+
+Quando la precisione di qualche contorno non e' verificabile, il messaggio specifica **precisione grafica dei contorni apparenti non verificata**, chiarendo che bordi e sezioni restano quotabili. Non sono abilitate quote su polilinee approssimate: la quotatura dei contorni apparenti rimane un incremento separato con riferimenti associativi alla superficie. Modello3D, quote, riferimenti e formati invariati; i contorni vengono ricalcolati aprendo la tavola con l'app aggiornata. Stato di test/installazione e limiti in CLAUDE.md.
+
+Verifica conclusiva: app Release reale aggiornata con backup,37/37regressioni PASS in2,57s. Caso Parallelepipedo su copie:4falsi avvisi eliminati nella derivata e sezione,5viste e contorni conservati,9/9quote valide, foglio invariato. Editor e PDF ispezionati;30impronte funzionali e copie verificate. Riavviare ForgeCAD e riaprire la tavola; indicazione del legame con la madre conservata. Nessuna migrazione o salvataggio dei modelli necessario. Dettagli e limiti in CLAUDE.md.
+
+Verificata anche una copia dell’ultimo salvataggio esterno della tavola: 5 viste senza avvisi, 9/9 quote valide e foglio invariato durante la lettura. L’originale aggiornato dall’utente è stato preservato.

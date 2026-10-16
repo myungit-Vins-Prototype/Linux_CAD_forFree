@@ -60,6 +60,10 @@
 #include <QToolBar>
 #include <QVBoxLayout>
 #include <QWheelEvent>
+#include <QScrollBar>
+#include <QFocusEvent>
+#include <QSettings>
+#include <QKeySequence>
 #include <algorithm>
 #include <cmath>
 #include <map>
@@ -79,17 +83,76 @@ struct SheetCanvas final:QGraphicsView{
     std::function<bool(QPointF,Qt::KeyboardModifiers,bool)> pointer;
     std::function<bool(int)> key;
     std::function<bool(QPointF,Qt::KeyboardModifiers,int)> drag;
-    void mouseMoveEvent(QMouseEvent *event)override{if(pointer&&pointer(mapToScene(event->position().toPoint()),event->modifiers(),false)){event->accept();return;}if(drag&&drag(mapToScene(event->position().toPoint()),event->modifiers(),1)){event->accept();return;}QGraphicsView::mouseMoveEvent(event);}
-    void mousePressEvent(QMouseEvent *event)override{if(event->button()==Qt::RightButton&&key&&key(Qt::Key_Escape)){event->accept();return;}
-        if(event->button()==Qt::LeftButton&&pointer&&pointer(mapToScene(event->position().toPoint()),event->modifiers(),true)){event->accept();return;}if(event->button()==Qt::LeftButton&&drag&&drag(mapToScene(event->position().toPoint()),event->modifiers(),0)){event->accept();return;}QGraphicsView::mousePressEvent(event);}
-    bool event(QEvent *event)override{if(event->type()==QEvent::KeyPress&&static_cast<QKeyEvent *>(event)->key()==Qt::Key_Tab&&key&&key(Qt::Key_Tab)){event->accept();return true;}return QGraphicsView::event(event);}
-    void mouseReleaseEvent(QMouseEvent *event)override{if(pointer&&pointer(mapToScene(event->position().toPoint()),event->modifiers(),false)){event->accept();return;}if(event->button()==Qt::LeftButton&&drag&&drag(mapToScene(event->position().toPoint()),event->modifiers(),2)){event->accept();return;}QGraphicsView::mouseReleaseEvent(event);}
-    void keyPressEvent(QKeyEvent *event)override{if(key&&key(event->key())){event->accept();return;}QGraphicsView::keyPressEvent(event);}
-    void leaveEvent(QEvent *event)override{if(key)key(Qt::Key_Clear);QGraphicsView::leaveEvent(event);}
+    int panKey=Qt::Key_Space;
+    bool panHeld=false,panning=false,leftPressed=false,cursorSaved=false,hadCursor=false;
+    Qt::MouseButton panButton=Qt::NoButton;
+    QPointF panLast;
+    QCursor savedCursor;
+    void configurePan(){
+        panKey=QSettings().value(QStringLiteral("view/panKey"),int(Qt::Key_Space)).toInt();
+        setProperty("drawingPanKey",panKey);
+        const auto name=panKey==Qt::Key_Space?QStringLiteral("Spazio"):QKeySequence(panKey).toString(QKeySequence::NativeText);
+        setToolTip(QStringLiteral("Pan tavola: trascina con il tasto centrale oppure tieni premuto %1 e trascina con il sinistro. Rotella: zoom.").arg(name));
+    }
+    void savePanCursor(){if(!cursorSaved){savedCursor=cursor();hadCursor=testAttribute(Qt::WA_SetCursor);cursorSaved=true;}}
+    void restorePanCursor(){if(!cursorSaved)return;if(hadCursor)setCursor(savedCursor);else unsetCursor();cursorSaved=false;}
+    void endPan(bool refresh,Qt::KeyboardModifiers modifiers=Qt::NoModifier){
+        panning=false;panButton=Qt::NoButton;
+        if(panHeld)setCursor(Qt::OpenHandCursor);else restorePanCursor();
+        // Riprende lo strumento senza simulare un clic o modificare riferimenti.
+        if(refresh&&pointer)pointer(mapToScene(panLast.toPoint()),modifiers,false);
+    }
+    void mouseMoveEvent(QMouseEvent *event)override{
+        if(panning&&!(event->buttons()&panButton)){endPan(false);event->accept();return;}
+        if(panning){const auto delta=event->position().toPoint()-panLast.toPoint();panLast=event->position();horizontalScrollBar()->setValue(horizontalScrollBar()->value()+(isRightToLeft()?delta.x():-delta.x()));verticalScrollBar()->setValue(verticalScrollBar()->value()-delta.y());event->accept();return;}
+        if(panHeld&&!leftPressed){event->accept();return;}
+        if(pointer&&pointer(mapToScene(event->position().toPoint()),event->modifiers(),false)){event->accept();return;}
+        if(drag&&drag(mapToScene(event->position().toPoint()),event->modifiers(),1)){event->accept();return;}
+        QGraphicsView::mouseMoveEvent(event);
+    }
+    void mousePressEvent(QMouseEvent *event)override{
+        if(panning){event->accept();return;}
+        if(!leftPressed&&(event->button()==Qt::MiddleButton||(event->button()==Qt::LeftButton&&panHeld))){
+            setFocus(Qt::MouseFocusReason);savePanCursor();panning=true;panButton=event->button();panLast=event->position();setCursor(Qt::ClosedHandCursor);event->accept();return;
+        }
+        if(event->button()==Qt::MiddleButton){event->accept();return;}
+        if(event->button()==Qt::LeftButton)leftPressed=true;
+        if(event->button()==Qt::RightButton&&key&&key(Qt::Key_Escape)){event->accept();return;}
+        if(event->button()==Qt::LeftButton&&pointer&&pointer(mapToScene(event->position().toPoint()),event->modifiers(),true)){event->accept();return;}
+        if(event->button()==Qt::LeftButton&&drag&&drag(mapToScene(event->position().toPoint()),event->modifiers(),0)){event->accept();return;}
+        QGraphicsView::mousePressEvent(event);
+    }
+    void mouseDoubleClickEvent(QMouseEvent *event)override{if(panning||event->button()==Qt::MiddleButton||(event->button()==Qt::LeftButton&&panHeld)){mousePressEvent(event);return;}QGraphicsView::mouseDoubleClickEvent(event);}
+    bool event(QEvent *event)override{
+        if(event->type()==QEvent::ShortcutOverride&&static_cast<QKeyEvent *>(event)->key()==panKey){event->accept();return true;}
+        if(event->type()==QEvent::KeyPress&&static_cast<QKeyEvent *>(event)->key()==Qt::Key_Tab&&key&&key(Qt::Key_Tab)){event->accept();return true;}
+        return QGraphicsView::event(event);
+    }
+    void mouseReleaseEvent(QMouseEvent *event)override{
+        if(panning){if(event->button()==panButton){panLast=event->position();endPan(true,event->modifiers());}event->accept();return;}
+        if(event->button()==Qt::LeftButton)leftPressed=false;
+        if(event->button()==Qt::MiddleButton){event->accept();return;}
+        if(pointer&&pointer(mapToScene(event->position().toPoint()),event->modifiers(),false)){event->accept();return;}
+        if(event->button()==Qt::LeftButton&&drag&&drag(mapToScene(event->position().toPoint()),event->modifiers(),2)){event->accept();return;}
+        QGraphicsView::mouseReleaseEvent(event);
+    }
+    void keyPressEvent(QKeyEvent *event)override{
+        if(event->key()==panKey){if(!leftPressed&&!panHeld){savePanCursor();panHeld=true;if(!panning)setCursor(Qt::OpenHandCursor);}event->accept();return;}
+        if(panning&&event->key()==Qt::Key_Escape){panHeld=false;endPan(false);event->accept();return;}
+        if(key&&key(event->key())){event->accept();return;}QGraphicsView::keyPressEvent(event);
+    }
+    void keyReleaseEvent(QKeyEvent *event)override{
+        if(event->key()==panKey){if(!event->isAutoRepeat()){panHeld=false;if(!panning)restorePanCursor();}event->accept();return;}
+        QGraphicsView::keyReleaseEvent(event);
+    }
+    void focusInEvent(QFocusEvent *event)override{if(!panning&&!panHeld)configurePan();QGraphicsView::focusInEvent(event);}
+    void focusOutEvent(QFocusEvent *event)override{panHeld=false;leftPressed=false;endPan(false);QGraphicsView::focusOutEvent(event);}
+    void leaveEvent(QEvent *event)override{if(!panning&&key)key(Qt::Key_Clear);QGraphicsView::leaveEvent(event);}
     void wheelEvent(QWheelEvent *event)override{
+        if(panning){event->accept();return;}
         const double factor=event->angleDelta().y()>0?1.15:1/1.15;
         if(transform().m11()*factor>=0.1&&transform().m11()*factor<=100)scale(factor,factor);
-        if(pointer)pointer(mapToScene(event->position().toPoint()),event->modifiers(),false);
+        if(!panHeld&&pointer)pointer(mapToScene(event->position().toPoint()),event->modifiers(),false);
         event->accept();
     }
 };
@@ -1432,7 +1495,7 @@ DrawingSheetEditor::DrawingSheetEditor(DrawingSheet sheet,DrawingEditorModel mod
     toolbar->addSeparator();action(QStringLiteral("Elimina selezione"),"drawingDeleteSelectionAction",[this]{impl_->removeSelection();});
     impl_->updateAction=action(QStringLiteral("Aggiorna dal modello"),"drawingUpdateModelAction",[this]{if(impl_->provider){try{impl_->report(updateModel(impl_->provider()));}catch(const std::exception &error){impl_->report(QString::fromUtf8(error.what()));}}});
     impl_->updateAction->setEnabled(false);action(QStringLiteral("Adatta foglio"),"drawingFitAction",[this]{fitSheet();});
-    impl_->scene=new QGraphicsScene(this);impl_->view=new SheetCanvas(impl_->scene,this);impl_->view->setObjectName("drawingCanvas");impl_->view->setRenderHint(QPainter::Antialiasing);impl_->view->setBackgroundRole(QPalette::Dark);impl_->view->setMouseTracking(true);impl_->view->viewport()->setMouseTracking(true);
+    impl_->scene=new QGraphicsScene(this);impl_->view=new SheetCanvas(impl_->scene,this);impl_->view->setObjectName("drawingCanvas");impl_->view->configurePan();impl_->view->setRenderHint(QPainter::Antialiasing);impl_->view->setBackgroundRole(QPalette::Dark);impl_->view->setMouseTracking(true);impl_->view->viewport()->setMouseTracking(true);
     impl_->view->pointer=[this](QPointF point,Qt::KeyboardModifiers modifiers,bool click){try{return impl_->cut?impl_->cutPointer(point,modifiers,click):impl_->placement?impl_->placementPointer(point,click):impl_->quotePointer(point,modifiers,click);}catch(const std::exception &e){impl_->say(QString::fromUtf8(e.what()));return true;}};
     impl_->view->drag=[this](QPointF p,Qt::KeyboardModifiers m,int phase){try{return impl_->viewDragPointer(p,m,phase);}catch(const std::exception &e){impl_->cancelViewDrag();impl_->say(QString::fromUtf8(e.what()));return true;}};
     impl_->view->key=[this](int key){if(impl_->viewDrag){if(key==Qt::Key_Escape){impl_->cancelViewDrag();return true;}return false;}return impl_->cut?impl_->cutKey(key):impl_->placement?impl_->placementKey(key):impl_->quoteKey(key);};

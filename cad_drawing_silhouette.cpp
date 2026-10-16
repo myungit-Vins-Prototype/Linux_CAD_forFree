@@ -26,6 +26,17 @@ Vec2 root(const Surface &s,Vec2 a,Vec2 b,double fa,double fb,Vec3 direction){
     return .5*(a+b);
 }
 bool correctMid(const Surface &s,Vec2 a,Vec2 b,Vec2 span,Vec2 lo,Vec2 hi,Vec3 direction,Vec2 &mid){
+    // Ai poli sferici la longitudine e' arbitraria: il punto medio si ottiene
+    // sul cerchio massimo tangente alla vista, senza Newton nelle coordinate UV.
+    if(s.type()==SurfaceType::Sphere){
+        const auto &sphere=static_cast<const SphericalSurface &>(s);const auto &frame=sphere.frame();
+        const auto pa=s.point(a.x(),a.y()),pb=s.point(b.x(),b.y());const auto radialA=pa-frame.origin(),radialB=pb-frame.origin();
+        const auto sum=frame.toLocal(pa)+frame.toLocal(pb);
+        if(norm(sum)>sphere.radius()*1e-12&&std::abs(dot(radialA,direction))<=1e-8*sphere.radius()&&std::abs(dot(radialB,direction))<=1e-8*sphere.radius()){
+            const auto n=normalized(sum);double u=std::atan2(n.y(),n.x());u+=kTwoPi*std::round((.5*(a.x()+b.x())-u)/kTwoPi);mid=Vec2(u,std::atan2(n.z(),std::hypot(n.x(),n.y())));
+            if(mid.x()>=lo.x()-1e-9*span.x()&&mid.x()<=hi.x()+1e-9*span.x()&&mid.y()>=lo.y()-1e-9*span.y()&&mid.y()<=hi.y()+1e-9*span.y())return true;
+        }
+    }
     const Vec2 chord((b.x()-a.x())/span.x(),(b.y()-a.y())/span.y());const double length=norm(chord);if(length<1e-14)return false;
     const Vec2 transverse(-chord.y()/length,chord.x()/length);mid=.5*(a+b);
     for(int i=0;i<12;++i){const auto jet=normalJet(s,mid,direction,true);if(jet.length<=1e-25)return false;if(std::abs(jet.value)<=1e-10*jet.length)return true;
@@ -90,7 +101,7 @@ QString drawingViewSilhouettes(const DrawingModelSnapshot &model,const DrawingVi
             const auto mesh=cache.seeds(source);if(mesh->failedFaces)prepared.warnings.append(QStringLiteral("%1 facce senza contorno apparente nella sorgente %2.").arg(mesh->failedFaces).arg(source.featureId));
             for(const auto &face:mesh->faces){cancellationPoint();faceContours(source,face,view,deflection,prepared.paths);}}
         const auto limited=std::count_if(prepared.paths.begin(),prepared.paths.end(),[](const auto &path){return path.refinementLimited;});
-        if(limited)prepared.warnings.append(QStringLiteral("Raffinamento limitato su %1 contorni: visualizzazione approssimata, non quotabile.").arg(limited));
+        if(limited)prepared.warnings.append(QStringLiteral("Precisione grafica non verificata su %1 contorni apparenti; bordi e sezioni restano quotabili.").arg(limited));
         contours=std::move(prepared);return {};
     }catch(const std::exception &e){return QString::fromUtf8(e.what());}
 }
