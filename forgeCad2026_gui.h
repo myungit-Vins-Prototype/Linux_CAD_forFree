@@ -18,6 +18,9 @@ class QTreeWidget;
 class QTreeWidgetItem;
 class QColor;
 class QCloseEvent;
+class QDockWidget;
+class QTableWidget;
+class QPushButton;
 
 class PdfWindow final : public QMainWindow {
 public:
@@ -39,6 +42,13 @@ private:
     enum class DocumentRevisionAction { Checkout, Checkin, CompletePending, CancelCheckout };
     QString runDocumentRevisionAction(DocumentRevisionAction action, const QString &first = {}, const QString &second = {});
     void showDocumentRevisions();
+    void installDocumentRevisionPanel(QMenu *viewMenu);
+    void refreshDocumentRevisionPanel();
+    void openSelectedDocumentRevision();
+    QDockWidget *documentRevisionDock_=nullptr;
+    QTableWidget *documentRevisionHistory_=nullptr;
+    QLabel *documentRevisionPanelStatus_=nullptr;
+    QPushButton *documentOpenRevision_=nullptr;
     void rememberRecentDocument(const QString &path);
     void refreshRecentDocuments();
     bool maybeSaveChanges();

@@ -47,6 +47,10 @@ void select(DrawingSheetEditor &editor,const QUuid &id){auto *tree=editor.findCh
 DrawingDimension last(const DrawingSheetEditor &editor){require(!editor.sheet().drawing.dimensions.empty(),"quota inserita");return editor.sheet().drawing.dimensions.back();}
 }
 #include "test_drawing_segment_spacing.h"
+#include "test_drawing_section_radius.h"
+#include "test_drawing_flacone_interaction.h"
+#include "test_drawing_navigation_contours.h"
+#include "test_drawing_apparent_radii.h"
 int main(int argc,char **argv){QApplication app(argc,argv);try{
     const double angle=kPi/6;DrawingEditorModel model;model.snapshot.version={QUuid::createUuid(),{}};model.snapshot.bodies={source(makeBox(Frame3(),10,6,4),1),source(makePlaneSheet(Frame3(Vec3(18,0,0),Vec3(0,0,1),Vec3(std::cos(angle),std::sin(angle),0)),4),2),source(makeCylinder(Frame3(Vec3(35,0,0),Vec3(0,0,1),Vec3(1,0,0)),3,8),3)};model.choices={{1,"Corpo"},{2,"Superficie ruotata"},{3,"Cilindro"}};
     DrawingSheet sheet;sheet.title="Quotatura associativa";sheet.drawing.model=model.snapshot.version;DrawingSheetEditor editor(sheet,model);editor.resize(1450,900);editor.show();QApplication::processEvents();DrawingView view;view.kind=DrawingViewKind::ProjectedEdges;view.scale=3;ok(editor.insertView(view,{view.id,"Superiore",QPointF(75,120),{1,2,3}}));editor.fitSheet();QApplication::processEvents();editor.markSaved();
@@ -87,7 +91,11 @@ int main(int argc,char **argv){QApplication app(argc,argv);try{
      auto legacy=dimensionOfCurve(countedView,countedCurves[0],DrawingMeasure::EndpointDistance);DrawingSheet countedSheet;countedSheet.drawing.model=countedModel.snapshot.version;countedSheet.drawing.views={countedView};countedSheet.drawing.dimensions={legacy};countedSheet.views={{countedView.id,"Vista",QPointF(100,100),{1}}};countedSheet.dimensions={{legacy.id,QPointF(80,80)}};
      DrawingSheetEditor cached(countedSheet,countedModel);*evaluations=0;ok(cached.moveDimension(legacy.id,QPointF(82,83)));require(*evaluations==0,"spostare il testo riusa il risultato senza rivalutare il modello");
      cached.findChild<QAction *>("drawingSmartDimensionAction")->setChecked(true);cached.show();QApplication::processEvents();move(cached,QPointF(100,100));require(items(cached,"dimensionSnap")==1,"chiusura dell'editor con snap attivo");}
+    drawingApparentRadiusTests();
+    drawingNavigationContourTests();
+    drawingFlaconeInteractionTests();
     drawingSegmentSpacingTests();
+    drawingSectionRadiusTests();
     const auto preview=qEnvironmentVariable("FORGECAD_DIMENSION_PREVIEW");if(!preview.isEmpty()){QApplication::processEvents();editor.fitSheet();require(editor.grab().save(preview),"anteprima quotatura completa");}
     std::cout<<"PASS mouse snaps, point-point/line-point, radial/angular dimensions, properties, persistence and history\n";
 }catch(const std::exception &e){std::cerr<<e.what()<<'\n';return 1;}}

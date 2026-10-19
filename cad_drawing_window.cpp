@@ -17,6 +17,10 @@
 #include <QMessageBox>
 #include <QToolBar>
 #include <QVBoxLayout>
+#include <QHBoxLayout>
+#include <QPushButton>
+#include <QTimer>
+#include <QEvent>
 #include <stdexcept>
 
 namespace ForgeCad {
@@ -42,7 +46,7 @@ DrawingWindow::DrawingWindow(QWidget *parent):QMainWindow(parent,Qt::Window){
         const auto path=QFileDialog::getOpenFileName(this,QStringLiteral("Individua il modello della tavola"),sourcePath_,QStringLiteral("Modello ForgeCAD (*.prt)"));
         if(!path.isEmpty())report(updateFromSource(path));
     });
-    updateAction_->setIcon(commandIcon("drawingModelUpdate"));updateAction_->setToolTip(QStringLiteral("Rilegge il .prt salvato e ricalcola viste e quote della tavola."));locate->setIcon(commandIcon("drawingLocateModel"));
+    updateAction_->setIcon(commandIcon("drawingModelUpdate"));updateAction_->setToolTip(QStringLiteral("Verifica nuovi check-in del modello e propone di aggiornare la tavola; altrimenti rilegge la sorgente selezionata."));locate->setIcon(commandIcon("drawingLocateModel"));
     auto *modelMenu=findChild<QMenu *>("drawingModelMenu");modelMenu->addSeparator();modelMenu->addAction(updateAction_);modelMenu->addAction(locate);
     sourceStatus_=new QLabel(this);sourceStatus_->setObjectName("drawingSourceStatus");sourceStatus_->setWordWrap(false);
     sourceStatus_->setSizePolicy(QSizePolicy::Ignored,QSizePolicy::Fixed);sourceStatus_->setMinimumWidth(0);statusBar()->addWidget(sourceStatus_,1);
@@ -72,6 +76,7 @@ void DrawingWindow::refreshTitle(){
     findChild<QAction *>("drawingSaveAction")->setEnabled(editor_&&!editAccess_.readOnly&&!busy_);
     findChild<QAction *>("drawingLocateSourceAction")->setEnabled(editor_&&!editAccess_.readOnly&&!busy_);
     updateAction_->setEnabled(editor_&&!editAccess_.readOnly&&!busy_);
+    if(loadLatestModel_)loadLatestModel_->setEnabled(editor_&&!editAccess_.readOnly&&!busy_&&!availableModelRevision_.version.checkinId.isNull());
     for(auto *action:revisionMutationActions_)action->setEnabled(editor_&&checkin.isNull()&&!busy_);
     for(const auto name:{"drawingPinModelAction","drawingWorkingModelAction"})
         findChild<QAction *>(name)->setEnabled(editor_&&!editAccess_.readOnly&&!busy_);
@@ -100,6 +105,13 @@ void DrawingWindow::installEditor(){
     next->setChangedCallback([this](const DrawingSheet &sheet){drawing_.sheet=sheet;modified_=containerDirty_||editor_->isModified();refreshTitle();});
     // Il comando del contenitore verifica percorso, identita' e impronta.
     next->findChild<QAction *>("drawingUpdateModelAction")->setVisible(false);
+    modelUpdateNotice_=new QWidget(container);modelUpdateNotice_->setObjectName("drawingModelUpdateNotice");
+    auto *noticeLayout=new QHBoxLayout(modelUpdateNotice_);noticeLayout->setContentsMargins(8,5,8,5);
+    modelUpdateText_=new QLabel(modelUpdateNotice_);modelUpdateText_->setTextFormat(Qt::PlainText);modelUpdateText_->setWordWrap(true);
+    modelUpdateText_->setObjectName("drawingModelUpdateText");noticeLayout->addWidget(modelUpdateText_,1);
+    loadLatestModel_=new QPushButton(QStringLiteral("Carica ultima revisione"),modelUpdateNotice_);loadLatestModel_->setObjectName("drawingLoadLatestModelButton");noticeLayout->addWidget(loadLatestModel_);
+    connect(loadLatestModel_,&QPushButton::clicked,this,[this]{const auto version=availableModelRevision_.version;if(!version.checkinId.isNull()&&(!path_.isEmpty()||save(false)))report(pinModelRevision(version));});
+    modelUpdateNotice_->hide();layout->addWidget(modelUpdateNotice_);
     layout->addWidget(next,1);auto *previous=takeCentralWidget();setCentralWidget(container);editor_=next;delete previous;
     const auto populate=[next,this](QMenu *menu,std::initializer_list<const char *> names){menu->clear();for(auto name:names){auto *action=next->findChild<QAction *>(name);if(!action)action=findChild<QAction *>(name);if(action)menu->addAction(action);}};
     populate(editMenu_,{"drawingOptionsAction","drawingResetViewTitleAction","drawingPageSettingsAction","drawingRevisionTableAction","drawingUndoAction","drawingRedoAction","drawingEditViewAction","drawingAlignViewAction","drawingDetachViewAction","drawingReleaseAlignmentAction","drawingEditSectionLineAction","drawingAlignSectionOrientationAction","drawingReverseSectionAction","drawingSectionHatchAction","drawingEditAxisAction","drawingEditAnnotationAction","drawingDeleteSelectionAction"});
@@ -156,6 +168,15 @@ QString DrawingWindow::updateFromSource(const QString &overridePath){
     const auto accessError=requireEditAccess();if(!accessError.isEmpty())return accessError;
     if(busy_||(editor_&&editor_->isComputing()))return QStringLiteral("Attendere il calcolo in corso.");
     if(!editor_||!drawing_.sheet.drawing.version.checkinId.isNull())return QStringLiteral("La tavola archiviata e' in sola lettura: creare prima una copia indipendente.");
+    refreshPageContext();
+    if(overridePath.isEmpty()&&!availableModelRevision_.version.checkinId.isNull()){
+        QMessageBox question(QMessageBox::Question,QStringLiteral("Nuova revisione del modello"),
+            modelUpdateText_->text()+QStringLiteral("\n\nCaricare questa revisione e ricalcolare viste, quote e colori?"),QMessageBox::Yes|QMessageBox::No,this);
+        question.setObjectName("drawingLatestModelQuestion");question.setDefaultButton(QMessageBox::Yes);
+        question.button(QMessageBox::Yes)->setText(QStringLiteral("Carica ultima revisione"));question.button(QMessageBox::No)->setText(QStringLiteral("Mantieni attuale"));
+        if(question.exec()==QMessageBox::Yes){if(path_.isEmpty()&&!save(false))return {};return pinModelRevision(availableModelRevision_.version);}
+        return {};
+    }
     DocumentState source;QString resolved;bool changed=false;
     // Per una tavola nuova il riferimento e' assoluto; per quella salvata e' relativo.
     const auto context=path_.isEmpty()?sourcePath_:path_;
@@ -214,7 +235,36 @@ void DrawingWindow::refreshPageContext(){
             for(const auto &record:projectRecords_)if(record.sequence<=limit)context.projectRevisions.append({record.version,record.sequence,record.technicalRevision,record.author,record.comment,record.createdUtc});
         }
     }
-    editor_->setPageContext(std::move(context));refreshEditAccess();refreshRevisionPanel();
+    editor_->setPageContext(std::move(context));refreshEditAccess();refreshRevisionPanel();refreshModelUpdateNotice();
+}
+void DrawingWindow::refreshModelUpdateNotice(){
+    availableModelRevision_={};
+    if(!modelUpdateNotice_)return;
+    modelUpdateNotice_->hide();
+    // Una tavola storica conserva sempre la sua dipendenza originale.
+    if(!editor_||!drawing_.sheet.drawing.version.checkinId.isNull()||projectRecords_.isEmpty())return;
+    const auto current=drawing_.sheet.drawing.model.checkinId.isNull()?modelBaseCheckinId_:drawing_.sheet.drawing.model.checkinId;
+    const RevisionRecord *latest=nullptr,*base=nullptr;
+    for(const auto &record:projectRecords_){
+        if(record.version.documentId!=drawing_.sheet.drawing.model.documentId)continue;
+        if(!latest||record.sequence>latest->sequence)latest=&record;
+        if(record.version.checkinId==current)base=&record;
+    }
+    if(!latest||(!current.isNull()&&(!base||latest->sequence<=base->sequence)))return;
+    availableModelRevision_=*latest;
+    const auto label=[](const RevisionRecord &record){return record.technicalRevision.isEmpty()?record.version.checkinId.toString(QUuid::WithoutBraces).left(8):record.technicalRevision;};
+    const QString previous=drawing_.sheet.drawing.model.checkinId.isNull()?QStringLiteral("copia di lavoro"):label(*base);
+    modelUpdateText_->setText(QStringLiteral("Modello: %1. È disponibile la revisione %2 (%3). Caricarla nel 2D?%4")
+        .arg(previous,label(*latest),latest->createdUtc.toLocalTime().toString("dd/MM/yyyy HH:mm"),editAccess_.readOnly?QStringLiteral(" Esegui prima il check-out della tavola."):QString()));
+    loadLatestModel_->setEnabled(!editAccess_.readOnly&&!busy_);
+    modelUpdateNotice_->show();
+}
+bool DrawingWindow::event(QEvent *event){
+    const bool result=QMainWindow::event(event);
+    if(event->type()==QEvent::WindowActivate)QTimer::singleShot(0,this,[this]{
+        if(editor_&&isVisible()&&!busy_&&!editor_->isComputing()){refreshPageContext();refreshTitle();}
+    });
+    return result;
 }
 QString DrawingWindow::exportPdfPath(const QString &path,DrawingPdfReport &report)const{
     if(!editor_||busy_||!sourceReady_)return QStringLiteral("Modello non verificato: aggiornare la tavola prima di esportare.");

@@ -31,7 +31,7 @@ struct DrawingModelSnapshot {
 
 enum class DrawingSectionStyle { Removed, Full, HalfRight, HalfLeft };
 enum class DrawingViewKind { Section, ProjectedEdges };
-enum class DrawingCurveKind { Section, ProjectedEdge };
+enum class DrawingCurveKind { Section, ProjectedEdge, ApparentLine, ApparentArc };
 struct DrawingView {
     QUuid id = QUuid::createUuid();
     Kernel::Frame3 plane;
@@ -63,6 +63,7 @@ struct DrawingCurve {
     std::string edgeName{};
     Kernel::CurvePtr<3> sourceGeometry; // geometria esatta prima della proiezione, solo cache
     Kernel::Interval sourceRange{};
+    int contourSide=0; // lato analitico del raccordo rispetto all'asse e alla vista
     bool hasSourceRange=false; // intervallo 3D trattenuto: il parametro della proiezione puo’ essere diverso
 };
 using DrawingSection = DrawingCurve;
@@ -76,6 +77,7 @@ struct DrawingSectionReference {
     bool requiresWitness = false; // non riassociare un ramo eliminato al solo superstite
     DrawingCurveKind kind = DrawingCurveKind::Section;
     QString edgeName{};
+    int contourSide=0; // +/-1 soltanto per un arco apparente esatto, schema7
 };
 enum class DrawingMeasure { SectionLength, EndpointDistance, HorizontalDistance, VerticalDistance,
     Distance, Angle, Radius, Diameter, AxisRadius, AxisDiameter };

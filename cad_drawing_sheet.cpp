@@ -193,11 +193,11 @@ QString decodeDrawingSheet(const QByteArray &bytes,DrawingSheet &sheet){
         require(!drawingNeedsAxisSchema(prepared.drawing)||object["schema"].toInt()>=5,"Quote sugli assi estranee allo schema del foglio.");
         if(schema==4||object.contains("axes")){
             require(object["axes"].isArray()&&object["axes"].toArray().size()<=10000,"Elenco assi non valido.");
-            const auto refSchema=object["axisReferenceSchema"].toDouble(-1);require(refSchema==3||refSchema==4,"Schema degli agganci degli assi non valido.");
+            const auto refSchema=object["axisReferenceSchema"].toDouble(-1);require(refSchema==3||refSchema==4||refSchema==6||refSchema==7,"Schema degli agganci degli assi non valido.");
             auto support=object["drawing"].toObject();support["schema"]=refSchema;QJsonArray views,definitions;
             const auto originalViews=support["views"].toArray();
             for(qsizetype i=0;i<originalViews.size();++i){auto v=originalViews[i].toObject();v["kind"]=int(prepared.drawing.views[std::size_t(i)].kind);v["sectionReferences"]=prepared.drawing.views[std::size_t(i)].sectionReferences;
-                if(refSchema==4)v["sectionStyle"]=int(prepared.drawing.views[std::size_t(i)].sectionStyle);else v.remove("sectionStyle");views.append(v);}
+                if(refSchema>=4)v["sectionStyle"]=int(prepared.drawing.views[std::size_t(i)].sectionStyle);else v.remove("sectionStyle");views.append(v);}
             for(const auto &value:object["axes"].toArray()){
                 require(value.isObject(),"Asse non valido.");const auto a=value.toObject();const double kind=a["kind"].toDouble(-1);require((kind==0||kind==1)&&a["name"].isString()&&a["extension"].isDouble()&&a["visible"].isBool()&&a["definition"].isObject(),"Dati dell'asse incompleti.");
                 DrawingAxis axis;axis.kind=DrawingAxisKind(int(kind));axis.name=a["name"].toString();axis.extension=a["extension"].toDouble();axis.visible=a["visible"].toBool();prepared.axes.append(axis);definitions.append(a["definition"]);
@@ -215,7 +215,7 @@ QString decodeDrawingSheet(const QByteArray &bytes,DrawingSheet &sheet){
             }
             require(!definitions.isEmpty()==object.contains("annotationReferenceSchema"),"Schema degli agganci delle note incoerente.");
             if(!definitions.isEmpty()){
-                const double rs=object["annotationReferenceSchema"].toDouble(-1);require(rs==3||rs==4||rs==5,"Schema degli agganci delle note non supportato.");
+                const double rs=object["annotationReferenceSchema"].toDouble(-1);require(rs==3||rs==4||rs==5||rs==6||rs==7,"Schema degli agganci delle note non supportato.");
                 auto support=object["drawing"].toObject();support["schema"]=rs;support["dimensions"]=definitions;
                 QJsonArray supportViews;const auto sourceViews=support["views"].toArray();
                 for(qsizetype i=0;i<sourceViews.size();++i){auto v=sourceViews[i].toObject();const auto &original=prepared.drawing.views[std::size_t(i)];v["kind"]=int(original.kind);v["sectionReferences"]=original.sectionReferences;

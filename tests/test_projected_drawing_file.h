@@ -19,13 +19,20 @@ void projectedDrawingFileTests(){
     // La fixture quota anche bordi coperti: renderli disponibili nella vista.
     clientOk(window.editor()->setHiddenLinesVisible(view.id,true));QApplication::processEvents();
     const auto &curves=window.editor()->curves(view.id);int chosen=-1;
-    for(std::size_t i=0;i<curves.size();++i)if(curves[i].kind==DrawingCurveKind::ProjectedEdge&&std::abs(arcLength(*curves[i].curve,curves[i].range)-10)<1e-7){chosen=int(i);break;}
+    // I bordi coincidenti sono consolidati: scegliere il proprietario presente sul foglio.
+    for(auto *item:window.editor()->canvas()->scene()->items())if(item->data(0).toString()=="projection"){
+        const auto i=item->data(2).toULongLong();
+        if(i<curves.size()&&curves[i].kind==DrawingCurveKind::ProjectedEdge&&std::abs(arcLength(*curves[i].curve,curves[i].range)-10)<1e-7){chosen=int(i);break;}
+    }
     require(chosen>=0,"bordo proiettato da quotare su .prt");for(auto *item:window.editor()->canvas()->scene()->items())if(item->data(0).toString()=="projection"&&item->data(2).toInt()==chosen)item->setSelected(true);
     clientOk(window.editor()->addSelectedDimension(DrawingMeasure::HorizontalDistance));const auto dimension=window.document().sheet.drawing.dimensions[0].id;
     auto snapped=dimensionOfCurve(view,curves[std::size_t(chosen)]);snapped.measure=DrawingMeasure::Distance;
     DrawingModelSnapshot modelSnapshot;clientOk(drawingSnapshotOfDocument(working,{working.extrusions[0].featureId},modelSnapshot));
-    snapped.references={drawingAttachment(view,curves[std::size_t(chosen)],modelSnapshot,DrawingPointRole::Start),
-                        drawingAttachment(view,curves[std::size_t(chosen)],modelSnapshot,DrawingPointRole::End)};
+    // Il proprietario consolidato può avere verso opposto: il richiamo deve seguire l'estremo X crescente.
+    const auto &selectedCurve=curves[std::size_t(chosen)];
+    const bool forward=selectedCurve.curve->point(selectedCurve.range.hi).x()>selectedCurve.curve->point(selectedCurve.range.lo).x();
+    snapped.references={drawingAttachment(view,selectedCurve,modelSnapshot,forward?DrawingPointRole::Start:DrawingPointRole::End),
+                        drawingAttachment(view,selectedCurve,modelSnapshot,forward?DrawingPointRole::End:DrawingPointRole::Start)};
     snapped.section=snapped.references[0].curve;snapped.decimals=3;const auto snappedId=snapped.id;
     clientOk(window.editor()->addDimension(snapped,QPointF(105,70)));
     auto changedView=view;changedView.scale=3;auto changedLayout=window.editor()->sheet().views[0];changedLayout.title="Vista superiore modificata";

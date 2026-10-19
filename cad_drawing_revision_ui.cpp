@@ -181,7 +181,16 @@ void DrawingWindow::installRevisionPanel(){
     tabs->addTab(revisionHistory_,QStringLiteral("Tavola"));tabs->addTab(projectHistory_,QStringLiteral("Modello"));layout->addWidget(tabs,1);
     auto *refresh=new QPushButton(QStringLiteral("Aggiorna stato"),body);refresh->setObjectName("drawingRefreshRevisions");layout->addWidget(refresh);connect(refresh,&QPushButton::clicked,this,[this]{if(!busy_&&editor_&&!editor_->isComputing()){refreshPageContext();refreshTitle();}});
     auto *edit=new QAction(commandIcon("drawingRevisionTable"),QStringLiteral("Tabella revisioni..."),this);edit->setObjectName("drawingRevisionTableAction");connect(edit,&QAction::triggered,this,[this]{showRevisionTableDialog();});auto *tableButton=new QToolButton(body);tableButton->setDefaultAction(edit);tableButton->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);layout->addWidget(tableButton);
-    connect(revisionHistory_,&QTableWidget::cellDoubleClicked,this,[this](int row,int){if(busy_||!editor_||editor_->isComputing()||row<0)return;auto *item=revisionHistory_->item(row,0);if(!item)return;DocumentVersion version{item->data(Qt::UserRole+1).toUuid(),item->data(Qt::UserRole).toUuid()};auto *window=new DrawingWindow(parentWidget());const auto error=window->openRevision(path_,version);if(!error.isEmpty()){delete window;report(error);return;}window->setAttribute(Qt::WA_DeleteOnClose);window->show();});
+    auto *openRevisionButton=new QPushButton(commandIcon("open"),QStringLiteral("Apri revisione selezionata"),body);
+    openRevisionButton->setObjectName("drawingOpenSelectedRevision");openRevisionButton->setToolTip(QStringLiteral("Apre la revisione della tavola selezionata in una finestra separata, in sola lettura."));
+    layout->insertWidget(layout->indexOf(tabs)+1,openRevisionButton);openRevisionButton->setEnabled(false);
+    const auto updateOpenButton=[this,tabs,openRevisionButton]{openRevisionButton->setVisible(tabs->currentWidget()==revisionHistory_);openRevisionButton->setEnabled(revisionHistory_->currentRow()>=0);};
+    connect(revisionHistory_,&QTableWidget::itemSelectionChanged,this,updateOpenButton);
+    connect(tabs,&QTabWidget::currentChanged,this,updateOpenButton);
+    const auto openSelectedRevision=[this](int row){if(busy_||!editor_||editor_->isComputing()||row<0)return;auto *item=revisionHistory_->item(row,0);if(!item)return;DocumentVersion version{item->data(Qt::UserRole+1).toUuid(),item->data(Qt::UserRole).toUuid()};auto *window=new DrawingWindow(parentWidget());const auto error=window->openRevision(path_,version);if(!error.isEmpty()){delete window;report(error);return;}window->setAttribute(Qt::WA_DeleteOnClose);window->show();};
+    connect(openRevisionButton,&QPushButton::clicked,this,[this,openSelectedRevision]{openSelectedRevision(revisionHistory_->currentRow());});
+    connect(revisionHistory_,&QTableWidget::cellDoubleClicked,this,[openSelectedRevision](int row,int){openSelectedRevision(row);});
+    revisionHistory_->setToolTip(QStringLiteral("Seleziona una revisione e premi Apri revisione selezionata; puoi anche fare doppio clic sulla riga."));
     revisionDock_->setWidget(body);addDockWidget(Qt::RightDockWidgetArea,revisionDock_);
     auto *timer=new QTimer(this);timer->setInterval(5000);connect(timer,&QTimer::timeout,this,[this,last=QString()]()mutable{
         if(!editor_||busy_||editor_->isComputing())return;

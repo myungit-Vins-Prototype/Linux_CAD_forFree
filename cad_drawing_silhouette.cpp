@@ -85,11 +85,12 @@ void faceContours(const DrawingSourceBody &source,const FaceMesh &mesh,const Dra
     for(std::size_t i=0;i<segments.size();++i)if(!used[i])walk(segments[i].first,int(i));
 }
 }
-std::shared_ptr<const Kernel::Tessellation> DrawingSilhouetteCache::seeds(const DrawingSourceBody &source){
-    const auto found=entries_.find(source.body.get());if(found!=entries_.end())return found->second.mesh;
+std::shared_ptr<const Kernel::Tessellation> DrawingSilhouetteCache::seeds(const DrawingSourceBody &source,double maximumDeflection){
     Kernel::Box bounds;for(auto face:source.body->faces())bounds.add(Kernel::faceBox(*source.body,face));
-    Kernel::TessellationOptions options;options.deflection=std::clamp(bounds.diagonal()*.001,1e-6,1.0);options.angle=.18;
-    auto mesh=std::make_shared<const Kernel::Tessellation>(Kernel::tessellate(*source.body,options));entries_[source.body.get()]={source.body,mesh};return mesh;
+    Kernel::TessellationOptions options;options.deflection=std::min(std::clamp(bounds.diagonal()*.001,1e-6,1.0),maximumDeflection);options.angle=.18;
+    need(std::isfinite(options.deflection)&&options.deflection>0,"Precisione della mesh non valida.");
+    const auto found=entries_.find(source.body.get());if(found!=entries_.end()&&found->second.deflection<=options.deflection)return found->second.mesh;
+    auto mesh=std::make_shared<const Kernel::Tessellation>(Kernel::tessellate(*source.body,options));entries_[source.body.get()]={source.body,mesh,options.deflection};return mesh;
 }
 QString drawingViewSilhouettes(const DrawingModelSnapshot &model,const DrawingView &view,DrawingSilhouetteResult &contours,DrawingSilhouetteCache &cache){
     try{if(!drawingHasProjection(view)){contours={};return {};}

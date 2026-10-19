@@ -151,3 +151,25 @@ FK_TEST(PlaneSurfaceIntersections) {
             }
     }
 }
+
+// Non trasformare una sezione toroidale generica in un falso raggio circolare.
+FK_TEST(PlaneTorusMeridianIntersections) {
+    for (const auto &frame : {Frame3(), Frame3(Vec3(12,-7,3), normalized(Vec3(1,2,3)), Vec3(1,0,0))}) {
+        const ToroidalSurface torus(frame, 5, 1.5);
+        const Plane plane(Frame3(frame.origin(), frame.yDir(), frame.xDir()));
+        Box bounds; bounds.add(frame.origin()-Vec3(20,20,20)); bounds.add(frame.origin()+Vec3(20,20,20));
+        const auto result = intersectPlaneSurface(plane, torus, bounds, 1e-9);
+        FK_CHECK(result.curves.size() == 2);
+        for (const auto &curve : result.curves) {
+            FK_CHECK(curve->type() == CurveType::Circle);
+            FK_CHECK(std::abs(static_cast<const Circle<3> &>(*curve).radius()-1.5) < 1e-12);
+            for (int i=0; i<32; ++i) {
+                const auto p = curve->point(kTwoPi*i/32.);
+                FK_CHECK(projectPoint(torus,p).distance < 1e-9);
+                FK_CHECK(std::abs(dot(plane.frame().zDir(),p-plane.frame().origin())) < 1e-10);
+            }
+        }
+        FK_CHECK_THROWS(intersectPlaneSurface(Plane(Frame3(frame.origin()+.1*frame.yDir(),frame.yDir(),frame.xDir())),torus,bounds,1e-9));
+        FK_CHECK_THROWS(intersectPlaneSurface(Plane(Frame3(frame.origin(),normalized(frame.yDir()+.001*frame.zDir()),frame.xDir())),torus,bounds,1e-9));
+    }
+}

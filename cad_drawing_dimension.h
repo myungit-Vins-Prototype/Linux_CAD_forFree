@@ -5,7 +5,8 @@ namespace ForgeCad {
 struct DrawingPrimitive {
     enum class Kind { Other, Line, Conic } kind=Kind::Other;
     Kernel::Vec2 center{},firstAxis{},secondAxis{};
-    bool circular=false;
+    bool circular=false,linearProjection=false;
+    Kernel::Vec2 lineFirst{},lineSecond{};
 };
 DrawingPrimitive drawingPrimitive(const DrawingView &view,const DrawingCurve &curve);
 bool drawingDatum(DrawingPointRole role);

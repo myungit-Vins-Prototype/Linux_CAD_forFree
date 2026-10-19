@@ -88,18 +88,19 @@ void validateDocument(const DrawingDocument &document) {
         const auto view=std::find_if(document.views.begin(),document.views.end(),[&](const auto &v){return v.id==dimension.viewId;});
         const auto &reference=dimension.section;
         const bool edge=reference.kind==DrawingCurveKind::ProjectedEdge;
-        require(reference.kind==DrawingCurveKind::Section || edge,"Tipo di riferimento non supportato.");
+        require(reference.kind==DrawingCurveKind::Section || reference.kind==DrawingCurveKind::ApparentLine || reference.kind==DrawingCurveKind::ApparentArc || edge,"Tipo di riferimento non supportato.");
+        require(reference.kind==DrawingCurveKind::ApparentArc?std::abs(reference.contourSide)==1:reference.contourSide==0,"Lato del riferimento geometrico non valido.");
         const bool axisOnly=!dimension.references.empty()&&std::all_of(dimension.references.begin(),dimension.references.end(),[](const auto &r){return !r.axisId.isNull()||drawingDatum(r.role);});
         if(!axisOnly){
         require(reference.featureId && isFinite(reference.witness),"Riferimento geometrico non valido.");
         require(edge ? (!reference.edgeName.isEmpty() && reference.edgeName.size()<=4096 && reference.faceName.isEmpty())
                      : (!reference.faceName.isEmpty() && reference.faceName.size()<=4096 && reference.edgeName.isEmpty()),"Nome del riferimento geometrico non valido.");
-        require(edge ? drawingHasProjection(*view) : (view->kind==DrawingViewKind::Section || view->sectionReferences),"Riferimento estraneo al tipo di vista.");
+        require(edge||reference.kind==DrawingCurveKind::ApparentLine||reference.kind==DrawingCurveKind::ApparentArc ? drawingHasProjection(*view) : (view->kind==DrawingViewKind::Section || view->sectionReferences),"Riferimento estraneo al tipo di vista.");
         }
         require(int(dimension.measure)>=0&&int(dimension.measure)<=9,"Tipo di quota non supportato.");
         const auto attachments=validateDrawingAttachments(dimension,*view);require(attachments.isEmpty(),qPrintable(attachments));
         for(const auto &attachment:dimension.references)if(attachment.axisId.isNull()&&!drawingDatum(attachment.role)){
-            const auto &r=attachment.curve;require(r.kind==DrawingCurveKind::ProjectedEdge?drawingHasProjection(*view):(view->kind==DrawingViewKind::Section||view->sectionReferences),"Aggancio estraneo al tipo di vista.");
+            const auto &r=attachment.curve;require((r.kind==DrawingCurveKind::ProjectedEdge||r.kind==DrawingCurveKind::ApparentLine||r.kind==DrawingCurveKind::ApparentArc)?drawingHasProjection(*view):(view->kind==DrawingViewKind::Section||view->sectionReferences),"Aggancio estraneo al tipo di vista.");
         }
     }
 }
@@ -178,6 +179,16 @@ DrawingPrimitive drawingPrimitive(const DrawingView &view,const DrawingCurve &pi
     const auto q=view.plane.toLocal(exact.center),a=view.plane.directionToLocal(exact.a),b=view.plane.directionToLocal(exact.b);
     out.center={q.x(),q.y()};out.firstAxis={a.x(),a.y()};out.secondAxis={b.x(),b.y()};
     if(exact.kind==1&&norm(out.firstAxis)>view.tolerance)out.kind=DrawingPrimitive::Kind::Line;
+    else if(exact.kind==2&&std::max(norm(out.firstAxis),norm(out.secondAxis))>view.tolerance&&std::abs(out.firstAxis.x()*out.secondAxis.y()-out.firstAxis.y()*out.secondAxis.x())<=view.tolerance*std::max(norm(out.firstAxis),norm(out.secondAxis))){
+        // Un cerchio visto di taglio e' un segmento finito, anche se i due
+        // estremi parametrici del bordo chiuso coincidono.
+        const auto u=normalized(norm(out.firstAxis)>norm(out.secondAxis)?out.firstAxis:out.secondAxis);
+        const double x=dot(out.firstAxis,u),y=dot(out.secondAxis,u);const auto range=piece.hasSourceRange?piece.sourceRange:piece.range;
+        const auto value=[&](double t){return x*std::cos(t)+y*std::sin(t);};
+        double low=std::min(value(range.lo),value(range.hi)),high=std::max(value(range.lo),value(range.hi));
+        const double phase=std::atan2(y,x);for(double t=phase+kPi*std::ceil((range.lo-phase)/kPi);t<=range.hi+1e-12;t+=kPi){low=std::min(low,value(t));high=std::max(high,value(t));}
+        out.kind=DrawingPrimitive::Kind::Line;out.linearProjection=true;out.lineFirst=out.center+low*u;out.lineSecond=out.center+high*u;
+    }
     else if(exact.kind==2&&norm(out.firstAxis)>view.tolerance&&norm(out.secondAxis)>view.tolerance){out.kind=DrawingPrimitive::Kind::Conic;
         const double x=norm(out.firstAxis),y=norm(out.secondAxis);out.circular=std::abs(x-y)<=1e-10*std::max({1.0,x,y})&&std::abs(dot(out.firstAxis,out.secondAxis))<=1e-10*x*y;}
     return out;
@@ -254,25 +265,81 @@ QString projectDrawingEdges(const DrawingModelSnapshot &model,const DrawingView 
         curves=std::move(prepared);return {};
     }catch(const std::exception &error){return QString::fromUtf8(error.what());}
 }
+namespace {
+// Generatrici esatte del cilindro tangenti alla direzione di vista. Il
+// ritaglio usa i bordi B-rep della faccia e la classificazione sulla faccia;
+// nessun punto della mesh entra nei riferimenti delle quote.
+void appendApparentLines(const DrawingModelSnapshot &model,const DrawingView &view,std::vector<DrawingCurve> &out){
+    if(view.kind!=DrawingViewKind::ProjectedEdges)return;
+    for(const auto &source:model.bodies)for(auto faceId:source.body->faces()){
+        cancellationPoint();const auto &face=source.body->face(faceId);if(face.surface->type()!=SurfaceType::Cylinder)continue;
+        const auto &cylinder=static_cast<const CylindricalSurface &>(*face.surface);const auto axis=cylinder.frame().zDir(),direction=view.plane.zDir();
+        // Riferimenti analitici per la vista laterale ortogonale al cilindro.
+        if(std::abs(dot(axis,direction))>1e-10)continue;
+        const auto radial=normalized(cross(axis,direction));const auto origin=cylinder.frame().origin();
+        const auto bounds=faceBox(*source.body,faceId);double low=1e100,high=-1e100;
+        for(int mask=0;mask<8;++mask){const double v=dot(Vec3(mask&1?bounds.hi.x():bounds.lo.x(),mask&2?bounds.hi.y():bounds.lo.y(),mask&4?bounds.hi.z():bounds.lo.z())-origin,axis);low=std::min(low,v);high=std::max(high,v);}
+        const Plane meridian(Frame3(origin,cross(axis,radial),axis));std::vector<double> cuts{low,high};
+        for(auto loop:face.loops)for(auto fin:source.body->loopFins(loop)){const auto &edge=source.body->edge(source.body->fin(fin).edge);const auto hits=intersectCurveSurface(*edge.curve,edge.range,meridian,view.tolerance);
+            for(double t:hits.parameters)cuts.push_back(dot(edge.curve->point(t)-origin,axis));
+            for(const auto &range:hits.coincident)for(double t:{range.lo,range.hi})cuts.push_back(dot(edge.curve->point(t)-origin,axis));}
+        std::sort(cuts.begin(),cuts.end());cuts.erase(std::unique(cuts.begin(),cuts.end(),[&](double a,double b){return b-a<=view.tolerance;}),cuts.end());
+        for(double side:{-1.,1.}){auto geometry=std::make_shared<Line<3>>(origin+side*cylinder.radius()*radial,axis);std::vector<Interval> retained;
+            for(std::size_t i=1;i<cuts.size();++i){const Interval range{cuts[i-1],cuts[i]};if(range.length()<=view.tolerance||classifyPointOnFace(*source.body,faceId,geometry->point(.5*(range.lo+range.hi)),view.tolerance)==PointLocation::Outside)continue;
+                if(!retained.empty()&&std::abs(retained.back().hi-range.lo)<=view.tolerance)retained.back().hi=range.hi;else retained.push_back(range);
+            }
+            for(const auto range:retained){
+                const auto image=planarImage(*geometry,range,view.plane);if(!image.curve)continue;DrawingCurve curve;curve.viewId=view.id;curve.featureId=source.featureId;curve.kind=DrawingCurveKind::ApparentLine;curve.sourceFace=faceId;
+                curve.faceName=source.names->primary(EntityKind::Face,faceId.index);require(!curve.faceName.empty(),"Contorno cilindrico senza nome della faccia.");curve.curve=embedCurve(image.curve,view.plane);curve.range=image.range;curve.sourceGeometry=geometry;curve.sourceRange=range;curve.hasSourceRange=true;curve.multipleBranches=true;out.push_back(std::move(curve));
+            }
+        }
+    }
+}
+// Raccordi toroidali nella vista laterale: i due meridiani tangenti
+// sono archi circolari esatti con raggio pari al raggio minore del toro.
+void appendApparentArcs(const DrawingModelSnapshot &model,const DrawingView &view,std::vector<DrawingCurve> &out){
+    if(view.kind!=DrawingViewKind::ProjectedEdges)return;
+    for(const auto &source:model.bodies)for(auto faceId:source.body->faces()){
+        cancellationPoint();const auto &face=source.body->face(faceId);if(face.surface->type()!=SurfaceType::Torus)continue;
+        const auto &torus=static_cast<const ToroidalSurface &>(*face.surface);const auto origin=torus.frame().origin(),axis=torus.frame().zDir(),direction=view.plane.zDir();
+        if(std::abs(dot(axis,direction))>1e-10)continue;
+        const auto radial=normalized(cross(axis,direction));const Plane meridian(Frame3(origin,cross(axis,radial),axis));std::vector<Vec3> boundary;
+        for(auto loop:face.loops)for(auto fin:source.body->loopFins(loop)){const auto &edge=source.body->edge(source.body->fin(fin).edge);const auto hits=intersectCurveSurface(*edge.curve,edge.range,meridian,view.tolerance);
+            for(double t:hits.parameters)boundary.push_back(edge.curve->point(t));
+            for(const auto &range:hits.coincident)for(double t:{range.lo,range.hi})boundary.push_back(edge.curve->point(t));}
+        for(int side:{-1,1}){const auto x=double(side)*radial,center=origin+torus.majorRadius()*x;auto geometry=std::make_shared<Circle<3>>(center,x,axis,torus.minorRadius());std::vector<double> cuts{0,kTwoPi};
+            for(const auto &point:boundary){const auto d=point-center;double angle=std::atan2(dot(d,axis),dot(d,x));if(angle<0)angle+=kTwoPi;const double seam=view.tolerance/std::max(torus.minorRadius(),view.tolerance);if(angle<seam||kTwoPi-angle<seam)angle=0;
+                if(distance(geometry->point(angle),point)<=4*view.tolerance)cuts.push_back(angle);}
+            std::sort(cuts.begin(),cuts.end());const double angular=view.tolerance/std::max(torus.minorRadius(),view.tolerance);cuts.erase(std::unique(cuts.begin(),cuts.end(),[&](double a,double b){return b-a<=angular;}),cuts.end());std::vector<Interval> retained;
+            for(std::size_t i=1;i<cuts.size();++i){const Interval range{cuts[i-1],cuts[i]};if(range.length()*torus.minorRadius()<=view.tolerance||classifyPointOnFace(*source.body,faceId,geometry->point(.5*(range.lo+range.hi)),view.tolerance)==PointLocation::Outside)continue;
+                if(!retained.empty()&&retained.back().hi==range.lo)retained.back().hi=range.hi;else retained.push_back(range);}
+            if(retained.size()>1&&retained.front().lo==0&&retained.back().hi==kTwoPi){const Interval wrapped{retained.back().lo,retained.front().hi+kTwoPi};retained.erase(retained.begin());retained.pop_back();retained.push_back(wrapped);}
+            for(const auto range:retained){const auto image=planarImage(*geometry,range,view.plane);if(!image.curve)continue;DrawingCurve curve;curve.viewId=view.id;curve.featureId=source.featureId;curve.kind=DrawingCurveKind::ApparentArc;curve.sourceFace=faceId;
+                curve.faceName=source.names->primary(EntityKind::Face,faceId.index);require(!curve.faceName.empty(),"Raccordo toroidale senza nome della faccia.");curve.curve=embedCurve(image.curve,view.plane);curve.range=image.range;curve.sourceGeometry=geometry;curve.sourceRange=range;curve.hasSourceRange=true;curve.multipleBranches=true;curve.contourSide=side;out.push_back(std::move(curve));}
+        }
+    }
+}
+}
 QString drawingViewCurves(const DrawingModelSnapshot &model,const DrawingView &view,std::vector<DrawingCurve> &curves){
     if(view.kind==DrawingViewKind::Section&&!drawingHasProjection(view))return sectionDrawingView(model,view,curves);
     std::vector<DrawingCurve> prepared;auto error=projectDrawingEdges(model,view,prepared);if(!error.isEmpty())return error;
     if(view.kind==DrawingViewKind::Section||view.sectionReferences){std::vector<DrawingCurve> sections;error=sectionDrawingView(model,view,sections);if(!error.isEmpty())return error;
         prepared.insert(prepared.end(),sections.begin(),sections.end());}
+    appendApparentLines(model,view,prepared);appendApparentArcs(model,view,prepared);
     curves=std::move(prepared);return {};
 }
 DrawingDimension dimensionOfCurve(const DrawingView &view,const DrawingCurve &curve,DrawingMeasure measure){
     validateView(view);const bool edge=curve.kind==DrawingCurveKind::ProjectedEdge;
-    require(curve.kind==DrawingCurveKind::Section||edge,"Tipo di curva non supportato.");
+    require(curve.kind==DrawingCurveKind::Section||curve.kind==DrawingCurveKind::ApparentLine||curve.kind==DrawingCurveKind::ApparentArc||edge,"Tipo di curva non supportato.");
     require(curve.viewId==view.id&&curve.featureId&&curve.curve&&curve.range.isFinite()&&curve.range.length()>0,"Curva della quota non valida.");
-    require(edge?drawingHasProjection(view):(view.kind==DrawingViewKind::Section||view.sectionReferences),"Curva estranea alla vista.");
+    require((edge||curve.kind==DrawingCurveKind::ApparentLine||curve.kind==DrawingCurveKind::ApparentArc)?drawingHasProjection(view):(view.kind==DrawingViewKind::Section||view.sectionReferences),"Curva estranea alla vista.");
     require(edge?!curve.edgeName.empty():!curve.faceName.empty(),"Curva senza provenienza topologica.");
     require(measure==DrawingMeasure::SectionLength||measure==DrawingMeasure::EndpointDistance||measure==DrawingMeasure::HorizontalDistance||measure==DrawingMeasure::VerticalDistance,"Tipo di quota non supportato.");
     const auto point=view.plane.toLocal(curve.curve->point(0.5*(curve.range.lo+curve.range.hi)));
     require(std::fabs(point.z())<=view.tolerance,"La curva non appartiene al piano della vista.");
     DrawingDimension dimension;dimension.viewId=view.id;dimension.measure=measure;
     dimension.section.featureId=curve.featureId;dimension.section.witness=Vec2(point.x(),point.y());dimension.section.requiresWitness=curve.multipleBranches;
-    dimension.section.kind=curve.kind;
+    dimension.section.kind=curve.kind;dimension.section.contourSide=curve.contourSide;
     if(edge)dimension.section.edgeName=QString::fromStdString(curve.edgeName);else dimension.section.faceName=QString::fromStdString(curve.faceName);
     return dimension;
 }
@@ -357,7 +424,9 @@ QString encodeDrawingDocument(const DrawingDocument &document, QByteArray &bytes
     try {
         validateDocument(document);
         const bool axisReferences=drawingNeedsAxisSchema(document);
-        const bool technical=axisReferences||drawingNeedsSectionSchema(document);
+        const bool apparent=std::any_of(document.dimensions.begin(),document.dimensions.end(),[](const auto &d){return d.section.kind==DrawingCurveKind::ApparentLine||std::any_of(d.references.begin(),d.references.end(),[](const auto &r){return r.curve.kind==DrawingCurveKind::ApparentLine;});});
+        const bool apparentArc=std::any_of(document.dimensions.begin(),document.dimensions.end(),[](const auto &d){return d.section.kind==DrawingCurveKind::ApparentArc||std::any_of(d.references.begin(),d.references.end(),[](const auto &r){return r.curve.kind==DrawingCurveKind::ApparentArc;});});
+        const bool technical=apparentArc||apparent||axisReferences||drawingNeedsSectionSchema(document);
         const bool attachments=technical||std::any_of(document.dimensions.begin(),document.dimensions.end(),[](const auto &d){return !d.references.empty()||d.decimals!=2;});
         const bool extended=attachments||std::any_of(document.views.begin(),document.views.end(),[](const auto &view){return view.kind!=DrawingViewKind::Section;})
             ||std::any_of(document.dimensions.begin(),document.dimensions.end(),[](const auto &dimension){return int(dimension.measure)>1;});
@@ -370,14 +439,15 @@ QString encodeDrawingDocument(const DrawingDocument &document, QByteArray &bytes
             {"id",uuidText(dimension.id)},{"viewId",uuidText(dimension.viewId)},{"featureId",QString::number(dimension.section.featureId)},
             {"faceName",dimension.section.faceName},{"witness",QJsonArray{dimension.section.witness.x(),dimension.section.witness.y()}},
             {"requiresWitness",dimension.section.requiresWitness},{"measure",int(dimension.measure)}};
+            if(dimension.section.contourSide)object["contourSide"]=dimension.section.contourSide;
             if(extended){object["referenceKind"]=int(dimension.section.kind);if(dimension.section.kind==DrawingCurveKind::ProjectedEdge)object["edgeName"]=dimension.section.edgeName;}
             if(attachments){QJsonArray references;for(const auto &r:dimension.references){references.append(QJsonObject{
                 {"featureId",QString::number(r.curve.featureId)},{"faceName",r.curve.faceName},{"edgeName",r.curve.edgeName},{"kind",int(r.curve.kind)},
                 {"witness",QJsonArray{r.curve.witness.x(),r.curve.witness.y()}},{"requiresWitness",r.curve.requiresWitness},
-                {"role",int(r.role)},{"fraction",r.fraction},{"polar",r.polar},{"supportFace",r.supportFace},{"curveSide",r.curveSide},{"anchorSide",r.anchorSide},{"vertex",r.vertexName},{"boundary",r.boundaryName}});if(technical){auto object=references.last().toObject();object["clipBoundary"]=r.clipBoundary;if(!r.axisId.isNull())object["axisId"]=uuidText(r.axisId);references[references.size()-1]=object;}}
+                {"role",int(r.role)},{"fraction",r.fraction},{"polar",r.polar},{"supportFace",r.supportFace},{"curveSide",r.curveSide},{"anchorSide",r.anchorSide},{"vertex",r.vertexName},{"boundary",r.boundaryName}});if(technical){auto object=references.last().toObject();if(r.curve.contourSide)object["contourSide"]=r.curve.contourSide;object["clipBoundary"]=r.clipBoundary;if(!r.axisId.isNull())object["axisId"]=uuidText(r.axisId);references[references.size()-1]=object;}}
                 object["references"]=references;object["angleSides"]=dimension.angleSides;object["decimals"]=dimension.decimals;}
             dimensions.append(object);}
-        const QByteArray prepared=QJsonDocument(QJsonObject{{"format","ForgeCAD.DrawingPrototype"},{"schema",axisReferences?5:technical?4:attachments?3:extended?2:1},
+        const QByteArray prepared=QJsonDocument(QJsonObject{{"format","ForgeCAD.DrawingPrototype"},{"schema",apparentArc?7:apparent?6:axisReferences?5:technical?4:attachments?3:extended?2:1},
             {"version",versionJson(document.version)},{"model",versionJson(document.model)},{"views",views},{"dimensions",dimensions}}).toJson(QJsonDocument::Compact);
         require(prepared.size() <= kMaxDrawingBytes, "Tavola troppo grande per il codec del prototipo.");
         bytes = prepared;
@@ -393,7 +463,7 @@ QString decodeDrawingDocument(const QByteArray &bytes, DrawingDocument &document
         require(parse.error == QJsonParseError::NoError && json.isObject(), "Documento tavola JSON non valido.");
         const auto root = json.object();
         const double schema=root["schema"].toDouble(-1);
-        require(root["format"].toString()==QLatin1String("ForgeCAD.DrawingPrototype")&&(schema==1||schema==2||schema==3||schema==4||schema==5),"Formato o schema della tavola non supportato.");
+        require(root["format"].toString()==QLatin1String("ForgeCAD.DrawingPrototype")&&(schema==1||schema==2||schema==3||schema==4||schema==5||schema==6||schema==7),"Formato o schema della tavola non supportato.");
         require(root["views"].isArray() && root["dimensions"].isArray(), "Elenchi della tavola assenti.");
         const auto views = root["views"].toArray(), dimensions = root["dimensions"].toArray();
         require(views.size() <= qsizetype(kMaxRecords) && dimensions.size() <= qsizetype(kMaxRecords), "Troppi elementi nella tavola.");
@@ -428,11 +498,12 @@ QString decodeDrawingDocument(const QByteArray &bytes, DrawingDocument &document
             dimension.section.requiresWitness = d["requiresWitness"].toBool();
             const double measure = d["measure"].toDouble(-1);
             require(measure==0||measure==1||(schema>=2&&(measure==2||measure==3))||(schema>=3&&measure>=4&&measure<=9&&measure==std::floor(measure)),"Tipo di quota non supportato.");
-            if(schema>=2){const double kind=d["referenceKind"].toDouble(-1);require(kind==0||kind==1,"Tipo di riferimento non supportato.");
+            if(schema>=2){const double kind=d["referenceKind"].toDouble(-1);require(kind==0||kind==1||(schema>=6&&kind==2)||(schema>=7&&kind==3),"Tipo di riferimento non supportato.");
                 dimension.section.kind=DrawingCurveKind(int(kind));
                 if(kind==1){require(d["edgeName"].isString(),"Nome del bordo proiettato assente.");dimension.section.edgeName=d["edgeName"].toString();}
                 else require(!d.contains("edgeName"),"Riferimento di sezione con nome di bordo estraneo.");}
             else require(!d.contains("referenceKind")&&!d.contains("edgeName"),"Estensione della quota non prevista dallo schema 1.");
+            if(d.contains("contourSide")){const double side=d["contourSide"].toDouble(0);require(schema>=7&&(side==-1||side==1)&&dimension.section.kind==DrawingCurveKind::ApparentArc,"Lato del raccordo apparente non valido.");dimension.section.contourSide=int(side);}
             if(schema>=3){
                 require(d["references"].isArray()&&d["references"].toArray().size()<=2,"Agganci della quota assenti o eccessivi.");
                 const auto sides=d["angleSides"].toDouble(-1),decimals=d["decimals"].toDouble(-1);
@@ -443,8 +514,10 @@ QString decodeDrawingDocument(const QByteArray &bytes, DrawingDocument &document
                     bool valid=false;a.curve.featureId=r["featureId"].toString().toULongLong(&valid);require(valid,"ID della sorgente dell'aggancio non valido.");
                     a.curve.faceName=r["faceName"].toString();a.curve.edgeName=r["edgeName"].toString();a.vertexName=r["vertex"].toString();a.boundaryName=r["boundary"].toString();a.supportFace=r["supportFace"].toString();
                     const auto curveSide=r["curveSide"].toDouble(-1),anchorSide=r["anchorSide"].toDouble(-1);require(curveSide>=0&&curveSide<=15&&curveSide==std::floor(curveSide)&&anchorSide>=0&&anchorSide<=15&&anchorSide==std::floor(anchorSide),"Localizzatore UV non valido.");a.curveSide=int(curveSide);a.anchorSide=int(anchorSide);
-                    const auto kind=r["kind"].toDouble(-1),role=r["role"].toDouble(-1);require((kind==0||kind==1)&&role>=0&&role<=12&&role==std::floor(role),"Tipo di aggancio non valido.");
-                    a.curve.kind=DrawingCurveKind(int(kind));a.role=DrawingPointRole(int(role));
+                    const auto kind=r["kind"].toDouble(-1),role=r["role"].toDouble(-1);require((kind==0||kind==1||(schema>=6&&kind==2)||(schema>=7&&kind==3))&&role>=0&&role<=12&&role==std::floor(role),"Tipo di aggancio non valido.");
+                    a.curve.kind=DrawingCurveKind(int(kind));
+                    if(r.contains("contourSide")){const double side=r["contourSide"].toDouble(0);require(schema>=7&&(side==-1||side==1)&&a.curve.kind==DrawingCurveKind::ApparentArc,"Lato dell'aggancio sul raccordo non valido.");a.curve.contourSide=int(side);}
+                    a.role=DrawingPointRole(int(role));
                     const auto witness=r["witness"].toArray();require(r["witness"].isArray()&&witness.size()==2&&witness[0].isDouble()&&witness[1].isDouble()&&r["requiresWitness"].isBool()&&r["fraction"].isDouble()&&r["polar"].isBool(),"Parametri dell'aggancio non validi.");
                     a.curve.witness=Vec2(witness[0].toDouble(),witness[1].toDouble());a.curve.requiresWitness=r["requiresWitness"].toBool();
                     if(schema>=4){const auto boundary=r["clipBoundary"].toDouble(-1);require(boundary>=0&&boundary<=3&&boundary==std::floor(boundary),"Origine di taglio dell'aggancio non valida.");a.clipBoundary=int(boundary);}else require(!r.contains("clipBoundary"),"Origine di taglio estranea allo schema dichiarato.");

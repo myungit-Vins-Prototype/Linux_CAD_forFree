@@ -21,7 +21,7 @@ Vec2 conicPoint(const DrawingPrimitive &primitive,double fraction){
     const Vec2 coefficients(cross2(direction,primitive.secondAxis)/determinant,cross2(primitive.firstAxis,direction)/determinant);
     return primitive.center+direction/norm(coefficients);
 }
-bool same(const DrawingSectionReference &a,const DrawingSectionReference &b){return a.featureId==b.featureId&&a.faceName==b.faceName&&a.edgeName==b.edgeName&&a.kind==b.kind&&a.requiresWitness==b.requiresWitness&&distance(a.witness,b.witness)==0;}
+bool same(const DrawingSectionReference &a,const DrawingSectionReference &b){return a.featureId==b.featureId&&a.faceName==b.faceName&&a.edgeName==b.edgeName&&a.kind==b.kind&&a.contourSide==b.contourSide&&a.requiresWitness==b.requiresWitness&&distance(a.witness,b.witness)==0;}
 const DrawingSourceBody &sourceFor(const DrawingModelSnapshot &model,quint64 id){
     const DrawingSourceBody *found=nullptr;for(const auto &s:model.bodies)if(s.featureId==id){need(!found,"Identita' della feature duplicata.");found=&s;}
     if(!found)missing(QStringLiteral("Feature sorgente assente."));
@@ -72,6 +72,35 @@ const DrawingCurve &curveFor(const DrawingView &view,const DrawingSourceBody &so
     for(const auto &c:curves)if(c.viewId==view.id&&c.featureId==ref.featureId&&c.kind==ref.kind&&std::find(entities.begin(),entities.end(),edge?c.sourceEdge.index:c.sourceFace.index)!=entities.end()){
         if(attachment.curveSide&&!onSupport(source,c,attachment,attachment.curveSide))continue;
         candidates.push_back(&c);}
+    if(ref.kind==DrawingCurveKind::ApparentArc){
+        const DrawingCurve *chosen=nullptr;
+        for(const auto *c:candidates){if(c->contourSide!=ref.contourSide)continue;
+            const auto primitive=drawingPrimitive(view,*c);if(!primitive.circular)continue;
+            if(attachment.polar){const auto point=conicPoint(primitive,attachment.fraction);if(projectPoint(*c->curve,view.plane.toGlobal(Vec3(point.x(),point.y(),0)),c->range).distance>view.tolerance)continue;}
+            if(chosen)throw ReferenceError{DrawingDimensionStatus::Ambiguous,QStringLiteral("Piu' archi del raccordo appartengono allo stesso lato e aggancio.")};
+            chosen=c;
+        }
+        if(!chosen)missing(QStringLiteral("L'arco associato del raccordo non e' piu' disponibile."));
+        return *chosen;
+    }
+    if(ref.kind==DrawingCurveKind::ApparentLine){
+        // Il lato della generatrice rispetto all'asse resta associato anche
+        // quando cambia il raggio. Nessuna scelta del ramo piu' vicino.
+        const DrawingCurve *chosen=nullptr;
+        for(const auto *c:candidates){const auto &face=source.body->face(c->sourceFace);if(face.surface->type()!=SurfaceType::Cylinder)continue;const auto &cylinder=static_cast<const CylindricalSurface &>(*face.surface);
+            const auto center=local(view,cylinder.frame().origin());const auto axis3=view.plane.directionToLocal(cylinder.frame().zDir());const Vec2 axis(axis3.x(),axis3.y());
+            const double wanted=cross2(axis,ref.witness-center),side=cross2(axis,local(view,c->curve->point(.5*(c->range.lo+c->range.hi)))-center);
+            if(wanted*side<=0)continue;
+            // Facce rifilate con piu' intervalli sullo stesso lato richiedono
+            // anche l'appartenenza assiale del testimone.
+            const double position=dot(ref.witness-center,axis),a=dot(local(view,c->curve->point(c->range.lo))-center,axis),b=dot(local(view,c->curve->point(c->range.hi))-center,axis);
+            if(position<std::min(a,b)-view.tolerance||position>std::max(a,b)+view.tolerance)continue;
+            if(chosen)throw ReferenceError{DrawingDimensionStatus::Ambiguous,QStringLiteral("Contorno cilindrico con piu' rami compatibili.")};
+            chosen=c;
+        }
+        if(!chosen)missing(QStringLiteral("Il lato del contorno cilindrico non e' piu' disponibile."));
+        return *chosen;
+    }
     if(candidates.empty())missing(QStringLiteral("Entita' o ramo geometrico non ritrovato."));
     if(candidates.size()==1&&(!ref.requiresWitness||(attachment.curveSide&&view.sectionStyle==DrawingSectionStyle::Removed)))return *candidates[0];
     const auto witness=view.plane.toGlobal(Vec3(ref.witness.x(),ref.witness.y(),0));const DrawingCurve *chosen=nullptr;
@@ -150,8 +179,9 @@ DrawingResolvedAttachment resolve(const DrawingView &view,const DrawingModelSnap
     const auto &source=sourceFor(model,ref.curve.featureId);const auto &curve=curveFor(view,source,curves,ref);out.curve=&curve;
     out.first=local(view,curve.curve->point(curve.range.lo));out.second=local(view,curve.curve->point(curve.range.hi));
     const auto primitive=drawingPrimitive(view,curve);out.center=primitive.center;out.radius=norm(primitive.firstAxis);out.isCircle=primitive.circular;out.hasCenter=primitive.kind==DrawingPrimitive::Kind::Conic;out.isLine=primitive.kind==DrawingPrimitive::Kind::Line;
+    if(primitive.linearProjection){out.first=primitive.lineFirst;out.second=primitive.lineSecond;}
     if(ref.role==DrawingPointRole::Curve){
-        if(out.isLine&&(!ref.vertexName.isEmpty()||!ref.boundaryName.isEmpty())){
+        if(out.isLine&&!primitive.linearProjection&&(!ref.vertexName.isEmpty()||!ref.boundaryName.isEmpty())){
             const bool first=anchorAt(view,source,curve,ref,curve.curve->point(curve.range.lo)),last=anchorAt(view,source,curve,ref,curve.curve->point(curve.range.hi));
             if(first&&last)throw ReferenceError{DrawingDimensionStatus::Ambiguous,QStringLiteral("Orientamento della retta ambiguo.")};
             if(!first&&!last)missing(QStringLiteral("Orientamento della retta non ritrovato."));
@@ -189,12 +219,13 @@ QString validateDrawingAttachments(const DrawingDimension &d,const DrawingView &
             need((r.curveSide||r.anchorSide)?!r.supportFace.isEmpty():r.supportFace.isEmpty(),"Faccia di supporto incoerente.");
             need((r.curveSide&3)!=3&&(r.curveSide&12)!=12&&(r.anchorSide&3)!=3&&(r.anchorSide&12)!=12,"Lati UV incompatibili.");
             need(r.vertexName.size()<=4096&&r.boundaryName.size()<=4096&&(r.vertexName.isEmpty()||r.boundaryName.isEmpty()),"Origine dell'aggancio non valida.");
+            need(r.curve.kind==DrawingCurveKind::ApparentArc?std::abs(r.curve.contourSide)==1:r.curve.contourSide==0,"Lato dell'aggancio geometrico non valido.");
             if(!r.axisId.isNull()){
                 need(r.role==DrawingPointRole::Curve||r.role==DrawingPointRole::Start||r.role==DrawingPointRole::End||r.role==DrawingPointRole::Midpoint||r.role==DrawingPointRole::Nearest,"Tipo di aggancio all’asse non supportato.");
                 need(!r.curve.featureId&&r.curve.kind==DrawingCurveKind::Section&&r.curve.faceName.isEmpty()&&r.curve.edgeName.isEmpty()&&!r.curve.requiresWitness&&norm(r.curve.witness)==0&&r.supportFace.isEmpty()&&!r.curveSide&&!r.anchorSide&&!r.polar&&r.vertexName.isEmpty()&&r.boundaryName.isEmpty()&&!r.clipBoundary,"Aggancio all’asse con dati topologici estranei.");
             }else if(drawingDatum(r.role))need(r.supportFace.isEmpty()&&!r.curveSide&&!r.anchorSide&&!r.polar&&r.curve.kind==DrawingCurveKind::Section&&!r.curve.requiresWitness&&norm(r.curve.witness)==0&&!r.curve.featureId&&r.curve.faceName.isEmpty()&&r.curve.edgeName.isEmpty()&&r.vertexName.isEmpty()&&r.boundaryName.isEmpty()&&r.fraction==0,"Riferimento del piano con dati topologici estranei.");
             else{if(!primary)primary=&r;need(r.curve.featureId&&isFinite(r.curve.witness),"Sorgente dell'aggancio non valida.");
-                need((r.curve.kind==DrawingCurveKind::Section&&!r.curve.faceName.isEmpty()&&r.curve.edgeName.isEmpty())||(r.curve.kind==DrawingCurveKind::ProjectedEdge&&!r.curve.edgeName.isEmpty()&&r.curve.faceName.isEmpty()),"Origine geometrica dell'aggancio non valida.");
+                need(((r.curve.kind==DrawingCurveKind::Section||r.curve.kind==DrawingCurveKind::ApparentLine||r.curve.kind==DrawingCurveKind::ApparentArc)&&!r.curve.faceName.isEmpty()&&r.curve.edgeName.isEmpty())||(r.curve.kind==DrawingCurveKind::ProjectedEdge&&!r.curve.edgeName.isEmpty()&&r.curve.faceName.isEmpty()),"Origine geometrica dell'aggancio non valida.");
                 need(r.curve.faceName.size()<=4096&&r.curve.edgeName.size()<=4096,"Nome geometrico troppo lungo.");
                 need(!r.polar||r.role==DrawingPointRole::Nearest||r.role==DrawingPointRole::Curve,"Aggancio angolare incompatibile con il tipo di punto.");
                 if(r.role==DrawingPointRole::Start||r.role==DrawingPointRole::End||(r.role==DrawingPointRole::Nearest&&!r.polar))need(!r.vertexName.isEmpty()||!r.boundaryName.isEmpty()||r.clipBoundary,"Punto privo di ancoraggio topologico.");
@@ -210,6 +241,8 @@ DrawingAttachment drawingAttachment(const DrawingView &view,const DrawingCurve &
     DrawingAttachment ref;ref.curve=dimensionOfCurve(view,curve).section;ref.role=role;need(!drawingDatum(role),"Usare un riferimento del piano senza curva.");
     if(std::isfinite(parameter))need(parameter>=curve.range.lo&&parameter<=curve.range.hi,"Parametro dell'aggancio fuori dalla curva.");
     const auto &source=sourceFor(model,curve.featureId);setCurveSupport(source,curve,ref);const auto primitive=drawingPrimitive(view,curve);
+    if(curve.kind==DrawingCurveKind::ApparentLine){need(role==DrawingPointRole::Curve||role==DrawingPointRole::Midpoint,"Sul contorno cilindrico scegliere la retta o il punto medio.");return ref;}
+    if(primitive.linearProjection&&role==DrawingPointRole::Curve)return ref;
     if((role==DrawingPointRole::Curve||role==DrawingPointRole::Nearest)&&primitive.kind==DrawingPrimitive::Kind::Conic){
         const auto q=local(view,curve.curve->point(std::isfinite(parameter)?parameter:curve.range.lo))-primitive.center;
         ref.polar=true;ref.fraction=std::atan2(q.y(),q.x())/kTwoPi;if(ref.fraction<0)ref.fraction+=1;return ref;
@@ -255,7 +288,10 @@ DrawingDimensionResult evaluateDrawingAttachments(const DrawingDimension &d,cons
                 if(other.isLine){const auto u=normalized(other.second-other.first);out.second=other.first+u*dot(point.point-other.first,u);}
                 else{need(other.curve,"Il secondo riferimento non e' una curva.");const auto p=view.plane.toGlobal(Vec3(point.point.x(),point.point.y(),0));out.second=local(view,projectPoint(*other.curve->curve,p,other.curve->range).point);}}
             else{need(a.isLine&&b.isLine,"Selezionare due punti, punto e retta, oppure rette parallele.");const auto u=normalized(a.second-a.first),v=normalized(b.second-b.first);need(std::abs(cross2(u,v))<1e-9,"Per rette non parallele usare una quota angolare.");out.first=b.first;out.second=a.first+u*dot(b.first-a.first,u);}
-            if(d.measure==M::HorizontalDistance||d.measure==M::VerticalDistance)need(a.isPoint&&b.isPoint,"Le quote orizzontali/verticali richiedono due punti.");
+            if(d.measure==M::HorizontalDistance||d.measure==M::VerticalDistance){
+                const auto aligned=[&](const DrawingResolvedAttachment &r){return r.isPoint||(r.isLine&&std::abs(d.measure==M::HorizontalDistance?(r.second-r.first).x():(r.second-r.first).y())<=view.tolerance);};
+                need(aligned(a)&&aligned(b),"Scegliere due punti oppure rette perpendicolari alla direzione di quota.");
+            }
             const auto delta=out.second-out.first;out.value=d.measure==M::HorizontalDistance?std::abs(delta.x()):d.measure==M::VerticalDistance?std::abs(delta.y()):norm(delta);
             if(d.measure==M::AxisDiameter){out.second=2*out.second-out.first;out.value*=2;}
         }
@@ -268,7 +304,7 @@ int drawingAngleSector(const DrawingDimensionResult &base,const Vec2 &cursor){
 }
 DrawingDimension drawingDimensionBetween(const DrawingView &view,const DrawingModelSnapshot &model,const std::vector<DrawingCurve> &curves,std::vector<DrawingAttachment> refs,DrawingMeasure measure,const Vec2 &cursor,bool automatic,const DrawingAttachmentResolver &axes){
     need(!refs.empty()&&refs.size()<=2,"Selezionare uno o due riferimenti.");using M=DrawingMeasure;auto a=resolved(view,model,curves,refs[0],axes);
-    if(refs.size()==1&&a.isLine&&a.curve&&(automatic||measure==M::Distance||measure==M::EndpointDistance||measure==M::HorizontalDistance||measure==M::VerticalDistance)){
+    if(refs.size()==1&&a.isLine&&a.curve&&a.curve->kind!=DrawingCurveKind::ApparentLine&&!drawingPrimitive(view,*a.curve).linearProjection&&(automatic||measure==M::Distance||measure==M::EndpointDistance||measure==M::HorizontalDistance||measure==M::VerticalDistance)){
         refs={drawingAttachment(view,*a.curve,model,DrawingPointRole::Start),drawingAttachment(view,*a.curve,model,DrawingPointRole::End)};a=resolved(view,model,curves,refs[0],axes);}
     if(refs.size()==2&&automatic){for(auto &ref:refs){auto r=resolved(view,model,curves,ref,axes);if(!r.isPoint&&r.hasCenter){ref.role=DrawingPointRole::Center;ref.polar=false;ref.fraction=0;ref.vertexName.clear();ref.boundaryName.clear();}}}
     a=resolved(view,model,curves,refs[0],axes);DrawingResolvedAttachment b;if(refs.size()==2)b=resolved(view,model,curves,refs[1],axes);

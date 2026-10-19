@@ -786,6 +786,21 @@ PlaneSurfaceIntersection intersectPlaneSurface(const Plane &plane, const Surface
         out.ranges.push_back(range);
         return out;
     }
+    case SurfaceType::Torus: {
+        const auto &torus = static_cast<const ToroidalSurface &>(surface);
+        const auto &frame = torus.frame();
+        // Solo il piano per l'asse: una sezione spostata o obliqua non e' un cerchio.
+        if (std::fabs(dot(n, frame.zDir())) > 1e-14
+            || std::fabs(dot(n, frame.origin() - p0)) > 1e-12 * std::max({1.0, torus.majorRadius(), torus.minorRadius()}))
+            throw std::domain_error("intersectPlaneSurface: sezione toroidale non meridiana");
+        const auto radial = normalized(cross(n, frame.zDir()));
+        for (double side : {-1.0, 1.0}) {
+            out.curves.push_back(std::make_shared<Circle<3>>(frame.origin() + side * torus.majorRadius() * radial,
+                                                            radial, frame.zDir(), torus.minorRadius()));
+            out.ranges.push_back({0.0, kTwoPi});
+        }
+        return out;
+    }
     case SurfaceType::Cone: {
         // Solo i casi con curve esatte semplici: piano per il vertice
         // (generatrici) e piano perpendicolare all'asse (cerchio). Le altre

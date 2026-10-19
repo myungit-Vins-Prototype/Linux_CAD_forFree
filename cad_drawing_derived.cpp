@@ -3,6 +3,7 @@
 #include "fk_curve_ops.h"
 #include <QLineF>
 #include "fk_profile.h"
+#include "fk_classify.h"
 #include "fk_tessellate.h"
 #include <QSet>
 #include <algorithm>
@@ -88,6 +89,89 @@ int connectTolerantSectionEnds(const Body &body,const DrawingView &view,const st
     }
     return count;
 }
+// Recupero grafico per tagli sui bordi condivisi. Riusa le sezioni campionate
+// entro 0,001 mm sul foglio; nelle fasce con intersezioni mancanti (numero
+// dispari) interseca le facce esatte. Classifica ogni componente nel solido,
+// riusando il risultato solo fra eventi di estremita'/tangenza con la stessa
+// sequenza ordinata di curve di confine. Il risultato resta solo grafico.
+// Non si chiudono catene aperte per vicinanza e non si cambiano riferimenti di quota.
+QPainterPath solidSectionMaterial(const Body &body,int region,const DrawingView &view,const std::vector<DrawingCurve> &curves,quint64 feature){
+    struct Face {FaceId id;double low,high;};std::vector<Face> faces;Box bounds;
+    const auto limits=[&](const Box &b){double low=1e100,high=-1e100;
+        for(int mask=0;mask<8;++mask){const auto q=view.plane.toLocal(Vec3(mask&1?b.hi.x():b.lo.x(),mask&2?b.hi.y():b.lo.y(),mask&4?b.hi.z():b.lo.z()));low=std::min(low,q.y());high=std::max(high,q.y());}return std::pair<double,double>{low,high};};
+    std::vector<double> levels;
+    for(auto id:body.faces())if(body.shell(body.face(id).shell).region.index==region){const auto b=faceBox(body,id);const auto [low,high]=limits(b);faces.push_back({id,low,high});bounds.add(b);}
+    if(faces.empty())return {};
+    double left=1e100,right=-1e100;const auto [bottom,top]=limits(bounds);
+    for(int mask=0;mask<8;++mask){const auto q=view.plane.toLocal(Vec3(mask&1?bounds.hi.x():bounds.lo.x(),mask&2?bounds.hi.y():bounds.lo.y(),mask&4?bounds.hi.z():bounds.lo.z()));left=std::min(left,q.x());right=std::max(right,q.x());}
+    left-=1;right+=1;SolidClassifier classifier(body,view.tolerance);
+    for(auto vertex:body.vertices())levels.push_back(view.plane.toLocal(body.vertex(vertex).point).y());
+    for(const auto &curve:curves)if(curve.kind==DrawingCurveKind::Section&&curve.featureId==feature){
+        const auto [low,high]=limits(curveBox(*curve.curve,curve.range));levels.push_back(low);levels.push_back(high);
+        for(double t:{curve.range.lo,curve.range.hi})levels.push_back(view.plane.toLocal(curve.curve->point(t)).y());
+    }
+    const double precision=std::clamp(.005/view.scale,1e-6,1.0),step=std::max(.5/view.scale,4*precision);
+    require((top-bottom)/step<20000,"Sezione troppo estesa per la ricostruzione del materiale.");
+    for(double y=bottom;y<top;y+=step)levels.push_back(y);
+    levels.push_back(top);
+    std::sort(levels.begin(),levels.end());levels.erase(std::unique(levels.begin(),levels.end(),[&](double a,double b){return b-a<=view.tolerance;}),levels.end());
+    struct CutSegment{Vec2 a,b;int curve;};std::vector<CutSegment> cutSegments;std::vector<double> critical;int curveId=0;
+    TessellationOptions chord;chord.deflection=std::clamp(.001/view.scale,1e-7,1.0);chord.angle=.06;
+    for(const auto &curve:curves)if(curve.kind==DrawingCurveKind::Section&&curve.featureId==feature){
+        ++curveId;const auto samples=sampleCurve(*curve.curve,curve.range,chord);
+        critical.push_back(view.plane.toLocal(curve.curve->point(samples.front())).y());critical.push_back(view.plane.toLocal(curve.curve->point(samples.back())).y());
+        for(std::size_t i=1;i<samples.size();++i){const auto a=view.plane.toLocal(curve.curve->point(samples[i-1])),b=view.plane.toLocal(curve.curve->point(samples[i]));cutSegments.push_back({{a.x(),a.y()},{b.x(),b.y()},curveId});
+            if(i+1<samples.size()){const auto c=view.plane.toLocal(curve.curve->point(samples[i+1]));if((b.y()-a.y())*(c.y()-b.y())<=0)critical.push_back(b.y());}}
+    }
+    for(auto vertex:body.vertices())critical.push_back(view.plane.toLocal(body.vertex(vertex).point).y());
+    std::sort(critical.begin(),critical.end());
+    std::map<std::tuple<int,std::vector<int>,int>,bool> classified;
+    using Spans=std::vector<Interval>;std::map<double,Spans> scans;
+    const auto scan=[&](double y)->const Spans &{
+        const auto cached=scans.find(y);if(cached!=scans.end())return cached->second;
+        cancellationPoint();require(scans.size()<50000,"Troppi campioni per ricostruire il materiale della sezione.");
+        Line<3> line(view.plane.toGlobal(Vec3(left,y,0)),view.plane.xDir());std::vector<double> cuts;std::vector<std::pair<double,int>> crossings;
+        for(const auto &s:cutSegments)if((s.a.y()<=y&&s.b.y()>y)||(s.b.y()<=y&&s.a.y()>y))crossings.push_back({s.a.x()+(s.b.x()-s.a.x())*(y-s.a.y())/(s.b.y()-s.a.y()),s.curve});
+        std::sort(crossings.begin(),crossings.end());for(const auto &hit:crossings)if(cuts.empty()||hit.first-cuts.back()>4*view.tolerance)cuts.push_back(hit.first);
+        std::sort(cuts.begin(),cuts.end());cuts.erase(std::unique(cuts.begin(),cuts.end(),[&](double a,double b){return b-a<=4*view.tolerance;}),cuts.end());
+        const bool exact=cuts.size()%2;
+        if(exact){cuts.clear();
+        for(const auto &face:faces){
+            if(y<face.low-view.tolerance||y>face.high+view.tolerance)continue;
+            const auto hits=intersectCurveSurface(line,{0,right-left},*body.face(face.id).surface,view.tolerance);
+            for(double t:hits.parameters)if(classifyPointOnFace(body,face.id,line.point(t),view.tolerance)!=PointLocation::Outside)cuts.push_back(left+t);
+        }
+        }
+        std::sort(cuts.begin(),cuts.end());cuts.erase(std::unique(cuts.begin(),cuts.end(),[&](double a,double b){return b-a<=4*view.tolerance;}),cuts.end());Spans spans;
+        std::vector<int> signature;for(const auto &hit:crossings)signature.push_back(hit.second);
+        const int band=int(std::upper_bound(critical.begin(),critical.end(),y)-critical.begin());
+        const auto inside=[&](std::size_t i){
+            const auto classify=[&]{return classifier.classify(view.plane.toGlobal(Vec3(.5*(cuts[i]+cuts[i-1]),y,0)))==PointLocation::Inside;};
+            const auto event=std::lower_bound(critical.begin(),critical.end(),y-view.tolerance);
+            if(exact||(event!=critical.end()&&std::abs(*event-y)<=view.tolerance))return classify();
+            const auto key=std::make_tuple(band,signature,int(i));const auto old=classified.find(key);if(old!=classified.end())return old->second;
+            const bool value=classify();classified.emplace(key,value);return value;
+        };
+        for(std::size_t i=1;i<cuts.size();++i)if(cuts[i]-cuts[i-1]>4*view.tolerance&&inside(i)){
+            if(!spans.empty()&&cuts[i-1]-spans.back().hi<=4*view.tolerance)spans.back().hi=cuts[i];else spans.push_back({cuts[i-1],cuts[i]});
+        }
+        return scans.emplace(y,std::move(spans)).first->second;
+    };
+    QPainterPath material;material.setFillRule(Qt::WindingFill);
+    const auto point=[&](double x,double y){return QPointF(x*view.scale,-y*view.scale);};
+    const auto band=[&](double low,double high,const Spans &a,const Spans &b){for(std::size_t i=0;i<a.size();++i){QPainterPath path;path.moveTo(point(a[i].lo,low));path.lineTo(point(a[i].hi,low));path.lineTo(point(b[i].hi,high));path.lineTo(point(b[i].lo,high));path.closeSubpath();material.addPath(path);}};
+    std::function<void(double,double,int)> append=[&](double low,double high,int depth){
+        const double mid=.5*(low+high);const auto &a=scan(low),&b=scan(high),&m=scan(mid);
+        if(high-low<=precision||depth==24){band(low,high,m,m);return;}
+        bool flat=a.size()==b.size()&&a.size()==m.size();
+        if(flat)for(std::size_t i=0;i<a.size();++i)if(std::abs(m[i].lo-.5*(a[i].lo+b[i].lo))>precision||std::abs(m[i].hi-.5*(a[i].hi+b[i].hi))>precision)flat=false;
+        if(flat){band(low,high,a,b);return;}
+        append(low,mid,depth+1);append(mid,high,depth+1);
+    };
+    for(std::size_t i=1;i<levels.size();++i)if(levels[i]>levels[i-1])append(levels[i-1],levels[i],0);
+    return material.simplified();
+}
+
 bool finite(QPointF p){return std::isfinite(p.x())&&std::isfinite(p.y())&&std::abs(p.x())<=1e7&&std::abs(p.y())<=1e7;}
 }
 QPointF constrainDrawingViewPosition(const DrawingSheet &sheet,const DrawingViewLayout &layout,QPointF p){
@@ -188,14 +272,31 @@ QString drawingSectionHatch(const DrawingModelSnapshot &model,const DrawingView 
                 if(degree!=2)ambiguous=true;
             }
             const auto profile=buildProfile(segments,view.tolerance);
-            if(ambiguous||profile.openChains){prepared.warnings.append(QStringLiteral("Tratteggio omesso: contorno aperto o ambiguo nel corpo %1.").arg(key.first));continue;}
-            if(connections)prepared.warnings.append(QStringLiteral("Tratteggio con %1 connessioni grafiche entro le tolleranze locali del B-rep (corpo %2).").arg(connections).arg(key.first));
             QPainterPath material;material.setFillRule(Qt::OddEvenFill);
+            if(ambiguous||profile.openChains){
+                // Recupero ammesso solo per bordi esatti condivisi da due facce,
+                // non per una generica catena aperta o per una superficie.
+                bool shared=false;
+                for(std::size_t i=0;i<original.size()&&!shared;++i)for(std::size_t j=0;j<i;++j){
+                    const auto &a=curves.at(original[i].source),&b=curves.at(original[j].source);
+                    if(a.sourceFace!=b.sourceFace&&a.curve==b.curve&&a.range.lo==b.range.lo&&a.range.hi==b.range.hi){
+                        for(auto edgeId:source->body->edges()){
+                            const auto &edge=source->body->edge(edgeId);if(edge.curve!=a.curve||!edge.forward.valid()||!edge.backward.valid())continue;
+                            const auto first=source->body->finFace(edge.forward),second=source->body->finFace(edge.backward);
+                            if((first==a.sourceFace&&second==b.sourceFace)||(first==b.sourceFace&&second==a.sourceFace))shared=true;
+                        }
+                    }
+                }
+                if(shared)material=solidSectionMaterial(*source->body,key.second,view,curves,key.first);
+                if(material.isEmpty()){prepared.warnings.append(QStringLiteral("Tratteggio omesso: contorno aperto o ambiguo nel corpo %1.").arg(key.first));continue;}
+                prepared.warnings.append(QStringLiteral("Campitura grafica ricostruita dal solido sui bordi condivisi (corpo %1).").arg(key.first));
+            }
+            if(connections)prepared.warnings.append(QStringLiteral("Tratteggio con %1 connessioni grafiche entro le tolleranze locali del B-rep (corpo %2).").arg(connections).arg(key.first));
             const auto loopPath=[&](const ProfileLoop &loop){QPainterPath path;bool first=true;
                 for(const auto &segment:loop.segments){const auto world=embedCurve(segment.curve,view.plane);TessellationOptions options;options.deflection=std::clamp(.02/view.scale,1e-6,1.0);options.angle=.1;const auto points=sampleCurve(*world,segment.range,options);
                     for(const auto parameter:points){const auto q=view.plane.toLocal(world->point(parameter));const QPointF point(q.x()*view.scale,-q.y()*view.scale);if(first){path.moveTo(point);first=false;}else path.lineTo(point);}}
                 path.closeSubpath();return path;};
-            for(const auto &region:profile.regions){material.addPath(loopPath(region.outer));for(const auto &hole:region.holes)material.addPath(loopPath(hole));}
+            if(material.isEmpty())for(const auto &region:profile.regions){material.addPath(loopPath(region.outer));for(const auto &hole:region.holes)material.addPath(loopPath(hole));}
             prepared.material=prepared.material.united(material);
             // Intersezione delle righe con i poligoni campionati; parita' conserva i fori. Passo fisso sul foglio.
             const bool alternate=(index++%2)!=0;const auto polygons=material.toSubpathPolygons();const auto bounds=material.boundingRect();

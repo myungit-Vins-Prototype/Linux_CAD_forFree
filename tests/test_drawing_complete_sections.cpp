@@ -4,6 +4,7 @@
 #include "cad_drawing_visibility.h"
 #include "fk_primitives.h"
 #include "fk_boolean.h"
+#include "fk_body_check.h"
 #include "fk_bspline.h"
 #include "fk_extrude.h"
 #include "fk_sheet.h"
@@ -41,6 +42,25 @@ struct Display {std::vector<DrawingCurve> curves;DrawingViewVisibility paths;Dra
 Display display(const DrawingModelSnapshot &m,const DrawingView &v){Display d;DrawingSilhouetteCache cache;DrawingSilhouetteResult contours;ok(drawingViewCurves(m,v,d.curves));ok(drawingViewSilhouettes(m,v,contours,cache));ok(drawingSectionHatch(m,v,d.curves,d.hatch));ok(drawingViewVisibility(m,v,d.curves,contours,cache,d.paths,&d.hatch.material));return d;}
 }
 int main(int argc,char **argv){QApplication app(argc,argv);try{
+
+ // Taglio esattamente su spigoli condivisi: recupero dal solido senza riempire il foro.
+ {const auto square=[](double r){ProfileLoop loop;std::vector<Vec2> p{{-r,-r},{r,-r},{r,r},{-r,r}};for(int i=0;i<4;++i)loop.segments.push_back({std::make_shared<Line<2>>(p[i],p[(i+1)%4]-p[i]),{0,2*r},-1});return loop;};
+  DrawingModelSnapshot tube{{QUuid::createUuid(),{}},{source(makeExtrusion(Frame3(),{square(10),{reversed(square(8))}},10))}};
+  require(checkBody(*tube.bodies[0].body).empty(),"tubo di prova valido");
+  DrawingView cut;cut.sectionStyle=DrawingSectionStyle::Full;cut.plane=Frame3(Vec3(0,0,5),normalized(Vec3(1,-1,0)),normalized(Vec3(1,1,0)));
+  const auto d=display(tube,cut);require(!d.hatch.lines.isEmpty()&&d.hatch.material.contains({13,0})&&!d.hatch.material.contains({0,0}),"taglio sui bordi condivisi campito, foro libero");
+  require(d.hatch.warnings.join(" ").contains("ricostruita dal solido"),"esercitato il recupero geometrico dei bordi condivisi");
+  for(double x:{-13.,0.,13.})for(double y:{-4.,0.,4.})require(d.hatch.material.contains({x,y})==(std::abs(x)>12),"maschera coerente con il tubo quadrato");
+  auto half=cut;half.sectionStyle=DrawingSectionStyle::HalfRight;const auto h=display(tube,half);require(h.hatch.material.contains({13,0})&&!h.hatch.material.contains({-13,0})&&!h.hatch.material.contains({0,0}),"recupero e clipping della mezza sezione");
+ }
+ // Parete sottile su un corpo lungo: il bias del box globale non deve
+ // rendere visibile il corpo posteriore attraverso la parete interna.
+ {ProfileLoop outer{{{std::make_shared<Circle<2>>(makeCircle(Vec2(),10)),{0,kTwoPi},-1}}},inner{{{std::make_shared<Circle<2>>(makeCircle(Vec2(),9.8)),{0,kTwoPi},-1}}};
+  DrawingModelSnapshot thin{{QUuid::createUuid(),{}},{source(makeExtrusion(Frame3(),{outer,{reversed(inner)}},1500)),source(box({-.5,-11,500},1,.2,1),2)}};
+  DrawingView cut;cut.sectionStyle=DrawingSectionStyle::Full;cut.plane=Frame3(Vec3(0,0,500),Vec3(0,1,0),Vec3(1,0,0));const auto d=display(thin,cut);bool rear=false;
+  for(std::size_t i=0;i<d.curves.size();++i)if(d.curves[i].featureId==2){rear=true;require(d.paths.curves[i].visible.isEmpty(),"nessun bordo dietro la parete interna visibile nella cavita'");}
+  require(rear&&!d.hatch.material.contains({0,0}),"occlusione verificata attraverso il foro, senza tappo fittizio");
+ }
  DrawingModelSnapshot model{{QUuid::createUuid(),{}},{source(booleanOperation(box({-4,-4,-5},8,8,10),box({-10,-8,-7},20,16,2),BooleanOperation::Unite)),source(box({-12,9,2},6,6,3),2),source(box({-1,-1,-4},2,2,1),3)}};
  DrawingView full;full.sectionStyle=DrawingSectionStyle::Full;full.scale=3;auto d=display(model,full);bool flange=false,hiddenInterior=false;int projected=0,sections=0;
  for(std::size_t i=0;i<d.curves.size();++i){const auto &c=d.curves[i];require(c.featureId!=2,"la parte completamente asportata non e' un bordo nascosto");if(c.kind==DrawingCurveKind::Section){++sections;continue;}++projected;require(c.hasSourceRange,"intervallo 3D del bordo conservato");for(double t:{c.sourceRange.lo,.5*(c.sourceRange.lo+c.sourceRange.hi),c.sourceRange.hi})require(full.plane.toLocal(c.sourceGeometry->point(t)).z()<=full.tolerance,"nessun bordo davanti al piano");if(c.featureId==3){require(d.paths.curves[i].visible.isEmpty(),"il materiale del taglio occlude il corpo posteriore interno");hiddenInterior|=!d.paths.curves[i].hidden.isEmpty();}if(c.featureId==1&&!d.paths.curves[i].visible.isEmpty()&&d.paths.curves[i].visible.boundingRect().width()>40)flange=true;}

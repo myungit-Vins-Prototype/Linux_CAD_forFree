@@ -396,8 +396,8 @@ void BooleanBuilder::pairArcs(FaceId fa, FaceId fb, PairResult &out, bool includ
         surfaceArcs(fa, fb, out);
         return;
     }
-    // Piano con cono, toro, rivoluzione o B-spline: curve tracciate come tra
-    // due superfici qualsiasi (semi dalla suddivisione).
+    // Per le superfici curve si privilegiano le intersezioni analitiche;
+    // i casi generici restano tracciati dalla suddivisione.
     const FaceId fp = k == 0 ? fa : fb, fq = k == 0 ? fb : fa;
     const Body &bp = bodies_[k], &bq = bodies_[1 - k];
     const Plane &plane = static_cast<const Plane &>(*bp.face(fp).surface);
@@ -410,6 +410,12 @@ void BooleanBuilder::pairArcs(FaceId fa, FaceId fb, PairResult &out, bool includ
         // Piano per il vertice (generatrici) o perpendicolare all'asse (cerchio): curve esatte.
         const auto &cone = static_cast<const ConicalSurface &>(curved);
         exact = std::fabs(dot(n, cone.apex()) - offset) <= tolerance_ || std::fabs(dot(n, cone.frame().zDir())) >= 1.0 - 1e-15;
+    }
+    if (other == SurfaceType::Torus) {
+        // Il piano per l'asse taglia il raccordo in due meridiani circolari esatti.
+        const auto &torus = static_cast<const ToroidalSurface &>(curved);
+        exact = std::fabs(dot(n, torus.frame().zDir())) <= 1e-14
+             && std::fabs(dot(n, torus.frame().origin() - plane.frame().origin())) <= 1e-12 * std::max({1.0, torus.majorRadius(), torus.minorRadius()});
     }
     if (!exact) {
         surfaceArcs(fa, fb, out);

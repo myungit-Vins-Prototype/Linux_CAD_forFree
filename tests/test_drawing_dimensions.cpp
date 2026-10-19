@@ -1,6 +1,7 @@
 #include "cad_drawing_dimension.h"
 #include "cad_drawing_sheet.h"
 #include "fk_primitives.h"
+#include "fk_revolve.h"
 #include "fk_sheet.h"
 #include "fk_curve_algo.h"
 #include "fk_bspline_surface.h"
@@ -69,6 +70,15 @@ int main(){try{
     auto automaticCircle=drawingDimensionBetween(view,cylinder,circles,{circle},DrawingMeasure::Distance,{10,10},true);require(automaticCircle.measure==DrawingMeasure::Diameter,"cerchio intero propone diametro");near(result(cylinder,view,automaticCircle).value,6,"diametro automatico");
     DrawingView circularSection;circularSection.plane=Frame3(Vec3(0,0,4),Vec3(0,0,1),Vec3(1,0,0));auto cutCircles=curves(cylinder,circularSection);require(!cutCircles.empty(),"sezione circolare del cilindro");
     auto cutCircle=drawingAttachment(circularSection,cutCircles[0],cylinder,DrawingPointRole::Curve);auto sectionRadius=drawingDimensionBetween(circularSection,cylinder,cutCircles,{cutCircle},DrawingMeasure::Radius,{10,10});near(result(cylinder,circularSection,sectionRadius).value,3,"raggio sulla sezione della superficie");
+    // Un piano per l'asse del toro conserva due cerchi esatti, anche ruotato/traslato.
+    for(const auto &frame:{Frame3(),Frame3(Vec3(12,-7,3),normalized(Vec3(1,2,3)),Vec3(1,0,0))}){
+        DrawingModelSnapshot torus{model.version,{source(makeTorus(frame,5,1.5))}};DrawingView meridian;
+        meridian.plane=Frame3(frame.origin(),frame.yDir(),frame.xDir());auto meridians=curves(torus,meridian);
+        require(meridians.size()==2,"due meridiani del toro");
+        for(const auto &c:meridians){require(c.curve->type()==CurveType::Circle&&drawingPrimitive(meridian,c).circular,"meridiano analitico senza spline approssimata");
+            auto ref=drawingAttachment(meridian,c,torus,DrawingPointRole::Curve,.25*kTwoPi);
+            auto dim=drawingDimensionBetween(meridian,torus,meridians,{ref},DrawingMeasure::Radius,{12,8});near(result(torus,meridian,dim).value,1.5,"raggio esatto della sezione del raccordo toroidale");}
+    }
     const auto center=resolveDrawingAttachment(view,cylinder,circles,drawingAttachment(view,*circular,cylinder,DrawingPointRole::Center));near(norm(center.point),0,"centro esatto");
     const auto quadrant=resolveDrawingAttachment(view,cylinder,circles,drawingAttachment(view,*circular,cylinder,DrawingPointRole::Quadrant1));near(quadrant.point.y(),3,"quadrante nel piano");
     auto circleNearest=drawingAttachment(view,*circular,cylinder,DrawingPointRole::Nearest,circular->range.lo+.2*circular->range.length());require(resolveDrawingAttachment(view,cylinder,circles,circleNearest).status==DrawingDimensionStatus::Ready,"nearest su circonferenza senza falsa origine topologica");

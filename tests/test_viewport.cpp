@@ -40,6 +40,12 @@ static void require(bool ok, const char *message) {
     if (!ok) throw std::runtime_error(message);
 }
 
+// Configurabile anche nei lanci diretti del runner; CTest passa la cartella da CMake.
+static QString exampleDocumentPath(const char *name) {
+    const QString directory = qEnvironmentVariable("FORGECAD_EXAMPLE_DIR", QStringLiteral(FORGECAD_SOURCE_DIR "/File_Esempio"));
+    return QDir(directory).filePath(QString::fromUtf8(name));
+}
+
 #include "test_declared_history_cache.h"
 #include "test_boolean_history.h"
 #include "test_extrusion_history.h"
@@ -55,6 +61,172 @@ static void require(bool ok, const char *message) {
 #include "document_regression.h"
 class ViewportInteractionTest {
 public:
+    static void featureHandles() {
+        QTemporaryDir settings;
+        QSettings::setDefaultFormat(QSettings::IniFormat);
+        QSettings::setPath(QSettings::IniFormat, QSettings::UserScope, settings.path());
+        CadViewport v;
+        v.resize(1000, 750);
+        SketchObject sketch;
+        sketch.segments = {{{2,2},{8,2}}, {{8,2},{8,8}}, {{8,8},{2,8}}, {{2,8},{2,2}}};
+        v.sketches_.append(sketch);
+        v.zoom_ = 40;
+        ExtrusionObject definition;
+        definition.sketchIndex = 0;
+        definition.distance = 5;
+        // Il callback reale rientra nel refresh del pannello a ogni movimento.
+        std::function<void(double)> changed;
+        changed = [&](double value) {
+            if (definition.feature == BodyFeature::Revolution) definition.revolveAngle = value;
+            else definition.distance = value;
+            v.setFeatureHandle(definition, changed);
+        };
+        QImage image(v.size(), QImage::Format_ARGB32_Premultiplied);
+        const auto draw = [&] { image.fill(QColor(25,32,40)); QPainter painter(&image); v.drawFeatureHandle(painter); };
+        const auto press = [&](QPointF point) {
+            QMouseEvent event(QEvent::MouseButtonPress, point, point, Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+            v.mousePressEvent(&event);
+        };
+        const auto move = [&](QPointF point) {
+            QMouseEvent event(QEvent::MouseMove, point, point, Qt::NoButton, Qt::LeftButton, Qt::NoModifier);
+            v.mouseMoveEvent(&event);
+        };
+        const auto release = [&](QPointF point) {
+            QMouseEvent event(QEvent::MouseButtonRelease, point, point, Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
+            v.mouseReleaseEvent(&event);
+        };
+        v.setFeatureHandle(definition, changed);
+        draw();
+        require(v.featureHandlePath_.size() == 2, "freccia estrusione dall'origine");
+        require(v.featureHandleAt(v.featureHandlePath_.last()), "freccia selezionabile");
+        v.interactionLocked_ = true;
+        const QPointF tip = v.featureHandlePath_.last();
+        const QPointF screen = v.projectWorldPoint(v.featureHandleOrigin_ + 5 * v.featureHandleAxis_) - v.projectWorldPoint(v.featureHandleOrigin_);
+        press(tip);
+        require(v.featureHandleDragging_, "freccia attiva durante finestra funzione");
+        // Anche una normale vista frontalmente deve poter oltrepassare lo zero.
+        const QPointF delta = std::hypot(screen.x(),screen.y()) > 12 ? -2 * screen : QPointF(0, 10 * v.height()/v.zoom_);
+        move(tip + delta);
+        release(tip + delta);
+        require(std::abs(definition.distance + 5) < 1e-4, "estrusione attraversa il piano e inverte il verso");
+        draw();
+        if (qEnvironmentVariableIsSet("FORGECAD_HANDLE_QA")) {
+            v.featureHandleBox_->render(&image, v.featureHandleBox_->pos());
+            image.save(QStringLiteral("/tmp/forgecad-feature-handles-extrusion.png"));
+        }
+        require(v.featureHandleBox_->value() < 0 && !v.featureHandleDragging_, "quota firmata e fine drag");
+        v.featureHandleBox_->setValue(7.25);
+        require(definition.distance == 7.25, "box aggiorna parametro estrusione");
+        definition.extrudeSides = 1;
+        v.setFeatureHandle(definition, changed);
+        draw();
+        require(pointDistance(v.featureHandlePath_.last(),v.projectWorldPoint(v.featureHandleOrigin_ + float(7.25/2) * v.featureHandleAxis_)) < 0.01,
+                "simmetrica mostra meta distanza e quota totale");
+        for (int plane = 0; plane < 3; ++plane) {
+            v.sketches_[0].plane = plane;
+            QVector3D origin, axis, radial;
+            require(v.featureHandleGeometry(origin,axis,radial), "geometria manipolatore piani standard");
+            const auto expected = ForgeCad::extrusionVector(v.sketches_[0],1);
+            require((axis-QVector3D(expected.x(),expected.y(),expected.z())).length() < 1e-6, "direzione coerente con kernel");
+        }
+        v.sketches_[0].customFrame = true;
+        v.sketches_[0].frame.origin[0]=3; v.sketches_[0].frame.origin[1]=4; v.sketches_[0].frame.origin[2]=5;
+        v.sketches_[0].frame.normal[0]=0; v.sketches_[0].frame.normal[1]=1; v.sketches_[0].frame.normal[2]=0;
+        v.sketches_[0].frame.xAxis[0]=1; v.sketches_[0].frame.xAxis[1]=0; v.sketches_[0].frame.xAxis[2]=0;
+        QVector3D origin, axis, radial;
+        require(v.featureHandleGeometry(origin,axis,radial) && (origin-QVector3D(3,4,5)).length()<1e-6 && axis==QVector3D(0,1,0),
+                "origine e normale piano personalizzato");
+        v.sketches_[0] = sketch;
+        definition.feature = BodyFeature::Revolution;
+        definition.revolveAxis = -1;
+        definition.revolveAngle = 30;
+        v.setFeatureHandle(definition, changed);
+        draw();
+        require(v.featureHandlePath_.size() > 2 && v.featureHandleBox_->suffix().contains(QChar(0x00b0)), "arco con angolo editabile");
+        const auto angularPoint = [&](double angle) { return v.projectWorldPoint(v.featureHandleOrigin_ + v.featureHandleRadius_*v.featureHandleRadialAt(angle)); };
+        press(v.featureHandlePath_.last());
+        for (int angle = 25; angle >= -210; angle -= 5) move(angularPoint(angle));
+        release(angularPoint(-210));
+        require(std::abs(definition.revolveAngle + 210) < 2, "rivoluzione attraversa zero e -180 senza salto");
+        draw();
+        if (qEnvironmentVariableIsSet("FORGECAD_HANDLE_QA")) {
+            v.featureHandleBox_->render(&image, v.featureHandleBox_->pos());
+            image.save(QStringLiteral("/tmp/forgecad-feature-handles-revolution.png"));
+        }
+        require(v.featureHandleBox_->value() < 0, "angolo negativo nel box");
+        v.featureHandleBox_->setValue(360);
+        require(definition.revolveAngle == 360, "rivoluzione completa dal box");
+        draw();
+        press(v.featureHandlePath_.last());
+        for (int angle = 355; angle >= 330; angle -= 5) move(angularPoint(angle));
+        release(angularPoint(330));
+        require(std::abs(definition.revolveAngle-330)<2, "drag da rivoluzione completa non salta a zero");
+        v.yaw_=0; v.pitch_=0; v.roll_=0;
+        draw();
+        QVector3D rayOrigin, rayDirection;
+        v.viewRay(QPoint(v.width()/2,v.height()/2),rayOrigin,rayDirection);
+        require(std::abs(QVector3D::dotProduct(rayDirection,v.featureHandleAxis_))<0.08, "fixture arco visto di taglio");
+        const double beforeEdgeOn=definition.revolveAngle;
+        const QPointF edgeTip=v.featureHandlePath_.last();
+        const QPointF tangent=angularPoint(beforeEdgeOn+1)-angularPoint(beforeEdgeOn);
+        press(edgeTip);
+        const QPointF edgeDelta=QPointF::dotProduct(tangent,tangent)>0.05 ? 4*tangent : QPointF(0,-4);
+        move(edgeTip+edgeDelta); release(edgeTip+edgeDelta);
+        require(definition.revolveAngle>beforeEdgeOn+3, "trascinamento angolare anche di taglio");
+        v.documentReadOnly_=true;
+        require(!v.featureHandleAt(edgeTip), "manipolatore disabilitato in sola lettura");
+        v.documentReadOnly_=false;
+        definition.feature=BodyFeature::Extrusion;
+        v.setFeatureHandle(definition,changed);
+        require(v.featureHandleBox_->isLengthMeasurement(), "unita di lunghezza ripristinata dopo angolo");
+        definition.feature=BodyFeature::Revolution;
+        definition.revolveAxis = 999;
+        v.setFeatureHandle(definition, changed);
+        draw();
+        require(v.featureHandlePath_.isEmpty() && v.featureHandleBox_->isHidden(), "asse invalido nasconde controlli");
+        v.clearFeatureHandle();
+        require(!v.featureHandleChanged_ && !v.featureHandleDragging_ && v.featureHandleBox_->isHidden(), "pulizia manipolatore");
+        // Verifica i collegamenti dei veri pannelli e la pulizia su Annulla.
+        QMainWindow window;
+        auto *viewport = new CadViewport(&window);
+        window.setCentralWidget(viewport);
+        viewport->sketches_.append(sketch);
+        bool synchronized = false, visited = false;
+        const auto editPanel = [&](bool angular) {
+            QTimer::singleShot(0, viewport, [&, angular] {
+                for (auto *dialog : viewport->findChildren<QDialog *>()) {
+                    if (dialog->objectName() != QStringLiteral("functionDialogPanel")) continue;
+                    visited = true;
+                    if (viewport->featureHandleChanged_ && viewport->featureHandleBox_) {
+                        viewport->featureHandleBox_->setValue(angular ? -75.5 : -12.5);
+                        synchronized = std::abs(viewport->featureHandleValue() - (angular ? -75.5 : -12.5)) < 1e-6;
+                        if (angular) {
+                            bool reverse = false;
+                            for (auto *button : dialog->findChildren<QPushButton *>())
+                                if (button->text() == QStringLiteral("Inverti il verso")) reverse = button->isChecked();
+                            synchronized = synchronized && reverse;
+                        }
+                    }
+                    dialog->reject();
+                    return;
+                }
+                for (auto *dialog : window.findChildren<QDialog *>()) dialog->reject();
+            });
+        };
+        definition = ExtrusionObject(); definition.sketchIndex=0; definition.distance=5;
+        editPanel(false);
+        require(!extrusionDialog(&window, viewport, QStringLiteral("Test estrusione"), -1, definition,
+                                 [](const ExtrusionObject &) { return QString(); }), "annullamento estrusione");
+        require(visited && synchronized && !viewport->featureHandleChanged_, "pannello estrusione sincronizzato e pulito");
+        visited = synchronized = false;
+        definition.feature=BodyFeature::Revolution; definition.revolveAngle=60;
+        editPanel(true);
+        require(!revolutionDialog(&window, viewport, QStringLiteral("Test rivoluzione"), -1, definition, false,
+                                  [](const ExtrusionObject &) { return QString(); }), "annullamento rivoluzione");
+        require(visited && synchronized && !viewport->featureHandleChanged_ && viewport->extrusions_.isEmpty(),
+                "pannello angolo/verso sincronizzato, Annulla non cambia documento");
+        std::cout << "PASS feature handles" << std::endl;
+    }
     static void linkedDrawingUi() {
         using namespace ForgeCad;
         QTemporaryDir temporary;const auto path=temporary.filePath("modello.prt");clientOk(saveDocumentFile(path,clientModel()));
@@ -1252,7 +1424,7 @@ public:
     }
     static void mouseSnapshotRegression(const QString &output = {}) {
         using namespace ForgeCad;
-        const QString input = QStringLiteral(FORGECAD_SOURCE_DIR "/File_Esempio/Mouse.prt");
+        const QString input = exampleDocumentPath("Mouse.prt");
         DocumentState original;
         require(loadDocumentFile(input, original).isEmpty(), "lettura Mouse cache precedente");
         QVector<std::string> geometry;
@@ -8592,7 +8764,7 @@ public:
         // piu' periodi per lati collassati.
         {
             DocumentState applicator;
-            const QString path = QString::fromUtf8(FORGECAD_SOURCE_DIR) + QStringLiteral("/File_Esempio/Applicatore.prt");
+            const QString path = exampleDocumentPath("Applicatore.prt");
             require(loadDocumentFile(path, applicator).isEmpty() && !applicator.extrusions.isEmpty(), "lettura di Applicatore.prt");
             const ForgeBody result = applicator.extrusions.back().forgeBody;
             require(bool(result), "B-rep finale di Applicatore nello snapshot");
@@ -8639,7 +8811,7 @@ public:
         // sceglieva il ramo sbagliato della curva chiusa.
         {
             DocumentState bottleDocument;
-            const QString bottlePath = QString::fromUtf8(FORGECAD_SOURCE_DIR) + QStringLiteral("/File_Esempio/flacone.prt");
+            const QString bottlePath = exampleDocumentPath("flacone.prt");
             require(loadDocumentFile(bottlePath, bottleDocument).isEmpty(), "lettura di flacone.prt");
             CadViewport bottle;
             bottle.loadDocument(bottleDocument);
@@ -9288,6 +9460,11 @@ int main(int argc, char **argv) {
         catch (const std::exception &e) { std::cerr << e.what() << std::endl; return 1; }
         return 0;
     }
+    if (app.arguments().contains(QStringLiteral("--feature-handles"))) {
+        try { ViewportInteractionTest::featureHandles(); }
+        catch (const std::exception &e) { std::cerr << e.what() << std::endl; return 1; }
+        return 0;
+    }
     if (app.arguments().contains(QStringLiteral("--revolution-history"))) {
         try { revolutionHistoryTest(); }
         catch (const std::exception &e) { std::cerr << e.what() << std::endl; return 1; }
@@ -9478,7 +9655,7 @@ int main(int argc, char **argv) {
         else if (app.arguments().contains(QStringLiteral("--offset-lofts")))
             ViewportInteractionTest::offsetLofts(app.arguments().mid(app.arguments().indexOf(QStringLiteral("--offset-lofts")) + 1));
         else if (app.arguments().contains(QStringLiteral("--loft-corner")))
-            ViewportInteractionTest::loftCorner(QStringLiteral("File_Esempio/prova con loft.prt"));
+            ViewportInteractionTest::loftCorner(exampleDocumentPath("prova con loft.prt"));
         else if (app.arguments().contains(QStringLiteral("--copy-faces"))) ViewportInteractionTest::copyFaces();
         else if (app.arguments().contains(QStringLiteral("--reference-list-highlight"))) ViewportInteractionTest::referenceListHighlight();
         else if (app.arguments().contains(QStringLiteral("--surface-patterns"))) ViewportInteractionTest::surfacePatterns();

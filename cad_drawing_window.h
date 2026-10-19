@@ -7,6 +7,7 @@ class QAction;
 class QMenu;
 class QDockWidget;
 class QTableWidget;
+class QPushButton;
 namespace ForgeCad {
 // Documento tavola autonomo: il modello viene letto dal file salvato.
 class DrawingToolbarController;
@@ -30,6 +31,7 @@ public:
     bool isModified()const{return modified_;}
 protected:
     void closeEvent(QCloseEvent *event)override;
+    bool event(QEvent *event)override;
 private:
     void installEditor();
     DrawingToolbarController *toolbarController_=nullptr;
@@ -45,6 +47,7 @@ private:
     void refreshEditAccess();
     QString requireEditAccess();
     void refreshPageContext();
+    void refreshModelUpdateNotice();
     QHash<QString,QString> revisionLabels_;
     bool save(bool askPath);
     void report(const QString &error);
@@ -55,6 +58,10 @@ private:
     DrawingSheetEditor *editor_=nullptr;
     QLabel *sourceStatus_=nullptr;
     QAction *updateAction_=nullptr;
+    QWidget *modelUpdateNotice_=nullptr;
+    QLabel *modelUpdateText_=nullptr;
+    QPushButton *loadLatestModel_=nullptr;
+    RevisionRecord availableModelRevision_;
     QMenu *editMenu_=nullptr,*insertMenu_=nullptr,*dimensionMenu_=nullptr,*viewMenu_=nullptr;
     QVector<QAction *> revisionMutationActions_;
     bool modified_=false,containerDirty_=false,sourceReady_=false,busy_=false;

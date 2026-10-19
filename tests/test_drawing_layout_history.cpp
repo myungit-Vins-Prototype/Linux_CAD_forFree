@@ -52,7 +52,7 @@ int main(int argc,char **argv){
         // La fixture usa tutti i bordi per verificare la cronologia delle quote.
         ok(editor.insertView(top,{top.id,"Superiore",QPointF(100,100),{1},true}));const auto inserted=encoded(editor);
         ok(editor.undo());require(encoded(editor)==empty&&!editor.isModified()&&editor.canRedo(),"inserimento annullato senza metadati residui");ok(editor.redo());require(encoded(editor)==inserted,"vista ripristinata con stesso UUID");
-        int chosen=-1;for(std::size_t i=0;i<editor.curves(top.id).size();++i){const auto &c=editor.curves(top.id)[i];if(std::abs(std::abs((c.curve->point(c.range.hi)-c.curve->point(c.range.lo)).x())-10)<1e-7){chosen=int(i);break;}}
+        int chosen=-1;for(std::size_t i=0;i<editor.curves(top.id).size();++i){const auto &c=editor.curves(top.id)[i];if(std::abs(std::abs((c.curve->point(c.range.hi)-c.curve->point(c.range.lo)).x())-10)<1e-7){for(auto *item:editor.canvas()->scene()->items())if(item->data(0).toString()=="projection"&&item->data(1).toUuid()==top.id&&item->data(2).toInt()==int(i)){chosen=int(i);break;}if(chosen>=0)break;}}
         require(chosen>=0,"bordo orizzontale");for(auto *item:editor.canvas()->scene()->items())if(item->data(0).toString()=="projection"&&item->data(1).toUuid()==top.id&&item->data(2).toInt()==chosen)item->setSelected(true);
         ok(editor.addSelectedDimension(DrawingMeasure::HorizontalDistance));const auto dimension=editor.sheet().drawing.dimensions[0].id;
         const auto withDimension=encoded(editor);ok(editor.undo());require(editor.sheet().drawing.dimensions.empty(),"inserimento quota annullato");ok(editor.redo());require(encoded(editor)==withDimension,"quota ripristinata con stesso riferimento");

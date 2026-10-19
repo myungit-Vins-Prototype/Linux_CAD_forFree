@@ -1,4 +1,5 @@
 #pragma once
+#include "test_drawing_model_update.h"
 #include "../cad_drawing_revisions.h"
 namespace {
 ForgeCad::DrawingFile revisionDrawingFixture(const QString &path,const QString &sourcePath,QUuid &dimensionId){
@@ -14,6 +15,7 @@ ForgeCad::DrawingFile revisionDrawingFixture(const QString &path,const QString &
     clientOk(window.savePath(path));return window.document();
 }
 void drawingRevisionTests(){
+    drawingModelUpdateTests();
     using namespace ForgeCad;
     QTemporaryDir temporary;auto sourcePath=temporary.filePath("parte.prt"),path=temporary.filePath("tavola.drw");
     auto source=clientModel();clientOk(saveDocumentFile(sourcePath,source));WorkspacePaths paths;clientOk(locateDocumentWorkspace(sourcePath,paths));

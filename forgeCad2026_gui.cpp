@@ -32,6 +32,7 @@
 #include "fk_curve_ops.h"
 #include "cad_overlay_renderer.h"
 #include <QOpenGLContext>
+#include <QQuaternion>
 #include <array>
 #include <atomic>
 #include <set>
@@ -333,6 +334,7 @@ public:
         for (double &scale : referencePlaneScales_) scale = sharedPlaneScale;
     }
     ~CadViewport() override {
+        clearFeatureHandle();
         if (previewCancellation_) previewCancellation_->store(true, std::memory_order_relaxed);
         // I pannelli figli si deregistrano da glassPanels_: devono sparire
         // mentre i membri del viewport esistono ancora, prima della classe base.
@@ -3834,6 +3836,184 @@ public:
     bool sectionEnabled() const { return section_.enabled; }
     // Trascinamento del piano di sezione nella vista: `callback(spostamento)`
     // lungo la normale della sezione (nullptr: il piano non si trascina).
+    // Manipolatore temporaneo: modifica i parametri del pannello, mai il documento.
+    void clearFeatureHandle() {
+        featureHandleChanged_ = {};
+        featureHandleDragging_ = false;
+        featureHandlePath_.clear();
+        if (featureHandleBox_) featureHandleBox_->hide();
+        unsetCursor();
+        update();
+    }
+    void setFeatureHandle(const ExtrusionObject &definition, std::function<void(double)> changed) {
+        featureHandleDefinition_ = definition;
+        featureHandleChanged_ = std::move(changed);
+        if (!featureHandleBox_) {
+            featureHandleBox_ = new ForgeCad::ExpressionSpinBox(this);
+            featureHandleBox_->setObjectName(QStringLiteral("featureHandleValue"));
+            featureHandleBox_->setDecimals(6);
+            featureHandleBox_->setKeyboardTracking(false);
+            featureHandleBox_->setFixedWidth(150);
+            featureHandleBox_->setStyleSheet(QStringLiteral("QDoubleSpinBox { background: #202b38; color: #ffcf86; border: 1px solid #eea048; border-radius: 4px; padding: 4px; }"));
+            featureHandleBox_->setToolTip(QStringLiteral("Quota con segno: un valore negativo inverte il verso. Invio applica il valore all'anteprima."));
+            featureHandleBox_->onReturn = [this] { commitFeatureHandleValue(); };
+            QObject::connect(featureHandleBox_, &QDoubleSpinBox::editingFinished, this, [this] { commitFeatureHandleValue(); });
+            QObject::connect(featureHandleBox_, &QDoubleSpinBox::valueChanged, this, [this](double) {
+                commitFeatureHandleValue();
+            });
+        }
+        const bool angular = definition.feature == BodyFeature::Revolution;
+        const QSignalBlocker blocker(featureHandleBox_);
+        featureHandleBox_->setRange(angular ? -360.0 : -100000.0, angular ? 360.0 : 100000.0);
+        featureHandleBox_->setLengthMeasurement(!angular);
+        if (angular) featureHandleBox_->setSuffix(QStringLiteral(" °"));
+        if (!featureHandleBox_->hasFocus()) featureHandleBox_->setValue(featureHandleValue());
+        update();
+    }
+    double featureHandleValue() const {
+        return featureHandleDefinition_.feature == BodyFeature::Revolution
+            ? featureHandleDefinition_.revolveAngle : featureHandleDefinition_.distance;
+    }
+    void commitFeatureHandleValue() {
+        if (!featureHandleChanged_ || !featureHandleBox_) return;
+        const double value = featureHandleBox_->value();
+        if (std::abs(value - featureHandleValue()) < 1e-10) return;
+        const auto changed = featureHandleChanged_;
+        changed(value);
+    }
+    bool featureHandleGeometry(QVector3D &origin, QVector3D &axis, QVector3D &radial) const {
+        const auto &d = featureHandleDefinition_;
+        if (!featureHandleChanged_ || d.sketchIndex < 0 || d.sketchIndex >= sketches_.size()) return false;
+        const auto &sketch = sketches_.at(d.sketchIndex);
+        origin = ForgeCad::sketchToDisplay(QPointF(), sketch);
+        const auto display = [](const ForgeCad::Kernel::Vec3 &p) { return QVector3D(p.x(), p.y(), p.z()); };
+        if (d.feature == BodyFeature::Extrusion) {
+            axis = display(ForgeCad::extrusionVector(sketch, 1.0)).normalized();
+            radial = {};
+            return true;
+        }
+        QPointF point, direction;
+        QString error;
+        if (d.revolveAxis == kRevolveAxisReference) {
+            ForgeCad::ResolvedRef reference;
+            if (!ForgeCad::resolveGeometryRef(d.revolveAxisRef, extrusions_.size(), sketches_, extrusions_, reference, &error)
+                || !reference.hasLine || !ForgeCad::sketchLineFromWorld(sketch, reference.point, reference.direction, point, direction, &error)) return false;
+        } else if (!ForgeCad::sketchRevolutionAxis(sketch, d.revolveAxis, point, direction, &error)) return false;
+        axis = (ForgeCad::sketchToDisplay(point + direction, sketch) - ForgeCad::sketchToDisplay(point, sketch)).normalized();
+        const auto axisPoint = ForgeCad::sketchToDisplay(point, sketch);
+        const auto foot = axisPoint + axis * QVector3D::dotProduct(origin - axisPoint, axis);
+        radial = origin - foot;
+        if (radial.lengthSquared() < 1e-10f) {
+            int side = ForgeCad::revolutionProfileSide(sketch, point, direction, &error);
+            const QPointF perpendicular(-direction.y(), direction.x());
+            radial = (ForgeCad::sketchToDisplay(point + perpendicular, sketch) - axisPoint) * (side < 0 ? -1.0f : 1.0f);
+        }
+        radial.normalize();
+        origin = foot;
+        return true;
+    }
+    QVector3D featureHandleRadialAt(double degrees) const {
+        return QQuaternion::fromAxisAndAngle(featureHandleAxis_, float(degrees)).rotatedVector(featureHandleRadial_);
+    }
+    void drawFeatureHandle(QPainter &painter) {
+        if (!featureHandleGeometry(featureHandleOrigin_, featureHandleAxis_, featureHandleRadial_)) {
+            featureHandlePath_.clear();
+            if (featureHandleBox_) featureHandleBox_->hide();
+            return;
+        }
+        const bool angular = featureHandleDefinition_.feature == BodyFeature::Revolution;
+        const double value = featureHandleValue();
+        const float unit = zoom_ / qMax(1, height());
+        featureHandleRadius_ = 90.0f * unit;
+        featureHandlePath_.clear();
+        const QPointF sketchOrigin = projectWorldPoint(ForgeCad::sketchToDisplay(QPointF(), sketches_.at(featureHandleDefinition_.sketchIndex)));
+        painter.save();
+        painter.setRenderHint(QPainter::Antialiasing);
+        painter.setPen(QPen(QColor(255, 194, 100), 1.5, Qt::DashLine));
+        if (angular) {
+            const int steps = qMax(2, int(std::abs(value) / 3.0));
+            for (int k = 0; k <= steps; ++k)
+                featureHandlePath_ << projectWorldPoint(featureHandleOrigin_ + featureHandleRadius_ * featureHandleRadialAt(value * k / steps));
+            painter.drawLine(sketchOrigin, featureHandlePath_.first());
+            painter.drawLine(projectWorldPoint(featureHandleOrigin_), featureHandlePath_.last());
+        } else {
+            // Nella simmetrica il parametro rappresenta la distanza totale.
+            const double length = featureHandleDefinition_.extrudeSides == 1 ? value * 0.5 : value;
+            featureHandlePath_ << sketchOrigin << projectWorldPoint(featureHandleOrigin_ + float(length) * featureHandleAxis_);
+        }
+        painter.setPen(QPen(QColor(255, 174, 70), featureHandleDragging_ ? 4.0 : 3.0, Qt::SolidLine, Qt::RoundCap));
+        painter.drawPolyline(featureHandlePath_);
+        const QPointF tip = featureHandlePath_.last();
+        QPointF tangent = tip - featureHandlePath_.at(featureHandlePath_.size() - 2);
+        if (std::hypot(tangent.x(), tangent.y()) < 0.01) tangent = QPointF(0, value < 0 ? 1 : -1);
+        tangent /= std::hypot(tangent.x(), tangent.y());
+        const QPointF normal(-tangent.y(), tangent.x());
+        painter.setBrush(QColor(255, 194, 100));
+        painter.drawPolygon(QPolygonF({tip, tip - 14 * tangent + 6 * normal, tip - 14 * tangent - 6 * normal}));
+        painter.drawEllipse(featureHandlePath_.first(), 3, 3);
+        painter.setBrush(QColor(255, 174, 70));
+        painter.drawEllipse(tip, 5, 5);
+        painter.restore();
+        const int maxX = qMax(0, width() - featureHandleBox_->width());
+        const int maxY = qMax(0, height() - featureHandleBox_->height());
+        QPoint boxPosition(qRound(qBound(0.0, tip.x() + 18, double(maxX))),
+                           qRound(qBound(0.0, tip.y() - 16, double(maxY))));
+        for (auto *panel : findChildren<QDialog *>(QStringLiteral("functionDialogPanel"), Qt::FindDirectChildrenOnly)) {
+            if (panel->isVisible() && panel->geometry().intersects(QRect(boxPosition, featureHandleBox_->size()))) {
+                boxPosition.setX(qBound(0, panel->x() - featureHandleBox_->width() - 12, maxX));
+            }
+        }
+        featureHandleBox_->move(boxPosition);
+        featureHandleBox_->show();
+        featureHandleBox_->raise();
+    }
+    bool featureHandleAt(const QPointF &position) const {
+        if (!featureHandleChanged_ || refPicking_ || edgePicking_ || documentReadOnly_) return false;
+        for (int k = 1; k < featureHandlePath_.size(); ++k)
+            if (distanceToSegment(position, featureHandlePath_[k - 1], featureHandlePath_[k]) <= 10) return true;
+        return false;
+    }
+    void dragFeatureHandle(const QPointF &position) {
+        if (!featureHandleChanged_) return;
+        const QPointF delta = position - featureHandleLastMouse_;
+        double value = featureHandleDragValue_;
+        if (featureHandleDefinition_.feature == BodyFeature::Revolution) {
+            // Intersezione raggio/piano dell'arco: angolo incrementale senza salto a +/-180.
+            QVector3D a, ray;
+            viewRay(position.toPoint(), a, ray);
+            const double denominator = QVector3D::dotProduct(ray, featureHandleAxis_);
+            if (std::abs(denominator) > 0.08) {
+                const QVector3D hit = a + ray * (QVector3D::dotProduct(featureHandleOrigin_ - a, featureHandleAxis_) / denominator);
+                const QVector3D radial = hit - featureHandleOrigin_;
+                if (radial.lengthSquared() > 1e-12f) {
+                    const double angle = std::atan2(QVector3D::dotProduct(featureHandleAxis_, QVector3D::crossProduct(featureHandleRadial_, radial)),
+                                                    QVector3D::dotProduct(featureHandleRadial_, radial)) * 180.0 / M_PI;
+                    if (featureHandleMouseAngleValid_) value += std::remainder(angle - featureHandleMouseAngle_, 360.0);
+                    featureHandleMouseAngle_ = angle;
+                    featureHandleMouseAngleValid_ = true;
+                }
+            } else {
+                const QPointF tip = projectWorldPoint(featureHandleOrigin_ + featureHandleRadius_ * featureHandleRadialAt(value));
+                QPointF tangent = projectWorldPoint(featureHandleOrigin_ + featureHandleRadius_ * featureHandleRadialAt(value + 1)) - tip;
+                const double squared = QPointF::dotProduct(tangent, tangent);
+                value += squared > 0.05 ? QPointF::dotProduct(delta, tangent) / squared : -delta.y();
+            }
+            value = qBound(-360.0, value, 360.0);
+        } else {
+            const float length = 90.0f * zoom_ / qMax(1, height());
+            const QPointF screen = projectWorldPoint(featureHandleOrigin_ + length * featureHandleAxis_) - projectWorldPoint(featureHandleOrigin_);
+            const double squared = QPointF::dotProduct(screen, screen);
+            const double movement = squared > 144.0 ? QPointF::dotProduct(delta, screen) * length / squared
+                                                   : -delta.y() * zoom_ / qMax(1, height());
+            value += movement * (featureHandleDefinition_.extrudeSides == 1 ? 2 : 1);
+            value = qBound(-100000.0, value, 100000.0);
+        }
+        featureHandleLastMouse_ = position;
+        featureHandleDragValue_ = value;
+        const auto changed = featureHandleChanged_;
+        changed(value);
+    }
+
     void setSectionDragCallback(std::function<void(double)> callback) { sectionDragged_ = std::move(callback); }
     // Maniglia del piano di sezione sullo schermo: la freccia dal centro del
     // piano lungo la normale (un disco se la normale guarda l'osservatore).
@@ -4494,6 +4674,16 @@ protected:
         if (event->button() == Qt::MiddleButton || (event->button() == Qt::LeftButton && panKeyHeld_)) {
             panning_ = true;
             setCursor(Qt::ClosedHandCursor);
+            return;
+        }
+        if (event->button() == Qt::LeftButton && featureHandleAt(event->position())) {
+            featureHandleDragging_ = true;
+            featureHandleDragValue_ = featureHandleValue();
+            featureHandleLastMouse_ = event->position();
+            featureHandleMouseAngleValid_ = false;
+            dragFeatureHandle(event->position());
+            setCursor(Qt::ClosedHandCursor);
+            event->accept();
             return;
         }
         if(spatialAdd_) {
@@ -6069,6 +6259,13 @@ protected:
     }
 
     void mouseMoveEvent(QMouseEvent *event) override {
+        if (featureHandleDragging_) {
+            if (!(event->buttons() & Qt::LeftButton)) { featureHandleDragging_ = false; unsetCursor(); update(); return; }
+            dragFeatureHandle(event->position());
+            event->accept();
+            return;
+        }
+        if (!event->buttons() && featureHandleAt(event->position())) { setCursor(Qt::OpenHandCursor); return; }
         if (selectionPending_ && (event->buttons() & Qt::LeftButton)
             && (event->position().toPoint() - selectionPress_).manhattanLength() >= QApplication::startDragDistance())
             selectionDragged_ = true;
@@ -6445,6 +6642,7 @@ protected:
     }
 
     void focusOutEvent(QFocusEvent *event) override {
+        featureHandleDragging_ = false;
         panKeyHeld_ = false;
         panning_ = false;
         unsetCursor();
@@ -6452,6 +6650,14 @@ protected:
     }
 
     void mouseReleaseEvent(QMouseEvent *event) override {
+        if (featureHandleDragging_ && event->button() == Qt::LeftButton) {
+            dragFeatureHandle(event->position());
+            featureHandleDragging_ = false;
+            unsetCursor();
+            update();
+            event->accept();
+            return;
+        }
         orbitPivotValid_ = false;
         if(spatialAdd_ && !panning_) {
             if(event->button()==Qt::LeftButton && spatialPressed_) {
@@ -9144,6 +9350,7 @@ private:
         QPainter painter(this);
         painter.setRenderHint(QPainter::Antialiasing);
         drawSectionHandle(painter);
+        drawFeatureHandle(painter);
         drawSelectionBox(painter);
         if (sketchMode_ && activeSketch_ >= 0 && activeSketch_ < sketches_.size()) {
             if (drawingTool_ == DrawingTool::Select || drawingTool_ == DrawingTool::Dimension) {
@@ -12259,6 +12466,15 @@ private:
     mutable std::map<const void *, std::pair<std::weak_ptr<const ForgeCad::Kernel::Body>, QPair<int, int>>> componentCache_;
     bool referencesConstruction_ = true;
     std::function<void()> sectionRefresh_;
+    ExtrusionObject featureHandleDefinition_;
+    std::function<void(double)> featureHandleChanged_;
+    ForgeCad::ExpressionSpinBox *featureHandleBox_ = nullptr;
+    QPolygonF featureHandlePath_;
+    QVector3D featureHandleOrigin_, featureHandleAxis_, featureHandleRadial_;
+    float featureHandleRadius_ = 1;
+    bool featureHandleDragging_ = false, featureHandleMouseAngleValid_ = false;
+    double featureHandleDragValue_ = 0, featureHandleMouseAngle_ = 0;
+    QPointF featureHandleLastMouse_;
     std::function<void(double)> sectionDragged_;
     bool sectionDragging_ = false, sectionHover_ = false;
     mutable bool sceneBoundsDirty_ = true;
@@ -16300,7 +16516,8 @@ static bool extrusionDialog(QMainWindow *window, CadViewport *viewport, const QS
             if (bodyList->item(row)->checkState() == Qt::Checked) d.mergeBodies.append(bodyList->item(row)->data(Qt::UserRole).toInt());
         return d;
     };
-    const auto refresh = [&] {
+    std::function<void()> refresh;
+    refresh = [&] {
         const int extent = extentBox->currentIndex();
         // La simmetrica vale solo con la fine a distanza.
         if (auto *model = qobject_cast<QStandardItemModel *>(sidesBox->model()))
@@ -16333,12 +16550,19 @@ static bool extrusionDialog(QMainWindow *window, CadViewport *viewport, const QS
         else if (extent != 0 && definition.extentRef.kind < 0) setStatus(QStringLiteral("Scegli nella vista dove finisce l'estrusione."), false);
         else setStatus(QString(), false);
         ExtrusionObject d = current();
+        if (extent == 0 && !picking && !picker.active()) {
+            viewport->setFeatureHandle(d, [&](double value) {
+                const QSignalBlocker blocker(distanceBox);
+                distanceBox->setValue(value);
+                refresh();
+            });
+        } else viewport->clearFeatureHandle();
         if (extent != 0 && d.extentRef.kind < 0) return;
         scope->request(viewport->withMergeCandidates(d, replaced >= 0 ? replaced : int(bodies.size())));
     };
     picker.changed = refresh;
     picker.message = setStatus;
-    picker.starting = [&] { picking = false; };
+    picker.starting = [&] { picking = false; viewport->clearFeatureHandle(); };
     const auto pick = [&] {
         picker.stop();
         picking = true;
@@ -16388,6 +16612,8 @@ static bool extrusionDialog(QMainWindow *window, CadViewport *viewport, const QS
         }
         refresh();
     });
+    QObject::connect(distanceBox, &QDoubleSpinBox::valueChanged, &dialog, refresh);
+    QObject::connect(distance2Box, &QDoubleSpinBox::valueChanged, &dialog, refresh);
     distanceBox->onReturn = refresh;
     distance2Box->onReturn = refresh;
     QObject::connect(buttons, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
@@ -16427,6 +16653,7 @@ static bool extrusionDialog(QMainWindow *window, CadViewport *viewport, const QS
     viewport->cancelReferencePick();
     viewport->setReferencePickCallback(nullptr);
     viewport->setReferenceMarks({});
+    viewport->clearFeatureHandle();
     scope.reset();
     return accepted;
 }
@@ -19900,7 +20127,7 @@ static bool revolutionDialog(QWidget *parent, CadViewport *viewport, const QStri
                                           "uno spigolo rettilineo o una faccia cilindrica (il suo asse). Deve stare nel piano dello schizzo."));
     auto *angleBox = new ForgeCad::ExpressionSpinBox(&dialog);
     angleBox->setDecimals(6);
-    angleBox->setRange(0.000001, 360.0);
+    angleBox->setRange(0.0, 360.0);
     angleBox->setValue(std::abs(initial.revolveAngle));
     angleBox->setSuffix(QStringLiteral(" °"));
     // Inverti il verso: pulsante a due stati (premuto = angolo negativo).
@@ -19962,19 +20189,29 @@ static bool revolutionDialog(QWidget *parent, CadViewport *viewport, const QStri
         }
         viewport->setReferenceMarks(mark.kind >= 0 ? QVector<GeometryRef>{mark} : QVector<GeometryRef>());
     };
-    const auto refresh = [&] {
+    std::function<void()> refresh;
+    refresh = [&] {
         const bool merge = operationBox->currentIndex() != 0;
         form->setRowVisible(autoBox, merge);
         form->setRowVisible(bodyRow, merge);
         bodyRow->setEnabled(!autoBox->isChecked());
         if (!merge || autoBox->isChecked()) picker.stop();
         markAxis();
-        if (axisBox->currentIndex() < 0) return;
+        if (axisBox->currentIndex() < 0) { viewport->clearFeatureHandle(); return; }
+        if (!pickButton->isChecked() && !picker.active()) {
+            viewport->setFeatureHandle(current(), [&](double value) {
+                const QSignalBlocker angleBlocker(angleBox), reverseBlocker(reverseBox);
+                angleBox->setValue(std::abs(value));
+                reverseBox->setChecked(value < 0);
+                refresh();
+            });
+        } else viewport->clearFeatureHandle();
         scope.request(viewport->withMergeCandidates(current(), replaced >= 0 ? replaced : int(bodies.size())));
     };
     picker.changed = refresh;
     picker.message = [&](const QString &text, bool) { pickStatus->setText(text); };
     picker.starting = [&] {
+        viewport->clearFeatureHandle();
         const QSignalBlocker blocker(pickButton);
         pickButton->setChecked(false);
         pickStatus->setText(picker.hint());
@@ -19982,10 +20219,11 @@ static bool revolutionDialog(QWidget *parent, CadViewport *viewport, const QStri
     const auto setPicking = [&](bool on) {
         const QSignalBlocker blocker(pickButton);
         pickButton->setChecked(on);
-        if (on) picker.stop();
+        if (on) { picker.stop(); viewport->clearFeatureHandle(); }
         if (!on) {
             viewport->cancelReferencePick();
             pickStatus->setText(QString());
+            refresh();
             return;
         }
         const QString error = viewport->beginReferencePick(ForgeCad::DatumRoleLine, replaced);
@@ -20027,6 +20265,7 @@ static bool revolutionDialog(QWidget *parent, CadViewport *viewport, const QStri
         refresh();
     });
     QObject::connect(axisBox, &QComboBox::currentIndexChanged, &dialog, refresh);
+    QObject::connect(angleBox, &QDoubleSpinBox::valueChanged, &dialog, refresh);
     angleBox->onReturn = refresh;
     QObject::connect(reverseBox, &QPushButton::toggled, &dialog, refresh);
     QObject::connect(operationBox, &QComboBox::currentIndexChanged, &dialog, refresh);
@@ -20053,6 +20292,7 @@ static bool revolutionDialog(QWidget *parent, CadViewport *viewport, const QStri
     viewport->cancelReferencePick();
     viewport->setReferencePickCallback({});
     viewport->setReferenceMarks({});
+    viewport->clearFeatureHandle();
     return applied;
 }
 
@@ -23193,6 +23433,7 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
         glRenderer_ = renderer;
         gpuStatus->setText(gpuStatusText());
     });
+    installDocumentRevisionPanel(viewMenu);
     // Impostazioni dell'interfaccia (Opzioni): finestra e pannelli, stile di
     // visualizzazione, luci, qualita', sfondo, piani, griglia, zoom con la
     // rotella. Si salvano a richiesta nel gruppo "interface" di QSettings e
@@ -23359,6 +23600,7 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
         if(foregroundProgressDepth_||viewport_->interactionLocked())return;
         refreshDocumentEditAccess();updateWindowTitle();
     });revisionTimer->start();
+    documentRevisionDock_->setVisible(QSettings().value("revisions/modelPanelVisible",true).toBool());
     refreshDocumentEditAccess();updateWindowTitle();
     setTheme(QApplication::palette().color(QPalette::Window).lightness() < 128);
 }
@@ -23386,8 +23628,9 @@ void PdfWindow::refreshDocumentEditAccess(){
         for(const auto &action:revisionDisabledActions_)if(action)action->setEnabled(true);
         revisionDisabledActions_.clear();
     }
-    if(documentRevisionStatus_){documentRevisionStatus_->setText(documentEditAccess_.readOnly?QStringLiteral("Sola lettura · Eseguire check-out"):QString());documentRevisionStatus_->setToolTip(documentEditAccess_.reason);}
+    if(documentRevisionStatus_){documentRevisionStatus_->setText(!viewport_->documentVersion().checkinId.isNull()?QStringLiteral("Revisione storica · Sola lettura"):documentEditAccess_.readOnly?QStringLiteral("Sola lettura · Eseguire check-out"):QString());documentRevisionStatus_->setToolTip(documentEditAccess_.reason);}
     updateUndoActions();
+    refreshDocumentRevisionPanel();
 }
 void PdfWindow::updateWindowTitle() {
     const QString name = documentPath_.isEmpty() ? QStringLiteral("Senza nome") : QFileInfo(documentPath_).fileName();
@@ -23722,6 +23965,72 @@ QString PdfWindow::runDocumentRevisionAction(DocumentRevisionAction action, cons
                 : QStringLiteral("Check-out annullato; modifiche locali mantenute."),6000);
     }
     refreshDocumentEditAccess();updateWindowTitle(); return error;
+}
+
+void PdfWindow::installDocumentRevisionPanel(QMenu *viewMenu) {
+    documentRevisionDock_=new QDockWidget(QStringLiteral("Revisioni"),this);documentRevisionDock_->setObjectName("documentRevisionDock");
+    documentRevisionDock_->setMinimumWidth(300);auto *body=new QWidget(documentRevisionDock_);auto *layout=new QVBoxLayout(body);
+    documentRevisionPanelStatus_=new QLabel(body);documentRevisionPanelStatus_->setObjectName("documentRevisionPanelStatus");documentRevisionPanelStatus_->setWordWrap(true);documentRevisionPanelStatus_->setTextFormat(Qt::PlainText);layout->addWidget(documentRevisionPanelStatus_);
+    auto *commands=new QHBoxLayout;
+    for(const auto &entry:QList<QPair<QString,QString>>{{"revisionCheckoutAction","open"},{"revisionCheckinAction","save"},{"revisionCompleteAction","rebuild"},{"revisionCancelAction","undo"}}){
+        auto *action=findChild<QAction *>(entry.first);action->setIcon(ForgeCad::commandIcon(entry.second));auto *button=new QToolButton(body);button->setDefaultAction(action);button->setToolTip(action->text());commands->addWidget(button);
+    }
+    layout->addLayout(commands);
+    documentRevisionHistory_=new QTableWidget(0,5,body);documentRevisionHistory_->setObjectName("documentRevisionHistory");
+    documentRevisionHistory_->setHorizontalHeaderLabels({QStringLiteral("N."),QStringLiteral("Rev."),QStringLiteral("Autore"),QStringLiteral("Data"),QStringLiteral("Commento")});
+    documentRevisionHistory_->setEditTriggers(QAbstractItemView::NoEditTriggers);documentRevisionHistory_->setSelectionBehavior(QAbstractItemView::SelectRows);documentRevisionHistory_->setSelectionMode(QAbstractItemView::SingleSelection);documentRevisionHistory_->horizontalHeader()->setStretchLastSection(true);layout->addWidget(documentRevisionHistory_,1);
+    documentOpenRevision_=new QPushButton(ForgeCad::commandIcon("open"),QStringLiteral("Apri revisione selezionata"),body);documentOpenRevision_->setObjectName("documentOpenSelectedRevision");documentOpenRevision_->setToolTip(QStringLiteral("Apre il modello archiviato in una finestra separata in sola lettura."));documentOpenRevision_->setEnabled(false);layout->addWidget(documentOpenRevision_);
+    connect(documentOpenRevision_,&QPushButton::clicked,this,&PdfWindow::openSelectedDocumentRevision);
+    connect(documentRevisionHistory_,&QTableWidget::cellDoubleClicked,this,[this](int,int){openSelectedDocumentRevision();});
+    connect(documentRevisionHistory_,&QTableWidget::itemSelectionChanged,this,[this]{documentOpenRevision_->setEnabled(documentRevisionHistory_->currentRow()>=0&&!foregroundProgressDepth_&&!viewport_->interactionLocked());});
+    auto *refresh=new QPushButton(QStringLiteral("Aggiorna stato"),body);refresh->setObjectName("documentRefreshRevisions");layout->addWidget(refresh);connect(refresh,&QPushButton::clicked,this,[this]{refreshDocumentEditAccess();updateWindowTitle();});
+    documentRevisionDock_->setWidget(body);addDockWidget(Qt::RightDockWidgetArea,documentRevisionDock_);
+    auto *toggle=documentRevisionDock_->toggleViewAction();toggle->setObjectName("documentRevisionPanelAction");toggle->setText(QStringLiteral("Pannello revisioni"));viewMenu->addAction(toggle);
+    documentRevisionDock_->setVisible(QSettings().value("revisions/modelPanelVisible",true).toBool());
+    connect(documentRevisionDock_,&QDockWidget::visibilityChanged,this,[this](bool visible){if(isVisible())QSettings().setValue("revisions/modelPanelVisible",visible);});
+}
+void PdfWindow::refreshDocumentRevisionPanel() {
+    if(!documentRevisionDock_||!viewport_||foregroundProgressDepth_||viewport_->interactionLocked())return;
+    DocumentState identity;identity.version=viewport_->documentVersion();identity.baseCheckinId=viewport_->documentBaseCheckinId();
+    const bool historical=!identity.version.checkinId.isNull();QVector<ForgeCad::RevisionRecord> records;ForgeCad::WorkspaceRevisionStatus status;
+    QString message,error;bool known=false;
+    if(documentPath_.isEmpty())message=QStringLiteral("Nuovo modello: salva il documento per gestire le revisioni.");
+    else{
+        error=ForgeCad::workspaceDocumentHistory(documentPath_,identity,records);
+        if(historical)message=QStringLiteral("Copia storica in sola lettura.");
+        else{
+            const auto statusError=ForgeCad::workspaceRevisionStatus(documentPath_,identity,status);known=statusError.isEmpty();
+            if(!known)message=QStringLiteral("Stato non verificato: %1").arg(statusError);
+            else if(status.hasPending)message=QStringLiteral("Check-in pendente: completa l'operazione.");
+            else if(status.hasSession)message=QStringLiteral("Check-out: %1\n%2").arg(status.session.checkout.owner,status.phase==ForgeCad::WorkspaceCheckoutPhase::Active?QStringLiteral("Copia di lavoro prenotata"):QStringLiteral("Prenotazione da completare"));
+            else message=documentEditAccess_.readOnly?documentEditAccess_.reason:QStringLiteral("Nessun check-out attivo.");
+            QString next;if(ForgeCad::nextWorkspaceRevisionLabel(documentPath_,identity.version.documentId,next).isEmpty())message+=QStringLiteral("\nProssima revisione automatica: %1").arg(next);
+        }
+    }
+    const auto base=historical?identity.version.checkinId:identity.baseCheckinId;
+    for(const auto &record:records)if(record.version.checkinId==base)message+=QStringLiteral("\n%1: %2").arg(historical?QStringLiteral("Revisione"):QStringLiteral("Base"),record.technicalRevision);
+    if(documentModified_)message+=QStringLiteral("\nModifiche locali da salvare.");
+    documentRevisionPanelStatus_->setText(message);documentRevisionPanelStatus_->setToolTip(error);
+    const auto selected=documentRevisionHistory_->currentRow()>=0&&documentRevisionHistory_->item(documentRevisionHistory_->currentRow(),0)?documentRevisionHistory_->item(documentRevisionHistory_->currentRow(),0)->data(Qt::UserRole).toUuid():QUuid();
+    QSignalBlocker lock(documentRevisionHistory_);documentRevisionHistory_->setRowCount(records.size());int selection=records.size()-1;
+    for(int row=0;row<records.size();++row){const auto &record=records[row];const QStringList cells{QString::number(record.sequence),record.technicalRevision,record.author,record.createdUtc.toLocalTime().toString("yyyy-MM-dd HH:mm"),record.comment};for(int col=0;col<cells.size();++col)documentRevisionHistory_->setItem(row,col,new QTableWidgetItem(cells[col]));auto *item=documentRevisionHistory_->item(row,0);item->setData(Qt::UserRole,record.version.checkinId);item->setData(Qt::UserRole+1,record.version.documentId);if(record.version.checkinId==selected)selection=row;}
+    documentRevisionHistory_->resizeColumnsToContents();documentRevisionHistory_->setColumnWidth(4,200);documentRevisionHistory_->resizeRowsToContents();if(selection>=0)documentRevisionHistory_->selectRow(selection);
+    documentOpenRevision_->setEnabled(selection>=0);
+    const bool writableVersion=!historical&&!documentPath_.isEmpty();
+    findChild<QAction *>("revisionCheckoutAction")->setEnabled(writableVersion&&known&&!status.hasPending&&(!status.hasSession||status.phase==ForgeCad::WorkspaceCheckoutPhase::Reserving));
+    findChild<QAction *>("revisionCheckinAction")->setEnabled(writableVersion&&known&&status.hasSession&&!status.hasPending&&status.phase==ForgeCad::WorkspaceCheckoutPhase::Active);
+    findChild<QAction *>("revisionCompleteAction")->setEnabled(writableVersion&&known&&status.hasPending);
+    findChild<QAction *>("revisionCancelAction")->setEnabled(writableVersion&&known&&status.hasSession&&!status.hasPending);
+}
+void PdfWindow::openSelectedDocumentRevision() {
+    if(foregroundProgressDepth_||viewport_->interactionLocked()||!documentRevisionHistory_)return;
+    const int row=documentRevisionHistory_->currentRow();auto *item=row>=0?documentRevisionHistory_->item(row,0):nullptr;if(!item)return;
+    const ForgeCad::DocumentVersion version{item->data(Qt::UserRole+1).toUuid(),item->data(Qt::UserRole).toUuid()};
+    ForgeCad::WorkspacePaths paths;auto error=ForgeCad::locateDocumentWorkspace(documentPath_,paths);DocumentState source;
+    if(error.isEmpty()){ForgeCad::RevisionStore store(paths.revisions);error=ForgeCad::readNativeRevision(store,version,source);}
+    if(!error.isEmpty()){QMessageBox::warning(this,QStringLiteral("Revisioni"),error);return;}
+    auto *window=new PdfWindow;window->loadingDocument_=true;window->viewport_->loadDocument(source);window->documentPath_=documentPath_;window->documentModified_=false;window->loadingDocument_=false;
+    window->refreshDocumentEditAccess();window->updateWindowTitle();window->rebuildModelTree();window->setAttribute(Qt::WA_DeleteOnClose);window->show();
 }
 
 void PdfWindow::showDocumentRevisions() {
