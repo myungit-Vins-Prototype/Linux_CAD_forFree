@@ -10,7 +10,8 @@ struct DrawingDimensionPresentation {
     double upper=0,lower=0; // scostamenti dal nominale esatto, nelle unita' della quota
     int decimals=3;
     QString prefix,suffix;
-    bool operator==(const DrawingDimensionPresentation &p)const{return mode==p.mode&&upper==p.upper&&lower==p.lower&&decimals==p.decimals&&prefix==p.prefix&&suffix==p.suffix;}
+    bool reverseArrows=false;
+    bool operator==(const DrawingDimensionPresentation &p)const{return mode==p.mode&&upper==p.upper&&lower==p.lower&&decimals==p.decimals&&prefix==p.prefix&&suffix==p.suffix&&reverseArrows==p.reverseArrows;}
     bool active()const{return !(*this==DrawingDimensionPresentation{});}
 };
 inline QString validateDrawingDimensionPresentation(const DrawingDimensionPresentation &p){

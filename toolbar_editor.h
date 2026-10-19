@@ -48,7 +48,7 @@ public:
         int index = 0;
         for (auto *action : bar_->actions()) {
             if (!keys_.contains(action)) {
-                const QString key = QStringLiteral("builtin/%1").arg(index);
+                const QString key = !action->property("toolbarRequired").toBool()?QStringLiteral("builtin/%1").arg(index):QStringLiteral("widget/")+action->objectName();
                 keys_.insert(action, key);
                 available_.append({key, action});
                 auto *button = qobject_cast<QToolButton *>(bar_->widgetForAction(action));
@@ -340,6 +340,8 @@ private:
             keys_.insert(action, key);
             groups_.append(action);
         }
+        // Essential interactive controls must survive old/custom toolbar layouts.
+        for(const auto &entry:available_)if(entry.second->property("toolbarRequired").toBool()&&!bar_->actions().contains(entry.second))bar_->insertAction(bar_->actions().isEmpty()?nullptr:bar_->actions().front(),entry.second);
         refreshVisibility(bar_);
         watchButtons();
         if (persist) save();

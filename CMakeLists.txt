@@ -505,3 +505,10 @@ target_link_libraries(forgecad_drawing_axes_tests PRIVATE Qt6::Widgets forgekern
 target_compile_options(forgecad_drawing_axes_tests PRIVATE -Wall -Wextra -Wpedantic)
 add_test(NAME forgecad_drawing_axes_tests COMMAND forgecad_drawing_axes_tests)
 set_tests_properties(forgecad_drawing_axes_tests PROPERTIES TIMEOUT 120 ENVIRONMENT "QT_QPA_PLATFORM=offscreen;QT_QPA_OFFSCREEN_NO_GLX=1;QT_QPA_PLATFORMTHEME=;QT_STYLE_OVERRIDE=Fusion")
+
+add_executable(forgecad_drawing_ui_controls_tests tests/test_drawing_ui_controls.cpp ${FORGECAD_DETAIL_TEST_SOURCES})
+target_include_directories(forgecad_drawing_ui_controls_tests PRIVATE ${PROJECT_SOURCE_DIR})
+target_link_libraries(forgecad_drawing_ui_controls_tests PRIVATE Qt6::Widgets forgekernel)
+target_compile_options(forgecad_drawing_ui_controls_tests PRIVATE -Wall -Wextra -Wpedantic)
+add_test(NAME forgecad_drawing_ui_controls_tests COMMAND forgecad_drawing_ui_controls_tests)
+set_tests_properties(forgecad_drawing_ui_controls_tests PROPERTIES TIMEOUT 120 ENVIRONMENT "QT_QPA_PLATFORM=offscreen;QT_QPA_OFFSCREEN_NO_GLX=1;QT_QPA_PLATFORMTHEME=;QT_STYLE_OVERRIDE=Fusion")

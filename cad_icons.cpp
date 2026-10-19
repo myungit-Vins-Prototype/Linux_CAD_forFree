@@ -1439,6 +1439,10 @@ std::map<QString, Draw> &registry() {
         p.save();p.translate(0,3);p.scale(.85,.85);base(p,c);p.restore();
         polygon(p,QPolygonF({{14,1},{14,11},{17,8},{20,12},{22,10},{19,7},{23,6}}),c.construction,stroke(c.ink,.8));
     };
+    icons["drawingReverseArrows"]=[](QPainter &p,const IconPalette &c){
+        for(double x:{7.,17.})line(p,{x,4},{x,20},stroke(c.ink,1.2));
+        line(p,{1,12},{23,12},stroke(c.accent,1.4));arrowHead(p,{7,12},{1,12},c.accent,4);arrowHead(p,{17,12},{23,12},c.accent,4);
+    };
     icons["drawingCurveLength"]=[](QPainter &p,const IconPalette &c){
         QPainterPath path({3,18});path.cubicTo({3,1},{21,23},{21,6});p.setPen(stroke(c.ink,1.5));p.setBrush(Qt::NoBrush);p.drawPath(path);
         QPainterPath measure({3,22});measure.cubicTo({12,24},{23,20},{23,7});p.setPen(stroke(c.accent,1.3));p.drawPath(measure);arrowHead(p,{3,22},{11,22},c.accent,3);arrowHead(p,{23,7},{23,15},c.accent,3);

@@ -8,6 +8,7 @@
 #include <QPointF>
 #include <functional>
 #include <map>
+#include <optional>
 #include <tuple>
 #include <algorithm>
 #include <cmath>
@@ -21,6 +22,7 @@ struct DrawingAxis {
     std::vector<DrawingAttachment> references;
     double extension=2; // mm sul foglio, per lato
     bool visible=true;
+    std::optional<double> endExtension; // secondo estremo, mm carta; assente = simmetrico
 };
 struct DrawingAxisResult {
     DrawingDimensionStatus status=DrawingDimensionStatus::Invalid;
@@ -63,11 +65,11 @@ inline DrawingAxisResult evaluateDrawingAxis(const DrawingAxis &axis,const Drawi
         return {DrawingDimensionStatus::Invalid,QStringLiteral("L'asse richiede due punti distinti.")};
     return result;
 }
-inline QPainterPath drawingAxisPath(const DrawingAxisResult &result,const DrawingView &view,double extension){
+inline QPainterPath drawingAxisPath(const DrawingAxisResult &result,const DrawingView &view,double extension,double endExtension=-1){
     if(result.status!=DrawingDimensionStatus::Ready)return {};
     const QPointF a(result.first.x()*view.scale,-result.first.y()*view.scale),b(result.second.x()*view.scale,-result.second.y()*view.scale);
-    auto d=b-a;const double length=std::hypot(d.x(),d.y());if(length<=1e-12)return {};d*=extension/length;
-    QPainterPath path;path.moveTo(a-d);path.lineTo(b+d);return path;
+    auto d=b-a;const double length=std::hypot(d.x(),d.y());if(length<=1e-12)return {};d/=length;
+    QPainterPath path;path.moveTo(a-d*extension);path.lineTo(b+d*(endExtension<0?extension:endExtension));return path;
 }
 // Un asse cilindrico deriva dalla superficie analitica e dal suo intervallo UV
 // rifilato. La visibilita' decide quali facce ammettere, non la posizione dell'asse.

@@ -522,3 +522,13 @@ La relazione Detail usa lo **schema foglio 10** quando presente. Si salvano solt
 Questa versione comprende il ritaglio circolare; dettagli di dettagli e sgancio dalla madre non sono supportati. La rimozione della madre è protetta finché esistono viste dipendenti, come per le altre derivate. La visibilità resta quella del motore esistente e i contorni approssimati restano esclusi dalle quote. Il calcolo prepara ancora la vista completa prima del ritaglio: tempi su modelli grandi e ottimizzazione per la sola area interessata restano da misurare. I successivi punti della roadmap rimangono viste ausiliarie/interrotte e sezioni a gradini/allineate, poi quote e annotazioni strutturate e fogli multipli.
 
 Il delimitatore di un dettaglio esistente si sposta direttamente trascinando la circonferenza o il suo identificativo sulla madre. Il richiamo segue il mouse; al rilascio si aggiorna la zona del dettaglio, conservando posizione sul foglio, scala, raggio e riferimenti delle quote. Esc annulla il trascinamento; un solo Undo ripristina lo spostamento. Disponibile sulle tavole modificabili senza aprire le proprietà.
+
+### Controlli grafici di quote e assi (2026-10-19)
+
+I popup condivisi tra 3D e 2D seguono la palette dell'interfaccia, compresi sfondo, testo, selezione e spunte. Il controllo **Tipo quota automatica** viene mantenuto sulla toolbar anche ripristinando un layout precedente che lo aveva escluso; i gruppi di comandi personalizzati restano disponibili.
+
+Selezionare il testo di una o più quote e usare **Quote → Inverti frecce quota** per cambiare il verso. La stessa opzione è nelle proprietà della singola quota e nel menu contestuale dell'albero. Le punte rimangono sugli agganci originali; nelle quote lineari le frecce esterne hanno un breve prolungamento della linea. Il valore misurato resta invariato.
+
+Selezionando un asse manuale compaiono due maniglie quadrate: trascinandone una si modifica il prolungamento di quel solo lato, in mm sul foglio. L'anteprima segue il mouse, il rilascio conferma ed Esc annulla. Gli agganci dell'asse e le quote associate non vengono spostati. Le proprietà esistenti **Prolungamento per lato** mantengono la regolazione simmetrica quando se ne cambia il valore. Le maniglie non modificano automaticamente gli assi cilindrici/conici di presentazione.
+
+L'inversione delle frecce e i prolungamenti asimmetrici sono salvati nello **schema foglio 11**, emesso soltanto quando tali dati sono presenti. I documenti precedenti restano leggibili; i nuovi campi dichiarati in uno schema precedente vengono rifiutati. Le operazioni partecipano a Undo/Redo, PDF e salvataggio/revisioni; stato effettivo di verifica e installazione nel registro CLAUDE.md.
