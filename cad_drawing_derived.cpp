@@ -19,6 +19,9 @@ const DrawingViewLayout &layoutFor(const DrawingSheet &s,const QUuid &id){for(co
 const DrawingView &viewFor(const DrawingSheet &s,const QUuid &id){for(const auto &v:s.drawing.views)if(v.id==id)return v;throw std::invalid_argument("Definizione della vista madre assente.");}
 void derive(const DrawingView &parent,const DrawingViewRelation &r,DrawingView &child,bool preserveLegacy=true){
     const auto x=parent.plane.xDir(),y=parent.plane.yDir(),z=parent.plane.zDir();
+    if(r.kind==DrawingDerivedKind::Detail){
+        const auto id=child.id;const double scale=child.scale;child=parent;child.id=id;child.scale=scale;return;
+    }
     child.scale=parent.scale;child.tolerance=parent.tolerance;
     if(r.kind==DrawingDerivedKind::Orthographic){
         // Il lato e' la posizione della figlia sul foglio; il metodo determina il verso d'osservazione.
@@ -189,9 +192,10 @@ QString synchronizeDrawingViews(DrawingSheet &sheet){
             require(visiting.size()<256,"Gerarchia delle viste troppo profonda.");visiting.insert(id);
             auto &layout=const_cast<DrawingViewLayout &>(layoutFor(sheet,id));const auto &r=layout.relation;
             if(!r.parentId.isNull()){
-                require(r.kind==DrawingDerivedKind::Orthographic||r.kind==DrawingDerivedKind::Section,"Tipo di vista derivata non valido.");
+                require(r.kind==DrawingDerivedKind::Orthographic||r.kind==DrawingDerivedKind::Section||r.kind==DrawingDerivedKind::Detail,"Tipo di vista derivata non valido.");
                 visit(r.parentId);const auto &parent=viewFor(sheet,r.parentId);
-                require(parent.kind==DrawingViewKind::ProjectedEdges,"La vista madre deve essere una proiezione.");
+                require(r.kind==DrawingDerivedKind::Detail||parent.kind==DrawingViewKind::ProjectedEdges,"La vista madre deve essere una proiezione.");
+                require(layoutFor(sheet,r.parentId).relation.kind!=DrawingDerivedKind::Detail,"Non sono supportati dettagli di altri dettagli.");
                 auto &child=const_cast<DrawingView &>(viewFor(sheet,id));derive(parent,r,child);
                 layout.features=layoutFor(sheet,r.parentId).features;layout.position=constrainDrawingViewPosition(sheet,layout,layout.position);
             }
@@ -213,11 +217,15 @@ QString validateDrawingRelations(const DrawingSheet &sheet){
         QSet<QString> labels;
         for(const auto &l:sheet.views){const auto &r=l.relation;
             if(r.parentId.isNull()){require(r.kind==DrawingDerivedKind::None,"Relazione della vista senza madre.");continue;}
-            require(r.kind==DrawingDerivedKind::Orthographic||r.kind==DrawingDerivedKind::Section,"Tipo di relazione non valido.");
+            require(r.kind==DrawingDerivedKind::Orthographic||r.kind==DrawingDerivedKind::Section||r.kind==DrawingDerivedKind::Detail,"Tipo di relazione non valido.");
             require(r.side>=DrawingProjectionSide::Left&&r.side<=DrawingProjectionSide::Below,"Lato della vista derivata non valido.");
             require(r.method==DrawingProjectionMethod::FirstAngle||r.method==DrawingProjectionMethod::ThirdAngle,"Metodo di proiezione non valido.");
-            if(r.kind==DrawingDerivedKind::Section){
-                require(finite(r.cutStart)&&finite(r.cutEnd)&&QLineF(r.cutStart,r.cutEnd).length()>1e-7,"Linea di taglio non valida.");
+            if(r.kind==DrawingDerivedKind::Detail){
+                require(finite(r.detailCenter)&&std::isfinite(r.detailRadius)&&r.detailRadius>1e-7&&r.detailRadius<=1e6,"Ritaglio del dettaglio non valido.");
+                require(!r.aligned,"Il dettaglio ha posizione indipendente.");
+            }
+            if(r.kind==DrawingDerivedKind::Section||r.kind==DrawingDerivedKind::Detail){
+                if(r.kind==DrawingDerivedKind::Section)require(finite(r.cutStart)&&finite(r.cutEnd)&&QLineF(r.cutStart,r.cutEnd).length()>1e-7,"Linea di taglio non valida.");
                 require(!r.label.isEmpty()&&r.label.size()<=8,"Identificativo della sezione non valido.");
                 for(auto c:r.label)require(c.isLetterOrNumber(),"L'identificativo della sezione deve essere alfanumerico.");
                 const auto label=r.label.toUpper();require(!labels.contains(label),"Identificativo della sezione duplicato.");labels.insert(label);

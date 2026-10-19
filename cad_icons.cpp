@@ -1366,6 +1366,9 @@ std::map<QString, Draw> &registry() {
         p.setPen(stroke(c.ink,1.3));p.setBrush(c.faceLight);p.drawPath(face);
         p.save();p.setClipPath(face);for(int i=-18;i<24;i+=4)line(p,{double(i),21},{double(i+18),3},stroke(c.construction,.8));p.restore();
     };
+    icons["drawingDetailView"]=[](QPainter &p,const IconPalette &c){
+        p.setBrush(Qt::NoBrush);p.setPen(stroke(c.ink,1.2));p.drawRect(QRectF(2,4,9,15));p.setPen(stroke(c.accent,1.2));p.drawEllipse(QPointF(7,10),3,3);p.drawEllipse(QPointF(18,15),5,5);line(p,{9,12},{14,14},stroke(c.construction,.8,Qt::DashLine));
+    };
     icons["drawingDerivedView"]=[](QPainter &p,const IconPalette &c){
         p.setBrush(Qt::NoBrush);p.setPen(stroke(c.ink,1.3));p.drawRect(QRectF(2,5,8,14));p.drawRect(QRectF(16,8,6,8));
         for(double y:{8.,16.})line(p,{3,y},{22,y},stroke(c.construction,.8,Qt::DashLine));

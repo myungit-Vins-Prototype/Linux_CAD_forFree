@@ -128,11 +128,12 @@ QString encodeDrawingSheet(const DrawingSheet &sheet,QByteArray &bytes){
             const auto &r=view.relation;if(!r.parentId.isNull())object.insert("relation",QJsonObject{
                 {"parent",r.parentId.toString(QUuid::WithoutBraces)},{"kind",int(r.kind)},{"side",int(r.side)},{"method",int(r.method)},
                 {"aligned",r.aligned},{"cutStart",pointJson(r.cutStart)},{"cutEnd",pointJson(r.cutEnd)},{"reverse",r.reverse},{"hatch",r.hatch},{"label",r.label}});
+            if(r.kind==DrawingDerivedKind::Detail){auto relation=object["relation"].toObject();relation.insert("detailCenter",pointJson(r.detailCenter));relation.insert("detailRadius",r.detailRadius);object["relation"]=relation;}
             views.append(object);}
         bool styled=false;
         for(const auto &dimension:sheet.dimensions){QJsonObject item{{"id",dimension.dimensionId.toString(QUuid::WithoutBraces)},{"position",pointJson(dimension.position)}};
             const auto &p=dimension.presentation;if(p.active()){styled=true;item.insert("presentation",QJsonObject{{"mode",int(p.mode)},{"upper",p.upper},{"lower",p.lower},{"decimals",p.decimals},{"prefix",p.prefix},{"suffix",p.suffix}});}dimensions.append(item);}
-        QJsonObject object{{"format","ForgeCAD.DrawingSheet"},{"schema",(sheet.style.extensionGap!=0||sheet.style.dimensionOffset!=0)?9:(sheet.style.active()||std::any_of(sheet.views.cbegin(),sheet.views.cend(),[](const auto &v){return v.titleOffset.has_value();}))?8:styled?7:!sheet.annotations.isEmpty()?6:drawingNeedsAxisSchema(sheet.drawing)?5:!sheet.axes.isEmpty()?4:(drawingNeedsSectionSchema(sheet.drawing)||std::any_of(sheet.views.cbegin(),sheet.views.cend(),[](const auto &v){return v.relation.parentId.isNull()&&!v.relation.hatch;}))?3:std::any_of(sheet.views.cbegin(),sheet.views.cend(),[](const auto &v){return !v.relation.parentId.isNull();})?2:1},{"title",sheet.title},
+        QJsonObject object{{"format","ForgeCAD.DrawingSheet"},{"schema",std::any_of(sheet.views.cbegin(),sheet.views.cend(),[](const auto &v){return v.relation.kind==DrawingDerivedKind::Detail;})?10:(sheet.style.extensionGap!=0||sheet.style.dimensionOffset!=0)?9:(sheet.style.active()||std::any_of(sheet.views.cbegin(),sheet.views.cend(),[](const auto &v){return v.titleOffset.has_value();}))?8:styled?7:!sheet.annotations.isEmpty()?6:drawingNeedsAxisSchema(sheet.drawing)?5:!sheet.axes.isEmpty()?4:(drawingNeedsSectionSchema(sheet.drawing)||std::any_of(sheet.views.cbegin(),sheet.views.cend(),[](const auto &v){return v.relation.parentId.isNull()&&!v.relation.hatch;}))?3:std::any_of(sheet.views.cbegin(),sheet.views.cend(),[](const auto &v){return !v.relation.parentId.isNull();})?2:1},{"title",sheet.title},
             {"size",QJsonArray{sheet.size.width(),sheet.size.height()}},{"drawing",QJsonDocument::fromJson(document).object()},
             {"views",views},{"dimensions",dimensions}};
         if(sheet.style.active()){const auto &s=sheet.style;object.insert("style",QJsonObject{{"fontFamily",s.fontFamily},{"dimensionHeight",s.dimensionHeight},{"viewTitleHeight",s.viewTitleHeight},{"arrowLength",s.arrowLength},{"arrow",int(s.arrow)},{"titleGap",s.titleGap},{"titleSnaps",s.titleSnaps}});if(s.extensionGap!=0||s.dimensionOffset!=0)object.insert("dimensionSpacing",QJsonObject{{"extensionGap",s.extensionGap},{"dimensionOffset",s.dimensionOffset}});}
@@ -159,7 +160,7 @@ QString decodeDrawingSheet(const QByteArray &bytes,DrawingSheet &sheet){
     try{
         require(!bytes.isEmpty()&&bytes.size()<=8*1024*1024,"Dimensione del foglio non valida.");
         const auto json=QJsonDocument::fromJson(bytes);const auto object=json.object();
-        require(json.isObject()&&object["format"].toString()==QLatin1String("ForgeCAD.DrawingSheet")&&(object["schema"].toInt(-1)==1||object["schema"].toInt(-1)==2||object["schema"].toInt(-1)==3||object["schema"].toInt(-1)==4||object["schema"].toInt(-1)==5||object["schema"].toInt(-1)==6||object["schema"].toInt(-1)==7||object["schema"].toInt(-1)==8||object["schema"].toInt(-1)==9),"Formato del foglio non supportato.");
+        require(json.isObject()&&object["format"].toString()==QLatin1String("ForgeCAD.DrawingSheet")&&(object["schema"].toInt(-1)==1||object["schema"].toInt(-1)==2||object["schema"].toInt(-1)==3||object["schema"].toInt(-1)==4||object["schema"].toInt(-1)==5||object["schema"].toInt(-1)==6||object["schema"].toInt(-1)==7||object["schema"].toInt(-1)==8||object["schema"].toInt(-1)==9||object["schema"].toInt(-1)==10),"Formato del foglio non supportato.");
         const int schema=object["schema"].toInt();
         require(schema>=6||(!object.contains("annotations")&&!object.contains("annotationReferenceSchema")),"Annotazioni estranee allo schema dichiarato.");
         require(schema!=6||object.contains("annotations"),"Annotazioni del foglio assenti.");
@@ -242,11 +243,13 @@ QString decodeDrawingSheet(const QByteArray &bytes,DrawingSheet &sheet){
                 require(object["schema"].toInt()>=2&&view["relation"].isObject(),"Relazione della vista non supportata dal formato.");
                 const auto r=view["relation"].toObject();layout.relation.parentId=readId(r["parent"]);
                 const auto integer=[&](const char *key,int lo,int hi){const auto value=r[key];const double number=value.toDouble(-100);require(value.isDouble()&&number==std::floor(number)&&number>=lo&&number<=hi,"Enumerazione della relazione non valida.");return int(number);};
-                layout.relation.kind=DrawingDerivedKind(integer("kind",1,2));layout.relation.side=DrawingProjectionSide(integer("side",0,3));layout.relation.method=DrawingProjectionMethod(integer("method",0,1));
+                layout.relation.kind=DrawingDerivedKind(integer("kind",1,schema>=10?3:2));layout.relation.side=DrawingProjectionSide(integer("side",0,3));layout.relation.method=DrawingProjectionMethod(integer("method",0,1));
                 for(const auto key:{"aligned","reverse","hatch"})require(r[key].isBool(),"Opzione della relazione non valida.");
                 require(r["label"].isString(),"Identificativo della sezione assente.");
                 layout.relation.aligned=r["aligned"].toBool();layout.relation.reverse=r["reverse"].toBool();layout.relation.hatch=r["hatch"].toBool();layout.relation.label=r["label"].toString();
                 layout.relation.cutStart=readPoint(r["cutStart"]);layout.relation.cutEnd=readPoint(r["cutEnd"]);
+                if(layout.relation.kind==DrawingDerivedKind::Detail){require(schema>=10&&r["detailRadius"].isDouble(),"Parametri dettaglio mancanti o schema incompatibile.");layout.relation.detailCenter=readPoint(r["detailCenter"]);layout.relation.detailRadius=r["detailRadius"].toDouble();}
+                else require(!r.contains("detailCenter")&&!r.contains("detailRadius"),"Parametri dettaglio estranei alla relazione.");
             }
             if(view.contains("sectionHatch")){require(object["schema"].toInt()>=3&&view["sectionHatch"].isBool()&&layout.relation.parentId.isNull(),"Tratteggio indipendente non valido.");layout.relation.hatch=view["sectionHatch"].toBool();}
             prepared.views.append(std::move(layout));

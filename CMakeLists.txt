@@ -463,6 +463,16 @@ target_compile_options(forgecad_drawing_derived_tests PRIVATE -Wall -Wextra -Wpe
 add_test(NAME forgecad_drawing_derived_tests COMMAND forgecad_drawing_derived_tests)
 set_tests_properties(forgecad_drawing_derived_tests PROPERTIES TIMEOUT 120 ENVIRONMENT "QT_QPA_PLATFORM=offscreen;QT_QPA_OFFSCREEN_NO_GLX=1;QT_QPA_PLATFORMTHEME=;QT_STYLE_OVERRIDE=Fusion")
 
+# Dettagli circolari: stesso renderer delle viste derivate, riferimenti originali.
+get_target_property(FORGECAD_DETAIL_TEST_SOURCES forgecad_drawing_derived_tests SOURCES)
+list(REMOVE_ITEM FORGECAD_DETAIL_TEST_SOURCES tests/test_drawing_derived.cpp tests/test_drawing_cut_snaps.h)
+add_executable(forgecad_drawing_detail_tests tests/test_drawing_detail.cpp cad_drawing_detail.h ${FORGECAD_DETAIL_TEST_SOURCES})
+target_include_directories(forgecad_drawing_detail_tests PRIVATE ${PROJECT_SOURCE_DIR})
+target_link_libraries(forgecad_drawing_detail_tests PRIVATE Qt6::Widgets forgekernel)
+target_compile_options(forgecad_drawing_detail_tests PRIVATE -Wall -Wextra -Wpedantic)
+add_test(NAME forgecad_drawing_detail_tests COMMAND forgecad_drawing_detail_tests)
+set_tests_properties(forgecad_drawing_detail_tests PROPERTIES TIMEOUT 120 ENVIRONMENT "QT_QPA_PLATFORM=offscreen;QT_QPA_OFFSCREEN_NO_GLX=1;QT_QPA_PLATFORMTHEME=;QT_STYLE_OVERRIDE=Fusion")
+
 add_executable(forgecad_revision_numbers_tests tests/test_revision_numbers.cpp cad_revision_store.cpp)
 target_include_directories(forgecad_revision_numbers_tests PRIVATE ${PROJECT_SOURCE_DIR})
 target_link_libraries(forgecad_revision_numbers_tests PRIVATE Qt6::Core)

@@ -8,6 +8,7 @@
 #include "cad_drawing_silhouette.h"
 #include "cad_drawing_visibility.h"
 #include "cad_drawing_derived.h"
+#include "cad_drawing_detail.h"
 #include "cad_drawing_compute.h"
 #include <QGraphicsPixmapItem>
 #include "cad_icons.h"
@@ -20,6 +21,7 @@
 #include <QComboBox>
 #include <QCheckBox>
 #include <QDialog>
+#include <QPointer>
 #include <QDialogButtonBox>
 #include <QDoubleSpinBox>
 #include <QDockWidget>
@@ -330,6 +332,8 @@ struct DrawingSheetEditor::Impl{
     Qt::KeyboardModifiers quoteModifiers{};
     std::size_t snapCycle=0;
     std::vector<QGraphicsItem *> overlay;
+    struct DetailPick {QUuid parent;QString label;double scale=2;bool started=false;QPointF center;QGraphicsEllipseItem *circle=nullptr;QPointer<QDialog> options;};
+    std::unique_ptr<DetailPick> detail;
     struct ViewPlacement {
         DrawingView definition;
         DrawingViewLayout layout;
@@ -421,10 +425,11 @@ struct DrawingSheetEditor::Impl{
             for(const auto &definition:next.drawing.views){const auto layout=std::find_if(next.views.begin(),next.views.end(),[&](const auto &l){return l.viewId==definition.id;});
                 const auto *old=viewFor(definition.id);const auto *oldLayout=layoutFor(definition.id);const auto cached=curves.find(definition.id);const auto contour=silhouettes.find(definition.id);const auto display=visibility.find(definition.id);
                 const bool same=old&&oldLayout&&sameGeometry(*old,definition)&&oldLayout->features==layout->features&&cached!=curves.end();const bool contourSame=same&&old->scale==definition.scale&&contour!=silhouettes.end();
-                if(contourSame&&display!=visibility.end()&&(!layout->showMesh||display->second->meshPrepared)){prepared[definition.id]=cached->second;preparedSilhouettes[definition.id]=contour->second;preparedVisibility[definition.id]=display->second;continue;}
+                const bool cropSame=oldLayout&&sameDrawingDetail(*oldLayout,*layout);
+                if(contourSame&&cropSame&&display!=visibility.end()&&(!layout->showMesh||display->second->meshPrepared)){prepared[definition.id]=cached->second;preparedSilhouettes[definition.id]=contour->second;preparedVisibility[definition.id]=display->second;continue;}
                 ComputedView result;
                 if(dialogReady&&sameGeometry(dialogReady->definition,definition)&&dialogReady->definition.scale==definition.scale&&dialogReady->layout.features==layout->features
-                   &&sameSource(dialogReady->source,sourceFor(*layout))&&(!layout->showMesh||dialogReady->result.display->meshPrepared)){
+                   &&sameDrawingDetail(dialogReady->layout,*layout)&&sameSource(dialogReady->source,sourceFor(*layout))&&(!layout->showMesh||dialogReady->result.display->meshPrepared)){
                     result=dialogReady->result;seeds=result.cache;
                 }else {const auto error=computeView(sourceFor(*layout),definition,*layout,seeds,result,same?&cached->second:nullptr,contourSame?&contour->second:nullptr);if(!error.isEmpty())return error;}
                 if(!same)changedViews.insert(definition.id);
@@ -455,7 +460,7 @@ struct DrawingSheetEditor::Impl{
             if(!found->relation.parentId.isNull()){
                 const auto parent=found->relation.parentId;visit(parent);const auto *old=layoutFor(id),*oldParent=layoutFor(parent);
                 const auto newParent=std::find_if(next.views.begin(),next.views.end(),[&](const auto &l){return l.viewId==parent;});
-                if(old&&oldParent&&old->position==found->position)found->position+=newParent->position-oldParent->position;
+                if(old&&oldParent&&!drawingIsDetail(*found)&&old->position==found->position)found->position+=newParent->position-oldParent->position;
                 found->position=constrainDrawingViewPosition(next,*found,found->position);
             }
             visiting.remove(id);done.insert(id);
@@ -507,7 +512,7 @@ struct DrawingSheetEditor::Impl{
         return applyLayout(std::move(next),label);
     }
     bool centerFor(const QUuid &id,QPointF &center)const{
-        const auto *layout=layoutFor(id);const auto found=visibility.find(id);if(!layout||found==visibility.end())return false;QRectF bounds;bool first=true;
+        const auto *layout=layoutFor(id);const auto found=visibility.find(id);if(!layout||found==visibility.end())return false;if(drawingIsDetail(*layout)){center=drawingDetailBounds(*viewFor(id),*layout).center()+layout->position;return true;}QRectF bounds;bool first=true;
         const auto add=[&](const DrawingVisiblePath &path){const auto box=joinedPaths(path.visible,path.hidden).boundingRect();bounds=first?box:bounds.united(box);first=false;};
         for(const auto &path:found->second->curves)add(path);
         for(const auto &path:found->second->silhouettes)add(path);
@@ -568,11 +573,13 @@ struct DrawingSheetEditor::Impl{
         if(auto *a=owner->findChild<QAction *>("drawingDetachViewAction"))a->setEnabled(!readOnly&&layout&&layout->relation.kind==DrawingDerivedKind::Orthographic);
         if(auto *a=owner->findChild<QAction *>("drawingReleaseAlignmentAction")){a->setEnabled(!readOnly&&layout&&layout->relation.kind==DrawingDerivedKind::Orthographic);a->setText(layout&&layout->relation.aligned?QStringLiteral("Libera allineamento"):QStringLiteral("Ripristina allineamento"));}
         for(auto name:{"drawingSectionHatchAction","drawingEditSectionLineAction","drawingAlignSectionOrientationAction","drawingReverseSectionAction"})if(auto *a=owner->findChild<QAction *>(name))a->setEnabled(!readOnly&&layout&&layout->relation.kind==DrawingDerivedKind::Section);
-        if(auto *a=owner->findChild<QAction *>("drawingSectionHatchAction"))a->setEnabled(!readOnly&&definition&&layout&&definition->kind==DrawingViewKind::Section&&(layout->relation.kind==DrawingDerivedKind::Section||definition->sectionStyle!=DrawingSectionStyle::Removed));
+        if(auto *a=owner->findChild<QAction *>("drawingSectionHatchAction"))a->setEnabled(!readOnly&&definition&&layout&&definition->kind==DrawingViewKind::Section&&(layout->relation.kind==DrawingDerivedKind::Section||drawingIsDetail(*layout)||definition->sectionStyle!=DrawingSectionStyle::Removed));
         if(auto *a=owner->findChild<QAction *>("drawingSectionHatchAction"))a->setText(layout&&layout->relation.hatch?QStringLiteral("Nascondi tratteggio"):QStringLiteral("Mostra tratteggio"));
     }
     bool pointShown(const QUuid &id,std::size_t index,QPointF point,bool center=false)const{
-        const auto *layout=layoutFor(id);if(!layout)return false;const auto found=visibility.find(id);if(found==visibility.end()||index>=found->second->curves.size())return false;
+        const auto *layout=layoutFor(id);if(!layout)return false;
+        if(drawingIsDetail(*layout)){const auto box=drawingDetailBounds(*viewFor(id),*layout);if(QLineF(point-layout->position,box.center()).length()>box.width()/2+1e-8)return false;}
+        const auto found=visibility.find(id);if(found==visibility.end()||index>=found->second->curves.size())return false;
         auto path=found->second->curves[index].visible;if(layout->showHiddenLines)path.addPath(found->second->curves[index].hidden);if(path.isEmpty())return false;if(center)return true;QPainterPathStroker stroke;stroke.setWidth(.14);return stroke.createStroke(path).contains(point-layout->position);
     }
     void selectTreeItem(const QString &kind,const QUuid &id){
@@ -627,7 +634,7 @@ struct DrawingSheetEditor::Impl{
         selectTreeItem(kind,selected);
     }
     void editSelectedView(){if(readOnly)return;const auto id=selectedView();if(id.isNull()){say(QStringLiteral("Seleziona una vista o una sua quota nell'albero o sul foglio."));return;}
-        const auto *definition=viewFor(id);if(definition){if(!layoutFor(id)->relation.parentId.isNull())derivedProperties(id);else addViewDialog(definition->kind,id);}}
+        const auto *definition=viewFor(id);if(definition){if(drawingIsDetail(*layoutFor(id)))detailProperties(id);else if(!layoutFor(id)->relation.parentId.isNull())derivedProperties(id);else addViewDialog(definition->kind,id);}}
     struct ComputedView {std::vector<DrawingCurve> curves;DrawingSilhouetteResult contours;std::shared_ptr<DrawingViewVisibility> display;DrawingSilhouetteCache cache;};
     static ComputedView buildView(const DrawingModelSnapshot &source,const DrawingView &definition,const DrawingViewLayout &layout,
         DrawingSilhouetteCache seeds,const std::function<void(int)> &phase,const std::vector<DrawingCurve> *reuseCurves=nullptr,const DrawingSilhouetteResult *reuseContours=nullptr){
@@ -636,7 +643,7 @@ struct DrawingSheetEditor::Impl{
         if(reuseContours)result.contours=*reuseContours;else ok(drawingViewSilhouettes(source,definition,result.contours,result.cache));phase(2);
         DrawingSectionHatch hatch;ok(drawingSectionHatch(source,definition,result.curves,hatch));phase(3);
         result.display=std::make_shared<DrawingViewVisibility>();ok(drawingViewVisibility(source,definition,result.curves,result.contours,result.cache,*result.display,&hatch.material,layout.showMesh));
-        result.display->sectionHatch=std::move(hatch.lines);result.display->sectionMaterial=std::move(hatch.material);result.display->warnings.append(hatch.warnings);phase(4);phase(5);return result;
+        result.display->sectionHatch=std::move(hatch.lines);result.display->sectionMaterial=std::move(hatch.material);result.display->warnings.append(hatch.warnings);clipDrawingDetailVisibility(definition,layout,*result.display);phase(4);phase(5);return result;
     }
     struct PreparedView {DrawingView definition;DrawingViewLayout layout;DrawingModelSnapshot source;ComputedView result;};
     std::optional<PreparedView> dialogReady;
@@ -680,7 +687,7 @@ struct DrawingSheetEditor::Impl{
         state=std::move(next);curves[definition.id]=std::move(pieces);silhouettes[definition.id]=std::move(contours);visibility[definition.id]=std::move(display);cacheSections();record(QStringLiteral("Inserisci vista"),std::move(bytes));redraw();return {};
     }
     void cancelPlacement(){
-        cancelCut();
+        cancelCut();cancelDetail();
         if(!placement)return;
         delete placement->item;placement.reset();view->setCursor(quoteAction->isChecked()?Qt::CrossCursor:Qt::ArrowCursor);
     }
@@ -698,7 +705,11 @@ struct DrawingSheetEditor::Impl{
         const auto add=[&](const DrawingVisiblePath &path){const auto all=joinedPaths(path.visible,path.hidden);bounds=first?all.boundingRect():bounds.united(all.boundingRect());first=false;paths.push_back(joinedPaths(path.visible,layout.showHiddenLines?path.hidden:QPainterPath()));};
         for(const auto &path:display->curves)add(path);
         const auto edgePaths=paths.size();for(const auto &path:display->silhouettes)add(path);
-        if((layout.relation.kind==DrawingDerivedKind::Section||definition.sectionStyle!=DrawingSectionStyle::Removed)&&layout.relation.hatch)paths.push_back(display->sectionHatch);
+        if(drawingIsDetail(layout)){
+            if(std::none_of(paths.begin(),paths.end(),[](const auto &path){return !path.isEmpty();})&&display->shadedImage.isNull())return QStringLiteral("Il cerchio non contiene geometria visibile. Modifica centro o raggio.");
+            bounds=drawingDetailBounds(definition,layout);
+        }
+        if((layout.relation.kind==DrawingDerivedKind::Section||(drawingIsDetail(layout)&&definition.kind==DrawingViewKind::Section)||definition.sectionStyle!=DrawingSectionStyle::Removed)&&layout.relation.hatch)paths.push_back(display->sectionHatch);
         auto prepared=std::make_unique<ViewPlacement>();prepared->definition=definition;prepared->layout=layout;prepared->curves=std::move(pieces);prepared->silhouettes=std::move(contours);prepared->center=bounds.center();prepared->visibility=std::move(display);
         // La scena possiede il gruppo e i figli; rimuove prima la vecchia anteprima.
         quoteAction->setChecked(false);cancelPlacement();resetQuote();
@@ -713,6 +724,7 @@ struct DrawingSheetEditor::Impl{
             if(layout.showCenterLines){auto *item=new QGraphicsPathItem(centers.axes.translated(-prepared->center),group);QPen pen(QColor("#1469c0"),.18);pen.setDashPattern({32,5,3,5});item->setPen(pen);item->setAcceptedMouseButtons(Qt::NoButton);}
             auto *item=new QGraphicsPathItem(centers.crosses.translated(-prepared->center),group);item->setPen(QPen(QColor("#1469c0"),.18));item->setAcceptedMouseButtons(Qt::NoButton);}
         if(layout.showCylinderAxes){const auto &path=layout.showHiddenLines?prepared->visibility->allCylinderAxes:prepared->visibility->visibleCylinderAxes;auto *item=new QGraphicsPathItem(path.translated(-prepared->center),group);QPen pen(QColor("#1469c0"),.18);pen.setDashPattern({32,5,3,5});item->setPen(pen);item->setAcceptedMouseButtons(Qt::NoButton);}
+        if(drawingIsDetail(layout)){auto *boundary=new QGraphicsEllipseItem(drawingDetailBounds(definition,layout).translated(-prepared->center),group);boundary->setPen(QPen(QColor("#1469c0"),.18));boundary->setAcceptedMouseButtons(Qt::NoButton);}
         auto *label=new QGraphicsSimpleTextItem(layout.title,group);fontFor(label,state.style,state.style.viewTitleHeight);label->setPos(layout.titleOffset?*layout.titleOffset-prepared->center:bounds.bottomLeft()-prepared->center+QPointF(0,state.style.titleGap));label->setBrush(QColor("#1469c0"));label->setAcceptedMouseButtons(Qt::NoButton);
         const auto mouse=view->viewport()->mapFromGlobal(QCursor::pos());const auto initial=view->viewport()->rect().contains(mouse)?view->mapToScene(mouse):QPointF(state.size.width()/2,state.size.height()/2);
         group->setPos(initial);placement=std::move(prepared);placementPointer(initial,false);view->setCursor(Qt::CrossCursor);view->setFocus();say(QStringLiteral("Sposta l'anteprima e fai clic sul foglio per inserire la vista. Esc o tasto destro annulla."));return {};
@@ -734,13 +746,14 @@ struct DrawingSheetEditor::Impl{
         if(key==Qt::Key_Clear){placement->item->setVisible(false);return true;}return false;
     }
     struct ViewDrag {
-        QUuid id;bool title=false,moved=false;QPointF press,origin,target;QByteArray base;
+        QUuid id;bool title=false,delimiter=false,moved=false;QPointF press,origin,target;QByteArray base;
         struct Item{QGraphicsItem *item;QPointF position;QUuid owner;};std::vector<Item> items;
         QGraphicsPathItem *guides=nullptr;QSizeF titleSize;
     };
     std::unique_ptr<ViewDrag> viewDrag;
     QRectF viewBounds(const QUuid &id)const{
         const auto *layout=layoutFor(id);const auto found=visibility.find(id);if(!layout||found==visibility.end())return {};
+        if(drawingIsDetail(*layout))return drawingDetailBounds(*viewFor(id),*layout).translated(layout->position);
         QRectF box;bool first=true;const auto add=[&](const DrawingVisiblePath &p){const auto path=joinedPaths(p.visible,p.hidden);if(path.isEmpty())return;const auto b=path.boundingRect();if(first){box=b;first=false;}else box=QRectF(QPointF(std::min(box.left(),b.left()),std::min(box.top(),b.top())),QPointF(std::max(box.right(),b.right()),std::max(box.bottom(),b.bottom())));};
         for(const auto &p:found->second->curves)add(p);
         for(const auto &p:found->second->silhouettes)add(p);
@@ -762,21 +775,30 @@ struct DrawingSheetEditor::Impl{
     }
     bool viewDragPointer(QPointF point,Qt::KeyboardModifiers modifiers,int phase){
         if(phase==0){
-            if(readOnly||computing||placement||cut||quoteAction->isChecked()||(modifiers&Qt::ControlModifier))return false;
+            if(readOnly||computing||placement||cut||detail||quoteAction->isChecked()||(modifiers&Qt::ControlModifier))return false;
             cancelViewDrag();QGraphicsItem *picked=nullptr;
-            for(auto *item:scene->items(point)){const auto kind=item->data(kindRole).toString();if(kind=="dimension"||kind=="annotation"||kind=="axis")return false;
+            // Hit the circumference with a fixed screen tolerance; its interior remains available for geometry selection.
+            const double zoom=std::max(.01,std::abs(view->transform().m11()));
+            for(auto *item:scene->items()){
+                const auto kind=item->data(kindRole).toString();
+                if(kind=="detailCallout"){auto *ring=dynamic_cast<QGraphicsEllipseItem *>(item);if(ring&&std::abs(QLineF(point,ring->mapToScene(ring->rect().center())).length()-ring->rect().width()/2)*zoom<=7){picked=item;break;}}
+                if(kind=="detailCalloutLabel"&&item->sceneBoundingRect().contains(point)){picked=item;break;}
+            }
+            if(!picked)for(auto *item:scene->items(point)){const auto kind=item->data(kindRole).toString();if(kind=="dimension"||kind=="annotation"||kind=="axis")return false;
                 if(kind=="view"||kind=="projection"||kind=="section"||kind=="silhouette"||kind=="viewFrame"||kind=="viewShading"){picked=item;break;}}
             if(!picked)return false;
-            auto drag=std::make_unique<ViewDrag>();drag->id=picked->data(viewRole).toUuid();if(!layoutFor(drag->id))return false;drag->title=picked->data(kindRole).toString()=="view";drag->press=point;drag->base=history[historyIndex].sheet;drag->origin=drag->title?picked->pos():layoutFor(drag->id)->position;drag->target=drag->origin;drag->titleSize=picked->sceneBoundingRect().size();
-            scene->clearSelection();picked->setSelected(true);selectTreeItem("view",drag->id);
-            for(auto *item:scene->items()){const auto id=item->data(viewRole).toUuid();if(id.isNull()||(drag->title&&item!=picked))continue;drag->items.push_back({item,item->pos(),id});}
+            auto drag=std::make_unique<ViewDrag>();drag->delimiter=picked->data(kindRole).toString()=="detailCallout"||picked->data(kindRole).toString()=="detailCalloutLabel";drag->id=picked->data(drag->delimiter?idRole:viewRole).toUuid();if(!layoutFor(drag->id))return false;drag->title=picked->data(kindRole).toString()=="view";drag->press=point;drag->base=history[historyIndex].sheet;drag->origin=drag->title?picked->pos():layoutFor(drag->id)->position;if(drag->delimiter){const auto &relation=layoutFor(drag->id)->relation;const auto *parent=viewFor(relation.parentId);drag->origin=layoutFor(relation.parentId)->position+QPointF(relation.detailCenter.x()*parent->scale,-relation.detailCenter.y()*parent->scale);}
+            drag->target=drag->origin;drag->titleSize=picked->sceneBoundingRect().size();
+            scene->clearSelection();if(picked->flags()&QGraphicsItem::ItemIsSelectable)picked->setSelected(true);selectTreeItem("view",drag->id);
+            for(auto *item:scene->items()){const auto id=item->data(viewRole).toUuid();if(drag->delimiter){const auto kind=item->data(kindRole).toString();if((kind=="detailCallout"||kind=="detailCalloutLabel")&&item->data(idRole).toUuid()==drag->id)drag->items.push_back({item,item->pos(),id});continue;}if(id.isNull()||(drag->title&&item!=picked))continue;drag->items.push_back({item,item->pos(),id});}
             auto *guides=scene->addPath({},QPen(QColor("#1469c0"),0,Qt::DashLine));guides->setData(kindRole,"viewMovePreview");guides->setData(viewRole,drag->id);guides->setZValue(40);guides->setAcceptedMouseButtons(Qt::NoButton);drag->guides=guides;viewDrag=std::move(drag);view->setFocus();return true;
         }
         if(!viewDrag)return false;
         if(readOnly||computing||viewDrag->base!=history[historyIndex].sheet){cancelViewDrag();return true;}
         if(QLineF(point,viewDrag->press).length()*std::abs(view->transform().m11())<4&&!viewDrag->moved){if(phase==2)cancelViewDrag();return true;}
         viewDrag->moved=true;view->setCursor(Qt::ClosedHandCursor);viewDrag->target=viewDrag->origin+point-viewDrag->press;
-        if(viewDrag->title){viewDrag->target=snapViewTitle(viewDrag->target,modifiers);for(const auto &p:viewDrag->items)p.item->setPos(p.position+viewDrag->target-viewDrag->origin);}
+        if(viewDrag->delimiter){for(const auto &p:viewDrag->items)p.item->setPos(p.position+viewDrag->target-viewDrag->origin);}
+        else if(viewDrag->title){viewDrag->target=snapViewTitle(viewDrag->target,modifiers);for(const auto &p:viewDrag->items)p.item->setPos(p.position+viewDrag->target-viewDrag->origin);}
         else {
             auto next=state;for(auto &v:next.views)if(v.viewId==viewDrag->id)v.position=viewDrag->target;
             const auto error=propagateLayout(next);if(!error.isEmpty()){say(error);cancelViewDrag();return true;}
@@ -785,7 +807,11 @@ struct DrawingSheetEditor::Impl{
             viewDrag->target=layoutFor(viewDrag->id)->position+deltas.value(viewDrag->id);
             QPainterPath outline;outline.addRect(viewBounds(viewDrag->id).translated(deltas.value(viewDrag->id)).adjusted(-1,-1,1,1));viewDrag->guides->setPath(outline);
         }
-        if(phase==2){const auto id=viewDrag->id;const auto target=viewDrag->target;const bool title=viewDrag->title;cancelViewDrag();const auto error=title?owner->moveViewTitle(id,target):owner->moveView(id,target);if(!error.isEmpty())say(error);}
+        if(phase==2){const auto id=viewDrag->id;const auto target=viewDrag->target;const bool title=viewDrag->title,delimiter=viewDrag->delimiter;cancelViewDrag();QString error;
+            if(delimiter){const auto relation=layoutFor(id)->relation;const auto center=localPaper(relation.parentId,target);error=owner->updateDetailView(id,{center.x(),center.y()},relation.detailRadius,viewFor(id)->scale,relation.label);}
+            else error=title?owner->moveViewTitle(id,target):owner->moveView(id,target);
+            if(!error.isEmpty())say(error);
+        }
         return true;
     }
     void queueRedraw(){QTimer::singleShot(0,owner,[this]{redraw();});}
@@ -816,7 +842,7 @@ struct DrawingSheetEditor::Impl{
                 auto *image=scene->addPixmap(QPixmap::fromImage(display->shadedImage));image->setTransform(QTransform::fromScale(display->shadedBounds.width()/display->shadedImage.width(),display->shadedBounds.height()/display->shadedImage.height()));image->setPos(layout->position+display->shadedBounds.topLeft());image->setZValue(-3);image->setData(kindRole,"viewShading");image->setData(viewRole,definition.id);image->setAcceptedMouseButtons(Qt::NoButton);image->setTransformationMode(Qt::SmoothTransformation);
                 if(!display->sectionMaterial.isEmpty()){auto *cap=scene->addPath(display->sectionMaterial.translated(layout->position),QPen(Qt::NoPen),Qt::white);cap->setZValue(-2);cap->setData(kindRole,"sectionMaterial");cap->setData(viewRole,definition.id);cap->setAcceptedMouseButtons(Qt::NoButton);}
             }
-            if((layout->relation.kind==DrawingDerivedKind::Section||definition.sectionStyle!=DrawingSectionStyle::Removed)&&layout->relation.hatch&&!display->sectionHatch.isEmpty()){
+            if((layout->relation.kind==DrawingDerivedKind::Section||(drawingIsDetail(*layout)&&definition.kind==DrawingViewKind::Section)||definition.sectionStyle!=DrawingSectionStyle::Removed)&&layout->relation.hatch&&!display->sectionHatch.isEmpty()){
                 auto *hatch=scene->addPath(display->sectionHatch.translated(layout->position),technicalPen(QPen(QColor("#555555"),.13),interactive));hatch->setZValue(-1);hatch->setData(kindRole,"sectionHatch");hatch->setData(viewRole,definition.id);hatch->setAcceptedMouseButtons(Qt::NoButton);
             }
             drawCutLines(scene,definition,*layout);
@@ -839,17 +865,21 @@ struct DrawingSheetEditor::Impl{
             if(layout->showCylinderAxes){const auto &path=layout->showHiddenLines?display->allCylinderAxes:display->visibleCylinderAxes;if(!path.isEmpty()){QPen pen(QColor("#444444"),.18);pen.setDashPattern({32,5,3,5});auto *item=scene->addPath(path,technicalPen(pen,interactive));item->setPos(layout->position);item->setZValue(3);item->setData(kindRole,"cylinderAxes");item->setData(viewRole,definition.id);item->setAcceptedMouseButtons(Qt::NoButton);}}
             int axisRow=0;for(const auto &axis:state.axes)if(axis.viewId==definition.id){const auto result=cachedAxis(axis);
                 if(!axis.visible){if(interactive){QPainterPath placeholder;placeholder.addRect(-.1,-.1,.2,.2);auto *item=scene->addPath(placeholder);item->setPos(layout->position);item->setOpacity(0);item->setFlag(QGraphicsItem::ItemIsSelectable);item->setData(kindRole,"axis");item->setData(viewRole,definition.id);item->setData(idRole,axis.id);item->setAcceptedMouseButtons(Qt::NoButton);}continue;}
-                if(result.status==DrawingDimensionStatus::Ready){auto *item=new AxisItem(drawingAxisPath(result,definition,axis.extension));item->setPos(layout->position);item->setData(kindRole,"axis");item->setData(viewRole,definition.id);item->setData(idRole,axis.id);item->setToolTip(axis.name+QStringLiteral(" · Doppio clic per modificare."));if(interactive)item->activated=[this,id=axis.id]{QTimer::singleShot(0,owner,[this,id]{editAxisDialog(id);});};else item->setFlag(QGraphicsItem::ItemIsSelectable,false);scene->addItem(item);}
+                if(result.status==DrawingDimensionStatus::Ready){auto axisPath=drawingAxisPath(result,definition,axis.extension);if(drawingIsDetail(*layout)){const auto box=drawingDetailBounds(definition,*layout);axisPath=clipDrawingDetailPath(axisPath,box.center(),box.width()/2);}auto *item=new AxisItem(axisPath);item->setPos(layout->position);item->setData(kindRole,"axis");item->setData(viewRole,definition.id);item->setData(idRole,axis.id);item->setToolTip(axis.name+QStringLiteral(" · Doppio clic per modificare."));if(interactive)item->activated=[this,id=axis.id]{QTimer::singleShot(0,owner,[this,id]{editAxisDialog(id);});};else item->setFlag(QGraphicsItem::ItemIsSelectable,false);scene->addItem(item);}
                 else{auto *warning=scene->addSimpleText(axis.name+QStringLiteral(": da verificare"));fontFor(warning);warning->setBrush(QColor("#c42b32"));warning->setPos(layout->position+QPointF(0,-8-5*axisRow++));warning->setToolTip(result.message);warning->setData(kindRole,"axis");warning->setData(viewRole,definition.id);warning->setData(idRole,axis.id);warning->setFlag(QGraphicsItem::ItemIsSelectable,interactive);}
             }
+            if(drawingIsDetail(*layout)){
+                bounds=drawingDetailBounds(definition,*layout).translated(layout->position);
+                auto *border=scene->addEllipse(bounds,technicalPen(QPen(QColor("#444444"),.18),interactive));border->setData(kindRole,"detailBorder");border->setData(viewRole,definition.id);border->setAcceptedMouseButtons(Qt::NoButton);
+            }
             if(drawingHalfSection(definition)&&!bounds.isNull()){
-                QPen pen(QColor("#555555"),.18);pen.setDashPattern({10,2,2,2});auto *axis=scene->addLine(layout->position.x(),bounds.top()-3,layout->position.x(),bounds.bottom()+3,pen);axis->setData(kindRole,"sectionAxis");axis->setData(viewRole,definition.id);axis->setAcceptedMouseButtons(Qt::NoButton);axis->setZValue(3);
+                QPen pen(QColor("#555555"),.18);pen.setDashPattern({10,2,2,2});QPainterPath axisPath;axisPath.moveTo(layout->position.x(),bounds.top()-3);axisPath.lineTo(layout->position.x(),bounds.bottom()+3);if(drawingIsDetail(*layout)){const auto box=drawingDetailBounds(definition,*layout).translated(layout->position);axisPath=clipDrawingDetailPath(axisPath,box.center(),box.width()/2);}auto *axis=scene->addPath(axisPath,technicalPen(pen,interactive));axis->setData(kindRole,"sectionAxis");axis->setData(viewRole,definition.id);axis->setAcceptedMouseButtons(Qt::NoButton);axis->setZValue(3);
             }
             auto *label=new MoveLabel((layout->relation.kind==DrawingDerivedKind::Section?layout->relation.label+QStringLiteral("–")+layout->relation.label+QStringLiteral(" · "):QString())+layout->title+QStringLiteral("  (%1:1)").arg(definition.scale,0,'g',4));fontFor(label,state.style,state.style.viewTitleHeight);label->setBrush(QColor("#35495c"));
             label->setPos(layout->titleOffset?layout->position+*layout->titleOffset:bounds.isNull()?layout->position:bounds.bottomLeft()+QPointF(0,state.style.titleGap));label->setData(kindRole,"view");label->setData(viewRole,definition.id);
             label->setFlag(QGraphicsItem::ItemIsMovable,false);
             label->setToolTip(QStringLiteral("Trascina il nome per spostarlo separatamente; Alt esclude gli snap. Trascina la geometria per spostare la vista. Doppio clic per modificarla."));
-            label->activated=[this,id=definition.id]{QTimer::singleShot(0,owner,[this,id]{const auto *v=viewFor(id);if(v)addViewDialog(v->kind,id);});};
+            label->activated=[this,id=definition.id]{QTimer::singleShot(0,owner,[this,id]{const auto *v=viewFor(id);if(v){if(drawingIsDetail(*layoutFor(id)))detailProperties(id);else addViewDialog(v->kind,id);}});};
             const auto id=definition.id;label->moved=[this,id](QPointF before,QPointF after){const auto *layout=layoutFor(id);if(!layout)return;
                 Q_UNUSED(before);const auto error=owner->moveViewTitle(id,after);if(!error.isEmpty()){say(error);queueRedraw();}};scene->addItem(label);
             if(interactive){auto *frame=new ViewFrame(bounds.adjusted(-1,-1,1,1));frame->setZValue(-4);frame->setFlag(QGraphicsItem::ItemIsSelectable);frame->setData(kindRole,"viewFrame");frame->setData(viewRole,definition.id);frame->setToolTip(QStringLiteral("Trascina per spostare la vista; Esc annulla."));scene->addItem(frame);}
@@ -994,6 +1024,7 @@ struct DrawingSheetEditor::Impl{
         for(const auto &axis:state.axes)if(axis.visible){const auto result=cachedAxis(axis);if(result.status!=DrawingDimensionStatus::Ready)continue;
             for(auto role:{DrawingPointRole::Start,DrawingPointRole::End,DrawingPointRole::Midpoint}){
                 const auto p=role==DrawingPointRole::Start?result.first:role==DrawingPointRole::End?result.second:.5*(result.first+result.second);
+                const auto *axisLayout=layoutFor(axis.viewId);if(axisLayout&&drawingIsDetail(*axisLayout)&&QLineF(QPointF(p.x(),p.y()),axisLayout->relation.detailCenter).length()>axisLayout->relation.detailRadius)continue;
                 notable.push_back({axis.viewId,0,role,std::numeric_limits<double>::quiet_NaN(),paperLocal(axis.viewId,p),0,axis.id});
             }
         }
@@ -1399,6 +1430,11 @@ struct DrawingSheetEditor::Impl{
         return true;
     }
     void drawCutLines(QGraphicsScene *target,const DrawingView &parent,const DrawingViewLayout &layout){
+        for(const auto &detail:state.views)if(drawingIsDetail(detail)&&detail.relation.parentId==parent.id){
+            const auto &r=detail.relation;const QPointF center=layout.position+QPointF(r.detailCenter.x()*parent.scale,-r.detailCenter.y()*parent.scale);const double radius=r.detailRadius*parent.scale;
+            auto *ring=target->addEllipse(QRectF(center-QPointF(radius,radius),QSizeF(2*radius,2*radius)),technicalPen(QPen(QColor("#444444"),.18,Qt::DashDotLine),target==this->scene));ring->setToolTip(QStringLiteral("Trascina il cerchio o il suo identificativo per spostare la zona del dettaglio. Esc annulla."));ring->setData(kindRole,"detailCallout");ring->setData(viewRole,parent.id);ring->setData(idRole,detail.viewId);ring->setAcceptedMouseButtons(Qt::NoButton);ring->setZValue(5);
+            auto *text=target->addSimpleText(r.label);fontFor(text,state.style,state.style.viewTitleHeight);QPointF labelPosition=center+QPointF(-radius-4,-radius);if(labelPosition.x()<1)labelPosition.setX(center.x()+radius+1);labelPosition.setX(std::clamp(labelPosition.x(),1.,std::max(1.,state.size.width()-10)));labelPosition.setY(std::max(1.,labelPosition.y()));text->setPos(labelPosition);text->setToolTip(QStringLiteral("Trascina per spostare il delimitatore del dettaglio."));text->setData(kindRole,"detailCalloutLabel");text->setData(viewRole,parent.id);text->setData(idRole,detail.viewId);text->setAcceptedMouseButtons(Qt::NoButton);text->setZValue(5);
+        }
         for(const auto &section:state.views){const auto &r=section.relation;if(r.kind!=DrawingDerivedKind::Section||r.parentId!=parent.id)continue;
             const auto point=[&](QPointF p){return layout.position+QPointF(p.x()*parent.scale,-p.y()*parent.scale);};
             auto a=point(r.cutStart),b=point(r.cutEnd);const auto t=(b-a)/QLineF(a,b).length();const auto n=(r.reverse?-1:1)*QPointF(t.y(),-t.x());const auto *sectionView=viewFor(section.viewId);const bool half=sectionView&&drawingHalfSection(*sectionView);if(!half)a-=t*4;b+=t*4;
@@ -1408,14 +1444,84 @@ struct DrawingSheetEditor::Impl{
                 auto *label=target->addSimpleText(r.label);fontFor(label,.3);label->setBrush(QColor("#222222"));label->setPos(p-n*10+QPointF(1,-2));label->setZValue(6);label->setData(kindRole,"cuttingLabel");label->setData(viewRole,parent.id);label->setData(idRole,section.viewId);label->setAcceptedMouseButtons(Qt::NoButton);}
         }
     }
+    void cancelDetail(){if(!detail)return;auto options=detail->options;delete detail->circle;detail.reset();if(options){options->blockSignals(true);options->close();}view->setCursor(Qt::ArrowCursor);}
+    QUuid detailParent(QPointF center,double radius) const {
+        QVector<QUuid> candidates,centered;
+        for(const auto &layout:state.views){
+            if(drawingIsDetail(layout))continue;
+            const auto found=visibility.find(layout.viewId);if(found==visibility.end()||!found->second)continue;
+            const auto &display=*found->second;const auto local=center-layout.position;
+            const auto intersects=[&](const DrawingVisiblePath &path){return !clipDrawingDetailPath(path.visible,local,radius).isEmpty()||(layout.showHiddenLines&&!clipDrawingDetailPath(path.hidden,local,radius).isEmpty());};
+            bool hit=std::any_of(display.curves.begin(),display.curves.end(),intersects)||std::any_of(display.silhouettes.begin(),display.silhouettes.end(),intersects);
+            if(!hit&&layout.showMesh&&!display.shadedImage.isNull()&&display.shadedBounds.contains(local)){
+                const auto &bounds=display.shadedBounds;const int x=std::clamp(int((local.x()-bounds.left())/bounds.width()*display.shadedImage.width()),0,display.shadedImage.width()-1),y=std::clamp(int((local.y()-bounds.top())/bounds.height()*display.shadedImage.height()),0,display.shadedImage.height()-1);
+                hit=qAlpha(display.shadedImage.pixel(x,y))>0;
+            }
+            if(hit){candidates.append(layout.viewId);if(viewBounds(layout.viewId).contains(center))centered.append(layout.viewId);}
+        }
+        // Prefer the unique view under the center when the circle reaches a neighbouring view.
+        // Coincident or otherwise ambiguous views must be redrawn, never resolved by selection order.
+        if(candidates.size()==1)return candidates.front();
+        if(centered.size()==1)return centered.front();
+        return {};
+    }
+    void detailCreationOptions(){
+        QString identifier;for(int i=0;i<1000;++i){identifier=i<26?QString(QChar('A'+i)):QStringLiteral("D%1").arg(i+1);bool used=false;for(const auto &layout:state.views)if(layout.relation.label.compare(identifier,Qt::CaseInsensitive)==0)used=true;if(!used)break;}
+        const auto error=owner->beginDetailCircle({},identifier,2);if(!error.isEmpty()){say(error);return;}
+        auto *dialog=new QDialog(owner,Qt::Tool);dialog->setAttribute(Qt::WA_DeleteOnClose);dialog->setObjectName("drawingDetailDialog");dialog->setWindowTitle(QStringLiteral("Vista dettaglio"));auto *form=new QFormLayout(dialog);
+        auto *label=new QLineEdit(identifier,dialog);label->setObjectName("drawingDetailIdentifier");label->setMaxLength(8);form->addRow(QStringLiteral("Identificativo:"),label);
+        auto *scale=new NumericInput(dialog);scale->setObjectName("drawingDetailScale");scale->setRange(.001,1000);scale->setDecimals(4);scale->setValue(2);form->addRow(QStringLiteral("Scala (rispetto al modello):"),scale);
+        auto *note=new QLabel(QStringLiteral("Disegna subito il cerchio sul foglio: clic sul centro, poi sul raggio. La vista madre viene riconosciuta dalla zona delimitata. Al secondo clic compare l'anteprima da posizionare."),dialog);note->setWordWrap(true);form->addRow(note);
+        auto *redraw=new QPushButton(QStringLiteral("Ridisegna cerchio"),dialog);redraw->setObjectName("drawingDetailRedraw");form->addRow(redraw);
+        auto *buttons=new QDialogButtonBox(QDialogButtonBox::Cancel,dialog);form->addRow(buttons);detail->options=dialog;
+        connect(label,&QLineEdit::textChanged,dialog,[this](const QString &text){if(detail)detail->label=text.trimmed().toUpper();});
+        connect(scale,qOverload<double>(&QDoubleSpinBox::valueChanged),dialog,[this](double value){if(detail)detail->scale=value;});
+        connect(redraw,&QPushButton::clicked,dialog,[this]{if(detail){detail->started=false;detail->circle->hide();view->setFocus();say(QStringLiteral("Indica il centro del nuovo cerchio."));}});
+        connect(buttons,&QDialogButtonBox::rejected,dialog,&QDialog::reject);
+        connect(dialog,&QDialog::rejected,owner,[this,dialog]{if(detail&&detail->options==dialog){cancelDetail();say(QStringLiteral("Dettaglio annullato."));}});
+        dialog->resize(400,220);dialog->show();view->setFocus();
+    }
+    bool detailKey(int key){if(!detail)return false;if(key==Qt::Key_Escape){cancelDetail();say(QStringLiteral("Dettaglio annullato."));}else if(key==Qt::Key_Clear)detail->circle->hide();return true;}
+    bool detailPointer(QPointF point,bool click){
+        if(!detail)return false;
+        const double radius=detail->started?QLineF(detail->center,point).length():0;
+        detail->circle->setRect(QRectF(detail->center-QPointF(radius,radius),QSizeF(2*radius,2*radius)));detail->circle->setVisible(detail->started);
+        if(!click)return true;
+        if(!QRectF(QPointF(),state.size).contains(point)){say(QStringLiteral("Scegli un punto sul foglio."));return true;}
+        if(!detail->started){if(!detail->parent.isNull()&&!viewBounds(detail->parent).adjusted(-1,-1,1,1).contains(point)){say(QStringLiteral("Scegli il centro sulla vista madre selezionata."));return true;}detail->center=point;detail->started=true;say(QStringLiteral("Indica il raggio del cerchio di dettaglio. Esc annulla."));return true;}
+        if(radius<1){say(QStringLiteral("Il cerchio deve avere raggio almeno 1 mm sul foglio."));return true;}
+        const auto parent=detail->parent.isNull()?detailParent(detail->center,radius):detail->parent;
+        if(parent.isNull()){say(QStringLiteral("Il cerchio non identifica una sola vista. Ridisegnalo o modifica il raggio per delimitare la vista desiderata."));return true;}
+        const auto center=localPaper(parent,detail->center);const auto label=detail->label;const double scale=detail->scale,r=radius/viewFor(parent)->scale;
+        const auto error=owner->beginDetailViewPlacement(parent,{center.x(),center.y()},r,scale,label);if(!error.isEmpty())say(error);return true;
+    }
+    void detailProperties(const QUuid &id){detailDialog(id);}
+    void detailDialog(const QUuid &existing={}){
+        if(readOnly)return;
+        if(existing.isNull()){detailCreationOptions();return;}
+        const auto *original=layoutFor(existing);if(!original||!drawingIsDetail(*original))return;
+        QDialog dialog(owner);dialog.setObjectName("drawingDetailDialog");dialog.setWindowTitle(original?QStringLiteral("Modifica dettaglio"):QStringLiteral("Vista dettaglio"));auto *form=new QFormLayout(&dialog);
+        auto *parent=new QComboBox(&dialog);parent->setObjectName("drawingDetailParent");for(const auto &layout:state.views)if(!drawingIsDetail(layout))parent->addItem(layout.title,layout.viewId);
+        if(!parent->count()){say(QStringLiteral("Inserisci prima una vista madre."));return;}
+        const auto selected=original?original->relation.parentId:selectedView();const int selectedIndex=parent->findData(selected);if(selectedIndex>=0)parent->setCurrentIndex(selectedIndex);parent->setEnabled(!original);form->addRow(QStringLiteral("Vista madre:"),parent);
+        QString identifier=QStringLiteral("A");for(int i=0;i<1000;++i){identifier=i<26?QString(QChar('A'+i)):QStringLiteral("D%1").arg(i+1);bool used=false;for(const auto &layout:state.views)if(layout.relation.label.compare(identifier,Qt::CaseInsensitive)==0)used=true;if(!used)break;}
+        auto *label=new QLineEdit(original?original->relation.label:identifier,&dialog);label->setObjectName("drawingDetailIdentifier");label->setMaxLength(8);form->addRow(QStringLiteral("Identificativo:"),label);
+        auto *scale=new NumericInput(&dialog);scale->setObjectName("drawingDetailScale");scale->setRange(.001,1000);scale->setDecimals(4);scale->setValue(original?viewFor(existing)->scale:2*viewFor(parent->currentData().toUuid())->scale);form->addRow(QStringLiteral("Scala (rispetto al modello):"),scale);
+        auto *x=new NumericInput(&dialog),*y=new NumericInput(&dialog),*radius=new NumericInput(&dialog);x->setObjectName("drawingDetailCenterX");y->setObjectName("drawingDetailCenterY");radius->setObjectName("drawingDetailRadius");for(auto *input:{x,y,radius}){input->setRange(-1e6,1e6);input->setDecimals(6);input->setSuffix(QStringLiteral(" mm modello"));}radius->setMinimum(.000001);
+        auto *title=new QLineEdit(original?original->title:QString(),&dialog);title->setObjectName("drawingDetailTitle");title->setMaxLength(256);
+        if(original){x->setValue(original->relation.detailCenter.x());y->setValue(original->relation.detailCenter.y());radius->setValue(original->relation.detailRadius);form->addRow(QStringLiteral("Centro X:"),x);form->addRow(QStringLiteral("Centro Y:"),y);form->addRow(QStringLiteral("Raggio:"),radius);form->addRow(QStringLiteral("Titolo:"),title);}else{for(auto *input:{x,y,radius})input->hide();title->hide();}
+        auto *note=new QLabel(original?QStringLiteral("Piano, corpi e taglio seguono la madre. Centro e raggio sono nel piano della madre; la scala e' indipendente. Le quote misurano la geometria originale."):QStringLiteral("Dopo OK, indica centro e raggio sulla madre, poi posiziona l'anteprima sul foglio. Il cerchio delimita la vista e non e' quotabile."),&dialog);note->setWordWrap(true);form->addRow(note);
+        auto *error=new QLabel(&dialog);error->setWordWrap(true);form->addRow(error);auto *buttons=new QDialogButtonBox(QDialogButtonBox::Ok|QDialogButtonBox::Cancel,&dialog);form->addRow(buttons);connect(buttons,&QDialogButtonBox::rejected,&dialog,&QDialog::reject);
+        connect(buttons,&QDialogButtonBox::accepted,&dialog,[&]{QString message;if(original){auto next=state;for(auto &v:next.drawing.views)if(v.id==existing)v.scale=scale->value();for(auto &layout:next.views)if(layout.viewId==existing){layout.title=title->text().trimmed();if(layout.title==QStringLiteral("Dettaglio %1").arg(layout.relation.label))layout.title=QStringLiteral("Dettaglio %1").arg(label->text().trimmed().toUpper());layout.relation.label=label->text().trimmed().toUpper();layout.relation.detailCenter={x->value(),y->value()};layout.relation.detailRadius=radius->value();}message=changeViews(std::move(next),QStringLiteral("Modifica dettaglio"));}else message=owner->beginDetailCircle(parent->currentData().toUuid(),label->text().trimmed().toUpper(),scale->value());error->setText(message);if(message.isEmpty())dialog.accept();});dialog.resize(500,original?400:250);dialog.exec();if(detail)view->setFocus();
+    }
     void derivedDialog(bool section){
         if(readOnly)return;
         QDialog dialog(owner);dialog.setObjectName(section?"drawingTechnicalSectionDialog":"drawingDerivedViewDialog");dialog.setWindowTitle(section?QStringLiteral("Sezione da linea di taglio"):QStringLiteral("Vista derivata"));auto *form=new QFormLayout(&dialog);
-        auto *parent=new QComboBox(&dialog);parent->setObjectName("drawingParentView");for(const auto &l:state.views)if(viewFor(l.viewId)->kind==DrawingViewKind::ProjectedEdges)parent->addItem(l.title,l.viewId);
+        auto *parent=new QComboBox(&dialog);parent->setObjectName("drawingParentView");for(const auto &l:state.views)if(viewFor(l.viewId)->kind==DrawingViewKind::ProjectedEdges&&!drawingIsDetail(l))parent->addItem(l.title,l.viewId);
         if(!parent->count()){say(QStringLiteral("Inserisci prima una vista proiettata."));return;}const auto chosen=parent->findData(selectedView());if(chosen>=0)parent->setCurrentIndex(chosen);form->addRow(QStringLiteral("Vista madre:"),parent);
         auto *side=new QComboBox(&dialog);side->setObjectName("drawingProjectionSide");side->addItems({"A sinistra","A destra","Sopra","Sotto"});side->setCurrentIndex(1);
         auto *method=new QComboBox(&dialog);method->setObjectName("drawingProjectionMethod");method->addItems({"Primo diedro (europeo)","Terzo diedro (americano)"});
-        auto *label=new QLineEdit(&dialog);label->setObjectName("drawingSectionIdentifier");label->setMaxLength(8);int number=0;QString identifier;do{identifier=number<26?QString(QChar('A'+number)):QStringLiteral("S%1").arg(number+1);++number;}while(std::any_of(state.views.cbegin(),state.views.cend(),[&](const auto &l){return l.relation.kind==DrawingDerivedKind::Section&&l.relation.label.compare(identifier,Qt::CaseInsensitive)==0;}));label->setText(identifier);
+        auto *label=new QLineEdit(&dialog);label->setObjectName("drawingSectionIdentifier");label->setMaxLength(8);int number=0;QString identifier;do{identifier=number<26?QString(QChar('A'+number)):QStringLiteral("S%1").arg(number+1);++number;}while(std::any_of(state.views.cbegin(),state.views.cend(),[&](const auto &l){return !l.relation.parentId.isNull()&&l.relation.label.compare(identifier,Qt::CaseInsensitive)==0;}));label->setText(identifier);
         auto *reverse=new QCheckBox(QStringLiteral("Inverti verso delle frecce"),&dialog);reverse->setObjectName("drawingSectionReverse");
         auto *style=new QComboBox(&dialog);style->setObjectName("drawingSectionStyle");style->addItems({"Sezione rimossa","Sezione completa","Mezza sezione destra","Mezza sezione sinistra"});style->setCurrentIndex(1);
         if(section){form->addRow(QStringLiteral("Tipo:"),style);form->addRow(QStringLiteral("Identificativo:"),label);form->addRow(reverse);}else{style->hide();form->addRow(QStringLiteral("Posizione sul foglio:"),side);form->addRow(QStringLiteral("Metodo:"),method);}
@@ -1513,6 +1619,7 @@ DrawingSheetEditor::DrawingSheetEditor(DrawingSheet sheet,DrawingEditorModel mod
     impl_->redoAction=action(QStringLiteral("Ripristina"),"drawingRedoAction",[this]{impl_->report(redo());});toolbar->addSeparator();
     action(QStringLiteral("Inserisci vista..."),"drawingAddProjectionAction",[this]{impl_->addViewDialog(DrawingViewKind::ProjectedEdges);});
     action(QStringLiteral("Inserisci sezione..."),"drawingAddViewAction",[this]{impl_->addViewDialog();});
+    action(QStringLiteral("Vista dettaglio..."),"drawingDetailViewAction",[this]{impl_->detailDialog();});
     action(QStringLiteral("Vista derivata..."),"drawingDerivedViewAction",[this]{impl_->derivedDialog(false);});
     action(QStringLiteral("Sezione da linea di taglio..."),"drawingTechnicalSectionAction",[this]{impl_->derivedDialog(true);});
     action(QStringLiteral("Sgancia vista"),"drawingDetachViewAction",[this]{impl_->report(detachView(impl_->selectedView()));});
@@ -1553,9 +1660,9 @@ DrawingSheetEditor::DrawingSheetEditor(DrawingSheet sheet,DrawingEditorModel mod
     impl_->updateAction=action(QStringLiteral("Aggiorna dal modello"),"drawingUpdateModelAction",[this]{if(impl_->provider){try{impl_->report(updateModel(impl_->provider()));}catch(const std::exception &error){impl_->report(QString::fromUtf8(error.what()));}}});
     impl_->updateAction->setEnabled(false);action(QStringLiteral("Adatta foglio"),"drawingFitAction",[this]{fitSheet();});
     impl_->scene=new QGraphicsScene(this);impl_->view=new SheetCanvas(impl_->scene,this);impl_->view->setObjectName("drawingCanvas");impl_->view->configurePan();impl_->view->setRenderHint(QPainter::Antialiasing);impl_->view->setBackgroundRole(QPalette::Dark);impl_->view->setMouseTracking(true);impl_->view->viewport()->setMouseTracking(true);
-    impl_->view->pointer=[this](QPointF point,Qt::KeyboardModifiers modifiers,bool click){try{return impl_->cut?impl_->cutPointer(point,modifiers,click):impl_->placement?impl_->placementPointer(point,click):impl_->quotePointer(point,modifiers,click);}catch(const std::exception &e){impl_->say(QString::fromUtf8(e.what()));return true;}};
+    impl_->view->pointer=[this](QPointF point,Qt::KeyboardModifiers modifiers,bool click){try{return impl_->detail?impl_->detailPointer(point,click):impl_->cut?impl_->cutPointer(point,modifiers,click):impl_->placement?impl_->placementPointer(point,click):impl_->quotePointer(point,modifiers,click);}catch(const std::exception &e){impl_->say(QString::fromUtf8(e.what()));return true;}};
     impl_->view->drag=[this](QPointF p,Qt::KeyboardModifiers m,int phase){try{return impl_->viewDragPointer(p,m,phase);}catch(const std::exception &e){impl_->cancelViewDrag();impl_->say(QString::fromUtf8(e.what()));return true;}};
-    impl_->view->key=[this](int key){if(impl_->viewDrag){if(key==Qt::Key_Escape){impl_->cancelViewDrag();return true;}return false;}return impl_->cut?impl_->cutKey(key):impl_->placement?impl_->placementKey(key):impl_->quoteKey(key);};
+    impl_->view->key=[this](int key){if(impl_->viewDrag){if(key==Qt::Key_Escape){impl_->cancelViewDrag();return true;}return false;}return impl_->detail?impl_->detailKey(key):impl_->cut?impl_->cutKey(key):impl_->placement?impl_->placementKey(key):impl_->quoteKey(key);};
     connect(impl_->quoteAction,&QAction::toggled,this,[this](bool checked){impl_->axisInput=-1;impl_->editingAxis={};impl_->quoteType->setEnabled(!impl_->readOnly);if(checked){impl_->cancelViewDrag();impl_->cancelPlacement();}impl_->resetQuote();impl_->view->setCursor(checked?Qt::CrossCursor:Qt::ArrowCursor);impl_->refreshNotable();if(checked)impl_->quoteOverlay();});
     connect(impl_->quoteType,qOverload<int>(&QComboBox::currentIndexChanged),this,[this](int){if(!impl_->quoteAction->isChecked())impl_->quoteAction->setChecked(true);impl_->quoteOverlay();});
     for(const auto &entry:{qMakePair("drawingOriginReferenceAction",DrawingPointRole::Origin),qMakePair("drawingAxisXReferenceAction",DrawingPointRole::AxisX),qMakePair("drawingAxisYReferenceAction",DrawingPointRole::AxisY)}){
@@ -1572,7 +1679,7 @@ DrawingSheetEditor::DrawingSheetEditor(DrawingSheet sheet,DrawingEditorModel mod
         if(item->data(0,Qt::UserRole).toString()==QLatin1String("dimension"))menu.addAction(findChild<QAction *>("drawingEditDimensionAction"));
         else if(item->data(0,Qt::UserRole).toString()==QLatin1String("annotation"))menu.addAction(findChild<QAction *>("drawingEditAnnotationAction"));
         else if(item->data(0,Qt::UserRole).toString()==QLatin1String("axis"))menu.addAction(findChild<QAction *>("drawingEditAxisAction"));
-        else{menu.addAction(findChild<QAction *>("drawingEditViewAction"));menu.addAction(findChild<QAction *>("drawingAlignViewAction"));menu.addAction(findChild<QAction *>("drawingResetViewTitleAction"));menu.addAction(impl_->hiddenAction);menu.addAction(impl_->shadedAction);menu.addAction(impl_->centersAction);menu.addAction(impl_->centerLinesAction);menu.addAction(impl_->cylinderAxesAction);for(auto name:{"drawingDerivedViewAction","drawingTechnicalSectionAction","drawingDetachViewAction","drawingReleaseAlignmentAction","drawingSectionHatchAction","drawingEditSectionLineAction","drawingAlignSectionOrientationAction","drawingReverseSectionAction"})menu.addAction(findChild<QAction *>(name));}
+        else{menu.addAction(findChild<QAction *>("drawingEditViewAction"));menu.addAction(findChild<QAction *>("drawingAlignViewAction"));menu.addAction(findChild<QAction *>("drawingResetViewTitleAction"));menu.addAction(impl_->hiddenAction);menu.addAction(impl_->shadedAction);menu.addAction(impl_->centersAction);menu.addAction(impl_->centerLinesAction);menu.addAction(impl_->cylinderAxesAction);for(auto name:{"drawingDerivedViewAction","drawingDetailViewAction","drawingTechnicalSectionAction","drawingDetachViewAction","drawingReleaseAlignmentAction","drawingSectionHatchAction","drawingEditSectionLineAction","drawingAlignSectionOrientationAction","drawingReverseSectionAction"})menu.addAction(findChild<QAction *>(name));}
         menu.addSeparator();menu.addAction(findChild<QAction *>("drawingDeleteSelectionAction"));
         menu.exec(impl_->tree->viewport()->mapToGlobal(point));});
     for(auto name:{"drawingResetViewTitleAction","drawingEditAnnotationAction","drawingEditAxisAction","drawingDetachViewAction","drawingReleaseAlignmentAction","drawingSectionHatchAction","drawingEditSectionLineAction","drawingAlignSectionOrientationAction","drawingReverseSectionAction"})toolbar->removeAction(findChild<QAction *>(name));
@@ -1580,6 +1687,7 @@ DrawingSheetEditor::DrawingSheetEditor(DrawingSheet sheet,DrawingEditorModel mod
     const QPair<const char *,const char *> icons[]={
         {"drawingOptionsAction","drawingOptions"},
         {"drawingResetViewTitleAction","drawingResetViewTitle"},
+        {"drawingDetailViewAction","drawingDetailView"},
         {"drawingDerivedViewAction","drawingDerivedView"},
         {"drawingTechnicalSectionAction","drawingTechnicalSection"},
         {"drawingDetachViewAction","drawingDetachView"},
@@ -1653,6 +1761,28 @@ QString DrawingSheetEditor::beginDerivedViewPlacement(const QUuid &parent,Drawin
     auto next=impl_->state;next.drawing.views.push_back(child);next.views.append(layout);const auto error=synchronizeDrawingViews(next);if(!error.isEmpty())return error;
     return beginViewPlacement(next.drawing.views.back(),next.views.back());
 }
+QString DrawingSheetEditor::beginDetailCircle(const QUuid &parent,const QString &label,double scale){
+    if(impl_->computing||impl_->readOnly)return QStringLiteral("Tavola occupata o in sola lettura.");
+    const auto *base=impl_->viewFor(parent);const auto *source=impl_->layoutFor(parent);if(!parent.isNull()&&(!base||!source||drawingIsDetail(*source)))return QStringLiteral("Scegli una vista madre o una sezione, non un altro dettaglio.");
+    if(parent.isNull()&&std::none_of(impl_->state.views.begin(),impl_->state.views.end(),[](const auto &layout){return !drawingIsDetail(layout);}))return QStringLiteral("Inserisci prima una vista madre.");
+    if(!std::isfinite(scale)||scale<=0||scale>1000)return QStringLiteral("Scala del dettaglio non valida.");
+    if(label.isEmpty()||label.size()>8||std::any_of(label.begin(),label.end(),[](QChar c){return !c.isLetterOrNumber();}))return QStringLiteral("Identificativo del dettaglio non valido.");
+    for(const auto &layout:impl_->state.views)if(!layout.relation.parentId.isNull()&&layout.relation.label.compare(label,Qt::CaseInsensitive)==0)return QStringLiteral("Identificativo gia' usato.");
+    impl_->cancelPlacement();impl_->quoteAction->setChecked(false);impl_->resetQuote();auto pick=std::make_unique<Impl::DetailPick>();pick->parent=parent;pick->label=label;pick->scale=scale;
+    QPen pen(QColor("#1469c0"),1.2,Qt::DashDotLine);pen.setCosmetic(true);pick->circle=impl_->scene->addEllipse({},pen);pick->circle->setData(kindRole,"detailCirclePreview");pick->circle->setAcceptedMouseButtons(Qt::NoButton);pick->circle->setZValue(40);impl_->detail=std::move(pick);impl_->view->setCursor(Qt::CrossCursor);impl_->view->setFocus();impl_->say(QStringLiteral("Indica il centro del dettaglio sulla vista madre. Esc annulla."));return {};
+}
+QString DrawingSheetEditor::beginDetailViewPlacement(const QUuid &parent,QPointF center,double radius,double scale,const QString &label){
+    if(impl_->computing||impl_->readOnly)return QStringLiteral("Tavola occupata o in sola lettura.");
+    const auto *base=impl_->viewFor(parent);const auto *source=impl_->layoutFor(parent);if(!base||!source||drawingIsDetail(*source))return QStringLiteral("Scegli una vista madre o una sezione.");
+    DrawingView child=*base;child.id=QUuid::createUuid();child.scale=scale;DrawingViewLayout layout=*source;layout.viewId=child.id;layout.title=QStringLiteral("Dettaglio %1").arg(label);layout.titleOffset.reset();layout.relation={};layout.relation.kind=DrawingDerivedKind::Detail;layout.relation.parentId=parent;layout.relation.aligned=false;layout.relation.detailCenter=center;layout.relation.detailRadius=radius;layout.relation.label=label;layout.relation.hatch=source->relation.hatch;
+    return beginViewPlacement(child,layout);
+}
+QString DrawingSheetEditor::updateDetailView(const QUuid &id,QPointF center,double radius,double scale,const QString &label){
+    if(impl_->computing||impl_->readOnly)return QStringLiteral("Tavola occupata o in sola lettura.");
+    const auto *layout=impl_->layoutFor(id);if(!layout||!drawingIsDetail(*layout))return QStringLiteral("Seleziona un dettaglio.");
+    auto next=impl_->state;for(auto &v:next.drawing.views)if(v.id==id)v.scale=scale;for(auto &l:next.views)if(l.viewId==id){if(l.title==QStringLiteral("Dettaglio %1").arg(l.relation.label))l.title=QStringLiteral("Dettaglio %1").arg(label);l.relation.detailCenter=center;l.relation.detailRadius=radius;l.relation.label=label;}
+    return impl_->changeViews(std::move(next),QStringLiteral("Modifica dettaglio"));
+}
 QString DrawingSheetEditor::beginSectionPlacement(const QUuid &parent,QPointF start,QPointF end,const QString &label,bool reverse,DrawingSectionStyle style){
     if(impl_->computing)return QStringLiteral("Attendere il calcolo della vista in corso.");
     const auto *base=impl_->viewFor(parent);const auto *source=impl_->layoutFor(parent);if(!base||!source||base->kind!=DrawingViewKind::ProjectedEdges)return QStringLiteral("Scegli una vista madre proiettata.");
@@ -1710,6 +1840,7 @@ QString DrawingSheetEditor::setSectionLine(const QUuid &section,QPointF start,QP
 }
 bool DrawingSheetEditor::hasSectionLine()const{return bool(impl_->cut);}
 QString DrawingSheetEditor::detachView(const QUuid &id){
+    if(impl_->layoutFor(id)&&drawingIsDetail(*impl_->layoutFor(id)))return QStringLiteral("Il dettaglio mantiene il collegamento alla madre; modifica il dettaglio o eliminalo.");
     if(impl_->computing)return QStringLiteral("Attendere il calcolo della vista in corso.");
     if(impl_->readOnly)return QStringLiteral("La tavola e' in sola lettura.");
     const auto *layout=impl_->layoutFor(id);if(!layout||layout->relation.kind!=DrawingDerivedKind::Orthographic)return QStringLiteral("Seleziona una vista ortogonale derivata. Le sezioni mantengono il legame con la linea di taglio.");
@@ -1722,7 +1853,7 @@ QString DrawingSheetEditor::setViewAlignment(const QUuid &id,bool aligned){
 }
 QString DrawingSheetEditor::setSectionHatch(const QUuid &id,bool visible){
     if(impl_->computing)return QStringLiteral("Attendere il calcolo della vista in corso.");
-    const auto *l=impl_->layoutFor(id);const auto *v=impl_->viewFor(id);if(!l||!v||v->kind!=DrawingViewKind::Section||(l->relation.kind!=DrawingDerivedKind::Section&&v->sectionStyle==DrawingSectionStyle::Removed))return QStringLiteral("Seleziona una sezione tecnica.");
+    const auto *l=impl_->layoutFor(id);const auto *v=impl_->viewFor(id);if(!l||!v||v->kind!=DrawingViewKind::Section||(l->relation.kind!=DrawingDerivedKind::Section&&!drawingIsDetail(*l)&&v->sectionStyle==DrawingSectionStyle::Removed))return QStringLiteral("Seleziona una sezione tecnica.");
     auto next=impl_->state;for(auto &p:next.views)if(p.viewId==id)p.relation.hatch=visible;return impl_->applyLayout(std::move(next),QStringLiteral("Tratteggio sezione"));
 }
 QString DrawingSheetEditor::setSectionStyle(const QUuid &id,DrawingSectionStyle style){
@@ -2031,7 +2162,7 @@ void DrawingSheetEditor::setReadOnly(bool readOnly){
     impl_->readOnly=readOnly||!impl_->state.drawing.version.checkinId.isNull();
     if(impl_->readOnly){impl_->cancelViewDrag();impl_->cancelPlacement();impl_->quoteAction->setChecked(false);}
     impl_->quoteType->setEnabled(!impl_->readOnly);
-    for(const auto &name:{"drawingAddNoteAction","drawingAddLeaderAction","drawingEditAnnotationAction","drawingAxisThroughPointsAction","drawingAxisBetweenLinesAction","drawingEditAxisAction","drawingDerivedViewAction","drawingTechnicalSectionAction","drawingDetachViewAction","drawingReleaseAlignmentAction","drawingSectionHatchAction","drawingEditSectionLineAction","drawingAlignSectionOrientationAction","drawingReverseSectionAction","drawingOptionsAction","drawingResetViewTitleAction","drawingPageSettingsAction","drawingSmartDimensionAction","drawingEditDimensionAction","drawingOriginReferenceAction","drawingAxisXReferenceAction","drawingAxisYReferenceAction","drawingAddProjectionAction","drawingAddViewAction","drawingEditViewAction","drawingAlignViewAction","drawingEndpointDimensionAction","drawingHorizontalDimensionAction","drawingVerticalDimensionAction","drawingLengthDimensionAction","drawingDeleteSelectionAction"})
+    for(const auto &name:{"drawingAddNoteAction","drawingAddLeaderAction","drawingEditAnnotationAction","drawingAxisThroughPointsAction","drawingAxisBetweenLinesAction","drawingEditAxisAction","drawingDerivedViewAction","drawingDetailViewAction","drawingTechnicalSectionAction","drawingDetachViewAction","drawingReleaseAlignmentAction","drawingSectionHatchAction","drawingEditSectionLineAction","drawingAlignSectionOrientationAction","drawingReverseSectionAction","drawingOptionsAction","drawingResetViewTitleAction","drawingPageSettingsAction","drawingSmartDimensionAction","drawingEditDimensionAction","drawingOriginReferenceAction","drawingAxisXReferenceAction","drawingAxisYReferenceAction","drawingAddProjectionAction","drawingAddViewAction","drawingEditViewAction","drawingAlignViewAction","drawingEndpointDimensionAction","drawingHorizontalDimensionAction","drawingVerticalDimensionAction","drawingLengthDimensionAction","drawingDeleteSelectionAction"})
         findChild<QAction *>(QString::fromLatin1(name))->setEnabled(!impl_->readOnly);
     impl_->refreshHiddenAction();impl_->refreshHistoryActions();impl_->updateAction->setEnabled(!impl_->readOnly&&bool(impl_->provider));
     for(auto *item:impl_->scene->items())if(dynamic_cast<MoveLabel *>(item)||dynamic_cast<MoveNote *>(item))item->setFlag(QGraphicsItem::ItemIsMovable,!impl_->readOnly&&item->data(kindRole).toString()!=QLatin1String("view"));
