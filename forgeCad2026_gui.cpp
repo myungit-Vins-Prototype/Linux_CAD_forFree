@@ -1,3 +1,4 @@
+#include "cad_drawing_browser.h"
 #include "cad_drawing_window.h"
 #include "cad_toolbar.h"
 #include "cad_curve_extract.h"
@@ -20764,7 +20765,7 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
     connect(newDrawingAction,&QAction::triggered,this,&PdfWindow::newDrawing);
     auto *openDrawingAction = drawingMenu->addAction(QStringLiteral("Apri tavola..."));
     openDrawingAction->setObjectName(QStringLiteral("openDrawingAction"));
-    openDrawingAction->setIconVisibleInMenu(true);openDrawingAction->setToolTip(QStringLiteral("Apre una tavola 2D ForgeCAD (.drw)."));
+    openDrawingAction->setIconVisibleInMenu(true);openDrawingAction->setToolTip(QStringLiteral("Apre le tavole collegate al modello: scelta con anteprima se sono più di una; altrimenti consente di sfogliare i file .drw."));
     connect(openDrawingAction,&QAction::triggered,this,&PdfWindow::openDrawing);
     QMenu *revisionMenu = addCadMenu(fileMenu, QStringLiteral("Revisioni"));
     revisionMenu->setObjectName(QStringLiteral("documentRevisionMenu"));
@@ -23523,7 +23524,7 @@ void PdfWindow::newDrawing() {
 }
 
 void PdfWindow::openDrawing() {
-    const auto path=QFileDialog::getOpenFileName(this,QStringLiteral("Apri tavola 2D"),QFileInfo(documentPath_).absolutePath(),QStringLiteral("Tavola ForgeCAD (*.drw)"));
+    const auto path=ForgeCad::chooseLinkedDrawing(this,documentPath_,viewport_->currentDocument().version.documentId);
     if (path.isEmpty()) return;
     for (auto *child:children()) if (auto *drawing=dynamic_cast<ForgeCad::DrawingWindow *>(child))
         if (drawing->filePath()==ForgeCad::canonicalDocumentPath(path) && drawing->document().sheet.drawing.version.checkinId.isNull()) { drawing->show(); drawing->raise(); drawing->activateWindow(); return; }

@@ -10,10 +10,12 @@ struct DrawingStyle {
     double dimensionHeight=3,viewTitleHeight=3,arrowLength=2,titleGap=6;
     DrawingArrowStyle arrow=DrawingArrowStyle::Open;
     bool titleSnaps=true;
-    bool operator==(const DrawingStyle &s)const{return fontFamily==s.fontFamily&&dimensionHeight==s.dimensionHeight&&viewTitleHeight==s.viewTitleHeight&&arrowLength==s.arrowLength&&titleGap==s.titleGap&&arrow==s.arrow&&titleSnaps==s.titleSnaps;}
+    double extensionGap=0,dimensionOffset=0; // mm sul foglio, zero conserva il layout precedente
+    bool operator==(const DrawingStyle &s)const{return fontFamily==s.fontFamily&&dimensionHeight==s.dimensionHeight&&viewTitleHeight==s.viewTitleHeight&&arrowLength==s.arrowLength&&titleGap==s.titleGap&&arrow==s.arrow&&titleSnaps==s.titleSnaps&&extensionGap==s.extensionGap&&dimensionOffset==s.dimensionOffset;}
     bool active()const{return !(*this==DrawingStyle{});}
 };
 inline QString validateDrawingStyle(const DrawingStyle &s){
+    for(double x:{s.extensionGap,s.dimensionOffset})if(!std::isfinite(x)||x<0||x>100)return QStringLiteral("Distanza delle quote non valida (0–100 mm sul foglio).");
     if(s.fontFamily.trimmed().isEmpty()||s.fontFamily.size()>256)return QStringLiteral("Famiglia del carattere non valida.");
     for(auto c:s.fontFamily)if(!c.isPrint())return QStringLiteral("Famiglia del carattere non stampabile.");
     for(double x:{s.dimensionHeight,s.viewTitleHeight,s.arrowLength})if(!std::isfinite(x)||x<.5||x>20)return QStringLiteral("Dimensione di testi o frecce non valida (0,5–20 mm).");

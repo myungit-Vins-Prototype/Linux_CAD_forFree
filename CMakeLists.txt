@@ -84,6 +84,9 @@ add_executable(forgecad
     cad_drawing_page.cpp
     cad_drawing_file.h
     cad_drawing_file.cpp
+    cad_drawing_browser.h
+    cad_drawing_browser.cpp
+    cad_drawing_toolbars.h
     cad_drawing_revisions.h
     cad_drawing_revisions.cpp
     cad_drawing_revision_ui.cpp
@@ -238,7 +241,7 @@ if(FORGECAD_BUILD_VIEW_TESTS)
     get_target_property(FORGECAD_VIEW_TEST_SOURCES forgecad SOURCES)
     list(REMOVE_ITEM FORGECAD_VIEW_TEST_SOURCES forgeCad2026.cpp forgeCad2026_gui.cpp ${FORGE_CAD_CUDA_SOURCE} ${FORGECAD_HASH_HEADER})
     list(REMOVE_ITEM FORGECAD_VIEW_TEST_SOURCES cad_macos_menu.h cad_macos_menu.mm)
-    add_executable(forgecad_view_tests tests/test_viewport.cpp tests/test_declared_history_cache.h tests/test_boolean_history.h tests/test_blend_history.h tests/test_extrusion_history.h tests/test_revolution_history.h tests/test_all_history.h tests/test_native_revisions.h tests/test_workspace_revisions.h tests/test_linked_drawing.h tests/test_drawing_revisions.h tests/test_projected_drawing_file.h tests/test_drawing_mouse.h tests/test_drawing_section_model.h cuda_support_cpu.cpp ${FORGECAD_VIEW_TEST_SOURCES})
+    add_executable(forgecad_view_tests tests/test_viewport.cpp tests/test_declared_history_cache.h tests/test_boolean_history.h tests/test_blend_history.h tests/test_extrusion_history.h tests/test_revolution_history.h tests/test_all_history.h tests/test_native_revisions.h tests/test_workspace_revisions.h tests/test_linked_drawing.h tests/test_drawing_workflow.h tests/test_drawing_revisions.h tests/test_projected_drawing_file.h tests/test_drawing_mouse.h tests/test_drawing_section_model.h cuda_support_cpu.cpp ${FORGECAD_VIEW_TEST_SOURCES})
     add_dependencies(forgecad_view_tests forgecad) # genera l'impronta una sola volta, prima dei test
     target_include_directories(forgecad_view_tests PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/generated)
     target_link_libraries(forgecad_view_tests PRIVATE Qt6::Widgets Qt6::OpenGL Qt6::OpenGLWidgets OpenGL::GL forgekernel)
@@ -406,7 +409,7 @@ target_compile_options(forgecad_drawing_dimensions_tests PRIVATE -Wall -Wextra -
 add_test(NAME forgecad_drawing_dimensions_tests COMMAND forgecad_drawing_dimensions_tests)
 set_tests_properties(forgecad_drawing_dimensions_tests PROPERTIES TIMEOUT 60)
 
-add_executable(forgecad_drawing_dimensions_gui_tests tests/test_drawing_dimensions_gui.cpp cad_drawing.cpp cad_drawing_dimension.cpp cad_drawing_sheet.cpp cad_drawing_derived.cpp cad_drawing_editor.cpp cad_icons.cpp cad_drawing_silhouette.cpp cad_drawing_visibility.cpp cad_drawing_page.cpp)
+add_executable(forgecad_drawing_dimensions_gui_tests tests/test_drawing_dimensions_gui.cpp tests/test_drawing_segment_spacing.h cad_drawing.cpp cad_drawing_dimension.cpp cad_drawing_sheet.cpp cad_drawing_derived.cpp cad_drawing_editor.cpp cad_icons.cpp cad_drawing_silhouette.cpp cad_drawing_visibility.cpp cad_drawing_page.cpp)
 target_include_directories(forgecad_drawing_dimensions_gui_tests PRIVATE ${PROJECT_SOURCE_DIR})
 target_link_libraries(forgecad_drawing_dimensions_gui_tests PRIVATE Qt6::Widgets forgekernel)
 target_compile_options(forgecad_drawing_dimensions_gui_tests PRIVATE -Wall -Wextra -Wpedantic)

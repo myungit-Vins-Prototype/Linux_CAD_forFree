@@ -14,7 +14,7 @@ namespace ForgeCad {
 // Facciata sincrona per i comandi esistenti; solo dati geometrici nel worker.
 // L'editor resta immutato e bloccato fino alla ricevuta o all'annullamento.
 template<class Result,class Work>
-QString runDrawingComputation(QWidget *owner,bool &busy,const QString &title,Result &result,Work work){
+QString runDrawingComputation(QWidget *owner,bool &busy,const QString &title,Result &result,Work work,const QStringList &phaseLabels={}){
     if(busy)return QStringLiteral("Attendere il calcolo della vista in corso.");
     struct Guard{QWidget *widget;bool &busy;bool enabled;Guard(QWidget *w,bool &b):widget(w),busy(b),enabled(w->isEnabled()){busy=true;widget->setEnabled(false);}~Guard(){busy=false;widget->setEnabled(enabled);}} guard(owner,busy);
     const auto cancel=Kernel::currentCancellation?Kernel::currentCancellation:std::make_shared<std::atomic<bool>>(false);std::atomic<int> phase{0};
@@ -26,8 +26,8 @@ QString runDrawingComputation(QWidget *owner,bool &busy,const QString &title,Res
         QEventLoop loop;QTimer timer;timer.setInterval(16);
         QObject::connect(&dialog,&QProgressDialog::canceled,&loop,[&]{cancel->store(true,std::memory_order_relaxed);dialog.setLabelText(QStringLiteral("Annullamento del calcolo..."));});
         QObject::connect(&timer,&QTimer::timeout,&loop,[&]{
-            const int value=std::clamp(phase.load(std::memory_order_relaxed),0,5);const QStringList labels={QStringLiteral("Intersezioni e bordi esatti"),QStringLiteral("Contorni apparenti"),QStringLiteral("Materiale e tratteggio"),QStringLiteral("Visibilita' e facce ombreggiate"),QStringLiteral("Preparazione del risultato"),QStringLiteral("Calcolo completato")};
-            if(!cancel->load(std::memory_order_relaxed)){dialog.setLabelText(title+QStringLiteral("\n")+labels[value]);dialog.setValue(value);}
+            const int value=std::clamp(phase.load(std::memory_order_relaxed),0,5);const QStringList defaults={QStringLiteral("Intersezioni e bordi esatti"),QStringLiteral("Contorni apparenti"),QStringLiteral("Materiale e tratteggio"),QStringLiteral("Visibilita' e facce ombreggiate"),QStringLiteral("Preparazione del risultato"),QStringLiteral("Calcolo completato")};
+            if(!cancel->load(std::memory_order_relaxed)){dialog.setLabelText(title+QStringLiteral("\n")+(phaseLabels.size()==6?phaseLabels[value]:defaults[value]));dialog.setValue(value);}
             if(task.wait_for(std::chrono::milliseconds(0))==std::future_status::ready)loop.quit();
         });
         timer.start();loop.exec();timer.stop();auto prepared=task.get();dialog.hide();

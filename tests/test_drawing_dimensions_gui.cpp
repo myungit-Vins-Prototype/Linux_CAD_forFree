@@ -5,6 +5,7 @@
 #include <QApplication>
 #include <QComboBox>
 #include <QDialog>
+#include <QDir>
 #include <QDialogButtonBox>
 #include <QGraphicsScene>
 #include <QGraphicsView>
@@ -45,6 +46,7 @@ int items(DrawingSheetEditor &editor,const QString &kind){int count=0;for(auto *
 void select(DrawingSheetEditor &editor,const QUuid &id){auto *tree=editor.findChild<QTreeWidget *>("drawingTree");for(QTreeWidgetItemIterator it(tree);*it;++it)if((*it)->data(0,Qt::UserRole+1).toUuid()==id){tree->setCurrentItem(*it);return;}throw std::runtime_error("elemento albero");}
 DrawingDimension last(const DrawingSheetEditor &editor){require(!editor.sheet().drawing.dimensions.empty(),"quota inserita");return editor.sheet().drawing.dimensions.back();}
 }
+#include "test_drawing_segment_spacing.h"
 int main(int argc,char **argv){QApplication app(argc,argv);try{
     const double angle=kPi/6;DrawingEditorModel model;model.snapshot.version={QUuid::createUuid(),{}};model.snapshot.bodies={source(makeBox(Frame3(),10,6,4),1),source(makePlaneSheet(Frame3(Vec3(18,0,0),Vec3(0,0,1),Vec3(std::cos(angle),std::sin(angle),0)),4),2),source(makeCylinder(Frame3(Vec3(35,0,0),Vec3(0,0,1),Vec3(1,0,0)),3,8),3)};model.choices={{1,"Corpo"},{2,"Superficie ruotata"},{3,"Cilindro"}};
     DrawingSheet sheet;sheet.title="Quotatura associativa";sheet.drawing.model=model.snapshot.version;DrawingSheetEditor editor(sheet,model);editor.resize(1450,900);editor.show();QApplication::processEvents();DrawingView view;view.kind=DrawingViewKind::ProjectedEdges;view.scale=3;ok(editor.insertView(view,{view.id,"Superiore",QPointF(75,120),{1,2,3}}));editor.fitSheet();QApplication::processEvents();editor.markSaved();
@@ -60,7 +62,7 @@ int main(int argc,char **argv){QApplication app(argc,argv);try{
     mode(editor,int(DrawingMeasure::HorizontalDistance));click(editor,paper({0,0}));click(editor,paper({10,6}));click(editor,QPointF(90,85));near(editor.dimensionResult(last(editor).id).value,10,"punto-punto orizzontale");
     mode(editor,int(DrawingMeasure::HorizontalDistance));click(editor,paper({0,0}));click(editor,paper({0,6}));click(editor,QPointF(60,90));near(editor.dimensionResult(last(editor).id).value,0,"componente orizzontale nulla senza trasformarla in distanza verticale");
     mode(editor,int(DrawingMeasure::VerticalDistance));click(editor,paper({0,0}));click(editor,paper({10,6}));click(editor,QPointF(60,110));near(editor.dimensionResult(last(editor).id).value,6,"punto-punto verticale");
-    mode(editor,int(DrawingMeasure::Distance));click(editor,paper({5,0}));click(editor,paper({10,6}));click(editor,QPointF(90,140));auto midpoint=last(editor);near(editor.dimensionResult(midpoint.id).value,std::sqrt(61.),"snap punto medio");require(midpoint.references[0].role==DrawingPointRole::Midpoint,"tipo di snap medio conservato");
+    mode(editor,int(DrawingMeasure::Distance));click(editor,paper({5,0}),Qt::ControlModifier);click(editor,paper({10,6}));click(editor,QPointF(90,140));auto midpoint=last(editor);near(editor.dimensionResult(midpoint.id).value,std::sqrt(61.),"snap punto medio");require(midpoint.references[0].role==DrawingPointRole::Midpoint,"tipo di snap medio conservato");
     mode(editor,int(DrawingMeasure::Distance));click(editor,paper({3,0}),Qt::AltModifier);click(editor,paper({10,6}));click(editor,QPointF(105,150));auto nearest=last(editor);require(nearest.references[0].role==DrawingPointRole::Nearest,"Alt sceglie il punto piu' vicino");near(editor.dimensionResult(nearest.id).value,std::sqrt(85.),"distanza dal nearest",.15);
     mode(editor,int(DrawingMeasure::Distance));click(editor,paper({35,0}));click(editor,paper({0,0}));click(editor,QPointF(130,155));auto center=last(editor);require(center.references[0].role==DrawingPointRole::Center,"snap centro del cerchio");near(editor.dimensionResult(center.id).value,35,"distanza dal centro");
     mode(editor,int(DrawingMeasure::Distance));click(editor,paper({38,0}));click(editor,paper({0,0}));click(editor,QPointF(130,162));require(last(editor).references[0].role==DrawingPointRole::Quadrant0,"snap quadrante");near(editor.dimensionResult(last(editor).id).value,38,"quadrante esatto");
@@ -85,6 +87,7 @@ int main(int argc,char **argv){QApplication app(argc,argv);try{
      auto legacy=dimensionOfCurve(countedView,countedCurves[0],DrawingMeasure::EndpointDistance);DrawingSheet countedSheet;countedSheet.drawing.model=countedModel.snapshot.version;countedSheet.drawing.views={countedView};countedSheet.drawing.dimensions={legacy};countedSheet.views={{countedView.id,"Vista",QPointF(100,100),{1}}};countedSheet.dimensions={{legacy.id,QPointF(80,80)}};
      DrawingSheetEditor cached(countedSheet,countedModel);*evaluations=0;ok(cached.moveDimension(legacy.id,QPointF(82,83)));require(*evaluations==0,"spostare il testo riusa il risultato senza rivalutare il modello");
      cached.findChild<QAction *>("drawingSmartDimensionAction")->setChecked(true);cached.show();QApplication::processEvents();move(cached,QPointF(100,100));require(items(cached,"dimensionSnap")==1,"chiusura dell'editor con snap attivo");}
+    drawingSegmentSpacingTests();
     const auto preview=qEnvironmentVariable("FORGECAD_DIMENSION_PREVIEW");if(!preview.isEmpty()){QApplication::processEvents();editor.fitSheet();require(editor.grab().save(preview),"anteprima quotatura completa");}
     std::cout<<"PASS mouse snaps, point-point/line-point, radial/angular dimensions, properties, persistence and history\n";
 }catch(const std::exception &e){std::cerr<<e.what()<<'\n';return 1;}}

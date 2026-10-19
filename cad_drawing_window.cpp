@@ -2,6 +2,7 @@
 #include "cad_icons.h"
 #include "cad_menu.h"
 #include "cad_toolbar.h"
+#include "cad_drawing_toolbars.h"
 #include "cad_workspace.h"
 #include <QDate>
 #include <QAction>
@@ -48,6 +49,7 @@ DrawingWindow::DrawingWindow(QWidget *parent):QMainWindow(parent,Qt::Window){
     statusBar()->addPermanentWidget(new QLabel(QStringLiteral("  ForgeCAD / Tavola 2D  "),this));
     installRevisionPanel();refreshTitle();
 }
+DrawingWindow::~DrawingWindow(){delete toolbarController_;}
 void DrawingWindow::report(const QString &error){if(!error.isEmpty())QMessageBox::warning(this,QStringLiteral("Tavola 2D"),error);}
 void DrawingWindow::refreshEditAccess(){
     if(!editor_||busy_||editor_->isComputing())return;
@@ -83,6 +85,8 @@ void DrawingWindow::refreshTitle(){
 
 }
 void DrawingWindow::installEditor(){
+    const int revisionWidth=editor_&&isVisible()&&!revisionDock_->isFloating()?revisionDock_->width():0;
+    delete toolbarController_;toolbarController_=nullptr;
     const bool oldBusy=busy_;busy_=true;
     auto *container=new QWidget(this);auto *layout=new QVBoxLayout(container);layout->setContentsMargins(4,4,4,4);
     DrawingSheetEditor *next=nullptr;
@@ -106,6 +110,9 @@ void DrawingWindow::installEditor(){
     populate(viewMenu_,{"drawingHiddenLinesAction","drawingShadedFacesAction","drawingCenterMarksAction","drawingCenterLinesAction","drawingCylinderAxesAction","drawingFitAction"});viewMenu_->addSeparator();viewMenu_->addAction(next->findChild<QDockWidget *>("drawingTreeDock")->toggleViewAction());
     viewMenu_->addAction(revisionDock_->toggleViewAction());
     viewMenu_->addAction(next->findChild<QToolBar *>("drawingCommandBar")->toggleViewAction());viewMenu_->addAction(findChild<QToolBar *>("drawingDocumentBar")->toggleViewAction());
+    auto *workspace=next->findChild<QMainWindow *>();
+    auto *custom=workspace->addToolBar(QStringLiteral("Personalizzata"));custom->setObjectName("drawingCustomBar");configureCommandBar(custom);
+    toolbarController_=new DrawingToolbarController(this,workspace,viewMenu_,{findChild<QToolBar *>("drawingDocumentBar"),next->findChild<QToolBar *>("drawingCommandBar"),custom},[this,next,revisionWidth]{if(revisionWidth>0)resizeDocks({revisionDock_},{revisionWidth},Qt::Horizontal);QTimer::singleShot(0,next,[next]{next->fitSheet();});});
     busy_=oldBusy;refreshPageContext();
     refreshEditAccess();
     if(sourceReady_){

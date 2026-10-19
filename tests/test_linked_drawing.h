@@ -1,7 +1,9 @@
 #pragma once
 #include "../cad_drawing_window.h"
+#include "test_drawing_workflow.h"
 namespace {
 void linkedDrawingTests(){
+    drawingWorkflowTests();
     using namespace ForgeCad;using namespace ForgeCad::Kernel;
     QTemporaryDir temporary;require(temporary.isValid(),"workspace temporaneo tavole");
     const auto sourcePath=temporary.filePath("parte.prt"),drawingPath=temporary.filePath("foglio.drw");

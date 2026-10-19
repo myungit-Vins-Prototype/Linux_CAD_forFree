@@ -9,9 +9,11 @@ class QDockWidget;
 class QTableWidget;
 namespace ForgeCad {
 // Documento tavola autonomo: il modello viene letto dal file salvato.
+class DrawingToolbarController;
 class DrawingWindow final:public QMainWindow {
 public:
     explicit DrawingWindow(QWidget *parent=nullptr);
+    ~DrawingWindow() override;
     enum class RevisionAction {Checkout,Checkin,CompletePending,CancelCheckout};
     QString runRevisionAction(RevisionAction action,const QString &first={},const QString &second={});
     QString pinModelRevision(const DocumentVersion &version);
@@ -30,6 +32,7 @@ protected:
     void closeEvent(QCloseEvent *event)override;
 private:
     void installEditor();
+    DrawingToolbarController *toolbarController_=nullptr;
     void loadContents(const QString &path,DrawingFile drawing);
     QString applySource(DrawingFile drawing,DocumentState source);
     void addRevisionMenus(QMenu *file);
