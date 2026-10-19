@@ -12,7 +12,7 @@ static void revolutionHistoryTest() {
         return sketch;
     };
     QTemporaryDir directory;require(directory.isValid(),"directory rivoluzioni dichiarate");
-    for(int mode=0;mode<16;++mode) {
+    for(int mode=0;mode<20;++mode) {
         DocumentState definition;
         auto sketch=rectangle(1,0,4,4);
         ExtrusionObject feature;feature.feature=BodyFeature::Revolution;feature.featureId=98001;
@@ -32,12 +32,21 @@ static void revolutionHistoryTest() {
             feature.mergeOperation=mode==11?1:2;
         }
         if(mode==13)sketch=rectangle(-5,0,4,4);
+        if(mode>=16) {
+            sketch.segments.resize(1);
+            CurveObject spline; spline.tool=DrawingTool::Spline;
+            spline.controlPoints={{2,0},{3,-1},{5,0},{4,2},{2,1},{2,0}};
+            shapeSpline(spline,{true,false,false});recalculateCurve(spline);
+            sketch.curves={spline};
+            feature.revolveAngle=mode==16?90:mode==17?-90:mode==18?270:360;
+        }
         definition.sketches.append(sketch);definition.extrusions.append(feature);
         CadViewport view;view.loadDocument(definition);
         const auto original=view.currentDocument();const int index=original.extrusions.size()-1;
         const auto body=original.extrusions[index].forgeBody;
         if(!body)std::cerr<<"revolution mode "<<mode<<": "<<original.extrusions[index].error.toStdString()<<std::endl;
         require(body&&original.extrusions[index].error.isEmpty(),"rivoluzione della matrice costruita");
+        if(mode>=16)require(checkBody(*body).empty(),"spline chiusa: corpo rivoluzione valido");
         const auto bytes=writeBodyBinary(*body);const auto names=elementNamesOf(*body);
         require(bool(names),"nomi rivoluzione disponibili");
         const auto verify=[&](const DocumentState &state) {
@@ -58,8 +67,8 @@ static void revolutionHistoryTest() {
                 }
             }
             require(side,"fianchi associati ai tratti dello schizzo");
-            if(mode==0||mode==9||mode==15)require(!start&&!end,"giro completo e lamina senza coperchi");
-            else if(mode<11||mode==13||mode==14)require(start&&end,"coperchi iniziale e finale dichiarati");
+            if(mode==0||mode==9||mode==15||mode==19)require(!start&&!end,"giro completo e lamina senza coperchi");
+            else if(mode<11||mode==13||mode==14||mode>=16)require(start&&end,"coperchi iniziale e finale dichiarati");
             const auto next=elementNamesOf(*shape);
             require(next&&next->faces==names->faces&&next->edges==names->edges&&next->vertices==names->vertices,
                 "nomi di tutte le entita' conservati dopo riapertura e rigenerazione");
@@ -78,7 +87,7 @@ static void revolutionHistoryTest() {
         DocumentState loaded;require(loadDocumentFile(path,loaded).isEmpty()&&loaded.extrusions[index].cachedGeometry,"rivoluzione ripristinata dalla cache 7");
         CadViewport reopened;reopened.loadDocument(loaded);verify(reopened.currentDocument());
         require(reopened.rebuildAllFeatures()==0,"rigenerazione rivoluzione riaperta");verify(reopened.currentDocument());
-        if(mode!=0&&mode!=5&&mode!=11&&mode!=12&&mode!=14&&mode!=15) {
+        if(mode!=0&&mode!=5&&mode!=11&&mode!=12&&mode!=14&&mode!=15&&mode!=19) {
             auto changed=original;changed.extrusions[index].revolveAngle*=0.8;
             for(auto &f:changed.extrusions)f.cachedGeometry=false;
             CadViewport shorter;shorter.loadDocument(changed);

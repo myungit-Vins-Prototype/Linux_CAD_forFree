@@ -2193,12 +2193,66 @@ public:
     // posto del corpo `index` se si modifica), calcolata in background; le richieste superate si scartano. Si disegna in ambra; al
     // suo posto spariscono il corpo modificato e gli operandi (booleane, base
     // del raccordo), che si vedono finche' l'anteprima non e' pronta.
+    // Durante il movimento una semplice estrusione varia solo lungo la normale.
+    // Aggiorna la mesh grafica subito, senza promuoverla a geometria confermabile.
+    void updateDragPreview(const ExtrusionObject &definition, int index) {
+        if (!featureHandleDragging_) return;
+        if (preview_.valid) {
+            previewDragDisplay_ = preview_.display;
+            previewDragVisible_ = true;
+        }
+        if (!previewDragSource_ || definition.feature != BodyFeature::Extrusion
+            || definition.operation >= 0 || definition.extent != 0
+            || definition.mergeOperation != 0 || definition.extrudeSides == 2
+            || definition.sketchIndex < 0 || definition.sketchIndex >= sketches_.size()
+            || std::abs(definition.distance) < 1e-7
+            || std::abs(previewDragDefinition_.distance) < 1e-7) return;
+        auto same = definition;
+        same.distance = previewDragDefinition_.distance;
+        if (previewKey(same, index) != previewDragKey_) return;
+        const auto &sketch = sketches_.at(definition.sketchIndex);
+        const auto base = ForgeCad::sketchToDisplay(QPointF(), sketch);
+        const auto vector = ForgeCad::extrusionVector(sketch, 1.0);
+        const QVector3D axis = QVector3D(vector.x(), vector.y(), vector.z()).normalized();
+        const float ratio = float(definition.distance / previewDragDefinition_.distance);
+        previewDragDisplay_ = *previewDragSource_;
+        const auto transform = [&](QVector3D &point) {
+            point += axis * (QVector3D::dotProduct(point - base, axis) * (ratio - 1));
+        };
+        for (auto &point : previewDragDisplay_.vertices) transform(point);
+        for (auto &line : previewDragDisplay_.edges) for (auto &point : line) transform(point);
+        for (auto &point : previewDragDisplay_.faceLabelPoints) transform(point);
+        for (auto &normal : previewDragDisplay_.normals)
+            normal = (normal + axis * (QVector3D::dotProduct(normal, axis) * (1 / ratio - 1))).normalized();
+        if (ratio < 0) {
+            for (int i = 0; i + 2 < previewDragDisplay_.vertices.size(); i += 3) {
+                qSwap(previewDragDisplay_.vertices[i+1], previewDragDisplay_.vertices[i+2]);
+                if (i + 2 < previewDragDisplay_.normals.size())
+                    qSwap(previewDragDisplay_.normals[i+1], previewDragDisplay_.normals[i+2]);
+            }
+        }
+        for (auto &line : previewDragDisplay_.constructionCurves) for (auto &point : line) transform(point);
+        previewDragDisplay_.rayIndex.reset();
+        previewDragVisible_ = true;
+        update();
+    }
     void requestPreview(const ExtrusionObject &definition, int index = -1) {
+        updateDragPreview(definition, index);
         const QString key = previewKey(definition, index);
         if (key == preview_.key) {
+            previewHandlePending_ = false;
             if ((preview_.valid || !preview_.error.isEmpty()) && previewCallback_) previewCallback_(preview_.error);
             return;
         }
+        // Durante il drag lascia finire il fotogramma in corso: cancellarlo
+        // a ogni movimento impedirebbe di vedere qualunque risultato.
+        if (featureHandleDragging_ && previewRunning_) {
+            previewHandlePending_ = true;
+            previewHandleDefinition_ = definition;
+            previewHandleIndex_ = index;
+            return;
+        }
+        previewHandlePending_ = false;
         if (previewCancellation_) previewCancellation_->store(true, std::memory_order_relaxed);
         preview_.key = key;
         preview_.notice.clear();
@@ -2248,7 +2302,7 @@ public:
         preview_.valid = false;
         preview_.error.clear();
         preview_.geometry.reset();
-        preview_.retainedDisplay = {};
+        if (!previewDragVisible_) preview_.retainedDisplay = {};
         preview_.resultDisplay = {};
         previewErrorSketch_ = -1;
         ++preview_.generation;
@@ -2258,7 +2312,8 @@ public:
             previewTimer_->setInterval(120);
             previewTimer_->callOnTimeout([this] { startPreviewJob(); });
         }
-        previewTimer_->start();
+        // Il timer scandisce il movimento: non rimandarlo a ogni evento mouse.
+        if (!featureHandleDragging_ || !previewTimer_->isActive()) previewTimer_->start();
         update();
     }
     // Il pannello del taglio ha gia' calcolato e tassellato tutte le parti.
@@ -2300,6 +2355,11 @@ public:
         if (previewTimer_) previewTimer_->stop();
         if (previewCancellation_) previewCancellation_->store(true, std::memory_order_relaxed);
         previewRerun_ = false;
+        previewHandlePending_ = false;
+        previewDragVisible_ = false;
+        previewDragSource_.reset();
+        previewDragDisplay_ = {};
+        previewDragKey_.clear();
         ++preview_.generation;
         preview_.key.clear();
         preview_.index = -1;
@@ -3888,6 +3948,29 @@ public:
         origin = ForgeCad::sketchToDisplay(QPointF(), sketch);
         const auto display = [](const ForgeCad::Kernel::Vec3 &p) { return QVector3D(p.x(), p.y(), p.z()); };
         if (d.feature == BodyFeature::Extrusion) {
+            // Centro dell'ingombro del profilo nel suo piano, senza riferimenti
+            // di costruzione che possono estendersi molto oltre il profilo.
+            QPointF minimum, maximum;
+            bool hasPoint = false;
+            const auto include = [&](const QPointF &p) {
+                if (!hasPoint) { minimum = maximum = p; hasPoint = true; }
+                else {
+                    minimum.setX(qMin(minimum.x(), p.x()));
+                    minimum.setY(qMin(minimum.y(), p.y()));
+                    maximum.setX(qMax(maximum.x(), p.x()));
+                    maximum.setY(qMax(maximum.y(), p.y()));
+                }
+            };
+            for (int i = 0; i < sketch.segments.size(); ++i) {
+                if (sketch.isConstructionSegment(i)) continue;
+                include(sketch.segments.at(i).first);
+                include(sketch.segments.at(i).second);
+            }
+            for (const auto &curve : sketch.curves) {
+                if (curve.construction) continue;
+                for (const auto &p : curve.samples) include(p);
+            }
+            if (hasPoint) origin = ForgeCad::sketchToDisplay((minimum + maximum) * 0.5, sketch);
             axis = display(ForgeCad::extrusionVector(sketch, 1.0)).normalized();
             radial = {};
             return true;
@@ -3939,7 +4022,7 @@ public:
         } else {
             // Nella simmetrica il parametro rappresenta la distanza totale.
             const double length = featureHandleDefinition_.extrudeSides == 1 ? value * 0.5 : value;
-            featureHandlePath_ << sketchOrigin << projectWorldPoint(featureHandleOrigin_ + float(length) * featureHandleAxis_);
+            featureHandlePath_ << projectWorldPoint(featureHandleOrigin_) << projectWorldPoint(featureHandleOrigin_ + float(length) * featureHandleAxis_);
         }
         painter.setPen(QPen(QColor(255, 174, 70), featureHandleDragging_ ? 4.0 : 3.0, Qt::SolidLine, Qt::RoundCap));
         painter.drawPolyline(featureHandlePath_);
@@ -6651,8 +6734,8 @@ protected:
 
     void mouseReleaseEvent(QMouseEvent *event) override {
         if (featureHandleDragging_ && event->button() == Qt::LeftButton) {
-            dragFeatureHandle(event->position());
             featureHandleDragging_ = false;
+            dragFeatureHandle(event->position());
             unsetCursor();
             update();
             event->accept();
@@ -11202,7 +11285,7 @@ private:
             const bool blendBase = previewing && preview_.definition.operation < 0
                 && preview_.definition.feature == BodyFeature::Blend
                 && preview_.definition.firstBody == index;
-            if (previewing && (index == preview_.index || preview_.later.contains(index) || (replaced && preview_.valid))) continue;
+            if (previewing && (index == preview_.index || preview_.later.contains(index) || (replaced && (preview_.valid || previewDragVisible_)))) continue;
             // Scelta dei corpi da una finestra: si vedono solo quelli che si possono scegliere.
             if (!pickBodies_.isEmpty() && !pickBodies_.contains(index)) continue;
             const bool forced = replaced || blendBase || index == edgePickBody_ || (previewing && preview_.restored.contains(index))
@@ -11310,7 +11393,7 @@ private:
             if (!extrusion.visible || (extrusion.display.vertices.isEmpty() && extrusion.display.edges.isEmpty())) return;
             drawExtrusionOutline(extrusion, color, width);
         };
-        if (previewing && preview_.valid) drawPreview();
+        if (previewing && (preview_.valid || previewDragVisible_)) drawPreview();
         drawTrimPartHover();
         disableSectionClip();
         drawSectionCaps(sectionSolids);
@@ -11350,16 +11433,18 @@ private:
         }
     }
 
-    // Anteprima di loft, raccordi, estrusioni e rivoluzioni: semitrasparente
-    // con isoparametriche U/V, nello stesso linguaggio visivo.
+    // Anteprime semitrasparenti con isoparametriche U/V.
+    // Per estrusione/rivoluzione una passata di profondita' elimina la
+    // sovrapposizione dei triangoli posteriori senza rendere opaca la superficie.
     void drawPreview() {
-        const BodyDisplay &display = preview_.display;
+        const BodyDisplay &display = previewDragVisible_ ? previewDragDisplay_ : preview_.display;
         const BodyDisplay &retained = preview_.retainedDisplay;
         const bool loft = preview_.definition.operation < 0 && preview_.definition.feature == BodyFeature::Loft;
         const bool blend = preview_.definition.operation < 0 && preview_.definition.feature == BodyFeature::Blend;
         const bool extrusion = preview_.definition.operation < 0 && preview_.definition.feature == BodyFeature::Extrusion;
         const bool revolution = preview_.definition.operation < 0 && preview_.definition.feature == BodyFeature::Revolution;
         const bool transparent = loft || blend || extrusion || revolution;
+        const bool nearestSurface = extrusion || revolution;
         // Sottrazione mediante estrusione: il vecchio corpo non puo' restare
         // davanti alla patch, altrimenti chiude visivamente il foro. Disegniamo
         // opache le facce conservate del risultato, con il taglio gia' presente.
@@ -11398,6 +11483,14 @@ private:
             }
             glEnable(GL_POLYGON_OFFSET_FILL);
             glPolygonOffset(1.0f, 2.0f);
+            if (nearestSurface) {
+                glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
+                glDepthMask(GL_TRUE);
+                drawDisplayFaces(display);
+                glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+                glDepthMask(GL_FALSE);
+                glDepthFunc(GL_LEQUAL);
+            }
             drawDisplayFaces(display);
             glDisable(GL_POLYGON_OFFSET_FILL);
             if (transparent) {
@@ -11753,6 +11846,13 @@ private:
                     preview_.notice = ok ? notice : QString();
                     preview_.geometry = std::move(geometry);
                     preview_.display = std::move(display);
+                    previewDragVisible_ = false;
+                    if (ok && preview_.definition.feature == BodyFeature::Extrusion
+                        && preview_.definition.mergeOperation == 0 && preview_.definition.extent == 0) {
+                        previewDragSource_ = std::make_shared<BodyDisplay>(preview_.display);
+                        previewDragDefinition_ = preview_.definition;
+                        previewDragKey_ = preview_.key;
+                    } else previewDragSource_.reset();
                     preview_.retainedDisplay = std::move(retainedDisplay);
                     preview_.resultDisplay = std::move(resultDisplay);
                     if (edgePicking_ && edgePickStatus_) edgePickStatus_(edgePickMessage());
@@ -11762,6 +11862,12 @@ private:
                 } else if (!preview_.key.isEmpty()) {
                     previewRerun_ = false;
                     startPreviewJob();
+                }
+                if (previewHandlePending_) {
+                    const auto pending = previewHandleDefinition_;
+                    const int index = previewHandleIndex_;
+                    previewHandlePending_ = false;
+                    requestPreview(pending, index);
                 }
             });
         });
@@ -12218,7 +12324,7 @@ private:
     bool wheelZoomEnabled_ = true;
     bool hasPendingPoint_ = false, referencePlanesVisible_ = true;
     DrawingTool drawingTool_ = DrawingTool::Select;
-    ForgeCad::SplineShapeOptions splineShapeOptions_;
+    ForgeCad::SplineShapeOptions splineShapeOptions_{true, false, false};
     SnapKind lastSnapKind_ = SnapKind::None;
     QString lastSnapNote_;   // etichetta particolare dell'aggancio (origine, quadrante, su curva)
     int lastSnapCurve_ = -1; // curva su cui si e' agganciato il punto (aggancio "su curva")
@@ -12355,6 +12461,11 @@ private:
         quint64 generation = 0;
     };
     Preview preview_;
+    BodyDisplay previewDragDisplay_;
+    std::shared_ptr<const BodyDisplay> previewDragSource_;
+    ExtrusionObject previewDragDefinition_;
+    QString previewDragKey_;
+    bool previewDragVisible_ = false;
     BodyDisplay exportMeshPreview_;
     bool exportMeshPreviewQuadrangular_ = false;
     bool exportMeshPreviewLimited_ = false;
@@ -12363,6 +12474,9 @@ private:
     QTimer *previewTimer_ = nullptr;
     ForgeCad::Kernel::CancellationToken previewCancellation_;
     bool previewRunning_ = false, previewRerun_ = false;
+    bool previewHandlePending_ = false;
+    ExtrusionObject previewHandleDefinition_;
+    int previewHandleIndex_ = -1;
     std::function<void(const QString &)> previewCallback_;
     // Faccia selezionata con il clic su un corpo (schizzo su faccia, bordi da raccordare).
     struct SelectedFace {
@@ -22708,7 +22822,8 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
             viewport->setSplineShapeOptions({uniformSpline->isChecked(), relaxedSpline->isChecked(), limitedSpline->isChecked()});
         });
     }
-    splineTool->setToolTip(QStringLiteral("Spline per punti. Spunte in Schizzo > Strumento geometrico > Opzioni spline; "
+    uniformSpline->setChecked(true);
+    splineTool->setToolTip(QStringLiteral("Spline per punti, continuita' C2 automatica. Spunte in Schizzo > Strumento geometrico > Opzioni spline; "
                                         "per curve esistenti: Selezione, clic destro > Modifica punti e maniglie"));
     QAction *nurbsTool = addTool(QStringLiteral("NURBS"), DrawingTool::Nurbs, false);
     QAction *circleTool = addTool(QStringLiteral("Cerchio"), DrawingTool::Circle, false);

@@ -97,7 +97,11 @@ public:
         };
         v.setFeatureHandle(definition, changed);
         draw();
-        require(v.featureHandlePath_.size() == 2, "freccia estrusione dall'origine");
+        require(v.featureHandlePath_.size() == 2, "freccia estrusione dal centro");
+        require((v.featureHandleOrigin_ - ForgeCad::sketchToDisplay(QPointF(5,5), sketch)).length() < 1e-6,
+                "freccia centrata sul profilo decentrato");
+        require(pointDistance(v.featureHandlePath_.first(), v.projectWorldPoint(v.featureHandleOrigin_)) < 0.01,
+                "base freccia sul centro del piano schizzo");
         require(v.featureHandleAt(v.featureHandlePath_.last()), "freccia selezionabile");
         v.interactionLocked_ = true;
         const QPointF tip = v.featureHandlePath_.last();
@@ -126,6 +130,8 @@ public:
             v.sketches_[0].plane = plane;
             QVector3D origin, axis, radial;
             require(v.featureHandleGeometry(origin,axis,radial), "geometria manipolatore piani standard");
+            require((origin - ForgeCad::sketchToDisplay(QPointF(5,5), v.sketches_[0])).length() < 1e-6,
+                    "centro profilo sui piani standard");
             const auto expected = ForgeCad::extrusionVector(v.sketches_[0],1);
             require((axis-QVector3D(expected.x(),expected.y(),expected.z())).length() < 1e-6, "direzione coerente con kernel");
         }
@@ -134,8 +140,24 @@ public:
         v.sketches_[0].frame.normal[0]=0; v.sketches_[0].frame.normal[1]=1; v.sketches_[0].frame.normal[2]=0;
         v.sketches_[0].frame.xAxis[0]=1; v.sketches_[0].frame.xAxis[1]=0; v.sketches_[0].frame.xAxis[2]=0;
         QVector3D origin, axis, radial;
-        require(v.featureHandleGeometry(origin,axis,radial) && (origin-QVector3D(3,4,5)).length()<1e-6 && axis==QVector3D(0,1,0),
+        require(v.featureHandleGeometry(origin,axis,radial) && (origin-ForgeCad::sketchToDisplay(QPointF(5,5), v.sketches_[0])).length()<1e-6 && axis==QVector3D(0,1,0),
                 "origine e normale piano personalizzato");
+        v.sketches_[0].segments.append({{-100,-200},{300,400}});
+        v.sketches_[0].constructionSegments.append(4);
+        require(v.featureHandleGeometry(origin,axis,radial)
+                && (origin-ForgeCad::sketchToDisplay(QPointF(5,5), v.sketches_[0])).length()<1e-6,
+                "geometria di costruzione esclusa dal centro");
+        v.sketches_[0] = SketchObject();
+        CurveObject curvedProfile;
+        curvedProfile.samples = {{20,30},{30,40},{40,30},{30,20},{20,30}};
+        v.sketches_[0].curves.append(curvedProfile);
+        CurveObject constructionCurve = curvedProfile;
+        constructionCurve.construction = true;
+        constructionCurve.samples = {{-500,-500},{500,500}};
+        v.sketches_[0].curves.append(constructionCurve);
+        require(v.featureHandleGeometry(origin,axis,radial)
+                && (origin-ForgeCad::sketchToDisplay(QPointF(30,30), v.sketches_[0])).length()<1e-6,
+                "centro profilo curvo senza curve di costruzione");
         v.sketches_[0] = sketch;
         definition.feature = BodyFeature::Revolution;
         definition.revolveAxis = -1;
@@ -186,6 +208,91 @@ public:
         require(v.featureHandlePath_.isEmpty() && v.featureHandleBox_->isHidden(), "asse invalido nasconde controlli");
         v.clearFeatureHandle();
         require(!v.featureHandleChanged_ && !v.featureHandleDragging_ && v.featureHandleBox_->isHidden(), "pulizia manipolatore");
+        // Movimento continuo: devono arrivare risultati prima del rilascio,
+        // anche se gli eventi sono piu' frequenti del timer dell'anteprima.
+        definition = ExtrusionObject(); definition.sketchIndex = 0; definition.distance = 5;
+        int liveFrames = 0;
+        v.setPreviewCallback([&](const QString &error) { if (error.isEmpty() && v.preview_.valid) ++liveFrames; });
+        changed = [&](double value) {
+            definition.distance = value;
+            v.setFeatureHandle(definition, changed);
+            v.requestPreview(definition);
+        };
+        v.setFeatureHandle(definition, changed);
+        draw();
+        press(v.featureHandlePath_.last());
+        require(v.featureHandleDragging_, "drag per anteprima continua attivo");
+        QElapsedTimer liveTime; liveTime.start();
+        qint64 nextMove = 0;
+        int immediateFrames = 0;
+        QPointF livePosition = v.featureHandlePath_.last();
+        while (liveTime.elapsed() < 1500) {
+            if (liveTime.elapsed() >= nextMove) {
+                livePosition += QPointF(0,-1);
+                move(livePosition);
+                if (v.previewDragVisible_ && v.previewDragSource_) {
+                    const auto axis = v.featureHandleAxis_;
+                    const auto base = ForgeCad::sketchToDisplay(QPointF(), sketch);
+                    double low = 1e100, high = -1e100;
+                    for (const auto &point : v.previewDragDisplay_.vertices) {
+                        const double height = QVector3D::dotProduct(point-base,axis);
+                        low = qMin(low,height); high = qMax(high,height);
+                    }
+                    require(std::abs(low-qMin(0.0,definition.distance)) < 1e-4
+                            && std::abs(high-qMax(0.0,definition.distance)) < 1e-4,
+                            "mesh grafica segue subito l'altezza corrente senza attendere il kernel");
+                    require(!v.previewDragDisplay_.constructionCurves.isEmpty(),
+                            "curve UV conservate durante il movimento immediato");
+                    for (const auto &line : v.previewDragDisplay_.constructionCurves)
+                        for (const auto &point : line) {
+                            const double height = QVector3D::dotProduct(point-base,axis);
+                            require(height >= low-1e-4 && height <= high+1e-4,
+                                    "curve UV seguono l'altezza della mesh");
+                        }
+                    ++immediateFrames;
+                }
+                nextMove = liveTime.elapsed() + 10;
+            }
+            QApplication::processEvents();
+        }
+        require(liveFrames >= 2 && v.featureHandleDragging_, "anteprima aggiornata durante movimento senza rilascio");
+        require(immediateFrames > 20, "aggiornamenti grafici immediati tra i risultati esatti");
+        release(livePosition);
+        QElapsedTimer finalTime; finalTime.start();
+        while ((!v.preview_.valid || v.previewRunning_ || v.previewHandlePending_ || v.previewTimer_->isActive())
+               && finalTime.elapsed() < 10000) QApplication::processEvents();
+        require(v.preview_.valid && !v.previewRunning_
+                && std::abs(v.preview_.definition.distance - definition.distance) < 1e-6,
+                "anteprima finale allineata all'ultima posizione");
+        require(!v.previewDragVisible_, "risultato esatto sostituisce la mesh grafica al termine");
+        v.featureHandleDragging_ = true;
+        auto reversed = definition;
+        reversed.distance = -2 * std::abs(definition.distance);
+        v.updateDragPreview(reversed, -1);
+        double reversedLow = 1e100, reversedHigh = -1e100;
+        const auto planeOrigin = ForgeCad::sketchToDisplay(QPointF(), sketch);
+        for (const auto &point : v.previewDragDisplay_.vertices) {
+            const double height = QVector3D::dotProduct(point-planeOrigin,v.featureHandleAxis_);
+            reversedLow = qMin(reversedLow,height); reversedHigh = qMax(reversedHigh,height);
+        }
+        require(v.previewDragVisible_ && std::abs(reversedLow-reversed.distance)<1e-4 && std::abs(reversedHigh)<1e-4,
+                "mesh immediata invertita ancorata al piano schizzo");
+        for (const auto &normal : v.previewDragDisplay_.normals)
+            require(std::isfinite(normal.length()) && std::abs(normal.length()-1)<1e-4,
+                    "normali della mesh invertita finite e normalizzate");
+        v.featureHandleDragging_ = false;
+        v.previewDragVisible_ = false;
+        if (qEnvironmentVariableIsSet("FORGECAD_HANDLE_GL_QA")) {
+            v.yaw_ = 35; v.pitch_ = 25; v.roll_ = 0;
+            v.show();
+            QApplication::processEvents();
+            const auto frame = v.grabFramebuffer();
+            require(!frame.isNull() && frame.save(QStringLiteral("/tmp/extrusion-preview-uv.png")),
+                    "acquisizione OpenGL anteprima semitrasparente con UV");
+            v.hide();
+        }
+        v.clearPreview(); v.setPreviewCallback({}); v.clearFeatureHandle();
+        require(!v.previewDragVisible_ && !v.previewDragSource_, "pulizia cache grafica del drag");
         // Verifica i collegamenti dei veri pannelli e la pulizia su Annulla.
         QMainWindow window;
         auto *viewport = new CadViewport(&window);
@@ -3251,6 +3358,35 @@ public:
         shapeSpline(curve, {true,false,false});
         require(near(curve.tangentHandles.first().second, QPointF(2.0/3.0,4.0/3.0)), "due punti: segmento rettilineo");
 
+        // La creazione ordinaria, senza scegliere opzioni, deve gia' essere C2.
+        for (bool closed : {false, true}) {
+            CadViewport automatic;
+            automatic.sketches_.append(SketchObject{}); automatic.activeSketch_ = 0;
+            automatic.setDrawingTool(DrawingTool::Spline);
+            automatic.sketchMode_ = true;
+            automatic.curveControlPoints_ = original;
+            if (closed) automatic.curveControlPoints_.append(original.first());
+            const auto points = automatic.curveControlPoints_;
+            automatic.cursorSketchPoint_ = points.last();
+            CurveObject automaticPreview;
+            require(automatic.previewCurve(automaticPreview), "anteprima C2 predefinita");
+            automatic.finalizeCurve();
+            require(automatic.sketches_[0].curves.size() == 1, "spline C2 automatica creata");
+            const auto &created = automatic.sketches_[0].curves.first();
+            require(created.controlPoints == points && created.tangentHandles == automaticPreview.tangentHandles,
+                    "C2 automatica conserva punti e coerenza con anteprima");
+            const auto startSecond = [&](int i) {
+                return 6.0*(created.controlPoints[i]-2.0*created.tangentHandles[i].second+created.tangentHandles[i+1].first);
+            };
+            const auto endSecond = [&](int i) {
+                return 6.0*(created.controlPoints[i+1]-2.0*created.tangentHandles[i+1].first+created.tangentHandles[i].second);
+            };
+            for (int i = 1; i+1 < points.size(); ++i)
+                require(near(endSecond(i-1),startSecond(i)), "derivata seconda continua nella spline creata senza opzioni");
+            if (closed) require(near(endSecond(points.size()-2),startSecond(0)), "chiusura periodica C2 automatica");
+            automatic.undo(); require(automatic.sketches_[0].curves.isEmpty(), "undo creazione C2 automatica");
+            automatic.redo(); require(automatic.sketches_[0].curves.first().controlPoints == points, "redo C2 automatica");
+        }
         CadViewport viewport;
         viewport.sketches_.append(SketchObject{}); viewport.activeSketch_ = 0;
         viewport.setDrawingTool(DrawingTool::Spline);

@@ -19,8 +19,11 @@ public:
 protected:
     void paintEvent(QPaintEvent *event) override {
         const auto colors=themePalette();
-        QMenu::paintEvent(event);
         QPainter painter(this);
+        painter.fillRect(rect(), colors.color(QPalette::Window));
+        QStyleOption panel;
+        panel.initFrom(this);
+        style()->drawPrimitive(QStyle::PE_PanelMenu, &panel, &painter, this);
         painter.setRenderHint(QPainter::Antialiasing);
         painter.setClipRect(rect().adjusted(6, 6, -6, -6));
         for (QAction *action : actions()) {

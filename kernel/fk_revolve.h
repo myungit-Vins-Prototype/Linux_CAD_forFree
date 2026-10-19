@@ -37,6 +37,8 @@ Body makeRevolution(const Frame3 &frame, const ProfileRegion &region);
 // completo). E' il giro completo intersecato con il cuneo dei due semipiani
 // per l'asse ad angolo 0 (il piano del profilo) e `angle`: le facce stanno
 // sulle stesse superfici esatte, piu' le due facce piane del profilo.
+// Un meridiano chiuso non periodico viene suddiviso in due intervalli esatti
+// per rendere esplicita la cucitura; entrambi conservano la sorgente originale.
 Body makeRevolution(const Frame3 &frame, const ProfileRegion &region, double angle, RevolutionProvenance *provenance = nullptr);
 
 // Lamina di rivoluzione: catene aperte (tratti in ordine, nel semipiano x >= 0
