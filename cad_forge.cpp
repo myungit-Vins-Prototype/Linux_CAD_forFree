@@ -1944,7 +1944,7 @@ static void surfaceConstructionCurvesSerial(const Body &body, BodyDisplay &displ
         // intervalli interni al dominio topologico: sui raccordi cilindrici
         // evita che un arco di quarto venga disegnato come un cerchio intero.
         constexpr int samples = 96;
-        const auto appendTrimmed = [&](const std::function<Vec3(double)> &point) {
+        const auto appendTrimmedSampled = [&](const std::function<Vec3(double)> &point) {
             const auto inside = [&](double t) {
                 try {
                     return classifyPointOnFace(body, face, point(t), trimTolerance) != PointLocation::Outside;
@@ -1982,14 +1982,92 @@ static void surfaceConstructionCurvesSerial(const Body &body, BodyDisplay &displ
             }
             if (piece.size() >= 2) display.constructionCurves.append(std::move(piece));
         };
-        for (int line = 1; line < divisions; ++line) {
-            const double fixed = u.lo + u.length() * line / divisions;
-            appendTrimmed([&](double t) { return surface.point(fixed, v.lo + v.length() * t); });
-        }
-        for (int line = 1; line < divisions; ++line) {
-            const double fixed = v.lo + v.length() * line / divisions;
-            appendTrimmed([&](double t) { return surface.point(u.lo + u.length() * t, fixed); });
-        }
+        // Le intersezioni con i bordi UV dividono l'isoparametrica in
+        // intervalli omogenei. Una sola classificazione per intervallo evita
+        // 97 proiezioni sulla stessa superficie per ogni linea della griglia.
+        struct Boundary {
+            CurvePtr<2> curve;
+            Interval range;
+            Box bounds;
+        };
+        std::vector<Boundary> boundaries;
+        bool hasPCurves = true;
+        for (LoopId loop : body.face(face).loops)
+            for (FinId fin : body.loopFins(loop)) {
+                const auto &curve = body.fin(fin).pcurve;
+                if (!curve) { hasPCurves = false; continue; }
+                const auto range = body.edge(body.fin(fin).edge).range;
+                try { boundaries.push_back({curve,range,curveBox(*embedCurve(curve,Frame3()),range)}); }
+                catch(const std::exception &) { hasPCurves=false; }
+            }
+        const auto appendTrimmed = [&](int fixedAxis, double fixed, const Interval &varying) {
+            const int along = 1-fixedAxis;
+            const auto point = [&](double t) {
+                Vec2 uv; uv[fixedAxis]=fixed; uv[along]=varying.lo+varying.length()*t;
+                return surface.point(uv.x(),uv.y());
+            };
+            if (!hasPCurves) { appendTrimmedSampled(point); return; }
+            QVector<QVector<QVector3D>> pieces;
+            try {
+                const double periods[2]={surface.isUPeriodic()?surface.uPeriod():0.0,
+                                         surface.isVPeriodic()?surface.vPeriod():0.0};
+                std::vector<double> cuts{0,1};
+                const auto addCut = [&](double value) {
+                    int first=0,last=0;
+                    if (periods[along]>0) {
+                        first=int(std::ceil((varying.lo-value)/periods[along]));
+                        last=int(std::floor((varying.hi-value)/periods[along]));
+                    }
+                    for (int k=first;k<=last;++k) {
+                        const double t=(value+k*periods[along]-varying.lo)/varying.length();
+                        if(t>0 && t<1) cuts.push_back(t);
+                    }
+                };
+                Vec2 normal; normal[fixedAxis]=1;
+                for (const auto &boundary:boundaries) {
+                    int first=0,last=0;
+                    if (periods[fixedAxis]>0) {
+                        first=int(std::ceil((boundary.bounds.lo[fixedAxis]-fixed)/periods[fixedAxis]));
+                        last=int(std::floor((boundary.bounds.hi[fixedAxis]-fixed)/periods[fixedAxis]));
+                    }
+                    for(int k=first;k<=last;++k) {
+                        const auto roots=planeRoots<2>(*boundary.curve,boundary.range,normal,
+                                                      fixed+k*periods[fixedAxis],1e-14*(1+std::abs(fixed)));
+                        for(double t:roots.parameters) addCut(boundary.curve->point(t)[along]);
+                        for(const auto &overlap:roots.coincident) {
+                            addCut(boundary.curve->point(overlap.lo)[along]);
+                            addCut(boundary.curve->point(overlap.hi)[along]);
+                        }
+                    }
+                }
+                std::sort(cuts.begin(),cuts.end());
+                cuts.erase(std::unique(cuts.begin(),cuts.end(),[](double a,double b){return std::abs(a-b)<1e-12;}),cuts.end());
+                double start=-1;
+                const auto appendPiece = [&](double low,double high) {
+                    QVector<QVector3D> piece{toDisplay(point(low))};
+                    // Stessa densita' della griglia precedente; estremi sul bordo
+                    // esatto, anche per fori piu' stretti di un passo grafico.
+                    for(int k=int(std::floor(low*samples))+1;k<samples && double(k)/samples<high;++k)
+                        piece.append(toDisplay(point(double(k)/samples)));
+                    piece.append(toDisplay(point(high)));
+                    pieces.append(std::move(piece));
+                };
+                for(std::size_t i=1;i<cuts.size();++i) {
+                    const bool inside=classifyPointOnFace(body,face,point(.5*(cuts[i-1]+cuts[i])),trimTolerance)!=PointLocation::Outside;
+                    if(inside && start<0) start=cuts[i-1];
+                    if(!inside && start>=0) { appendPiece(start,cuts[i-1]); start=-1; }
+                }
+                if(start>=0) appendPiece(start,cuts.back());
+            } catch(const std::exception &) {
+                appendTrimmedSampled(point);
+                return;
+            }
+            display.constructionCurves+=pieces;
+        };
+        for (int line = 1; line < divisions; ++line)
+            appendTrimmed(0,u.lo+u.length()*line/divisions,v);
+        for (int line = 1; line < divisions; ++line)
+            appendTrimmed(1,v.lo+v.length()*line/divisions,u);
     }
 }
 

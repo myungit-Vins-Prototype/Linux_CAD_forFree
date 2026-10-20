@@ -183,11 +183,12 @@ FK_TEST(RevolutionPartialClosedClampedSpline) {
     const auto outer = circle(1,42);
     const ProfileRegion region = regionOf({outer});
     const auto full = makeRevolution(frame,region);
-    FK_CHECK(full.counts().faces == 1);
+    FK_CHECK(full.counts().faces == 2);
+    FK_CHECK_NEAR(massProperties(full).volume,8*kPi*kPi,1e-6);
     FK_CHECK(checkBody(full).empty());
-    for (double degrees : {45.,90.,180.,270.,-90.,-270.}) {
+    for (double degrees : {45.,90.,180.,270.,-90.,-270.,360.,-360.}) {
         const double angle = degrees*kPi/180.;
-        checkPartialRevolution(frame,{outer},angle);
+        if (std::abs(degrees) < 360.) checkPartialRevolution(frame,{outer},angle);
         for (bool reverse : {false,true}) {
             auto profile = region;
             if (reverse) profile.outer = reversed(profile.outer);
@@ -203,9 +204,17 @@ FK_TEST(RevolutionPartialClosedClampedSpline) {
                     FK_CHECK(origin.loop == 0 && origin.segment == 0 && origin.source == 42);
                 }
             }
-            FK_CHECK(start && end && sides >= 2);
+            FK_CHECK((std::abs(degrees) == 360. ? !start && !end : start && end) && sides >= 2);
             const auto mass = massProperties(body);
             FK_CHECK_NEAR(mass.volume,8*kPi*kPi*std::abs(degrees)/360.,1e-6);
+            if (std::abs(degrees) == 360.) {
+                // Il baricentro del toro completo e' esattamente sull'asse;
+                // l'integrale OCCT della spline razionale introduce qui 4,6e-6.
+                FK_CHECK(distance(mass.centroid,frame.origin()) < 1e-8);
+                FK_CHECK_NEAR(mass.area,16*kPi*kPi,1e-6);
+                TessellationOptions options;options.deflection=1e-3;
+                FK_CHECK(tessellate(body,options).failedFaces==0);
+            }
         }
     }
     // Anche il foro e' un singolo meridiano chiuso non periodico.

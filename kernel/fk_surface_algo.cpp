@@ -573,7 +573,11 @@ bool projectOnPlanarRevolution(const RevolutionSurface &revolution, const Vec3 &
 // dalla parametrizzazione razionale del cerchio all'angolo originale.
 bool projectOnSplineRevolution(const RevolutionSurface &surface, const Vec3 &p, const Interval &uRange,
                                const Interval &vRange, Candidates &candidates) {
-    if (surface.meridian()->type() != CurveType::BSpline || !uRange.isFinite() || !vRange.isFinite()
+    // Il ritaglio conserva il parametro v della B-spline: anche il
+    // meridiano limitato usa la ricerca esatta sulle pezze NURBS.
+    const Curve<3> *meridian = surface.meridian().get();
+    while (meridian->type() == CurveType::Trimmed) meridian = static_cast<const TrimmedCurve<3> *>(meridian)->basis().get();
+    if (meridian->type() != CurveType::BSpline || !uRange.isFinite() || !vRange.isFinite()
         || !(uRange.length() > 0.0) || !(vRange.length() > 0.0)) return false;
     const Interval angular{uRange.lo, std::min(uRange.hi, uRange.lo + kTwoPi)};
     const BSplineSurface nurbs = toBSplineSurface(surface, angular, vRange);

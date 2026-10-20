@@ -40,7 +40,21 @@ BSplineCurve<3> wholeSpline(const Curve<3> &curve, const Interval &range) {
     }
     case CurveType::Circle: return toBSpline(static_cast<const Circle<3> &>(curve), range.lo, range.hi);
     case CurveType::Ellipse: return toBSpline(static_cast<const Ellipse<3> &>(curve), range.lo, range.hi);
-    case CurveType::BSpline: return static_cast<const BSplineCurve<3> &>(curve);
+    case CurveType::BSpline: {
+        const auto &spline = static_cast<const BSplineCurve<3> &>(curve);
+        const Interval domain = spline.domain();
+        if (range.lo <= domain.lo && range.hi >= domain.hi) return spline;
+        // Anche un meridiano TrimmedCurve deve restare limitato nella forma
+        // NURBS: includere il resto della spline produce intersezioni fantasma
+        // e conta due volte gli attraversamenti di facce adiacenti.
+        const auto pieces = splinePieces(spline, range);
+        std::vector<double> breaks;
+        for (const auto &piece : pieces) breaks.push_back(piece.domain().lo);
+        if (!pieces.empty()) breaks.push_back(pieces.back().domain().hi);
+        // I tratti vengono dalla stessa spline: i pesi omogenei ai nodi
+        // comuni coincidono, senza riparametrizzare il meridiano.
+        return joinBezierPieces(pieces, breaks);
+    }
     case CurveType::Trimmed: return wholeSpline(*static_cast<const TrimmedCurve<3> &>(curve).basis(), range);
     case CurveType::Transformed: {
         const auto &t = static_cast<const TransformedCurve &>(curve);

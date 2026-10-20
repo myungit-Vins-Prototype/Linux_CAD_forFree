@@ -13,6 +13,7 @@
 #include "fk_sew.h"
 #include "fk_helix.h"
 #include "fk_mass.h"
+#include "fk_pcurve.h"
 #include "fk_primitives.h"
 #include "fk_revolve.h"
 #include "fk_sheet.h"
@@ -61,6 +62,133 @@ static QString exampleDocumentPath(const char *name) {
 #include "document_regression.h"
 class ViewportInteractionTest {
 public:
+    static void previewPerformance() {
+        using namespace ForgeCad;using namespace ForgeCad::Kernel;
+        const auto settle=[](CadViewport &view) {
+            QElapsedTimer timer;timer.start();
+            while((view.previewRunning_ || (view.previewTimer_ && view.previewTimer_->isActive())
+                   || (!view.preview_.valid && view.preview_.error.isEmpty())) && timer.elapsed()<10000)
+                QApplication::processEvents();
+            if(!view.preview_.error.isEmpty())std::cerr<<view.preview_.error.toStdString()<<std::endl;
+            require(view.preview_.valid && !view.previewRunning_,"anteprima pronta e valida");
+        };
+        for(int mode=0;mode<4;++mode) {
+            CadViewport view;
+            SketchObject profile;
+            profile.segments={{{2,0},{4,0}},{{4,0},{4,2}},{{4,2},{2,2}},{{2,2},{2,0}}};
+            if(mode==1)profile.plane=1;
+            view.sketches_.append(profile);
+            ExtrusionObject a;a.sketchIndex=0;a.distance=5;
+            if(mode==1){a.feature=BodyFeature::Revolution;a.revolveAxis=-2;a.revolveAngle=90;}
+            if(mode==2){
+                SketchObject path;path.plane=1;path.segments={{{0,0},{0,8}}};view.sketches_.append(path);
+                a.feature=BodyFeature::Sweep;a.pathSketch=1;a.pathSegments={0};
+            }
+            if(mode==3){
+                auto upper=profile;upper.customFrame=true;upper.frame.origin[2]=8;
+                upper.frame.normal[2]=1;upper.frame.xAxis[0]=1;view.sketches_.append(upper);
+                a.feature=BodyFeature::Loft;a.loftSketches={0,1};
+            }
+            view.requestPreview(a);settle(view);
+            const auto first=view.preview_.geometry;
+            const auto firstDisplay=view.preview_.display;
+            auto b=a;
+            if(mode==0)b.distance=6;
+            if(mode==1)b.revolveAngle=120;
+            if(mode==2)b.sweepSurface=true;
+            if(mode==3)b.loftRuled=true;
+            view.requestPreview(b);settle(view);
+            QElapsedTimer hit;hit.start();view.requestPreview(a);
+            require(view.preview_.valid && view.preview_.geometry==first && !view.previewRunning_,
+                    "parametri ripetuti riusano immediatamente il risultato esatto");
+            require(view.preview_.display.vertices==firstDisplay.vertices
+                    && view.preview_.display.constructionCurves==firstDisplay.constructionCurves,
+                    "riuso conserva mesh e U/V");
+            std::cout<<"preview cache mode="<<mode<<" hit_ms="<<hit.nsecsElapsed()/1e6<<std::endl;
+            if(!qEnvironmentVariable("FORGECAD_PREVIEW_QA_DIR").isEmpty()) {
+                view.resize(1000,750);view.setViewPreset(4);view.fitView(view.preview_.display.vertices);
+                view.show();QApplication::processEvents();
+                require(view.grabFramebuffer().save(qEnvironmentVariable("FORGECAD_PREVIEW_QA_DIR")
+                        +QString("/preview-%1.png").arg(mode)),"acquisizione anteprima nativa");view.hide();
+            }
+            if(mode==0){
+                // Il worker superato non deve sostituire un risultato ripreso dalla cache.
+                auto *pool=QThreadPool::globalInstance();const int threads=pool->maxThreadCount();pool->setMaxThreadCount(1);
+                QSemaphore entered,release;
+                pool->start([&]{entered.release();release.acquire();});entered.acquire();
+                auto c=a;c.distance=7;view.requestPreview(c);
+                QElapsedTimer timer;timer.start();while(!view.previewRunning_ && timer.elapsed()<1000)QApplication::processEvents();
+                const bool running=view.previewRunning_;view.requestPreview(a);
+                const bool restored=view.preview_.valid && view.preview_.geometry==first;
+                release.release();pool->setMaxThreadCount(threads);settle(view);
+                require(running && restored && view.preview_.geometry==first,
+                        "cancellazione di un calcolo precedente preserva il risultato riusato");
+            }
+            for(auto &segment:view.sketches_[0].segments){segment.first+=QPointF(.25,0);segment.second+=QPointF(.25,0);}
+            view.requestPreview(a);settle(view);
+            require(view.preview_.geometry!=first,"modifica dello schizzo invalida i risultati precedenti");
+            const auto previous=view.preview_.geometry;
+            view.tessellationQuality_=0;view.requestPreview(a);settle(view);
+            require(view.preview_.geometry!=previous && view.preview_.display.quality==0,
+                    "cambio qualita' invalida il risultato grafico");
+            view.clearPreview();require(view.previewCache_.empty() && !view.previewCacheContextValid_,
+                                        "chiusura funzione libera cache e contesto");
+        }
+        {
+            CadViewport view;SketchObject profile;
+            profile.segments={{{0,0},{2,0}},{{2,0},{2,2}},{{2,2},{0,2}},{{0,2},{0,0}}};view.sketches_.append(profile);
+            ExtrusionObject path;path.feature=BodyFeature::Helix;
+            auto line=std::make_shared<Line<3>>(Vec3(),Vec3(0,0,1));
+            path.curve=std::make_shared<TrimmedCurve<3>>(line,0,3);view.extrusions_.append(path);
+            ExtrusionObject sweep;sweep.feature=BodyFeature::Sweep;sweep.sketchIndex=0;sweep.sweepPath=1;sweep.firstBody=0;
+            view.requestPreview(sweep);settle(view);const auto first=view.preview_.geometry;
+            require(std::abs(massProperties(*first).volume-12)<1e-7,"sweep iniziale sul percorso operando");
+            view.extrusions_[0].curve=std::make_shared<TrimmedCurve<3>>(line,0,7);
+            view.requestPreview(sweep);settle(view);
+            require(view.preview_.geometry!=first && std::abs(massProperties(*view.preview_.geometry).volume-28)<1e-7,
+                    "modifica dell'operando invalida la cache e cambia la geometria");
+        }
+        if(!qEnvironmentVariable("FORGECAD_PREVIEW_QA_FILE").isEmpty()) {
+            const QString path=qEnvironmentVariable("FORGECAD_PREVIEW_QA_FILE");QFile file(path);
+            require(file.open(QIODevice::ReadOnly),"lettura modello QA anteprima");const auto original=file.readAll();file.close();
+            DocumentState state;require(ForgeCad::decodeDocument(original,state,true).isEmpty(),"modello QA letto");
+            CadViewport view;view.loadDocument(state);require(!view.extrusions().isEmpty(),"funzione del modello QA disponibile");
+            view.requestPreview(view.extrusions().first(),0);settle(view);
+            require(!view.preview_.display.constructionCurves.isEmpty(),"U/V sul modello reale");
+            view.resize(1000,750);view.setViewPreset(4);view.fitView(view.preview_.display.vertices);view.show();QApplication::processEvents();
+            require(view.grabFramebuffer().save(qEnvironmentVariable("FORGECAD_PREVIEW_QA_DIR")+"/preview-real.png"),"acquisizione modello reale");view.hide();
+            require(file.open(QIODevice::ReadOnly)&&file.readAll()==original,"modello QA originale invariato");
+        }
+        // Ritaglio esatto di una U/V con un foro piu' stretto di un passo grafico.
+        std::vector<Vec3> vertices;std::vector<Body::BuildEdge> edges;
+        Body::BuildFace face;face.surface=std::make_shared<BSplineSurface>(1,1,
+            std::vector<double>{-2,-2,2,2},std::vector<double>{-2,-2,2,2},2,2,
+            std::vector<Vec3>{{-2,-2,0},{-2,2,0},{2,-2,0},{2,2,0}});face.sense=true;
+        for(const auto &loop:std::vector<std::vector<Vec2>>{{{-2,-2},{2,-2},{2,2},{-2,2}},
+                                                          {{-.02,.001},{-.02,.003},{.02,.003},{.02,.001}}}){
+            std::vector<Body::BuildFin> fins;const int base=int(vertices.size());
+            for(const auto &point:loop)vertices.emplace_back(point.x(),point.y(),0);
+            for(int i=0;i<4;++i){const auto a=loop[std::size_t(i)],b=loop[std::size_t((i+1)%4)];
+                Body::BuildEdge edge;edge.start=base+i;edge.end=base+(i+1)%4;
+                edge.curve=std::make_shared<Line<3>>(Vec3(a.x(),a.y(),0),Vec3(b.x()-a.x(),b.y()-a.y(),0));
+                edge.range={0,distance(a,b)};
+                fins.push_back({int(edges.size()),true,std::make_shared<Line<2>>(a,b-a),0});edges.push_back(edge);
+            }face.loops.push_back(fins);
+        }
+        const auto sheet=Body::buildSheet(vertices,edges,{face});BodyDisplay display;
+        forgeSurfaceConstructionCurves(sheet,display,4,true);
+        int centerPieces=0;
+        for(const auto &line:display.constructionCurves) {
+            if(std::abs(line.first().x())<1e-7 && std::abs(line.last().x())<1e-7)++centerPieces;
+            for(int i=1;i<line.size();++i){const auto a=line[i-1],b=line[i];
+                require(!(std::abs(a.x())<.02 && std::abs(b.x())<.02
+                    && qMin(a.y(),b.y())<.001 && qMax(a.y(),b.y())>.003),
+                    "nessun segmento U/V attraversa il foro sottile");
+            }
+        }
+        require(centerPieces==2,"isoparametrica divisa esattamente ai bordi del foro");
+        std::cout<<"PASS preview performance and exact UV clipping"<<std::endl;
+    }
     static void featureHandles() {
         QTemporaryDir settings;
         QSettings::setDefaultFormat(QSettings::IniFormat);
@@ -9594,6 +9722,11 @@ int main(int argc, char **argv) {
     if (app.arguments().contains(QStringLiteral("--all-history"))) {
         try { allHistoryTest(); }
         catch (const std::exception &e) { std::cerr << e.what() << std::endl; return 1; }
+        return 0;
+    }
+    if (app.arguments().contains(QStringLiteral("--preview-performance"))) {
+        try { ViewportInteractionTest::previewPerformance(); }
+        catch (const std::exception &e) { std::cerr<<e.what()<<std::endl;return 1; }
         return 0;
     }
     if (app.arguments().contains(QStringLiteral("--feature-handles"))) {

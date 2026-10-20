@@ -13,6 +13,8 @@
 #include "cad_pattern.h"
 #include "cad_sketch_refs.h"
 #include "fk_topology.h"
+#include "fk_surface.h"
+#include "fk_precision.h"
 
 #include <QElapsedTimer>
 #include <algorithm>
@@ -60,6 +62,21 @@ void buildBody(ExtrusionObject &body, int index, const QVector<SketchObject> &sk
         && bodies.at(body.firstBody).forgeBody
         && !ForgeCad::forgeBlendHasEffect(bodies.at(body.firstBody).forgeBody, body.forgeBody))
         usedSnapshot = false;
+    // Vecchie rivoluzioni complete di una spline chiusa non periodica:
+    // la faccia senza cuciture impedisce booleane e proprieta' di massa.
+    // Rigenera anche le feature derivate che ne conservano una nella cache.
+    if (usedSnapshot) for (const auto id : body.forgeBody->faces()) {
+        const auto &face = body.forgeBody->face(id);
+        if (face.surface->type() != Kernel::SurfaceType::Revolution) continue;
+        const auto &surface = static_cast<const Kernel::RevolutionSurface &>(*face.surface);
+        const auto &curve = *surface.meridian();
+        const auto range = curve.domain();
+        if (!curve.isPeriodic() && range.isFinite()
+            && Kernel::distance(curve.point(range.lo), curve.point(range.hi)) <= Kernel::kLinearResolution) {
+            usedSnapshot = false;
+            break;
+        }
+    }
     if (usedSnapshot) {
         // Appena aperto: B-rep e, nelle cache nuove, mesh salvati nel
         // documento al posto del calcolo.

@@ -47,6 +47,30 @@ static void revolutionHistoryTest() {
         if(!body)std::cerr<<"revolution mode "<<mode<<": "<<original.extrusions[index].error.toStdString()<<std::endl;
         require(body&&original.extrusions[index].error.isEmpty(),"rivoluzione della matrice costruita");
         if(mode>=16)require(checkBody(*body).empty(),"spline chiusa: corpo rivoluzione valido");
+        if(mode==19) {
+            require(body->counts().faces==2,"giro completo spline con cuciture esplicite");
+            const auto &face=body->face(body->faces().front());
+            const auto &surface=static_cast<const RevolutionSurface &>(*face.surface);
+            auto meridian=surface.meridian();
+            while(meridian->type()==CurveType::Trimmed)
+                meridian=static_cast<const TrimmedCurve<3>&>(*meridian).basis();
+            Body::BuildFace legacy;
+            legacy.surface=std::make_shared<RevolutionSurface>(meridian,surface.axisPoint(),surface.axisDirection());
+            legacy.sense=face.sense;
+            auto old=original;
+            old.extrusions[index].forgeBody=std::make_shared<Body>(Body::build({}, {}, {legacy}));
+            old.extrusions[index].cachedGeometry=true;
+            QByteArray encoded;
+            require(encodeDocument(old,encoded,true).isEmpty(),"serializzazione cache rivoluzione senza cuciture");
+            DocumentState decoded;
+            require(decodeDocument(encoded,decoded,true).isEmpty(),"lettura cache storica rivoluzione completa");
+            CadViewport migrated;migrated.loadDocument(decoded);
+            const auto &fixed=migrated.extrusions()[index];
+            require(fixed.forgeBody && fixed.forgeBody->counts().faces==2 && checkBody(*fixed.forgeBody).empty(),
+                    "vecchia cache a singola faccia rigenerata automaticamente");
+            require(std::abs(massProperties(*fixed.forgeBody).volume-massProperties(*body).volume)<1e-8,
+                    "migrazione conserva il volume esatto");
+        }
         const auto bytes=writeBodyBinary(*body);const auto names=elementNamesOf(*body);
         require(bool(names),"nomi rivoluzione disponibili");
         const auto verify=[&](const DocumentState &state) {

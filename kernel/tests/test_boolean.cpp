@@ -19,6 +19,8 @@
 #include "fk_body_check.h"
 #include "fk_body_io.h"
 #include "fk_boolean.h"
+#include "fk_classify.h"
+
 #include "fk_bspline_surface.h"
 #include "fk_pcurve.h"
 #include "fk_extrude.h"
@@ -1359,5 +1361,30 @@ FK_TEST(BooleanShellSlabsThroughHoleVertex) {
                       massProperties(front).volume + massProperties(sides).volume - massProperties(common).volume, 1e-8 * massProperties(front).volume);
     } catch (const std::exception &error) {
         reportFailure(__FILE__, __LINE__, error.what());
+    }
+}
+
+FK_TEST(BooleanPartialClosedSplineRevolution) {
+    // Profilo cubico chiuso non periodico, ridotto da EsempioRivParziale.
+    // Il perno parte dentro e termina fuori: il coperchio interno deve
+    // partecipare all'intersezione e non all'unione.
+    std::vector<Vec2> poles{{.683887,.545164},{.425351,.735184},{.444786,.509918},{.288111,.260974},
+        {.131436,.01203},{.380861,-.456151},{.572708,-.735699},
+        {.764554,-1.01525},{.837365,-.957635},{1.23156,-.93708},
+        {1.62576,-.916525},{1.75914,-.737468},{1.58831,-.41955},
+        {1.41747,-.101633},{.942424,.355145},{.683887,.545164}};
+    auto spline=std::make_shared<BSplineCurve<2>>(3,expandKnots({0,1,2,3,4,5},{4,3,3,3,3,4}),poles);
+    const auto region=buildProfile({{spline,spline->domain(),42}},1e-9).regions.front();
+    const Frame3 frame;
+    for (const double angle : {320*kPi/180., kTwoPi, -kTwoPi}) {
+    const Frame3 profilePlane(frame.origin(),-frame.yDir(),frame.xDir());
+    const Operand ring{makeRevolution(frame,region,angle),
+        BRepPrimAPI_MakeRevol(occtFace(region,profilePlane),gp_Ax1(toPnt(frame.origin()),toDir(frame.zDir())),angle).Shape()};
+    const Operand pin=cylinder(Frame3(Vec3(.48319,1.10064,-.311654),Vec3(0,1,0),Vec3(1,0,0)),.327718,1.38477);
+    FK_CHECK(SolidClassifier(ring.body,1e-7).classify(Vec3(.48319,1.10064,-.579084))==PointLocation::Inside);
+    // Tolleranza del confronto indipendente: 1e-6 relativa, anche per il
+    // baricentro; intersezione tracciata entro la tolleranza geometrica.
+    compareAll(ring,pin,true,1e-6);
+    compareAll(pin,ring,true,1e-6);
     }
 }

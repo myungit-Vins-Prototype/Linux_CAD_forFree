@@ -40,7 +40,7 @@ namespace {
 // bordi liberi). Normale della faccia a destra del verso di percorrenza.
 void revolveLoops(const Frame3 &frame, const std::vector<ProfileLoop> &loops, bool closed, std::vector<Vec3> &vertices,
                   std::vector<Body::BuildEdge> &edges, std::vector<Body::BuildFace> &faces,
-                  RevolutionProvenance *provenance, const std::vector<bool> &reversedLoops = {}, bool splitClosedMeridians = false) {
+                  RevolutionProvenance *provenance, const std::vector<bool> &reversedLoops = {}) {
     const double tolerance = 1e-9 * std::max(1.0, norm(frame.origin()));
     const Vec3 O = frame.origin(), X = frame.xDir(), Y = frame.yDir(), Z = frame.zDir();
     auto at = [&](const Vec2 &p) { return O + p.x() * X + p.y() * Z; };
@@ -48,10 +48,10 @@ void revolveLoops(const Frame3 &frame, const std::vector<ProfileLoop> &loops, bo
     for (std::size_t loopIndex = 0; loopIndex < loops.size(); ++loopIndex) {
         ProfileLoop loop = loops[loopIndex];
         // Una B-spline chiusa ma non periodica genera al giro completo una
-        // faccia senza bordi. Il taglio angolare richiede invece una cucitura
+        // faccia senza bordi. Anche le booleane sul giro completo richiedono una cucitura
         // esplicita nel meridiano: due intervalli esatti della stessa curva,
         // con la medesima sorgente, senza ricampionare o alterare il profilo.
-        const bool split = splitClosedMeridians && closed && loop.segments.size() == 1
+        const bool split = closed && loop.segments.size() == 1
             && !basisOf(*loop.segments.front().curve).isPeriodic()
             && distance(loop.segments.front().start(), loop.segments.front().end()) <= kLinearResolution;
         if (split) {
@@ -214,8 +214,7 @@ Body cutToAngle(Body full, const Frame3 &frame, double angle, RevolutionProvenan
 
 }
 
-static Body makeFullRevolution(const Frame3 &frame, const ProfileRegion &region, RevolutionProvenance *provenance,
-                               bool splitClosedMeridians = false) {
+static Body makeFullRevolution(const Frame3 &frame, const ProfileRegion &region, RevolutionProvenance *provenance) {
     if (provenance) *provenance = {};
     RevolutionProvenance output;
     std::vector<ProfileLoop> loops{signedArea(region.outer) > 0.0 ? region.outer : reversed(region.outer)};
@@ -227,7 +226,7 @@ static Body makeFullRevolution(const Frame3 &frame, const ProfileRegion &region,
     std::vector<Vec3> vertices;
     std::vector<Body::BuildEdge> edges;
     std::vector<Body::BuildFace> faces;
-    revolveLoops(frame, loops, true, vertices, edges, faces, provenance ? &output : nullptr, reversedLoops, splitClosedMeridians);
+    revolveLoops(frame, loops, true, vertices, edges, faces, provenance ? &output : nullptr, reversedLoops);
     if (faces.empty()) throw std::invalid_argument("makeRevolution: profilo tutto sull'asse");
     Body body = Body::build(vertices, edges, faces);
     computePCurves(body);
@@ -253,8 +252,7 @@ Body makeSheetRevolution(const Frame3 &frame, const std::vector<ProfileLoop> &ch
 Body makeRevolution(const Frame3 &frame, const ProfileRegion &region, double angle, RevolutionProvenance *provenance) {
     if (provenance) *provenance = {};
     RevolutionProvenance output;
-    Body body = makeFullRevolution(frame, region, provenance ? &output : nullptr,
-                                   std::fabs(angle) < kTwoPi - kAngularResolution);
+    Body body = makeFullRevolution(frame, region, provenance ? &output : nullptr);
     body = cutToAngle(std::move(body), frame, angle, provenance ? &output : nullptr);
     if (provenance) *provenance = std::move(output);
     return body;

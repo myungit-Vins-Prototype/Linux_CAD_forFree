@@ -71,8 +71,39 @@ FK_TEST(NurbsPiecesOfCurves) {
                 const Interval pd = piece.domain();
                 worst = std::max(worst, projectPoint(*curve, piece.point(pd.lo + pd.length() * i / 10.0), range).distance);
             }
-        FK_CHECK(worst <= 1e-9);
+    FK_CHECK(worst <= 1e-9);
         FK_CHECK(distance(pieces.front().point(pieces.front().domain().lo), curve->point(range.lo)) <= 1e-9);
         FK_CHECK(distance(pieces.back().point(pieces.back().domain().hi), curve->point(range.hi)) <= 1e-9);
+    }
+}
+
+FK_TEST(NurbsTrimmedSplineSurfaceWindows) {
+    // La forma NURBS di un meridiano limitato non deve includere l'altra
+    // meta' della spline: produrrebbe attraversamenti fantasma nei raggi.
+    std::mt19937 rng(197);
+    for (bool rational : {false, true}) {
+        auto spline = std::make_shared<BSplineCurve<3>>(randomBSpline<3>(rng, rational));
+        const Interval domain = spline->domain();
+        const Interval window{domain.lo + .21 * domain.length(), domain.lo + .63 * domain.length()};
+        auto trimmed = std::make_shared<TrimmedCurve<3>>(spline, window.lo, window.hi);
+        for (const CurvePtr<3> &curve : {CurvePtr<3>(spline), CurvePtr<3>(trimmed)}) {
+            const RevolutionSurface revolution(curve, Vec3(), Vec3(0,0,1));
+            const auto nurbs = toBSplineSurface(revolution, {.2,1.4}, window);
+            FK_CHECK_NEAR(nurbs.vDomain().lo, window.lo, 1e-13);
+            FK_CHECK_NEAR(nurbs.vDomain().hi, window.hi, 1e-13);
+            // Il parametro del meridiano e' conservato anche con pesi non unitari.
+            for (int i=0;i<=24;++i) {
+                const double v = window.lo + window.length()*i/24.;
+                FK_CHECK(distance(nurbs.point(nurbs.uDomain().lo,v),revolution.point(.2,v)) < 1e-9);
+            }
+            checkSurface(revolution,{.2,1.4},window);
+            const ExtrusionSurface extrusion(curve,Vec3(0,1,0));
+            const auto extruded=toBSplineSurface(extrusion,window,{-2,3});
+            FK_CHECK_NEAR(extruded.uDomain().lo,window.lo,1e-13);
+            FK_CHECK_NEAR(extruded.uDomain().hi,window.hi,1e-13);
+            for(int i=0;i<=24;++i){const double u=window.lo+window.length()*i/24.;
+                FK_CHECK(distance(extruded.point(u,.3),extrusion.point(u,.3))<1e-9);}
+            checkSurface(extrusion,window,{-2,3});
+        }
     }
 }

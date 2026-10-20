@@ -2193,6 +2193,52 @@ public:
     // posto del corpo `index` se si modifica), calcolata in background; le richieste superate si scartano. Si disegna in ambra; al
     // suo posto spariscono il corpo modificato e gli operandi (booleane, base
     // del raccordo), che si vedono finche' l'anteprima non e' pronta.
+    // Cache limitata alla finestra della funzione. Le copie condivise del
+    // contesto fanno cambiare identita' ai vettori appena il documento viene
+    // modificato: non si riusa un risultato con schizzi/operandi diversi.
+    bool preparePreviewCacheContext() {
+        const bool changed = previewCacheContextValid_
+            && (previewCacheSketches_.constData()!=sketches_.constData()
+                || previewCacheBodies_.constData()!=extrusions_.constData()
+                || previewCacheQuality_!=tessellationQuality_);
+        if (!previewCacheContextValid_ || changed) {
+            previewCache_.clear();
+            previewCacheSketches_=sketches_;
+            previewCacheBodies_=extrusions_;
+            previewCacheQuality_=tessellationQuality_;
+            previewCacheContextValid_=true;
+        }
+        return changed;
+    }
+    void refreshPreviewDragSource() {
+        if (preview_.valid && preview_.definition.feature==BodyFeature::Extrusion
+            && preview_.definition.mergeOperation==0 && preview_.definition.extent==0) {
+            previewDragSource_=std::make_shared<BodyDisplay>(preview_.display);
+            previewDragDefinition_=preview_.definition;
+            previewDragKey_=preview_.key;
+        } else previewDragSource_.reset();
+    }
+    void rememberPreview() {
+        if (!preview_.valid || !preview_.geometry) return;
+        const auto bytes=[](const BodyDisplay &display) {
+            std::size_t points=std::size_t(display.vertices.size()+display.normals.size());
+            for (const auto &line:display.edges) points+=std::size_t(line.size());
+            for (const auto &line:display.constructionCurves) points+=std::size_t(line.size());
+            return points*sizeof(QVector3D);
+        };
+        const auto size=[&](const Preview &preview) {
+            return bytes(preview.display)+bytes(preview.retainedDisplay)+bytes(preview.resultDisplay);
+        };
+        constexpr std::size_t budget=64*1024*1024;
+        if (size(preview_)>budget) return;
+        previewCache_.erase(std::remove_if(previewCache_.begin(),previewCache_.end(),
+            [&](const Preview &entry){return entry.key==preview_.key;}),previewCache_.end());
+        previewCache_.push_back(preview_);
+        std::size_t total=0;for(const auto &entry:previewCache_)total+=size(entry);
+        while(previewCache_.size()>4 || total>budget) {
+            total-=size(previewCache_.front());previewCache_.erase(previewCache_.begin());
+        }
+    }
     // Durante il movimento una semplice estrusione varia solo lungo la normale.
     // Aggiorna la mesh grafica subito, senza promuoverla a geometria confermabile.
     void updateDragPreview(const ExtrusionObject &definition, int index) {
@@ -2237,9 +2283,12 @@ public:
         update();
     }
     void requestPreview(const ExtrusionObject &definition, int index = -1) {
+        const bool contextChanged=preparePreviewCacheContext();
+        if (contextChanged) { previewDragSource_.reset();previewDragVisible_=false; }
         updateDragPreview(definition, index);
+        const bool firstRequest=preview_.key.isEmpty();
         const QString key = previewKey(definition, index);
-        if (key == preview_.key) {
+        if (!contextChanged && key == preview_.key) {
             previewHandlePending_ = false;
             if ((preview_.valid || !preview_.error.isEmpty()) && previewCallback_) previewCallback_(preview_.error);
             return;
@@ -2306,6 +2355,18 @@ public:
         preview_.resultDisplay = {};
         previewErrorSketch_ = -1;
         ++preview_.generation;
+        const auto cached=std::find_if(previewCache_.begin(),previewCache_.end(),
+            [&](const Preview &entry){return entry.key==key;});
+        if(cached!=previewCache_.end()) {
+            const quint64 generation=preview_.generation;
+            Preview result=*cached;
+            previewCache_.erase(cached);previewCache_.push_back(result);
+            preview_=std::move(result);preview_.generation=generation;
+            previewDragVisible_=false;refreshPreviewDragSource();
+            if(previewTimer_)previewTimer_->stop();
+            if(previewCallback_)previewCallback_(preview_.error);
+            update();return;
+        }
         if (!previewTimer_) {
             previewTimer_ = new QTimer(this);
             previewTimer_->setSingleShot(true);
@@ -2313,7 +2374,7 @@ public:
             previewTimer_->callOnTimeout([this] { startPreviewJob(); });
         }
         // Il timer scandisce il movimento: non rimandarlo a ogni evento mouse.
-        if (!featureHandleDragging_ || !previewTimer_->isActive()) previewTimer_->start();
+        if (!featureHandleDragging_ || !previewTimer_->isActive()) previewTimer_->start(firstRequest?0:120);
         update();
     }
     // Il pannello del taglio ha gia' calcolato e tassellato tutte le parti.
@@ -2356,6 +2417,7 @@ public:
         if (previewCancellation_) previewCancellation_->store(true, std::memory_order_relaxed);
         previewRerun_ = false;
         previewHandlePending_ = false;
+        previewCache_.clear();previewCacheSketches_.clear();previewCacheBodies_.clear();previewCacheContextValid_=false;
         previewDragVisible_ = false;
         previewDragSource_.reset();
         previewDragDisplay_ = {};
@@ -11847,19 +11909,15 @@ private:
                     preview_.geometry = std::move(geometry);
                     preview_.display = std::move(display);
                     previewDragVisible_ = false;
-                    if (ok && preview_.definition.feature == BodyFeature::Extrusion
-                        && preview_.definition.mergeOperation == 0 && preview_.definition.extent == 0) {
-                        previewDragSource_ = std::make_shared<BodyDisplay>(preview_.display);
-                        previewDragDefinition_ = preview_.definition;
-                        previewDragKey_ = preview_.key;
-                    } else previewDragSource_.reset();
+                    refreshPreviewDragSource();
                     preview_.retainedDisplay = std::move(retainedDisplay);
                     preview_.resultDisplay = std::move(resultDisplay);
+                    rememberPreview();
                     if (edgePicking_ && edgePickStatus_) edgePickStatus_(edgePickMessage());
                     if (previewCallback_) previewCallback_(preview_.error);
                     update();
                     previewRerun_ = false;
-                } else if (!preview_.key.isEmpty()) {
+                } else if (!preview_.key.isEmpty() && !preview_.valid && preview_.error.isEmpty()) {
                     previewRerun_ = false;
                     startPreviewJob();
                 }
@@ -12461,6 +12519,11 @@ private:
         quint64 generation = 0;
     };
     Preview preview_;
+    std::vector<Preview> previewCache_;
+    QVector<SketchObject> previewCacheSketches_;
+    QVector<ExtrusionObject> previewCacheBodies_;
+    int previewCacheQuality_=-1;
+    bool previewCacheContextValid_=false;
     BodyDisplay previewDragDisplay_;
     std::shared_ptr<const BodyDisplay> previewDragSource_;
     ExtrusionObject previewDragDefinition_;
