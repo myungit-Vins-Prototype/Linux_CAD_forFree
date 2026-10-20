@@ -4001,36 +4001,38 @@ public:
         const auto changed = featureHandleChanged_;
         changed(value);
     }
+    QVector3D featureHandleSketchCenter(const SketchObject &sketch) const {
+        // Centro dell'ingombro del profilo nel suo piano, senza riferimenti
+        // di costruzione che possono estendersi molto oltre il profilo.
+        QPointF minimum, maximum;
+        bool hasPoint = false;
+        const auto include = [&](const QPointF &p) {
+            if (!hasPoint) { minimum = maximum = p; hasPoint = true; }
+            else {
+                minimum.setX(qMin(minimum.x(), p.x()));
+                minimum.setY(qMin(minimum.y(), p.y()));
+                maximum.setX(qMax(maximum.x(), p.x()));
+                maximum.setY(qMax(maximum.y(), p.y()));
+            }
+        };
+        for (int i = 0; i < sketch.segments.size(); ++i) {
+            if (sketch.isConstructionSegment(i)) continue;
+            include(sketch.segments.at(i).first);
+            include(sketch.segments.at(i).second);
+        }
+        for (const auto &curve : sketch.curves) {
+            if (curve.construction) continue;
+            for (const auto &p : curve.samples) include(p);
+        }
+        return ForgeCad::sketchToDisplay(hasPoint ? (minimum + maximum) * 0.5 : QPointF(), sketch);
+    }
     bool featureHandleGeometry(QVector3D &origin, QVector3D &axis, QVector3D &radial) const {
         const auto &d = featureHandleDefinition_;
         if (!featureHandleChanged_ || d.sketchIndex < 0 || d.sketchIndex >= sketches_.size()) return false;
         const auto &sketch = sketches_.at(d.sketchIndex);
-        origin = ForgeCad::sketchToDisplay(QPointF(), sketch);
+        origin = featureHandleSketchCenter(sketch);
         const auto display = [](const ForgeCad::Kernel::Vec3 &p) { return QVector3D(p.x(), p.y(), p.z()); };
         if (d.feature == BodyFeature::Extrusion) {
-            // Centro dell'ingombro del profilo nel suo piano, senza riferimenti
-            // di costruzione che possono estendersi molto oltre il profilo.
-            QPointF minimum, maximum;
-            bool hasPoint = false;
-            const auto include = [&](const QPointF &p) {
-                if (!hasPoint) { minimum = maximum = p; hasPoint = true; }
-                else {
-                    minimum.setX(qMin(minimum.x(), p.x()));
-                    minimum.setY(qMin(minimum.y(), p.y()));
-                    maximum.setX(qMax(maximum.x(), p.x()));
-                    maximum.setY(qMax(maximum.y(), p.y()));
-                }
-            };
-            for (int i = 0; i < sketch.segments.size(); ++i) {
-                if (sketch.isConstructionSegment(i)) continue;
-                include(sketch.segments.at(i).first);
-                include(sketch.segments.at(i).second);
-            }
-            for (const auto &curve : sketch.curves) {
-                if (curve.construction) continue;
-                for (const auto &p : curve.samples) include(p);
-            }
-            if (hasPoint) origin = ForgeCad::sketchToDisplay((minimum + maximum) * 0.5, sketch);
             axis = display(ForgeCad::extrusionVector(sketch, 1.0)).normalized();
             radial = {};
             return true;
@@ -4069,7 +4071,7 @@ public:
         const float unit = zoom_ / qMax(1, height());
         featureHandleRadius_ = 90.0f * unit;
         featureHandlePath_.clear();
-        const QPointF sketchOrigin = projectWorldPoint(ForgeCad::sketchToDisplay(QPointF(), sketches_.at(featureHandleDefinition_.sketchIndex)));
+        const QPointF sketchCenter = projectWorldPoint(featureHandleSketchCenter(sketches_.at(featureHandleDefinition_.sketchIndex)));
         painter.save();
         painter.setRenderHint(QPainter::Antialiasing);
         painter.setPen(QPen(QColor(255, 194, 100), 1.5, Qt::DashLine));
@@ -4077,7 +4079,7 @@ public:
             const int steps = qMax(2, int(std::abs(value) / 3.0));
             for (int k = 0; k <= steps; ++k)
                 featureHandlePath_ << projectWorldPoint(featureHandleOrigin_ + featureHandleRadius_ * featureHandleRadialAt(value * k / steps));
-            painter.drawLine(sketchOrigin, featureHandlePath_.first());
+            painter.drawLine(sketchCenter, featureHandlePath_.first());
             painter.drawLine(projectWorldPoint(featureHandleOrigin_), featureHandlePath_.last());
         } else {
             // Nella simmetrica il parametro rappresenta la distanza totale.

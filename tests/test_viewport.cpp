@@ -295,6 +295,45 @@ public:
         v.setFeatureHandle(definition, changed);
         draw();
         require(v.featureHandlePath_.size() > 2 && v.featureHandleBox_->suffix().contains(QChar(0x00b0)), "arco con angolo editabile");
+        // Il centro dell'arco segue il profilo lungo l'asse, anche su piani diversi.
+        for (int plane = 0; plane < 4; ++plane) {
+            v.sketches_[0] = sketch;
+            if (plane < 3) v.sketches_[0].plane = plane;
+            else {
+                v.sketches_[0].customFrame = true;
+                auto &frame = v.sketches_[0].frame;
+                frame.origin[0]=3; frame.origin[1]=4; frame.origin[2]=5;
+                frame.normal[0]=0; frame.normal[1]=1; frame.normal[2]=0;
+                frame.xAxis[0]=1; frame.xAxis[1]=0; frame.xAxis[2]=0;
+            }
+            v.sketches_[0].segments.append({{-100,-200},{300,400}});
+            v.sketches_[0].constructionSegments.append(4);
+            for (int selectedAxis : {-1, -2, 0}) {
+                definition.revolveAxis = selectedAxis;
+                v.setFeatureHandle(definition, changed);
+                draw();
+                const auto center = ForgeCad::sketchToDisplay(QPointF(5,5), v.sketches_[0]);
+                QPointF point, direction; QString error;
+                require(ForgeCad::sketchRevolutionAxis(v.sketches_[0],selectedAxis,point,direction,&error), "asse fixture rivoluzione");
+                const auto axisPoint = ForgeCad::sketchToDisplay(point,v.sketches_[0]);
+                const auto expected = axisPoint + v.featureHandleAxis_*QVector3D::dotProduct(center-axisPoint,v.featureHandleAxis_);
+                require((v.featureHandleOrigin_-expected).length()<1e-5, "centro arco alla proiezione del centro profilo sull'asse");
+                const auto offset = center-expected;
+                if (offset.lengthSquared()>1e-10f)
+                    require((v.featureHandleRadial_-offset.normalized()).length()<1e-5, "arco orientato verso il centro del profilo");
+                require(!v.featureHandleBox_->isHidden() && v.featureHandleAt(v.featureHandlePath_.last()), "campo e freccia seguono l'arco decentrato");
+            }
+        }
+        v.sketches_[0] = SketchObject();
+        v.sketches_[0].curves = {curvedProfile, constructionCurve};
+        definition.revolveAxis = -1;
+        v.setFeatureHandle(definition, changed);
+        require(v.featureHandleGeometry(origin,axis,radial)
+                && (origin-ForgeCad::sketchToDisplay(QPointF(30,0),v.sketches_[0])).length()<1e-5,
+                "rivoluzione centrata sul profilo curvo senza costruzioni");
+        v.sketches_[0] = sketch;
+        v.setFeatureHandle(definition, changed);
+        draw();
         const auto angularPoint = [&](double angle) { return v.projectWorldPoint(v.featureHandleOrigin_ + v.featureHandleRadius_*v.featureHandleRadialAt(angle)); };
         press(v.featureHandlePath_.last());
         for (int angle = 25; angle >= -210; angle -= 5) move(angularPoint(angle));

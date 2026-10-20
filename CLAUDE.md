@@ -8,6 +8,17 @@ Per istruzione esplicita dell'utente, leggere questo registro all'inizio di ogni
 
 ## Registro del lavoro — istruzione dell'utente
 
+### Centro manipolatore rivoluzione coerente con estrusione (2026-10-20, Codex)
+
+- Checkpoint richiesto dall'utente con «fai commit»: diff ispezionato e git diff --check PASS; inclusi solo forgeCad2026_gui.cpp, tests/test_viewport.cpp e CLAUDE.md. Verifiche funzionali gia' concluse sotto (6/6 PASS), nessuna nuova modifica funzionale o ricompilazione necessaria per il commit. Nessun push richiesto.
+
+- Richiesta: freccia e campo angolare della rivoluzione riferiti al centro dello schizzo come per l'estrusione. Causa: il calcolo dell'ingombro era limitato al ramo estrusione; rivoluzione e collegamento tratteggiato usavano l'origine del piano.
+- Implementato in forgeCad2026_gui.cpp: calcolo condiviso del centro dell'ingombro 2D, escluse costruzioni; arco centrato sulla proiezione del centro profilo sull'asse effettivo, radiale verso il profilo e collegamento dal centro profilo. Il campo segue la punta come prima. Asse geometrico e parametri della lavorazione invariati.
+- Estese prove tests/test_viewport.cpp: profilo decentrato, assi standard/segmento, piani standard/personalizzato, curve e costruzioni escluse. Compilazione e verifiche ancora da eseguire; nessun eseguibile aggiornato a questo traguardo. Percorso effettivo Linux /home/myungit/Linux_CAD_forFree (/Users assente).
+- Conclusione verificata: app Linux completa e runner compilati PASS senza errori/warning, /tmp/revolution-center-build.log. CTest6/6 PASS in7,12s: manipolatori (1,59s), history rivoluzione/estrusione, riferimenti sketch, workflowUI e orbita; /tmp/revolution-center-tests.log. Immagine QPainter arco/campo ispezionata, centro verificato dagli assert. git diff --check PASS. Nessun collaudo manuale GPU o nuova build macOS/Windows.
+- Eseguibile abituale forgecad-release/forgecad aggiornato atomicamente e verificato SHA256 9b7d912168ffaa0b84625a8dbdd6278405df8a681854b7ed74e06582c9273d5b; precedente conservato in /tmp/revolution-center-backup/forgecad. Ricontrollate 415 impronte dei file versionati (registro escluso) e impronta del binario precedente prima della sostituzione. Riavvio app necessario, nessun processo utente chiuso o documento CAD scritto, nessun commit/push. Limite conservato: centro dell'ingombro grafico 2D, curve campionate, non baricentro d'area.
+
+
 ### Checkpoint Git getter GUI e ownership slot CUDA (2026-10-20, Codex)
 
 - Commit locale richiesto esplicitamente dall'utente. Diff finale ispezionato: solo rimozione dei2getterGUI approvati, gestioneRAII degli slotCUDA e registro del lavoro. Nessun limite8slot, budgetmemoria, espulsione adattiva o modifica alla disattivazione implementato. Progetto adattivo abbandonato, conservato nel registro come sola proposta storica.
