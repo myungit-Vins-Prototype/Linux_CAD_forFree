@@ -1,5 +1,6 @@
 #pragma once
 #include "fk_cancel.h"
+#include "cad_drawing_focus.h"
 #include <QApplication>
 #include <QEventLoop>
 #include <QLabel>
@@ -16,11 +17,12 @@ namespace ForgeCad {
 template<class Result,class Work>
 QString runDrawingComputation(QWidget *owner,bool &busy,const QString &title,Result &result,Work work,const QStringList &phaseLabels={}){
     if(busy)return QStringLiteral("Attendere il calcolo della vista in corso.");
+    DrawingFocusReturn focusReturn(owner);
     struct Guard{QWidget *widget;bool &busy;bool enabled;Guard(QWidget *w,bool &b):widget(w),busy(b),enabled(w->isEnabled()){busy=true;widget->setEnabled(false);}~Guard(){busy=false;widget->setEnabled(enabled);}} guard(owner,busy);
     const auto cancel=Kernel::currentCancellation?Kernel::currentCancellation:std::make_shared<std::atomic<bool>>(false);std::atomic<int> phase{0};
     try{
         auto task=std::async(std::launch::async,[work=std::move(work),cancel,&phase]()mutable{Kernel::CancellationScope scope(cancel);Kernel::cancellationPoint();auto output=work([&](int value){phase.store(value,std::memory_order_relaxed);Kernel::cancellationPoint();});Kernel::cancellationPoint();return output;});
-        QProgressDialog dialog(QString(),QStringLiteral("Annulla"),0,5,owner);dialog.setObjectName("drawingViewProgress");dialog.setWindowTitle(title);dialog.setWindowModality(Qt::ApplicationModal);dialog.setAutoClose(false);dialog.setAutoReset(false);dialog.setMinimumDuration(250);dialog.setEnabled(true);
+        QProgressDialog dialog(QString(),QStringLiteral("Annulla"),0,5,owner->window());dialog.setObjectName("drawingViewProgress");dialog.setWindowTitle(title);dialog.setWindowModality(Qt::WindowModal);dialog.setAutoClose(false);dialog.setAutoReset(false);dialog.setMinimumDuration(250);dialog.setEnabled(true);
         auto *bar=new QProgressBar(&dialog);bar->setObjectName("drawingViewProgressBar");bar->setRange(0,5);bar->setFormat(QStringLiteral("Fase %v di %m"));dialog.setBar(bar);
         auto *label=new QLabel(&dialog);label->setTextFormat(Qt::PlainText);dialog.setLabel(label);
         QEventLoop loop;QTimer timer;timer.setInterval(16);

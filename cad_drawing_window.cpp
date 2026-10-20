@@ -1,4 +1,5 @@
 #include "cad_drawing_window.h"
+#include "cad_drawing_focus.h"
 #include "cad_icons.h"
 #include "cad_menu.h"
 #include "cad_toolbar.h"
@@ -273,6 +274,7 @@ QString DrawingWindow::exportPdfPath(const QString &path,DrawingPdfReport &repor
     return editor_->exportPdf(path,report);
 }
 bool DrawingWindow::save(bool askPath){
+    DrawingFocusReturn focusReturn(this);
     auto path=path_;
     if(askPath||path.isEmpty()){
         const auto initial=path.isEmpty()?QFileInfo(sourcePath_).absolutePath()+"/"+drawing_.sheet.title+".drw":path;

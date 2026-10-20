@@ -133,10 +133,11 @@ QString encodeDrawingSheet(const DrawingSheet &sheet,QByteArray &bytes){
         bool styled=false;
         for(const auto &dimension:sheet.dimensions){QJsonObject item{{"id",dimension.dimensionId.toString(QUuid::WithoutBraces)},{"position",pointJson(dimension.position)}};
             const auto &p=dimension.presentation;if(p.active()){styled=true;item.insert("presentation",QJsonObject{{"mode",int(p.mode)},{"upper",p.upper},{"lower",p.lower},{"decimals",p.decimals},{"prefix",p.prefix},{"suffix",p.suffix}});if(p.reverseArrows){auto style=item["presentation"].toObject();style.insert("reverseArrows",true);item["presentation"]=style;}}dimensions.append(item);}
-        QJsonObject object{{"format","ForgeCAD.DrawingSheet"},{"schema",(std::any_of(sheet.axes.cbegin(),sheet.axes.cend(),[](const auto &a){return a.endExtension.has_value();})||std::any_of(sheet.dimensions.cbegin(),sheet.dimensions.cend(),[](const auto &d){return d.presentation.reverseArrows;}))?11:std::any_of(sheet.views.cbegin(),sheet.views.cend(),[](const auto &v){return v.relation.kind==DrawingDerivedKind::Detail;})?10:(sheet.style.extensionGap!=0||sheet.style.dimensionOffset!=0)?9:(sheet.style.active()||std::any_of(sheet.views.cbegin(),sheet.views.cend(),[](const auto &v){return v.titleOffset.has_value();}))?8:styled?7:!sheet.annotations.isEmpty()?6:drawingNeedsAxisSchema(sheet.drawing)?5:!sheet.axes.isEmpty()?4:(drawingNeedsSectionSchema(sheet.drawing)||std::any_of(sheet.views.cbegin(),sheet.views.cend(),[](const auto &v){return v.relation.parentId.isNull()&&!v.relation.hatch;}))?3:std::any_of(sheet.views.cbegin(),sheet.views.cend(),[](const auto &v){return !v.relation.parentId.isNull();})?2:1},{"title",sheet.title},
+        QJsonObject object{{"format","ForgeCAD.DrawingSheet"},{"schema",sheet.style.textLayoutActive()?12:(std::any_of(sheet.axes.cbegin(),sheet.axes.cend(),[](const auto &a){return a.endExtension.has_value();})||std::any_of(sheet.dimensions.cbegin(),sheet.dimensions.cend(),[](const auto &d){return d.presentation.reverseArrows;}))?11:std::any_of(sheet.views.cbegin(),sheet.views.cend(),[](const auto &v){return v.relation.kind==DrawingDerivedKind::Detail;})?10:(sheet.style.extensionGap!=0||sheet.style.dimensionOffset!=0)?9:(sheet.style.active()||std::any_of(sheet.views.cbegin(),sheet.views.cend(),[](const auto &v){return v.titleOffset.has_value();}))?8:styled?7:!sheet.annotations.isEmpty()?6:drawingNeedsAxisSchema(sheet.drawing)?5:!sheet.axes.isEmpty()?4:(drawingNeedsSectionSchema(sheet.drawing)||std::any_of(sheet.views.cbegin(),sheet.views.cend(),[](const auto &v){return v.relation.parentId.isNull()&&!v.relation.hatch;}))?3:std::any_of(sheet.views.cbegin(),sheet.views.cend(),[](const auto &v){return !v.relation.parentId.isNull();})?2:1},{"title",sheet.title},
             {"size",QJsonArray{sheet.size.width(),sheet.size.height()}},{"drawing",QJsonDocument::fromJson(document).object()},
             {"views",views},{"dimensions",dimensions}};
         if(sheet.style.active()){const auto &s=sheet.style;object.insert("style",QJsonObject{{"fontFamily",s.fontFamily},{"dimensionHeight",s.dimensionHeight},{"viewTitleHeight",s.viewTitleHeight},{"arrowLength",s.arrowLength},{"arrow",int(s.arrow)},{"titleGap",s.titleGap},{"titleSnaps",s.titleSnaps}});if(s.extensionGap!=0||s.dimensionOffset!=0)object.insert("dimensionSpacing",QJsonObject{{"extensionGap",s.extensionGap},{"dimensionOffset",s.dimensionOffset}});}
+        if(sheet.style.textLayoutActive())object.insert("dimensionText",QJsonObject{{"orientation",int(sheet.style.dimensionTextOrientation)},{"position",int(sheet.style.dimensionTextPosition)},{"gap",sheet.style.dimensionTextGap}});
         if(!sheet.axes.isEmpty()){
             QByteArray encoded;ok(encodeDrawingDocument(axisSupportDocument(sheet),encoded));const auto support=QJsonDocument::fromJson(encoded).object();const auto definitions=support["dimensions"].toArray();QJsonArray axes;
             for(qsizetype i=0;i<sheet.axes.size();++i){const auto &a=sheet.axes[i];QJsonObject entry{{"definition",definitions[i]},{"kind",int(a.kind)},{"name",a.name},{"extension",a.extension},{"visible",a.visible}};if(a.endExtension)entry.insert("endExtension",*a.endExtension);axes.append(entry);}
@@ -160,7 +161,7 @@ QString decodeDrawingSheet(const QByteArray &bytes,DrawingSheet &sheet){
     try{
         require(!bytes.isEmpty()&&bytes.size()<=8*1024*1024,"Dimensione del foglio non valida.");
         const auto json=QJsonDocument::fromJson(bytes);const auto object=json.object();
-        require(json.isObject()&&object["format"].toString()==QLatin1String("ForgeCAD.DrawingSheet")&&(object["schema"].toInt(-1)==1||object["schema"].toInt(-1)==2||object["schema"].toInt(-1)==3||object["schema"].toInt(-1)==4||object["schema"].toInt(-1)==5||object["schema"].toInt(-1)==6||object["schema"].toInt(-1)==7||object["schema"].toInt(-1)==8||object["schema"].toInt(-1)==9||object["schema"].toInt(-1)==10||object["schema"].toInt(-1)==11),"Formato del foglio non supportato.");
+        require(json.isObject()&&object["format"].toString()==QLatin1String("ForgeCAD.DrawingSheet")&&(object["schema"].toInt(-1)==1||object["schema"].toInt(-1)==2||object["schema"].toInt(-1)==3||object["schema"].toInt(-1)==4||object["schema"].toInt(-1)==5||object["schema"].toInt(-1)==6||object["schema"].toInt(-1)==7||object["schema"].toInt(-1)==8||object["schema"].toInt(-1)==9||object["schema"].toInt(-1)==10||object["schema"].toInt(-1)==11||object["schema"].toInt(-1)==12),"Formato del foglio non supportato.");
         const int schema=object["schema"].toInt();
         require(schema>=6||(!object.contains("annotations")&&!object.contains("annotationReferenceSchema")),"Annotazioni estranee allo schema dichiarato.");
         require(schema!=6||object.contains("annotations"),"Annotazioni del foglio assenti.");
@@ -170,6 +171,8 @@ QString decodeDrawingSheet(const QByteArray &bytes,DrawingSheet &sheet){
         require(schema>=8||!object.contains("style"),"Stile estraneo allo schema del foglio.");
         require(schema>=9||!object.contains("dimensionSpacing"),"Distanze quote estranee allo schema del foglio.");
         require(schema!=9||object.contains("dimensionSpacing"),"Distanze quote assenti.");
+        require(schema>=12||!object.contains("dimensionText"),"Posizione del testo quota estranea allo schema dichiarato.");
+        require(schema!=12||object.contains("dimensionText"),"Impostazioni testo quota assenti.");
         DrawingSheet prepared;
         if(object.contains("style")){
             require(object["style"].isObject(),"Stile del foglio non valido.");const auto s=object["style"].toObject();
@@ -181,6 +184,11 @@ QString decodeDrawingSheet(const QByteArray &bytes,DrawingSheet &sheet){
             require(object["dimensionSpacing"].isObject(),"Distanze quote non valide.");const auto spacing=object["dimensionSpacing"].toObject();
             require(spacing.size()==2&&spacing["extensionGap"].isDouble()&&spacing["dimensionOffset"].isDouble(),"Distanze quote incomplete.");
             prepared.style.extensionGap=spacing["extensionGap"].toDouble();prepared.style.dimensionOffset=spacing["dimensionOffset"].toDouble();
+        }
+        if(object.contains("dimensionText")){
+            require(object["dimensionText"].isObject(),"Impostazioni testo quota non valide.");const auto text=object["dimensionText"].toObject();
+            require(text.size()==3&&text["orientation"].isDouble()&&text["orientation"].toDouble()==text["orientation"].toInt(-1)&&text["position"].isDouble()&&text["position"].toDouble()==text["position"].toInt(-1)&&text["gap"].isDouble(),"Impostazioni testo quota incomplete.");
+            prepared.style.dimensionTextOrientation=DrawingTextOrientation(text["orientation"].toInt());prepared.style.dimensionTextPosition=DrawingTextPosition(text["position"].toInt());prepared.style.dimensionTextGap=text["gap"].toDouble();
         }
         prepared.title=object["title"].toString();const auto size=readPoint(object["size"]);prepared.size=QSizeF(size.x(),size.y());
         if(object.contains("titleBlock")){require(object["titleBlock"].isObject(),"Cartiglio non valido.");const auto block=object["titleBlock"].toObject();require(block["visible"].isBool(),"Visibilita' del cartiglio non valida.");

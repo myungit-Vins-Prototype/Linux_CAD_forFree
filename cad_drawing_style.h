@@ -4,6 +4,8 @@
 #include <QFont>
 #include <cmath>
 namespace ForgeCad {
+enum class DrawingTextOrientation { Horizontal, Aligned };
+enum class DrawingTextPosition { Centered, Above, Below };
 enum class DrawingArrowStyle { Open, Filled, Closed, Tick };
 struct DrawingStyle {
     QString fontFamily=QStringLiteral("DejaVu Sans");
@@ -11,10 +13,15 @@ struct DrawingStyle {
     DrawingArrowStyle arrow=DrawingArrowStyle::Open;
     bool titleSnaps=true;
     double extensionGap=0,dimensionOffset=0; // mm sul foglio, zero conserva il layout precedente
-    bool operator==(const DrawingStyle &s)const{return fontFamily==s.fontFamily&&dimensionHeight==s.dimensionHeight&&viewTitleHeight==s.viewTitleHeight&&arrowLength==s.arrowLength&&titleGap==s.titleGap&&arrow==s.arrow&&titleSnaps==s.titleSnaps&&extensionGap==s.extensionGap&&dimensionOffset==s.dimensionOffset;}
+    DrawingTextOrientation dimensionTextOrientation=DrawingTextOrientation::Horizontal;
+    DrawingTextPosition dimensionTextPosition=DrawingTextPosition::Centered;
+    double dimensionTextGap=.8; // mm sul foglio
+    bool textLayoutActive()const{return dimensionTextOrientation!=DrawingTextOrientation::Horizontal||dimensionTextPosition!=DrawingTextPosition::Centered||dimensionTextGap!=.8;}
+    bool operator==(const DrawingStyle &s)const{return fontFamily==s.fontFamily&&dimensionHeight==s.dimensionHeight&&viewTitleHeight==s.viewTitleHeight&&arrowLength==s.arrowLength&&titleGap==s.titleGap&&arrow==s.arrow&&titleSnaps==s.titleSnaps&&extensionGap==s.extensionGap&&dimensionOffset==s.dimensionOffset&&dimensionTextOrientation==s.dimensionTextOrientation&&dimensionTextPosition==s.dimensionTextPosition&&dimensionTextGap==s.dimensionTextGap;}
     bool active()const{return !(*this==DrawingStyle{});}
 };
 inline QString validateDrawingStyle(const DrawingStyle &s){
+    if(int(s.dimensionTextOrientation)<0||int(s.dimensionTextOrientation)>1||int(s.dimensionTextPosition)<0||int(s.dimensionTextPosition)>2||!std::isfinite(s.dimensionTextGap)||s.dimensionTextGap<0||s.dimensionTextGap>20)return QStringLiteral("Orientamento, posizione o distanza del testo quota non validi.");
     for(double x:{s.extensionGap,s.dimensionOffset})if(!std::isfinite(x)||x<0||x>100)return QStringLiteral("Distanza delle quote non valida (0–100 mm sul foglio).");
     if(s.fontFamily.trimmed().isEmpty()||s.fontFamily.size()>256)return QStringLiteral("Famiglia del carattere non valida.");
     for(auto c:s.fontFamily)if(!c.isPrint())return QStringLiteral("Famiglia del carattere non stampabile.");
