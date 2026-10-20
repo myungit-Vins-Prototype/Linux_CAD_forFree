@@ -5,6 +5,7 @@
 #include <atomic>
 #include <algorithm>
 #include <cstring>
+#include <memory>
 #include <mutex>
 #include <vector>
 
@@ -216,39 +217,56 @@ struct Slot {
     cudaStream_t stream = nullptr;
     double *host = nullptr, *device = nullptr;
     std::size_t capacity = 0;  // in double
+    Slot() = default;
+    Slot(const Slot &) = delete;
+    Slot &operator=(const Slot &) = delete;
+
+    void releaseBuffers() noexcept {
+        if (host) cudaFreeHost(host);
+        if (device) cudaFree(device);
+        host = device = nullptr;
+        capacity = 0;
+    }
+    ~Slot() {
+        releaseBuffers();
+        if (stream) cudaStreamDestroy(stream);
+    }
 };
 
-std::mutex slotMutex;
-std::vector<Slot *> freeSlots;
+struct SlotPool {
+    std::mutex mutex;
+    std::vector<std::unique_ptr<Slot>> freeSlots;
+};
 
-Slot *acquireSlot(std::size_t doubles) {
-    Slot *slot = nullptr;
+SlotPool &slotPool() {
+    // Come prima, la cache resta viva fino al termine del processo. Evita
+    // distruttori statici CUDA dopo l'arresto del runtime o con worker attivi;
+    // budget e svuotamento esplicito richiedono una politica separata.
+    static SlotPool *const pool = new SlotPool;
+    return *pool;
+}
+
+std::unique_ptr<Slot> acquireSlot(std::size_t doubles) {
+    std::unique_ptr<Slot> slot;
     {
-        std::lock_guard<std::mutex> lock(slotMutex);
-        if (!freeSlots.empty()) {
-            slot = freeSlots.back();
-            freeSlots.pop_back();
+        auto &pool = slotPool();
+        std::lock_guard<std::mutex> lock(pool.mutex);
+        if (!pool.freeSlots.empty()) {
+            slot = std::move(pool.freeSlots.back());
+            pool.freeSlots.pop_back();
         }
     }
     if (!slot) {
-        slot = new Slot;
+        slot = std::make_unique<Slot>();
         if (cudaStreamCreateWithFlags(&slot->stream, cudaStreamNonBlocking) != cudaSuccess) {
-            delete slot;
             return nullptr;
         }
     }
     if (slot->capacity < doubles) {
-        cudaFreeHost(slot->host);
-        cudaFree(slot->device);
-        slot->host = slot->device = nullptr;
-        slot->capacity = 0;
+        slot->releaseBuffers();
         const std::size_t capacity = std::max<std::size_t>(doubles, std::size_t(1) << 16);
         if (cudaMallocHost(&slot->host, capacity * sizeof(double)) != cudaSuccess ||
             cudaMalloc(&slot->device, capacity * sizeof(double)) != cudaSuccess) {
-            cudaFreeHost(slot->host);
-            cudaFree(slot->device);
-            cudaStreamDestroy(slot->stream);
-            delete slot;
             return nullptr;
         }
         slot->capacity = capacity;
@@ -256,17 +274,29 @@ Slot *acquireSlot(std::size_t doubles) {
     return slot;
 }
 
-void releaseSlot(Slot *slot) {
-    std::lock_guard<std::mutex> lock(slotMutex);
-    freeSlots.push_back(slot);
+void releaseSlot(Slot *raw) noexcept {
+    std::unique_ptr<Slot> slot(raw);
+    if (!slot) return;
+    try {
+        auto &pool = slotPool();
+        std::lock_guard<std::mutex> lock(pool.mutex);
+        pool.freeSlots.push_back(std::move(slot));
+    } catch (...) {
+        // Se il vettore non puo' crescere, distruggi lo slot gia' sincronizzato
+        // fuori dal lock. La restituzione non deve lanciare da un distruttore.
+    }
 }
+
+struct ReturnSlot {
+    void operator()(Slot *slot) const noexcept { releaseSlot(slot); }
+};
 
 }
 
 bool forgecad_cuda_evaluate_surface(void *handle, const double *uv, std::size_t count, double *points, double *normals) {
     auto *device = static_cast<DeviceSurface *>(handle);
     if (!device || count == 0 || count > std::size_t(1) << 28 || broken.load()) return false;
-    Slot *slot = acquireSlot(8 * count);
+    const std::unique_ptr<Slot, ReturnSlot> slot(acquireSlot(8 * count).release());
     if (!slot) return fail();
     // Ingresso: (u, v); uscita: punti e normali, consecutivi.
     double *hostUV = slot->host, *hostOut = slot->host + 2 * count;
@@ -285,6 +315,5 @@ bool forgecad_cuda_evaluate_surface(void *handle, const double *uv, std::size_t 
         std::memcpy(points, hostOut, 3 * count * sizeof(double));
         std::memcpy(normals, hostOut + 3 * count, 3 * count * sizeof(double));
     }
-    releaseSlot(slot);
     return ok ? true : fail();
 }

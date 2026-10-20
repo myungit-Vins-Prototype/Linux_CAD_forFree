@@ -533,7 +533,6 @@ public:
         }
         update();
     }
-    bool sketchViewRotated() const { return sketchViewRotated_; }
     void setOriginSnap(bool enabled) { originSnap_ = enabled; }
     bool originSnap() const { return originSnap_; }
 
@@ -555,7 +554,6 @@ public:
     // Lo strumento dello schizzo e' cambiato dal viewport (apertura dello
     // schizzo, Esc, linea chiusa su un punto): la finestra aggiorna i menu.
     void setToolChangedCallback(std::function<void(DrawingTool)> callback) { toolChangedCallback_ = std::move(callback); }
-    DrawingTool drawingTool() const { return drawingTool_; }
     void setSketchModeCallback(std::function<void(bool)> callback) {
         sketchModeCallback_ = std::move(callback);
     }
