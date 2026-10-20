@@ -52,14 +52,20 @@ DrawingDimension last(const DrawingSheetEditor &editor){require(!editor.sheet().
 #include "test_drawing_navigation_contours.h"
 #include "test_drawing_apparent_radii.h"
 #include "test_drawing_text_layout.h"
+#include "test_drawing_angular_extensions.h"
+#include "test_drawing_angular_center.h"
+#include "test_drawing_dimension_center.h"
 int main(int argc,char **argv){QApplication app(argc,argv);try{
     const double angle=kPi/6;DrawingEditorModel model;model.snapshot.version={QUuid::createUuid(),{}};model.snapshot.bodies={source(makeBox(Frame3(),10,6,4),1),source(makePlaneSheet(Frame3(Vec3(18,0,0),Vec3(0,0,1),Vec3(std::cos(angle),std::sin(angle),0)),4),2),source(makeCylinder(Frame3(Vec3(35,0,0),Vec3(0,0,1),Vec3(1,0,0)),3,8),3)};model.choices={{1,"Corpo"},{2,"Superficie ruotata"},{3,"Cilindro"}};
     DrawingSheet sheet;sheet.title="Quotatura associativa";sheet.drawing.model=model.snapshot.version;DrawingSheetEditor editor(sheet,model);editor.resize(1450,900);editor.show();QApplication::processEvents();DrawingView view;view.kind=DrawingViewKind::ProjectedEdges;view.scale=3;ok(editor.insertView(view,{view.id,"Superiore",QPointF(75,120),{1,2,3}}));editor.fitSheet();QApplication::processEvents();editor.markSaved();
     mode(editor,int(DrawingMeasure::Distance));move(editor,paper({0,0})+QPointF(.3,.2));require(items(editor,"dimensionSnap")==1&&!editor.isModified(),"snap visibile senza sporcare il foglio");
     key(editor,Qt::Key_Tab);require(items(editor,"dimensionSnap")==1,"Tab cicla i riferimenti sovrapposti");click(editor,paper({0,0})+QPointF(.3,.2));click(editor,paper({10,6})+QPointF(-.25,.2));move(editor,QPointF(99,70));require(items(editor,"dimensionPreview")==1&&editor.sheet().drawing.dimensions.empty(),"anteprima punto-punto prima del posizionamento");
     click(editor,QPointF(99,70));require(editor.sheet().drawing.dimensions.size()==1,"tre clic inseriscono la quota");auto diagonal=last(editor);near(editor.dimensionResult(diagonal.id).value,std::sqrt(136.),"snap estremi esatti indipendentemente dal pixel");require(diagonal.references.size()==2,"entrambi gli agganci persistenti");
-    QPointF textCenter;for(auto *item:editor.canvas()->scene()->items())if(item->data(0).toString()=="dimension"&&item->data(3).toUuid()==diagonal.id)textCenter=item->sceneBoundingRect().center();
-    bool attachedText=false;for(auto *item:editor.canvas()->scene()->items())if(auto *line=qgraphicsitem_cast<QGraphicsLineItem *>(item))if(QLineF(line->line().p1(),textCenter).length()<1e-7||QLineF(line->line().p2(),textCenter).length()<1e-7)attachedText=true;require(attachedText,"testo esterno collegato alla linea di quota");const auto one=encoded(editor);ok(editor.undo());require(editor.sheet().drawing.dimensions.empty(),"inserimento interattivo come unico undo");ok(editor.redo());require(encoded(editor)==one,"redo conserva agganci e ID");
+    const auto one=encoded(editor);ok(editor.undo());require(editor.sheet().drawing.dimensions.empty(),"inserimento interattivo come unico undo");ok(editor.redo());require(encoded(editor)==one,"redo conserva agganci e ID");
+    // Il nuovo inserimento e' centrato: sposta esplicitamente il valore fuori
+    // dagli estremi per conservare la regressione del collegamento esterno.
+    QApplication::processEvents();const auto offset=dimensionTextItem(editor,diagonal.id)->data(6).toPointF()-editor.sheet().dimensions[0].position;ok(editor.moveDimension(diagonal.id,QPointF(99,70)-offset));QApplication::processEvents();const auto textCenter=dimensionTextItem(editor,diagonal.id)->sceneBoundingRect().center();
+    bool attachedText=false;for(auto *item:editor.canvas()->scene()->items())if(auto *line=qgraphicsitem_cast<QGraphicsLineItem *>(item))if(QLineF(line->line().p1(),textCenter).length()<1e-7||QLineF(line->line().p2(),textCenter).length()<1e-7)attachedText=true;require(attachedText,"testo esterno collegato alla linea di quota");
     // Punto-retta: Maiusc sceglie la retta invece del suo punto medio.
     mode(editor,int(DrawingMeasure::Distance));click(editor,paper({10,6}));click(editor,paper({3,0}),Qt::ShiftModifier);click(editor,QPointF(125,95));auto perpendicular=last(editor);near(editor.dimensionResult(perpendicular.id).value,6,"quota linea-punto dalla GUI");require(perpendicular.references[1].role==DrawingPointRole::Curve,"Maiusc forza riferimento alla retta");
     mode(editor,int(DrawingMeasure::Distance));click(editor,paper({3,0}),Qt::ShiftModifier);click(editor,paper({10,6}));click(editor,QPointF(140,95));near(editor.dimensionResult(last(editor).id).value,6,"linea scelta prima del punto");
@@ -97,6 +103,9 @@ int main(int argc,char **argv){QApplication app(argc,argv);try{
     drawingFlaconeInteractionTests();
     drawingSegmentSpacingTests();
     drawingTextLayoutTests();
+    drawingAngularExtensionTests();
+    drawingAngularCenterTests();
+    drawingAllDimensionCenterTests();
     drawingSectionRadiusTests();
     const auto preview=qEnvironmentVariable("FORGECAD_DIMENSION_PREVIEW");if(!preview.isEmpty()){QApplication::processEvents();editor.fitSheet();require(editor.grab().save(preview),"anteprima quotatura completa");}
     std::cout<<"PASS mouse snaps, point-point/line-point, radial/angular dimensions, properties, persistence and history\n";
