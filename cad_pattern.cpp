@@ -104,6 +104,7 @@ ForgeBody uniteAll(std::vector<ForgeBody> bodies) {
 bool patternPlacements(const PatternParameters &p, int owner, const QVector<SketchObject> &sketches, const QVector<ExtrusionObject> &bodies,
                        std::vector<Transform3> &placements, QString *error) {
     placements.clear();
+    constexpr quint64 maximumPlacements = 500;
     const auto resolve = [&](int k, ResolvedRef &r) {
         if (k >= p.refs.size() || p.refs.at(k).kind < 0) {
             setError(error, k == 0 ? QStringLiteral("Manca il riferimento della ripetizione.") : QStringLiteral("Manca la seconda direzione."));
@@ -129,13 +130,20 @@ bool patternPlacements(const PatternParameters &p, int owner, const QVector<Sket
     };
     switch (p.kind) {
     case 0: {
-        if (p.count < 1 || p.count2 < 1 || p.count * p.count2 < 2) return setError(error, QStringLiteral("Servono almeno due istanze.")), false;
+        if (p.count < 1 || p.count2 < 1 || (p.count == 1 && p.count2 == 1))
+            return setError(error, QStringLiteral("Servono almeno due istanze.")), false;
+        // Conta prima di generare o risolvere la geometria. La divisione evita
+        // anche l'overflow del prodotto dei conteggi letti dal documento.
+        if (quint64(p.count) > (maximumPlacements + 1) / quint64(p.count2))
+            return setError(error, QStringLiteral("Troppe istanze (al massimo 500).")), false;
+        const auto copies = std::size_t(p.count) * std::size_t(p.count2) - 1;
         if (!(std::fabs(p.spacing) > 1e-9) || (p.count2 > 1 && !(std::fabs(p.spacing2) > 1e-9)))
             return setError(error, QStringLiteral("Il passo deve essere diverso da zero.")), false;
         Vec3 d1, d2;
         if (!direction(0, p.flip, d1)) return false;
         if (p.count2 > 1 && !direction(1, p.flip2, d2)) return false;
         if (p.count2 > 1 && norm(cross(d1, d2)) < 1e-9) return setError(error, QStringLiteral("Le due direzioni sono parallele.")), false;
+        placements.reserve(copies);
         for (int j = 0; j < p.count2; ++j)
             for (int i = 0; i < p.count; ++i)
                 if (i > 0 || j > 0) placements.push_back(Transform3::translation(i * p.spacing * d1 + j * p.spacing2 * d2));
@@ -143,6 +151,8 @@ bool patternPlacements(const PatternParameters &p, int owner, const QVector<Sket
     }
     case 1: {
         if (p.count < 2) return setError(error, QStringLiteral("Servono almeno due istanze.")), false;
+        if (quint64(p.count) - 1 > maximumPlacements)
+            return setError(error, QStringLiteral("Troppe istanze (al massimo 500).")), false;
         ResolvedRef r;
         if (!resolve(0, r)) return false;
         if (!r.hasLine) return setError(error, QStringLiteral("L'asse deve essere una retta (asse del modello, spigolo rettilineo, faccia cilindrica o conica, segmento).")), false;
@@ -150,6 +160,7 @@ bool patternPlacements(const PatternParameters &p, int owner, const QVector<Sket
         if (p.spread) step = std::fabs(std::fabs(p.angle) - 360.0) < 1e-9 ? p.angle / p.count : p.angle / (p.count - 1);
         if (!(std::fabs(step) > 1e-9)) return setError(error, QStringLiteral("L'angolo deve essere diverso da zero.")), false;
         const Vec3 axis = p.flip ? -r.direction : r.direction;
+        placements.reserve(std::size_t(p.count) - 1);
         for (int i = 1; i < p.count; ++i) placements.push_back(Transform3::rotation(r.point, axis, i * step * kPi / 180.0));
         break;
     }
@@ -163,7 +174,6 @@ bool patternPlacements(const PatternParameters &p, int owner, const QVector<Sket
     default:
         return setError(error, QStringLiteral("Tipo di ripetizione non valido.")), false;
     }
-    if (placements.size() > 500) return setError(error, QStringLiteral("Troppe istanze (al massimo 500).")), false;
     return true;
 }
 

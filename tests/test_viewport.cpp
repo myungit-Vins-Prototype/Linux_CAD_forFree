@@ -61,6 +61,7 @@ static QString exampleDocumentPath(const char *name) {
 #include "test_drawing_section_model.h"
 #include "document_regression.h"
 #include "test_document_read.h"
+#include "test_pattern_placements.h"
 class ViewportInteractionTest {
 public:
     static void previewPerformance() {
@@ -9322,6 +9323,11 @@ int main(int argc, char **argv) {
     QTemporaryDir settings;
     QSettings::setDefaultFormat(QSettings::IniFormat);
     QSettings::setPath(QSettings::IniFormat, QSettings::UserScope, settings.path());
+    if (app.arguments().contains(QStringLiteral("--pattern-placements"))) {
+        try { patternPlacementTests(); }
+        catch (const std::exception &error) { std::cerr << error.what() << std::endl; return 1; }
+        return 0;
+    }
     if (app.arguments().contains(QStringLiteral("--document-read")) || app.arguments().contains(QStringLiteral("--document-read-memory"))) {
         try {
             if (app.arguments().contains(QStringLiteral("--document-read-memory"))) documentReadMemoryTest();

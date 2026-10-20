@@ -16,6 +16,8 @@ namespace ForgeCad {
 // Le trasformazioni delle istanze oltre all'originale (per lo specchio la
 // simmetria), dai riferimenti risolti sulla geometria del corpo `owner`
 // (i corpi dei riferimenti hanno indice minore).
+// Massimo 500 trasformazioni oltre all'originale. Conteggi fuori limite
+// rifiutati prima delle allocazioni; su errore l'output e' vuoto.
 bool patternPlacements(const PatternParameters &pattern, int owner, const QVector<SketchObject> &sketches, const QVector<ExtrusionObject> &bodies,
                        std::vector<Kernel::Transform3> &placements, QString *error);
 
