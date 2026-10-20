@@ -5,6 +5,7 @@
 #include <QDataStream>
 #include <QHash>
 #include <QVector>
+#include <limits>
 
 namespace ForgeCad {
 
@@ -22,11 +23,13 @@ private:
 
 class SnapshotChunkReader {
 public:
-    explicit SnapshotChunkReader(QDataStream &stream) : stream_(stream) {}
+    explicit SnapshotChunkReader(QDataStream &stream, qsizetype maximumBytes = std::numeric_limits<qint32>::max())
+        : stream_(stream), remainingBytes_(maximumBytes) {}
     QByteArray read();
 private:
     QDataStream &stream_;
     QVector<QByteArray> chunks_;
+    qsizetype remainingBytes_;
 };
 
 }

@@ -46,6 +46,29 @@ int main() {
             SnapshotChunkReader truncatedReader(truncated);
             require(truncatedReader.read().isEmpty() && truncated.status() != QDataStream::Ok, "truncated record rejected");
         }
+        QByteArray repeated;
+        QDataStream repeatedOut(&repeated, QIODevice::WriteOnly);
+        repeatedOut.setVersion(QDataStream::Qt_6_0);
+        SnapshotChunkWriter repeatedWriter(repeatedOut);
+        repeatedWriter.write(bytes); repeatedWriter.write(bytes);
+        QDataStream limitedIn(repeated);
+        limitedIn.setVersion(QDataStream::Qt_6_0);
+        SnapshotChunkReader limitedReader(limitedIn, 2 * bytes.size() - 1);
+        require(limitedReader.read() == bytes, "first record within budget");
+        require(limitedReader.read().isEmpty() && limitedIn.status() != QDataStream::Ok,
+                "references count against cumulative expansion budget");
+        QDataStream exactIn(repeated);
+        exactIn.setVersion(QDataStream::Qt_6_0);
+        SnapshotChunkReader exactReader(exactIn, 2 * bytes.size());
+        require(exactReader.read() == bytes && exactReader.read() == bytes && exactIn.atEnd(), "exact expansion budget accepted");
+        for (quint32 length : {quint32(32769), quint32(0x7fffffff), quint32(0xffffffff)}) {
+            QByteArray invalid;
+            QDataStream badOut(&invalid, QIODevice::WriteOnly);
+            badOut << quint32(1) << quint32(1) << qint32(-1) << length;
+            QDataStream badIn(invalid);
+            SnapshotChunkReader badReader(badIn);
+            require(badReader.read().isEmpty() && badIn.status() != QDataStream::Ok, "chunk length checked before allocation");
+        }
         std::cout << "PASS snapshot chunks: exact round trip, shifted duplicates, corrupt input" << std::endl;
     } catch (const std::exception &error) { std::cerr << error.what() << std::endl; return 1; }
 }

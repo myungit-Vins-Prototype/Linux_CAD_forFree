@@ -1,4 +1,5 @@
 #include "cad_document_io.h"
+#include "cad_document_read.h"
 #include "cad_workspace.h"
 
 #include <cmath>
@@ -28,6 +29,8 @@
 
 namespace ForgeCad {
 namespace {
+
+using ReadStream = DocumentReadDetail::DataStream;
 
 constexpr char kMagic[4] = {'F', 'C', 'A', 'D'};
 // Versioni: 1 prima; 2 aggiunge il piano degli schizzi su una faccia (SketchFrame, faceSource);
@@ -77,7 +80,7 @@ void write(QDataStream &out, const CurveObject &curve) {
     out << curve.tangentLinked;                  // formato 16
 }
 
-void read(QDataStream &in, CurveObject &curve, quint16 version) {
+void read(ReadStream &in, CurveObject &curve, quint16 version) {
     qint32 tool = 0, sides = 0;
     in >> tool >> curve.controlPoints >> curve.weights >> curve.tangentHandles >> sides >> curve.construction;
     curve.tool = DrawingTool(tool);
@@ -95,14 +98,14 @@ void write(QDataStream &out, const CoincidentConstraint &c) {
         << qint32(c.secondElement) << qint32(c.secondPoint);
 }
 
-void read(QDataStream &in, CoincidentConstraint &c) {
+void read(ReadStream &in, CoincidentConstraint &c) {
     qint32 v[6] = {};
     for (qint32 &value : v) in >> value;
     c = {v[0], v[1], v[2], v[3], v[4], v[5]};
 }
 
 void writeRef(QDataStream &out, const ConstraintRef &r) { out << qint32(r.kind) << qint32(r.element) << qint32(r.point); }
-void readRef(QDataStream &in, ConstraintRef &r) {
+void readRef(ReadStream &in, ConstraintRef &r) {
     qint32 kind = -1, element = -1, point = -1;
     in >> kind >> element >> point;
     r = {kind, element, point};
@@ -111,7 +114,7 @@ void readRef(QDataStream &in, ConstraintRef &r) {
 void writePathRef(QDataStream &out, const SketchPathRef &path) {
     out << qint32(path.sketch) << path.segments << path.curves;
 }
-bool readPathRef(QDataStream &in, SketchPathRef &path) {
+bool readPathRef(ReadStream &in, SketchPathRef &path) {
     qint32 sketch = -1;
     in >> sketch >> path.segments >> path.curves;
     path.sketch = sketch;
@@ -128,16 +131,16 @@ void writePattern(QDataStream &out, const SketchPatternData &p) {
     out << p.directionAngle << p.directionAngle2 << p.centerPoint << p.axisPoint << p.axisDirection;
 }
 
-bool readCount(QDataStream &in, quint32 &count);
+bool readCount(ReadStream &in, quint32 &count, quint32 minimumBytes = 1);
 
-bool readPattern(QDataStream &in, SketchPatternData &p) {
+bool readPattern(ReadStream &in, SketchPatternData &p) {
     qint32 kind = 0, count = 0, count2 = 0;
     quint32 n = 0;
     in >> kind;
-    if (!readCount(in, n)) return false;
+    if (!readCount(in, n, 12)) return false;
     p.sources.resize(int(n));
     for (ConstraintRef &r : p.sources) readRef(in, r);
-    if (!readCount(in, n)) return false;
+    if (!readCount(in, n, 12)) return false;
     p.copies.resize(int(n));
     for (ConstraintRef &r : p.copies) readRef(in, r);
     in >> count >> count2 >> p.spacing >> p.spacing2 >> p.angle >> p.spread >> p.dimensioned >> p.dimensioned2;
@@ -150,7 +153,7 @@ bool readPattern(QDataStream &in, SketchPatternData &p) {
 }
 
 void writeRefs(QDataStream &out, const QVector<GeometryRef> &refs);
-bool readRefs(QDataStream &in, QVector<GeometryRef> &refs, quint16 version);
+bool readRefs(ReadStream &in, QVector<GeometryRef> &refs, quint16 version);
 
 void write(QDataStream &out, const SketchObject &sketch) {
     out << sketch.name << qint32(sketch.plane) << sketch.segments << sketch.constraints << sketch.segmentLengths
@@ -191,22 +194,22 @@ void write(QDataStream &out, const SketchObject &sketch) {
     out << sketch.symmetryAxes;        // formato 13
 }
 
-// Numero di elementi di un vettore, rifiutato se il file e' finito o troppo corto.
-bool readCount(QDataStream &in, quint32 &count) {
-    in >> count;
-    return in.status() == QDataStream::Ok && count <= quint32(in.device()->bytesAvailable());
+// Dimensione minima serializzata, mai sizeof dell'oggetto in memoria.
+bool readCount(ReadStream &in, quint32 &count, quint32 minimumBytes) {
+    return in.readCount(count, minimumBytes);
 }
 
-bool read(QDataStream &in, SketchObject &sketch, quint16 version) {
+bool read(ReadStream &in, SketchObject &sketch, quint16 version) {
     qint32 plane = 0;
     in >> sketch.name >> plane >> sketch.segments >> sketch.constraints >> sketch.segmentLengths >> sketch.segmentAngles
         >> sketch.visible >> sketch.constructionSegments;
     sketch.plane = plane;
     quint32 count = 0;
-    if (!readCount(in, count)) return false;
-    sketch.curves.resize(int(count));
-    for (CurveObject &curve : sketch.curves) read(in, curve, version);
-    if (!readCount(in, count)) return false;
+    if (!readCount(in, count, 21)) return false; // campi obbligatori di CurveObject anche nel formato 1
+    if (!in.readRecords(sketch.curves, count, [&](CurveObject &curve) {
+        read(in, curve, version); return in.status() == QDataStream::Ok;
+    })) return false;
+    if (!readCount(in, count, 24)) return false;
     sketch.coincidentConstraints.resize(int(count));
     for (CoincidentConstraint &c : sketch.coincidentConstraints) read(in, c);
     if (version >= 2) {
@@ -218,9 +221,8 @@ bool read(QDataStream &in, SketchObject &sketch, quint16 version) {
     if (version >= 4) in >> sketch.customFrame;
     if (version >= 3) {
         quint32 constraintCount = 0;
-        if (!readCount(in, constraintCount)) return false;
-        sketch.geometricConstraints.resize(int(constraintCount));
-        for (SketchConstraint &c : sketch.geometricConstraints) {
+        if (!readCount(in, constraintCount, 40)) return false;
+        if (!in.readRecords(sketch.geometricConstraints, constraintCount, [&](SketchConstraint &c) {
             qint32 type = 0;
             in >> type;
             c.type = ConstraintType(type);
@@ -241,9 +243,10 @@ bool read(QDataStream &in, SketchObject &sketch, quint16 version) {
                     data->surface=refs.first();
                     quint32 n=0;
                     in >> data->name >> data->error >> data->segments;
-                    if (!readCount(in,n)) return false;
-                    data->curves.resize(int(n));
-                    for (auto &curve : data->curves) read(in,curve,version);
+                    if (!readCount(in,n,21)) return false;
+                    if (!in.readRecords(data->curves, n, [&](CurveObject &curve) {
+                        read(in, curve, version); return in.status() == QDataStream::Ok;
+                    })) return false;
                     c.pierce=data;
                 }
             }
@@ -257,15 +260,16 @@ bool read(QDataStream &in, SketchObject &sketch, quint16 version) {
             if (c.type == ConstraintType::Offset) {
                 if (version < 37) return false;
                 quint32 n = 0;
-                if (!readCount(in,n)) return false;
+                if (!readCount(in,n,12)) return false;
                 c.offset.sources.resize(int(n));
                 for (auto &r : c.offset.sources) readRef(in,r);
-                if (!readCount(in,n)) return false;
+                if (!readCount(in,n,12)) return false;
                 c.offset.copies.resize(int(n));
                 for (auto &r : c.offset.copies) readRef(in,r);
                 in >> c.offset.reverse >> c.offset.bothSides >> c.offset.roundCorners;
             }
-        }
+            return in.status() == QDataStream::Ok;
+        })) return false;
     }
     if (version >= 8) {
         qint32 datum = -1;
@@ -292,9 +296,9 @@ void writeRefs(QDataStream &out, const QVector<GeometryRef> &refs) {
             << r.point.z << r.featureId << qint32(r.point.subshape) << qint32(r.point.geometry) << qint32(r.point.context);
 }
 
-bool readRefs(QDataStream &in, QVector<GeometryRef> &refs, quint16 version) {
+bool readRefs(ReadStream &in, QVector<GeometryRef> &refs, quint16 version) {
     quint32 count = 0;
-    if (!readCount(in, count)) return false;
+    if (!readCount(in, count, version >= 20 ? 64 : 44)) return false;
     refs.resize(int(count));
     for (GeometryRef &r : refs) {
         qint32 kind = -1, index = -1, elementKind = -1, element = -1, point = -1;
@@ -465,7 +469,7 @@ void write(QDataStream &out, const ExtrusionObject &body) {
 
 // `extras` (solo formato 5): i file scritti durante lo sviluppo del formato 5
 // possono avere anche i campi della scala (1) e dello smusso (2).
-bool read(QDataStream &in, ExtrusionObject &body, quint16 version, int extras) {
+bool read(ReadStream &in, ExtrusionObject &body, quint16 version, int extras) {
     qint32 sketchIndex = 0, plane = 0, operation = 0, feature = 0, revolveAxis = 0;
     in >> body.name >> sketchIndex >> plane >> body.distance >> body.visible >> operation >> feature >> revolveAxis
         >> body.revolveAngle;
@@ -483,7 +487,7 @@ bool read(QDataStream &in, ExtrusionObject &body, quint16 version, int extras) {
     for (double &v : p.size) in >> v;
     quint32 count = 0;
     in >> body.blendChamfer >> body.blendSize;
-    if (!readCount(in, count)) return false;
+    if (!readCount(in, count, 24)) return false;
     body.blendEdges.resize(int(count));
     for (EdgePoint &e : body.blendEdges) in >> e.x >> e.y >> e.z;
     qint32 first = -1, second = -1;
@@ -518,7 +522,7 @@ bool read(QDataStream &in, ExtrusionObject &body, quint16 version, int extras) {
         body.pathSketch = pathSketch;
         body.sweepMode = sweepMode;
         quint32 sections = 0;
-        if (!readCount(in, sections)) return false;
+        if (!readCount(in, sections, 4)) return false;
         body.loftSketches.clear();
         for (quint32 k = 0; k < sections; ++k) {
             qint32 sketch = -1;
@@ -569,7 +573,7 @@ bool read(QDataStream &in, ExtrusionObject &body, quint16 version, int extras) {
     }
     if (version >= 15) {
         quint32 guides = 0;
-        if (!readCount(in, guides)) return false;
+        if (!readCount(in, guides, 4)) return false;
         body.loftGuides.clear();
         for (quint32 k = 0; k < guides; ++k) {
             qint32 sketch = -1;
@@ -587,7 +591,7 @@ bool read(QDataStream &in, ExtrusionObject &body, quint16 version, int extras) {
     if (version >= 17) {
         quint32 paths = 0;
         in >> body.pathSegments >> body.pathCurves;
-        if (!readCount(in, paths)) return false;
+        if (!readCount(in, paths, 12)) return false;
         body.loftGuidePaths.clear();
         for (quint32 k = 0; k < paths; ++k) {
             SketchPathRef path;
@@ -617,7 +621,7 @@ bool read(QDataStream &in, ExtrusionObject &body, quint16 version, int extras) {
     }
     if (version >= 23) {
         quint32 faces = 0;
-        if (!readCount(in, faces)) return false;
+        if (!readCount(in, faces, 36)) return false;
         body.offsetFaces.resize(int(faces));
         for (EdgePoint &e : body.offsetFaces) {
             qint32 subshape = -1, geometry = -1, context = -1;
@@ -700,7 +704,7 @@ bool read(QDataStream &in, ExtrusionObject &body, quint16 version, int extras) {
     if (version >= 42 && (!readRefs(in, body.loftSections, version) || !readRefs(in, body.loftEdgeGuides, version))) return false;
     if (version >= 43) {
         quint32 count;
-        if (!readCount(in, count)) return false;
+        if (!readCount(in, count, 4)) return false;
         const int total = body.loftGuides.size() + body.loftGuidePaths.size() + body.loftEdgeGuides.size();
         if (count && count != quint32(total)) return false;
         QVector<bool> seen(total, false);
@@ -723,12 +727,12 @@ bool read(QDataStream &in, ExtrusionObject &body, quint16 version, int extras) {
     }
     if(version>=45) {
         qint32 next;quint32 count;
-        in >> next;if(next<1 || !readCount(in,count))return false;
+        in >> next;if(next<1 || !readCount(in,count,10))return false;
         body.spatialSketch.nextId=next;QSet<int> ids;
         for(quint32 k=0;k<count;++k) {
             SpatialCurve3D entity;qint32 id;quint32 points;
             in >> id >> entity.spline >> entity.closed;
-            if(id<=0 || id>=next || ids.contains(id) || !readCount(in,points))return false;
+            if(id<=0 || id>=next || ids.contains(id) || !readCount(in,points,24))return false;
             ids.insert(id);entity.id=id;
             for(quint32 j=0;j<points;++j) {
                 SpatialPoint point;in >> point.x >> point.y >> point.z;
@@ -741,11 +745,11 @@ bool read(QDataStream &in, ExtrusionObject &body, quint16 version, int extras) {
     if (version >= 46) {
         const int total = body.loftGuides.size() + body.loftGuidePaths.size() + body.loftEdgeGuides.size();
         quint32 count;
-        if (!readCount(in, count) || (count && count != quint32(total))) return false;
+        if (!readCount(in, count, 4) || (count && count != quint32(total))) return false;
         for (quint32 i = 0; i < count; ++i) { qint32 value; in >> value; if (value < 0 || value > 2) return false; body.loftGuideContinuities.append(value); }
-        if (!readCount(in, count) || (count && count != quint32(total))) return false;
+        if (!readCount(in, count, 8) || (count && count != quint32(total))) return false;
         for (quint32 i = 0; i < count; ++i) { double value; in >> value; if (!std::isfinite(value) || value < 0 || value > 1) return false; body.loftGuideInfluences.append(value); }
-        if (!readCount(in, count) || (count && count != quint32(body.ruledSecond.size()))) return false;
+        if (!readCount(in, count, 8) || (count && count != quint32(body.ruledSecond.size()))) return false;
         for (quint32 i = 0; i < count; ++i) { double value; in >> value; if (!std::isfinite(value) || value <= 0) return false; body.fillFaceInfluences.append(value); }
     }
     if(version>=47){qint32 face;in>>face>>body.fillShapeWeight;
@@ -813,7 +817,7 @@ bool reasonableDisplay(const BodyDisplay &display) {
         && (display.triangleFaces.isEmpty() || display.triangleFaces.size() * 3 == display.vertices.size());
 }
 
-bool readDisplay(QDataStream &in, BodyDisplay &display, quint32 cacheVersion) {
+bool readDisplay(ReadStream &in, BodyDisplay &display, quint32 cacheVersion) {
     qint32 quality = -1;
     const auto precision = in.floatingPointPrecision();
     if (cacheVersion >= 5) in.setFloatingPointPrecision(QDataStream::SinglePrecision);
@@ -876,7 +880,7 @@ bool readDeclaredHistory(const QByteArray &data, int index, const QVector<Extrus
     if (data.isEmpty()) return true;
     const auto &body = bodies.at(index);
     if (!body.forgeBody) return false;
-    QDataStream in(data);
+    ReadStream in(data);
     in.setVersion(QDataStream::Qt_6_0);
     quint32 version = 0, count = 0;
     in >> version >> count;
@@ -986,11 +990,12 @@ QByteArray bodyCache(const QByteArray &payload, const DocumentState &state) {
     return out.status() == QDataStream::Ok ? qCompress(cache, 6) : QByteArray();
 }
 
-void applyBodyCache(const QByteArray &compressed, const QByteArray &payload, DocumentState &state, bool previewCache) {
+void applyBodyCache(const QByteArray &compressed, const QByteArray &payload, DocumentState &state, bool previewCache,
+                    const DocumentReadLimits &limits) {
     (void)previewCache;
-    const QByteArray cache = qUncompress(compressed);
-    if (cache.isEmpty()) return;
-    QDataStream in(cache);
+    QByteArray cache;
+    if (!DocumentReadDetail::uncompress(compressed, limits.cacheBytes, cache) || cache.isEmpty()) return;
+    ReadStream in(cache);
     in.setVersion(QDataStream::Qt_6_0);
     QByteArray sourceHash, payloadHash;
     quint32 marker = 0, cacheVersion = 1, count = 0;
@@ -1010,32 +1015,35 @@ void applyBodyCache(const QByteArray &compressed, const QByteArray &payload, Doc
         bool hasBody = false;
         bool hasDisplay = false;
     };
-    std::vector<CachedBody> records(count);
-    SnapshotChunkReader chunks(in);
+    if (quint64(count) > quint64(in.device()->bytesAvailable())) return;
+    std::vector<CachedBody> records;
+    SnapshotChunkReader chunks(in, limits.cacheBytes);
     for (quint32 i = 0; i < count; ++i) {
+        CachedBody record;
         quint8 has = 0;
         in >> has;
-        records[i].hasBody = has != 0;
+        record.hasBody = has != 0;
         if (has) {
-            in >> records[i].error;
-            if (cacheVersion >= 5) records[i].data = chunks.read();
-            else in >> records[i].data;
+            in >> record.error;
+            if (cacheVersion >= 5) record.data = chunks.read();
+            else in >> record.data;
         }
         if (cacheVersion >= 2) {
             quint8 hasDisplay = 0;
             in >> hasDisplay;
-            records[i].hasDisplay = hasDisplay != 0;
-            if (records[i].hasDisplay && !readDisplay(in, records[i].display, cacheVersion)) return;
+            record.hasDisplay = hasDisplay != 0;
+            if (record.hasDisplay && !readDisplay(in, record.display, cacheVersion)) return;
             // Le mesh precedenti possono contenere vertici prodotti mentre
             // l'upload CUDA era ancora in corso. Conservare i B-rep esatti,
             // rigenerando solo il display al primo caricamento.
             if (cacheVersion < 5) {
-                records[i].hasDisplay = false;
-                records[i].display = {};
+                record.hasDisplay = false;
+                record.display = {};
             }
         }
-        if (cacheVersion >= 6) records[i].declared = chunks.read();
+        if (cacheVersion >= 6) record.declared = chunks.read();
         if (in.status() != QDataStream::Ok) return;
+        records.push_back(std::move(record));
     }
     if (!in.atEnd()) return;
 
@@ -1216,18 +1224,18 @@ QString parsePayload(const QByteArray &payload, quint16 version, int extras, Doc
     QBuffer buffer;
     buffer.setData(payload);
     buffer.open(QIODevice::ReadOnly);
-    QDataStream in(&buffer);
+    ReadStream in(&buffer);
     in.setVersion(QDataStream::Qt_6_0);
     in.setFloatingPointPrecision(QDataStream::DoublePrecision);
     quint32 count = 0;
-    if (!readCount(in, count)) return QStringLiteral("Il file e' danneggiato.");
-    loaded.sketches.resize(int(count));
-    for (SketchObject &sketch : loaded.sketches)
-        if (!read(in, sketch, version)) return QStringLiteral("Il file e' danneggiato (schizzi).");
-    if (!readCount(in, count)) return QStringLiteral("Il file e' danneggiato.");
-    loaded.extrusions.resize(int(count));
-    for (ExtrusionObject &body : loaded.extrusions)
-        if (!read(in, body, version, extras)) return QStringLiteral("Il file e' danneggiato (corpi).");
+    // Limiti inferiori dei record del formato 1, conservativi anche per tutti
+    // i formati successivi: si verifica l'intera sequenza prima di allocare.
+    if (!readCount(in, count, 37)) return QStringLiteral("Il file e' danneggiato.");
+    if (!in.readRecords(loaded.sketches, count, [&](SketchObject &sketch) { return read(in, sketch, version); }))
+        return QStringLiteral("Il file e' danneggiato (schizzi).");
+    if (!readCount(in, count, 118)) return QStringLiteral("Il file e' danneggiato.");
+    if (!in.readRecords(loaded.extrusions, count, [&](ExtrusionObject &body) { return read(in, body, version, extras); }))
+        return QStringLiteral("Il file e' danneggiato (corpi).");
     if (version >= 4) {
         for (double *axis : {loaded.orientation.right, loaded.orientation.up, loaded.orientation.toward})
             for (int k = 0; k < 3; ++k) in >> axis[k];
@@ -1235,12 +1243,12 @@ QString parsePayload(const QByteArray &payload, quint16 version, int extras, Doc
         loaded.orientationSet = true;
     }
     if (version >= 19) {
-        if (!readCount(in, count)) return QStringLiteral("Il file e' danneggiato (storyboard).");
-        loaded.modelBodies.resize(int(count));
-        for (ModelBody &body : loaded.modelBodies) {
+        if (!readCount(in, count, 21)) return QStringLiteral("Il file e' danneggiato (storyboard).");
+        if (!in.readRecords(loaded.modelBodies, count, [&](ModelBody &body) {
             in >> body.id >> body.name >> body.visible >> body.tipFeatureId;
             if (version >= 22) in >> body.meshColor;
-        }
+            return in.status() == QDataStream::Ok;
+        })) return QStringLiteral("Il file e' danneggiato (storyboard).");
         if (in.status() != QDataStream::Ok) return QStringLiteral("Il file e' danneggiato (storyboard).");
     }
     if (version >= 26) {
@@ -1270,44 +1278,79 @@ QString parsePayload(const QByteArray &payload, quint16 version, int extras, Doc
 }
 
 QString loadDocumentFile(const QString &path, DocumentState &state, bool previewCache) {
-    QFile file(path);
-    if (!file.open(QIODevice::ReadOnly)) return QStringLiteral("Impossibile aprire %1: %2").arg(path, file.errorString());
-    const QByteArray data = file.readAll();
-    return decodeDocument(data, state, previewCache);
+    return loadDocumentFile(path, state, DocumentReadLimits{}, previewCache);
+}
+
+QString loadDocumentFile(const QString &path, DocumentState &state, const DocumentReadLimits &limits, bool previewCache) {
+    if (limits.fileBytes < 0 || limits.definitionBytes < 0 || limits.cacheBytes < 0)
+        return QStringLiteral("Limiti di lettura del documento non validi.");
+    try {
+        QFile file(path);
+        if (!file.open(QIODevice::ReadOnly)) return QStringLiteral("Impossibile aprire %1: %2").arg(path, file.errorString());
+        if (file.size() > limits.fileBytes) return QStringLiteral("Il file supera il limite di lettura (%1 byte).").arg(limits.fileBytes);
+        QByteArray data;
+        // Il file puo' crescere dopo size(): non usare readAll o un'unica grande
+        // allocazione basata sul limite. Controllare anche i byte realmente letti.
+        while (!file.atEnd()) {
+            const auto chunk = file.read(65536);
+            if (file.error() != QFileDevice::NoError) return QStringLiteral("Errore di lettura su %1: %2").arg(path, file.errorString());
+            if (chunk.isEmpty()) return QStringLiteral("Lettura del documento interrotta.");
+            if (chunk.size() > limits.fileBytes - data.size())
+                return QStringLiteral("Il file supera il limite di lettura (%1 byte).").arg(limits.fileBytes);
+            data.append(chunk);
+        }
+        return decodeDocument(data, state, limits, previewCache);
+    } catch (const std::bad_alloc &) {
+        return QStringLiteral("Memoria insufficiente durante la lettura del file.");
+    }
 }
 
 QString decodeDocument(const QByteArray &data, DocumentState &state, bool previewCache) {
-    if (data.size() < 7 || !data.startsWith(QByteArray(kMagic, 4))) return QStringLiteral("Dati non riconosciuti come documento ForgeCAD.");
-    QDataStream header(data);
-    header.skipRawData(4);
-    quint16 version = 0;
-    quint8 compression = 0;
-    header >> version >> compression;
-    if (version > kVersion) return QStringLiteral("Il file e' stato scritto da una versione piu' recente di ForgeCAD (formato %1).").arg(version);
-    if (compression != kZlib) return QStringLiteral("Compressione sconosciuta nel file.");
-    QByteArray compressed = data.mid(7), cache;
-    if (version >= 14) {
-        quint32 size = 0;
-        header >> size;
-        if (header.status() != QDataStream::Ok || qsizetype(size) > data.size() - 11) return QStringLiteral("Il file e' danneggiato (lunghezza dei dati).");
-        compressed = data.mid(11, qsizetype(size));
-        cache = data.mid(11 + qsizetype(size));
+    return decodeDocument(data, state, DocumentReadLimits{}, previewCache);
+}
+
+QString decodeDocument(const QByteArray &data, DocumentState &state, const DocumentReadLimits &limits, bool previewCache) {
+    if (limits.fileBytes < 0 || limits.definitionBytes < 0 || limits.cacheBytes < 0)
+        return QStringLiteral("Limiti di lettura del documento non validi.");
+    if (data.size() > limits.fileBytes) return QStringLiteral("Il file supera il limite di lettura (%1 byte).").arg(limits.fileBytes);
+    try {
+        if (data.size() < 7 || !data.startsWith(QByteArray(kMagic, 4))) return QStringLiteral("Dati non riconosciuti come documento ForgeCAD.");
+        ReadStream header(data);
+        header.skipRawData(4);
+        quint16 version = 0;
+        quint8 compression = 0;
+        header >> version >> compression;
+        if (version > kVersion) return QStringLiteral("Il file e' stato scritto da una versione piu' recente di ForgeCAD (formato %1).").arg(version);
+        if (compression != kZlib) return QStringLiteral("Compressione sconosciuta nel file.");
+        QByteArray compressed = data.mid(7), cache;
+        if (version >= 14) {
+            quint32 size = 0;
+            header >> size;
+            if (header.status() != QDataStream::Ok || qsizetype(size) > data.size() - 11) return QStringLiteral("Il file e' danneggiato (lunghezza dei dati).");
+            compressed = data.mid(11, qsizetype(size));
+            cache = data.mid(11 + qsizetype(size));
+        }
+        QByteArray payload;
+        if (!DocumentReadDetail::uncompress(compressed, limits.definitionBytes, payload) || payload.isEmpty())
+            return QStringLiteral("Dati compressi del documento non validi o definizione oltre il limite di lettura (%1 byte).").arg(limits.definitionBytes);
+        // Formato 5: tre varianti (senza e con i campi della scala e dello smusso),
+        // vale la prima che si legge tutta.
+        QString error;
+        DocumentState loaded;
+        for (int extras : version == 5 ? std::vector<int>{2, 1, 0} : std::vector<int>{0}) {
+            loaded = DocumentState();
+            error = parsePayload(payload, version, extras, loaded);
+            if (error.isEmpty()) break;
+        }
+        if (!error.isEmpty()) return error;
+        if (!cache.isEmpty()) applyBodyCache(cache, payload, loaded, previewCache, limits);
+        state = std::move(loaded);
+        return {};
+    } catch (const std::bad_alloc &) {
+        return QStringLiteral("Memoria insufficiente durante la lettura del documento.");
+    } catch (const std::exception &error) {
+        return QStringLiteral("Impossibile leggere il documento: %1").arg(QString::fromUtf8(error.what()));
     }
-    const QByteArray payload = qUncompress(compressed);
-    if (payload.isEmpty()) return QStringLiteral("Il file e' danneggiato (dati compressi non validi).");
-    // Formato 5: tre varianti (senza e con i campi della scala e dello smusso),
-    // vale la prima che si legge tutta.
-    QString error;
-    DocumentState loaded;
-    for (int extras : version == 5 ? std::vector<int>{2, 1, 0} : std::vector<int>{0}) {
-        loaded = DocumentState();
-        error = parsePayload(payload, version, extras, loaded);
-        if (error.isEmpty()) break;
-    }
-    if (!error.isEmpty()) return error;
-    if (!cache.isEmpty()) applyBodyCache(cache, payload, loaded, previewCache);
-    state = std::move(loaded);
-    return {};
 }
 
 }

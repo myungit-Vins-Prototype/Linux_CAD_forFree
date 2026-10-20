@@ -158,7 +158,7 @@ If the repository is renamed or transferred, use the URL from the **Code** butto
 
 ```sh
 sudo apt update
-sudo apt install build-essential cmake git qt6-base-dev libqt6opengl6-dev \
+sudo apt install build-essential cmake git qt6-base-dev libqt6opengl6-dev zlib1g-dev \
   libgl1-mesa-dev libocct-foundation-dev libocct-modeling-data-dev \
   libocct-modeling-algorithms-dev libocct-data-exchange-dev \
   libocct-visualization-dev
@@ -169,10 +169,10 @@ On Ubuntu, some packages are in the **Universe** repository. On Wayland, also in
 **Arch Linux / pacman-compatible distributions:**
 
 ```sh
-sudo pacman -S --needed base-devel cmake git qt6-base opencascade mesa
+sudo pacman -S --needed base-devel cmake git qt6-base opencascade mesa zlib
 ```
 
-On Wayland, also install `qt6-wayland`. For other distributions, install the equivalent C++ compiler, CMake, Qt 6, OpenGL, and OCCT packages with their development files.
+On Wayland, also install `qt6-wayland`. For other distributions, install the equivalent C++ compiler, CMake, Qt 6, OpenGL, zlib, and OCCT packages with their development files. zlib supports incremental document decompression with memory limits.
 
 References: [Qt/OpenGL on Ubuntu](https://packages.ubuntu.com/jammy/libqt6opengl6-dev), [OCCT on Ubuntu](https://packages.ubuntu.com/search?keywords=libocct-data-exchange-dev&suite=noble), [Qt on Arch](https://archlinux.org/packages/extra/x86_64/qt6-base/), and [OCCT on Arch](https://archlinux.org/packages/extra/x86_64/opencascade/).
 
@@ -240,6 +240,8 @@ brew install cmake qt opencascade
 ```
 
 The official formulas are [Qt](https://formulae.brew.sh/formula/qt) and [OpenCASCADE](https://formulae.brew.sh/formula/opencascade). Use a compiler and libraries with the same architecture: arm64 on Apple Silicon or x86_64 on Intel.
+
+CMake also requires zlib, which is provided by the SDK installed with the Xcode Command Line Tools.
 
 ### 2. Build and run
 

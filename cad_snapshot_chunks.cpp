@@ -65,7 +65,8 @@ QByteArray SnapshotChunkReader::read() {
         stream_.setStatus(QDataStream::ReadCorruptData);
         return QByteArray();
     };
-    if (stream_.status() != QDataStream::Ok || size > quint32(std::numeric_limits<qint32>::max())
+    if (stream_.status() != QDataStream::Ok || remainingBytes_ < 0
+        || quint64(size) > quint64(remainingBytes_) || size > quint32(std::numeric_limits<qint32>::max())
         || count > size / kMinimum + 1 || (size == 0) != (count == 0)
         || !stream_.device() || quint64(count) * sizeof(qint32) > quint64(stream_.device()->bytesAvailable()))
         return corrupt();
@@ -75,8 +76,15 @@ QByteArray SnapshotChunkReader::read() {
         stream_ >> reference;
         QByteArray chunk;
         if (reference == -1) {
-            stream_ >> chunk;
-            if (chunk.isEmpty() || chunk.size() > kMaximum) return corrupt();
+            // Verifica la lunghezza prima che QByteArray tenti di allocarla.
+            // Il formato usa QDataStream::Qt_6_0: lunghezza quint32, poi i byte.
+            quint32 length = 0;
+            stream_ >> length;
+            if (stream_.status() != QDataStream::Ok || length == 0 || length > quint32(kMaximum)
+                || length > size - quint32(data.size())
+                || quint64(length) > quint64(stream_.device()->bytesAvailable())) return corrupt();
+            chunk.resize(length);
+            if (stream_.readRawData(chunk.data(), length) != qint64(length)) return corrupt();
             chunks_.append(chunk);
         } else {
             if (reference < 0 || reference >= chunks_.size()) return corrupt();
@@ -86,6 +94,7 @@ QByteArray SnapshotChunkReader::read() {
         data.append(chunk);
     }
     if (data.size() != size) return corrupt();
+    remainingBytes_ -= data.size();
     return data;
 }
 }

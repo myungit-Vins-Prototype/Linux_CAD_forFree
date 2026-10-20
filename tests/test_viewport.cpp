@@ -60,6 +60,7 @@ static QString exampleDocumentPath(const char *name) {
 #include "test_drawing_mouse.h"
 #include "test_drawing_section_model.h"
 #include "document_regression.h"
+#include "test_document_read.h"
 class ViewportInteractionTest {
 public:
     static void previewPerformance() {
@@ -9321,6 +9322,13 @@ int main(int argc, char **argv) {
     QTemporaryDir settings;
     QSettings::setDefaultFormat(QSettings::IniFormat);
     QSettings::setPath(QSettings::IniFormat, QSettings::UserScope, settings.path());
+    if (app.arguments().contains(QStringLiteral("--document-read")) || app.arguments().contains(QStringLiteral("--document-read-memory"))) {
+        try {
+            if (app.arguments().contains(QStringLiteral("--document-read-memory"))) documentReadMemoryTest();
+            else documentReadTests();
+        } catch (const std::exception &error) { std::cerr << error.what() << std::endl; return 1; }
+        std::cout << "PASS document read" << std::endl; return 0;
+    }
     if (app.arguments().contains(QStringLiteral("--document-lock-worker"))) {
         const int index=app.arguments().indexOf(QStringLiteral("--document-lock-worker"));
         const QString path=app.arguments().value(index+1);

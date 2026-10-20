@@ -40,11 +40,23 @@ namespace ForgeCad {
 inline constexpr const char *kDocumentSuffix = "prt";
 inline constexpr quint16 kDocumentFormatVersion = 50;
 
+// Budget in byte, indipendenti dal numero di feature. I chiamanti che devono
+// aprire documenti piu' grandi possono passarne di espliciti agli overload.
+// Una cache fuori budget viene ignorata: la definizione resta leggibile e
+// la geometria si rigenera. cacheBytes limita anche l'espansione dei chunk.
+struct DocumentReadLimits {
+    qsizetype fileBytes = qsizetype(1024) * 1024 * 1024;
+    qsizetype definitionBytes = qsizetype(256) * 1024 * 1024;
+    qsizetype cacheBytes = qsizetype(1024) * 1024 * 1024;
+};
+
 // Codec senza accesso al filesystem, usato anche dall'archivio revisioni.
 // La codifica puo' rappresentare uno snapshot archiviato; il normale Salva
 // su file richiede invece una copia di lavoro.
 QString encodeDocument(const DocumentState &state, QByteArray &bytes, bool bodies = true);
 QString decodeDocument(const QByteArray &bytes, DocumentState &state, bool previewCache = false);
+QString decodeDocument(const QByteArray &bytes, DocumentState &state, const DocumentReadLimits &limits,
+                       bool previewCache = false);
 // Copia indipendente: stessi parametri/geometria, nuova identita' e nessuna base.
 void forkDocumentIdentity(DocumentState &state);
 
@@ -72,6 +84,8 @@ QString saveDocumentFile(const QString &path, const DocumentState &state, bool b
 // snapshot moderni e storici della stessa definizione sono validi anche dopo
 // un aggiornamento del kernel e vengono ricalcolati alla prima modifica.
 QString loadDocumentFile(const QString &path, DocumentState &state, bool previewCache = false);
+QString loadDocumentFile(const QString &path, DocumentState &state, const DocumentReadLimits &limits,
+                         bool previewCache = false);
 
 }
 

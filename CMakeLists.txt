@@ -30,6 +30,7 @@ set(CMAKE_AUTORCC ON)
 
 find_package(Qt6 REQUIRED COMPONENTS Widgets OpenGL OpenGLWidgets)
 find_package(OpenGL REQUIRED)
+find_package(ZLIB REQUIRED)
 # OpenCASCADE serve solo ai test del kernel (riferimento per i confronti):
 # l'applicazione usa soltanto il kernel proprio.
 find_package(OpenCASCADE REQUIRED)
@@ -63,6 +64,8 @@ add_executable(forgecad
     cad_expression.cpp
     cad_document_io.h
     cad_document_io.cpp
+    cad_document_read.h
+    cad_document_read.cpp
     cad_drawing.h
     cad_drawing.cpp
     cad_drawing_dimension.h
@@ -186,6 +189,7 @@ target_sources(forgecad PRIVATE ${FORGECAD_HASH_HEADER})
 target_include_directories(forgecad PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/generated)
 
 target_link_libraries(forgecad PRIVATE
+    ZLIB::ZLIB
     Qt6::Widgets
     Qt6::OpenGL
     Qt6::OpenGLWidgets
@@ -245,7 +249,7 @@ if(FORGECAD_BUILD_VIEW_TESTS)
     add_executable(forgecad_view_tests tests/test_viewport.cpp tests/test_declared_history_cache.h tests/test_boolean_history.h tests/test_blend_history.h tests/test_extrusion_history.h tests/test_revolution_history.h tests/test_all_history.h tests/test_native_revisions.h tests/test_workspace_revisions.h tests/test_linked_drawing.h tests/test_drawing_workflow.h tests/test_drawing_revisions.h tests/test_projected_drawing_file.h tests/test_drawing_mouse.h tests/test_drawing_section_model.h cuda_support_cpu.cpp ${FORGECAD_VIEW_TEST_SOURCES})
     add_dependencies(forgecad_view_tests forgecad) # genera l'impronta una sola volta, prima dei test
     target_include_directories(forgecad_view_tests PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/generated)
-    target_link_libraries(forgecad_view_tests PRIVATE Qt6::Widgets Qt6::OpenGL Qt6::OpenGLWidgets OpenGL::GL forgekernel)
+    target_link_libraries(forgecad_view_tests PRIVATE Qt6::Widgets Qt6::OpenGL Qt6::OpenGLWidgets OpenGL::GL forgekernel ZLIB::ZLIB)
     target_compile_options(forgecad_view_tests PRIVATE -Wall -Wextra -Wpedantic)
     target_compile_definitions(forgecad_view_tests PRIVATE FORGECAD_HAS_CUDA=0 FORGECAD_SOURCE_DIR="${PROJECT_SOURCE_DIR}")
     add_executable(forgecad_selection_benchmark tests/benchmark_selection.cpp)
@@ -258,6 +262,8 @@ if(FORGECAD_BUILD_VIEW_TESTS)
             ENVIRONMENT "QT_QPA_PLATFORM=offscreen;QT_QPA_OFFSCREEN_NO_GLX=1;QT_QPA_PLATFORMTHEME=;QT_STYLE_OVERRIDE=Fusion;FORGECAD_EXAMPLE_DIR=${FORGECAD_EXAMPLE_DIR}")
     endfunction()
     forgecad_add_view_test(forgecad_topology_label_tests --topology-labels)
+    forgecad_add_view_test(forgecad_document_read_tests --document-read)
+    set_tests_properties(forgecad_document_read_tests PROPERTIES TIMEOUT 60)
     forgecad_add_view_test(forgecad_genealogy_tests --genealogy)
     forgecad_add_view_test(forgecad_history_diagnostics_tests --history-diagnostics)
     forgecad_add_view_test(forgecad_declared_history_cache_tests --declared-history-cache)
