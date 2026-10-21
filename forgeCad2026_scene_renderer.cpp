@@ -575,4 +575,46 @@ void SceneRenderer::drawDatumQuad(OverlayRenderer &overlay, const QVector<QVecto
     glLineWidth(1.0f);
 }
 
+void SceneRenderer::drawPlanePass(const std::function<void()> &drawPlanes) {
+    glDisable(GL_DEPTH_TEST);
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    drawPlanes();
+    glLineWidth(1.0f);
+    glDisable(GL_BLEND);
+    glEnable(GL_DEPTH_TEST);
+}
+
+void SceneRenderer::drawReferencePlanes(OverlayRenderer &overlay, const std::array<ReferencePlane, 3> &planes) {
+    drawPlanePass([&] {
+        const GLfloat colors[][3] = {{0.20f, 0.55f, 0.95f}, {0.25f, 0.90f, 0.70f}, {0.95f, 0.45f, 0.25f}};
+        const GLfloat baseAlpha[] = {0.08f, 0.06f, 0.06f};
+        QVector<ForgeCad::OverlayVertex> fills;
+        for (int plane = 0; plane < 3; ++plane) {
+            if (!planes[plane].visible) continue;
+            const float alpha = baseAlpha[plane] + 0.10f * planes[plane].emphasis;
+            const QVector4D color(colors[plane][0], colors[plane][1], colors[plane][2], alpha);
+            const QVector<QVector3D> corners = planes[plane].corners;
+            for (int corner : {0, 1, 2, 0, 2, 3}) fills.push_back({corners.at(corner), color});
+        }
+        overlay.draw(GL_TRIANGLES, fills);
+        // Bordo: un alone largo e tenue del colore del piano, schiarito, e sopra
+        // una linea sottile piu' luminosa dello stesso colore.
+        const struct { GLfloat width, alpha, light; } strokes[] = {{4.0f, 0.10f, 0.25f}, {1.3f, 0.55f, 0.40f}};
+        for (const auto &stroke : strokes) {
+            glLineWidth(stroke.width);
+            for (int plane = 0; plane < 3; ++plane) {
+                if (!planes[plane].visible) continue;
+                const float alpha = qMin(1.0f, stroke.alpha * (1.0f + 0.6f * planes[plane].emphasis));
+                const GLfloat *c = colors[plane];
+                const QVector4D color(c[0] + (1.0f - c[0]) * stroke.light, c[1] + (1.0f - c[1]) * stroke.light,
+                                      c[2] + (1.0f - c[2]) * stroke.light, alpha);
+                QVector<QVector3D> corners = planes[plane].corners;
+                corners.push_back(corners.front());
+                overlay.draw(GL_LINE_STRIP, corners, color);
+            }
+        }
+    });
+}
+
 }

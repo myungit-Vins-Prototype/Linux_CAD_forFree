@@ -9225,45 +9225,16 @@ void CadViewport::drawPlaneResizeHandles() {
 }
 
 void CadViewport::drawReferencePlanes() {
-    glDisable(GL_DEPTH_TEST);
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-    const GLfloat colors[][3] = {{0.20f, 0.55f, 0.95f}, {0.25f, 0.90f, 0.70f}, {0.95f, 0.45f, 0.25f}};
-    const GLfloat baseAlpha[] = {0.08f, 0.06f, 0.06f};
-    const auto emphasis = [this](int plane) {
-        float extra = 0.0f;
-        if (selectedPlane_ == plane) extra += 1.0f;
-        if (hover_ == SceneSelection{SceneObjectKind::Plane, plane, -1}) extra += 0.8f;
-        return extra;
-    };
-    QVector<ForgeCad::OverlayVertex> fills;
+    std::array<ForgeCad::Gui::SceneRenderer::ReferencePlane, 3> planes;
     for (int plane = 0; plane < 3; ++plane) {
-        if (!isPlaneShown(plane)) continue;
-        const float alpha = baseAlpha[plane] + 0.10f * emphasis(plane);
-        const QVector4D color(colors[plane][0], colors[plane][1], colors[plane][2], alpha);
-        const QVector<QVector3D> corners = planeCorners(plane);
-        for (int corner : {0, 1, 2, 0, 2, 3}) fills.push_back({corners.at(corner), color});
+        auto &display = planes[plane];
+        display.visible = isPlaneShown(plane);
+        if (!display.visible) continue;
+        display.corners = planeCorners(plane);
+        if (selectedPlane_ == plane) display.emphasis += 1.0f;
+        if (hover_ == SceneSelection{SceneObjectKind::Plane, plane, -1}) display.emphasis += 0.8f;
     }
-    overlayRenderer_.draw(GL_TRIANGLES, fills);
-    // Bordo: un alone largo e tenue del colore del piano, schiarito, e sopra
-    // una linea sottile piu' luminosa dello stesso colore.
-    const struct { GLfloat width, alpha, light; } strokes[] = {{4.0f, 0.10f, 0.25f}, {1.3f, 0.55f, 0.40f}};
-    for (const auto &stroke : strokes) {
-        glLineWidth(stroke.width);
-        for (int plane = 0; plane < 3; ++plane) {
-            if (!isPlaneShown(plane)) continue;
-            const float alpha = qMin(1.0f, stroke.alpha * (1.0f + 0.6f * emphasis(plane)));
-            const GLfloat *c = colors[plane];
-            const QVector4D color(c[0] + (1.0f - c[0]) * stroke.light, c[1] + (1.0f - c[1]) * stroke.light,
-                                  c[2] + (1.0f - c[2]) * stroke.light, alpha);
-            QVector<QVector3D> corners = planeCorners(plane);
-            corners.push_back(corners.front());
-            overlayRenderer_.draw(GL_LINE_STRIP, corners, color);
-        }
-    }
-    glLineWidth(1.0f);
-    glDisable(GL_BLEND);
-    glEnable(GL_DEPTH_TEST);
+    sceneRenderer_.drawReferencePlanes(overlayRenderer_, planes);
 }
 
 double CadViewport::datumHalf(double size) const { return size > 0.0 ? size : 0.5 * double(planeHalf()); }
@@ -9321,21 +9292,17 @@ void CadViewport::drawDatumQuad(const QVector<QVector3D> &corners, const GLfloat
 }
 
 void CadViewport::drawDatumPlanes() {
-    glDisable(GL_DEPTH_TEST);
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-    static const GLfloat datumColor[] = {0.72f, 0.52f, 0.98f}, previewColor[] = {0.98f, 0.66f, 0.28f};
-    for (int index = 0; index < extrusions_.size(); ++index) {
-        if (!isDatumShown(index)) continue;
-        const ExtrusionObject &body = extrusions_.at(index);
-        const SceneSelection self{SceneObjectKind::Extrusion, index, -1};
-        const float emphasis = (selection_ == self ? 1.0f : 0.0f) + (hover_ == self ? 0.8f : 0.0f);
-        drawDatumQuad(datumCorners(body.datumFrame, body.datum.size), datumColor, emphasis);
-    }
-    if (datumPreviewValid_) drawDatumQuad(datumCorners(datumPreviewFrame_, datumPreviewSize_), previewColor, 1.0f);
-    glLineWidth(1.0f);
-    glDisable(GL_BLEND);
-    glEnable(GL_DEPTH_TEST);
+    sceneRenderer_.drawPlanePass([this] {
+        static const GLfloat datumColor[] = {0.72f, 0.52f, 0.98f}, previewColor[] = {0.98f, 0.66f, 0.28f};
+        for (int index = 0; index < extrusions_.size(); ++index) {
+            if (!isDatumShown(index)) continue;
+            const ExtrusionObject &body = extrusions_.at(index);
+            const SceneSelection self{SceneObjectKind::Extrusion, index, -1};
+            const float emphasis = (selection_ == self ? 1.0f : 0.0f) + (hover_ == self ? 0.8f : 0.0f);
+            drawDatumQuad(datumCorners(body.datumFrame, body.datum.size), datumColor, emphasis);
+        }
+        if (datumPreviewValid_) drawDatumQuad(datumCorners(datumPreviewFrame_, datumPreviewSize_), previewColor, 1.0f);
+    });
 }
 
 void CadViewport::drawDatumLabels(QPainter &painter) const {

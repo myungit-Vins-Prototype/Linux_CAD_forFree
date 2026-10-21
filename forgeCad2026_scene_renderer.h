@@ -101,6 +101,14 @@ public:
     void drawGrid(OverlayRenderer &overlay, const AxesOrientation &orientation, float step);
     void drawDatumQuad(OverlayRenderer &overlay, const QVector<QVector3D> &corners,
                        const GLfloat *color, float emphasis);
+    struct ReferencePlane {
+        QVector<QVector3D> corners;
+        float emphasis = 0.0f;
+        bool visible = false;
+    };
+    void drawReferencePlanes(OverlayRenderer &overlay, const std::array<ReferencePlane, 3> &planes);
+    // Il disegno dei datum scelti dal viewport e' eseguito subito e non conservato.
+    void drawPlanePass(const std::function<void()> &drawPlanes);
 private:
     friend class ::ViewportInteractionTest;
     QOpenGLFramebufferObject *sceneBuffer(const QSize &size);
