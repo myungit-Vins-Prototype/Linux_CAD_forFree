@@ -344,7 +344,9 @@ La stessa opzione può essere aggiunta alla configurazione macOS mantenendo i pa
 | Percorso | Contenuto |
 |---|---|
 | `forgeCad2026.cpp` | Avvio e configurazione OpenGL |
-| `forgeCad2026_gui.cpp` | Interfaccia, viewport e pannelli |
+| `forgeCad2026_gui.h/.cpp` | Finestra principale, menu, comandi e pannelli |
+| `forgeCad2026_viewport.h/.cpp` | Dichiarazioni e implementazione separata della vista 3D |
+| `forgeCad2026_gui_common.h/.cpp` | Helper grafici condivisi da finestra e viewport |
 | `cad_*.cpp`, `cad_*.h` | Schizzi, vincoli, feature, storia, documenti, analisi e scambio file |
 | `kernel/` | Kernel geometrico, B-rep, curve/superfici e test numerici |
 | `tests/` | Test dell'applicazione e delle interazioni |

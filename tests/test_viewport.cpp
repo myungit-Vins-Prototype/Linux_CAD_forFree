@@ -1,5 +1,7 @@
-// CadViewport e' ancora definito nel .cpp della finestra. Questa unita' di
-// test lo include per verificare interazioni e rendering senza esportare API di test.
+// CadViewport e' dichiarato nell'header interno e compilato separatamente.
+#include "../forgeCad2026_viewport.h"
+// I test di dialoghi, pannelli e storyboard usano ancora i dettagli della
+// finestra. Questa inclusione resta finche' saranno estratti anche quei componenti.
 #include "../forgeCad2026_gui.cpp"
 #include "fk_blend.h"
 #include "fk_blend_surface.h"
