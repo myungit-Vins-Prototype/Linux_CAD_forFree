@@ -2,6 +2,7 @@
 #define FORGECAD_DISPLAY_CACHE_H
 
 #include "cad_types.h"
+#include <QColor>
 #include <QOpenGLBuffer>
 #include <QOpenGLShaderProgram>
 #include <QOpenGLVertexArrayObject>
@@ -32,6 +33,11 @@ public:
     void setLighting(const Lighting &lighting);
     void faces(const BodyDisplay &display);
     void edges(const BodyDisplay &display);
+    // Disegno di un display completo: sceglie anche le eventuali istanze.
+    void displayFaces(const BodyDisplay &display);
+    void displayEdges(const BodyDisplay &display);
+    // Il chiamante decide se e' una curva: nessuna dipendenza da feature/selezione.
+    void outline(const BodyDisplay &display, bool curve, const QColor &color, float width);
     void instancedFaces(const BodyDisplay &display, const QVector<QMatrix4x4> &transforms);
     void instancedEdges(const BodyDisplay &display, const QVector<QMatrix4x4> &transforms);
     // Disegno piatto senza illuminazione per il framebuffer degli identificatori.

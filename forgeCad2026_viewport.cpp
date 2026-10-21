@@ -10032,16 +10032,11 @@ void CadViewport::drawSketch() {
 void CadViewport::drawExtrusionFaces(const ExtrusionObject &extrusion) { drawDisplayFaces(extrusion.display); }
 
 void CadViewport::drawDisplayFaces(const BodyDisplay &display) {
-    if (display.instancedBase && !display.instanceTransforms.isEmpty())
-        displayCache_.instancedFaces(*display.instancedBase, display.instanceTransforms);
-    else displayCache_.faces(display);
+    displayCache_.displayFaces(display);
 }
 
 void CadViewport::drawExtrusionEdges(const ExtrusionObject &extrusion) {
-    const BodyDisplay &display = extrusion.display;
-    if (display.instancedBase && !display.instanceTransforms.isEmpty())
-        displayCache_.instancedEdges(*display.instancedBase, display.instanceTransforms);
-    else displayCache_.edges(display);
+    displayCache_.displayEdges(extrusion.display);
 }
 
 void CadViewport::drawThreadProfileEdges(const BodyDisplay &display, const QVector4D &color) {
@@ -10050,39 +10045,7 @@ void CadViewport::drawThreadProfileEdges(const BodyDisplay &display, const QVect
 }
 
 void CadViewport::drawExtrusionOutline(const ExtrusionObject &extrusion, const QColor &color, float width) {
-    displayCache_.setLightingEnabled(false);
-    displayCache_.setColor(QVector4D(float(color.redF()), float(color.greenF()), float(color.blueF()), 1.0f));
-    glDisable(GL_DEPTH_TEST);
-    glDepthMask(GL_FALSE);
-    // Una curva non ha una sagoma di facce: lo stencil e il doppio passaggio
-    // servono solo ai corpi. Evidenziarla direttamente evita lavoro inutile
-    // durante la navigazione con un'elica selezionata.
-    if (ForgeCad::isCurveBody(extrusion)) {
-        glLineWidth(width);
-        drawExtrusionEdges(extrusion);
-        glDepthMask(GL_TRUE);
-        glEnable(GL_DEPTH_TEST);
-        glLineWidth(1.0f);
-        return;
-    }
-    glEnable(GL_STENCIL_TEST);
-    glClear(GL_STENCIL_BUFFER_BIT);
-    glStencilFunc(GL_ALWAYS, 1, 0xFF);
-    glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
-    glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
-    drawExtrusionFaces(extrusion);
-    glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
-    glStencilFunc(GL_NOTEQUAL, 1, 0xFF);
-    glStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);
-    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-    glLineWidth(width);
-    drawExtrusionFaces(extrusion);
-    drawExtrusionEdges(extrusion);
-    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-    glDisable(GL_STENCIL_TEST);
-    glDepthMask(GL_TRUE);
-    glEnable(GL_DEPTH_TEST);
-    glLineWidth(1.0f);
+    displayCache_.outline(extrusion.display, ForgeCad::isCurveBody(extrusion), color, width);
 }
 
 QString CadViewport::edgePickMessage() const {

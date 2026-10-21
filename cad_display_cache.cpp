@@ -399,4 +399,53 @@ void DisplayCache::pickingInstancedFaces(const BodyDisplay &display, const QVect
     faceShader_->setUniformValue("useInstances", false);
     faceShader_->release();
 }
+
+void DisplayCache::displayFaces(const BodyDisplay &display) {
+    if (display.instancedBase && !display.instanceTransforms.isEmpty())
+        instancedFaces(*display.instancedBase, display.instanceTransforms);
+    else faces(display);
+}
+
+void DisplayCache::displayEdges(const BodyDisplay &display) {
+    if (display.instancedBase && !display.instanceTransforms.isEmpty())
+        instancedEdges(*display.instancedBase, display.instanceTransforms);
+    else edges(display);
+}
+
+void DisplayCache::outline(const BodyDisplay &display, bool curve, const QColor &color, float width) {
+    setLightingEnabled(false);
+    setColor(QVector4D(float(color.redF()), float(color.greenF()), float(color.blueF()), 1.0f));
+    glDisable(GL_DEPTH_TEST);
+    glDepthMask(GL_FALSE);
+    // Una curva non ha una sagoma di facce: lo stencil e il doppio passaggio
+    // servono solo ai corpi. Evidenziarla direttamente evita lavoro inutile
+    // durante la navigazione con un'elica selezionata.
+    if (curve) {
+        glLineWidth(width);
+        displayEdges(display);
+        glDepthMask(GL_TRUE);
+        glEnable(GL_DEPTH_TEST);
+        glLineWidth(1.0f);
+        return;
+    }
+    glEnable(GL_STENCIL_TEST);
+    glClear(GL_STENCIL_BUFFER_BIT);
+    glStencilFunc(GL_ALWAYS, 1, 0xFF);
+    glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
+    glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
+    displayFaces(display);
+    glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+    glStencilFunc(GL_NOTEQUAL, 1, 0xFF);
+    glStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);
+    glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+    glLineWidth(width);
+    displayFaces(display);
+    displayEdges(display);
+    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+    glDisable(GL_STENCIL_TEST);
+    glDepthMask(GL_TRUE);
+    glEnable(GL_DEPTH_TEST);
+    glLineWidth(1.0f);
+}
+
 }
