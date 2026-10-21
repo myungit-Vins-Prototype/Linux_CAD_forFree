@@ -34,35 +34,27 @@ Python legge il codice e risolve le chiamate C++; JavaScript gestisce la visuali
 
 Il server ascolta solo su `127.0.0.1`, su una porta libera, con un percorso casuale di sessione. Espone esclusivamente mappa e sorgenti del catalogo, con i sorgenti serviti come testo; rifiuta percorsi fuori dal catalogo e richieste da altri siti. Nessun servizio o avvio permanente viene installato. **Ctrl+C nel terminale** chiude server ed eventuale analisi in corso. Con `--no-browser` stampa il link senza aprire una finestra; `--port` permette di scegliere una porta. Il percorso della build è memorizzato nel file locale ignorato da Git `.forgecad-architecture.json` e non viene condiviso tra computer.
 
-## Aggiornamento automatico
+## Aggiornamento indipendente dalla compilazione
 
-L’aggiornamento è **attivo per default** (`FORGECAD_UPDATE_ARCHITECTURE=ON`). Dopo aver riconfigurato la propria build CMake, il normale comando di compilazione aggiorna anche la mappa:
+La build CMake esporta `compile_commands.json`, ma non esegue il generatore della mappa e non richiede Python/libclang per questa funzione. Dopo aver aggiornato il checkout, riconfigurare la build esistente per eliminare i precedenti comandi automatici; la normale build CMake esegue anche questa riconfigurazione quando rileva la modifica a `CMakeLists.txt`.
 
-```sh
-cmake --build build-linux --parallel
-```
-
-Il target `forgecad_architecture`, incluso nella build standard, verifica sorgenti, catalogo, template e configurazione di compilazione. Rigenera HTML/JSON soltanto se necessario, riutilizzando la cache AST; a vista invariata non modifica i file. Un comando dopo il link copre anche la compilazione esplicita del solo target `forgecad`; se questo target non richiede un nuovo link, usare la build standard per rilevare anche cambiamenti dei soli strumenti/template. Per aggiornare esplicitamente la mappa:
+Per aggiornare e consultare la mappa usare il server descritto sopra: l’apertura/ricaricamento della pagina e il pulsante avviano il controllo. Per aggiornare esplicitamente da terminale:
 
 ```sh
-cmake --build build-linux --target forgecad_architecture
+python3 tools/generate_architecture.py --update --build-dir build-linux --jobs 1
 ```
 
-CMake abilita automaticamente `compile_commands.json`. Servono Python 3 e binding `clang.cindex` compatibili con libclang. Gli header Qt generati vengono preparati prima dell’analisi. La build usa un solo processo AST per contenere il consumo di memoria. Alla prima generazione o dopo cambiamenti agli header l’analisi può richiedere alcuni minuti. Le compilazioni successive invariate eseguono soltanto il controllo rapido.
+Servono Python 3, binding `clang.cindex` compatibili con libclang e una build configurata con gli header Qt generati già disponibili. L’analisi riutilizza la cache AST e riscrive HTML/JSON soltanto se necessario; dopo modifiche agli header può richiedere alcuni minuti. Un errore conserva la vista precedente e viene segnalato dal server o dal comando, senza influire sulla compilazione dell’applicazione. Un lock per checkout serializza gli aggiornamenti della mappa.
 
-Un errore di analisi fa fallire il target e conserva la vista precedente; non viene pubblicato un nuovo grafo incompleto. Le scritture avvengono tramite sostituzione di file temporanei e un lock per checkout serializza aggiornamenti da build diverse. La vista aperta nel browser va ricaricata dopo l’aggiornamento. Non è un servizio in background: le modifiche vengono recepite alla build successiva.
-
-L’automatismo aggiorna file, simboli, chiamate e include. Le descrizioni curate e i gruppi di responsabilità richiedono ancora una revisione umana quando cambia il significato di un modulo.
-
-Per build di distribuzione senza gli strumenti di analisi è possibile disabilitare esplicitamente il target con `-DFORGECAD_UPDATE_ARCHITECTURE=OFF`. In quel caso l’aggiornamento resta obbligatorio prima di consegnare modifiche strutturali.
+L’analisi aggiorna file, simboli, chiamate e include. Le descrizioni curate e i gruppi di responsabilità richiedono ancora una revisione umana quando cambia il significato di un modulo. L’aggiornamento resta obbligatorio prima di consegnare modifiche strutturali.
 
 ## Aggiornamento obbligatorio
 
 Per richiesta dell’utente, **ogni cambiamento strutturale richiede l’aggiornamento di questa vista**. La regola permanente è in `AGENTS.md` e `CLAUDE.md`.
 
 1. Aggiornare i gruppi e le descrizioni curate in `tools/generate_architecture.py` quando cambia una responsabilità. Le descrizioni del kernel derivano dal commento iniziale del relativo header; le altre descrizioni non curate derivano dal ruolo header/implementazione e dal nome del file; i simboli vengono estratti dal codice.
-2. Configurare la build abituale conservando le proprie opzioni; l’aggiornamento automatico esporta già i comandi di compilazione.
-3. Compilare normalmente, oppure generare esplicitamente il grafo usando Python 3 e i binding `clang.cindex` compatibili con la libclang installata:
+2. Configurare la build abituale conservando le proprie opzioni; CMake esporta i comandi di compilazione anche senza avviare l’analisi della mappa.
+3. Preparare con la build gli header generati, se mancanti; aggiornare quindi tramite il server oppure generare esplicitamente il grafo usando Python 3 e i binding `clang.cindex` compatibili con la libclang installata:
 
    ```sh
    python3 tools/generate_architecture.py --build-dir build-linux
@@ -74,4 +66,4 @@ Per richiesta dell’utente, **ogni cambiamento strutturale richiede l’aggiorn
 
 `--check` non richiede libclang né una build: verifica il catalogo dei file, gli hash dei sorgenti/strumento/template, i collegamenti e la corrispondenza tra JSON e HTML. Segnala anche modifiche non strutturali: in quel caso rigenerare, così righe e simboli rimangono corretti. Non sostituisce compilazione e test. Un errore AST fa fallire la generazione e il controllo; non deve essere interpretato come un grafo completo.
 
-File mantenuti a mano: `template.html`, questo documento e il catalogo Python. File generati e ignorati da Git: `graph.json`, `index.html`. Su un nuovo checkout vengono creati automaticamente al primo aggiornamento tramite build o avvio Python. Il generatore non esegue il codice del progetto né invia dati in rete.
+File mantenuti a mano: `template.html`, questo documento e il catalogo Python. File generati e ignorati da Git: `graph.json`, `index.html`. Su un nuovo checkout vengono creati automaticamente al primo aggiornamento tramite il server o il generatore Python. Il generatore non esegue il codice del progetto né invia dati in rete.

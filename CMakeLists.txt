@@ -33,11 +33,9 @@ else()
     set(FORGE_CAD_CUDA_SOURCE cuda_support_cpu.cpp)
 endif()
 
-# Necessario alla mappa architetturale: usa le vere opzioni della build.
-option(FORGECAD_UPDATE_ARCHITECTURE "Aggiorna automaticamente la mappa durante la build" ON)
-if(FORGECAD_UPDATE_ARCHITECTURE)
-    set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-endif()
+# Il server della mappa usa le vere opzioni della build, senza eseguire
+# l'analisi architetturale durante la compilazione dell'applicazione.
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -545,6 +543,13 @@ target_compile_options(forgecad_drawing_detail_tests PRIVATE -Wall -Wextra -Wped
 add_test(NAME forgecad_drawing_detail_tests COMMAND forgecad_drawing_detail_tests)
 set_tests_properties(forgecad_drawing_detail_tests PROPERTIES TIMEOUT 120 ENVIRONMENT "QT_QPA_PLATFORM=offscreen;QT_QPA_OFFSCREEN_NO_GLX=1;QT_QPA_PLATFORMTHEME=;QT_STYLE_OVERRIDE=Fusion")
 
+add_executable(forgecad_drawing_auxiliary_tests tests/test_drawing_auxiliary.cpp ${FORGECAD_DETAIL_TEST_SOURCES})
+target_include_directories(forgecad_drawing_auxiliary_tests PRIVATE ${PROJECT_SOURCE_DIR})
+target_link_libraries(forgecad_drawing_auxiliary_tests PRIVATE Qt6::Widgets forgekernel)
+target_compile_options(forgecad_drawing_auxiliary_tests PRIVATE -Wall -Wextra -Wpedantic)
+add_test(NAME forgecad_drawing_auxiliary_tests COMMAND forgecad_drawing_auxiliary_tests)
+set_tests_properties(forgecad_drawing_auxiliary_tests PROPERTIES TIMEOUT 120 ENVIRONMENT "QT_QPA_PLATFORM=offscreen;QT_QPA_OFFSCREEN_NO_GLX=1;QT_QPA_PLATFORMTHEME=;QT_STYLE_OVERRIDE=Fusion")
+
 add_executable(forgecad_revision_numbers_tests tests/test_revision_numbers.cpp cad_revision_store.cpp)
 target_include_directories(forgecad_revision_numbers_tests PRIVATE ${PROJECT_SOURCE_DIR})
 target_link_libraries(forgecad_revision_numbers_tests PRIVATE Qt6::Core)
@@ -600,26 +605,3 @@ add_test(NAME forgecad_overlay_uniform_tests COMMAND forgecad_overlay_uniform_te
 set_tests_properties(forgecad_overlay_uniform_tests PROPERTIES
     SKIP_RETURN_CODE 77 LABELS "opengl"
     ENVIRONMENT "QT_QPA_PLATFORM=offscreen;QT_QPA_OFFSCREEN_NO_GLX=1;QT_QPA_PLATFORMTHEME=")
-
-# Dopo l'eseguibile: nella prima build gli header generati da Qt esistono già.
-# Il target gira a ogni build standard, ma --update evita analisi e riscritture
-# quando codice, configurazione e documento sono già allineati.
-if(FORGECAD_UPDATE_ARCHITECTURE)
-    find_package(Python3 REQUIRED COMPONENTS Interpreter)
-    # Copre anche chi compila esplicitamente il solo target forgecad.
-    add_custom_command(TARGET forgecad POST_BUILD
-        COMMAND "${Python3_EXECUTABLE}" "${PROJECT_SOURCE_DIR}/tools/generate_architecture.py"
-            --update --build-dir "${PROJECT_BINARY_DIR}" --jobs 1
-        WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}"
-        COMMENT "Aggiornamento dell'architettura dopo il link"
-        VERBATIM
-    )
-    add_custom_target(forgecad_architecture ALL
-        COMMAND "${Python3_EXECUTABLE}" "${PROJECT_SOURCE_DIR}/tools/generate_architecture.py"
-            --update --build-dir "${PROJECT_BINARY_DIR}" --jobs 1
-        DEPENDS forgecad
-        WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}"
-        COMMENT "Verifica e aggiornamento automatico dell'architettura ForgeCAD"
-        VERBATIM
-    )
-endif()

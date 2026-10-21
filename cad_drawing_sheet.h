@@ -10,7 +10,7 @@
 #include <optional>
 
 namespace ForgeCad {
-enum class DrawingDerivedKind { None, Orthographic, Section, Detail };
+enum class DrawingDerivedKind { None, Orthographic, Section, Detail, Auxiliary };
 enum class DrawingProjectionSide { Left, Right, Above, Below };
 enum class DrawingProjectionMethod { FirstAngle, ThirdAngle };
 struct DrawingViewRelation {
@@ -24,6 +24,7 @@ struct DrawingViewRelation {
     QString label;
     QPointF detailCenter; // piano madre, mm modello
     double detailRadius=0; // ritaglio grafico, mai riferimento di quota
+    double auxiliaryAngle=0; // lato d'osservazione nel piano madre, gradi da +X verso +Y
 };
 struct DrawingViewLayout {
     QUuid viewId;

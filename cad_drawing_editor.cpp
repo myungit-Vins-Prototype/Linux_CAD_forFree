@@ -573,8 +573,8 @@ struct DrawingSheetEditor::Impl{
         if(auto *action=owner->findChild<QAction *>("drawingEditAnnotationAction"))action->setEnabled(!readOnly&&!selectedNote().isNull());
         if(auto *action=owner->findChild<QAction *>("drawingEditAxisAction"))action->setEnabled(!readOnly&&!selectedAxis().isNull());
         if(shadedAction){QSignalBlocker lock(shadedAction);shadedAction->setEnabled(!readOnly&&definition&&drawingHasProjection(*definition));shadedAction->setChecked(layout&&layout->showMesh);}
-        if(auto *a=owner->findChild<QAction *>("drawingDetachViewAction"))a->setEnabled(!readOnly&&layout&&layout->relation.kind==DrawingDerivedKind::Orthographic);
-        if(auto *a=owner->findChild<QAction *>("drawingReleaseAlignmentAction")){a->setEnabled(!readOnly&&layout&&layout->relation.kind==DrawingDerivedKind::Orthographic);a->setText(layout&&layout->relation.aligned?QStringLiteral("Libera allineamento"):QStringLiteral("Ripristina allineamento"));}
+        if(auto *a=owner->findChild<QAction *>("drawingDetachViewAction"))a->setEnabled(!readOnly&&layout&&(layout->relation.kind==DrawingDerivedKind::Orthographic||layout->relation.kind==DrawingDerivedKind::Auxiliary));
+        if(auto *a=owner->findChild<QAction *>("drawingReleaseAlignmentAction")){a->setEnabled(!readOnly&&layout&&(layout->relation.kind==DrawingDerivedKind::Orthographic||layout->relation.kind==DrawingDerivedKind::Auxiliary));a->setText(layout&&layout->relation.aligned?QStringLiteral("Libera allineamento"):QStringLiteral("Ripristina allineamento"));}
         for(auto name:{"drawingSectionHatchAction","drawingEditSectionLineAction","drawingAlignSectionOrientationAction","drawingReverseSectionAction"})if(auto *a=owner->findChild<QAction *>(name))a->setEnabled(!readOnly&&layout&&layout->relation.kind==DrawingDerivedKind::Section);
         if(auto *a=owner->findChild<QAction *>("drawingSectionHatchAction"))a->setEnabled(!readOnly&&definition&&layout&&definition->kind==DrawingViewKind::Section&&(layout->relation.kind==DrawingDerivedKind::Section||drawingIsDetail(*layout)||definition->sectionStyle!=DrawingSectionStyle::Removed));
         if(auto *a=owner->findChild<QAction *>("drawingSectionHatchAction"))a->setText(layout&&layout->relation.hatch?QStringLiteral("Nascondi tratteggio"):QStringLiteral("Mostra tratteggio"));
@@ -1759,6 +1759,19 @@ struct DrawingSheetEditor::Impl{
         while(std::any_of(state.views.cbegin(),state.views.cend(),[&](const auto &layout){return !layout.relation.parentId.isNull()&&layout.relation.label.compare(identifier,Qt::CaseInsensitive)==0;}));
         report(owner->beginSectionLine({},identifier,false,{},DrawingSectionStyle::Full));
     }
+    void auxiliaryDialog(){
+        if(readOnly||computing)return;
+        QDialog dialog(owner);dialog.setObjectName("drawingAuxiliaryViewDialog");dialog.setWindowTitle(QStringLiteral("Vista ausiliaria"));auto *form=new QFormLayout(&dialog);
+        auto *parent=new QComboBox(&dialog);parent->setObjectName("drawingParentView");
+        for(const auto &layout:state.views)if(viewFor(layout.viewId)->kind==DrawingViewKind::ProjectedEdges&&!drawingIsDetail(layout))parent->addItem(layout.title,layout.viewId);
+        if(!parent->count()){say(QStringLiteral("Inserisci prima una vista proiettata."));return;}
+        const auto chosen=parent->findData(selectedView());if(chosen>=0)parent->setCurrentIndex(chosen);form->addRow(QStringLiteral("Vista madre:"),parent);
+        auto *angle=new NumericInput(&dialog);angle->setObjectName("drawingAuxiliaryAngle");angle->setRange(-360,360);angle->setDecimals(4);angle->setSuffix(QStringLiteral("°"));angle->setValue(45);form->addRow(QStringLiteral("Lato di osservazione:"),angle);
+        auto *note=new QLabel(QStringLiteral("Direzione nel piano della madre: 0° a destra, 90° in alto. Dopo OK, posiziona l'anteprima lungo questa direzione. Scala e corpi seguono la madre; l'allineamento si puo' liberare dalle proprieta'."),&dialog);note->setWordWrap(true);form->addRow(note);
+        auto *error=new QLabel(&dialog);error->setWordWrap(true);form->addRow(error);auto *buttons=new QDialogButtonBox(QDialogButtonBox::Ok|QDialogButtonBox::Cancel,&dialog);form->addRow(buttons);
+        connect(buttons,&QDialogButtonBox::rejected,&dialog,&QDialog::reject);
+        connect(buttons,&QDialogButtonBox::accepted,&dialog,[&]{const auto result=owner->beginAuxiliaryViewPlacement(parent->currentData().toUuid(),angle->value());error->setText(result);if(result.isEmpty())dialog.accept();});dialog.resize(500,280);dialog.exec();if(placement)view->setFocus();
+    }
     void derivedDialog(){
         if(readOnly)return;
         QDialog dialog(owner);dialog.setObjectName("drawingDerivedViewDialog");dialog.setWindowTitle(QStringLiteral("Vista derivata"));auto *form=new QFormLayout(&dialog);
@@ -1774,17 +1787,20 @@ struct DrawingSheetEditor::Impl{
     void derivedProperties(QUuid id){
         const auto *v=viewFor(id);const auto *l=layoutFor(id);if(!v||!l)return;
         auto layout=*l;const bool section=layout.relation.kind==DrawingDerivedKind::Section;
+        const bool auxiliary=layout.relation.kind==DrawingDerivedKind::Auxiliary;
         QDialog dialog(owner);dialog.setObjectName("drawingDerivedPropertiesDialog");dialog.setWindowTitle(QStringLiteral("Proprieta' vista derivata"));auto *form=new QFormLayout(&dialog);
         auto *title=new QLineEdit(layout.title,&dialog);title->setObjectName("drawingDerivedTitle");title->setMaxLength(256);form->addRow(QStringLiteral("Titolo:"),title);
         auto *label=new QLineEdit(layout.relation.label,&dialog);label->setMaxLength(8);label->setObjectName("drawingSectionIdentifier");
         auto *flag=new QCheckBox(section?QStringLiteral("Mostra tratteggio"):QStringLiteral("Mantieni allineamento"),&dialog);flag->setChecked(section?layout.relation.hatch:layout.relation.aligned);flag->setObjectName("drawingDerivedFlag");
         auto *reverse=new QCheckBox(QStringLiteral("Inverti verso delle frecce"),&dialog);reverse->setChecked(layout.relation.reverse);reverse->setObjectName("drawingSectionReverse");
         auto *style=new QComboBox(&dialog);style->setObjectName("drawingSectionStyle");style->addItems({"Sezione rimossa","Sezione completa","Mezza sezione destra","Mezza sezione sinistra"});style->setCurrentIndex(int(v->sectionStyle));
-        if(section){form->addRow(QStringLiteral("Tipo:"),style);form->addRow(QStringLiteral("Identificativo:"),label);form->addRow(reverse);}else style->hide();form->addRow(flag);
+        if(section){form->addRow(QStringLiteral("Tipo:"),style);form->addRow(QStringLiteral("Identificativo:"),label);form->addRow(reverse);}else{style->hide();label->hide();reverse->hide();}form->addRow(flag);
+        auto *angle=new NumericInput(&dialog);angle->setObjectName("drawingAuxiliaryAngle");angle->setRange(-360,360);angle->setDecimals(4);angle->setSuffix(QStringLiteral("°"));angle->setValue(layout.relation.auxiliaryAngle);
+        if(auxiliary)form->addRow(QStringLiteral("Lato di osservazione:"),angle);else angle->hide();
         auto *references=new QCheckBox(QStringLiteral("Sezioni del piano come riferimenti di quota"),&dialog);references->setObjectName("drawingDerivedSectionReferences");references->setChecked(v->sectionReferences);if(!section)form->addRow(references);else references->hide();
         auto *note=new QLabel(section?QStringLiteral("Scala, piano e corpi seguono la madre. Ridefinisci linea di taglio conserva quote e identificativo. Per una mezza sezione indica prima un punto sull’asse: il cambio tipo non riposiziona l’asse automaticamente."):QStringLiteral("Scala, piano e corpi seguono la vista madre. Sgancia vista conserva l'orientamento corrente e permette modifiche indipendenti."),&dialog);note->setWordWrap(true);form->addRow(note);
         auto *error=new QLabel(&dialog);error->setWordWrap(true);form->addRow(error);auto *buttons=new QDialogButtonBox(QDialogButtonBox::Ok|QDialogButtonBox::Cancel,&dialog);form->addRow(buttons);
-        connect(buttons,&QDialogButtonBox::rejected,&dialog,&QDialog::reject);connect(buttons,&QDialogButtonBox::accepted,&dialog,[&]{auto next=state;for(auto &p:next.views)if(p.viewId==id){p.title=title->text().trimmed();if(section){p.relation.label=label->text().trimmed().toUpper();p.relation.hatch=flag->isChecked();p.relation.reverse=reverse->isChecked();}else p.relation.aligned=flag->isChecked();}for(auto &v:next.drawing.views)if(v.id==id){if(section)v.sectionStyle=DrawingSectionStyle(style->currentIndex());else v.sectionReferences=references->isChecked();}const auto result=changeViews(std::move(next),QStringLiteral("Proprieta' vista derivata"));error->setText(result);if(result.isEmpty())dialog.accept();});dialog.exec();
+        connect(buttons,&QDialogButtonBox::rejected,&dialog,&QDialog::reject);connect(buttons,&QDialogButtonBox::accepted,&dialog,[&]{auto next=state;for(auto &p:next.views)if(p.viewId==id){p.title=title->text().trimmed();if(section){p.relation.label=label->text().trimmed().toUpper();p.relation.hatch=flag->isChecked();p.relation.reverse=reverse->isChecked();}else{p.relation.aligned=flag->isChecked();if(auxiliary)p.relation.auxiliaryAngle=angle->value();}}for(auto &v:next.drawing.views)if(v.id==id){if(section)v.sectionStyle=DrawingSectionStyle(style->currentIndex());else v.sectionReferences=references->isChecked();}const auto result=changeViews(std::move(next),QStringLiteral("Proprieta' vista derivata"));error->setText(result);if(result.isEmpty())dialog.accept();});dialog.exec();
     }
     void styleDialog(){
         if(readOnly)return;
@@ -1882,6 +1898,7 @@ DrawingSheetEditor::DrawingSheetEditor(DrawingSheet sheet,DrawingEditorModel mod
     action(QStringLiteral("Inserisci sezione..."),"drawingAddViewAction",[this]{impl_->addViewDialog();});
     action(QStringLiteral("Vista dettaglio..."),"drawingDetailViewAction",[this]{impl_->detailDialog();});
     action(QStringLiteral("Vista derivata..."),"drawingDerivedViewAction",[this]{impl_->derivedDialog();});
+    action(QStringLiteral("Vista ausiliaria..."),"drawingAuxiliaryViewAction",[this]{impl_->auxiliaryDialog();});
     action(QStringLiteral("Sezione da linea di taglio"),"drawingTechnicalSectionAction",[this]{impl_->beginTechnicalSection();});
     action(QStringLiteral("Sgancia vista"),"drawingDetachViewAction",[this]{impl_->report(detachView(impl_->selectedView()));});
     action(QStringLiteral("Libera/ripristina allineamento"),"drawingReleaseAlignmentAction",[this]{const auto *l=impl_->layoutFor(impl_->selectedView());impl_->report(setViewAlignment(impl_->selectedView(),l?!l->relation.aligned:false));});
@@ -1955,7 +1972,7 @@ DrawingSheetEditor::DrawingSheetEditor(DrawingSheet sheet,DrawingEditorModel mod
         if(item->data(0,Qt::UserRole).toString()==QLatin1String("dimension")){menu.addAction(findChild<QAction *>("drawingEditDimensionAction"));menu.addAction(findChild<QAction *>("drawingReverseDimensionArrowsAction"));}
         else if(item->data(0,Qt::UserRole).toString()==QLatin1String("annotation"))menu.addAction(findChild<QAction *>("drawingEditAnnotationAction"));
         else if(item->data(0,Qt::UserRole).toString()==QLatin1String("axis"))menu.addAction(findChild<QAction *>("drawingEditAxisAction"));
-        else{menu.addAction(findChild<QAction *>("drawingEditViewAction"));menu.addAction(findChild<QAction *>("drawingAlignViewAction"));menu.addAction(findChild<QAction *>("drawingResetViewTitleAction"));menu.addAction(impl_->hiddenAction);menu.addAction(impl_->shadedAction);menu.addAction(impl_->centersAction);menu.addAction(impl_->centerLinesAction);menu.addAction(impl_->cylinderAxesAction);for(auto name:{"drawingDerivedViewAction","drawingDetailViewAction","drawingTechnicalSectionAction","drawingDetachViewAction","drawingReleaseAlignmentAction","drawingSectionHatchAction","drawingEditSectionLineAction","drawingAlignSectionOrientationAction","drawingReverseSectionAction"})menu.addAction(findChild<QAction *>(name));}
+        else{menu.addAction(findChild<QAction *>("drawingEditViewAction"));menu.addAction(findChild<QAction *>("drawingAlignViewAction"));menu.addAction(findChild<QAction *>("drawingResetViewTitleAction"));menu.addAction(impl_->hiddenAction);menu.addAction(impl_->shadedAction);menu.addAction(impl_->centersAction);menu.addAction(impl_->centerLinesAction);menu.addAction(impl_->cylinderAxesAction);for(auto name:{"drawingDerivedViewAction","drawingAuxiliaryViewAction","drawingDetailViewAction","drawingTechnicalSectionAction","drawingDetachViewAction","drawingReleaseAlignmentAction","drawingSectionHatchAction","drawingEditSectionLineAction","drawingAlignSectionOrientationAction","drawingReverseSectionAction"})menu.addAction(findChild<QAction *>(name));}
         menu.addSeparator();menu.addAction(findChild<QAction *>("drawingDeleteSelectionAction"));
         menu.exec(impl_->tree->viewport()->mapToGlobal(point));});
     for(auto name:{"drawingResetViewTitleAction","drawingEditAnnotationAction","drawingEditAxisAction","drawingDetachViewAction","drawingReleaseAlignmentAction","drawingSectionHatchAction","drawingEditSectionLineAction","drawingAlignSectionOrientationAction","drawingReverseSectionAction"})toolbar->removeAction(findChild<QAction *>(name));
@@ -1965,6 +1982,7 @@ DrawingSheetEditor::DrawingSheetEditor(DrawingSheet sheet,DrawingEditorModel mod
         {"drawingResetViewTitleAction","drawingResetViewTitle"},
         {"drawingDetailViewAction","drawingDetailView"},
         {"drawingDerivedViewAction","drawingDerivedView"},
+        {"drawingAuxiliaryViewAction","drawingAuxiliaryView"},
         {"drawingTechnicalSectionAction","drawingTechnicalSection"},
         {"drawingDetachViewAction","drawingDetachView"},
         {"drawingReleaseAlignmentAction","drawingReleaseAlignment"},
@@ -2035,6 +2053,18 @@ QString DrawingSheetEditor::beginDerivedViewPlacement(const QUuid &parent,Drawin
     DrawingView child;child.sectionReferences=base->sectionReferences;
     DrawingViewLayout layout;layout.viewId=child.id;layout.title=QStringLiteral("Vista derivata %1").arg(impl_->state.views.size()+1);layout.features=source->features;layout.showHiddenLines=source->showHiddenLines;layout.position=source->position;
     layout.relation.parentId=parent;layout.relation.kind=DrawingDerivedKind::Orthographic;layout.relation.side=side;layout.relation.method=method;
+    auto next=impl_->state;next.drawing.views.push_back(child);next.views.append(layout);const auto error=synchronizeDrawingViews(next);if(!error.isEmpty())return error;
+    return beginViewPlacement(next.drawing.views.back(),next.views.back());
+}
+QString DrawingSheetEditor::beginAuxiliaryViewPlacement(const QUuid &parent,double angle){
+    if(impl_->computing)return QStringLiteral("Attendere il calcolo della vista in corso.");
+    if(impl_->readOnly)return QStringLiteral("La tavola e' in sola lettura.");
+    if(!std::isfinite(angle)||std::abs(angle)>360)return QStringLiteral("Direzione della vista ausiliaria non valida.");
+    const auto *base=impl_->viewFor(parent);const auto *source=impl_->layoutFor(parent);
+    if(!base||!source||base->kind!=DrawingViewKind::ProjectedEdges||drawingIsDetail(*source))return QStringLiteral("Scegli una vista madre proiettata, non un dettaglio.");
+    DrawingView child;child.sectionReferences=base->sectionReferences;
+    DrawingViewLayout layout;layout.viewId=child.id;layout.title=QStringLiteral("Vista ausiliaria %1").arg(impl_->state.views.size()+1);layout.features=source->features;layout.showHiddenLines=source->showHiddenLines;layout.showMesh=source->showMesh;layout.position=source->position;
+    layout.relation.parentId=parent;layout.relation.kind=DrawingDerivedKind::Auxiliary;layout.relation.auxiliaryAngle=angle;
     auto next=impl_->state;next.drawing.views.push_back(child);next.views.append(layout);const auto error=synchronizeDrawingViews(next);if(!error.isEmpty())return error;
     return beginViewPlacement(next.drawing.views.back(),next.views.back());
 }
@@ -2122,12 +2152,12 @@ QString DrawingSheetEditor::detachView(const QUuid &id){
     if(impl_->layoutFor(id)&&drawingIsDetail(*impl_->layoutFor(id)))return QStringLiteral("Il dettaglio mantiene il collegamento alla madre; modifica il dettaglio o eliminalo.");
     if(impl_->computing)return QStringLiteral("Attendere il calcolo della vista in corso.");
     if(impl_->readOnly)return QStringLiteral("La tavola e' in sola lettura.");
-    const auto *layout=impl_->layoutFor(id);if(!layout||layout->relation.kind!=DrawingDerivedKind::Orthographic)return QStringLiteral("Seleziona una vista ortogonale derivata. Le sezioni mantengono il legame con la linea di taglio.");
+    const auto *layout=impl_->layoutFor(id);if(!layout||(layout->relation.kind!=DrawingDerivedKind::Orthographic&&layout->relation.kind!=DrawingDerivedKind::Auxiliary))return QStringLiteral("Seleziona una vista ortogonale o ausiliaria derivata. Le sezioni mantengono il legame con la linea di taglio.");
     auto next=impl_->state;for(auto &l:next.views)if(l.viewId==id)l.relation={};return impl_->changeViews(std::move(next),QStringLiteral("Sgancia vista"));
 }
 QString DrawingSheetEditor::setViewAlignment(const QUuid &id,bool aligned){
     if(impl_->computing)return QStringLiteral("Attendere il calcolo della vista in corso.");
-    const auto *l=impl_->layoutFor(id);if(!l||l->relation.kind!=DrawingDerivedKind::Orthographic)return QStringLiteral("Seleziona una vista derivata ortogonale.");
+    const auto *l=impl_->layoutFor(id);if(!l||(l->relation.kind!=DrawingDerivedKind::Orthographic&&l->relation.kind!=DrawingDerivedKind::Auxiliary))return QStringLiteral("Seleziona una vista derivata ortogonale o ausiliaria.");
     auto next=impl_->state;for(auto &p:next.views)if(p.viewId==id)p.relation.aligned=aligned;return impl_->applyLayout(std::move(next),QStringLiteral("Allineamento vista derivata"));
 }
 QString DrawingSheetEditor::setSectionHatch(const QUuid &id,bool visible){
@@ -2444,7 +2474,7 @@ void DrawingSheetEditor::setReadOnly(bool readOnly){
     impl_->readOnly=readOnly||!impl_->state.drawing.version.checkinId.isNull();
     if(impl_->readOnly){impl_->cancelViewDrag();impl_->cancelPlacement();impl_->quoteAction->setChecked(false);}
     impl_->quoteType->setEnabled(!impl_->readOnly);
-    for(const auto &name:{"drawingAddNoteAction","drawingAddLeaderAction","drawingEditAnnotationAction","drawingAxisThroughPointsAction","drawingAxisBetweenLinesAction","drawingEditAxisAction","drawingDerivedViewAction","drawingDetailViewAction","drawingTechnicalSectionAction","drawingDetachViewAction","drawingReleaseAlignmentAction","drawingSectionHatchAction","drawingEditSectionLineAction","drawingAlignSectionOrientationAction","drawingReverseSectionAction","drawingOptionsAction","drawingResetViewTitleAction","drawingPageSettingsAction","drawingSmartDimensionAction","drawingEditDimensionAction","drawingReverseDimensionArrowsAction","drawingOriginReferenceAction","drawingAxisXReferenceAction","drawingAxisYReferenceAction","drawingAddProjectionAction","drawingAddViewAction","drawingEditViewAction","drawingAlignViewAction","drawingEndpointDimensionAction","drawingHorizontalDimensionAction","drawingVerticalDimensionAction","drawingLengthDimensionAction","drawingDeleteSelectionAction"})
+    for(const auto &name:{"drawingAddNoteAction","drawingAddLeaderAction","drawingEditAnnotationAction","drawingAxisThroughPointsAction","drawingAxisBetweenLinesAction","drawingEditAxisAction","drawingDerivedViewAction","drawingAuxiliaryViewAction","drawingDetailViewAction","drawingTechnicalSectionAction","drawingDetachViewAction","drawingReleaseAlignmentAction","drawingSectionHatchAction","drawingEditSectionLineAction","drawingAlignSectionOrientationAction","drawingReverseSectionAction","drawingOptionsAction","drawingResetViewTitleAction","drawingPageSettingsAction","drawingSmartDimensionAction","drawingEditDimensionAction","drawingReverseDimensionArrowsAction","drawingOriginReferenceAction","drawingAxisXReferenceAction","drawingAxisYReferenceAction","drawingAddProjectionAction","drawingAddViewAction","drawingEditViewAction","drawingAlignViewAction","drawingEndpointDimensionAction","drawingHorizontalDimensionAction","drawingVerticalDimensionAction","drawingLengthDimensionAction","drawingDeleteSelectionAction"})
         findChild<QAction *>(QString::fromLatin1(name))->setEnabled(!impl_->readOnly);
     impl_->refreshHiddenAction();impl_->refreshHistoryActions();impl_->updateAction->setEnabled(!impl_->readOnly&&bool(impl_->provider));
     for(auto *item:impl_->scene->items())if(dynamic_cast<MoveLabel *>(item)||dynamic_cast<MoveNote *>(item))item->setFlag(QGraphicsItem::ItemIsMovable,!impl_->readOnly&&item->data(kindRole).toString()!=QLatin1String("view"));

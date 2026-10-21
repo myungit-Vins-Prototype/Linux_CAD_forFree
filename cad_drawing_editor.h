@@ -29,6 +29,7 @@ public:
     // Anteprima transitoria: segue il mouse, clic inserisce, Esc annulla.
     QString beginViewPlacement(DrawingView view,DrawingViewLayout layout);
     QString beginDerivedViewPlacement(const QUuid &parent,DrawingProjectionSide side,DrawingProjectionMethod method);
+    QString beginAuxiliaryViewPlacement(const QUuid &parent,double angle);
     QString beginDetailCircle(const QUuid &parent,const QString &label,double scale);
     QString beginDetailViewPlacement(const QUuid &parent,QPointF center,double radius,double scale,const QString &label);
     QString updateDetailView(const QUuid &id,QPointF center,double radius,double scale,const QString &label);

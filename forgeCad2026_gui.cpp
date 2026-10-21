@@ -4248,7 +4248,8 @@ void PdfWindow::installDocumentRevisionPanel(QMenu *viewMenu) {
     connect(documentRevisionHistory_,&QTableWidget::itemSelectionChanged,this,[this]{documentOpenRevision_->setEnabled(documentRevisionHistory_->currentRow()>=0&&!foregroundProgressDepth_&&!viewport_->interactionLocked());});
     auto *refresh=new QPushButton(QStringLiteral("Aggiorna stato"),body);refresh->setObjectName("documentRefreshRevisions");layout->addWidget(refresh);connect(refresh,&QPushButton::clicked,this,[this]{refreshDocumentEditAccess();updateWindowTitle();});
     documentRevisionDock_->setWidget(body);addDockWidget(Qt::RightDockWidgetArea,documentRevisionDock_);
-    auto *toggle=documentRevisionDock_->toggleViewAction();toggle->setObjectName("documentRevisionPanelAction");toggle->setText(QStringLiteral("Pannello revisioni"));viewMenu->addAction(toggle);
+    auto *toggle=documentRevisionDock_->toggleViewAction();toggle->setObjectName("documentRevisionPanelAction");toggle->setText(QStringLiteral("Pannello revisioni"));
+    toggle->setIcon(ForgeCad::commandIcon("storyboard"));toggle->setIconVisibleInMenu(true);viewMenu->addAction(toggle);
     documentRevisionDock_->setVisible(QSettings().value("revisions/modelPanelVisible",true).toBool());
     connect(documentRevisionDock_,&QDockWidget::visibilityChanged,this,[this](bool visible){if(isVisible())QSettings().setValue("revisions/modelPanelVisible",visible);});
 }

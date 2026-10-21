@@ -1374,6 +1374,12 @@ std::map<QString, Draw> &registry() {
         for(double y:{8.,16.})line(p,{3,y},{22,y},stroke(c.construction,.8,Qt::DashLine));
         line(p,{11,12},{16,12},stroke(c.accent,1.5));arrowHead(p,{16,12},{11,12},c.accent,2.5);
     };
+    icons["drawingAuxiliaryView"]=[](QPainter &p,const IconPalette &c){
+        polygon(p,QPolygonF({{2,16},{8,10},{13,15},{7,21}}),c.faceLight,stroke(c.ink,1.3));
+        polygon(p,QPolygonF({{13,5},{18,1},{23,6},{18,10}}),c.faceLight,stroke(c.ink,1.3));
+        line(p,{7,16},{18,5},stroke(c.construction,.8,Qt::DashLine));
+        line(p,{10,12},{14,8},stroke(c.accent,1.5));arrowHead(p,{14,8},{10,12},c.accent,2.5);
+    };
     icons["drawingTechnicalSection"]=[](QPainter &p,const IconPalette &c){
         p.setPen(stroke(c.ink,1.1));p.setBrush(Qt::NoBrush);p.drawRect(QRectF(2,6,8,14));p.drawRect(QRectF(15,8,7,12));
         for(int i=0;i<3;++i)line(p,{15.,double(12+4*i)},{19.,double(8+4*i)},stroke(c.construction,.8));

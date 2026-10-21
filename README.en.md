@@ -341,7 +341,9 @@ ctest --test-dir build-linux --output-on-failure
 
 The same option can be added to the macOS configuration while retaining the Homebrew parameters. Viewport tests registered with CTest use Qt offscreen; OpenGL checks require a suitable graphical environment. CUDA tests are configured only when a CUDA compiler is available.
 
-The offline [interactive architecture map](docs/architecture/index.html) groups files by responsibility and shows incoming/outgoing C++ calls, includes and function references. [Generation and coverage guide](docs/architecture/README.md). Run `python3 tools/open_architecture.py` to **update the map whenever it is opened or reloaded**, then view it in your browser. The standard CMake build also **automatically updates this view** (`FORGECAD_UPDATE_ARCHITECTURE=ON` by default; Python 3 and libclang bindings required). Review curated responsibility descriptions after structural changes and run `python3 tools/generate_architecture.py --check`, as required by `AGENTS.md`.
+Tests using real documents require the example files. If they are stored outside the checkout, configure `-DFORGECAD_EXAMPLE_DIR=/path/to/examples`: CTest uses this path even when the environment variable of the same name differs. Direct runner invocations can instead use the `FORGECAD_EXAMPLE_DIR` environment variable. Tests save copies in temporary directories and preserve the originals.
+
+The offline [interactive architecture map](docs/architecture/index.html) groups files by responsibility and shows incoming/outgoing C++ calls, includes and function references. [Generation and coverage guide](docs/architecture/README.md). Run `python3 tools/open_architecture.py` to **update the map whenever it is opened or reloaded**, then view it in your browser. The CMake build exports `compile_commands.json` without running map analysis; Python 3 and libclang bindings are only needed to update the map. Review curated responsibility descriptions after structural changes and run `python3 tools/generate_architecture.py --check`, as required by `AGENTS.md`.
 
 | Path | Contents |
 |---|---|

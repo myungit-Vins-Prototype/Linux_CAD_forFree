@@ -1745,7 +1745,9 @@ public:
         using namespace ForgeCad;
         const QString input = exampleDocumentPath("Mouse.prt");
         DocumentState original;
-        require(loadDocumentFile(input, original).isEmpty(), "lettura Mouse cache precedente");
+        const auto loadError = loadDocumentFile(input, original);
+        require(loadError.isEmpty(), qPrintable(QStringLiteral("lettura Mouse cache precedente (%1): %2; configurare FORGECAD_EXAMPLE_DIR")
+                                               .arg(input, loadError)));
         QVector<std::string> geometry;
         for (const auto &feature : original.extrusions)
             geometry.append(feature.forgeBody ? Kernel::writeBodyBinary(*feature.forgeBody) : std::string());
@@ -1753,6 +1755,12 @@ public:
         QDataStream geometryOut(&sharedGeometry, QIODevice::WriteOnly);
         SnapshotChunkWriter geometryWriter(geometryOut);
         for (const auto &binary : geometry) geometryWriter.write(QByteArray(binary.data(), qsizetype(binary.size())));
+        // Il file di esempio puo' essere gia' compatto: confrontare gli stessi
+        // snapshot con/senza condivisione, non due salvataggi di epoche diverse.
+        QByteArray unsharedGeometry;
+        QDataStream unsharedOut(&unsharedGeometry, QIODevice::WriteOnly);
+        for (const auto &binary : geometry) unsharedOut << QByteArray(binary.data(), qsizetype(binary.size()));
+        require(sharedGeometry.size() < unsharedGeometry.size() / 2, "riduzione blocchi B-rep Mouse rispetto agli snapshot non condivisi");
         QDataStream geometryIn(sharedGeometry);
         SnapshotChunkReader geometryReader(geometryIn);
         for (const auto &binary : geometry)
@@ -1814,7 +1822,6 @@ public:
                         && feature.display.triangleFaces == expected.triangleFaces, "mesh float conservata senza perdita");
             }
         }
-        require(QFileInfo(path).size() < QFileInfo(input).size() / 2, "riduzione dimensioni Mouse");
         CadViewport reopened;
         reopened.setTessellationQuality(2);
         reopened.loadDocument(loaded);
@@ -1823,6 +1830,7 @@ public:
         reopened.setHistoryPosition(planar + 2);
         require(!reopened.extrusions_[planar].visible, "visibilita' Mouse dopo riapertura");
         std::cout << "Mouse original=" << QFileInfo(input).size() << " compact=" << QFileInfo(path).size()
+                  << " geometry_unshared=" << unsharedGeometry.size() << " geometry_shared=" << sharedGeometry.size()
                   << " stages=" << geometry.size() << " exact_geometry=standard_binary_round_trip" << std::endl;
     }
     static void storyboardScroll() {
@@ -8981,12 +8989,21 @@ public:
                 v.sketchMode_ = true;
                 v.sketchSelections_ = {SketchElementSelection{0, 0}};
                 v.deleteSketchElements();
+                require(v.hasPendingSketchChanges() && v.extrusions_.back().forgeBody
+                            && v.extrusions_.back().error.isEmpty(),
+                        "eliminazione estranea rinvia la rigenerazione fino all'uscita dallo schizzo");
+                v.endSketchMode();
                 const ExtrusionObject &after = v.extrusions_.back();
                 require(after.ruledFirst.at(0).element.element == 0 && after.ruledSecond.at(0).element.element == 1 && after.forgeBody
                             && std::fabs(minY(after)) < 1e-12,
                         "la rigata segue le entita' rinumerate");
+                v.sketchMode_ = true;
                 v.sketchSelections_ = {SketchElementSelection{0, 0}};
                 v.deleteSketchElements();
+                require(v.extrusions_.back().ruledFirst.at(0).element.element == -1
+                            && v.hasPendingSketchChanges() && v.extrusions_.back().error.isEmpty(),
+                        "riferimento eliminato subito, errore geometrico differito durante lo schizzo");
+                v.endSketchMode();
                 require(v.extrusions_.back().ruledFirst.at(0).element.element == -1 && !v.extrusions_.back().error.isEmpty(),
                         "entita' eliminata: la rigata va in errore invece di passare a un'altra");
             }
@@ -9158,29 +9175,25 @@ public:
         // presso una cucitura della superficie e Newton, con un solo seme,
         // sceglieva il ramo sbagliato della curva chiusa.
         {
-            DocumentState bottleDocument;
-            const QString bottlePath = exampleDocumentPath("flacone.prt");
-            require(loadDocumentFile(bottlePath, bottleDocument).isEmpty(), "lettura di flacone.prt");
-            CadViewport bottle;
-            bottle.loadDocument(bottleDocument);
-            int sourceBody = -1;
-            Kernel::EdgeId singular;
-            for (int index = bottle.extrusions_.size() - 1; index >= 0 && sourceBody < 0; --index) {
-                const ForgeBody &candidate = bottle.extrusions_.at(index).forgeBody;
-                if (!candidate) continue;
-                singular = Kernel::nearestEdge(*candidate, Kernel::Vec3(0.0, 13.6, 105.285), 1e-2);
-                if (singular.valid()) sourceBody = index;
-            }
-            require(sourceBody >= 0, "corpo del flacone prima dei raccordi");
-            const Kernel::Body &base = *bottle.extrusions_.at(sourceBody).forgeBody;
+            // Snapshot fisso della Differenza 19 prima dei raccordi. La ricerca
+            // a ritroso nel documento modificabile sceglieva anche corpi gia'
+            // raccordati; conteggi e punti del vecchio esempio non erano stabili.
+            QFile fixture(QStringLiteral(FORGECAD_SOURCE_DIR "/kernel/tests/data/flacone_pre_blend.body.qz"));
+            require(fixture.open(QIODevice::ReadOnly), "apertura fixture flacone prima dei raccordi");
+            const auto bytes = qUncompress(fixture.readAll());
+            require(!bytes.isEmpty(), "decompressione fixture flacone");
+            const Kernel::Body base = Kernel::readBodyBinary(std::string(bytes.constData(), std::size_t(bytes.size())));
+            require(base.faces().size() == 29 && base.edges().size() == 40 && Kernel::checkBody(base).empty(),
+                    "topologia della fixture flacone prima dei raccordi");
+            const Kernel::EdgeId singular = Kernel::nearestEdge(base, Kernel::Vec3(0.0, 13.6, 105.285), 1e-2);
             require(singular.valid(), "bordo singolare del flacone");
             const Kernel::Body rounded = Kernel::blendEdges(base, {singular}, 0.6, false);
-            require(Kernel::checkBody(rounded).empty() && rounded.faces().size() == 34 && rounded.edges().size() == 48,
+            require(Kernel::checkBody(rounded).empty() && rounded.faces().size() == 32 && rounded.edges().size() == 45,
                     "raccordo da 0,6 mm sulla cucitura del flacone");
             const Kernel::EdgeId threadEnd = Kernel::nearestEdge(base, Kernel::Vec3(0.0, 13.6, 108.034), 1e-2);
             require(threadEnd.valid(), "bordo del fine-filetto del flacone");
             const Kernel::Body joined = Kernel::blendEdges(base, {singular, threadEnd}, 0.3, false);
-            require(Kernel::checkBody(joined).empty() && joined.faces().size() == 37 && joined.edges().size() == 53,
+            require(Kernel::checkBody(joined).empty() && joined.faces().size() == 35 && joined.edges().size() == 50,
                     "raccordo congiunto da 0,3 mm su elica e fine-filetto");
             const Kernel::EdgeId otherThreadEnd = Kernel::nearestEdge(base, Kernel::Vec3(0.0, 13.6, 101.678), 1e-2);
             require(otherThreadEnd.valid(), "secondo bordo del fine-filetto del flacone");
@@ -9195,12 +9208,12 @@ public:
             const Kernel::EdgeId lowerTrimA = edgeNear(Kernel::Vec3(-2.506, 12.987, 107.704), "primo trim inferiore del filetto");
             const Kernel::EdgeId lowerTrimB = edgeNear(Kernel::Vec3(2.528, 12.967, 101.153), "secondo trim inferiore del filetto");
             const Kernel::Body lower = Kernel::blendEdges(base, {lowerHelix, lowerTrimA, lowerTrimB}, 0.3, false);
-            require(Kernel::checkBody(lower).empty() && lower.faces().size() == 34 && lower.edges().size() == 50,
+            require(Kernel::checkBody(lower).empty() && lower.faces().size() == 32 && lower.edges().size() == 47,
                     "raccordo del bordo inferiore attraverso i trim del collo");
             const Kernel::EdgeId upperTrimA = edgeNear(Kernel::Vec3(-2.478, 12.984, 108.560), "primo trim superiore del filetto");
-            const Kernel::EdgeId upperTrimB = edgeNear(Kernel::Vec3(2.555, 12.969, 102.010), "secondo trim superiore del filetto");
+            const Kernel::EdgeId upperTrimB = edgeNear(Kernel::Vec3(2.54383, 12.9486, 102.010), "secondo trim superiore del filetto");
             const Kernel::Body upper = Kernel::blendEdges(base, {singular, upperTrimA, upperTrimB}, 0.3, false);
-            require(Kernel::checkBody(upper).empty() && upper.faces().size() == 34 && upper.edges().size() == 50,
+            require(Kernel::checkBody(upper).empty() && upper.faces().size() == 32 && upper.edges().size() == 47,
                     "raccordo del bordo superiore attraverso i trim del collo");
 
             // La parete del collo e' un cilindro con piu' loop e bordi,

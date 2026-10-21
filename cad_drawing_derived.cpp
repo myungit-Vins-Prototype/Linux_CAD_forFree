@@ -34,6 +34,16 @@ void derive(const DrawingView &parent,const DrawingViewRelation &r,DrawingView &
         case DrawingProjectionSide::Below:normal=-sign*y;reference=x;break;
         }
         child.kind=DrawingViewKind::ProjectedEdges;child.sectionStyle=DrawingSectionStyle::Removed;child.plane=Frame3(parent.plane.origin(),normal,reference);
+    }else if(r.kind==DrawingDerivedKind::Auxiliary){
+        require(std::isfinite(r.auxiliaryAngle)&&std::abs(r.auxiliaryAngle)<=360,"Direzione della vista ausiliaria non valida.");
+        const double angle=r.auxiliaryAngle*kPi/180;
+        const auto normal=std::cos(angle)*x+std::sin(angle)*y;
+        const auto tangent=-std::sin(angle)*x+std::cos(angle)*y;
+        // Ribalta il piano madre di 90 gradi attorno alla retta perpendicolare
+        // alla direzione scelta: conserva l'orientamento sul foglio, senza specchiare.
+        const auto reference=-std::sin(angle)*tangent-std::cos(angle)*z;
+        child.kind=DrawingViewKind::ProjectedEdges;child.sectionStyle=DrawingSectionStyle::Removed;
+        child.plane=Frame3(parent.plane.origin(),normal,reference);
     }else{
         const auto delta=r.cutEnd-r.cutStart;const double length=std::hypot(delta.x(),delta.y());
         require(std::isfinite(length)&&length>1e-7,"La linea di taglio richiede due punti distinti.");
@@ -178,8 +188,13 @@ QPainterPath solidSectionMaterial(const Body &body,int region,const DrawingView 
 bool finite(QPointF p){return std::isfinite(p.x())&&std::isfinite(p.y())&&std::abs(p.x())<=1e7&&std::abs(p.y())<=1e7;}
 }
 QPointF constrainDrawingViewPosition(const DrawingSheet &sheet,const DrawingViewLayout &layout,QPointF p){
-    const auto &r=layout.relation;if(r.parentId.isNull()||!r.aligned||r.kind!=DrawingDerivedKind::Orthographic)return p;
+    const auto &r=layout.relation;if(r.parentId.isNull()||!r.aligned)return p;
     const auto &parent=layoutFor(sheet,r.parentId);
+    if(r.kind==DrawingDerivedKind::Auxiliary){
+        const double angle=r.auxiliaryAngle*kPi/180;const QPointF direction(std::cos(angle),-std::sin(angle));
+        return parent.position+QPointF::dotProduct(p-parent.position,direction)*direction;
+    }
+    if(r.kind!=DrawingDerivedKind::Orthographic)return p;
     if(r.side==DrawingProjectionSide::Left||r.side==DrawingProjectionSide::Right)p.setY(parent.position.y());else p.setX(parent.position.x());
     return p;
 }
@@ -192,7 +207,7 @@ QString synchronizeDrawingViews(DrawingSheet &sheet){
             require(visiting.size()<256,"Gerarchia delle viste troppo profonda.");visiting.insert(id);
             auto &layout=const_cast<DrawingViewLayout &>(layoutFor(sheet,id));const auto &r=layout.relation;
             if(!r.parentId.isNull()){
-                require(r.kind==DrawingDerivedKind::Orthographic||r.kind==DrawingDerivedKind::Section||r.kind==DrawingDerivedKind::Detail,"Tipo di vista derivata non valido.");
+                require(r.kind==DrawingDerivedKind::Orthographic||r.kind==DrawingDerivedKind::Section||r.kind==DrawingDerivedKind::Detail||r.kind==DrawingDerivedKind::Auxiliary,"Tipo di vista derivata non valido.");
                 visit(r.parentId);const auto &parent=viewFor(sheet,r.parentId);
                 require(r.kind==DrawingDerivedKind::Detail||parent.kind==DrawingViewKind::ProjectedEdges,"La vista madre deve essere una proiezione.");
                 require(layoutFor(sheet,r.parentId).relation.kind!=DrawingDerivedKind::Detail,"Non sono supportati dettagli di altri dettagli.");
@@ -217,7 +232,8 @@ QString validateDrawingRelations(const DrawingSheet &sheet){
         QSet<QString> labels;
         for(const auto &l:sheet.views){const auto &r=l.relation;
             if(r.parentId.isNull()){require(r.kind==DrawingDerivedKind::None,"Relazione della vista senza madre.");continue;}
-            require(r.kind==DrawingDerivedKind::Orthographic||r.kind==DrawingDerivedKind::Section||r.kind==DrawingDerivedKind::Detail,"Tipo di relazione non valido.");
+            require(r.kind==DrawingDerivedKind::Orthographic||r.kind==DrawingDerivedKind::Section||r.kind==DrawingDerivedKind::Detail||r.kind==DrawingDerivedKind::Auxiliary,"Tipo di relazione non valido.");
+            if(r.kind==DrawingDerivedKind::Auxiliary)require(std::isfinite(r.auxiliaryAngle)&&std::abs(r.auxiliaryAngle)<=360,"Direzione della vista ausiliaria non valida.");
             require(r.side>=DrawingProjectionSide::Left&&r.side<=DrawingProjectionSide::Below,"Lato della vista derivata non valido.");
             require(r.method==DrawingProjectionMethod::FirstAngle||r.method==DrawingProjectionMethod::ThirdAngle,"Metodo di proiezione non valido.");
             if(r.kind==DrawingDerivedKind::Detail){

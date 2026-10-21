@@ -8,7 +8,35 @@
 #include "../cad_drawing_dimension.h"
 #include "../cad_drawing_derived.h"
 namespace {
+void auxiliaryNativeFileRevisionTests(){
+    using namespace ForgeCad;using namespace ForgeCad::Kernel;
+    QTemporaryDir temporary;const auto modelPath=temporary.filePath("ausiliaria.prt"),path=temporary.filePath("ausiliaria.drw");
+    auto model=clientModel();clientOk(saveDocumentFile(modelPath,model));clientOk(checkoutWorkspaceDocument(modelPath,model,"qa"));RevisionRecord modelRecord;
+    clientOk(checkinWorkspaceDocument(modelPath,model,"M-A","",modelRecord));DrawingWindow window;clientOk(window.createFromModel(modelPath));
+    DrawingView parent;parent.kind=DrawingViewKind::ProjectedEdges;parent.scale=2;clientOk(window.editor()->insertView(parent,{parent.id,"Madre",{60,120},{model.extrusions[0].featureId}}));
+    auto sheet=window.editor()->sheet();DrawingView child;DrawingViewLayout derived{child.id,"Ausiliaria A",{160,60},{model.extrusions[0].featureId}};
+    derived.relation.kind=DrawingDerivedKind::Auxiliary;derived.relation.parentId=parent.id;derived.relation.auxiliaryAngle=45;
+    sheet.drawing.views.push_back(child);sheet.views.append(derived);clientOk(synchronizeDrawingViews(sheet));clientOk(window.editor()->insertView(sheet.drawing.views.back(),sheet.views.back()));
+    DrawingDimension dimension;bool chosen=false;
+    for(const auto &curve:window.editor()->curves(child.id))if(curve.kind==DrawingCurveKind::ProjectedEdge&&arcLength(*curve.curve,curve.range)>1e-5){dimension=dimensionOfCurve(sheet.drawing.views.back(),curve);chosen=true;break;}
+    require(chosen,"bordo dell'ausiliaria nativa da quotare");clientOk(window.editor()->addDimension(dimension,{200,80}));const auto nominal=window.editor()->dimensionResult(dimension.id).value;
+    clientOk(window.savePath(path));clientOk(window.pinModelRevision(modelRecord.version));
+    clientOk(window.savePath(path));clientOk(window.runRevisionAction(DrawingWindow::RevisionAction::Checkout,"qa"));clientOk(window.runRevisionAction(DrawingWindow::RevisionAction::Checkin,{},"Ausiliaria A"));
+    auto first=window.document().sheet.drawing.version;first.checkinId=window.document().baseCheckinId;
+    require(!first.checkinId.isNull(),"check-in dell'ausiliaria A");clientOk(window.runRevisionAction(DrawingWindow::RevisionAction::Checkout,"qa"));
+    auto changed=window.editor()->sheet().views.back();changed.relation.auxiliaryAngle=75;clientOk(window.editor()->updateView(window.editor()->sheet().drawing.views.back(),changed));
+    clientOk(window.savePath(path));clientOk(window.runRevisionAction(DrawingWindow::RevisionAction::Checkin,{},"Ausiliaria B"));
+    DrawingFile loaded;clientOk(loadDrawingFile(path,loaded));require(loaded.sheet.views.back().relation.auxiliaryAngle==75&&loaded.sheet.views.back().relation.parentId==parent.id,"file .drw conserva direzione B e madre");
+    DrawingWindow archived;clientOk(archived.openRevision(path,first));require(archived.document().sheet.views.back().relation.auxiliaryAngle==45,"storico A conserva la direzione senza futuro B");
+    require(archived.editor()->dimensionResult(dimension.id).status==DrawingDimensionStatus::Ready&&std::abs(archived.editor()->dimensionResult(dimension.id).value-nominal)<1e-7,"quota storica ausiliaria invariata");
+    require(archived.editor()->isReadOnly()&&!archived.editor()->findChild<QAction *>("drawingAuxiliaryViewAction")->isEnabled()&&!archived.editor()->beginAuxiliaryViewPlacement(parent.id,30).isEmpty(),"storico ausiliaria protegge comandi e dati");
+    DrawingPdfReport report;clientOk(archived.exportPdfPath(temporary.filePath("ausiliaria-a.pdf"),report));
+    auto *insert=window.findChild<QAction *>("drawingAuxiliaryViewAction");bool inMenu=false;
+    for(auto *action:window.menuBar()->actions())if(action->text()=="Inserisci")inMenu=action->menu()->actions().contains(insert);
+    require(inMenu,"vista ausiliaria raggiungibile dal menu della finestra nativa");
+}
 void projectedDrawingFileTests(){
+    auxiliaryNativeFileRevisionTests();
     using namespace ForgeCad;using namespace ForgeCad::Kernel;
     QTemporaryDir temporary;const auto sourcePath=temporary.filePath("modello.prt"),drawingPath=temporary.filePath("proiezioni.drw");
     auto working=clientModel();clientOk(saveDocumentFile(sourcePath,working));clientOk(checkoutWorkspaceDocument(sourcePath,working,"modellatore"));RevisionRecord modelA;

@@ -99,7 +99,7 @@ DESCRIPTIONS.update({'tools/open_architecture.py': ('build', 'Avvio locale della
  'cad_drawing_compute.h': ('drawing',
                            'Calcolo delle viste su worker con avanzamento, annullamento e blocco '
                            'temporaneo dell’editor.'),
- 'cad_drawing_derived': ('drawing', 'Costruzione delle viste derivate, proiettate e in sezione.'),
+ 'cad_drawing_derived': ('drawing', 'Costruzione e allineamento delle viste ortogonali, ausiliarie e in sezione.'),
  'cad_drawing_detail.h': ('drawing', 'Definizione e gestione del ritaglio delle viste di dettaglio.'),
  'cad_drawing_dimension': ('drawing', 'Geometria e presentazione delle quote delle viste 2D.'),
  'cad_drawing_editor': ('drawing',

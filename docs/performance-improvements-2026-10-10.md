@@ -127,6 +127,7 @@ stati isolati E22 (elica) ed E21 (fine-filetto). Lungo E21, intorno al parametro
 0,76489172, la soluzione del contatto salta di circa 0,01 mm pur con residui
 Newton nell'ordine di 1e-12. Questo dimostra un salto del ramo numerico;
 non dimostra che la superficie di partenza sia geometricamente discontinua.
+
 Resta da verificare una continuazione robusta dello stesso ramo e gli estremi.
 Tentativo con limite più stretto al salto del predittore: stesso fallimento.
 Tentativo invertendo l'ordine dei gruppi: errore di prolungamento
@@ -177,3 +178,19 @@ Per ricostruire la baseline usare un checkout separato di `f0dfbb5`, compilare
 il kernel con la stessa configurazione Release e collegare lo stesso sorgente
 aggiornato del probe al relativo archivio. Non compilare il vecchio probe,
 che non contiene tutte le modalità o ha un protocollo diverso.
+
+## Aggiornamento della fixture flacone (21 ottobre 2026)
+
+La regressione generale del viewport usa ora
+`kernel/tests/data/flacone_pre_blend.body.qz`, snapshot binario del kernel
+compresso con `qCompress`, senza definizioni del documento o dati di revisione.
+Proviene da **Differenza 19** (indice 18, prima dei raccordi) del flacone
+disponibile il 21 ottobre: 29 facce e 40 spigoli. La vecchia ricerca a ritroso
+sceglieva invece Raccordo 21, che aveva gia' 33 facce e 48 spigoli. I conteggi
+assoluti del vecchio documento non descrivevano piu' la geometria selezionata.
+La fixture conserva le stesse verifiche di validita', raggi 0,6/0,3, estremi
+del filetto, trim e ricucitura del collo; gli incrementi di topologia attesi
+restano +3/+5, +6/+10 e +3/+7 (facce/spigoli). Il punto del secondo trim
+superiore e' ora sulla geometria della fixture: (2,54383; 12,9486; 102,010).
+I casi su altri stadi gia' raccordati restano distinti: questo aggiornamento
+stabilizza l'input del test e non introduce correzioni al kernel.
