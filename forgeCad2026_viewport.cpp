@@ -10699,77 +10699,32 @@ QVector<QVector3D> CadViewport::sectionQuad(float scale ) const {
 }
 
 void CadViewport::enableSectionClip() {
-    if (!section_.enabled) {
-        displayCache_.setClipPlane(QVector4D(), false);
-        overlayRenderer_.setClipPlane(QVector4D(), false);
-        glDisable(GL_CLIP_DISTANCE0);
-        return;
+    QVector4D plane;
+    if (section_.enabled) {
+        const QVector3D n = section_.normal;
+        plane = QVector4D(-n.x(), -n.y(), -n.z(), QVector3D::dotProduct(n, section_.point));
     }
-    const QVector3D n = section_.normal;
-    const QVector4D plane{-n.x(), -n.y(), -n.z(), QVector3D::dotProduct(n, section_.point)};
-    displayCache_.setClipPlane(plane, true);
-    overlayRenderer_.setClipPlane(plane, true);
-    glEnable(GL_CLIP_DISTANCE0);
+    sceneRenderer_.setSectionClip(displayCache_, overlayRenderer_, plane, section_.enabled);
 }
 
 void CadViewport::disableSectionClip() {
-    displayCache_.setClipPlane(QVector4D(), false);
-    overlayRenderer_.setClipPlane(QVector4D(), false);
-    glDisable(GL_CLIP_DISTANCE0);
+    sceneRenderer_.setSectionClip(displayCache_, overlayRenderer_, QVector4D(), false);
 }
 
 void CadViewport::drawSectionCaps(const QVector<int> &solids) {
     if (!section_.enabled || !section_.caps || solids.isEmpty()) return;
     const QVector<QVector3D> quad = sectionQuad(1.5f);
-    displayCache_.setLightingEnabled(false);
-    glEnable(GL_STENCIL_TEST);
-    for (int index : solids) {
-        const BodyDisplay &display = extrusions_.at(index).display;
-        glClear(GL_STENCIL_BUFFER_BIT);
-        glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
-        glDepthMask(GL_FALSE);
-        glDisable(GL_DEPTH_TEST);
-        glStencilFunc(GL_ALWAYS, 0, 1);
-        glStencilOp(GL_KEEP, GL_KEEP, GL_INVERT);
-        enableSectionClip();
-        drawDisplayFaces(display);
-        disableSectionClip();
-        glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
-        glDepthMask(GL_TRUE);
-        glEnable(GL_DEPTH_TEST);
-        glStencilFunc(GL_EQUAL, 1, 1);
-        glStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);
-        QVector<QVector3D> triangles;
-        for (int corner : {0, 1, 2, 0, 2, 3}) triangles.push_back(quad.at(corner));
-        overlayRenderer_.draw(GL_TRIANGLES, triangles, QVector4D(0.78f, 0.36f, 0.30f, 1.0f));
-        glDepthFunc(GL_LEQUAL);
-        overlayRenderer_.setHatch(true);
-        overlayRenderer_.draw(GL_TRIANGLES, triangles, QVector4D(0.45f, 0.14f, 0.12f, 1.0f));
-        overlayRenderer_.setHatch(false);
-    }
-    // Resta GL_LEQUAL (come in initializeGL): con GL_LESS le linee degli schizzi
-    // che stanno sugli spigoli dei corpi non si vedrebbero piu'.
-    glDepthFunc(GL_LEQUAL);
-    glDisable(GL_STENCIL_TEST);
-    glStencilFunc(GL_ALWAYS, 0, 0xff);
+    QVector<const BodyDisplay *> displays;
+    displays.reserve(solids.size());
+    for (int index : solids) displays.append(&extrusions_.at(index).display);
+    const QVector3D n = section_.normal;
+    const QVector4D plane(-n.x(), -n.y(), -n.z(), QVector3D::dotProduct(n, section_.point));
+    sceneRenderer_.drawSectionCaps(displayCache_, overlayRenderer_, displays, quad, plane);
 }
 
 void CadViewport::drawSectionPlane() {
     if (!section_.enabled || !section_.showPlane) return;
-    const QVector<QVector3D> quad = sectionQuad();
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-    glDepthMask(GL_FALSE);
-    QVector<QVector3D> triangles;
-    for (int corner : {0, 1, 2, 0, 2, 3}) triangles.push_back(quad.at(corner));
-    overlayRenderer_.draw(GL_TRIANGLES, triangles, QVector4D(0.95f, 0.45f, 0.35f, 0.10f));
-    const bool active = sectionHover_ || sectionDragging_;
-    glLineWidth(active ? 2.5f : 1.5f);
-    QVector<QVector3D> outline = quad;
-    outline.push_back(outline.front());
-    overlayRenderer_.draw(GL_LINE_STRIP, outline, QVector4D(1.0f, 0.55f, 0.45f, active ? 1.0f : 0.75f));
-    glLineWidth(1.0f);
-    glDepthMask(GL_TRUE);
+    sceneRenderer_.drawSectionPlane(overlayRenderer_, sectionQuad(), sectionHover_ || sectionDragging_);
 }
 
 void CadViewport::drawExtrusions() {

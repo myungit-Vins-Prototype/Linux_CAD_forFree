@@ -8,6 +8,24 @@ Per istruzione esplicita dell'utente, leggere questo registro all'inizio di ogni
 
 ## Registro del lavoro — istruzione dell'utente
 
+### Checkpoint Git delle sezioni 3D (2026-10-21, Codex)
+
+Richiesta «fai commit». Ricontrollati i sei file dell'estrazione, whitespace e controllo strutturale PASS; sorgenti integrati identici allo stage già verificato. Restano valide build completa senza warning/errori, 2304 confronti grafici identici e regressioni 85 PASS/3 FAIL noti/1 SKIP. Nessuna nuova modifica funzionale o ripetizione della build. Commit locale con solo titolo; nessun push o installazione.
+
+### Punto 3, rendering delle sezioni 3D (2026-10-21, Codex)
+
+- **Concluso e verificato:** compilazione completa con zero warning/errori, 2304 confronti grafici identici e controllo strutturale PASS. Regressioni finali in 55,46s: 85 PASS, gli stessi 3 FAIL e 1 SKIP OpenGL headless. Tutti gli 89 esiti e i messaggi dei FAIL identici alla baseline d4306ea (suite-comparison.json); nessuna nuova regressione rilevata. Confronto GL reale su X11/llvmpipe, non GPU fisica; limite preesistente delle linee larghe preservato come sotto.
+- Perimetro finale: sei file, renderer scena/header e viewport, README IT/EN e registro. Whitespace PASS, nessun file nuovo o test modificato. Modifiche non ancora committate; nessun push, installazione dell'eseguibile abituale o documento CAD modificato. Punto 3 ancora aperto: orchestrazione dei corpi, filtri/interazioni di selezione, editing sketch e gestione anteprime; successivamente punto 4 sul costruttore della finestra.
+
+- Build completa di tutti i target PASS, zero warning/errori verificati nel log (build-final.log e warning-summary.json). Regressioni finali delle 89 suite root in corso a compilatori fermi; nessuna suite kernel runtime generale dichiarata.
+
+- Controllo strutturale PASS (structure.log): viewport ricostruibile byte per byte sostituendo soltanto quattro deleghe; sequenze GL di caps e piano identiche salvo nomi/parametri; passata scena preesistente e campi privati invariati. Sorgenti integrati identici allo stage del confronto; kernel, shader, test, CMake e header viewport invariati. Build finale ancora in corso, finora senza warning.
+
+- Stage integrato dopo confronto grafico PASS: 2304 frame identici pixel per pixel e stati GL uguali su due contesti llvmpipe, due cicli di cleanup, due dimensioni con/senza MSAA, quattro fixture (solido, istanze, fallback, vuoto), sezioni disattivate e tre normali, tre posizioni, caps on/off, piano nascosto/normale/attivo e più solidi. Otto controlli confermano chiusure realmente visibili; immagine estratta ispezionata. Rimangono identici 1152 errori GL_INVALID_VALUE preesistenti per linee larghe; catturati prima del readback, nessun nuovo errore ammesso. Probe -Wall/-Wextra/-Wpedantic senza avvisi. Primo tentativo della fixture non compilava per nome duplicato ExtrusionObject, corretto nel solo probe; prima misurazione intercettava gli errori dopo il readback Qt, corretta per verificarli prima. Nessun adattamento della produzione alla prova.
+- Il renderer riceve riferimenti immediati a cache/overlay, puntatori const ai soli display scelti e geometria del piano; non conserva documenti, corpi o puntatori. Viewport mantiene tutti i guard, sectionQuad e ordine del disegno. Kernel, CMake, shader e suite tavole 2D invariati. README aggiornati; build completa e regressioni ancora da eseguire. Nessun commit/push/installazione.
+
+Dopo il commit d4306ea, richiesta «puoi andare avanti». Working tree iniziale pulito. Prossima estrazione: clipping, chiusure stencil/tratteggio e piano trasparente nel renderer della scena esistente; viewport mantiene scelta dei solidi, geometria e interazioni del piano. Stage e snapshot in /tmp/forgecad-punto3-section-render-20261021; integrazione e confronto grafico ancora da eseguire. Nessun cambiamento alla suite tavole 2D, kernel o documenti dell'utente.
+
 ### Checkpoint Git del disegno dei corpi (2026-10-21, Codex)
 
 Richiesta «fai commit così intanto compilo». Controllato il perimetro di sei file: operazioni GPU e deleghe del viewport, README e registro. Sorgenti DisplayCache identici allo stage verificato e whitespace PASS. Restano valide le prove già concluse: build completa senza warning/errori, 1008 confronti grafici identici e 85 PASS/3 FAIL noti/1 SKIP. Nessuna nuova modifica funzionale o compilazione durante quella manuale dell'utente. Checkpoint locale con solo titolo, senza push o installazione; il punto 3 resta progressivo come descritto sotto.

@@ -4,9 +4,17 @@
 #include <QOpenGLFunctions>
 #include <QOpenGLFramebufferObject>
 #include <QSize>
+#include <QVector>
+#include <QVector3D>
+#include <QVector4D>
 #include <functional>
 #include <memory>
 
+struct BodyDisplay;
+namespace ForgeCad {
+class DisplayCache;
+class OverlayRenderer;
+}
 class ViewportInteractionTest;
 namespace ForgeCad::Gui {
 // Passata della scena: target MSAA, risoluzione e opacita' del framebuffer.
@@ -20,6 +28,12 @@ public:
     int antialiasing() const;
     int maxAntialiasing() const;
     QSize render(const QSize &logicalSize, const std::function<void()> &drawScene);
+    // Operazioni immediate: il viewport sceglie corpi e geometria del piano.
+    void setSectionClip(DisplayCache &display, OverlayRenderer &overlay, const QVector4D &plane, bool enabled);
+    void drawSectionCaps(DisplayCache &display, OverlayRenderer &overlay,
+                         const QVector<const BodyDisplay *> &solids,
+                         const QVector<QVector3D> &quad, const QVector4D &plane);
+    void drawSectionPlane(OverlayRenderer &overlay, const QVector<QVector3D> &quad, bool active);
 private:
     friend class ::ViewportInteractionTest;
     QOpenGLFramebufferObject *sceneBuffer(const QSize &size);
