@@ -15,6 +15,7 @@ struct BodyDisplay;
 namespace ForgeCad {
 class DisplayCache;
 class OverlayRenderer;
+struct OverlayVertex;
 }
 class ViewportInteractionTest;
 namespace ForgeCad::Gui {
@@ -49,6 +50,27 @@ public:
     void drawTrimPreview(DisplayCache &cache, const BodyDisplay &display, int displayMode);
     void drawExportMeshPreview(DisplayCache &cache, const BodyDisplay &display, bool quadrangular);
     void drawThreadProfileEdges(OverlayRenderer &overlay, const BodyDisplay &display, const QVector4D &color);
+    struct BodyFaceStyle {
+        QColor color, hoverColor;
+        bool hovered = false, seeThrough = false, analyzing = false, faceOnly = false;
+        float opacity = 1.0f;
+        int analysisMode = -1;
+        float zebraFrequency = 12.0f, zebraAngle = 0.0f;
+    };
+    struct BodyEdgeStyle {
+        bool curve = false, spatial = false, hovered = false, hiddenEdgesVisible = false, thread = false;
+        QColor hoverColor;
+        int displayMode = 0;
+        float devicePixelRatio = 1.0f;
+    };
+    // Evidenziazione eseguita subito, fra facce e ripristino dello stato GL.
+    // Il renderer non conserva il callback o le opzioni ricevute.
+    void drawBodyFaces(DisplayCache &cache, OverlayRenderer &overlay, const BodyDisplay &display,
+                       const BodyFaceStyle &style, const BodyDisplay &analysisFace,
+                       const QVector<OverlayVertex> &analysisTriangles,
+                       const std::function<void()> &highlightFaces);
+    void drawBodyEdges(DisplayCache &cache, OverlayRenderer &overlay,
+                       const BodyDisplay &display, const BodyEdgeStyle &style);
 private:
     friend class ::ViewportInteractionTest;
     QOpenGLFramebufferObject *sceneBuffer(const QSize &size);

@@ -274,4 +274,92 @@ void SceneRenderer::drawExportMeshPreview(DisplayCache &cache, const BodyDisplay
     glDisable(GL_BLEND);
 }
 
+void SceneRenderer::drawBodyFaces(DisplayCache &cache, OverlayRenderer &overlay, const BodyDisplay &display,
+                                  const BodyFaceStyle &style, const BodyDisplay &analysisFace,
+                                  const QVector<OverlayVertex> &analysisTriangles,
+                                  const std::function<void()> &highlightFaces) {
+    cache.setLightingEnabled(true);
+    QColor color = style.color;
+    QVector4D emission(0.0f, 0.0f, 0.0f, 1.0f);
+    if (style.hovered) {
+        // L'oggetto sotto il puntatore si "accende".
+        color = QColor::fromRgbF(color.redF() * 0.75 + style.hoverColor.redF() * 0.25,
+                                 color.greenF() * 0.75 + style.hoverColor.greenF() * 0.25,
+                                 color.blueF() * 0.75 + style.hoverColor.blueF() * 0.25);
+        emission = QVector4D(float(style.hoverColor.redF()) * 0.14f,
+                             float(style.hoverColor.greenF()) * 0.14f,
+                             float(style.hoverColor.blueF()) * 0.14f, 1.0f);
+    }
+    // In modalita' schizzo le facce sono trasparenti (opacita' regolabile)
+    // e non scrivono la profondita': lo schizzo dietro i corpi resta leggibile.
+    const bool seeThrough = style.seeThrough;
+    cache.setColor(QVector4D(float(color.redF()), float(color.greenF()), float(color.blueF()),
+                                     seeThrough ? style.opacity : 1.0f));
+    cache.setEmission(emission);
+    if (seeThrough) {
+        glEnable(GL_BLEND);
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+        glDepthMask(GL_FALSE);
+    }
+    // Le facce vanno un poco indietro nella profondita': spigoli e
+    // schizzi che stanno sulla faccia si vedono senza spostarli.
+    glEnable(GL_POLYGON_OFFSET_FILL);
+    glPolygonOffset(1.0f, 2.0f);
+    const bool analyzing = style.analyzing;
+    const bool faceOnly = style.faceOnly;
+    const bool colorMap = analyzing && (style.analysisMode==1 || style.analysisMode==2);
+    cache.setZebra(analyzing && !faceOnly && style.analysisMode==0, style.zebraFrequency, style.zebraAngle);
+    if (!colorMap || faceOnly) cache.displayFaces(display);
+    cache.setZebra(false,style.zebraFrequency,style.zebraAngle);
+    if (faceOnly) glPolygonOffset(0.0f,0.0f);
+    if (colorMap) overlay.draw(GL_TRIANGLES,analysisTriangles);
+    else if (faceOnly && style.analysisMode==0) {
+        cache.setZebra(true,style.zebraFrequency,style.zebraAngle);
+        cache.displayFaces(analysisFace);
+        cache.setZebra(false,style.zebraFrequency,style.zebraAngle);
+    }
+    glDisable(GL_POLYGON_OFFSET_FILL);
+    if (!seeThrough && !analyzing) highlightFaces();
+    if (seeThrough) {
+        glDepthMask(GL_TRUE);
+        glDisable(GL_BLEND);
+    }
+    cache.setEmission(QVector4D(0.0f, 0.0f, 0.0f, 1.0f));
+}
+
+void SceneRenderer::drawBodyEdges(DisplayCache &cache, OverlayRenderer &overlay,
+                                  const BodyDisplay &display, const BodyEdgeStyle &style) {
+    if (style.curve) {
+        // Curve (eliche): sempre, in arancio, piu' spesse sotto il puntatore.
+        cache.setLightingEnabled(false);
+        cache.setColor(style.hovered
+            ? QVector4D(float(style.hoverColor.redF()), float(style.hoverColor.greenF()), float(style.hoverColor.blueF()), 1.0f)
+            : QVector4D(1.0f, 0.69f, 0.29f, 1.0f));
+        const bool spatial=style.spatial;
+        glLineWidth(spatial ? (style.hovered ? 5.0f : 3.5f) : (style.hovered ? 3.0f : 2.2f));
+        if(spatial) {
+            const QVector4D color=style.hovered ? QVector4D(float(style.hoverColor.redF()),float(style.hoverColor.greenF()),float(style.hoverColor.blueF()),1)
+                                          : QVector4D(1,.69f,.29f,1);
+            for(const auto &line:display.edges)overlay.drawWideLineStrip(line,color,(style.hovered?5.0f:3.5f)*style.devicePixelRatio);
+        } else cache.displayEdges(display);
+        glLineWidth(1.0f);
+    } else if (style.displayMode != 1) {
+        cache.setLightingEnabled(false);
+        cache.setColor(QVector4D(0.82f, 0.91f, 0.96f, 1.0f));
+        if (style.hiddenEdgesVisible) glDisable(GL_DEPTH_TEST);
+        glLineWidth(1.5f);
+        // Il filetto fisico e' costruito con molte facce molto
+        // piccole. In "ombreggiato con bordi" mostrarne ogni
+        // diagonale produce una falsa trama verticale e nasconde il
+        // profilo elicoidale. Il wireframe conserva invece l'intera
+        // topologia, utile per l'ispezione.
+        if (style.thread && style.displayMode != 0)
+            drawThreadProfileEdges(overlay, display, QVector4D(0.82f, 0.91f, 0.96f, 1.0f));
+        else
+            cache.displayEdges(display);
+        glLineWidth(1.0f);
+        if (style.hiddenEdgesVisible) glEnable(GL_DEPTH_TEST);
+    }
+}
+
 }

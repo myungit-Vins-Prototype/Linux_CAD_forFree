@@ -10750,86 +10750,32 @@ void CadViewport::drawExtrusions() {
         const SceneSelection self{SceneObjectKind::Extrusion, index, -1};
         const bool hovered = hover_ == self;
         if (displayMode_ != 0 || index == shapeAnalysisBody_) {
-            displayCache_.setLightingEnabled(true);
-            QColor color = meshColorForFeature(index);
-            QVector4D emission(0.0f, 0.0f, 0.0f, 1.0f);
-            if (hovered) {
-                // L'oggetto sotto il puntatore si "accende".
-                color = QColor::fromRgbF(color.redF() * 0.75 + kHoverColor.redF() * 0.25,
-                                         color.greenF() * 0.75 + kHoverColor.greenF() * 0.25,
-                                         color.blueF() * 0.75 + kHoverColor.blueF() * 0.25);
-                emission = QVector4D(float(kHoverColor.redF()) * 0.14f,
-                                     float(kHoverColor.greenF()) * 0.14f,
-                                     float(kHoverColor.blueF()) * 0.14f, 1.0f);
-            }
-            // In modalita' schizzo le facce sono trasparenti (opacita' regolabile)
-            // e non scrivono la profondita': lo schizzo dietro i corpi resta leggibile.
-            const bool seeThrough = sketchMode_ && sketchBodyOpacity_ < 0.999;
-            displayCache_.setColor(QVector4D(float(color.redF()), float(color.greenF()), float(color.blueF()),
-                                             seeThrough ? float(sketchBodyOpacity_) : 1.0f));
-            displayCache_.setEmission(emission);
-            if (seeThrough) {
-                glEnable(GL_BLEND);
-                glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-                glDepthMask(GL_FALSE);
-            }
-            // Le facce vanno un poco indietro nella profondita': spigoli e
-            // schizzi che stanno sulla faccia si vedono senza spostarli.
-            glEnable(GL_POLYGON_OFFSET_FILL);
-            glPolygonOffset(1.0f, 2.0f);
-            const bool analyzing = index == shapeAnalysisBody_;
-            const bool faceOnly = analyzing && shapeAnalysisFace_>=0;
-            const bool colorMap = analyzing && (shapeAnalysisMode_==1 || shapeAnalysisMode_==2);
-            displayCache_.setZebra(analyzing && !faceOnly && shapeAnalysisMode_==0, zebraFrequency_, zebraAngle_);
-            if (!colorMap || faceOnly) drawExtrusionFaces(extrusion);
-            displayCache_.setZebra(false,zebraFrequency_,zebraAngle_);
-            if (faceOnly) glPolygonOffset(0.0f,0.0f);
-            if (colorMap) overlayRenderer_.draw(GL_TRIANGLES,shapeAnalysis_.triangles);
-            else if (faceOnly && shapeAnalysisMode_==0) {
-                displayCache_.setZebra(true,zebraFrequency_,zebraAngle_);
-                drawDisplayFaces(shapeAnalysisFaceDisplay_);
-                displayCache_.setZebra(false,zebraFrequency_,zebraAngle_);
-            }
-            glDisable(GL_POLYGON_OFFSET_FILL);
-            if (!seeThrough && !analyzing) drawFeatureHighlightFaces(index);
-            if (seeThrough) {
-                glDepthMask(GL_TRUE);
-                glDisable(GL_BLEND);
-            }
-            displayCache_.setEmission(QVector4D(0.0f, 0.0f, 0.0f, 1.0f));
+            ForgeCad::Gui::SceneRenderer::BodyFaceStyle style;
+            style.color = meshColorForFeature(index);
+            style.hoverColor = kHoverColor;
+            style.hovered = hovered;
+            style.seeThrough = sketchMode_ && sketchBodyOpacity_ < 0.999;
+            style.opacity = float(sketchBodyOpacity_);
+            style.analyzing = index == shapeAnalysisBody_;
+            style.faceOnly = style.analyzing && shapeAnalysisFace_ >= 0;
+            style.analysisMode = shapeAnalysisMode_;
+            style.zebraFrequency = zebraFrequency_;
+            style.zebraAngle = zebraAngle_;
+            sceneRenderer_.drawBodyFaces(displayCache_, overlayRenderer_, extrusion.display, style,
+                                         shapeAnalysisFaceDisplay_, shapeAnalysis_.triangles,
+                                         [this, index] { drawFeatureHighlightFaces(index); });
         }
         if (section_.enabled && extrusion.solid && displayMode_ != 0 && !extrusion.display.vertices.isEmpty()) sectionSolids.append(index);
-        if (ForgeCad::isCurveBody(extrusion)) {
-            // Curve (eliche): sempre, in arancio, piu' spesse sotto il puntatore.
-            displayCache_.setLightingEnabled(false);
-            displayCache_.setColor(hovered
-                ? QVector4D(float(kHoverColor.redF()), float(kHoverColor.greenF()), float(kHoverColor.blueF()), 1.0f)
-                : QVector4D(1.0f, 0.69f, 0.29f, 1.0f));
-            const bool spatial=extrusion.feature==BodyFeature::SpatialSketch || extrusion.feature==BodyFeature::ExtractedCurve;
-            glLineWidth(spatial ? (hovered ? 5.0f : 3.5f) : (hovered ? 3.0f : 2.2f));
-            if(spatial) {
-                const QVector4D color=hovered ? QVector4D(float(kHoverColor.redF()),float(kHoverColor.greenF()),float(kHoverColor.blueF()),1)
-                                              : QVector4D(1,.69f,.29f,1);
-                for(const auto &line:extrusion.display.edges)overlayRenderer_.drawWideLineStrip(line,color,(hovered?5.0f:3.5f)*float(devicePixelRatioF()));
-            } else drawExtrusionEdges(extrusion);
-            glLineWidth(1.0f);
-        } else if (displayMode_ != 1) {
-            displayCache_.setLightingEnabled(false);
-            displayCache_.setColor(QVector4D(0.82f, 0.91f, 0.96f, 1.0f));
-            if (hiddenEdgesVisible_) glDisable(GL_DEPTH_TEST);
-            glLineWidth(1.5f);
-            // Il filetto fisico e' costruito con molte facce molto
-            // piccole. In "ombreggiato con bordi" mostrarne ogni
-            // diagonale produce una falsa trama verticale e nasconde il
-            // profilo elicoidale. Il wireframe conserva invece l'intera
-            // topologia, utile per l'ispezione.
-            if (extrusion.feature == BodyFeature::Thread && displayMode_ != 0)
-                drawThreadProfileEdges(extrusion.display, QVector4D(0.82f, 0.91f, 0.96f, 1.0f));
-            else
-                drawExtrusionEdges(extrusion);
-            glLineWidth(1.0f);
-            if (hiddenEdgesVisible_) glEnable(GL_DEPTH_TEST);
-        }
+        ForgeCad::Gui::SceneRenderer::BodyEdgeStyle edgeStyle;
+        edgeStyle.curve = ForgeCad::isCurveBody(extrusion);
+        edgeStyle.spatial = extrusion.feature == BodyFeature::SpatialSketch || extrusion.feature == BodyFeature::ExtractedCurve;
+        edgeStyle.hovered = hovered;
+        edgeStyle.hoverColor = kHoverColor;
+        edgeStyle.displayMode = displayMode_;
+        edgeStyle.hiddenEdgesVisible = hiddenEdgesVisible_;
+        edgeStyle.thread = extrusion.feature == BodyFeature::Thread;
+        edgeStyle.devicePixelRatio = float(devicePixelRatioF());
+        sceneRenderer_.drawBodyEdges(displayCache_, overlayRenderer_, extrusion.display, edgeStyle);
         if (!ForgeCad::isCurveBody(extrusion) && index != shapeAnalysisBody_) drawFeatureHighlightEdges(index);
     }
     if (shapeAnalysisMode_ >= 0) {
