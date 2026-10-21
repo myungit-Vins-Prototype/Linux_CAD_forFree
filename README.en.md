@@ -349,6 +349,7 @@ The same option can be added to the macOS configuration while retaining the Home
 | `forgeCad2026_camera.h/.cpp` | Camera state and widget-independent view, projection, ray, and orbit calculations |
 | `forgeCad2026_glass_compositor.h/.cpp` | OpenGL compositor for blurred panel backdrops, owning its shaders and framebuffers |
 | `forgeCad2026_gpu_picker.h/.cpp` | GPU picking buffer: per-frame cache, identifier readback and owned resources |
+| `forgeCad2026_scene_renderer.h/.cpp` | OpenGL scene pass: MSAA framebuffers, resolve and output opacity |
 | `forgeCad2026_gui_common.h/.cpp` | GUI helpers shared by the window and viewport |
 | `forgeCad2026_storyboard.h/.cpp` | Storyboard tree, badges, and history cursor |
 | `forgeCad2026_dialogs.h`, `forgeCad2026_dialogs_*.cpp` | Operation dialogs grouped into solids, surfaces, sketches/curves, and analysis |

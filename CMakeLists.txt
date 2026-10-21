@@ -12,11 +12,22 @@ if(NOT CMAKE_CUDA_COMPILER AND EXISTS "/opt/cuda/bin/nvcc")
     set(CMAKE_CUDA_COMPILER "/opt/cuda/bin/nvcc" CACHE FILEPATH "CUDA compiler" FORCE)
 endif()
 check_language(CUDA)
-if(CMAKE_CUDA_COMPILER AND NOT DEFINED CMAKE_CUDA_ARCHITECTURES)
-    set(CMAKE_CUDA_ARCHITECTURES native)
+# Senza scelta esplicita, usa native solo quando CMake ha rilevato una GPU.
+# Su macchine senza GPU resta il default del compilatore CUDA; non forzare
+# -arch=native (nvcc avviserebbe e userebbe comunque il proprio default).
+set(FORGECAD_AUTO_CUDA_ARCHITECTURES OFF)
+if(CMAKE_CUDA_COMPILER AND NOT DEFINED CMAKE_CUDA_ARCHITECTURES AND "$ENV{CUDAARCHS}" STREQUAL "")
+    set(FORGECAD_AUTO_CUDA_ARCHITECTURES ON)
+    # OFF lascia scegliere l'architettura al compilatore, anche se il build
+    # esistente era stato configurato con native senza una voce nella cache.
+    set(CMAKE_CUDA_ARCHITECTURES OFF)
 endif()
 if(CMAKE_CUDA_COMPILER)
     enable_language(CUDA)
+    if(FORGECAD_AUTO_CUDA_ARCHITECTURES AND
+       CMAKE_CUDA_ARCHITECTURES_NATIVE MATCHES "^[0-9]+(-real)?(;[0-9]+(-real)?)*$")
+        set(CMAKE_CUDA_ARCHITECTURES "${CMAKE_CUDA_ARCHITECTURES_NATIVE}")
+    endif()
     set(FORGE_CAD_CUDA_SOURCE cuda_support.cu)
 else()
     set(FORGE_CAD_CUDA_SOURCE cuda_support_cpu.cpp)
@@ -51,6 +62,8 @@ add_executable(forgecad
     forgeCad2026_glass_compositor.h
     forgeCad2026_gpu_picker.cpp
     forgeCad2026_gpu_picker.h
+    forgeCad2026_scene_renderer.cpp
+    forgeCad2026_scene_renderer.h
     forgeCad2026_gui_common.cpp
     forgeCad2026_gui_common.h
     forgeCad2026_storyboard.cpp
@@ -559,3 +572,13 @@ target_include_directories(forgecad_drawing_focus_tests PRIVATE ${PROJECT_SOURCE
 target_link_libraries(forgecad_drawing_focus_tests PRIVATE Qt6::Widgets forgekernel)
 add_test(NAME forgecad_drawing_focus_tests COMMAND forgecad_drawing_focus_tests)
 set_tests_properties(forgecad_drawing_focus_tests PROPERTIES TIMEOUT 30 ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+
+# Richiede un contesto OpenGL: in ambiente headless senza supporto viene saltato.
+add_executable(forgecad_overlay_uniform_tests tests/test_overlay_uniform.cpp cad_overlay_renderer.cpp)
+target_include_directories(forgecad_overlay_uniform_tests PRIVATE ${PROJECT_SOURCE_DIR})
+target_link_libraries(forgecad_overlay_uniform_tests PRIVATE Qt6::Gui Qt6::OpenGL)
+target_compile_options(forgecad_overlay_uniform_tests PRIVATE -Wall -Wextra -Wpedantic)
+add_test(NAME forgecad_overlay_uniform_tests COMMAND forgecad_overlay_uniform_tests)
+set_tests_properties(forgecad_overlay_uniform_tests PROPERTIES
+    SKIP_RETURN_CODE 77 LABELS "opengl"
+    ENVIRONMENT "QT_QPA_PLATFORM=offscreen;QT_QPA_OFFSCREEN_NO_GLX=1;QT_QPA_PLATFORMTHEME=")

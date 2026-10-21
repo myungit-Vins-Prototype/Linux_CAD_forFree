@@ -3280,7 +3280,8 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
         window->statusBar()->showMessage(QStringLiteral("Recuperato %1. Salva con nome per conservare la copia.").arg(entry.title),15000);
     });
     connect(recovery_,&ForgeCad::DocumentRecovery::entriesFound,this,[this](const QVector<ForgeCad::RecoveryEntry> &entries,const QString &error){
-        if(!recoveryScanPending_)return;recoveryScanPending_=false;
+        if(!recoveryScanPending_)return;
+        recoveryScanPending_=false;
         if(recoveryClosing_)return;
         if(foregroundProgressDepth_||loadingDocument_||viewport_->interactionLocked()||QApplication::activeModalWidget()){
             if(!entries.isEmpty())statusBar()->showMessage(QStringLiteral("Backup disponibili in File → Recupera documenti..."),10000);

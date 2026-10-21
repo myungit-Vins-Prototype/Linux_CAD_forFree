@@ -175,8 +175,7 @@ CadViewport::~CadViewport() {
     displayCache_.clear();
     overlayRenderer_.clear();
     glassCompositor_.clearResources();
-    msaaBuffer_.reset();
-    resolveBuffer_.reset();
+    sceneRenderer_.clearResources();
     gpuPicker_.clearResources();
     doneCurrent();
 }
@@ -314,13 +313,13 @@ double CadViewport::sketchBlendSize(bool chamfer) const { return chamfer ? sketc
 void CadViewport::setStatusCallback(std::function<void(const QString &)> callback) { statusCallback_ = std::move(callback); }
 
 void CadViewport::setAntialiasing(int samples) {
-    antialiasing_ = qMax(0, samples);
+    sceneRenderer_.setAntialiasing(samples);
     update();
 }
 
-int CadViewport::antialiasing() const { return maxSamples_ > 0 ? qMin(antialiasing_, maxSamples_) : antialiasing_; }
+int CadViewport::antialiasing() const { return sceneRenderer_.antialiasing(); }
 
-int CadViewport::maxAntialiasing() const { return maxSamples_; }
+int CadViewport::maxAntialiasing() const { return sceneRenderer_.maxAntialiasing(); }
 
 void CadViewport::setGridVisible(bool visible) { gridVisible_ = visible; update(); }
 
@@ -4343,8 +4342,7 @@ void CadViewport::initializeGL() {
         makeCurrent();
         displayCache_.clear();
         overlayRenderer_.clear();
-        msaaBuffer_.reset();
-        resolveBuffer_.reset();
+        sceneRenderer_.clearResources();
         gpuPicker_.clearResources();
         doneCurrent();
     }, Qt::DirectConnection);
@@ -4353,16 +4351,7 @@ void CadViewport::initializeGL() {
     if (rendererCallback_)
         rendererCallback_(renderer + (modernRenderer ? QStringLiteral(" | shader 3.3, VAO/VBO solidi e overlay, picking GPU")
                                                       : QStringLiteral(" | renderer Core non disponibile")));
-    glEnable(GL_DEPTH_TEST);
-    glDisable(GL_CULL_FACE);
-    glDepthFunc(GL_LEQUAL);
-    glClearColor(0.025f, 0.035f, 0.050f, 1.0f);
-    // 0 se i framebuffer multisample non ci sono (la chiamata fallisce e il valore resta 0).
-    GLint samples = 0;
-    glGetIntegerv(GL_MAX_SAMPLES, &samples);
-    while (glGetError() != GL_NO_ERROR) {
-    }
-    maxSamples_ = samples;
+    sceneRenderer_.initialize();
     initializeGlassShader();
 }
 
@@ -4378,42 +4367,25 @@ void CadViewport::paintGL() {
         if (!pendingFit_.isEmpty()) fitView(pendingFit_);
         pendingFit_.clear();
     }
-    // Con l'antialiasing la scena OpenGL va nel framebuffer multisample;
-    // le sovrapposizioni QPainter si disegnano dopo, direttamente nel widget.
-    GLint viewport[4] = {0, 0, width(), height()};
-    glGetIntegerv(GL_VIEWPORT, viewport);
-    const QSize pixels(qMax(1, viewport[2]), qMax(1, viewport[3]));
-    QOpenGLFramebufferObject *scene = sceneBuffer(pixels);
-    if (scene) {
-        scene->bind();
-        glViewport(0, 0, pixels.width(), pixels.height());
-        glEnable(GL_MULTISAMPLE);
-    }
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-    drawBackgroundGradient();
-    const QMatrix4x4 projection = sceneProjectionMatrix();
-    const QMatrix4x4 modelView = sceneModelViewMatrix();
-    setRenderMatrices(projection, modelView);
-    drawReferencePlanes();
-    drawDatumPlanes();
-    drawGrid();
-    if (!axesOnTop_) drawAxes();
-    configureLighting();
-    drawExtrusions();
-    drawExportMeshPreview();
-    drawPickedEdges();
-    drawTopologyHighlight();
-    drawSketch();
-    drawSketchCurvature();
-    drawSnapMarkers();
-    if (axesOnTop_) drawAxes();
-    makeOpaque();
-    if (scene) {
-        scene->release();
-        QOpenGLFramebufferObject::blitFramebuffer(resolveBuffer_.get(), msaaBuffer_.get());
-        QOpenGLFramebufferObject::blitFramebuffer(nullptr, QRect(QPoint(), pixels), resolveBuffer_.get(), QRect(QPoint(), pixels));
-        glViewport(viewport[0], viewport[1], viewport[2], viewport[3]);
-    }
+    const QSize pixels = sceneRenderer_.render(size(), [this] {
+        drawBackgroundGradient();
+        const QMatrix4x4 projection = sceneProjectionMatrix();
+        const QMatrix4x4 modelView = sceneModelViewMatrix();
+        setRenderMatrices(projection, modelView);
+        drawReferencePlanes();
+        drawDatumPlanes();
+        drawGrid();
+        if (!axesOnTop_) drawAxes();
+        configureLighting();
+        drawExtrusions();
+        drawExportMeshPreview();
+        drawPickedEdges();
+        drawTopologyHighlight();
+        drawSketch();
+        drawSketchCurvature();
+        drawSnapMarkers();
+        if (axesOnTop_) drawAxes();
+    });
     drawReferenceLabels();
     drawSelectionHighlight();
     drawPlaneResizeHandles();
@@ -9816,15 +9788,7 @@ QVector3D CadViewport::polylineMidpoint(const QVector<QVector3D> &polyline) {
     return polyline.last();
 }
 
-void CadViewport::makeOpaque() {
-    GLfloat clear[4];
-    glGetFloatv(GL_COLOR_CLEAR_VALUE, clear);
-    glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_TRUE);
-    glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-    glClear(GL_COLOR_BUFFER_BIT);
-    glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
-    glClearColor(clear[0], clear[1], clear[2], clear[3]);
-}
+
 
 void CadViewport::configureLighting() {
     ForgeCad::DisplayCache::Lighting lighting;
@@ -11549,29 +11513,7 @@ void CadViewport::fitView(const QVector<QVector3D> &points) {
     setZoom(camera_.fitPoints(points, size()));
 }
 
-QOpenGLFramebufferObject *CadViewport::sceneBuffer(const QSize &size) {
-    const int samples = antialiasing();
-    if (samples <= 0 || maxSamples_ <= 0 || !QOpenGLFramebufferObject::hasOpenGLFramebufferBlit()) {
-        msaaBuffer_.reset();
-        resolveBuffer_.reset();
-        return nullptr;
-    }
-    if (!msaaBuffer_ || msaaBuffer_->size() != size || bufferSamples_ != samples) {
-        QOpenGLFramebufferObjectFormat format;
-        format.setAttachment(QOpenGLFramebufferObject::CombinedDepthStencil);
-        format.setSamples(samples);
-        msaaBuffer_ = std::make_unique<QOpenGLFramebufferObject>(size, format);
-        resolveBuffer_ = std::make_unique<QOpenGLFramebufferObject>(size);
-        bufferSamples_ = samples;
-        if (!msaaBuffer_->isValid() || !resolveBuffer_->isValid()) {
-            msaaBuffer_.reset();
-            resolveBuffer_.reset();
-            antialiasing_ = 0;
-            return nullptr;
-        }
-    }
-    return msaaBuffer_.get();
-}
+
 
 void CadViewport::initializeGlassShader() {
     glassCompositor_.initialize();

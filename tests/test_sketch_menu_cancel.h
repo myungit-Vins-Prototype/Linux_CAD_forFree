@@ -29,7 +29,8 @@
                 QTimer::singleShot(native?30:0,&v,[&]{
                     auto *menu=qobject_cast<QMenu*>(QApplication::activePopupWidget());
                     if(!menu)for(auto *candidate:v.findChildren<QMenu*>())if(candidate->isVisible()){menu=candidate;break;}
-                    if(!menu)return;opened=true;
+                    if(!menu)return;
+                    opened=true;
                     if(escape){QKeyEvent key(QEvent::KeyPress,Qt::Key_Escape,Qt::NoModifier);QApplication::sendEvent(menu,&key);}
                     else menu->close();
                 });
@@ -53,7 +54,8 @@
             if(native){v.show();v.activateWindow();QApplication::processEvents();}
             const auto before=v.sketches_[0].curves[0];bool selected=false;
             QTimer::singleShot(native?30:0,&v,[&]{auto *menu=qobject_cast<QMenu*>(QApplication::activePopupWidget());if(!menu)return;
-                for(auto *action:menu->actions())if(action->text().contains(QStringLiteral("le maniglie"))){menu->setActiveAction(action);QKeyEvent enter(QEvent::KeyPress,Qt::Key_Return,Qt::NoModifier);QApplication::sendEvent(menu,&enter);selected=true;return;}menu->close();});
+                for(auto *action:menu->actions())if(action->text().contains(QStringLiteral("le maniglie"))){menu->setActiveAction(action);QKeyEvent enter(QEvent::KeyPress,Qt::Key_Return,Qt::NoModifier);QApplication::sendEvent(menu,&enter);selected=true;return;}
+                menu->close();});
             const auto at=v.projectWorldPoint(v.mapSketchPoint(before.controlPoints[0],s)).toPoint();QContextMenuEvent context(QContextMenuEvent::Keyboard,at,v.mapToGlobal(at));v.contextMenuEvent(&context);
             require(selected&&v.sketches_[0].curves[0].tangentLinked[0]!=before.tangentLinked[0]&&v.canUndo(),"comando maniglie effettivamente scelto resta attivo");
             v.undo();require(v.sketches_[0].curves[0].tangentLinked==before.tangentLinked,"Undo comando maniglie del menu");

@@ -41,10 +41,12 @@
         bool ready=true;
         auto live=std::make_unique<DocumentRecovery>([&](DocumentState &out,QString &path){
             require(QThread::currentThread()==qApp->thread(),"acquisizione snapshot soltanto sul thread GUI");
-            if(!ready)return false;++captures;out=state;path=directory.filePath("original.prt");return true;
+            if(!ready)return false;
+            ++captures;out=state;path=directory.filePath("original.prt");return true;
         },nullptr,directory.path(),30,140);
         QObject::connect(live.get(),&DocumentRecovery::checkpointFinished,live.get(),[&](quint64,bool written,const QString &error){++finished;writes+=written;failure=error;});
-        for(int i=0;i<200;++i)live->changed();wait([&]{return finished==1;});
+        for(int i=0;i<200;++i)live->changed();
+        wait([&]{return finished==1;});
         require(failure.isEmpty()&&captures==1&&writes==1,"raffica accorpata in un solo snapshot/scrittura");
         auto reader=std::make_unique<DocumentRecovery>([](DocumentState &,QString &){return false;},nullptr,directory.path());
         require(scan(*reader).isEmpty(),"sessione ancora aperta non proposta per il recupero");

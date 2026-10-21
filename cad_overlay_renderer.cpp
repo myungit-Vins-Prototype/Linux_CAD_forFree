@@ -178,7 +178,9 @@ void OverlayRenderer::draw(GLenum primitive, const QVector<OverlayVertex> &verti
     shader_->setUniformValue("clipEnabled", clipEnabled_);
     shader_->setUniformValue("useInstances", false);
     shader_->setUniformValue("stippleEnabled", stippleEnabled_);
-    shader_->setUniformValue("stipplePattern", GLuint(stipplePattern_));
+    // L'overload GLuint di QOpenGLShaderProgram usa glUniform1i; qui GLSL richiede uint.
+    QOpenGLContext::currentContext()->extraFunctions()->glUniform1ui(
+        shader_->uniformLocation("stipplePattern"), GLuint(stipplePattern_));
     shader_->setUniformValue("stippleFactor", stippleFactor_);
     shader_->setUniformValue("hatchEnabled", hatchEnabled_);
     QOpenGLVertexArrayObject::Binder array(&array_);
@@ -236,7 +238,9 @@ void OverlayRenderer::drawInstanced(GLenum primitive, const QVector<QVector3D> &
     shader_->setUniformValue("clipPlane", clipPlane_);
     shader_->setUniformValue("clipEnabled", clipEnabled_);
     shader_->setUniformValue("stippleEnabled", stippleEnabled_);
-    shader_->setUniformValue("stipplePattern", GLuint(stipplePattern_));
+    // L'overload GLuint di QOpenGLShaderProgram usa glUniform1i; qui GLSL richiede uint.
+    QOpenGLContext::currentContext()->extraFunctions()->glUniform1ui(
+        shader_->uniformLocation("stipplePattern"), GLuint(stipplePattern_));
     shader_->setUniformValue("stippleFactor", stippleFactor_);
     shader_->setUniformValue("hatchEnabled", hatchEnabled_);
     shader_->setUniformValue("useInstances", true);

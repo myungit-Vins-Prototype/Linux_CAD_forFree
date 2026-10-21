@@ -21,6 +21,7 @@
 #include <QJsonObject>
 #include <QMouseEvent>
 #include <QTimer>
+#include <QElapsedTimer>
 #include <iostream>
 #include <algorithm>
 #include <cmath>
@@ -34,7 +35,8 @@ DrawingSourceBody source(Body body){auto p=std::make_shared<Body>(std::move(body
 std::vector<DrawingCurve> curves(const DrawingModelSnapshot &model,const DrawingView &view){std::vector<DrawingCurve> result;ok(drawingViewCurves(model,view,result));return result;}
 DrawingDocument dimension(const DrawingModelSnapshot &model,const DrawingView &view,const DrawingCurve &curve,DrawingMeasure measure){DrawingDocument doc;doc.model=model.version;doc.views={view};doc.dimensions={dimensionOfCurve(view,curve,measure)};return doc;}
 double value(const DrawingDocument &doc,const DrawingModelSnapshot &model){const auto result=evaluateDrawingDimension(doc,model,doc.dimensions[0].id);require(result.status==DrawingDimensionStatus::Ready,"quota pronta");return result.value;}
-void select(DrawingSheetEditor &editor,const QUuid &view,int index){for(auto *item:editor.canvas()->scene()->items())item->setSelected(item->data(1).toUuid()==view&&item->data(2).toInt()==index&&(item->data(0).toString()=="projection"||item->data(0).toString()=="section"));}
+bool shown(DrawingSheetEditor &editor,const QUuid &view,int index){for(auto *item:editor.canvas()->scene()->items())if(item->data(1).toUuid()==view&&item->data(2).toInt()==index&&(item->data(0).toString()=="projection"||item->data(0).toString()=="section"))return true;return false;}
+void select(DrawingSheetEditor &editor,const QUuid &view,int index){editor.canvas()->scene()->clearSelection();for(auto *item:editor.canvas()->scene()->items())if(item->data(1).toUuid()==view&&item->data(2).toInt()==index&&(item->data(0).toString()=="projection"||item->data(0).toString()=="section")){item->setSelected(true);require(item->isSelected(),"curva selezionabile sul foglio");return;}throw std::runtime_error("curva da selezionare non disegnata sul foglio");}
 Body patch(){
     auto surface=std::make_shared<BSplineSurface>(2,1,std::vector<double>{0,0,0,1,1,1},std::vector<double>{0,0,1,1},3,2,
         std::vector<Vec3>{{-5,-4,0},{-5,4,0},{0,-4,3},{0,4,3},{5,-4,0},{5,4,0}},std::vector<double>{1,1,.7,.7,1,1});
@@ -85,21 +87,35 @@ int main(int argc,char **argv){
         auto duplicate=model;duplicate.bodies.push_back(duplicate.bodies[0]);const auto count=projected.size();require(!projectDrawingEdges(duplicate,view,projected).isEmpty()&&projected.size()==count,"sorgente duplicata rifiutata senza risultati parziali");
         // Dialogo reale, selezione, nuove quote e schema del foglio.
         DrawingSheet page;page.drawing.model=model.version;DrawingEditorModel editorModel{model,{{1,"Corpo"}},{}};DrawingSheetEditor editor(page,editorModel);editor.resize(1450,850);editor.show();QApplication::processEvents();bool dialogSeen=false;
-        QTimer::singleShot(0,[&]{auto *dialog=editor.findChild<QDialog *>("drawingViewDialog");if(!dialog)return;dialog->findChild<QComboBox *>("drawingViewPlane")->setCurrentIndex(0);dialog->findChild<QCheckBox *>("drawingSectionReferences")->setChecked(true);dialog->findChild<QDoubleSpinBox *>("drawingViewDepth")->setValue(2);dialog->findChild<QDoubleSpinBox *>("drawingViewScale")->setValue(4);dialogSeen=true;dialog->findChild<QDialogButtonBox *>()->button(QDialogButtonBox::Ok)->click();});
-        editor.findChild<QAction *>("drawingAddProjectionAction")->trigger();require(dialogSeen&&editor.hasViewPlacement()&&editor.sheet().drawing.views.empty(),"dialogo proiezione prepara l'anteprima");
+        // Il calcolo dell'anteprima e' asincrono: attendere il pulsante attivo.
+        QTimer confirm;confirm.setInterval(10);QElapsedTimer elapsed;elapsed.start();bool timedOut=false;
+        QObject::connect(&confirm,&QTimer::timeout,&editor,[&]{
+            auto *dialog=editor.findChild<QDialog *>("drawingViewDialog");if(!dialog)return;
+            if(!dialogSeen){
+                dialog->findChild<QComboBox *>("drawingViewPlane")->setCurrentIndex(0);
+                dialog->findChild<QCheckBox *>("drawingSectionReferences")->setChecked(true);
+                dialog->findChild<QDoubleSpinBox *>("drawingViewDepth")->setValue(2);
+                dialog->findChild<QDoubleSpinBox *>("drawingViewScale")->setValue(4);dialogSeen=true;
+            }
+            auto *button=dialog->findChild<QDialogButtonBox *>()->button(QDialogButtonBox::Ok);
+            if(button->isEnabled()){confirm.stop();button->click();}
+            else if(elapsed.elapsed()>10000){timedOut=true;confirm.stop();dialog->reject();}
+        });
+        confirm.start();
+        editor.findChild<QAction *>("drawingAddProjectionAction")->trigger();confirm.stop();require(!timedOut,"anteprima della proiezione pronta entro il limite");require(dialogSeen&&editor.hasViewPlacement()&&editor.sheet().drawing.views.empty(),"dialogo proiezione prepara l'anteprima");
         {auto *canvas=editor.canvas();const QPointF local=canvas->mapFromScene(QPointF(140,100)),global=canvas->viewport()->mapToGlobal(local.toPoint());QMouseEvent press(QEvent::MouseButtonPress,local,global,Qt::LeftButton,Qt::LeftButton,Qt::NoModifier),release(QEvent::MouseButtonRelease,local,global,Qt::LeftButton,Qt::NoButton,Qt::NoModifier);QApplication::sendEvent(canvas->viewport(),&press);QApplication::sendEvent(canvas->viewport(),&release);}
         require(!editor.hasViewPlacement()&&editor.sheet().drawing.views.size()==1,"clic conferma la proiezione");const auto id=editor.sheet().drawing.views[0].id;
         require(editor.curves(id).size()==12&&editor.sections(id).size()==4,"sezioni e bordi distinti nell'editor");int index=-1;const auto &display=editor.curves(id);
-        for(std::size_t i=0;i<display.size();++i)if(display[i].kind==DrawingCurveKind::ProjectedEdge&&std::abs(arcLength(*display[i].curve,display[i].range)-10)<1e-7){index=int(i);break;}
-        // La fixture sceglie anche bordi posteriori: mostrarli esplicitamente prima della quota.
+        for(std::size_t i=0;i<display.size();++i)if(display[i].kind==DrawingCurveKind::ProjectedEdge&&shown(editor,id,int(i))&&std::abs(arcLength(*display[i].curve,display[i].range)-10)<1e-7){index=int(i);break;}
+        // Scegliere un tratto effettivamente disegnato, evitando duplicati proiettati soppressi.
         ok(editor.setHiddenLinesVisible(id,true));QApplication::processEvents();
-        select(editor,id,index);editor.findChild<QAction *>("drawingHorizontalDimensionAction")->trigger();require(editor.sheet().drawing.dimensions.size()==1,"quota orizzontale dalla toolbar");const auto dimensionId=editor.sheet().drawing.dimensions[0].id;near(editor.dimensionResult(dimensionId).value,10,"quota GUI nel piano");
+        require(index>=0,"bordo orizzontale realmente disegnato");select(editor,id,index);editor.findChild<QAction *>("drawingHorizontalDimensionAction")->trigger();require(editor.sheet().drawing.dimensions.size()==1,"quota orizzontale dalla toolbar");const auto dimensionId=editor.sheet().drawing.dimensions[0].id;near(editor.dimensionResult(dimensionId).value,10,"quota GUI nel piano");
         DrawingEditorModel changed=editorModel;changed.snapshot.bodies={source(makeBox(Frame3(),14,6,4))};ok(editor.updateModel(changed));near(editor.dimensionResult(dimensionId).value,14,"bordo proiettato associativo dopo modifica");
         ok(encodeDrawingSheet(editor.sheet(),bytes));DrawingSheet restored;ok(decodeDrawingSheet(bytes,restored));DrawingSheetEditor reopened(restored,changed);near(reopened.dimensionResult(dimensionId).value,14,"riapertura della vista proiettata e quota");
         int verticalIndex=-1,sectionIndex=-1;const auto &loadedCurves=reopened.curves(id);
         for(std::size_t i=0;i<loadedCurves.size();++i){const auto &c=loadedCurves[i];const auto delta=c.curve->point(c.range.hi)-c.curve->point(c.range.lo);
-            if(c.kind==DrawingCurveKind::ProjectedEdge&&std::abs(std::abs(delta.y())-6)<1e-7)verticalIndex=int(i);
-            if(c.kind==DrawingCurveKind::Section&&std::abs(arcLength(*c.curve,c.range)-14)<1e-7)sectionIndex=int(i);}
+            if(c.kind==DrawingCurveKind::ProjectedEdge&&shown(reopened,id,int(i))&&std::abs(std::abs(delta.y())-6)<1e-7)verticalIndex=int(i);
+            if(c.kind==DrawingCurveKind::Section&&shown(reopened,id,int(i))&&std::abs(arcLength(*c.curve,c.range)-14)<1e-7)sectionIndex=int(i);}
         require(verticalIndex>=0&&sectionIndex>=0,"riferimenti verticali e sezioni nella vista riaperta");
         select(reopened,id,verticalIndex);reopened.findChild<QAction *>("drawingVerticalDimensionAction")->trigger();
         require(reopened.sheet().drawing.dimensions.size()==2,"quota verticale dalla toolbar");near(reopened.dimensionResult(reopened.sheet().drawing.dimensions.back().id).value,6,"quota verticale GUI");

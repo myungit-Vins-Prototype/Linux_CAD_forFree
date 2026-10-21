@@ -6034,7 +6034,7 @@ public:
         paintNow(v);
         v.makeCurrent();
         std::cout << "renderer: " << reinterpret_cast<const char *>(glGetString(GL_RENDERER)) << " dpr " << v.devicePixelRatioF()
-                  << " campioni " << v.bufferSamples_ << std::endl;
+                  << " campioni " << v.sceneRenderer_.bufferSamples_ << std::endl;
         v.doneCurrent();
         QElapsedTimer t;
         t.start();
@@ -6140,7 +6140,7 @@ public:
         QObject::connect(v, &QOpenGLWidget::frameSwapped, [&] { ++frames; });
         v->makeCurrent();
         std::cout << "renderer: " << reinterpret_cast<const char *>(glGetString(GL_RENDERER)) << " size " << v->width() << "x" << v->height()
-                  << " campioni " << v->bufferSamples_ << std::endl;
+                  << " campioni " << v->sceneRenderer_.bufferSamples_ << std::endl;
         v->doneCurrent();
         const auto waitFrame = [&] {
             const int start = frames;

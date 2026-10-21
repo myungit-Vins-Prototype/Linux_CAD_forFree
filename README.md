@@ -349,6 +349,7 @@ La stessa opzione può essere aggiunta alla configurazione macOS mantenendo i pa
 | `forgeCad2026_camera.h/.cpp` | Stato camera e calcoli di vista, proiezione, raggi e orbita senza dipendenze dal widget |
 | `forgeCad2026_glass_compositor.h/.cpp` | Compositore OpenGL dei fondali sfocati dei pannelli, con shader e framebuffer propri |
 | `forgeCad2026_gpu_picker.h/.cpp` | Buffer del picking GPU: cache per frame, lettura degli identificativi e risorse proprie |
+| `forgeCad2026_scene_renderer.h/.cpp` | Passata della scena OpenGL: framebuffer MSAA, risoluzione e opacita' del risultato |
 | `forgeCad2026_gui_common.h/.cpp` | Helper grafici condivisi da finestra e viewport |
 | `forgeCad2026_storyboard.h/.cpp` | Albero storyboard, badge e cursore della storia |
 | `forgeCad2026_dialogs.h`, `forgeCad2026_dialogs_*.cpp` | Dialoghi raggruppati per solidi, superfici, schizzi/curve e analisi |

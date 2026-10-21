@@ -5,6 +5,7 @@
 #include "forgeCad2026_camera.h"
 #include "forgeCad2026_glass_compositor.h"
 #include "forgeCad2026_gpu_picker.h"
+#include "forgeCad2026_scene_renderer.h"
 #include "cad_constraints.h"
 #include "cad_curve_solver.h"
 #include "cad_display_cache.h"
@@ -1318,7 +1319,6 @@ private:
     // di trasparente (i piani, le anteprime). Il compositore di Wayland (niri)
     // usa quell'alfa per la finestra e vi fa vedere attraverso il desktop: alla
     // fine della scena l'alfa torna 1 ovunque, senza toccare i colori.
-    void makeOpaque();
 
     void configureLighting();
 
@@ -1508,7 +1508,6 @@ private:
     void fitView(const QVector<QVector3D> &points);
 
     // Framebuffer multisample della scena (nullptr: antialiasing spento o non disponibile).
-    QOpenGLFramebufferObject *sceneBuffer(const QSize &size);
 
     void initializeGlassShader();
 
@@ -1780,8 +1779,7 @@ private:
     std::function<void(const QString &)> statusCallback_;
     // Antialiasing: campioni MSAA (0 = spento). La scena OpenGL si disegna in
     // un framebuffer multisample, risolto in uno normale e copiato nel widget.
-    int antialiasing_ = 4, maxSamples_ = 0, bufferSamples_ = 0;
-    std::unique_ptr<QOpenGLFramebufferObject> msaaBuffer_, resolveBuffer_;
+    ForgeCad::Gui::SceneRenderer sceneRenderer_;
     ForgeCad::Gui::GlassCompositor glassCompositor_;
     bool gridVisible_ = true;
     double referencePlaneScales_[3] = {1.0, 1.0, 1.0};
