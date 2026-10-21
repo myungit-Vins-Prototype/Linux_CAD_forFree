@@ -32,6 +32,7 @@ public:
     QString beginDetailCircle(const QUuid &parent,const QString &label,double scale);
     QString beginDetailViewPlacement(const QUuid &parent,QPointF center,double radius,double scale,const QString &label);
     QString updateDetailView(const QUuid &id,QPointF center,double radius,double scale,const QString &label);
+    // Madre nulla: la linea sul foglio individua la vista proiettata attraversata.
     QString beginSectionLine(const QUuid &parent,const QString &label,bool reverse=false,const QUuid &existing={},DrawingSectionStyle style=DrawingSectionStyle::Removed);
     QString setSectionLine(const QUuid &section,QPointF start,QPointF end);
     QString beginSectionPlacement(const QUuid &parent,QPointF start,QPointF end,const QString &label,bool reverse=false,DrawingSectionStyle style=DrawingSectionStyle::Removed);

@@ -7281,11 +7281,11 @@ public:
         require(embeddedPanel.isEmbedded() && !embeddedPanel.isWindow() && embeddedPanel.parentWidget() == &v,
                 "pannello funzione sovrapposto nelle coordinate del viewport");
         v.setGlassPanel(123, QRect(10, 20, 300, 220), 16, 14, true);
-        require(v.glassPanels_.contains(123) && v.glassPanels_.value(123).blur == 16
-                    && v.glassPanels_.value(123).radius == 14,
+        require(v.glassCompositor_.glassPanels_.contains(123) && v.glassCompositor_.glassPanels_.value(123).blur == 16
+                    && v.glassCompositor_.glassPanels_.value(123).radius == 14,
                 "registrazione del pannello per la composizione GPU");
         v.removeGlassPanel(123);
-        require(!v.glassPanels_.contains(123), "rimozione del pannello dalla composizione GPU");
+        require(!v.glassCompositor_.glassPanels_.contains(123), "rimozione del pannello dalla composizione GPU");
         embeddedPanel.resize(420, 300);
         embeddedPanel.placeAtLeft();
         const QPoint initialPanelPosition = embeddedPanel.pos();

@@ -39,6 +39,7 @@ class Counted final:public Curve<3>{CurvePtr<3> curve_;std::shared_ptr<int> coun
 }
 #include "test_drawing_cut_snaps.h"
 #include "test_drawing_section_edit.h"
+#include "test_drawing_cut_view_selection.h"
 void sectionFrameRegression(){
  const std::vector<Frame3> parents{Frame3(),Frame3(Vec3(4,5,6),Vec3(0,-1,0),Vec3(1,0,0)),Frame3(Vec3(3,4,5),Vec3(1,0,0),Vec3(0,1,0)),Frame3(Vec3(2,3,4),normalized(Vec3(1,-2,3)),normalized(Vec3(2,1,0)))};
  for(const auto &frame:parents)for(double angle:{0.,kPi/2,kPi,3*kPi/2,.37,2.18})for(bool reverse:{false,true})for(auto style:{DrawingSectionStyle::Removed,DrawingSectionStyle::Full,DrawingSectionStyle::HalfRight,DrawingSectionStyle::HalfLeft}){
@@ -87,7 +88,7 @@ void sectionOrientationRegression(){
 
 }
 int main(int argc,char **argv){QApplication app(argc,argv);try{
- sectionFrameRegression();sectionSnapTests();sectionEditTests();
+ sectionFrameRegression();sectionSnapTests();sectionEditTests();sectionViewSelectionTests();
  sectionOrientationRegression();
  DrawingEditorModel model;model.snapshot.version={QUuid::createUuid(),{}};model.snapshot.bodies={source(makeBox(Frame3(),20,12,8))};model.choices={{1,"Corpo"}};DrawingSheet sheet;sheet.drawing.model=model.snapshot.version;DrawingSheetEditor editor(sheet,model);editor.resize(1250,820);editor.show();QApplication::processEvents();editor.fitSheet();
  DrawingView parent;parent.kind=DrawingViewKind::ProjectedEdges;parent.scale=3;parent.plane=Frame3(Vec3(0,0,4),Vec3(0,0,1),Vec3(1,0,0));ok(editor.insertView(parent,{parent.id,"Madre",{80,90},{1}}));

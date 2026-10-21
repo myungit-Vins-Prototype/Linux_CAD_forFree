@@ -3,6 +3,7 @@
 
 #include "forgeCad2026_gui_common.h"
 #include "forgeCad2026_camera.h"
+#include "forgeCad2026_glass_compositor.h"
 #include "cad_constraints.h"
 #include "cad_curve_solver.h"
 #include "cad_display_cache.h"
@@ -1510,12 +1511,6 @@ private:
 
     void initializeGlassShader();
 
-    void ensureGlassBuffers(const QSize &fullSize);
-
-    void glassBlurPass(QOpenGLFramebufferObject *target, GLuint texture, const QVector2D &direction);
-
-    void drawRoundedGlassRect(const QRect &rect, int radius, const QSize &pixels);
-
     void drawGpuGlassPanels(const QSize &pixels, QOpenGLFramebufferObject *resolvedScene);
 
 
@@ -1786,11 +1781,7 @@ private:
     // un framebuffer multisample, risolto in uno normale e copiato nel widget.
     int antialiasing_ = 4, maxSamples_ = 0, bufferSamples_ = 0;
     std::unique_ptr<QOpenGLFramebufferObject> msaaBuffer_, resolveBuffer_;
-    struct GlassPanel { QRect rect; int blur = 0; int radius = 0; };
-    QHash<quintptr, GlassPanel> glassPanels_;
-    std::unique_ptr<QOpenGLShaderProgram> glassShader_;
-    std::unique_ptr<QOpenGLFramebufferObject> glassSource_, glassPing_, glassBlur_;
-    bool gpuGlassReady_ = false;
+    ForgeCad::Gui::GlassCompositor glassCompositor_;
     bool gridVisible_ = true;
     double referencePlaneScales_[3] = {1.0, 1.0, 1.0};
     mutable QSizeF referencePlaneAuto_[3] = {

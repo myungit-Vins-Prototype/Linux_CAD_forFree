@@ -1,0 +1,15 @@
+#pragma once
+namespace {
+void sectionViewSelectionTests(){
+ DrawingEditorModel model;model.snapshot.version={QUuid::createUuid(),{}};model.snapshot.bodies={source(makeBox(Frame3(),10,6,4))};model.choices={{1,"Blocco"}};DrawingSheet sheet;sheet.drawing.model=model.snapshot.version;DrawingSheetEditor e(sheet,model);e.resize(1350,900);e.show();QApplication::processEvents();e.fitSheet();
+ DrawingView a;a.kind=DrawingViewKind::ProjectedEdges;ok(e.insertView(a,{a.id,"Vista 1",{45,105},{1}}));DrawingView b=a;b.id=QUuid::createUuid();b.scale=2;b.plane=Frame3(Vec3(),Vec3(1,0,0),Vec3(0,0,1));ok(e.insertView(b,{b.id,"Vista 2",{160,105},{1}}));const auto baseline=bytes(e.sheet());
+ for(auto *item:e.canvas()->scene()->items())if(item->data(1).toUuid()==a.id&&(item->flags()&QGraphicsItem::ItemIsSelectable)){item->setSelected(true);break;}
+ auto *action=e.findChild<QAction *>("drawingTechnicalSectionAction");require(action,"comando taglio");action->trigger();require(e.hasSectionLine()&&!e.findChild<QDialog *>("drawingTechnicalSectionDialog"),"il comando avvia subito la linea senza dialogo");
+ const QPointF middle(164,105);mouse(e,middle+QPointF(.2,.1));auto *mark=cutSnapItem(e);require(mark&&QLineF(mark->pos(),middle).length()<1e-7,"snap attivi sulla vista 2 senza preselezionarla");mouse(e,middle+QPointF(.2,.1),true);mouse(e,{164,122},true,Qt::ShiftModifier);require(e.hasViewPlacement(),"linea sulla seconda vista prepara la sezione");mouse(e,{230,100},true);const auto child=e.sheet().drawing.views.back();const auto rel=layout(e,child.id).relation;
+ require(rel.parentId==b.id&&child.sectionStyle==DrawingSectionStyle::Full,"la linea decide la madre e il comando crea una sezione completa");close(child.scale,b.scale,"scala della madre attraversata");require(layout(e,child.id).features==layout(e,b.id).features,"sorgenti della madre attraversata");close(rel.cutStart.x(),2,"snap convertito nel piano della madre corretta");close(rel.cutStart.y(),0,"snap sul bordo della seconda vista");require(std::abs(dot(child.plane.zDir(),b.plane.xDir()))>1-1e-10,"orientamento dal piano della seconda vista");ok(e.undo());require(bytes(e.sheet())==baseline,"Undo atomico della sezione automatica");
+ action->trigger();mouse(e,{80,140},true,Qt::AltModifier);mouse(e,{100,140},true,Qt::AltModifier);require(e.hasSectionLine()&&!e.hasViewPlacement()&&bytes(e.sheet())==baseline,"taglio nel vuoto resta attivo senza modifiche");key(e,Qt::Key_Escape);require(!e.hasSectionLine(),"Esc annulla il taglio automatico");
+ action->trigger();mouse(e,{40,105},true,Qt::AltModifier);mouse(e,{175,105},true,Qt::AltModifier);require(e.hasSectionLine()&&!e.hasViewPlacement()&&bytes(e.sheet())==baseline,"due viste attraversate non scelgono una madre arbitraria");key(e,Qt::Key_Escape);
+ e.setReadOnly(true);require(!e.beginSectionLine({},"A").isEmpty()&&!e.hasSectionLine(),"taglio automatico protetto in sola lettura");
+ std::cout<<"PASS section parent from cutting line, direct command, snaps on second view, scale/frame, ambiguity, cancel and undo\n";
+}
+}

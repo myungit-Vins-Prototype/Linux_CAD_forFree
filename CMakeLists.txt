@@ -47,6 +47,8 @@ add_executable(forgecad
     forgeCad2026_viewport.h
     forgeCad2026_camera.cpp
     forgeCad2026_camera.h
+    forgeCad2026_glass_compositor.cpp
+    forgeCad2026_glass_compositor.h
     forgeCad2026_gui_common.cpp
     forgeCad2026_gui_common.h
     forgeCad2026_storyboard.cpp
@@ -448,7 +450,7 @@ target_compile_options(forgecad_drawing_dimensions_tests PRIVATE -Wall -Wextra -
 add_test(NAME forgecad_drawing_dimensions_tests COMMAND forgecad_drawing_dimensions_tests)
 set_tests_properties(forgecad_drawing_dimensions_tests PROPERTIES TIMEOUT 60)
 
-add_executable(forgecad_drawing_dimensions_gui_tests tests/test_drawing_dimensions_gui.cpp tests/test_drawing_segment_spacing.h cad_drawing.cpp cad_drawing_dimension.cpp cad_drawing_sheet.cpp cad_drawing_derived.cpp cad_drawing_editor.cpp cad_icons.cpp cad_drawing_silhouette.cpp cad_drawing_visibility.cpp cad_drawing_page.cpp)
+add_executable(forgecad_drawing_dimensions_gui_tests tests/test_drawing_dimensions_gui.cpp tests/test_drawing_ambiguous_snaps.h tests/test_drawing_segment_spacing.h cad_drawing.cpp cad_drawing_dimension.cpp cad_drawing_sheet.cpp cad_drawing_derived.cpp cad_drawing_editor.cpp cad_icons.cpp cad_drawing_silhouette.cpp cad_drawing_visibility.cpp cad_drawing_page.cpp)
 target_include_directories(forgecad_drawing_dimensions_gui_tests PRIVATE ${PROJECT_SOURCE_DIR})
 target_link_libraries(forgecad_drawing_dimensions_gui_tests PRIVATE Qt6::Widgets forgekernel)
 target_compile_options(forgecad_drawing_dimensions_gui_tests PRIVATE -Wall -Wextra -Wpedantic)
@@ -493,7 +495,7 @@ target_compile_options(forgecad_drawing_page_tests PRIVATE -Wall -Wextra -Wpedan
 add_test(NAME forgecad_drawing_page_tests COMMAND forgecad_drawing_page_tests)
 set_tests_properties(forgecad_drawing_page_tests PROPERTIES TIMEOUT 120 ENVIRONMENT "QT_QPA_PLATFORM=offscreen;QT_QPA_OFFSCREEN_NO_GLX=1;QT_QPA_PLATFORMTHEME=;QT_STYLE_OVERRIDE=Fusion")
 
-add_executable(forgecad_drawing_derived_tests tests/test_drawing_derived.cpp tests/test_drawing_cut_snaps.h cad_drawing_editor.cpp cad_drawing_sheet.cpp cad_drawing_derived.cpp cad_drawing_page.cpp cad_drawing.cpp cad_drawing_dimension.cpp cad_drawing_silhouette.cpp cad_drawing_visibility.cpp cad_icons.cpp)
+add_executable(forgecad_drawing_derived_tests tests/test_drawing_derived.cpp tests/test_drawing_cut_view_selection.h tests/test_drawing_cut_snaps.h cad_drawing_editor.cpp cad_drawing_sheet.cpp cad_drawing_derived.cpp cad_drawing_page.cpp cad_drawing.cpp cad_drawing_dimension.cpp cad_drawing_silhouette.cpp cad_drawing_visibility.cpp cad_icons.cpp)
 target_include_directories(forgecad_drawing_derived_tests PRIVATE ${PROJECT_SOURCE_DIR})
 target_link_libraries(forgecad_drawing_derived_tests PRIVATE Qt6::Widgets forgekernel)
 target_compile_options(forgecad_drawing_derived_tests PRIVATE -Wall -Wextra -Wpedantic)
@@ -502,7 +504,7 @@ set_tests_properties(forgecad_drawing_derived_tests PROPERTIES TIMEOUT 120 ENVIR
 
 # Dettagli circolari: stesso renderer delle viste derivate, riferimenti originali.
 get_target_property(FORGECAD_DETAIL_TEST_SOURCES forgecad_drawing_derived_tests SOURCES)
-list(REMOVE_ITEM FORGECAD_DETAIL_TEST_SOURCES tests/test_drawing_derived.cpp tests/test_drawing_cut_snaps.h)
+list(REMOVE_ITEM FORGECAD_DETAIL_TEST_SOURCES tests/test_drawing_derived.cpp tests/test_drawing_cut_view_selection.h tests/test_drawing_cut_snaps.h)
 add_executable(forgecad_drawing_detail_tests tests/test_drawing_detail.cpp cad_drawing_detail.h ${FORGECAD_DETAIL_TEST_SOURCES})
 target_include_directories(forgecad_drawing_detail_tests PRIVATE ${PROJECT_SOURCE_DIR})
 target_link_libraries(forgecad_drawing_detail_tests PRIVATE Qt6::Widgets forgekernel)
