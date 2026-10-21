@@ -33,6 +33,12 @@ else()
     set(FORGE_CAD_CUDA_SOURCE cuda_support_cpu.cpp)
 endif()
 
+# Necessario alla mappa architetturale: usa le vere opzioni della build.
+option(FORGECAD_UPDATE_ARCHITECTURE "Aggiorna automaticamente la mappa durante la build" ON)
+if(FORGECAD_UPDATE_ARCHITECTURE)
+    set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+endif()
+
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_AUTOMOC ON)
@@ -55,6 +61,18 @@ add_executable(forgecad
     forgeCad2026_gui.cpp
     forgeCad2026_gui.h
     forgeCad2026_viewport.cpp
+    forgeCad2026_viewport_sketch.cpp
+    forgeCad2026_viewport_document.cpp
+    forgeCad2026_viewport_selection.cpp
+    forgeCad2026_viewport_render.cpp
+    forgeCad2026_viewport_preview.cpp
+    forgeCad2026_viewport_scene.cpp
+    forgeCad2026_viewport_interaction.cpp
+    forgeCad2026_viewport_internal.h
+    forgeCad2026_feature_preview.cpp
+    forgeCad2026_feature_preview.h
+    forgeCad2026_sketch_curvature.cpp
+    forgeCad2026_sketch_curvature.h
     forgeCad2026_viewport.h
     forgeCad2026_camera.cpp
     forgeCad2026_camera.h
@@ -582,3 +600,26 @@ add_test(NAME forgecad_overlay_uniform_tests COMMAND forgecad_overlay_uniform_te
 set_tests_properties(forgecad_overlay_uniform_tests PROPERTIES
     SKIP_RETURN_CODE 77 LABELS "opengl"
     ENVIRONMENT "QT_QPA_PLATFORM=offscreen;QT_QPA_OFFSCREEN_NO_GLX=1;QT_QPA_PLATFORMTHEME=")
+
+# Dopo l'eseguibile: nella prima build gli header generati da Qt esistono già.
+# Il target gira a ogni build standard, ma --update evita analisi e riscritture
+# quando codice, configurazione e documento sono già allineati.
+if(FORGECAD_UPDATE_ARCHITECTURE)
+    find_package(Python3 REQUIRED COMPONENTS Interpreter)
+    # Copre anche chi compila esplicitamente il solo target forgecad.
+    add_custom_command(TARGET forgecad POST_BUILD
+        COMMAND "${Python3_EXECUTABLE}" "${PROJECT_SOURCE_DIR}/tools/generate_architecture.py"
+            --update --build-dir "${PROJECT_BINARY_DIR}" --jobs 1
+        WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}"
+        COMMENT "Aggiornamento dell'architettura dopo il link"
+        VERBATIM
+    )
+    add_custom_target(forgecad_architecture ALL
+        COMMAND "${Python3_EXECUTABLE}" "${PROJECT_SOURCE_DIR}/tools/generate_architecture.py"
+            --update --build-dir "${PROJECT_BINARY_DIR}" --jobs 1
+        DEPENDS forgecad
+        WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}"
+        COMMENT "Verifica e aggiornamento automatico dell'architettura ForgeCAD"
+        VERBATIM
+    )
+endif()

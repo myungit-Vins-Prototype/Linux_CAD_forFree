@@ -6,6 +6,8 @@
 #include "forgeCad2026_glass_compositor.h"
 #include "forgeCad2026_gpu_picker.h"
 #include "forgeCad2026_scene_renderer.h"
+#include "forgeCad2026_feature_preview.h"
+#include "forgeCad2026_sketch_curvature.h"
 #include "cad_constraints.h"
 #include "cad_curve_solver.h"
 #include "cad_display_cache.h"
@@ -1126,15 +1128,10 @@ private:
     // precedente, oppure -1 per un punto appena inserito.
     void commitFreeCurveEdit(int curveIndex, const CurveObject &working, const QVector<int> &origins);
 
-    struct SketchCombCache {
-        CurveObject source;
-        double scale = -1;
-        QVector<ForgeCad::OverlayVertex> lines;
-        bool valid = false;
-    };
+
     bool sketchCombVisible_ = false;
     double sketchCombScale_ = 0; // zero: automatica per curva; altrimenti mm²
-    QVector<SketchCombCache> sketchCombCache_;
+    ForgeCad::Gui::SketchCurvatureCache sketchCombCache_;
     int sketchCombPreviewIndex_ = -1;
     CurveObject sketchCombPreview_;
 
@@ -1440,20 +1437,7 @@ private:
     // Dati di un'anteprima, copiati nel thread dell'interfaccia: il thread del
     // pool non tocca il documento (i body del kernel sono immutabili e
     // condivisi, gli schizzi sono copie).
-    struct PreviewInputs {
-        ExtrusionObject definition;
-        int index = 0;  // posizione del corpo (gli operandi hanno indice minore)
-        QVector<SketchObject> sketches;
-        QVector<ExtrusionObject> bodies;  // solo gli operandi, copiati
-        int quality = 1;
-        // Modifica senza valori cambiati (unchangedFeature): il body e la
-        // tassellazione del corpo, niente kernel; si prepara solo la vista
-        // (la patch del raccordo, le curve U/V).
-        bool reuse = false;
-        ForgeCad::ForgeBody existing;
-        BodyDisplay existingDisplay;
-        QVector<int> existingMerge;
-    };
+    using PreviewInputs = ForgeCad::Gui::FeaturePreviewBuilder::PreviewInputs;
     // La geometria dell'anteprima, come rebuildBody, e la sua tassellazione.
     static bool computePreview(const PreviewInputs &in, BodyDisplay &display, BodyDisplay &retainedDisplay,
                                BodyDisplay &resultDisplay, ForgeCad::ForgeBody &geometry,

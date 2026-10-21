@@ -1,0 +1,462 @@
+#!/usr/bin/env python3
+"""Catalogo verificabile + dipendenze include + chiamate C++ risolte da libclang.
+
+Generazione: python3 tools/generate_architecture.py --build-dir build-linux
+Verifica senza libclang: python3 tools/generate_architecture.py --check
+Il build deve avere CMAKE_EXPORT_COMPILE_COMMANDS=ON. Non esegue i sorgenti.
+"""
+from __future__ import annotations
+import argparse
+import concurrent.futures
+import hashlib
+import json
+import os
+import posixpath
+from pathlib import Path
+import re
+import shlex
+import subprocess
+import sys
+import tempfile
+from contextlib import contextmanager
+
+ROOT = Path(__file__).resolve().parents[1]
+OUT = ROOT / 'docs/architecture'
+VERSION = 1
+GROUPS = [
+ ('startup', 'Avvio e finestra', 'Ingresso applicazione, menu, toolbar, azioni e coordinamento della finestra.'),
+ ('viewport', 'Viewport e interazione', 'Stato GUI della vista 3D, input, selezione, sketch e orchestrazione delle anteprime.'),
+ ('render', 'Rendering e camera', 'Camera, cache grafiche, passate OpenGL, trasparenza e picking GPU.'),
+ ('dialogs', 'Dialoghi e storyboard', 'Parametri dei comandi, dialoghi per dominio e albero della storia.'),
+ ('sketch', 'Sketch e vincoli', 'Geometria 2D/3D dello sketch, editing, snap, riferimenti e risoluzione dei vincoli.'),
+ ('features', 'Feature e ricostruzione', 'Operazioni parametriche, dipendenze, ricostruzione e calcolo delle anteprime.'),
+ ('documents', 'Documenti e revisioni', 'Persistenza, accesso, revisioni, recupero e metadati del modello.'),
+ ('drawing', 'Tavole 2D', 'Viste, sezioni, quote, presentazione ed esportazione delle tavole.'),
+ ('io', 'Importazione ed esportazione', 'Adattatori dei formati e integrazione con librerie esterne.'),
+ ('analysis', 'Analisi e mesh', 'Analisi geometrica, discretizzazione e supporto al calcolo.'),
+ ('kernel', 'Kernel geometrico', 'Matematica, curve, superfici, topologia B-rep e operazioni geometriche di base.'),
+ ('model', 'Modello e servizi comuni', 'Tipi condivisi, utilità e servizi applicativi trasversali.'),
+ ('tests', 'Test e benchmark', 'Verifiche automatiche e misure; non fanno parte dell’eseguibile distribuito.'),
+ ('build', 'Build e strumenti', 'Configurazione, generazione e confezionamento del software.')]
+# Descrizioni curate: aggiornare queste voci quando cambia il confine di un modulo.
+DESCRIPTIONS = {
+ 'forgeCad2026.cpp': ('startup', 'Entry point Qt: avvio, opzioni e apertura della finestra principale.'),
+ 'forgeCad2026_gui': ('startup', 'PdfWindow: sette fasi di inizializzazione di scena, menu, comandi, opzioni e toolbar; ciclo del documento.'),
+ 'forgeCad2026_gui_common': ('startup', 'Helper condivisi dalla finestra, dai dialoghi e dal viewport.'),
+ 'forgeCad2026_viewport.cpp': ('viewport', 'Ciclo di vita e impostazioni pubbliche del coordinatore CadViewport.'),
+ 'forgeCad2026_viewport.h': ('viewport', 'Contratto e stato privato del coordinatore GUI della vista 3D.'),
+ 'forgeCad2026_viewport_internal.h': ('viewport', 'Dipendenze di implementazione e template condivisi dai soli file viewport.'),
+ 'forgeCad2026_viewport_document.cpp': ('viewport', 'Modifiche al documento, corpi, feature, storia e sincronizzazione della vista.'),
+ 'forgeCad2026_viewport_interaction.cpp': ('viewport', 'Eventi Qt di mouse, tastiera, ruota e menu contestuali.'),
+ 'forgeCad2026_viewport_selection.cpp': ('viewport', 'Filtri di selezione, hover, riferimenti e hit testing di entità e maniglie.'),
+ 'forgeCad2026_viewport_sketch.cpp': ('viewport', 'Comandi e interazioni per disegno, modifica, vincoli e riferimenti dello sketch.'),
+ 'forgeCad2026_viewport_preview.cpp': ('viewport', 'Orchestrazione asincrona delle anteprime: generazioni, cancellazione e consegna sul thread GUI.'),
+ 'forgeCad2026_viewport_render.cpp': ('viewport', 'Orchestrazione del frame e degli overlay; delega delle passate ai componenti grafici.'),
+ 'forgeCad2026_viewport_scene.cpp': ('viewport', 'Coordinate scena/schermo, raggi, bounds, adattamento vista e piani di riferimento.'),
+ 'forgeCad2026_feature_preview': ('features', 'FeaturePreviewBuilder: chiave e calcolo delle anteprime da snapshot, senza possedere widget.'),
+ 'forgeCad2026_sketch_curvature': ('sketch', 'SketchCurvatureCache: possiede e invalida i pettini di curvatura al cambio di curva o scala.'),
+ 'forgeCad2026_camera': ('render', 'Stato e trasformazioni della camera 3D.'),
+ 'forgeCad2026_scene_renderer': ('render', 'Passate grafiche della scena, FBO/MSAA e disegno di corpi, riferimenti e overlay.'),
+ 'forgeCad2026_gpu_picker': ('render', 'Picking tramite identificatori GPU e gestione dei buffer necessari.'),
+ 'forgeCad2026_glass_compositor': ('render', 'Composizione della trasparenza dei corpi e risorse OpenGL associate.'),
+ 'forgeCad2026_storyboard': ('dialogs', 'Albero della storia: presentazione, selezione, riordino e segnali delle feature.'),
+ 'forgeCad2026_dialogs_solids.cpp': ('dialogs', 'Dialoghi di parametri per operazioni solide.'),
+ 'forgeCad2026_dialogs_surfaces.cpp': ('dialogs', 'Dialoghi di parametri per operazioni sulle superfici.'),
+ 'forgeCad2026_dialogs_sketch.cpp': ('dialogs', 'Dialoghi di creazione e modifica degli sketch.'),
+ 'forgeCad2026_dialogs_analysis.cpp': ('dialogs', 'Dialoghi per analisi e opzioni di verifica geometrica.'),
+ 'forgeCad2026_dialogs_common': ('dialogs', 'Controlli e comportamento condivisi dai dialoghi di modellazione.'),
+ 'forgeCad2026_dialogs.h': ('dialogs', 'Contratti dei dialoghi di comando per solidi, superfici, sketch e analisi.'),
+ 'toolbar_editor.h': ('startup', 'Editor della disposizione e dei comandi delle toolbar.'),
+}
+
+# Catalogo dei moduli applicativi: descrizioni specifiche condivise da header e sorgente.
+DESCRIPTIONS.update({'tools/open_architecture.py': ('build', 'Avvio locale della mappa: aggiorna i dati a ogni apertura e li mostra nel browser con avanzamento ed errori.'), 'CMakeLists.txt': ('build',
+                    'Definisce eseguibile, dipendenze, sorgenti e suite di test dell’applicazione.'),
+ 'cad_constraints': ('sketch', 'Definisce e applica vincoli geometrici e dimensionali degli sketch.'),
+ 'cad_cuda_tessellation': ('analysis', 'Adatta il calcolo di tessellazione ai percorsi accelerati CUDA.'),
+ 'cad_curve_extract': ('features',
+                       'Estrae curve 3D associative dalla geometria sorgente e dai riferimenti della '
+                       'feature.'),
+ 'cad_curve_solver': ('sketch',
+                      'Costruisce e ricalcola le curve esatte a partire dalle entità dello sketch.'),
+ 'cad_datum': ('features', 'Risoluzione dei piani e dei riferimenti geometrici di costruzione.'),
+ 'cad_display_cache': ('render', 'Cache GPU dei display: facce, spigoli, contorni e istanze.'),
+ 'cad_document_io': ('documents',
+                     'Salva e carica lo stato nativo del documento, incluse geometria e impostazioni.'),
+ 'cad_document_read': ('documents', 'Lettura del documento e opzioni di apertura/consultazione.'),
+ 'cad_document_recovery': ('documents',
+                           'Checkpoint di recupero e ripristino dei documenti dopo interruzioni.'),
+ 'cad_document_version.h': ('documents',
+                            'Identità e informazioni di versione dei documenti e dei check-in.'),
+ 'cad_drawing': ('drawing',
+                 'Tipi e calcolo geometrico delle viste di tavola e delle loro entità proiettate.'),
+ 'cad_drawing_annotations.h': ('drawing',
+                               'Modello delle annotazioni e dei riferimenti di quotatura delle tavole.'),
+ 'cad_drawing_axes.h': ('drawing', 'Convenzioni degli assi e conversioni delle coordinate delle viste 2D.'),
+ 'cad_drawing_browser': ('drawing', 'Navigazione e scelta di documenti/modelli per le tavole.'),
+ 'cad_drawing_centers.h': ('drawing',
+                           'Calcolo e riconoscimento dei centri geometrici utilizzati nelle tavole.'),
+ 'cad_drawing_compute.h': ('drawing',
+                           'Calcolo delle viste su worker con avanzamento, annullamento e blocco '
+                           'temporaneo dell’editor.'),
+ 'cad_drawing_derived': ('drawing', 'Costruzione delle viste derivate, proiettate e in sezione.'),
+ 'cad_drawing_detail.h': ('drawing', 'Definizione e gestione del ritaglio delle viste di dettaglio.'),
+ 'cad_drawing_dimension': ('drawing', 'Geometria e presentazione delle quote delle viste 2D.'),
+ 'cad_drawing_editor': ('drawing',
+                        'Editor interattivo della tavola: selezione, posizionamento e comandi sul foglio.'),
+ 'cad_drawing_file': ('drawing', 'Lettura e scrittura dei file nativi di tavola .drw.'),
+ 'cad_drawing_focus.h': ('drawing',
+                         'Ripristina il focus alla finestra della tavola dopo i dialoghi nativi.'),
+ 'cad_drawing_page': ('drawing', 'Impaginazione, formati e presentazione delle pagine della tavola.'),
+ 'cad_drawing_revision_ui.cpp': ('drawing', 'Interfaccia dei comandi di revisione della tavola.'),
+ 'cad_drawing_revisions': ('drawing', 'Integra le tavole con il protocollo di revisioni dei documenti.'),
+ 'cad_drawing_sheet': ('drawing',
+                       'Stato del foglio, posizione delle viste e relazioni tra viste madri e derivate.'),
+ 'cad_drawing_silhouette': ('drawing',
+                            'Calcola i contorni apparenti delle superfici nella vista di tavola.'),
+ 'cad_drawing_style.h': ('drawing', 'Stili grafici e convenzioni di presentazione delle tavole.'),
+ 'cad_drawing_text_layout.h': ('drawing', 'Misura e disposizione del testo delle annotazioni sul foglio.'),
+ 'cad_drawing_tolerances.h': ('drawing', 'Tolleranze geometriche condivise dai calcoli delle tavole.'),
+ 'cad_drawing_toolbars.h': ('drawing', 'Costruzione e configurazione delle toolbar della suite 2D.'),
+ 'cad_drawing_visibility': ('drawing',
+                            'Classifica la visibilità delle entità proiettate e le linee nascoste.'),
+ 'cad_drawing_window': ('drawing',
+                        'Finestra della suite 2D e coordinamento dei comandi del documento di tavola.'),
+ 'cad_element_names': ('features',
+                       'Registra genealogia delle feature e nomi topologici persistenti per risolvere i '
+                       'riferimenti.'),
+ 'cad_export': ('io', 'Esporta la geometria del modello nei formati di scambio supportati.'),
+ 'cad_expression': ('model',
+                    'Valuta espressioni nei campi numerici e gestisce unità e formattazione delle misure.'),
+ 'cad_extrude': ('features',
+                 'Costruisce estrusioni con condizioni di fine e applica la fusione con i corpi '
+                 'selezionati.'),
+ 'cad_feature_build': ('features',
+                       'Dispatcher di costruzione delle feature dai parametri e dagli operandi '
+                       'disponibili.'),
+ 'cad_feature_dependencies': ('features', 'Determina le dipendenze delle feature e dei loro riferimenti.'),
+ 'cad_features': ('features', 'Tipi e regole comuni delle operazioni parametriche del modello.'),
+ 'cad_forge': ('features',
+               'Adatta sketch e parametri applicativi alle operazioni del kernel geometrico proprio.'),
+ 'cad_history': ('features', 'Ricostruzione e gestione degli stadi della storia delle feature.'),
+ 'cad_history_graph': ('features', 'Rappresenta e analizza il grafo delle dipendenze della storia.'),
+ 'cad_icons': ('startup', 'Fornisce le icone dei comandi dell’applicazione.'),
+ 'cad_import': ('io', 'Importa geometria da formati di scambio nel modello applicativo.'),
+ 'cad_kernel': ('sketch',
+                'Sistemi di riferimento degli sketch, trasformazioni e regole comuni di modellazione.'),
+ 'cad_macos_menu': ('startup', 'Integrazione dei menu con il comportamento nativo di macOS.'),
+ 'cad_mass': ('analysis', 'Calcola proprietà di massa, area, volume e momenti dei corpi.'),
+ 'cad_measure': ('analysis', 'Misura distanze e relazioni tra entità selezionate sulla geometria esatta.'),
+ 'cad_menu.h': ('startup', 'Componente menu personalizzato dell’interfaccia.'),
+ 'cad_model_history': ('features',
+                       'Gestisce l’evoluzione dello stato del modello nella storia delle operazioni.'),
+ 'cad_native_revisions': ('documents', 'Persistenza dei dati nativi necessari alle revisioni del modello.'),
+ 'cad_numeric_input.h': ('startup', 'Gestione comune dell’input numerico nei controlli dell’interfaccia.'),
+ 'cad_overlay_renderer': ('render', 'Disegno OpenGL degli overlay e delle loro istanze.'),
+ 'cad_pattern': ('features', 'Costruisce le ripetizioni parametriche delle feature.'),
+ 'cad_revision_client': ('documents',
+                         'Protocollo client per copie di lavoro, sessioni e operazioni sulle revisioni.'),
+ 'cad_revision_client_internal.h': ('documents',
+                                    'Helper privati del protocollo revisioni: identità, percorsi, lock e '
+                                    'file di sessione.'),
+ 'cad_revision_store': ('documents', 'Archivio delle revisioni e gestione dei dati dei check-in.'),
+ 'cad_shape_analysis': ('analysis', 'Campiona e visualizza analisi di curvatura e qualità delle forme.'),
+ 'cad_sketch_edit': ('sketch', 'Operazioni di modifica della geometria dello sketch.'),
+ 'cad_sketch_offset': ('sketch', 'Costruzione degli offset delle entità dello sketch.'),
+ 'cad_sketch_refs': ('sketch', 'Riferimenti associativi dello sketch a geometrie e feature del modello.'),
+ 'cad_snap': ('sketch', 'Ricerca degli agganci geometrici per disegno e selezione.'),
+ 'cad_snapshot_chunks': ('documents',
+                         'Suddivide e ricompone snapshot per la conservazione dei dati documentali.'),
+ 'cad_spatial_sketch': ('sketch', 'Gestisce entità e riferimenti degli sketch spaziali.'),
+ 'cad_toolbar.h': ('startup', 'Componente toolbar personalizzato dell’interfaccia.'),
+ 'cad_topology_ref': ('features',
+                      'Crea e risolve riferimenti a facce, spigoli e vertici, anche dopo la '
+                      'rigenerazione.'),
+ 'cad_types.h': ('model',
+                 'Tipi applicativi condivisi: sketch, entità, feature, display, riferimenti e stato del '
+                 'documento.'),
+ 'cad_workspace': ('documents',
+                   'Individua e inizializza il workspace del documento e le cartelle delle revisioni.'),
+ 'cuda_support.cu': ('analysis', 'Implementazione CUDA dei calcoli accelerati disponibili.'),
+ 'cuda_support.h': ('analysis', 'Contratto comune dei percorsi CUDA e CPU.'),
+ 'cuda_support_cpu.cpp': ('analysis',
+                          'Implementazione CPU del contratto di accelerazione quando CUDA non è '
+                          'disponibile.'),
+ 'forgeCad2026_glass_compositor': ('render',
+                                   'Compositore dei fondali sfocati dei pannelli, con shader e framebuffer '
+                                   'propri.'),
+ 'kernel/CMakeLists.txt': ('build', 'Definisce libreria geometrica e target di verifica del kernel.')})
+
+TOKEN_DESCRIPTIONS = {
+ 'viewport':'Vista e interazione', 'constraint':'Vincoli geometrici', 'solver':'Risoluzione numerica',
+ 'sketch':'Sketch', 'curve':'Curve', 'surface':'Superfici', 'brep':'Rappresentazione B-rep',
+ 'boolean':'Operazioni booleane', 'tessellat':'Tessellazione', 'triang':'Triangolazione',
+ 'topology':'Topologia', 'feature':'Feature parametriche', 'dependenc':'Dipendenze',
+ 'rebuild':'Ricostruzione', 'history':'Storia delle operazioni', 'document':'Documento',
+ 'revision':'Revisioni', 'recovery':'Recupero', 'drawing':'Tavole 2D', 'section':'Sezioni',
+ 'dimension':'Quotatura', 'export':'Esportazione', 'import':'Importazione', 'step':'Formato STEP',
+ 'stl':'Formato STL', 'iges':'Formato IGES', 'mesh':'Mesh', 'display':'Dati di visualizzazione',
+ 'render':'Rendering', 'selection':'Selezione', 'pick':'Picking', 'snap':'Snap', 'thread':'Filettature',
+ 'sweep':'Sweep', 'loft':'Loft', 'extrusion':'Estrusione', 'fillet':'Raccordi', 'chamfer':'Smussi',
+ 'analysis':'Analisi geometrica', 'shape':'Forme geometriche', 'datum':'Riferimenti geometrici',
+ 'transform':'Trasformazioni', 'pattern':'Ripetizioni', 'offset':'Offset', 'trim':'Taglio geometrico',
+ 'sew':'Cucitura', 'thicken':'Ispessimento', 'draft':'Sformo', 'primitive':'Primitive',
+ 'font':'Font', 'text':'Testo', 'gpu':'Accelerazione GPU', 'cuda':'Calcolo CUDA',
+ 'nurbs':'NURBS', 'intersect':'Intersezioni', 'bounding':'Limiti geometrici', 'projection':'Proiezioni'}
+
+
+def inventory():
+    names = subprocess.check_output(['git','ls-files','--cached','--others','--exclude-standard','-z'], cwd=ROOT).decode().split('\0')
+    suffixes = {'.cpp','.h','.hpp','.c','.cu','.cuh','.mm','.py','.sh','.cmake','.qrc','.vert','.frag'}
+    return sorted({n for n in names if n and (Path(n).suffix in suffixes or Path(n).name=='CMakeLists.txt')
+                   and not n.startswith(('docs/architecture/', 'build', 'forgecad-release/'))
+                   and (ROOT/n).is_file()})
+
+
+def digest(path):
+    return hashlib.sha256((ROOT/path).read_bytes()).hexdigest()
+
+
+def classify(path):
+    p=Path(path);stem=p.stem;low=path.lower()
+    if path in DESCRIPTIONS:return DESCRIPTIONS[path]
+    if stem in DESCRIPTIONS:return DESCRIPTIONS[stem]
+    if path.startswith(('tests/','kernel/tests/')) or stem.startswith('test_'):group='tests'
+    elif path.startswith('kernel/'):group='kernel'
+    elif path.startswith(('tools/','packaging/')) or p.suffix in {'.py','.sh','.cmake','.qrc'} or p.name=='CMakeLists.txt':group='build'
+    elif any(w in low for w in ('drawing','dimension','section_view')):group='drawing'
+    elif any(w in low for w in ('document','revision','recovery','metadata','access','snapshot','persistence')):group='documents'
+    elif any(w in low for w in ('import','export','step_','stl_','iges','pdf','dxf')):group='io'
+    elif any(w in low for w in ('display','render','shader','camera','opengl','gpu_pick')):group='render'
+    elif any(w in low for w in ('sketch','constraint','solver','snap','curve_edit')):group='sketch'
+    elif any(w in low for w in ('mesh','analysis','analyz','cuda')):group='analysis'
+    elif any(w in low for w in ('feature','rebuild','history','extrusion','sweep','loft','boolean','chamfer','fillet','pattern','datum','primitive','offset','thicken','draft','trim')):group='features'
+    else:group='model'
+    if group=='kernel':
+        header=p if p.suffix in {'.h','.hpp'} else p.with_suffix('.h')
+        if (ROOT/header).is_file():
+            comments=[];started=False
+            for line in (ROOT/header).read_text(errors='replace').splitlines():
+                text=line.strip()
+                if text.startswith('//'):
+                    comments.append(text[2:].strip());started=True
+                elif started:break
+            if comments:
+                paragraph=' '.join(comments)
+                first=re.split(r'(?<=[.!?])\s',paragraph,maxsplit=1)[0]
+                return group, first if len(first)<=290 else first[:287]+'…'
+    themes=list(dict.fromkeys(v for k,v in TOKEN_DESCRIPTIONS.items() if k in low))
+    role='Verifica' if group=='tests' else ('Contratti e tipi' if p.suffix in {'.h','.hpp','.cuh'} else 'Implementazione')
+    # Nome preciso sempre presente: evita descrizioni generiche indistinguibili.
+    description=f'{role}: '+(' / '.join(themes[:3]) if themes else stem.replace('_',' '))+'.'
+    return group, description
+
+
+def local_includes(files):
+    known=set(files);by_name={}
+    for f in files:by_name.setdefault(Path(f).name,[]).append(f)
+    edges=[]
+    for f in files:
+        for line,text in enumerate((ROOT/f).read_text(errors='replace').splitlines(),1):
+            m=re.match(r'\s*#\s*include\s*["<]([^">]+)[">]',text)
+            if not m:continue
+            name=m[1];candidates=[posixpath.normpath((Path(f).parent/name).as_posix()),name,'kernel/'+name]
+            target=next((c for c in candidates if c in known),None)
+            if not target and len(by_name.get(name,[]))==1:target=by_name[name][0]
+            if target:edges.append((f,target,'include',line,name,''))
+    return edges
+
+
+def parse_unit(job):
+    # Worker indipendente: nessun oggetto libclang condiviso fra processi.
+    import clang.cindex as c
+    filename,args,root,known=job;root=Path(root);known=set(known)
+    idx=c.Index.create();tu=idx.parse(filename,args=args)
+    errors=[str(d).replace(str(root)+'/', '') for d in tu.diagnostics if d.severity>=3]
+    def relative(loc):
+        if not loc.file:return None
+        try:p=Path(loc.file.name).resolve().relative_to(root).as_posix()
+        except ValueError:return None
+        return p if p in known else None
+    def qualified(cur):
+        parts=[cur.spelling];p=cur.semantic_parent
+        while p and p.kind!=c.CursorKind.TRANSLATION_UNIT:
+            if p.spelling:parts.append(p.spelling)
+            p=p.semantic_parent
+        return '::'.join(reversed(parts))
+    functions={c.CursorKind.FUNCTION_DECL,c.CursorKind.CXX_METHOD,c.CursorKind.CONSTRUCTOR,c.CursorKind.DESTRUCTOR,c.CursorKind.CONVERSION_FUNCTION,c.CursorKind.FUNCTION_TEMPLATE}
+    definitions={};calls=[];symbols={}
+    def visit(cur,owner=''):
+        file=relative(cur.location)
+        if not file:
+            if cur.kind==c.CursorKind.TRANSLATION_UNIT:
+                for child in cur.get_children():visit(child)
+            return
+        if cur.kind in functions and cur.is_definition():
+            owner=qualified(cur);usr=cur.get_usr()
+            if usr:definitions[usr]=(file,owner,cur.location.line)
+            symbols.setdefault(file,set()).add(owner)
+        if cur.kind==c.CursorKind.CALL_EXPR:
+            ref=cur.referenced
+            if ref and ref.kind in functions and relative(ref.location):
+                calls.append((file,ref.get_usr(),relative(ref.location),'call',cur.location.line,qualified(ref),owner))
+        elif cur.kind==c.CursorKind.UNARY_OPERATOR:
+            tokens=cur.get_tokens();first=next(tokens,None)
+            if first and first.spelling=='&':
+                for child in cur.get_children():
+                    ref=child.referenced
+                    if ref and ref.kind in functions and relative(ref.location):
+                        calls.append((file,ref.get_usr(),relative(ref.location),'reference',cur.location.line,qualified(ref),owner))
+        for child in cur.get_children():visit(child,owner)
+    visit(tu.cursor)
+    return {'file':str(Path(filename).relative_to(root)), 'errors':errors, 'definitions':definitions, 'calls':calls,
+            'symbols':{k:sorted(v) for k,v in symbols.items()}}
+
+
+def compilation_jobs(db,files,resource):
+    records=json.loads(db.read_text());known=set(files);selected={}
+    for record in records:
+        path=Path(record['file']).resolve()
+        try:rel=path.relative_to(ROOT).as_posix()
+        except ValueError:continue
+        if rel not in known or path.suffix not in {'.cpp','.c','.mm'} or rel in selected:continue
+        args=record.get('arguments') or shlex.split(record['command']);args=args[1:];clean=[];i=0
+        while i<len(args):
+            a=args[i]
+            if a in {'-o','-MF','-MT','-MQ'}:i+=2;continue
+            if a in {'-c','-MD','-MMD','-MP'} or a==str(path) or a=='-mno-direct-extern-access':i+=1;continue
+            if a in {'-I','-isystem','-iquote','-include'} and i+1<len(args):
+                v=args[i+1];v=str((Path(record['directory'])/v).resolve()) if not os.path.isabs(v) else v
+                clean.extend([a,v]);i+=2;continue
+            if a.startswith('-I') and len(a)>2 and not os.path.isabs(a[2:]):a='-I'+str((Path(record['directory'])/a[2:]).resolve())
+            clean.append(a);i+=1
+        if resource:clean+=['-isystem',resource]
+        clean+=['-I'+str(ROOT),'-Wno-unknown-attributes']
+        selected[rel]=(str(path),clean,str(ROOT),files)
+    return list(selected.values())
+
+
+def aggregate(records):
+    result={}
+    for source,target,kind,line,symbol,owner in records:
+        key=(source,target,kind)
+        edge=result.setdefault(key,{'source':source,'target':target,'kind':kind,'count':0,'sites':[]})
+        site={'line':line,'symbol':symbol,'owner':owner}
+        # Duplicati AST di template/header in TUs diverse non gonfiano i conteggi.
+        ident=(line,symbol,owner)
+        edge.setdefault('_seen',set()).add(ident)
+    for edge in result.values():
+        sites=sorted(edge.pop('_seen'));edge['count']=len(sites)
+        edge['sites']=[{'line':l,'symbol':s,'owner':o} for l,s,o in sites]
+    return sorted(result.values(),key=lambda e:(e['source'],e['target'],e['kind']))
+
+
+def render(graph):
+    data=json.dumps(graph,ensure_ascii=False,separators=(',',':')).replace('<','\\u003c')
+    return (OUT/'template.html').read_text().replace('/*__GRAPH__*/',data)
+
+
+def check(quiet=False):
+    graph=json.loads((OUT/'graph.json').read_text());files=inventory();expected=graph['hashes']
+    actual={f:digest(f) for f in files};actual['docs/architecture/template.html']=digest('docs/architecture/template.html')
+    changed=sorted(f for f in set(actual)|set(expected) if actual.get(f)!=expected.get(f))
+    assert not changed,'Vista obsoleta; rigenerare. File: '+', '.join(changed[:30])
+    known={n['id'] for n in graph['nodes']}
+    assert known==set(files),'Catalogo incompleto'
+    assert all(e['source'] in known and e['target'] in known for e in graph['edges']),'Collegamenti non validi'
+    assert (OUT/'index.html').read_text()==render(graph),'HTML diverso dal grafo o template'
+    assert not graph['analysis']['errors'],'Analisi C++ incompleta; risolvere diagnostica prima di dichiararla verificata'
+    if not quiet:print(f"PASS: {len(files)} file, {len(graph['edges'])} relazioni; contenuti e vista aggiornati.")
+
+
+@contextmanager
+def generation_lock():
+    # Stesso lock per checkout, anche se due build diverse aggiornano la vista.
+    # Linux/macOS: lock del processo, rilasciato dal sistema anche dopo un crash.
+    import fcntl
+    name='forgecad-architecture-'+hashlib.sha256(str(ROOT).encode()).hexdigest()[:20]+'.lock'
+    with (Path(tempfile.gettempdir())/name).open('a') as handle:
+        fcntl.flock(handle,fcntl.LOCK_EX)
+        try:yield
+        finally:fcntl.flock(handle,fcntl.LOCK_UN)
+
+
+def write_changed(path,content):
+    if path.exists() and path.read_text()==content:return
+    temporary=None
+    try:
+        with tempfile.NamedTemporaryFile(mode='w',encoding='utf-8',dir=path.parent,
+                                         prefix='.'+path.name+'.',delete=False) as handle:
+            temporary=Path(handle.name);handle.write(content)
+        temporary.replace(path)
+    finally:
+        if temporary and temporary.exists():temporary.unlink()
+
+
+def main():
+    p=argparse.ArgumentParser(description=__doc__);p.add_argument('--build-dir',type=Path);p.add_argument('--check',action='store_true');p.add_argument('--update',action='store_true',help='Aggiorna solo se sorgenti, vista o configurazione sono cambiati');p.add_argument('--jobs',type=int,default=2);p.add_argument('--clang-resource-dir',help='Directory include builtin di clang, se non rilevata automaticamente')
+    args=p.parse_args()
+    if args.check:check();return
+    if not args.build_dir:p.error('Specificare --build-dir con compile_commands.json')
+    db=args.build_dir.resolve()/'compile_commands.json'
+    if not db.exists():p.error('Manca compile_commands.json: configurare CMake con -DCMAKE_EXPORT_COMPILE_COMMANDS=ON')
+    write_changed(ROOT/'.forgecad-architecture.json',json.dumps({'buildDir':str(args.build_dir.resolve())},indent=2)+'\n')
+    configuration_digest=hashlib.sha256(db.read_bytes()).hexdigest()
+    if args.update:
+        try:
+            check(quiet=True)
+            previous=json.loads((OUT/'graph.json').read_text())
+            if previous['analysis'].get('configurationDigest')==configuration_digest:
+                print('Architettura già aggiornata.');return
+        except (AssertionError,OSError,ValueError,KeyError):pass
+        print('Aggiornamento automatico della mappa architetturale…',flush=True)
+    try:import clang.cindex  # noqa: F401
+    except ImportError:p.error('Installare i binding Python clang compatibili con libclang (per esempio python3-clang su Linux)')
+    resource=args.clang_resource_dir
+    if not resource:
+        try:resource=str(Path(subprocess.check_output(['clang','-print-resource-dir'],text=True).strip())/'include')
+        except (OSError,subprocess.CalledProcessError):
+            roots=sorted(Path('/usr/lib/clang').glob('*/include'),key=lambda x:[int(n) for n in re.findall(r'\d+',str(x))]);resource=str(roots[-1]) if roots else None
+    files=inventory();nodes=[{'id':f,'group':classify(f)[0],'description':classify(f)[1],'lines':len((ROOT/f).read_bytes().splitlines())} for f in files]
+    records=local_includes(files);jobs=compilation_jobs(db,files,resource);results=[]
+    cache_dir=args.build_dir.resolve()/'architecture-cache';cache_dir.mkdir(exist_ok=True)
+    headers=hashlib.sha256(''.join(digest(f) for f in files if Path(f).suffix in {'.h','.hpp','.cuh'}).encode()).hexdigest()
+    pending=[]
+    for job in jobs:
+        key=hashlib.sha256((str(VERSION)+headers+Path(job[0]).read_text(errors='replace')+json.dumps(job[:2])).encode()).hexdigest()
+        cache=cache_dir/(key+'.json')
+        if cache.exists() and not json.loads(cache.read_text()).get('errors'):
+            results.append(json.loads(cache.read_text()))
+        else:pending.append((job,cache))
+    print(f'{len(results)} unità da cache, {len(pending)} da analizzare.',flush=True)
+    with concurrent.futures.ProcessPoolExecutor(max_workers=max(1,args.jobs)) as pool:
+        for (_,cache),result in zip(pending,pool.map(parse_unit,[j for j,c in pending],chunksize=1)):
+            if not result['errors']:write_changed(cache,json.dumps(result))
+            results.append(result);print(f"[{len(results)}/{len(jobs)}] {result['file']}"+(' ERRORI' if result['errors'] else ''),flush=True)
+    definitions={};symbols={}
+    for r in results:
+        definitions.update(r['definitions'])
+        for f,syms in r['symbols'].items():symbols.setdefault(f,set()).update(syms)
+    for r in results:
+        for source,usr,decl,kind,line,symbol,owner in r['calls']:
+            target=definitions.get(usr,(decl,))[0];records.append((source,target,kind,line,symbol,owner))
+    for node in nodes:node['symbols']=sorted(symbols.get(node['id'],[]))
+    errors={r['file']:r['errors'] for r in results if r['errors']}
+    hashes={f:digest(f) for f in files};hashes['docs/architecture/template.html']=digest('docs/architecture/template.html')
+    graph={'version':VERSION,'groups':[{'id':a,'name':b,'description':c} for a,b,c in GROUPS], 'nodes':nodes,'edges':aggregate(records),'hashes':hashes,
+           'analysis':{'configurationDigest':configuration_digest,'engine':'libclang: AST della configurazione CMake indicata', 'units':sorted(r['file'] for r in results),'errors':errors,
+           'limits':'Chiamate statiche risolte e indirizzi di funzione nel codice C++ compilato. Include locali rilevati testualmente, anche nei rami condizionali. Dispatch virtuale, segnali/slot dinamici, std::function, plugin e rami esclusi dalla configurazione possono aggiungere chiamate a runtime. CUDA non analizzato via AST; relazioni include disponibili. Le frecce fra file della stessa classe possono rappresentare chiamate a metodi del medesimo oggetto.'}}
+    if errors:
+        for filename,diagnostics in errors.items():
+            for diagnostic in diagnostics:print(filename+': '+diagnostic,file=sys.stderr)
+        print('Analisi incompleta: conservata la vista precedente.',file=sys.stderr)
+        sys.exit(1)
+    write_changed(OUT/'graph.json',json.dumps(graph,ensure_ascii=False,indent=2)+'\n')
+    write_changed(OUT/'index.html',render(graph))
+    print(f"Generati {len(nodes)} file, {len(graph['edges'])} relazioni, {len(errors)} TUs con diagnostica.")
+    if errors:sys.exit(1)
+
+if __name__=='__main__':
+    try:
+        with generation_lock():main()
+    except (AssertionError,FileNotFoundError) as error:print(str(error),file=sys.stderr);sys.exit(1)

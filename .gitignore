@@ -13,3 +13,10 @@ docs/benchmarks/
 *.lock
 .claude/
 forgecad-cuda-build/
+
+# Percorso della build locale usata dalla vista architetturale.
+.forgecad-architecture.json
+
+# Schema architetturale generato localmente dai sorgenti.
+/docs/architecture/index.html
+/docs/architecture/graph.json

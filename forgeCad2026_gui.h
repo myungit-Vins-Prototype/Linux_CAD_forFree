@@ -33,6 +33,14 @@ protected:
     bool event(QEvent *event) override;
 private:
     friend class ViewportInteractionTest;
+    struct WindowSetup;
+    void initializeSceneAndTree(WindowSetup &setup);
+    void initializeFileMenu(WindowSetup &setup);
+    void initializeActionsAndView(WindowSetup &setup);
+    void initializeFeatureCommands(WindowSetup &setup);
+    void initializeOptions(WindowSetup &setup);
+    void initializeSketchCommands(WindowSetup &setup);
+    void initializeToolbarsAndStatus(WindowSetup &setup);
     // Documento su file (.prt, vedi cad_document_io).
     void newDocument();
     void newDrawing();

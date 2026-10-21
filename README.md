@@ -341,11 +341,15 @@ ctest --test-dir build-linux --output-on-failure
 
 La stessa opzione può essere aggiunta alla configurazione macOS mantenendo i parametri Homebrew. I test del viewport registrati in CTest usano Qt offscreen; le verifiche OpenGL richiedono un ambiente grafico adatto. I test CUDA sono configurati solo quando è disponibile il compilatore CUDA.
 
+La [mappa architetturale interattiva](docs/architecture/index.html), consultabile offline, raggruppa i file per responsabilità e mostra chiamate C++, include e riferimenti a funzione in entrambi i versi. [Guida a generazione e copertura](docs/architecture/README.md). Avviare `python3 tools/open_architecture.py` per **aggiornare la mappa a ogni apertura o ricaricamento** e consultarla nel browser. Anche la build CMake standard **aggiorna automaticamente questa vista** (`FORGECAD_UPDATE_ARCHITECTURE=ON` per default; richiede Python 3 e binding libclang). Rivedere le descrizioni curate dopo modifiche strutturali e verificare con `python3 tools/generate_architecture.py --check`, come richiesto in `AGENTS.md`.
+
 | Percorso | Contenuto |
 |---|---|
 | `forgeCad2026.cpp` | Avvio e configurazione OpenGL |
-| `forgeCad2026_gui.h/.cpp` | Finestra principale, menu, comandi e pannelli |
-| `forgeCad2026_viewport.h/.cpp` | Dichiarazioni e implementazione separata della vista 3D |
+| `forgeCad2026_gui.h/.cpp` | Finestra principale; sette fasi di inizializzazione per scena, menu, comandi, opzioni e toolbar |
+| `forgeCad2026_viewport.h/.cpp`, `forgeCad2026_viewport_*.cpp` | Coordinatore GUI privato, con implementazioni per documento, interazione, selezione, sketch, anteprime, rendering e scena |
+| `forgeCad2026_feature_preview.h/.cpp` | Chiave e calcolo anteprime su snapshot; ciclo asincrono GUI nel viewport |
+| `forgeCad2026_sketch_curvature.h/.cpp` | Cache dei pettini di curvatura con stato e invalidazione propri |
 | `forgeCad2026_camera.h/.cpp` | Stato camera e calcoli di vista, proiezione, raggi e orbita senza dipendenze dal widget |
 | `forgeCad2026_glass_compositor.h/.cpp` | Compositore OpenGL dei fondali sfocati dei pannelli, con shader e framebuffer propri |
 | `forgeCad2026_gpu_picker.h/.cpp` | Buffer del picking GPU: cache per frame, lettura degli identificativi e risorse proprie |

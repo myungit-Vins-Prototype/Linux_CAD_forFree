@@ -341,11 +341,15 @@ ctest --test-dir build-linux --output-on-failure
 
 The same option can be added to the macOS configuration while retaining the Homebrew parameters. Viewport tests registered with CTest use Qt offscreen; OpenGL checks require a suitable graphical environment. CUDA tests are configured only when a CUDA compiler is available.
 
+The offline [interactive architecture map](docs/architecture/index.html) groups files by responsibility and shows incoming/outgoing C++ calls, includes and function references. [Generation and coverage guide](docs/architecture/README.md). Run `python3 tools/open_architecture.py` to **update the map whenever it is opened or reloaded**, then view it in your browser. The standard CMake build also **automatically updates this view** (`FORGECAD_UPDATE_ARCHITECTURE=ON` by default; Python 3 and libclang bindings required). Review curated responsibility descriptions after structural changes and run `python3 tools/generate_architecture.py --check`, as required by `AGENTS.md`.
+
 | Path | Contents |
 |---|---|
 | `forgeCad2026.cpp` | Startup and OpenGL configuration |
-| `forgeCad2026_gui.h/.cpp` | Main window, menus, commands, and panels |
-| `forgeCad2026_viewport.h/.cpp` | Separate declarations and implementation of the 3D viewport |
+| `forgeCad2026_gui.h/.cpp` | Main window; seven initialization phases for scene, menus, commands, options and toolbars |
+| `forgeCad2026_viewport.h/.cpp`, `forgeCad2026_viewport_*.cpp` | Private GUI coordinator, split into document, interaction, selection, sketch, preview, rendering and scene implementations |
+| `forgeCad2026_feature_preview.h/.cpp` | Snapshot-based preview key and computation; async GUI lifecycle remains in the viewport |
+| `forgeCad2026_sketch_curvature.h/.cpp` | Owned curvature-comb cache and invalidation |
 | `forgeCad2026_camera.h/.cpp` | Camera state and widget-independent view, projection, ray, and orbit calculations |
 | `forgeCad2026_glass_compositor.h/.cpp` | OpenGL compositor for blurred panel backdrops, owning its shaders and framebuffers |
 | `forgeCad2026_gpu_picker.h/.cpp` | GPU picking buffer: per-frame cache, identifier readback and owned resources |

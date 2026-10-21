@@ -7,3 +7,12 @@
 - Aggiornare `CLAUDE.md` anche a ogni obiettivo raggiunto durante un intervento, senza attendere un promemoria dell'utente o la fine della chat.
 - Registrare richiesta, decisioni, cause individuate, file modificati, verifiche realmente eseguite, risultati, limiti e lavoro ancora aperto. Distinguere implementato, verificato, sperimentale e proposto; non dichiarare aggiornato l'eseguibile se è stato compilato soltanto il kernel o il runner dei test.
 - Preservare le voci delle altre chat. Rileggere la parte da modificare prima di scrivere per non sovrascrivere aggiornamenti concorrenti; aggiornare la voce pertinente o aggiungere una voce datata senza duplicare il registro. Non inserire credenziali o segreti.
+
+## Vista architetturale — istruzione permanente dell’utente
+
+- Per richiesta esplicita dell’utente, `docs/architecture/index.html` e `graph.json` sono generati localmente e ignorati da Git; non forzarne l’aggiunta ai commit. Versionare generatori, launcher, template e documentazione necessari a ricrearli.
+- Dopo ogni cambiamento strutturale (file/moduli aggiunti, spostati o rimossi, responsabilità o confini di chiamata/dipendenza modificati), aggiornare la vista consultabile `docs/architecture/index.html` e il relativo `graph.json`.
+- Per consultazione con aggiornamento all’apertura usare `python3 tools/open_architecture.py`: la pagina richiede a Python un controllo/aggiornamento a ogni apertura o ricaricamento; il solo index.html è uno snapshot offline.
+- La build CMake standard aggiorna automaticamente la vista (`FORGECAD_UPDATE_ARCHITECTURE=ON` per default); anche il link del solo target forgecad attiva l’aggiornamento. Non disabilitare l’automatismo per nascondere errori della mappa.
+- Aggiornare le descrizioni e i gruppi in `tools/generate_architecture.py`, rigenerare con `python3 tools/generate_architecture.py --build-dir <build-configurata>` e verificare con `python3 tools/generate_architecture.py --check`. Istruzioni e limiti: `docs/architecture/README.md`.
+- Verificare il blocco interessato e i collegamenti in entrambi i versi; mantenere distinte chiamate C++ risolte, include e riferimenti a funzione. Non dichiarare conclusa una modifica strutturale lasciando la vista obsoleta; segnalare esplicitamente eventuali limiti di analisi.
