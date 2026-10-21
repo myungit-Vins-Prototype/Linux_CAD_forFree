@@ -237,7 +237,7 @@ public:
         SketchObject sketch;
         sketch.segments = {{{2,2},{8,2}}, {{8,2},{8,8}}, {{8,8},{2,8}}, {{2,8},{2,2}}};
         v.sketches_.append(sketch);
-        v.zoom_ = 40;
+        v.camera_.zoom_ = 40;
         ExtrusionObject definition;
         definition.sketchIndex = 0;
         definition.distance = 5;
@@ -276,7 +276,7 @@ public:
         press(tip);
         require(v.featureHandleDragging_, "freccia attiva durante finestra funzione");
         // Anche una normale vista frontalmente deve poter oltrepassare lo zero.
-        const QPointF delta = std::hypot(screen.x(),screen.y()) > 12 ? -2 * screen : QPointF(0, 10 * v.height()/v.zoom_);
+        const QPointF delta = std::hypot(screen.x(),screen.y()) > 12 ? -2 * screen : QPointF(0, 10 * v.height()/v.camera_.zoom_);
         move(tip + delta);
         release(tip + delta);
         require(std::abs(definition.distance + 5) < 1e-4, "estrusione attraversa il piano e inverte il verso");
@@ -389,7 +389,7 @@ public:
         for (int angle = 355; angle >= 330; angle -= 5) move(angularPoint(angle));
         release(angularPoint(330));
         require(std::abs(definition.revolveAngle-330)<2, "drag da rivoluzione completa non salta a zero");
-        v.yaw_=0; v.pitch_=0; v.roll_=0;
+        v.camera_.yaw_=0; v.camera_.pitch_=0; v.camera_.roll_=0;
         draw();
         QVector3D rayOrigin, rayDirection;
         v.viewRay(QPoint(v.width()/2,v.height()/2),rayOrigin,rayDirection);
@@ -489,7 +489,7 @@ public:
         v.featureHandleDragging_ = false;
         v.previewDragVisible_ = false;
         if (qEnvironmentVariableIsSet("FORGECAD_HANDLE_GL_QA")) {
-            v.yaw_ = 35; v.pitch_ = 25; v.roll_ = 0;
+            v.camera_.yaw_ = 35; v.camera_.pitch_ = 25; v.camera_.roll_ = 0;
             v.show();
             QApplication::processEvents();
             const auto frame = v.grabFramebuffer();
@@ -1656,13 +1656,13 @@ public:
                 require(view->createBody(loft).isEmpty(),"mouse2 original loft for shading verification");
                 window.show(); view->fitAll();
                 for (bool back : {false,true}) {
-                    if (back) view->yaw_+=180.0f;
+                    if (back) view->camera_.yaw_+=180.0f;
                     view->update(); QEventLoop loop; QTimer::singleShot(250,&loop,&QEventLoop::quit); loop.exec();
                     require(view->grabFramebuffer().save(back?"/tmp/forgecad-mouse2-loft-back.png":"/tmp/forgecad-mouse2-loft-front.png"),"mouse2 shading screenshot");
                 }
                 loft.loftGuides={3};
                 require(view->updateBody(0,loft).isEmpty(),"mouse2 guided loft in viewport");
-                view->yaw_-=180.0f; view->update(); QEventLoop loop; QTimer::singleShot(250,&loop,&QEventLoop::quit); loop.exec();
+                view->camera_.yaw_-=180.0f; view->update(); QEventLoop loop; QTimer::singleShot(250,&loop,&QEventLoop::quit); loop.exec();
                 require(view->grabFramebuffer().save("/tmp/forgecad-mouse2-loft-guided.png"),"mouse2 guided loft screenshot");
                 std::exception_ptr uiFailure;
                 QTimer::singleShot(100,&window,[&] {
@@ -4152,7 +4152,7 @@ public:
             bool locked = false, rotated = false, selected = false;
             QTimer::singleShot(0, &options, [&] {
                 locked = viewport->interactionLocked() && !options.isModal();
-                const float beforeYaw = viewport->yaw_, beforePitch = viewport->pitch_;
+                const float beforeYaw = viewport->camera_.yaw_, beforePitch = viewport->camera_.pitch_;
                 const SceneSelection selection = viewport->selection_;
                 const QPoint from(800, 400), to(860, 430);
                 QMouseEvent press(QEvent::MouseButtonPress, from, viewport->mapToGlobal(from), Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
@@ -4161,7 +4161,7 @@ public:
                 QApplication::sendEvent(viewport, &move);
                 QMouseEvent release(QEvent::MouseButtonRelease, to, viewport->mapToGlobal(to), Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
                 QApplication::sendEvent(viewport, &release);
-                rotated = viewport->yaw_ != beforeYaw || viewport->pitch_ != beforePitch;
+                rotated = viewport->camera_.yaw_ != beforeYaw || viewport->camera_.pitch_ != beforePitch;
                 selected = viewport->selection_ == selection;
                 options.accept();
             });
@@ -6038,10 +6038,10 @@ public:
         v.doneCurrent();
         QElapsedTimer t;
         t.start();
-        for (int i = 0; i < count; ++i) { v.yaw_ += 2.0f; paintNow(v); }
+        for (int i = 0; i < count; ++i) { v.camera_.yaw_ += 2.0f; paintNow(v); }
         std::cout << "paint dopo rotazione: " << double(t.nsecsElapsed()) / 1e6 / count << " ms" << std::endl;
         t.restart();
-        for (int i = 0; i < count; ++i) { v.setZoom(v.zoom_ * (i % 2 ? 1.05f : 0.95f)); paintNow(v); }
+        for (int i = 0; i < count; ++i) { v.setZoom(v.camera_.zoom_ * (i % 2 ? 1.05f : 0.95f)); paintNow(v); }
         std::cout << "paint dopo zoom: " << double(t.nsecsElapsed()) / 1e6 / count << " ms" << std::endl;
         t.restart();
         for (int i = 0; i < count; ++i) {
@@ -6384,7 +6384,7 @@ public:
         invalid=p;invalid.entities[0].points[0].z=qQNaN();require(buildSpatialSketch(invalid,&error).isEmpty(),"coordinate non finite rifiutate");
         invalid=p;invalid.entities[1].id=1;require(buildSpatialSketch(invalid,&error).isEmpty(),"ID di entita' duplicati rifiutati");
         // Clic a profondita' diversa, aggancio esatto e trascinamento per ruotare.
-        CadViewport drawing;drawing.resize(800,600);drawing.setViewNormal(0);drawing.zoom_=40;drawing.autoFit_=false;
+        CadViewport drawing;drawing.resize(800,600);drawing.setViewNormal(0);drawing.camera_.zoom_=40;drawing.camera_.autoFit_=false;
         QVector<SpatialPoint> picked;bool stopped=false;
         drawing.configureSpatialDrawing(1,4,{}, {},false);drawing.setSpatialDrawing([&](SpatialPoint q){picked.append(q);},[&]{stopped=true;});
         drawing.setInteractionLocked(true);
@@ -6399,11 +6399,11 @@ public:
         drawing.configureSpatialDrawing(1,0,{}, {precise},true);SpatialPoint snapped;
         require(drawing.spatialPointAt(drawing.projectWorldPoint(QVector3D(precise.x,precise.y,precise.z)).toPoint(),snapped)
             && snapped.x==precise.x && snapped.y==precise.y && snapped.z==precise.z,"snap mantiene double e profondita' originale");
-        const QPoint a(100,100),b(130,115);const float yaw=drawing.yaw_;
+        const QPoint a(100,100),b(130,115);const float yaw=drawing.camera_.yaw_;
         QMouseEvent press(QEvent::MouseButtonPress,a,a,Qt::LeftButton,Qt::LeftButton,Qt::NoModifier);drawing.mousePressEvent(&press);
         QMouseEvent move(QEvent::MouseMove,b,b,Qt::NoButton,Qt::LeftButton,Qt::NoModifier);drawing.mouseMoveEvent(&move);
         QMouseEvent release(QEvent::MouseButtonRelease,b,b,Qt::LeftButton,Qt::NoButton,Qt::NoModifier);drawing.mouseReleaseEvent(&release);
-        require(picked.size()==2 && drawing.yaw_!=yaw,"trascinamento ruota senza aggiungere punti");
+        require(picked.size()==2 && drawing.camera_.yaw_!=yaw,"trascinamento ruota senza aggiungere punti");
         QKeyEvent escape(QEvent::KeyPress,Qt::Key_Escape,Qt::NoModifier);drawing.keyPressEvent(&escape);require(stopped,"Esc interrompe inserimento spaziale");
         drawing.setSpatialDrawing({},{});require(!drawing.spatialAdd_ && !drawing.spatialFinish_,"callback disegno puliti");
         // Il pannello crea e modifica entita', mantiene un undo locale e chiude.
@@ -6434,7 +6434,7 @@ public:
         require(!spatialSketchDialog(&window,&editor,"Annulla",0,editor.extrusions_[0],[&](const ExtrusionObject &){return QString();})
             && !editor.spatialAdd_ && !editor.spatialUndo_ && editor.extrusions_.size()==1,"Annulla modifica conserva storia e pulisce callback");
         // Il picker riconosce anche la seconda entita' e i suoi estremi.
-        editor.setViewNormal(0);editor.autoFit_=false;editor.zoom_=40;
+        editor.setViewNormal(0);editor.camera_.autoFit_=false;editor.camera_.zoom_=40;
         require(editor.beginReferencePick(DatumRoleCurve,-1).isEmpty(),"picker curve 3D attivo");GeometryRef pickedRef;
         require(editor.pickReference(editor.projectWorldPoint({5,10,3}).toPoint(),pickedRef)
             && pickedRef.kind==9 && pickedRef.point.geometry==kSpatialCurveReference && pickedRef.point.subshape==2,"picker identifica seconda curva per ID");
@@ -7358,38 +7358,38 @@ public:
                 "grafiche Estrusione e Rivoluzione sempre opache");
         v.resize(900, 650);
         v.setViewNormal(0);
-        v.zoom_ = 20;
-        const double ratio = v.axisDisplayLength() / v.zoom_;
-        v.zoom_ *= 3;
-        require(std::fabs(v.axisDisplayLength() / v.zoom_ - ratio) < 1e-12, "dimensione assi durante zoom");
-        v.zoom_ = 20;
-        v.yaw_ = 0.0f;
-        v.pitch_ = 0.0f;
-        v.roll_ = 0.0f;
+        v.camera_.zoom_ = 20;
+        const double ratio = v.axisDisplayLength() / v.camera_.zoom_;
+        v.camera_.zoom_ *= 3;
+        require(std::fabs(v.axisDisplayLength() / v.camera_.zoom_ - ratio) < 1e-12, "dimensione assi durante zoom");
+        v.camera_.zoom_ = 20;
+        v.camera_.yaw_ = 0.0f;
+        v.camera_.pitch_ = 0.0f;
+        v.camera_.roll_ = 0.0f;
         v.lastMousePosition_ = QPoint(450,325);
         v.orbitView(QPoint(100,70));
-        require(std::fabs(v.yaw_-50.0f) < 1e-6f && std::fabs(v.pitch_-35.0f) < 1e-6f,
+        require(std::fabs(v.camera_.yaw_-50.0f) < 1e-6f && std::fabs(v.camera_.pitch_-35.0f) < 1e-6f,
                 "rotazione classica a mezzo grado per pixel");
         v.lastMousePosition_ += QPoint(100,70);
         v.orbitView(QPoint(-100,-70));
-        require(std::fabs(v.yaw_) < 1e-6f && std::fabs(v.pitch_) < 1e-6f,
+        require(std::fabs(v.camera_.yaw_) < 1e-6f && std::fabs(v.camera_.pitch_) < 1e-6f,
                 "gesto inverso recupera orientamento");
         v.orbitView(QPoint(360,360));
-        require(std::fabs(v.yaw_) == 180.0f && std::fabs(v.pitch_) == 180.0f,
+        require(std::fabs(v.camera_.yaw_) == 180.0f && std::fabs(v.camera_.pitch_) == 180.0f,
                 "orbita libera oltre i poli");
         v.orbitView(QPoint(360,360));
-        require(std::fabs(v.yaw_) < 1e-6f && std::fabs(v.pitch_) < 1e-6f,
+        require(std::fabs(v.camera_.yaw_) < 1e-6f && std::fabs(v.camera_.pitch_) < 1e-6f,
                 "giro completo sui due assi");
         v.resize(1200,800);
         v.orbitView(QPoint(100,70));
-        require(std::fabs(v.yaw_-50.0f) < 1e-6f && std::fabs(v.pitch_-35.0f) < 1e-6f,
+        require(std::fabs(v.camera_.yaw_-50.0f) < 1e-6f && std::fabs(v.camera_.pitch_-35.0f) < 1e-6f,
                 "sensibilita' indipendente dalla dimensione del viewport");
         v.resize(900,650);
         {
             CadViewport pivotView;
             pivotView.resize(900,650);
             pivotView.setViewPreset(0);
-            pivotView.zoom_ = 20;
+            pivotView.camera_.zoom_ = 20;
             ExtrusionObject body;
             body.forgeBody = std::make_shared<const ForgeCad::Kernel::Body>();
             body.display.vertices = {QVector3D(-4,-3,-4), QVector3D(4,-3,-4), QVector3D(0,-3,4)};
@@ -7405,13 +7405,13 @@ public:
                     "pivot resta nello stesso pixel durante orbita");
             pivotView.lastMousePosition_ += QPoint(80,30);
             pivotView.orbitView(QPoint(20,40));
-            require((pivotView.orbitPivot_-hit).length() < 1e-6f
+            require((pivotView.camera_.orbitPivot_-hit).length() < 1e-6f
                     && (pivotView.projectWorldPoint(hit)-fixedPixel).manhattanLength() < 1e-3,
                     "pivot stabile per tutto il trascinamento");
             QMouseEvent release(QEvent::MouseButtonRelease, QPointF(550,395), QPointF(550,395),
                                 Qt::RightButton, Qt::NoButton, Qt::NoModifier);
             pivotView.mouseReleaseEvent(&release);
-            require(!pivotView.orbitPivotValid_, "rilascio libera il pivot");
+            require(!pivotView.camera_.orbitPivotValid_, "rilascio libera il pivot");
             const QPoint background(850,40);
             const QVector3D fallback = pivotView.orbitPointAt(background);
             require((pivotView.projectWorldPoint(fallback)-QPointF(background)).manhattanLength() < 1e-3,
@@ -7980,7 +7980,7 @@ public:
         const auto &projection = v.projectedBodyEdges(body);
         require(projection.lines.size() == display.edges.size(), "cache proiezione spigoli");
         const auto oldPoint = projection.lines.first().first();
-        v.panX_ += 1;
+        v.camera_.panX_ += 1;
         require(v.projectedBodyEdges(body).lines.first().first() != oldPoint, "invalidazione cache sul pan");
 
         // La dimensione maggiore del corpo determina un unico quadrato comune:

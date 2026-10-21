@@ -259,15 +259,15 @@ QImage CadViewport::panelBackdropFrame() {
     return panelBackdropCache_;
 }
 
-void CadViewport::zoomIn() { setZoom(zoom_ * 0.85f); }
+void CadViewport::zoomIn() { setZoom(camera_.zoom_ * 0.85f); }
 
-void CadViewport::zoomOut() { setZoom(zoom_ / 0.85f); }
+void CadViewport::zoomOut() { setZoom(camera_.zoom_ / 0.85f); }
 
 void CadViewport::resetZoom() { fitAll(); }
 
 void CadViewport::fitAll() {
     fitView(sceneGeometryPoints());
-    autoFit_ = true;
+    camera_.autoFit_ = true;
 }
 
 void CadViewport::setPanKey(int key) { panKey_ = key; panKeyHeld_ = false; }
@@ -327,7 +327,7 @@ void CadViewport::setAxisLength(double length) { axisLength_ = qBound(0.1, lengt
 double CadViewport::axisLength() const { return axisLength_; }
 
 double CadViewport::axisDisplayLength() const {
-    return double(zoom_) * 0.22 * axisLength_ / kDefaultAxisLength;
+    return double(camera_.zoom_) * 0.22 * axisLength_ / kDefaultAxisLength;
 }
 
 void CadViewport::setAxesVisible(bool visible) { axesVisible_ = visible; update(); }
@@ -353,7 +353,7 @@ void CadViewport::setSketchViewUnlocked(bool unlocked) {
     if (unlocked == sketchViewUnlocked_) return;
     if (unlocked) {
         if (!sketchMode_) return;
-        sketchCamera_ = {yaw_, pitch_, roll_, zoom_, panX_, panY_, sketchViewRotated_};
+        sketchCamera_ = {camera_.yaw_, camera_.pitch_, camera_.roll_, camera_.zoom_, camera_.panX_, camera_.panY_, sketchViewRotated_};
         sketchViewUnlocked_ = true;
         hasPendingPoint_ = false;
         curveControlPoints_.clear();
@@ -361,12 +361,12 @@ void CadViewport::setSketchViewUnlocked(bool unlocked) {
     } else {
         sketchViewUnlocked_ = false;
         if (sketchMode_) {
-            yaw_ = sketchCamera_.yaw;
-            pitch_ = sketchCamera_.pitch;
-            roll_ = sketchCamera_.roll;
-            zoom_ = sketchCamera_.zoom;
-            panX_ = sketchCamera_.panX;
-            panY_ = sketchCamera_.panY;
+            camera_.yaw_ = sketchCamera_.yaw;
+            camera_.pitch_ = sketchCamera_.pitch;
+            camera_.roll_ = sketchCamera_.roll;
+            camera_.zoom_ = sketchCamera_.zoom;
+            camera_.panX_ = sketchCamera_.panX;
+            camera_.panY_ = sketchCamera_.panY;
             sketchViewRotated_ = sketchCamera_.rotated;
         }
     }
@@ -386,8 +386,8 @@ void CadViewport::alignViewToSketch() {
     sketchViewRotated_ = false;
     if (keep) {
         // Nella vista allineata il centro dello schermo e' il punto -pan dello schizzo.
-        panX_ = float(-middle.x());
-        panY_ = float(-middle.y());
+        camera_.panX_ = float(-middle.x());
+        camera_.panY_ = float(-middle.y());
     } else {
         const QVector<QVector3D> points = sketchGeometryPoints(*sketch);
         fitView(points.isEmpty() ? sceneGeometryPoints() : points);
@@ -482,7 +482,7 @@ void CadViewport::loadDocument(DocumentState state,
     selection_ = {};
     history_.clear();
     adoptDocumentIdentity(state.version, state.baseCheckinId);
-    if (state.orientationSet) orientation_ = state.orientation;
+    if (state.orientationSet) camera_.orientation_ = state.orientation;
     lengthUnit_ = state.lengthUnitSet ? state.lengthUnit : LengthUnit::Millimeter;
     ForgeCad::setDisplayLengthUnit(lengthUnit_);
     ForgeCad::normalizeModelHistory(state);
@@ -511,7 +511,7 @@ void CadViewport::loadPreviewDocument(DocumentState state) {
     activeSketch_ = -1;
     selection_ = {};
     adoptDocumentIdentity(state.version, state.baseCheckinId);
-    if (state.orientationSet) orientation_ = state.orientation;
+    if (state.orientationSet) camera_.orientation_ = state.orientation;
     lengthUnit_ = state.lengthUnitSet ? state.lengthUnit : LengthUnit::Millimeter;
     ForgeCad::normalizeModelHistory(state);
     sketches_ = std::move(state.sketches);
@@ -3005,7 +3005,7 @@ void CadViewport::selectSketchReference(int kind, int index) {
     } else {
         SketchFrame plane;
         if (kind == 1 && index >= 0 && index < 3) {
-            plane = ForgeCad::referenceSketchFrame(index, orientation_);
+            plane = ForgeCad::referenceSketchFrame(index, camera_.orientation_);
             name = QStringLiteral("Piano %1").arg(index == 0 ? QStringLiteral("XY") : index == 1 ? QStringLiteral("XZ") : QStringLiteral("YZ"));
         } else if (kind == 8 && index >= 0 && index < extrusions_.size() && ForgeCad::isDatumBody(extrusions_.at(index)) && extrusions_.at(index).datumValid) {
             plane = extrusions_.at(index).datumFrame;
@@ -3015,7 +3015,7 @@ void CadViewport::selectSketchReference(int kind, int index) {
     }
     if (!error.isEmpty()) { showStatus(error); return; }
     const int before = int(work.segments.size());
-    const int segment = ForgeCad::appendFixedReferenceLine(work, point, direction, std::max(1e-4, double(zoom_) * 0.35));
+    const int segment = ForgeCad::appendFixedReferenceLine(work, point, direction, std::max(1e-4, double(camera_.zoom_) * 0.35));
     if (work.segments.size() != before) {
         recordUndo();
         sketches_[activeSketch_] = work;
@@ -3865,7 +3865,7 @@ void CadViewport::drawFeatureHandle(QPainter &painter) {
     }
     const bool angular = featureHandleDefinition_.feature == BodyFeature::Revolution;
     const double value = featureHandleValue();
-    const float unit = zoom_ / qMax(1, height());
+    const float unit = camera_.zoom_ / qMax(1, height());
     featureHandleRadius_ = 90.0f * unit;
     featureHandlePath_.clear();
     const QPointF sketchCenter = projectWorldPoint(featureHandleSketchCenter(sketches_.at(featureHandleDefinition_.sketchIndex)));
@@ -3944,11 +3944,11 @@ void CadViewport::dragFeatureHandle(const QPointF &position) {
         }
         value = qBound(-360.0, value, 360.0);
     } else {
-        const float length = 90.0f * zoom_ / qMax(1, height());
+        const float length = 90.0f * camera_.zoom_ / qMax(1, height());
         const QPointF screen = projectWorldPoint(featureHandleOrigin_ + length * featureHandleAxis_) - projectWorldPoint(featureHandleOrigin_);
         const double squared = QPointF::dotProduct(screen, screen);
         const double movement = squared > 144.0 ? QPointF::dotProduct(delta, screen) * length / squared
-                                               : -delta.y() * zoom_ / qMax(1, height());
+                                               : -delta.y() * camera_.zoom_ / qMax(1, height());
         value += movement * (featureHandleDefinition_.extrudeSides == 1 ? 2 : 1);
         value = qBound(-100000.0, value, 100000.0);
     }
@@ -4013,14 +4013,14 @@ void CadViewport::drawSectionHandle(QPainter &painter) const {
     painter.restore();
 }
 
-float CadViewport::sectionArrowLength() const { return 90.0f * zoom_ / float(qMax(1, height())); }
+float CadViewport::sectionArrowLength() const { return 90.0f * camera_.zoom_ / float(qMax(1, height())); }
 
 double CadViewport::sectionDragDelta(const QPoint &mouse) const {
     const float length = sectionArrowLength();
     const QPointF a = projectWorldPoint(section_.point), b = projectWorldPoint(section_.point + length * section_.normal);
     const QPointF screen = b - a;
     const double pixels = std::hypot(screen.x(), screen.y());
-    const double unit = double(zoom_) / double(qMax(1, height()));  // unita' del modello per pixel
+    const double unit = double(camera_.zoom_) / double(qMax(1, height()));  // unita' del modello per pixel
     if (pixels < 12.0) return -double(mouse.y()) * unit;
     return (screen.x() * mouse.x() + screen.y() * mouse.y()) / (pixels * pixels) * double(length);
 }
@@ -4124,7 +4124,7 @@ int CadViewport::createSketch(int plane, const QString &name) {
     sketch.name = name;
     sketch.plane = plane;
     // Gli assi dello schizzo sono quelli dello schermo nella vista normale al piano.
-    sketch.frame = ForgeCad::referenceSketchFrame(plane, orientation_);
+    sketch.frame = ForgeCad::referenceSketchFrame(plane, camera_.orientation_);
     sketch.customFrame = true;
     sketches_.append(sketch);
     activeSketch_ = sketches_.size() - 1;
@@ -4143,7 +4143,7 @@ int CadViewport::createFaceSketch(int body, const FaceHit &face, const QString &
     sketch.plane = kFacePlane;
     sketch.frame = ForgeCad::faceSketchFrame(ForgeCad::Kernel::Vec3(face.point[0], face.point[1], face.point[2]),
                                              normalized(ForgeCad::Kernel::Vec3(face.normal[0], face.normal[1], face.normal[2])),
-                                             ForgeCad::Kernel::Vec3(orientation_.up[0], orientation_.up[1], orientation_.up[2]));
+                                             ForgeCad::Kernel::Vec3(camera_.orientation_.up[0], camera_.orientation_.up[1], camera_.orientation_.up[2]));
     sketch.faceSource = extrusions_.at(body).name;
     recordUndo();
     sketches_.append(sketch);
@@ -4255,32 +4255,15 @@ void CadViewport::endSketchMode() {
 }
 
 QMatrix4x4 CadViewport::basisMatrix() const {
-    const AxesOrientation &o = orientation_;
-    return QMatrix4x4(float(o.right[0]), float(o.right[1]), float(o.right[2]), 0.0f,
-                      float(o.up[0]), float(o.up[1]), float(o.up[2]), 0.0f,
-                      float(o.toward[0]), float(o.toward[1]), float(o.toward[2]), 0.0f,
-                      0.0f, 0.0f, 0.0f, 1.0f);
+    return camera_.basisMatrix();
 }
 
 QMatrix4x4 CadViewport::sceneProjectionMatrix() const {
-    const float aspect = float(width()) / float(qMax(1, height()));
-    const float viewScale = zoom_ / 8.0f;
-    const double depth = sceneDepth();
-    QMatrix4x4 projection;
-    projection.ortho(-4.0f * aspect * viewScale, 4.0f * aspect * viewScale,
-                     -4.0f * viewScale, 4.0f * viewScale,
-                     float(double(zoom_) - depth), float(double(zoom_) + depth));
-    return projection;
+    return camera_.projectionMatrix(size(), sceneDepth());
 }
 
 QMatrix4x4 CadViewport::sceneModelViewMatrix() const {
-    QMatrix4x4 modelView;
-    modelView.translate(panX_, panY_, -zoom_);
-    modelView.rotate(roll_, 0.0f, 0.0f, 1.0f);
-    modelView.rotate(pitch_, 1.0f, 0.0f, 0.0f);
-    modelView.rotate(yaw_, 0.0f, 1.0f, 0.0f);
-    modelView *= basisMatrix();
-    return modelView;
+    return camera_.modelViewMatrix();
 }
 
 void CadViewport::setRenderMatrices(const QMatrix4x4 &projection, const QMatrix4x4 &modelView) {
@@ -4289,44 +4272,23 @@ void CadViewport::setRenderMatrices(const QMatrix4x4 &projection, const QMatrix4
 }
 
 void CadViewport::setViewPreset(int preset) {
-    orbitPivotValid_ = false;
-    roll_ = 0.0f;
-    switch (preset) {
-    case 0: yaw_ = 0.0f; pitch_ = 0.0f; break;
-    case 1: yaw_ = 180.0f; pitch_ = 0.0f; break;
-    case 2: yaw_ = -90.0f; pitch_ = 0.0f; break;  // destra: dall'asse a destra della vista frontale
-    case 3: yaw_ = 0.0f; pitch_ = 90.0f; break;   // superiore: dall'alto, il fondo in alto
-    case 4: yaw_ = -32.0f; pitch_ = 22.0f; break;
-    case 5: yaw_ = -45.0f; pitch_ = 12.0f; break;
-    default: break;
-    }
+    camera_.setPreset(preset);
     update();
 }
 
 void CadViewport::setViewFrame(const QVector3D &worldX, const QVector3D &worldNormal) {
-    orbitPivotValid_ = false;
-    // Le direzioni del modello nello spazio della vista standard (orientamento degli assi).
-    const QMatrix4x4 basis = basisMatrix();
-    const QVector3D x = basis.mapVector(worldX), normal = basis.mapVector(worldNormal);
-    const double degrees = 180.0 / M_PI;
-    const double a = std::asin(qBound(-1.0, double(normal.y()), 1.0));
-    const double b = std::atan2(-double(normal.x()), double(normal.z()));
-    const QVector3D u1(float(std::cos(b)), 0.0f, float(std::sin(b)));
-    const QVector3D u2(float(std::sin(a) * std::sin(b)), float(std::cos(a)), float(-std::sin(a) * std::cos(b)));
-    pitch_ = float(a * degrees);
-    yaw_ = float(b * degrees);
-    roll_ = float(std::atan2(-double(QVector3D::dotProduct(x, u2)), double(QVector3D::dotProduct(x, u1))) * degrees);
+    camera_.setFrame(worldX, worldNormal);
     update();
 }
 
 void CadViewport::setViewNormal(int plane) {
-    const SketchFrame frame = ForgeCad::referenceSketchFrame(plane, orientation_);
+    const SketchFrame frame = ForgeCad::referenceSketchFrame(plane, camera_.orientation_);
     setViewFrame(QVector3D(float(frame.xAxis[0]), float(frame.xAxis[1]), float(frame.xAxis[2])),
                  QVector3D(float(frame.normal[0]), float(frame.normal[1]), float(frame.normal[2])));
 }
 
 float CadViewport::normalizedViewAngle(float degrees) {
-    return std::remainder(degrees, 360.0f);
+    return ForgeCad::Gui::ViewportCamera::normalizedViewAngle(degrees);
 }
 
 QVector3D CadViewport::orbitPointAt(const QPoint &position) const {
@@ -4352,47 +4314,25 @@ QVector3D CadViewport::orbitPointAt(const QPoint &position) const {
 
 void CadViewport::orbitView(const QPoint &delta) {
     if (delta.isNull()) return;
-    if (!orbitPivotValid_) {
-        orbitPivot_ = orbitPointAt(lastMousePosition_);
-        orbitPivotValid_ = true;
+    if (!camera_.orbitPivotValid_) {
+        camera_.orbitPivot_ = orbitPointAt(lastMousePosition_);
+        camera_.orbitPivotValid_ = true;
     }
-    const QVector3D previousPivot = sceneModelViewMatrix().map(orbitPivot_);
-    yaw_ = normalizedViewAngle(yaw_ + delta.x()*kOrbitDegreesPerPixel);
-    pitch_ = normalizedViewAngle(pitch_ + delta.y()*kOrbitDegreesPerPixel);
-    roll_ *= 0.9f;
-    // Compensa la traslazione: il punto scelto resta nello stesso pixel.
-    // La proiezione ortografica non richiede una compensazione in Z.
-    const QVector3D movedPivot = sceneModelViewMatrix().map(orbitPivot_);
-    panX_ += previousPivot.x() - movedPivot.x();
-    panY_ += previousPivot.y() - movedPivot.y();
+    camera_.orbitView(delta);
 }
 
-const AxesOrientation &CadViewport::orientation() const { return orientation_; }
+const AxesOrientation &CadViewport::orientation() const { return camera_.orientation_; }
 
 void CadViewport::setOrientation(const AxesOrientation &orientation) {
     if(documentReadOnly_)return;
-    orientation_ = orientation;
+    camera_.orientation_ = orientation;
     setViewPreset(4);
     fitAll();
     update();
 }
 
 AxesOrientation CadViewport::orientationFromCurrentView() const {
-    QMatrix4x4 rotation;
-    rotation.rotate(roll_, 0.0f, 0.0f, 1.0f);
-    rotation.rotate(pitch_, 1.0f, 0.0f, 0.0f);
-    rotation.rotate(yaw_, 0.0f, 1.0f, 0.0f);
-    rotation *= basisMatrix();
-    // Righe della rotazione: le direzioni del modello a destra, in alto e verso l'osservatore.
-    AxesOrientation result;
-    double *rows[3] = {result.right, result.up, result.toward};
-    for (int r = 0; r < 3; ++r) {
-        double length = 0.0;
-        for (int k = 0; k < 3; ++k) length += double(rotation(r, k)) * double(rotation(r, k));
-        length = std::sqrt(length);
-        for (int k = 0; k < 3; ++k) rows[r][k] = double(rotation(r, k)) / length;
-    }
-    return result;
+    return camera_.orientationFromCurrentView();
 }
 
 void CadViewport::initializeGL() {
@@ -4426,7 +4366,7 @@ void CadViewport::initializeGL() {
 
 void CadViewport::resizeGL(int width, int height) {
     glViewport(0, 0, width, height);
-    if (autoFit_ && painted_ && !sketchMode_) fitView(sceneGeometryPoints());
+    if (camera_.autoFit_ && painted_ && !sketchMode_) fitView(sceneGeometryPoints());
 }
 
 void CadViewport::paintGL() {
@@ -4611,7 +4551,7 @@ void CadViewport::keyPressEvent(QKeyEvent *event) {
 }
 
 void CadViewport::mousePressEvent(QMouseEvent *event) {
-    orbitPivotValid_ = false;
+    camera_.orbitPivotValid_ = false;
     lastMousePosition_ = event->position().toPoint();
     if (event->button() == Qt::MiddleButton || (event->button() == Qt::LeftButton && panKeyHeld_)) {
         panning_ = true;
@@ -6156,7 +6096,7 @@ void CadViewport::mouseMoveEvent(QMouseEvent *event) {
             for (double &planeScale : referencePlaneScales_) planeScale = scale;
         } else extrusions_[planeResizeTarget_.index].datum.size = half;
         sceneBoundsDirty_ = true;
-        autoFit_ = false;
+        camera_.autoFit_ = false;
         update();
         return;
     }
@@ -6182,11 +6122,11 @@ void CadViewport::mouseMoveEvent(QMouseEvent *event) {
     }
     if (panning_) {
         // Un pixel vale 8 * zoom / 8 / altezza unita' della vista.
-        const float unit = 8.0f * (zoom_ / 8.0f) / float(qMax(1, height()));
+        const float unit = 8.0f * (camera_.zoom_ / 8.0f) / float(qMax(1, height()));
         const QPoint delta = currentPosition - lastMousePosition_;
-        autoFit_ = false;
-        panX_ += float(delta.x()) * unit;
-        panY_ -= float(delta.y()) * unit;
+        camera_.autoFit_ = false;
+        camera_.panX_ += float(delta.x()) * unit;
+        camera_.panY_ -= float(delta.y()) * unit;
         lastMousePosition_ = currentPosition;
         update();
         return;
@@ -6195,7 +6135,7 @@ void CadViewport::mouseMoveEvent(QMouseEvent *event) {
         if(event->buttons() & (Qt::LeftButton|Qt::RightButton)) {
             if((currentPosition-spatialPress_).manhattanLength()>=QApplication::startDragDistance())spatialDragged_=true;
             if(event->buttons() & Qt::RightButton || spatialDragged_) {
-                autoFit_=false;orbitView(currentPosition-lastMousePosition_);
+                camera_.autoFit_=false;orbitView(currentPosition-lastMousePosition_);
             }
         }
         lastMousePosition_=currentPosition;
@@ -6205,7 +6145,7 @@ void CadViewport::mouseMoveEvent(QMouseEvent *event) {
     if ((interactionLocked_ || documentReadOnly_) && !refPicking_ && !edgePicking_ && !trimPartPickFinished_
         && !sketchPickCallback_ && !sketchEntityPickCallback_ && !sketchOffsetSelectionCallback_) {
         if (event->buttons() & Qt::LeftButton) {
-            autoFit_ = false;
+            camera_.autoFit_ = false;
             orbitView(currentPosition - lastMousePosition_);
         }
         lastMousePosition_ = currentPosition;
@@ -6229,7 +6169,7 @@ void CadViewport::mouseMoveEvent(QMouseEvent *event) {
             showStatus(QStringLiteral("Vista ruotata: \"Vista normale allo schizzo\" (Ctrl+8) la rimette perpendicolare al piano"));
         }
         const QPoint delta = currentPosition - lastMousePosition_;
-        autoFit_ = false;
+        camera_.autoFit_ = false;
         orbitView(delta);
         if (!sketchViewUnlocked_) sketchViewRotated_ = true;
         lastMousePosition_ = currentPosition;
@@ -6397,7 +6337,7 @@ void CadViewport::mouseMoveEvent(QMouseEvent *event) {
     }
     if (event->buttons() & Qt::LeftButton) {
         const QPoint delta = currentPosition - lastMousePosition_;
-        autoFit_ = false;
+        camera_.autoFit_ = false;
         orbitView(delta);  // la vista inclinata di uno schizzo su faccia si raddrizza ruotando
         update();
     }
@@ -6525,7 +6465,7 @@ void CadViewport::mouseReleaseEvent(QMouseEvent *event) {
         event->accept();
         return;
     }
-    orbitPivotValid_ = false;
+    camera_.orbitPivotValid_ = false;
     if(spatialAdd_ && !panning_) {
         if(event->button()==Qt::LeftButton && spatialPressed_) {
             spatialPressed_=false;
@@ -6630,8 +6570,8 @@ void CadViewport::wheelEvent(QWheelEvent *event) {
     const QPoint pixelDelta = event->pixelDelta();
     const int delta = angleDelta.y() != 0 ? angleDelta.y() : pixelDelta.y();
     if (delta == 0) { event->ignore(); return; }
-    autoFit_ = false;
-    setZoom(zoom_ * std::pow(0.9985f, float(delta)));
+    camera_.autoFit_ = false;
+    setZoom(camera_.zoom_ * std::pow(0.9985f, float(delta)));
     event->accept();
 }
 
@@ -6646,7 +6586,7 @@ DocumentState CadViewport::documentState(bool normalizeVisibility ) const {
     if (normalizeVisibility) for (ExtrusionObject &feature : state.extrusions)
         for (const ModelBody &body : state.modelBodies)
             if (feature.modelBodyId == body.id) feature.visible = feature.featureId == body.tipFeatureId && body.visible;
-    state.orientation = orientation_;
+    state.orientation = camera_.orientation_;
     state.orientationSet = true;
     state.lengthUnit = lengthUnit_;
     state.lengthUnitSet = true;
@@ -6747,7 +6687,7 @@ bool CadViewport::dimensionGraphic(const SketchObject &sketch, int index, Dimens
 
 bool CadViewport::dimensionGraphic(const SketchObject &sketch, const SketchConstraint &c, DimensionGraphic &g) const {
     if (!ForgeCad::isDimension(c.type)) return false;
-    const double px = double(zoom_) / double(qMax(1, height()));  // unita' dello schizzo per pixel
+    const double px = double(camera_.zoom_) / double(qMax(1, height()));  // unita' dello schizzo per pixel
     const auto screen = [&](const QPointF &p) { return projectWorldPoint(mapSketchPoint(p, sketch)); };
     const QFontMetricsF metrics(uiFont(9, QFont::DemiBold));
     g.text = dimensionText(c);
@@ -7687,7 +7627,7 @@ void CadViewport::drawBackgroundGradient() {
 }
 
 double CadViewport::pickTolerance(double pixels ) const {
-    return pixels * 8.0 * double(zoom_) / 8.0 / double(qMax(1, height()));
+    return pixels * 8.0 * double(camera_.zoom_) / 8.0 / double(qMax(1, height()));
 }
 
 QVector<QPointF> CadViewport::curveEditMarkers(const CurveObject &curve,bool hover) {
@@ -8437,22 +8377,7 @@ void CadViewport::normalizeEllipse(CurveObject &curve, int moved, const QPointF 
 }
 
 QPointF CadViewport::projectWorldPoint(const QVector3D &point) const {
-    const std::array<double, 18> key = {double(width()), double(height()), zoom_, panX_, panY_, yaw_, pitch_, roll_,
-        orientation_.right[0], orientation_.right[1], orientation_.right[2],
-        orientation_.up[0], orientation_.up[1], orientation_.up[2],
-        orientation_.toward[0], orientation_.toward[1], orientation_.toward[2], 0.0};
-    if (key != projectionKey_) {
-        projectionKey_ = key;
-        projectionMatrix_.setToIdentity();
-        projectionMatrix_.translate(panX_, panY_, -zoom_);
-        projectionMatrix_.rotate(roll_, 0.0f, 0.0f, 1.0f);
-        projectionMatrix_.rotate(pitch_, 1.0f, 0.0f, 0.0f);
-        projectionMatrix_.rotate(yaw_, 0.0f, 1.0f, 0.0f);
-        projectionMatrix_ *= basisMatrix();
-    }
-    const QVector3D cameraPoint = projectionMatrix_.map(point);
-    const double pixels = double(qMax(1, height())) / zoom_;
-    return QPointF(width() * 0.5 + cameraPoint.x() * pixels, height() * 0.5 - cameraPoint.y() * pixels);
+    return camera_.projectWorldPoint(point, size());
 }
 
 void CadViewport::drawReferenceLabels() {
@@ -8646,9 +8571,9 @@ QPointF CadViewport::screenToSketchPoint(const QPoint &position) const {
         if (rayToSketchPlane(position, point)) return point;
     }
     const double aspect = double(width()) / double(qMax(1, height()));
-    const double viewScale = double(zoom_) / 8.0;
-    return QPointF((double(position.x()) / double(qMax(1, width())) - 0.5) * 8.0 * aspect * viewScale - double(panX_),
-                   (0.5 - double(position.y()) / double(qMax(1, height()))) * 8.0 * viewScale - double(panY_));
+    const double viewScale = double(camera_.zoom_) / 8.0;
+    return QPointF((double(position.x()) / double(qMax(1, width())) - 0.5) * 8.0 * aspect * viewScale - double(camera_.panX_),
+                   (0.5 - double(position.y()) / double(qMax(1, height()))) * 8.0 * viewScale - double(camera_.panY_));
 }
 
 bool CadViewport::rayToSketchPlane(const QPoint &position, QPointF &point) const {
@@ -8871,19 +8796,7 @@ void CadViewport::drawSnapMarkers() {
 }
 
 void CadViewport::viewRay(const QPoint &position, QVector3D &origin, QVector3D &direction) const {
-    const float aspect = float(width()) / float(qMax(1, height()));
-    const float viewScale = zoom_ / 8.0f;
-    QMatrix4x4 rotation;
-    rotation.rotate(roll_, 0.0f, 0.0f, 1.0f);
-    rotation.rotate(pitch_, 1.0f, 0.0f, 0.0f);
-    rotation.rotate(yaw_, 0.0f, 1.0f, 0.0f);
-    rotation *= basisMatrix();
-    const QMatrix4x4 inverse = rotation.inverted();
-    origin = inverse.map(QVector3D(
-        (float(position.x()) / float(qMax(1, width())) - 0.5f) * 8.0f * aspect * viewScale - panX_,
-        (0.5f - float(position.y()) / float(qMax(1, height()))) * 8.0f * viewScale - panY_,
-        float(sceneDepth())));
-    direction = inverse.mapVector(QVector3D(0.0f, 0.0f, -1.0f));
+    camera_.viewRay(position, size(), sceneDepth(), origin, direction);
 }
 
 bool CadViewport::meshRayHit(const BodyDisplay &display, const QVector3D &origin, const QVector3D &direction, float &distance) {
@@ -10367,9 +10280,9 @@ const CadViewport::ProjectedEdges &CadViewport::projectedBodyEdges(int index) co
     if (projectedEdges_.size() != extrusions_.size()) projectedEdges_.resize(extrusions_.size());
     auto &cache = projectedEdges_[index];
     const auto &display = extrusions_.at(index).display;
-    if (cache.valid && cache.view == projectionKey_ && cache.source.edges.constData() == display.edges.constData()) return cache;
+    if (cache.valid && cache.view == camera_.projectionKey_ && cache.source.edges.constData() == display.edges.constData()) return cache;
     cache.source = display;
-    cache.view = projectionKey_;
+    cache.view = camera_.projectionKey_;
     cache.lines.clear(); cache.bounds.clear();
     for (const auto &edge : display.edges) {
         QVector<QPointF> points;
@@ -10429,7 +10342,7 @@ int CadViewport::pickEdge(const QPoint &position, int *body ) const {
                     // Due pixel di margine assorbono la discretizzazione
                     // della mesh senza far passare il bordo opposto di
                     // pareti o fori sottili.
-                    const double tolerance = qMax(1e-5, 2.0 * double(zoom_) / qMax(1, height()));
+                    const double tolerance = qMax(1e-5, 2.0 * double(camera_.zoom_) / qMax(1, height()));
                     if (edgeOccludedByMesh(extrusions_.at(candidate).display, rayOrigin, rayDirection, edgePoint, tolerance)) continue;
                 }
                 nearest = d;
@@ -11664,7 +11577,7 @@ void CadViewport::zoomLimits(float &minimum, float &maximum) const {
 void CadViewport::setZoom(float zoom) {
     float minimum = 0.0f, maximum = 0.0f;
     zoomLimits(minimum, maximum);
-    zoom_ = qBound(minimum, zoom, maximum);
+    camera_.zoom_ = qBound(minimum, zoom, maximum);
     update();
 }
 
@@ -11673,24 +11586,7 @@ void CadViewport::fitView(const QVector<QVector3D> &points) {
     // Prima del primo disegno il widget non ha ancora la sua dimensione:
     // l'inquadratura si ripete al primo paintGL.
     if (!painted_) pendingFit_ = points;
-    QMatrix4x4 rotation;
-    rotation.rotate(roll_, 0.0f, 0.0f, 1.0f);
-    rotation.rotate(pitch_, 1.0f, 0.0f, 0.0f);
-    rotation.rotate(yaw_, 0.0f, 1.0f, 0.0f);
-    rotation *= basisMatrix();
-    QVector3D low = rotation.map(points.first()), high = low;
-    for (const QVector3D &p : points) {
-        const QVector3D v = rotation.map(p);
-        low = QVector3D(qMin(low.x(), v.x()), qMin(low.y(), v.y()), 0.0f);
-        high = QVector3D(qMax(high.x(), v.x()), qMax(high.y(), v.y()), 0.0f);
-    }
-    const float aspect = float(width()) / float(qMax(1, height()));
-    const float halfWidth = 0.5f * (high.x() - low.x()), halfHeight = 0.5f * (high.y() - low.y());
-    panX_ = -0.5f * (low.x() + high.x());
-    panY_ = -0.5f * (low.y() + high.y());
-    // Mezza altezza visibile = zoom_ / 2, mezza larghezza = aspect * zoom_ / 2.
-    const float needed = 2.0f * 1.1f * qMax(halfHeight, halfWidth / aspect);
-    setZoom(needed > 0.0f ? needed : zoom_);
+    setZoom(camera_.fitPoints(points, size()));
 }
 
 QOpenGLFramebufferObject *CadViewport::sceneBuffer(const QSize &size) {
@@ -11918,11 +11814,11 @@ void CadViewport::drawGrid() {
     if (!gridVisible_) return;
     glDisable(GL_DEPTH_TEST);
     // Griglia nel piano orizzontale dell'orientamento (perpendicolare all'asse in alto), poco sotto l'origine.
-    const QVector3D a(float(orientation_.right[0]), float(orientation_.right[1]), float(orientation_.right[2]));
-    const QVector3D b(float(orientation_.toward[0]), float(orientation_.toward[1]), float(orientation_.toward[2]));
+    const QVector3D a(float(camera_.orientation_.right[0]), float(camera_.orientation_.right[1]), float(camera_.orientation_.right[2]));
+    const QVector3D b(float(camera_.orientation_.toward[0]), float(camera_.orientation_.toward[1]), float(camera_.orientation_.toward[2]));
     // Passo 1 con i piani di default, poi segue la loro dimensione (20 passi per lato).
     const float step = niceCeiling(qMax(0.25f * planeHalf(), 1e-4f)), extent = 10.0f * step;
-    const QVector3D below = -0.05f * step * QVector3D(float(orientation_.up[0]), float(orientation_.up[1]), float(orientation_.up[2]));
+    const QVector3D below = -0.05f * step * QVector3D(float(camera_.orientation_.up[0]), float(camera_.orientation_.up[1]), float(camera_.orientation_.up[2]));
     QVector<QVector3D> lines;
     lines.reserve(84);
     for (int i = -10; i <= 10; ++i) {

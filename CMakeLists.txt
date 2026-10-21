@@ -45,6 +45,8 @@ add_executable(forgecad
     forgeCad2026_gui.h
     forgeCad2026_viewport.cpp
     forgeCad2026_viewport.h
+    forgeCad2026_camera.cpp
+    forgeCad2026_camera.h
     forgeCad2026_gui_common.cpp
     forgeCad2026_gui_common.h
     forgeCad2026_storyboard.cpp

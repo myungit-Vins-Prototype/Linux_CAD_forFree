@@ -2,6 +2,7 @@
 #define FORGECAD2026_VIEWPORT_H
 
 #include "forgeCad2026_gui_common.h"
+#include "forgeCad2026_camera.h"
 #include "cad_constraints.h"
 #include "cad_curve_solver.h"
 #include "cad_display_cache.h"
@@ -777,7 +778,7 @@ public:
     void setViewNormal(int plane);
 
     // Sensibilita' della rotazione classica, indipendente dalla dimensione della vista.
-    static constexpr float kOrbitDegreesPerPixel = 0.5f;
+    static constexpr float kOrbitDegreesPerPixel = ForgeCad::Gui::ViewportCamera::kOrbitDegreesPerPixel;
     static float normalizedViewAngle(float degrees);
 
     // Il pivot viene scelto solo quando comincia realmente l'orbita.
@@ -1532,17 +1533,11 @@ private:
     int topologyHighlightBody_ = -1;
     int topologyHighlightEdge_ = -1;  // EdgeId evidenziato cliccando l'etichetta
     int topologyHighlightFace_ = -1;  // FaceId: se cliccato se ne illuminano tutti i bordi
-    float yaw_ = -32.0f, pitch_ = 22.0f, zoom_ = 8.0f;
-    float roll_ = 0.0f;  // rotazione attorno all'asse di vista (schizzi su facce inclinate)
+    ForgeCad::Gui::ViewportCamera camera_;
     ForgeCad::DocumentVersion documentVersion_{QUuid::createUuid(), {}};
     QUuid documentBaseCheckinId_;
-    AxesOrientation orientation_;  // orientamento degli assi del documento (vedi basisMatrix)
-    bool autoFit_ = false;         // l'ultima inquadratura e' "zoom tutto" e l'utente non ha mosso la vista
-    float panX_ = 0.0f, panY_ = 0.0f;  // spostamento della vista (unita' della vista)
     int panKey_ = Qt::Key_Space;
     bool panKeyHeld_ = false, panning_ = false;
-    QVector3D orbitPivot_;
-    bool orbitPivotValid_ = false;
     QPoint lastMousePosition_;
     QPoint selectionPress_;
     QPoint hoverPosition_;
@@ -1816,8 +1811,6 @@ private:
     mutable QVector<RaySelectionCache> raySelectionCache_;
     std::vector<std::weak_ptr<const ForgeCad::Kernel::Body>> warmedBodies_;  // B-rep con le cache di selezione gia' preparate
     mutable QVector<ProjectedEdges> projectedEdges_;
-    mutable std::array<double, 18> projectionKey_{};
-    mutable QMatrix4x4 projectionMatrix_;
     bool axesVisible_ = true, axesOnTop_ = true;  // assi mostrati; sopra solidi, superfici e schizzi
     bool originSnap_ = true;                      // lo schizzo si aggancia all'origine del piano
     // Box della geometria visibile (coordinate del modello), per zoom e profondita' della vista.

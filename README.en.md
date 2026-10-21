@@ -346,6 +346,7 @@ The same option can be added to the macOS configuration while retaining the Home
 | `forgeCad2026.cpp` | Startup and OpenGL configuration |
 | `forgeCad2026_gui.h/.cpp` | Main window, menus, commands, and panels |
 | `forgeCad2026_viewport.h/.cpp` | Separate declarations and implementation of the 3D viewport |
+| `forgeCad2026_camera.h/.cpp` | Camera state and widget-independent view, projection, ray, and orbit calculations |
 | `forgeCad2026_gui_common.h/.cpp` | GUI helpers shared by the window and viewport |
 | `forgeCad2026_storyboard.h/.cpp` | Storyboard tree, badges, and history cursor |
 | `forgeCad2026_dialogs.h`, `forgeCad2026_dialogs_*.cpp` | Operation dialogs grouped into solids, surfaces, sketches/curves, and analysis |
