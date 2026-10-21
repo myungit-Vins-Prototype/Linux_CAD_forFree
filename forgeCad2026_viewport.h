@@ -1331,16 +1331,6 @@ private:
 
     void drawSketch();
 
-    // Solo visualizzazione: triangoli e spigoli ricavati dalla forma esatta.
-    void drawExtrusionFaces(const ExtrusionObject &extrusion);
-    void drawDisplayFaces(const BodyDisplay &display);
-    void drawExtrusionEdges(const ExtrusionObject &extrusion);
-    // Su una filettatura ottenuta per sweep, le polilinee campionate sono i
-    // veri bordi elicoidali; i segmenti di due punti sono soltanto le cuciture
-    // trasversali tra domini B-spline. Mostrare i primi rende leggibile il
-    // profilo senza reintrodurre la trama da tassellazione.
-    void drawThreadProfileEdges(const BodyDisplay &display, const QVector4D &color);
-
     // Bordo di evidenziazione: la sagoma dell'oggetto va nello stencil, poi le
     // sue facce vengono ridisegnate a linee spesse solo fuori dalla sagoma.
     void drawExtrusionOutline(const ExtrusionObject &extrusion, const QColor &color, float width);

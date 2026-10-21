@@ -7567,37 +7567,7 @@ void CadViewport::restoreDocument(DocumentState state) {
 }
 
 void CadViewport::drawBackgroundGradient() {
-    glDisable(GL_DEPTH_TEST);
-    glDisable(GL_CULL_FACE);
-    const float aspect = float(width()) / float(qMax(1, height()));
-    QMatrix4x4 projection;
-    projection.ortho(-aspect, aspect, -1.0f, 1.0f, -1.0f, 1.0f);
-    overlayRenderer_.setMatrices(projection, QMatrix4x4());
-    overlayRenderer_.setClipPlane(QVector4D(), false);
-    const QColor start = background_.startColor;
-    const QColor end = background_.gradient ? background_.endColor : start;
-    const float radians = background_.angle * float(M_PI) / 180.0f;
-    const QVector2D direction(std::cos(radians), std::sin(radians));
-    const QVector2D across(-direction.y(), direction.x());
-    const float extent = qAbs(direction.x()) * aspect + qAbs(direction.y());
-    const float middle = -extent + 2.0f * extent * qBound(0.0f, background_.position, 1.0f);
-    const float span = 2.0f * (aspect + 1.0f);
-    const struct { float offset; float mix; } stops[] = {
-        {-extent, 0.0f}, {middle, 0.5f}, {extent, 1.0f}};
-    QVector<ForgeCad::OverlayVertex> vertices;
-    vertices.reserve(6);
-    for (const auto &stop : stops) {
-        const QVector4D color(float(start.redF() + (end.redF() - start.redF()) * stop.mix),
-                              float(start.greenF() + (end.greenF() - start.greenF()) * stop.mix),
-                              float(start.blueF() + (end.blueF() - start.blueF()) * stop.mix), 1.0f);
-        const QVector2D centre = direction * stop.offset;
-        const QVector2D first = centre + across * span;
-        const QVector2D second = centre - across * span;
-        vertices.push_back({QVector3D(first.x(), first.y(), 0.0f), color});
-        vertices.push_back({QVector3D(second.x(), second.y(), 0.0f), color});
-    }
-    overlayRenderer_.draw(GL_TRIANGLE_STRIP, vertices);
-    glEnable(GL_DEPTH_TEST);
+    sceneRenderer_.drawBackgroundGradient(overlayRenderer_, size(), background_);
 }
 
 double CadViewport::pickTolerance(double pixels ) const {
@@ -10029,20 +9999,6 @@ void CadViewport::drawSketch() {
     glEnable(GL_DEPTH_TEST);
 }
 
-void CadViewport::drawExtrusionFaces(const ExtrusionObject &extrusion) { drawDisplayFaces(extrusion.display); }
-
-void CadViewport::drawDisplayFaces(const BodyDisplay &display) {
-    displayCache_.displayFaces(display);
-}
-
-void CadViewport::drawExtrusionEdges(const ExtrusionObject &extrusion) {
-    displayCache_.displayEdges(extrusion.display);
-}
-
-void CadViewport::drawThreadProfileEdges(const BodyDisplay &display, const QVector4D &color) {
-    sceneRenderer_.drawThreadProfileEdges(overlayRenderer_, display, color);
-}
-
 void CadViewport::drawExtrusionOutline(const ExtrusionObject &extrusion, const QColor &color, float width) {
     displayCache_.outline(extrusion.display, ForgeCad::isCurveBody(extrusion), color, width);
 }
@@ -10714,11 +10670,7 @@ void CadViewport::drawExtrusions() {
     }
     if (shapeAnalysisMode_ >= 0) {
         const bool through = shapeAnalysisThrough_ && (shapeAnalysisMode_ == 4 || shapeAnalysisMode_ == 5);
-        const bool depthEnabled = glIsEnabled(GL_DEPTH_TEST);
-        if (through) glDisable(GL_DEPTH_TEST);
-        overlayRenderer_.draw(GL_LINES, shapeAnalysis_.grid);
-        overlayRenderer_.draw(GL_LINES, shapeAnalysis_.lines);
-        if (through && depthEnabled) glEnable(GL_DEPTH_TEST);
+        sceneRenderer_.drawAnalysisLines(overlayRenderer_, shapeAnalysis_.grid, shapeAnalysis_.lines, through);
         for (const auto &border : shapeAnalysis_.borders)
             overlayRenderer_.drawWideLineStrip(border.points, border.color, 4.0f);
     }

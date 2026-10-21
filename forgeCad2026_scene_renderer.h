@@ -12,6 +12,7 @@
 #include <memory>
 
 struct BodyDisplay;
+struct BackgroundSettings;
 namespace ForgeCad {
 class DisplayCache;
 class OverlayRenderer;
@@ -19,7 +20,7 @@ struct OverlayVertex;
 }
 class ViewportInteractionTest;
 namespace ForgeCad::Gui {
-// Passata della scena: target MSAA, risoluzione e opacita' del framebuffer.
+// Rendering della scena: fondale, passata MSAA, corpi e sovrapposizioni.
 // Richiede il contesto corrente. Il disegno ricevuto e' eseguito subito e
 // non viene conservato; gli overlay del widget restano successivi alla passata.
 class SceneRenderer : protected QOpenGLFunctions {
@@ -49,6 +50,8 @@ public:
                             const PreviewStyle &style);
     void drawTrimPreview(DisplayCache &cache, const BodyDisplay &display, int displayMode);
     void drawExportMeshPreview(DisplayCache &cache, const BodyDisplay &display, bool quadrangular);
+    // Nel filetto le polilinee campionate sono bordi elicoidali; i segmenti
+    // di due punti sono cuciture fra domini B-spline e vengono esclusi.
     void drawThreadProfileEdges(OverlayRenderer &overlay, const BodyDisplay &display, const QVector4D &color);
     struct BodyFaceStyle {
         QColor color, hoverColor;
@@ -87,6 +90,10 @@ public:
     void drawPickedEdges(OverlayRenderer &overlay, const BodyDisplay *body,
                          const BodyDisplay *hoverBody, const QVector<int> &hoverFaceEdges,
                          const QVector<int> &pickedEdges, const EdgePickStyle &style);
+    void drawBackgroundGradient(OverlayRenderer &overlay, const QSize &logicalSize,
+                                 const BackgroundSettings &background);
+    void drawAnalysisLines(OverlayRenderer &overlay, const QVector<OverlayVertex> &grid,
+                           const QVector<OverlayVertex> &lines, bool through);
 private:
     friend class ::ViewportInteractionTest;
     QOpenGLFramebufferObject *sceneBuffer(const QSize &size);

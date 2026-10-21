@@ -1,6 +1,7 @@
 #include "forgeCad2026_scene_renderer.h"
 #include "cad_display_cache.h"
 #include "cad_overlay_renderer.h"
+#include <cmath>
 
 namespace ForgeCad::Gui {
 void SceneRenderer::initialize() {
@@ -460,6 +461,50 @@ void SceneRenderer::drawPickedEdges(OverlayRenderer &overlay, const BodyDisplay 
     glDepthMask(GL_TRUE);
     glLineWidth(1.0f);
     glEnable(GL_DEPTH_TEST);
+}
+
+void SceneRenderer::drawBackgroundGradient(OverlayRenderer &overlay, const QSize &logicalSize,
+                                            const BackgroundSettings &background) {
+    glDisable(GL_DEPTH_TEST);
+    glDisable(GL_CULL_FACE);
+    const float aspect = float(logicalSize.width()) / float(qMax(1, logicalSize.height()));
+    QMatrix4x4 projection;
+    projection.ortho(-aspect, aspect, -1.0f, 1.0f, -1.0f, 1.0f);
+    overlay.setMatrices(projection, QMatrix4x4());
+    overlay.setClipPlane(QVector4D(), false);
+    const QColor start = background.startColor;
+    const QColor end = background.gradient ? background.endColor : start;
+    const float radians = background.angle * float(M_PI) / 180.0f;
+    const QVector2D direction(std::cos(radians), std::sin(radians));
+    const QVector2D across(-direction.y(), direction.x());
+    const float extent = qAbs(direction.x()) * aspect + qAbs(direction.y());
+    const float middle = -extent + 2.0f * extent * qBound(0.0f, background.position, 1.0f);
+    const float span = 2.0f * (aspect + 1.0f);
+    const struct { float offset; float mix; } stops[] = {
+        {-extent, 0.0f}, {middle, 0.5f}, {extent, 1.0f}};
+    QVector<ForgeCad::OverlayVertex> vertices;
+    vertices.reserve(6);
+    for (const auto &stop : stops) {
+        const QVector4D color(float(start.redF() + (end.redF() - start.redF()) * stop.mix),
+                              float(start.greenF() + (end.greenF() - start.greenF()) * stop.mix),
+                              float(start.blueF() + (end.blueF() - start.blueF()) * stop.mix), 1.0f);
+        const QVector2D centre = direction * stop.offset;
+        const QVector2D first = centre + across * span;
+        const QVector2D second = centre - across * span;
+        vertices.push_back({QVector3D(first.x(), first.y(), 0.0f), color});
+        vertices.push_back({QVector3D(second.x(), second.y(), 0.0f), color});
+    }
+    overlay.draw(GL_TRIANGLE_STRIP, vertices);
+    glEnable(GL_DEPTH_TEST);
+}
+
+void SceneRenderer::drawAnalysisLines(OverlayRenderer &overlay, const QVector<OverlayVertex> &grid,
+                                      const QVector<OverlayVertex> &lines, bool through) {
+    const bool depthEnabled = glIsEnabled(GL_DEPTH_TEST);
+    if (through) glDisable(GL_DEPTH_TEST);
+    overlay.draw(GL_LINES, grid);
+    overlay.draw(GL_LINES, lines);
+    if (through && depthEnabled) glEnable(GL_DEPTH_TEST);
 }
 
 }
