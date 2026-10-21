@@ -13,12 +13,19 @@
 #include <Poly_Triangulation.hxx>
 #include <TopExp_Explorer.hxx>
 
+#include <fstream>
+#include <sstream>
+
 #include "fk_body_check.h"
+#include "fk_body_io.h"
 #include "fk_boolean.h"
+#include "fk_classify.h"
+
 #include "fk_bspline_surface.h"
 #include "fk_pcurve.h"
 #include "fk_extrude.h"
 #include "fk_helix.h"
+#include "fk_intersect.h"
 #include "fk_sweep.h"
 #include "fk_revolve.h"
 #include "fk_marching.h"
@@ -96,7 +103,7 @@ const char *name(BooleanOperation operation) {
 // contro BRepAlgoAPI: volume, area e baricentro. `exactOcct`: facce solo
 // piane e cilindriche, dove BRepGProp e' affidabile; altrimenti area e
 // volume si confrontano con la tassellazione fine del risultato OCCT.
-void compare(const Operand &a, const Operand &b, BooleanOperation operation, bool exactOcct = true, double relative = 1e-8) {
+void compare(const Operand &a, const Operand &b, BooleanOperation operation, bool exactOcct = true, double relative = 1e-8, double independentVolume = 0.0) {
     Body result;
     try {
         result = booleanOperation(a.body, b.body, operation);
@@ -120,7 +127,11 @@ void compare(const Operand &a, const Operand &b, BooleanOperation operation, boo
     } else {
         double meshArea, meshVolume;
         meshProperties(reference, meshArea, meshVolume);
-        FK_CHECK_NEAR(ours.volume, meshVolume, 2e-4 * meshVolume);
+        if (independentVolume > 0.0) {
+            FK_CHECK_NEAR(ours.volume, independentVolume, 1e-9 * independentVolume);
+        } else {
+            FK_CHECK_NEAR(ours.volume, meshVolume, 2e-4 * meshVolume);
+        }
         FK_CHECK_NEAR(ours.area, meshArea, 5e-5 * meshArea);
         FK_CHECK(distance(ours.centroid, fromOcct(volume.CentreOfMass())) <= 1e-2 * std::cbrt(volume.Mass()));
     }
@@ -281,6 +292,59 @@ FK_TEST(BooleanCylinderCylinder) {
     FK_CHECK_NEAR(massProperties(drilled).volume, properties.Mass(), 1e-6 * properties.Mass());
 }
 
+namespace {
+
+// Volume comune indipendente dalla booleana e dalle proprieta' di massa:
+// integra le corde del cilindro lungo la direzione dell'estrusione, sul
+// profilo spline. Per questi assi non paralleli, il discriminante in x
+// delimita esattamente il supporto dell'integrando (non va campionato).
+double splineCylinderCommonVolume(const BSplineCurve<2> &profile, const Frame3 &base, double height,
+                                  const Frame3 &cylinder, double radius, double cylinderHeight) {
+    const Vec3 d = base.zDir(), n = cylinder.zDir();
+    const Vec3 dr = d - dot(d, n) * n, ex = base.xDir() - dot(base.xDir(), n) * n;
+    const double A = squaredNorm(dr), bx = dot(ex, dr), aa = bx * bx - A * squaredNorm(ex);
+    FK_CHECK(A > 1e-6 && aa < -1e-6 && std::fabs(dot(d, n)) > 1e-6);
+    auto chord = [&](double x, double y) {
+        const Vec3 q = base.toGlobal(Vec3(x, y, 0)) - cylinder.origin(), qr = q - dot(q, n) * n;
+        const double B = dot(qr, dr), C = squaredNorm(qr) - radius * radius, disc = B * B - A * C;
+        if (disc <= 0.0) return 0.0;
+        const double lo = std::max(0.0, (-B - std::sqrt(disc)) / A);
+        const double hi = std::min(height, (-B + std::sqrt(disc)) / A);
+        double cap0 = -dot(q, n) / dot(d, n), cap1 = (cylinderHeight - dot(q, n)) / dot(d, n);
+        if (cap0 > cap1) std::swap(cap0, cap1);
+        return std::max(0.0, std::min(hi, cap1) - std::max(lo, cap0));
+    };
+    auto slice = [&](double y) {
+        const Vec3 q = base.toGlobal(Vec3(0, y, 0)) - cylinder.origin(), qr = q - dot(q, n) * n;
+        const double b0 = dot(qr, dr), bb = 2.0 * (b0 * bx - A * dot(qr, ex));
+        const double cc = b0 * b0 - A * (squaredNorm(qr) - radius * radius), disc = bb * bb - 4.0 * aa * cc;
+        if (disc <= 0.0) return 0.0;
+        const double x0 = (-bb + std::sqrt(disc)) / (2.0 * aa), x1 = (-bb - std::sqrt(disc)) / (2.0 * aa);
+        const auto roots = planeRoots<2>(profile, profile.domain(), Vec2(0, 1), y, 1e-12);
+        std::vector<double> xs;
+        for (double t : roots.parameters) xs.push_back(profile.point(t).x());
+        std::sort(xs.begin(), xs.end());
+        FK_CHECK(xs.size() % 2 == 0);
+        double sum = 0.0;
+        for (std::size_t k = 0; k + 1 < xs.size(); k += 2) {
+            const double lo = std::max(xs[k], x0), hi = std::min(xs[k + 1], x1);
+            if (hi <= lo) continue;
+            for (int j = 0; j < 16; ++j)
+                sum += detail::integrate([&](double x) { return chord(x, y); },
+                                        lo + (hi - lo) * j / 16.0, lo + (hi - lo) * (j + 1) / 16.0, 1e-10);
+        }
+        return sum;
+    };
+    double y0 = profile.poles().front().y(), y1 = y0;
+    for (const Vec2 &p : profile.poles()) { y0 = std::min(y0, p.y()); y1 = std::max(y1, p.y()); }
+    double common = 0.0;
+    for (int j = 0; j < 100; ++j)
+        common += detail::integrate(slice, y0 + (y1 - y0) * j / 100.0, y0 + (y1 - y0) * (j + 1) / 100.0, 1e-10);
+    return common;
+}
+
+}
+
 // Fianchi estrusi da spline contro cilindri e contro altri fianchi estrusi in
 // un'altra direzione.
 FK_TEST(BooleanCurvedExtrusions) {
@@ -291,10 +355,25 @@ FK_TEST(BooleanCurvedExtrusions) {
     compareAll(a, cylinder(Frame3(Vec3(-14, 0.5, 4), Vec3(1, 0.1, 0.05), Vec3(0, 0, 1)), 2.5, 30), false);  // attraversa il foro a spline
     compare(a, cylinder(Frame3(Vec3(4, -9, 3.5), Vec3(0.1, 1, 0.2), Vec3(0, 0, 1)), 1.5, 20), BooleanOperation::Subtract, false);
     const ProfileSegment spline = closedSpline(Vec2(0, 0), 3.0, false);
-    const Operand b = extrusion(Frame3(Vec3(-2, 1, 4), Vec3(1, 0.2, 0.1), Vec3(0, 0, 1)), {spline}, 14.0);
+    const Frame3 base(Vec3(-2, 1, 4), Vec3(1, 0.2, 0.1), Vec3(0, 0, 1));
+    const Operand b = extrusion(base, {spline}, 14.0);
     const Operand c = extrusion(Frame3(Vec3(-12, 0, 4), Vec3(1, 0, 0), Vec3(0, 0, 1)), {spline}, 24.0);
     compare(a, c, BooleanOperation::Intersect, false);  // spigoli vivi delle due spline chiuse che si incrociano
-    compare(b, cylinder(Frame3(Vec3(3, -6, 4.5), Vec3(0, 1, 0.1), Vec3(1, 0, 0)), 1.2, 14), BooleanOperation::Unite, false);
+    const Frame3 cylinderFrame(Vec3(3, -6, 4.5), Vec3(0, 1, 0.1), Vec3(1, 0, 0));
+    // Su questa faccia spline ritagliata nemmeno la mesh OCCT converge al
+    // volume corretto (scarto > 0.08). Usa un integrale sulle geometrie di
+    // ingresso; conserva OCCT per area e baricentro, verificati separatamente.
+    double profileArea = 0.0;
+    const auto breaks = spline.curve->breakpoints(spline.range);
+    for (std::size_t k = 0; k + 1 < breaks.size(); ++k)
+        profileArea += detail::integrate([&](double t) {
+            Vec2 derivatives[2]; spline.curve->evaluate(t, 1, derivatives);
+            return 0.5 * cross(derivatives[0], derivatives[1]);
+        }, breaks[k], breaks[k + 1], 1e-12);
+    const double common = splineCylinderCommonVolume(static_cast<const BSplineCurve<2> &>(*spline.curve), base, 14.0,
+                                                     cylinderFrame, 1.2, 14.0);
+    const double independentUnion = 14.0 * profileArea + kPi * 1.2 * 1.2 * 14.0 - common;
+    compare(b, cylinder(cylinderFrame, 1.2, 14), BooleanOperation::Unite, false, 1e-8, independentUnion);
 
     // Identita' dei volumi con le nostre sole proprieta' di massa.
     const double va = massProperties(a.body).volume, vc = massProperties(c.body).volume;
@@ -514,6 +593,22 @@ FK_TEST(BooleanStressGrid) {
 // uguali (rami che si incrociano), fianchi tangenti dentro e fuori, contatti
 // in un punto, cerchi sulle facce dell'altro. Riferimento: il volume esatto;
 // nessun risultato sbagliato e nessuna eccezione.
+FK_TEST(BooleanCylinderFourthOrderCapContact) {
+    // La curva di intersezione lascia il coperchio con contatto di ordine
+    // superiore: corde troppo corte ne invertono l'ordine per arrotondamento.
+    const Operand a = cylinder(Frame3(), 5.0, 8.0);
+    const Operand b = cylinder(Frame3(Vec3(3,-5,2), Vec3(0,1,0), Vec3(1,0,0)), 3.0, 12.0);
+    const double common = crossedCylinderVolume(5,8,3,2,3,-5,7);
+    for (BooleanOperation op : {BooleanOperation::Unite, BooleanOperation::Intersect, BooleanOperation::Subtract}) {
+        const std::string problem = stressCase(a,b,op,expectedVolume(200*kPi,108*kPi,common,op));
+        if (!problem.empty()) reportFailure(__FILE__,__LINE__,problem);
+        BooleanOptions serial; serial.threads = 1;
+        const Body first = booleanOperation(a.body,b.body,op,serial);
+        const Body parallel = booleanOperation(a.body,b.body,op);
+        FK_CHECK(writeBodyBinary(first) == writeBodyBinary(parallel));
+    }
+}
+
 FK_TEST(BooleanStressCylinderGrid) {
     std::mt19937 rng(780);
     for (int trial = 0; trial < 60; ++trial) {
@@ -942,6 +1037,31 @@ FK_TEST(BooleanCoaxialRevolutions) {
     }
 }
 
+// Applicatore.prt: un utensile di rivoluzione (sotto un toro tangente al
+// piano y = 0 nel cerchio di raggio c, un disco su quel piano) sottratto dal
+// corpo di rivoluzione coassiale che ha la base sullo stesso piano. Il disco
+// dell'utensile e' delimitato da un solo edge chiuso (il cerchio intero):
+// tra le facce complanari va considerato anche se ha gli estremi uguali
+// (prima si scartava come degenere e il risultato non si chiudeva).
+FK_TEST(BooleanCoplanarClosedCircleWithTangentTorus) {
+    const Frame3 frame(Vec3(0, 0, 0), Vec3(0, 1, 0), Vec3(1, 0, 0));
+    const double R = 2.275, c = 1.14678, top = 2.35915;
+    const double rt = ((3 - c) * (3 - c) + top * top) / (2 * top);  // il toro passa per (c, 0) e (3, top)
+    const Profile pa = buildProfile({lineSegment(Vec2(0, 0), Vec2(0, 14)), lineSegment(Vec2(0, 14), Vec2(1.75, 14)), lineSegment(Vec2(1.75, 14), Vec2(R, 11.2)),
+                                     lineSegment(Vec2(R, 11.2), Vec2(R, 0)), lineSegment(Vec2(R, 0), Vec2(0, 0))}, 1e-9);
+    const Profile pb = buildProfile({lineSegment(Vec2(c, 0), Vec2(0, 0)), arcSegment(Vec2(c, rt), rt, -kHalfPi, std::atan2(top - rt, 3 - c)),
+                                     lineSegment(Vec2(3, top), Vec2(3.75, top)), lineSegment(Vec2(3.75, top), Vec2(3.75, -1)),
+                                     lineSegment(Vec2(3.75, -1), Vec2(0, -1)), lineSegment(Vec2(0, -1), Vec2(0, 0))}, 1e-9);
+    FK_CHECK(pa.regions.size() == 1 && pb.regions.size() == 1);
+    if (pa.regions.size() != 1 || pb.regions.size() != 1) return;
+    const Body body = makeRevolution(frame, pa.regions.front()), tool = makeRevolution(frame, pb.regions.front());
+    // Parte comune: 2 pi \int_c^R rho (rt - sqrt(rt^2 - (rho - c)^2)) drho, in forma chiusa.
+    const double S = R - c, root = std::sqrt(rt * rt - S * S);
+    const double common = kPi * rt * (R * R - c * c)
+        - kTwoPi * ((std::pow(rt, 3) - std::pow(root, 3)) / 3.0 + c * (0.5 * S * root + 0.5 * rt * rt * std::asin(S / rt)));
+    checkVolumes(body, tool, massProperties(body).volume, massProperties(tool).volume, common);
+}
+
 namespace {
 
 // Funzione spline Z(u, v) (grado 3 in u, 2 in v) come superficie
@@ -1113,8 +1233,9 @@ void checkIdentical(const Body &a, const Body &b) {
 }
 
 FK_TEST(BooleanParallelMatchesSequential) {
-    // Le intersezioni tra le coppie di facce si calcolano in parallelo: il
-    // risultato deve essere lo stesso del calcolo in sequenza. Molla (sweep
+    // Le intersezioni tra le coppie e la divisione/classificazione delle
+    // singole facce si calcolano in parallelo: il risultato deve essere lo
+    // stesso del calcolo in sequenza. Molla (sweep
     // di un cerchio lungo un'elica, facce B-spline) con un cilindro che la
     // attraversa, come un flacone con la filettatura.
     HelixSpec spec;
@@ -1142,6 +1263,34 @@ FK_TEST(BooleanParallelMatchesSequential) {
     const Body slabA = slab(a), slabB = slab(shifted);
     for (BooleanOperation op : {BooleanOperation::Unite, BooleanOperation::Intersect, BooleanOperation::Subtract})
         checkIdentical(booleanOperation(slabA, slabB, op, sequential), booleanOperation(slabA, slabB, op, parallel));
+}
+
+FK_TEST(BooleanDisjointValidationAndUnification) {
+    const Body a = makeBox(Frame3(), 4, 4, 4);
+    const Body b = makeBox(Frame3(Vec3(4, 0, 0), Vec3(0, 0, 1), Vec3(1, 0, 0)), 4, 4, 4);
+    const Body far = makeBox(Frame3(Vec3(100, 0, 0), Vec3(0, 0, 1), Vec3(1, 0, 0)), 4, 4, 4);
+    BooleanOptions raw;
+    raw.unifySameDomain = false;
+    const Body split = booleanOperation(a, b, BooleanOperation::Unite, raw);
+    FK_CHECK(split.faces().size() > 6);
+    const Body preserved = booleanOperation(split, far, BooleanOperation::Subtract, raw);
+    FK_CHECK(preserved.faces().size() == split.faces().size());
+    FK_CHECK(checkBody(preserved).empty());
+    const Body unified = booleanOperation(split, far, BooleanOperation::Subtract);
+    FK_CHECK(unified.faces().size() == 6);
+    FK_CHECK(checkBody(unified).empty());
+    FK_CHECK_NEAR(massProperties(unified).volume, 128, 1e-10);
+    FK_CHECK(booleanOperation(a, far, BooleanOperation::Intersect).faces().empty());
+    const Body united = booleanOperation(a, far, BooleanOperation::Unite);
+    FK_CHECK(checkBody(united).empty());
+    FK_CHECK_NEAR(massProperties(united).volume, 128, 1e-10);
+    Body invalid = a;
+    invalid.vertex(invalid.vertices().front()).point += Vec3(0, 0, 0.01);
+    FK_CHECK_THROWS(booleanOperation(invalid, far, BooleanOperation::Subtract, raw));
+    BooleanOptions sequential, parallel;
+    sequential.threads = 1; parallel.threads = 8;
+    checkIdentical(booleanOperation(a, b, BooleanOperation::Unite, sequential),
+                   booleanOperation(a, b, BooleanOperation::Unite, parallel));
 }
 
 // Vertici tolleranti come nei file STEP di CATIA: le curve degli edge si
@@ -1189,5 +1338,53 @@ FK_TEST(BooleanTolerantVertices) {
         FK_CHECK_NEAR(massProperties(twice).volume, 24.0 - 1.0 - 3.0, 1e-2);
     } catch (const std::exception &failure) {
         reportFailure(__FILE__, __LINE__, failure.what());
+    }
+}
+
+// Le due lastre del guscio di Parallelepipedo.prt (corpo 1, spessore 0.3):
+// lo spigolo di una fascia, complanare con la corona sottile (0.2) della
+// faccia frontale, ne attraversa il bordo interno proprio in un vertice e
+// prosegue nel foro. Prima: "divisione di una faccia non riuscita".
+FK_TEST(BooleanShellSlabsThroughHoleVertex) {
+    const auto load = [](const char *name) {
+        std::ifstream in(std::string(FORGECAD_SOURCE_DIR) + "/kernel/tests/data/" + name, std::ios::binary);
+        std::stringstream content;
+        content << in.rdbuf();
+        return readBodyBinary(content.str());
+    };
+    try {
+        const Body front = load("shell_slab_front.bin"), sides = load("shell_slab_sides.bin");
+        const Body united = booleanOperation(front, sides, BooleanOperation::Unite);
+        const Body common = booleanOperation(front, sides, BooleanOperation::Intersect);
+        FK_CHECK(checkBody(united).empty());
+        FK_CHECK_NEAR(massProperties(united).volume,
+                      massProperties(front).volume + massProperties(sides).volume - massProperties(common).volume, 1e-8 * massProperties(front).volume);
+    } catch (const std::exception &error) {
+        reportFailure(__FILE__, __LINE__, error.what());
+    }
+}
+
+FK_TEST(BooleanPartialClosedSplineRevolution) {
+    // Profilo cubico chiuso non periodico, ridotto da EsempioRivParziale.
+    // Il perno parte dentro e termina fuori: il coperchio interno deve
+    // partecipare all'intersezione e non all'unione.
+    std::vector<Vec2> poles{{.683887,.545164},{.425351,.735184},{.444786,.509918},{.288111,.260974},
+        {.131436,.01203},{.380861,-.456151},{.572708,-.735699},
+        {.764554,-1.01525},{.837365,-.957635},{1.23156,-.93708},
+        {1.62576,-.916525},{1.75914,-.737468},{1.58831,-.41955},
+        {1.41747,-.101633},{.942424,.355145},{.683887,.545164}};
+    auto spline=std::make_shared<BSplineCurve<2>>(3,expandKnots({0,1,2,3,4,5},{4,3,3,3,3,4}),poles);
+    const auto region=buildProfile({{spline,spline->domain(),42}},1e-9).regions.front();
+    const Frame3 frame;
+    for (const double angle : {320*kPi/180., kTwoPi, -kTwoPi}) {
+    const Frame3 profilePlane(frame.origin(),-frame.yDir(),frame.xDir());
+    const Operand ring{makeRevolution(frame,region,angle),
+        BRepPrimAPI_MakeRevol(occtFace(region,profilePlane),gp_Ax1(toPnt(frame.origin()),toDir(frame.zDir())),angle).Shape()};
+    const Operand pin=cylinder(Frame3(Vec3(.48319,1.10064,-.311654),Vec3(0,1,0),Vec3(1,0,0)),.327718,1.38477);
+    FK_CHECK(SolidClassifier(ring.body,1e-7).classify(Vec3(.48319,1.10064,-.579084))==PointLocation::Inside);
+    // Tolleranza del confronto indipendente: 1e-6 relativa, anche per il
+    // baricentro; intersezione tracciata entro la tolleranza geometrica.
+    compareAll(ring,pin,true,1e-6);
+    compareAll(pin,ring,true,1e-6);
     }
 }

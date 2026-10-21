@@ -1,4 +1,5 @@
 #include "fk_unify.h"
+#include "fk_history.h"
 
 #include <algorithm>
 #include <cmath>
@@ -36,6 +37,8 @@ struct Lists {
     std::vector<Body::BuildEdge> edges;
     std::vector<bool> alive;
     std::vector<Body::BuildFace> faces;
+    std::vector<std::vector<FaceId>> faceSources;
+    std::vector<bool> faceModified;
 };
 
 double angleOn(const Circle<3> &circle, const Vec3 &p) {
@@ -170,6 +173,7 @@ void mergeCollinearEdges(Lists &lists, double tolerance) {
                         }
                         loop[i] = fin;
                         loop.erase(loop.begin() + j);
+                        if (!lists.faceModified.empty()) lists.faceModified[f] = true;
                         places.emplace_back(f, l);
                         break;
                     }
@@ -191,7 +195,8 @@ void mergeCollinearEdges(Lists &lists, double tolerance) {
 
 }
 
-Body unifySameDomain(const Body &body, double tolerance) {
+Body unifySameDomain(const Body &body, double tolerance, BodyHistory *history) {
+    if (history) *history = BodyHistory();
     const std::vector<FaceId> faceIds = body.faces();
     std::map<int, int> position;
     for (std::size_t i = 0; i < faceIds.size(); ++i) position[faceIds[i].index] = int(i);
@@ -277,7 +282,17 @@ Body unifySameDomain(const Body &body, double tolerance) {
         bool edgeless = true;
         for (FaceId f : members)
             for (LoopId l : body.face(f).loops) edgeless = edgeless && !body.loop(l).first.valid();
-        if (!built.loops.empty() || edgeless) lists.faces.push_back(std::move(built));
+        if (!built.loops.empty() || edgeless) {
+            lists.faces.push_back(std::move(built));
+            if (history) {
+                bool modified = members.size() > 1;
+                for (FaceId f : members)
+                    for (LoopId l : body.face(f).loops)
+                        for (FinId fin : body.loopFins(l)) modified = modified || internal[body.fin(fin).edge.index];
+                lists.faceSources.push_back(members);
+                lists.faceModified.push_back(modified);
+            }
+        }
     }
 
     // 3. Edge sulla stessa curva separati da un vertice che non serve piu'.
@@ -305,6 +320,18 @@ Body unifySameDomain(const Body &body, double tolerance) {
             for (Body::BuildFin &fin : loop) fin.edge = newEdge[fin.edge];
     Body result = body.isSheet() ? Body::buildSheet(vertices, edges, lists.faces) : Body::build(vertices, edges, lists.faces);
     computePCurves(result);
+    if (history) {
+        BodyHistory declared = makeHistory({&body}, result);
+        const auto faces = result.faces();
+        if (faces.size() != lists.faceSources.size()) throw std::logic_error("unifySameDomain: mappa delle facce incoerente");
+        for (std::size_t i = 0; i < faces.size(); ++i) {
+            std::vector<HistoryLink> origins;
+            for (FaceId source : lists.faceSources[i])
+                origins.push_back({0, EntityKind::Face, source.index, lists.faceModified[i] ? HistoryRelation::Modified : HistoryRelation::Same});
+            declared.declareOrigins(EntityKind::Face, faces[i].index, std::move(origins));
+        }
+        *history = std::move(declared);
+    }
     return result;
 }
 

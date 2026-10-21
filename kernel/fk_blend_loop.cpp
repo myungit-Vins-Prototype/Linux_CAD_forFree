@@ -1,14 +1,18 @@
 #include "fk_blend_loop.h"
+
+#include "fk_cancel.h"
 #include "fk_blend_model.h"
 
 #include <algorithm>
 #include <cmath>
+#include <exception>
 #include <map>
 #include <set>
 #include <stdexcept>
 #include <string>
 
 #include "fk_body_check.h"
+#include "fk_parallel.h"
 #include "fk_bspline.h"
 #include "fk_bspline_surface.h"
 #include "fk_classify.h"
@@ -55,6 +59,7 @@ std::vector<FaceId> planarSides(const Body &body, EdgeId e) {
     const FaceId faces[2] = {body.finFace(edge.forward), body.finFace(edge.backward)};
     if (faces[0] == faces[1]) return result;
     for (int k = 0; k < 2; ++k) {
+        cancellationPoint();
         Vec3 normal;
         if (planeNormal(body, faces[k], normal) && parallelWall(*body.face(faces[1 - k]).surface, normal)) result.push_back(faces[k]);
     }
@@ -110,6 +115,7 @@ public:
         // Almeno 8 tratti, poi si dividono quelli che si scostano troppo.
         std::vector<double> start;
         for (std::size_t k = 0; k + 1 < breaks.size(); ++k) {
+            cancellationPoint();
             const double a = breaks[k], b = breaks[k + 1];
             const int pieces = std::max(1, int(std::ceil(8.0 * (b - a) / span.length())));
             for (int j = 0; j < pieces; ++j) start.push_back(a + (b - a) * j / pieces);
@@ -126,6 +132,7 @@ public:
         for (std::size_t k = start.size() - 1; k > 0; --k) pending.push_back({start[k - 1], start[k]});
         int guard = 0;
         while (!pending.empty()) {
+            cancellationPoint();
             if (++guard > 20000) throw std::domain_error("blendEdges: bordo troppo complesso da raccordare");
             const auto [a, b] = pending.back();
             pending.pop_back();
@@ -166,6 +173,7 @@ public:
     std::shared_ptr<BSplineSurface> surface(const RowFit &fit) const {
         std::vector<double> uKnots;
         for (std::size_t k = 0; k < fit.breaks.size(); ++k) {
+            cancellationPoint();
             const int multiplicity = (k == 0 || k + 1 == fit.breaks.size()) ? 4 : 3;
             for (int j = 0; j < multiplicity; ++j) uKnots.push_back(fit.breaks[k]);
         }
@@ -250,6 +258,7 @@ std::vector<EdgeId> planarChainRuns(const Body &body, const std::vector<EdgeId> 
     std::set<int> chosen, result;
     for (EdgeId e : selected) chosen.insert(e.index);
     for (EdgeId seed : seeds) {
+        cancellationPoint();
         const std::vector<FaceId> sides = planarSides(body, seed);
         if (sides.size() != 1)
             throw std::domain_error("blendEdges: bordo di forma libera non tra una faccia piana e un fianco normale ad essa");
@@ -268,21 +277,25 @@ std::vector<EdgeId> planarChainRuns(const Body &body, const std::vector<EdgeId> 
 }
 
 Body blendPlanarChains(const Body &input, const std::vector<EdgeId> &selected, double size, bool chamfer, const std::vector<ChamferSides> *sides,
-                       FaceId preferredPlane) {
+                       FaceId preferredPlane, BodyHistory *history) {
+    if (history) *history = BodyHistory();
     if (!(size > kLinearResolution)) throw std::domain_error("blendEdges: raggio o distanza non validi");
     Body body = input;
+    std::map<int, int> edgeSources;
     std::vector<EdgeId> edges = selected;
     std::map<int, ChamferSides> sideOf;
     if (sides)
         for (std::size_t k = 0; k < selected.size() && k < sides->size(); ++k) sideOf[selected[k].index] = (*sides)[k];
     // Un loop fatto di un solo edge chiuso si divide in due (i raccordi sono pezze aperte).
     for (std::size_t k = 0; k < edges.size(); ++k) {
+        cancellationPoint();
         const EdgeId e = edges[k];
         if (body.edgeStart(e) != body.edgeEnd(e)) continue;
         const Edge &edge = body.edge(e);
         const double middle = 0.5 * (edge.range.lo + edge.range.hi);
         const EdgeId half = body.semv(e, edge.curve->point(middle), middle).edge;
         if (sideOf.count(e.index)) sideOf[half.index] = sideOf[e.index];
+        if (history) edgeSources[half.index] = e.index;
         edges.push_back(half);
     }
     // Distanze in T e sul fianco dell'edge della fin (in T).
@@ -307,10 +320,12 @@ Body blendPlanarChains(const Body &input, const std::vector<EdgeId> &selected, d
     };
     std::vector<Chain> chains;
     while (!pending.empty()) {
+        cancellationPoint();
         // Prima gli edge con una sola faccia piana possibile (spline, archi): fissano la faccia della catena.
         int seed = -1;
         FaceId plane;
         for (int index : pending) {
+            cancellationPoint();
             const std::vector<FaceId> sides = planarSides(body, EdgeId(index));
             if (sides.empty()) throw std::domain_error("blendEdges: spigolo non tra una faccia piana e un fianco normale ad essa");
             if (preferredPlane.valid() && std::find(sides.begin(), sides.end(), preferredPlane) != sides.end()) {
@@ -338,6 +353,7 @@ Body blendPlanarChains(const Body &input, const std::vector<EdgeId> &selected, d
         while (count < n && chosen(first + count)) ++count;
         chain.closed = count == n;
         for (int k = 0; k < count; ++k) {
+            cancellationPoint();
             ChainFin fin;
             fin.fin = loop[std::size_t(((first + k) % n + n) % n)];
             fin.edge = body.fin(fin.fin).edge;
@@ -354,14 +370,16 @@ Body blendPlanarChains(const Body &input, const std::vector<EdgeId> &selected, d
         chains.push_back(std::move(chain));
     }
 
-    Model model(body);
+    Model model(body, history ? &input : nullptr, edgeSources);
     std::set<int> usedVertices;
     for (Chain &chain : chains) {
+        cancellationPoint();
         const Vec3 D = chain.normal;
         const int n = int(chain.fins.size());
         // Verso della parallela in T e del fianco (dall'edge verso la faccia), convessita'.
         int convexity = 0;
         for (ChainFin &fin : chain.fins) {
+            cancellationPoint();
             const Edge &edge = body.edge(fin.edge);
             const double middle = 0.5 * (edge.range.lo + edge.range.hi);
             const Vec3 p = edge.curve->point(middle), across = normalized(cross(D, edge.curve->derivative(middle)));
@@ -386,10 +404,7 @@ Body blendPlanarChains(const Body &input, const std::vector<EdgeId> &selected, d
             const auto [inPlane, onWall] = distances(fin);
             fin.geometry = std::make_shared<ChainEdge>(edge, D, sideT, wall, inPlane, chamfer, onWall);
             fin.sizes = {inPlane, onWall};
-            const RowFit fit = fin.geometry->fit();
-            fin.fitError = fit.error;
-            fin.surface = fin.geometry->surface(fit);
-            fin.span = edge.range;
+            fin.span = edge.range;  // la superficie si interpola dopo, sul dominio definitivo
             // I punti della parallela devono stare in T, quelli della traslata sul fianco.
             for (double f : {0.25, 0.5, 0.75}) {
                 const double t = edge.range.lo + f * edge.range.length();
@@ -405,6 +420,7 @@ Body blendPlanarChains(const Body &input, const std::vector<EdgeId> &selected, d
         const int vertexCount = chain.closed ? n : n + 1;
         std::vector<ChainVertex> vertices(static_cast<std::size_t>(vertexCount));
         for (int j = 0; j < vertexCount; ++j) {
+            cancellationPoint();
             ChainVertex &cv = vertices[std::size_t(j)];
             cv.vertex = j < n ? body.finStart(chain.fins[std::size_t(j)].fin) : body.finEnd(chain.fins[std::size_t(n - 1)].fin);
             if (!usedVertices.insert(cv.vertex.index).second) throw std::domain_error("blendEdges: catene di raccordi che si toccano");
@@ -477,27 +493,102 @@ Body blendPlanarChains(const Body &input, const std::vector<EdgeId> &selected, d
         // Angoli vivi concavi: le parallele in T si incontrano oltre il vertice.
         // Punto comune esatto (Gauss-Newton sulle parallele vere, prolungate), poi
         // le superfici dei due raccordi rifatte sul dominio allungato.
+        std::vector<std::vector<std::pair<double, double>>> extensions(static_cast<std::size_t>(n));  // per edge: (punto comune, vertice)
         for (int j = 0; j < vertexCount; ++j) {
+            cancellationPoint();
             ChainVertex &cv = vertices[std::size_t(j)];
             if (cv.joint != Joint::Sharp || !cv.concave) continue;
             ChainFin &previous = chain.fins[std::size_t((j - 1 + n) % n)];
             ChainFin &next = chain.fins[std::size_t(j % n)];
+            const auto beyond = [&](double a, double b) {
+                return (previous.sense ? a > previous.endParameter : a < previous.endParameter)
+                    && (next.sense ? b < next.startParameter : b > next.startParameter);
+            };
             double ua = previous.endParameter, ub = next.startParameter;
-            double miss = 1e300;
-            for (int iteration = 0; iteration < 100; ++iteration) {
+            // Stima in forma chiusa: le parallele in T di rette e cerchi sono
+            // rette e cerchi (gli unici bordi ammessi negli angoli concavi). Fra
+            // le loro intersezioni, quella oltre il vertice su entrambi e dentro
+            // T; vicino alla tangenza delle due parallele Gauss-Newton dal
+            // vertice divergeva.
+            {
+                struct Carrier {
+                    bool circle = false;
+                    Vec3 center, point, direction;
+                    double radius = 0.0;
+                };
+                const auto carrier = [&](const ChainFin &fin, double t) {
+                    Carrier c;
+                    const Curve<3> &curve = *body.edge(fin.edge).curve;
+                    const Vec3 p = fin.geometry->sample(t, false).value[2];
+                    if (const auto *circle = dynamic_cast<const Circle<3> *>(&curve)) {
+                        c.circle = true;
+                        c.center = circle->center();
+                        c.radius = distance(p, circle->center());
+                    } else if (const auto *line = dynamic_cast<const Line<3> *>(&curve)) {
+                        c.point = p;
+                        c.direction = normalized(line->direction());
+                    }
+                    return c;
+                };
+                const auto parameterOf = [&](const ChainFin &fin, const Vec3 &m, double near) {
+                    const Curve<3> &curve = *body.edge(fin.edge).curve;
+                    if (const auto *circle = dynamic_cast<const Circle<3> *>(&curve)) {
+                        const Vec3 d = m - circle->center();
+                        double t = std::atan2(dot(d, circle->yAxis()), dot(d, circle->xAxis()));
+                        return t + kTwoPi * std::round((near - t) / kTwoPi);
+                    }
+                    const auto *line = dynamic_cast<const Line<3> *>(&curve);
+                    return dot(m - line->origin(), line->direction()) / dot(line->direction(), line->direction());
+                };
+                const Carrier a = carrier(previous, previous.endParameter), b = carrier(next, next.startParameter);
+                std::vector<Vec3> candidates;
+                const auto lineCircle = [&](const Carrier &l, const Carrier &c) {
+                    const Vec3 w = l.point - c.center;
+                    const double half = dot(w, l.direction), q = dot(w, w) - c.radius * c.radius, disc = half * half - q;
+                    if (disc < 0.0) return;
+                    for (double sign : {-1.0, 1.0}) candidates.push_back(l.point + (-half + sign * std::sqrt(disc)) * l.direction);
+                };
+                if (!a.circle && !b.circle) {
+                    const Vec3 crossed = cross(a.direction, b.direction);
+                    const double denominator = dot(crossed, crossed);
+                    if (denominator > 0.0) candidates.push_back(a.point + (dot(cross(b.point - a.point, b.direction), crossed) / denominator) * a.direction);
+                } else if (a.circle && b.circle) {
+                    const Vec3 axis = b.center - a.center;
+                    const double d = norm(axis);
+                    if (d > 0.0) {
+                        const double along = (d * d + a.radius * a.radius - b.radius * b.radius) / (2.0 * d), h2 = a.radius * a.radius - along * along;
+                        if (h2 >= 0.0) {
+                            const Vec3 x = axis / d, y = normalized(cross(D, x));
+                            for (double sign : {-1.0, 1.0}) candidates.push_back(a.center + along * x + sign * std::sqrt(h2) * y);
+                        }
+                    }
+                } else {
+                    lineCircle(a.circle ? b : a, a.circle ? a : b);
+                }
+                double best = 1e300;
+                for (const Vec3 &m : candidates) {
+                    const double ta = parameterOf(previous, m, previous.endParameter), tb = parameterOf(next, m, next.startParameter);
+                    if (!beyond(ta, tb) || classifyPointOnFace(body, chain.plane, m, tolerance) != PointLocation::Inside) continue;
+                    const double travel = std::fabs(ta - previous.endParameter) + std::fabs(tb - next.startParameter);
+                    if (travel < best) best = travel, ua = ta, ub = tb;
+                }
+            }
+            // Rifinitura sulle sezioni vere: solo i passi che riducono lo scarto.
+            double miss = distance(previous.geometry->sample(ua, false).value[2], next.geometry->sample(ub, false).value[2]);
+            for (int iteration = 0; iteration < 100 && miss > 0.0; ++iteration) {
                 const RowSample sa = previous.geometry->sample(ua, false), sb = next.geometry->sample(ub, false);
                 const Vec3 f = sa.value[2] - sb.value[2], da = sa.derivative[2], db = sb.derivative[2];
-                miss = norm(f);
                 const double a11 = dot(da, da), a12 = -dot(da, db), a22 = dot(db, db);
                 const double r1 = -dot(da, f), r2 = dot(db, f), det = a11 * a22 - a12 * a12;
                 if (!(std::fabs(det) > 0.0)) break;
                 const double du = (r1 * a22 - a12 * r2) / det, dv = (a11 * r2 - a12 * r1) / det;
-                ua += du;
-                ub += dv;
-                if (std::fabs(du) + std::fabs(dv) < 1e-15 * (1.0 + std::fabs(ua) + std::fabs(ub))) {
-                    miss = distance(previous.geometry->sample(ua, false).value[2], next.geometry->sample(ub, false).value[2]);
-                    break;
+                bool improved = false;
+                for (double lambda = 1.0; lambda > 1e-4 && !improved; lambda *= 0.5) {
+                    const double ta = ua + lambda * du, tb = ub + lambda * dv;
+                    const double trial = distance(previous.geometry->sample(ta, false).value[2], next.geometry->sample(tb, false).value[2]);
+                    if (trial < miss) ua = ta, ub = tb, miss = trial, improved = true;
                 }
+                if (!improved || std::fabs(du) + std::fabs(dv) < 1e-15 * (1.0 + std::fabs(ua) + std::fabs(ub))) break;
             }
             // Oltre il vertice su entrambi gli edge, e dentro T.
             const bool beyondPrevious = previous.sense ? ua > previous.endParameter : ua < previous.endParameter;
@@ -508,25 +599,54 @@ Body blendPlanarChains(const Body &input, const std::vector<EdgeId> &selected, d
                 throw std::domain_error("blendEdges: le parallele dei raccordi nell'angolo concavo non si incontrano (raggio troppo grande?)");
             cv.previousAt = ua;
             cv.nextAt = ub;
-            // Dominio allungato oltre il punto comune (margine per le superfici locali del tracciamento).
-            auto extend = [&](ChainFin &fin, double at, double from) {
-                const double reach = at + 0.75 * (at - from);
-                fin.span = {std::min(fin.span.lo, reach), std::max(fin.span.hi, reach)};
-                if (body.edge(fin.edge).curve->type() == CurveType::Circle && fin.span.length() >= kTwoPi - 1e-3)
-                    throw std::domain_error("blendEdges: arco troppo lungo per l'angolo concavo");
-            };
-            extend(previous, ua, previous.endParameter);
-            extend(next, ub, next.startParameter);
+            // Dominio allungato oltre il punto comune: dopo aver trovato tutti i
+            // punti comuni (un arco tra due angoli concavi si allunga dai due lati).
+            extensions[std::size_t((j - 1 + n) % n)].push_back({ua, previous.endParameter});
+            extensions[std::size_t(j % n)].push_back({ub, next.startParameter});
         }
-        for (ChainFin &fin : chain.fins) {
-            if (fin.span.lo == body.edge(fin.edge).range.lo && fin.span.hi == body.edge(fin.edge).range.hi) continue;
-            const RowFit fit = fin.geometry->fit(fin.span);
-            fin.fitError = fit.error;
-            fin.surface = fin.geometry->surface(fit);
+        // Margine per le superfici locali del tracciamento. Sugli archi lunghi tra
+        // due angoli concavi (i lobi di un profilo) si riduce quanto serve a
+        // restare sotto il giro completo, uguale per i due estremi.
+        for (int i = 0; i < n; ++i) {
+            cancellationPoint();
+            if (extensions[std::size_t(i)].empty()) continue;
+            ChainFin &fin = chain.fins[std::size_t(i)];
+            const bool circle = body.edge(fin.edge).curve->type() == CurveType::Circle;
+            bool fitted = false;
+            for (double margin : {0.75, 0.5, 0.25, 0.1, 0.05}) {
+                Interval span = fin.span;
+                for (const auto &[at, from] : extensions[std::size_t(i)]) {
+                    const double reach = at + margin * (at - from);
+                    span = {std::min(span.lo, reach), std::max(span.hi, reach)};
+                }
+                if (circle && span.length() >= kTwoPi - 1e-3) continue;
+                fin.span = span;
+                fitted = true;
+                break;
+            }
+            if (!fitted) throw std::domain_error("blendEdges: arco troppo lungo per l'angolo concavo");
+        }
+        // Superfici dei raccordi sul dominio definitivo (allungato oltre gli
+        // angoli concavi): una sola interpolazione per edge, in parallelo.
+        {
+            std::vector<std::exception_ptr> errors(static_cast<std::size_t>(n));
+            parallelFor(std::size_t(n), threadCount(0), [&](std::size_t i) {
+                try {
+                    ChainFin &fin = chain.fins[i];
+                    const RowFit fit = fin.geometry->fit(fin.span);
+                    fin.fitError = fit.error;
+                    fin.surface = fin.geometry->surface(fit);
+                } catch (const OperationCancelled &) { throw; } catch (...) {
+                    errors[i] = std::current_exception();
+                }
+            });
+            for (const std::exception_ptr &error : errors)
+                if (error) std::rethrow_exception(error);
         }
 
         // Facce e edge nuovi dei raccordi.
         for (int i = 0; i < n; ++i) {
+            cancellationPoint();
             ChainFin &fin = chain.fins[std::size_t(i)];
             fin.face = int(model.faces.size());
             Body::BuildFace face;
@@ -539,15 +659,151 @@ Body blendPlanarChains(const Body &input, const std::vector<EdgeId> &selected, d
             const Vec3 normal = cross(d[Surface::derivativeIndex(1, 0, 1)], d[Surface::derivativeIndex(0, 1, 1)]);
             const Vec3 towardCorner = edge.curve->point(middle) - d[0];
             face.sense = (dot(normal, towardCorner) > 0.0) == convex;
-            model.faces.push_back(std::move(face));
+            model.addGeneratedFace(std::move(face), EntityKind::Edge, edgeSources.count(fin.edge.index) ? edgeSources.at(fin.edge.index) : fin.edge.index);
             const ChainVertex &a = vertices[std::size_t(i)], &b = vertices[std::size_t((i + 1) % vertexCount)];
             const int lo = fin.sense ? a.inPlanePoint : b.inPlanePoint, hi = fin.sense ? b.inPlanePoint : a.inPlanePoint;
             const int wlo = fin.sense ? a.wallPoint : b.wallPoint, whi = fin.sense ? b.wallPoint : a.wallPoint;
             fin.inPlaneEdge = model.addEdge(lo, hi, std::make_shared<BSplineCurve<3>>(fin.surface->vIsoCurve(1.0)), edge.range);
             fin.wallEdge = model.addEdge(wlo, whi, std::make_shared<BSplineCurve<3>>(fin.surface->vIsoCurve(0.0)), edge.range, fin.fitError > 1e-8 ? 2.0 * fin.fitError : 0.0);
         }
+        // Angoli vivi: i due raccordi si tagliano lungo la loro intersezione. Gli
+        // angoli sono indipendenti: si calcolano in parallelo (leggono solo le
+        // superfici e le parallele), poi il modello si aggiorna in ordine.
+        struct CornerCut {
+            bool sharp = false;
+            Vec3 exact;
+            double ua = 0.0, ub = 0.0;
+            CurvePtr<3> curve;
+            Interval range;
+            bool wallAtStart = true;
+            double slack = 0.0;
+        };
+        std::vector<CornerCut> cuts(static_cast<std::size_t>(vertexCount));
+        {
+            std::vector<std::exception_ptr> errors(static_cast<std::size_t>(vertexCount));
+            parallelFor(std::size_t(vertexCount), threadCount(0), [&](std::size_t jj) {
+              try {
+                const int j = int(jj);
+                const ChainVertex &cv = vertices[jj];
+                if (cv.joint != Joint::Sharp) return;
+                CornerCut &cut = cuts[jj];
+                cut.sharp = true;
+                const ChainFin &previous = chain.fins[std::size_t((j - 1 + n) % n)];
+                const ChainFin &next = chain.fins[std::size_t(j % n)];
+                const Vec3 corner = model.points[std::size_t(cv.wallPoint)];
+                // Il vertice in T e' il punto comune esatto delle due parallele
+                // (trasversali: Gauss-Newton ben condizionato), dai loro punti nel vertice.
+                const Body::BuildEdge &inA = model.edges[std::size_t(previous.inPlaneEdge)], &inB = model.edges[std::size_t(next.inPlaneEdge)];
+                double ua = previous.endParameter, ub = next.startParameter;
+                for (int iteration = 0; iteration < 50 && !cv.concave; ++iteration) {
+                    Vec3 da[2], db[2];
+                    inA.curve->evaluate(ua, 1, da);
+                    inB.curve->evaluate(ub, 1, db);
+                    const Vec3 f = da[0] - db[0];
+                    const double a11 = dot(da[1], da[1]), a12 = -dot(da[1], db[1]), a22 = dot(db[1], db[1]);
+                    const double r1 = -dot(da[1], f), r2 = dot(db[1], f), det = a11 * a22 - a12 * a12;
+                    if (!(std::fabs(det) > 0.0)) break;
+                    const double du = (r1 * a22 - a12 * r2) / det, dv = (a11 * r2 - a12 * r1) / det;
+                    ua = std::clamp(ua + du, inA.range.lo, inA.range.hi);
+                    ub = std::clamp(ub + dv, inB.range.lo, inB.range.hi);
+                    if (std::fabs(du) + std::fabs(dv) < 1e-15 * (1.0 + std::fabs(ua) + std::fabs(ub))) break;
+                }
+                if (cv.concave) {
+                    ua = cv.previousAt;
+                    ub = cv.nextAt;
+                }
+                const Vec3 exact = 0.5 * (inA.curve->point(ua) + inB.curve->point(ub));
+                if (distance(inA.curve->point(ua), inB.curve->point(ub)) > 1e-9 * scale)
+                    throw std::domain_error("blendEdges: le parallele dei raccordi nell'angolo non si incontrano (raggio troppo grande)");
+                // I due raccordi si tagliano lungo la loro intersezione, dal punto sul fianco
+                // (comune: le traslate finiscono entrambe sullo spigolo verticale) a quello in T.
+                // Box stretto attorno all'angolo: oltre i due estremi le superfici escono dai
+                // loro domini e il tracciamento non avrebbe senso.
+                Box bounds;
+                bounds.add(corner);
+                bounds.add(exact);
+                for (double v = 0.0; v <= 1.0; v += 0.125) {
+                    bounds.add(previous.surface->point(previous.endParameter, v));
+                    bounds.add(next.surface->point(next.startParameter, v));
+                    if (cv.concave) {
+                        bounds.add(previous.surface->point(ua, v));
+                        bounds.add(next.surface->point(ub, v));
+                    }
+                }
+                bounds = bounds.padded(0.05 * size);
+                SurfaceIntersectionOptions options;
+                options.tolerance = 1e-7 * scale;
+                // Seme interno, a meta' della sezione del primo raccordo: Newton su
+                // S_prev(u, 1/2) = S_next(s, t) (le superfici vi si incontrano in modo trasversale).
+                double su = 0.5 * (previous.endParameter + ua), ss = 0.5 * (next.startParameter + ub), st = 0.5;
+                Vec3 seed = previous.surface->point(su, 0.5);
+                for (int iteration = 0; iteration < 50; ++iteration) {
+                    Vec3 pa[4], pb[4];
+                    previous.surface->evaluate(su, 0.5, 1, pa);
+                    next.surface->evaluate(ss, st, 1, pb);
+                    const Vec3 f = pa[0] - pb[0];
+                    const Vec3 c0 = pa[Surface::derivativeIndex(1, 0, 1)], c1 = -pb[Surface::derivativeIndex(1, 0, 1)], c2 = -pb[Surface::derivativeIndex(0, 1, 1)];
+                    const double det = dot(c0, cross(c1, c2));
+                    if (!(std::fabs(det) > 0.0)) break;
+                    // J d = -f con la regola di Cramer.
+                    const double d0 = -dot(f, cross(c1, c2)) / det, d1 = -dot(c0, cross(f, c2)) / det, d2 = -dot(c0, cross(c1, f)) / det;
+                    su += d0;
+                    ss += d1;
+                    st += d2;
+                    seed = 0.5 * (previous.surface->point(su, 0.5) + next.surface->point(ss, st));
+                    if (norm(f) < 1e-13 * scale) break;
+                }
+                if (!(st > 0.0 && st < 1.0) || distance(previous.surface->point(su, 0.5), next.surface->point(ss, st)) > 1e-9 * scale)
+                    throw std::domain_error("blendEdges: raccordi nell'angolo senza punto comune (raggio troppo grande?)");
+                // Per il tracciamento, i due raccordi rifatti solo sul tratto vicino
+                // all'angolo: poche pezze (la ricerca dei semi le suddivide tutte), e
+                // coincidono con quelli interi entro la tolleranza delle curve di controllo.
+                auto local = [&](const ChainFin &fin, double at, double inner) {
+                    const Interval &full = fin.span;
+                    const double extra = 0.5 * std::fabs(at - inner);
+                    const double lo = at < inner ? at : inner - extra, hi = at < inner ? inner + extra : at;
+                    return fin.geometry->surface(fin.geometry->fit({std::max(full.lo, lo), std::min(full.hi, hi)}));
+                };
+                const std::shared_ptr<BSplineSurface> nearPrevious = local(previous, previous.endParameter, ua), nearNext = local(next, next.startParameter, ub);
+                SurfaceIntersection hit;
+                try {
+                    hit = intersectSurfaces(*nearPrevious, *nearNext, bounds, {seed}, options);
+                } catch (const std::domain_error &failure) {
+                    const Vec3 p = body.vertex(cv.vertex).point;
+                    throw std::domain_error(std::string(failure.what()) + " (angolo in " + std::to_string(p.x()) + " " + std::to_string(p.y()) + " " + std::to_string(p.z()) + ")");
+                }
+                const IntersectionCurve *best = nullptr;
+                double bestDistance = 1e300;
+                for (const IntersectionCurve &c : hit.curves) {
+                    const double d = projectPoint(*c.curve, seed, c.range).distance;
+                    if (d < bestDistance) bestDistance = d, best = &c;
+                }
+                if (!best || bestDistance > 1e-6 * scale) throw std::domain_error("blendEdges: intersezione dei raccordi nell'angolo non trovata");
+                // La curva, rifilata tra i due estremi. Nel punto in T i due raccordi sono
+                // tangenti tra loro (entrambi tangenti a T): li' la curva e' determinata solo
+                // al secondo ordine e il suo estremo si scosta un poco dal punto esatto:
+                // vertici ed edge tolleranti per quello scarto.
+                const CurveProjection atWall = projectPoint(*best->curve, corner, best->range), atTop = projectPoint(*best->curve, exact, best->range);
+                const double gap = std::max(atWall.distance, atTop.distance);
+                if (gap > 1e-3 * size || atWall.parameter == atTop.parameter)
+                    throw std::domain_error("blendEdges: la curva d'intersezione dei raccordi non collega il fianco alla faccia piana");
+                cut.exact = exact;
+                cut.ua = ua;
+                cut.ub = ub;
+                cut.curve = best->curve;
+                cut.wallAtStart = atWall.parameter < atTop.parameter;
+                cut.range = {std::min(atWall.parameter, atTop.parameter), std::max(atWall.parameter, atTop.parameter)};
+                cut.slack = std::max(2.0 * gap, 2.0 * best->deviation);
+              } catch (const OperationCancelled &) { throw; } catch (...) {
+                errors[jj] = std::current_exception();
+              }
+            });
+            for (const std::exception_ptr &error : errors)
+                if (error) std::rethrow_exception(error);
+        }
         // Connettori nei vertici: arco (o segmento) della sezione, o curva d'intersezione negli angoli vivi.
         for (int j = 0; j < vertexCount; ++j) {
+            cancellationPoint();
             ChainVertex &cv = vertices[std::size_t(j)];
             const bool hasNext = chain.closed || j < n;
             const ChainFin &adjacent = hasNext ? chain.fins[std::size_t(j % n)] : chain.fins[std::size_t(n - 1)];
@@ -557,115 +813,15 @@ Body blendPlanarChains(const Body &input, const std::vector<EdgeId> &selected, d
                 cv.connectorFromWall = true;
                 continue;
             }
-            // Angolo vivo: i due raccordi si tagliano lungo la loro intersezione, dal punto sul
-            // fianco (comune: le traslate finiscono entrambe sullo spigolo verticale) a quello in T.
             ChainFin &previous = chain.fins[std::size_t((j - 1 + n) % n)];
             ChainFin &next = chain.fins[std::size_t(j % n)];
-            const Vec3 corner = model.points[std::size_t(cv.wallPoint)];
-            // Il vertice in T e' il punto comune esatto delle due parallele
-            // (trasversali: Gauss-Newton ben condizionato), dai loro punti nel vertice.
-            const Body::BuildEdge &inA = model.edges[std::size_t(previous.inPlaneEdge)], &inB = model.edges[std::size_t(next.inPlaneEdge)];
-            double ua = previous.endParameter, ub = next.startParameter;
-            for (int iteration = 0; iteration < 50 && !cv.concave; ++iteration) {
-                Vec3 da[2], db[2];
-                inA.curve->evaluate(ua, 1, da);
-                inB.curve->evaluate(ub, 1, db);
-                const Vec3 f = da[0] - db[0];
-                const double a11 = dot(da[1], da[1]), a12 = -dot(da[1], db[1]), a22 = dot(db[1], db[1]);
-                const double r1 = -dot(da[1], f), r2 = dot(db[1], f), det = a11 * a22 - a12 * a12;
-                if (!(std::fabs(det) > 0.0)) break;
-                const double du = (r1 * a22 - a12 * r2) / det, dv = (a11 * r2 - a12 * r1) / det;
-                ua = std::clamp(ua + du, inA.range.lo, inA.range.hi);
-                ub = std::clamp(ub + dv, inB.range.lo, inB.range.hi);
-                if (std::fabs(du) + std::fabs(dv) < 1e-15 * (1.0 + std::fabs(ua) + std::fabs(ub))) break;
-            }
-            if (cv.concave) {
-                ua = cv.previousAt;
-                ub = cv.nextAt;
-            }
-            const Vec3 exact = 0.5 * (inA.curve->point(ua) + inB.curve->point(ub));
-            if (distance(inA.curve->point(ua), inB.curve->point(ub)) > 1e-9 * scale)
-                throw std::domain_error("blendEdges: le parallele dei raccordi nell'angolo non si incontrano (raggio troppo grande)");
-            // I due raccordi si tagliano lungo la loro intersezione, dal punto sul fianco
-            // (comune: le traslate finiscono entrambe sullo spigolo verticale) a quello in T.
-            // Box stretto attorno all'angolo: oltre i due estremi le superfici escono dai
-            // loro domini e il tracciamento non avrebbe senso.
-            Box bounds;
-            bounds.add(corner);
-            bounds.add(exact);
-            for (double v = 0.0; v <= 1.0; v += 0.125) {
-                bounds.add(previous.surface->point(previous.endParameter, v));
-                bounds.add(next.surface->point(next.startParameter, v));
-                if (cv.concave) {
-                    bounds.add(previous.surface->point(ua, v));
-                    bounds.add(next.surface->point(ub, v));
-                }
-            }
-            bounds = bounds.padded(0.05 * size);
-            SurfaceIntersectionOptions options;
-            options.tolerance = 1e-7 * scale;
-            // Seme interno, a meta' della sezione del primo raccordo: Newton su
-            // S_prev(u, 1/2) = S_next(s, t) (le superfici vi si incontrano in modo trasversale).
-            double su = 0.5 * (previous.endParameter + ua), ss = 0.5 * (next.startParameter + ub), st = 0.5;
-            Vec3 seed = previous.surface->point(su, 0.5);
-            for (int iteration = 0; iteration < 50; ++iteration) {
-                Vec3 pa[4], pb[4];
-                previous.surface->evaluate(su, 0.5, 1, pa);
-                next.surface->evaluate(ss, st, 1, pb);
-                const Vec3 f = pa[0] - pb[0];
-                const Vec3 c0 = pa[Surface::derivativeIndex(1, 0, 1)], c1 = -pb[Surface::derivativeIndex(1, 0, 1)], c2 = -pb[Surface::derivativeIndex(0, 1, 1)];
-                const double det = dot(c0, cross(c1, c2));
-                if (!(std::fabs(det) > 0.0)) break;
-                // J d = -f con la regola di Cramer.
-                const double d0 = -dot(f, cross(c1, c2)) / det, d1 = -dot(c0, cross(f, c2)) / det, d2 = -dot(c0, cross(c1, f)) / det;
-                su += d0;
-                ss += d1;
-                st += d2;
-                seed = 0.5 * (previous.surface->point(su, 0.5) + next.surface->point(ss, st));
-                if (norm(f) < 1e-13 * scale) break;
-            }
-            if (!(st > 0.0 && st < 1.0) || distance(previous.surface->point(su, 0.5), next.surface->point(ss, st)) > 1e-9 * scale)
-                throw std::domain_error("blendEdges: raccordi nell'angolo senza punto comune (raggio troppo grande?)");
-            // Per il tracciamento, i due raccordi rifatti solo sul tratto vicino
-            // all'angolo: poche pezze (la ricerca dei semi le suddivide tutte), e
-            // coincidono con quelli interi entro la tolleranza delle curve di controllo.
-            auto local = [&](const ChainFin &fin, double at, double inner) {
-                const Interval &full = fin.span;
-                const double extra = 0.5 * std::fabs(at - inner);
-                const double lo = at < inner ? at : inner - extra, hi = at < inner ? inner + extra : at;
-                return fin.geometry->surface(fin.geometry->fit({std::max(full.lo, lo), std::min(full.hi, hi)}));
-            };
-            const std::shared_ptr<BSplineSurface> nearPrevious = local(previous, previous.endParameter, ua), nearNext = local(next, next.startParameter, ub);
-            SurfaceIntersection hit;
-            try {
-                hit = intersectSurfaces(*nearPrevious, *nearNext, bounds, {seed}, options);
-            } catch (const std::domain_error &failure) {
-                const Vec3 p = body.vertex(cv.vertex).point;
-                throw std::domain_error(std::string(failure.what()) + " (angolo in " + std::to_string(p.x()) + " " + std::to_string(p.y()) + " " + std::to_string(p.z()) + ")");
-            }
-            const IntersectionCurve *best = nullptr;
-            double bestDistance = 1e300;
-            for (const IntersectionCurve &c : hit.curves) {
-                const double d = projectPoint(*c.curve, seed, c.range).distance;
-                if (d < bestDistance) bestDistance = d, best = &c;
-            }
-            if (!best || bestDistance > 1e-6 * scale) throw std::domain_error("blendEdges: intersezione dei raccordi nell'angolo non trovata");
-            // La curva, rifilata tra i due estremi. Nel punto in T i due raccordi sono
-            // tangenti tra loro (entrambi tangenti a T): li' la curva e' determinata solo
-            // al secondo ordine e il suo estremo si scosta un poco dal punto esatto:
-            // vertici ed edge tolleranti per quello scarto.
-            const CurveProjection atWall = projectPoint(*best->curve, corner, best->range), atTop = projectPoint(*best->curve, exact, best->range);
-            const double gap = std::max(atWall.distance, atTop.distance);
-            if (gap > 1e-3 * size || atWall.parameter == atTop.parameter)
-                throw std::domain_error("blendEdges: la curva d'intersezione dei raccordi non collega il fianco alla faccia piana");
-            const bool wallAtStart = atWall.parameter < atTop.parameter;
-            const Interval range{std::min(atWall.parameter, atTop.parameter), std::max(atWall.parameter, atTop.parameter)};
-            model.points[std::size_t(cv.inPlanePoint)] = exact;
-            const double slack = std::max(2.0 * gap, 2.0 * best->deviation);
-            if (slack > 1e-7) model.pointTolerance[std::size_t(cv.inPlanePoint)] = model.pointTolerance[std::size_t(cv.wallPoint)] = slack;
-            cv.connector = model.addEdge(wallAtStart ? cv.wallPoint : cv.inPlanePoint, wallAtStart ? cv.inPlanePoint : cv.wallPoint,
-                                         best->curve, range, slack > 1e-7 ? slack : 0.0);
-            cv.connectorFromWall = wallAtStart;
+            const CornerCut &cut = cuts[std::size_t(j)];
+            const double ua = cut.ua, ub = cut.ub;
+            model.points[std::size_t(cv.inPlanePoint)] = cut.exact;
+            if (cut.slack > 1e-7) model.pointTolerance[std::size_t(cv.inPlanePoint)] = model.pointTolerance[std::size_t(cv.wallPoint)] = cut.slack;
+            cv.connector = model.addEdge(cut.wallAtStart ? cv.wallPoint : cv.inPlanePoint, cut.wallAtStart ? cv.inPlanePoint : cv.wallPoint,
+                                         cut.curve, cut.range, cut.slack > 1e-7 ? cut.slack : 0.0);
+            cv.connectorFromWall = cut.wallAtStart;
             // Le parallele in T finiscono nel punto d'intersezione.
             for (ChainFin *fin : {&previous, &next}) {
                 Body::BuildEdge &e = model.edges[std::size_t(fin->inPlaneEdge)];
@@ -680,6 +836,7 @@ Body blendPlanarChains(const Body &input, const std::vector<EdgeId> &selected, d
         // Topologia: T e fianchi accorciati, spigoli verticali e di estremita' accorciati, facce nuove.
         const int planeFace = model.faceIndex.at(chain.plane.index);
         for (int i = 0; i < n; ++i) {
+            cancellationPoint();
             const ChainFin &fin = chain.fins[std::size_t(i)];
             const int old = model.edgeIndex.at(fin.edge.index);
             model.replaceFin(planeFace, old, fin.inPlaneEdge);
@@ -687,6 +844,7 @@ Body blendPlanarChains(const Body &input, const std::vector<EdgeId> &selected, d
             model.edgeAlive[std::size_t(old)] = false;
         }
         for (int j = 0; j < vertexCount; ++j) {
+            cancellationPoint();
             ChainVertex &cv = vertices[std::size_t(j)];
             const int vertex = model.vertexIndex.at(cv.vertex.index);
             if (cv.vertical >= 0) model.moveEnd(cv.vertical, vertex, cv.wallPoint);
@@ -703,6 +861,7 @@ Body blendPlanarChains(const Body &input, const std::vector<EdgeId> &selected, d
             }
         }
         for (int i = 0; i < n; ++i) {
+            cancellationPoint();
             const ChainFin &fin = chain.fins[std::size_t(i)];
             const ChainVertex &a = vertices[std::size_t(i)], &b = vertices[std::size_t((i + 1) % vertexCount)];
             // Loop: parallela all'indietro, connettore all'inizio (da T al fianco), traslata in avanti, connettore alla fine.
@@ -714,10 +873,14 @@ Body blendPlanarChains(const Body &input, const std::vector<EdgeId> &selected, d
             model.faces[std::size_t(fin.face)].loops.push_back(std::move(loop));
         }
     }
-    Body result = model.build();
+    BodyHistory declared;
+    Body result = model.build(history ? &declared : nullptr);
     computePCurves(result);
-    const std::vector<CheckIssue> issues = checkBody(result);
+    CheckOptions checks;
+    checks.loopCrossings = true;  // un raccordo che invade un altro contorno della faccia
+    const std::vector<CheckIssue> issues = checkBody(result, checks);
     if (!issues.empty()) throw std::domain_error("blendEdges: raccordo non valido (" + describe(issues.front().code) + ": " + issues.front().message + ")");
+    if (history) *history = std::move(declared);
     return result;
 }
 

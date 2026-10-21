@@ -23,9 +23,13 @@
 #include <cmath>
 #include <cstdio>
 #include <fstream>
+#include <random>
 
 #include "fk_blend.h"
 #include "fk_body_check.h"
+#include "fk_body_io.h"
+#include "fk_exchange.h"
+#include <algorithm>
 #include "fk_boolean.h"
 #include "fk_iges.h"
 #include "fk_loft.h"
@@ -167,7 +171,13 @@ FK_TEST(IgesRoundTrip) {
         }
         IgesWriteOptions options;
         options.mode = mode;
-        const IgesReadResult read = readIges(writeIges(bodies, options));
+        const std::string content = writeIges(bodies, options);
+        const IgesReadResult read = readIges(content);
+        const IgesReadResult serial = readIges(content, {1});
+        FK_CHECK(read.notes == serial.notes);
+        FK_CHECK(read.bodies.size() == serial.bodies.size());
+        for (std::size_t k = 0; k < std::min(read.bodies.size(), serial.bodies.size()); ++k)
+            FK_CHECK(writeBodyBinary(read.bodies[k].body) == writeBodyBinary(serial.bodies[k].body));
         FK_CHECK(read.bodies.size() == bodies.size());
         FK_CHECK_NEAR(ourVolume(read), expected, 1e-8 * expected);
         if (mode == IgesMode::Solids)
@@ -229,4 +239,96 @@ FK_TEST(IgesCurveByOcct) {
     FK_CHECK(edges == 1);
     const double expected = arcLength(*helix, helix->domain());
     FK_CHECK_NEAR(length, expected, 1e-7 * expected);
+}
+
+// Stessa geometria, ordine, nomi, colori e diagnostica con uno o piu' worker.
+FK_TEST(IgesParallelComponents) {
+    std::vector<ExchangeBody> bodies;
+    for (int i = 0; i < 24; ++i) {
+        ExchangeBody b;
+        b.name = i < 12 ? "gruppo" : "parte " + std::to_string(i);
+        b.body = makeBox(Frame3(Vec3(0, i * 5.0, 0), Vec3(0, 0, 1), Vec3(1, 0, 0)), 4, 3, 2);
+        b.hasColor = true;
+        b.color[0] = 0.25; b.color[1] = 0.5; b.color[2] = 0.75;
+        bodies.push_back(std::move(b));
+    }
+    for (IgesMode mode : {IgesMode::Solids, IgesMode::Surfaces}) {
+        IgesWriteOptions options;
+        options.mode = mode;
+        const std::string content = writeIges(bodies, options);
+        const IgesReadResult serial = readIges(content, {1});
+        const IgesReadResult parallel = readIges(content, {4});
+        FK_CHECK(serial.notes == parallel.notes);
+        FK_CHECK(serial.notes.empty());
+        FK_CHECK(serial.bodies.size() == bodies.size());
+        FK_CHECK(parallel.bodies.size() == serial.bodies.size());
+        for (std::size_t i = 0; i < std::min(serial.bodies.size(), parallel.bodies.size()); ++i) {
+            const auto &a = serial.bodies[i], &b = parallel.bodies[i];
+            FK_CHECK(a.name == b.name);
+            FK_CHECK(a.hasColor && b.hasColor);
+            for (int k = 0; k < 3; ++k) FK_CHECK(a.color[k] == b.color[k]);
+            FK_CHECK(writeBodyBinary(a.body) == writeBodyBinary(b.body));
+            FK_CHECK(checkBody(b.body).empty());
+            FK_CHECK_NEAR(massProperties(b.body).volume, 24.0, 1e-8);
+        }
+        if (mode == IgesMode::Solids) {
+            // Punta la prima shell a DE 0: il fallimento non deve cambiare
+            // l'ordine dei corpi superstiti o degli avvisi.
+            std::string broken = content;
+            for (std::size_t line = 0; line + 80 <= broken.size(); line += 81) {
+                if (broken[line + 72] != 'P' || broken.compare(line, 4, "186,") != 0) continue;
+                const std::size_t end = broken.find(',', line + 4);
+                broken.replace(line + 4, end - line - 4, end - line - 4, '0');
+                break;
+            }
+            const auto a = readIges(broken, {1}), b = readIges(broken, {4});
+            FK_CHECK(a.bodies.size() == bodies.size() - 1);
+            FK_CHECK(a.bodies.size() == b.bodies.size());
+            FK_CHECK(!a.notes.empty() && a.notes == b.notes);
+            for (std::size_t i = 0; i < std::min(a.bodies.size(), b.bodies.size()); ++i)
+                FK_CHECK(writeBodyBinary(a.bodies[i].body) == writeBodyBinary(b.bodies[i].body));
+        }
+    }
+}
+
+FK_TEST(IgesSewSpatialRepresentatives) {
+    // Confronta i rappresentanti con la fusione precedente: catene non
+    // transitive, confini delle celle, coordinate negative e x coincidenti.
+    for (double tolerance : {0.0, 0.1, 1.0, 1e-20}) {
+        detail::RawModel model;
+        for (int i = -30; i < 30; ++i)
+            for (double offset : {0.0, 0.09, 0.18}) model.points.push_back(Vec3(0, i * 0.2 + offset, 0));
+        model.points.push_back(Vec3(-0.2, -0.2, -0.2));
+        model.points.push_back(Vec3(-0.1, -0.2, -0.2));
+        model.points.push_back(Vec3(1e10, 0, 0));
+        std::mt19937 random(73);
+        std::uniform_real_distribution<double> coordinate(-2.0, 2.0);
+        for (int i = 0; i < 300; ++i) {
+            const Vec3 p(coordinate(random), coordinate(random), coordinate(random));
+            model.points.push_back(p);
+            model.points.push_back(p + Vec3(0.04, -0.04, 0.04));
+        }
+        std::vector<int> order(model.points.size()), expected(model.points.size());
+        for (std::size_t i = 0; i < order.size(); ++i) {
+            order[i] = expected[i] = int(i);
+            detail::RawEdge edge;
+            edge.start = edge.end = int(i);
+            edge.curve = std::make_shared<Line<3>>(model.points[i], Vec3(1, 0, 0));
+            edge.hasRange = true;
+            edge.range = {0, 1};
+            model.edges.push_back(edge);
+        }
+        std::sort(order.begin(), order.end(), [&](int a, int b) { return model.points[a].x() < model.points[b].x(); });
+        for (std::size_t i = 0; i < order.size(); ++i) {
+            const int a = order[i];
+            if (expected[a] != a) continue;
+            for (std::size_t j = i + 1; j < order.size(); ++j) {
+                const int b = order[j];
+                if (model.points[b].x() - model.points[a].x() > tolerance) break;
+                if (expected[b] == b && distance(model.points[a], model.points[b]) <= tolerance) expected[b] = a;
+            }
+        }
+        detail::sewModel(model, tolerance);
+        for (std::size_t i = 0; i < expected.size(); ++i) FK_CHECK(model.edges[i].start == expected[i]);
+    }
 }

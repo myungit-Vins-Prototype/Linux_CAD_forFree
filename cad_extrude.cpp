@@ -7,6 +7,7 @@
 #include <memory>
 
 #include "cad_datum.h"
+#include "cad_element_names.h"
 #include "cad_forge.h"
 #include "cad_kernel.h"
 #include "fk_boolean.h"
@@ -72,7 +73,8 @@ namespace {
 
 // Le shell scelte di `body` aggiunte alle liste di Body::build.
 void appendShells(const Body &source, const std::function<bool(const Body &, ShellId)> &keep, std::vector<Vec3> &vertices,
-                  std::vector<Body::BuildEdge> &edges, std::vector<Body::BuildFace> &faces) {
+                  std::vector<Body::BuildEdge> &edges, std::vector<Body::BuildFace> &faces,
+                  std::vector<HistoryLink> *origins = nullptr, int operand = 0) {
     const Body *body = &source;
     std::map<int, int> vertexMap, edgeMap;
     const auto vertexIndex = [&](VertexId v) {
@@ -116,20 +118,54 @@ void appendShells(const Body &source, const std::function<bool(const Body &, She
                 built.loops.push_back(std::move(loop));
             }
             faces.push_back(std::move(built));
+            if (origins) origins->push_back({operand, EntityKind::Face, f.index, HistoryRelation::Same});
         }
     }
 }
 
 // Due solidi in un body solo senza booleana (pezzi separati, anche se si
 // toccano lungo uno spigolo): quando l'unione non si puo' fare.
-Body combined(const Body &a, const Body &b) {
+Body combined(const Body &a, const Body &b, BodyHistory *history) {
     std::vector<Vec3> vertices;
     std::vector<Body::BuildEdge> edges;
     std::vector<Body::BuildFace> faces;
     const auto all = [](const Body &, ShellId) { return true; };
-    appendShells(a, all, vertices, edges, faces);
-    appendShells(b, all, vertices, edges, faces);
-    return Body::build(vertices, edges, faces);
+    std::vector<HistoryLink> origins;
+    appendShells(a, all, vertices, edges, faces, history ? &origins : nullptr, 0);
+    appendShells(b, all, vertices, edges, faces, history ? &origins : nullptr, 1);
+    Body result = Body::build(vertices, edges, faces);
+    if (history) {
+        *history = makeHistory({&a, &b}, result);
+        const auto built = result.faces();
+        if (built.size() != origins.size()) throw std::logic_error("estrusione: mappa dei pezzi incoerente");
+        for (std::size_t i = 0; i < built.size(); ++i) history->declareOrigins(EntityKind::Face, built[i].index, {origins[i]});
+    }
+    return result;
+}
+
+
+ForgeBody extrusionBoolean(const ForgeBody &a, const ForgeBody &b, Kernel::BooleanOperation operation) {
+    BodyHistory history;
+    Body body = booleanOperation(*a, *b, operation, {}, &history);
+    const ForgeBody result = std::make_shared<const Body>(std::move(body));
+    registerDeclaredHistory(result, {a, b}, std::move(history));
+    return result;
+}
+
+// L'utensile del limite produce il coperchio finale; quando e' un corpo
+// effettivo il legame Generated mantiene anche la faccia di riferimento.
+ForgeBody extrusionEndTool(Body body, const ForgeBody &owner = {}, int sourceFace = -1) {
+    BodyHistory history = makeHistory(owner ? std::vector<const Body *>{owner.get()} : std::vector<const Body *>{}, body);
+    FaceAliases labels(std::size_t(history.resultSize(EntityKind::Face)));
+    for (FaceId face : body.faces()) {
+        std::vector<HistoryLink> origins;
+        if (owner) origins.push_back({0, EntityKind::Face, sourceFace >= 0 ? sourceFace : face.index, HistoryRelation::Generated});
+        history.declareOrigins(EntityKind::Face, face.index, std::move(origins));
+        labels[std::size_t(face.index)] = {"cap.end"};
+    }
+    const ForgeBody result = std::make_shared<const Body>(std::move(body));
+    registerDeclaredHistory(result, owner ? std::vector<ForgeBody>{owner} : std::vector<ForgeBody>{}, std::move(history), std::move(labels));
+    return result;
 }
 
 }
@@ -139,9 +175,16 @@ ForgeBody forgeKeepShells(const ForgeBody &body, const std::function<bool(const 
     std::vector<Vec3> vertices;
     std::vector<Body::BuildEdge> edges;
     std::vector<Body::BuildFace> faces;
-    appendShells(*body, keep, vertices, edges, faces);
+    std::vector<HistoryLink> origins;
+    appendShells(*body, keep, vertices, edges, faces, &origins);
     if (faces.empty()) return nullptr;
-    return std::make_shared<const Body>(Body::build(vertices, edges, faces));
+    const ForgeBody result = std::make_shared<const Body>(Body::build(vertices, edges, faces));
+    BodyHistory history = makeHistory({body.get()}, *result);
+    const auto built = result->faces();
+    if (built.size() != origins.size()) throw std::logic_error("estrusione: mappa delle shell incoerente");
+    for (std::size_t i = 0; i < built.size(); ++i) history.declareOrigins(EntityKind::Face, built[i].index, {origins[i]});
+    registerDeclaredHistory(result, {body}, std::move(history));
+    return result;
 }
 
 bool forgeSharesMaterial(const ForgeBody &tool, const ForgeBody &body, bool subtract) {
@@ -164,11 +207,37 @@ ForgeBody forgeExtrusionFeature(ExtrusionObject &body, int index, const QVector<
         return nullptr;
     }
     const SketchObject &sketch = sketches.at(body.sketchIndex);
+    // Con "Solo superficie" anche i contorni chiusi danno una lamina.
+    const auto extrude = [&](double d, QString *why, double start = 0.0) {
+        return forgeExtrusion(sketch, d, why, start, body.extrudeSurface);
+    };
     ForgeBody result;
     try {
         if (body.extent == 0) {
-            result = forgeExtrusion(sketch, body.distance, error);
+            const double d = body.distance;
+            if (body.extrudeSides == 1) {
+                // Simmetrica: meta' per parte del piano dello schizzo.
+                result = extrude(d, error, -0.5 * d);
+            } else if (body.extrudeSides == 2) {
+                if (std::fabs(d) <= 1e-7) {
+                    setError(error, QStringLiteral("La distanza di estrusione e' nulla."));
+                    return nullptr;
+                }
+                if (!(body.distance2 > 1e-7)) {
+                    setError(error, QStringLiteral("La distanza nel secondo verso deve essere positiva."));
+                    return nullptr;
+                }
+                // Un solo prisma dal piano spostato di distance2 all'indietro.
+                const double s = d > 0.0 ? 1.0 : -1.0;
+                result = extrude(d + s * body.distance2, error, -s * body.distance2);
+            } else {
+                result = extrude(d, error);
+            }
         } else {
+            if (body.extrudeSides == 1) {
+                setError(error, QStringLiteral("L'estrusione simmetrica vale solo con la fine a distanza."));
+                return nullptr;
+            }
             ResolvedRef target;
             QString why;
             if (!resolveGeometryRef(body.extentRef, index, sketches, bodies, target, &why)) {
@@ -186,7 +255,7 @@ ForgeBody forgeExtrusionFeature(ExtrusionObject &body, int index, const QVector<
                     return nullptr;
                 }
                 body.distance = d;  // la distanza che ne viene (si vede nella finestra)
-                return forgeExtrusion(sketch, d, error);
+                return extrude(d, error);
             };
             if (body.extent == 1) {
                 if (!target.hasPoint) {
@@ -205,7 +274,7 @@ ForgeBody forgeExtrusionFeature(ExtrusionObject &body, int index, const QVector<
             } else {
                 const bool curvedFace = body.extentRef.kind == 5 && !target.hasPlane;
                 // Box del profilo: dall'estrusione di altezza unitaria (esatto, dalle facce).
-                const ForgeBody unit = forgeExtrusion(sketch, 1.0, error);
+                const ForgeBody unit = extrude(1.0, error);
                 if (!unit) return nullptr;
                 const Box profile = bodyBox(*unit);
                 const double size = std::max(1.0, profile.diagonal());
@@ -229,8 +298,9 @@ ForgeBody forgeExtrusionFeature(ExtrusionObject &body, int index, const QVector<
                         }
                         // Prisma oltre il piano, poi solo la parte dalla parte dello schizzo.
                         const double reach = hi > 0.0 ? hi : lo;
+                        body.distance = reach;  // il verso (e la portata) per il secondo verso
                         const double length = (reach > 0.0 ? 1.0 : -1.0) * (std::fabs(hi > 0.0 ? hi : lo) * 1.05 + 1e-3 * size);
-                        const ForgeBody longer = forgeExtrusion(sketch, length, error);
+                        const ForgeBody longer = extrude(length, error);
                         if (!longer) return nullptr;
                         Vec3 z = n;
                         if (dot(origin - q, z) < 0.0) z = -z;
@@ -239,7 +309,9 @@ ForgeBody forgeExtrusionFeature(ExtrusionObject &body, int index, const QVector<
                         const double half = 4.0 * (size + std::fabs(length));
                         const Frame3 boxFrame(center, z, x);
                         const Body box = makeBox(Frame3(boxFrame.toGlobal(Vec3(-half, -half, 0.0)), z, x), 2.0 * half, 2.0 * half, 2.0 * half);
-                        result = std::make_shared<const Body>(booleanOperation(*longer, box, Kernel::BooleanOperation::Intersect));
+                        const ForgeBody owner = body.extentRef.kind == 5 && body.extentRef.index >= 0 && body.extentRef.index < bodies.size()
+                            ? bodies.at(body.extentRef.index).forgeBody : ForgeBody{};
+                        result = extrusionBoolean(longer, extrusionEndTool(box, owner, target.face), Kernel::BooleanOperation::Intersect);
                     }
                 } else {
                     // Faccia curva: il prisma fino oltre il corpo della faccia, meno il
@@ -257,13 +329,14 @@ ForgeBody forgeExtrusionFeature(ExtrusionObject &body, int index, const QVector<
                         setError(error, QStringLiteral("La faccia sta dall'altra parte dello schizzo."));
                         return nullptr;
                     }
-                    const ForgeBody longer = forgeExtrusion(sketch, side * (reach * 1.05 + 1e-3 * size), error);
+                    const ForgeBody longer = extrude(side * (reach * 1.05 + 1e-3 * size), error);
                     if (!longer) return nullptr;
                     const auto base = [&](const Body &b, ShellId shell) { return touchesPlane(b, shell, origin, e, 1e-7 * size); };
+                    const ForgeBody tool = extrusionEndTool(solid, bodies.at(owner).forgeBody);
                     for (const Kernel::BooleanOperation op : {Kernel::BooleanOperation::Subtract, Kernel::BooleanOperation::Intersect}) {
-                        const Body piece = booleanOperation(*longer, solid, op);
-                        if (piece.faces().empty()) continue;
-                        result = forgeKeepShells(std::make_shared<const Body>(piece), base);
+                        const ForgeBody piece = extrusionBoolean(longer, tool, op);
+                        if (piece->faces().empty()) continue;
+                        result = forgeKeepShells(piece, base);
                         if (result) break;
                     }
                     if (!result) {
@@ -272,6 +345,22 @@ ForgeBody forgeExtrusionFeature(ExtrusionObject &body, int index, const QVector<
                     }
                     body.distance = side * reach;
                 }
+            }
+            if (result && body.extrudeSides == 2) {
+                // Secondo verso: un prisma dall'altra parte del piano dello
+                // schizzo, unito (si toccano lungo la base comune).
+                if (!(body.distance2 > 1e-7)) {
+                    setError(error, QStringLiteral("La distanza nel secondo verso deve essere positiva."));
+                    return nullptr;
+                }
+                const double s = body.distance > 0.0 ? 1.0 : -1.0;
+                const ForgeBody back = forgeExtrusion(sketch, -s * body.distance2, error, 0, body.extrudeSurface, true);
+                if (!back) return nullptr;
+                if (result->isSheet() || back->isSheet()) {
+                    setError(error, QStringLiteral("Una superficie nei due versi si estrude solo a distanza."));
+                    return nullptr;
+                }
+                result = extrusionBoolean(result, back, Kernel::BooleanOperation::Unite);
             }
         }
     } catch (const std::exception &failure) {
@@ -294,9 +383,17 @@ ForgeBody forgeMergeFeatureResult(ExtrusionObject &body, const ForgeBody &result
     const bool subtract = body.mergeOperation == 2;
     QVector<int> targets;
     for (int target : body.mergeBodies) {
-        if (target < 0 || target >= index || target >= bodies.size()) continue;
+        // I bersagli gia' associati sono dipendenze della storyboard. Se
+        // falliscono non si puo' restituire soltanto il nuovo prisma come se
+        // l'unione fosse riuscita, ne' unire solo gli altri bersagli validi.
+        const bool inRange=target>=0&&target<index&&target<bodies.size();
+        if(!inRange||!bodies.at(target).forgeBody||bodies.at(target).forgeBody->isSheet()){
+            if(body.mergeProbe)continue;  // ricerca dei candidati di una nuova fusione automatica
+            const QString name=inRange?bodies.at(target).name:QString::number(target);
+            setError(error,QStringLiteral("Il corpo associato alla fusione \"%1\" non ha geometria solida valida.").arg(name));
+            return nullptr;
+        }
         const ExtrusionObject &other = bodies.at(target);
-        if (!other.forgeBody || other.forgeBody->isSheet()) continue;
         if (body.mergeProbe && !forgeSharesMaterial(result, other.forgeBody, subtract)) continue;
         targets.append(target);
     }
@@ -310,30 +407,33 @@ ForgeBody forgeMergeFeatureResult(ExtrusionObject &body, const ForgeBody &result
     }
     try {
         if (!subtract) {
-            Body united = *result;
-            for (int target : targets) united = booleanOperation(united, *bodies.at(target).forgeBody, Kernel::BooleanOperation::Unite);
-            return std::make_shared<const Body>(std::move(united));
+            ForgeBody united = result;
+            for (int target : targets) united = extrusionBoolean(united, bodies.at(target).forgeBody, Kernel::BooleanOperation::Unite);
+            return united;
         }
-        std::unique_ptr<Body> cut;
+        ForgeBody cut;
         for (int target : targets) {
-            Body piece = booleanOperation(*bodies.at(target).forgeBody, *result, Kernel::BooleanOperation::Subtract);
-            if (piece.faces().empty()) continue;
+            ForgeBody piece = extrusionBoolean(bodies.at(target).forgeBody, result, Kernel::BooleanOperation::Subtract);
+            if (piece->faces().empty()) continue;
             if (!cut) {
-                cut = std::make_unique<Body>(std::move(piece));
+                cut = std::move(piece);
                 continue;
             }
             // I pezzi dei solidi diversi: uniti, o insieme come pezzi separati se si toccano solo lungo uno spigolo.
             try {
-                cut = std::make_unique<Body>(booleanOperation(*cut, piece, Kernel::BooleanOperation::Unite));
+                cut = extrusionBoolean(cut, piece, Kernel::BooleanOperation::Unite);
             } catch (const std::exception &) {
-                cut = std::make_unique<Body>(combined(*cut, piece));
+                BodyHistory history;
+                const ForgeBody joined = std::make_shared<const Body>(combined(*cut, *piece, &history));
+                registerDeclaredHistory(joined, {cut, piece}, std::move(history));
+                cut = joined;
             }
         }
         if (!cut) {
             setError(error, QStringLiteral("La sottrazione toglie tutto il materiale."));
             return nullptr;
         }
-        return std::make_shared<const Body>(std::move(*cut));
+        return cut;
     } catch (const std::exception &failure) {
         setError(error, QStringLiteral("Fusione con i corpi non riuscita: %1").arg(QString::fromUtf8(failure.what())));
         return nullptr;

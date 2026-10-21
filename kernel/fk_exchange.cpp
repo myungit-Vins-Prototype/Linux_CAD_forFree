@@ -1,8 +1,12 @@
 #include "fk_exchange.h"
 
 #include <charconv>
+#include <array>
+#include <cstdint>
+#include <unordered_map>
 
 #include <algorithm>
+#include <optional>
 #include <cmath>
 #include <exception>
 #include <map>
@@ -14,7 +18,9 @@
 #include "fk_curve_ops.h"
 #include "fk_parallel.h"
 #include "fk_pcurve.h"
+#include "fk_offset.h"
 #include "fk_surface_algo.h"
+#include "fk_timing.h"
 
 namespace ForgeCad::Kernel::detail {
 
@@ -66,7 +72,192 @@ bool dropsSeam(const Surface &surface, const RawEdge &edge, const Interval &rang
 
 }  // namespace
 
-Body assembleBody(const RawModel &input, bool solid, std::vector<std::string> *notes) {
+// Una sfera si puo' parametrizzare con qualsiasi asse per il centro. Nei file
+// l'asse e' arbitrario: un edge che passa vicino a un polo senza toccarlo (un
+// cerchio massimo inclinato di pochi millesimi su un meridiano, L407-P3.STEP)
+// ha nello spazio (u, v) una curva che gira di quasi mezzo giro in un tratto
+// minuscolo, e l'SP-curve non si approssima. Le sfere delle facce con fin
+// senza SP-curve prendono l'asse con i poli piu' lontani da tutti gli edge
+// delle loro facce (la geometria non cambia, solo i parametri); le SP-curve di
+// quelle facce si rifanno. Vero se qualche sfera e' cambiata.
+static bool reorientSpheres(Body &body) {
+    std::map<const SphericalSurface *, std::vector<FaceId>> spheres;
+    std::set<const SphericalSurface *> failing;
+    for (FaceId f : body.faces()) {
+        const auto *sphere = dynamic_cast<const SphericalSurface *>(body.face(f).surface.get());
+        if (!sphere) continue;
+        spheres[sphere].push_back(f);
+        for (LoopId l : body.face(f).loops)
+            for (FinId fin : body.loopFins(l))
+                if (!body.fin(fin).pcurve) failing.insert(sphere);
+    }
+    bool changed = false;
+    for (const SphericalSurface *sphere : failing) {
+        const std::vector<FaceId> &faces = spheres[sphere];
+        const Vec3 center = sphere->frame().origin();
+        std::vector<Vec3> directions;  // dal centro ai punti degli edge
+        std::vector<Vec3> candidates{sphere->frame().zDir(), sphere->frame().xDir(), sphere->frame().yDir(),
+                                     Vec3(1, 0, 0), Vec3(0, 1, 0), Vec3(0, 0, 1)};
+        for (FaceId f : faces)
+            for (LoopId l : body.face(f).loops)
+                for (FinId fin : body.loopFins(l)) {
+                    const Edge &edge = body.edge(body.fin(fin).edge);
+                    if (!edge.curve || !edge.range.isFinite()) continue;
+                    if (const auto *circle = dynamic_cast<const Circle<3> *>(edge.curve.get()))
+                        candidates.push_back(cross(circle->xAxis(), circle->yAxis()));
+                    for (int k = 0; k <= 32; ++k) {
+                        const Vec3 d = edge.curve->point(edge.range.lo + edge.range.length() * k / 32.0) - center;
+                        if (norm(d) > 0.0) directions.push_back(d / norm(d));
+                    }
+                }
+        // Direzioni sparse in modo uniforme (spirale di Fibonacci).
+        for (int k = 0; k < 400; ++k) {
+            const double z = 1.0 - (k + 0.5) / 200.0, r = std::sqrt(std::max(0.0, 1.0 - z * z)), a = 2.399963229728653 * k;
+            candidates.push_back(Vec3(r * std::cos(a), r * std::sin(a), z));
+        }
+        // Punteggio: il seno dell'angolo piu' piccolo tra un punto e l'asse (i due poli).
+        const auto score = [&](const Vec3 &axis) {
+            double worst = 1.0;
+            for (const Vec3 &d : directions) worst = std::min(worst, norm(cross(d, axis)));
+            return worst;
+        };
+        const double before = score(sphere->frame().zDir());
+        Vec3 best = sphere->frame().zDir();
+        double bestScore = before;
+        for (Vec3 axis : candidates) {
+            if (!(norm(axis) > 0.0)) continue;
+            axis = axis / norm(axis);
+            const double value = score(axis);
+            if (value > bestScore) bestScore = value, best = axis;
+        }
+        if (!(bestScore > before + 1e-3)) continue;
+        // Asse X qualsiasi normale al nuovo asse; il sistema resta destrorso e
+        // la normale uscente, quindi il verso delle facce non cambia.
+        Vec3 x = std::fabs(best[0]) < 0.9 ? Vec3(1, 0, 0) : Vec3(0, 1, 0);
+        x = x - dot(x, best) * best;
+        const SurfacePtr replacement = std::make_shared<SphericalSurface>(Frame3(center, best, x / norm(x)), sphere->radius());
+        for (FaceId f : faces) {
+            body.face(f).surface = replacement;
+            for (LoopId l : body.face(f).loops)
+                for (FinId fin : body.loopFins(l)) {
+                    body.fin(fin).pcurve = nullptr;
+                    body.fin(fin).pcurveTolerance = 0.0;
+                }
+        }
+        changed = true;
+    }
+    return changed;
+}
+
+// Un bordo sulla chiusura di una B-spline ha due immagini parametriche.
+// Scegli quella che chiude il loop con le fin adiacenti, prima di dedurne
+// il verso o di integrare/triangolare il dominio della faccia.
+static int alignClosedSplineSeams(Body &body) {
+    int changed = 0;
+    for (FaceId id : body.faces()) {
+        const Face &face = body.face(id);
+        if (face.surface->type() != SurfaceType::BSpline) continue;
+        const Surface &surface = *face.surface;
+        for (LoopId loop : face.loops) {
+            const auto fins = body.loopFins(loop);
+            if (fins.size() < 2) continue;
+            const auto endPoint = [&](FinId id, bool start) {
+                const Fin &fin = body.fin(id);
+                const Edge &edge = body.edge(fin.edge);
+                return fin.pcurve->point(start == fin.sense ? edge.range.lo : edge.range.hi);
+            };
+            for (std::size_t i = 0; i < fins.size(); ++i) {
+                Fin &fin = body.fin(fins[i]);
+                const Edge &edge = body.edge(fin.edge);
+                const Vec2 previous = endPoint(fins[(i + fins.size() - 1) % fins.size()], false);
+                const Vec2 next = endPoint(fins[(i + 1) % fins.size()], true);
+                for (int axis = 0; axis < 2; ++axis) {
+                    const Interval domain = axis == 0 ? surface.uDomain() : surface.vDomain();
+                    const Vec2 a = endPoint(fins[i], true), b = endPoint(fins[i], false);
+                    const double middle = fin.pcurve->point(0.5 * (edge.range.lo + edge.range.hi))[axis];
+                    const bool low = std::fabs(middle - domain.lo) < std::fabs(middle - domain.hi);
+                    const double boundary = low ? domain.lo : domain.hi;
+                    if (std::max({std::fabs(a[axis] - boundary), std::fabs(b[axis] - boundary),
+                                  std::fabs(middle - boundary)}) > 1e-6 * domain.length()) continue;
+                    Vec2 lowUV = fin.pcurve->point(0.5 * (edge.range.lo + edge.range.hi)), highUV = lowUV;
+                    lowUV[axis] = domain.lo;
+                    highUV[axis] = domain.hi;
+                    const Vec3 lowPoint = surface.point(lowUV[0], lowUV[1]), highPoint = surface.point(highUV[0], highUV[1]);
+                    if (distance(lowPoint, highPoint) > 1e-12 * std::max({1.0, norm(lowPoint), norm(highPoint)})) continue;
+                    Vec2 shift;
+                    shift[axis] = low ? domain.length() : -domain.length();
+                    const double before = std::fabs(a[axis] - previous[axis]) + std::fabs(b[axis] - next[axis]);
+                    const double after = std::fabs(a[axis] + shift[axis] - previous[axis]) +
+                                         std::fabs(b[axis] + shift[axis] - next[axis]);
+                    if (before - after < domain.length()) continue;
+                    const auto candidate = translatedCurve(fin.pcurve, shift);
+                    const double deviation = pcurveDeviation(surface, *edge.curve, *candidate, edge.range, 32);
+                    if (!(deviation <= std::max({kPCurveTolerance, edge.tolerance, fin.pcurveTolerance}))) continue;
+                    fin.pcurve = candidate;
+                    fin.pcurveTolerance = std::max(fin.pcurveTolerance, deviation);
+                    ++changed;
+                }
+            }
+        }
+    }
+    return changed;
+}
+
+// Verso delle facce su superfici non periodiche: la faccia sta a sinistra dei
+// suoi loop rispetto alla sua normale, quindi nello spazio (u, v) l'area con
+// segno dei loop e' positiva se la normale della faccia e' quella della
+// superficie (sense) e negativa altrimenti. I loop vengono dalla topologia, che
+// e' coerente con le facce vicine (ogni edge e' percorso nei due versi); il
+// flag same_sense del file puo' essere sbagliato (L407-P3.STEP di SolidWorks:
+// due raccordi B-spline con la normale opposta alle facce tangenti accanto).
+// Si corregge il flag; le superfici periodiche (loop avvolti) non si toccano.
+// Restituisce le facce corrette.
+static int repairFaceSenses(Body &body) {
+    int flipped = 0;
+    for (FaceId f : body.faces()) {
+        Face &face = body.face(f);
+        if (!face.surface || face.surface->isUPeriodic() || face.surface->isVPeriodic()) continue;
+        double area = 0.0, size = 0.0;
+        bool complete = true;
+        for (LoopId l : face.loops) {
+            std::vector<Vec2> polygon;
+            for (FinId finId : body.loopFins(l)) {
+                const Fin &fin = body.fin(finId);
+                const Edge &edge = body.edge(fin.edge);
+                if (!fin.pcurve || !edge.range.isFinite()) {
+                    complete = false;
+                    break;
+                }
+                std::vector<double> breaks = edge.curve->breakpoints(edge.range);
+                if (breaks.size() < 2 || breaks.size() > 64) breaks = {edge.range.lo, edge.range.hi};
+                std::vector<double> ts;
+                for (std::size_t b = 0; b + 1 < breaks.size(); ++b)
+                    for (int k = 0; k < 16; ++k) ts.push_back(breaks[b] + (breaks[b + 1] - breaks[b]) * k / 16.0);
+                if (!fin.sense) {
+                    for (double &t : ts) t = edge.range.lo + edge.range.hi - t;
+                }
+                for (double t : ts) polygon.push_back(fin.pcurve->point(t));
+            }
+            if (!complete) break;
+            for (std::size_t i = 0; i < polygon.size(); ++i) {
+                const Vec2 &a = polygon[i], &b = polygon[(i + 1) % polygon.size()];
+                area += 0.5 * (a[0] * b[1] - b[0] * a[1]);
+                size += 0.5 * std::fabs(a[0] * b[1] - b[0] * a[1]);
+            }
+        }
+        if (!complete || face.loops.empty()) continue;
+        // Solo se il segno e' netto (loop degeneri o quasi a area nulla restano come sono).
+        if (!(std::fabs(area) > 1e-6 * size)) continue;
+        if ((area > 0.0) != face.sense) {
+            face.sense = !face.sense;
+            ++flipped;
+        }
+    }
+    return flipped;
+}
+
+Body assembleBody(const RawModel &input, bool solid, std::vector<std::string> *notes, AssemblyMap *map) {
+    if(map)*map={};
     RawModel model = input;
     const auto note = [&](const std::string &text) {
         if (notes) notes->push_back(text);
@@ -177,7 +368,7 @@ Body assembleBody(const RawModel &input, bool solid, std::vector<std::string> *n
                 const RawFin &fin = kept[(begin + k) % n];
                 if (!current.empty() && currentEnd != startOf(fin)) close();
                 if (current.empty()) currentStart = startOf(fin);
-                current.push_back({edgeOf(fin.edge), fin.sense, nullptr, 0.0});
+                current.push_back({edgeOf(fin.edge), fin.sense, fin.pcurve, fin.pcurve ? fin.pcurveTolerance : 0.0});
                 currentEnd = endOf(fin);
             }
             close();
@@ -249,6 +440,11 @@ Body assembleBody(const RawModel &input, bool solid, std::vector<std::string> *n
         for (FinId fin : {edge.forward, edge.backward}) {
             if (!fin.valid()) continue;
             const Surface &surface = *measured.face(measured.finFace(fin)).surface;
+            // SP-curve data: lo scarto e' |S(p(t)) - C(t)|, senza proiezioni.
+            if (const CurvePtr<2> &pcurve = measured.fin(fin).pcurve) {
+                deviation = std::max(deviation, pcurveDeviation(surface, *edge.curve, *pcurve, edge.range, 64));
+                continue;
+            }
             // Campioni fitti: lo scarto di una B-spline da una superficie libera cambia tra un nodo e l'altro.
             std::vector<double> breaks = edge.curve->breakpoints(edge.range);
             if (breaks.size() < 2 || breaks.size() > 64) breaks = {edge.range.lo, edge.range.hi};
@@ -258,7 +454,9 @@ Body assembleBody(const RawModel &input, bool solid, std::vector<std::string> *n
         }
         deviations[i] = deviation;
     };
-    parallelFor(edgeIds.size(), edgeIds.size() >= 256 ? threadCount(0) : 1u, [&](std::size_t i) {
+    std::optional<detail::PhaseTimer> measureTimer;
+    measureTimer.emplace("assemblaggio: scarti degli edge");
+    parallelFor(edgeIds.size(), edgeIds.size() >= 8 ? threadCount(0) : 1u, [&](std::size_t i) {
         try {
             measure(i);
         } catch (...) {
@@ -285,12 +483,171 @@ Body assembleBody(const RawModel &input, bool solid, std::vector<std::string> *n
         for (VertexId v : {body.edgeStart(e), body.edgeEnd(e)})
             if (body.edge(e).tolerance > 0.0) body.vertex(v).tolerance = std::max(body.vertex(v).tolerance, body.edge(e).tolerance);
     if (worst > 1e-6) note("edge tolleranti fino a " + std::to_string(worst) + " (precisione del file)");
-    const int missing = computePCurves(body);
+    measureTimer.reset();
+    std::optional<detail::PhaseTimer> pcurveTimer;
+    pcurveTimer.emplace("assemblaggio: SP-curve");
+    int missing = 0;
+    {
+        const detail::PhaseTimer timer("assemblaggio: SP-curve, primo calcolo");
+        missing = computePCurves(body);
+    }
+    // Gli edge con piu' di 64 tratti si misurano sopra con pochi campioni, che
+    // possono cadere tutti nei punti esatti (i nodi di una curva tracciata) e
+    // non vedere lo scarto tra l'uno e l'altro: l'SP-curve si cerca allora
+    // entro la risoluzione e non si trova. Per gli edge senza SP-curve lo
+    // scarto si rimisura con campioni in ogni tratto e si riprova.
+    if (missing > 0) {
+        const detail::PhaseTimer timer("assemblaggio: SP-curve, ripieghi");
+        bool raised = false;
+        std::vector<EdgeId> failed;
+        for (FinId f : body.fins())
+            if (!body.fin(f).pcurve && std::find(failed.begin(), failed.end(), body.fin(f).edge) == failed.end()) failed.push_back(body.fin(f).edge);
+        for (EdgeId e : failed) {
+            Edge &edge = body.edge(e);
+            std::vector<double> breaks = edge.curve->breakpoints(edge.range);
+            if (breaks.size() < 2) breaks = {edge.range.lo, edge.range.hi};
+            const std::size_t spans = breaks.size() - 1;
+            const int perSpan = int(std::max<std::size_t>(2, std::min<std::size_t>(16, 4096 / spans)));
+            double deviation = 0.0;
+            for (FinId fin : {edge.forward, edge.backward}) {
+                if (!fin.valid()) continue;
+                const Surface &surface = *body.face(body.finFace(fin)).surface;
+                // Anche nei nodi della curva: lo scarto puo' essere un picco proprio li'.
+                for (std::size_t b = 0; b < spans; ++b)
+                    for (int k = 0; k <= perSpan; ++k)
+                        deviation = std::max(deviation, projectPoint(surface, edge.curve->point(breaks[b] + (breaks[b + 1] - breaks[b]) * k / perSpan)).distance);
+            }
+            if (deviation > 1e-7 && 1.5 * deviation > edge.tolerance) {
+                edge.tolerance = 1.5 * deviation;
+                for (VertexId v : {body.edgeStart(e), body.edgeEnd(e)}) body.vertex(v).tolerance = std::max(body.vertex(v).tolerance, edge.tolerance);
+                worst = std::max(worst, deviation);
+                raised = true;
+            }
+        }
+        if (raised) missing = computePCurves(body);
+        // Curve che stanno sulla superficie ma la cui SP-curve non scende alla
+        // risoluzione (inversioni al limite dell'arrotondamento su superfici
+        // con centinaia di tratti): edge tollerante 1e-6 e un ultimo tentativo.
+        if (missing > 0) {
+            bool loosened = false;
+            for (FinId f : body.fins())
+                if (!body.fin(f).pcurve) {
+                    Edge &edge = body.edge(body.fin(f).edge);
+                    if (edge.tolerance < 1e-6) {
+                        edge.tolerance = 1e-6;
+                        loosened = true;
+                    }
+                }
+            if (loosened) missing = computePCurves(body);
+        }
+    }
+    if (missing > 0 && reorientSpheres(body)) missing = computePCurves(body);
+    pcurveTimer.reset();
     if (missing > 0) throw std::domain_error(std::to_string(missing) + " SP-curve non calcolabili");
-    const std::vector<CheckIssue> issues = checkBody(body);
+    if (const int aligned = alignClosedSplineSeams(body))
+        note(std::to_string(aligned) + " SP-curve sulla chiusura delle B-spline allineate ai loop");
+    if (const int flipped = repairFaceSenses(body))
+        note(std::to_string(flipped) + " facce con il verso (same_sense) opposto ai loop: corretto");
+ std::vector<CheckIssue> issues;
+    {
+        const detail::PhaseTimer timer("assemblaggio: controllo del corpo");
+        issues = checkBody(body);
+    }
     if (!issues.empty()) throw std::domain_error("corpo non valido: " + describe(issues.front().code) + " (" + issues.front().message + ")");
+    if(map) {
+        AssemblyMap emitted;emitted.points.resize(input.points.size());emitted.edges.resize(input.edges.size());
+        const auto vs=body.vertices();const auto es=body.edges();
+        for(std::size_t i=0;i<pointIndex.size();++i)if(pointIndex[i]>=0)emitted.points[i]=vs.at(std::size_t(pointIndex[i]));
+        for(std::size_t i=0;i<edgeIndex.size();++i)if(edgeIndex[i]>=0)emitted.edges[i]=es.at(std::size_t(edgeIndex[i]));
+        emitted.faces=body.faces();*map=std::move(emitted);
+    }
     return body;
 }
+
+namespace {
+
+// La fin deve usare il parametro della curva rappresentativa dopo l'unione.
+// Conservare il ramo UV originale evita una nuova inversione della superficie.
+CurvePtr<2> sewnPCurve(const RawEdge &source, const RawEdge &target,
+                       const RawFace &face, const RawFin &fin, bool reverse, double tolerance) {
+    if (!fin.pcurve) return nullptr;
+    if (!source.hasRange || !target.hasRange || !source.range.isFinite() || !target.range.isFinite()
+        || !(source.range.length()>0) || !(target.range.length()>0)) return nullptr;
+    if (source.curve == target.curve && !reverse) return fin.pcurve;
+    const double original = pcurveDeviation(*face.surface, *source.curve, *fin.pcurve, source.range, 16);
+    if (!std::isfinite(original)) throw std::domain_error("cucitura: SP-curve sorgente non valida");
+    const double budget = original + std::max(1e-7, 10.0 * tolerance);
+    const auto acceptable = [&](const CurvePtr<2> &curve) {
+        const double error = pcurveDeviation(*face.surface, *target.curve, *curve, target.range, 16);
+        return std::isfinite(error) && error <= budget;
+    };
+    // Stesso parametro, anche per copie geometricamente equivalenti.
+    if (!reverse && source.range.lo == target.range.lo && source.range.hi == target.range.hi
+        && acceptable(fin.pcurve)) return fin.pcurve;
+    const double first = reverse ? source.range.hi : source.range.lo;
+    const double slope = (reverse ? -1 : 1) * source.range.length() / target.range.length();
+    CurvePtr<2> affine;
+    if (const auto *spline = dynamic_cast<const BSplineCurve<2> *>(fin.pcurve.get())) {
+        auto knots = spline->knots(); auto poles = spline->poles(); auto weights = spline->weights();
+        for (double &t : knots) t = target.range.lo + (t - first) / slope;
+        if (slope < 0) {
+            std::reverse(knots.begin(), knots.end()); std::reverse(poles.begin(), poles.end());
+            std::reverse(weights.begin(), weights.end());
+        }
+        affine = std::make_shared<BSplineCurve<2>>(spline->degree(), std::move(knots), std::move(poles), std::move(weights));
+    } else if (fin.pcurve->type() == CurveType::Line) {
+        affine = std::make_shared<BSplineCurve<2>>(1,
+            std::vector<double>{target.range.lo,target.range.lo,target.range.hi,target.range.hi},
+            std::vector<Vec2>{fin.pcurve->point(first),fin.pcurve->point(first+slope*target.range.length())});
+    }
+    if (affine && acceptable(affine)) return affine;
+
+    // Parametrizzazioni non affini: proiezione sulla curva 3D sorgente,
+    // composizione con la sua SP-curve, poi verifica indipendente in 3D.
+    const auto parameter = [&](double t) {
+        if (t == target.range.lo) return first;
+        if (t == target.range.hi) return first+slope*target.range.length();
+        const Vec3 point = target.curve->point(t);
+        const auto candidates = projectPointCandidates(*source.curve, point, source.range);
+        double best = std::numeric_limits<double>::infinity(), chosen = first;
+        for (const auto &q : candidates) best = std::min(best, q.distance);
+        if (best>std::max(1e-7,10.0*tolerance))
+            throw std::domain_error("cucitura: bordi uniti non coincidenti nella rimappatura");
+        const double expected = first+slope*(t-target.range.lo);
+        double near = std::numeric_limits<double>::infinity();
+        for (const auto &q : candidates)
+            if (q.distance <= best+1e-10 && std::fabs(q.parameter-expected)<near) {
+                chosen=q.parameter; near=std::fabs(q.parameter-expected);
+            }
+        if (!std::isfinite(near)) throw std::domain_error("cucitura: parametro sorgente non determinabile");
+        return chosen;
+    };
+    auto breaks = target.curve->breakpoints(target.range);
+    auto nodes = source.curve->breakpoints(source.range);
+    const auto uvNodes = fin.pcurve->breakpoints(source.range);
+    nodes.insert(nodes.end(),uvNodes.begin(),uvNodes.end());
+    for (double t : nodes) {
+        const auto q = projectPoint(*target.curve, source.curve->point(t), target.range);
+        if (q.parameter>target.range.lo && q.parameter<target.range.hi) breaks.push_back(q.parameter);
+    }
+    std::sort(breaks.begin(),breaks.end());
+    breaks.erase(std::unique(breaks.begin(),breaks.end()),breaks.end());
+    double speed=1.0;
+    for(int i=0;i<=16;++i) {
+        const Vec2 uv=fin.pcurve->point(first+slope*target.range.length()*i/16.0);
+        Vec3 d[4];face.surface->evaluate(uv.x(),uv.y(),1,d);
+        speed=std::max({speed,norm(d[Surface::derivativeIndex(1,0,1)]),norm(d[Surface::derivativeIndex(0,1,1)])});
+    }
+    const auto fitted=fitCurve([&](double t) {
+        const Vec2 uv=fin.pcurve->point(parameter(t));return Vec3(uv.x(),uv.y(),0);
+    },target.range,breaks,1e-8/speed);
+    std::vector<Vec2> poles;for(const Vec3 &p:fitted->poles())poles.emplace_back(p.x(),p.y());
+    auto result=std::make_shared<BSplineCurve<2>>(fitted->degree(),fitted->knots(),std::move(poles),fitted->weights());
+    if(!acceptable(result))throw std::domain_error("cucitura: rimappatura SP-curve fuori tolleranza");
+    return result;
+}
+
+} // namespace
 
 bool sewModel(RawModel &model, double tolerance) {
     // Vertici uniti: ordinati in x, confronti solo vicini.
@@ -298,13 +655,54 @@ bool sewModel(RawModel &model, double tolerance) {
     std::vector<int> order(n), target(n);
     for (std::size_t k = 0; k < n; ++k) order[k] = int(k), target[k] = int(k);
     std::sort(order.begin(), order.end(), [&](int a, int b) { return model.points[std::size_t(a)].x() < model.points[std::size_t(b)].x(); });
-    for (std::size_t i = 0; i < n; ++i) {
-        const int a = order[i];
-        if (target[std::size_t(a)] != a) continue;
-        for (std::size_t j = i + 1; j < n; ++j) {
-            const int b = order[j];
-            if (model.points[std::size_t(b)].x() - model.points[std::size_t(a)].x() > tolerance) break;
-            if (target[std::size_t(b)] == b && distance(model.points[std::size_t(a)], model.points[std::size_t(b)]) <= tolerance) target[std::size_t(b)] = a;
+    // Celle 3D: evita la scansione quadratica dei punti con la stessa x.
+    // Mantieni ordine e rappresentanti della precedente fusione greedy.
+    using Cell = std::array<std::int64_t, 3>;
+    struct CellHash {
+        std::size_t operator()(const Cell &cell) const {
+            std::size_t h = 0;
+            for (std::int64_t c : cell) h ^= std::hash<std::int64_t>{}(c) + std::size_t(0x9e3779b9) + (h << 6) + (h >> 2);
+            return h;
+        }
+    };
+    std::vector<Cell> cells(n);
+    bool spatial = tolerance > 0.0 && std::isfinite(tolerance);
+    for (std::size_t i = 0; spatial && i < n; ++i) {
+        for (int axis = 0; axis < 3; ++axis) {
+            // Celle larghe 2*tolleranza lasciano margine agli arrotondamenti.
+            const long double c = std::floor(static_cast<long double>(model.points[i][axis]) / (2.0L * tolerance));
+            if (!std::isfinite(c) || std::fabs(c) > 0x1p50L) { spatial = false; break; }
+            cells[i][std::size_t(axis)] = static_cast<std::int64_t>(c);
+        }
+    }
+    if (spatial) {
+        std::unordered_map<Cell, std::vector<int>, CellHash> buckets;
+        buckets.reserve(n);
+        for (std::size_t i = 0; i < n; ++i) buckets[cells[i]].push_back(int(i));
+        for (int a : order) {
+            if (target[std::size_t(a)] != a) continue;
+            const Cell &cell = cells[std::size_t(a)];
+            for (int dx = -1; dx <= 1; ++dx)
+                for (int dy = -1; dy <= 1; ++dy)
+                    for (int dz = -1; dz <= 1; ++dz) {
+                        const auto found = buckets.find({cell[0] + dx, cell[1] + dy, cell[2] + dz});
+                        if (found == buckets.end()) continue;
+                        for (int b : found->second)
+                            if (target[std::size_t(b)] == b && distance(model.points[std::size_t(a)], model.points[std::size_t(b)]) <= tolerance)
+                                target[std::size_t(b)] = a;
+                    }
+        }
+    } else {
+        // Coordinate estreme o tolleranza non positiva: nessuna conversione
+        // fuori intervallo, stesso percorso precedente.
+        for (std::size_t i = 0; i < n; ++i) {
+            const int a = order[i];
+            if (target[std::size_t(a)] != a) continue;
+            for (std::size_t j = i + 1; j < n; ++j) {
+                const int b = order[j];
+                if (model.points[std::size_t(b)].x() - model.points[std::size_t(a)].x() > tolerance) break;
+                if (target[std::size_t(b)] == b && distance(model.points[std::size_t(a)], model.points[std::size_t(b)]) <= tolerance) target[std::size_t(b)] = a;
+            }
         }
     }
     for (RawEdge &e : model.edges) {
@@ -320,35 +718,76 @@ bool sewModel(RawModel &model, double tolerance) {
     std::vector<int> edgeTarget(model.edges.size());
     std::vector<bool> reversed(model.edges.size(), false);
     for (std::size_t k = 0; k < edgeTarget.size(); ++k) edgeTarget[k] = int(k);
-    // Punto della curva alla frazione f del tratto (nel verso della curva).
-    const auto at = [&](const RawEdge &e, double f) {
-        if (e.hasRange) return e.curve->point(e.range.lo + f * e.range.length());
-        // Senza tratto: tra le proiezioni degli estremi.
-        double a = projectPoint(*e.curve, model.points[std::size_t(e.start)]).parameter, b = projectPoint(*e.curve, model.points[std::size_t(e.end)]).parameter;
-        if (e.curve->isPeriodic() && b <= a) b += e.curve->period();
-        return e.curve->point(a + f * (b - a));
+    // Il confronto e' geometrico: la stessa frazione di parametro puo'
+    // individuare punti diversi su curve coincidenti.
+    const auto rangeOf = [&](const RawEdge &e) {
+        if (e.hasRange) return e.range;
+        double a=projectPoint(*e.curve,model.points[std::size_t(e.start)]).parameter;
+        double b=projectPoint(*e.curve,model.points[std::size_t(e.end)]).parameter;
+        if(e.curve->isPeriodic() && b<=a)b+=e.curve->period();
+        else if(e.start==e.end && e.curve->domain().isFinite())return e.curve->domain();
+        return Interval{std::min(a,b),std::max(a,b)};
     };
-    const auto middle = [&](const RawEdge &e) { return at(e, 0.5); };
+    const auto matching = [&](const RawEdge &a,const Interval &ra,const RawEdge &b,const Interval &rb) {
+        if(!ra.isFinite() || !rb.isFinite() || !(ra.length()>0) || !(rb.length()>0))return false;
+        const double limit=10.0*tolerance;
+        if(projectPoint(*b.curve,a.curve->point((ra.lo+ra.hi)/2),rb).distance>limit)return false;
+        for(const auto pair : {std::pair<const RawEdge*,Interval>{&a,ra},{&b,rb}}) {
+            const RawEdge &other=pair.first==&a?b:a;
+            const Interval otherRange=pair.first==&a?rb:ra;
+            const auto nodes=pair.first->curve->breakpoints(pair.second);
+            const auto near = [&](double t) {
+                const double gap=projectPoint(*other.curve,pair.first->curve->point(t),otherRange).distance;
+                return std::isfinite(gap) && gap<=limit;
+            };
+            // Campioni uniformi aggiuntivi per campate analitiche o di grado alto.
+            for(int sample=0;sample<=16;++sample)
+                if(!near(pair.second.lo+pair.second.length()*sample/16.0))return false;
+            for(std::size_t k=1;k<nodes.size();++k)
+                for(double f : {0.0,0.25,0.5,0.75,1.0}) {
+                    cancellationPoint();
+                    if(!near(nodes[k-1]+f*(nodes[k]-nodes[k-1])))return false;
+                }
+        }
+        return true;
+    };
+    const auto closedReversed = [&](const RawEdge &a,const Interval &ra,const RawEdge &b,const Interval &rb) {
+        const auto nodes=a.curve->breakpoints(ra);
+        for(std::size_t k=1;k<nodes.size();++k)for(double f : {0.17,0.37,0.71}) {
+            const double t=nodes[k-1]+f*(nodes[k]-nodes[k-1]);
+            const Vec3 tangent=a.curve->derivative(t);
+            const auto q=projectPoint(*b.curve,a.curve->point(t),rb);
+            const Vec3 other=b.curve->derivative(q.parameter);
+            if(norm(tangent)>0 && norm(other)>0) {
+                const double agree=dot(normalized(tangent),normalized(other));
+                if(std::fabs(agree)>0.5)return agree<0;
+            }
+        }
+        throw std::domain_error("cucitura: verso del bordo chiuso non determinabile");
+    };
     for (const auto &[ends, list] : byEnds)
         for (std::size_t i = 0; i < list.size(); ++i) {
             if (edgeTarget[std::size_t(list[i])] != list[i]) continue;
             const RawEdge &a = model.edges[std::size_t(list[i])];
-            const Vec3 ma = middle(a);
+            const Interval ra=rangeOf(a);
             for (std::size_t j = i + 1; j < list.size(); ++j) {
                 if (edgeTarget[std::size_t(list[j])] != list[j]) continue;
                 const RawEdge &b = model.edges[std::size_t(list[j])];
-                if (distance(ma, middle(b)) > 10.0 * tolerance) continue;
+                const Interval rb=rangeOf(b);
+                if (!matching(a,ra,b,rb)) continue;
                 edgeTarget[std::size_t(list[j])] = list[i];
-                // Il verso: dagli estremi, o per un edge chiuso da un punto a un quarto del tratto.
-                if (a.start != a.end) reversed[std::size_t(list[j])] = a.start != b.start;
-                else reversed[std::size_t(list[j])] = distance(at(a, 0.25), at(b, 0.25)) > distance(at(a, 0.25), at(b, 0.75));
+                reversed[std::size_t(list[j])] = a.start!=a.end ? a.start!=b.start : closedReversed(a,ra,b,rb);
             }
         }
     for (RawFace &face : model.faces)
         for (auto &loop : face.loops)
             for (RawFin &fin : loop) {
-                if (reversed[std::size_t(fin.edge)]) fin.sense = !fin.sense;
-                fin.edge = edgeTarget[std::size_t(fin.edge)];
+                const int oldEdge = fin.edge, newEdge = edgeTarget[std::size_t(oldEdge)];
+                if (oldEdge != newEdge && fin.pcurve)
+                    fin.pcurve = sewnPCurve(model.edges[std::size_t(oldEdge)], model.edges[std::size_t(newEdge)],
+                                            face, fin, reversed[std::size_t(oldEdge)], tolerance);
+                if (reversed[std::size_t(oldEdge)]) fin.sense = !fin.sense;
+                fin.edge = newEdge;
             }
     // Versi coerenti: le due facce di un edge lo percorrono in versi opposti.
     std::map<int, std::vector<std::pair<std::size_t, bool>>> finsOf;  // edge -> (faccia, verso)

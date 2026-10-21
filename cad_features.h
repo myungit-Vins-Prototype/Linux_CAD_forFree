@@ -29,6 +29,7 @@ struct HelixBase {
 Kernel::Vec3 helixReference(const Kernel::Vec3 &axis);
 
 // Base da un cerchio o arco dello schizzo (curve = -1: il primo).
+// Angolo 0 sull'asse X dello schizzo, 90 sull'asse Y.
 bool helixBaseFromSketch(const SketchObject &sketch, int curve, HelixBase &base, QString *error);
 
 // Passo, giri e altezza effettivi (il valore che il modo non usa si ricava).
@@ -49,6 +50,7 @@ SketchObject sketchPathSubset(const SketchObject &sketch, const SketchPathRef &s
 std::vector<Kernel::PathSegment> curvePath(const ForgeCurve &curve);
 // Il percorso orientato perche' parta vicino al profilo: una catena si gira se
 // il profilo sta alla sua fine, un contorno chiuso parte dal punto piu' vicino.
+std::vector<Kernel::PathSegment> alignPath(const std::vector<Kernel::PathSegment> &path, const Kernel::Vec3 &center);
 std::vector<Kernel::PathSegment> alignPath(const std::vector<Kernel::PathSegment> &path, const SketchObject &profile);
 
 }

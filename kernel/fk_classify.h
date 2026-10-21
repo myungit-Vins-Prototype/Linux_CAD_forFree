@@ -33,8 +33,12 @@ struct RayFaceIndex {
     std::vector<std::pair<FaceId, Box>> faces;
     Box bounds;
 };
+// `window` (facoltativa): solo i punti a distanza (lungo la direzione
+// normalizzata) nell'intervallo, per esempio attorno al punto colpito sulla
+// tassellazione: si provano soltanto le facce il cui box lo attraversa li'.
+// Il risultato e' esatto; se nella finestra non c'e' nulla, falso.
 bool firstRayHit(const Body &body, const Vec3 &origin, const Vec3 &direction, double tolerance, double &t,
-                 FaceId *face = nullptr, const RayFaceIndex *index = nullptr);
+                 FaceId *face = nullptr, const RayFaceIndex *index = nullptr, const Interval *window = nullptr);
 
 // Box che contiene la faccia.
 Box faceBox(const Body &body, FaceId face);

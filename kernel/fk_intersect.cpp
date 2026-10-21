@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <cmath>
 #include <functional>
+#include <limits>
 #include <stdexcept>
 
 #include "fk_bernstein.h"
@@ -89,6 +90,16 @@ namespace {
 // (tangenze: radici doppie che l'isolamento per cambi di segno puo' perdere
 // per un arrotondamento): minimi di |p| entro valueTolerance.
 std::vector<double> rootsAndTouchings(const BernsteinPolynomial &p, double valueTolerance) {
+    // La base di Bernstein e' positiva su [0,1]: fuori dall'inviluppo dei
+    // coefficienti non ci sono ne' zeri ne' tangenze entro valueTolerance.
+    // Evita soprattutto la ricerca degli estremi di tratti lontani dal piano.
+    const auto &coefficients = p.coefficients();
+    if (!coefficients.empty()) {
+        const auto bounds = std::minmax_element(coefficients.begin(), coefficients.end());
+        const double magnitude = std::max(std::fabs(*bounds.first), std::fabs(*bounds.second));
+        const double margin = std::max(valueTolerance, 64 * std::numeric_limits<double>::epsilon() * magnitude);
+        if (*bounds.first > margin || *bounds.second < -margin) return {};
+    }
     std::vector<double> result = p.roots();
     if (p.degree() >= 2)
         for (double s : p.derivative().roots())
@@ -145,6 +156,23 @@ void rootsOf(const Curve<N> &curve, const Interval &range, const Vec<N> &n, doub
     }
     case CurveType::BSpline: {
         const auto &spline = static_cast<const BSplineCurve<N> &>(curve);
+        // Pesi positivi: anche la NURBS e' contenuta nell'inviluppo dei poli.
+        // Rifiuta il tratto intero prima di visitare tutti i suoi Bezier. Il
+        // margine conserva sia i coincidenti sia i quasi-contatti razionali
+        // accettati da rootsAndTouchings, inclusi normali non unitarie.
+        double low = 1e300, high = -1e300, magnitude = std::fabs(offset);
+        double minWeight = 1e300, maxWeight = 0.0;
+        for (int j = 0; j < spline.poleCount(); ++j) {
+            const double projection = dot(n, spline.poles()[j]);
+            low = std::min(low, projection - offset);
+            high = std::max(high, projection - offset);
+            magnitude = std::max(magnitude, std::fabs(projection));
+            minWeight = std::min(minWeight, spline.weight(j));
+            maxWeight = std::max(maxWeight, spline.weight(j));
+        }
+        const double margin = std::max(tolerance, 0.1 * tolerance * (maxWeight / minWeight) * norm(n))
+            + 64 * std::numeric_limits<double>::epsilon() * magnitude;
+        if (low > margin || high < -margin) return;
         const auto segments = spline.cachedBezierSegments();
         for (const BSplineCurve<N> &segment : *segments) {
             const Interval dom = segment.domain();
@@ -674,12 +702,18 @@ PlaneSurfaceIntersection intersectPlaneSurface(const Plane &plane, const Surface
         const Vec3 m = other.zDir();
         const Vec3 d = cross(n, m);
         const double sine = norm(d);
-        if (sine <= 1e-12) {
+        // Quasi paralleli: se dentro la regione i due piani si scostano meno
+        // della tolleranza sono lo stesso piano (i piani equivalenti delle
+        // B-spline hanno la normale giusta solo all'ultimo bit); altrimenti la
+        // retta comune sarebbe lontanissima o non finita.
+        const Vec3 extent = bounds.hi - bounds.lo;
+        const double size = isFinite(extent) ? norm(extent) : 1.0;
+        if (sine <= 1e-12 || sine * size <= tolerance) {
             if (std::fabs(dot(n, other.origin()) - offset) <= tolerance) out.coincident = true;
             return out;
         }
         // Punto comune: combinazione di n e m.
-        const double c1 = offset, c2 = dot(m, other.origin()), nm = dot(n, m), det = 1.0 - nm * nm;
+        const double c1 = offset, c2 = dot(m, other.origin()), nm = dot(n, m), det = sine * sine;
         const Vec3 point = ((c1 - c2 * nm) / det) * n + ((c2 - c1 * nm) / det) * m;
         addLine(out, point, d / sine, bounds);
         return out;
@@ -689,7 +723,9 @@ PlaneSurfaceIntersection intersectPlaneSurface(const Plane &plane, const Surface
         const Frame3 &f = cylinder.frame();
         const Vec3 a = f.zDir(), c = f.origin();
         const double r = cylinder.radius(), na = dot(n, a);
-        if (std::fabs(na) <= 1e-12) {
+        const Vec3 extent = bounds.hi - bounds.lo;
+        const double size = isFinite(extent) ? norm(extent) : 1.0;
+        if (std::fabs(na) <= 1e-12 || std::fabs(na) * size <= tolerance) {
             // Piano parallelo all'asse: 0, 1 (tangente) o 2 generatrici.
             const double delta = dot(n, c) - offset;
             if (std::fabs(delta) > r + tolerance) return out;
@@ -776,6 +812,21 @@ PlaneSurfaceIntersection intersectPlaneSurface(const Plane &plane, const Surface
         Interval range;
         out.curves.push_back(obliqueImage(base, domain, n, offset, d, range));
         out.ranges.push_back(range);
+        return out;
+    }
+    case SurfaceType::Torus: {
+        const auto &torus = static_cast<const ToroidalSurface &>(surface);
+        const auto &frame = torus.frame();
+        // Solo il piano per l'asse: una sezione spostata o obliqua non e' un cerchio.
+        if (std::fabs(dot(n, frame.zDir())) > 1e-14
+            || std::fabs(dot(n, frame.origin() - p0)) > 1e-12 * std::max({1.0, torus.majorRadius(), torus.minorRadius()}))
+            throw std::domain_error("intersectPlaneSurface: sezione toroidale non meridiana");
+        const auto radial = normalized(cross(n, frame.zDir()));
+        for (double side : {-1.0, 1.0}) {
+            out.curves.push_back(std::make_shared<Circle<3>>(frame.origin() + side * torus.majorRadius() * radial,
+                                                            radial, frame.zDir(), torus.minorRadius()));
+            out.ranges.push_back({0.0, kTwoPi});
+        }
         return out;
     }
     case SurfaceType::Cone: {

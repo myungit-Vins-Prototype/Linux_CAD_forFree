@@ -9,11 +9,17 @@ double distance(const QPointF &a, const QPointF &b) { return std::hypot(b.x() - 
 }
 
 SnapResult snapSegments(const QPointF &point, const QVector<SketchSegment> &segments,
-                        const QVector<QPointF> &points, bool enabled, bool snapToGrid,
+                        const QVector<QPointF> &points, bool snapToGeometry, bool snapToGrid,
                         double gridSpacing, double tolerance) {
     SnapResult result;
     result.point = point;
-    if (!enabled) return result;
+    if (!snapToGeometry) {
+        if (snapToGrid) {
+            result.point.setX(std::round(point.x() / gridSpacing) * gridSpacing);
+            result.point.setY(std::round(point.y() / gridSpacing) * gridSpacing);
+        }
+        return result;
+    }
 
     double bestDistance = tolerance;
     for (const QPointF &candidate : points) {

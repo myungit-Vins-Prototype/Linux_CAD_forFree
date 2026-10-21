@@ -151,3 +151,71 @@ FK_TEST(PlaneSurfaceIntersections) {
             }
     }
 }
+
+// Non trasformare una sezione toroidale generica in un falso raggio circolare.
+FK_TEST(PlaneTorusMeridianIntersections) {
+    for (const auto &frame : {Frame3(), Frame3(Vec3(12,-7,3), normalized(Vec3(1,2,3)), Vec3(1,0,0))}) {
+        const ToroidalSurface torus(frame, 5, 1.5);
+        const Plane plane(Frame3(frame.origin(), frame.yDir(), frame.xDir()));
+        Box bounds; bounds.add(frame.origin()-Vec3(20,20,20)); bounds.add(frame.origin()+Vec3(20,20,20));
+        const auto result = intersectPlaneSurface(plane, torus, bounds, 1e-9);
+        FK_CHECK(result.curves.size() == 2);
+        for (const auto &curve : result.curves) {
+            FK_CHECK(curve->type() == CurveType::Circle);
+            FK_CHECK(std::abs(static_cast<const Circle<3> &>(*curve).radius()-1.5) < 1e-12);
+            for (int i=0; i<32; ++i) {
+                const auto p = curve->point(kTwoPi*i/32.);
+                FK_CHECK(projectPoint(torus,p).distance < 1e-9);
+                FK_CHECK(std::abs(dot(plane.frame().zDir(),p-plane.frame().origin())) < 1e-10);
+            }
+        }
+        FK_CHECK_THROWS(intersectPlaneSurface(Plane(Frame3(frame.origin()+.1*frame.yDir(),frame.yDir(),frame.xDir())),torus,bounds,1e-9));
+        FK_CHECK_THROWS(intersectPlaneSurface(Plane(Frame3(frame.origin(),normalized(frame.yDir()+.001*frame.zDir()),frame.xDir())),torus,bounds,1e-9));
+    }
+}
+
+// Il filtro per inviluppo dei poli deve conservare anche i contatti senza
+// cambio di segno, le radici agli estremi e i tratti coincidenti.
+FK_TEST(PlaneRootsHullKeepsContacts) {
+    const auto curve = [](std::vector<double> y, std::vector<double> weights = {}) {
+        return BSplineCurve<2>(2, {0,0,0,1,1,1}, {{0,y[0]}, {.5,y[1]}, {1,y[2]}}, std::move(weights));
+    };
+    const Vec2 normal(0,1);
+    for (double sign : {-1.0, 1.0}) {
+        const auto separated = curve({sign*2,sign*3,sign*4}, {1e-6,1,1e6});
+        const auto roots = planeRoots<2>(separated, {0,1}, normal, 0, 1e-9);
+        FK_CHECK(roots.parameters.empty() && roots.coincident.empty());
+    }
+    for (double shift : {0.0, 5e-12}) {
+        const auto tangent = curve({1+shift,-1+shift,1+shift});
+        const auto roots = planeRoots<2>(tangent, {0,1}, normal, 0, 1e-9);
+        FK_CHECK(roots.parameters.size() == 1);
+        if (!roots.parameters.empty()) FK_CHECK_NEAR(roots.parameters.front(), .5, 1e-12);
+        FK_CHECK(roots.coincident.empty());
+    }
+    const auto endpoints = curve({0,1,0}, {1,2,3});
+    const auto ends = planeRoots<2>(endpoints, {0,1}, normal, 0, 1e-9);
+    FK_CHECK(ends.parameters.size() == 2);
+    if (ends.parameters.size() == 2) {
+        FK_CHECK_NEAR(ends.parameters.front(), 0, 1e-14);
+        FK_CHECK_NEAR(ends.parameters.back(), 1, 1e-14);
+    }
+    const auto coincident = curve({0,0,0}, {1,10,.1});
+    const auto overlap = planeRoots<2>(coincident, {.2,.8}, normal, 0, 1e-9);
+    FK_CHECK(overlap.parameters.empty() && overlap.coincident.size() == 1);
+    if (!overlap.coincident.empty()) {
+        FK_CHECK_NEAR(overlap.coincident.front().lo, .2, 1e-14);
+        FK_CHECK_NEAR(overlap.coincident.front().hi, .8, 1e-14);
+    }
+    // Una normale scalata e pesi molto diversi non cambiano le radici esatte.
+    const auto rational = curve({-1,0,1}, {1,100,4});
+    for (double scale : {1e-3,1.0,1e3}) {
+        const auto roots = planeRoots<2>(rational, {0,1}, scale*normal, 0, 1e-12);
+        FK_CHECK(roots.parameters.size() == 1);
+        if (!roots.parameters.empty()) FK_CHECK_NEAR(roots.parameters.front(), 1.0/3.0, 1e-12);
+    }
+    const auto far = curve({1e9+1,1e9-1,1e9+1});
+    const auto translated = planeRoots<2>(far, {0,1}, normal, 1e9, 1e-9);
+    FK_CHECK(translated.parameters.size() == 1);
+    if (!translated.parameters.empty()) FK_CHECK_NEAR(translated.parameters.front(), .5, 1e-12);
+}

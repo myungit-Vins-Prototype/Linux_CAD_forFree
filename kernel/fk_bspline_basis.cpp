@@ -1,5 +1,7 @@
 #include "fk_bspline_basis.h"
 
+#include "fk_cancel.h"
+
 #include <algorithm>
 #include <stdexcept>
 #include <string>
@@ -63,6 +65,7 @@ std::vector<double> knotBreakpoints(const std::vector<double> &knots, const Inte
 }
 
 void basisFunctionDerivatives(const std::vector<double> &knots, int span, double u, int p, int n, double *ders) {
+    cancellationPoint();
     ScratchBuffer<double> ndu((p + 1) * (p + 1));
     ScratchBuffer<double, 16> left(p + 1), right(p + 1);
     auto NDU = [&](int row, int column) -> double & { return ndu[row * (p + 1) + column]; };

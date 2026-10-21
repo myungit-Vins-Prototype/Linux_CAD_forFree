@@ -10,16 +10,19 @@
 
 // Ripetizione dei corpi e delle funzioni (BodyFeature::Pattern, vedi
 // PatternParameters): movimenti esatti (traslazioni, rotazioni, simmetrie di
-// fk_transform) e unione delle copie con le booleane del kernel.
+// fk_transform), unione dei solidi e raccolta delle superfici in shell separate.
 namespace ForgeCad {
 
 // Le trasformazioni delle istanze oltre all'originale (per lo specchio la
 // simmetria), dai riferimenti risolti sulla geometria del corpo `owner`
 // (i corpi dei riferimenti hanno indice minore).
+// Massimo 500 trasformazioni oltre all'originale. Conteggi fuori limite
+// rifiutati prima delle allocazioni; su errore l'output e' vuoto.
 bool patternPlacements(const PatternParameters &pattern, int owner, const QVector<SketchObject> &sketches, const QVector<ExtrusionObject> &bodies,
                        std::vector<Kernel::Transform3> &placements, QString *error);
 
-// Il corpo con le sue copie (unione; senza l'originale se !keepOriginal).
+// Il corpo con le sue copie (unione dei solidi, shell separate per le superfici;
+// senza l'originale se !keepOriginal).
 ForgeBody forgePattern(const ForgeBody &base, const std::vector<Kernel::Transform3> &placements, bool keepOriginal, QString *error);
 
 // Ripetizione della funzione: `target` unito (operation Union) o meno

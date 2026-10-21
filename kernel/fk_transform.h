@@ -6,8 +6,11 @@
 // Trasformazioni rigide e scale uniformi dei body, esatte: ogni curva e ogni
 // superficie resta del suo tipo (un cilindro scalato e' un cilindro di raggio
 // s R, una B-spline ha i poli trasformati), le curve e le superfici condivise
-// restano condivise, le SP-curve si ricalcolano.
+// restano condivise. Nella simmetria si conservano le SP-curve delle
+// superfici B-spline se il parametro dell'edge resta invariato; le altre
+// si ricalcolano.
 namespace ForgeCad::Kernel {
+class BodyHistory;
 
 // `transform` deve essere una similitudine (rotazione, traslazione, scala
 // uniforme positiva, anche con una simmetria): altrimenti std::domain_error.
@@ -15,13 +18,13 @@ namespace ForgeCad::Kernel {
 // sistema speculare reso destrorso (stesso insieme di punti, u al contrario),
 // i loop si percorrono al contrario e il verso delle facce viene dalla
 // normale trasformata.
-Body transformBody(const Body &body, const Transform3 &transform);
+Body transformBody(const Body &body, const Transform3 &transform, BodyHistory *history = nullptr);
 
 // Immagine speculare rispetto al piano per `point` normale a `normal`.
-Body mirrorBody(const Body &body, const Vec3 &point, const Vec3 &normal);
+Body mirrorBody(const Body &body, const Vec3 &point, const Vec3 &normal, BodyHistory *history = nullptr);
 
 // Scala uniforme di fattore `factor` > 0 attorno a `center`.
-Body scaleBody(const Body &body, const Vec3 &center, double factor);
+Body scaleBody(const Body &body, const Vec3 &center, double factor, BodyHistory *history = nullptr);
 
 // Curva e superficie trasformate, dello stesso tipo. Il parametro della
 // curva trasformata e' k t (`parameterScale` = k: le rette hanno la direzione

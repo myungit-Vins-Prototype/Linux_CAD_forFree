@@ -16,7 +16,7 @@
 //    per sostituzione nell'equazione implicita della conica (Bernstein),
 //    B-spline con B-spline per suddivisione delle pezze di Bezier + Newton;
 //  - piano con piano, cilindro, sfera, superficie estrusa (qualsiasi curva
-//    base): curve esatte (rette, cerchi, ellissi, NURBS);
+//    base), toro nei piani per l'asse: curve esatte (rette, cerchi, ellissi, NURBS);
 //  - retta con piano, cilindro, sfera, superficie estrusa (per il test
 //    punto-in-solido).
 //  - curva con piano, cilindro, superficie estrusa (riduzione esatta a

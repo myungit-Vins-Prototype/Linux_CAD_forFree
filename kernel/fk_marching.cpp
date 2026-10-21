@@ -1,5 +1,7 @@
 #include "fk_marching.h"
 
+#include "fk_cancel.h"
+
 #include <algorithm>
 #include <array>
 #include <cmath>
@@ -62,6 +64,7 @@ struct Constraint {
 
 bool solve4(double m[4][5], double x[4]) {
     for (int c = 0; c < 4; ++c) {
+        cancellationPoint();
         int pivot = c;
         for (int r = c + 1; r < 4; ++r)
             if (std::fabs(m[r][c]) > std::fabs(m[pivot][c])) pivot = r;
@@ -69,11 +72,13 @@ bool solve4(double m[4][5], double x[4]) {
         if (pivot != c)
             for (int k = 0; k < 5; ++k) std::swap(m[c][k], m[pivot][k]);
         for (int r = c + 1; r < 4; ++r) {
+            cancellationPoint();
             const double f = m[r][c] / m[c][c];
             for (int k = c; k < 5; ++k) m[r][k] -= f * m[c][k];
         }
     }
     for (int r = 3; r >= 0; --r) {
+        cancellationPoint();
         double sum = m[r][4];
         for (int k = r + 1; k < 4; ++k) sum -= m[r][k] * x[k];
         x[r] = sum / m[r][r];
@@ -216,11 +221,13 @@ private:
 bool Marcher::correct(Params &x, const Constraint &constraint) const {
     const double threshold = 1e-13 * scale_;
     for (int iteration = 0; iteration < 30; ++iteration) {
+        cancellationPoint();
         Vec3 ea[4], eb[4];
         evaluate(x, ea, eb);
         const Vec3 gap = ea[0] - eb[0];
         double m[4][5];
         for (int i = 0; i < 3; ++i) {
+            cancellationPoint();
             m[i][0] = ea[kU][i];
             m[i][1] = ea[kV][i];
             m[i][2] = -eb[kU][i];
@@ -245,6 +252,7 @@ bool Marcher::correct(Params &x, const Constraint &constraint) const {
         if (!solve4(m, dx)) return false;
         double largest = 0.0;
         for (int k = 0; k < 4; ++k) {
+            cancellationPoint();
             x[k] += dx[k];
             largest = std::max(largest, std::fabs(dx[k]) / (1.0 + std::fabs(x[k])));
         }
@@ -281,6 +289,7 @@ bool Marcher::makeBreakNode(const Params &x, const Vec3 &reference, const Params
     if (!(largest > 0.0)) return false;
     Params before = x, after = x;
     for (int i = 0; i < 4; ++i) {
+        cancellationPoint();
         const double delta = 1e-9 * direction[i] / largest;
         before[i] -= delta;
         after[i] += delta;
@@ -308,6 +317,7 @@ bool Marcher::validate(const Node &a, const Node &b, double &curveDeviation, dou
     const double h = distance(a.p, b.p);
     curveDeviation = pcurveDeviation = 0.0;
     for (double s : {0.25, 0.5, 0.75}) {
+        cancellationPoint();
         Vec3 derivative;
         const Vec3 point = hermite(a.p, a.t, b.p, b.tIn, h, s, &derivative);
         const Vec2 pa = hermite(Vec2(a.x[0], a.x[1]), a.da, Vec2(b.x[0], b.x[1]), b.daIn, h, s);
@@ -329,6 +339,7 @@ bool Marcher::validate(const Node &a, const Node &b, double &curveDeviation, dou
 bool Marcher::firstCrossing(const Params &from, const Params &to, double &fraction, int &index, double &value, bool &limit) const {
     fraction = 2.0;
     for (int i = 0; i < 4; ++i) {
+        cancellationPoint();
         const double p0 = from[i], p1 = to[i];
         if (p0 == p1) continue;
         const Surface &surface = i < 2 ? a_ : b_;
@@ -345,6 +356,7 @@ bool Marcher::firstCrossing(const Params &from, const Params &to, double &fracti
         };
         const std::vector<double> breaks = surfaceBreaks(surface, isU, {lo, hi});
         for (double c : breaks) {
+            cancellationPoint();
             const double margin = 1e-12 * (1.0 + std::fabs(c));
             if (c > lo + margin && c < hi - margin) consider(c, false);
         }
@@ -389,6 +401,7 @@ Stop Marcher::trace(Node &seed, std::vector<Node> &out, Vec3 &tangentPoint) {
     };
     const double shortest = 1e-5 * scale_;
     for (int guard = 0; guard < 200000; ++guard) {
+        cancellationPoint();
         if (h < hMin_) {
             if (current.sine < 1e-3) {
                 tangentPoint = current.p;
@@ -411,6 +424,7 @@ Stop Marcher::trace(Node &seed, std::vector<Node> &out, Vec3 &tangentPoint) {
         // vi si incrociano sono curve distinte, il punto e' un vertice).
         bool nearSingular = false;
         for (const Singular &singular : singular_) {
+            cancellationPoint();
             const Vec3 d = singular.p - current.p;
             const double along = dot(d, current.t);
             if (along <= 1e-6 * scale_ || along > 1.5 * h || norm(d - along * current.t) > 0.2 * along + 10.0 * tolerance_) continue;
@@ -429,6 +443,7 @@ Stop Marcher::trace(Node &seed, std::vector<Node> &out, Vec3 &tangentPoint) {
         if (nearSingular) continue;
         Params x = current.x;
         for (int i = 0; i < 2; ++i) {
+            cancellationPoint();
             x[i] += h * current.da[i];
             x[i + 2] += h * current.db[i];
         }
@@ -573,6 +588,7 @@ IntersectionCurve Marcher::assemble(const std::vector<Node> &nodes, bool closed)
     IntersectionCurve curve;
     if (nodes.front().singular) curve.splitParameters.push_back(0.0);
     for (std::size_t i = 0; i + 1 < nodes.size(); ++i) {
+        cancellationPoint();
         const Node &a = nodes[i], &b = nodes[i + 1];
         const double h = distance(a.p, b.p);
         if (!(h > 1e-12 * scale_)) throw std::logic_error("intersectSurfaces: due punti coincidenti sulla curva");
@@ -612,8 +628,10 @@ bool Marcher::completeToContact(const Node &seed, std::vector<Node> &nodes, Vec3
     // normali cresce col quadrato della distanza). Se c'e' un polo di una
     // delle due superfici vicino, e sta sull'altra, il contatto e' li'.
     for (int side = 0; side < 2; ++side) {
+        cancellationPoint();
         const Surface &surface = side == 0 ? a_ : b_, &other = side == 0 ? b_ : a_;
         for (const SurfacePole &pole : surfacePoles(surface)) {
+            cancellationPoint();
             if (distance(pole.point, P) > 1e-3 * scale_) continue;
             const SurfaceProjection onOther = projectPoint(other, pole.point);
             if (onOther.distance > 0.1 * tolerance_) continue;
@@ -645,6 +663,7 @@ bool Marcher::completeToContact(const Node &seed, std::vector<Node> &nodes, Vec3
     // Parametri del punto: periodi come l'ultimo nodo; in un polo u e' il
     // limite lungo il ramo (quello dell'ultimo nodo).
     for (int i = 0; i < 4; ++i) {
+        cancellationPoint();
         const Surface &surface = i < 2 ? a_ : b_;
         const bool periodic = i % 2 == 0 ? surface.isUPeriodic() : surface.isVPeriodic();
         if (!periodic) continue;
@@ -671,6 +690,7 @@ bool Marcher::completeToContact(const Node &seed, std::vector<Node> &nodes, Vec3
     auto chordPoint = [&](double fraction, const Params &guess, Sample &sample) {
         sample.p = P + fraction * (last.p - P);
         for (int side = 0; side < 2; ++side) {
+            cancellationPoint();
             const Surface &surface = side == 0 ? a_ : b_;
             Vec2 uv(guess[2 * side], guess[2 * side + 1]);
             if (!invertPoint(surface, sample.p, uv, limit, scale_)) return false;
@@ -683,6 +703,7 @@ bool Marcher::completeToContact(const Node &seed, std::vector<Node> &nodes, Vec3
     // Parametri dentro i domini non periodici (la previsione puo' uscirne di poco).
     auto clampDomains = [&](Params &x) {
         for (int i = 0; i < 4; ++i) {
+            cancellationPoint();
             const Surface &surface = i < 2 ? a_ : b_;
             const bool periodic = i % 2 == 0 ? surface.isUPeriodic() : surface.isVPeriodic();
             if (!periodic) x[i] = (i % 2 == 0 ? surface.uDomain() : surface.vDomain()).clamp(x[i]);
@@ -744,6 +765,7 @@ bool Marcher::completeToContact(const Node &seed, std::vector<Node> &nodes, Vec3
         // Nodi con derivate dalle differenze (parabola per tre punti, rispetto
         // alla lunghezza delle corde); nel punto la differenza da un lato.
         for (int refinement = 0; refinement < 300; ++refinement) {
+            cancellationPoint();
             const std::size_t m = samples.size();
             std::vector<double> length(m, 0.0);
             for (std::size_t k = 1; k < m; ++k) length[k] = length[k - 1] + distance(samples[k - 1].p, samples[k].p);
@@ -829,6 +851,7 @@ bool Marcher::completeToContact(const Node &seed, std::vector<Node> &nodes, Vec3
     std::vector<Sample> samples{{last.x, last.p}};
     bool chord = true;
     for (double fraction : {2.0 / 3.0, 1.0 / 3.0}) {
+        cancellationPoint();
         Sample sample;
         Params guess;
         for (int i = 0; i < 4; ++i) guess[i] = xp[i] + fraction * (last.x[i] - xp[i]);
@@ -848,6 +871,7 @@ bool Marcher::completeToContact(const Node &seed, std::vector<Node> &nodes, Vec3
     double ratio = 0.5;
     const double sFirst = dot(last.p - P, d), sStop = std::max(20.0 * tolerance_, 1e-4 * sFirst);
     for (int guard = 0; guard < 400; ++guard) {
+        cancellationPoint();
         const Sample &previous = samples.back();
         const double sPrevious = dot(previous.p - P, d);
         // Abbastanza vicino (i tratti si verificano poi uno per uno).
@@ -890,6 +914,7 @@ bool Marcher::completeToContact(const Node &seed, std::vector<Node> &nodes, Vec3
     // In un polo u e' il limite lungo il ramo: estrapolato dagli ultimi due
     // campioni, lineare in sqrt(s) come la previsione.
     for (int side = 0; side < 2; ++side) {
+        cancellationPoint();
         if (poleIndex(surfacePoles(side == 0 ? a_ : b_), P, 10.0 * tolerance_) < 0 || samples.size() < 2) continue;
         const Sample &near = samples.back(), &far = samples[samples.size() - 2];
         const double s1 = std::sqrt(std::max(dot(near.p - P, d), 0.0)), s2 = std::sqrt(std::max(dot(far.p - P, d), 0.0));
@@ -937,6 +962,7 @@ void Marcher::traceFrom(const Vec3 &seedPoint, SurfaceIntersection &out, bool si
     // parametri interessati; il tracciamento poi attraversa i nodi come al solito.
     std::vector<int> onBreak;
     for (int i = 0; i < 4; ++i) {
+        cancellationPoint();
         const Surface &surface = i < 2 ? a_ : b_;
         const double margin = 1e-10 * (1.0 + std::fabs(x[i]));
         const Interval around{x[i] - margin, x[i] + margin};
@@ -952,6 +978,7 @@ void Marcher::traceFrom(const Vec3 &seedPoint, SurfaceIntersection &out, bool si
         const double step = 1e-4 * scale_;
         bool moved = false;
         for (int sides = 0; sides < (1 << onBreak.size()) && !moved; ++sides) {
+            cancellationPoint();
             Params y = x;
             std::vector<double> sign(onBreak.size());
             for (std::size_t k = 0; k < onBreak.size(); ++k) {
@@ -1084,12 +1111,14 @@ bool Marcher::refineSingular(Params &x, const Vec3 *planeOrigin, const Vec3 *pla
     };
     const Params start = x;
     for (int iteration = 0; iteration < 40; ++iteration) {
+        cancellationPoint();
         double r[6], jac[6][4];
         residual(x, r);
         double size = 0.0;
         for (int i = 0; i < count; ++i) size = std::max(size, std::fabs(r[i]));
         if (size <= 1e-12 * scale_) break;
         for (int k = 0; k < 4; ++k) {
+            cancellationPoint();
             Params y = x;
             const double step = 1e-7 * (1.0 + std::fabs(x[k]));
             y[k] += step;
@@ -1102,6 +1131,7 @@ bool Marcher::refineSingular(Params &x, const Vec3 *planeOrigin, const Vec3 *pla
         // senza piano ha una direzione libera (si va al punto piu' vicino).
         double m[4][5];
         for (int i = 0; i < 4; ++i) {
+            cancellationPoint();
             for (int j = 0; j < 4; ++j) {
                 m[i][j] = 0.0;
                 for (int k = 0; k < count; ++k) m[i][j] += jac[k][i] * jac[k][j];
@@ -1116,6 +1146,7 @@ bool Marcher::refineSingular(Params &x, const Vec3 *planeOrigin, const Vec3 *pla
         if (!solve4(m, dx)) return false;
         double largest = 0.0;
         for (int k = 0; k < 4; ++k) {
+            cancellationPoint();
             x[k] += dx[k];
             largest = std::max(largest, std::fabs(dx[k]) / (1.0 + std::fabs(x[k])));
         }
@@ -1158,6 +1189,7 @@ int Marcher::singularBranches(const Params &x, Vec3 directions[2]) const {
     }
     const double root = std::sqrt(disc);
     for (int k = 0; k < 2; ++k) {
+        cancellationPoint();
         const double sign = k == 0 ? 1.0 : -1.0;
         if (std::fabs(d11) >= std::fabs(d22)) directions[k] = normalized(((-d12 + sign * root) / d11) * e1 + e2);
         else directions[k] = normalized(e1 + ((-d12 + sign * root) / d22) * e2);
@@ -1194,6 +1226,7 @@ void Marcher::singularSeed(const Params &x, SurfaceIntersection &out) {
 void Marcher::traceSingularBranches(SurfaceIntersection &out) {
     const std::vector<Singular> points = singular_;
     for (const Singular &singular : points) {
+        cancellationPoint();
         Vec3 ea[4], eb[4];
         evaluate(singular.x, ea, eb);
         // Quattro semirami: ogni curva tracciata da qui ne copre due (avanti e indietro).
@@ -1247,6 +1280,7 @@ bool Marcher::traceTangentCurve(const Params &x, const Vec3 &direction, SurfaceI
     auto fits = [&](const Node &a, const Node &b) {
         const double h = distance(a.p, b.p);
         for (double s : {0.25, 0.5, 0.75}) {
+            cancellationPoint();
             Vec3 derivative;
             const Vec3 point = hermite(a.p, a.t, b.p, b.tIn, h, s, &derivative);
             const Vec2 pa = hermite(Vec2(a.x[0], a.x[1]), a.da, Vec2(b.x[0], b.x[1]), b.daIn, h, s);
@@ -1263,9 +1297,11 @@ bool Marcher::traceTangentCurve(const Params &x, const Vec3 &direction, SurfaceI
     std::vector<Node> halves[2];
     bool closed = false;
     for (int side = 0; side < 2 && !closed; ++side) {
+        cancellationPoint();
         Node current = side == 0 ? start : start.reversed();
         double h = h0_, travelled = 0.0;
         for (int guard = 0; guard < 20000; ++guard) {
+            cancellationPoint();
             if (h < 1e-6 * scale_) break;  // il contatto finisce (o non si riesce a seguirlo)
             Params y = current.x;
             for (int i = 0; i < 2; ++i) {
@@ -1340,6 +1376,7 @@ Node Marcher::singularNode(const Singular &singular, const Node &current) const 
     singularFrame(singular, w, node);
     if (singular.apex)  // u del cono come il nodo di arrivo (a meno di periodi)
         for (int i = 0; i < 4; ++i) {
+            cancellationPoint();
             const Surface &surface = i < 2 ? a_ : b_;
             const bool periodic = i % 2 == 0 ? surface.isUPeriodic() : surface.isVPeriodic();
             if (periodic) {
@@ -1381,6 +1418,7 @@ void Marcher::singularFrame(const Singular &singular, const Vec3 &w, Node &node)
 
 void Marcher::registerApexes(SurfaceIntersection &out) {
     for (int side = 0; side < 2; ++side) {
+        cancellationPoint();
         const Surface &surface = side == 0 ? a_ : b_, &other = side == 0 ? b_ : a_;
         if (surface.type() != SurfaceType::Cone) continue;
         const auto &cone = static_cast<const ConicalSurface &>(surface);
@@ -1409,6 +1447,7 @@ void Marcher::registerApexes(SurfaceIntersection &out) {
         singular.coneSide = side;
         singular.p = apex;
         for (int k = 0; k < 2; ++k) {
+            cancellationPoint();
             const double u = phi + (k == 0 ? half : -half);
             singular.directions[k] = sa * (std::cos(u) * f.xDir() + std::sin(u) * f.yDir()) + ca * f.zDir();
             Params x;
@@ -1450,6 +1489,7 @@ void criticalParameters(const Curve<3> &curve, const Interval &range, const Vec3
         const auto &spline = static_cast<const BSplineCurve<3> &>(curve);
         const auto segments = spline.cachedBezierSegments();
         for (const BSplineCurve<3> &segment : *segments) {
+            cancellationPoint();
             const Interval dom = segment.domain();
             if (dom.hi < range.lo || dom.lo > range.hi) continue;
             std::vector<double> numerator, weights;
@@ -1496,9 +1536,11 @@ void criticalSeeds(const GeneralizedCylinder &g, const Surface &other, const Vec
         us.push_back(g.domain.hi);
     }
     for (double u : us) {
+        cancellationPoint();
         const Vec3 origin = g.profile->point(u);
         bool grazing = false;
         for (double t : intersectLineSurface(origin, g.direction, other, grazing, tolerance)) {
+            cancellationPoint();
             const Vec3 p = origin + t * g.direction;
             if (inside(bounds, p)) seeds.push_back(p);
         }
@@ -1534,6 +1576,7 @@ SurfaceIntersection parallelCase(const GeneralizedCylinder &ga, const Generalize
         return cross(ib.curve->derivative(projection.parameter), q - projection.point);
     };
     for (const CurveCurvePoint &p : hits.points) {
+        cancellationPoint();
         const Vec2 ta = ia.curve->derivative(p.s), tb = ib.curve->derivative(p.t);
         bool tangent = std::fabs(cross(normalized(ta), normalized(tb))) <= 1e-9;
         if (hits.overlap) {
@@ -1584,6 +1627,7 @@ void parameterWindow(const Surface &surface, const Box &bounds, Interval &u, Int
         range.hi = std::max(range.hi, value);
     };
     for (const Vec3 &c : corners) {
+        cancellationPoint();
         if (surface.type() == SurfaceType::Plane) {
             const Vec3 local = static_cast<const Plane &>(surface).frame().toLocal(c);
             add(pu, local.x());
@@ -1622,6 +1666,7 @@ void subdivisionSeeds(const Surface &a, const Surface &b, const Box &bounds, dou
         SurfaceProjection qa = projectPoint(a, pa), qb = projectPoint(b, pb);
         double x[4] = {qa.u, qa.v, qb.u, qb.v};
         for (int iteration = 0; iteration < 40; ++iteration) {
+            cancellationPoint();
             Vec3 ea[4], eb[4];
             a.evaluate(x[0], x[1], 1, ea);
             b.evaluate(x[2], x[3], 1, eb);
@@ -1738,6 +1783,7 @@ bool rotationalProfiles(const Surface &surface, const Vec3 &origin, const Vec3 &
                         std::vector<Profile2> &out) {
     double zLo = 1e300, zHi = -1e300;
     for (int i = 0; i < 8; ++i) {
+        cancellationPoint();
         const Vec3 c(i & 1 ? bounds.hi.x() : bounds.lo.x(), i & 2 ? bounds.hi.y() : bounds.lo.y(), i & 4 ? bounds.hi.z() : bounds.lo.z());
         zLo = std::min(zLo, dot(c - origin, d));
         zHi = std::max(zHi, dot(c - origin, d));
@@ -1760,6 +1806,7 @@ bool rotationalProfiles(const Surface &surface, const Vec3 &origin, const Vec3 &
         const Interval all{std::min(v0, v1), std::max(v0, v1)};
         // Due falde: la retta del profilo e la sua immagine riflessa (rho < 0 -> -rho).
         for (double mirror : {1.0, -1.0}) {
+            cancellationPoint();
             auto line = std::make_shared<Line<2>>(Vec2(mirror * r, z0), Vec2(mirror * sa, s * ca));
             // rho = mirror (r + v sa) >= 0
             Interval range = all;
@@ -1789,6 +1836,7 @@ bool rotationalProfiles(const Surface &surface, const Vec3 &origin, const Vec3 &
         // Piano del meridiano: deve contenere l'asse.
         Vec3 radial;
         for (double f : {0.5, 0.3, 0.7, 0.1, 0.9}) {
+            cancellationPoint();
             const Vec3 w = meridian.point(domain.lo + f * domain.length()) - origin;
             radial = w - dot(w, d) * d;
             if (norm(radial) > 1e-9) break;
@@ -1797,6 +1845,7 @@ bool rotationalProfiles(const Surface &surface, const Vec3 &origin, const Vec3 &
         radial = normalized(radial);
         const Vec3 normal = cross(radial, d);
         for (int k = 0; k <= 16; ++k) {
+            cancellationPoint();
             const Vec3 w = meridian.point(domain.lo + domain.length() * k / 16.0) - origin;
             if (std::fabs(dot(w, normal)) > tolerance || dot(w, radial) < -tolerance) return false;
         }
@@ -1842,6 +1891,7 @@ SurfaceIntersection rotationalCase(const Surface &a, const Surface &b, const Vec
     std::vector<Vec2> done;
     for (const Profile2 &ca : pa)
         for (const Profile2 &cb : pb) {
+            cancellationPoint();
             const CurveCurveIntersection hits = intersectCurves(*ca.curve, ca.range, *cb.curve, cb.range, tolerance);
             if (hits.overlap) out.coincident = true;
             auto onB = [&](double s) { return ca.range.contains(s) && projectPoint(*cb.curve, ca.curve->point(s), cb.range).distance <= tolerance; };
@@ -1908,22 +1958,56 @@ static bool splineCoincidence(const Surface &a, const Surface &b, const Box &bou
     bool any = false;
     std::vector<IntersectionCurve> cuts;
     for (int side = 0; side < 2; ++side) {
+        cancellationPoint();
         const Surface &self = side == 0 ? a : b, &other = side == 0 ? b : a;
         if (self.type() != SurfaceType::BSpline) continue;
         const std::vector<double> us = self.uBreakpoints(self.uDomain()), vs = self.vBreakpoints(self.vDomain());
         const std::size_t nu = us.size() - 1, nv = vs.size() - 1;
         std::vector<Cover> cover(nu * nv, Cover::Off);
         std::vector<bool> near(nu * nv, false);
+        // Campioni 5 x 5 di ogni pezza (valutazioni: costano poco rispetto alle
+        // proiezioni sull'altra superficie) e pezze vicine al box della ricerca.
+        const auto sampleAt = [&](std::size_t i, std::size_t j, int iu, int iv, double &u, double &v) {
+            u = us[i] + (0.1 + 0.2 * iu) * (us[i + 1] - us[i]);
+            v = vs[j] + (0.1 + 0.2 * iv) * (vs[j + 1] - vs[j]);
+            return self.point(u, v);
+        };
+        std::vector<Box> boxes(nu * nv);
         for (std::size_t i = 0; i < nu; ++i)
             for (std::size_t j = 0; j < nv; ++j) {
-                int on = 0, total = 0;
-                bool grid[5][5];
-                Box box;
+                Box &box = boxes[i * nv + j];
                 for (int iu = 0; iu < 5; ++iu)
                     for (int iv = 0; iv < 5; ++iv) {
-                        const double u = us[i] + (0.1 + 0.2 * iu) * (us[i + 1] - us[i]), v = vs[j] + (0.1 + 0.2 * iv) * (vs[j + 1] - vs[j]);
-                        const Vec3 p = self.point(u, v);
-                        box.add(p);
+                        double u, v;
+                        box.add(sampleAt(i, j, iu, iv, u, v));
+                    }
+                near[i * nv + j] = box.padded(0.25 * box.diagonal() + tolerance).overlaps(bounds);
+            }
+        // Si classificano solo le pezze vicine e le loro adiacenti: le altre
+        // non entrano ne' in `any` ne' nei tagli (che stanno tra pezze vicine).
+        const auto relevant = [&](std::size_t i, std::size_t j) {
+            if (near[i * nv + j]) return true;
+            return (i > 0 && near[(i - 1) * nv + j]) || (i + 1 < nu && near[(i + 1) * nv + j]) || (j > 0 && near[i * nv + j - 1])
+                || (j + 1 < nv && near[i * nv + j + 1]);
+        };
+        for (std::size_t i = 0; i < nu; ++i)
+            for (std::size_t j = 0; j < nv; ++j) {
+                if (!relevant(i, j)) continue;
+                const Box &box = boxes[i * nv + j];
+                // Scarto con una proiezione: se il centro della pezza dista
+                // dall'altra superficie piu' della tolleranza e della diagonale,
+                // nessun campione vi sta sopra.
+                {
+                    double u, v;
+                    const Vec3 center = sampleAt(i, j, 2, 2, u, v);
+                    if (projectPoint(other, center).distance > tolerance + box.diagonal()) continue;  // Cover::Off
+                }
+                int on = 0, total = 0;
+                bool grid[5][5];
+                for (int iu = 0; iu < 5; ++iu)
+                    for (int iv = 0; iv < 5; ++iv) {
+                        double u, v;
+                        const Vec3 p = sampleAt(i, j, iu, iv, u, v);
                         grid[iu][iv] = coincidentAt(self, other, u, v, p);
                         on += grid[iu][iv];
                         ++total;
@@ -1931,7 +2015,6 @@ static bool splineCoincidence(const Surface &a, const Surface &b, const Box &bou
                 bool block = false;
                 for (int iu = 0; iu < 4; ++iu)
                     for (int iv = 0; iv < 4; ++iv) block = block || (grid[iu][iv] && grid[iu + 1][iv] && grid[iu][iv + 1] && grid[iu + 1][iv + 1]);
-                near[i * nv + j] = box.padded(0.25 * box.diagonal() + tolerance).overlaps(bounds);
                 cover[i * nv + j] = on == total ? Cover::On : (on == 0 ? Cover::Off : Cover::Mixed);
                 any = any || (near[i * nv + j] && block);
             }
@@ -1971,6 +2054,7 @@ static bool splineCoincidence(const Surface &a, const Surface &b, const Box &bou
     out.coincident = true;
     // Tagli uguali visti dalle due superfici (la stessa linea di nodo): uno solo.
     for (const IntersectionCurve &cut : cuts) {
+        cancellationPoint();
         bool duplicate = false;
         for (const IntersectionCurve &kept : out.curves)
             duplicate = duplicate || (projectPoint(*kept.curve, cut.curve->point(cut.range.lo + 0.5 * cut.range.length()), kept.range).distance <= tolerance

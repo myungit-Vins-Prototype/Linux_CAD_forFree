@@ -27,6 +27,8 @@ FK_TEST(BSplineSurfaceMatchesOcct) {
             // Isoparametriche esatte.
             FK_CHECK(near(surface.uIsoCurve(u).point(v), d[0], 1e-13));
             FK_CHECK(near(surface.vIsoCurve(v).point(u), d[0], 1e-13));
+            FK_CHECK(near(surface.uIso(u)->point(v), d[0], 1e-13));
+            FK_CHECK(near(surface.vIso(v)->point(u), d[0], 1e-13));
             FK_CHECK(near(surface.uIsoCurve(u).derivative(v, 1), d[Surface::derivativeIndex(0, 1, order)], 1e-11));
             FK_CHECK(near(surface.vIsoCurve(v).derivative(u, 1), d[Surface::derivativeIndex(1, 0, order)], 1e-11));
         }

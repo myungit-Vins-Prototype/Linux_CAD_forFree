@@ -38,7 +38,12 @@ struct IgesReadResult {
     std::vector<std::string> notes;
 };
 
-IgesReadResult readIges(const std::string &content);
+struct IgesReadOptions {
+    // 0: automatico (al massimo 8 worker); 1: corpi in sequenza.
+    int threads = 0;
+};
+
+IgesReadResult readIges(const std::string &content, const IgesReadOptions &options = {});
 
 }
 

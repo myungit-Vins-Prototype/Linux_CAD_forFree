@@ -1,0 +1,94 @@
+CONTESTO PER RIPRENDERE SU WINDOWS — 7 ottobre 2026
+
+Questo file riassume la sessione precedente: non e' una trascrizione integrale.
+Leggere anche confronto_loft_occt.txt, che contiene risultati e limiti delle prove.
+
+OBIETTIVO E VINCOLI
+ForgeCAD / Linux_CAD_forFree, C++17 e Qt6, kernel geometrico proprietario.
+L'utente vuole mantenerlo proprietario: OCCT serve solo da riferimento nei test,
+non va introdotto come dipendenza del kernel applicativo.
+Prossima sessione: osservare in SolidWorks come vengono gestiti i raccordi sullo
+stesso corpo, soprattutto i bordi frammentati e il comando Heal Edges.
+Non e' ancora stata eseguita una prova in SolidWorks.
+
+MODELLO E FILE
+Originale sul Mac: /Users/myungit/Loft_offset.prt. Non sovrascriverlo.
+Loft_offset_confronto_SW.step: corpo finale originale B15, per importazione in SW.
+Loft_offset_raccordo_superiore_R1.prt: copia con SOLO raccordo superiore R1 riuscito
+nel nostro kernel. Formato nativo ForgeCAD, usare lo STEP per SolidWorks.
+Loft_offset_facce_intere.prt: loft e offset corretti, senza la vecchia storia
+completa di estensioni/tagli; NON e' la geometria finale lavorata.
+Loft_raccordato_R1.prt: precedente copia del loft iniziale raccordato, non B15.
+kernel/tests/data/loft_offset_trimmed.body: fixture del corpo finale originale.
+
+DIAGNOSI E MODIFICHE GIA' FATTE
+La riparametrizzazione per lunghezza d'arco delle sezioni del loft introduceva
+salti di normale e piccole suddivisioni. fk_loft.cpp usa ora i domini parametrici
+originali normalizzati: l'offset rigenerato ha due facce laterali invece di sei.
+Le due meta' del loft chiuso rimangono previste dall'attuale rappresentazione;
+una singola faccia periodica sarebbe un intervento diverso e piu' ampio.
+
+Sul corpo finale originale: 8 facce, 22 bordi. Fondo F6, sommità F7.
+Il raccordo superiore R1 ora riesce nel kernel proprietario:
+20 facce, corpo chiuso, checkBody senza errori, tolleranza massima dei bordi
+0.0000249358 mm; verifica del raggio sui supporti entro 1e-4 mm.
+Modifiche principali in kernel/fk_blend_model.h e kernel/fk_blend_surface.cpp:
+- proseguire l'accorciamento attraverso catene di bordi tangenti frammentati;
+- rispettare gli angoli reali usando derivate unilaterali ai nodi delle spline;
+- verificare la curva comune per superfici di raccordo quasi tangenti;
+- adeguare il limite di visita del raffinamento alla profondita' prevista.
+Il raccordo inferiore e quello simultaneo sopra/sotto NON sono risolti.
+Successiva prova di assorbimento delle micro-concavita': tentativi Split e Mitre
+scartati per errori geometrici. Corretto il calcolo indipendente degli estremi
+dei tagli e aggiunto il rifiuto esplicito dei tratti consumati. Non e' stata
+implementata la ricostruzione non locale necessaria a eliminare la striscia.
+Dettagli nella sezione finale di confronto_loft_occt.txt.
+Al fondo resta un piccolo angolo concavo di circa 3 gradi accanto a una striscia
+di circa 0.008 mm. Non assumere che basti cancellare i bordi: vanno rispettate
+geometria dei supporti, continuita' e tolleranze.
+
+CONFRONTO OCCT 7.9.3
+Stesso B15 importato da STEP, input valido:
+- sopra+sotto R1: risultato valido;
+- sopra+sotto R2 e R3: costruzione completata ma risultato NON valido;
+- ShapeFix li rende validi al checker aumentando la tolleranza massima a circa
+  0.00386118 mm (R2) e 0.000776962 mm (R3). Non equivale alla precisione iniziale.
+Sul loft corretto iniziale: sopra+sotto R1 valido; R2/R3 falliscono.
+OCCT riconosce due contorni dai dodici bordi delle calotte di B15.
+Non e' stato completato il confronto integrale dei volumi del raccordo ForgeCAD
+sul corpo finale: troppo costoso. Non dichiararlo verificato.
+
+VALIDAZIONE
+Build app e test completata sul Mac.
+PASS: BlendSurfaceAcrossSplitSeam, BlendSplitSeamPreservesKnotCorner,
+BlendOffsetLoftTrimmedTopOneMillimeter. Test loft: 24/24 nell'ultima verifica.
+La suite Blend presenta un errore numerico preesistente in
+BlendGeneralMatchesAnalytic, riprodotto anche con la vecchia implementazione:
+scarto di volume 2.1555260687478039e-08, soglia 1.1279881782264925e-08.
+Non e' stata allargata la soglia del test.
+Commit presente quando preparato questo riepilogo: 2ece361
+(serious blend surface fix on loft body edge blend); working tree inizialmente pulito.
+
+PROVE DA FARE IN SOLIDWORKS
+1. Aprire una copia dello STEP originale e annotare versione SW, unita', opzioni
+   di importazione e riparazioni automatiche. Conservare un riferimento invariato.
+2. Provare separatamente superiore, inferiore ed entrambi: raggi 1, 2 e 3 mm.
+3. Ripetere su una copia dopo Heal Edges annotando soglie angolari/lunghezza,
+   numero di bordi/facce prima e dopo, eventuali cambiamenti geometrici.
+4. Registrare selezioni, propagazione tangente, impostazioni di raccordo,
+   errori e validita' del solido; esportare gli esiti utili in STEP.
+5. Usare gli esiti per migliorare il kernel proprietario. Non attribuire a SW
+   algoritmi interni che non abbiamo osservato o trovato documentati.
+Riferimento pubblico Heal Edges:
+https://help.solidworks.com/2019/english/SolidWorks/sldworks/t_heal_edges.htm
+
+TRASFERIMENTO
+Per la sessione di confronto bastano questo file, confronto_loft_occt.txt e
+Loft_offset_confronto_SW.step. Per modificare il kernel serve anche il progetto.
+I file .prt e .step sono ignorati da Git: copiarli esplicitamente su Windows.
+Il riepilogo non trasferisce automaticamente la chat o l'accesso al computer.
+
+MESSAGGIO PER LA NUOVA CHAT
+Leggi CONTESTO_WINDOWS_SOLIDWORKS.txt e confronto_loft_occt.txt. Riprendiamo il
+confronto dei raccordi in SolidWorks sul file Loft_offset_confronto_SW.step,
+in particolare prima e dopo Heal Edges. Il nostro kernel deve restare proprietario.

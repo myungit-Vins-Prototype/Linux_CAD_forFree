@@ -6,8 +6,8 @@
 #include <QStringList>
 
 // Icone dei comandi, disegnate con QPainter (vettoriali: nitide a qualsiasi
-// dimensione e rapporto di pixel, niente file esterni). Colori per il tema
-// scuro dell'interfaccia; disattivate in grigio.
+// dimensione e rapporto di pixel, niente file esterni). Colori adattati al tema
+// corrente dell'interfaccia; disattivate in grigio.
 namespace ForgeCad {
 
 // Icona del comando `name` (vedi commandIconNames); vuota se il nome non esiste.

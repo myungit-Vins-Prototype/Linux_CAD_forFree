@@ -5,21 +5,27 @@
 #include <STEPControl_Reader.hxx>
 #include <TopExp_Explorer.hxx>
 
+#include <algorithm>
 #include <cmath>
 #include <cstdio>
 #include <fstream>
+#include <sstream>
 
 #include "fk_blend.h"
 #include "fk_body_check.h"
+#include "fk_body_io.h"
 #include "fk_boolean.h"
 #include "fk_curve_ops.h"
+#include "fk_exchange.h"
 #include "fk_helix.h"
 #include "fk_loft.h"
 #include "fk_mass.h"
+#include "fk_nurbs.h"
 #include "fk_primitives.h"
 #include "fk_revolve.h"
 #include "fk_step.h"
 #include "fk_sweep.h"
+#include "fk_tessellate.h"
 #include "fk_test_profiles.h"
 
 using namespace fktest;
@@ -194,7 +200,12 @@ FK_TEST(StepRoundTrip) {
         e.body = body;
         bodies.push_back(e);
     }
-    const StepReadResult read = readStep(writeStep(bodies));
+    const std::string content = writeStep(bodies);
+    const StepReadResult read = readStep(content);
+    const StepReadResult serial = readStep(content, {1});
+    FK_CHECK(read.notes == serial.notes && read.bodies.size() == serial.bodies.size());
+    for (std::size_t i = 0; i < std::min(read.bodies.size(), serial.bodies.size()); ++i)
+        FK_CHECK(writeBodyBinary(read.bodies[i].body) == writeBodyBinary(serial.bodies[i].body));
     FK_CHECK(read.bodies.size() == bodies.size());
     for (std::size_t k = 0; k < read.bodies.size() && k < bodies.size(); ++k) {
         FK_CHECK(read.bodies[k].name == bodies[k].name);
@@ -236,7 +247,7 @@ FK_TEST(StepReadOcctFiles) {
 }
 
 FK_TEST(StepReadAssembly) {
-    // Assieme XCAF con due istanze posizionate dello stesso cilindro e un box.
+    // Assieme XCAF con tre istanze posizionate dello stesso cilindro e un box.
     const Handle(XCAFApp_Application) application = XCAFApp_Application::GetApplication();
     Handle(TDocStd_Document) document;
     application->NewDocument(TCollection_ExtendedString("MDTV-XCAF"), document);
@@ -247,12 +258,14 @@ FK_TEST(StepReadAssembly) {
     TDataStd_Name::Set(pin, "perno");
     const TDF_Label block = tool->AddShape(BRepPrimAPI_MakeBox(3.0, 2.0, 1.0).Shape(), false);
     TDataStd_Name::Set(block, "blocco");
-    gp_Trsf a, b;
+    gp_Trsf a, b, c;
     a.SetTranslation(gp_Vec(10, 0, 0));
     b.SetRotation(gp_Ax1(gp_Pnt(0, 0, 0), gp_Dir(1, 0, 0)), kHalfPi);
     b.SetTranslationPart(gp_Vec(0, 7, 0));
+    c.SetTranslation(gp_Vec(0, -7, 0));
     tool->AddComponent(assembly, pin, TopLoc_Location(a));
     tool->AddComponent(assembly, pin, TopLoc_Location(b));
+    tool->AddComponent(assembly, pin, TopLoc_Location(c));
     tool->AddComponent(assembly, block, TopLoc_Location());
     tool->UpdateAssemblies();
     const std::string path = std::string(P_tmpdir) + "/forgekernel_step_assembly.step";
@@ -264,22 +277,26 @@ FK_TEST(StepReadAssembly) {
     const std::string content((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
     std::remove(path.c_str());
     const StepReadResult read = readStep(content);
-    FK_CHECK(read.bodies.size() == 3);
+    const StepReadResult serial = readStep(content, {1});
+    FK_CHECK(read.notes == serial.notes && read.bodies.size() == serial.bodies.size());
+    for (std::size_t i = 0; i < std::min(read.bodies.size(), serial.bodies.size()); ++i)
+        FK_CHECK(writeBodyBinary(read.bodies[i].body) == writeBodyBinary(serial.bodies[i].body));
+    FK_CHECK(read.bodies.size() == 4);
     int pins = 0;
     for (const ExchangeBody &body : read.bodies) {
         const MassProperties m = massProperties(body.body, 1e-10);
         if (body.name.find("perno") == 0) {
             ++pins;
             FK_CHECK_NEAR(m.volume, kPi * 0.25 * 2.0, 1e-10);
-            // Le due istanze: (10, 0, 1) e ruotata attorno a X di 90 gradi: (0, 7 - 1, 0).
+            // Le tre istanze: traslazioni e una rotazione attorno a X.
             const bool first = distance(m.centroid, Vec3(10, 0, 1)) < 1e-9, second = distance(m.centroid, Vec3(0, 6, 0)) < 1e-9;
-            FK_CHECK(first || second);
+            FK_CHECK(first || second || distance(m.centroid, Vec3(0, -7, 1)) < 1e-9);
         } else {
             FK_CHECK(body.name == "blocco");
             FK_CHECK_NEAR(m.volume, 6.0, 1e-10);
         }
     }
-    FK_CHECK(pins == 2);
+    FK_CHECK(pins == 3);
 }
 
 #include <GCPnts_AbscissaPoint.hxx>
@@ -360,4 +377,362 @@ FK_TEST(StepReadSolidWorksFile) {
     GProp_GProps props;
     BRepGProp::VolumeProperties(shape, props, 1e-9);
     FK_CHECK_NEAR(massProperties(body, 1e-9).volume, props.Mass(), 1e-6 * props.Mass());
+}
+
+FK_TEST(ExchangeClosedSplineSeamClosesFaceDomain) {
+    // Mezzo cilindro delimitato da due semicerchi e due generatrici. La
+    // generatrice sul seam puo' essere proiettata a u=0, mentre gli archi
+    // terminano a u=2*pi: il loop deve usare quest'ultimo ramo.
+    detail::RawModel model;
+    model.points = {Vec3(-3, 0, 0), Vec3(3, 0, 0), Vec3(3, 0, 2), Vec3(-3, 0, 2)};
+    const auto bottom = std::make_shared<Circle<3>>(Vec3(), Vec3(1, 0, 0), Vec3(0, 1, 0), 3.0);
+    const auto top = std::make_shared<Circle<3>>(Vec3(0, 0, 2), Vec3(1, 0, 0), Vec3(0, 1, 0), 3.0);
+    model.edges = {{0, 1, bottom, true, {kPi, kTwoPi}},
+                   {1, 2, std::make_shared<Line<3>>(Vec3(3, 0, 0), Vec3(0, 0, 1)), true, {0, 2}},
+                   {3, 2, top, true, {kPi, kTwoPi}},
+                   {0, 3, std::make_shared<Line<3>>(Vec3(-3, 0, 0), Vec3(0, 0, 1)), true, {0, 2}}};
+    detail::RawFace face;
+    face.surface = std::make_shared<BSplineSurface>(
+        toBSplineSurface(CylindricalSurface(Frame3(), 3.0), {0, kTwoPi}, {0, 2}));
+    face.loops = {{{0, true}, {1, true}, {2, false}, {3, false}}};
+    model.faces.push_back(face);
+    const Body body = detail::assembleBody(model, false);
+    FK_CHECK(checkBody(body).empty());
+    FK_CHECK_NEAR(faceArea(body, body.faces().front(), 1e-9), 6.0 * kPi, 1e-6);
+    const auto fins = body.loopFins(body.face(body.faces().front()).loops.front());
+    for (std::size_t i = 0; i < fins.size(); ++i) {
+        const Fin &a = body.fin(fins[i]), &b = body.fin(fins[(i + 1) % fins.size()]);
+        const Edge &ea = body.edge(a.edge), &eb = body.edge(b.edge);
+        FK_CHECK_NEAR(distance(a.pcurve->point(a.sense ? ea.range.hi : ea.range.lo),
+                               b.pcurve->point(b.sense ? eb.range.lo : eb.range.hi)), 0.0, 1e-6);
+    }
+}
+
+FK_TEST(StepReadD250227SolidWorksFile) {
+    const std::string path = std::string(FORGECAD_SOURCE_DIR) + "/File_Esempio/D250227-REV00.step";
+    std::ifstream file(path, std::ios::binary);
+    if (!file) return;  // file reale facoltativo; caso sintetico sempre eseguito
+    const std::string content((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+    const auto read = readStep(content);
+    for (const auto &note : read.notes)
+        if (note.find("non ricostruito") != std::string::npos) fktest::reportFailure(__FILE__, __LINE__, note);
+    FK_CHECK(read.bodies.size() == 1);
+    if (read.bodies.empty()) return;
+    const Body &body = read.bodies.front().body;
+    FK_CHECK(!body.isSheet());
+    FK_CHECK(body.faces().size() == 33);
+    FK_CHECK(body.edges().size() == 80);
+    FK_CHECK(checkBody(body).empty());
+    const auto mesh = tessellate(body, {});
+    FK_CHECK(mesh.failedFaces == 0);
+    FK_CHECK(mesh.faces.size() == body.faces().size());
+    for (const auto &face : mesh.faces) FK_CHECK(!face.triangles.empty());
+    const TopoDS_Shape reference = readWithOcct(content);
+    FK_CHECK(BRepCheck_Analyzer(reference).IsValid());
+    GProp_GProps props;
+    BRepGProp::VolumeProperties(reference, props, 1e-9);
+    FK_CHECK_NEAR(massProperties(body, 1e-9).volume, props.Mass(), 1e-4 * props.Mass());
+    double meshVolume = 0.0;
+    for (const auto &face : mesh.faces)
+        for (const auto &triangle : face.triangles)
+            meshVolume += dot(face.points[std::size_t(triangle[0])],
+                              cross(face.points[std::size_t(triangle[1])], face.points[std::size_t(triangle[2])])) / 6.0;
+    FK_CHECK_NEAR(meshVolume, props.Mass(), 1e-3 * props.Mass());
+    const auto restored = readStep(writeStep(read.bodies));
+    FK_CHECK(restored.bodies.size() == 1);
+    if (!restored.bodies.empty()) FK_CHECK(checkBody(restored.bodies.front().body).empty());
+}
+
+FK_TEST(StepReadD260320SolidWorksAssembly) {
+    const std::string path = std::string(FORGECAD_SOURCE_DIR) + "/File_Esempio/D260320.STEP";
+    std::ifstream file(path, std::ios::binary);
+    if (!file) return;  // fixture reale facoltativa
+    const std::string content((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+    const auto read = readStep(content);
+    for (const auto &note : read.notes)
+        if (note.find("non ricostruito") != std::string::npos) fktest::reportFailure(__FILE__, __LINE__, note);
+    FK_CHECK(read.bodies.size() == 6);
+    std::size_t faces = 0;
+    int solids = 0;
+    double meshVolume = 0.0;
+    TessellationOptions meshOptions;
+    meshOptions.deflection = 0.001;
+    meshOptions.angle = 0.05;
+    for (const auto &part : read.bodies) {
+        const Body &body = part.body;
+        faces += body.faces().size();
+        if (!body.isSheet()) ++solids;
+        FK_CHECK(checkBody(body).empty());
+        const auto mesh = tessellate(body, meshOptions);
+        FK_CHECK(mesh.failedFaces == 0);
+        FK_CHECK(mesh.faces.size() == body.faces().size());
+        for (const auto &face : mesh.faces) FK_CHECK(!face.triangles.empty());
+        if (!body.isSheet())
+            for (const auto &face : mesh.faces)
+                for (const auto &triangle : face.triangles)
+                    meshVolume += dot(face.points[std::size_t(triangle[0])],
+                        cross(face.points[std::size_t(triangle[1])], face.points[std::size_t(triangle[2])])) / 6.0;
+    }
+    FK_CHECK(faces == 290);
+    FK_CHECK(solids == 5);
+    const TopoDS_Shape reference = readWithOcct(content);
+    double referenceVolume = 0.0;
+    int referenceSolids = 0;
+    for (TopExp_Explorer ex(reference, TopAbs_SOLID); ex.More(); ex.Next()) {
+        GProp_GProps props;
+        BRepGProp::VolumeProperties(ex.Current(), props, 1e-9);
+        referenceVolume += props.Mass();
+        ++referenceSolids;
+    }
+    FK_CHECK(referenceSolids == solids);
+    FK_CHECK_NEAR(meshVolume, referenceVolume, 1e-3 * referenceVolume);
+    const auto restored = readStep(writeStep(read.bodies));
+    FK_CHECK(restored.bodies.size() == read.bodies.size());
+    for (const auto &part : restored.bodies) FK_CHECK(checkBody(part.body).empty());
+}
+
+FK_TEST(StepReadSignedMajorTorus) {
+    const Frame3 frame(Vec3(3, -2, 7), normalized(Vec3(1, 2, 3)), Vec3(1, 0, 0));
+    ExchangeBody source;
+    source.body = makeTorus(frame, 10.5, 1.0);
+    const std::string original = writeStep({source});
+    for (const std::string type : {"TOROIDAL_SURFACE", "DEGENERATE_TOROIDAL_SURFACE"}) {
+        std::string content = original;
+        const auto start = content.find("TOROIDAL_SURFACE(");
+        FK_CHECK(start != std::string::npos);
+        if (start == std::string::npos) return;
+        const auto placementEnd = content.find(',', content.find(',', start) + 1);
+        const auto end = content.find(')', placementEnd);
+        content.replace(placementEnd + 1, end - placementEnd - 1,
+                        type == "TOROIDAL_SURFACE" ? "-10.5,13." : "-10.5,13.,.T.");
+        content.replace(start, std::string("TOROIDAL_SURFACE").size(), type);
+        const auto read = readStep(content);
+        FK_CHECK(read.bodies.size() == 1);
+        if (read.bodies.empty()) continue;
+        const Body &body = read.bodies.front().body;
+        FK_CHECK(checkBody(body).empty());
+        FK_CHECK(body.faces().size() == 1);
+        const Surface &surface = *body.face(body.faces().front()).surface;
+        FK_CHECK(surface.type() == SurfaceType::Revolution);
+        for (double u : {0.0, 0.7, 2.1, 5.8}) {
+            for (double v : {0.0, 0.3, 1.4, 3.2, 5.7}) {
+                const Vec3 radial = std::cos(u) * frame.xDir() + std::sin(u) * frame.yDir();
+                const Vec3 tangent = -std::sin(u) * frame.xDir() + std::cos(u) * frame.yDir();
+                const double rho = -10.5 + 13.0 * std::cos(v);
+                const Vec3 expected = frame.origin() + rho * radial + 13.0 * std::sin(v) * frame.zDir();
+                FK_CHECK_NEAR(distance(surface.point(u, v), expected), 0.0, 1e-10);
+                const Vec3 normal = normalized(cross(rho * tangent,
+                    -13.0 * std::sin(v) * radial + 13.0 * std::cos(v) * frame.zDir()));
+                FK_CHECK_NEAR(distance(surface.normal(u, v), normal), 0.0, 1e-10);
+            }
+        }
+    }
+}
+
+FK_TEST(StepReadAP0730SolidWorksFile) {
+    const std::string path = std::string(FORGECAD_SOURCE_DIR) + "/File_Esempio/AP0730-REV00.STEP";
+    std::ifstream file(path, std::ios::binary);
+    if (!file) return;  // fixture reale facoltativa, test sintetico sempre eseguito
+    const std::string content((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+    const auto read = readStep(content);
+    FK_CHECK(read.bodies.size() == 1);
+    if (read.bodies.empty()) return;
+    const Body &body = read.bodies.front().body;
+    FK_CHECK(!body.isSheet());
+    FK_CHECK(checkBody(body).empty());
+    int revolutions = 0;
+    for (FaceId id : body.faces())
+        if (body.face(id).surface->type() == SurfaceType::Revolution) ++revolutions;
+    FK_CHECK(revolutions == 2);
+    const auto mesh = tessellate(body, {});
+    // Tutte le facce si triangolano, anche quelle sottili tra un segmento e
+    // un arco con freccia sotto la deflessione. L'area dei triangoli non
+    // supera quella esatta: sul toro della faccia 249 un campione quasi
+    // doppio (salto di 6e-12 tra le SP-curve) dava una "membrana" piatta
+    // percorsa nei due versi, sei volte l'area della faccia.
+    FK_CHECK(mesh.failedFaces == 0);
+    FK_CHECK(mesh.faces.size() == body.faces().size());
+    for (FaceId id : body.faces()) {
+        const auto found = std::find_if(mesh.faces.begin(), mesh.faces.end(),
+            [id](const FaceMesh &face) { return face.face == id; });
+        FK_CHECK(found != mesh.faces.end());
+        if (found == mesh.faces.end()) continue;
+        FK_CHECK(!found->triangles.empty());
+        double area = 0.0;
+        for (const auto &t : found->triangles)
+            area += 0.5 * norm(cross(found->points[std::size_t(t[1])] - found->points[std::size_t(t[0])],
+                                     found->points[std::size_t(t[2])] - found->points[std::size_t(t[0])]));
+        FK_CHECK(area <= 1.05 * faceArea(body, id, 1e-9));
+    }
+    const Body restored = readBodyBinary(writeBodyBinary(body));
+    FK_CHECK(restored.faces().size() == body.faces().size());
+    FK_CHECK(checkBody(restored).empty());
+}
+
+namespace {
+
+// Sostituisce il testo dopo "=" dell'entita' `id` (con o senza spazi attorno a "=").
+std::string replaceEntity(std::string text, int id, const std::string &body) {
+    const std::string head = "\n#" + std::to_string(id);
+    for (std::size_t at = text.find(head); at != std::string::npos; at = text.find(head, at + 1)) {
+        std::size_t equal = at + head.size();
+        while (text[equal] == ' ') ++equal;
+        if (text[equal] != '=') continue;
+        const std::size_t end = text.find(';', equal);
+        return text.replace(equal + 1, end - equal - 1, body);
+    }
+    return text;
+}
+
+// Numero dell'entita' e testo dopo "=" delle righe che cominciano con `name`.
+std::vector<std::pair<int, std::string>> entities(const std::string &text, const std::string &name) {
+    std::vector<std::pair<int, std::string>> found;
+    std::size_t at = 0;
+    while ((at = text.find("\n#", at)) != std::string::npos) {
+        const std::size_t equal = text.find('=', at), end = text.find(';', at);
+        std::size_t start = equal + 1;
+        while (text[start] == ' ') ++start;
+        if (text.compare(start, name.size(), name) == 0)
+            found.push_back({std::stoi(text.substr(at + 2, equal - at - 2)), text.substr(start, end - start)});
+        at = end;
+    }
+    return found;
+}
+
+std::vector<int> references(const std::string &entity) {
+    std::vector<int> ids;
+    for (std::size_t at = entity.find('#'); at != std::string::npos; at = entity.find('#', at + 1)) ids.push_back(std::stoi(entity.substr(at + 1)));
+    return ids;
+}
+
+}
+
+// Sfera con l'asse quasi nel piano di un suo cerchio massimo (come negli STEP
+// di SolidWorks, dove l'asse e' arbitrario): il cerchio passa a 0.006 R dai
+// poli e la sua SP-curve non si approssima; la lettura cambia l'asse della
+// sfera (la geometria e' la stessa) e il corpo si legge.
+FK_TEST(StepReadSphereEdgeNearPole) {
+    const double radius = 3.0;
+    ProfileRegion quarter = buildProfile({lineSegment(Vec2(0, 0), Vec2(radius, 0)), arcSegment(Vec2(0, 0), radius, 0.0, kHalfPi),
+                                          lineSegment(Vec2(0, radius), Vec2(0, 0))}, 1e-9).regions.front();
+    const Body hemisphere = makeRevolution(Frame3(Vec3(1, 2, 3), Vec3(0, 0, 1), Vec3(1, 0, 0)), quarter);
+    ExchangeBody exchange;
+    exchange.name = "semisfera";
+    exchange.body = hemisphere;
+    std::string text = writeStep({exchange});
+    const auto spheres = entities(text, "SPHERICAL_SURFACE");
+    FK_CHECK(spheres.size() == 1);
+    if (spheres.empty()) return;
+    const int placement = references(spheres.front().second).front();
+    std::string axis2;
+    for (const auto &entity : entities(text, "AXIS2_PLACEMENT_3D"))
+        if (entity.first == placement) axis2 = entity.second;
+    const std::vector<int> parts = references(axis2);
+    FK_CHECK(parts.size() == 3);
+    if (parts.size() != 3) return;
+    // Asse quasi orizzontale: il cerchio dell'equatore (piano z = 3) passa vicino ai poli.
+    const double tilt = 0.006;
+    text = replaceEntity(text, parts[1], "DIRECTION ( 'NONE', ( " + std::to_string(std::cos(tilt)) + ", 0.0, " + std::to_string(std::sin(tilt)) + " ) )");
+    text = replaceEntity(text, parts[2], "DIRECTION ( 'NONE', ( " + std::to_string(-std::sin(tilt)) + ", 0.0, " + std::to_string(std::cos(tilt)) + " ) )");
+    const auto read = readStep(text);
+    FK_CHECK(read.bodies.size() == 1);
+    if (read.bodies.empty()) return;
+    const Body &body = read.bodies.front().body;
+    FK_CHECK(checkBody(body).empty());
+    const double exact = 2.0 / 3.0 * kPi * radius * radius * radius;
+    FK_CHECK_NEAR(massProperties(body).volume, exact, 1e-8 * exact);
+    FK_CHECK(tessellate(body, {}).failedFaces == 0);
+}
+
+// Faccia con same_sense sbagliato nel file: il verso viene dai loop (la
+// topologia e' coerente con le facce vicine) e il volume resta giusto.
+FK_TEST(StepReadRepairsFaceSense) {
+    const Body box = makeBox(Frame3(Vec3(1, 2, 3), Vec3(0, 0, 1), Vec3(1, 0, 0)), 2.0, 3.0, 4.0);
+    ExchangeBody exchange;
+    exchange.name = "blocco";
+    exchange.body = box;
+    std::string text = writeStep({exchange});
+    const auto faces = entities(text, "ADVANCED_FACE");
+    FK_CHECK(faces.size() == 6);
+    if (faces.empty()) return;
+    std::string face = faces.front().second;
+    const std::size_t flag = face.rfind(face.find(".T.") != std::string::npos ? ".T." : ".F.");
+    face.replace(flag, 3, face.compare(flag, 3, ".T.") == 0 ? ".F." : ".T.");
+    text = replaceEntity(text, faces.front().first, face);
+    const auto read = readStep(text);
+    FK_CHECK(read.bodies.size() == 1);
+    if (read.bodies.empty()) return;
+    const Body &body = read.bodies.front().body;
+    FK_CHECK(checkBody(body).empty());
+    FK_CHECK_NEAR(massProperties(body).volume, 24.0, 1e-10);
+    FK_CHECK_NEAR(massProperties(body).area, 52.0, 1e-10);
+    bool noted = false;
+    for (const std::string &note : read.notes) noted = noted || note.find("same_sense") != std::string::npos;
+    FK_CHECK(noted);
+}
+
+// L407-P3.STEP (SolidWorks): cerchio massimo vicino al polo di una sfera e due
+// raccordi B-spline con same_sense opposto ai loop.
+FK_TEST(StepReadL407SolidWorksFile) {
+    const std::string path = std::string(FORGECAD_SOURCE_DIR) + "/File_Esempio/L407-P3.STEP";
+    std::ifstream file(path, std::ios::binary);
+    if (!file) return;  // fixture reale facoltativa
+    const std::string content((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+    const auto read = readStep(content);
+    FK_CHECK(read.bodies.size() == 1);
+    if (read.bodies.empty()) return;
+    const Body &body = read.bodies.front().body;
+    FK_CHECK(!body.isSheet());
+    FK_CHECK(checkBody(body).empty());
+    for (FaceId id : body.faces()) FK_CHECK(faceArea(body, id, 1e-9) > 0.0);
+    const MassProperties mass = massProperties(body);
+    // Riferimenti: OCCT 16379.188 (volume) e 33614.327 (area); la tassellazione
+    // fine converge verso 16379.1.
+    FK_CHECK_NEAR(mass.volume, 16379.15, 0.1);
+    FK_CHECK_NEAR(mass.area, 33614.33, 0.05);
+    FK_CHECK(tessellate(body, {}).failedFaces == 0);
+}
+
+FK_TEST(StepParallelBodiesAndEntityOrder) {
+    std::vector<ExchangeBody> bodies;
+    for (int i = 0; i < 16; ++i) {
+        ExchangeBody b;
+        b.name = "gruppo";
+        b.body = makeBox(Frame3(Vec3(i * 5, 0, 0), Vec3(0, 0, 1), Vec3(1, 0, 0)), 4, 3, 2);
+        b.hasColor = true;
+        b.color[0] = 0.25; b.color[1] = 0.5; b.color[2] = 0.75;
+        bodies.push_back(std::move(b));
+    }
+    const std::string content = writeStep(bodies);
+    const auto compare = [&](const StepReadResult &a, const StepReadResult &b) {
+        FK_CHECK(a.notes == b.notes);
+        FK_CHECK(a.bodies.size() == b.bodies.size());
+        for (std::size_t i = 0; i < std::min(a.bodies.size(), b.bodies.size()); ++i) {
+            FK_CHECK(a.bodies[i].name == b.bodies[i].name);
+            FK_CHECK(a.bodies[i].hasColor == b.bodies[i].hasColor);
+            for (int k = 0; k < 3; ++k) FK_CHECK(a.bodies[i].color[k] == b.bodies[i].color[k]);
+            FK_CHECK(writeBodyBinary(a.bodies[i].body) == writeBodyBinary(b.bodies[i].body));
+        }
+    };
+    const auto serial = readStep(content, {1});
+    FK_CHECK(serial.bodies.size() == bodies.size() && serial.notes.empty());
+    compare(serial, readStep(content, {4}));
+    // ID in ordine fisico inverso: la tabella hash non deve cambiare l'ordine
+    // dei prodotti o delle istanze rispetto agli ID STEP.
+    const std::size_t start = content.find("DATA;\n") + 6, end = content.find("ENDSEC;", start);
+    std::istringstream stream(content.substr(start, end - start));
+    std::vector<std::string> records;
+    for (std::string line; std::getline(stream, line);) records.push_back(line);
+    std::string reversed = content.substr(0, start);
+    for (auto it = records.rbegin(); it != records.rend(); ++it) reversed += *it + "\n";
+    reversed += content.substr(end);
+    compare(serial, readStep(reversed, {4}));
+    // Shell inesistente: le altre istanze restano importabili, avvisi in ordine.
+    std::string broken = content;
+    const std::size_t solid = broken.find("MANIFOLD_SOLID_BREP(");
+    const std::size_t shell = broken.find('#', solid), close = broken.find(')', shell);
+    broken.replace(shell + 1, close - shell - 1, "0");
+    const auto failed = readStep(broken, {1});
+    FK_CHECK(failed.bodies.size() == bodies.size() - 1 && !failed.notes.empty());
+    compare(failed, readStep(broken, {4}));
 }

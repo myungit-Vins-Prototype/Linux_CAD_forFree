@@ -115,6 +115,30 @@ FK_TEST(MarchingPerpendicularCylinders) {
 // Cilindri in posizione generica contro GeomAPI_IntSS: ogni punto delle
 // curve di OCCT sta su una delle nostre e viceversa.
 FK_TEST(MarchingCylindersAgainstOcct) {
+    // IntSS restituisce curve approssimate: prima del confronto riporta
+    // i campioni sull'intersezione delle equazioni analitiche. Vicino alla
+    // tangenza pochi micrometri di residuo amplificano l'errore sulla curva.
+    auto corrected = [](Vec3 p, const CylindricalSurface &a, const CylindricalSurface &b) {
+        const Vec3 original = p;
+        FK_CHECK(projectPoint(a, p).distance <= 1e-4);
+        FK_CHECK(projectPoint(b, p).distance <= 1e-4);
+        for (int k = 0; k < 12; ++k) {
+            auto radial = [&](const CylindricalSurface &s) {
+                const Vec3 q = p - s.frame().origin();
+                return q - dot(q, s.frame().zDir()) * s.frame().zDir();
+            };
+            Vec3 x = radial(a), y = radial(b);
+            const double nx = norm(x), ny = norm(y);
+            x = x / nx; y = y / ny;
+            const double r = nx - a.radius(), s = ny - b.radius(), c = dot(x, y), det = 1.0 - c * c;
+            if (det < 1e-14) break;
+            p -= ((r - c * s) * x + (s - c * r) * y) / det;
+        }
+        FK_CHECK(distance(p, original) <= 1e-3);
+        FK_CHECK(projectPoint(a, p).distance <= 1e-9);
+        FK_CHECK(projectPoint(b, p).distance <= 1e-9);
+        return p;
+    };
     std::mt19937 rng(901);
     int compared = 0;
     for (int trial = 0; trial < 12; ++trial) {
@@ -132,7 +156,7 @@ FK_TEST(MarchingCylindersAgainstOcct) {
             const Handle(Geom_Curve) line = reference.Line(i);
             const double t0 = line->FirstParameter(), t1 = line->LastParameter();
             if (!std::isfinite(t0) || !std::isfinite(t1) || std::fabs(t1 - t0) > 1e6) continue;
-            for (int j = 0; j <= 50; ++j) FK_CHECK(distanceToCurves(ours, fromOcct(line->Value(t0 + (t1 - t0) * j / 50.0))) <= 1e-5);
+            for (int j = 0; j <= 50; ++j) FK_CHECK(distanceToCurves(ours, corrected(fromOcct(line->Value(t0 + (t1 - t0) * j / 50.0)), a, b)) <= 1e-5);
         }
         for (const IntersectionCurve &c : ours.curves)
             for (int j = 0; j <= 50; ++j) {
@@ -140,7 +164,7 @@ FK_TEST(MarchingCylindersAgainstOcct) {
                 double best = 1e300;
                 for (int i = 1; i <= reference.NbLines(); ++i) {
                     GeomAPI_ProjectPointOnCurve projection(p, reference.Line(i));
-                    if (projection.NbPoints() > 0) best = std::min(best, projection.LowerDistance());
+                    if (projection.NbPoints() > 0) best = std::min(best, distance(fromOcct(p), corrected(fromOcct(projection.NearestPoint()), a, b)));
                 }
                 FK_CHECK(best <= 1e-5);
             }

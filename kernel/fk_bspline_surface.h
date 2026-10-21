@@ -40,6 +40,33 @@ public:
     // Pezze di Bezier (una per rettangolo tra nodi distinti), ordinate per u
     // e poi per v: [iu * numero_di_pezze_in_v + iv].
     std::vector<BSplineSurface> bezierPatches() const;
+    // Le stesse, calcolate una volta per superficie (la superficie e'
+    // immutabile; la cache si legge e si scrive in modo atomico). Chi la usa
+    // tiene il puntatore per tutto il tempo in cui scorre il vettore.
+    std::shared_ptr<const std::vector<BSplineSurface>> cachedBezierPatches() const;
+    // Linee di nodo interne in cui la superficie non e' C1 (le derivate prime
+    // omogenee dai due lati differiscono): solo li' il punto piu' vicino puo'
+    // stare su uno spigolo senza essere stazionario. Ordinate, calcolate una
+    // volta (le superfici dei raccordi hanno nodi tripli ma sono C1).
+    struct SharpKnotLines {
+        std::vector<double> u, v;
+    };
+    std::shared_ptr<const SharpKnotLines> cachedSharpKnotLines() const;
+    // Gerarchia dei box dei poli delle pezze di Bezier (rettangoli della
+    // griglia delle pezze divisi a meta' lungo il lato piu' lungo), calcolata
+    // una volta: la proiezione di un punto scende dai box invece di guardare
+    // tutte le pezze (le superfici a distanza delle B-spline ne hanno
+    // decine di migliaia). leaf = indice della pezza nelle foglie, -1 altrove.
+    struct PatchTree {
+        struct Node {
+            Vec3 lo, hi;     // box dei poli euclidei delle pezze del nodo
+            Interval u, v;   // rettangolo dei parametri
+            int leaf = -1, first = -1, second = -1;
+        };
+        std::vector<Node> nodes;  // nodes[0] = radice (vuoto senza pezze)
+        double largestPatchDiagonal = 0.0;
+    };
+    std::shared_ptr<const PatchTree> cachedPatchTree() const;
 
 private:
     int uDegree_, vDegree_;
@@ -47,6 +74,15 @@ private:
     int uPoleCount_, vPoleCount_;
     std::vector<Vec3> poles_;
     std::vector<double> weights_;
+    mutable std::shared_ptr<const std::vector<BSplineSurface>> patchCache_;
+    mutable std::shared_ptr<const SharpKnotLines> sharpCache_;
+    mutable std::shared_ptr<const PatchTree> treeCache_;
+    // Isoparametriche ai nodi (le linee delle pezze), calcolate una volta: la
+    // proiezione di un punto le prova tutte, e con le curve rifatte a ogni
+    // chiamata costava millisecondi per punto (selezione a video, SP-curve).
+    struct IsoCache;
+    mutable std::shared_ptr<const IsoCache> isoCache_;
+    CurvePtr<3> knotIso(bool fixedU, double value) const;
 };
 
 using BSplineSurfacePtr = std::shared_ptr<const BSplineSurface>;

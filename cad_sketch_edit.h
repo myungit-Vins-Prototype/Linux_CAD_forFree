@@ -13,8 +13,8 @@
 // intersectCurves del kernel (fk_intersect) sulle curve di `curveGeometry`
 // (rette e cerchi in forma chiusa); un tratto di segmento o d'arco resta un segmento o un arco
 // dello stesso cerchio, un tratto di spline e' fatto dei tratti di Bezier
-// esatti (de Casteljau). Le NURBS fanno da bordo di taglio ma non si
-// modificano (i loro nodi sono uniformi per costruzione); un poligono si
+// esatti (de Casteljau). Gli archi ellittici restano NURBS razionali esatte;
+// ellissi, NURBS e riferimenti copiati si possono tagliare e spezzare. Un poligono si
 // scompone prima nei suoi lati.
 //
 // Le funzioni lavorano su una copia: se falliscono lo schizzo non cambia.
@@ -99,6 +99,21 @@ struct SketchPattern {
 };
 SketchEditResult patternSketchEntities(SketchObject &sketch, const QVector<SketchEntity> &entities, const SketchPattern &pattern,
                                        QVector<SketchEntity> *created = nullptr);
+
+// Sposta, ruota o copia entita' dello schizzo: rotazione di `angle` gradi
+// (antiorario) attorno a `center`, poi traslazione di `translation`. Le
+// entita' spostate perdono i vincoli che non valgono piu' (verso le entita'
+// rimaste ferme, fissi, orizzontali/verticali dopo una rotazione) e prendono
+// le coincidenze con i punti che toccano; le copie (`copy`) portano i vincoli
+// tra le entita' copiate che restano veri. `created`: le copie o le entita' spostate.
+struct SketchMove {
+    QPointF translation;
+    QPointF center;
+    double angle = 0.0;
+    bool copy = false;
+};
+SketchEditResult moveSketchEntities(SketchObject &sketch, const QVector<SketchEntity> &entities, const SketchMove &move,
+                                    QVector<SketchEntity> *created = nullptr);
 
 // Parametri nuovi della ripetizione parametrica `constraint` (istanze, passi,
 // angolo, quote): se il numero di istanze non cambia si aggiornano i valori

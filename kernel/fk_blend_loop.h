@@ -58,7 +58,7 @@ std::vector<EdgeId> planarChainRuns(const Body &body, const std::vector<EdgeId> 
 // `plane` (facoltativo): la faccia T per gli edge che ne hanno due possibili
 // (un segmento tra due piani perpendicolari).
 Body blendPlanarChains(const Body &body, const std::vector<EdgeId> &edges, double size, bool chamfer, const std::vector<ChamferSides> *sides = nullptr,
-                       FaceId plane = FaceId());
+                       FaceId plane = FaceId(), BodyHistory *history = nullptr);
 
 }
 

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Documenti ForgeCAD (.prt). L'estensione e' la stessa di altri CAD (Creo,
+     NX, Solid Edge): i file ForgeCAD si riconoscono dalla firma "FCAD" all'inizio,
+     con la priorita' sopra le altre definizioni di *.prt. -->
+<mime-info xmlns="http://www.freedesktop.org/standards/shared-mime-info">
+    <mime-type type="application/x-forgecad-part">
+        <comment>Documento ForgeCAD</comment>
+        <comment xml:lang="en">ForgeCAD part document</comment>
+        <icon name="application-x-forgecad-part"/>
+        <glob pattern="*.prt" weight="60"/>
+        <glob pattern="*.PRT" weight="60"/>
+        <magic priority="90">
+            <match type="string" offset="0" value="FCAD"/>
+        </magic>
+    </mime-type>
+</mime-info>

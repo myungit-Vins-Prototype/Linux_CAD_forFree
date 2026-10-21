@@ -37,6 +37,8 @@ add_library(forgekernel STATIC
     fk_primitives.cpp
     fk_pcurve.h
     fk_pcurve.cpp
+    fk_micro.h
+    fk_micro.cpp
     fk_mass.h
     fk_mass.cpp
     fk_intersect.h
@@ -45,6 +47,7 @@ add_library(forgekernel STATIC
     fk_marching.cpp
     fk_classify.h
     fk_classify.cpp
+    fk_cancel.h
     fk_parallel.h
     fk_body_io.h
     fk_body_io.cpp
@@ -52,6 +55,8 @@ add_library(forgekernel STATIC
     fk_boolean.cpp
     fk_unify.h
     fk_unify.cpp
+    fk_history.h
+    fk_history.cpp
     fk_tessellate.h
     fk_tessellate.cpp
     fk_nurbs.h
@@ -69,8 +74,26 @@ add_library(forgekernel STATIC
     fk_blend_surface.cpp
     fk_sheet.h
     fk_sheet.cpp
+    fk_offset.h
+    fk_offset.cpp
+    fk_sew.h
+    fk_sew.cpp
+    fk_planar.h
+    fk_planar.cpp
+    fk_boundary.h
+    fk_boundary.cpp
+    fk_fill.h
+    fk_fill.cpp
+    fk_project.h
+    fk_project.cpp
+    fk_thicken.h
+    fk_thicken.cpp
+    fk_shell.h
+    fk_shell.cpp
     fk_transform.h
     fk_transform.cpp
+    fk_draft.h
+    fk_draft.cpp
     fk_hermite.h
     fk_hermite.cpp
     fk_helix.h
@@ -113,6 +136,7 @@ add_executable(forgekernel_tests
     tests/fk_test_main.cpp
     tests/fk_test_util.h
     tests/fk_test_profiles.h
+    tests/test_cancel.cpp
     tests/test_math.cpp
     tests/test_predicates.cpp
     tests/test_bernstein.cpp
@@ -122,6 +146,7 @@ add_executable(forgekernel_tests
     tests/test_surfaces.cpp
     tests/test_bspline_surface.cpp
     tests/test_surface_algo.cpp
+    tests/test_tolerance.cpp
     tests/test_topology.cpp
     tests/test_primitives.cpp
     tests/test_extrude.cpp
@@ -138,6 +163,7 @@ add_executable(forgekernel_tests
     tests/test_blend.cpp
     tests/test_sheet.cpp
     tests/test_transform.cpp
+    tests/test_draft.cpp
     tests/test_body_io.cpp
     tests/test_helix.cpp
     tests/test_sweep.cpp
@@ -146,6 +172,16 @@ add_executable(forgekernel_tests
     tests/test_blend_features.cpp
     tests/test_step.cpp
     tests/test_iges.cpp
+    tests/test_offset.cpp
+    tests/test_planar.cpp
+    tests/test_boundary.cpp
+    tests/test_fill.cpp
+    tests/test_project.cpp
+    tests/test_thicken.cpp
+    tests/test_shell.cpp
+    tests/test_loft_surfaces.cpp
+    tests/test_sweep_surfaces.cpp
+    tests/test_history.cpp
 )
 target_link_libraries(forgekernel_tests PRIVATE
     forgekernel
@@ -160,3 +196,36 @@ target_compile_definitions(forgekernel_tests PRIVATE FORGECAD_SOURCE_DIR="${PROJ
 set_target_properties(forgekernel_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
 
 add_test(NAME forgekernel_tests COMMAND forgekernel_tests)
+
+# Genealogia delle operazioni: solo il kernel, senza OCCT (eseguibile anche
+# dove le librerie di riferimento non ci sono).
+add_executable(forgekernel_history_tests
+    tests/fk_test.h
+    tests/fk_test_main.cpp
+    tests/test_history.cpp
+)
+target_link_libraries(forgekernel_history_tests PRIVATE forgekernel)
+target_compile_options(forgekernel_history_tests PRIVATE -Wall -Wextra -Wpedantic -O2 -g)
+set_target_properties(forgekernel_history_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
+add_test(NAME forgekernel_history_tests COMMAND forgekernel_history_tests)
+
+# Diagnostica del raccordo non locale: non e' collegata all'applicazione.
+# Il self-test controlla casi geometrici analitici, senza dipendere da OCCT.
+add_executable(forgekernel_blend_probe
+    tests/probe_blend_candidates.cpp
+    tests/probe_trimmed_sphere.h
+)
+target_link_libraries(forgekernel_blend_probe PRIVATE forgekernel)
+target_compile_options(forgekernel_blend_probe PRIVATE -Wall -Wextra -Wpedantic -O2 -g)
+set_target_properties(forgekernel_blend_probe PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
+add_test(NAME forgekernel_blend_probe_self_test COMMAND forgekernel_blend_probe --self-test)
+
+# Politica delle tolleranze: collegamento al solo kernel proprio.
+add_executable(forgekernel_tolerance_tests
+    tests/fk_test_main.cpp
+    tests/test_tolerance.cpp
+)
+target_link_libraries(forgekernel_tolerance_tests PRIVATE forgekernel)
+target_compile_options(forgekernel_tolerance_tests PRIVATE -Wall -Wextra -Wpedantic)
+set_target_properties(forgekernel_tolerance_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
+add_test(NAME forgekernel_tolerance_tests COMMAND forgekernel_tolerance_tests)

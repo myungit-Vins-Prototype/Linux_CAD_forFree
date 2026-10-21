@@ -1,6 +1,8 @@
 #ifndef FORGECAD_FK_MARCHING_H
 #define FORGECAD_FK_MARCHING_H
 
+#include "fk_precision.h"
+
 #include <vector>
 
 #include "fk_intersect.h"
@@ -70,8 +72,8 @@ struct SurfaceIntersection {
 };
 
 struct SurfaceIntersectionOptions {
-    double tolerance = 1e-6;       // due punti piu' vicini sono lo stesso punto
-    double fitTolerance = 1e-9;  // scarto massimo della curva e delle SP-curve
+    double tolerance = kMarchingConnectionTolerance;       // due punti piu' vicini sono lo stesso punto
+    double fitTolerance = kMarchingFitTolerance;  // scarto massimo della curva e delle SP-curve
 };
 
 // Componenti di A inter B dentro `bounds` che passano per un punto di `seeds`

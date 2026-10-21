@@ -17,7 +17,10 @@
 #include "fk_intersect.h"
 #include "fk_nurbs.h"
 #include "fk_precision.h"
+#include "fk_offset.h"
 #include "fk_sheet.h"
+#include "fk_sew.h"
+#include "cad_topology_ref.h"
 
 namespace ForgeCad {
 namespace {
@@ -112,6 +115,12 @@ bool onOneSide(const Body &body, const Vec3 &origin, const Vec3 &n, double toler
 }
 
 // Toglie i livelli di TrimmedCurve (il tratto resta quello dato).
+bool needsProjectionFit(const Curve<3> &curve) {
+    if(curve.type()==CurveType::Trimmed) return needsProjectionFit(*static_cast<const TrimmedCurve<3>&>(curve).basis());
+    if(curve.type()==CurveType::Transformed) return needsProjectionFit(*static_cast<const TransformedCurve&>(curve).basis());
+    return curve.type()==CurveType::Other;
+}
+
 const Curve<3> *basisOf(const Curve<3> *curve) {
     while (curve && curve->type() == CurveType::Trimmed) curve = static_cast<const TrimmedCurve<3> *>(curve)->basis().get();
     return curve;
@@ -180,6 +189,11 @@ QString appendProjectedCurve(SketchObject &sketch, const CurvePtr<3> &curve, con
                 } else {
                     spline = joinBezierPieces(standardBezierPieces(full, range));
                 }
+            } else if (needsProjectionFit(*curve)) {
+                // Le curve procedurali (ad esempio isoparametriche) non
+                // hanno necessariamente una forma razionale: le approssima
+                // il fitter adattivo, poi la proiezione affine dei poli.
+                spline=*fitCurve([&](double t){return curve->point(t);},range,curve->breakpoints(range),kLinearResolution);
             } else {
                 std::vector<BSplineCurve<3>> pieces = standardBezierPieces(*curve, range);
                 int degree = 1;
@@ -194,9 +208,17 @@ QString appendProjectedCurve(SketchObject &sketch, const CurvePtr<3> &curve, con
             for (const Vec3 &p : spline.poles()) projected.push_back(local(p));
             QPointF a = projected.front(), b = projected.front();
             double span = 0.0;
-            for (const QPointF &p : projected)
-                for (const QPointF &q : projected)
-                    if (std::hypot(p.x() - q.x(), p.y() - q.y()) > span) span = std::hypot(p.x() - q.x(), p.y() - q.y()), a = p, b = q;
+            // Due scansioni lineari bastano a scegliere una direzione:
+            // non serve cercare la coppia piu' lontana fra tutti i poli.
+            for (const QPointF &p : projected) {
+                const double d=std::hypot(p.x()-a.x(),p.y()-a.y());
+                if(d>span){span=d;b=p;}
+            }
+            a=b;span=0;
+            for (const QPointF &p : projected) {
+                const double d=std::hypot(p.x()-a.x(),p.y()-a.y());
+                if(d>span){span=d;b=p;}
+            }
             bool collinear = span > kSketchConnectionTolerance;
             for (const QPointF &p : projected) {
                 const QPointF d = b - a, r = p - a;
@@ -258,13 +280,22 @@ QString appendProjectedCurve(SketchObject &sketch, const CurvePtr<3> &curve, con
 }
 
 QString appendSectionCurves(SketchObject &sketch, const Body &body, bool construction, bool fixed, QVector<SketchEntity> *created) {
-    if (body.isSheet()) return QStringLiteral("La sezione vale per i solidi.");
     try {
         const Frame3 frame = sketchAxes(sketch);
         Box box;
         for (FaceId f : body.faces()) box.add(faceBox(body, f));
         const Vec3 middle = 0.5 * (box.lo + box.hi);
         const double half = 2.0 * std::max(1.0, box.diagonal()) + distance(frame.origin(), middle);
+        if (body.isSheet()) {
+            const Body plane = makePlaneSheet(frame, half);
+            const auto curves = bodySectionCurves(plane, body);
+            if (curves.empty()) return QStringLiteral("Il piano dello schizzo non interseca la superficie.");
+            for (const auto &section : curves) {
+                const QString error = appendProjectedCurve(sketch, section.curve, section.range, construction, fixed, created);
+                if (!error.isEmpty()) return error;
+            }
+            return {};
+        }
         // Piano d'appoggio (il solido tutto da una parte: lo schizzo su una sua
         // faccia piana): la sezione sono le facce piane che stanno nel piano, e le
         // curve i loro bordi, gli edge esatti del corpo (quelli tra due facce del
@@ -308,6 +339,75 @@ QString appendSectionCurves(SketchObject &sketch, const Body &body, bool constru
         return QStringLiteral("Sezione non riuscita: %1").arg(QString::fromUtf8(failure.what()));
     }
     return {};
+}
+
+QString refreshSurfacePierce(const SketchObject &sketch, SketchConstraint &constraint,
+                            const Body &body, const GeometryRef &surface, const QString &name) {
+    auto data = std::make_shared<SketchPierceData>();
+    data->surface = surface;
+    data->name = name;
+    const auto fail = [&](const QString &error) {
+        data->error = error;
+        constraint.pierce = data;
+        return error;
+    };
+    try {
+        if (surface.kind != 5) return fail(QStringLiteral("Scegli una faccia della superficie o del solido."));
+        const FaceId face = resolveFaceReference(body, surface.point, 1e-6);
+        if (!face.valid()) return fail(QStringLiteral("La faccia del vincolo Pierce non esiste piu'."));
+        const Frame3 frame = sketchAxes(sketch);
+        const Surface &geometry = *body.face(face).surface;
+        if (geometry.type() == SurfaceType::Plane) {
+            const Frame3 &plane = static_cast<const Plane &>(geometry).frame();
+            if (norm(cross(plane.zDir(),frame.zDir())) <= 1e-12
+                && std::fabs(dot(plane.origin()-frame.origin(),frame.zDir())) <= kLinearResolution)
+                return fail(QStringLiteral("La faccia e' complanare allo schizzo: non definisce un'intersezione Pierce."));
+        }
+        SketchObject section;
+        section.plane = sketch.plane;
+        section.frame = sketch.frame;
+        section.customFrame = sketch.customFrame;
+        const Body sheet = facesAsSheet(body,{face});
+        const QString error = appendSectionCurves(section,sheet,true,false);
+        if (!error.isEmpty()) return fail(error);
+        data->segments = std::move(section.segments);
+        data->curves = std::move(section.curves);
+        constraint.pierce = data;
+        return {};
+    } catch (const std::exception &error) {
+        return fail(QStringLiteral("Pierce non riuscito: %1").arg(QString::fromUtf8(error.what())));
+    }
+}
+
+QString appendProjectedSketchEntity(SketchObject &sketch, const SketchObject &source, SketchEntity entity,
+                                    bool construction, QVector<SketchEntity> *created) {
+    try {
+        const Frame3 from = sketchAxes(source);
+        std::vector<ProfileSegment> pieces;
+        if (entity.kind == 0 && entity.index >= 0 && entity.index < source.segments.size()) {
+            const SketchSegment &segment = source.segments.at(entity.index);
+            const Vec2 a(segment.first.x(), segment.first.y()), b(segment.second.x(), segment.second.y());
+            const double length = distance(a, b);
+            if (length <= kSketchConnectionTolerance) return QStringLiteral("Il segmento sorgente e' un punto.");
+            pieces.push_back({std::make_shared<Line<2>>(a, (b - a) / length), {0.0, length}});
+        } else if (entity.kind == 1 && entity.index >= 0 && entity.index < source.curves.size()) {
+            const auto geometry = curveGeometry(source.curves.at(entity.index));
+            for (const auto &piece : geometry) pieces.push_back(piece);
+        } else return QStringLiteral("Entita' dello schizzo sorgente non valida.");
+        if (pieces.empty()) return QStringLiteral("La curva sorgente non contiene geometria utilizzabile.");
+        SketchObject work = sketch;
+        QVector<SketchEntity> made;
+        for (const ProfileSegment &piece : pieces) {
+            const QString error = appendProjectedCurve(work, embedCurve(piece.curve, from), piece.range,
+                                                       construction, true, &made);
+            if (!error.isEmpty()) return error;
+        }
+        sketch = std::move(work);
+        if (created) *created += made;
+        return {};
+    } catch (const std::exception &failure) {
+        return QStringLiteral("Proiezione dello schizzo non riuscita: %1").arg(QString::fromUtf8(failure.what()));
+    }
 }
 
 QString appendSketchContactReferences(SketchObject &sketch, const SketchObject &source, QVector<SketchEntity> *created) {

@@ -1,10 +1,12 @@
 #include "cad_datum.h"
+#include "cad_spatial_sketch.h"
 
 #include <cmath>
 #include <limits>
 
 #include "cad_curve_solver.h"
 #include "cad_kernel.h"
+#include "cad_topology_ref.h"
 #include "fk_classify.h"
 #include "fk_curve_ops.h"
 #include "fk_sweep.h"
@@ -39,25 +41,17 @@ void setLine(ResolvedRef &r, const Vec3 &point, const Vec3 &direction) {
     r.direction = normalized(direction);
 }
 
-bool resolveForgeBody(const Body &body, int kind, const Vec3 &p, ResolvedRef &r, QString *error) {
+bool resolveForgeBody(const Body &body, int kind, const EdgePoint &reference, ResolvedRef &r, QString *error) {
+    const Vec3 p(reference.x, reference.y, reference.z);
     if (kind == 3) {
-        double closest = std::numeric_limits<double>::max();
-        for (VertexId v : body.vertices()) {
-            const double d = distance(body.vertex(v).point, p);
-            if (d < closest) closest = d, r.point = body.vertex(v).point;
-        }
-        if (closest == std::numeric_limits<double>::max()) return setError(error, QStringLiteral("il corpo non ha vertici")), false;
+        const VertexId vertex = resolveVertexReference(body, reference, std::numeric_limits<double>::max());
+        if (!vertex.valid()) return setError(error, QStringLiteral("il corpo non ha vertici")), false;
+        r.point = body.vertex(vertex).point;
         r.hasPoint = true;
         return true;
     }
     if (kind == 4) {
-        EdgeId best;
-        double closest = std::numeric_limits<double>::max();
-        for (EdgeId e : body.edges()) {
-            const Edge &edge = body.edge(e);
-            const double d = projectPoint(*edge.curve, p, edge.range).distance;
-            if (d < closest) closest = d, best = e;
-        }
+        const EdgeId best = resolveEdgeReference(body, reference, std::numeric_limits<double>::max());
         if (!best.valid()) return setError(error, QStringLiteral("il corpo non ha spigoli")), false;
         const Edge &edge = body.edge(best);
         const CurvePtr<3> curve = edge.curve;
@@ -72,15 +66,9 @@ bool resolveForgeBody(const Body &body, int kind, const Vec3 &p, ResolvedRef &r,
     Box box;
     for (VertexId v : body.vertices()) box.add(body.vertex(v).point);
     const double tolerance = 1e-6 * std::max(1.0, box.diagonal());
-    FaceId best;
-    double closest = std::numeric_limits<double>::max();
-    for (FaceId f : body.faces()) {
-        const SurfaceProjection projection = projectPoint(*body.face(f).surface, p);
-        const double d = distance(projection.point, p);
-        if (d < closest && d <= 1e3 * tolerance && classifyPointOnFace(body, f, projection.point, tolerance) != PointLocation::Outside)
-            closest = d, best = f;
-    }
+    const FaceId best = resolveFaceReference(body, reference, 1e3 * tolerance);
     if (!best.valid()) return setError(error, QStringLiteral("il punto non sta piu' su una faccia del corpo")), false;
+    r.face = best.index;
     const Face &face = body.face(best);
     const Surface &surface = *face.surface;
     if (surface.type() == SurfaceType::Plane) {
@@ -121,6 +109,18 @@ bool sketchPoint(const SketchObject &sketch, const ConstraintRef &element, QPoin
         return true;
     }
     return false;
+}
+
+// Corpo di un riferimento: dall'identita' persistente se c'e', altrimenti
+// dall'indice; -1 se non esiste o non viene prima del proprietario.
+int referenceBody(const GeometryRef &ref, int owner, const QVector<ExtrusionObject> &bodies) {
+    int bodyIndex = ref.index;
+    if (ref.featureId) {
+        bodyIndex = -1;
+        for (int candidate = 0; candidate < owner && candidate < bodies.size(); ++candidate)
+            if (bodies.at(candidate).featureId == ref.featureId) { bodyIndex = candidate; break; }
+    }
+    return bodyIndex >= 0 && bodyIndex < owner && bodyIndex < bodies.size() ? bodyIndex : -1;
 }
 
 Vec3 planeNormal(int plane) {
@@ -203,12 +203,18 @@ bool resolveGeometryRef(const GeometryRef &ref, int owner, const QVector<SketchO
         case 3:
         case 4:
         case 5: {
-            if (ref.index < 0 || ref.index >= owner || ref.index >= bodies.size()) {
+            int bodyIndex = ref.index;
+            if (ref.featureId) {
+                bodyIndex = -1;
+                for (int candidate = 0; candidate < owner && candidate < bodies.size(); ++candidate)
+                    if (bodies.at(candidate).featureId == ref.featureId) { bodyIndex = candidate; break; }
+            }
+            if (bodyIndex < 0 || bodyIndex >= owner || bodyIndex >= bodies.size()) {
                 setError(error, QStringLiteral("il corpo del riferimento non esiste piu'"));
                 return false;
             }
-            const ExtrusionObject &body = bodies.at(ref.index);
-            if (body.forgeBody) return resolveForgeBody(*body.forgeBody, ref.kind, p, r, error);
+            const ExtrusionObject &body = bodies.at(bodyIndex);
+            if (body.forgeBody) return resolveForgeBody(*body.forgeBody, ref.kind, ref.point, r, error);
             setError(error, QStringLiteral("il corpo \"%1\" non ha geometria").arg(body.name));
             return false;
         }
@@ -268,32 +274,52 @@ bool resolveGeometryRef(const GeometryRef &ref, int owner, const QVector<SketchO
             return true;
         }
         case 8: {
-            if (ref.index < 0 || ref.index >= owner || ref.index >= bodies.size() || !bodies.at(ref.index).datumValid) {
+            int bodyIndex = ref.index;
+            if (ref.featureId) {
+                bodyIndex = -1;
+                for (int candidate = 0; candidate < owner && candidate < bodies.size(); ++candidate)
+                    if (bodies.at(candidate).featureId == ref.featureId) { bodyIndex = candidate; break; }
+            }
+            if (bodyIndex < 0 || bodyIndex >= owner || bodyIndex >= bodies.size() || !bodies.at(bodyIndex).datumValid) {
                 setError(error, QStringLiteral("il piano di costruzione del riferimento non esiste piu' o non e' valido"));
                 return false;
             }
-            const SketchFrame &f = bodies.at(ref.index).datumFrame;
+            const SketchFrame &f = bodies.at(bodyIndex).datumFrame;
             r.hasPlane = true;
             r.point = Vec3(f.origin[0], f.origin[1], f.origin[2]);
             r.direction = normalized(Vec3(f.normal[0], f.normal[1], f.normal[2]));
             return true;
         }
         case 9: {
-            if (ref.index < 0 || ref.index >= owner || ref.index >= bodies.size() || !bodies.at(ref.index).curve) {
+            int bodyIndex = ref.index;
+            if (ref.featureId) {
+                bodyIndex = -1;
+                for (int candidate = 0; candidate < owner && candidate < bodies.size(); ++candidate)
+                    if (bodies.at(candidate).featureId == ref.featureId) { bodyIndex = candidate; break; }
+            }
+            if (bodyIndex < 0 || bodyIndex >= owner || bodyIndex >= bodies.size() || !bodies.at(bodyIndex).curve) {
                 setError(error, QStringLiteral("la curva del riferimento non esiste piu'"));
                 return false;
             }
-            const ForgeCurve curve = bodies.at(ref.index).curve;
+            const ForgeCurve curve = bodyCurveNear(bodies.at(bodyIndex), ref.point);
+            if(!curve)return setError(error,QStringLiteral("l'entita' dello schizzo 3D non esiste piu'")),false;
             r.hasCurve = true;
             r.nearest = [curve](const Vec3 &q, Vec3 &foot, Vec3 &tangent) { return nearestOnForgeCurve(*curve, curve->domain(), q, foot, tangent); };
             return true;
         }
         case 10: {
-            if (ref.index < 0 || ref.index >= owner || ref.index >= bodies.size() || !bodies.at(ref.index).curve) {
+            int bodyIndex = ref.index;
+            if (ref.featureId) {
+                bodyIndex = -1;
+                for (int candidate = 0; candidate < owner && candidate < bodies.size(); ++candidate)
+                    if (bodies.at(candidate).featureId == ref.featureId) { bodyIndex = candidate; break; }
+            }
+            if (bodyIndex < 0 || bodyIndex >= owner || bodyIndex >= bodies.size() || !bodies.at(bodyIndex).curve) {
                 setError(error, QStringLiteral("la curva del punto di riferimento non esiste piu'"));
                 return false;
             }
-            const ForgeCurve curve = bodies.at(ref.index).curve;
+            const ForgeCurve curve = bodyCurveNear(bodies.at(bodyIndex), ref.point);
+            if(!curve)return setError(error,QStringLiteral("l'entita' dello schizzo 3D non esiste piu'")),false;
             const Interval domain = curve->domain();
             const double parameter = ref.element.point == 1 ? domain.hi : domain.lo;
             r.hasPoint = true;
@@ -308,6 +334,77 @@ bool resolveGeometryRef(const GeometryRef &ref, int owner, const QVector<SketchO
     }
     setError(error, QStringLiteral("riferimento non valido"));
     return false;
+}
+
+ForgeCurve bodyCurveNear(const ExtrusionObject &body, const EdgePoint &point) {
+    if(body.feature==BodyFeature::SpatialSketch && point.geometry==kSpatialCurveReference) {
+        for(int i=0;i<body.spatialSketch.entities.size();++i)
+            if(body.spatialSketch.entities[i].id==point.subshape)return body.curves.value(i);
+        return {};
+    }
+    if (body.curves.size() <= 1) return body.curve;
+    const Vec3 p(point.x, point.y, point.z);
+    ForgeCurve best = body.curve;
+    double distance = std::numeric_limits<double>::infinity();
+    for (const ForgeCurve &curve : body.curves) {
+        if (!curve) continue;
+        const double d = projectPoint(*curve, p, curve->domain()).distance;
+        if (d < distance) distance = d, best = curve;
+    }
+    return best;
+}
+
+bool geometryRefPath(const GeometryRef &ref, int owner, const QVector<SketchObject> &sketches, const QVector<ExtrusionObject> &bodies,
+                     std::vector<PathSegment> &segments, QString *error) {
+    segments.clear();
+    if (owner < 0) owner = int(bodies.size());
+    try {
+        if (ref.kind == 4 || ref.kind == 9) {
+            const int bodyIndex = referenceBody(ref, owner, bodies);
+            if (bodyIndex < 0) return setError(error, QStringLiteral("il corpo del riferimento non esiste piu'")), false;
+            const ExtrusionObject &body = bodies.at(bodyIndex);
+            if (ref.kind == 9) {
+                if (!body.curve) return setError(error, QStringLiteral("la curva \"%1\" non e' valida").arg(body.name)), false;
+                const ForgeCurve curve = bodyCurveNear(body, ref.point);
+                if(!curve)return setError(error,QStringLiteral("l'entita' dello schizzo 3D non esiste piu'")),false;
+                segments.push_back({curve, curve->domain()});
+                return true;
+            }
+            if (!body.forgeBody) return setError(error, QStringLiteral("il corpo \"%1\" non ha geometria").arg(body.name)), false;
+            const EdgeId edge = resolveEdgeReference(*body.forgeBody, ref.point, std::numeric_limits<double>::max());
+            if (!edge.valid()) return setError(error, QStringLiteral("lo spigolo non esiste piu' in \"%1\"").arg(body.name)), false;
+            const Edge &e = body.forgeBody->edge(edge);
+            segments.push_back({e.curve, e.range});
+            return true;
+        }
+        if (ref.kind == 7) {
+            if (ref.index < 0 || ref.index >= sketches.size()) return setError(error, QStringLiteral("lo schizzo del riferimento non esiste piu'")), false;
+            const SketchObject &sketch = sketches.at(ref.index);
+            if (sketch.datumPlane >= owner && owner >= 0)
+                return setError(error, QStringLiteral("lo schizzo \"%1\" sta su un piano successivo").arg(sketch.name)), false;
+            if (ref.element.kind == 0) {
+                if (ref.element.element < 0 || ref.element.element >= sketch.segments.size())
+                    return setError(error, QStringLiteral("il segmento dello schizzo \"%1\" non esiste piu'").arg(sketch.name)), false;
+                const SketchSegment &s = sketch.segments.at(ref.element.element);
+                const Vec3 a = sketchToWorld(s.first, sketch), b = sketchToWorld(s.second, sketch);
+                if (distance(a, b) < 1e-12) return setError(error, QStringLiteral("segmento di lunghezza nulla")), false;
+                segments.push_back({std::make_shared<Line<3>>(a, b - a), Interval{0.0, distance(a, b)}});
+                return true;
+            }
+            if (ref.element.kind != 1 || ref.element.element < 0 || ref.element.element >= sketch.curves.size())
+                return setError(error, QStringLiteral("la curva dello schizzo \"%1\" non esiste piu'").arg(sketch.name)), false;
+            const Frame3 plane = sketchAxes(sketch);
+            for (const ProfileSegment &piece : curveGeometry(sketch.curves.at(ref.element.element)))
+                segments.push_back({embedCurve(piece.curve, plane), piece.range});
+            if (segments.empty()) return setError(error, QStringLiteral("la curva dello schizzo \"%1\" non ha geometria").arg(sketch.name)), false;
+            return true;
+        }
+    } catch (const std::exception &failure) {
+        segments.clear();
+        setError(error, QString::fromUtf8(failure.what()));
+        return false;
+    }
+    return setError(error, QStringLiteral("serve uno spigolo, un'entita' di uno schizzo o una curva")), false;
 }
 
 bool computeDatum(const DatumParameters &parameters, int index, const QVector<SketchObject> &sketches, const QVector<ExtrusionObject> &bodies,
@@ -403,7 +500,12 @@ bool computeDatum(const DatumParameters &parameters, int index, const QVector<Sk
 
 QString geometryRefText(const GeometryRef &ref, const QVector<SketchObject> &sketches, const QVector<ExtrusionObject> &bodies) {
     static const char *planes[] = {"XY", "XZ", "YZ"}, *axes[] = {"X", "Y", "Z"};
-    const auto bodyName = [&](int i) { return i >= 0 && i < bodies.size() ? bodies.at(i).name : QStringLiteral("?"); };
+    const auto bodyName = [&](int i) {
+        if (ref.featureId)
+            for (const ExtrusionObject &body : bodies)
+                if (body.featureId == ref.featureId) return body.name;
+        return i >= 0 && i < bodies.size() ? bodies.at(i).name : QStringLiteral("?");
+    };
     const auto sketchName = [&](int i) { return i >= 0 && i < sketches.size() ? sketches.at(i).name : QStringLiteral("?"); };
     switch (ref.kind) {
     case 0: return QStringLiteral("Origine");

@@ -30,8 +30,17 @@ struct RawEdge {
 };
 
 struct RawFin {
+    RawFin() = default;
+    RawFin(int edgeIndex, bool forward, CurvePtr<2> known = nullptr, double knownTolerance = 0.0)
+        : edge(edgeIndex), sense(forward), pcurve(std::move(known)), pcurveTolerance(knownTolerance) {}
     int edge = -1;
     bool sense = true;  // nel verso dell'edge
+    // SP-curve gia' nota (stesso parametro dell'edge), con lo scarto in 3D
+    // dichiarato: assembleBody non la ricalcola e misura lo scarto dell'edge
+    // con quella invece che con le proiezioni (le superfici a distanza hanno i
+    // parametri delle facce di partenza).
+    CurvePtr<2> pcurve;
+    double pcurveTolerance = 0.0;
 };
 
 struct RawFace {
@@ -55,8 +64,11 @@ struct RawModel {
 std::string formatReal(double x);
 std::size_t parseReal(const char *begin, const char *end, double &value);
 
+// Identita' emesse dall'assemblaggio: uno slot per entita' del modello grezzo;
+// gli edge di cucitura eliminati e i punti inutilizzati restano non validi.
+struct AssemblyMap { std::vector<VertexId> points; std::vector<EdgeId> edges; std::vector<FaceId> faces; };
 // Solido (solid) o lamina. `notes` riceve le correzioni fatte.
-Body assembleBody(const RawModel &model, bool solid, std::vector<std::string> *notes = nullptr);
+Body assembleBody(const RawModel &model, bool solid, std::vector<std::string> *notes = nullptr, AssemblyMap *map = nullptr);
 
 // Facce sciolte (IGES 144, superfici senza topologia): vertici uniti entro
 // `tolerance`, edge con gli stessi estremi e la stessa geometria condivisi, versi

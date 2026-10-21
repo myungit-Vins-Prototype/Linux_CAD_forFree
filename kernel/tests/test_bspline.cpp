@@ -172,12 +172,18 @@ FK_TEST(ConicArcsAreExact) {
             FK_CHECK_NEAR(std::hypot(local.x(), local.y()), radius, 1e-14 * radius + 1e-13);
         }
 
-        // Ellisse: (x/a)^2 + (y/b)^2 = 1.
+        // Ellisse: (x/a)^2 + (y/b)^2 = 1. Il passaggio mondo->locale
+        // perde precisione per ellissi piccole lontane dall'origine:
+        // il residuo adimensionale amplifica l'errore cartesiano di 1/b.
         const double a = radius, b = radius * uniform(rng, 0.05, 1.0);
         const BSplineCurve<3> ellipse = toBSpline(makeEllipse(frame, a, b), first, first + sweep);
+        const double residualTolerance = std::max(1e-13, 16.0 * std::numeric_limits<double>::epsilon() * (norm(frame.origin()) + a) / b);
+        const auto centered = toBSpline(makeEllipse(Frame3(), a, b), first, first + sweep);
         for (int i = 0; i <= 100; ++i) {
             const Vec3 local = frame.toLocal(ellipse.point(ellipse.domain().lo + ellipse.domain().length() * i / 100.0));
-            FK_CHECK_NEAR(std::pow(local.x() / a, 2) + std::pow(local.y() / b, 2), 1.0, 1e-13);
+            FK_CHECK_NEAR(std::pow(local.x() / a, 2) + std::pow(local.y() / b, 2), 1.0, residualTolerance);
+            const Vec3 q = centered.point(centered.domain().lo + centered.domain().length() * i / 100.0);
+            FK_CHECK_NEAR(std::pow(q.x() / a, 2) + std::pow(q.y() / b, 2), 1.0, 1e-13);
         }
     }
     FK_CHECK_THROWS(toBSpline(makeCircle(Vec2(), 1.0), 1.0, 1.0));

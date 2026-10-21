@@ -1,6 +1,8 @@
 #ifndef FORGECAD_FK_CURVE_H
 #define FORGECAD_FK_CURVE_H
 
+#include "fk_cancel.h"
+
 #include <memory>
 #include <vector>
 
@@ -35,11 +37,13 @@ public:
     virtual std::vector<double> breakpoints(const Interval &range) const { return {range.lo, range.hi}; }
 
     Vec<N> point(double t) const {
+        cancellationPoint();
         Vec<N> result;
         evaluate(t, 0, &result);
         return result;
     }
     Vec<N> derivative(double t, int order = 1) const {
+        cancellationPoint();
         std::vector<Vec<N>> result(order + 1);
         evaluate(t, order, result.data());
         return result[order];

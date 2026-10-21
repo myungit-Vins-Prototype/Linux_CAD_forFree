@@ -332,7 +332,7 @@ RayFaceIndex::RayFaceIndex(const Body &body) {
 }
 
 bool firstRayHit(const Body &body, const Vec3 &origin, const Vec3 &direction, double tolerance, double &t,
-                 FaceId *face, const RayFaceIndex *index) {
+                 FaceId *face, const RayFaceIndex *index, const Interval *window) {
     const Vec3 unit = normalized(direction);
     const double scale = norm(direction);
     double best = 1e300;
@@ -341,8 +341,9 @@ bool firstRayHit(const Body &body, const Vec3 &origin, const Vec3 &direction, do
     const auto consider = [&](FaceId f, const Box &rawBox) {
         const Box box = rawBox.padded(10.0 * tolerance);
         Interval range;
-        if (clipLineToBox(origin, unit, box, range) && range.hi >= 0.0)
-            candidates.emplace_back(std::max(0.0, range.lo), f);
+        if (!clipLineToBox(origin, unit, box, range) || range.hi < 0.0) return;
+        if (window && (range.hi < window->lo || range.lo > window->hi)) return;
+        candidates.emplace_back(std::max(0.0, range.lo), f);
     };
     if (index) {
         Interval range;
@@ -364,6 +365,7 @@ bool firstRayHit(const Body &body, const Vec3 &origin, const Vec3 &direction, do
         }
         for (double hit : hits) {
             if (hit < 0.0 || hit >= best) continue;
+            if (window && (hit < window->lo || hit > window->hi)) continue;
             try {
                 if (classifyPointOnFace(body, f, origin + hit * unit, tolerance) != PointLocation::Outside) {
                     best = hit;

@@ -15,7 +15,11 @@
 // Il risultato ha una sola region solida, come quelli delle booleane.
 namespace ForgeCad::Kernel {
 
-Body unifySameDomain(const Body &body, double tolerance = 1e-6);
+class BodyHistory;
+
+// history facoltativa: provenienza dichiarata delle facce, compresi tutti
+// i membri dei gruppi fusi. Edge/vertici restano senza copertura dichiarata.
+Body unifySameDomain(const Body &body, double tolerance = 1e-6, BodyHistory *history = nullptr);
 
 }
 

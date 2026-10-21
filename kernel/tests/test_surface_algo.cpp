@@ -7,9 +7,44 @@
 #include <gp_Ax1.hxx>
 
 #include "fk_surface_algo.h"
+#include "fk_nurbs.h"
 #include "fk_test_util.h"
 
 using namespace fktest;
+
+FK_TEST(InvertPointKeepsClosedBSplineBranch) {
+    const CylindricalSurface cylinder(Frame3(), 3.0);
+    const BSplineSurface source = toBSplineSurface(cylinder, {0.0, kTwoPi}, {0.0, 2.0});
+    // Stesso cilindro, prima chiuso in u e poi in v. Le B-spline restano
+    // non periodiche: entrambi i bordi sono rappresentazioni valide del seam.
+    std::vector<Vec3> poles;
+    std::vector<double> weights;
+    for (int j = 0; j < source.vPoleCount(); ++j)
+        for (int i = 0; i < source.uPoleCount(); ++i) {
+            poles.push_back(source.pole(i, j));
+            weights.push_back(source.weight(i, j));
+        }
+    const BSplineSurface transposed(source.vDegree(), source.uDegree(), source.vKnots(), source.uKnots(),
+                                    source.vPoleCount(), source.uPoleCount(), poles, weights);
+    for (int axis : {0, 1}) {
+        const BSplineSurface &surface = axis == 0 ? source : transposed;
+        const Interval domain = axis == 0 ? surface.uDomain() : surface.vDomain();
+        for (bool high : {false, true}) {
+            // Punto appena oltre il seam rispetto al ramo della stima. La
+            // proiezione globale preferisce l'altro bordo; quello vicino
+            // alla stima e' comunque entro la tolleranza dell'edge.
+            Vec2 target(1.0, 1.0), guess(1.0, 1.0);
+            target[axis] = high ? domain.lo + 1e-8 : domain.hi - 1e-8;
+            guess[axis] = high ? domain.hi - 0.1 : domain.lo + 0.1;
+            Vec3 point = surface.point(target[0], target[1]);
+            point[0] *= 1.0001;
+            point[1] *= 1.0001;
+            FK_CHECK(invertPoint(surface, point, guess, 1e-3, 3.0));
+            FK_CHECK(high ? guess[axis] > domain.hi - 0.01 : guess[axis] < domain.lo + 0.01);
+            FK_CHECK(distance(point, surface.point(guess[0], guess[1])) <= 1e-3);
+        }
+    }
+}
 
 namespace {
 
@@ -190,5 +225,29 @@ FK_TEST(ProjectOnInfiniteExtrusion) {
         FK_CHECK(result.distance <= gridMinimum(extrusion, p, curve->domain(), band) + 1e-9);
         // Per u fisso il v scelto e' quello ottimo.
         FK_CHECK_NEAR(result.v, dot(p - curve->point(result.u), extrusion.direction()), 1e-9);
+    }
+}
+
+// Il meridiano sghembo mantiene v nella forma NURBS, anche se la finestra
+// di proiezione ne copre solo una parte e u attraversa la cucitura.
+FK_TEST(ProjectOnSkewRevolutionWindows) {
+    auto curve = std::make_shared<BSplineCurve<3>>(3, std::vector<double>{0,0,0,0,1,1,1,1},
+        std::vector<Vec3>{{2,1,-2},{-1,3,1},{3,-2,-1},{1,2,3}});
+    const RevolutionSurface surface(curve, Vec3(), Vec3(0,0,1));
+    for (Interval u : {Interval{5.8,7.0}, Interval{-8,-8+kTwoPi}, Interval{0,kTwoPi}}) {
+        const Interval v{0.3,0.7};
+        for (int i=0; i<=8; ++i) for (int j=0; j<=8; ++j) {
+            const Vec3 p = surface.point(u.lo+u.length()*i/8.0, v.lo+v.length()*j/8.0);
+            const auto result = projectPoint(surface,p,u,v);
+            FK_CHECK(result.distance <= 1e-9);
+            FK_CHECK(u.contains(result.u) && v.contains(result.v));
+        }
+        // Un punto fuori dalla finestra: confronto con la ricerca esaustiva
+        // sui campioni, che fornisce un limite superiore alla distanza minima.
+        const Vec3 p = surface.point(u.lo+0.2,0.05);
+        const auto result = projectPoint(surface,p,u,v);
+        FK_CHECK(u.contains(result.u) && v.contains(result.v));
+        for(int i=0;i<=20;++i) for(int j=0;j<=20;++j)
+            FK_CHECK(result.distance <= distance(p,surface.point(u.lo+u.length()*i/20.0,v.lo+v.length()*j/20.0))+1e-9);
     }
 }

@@ -2,9 +2,14 @@
 #define FORGECAD2026_GUI_H
 
 #include <QMainWindow>
+#include "cad_document_io.h"
+#include "cad_document_recovery.h"
+#include "cad_revision_client.h"
+#include <QPointer>
 
 class CadViewport;
 class QAction;
+class QMenu;
 class QDoubleSpinBox;
 class QLabel;
 class QProgressBar;
@@ -14,6 +19,9 @@ class QTreeWidget;
 class QTreeWidgetItem;
 class QColor;
 class QCloseEvent;
+class QDockWidget;
+class QTableWidget;
+class QPushButton;
 
 class PdfWindow final : public QMainWindow {
 public:
@@ -22,13 +30,42 @@ public:
     bool openDocumentPath(const QString &path);
 protected:
     void closeEvent(QCloseEvent *event) override;
+    bool event(QEvent *event) override;
 private:
+    friend class ViewportInteractionTest;
     // Documento su file (.prt, vedi cad_document_io).
     void newDocument();
+    void newDrawing();
+    void openDrawing();
     void openDocument();
     bool saveDocument(bool askPath);
+    bool saveDocumentPath(const QString &path);
+    enum class DocumentRevisionAction { Checkout, Checkin, CompletePending, CancelCheckout };
+    QString runDocumentRevisionAction(DocumentRevisionAction action, const QString &first = {}, const QString &second = {});
+    void showDocumentRevisions();
+    void installDocumentRevisionPanel(QMenu *viewMenu);
+    void refreshDocumentRevisionPanel();
+    void openSelectedDocumentRevision();
+    QDockWidget *documentRevisionDock_=nullptr;
+    QTableWidget *documentRevisionHistory_=nullptr;
+    QLabel *documentRevisionPanelStatus_=nullptr;
+    QPushButton *documentOpenRevision_=nullptr;
+    void rememberRecentDocument(const QString &path);
+    void refreshRecentDocuments();
     bool maybeSaveChanges();
+    void showRecoveryDocuments(bool automatic = false);
+    quint64 clearDocumentRecovery();
+    ForgeCad::DocumentRecovery *recovery_ = nullptr;
+    ForgeCad::RecoveryEntry recoveredSource_;
+    bool recoveryScanPending_ = false, recoveryScanAutomatic_ = false;
+    bool recoveryClosing_ = false, recoveryCloseReady_ = false;
+    quint64 recoveryCloseRevision_ = 0;
     void updateWindowTitle();
+    void refreshDocumentEditAccess();
+    QString acquireDocumentWriteAccess();
+    ForgeCad::WorkspaceEditAccess documentEditAccess_;
+    QVector<QPointer<QAction>> documentMutationActions_,revisionDisabledActions_;
+    QLabel *documentRevisionStatus_=nullptr;
     void beginForegroundProgress(const QString &message, int maximum = 0);
     void updateForegroundProgress(const QString &message, int value, int maximum = 100);
     void endForegroundProgress();
@@ -53,6 +90,11 @@ private:
     bool treeRebuildPending_ = false;
     bool suppressTreeClick_ = false;
     QString documentPath_;
+    std::unique_ptr<ForgeCad::DocumentFileLock> documentLock_;
+    QByteArray documentDiskFingerprint_;
+    QMenu *recentDocumentsMenu_ = nullptr;
+    QString glRenderer_ = QStringLiteral("in avvio");  // GL_RENDERER per la barra di stato
+    QString gpuStatusText() const;
     bool documentModified_ = false;
     bool loadingDocument_ = false;
     QProgressDialog *foregroundProgress_ = nullptr;
@@ -63,6 +105,7 @@ private:
     double blendSize_ = 0.5;  // ultima misura di raccordo o smusso (proposta la volta dopo)
     QDoubleSpinBox *pickSizeBox_ = nullptr;
     QWidget *constraintPanel_ = nullptr;  // finestra fluttuante dei vincoli (modalita' schizzo)  // misura dell'anteprima durante la scelta degli spigoli
+    QWidget *historyGraphDialog_ = nullptr;  // diagnostica non modale della storyboard
 };
 
 #endif

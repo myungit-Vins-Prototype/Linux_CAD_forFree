@@ -43,15 +43,22 @@
 // contro facce non piane o non normali allo spigolo, raggi che fanno
 // uscire i contatti dalle facce o che superano la curvatura (la curva dei
 // centri tornerebbe indietro), facce che si ripiegano (arco vicino a 180 gradi).
+// Le sezioni iniziali e il fitting delle pezze di una catena sono calcolati
+// in parallelo; il montaggio topologico delle facce resta ordinato.
 namespace ForgeCad::Kernel {
 
 // Raccordo (o smusso di distanza `size`) delle catene formate dagli edge.
 // `sides` (facoltativo, uno per edge): smussi asimmetrici, vedi chamferEdges.
-Body blendSurfaceChains(const Body &body, const std::vector<EdgeId> &edges, double size, bool chamfer, const std::vector<ChamferSides> *sides = nullptr);
+Body blendSurfaceChains(const Body &body, const std::vector<EdgeId> &edges, double size, bool chamfer, const std::vector<ChamferSides> *sides = nullptr, BodyHistory *history = nullptr);
 
 // Edge di `selected` nelle catene (tratti lisci tra le stesse due facce) che
 // contengono un edge di `seeds`.
 std::vector<EdgeId> surfaceChainRuns(const Body &body, const std::vector<EdgeId> &selected, const std::vector<EdgeId> &seeds);
+
+// Raggruppa gli edge scelti per catena e segnala se catene distinte
+// condividono un vertice. In quel caso le pezze vanno costruite in sequenza
+// sulla topologia aggiornata, invece di sovrapporre due estremi indipendenti.
+std::vector<std::vector<EdgeId>> surfaceChainGroups(const Body &body, const std::vector<EdgeId> &selected, bool &touching);
 
 }
 

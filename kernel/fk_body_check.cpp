@@ -1,6 +1,7 @@
 #include "fk_body_check.h"
 
 #include <algorithm>
+#include <cmath>
 #include <exception>
 #include <set>
 #include <sstream>
@@ -9,6 +10,8 @@
 #include "fk_pcurve.h"
 #include "fk_precision.h"
 #include "fk_surface_algo.h"
+#include "fk_curve_ops.h"
+#include "fk_intersect.h"
 
 namespace ForgeCad::Kernel {
 namespace {
@@ -159,6 +162,20 @@ void checkTopology(const Body &body, Report &report) {
         if (!usedVertices.count(v.index)) report.add(CheckCode::DanglingVertex, "vertice ", v.index, " non usato");
 }
 
+// Metadati sempre validi, anche quando si richiede la sola topologia.
+void checkTolerances(const Body &body, Report &report) {
+    const auto valid = [](double value) { return std::isfinite(value) && value >= 0.0; };
+    for (VertexId v : body.vertices())
+        if (!valid(body.vertex(v).tolerance))
+            report.add(CheckCode::InvalidTolerance, "vertice ", v.index, ": tolleranza non valida ", body.vertex(v).tolerance);
+    for (EdgeId e : body.edges())
+        if (!valid(body.edge(e).tolerance))
+            report.add(CheckCode::InvalidTolerance, "edge ", e.index, ": tolleranza non valida ", body.edge(e).tolerance);
+    for (FinId f : body.fins())
+        if (!valid(body.fin(f).pcurveTolerance))
+            report.add(CheckCode::InvalidTolerance, "fin ", f.index, ": tolleranza SP-curve non valida ", body.fin(f).pcurveTolerance);
+}
+
 void checkEuler(const Body &body, Report &report) {
     for (ShellId s : body.shells())
         if (body.region(body.shell(s).region).solid && shellGenus(body, s) < 0)
@@ -202,6 +219,20 @@ void checkEdge(const Body &body, EdgeId e, Report &report) {
         const FaceId faceId = body.finFace(f);
         const Face &fc = body.face(faceId);
         if (!fc.surface) continue;  // segnalato sotto
+        // SP-curve: S(p(t)) deve coincidere con C(t) entro la tolleranza
+        // dell'edge piu' lo scarto dichiarato dell'approssimazione.
+        const Fin &fn = body.fin(f);
+        double gap = -1.0;
+        if (fn.pcurve) {
+            gap = pcurveDeviation(*fc.surface, *ed.curve, *fn.pcurve, ed.range, 8);
+            if (!(gap <= tolerance + fn.pcurveTolerance))
+                report.add(CheckCode::PCurveOffEdge, "fin ", f.index, " (edge ", e.index, "): SP-curve fino a ", gap,
+                           " dalla curva");
+        }
+        // La distanza dalla superficie non supera |C(t) - S(p(t))|: se l'SP-curve
+        // sta gia' entro la tolleranza le proiezioni (lente sulle B-spline con
+        // migliaia di pezze) non servono.
+        if (gap >= 0.0 && gap <= tolerance) continue;
         double worst = 0.0;
         for (int i = 0; i <= 8; ++i) {
             const Vec3 p = ed.curve->point(ed.range.lo + ed.range.length() * i / 8.0);
@@ -210,15 +241,6 @@ void checkEdge(const Body &body, EdgeId e, Report &report) {
         if (worst > tolerance)
             report.add(CheckCode::EdgeOffFace, "edge ", e.index, ": fino a ", worst, " dalla superficie della faccia ",
                        faceId.index);
-        // SP-curve: S(p(t)) deve coincidere con C(t) entro la tolleranza
-        // dell'edge piu' lo scarto dichiarato dell'approssimazione.
-        const Fin &fn = body.fin(f);
-        if (fn.pcurve) {
-            const double gap = pcurveDeviation(*fc.surface, *ed.curve, *fn.pcurve, ed.range, 8);
-            if (!(gap <= tolerance + fn.pcurveTolerance))
-                report.add(CheckCode::PCurveOffEdge, "fin ", f.index, " (edge ", e.index, "): SP-curve fino a ", gap,
-                           " dalla curva");
-        }
     }
 }
 
@@ -295,13 +317,92 @@ int shellGenus(const Body &body, ShellId s) {
     return (2 - chi) / 2;
 }
 
+namespace {
+
+// Loop della stessa faccia che si toccano o si incrociano: SP-curve di loop
+// diversi intersecate nello spazio (u, v), anche spostate di un periodo.
+void checkLoopCrossings(const Body &body, Report &report) {
+    for (FaceId f : body.faces()) {
+        const Face &face = body.face(f);
+        if (face.loops.size() < 2 || !face.surface) continue;
+        struct Piece {
+            CurvePtr<2> curve;
+            Interval range;
+            Box box;
+            std::vector<VertexId> ends;
+        };
+        std::vector<std::vector<Piece>> loops;
+        double size = 0.0;
+        for (LoopId l : face.loops) {
+            std::vector<Piece> pieces;
+            for (FinId fin : body.loopFins(l)) {
+                const Fin &data = body.fin(fin);
+                const Edge &edge = body.edge(data.edge);
+                if (!data.pcurve || !(edge.range.length() > 0.0)) continue;
+                Piece piece{data.pcurve, edge.range, Box(), {body.edgeStart(data.edge), body.edgeEnd(data.edge)}};
+                for (int k = 0; k <= 16; ++k) {
+                    const Vec2 q = data.pcurve->point(edge.range.lo + edge.range.length() * k / 16.0);
+                    piece.box.add(Vec3(q.x(), q.y(), 0.0));
+                }
+                size = std::max(size, piece.box.diagonal());
+                pieces.push_back(std::move(piece));
+            }
+            loops.push_back(std::move(pieces));
+        }
+        const double margin = 0.05 * size + 1e-9;
+        const double uPeriod = face.surface->isUPeriodic() ? face.surface->uPeriod() : 0.0;
+        const double vPeriod = face.surface->isVPeriodic() ? face.surface->vPeriod() : 0.0;
+        bool found = false;
+        for (std::size_t a = 0; a < loops.size() && !found; ++a)
+            for (std::size_t b = a + 1; b < loops.size() && !found; ++b)
+                for (const Piece &p : loops[a])
+                    for (const Piece &q : loops[b]) {
+                        if (found) break;
+                        for (int i = uPeriod > 0.0 ? -1 : 0; i <= (uPeriod > 0.0 ? 1 : 0) && !found; ++i)
+                            for (int j = vPeriod > 0.0 ? -1 : 0; j <= (vPeriod > 0.0 ? 1 : 0) && !found; ++j) {
+                                const Vec2 shift(i * uPeriod, j * vPeriod);
+                                Box moved;
+                                moved.add(q.box.lo + Vec3(shift.x(), shift.y(), 0.0));
+                                moved.add(q.box.hi + Vec3(shift.x(), shift.y(), 0.0));
+                                if (!p.box.padded(margin).overlaps(moved.padded(margin))) continue;
+                                const CurvePtr<2> other = i == 0 && j == 0 ? q.curve : translatedCurve(q.curve, shift);
+                                CurveCurveIntersection hits;
+                                try {
+                                    hits = intersectCurves(*p.curve, p.range, *other, q.range, 1e-10 * std::max(1.0, size));
+                                } catch (const std::exception &) {
+                                    continue;
+                                }
+                                for (const CurveCurvePoint &hit : hits.points) {
+                                    const Vec3 point = face.surface->point(hit.point.x(), hit.point.y());
+                                    // Un vertice comune ai due loop (loop che si toccano in un vertice) non conta.
+                                    bool shared = false;
+                                    for (VertexId v : p.ends)
+                                        if (std::find(q.ends.begin(), q.ends.end(), v) != q.ends.end()
+                                            && distance(body.vertex(v).point, point) <= std::max(body.vertex(v).tolerance, kLinearResolution) * 10.0)
+                                            shared = true;
+                                    if (shared) continue;
+                                    report.add(CheckCode::LoopsCross, "faccia ", f.index, ": i loop ", a, " e ", b, " si incontrano in (", point.x(), ", ",
+                                               point.y(), ", ", point.z(), ")");
+                                    found = true;
+                                    break;
+                                }
+                            }
+                    }
+    }
+}
+
+}
+
 std::vector<CheckIssue> checkBody(const Body &body, const CheckOptions &options) {
     std::vector<CheckIssue> issues;
     Report report(issues);
     checkTopology(body, report);
     if (!issues.empty()) return issues;  // i controlli successivi presuppongono una topologia sana
+    checkTolerances(body, report);
+    if (!issues.empty()) return issues;  // non usare budget numericamente invalidi
     checkEuler(body, report);
     if (options.geometry) checkGeometry(body, report);
+    if (options.geometry && options.loopCrossings && issues.empty()) checkLoopCrossings(body, report);
     return issues;
 }
 
@@ -319,6 +420,8 @@ std::string describe(CheckCode code) {
     case CheckCode::EdgeOffFace: return "edge lontano dalla superficie";
     case CheckCode::LoopOrientation: return "orientamento dei loop";
     case CheckCode::PCurveOffEdge: return "SP-curve lontana dall'edge";
+    case CheckCode::InvalidTolerance: return "tolleranza locale non valida";
+    case CheckCode::LoopsCross: return "loop della faccia che si incrociano";
     }
     return "?";
 }

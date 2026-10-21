@@ -2,10 +2,13 @@
 #define FORGECAD_FK_BLEND_MODEL_H
 
 #include <map>
+#include <algorithm>
+#include <limits>
 #include <stdexcept>
 #include <vector>
 
 #include "fk_blend.h"
+#include "fk_history.h"
 #include "fk_curve_algo.h"
 #include "fk_surface_algo.h"
 #include "fk_topology.h"
@@ -13,6 +16,44 @@
 // Interno ai raccordi senza booleane (fk_blend_loop, fk_blend_surface): il
 // body come liste modificabili di Body::build, per la chirurgia topologica.
 namespace ForgeCad::Kernel::detail {
+
+// Identita' topologica nota, usata prima del primo passaggio del raccordo.
+inline BodyHistory blendIdentityHistory(const Body &body) {
+    BodyHistory history = makeHistory({&body}, body);
+    for (FaceId f : body.faces()) history.declareOrigins(EntityKind::Face, f.index, {{0, EntityKind::Face, f.index, HistoryRelation::Same}});
+    for (EdgeId e : body.edges()) history.declareOrigins(EntityKind::Edge, e.index, {{0, EntityKind::Edge, e.index, HistoryRelation::Same}});
+    for (VertexId v : body.vertices()) history.declareOrigins(EntityKind::Vertex, v.index, {{0, EntityKind::Vertex, v.index, HistoryRelation::Same}});
+    return history;
+}
+
+// Tutti gli stadi si riferiscono allo stesso ingresso del raccordo. Le
+// booleane hanno due slot: qui si ricompongono senza duplicare l'operando.
+inline BodyHistory blendBooleanHistory(const Body &input, const Body &result, const BodyHistory &before,
+                                       const BodyHistory &tool, const BodyHistory &step) {
+    BodyHistory history = makeHistory({&input}, result);
+    for (FaceId f : result.faces()) {
+        bool complete = step.isDeclared(EntityKind::Face, f.index);
+        std::vector<HistoryLink> origins;
+        for (const auto &link : step.origins(EntityKind::Face, f.index)) {
+            const auto &source = link.operand == 0 ? before : tool;
+            complete = complete && source.isDeclared(link.kind, link.index);
+            for (auto inner : source.origins(link.kind, link.index)) {
+                inner.relation = std::max(inner.relation, link.relation);
+                origins.push_back(inner);
+            }
+        }
+        // Un fianco originale rifilato conserva la sua identita'. I bordi
+        // degli utensili complanari non lo trasformano in una faccia nuova.
+        const bool inherited = std::any_of(origins.begin(), origins.end(), [](const HistoryLink &link) {
+            return link.kind == EntityKind::Face && link.relation != HistoryRelation::Generated;
+        });
+        if (inherited) origins.erase(std::remove_if(origins.begin(), origins.end(), [](const HistoryLink &link) {
+            return link.relation == HistoryRelation::Generated;
+        }), origins.end());
+        if (complete) history.declareOrigins(EntityKind::Face, f.index, std::move(origins));
+    }
+    return history;
+}
 
 // Distanze di uno smusso asimmetrico sulle facce della fin forward e della
 // fin backward dell'edge: la faccia di riferimento e' quella con la normale
@@ -45,10 +86,14 @@ struct BlendModel {
     std::vector<bool> edgeAlive;
     std::vector<Body::BuildFace> faces;
     std::map<int, int> vertexIndex, edgeIndex, faceIndex;
+    const Body *historyInput = nullptr;
+    std::map<int, int> edgeSources; // indice nelle liste -> edge originale, anche dopo semv
+    std::map<int, std::vector<HistoryLink>> generatedFaces;
 
     bool sheet = false;  // lamina: si ricostruisce con Body::buildSheet
 
-    explicit BlendModel(const Body &body) : sheet(body.isSheet()) {
+    explicit BlendModel(const Body &body, const Body *input = nullptr, const std::map<int, int> &splitSources = {})
+        : historyInput(input), sheet(body.isSheet()) {
         for (VertexId v : body.vertices()) {
             vertexIndex[v.index] = int(points.size());
             points.push_back(body.vertex(v).point);
@@ -57,6 +102,11 @@ struct BlendModel {
         for (EdgeId e : body.edges()) {
             const Edge &edge = body.edge(e);
             edgeIndex[e.index] = int(edges.size());
+            if (input) {
+                const auto split = splitSources.find(e.index);
+                if (split != splitSources.end()) edgeSources[int(edges.size())] = split->second;
+                else if (input->contains(e)) edgeSources[int(edges.size())] = e.index;
+            }
             edges.push_back({vertexIndex.at(body.edgeStart(e).index), vertexIndex.at(body.edgeEnd(e).index), edge.curve, edge.range, edge.tolerance});
             edgeAlive.push_back(true);
         }
@@ -76,6 +126,12 @@ struct BlendModel {
             }
             faces.push_back(std::move(built));
         }
+    }
+    void addGeneratedFace(Body::BuildFace face, EntityKind kind, int source) {
+        if (historyInput && ((kind == EntityKind::Edge && historyInput->contains(EdgeId(source)))
+            || (kind == EntityKind::Vertex && historyInput->contains(VertexId(source)))))
+            generatedFaces[int(faces.size())] = {{0, kind, source, HistoryRelation::Generated}};
+        faces.push_back(std::move(face));
     }
     int addPoint(const Vec3 &p) {
         points.push_back(p);
@@ -132,6 +188,74 @@ struct BlendModel {
             throw std::logic_error("blendEdges: edge senza il vertice");
         }
     }
+    // Una cucitura puo' essere suddivisa in piu' edge dopo un'estensione.
+    // Attraversa solo vertici di grado due e continuazioni tangenti: non
+    // supera angoli o biforcazioni della topologia.
+    std::vector<std::pair<int, int>> edgeChain(int edge, int vertex) const {
+        std::vector<std::pair<int, int>> chain;
+        for (std::size_t guard = 0; guard < edges.size(); ++guard) {
+            const auto &e = edges[std::size_t(edge)];
+            if (!edgeAlive[std::size_t(edge)] || (e.start != vertex && e.end != vertex)) break;
+            chain.push_back({edge, vertex});
+            const int far = e.start == vertex ? e.end : e.start;
+            int next = -1, count = 0;
+            for (std::size_t k = 0; k < edges.size(); ++k) {
+                if (!edgeAlive[k] || int(k) == edge) continue;
+                if (edges[k].start == far || edges[k].end == far) { next = int(k); ++count; }
+            }
+            if (count != 1) break;
+            const auto &n = edges[std::size_t(next)];
+            const auto tangent = [](const Body::BuildEdge &edge, bool end) {
+                Vec3 values[2];
+                if (end) edge.curve->evaluateLeft(edge.range.hi, 1, values);
+                else edge.curve->evaluate(edge.range.lo, 1, values);
+                return values[1];
+            };
+            const Vec3 arriving = (e.end == far ? 1.0 : -1.0) * tangent(e, e.end == far);
+            const Vec3 leaving = (n.start == far ? 1.0 : -1.0) * tangent(n, n.end == far);
+            if (dot(normalized(arriving), normalized(leaving)) < 1.0 - 1e-6) break;
+            if (next == chain.front().first) break;
+            edge = next;
+            vertex = far;
+        }
+        return chain;
+    }
+    Vec3 projectOnEdgeChain(int edge, int vertex, const Vec3 &p) const {
+        Vec3 best = p;
+        double gap = std::numeric_limits<double>::infinity();
+        for (const auto &step : edgeChain(edge, vertex)) {
+            const auto &e = edges[std::size_t(step.first)];
+            const auto q = projectPoint(*e.curve, p, e.range);
+            if (q.distance < gap) { gap = q.distance; best = q.point; }
+        }
+        return best;
+    }
+    void moveEndAlongChain(int edge, int vertex, int point) {
+        const auto chain = edgeChain(edge, vertex);
+        std::size_t best = 0;
+        double gap = std::numeric_limits<double>::infinity();
+        for (std::size_t k = 0; k < chain.size(); ++k) {
+            const auto &e = edges[std::size_t(chain[k].first)];
+            const auto q = projectPoint(*e.curve, points[std::size_t(point)], e.range);
+            if (q.parameter > e.range.lo && q.parameter < e.range.hi && q.distance < gap) {
+                best = k; gap = q.distance;
+            }
+        }
+        if (best == 0 || gap > std::max(1e-7, pointTolerance[std::size_t(point)])) {
+            moveEnd(edge, vertex, point);
+            return;
+        }
+        // Verifica e accorcia prima di rimuovere gli edge interamente consumati.
+        moveEnd(chain[best].first, chain[best].second, point);
+        for (std::size_t k = 0; k < best; ++k) {
+            const int consumed = chain[k].first;
+            edgeAlive[std::size_t(consumed)] = false;
+            for (auto &face : faces) for (auto &loop : face.loops)
+                loop.erase(std::remove_if(loop.begin(), loop.end(), [&](const Body::BuildFin &fin) {
+                    return fin.edge == consumed;
+                }), loop.end());
+        }
+    }
     // Sostituisce l'edge `from` con `to` (stesso verso) nelle fin della faccia.
     void replaceFin(int face, int from, int to) {
         for (auto &loop : faces[std::size_t(face)].loops)
@@ -157,7 +281,7 @@ struct BlendModel {
             }
         throw std::logic_error("blendEdges: vertice non trovato nel loop");
     }
-    Body build() const {
+    Body build(BodyHistory *history = nullptr) const {
         // Solo i vertici usati, rinumerati.
         std::vector<int> used(points.size(), -1);
         std::vector<Vec3> kept;
@@ -190,6 +314,48 @@ struct BlendModel {
         for (VertexId v : vertices)
             for (std::size_t k = 0; k < kept.size(); ++k)
                 if (keptTolerance[k] > 0.0 && distance(body.vertex(v).point, kept[k]) == 0.0) body.vertex(v).tolerance = keptTolerance[k];
+        if (history && historyInput) {
+            BodyHistory declared = makeHistory({historyInput}, body);
+            const auto sameEdge = [&](int index, int source) {
+                const auto &now = edges.at(std::size_t(index));
+                const auto &old = historyInput->edge(EdgeId(source));
+                return now.curve == old.curve && now.range.lo == old.range.lo && now.range.hi == old.range.hi
+                    && distance(points[std::size_t(now.start)], historyInput->vertex(historyInput->edgeStart(EdgeId(source))).point) == 0.0
+                    && distance(points[std::size_t(now.end)], historyInput->vertex(historyInput->edgeEnd(EdgeId(source))).point) == 0.0;
+            };
+            const auto resultEdges = body.edges();
+            for (const auto &[index, source] : edgeSources)
+                if (edgeMap.at(std::size_t(index)) >= 0)
+                    declared.declareOrigins(EntityKind::Edge, resultEdges.at(std::size_t(edgeMap[std::size_t(index)])).index,
+                        {{0, EntityKind::Edge, source, sameEdge(index, source) ? HistoryRelation::Same : HistoryRelation::Modified}});
+            const auto resultVertices = body.vertices();
+            for (const auto &[source, index] : vertexIndex)
+                if (historyInput->contains(VertexId(source)) && used.at(std::size_t(index)) >= 0)
+                    declared.declareOrigins(EntityKind::Vertex, resultVertices.at(std::size_t(used[std::size_t(index)])).index,
+                        {{0, EntityKind::Vertex, source, HistoryRelation::Same}});
+            const auto resultFaces = body.faces();
+            for (const auto &[source, index] : faceIndex) {
+                const auto &now = faces.at(std::size_t(index));
+                const auto &old = historyInput->face(FaceId(source));
+                bool same = now.surface == old.surface && now.sense == old.sense && now.loops.size() == old.loops.size();
+                for (std::size_t l = 0; same && l < now.loops.size(); ++l) {
+                    const auto fins = historyInput->loopFins(old.loops[l]);
+                    same = fins.size() == now.loops[l].size();
+                    for (std::size_t f = 0; same && f < fins.size(); ++f) {
+                        const auto &fin = now.loops[l][f];
+                        const auto &previous = historyInput->fin(fins[f]);
+                        const auto sourceEdge = edgeSources.find(fin.edge);
+                        same = sourceEdge != edgeSources.end() && sourceEdge->second == previous.edge.index
+                            && fin.sense == previous.sense && sameEdge(fin.edge, sourceEdge->second);
+                    }
+                }
+                declared.declareOrigins(EntityKind::Face, resultFaces.at(std::size_t(index)).index,
+                    {{0, EntityKind::Face, source, same ? HistoryRelation::Same : HistoryRelation::Modified}});
+            }
+            for (const auto &[index, origins] : generatedFaces)
+                declared.declareOrigins(EntityKind::Face, resultFaces.at(std::size_t(index)).index, origins);
+            *history = std::move(declared);
+        }
         return body;
     }
 };

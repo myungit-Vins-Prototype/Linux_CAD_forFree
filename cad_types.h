@@ -4,12 +4,15 @@
 #include <QByteArray>
 #include <QColor>
 #include <QPair>
+#include <QMatrix4x4>
 #include <QPointF>
 #include <QString>
 #include <QVector>
 #include <QVector3D>
 
 #include <memory>
+
+#include "cad_document_version.h"
 
 namespace ForgeCad::Kernel {
 class Body;
@@ -50,7 +53,8 @@ using SketchSegment = QPair<QPointF, QPointF>;
 // Entita' curva dello schizzo, in coordinate del piano di schizzo.
 // La geometria esatta e' definita dai soli parametri:
 //  - Spline: punti di passaggio + maniglie tangenti (Bezier cubiche C1 a tratti)
-//  - Nurbs: poli, pesi (vuoto = tutti 1), nodi uniformi "clamped", grado <= 3
+//  - Nurbs: poli, pesi (vuoto = tutti 1); con knots vuoto nodi uniformi
+//    "clamped" e grado <= 3, altrimenti nodi e grado espliciti (archi ellittici)
 //  - Circle: centro, punto sulla circonferenza
 //  - Arc: centro, punto iniziale (definisce il raggio), punto finale (definisce l'angolo)
 //  - Polygon: centro, primo vertice, numero di lati
@@ -72,8 +76,8 @@ struct CurveObject {
     // opposte. Le lunghezze possono essere quotate separatamente.
     QVector<bool> tangentLinked;
     int sides = 0;
-    QVector<double> knots;  // Converted: nodi espansi (poli + grado + 1)
-    int degree = 3;         // Converted
+    QVector<double> knots;  // Nurbs / Converted: nodi espansi (poli + grado + 1)
+    int degree = 3;         // Nurbs con knots / Converted
     QVector<QPointF> samples;
     bool numericallyValid = false;
     bool construction = false;
@@ -126,8 +130,9 @@ struct ConstraintRef {
 enum class ConstraintType {
     Coincident = 0, Horizontal, Vertical, Parallel, Perpendicular, Collinear, Tangent, Equal, Concentric, Midpoint,
     PointOnCurve, Fix, Distance, Angle, Radius, Diameter, Pattern, Symmetric, AxisRadius, AxisDiameter,
-    HorizontalDistance, VerticalDistance
+    HorizontalDistance, VerticalDistance, Quadrant, Offset, Pierce
 };
+// Quadrant: first e un punto, second un cerchio/arco; value = 0/1/2/3 per 0/90/180/270 gradi.
 // HorizontalDistance / VerticalDistance: quota lungo l'asse X (o Y) dello
 // schizzo tra due punti (anche di entita' diverse) o tra gli estremi di un
 // segmento: |dx| (o |dy|) = value.
@@ -172,8 +177,18 @@ struct SketchPatternData {
     int instances() const { return kind == 2 ? 1 : kind == 1 ? count - 1 : count * qMax(1, count2) - 1; }
 };
 
+// Offset diretto: value contiene la distanza; sorgenti e copie sono
+// entita' intere. Le copie vengono rigenerate prima di risolvere i vincoli.
+struct SketchOffsetData {
+    QVector<ConstraintRef> sources, copies;
+    bool reverse = false, bothSides = false, roundCorners = false;
+};
+
+struct SketchPierceData;
+
 // Vincolo geometrico dello schizzo, mantenuto dal risolutore (cad_constraints).
 struct SketchConstraint {
+    std::shared_ptr<const SketchPierceData> pierce; // solo Pierce: riferimento esterno e sezione esatta
     ConstraintType type = ConstraintType::Coincident;
     ConstraintRef first, second;  // second.kind < 0: vincolo su un solo riferimento
     double value = 0.0;           // quote; Tangent tra cerchi: 0 esterna, 1 interna
@@ -183,8 +198,13 @@ struct SketchConstraint {
     // dell'arco dell'angolo); se non e' stata spostata, una posizione di default.
     QPointF placement;
     bool placed = false;
+    SketchOffsetData offset;    // solo per Offset
     SketchPatternData pattern;  // solo per Pattern
     ConstraintRef third;        // Symmetric: la retta di simmetria
+    // Angle: settore della quota tra le due rette. Bit 0: direzione della prima
+    // retta al contrario, bit 1: della seconda (0 = verso dei segmenti). L'angolo
+    // misurato e' quello tra le due direzioni risultanti: interno o supplementare.
+    int angleSides = 0;
 };
 
 struct SketchObject {
@@ -230,9 +250,18 @@ struct BodyDisplay {
     QVector<QVector3D> vertices;   // tre vertici per triangolo
     QVector<QVector3D> normals;    // una normale per vertice
     QVector<QVector<QVector3D>> edges;
+    QVector<int> edgeIds;               // polilinea visualizzata -> EdgeId del B-rep
+    QVector<int> faceIds;               // punto etichetta -> FaceId del B-rep
+    QVector<int> triangleFaces;         // triangolo -> FaceId del B-rep (vuoto se non noto)
+    QVector<QVector3D> faceLabelPoints;  // posizione delle etichette topologiche delle facce
     QVector<QVector<QVector3D>> constructionCurves; // isoparametriche U/V delle anteprime
     QVector<QVector<int>> faceEdges; // faccia B-rep -> polilinee, senza ricerche geometriche durante il disegno
     std::shared_ptr<const ForgeCad::Kernel::RayFaceIndex> rayIndex;
+    // Ripetizioni disgiunte: il risultato finale resta sopra per selezione,
+    // bordi e misure, ma il renderer puo' disegnare questa mesh base con una
+    // sola chiamata instanced. Vuoti negli altri casi e nei file salvati.
+    std::shared_ptr<const BodyDisplay> instancedBase;
+    QVector<QMatrix4x4> instanceTransforms;
     int quality = -1;
 };
 
@@ -245,14 +274,75 @@ struct BodyDisplay {
 // letta da un file STEP/IGES. DatumPlane: piano di costruzione (niente solido).
 // Pattern: ripetizione (lineare, circolare, specchio) di un corpo o di una funzione.
 // Transform: spostamento e rotazione di un corpo (o di una sua copia).
+// SurfaceOffset: lamina a distanza `distance` dalle facce `offsetFaces` del
+// corpo firstBody (vuoto: tutte); distanza zero: copia esatta con i bordi comuni.
+// Il corpo originale resta disponibile e la copia e' un corpo logico separato.
+// Sew: cucitura delle superfici firstBody + booleanTools in una (solido se
+// chiusa e sewSolid), entro sewTolerance.
+// Ruled: superficie rigata tra le catene di curve ruledFirst e ruledSecond.
+// PlanarSurface: lamina piana delimitata dai contorni chiusi dello schizzo
+// sketchIndex (planarRefs vuoto) o dai bordi planarRefs scelti nella vista.
+// DeleteFace: il corpo firstBody senza le facce offsetFaces (lamina con le
+// facce restanti: un solido diventa una superficie aperta).
+// BoundarySurface: superficie tra curve (patch di Coons) delimitata dal
+// contorno chiuso dei riferimenti curva planarRefs (3 o 4 lati).
+// FillSurface: superficie di riempimento (fk_fill) del contorno chiuso
+// planarRefs, che passa per le curve guida ruledFirst e continua le facce
+// ruledSecond (riferimenti di faccia) dove il contorno sta sul loro bordo:
+// fillContinuity 0 contatto, 1 tangenza, 2 curvatura.
+// Shell: il solido firstBody svuotato con pareti di spessore `distance` verso
+// l'interno, le facce offsetFaces tolte per l'apertura (nessuna: cavita' chiusa).
+// SheetTrim con uno schizzo (sketchIndex) e trimProject: il corpo firstBody
+// tagliato dalla proiezione dello schizzo lungo la normale del suo piano,
+// sulla prima faccia incontrata (fk_project): projectionMode 0 toglie le
+// parti dentro i contorni chiusi, 1 tiene solo quelle, 2 divide soltanto le
+// facce. Senza trimProject (file precedenti) lo schizzo taglia tutte le facce
+// lungo la normale e resta la parte che contiene trimKeep.
+// ProjectedCurve: le entita' dello schizzo sketchIndex proiettate sul corpo
+// firstBody (curve 3D, una per catena continua: `curves`).
+// Thicken: spessore `distance` delle facce offsetFaces del corpo firstBody
+// (vuoto: tutta la superficie, che diventa un solido nello stesso corpo
+// logico; altrimenti un corpo nuovo), lungo la normale o lungo la direzione
+// del riferimento thickenDirection (retta o normale di un piano/faccia);
+// thickenSide 0 nel verso, 1 nel verso opposto, 2 meta' per parte (fk_thicken).
 enum class BodyFeature { Extrusion = 0, Revolution = 1, Primitive = 2, Blend = 3, SheetTrim = 4, SheetExtend = 5, Scale = 6, Helix = 7, Sweep = 8, Loft = 9,
-                         Imported = 10, DatumPlane = 11, Pattern = 12, Transform = 13 };
+                         Imported = 10, DatumPlane = 11, Pattern = 12, Transform = 13, SurfaceOffset = 14, Sew = 15, Ruled = 16, PlanarSurface = 17,
+                         DeleteFace = 18, BoundarySurface = 19, Shell = 20, Thread = 21, FillSurface = 22, Draft = 23,
+                         ProjectedCurve = 24, Thicken = 25, ExtractedCurve = 26, SpatialSketch = 27 };
 
-// Spigolo di un corpo identificato da un suo punto (coordinate del modello):
-// dopo una rigenerazione si prende lo spigolo piu' vicino.
+// Riferimento leggero a una sotto-entita' del B-rep. `subshape` e' l'ID
+// topologico al momento della scelta, `geometry` il tipo di curva/superficie.
+// Il punto resta sia una firma geometrica sia il fallback per i file vecchi.
 struct EdgePoint {
     double x = 0.0, y = 0.0, z = 0.0;
+    int subshape = -1;
+    int geometry = -1;
+    int context = -1;
+    // Nei raccordi e negli smussi (blendEdges): 0 = lo spigolo, 1 = tutti i
+    // bordi della faccia (riferimento di faccia). La faccia si ritrova anche
+    // dopo che altre feature ne hanno cambiato i bordi (riordino della storia),
+    // e i suoi bordi si prendono sullo stato corrente.
+    int role = 0;
+    // Nome topologico persistente (genealogia delle operazioni, fk_history):
+    // non dipende dagli indici, quindi sopravvive alla rigenerazione con altri
+    // parametri e al riordino della storia. Vuoto nei documenti fino al 48.
+    QString name{};
 };
+// Esito diagnostico di una risoluzione: solo runtime, non si serializza.
+enum class TopologyResolutionMethod { Name, Identity, Geometry, Ambiguous, Missing };
+struct TopologyReferenceResolution {
+    int kind = -1;  // 3 vertice, 4 spigolo, 5 faccia (come GeometryRef)
+    EdgePoint reference;
+    int resolvedSubshape = -1;
+    int candidates = 0;
+    TopologyResolutionMethod method = TopologyResolutionMethod::Missing;
+    QString warning;
+    int sourceIndex = -1;
+    quint64 sourceFeatureId = 0;
+    bool currentCheck = false;  // verifica corrente di uno snapshot senza audit
+};
+inline constexpr int kEdgePointEdge = 0;
+inline constexpr int kEdgePointFaceBoundary = 1;
 
 // Faccia di un corpo sotto il puntatore (geometria esatta): per scegliere i
 // suoi bordi (raccordi e smussi) e, se e' piana, per schizzarci sopra.
@@ -284,7 +374,8 @@ struct PrimitiveParameters {
 // Elica (cilindrica o conica) o spirale piana (di Archimede). La base da' asse,
 // raggio iniziale e riferimento dell'angolo:
 //  - source 0: cerchio o arco `curve` dello schizzo sketchIndex (-1: il primo):
-//    asse = normale dello schizzo, angolo 0 verso il punto del cerchio;
+//    asse = normale dello schizzo, angolo 0 verso X e 90 verso Y dello
+//    schizzo, indipendentemente dal punto che definisce il raggio;
 //  - source 1: spigolo circolare del corpo firstBody piu' vicino a `reference`
 //    (asse verso la faccia cilindrica o conica coassiale, se c'e');
 //  - source 2: faccia cilindrica o conica del corpo firstBody che contiene
@@ -329,7 +420,21 @@ struct GeometryRef {
     int index = -1;
     ConstraintRef element;
     EdgePoint point;
+    quint64 featureId = 0;  // proprietario persistente; index e' la cache operativa
 };
+
+// Pierce: punto dello schizzo sulla sezione della faccia esterna.
+// Cache immutabile condivisa con Undo; viene sostituita alla rigenerazione.
+struct SketchPierceData {
+    GeometryRef surface;
+    QString name, error;
+    QVector<SketchSegment> segments;
+    QVector<CurveObject> curves;
+};
+
+// Asse della rivoluzione dato da un riferimento (ExtrusionObject::revolveAxisRef):
+// -3 resta "segmento eliminato".
+constexpr int kRevolveAxisReference = -4;
 
 // Piano di costruzione. Modi (i riferimenti in `refs`, nell'ordine):
 //  0 parallelo a un piano a distanza `distance`;
@@ -405,13 +510,29 @@ struct TransformParameters {
     bool copy = false;
 };
 
+// Filettatura reale ricavata da una faccia cilindrica o conica del corpo
+// `firstBody`. Standard: 0 ISO M, 1 UNC, 2 UNF, 3 BSPP/G, 4 BSPT/R,
+// 5 NPT, 6 ISO trapezoidale Tr, 7 ACME. Il diametro e il verso interno/esterno
+// sono letti dalla faccia; pitch e length sono sempre millimetri.
+struct ThreadParameters {
+    int standard = 0;
+    QString designation;
+    double pitch = 1.5;
+    double length = 0.0;  // 0: tutta la lunghezza della faccia
+    bool leftHanded = false;
+    bool reverse = false;
+    EdgePoint face;
+};
+
 // Corpo della scena, definito in modo parametrico:
 //  - estrusione (operation = -1, feature Extrusion): profili chiusi dello
 //    schizzo `sketchIndex` estrusi di `distance` lungo la normale del piano;
 //  - rivoluzione (feature Revolution): profili chiusi dello schizzo
 //    `sketchIndex` ruotati di `revolveAngle` gradi (con segno: verso
 //    destrorso attorno all'asse orientato; 360 = giro completo) attorno al
-//    segmento `revolveAxis` dello schizzo (-1 = asse X, -2 = asse Y del piano);
+//    segmento `revolveAxis` dello schizzo (-1 = asse X, -2 = asse Y del piano;
+//    kRevolveAxisReference: la retta `revolveAxisRef` scelta nella vista, che
+//    deve stare nel piano dello schizzo);
 //  - primitiva (feature Primitive): `primitive`;
 //  - raccordo o smusso (feature Blend): gli spigoli `blendEdges` del corpo
 //    `firstBody` raccordati con raggio `blendSize` (o smussati a distanza
@@ -429,14 +550,45 @@ struct ChamferSpec {
     bool flip = false;
 };
 
-// Parte di una superficie divisa da uno strumento (finestra del taglio): un
-// suo punto e la sua area.
+// Parte gia' calcolata di una superficie divisa: geometria e mesh vengono
+// riusate per la scelta nella vista e per l'anteprima, senza rifare il taglio.
 struct SheetPiece {
     EdgePoint point;
     double area = 0.0;
+    ForgeCad::ForgeBody geometry;
+    BodyDisplay display;
+};
+
+// Curva spaziale ricavata da un riferimento persistente. Il taglio mantiene
+// il bordo originale e ricalcola il suo intervallo ad ogni rigenerazione.
+struct SpatialPoint { double x=0, y=0, z=0; };
+struct SpatialCurve3D {
+    int id=0; // persistente anche quando si riordina o elimina un'altra entita'
+    bool spline=false, closed=false;
+    QVector<SpatialPoint> points;
+};
+struct SpatialSketchParameters {
+    int nextId=1;
+    QVector<SpatialCurve3D> entities;
+};
+
+struct CurveExtractionParameters {
+    GeometryRef source, tool;
+    QVector<GeometryRef> sources; // vuoto: sorgente singola precedente; altrimenti catena unificata
+    bool trimmed = false;
+    bool projected = false;
+    bool keepStart = true;
+    double cutHint = 0.5; // frazione del dominio, selezione fra piu' intersezioni
+    SketchFrame view; // direzione di proiezione congelata, indipendente dalla camera
 };
 
 struct ExtrusionObject {
+    // Identita' persistente della feature e del corpo logico a cui appartiene.
+    // Gli indici nel vettore restano il formato operativo delle dipendenze;
+    // questi identificatori non cambiano quando la storyboard viene riordinata.
+    quint64 featureId = 0;
+    quint64 modelBodyId = 0;  // 0: elemento di riferimento, non uno stadio di un corpo
+    bool suppressed = false;
     QString name;
     int sketchIndex = -1;
     int plane = 0;
@@ -447,15 +599,23 @@ struct ExtrusionObject {
     BodyFeature feature = BodyFeature::Extrusion;
     int revolveAxis = -1;
     double revolveAngle = 360.0;
+    GeometryRef revolveAxisRef;  // con revolveAxis == kRevolveAxisReference
     PrimitiveParameters primitive;
     bool blendChamfer = false;
     ChamferSpec chamferSpec;
     double blendSize = 1.0;
     QVector<EdgePoint> blendEdges;  // anche i bordi di SheetExtend (blendSize = distanza)
+    // Feature della base su cui sono stati scelti blendEdges (0: non nota). Se
+    // la base e' ancora quella (anche rigenerata) gli ID valgono piu' dei
+    // punti; dopo un riordino della storia si cerca per geometria.
+    quint64 blendBaseFeature = 0;
     // SheetTrim: firstBody = superficie, secondBody = corpo strumento (-1: il
     // piano di riferimento trimPlane), trimKeep un punto della parte da tenere.
+    // Con trimBoth si rifila anche secondBody e trimToolKeep ne sceglie la parte.
     int trimPlane = 0;
     EdgePoint trimKeep;
+    bool trimBoth = false;
+    EdgePoint trimToolKeep;
     bool extendLinear = false;  // SheetExtend: tangente (rigata) invece della stessa superficie
     // Scale: firstBody = corpo, fattore uniforme e centro (0 origine, 1 baricentro del solido, 2 il punto scaleCenter).
     double scaleFactor = 1.0;
@@ -466,23 +626,42 @@ struct ExtrusionObject {
     // Sweep: profilo dello schizzo sketchIndex lungo il percorso: lo schizzo
     // pathSketch (sweepPath 0) o la curva firstBody (1, un'elica). sweepMode: 0
     // torsione minima, 1 Frenet, 2 orientamento costante.
+    // Riferimenti associativi opzionali: sezione piana e percorso dalla vista.
+    GeometryRef sweepProfileRef, sweepPathRef;
     int sweepPath = 0;
     int pathSketch = -1;
     QVector<int> pathSegments;
     QVector<int> pathCurves;
     int sweepMode = 0;
+    // Sweep di superficie: lamina senza coperchi (un profilo chiuso da' un
+    // tubo aperto alle estremita'); niente fusione con i solidi.
+    bool sweepSurface = false;
     // Loft: sezioni e curve guida (schizzi, nell'ordine), rigato o liscio.
     // La continuita' 0/1/2 corrisponde a G0/G1/G2; le influenze sono [0, 1].
+    // Se presenti, sostituiscono loftSketches: ogni riferimento e’ una sezione.
+    // kind 7 / element.kind -1 indica un intero schizzo.
+    QVector<GeometryRef> loftSections, loftEdgeGuides;
     QVector<int> loftSketches;
     QVector<int> loftGuides;
     QVector<SketchPathRef> loftGuidePaths;
+    // Permutazione di schizzi interi, percorsi parziali e bordi concatenati.
+    // Vuota conserva l’ordine dei documenti precedenti.
+    QVector<int> loftGuideOrder;
     bool loftRuled = false;
     int loftStartContinuity = 0;
     int loftEndContinuity = 0;
+    // Condizioni per guida, nell'ordine canonico: schizzi, percorsi, bordi.
+    // Vettori vuoti: eredita i valori globali dei documenti precedenti.
+    QVector<int> loftGuideContinuities;
+    QVector<double> loftGuideInfluences;
     int loftGuideContinuity = 1;
     double loftGuideInfluence = 1.0;
     double loftStartInfluence = 1.0;
     double loftEndInfluence = 1.0;
+    // Modalita' 3: G1 alle facce scelte; condiviso dalla superficie rigata.
+    QVector<GeometryRef> loftStartFaces, loftEndFaces;
+    // Loft di superficie: lamina senza coperchi (sezioni chiuse: un tubo).
+    bool loftSurface = false;
     // Imported: il body letto dal file come testo STEP scritto dal kernel
     // (fk_step, numeri a 17 cifre: la stessa geometria) e il nome del file d'origine.
     QByteArray importData;
@@ -492,13 +671,33 @@ struct ExtrusionObject {
     DatumParameters datum;
     // Pattern: la ripetizione del corpo firstBody.
     PatternParameters pattern;
+    // Thread: filetto parametrico sulla faccia cilindrica/conica scelta.
+    ThreadParameters thread;
     // Extrusion: condizione di fine (0 la distanza `distance`; 1 fino a un
     // punto; 2 fino a uno spigolo, nel suo punto piu' vicino al riferimento;
     // 3 fino a una faccia o a un piano) con il riferimento `extentRef`
     // (GeometryRef come i piani di costruzione).
     int extent = 0;
     GeometryRef extentRef;
-    // Estrusione e sweep: fusione del risultato con altri solidi (mergeOperation 0
+    // Extrusion: versi rispetto al piano dello schizzo (0 uno solo; 1
+    // simmetrica: `distance` in tutto, meta' per parte, solo con la fine a
+    // distanza; 2 due versi: la fine scelta da una parte e `distance2` > 0
+    // dall'altra).
+    int extrudeSides = 0;
+    double distance2 = 1.0;
+    // Extrusion: solo superficie, anche dai contorni chiusi (tubi senza base
+    // e coperchio); niente fusione con i solidi.
+    bool extrudeSurface = false;
+    // FillSurface: continuita' comune con le facce adiacenti, influenza
+    // locale del raccordo (1 naturale) e peso delle guide.
+    // Un valore per ruledSecond; vuoto eredita fillInfluence.
+    QVector<double> fillFaceInfluences;
+    int fillShapeFace = -1; // indice di ruledSecond, -1 forma libera
+    double fillShapeWeight = 1.0;
+    int fillContinuity = 1;
+    double fillInfluence = 1.0;
+    double fillGuideWeight = 1.0;
+    // Estrusione, rivoluzione e sweep: fusione del risultato con altri solidi (mergeOperation 0
     // corpo nuovo, 1 unione, 2 sottrazione) nei corpi `mergeBodies` (indici
     // minori, nascosti come gli operandi delle booleane); `mergeAuto` dice che
     // sono stati scelti da soli, tra quelli che hanno punti in comune con la
@@ -512,17 +711,69 @@ struct ExtrusionObject {
     QVector<int> booleanTools;
     // Transform: spostamento del corpo firstBody.
     TransformParameters move;
+    // SurfaceOffset: le facce scelte (vuoto: tutte le facce del corpo).
+    // DeleteFace: le facce da togliere (almeno una); Shell: le facce dell'apertura.
+    QVector<EdgePoint> offsetFaces;
+    // Sformo a piano neutro: normale del riferimento = direzione di estrazione.
+    GeometryRef draftNeutral;
+    double draftAngle = 3.0;  // gradi, positivo restringe lungo la direzione
+    bool draftReverse = false;
+    // SheetTrim con schizzo proiettato e ProjectedCurve: proiezione sulla
+    // prima faccia (trimProject), modo del taglio e verso (di default verso il
+    // corpo; vero: il verso opposto).
+    bool trimProject = false;
+    int projectionMode = 0;
+    bool projectionReverse = false;
+    // Thicken: lato dello spessore e direzione (kind < 0: la normale delle facce).
+    int thickenSide = 0;
+    GeometryRef thickenDirection;
+    bool offsetSew = true;  // estendi/rifila le facce adiacenti prima di cucirle
+    // DeleteFace multi-risultato: -1 = tutte le componenti (file storici),
+    // altrimenti la componente connessa esposta da questo corpo logico.
+    int deleteComponent = -1;
+    // Sew: tolleranza della cucitura e solido se il risultato e' chiuso.
+    double sewTolerance = 1e-5;
+    bool sewSolid = true;
+    // Ruled: le due curve, ognuna una catena di riferimenti curva (GeometryRef
+    // come i piani di costruzione: spigoli dei corpi, entita' degli schizzi,
+    // curve come le eliche), usati per intero; il verso e il punto di
+    // partenza della seconda si accordano alla prima da soli.
+    QVector<GeometryRef> ruledFirst, ruledSecond;
+    // PlanarSurface: bordi scelti nella vista (spigoli, entita' degli schizzi,
+    // curve), raggruppati in contorni chiusi per estremi comuni; vuoto: i
+    // contorni chiusi dello schizzo sketchIndex.
+    QVector<GeometryRef> planarRefs;
     SketchFrame datumFrame;
     bool datumValid = false;
     int firstBody = -1;
     int secondBody = -1;
-    ForgeCad::ForgeCurve curve;  // funzioni curva (Helix): la curva esatta
+    CurveExtractionParameters curveExtraction;
+    SpatialSketchParameters spatialSketch;
+    ForgeCad::ForgeCurve curve;  // funzioni curva (Helix, ProjectedCurve): la curva esatta (la prima)
+    // ProjectedCurve: tutte le curve (curves.first() == curve); non si salva.
+    QVector<ForgeCad::ForgeCurve> curves;
     ForgeCad::ForgeBody forgeBody;
     QString error;
+    // Esito non bloccante del calcolo (scarti della superficie di
+    // riempimento); non si salva.
+    QString notice;
+    QVector<TopologyReferenceResolution> referenceResolutions;  // audit dell'ultimo calcolo, non si salva
     BodyDisplay display;
-    // forgeBody e error vengono dalla copia salvata nel documento (formato 14):
-    // alla prima rigenerazione si usano invece di ricalcolare il corpo.
+    // forgeBody, display ed error vengono dallo snapshot salvato: alla prima
+    // apertura si usano invece di ricalcolare e ritassellare il corpo.
     bool cachedGeometry = false;
+};
+
+// Corpo logico mostrato nella storyboard. Le feature conservano i risultati
+// intermedi, mentre nella scena viene mostrato soltanto `tipFeatureId`.
+struct ModelBody {
+    quint64 id = 0;
+    QString name;
+    bool visible = true;
+    quint64 tipFeatureId = 0;
+    // Colore delle facce nel viewport e nei formati di scambio che lo
+    // supportano. Non valido = azzurro predefinito (solido o superficie).
+    QColor meshColor;
 };
 
 // Orientamento degli assi del modello sullo schermo: le direzioni del modello
@@ -534,13 +785,32 @@ struct AxesOrientation {
     double toward[3] = {0.0, -1.0, 0.0};
 };
 
+// Unita' lineare mostrata dall'interfaccia. La geometria e tutte le
+// definizioni parametriche restano sempre in millimetri: cambiare questa
+// preferenza non modifica ne' rigenera il modello.
+enum class LengthUnit { Millimeter = 0, Centimeter = 1, Meter = 2, Inch = 3, Foot = 4 };
+
 // Stato del documento soggetto a Undo/Redo (l'orientamento degli assi si
 // salva con il documento ma non torna indietro con l'Undo).
 struct DocumentState {
+    DocumentState() = default;
+    // Le istantanee riusano l'identita' corrente senza generare un UUID.
+    DocumentState(const ForgeCad::DocumentVersion &identity, const QUuid &base)
+        : version(identity), baseCheckinId(base) {}
+
     QVector<SketchObject> sketches;
     QVector<ExtrusionObject> extrusions;
+    QVector<ModelBody> modelBodies;
+    // Stato transitorio per Undo/Redo durante l'editing: i corpi mostrano
+    // ancora il risultato precedente. Non viene serializzato nel formato.
+    QVector<int> pendingSketchChanges;
     AxesOrientation orientation;
     bool orientationSet = false;  // letto dal file (altrimenti quello predefinito delle opzioni)
+    LengthUnit lengthUnit = LengthUnit::Millimeter;
+    bool lengthUnitSet = false;
+    // Metadati del documento, indipendenti dalla cronologia parametrica.
+    ForgeCad::DocumentVersion version{QUuid::createUuid(), {}};
+    QUuid baseCheckinId;
 };
 
 // Sfondo della scena. Con la sfumatura attiva i due colori sono distribuiti

@@ -6,6 +6,7 @@
 #include "fk_bspline_surface.h"
 #include "fk_curve_algo.h"
 #include "fk_precision.h"
+#include "fk_nurbs.h"
 
 namespace ForgeCad::Kernel {
 namespace {
@@ -88,28 +89,31 @@ private:
 // breakpoint interni: su uno spigolo interno (nodo C0) il minimo non e' un
 // punto stazionario di nessuna delle due pezze, ma e' il minimo della curva
 // isoparametrica, che si trova in modo esatto.
+// Proiezione esatta sull'isoparametrica u = value (fixedU) o v = value, nel tratto dato.
+void projectOnIso(const Surface &surface, const Vec3 &p, bool fixedU, double value, const Interval &range, Candidates &candidates) {
+    if (!std::isfinite(value)) return;
+    const CurvePtr<3> iso = fixedU ? surface.uIso(value) : surface.vIso(value);
+    CurveProjection<3> result;
+    if (iso) {
+        result = projectPoint(*iso, p, range);
+    } else {
+        const IsoAdapter adapter(surface, fixedU, value);
+        // Isoparametrica degenere (polo della sfera, vertice del cono): un punto solo.
+        const Vec3 first = adapter.point(range.lo);
+        if (range.isFinite() && distance(first, adapter.point(0.5 * (range.lo + range.hi))) <= kLinearResolution
+            && distance(first, adapter.point(range.hi)) <= kLinearResolution) {
+            result.parameter = range.lo;
+        } else {
+            result = projectPoint(adapter, p, range);
+        }
+    }
+    if (fixedU) candidates.consider(value, result.parameter);
+    else candidates.consider(result.parameter, value);
+}
+
 void projectOnBoundary(const Surface &surface, const Vec3 &p, const Interval &uRange, const Interval &vRange,
                        Candidates &candidates, bool allPatchEdges = false) {
-    auto edge = [&](bool fixedU, double value, const Interval &range) {
-        if (!std::isfinite(value)) return;
-        const CurvePtr<3> iso = fixedU ? surface.uIso(value) : surface.vIso(value);
-        CurveProjection<3> result;
-        if (iso) {
-            result = projectPoint(*iso, p, range);
-        } else {
-            const IsoAdapter adapter(surface, fixedU, value);
-            // Isoparametrica degenere (polo della sfera, vertice del cono): un punto solo.
-            const Vec3 first = adapter.point(range.lo);
-            if (range.isFinite() && distance(first, adapter.point(0.5 * (range.lo + range.hi))) <= kLinearResolution
-                && distance(first, adapter.point(range.hi)) <= kLinearResolution) {
-                result.parameter = range.lo;
-            } else {
-                result = projectPoint(adapter, p, range);
-            }
-        }
-        if (fixedU) candidates.consider(value, result.parameter);
-        else candidates.consider(result.parameter, value);
-    };
+    auto edge = [&](bool fixedU, double value, const Interval &range) { projectOnIso(surface, p, fixedU, value, range, candidates); };
     if (allPatchEdges) {
         for (double u : surface.uBreakpoints(uRange)) edge(true, u, vRange);
         for (double v : surface.vBreakpoints(vRange)) edge(false, v, uRange);
@@ -334,25 +338,83 @@ void projectOnBSplineSurface(const BSplineSurface &surface, const Vec3 &p, const
                              const Interval &vRange, Candidates &candidates) {
     if (!uRange.isFinite() || !vRange.isFinite())
         throw std::invalid_argument("projectPoint: questa superficie richiede intervalli finiti");
-    projectOnBoundary(surface, p, uRange, vRange, candidates, true);  // primo limite superiore
+    // Primo limite superiore: i bordi del dominio e gli angoli delle pezze (punti
+    // della superficie). Le isoparametriche dei nodi interni (dove il minimo
+    // puo' stare su uno spigolo C0) si proiettano solo per le pezze che il
+    // limite inferiore non scarta: una linea di nodo sta dentro la sua pezza,
+    // quindi non e' piu' vicina del limite della pezza. Proiettarle tutte a ogni
+    // chiamata costava centinaia di proiezioni di curve sulle superfici dei
+    // raccordi, fatte a tratti con molti nodi.
+    projectOnBoundary(surface, p, uRange, vRange, candidates);
 
     // Best-first: si esplora prima la pezza con il limite inferiore piu' basso,
     // cosi' il minimo si trova presto e il resto viene scartato subito.
+    // tree >= 0: nodo della gerarchia dei box delle pezze non ancora aperto
+    // (patch vuota); altrimenti una pezza o un suo pezzo.
     struct Node {
         double lowerBound;
         BezierPatch patch;
         int depth;
+        int tree = -1;
         bool operator<(const Node &other) const { return lowerBound > other.lowerBound; }
     };
     std::priority_queue<Node> queue;
     double rootDiagonal = 0.0;
-    for (const BSplineSurface &piece : surface.bezierPatches()) {
+    // Le pezze si calcolano una volta per superficie: la proiezione si ripete
+    // per ogni raggio della selezione a video e per ogni punto delle SP-curve.
+    const auto patches = surface.cachedBezierPatches();
+    const auto tree = surface.cachedPatchTree();
+    const auto overlaps = [&](const Interval &u, const Interval &v) {
+        return !(u.hi < uRange.lo || u.lo > uRange.hi || v.hi < vRange.lo || v.lo > vRange.hi);
+    };
+    // Una pezza intera entra nella coda; i suoi angoli sono poli d'angolo
+    // (punti della superficie): il piu' vicino migliora subito il limite superiore.
+    const auto pushPatch = [&](const BSplineSurface &piece) {
         BezierPatch patch = toPatch(piece);
-        if (patch.u.hi < uRange.lo || patch.u.lo > uRange.hi || patch.v.hi < vRange.lo || patch.v.lo > vRange.hi) continue;
+        if (!overlaps(patch.u, patch.v)) return;
         const PatchBounds bounds = patchBounds(patch, p);
-        rootDiagonal = std::max(rootDiagonal, bounds.diagonal);
+        const bool whole = patch.u.lo >= uRange.lo && patch.u.hi <= uRange.hi && patch.v.lo >= vRange.lo && patch.v.hi <= vRange.hi;
+        if (whole) {
+            double nearestCorner = std::numeric_limits<double>::infinity(), cornerU = 0.0, cornerV = 0.0;
+            for (int a = 0; a < 2; ++a)
+                for (int b = 0; b < 2; ++b) {
+                    const double d = distance(patch.pole(a * patch.uDegree, b * patch.vDegree), p);
+                    if (d < nearestCorner) nearestCorner = d, cornerU = a ? patch.u.hi : patch.u.lo, cornerV = b ? patch.v.hi : patch.v.lo;
+                }
+            if (nearestCorner < candidates.bestDistance()) candidates.consider(cornerU, cornerV);
+        }
         queue.push({bounds.lowerBound, std::move(patch), 0});
+    };
+    const auto boxDistance = [&](const BSplineSurface::PatchTree::Node &node) {
+        Vec3 outside;
+        for (int c = 0; c < 3; ++c) outside[c] = std::max({node.lo[c] - p[c], 0.0, p[c] - node.hi[c]});
+        return norm(outside);
+    };
+    if (!tree->nodes.empty()) {
+        // La soglia delle foglie resta quella della pezza piu' grande, come
+        // quando le pezze si mettevano tutte in coda.
+        rootDiagonal = tree->largestPatchDiagonal;
+        if (overlaps(tree->nodes.front().u, tree->nodes.front().v)) queue.push({boxDistance(tree->nodes.front()), {}, 0, 0});
+    } else {
+        for (const BSplineSurface &piece : *patches) {
+            const BezierPatch patch = toPatch(piece);
+            if (overlaps(patch.u, patch.v)) rootDiagonal = std::max(rootDiagonal, patchBounds(patch, p).diagonal);
+        }
+        for (const BSplineSurface &piece : *patches) pushPatch(piece);
     }
+    // Lati di una pezza intera che sono linee di nodo interne in cui la
+    // superficie non e' C1 (altrove il minimo e' stazionario e lo trova Newton).
+    const auto sharp = surface.cachedSharpKnotLines();
+    const auto patchEdges = [&](const BezierPatch &patch) {
+        const Interval uSpan{std::max(patch.u.lo, uRange.lo), std::min(patch.u.hi, uRange.hi)};
+        const Interval vSpan{std::max(patch.v.lo, vRange.lo), std::min(patch.v.hi, vRange.hi)};
+        for (double u : {patch.u.lo, patch.u.hi})
+            if (u > uRange.lo && u < uRange.hi && std::binary_search(sharp->u.begin(), sharp->u.end(), u))
+                projectOnIso(surface, p, true, u, vSpan, candidates);
+        for (double v : {patch.v.lo, patch.v.hi})
+            if (v > vRange.lo && v < vRange.hi && std::binary_search(sharp->v.begin(), sharp->v.end(), v))
+                projectOnIso(surface, p, false, v, uSpan, candidates);
+    };
     const double leafDiagonal = std::max(1.0e-4 * rootDiagonal, kLinearResolution);
     while (!queue.empty()) {
         const Node node = queue.top();
@@ -360,9 +422,22 @@ void projectOnBSplineSurface(const BSplineSurface &surface, const Vec3 &p, const
         const double best = candidates.bestDistance();
         const double margin = 1.0e-12 * std::max(1.0, best);
         if (node.lowerBound >= best - margin) break;  // tutte le altre hanno un limite ancora piu' alto
+        if (node.tree >= 0) {
+            const auto &treeNode = tree->nodes[std::size_t(node.tree)];
+            if (treeNode.leaf >= 0) {
+                pushPatch((*patches)[std::size_t(treeNode.leaf)]);
+                continue;
+            }
+            for (int child : {treeNode.first, treeNode.second}) {
+                const auto &childNode = tree->nodes[std::size_t(child)];
+                if (overlaps(childNode.u, childNode.v)) queue.push({std::max(node.lowerBound, boxDistance(childNode)), {}, 0, child});
+            }
+            continue;
+        }
         const Interval uBox{std::max(node.patch.u.lo, uRange.lo), std::min(node.patch.u.hi, uRange.hi)};
         const Interval vBox{std::max(node.patch.v.lo, vRange.lo), std::min(node.patch.v.hi, vRange.hi)};
         if (!(uBox.lo <= uBox.hi && vBox.lo <= vBox.hi)) continue;
+        if (node.depth == 0) patchEdges(node.patch);
         double u = 0.5 * (node.patch.u.lo + node.patch.u.hi), v = 0.5 * (node.patch.v.lo + node.patch.v.hi);
         const Vec3 center = surface.point(u, v);
         const PatchBounds bounds = patchBounds(node.patch, p, &center);
@@ -492,6 +567,32 @@ bool projectOnPlanarRevolution(const RevolutionSurface &revolution, const Vec3 &
     return true;
 }
 
+// Meridiano sghembo B-spline: la griglia UV puo' perdere valli strette.
+// La forma razionale esatta permette il branch-and-bound sui poli gia'
+// usato per le B-spline. Il parametro v resta invariato; u va riconvertito
+// dalla parametrizzazione razionale del cerchio all'angolo originale.
+bool projectOnSplineRevolution(const RevolutionSurface &surface, const Vec3 &p, const Interval &uRange,
+                               const Interval &vRange, Candidates &candidates) {
+    // Il ritaglio conserva il parametro v della B-spline: anche il
+    // meridiano limitato usa la ricerca esatta sulle pezze NURBS.
+    const Curve<3> *meridian = surface.meridian().get();
+    while (meridian->type() == CurveType::Trimmed) meridian = static_cast<const TrimmedCurve<3> *>(meridian)->basis().get();
+    if (meridian->type() != CurveType::BSpline || !uRange.isFinite() || !vRange.isFinite()
+        || !(uRange.length() > 0.0) || !(vRange.length() > 0.0)) return false;
+    const Interval angular{uRange.lo, std::min(uRange.hi, uRange.lo + kTwoPi)};
+    const BSplineSurface nurbs = toBSplineSurface(surface, angular, vRange);
+    const SurfaceProjection result = projectPoint(nurbs, p, nurbs.uDomain(), vRange);
+    // toBSplineSurface usa il dominio canonico quando copre un periodo.
+    const Interval circleRange = angular.length() >= kTwoPi * (1.0 - 1e-12) ? surface.uDomain() : angular;
+    const auto circle = conicArcToBSpline<2>(Vec2(), Vec2(1, 0), Vec2(0, 1), circleRange.lo, circleRange.hi);
+    const Vec2 xy = circle.point(result.u);
+    double u = std::atan2(xy.y(), xy.x());
+    u += kTwoPi * std::round((0.5 * (angular.lo + angular.hi) - u) / kTwoPi);
+    candidates.consider(angular.clamp(u), vRange.clamp(result.v));
+    projectOnBoundary(surface, p, uRange, vRange, candidates);
+    return true;
+}
+
 SurfaceProjection projectOnPlane(const Plane &plane, const Vec3 &p, const Interval &uRange, const Interval &vRange) {
     // Parametrizzazione isometrica: il problema si separa in u e v.
     const Vec3 local = plane.frame().toLocal(p);
@@ -576,7 +677,8 @@ SurfaceProjection projectPoint(const Surface &surface, const Vec3 &p, const Inte
         projectOnExtrusion(static_cast<const ExtrusionSurface &>(surface), p, uRange, vRange, candidates);
         break;
     case SurfaceType::Revolution:
-        if (!projectOnPlanarRevolution(static_cast<const RevolutionSurface &>(surface), p, uRange, vRange, candidates))
+        if (!projectOnPlanarRevolution(static_cast<const RevolutionSurface &>(surface), p, uRange, vRange, candidates)
+            && !projectOnSplineRevolution(static_cast<const RevolutionSurface &>(surface), p, uRange, vRange, candidates))
             projectGeneric(surface, p, uRange, vRange, candidates);
         break;
     default:
@@ -628,6 +730,27 @@ bool invertPoint(const Surface &surface, const Vec3 &p, Vec2 &uv, double toleran
         if (!(projection.distance <= tolerance)) {
             unwrapNear(surface, uv, guess);
             return false;
+        }
+    }
+    // Bordi coincidenti di una B-spline non periodica: a parita' di
+    // precisione mantieni il ramo della stima, evitando salti tra i due
+    // estremi del dominio durante la costruzione delle SP-curve.
+    if (surface.type() == SurfaceType::BSpline) {
+        for (int axis = 0; axis < 2; ++axis) {
+            const Interval domain = axis == 0 ? uDomain : vDomain;
+            if (std::fabs(uv[axis] - guess[axis]) <= 0.5 * domain.length()) continue;
+            Vec2 low = uv, high = uv;
+            low[axis] = domain.lo;
+            high[axis] = domain.hi;
+            const Vec3 a = surface.point(low[0], low[1]), b = surface.point(high[0], high[1]);
+            if (distance(a, b) > 1e-12 * std::max({1.0, norm(a), norm(b)})) continue;
+            Interval local = domain;
+            const double middle = 0.5 * (domain.lo + domain.hi);
+            if (guess[axis] < middle) local.hi = middle;
+            else local.lo = middle;
+            const SurfaceProjection nearby = axis == 0 ? projectPoint(surface, p, local, vDomain)
+                                                       : projectPoint(surface, p, uDomain, local);
+            if (nearby.distance <= tolerance) uv = Vec2(nearby.u, nearby.v);
         }
     }
     unwrapNear(surface, uv, guess);

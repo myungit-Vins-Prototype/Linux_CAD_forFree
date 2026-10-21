@@ -12,15 +12,19 @@ void History::record(const DocumentState &current) {
 
 bool History::undo(DocumentState &current) {
     if (undo_.isEmpty()) return false;
+    const auto identity = current.version; const auto base = current.baseCheckinId;
     redo_.append(std::move(current));
     current = undo_.takeLast();
+    current.version = identity; current.baseCheckinId = base;
     return true;
 }
 
 bool History::redo(DocumentState &current) {
     if (redo_.isEmpty()) return false;
+    const auto identity = current.version; const auto base = current.baseCheckinId;
     undo_.append(std::move(current));
     current = redo_.takeLast();
+    current.version = identity; current.baseCheckinId = base;
     return true;
 }
 

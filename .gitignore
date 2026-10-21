@@ -3,4 +3,13 @@
 *.step
 *.iges
 *.igs
+*.stl
+*.obj
+forgecad-release/
+.DS_Store
+*.STEP
+.vscode/
+docs/benchmarks/
+*.lock
+.claude/
 forgecad-cuda-build/

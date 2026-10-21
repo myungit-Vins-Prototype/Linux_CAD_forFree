@@ -1,4 +1,5 @@
 #include "fk_transform.h"
+#include "fk_history_tools.h"
 
 #include <cmath>
 #include <map>
@@ -173,7 +174,7 @@ bool faceNormalSample(const Body &body, FaceId f, Vec3 &point, Vec3 &normal) {
 // Simmetria: la stessa topologia con i loop percorsi al contrario (la
 // faccia resta a sinistra delle fin nell'immagine speculare) e il verso di
 // ogni faccia dalla normale trasformata.
-Body mirroredBody(const Body &input, Transformer &t) {
+Body mirroredBody(const Body &input, Transformer &t, BodyHistory *history) {
     std::map<int, int> vertexIndex;
     std::vector<Vec3> points;
     std::vector<double> tolerances;
@@ -218,6 +219,15 @@ Body mirroredBody(const Body &input, Transformer &t) {
                 Body::BuildFin fin;
                 fin.edge = edgeIndex.at(input.fin(*it).edge.index);
                 fin.sense = !input.fin(*it).sense;
+                // La simmetria dei poli B-spline lascia invariati U e V.
+                // Riutilizzare la SP-curve evita di approssimare di nuovo
+                // bordi esatti. Se cambia il parametro 3D si ricalcola.
+                const Fin &source = input.fin(*it);
+                if (face.surface->type() == SurfaceType::BSpline
+                    && t.curve(input.edge(source.edge).curve).second == 1.0) {
+                    fin.pcurve = source.pcurve;
+                    fin.pcurveTolerance = source.pcurveTolerance * t.scale();
+                }
                 loop.push_back(fin);
             }
             b.loops.push_back(std::move(loop));
@@ -234,18 +244,28 @@ Body mirroredBody(const Body &input, Transformer &t) {
     std::size_t k = 0;
     for (VertexId v : body.vertices())
         if (k < tolerances.size()) body.vertex(v).tolerance = tolerances[k++];
+    if(history) {
+        auto declared=makeHistory({&input},body);const auto fs=body.faces(), old=input.faces();
+        for(std::size_t i=0;i<fs.size();++i)declared.declareOrigins(EntityKind::Face,fs[i].index,{{0,EntityKind::Face,old[i].index,HistoryRelation::Modified}});
+        const auto es=body.edges();for(const auto &[source,index]:edgeIndex)declared.declareOrigins(EntityKind::Edge,es.at(std::size_t(index)).index,{{0,EntityKind::Edge,source,HistoryRelation::Modified}});
+        const auto vs=body.vertices();for(const auto &[source,index]:vertexIndex)declared.declareOrigins(EntityKind::Vertex,vs.at(std::size_t(index)).index,{{0,EntityKind::Vertex,source,HistoryRelation::Modified}});
+        *history=std::move(declared);
+    }
     return body;
 }
 
 }
 
-Body transformBody(const Body &input, const Transform3 &transform) {
+Body transformBody(const Body &input, const Transform3 &transform, BodyHistory *history) {
+    if(history)*history={};
     Transformer t(transform);
     if (t.improper()) {
-        Body body = mirroredBody(input, t);
+        BodyHistory mirrored;
+        Body body = mirroredBody(input,t,history?&mirrored:nullptr);
         computePCurves(body);
         const std::vector<CheckIssue> issues = checkBody(body);
         if (!issues.empty()) throw std::domain_error("transformBody: risultato non valido (" + describe(issues.front().code) + ": " + issues.front().message + ")");
+        if(history)*history=std::move(mirrored);
         return body;
     }
     Body body = input;
@@ -271,7 +291,8 @@ Body transformBody(const Body &input, const Transform3 &transform) {
     computePCurves(body);
     const std::vector<CheckIssue> issues = checkBody(body);
     if (!issues.empty()) throw std::domain_error("transformBody: risultato non valido (" + describe(issues.front().code) + ": " + issues.front().message + ")");
-    return body;
+    if(history)*history=detail::indexHistory(input,body);
+        return body;
 }
 
 CurvePtr<3> transformCurve(const CurvePtr<3> &curve, const Transform3 &transform, double *parameterScale) {
@@ -286,11 +307,12 @@ SurfacePtr transformSurface(const SurfacePtr &surface, const Transform3 &transfo
     return t.surface(surface);
 }
 
-Body mirrorBody(const Body &body, const Vec3 &point, const Vec3 &normal) { return transformBody(body, Transform3::reflection(point, normal)); }
+Body mirrorBody(const Body &body, const Vec3 &point, const Vec3 &normal, BodyHistory *history) { return transformBody(body, Transform3::reflection(point, normal),history); }
 
-Body scaleBody(const Body &body, const Vec3 &center, double factor) {
+Body scaleBody(const Body &body, const Vec3 &center, double factor, BodyHistory *history) {
+    if(history)*history={};
     if (!(factor > 0.0) || !std::isfinite(factor)) throw std::domain_error("scaleBody: il fattore di scala deve essere positivo");
-    return transformBody(body, Transform3::scaling(center, factor));
+    return transformBody(body, Transform3::scaling(center, factor),history);
 }
 
 }

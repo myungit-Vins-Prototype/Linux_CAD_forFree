@@ -60,7 +60,9 @@ bool helixBaseFromSketch(const SketchObject &sketch, int curve, HelixBase &base,
         setError(error, QStringLiteral("Il cerchio della base ha raggio nullo."));
         return false;
     }
-    base.xRef = (point - center) / base.radius;
+    // Il punto sulla circonferenza definisce soltanto il raggio. Lo zero
+    // angolare segue gli assi visibili dello schizzo, anche su piani ruotati.
+    base.xRef = sketchAxes(sketch).xDir();
     return true;
 }
 
@@ -100,6 +102,9 @@ ForgeCurve helixCurve(const HelixParameters &parameters, const HelixBase &input,
     spec.spiral = parameters.spiral;
     spec.leftHanded = parameters.leftHanded;
     spec.startAngle = parameters.startAngle * kPi / 180.0;
+    // Invertire l'asse cambia il verso Y del frame dell'elica, non il
+    // quadrante iniziale scelto negli assi dello schizzo.
+    if (parameters.source == 0 && parameters.reverse) spec.startAngle = -spec.startAngle;
     try {
         return std::make_shared<const HelixCurve>(spec);
     } catch (const std::exception &failure) {
@@ -122,9 +127,20 @@ void curveDisplay(const Curve<3> &curve, int quality, BodyDisplay &display) {
     // complessiva e rallentano rotazione e zoom senza aggiungere dettaglio.
     count = std::min(count, 32768);
     QVector<QVector3D> polyline;
-    for (int i = 0; i <= count; ++i) {
-        const Vec3 p = curve.point(range.lo + range.length() * i / count);
+    const auto add = [&](double t) {
+        const Vec3 p = curve.point(t);
         polyline.append(QVector3D(float(p.x()), float(p.y()), float(p.z())));
+    };
+    // Curve a tratti (curve proiettate, con tratti cortissimi accanto a tratti
+    // lunghi): i campioni per tratto, cosi' i tratti corti non spariscono.
+    const std::vector<double> breaks = curve.breakpoints(range);
+    if (breaks.size() > 2 && breaks.size() <= 16384) {
+        const int perSpan = std::max(2, std::min(16, int(4L * count / long(breaks.size()))));
+        add(breaks.front());
+        for (std::size_t k = 0; k + 1 < breaks.size(); ++k)
+            for (int j = 1; j <= perSpan; ++j) add(breaks[k] + (breaks[k + 1] - breaks[k]) * j / perSpan);
+    } else {
+        for (int i = 0; i <= count; ++i) add(range.lo + range.length() * i / count);
     }
     display.edges.append(polyline);
 }
@@ -242,6 +258,11 @@ std::vector<PathSegment> alignPath(const std::vector<PathSegment> &path, const S
         }
     if (count == 0) return path;
     center /= double(count);
+    return alignPath(path, center);
+}
+
+std::vector<PathSegment> alignPath(const std::vector<PathSegment> &path, const Vec3 &center) {
+    if (path.empty()) return path;
     const Vec3 start = path.front().curve->point(path.front().range.lo), end = path.back().curve->point(path.back().range.hi);
     const bool closed = distance(start, end) <= 1e-6 * std::max(1.0, norm(start));
     const auto reversible = [&] {

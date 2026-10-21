@@ -38,27 +38,72 @@ namespace ForgeCad::Kernel {
 struct LoftSection {
     Frame3 frame;
     ProfileLoop loop;  // chiuso (solidi) o catena aperta (lamine)
+    // Alternativa esatta 3D, senza proiezione sul piano del frame.
+    std::vector<PathSegment> path;
+};
+
+// Facce da continuare lungo il bordo della prima/ultima sezione.
+struct LoftContact {
+    std::shared_ptr<const Body> body;
+    FaceId face;
 };
 
 // Una guida e' una catena 3D che deve attraversare una volta ogni sezione.
 // La prima guida fissa la cucitura/corrispondenza dei contorni chiusi; le
-// altre sono validate come riferimenti trasversali e saranno usate dalle
-// condizioni di forma del loft liscio.
+// altre fissano ulteriori righe longitudinali. Il loft liscio con G1/G2 e
+// influenza 1 segue tutta la guida entro 1e-9 mm (quintiche adattive),
+// conservando i profili di sezione e verificando lo scarto. Influenze
+// intermedie miscelano il percorso guidato con quello libero; G0 mantiene
+// il solo attraversamento delle sezioni.
+struct LoftGuideCondition {
+    int continuity = 1;
+    double influence = 1.0;
+};
+
 struct LoftOptions {
     bool ruled = false;
     std::vector<std::vector<PathSegment>> guides;
+    // Un elemento per guides; vuoto eredita guideContinuity/guideInfluence.
+    std::vector<LoftGuideCondition> guideConditions;
     int startContinuity = 0;  // 0 G0, 1 G1, 2 G2
     int endContinuity = 0;
     int guideContinuity = 1;  // G0 solo attraversamento, G1 tangente, G2 anche curvatura
     double guideInfluence = 1.0;
     double startInfluence = 1.0;
     double endInfluence = 1.0;
+    std::vector<LoftContact> startFaces, endFaces;
 };
 
-Body loftSolid(const std::vector<LoftSection> &sections, bool ruled = false);
-Body loftSheet(const std::vector<LoftSection> &sections, bool ruled = false);
-Body loftSolid(const std::vector<LoftSection> &sections, const LoftOptions &options);
-Body loftSheet(const std::vector<LoftSection> &sections, const LoftOptions &options);
+// Solido: tutte le sezioni chiuse, facce di testa piane.
+Body loftSolid(const std::vector<LoftSection> &sections, bool ruled = false, FaceAliases *labels = nullptr);
+Body loftSolid(const std::vector<LoftSection> &sections, const LoftOptions &options, FaceAliases *labels = nullptr);
+
+// Lamina (Body::buildSheet). Sezioni tutte aperte: superficie tra le catene.
+// Sezioni tutte chiuse: tubo senza coperchi, con la stessa corrispondenza dei
+// loop del solido (verso, partenza, guide, continuita' G0/G1/G2); le sue facce
+// laterali coincidono con quelle di loftSolid sulle stesse sezioni. Sezioni
+// miste (chiuse e aperte): std::domain_error.
+Body loftSheet(const std::vector<LoftSection> &sections, bool ruled = false, FaceAliases *labels = nullptr);
+Body loftSheet(const std::vector<LoftSection> &sections, const LoftOptions &options, FaceAliases *labels = nullptr);
+
+// Superficie rigata tra due catene 3D qualsiasi (spigoli, curve di schizzi su
+// piani diversi, eliche: le HelixCurve si usano come la loro B-spline entro
+// 1e-9), non necessariamente piane. I tratti di ogni catena sono consecutivi
+// ma in verso qualsiasi: si concatenano per estremi entro 1e-6 della scala.
+// Le due catene sono entrambe aperte o entrambe chiuse (altrimenti
+// std::domain_error). Corrispondenza come il loft rigato: stesso numero di
+// tratti -> tratto con tratto, altrimenti divisione nell'unione delle frazioni
+// di ascissa curvilinea dei vertici. Verso: catene aperte con l'inizio della
+// seconda dalla parte dell'inizio della prima (minimo di |A0-B0| + |A1-B1|);
+// catene chiuse con lo stesso verso di rotazione (normali di Newell) e la
+// partenza della seconda nel punto piu' vicino alla partenza della prima.
+// Superficie esatta: lineare in v tra le righe dei poli omogenei dei tratti
+// (piano esatto dove le pezze sono piane). Lamina: spigoli = le due curve
+// (stesso tipo) e le rette nei vertici corrispondenti.
+Body ruledSurface(const std::vector<PathSegment> &first, const std::vector<PathSegment> &second, FaceAliases *labels = nullptr);
+// Con condizioni alle estremita' costruisce una superficie raccordata:
+// i profili restano esatti, i collegamenti possono diventare curvi.
+Body ruledSurface(const std::vector<PathSegment> &first, const std::vector<PathSegment> &second, const LoftOptions &options, FaceAliases *labels = nullptr);
 
 }
 

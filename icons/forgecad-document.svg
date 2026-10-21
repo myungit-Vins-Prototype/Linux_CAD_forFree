@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Icona dei documenti ForgeCAD (.prt, tipo MIME application/x-forgecad-part):
+     foglio con l'angolo piegato, il solido dell'icona dell'applicazione e la
+     fascia arancio con l'estensione. -->
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
+  <defs>
+    <linearGradient id="paper" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fbfdff"/>
+      <stop offset="1" stop-color="#dfe7ee"/>
+    </linearGradient>
+    <linearGradient id="top" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#b9e6ff"/>
+      <stop offset="1" stop-color="#5fb6f2"/>
+    </linearGradient>
+    <linearGradient id="left" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#3a93dc"/>
+      <stop offset="1" stop-color="#2468ad"/>
+    </linearGradient>
+    <linearGradient id="right" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1f62a3"/>
+      <stop offset="1" stop-color="#143f6e"/>
+    </linearGradient>
+    <linearGradient id="chamfer" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ffc163"/>
+      <stop offset="1" stop-color="#f06d14"/>
+    </linearGradient>
+  </defs>
+  <path d="M52 16 H164 L212 64 V236 Q212 244 204 244 H60 Q52 244 52 236 Z" fill="url(#paper)" stroke="#7d8d9c" stroke-width="4"
+        stroke-linejoin="round"/>
+  <path d="M164 16 V56 Q164 64 172 64 H212" fill="#c9d4de" stroke="#7d8d9c" stroke-width="4" stroke-linejoin="round"/>
+  <g transform="translate(132 112) scale(0.62) translate(-128 -132)" stroke="#ffffff" stroke-width="4.5" stroke-linejoin="round">
+    <polygon points="128,50 186.6,83.8 115.6,124.8 57,91" fill="url(#top)"/>
+    <polygon points="57,91 115.6,124.8 128,145.4 128,214 57,173" fill="url(#left)"/>
+    <polygon points="128,145.4 199,104.4 199,173 128,214" fill="url(#right)"/>
+    <polygon points="115.6,124.8 186.6,83.8 199,104.4 128,145.4" fill="url(#chamfer)"/>
+  </g>
+  <rect x="52" y="184" width="160" height="44" fill="#f07a1a"/>
+  <text x="132" y="217" text-anchor="middle" font-family="DejaVu Sans, Noto Sans, Arial, sans-serif" font-size="34"
+        font-weight="700" fill="#ffffff" letter-spacing="2">PRT</text>
+</svg>

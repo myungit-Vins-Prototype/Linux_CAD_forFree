@@ -16,6 +16,7 @@ struct LoopPlan {
     std::vector<VertexId> top;             // gli stessi alla quota dell'estrusione
     std::vector<FinId> fins;               // fin del loop superiore su ogni tratto (poi del fianco)
     LoopId loop;
+    bool reversed = false; // consente di restituire l'indice del tratto nel loop di ingresso
 };
 
 // Spigoli e faccia laterale generati da un tratto.
@@ -106,7 +107,9 @@ void assignSideSurface(Face &face, const ProfileSegment &segment, const Frame3 &
 
 }
 
-Body makeExtrusion(const Frame3 &inputFrame, const ProfileRegion &region, double height) {
+Body makeExtrusion(const Frame3 &inputFrame, const ProfileRegion &region, double height, ExtrusionProvenance *provenance) {
+    if (provenance) *provenance = {};
+    ExtrusionProvenance declared;
     if (!(std::fabs(height) > kLinearResolution)) throw std::invalid_argument("makeExtrusion: altezza nulla");
     if (region.outer.segments.empty()) throw std::invalid_argument("makeExtrusion: profilo vuoto");
     // Altezza negativa: stessa estrusione partendo dalla quota piu' bassa.
@@ -128,7 +131,8 @@ Body makeExtrusion(const Frame3 &inputFrame, const ProfileRegion &region, double
     //    il coperchio) e la faccia del mef di chiusura (la base).
     {
         LoopPlan plan;
-        plan.segments = (signedArea(region.outer) > 0.0 ? region.outer : reversed(region.outer)).segments;
+        plan.reversed = !(signedArea(region.outer) > 0.0);
+        plan.segments = (plan.reversed ? reversed(region.outer) : region.outer).segments;
         const std::vector<Vec3> points = starts(plan.segments);
         const Body::MvfsResult start = body.mvfs(points[0]);
         plan.bottom.push_back(start.vertex);
@@ -154,7 +158,8 @@ Body makeExtrusion(const Frame3 &inputFrame, const ProfileRegion &region, double
     //    q0, q_{m-1}, ..., q1 perche' il kemr lascia l'anello percorso q0, q1, ...
     for (const ProfileLoop &holeLoop : region.holes) {
         LoopPlan plan;
-        plan.segments = (signedArea(holeLoop) < 0.0 ? holeLoop : reversed(holeLoop)).segments;
+        plan.reversed = !(signedArea(holeLoop) < 0.0);
+        plan.segments = (plan.reversed ? reversed(holeLoop) : holeLoop).segments;
         const std::vector<Vec3> q = starts(plan.segments);
         const std::size_t m = q.size();
         const Body::MevResult bridge = body.mev(body.findFin(plans[0].loop, plans[0].bottom[0]), q[0]);
@@ -186,6 +191,10 @@ Body makeExtrusion(const Frame3 &inputFrame, const ProfileRegion &region, double
     // 4. Geometria.
     body.face(bottom).surface = std::make_shared<Plane>(Frame3(frame.origin(), -frame.zDir(), frame.xDir()));
     body.face(top).surface = std::make_shared<Plane>(Frame3(frame.origin() + up, frame.zDir(), frame.xDir()));
+    if (provenance) {
+        declared.faces.push_back({height > 0 ? bottom : top, ExtrusionFaceRole::Start, -1, -1, -1});
+        declared.faces.push_back({height > 0 ? top : bottom, ExtrusionFaceRole::End, -1, -1, -1});
+    }
     for (std::size_t l = 0; l < plans.size(); ++l) {
         const LoopPlan &plan = plans[l];
         const std::size_t count = plan.segments.size();
@@ -205,6 +214,8 @@ Body makeExtrusion(const Frame3 &inputFrame, const ProfileRegion &region, double
                 body.edge(piece.vertical).range = {0.0, h};
             }
             assignSideSurface(body.face(piece.side), segment, frame);
+            if (provenance) declared.faces.push_back({piece.side, ExtrusionFaceRole::Side, int(l),
+                int(plan.reversed ? count - 1 - j : j), segment.source});
             // Vertici tolleranti dove i tratti si toccano solo entro la tolleranza dello schizzo.
             const double gap = distance(plan.segments[(j + count - 1) % count].end(), segment.start());
             if (gap > kLinearResolution) {
@@ -218,11 +229,14 @@ Body makeExtrusion(const Frame3 &inputFrame, const ProfileRegion &region, double
     // SP-curve: tutte esatte (rette e curve del profilo sui piani,
     // isoparametriche sui fianchi).
     computePCurves(body);
+    if (provenance) *provenance = std::move(declared);
     return body;
 }
 
 
-Body makeSheetExtrusion(const Frame3 &inputFrame, const std::vector<ProfileLoop> &chains, double height) {
+Body makeSheetExtrusion(const Frame3 &inputFrame, const std::vector<ProfileLoop> &chains, double height, ExtrusionProvenance *provenance) {
+    if (provenance) *provenance = {};
+    std::vector<ExtrusionFaceOrigin> declared;
     if (!(std::fabs(height) > kLinearResolution)) throw std::invalid_argument("makeSheetExtrusion: altezza nulla");
     const Frame3 frame = height > 0.0 ? inputFrame
         : Frame3(inputFrame.origin() + height * inputFrame.zDir(), inputFrame.zDir(), inputFrame.xDir());
@@ -231,7 +245,8 @@ Body makeSheetExtrusion(const Frame3 &inputFrame, const std::vector<ProfileLoop>
     std::vector<Vec3> vertices;
     std::vector<Body::BuildEdge> edges;
     std::vector<Body::BuildFace> faces;
-    for (const ProfileLoop &chain : chains) {
+    for (std::size_t c = 0; c < chains.size(); ++c) {
+        const ProfileLoop &chain = chains[c];
         const std::size_t n = chain.segments.size();
         if (n == 0) continue;
         // Vertici in basso e in alto a ogni estremo di tratto (n + 1).
@@ -286,11 +301,18 @@ Body makeSheetExtrusion(const Frame3 &inputFrame, const std::vector<ProfileLoop>
             built.loops.push_back({fin(lowerIndex, true), fin(verticalBase + int(j) + 1, true), fin(lowerIndex + 1, false),
                                    fin(verticalBase + int(j), false)});
             faces.push_back(std::move(built));
+            if (provenance) declared.push_back({FaceId(), ExtrusionFaceRole::Side, int(c), int(j), segment.source});
         }
     }
     if (faces.empty()) throw std::invalid_argument("makeSheetExtrusion: nessun tratto");
     Body body = Body::buildSheet(vertices, edges, faces);
     computePCurves(body);
+    if (provenance) {
+        const auto faces = body.faces();
+        if (faces.size() != declared.size()) throw std::logic_error("makeSheetExtrusion: mappa delle facce incoerente");
+        for (std::size_t i = 0; i < faces.size(); ++i) declared[i].face = faces[i];
+        provenance->faces = std::move(declared);
+    }
     return body;
 }
 

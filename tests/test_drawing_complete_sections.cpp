@@ -1,0 +1,98 @@
+#include "cad_drawing_editor.h"
+#include "cad_drawing_derived.h"
+#include "cad_drawing_silhouette.h"
+#include "cad_drawing_visibility.h"
+#include "fk_primitives.h"
+#include "fk_boolean.h"
+#include "fk_body_check.h"
+#include "fk_bspline.h"
+#include "fk_extrude.h"
+#include "fk_sheet.h"
+#include "fk_curve_algo.h"
+#include <QAction>
+#include <QApplication>
+#include <QComboBox>
+#include <QDialog>
+#include <QDialogButtonBox>
+#include <QGraphicsScene>
+#include <QGraphicsItem>
+#include <QGraphicsView>
+#include <QJsonArray>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QKeyEvent>
+#include <QMouseEvent>
+#include <QPushButton>
+#include <QTemporaryDir>
+#include <QTimer>
+#include <QDir>
+#include <iostream>
+#include <stdexcept>
+using namespace ForgeCad;using namespace ForgeCad::Kernel;
+namespace {
+void require(bool b,const char *m){if(!b)throw std::runtime_error(m);}
+void ok(QString e){if(!e.isEmpty())throw std::runtime_error(e.toStdString());}
+void close(double a,double b,const char *m){require(std::isfinite(a)&&std::abs(a-b)<1e-6,m);}
+DrawingSourceBody source(Body body,quint64 id=1){auto b=std::make_shared<Body>(std::move(body));return {id,b,std::make_shared<ElementNames>(propagateNames(*b,makeHistory({},*b),{},"s"+std::to_string(id)))};}
+Body box(Vec3 start,double x,double y,double z){return makeBox(Frame3(start,Vec3(0,0,1),Vec3(1,0,0)),x,y,z);}
+QByteArray bytes(const DrawingSheet &sheet){QByteArray b;ok(encodeDrawingSheet(sheet,b));return b;}
+void click(DrawingSheetEditor &e,QPointF p){auto *v=e.canvas();QPointF local=v->mapFromScene(p),global=v->viewport()->mapToGlobal(local.toPoint());QMouseEvent a(QEvent::MouseButtonPress,local,global,Qt::LeftButton,Qt::LeftButton,Qt::NoModifier),b(QEvent::MouseButtonRelease,local,global,Qt::LeftButton,Qt::NoButton,Qt::NoModifier);QApplication::sendEvent(v->viewport(),&a);QApplication::sendEvent(v->viewport(),&b);}
+int count(DrawingSheetEditor &e,const char *kind){int n=0;for(auto *item:e.canvas()->scene()->items())n+=item->data(0).toString()==kind;return n;}
+struct Display {std::vector<DrawingCurve> curves;DrawingViewVisibility paths;DrawingSectionHatch hatch;};
+Display display(const DrawingModelSnapshot &m,const DrawingView &v){Display d;DrawingSilhouetteCache cache;DrawingSilhouetteResult contours;ok(drawingViewCurves(m,v,d.curves));ok(drawingViewSilhouettes(m,v,contours,cache));ok(drawingSectionHatch(m,v,d.curves,d.hatch));ok(drawingViewVisibility(m,v,d.curves,contours,cache,d.paths,&d.hatch.material));return d;}
+}
+int main(int argc,char **argv){QApplication app(argc,argv);try{
+
+ // Taglio esattamente su spigoli condivisi: recupero dal solido senza riempire il foro.
+ {const auto square=[](double r){ProfileLoop loop;std::vector<Vec2> p{{-r,-r},{r,-r},{r,r},{-r,r}};for(int i=0;i<4;++i)loop.segments.push_back({std::make_shared<Line<2>>(p[i],p[(i+1)%4]-p[i]),{0,2*r},-1});return loop;};
+  DrawingModelSnapshot tube{{QUuid::createUuid(),{}},{source(makeExtrusion(Frame3(),{square(10),{reversed(square(8))}},10))}};
+  require(checkBody(*tube.bodies[0].body).empty(),"tubo di prova valido");
+  DrawingView cut;cut.sectionStyle=DrawingSectionStyle::Full;cut.plane=Frame3(Vec3(0,0,5),normalized(Vec3(1,-1,0)),normalized(Vec3(1,1,0)));
+  const auto d=display(tube,cut);require(!d.hatch.lines.isEmpty()&&d.hatch.material.contains({13,0})&&!d.hatch.material.contains({0,0}),"taglio sui bordi condivisi campito, foro libero");
+  require(d.hatch.warnings.join(" ").contains("ricostruita dal solido"),"esercitato il recupero geometrico dei bordi condivisi");
+  for(double x:{-13.,0.,13.})for(double y:{-4.,0.,4.})require(d.hatch.material.contains({x,y})==(std::abs(x)>12),"maschera coerente con il tubo quadrato");
+  auto half=cut;half.sectionStyle=DrawingSectionStyle::HalfRight;const auto h=display(tube,half);require(h.hatch.material.contains({13,0})&&!h.hatch.material.contains({-13,0})&&!h.hatch.material.contains({0,0}),"recupero e clipping della mezza sezione");
+ }
+ // Parete sottile su un corpo lungo: il bias del box globale non deve
+ // rendere visibile il corpo posteriore attraverso la parete interna.
+ {ProfileLoop outer{{{std::make_shared<Circle<2>>(makeCircle(Vec2(),10)),{0,kTwoPi},-1}}},inner{{{std::make_shared<Circle<2>>(makeCircle(Vec2(),9.8)),{0,kTwoPi},-1}}};
+  DrawingModelSnapshot thin{{QUuid::createUuid(),{}},{source(makeExtrusion(Frame3(),{outer,{reversed(inner)}},1500)),source(box({-.5,-11,500},1,.2,1),2)}};
+  DrawingView cut;cut.sectionStyle=DrawingSectionStyle::Full;cut.plane=Frame3(Vec3(0,0,500),Vec3(0,1,0),Vec3(1,0,0));const auto d=display(thin,cut);bool rear=false;
+  for(std::size_t i=0;i<d.curves.size();++i)if(d.curves[i].featureId==2){rear=true;require(d.paths.curves[i].visible.isEmpty(),"nessun bordo dietro la parete interna visibile nella cavita'");}
+  require(rear&&!d.hatch.material.contains({0,0}),"occlusione verificata attraverso il foro, senza tappo fittizio");
+ }
+ DrawingModelSnapshot model{{QUuid::createUuid(),{}},{source(booleanOperation(box({-4,-4,-5},8,8,10),box({-10,-8,-7},20,16,2),BooleanOperation::Unite)),source(box({-12,9,2},6,6,3),2),source(box({-1,-1,-4},2,2,1),3)}};
+ DrawingView full;full.sectionStyle=DrawingSectionStyle::Full;full.scale=3;auto d=display(model,full);bool flange=false,hiddenInterior=false;int projected=0,sections=0;
+ for(std::size_t i=0;i<d.curves.size();++i){const auto &c=d.curves[i];require(c.featureId!=2,"la parte completamente asportata non e' un bordo nascosto");if(c.kind==DrawingCurveKind::Section){++sections;continue;}++projected;require(c.hasSourceRange,"intervallo 3D del bordo conservato");for(double t:{c.sourceRange.lo,.5*(c.sourceRange.lo+c.sourceRange.hi),c.sourceRange.hi})require(full.plane.toLocal(c.sourceGeometry->point(t)).z()<=full.tolerance,"nessun bordo davanti al piano");if(c.featureId==3){require(d.paths.curves[i].visible.isEmpty(),"il materiale del taglio occlude il corpo posteriore interno");hiddenInterior|=!d.paths.curves[i].hidden.isEmpty();}if(c.featureId==1&&!d.paths.curves[i].visible.isEmpty()&&d.paths.curves[i].visible.boundingRect().width()>40)flange=true;}
+ require(projected&&sections==4&&flange&&hiddenInterior&&!d.hatch.lines.isEmpty(),"sezione completa, flangia dietro, chiusura e tratteggio");
+ // Foro: il corpo dietro e' visibile soltanto attraverso il vuoto, mai attraverso il materiale.
+ ProfileLoop outer{{{std::make_shared<Circle<2>>(makeCircle(Vec2(),10)),{0,kTwoPi},-1}}},inner{{{std::make_shared<Circle<2>>(makeCircle(Vec2(),4)),{0,kTwoPi},-1}}};
+ auto ring=model;ring.bodies={source(makeExtrusion(Frame3(Vec3(0,0,-5),Vec3(0,0,1),Vec3(1,0,0)),{outer,{reversed(inner)}},10)),source(box({-1,-1,-4},2,2,1),3)};auto hole=display(ring,full);bool visibleThroughHole=false;for(std::size_t i=0;i<hole.curves.size();++i)if(hole.curves[i].featureId==3&&!hole.paths.curves[i].visible.isEmpty())visibleThroughHole=true;require(visibleThroughHole&&!hole.hatch.material.contains({0,0}),"foro aperto nella maschera di occlusione");
+ // La stessa superficie senza volume non genera un tappo.
+ auto sheetModel=model;sheetModel.bodies={source(makePlaneSheet(Frame3(Vec3(),Vec3(0,1,0),Vec3(1,0,0)),5)),source(box({1,1,-4},2,2,1),3)};auto opened=display(sheetModel,full);require(opened.hatch.material.isEmpty(),"superficie aperta senza riempimento");bool throughSurface=false;for(std::size_t i=0;i<opened.curves.size();++i)if(opened.curves[i].featureId==3&&!opened.paths.curves[i].visible.isEmpty())throughSurface=true;require(throughSurface,"nessuna occlusione fittizia di un volume sulla superficie");
+ // Mezza sezione: tutto il lato non tagliato, soltanto Z<=0 nel lato tagliato; asse come origine stabile.
+ auto centered=model;centered.bodies={source(box({-10,-8,-5},20,16,10))};auto half=full;half.sectionStyle=DrawingSectionStyle::HalfRight;auto h=display(centered,half);require(!h.hatch.material.contains({-5,0})&&h.hatch.material.contains({5,0}),"materiale solo nella meta' destra");const DrawingCurve *axisEdge=nullptr;DrawingPointRole axisRole=DrawingPointRole::Start;
+ for(const auto &c:h.curves){if(c.kind==DrawingCurveKind::Section){for(double t:{c.range.lo,c.range.hi})require(half.plane.toLocal(c.curve->point(t)).x()>=-half.tolerance,"curve esatte di sezione nella meta' scelta");continue;}for(double t:{c.sourceRange.lo,.5*(c.sourceRange.lo+c.sourceRange.hi),c.sourceRange.hi})require(drawingRetainsPoint(half,half.plane.toLocal(c.sourceGeometry->point(t))),"bordo 3D della mezza sezione trattenuto");const auto a=half.plane.toLocal(c.sourceGeometry->point(c.sourceRange.lo)),b=half.plane.toLocal(c.sourceGeometry->point(c.sourceRange.hi));if(a.z()>1&&b.z()>1&&(std::abs(a.x())<1e-7||std::abs(b.x())<1e-7)){axisEdge=&c;axisRole=std::abs(a.x())<1e-7?DrawingPointRole::Start:DrawingPointRole::End;}}
+ require(axisEdge,"bordo anteriore tagliato sull'asse");auto axis=drawingAttachment(half,*axisEdge,centered,axisRole);require(axis.clipBoundary==2,"aggancio semantico al piano dell'asse");auto resolved=resolveDrawingAttachment(half,centered,h.curves,axis);require(resolved.status==DrawingDimensionStatus::Ready,"estremo sull'asse risolto");close(resolved.point.x(),0,"quota sul punto d'asse esatto");
+ auto otherHalf=half;otherHalf.sectionStyle=DrawingSectionStyle::HalfLeft;auto left=display(centered,otherHalf);require(left.hatch.material.contains({-5,0})&&!left.hatch.material.contains({5,0}),"meta' sinistra simmetrica");
+ Circle<3> closedCircle(Vec3(0,0,5),Vec3(1,0,0),Vec3(0,1,0),10);const auto wrapped=drawingRetainedCurveRanges(otherHalf,closedCircle,{0,kTwoPi});require(wrapped.size()==1,"semicerchio trattenuto unito attraverso la cucitura periodica");close(arcLength(closedCircle,wrapped.front()),10*kPi,"lunghezza del semicerchio senza divisione artificiale");
+ {auto cylinder=centered;cylinder.bodies={source(makeCylinder(Frame3(Vec3(0,0,-5),Vec3(0,0,1),Vec3(1,0,0)),10,10))};auto cut=half;cut.plane=Frame3(Vec3(),Vec3(0,-1,0),Vec3(1,0,0));std::vector<DrawingCurve> pieces;ok(drawingViewCurves(cylinder,cut,pieces));bool knownBranch=false;for(const auto &c:pieces)if(c.kind==DrawingCurveKind::Section&&cylinder.bodies[0].body->face(c.sourceFace).surface->type()==SurfaceType::Cylinder){knownBranch=true;require(c.multipleBranches,"rami della faccia esclusi dal taglio conservati nella provenienza");require(dimensionOfCurve(cut,c).section.requiresWitness,"testimone conservato anche per l’unico ramo visibile della mezza sezione");}require(knownBranch,"ramo cilindrico nella mezza sezione");}
+ // Un bordo obliquo attraversa il taglio; il nuovo estremo si associa al piano, non a un vertice inesistente.
+ auto angled=centered;angled.bodies={source(makeBox(Frame3(Vec3(-5,-5,-5),normalized(Vec3(0,1,1)),Vec3(1,0,0)),10,10,10))};auto oblique=display(angled,full);const DrawingCurve *cutEdge=nullptr;DrawingPointRole cutRole=DrawingPointRole::Start;
+ for(const auto &c:oblique.curves)if(c.kind==DrawingCurveKind::ProjectedEdge){const double a=full.plane.toLocal(c.sourceGeometry->point(c.sourceRange.lo)).z(),b=full.plane.toLocal(c.sourceGeometry->point(c.sourceRange.hi)).z();if((std::abs(a)<1e-7&&b<-1e-3)||(std::abs(b)<1e-7&&a<-1e-3)){cutEdge=&c;cutRole=std::abs(a)<1e-7?DrawingPointRole::Start:DrawingPointRole::End;break;}}
+ require(cutEdge,"bordo obliquo realmente intersecato");auto endpoint=drawingAttachment(full,*cutEdge,angled,cutRole);require(endpoint.clipBoundary==1,"aggancio al taglio");require(resolveDrawingAttachment(full,angled,oblique.curves,endpoint).status==DrawingDimensionStatus::Ready,"aggancio del nuovo estremo risolto");
+ // Un ramo tagliato eliminato non puo' riagganciarsi a quello rimasto dello stesso edge, neppure con supporto UV uguale.
+ {const auto wave=[&](bool changed){std::vector<Vec2> poles{{0,changed?-1.:1.},{1,-1},{2,1},{3,-1},{4,changed?-1.:1.}};ProfileLoop chain{{{std::make_shared<BSplineCurve<2>>(1,std::vector<double>{0,0,1,2,3,4,4},poles),{0,4},-1}}};return makeSheetExtrusion(Frame3(Vec3(),Vec3(0,1,0),Vec3(1,0,0)),{chain},2);};auto original=centered;original.bodies={source(wave(false))};std::vector<DrawingCurve> pieces;ok(drawingViewCurves(original,full,pieces));const auto old=std::find_if(pieces.begin(),pieces.end(),[](const auto &c){return c.kind==DrawingCurveKind::ProjectedEdge&&c.multipleBranches&&c.curve->point(.5*(c.range.lo+c.range.hi)).x()<1;});require(old!=pieces.end(),"tre rami da un solo edge ondulato");auto ref=drawingAttachment(full,*old,original,DrawingPointRole::Curve);require(ref.curve.requiresWitness&&ref.curveSide,"riferimento con ramo e supporto UV");auto changed=original;changed.bodies={source(wave(true))};ok(drawingViewCurves(changed,full,pieces));require(resolveDrawingAttachment(full,changed,pieces,ref).status!=DrawingDimensionStatus::Ready,"ramo scomparso non riassociato al superstite");}
+ {auto inherited=centered;auto names=std::make_shared<ElementNames>(*inherited.bodies[0].names);int labeled=0;for(auto id:inherited.bodies[0].body->edges()){const auto &edge=inherited.bodies[0].body->edge(id);const auto a=edge.curve->point(edge.range.lo),b=edge.curve->point(edge.range.hi);if(std::abs(a.y()-8)<1e-7&&std::abs(b.y()-8)<1e-7&&std::abs(a.z()-b.z())<1e-7){names->edges[id.index]={"history-edge-split"};++labeled;}}require(labeled==2,"alias condiviso fra edge anteriore e posteriore");inherited.bodies[0].names=names;std::vector<DrawingCurve> pieces;ok(drawingViewCurves(inherited,full,pieces));const auto edge=std::find_if(pieces.begin(),pieces.end(),[](const auto &c){return c.edgeName=="history-edge-split";});require(edge!=pieces.end()&&edge->multipleBranches,"alias dei bordi asportati conserva la regola di disambiguazione");}
+ // GUI, cronologia locale, codec protetto, copia storica e PDF.
+ DrawingEditorModel ui{centered,{{1,"Corpo"}},{}};DrawingSheet drawing;drawing.drawing.model=centered.version;drawing.title="Sezioni complete";DrawingSheetEditor editor(drawing,ui);editor.resize(1250,820);editor.show();QApplication::processEvents();editor.fitSheet();ok(editor.insertView(half,{half.id,"Mezza sezione",{100,95},{1}}));require(count(editor,"sectionAxis")==1&&count(editor,"sectionHatch")==1,"asse e tratteggio grafico della mezza sezione indipendente");auto dimension=dimensionOfCurve(half,*axisEdge,DrawingMeasure::SectionLength);dimension.references={drawingAttachment(half,*axisEdge,centered,DrawingPointRole::Curve)};dimension.section=dimension.references[0].curve;ok(editor.addDimension(dimension,{150,80}));close(editor.dimensionResult(dimension.id).value,10,"misura solo del bordo trattenuto");DrawingAttachment origin;origin.role=DrawingPointRole::Origin;auto fromAxis=drawingDimensionBetween(half,centered,h.curves,{axis,origin},DrawingMeasure::Distance,{20,20});ok(editor.addDimension(fromAxis,{150,105}));auto before=bytes(editor.sheet());DrawingSheet decoded;ok(decodeDrawingSheet(before,decoded));require(decoded.drawing.views[0].sectionStyle==DrawingSectionStyle::HalfRight&&QJsonDocument::fromJson(before).object()["schema"].toInt()==3,"schema 3 salva mezza sezione");require(decoded.drawing.dimensions.back().references[0].clipBoundary==2,"origine di taglio persistita nel codec");auto innerDocument=QJsonDocument::fromJson(before).object()["drawing"].toObject();require(innerDocument["schema"].toInt()==4,"schema geometrico 4");
+ ok(editor.setSectionStyle(half.id,DrawingSectionStyle::Full));require(count(editor,"sectionAxis")==0,"cambio tipo rimuove solo l'asse grafico");ok(editor.undo());require(bytes(editor.sheet())==before,"Undo ripristina tipo, riferimenti e cache");ok(editor.setSectionHatch(half.id,false));QApplication::processEvents();require(count(editor,"sectionHatch")==0,"tratteggio indipendente disattivabile");DrawingSheet hiddenSheet;ok(decodeDrawingSheet(bytes(editor.sheet()),hiddenSheet));require(!hiddenSheet.views[0].relation.hatch,"tratteggio indipendente persistito");ok(editor.undo());
+ ok(editor.setHiddenLinesVisible(half.id,true));QApplication::processEvents();ok(editor.undo());
+ auto malformed=QJsonDocument::fromJson(before).object();malformed["schema"]=2;QByteArray stable=before;DrawingSheet unchanged=editor.sheet();require(!decodeDrawingSheet(QJsonDocument(malformed).toJson(),unchanged).isEmpty()&&bytes(unchanged)==stable,"schema vecchio non puo' mascherare estensioni nuove");
+ auto payload=innerDocument;auto views=payload["views"].toArray();auto v=views[0].toObject();v["sectionStyle"]=9;views[0]=v;payload["views"]=views;malformed=QJsonDocument::fromJson(before).object();malformed["drawing"]=payload;require(!decodeDrawingSheet(QJsonDocument(malformed).toJson(),unchanged).isEmpty(),"tipo di sezione non supportato rifiutato");
+ QTemporaryDir temporary;DrawingPdfReport report;const auto output=qEnvironmentVariable("FORGECAD_COMPLETE_SECTION_OUTPUT");if(!output.isEmpty())QDir().mkpath(output);ok(editor.exportPdf(output.isEmpty()?temporary.filePath("mezza.pdf"):output+"/mezza.pdf",report));editor.setReadOnly(true);require(!editor.setSectionStyle(half.id,DrawingSectionStyle::Full).isEmpty(),"tipo storico in sola lettura");ok(editor.exportPdf(temporary.filePath("storico.pdf"),report));editor.setReadOnly(false);
+ // Dialogo reale: il nuovo comando propone completa e avvia l'anteprima del taglio scelto.
+ DrawingView parent;parent.kind=DrawingViewKind::ProjectedEdges;ok(editor.insertView(parent,{parent.id,"Madre",{90,150},{1}}));QTimer::singleShot(0,&editor,[&]{auto *dialog=editor.findChild<QDialog *>("drawingTechnicalSectionDialog");require(dialog,"dialogo sezioni tecniche");auto *style=dialog->findChild<QComboBox *>("drawingSectionStyle");require(style&&style->currentIndex()==1,"nuova sezione completa predefinita");style->setCurrentIndex(2);dialog->findChild<QDialogButtonBox *>()->button(QDialogButtonBox::Ok)->click();});editor.findChild<QAction *>("drawingTechnicalSectionAction")->trigger();require(editor.hasSectionLine(),"mezzo taglio dal dialogo");click(editor,{90,150});click(editor,{125,150});require(editor.hasViewPlacement(),"anteprima mezza sezione dopo la scelta dell’asse");click(editor,{220,140});require(editor.sheet().drawing.views.back().sectionStyle==DrawingSectionStyle::HalfRight,"tipo mantenuto dalla scelta fino all’inserimento");
+ if(!output.isEmpty())require(editor.grab().save(output+"/editor.png"),"immagine editor sezioni");
+ std::cout<<"PASS complete/half sections, clipped source ranges, rear geometry, removed bodies, cap occlusion/holes, open surfaces, cut anchors, codec, GUI, history and PDF\n";
+}catch(const std::exception &e){std::cerr<<e.what()<<'\n';return 1;}}

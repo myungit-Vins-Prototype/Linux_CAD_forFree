@@ -5,7 +5,7 @@
 
 #include "fk_topology.h"
 
-// Raccordi (fillet) e smussi (chamfer) sugli spigoli di un solido.
+// Raccordi (fillet) e smussi (chamfer) sugli spigoli condivisi di solidi o superfici cucite.
 //
 // Ogni spigolo si tratta nella sua sezione: il piano normale a uno spigolo
 // rettilineo, o il semipiano per l'asse di uno spigolo circolare (chiuso o
@@ -46,11 +46,17 @@
 // circolari tra facce non coassiali, estremi contro facce curve non normali
 // o non tangenti, piu' di tre spigoli in un vertice o pezze d'angolo tra
 // facce curve, raggi che non stanno nelle facce.
+// La preparazione delle sezioni, delle zone e degli utensili dei diversi
+// spigoli e' distribuita sui core; cucitura e applicazione finale restano in
+// ordine per conservare una topologia deterministica.
 namespace ForgeCad::Kernel {
 
+class BodyHistory;
+
 // `size`: raggio del raccordo o distanza dello smusso dallo spigolo su
-// ciascuna faccia.
-Body blendEdges(const Body &body, const std::vector<EdgeId> &edges, double size, bool chamfer);
+// ciascuna faccia. history facoltativa: facce ereditate e facce generate
+// dagli spigoli/vertici, registrate durante la costruzione.
+Body blendEdges(const Body &body, const std::vector<EdgeId> &edges, double size, bool chamfer, BodyHistory *history = nullptr);
 
 // Smusso asimmetrico di un edge: `onReference` sulla faccia la cui normale
 // uscente (nel punto medio dello spigolo) e' piu' vicina a `referenceNormal`,
@@ -63,7 +69,7 @@ struct ChamferSides {
 };
 
 // Smusso degli edge con le distanze di ognuno (sides[i] per edges[i]).
-Body chamferEdges(const Body &body, const std::vector<EdgeId> &edges, const std::vector<ChamferSides> &sides);
+Body chamferEdges(const Body &body, const std::vector<EdgeId> &edges, const std::vector<ChamferSides> &sides, BodyHistory *history = nullptr);
 
 // Edge del body piu' vicino al punto (non valido se nessuno dista meno di `tolerance`).
 EdgeId nearestEdge(const Body &body, const Vec3 &point, double tolerance);

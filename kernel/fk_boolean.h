@@ -1,6 +1,10 @@
 #ifndef FORGECAD_FK_BOOLEAN_H
 #define FORGECAD_FK_BOOLEAN_H
 
+#include "fk_precision.h"
+
+#include <functional>
+
 #include "fk_topology.h"
 
 // Booleane tra solidi B-rep esatti (unione, intersezione, differenza).
@@ -35,20 +39,46 @@
 // contatti di ordine superiore (rami tangenti tra loro).
 namespace ForgeCad::Kernel {
 
+class BodyHistory;
+
 // Stessa numerazione dell'app: 0 unione, 1 intersezione, 2 differenza.
 enum class BooleanOperation { Unite = 0, Intersect = 1, Subtract = 2 };
 
 struct BooleanOptions {
-    double tolerance = 1e-6;  // distanza sotto la quale due punti sono lo stesso vertice
+    double tolerance = kBooleanConnectionTolerance;  // distanza sotto la quale due punti sono lo stesso vertice
     // Fonde facce ed edge sulla stessa geometria (fk_unify.h), come fa l'app
     // con ShapeUpgrade_UnifySameDomain dopo le booleane di OCCT.
     bool unifySameDomain = true;
-    // Thread per le intersezioni tra le coppie di facce (passo 1): 0 = i core
-    // della macchina, 1 = in sequenza. Il risultato non dipende dal numero.
+    // Thread per le intersezioni tra coppie di facce e per la successiva
+    // divisione/classificazione delle singole facce: 0 = automatico (i piccoli
+    // lavori fra piani restano in sequenza), 1 = in sequenza. Le richieste
+    // esplicite sono rispettate. Il risultato non dipende dal numero.
     int threads = 0;
 };
 
-Body booleanOperation(const Body &a, const Body &b, BooleanOperation operation, const BooleanOptions &options = {});
+// history facoltativa: facce dichiarate rispetto ad A/B, anche dopo la
+// fusione dei domini, con provenienza da entrambi per i pezzi coincidenti.
+// Edge/vertici non ancora coperti conservano il ripiego geometrico.
+Body booleanOperation(const Body &a, const Body &b, BooleanOperation operation, const BooleanOptions &options = {},
+                      BodyHistory *history = nullptr);
+
+// Curve comuni alle facce dei due corpi, limitate ai loro bordi.
+// Include sezioni aperte e bordi complanari; non costruisce un solido.
+struct BodySectionCurve {
+    CurvePtr<3> curve;
+    Interval range;
+    FaceId firstFace, secondFace;
+    bool coincident = false;
+    bool tangent = false;
+};
+std::vector<BodySectionCurve> bodySectionCurves(const Body &a, const Body &b, const BooleanOptions &options = {});
+
+// Include anche le rette di sola tangenza (non dividono le facce).
+// Conserva separati i tratti con coppie di facce diverse, anche sovrapposti:
+// la provenienza vale sull'intero intervallo e non viene dedotta dalla geometria.
+// La versione sopra mantiene la deduplicazione storica, con una sola coppia
+// rappresentativa per ogni tratto restituito.
+std::vector<BodySectionCurve> bodySectionCurvesWithOrigins(const Body &a, const Body &b, const BooleanOptions &options = {});
 
 // Divide la lamina lungo le curve in cui la attraversa `tool` (una lamina o
 // un solido: le sue facce fanno da lame, anche oltre la lamina) e ne
@@ -57,7 +87,32 @@ Body booleanOperation(const Body &a, const Body &b, BooleanOperation operation, 
 // booleane; i pezzi si raggruppano attraverso gli edge che non sono tagli.
 // Se lo strumento non la attraversa del tutto (un taglio che finisce dentro
 // una faccia) la regione resta una sola.
-std::vector<Body> splitSheet(const Body &sheet, const Body &tool, const BooleanOptions &options = {});
+std::vector<Body> splitSheet(const Body &sheet, const Body &tool, const BooleanOptions &options = {}, std::vector<BodyHistory> *histories = nullptr);
+
+// Curva da imprimere su una faccia (imprintCurves): il tratto `range` di
+// `curve`, che giace sulla faccia `face` entro `tolerance`. Un estremo su un
+// edge del body (loOnEdge/hiOnEdge) diventa il punto dell'edge
+// loPoint/hiPoint, che divide l'edge (anche se la curva vi arriva solo entro
+// uno scarto piccolo: il vertice diventa tollerante).
+struct ImprintCurve {
+    FaceId face;
+    CurvePtr<3> curve;
+    Interval range;
+    double tolerance = 0.0;
+    bool loOnEdge = false, hiOnEdge = false;
+    Vec3 loPoint, hiPoint;
+};
+
+// Divide le facce del body lungo le curve (come le facce delle booleane lungo
+// le curve d'intersezione, ma con curve date) e toglie i pezzi di faccia per
+// cui `remove(faccia di partenza, punto interno)` e' vero. Se toglie qualcosa
+// il risultato e' una lamina. `removed` riceve il numero dei pezzi tolti.
+// Le facce sulla stessa superficie si fondono solo con options.unifySameDomain
+// (spento, i pezzi divisi restano facce distinte).
+// `history` facoltativa: facce dichiarate rispetto al body di ingresso,
+// composte con le origini della fusione quando unifySameDomain=true.
+Body imprintCurves(const Body &body, const std::vector<ImprintCurve> &curves, const std::function<bool(FaceId, const Vec3 &)> &remove = {},
+                   const BooleanOptions &options = {}, int *removed = nullptr, BodyHistory *history = nullptr);
 
 }
 

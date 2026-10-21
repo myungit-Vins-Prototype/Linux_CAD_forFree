@@ -5,6 +5,8 @@
 #include "fk_curve_algo.h"
 #include "fk_extrude.h"
 #include "fk_mass.h"
+#include "fk_loft.h"
+#include "fk_sew.h"
 #include "fk_primitives.h"
 #include "fk_profile.h"
 #include "fk_sheet.h"
@@ -120,6 +122,32 @@ FK_TEST(SheetExtend) {
     const Body wider = extendSheet(flat, {edgeNear(flat, Vec3(4, 0, 1))}, d);
     checkedSheet(wider, (4.0 + d) * h);
     FK_CHECK(wider.faces().size() == 1);
+    // Piano rifilato da due archi: il bordo non segue una isoparametrica del
+    // piano. E' il caso delle facce piane offset ricavate da un loft.
+    const double diskRadius = 4.0;
+    const auto circle = std::make_shared<Circle<3>>(Vec3(), Vec3(1, 0, 0), Vec3(0, 1, 0), diskRadius);
+    std::vector<Body::BuildEdge> diskEdges{
+        {0, 1, circle, {0.0, kPi}, 0.0},
+        {1, 0, circle, {kPi, kTwoPi}, 0.0}
+    };
+    Body::BuildFace diskFace;
+    diskFace.surface = std::make_shared<Plane>(Frame3());
+    diskFace.loops.push_back({{0, true, nullptr, 0.0}, {1, true, nullptr, 0.0}});
+    const Body disk = Body::buildSheet({Vec3(diskRadius, 0, 0), Vec3(-diskRadius, 0, 0)}, diskEdges, {diskFace});
+    const Body enlargedHalf = extendSheet(disk, {disk.edges().front()}, d);
+    const double expectedDiskArea = kPi * diskRadius * diskRadius
+                                  + 0.5 * kPi * ((diskRadius + d) * (diskRadius + d) - diskRadius * diskRadius);
+    checkedSheet(enlargedHalf, expectedDiskArea, 1e-7);
+    // La seconda meta' raggiunge esattamente gli estremi della prima: i due
+    // connettori precedenti vanno consumati, senza bordi sovrapposti.
+    const Body enlargedDisk = extendSheet(enlargedHalf, {edgeNear(enlargedHalf, Vec3(0, -diskRadius, 0))}, d);
+    checkedSheet(enlargedDisk, kPi * (diskRadius + d) * (diskRadius + d), 2e-7);
+    FK_CHECK(enlargedDisk.edges().size() == 2);
+    std::vector<EdgeId> wholeBoundary;
+    for (EdgeId edge : enlargedHalf.edges())
+        if (enlargedHalf.isLaminar(edge)) wholeBoundary.push_back(edge);
+    const Body extendedWholeFace = extendSheet(enlargedHalf, wholeBoundary, d);
+    FK_CHECK(checkedSheet(extendedWholeFace, 0.0) > expectedDiskArea);
     // Cilindro (arco di 90 gradi): in alto, e all'estremo lungo l'arco o tangente (piano).
     const double R = 2.0;
     const Body arc = sheetOf({arcSegment(Vec2(0, 0), R, 0.0, kPi / 2)}, h);
@@ -155,4 +183,58 @@ FK_TEST(SheetExtend) {
     FK_CHECK(raised.faces().size() == folded.faces().size());
     // Bordi non isoparametrici e bordi interni non si estendono.
     FK_CHECK_THROWS(extendSheet(folded, {edgeNear(folded, Vec3(0, 0, 1))}, d));
+}
+
+
+FK_TEST(SheetSectionKeepsExactSplineBoundary) {
+    const std::vector<double> knots{0, 0, 0, 0, 0.3, 0.7, 1, 1, 1, 1};
+    const std::vector<Vec3> poles{{-4, 0, 0}, {-3, 0, 2}, {-1, 0, -1},
+                                 {1, 0, 3}, {3, 0, 1}, {4, 0, 0}};
+    const auto first = std::make_shared<BSplineCurve<3>>(3, knots, poles);
+    auto shifted = poles;
+    for (Vec3 &p : shifted) p[1] = 3;
+    const auto second = std::make_shared<BSplineCurve<3>>(3, knots, shifted);
+    const Body sheet = ruledSurface({{first, first->domain()}}, {{second, second->domain()}});
+    const EdgeId boundary = edgeNear(sheet, first->point(0.5));
+    const auto exact = sheet.edge(boundary).curve;
+    for (double half : {10.0, 1000.0}) {
+        const Body plane = makePlaneSheet(Frame3(Vec3(), Vec3(0, 1, 0), Vec3(1, 0, 0)), half);
+        for (bool swapped : {false, true}) {
+            const auto curves = swapped ? bodySectionCurves(sheet, plane) : bodySectionCurves(plane, sheet);
+            FK_CHECK(curves.size() == 1);
+            if (curves.size() != 1) continue;
+            FK_CHECK(curves.front().curve == exact);
+            FK_CHECK_NEAR(curves.front().range.lo, exact->domain().lo, 1e-12);
+            FK_CHECK_NEAR(curves.front().range.hi, exact->domain().hi, 1e-12);
+        }
+    }
+    // A finite planar face clips the boundary rather than returning the full edge.
+    const Body small = makePlaneSheet(Frame3(Vec3(), Vec3(0, 1, 0), Vec3(1, 0, 0)), 2.0);
+    const auto clipped = bodySectionCurves(small, sheet);
+    FK_CHECK(!clipped.empty());
+    for (const auto &curve : clipped) {
+        FK_CHECK(curve.curve == exact);
+        for (int i = 0; i <= 20; ++i) {
+            const Vec3 p = curve.curve->point(curve.range.lo + curve.range.length() * i / 20.0);
+            FK_CHECK(std::fabs(p[0]) <= 2.0 + 1e-6);
+            FK_CHECK(std::fabs(p[2]) <= 2.0 + 1e-6);
+        }
+    }
+    // An interior section continues to use surface intersection.
+    const Body middle = makePlaneSheet(Frame3(Vec3(0, 1.5, 0), Vec3(0, 1, 0), Vec3(1, 0, 0)), 10.0);
+    const auto interior = bodySectionCurves(middle, sheet);
+    FK_CHECK(!interior.empty());
+    for (const auto &curve : interior)
+        FK_CHECK_NEAR(curve.curve->point(curve.range.lo + curve.range.length() * 0.5)[1], 1.5, 1e-6);
+    // Close but different boundaries are not merged by widening the tolerance.
+    auto raised = poles;
+    for (Vec3 &p : raised) p[2] += 0.01;
+    auto far = raised;
+    for (Vec3 &p : far) p[1] = 3;
+    const auto third = std::make_shared<BSplineCurve<3>>(3, knots, raised);
+    const auto fourth = std::make_shared<BSplineCurve<3>>(3, knots, far);
+    const Body neighbor = ruledSurface({{third, third->domain()}}, {{fourth, fourth->domain()}});
+    const Body joined = sewSheets({&sheet, &neighbor}, 1e-6, false).body;
+    const Body plane = makePlaneSheet(Frame3(Vec3(), Vec3(0, 1, 0), Vec3(1, 0, 0)), 10.0);
+    FK_CHECK(bodySectionCurves(plane, joined).size() == 2);
 }
