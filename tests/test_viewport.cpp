@@ -68,6 +68,7 @@ public:
 #include "test_helix_start_angle.h"
 #include "test_sketch_menu_cancel.h"
 #include "test_document_recovery.h"
+#include "test_document_consultation.h"
     static void previewPerformance() {
         using namespace ForgeCad;using namespace ForgeCad::Kernel;
         const auto settle=[](CadViewport &view) {
@@ -519,7 +520,9 @@ public:
         QTimer::singleShot(0,[&]{for(auto *widget:QApplication::topLevelWidgets())if(auto *box=qobject_cast<QMessageBox *>(widget)){box->button(QMessageBox::Cancel)->click();cancelSeen=true;}});
         require(!main.close()&&cancelSeen&&drawing->isVisible(),"chiusura principale rispetta Annulla per tavola non salvata");
         clientOk(drawing->savePath(temporary.filePath("modello.drw")));
-        require(main.close(),"chiusura principale dopo salvataggio tavola");QApplication::sendPostedEvents(nullptr,QEvent::DeferredDelete);
+        main.close();QElapsedTimer closing;closing.start();
+        while(!main.recoveryCloseReady_&&closing.elapsed()<5000)QApplication::processEvents();
+        require(main.recoveryCloseReady_,"chiusura asincrona principale dopo salvataggio tavola");QApplication::sendPostedEvents(nullptr,QEvent::DeferredDelete);
     }
     static void workspaceRevisionsUi() {
         using namespace ForgeCad;
@@ -1062,8 +1065,10 @@ public:
             });
             timer->start(5);
         };
-        dismiss(); require(!second.openDocumentPath(a), "second window refuses owned document");
-        require(first.documentLock_ && first.documentLock_->owns(a) && second.documentPath_.isEmpty(), "failed open preserves owners");
+        require(second.openDocumentPath(a), "second window opens owned document for consultation");
+        require(first.documentLock_ && first.documentLock_->owns(a) && !second.documentLock_
+                && second.viewport_->documentReadOnly(), "one editor and one reader of the same document");
+        require(!second.saveDocumentPath(a), "reader cannot overwrite the editor's file");
         require(first.openDocumentPath(a), "reopening same document preserves current session");
         require(QSettings().value("document/recentFiles").toStringList()==QStringList{canonicalDocumentPath(a)}, "recent files deduplicate");
         {
@@ -1097,7 +1102,9 @@ public:
         first.documentModified_=false;
         first.newDocument(); require(!first.documentLock_ && !QFileInfo::exists(b+".lock"), "new document releases lock");
         require(second.openDocumentPath(b), "released document opens in other window");
-        require(second.close() && !QFileInfo::exists(b+".lock"), "accepted close releases lock");
+        second.close();QElapsedTimer closing;closing.start();
+        while(!second.recoveryCloseReady_&&closing.elapsed()<5000)QApplication::processEvents();
+        require(second.recoveryCloseReady_ && !QFileInfo::exists(b+".lock"), "accepted asynchronous close releases lock");
         first.refreshRecentDocuments();
         require(menu->actions().first()->data().toString()==canonicalDocumentPath(b), "most recent file first");
         // L'azione del menu usa il normale percorso di apertura esclusiva.
@@ -9384,6 +9391,11 @@ int main(int argc, char **argv) {
             else documentReadTests();
         } catch (const std::exception &error) { std::cerr << error.what() << std::endl; return 1; }
         std::cout << "PASS document read" << std::endl; return 0;
+    }
+    if (app.arguments().contains(QStringLiteral("--document-consultation"))) {
+        try { ViewportInteractionTest::documentConsultation(); }
+        catch(const std::exception &error){std::cerr<<error.what()<<std::endl;return 1;}
+        std::cout<<"PASS concurrent consultation and exclusive editing"<<std::endl;return 0;
     }
     if (app.arguments().contains(QStringLiteral("--document-lock-worker"))) {
         const int index=app.arguments().indexOf(QStringLiteral("--document-lock-worker"));

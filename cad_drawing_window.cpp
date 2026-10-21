@@ -59,8 +59,30 @@ void DrawingWindow::report(const QString &error){if(!error.isEmpty())QMessageBox
 void DrawingWindow::refreshEditAccess(){
     if(!editor_||busy_||editor_->isComputing())return;
     workspaceDocumentEditAccess(path_,drawing_.sheet.drawing.version,drawing_.baseCheckinId,editAccess_);
+    if(editAccess_.readOnly)lock_.reset();
+    if(!path_.isEmpty()&&!editAccess_.readOnly&&(!lock_||!lock_->owns(path_))){
+        lock_.reset();editAccess_.readOnly=true;
+        editAccess_.reason=QStringLiteral("Copia aperta in consultazione. Eseguire check-out per passare alla modifica; la copia potrebbe essere in uso da un'altra sessione.");
+    }
     const bool readOnly=!sourceReady_||editAccess_.readOnly;
     if(editor_->isReadOnly()!=readOnly)editor_->setReadOnly(readOnly);
+}
+QString DrawingWindow::acquireWriteAccess(){
+    if(lock_&&lock_->owns(path_))return {};
+    auto candidate=std::make_unique<DocumentFileLock>(path_);
+    auto error=candidate->acquire();if(!error.isEmpty())return error;
+    QByteArray fingerprint;error=documentFileFingerprint(path_,fingerprint);if(!error.isEmpty())return error;
+    if(modified_){
+        if(diskFingerprint_.isEmpty()||fingerprint!=diskFingerprint_)
+            return QStringLiteral("La copia su disco e' cambiata. Salvare le modifiche locali con un altro nome prima di riprendere il check-out.");
+    }else if(diskFingerprint_.isEmpty()||fingerprint!=diskFingerprint_){
+        DrawingFile current;error=loadDrawingFile(path_,current);if(!error.isEmpty())return error;
+        if(current.sheet.drawing.version.documentId!=drawing_.sheet.drawing.version.documentId||!current.sheet.drawing.version.checkinId.isNull())
+            return QStringLiteral("Il documento su disco ha un'altra identita'. Riaprirlo prima di modificarlo.");
+        // Ricalcola anche sorgente e viste dalla copia riletta sotto esclusiva.
+        busy_=true;loadContents(path_,std::move(current));busy_=false;
+    }
+    diskFingerprint_=fingerprint;lock_=std::move(candidate);return {};
 }
 QString DrawingWindow::requireEditAccess(){
     refreshEditAccess();refreshTitle();
@@ -82,8 +104,8 @@ void DrawingWindow::refreshTitle(){
     for(const auto name:{"drawingPinModelAction","drawingWorkingModelAction"})
         findChild<QAction *>(name)->setEnabled(editor_&&!editAccess_.readOnly&&!busy_);
     if(editor_&&checkin.isNull()&&!busy_&&revisionStatusKnown_){
-        findChild<QAction *>("drawingCheckoutAction")->setEnabled(!revisionStatusCache_.hasPending&&(!revisionStatusCache_.hasSession||revisionStatusCache_.phase==WorkspaceCheckoutPhase::Reserving));
-        findChild<QAction *>("drawingCheckinAction")->setEnabled(revisionStatusCache_.hasSession&&!revisionStatusCache_.hasPending&&revisionStatusCache_.phase==WorkspaceCheckoutPhase::Active);
+        findChild<QAction *>("drawingCheckoutAction")->setEnabled(!revisionStatusCache_.hasPending&&(!revisionStatusCache_.hasSession||revisionStatusCache_.phase==WorkspaceCheckoutPhase::Reserving||!lock_));
+        findChild<QAction *>("drawingCheckinAction")->setEnabled(lock_&&!editAccess_.readOnly&&revisionStatusCache_.hasSession&&!revisionStatusCache_.hasPending&&revisionStatusCache_.phase==WorkspaceCheckoutPhase::Active);
         findChild<QAction *>("drawingCompleteCheckinAction")->setEnabled(revisionStatusCache_.hasPending);
         findChild<QAction *>("drawingCancelCheckoutAction")->setEnabled(revisionStatusCache_.hasSession&&!revisionStatusCache_.hasPending);
     }
@@ -146,9 +168,21 @@ QString DrawingWindow::createFromModel(const QString &modelPath){
 }
 QString DrawingWindow::openPath(const QString &path){
     if(editor_)return QStringLiteral("Questa finestra contiene gia' una tavola.");
-    auto candidate=std::make_unique<DocumentFileLock>(path);auto error=candidate->acquire();if(!error.isEmpty())return error;
-    DrawingFile prepared;error=loadDrawingFile(candidate->path(),prepared);if(!error.isEmpty())return error;
-    const auto resolved=candidate->path();lock_=std::move(candidate);loadContents(resolved,std::move(prepared));return {};
+    const auto resolved=canonicalDocumentPath(path);
+    DrawingFile prepared;auto error=loadDrawingFile(resolved,prepared);if(!error.isEmpty())return error;
+    WorkspaceEditAccess access;workspaceDocumentEditAccess(resolved,prepared.sheet.drawing.version,prepared.baseCheckinId,access);
+    WorkspaceRevisionStatus status;const auto statusError=workspaceDrawingRevisionStatus(resolved,prepared,status);
+    std::unique_ptr<DocumentFileLock> candidate;QByteArray fingerprint;
+    if(!access.readOnly&&(statusError.isEmpty()?!status.hasSession:prepared.baseCheckinId.isNull())){
+        candidate=std::make_unique<DocumentFileLock>(resolved);
+        if(!candidate->acquire().isEmpty())candidate.reset();
+        else{
+            error=loadDrawingFile(resolved,prepared);if(!error.isEmpty())return error;
+            error=documentFileFingerprint(resolved,fingerprint);if(!error.isEmpty())return error;
+        }
+    }
+    lock_=std::move(candidate);diskFingerprint_=fingerprint;
+    loadContents(resolved,std::move(prepared));return {};
 }
 void DrawingWindow::loadContents(const QString &path,DrawingFile prepared){
     DocumentState source;QString resolved;bool changed=false;
@@ -208,6 +242,7 @@ QString DrawingWindow::savePath(const QString &path){
     if(!lock||lock->path()!=resolved){candidate=std::make_unique<DocumentFileLock>(resolved);const auto error=candidate->acquire();if(!error.isEmpty())return error;lock=candidate.get();}
     const auto error=saveDrawingFile(resolved,prepared,lock);if(!error.isEmpty())return error;
     if(candidate)lock_=std::move(candidate);
+    diskFingerprint_.clear();documentFileFingerprint(resolved,diskFingerprint_);
     drawing_=std::move(prepared);path_=resolved;containerDirty_=false;modified_=false;
     if(different)installEditor();
     editor_->markSaved();refreshPageContext();refreshTitle();return {};

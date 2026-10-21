@@ -24,11 +24,12 @@ void linkedDrawingTests(){
         const auto bytes=clientRead(drawingPath);require(bytes.size()<4096&&!bytes.contains("forgeBody")&&!bytes.contains("importData"),"file tavola leggero senza snapshot 3D");
         DrawingFile restored;clientOk(decodeDrawingFile(bytes,restored));const auto retained=restored.sheet.drawing.version.documentId;
         require(!decodeDrawingFile(bytes.left(bytes.size()-1),restored).isEmpty()&&restored.sheet.drawing.version.documentId==retained,"tavola troncata rifiutata atomicamente");
-        DrawingWindow second;require(!second.openPath(drawingPath).isEmpty(),"accesso esclusivo alla stessa tavola");
+        DrawingWindow second;clientOk(second.openPath(drawingPath));require(second.editor()->isReadOnly(),"seconda apertura della stessa tavola in consultazione");
+        require(!second.savePath(drawingPath).isEmpty(),"consultazione non sovrascrive la tavola dell'editor");
         const auto copy=temporary.filePath("copia.drw");clientOk(window.savePath(copy));
         require(window.document().sheet.drawing.version.documentId!=retained&&window.document().sheet.drawing.model.documentId==working.version.documentId,"Salva con nome crea tavola indipendente sullo stesso 3D");
         const auto copiedId=window.document().sheet.drawing.version.documentId;
-        require(!window.savePath(temporary.filePath("assente/copia.drw")).isEmpty()&&window.document().sheet.drawing.version.documentId==copiedId&&window.filePath()==copy,"salvataggio fallito conserva identita' e percorso");
+        require(!window.savePath(temporary.filePath("assente/copia.drw")).isEmpty()&&window.document().sheet.drawing.version.documentId==copiedId&&window.filePath()==canonicalDocumentPath(copy),"salvataggio fallito conserva identita' e percorso canonico");
         require(!window.savePath(sourcePath).isEmpty(),"la tavola non puo' sostituire il modello");
     }
     {

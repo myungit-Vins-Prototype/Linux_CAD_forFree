@@ -62,6 +62,7 @@ private:
     quint64 recoveryCloseRevision_ = 0;
     void updateWindowTitle();
     void refreshDocumentEditAccess();
+    QString acquireDocumentWriteAccess();
     ForgeCad::WorkspaceEditAccess documentEditAccess_;
     QVector<QPointer<QAction>> documentMutationActions_,revisionDisabledActions_;
     QLabel *documentRevisionStatus_=nullptr;
@@ -90,6 +91,7 @@ private:
     bool suppressTreeClick_ = false;
     QString documentPath_;
     std::unique_ptr<ForgeCad::DocumentFileLock> documentLock_;
+    QByteArray documentDiskFingerprint_;
     QMenu *recentDocumentsMenu_ = nullptr;
     QString glRenderer_ = QStringLiteral("in avvio");  // GL_RENDERER per la barra di stato
     QString gpuStatusText() const;

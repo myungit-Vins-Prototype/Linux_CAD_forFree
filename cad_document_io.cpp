@@ -1111,6 +1111,15 @@ QString canonicalDocumentPath(const QString &path) {
     return QDir::cleanPath(parent.isEmpty() ? info.absoluteFilePath() : QDir(parent).filePath(info.fileName()));
 }
 
+QString documentFileFingerprint(const QString &path, QByteArray &fingerprint) {
+    QFile file(path);
+    QCryptographicHash hash(QCryptographicHash::Sha256);
+    if (!file.open(QIODevice::ReadOnly) || !hash.addData(&file))
+        return QStringLiteral("Impossibile verificare la copia su disco: %1").arg(path);
+    fingerprint = hash.result();
+    return {};
+}
+
 DocumentFileLock::DocumentFileLock(const QString &path)
     : path_(canonicalDocumentPath(path)), lock_(path_ + QStringLiteral(".lock")) {
     lock_.setStaleLockTime(0);

@@ -61,8 +61,11 @@ QString decodeDocument(const QByteArray &bytes, DocumentState &state, const Docu
 void forkDocumentIdentity(DocumentState &state);
 
 // Il lock vive accanto al documento, anche su una condivisione di rete.
-// Non scade per anzianita': un documento puo' restare aperto indefinitamente.
+// Non scade per anzianita': una sessione di modifica puo' durare indefinitamente.
 QString canonicalDocumentPath(const QString &path);
+// Impronta della copia su disco, per non riapplicare modifiche locali a una
+// copia cambiata mentre la finestra non possedeva l'esclusiva di scrittura.
+QString documentFileFingerprint(const QString &path, QByteArray &fingerprint);
 class DocumentFileLock final {
 public:
     explicit DocumentFileLock(const QString &path);

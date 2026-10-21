@@ -23948,6 +23948,11 @@ bool PdfWindow::event(QEvent *event) {
 void PdfWindow::refreshDocumentEditAccess(){
     if(!viewport_||foregroundProgressDepth_||viewport_->interactionLocked())return;
     ForgeCad::workspaceDocumentEditAccess(documentPath_,viewport_->documentVersion(),viewport_->documentBaseCheckinId(),documentEditAccess_);
+    if(documentEditAccess_.readOnly)documentLock_.reset();
+    if(!documentPath_.isEmpty()&&!documentEditAccess_.readOnly&&(!documentLock_||!documentLock_->owns(documentPath_))){
+        documentLock_.reset();documentEditAccess_.readOnly=true;
+        documentEditAccess_.reason=QStringLiteral("Copia aperta in consultazione. Eseguire check-out per passare alla modifica; la copia potrebbe essere in uso da un'altra sessione.");
+    }
     viewport_->setDocumentReadOnly(documentEditAccess_.readOnly);
     if(documentEditAccess_.readOnly){
         for(const auto &action:documentMutationActions_)if(action&&action->isEnabled()){
@@ -23957,7 +23962,7 @@ void PdfWindow::refreshDocumentEditAccess(){
         for(const auto &action:revisionDisabledActions_)if(action)action->setEnabled(true);
         revisionDisabledActions_.clear();
     }
-    if(documentRevisionStatus_){documentRevisionStatus_->setText(!viewport_->documentVersion().checkinId.isNull()?QStringLiteral("Revisione storica · Sola lettura"):documentEditAccess_.readOnly?QStringLiteral("Sola lettura · Eseguire check-out"):QString());documentRevisionStatus_->setToolTip(documentEditAccess_.reason);}
+    if(documentRevisionStatus_){documentRevisionStatus_->setText(!viewport_->documentVersion().checkinId.isNull()?QStringLiteral("Revisione storica · Sola lettura"):documentEditAccess_.readOnly?QStringLiteral("Sola lettura · Consultazione"):QString());documentRevisionStatus_->setToolTip(documentEditAccess_.reason);}
     updateUndoActions();
     refreshDocumentRevisionPanel();
 }
@@ -24118,6 +24123,7 @@ void PdfWindow::newDocument() {
     viewport_->loadDocument(empty);
     loadingDocument_ = false;
     documentLock_.reset();
+    documentDiskFingerprint_.clear();
     documentPath_.clear();
     documentModified_ = false;
     refreshDocumentEditAccess();
@@ -24160,18 +24166,29 @@ bool PdfWindow::openDocumentPath(const QString &path) {
         rememberRecentDocument(resolved);
         return true;
     }
-    auto candidate = std::make_unique<ForgeCad::DocumentFileLock>(resolved);
-    const QString lockError = candidate->acquire();
-    if (!lockError.isEmpty()) {
-        QMessageBox::warning(this, QStringLiteral("Apri — accesso esclusivo"), lockError);
-        return false;
-    }
     if (!maybeSaveChanges()) return false;
+    std::unique_ptr<ForgeCad::DocumentFileLock> candidate;
     const QString fileName = QFileInfo(path).fileName();
     beginForegroundProgress(QStringLiteral("Lettura di %1... 0%").arg(fileName), 100);
     updateForegroundProgress(QStringLiteral("Lettura del file %1... 5%").arg(fileName), 5);
     DocumentState state;
-    const QString error = ForgeCad::loadDocumentFile(resolved, state);
+    QString error = ForgeCad::loadDocumentFile(resolved, state);
+    QByteArray fingerprint;
+    if(error.isEmpty()){
+        ForgeCad::WorkspaceEditAccess access;
+        ForgeCad::workspaceDocumentEditAccess(resolved,state.version,state.baseCheckinId,access);
+        ForgeCad::WorkspaceRevisionStatus status;
+        const auto statusError=ForgeCad::workspaceRevisionStatus(resolved,state,status);
+        // Un check-out persistente viene ripreso soltanto su comando esplicito.
+        if(!access.readOnly&&(statusError.isEmpty()?!status.hasSession:state.baseCheckinId.isNull())){
+            candidate=std::make_unique<ForgeCad::DocumentFileLock>(resolved);
+            if(!candidate->acquire().isEmpty())candidate.reset();
+            else{
+                error=ForgeCad::loadDocumentFile(resolved,state);
+                if(error.isEmpty())error=ForgeCad::documentFileFingerprint(resolved,fingerprint);
+            }
+        }
+    }
     if (!error.isEmpty()) {
         endForegroundProgress();
         QMessageBox::warning(this, QStringLiteral("Apri"), error);
@@ -24197,6 +24214,7 @@ bool PdfWindow::openDocumentPath(const QString &path) {
     updateForegroundProgress(QStringLiteral("Documento caricato. 100%"), 100);
     endForegroundProgress();
     documentLock_ = std::move(candidate);
+    documentDiskFingerprint_=fingerprint;
     documentPath_ = resolved;
     documentModified_ = false;
     refreshDocumentEditAccess();
@@ -24251,6 +24269,8 @@ bool PdfWindow::saveDocumentPath(const QString &path) {
         return false;
     }
     if (candidate) documentLock_ = std::move(candidate);
+    documentDiskFingerprint_.clear();
+    ForgeCad::documentFileFingerprint(resolved,documentDiskFingerprint_);
     viewport_->adoptDocumentIdentity(saved.version, saved.baseCheckinId);
     documentPath_ = resolved;
     documentModified_ = false;
@@ -24262,10 +24282,36 @@ bool PdfWindow::saveDocumentPath(const QString &path) {
     return true;
 }
 
+QString PdfWindow::acquireDocumentWriteAccess() {
+    if(documentLock_&&documentLock_->owns(documentPath_))return {};
+    auto candidate=std::make_unique<ForgeCad::DocumentFileLock>(documentPath_);
+    auto error=candidate->acquire();if(!error.isEmpty())return error;
+    QByteArray fingerprint;error=ForgeCad::documentFileFingerprint(documentPath_,fingerprint);
+    if(!error.isEmpty())return error;
+    if(documentModified_){
+        if(documentDiskFingerprint_.isEmpty()||fingerprint!=documentDiskFingerprint_)
+            return QStringLiteral("La copia su disco e' cambiata. Salvare le modifiche locali con un altro nome prima di riprendere il check-out.");
+    }else if(documentDiskFingerprint_.isEmpty()||fingerprint!=documentDiskFingerprint_){
+        DocumentState current;error=ForgeCad::loadDocumentFile(documentPath_,current);
+        if(!error.isEmpty())return error;
+        if(current.version.documentId!=viewport_->documentVersion().documentId||!current.version.checkinId.isNull())
+            return QStringLiteral("Il documento su disco ha un'altra identita'. Riaprirlo prima di modificarlo.");
+        // La rilettura avviene sotto esclusiva, prima di prenotare la base.
+        beginForegroundProgress(QStringLiteral("Aggiornamento della copia di lavoro..."));
+        loadingDocument_=true;viewport_->setDocumentReadOnly(false);viewport_->loadDocument(std::move(current));loadingDocument_=false;
+        endForegroundProgress();
+    }
+    documentDiskFingerprint_=fingerprint;documentLock_=std::move(candidate);return {};
+}
+
 QString PdfWindow::runDocumentRevisionAction(DocumentRevisionAction action, const QString &first, const QString &second) {
     if (foregroundProgressDepth_>0 || viewport_->interactionLocked()) return QStringLiteral("Attendere la conclusione dell'operazione in corso.");
     if (documentPath_.isEmpty()) return QStringLiteral("Salvare prima il documento nel workspace.");
-    if (!documentLock_ || !documentLock_->owns(documentPath_)) return QStringLiteral("Il documento non ha piu' un blocco esclusivo valido.");
+    if(!viewport_->documentVersion().checkinId.isNull())return QStringLiteral("La revisione storica e' in sola lettura.");
+    const bool owned=documentLock_&&documentLock_->owns(documentPath_);
+    if(!owned&&action==DocumentRevisionAction::Checkin)return QStringLiteral("Riprendere il check-out prima di pubblicare le modifiche.");
+    const auto lockError=acquireDocumentWriteAccess();
+    if(!lockError.isEmpty()){refreshDocumentEditAccess();return lockError;}
     auto working = viewport_->currentDocument();
     const auto oldBase = working.baseCheckinId;
     const bool bodies = QSettings().value(QStringLiteral("document/saveBodies"),true).toBool();
@@ -24297,6 +24343,10 @@ QString PdfWindow::runDocumentRevisionAction(DocumentRevisionAction action, cons
                 ? QStringLiteral("Check-out attivo: %1.").arg(first)
                 : QStringLiteral("Check-out annullato; modifiche locali mantenute."),6000);
     }
+    if(error.isEmpty()){
+        documentDiskFingerprint_.clear();ForgeCad::documentFileFingerprint(documentPath_,documentDiskFingerprint_);
+    }
+    if(!owned&&!error.isEmpty())documentLock_.reset();
     refreshDocumentEditAccess();updateWindowTitle(); return error;
 }
 
@@ -24350,8 +24400,8 @@ void PdfWindow::refreshDocumentRevisionPanel() {
     documentRevisionHistory_->resizeColumnsToContents();documentRevisionHistory_->setColumnWidth(4,200);documentRevisionHistory_->resizeRowsToContents();if(selection>=0)documentRevisionHistory_->selectRow(selection);
     documentOpenRevision_->setEnabled(selection>=0);
     const bool writableVersion=!historical&&!documentPath_.isEmpty();
-    findChild<QAction *>("revisionCheckoutAction")->setEnabled(writableVersion&&known&&!status.hasPending&&(!status.hasSession||status.phase==ForgeCad::WorkspaceCheckoutPhase::Reserving));
-    findChild<QAction *>("revisionCheckinAction")->setEnabled(writableVersion&&known&&status.hasSession&&!status.hasPending&&status.phase==ForgeCad::WorkspaceCheckoutPhase::Active);
+    findChild<QAction *>("revisionCheckoutAction")->setEnabled(writableVersion&&known&&!status.hasPending&&(!status.hasSession||status.phase==ForgeCad::WorkspaceCheckoutPhase::Reserving||!documentLock_));
+    findChild<QAction *>("revisionCheckinAction")->setEnabled(writableVersion&&known&&documentLock_&&!documentEditAccess_.readOnly&&status.hasSession&&!status.hasPending&&status.phase==ForgeCad::WorkspaceCheckoutPhase::Active);
     findChild<QAction *>("revisionCompleteAction")->setEnabled(writableVersion&&known&&status.hasPending);
     findChild<QAction *>("revisionCancelAction")->setEnabled(writableVersion&&known&&status.hasSession&&!status.hasPending);
 }
