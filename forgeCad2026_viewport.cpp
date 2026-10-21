@@ -177,7 +177,7 @@ CadViewport::~CadViewport() {
     glassCompositor_.clearResources();
     msaaBuffer_.reset();
     resolveBuffer_.reset();
-    pickingBuffer_.reset();
+    gpuPicker_.clearResources();
     doneCurrent();
 }
 
@@ -4345,7 +4345,7 @@ void CadViewport::initializeGL() {
         overlayRenderer_.clear();
         msaaBuffer_.reset();
         resolveBuffer_.reset();
-        pickingBuffer_.reset();
+        gpuPicker_.clearResources();
         doneCurrent();
     }, Qt::DirectConnection);
     const QString renderer = QString::fromLatin1(reinterpret_cast<const char *>(glGetString(GL_RENDERER)));
@@ -8835,34 +8835,7 @@ int CadViewport::gpuPickBody(const QPoint &position) const {
     self->makeCurrent();
     const qreal ratio = devicePixelRatioF();
     const QSize pixels(qMax(1, qRound(width() * ratio)), qMax(1, qRound(height() * ratio)));
-    if (!pickingBuffer_ || pickingBuffer_->size() != pixels) {
-        QOpenGLFramebufferObjectFormat format;
-        format.setAttachment(QOpenGLFramebufferObject::CombinedDepthStencil);
-        format.setInternalTextureFormat(GL_RGBA8);
-        pickingBuffer_ = std::make_unique<QOpenGLFramebufferObject>(pixels, format);
-        pickingBufferSerial_ = std::numeric_limits<quint64>::max();
-    }
-    if (!pickingBuffer_ || !pickingBuffer_->isValid()) {
-        self->doneCurrent();
-        return -2;
-    }
-    if (pickingBufferSerial_ != renderedFrameSerial_) {
-        GLint viewport[4] = {};
-        GLfloat clearColor[4] = {};
-        self->glGetIntegerv(GL_VIEWPORT, viewport);
-        self->glGetFloatv(GL_COLOR_CLEAR_VALUE, clearColor);
-        pickingBuffer_->bind();
-        self->glViewport(0, 0, pixels.width(), pixels.height());
-        self->glDisable(GL_BLEND);
-        self->glDisable(GL_DITHER);
-        self->glDisable(GL_MULTISAMPLE);
-        self->glDisable(GL_CULL_FACE);
-        self->glEnable(GL_DEPTH_TEST);
-        self->glDepthMask(GL_TRUE);
-        self->glDepthFunc(GL_LEQUAL);
-        QOpenGLContext::currentContext()->functions()->glUseProgram(0);
-        self->glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
-        self->glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+    const int index = gpuPicker_.pick(position, pixels, ratio, renderedFrameSerial_, [this] {
         displayCache_.setMatrices(sceneProjectionMatrix(), sceneModelViewMatrix());
         for (int index = 0; index < extrusions_.size(); ++index) {
             const ExtrusionObject &body = extrusions_.at(index);
@@ -8875,24 +8848,9 @@ int CadViewport::gpuPickBody(const QPoint &position) const {
                 displayCache_.pickingInstancedFaces(*body.display.instancedBase, body.display.instanceTransforms, identifier);
             else displayCache_.pickingFaces(body.display, identifier);
         }
-        self->glFlush();
-        pickingBufferSerial_ = renderedFrameSerial_;
-        self->glEnable(GL_DITHER);
-        self->glEnable(GL_MULTISAMPLE);
-        self->glClearColor(clearColor[0], clearColor[1], clearColor[2], clearColor[3]);
-        self->glViewport(viewport[0], viewport[1], viewport[2], viewport[3]);
-    } else {
-        pickingBuffer_->bind();
-    }
-    const int x = qBound(0, qRound(position.x() * ratio), pixels.width() - 1);
-    const int y = qBound(0, pixels.height() - 1 - qRound(position.y() * ratio), pixels.height() - 1);
-    GLubyte color[4] = {};
-    self->glReadPixels(x, y, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, color);
-    pickingBuffer_->release();
+    });
     self->doneCurrent();
-    const unsigned id = unsigned(color[0]) | (unsigned(color[1]) << 8) | (unsigned(color[2]) << 16);
-    const int index = int(id) - 1;
-    return index >= 0 && index < extrusions_.size() ? index : -1;
+    return index >= 0 && index < extrusions_.size() ? index : index == -2 ? -2 : -1;
 }
 
 SceneSelection CadViewport::pickSceneObject(const QPoint &position, bool exact ) const {

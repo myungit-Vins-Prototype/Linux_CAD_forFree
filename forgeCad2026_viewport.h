@@ -4,6 +4,7 @@
 #include "forgeCad2026_gui_common.h"
 #include "forgeCad2026_camera.h"
 #include "forgeCad2026_glass_compositor.h"
+#include "forgeCad2026_gpu_picker.h"
 #include "cad_constraints.h"
 #include "cad_curve_solver.h"
 #include "cad_display_cache.h"
@@ -1797,8 +1798,7 @@ private:
     double axisLength_ = kDefaultAxisLength;
     mutable ForgeCad::DisplayCache displayCache_;
     ForgeCad::OverlayRenderer overlayRenderer_;
-    mutable std::unique_ptr<QOpenGLFramebufferObject> pickingBuffer_;
-    mutable quint64 pickingBufferSerial_ = std::numeric_limits<quint64>::max();
+    mutable ForgeCad::Gui::GpuPicker gpuPicker_;
     mutable QVector<RaySelectionCache> raySelectionCache_;
     std::vector<std::weak_ptr<const ForgeCad::Kernel::Body>> warmedBodies_;  // B-rep con le cache di selezione gia' preparate
     mutable QVector<ProjectedEdges> projectedEdges_;

@@ -49,6 +49,8 @@ add_executable(forgecad
     forgeCad2026_camera.h
     forgeCad2026_glass_compositor.cpp
     forgeCad2026_glass_compositor.h
+    forgeCad2026_gpu_picker.cpp
+    forgeCad2026_gpu_picker.h
     forgeCad2026_gui_common.cpp
     forgeCad2026_gui_common.h
     forgeCad2026_storyboard.cpp
