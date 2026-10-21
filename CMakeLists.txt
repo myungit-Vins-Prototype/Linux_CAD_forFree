@@ -47,6 +47,15 @@ add_executable(forgecad
     forgeCad2026_viewport.h
     forgeCad2026_gui_common.cpp
     forgeCad2026_gui_common.h
+    forgeCad2026_storyboard.cpp
+    forgeCad2026_storyboard.h
+    forgeCad2026_dialogs.h
+    forgeCad2026_dialogs_common.cpp
+    forgeCad2026_dialogs_common.h
+    forgeCad2026_dialogs_solids.cpp
+    forgeCad2026_dialogs_surfaces.cpp
+    forgeCad2026_dialogs_sketch.cpp
+    forgeCad2026_dialogs_analysis.cpp
     cad_types.h
     cad_shape_analysis.h
     cad_shape_analysis.cpp
@@ -250,9 +259,8 @@ option(FORGECAD_BUILD_VIEW_TESTS "Compila i test delle interazioni del viewport"
 if(FORGECAD_BUILD_VIEW_TESTS)
     set(FORGECAD_EXAMPLE_DIR "${PROJECT_SOURCE_DIR}/File_Esempio" CACHE PATH "Cartella dei documenti di esempio per i test GUI")
     get_target_property(FORGECAD_VIEW_TEST_SOURCES forgecad SOURCES)
-    # Il viewport e gli helper sono compilati separatamente anche nel runner.
-    # Il solo .cpp della finestra resta incluso dai test di dialoghi/storyboard.
-    list(REMOVE_ITEM FORGECAD_VIEW_TEST_SOURCES forgeCad2026.cpp forgeCad2026_gui.cpp ${FORGE_CAD_CUDA_SOURCE} ${FORGECAD_HASH_HEADER})
+    # Finestra, viewport, storyboard e dialoghi sono unita' separate anche nei test.
+    list(REMOVE_ITEM FORGECAD_VIEW_TEST_SOURCES forgeCad2026.cpp ${FORGE_CAD_CUDA_SOURCE} ${FORGECAD_HASH_HEADER})
     list(REMOVE_ITEM FORGECAD_VIEW_TEST_SOURCES cad_macos_menu.h cad_macos_menu.mm)
     add_executable(forgecad_view_tests tests/test_viewport.cpp tests/test_declared_history_cache.h tests/test_boolean_history.h tests/test_blend_history.h tests/test_extrusion_history.h tests/test_revolution_history.h tests/test_all_history.h tests/test_native_revisions.h tests/test_workspace_revisions.h tests/test_linked_drawing.h tests/test_drawing_workflow.h tests/test_drawing_revisions.h tests/test_projected_drawing_file.h tests/test_drawing_mouse.h tests/test_drawing_section_model.h cuda_support_cpu.cpp ${FORGECAD_VIEW_TEST_SOURCES})
     add_dependencies(forgecad_view_tests forgecad) # genera l'impronta una sola volta, prima dei test

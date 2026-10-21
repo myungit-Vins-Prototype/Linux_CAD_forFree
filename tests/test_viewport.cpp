@@ -1,8 +1,38 @@
-// CadViewport e' dichiarato nell'header interno e compilato separatamente.
+// I componenti GUI sono dichiarati negli header e compilati separatamente.
+#include "../forgeCad2026_gui.h"
 #include "../forgeCad2026_viewport.h"
-// I test di dialoghi, pannelli e storyboard usano ancora i dettagli della
-// finestra. Questa inclusione resta finche' saranno estratti anche quei componenti.
-#include "../forgeCad2026_gui.cpp"
+#include "../forgeCad2026_storyboard.h"
+#include "../forgeCad2026_dialogs.h"
+#include "../cad_expression.h"
+#include "../cad_features.h"
+#include "../cad_feature_build.h"
+#include "../cad_feature_dependencies.h"
+#include "../cad_datum.h"
+#include "../cad_forge.h"
+#include "../cad_pattern.h"
+#include "../cad_extrude.h"
+#include "../cad_sketch_refs.h"
+#include "../cad_history_graph.h"
+#include "../cad_model_history.h"
+#include "../cad_topology_ref.h"
+#include "../cad_icons.h"
+#include "../cad_menu.h"
+#include "../cad_kernel.h"
+#include "../cad_curve_extract.h"
+#include "../cad_measure.h"
+#include "../toolbar_editor.h"
+#include <QOpenGLContext>
+#include <QOpenGLFunctions>
+#include <QOpenGLShaderProgram>
+
+using ForgeCad::Gui::uiFont;
+using ForgeCad::Gui::pointLength;
+using ForgeCad::Gui::pointDistance;
+using ForgeCad::Gui::featureIconName;
+using ForgeCad::Gui::kSelectionColor;
+using ForgeCad::Gui::kHoverColor;
+using ForgeCad::Gui::runUntilApplied;
+using ForgeCad::Gui::wrappedNote;
 #include "fk_blend.h"
 #include "fk_blend_surface.h"
 #include "fk_body_check.h"

@@ -347,6 +347,9 @@ The same option can be added to the macOS configuration while retaining the Home
 | `forgeCad2026_gui.h/.cpp` | Main window, menus, commands, and panels |
 | `forgeCad2026_viewport.h/.cpp` | Separate declarations and implementation of the 3D viewport |
 | `forgeCad2026_gui_common.h/.cpp` | GUI helpers shared by the window and viewport |
+| `forgeCad2026_storyboard.h/.cpp` | Storyboard tree, badges, and history cursor |
+| `forgeCad2026_dialogs.h`, `forgeCad2026_dialogs_*.cpp` | Operation dialogs grouped into solids, surfaces, sketches/curves, and analysis |
+| `forgeCad2026_dialogs_common.h/.cpp` | Shared panels, previews, and reference pickers |
 | `cad_*.cpp`, `cad_*.h` | Sketches, constraints, features, history, documents, analysis, and file exchange |
 | `kernel/` | Geometry kernel, B-rep, curves/surfaces, and numerical tests |
 | `tests/` | Application and interaction tests |
