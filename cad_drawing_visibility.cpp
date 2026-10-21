@@ -26,6 +26,38 @@ double cross2(Vec3 a,Vec3 b){return a.x()*b.y()-a.y()*b.x();}
 struct DisplaySource {quint64 featureId=0;std::vector<FaceId> faces;const Surface *surface=nullptr;double extraError=0;};
 struct Triangle {Vec3 a,b,c;Bounds bounds;double area=0,bias=0,selfBias=0,depthScale=0;quint64 featureId=0;FaceId face;};
 struct Node {Bounds bounds;std::size_t start=0,end=0;int left=-1,right=-1;};
+// Forma parametrica nello spazio della vista: conserva anche la profondita'.
+struct DisplayConic {
+    Vec3 center,a,b;
+    Vec3 point(double t)const{return center+std::cos(t)*a+std::sin(t)*b;}
+    Bounds bounds(Interval range)const{Bounds box;box.add(point(range.lo));box.add(point(range.hi));
+        for(int axis:{0,1}){const double phase=std::atan2(b[axis],a[axis]),t=phase+kPi*std::ceil((range.lo-phase)/kPi);if(t<range.hi)box.add(point(t));}return box;}
+};
+bool conicForm(const Curve<3> &curve,DisplayConic &out){
+    switch(curve.type()){
+    case CurveType::Circle:{const auto &c=static_cast<const Circle<3> &>(curve);out={c.center(),c.radius()*c.xAxis(),c.radius()*c.yAxis()};return true;}
+    case CurveType::Ellipse:{const auto &c=static_cast<const Ellipse<3> &>(curve);out={c.center(),c.xRadius()*c.xAxis(),c.yRadius()*c.yAxis()};return true;}
+    case CurveType::Trimmed:return conicForm(*static_cast<const TrimmedCurve<3> &>(curve).basis(),out);
+    case CurveType::Transformed:{const auto &c=static_cast<const TransformedCurve &>(curve);if(!conicForm(*c.basis(),out))return false;
+        out={c.transform().applyToPoint(out.center),c.transform().applyToVector(out.a),c.transform().applyToVector(out.b)};return true;}
+    default:return false;
+    }
+}
+// Zeri di c + a*cos(t) + b*sin(t) su un arco grafico (< pi):
+// conserva anche due tagli ravvicinati alla tangenza.
+void conicCuts(double c,double a,double b,Interval range,std::vector<double> &cuts){
+    const double radius=std::hypot(a,b);if(radius==0||std::abs(c)>radius)return;
+    const double phase=std::atan2(b,a),offset=std::acos(std::clamp(-c/radius,-1.,1.));
+    for(double root:{phase-offset,phase+offset}){const double t=root+kTwoPi*std::ceil((range.lo-root)/kTwoPi);if(t>range.lo&&t<range.hi)cuts.push_back(t);}
+}
+struct ConicHalfspace {
+    double c,a,b;
+    double value(double t)const{return c+a*std::cos(t)+b*std::sin(t);}
+};
+template<class Function> ConicHalfspace conicHalfspace(const DisplayConic &curve,Function value){
+    const double c=value(curve.center);return {c,value(curve.center+curve.a)-c,value(curve.center+curve.b)-c};
+}
+double conicDisplayStep(double radius){return std::min(.08,std::sqrt(.008/std::max(radius,1e-12)));}
 std::vector<Vec3> clipPolygon(const std::vector<Vec3> &input,int axis,double sign){
     std::vector<Vec3> result;if(input.empty())return result;auto a=input.back();double fa=sign*a[axis];
     for(const auto b:input){const double fb=sign*b[axis];if((fa<0)!=(fb<0))result.push_back(a+(b-a)*(fa/(fa-fb)));if(fb>=0)result.push_back(b);a=b;fa=fb;}return result;
@@ -72,6 +104,21 @@ class Occlusion {
     }
     void query(int id,const Bounds &box,Vec3 a,Vec3 b,const DisplaySource &source,std::vector<Interval> &hits)const{const auto &node=nodes_[id];if(!node.bounds.overlaps(box))return;if(node.left>=0){query(node.left,box,a,b,source,hits);query(node.right,box,a,b,source,hits);return;}
         for(auto i=node.start;i<node.end;++i){const auto &triangle=triangles_[order_[i]];if(!triangle.bounds.overlaps(box))continue;double lo,hi;if(covered(triangle,a,b,source,lo,hi))hits.push_back({lo,hi});}}
+    void queryConic(int id,const Bounds &box,const DisplayConic &curve,Interval range,const DisplaySource &source,std::vector<Interval> &hits)const{
+        const auto &node=nodes_[id];if(!node.bounds.overlaps(box))return;
+        if(node.left>=0){queryConic(node.left,box,curve,range,source,hits);queryConic(node.right,box,curve,range,source,hits);return;}
+        for(auto i=node.start;i<node.end;++i){const auto &t=triangles_[order_[i]];if(!t.bounds.overlaps(box))continue;cancellationPoint();
+            const double sign=t.area>0?1:-1;const Vec3 vertices[]={t.a,t.b,t.c};std::vector<ConicHalfspace> planes;
+            for(int k=0;k<3;++k){const auto p=vertices[k],edge=vertices[(k+1)%3]-p;planes.push_back(conicHalfspace(curve,[&](Vec3 q){return sign*cross2(edge,q-p);}));}
+            const bool self=t.featureId==source.featureId&&std::find(source.faces.begin(),source.faces.end(),t.face)!=source.faces.end();
+            // La conica e' valutata esattamente: resta il margine della mesh,
+            // non occorre aggiungere l'errore di una corda al punto di taglio.
+            const double bias=self?t.selfBias:t.bias;
+            planes.push_back(conicHalfspace(curve,[&](Vec3 p){const double u=cross2(t.b-p,t.c-p)/t.area,v=cross2(t.c-p,t.a-p)/t.area;return u*t.a.z()+v*t.b.z()+(1-u-v)*t.c.z()-p.z()-bias;}));
+            std::vector<double> cuts{range.lo,range.hi};for(const auto &plane:planes)conicCuts(plane.c,plane.a,plane.b,range,cuts);std::sort(cuts.begin(),cuts.end());
+            for(std::size_t k=1;k<cuts.size();++k){const double mid=cuts[k-1]+.5*(cuts[k]-cuts[k-1]);if(cuts[k]>cuts[k-1]&&std::all_of(planes.begin(),planes.end(),[&](const auto &plane){return plane.value(mid)>=0;}))hits.push_back({cuts[k-1],cuts[k]});}
+        }
+    }
 public:
     Occlusion(const DrawingModelSnapshot &model,const DrawingView &view,DrawingSilhouetteCache &cache,QStringList &warnings,const QPainterPath *material){QSet<quint64> ids;
         if(view.sectionStyle!=DrawingSectionStyle::Removed){need(material,"Materiale della sezione non preparato per la visibilita'.");capBias_=4*view.tolerance;cap_=QTransform::fromScale(1/view.scale,-1/view.scale).map(*material);capLoops_=cap_.toSubpathPolygons();}
@@ -108,6 +155,17 @@ public:
     }
     std::vector<Interval> hidden(Vec3 a,Vec3 b,const DisplaySource &source)const{std::vector<Interval> hits=capHidden(a,b);Bounds box;box.add(a);box.add(b);if(!nodes_.empty())query(0,box,a,b,source,hits);
         std::sort(hits.begin(),hits.end(),[](const auto &a,const auto &b){return a.lo<b.lo;});std::vector<Interval> merged;for(const auto &hit:hits){if(!merged.empty()&&hit.lo<=merged.back().hi+1e-10)merged.back().hi=std::max(merged.back().hi,hit.hi);else merged.push_back(hit);}return merged;}
+    std::vector<Interval> hidden(const DisplayConic &curve,Interval range,const DisplaySource &source)const{
+        std::vector<Interval> hits;if(!nodes_.empty())queryConic(0,curve.bounds(range),curve,range,source,hits);
+        if(!cap_.isEmpty()){
+            std::vector<double> cuts{range.lo,range.hi};conicCuts(curve.center.z()+capBias_,curve.a.z(),curve.b.z(),range,cuts);
+            for(const auto &loop:capLoops_)for(int i=1;i<loop.size();++i){const auto p=loop[i-1],edge=loop[i]-p;
+                const auto plane=conicHalfspace(curve,[&](Vec3 q){return edge.x()*(q.y()-p.y())-edge.y()*(q.x()-p.x());});conicCuts(plane.c,plane.a,plane.b,range,cuts);}
+            std::sort(cuts.begin(),cuts.end());for(std::size_t i=1;i<cuts.size();++i){const auto p=curve.point(cuts[i-1]+.5*(cuts[i]-cuts[i-1]));if(p.z()<-capBias_&&cap_.contains(QPointF(p.x(),p.y())))hits.push_back({cuts[i-1],cuts[i]});}
+        }
+        std::sort(hits.begin(),hits.end(),[](auto a,auto b){return a.lo<b.lo;});std::vector<Interval> merged;
+        for(auto hit:hits){if(!merged.empty()&&hit.lo<=merged.back().hi+1e-12)merged.back().hi=std::max(merged.back().hi,hit.hi);else merged.push_back(hit);}return merged;
+    }
 };
 void renderShadedMesh(const DrawingModelSnapshot &model,const DrawingView &view,DrawingSilhouetteCache &cache,QImage &image,QRectF &bounds){
     struct RenderTriangle{Vec3 p[3],n[3];QRgb color;};std::vector<RenderTriangle> triangles;QRectF box;bool first=true;
@@ -134,6 +192,23 @@ void renderShadedMesh(const DrawingModelSnapshot &model,const DrawingView &view,
 }
 
 void append(QPainterPath &path,QPointF a,QPointF b){if(QLineF(a,b).length()<1e-10)return;if(path.isEmpty()||QLineF(path.currentPosition(),a).length()>1e-8)path.moveTo(a);path.lineTo(b);}
+DrawingVisiblePath displayConic(const DisplayConic &world,Interval range,const Curve<3> &geometry,const DrawingView &view,const Occlusion *index,const DisplaySource &source){
+    DisplayConic curve{view.plane.toLocal(world.center),view.plane.directionToLocal(world.a),view.plane.directionToLocal(world.b)};DrawingVisiblePath result;
+    const double step=conicDisplayStep((norm(curve.a)+norm(curve.b))*view.scale);
+    const auto paper=[&](double t){const auto p=curve.point(t);const QPointF q(p.x()*view.scale,-p.y()*view.scale);need(std::isfinite(q.x())&&std::isfinite(q.y()),"Conica non finita sul foglio.");return q;};
+    std::size_t samples=0;
+    const auto draw=[&](QPainterPath &path,Interval part){if(part.hi<=part.lo)return;const double count=std::max(1.,std::ceil(part.length()/step));
+        need(std::isfinite(count)&&count<=200000&&samples+count<=200000,"Troppi campioni per la conica della tavola.");samples+=std::size_t(count);
+        auto previous=paper(part.lo);for(int i=1;i<=int(count);++i){const auto p=paper(part.lo+part.length()*i/count);append(path,previous,p);previous=p;}};
+    // I tagli del piano di sezione sono risolti sulla curva originale, prima
+    // della suddivisione grafica: non si interpolano punti sulle corde.
+    const auto retained=index?drawingRetainedCurveRanges(view,geometry,range):std::vector<Interval>{range};
+    for(auto part:retained){const double count=std::max(1.,std::ceil(part.length()/step));need(std::isfinite(count)&&count<=200000,"Troppi intervalli per la conica della tavola.");
+        for(int i=0;i<int(count);++i){cancellationPoint();const Interval arc{part.lo+part.length()*i/count,part.lo+part.length()*(i+1)/count};
+            const auto hidden=index?index->hidden(curve,arc,source):std::vector<Interval>{};double start=arc.lo;
+            for(auto hit:hidden){draw(result.visible,{start,hit.lo});draw(result.hidden,hit);start=hit.hi;}draw(result.visible,{start,arc.hi});}}
+    return result;
+}
 DrawingVisiblePath display(const std::vector<Vec3> &points,const DrawingView &view,const Occlusion *index,const DisplaySource &source={},const std::function<bool(Vec3,Vec3)> &omit={}){DrawingVisiblePath result;auto displayed=source;
     const auto paper=[&](Vec3 p){const QPointF point(p.x()*view.scale,-p.y()*view.scale);need(std::isfinite(point.x())&&std::isfinite(point.y()),"Tratto non finito sul foglio.");return point;};
     for(std::size_t i=1;i<points.size();++i){cancellationPoint();if(omit&&omit(points[i-1],points[i]))continue;const auto a=view.plane.toLocal(points[i-1]),b=view.plane.toLocal(points[i]);need(isFinite(a)&&isFinite(b),"Curva non finita nella visibilita'.");
@@ -182,8 +257,8 @@ void consolidateConicPaths(const DrawingView &view,const std::vector<DrawingCurv
     for(auto &group:groups){const auto &f=group.form;const double determinant=f.firstAxis.x()*f.secondAxis.y()-f.firstAxis.y()*f.secondAxis.x();if(std::abs(determinant)<1e-20)continue;
         const auto angle=[&](QPointF p){const Vec2 d(p.x()/view.scale-f.center.x(),-p.y()/view.scale-f.center.y());double t=std::atan2((f.firstAxis.x()*d.y()-f.firstAxis.y()*d.x())/determinant,(d.x()*f.secondAxis.y()-d.y()*f.secondAxis.x())/determinant);if(t<0)t+=kTwoPi;return t;};
         const auto spans=[&](const QPainterPath &path){Intervals result;for(int i=1;i<path.elementCount();++i){const auto e=path.elementAt(i),previous=path.elementAt(i-1);if(e.type!=QPainterPath::LineToElement)continue;const double a=angle({previous.x,previous.y}),b=angle({e.x,e.y}),delta=std::remainder(b-a,kTwoPi);double low=std::min(a,a+delta),high=std::max(a,a+delta);if(low<0){result.push_back({low+kTwoPi,kTwoPi});low=0;}if(high>kTwoPi){result.push_back({0,high-kTwoPi});high=kTwoPi;}result.push_back({low,high});}return unite(std::move(result));};
-        const double radius=std::max(norm(f.firstAxis),norm(f.secondAxis))*view.scale,step=std::clamp(std::sqrt(.008/std::max(radius,1e-12)),.001,.08);
-        const auto path=[&](const Intervals &spans){QPainterPath result;for(auto span:spans){const int count=std::max(1,int(std::ceil(span.length()/step)));for(int i=0;i<=count;++i){const double t=span.lo+span.length()*i/count;const auto p=f.center+std::cos(t)*f.firstAxis+std::sin(t)*f.secondAxis;const QPointF q(p.x()*view.scale,-p.y()*view.scale);if(i)result.lineTo(q);else result.moveTo(q);}}return result;};
+        const double radius=(norm(f.firstAxis)+norm(f.secondAxis))*view.scale,step=conicDisplayStep(radius);
+        const auto path=[&](const Intervals &spans){QPainterPath result;std::size_t total=0;for(auto span:spans){const double size=std::max(1.,std::ceil(span.length()/step));need(std::isfinite(size)&&size<=200000&&total+size<=200000,"Troppi campioni per la conica consolidata.");total+=std::size_t(size);const int count=int(size);for(int i=0;i<=count;++i){cancellationPoint();const double t=span.lo+span.length()*i/count;const auto p=f.center+std::cos(t)*f.firstAxis+std::sin(t)*f.secondAxis;const QPointF q(p.x()*view.scale,-p.y()*view.scale);if(i)result.lineTo(q);else result.moveTo(q);}}return result;};
         std::stable_sort(group.entries.begin(),group.entries.end(),[&](auto a,auto b){return paths[a].visible.length()>paths[b].visible.length();});Intervals covered;
         for(auto i:group.entries){auto intervals=spans(paths[i].visible);paths[i].visible=path(subtract(intervals,covered));covered.insert(covered.end(),intervals.begin(),intervals.end());covered=unite(std::move(covered));}
         for(auto i:group.entries){auto intervals=spans(paths[i].hidden);paths[i].hidden=path(subtract(intervals,covered));covered.insert(covered.end(),intervals.begin(),intervals.end());covered=unite(std::move(covered));}
@@ -207,6 +282,7 @@ QString drawingViewVisibility(const DrawingModelSnapshot &model,const DrawingVie
                     for(auto loop:source->body->face(curve.sourceFace).loops)for(auto fin:source->body->loopFins(loop)){const auto &edge=source->body->edge(source->body->fin(fin).edge);for(auto side:{edge.forward,edge.backward})if(side.valid()){const auto face=source->body->finFace(side);if(std::find(origin.faces.begin(),origin.faces.end(),face)==origin.faces.end())origin.faces.push_back(face);}}
                 }
             }
+            DisplayConic conic;if(conicForm(*geometry,conic)){next.curves.push_back(displayConic(conic,range,*geometry,view,curve.kind!=DrawingCurveKind::Section?index.get():nullptr,origin));continue;}
             const auto parameters=sampleCurve(*geometry,range,options);need(parameters.size()<=200000,"Troppi campioni per la visibilita'.");std::vector<Vec3> points;points.reserve(parameters.size());for(auto parameter:parameters)points.push_back(geometry->point(parameter));
             next.curves.push_back(display(points,view,curve.kind!=DrawingCurveKind::Section?index.get():nullptr,origin));}
         if(drawingHasProjection(view)){consolidateLinearPaths(view,curves,next.curves);consolidateConicPaths(view,curves,next.curves);}

@@ -6,7 +6,8 @@
 #include <QImage>
 #include <QRectF>
 namespace ForgeCad {
-// Sola presentazione: classificazione sulla mesh, riferimenti delle quote invariati.
+// Sola presentazione: classificazione sulla mesh, con tagli parametrici esatti
+// di cerchi/ellissi contro i triangoli; riferimenti delle quote invariati.
 // Coordinate dei tracciati in mm sul foglio, relative all'origine della vista.
 struct DrawingVisiblePath {QPainterPath visible,hidden;};
 struct DrawingViewVisibility {

@@ -11,6 +11,8 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QJsonArray>
+#include <QTemporaryDir>
+#include <QFile>
 #include <iostream>
 #include <stdexcept>
 using namespace ForgeCad;using namespace ForgeCad::Kernel;
@@ -18,7 +20,7 @@ namespace {
 void require(bool value,const char *why){if(!value)throw std::runtime_error(why);}
 void ok(const QString &error){if(!error.isEmpty())throw std::runtime_error(error.toStdString());}
 class Counted final:public Curve<3>{CurvePtr<3> basis_;std::shared_ptr<int> count_;public:Counted(CurvePtr<3> basis,std::shared_ptr<int> count):basis_(std::move(basis)),count_(std::move(count)){}CurveType type()const override{return CurveType::Other;}Interval domain()const override{return basis_->domain();}void evaluate(double t,int order,Vec3 *out)const override{++*count_;basis_->evaluate(t,order,out);}};
-DrawingSourceBody source(quint64 id,Body body,std::shared_ptr<int> count){auto p=std::make_shared<Body>(std::move(body));for(auto edge:p->edges())p->edge(edge).curve=std::make_shared<Counted>(p->edge(edge).curve,count);return {id,p,std::make_shared<ElementNames>(propagateNames(*p,makeHistory({},*p),{},"hidden"))};}
+DrawingSourceBody source(quint64 id,Body body,std::shared_ptr<int> count){auto p=std::make_shared<Body>(std::move(body));if(count)for(auto edge:p->edges())p->edge(edge).curve=std::make_shared<Counted>(p->edge(edge).curve,count);return {id,p,std::make_shared<ElementNames>(propagateNames(*p,makeHistory({},*p),{},"hidden"))};}
 QByteArray encoded(const DrawingSheetEditor &e){QByteArray b;ok(encodeDrawingSheet(e.sheet(),b));return b;}
 void select(DrawingSheetEditor &editor,const QUuid &id){auto *tree=editor.findChild<QTreeWidget *>("drawingTree");for(QTreeWidgetItemIterator it(tree);*it;++it)if((*it)->data(0,Qt::UserRole+1).toUuid()==id){tree->setCurrentItem(*it);return;}throw std::runtime_error("vista da selezionare");}
 int hidden(DrawingSheetEditor &editor,const QUuid &id){int count=0;for(auto *item:editor.canvas()->scene()->items())if(item->data(1).toUuid()==id&&item->data(4).toBool())++count;return count;}
@@ -46,6 +48,16 @@ int main(int argc,char **argv){QApplication app(argc,argv);try{
  // La ricomposizione visibile+nascosto conserva i tratti aperti nell'anteprima.
  {auto partialModel=model;partialModel.snapshot.bodies={source(1,makeCylinder(Frame3(),5,1),count),source(2,makeBox(Frame3(Vec3(-1,-6,3),Vec3(0,0,1),Vec3(1,0,0)),2,12,1),count)};DrawingSheetEditor partial(sheet,partialModel);DrawingView split;split.kind=DrawingViewKind::ProjectedEdges;split.scale=3;DrawingViewLayout layout{split.id,"Parziale",QPointF(100,100),{1,2},true};
   std::vector<DrawingCurve> pieces;ok(projectDrawingEdges(partialModel.snapshot,split,pieces));int index=-1;for(std::size_t i=0;i<pieces.size();++i)if(pieces[i].featureId==1){const auto &edge=partialModel.snapshot.bodies[0].body->edge(pieces[i].sourceEdge);const auto point=edge.curve->point((edge.range.lo+edge.range.hi)/2);if(std::abs(point.z()-1)<1e-8)index=int(i);}require(index>=0,"bordo parzialmente coperto da verificare");ok(partial.beginViewPlacement(split,layout));QGraphicsItemGroup *group=nullptr;for(auto *item:partial.canvas()->scene()->items())if(item->data(0).toString()=="viewPreview")group=qgraphicsitem_cast<QGraphicsItemGroup *>(item);require(group,"anteprima parziale");auto *path=qgraphicsitem_cast<QGraphicsPathItem *>(group->childItems().at(index));require(path&&!path->path().isEmpty()&&std::abs(path->path().length()-30*kPi)<.3,"tratti aperti visibili e nascosti concatenati senza unione di aree");}
+ // Il percorso editor/PDF conserva i punti di taglio delle coniche esatte.
+ {auto preciseModel=model;preciseModel.snapshot.bodies={source(1,makeCylinder(Frame3(),5,1),{}),source(2,makeBox(Frame3(Vec3(4.999,-6,3),Vec3(0,0,1),Vec3(1,0,0)),2,12,1),{})};DrawingSheetEditor precise(sheet,preciseModel);precise.resize(1200,820);DrawingView v;v.kind=DrawingViewKind::ProjectedEdges;v.scale=8;const QPointF origin(100,100);
+  ok(precise.insertView(v,{v.id,"Transizioni esatte",origin,{1,2},true}));bool checked=false;
+  for(auto *item:precise.canvas()->scene()->items())if(item->data(1).toUuid()==v.id&&item->data(0).toString()=="projection"&&item->data(4).toBool()){
+   const int index=item->data(2).toInt();if(precise.curves(v.id).at(index).featureId!=1)continue;const auto *path=qgraphicsitem_cast<QGraphicsPathItem *>(item);require(path,"tracciato nascosto vettoriale");const auto box=path->path().boundingRect().translated(-origin);const double dy=std::sqrt(25-4.999*4.999)*v.scale;
+   require(std::abs(box.left()-4.999*v.scale)<1e-7&&std::abs(box.top()+dy)<1e-7&&std::abs(box.bottom()-dy)<1e-7,"editor conserva i tagli analitici del tratto nascosto");checked=true;}
+  require(checked,"copertura sottile raggiunge l'editor");const auto before=encoded(precise);ok(precise.setHiddenLinesVisible(v.id,false));ok(precise.undo());require(encoded(precise)==before,"Undo della presentazione conserva la tavola precisa");
+  DrawingSheet decoded;ok(decodeDrawingSheet(before,decoded));DrawingSheetEditor reread(decoded,preciseModel);require(encoded(reread)==before,"riapertura senza nuovo schema o modifica dei riferimenti");
+  QTemporaryDir temp;const auto output=qEnvironmentVariable("FORGECAD_HLR_QA_OUTPUT",temp.path());DrawingPdfReport report;precise.setReadOnly(true);ok(precise.exportPdf(output+"/coniche.pdf",report));QFile pdf(output+"/coniche.pdf");require(pdf.open(QIODevice::ReadOnly)&&pdf.read(5)=="%PDF-"&&encoded(precise)==before,"PDF dalla stessa scena vettoriale, anche in sola lettura");
+  if(qEnvironmentVariableIsSet("FORGECAD_HLR_QA_OUTPUT")){precise.show();QApplication::processEvents();precise.fitSheet();require(precise.grab().save(output+"/editor.png"),"anteprima precisione coniche");}}
  select(editor,other.id);require(toggle->isChecked(),"selezione altra vista aggiorna il pulsante");const auto preview=qEnvironmentVariable("FORGECAD_HIDDEN_LINES_PREVIEW");if(!preview.isEmpty())require(editor.grab().save(preview),"anteprima linee nascoste");
  std::cout<<"PASS default hidden lines, selected-view toggle, exact dimensions, snap exclusion, cached rendering, undo and persistence\n";
 }catch(const std::exception &e){std::cerr<<e.what()<<'\n';return 1;}}
