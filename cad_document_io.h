@@ -53,7 +53,7 @@ struct DocumentReadLimits {
 // Codec senza accesso al filesystem, usato anche dall'archivio revisioni.
 // La codifica puo' rappresentare uno snapshot archiviato; il normale Salva
 // su file richiede invece una copia di lavoro.
-QString encodeDocument(const DocumentState &state, QByteArray &bytes, bool bodies = true);
+QString encodeDocument(const DocumentState &state, QByteArray &bytes, bool bodies = true, int compressionLevel = 9);
 QString decodeDocument(const QByteArray &bytes, DocumentState &state, bool previewCache = false);
 QString decodeDocument(const QByteArray &bytes, DocumentState &state, const DocumentReadLimits &limits,
                        bool previewCache = false);

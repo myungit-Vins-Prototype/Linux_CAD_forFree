@@ -64,6 +64,8 @@ add_executable(forgecad
     cad_expression.cpp
     cad_document_io.h
     cad_document_io.cpp
+    cad_document_recovery.h
+    cad_document_recovery.cpp
     cad_document_read.h
     cad_document_read.cpp
     cad_drawing.h
@@ -305,6 +307,14 @@ if(FORGECAD_BUILD_VIEW_TESTS)
     set_tests_properties(forgecad_curve_extraction_tests PROPERTIES TIMEOUT 60)
     forgecad_add_view_test(forgecad_handle_constraints_tests --handle-constraints)
     set_tests_properties(forgecad_handle_constraints_tests PROPERTIES TIMEOUT 30)
+    forgecad_add_view_test(forgecad_sketch_editing_tests --sketch-editing)
+    set_tests_properties(forgecad_sketch_editing_tests PROPERTIES TIMEOUT 60)
+    forgecad_add_view_test(forgecad_helix_start_angle_tests --helix-start-angle)
+    set_tests_properties(forgecad_helix_start_angle_tests PROPERTIES TIMEOUT 60)
+    forgecad_add_view_test(forgecad_sketch_menu_cancel_tests --sketch-menu-cancel)
+    set_tests_properties(forgecad_sketch_menu_cancel_tests PROPERTIES TIMEOUT 60)
+    forgecad_add_view_test(forgecad_document_recovery_tests --document-recovery)
+    set_tests_properties(forgecad_document_recovery_tests PROPERTIES TIMEOUT 90)
     forgecad_add_view_test(forgecad_dense_fixed_sketch_tests --dense-fixed-sketch)
     set_tests_properties(forgecad_dense_fixed_sketch_tests PROPERTIES TIMEOUT 15)
     forgecad_add_view_test(forgecad_blend_preview_reload_tests --blend-preview-reload)

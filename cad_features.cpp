@@ -60,7 +60,9 @@ bool helixBaseFromSketch(const SketchObject &sketch, int curve, HelixBase &base,
         setError(error, QStringLiteral("Il cerchio della base ha raggio nullo."));
         return false;
     }
-    base.xRef = (point - center) / base.radius;
+    // Il punto sulla circonferenza definisce soltanto il raggio. Lo zero
+    // angolare segue gli assi visibili dello schizzo, anche su piani ruotati.
+    base.xRef = sketchAxes(sketch).xDir();
     return true;
 }
 
@@ -100,6 +102,9 @@ ForgeCurve helixCurve(const HelixParameters &parameters, const HelixBase &input,
     spec.spiral = parameters.spiral;
     spec.leftHanded = parameters.leftHanded;
     spec.startAngle = parameters.startAngle * kPi / 180.0;
+    // Invertire l'asse cambia il verso Y del frame dell'elica, non il
+    // quadrante iniziale scelto negli assi dello schizzo.
+    if (parameters.source == 0 && parameters.reverse) spec.startAngle = -spec.startAngle;
     try {
         return std::make_shared<const HelixCurve>(spec);
     } catch (const std::exception &failure) {

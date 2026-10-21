@@ -64,6 +64,10 @@ static QString exampleDocumentPath(const char *name) {
 #include "test_pattern_placements.h"
 class ViewportInteractionTest {
 public:
+#include "test_sketch_interaction.h"
+#include "test_helix_start_angle.h"
+#include "test_sketch_menu_cancel.h"
+#include "test_document_recovery.h"
     static void previewPerformance() {
         using namespace ForgeCad;using namespace ForgeCad::Kernel;
         const auto settle=[](CadViewport &view) {
@@ -9362,6 +9366,13 @@ int main(int argc, char **argv) {
     QTemporaryDir settings;
     QSettings::setDefaultFormat(QSettings::IniFormat);
     QSettings::setPath(QSettings::IniFormat, QSettings::UserScope, settings.path());
+    qputenv("FORGECAD_RECOVERY_DIR",settings.filePath(QStringLiteral("recovery")).toUtf8());
+    if(app.arguments().contains(QStringLiteral("--recovery-crash-worker")))return ViewportInteractionTest::recoveryCrashWorker(app.arguments().last());
+    if(app.arguments().contains(QStringLiteral("--document-recovery"))){
+        try{ViewportInteractionTest::documentRecoveryRegressions();}
+        catch(const std::exception &e){std::cerr<<e.what()<<std::endl;return 1;}
+        return 0;
+    }
     if (app.arguments().contains(QStringLiteral("--pattern-placements"))) {
         try { patternPlacementTests(); }
         catch (const std::exception &error) { std::cerr << error.what() << std::endl; return 1; }
@@ -9490,6 +9501,21 @@ int main(int argc, char **argv) {
     if (app.arguments().contains(QStringLiteral("--profile-mouse-offset"))) {
         try { ViewportInteractionTest::profileMouseOffset(app.arguments().value(app.arguments().indexOf(QStringLiteral("--profile-mouse-offset"))+1)); }
         catch(const std::exception &e) { std::cerr<<e.what()<<std::endl;return 1; }
+        return 0;
+    }
+    if(app.arguments().contains(QStringLiteral("--sketch-editing"))){
+        try{ViewportInteractionTest::sketchInteractionRegressions();}
+        catch(const std::exception &e){std::cerr<<e.what()<<std::endl;return 1;}
+        return 0;
+    }
+    if(app.arguments().contains(QStringLiteral("--helix-start-angle"))){
+        try{ViewportInteractionTest::helixStartAngleRegressions();}
+        catch(const std::exception &e){std::cerr<<e.what()<<std::endl;return 1;}
+        return 0;
+    }
+    if(app.arguments().contains(QStringLiteral("--sketch-menu-cancel"))){
+        try{ViewportInteractionTest::sketchMenuCancelRegressions();}
+        catch(const std::exception &e){std::cerr<<e.what()<<std::endl;return 1;}
         return 0;
     }
     if (app.arguments().contains(QStringLiteral("--dense-fixed-sketch"))) {

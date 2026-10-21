@@ -374,7 +374,8 @@ struct PrimitiveParameters {
 // Elica (cilindrica o conica) o spirale piana (di Archimede). La base da' asse,
 // raggio iniziale e riferimento dell'angolo:
 //  - source 0: cerchio o arco `curve` dello schizzo sketchIndex (-1: il primo):
-//    asse = normale dello schizzo, angolo 0 verso il punto del cerchio;
+//    asse = normale dello schizzo, angolo 0 verso X e 90 verso Y dello
+//    schizzo, indipendentemente dal punto che definisce il raggio;
 //  - source 1: spigolo circolare del corpo firstBody piu' vicino a `reference`
 //    (asse verso la faccia cilindrica o conica coassiale, se c'e');
 //  - source 2: faccia cilindrica o conica del corpo firstBody che contiene
@@ -800,6 +801,9 @@ struct DocumentState {
     QVector<SketchObject> sketches;
     QVector<ExtrusionObject> extrusions;
     QVector<ModelBody> modelBodies;
+    // Stato transitorio per Undo/Redo durante l'editing: i corpi mostrano
+    // ancora il risultato precedente. Non viene serializzato nel formato.
+    QVector<int> pendingSketchChanges;
     AxesOrientation orientation;
     bool orientationSet = false;  // letto dal file (altrimenti quello predefinito delle opzioni)
     LengthUnit lengthUnit = LengthUnit::Millimeter;

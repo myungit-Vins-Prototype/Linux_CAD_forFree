@@ -569,6 +569,12 @@ public:
     // cronologia riparte da zero; i corpi usano lo snapshot salvato quando e'
     // presente, altrimenti si rigenerano dalla definizione.
     DocumentState currentDocument() const { return documentState(); }
+    DocumentState recoveryDocument() const { return documentState(false); }
+    bool recoverySnapshotReady() const {
+        return !interactionLocked_ && !responsiveWork_ && !pointDragActive_ && !draggingControlPoint_
+            && bodyDragSegment_<0 && circleRadiusDrag_<0 && !featureHandleDragging_ && !planeResizing_;
+    }
+    bool hasPendingSketchChanges() const { return !deferredSketches_.isEmpty(); }
     void adoptDocumentIdentity(const ForgeCad::DocumentVersion &identity, const QUuid &base) {
         documentVersion_ = identity; documentBaseCheckinId_ = base;
     }
@@ -599,6 +605,8 @@ public:
                       const std::function<void(int, int, const QString &)> &progress = {}) {
         ScopedWork work(workCallback_, QStringLiteral("Caricamento e rigenerazione del documento..."));
         if (sketchMode_) endSketchMode();
+        deferredSketches_.clear();
+        if(!state.pendingSketchChanges.isEmpty())for(auto &body:state.extrusions)body.cachedGeometry=false;
         activeSketch_ = -1;
         selection_ = {};
         history_.clear();
@@ -4318,6 +4326,7 @@ public:
 
     int createSketch(int plane, const QString &name) {
         if(documentReadOnly_)return -1;
+        if(sketchMode_)endSketchMode();
         recordUndo();
         SketchObject sketch;
         sketch.name = name;
@@ -4381,6 +4390,7 @@ public:
     void selectSketch(int index) {
         if(documentReadOnly_)return;
         if (index < 0 || index >= sketches_.size()) return;
+        if(sketchMode_&&index!=activeSketch_)endSketchMode();
         activeSketch_ = index;
         beginSketchMode(sketches_.at(index).plane);
     }
@@ -4426,6 +4436,7 @@ public:
     }
 
     void endSketchMode() {
+        circleRadiusDrag_=-1;
         dimensionPlacing_ = -1;
         sketchViewUnlocked_ = false;
         sketchViewRotated_ = false;
@@ -4442,6 +4453,13 @@ public:
         constraintHover_ = -1;
         curveControlPoints_.clear();
         sketchHover_ = {};
+        if(!deferredSketches_.isEmpty()){
+            QSet<int> changed;
+            for(int index:deferredSketches_)if(index>=0&&index<sketches_.size())changed.insert(index);
+            deferredSketches_.clear();
+            if(!changed.isEmpty())regenerateFrom(0,QVector<bool>(extrusions_.size(),false),changed);
+            documentChanged();
+        }
         if (sketchModeCallback_) sketchModeCallback_(false);
         selectionChanged();
         update();
@@ -5077,7 +5095,9 @@ protected:
                 // possono coprire il centro di cerchi e poligoni.
                 if ((event->modifiers() & Qt::ControlModifier) && selectPointWithControl(rawPoint)) return;
                 // Un clic sul simbolo di un vincolo lo seleziona (Maiusc aggiunge o toglie).
-                const int glyph = constraintAt(lastMousePosition_);
+                QPointF endpoint;int editCurve=-1,editControl=-1;EditablePointKind editKind;
+                const bool onEditablePoint=segmentEndpointAt(rawPoint,endpoint)||findCurveEditPoint(rawPoint,editCurve,editControl,editKind);
+                const int glyph = onEditablePoint?-1:constraintAt(lastMousePosition_);
                 if (glyph >= 0) {
                     // Una quota si sposta trascinandola.
                     if (ForgeCad::isDimension(sketches_.at(activeSketch_).geometricConstraints.at(glyph).type)) {
@@ -5097,8 +5117,9 @@ protected:
                     update();
                     return;
                 }
-                int referenceKind = -1, referenceIndex = -1;
-                if (findSketchElement(rawPoint).kind < 0 && pickSketchReferencePlaneAxis(lastMousePosition_, referenceKind, referenceIndex)) {
+                int referenceKind = -1, referenceIndex = -1, pointCurve=-1,pointControl=-1;EditablePointKind pointKind;
+                const bool editablePoint=findCurveEditPoint(rawPoint,pointCurve,pointControl,pointKind);
+                if (!editablePoint&&findSketchElement(rawPoint).kind < 0 && pickSketchReferencePlaneAxis(lastMousePosition_, referenceKind, referenceIndex)) {
                     selectSketchReference(referenceKind, referenceIndex);
                     return;
                 }
@@ -5123,6 +5144,10 @@ protected:
                     const SketchElementSelection hit = findSketchElement(rawPoint);
                     // Dal vuoto il trascinamento e' un riquadro di selezione.
                     if (hit.kind < 0) armBoxSelection(lastMousePosition_, event->modifiers() & Qt::ShiftModifier);
+                    if(hit.kind==1&&sketches_[activeSketch_].curves[hit.index].tool==DrawingTool::Circle){
+                        const auto &circle=sketches_[activeSketch_].curves[hit.index];
+                        circleRadiusDrag_=hit.index;circleInitialRadius_=pointDistance(circle.controlPoints[0],circle.controlPoints[1]);circlePointerRadius_=pointDistance(rawPoint,circle.controlPoints[0]);dragSnapshot_=documentState();dragRecorded_=false;
+                    }
                     if (hit.kind == 0) {
                         bodyDragSegment_ = hit.index;
                         bodyDragLast_ = rawPoint;
@@ -5295,21 +5320,16 @@ protected:
         if (activeSketch_ < 0 || activeSketch_ >= sketches_.size()) return;
         const QPointF delta = target - pointDragPosition_;
         if (pointLength(delta) <= 0.0) return;
-        if (!dragRecorded_) {
-            history_.record(dragSnapshot_);
-            dragRecorded_ = true;
-        }
         SketchObject &sketch = sketches_[activeSketch_];
         const SketchObject before = sketch;
         moveSketchPoint(sketch, -1, pointDragPosition_, delta, QPointF(qQNaN(), qQNaN()));
-        // Il risolutore tiene i punti trascinati sul cursore e adatta il resto;
-        // se i vincoli non lo permettono il punto resta dov'era.
-        QString failure;
-        if (!solveActive(targetsAt(sketch, target), before, &failure)) {
+        // Il punto segue il cursore o la sua componente ammessa dai vincoli.
+        const auto targets=targetsAt(sketch,target);
+        if (!solveActiveDrag(targets,before)) {
             showStatus(QStringLiteral("Il punto e' bloccato dai vincoli."));
             return;
         }
-        pointDragPosition_ = target;
+        if(!targets.isEmpty())ForgeCad::refPoint(sketch,targets.first().point,pointDragPosition_);
         sceneBoundsDirty_ = true;
     }
 
@@ -5322,18 +5342,13 @@ protected:
         QPointF delta = raw - bodyDragLast_;
         if (!bodyDragMoved_ && pointLength(delta) < pickTolerance(3.0)) return;
         bodyDragMoved_ = true;
-        if (!dragRecorded_) {
-            history_.record(dragSnapshot_);
-            dragRecorded_ = true;
-        }
         const QPointF first = sketch.segments.at(bodyDragSegment_).first, second = sketch.segments.at(bodyDragSegment_).second;
         const QPointF nowhere(qQNaN(), qQNaN());
         const SketchObject before = sketch;
-        moveSketchPoint(sketch, bodyDragSegment_, first, delta, nowhere);
-        moveSketchPoint(sketch, bodyDragSegment_, second, delta, nowhere);
+        moveSketchPoints(sketch,bodyDragSegment_,{first,second},delta,nowhere);
         QVector<ForgeCad::PointTarget> targets = targetsAt(sketch, first + delta);
         targets += targetsAt(sketch, second + delta);
-        if (!solveActive(targets, before)) {
+        if (!solveActiveDrag(targets, before)) {
             showStatus(QStringLiteral("Il segmento e' bloccato dai vincoli."));
             return;
         }
@@ -6250,6 +6265,12 @@ protected:
                 insert->setEnabled(canChangeControlPointCount(source));
                 if (remove) remove->setEnabled(canChangeControlPointCount(source) && source.controlPoints.size() > (source.tool == DrawingTool::Nurbs ? 4 : 2));
                 const QAction *chosen = menu.exec(event->globalPos());
+                // Esc o clic fuori dal menu restituiscono nullptr, come le
+                // azioni opzionali non presenti: non sono comandi da eseguire.
+                if (!chosen) {
+                    event->accept();
+                    return;
+                }
                 if (chosen == edit) editFreeCurve(curveIndex, onPoint ? control : -1);
                 else if (chosen == insert) {
                     QVector<int> origins; for (int k = 0; k < source.controlPoints.size(); ++k) origins.append(k);
@@ -6568,6 +6589,12 @@ protected:
                 update();
                 return;
             }
+            if(circleRadiusDrag_>=0&&(event->buttons()&Qt::LeftButton)){
+                auto &sketch=sketches_[activeSketch_];const auto before=sketch;auto &circle=sketch.curves[circleRadiusDrag_];const auto center=circle.controlPoints[0];
+                const double radius=circleInitialRadius_+pointDistance(rawPoint,center)-circlePointerRadius_;const auto d=circle.controlPoints[1]-center;const double length=pointLength(d);
+                if(radius>1e-9&&length>1e-15){circle.controlPoints[1]=center+d*(radius/length);solveActiveDrag({{{1,circleRadiusDrag_,1},circle.controlPoints[1]}},before,{{{1,circleRadiusDrag_,0},center}});}
+                update();return;
+            }
             if (pointDragActive_ && (event->buttons() & Qt::LeftButton)) {
                 dragSketchPoint(dragSnapPoint(rawPoint));
                 update();
@@ -6588,17 +6615,16 @@ protected:
                 QPointF unused;
                 if (segmentEndpointAt(rawPoint, unused) || findCurveEditPoint(rawPoint, draggingCurveIndex_, draggingControlIndex_, draggingPointKind_))
                     setCursor(Qt::SizeAllCursor);
-                else
-                    unsetCursor();
+                else {
+                    const auto hit=findSketchElement(rawPoint);
+                    if(hit.kind==1&&sketches_[activeSketch_].curves[hit.index].tool==DrawingTool::Circle)setCursor(Qt::SizeHorCursor);
+                    else unsetCursor();
+                }
                 draggingCurveIndex_ = -1;
                 draggingControlIndex_ = -1;
                 draggingPointKind_ = EditablePointKind::Control;
             }
             if (draggingControlPoint_ && draggingCurveIndex_ >= 0) {
-                if (!dragRecorded_) {
-                    history_.record(dragSnapshot_);
-                    dragRecorded_ = true;
-                }
                 const SketchObject sketchBefore = sketches_[activeSketch_];
                 CurveObject &curve = sketches_[activeSketch_].curves[draggingCurveIndex_];
                 if (draggingPointKind_ == EditablePointKind::Control) {
@@ -6610,15 +6636,12 @@ protected:
                         const double radius = pointDistance(c, curve.controlPoints.at(1)), l = pointLength(r);
                         if (l > 0.0) position = c + r * (radius / l);
                     }
-                    curve.controlPoints[draggingControlIndex_] = position;
-                    if (curve.tool == DrawingTool::Spline && curve.tangentHandles.size() == curve.controlPoints.size()) {
-                        const QPointF delta = position - before;
-                        curve.tangentHandles[draggingControlIndex_].first += delta;
-                        curve.tangentHandles[draggingControlIndex_].second += delta;
-                    }
+                    if(curve.tool==DrawingTool::Spline||curve.tool==DrawingTool::Nurbs||curve.tool==DrawingTool::Circle)
+                        moveSketchPoint(sketches_[activeSketch_],-1,before,position-before,QPointF(qQNaN(),qQNaN()));
+                    else curve.controlPoints[draggingControlIndex_]=position;
                     normalizeEllipse(curve, draggingControlIndex_, before);
                     SketchObject &sketch = sketches_[activeSketch_];
-                    if (!solveActive({{{1, draggingCurveIndex_, draggingControlIndex_}, curve.controlPoints.at(draggingControlIndex_)}}, sketchBefore)) {
+                    if (!solveActiveDrag(targetsAt(sketch,curve.controlPoints.at(draggingControlIndex_)), sketchBefore)) {
                         showStatus(QStringLiteral("Il punto e' bloccato dai vincoli."));
                         update();
                         return;
@@ -6627,17 +6650,8 @@ protected:
                 } else {
                     // La maniglia passa dal risolutore: i vincoli sulle maniglie (tangenze, quote) restano veri.
                     const int side = draggingPointKind_ == EditablePointKind::TangentIn ? 0 : 1;
-                    (side == 0 ? curve.tangentHandles[draggingControlIndex_].first : curve.tangentHandles[draggingControlIndex_].second) = rawPoint;
-                    if (curve.tangentLinked.value(draggingControlIndex_)) {
-                        const QPointF center = curve.controlPoints.at(draggingControlIndex_);
-                        const QPointF direction = rawPoint - center;
-                        const double length = pointLength(direction);
-                        QPointF &other = side == 0 ? curve.tangentHandles[draggingControlIndex_].second
-                                                   : curve.tangentHandles[draggingControlIndex_].first;
-                        const double otherLength = pointDistance(center, other);
-                        if (length > 0.0) other = center - direction * (otherLength / length);
-                    }
-                    if (!solveActive({{{1, draggingCurveIndex_, handlePoint(draggingControlIndex_, side)}, rawPoint}}, sketchBefore)) {
+                    moveSplineHandle(curve,draggingControlIndex_,side,rawPoint);
+                    if (!solveActiveDrag({{{1, draggingCurveIndex_, handlePoint(draggingControlIndex_, side)}, rawPoint}}, sketchBefore)) {
                         showStatus(QStringLiteral("La maniglia e' bloccata dai vincoli."));
                         update();
                         return;
@@ -6879,6 +6893,7 @@ protected:
             }
             dimensionDrag_ = -1;
             pointDragActive_ = false;
+            circleRadiusDrag_=-1;
             bodyDragSegment_ = -1;
             if (dragRecorded_) sketchEdited();
             dragRecorded_ = false;
@@ -6913,14 +6928,15 @@ protected:
     }
 
 private:
-    DocumentState documentState() const {
+    DocumentState documentState(bool normalizeVisibility = true) const {
         DocumentState state(documentVersion_, documentBaseCheckinId_);
         state.sketches = sketches_;
         state.extrusions = extrusions_;
         state.modelBodies = modelBodies_;
+        state.pendingSketchChanges=deferredSketches_.values();
         // La visibilita' del documento conserva la preferenza del corpo;
         // il filtro dei corpi consumati riguarda soltanto la scena corrente.
-        for (ExtrusionObject &feature : state.extrusions)
+        if (normalizeVisibility) for (ExtrusionObject &feature : state.extrusions)
             for (const ModelBody &body : state.modelBodies)
                 if (feature.modelBodyId == body.id) feature.visible = feature.featureId == body.tipFeatureId && body.visible;
         state.orientation = orientation_;
@@ -6949,6 +6965,28 @@ private:
         for (CurveObject &curve : sketch.curves) ForgeCad::recalculateCurve(curve, tessellationQuality_);
         return result.ok;
     }
+    // Il cursore e' un obiettivo di trascinamento, non un nuovo vincolo:
+    // se non appartiene alla traiettoria ammessa, proietta la proposta sui
+    // vincoli esistenti. Quote e comandi numerici usano ancora solveActive.
+    bool solveActiveDrag(const QVector<ForgeCad::PointTarget> &targets,const SketchObject &before,const QVector<ForgeCad::PointTarget> &anchors={}){
+        auto &sketch=sketches_[activeSketch_];const auto seed=sketch;auto work=seed;
+        auto exact=targets;exact+=anchors;auto result=ForgeCad::solveSketch(work,exact);
+        if(!result.ok){work=seed;result=ForgeCad::solveSketch(work,anchors);}
+        analysisDirty_=true;
+        if(!result.ok){sketch=before;return false;}
+        const auto changed=[&]{
+            for(int i=0;i<work.segments.size();++i)if(pointDistance(work.segments[i].first,before.segments[i].first)>1e-12||pointDistance(work.segments[i].second,before.segments[i].second)>1e-12)return true;
+            for(int i=0;i<work.curves.size();++i){const auto &a=work.curves[i],&b=before.curves[i];for(int k=0;k<a.controlPoints.size();++k)if(pointDistance(a.controlPoints[k],b.controlPoints[k])>1e-12)return true;for(int k=0;k<a.tangentHandles.size();++k)if(pointDistance(a.tangentHandles[k].first,b.tangentHandles[k].first)>1e-12||pointDistance(a.tangentHandles[k].second,b.tangentHandles[k].second)>1e-12)return true;}
+            return false;
+        };
+        if(changed()){
+            if(!dragRecorded_){history_.record(dragSnapshot_);dragRecorded_=true;}
+            if(sketchMode_)deferredSketches_.insert(activeSketch_);
+        }
+        sketch=std::move(work);
+        for(auto &curve:sketch.curves)ForgeCad::recalculateCurve(curve,tessellationQuality_);
+        sceneBoundsDirty_=true;return true;
+    }
     // Bersagli: tutti i punti dello schizzo che stanno in `position`, fermi li'.
     static QVector<ForgeCad::PointTarget> targetsAt(const SketchObject &sketch, const QPointF &position) {
         QVector<ForgeCad::PointTarget> targets;
@@ -6959,7 +6997,7 @@ private:
         }
         for (int c = 0; c < sketch.curves.size(); ++c)
             for (int k = 0; k < sketch.curves.at(c).controlPoints.size(); ++k)
-                if (pointDistance(sketch.curves.at(c).controlPoints.at(k), position) <= tolerance) targets.append({{1, c, k}, position});
+                if ((sketch.curves.at(c).tool!=DrawingTool::Circle||k==0)&&pointDistance(sketch.curves.at(c).controlPoints.at(k), position) <= tolerance) targets.append({{1, c, k}, position});
         return targets;
     }
     // Bersagli: i punti della curva dove stanno ora.
@@ -7499,7 +7537,8 @@ private:
         for (int k = selectedConstraints_.size() - 1; k >= 0; --k)
             if (selectedConstraints_.at(k) >= count) selectedConstraints_.removeAt(k);
         if (constraintHover_ >= count) constraintHover_ = -1;
-        regenerateDependents(activeSketch_);
+        if(sketchMode_&&activeSketch_>=0)deferredSketches_.insert(activeSketch_);
+        else regenerateDependents(activeSketch_);
         documentChanged();
     }
 
@@ -7791,10 +7830,13 @@ private:
     // punti delle curve); i segmenti orizzontali e verticali collegati
     // trascinano l'altro estremo quanto serve per restarlo. `fixed` non si
     // muove; il segmento `edited` non propaga all'indietro.
-    void moveSketchPoint(SketchObject &sketch, int edited, const QPointF &from, const QPointF &delta, const QPointF &fixed) {
+    void moveSketchPoint(SketchObject &sketch,int edited,const QPointF &from,const QPointF &delta,const QPointF &fixed){
+        moveSketchPoints(sketch,edited,{from},delta,fixed);
+    }
+    void moveSketchPoints(SketchObject &sketch, int edited, const QVector<QPointF> &origins, const QPointF &delta, const QPointF &fixed) {
         const double tolerance = ForgeCad::kSketchConnectionTolerance;
         struct Move { QPointF from, delta; };
-        QVector<Move> pending{{from, delta}};
+        QVector<Move> pending;for(const auto &from:origins)pending.append({from,delta});
         QVector<QPointF> done;
         QVector<QPair<QPointF *, QPointF>> updates;
         QSet<int> movedCurves;
@@ -7823,10 +7865,12 @@ private:
                 for (int control = 0; control < sketch.curves[curve].controlPoints.size(); ++control) {
                     // Le curve derivate sono rigide: chi vi e' collegato si adatta a loro.
                     if (sketch.curves.at(curve).tool == DrawingTool::Converted) break;
+                    if(sketch.curves.at(curve).tool==DrawingTool::Circle&&control>0)continue;
                     QPointF &point = sketch.curves[curve].controlPoints[control];
                     if (pointDistance(point, move.from) <= tolerance) {
                         updates.append({&point, point + move.delta});
                         CurveObject &object = sketch.curves[curve];
+                        if(object.tool==DrawingTool::Circle&&control==0&&object.controlPoints.size()>1)updates.append({&object.controlPoints[1],object.controlPoints[1]+move.delta});
                         if (object.tool == DrawingTool::Spline && object.tangentHandles.size() == object.controlPoints.size()) {
                             updates.append({&object.tangentHandles[control].first, object.tangentHandles.at(control).first + move.delta});
                             updates.append({&object.tangentHandles[control].second, object.tangentHandles.at(control).second + move.delta});
@@ -7925,6 +7969,7 @@ private:
         if (index >= 0) ForgeCad::configurePatternInstances(body, index, sketches_, extrusions_);
     }
     void restoreDocument(DocumentState state) {
+        deferredSketches_.clear();for(int index:state.pendingSketchChanges)if(index>=0&&index<state.sketches.size())deferredSketches_.insert(index);
         adoptDocumentIdentity(state.version, state.baseCheckinId);
         dimensionPlacing_ = -1;
         ForgeCad::normalizeModelHistory(state);
@@ -7947,6 +7992,7 @@ private:
         sketchHover_ = {};
         hover_ = {};
         draggingControlPoint_ = false;
+        circleRadiusDrag_=-1;
         dragRecorded_ = false;
         if (edgePicking_) cancelEdgePick();
         clearBlendPreview();
@@ -7955,6 +8001,10 @@ private:
         if (activeSketch_ >= sketches_.size()) {
             activeSketch_ = -1;
             if (sketchMode_) endSketchMode();
+        }
+        if(!sketchMode_&&!deferredSketches_.isEmpty()){
+            const auto changed=deferredSketches_;deferredSketches_.clear();
+            regenerateFrom(0,QVector<bool>(extrusions_.size(),false),changed);
         }
         documentChanged();
     }
@@ -8001,6 +8051,31 @@ private:
         return pixels * 8.0 * double(zoom_) / 8.0 / double(qMax(1, height()));
     }
 
+    static QVector<QPointF> curveEditMarkers(const CurveObject &curve,bool hover){
+        if(curve.tool!=DrawingTool::Circle)return curve.controlPoints;
+        if(curve.controlPoints.isEmpty())return {};
+        const auto center=curve.controlPoints[0];QVector<QPointF> result{center};
+        if(hover&&curve.controlPoints.size()>1){const double radius=pointDistance(center,curve.controlPoints[1]);result<<center+QPointF(radius,0)<<center+QPointF(0,radius)<<center-QPointF(radius,0)<<center-QPointF(0,radius);}
+        return result;
+    }
+    static bool closedSpline(const CurveObject &curve){
+        return curve.tool==DrawingTool::Spline&&curve.controlPoints.size()>2&&pointDistance(curve.controlPoints.first(),curve.controlPoints.last())<=ForgeCad::kSketchConnectionTolerance;
+    }
+    static void moveSplineHandle(CurveObject &curve,int control,int side,QPointF position){
+        const auto set=[&](int k,int s,QPointF p){
+            auto &pair=curve.tangentHandles[k];auto &selected=s?pair.second:pair.first;auto &other=s?pair.first:pair.second;const auto center=curve.controlPoints[k];
+            const double otherLength=pointDistance(other,center);selected=p;
+            const auto d=p-center;const double length=pointLength(d);
+            if(curve.tangentLinked.value(k)&&length>1e-15)other=center-d*(otherLength/length);
+        };
+        const int last=int(curve.controlPoints.size())-1;
+        const bool seam=closedSpline(curve)&&((control==0&&side==1)||(control==last&&side==0))&&curve.tangentLinked.value(0)&&curve.tangentLinked.value(last);
+        const int partner=control==0?last:0,partnerSide=1-side;
+        const double otherLength=seam?pointDistance(partnerSide?curve.tangentHandles[partner].second:curve.tangentHandles[partner].first,curve.controlPoints[partner]):0;
+        set(control,side,position);
+        const auto d=position-curve.controlPoints[control];const double length=pointLength(d);
+        if(seam&&length>1e-15)set(partner,partnerSide,curve.controlPoints[partner]-d*(otherLength/length));
+    }
     static bool visibleSplineHandle(const CurveObject &curve, int control, int side) {
         const int last = int(curve.controlPoints.size()) - 1;
         const bool closed = curve.tool == DrawingTool::Spline && last > 1
@@ -8023,6 +8098,7 @@ private:
             if (candidate.tool == DrawingTool::Converted) continue;
             const bool hasHandles = candidate.tangentHandles.size() == candidate.controlPoints.size();
             for (int control = 0; control < candidate.controlPoints.size(); ++control) {
+                if(!isPickableCurvePoint(candidate,control))continue;
                 const QPointF candidates[] = {
                     candidate.controlPoints.at(control),
                     hasHandles ? candidate.tangentHandles.at(control).first : candidate.controlPoints.at(control),
@@ -8577,6 +8653,7 @@ private:
     // Punti di una curva che si scelgono singolarmente: tutti, tranne i poli
     // interni delle curve derivate (bordi copiati, offset), che sono un'entita' unica.
     static bool isPickableCurvePoint(const CurveObject &curve, int control) {
+        if(curve.tool==DrawingTool::Circle)return control==0;
         return curve.tool != DrawingTool::Converted || control == 0 || control == int(curve.controlPoints.size()) - 1;
     }
 
@@ -8990,7 +9067,7 @@ private:
     QVector<QPointF> snapCandidates(const SketchObject &sketch) const {
         QVector<QPointF> points;
         for (const CurveObject &curve : sketch.curves) {
-            if (curve.samples.size() >= 2) {
+            if (curve.tool!=DrawingTool::Circle&&curve.samples.size() >= 2) {
                 points.append(curve.samples.first());
                 points.append(curve.samples.last());
             }
@@ -9140,7 +9217,8 @@ private:
                 }
                 continue;
             }
-            for (const QPointF &control : curve.controlPoints) {
+            const bool hover=sketchHover_.kind==1&&sketchHover_.index==int(&curve-sketch.curves.constData());
+            for (const QPointF &control : curveEditMarkers(curve,hover)) {
                 const QVector3D world = mapSketchPoint(control, sketch);
                 point(world, red, 0.35f, 0.75f);
             }
@@ -10459,7 +10537,7 @@ private:
                 else if (curve.tool == DrawingTool::Spline) overlayRenderer_.drawWideLineStrip(samples, color, 3.5f);
                 else overlayRenderer_.draw(GL_LINE_STRIP, samples, color);
                 // Le spline interpolano i nodi: la spezzata fra i nodi non e' una guida tangente.
-                if (curve.construction || curve.tool == DrawingTool::Converted || curve.tool == DrawingTool::Spline) continue;
+                if (curve.construction || curve.tool == DrawingTool::Converted || curve.tool == DrawingTool::Spline || curve.tool == DrawingTool::Circle) continue;
                 QVector<QVector3D> controls;
                 controls.reserve(curve.controlPoints.size());
                 for (const QPointF &control : curve.controlPoints) {
@@ -12378,6 +12456,9 @@ private:
     double lineAngle_ = -1.0;
     int polygonSides_ = 6;
     int tessellationQuality_ = 1;
+    QSet<int> deferredSketches_;
+    int circleRadiusDrag_=-1;
+    double circlePointerRadius_=0,circleInitialRadius_=0;
     bool sketchMode_ = false, sketchCameraLocked_ = false, geometrySnap_ = true, gridSnap_ = true;
     bool wheelZoomEnabled_ = true;
     bool hasPendingPoint_ = false, referencePlanesVisible_ = true;
@@ -14683,7 +14764,7 @@ static HelixDialogResult helixDialog(QWidget *parent, CadViewport *viewport, con
     auto *taperBox = spin(initial.helix.taper, -89.0, 89.0, 4, QStringLiteral("°"));
     taperBox->setToolTip(QStringLiteral("Elica conica: positivo = il raggio cresce lungo l'asse. Sulla faccia di un cono vale quella della faccia."));
     auto *startBox = spin(initial.helix.startAngle, -360.0, 360.0, 4, QStringLiteral("°"));
-    startBox->setToolTip(QStringLiteral("Dal punto del cerchio della base (schizzo) o dall'asse X del modello proiettato (spigolo, faccia)"));
+    startBox->setToolTip(QStringLiteral("Base da schizzo: 0° verso X, 90° verso Y (quadrante superiore), anche invertendo l'asse. Spigolo o faccia: dall'asse X del modello proiettato."));
     auto *leftBox = new QCheckBox(QStringLiteral("Sinistrorsa (senso orario guardando lungo l'asse)"), &dialog);
     leftBox->setChecked(initial.helix.leftHanded);
     auto *reverseBox = new QCheckBox(QStringLiteral("Inverti la direzione dell'asse"), &dialog);
@@ -20738,6 +20819,10 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
     viewport->setOrientation(defaultAxesOrientation());  // assi del documento nuovo (Opzioni, di default Z in alto)
     viewport->setLengthUnit(defaultLengthUnit());
     setCentralWidget(viewport);
+    recovery_ = new ForgeCad::DocumentRecovery([this](DocumentState &state,QString &path) {
+        if (foregroundProgressDepth_ || loadingDocument_ || !viewport_->recoverySnapshotReady()) return false;
+        state=viewport_->recoveryDocument(); path=documentPath_; return true;
+    },this);
 
     auto *modelDock = new QDockWidget(QStringLiteral("Albero modello"), this);
     modelDock->setObjectName(QStringLiteral("modelDock"));  // per saveState/restoreState
@@ -20955,6 +21040,7 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
         }
     });
     viewport->setDocumentChangedCallback([this] {
+        if (!loadingDocument_ && !viewport_->documentReadOnly()) recovery_->changed();
         if (!loadingDocument_ && !viewport_->documentReadOnly() && !documentModified_) {
             documentModified_ = true;
             updateWindowTitle();
@@ -21175,6 +21261,11 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
     saveAsAction->setShortcut(QKeySequence::SaveAs);
     saveAsAction->setToolTip(QStringLiteral("Salva una copia indipendente del documento."));
     connect(saveAsAction, &QAction::triggered, this, [this] { saveDocument(true); });
+    auto *recoverAction=fileMenu->addAction(QStringLiteral("Recupera documenti..."));
+    recoverAction->setObjectName(QStringLiteral("documentRecoveryAction"));
+    recoverAction->setIcon(ForgeCad::commandIcon(QStringLiteral("open")));
+    recoverAction->setToolTip(QStringLiteral("Apri come copia un backup automatico rimasto dopo una chiusura imprevista"));
+    connect(recoverAction,&QAction::triggered,this,[this]{showRecoveryDocuments();});
     QMenu *drawingMenu = addCadMenu(fileMenu, QStringLiteral("Tavole 2D"));
     auto *newDrawingAction = drawingMenu->addAction(QStringLiteral("Nuova tavola dal modello..."));
     newDrawingAction->setObjectName(QStringLiteral("newDrawingAction"));
@@ -23781,6 +23872,66 @@ PdfWindow::PdfWindow(QWidget *parent) : QMainWindow(parent) {
     documentRevisionDock_->setVisible(QSettings().value("revisions/modelPanelVisible",true).toBool());
     refreshDocumentEditAccess();updateWindowTitle();
     setTheme(QApplication::palette().color(QPalette::Window).lightness() < 128);
+    connect(recovery_,&ForgeCad::DocumentRecovery::checkpointFinished,this,[this](quint64,bool,const QString &error){
+        if(!error.isEmpty())statusBar()->showMessage(QStringLiteral("Backup automatico non riuscito: %1").arg(error),12000);
+    });
+    connect(recovery_,&ForgeCad::DocumentRecovery::cleared,this,[this](quint64 revision,const QString &error){
+        if(!error.isEmpty())statusBar()->showMessage(QStringLiteral("Pulizia backup: %1").arg(error),8000);
+        if(recoveryClosing_&&revision==recoveryCloseRevision_)recovery_->shutdown();
+    });
+    connect(recovery_,&ForgeCad::DocumentRecovery::stopped,this,[this]{if(recoveryClosing_){recoveryCloseReady_=true;close();}});
+    connect(recovery_,&ForgeCad::DocumentRecovery::discarded,this,[this](const QString &error){
+        if(!error.isEmpty())statusBar()->showMessage(error,10000);
+    });
+    connect(recovery_,&ForgeCad::DocumentRecovery::restored,this,[this](DocumentState state,const ForgeCad::RecoveryEntry &entry,const QString &error){
+        if(!error.isEmpty()){QMessageBox::warning(this,QStringLiteral("Recupero documento"),error);return;}
+        ForgeCad::forkDocumentIdentity(state);
+        auto *window=new PdfWindow;window->setAttribute(Qt::WA_DeleteOnClose);
+        window->show();window->beginForegroundProgress(QStringLiteral("Ricostruzione del modello recuperato..."));
+        window->loadingDocument_=true;window->viewport_->loadDocument(std::move(state));window->loadingDocument_=false;
+        window->endForegroundProgress();
+        window->documentModified_=true;window->recoveredSource_=entry;window->recovery_->changed();
+        window->refreshDocumentEditAccess();window->updateWindowTitle();window->show();
+        window->statusBar()->showMessage(QStringLiteral("Recuperato %1. Salva con nome per conservare la copia.").arg(entry.title),15000);
+    });
+    connect(recovery_,&ForgeCad::DocumentRecovery::entriesFound,this,[this](const QVector<ForgeCad::RecoveryEntry> &entries,const QString &error){
+        if(!recoveryScanPending_)return;recoveryScanPending_=false;
+        if(recoveryClosing_)return;
+        if(foregroundProgressDepth_||loadingDocument_||viewport_->interactionLocked()||QApplication::activeModalWidget()){
+            if(!entries.isEmpty())statusBar()->showMessage(QStringLiteral("Backup disponibili in File → Recupera documenti..."),10000);
+            return;
+        }
+        if(!error.isEmpty()){statusBar()->showMessage(error,10000);return;}
+        if(entries.isEmpty()){
+            if(!recoveryScanAutomatic_)statusBar()->showMessage(QStringLiteral("Nessun documento da recuperare."),6000);
+            return;
+        }
+        QDialog dialog(this);dialog.setObjectName(QStringLiteral("documentRecoveryDialog"));dialog.setWindowTitle(QStringLiteral("Documenti da recuperare"));
+        auto *layout=new QVBoxLayout(&dialog);
+        auto *hint=new QLabel(QStringLiteral("Sono disponibili copie automatiche di sessioni interrotte. Il recupero apre una nuova copia e lascia intatto il file originale."),&dialog);
+        hint->setWordWrap(true);layout->addWidget(hint);
+        auto *table=new QTableWidget(entries.size(),3,&dialog);table->setObjectName(QStringLiteral("documentRecoveryTable"));
+        table->setHorizontalHeaderLabels({QStringLiteral("Documento"),QStringLiteral("Ultimo backup"),QStringLiteral("Dimensione")});
+        table->setEditTriggers(QAbstractItemView::NoEditTriggers);table->setSelectionBehavior(QAbstractItemView::SelectRows);table->setSelectionMode(QAbstractItemView::SingleSelection);
+        for(int row=0;row<entries.size();++row){const auto &entry=entries[row];
+            auto *name=new QTableWidgetItem(entry.originalPath.isEmpty()?entry.title:entry.originalPath);name->setToolTip(entry.originalPath);table->setItem(row,0,name);
+            table->setItem(row,1,new QTableWidgetItem(entry.savedAt.toLocalTime().toString(QStringLiteral("yyyy-MM-dd HH:mm:ss"))));
+            table->setItem(row,2,new QTableWidgetItem(QStringLiteral("%1 KiB").arg((entry.bytes+1023)/1024)));
+        }
+        table->setTextElideMode(Qt::ElideMiddle);table->resizeColumnsToContents();table->setColumnWidth(2,qMax(110,table->columnWidth(2)));
+        table->horizontalHeader()->setSectionResizeMode(0,QHeaderView::Stretch);table->selectRow(0);layout->addWidget(table);
+        auto *buttons=new QDialogButtonBox(QDialogButtonBox::Close,&dialog);
+        buttons->button(QDialogButtonBox::Close)->setText(QStringLiteral("Chiudi"));
+        auto *restore=buttons->addButton(QStringLiteral("Recupera come copia"),QDialogButtonBox::AcceptRole);restore->setObjectName(QStringLiteral("restoreRecoveryButton"));
+        auto *remove=buttons->addButton(QStringLiteral("Elimina backup"),QDialogButtonBox::DestructiveRole);remove->setObjectName(QStringLiteral("discardRecoveryButton"));
+        connect(restore,&QPushButton::clicked,&dialog,[&]{const int row=table->currentRow();if(row>=0){recovery_->restore(entries[row]);dialog.accept();}});
+        connect(remove,&QPushButton::clicked,&dialog,[&]{const int row=table->currentRow();if(row>=0){recovery_->discard(entries[row]);dialog.accept();}});
+        connect(buttons,&QDialogButtonBox::rejected,&dialog,&QDialog::reject);layout->addWidget(buttons);dialog.resize(800,340);dialog.exec();
+    });
+    // Solo la prima finestra dell'app propone il recupero all'avvio. Il menu
+    // File resta disponibile anche dopo aver chiuso la proposta.
+    static bool startupRecoveryScheduled=false;
+    if(!startupRecoveryScheduled){startupRecoveryScheduled=true;QTimer::singleShot(0,this,[this]{if(isVisible())showRecoveryDocuments(true);});}
 }
 
 bool PdfWindow::event(QEvent *event) {
@@ -23956,6 +24107,7 @@ void PdfWindow::openDrawing() {
 
 void PdfWindow::newDocument() {
     if (!maybeSaveChanges()) return;
+    clearDocumentRecovery();
     loadingDocument_ = true;
     viewport_->setDocumentReadOnly(false);
     DocumentState empty;
@@ -24025,6 +24177,7 @@ bool PdfWindow::openDocumentPath(const QString &path) {
         QMessageBox::warning(this, QStringLiteral("Apri"), error);
         return false;
     }
+    clearDocumentRecovery();
     updateForegroundProgress(QStringLiteral("Definizione caricata, preparazione della geometria... 15%"), 15);
     // I file senza orientamento (versioni vecchie) prendono quello predefinito.
     if (!state.orientationSet) {
@@ -24105,6 +24258,7 @@ bool PdfWindow::saveDocumentPath(const QString &path) {
     rememberRecentDocument(resolved);
     updateWindowTitle();
     statusBar()->showMessage(QStringLiteral("Salvato %1 (%2 byte)").arg(path).arg(QFileInfo(path).size()), 6000);
+    clearDocumentRecovery();
     return true;
 }
 
@@ -24135,6 +24289,7 @@ QString PdfWindow::runDocumentRevisionAction(DocumentRevisionAction action, cons
     if (error.isEmpty()) {
         if (action==DocumentRevisionAction::Checkin || action==DocumentRevisionAction::CompletePending) {
             documentModified_=false;
+            if(matchesWorking)clearDocumentRecovery();
             statusBar()->showMessage(matchesWorking
                 ? QStringLiteral("Check-in %1, revisione %2, completato.").arg(record.sequence).arg(record.technicalRevision)
                 : QStringLiteral("Check-in pendente completato. Le modifiche successive restano nella copia di lavoro."),10000);
@@ -24238,6 +24393,8 @@ void PdfWindow::showDocumentRevisions() {
 }
 
 void PdfWindow::closeEvent(QCloseEvent *event) {
+    if(recoveryCloseReady_){documentLock_.reset();event->accept();return;}
+    if(recoveryClosing_){event->ignore();return;}
     // Durante un calcolo il ciclo di eventi gira ancora (runWhileResponsive):
     // la chiusura aspetta la fine.
     if (foregroundProgressDepth_ > 0 || (viewport_ && viewport_->interactionLocked())) {
@@ -24249,10 +24406,21 @@ void PdfWindow::closeEvent(QCloseEvent *event) {
         for (auto *child:attached) if (auto *drawing=dynamic_cast<ForgeCad::DrawingWindow *>(child)) {
             if (!drawing->close()) { event->ignore(); return; }
         }
-        documentLock_.reset();
-        event->accept();
+        // La coda elimina anche una scrittura gia' in corso prima di uscire.
+        // Il ciclo eventi continua a rispondere; nessun wait/join sul disco.
+        recoveryClosing_=true;viewport_->setInteractionLocked(true);setEnabled(false);
+        recoveryCloseRevision_=clearDocumentRecovery();event->ignore();
     }
     else event->ignore();
+}
+
+quint64 PdfWindow::clearDocumentRecovery() {
+    if(!recoveredSource_.directory.isEmpty()){recovery_->discard(recoveredSource_);recoveredSource_={};}
+    return recovery_->reset();
+}
+void PdfWindow::showRecoveryDocuments(bool automatic) {
+    if(recoveryScanPending_||foregroundProgressDepth_||viewport_->interactionLocked())return;
+    recoveryScanPending_=true;recoveryScanAutomatic_=automatic;recovery_->scan();
 }
 
 // La ricostruzione dell'albero cancella e ricrea le voci: non si puo' fare

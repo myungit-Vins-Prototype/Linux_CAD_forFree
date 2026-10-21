@@ -3,6 +3,7 @@
 
 #include <QMainWindow>
 #include "cad_document_io.h"
+#include "cad_document_recovery.h"
 #include "cad_revision_client.h"
 #include <QPointer>
 
@@ -52,6 +53,13 @@ private:
     void rememberRecentDocument(const QString &path);
     void refreshRecentDocuments();
     bool maybeSaveChanges();
+    void showRecoveryDocuments(bool automatic = false);
+    quint64 clearDocumentRecovery();
+    ForgeCad::DocumentRecovery *recovery_ = nullptr;
+    ForgeCad::RecoveryEntry recoveredSource_;
+    bool recoveryScanPending_ = false, recoveryScanAutomatic_ = false;
+    bool recoveryClosing_ = false, recoveryCloseReady_ = false;
+    quint64 recoveryCloseRevision_ = 0;
     void updateWindowTitle();
     void refreshDocumentEditAccess();
     ForgeCad::WorkspaceEditAccess documentEditAccess_;

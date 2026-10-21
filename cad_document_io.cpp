@@ -1141,7 +1141,7 @@ bool DocumentFileLock::owns(const QString &path) const {
     return marker.open(QIODevice::ReadOnly) && marker.readAll() == identity_;
 }
 
-QString encodeDocument(const DocumentState &state, QByteArray &bytes, bool bodies) {
+QString encodeDocument(const DocumentState &state, QByteArray &bytes, bool bodies, int compressionLevel) {
     try {
         if (state.version.documentId.isNull() || (!state.version.checkinId.isNull() && state.version.checkinId == state.baseCheckinId))
             return QStringLiteral("Identita' del documento non valida.");
@@ -1171,10 +1171,10 @@ QString encodeDocument(const DocumentState &state, QByteArray &bytes, bool bodie
         QDataStream out(&prepared, QIODevice::WriteOnly);
         out.writeRawData(kMagic, 4);
         out << kVersion << kZlib;
-        const QByteArray compressed = qCompress(payload, 9);
+        const QByteArray compressed = qCompress(payload, qBound(0, compressionLevel, 9));
         out << quint32(compressed.size());
         out.writeRawData(compressed.constData(), int(compressed.size()));
-        if (bodies) {
+        if (bodies && state.pendingSketchChanges.isEmpty()) {
             const QByteArray cache = bodyCache(payload, normalized);
             out.writeRawData(cache.constData(), int(cache.size()));
         }
