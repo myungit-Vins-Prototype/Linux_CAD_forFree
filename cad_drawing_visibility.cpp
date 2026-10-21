@@ -144,6 +144,32 @@ bool completeCone(const DrawingSourceBody &source,const DrawingView &view,ExactC
     const auto x=view.plane.directionToLocal(frame.xDir()),y=view.plane.directionToLocal(frame.yDir());
     for(double level:levels){const auto center=view.plane.toLocal(frame.origin()+level*frame.zDir());const double r=result.radiusAt(level);const Vec3 extent(r*std::hypot(x.x(),y.x()),r*std::hypot(x.y(),y.y()),0);result.bounds.add(center-extent);result.bounds.add(center+extent);}return true;
 }
+// Toro ad anello completo: nelle viste assiali e laterali la sagoma e'
+// rispettivamente una corona circolare e una capsula, senza campionamenti.
+struct ExactTorus {
+    Frame3 surface,projection;double major=0,minor=0;bool axial=false;quint64 featureId=0;Bounds bounds;
+    bool covers(Vec3 point,double bias)const{
+        const auto p=projection.toLocal(point);double square=0;
+        const double roundoff=64*std::numeric_limits<double>::epsilon()*(major+minor)*(major+minor);
+        if(axial){const double delta=std::hypot(p.x(),p.y())-major;square=minor*minor-delta*delta;}
+        else{const double radial=minor*minor-p.y()*p.y();if(radial<-roundoff)return false;
+            const double outer=major+std::sqrt(std::max(0.,radial));square=outer*outer-p.x()*p.x();}
+        return square>=-roundoff&&p.z()<std::sqrt(std::max(0.,square))-bias;
+    }
+};
+bool completeTorus(const DrawingSourceBody &source,const DrawingView &view,ExactTorus &result){
+    if(view.sectionStyle!=DrawingSectionStyle::Removed)return false;
+    const auto &body=*source.body;const auto faces=body.faces();if(faces.size()!=1||!body.edges().empty())return false;
+    const auto &face=body.face(faces.front());if(face.surface->type()!=SurfaceType::Torus||!face.sense||!body.region(body.shell(face.shell).region).solid)return false;
+    for(auto loop:face.loops)if(!body.loopFins(loop).empty())return false;
+    const auto &torus=static_cast<const ToroidalSurface &>(*face.surface);const auto axis=torus.frame().zDir(),direction=view.plane.zDir();
+    const bool axial=norm(cross(axis,direction))<=1e-12,lateral=std::abs(dot(axis,direction))<=1e-12;
+    if((!axial&&!lateral)||torus.majorRadius()<=torus.minorRadius())return false;
+    result.surface=torus.frame();result.projection=Frame3(torus.frame().origin(),direction,axial?view.plane.xDir():cross(axis,direction));result.axial=axial;result.major=torus.majorRadius();result.minor=torus.minorRadius();result.featureId=source.featureId;
+    const double x=result.major+result.minor,y=axial?x:result.minor;
+    for(double a:{-x,x})for(double b:{-y,y})result.bounds.add(view.plane.toLocal(result.projection.toGlobal(Vec3(a,b,0))));
+    return true;
+}
 std::vector<Vec3> clipPolygon(const std::vector<Vec3> &input,int axis,double sign){
     std::vector<Vec3> result;if(input.empty())return result;auto a=input.back();double fa=sign*a[axis];
     for(const auto b:input){const double fb=sign*b[axis];if((fa<0)!=(fb<0))result.push_back(a+(b-a)*(fa/(fa-fb)));if(fb>=0)result.push_back(b);a=b;fa=fb;}return result;
@@ -159,6 +185,7 @@ class Occlusion {
     std::vector<ExactSphere> spheres_;
     std::vector<ExactCylinder> cylinders_;
     std::vector<ExactCone> cones_;
+    std::vector<ExactTorus> tori_;
     Frame3 plane_;
     double depthBias_=0,intersectionTolerance_=0;
     std::vector<Triangle> triangles_;
@@ -219,6 +246,7 @@ public:
         for(const auto &source:model.bodies){cancellationPoint();need(source.featureId&&!ids.contains(source.featureId)&&source.body&&source.names&&source.names->body==source.body.get(),"Sorgente della visibilita' incoerente.");ids.insert(source.featureId);
             ExactCylinder cylinder;const bool exactCylinder=completeCylinder(source,view,cylinder);if(exactCylinder)cylinders_.push_back(cylinder);
             ExactCone cone;const bool exactCone=completeCone(source,view,cone);if(exactCone)cones_.push_back(cone);
+            ExactTorus torus;const bool exactTorus=completeTorus(source,view,torus);if(exactTorus)tori_.push_back(torus);
             // Solo sfere intere, chiuse e orientate verso l'esterno: una
             // faccia rifilata o una sezione deve conservare il proprio dominio.
             const auto faces=source.body->faces();
@@ -255,7 +283,7 @@ public:
                         }
                         triangle.depthScale=planar?0:1/std::max(cosine,1e-8);
                         triangle.selfBias=planar?triangle.bias:std::max(triangle.bias,(2*deviation+.03/view.scale)*triangle.depthScale);
-                        triangle.featureId=source.featureId;triangle.face=face.face;triangle.exactExternal=exactCylinder||exactCone;triangle.bounds.add(triangle.a);triangle.bounds.add(triangle.b);triangle.bounds.add(triangle.c);triangles_.push_back(triangle);
+                        triangle.featureId=source.featureId;triangle.face=face.face;triangle.exactExternal=exactCylinder||exactCone||exactTorus;triangle.bounds.add(triangle.a);triangle.bounds.add(triangle.b);triangle.bounds.add(triangle.c);triangles_.push_back(triangle);
                         need(triangles_.size()<=2000000,"Troppi triangoli per la visibilita' della tavola.");}}
             }
         }
@@ -305,10 +333,19 @@ public:
                 for(double u:{middle-delta,middle+delta}){const auto radialDirection=std::cos(u)*frame.xDir()+std::sin(u)*frame.yDir();cut(Plane(Frame3(frame.origin()+cone.radius*radialDirection,radialDirection-cone.slope*axis,axis)));}}
             std::sort(cuts.begin(),cuts.end());for(std::size_t i=1;i<cuts.size();++i)if(cuts[i]>cuts[i-1]&&cone.covers(geometry.point(cuts[i-1]+.5*(cuts[i]-cuts[i-1])),direction,depthBias_))hits.push_back({cuts[i-1],cuts[i]});
         }
+        for(const auto &torus:tori_){cancellationPoint();if(torus.featureId==source.featureId)continue; // mantiene la vera auto-occlusione concava della mesh
+            const auto box=curveBox(geometry,range);Bounds projected;for(int mask=0;mask<8;++mask)projected.add(plane_.toLocal(Vec3(mask&1?box.hi.x():box.lo.x(),mask&2?box.hi.y():box.lo.y(),mask&4?box.hi.z():box.lo.z())));if(!projected.overlaps(torus.bounds))continue;
+            std::vector<double> cuts{range.lo,range.hi};const auto &frame=torus.projection;const auto center=frame.origin(),direction=frame.zDir();
+            const auto cut=[&](const Surface &surface){const auto crossing=intersectCurveSurface(geometry,range,surface,intersectionTolerance_);cuts.insert(cuts.end(),crossing.parameters.begin(),crossing.parameters.end());for(auto span:crossing.coincident){cuts.push_back(span.lo);cuts.push_back(span.hi);}};
+            const auto &original=torus.surface;cut(ToroidalSurface(Frame3(center-depthBias_*direction,original.zDir(),original.xDir()),torus.major,torus.minor));
+            if(torus.axial){for(double radius:{torus.major-torus.minor,torus.major+torus.minor})cut(CylindricalSurface(frame,radius));}
+            else{for(double sign:{-1.,1.}){cut(CylindricalSurface(Frame3(center+sign*torus.major*frame.xDir(),direction,frame.xDir()),torus.minor));cut(Plane(Frame3(center+sign*torus.minor*frame.yDir(),frame.yDir(),direction)));}}
+            std::sort(cuts.begin(),cuts.end());for(std::size_t i=1;i<cuts.size();++i)if(cuts[i]>cuts[i-1]&&torus.covers(geometry.point(cuts[i-1]+.5*(cuts[i]-cuts[i-1])),depthBias_))hits.push_back({cuts[i-1],cuts[i]});
+        }
         return hits;
     }
     std::vector<Interval> hidden(Vec3 a,Vec3 b,const DisplaySource &source)const{std::vector<Interval> hits=capHidden(a,b);Bounds box;box.add(a);box.add(b);if(!nodes_.empty())query(0,box,a,b,source,hits);
-        if((!spheres_.empty()||!cylinders_.empty()||!cones_.empty())&&distance(a,b)>1e-12){const double length=distance(a,b);const Line<3> segment(plane_.toGlobal(a),plane_.directionToGlobal(b-a));const auto exact=analyticHidden(segment,{0,length},source);for(auto span:exact)hits.push_back({span.lo/length,span.hi/length});}
+        if((!spheres_.empty()||!cylinders_.empty()||!cones_.empty()||!tori_.empty())&&distance(a,b)>1e-12){const double length=distance(a,b);const Line<3> segment(plane_.toGlobal(a),plane_.directionToGlobal(b-a));const auto exact=analyticHidden(segment,{0,length},source);for(auto span:exact)hits.push_back({span.lo/length,span.hi/length});}
         std::sort(hits.begin(),hits.end(),[](const auto &a,const auto &b){return a.lo<b.lo;});std::vector<Interval> merged;for(const auto &hit:hits){if(!merged.empty()&&hit.lo<=merged.back().hi+1e-10)merged.back().hi=std::max(merged.back().hi,hit.hi);else merged.push_back(hit);}return merged;}
     std::vector<Interval> hidden(const DisplayConic &curve,Interval range,const DisplaySource &source,const std::vector<Interval> &spherical)const{
         std::vector<Interval> hits;if(!nodes_.empty())queryConic(0,curve.bounds(range),curve,range,source,hits);
