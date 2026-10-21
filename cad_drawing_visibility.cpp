@@ -95,6 +95,55 @@ bool completeCylinder(const DrawingSourceBody &source,const DrawingView &view,Ex
     const auto x=view.plane.directionToLocal(frame.xDir()),y=view.plane.directionToLocal(frame.yDir());const Vec3 extent(radius*std::hypot(x.x(),y.x()),radius*std::hypot(x.y(),y.y()),0);
     for(double level:levels){const auto center=view.plane.toLocal(frame.origin()+level*frame.zDir());result.bounds.add(center-extent);result.bounds.add(center+extent);}return true;
 }
+// Il raggio varia linearmente con la quota assiale. L'intervallo delle basi
+// esclude l'altra falda del cono implicito, anche quando il vertice e' visibile.
+struct ExactCone {
+    Frame3 frame;double angle=0,radius=0,slope=0,low=0,high=0;quint64 featureId=0;Bounds bounds;
+    double radiusAt(double z)const{return std::max(0.,radius+slope*z);}
+    bool covers(Vec3 point,Vec3 direction,double bias)const{
+        const auto p=frame.toLocal(point),d=frame.directionToLocal(direction);
+        double lo=bias,hi=std::numeric_limits<double>::infinity();
+        if(d.z()==0){if(p.z()<low||p.z()>high)return false;}
+        else{const double a=(low-p.z())/d.z(),b=(high-p.z())/d.z();lo=std::max(lo,std::min(a,b));hi=std::max(a,b);}
+        if(hi<lo||hi<=bias)return false;
+        const double r=radius+slope*p.z(),dr=slope*d.z(),a=d.x()*d.x()+d.y()*d.y()-dr*dr;
+        const double b=p.x()*d.x()+p.y()*d.y()-r*dr;
+        const auto inside=[&](double t){const auto q=p+t*d;const double rr=radiusAt(q.z()),radial=q.x()*q.x()+q.y()*q.y(),f=radial-rr*rr;
+            const double roundoff=64*std::numeric_limits<double>::epsilon()*std::max(radial,rr*rr);
+            return f<0||(t>bias&&f<=roundoff);};
+        // Minimo del quadratico radiale sul raggio ritagliato dalle basi:
+        // nessuna sottrazione di radici quasi uguali nelle viste radenti.
+        if(a>0)return inside(std::clamp(-b/a,lo,hi));
+        return inside(lo)||inside(hi); // a<=0 implica d.z()!=0: estremi finiti
+    }
+};
+bool completeCone(const DrawingSourceBody &source,const DrawingView &view,ExactCone &result){
+    if(view.sectionStyle!=DrawingSectionStyle::Removed)return false;
+    const auto &body=*source.body;const auto faces=body.faces();const auto edges=body.edges();
+    if(!((faces.size()==3&&edges.size()==2)||(faces.size()==2&&edges.size()==1)))return false;
+    const Face *side=nullptr;std::vector<const Face *> caps;
+    for(auto id:faces){const auto &face=body.face(id);if(face.surface->type()==SurfaceType::Cone){if(side)return false;side=&face;}else if(face.surface->type()==SurfaceType::Plane)caps.push_back(&face);else return false;}
+    if(!side||!side->sense||caps.size()!=edges.size()||side->loops.size()!=edges.size()||!body.region(body.shell(side->shell).region).solid)return false;
+    for(auto loop:side->loops)if(body.loopFins(loop).size()!=1)return false;
+    const auto &surface=static_cast<const ConicalSurface &>(*side->surface);const auto &frame=surface.frame();
+    const double radius=surface.referenceRadius(),slope=std::tan(surface.semiAngle());
+    if(!std::isfinite(slope)||slope==0)return false;
+    const double epsilon=1e-8*std::max(1.,radius);std::vector<double> levels;
+    for(auto edgeId:edges){const auto &edge=body.edge(edgeId);if(edge.curve->type()!=CurveType::Circle||body.edgeStart(edgeId)!=body.edgeEnd(edgeId)||std::abs(edge.range.length()-kTwoPi)>1e-10)return false;
+        const auto &circle=static_cast<const Circle<3> &>(*edge.curve);const auto center=frame.toLocal(circle.center());
+        if(std::hypot(center.x(),center.y())>epsilon||std::abs(circle.radius()-radius-slope*center.z())>epsilon||std::abs(dot(cross(circle.xAxis(),circle.yAxis()),frame.zDir()))<1-1e-10)return false;
+        levels.push_back(center.z());}
+    if(edges.size()==1)levels.push_back(-radius/slope);
+    std::sort(levels.begin(),levels.end());if(levels[1]-levels[0]<=kLinearResolution)return false;
+    bool bottom=std::abs(radius+slope*levels[0])<=epsilon,top=std::abs(radius+slope*levels[1])<=epsilon;
+    for(const auto *cap:caps){if(cap->shell!=side->shell||cap->loops.size()!=1||body.loopFins(cap->loops[0]).size()!=1)return false;
+        const auto &plane=static_cast<const Plane &>(*cap->surface);const double level=frame.toLocal(plane.frame().origin()).z(),normal=dot(plane.frame().zDir(),frame.zDir())*(cap->sense?1:-1);
+        if(std::abs(level-levels[0])<=epsilon&&normal<-1+1e-10)bottom=true;else if(std::abs(level-levels[1])<=epsilon&&normal>1-1e-10)top=true;else return false;}
+    if(!bottom||!top||radius+slope*levels[0]<-epsilon||radius+slope*levels[1]<-epsilon)return false;
+    result.frame=frame;result.angle=surface.semiAngle();result.radius=radius;result.slope=slope;result.low=levels[0];result.high=levels[1];result.featureId=source.featureId;
+    const auto x=view.plane.directionToLocal(frame.xDir()),y=view.plane.directionToLocal(frame.yDir());
+    for(double level:levels){const auto center=view.plane.toLocal(frame.origin()+level*frame.zDir());const double r=result.radiusAt(level);const Vec3 extent(r*std::hypot(x.x(),y.x()),r*std::hypot(x.y(),y.y()),0);result.bounds.add(center-extent);result.bounds.add(center+extent);}return true;
+}
 std::vector<Vec3> clipPolygon(const std::vector<Vec3> &input,int axis,double sign){
     std::vector<Vec3> result;if(input.empty())return result;auto a=input.back();double fa=sign*a[axis];
     for(const auto b:input){const double fb=sign*b[axis];if((fa<0)!=(fb<0))result.push_back(a+(b-a)*(fa/(fa-fb)));if(fb>=0)result.push_back(b);a=b;fa=fb;}return result;
@@ -109,6 +158,7 @@ class Occlusion {
     struct ExactSphere {Vec3 world,local;double radius;quint64 featureId;};
     std::vector<ExactSphere> spheres_;
     std::vector<ExactCylinder> cylinders_;
+    std::vector<ExactCone> cones_;
     Frame3 plane_;
     double depthBias_=0,intersectionTolerance_=0;
     std::vector<Triangle> triangles_;
@@ -168,6 +218,7 @@ public:
         if(view.sectionStyle!=DrawingSectionStyle::Removed){need(material,"Materiale della sezione non preparato per la visibilita'.");capBias_=4*view.tolerance;cap_=QTransform::fromScale(1/view.scale,-1/view.scale).map(*material);capLoops_=cap_.toSubpathPolygons();}
         for(const auto &source:model.bodies){cancellationPoint();need(source.featureId&&!ids.contains(source.featureId)&&source.body&&source.names&&source.names->body==source.body.get(),"Sorgente della visibilita' incoerente.");ids.insert(source.featureId);
             ExactCylinder cylinder;const bool exactCylinder=completeCylinder(source,view,cylinder);if(exactCylinder)cylinders_.push_back(cylinder);
+            ExactCone cone;const bool exactCone=completeCone(source,view,cone);if(exactCone)cones_.push_back(cone);
             // Solo sfere intere, chiuse e orientate verso l'esterno: una
             // faccia rifilata o una sezione deve conservare il proprio dominio.
             const auto faces=source.body->faces();
@@ -204,7 +255,7 @@ public:
                         }
                         triangle.depthScale=planar?0:1/std::max(cosine,1e-8);
                         triangle.selfBias=planar?triangle.bias:std::max(triangle.bias,(2*deviation+.03/view.scale)*triangle.depthScale);
-                        triangle.featureId=source.featureId;triangle.face=face.face;triangle.exactExternal=exactCylinder;triangle.bounds.add(triangle.a);triangle.bounds.add(triangle.b);triangle.bounds.add(triangle.c);triangles_.push_back(triangle);
+                        triangle.featureId=source.featureId;triangle.face=face.face;triangle.exactExternal=exactCylinder||exactCone;triangle.bounds.add(triangle.a);triangle.bounds.add(triangle.b);triangle.bounds.add(triangle.c);triangles_.push_back(triangle);
                         need(triangles_.size()<=2000000,"Troppi triangoli per la visibilita' della tavola.");}}
             }
         }
@@ -241,10 +292,23 @@ public:
             const auto side=cross(axis,direction);if(norm(side)>1e-12){const auto normal=normalized(side);for(double sign:{-1.,1.})cut(Plane(Frame3(frame.origin()+sign*cylinder.radius*normal,normal,axis)));}
             std::sort(cuts.begin(),cuts.end());for(std::size_t i=1;i<cuts.size();++i)if(cuts[i]>cuts[i-1]&&cylinder.covers(geometry.point(cuts[i-1]+.5*(cuts[i]-cuts[i-1])),direction,depthBias_))hits.push_back({cuts[i-1],cuts[i]});
         }
+        for(const auto &cone:cones_){cancellationPoint();if(cone.featureId==source.featureId)continue;
+            const auto box=curveBox(geometry,range);Bounds projected;for(int mask=0;mask<8;++mask)projected.add(plane_.toLocal(Vec3(mask&1?box.hi.x():box.lo.x(),mask&2?box.hi.y():box.lo.y(),mask&4?box.hi.z():box.lo.z())));if(!projected.overlaps(cone.bounds))continue;
+            std::vector<double> cuts{range.lo,range.hi};const auto &frame=cone.frame;const auto direction=plane_.zDir(),axis=frame.zDir(),offset=depthBias_*direction;
+            const auto cut=[&](const Surface &surface){const auto crossing=intersectCurveSurface(geometry,range,surface,intersectionTolerance_);cuts.insert(cuts.end(),crossing.parameters.begin(),crossing.parameters.end());for(auto span:crossing.coincident){cuts.push_back(span.lo);cuts.push_back(span.hi);}};
+            cut(ConicalSurface(Frame3(frame.origin()-offset,axis,frame.xDir()),cone.angle,cone.radius));
+            for(double level:{cone.low,cone.high}){const auto center=frame.origin()+level*axis;cut(Plane(Frame3(center-offset,axis,frame.xDir())));const double r=cone.radiusAt(level);
+                if(r>kLinearResolution&&std::abs(dot(axis,direction))>1e-12)cut(ExtrusionSurface(std::make_shared<Circle<3>>(center,frame.xDir(),frame.yDir(),r),direction));}
+            // Generatrici tangenti: (U - pendenza*asse) . direzioneVista = 0.
+            const auto d=frame.directionToLocal(direction);const double radial=std::hypot(d.x(),d.y()),axial=cone.slope*d.z();
+            if(radial>0&&std::abs(axial)<=radial){const double middle=std::atan2(d.y(),d.x()),delta=std::acos(std::clamp(axial/radial,-1.,1.));
+                for(double u:{middle-delta,middle+delta}){const auto radialDirection=std::cos(u)*frame.xDir()+std::sin(u)*frame.yDir();cut(Plane(Frame3(frame.origin()+cone.radius*radialDirection,radialDirection-cone.slope*axis,axis)));}}
+            std::sort(cuts.begin(),cuts.end());for(std::size_t i=1;i<cuts.size();++i)if(cuts[i]>cuts[i-1]&&cone.covers(geometry.point(cuts[i-1]+.5*(cuts[i]-cuts[i-1])),direction,depthBias_))hits.push_back({cuts[i-1],cuts[i]});
+        }
         return hits;
     }
     std::vector<Interval> hidden(Vec3 a,Vec3 b,const DisplaySource &source)const{std::vector<Interval> hits=capHidden(a,b);Bounds box;box.add(a);box.add(b);if(!nodes_.empty())query(0,box,a,b,source,hits);
-        if((!spheres_.empty()||!cylinders_.empty())&&distance(a,b)>1e-12){const double length=distance(a,b);const Line<3> segment(plane_.toGlobal(a),plane_.directionToGlobal(b-a));const auto exact=analyticHidden(segment,{0,length},source);for(auto span:exact)hits.push_back({span.lo/length,span.hi/length});}
+        if((!spheres_.empty()||!cylinders_.empty()||!cones_.empty())&&distance(a,b)>1e-12){const double length=distance(a,b);const Line<3> segment(plane_.toGlobal(a),plane_.directionToGlobal(b-a));const auto exact=analyticHidden(segment,{0,length},source);for(auto span:exact)hits.push_back({span.lo/length,span.hi/length});}
         std::sort(hits.begin(),hits.end(),[](const auto &a,const auto &b){return a.lo<b.lo;});std::vector<Interval> merged;for(const auto &hit:hits){if(!merged.empty()&&hit.lo<=merged.back().hi+1e-10)merged.back().hi=std::max(merged.back().hi,hit.hi);else merged.push_back(hit);}return merged;}
     std::vector<Interval> hidden(const DisplayConic &curve,Interval range,const DisplaySource &source,const std::vector<Interval> &spherical)const{
         std::vector<Interval> hits;if(!nodes_.empty())queryConic(0,curve.bounds(range),curve,range,source,hits);

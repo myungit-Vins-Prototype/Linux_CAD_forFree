@@ -146,9 +146,64 @@ void cylinderOcclusion(){
   require(open?paths.curves[0].hidden.isEmpty():(starts(paths.curves[0].hidden)==2&&starts(paths.curves[0].visible)==3),"cilindro aperto/cavo conserva il foro e non diventa un cilindro pieno");
  }
 }
+void coneOcclusion(){
+ // Soluzione indipendente sul piano proiettato: massimo della sezione radiale
+ // lungo l'asse finito, comprendendo basi ellittiche e generatrici tangenti.
+ for(auto radii:{Vec2(3,1),Vec2(3,0),Vec2(0,3),Vec2(1,3)})for(bool rotated:{false,true})for(auto axis:{Vec3(0,0,1),Vec3(0,0,-1),Vec3(0,1,0),Vec3(0,.8,.6),Vec3(0,.6,.8)})for(bool narrow:{false,true})for(double scale:{.1,1.,10.}){
+  const Frame3 frame=rotated?Frame3(Vec3(13,-7,100),Vec3(.3,-.8,1),Vec3(1,0,0)):Frame3();const double slope=(radii.y()-radii.x())/4;
+  const double y=axis.z()==0?(narrow?-.0001:2.):(narrow?-std::abs(axis.z())*2.9999:1.6);
+  DrawingModelSnapshot model{{QUuid::createUuid(),{}},{source(1,makeBox(Frame3(frame.toGlobal(Vec3(-5,y,-100)),frame.zDir(),frame.xDir()),10,.05,.1)),source(2,makeCone(Frame3(frame.toGlobal(Vec3(0,0,10)),frame.directionToGlobal(axis),frame.xDir()),radii.x(),radii.y(),4))}};
+  DrawingView view;view.kind=DrawingViewKind::ProjectedEdges;view.plane=frame;view.scale=scale;std::vector<DrawingCurve> curves;ok(projectDrawingEdges(model,view,curves));
+  curves.erase(std::remove_if(curves.begin(),curves.end(),[&](const auto &c){if(c.featureId!=1)return true;const auto &edge=model.bodies[0].body->edge(c.sourceEdge);const auto p=frame.toLocal(edge.curve->point(.5*(edge.range.lo+edge.range.hi)));return std::abs(p.y()-y)>1e-8||std::abs(p.z()+99.9)>1e-8;}),curves.end());require(curves.size()==1,"segmento dietro il cono isolato");
+  DrawingSilhouetteCache cache;DrawingViewVisibility paths;ok(drawingViewVisibility(model,view,curves,{},cache,paths));
+  if(axis.z()==0&&narrow){require(paths.curves[0].hidden.isEmpty(),"cono finito non occlude oltre la base");continue;}
+  double x=0;
+  if(axis.z()==0)x=radii.x()+slope*y;
+  else{const double c2=axis.z()*axis.z(),a=slope*slope-axis.y()*axis.y()/c2,b=radii.x()*slope+axis.y()*y/c2;
+   const auto square=[&](double z){const double r=radii.x()+slope*z,v=(y-axis.y()*z)/axis.z();return r*r-v*v;};double squareX=std::max(square(0),square(4));if(a<0)squareX=std::max(squareX,square(std::clamp(-b/a,0.,4.)));x=std::sqrt(std::max(0.,squareX));}
+  if(x==0){require(paths.curves[0].hidden.isEmpty(),"bordo fuori dalla sagoma conica visibile");continue;}
+  const auto box=paths.curves[0].hidden.boundingRect();
+  if(paths.curves[0].hidden.isEmpty()||std::abs(box.left()/scale+x)>=2e-6||std::abs(box.right()/scale-x)>=2e-6)std::cerr<<"cone r="<<radii.x()<<","<<radii.y()<<" axis="<<axis.y()<<","<<axis.z()<<" y="<<y<<" scale="<<scale<<" rotated="<<rotated<<" bounds="<<box.left()/scale<<","<<box.right()/scale<<" expected="<<x<<'\n';
+  require(!paths.curves[0].hidden.isEmpty()&&std::abs(box.left()/scale+x)<2e-6&&std::abs(box.right()/scale-x)<2e-6,"ombra esatta del cono/tronco assiale, laterale e obliquo");
+  if(!narrow&&scale==1){auto section=view;section.kind=DrawingViewKind::Section;section.sectionStyle=DrawingSectionStyle::Full;QPainterPath material;DrawingViewVisibility cut;ok(drawingViewVisibility(model,section,curves,{},cache,cut,&material));require(cut.curves[0].hidden.isEmpty(),"cono asportato dalla sezione senza ombra residua");}
+ }
+ // Il taglio segue la superficie conica a profondita' diverse, non il raggio
+ // maggiore della sagoma; oltre il vertice non esiste una seconda falda.
+ for(bool lateral:{false,true})for(double z:{0.,10.,12.,13.8,14.,18.}){
+  const double y=lateral?2.:.2;DrawingModelSnapshot model{{QUuid::createUuid(),{}},{source(1,makeBox(Frame3(Vec3(-5,y,z),Vec3(0,0,1),Vec3(1,0,0)),10,.05,.1)),source(2,makeCone(Frame3(Vec3(0,0,10),lateral?Vec3(0,1,0):Vec3(0,0,1),Vec3(1,0,0)),3,0,4))}};
+  DrawingView view;view.kind=DrawingViewKind::ProjectedEdges;std::vector<DrawingCurve> curves;ok(projectDrawingEdges(model,view,curves));curves.erase(std::remove_if(curves.begin(),curves.end(),[&](const auto &c){if(c.featureId!=1)return true;const auto &edge=model.bodies[0].body->edge(c.sourceEdge);const auto p=edge.curve->point(.5*(edge.range.lo+edge.range.hi));return std::abs(p.y()-y)>1e-8||std::abs(p.z()-z-.1)>1e-8;}),curves.end());require(curves.size()==1,"segmento per profondita' conica");
+  DrawingSilhouetteCache cache;DrawingViewVisibility paths;ok(drawingViewVisibility(model,view,curves,{},cache,paths));const double front=z+.1+4*view.tolerance,r=lateral?1.5:3-.75*std::max(0.,front-10),v=lateral?std::max(0.,front-10):y;
+  if((!lateral&&front>=14)||r<=v){require(paths.curves[0].hidden.isEmpty(),"bordo davanti al cono o oltre il vertice visibile");continue;}
+  const double x=std::sqrt(r*r-v*v);const auto box=paths.curves[0].hidden.boundingRect();require(std::abs(box.left()+x)<2e-6&&std::abs(box.right()-x)<2e-6,"profondita' conica verificata sulla superficie esatta");
+ }
+ // Cerchi ed ellissi: tagli quasi tangenti, anche attraverso la cucitura.
+ for(bool elliptical:{false,true})for(bool apex:{false,true})for(double separation:{4.5,7.9999})for(double scale:{.1,1.,10.}){
+  const double minor=elliptical?3.:5.;ProfileRegion region;region.outer.segments={{std::make_shared<Ellipse<2>>(Vec2(),Vec2(1,0),Vec2(0,1),5,minor),{0,kTwoPi},0}};
+  DrawingModelSnapshot model{{QUuid::createUuid(),{}},{source(1,elliptical?makeExtrusion(Frame3(),region,1):makeCylinder(Frame3(),5,1)),source(2,makeCone(Frame3(Vec3(separation,0,10),Vec3(0,0,1),Vec3(1,0,0)),3,apex?0:1,4))}};
+  DrawingView view;view.kind=DrawingViewKind::ProjectedEdges;view.scale=scale;std::vector<DrawingCurve> curves;ok(projectDrawingEdges(model,view,curves));curves.erase(std::remove_if(curves.begin(),curves.end(),[&](const auto &c){return c.featureId!=1||std::abs(model.bodies[0].body->edge(c.sourceEdge).curve->point(kPi).z()-1)>1e-8;}),curves.end());require(curves.size()==1,"conica dietro il cono isolata");
+  curves[0].hasSourceRange=true;curves[0].sourceRange={kTwoPi-1.3,kTwoPi+1.3};curves[0].range=curves[0].sourceRange;
+  DrawingSilhouetteCache cache;DrawingViewVisibility paths;ok(drawingViewVisibility(model,view,curves,{},cache,paths));const double x=elliptical?.625*separation:(25+separation*separation-9)/(2*separation),y=minor*std::sqrt(1-x*x/25);const auto box=paths.curves[0].hidden.boundingRect();require(!paths.curves[0].hidden.isEmpty()&&std::abs(box.left()/scale-x)<2e-6&&std::abs(box.top()/scale+y)<2e-6&&std::abs(box.bottom()/scale-y)<2e-6,"cerchio/ellisse tagliato dalla base esatta del cono");
+ }
+ // Le generatrici laterali tagliano il cerchio in due punti asimmetrici.
+ for(double scale:{.1,1.,10.}){
+  DrawingModelSnapshot model{{QUuid::createUuid(),{}},{source(1,makeCylinder(Frame3(),5,1)),source(2,makeCone(Frame3(Vec3(4.5,-10,10),Vec3(0,1,0),Vec3(1,0,0)),3,1,20))}};
+  DrawingView view;view.kind=DrawingViewKind::ProjectedEdges;view.scale=scale;std::vector<DrawingCurve> curves;ok(projectDrawingEdges(model,view,curves));curves.erase(std::remove_if(curves.begin(),curves.end(),[&](const auto &c){return c.featureId!=1||std::abs(model.bodies[0].body->edge(c.sourceEdge).curve->point(kPi).z()-1)>1e-8;}),curves.end());require(curves.size()==1,"cerchio dietro le generatrici coniche isolato");
+  DrawingSilhouetteCache cache;DrawingViewVisibility paths;ok(drawingViewVisibility(model,view,curves,{},cache,paths));const double upper=(-.5+std::sqrt(76.))/2.02,lower=(-.5-std::sqrt(76.))/2.02;const auto box=paths.curves[0].hidden.boundingRect();require(std::abs(box.top()/scale+upper)<2e-6&&std::abs(box.bottom()/scale+lower)<2e-6&&std::abs(box.left()/scale-(2.5+.1*lower))<2e-6,"cerchio intersecato esattamente dalle generatrici coniche tangenti");
+ }
+ // Una faccia conica aperta e un cono cavo conservano il foro assiale.
+ for(bool open:{false,true}){
+  ProfileLoop profile;const std::vector<Vec2> points=open?std::vector<Vec2>{{3,0},{1,4}}:std::vector<Vec2>{{3,0},{1,4},{.5,4},{2,0},{3,0}};
+  for(std::size_t i=1;i<points.size();++i){const auto d=points[i]-points[i-1];profile.segments.push_back({std::make_shared<Line<2>>(points[i-1],d),{0,norm(d)},0});}
+  ProfileRegion region;region.outer=profile;const Frame3 front(Vec3(0,0,10),Vec3(0,0,1),Vec3(1,0,0));
+  DrawingModelSnapshot model{{QUuid::createUuid(),{}},{source(1,makeBox(Frame3(Vec3(-.2,.2,0),Vec3(0,0,1),Vec3(1,0,0)),.4,.05,.1)),source(2,open?makeSheetRevolution(front,{profile},kTwoPi):makeRevolution(front,region))}};
+  DrawingView view;view.kind=DrawingViewKind::ProjectedEdges;std::vector<DrawingCurve> curves;ok(projectDrawingEdges(model,view,curves));curves.erase(std::remove_if(curves.begin(),curves.end(),[](const auto &c){return c.featureId!=1;}),curves.end());DrawingSilhouetteCache cache;DrawingViewVisibility paths;ok(drawingViewVisibility(model,view,curves,{},cache,paths));for(const auto &path:paths.curves)require(path.hidden.isEmpty(),"cono cavo/aperto conserva il foro senza ombra piena");
+ }
+
+}
+
 }
 int main(int argc,char **argv){QCoreApplication app(argc,argv);try{
- conicTransitions();conicDepth();conicLimits();sphereOcclusion();cylinderOcclusion();
+ conicTransitions();conicDepth();conicLimits();sphereOcclusion();cylinderOcclusion();coneOcclusion();
  DrawingModelSnapshot model{{QUuid::createUuid(),{}},{source(1,makeBox(Frame3(),10,6,1))}};DrawingView view;view.kind=DrawingViewKind::ProjectedEdges;std::vector<DrawingCurve> curves;ok(projectDrawingEdges(model,view,curves));DrawingSilhouetteCache cache;DrawingViewVisibility visible;ok(drawingViewVisibility(model,view,curves,{},cache,visible));require(visible.curves.size()==curves.size(),"un risultato per ogni curva esatta");int back=0,front=0;
  for(std::size_t i=0;i<curves.size();++i){const auto &edge=model.bodies[0].body->edge(curves[i].sourceEdge);const auto p=edge.curve->point((edge.range.lo+edge.range.hi)/2);if(std::abs(p.z())<1e-8){++back;require(visible.curves[i].visible.isEmpty()&&visible.curves[i].hidden.isEmpty(),"bordo inferiore coincidente eliminato sotto il contorno visibile");}if(std::abs(p.z()-1)<1e-8){++front;require(!visible.curves[i].visible.isEmpty()&&visible.curves[i].hidden.isEmpty(),"bordi anteriori visibili, nessuna auto-occlusione");}}
  double contour=0;for(const auto &p:visible.curves)contour+=pathLength(p.visible);require(std::abs(contour-32)<1e-7,"ogni segmento del contorno proiettato e disegnato una sola volta");
