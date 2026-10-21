@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <cmath>
 #include <functional>
+#include <limits>
 #include <stdexcept>
 
 #include "fk_bernstein.h"
@@ -89,6 +90,16 @@ namespace {
 // (tangenze: radici doppie che l'isolamento per cambi di segno puo' perdere
 // per un arrotondamento): minimi di |p| entro valueTolerance.
 std::vector<double> rootsAndTouchings(const BernsteinPolynomial &p, double valueTolerance) {
+    // La base di Bernstein e' positiva su [0,1]: fuori dall'inviluppo dei
+    // coefficienti non ci sono ne' zeri ne' tangenze entro valueTolerance.
+    // Evita soprattutto la ricerca degli estremi di tratti lontani dal piano.
+    const auto &coefficients = p.coefficients();
+    if (!coefficients.empty()) {
+        const auto bounds = std::minmax_element(coefficients.begin(), coefficients.end());
+        const double magnitude = std::max(std::fabs(*bounds.first), std::fabs(*bounds.second));
+        const double margin = std::max(valueTolerance, 64 * std::numeric_limits<double>::epsilon() * magnitude);
+        if (*bounds.first > margin || *bounds.second < -margin) return {};
+    }
     std::vector<double> result = p.roots();
     if (p.degree() >= 2)
         for (double s : p.derivative().roots())
@@ -145,6 +156,23 @@ void rootsOf(const Curve<N> &curve, const Interval &range, const Vec<N> &n, doub
     }
     case CurveType::BSpline: {
         const auto &spline = static_cast<const BSplineCurve<N> &>(curve);
+        // Pesi positivi: anche la NURBS e' contenuta nell'inviluppo dei poli.
+        // Rifiuta il tratto intero prima di visitare tutti i suoi Bezier. Il
+        // margine conserva sia i coincidenti sia i quasi-contatti razionali
+        // accettati da rootsAndTouchings, inclusi normali non unitarie.
+        double low = 1e300, high = -1e300, magnitude = std::fabs(offset);
+        double minWeight = 1e300, maxWeight = 0.0;
+        for (int j = 0; j < spline.poleCount(); ++j) {
+            const double projection = dot(n, spline.poles()[j]);
+            low = std::min(low, projection - offset);
+            high = std::max(high, projection - offset);
+            magnitude = std::max(magnitude, std::fabs(projection));
+            minWeight = std::min(minWeight, spline.weight(j));
+            maxWeight = std::max(maxWeight, spline.weight(j));
+        }
+        const double margin = std::max(tolerance, 0.1 * tolerance * (maxWeight / minWeight) * norm(n))
+            + 64 * std::numeric_limits<double>::epsilon() * magnitude;
+        if (low > margin || high < -margin) return;
         const auto segments = spline.cachedBezierSegments();
         for (const BSplineCurve<N> &segment : *segments) {
             const Interval dom = segment.domain();
