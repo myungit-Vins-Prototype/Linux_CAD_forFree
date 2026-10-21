@@ -144,4 +144,134 @@ void SceneRenderer::drawSectionPlane(OverlayRenderer &overlay, const QVector<QVe
     glDepthMask(GL_TRUE);
 }
 
+void SceneRenderer::drawThreadProfileEdges(OverlayRenderer &overlay, const BodyDisplay &display, const QVector4D &color) {
+    for (const QVector<QVector3D> &edge : display.edges)
+        if (edge.size() > 2) overlay.draw(GL_LINE_STRIP, edge, color);
+}
+
+void SceneRenderer::drawTrimPreview(DisplayCache &cache, const BodyDisplay &display, int displayMode) {
+    if (displayMode != 0 && !display.vertices.isEmpty()) {
+        cache.setLightingEnabled(false);
+        cache.setColor(QVector4D(0.25f, 1.0f, 0.42f, 0.62f));
+        glEnable(GL_BLEND);
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+        glDepthMask(GL_FALSE);
+        glEnable(GL_POLYGON_OFFSET_FILL);
+        glPolygonOffset(-2.0f, -3.0f);
+        cache.displayFaces(display);
+        glDisable(GL_POLYGON_OFFSET_FILL);
+        glDepthMask(GL_TRUE);
+        glDisable(GL_BLEND);
+    }
+    if (displayMode != 1 && !display.edges.isEmpty()) {
+        cache.setLightingEnabled(false);
+        cache.setColor(QVector4D(0.55f, 1.0f, 0.65f, 1.0f));
+        glLineWidth(3.0f);
+        cache.edges(display);
+        glLineWidth(1.0f);
+    }
+}
+
+void SceneRenderer::drawFeaturePreview(DisplayCache &cache, OverlayRenderer &overlay,
+                                       const BodyDisplay &display, const BodyDisplay &retained,
+                                       const PreviewStyle &style) {
+    // Sottrazione mediante estrusione: il vecchio corpo non puo' restare
+    // davanti alla patch, altrimenti chiude visivamente il foro. Disegniamo
+    // opache le facce conservate del risultato, con il taglio gia' presente.
+    if (!retained.vertices.isEmpty() || !retained.edges.isEmpty()) {
+        const QColor &color = style.retainedColor;
+        if (style.displayMode != 0 && !retained.vertices.isEmpty()) {
+            cache.setLightingEnabled(true);
+            cache.setEmission(QVector4D(0.0f, 0.0f, 0.0f, 1.0f));
+            cache.setColor(QVector4D(float(color.redF()), float(color.greenF()), float(color.blueF()), 1.0f));
+            glEnable(GL_POLYGON_OFFSET_FILL);
+            glPolygonOffset(1.0f, 2.0f);
+            cache.displayFaces(retained);
+            glDisable(GL_POLYGON_OFFSET_FILL);
+        }
+        if (style.displayMode != 1 && !retained.edges.isEmpty()) {
+            cache.setLightingEnabled(false);
+            cache.setColor(QVector4D(0.82f, 0.91f, 0.96f, 1.0f));
+            glLineWidth(1.5f);
+            cache.edges(retained);
+            glLineWidth(1.0f);
+        }
+    }
+    // La superficie del raccordo e' interna al vecchio spigolo convesso:
+    // in sovrapposizione alla base opaca la mostriamo come patch X-ray.
+    if (style.xray) glDisable(GL_DEPTH_TEST);
+    if (style.displayMode != 0) {
+        cache.setLightingEnabled(true);
+        cache.setEmission(QVector4D(0.0f, 0.0f, 0.0f, 1.0f));
+        cache.setColor(QVector4D(0.95f, 0.66f, 0.28f, style.transparent ? 0.42f : 1.0f));
+        if (style.transparent) {
+            glEnable(GL_BLEND);
+            glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+            glDepthMask(GL_FALSE);
+        }
+        glEnable(GL_POLYGON_OFFSET_FILL);
+        glPolygonOffset(1.0f, 2.0f);
+        if (style.nearestSurface) {
+            glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
+            glDepthMask(GL_TRUE);
+            cache.displayFaces(display);
+            glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+            glDepthMask(GL_FALSE);
+            glDepthFunc(GL_LEQUAL);
+        }
+        cache.displayFaces(display);
+        glDisable(GL_POLYGON_OFFSET_FILL);
+        if (style.transparent) {
+            glDepthMask(GL_TRUE);
+            glDisable(GL_BLEND);
+        }
+    }
+    cache.setLightingEnabled(false);
+    cache.setColor(QVector4D(1.0f, 0.88f, 0.62f, 1.0f));
+    glLineWidth(1.5f);
+    if(style.spatial) {
+        for(const auto &line:display.edges)overlay.drawWideLineStrip(line,QVector4D(1,.88f,.62f,1),3.5f*style.devicePixelRatio);
+    } else if (style.thread && style.displayMode != 0)
+        drawThreadProfileEdges(overlay, display, QVector4D(1.0f, 0.88f, 0.62f, 1.0f));
+    else
+        cache.edges(display);
+    if (style.transparent && !display.constructionCurves.isEmpty()) {
+        overlay.setStipple(false);
+        glLineWidth(1.8f);
+        for (const QVector<QVector3D> &curve : display.constructionCurves) {
+            overlay.draw(GL_LINE_STRIP, curve, QVector4D(0.30f, 0.95f, 1.0f, 1.0f));
+        }
+    }
+    glLineWidth(1.0f);
+    if (style.xray) {
+        glEnable(GL_DEPTH_TEST);
+        glDepthFunc(GL_LEQUAL);
+    }
+}
+
+void SceneRenderer::drawExportMeshPreview(DisplayCache &cache, const BodyDisplay &display, bool quadrangular) {
+    if (display.vertices.isEmpty() && display.edges.isEmpty()) return;
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    glDepthMask(GL_FALSE);
+    if (!display.vertices.isEmpty()) {
+        cache.setLightingEnabled(false);
+        cache.setColor(quadrangular
+            ? QVector4D(0.18f, 0.82f, 0.94f, 0.18f)
+            : QVector4D(1.00f, 0.62f, 0.18f, 0.18f));
+        glEnable(GL_POLYGON_OFFSET_FILL);
+        glPolygonOffset(-0.75f, -1.0f);
+        cache.displayFaces(display);
+        glDisable(GL_POLYGON_OFFSET_FILL);
+    }
+    cache.setLightingEnabled(false);
+    cache.setColor(quadrangular
+        ? QVector4D(0.20f, 0.92f, 1.00f, 0.92f)
+        : QVector4D(1.00f, 0.72f, 0.25f, 0.92f));
+    glLineWidth(1.0f);
+    cache.edges(display);
+    glDepthMask(GL_TRUE);
+    glDisable(GL_BLEND);
+}
+
 }

@@ -10040,8 +10040,7 @@ void CadViewport::drawExtrusionEdges(const ExtrusionObject &extrusion) {
 }
 
 void CadViewport::drawThreadProfileEdges(const BodyDisplay &display, const QVector4D &color) {
-    for (const QVector<QVector3D> &edge : display.edges)
-        if (edge.size() > 2) overlayRenderer_.draw(GL_LINE_STRIP, edge, color);
+    sceneRenderer_.drawThreadProfileEdges(overlayRenderer_, display, color);
 }
 
 void CadViewport::drawExtrusionOutline(const ExtrusionObject &extrusion, const QColor &color, float width) {
@@ -10867,27 +10866,7 @@ void CadViewport::drawExtrusions() {
 
 void CadViewport::drawTrimPartHover() {
     if (trimPartHover_ < 0 || trimPartHover_ >= trimPartPickDisplays_.size()) return;
-    const BodyDisplay &display = trimPartPickDisplays_.at(trimPartHover_);
-    if (displayMode_ != 0 && !display.vertices.isEmpty()) {
-        displayCache_.setLightingEnabled(false);
-        displayCache_.setColor(QVector4D(0.25f, 1.0f, 0.42f, 0.62f));
-        glEnable(GL_BLEND);
-        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-        glDepthMask(GL_FALSE);
-        glEnable(GL_POLYGON_OFFSET_FILL);
-        glPolygonOffset(-2.0f, -3.0f);
-        drawDisplayFaces(display);
-        glDisable(GL_POLYGON_OFFSET_FILL);
-        glDepthMask(GL_TRUE);
-        glDisable(GL_BLEND);
-    }
-    if (displayMode_ != 1 && !display.edges.isEmpty()) {
-        displayCache_.setLightingEnabled(false);
-        displayCache_.setColor(QVector4D(0.55f, 1.0f, 0.65f, 1.0f));
-        glLineWidth(3.0f);
-        displayCache_.edges(display);
-        glLineWidth(1.0f);
-    }
+    sceneRenderer_.drawTrimPreview(displayCache_, trimPartPickDisplays_.at(trimPartHover_), displayMode_);
 }
 
 void CadViewport::drawPreview() {
@@ -10899,105 +10878,25 @@ void CadViewport::drawPreview() {
     const bool revolution = preview_.definition.operation < 0 && preview_.definition.feature == BodyFeature::Revolution;
     const bool transparent = loft || blend || extrusion || revolution;
     const bool nearestSurface = extrusion || revolution;
-    // Sottrazione mediante estrusione: il vecchio corpo non puo' restare
-    // davanti alla patch, altrimenti chiude visivamente il foro. Disegniamo
-    // opache le facce conservate del risultato, con il taglio gia' presente.
+    ForgeCad::Gui::SceneRenderer::PreviewStyle style;
+    style.displayMode = displayMode_;
+    style.transparent = transparent;
+    style.nearestSurface = nearestSurface;
+    style.xray = blend;
+    style.spatial = preview_.definition.feature == BodyFeature::SpatialSketch
+                 || preview_.definition.feature == BodyFeature::ExtractedCurve;
+    style.thread = preview_.definition.feature == BodyFeature::Thread;
+    style.devicePixelRatio = float(devicePixelRatioF());
     if (!retained.vertices.isEmpty() || !retained.edges.isEmpty()) {
         int base = preview_.replaced.isEmpty() ? -1 : preview_.replaced.first();
         if (base < 0 && !preview_.definition.mergeBodies.isEmpty()) base = preview_.definition.mergeBodies.first();
-        const QColor color = base >= 0 && base < extrusions_.size() ? meshColorForFeature(base) : QColor::fromRgbF(0.25, 0.65, 0.90);
-        if (displayMode_ != 0 && !retained.vertices.isEmpty()) {
-            displayCache_.setLightingEnabled(true);
-            displayCache_.setEmission(QVector4D(0.0f, 0.0f, 0.0f, 1.0f));
-            displayCache_.setColor(QVector4D(float(color.redF()), float(color.greenF()), float(color.blueF()), 1.0f));
-            glEnable(GL_POLYGON_OFFSET_FILL);
-            glPolygonOffset(1.0f, 2.0f);
-            drawDisplayFaces(retained);
-            glDisable(GL_POLYGON_OFFSET_FILL);
-        }
-        if (displayMode_ != 1 && !retained.edges.isEmpty()) {
-            displayCache_.setLightingEnabled(false);
-            displayCache_.setColor(QVector4D(0.82f, 0.91f, 0.96f, 1.0f));
-            glLineWidth(1.5f);
-            displayCache_.edges(retained);
-            glLineWidth(1.0f);
-        }
+        style.retainedColor = base >= 0 && base < extrusions_.size() ? meshColorForFeature(base) : QColor::fromRgbF(0.25, 0.65, 0.90);
     }
-    // La superficie del raccordo e' interna al vecchio spigolo convesso:
-    // in sovrapposizione alla base opaca la mostriamo come patch X-ray.
-    if (blend) glDisable(GL_DEPTH_TEST);
-    if (displayMode_ != 0) {
-        displayCache_.setLightingEnabled(true);
-        displayCache_.setEmission(QVector4D(0.0f, 0.0f, 0.0f, 1.0f));
-        displayCache_.setColor(QVector4D(0.95f, 0.66f, 0.28f, transparent ? 0.42f : 1.0f));
-        if (transparent) {
-            glEnable(GL_BLEND);
-            glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-            glDepthMask(GL_FALSE);
-        }
-        glEnable(GL_POLYGON_OFFSET_FILL);
-        glPolygonOffset(1.0f, 2.0f);
-        if (nearestSurface) {
-            glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
-            glDepthMask(GL_TRUE);
-            drawDisplayFaces(display);
-            glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
-            glDepthMask(GL_FALSE);
-            glDepthFunc(GL_LEQUAL);
-        }
-        drawDisplayFaces(display);
-        glDisable(GL_POLYGON_OFFSET_FILL);
-        if (transparent) {
-            glDepthMask(GL_TRUE);
-            glDisable(GL_BLEND);
-        }
-    }
-    displayCache_.setLightingEnabled(false);
-    displayCache_.setColor(QVector4D(1.0f, 0.88f, 0.62f, 1.0f));
-    glLineWidth(1.5f);
-    if(preview_.definition.feature==BodyFeature::SpatialSketch || preview_.definition.feature==BodyFeature::ExtractedCurve) {
-        for(const auto &line:display.edges)overlayRenderer_.drawWideLineStrip(line,QVector4D(1,.88f,.62f,1),3.5f*float(devicePixelRatioF()));
-    } else if (preview_.definition.feature == BodyFeature::Thread && displayMode_ != 0)
-        drawThreadProfileEdges(display, QVector4D(1.0f, 0.88f, 0.62f, 1.0f));
-    else
-        displayCache_.edges(display);
-    if (transparent && !display.constructionCurves.isEmpty()) {
-        overlayRenderer_.setStipple(false);
-        glLineWidth(1.8f);
-        for (const QVector<QVector3D> &curve : display.constructionCurves) {
-            overlayRenderer_.draw(GL_LINE_STRIP, curve, QVector4D(0.30f, 0.95f, 1.0f, 1.0f));
-        }
-    }
-    glLineWidth(1.0f);
-    if (blend) {
-        glEnable(GL_DEPTH_TEST);
-        glDepthFunc(GL_LEQUAL);
-    }
+    sceneRenderer_.drawFeaturePreview(displayCache_, overlayRenderer_, display, retained, style);
 }
 
 void CadViewport::drawExportMeshPreview() {
-    if (exportMeshPreview_.vertices.isEmpty() && exportMeshPreview_.edges.isEmpty()) return;
-    glEnable(GL_BLEND);
-    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-    glDepthMask(GL_FALSE);
-    if (!exportMeshPreview_.vertices.isEmpty()) {
-        displayCache_.setLightingEnabled(false);
-        displayCache_.setColor(exportMeshPreviewQuadrangular_
-            ? QVector4D(0.18f, 0.82f, 0.94f, 0.18f)
-            : QVector4D(1.00f, 0.62f, 0.18f, 0.18f));
-        glEnable(GL_POLYGON_OFFSET_FILL);
-        glPolygonOffset(-0.75f, -1.0f);
-        drawDisplayFaces(exportMeshPreview_);
-        glDisable(GL_POLYGON_OFFSET_FILL);
-    }
-    displayCache_.setLightingEnabled(false);
-    displayCache_.setColor(exportMeshPreviewQuadrangular_
-        ? QVector4D(0.20f, 0.92f, 1.00f, 0.92f)
-        : QVector4D(1.00f, 0.72f, 0.25f, 0.92f));
-    glLineWidth(1.0f);
-    displayCache_.edges(exportMeshPreview_);
-    glDepthMask(GL_TRUE);
-    glDisable(GL_BLEND);
+    sceneRenderer_.drawExportMeshPreview(displayCache_, exportMeshPreview_, exportMeshPreviewQuadrangular_);
 }
 
 QString CadViewport::previewKey(const ExtrusionObject &d, int index) {

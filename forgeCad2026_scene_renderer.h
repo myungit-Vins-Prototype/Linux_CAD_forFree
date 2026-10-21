@@ -4,6 +4,7 @@
 #include <QOpenGLFunctions>
 #include <QOpenGLFramebufferObject>
 #include <QSize>
+#include <QColor>
 #include <QVector>
 #include <QVector3D>
 #include <QVector4D>
@@ -34,6 +35,20 @@ public:
                          const QVector<const BodyDisplay *> &solids,
                          const QVector<QVector3D> &quad, const QVector4D &plane);
     void drawSectionPlane(OverlayRenderer &overlay, const QVector<QVector3D> &quad, bool active);
+    struct PreviewStyle {
+        int displayMode = 0;
+        bool transparent = false, nearestSurface = false, xray = false;
+        bool spatial = false, thread = false;
+        float devicePixelRatio = 1.0f;
+        QColor retainedColor;
+    };
+    // Disegno immediato di anteprime gia' calcolate, senza stato del documento.
+    void drawFeaturePreview(DisplayCache &cache, OverlayRenderer &overlay,
+                            const BodyDisplay &display, const BodyDisplay &retained,
+                            const PreviewStyle &style);
+    void drawTrimPreview(DisplayCache &cache, const BodyDisplay &display, int displayMode);
+    void drawExportMeshPreview(DisplayCache &cache, const BodyDisplay &display, bool quadrangular);
+    void drawThreadProfileEdges(OverlayRenderer &overlay, const BodyDisplay &display, const QVector4D &color);
 private:
     friend class ::ViewportInteractionTest;
     QOpenGLFramebufferObject *sceneBuffer(const QSize &size);
