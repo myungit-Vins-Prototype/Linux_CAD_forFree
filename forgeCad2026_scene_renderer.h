@@ -71,6 +71,22 @@ public:
                        const std::function<void()> &highlightFaces);
     void drawBodyEdges(DisplayCache &cache, OverlayRenderer &overlay,
                        const BodyDisplay &display, const BodyEdgeStyle &style);
+    // Display e indici sono scelti dal viewport e usati soltanto durante la chiamata.
+    void drawHighlightFaces(DisplayCache &cache, const BodyDisplay &display, bool whole, const QColor &color);
+    void drawHighlightEdges(DisplayCache &cache, const BodyDisplay &display, bool whole, const QColor &color);
+    void drawSelectedFace(OverlayRenderer &overlay, const BodyDisplay &display,
+                          const QVector<int> &indices, const QColor &color);
+    void drawTopologyHighlight(OverlayRenderer &overlay, const BodyDisplay &display,
+                               const QVector<int> &indices, const QColor &color, float devicePixelRatio);
+    struct EdgePickStyle {
+        bool hiddenEdgesVisible = false, hoveredSelected = false;
+        int hoverEdge = -1;
+        QColor hoverColor, selectionColor;
+        float devicePixelRatio = 1.0f;
+    };
+    void drawPickedEdges(OverlayRenderer &overlay, const BodyDisplay *body,
+                         const BodyDisplay *hoverBody, const QVector<int> &hoverFaceEdges,
+                         const QVector<int> &pickedEdges, const EdgePickStyle &style);
 private:
     friend class ::ViewportInteractionTest;
     QOpenGLFramebufferObject *sceneBuffer(const QSize &size);

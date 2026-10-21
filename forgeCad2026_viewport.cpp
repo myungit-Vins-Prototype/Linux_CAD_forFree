@@ -10432,37 +10432,20 @@ void CadViewport::setFeatureHighlights(const QVector<int> &features) {
 }
 
 void CadViewport::drawFeatureHighlightFaces(int index) {
-    const auto faces = [this](const BodyDisplay &display, bool whole) {
-        const QColor &color = featureHighlightColor_;
-        displayCache_.setLightingEnabled(true);
-        displayCache_.setColor(QVector4D(float(color.redF()), float(color.greenF()), float(color.blueF()), 1.0f));
-        displayCache_.setEmission(QVector4D(float(color.redF()) * 0.25f, float(color.greenF()) * 0.25f, float(color.blueF()) * 0.25f, 1.0f));
-        // Le facce dei corpi sono spostate indietro (glPolygonOffset 1, 2):
-        // senza spostamento l'evidenziazione sta sempre davanti alle facce
-        // da cui viene, e senza scrivere la profondita' gli spigoli restano visibili.
-        glDepthMask(GL_FALSE);
-        if (whole) drawDisplayFaces(display);  // anche le ripetizioni instanziate
-        else displayCache_.faces(display);
-        glDepthMask(GL_TRUE);
-        displayCache_.setEmission(QVector4D(0.0f, 0.0f, 0.0f, 1.0f));
-    };
-    if (index == bodyHighlight_) faces(extrusions_.at(index).display, true);
+    if (index == bodyHighlight_)
+        sceneRenderer_.drawHighlightFaces(displayCache_, extrusions_.at(index).display, true, featureHighlightColor_);
     for (const FeatureHighlight &highlight : featureHighlights_)
-        if (highlight.body == index && !highlight.display.vertices.isEmpty()) faces(highlight.display, false);
+        if (highlight.body == index && !highlight.display.vertices.isEmpty())
+            sceneRenderer_.drawHighlightFaces(displayCache_, highlight.display, false, featureHighlightColor_);
 }
 
 void CadViewport::drawFeatureHighlightEdges(int index) {
     const QColor edge = featureHighlightColor_.lighter(120);
-    const auto edges = [&](const auto &draw) {
-        displayCache_.setLightingEnabled(false);
-        displayCache_.setColor(QVector4D(float(edge.redF()), float(edge.greenF()), float(edge.blueF()), 1.0f));
-        glLineWidth(3.0f);
-        draw();
-        glLineWidth(1.0f);
-    };
-    if (index == bodyHighlight_) edges([&] { drawExtrusionEdges(extrusions_.at(index)); });
+    if (index == bodyHighlight_)
+        sceneRenderer_.drawHighlightEdges(displayCache_, extrusions_.at(index).display, true, edge);
     for (const FeatureHighlight &highlight : featureHighlights_)
-        if (highlight.body == index && !highlight.display.edges.isEmpty()) edges([&] { displayCache_.edges(highlight.display); });
+        if (highlight.body == index && !highlight.display.edges.isEmpty())
+            sceneRenderer_.drawHighlightEdges(displayCache_, highlight.display, false, edge);
 }
 
 EdgePoint CadViewport::faceBoundaryReference(int body, int face, const ForgeCad::Kernel::Vec3 &point) const {
@@ -10582,16 +10565,8 @@ QVector<int> CadViewport::faceDisplayEdges(int index, const FaceHit &hit) const 
 
 void CadViewport::drawSelectedFace() {
     if (edgePicking_ || sketchMode_ || selectedFace_.body < 0 || selectedFace_.body >= extrusions_.size()) return;
-    const QVector<QVector<QVector3D>> &edges = extrusions_.at(selectedFace_.body).display.edges;
-    glDisable(GL_DEPTH_TEST);
-    glLineWidth(3.5f);
-    for (int index : faceDisplayEdges(selectedFace_.body, selectedFace_.hit)) {
-        overlayRenderer_.draw(GL_LINE_STRIP, edges.at(index),
-                              QVector4D(float(kSelectionColor.redF()), float(kSelectionColor.greenF()),
-                                        float(kSelectionColor.blueF()), 1.0f));
-    }
-    glLineWidth(1.0f);
-    glEnable(GL_DEPTH_TEST);
+    sceneRenderer_.drawSelectedFace(overlayRenderer_, extrusions_.at(selectedFace_.body).display,
+                                     faceDisplayEdges(selectedFace_.body, selectedFace_.hit), kSelectionColor);
 }
 
 void CadViewport::drawTopologyHighlight() {
@@ -10608,65 +10583,24 @@ void CadViewport::drawTopologyHighlight() {
         color = QColor(255, 220, 70);
     }
     if (indices.isEmpty()) return;
-    glDisable(GL_DEPTH_TEST);
-    glDisable(GL_BLEND);
-    glDepthMask(GL_FALSE);
-    const QVector4D halo(0.03f, 0.05f, 0.07f, 1.0f);
-    const QVector4D bright(float(color.redF()), float(color.greenF()), float(color.blueF()), 1.0f);
-    for (int index : indices)
-        if (index >= 0 && index < display.edges.size())
-            overlayRenderer_.drawWideLineStrip(display.edges.at(index), halo, 6.0f * float(devicePixelRatioF()));
-    for (int index : indices)
-        if (index >= 0 && index < display.edges.size())
-            overlayRenderer_.drawWideLineStrip(display.edges.at(index), bright, 3.5f * float(devicePixelRatioF()));
-    glDepthMask(GL_TRUE);
-    glEnable(GL_DEPTH_TEST);
+    sceneRenderer_.drawTopologyHighlight(overlayRenderer_, display, indices, color, float(devicePixelRatioF()));
 }
 
 void CadViewport::drawPickedEdges() {
     drawSelectedFace();
     if (!edgePicking_) return;
-    // I candidati rispettano la profondita' (a meno della modalita' X-ray),
-    // cosi' la scena non si riempie di bordi posteriori. Gli spigoli gia'
-    // scelti vengono invece sovrapposti nell'ultimo passaggio: durante il
-    // calcolo o il fallimento di un'anteprima la base viene ridisegnata e
-    // il suo depth buffer non deve far sparire la conferma della scelta.
-    if (hiddenEdgesVisible_) glDisable(GL_DEPTH_TEST);
-    else glEnable(GL_DEPTH_TEST);
-    auto draw = [&](int body, int index, const QColor &color, float width, bool reliableWidth = false) {
-        if (body < 0 || body >= extrusions_.size()) return;
-        const QVector<QVector<QVector3D>> &edges = extrusions_.at(body).display.edges;
-        if (index < 0 || index >= edges.size()) return;
-        const QVector4D rgba(float(color.redF()), float(color.greenF()), float(color.blueF()), 1.0f);
-        if (reliableWidth)
-            overlayRenderer_.drawWideLineStrip(edges.at(index), rgba, width * float(devicePixelRatioF()));
-        else {
-            glLineWidth(width);
-            overlayRenderer_.draw(GL_LINE_STRIP, edges.at(index), rgba);
-        }
-    };
-    if (edgePickBody_ >= 0 && edgePickBody_ < extrusions_.size())
-        for (int index = 0; index < extrusions_.at(edgePickBody_).display.edges.size(); ++index) draw(edgePickBody_, index, QColor(120, 140, 160), 1.5f);
-    for (int index : hoverFaceEdges_) draw(hoverEdgeBody_, index, kHoverColor, 3.0f);
-
-    // Hover e selezione sono conferme dell'interazione, non geometria della
-    // scena: si disegnano opachi, senza profondita', con un alone scuro che
-    // li separa sia dal corpo sia dall'anteprima semitrasparente. Il picking
-    // ha gia' escluso gli spigoli nascosti quando la modalita' X-ray e' spenta.
-    glDisable(GL_DEPTH_TEST);
-    glDisable(GL_BLEND);
-    glDepthMask(GL_FALSE);
-    const QColor edgeHalo(8, 12, 18);
-    const bool hoveredSelected = hoverEdgeBody_ == edgePickBody_ && pickedEdges_.contains(hoverEdge_);
-    if (hoverEdge_ >= 0 && !hoveredSelected) {
-        draw(hoverEdgeBody_, hoverEdge_, edgeHalo, 4.25f, true);
-        draw(hoverEdgeBody_, hoverEdge_, kHoverColor, 2.75f, true);
-    }
-    for (int index : pickedEdges_) draw(edgePickBody_, index, edgeHalo, 5.0f, true);
-    for (int index : pickedEdges_) draw(edgePickBody_, index, kSelectionColor, 3.25f, true);
-    glDepthMask(GL_TRUE);
-    glLineWidth(1.0f);
-    glEnable(GL_DEPTH_TEST);
+    const BodyDisplay *body = edgePickBody_ >= 0 && edgePickBody_ < extrusions_.size()
+        ? &extrusions_.at(edgePickBody_).display : nullptr;
+    const BodyDisplay *hoverBody = hoverEdgeBody_ >= 0 && hoverEdgeBody_ < extrusions_.size()
+        ? &extrusions_.at(hoverEdgeBody_).display : nullptr;
+    ForgeCad::Gui::SceneRenderer::EdgePickStyle style;
+    style.hiddenEdgesVisible = hiddenEdgesVisible_;
+    style.hoveredSelected = hoverEdgeBody_ == edgePickBody_ && pickedEdges_.contains(hoverEdge_);
+    style.hoverEdge = hoverEdge_;
+    style.hoverColor = kHoverColor;
+    style.selectionColor = kSelectionColor;
+    style.devicePixelRatio = float(devicePixelRatioF());
+    sceneRenderer_.drawPickedEdges(overlayRenderer_, body, hoverBody, hoverFaceEdges_, pickedEdges_, style);
 }
 
 bool CadViewport::sectionRay(QVector3D &origin, const QVector3D &direction, double &skipped) const {

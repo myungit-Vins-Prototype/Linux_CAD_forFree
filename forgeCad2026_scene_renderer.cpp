@@ -362,4 +362,104 @@ void SceneRenderer::drawBodyEdges(DisplayCache &cache, OverlayRenderer &overlay,
     }
 }
 
+void SceneRenderer::drawHighlightFaces(DisplayCache &cache, const BodyDisplay &display,
+                                       bool whole, const QColor &color) {
+    cache.setLightingEnabled(true);
+    cache.setColor(QVector4D(float(color.redF()), float(color.greenF()), float(color.blueF()), 1.0f));
+    cache.setEmission(QVector4D(float(color.redF()) * 0.25f, float(color.greenF()) * 0.25f, float(color.blueF()) * 0.25f, 1.0f));
+    // Le facce dei corpi sono spostate indietro (glPolygonOffset 1, 2):
+    // senza spostamento l'evidenziazione sta sempre davanti alle facce
+    // da cui viene, e senza scrivere la profondita' gli spigoli restano visibili.
+    glDepthMask(GL_FALSE);
+    if (whole) cache.displayFaces(display);  // anche le ripetizioni instanziate
+    else cache.faces(display);
+    glDepthMask(GL_TRUE);
+    cache.setEmission(QVector4D(0.0f, 0.0f, 0.0f, 1.0f));
+}
+
+void SceneRenderer::drawHighlightEdges(DisplayCache &cache, const BodyDisplay &display,
+                                       bool whole, const QColor &color) {
+    cache.setLightingEnabled(false);
+    cache.setColor(QVector4D(float(color.redF()), float(color.greenF()), float(color.blueF()), 1.0f));
+    glLineWidth(3.0f);
+    if (whole) cache.displayEdges(display);
+    else cache.edges(display);
+    glLineWidth(1.0f);
+}
+
+void SceneRenderer::drawSelectedFace(OverlayRenderer &overlay, const BodyDisplay &display,
+                                     const QVector<int> &indices, const QColor &color) {
+    glDisable(GL_DEPTH_TEST);
+    glLineWidth(3.5f);
+    for (int index : indices) {
+        overlay.draw(GL_LINE_STRIP, display.edges.at(index),
+                              QVector4D(float(color.redF()), float(color.greenF()),
+                                        float(color.blueF()), 1.0f));
+    }
+    glLineWidth(1.0f);
+    glEnable(GL_DEPTH_TEST);
+}
+
+void SceneRenderer::drawTopologyHighlight(OverlayRenderer &overlay, const BodyDisplay &display,
+                                          const QVector<int> &indices, const QColor &color, float devicePixelRatio) {
+    glDisable(GL_DEPTH_TEST);
+    glDisable(GL_BLEND);
+    glDepthMask(GL_FALSE);
+    const QVector4D halo(0.03f, 0.05f, 0.07f, 1.0f);
+    const QVector4D bright(float(color.redF()), float(color.greenF()), float(color.blueF()), 1.0f);
+    for (int index : indices)
+        if (index >= 0 && index < display.edges.size())
+            overlay.drawWideLineStrip(display.edges.at(index), halo, 6.0f * devicePixelRatio);
+    for (int index : indices)
+        if (index >= 0 && index < display.edges.size())
+            overlay.drawWideLineStrip(display.edges.at(index), bright, 3.5f * devicePixelRatio);
+    glDepthMask(GL_TRUE);
+    glEnable(GL_DEPTH_TEST);
+}
+
+void SceneRenderer::drawPickedEdges(OverlayRenderer &overlay, const BodyDisplay *body,
+                                    const BodyDisplay *hoverBody, const QVector<int> &hoverFaceEdges,
+                                    const QVector<int> &pickedEdges, const EdgePickStyle &style) {
+    // I candidati rispettano la profondita' (a meno della modalita' X-ray),
+    // cosi' la scena non si riempie di bordi posteriori. Gli spigoli gia'
+    // scelti vengono invece sovrapposti nell'ultimo passaggio: durante il
+    // calcolo o il fallimento di un'anteprima la base viene ridisegnata e
+    // il suo depth buffer non deve far sparire la conferma della scelta.
+    if (style.hiddenEdgesVisible) glDisable(GL_DEPTH_TEST);
+    else glEnable(GL_DEPTH_TEST);
+    auto draw = [&](const BodyDisplay *source, int index, const QColor &color, float width, bool reliableWidth = false) {
+        if (!source) return;
+        const QVector<QVector<QVector3D>> &edges = source->edges;
+        if (index < 0 || index >= edges.size()) return;
+        const QVector4D rgba(float(color.redF()), float(color.greenF()), float(color.blueF()), 1.0f);
+        if (reliableWidth)
+            overlay.drawWideLineStrip(edges.at(index), rgba, width * style.devicePixelRatio);
+        else {
+            glLineWidth(width);
+            overlay.draw(GL_LINE_STRIP, edges.at(index), rgba);
+        }
+    };
+    if (body)
+        for (int index = 0; index < body->edges.size(); ++index) draw(body, index, QColor(120, 140, 160), 1.5f);
+    for (int index : hoverFaceEdges) draw(hoverBody, index, style.hoverColor, 3.0f);
+
+    // Hover e selezione sono conferme dell'interazione, non geometria della
+    // scena: si disegnano opachi, senza profondita', con un alone scuro che
+    // li separa sia dal corpo sia dall'anteprima semitrasparente. Il picking
+    // ha gia' escluso gli spigoli nascosti quando la modalita' X-ray e' spenta.
+    glDisable(GL_DEPTH_TEST);
+    glDisable(GL_BLEND);
+    glDepthMask(GL_FALSE);
+    const QColor edgeHalo(8, 12, 18);
+    if (style.hoverEdge >= 0 && !style.hoveredSelected) {
+        draw(hoverBody, style.hoverEdge, edgeHalo, 4.25f, true);
+        draw(hoverBody, style.hoverEdge, style.hoverColor, 2.75f, true);
+    }
+    for (int index : pickedEdges) draw(body, index, edgeHalo, 5.0f, true);
+    for (int index : pickedEdges) draw(body, index, style.selectionColor, 3.25f, true);
+    glDepthMask(GL_TRUE);
+    glLineWidth(1.0f);
+    glEnable(GL_DEPTH_TEST);
+}
+
 }
