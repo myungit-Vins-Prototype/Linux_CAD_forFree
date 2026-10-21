@@ -66,9 +66,89 @@ void conicLimits(){
  ok(drawingViewVisibility(model,view,{curve},{},cache,result));require(result.curves[0].visible.boundingRect()==baseline,"coniche trasformate e rifilate conservano il parametro");
  view.scale=1e14;const auto before=result.curves[0].visible;require(!drawingViewVisibility(model,view,{curve},{},cache,result).isEmpty()&&result.curves[0].visible==before,"limite di campionamento rifiutato senza pubblicare risultati parziali");
 }
+void sphereOcclusion(){
+ for(bool elliptical:{false,true})for(bool rotated:{false,true})for(double separation:{4.,7.9999})for(double scale:{.1,1.,10.}){
+  const Frame3 frame=rotated?Frame3(Vec3(13,-7,100),Vec3(.3,-.8,1),Vec3(1,0,0)):Frame3();const double minor=elliptical?3.:5.;ProfileRegion region;region.outer.segments={{std::make_shared<Ellipse<2>>(Vec2(),Vec2(1,0),Vec2(0,1),5,minor),{0,kTwoPi},0}};
+  DrawingModelSnapshot model{{QUuid::createUuid(),{}},{source(1,elliptical?makeExtrusion(frame,region,1):makeCylinder(frame,5,1)),source(2,makeSphere(Frame3(frame.toGlobal(Vec3(separation,0,10)),frame.zDir(),frame.xDir()),3))}};
+  DrawingView view;view.kind=DrawingViewKind::ProjectedEdges;view.plane=frame;view.scale=scale;std::vector<DrawingCurve> curves;ok(projectDrawingEdges(model,view,curves));
+  curves.erase(std::remove_if(curves.begin(),curves.end(),[&](const auto &c){if(c.featureId!=1)return true;const auto &edge=model.bodies[0].body->edge(c.sourceEdge);return std::abs(frame.toLocal(edge.curve->point(kPi)).z()-1)>1e-8;}),curves.end());require(curves.size()==1,"conica posteriore isolata");
+  DrawingSilhouetteCache cache;DrawingViewVisibility paths;ok(drawingViewVisibility(model,view,curves,{},cache,paths));const auto &path=paths.curves[0];require(!path.hidden.isEmpty()&&!path.visible.isEmpty(),"sfera nasconde anche una calotta sottile del cerchio");
+  const double x=elliptical?.625*separation:(25+separation*separation-9)/(2*separation),y=minor*std::sqrt(1-x*x/25);const auto box=path.hidden.boundingRect();
+  if(std::abs(box.left()/scale-x)>=2e-6||std::abs(box.top()/scale+y)>=2e-6||std::abs(box.bottom()/scale-y)>=2e-6){const auto &body=*model.bodies[1].body;const auto &face=body.face(body.faces()[0]);std::cerr<<"sphere d="<<separation<<" scale="<<scale<<" bounds="<<box.left()/scale<<","<<box.top()/scale<<","<<box.bottom()/scale<<" expected="<<x<<","<<y<<" topology="<<body.faces().size()<<","<<body.edges().size()<<","<<face.loops.size()<<","<<face.sense<<","<<body.region(body.shell(face.shell).region).solid<<'\n';}
+  require(std::abs(box.left()/scale-x)<2e-6&&std::abs(box.top()/scale+y)<2e-6&&std::abs(box.bottom()/scale-y)<2e-6,"transizioni sulla sfera esatta indipendenti dalla triangolazione e dalla scala");
+  if(separation>7)for(double shift:{-kTwoPi,kTwoPi}){auto trimmed=curves;trimmed[0].hasSourceRange=true;trimmed[0].sourceRange={shift-.2,shift+.2};trimmed[0].range=trimmed[0].sourceRange;DrawingViewVisibility part;
+   ok(drawingViewVisibility(model,view,trimmed,{},cache,part));const auto bounds=part.curves[0].hidden.boundingRect();require(std::abs(bounds.top()/scale+y)<2e-6&&std::abs(bounds.bottom()/scale-y)<2e-6,"ombra sferica su archi oltre la cucitura periodica");}
+ }
+ // Segmento dietro la sfera: intersezione esatta col cerchio dell'ombra.
+ for(bool rotated:{false,true})for(double scale:{.1,1.,10.})for(double z:{-100.,10.,14.}){
+  const Frame3 frame=rotated?Frame3(Vec3(13,-7,100),Vec3(.3,-.8,1),Vec3(1,0,0)):Frame3();
+  DrawingModelSnapshot model{{QUuid::createUuid(),{}},{source(1,makeBox(Frame3(frame.toGlobal(Vec3(-5,.7,z)),frame.zDir(),frame.xDir()),10,.2,.1)),source(2,makeSphere(Frame3(frame.toGlobal(Vec3(0,0,10)),frame.zDir(),frame.xDir()),3))}};
+  DrawingView view;view.kind=DrawingViewKind::ProjectedEdges;view.plane=frame;view.scale=scale;std::vector<DrawingCurve> curves;ok(projectDrawingEdges(model,view,curves));
+  curves.erase(std::remove_if(curves.begin(),curves.end(),[&](const auto &c){if(c.featureId!=1)return true;const auto &edge=model.bodies[0].body->edge(c.sourceEdge);const auto p=frame.toLocal(edge.curve->point(.5*(edge.range.lo+edge.range.hi)));return std::abs(p.y()-.7)>1e-8||std::abs(p.z()-z-.1)>1e-8;}),curves.end());require(curves.size()==1,"segmento di controllo isolato");
+  DrawingSilhouetteCache cache;DrawingViewVisibility paths;ok(drawingViewVisibility(model,view,curves,{},cache,paths));
+  if(z>13){require(paths.curves[0].hidden.isEmpty(),"un bordo davanti alla sfera resta visibile");continue;}
+  const double depth=std::max(0.,z+.1-10+4*view.tolerance),x=std::sqrt(9-.7*.7-depth*depth);const auto box=paths.curves[0].hidden.boundingRect();
+  if(std::abs(box.left()/scale+x)>=2e-6||std::abs(box.right()/scale-x)>=2e-6)std::cerr<<"sphere line scale="<<scale<<" z="<<z<<" bounds="<<box.left()/scale<<","<<box.right()/scale<<" expected="<<x<<'\n';
+  require(std::abs(box.left()/scale+x)<2e-6&&std::abs(box.right()/scale-x)<2e-6,"taglio esatto di impronta e profondita' sul segmento");
+  if(!rotated&&scale==1&&z<0){auto overlap=model;overlap.bodies.push_back(source(3,makeSphere(Frame3(Vec3(1,0,10),Vec3(0,0,1),Vec3(1,0,0)),3)));DrawingViewVisibility merged;
+   ok(drawingViewVisibility(overlap,view,curves,{},cache,merged));const auto bounds=merged.curves[0].hidden.boundingRect();require(starts(merged.curves[0].hidden)==1&&std::abs(bounds.left()+x)<2e-6&&std::abs(bounds.right()-1-x)<2e-6,"ombre sferiche sovrapposte unite senza lacune");}
+  if(z<0){auto section=view;section.kind=DrawingViewKind::Section;section.sectionStyle=DrawingSectionStyle::Full;QPainterPath material;DrawingViewVisibility cut;
+   ok(drawingViewVisibility(model,section,curves,{},cache,cut,&material));require(cut.curves[0].hidden.isEmpty(),"sfera interamente asportata dalla sezione non occlude il bordo posteriore");}
+ }
+ // Una calotta aperta non deve riempire l'ombra della sfera intera.
+ ProfileLoop meridian;meridian.segments={{std::make_shared<Circle<2>>(Vec2(),Vec2(1,0),Vec2(0,1),3),{0,kHalfPi},0}};
+ DrawingModelSnapshot open{{QUuid::createUuid(),{}},{source(1,makeBox(Frame3(Vec3(-5,5,-1),Vec3(0,0,1),Vec3(1,0,0)),10,1,.1)),source(2,makeSheetRevolution(Frame3(),{meridian},kTwoPi))}};
+ DrawingView side;side.kind=DrawingViewKind::ProjectedEdges;side.plane=Frame3(Vec3(),Vec3(0,-1,0),Vec3(1,0,0));std::vector<DrawingCurve> edges;ok(projectDrawingEdges(open,side,edges));
+ edges.erase(std::remove_if(edges.begin(),edges.end(),[&](const auto &c){if(c.featureId!=1)return true;const auto &edge=open.bodies[0].body->edge(c.sourceEdge);const auto p=edge.curve->point(.5*(edge.range.lo+edge.range.hi));return std::abs(p.y()-5)>1e-8||std::abs(p.z()+.9)>1e-8;}),edges.end());require(edges.size()==1,"bordo dietro la parte assente della calotta");
+ DrawingSilhouetteCache cache;DrawingViewVisibility paths;ok(drawingViewVisibility(open,side,edges,{},cache,paths));require(paths.curves[0].hidden.isEmpty()&&std::abs(pathLength(paths.curves[0].visible)-10)<1e-7,"superficie sferica rifilata conserva la propria apertura");
+}
+void cylinderOcclusion(){
+ for(bool rotated:{false,true})for(auto axis:{Vec3(0,0,1),Vec3(0,0,-1),Vec3(0,1,0),Vec3(0,.6,.8)})for(bool narrow:{false,true})for(double scale:{.1,1.,10.}){
+  const Frame3 frame=rotated?Frame3(Vec3(13,-7,100),Vec3(.3,-.8,1),Vec3(1,0,0)):Frame3();
+  const double y=std::abs(axis.z())<1e-10?(narrow?-.0001:2.):-std::abs(axis.z())*(narrow?2.9999:.7);
+  DrawingModelSnapshot model{{QUuid::createUuid(),{}},{source(1,makeBox(Frame3(frame.toGlobal(Vec3(-5,y,-100)),frame.zDir(),frame.xDir()),10,.05,.1)),source(2,makeCylinder(Frame3(frame.toGlobal(Vec3(0,0,10)),frame.directionToGlobal(axis),frame.xDir()),3,4))}};
+  DrawingView view;view.kind=DrawingViewKind::ProjectedEdges;view.plane=frame;view.scale=scale;std::vector<DrawingCurve> curves;ok(projectDrawingEdges(model,view,curves));
+  curves.erase(std::remove_if(curves.begin(),curves.end(),[&](const auto &c){if(c.featureId!=1)return true;const auto &edge=model.bodies[0].body->edge(c.sourceEdge);const auto p=frame.toLocal(edge.curve->point(.5*(edge.range.lo+edge.range.hi)));return std::abs(p.y()-y)>1e-8||std::abs(p.z()+99.9)>1e-8;}),curves.end());require(curves.size()==1,"segmento dietro il cilindro isolato");
+  DrawingSilhouetteCache cache;DrawingViewVisibility paths;ok(drawingViewVisibility(model,view,curves,{},cache,paths));
+  if(std::abs(axis.z())<1e-10&&narrow){require(paths.curves[0].hidden.isEmpty(),"cilindro finito non occlude oltre la base");continue;}
+  const double x=std::abs(axis.z())<1e-10?3:std::sqrt(9-y*y/(axis.z()*axis.z()));const auto box=paths.curves[0].hidden.boundingRect();
+  require(!paths.curves[0].hidden.isEmpty()&&std::abs(box.left()/scale+x)<2e-6&&std::abs(box.right()/scale-x)<2e-6,"ombra esatta del cilindro assiale/laterale/obliquo sul segmento");
+  if(!narrow&&scale==1){auto section=view;section.kind=DrawingViewKind::Section;section.sectionStyle=DrawingSectionStyle::Full;QPainterPath material;DrawingViewVisibility cut;
+   ok(drawingViewVisibility(model,section,curves,{},cache,cut,&material));require(cut.curves[0].hidden.isEmpty(),"cilindro asportato dalla sezione non conserva la propria ombra");}
+ }
+ // Tagli su coniche: sagoma circolare, generatrici laterali, base ellittica.
+ for(int orientation:{0,1,2})for(bool elliptical:{false,true})for(double separation:{4.,7.9999})for(double scale:{.1,1.,10.}){
+  if(orientation==2&&elliptical)continue;
+  const double minor=elliptical?3.:5.;ProfileRegion region;region.outer.segments={{std::make_shared<Ellipse<2>>(Vec2(),Vec2(1,0),Vec2(0,1),5,minor),{0,kTwoPi},0}};
+  const Vec3 axis=orientation==0?Vec3(0,0,1):orientation==1?Vec3(0,1,0):Vec3(0,.6,.8),origin(separation,orientation==1?-10:0,10);
+  DrawingModelSnapshot model{{QUuid::createUuid(),{}},{source(1,elliptical?makeExtrusion(Frame3(),region,1):makeCylinder(Frame3(),5,1)),source(2,makeCylinder(Frame3(origin,axis,Vec3(1,0,0)),3,orientation==1?20:4))}};
+  DrawingView view;view.kind=DrawingViewKind::ProjectedEdges;view.scale=scale;std::vector<DrawingCurve> curves;ok(projectDrawingEdges(model,view,curves));
+  curves.erase(std::remove_if(curves.begin(),curves.end(),[&](const auto &c){return c.featureId!=1||std::abs(model.bodies[0].body->edge(c.sourceEdge).curve->point(kPi).z()-1)>1e-8;}),curves.end());require(curves.size()==1,"conica dietro il cilindro isolata");
+  if(orientation==2){curves[0].hasSourceRange=true;curves[0].sourceRange={-.8,0};curves[0].range=curves[0].sourceRange;}
+  DrawingSilhouetteCache cache;DrawingViewVisibility paths;ok(drawingViewVisibility(model,view,curves,{},cache,paths));
+  double x=orientation==1?separation-3:elliptical?.625*separation:(25+separation*separation-9)/(2*separation);
+  if(orientation==2){const double a=1-1/.64,c=separation*separation+25/.64-9;x=2*c/(2*separation+std::sqrt(4*separation*separation-4*a*c));}
+  const double y=minor*std::sqrt(1-x*x/25);const auto box=paths.curves[0].hidden.boundingRect();
+  require(!paths.curves[0].hidden.isEmpty()&&std::abs(box.left()/scale-x)<2e-6&&std::abs(box.bottom()/scale-y)<2e-6&&std::abs(box.top()/scale-(orientation==2?0:-y))<2e-6,"conica tagliata sulla superficie esatta del cilindro e delle basi");
+ }
+ // Variazione di profondita': il fianco curvo, non la sua sagoma, decide il taglio.
+ for(double z:{0.,10.,12.8,14.}){
+  DrawingModelSnapshot model{{QUuid::createUuid(),{}},{source(1,makeBox(Frame3(Vec3(-5,2,z),Vec3(0,0,1),Vec3(1,0,0)),10,.05,.1)),source(2,makeCylinder(Frame3(Vec3(0,0,10),Vec3(0,1,0),Vec3(1,0,0)),3,4))}};
+  DrawingView view;view.kind=DrawingViewKind::ProjectedEdges;std::vector<DrawingCurve> curves;ok(projectDrawingEdges(model,view,curves));curves.erase(std::remove_if(curves.begin(),curves.end(),[&](const auto &c){if(c.featureId!=1)return true;const auto &edge=model.bodies[0].body->edge(c.sourceEdge);const auto p=edge.curve->point(.5*(edge.range.lo+edge.range.hi));return std::abs(p.y()-2)>1e-8||std::abs(p.z()-z-.1)>1e-8;}),curves.end());require(curves.size()==1,"segmento per il taglio in profondita' del cilindro");
+  DrawingSilhouetteCache cache;DrawingViewVisibility paths;ok(drawingViewVisibility(model,view,curves,{},cache,paths));if(z>13){require(paths.curves[0].hidden.isEmpty(),"bordo davanti al cilindro visibile");continue;}
+  const double depth=std::max(0.,z+.1-10+4*view.tolerance),x=std::sqrt(9-depth*depth);const auto box=paths.curves[0].hidden.boundingRect();require(std::abs(box.left()+x)<2e-6&&std::abs(box.right()-x)<2e-6,"profondita' radiale del cilindro verificata analiticamente");
+ }
+ ProfileLoop outside;outside.segments={{std::make_shared<Circle<2>>(Vec2(),Vec2(1,0),Vec2(0,1),3),{0,kTwoPi},0}};ProfileLoop inside;inside.segments={{std::make_shared<Circle<2>>(Vec2(),Vec2(1,0),Vec2(0,1),1),{0,kTwoPi},0}};
+ for(bool open:{false,true}){ProfileRegion annulus;annulus.outer=outside;annulus.holes={reversed(inside)};const Frame3 base(Vec3(0,0,10),Vec3(0,0,1),Vec3(1,0,0));
+  DrawingModelSnapshot model{{QUuid::createUuid(),{}},{source(1,makeBox(Frame3(Vec3(-5,.2,-100),Vec3(0,0,1),Vec3(1,0,0)),10,.05,.1)),source(2,open?makeSheetExtrusion(base,{outside},4):makeExtrusion(base,annulus,4))}};
+  DrawingView view;view.kind=DrawingViewKind::ProjectedEdges;std::vector<DrawingCurve> curves;ok(projectDrawingEdges(model,view,curves));curves.erase(std::remove_if(curves.begin(),curves.end(),[&](const auto &c){if(c.featureId!=1)return true;const auto &edge=model.bodies[0].body->edge(c.sourceEdge);const auto p=edge.curve->point(.5*(edge.range.lo+edge.range.hi));return std::abs(p.y()-.2)>1e-8||std::abs(p.z()+99.9)>1e-8;}),curves.end());require(curves.size()==1,"segmento dietro il tubo isolato");
+  DrawingSilhouetteCache cache;DrawingViewVisibility paths;ok(drawingViewVisibility(model,view,curves,{},cache,paths));
+  require(open?paths.curves[0].hidden.isEmpty():(starts(paths.curves[0].hidden)==2&&starts(paths.curves[0].visible)==3),"cilindro aperto/cavo conserva il foro e non diventa un cilindro pieno");
+ }
+}
 }
 int main(int argc,char **argv){QCoreApplication app(argc,argv);try{
- conicTransitions();conicDepth();conicLimits();
+ conicTransitions();conicDepth();conicLimits();sphereOcclusion();cylinderOcclusion();
  DrawingModelSnapshot model{{QUuid::createUuid(),{}},{source(1,makeBox(Frame3(),10,6,1))}};DrawingView view;view.kind=DrawingViewKind::ProjectedEdges;std::vector<DrawingCurve> curves;ok(projectDrawingEdges(model,view,curves));DrawingSilhouetteCache cache;DrawingViewVisibility visible;ok(drawingViewVisibility(model,view,curves,{},cache,visible));require(visible.curves.size()==curves.size(),"un risultato per ogni curva esatta");int back=0,front=0;
  for(std::size_t i=0;i<curves.size();++i){const auto &edge=model.bodies[0].body->edge(curves[i].sourceEdge);const auto p=edge.curve->point((edge.range.lo+edge.range.hi)/2);if(std::abs(p.z())<1e-8){++back;require(visible.curves[i].visible.isEmpty()&&visible.curves[i].hidden.isEmpty(),"bordo inferiore coincidente eliminato sotto il contorno visibile");}if(std::abs(p.z()-1)<1e-8){++front;require(!visible.curves[i].visible.isEmpty()&&visible.curves[i].hidden.isEmpty(),"bordi anteriori visibili, nessuna auto-occlusione");}}
  double contour=0;for(const auto &p:visible.curves)contour+=pathLength(p.visible);require(std::abs(contour-32)<1e-7,"ogni segmento del contorno proiettato e disegnato una sola volta");

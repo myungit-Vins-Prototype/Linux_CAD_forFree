@@ -24,7 +24,7 @@ struct Bounds {
 };
 double cross2(Vec3 a,Vec3 b){return a.x()*b.y()-a.y()*b.x();}
 struct DisplaySource {quint64 featureId=0;std::vector<FaceId> faces;const Surface *surface=nullptr;double extraError=0;};
-struct Triangle {Vec3 a,b,c;Bounds bounds;double area=0,bias=0,selfBias=0,depthScale=0;quint64 featureId=0;FaceId face;};
+struct Triangle {Vec3 a,b,c;Bounds bounds;double area=0,bias=0,selfBias=0,depthScale=0;quint64 featureId=0;FaceId face;bool exactExternal=false;};
 struct Node {Bounds bounds;std::size_t start=0,end=0;int left=-1,right=-1;};
 // Forma parametrica nello spazio della vista: conserva anche la profondita'.
 struct DisplayConic {
@@ -58,6 +58,43 @@ template<class Function> ConicHalfspace conicHalfspace(const DisplayConic &curve
     const double c=value(curve.center);return {c,value(curve.center+curve.a)-c,value(curve.center+curve.b)-c};
 }
 double conicDisplayStep(double radius){return std::min(.08,std::sqrt(.008/std::max(radius,1e-12)));}
+struct ExactCylinder {
+    Frame3 frame;double radius=0,low=0,high=0;quint64 featureId=0;Bounds bounds;
+    bool covers(Vec3 point,Vec3 direction,double bias)const{
+        const auto p=frame.toLocal(point),d=frame.directionToLocal(direction);double lo=-std::numeric_limits<double>::infinity(),hi=std::numeric_limits<double>::infinity();
+        if(std::abs(d.z())<=1e-12){if(p.z()<low||p.z()>high)return false;}
+        else{const double a=(low-p.z())/d.z(),b=(high-p.z())/d.z();lo=std::min(a,b);hi=std::max(a,b);}
+        const double a=d.x()*d.x()+d.y()*d.y(),roundoff=64*std::numeric_limits<double>::epsilon()*std::max(radius*radius,p.x()*p.x()+p.y()*p.y());
+        if(a<=1e-24){if(p.x()*p.x()+p.y()*p.y()>radius*radius+roundoff)return false;}
+        else{const double middle=-(p.x()*d.x()+p.y()*d.y())/a,x=p.x()+middle*d.x(),y=p.y()+middle*d.y(),remaining=radius*radius-x*x-y*y;
+            if(remaining<-roundoff)return false;
+            const double half=std::sqrt(std::max(0.,remaining)/a);lo=std::max(lo,middle-half);hi=std::min(hi,middle+half);}
+        return hi>=lo&&hi>bias;
+    }
+};
+bool completeCylinder(const DrawingSourceBody &source,const DrawingView &view,ExactCylinder &result){
+    if(view.sectionStyle!=DrawingSectionStyle::Removed)return false;
+    const auto &body=*source.body;const auto faces=body.faces();const auto edges=body.edges();
+    if(faces.size()!=3||edges.size()!=2)return false;
+    const Face *side=nullptr;std::vector<const Face *> caps;
+    for(auto id:faces){const auto &face=body.face(id);if(face.surface->type()==SurfaceType::Cylinder){if(side)return false;side=&face;}else if(face.surface->type()==SurfaceType::Plane)caps.push_back(&face);else return false;}
+    if(!side||caps.size()!=2||!side->sense||side->loops.size()!=2||!body.region(body.shell(side->shell).region).solid)return false;
+    for(auto loop:side->loops)if(body.loopFins(loop).size()!=1)return false;
+    const auto &surface=static_cast<const CylindricalSurface &>(*side->surface);const auto &frame=surface.frame();const double radius=surface.radius(),epsilon=1e-8*std::max(1.,radius);std::vector<double> levels;
+    for(auto edgeId:edges){const auto &edge=body.edge(edgeId);if(edge.curve->type()!=CurveType::Circle||body.edgeStart(edgeId)!=body.edgeEnd(edgeId)||std::abs(edge.range.length()-kTwoPi)>1e-10)return false;
+        const auto &circle=static_cast<const Circle<3> &>(*edge.curve);const auto center=frame.toLocal(circle.center());
+        if(std::hypot(center.x(),center.y())>epsilon||std::abs(circle.radius()-radius)>epsilon||std::abs(dot(cross(circle.xAxis(),circle.yAxis()),frame.zDir()))<1-1e-10)return false;
+        levels.push_back(center.z());}
+    std::sort(levels.begin(),levels.end());if(levels[1]-levels[0]<=kLinearResolution)return false;
+    bool bottom=false,top=false;
+    for(const auto *cap:caps){if(cap->shell!=side->shell||cap->loops.size()!=1||body.loopFins(cap->loops[0]).size()!=1)return false;
+        const auto &plane=static_cast<const Plane &>(*cap->surface);const double level=frame.toLocal(plane.frame().origin()).z(),normal=dot(plane.frame().zDir(),frame.zDir())*(cap->sense?1:-1);
+        if(std::abs(level-levels[0])<=epsilon&&normal<-1+1e-10)bottom=true;else if(std::abs(level-levels[1])<=epsilon&&normal>1-1e-10)top=true;else return false;}
+    if(!bottom||!top)return false;
+    result.frame=frame;result.radius=radius;result.low=levels[0];result.high=levels[1];result.featureId=source.featureId;
+    const auto x=view.plane.directionToLocal(frame.xDir()),y=view.plane.directionToLocal(frame.yDir());const Vec3 extent(radius*std::hypot(x.x(),y.x()),radius*std::hypot(x.y(),y.y()),0);
+    for(double level:levels){const auto center=view.plane.toLocal(frame.origin()+level*frame.zDir());result.bounds.add(center-extent);result.bounds.add(center+extent);}return true;
+}
 std::vector<Vec3> clipPolygon(const std::vector<Vec3> &input,int axis,double sign){
     std::vector<Vec3> result;if(input.empty())return result;auto a=input.back();double fa=sign*a[axis];
     for(const auto b:input){const double fb=sign*b[axis];if((fa<0)!=(fb<0))result.push_back(a+(b-a)*(fa/(fa-fb)));if(fb>=0)result.push_back(b);a=b;fa=fb;}return result;
@@ -69,6 +106,11 @@ std::vector<std::vector<Vec3>> retainedTriangles(Vec3 a,Vec3 b,Vec3 c,const Draw
     return {clipPolygon(polygon,0,-side),clipPolygon(clipPolygon(polygon,0,side),2,-1)};
 }
 class Occlusion {
+    struct ExactSphere {Vec3 world,local;double radius;quint64 featureId;};
+    std::vector<ExactSphere> spheres_;
+    std::vector<ExactCylinder> cylinders_;
+    Frame3 plane_;
+    double depthBias_=0,intersectionTolerance_=0;
     std::vector<Triangle> triangles_;
     std::vector<std::size_t> order_;
     std::vector<Node> nodes_;
@@ -92,6 +134,7 @@ class Occlusion {
     // Intersezione esatta del segmento grafico con l'impronta del triangolo e
     // con il semispazio dietro il suo piano. Conserva anche occlusioni molto corte.
     static bool covered(const Triangle &t,Vec3 a,Vec3 b,const DisplaySource &source,double &lo,double &hi){lo=0;hi=1;const double sign=t.area>0?1:-1;
+        if(t.exactExternal&&t.featureId!=source.featureId)return false;
         const auto clip=[&](double fa,double fb){if(fa<0&&fb<0)return false;if(fa>=0&&fb>=0)return true;const double q=fa/(fa-fb);if(fa<0)lo=std::max(lo,q);else hi=std::min(hi,q);return hi>lo;};
         const Vec3 vertices[]={t.a,t.b,t.c};for(int i=0;i<3;++i){const auto p=vertices[i],edge=vertices[(i+1)%3]-p;if(!clip(sign*cross2(edge,a-p),sign*cross2(edge,b-p)))return false;}
         // La corda grafica di un contorno tangente puo' passare appena dentro
@@ -108,6 +151,7 @@ class Occlusion {
         const auto &node=nodes_[id];if(!node.bounds.overlaps(box))return;
         if(node.left>=0){queryConic(node.left,box,curve,range,source,hits);queryConic(node.right,box,curve,range,source,hits);return;}
         for(auto i=node.start;i<node.end;++i){const auto &t=triangles_[order_[i]];if(!t.bounds.overlaps(box))continue;cancellationPoint();
+            if(t.exactExternal&&t.featureId!=source.featureId)continue;
             const double sign=t.area>0?1:-1;const Vec3 vertices[]={t.a,t.b,t.c};std::vector<ConicHalfspace> planes;
             for(int k=0;k<3;++k){const auto p=vertices[k],edge=vertices[(k+1)%3]-p;planes.push_back(conicHalfspace(curve,[&](Vec3 q){return sign*cross2(edge,q-p);}));}
             const bool self=t.featureId==source.featureId&&std::find(source.faces.begin(),source.faces.end(),t.face)!=source.faces.end();
@@ -120,9 +164,22 @@ class Occlusion {
         }
     }
 public:
-    Occlusion(const DrawingModelSnapshot &model,const DrawingView &view,DrawingSilhouetteCache &cache,QStringList &warnings,const QPainterPath *material){QSet<quint64> ids;
+    Occlusion(const DrawingModelSnapshot &model,const DrawingView &view,DrawingSilhouetteCache &cache,QStringList &warnings,const QPainterPath *material):plane_(view.plane),depthBias_(4*view.tolerance),intersectionTolerance_(std::max(1e-10,view.tolerance*.001)){QSet<quint64> ids;
         if(view.sectionStyle!=DrawingSectionStyle::Removed){need(material,"Materiale della sezione non preparato per la visibilita'.");capBias_=4*view.tolerance;cap_=QTransform::fromScale(1/view.scale,-1/view.scale).map(*material);capLoops_=cap_.toSubpathPolygons();}
         for(const auto &source:model.bodies){cancellationPoint();need(source.featureId&&!ids.contains(source.featureId)&&source.body&&source.names&&source.names->body==source.body.get(),"Sorgente della visibilita' incoerente.");ids.insert(source.featureId);
+            ExactCylinder cylinder;const bool exactCylinder=completeCylinder(source,view,cylinder);if(exactCylinder)cylinders_.push_back(cylinder);
+            // Solo sfere intere, chiuse e orientate verso l'esterno: una
+            // faccia rifilata o una sezione deve conservare il proprio dominio.
+            const auto faces=source.body->faces();
+            if(view.sectionStyle==DrawingSectionStyle::Removed&&faces.size()==1&&source.body->edges().empty()){
+                const auto &face=source.body->face(faces.front());
+                const bool untrimmed=std::all_of(face.loops.begin(),face.loops.end(),[&](auto loop){return source.body->loopFins(loop).empty();}); // i poli isolati non rifilano la sfera
+                if(face.surface->type()==SurfaceType::Sphere&&face.sense&&untrimmed&&source.body->region(source.body->shell(face.shell).region).solid){
+                    const auto &sphere=static_cast<const SphericalSurface &>(*face.surface);const auto center=sphere.frame().origin();
+                    const auto local=view.plane.toLocal(center);need(isFinite(center)&&isFinite(local)&&std::isfinite(sphere.radius())&&sphere.radius()>0,"Sfera non finita nella visibilita'.");
+                    spheres_.push_back({center,local,sphere.radius(),source.featureId});continue;
+                }
+            }
             // Il margine di profondita' segue la precisione sul foglio, non il
             // box conservativo delle superfici (che puo' essere molto piu' grande del pezzo).
             const double deflection=std::clamp(.005/view.scale,1e-6,1.0);
@@ -147,16 +204,51 @@ public:
                         }
                         triangle.depthScale=planar?0:1/std::max(cosine,1e-8);
                         triangle.selfBias=planar?triangle.bias:std::max(triangle.bias,(2*deviation+.03/view.scale)*triangle.depthScale);
-                        triangle.featureId=source.featureId;triangle.face=face.face;triangle.bounds.add(triangle.a);triangle.bounds.add(triangle.b);triangle.bounds.add(triangle.c);triangles_.push_back(triangle);
+                        triangle.featureId=source.featureId;triangle.face=face.face;triangle.exactExternal=exactCylinder;triangle.bounds.add(triangle.a);triangle.bounds.add(triangle.b);triangle.bounds.add(triangle.c);triangles_.push_back(triangle);
                         need(triangles_.size()<=2000000,"Troppi triangoli per la visibilita' della tavola.");}}
             }
         }
         order_.resize(triangles_.size());std::iota(order_.begin(),order_.end(),0);if(!order_.empty())build(0,order_.size());
     }
+    std::vector<Interval> analyticHidden(const Curve<3> &geometry,Interval range,const DisplaySource &source)const{
+        std::vector<Interval> hits;
+        for(const auto &sphere:spheres_){cancellationPoint();if(sphere.featureId==source.featureId)continue; // una sfera convessa non si auto-occlude
+            // Un bordo molto dietro puo' essere coperto: il rifiuto rapido
+            // usa soltanto l'ingombro proiettato, mai la distanza in Z.
+            const auto box=curveBox(geometry,range);Bounds projected;
+            for(int mask=0;mask<8;++mask)projected.add(plane_.toLocal(Vec3(mask&1?box.hi.x():box.lo.x(),mask&2?box.hi.y():box.lo.y(),mask&4?box.hi.z():box.lo.z())));
+            Bounds shadowBounds;shadowBounds.add(sphere.local-Vec3(sphere.radius,sphere.radius,0));shadowBounds.add(sphere.local+Vec3(sphere.radius,sphere.radius,0));if(!projected.overlaps(shadowBounds))continue;
+            std::vector<double> cuts{range.lo,range.hi};
+            const CylindricalSurface shadow(Frame3(sphere.world,plane_.zDir(),plane_.xDir()),sphere.radius);
+            const SphericalSurface depth(Frame3(sphere.world-depthBias_*plane_.zDir(),plane_.zDir(),plane_.xDir()),sphere.radius);
+            for(const Surface *surface:{static_cast<const Surface *>(&shadow),static_cast<const Surface *>(&depth)}){
+                const auto crossing=intersectCurveSurface(geometry,range,*surface,intersectionTolerance_);cuts.insert(cuts.end(),crossing.parameters.begin(),crossing.parameters.end());
+                for(auto span:crossing.coincident){cuts.push_back(span.lo);cuts.push_back(span.hi);}
+            }
+            std::sort(cuts.begin(),cuts.end());
+            for(std::size_t i=1;i<cuts.size();++i){if(cuts[i]<=cuts[i-1])continue;const auto p=plane_.toLocal(geometry.point(cuts[i-1]+.5*(cuts[i]-cuts[i-1])))-sphere.local;
+                const double radial=sphere.radius*sphere.radius-p.x()*p.x()-p.y()*p.y(),roundoff=64*std::numeric_limits<double>::epsilon()*std::max(sphere.radius*sphere.radius,p.x()*p.x()+p.y()*p.y());
+                if(radial>=-roundoff&&p.z()<std::sqrt(std::max(0.,radial))-depthBias_)hits.push_back({cuts[i-1],cuts[i]});
+            }
+        }
+        for(const auto &cylinder:cylinders_){cancellationPoint();if(cylinder.featureId==source.featureId)continue; // auto-occlusione: margini locali della mesh esistente
+            const auto box=curveBox(geometry,range);Bounds projected;for(int mask=0;mask<8;++mask)projected.add(plane_.toLocal(Vec3(mask&1?box.hi.x():box.lo.x(),mask&2?box.hi.y():box.lo.y(),mask&4?box.hi.z():box.lo.z())));if(!projected.overlaps(cylinder.bounds))continue;
+            std::vector<double> cuts{range.lo,range.hi};const auto &frame=cylinder.frame;const auto direction=plane_.zDir(),axis=frame.zDir(),offset=depthBias_*direction;
+            const auto cut=[&](const Surface &surface){const auto crossing=intersectCurveSurface(geometry,range,surface,intersectionTolerance_);cuts.insert(cuts.end(),crossing.parameters.begin(),crossing.parameters.end());for(auto span:crossing.coincident){cuts.push_back(span.lo);cuts.push_back(span.hi);}};
+            cut(CylindricalSurface(Frame3(frame.origin()-offset,axis,frame.xDir()),cylinder.radius));
+            for(double level:{cylinder.low,cylinder.high}){const auto center=frame.origin()+level*axis;cut(Plane(Frame3(center-offset,axis,frame.xDir())));
+                if(std::abs(dot(axis,direction))>1e-12)cut(ExtrusionSurface(std::make_shared<Circle<3>>(center,frame.xDir(),frame.yDir(),cylinder.radius),direction));}
+            const auto side=cross(axis,direction);if(norm(side)>1e-12){const auto normal=normalized(side);for(double sign:{-1.,1.})cut(Plane(Frame3(frame.origin()+sign*cylinder.radius*normal,normal,axis)));}
+            std::sort(cuts.begin(),cuts.end());for(std::size_t i=1;i<cuts.size();++i)if(cuts[i]>cuts[i-1]&&cylinder.covers(geometry.point(cuts[i-1]+.5*(cuts[i]-cuts[i-1])),direction,depthBias_))hits.push_back({cuts[i-1],cuts[i]});
+        }
+        return hits;
+    }
     std::vector<Interval> hidden(Vec3 a,Vec3 b,const DisplaySource &source)const{std::vector<Interval> hits=capHidden(a,b);Bounds box;box.add(a);box.add(b);if(!nodes_.empty())query(0,box,a,b,source,hits);
+        if((!spheres_.empty()||!cylinders_.empty())&&distance(a,b)>1e-12){const double length=distance(a,b);const Line<3> segment(plane_.toGlobal(a),plane_.directionToGlobal(b-a));const auto exact=analyticHidden(segment,{0,length},source);for(auto span:exact)hits.push_back({span.lo/length,span.hi/length});}
         std::sort(hits.begin(),hits.end(),[](const auto &a,const auto &b){return a.lo<b.lo;});std::vector<Interval> merged;for(const auto &hit:hits){if(!merged.empty()&&hit.lo<=merged.back().hi+1e-10)merged.back().hi=std::max(merged.back().hi,hit.hi);else merged.push_back(hit);}return merged;}
-    std::vector<Interval> hidden(const DisplayConic &curve,Interval range,const DisplaySource &source)const{
+    std::vector<Interval> hidden(const DisplayConic &curve,Interval range,const DisplaySource &source,const std::vector<Interval> &spherical)const{
         std::vector<Interval> hits;if(!nodes_.empty())queryConic(0,curve.bounds(range),curve,range,source,hits);
+        for(auto span:spherical){span.lo=std::max(span.lo,range.lo);span.hi=std::min(span.hi,range.hi);if(span.hi>span.lo)hits.push_back(span);}
         if(!cap_.isEmpty()){
             std::vector<double> cuts{range.lo,range.hi};conicCuts(curve.center.z()+capBias_,curve.a.z(),curve.b.z(),range,cuts);
             for(const auto &loop:capLoops_)for(int i=1;i<loop.size();++i){const auto p=loop[i-1],edge=loop[i]-p;
@@ -204,8 +296,9 @@ DrawingVisiblePath displayConic(const DisplayConic &world,Interval range,const C
     // della suddivisione grafica: non si interpolano punti sulle corde.
     const auto retained=index?drawingRetainedCurveRanges(view,geometry,range):std::vector<Interval>{range};
     for(auto part:retained){const double count=std::max(1.,std::ceil(part.length()/step));need(std::isfinite(count)&&count<=200000,"Troppi intervalli per la conica della tavola.");
+        const auto spherical=index?index->analyticHidden(geometry,part,source):std::vector<Interval>{};
         for(int i=0;i<int(count);++i){cancellationPoint();const Interval arc{part.lo+part.length()*i/count,part.lo+part.length()*(i+1)/count};
-            const auto hidden=index?index->hidden(curve,arc,source):std::vector<Interval>{};double start=arc.lo;
+            const auto hidden=index?index->hidden(curve,arc,source,spherical):std::vector<Interval>{};double start=arc.lo;
             for(auto hit:hidden){draw(result.visible,{start,hit.lo});draw(result.hidden,hit);start=hit.hi;}draw(result.visible,{start,arc.hi});}}
     return result;
 }

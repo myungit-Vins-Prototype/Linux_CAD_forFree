@@ -119,7 +119,7 @@ DESCRIPTIONS.update({'tools/open_architecture.py': ('build', 'Avvio locale della
  'cad_drawing_tolerances.h': ('drawing', 'Tolleranze geometriche condivise dai calcoli delle tavole.'),
  'cad_drawing_toolbars.h': ('drawing', 'Costruzione e configurazione delle toolbar della suite 2D.'),
  'cad_drawing_visibility': ('drawing',
-                            'Classifica la visibilità sulla mesh con tagli parametrici delle coniche e consolida le linee nascoste.'),
+                            'Classifica la visibilità con sfere e cilindri completi esatti, mesh per auto-occlusione e rifilature, tagli parametrici delle coniche.'),
  'cad_drawing_window': ('drawing',
                         'Finestra della suite 2D e coordinamento dei comandi del documento di tavola.'),
  'cad_element_names': ('features',
