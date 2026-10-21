@@ -9317,21 +9317,7 @@ int CadViewport::pickDatumPlane(const QPoint &position, bool border, double *dis
 }
 
 void CadViewport::drawDatumQuad(const QVector<QVector3D> &corners, const GLfloat *color, float emphasis) {
-    QVector<QVector3D> fill;
-    for (int corner : {0, 1, 2, 0, 2, 3}) fill.push_back(corners.at(corner));
-    overlayRenderer_.draw(GL_TRIANGLES, fill, QVector4D(color[0], color[1], color[2], 0.07f + 0.10f * emphasis));
-    const struct { GLfloat width, alpha, light; } strokes[] = {{4.0f, 0.12f, 0.25f}, {1.4f, 0.65f, 0.40f}};
-    for (const auto &stroke : strokes) {
-        glLineWidth(stroke.width);
-        const QVector4D strokeColor(color[0] + (1.0f - color[0]) * stroke.light,
-                                    color[1] + (1.0f - color[1]) * stroke.light,
-                                    color[2] + (1.0f - color[2]) * stroke.light,
-                                    qMin(1.0f, stroke.alpha * (1.0f + 0.6f * emphasis)));
-        QVector<QVector3D> outline = corners;
-        outline.push_back(outline.front());
-        overlayRenderer_.draw(GL_LINE_STRIP, outline, strokeColor);
-    }
-    glLineWidth(1.0f);
+    sceneRenderer_.drawDatumQuad(overlayRenderer_, corners, color, emphasis);
 }
 
 void CadViewport::drawDatumPlanes() {
@@ -11186,52 +11172,12 @@ const QColor &CadViewport::axisColor(int axis) {
 void CadViewport::drawAxes() {
     if (!axesVisible_) return;
     const float length = float(axisDisplayLength());
-    const float head = 0.09f * length, radius = 0.032f * length;
-    glDisable(GL_DEPTH_TEST);
-    glLineWidth(2.0f);
-    QVector<ForgeCad::OverlayVertex> shafts, cones;
-    for (int axis = 0; axis < 3; ++axis) {
-        QVector3D direction, side, up;
-        direction[axis] = 1.0f;
-        side[(axis + 1) % 3] = 1.0f;
-        up[(axis + 2) % 3] = 1.0f;
-        const QColor &color = axisColor(axis);
-        const QVector4D rgba(float(color.redF()), float(color.greenF()), float(color.blueF()), 1.0f);
-        const QVector3D tip = direction * length, base = direction * (length - head);
-        shafts.push_back({QVector3D(), rgba});
-        shafts.push_back({base, rgba});
-        for (int k = 0; k < 24; ++k) {
-            const float a0 = float(k) * 2.0f * float(M_PI) / 24.0f;
-            const float a1 = float(k + 1) * 2.0f * float(M_PI) / 24.0f;
-            const QVector3D p0 = base + radius * (std::cos(a0) * side + std::sin(a0) * up);
-            const QVector3D p1 = base + radius * (std::cos(a1) * side + std::sin(a1) * up);
-            cones.push_back({tip, rgba}); cones.push_back({p0, rgba}); cones.push_back({p1, rgba});
-            cones.push_back({base, rgba}); cones.push_back({p1, rgba}); cones.push_back({p0, rgba});
-        }
-    }
-    overlayRenderer_.draw(GL_LINES, shafts);
-    overlayRenderer_.draw(GL_TRIANGLES, cones);
-    glLineWidth(1.0f);
-    glEnable(GL_DEPTH_TEST);
+    const std::array<QColor, 3> colors{axisColor(0), axisColor(1), axisColor(2)};
+    sceneRenderer_.drawAxes(overlayRenderer_, length, colors);
 }
 
 void CadViewport::drawGrid() {
     if (!gridVisible_) return;
-    glDisable(GL_DEPTH_TEST);
-    // Griglia nel piano orizzontale dell'orientamento (perpendicolare all'asse in alto), poco sotto l'origine.
-    const QVector3D a(float(camera_.orientation_.right[0]), float(camera_.orientation_.right[1]), float(camera_.orientation_.right[2]));
-    const QVector3D b(float(camera_.orientation_.toward[0]), float(camera_.orientation_.toward[1]), float(camera_.orientation_.toward[2]));
-    // Passo 1 con i piani di default, poi segue la loro dimensione (20 passi per lato).
-    const float step = niceCeiling(qMax(0.25f * planeHalf(), 1e-4f)), extent = 10.0f * step;
-    const QVector3D below = -0.05f * step * QVector3D(float(camera_.orientation_.up[0]), float(camera_.orientation_.up[1]), float(camera_.orientation_.up[2]));
-    QVector<QVector3D> lines;
-    lines.reserve(84);
-    for (int i = -10; i <= 10; ++i) {
-        const float f = float(i) * step;
-        for (const QVector3D &p : {below + f * a - extent * b, below + f * a + extent * b,
-                                   below - extent * a + f * b, below + extent * a + f * b})
-            lines.push_back(p);
-    }
-    overlayRenderer_.draw(GL_LINES, lines, QVector4D(0.16f, 0.21f, 0.25f, 1.0f));
-    glEnable(GL_DEPTH_TEST);
+    const float step = niceCeiling(qMax(0.25f * planeHalf(), 1e-4f));
+    sceneRenderer_.drawGrid(overlayRenderer_, camera_.orientation_, step);
 }

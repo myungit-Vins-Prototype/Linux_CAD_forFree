@@ -8,11 +8,13 @@
 #include <QVector>
 #include <QVector3D>
 #include <QVector4D>
+#include <array>
 #include <functional>
 #include <memory>
 
 struct BodyDisplay;
 struct BackgroundSettings;
+struct AxesOrientation;
 namespace ForgeCad {
 class DisplayCache;
 class OverlayRenderer;
@@ -94,6 +96,11 @@ public:
                                  const BackgroundSettings &background);
     void drawAnalysisLines(OverlayRenderer &overlay, const QVector<OverlayVertex> &grid,
                            const QVector<OverlayVertex> &lines, bool through);
+    // Riferimenti gia' dimensionati/orientati dal viewport, nessuno stato della camera.
+    void drawAxes(OverlayRenderer &overlay, float length, const std::array<QColor, 3> &colors);
+    void drawGrid(OverlayRenderer &overlay, const AxesOrientation &orientation, float step);
+    void drawDatumQuad(OverlayRenderer &overlay, const QVector<QVector3D> &corners,
+                       const GLfloat *color, float emphasis);
 private:
     friend class ::ViewportInteractionTest;
     QOpenGLFramebufferObject *sceneBuffer(const QSize &size);
