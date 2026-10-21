@@ -45,6 +45,7 @@ private:
     void showRevisionTableDialog();
     void refreshTitle();
     void refreshEditAccess();
+    QString acquireWriteAccess();
     QString requireEditAccess();
     void refreshPageContext();
     void refreshModelUpdateNotice();
@@ -55,6 +56,7 @@ private:
     DrawingEditorModel model_;
     QString path_,sourcePath_,sourceArchivePath_;
     std::unique_ptr<DocumentFileLock> lock_;
+    QByteArray diskFingerprint_;
     DrawingSheetEditor *editor_=nullptr;
     QLabel *sourceStatus_=nullptr;
     QAction *updateAction_=nullptr;

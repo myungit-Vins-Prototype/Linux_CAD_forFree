@@ -11,6 +11,7 @@
 #include <limits>
 
 #include "cad_curve_solver.h"
+#include "cad_kernel.h"
 #include "fk_curve_algo.h"
 
 namespace ForgeCad {
@@ -1549,6 +1550,21 @@ QVector<Block> buildBlocks(const System &system, const SketchObject &sketch, con
         if (block.points.isEmpty()) continue;
         block.evaluate = [&system, curve](QVector<double> &out) { implicitEquations(system, curve, out); };
         blocks.append(block);
+    }
+    // La chiusura di una spline duplicata negli estremi resta un solo nodo,
+    // anche quando una quota o il solver sposta uno dei due riferimenti.
+    for(int curve=0;curve<sketch.curves.size();++curve){
+        const auto &object=sketch.curves[curve];const int last=int(object.controlPoints.size())-1;
+        if(object.tool!=DrawingTool::Spline||last<2||length(object.controlPoints.first()-object.controlPoints.last())>kSketchConnectionTolerance)continue;
+        const int firstPoint=system.curvePoint(curve,0),lastPoint=system.curvePoint(curve,last);
+        Block join;join.points={firstPoint,lastPoint};join.evaluate=[&system,firstPoint,lastPoint](QVector<double> &out){const auto d=system.point(firstPoint)-system.point(lastPoint);out<<d.x()<<d.y();};blocks.append(join);
+        const int base=system.handleBase(curve);
+        const auto firstTangent=base>=0?system.point(base+1):QPointF(),lastTangent=base>=0?system.point(base+2*last):QPointF();
+        const bool joinedTangent=std::abs(cross(firstTangent,lastTangent))<=1e-9*std::max({length(firstTangent),length(lastTangent),1e-9})&&dot(firstTangent,lastTangent)<=0;
+        if(base>=0&&object.tangentLinked.value(0)&&object.tangentLinked.value(last)&&joinedTangent){
+            const int firstOut=base+1,lastIn=base+2*last;
+            Block tangent;tangent.points={firstOut,lastIn};tangent.evaluate=[&system,firstOut,lastIn](QVector<double> &out){const auto a=system.point(firstOut),b=system.point(lastIn);out<<cross(a,b)/std::max({length(a),length(b),1e-9});};blocks.append(tangent);
+        }
     }
     // Una coppia di maniglie collegata definisce una sola tangente: i due
     // vettori restano collineari. Il verso opposto e' mantenuto dalla

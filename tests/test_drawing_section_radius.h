@@ -16,9 +16,10 @@ void drawingSectionRadiusTests(){
    if(auto *line=qgraphicsitem_cast<QGraphicsLineItem*>(i)){const auto p=line->line().p1(),q=line->line().p2();if(QLineF(p,a).length()<1e-6&&QLineF(q,b).length()<1e-6)++centerLines;}
   }require(arrows==1,"una sola freccia per il raggio");require(centerLines==(external?0:1),"richiamo esterno senza linea interna dal centro");return path;
  };
- const auto finalArrow=radial(e,true);require(finalArrow.elementCount()==previewArrow.elementCount(),"stessa freccia in anteprima e dopo inserimento");
- for(int i=0;i<finalArrow.elementCount();++i){near(finalArrow.elementAt(i).x,previewArrow.elementAt(i).x,"freccia senza salto orizzontale al clic");near(finalArrow.elementAt(i).y,previewArrow.elementAt(i).y,"freccia senza salto verticale al clic");}const auto saved=encoded(e);
+ const auto finalArrow=radial(e,false);require(finalArrow.elementCount()==previewArrow.elementCount(),"stessa freccia in anteprima e dopo inserimento");
+ for(int i=0;i<finalArrow.elementCount();++i){near(finalArrow.elementAt(i).x,previewArrow.elementAt(i).x,"freccia senza salto orizzontale al clic");near(finalArrow.elementAt(i).y,previewArrow.elementAt(i).y,"freccia senza salto verticale al clic");}
  QPointF labelCenter;for(auto *i:e.canvas()->scene()->items())if(i->data(0).toString()=="dimension"&&i->data(3).toUuid()==dim.id)labelCenter=i->sceneBoundingRect().center()-i->pos();
+ ok(e.moveDimension(dim.id,outside-labelCenter));radial(e,true);const auto saved=encoded(e);
  ok(e.moveDimension(dim.id,paper({5.5,0})-labelCenter));radial(e,false);ok(e.undo());require(encoded(e)==saved,"Undo ripristina posizione esterna");radial(e,true);
  DrawingSheet restored;ok(decodeDrawingSheet(saved,restored));DrawingSheetEditor reopened(restored,model);radial(reopened,true);near(reopened.dimensionResult(dim.id).value,1.5,"raggio associativo dopo riapertura");
  // Il filtro dei raggi non deve interferire con gli strumenti che riusano lo snap.

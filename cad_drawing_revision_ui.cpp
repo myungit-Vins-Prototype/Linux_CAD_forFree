@@ -90,7 +90,9 @@ QString DrawingWindow::runRevisionAction(RevisionAction action,const QString &fi
     if(!editor_||busy_||(editor_&&editor_->isComputing()))return QStringLiteral("Attendere la conclusione dell'operazione in corso.");
     if(path_.isEmpty())return QStringLiteral("Salvare prima la tavola nel workspace.");
     if(!drawing_.sheet.drawing.version.checkinId.isNull())return QStringLiteral("La tavola archiviata e' in sola lettura.");
-    if(!lock_||!lock_->owns(path_))return QStringLiteral("La tavola non ha piu' un blocco esclusivo valido.");
+    const bool owned=lock_&&lock_->owns(path_);
+    if(!owned&&action==RevisionAction::Checkin)return QStringLiteral("Riprendere il check-out prima di pubblicare le modifiche.");
+    const auto lockError=acquireWriteAccess();if(!lockError.isEmpty()){refreshEditAccess();refreshTitle();return lockError;}
     const auto oldBase=drawing_.baseCheckinId;busy_=true;refreshTitle();
     RevisionRecord record;bool matches=true;QString error;
     switch(action){
@@ -105,6 +107,8 @@ QString DrawingWindow::runRevisionAction(RevisionAction action,const QString &fi
         containerDirty_=false;modified_=false;editor_->markSaved();statusBar()->showMessage(matches?QStringLiteral("Check-in della tavola archiviato."):
             QStringLiteral("Check-in originale completato. Le modifiche successive sono conservate nella copia di lavoro."),10000);
     }
+    if(error.isEmpty()){diskFingerprint_.clear();documentFileFingerprint(path_,diskFingerprint_);}
+    if(!owned&&!error.isEmpty())lock_.reset();
     refreshPageContext();refreshTitle();return error;
 }
 QString DrawingWindow::applySource(DrawingFile prepared,DocumentState source){

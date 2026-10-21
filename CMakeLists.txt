@@ -43,6 +43,10 @@ add_executable(forgecad
     forgeCad2026.cpp
     forgeCad2026_gui.cpp
     forgeCad2026_gui.h
+    forgeCad2026_viewport.cpp
+    forgeCad2026_viewport.h
+    forgeCad2026_gui_common.cpp
+    forgeCad2026_gui_common.h
     cad_types.h
     cad_shape_analysis.h
     cad_shape_analysis.cpp
@@ -64,6 +68,8 @@ add_executable(forgecad
     cad_expression.cpp
     cad_document_io.h
     cad_document_io.cpp
+    cad_document_recovery.h
+    cad_document_recovery.cpp
     cad_document_read.h
     cad_document_read.cpp
     cad_drawing.h
@@ -244,6 +250,8 @@ option(FORGECAD_BUILD_VIEW_TESTS "Compila i test delle interazioni del viewport"
 if(FORGECAD_BUILD_VIEW_TESTS)
     set(FORGECAD_EXAMPLE_DIR "${PROJECT_SOURCE_DIR}/File_Esempio" CACHE PATH "Cartella dei documenti di esempio per i test GUI")
     get_target_property(FORGECAD_VIEW_TEST_SOURCES forgecad SOURCES)
+    # Il viewport e gli helper sono compilati separatamente anche nel runner.
+    # Il solo .cpp della finestra resta incluso dai test di dialoghi/storyboard.
     list(REMOVE_ITEM FORGECAD_VIEW_TEST_SOURCES forgeCad2026.cpp forgeCad2026_gui.cpp ${FORGE_CAD_CUDA_SOURCE} ${FORGECAD_HASH_HEADER})
     list(REMOVE_ITEM FORGECAD_VIEW_TEST_SOURCES cad_macos_menu.h cad_macos_menu.mm)
     add_executable(forgecad_view_tests tests/test_viewport.cpp tests/test_declared_history_cache.h tests/test_boolean_history.h tests/test_blend_history.h tests/test_extrusion_history.h tests/test_revolution_history.h tests/test_all_history.h tests/test_native_revisions.h tests/test_workspace_revisions.h tests/test_linked_drawing.h tests/test_drawing_workflow.h tests/test_drawing_revisions.h tests/test_projected_drawing_file.h tests/test_drawing_mouse.h tests/test_drawing_section_model.h cuda_support_cpu.cpp ${FORGECAD_VIEW_TEST_SOURCES})
@@ -296,6 +304,8 @@ if(FORGECAD_BUILD_VIEW_TESTS)
     forgecad_add_view_test(forgecad_sketch_reference_workflow_tests --sketch-reference-workflow)
     set_tests_properties(forgecad_sketch_reference_workflow_tests PROPERTIES TIMEOUT 30)
     forgecad_add_view_test(forgecad_document_access_tests --document-access)
+    forgecad_add_view_test(forgecad_document_consultation_tests --document-consultation)
+    set_tests_properties(forgecad_document_consultation_tests PROPERTIES TIMEOUT 90)
     set_tests_properties(forgecad_document_access_tests PROPERTIES TIMEOUT 60)
     forgecad_add_view_test(forgecad_sweep_reference_tests --sweep-references)
     set_tests_properties(forgecad_sweep_reference_tests PROPERTIES TIMEOUT 60)
@@ -305,6 +315,14 @@ if(FORGECAD_BUILD_VIEW_TESTS)
     set_tests_properties(forgecad_curve_extraction_tests PROPERTIES TIMEOUT 60)
     forgecad_add_view_test(forgecad_handle_constraints_tests --handle-constraints)
     set_tests_properties(forgecad_handle_constraints_tests PROPERTIES TIMEOUT 30)
+    forgecad_add_view_test(forgecad_sketch_editing_tests --sketch-editing)
+    set_tests_properties(forgecad_sketch_editing_tests PROPERTIES TIMEOUT 60)
+    forgecad_add_view_test(forgecad_helix_start_angle_tests --helix-start-angle)
+    set_tests_properties(forgecad_helix_start_angle_tests PROPERTIES TIMEOUT 60)
+    forgecad_add_view_test(forgecad_sketch_menu_cancel_tests --sketch-menu-cancel)
+    set_tests_properties(forgecad_sketch_menu_cancel_tests PROPERTIES TIMEOUT 60)
+    forgecad_add_view_test(forgecad_document_recovery_tests --document-recovery)
+    set_tests_properties(forgecad_document_recovery_tests PROPERTIES TIMEOUT 90)
     forgecad_add_view_test(forgecad_dense_fixed_sketch_tests --dense-fixed-sketch)
     set_tests_properties(forgecad_dense_fixed_sketch_tests PROPERTIES TIMEOUT 15)
     forgecad_add_view_test(forgecad_blend_preview_reload_tests --blend-preview-reload)

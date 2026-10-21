@@ -29,6 +29,7 @@ struct HelixBase {
 Kernel::Vec3 helixReference(const Kernel::Vec3 &axis);
 
 // Base da un cerchio o arco dello schizzo (curve = -1: il primo).
+// Angolo 0 sull'asse X dello schizzo, 90 sull'asse Y.
 bool helixBaseFromSketch(const SketchObject &sketch, int curve, HelixBase &base, QString *error);
 
 // Passo, giri e altezza effettivi (il valore che il modo non usa si ricava).
