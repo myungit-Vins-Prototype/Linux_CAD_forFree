@@ -52,6 +52,10 @@ DESCRIPTIONS = {
  'forgeCad2026_viewport_sketch.cpp': ('viewport', 'Comandi e interazioni per disegno, modifica, vincoli e riferimenti dello sketch.'),
  'forgeCad2026_viewport_preview.cpp': ('viewport', 'Orchestrazione asincrona delle anteprime: generazioni, cancellazione e consegna sul thread GUI.'),
  'forgeCad2026_viewport_render.cpp': ('viewport', 'Orchestrazione del frame e degli overlay; delega delle passate ai componenti grafici.'),
+ 'tools/run_ribbon_preview.sh': ('build', 'Avvio esplicito della prova ribbon separata, senza sostituire l’app abituale.'),
+ 'forgeCad2026_ribbon_preview': ('startup', 'Ribbon predefinita del viewport: schede/gruppi adattivi, azioni condivise con pulizia alla distruzione, configurazione persistente e contesto.'),
+ 'forgeCad2026_ribbon_editor': ('dialogs', 'Editor modale della ribbon: sezioni, comandi, separatori e ripristino su copia confermabile.'),
+ 'forgeCad2026_ribbon_preview_main.cpp': ('startup', 'Avvio separato della prova ribbon, preferenze isolate, cattura e regressione apertura documento/Blocco.'),
  'forgeCad2026_zoom': ('viewport', 'Normalizzazione input per backend, preferenze condivise e animazione temporale dello zoom per vista 3D e tavole.'),
  'forgeCad2026_viewport_scene.cpp': ('viewport', 'Coordinate scena/schermo, raggi, bounds, zoom uniforme al cursore, adattamento vista e piani di riferimento.'),
  'forgeCad2026_feature_preview': ('features', 'FeaturePreviewBuilder: chiave e calcolo delle anteprime da snapshot, senza possedere widget.'),
@@ -65,7 +69,7 @@ DESCRIPTIONS = {
  'forgeCad2026_dialogs_surfaces.cpp': ('dialogs', 'Dialoghi di parametri per operazioni sulle superfici.'),
  'forgeCad2026_dialogs_sketch.cpp': ('dialogs', 'Dialoghi di creazione e modifica degli sketch.'),
  'forgeCad2026_dialogs_analysis.cpp': ('dialogs', 'Dialoghi per analisi e opzioni di verifica geometrica.'),
- 'forgeCad2026_dialogs_common': ('dialogs', 'Controlli e comportamento condivisi dai dialoghi di modellazione.'),
+ 'forgeCad2026_dialogs_common': ('dialogs', 'Controlli e pannelli incorporati ridimensionabili: maniglia indipendente dalla finestra principale e geometria persistente.'),
  'forgeCad2026_dialogs.h': ('dialogs', 'Contratti dei dialoghi di comando per solidi, superfici, sketch e analisi.'),
  'toolbar_editor.h': ('startup', 'Editor della disposizione e dei comandi delle toolbar.'),
 }
@@ -148,7 +152,7 @@ DESCRIPTIONS.update({'tools/open_architecture.py': ('build', 'Avvio locale della
  'cad_macos_menu': ('startup', 'Integrazione dei menu con il comportamento nativo di macOS.'),
  'cad_mass': ('analysis', 'Calcola proprietà di massa, area, volume e momenti dei corpi.'),
  'cad_measure': ('analysis', 'Misura distanze e relazioni tra entità selezionate sulla geometria esatta.'),
- 'cad_menu.h': ('startup', 'Componente menu personalizzato dell’interfaccia.'),
+ 'cad_menu.h': ('startup', 'Popup comuni: palette della finestra, angoli antialias e padding dal raggio dei pannelli, spunte separate dalle icone.'),
  'cad_model_history': ('features',
                        'Gestisce l’evoluzione dello stato del modello nella storia delle operazioni.'),
  'cad_native_revisions': ('documents', 'Persistenza dei dati nativi necessari alle revisioni del modello.'),
@@ -184,8 +188,8 @@ DESCRIPTIONS.update({'tools/open_architecture.py': ('build', 'Avvio locale della
                           'Implementazione CPU del contratto di accelerazione quando CUDA non è '
                           'disponibile.'),
  'forgeCad2026_glass_compositor': ('render',
-                                   'Compositore dei fondali sfocati dei pannelli, con shader e framebuffer '
-                                   'propri.'),
+                                   'Compositore dei fondali sfocati dei pannelli, con maschera arrotondata '
+                                   'analitica e antialias per pixel, shader e framebuffer propri.'),
  'kernel/CMakeLists.txt': ('build', 'Definisce libreria geometrica e target di verifica del kernel.')})
 
 TOKEN_DESCRIPTIONS = {

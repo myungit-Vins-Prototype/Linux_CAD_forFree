@@ -225,12 +225,30 @@ WindowLock::~WindowLock() {
     viewport->setInteractionLocked(previousLock);
 }
 
+namespace {
+// Indicatore esplicito: alcuni temi non disegnano CE_SizeGrip nei pannelli figli.
+class PanelResizeGrip final : public QSizeGrip {
+public:
+    explicit PanelResizeGrip(QWidget *parent):QSizeGrip(parent) {}
+protected:
+    void paintEvent(QPaintEvent *) override {
+        QPainter painter(this);painter.setRenderHint(QPainter::Antialiasing);
+        auto color=palette().color(QPalette::WindowText);color.setAlpha(180);
+        painter.setPen(QPen(color,1.5,Qt::SolidLine,Qt::RoundCap));
+        for(int offset:{6,11,16})
+            painter.drawLine(QPointF(width()-offset,height()-4),QPointF(width()-4,height()-offset));
+    }
+};
+}
+
 FunctionDialogPanel::FunctionDialogPanel(QWidget *parent , bool exclusive )
         : QDialog(overlayParent(parent)), exclusive_(exclusive), panelColor_(palette().color(QPalette::Window)), captureTimer_(this) {
     setAttribute(Qt::WA_NoMousePropagation);
     embedded_ = dynamic_cast<CadViewport *>(parentWidget()) != nullptr;
     if (embedded_) {
-        setWindowFlags(Qt::Widget);
+        // Sottofinestra incorporata: QSizeGrip deve riferirsi al pannello,
+        // non alla finestra principale (dove si nasconderebbe se massimizzata).
+        setWindowFlags(Qt::SubWindow);
         parentWidget()->installEventFilter(this);
     }
     setObjectName(QStringLiteral("functionDialogPanel"));
@@ -246,9 +264,10 @@ FunctionDialogPanel::FunctionDialogPanel(QWidget *parent , bool exclusive )
                                          settings.value(QStringLiteral("loft/dialogOpacity"), 88)).toInt(), 100);
     blur_ = qBound(0, settings.value(QStringLiteral("view/functionPanelBlur"), 12).toInt(), 40);
     cornerRadius_ = qBound(0, settings.value(QStringLiteral("view/functionPanelCornerRadius"), 10).toInt(), 40);
-    resizeGrip_ = new QSizeGrip(this);
+    resizeGrip_ = new PanelResizeGrip(this);
     resizeGrip_->setObjectName(QStringLiteral("functionPanelResizeGrip"));
     resizeGrip_->setFixedSize(22, 22);
+    resizeGrip_->setToolTip(QStringLiteral("Trascina per ridimensionare il pannello"));
     resizeGrip_->installEventFilter(this);
     // Barra d'intestazione con il nome del comando (windowTitle), disegnata
     // in paintEvent: i layout delle finestre stanno sotto grazie al margine.
@@ -352,6 +371,10 @@ void FunctionDialogPanel::setBackdropBlur(int pixels) {
 
 void FunctionDialogPanel::setCornerRadius(int pixels) {
     cornerRadius_ = qBound(0, pixels, 40);
+    if(resizeGrip_) {
+        const int inset=qCeil(cornerRadius_*(1.0-1.0/std::sqrt(2.0)));
+        resizeGrip_->move(width()-resizeGrip_->width()-inset,height()-resizeGrip_->height()-inset);
+    }
     syncGpuGlass();
     updateRoundedMask();
     update();
@@ -409,7 +432,8 @@ void FunctionDialogPanel::resizeEvent(QResizeEvent *event) {
     QDialog::resizeEvent(event);
     if (embedded_ && placed_) keepInsideViewport();
     if (resizeGrip_) {
-        resizeGrip_->move(width() - resizeGrip_->width(), height() - resizeGrip_->height());
+        const int inset=qCeil(cornerRadius_*(1.0-1.0/std::sqrt(2.0)));
+        resizeGrip_->move(width() - resizeGrip_->width() - inset, height() - resizeGrip_->height() - inset);
         resizeGrip_->raise();
     }
     if (headerClose_) {
@@ -1590,7 +1614,8 @@ FloatingPanel::FloatingPanel(QWidget *window, const QString &title, const QStrin
         : FunctionDialogPanel(window, false), settingsKey_(settingsKey), defaultSize_(defaultSize) {
     setHeaderVisible(false);
     auto *outer = new QVBoxLayout(this);
-    outer->setContentsMargins(1, 1, 1, 1);
+    // Area libera per la maniglia anche con il raggio massimo degli angoli.
+    outer->setContentsMargins(1, 1, 1, 36);
     outer->setSpacing(0);
     header_ = new QWidget(this);
     header_->setObjectName(QStringLiteral("floatingPanelHeader"));

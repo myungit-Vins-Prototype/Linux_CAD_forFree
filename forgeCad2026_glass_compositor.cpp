@@ -1,6 +1,7 @@
 #include "forgeCad2026_glass_compositor.h"
 #include "cad_overlay_renderer.h"
 #include <QMatrix4x4>
+#include <QVector4D>
 #include <cmath>
 
 namespace ForgeCad::Gui {
@@ -37,12 +38,21 @@ void GlassCompositor::initializeGlassShader() {
         "#version 330 core\n"
         "uniform sampler2D sourceTexture;\n"
         "uniform vec2 direction;\n"
+        "uniform vec2 logicalSize;\n"
+        "uniform vec4 panelRect;\n"
+        "uniform float panelRadius;\n"
         "in vec2 uv;\n"
         "out vec4 fragmentColor;\n"
         "void main() {\n"
         // La composizione finale usa direction=(0,0): in quel passaggio
         // basta una lettura, non tredici letture identiche.
-        " if (direction.x == 0.0 && direction.y == 0.0) { fragmentColor = texture(sourceTexture, uv); return; }\n"
+        " if (direction.x == 0.0 && direction.y == 0.0) {\n"
+        "   vec2 q = abs(uv * logicalSize - panelRect.xy) - panelRect.zw + vec2(panelRadius);\n"
+        "   float d = length(max(q, vec2(0.0))) + min(max(q.x, q.y), 0.0) - panelRadius;\n"
+        "   float aa = max(fwidth(d), 0.0001);\n"
+        "   float coverage = 1.0 - smoothstep(-0.5 * aa, 0.5 * aa, d);\n"
+        "   fragmentColor = vec4(texture(sourceTexture, uv).rgb, coverage); return;\n"
+        " }\n"
         // Tredici campioni contigui: con soli cinque campioni molto
         // distanziati i contorni netti apparivano come immagini ripetute.
         " vec4 c = texture(sourceTexture, uv) * 0.137022816;\n"
@@ -117,29 +127,20 @@ void GlassCompositor::glassBlurPass(OverlayRenderer &renderer, QOpenGLFramebuffe
 }
 
 void GlassCompositor::drawRoundedGlassRect(OverlayRenderer &renderer, const QSize &logicalSize, const QRect &rect, int radius, const QSize &pixels) {
-    const float cx = rect.center().x(), cy = logicalSize.height() - rect.center().y();
     const float left = rect.left(), right = rect.right() + 1.0f;
     const float bottom = logicalSize.height() - (rect.bottom() + 1.0f), top = logicalSize.height() - rect.top();
     const float r = qMin(float(qMax(0, radius)), 0.5f * qMin(rect.width(), rect.height()));
+    glassShader_->setUniformValue("panelRect", QVector4D((left + right) * 0.5f, (bottom + top) * 0.5f,
+                                                         (right - left) * 0.5f, (top - bottom) * 0.5f));
+    glassShader_->setUniformValue("panelRadius", r);
+    // La curva viene valutata per pixel nello shader: nessuna spezzata
+    // a cinque segmenti e antialias anche dopo il resolve multisample.
     QVector<ForgeCad::TexturedOverlayVertex> vertices;
     const auto vertex = [&](float x, float y) {
         vertices.push_back({QVector3D(x, y, 0.0f), QVector2D(x / qMax(1, logicalSize.width()), y / qMax(1, logicalSize.height()))});
     };
-    vertex(cx, cy);
-    if (r <= 0.0f) {
-        vertex(left, bottom); vertex(right, bottom); vertex(right, top); vertex(left, top); vertex(left, bottom);
-    } else {
-        const struct { float x, y, start; } corners[] = {
-            {right - r, bottom + r, -90}, {right - r, top - r, 0},
-            {left + r, top - r, 90}, {left + r, bottom + r, 180}};
-        for (const auto &corner : corners)
-            for (int step = 0; step <= 5; ++step) {
-                const float a = (corner.start + step * 18.0f) * float(M_PI) / 180.0f;
-                vertex(corner.x + r * std::cos(a), corner.y + r * std::sin(a));
-            }
-        vertex(right - r, bottom);
-    }
-    renderer.drawTextured(*glassShader_, GL_TRIANGLE_FAN, vertices);
+    vertex(left, bottom); vertex(right, bottom); vertex(left, top); vertex(right, top);
+    renderer.drawTextured(*glassShader_, GL_TRIANGLE_STRIP, vertices);
     Q_UNUSED(pixels);
 }
 
@@ -171,17 +172,20 @@ void GlassCompositor::draw(const QSize &pixels, const QSize &logicalSize, qreal 
 
     glBindFramebuffer(GL_FRAMEBUFFER, targetFramebuffer);
     glViewport(0, 0, pixels.width(), pixels.height());
-    glDisable(GL_DEPTH_TEST); glDisable(GL_BLEND);
+    glDisable(GL_DEPTH_TEST); glEnable(GL_BLEND);
+    glBlendEquation(GL_FUNC_ADD);
+    glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
     glBindTexture(GL_TEXTURE_2D, glassBlur_->texture());
     QMatrix4x4 transform;
     transform.ortho(0.0f, float(logicalSize.width()), 0.0f, float(logicalSize.height()), -1.0f, 1.0f);
     glassShader_->bind();
     glassShader_->setUniformValue("sourceTexture", 0);
     glassShader_->setUniformValue("direction", QVector2D());
+    glassShader_->setUniformValue("logicalSize", QVector2D(logicalSize.width(), logicalSize.height()));
     glassShader_->setUniformValue("transform", transform);
     for (const GlassPanel &panel : glassPanels_) drawRoundedGlassRect(renderer, logicalSize, panel.rect, panel.radius, pixels);
     glassShader_->release();
-    glBindTexture(GL_TEXTURE_2D, 0); glEnable(GL_DEPTH_TEST);
+    glBindTexture(GL_TEXTURE_2D, 0); glDisable(GL_BLEND); glEnable(GL_DEPTH_TEST);
 }
 
 }

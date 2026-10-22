@@ -465,6 +465,9 @@ void SceneRenderer::drawPickedEdges(OverlayRenderer &overlay, const BodyDisplay 
 
 void SceneRenderer::drawBackgroundGradient(OverlayRenderer &overlay, const QSize &logicalSize,
                                             const BackgroundSettings &background) {
+    // QPainter puo' lasciare GL_CONSTANT_COLOR e una penna colorata nel
+    // blending. Lo sfondo e' opaco: non deve dipendere dal frame precedente.
+    glDisable(GL_BLEND);
     glDisable(GL_DEPTH_TEST);
     glDisable(GL_CULL_FACE);
     const float aspect = float(logicalSize.width()) / float(qMax(1, logicalSize.height()));

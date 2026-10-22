@@ -9797,6 +9797,9 @@ int main(int argc, char **argv) {
                 auto *model = first.findChild<QToolBar *>(QStringLiteral("modelingIconBar"));
                 auto *sketch = first.findChild<QToolBar *>(QStringLiteral("sketchIconBar"));
                 require(model && sketch, "toolbars exist");
+                require(model->isHidden() && sketch->isHidden(), "classic toolbars off by default");
+                require(first.findChild<QAction *>("ribbonVisibleAction")->isChecked(), "ribbon on by default");
+                for(const auto &name:{"modelingIconBar","surfaceIconBar","sketchIconBar"})first.findChild<QAction *>(QString::fromLatin1(name)+"VisibleAction")->setChecked(true);
                 model->hide(); sketch->show();
                 QSettings().setValue(QStringLiteral("interface/state"), first.saveState());
             }
@@ -9817,6 +9820,7 @@ int main(int argc, char **argv) {
             require(custom && custom->isHidden() && custom->actions().isEmpty(), "barra personalizzata vuota all'inizio");
             QSettings().setValue(QStringLiteral("toolbar/custom"),
                                  QStringList{QStringLiteral("Funzioni/Superfici/Spessore..."), QStringLiteral("Analisi/Misura..."), QStringLiteral("Comando inesistente")});
+            QSettings().setValue("toolbar/visible/customIconBar",true);
             PdfWindow customized;
             auto *chosen = customized.findChild<QToolBar *>(QStringLiteral("customIconBar"));
             require(chosen && !chosen->isHidden() && chosen->actions().size() == 2 && chosen->actions().at(0)->text() == QStringLiteral("Spessore...")

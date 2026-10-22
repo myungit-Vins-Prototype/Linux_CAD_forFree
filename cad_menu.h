@@ -8,6 +8,9 @@
 #include <QPaintEvent>
 #include <QStyleOptionMenuItem>
 #include <QToolButton>
+#include <QSettings>
+#include <QtMath>
+#include <algorithm>
 
 // Popup comuni: colori del tema e colonna delle spunte
 // indipendente dalle icone, anche nelle scelte esclusive di Visualizza.
@@ -20,12 +23,20 @@ protected:
     void paintEvent(QPaintEvent *event) override {
         const auto colors=themePalette();
         QPainter painter(this);
-        painter.fillRect(rect(), colors.color(QPalette::Window));
-        QStyleOption panel;
-        panel.initFrom(this);
-        style()->drawPrimitive(QStyle::PE_PanelMenu, &panel, &painter, this);
+        // Il popup è una finestra traslucida: cancellare il rettangolo del
+        // tema prima di disegnare la sola sagoma, senza maschere QRegion.
+        painter.setCompositionMode(QPainter::CompositionMode_Source);
+        painter.fillRect(rect(), Qt::transparent);
+        painter.setCompositionMode(QPainter::CompositionMode_SourceOver);
         painter.setRenderHint(QPainter::Antialiasing);
-        painter.setClipRect(rect().adjusted(6, 6, -6, -6));
+        const QRectF bounds=QRectF(rect()).adjusted(.5,.5,-.5,-.5);
+        const qreal radius=std::min(qreal(radius_),std::min(bounds.width(),bounds.height())/2);
+        QPainterPath shape;shape.addRoundedRect(bounds,radius,radius);
+        painter.fillPath(shape,colors.color(QPalette::Window));
+        painter.setPen(QPen(colors.color(QPalette::Mid),1));
+        painter.drawPath(shape);
+        painter.setClipPath(shape);
+        painter.setClipRect(rect().adjusted(padding_,padding_,-padding_,-padding_),Qt::IntersectClip);
         for (QAction *action : actions()) {
             const QRect row = actionGeometry(action);
             if (!action->isVisible() || row.isEmpty() || !row.intersects(event->rect())) continue;
@@ -68,13 +79,27 @@ private:
         auto *anchor=parentWidget();while(anchor&&qobject_cast<QMenu *>(anchor))anchor=anchor->parentWidget();
         return anchor?anchor->palette():QApplication::palette();
     }
-    void configure() {
-        setStyleSheet(QStringLiteral(
-            "QMenu { background: palette(window); color: palette(window-text); border: 1px solid palette(mid); padding: 6px; }"
+    int radius_=10;
+    int padding_=6;
+    void reloadAppearance() {
+        radius_=std::clamp(QSettings().value(QStringLiteral("view/functionPanelCornerRadius"),10).toInt(),0,40);
+        // Margine minimo che tiene le voci fuori dal quarto di cerchio.
+        padding_=qMax(6,qCeil(radius_*(1.0-1.0/qSqrt(2.0)))+2);
+        setPalette(themePalette());
+        const auto sheet=QStringLiteral(
+            "QMenu { background: transparent; color: palette(window-text); border: 1px solid transparent; padding: %1px; }"
             "QMenu::item { padding: 4px 14px 4px 26px; background: transparent; border-radius: 4px; }"
             "QMenu::item:selected:enabled { background: palette(highlight); color: palette(highlighted-text); }"
             "QMenu::item:disabled { color: palette(mid); }"
-            "QMenu::separator { height: 2px; background: palette(mid); margin: 0px 8px; }"));
+            "QMenu::separator { height: 2px; background: palette(mid); margin: 0px 8px; }").arg(padding_);
+        if(styleSheet()!=sheet)setStyleSheet(sheet);
+        update();
+    }
+    void configure() {
+        setWindowFlag(Qt::FramelessWindowHint,true);
+        setAttribute(Qt::WA_TranslucentBackground);
+        reloadAppearance();
+        connect(this,&QMenu::aboutToShow,this,[this]{reloadAppearance();});
     }
 };
 

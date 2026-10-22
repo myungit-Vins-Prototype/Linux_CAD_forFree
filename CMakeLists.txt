@@ -58,6 +58,10 @@ add_executable(forgecad
     forgeCad2026.cpp
     forgeCad2026_gui.cpp
     forgeCad2026_gui.h
+    forgeCad2026_ribbon_preview.cpp
+    forgeCad2026_ribbon_preview.h
+    forgeCad2026_ribbon_editor.cpp
+    forgeCad2026_ribbon_editor.h
     forgeCad2026_viewport.cpp
     forgeCad2026_zoom.cpp
     forgeCad2026_zoom.h
@@ -258,6 +262,34 @@ if(CMAKE_CUDA_COMPILER)
     target_compile_definitions(forgecad PRIVATE FORGECAD_HAS_CUDA=1)
 else()
     target_compile_definitions(forgecad PRIVATE FORGECAD_HAS_CUDA=0)
+endif()
+
+# Runner ribbon separato con preferenze isolate: non viene installato
+# e non partecipa alla build predefinita. Preferenze isolate nell'entrypoint.
+option(FORGECAD_BUILD_RIBBON_PREVIEW "Abilita l'eseguibile sperimentale della ribbon" OFF)
+if(FORGECAD_BUILD_RIBBON_PREVIEW)
+    get_target_property(FORGECAD_RIBBON_SOURCES forgecad SOURCES)
+    list(REMOVE_ITEM FORGECAD_RIBBON_SOURCES forgeCad2026.cpp)
+    add_executable(forgecad_ribbon_preview EXCLUDE_FROM_ALL
+        forgeCad2026_ribbon_preview_main.cpp ${FORGECAD_RIBBON_SOURCES})
+    get_target_property(FORGECAD_RIBBON_INCLUDES forgecad INCLUDE_DIRECTORIES)
+    get_target_property(FORGECAD_RIBBON_LIBRARIES forgecad LINK_LIBRARIES)
+    get_target_property(FORGECAD_RIBBON_OPTIONS forgecad COMPILE_OPTIONS)
+    get_target_property(FORGECAD_RIBBON_DEFINITIONS forgecad COMPILE_DEFINITIONS)
+    target_include_directories(forgecad_ribbon_preview PRIVATE ${FORGECAD_RIBBON_INCLUDES})
+    target_link_libraries(forgecad_ribbon_preview PRIVATE ${FORGECAD_RIBBON_LIBRARIES})
+    target_compile_options(forgecad_ribbon_preview PRIVATE ${FORGECAD_RIBBON_OPTIONS})
+    if(FORGECAD_RIBBON_DEFINITIONS)
+        target_compile_definitions(forgecad_ribbon_preview PRIVATE ${FORGECAD_RIBBON_DEFINITIONS})
+    endif()
+    if(CMAKE_CUDA_COMPILER)
+        set_target_properties(forgecad_ribbon_preview PROPERTIES CUDA_STANDARD 17 CUDA_STANDARD_REQUIRED ON)
+    endif()
+    set_target_properties(forgecad_ribbon_preview PROPERTIES
+        OUTPUT_NAME forgecad-ribbon-preview RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/ribbon-preview")
+    add_test(NAME forgecad_ribbon_preview_tests COMMAND forgecad_ribbon_preview --self-test)
+    set_tests_properties(forgecad_ribbon_preview_tests PROPERTIES TIMEOUT 30
+        ENVIRONMENT "QT_QPA_PLATFORM=offscreen;QT_QPA_OFFSCREEN_NO_GLX=1;QT_QPA_PLATFORMTHEME=;QT_STYLE_OVERRIDE=Fusion")
 endif()
 
 # Installazione (cmake --install): binario, voce del menu, icone e tipo MIME dei

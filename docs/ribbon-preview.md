@@ -1,0 +1,93 @@
+# Ribbon del viewport e runner separato
+
+La ribbon approvata è ora inclusa nell’app normale e visibile per default. Le toolbar classiche restano agganciabili e personalizzabili; al primo avvio della nuova interfaccia vengono spente, conservando posizioni e layout. Le successive scelte di visibilità sono rispettate.
+
+In **Opzioni → Barre degli strumenti** si possono riattivare le toolbar, mostrare/nascondere la ribbon e aprire **Personalizza ribbon…**. Anche il clic destro sulla ribbon apre il menu; sul pulsante Compatta apre direttamente l’editor.
+
+L’editor permette, per ogni scheda, di aggiungere, rinominare, mostrare/nascondere, rimuovere e riordinare sezioni; aggiungere, rimuovere e riordinare comandi e separatori; inserire un separatore tra sezioni e scegliere quanti pulsanti promuovere nella ribbon. Il menu della sezione contiene tutti i comandi, anche quelli non promossi. Termina schizzo è protetto dalla rimozione e dall’overflow. Conferma salva, Annulla scarta, Ripristina ricrea la disposizione iniziale solo dopo Conferma.
+
+Preferenze: `ribbon/layout` (JSON), `ribbon/visible`, `ribbon/compact`; `ribbon/toolbarDefaultsApplied` applica una sola volta i nuovi default. Le precedenti preferenze di visibilità sono conservate sotto `ribbon/previous/`. Il nome sorgente `ribbon_preview` è mantenuto per continuità, ma il componente è condiviso con l’app normale.
+
+## Avvio
+
+Dalla radice del progetto, con la build già preparata:
+
+```sh
+./tools/run_ribbon_preview.sh
+```
+
+Eseguibile separato:
+
+```text
+forgecad-release/ribbon-preview/forgecad-ribbon-preview
+```
+
+La prova usa `QSettings` con organizzazione `ForgeCADPreview` e applicazione `RibbonExperiment`. Le impostazioni di `ForgeCAD/ForgeCAD` restano separate. La finestra indica **ForgeCAD — Prova ribbon**. Le barre tradizionali partono nascoste come nell’app; la ribbon è un adattatore delle azioni reali della finestra e i menu restano disponibili. Il pannello Revisioni conserva la propria preferenza.
+
+Il target del runner condivide la ribbon dell’app e conserva preferenze separate. Il target non viene installato e resta escluso dalla build predefinita.
+
+Per ricompilarla esplicitamente:
+
+```sh
+cmake -S . -B forgecad-release -DFORGECAD_BUILD_RIBBON_PREVIEW=ON
+cmake --build forgecad-release --target forgecad_ribbon_preview -j4
+```
+
+L'opzione CMake è disattivata per default. La sua attivazione rende disponibile il target, che va comunque richiesto esplicitamente.
+
+## Cosa provare
+
+- Fondo delle due carte con lo stesso blur GPU dei pannelli parametrici. Opacità, sfocatura e raggio seguono le impostazioni dei pannelli nella prova, anche durante la sessione (entro mezzo secondo). Lo spazio tra le carte resta libero; la sfocatura segue resize e modalità compatta e viene rimossa nascondendo la ribbon. Senza il compositore GPU resta il fondo traslucido.
+- Ribbon sopra il viewport: 123 punti logici, oppure 95 con **Compatta**, più il padding superiore/inferiore calcolato dal raggio. Il margine segue la geometria del quarto di cerchio e si aggiorna insieme all’arrotondamento; anche il blocco laterale si allarga per conservare lo spazio interno dei comandi. Le schede sono ancorate a sinistra indipendentemente dall’allineamento interno del tema Qt e restano a filo del bordo superiore per mantenere continua la linea blu sul raggio; il margine superiore viene applicato ai gruppi di pulsanti.
+- Schede Modello, Superfici, Schizzo, Analisi e Vista sempre visibili. Schizzo include un gruppo Crea schizzo utilizzabile prima di iniziare; strumenti e vincoli si abilitano creando o aprendo uno schizzo. La scheda viene selezionata automaticamente entrando in modifica.
+- Fondale blur GPU con curva arrotondata analitica e antialias per pixel, senza segmenti poligonali. Contorno e maschera delle carte generati dalla stessa sagoma a risoluzione quadrupla e ridotti alla risoluzione del display; il fondo viene ritagliato una sola volta. Accento blu di 3 punti logici, con sfumatura lungo l’arco e spessore costante. Un contorno bianco di 0,35 punti logici circonda entrambi i blocchi e viene disegnato prima dell’accento blu, che rimane in primo piano.
+- Etichette entro due righe, elisione e tooltip completi; carattere adattato allo spazio mantenendo le icone. I nomi dei gruppi conservano spazio per la freccia del menu.
+- Gruppi con pulsanti principali, menu completi e menu `»` quando lo spazio non basta.
+- Termina schizzo resta fuori dall'overflow.
+- Dopo l'ingresso nel contesto si può cambiare manualmente scheda senza essere riportati continuamente su Schizzo.
+- Le azioni sono le stesse dei menu: stato selezionato, abilitazione, scorciatoie e comandi operativi sono condivisi. Il gruppo Zoom include le impostazioni già implementate.
+- I pannelli parametrici originali si aprono sotto la ribbon, con i campi numerici e le conferme/annullamenti originali.
+- Gli eventi di attivazione da pulsanti, menu e scorciatoie preparano la scheda pertinente; le riaperture dei pannelli note vengono riconosciute anche dal titolo.
+
+## Limiti della prima versione
+
+Il catalogo deriva dai menu italiani e il riconoscimento delle feature riaperte usa anche i titoli dei pannelli. È un ponte sperimentale che evita modifiche al dispatcher dell'app attuale; non è ancora il catalogo definitivo con identificatori stabili e notifiche esplicite di ogni fase del comando.
+
+Il contesto schizzo è osservato tramite il getter pubblico ogni 50 ms senza sostituire i callback originali. Il ciclo di vita completo, le personalizzazioni avanzate della ribbon e la riapertura di tutte le famiglie di feature restano da completare dopo la valutazione.
+
+Lo Zoom tutto conserva il calcolo originale sull'intero viewport. La gestione delle aree coperte per l'inquadramento e per tutti i navigatori non è ancora il servizio completo proposto nello studio. Il layout dei pannelli molto alti su viewport piccoli richiede ulteriori verifiche. La prima prova riguarda la finestra 3D; le tavole mantengono la propria interfaccia.
+
+## Verifiche
+
+```sh
+ctest --test-dir forgecad-release -R '^forgecad_ribbon_preview_tests$' --output-on-failure
+QT_QPA_PLATFORM=xcb FORGECAD_IGPU=1 ./forgecad-release/ribbon-preview/forgecad-ribbon-preview --self-test
+```
+
+Il primo comando usa preferenze temporanee e profilo offscreen. La prova nativa richiede una sessione grafica disponibile; su altri sistemi va lasciato il relativo backend Qt. Copertura: contenimento delle etichette in tutte le schede, dimensioni normale/compatta, schede contestuali, scelta manuale, compressione/overflow, uscita schizzo, pannello sotto la ribbon, QAction reali e abilitazione della rotella. La prova nativa confronta anche il framebuffer con ribbon nascosta/visibile: il blur deve modificare la scena sotto le carte e lasciare invariato il distacco tra loro. Verifica inoltre una sfumatura grigio–bianco dopo aver contaminato esplicitamente il blending come QPainter, su otto fotogrammi con viste diverse, blur presente/assente e antialiasing0/4, confrontando i pixel con i colori attesi. Apre e annulla inoltre il pannello reale di una primitiva senza creare geometria.
+
+Cattura della sola finestra della prova, con chiusura automatica:
+
+```sh
+./tools/run_ribbon_preview.sh --capture /tmp/forgecad-ribbon-preview.png
+```
+
+Le verifiche locali non certificano tutti i DPI o i driver di Windows/macOS/Wayland. La prima cattura è stata ispezionata nella sessione X11/OpenGL locale.
+
+## Regressione Blocco dopo apertura documento
+
+Il catalogo elimina sincronicamente i riferimenti alle `QAction` distrutte, anche dai gruppi personalizzati: i menu dinamici come File recenti ricreano le proprie azioni a ogni apertura. Il self-test verifica questa rimozione prima di aprire i pannelli.
+
+Per riprodurre il percorso con un documento reale senza modificarlo, il runner usa preferenze isolate e tre copie temporanee, carica ciascuna copia e clicca il vero pulsante Blocco, annullando il pannello:
+
+```sh
+./forgecad-release/ribbon-preview/forgecad-ribbon-preview --test-open-block /percorso/modello.prt
+```
+
+## Angoli dei menu
+
+I popup comuni (menu principali, sottomenu, menu contestuali e menu della ribbon) seguono **Visualizza → Pannelli delle funzioni → Raggio degli angoli**. La preferenza condivisa `view/functionPanelCornerRadius` viene riletta a ogni apertura; raggio zero mantiene gli spigoli retti. Il margine interno cresce con il raggio per proteggere voci, icone e scorciatoie. I menu conservano i propri colori opachi del tema.
+
+## Ridimensionamento dei Vincoli
+
+Il pannello **Vincoli** si ridimensiona trascinando la maniglia nell’angolo inferiore destro. Le dimensioni scelte vengono ricordate. La maniglia resta disponibile con ForgeCAD massimizzato e conserva uno spazio libero rispetto al contenuto e agli angoli arrotondati.

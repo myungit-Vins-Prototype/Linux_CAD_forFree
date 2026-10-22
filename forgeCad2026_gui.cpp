@@ -1,3 +1,4 @@
+#include "forgeCad2026_ribbon_preview.h"
 #include "cad_drawing_browser.h"
 #include "cad_drawing_window.h"
 #include "cad_toolbar.h"
@@ -3716,6 +3717,15 @@ void PdfWindow::initializeToolbarsAndStatus(WindowSetup &setup) {
     auto *editBarsMenu = addCadMenu(toolbarsMenu, QStringLiteral("Personalizza pulsanti delle barre"));
     editBarsMenu->menuAction()->setProperty("toolbarConfiguration", true);
     toolbarsMenu->addSeparator();
+    // Prima adozione della ribbon: conservare layout e posizioni delle barre classiche.
+    if (!QSettings().value("ribbon/toolbarDefaultsApplied", false).toBool()) {
+        for (auto *bar : {toolbar, surfaceToolbar, customToolbar, drawingToolbar}) {
+            const auto key = QStringLiteral("toolbar/visible/") + bar->objectName();
+            QSettings().setValue("ribbon/previous/" + bar->objectName(), QSettings().value(key, true));
+            QSettings().setValue(key, false);
+        }
+        QSettings().setValue("ribbon/toolbarDefaultsApplied", true);
+    }
     for (auto *bar : {toolbar, surfaceToolbar, customToolbar, drawingToolbar}) {
         const auto saveCustomOrder = [customToolbar, toolbarCommands] {
             if (QSettings().value(QStringLiteral("toolbar/customDropdown"), false).toBool()) return;
@@ -3830,6 +3840,7 @@ void PdfWindow::initializeToolbarsAndStatus(WindowSetup &setup) {
     });
     // Solo la prima finestra dell'app propone il recupero all'avvio. Il menu
     // File resta disponibile anche dopo aver chiuso la proposta.
+    new ForgeCad::RibbonPreview(this);
     static bool startupRecoveryScheduled=false;
     if(!startupRecoveryScheduled){startupRecoveryScheduled=true;QTimer::singleShot(0,this,[this]{if(isVisible())showRecoveryDocuments(true);});}
 }
