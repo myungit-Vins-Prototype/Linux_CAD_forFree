@@ -1,4 +1,7 @@
+#include <QNativeGestureEvent>
 #include "forgeCad2026_viewport_internal.h"
+#include <QDebug>
+#include <QPointingDevice>
 
 
 void CadViewport::keyPressEvent(QKeyEvent *event) {
@@ -128,6 +131,7 @@ void CadViewport::keyPressEvent(QKeyEvent *event) {
 }
 
 void CadViewport::mousePressEvent(QMouseEvent *event) {
+    stopWheelZoom();
     camera_.orbitPivotValid_ = false;
     lastMousePosition_ = event->position().toPoint();
     if (event->button() == Qt::MiddleButton || (event->button() == Qt::LeftButton && panKeyHeld_)) {
@@ -1105,6 +1109,10 @@ void CadViewport::mouseMoveEvent(QMouseEvent *event) {
 }
 
 bool CadViewport::event(QEvent *event) {
+    if (event->type()==QEvent::NativeGesture && wheelZoomEnabled_
+        && wheelZoom_.nativeGesture(*static_cast<QNativeGestureEvent *>(event))) {
+        event->accept();return true;
+    }
     if (event->type() == QEvent::ToolTip && topologyIdsVisible_ && !sketchMode_) {
         const auto *help = static_cast<QHelpEvent *>(event);
         TopologyLabelItem label;
@@ -1142,6 +1150,7 @@ void CadViewport::keyReleaseEvent(QKeyEvent *event) {
 }
 
 void CadViewport::focusOutEvent(QFocusEvent *event) {
+    stopWheelZoom();
     featureHandleDragging_ = false;
     panKeyHeld_ = false;
     panning_ = false;
@@ -1259,11 +1268,5 @@ void CadViewport::leaveEvent(QEvent *event) {
 
 void CadViewport::wheelEvent(QWheelEvent *event) {
     if (!wheelZoomEnabled_) { event->ignore(); return; }
-    const QPoint angleDelta = event->angleDelta();
-    const QPoint pixelDelta = event->pixelDelta();
-    const int delta = angleDelta.y() != 0 ? angleDelta.y() : pixelDelta.y();
-    if (delta == 0) { event->ignore(); return; }
-    camera_.autoFit_ = false;
-    setZoom(camera_.zoom_ * std::pow(0.9985f, float(delta)));
-    event->accept();
+    if (wheelZoom_.wheel(*event)) { camera_.autoFit_=false;event->accept(); } else event->ignore();
 }

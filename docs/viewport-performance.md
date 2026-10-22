@@ -78,3 +78,78 @@ QT_QPA_PLATFORM=offscreen ./forgecad-cuda-build/forgecad_view_tests --bench-load
 ```
 
 In una sessione grafica con OpenGL desktop, `forgecad_view_tests --gl` verifica anche il disegno dei buffer e confronta pixel per pixel il rendering VBO e quello immediato dello stesso corpo. Le impostazioni dei test sono temporanee. Il test comprende ridimensionamento, annullamento, Undo/Redo, vincoli sui riferimenti fissi, salvataggio e riapertura del documento, e invalidazione della cache durante il pan.
+
+
+## Zoom comune a vista 3D e tavole (22 ottobre 2026)
+
+Il modulo `forgeCad2026_zoom.h/.cpp` separa la normalizzazione degli eventi
+Qt dal controller temporale e dagli adattatori della camera 3D/QGraphicsView.
+Entrambi usano incrementi del logaritmo dell'ingrandimento: con sensibilità
+100%, uno scatto angolare di120unità produce `exp(.03)` di ingrandimento
+(la camera3D, espressa come estensione visibile, varia di `exp(-.03)`).
+Le frazioni di scatto restano proporzionali;12eventi da10equivalgono a120.
+Il percorso pixel usa un guadagno distinto di `.0015` per pixel. Non si
+sommano angolo e pixel dello stesso evento e non si moltiplica per il DPR.
+La direzione ricevuta segue le preferenze del sistema, senza doppia inversione.
+
+In **Visualizza → Zoom → Impostazioni zoom…** si scelgono:
+
+- **Automatico**: fallback animato per input incerti. Su X11/xcb si preferisce
+  l'angolo perché Qt dichiara i pixel dipendenti dal driver e inaffidabili.
+  Negli altri backend, tipoTouchPad, pixel e fasi di gesto congiunti possono
+  selezionare la risposta diretta. Un primo evento quantizzato120 con almeno8pixel
+  resta animato anche se dichiaratoTouchPad; questa è ancora un'euristica,
+  non un riconoscimento universale dell'hardware.
+- **Rotella animata**: ogni evento di scorrimento usa la durata scelta.
+- **Touchpad diretto**: ogni evento di scorrimento viene applicato subito,
+  preferendo i pixel quando presenti. È anche l'override per dispositivi
+  che il backend non identifica correttamente.
+
+Il percorso automatico resta stabile nella sequenza: viene riaperta dopo
+180ms di inattività, cambio dispositivo o fine/inizio esplicito del gesto.
+Un inizio/fine a delta nullo non genera zoom. Il pinch nativo è separato:
+segue direttamente il fattore incrementaleQt `1 + value`, senza aggiungere
+un'altra animazione; gli altri gesti nativi non vengono convertiti in zoom.
+
+**Sensibilità** (5–1000%) e **Durata transizione** (0–10secondi) sono indipendenti.
+Il default della durata è `.250` secondi, pari al sorgente presente all'inizio
+di questa implementazione; per riprovare3secondi basta impostare `3.000 s`
+nel dialogo. Zero applica immediatamente. Le chiaviQSettings condivise sono
+`view/zoomMode`, `view/zoomSensitivity`, `view/zoomDuration`. La conferma aggiorna
+anche i controller delle finestre già aperte e annulla gli eventuali residui.
+Le tavole offrono lo stesso dialogo tramite **Impostazioni zoom…** nella barra.
+
+Il residuo si distribuisce uniformemente nel logaritmo della scala, senza
+easing. Eventi concordi si sommano; l'inversione scarta il residuo opposto.
+Il timer preciso16ms usa il tempo effettivamente trascorso, anche dopo uno
+stallo dell'UI. Clamp prima dell'esponenziale e limiti della singola vista
+impediscono overflow o accumulo ai fine corsa. Gli adattatori mantengono
+l'ancora al cursore; nelle tavole resta l'arrotondamento delle scrollbar intere.
+Clic/pan, perdita focus e inquadramento eliminano il residuo; il3D mantiene
+anche le interruzioni su cambio vista e disabilitazione della rotella.
+
+Il test `forgecad_smooth_zoom_tests` comprende profiliQt sintetici per fallback
+X11/pixel nativi, fasi, frazioni, mouse con pixel e mouse dichiaratoTouchPad,
+più durata3secondi, sensibilità, override, pinch, dialogo e persistenza.
+Il casoTouchPad con angolo-120/pixel-15 riproduce i dati fisici registrati
+nella prova precedente dell'utente. `forgecad_drawing_view_edit_tests` verifica
+anche animazione/ancora nelle tavole e interruzione su pan/Adatta foglio.
+Questi test non sostituiscono un collaudo fisico su Windows, macOS e Wayland.
+In sessione grafica `forgecad_view_tests --smooth-zoom --gl` verifica i
+fotogrammi effettivamente presentati nel viewport vuoto.
+
+Per registrare gli eventi senza modificare documenti:
+
+```sh
+FORGECAD_ZOOM_TRACE=1 QT_FORCE_STDERR_LOGGING=1 ./forgecad-release/forgecad 2>zoom-input.log
+```
+
+Le righe `ZOOM {…}` contengono JSON con backend, dispositivo/tipo, timestamp,
+angolo, pixel, fase, inversione, incremento normalizzato, percorso e preferenze.
+La diagnostica resta silenziosa quando la variabile non è impostata.
+
+Riferimenti: [Qt QWheelEvent](https://doc.qt.io/qt-6/qwheelevent.html),
+[Qt QNativeGestureEvent](https://doc.qt.io/qt-6/qnativegestureevent.html).
+Il confronto iniziale con [SolidCraft v0.19.0](https://github.com/tangency-labs/solidcraft/blob/v0.19.0/crates/ui-egui/src/navigation.rs)
+ha guidato lo studio della normalizzazione. Passo e avanzamento uniforme
+attuali sono una taraturaForgeCAD, non una replica del filtroegui.

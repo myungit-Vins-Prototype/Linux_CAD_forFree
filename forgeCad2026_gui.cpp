@@ -1613,11 +1613,32 @@ void PdfWindow::initializeActionsAndView(WindowSetup &setup) {
                 statusBar()->showMessage(samples == 0 ? QStringLiteral("Antialiasing spento") : QStringLiteral("Antialiasing %1x").arg(samples), 4000);
         });
     }
-    wheelZoomAction = viewMenu->addAction(QStringLiteral("Zoom con rotella"));
+    auto *zoomMenu = addCadMenu(viewMenu, QStringLiteral("Zoom"));
+    zoomMenu->setObjectName("zoomMenu");
+    zoomMenu->menuAction()->setIcon(ForgeCad::commandIcon("zoomAll"));
+    zoomInAction = zoomMenu->addAction(QStringLiteral("Aumenta zoom"));
+    zoomOutAction = zoomMenu->addAction(QStringLiteral("Riduci zoom"));
+    resetZoomAction = zoomMenu->addAction(QStringLiteral("Zoom tutto (inquadra la scena)"));
+    zoomMenu->addSeparator();
+    wheelZoomAction = zoomMenu->addAction(QStringLiteral("Zoom con rotella"));
     wheelZoomAction->setCheckable(true); wheelZoomAction->setChecked(true);
-    zoomInAction = viewMenu->addAction(QStringLiteral("Aumenta zoom"));
-    zoomOutAction = viewMenu->addAction(QStringLiteral("Riduci zoom"));
-    resetZoomAction = viewMenu->addAction(QStringLiteral("Zoom tutto (inquadra la scena)"));
+    auto *zoomPreferencesAction = zoomMenu->addAction(QStringLiteral("Impostazioni zoom…"));
+    zoomPreferencesAction->setObjectName("zoomPreferencesAction");
+    connect(zoomPreferencesAction, &QAction::triggered, this, [this] { ForgeCad::showZoomPreferences(this); });
+    // La barra personalizzata salva i percorsi del menu: conserva le scelte
+    // precedenti dopo il raggruppamento sotto Visualizza/Zoom.
+    {
+        QSettings settings;
+        const auto saved = settings.value(QStringLiteral("toolbar/custom")).toStringList();
+        auto migrated = saved;
+        for (QString &key : migrated)
+            for (QAction *action : zoomMenu->actions())
+                if (!action->isSeparator() && key == QStringLiteral("Visualizza/") + action->text()) {
+                    key = QStringLiteral("Visualizza/Zoom/") + action->text();
+                    break;
+                }
+        if (migrated != saved) settings.setValue(QStringLiteral("toolbar/custom"), migrated);
+    }
     zoomInAction->setShortcut(QKeySequence(Qt::Key_Plus));
     zoomOutAction->setShortcut(QKeySequence(Qt::Key_Minus));
     resetZoomAction->setShortcut(QKeySequence(Qt::Key_0));

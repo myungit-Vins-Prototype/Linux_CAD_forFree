@@ -3,6 +3,7 @@
 
 #include "forgeCad2026_gui_common.h"
 #include "forgeCad2026_camera.h"
+#include "forgeCad2026_zoom.h"
 #include "forgeCad2026_glass_compositor.h"
 #include "forgeCad2026_gpu_picker.h"
 #include "forgeCad2026_scene_renderer.h"
@@ -23,6 +24,7 @@
 #include "cad_snap.h"
 #include "cad_spatial_sketch.h"
 #include <QImage>
+#include <QElapsedTimer>
 #include <QMatrix4x4>
 #include <QOpenGLFunctions>
 #include <QOpenGLFramebufferObject>
@@ -1476,6 +1478,9 @@ private:
     void zoomLimits(float &minimum, float &maximum) const;
 
     void setZoom(float zoom);
+    void applyWheelZoom(double zoom, const QPointF &anchor);
+    void advanceWheelZoom(double seconds);
+    void stopWheelZoom();
 
     // Inquadra i punti nella vista corrente (orientamento invariato): pan sul
     // centro del loro box in coordinate vista e zoom con un margine del 10%.
@@ -1533,6 +1538,7 @@ private:
     double circlePointerRadius_=0,circleInitialRadius_=0;
     bool sketchMode_ = false, sketchCameraLocked_ = false, geometrySnap_ = true, gridSnap_ = true;
     bool wheelZoomEnabled_ = true;
+    ForgeCad::ZoomController wheelZoom_{this};
     bool hasPendingPoint_ = false, referencePlanesVisible_ = true;
     DrawingTool drawingTool_ = DrawingTool::Select;
     ForgeCad::SplineShapeOptions splineShapeOptions_{true, false, false};

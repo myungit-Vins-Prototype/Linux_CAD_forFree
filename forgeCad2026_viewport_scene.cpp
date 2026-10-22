@@ -1,4 +1,5 @@
 #include "forgeCad2026_viewport_internal.h"
+#include <QDebug>
 
 
 QVector3D CadViewport::viewerDirection() const {
@@ -35,11 +36,13 @@ void CadViewport::setRenderMatrices(const QMatrix4x4 &projection, const QMatrix4
 }
 
 void CadViewport::setViewPreset(int preset) {
+    stopWheelZoom();
     camera_.setPreset(preset);
     update();
 }
 
 void CadViewport::setViewFrame(const QVector3D &worldX, const QVector3D &worldNormal) {
+    stopWheelZoom();
     camera_.setFrame(worldX, worldNormal);
     update();
 }
@@ -292,11 +295,34 @@ void CadViewport::zoomLimits(float &minimum, float &maximum) const {
 }
 
 void CadViewport::setZoom(float zoom) {
+    stopWheelZoom();
     float minimum = 0.0f, maximum = 0.0f;
     zoomLimits(minimum, maximum);
     camera_.zoom_ = qBound(minimum, zoom, maximum);
     update();
 }
+
+void CadViewport::stopWheelZoom() { wheelZoom_.stop(); }
+
+void CadViewport::applyWheelZoom(double zoom, const QPointF &anchor) {
+    float minimum = 0.0f, maximum = 0.0f;
+    zoomLimits(minimum, maximum);
+    float next = float(qBound(double(minimum), zoom, double(maximum)));
+    // Soltanto arrotondamento della camera float, senza tolleranze geometriche.
+    constexpr float boundaryRoundoff = 8 * std::numeric_limits<float>::epsilon();
+    if (next <= minimum * (1 + boundaryRoundoff)) next = minimum;
+    if (next >= maximum * (1 - boundaryRoundoff)) next = maximum;
+    // Nella camera ortografica basta compensare il pan in coordinate vista:
+    // il punto del raggio sotto il cursore rimane nello stesso pixel a ogni
+    // profondita'. Usa il delta effettivo dopo il clamp, anche ai fine corsa.
+    const double unit = (double(next) - camera_.zoom_) / qMax(1, height());
+    camera_.panX_ += float((anchor.x() - width() * 0.5) * unit);
+    camera_.panY_ += float((height() * 0.5 - anchor.y()) * unit);
+    camera_.zoom_ = next;
+    update();
+}
+
+void CadViewport::advanceWheelZoom(double seconds) { wheelZoom_.advance(seconds); }
 
 void CadViewport::fitView(const QVector<QVector3D> &points) {
     if (points.isEmpty()) return;

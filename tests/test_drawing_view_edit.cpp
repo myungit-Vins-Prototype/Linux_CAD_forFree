@@ -18,6 +18,8 @@
 #include <QMainWindow>
 #include <QPushButton>
 #include <QTimer>
+#include <QSettings>
+#include <QTemporaryDir>
 #include <QToolBar>
 #include <QWidgetAction>
 #include <QTreeWidget>
@@ -38,6 +40,11 @@ void confirm(QDialog *dialog){dialog->findChild<QDialogButtonBox *>()->button(QD
 #include "test_drawing_pan.h"
 int main(int argc,char **argv){
     QApplication app(argc,argv);
+    QCoreApplication::setOrganizationName(QStringLiteral("ForgeCADTests"));
+    QCoreApplication::setApplicationName(QStringLiteral("DrawingViewEdit"));
+    QTemporaryDir settings;
+    QSettings::setDefaultFormat(QSettings::IniFormat);
+    QSettings::setPath(QSettings::IniFormat,QSettings::UserScope,settings.path());
     try{
         auto body=std::make_shared<Body>(makeBox(Frame3(),10,6,4));auto names=std::make_shared<ElementNames>(propagateNames(*body,makeHistory({},*body),{},"edit"));
         DrawingEditorModel model{{{QUuid::createUuid(),{}},{{1,body,names}}},{{1,"Corpo"}},{}};

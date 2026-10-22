@@ -6,6 +6,14 @@ void CadViewport::calculateShapeAnalysis(const std::function<void()> &work) { ru
 void CadViewport::clearShapeAnalysis() { shapeAnalysisBody_ = -1; shapeAnalysisMode_ = -1; shapeAnalysisFace_ = -1; shapeAnalysisFaceDisplay_ = {}; shapeAnalysis_ = {}; update(); }
 
 CadViewport::CadViewport(QWidget *parent ) : QOpenGLWidget(parent) {
+    wheelZoom_.scale = [this] { return 1.0 / camera_.zoom_; };
+    wheelZoom_.limits = [this] {
+        float minimum=0,maximum=0;zoomLimits(minimum,maximum);
+        return std::pair<double,double>{1.0/maximum,1.0/minimum};
+    };
+    wheelZoom_.apply = [this](double scale,const QPointF &anchor) {
+        camera_.autoFit_=false;applyWheelZoom(1.0/scale,anchor);
+    };
     setFocusPolicy(Qt::StrongFocus);
     setMouseTracking(true);
     setMinimumSize(640, 420);
@@ -20,6 +28,7 @@ CadViewport::CadViewport(QWidget *parent ) : QOpenGLWidget(parent) {
 }
 
 CadViewport::~CadViewport() {
+    stopWheelZoom();
     clearFeatureHandle();
     if (previewCancellation_) previewCancellation_->store(true, std::memory_order_relaxed);
     // I pannelli figli si deregistrano dal compositore: devono sparire
@@ -78,7 +87,10 @@ void CadViewport::setTessellationQuality(int quality) {
     update();
 }
 
-void CadViewport::setWheelZoomEnabled(bool enabled) { wheelZoomEnabled_ = enabled; }
+void CadViewport::setWheelZoomEnabled(bool enabled) {
+    wheelZoomEnabled_ = enabled;
+    if (!enabled) stopWheelZoom();
+}
 
 quint64 CadViewport::renderedFrameSerial() const { return renderedFrameSerial_; }
 
@@ -187,6 +199,7 @@ double CadViewport::sketchBodyOpacity() const { return sketchBodyOpacity_; }
 
 void CadViewport::setSketchViewUnlocked(bool unlocked) {
     if (unlocked == sketchViewUnlocked_) return;
+    stopWheelZoom();
     if (unlocked) {
         if (!sketchMode_) return;
         sketchCamera_ = {camera_.yaw_, camera_.pitch_, camera_.roll_, camera_.zoom_, camera_.panX_, camera_.panY_, sketchViewRotated_};

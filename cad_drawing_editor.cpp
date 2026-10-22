@@ -1,3 +1,5 @@
+#include "forgeCad2026_zoom.h"
+#include <QNativeGestureEvent>
 #include "cad_drawing_editor.h"
 #include "cad_drawing_text_layout.h"
 #include "cad_drawing_annotations.h"
@@ -86,7 +88,36 @@ struct ViewPreviewCanvas final:QGraphicsView{
     void resizeEvent(QResizeEvent *event)override{QGraphicsView::resizeEvent(event);fit();}
 };
 struct SheetCanvas final:QGraphicsView{
-    using QGraphicsView::QGraphicsView;
+    ForgeCad::ZoomController zoom{this};
+    QPointF zoomSceneAnchor;
+    Qt::KeyboardModifiers zoomModifiers=Qt::NoModifier;
+    explicit SheetCanvas(QGraphicsScene *scene,QWidget *parent):QGraphicsView(scene,parent) {
+        zoom.scale=[this]{return transform().m11();};
+        zoom.limits=[] {return std::pair<double,double>{.1,100.};};
+        zoom.apply=[this](double next,const QPointF &position){applyZoom(next,position);};
+    }
+    void applyZoom(double next,const QPointF &position) {
+        const auto viewportPoint=position.toPoint();
+        // Ancora di scena fissata all'input, non ricalcolata a ogni frame:
+        // le scrollbar intere non devono accumulare arrotondamento durante la transizione.
+        const auto anchor=zoomSceneAnchor;const auto old=transformationAnchor();
+        setTransformationAnchor(QGraphicsView::NoAnchor);
+        if(scene())setSceneRect(scene()->sceneRect().adjusted(-10000,-10000,10000,10000));
+        scale(next/transform().m11(),next/transform().m11());
+        const auto displaced=mapFromScene(anchor)-viewportPoint;
+        horizontalScrollBar()->setValue(horizontalScrollBar()->value()+displaced.x());
+        verticalScrollBar()->setValue(verticalScrollBar()->value()+displaced.y());setTransformationAnchor(old);
+        if(!panHeld&&pointer)pointer(mapToScene(viewportPoint),zoomModifiers,false);
+    }
+    bool viewportEvent(QEvent *event)override {
+        if(event->type()==QEvent::NativeGesture && !panning) {
+            const auto *gesture=static_cast<QNativeGestureEvent *>(event);
+            zoomSceneAnchor=mapToScene(gesture->position().toPoint());
+            if(zoom.nativeGesture(*gesture)) {event->accept();return true;}
+        }
+        return QGraphicsView::viewportEvent(event);
+    }
+
     std::function<bool(QPointF,Qt::KeyboardModifiers,bool)> pointer;
     std::function<bool(int)> key;
     std::function<bool(QPointF,Qt::KeyboardModifiers,int)> drag;
@@ -118,6 +149,7 @@ struct SheetCanvas final:QGraphicsView{
         QGraphicsView::mouseMoveEvent(event);
     }
     void mousePressEvent(QMouseEvent *event)override{
+        zoom.stop();
         if(panning){event->accept();return;}
         if(!leftPressed&&(event->button()==Qt::MiddleButton||(event->button()==Qt::LeftButton&&panHeld))){
             setFocus(Qt::MouseFocusReason);savePanCursor();panning=true;panButton=event->button();panLast=event->position();setCursor(Qt::ClosedHandCursor);event->accept();return;
@@ -153,19 +185,13 @@ struct SheetCanvas final:QGraphicsView{
         QGraphicsView::keyReleaseEvent(event);
     }
     void focusInEvent(QFocusEvent *event)override{if(!panning&&!panHeld)configurePan();QGraphicsView::focusInEvent(event);}
-    void focusOutEvent(QFocusEvent *event)override{panHeld=false;leftPressed=false;endPan(false);QGraphicsView::focusOutEvent(event);}
+    void focusOutEvent(QFocusEvent *event)override{zoom.stop();panHeld=false;leftPressed=false;endPan(false);QGraphicsView::focusOutEvent(event);}
     void leaveEvent(QEvent *event)override{if(!panning&&key)key(Qt::Key_Clear);QGraphicsView::leaveEvent(event);}
     void wheelEvent(QWheelEvent *event)override{
         if(panning){event->accept();return;}
-        const double delta=event->angleDelta().y()!=0?event->angleDelta().y():event->pixelDelta().y();if(delta==0){event->accept();return;}
-        const double factor=std::pow(1.15,delta/120.0),next=std::clamp(transform().m11()*factor,.1,100.);
-        // Usa la posizione dell'evento, anche senza un precedente mouseMove.
-        // L'anchor Qt dipende invece dall'ultima posizione globale del cursore.
-        const auto viewportPoint=event->position().toPoint();const auto anchor=mapToScene(viewportPoint);const auto old=transformationAnchor();setTransformationAnchor(QGraphicsView::NoAnchor);setSceneRect(scene()->sceneRect().adjusted(-10000,-10000,10000,10000));
-        scale(next/transform().m11(),next/transform().m11());const auto displaced=mapFromScene(anchor)-viewportPoint;
-        horizontalScrollBar()->setValue(horizontalScrollBar()->value()+displaced.x());verticalScrollBar()->setValue(verticalScrollBar()->value()+displaced.y());setTransformationAnchor(old);
-        if(!panHeld&&pointer)pointer(mapToScene(event->position().toPoint()),event->modifiers(),false);
-        event->accept();
+        zoomModifiers=event->modifiers();
+        zoomSceneAnchor=mapToScene(event->position().toPoint());
+        if(zoom.wheel(*event))event->accept();else event->ignore();
     }
 };
 struct SectionItem final:QGraphicsPathItem{
@@ -1937,6 +1963,7 @@ DrawingSheetEditor::DrawingSheetEditor(DrawingSheet sheet,DrawingEditorModel mod
     action(QStringLiteral("Lunghezza curva"),"drawingLengthDimensionAction",[this]{impl_->report(addSelectedDimension(DrawingMeasure::SectionLength));});
     toolbar->addSeparator();action(QStringLiteral("Elimina selezione"),"drawingDeleteSelectionAction",[this]{impl_->removeSelection();});
     impl_->updateAction=action(QStringLiteral("Aggiorna dal modello"),"drawingUpdateModelAction",[this]{if(impl_->provider){try{impl_->report(updateModel(impl_->provider()));}catch(const std::exception &error){impl_->report(QString::fromUtf8(error.what()));}}});
+    action(QStringLiteral("Impostazioni zoom…"),"drawingZoomPreferencesAction",[this]{ForgeCad::showZoomPreferences(this);});
     impl_->updateAction->setEnabled(false);action(QStringLiteral("Adatta foglio"),"drawingFitAction",[this]{fitSheet();});
     impl_->scene=new QGraphicsScene(this);impl_->view=new SheetCanvas(impl_->scene,this);impl_->view->setObjectName("drawingCanvas");impl_->view->configurePan();impl_->view->setRenderHint(QPainter::Antialiasing);impl_->view->setBackgroundRole(QPalette::Dark);impl_->view->setMouseTracking(true);impl_->view->viewport()->setMouseTracking(true);
     impl_->view->pointer=[this](QPointF point,Qt::KeyboardModifiers modifiers,bool click){try{return impl_->detail?impl_->detailPointer(point,click):impl_->cut?impl_->cutPointer(point,modifiers,click):impl_->placement?impl_->placementPointer(point,click):impl_->quotePointer(point,modifiers,click);}catch(const std::exception &e){impl_->say(QString::fromUtf8(e.what()));return true;}};
@@ -2007,6 +2034,7 @@ DrawingSheetEditor::DrawingSheetEditor(DrawingSheet sheet,DrawingEditorModel mod
         {"drawingDeleteSelectionAction","delete"},
         {"drawingUpdateModelAction","drawingModelUpdate"},
         {"drawingFitAction","zoomAll"},
+        {"drawingZoomPreferencesAction","viewWheel"},
         {"drawingAlignSectionOrientationAction","drawingAlignSectionOrientation"},
         {"drawingAxisThroughPointsAction","drawingAxisThroughPoints"},
         {"drawingAxisBetweenLinesAction","drawingAxisBetweenLines"},
@@ -2479,5 +2507,5 @@ void DrawingSheetEditor::setReadOnly(bool readOnly){
     impl_->refreshHiddenAction();impl_->refreshHistoryActions();impl_->updateAction->setEnabled(!impl_->readOnly&&bool(impl_->provider));
     for(auto *item:impl_->scene->items())if(dynamic_cast<MoveLabel *>(item)||dynamic_cast<MoveNote *>(item))item->setFlag(QGraphicsItem::ItemIsMovable,!impl_->readOnly&&item->data(kindRole).toString()!=QLatin1String("view"));
 }
-void DrawingSheetEditor::fitSheet(){impl_->view->fitInView(QRectF(QPointF(-5,-5),impl_->state.size+QSizeF(10,10)),Qt::KeepAspectRatio);}
+void DrawingSheetEditor::fitSheet(){impl_->view->zoom.stop();impl_->view->fitInView(QRectF(QPointF(-5,-5),impl_->state.size+QSizeF(10,10)),Qt::KeepAspectRatio);}
 }

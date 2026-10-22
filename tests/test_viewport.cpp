@@ -61,6 +61,7 @@ using ForgeCad::Gui::wrappedNote;
 #include "../cad_element_names.h"
 #include <QProcess>
 #include <QDateTime>
+#include <QPointingDevice>
 #include <QSemaphore>
 #include <QCryptographicHash>
 #include <QtEndian>
@@ -94,6 +95,7 @@ static QString exampleDocumentPath(const char *name) {
 #include "document_regression.h"
 #include "test_document_read.h"
 #include "test_pattern_placements.h"
+#include "test_zoom_input.h"
 class ViewportInteractionTest {
 public:
 #include "test_sketch_interaction.h"
@@ -6680,6 +6682,175 @@ public:
         }
     }
 
+    static void smoothZoom(bool render = false) {
+        portableZoomTests();
+        CadViewport v;
+        v.wheelZoom_.setPreferences({});
+        v.resize(900,650);
+        v.setZoom(20);
+        QPointingDevice trackpad(QStringLiteral("Zoom test trackpad"),1234,QInputDevice::DeviceType::TouchPad,
+                                 QPointingDevice::PointerType::Finger,QInputDevice::Capability::Position|QInputDevice::Capability::PixelScroll,1,0);
+        const auto wheel = [&](int angle, int pixel = 0, Qt::ScrollPhase phase = Qt::NoScrollPhase, bool mousePixels = false,
+                               QPointF anchor = QPointF(450,325)) {
+            const auto *device = pixel!=0 && !mousePixels ? &trackpad : QPointingDevice::primaryPointingDevice();
+            QWheelEvent event(anchor, anchor, QPoint(0,pixel), QPoint(0,angle),
+                              Qt::NoButton, Qt::NoModifier, phase, false, Qt::MouseEventNotSynthesized, device);
+            v.wheelEvent(&event);
+        };
+        const auto close = [](double actual, double expected, const char *message) {
+            require(std::abs(actual-expected) < 2e-6*std::max(1.0,std::abs(expected)),message);
+        };
+        const auto drain = [&] {
+            for(int i=0;i<2000 && v.wheelZoom_.timer()->isActive();++i) v.advanceWheelZoom(0.016);
+            require(!v.wheelZoom_.timer()->isActive() && v.wheelZoom_.pendingPoints()==0,"coda finita senza movimento residuo");
+        };
+        const double factor=std::exp(-0.03); // passo dimezzato: 20 punti, circa 2.96%
+        wheel(120);
+        const double duration=v.wheelZoom_.remaining();
+        const double sampleTime=duration/10.0;
+        const auto advanceInterval = [&](double total) {
+            while(total>1e-10) {
+                const double dt=std::min(total,0.016);
+                v.advanceWheelZoom(dt);
+                total-=dt;
+            }
+        };
+        auto *timer=v.wheelZoom_.timer();
+        require(timer && timer->isActive(),"rotella avvia filtro continuo");
+        close(v.camera_.zoom_,20,"nessun salto sullo scatto");
+        close(v.wheelZoom_.pendingPoints(),20,"120 unita Qt normalizzate a 20 punti");
+        double previousLog=std::log(20.0);
+        for(int i=0;i<5;++i) {
+            advanceInterval(sampleTime);
+            const double currentLog=std::log(double(v.camera_.zoom_));
+            close(previousLog-currentLog,0.003,"stessa quota di zoom per frame, senza accelerazione o frenata");
+            previousLog=currentLog;
+        }
+        close(v.wheelZoom_.pendingPoints(),10,"meta' movimento a meta' durata");
+        advanceInterval(sampleTime*1.25);
+        close(v.wheelZoom_.pendingPoints(),7.5,"avanzamento proporzionale al tempo");
+        close(v.camera_.zoom_,20*std::exp(-0.01875),"scala al 62.5 percento della durata");
+        const double pending=v.wheelZoom_.pendingPoints();
+        wheel(120);
+        close(v.wheelZoom_.pendingPoints(),pending+20,"scatti aggiunti al movimento rimasto");
+        drain();
+        close(v.camera_.zoom_,20*factor*factor,"due scatti conservano esattamente la quantita' richiesta");
+
+        v.setZoom(20);wheel(120);
+        previousLog=std::log(20.0);
+        for(int i=0;i<10;++i) {
+            advanceInterval(sampleTime);
+            const double currentLog=std::log(double(v.camera_.zoom_));
+            close(previousLog-currentLog,0.003,"velocita' uniforme anche all'ultimo frame");
+            previousLog=currentLog;
+        }
+        drain();close(v.camera_.zoom_,20*factor,"durata e ampiezza del singolo scatto");
+        const QPointF anchor(670,210);
+        v.setZoom(20);
+        QVector3D fixedPoint,rayDirection;
+        v.viewRay(anchor.toPoint(),fixedPoint,rayDirection);
+        require((v.projectWorldPoint(fixedPoint)-anchor).manhattanLength()<1e-3,"raggio iniziale al cursore");
+        wheel(120,0,Qt::NoScrollPhase,false,anchor);
+        for(int i=0;i<10;++i) {
+            advanceInterval(sampleTime);
+            require((v.projectWorldPoint(fixedPoint)-anchor).manhattanLength()<1e-3,"punto sotto cursore fermo a ogni frame");
+        }
+        drain();
+        wheel(-120000,0,Qt::NoScrollPhase,false,anchor);drain();
+        require((v.projectWorldPoint(fixedPoint)-anchor).manhattanLength()<0.02,"ancora corretta anche al limite effettivo");
+
+        // La scala totale resta proporzionale all'input: nessuna soglia minima
+        // per evento che amplifichi una rotella ad alta risoluzione.
+        v.setZoom(20);
+        for(int i=0;i<12;++i) wheel(10);
+        drain();
+        close(v.camera_.zoom_,20*factor,"dodici frazioni equivalgono a uno scatto");
+        for(double dt:{1.0/30.0,1.0/60.0,1.0/144.0}) {
+            v.setZoom(20);wheel(120);
+            for(int i=0;i<2000 && timer->isActive();++i) v.advanceWheelZoom(dt);
+            close(v.camera_.zoom_,20*factor,"scala finale indipendente dalla frequenza dei frame");
+        }
+        v.setZoom(20);wheel(120);v.advanceWheelZoom(0.016);
+        const double reversedFrom=v.camera_.zoom_;
+        wheel(-120);v.advanceWheelZoom(0.016);
+        require(v.camera_.zoom_>reversedFrom,"inversione risponde senza smaltire vecchia coda");
+        drain();close(v.camera_.zoom_,reversedFrom/factor,"inversione dalla scala visibile");
+
+        float low=0,high=0;v.zoomLimits(low,high);
+        v.setZoom(low*1.1f);wheel(120000);drain();
+        close(v.camera_.zoom_,low,"limite minimo senza accumulo eccessivo");
+        wheel(-120000);drain();close(v.camera_.zoom_,high,"limite massimo");
+        wheel(-120);require(!timer->isActive(),"nessun timer al limite");
+
+        v.setZoom(20);wheel(120);
+        v.wheelZoom_.setPreferences({ForgeCad::ZoomInputMode::DirectTouchpad,1.,duration});
+        wheel(120,3,Qt::ScrollUpdate);
+        close(v.camera_.zoom_,20*std::exp(-0.0045),"trackpad segue pixel senza scatto angolare");
+        require(!timer->isActive() && v.wheelZoom_.pendingPoints()==0,"trackpad elimina la coda della rotella");
+        // Riproduzione dell'input fisico letto dal journal della prova utente:
+        // dispositivo TouchPad, scatto angolare -120 e pixel -15.
+        v.wheelZoom_.setPreferences({ForgeCad::ZoomInputMode::Automatic,1.,duration});
+        const double realWheelStart=v.camera_.zoom_;
+        wheel(-120,-15,Qt::NoScrollPhase);
+        close(v.camera_.zoom_,realWheelStart,"rotella etichettata TouchPad non salta subito alla scala finale");
+        require(timer->isActive(),"input reale dell'utente passa dal percorso animato");
+        close(v.wheelZoom_.remaining(),duration,"anche la rotella TouchPad rispetta i secondi scelti");
+        advanceInterval(duration/2);
+        close(v.camera_.zoom_,realWheelStart*std::exp(0.015),"meta' zoom solo a meta' durata sull'input reale");
+        drain();close(v.camera_.zoom_,realWheelStart/factor,"scala finale dello scatto reale");
+        const double pixelZoom=v.camera_.zoom_;
+        wheel(120,0,Qt::ScrollUpdate);
+        close(v.camera_.zoom_,pixelZoom,"fase da sola non bypassa il filtro");
+        drain();close(v.camera_.zoom_,pixelZoom*factor,"rotella con fase mantiene la normalizzazione");
+        const double mousePixels=v.camera_.zoom_;
+        wheel(120,20,Qt::ScrollUpdate,true);
+        close(v.camera_.zoom_,mousePixels,"pixel forniti dal mouse non saltano il filtro");
+        drain();close(v.camera_.zoom_,mousePixels*factor,"mouse usa angolo anche quando il driver fornisce pixel");
+        wheel(0);require(!timer->isActive(),"delta nullo non avvia zoom");
+
+        wheel(120);v.setWheelZoomEnabled(false);
+        const double disabled=v.camera_.zoom_;wheel(120);
+        close(v.camera_.zoom_,disabled,"ruota disabilitata non cambia vista");
+        require(!timer->isActive() && v.wheelZoom_.pendingPoints()==0,"disabilitare elimina il residuo");
+        v.setWheelZoomEnabled(true);wheel(120);v.zoomOut();
+        require(!timer->isActive(),"comando diretto interrompe filtro");
+        wheel(120);v.fitAll();const double fitted=v.camera_.zoom_;
+        v.advanceWheelZoom(1);
+        close(v.camera_.zoom_,fitted,"nessun callback superato sovrascrive Zoom tutto");
+        wheel(120);v.setViewPreset(4);require(!timer->isActive(),"cambio vista ferma la ruota");
+        wheel(120);
+        QMouseEvent press(QEvent::MouseButtonPress,QPointF(450,325),QPointF(450,325),Qt::MiddleButton,Qt::MiddleButton,Qt::NoModifier);
+        v.mousePressEvent(&press);require(!timer->isActive() && v.panning_,"pan interrompe il residuo");
+        wheel(120);QFocusEvent focus(QEvent::FocusOut);v.focusOutEvent(&focus);
+        require(!timer->isActive(),"perdita focus interrompe la ruota");
+        if(render) {
+            v.show();QEventLoop warmup;QTimer::singleShot(250,&warmup,&QEventLoop::quit);warmup.exec();
+            require(v.context() && v.context()->isValid(),"contesto OpenGL reale disponibile");
+        }
+        v.setZoom(20);
+        int frames=0;QVector<double> shown;
+        const auto swapped=QObject::connect(&v,&QOpenGLWidget::frameSwapped,[&]{shown.append(v.camera_.zoom_);});
+        const auto connection=QObject::connect(timer,&QTimer::timeout,[&]{++frames;});
+        wheel(120);QElapsedTimer elapsed;elapsed.start();
+        QEventLoop loop;QTimer::singleShot(int(duration*1000)+200,&loop,&QEventLoop::quit);loop.exec();
+        QObject::disconnect(connection);QObject::disconnect(swapped);
+        if(render) {
+            int intermediate=0;double previous=20;
+            for(double z:shown) {
+                require(z<=previous+1e-5,"fotogrammi OpenGL monotoni");
+                if(z<20-1e-4 && z>20*factor+1e-4)++intermediate;
+                previous=z;
+            }
+            require(intermediate>=5,"almeno cinque fotogrammi OpenGL intermedi");
+            v.makeCurrent();std::cout<<"OpenGL: "<<reinterpret_cast<const char *>(glGetString(GL_RENDERER))
+                <<"; fotogrammi intermedi presentati: "<<intermediate<<std::endl;v.doneCurrent();
+        }
+        require(frames>=3 && !timer->isActive(),"timer reale produce passi intermedi e si ferma");
+        close(v.camera_.zoom_,20*factor,"scala finale con timer reale");
+        std::cout<<"PASS zoom uniforme al cursore: 120 Qt = 20 punti, fattore "<<factor
+                 <<", "<<duration*1000<<"ms senza easing; osservazione "<<elapsed.elapsed()<<"ms; "<<frames<<" aggiornamenti Qt"<<std::endl;
+    }
+
     static void run(bool render, bool orbitOnly = false) {
         extensionContourPicking();
         trimPartPicking();
@@ -9858,6 +10029,11 @@ int main(int argc, char **argv) {
     if (app.arguments().contains(QStringLiteral("--all-history"))) {
         try { allHistoryTest(); }
         catch (const std::exception &e) { std::cerr << e.what() << std::endl; return 1; }
+        return 0;
+    }
+    if (app.arguments().contains(QStringLiteral("--smooth-zoom"))) {
+        try { ViewportInteractionTest::smoothZoom(app.arguments().contains(QStringLiteral("--gl"))); }
+        catch (const std::exception &e) { std::cerr<<e.what()<<std::endl;return 1; }
         return 0;
     }
     if (app.arguments().contains(QStringLiteral("--preview-performance"))) {

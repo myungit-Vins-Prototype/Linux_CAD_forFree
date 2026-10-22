@@ -1,4 +1,9 @@
 #pragma once
+#include "../forgeCad2026_zoom.h"
+#include <QEventLoop>
+#include <QTimer>
+#include <QWheelEvent>
+#include <cmath>
 #include <QFocusEvent>
 #include <QScrollBar>
 #include <QMouseEvent>
@@ -27,6 +32,23 @@ void drawingPanTests(){
  e.setReadOnly(true);gesture(Qt::MiddleButton,{-14,13});panKeyEvent(e,QEvent::KeyPress,key);gesture(Qt::LeftButton,{11,-12});panKeyEvent(e,QEvent::KeyRelease,key);require(e.isReadOnly(),"pan disponibile nello storico senza checkout");e.setReadOnly(false);
  // I normali spostamenti continuano a funzionare dopo la navigazione.
  e.fitSheet();const auto from=QPointF(canvas->mapFromScene(QPointF(154,94))),to=from+QPointF(30,20);panMouse(e,QEvent::MouseButtonPress,from,Qt::LeftButton,Qt::LeftButton);panMouse(e,QEvent::MouseMove,to,Qt::NoButton,Qt::LeftButton);panMouse(e,QEvent::MouseButtonRelease,to,Qt::LeftButton,Qt::NoButton);QApplication::processEvents();require(e.sheet().views[0].position!=QPointF(130,110),"trascinamento vista conservato dopo pan");ok(e.undo());require(encoded(e)==before,"un solo Undo annulla lo spostamento, nessun pan nella storia");
+ // Lo zoom usa lo stesso passo e la stessa durata del viewport 3D.
+ const auto savedZoom=ForgeCad::loadZoomPreferences();
+ ForgeCad::saveZoomPreferences({ForgeCad::ZoomInputMode::AnimatedWheel,1.,.25});
+ const auto zoomPoint=start+QPointF(123,-61);
+ const auto sendWheel=[&]{QWheelEvent wheel(zoomPoint,zoomPoint,QPoint(0,-15),QPoint(0,-120),Qt::NoButton,Qt::NoModifier,Qt::NoScrollPhase,false);QApplication::sendEvent(canvas->viewport(),&wheel);};
+ const auto waitZoom=[] {QEventLoop loop;QTimer::singleShot(350,&loop,&QEventLoop::quit);loop.exec();};
+ const auto drawingBefore=encoded(e);const auto initialScale=canvas->transform().m11();
+ const auto fixed=canvas->mapToScene(zoomPoint.toPoint());sendWheel();
+ require(canvas->transform().m11()==initialScale,"tavola non salta subito al target");
+ waitZoom();require(std::abs(canvas->transform().m11()/initialScale-std::exp(-.03))<1e-7,"tavola usa passo comune del 3D");
+ require(QLineF(QPointF(canvas->mapFromScene(fixed)),zoomPoint).length()<2,"ancora tavola conserva posizione entro arrotondamento scrollbar");
+ require(encoded(e)==drawingBefore && !e.isModified(),"zoom tavola non modifica il documento");
+ sendWheel();e.fitSheet();const auto fitted=canvas->transform();waitZoom();
+ require(canvas->transform()==fitted,"adatta foglio interrompe animazione");
+ sendWheel();panMouse(e,QEvent::MouseButtonPress,start,Qt::MiddleButton,Qt::MiddleButton);const auto stopped=canvas->transform();waitZoom();
+ require(canvas->transform()==stopped,"pan tavola interrompe animazione");panMouse(e,QEvent::MouseButtonRelease,start,Qt::MiddleButton,Qt::NoButton);
+ ForgeCad::saveZoomPreferences(savedZoom);
  std::cout<<"PASS pan tavola: centrale/tasto 3D+sinistro, zoom alto, cursore/selezioni, quota/taglio/ghost, sola lettura, focus, Undo e cache invariati\n";
 }
 }
