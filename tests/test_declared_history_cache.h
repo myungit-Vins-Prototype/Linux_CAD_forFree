@@ -118,7 +118,7 @@ static void declaredHistoryCacheTest() {
     QDataStream header(bytes); header.skipRawData(4);
     quint16 fileVersion = 0; quint8 compression = 0; quint32 payloadSize = 0;
     header >> fileVersion >> compression >> payloadSize;
-    require(fileVersion == 50 && compression == 1, "definizione parametrica formato 50 con identita' del documento");
+    require(fileVersion == kDocumentFormatVersion && compression == 1, "definizione parametrica nel formato corrente con identita' del documento");
     const qsizetype cacheOffset = 11 + qsizetype(payloadSize);
     const QByteArray prefix = bytes.left(cacheOffset), cacheData = qUncompress(bytes.mid(cacheOffset));
     QDataStream cacheIn(cacheData); cacheIn.setVersion(QDataStream::Qt_6_0);

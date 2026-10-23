@@ -21,11 +21,33 @@ B-rep intermedio, ma possiede un `featureId` persistente e un `modelBodyId`.
   faccia o a un bordo scomparso produce un errore visibile nella storyboard.
 - Il riordino dal menu o con trascinamento rimappa tutti gli indici, ricostruisce
   le basi implicite e viene accettato solo se ogni dipendenza resta precedente
-  alla feature che la usa. Nel trascinamento anche schizzi e righe informative
-  vengono ricondotti alla feature piu' vicina dello stesso corpo. La feature
-  iniziale non puo' essere spostata.
-- La geometria di riferimento precede i corpi nell'albero; datum ed eliche non
-  partecipano al riordino delle feature dei corpi.
+  alla feature che la usa. Gli schizzi si spostano come passi autonomi;
+  le righe informative restano figlie della propria lavorazione. La feature
+  iniziale di un corpo non puo' superare gli altri stadi del corpo.
+- Schizzi, datum e lavorazioni compaiono nella sequenza di calcolo. I corpi
+  logici hanno un gruppo separato per consultare i risultati.
+
+## Schizzi come passi della storia
+
+Ogni schizzo, anche non utilizzato, conserva la propria posizione e un ID
+persistente. Creare uno schizzo lo inserisce al cursore; usarlo in una nuova
+lavorazione non ne cambia la posizione. Il cursore conta schizzi e lavorazioni
+separatamente. Durante la modifica si vedono gli stadi precedenti alla posizione
+propria dello schizzo.
+
+Dal menu dello schizzo, **Cambia piano di riferimento...** permette di scegliere
+un piano di origine, un datum o una faccia piana di una lavorazione precedente.
+Geometria e quote conservano le coordinate locali sul nuovo piano; gli
+utilizzatori vengono rigenerati. Datum e facce restano associativi: quando cambia
+il produttore, lo schizzo segue il piano risolto. Un appoggio perso produce una
+diagnostica e impedisce di rigenerare gli utilizzatori con una posizione obsoleta.
+I vecchi schizzi creati su facce, privi di un riferimento persistente, conservano
+il loro frame fisso finche' non si sceglie esplicitamente un nuovo appoggio.
+
+Il riordino rifiuta uno schizzo dopo un suo utilizzatore o prima di un suo
+appoggio/riferimento Pierce. Cambio piano e riordino sono operazioni Undo/Redo;
+la posizione viene conservata nel file. Alla migrazione dei vecchi documenti gli
+schizzi sono collocati davanti al primo utilizzatore; quelli liberi alla fine.
 
 ## Posizione di calcolo
 
@@ -62,7 +84,8 @@ separarlo visivamente; i bordi dei segmenti sfumano nell'azzurro trasparente.
 
 ## File e compatibilita'
 
-Il formato `.prt` 20 salva gli identificatori, la soppressione, i corpi logici
+Il formato `.prt` 51 aggiunge identita' e posizione autonome degli schizzi e
+l'appoggio associativo su faccia. Il formato 20 salva gli identificatori, la soppressione, i corpi logici
 e i riferimenti persistenti alle sotto-entita' B-rep. Il formato 19 introduceva
 la storyboard. I documenti fino al formato 19 vengono migrati automaticamente seguendo gli
 operandi gia' presenti: raccordi, smussi, scale, trasformazioni, booleane e

@@ -1,4 +1,5 @@
 #include "forgeCad2026_viewport_internal.h"
+#include "forgeCad2026_ribbon_preview.h"
 
 
 void CadViewport::calculateShapeAnalysis(const std::function<void()> &work) { runWhileResponsive(work); }
@@ -33,6 +34,9 @@ CadViewport::~CadViewport() {
     if (previewCancellation_) previewCancellation_->store(true, std::memory_order_relaxed);
     // I pannelli figli si deregistrano dal compositore: devono sparire
     // mentre i membri del viewport esistono ancora, prima della classe base.
+    QVector<ForgeCad::RibbonPreview *> ribbons;
+    for (QObject *child : children()) if (auto *ribbon = dynamic_cast<ForgeCad::RibbonPreview *>(child)) ribbons.append(ribbon);
+    qDeleteAll(ribbons);
     qDeleteAll(findChildren<QDialog *>(QString(), Qt::FindDirectChildrenOnly));
     // I framebuffer vanno distrutti con il loro contesto corrente.
     // Il contesto puo' emettere aboutToBeDestroyed dal distruttore della
@@ -575,6 +579,7 @@ QVector<QPointF> CadViewport::projectSketchPolyline(const QVector<QPointF> &poin
 bool CadViewport::isSketchDrawn(int index) const {
     if(sketchMode_ && index==activeSketch_)return true;
     if(sketchMode_ && sketchContextEnd_>=0 && (index>=sketchContextSketches_.size() || !sketchContextSketches_.at(index)))return false;
+    if (storyPosition_ >= 0 && storyboardIndex(true, index) >= storyPosition_) return false;
     return sketches_.at(index).visible;
 }
 

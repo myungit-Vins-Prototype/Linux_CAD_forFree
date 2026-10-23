@@ -52,6 +52,7 @@ void buildBody(ExtrusionObject &body, int index, const QVector<SketchObject> &sk
         for (const auto &feature : bodies) body.featureId = std::max(body.featureId, feature.featureId + 1);
     }
     bool usedSnapshot = body.cachedGeometry && body.forgeBody;
+    for (int sketch : sketchesOf(body)) if (sketch >= 0 && sketch < sketches.size() && !sketches.at(sketch).supportError.isEmpty()) usedSnapshot = false;
     // Le versioni precedenti potevano salvare come raccordo riuscito una
     // booleana no-op, identica alla base. Non perpetuare quel falso
     // risultato dalla cache: rigenerandolo il kernel restituisce l'errore
@@ -142,6 +143,10 @@ void buildGeometryImpl(ExtrusionObject &body, int index, const QVector<SketchObj
     body.curves.clear();
     body.datumValid = false;
     body.solid = false;
+    for (int sketch : sketchesOf(body)) if (sketch >= 0 && sketch < sketches.size() && !sketches.at(sketch).supportError.isEmpty()) {
+        body.error = QStringLiteral("Appoggio non risolto nello schizzo %1: %2").arg(sketches.at(sketch).name, sketches.at(sketch).supportError);
+        return;
+    }
     const auto operand = [&](int i) -> const ExtrusionObject * {
         return i >= 0 && i < index && i < bodies.size() ? &bodies.at(i) : nullptr;
     };

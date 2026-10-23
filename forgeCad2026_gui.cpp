@@ -373,11 +373,11 @@ void PdfWindow::initializeSceneAndTree(WindowSetup &setup) {
     modelTree = new StoryboardTree(modelDock);
     modelTree_ = modelTree;
     modelTree->setItemDelegate(new TreeBadgeDelegate(modelTree));
-    modelTree->setMoveFeatureCallback([viewport](int feature, int target) { return viewport->moveFeatureTo(feature, target); });
+    modelTree->setMoveFeatureCallback([viewport](int feature, int target) { return viewport->moveStoryboardStep(feature, target); });
     modelTree->setHeaderLabel(QStringLiteral("Oggetti scena"));
     modelTree->setMinimumWidth(220);
     modelTree->setContextMenuPolicy(Qt::CustomContextMenu);
-    modelTree->setHistoryPositionCallback([viewport](int position) { viewport->setHistoryPosition(position); });
+    modelTree->setHistoryPositionCallback([viewport](int position) { viewport->setStoryboardPosition(position); });
     modelTree->setCursorMode(static_cast<StoryboardTree::CursorMode>(qBound(0,
         QSettings().value(QStringLiteral("view/storyboardCursorMode"), 0).toInt(), 2)));
     modelDock->setWidget(modelTree);
@@ -752,8 +752,11 @@ void PdfWindow::initializeSceneAndTree(WindowSetup &setup) {
                                                                             : QStringLiteral("Sopprimi feature"))
                 : nullptr;
             if (suppress) suppress->setIcon(ForgeCad::commandIcon(QStringLiteral("visibility")));
-            QAction *moveEarlier = storyboardFeature ? menu.addAction(QStringLiteral("Sposta prima nella storia")) : nullptr;
-            QAction *moveLater = storyboardFeature ? menu.addAction(QStringLiteral("Sposta dopo nella storia")) : nullptr;
+            const bool movableStep = storyboardFeature || type == kTreeSketch;
+            QAction *changePlane = type == kTreeSketch ? menu.addAction(QStringLiteral("Cambia piano di riferimento...")) : nullptr;
+            if (changePlane) changePlane->setIcon(ForgeCad::commandIcon(QStringLiteral("datumPlane")));
+            QAction *moveEarlier = movableStep ? menu.addAction(QStringLiteral("Sposta prima nella storia")) : nullptr;
+            QAction *moveLater = movableStep ? menu.addAction(QStringLiteral("Sposta dopo nella storia")) : nullptr;
             if (moveEarlier) moveEarlier->setIcon(ForgeCad::commandIcon(QStringLiteral("move")));
             if (moveLater) moveLater->setIcon(ForgeCad::commandIcon(QStringLiteral("move")));
             const bool datum = type == kTreeExtrusion && index >= 0 && index < viewport->extrusions().size()
@@ -782,8 +785,49 @@ void PdfWindow::initializeSceneAndTree(WindowSetup &setup) {
                 if (!error.isEmpty()) QMessageBox::warning(this, QStringLiteral("Storyboard"), error);
             }
             else if (chosen && (chosen == moveEarlier || chosen == moveLater)) {
-                const QString error = viewport->moveFeature(index, chosen == moveEarlier ? -1 : 1);
+                const int from = viewport->storyboardIndex(type == kTreeSketch, index);
+                const QString error = viewport->moveStoryboardStep(from, from + (chosen == moveEarlier ? -1 : 1));
                 if (!error.isEmpty()) QMessageBox::information(this, QStringLiteral("Riordina storyboard"), error);
+            }
+            else if (chosen && chosen == changePlane) {
+                QStringList names = planeNames();
+                QVector<GeometryRef> supports;
+                for (int plane = 0; plane < 3; ++plane) { GeometryRef r; r.kind = 1; r.index = plane; supports.append(r); }
+                const int sketchPosition = viewport->storyboardIndex(true, index);
+                for (const auto &step : viewport->storyboard()) {
+                    if (step.sketch || viewport->storyboardIndex(false, step.index) >= sketchPosition) continue;
+                    const auto &body = viewport->extrusions().at(step.index);
+                    if (body.suppressed || !body.error.isEmpty()) continue;
+                    if (body.feature == BodyFeature::DatumPlane && body.datumValid) {
+                        GeometryRef r; r.kind = 8; r.index = step.index; r.featureId = body.featureId;
+                        supports.append(r); names.append(body.name);
+                    } else if (body.forgeBody) for (auto face : body.forgeBody->faces()) {
+                        const auto &data = body.forgeBody->face(face);
+                        if (data.surface->type() != ForgeCad::Kernel::SurfaceType::Plane || data.loops.empty()) continue;
+                        const auto first = body.forgeBody->loop(data.loops.front()).first;
+                        if (!first.valid()) continue;
+                        GeometryRef r; r.kind = 5; r.index = step.index; r.featureId = body.featureId;
+                        r.point = ForgeCad::faceReference(*body.forgeBody, face, body.forgeBody->finPoint(first, 0.5));
+                        supports.append(r); names.append(QStringLiteral("%1 — F%2").arg(body.name).arg(face.index));
+                    }
+                }
+                QDialog chooser(this);
+                chooser.setWindowTitle(QStringLiteral("Piano dello schizzo"));
+                auto *layout = new QFormLayout(&chooser);
+                auto *choices = new QComboBox(&chooser);
+                choices->setObjectName(QStringLiteral("sketchSupportChoice"));
+                choices->addItems(names);
+                layout->addRow(QStringLiteral("Nuovo riferimento:"), choices);
+                auto *explanation = new QLabel(QStringLiteral("Geometria e quote conservano le coordinate locali sul nuovo piano."), &chooser);
+                explanation->setWordWrap(true); layout->addRow(explanation);
+                auto *buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &chooser);
+                connect(buttons, &QDialogButtonBox::accepted, &chooser, &QDialog::accept);
+                connect(buttons, &QDialogButtonBox::rejected, &chooser, &QDialog::reject);
+                layout->addRow(buttons);
+                if (chooser.exec() == QDialog::Accepted) {
+                    const QString error = viewport->changeSketchSupport(index, supports.at(choices->currentIndex()));
+                    if (!error.isEmpty()) QMessageBox::warning(this, QStringLiteral("Piano dello schizzo"), error);
+                }
             }
             else if (chosen && chosen == datumSketch) viewport->createDatumSketch(index, QStringLiteral("Schizzo %1").arg(viewport->sketches().size() + 1));
             else if (chosen && chosen == remove) viewport->deleteObject(kind, index);
@@ -4483,6 +4527,7 @@ void PdfWindow::rebuildModelTree() {
     };
     while (modelTree_->topLevelItemCount() > fixedItems) delete modelTree_->takeTopLevelItem(fixedItems);
     const QVector<SketchObject> &sketches = viewport_->sketches();
+    QHash<int, QTreeWidgetItem *> featureItems, sketchItems;
     QSet<int> shownSketches;
     const auto addSketch = [&](int index, QTreeWidgetItem *parent) {
         if (index < 0 || index >= sketches.size() || shownSketches.contains(index)) return;
@@ -4493,6 +4538,10 @@ void PdfWindow::rebuildModelTree() {
                                                                                                          : QStringLiteral("Faccia di %1").arg(sketch.faceSource);
         QTreeWidgetItem *item = addObject(sketch.name + QStringLiteral(" [") + plane + QStringLiteral("]"), kTreeSketch, index,
                                           sketch.visible, parent);
+        sketchItems.insert(index, item);
+        item->setFlags(item->flags() | Qt::ItemIsDragEnabled | Qt::ItemIsDropEnabled);
+        item->setToolTip(0, sketch.supportError.isEmpty() ? QStringLiteral("Passo autonomo: modifica il piano o sposta lo schizzo nella storia.") : sketch.supportError);
+        if (!sketch.supportError.isEmpty()) item->setForeground(0, QColor(255,150,90));
         item->setIcon(0, ForgeCad::commandIcon(QStringLiteral("newSketch")));
         if ((selection.kind == SceneObjectKind::Sketch && selection.index == index)
             || viewport_->activeSketchIndex() == index) modelTree_->setCurrentItem(item);
@@ -4569,6 +4618,7 @@ void PdfWindow::rebuildModelTree() {
         const QString featureKey = QStringLiteral("F%1").arg(body.featureId);
         QTreeWidgetItem *item = addObject(body.error.isEmpty() ? label : label + QStringLiteral("  \u26A0"),
                                           kTreeExtrusion, index, reference ? body.visible : -1, parent);
+        featureItems.insert(index, item);
         bool hasPreviousStage = false;
         for (int previous = 0; previous < index; ++previous)
             if (extrusions.at(previous).modelBodyId == body.modelBodyId) { hasPreviousStage = true; break; }
@@ -4905,28 +4955,31 @@ void PdfWindow::rebuildModelTree() {
         }
         if (selection.kind == SceneObjectKind::Extrusion && selection.index == index) modelTree_->setCurrentItem(item);
     }
-    QTreeWidgetItem *sketchRoot = nullptr;
     if (!historyRoot) {
         historyRoot = new QTreeWidgetItem(modelTree_, {QStringLiteral("Storia delle feature")});
         historyRoot->setData(0, Qt::UserRole, kTreeInfo);
         restore(historyRoot, QStringLiteral("H"), true);
     }
-    const int position = viewport_->historyPosition();
-    int cursorRow = historyRoot->childCount();
-    for (int row = 0; row < historyRoot->childCount(); ++row) {
-        auto *item = historyRoot->child(row);
-        if (item->data(0, Qt::UserRole).toInt() != kTreeExtrusion) continue;
-        if (item->data(0, Qt::UserRole + 1).toInt() >= position) {
-            cursorRow = row;
-            // Keep the next feature's profile together with that feature.
-            while (cursorRow > 0 && historyRoot->child(cursorRow - 1)->data(0, Qt::UserRole).toInt() == kTreeSketch) --cursorRow;
-            break;
-        }
+    for (int index = 0; index < sketches.size(); ++index) addSketch(index, historyRoot);
+    // Tutti i passi hanno una posizione propria. I dettagli rimangono figli
+    // della lavorazione; schizzi e piani non seguono implicitamente il profilo.
+    const auto story = viewport_->storyboard();
+    for (int p = 0; p < story.size(); ++p) {
+        const auto step = story.at(p);
+        auto *item = step.sketch ? sketchItems.value(step.index) : featureItems.value(step.index);
+        if (!item) continue;
+        if (item->parent()) item->parent()->takeChild(item->parent()->indexOfChild(item));
+        historyRoot->addChild(item);
+        item->setData(0, Qt::UserRole + 4, p);
+        item->setFlags(item->flags() | Qt::ItemIsDropEnabled);
     }
+    if (referenceRoot && referenceRoot->childCount() == 0) { delete referenceRoot; referenceRoot = nullptr; }
+    const int position = viewport_->storyboardPosition();
+    const int cursorRow = qBound(0, position, historyRoot->childCount());
     const bool horizontalCursor = static_cast<StoryboardTree *>(modelTree_)->cursorMode() == StoryboardTree::CursorMode::Horizontal;
     auto *cursor = new QTreeWidgetItem(QStringList{(horizontalCursor
         ? QStringLiteral("━━━━  Inserisci qui  %1 / %2  ━━━━")
-        : QStringLiteral("Inserisci qui  %1 / %2")).arg(position).arg(extrusions.size())});
+        : QStringLiteral("Inserisci qui  %1 / %2")).arg(position).arg(story.size())});
     cursor->setData(0, Qt::UserRole, kTreeInfo);
     cursor->setData(0, Qt::UserRole + 2, QStringLiteral("historyCursor"));
     cursor->setFlags(Qt::ItemIsEnabled | Qt::ItemIsSelectable);
@@ -4939,22 +4992,13 @@ void PdfWindow::rebuildModelTree() {
         ? QStringLiteral("Trascina la barra tra le feature per scegliere la posizione di calcolo e inserimento. Frecce su/giù: un passo; Home: inizio; End: fine.")
         : QStringLiteral("Trascina la maniglia laterale per scegliere la posizione di calcolo e inserimento. Frecce su/giù: un passo; Home: inizio; End: fine."));
     historyRoot->insertChild(cursorRow, cursor);
-    static_cast<StoryboardTree *>(modelTree_)->setHistoryRange(position, extrusions.size());
+    static_cast<StoryboardTree *>(modelTree_)->setHistoryRange(position, story.size());
     for (int row = cursorRow + 1; row < historyRoot->childCount(); ++row) {
         auto *item = historyRoot->child(row);
         item->setForeground(0, QColor(110, 120, 130));
         QFont font = item->font(0);
         font.setItalic(true);
         item->setFont(0, font);
-    }
-    for (int index = 0; index < sketches.size(); ++index) {
-        if (shownSketches.contains(index)) continue;
-        if (!sketchRoot) {
-            sketchRoot = new QTreeWidgetItem(modelTree_, {QStringLiteral("Schizzi non utilizzati")});
-            sketchRoot->setData(0, Qt::UserRole, kTreeInfo);
-            restore(sketchRoot, QStringLiteral("S"), true);
-        }
-        addSketch(index, sketchRoot);
     }
     // Solidi e superfici separati dei corpi visibili (barra di stato).
     if (auto *counts = statusBar()->findChild<QLabel *>(QStringLiteral("sceneCounts"))) {

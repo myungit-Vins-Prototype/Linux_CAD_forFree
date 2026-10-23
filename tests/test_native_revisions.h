@@ -43,7 +43,7 @@ void nativeRevisionTests() {
     QByteArray encoded;nativeOk(encodeDocument(working,encoded,true));
     QDataStream header(encoded);header.skipRawData(4);quint16 format=0;quint8 compression=0;quint32 payloadSize=0;
     header>>format>>compression>>payloadSize;
-    require(format==50 && compression==1,"nuovo formato nativo 50");
+    require(format==kDocumentFormatVersion && compression==1,"formato nativo corrente");
     const auto cache=qUncompress(encoded.mid(11+payloadSize));QDataStream cacheIn(cache);
     QByteArray sourceHash,payloadHash;quint32 tag=0,cacheVersion=0;cacheIn>>sourceHash>>payloadHash>>tag>>cacheVersion;
     require(cacheVersion==7,"cache geometrica resta 7");

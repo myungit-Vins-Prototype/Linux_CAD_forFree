@@ -207,7 +207,17 @@ struct SketchConstraint {
     int angleSides = 0;
 };
 
+struct GeometryRef;
+// Posizione operativa in una sequenza che comprende schizzi e feature.
+struct StoryStep { bool sketch = false; int index = -1; };
+
 struct SketchObject {
+    quint64 storyId = 0;
+    quint64 beforeFeatureId = 0; // 0: dopo tutte le feature; ID persistente del passo successivo
+    int storyOrder = 0;         // ordine fra schizzi nello stesso intervallo
+    std::shared_ptr<GeometryRef> support; // appoggio associativo su faccia; dati immutabili per Undo
+    QString supportError;      // diagnostica runtime, non serializzata
+
     QString name;
     int plane = 0;  // 0 XY, 1 XZ, 2 YZ, kFacePlane: su una faccia (frame)
     QVector<SketchSegment> segments;

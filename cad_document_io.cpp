@@ -70,6 +70,7 @@ constexpr char kMagic[4] = {'F', 'C', 'A', 'D'};
 // 44 estrazione associativa di curve 3D, segmento e vista salvata del taglio.
 // 45 schizzi spaziali con entita' e punti XYZ in double.
 // 50 identita' del documento, check-in archiviato e base della copia di lavoro.
+// 51 schizzi autonomi nella storyboard e appoggio associativo su faccia.
 constexpr quint16 kVersion = kDocumentFormatVersion;
 constexpr quint8 kZlib = 1;
 
@@ -192,6 +193,8 @@ void write(QDataStream &out, const SketchObject &sketch) {
     }
     out << qint32(sketch.datumPlane);  // formato 8
     out << sketch.symmetryAxes;        // formato 13
+    out << sketch.storyId << sketch.beforeFeatureId << qint32(sketch.storyOrder); // formato 51
+    writeRefs(out, sketch.support ? QVector<GeometryRef>{*sketch.support} : QVector<GeometryRef>{});
 }
 
 // Dimensione minima serializzata, mai sizeof dell'oggetto in memoria.
@@ -277,6 +280,14 @@ bool read(ReadStream &in, SketchObject &sketch, quint16 version) {
         sketch.datumPlane = datum;
     }
     if (version >= 13) in >> sketch.symmetryAxes;
+    if (version >= 51) {
+        qint32 order = 0;
+        in >> sketch.storyId >> sketch.beforeFeatureId >> order;
+        sketch.storyOrder = order;
+        QVector<GeometryRef> support;
+        if (!readRefs(in, support, version) || support.size() > 1) return false;
+        if (!support.isEmpty()) sketch.support = std::make_shared<GeometryRef>(support.front());
+    }
     if (sketch.plane < 0 || sketch.plane > kFacePlane) return false;
     // Gli array paralleli dei segmenti devono restare allineati.
     const int segments = sketch.segments.size();

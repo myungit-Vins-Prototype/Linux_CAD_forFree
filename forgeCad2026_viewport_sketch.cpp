@@ -1258,7 +1258,7 @@ int CadViewport::createSketch(int plane, const QString &name) {
 
 int CadViewport::createFaceSketch(int body, const FaceHit &face, const QString &name) {
     if(documentReadOnly_)return -1;
-    if (!face.planar || body < 0 || body >= extrusions_.size()) return -1;
+    if (!face.planar || body < 0 || body >= historyPosition() || body >= extrusions_.size()) return -1;
     if (sketchMode_) endSketchMode();
     if (edgePicking_) cancelEdgePick();
     SketchObject sketch;
@@ -1268,6 +1268,13 @@ int CadViewport::createFaceSketch(int body, const FaceHit &face, const QString &
                                              normalized(ForgeCad::Kernel::Vec3(face.normal[0], face.normal[1], face.normal[2])),
                                              ForgeCad::Kernel::Vec3(camera_.orientation_.up[0], camera_.orientation_.up[1], camera_.orientation_.up[2]));
     sketch.faceSource = extrusions_.at(body).name;
+    if (extrusions_.at(body).forgeBody && face.face >= 0) {
+        auto ref = std::make_shared<GeometryRef>();
+        ref->kind = 5; ref->index = body; ref->featureId = extrusions_.at(body).featureId;
+        ref->point = ForgeCad::faceReference(*extrusions_.at(body).forgeBody, ForgeCad::Kernel::FaceId(face.face),
+            ForgeCad::Kernel::Vec3(face.point[0], face.point[1], face.point[2]));
+        sketch.support = std::move(ref);
+    }
     recordUndo();
     sketches_.append(sketch);
     activeSketch_ = sketches_.size() - 1;

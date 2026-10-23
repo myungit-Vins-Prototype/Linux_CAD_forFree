@@ -18,7 +18,13 @@
         using namespace ForgeCad;
         const auto wait=[](const std::function<bool()> &done,int timeout=12000){
             QElapsedTimer elapsed;elapsed.start();
-            while(!done()&&elapsed.elapsed()<timeout){QApplication::processEvents();QThread::msleep(1);}
+            while(!done()&&elapsed.elapsed()<timeout){
+                QApplication::processEvents();
+                // Il test pompa gli eventi senza exec(): consegna anche le
+                // distruzioni rinviate che il normale loop Qt esegue da solo.
+                QCoreApplication::sendPostedEvents(nullptr,QEvent::DeferredDelete);
+                QThread::msleep(1);
+            }
             require(done(),"timeout recupero asincrono");
         };
         const auto scan=[&](DocumentRecovery &recovery){

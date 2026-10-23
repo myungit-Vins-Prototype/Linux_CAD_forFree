@@ -209,6 +209,17 @@ StoryboardTree::StoryboardTree(QWidget *parent ) : QTreeWidget(parent) {
     connect(verticalScrollBar(), &QScrollBar::valueChanged, this, [this] { updateHistoryRail(); });
 }
 
+namespace {
+int storyItemPosition(QTreeWidgetItem *item) {
+    return item->data(0, Qt::UserRole + 4).isValid() ? item->data(0, Qt::UserRole + 4).toInt()
+                                                   : item->data(0, Qt::UserRole + 1).toInt();
+}
+bool storyObject(QTreeWidgetItem *item) {
+    const int type = item->data(0, Qt::UserRole).toInt();
+    return type == kTreeExtrusion || type == kTreeSketch;
+}
+}
+
 void StoryboardTree::setMoveFeatureCallback(std::function<QString(int, int)> callback) { moveFeature_ = std::move(callback); }
 
 void StoryboardTree::setHistoryPositionCallback(std::function<void(int)> callback) { historyPositionChanged_ = std::move(callback); }
@@ -271,10 +282,10 @@ void StoryboardTree::mouseMoveEvent(QMouseEvent *event) {
         if (history) {
             for (int i = 0; i < history->childCount(); ++i) {
                 auto *item = history->child(i);
-                if (item->data(0, Qt::UserRole).toInt() != kTreeExtrusion) continue;
+                if (!storyObject(item)) continue;
                 const QRect rect = visualItemRect(item);
                 if (!rect.isEmpty() && event->position().y() <= rect.center().y()) {
-                    position = item->data(0, Qt::UserRole + 1).toInt();
+                    position = storyItemPosition(item);
                     lineY = rect.top();
                     break;
                 }
@@ -342,8 +353,8 @@ void StoryboardTree::dragEnterEvent(QDragEnterEvent *event) {
 void StoryboardTree::dragMoveEvent(QDragMoveEvent *event) {
     QTreeWidgetItem *target = targetFeature(event->position().toPoint());
     if (target && target != draggedItem_) {
-        const int sourceIndex = draggedItem_->data(0, Qt::UserRole + 1).toInt();
-        const int targetIndex = target->data(0, Qt::UserRole + 1).toInt();
+        const int sourceIndex = storyItemPosition(draggedItem_);
+        const int targetIndex = storyItemPosition(target);
         const QRect targetRect = visualItemRect(target);
         setInsertionLine(sourceIndex < targetIndex ? targetRect.bottom() + 1 : targetRect.top(), targetRect.left());
         event->acceptProposedAction();
@@ -366,7 +377,7 @@ void StoryboardTree::dropEvent(QDropEvent *event) {
         event->ignore();
         return;
     }
-    const QString error = moveFeature_(source->data(0, Qt::UserRole + 1).toInt(), target->data(0, Qt::UserRole + 1).toInt());
+    const QString error = moveFeature_(storyItemPosition(source), storyItemPosition(target));
     event->ignore();  // l'albero viene ricostruito dal documento, mai spostato solo graficamente
     if (!error.isEmpty()) QMessageBox::information(this, QStringLiteral("Riordina storyboard"), error);
 }
@@ -400,10 +411,10 @@ int StoryboardTree::historyPositionAtY(int y) const {
     bool first = true;
     for (int row = 0; row < root->childCount(); ++row) {
         auto *item = root->child(row);
-        if (item->data(0, Qt::UserRole).toInt() != kTreeExtrusion) continue;
+        if (!storyObject(item)) continue;
         const QRect rect = visualItemRect(item);
         if (!rect.isEmpty() && y <= rect.center().y())
-            return first ? 0 : item->data(0, Qt::UserRole + 1).toInt();
+            return first ? 0 : storyItemPosition(item);
         first = false;
     }
     return historyCount_;
@@ -439,10 +450,10 @@ void StoryboardTree::updateHistoryRail() {
     slider->activePosition = historyPosition_;
     for (int row = 0; row < root->childCount(); ++row) {
         auto *item = root->child(row);
-        if (item->data(0, Qt::UserRole).toInt() != kTreeExtrusion) continue;
+        if (!storyObject(item)) continue;
         const QRect rect = visualItemRect(item);
         if (!rect.isEmpty() && rect.center().y() >= top && rect.center().y() <= bottom)
-            slider->checkpoints.append({rect.center().y() - top + handleOffset, item->data(0, Qt::UserRole + 1).toInt() + 1});
+            slider->checkpoints.append({rect.center().y() - top + handleOffset, storyItemPosition(item) + 1});
     }
     historyRail_->setRange(0, bottom - top);
     if (!historyRail_->isSliderDown()) historyRail_->setValue(cursorY - top);
@@ -466,7 +477,7 @@ void StoryboardTree::clearInsertionLine() {
 }
 
 bool StoryboardTree::isMovableFeature(QTreeWidgetItem *item) {
-    return item && item->data(0, Qt::UserRole).toInt() == kTreeExtrusion && item->parent()
+    return item && storyObject(item) && item->parent()
         && item->parent()->data(0, Qt::UserRole + 2).toString() == QStringLiteral("H");
 }
 
@@ -475,7 +486,7 @@ QTreeWidgetItem *StoryboardTree::targetFeature(const QPoint &position) const {
     QTreeWidgetItem *body = draggedItem_->parent();
     QTreeWidgetItem *under = itemAt(position);
     for (QTreeWidgetItem *candidate = under; candidate && candidate != body; candidate = candidate->parent())
-        if (candidate->parent() == body && candidate->data(0, Qt::UserRole).toInt() == kTreeExtrusion)
+        if (candidate->parent() == body && storyObject(candidate))
             return normalizedTarget(body, candidate);
 
     // Schizzi e dettagli possono stare tra due feature. In quel caso il
@@ -484,7 +495,7 @@ QTreeWidgetItem *StoryboardTree::targetFeature(const QPoint &position) const {
     int distance = std::numeric_limits<int>::max();
     for (int row = 0; row < body->childCount(); ++row) {
         QTreeWidgetItem *candidate = body->child(row);
-        if (candidate->data(0, Qt::UserRole).toInt() != kTreeExtrusion) continue;
+        if (!storyObject(candidate)) continue;
         const QRect rect = visualItemRect(candidate);
         const int d = std::abs(rect.center().y() - position.y());
         if (d < distance) distance = d, best = candidate;
@@ -492,17 +503,8 @@ QTreeWidgetItem *StoryboardTree::targetFeature(const QPoint &position) const {
     return normalizedTarget(body, best);
 }
 
-QTreeWidgetItem *StoryboardTree::normalizedTarget(QTreeWidgetItem *body, QTreeWidgetItem *target) const {
-    if (!body || !target || target != firstFeature(body)) return target;
-    // Il primo stadio resta fisso. Un rilascio su di esso significa
-    // "porta subito dopo la radice".
-    bool foundRoot = false;
-    for (int row = 0; row < body->childCount(); ++row) {
-        QTreeWidgetItem *candidate = body->child(row);
-        if (candidate->data(0, Qt::UserRole).toInt() != kTreeExtrusion) continue;
-        if (foundRoot) return candidate;
-        foundRoot = true;
-    }
+QTreeWidgetItem *StoryboardTree::normalizedTarget(QTreeWidgetItem *, QTreeWidgetItem *target) const {
+    // Le dipendenze vengono validate sul documento, compresi gli schizzi.
     return target;
 }
 

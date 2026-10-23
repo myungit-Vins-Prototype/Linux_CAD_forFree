@@ -802,6 +802,12 @@ void HistoryGraphDialog::rebuild() {
     referenceDiagnostics_.clear();
     const QVector<ExtrusionObject> &features = document_.extrusions;
     const QVector<SketchObject> &sketches = document_.sketches;
+    const auto story = modelStory(sketches, features);
+    QVector<int> featurePositions(features.size()), sketchPositions(sketches.size());
+    for (int p = 0; p < story.size(); ++p) {
+        const auto step = story.at(p);
+        (step.sketch ? sketchPositions : featurePositions)[step.index] = p;
+    }
     QHash<quint64, int> lanes;
     int nextLane = 1;
     for (const ExtrusionObject &feature : features)
@@ -862,6 +868,9 @@ void HistoryGraphDialog::rebuild() {
     for (int index = 0; index < features.size(); ++index) {
         const ExtrusionObject &feature = features.at(index);
         allDependencies[index] = dependencies(index, document_);
+        for (auto &dependency : allDependencies[index]) if (dependency.source == Dependency::Source::Sketch
+            && dependency.index >= 0 && dependency.index < sketches.size())
+            dependency.valid = dependency.valid && sketchPositions.at(dependency.index) < featurePositions.at(index);
         const int lane = feature.modelBodyId ? lanes.value(feature.modelBodyId, 1) : 0;
         bool tip = false;
         for (const ModelBody &body : document_.modelBodies)
@@ -875,7 +884,7 @@ void HistoryGraphDialog::rebuild() {
         const QString operation = featureType(feature);
         const QString featureName = feature.name.trimmed().isEmpty()
             ? QStringLiteral("%1 %2").arg(operation).arg(index + 1) : feature.name;
-        auto *featureNode = addNode(QStringLiteral("f:%1").arg(index), QPointF(index * xStep, lane * yStep),
+        auto *featureNode = addNode(QStringLiteral("f:%1").arg(index), QPointF(featurePositions.at(index) * xStep, lane * yStep),
                 QStringLiteral("#%1  %2").arg(index).arg(featureName),
                 QStringLiteral("Lavorazione: %1\n%2").arg(operation, state),
                 featureDetails(index, document_, allDependencies.at(index)), nodeColor(feature, tip), 1, index);
@@ -892,10 +901,6 @@ void HistoryGraphDialog::rebuild() {
 
     if (showSketches_->isChecked()) {
         for (int index = 0; index < sketches.size(); ++index) {
-            int firstUse = features.size();
-            for (int feature = 0; feature < allDependencies.size(); ++feature)
-                for (const Dependency &dependency : allDependencies.at(feature))
-                    if (dependency.source == Dependency::Source::Sketch && dependency.index == index) firstUse = std::min(firstUse, feature);
             const SketchObject &sketch = sketches.at(index);
             QStringList details{
                 QStringLiteral("%1 (#%2)").arg(sketch.name).arg(index),
@@ -903,7 +908,10 @@ void HistoryGraphDialog::rebuild() {
                 QStringLiteral("Curve: %1").arg(sketch.curves.size()),
                 QStringLiteral("Vincoli geometrici: %1").arg(sketch.geometricConstraints.size()),
                 QStringLiteral("Piano: %1").arg(sketch.plane),
-                QStringLiteral("Datum: %1").arg(sketch.datumPlane)
+                QStringLiteral("Datum: %1").arg(sketch.datumPlane),
+                QStringLiteral("ID schizzo: %1 • posizione storia: %2").arg(sketch.storyId).arg(sketchPositions.at(index)),
+                sketch.support ? geometryRefText(*sketch.support, sketches, features) : QString(),
+                sketch.supportError
             };
             if (!sketch.geometricConstraints.isEmpty()) {
                 details << QStringLiteral("\nVincoli:");
@@ -915,7 +923,7 @@ void HistoryGraphDialog::rebuild() {
                                    .arg(constraintError(sketch, value), 0, 'g', 6);
                 }
             }
-            addNode(QStringLiteral("s:%1").arg(index), QPointF((firstUse == features.size() ? index : firstUse) * xStep, sketchLane * yStep),
+            addNode(QStringLiteral("s:%1").arg(index), QPointF(sketchPositions.at(index) * xStep, sketchLane * yStep),
                     QStringLiteral("Schizzo #%1  %2").arg(index).arg(sketch.name),
                     QStringLiteral("%1 segmenti • %2 curve • %3 vincoli")
                         .arg(sketch.segments.size()).arg(sketch.curves.size()).arg(sketch.geometricConstraints.size()),
@@ -967,6 +975,24 @@ void HistoryGraphDialog::rebuild() {
             if (!dependency.valid) ++invalidDependencies_;
             ++edgeCount_;
         }
+    }
+    if (showSketches_->isChecked()) for (int s = 0; s < sketches.size(); ++s) {
+        const auto &sketch = sketches.at(s);
+        if (!sketch.support) continue;
+        const auto &ref = *sketch.support;
+        int sourceIndex = ref.index;
+        if (ref.featureId) {
+            sourceIndex = -1;
+            for (int f = 0; f < features.size(); ++f) if (features.at(f).featureId == ref.featureId) { sourceIndex = f; break; }
+        }
+        auto *source = nodes.value(QStringLiteral("f:%1").arg(sourceIndex), nullptr);
+        auto *target = nodes.value(QStringLiteral("s:%1").arg(s), nullptr);
+        if (!source || !target) continue;
+        const bool valid = sketch.supportError.isEmpty() && featurePositions.at(sourceIndex) < sketchPositions.at(s);
+        auto *edge = new HistoryGraphEdge(source, target, QStringLiteral("piano schizzo"),
+            valid ? QColor(90,190,205) : QColor(255,76,76), valid, showLabels_->isChecked());
+        scene_->addItem(edge); edge->updateGeometry();
+        ++edgeCount_; if (!valid) ++invalidDependencies_;
     }
     int failures = 0, suppressed = 0;
     for (const ExtrusionObject &feature : features) {

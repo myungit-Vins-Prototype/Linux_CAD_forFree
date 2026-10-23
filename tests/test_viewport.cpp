@@ -1941,6 +1941,147 @@ public:
         view.close();
     }
 
+    static void sketchStoryRegressions() {
+        CadViewport view;
+        view.tessellationQuality_ = 0;
+        PrimitiveParameters box; box.size[0] = box.size[1] = box.size[2] = 4;
+        require(view.createPrimitive(box, QStringLiteral("Base")).isEmpty(), "base della storia");
+        ExtrusionObject datum; datum.name = QStringLiteral("Appoggio"); datum.feature = BodyFeature::DatumPlane;
+        GeometryRef xy; xy.kind = 1; xy.index = 0;
+        datum.datum.refs = {xy}; datum.datum.distance = 3; datum.datum.size = 10;
+        require(view.createBody(datum).isEmpty(), "piano precedente allo schizzo");
+        const int s = view.createSketch(0, QStringLiteral("Profilo autonomo"));
+        view.sketches_[s].segments = {{{0,0},{1,0}},{{1,0},{1,1}},{{1,1},{0,1}},{{0,1},{0,0}}};
+        const auto segments = view.sketches_[s].segments;
+        view.endSketchMode();
+        require(view.createScale(0, 1.2, 0, {}, QStringLiteral("Scala indipendente")).isEmpty(), "lavorazione fra schizzo e utilizzatore");
+        ExtrusionObject extrusion; extrusion.sketchIndex = s; extrusion.distance = 2; extrusion.solid = true;
+        require(view.createExtrusion(extrusion, QStringLiteral("Estrusione del profilo")).isEmpty(), "utilizzatore dello schizzo");
+        const quint64 identity = view.sketches_[s].storyId;
+        require(identity && view.storyboardIndex(true,s) == 2 && view.storyboard().size() == 5, "schizzo conserva la posizione di creazione");
+        require(view.moveStoryboardStep(2,3).isEmpty() && view.storyboardIndex(true,s) == 3, "schizzo si sposta indipendentemente dalla feature");
+        view.selectSketch(s);
+        require(view.isBodyDrawn(2) && !view.isBodyDrawn(0) && !view.isBodyDrawn(3), "contesto segue la posizione autonoma dello schizzo");
+        view.endSketchMode();
+        require(!view.moveStoryboardStep(3,4).isEmpty() && view.storyboardIndex(true,s) == 3, "rifiuto atomico dopo l'utilizzatore");
+        GeometryRef support; support.kind = 8; support.index = 1;
+        require(view.changeSketchSupport(s, support).isEmpty(), "sostituzione del piano di riferimento");
+        require(std::abs(view.sketches_[s].frame.origin[2]-3) < 1e-9 && view.sketches_[s].datumPlane == 1, "schizzo associato al nuovo piano");
+        require(view.sketches_[s].segments.size() == segments.size() && view.sketches_[s].segments[1].second == segments[1].second,
+                "profilo locale conservato durante cambio piano");
+        const auto zBounds = [&] {
+            const auto body = view.extrusions_.back().forgeBody;
+            require(bool(body), "geometria dipendente disponibile");
+            double lo = 1e100, hi = -1e100;
+            for (auto vertex : body->vertices()) { const double z = body->vertex(vertex).point.z(); lo = std::min(lo,z); hi = std::max(hi,z); }
+            return QPair<double,double>{lo,hi};
+        };
+        require(std::abs(zBounds().first-3) < 1e-8 && std::abs(zBounds().second-5) < 1e-8, "estrusione rigenerata sul nuovo piano");
+        require(!view.moveStoryboardStep(3,0).isEmpty() && view.storyboardIndex(true,s) == 3, "schizzo non puo' precedere il suo piano");
+        auto changedDatum = view.extrusions_[1]; changedDatum.datum.distance = 4;
+        require(view.updateBody(1,changedDatum).isEmpty(), "modifica del piano sostituito");
+        require(std::abs(view.sketches_[s].frame.origin[2]-4) < 1e-8 && std::abs(zBounds().first-4) < 1e-8, "appoggio e utilizzatore seguono il datum");
+        GeometryRef xz; xz.kind = 1; xz.index = 1;
+        require(view.changeSketchSupport(s,xz).isEmpty() && view.sketches_[s].plane == 1 && view.sketches_[s].datumPlane == -1,
+                "sostituzione con piano di origine");
+        view.undo();
+        require(view.sketches_[s].datumPlane == 1 && std::abs(zBounds().first-4) < 1e-8, "Undo ripristina appoggio e risultato");
+        view.redo(); require(view.sketches_[s].plane == 1, "Redo del cambio piano"); view.undo();
+        GeometryRef face; face.kind = 5; face.index = 0; face.featureId = view.extrusions_[0].featureId;
+        const auto base = view.extrusions_[0].forgeBody;
+        bool found = false;
+        for (auto f : base->faces()) {
+            if (base->face(f).surface->type() != ForgeCad::Kernel::SurfaceType::Plane) continue;
+            const auto first = base->loop(base->face(f).loops.front()).first;
+            const auto p = base->finPoint(first,0.5);
+            if (std::abs(p.z()-4) < 1e-8 && std::abs(base->face(f).surface->normal(0,0).z()) > 0.9) {
+                face.point = ForgeCad::faceReference(*base,f,p); found = true; break;
+            }
+        }
+        require(found && view.changeSketchSupport(s,face).isEmpty(), "sostituzione con faccia piana precedente");
+        auto changedBase = view.extrusions_[0]; changedBase.primitive.size[2] = 5;
+        require(view.updateBody(0,changedBase).isEmpty(), "modifica del produttore della faccia");
+        require(std::abs(view.sketches_[s].frame.origin[2]-5) < 1e-8 && std::abs(zBounds().first-5) < 1e-8,
+                "schizzo su faccia e dipendenti seguono la rigenerazione");
+        QTemporaryDir dir;
+        const QString path = dir.filePath(QStringLiteral("schizzi.prt"));
+        require(ForgeCad::saveDocumentFile(path,view.documentState()).isEmpty(), "salvataggio storia unificata");
+        DocumentState saved;
+        require(ForgeCad::loadDocumentFile(path,saved).isEmpty(), "rilettura storia unificata");
+        CadViewport restored; restored.loadDocument(saved);
+        require(restored.sketches_[s].storyId == identity && restored.storyboardIndex(true,s) == 3
+                    && restored.sketches_[s].support && restored.sketches_[s].support->featureId == face.featureId,
+                "identita, posizione e appoggio conservati nel file");
+        auto legacy = saved;
+        for (auto &sketch : legacy.sketches) { sketch.storyId = 0; sketch.beforeFeatureId = 0; }
+        ForgeCad::normalizeModelHistory(legacy);
+        const auto migrated = ForgeCad::modelStory(legacy.sketches,legacy.extrusions);
+        require(migrated[3].sketch && legacy.sketches[s].storyId != 0, "migrazione degli schizzi prima del primo utilizzatore");
+        restored.setStoryboardPosition(2);
+        const int countBefore = restored.extrusions_.size();
+        require(!restored.createExtrusion(extrusion, QStringLiteral("Uso anticipato")).isEmpty()
+                    && restored.extrusions_.size() == countBefore, "nuova lavorazione non puo' usare uno schizzo futuro");
+        const int free = restored.createSketch(0,QStringLiteral("Schizzo al cursore")); restored.endSketchMode();
+        require(restored.storyboardIndex(true,free) == 2 && restored.storyboardPosition() == 3, "nuovo schizzo al cursore indipendente");
+        restored.setStoryboardPosition(2); require(!restored.isSketchDrawn(free), "rollback prima dello schizzo");
+        restored.setStoryboardPosition(3); require(restored.isSketchDrawn(free), "rollback dopo lo schizzo");
+        restored.undo(); require(restored.sketches_.size() == 1, "Undo creazione del passo schizzo");
+        restored.redo(); require(restored.sketches_.size() == 2 && restored.storyboardIndex(true,free) == 2, "Redo conserva la posizione");
+        restored.setDocumentReadOnly(true);
+        require(!restored.moveStoryboardStep(2,3).isEmpty() && !restored.changeSketchSupport(s,xy).isEmpty(), "documento consultato immutabile");
+        CadViewport eraseConsumer;
+        eraseConsumer.loadDocument(saved);
+        require(eraseConsumer.createPrimitive(box, QStringLiteral("Ultimo indipendente")).isEmpty(), "passo dopo l'utilizzatore");
+        eraseConsumer.deleteObject(SceneObjectKind::Extrusion, 3);
+        require(eraseConsumer.storyboardIndex(true,s) == 3 && eraseConsumer.storyboardIndex(false,3) == 4,
+                "eliminare l'utilizzatore conserva la posizione autonoma dello schizzo");
+        CadViewport deleted;
+        deleted.loadDocument(saved);
+        deleted.deleteObject(SceneObjectKind::Extrusion, 0);
+        require(!deleted.sketches_[s].supportError.isEmpty() && !deleted.extrusions_.back().forgeBody,
+                "eliminare l'appoggio impedisce l'uso della geometria obsoleta");
+        PdfWindow window;
+        window.viewport_->loadDocument(saved);
+        window.rebuildModelTree();
+        auto *tree = window.modelTree_;
+        QTreeWidgetItem *root = nullptr;
+        for (int i = 0; i < tree->topLevelItemCount(); ++i)
+            if (tree->topLevelItem(i)->data(0,Qt::UserRole+2).toString() == QStringLiteral("H")) root = tree->topLevelItem(i);
+        require(root && root->childCount() == 6 && root->child(3)->data(0,Qt::UserRole).toInt() == kTreeSketch,
+                "albero espone lo schizzo come passo autonomo");
+        require(root->child(3)->data(0,Qt::UserRole+4).toInt() == 3 && (root->child(3)->flags() & Qt::ItemIsDragEnabled),
+                "schizzo trascinabile alla propria posizione della storia");
+        require(tree->grab().save(QStringLiteral("/tmp/sketch-story/tree.png")), "cattura storyboard con schizzo autonomo");
+        bool menuSeen = false, dialogSeen = false;
+        QElapsedTimer menuClock; menuClock.start();
+        QTimer chooseSupport; chooseSupport.setInterval(1);
+        QObject::connect(&chooseSupport, &QTimer::timeout, &window, [&] {
+            if (menuClock.elapsed() > 5000) {
+                if (auto *menu = qobject_cast<QMenu *>(QApplication::activePopupWidget())) menu->close();
+                if (auto *dialog = qobject_cast<QDialog *>(QApplication::activeModalWidget())) dialog->reject();
+                chooseSupport.stop(); return;
+            }
+            if (!menuSeen) if (auto *menu = qobject_cast<QMenu *>(QApplication::activePopupWidget()))
+                for (auto *action : menu->actions()) if (action->text() == QStringLiteral("Cambia piano di riferimento...")) {
+                    menuSeen = true; menu->setActiveAction(action);
+                    QKeyEvent enter(QEvent::KeyPress, Qt::Key_Return, Qt::NoModifier);
+                    QApplication::sendEvent(menu, &enter); return;
+                }
+            if (auto *dialog = qobject_cast<QDialog *>(QApplication::activeModalWidget()))
+                if (auto *choice = dialog->findChild<QComboBox *>(QStringLiteral("sketchSupportChoice"))) {
+                    dialogSeen = true;
+                    require(choice->count() > 3, "dialogo offre gli appoggi precedenti");
+                    dialog->grab().save(QStringLiteral("/tmp/sketch-story/change-plane.png"));
+                    choice->setCurrentIndex(0); chooseSupport.stop(); dialog->accept();
+                }
+        });
+        chooseSupport.start(); tree->doItemsLayout();
+        tree->customContextMenuRequested(tree->visualItemRect(root->child(3)).center());
+        require(menuSeen && dialogSeen && window.viewport_->sketches_[s].plane == 0
+                    && !window.viewport_->sketches_[s].support, "menu e dialogo reali cambiano il piano dello schizzo");
+        std::cout << "PASS sketch story: independent order, dependencies, supports, regeneration, persistence, undo, rollback, tree and plane dialog" << std::endl;
+    }
+
     static void historyPositionRegressions() {
         {
             CadViewport edit;
@@ -9770,6 +9911,11 @@ int main(int argc, char **argv) {
         try { ViewportInteractionTest::storyboardScroll(); }
         catch(const std::exception &e){std::cerr<<e.what()<<std::endl;return 1;}
         std::cout<<"storyboard scroll PASS"<<std::endl;return 0;
+    }
+    if (app.arguments().contains(QStringLiteral("--sketch-story"))) {
+        try { ViewportInteractionTest::sketchStoryRegressions(); }
+        catch (const std::exception &e) { std::cerr << e.what() << std::endl; return 1; }
+        return 0;
     }
     if (app.arguments().contains(QStringLiteral("--history-position"))) {
         try { ViewportInteractionTest::historyPositionRegressions(); }

@@ -222,6 +222,13 @@ public:
     const QVector<SketchObject> &sketches() const;
     const QVector<ExtrusionObject> &extrusions() const;
     const QVector<ModelBody> &modelBodies() const;
+    QVector<StoryStep> storyboard() const;
+    int storyboardPosition() const;
+    int storyboardIndex(bool sketch, int index) const;
+    void setStoryboardPosition(int position);
+    QString moveStoryboardStep(int from, int to);
+    QString changeSketchSupport(int sketch, GeometryRef reference);
+    // Posizione di calcolo nei soli corpi, mantenuta per i chiamanti geometrici.
     int historyPosition() const;
     void applyHistoryPosition();
     // Visibilita temporanea della scena, distinta dai flag salvati nel documento.
@@ -1012,6 +1019,7 @@ private:
 
     // Salva lo stato corrente nella cronologia: va chiamata subito prima di
     // una modifica al documento, seguita da documentChanged() a modifica fatta.
+    QString reorderFeatureTo(int index, int target, const QVector<StoryStep> &steps);
     void recordUndo();
 
     void documentChanged();
@@ -1599,6 +1607,8 @@ private:
     bool constraintsVisible_ = true;
     std::function<void()> constraintPanelCallback_;
     QVector<SketchObject> sketches_;
+    int storyPosition_ = -1;
+    int insertionSketchSourceSize_ = -1;
     int historyPosition_ = -1;
     int sketchContextEnd_ = -1;
     QVector<bool> sketchContextBodies_, sketchContextSketches_;

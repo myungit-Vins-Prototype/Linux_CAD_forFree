@@ -189,6 +189,120 @@ void normalizeModelHistory(QVector<ExtrusionObject> &features, QVector<ModelBody
     modelBodies = std::move(bodies);
 }
 
-void normalizeModelHistory(DocumentState &state) { normalizeModelHistory(state.extrusions, state.modelBodies); }
+void normalizeModelHistory(DocumentState &state) {
+    normalizeModelHistory(state.extrusions, state.modelBodies);
+    normalizeSketchHistory(state.sketches, state.extrusions);
+}
+
+QVector<StoryStep> modelStory(const QVector<SketchObject> &sketches, const QVector<ExtrusionObject> &features) {
+    QHash<quint64, int> featureIndices;
+    for (int i = 0; i < features.size(); ++i) if (features.at(i).featureId) featureIndices.insert(features.at(i).featureId, i);
+    QVector<QVector<int>> before(features.size() + 1);
+    for (int s = 0; s < sketches.size(); ++s)
+        before[featureIndices.value(sketches.at(s).beforeFeatureId, features.size())].append(s);
+    QVector<StoryStep> result;
+    for (int f = 0; f <= features.size(); ++f) {
+        std::stable_sort(before[f].begin(), before[f].end(), [&](int a, int b) {
+            return sketches.at(a).storyOrder < sketches.at(b).storyOrder;
+        });
+        for (int s : before.at(f)) result.append({true, s});
+        if (f < features.size()) result.append({false, f});
+    }
+    return result;
+}
+
+void placeStorySketches(QVector<SketchObject> &sketches, const QVector<ExtrusionObject> &features, const QVector<StoryStep> &order) {
+    quint64 next = 0;
+    for (int i = order.size() - 1; i >= 0; --i) {
+        const auto step = order.at(i);
+        if (!step.sketch) next = features.at(step.index).featureId;
+        else {
+            sketches[step.index].beforeFeatureId = next;
+            sketches[step.index].storyOrder = i;
+        }
+    }
+}
+
+void normalizeSketchHistory(QVector<SketchObject> &sketches, const QVector<ExtrusionObject> &features) {
+    quint64 next = 1;
+    for (const auto &s : sketches) next = std::max(next, s.storyId + 1);
+    QSet<quint64> seen;
+    for (int s = 0; s < sketches.size(); ++s) {
+        auto &sketch = sketches[s];
+        if (!sketch.support && sketch.datumPlane >= 0 && sketch.datumPlane < features.size()) {
+            auto ref = std::make_shared<GeometryRef>();
+            ref->kind = 8; ref->index = sketch.datumPlane; ref->featureId = features.at(sketch.datumPlane).featureId;
+            sketch.support = std::move(ref);
+        }
+        if (sketch.storyId && !seen.contains(sketch.storyId)) { seen.insert(sketch.storyId); continue; }
+        sketch.storyId = next++;
+        seen.insert(sketch.storyId);
+        sketch.beforeFeatureId = 0;
+        sketch.storyOrder = s;
+        // Migrazione: conserva il contesto che l'albero mostrava, davanti al
+        // primo utilizzatore; gli schizzi liberi restano alla fine.
+        for (int f = 0; f < features.size(); ++f) if (sketchesOf(features.at(f)).contains(s)) {
+            sketch.beforeFeatureId = features.at(f).featureId;
+            break;
+        }
+    }
+}
+
+QString storySketchDependencyError(const QVector<SketchObject> &sketches, const QVector<ExtrusionObject> &features,
+                                   const QVector<StoryStep> &order) {
+    QVector<int> sp(sketches.size(), -1), fp(features.size(), -1);
+    for (int i = 0; i < order.size(); ++i) {
+        const auto step = order.at(i);
+        auto &positions = step.sketch ? sp : fp;
+        if (step.index < 0 || step.index >= positions.size() || positions.at(step.index) >= 0)
+            return QStringLiteral("Sequenza della storia non valida.");
+        positions[step.index] = i;
+    }
+    if (sp.contains(-1) || fp.contains(-1)) return QStringLiteral("La storia deve contenere tutti gli schizzi e le lavorazioni.");
+    for (int f = 0; f < features.size(); ++f) for (int s : sketchesOf(features.at(f)))
+        if (s >= 0 && s < sp.size() && sp.at(s) >= fp.at(f))
+            return QStringLiteral("\"%1\" deve precedere \"%2\", che lo utilizza.").arg(sketches.at(s).name, features.at(f).name);
+    const auto referenceError = [&](int s, const GeometryRef &ref) -> QString {
+        const bool body = isBodyRef(ref), sketch = isSketchRef(ref);
+        if (!body && !sketch) return {};
+        const auto &positions = body ? fp : sp;
+        int index = ref.index;
+        if (body && ref.featureId) {
+            index = -1;
+            for (int f = 0; f < features.size(); ++f) if (features.at(f).featureId == ref.featureId) { index = f; break; }
+        }
+        if (index < 0 || index >= positions.size() || positions.at(index) >= sp.at(s))
+            return QStringLiteral("\"%1\" deve restare dopo il riferimento che utilizza.").arg(sketches.at(s).name);
+        return {};
+    };
+    for (int s = 0; s < sketches.size(); ++s) {
+        const auto &sketch = sketches.at(s);
+        if (sketch.datumPlane >= 0) {
+            GeometryRef ref; ref.kind = 8; ref.index = sketch.datumPlane;
+            const QString error = referenceError(s, ref); if (!error.isEmpty()) return error;
+        }
+        if (sketch.support) { const QString error = referenceError(s, *sketch.support); if (!error.isEmpty()) return error; }
+        for (const auto &c : sketch.geometricConstraints) if (c.pierce) {
+            const QString error = referenceError(s, c.pierce->surface); if (!error.isEmpty()) return error;
+        }
+    }
+    return {};
+}
+
+void remapSketchSupports(QVector<SketchObject> &sketches, const std::function<int(int)> &map) {
+    for (auto &sketch : sketches) {
+        if (sketch.datumPlane >= 0) sketch.datumPlane = map(sketch.datumPlane);
+        if (sketch.support) {
+            auto ref = std::make_shared<GeometryRef>(*sketch.support);
+            if (isBodyRef(*ref)) ref->index = map(ref->index);
+            sketch.support = std::move(ref);
+        }
+        for (auto &c : sketch.geometricConstraints) if (c.pierce) {
+            auto data = std::make_shared<SketchPierceData>(*c.pierce);
+            if (isBodyRef(data->surface)) data->surface.index = map(data->surface.index);
+            c.pierce = std::move(data);
+        }
+    }
+}
 
 }

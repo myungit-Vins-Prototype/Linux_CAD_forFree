@@ -1,6 +1,16 @@
 #include "forgeCad2026_viewport_internal.h"
 
 
+namespace {
+QString sketchPositionError(const CadViewport &view, const ExtrusionObject &feature, int position = -1) {
+    if (position < 0) position = view.storyboardPosition();
+    for (int sketch : ForgeCad::sketchesOf(feature)) if (sketch >= 0 && sketch < view.sketches().size()
+        && view.storyboardIndex(true, sketch) >= position)
+        return QStringLiteral("Lo schizzo %1 deve precedere la lavorazione: sposta il cursore o riordina lo schizzo.").arg(view.sketches().at(sketch).name);
+    return {};
+}
+}
+
 DocumentState CadViewport::currentDocument() const { return documentState(); }
 
 DocumentState CadViewport::recoveryDocument() const { return documentState(false); }
@@ -53,6 +63,8 @@ void CadViewport::loadDocument(DocumentState state,
     ForgeCad::setDisplayLengthUnit(lengthUnit_);
     ForgeCad::normalizeModelHistory(state);
     sketches_ = std::move(state.sketches);
+    storyPosition_ = -1;
+    insertionSketchSourceSize_ = -1;
     historyPosition_ = -1;
     insertionSourceSize_ = -1;
     extrusions_ = std::move(state.extrusions);
@@ -81,6 +93,8 @@ void CadViewport::loadPreviewDocument(DocumentState state) {
     lengthUnit_ = state.lengthUnitSet ? state.lengthUnit : LengthUnit::Millimeter;
     ForgeCad::normalizeModelHistory(state);
     sketches_ = std::move(state.sketches);
+    storyPosition_ = -1;
+    insertionSketchSourceSize_ = -1;
     historyPosition_ = -1;
     insertionSourceSize_ = -1;
     extrusions_ = std::move(state.extrusions);
@@ -169,17 +183,20 @@ bool CadViewport::isBodyDrawn(int index) const {
 void CadViewport::refreshSketchContext() {
     sketchContextEnd_=-1;sketchContextBodies_.clear();sketchContextSketches_.clear();
     if(!sketchMode_ || activeSketch_<0 || activeSketch_>=sketches_.size())return;
-    // La storyboard inserisce lo schizzo davanti alla prima feature che lo usa.
-    // Per uno schizzo nuovo/non usato vale invece il cursore di inserimento.
-    int end=historyPosition();
-    for(int i=0;i<end;++i)if(featureSketches(i).contains(activeSketch_)){end=i;break;}
-    sketchContextEnd_=end;
-    sketchContextBodies_.fill(false,extrusions_.size());
-    sketchContextSketches_.fill(false,sketches_.size());sketchContextSketches_[activeSketch_]=true;
-    for(int i=0;i<end;++i) {
-        const auto &feature=extrusions_.at(i);
-        if(!ForgeCad::isShapeBody(feature))sketchContextBodies_[i]=feature.visible && !feature.suppressed && feature.error.isEmpty();
-        for(int sketch:featureSketches(i))if(sketch>=0 && sketch<sketches_.size())sketchContextSketches_[sketch]=true;
+    const auto steps = storyboard();
+    const int stop = std::min(storyboardPosition(), storyboardIndex(true, activeSketch_));
+    int end = 0;
+    sketchContextSketches_.fill(false, sketches_.size());
+    sketchContextSketches_[activeSketch_] = true;
+    for (int p = 0; p < stop; ++p) {
+        if (steps.at(p).sketch) sketchContextSketches_[steps.at(p).index] = true;
+        else ++end;
+    }
+    sketchContextEnd_ = end;
+    sketchContextBodies_.fill(false, extrusions_.size());
+    for (int i = 0; i < end; ++i) {
+        const auto &feature = extrusions_.at(i);
+        if (!ForgeCad::isShapeBody(feature)) sketchContextBodies_[i] = feature.visible && !feature.suppressed && feature.error.isEmpty();
     }
     // Gli stadi precedenti esistono gia nel kernel: ripristinare solo la loro
     // visibilita di scena, senza spostare il cursore o modificare preferenze/undo.
@@ -211,12 +228,103 @@ void CadViewport::applyHistoryPosition() {
 }
 
 void CadViewport::setHistoryPosition(int position) {
-    for (ExtrusionObject &feature : extrusions_)
-        for (const ModelBody &body : modelBodies_)
-            if (feature.modelBodyId == body.id) feature.visible = feature.featureId == body.tipFeatureId && body.visible;
-    historyPosition_ = position >= extrusions_.size() ? -1 : qMax(0, position);
+    const auto steps = storyboard();
+    int p = steps.size();
+    for (int i = 0; i < steps.size(); ++i) if (!steps.at(i).sketch && steps.at(i).index >= position) {
+        p = i;
+        while (p > 0 && steps.at(p-1).sketch) --p;
+        break;
+    }
+    setStoryboardPosition(position >= extrusions_.size() ? steps.size() : p);
+}
+
+QVector<StoryStep> CadViewport::storyboard() const { return ForgeCad::modelStory(sketches_, extrusions_); }
+
+int CadViewport::storyboardPosition() const { return storyPosition_ < 0 ? storyboard().size() : storyPosition_; }
+
+int CadViewport::storyboardIndex(bool sketch, int index) const {
+    const auto steps = storyboard();
+    for (int p = 0; p < steps.size(); ++p) if (steps.at(p).sketch == sketch && steps.at(p).index == index) return p;
+    return -1;
+}
+
+void CadViewport::setStoryboardPosition(int position) {
+    const auto steps = storyboard();
+    storyPosition_ = position >= steps.size() ? -1 : qBound(0, position, int(steps.size()));
+    historyPosition_ = -1;
+    if (storyPosition_ >= 0) {
+        historyPosition_ = 0;
+        for (int p = 0; p < storyPosition_; ++p) if (!steps.at(p).sketch) ++historyPosition_;
+    }
+    for (ExtrusionObject &feature : extrusions_) for (const ModelBody &body : modelBodies_)
+        if (feature.modelBodyId == body.id) feature.visible = feature.featureId == body.tipFeatureId && body.visible;
     selection_ = {};
     documentChanged();
+}
+
+QString CadViewport::moveStoryboardStep(int from, int to) {
+    if (documentReadOnly_) return QStringLiteral("Documento in sola lettura: eseguire il check-out.");
+    if (sketchMode_) return QStringLiteral("Termina la modifica dello schizzo prima di riordinare la storia.");
+    auto steps = storyboard();
+    if (from < 0 || to < 0 || from >= steps.size() || to >= steps.size()) return QStringLiteral("Posizione della storia non valida.");
+    if (from == to) return {};
+    const StoryStep moved = steps.takeAt(from);
+    steps.insert(to, moved);
+    const QString error = ForgeCad::storySketchDependencyError(sketches_, extrusions_, steps);
+    if (!error.isEmpty()) return error;
+    if (!moved.sketch) {
+        QVector<int> featureOrder;
+        for (const auto &step : steps) if (!step.sketch) featureOrder.append(step.index);
+        const int destination = featureOrder.indexOf(moved.index);
+        if (destination != moved.index) {
+            const int target = featureOrder.at(destination < moved.index ? destination + 1 : destination - 1);
+            return reorderFeatureTo(moved.index, target, steps);
+        }
+    }
+    recordUndo();
+    ForgeCad::placeStorySketches(sketches_, extrusions_, steps);
+    storyPosition_ = historyPosition_ = -1;
+    selection_ = {moved.sketch ? SceneObjectKind::Sketch : SceneObjectKind::Extrusion, moved.index, -1};
+    documentChanged();
+    return {};
+}
+
+QString CadViewport::changeSketchSupport(int index, GeometryRef reference) {
+    if (documentReadOnly_) return QStringLiteral("Documento in sola lettura: eseguire il check-out.");
+    if (sketchMode_) return QStringLiteral("Termina la modifica dello schizzo prima di sostituire il piano.");
+    if (index < 0 || index >= sketches_.size() || (reference.kind != 1 && reference.kind != 5 && reference.kind != 8))
+        return QStringLiteral("Scegli un piano di origine, un piano di costruzione o una faccia piana.");
+    if (ForgeCad::isBodyRef(reference)) {
+        if (reference.index < 0 || reference.index >= extrusions_.size()) return QStringLiteral("Riferimento non valido.");
+        reference.featureId = extrusions_.at(reference.index).featureId;
+        if (storyboardIndex(false, reference.index) >= storyboardIndex(true, index))
+            return QStringLiteral("Il piano di riferimento deve precedere lo schizzo nella storia.");
+    }
+    ForgeCad::ResolvedRef resolved;
+    QString error;
+    if (!ForgeCad::resolveGeometryRef(reference, extrusions_.size(), sketches_, extrusions_, resolved, &error) || !resolved.hasPlane)
+        return error.isEmpty() ? QStringLiteral("Il riferimento non e' un piano valido.") : error;
+    SketchObject next = sketches_.at(index);
+    next.plane = reference.kind == 1 ? reference.index : kFacePlane;
+    next.datumPlane = reference.kind == 8 ? reference.index : -1;
+    next.support = reference.kind != 1 ? std::make_shared<GeometryRef>(reference) : nullptr;
+    next.supportError.clear();
+    next.customFrame = true;
+    if (reference.kind == 1) next.frame = ForgeCad::referenceSketchFrame(reference.index, camera_.orientation_);
+    else {
+        SketchFrame plane;
+        for (int k = 0; k < 3; ++k) { plane.origin[k] = resolved.point[k]; plane.normal[k] = resolved.direction[k]; }
+        if (reference.kind == 8) plane = extrusions_.at(reference.index).datumFrame;
+        else plane = ForgeCad::faceSketchFrame(resolved.point, resolved.direction, ForgeCad::Kernel::Vec3(0,0,1));
+        next.frame = datumSketchFrame(plane, &next.frame);
+    }
+    next.faceSource = reference.kind == 1 ? QString() : extrusions_.at(reference.index).name;
+    recordUndo();
+    sketches_[index] = std::move(next);
+    regenerateFrom(0, {}, QSet<int>{index});
+    selection_ = {SceneObjectKind::Sketch, index, -1};
+    documentChanged();
+    return {};
 }
 
 QVector<int> CadViewport::resultBodiesBefore(int position) const {
@@ -456,23 +564,23 @@ void CadViewport::deleteFeatures(const QVector<int> &indices) {
 }
 
 QString CadViewport::moveFeature(int index, int direction) {
-    if (index < 0 || index >= extrusions_.size() || !extrusions_.at(index).modelBodyId)
-        return QStringLiteral("Feature non valida.");
-    // Un passo nella storia (le feature di tutti i corpi, nell'ordine di calcolo).
-    QVector<int> chain;
-    for (int candidate = 0; candidate < extrusions_.size(); ++candidate)
-        if (extrusions_.at(candidate).modelBodyId) chain.append(candidate);
-    const int position = chain.indexOf(index), destination = position + (direction < 0 ? -1 : 1);
-    if (position < 0 || destination < 0 || destination >= chain.size()) return QStringLiteral("Non ci sono altre feature in quella direzione.");
-    return moveFeatureTo(index, chain.at(destination));
+    QVector<int> features;
+    for (int f = 0; f < extrusions_.size(); ++f) if (extrusions_.at(f).modelBodyId) features.append(f);
+    const int from = features.indexOf(index), to = from + (direction < 0 ? -1 : 1);
+    if (from < 0 || to < 0 || to >= features.size()) return QStringLiteral("Non ci sono altre feature in quella direzione.");
+    return moveFeatureTo(index, features.at(to));
 }
 
 QString CadViewport::moveFeatureTo(int index, int target) {
+    return moveStoryboardStep(storyboardIndex(false, index), storyboardIndex(false, target));
+}
+
+QString CadViewport::reorderFeatureTo(int index, int target, const QVector<StoryStep> &steps) {
     if(documentReadOnly_)return QStringLiteral("Documento in sola lettura: eseguire il check-out.");
     // La storia e' una sola sequenza: il bersaglio puo' essere una feature
     // di un altro corpo, conta solo che le dipendenze restino prima.
     if (index < 0 || index >= extrusions_.size() || target < 0 || target >= extrusions_.size()
-        || !extrusions_.at(index).modelBodyId || !extrusions_.at(target).modelBodyId)
+        || !extrusions_.at(index).modelBodyId)
         return QStringLiteral("Feature non valida.");
     if (index == target) return {};
     const quint64 bodyId = extrusions_.at(index).modelBodyId;
@@ -561,14 +669,15 @@ QString CadViewport::moveFeatureTo(int index, int target) {
                     .arg(reordered.at(current).name);
 
     recordUndo();
+    ForgeCad::placeStorySketches(sketches_, extrusions_, steps);
+    storyPosition_ = historyPosition_ = -1;
     extrusions_ = std::move(reordered);
     int tip = -1;
     for (int candidate = extrusions_.size() - 1; candidate >= 0; --candidate)
         if (extrusions_.at(candidate).modelBodyId == bodyId && !extrusions_.at(candidate).suppressed) { tip = candidate; break; }
     for (int candidate = 0; candidate < extrusions_.size(); ++candidate)
         if (extrusions_.at(candidate).modelBodyId == bodyId) extrusions_[candidate].visible = candidate == tip && bodyVisible;
-    for (SketchObject &sketch : sketches_)
-        if (sketch.datumPlane >= 0) sketch.datumPlane = mapped(sketch.datumPlane);
+    ForgeCad::remapSketchSupports(sketches_, mapped);
     regenerateAll();
     const int moved = map.value(index, -1);
     selection_ = moved >= 0 ? SceneSelection{SceneObjectKind::Extrusion, moved, -1} : SceneSelection{};
@@ -763,6 +872,8 @@ QString CadViewport::booleanOperandsError(BooleanOperation operation, const Extr
 
 QString CadViewport::updateBody(int index, const ExtrusionObject &definition) {
     if(documentReadOnly_)return QStringLiteral("Documento in sola lettura: eseguire il check-out.");
+    const QString positionError = sketchPositionError(*this, definition, storyboardIndex(false, index));
+    if (!positionError.isEmpty()) return positionError;
     if (index < 0 || index >= extrusions_.size()) return QStringLiteral("Corpo non valido.");
     if (definition.operation >= 0) {
         if (definition.firstBody < 0 || definition.secondBody < 0 || definition.firstBody >= index || definition.secondBody >= index)
@@ -980,6 +1091,8 @@ QString CadViewport::createExtrusion(const ExtrusionObject &definition, const QS
     extrusion.feature = BodyFeature::Extrusion;
     extrusion.name = name;
     extrusion.sketchIndex = sketch;
+    const QString positionError = sketchPositionError(*this, extrusion);
+    if (!positionError.isEmpty()) return positionError;
     extrusion.plane = sketches_.at(sketch).plane;
     rebuildBody(extrusion, int(extrusions_.size()));
     extrusion.mergeProbe = false;
@@ -1000,6 +1113,8 @@ QString CadViewport::createRevolution(int sketchIndex, int axis, double angle, c
     revolution.name = name;
     revolution.feature = BodyFeature::Revolution;
     revolution.sketchIndex = sketchIndex;
+    const QString positionError = sketchPositionError(*this, revolution);
+    if (!positionError.isEmpty()) return positionError;
     revolution.plane = sketches_.at(sketchIndex).plane;
     revolution.revolveAxis = axis;
     revolution.revolveAngle = angle;
@@ -1089,6 +1204,8 @@ QString CadViewport::createSheetTrim(int sheet, int tool, int plane, const EdgeP
 
 QString CadViewport::createSheetTrim(const ExtrusionObject &definition, const QString &name) {
     if(documentReadOnly_)return QStringLiteral("Documento in sola lettura: eseguire il check-out.");
+    const QString positionError = sketchPositionError(*this, definition);
+    if (!positionError.isEmpty()) return positionError;
     const int sheet = definition.firstBody, tool = definition.secondBody;
     const bool both = definition.trimBoth;
     if (sheet < 0 || sheet >= extrusions_.size() || tool >= extrusions_.size() || tool == sheet)
@@ -1214,6 +1331,8 @@ QString CadViewport::createScale(int base, double factor, int mode, const EdgePo
 
 QString CadViewport::createBody(ExtrusionObject body, const QVector<int> &hide ) {
     if(documentReadOnly_)return QStringLiteral("Documento in sola lettura: eseguire il check-out.");
+    const QString positionError = sketchPositionError(*this, body);
+    if (!positionError.isEmpty()) return positionError;
     body = withMergeCandidates(body, int(extrusions_.size()));
     QString previewError;
     if (takePreviewResult(body, -1, &previewError)) {
@@ -1288,7 +1407,7 @@ bool CadViewport::previewDatum(const DatumParameters &parameters, int index, Ske
 
 int CadViewport::createDatumSketch(int body, const QString &name) {
     if(documentReadOnly_)return -1;
-    if (body < 0 || body >= extrusions_.size() || !ForgeCad::isDatumBody(extrusions_.at(body)) || !extrusions_.at(body).datumValid) return -1;
+    if (body < 0 || body >= historyPosition() || body >= extrusions_.size() || !ForgeCad::isDatumBody(extrusions_.at(body)) || !extrusions_.at(body).datumValid) return -1;
     if (sketchMode_) endSketchMode();
     if (edgePicking_) cancelEdgePick();
     SketchObject sketch;
@@ -1438,9 +1557,21 @@ void CadViewport::selectionChanged() {
     if (constraintPanelCallback_) constraintPanelCallback_();
 }
 
-void CadViewport::recordUndo() { insertionSourceSize_ = extrusions_.size(); history_.record(documentState()); }
+void CadViewport::recordUndo() {
+    insertionSourceSize_ = extrusions_.size();
+    insertionSketchSourceSize_ = sketches_.size();
+    history_.record(documentState());
+}
 
 void CadViewport::documentChanged() {
+    const int insertionPosition = storyPosition_;
+    const int addedFeatures = insertionSourceSize_ < 0 ? 0 : int(extrusions_.size()) - insertionSourceSize_;
+    const int addedSketches = insertionSketchSourceSize_ < 0 ? 0 : int(sketches_.size()) - insertionSketchSourceSize_;
+    QSet<quint64> newFeatureIds;
+    if (addedFeatures > 0) {
+        ForgeCad::normalizeModelHistory(extrusions_, modelBodies_);
+        for (int i = insertionSourceSize_; i < extrusions_.size(); ++i) newFeatureIds.insert(extrusions_.at(i).featureId);
+    }
 
     for (ExtrusionObject &feature : extrusions_)
         if (historyPosition_ >= 0 || (consumedBodies_.contains(feature.modelBodyId) && !feature.visible))
@@ -1507,8 +1638,7 @@ void CadViewport::documentChanged() {
                 previous = current;
             }
         }
-        for (SketchObject &sketch : sketches_)
-            if (sketch.datumPlane >= 0) sketch.datumPlane = mapped(sketch.datumPlane);
+        ForgeCad::remapSketchSupports(sketches_, mapped);
         if (selection_.kind == SceneObjectKind::Extrusion) selection_.index = mapped(selection_.index);
         extrusions_ = std::move(reordered);
         historyPosition_ = start + added;
@@ -1517,6 +1647,33 @@ void CadViewport::documentChanged() {
     insertionSourceSize_ = -1;
     if (historyPosition_ > extrusions_.size()) historyPosition_ = extrusions_.size();
     ForgeCad::normalizeModelHistory(extrusions_, modelBodies_);
+    ForgeCad::normalizeSketchHistory(sketches_, extrusions_);
+    if (addedFeatures > 0 || addedSketches > 0) {
+        auto steps = storyboard();
+        QVector<StoryStep> old, added;
+        for (const auto &step : steps) {
+            const bool fresh = step.sketch ? addedSketches > 0 && step.index >= insertionSketchSourceSize_
+                                           : newFeatureIds.contains(extrusions_.at(step.index).featureId);
+            (fresh ? added : old).append(step);
+        }
+        int at = insertionPosition < 0 ? int(old.size()) : qBound(0, insertionPosition, int(old.size()));
+        for (const auto &step : added) old.insert(at++, step);
+        ForgeCad::placeStorySketches(sketches_, extrusions_, old);
+        if (insertionPosition >= 0) {
+            storyPosition_ = at;
+            historyPosition_ = 0;
+            for (int p = 0; p < at; ++p) if (!old.at(p).sketch) ++historyPosition_;
+        }
+    }
+    insertionSketchSourceSize_ = -1;
+    const auto currentStory = storyboard();
+    if (storyPosition_ >= currentStory.size()) storyPosition_ = historyPosition_ = -1;
+    else if (storyPosition_ >= 0) {
+        // Anche eliminazioni e riordini possono cambiare quanti corpi
+        // precedono il cursore: il prefisso geometrico deriva dalla storia.
+        historyPosition_ = 0;
+        for (int p = 0; p < storyPosition_; ++p) if (!currentStory.at(p).sketch) ++historyPosition_;
+    }
     applyHistoryPosition();
     refreshSketchContext();
     sceneBoundsDirty_ = true;
@@ -1577,6 +1734,16 @@ void CadViewport::refreshSurfacePierceSketches(int sourceIndex,QSet<int> &change
 void CadViewport::regenerateFrom(int from, QVector<bool> dirty, QSet<int> dirtySketches, bool all ,
                         const std::function<void(int, int, const QString &)> &progress ) {
     dirty.resize(extrusions_.size());
+    for (int s = 0; s < sketches_.size(); ++s) if (sketches_.at(s).support) {
+        const auto &ref = *sketches_.at(s).support;
+        bool found = false;
+        for (int f = 0; f < extrusions_.size(); ++f)
+            if (ref.featureId ? extrusions_.at(f).featureId == ref.featureId : f == ref.index) { found = true; break; }
+        if (!found) {
+            sketches_[s].supportError = QStringLiteral("La lavorazione della faccia di appoggio e' stata eliminata.");
+            dirtySketches.insert(s);
+        }
+    }
     refreshSurfacePierceSketches(-2,dirtySketches);
     const QSet<int> targets=dirtySketches;
     for (int sketch : targets) refreshSurfacePierceSketches(-1,dirtySketches,sketch);
@@ -1600,8 +1767,11 @@ void CadViewport::regenerateFrom(int from, QVector<bool> dirty, QSet<int> dirtyS
         dirty[index] = true;
         if (!ForgeCad::isDatumBody(body)) {
             pending.append(index);
-            if (hasSurfacePierceSource(index)) {
+            bool attached = false;
+            for (const auto &sketch : sketches_) if (sketch.support && sketch.support->featureId == body.featureId) attached = true;
+            if (hasSurfacePierceSource(index) || attached) {
                 flush();
+                followDatum(index, dirtySketches);
                 refreshSurfacePierceSketches(index,dirtySketches);
             }
             continue;
@@ -1666,19 +1836,33 @@ void CadViewport::rebuildParallel(const QVector<int> &indices,
 }
 
 void CadViewport::followDatum(int index, QSet<int> &changed) {
-    if (index < 0 || index >= extrusions_.size() || !extrusions_.at(index).datumValid) return;
-    const SketchFrame &datum = extrusions_.at(index).datumFrame;
+    if (index < 0 || index >= extrusions_.size()) return;
     for (int s = 0; s < sketches_.size(); ++s) {
         SketchObject &sketch = sketches_[s];
-        if (sketch.datumPlane != index || sketch.plane != kFacePlane) continue;
+        const bool datum = sketch.datumPlane == index;
+        const bool face = sketch.support && (sketch.support->featureId ? sketch.support->featureId == extrusions_.at(index).featureId
+                                                                      : sketch.support->index == index);
+        if ((!datum && !face) || sketch.plane != kFacePlane) continue;
+        SketchFrame plane;
+        QString error;
+        if (datum) {
+            if (!extrusions_.at(index).datumValid || !extrusions_.at(index).error.isEmpty()) error = QStringLiteral("Piano di costruzione non valido.");
+            else plane = extrusions_.at(index).datumFrame;
+        } else {
+            ForgeCad::ResolvedRef resolved;
+            if (!ForgeCad::resolveGeometryRef(*sketch.support, extrusions_.size(), sketches_, extrusions_, resolved, &error) || !resolved.hasPlane)
+                error = error.isEmpty() ? QStringLiteral("La faccia di appoggio non e' piu' un piano risolvibile.") : error;
+            else plane = ForgeCad::faceSketchFrame(resolved.point, resolved.direction, ForgeCad::Kernel::Vec3(0,0,1));
+        }
         const SketchFrame before = sketch.frame;
-        SketchFrame frame = datumSketchFrame(datum, &before);
-        bool same = true;
+        const QString beforeError = sketch.supportError;
+        sketch.supportError = error;
+        if (error.isEmpty()) sketch.frame = datumSketchFrame(plane, &before);
+        bool same = beforeError == error;
         for (int k = 0; k < 3; ++k)
-            same = same && frame.origin[k] == before.origin[k] && frame.xAxis[k] == before.xAxis[k] && frame.normal[k] == before.normal[k];
-        if (same) continue;
-        sketch.frame = frame;
-        changed.insert(s);
+            same = same && sketch.frame.origin[k] == before.origin[k] && sketch.frame.xAxis[k] == before.xAxis[k]
+                        && sketch.frame.normal[k] == before.normal[k];
+        if (!same) changed.insert(s);
     }
 }
 
@@ -1716,6 +1900,19 @@ void CadViewport::removeBodies(const QSet<int> &removed) {
     // annullarla prima di eliminare o rinumerare i corpi, anche se la base
     // selezionata sopravvive con un indice diverso.
     if (!removed.isEmpty() && edgePicking_) cancelEdgePick();
+    // Eliminare il passo seguente non deve trascinare lo schizzo alla fine:
+    // conserva il suo intervallo e l'ordine rispetto agli altri schizzi.
+    const auto previousStory = storyboard();
+    for (int p = 0; p < previousStory.size(); ++p)
+        if (previousStory.at(p).sketch) sketches_[previousStory.at(p).index].storyOrder = p;
+    QHash<quint64, quint64> successors;
+    quint64 nextFeature = 0;
+    for (int f = extrusions_.size()-1; f >= 0; --f) {
+        if (removed.contains(f)) successors.insert(extrusions_.at(f).featureId, nextFeature);
+        else nextFeature = extrusions_.at(f).featureId;
+    }
+    for (auto &sketch : sketches_)
+        if (successors.contains(sketch.beforeFeatureId)) sketch.beforeFeatureId = successors.value(sketch.beforeFeatureId);
     QVector<int> map(extrusions_.size(), -1);
     QVector<ExtrusionObject> kept;
     for (int index = 0; index < extrusions_.size(); ++index) {
@@ -1755,8 +1952,7 @@ void CadViewport::removeBodies(const QSet<int> &removed) {
         }
     }
     // Gli schizzi su un piano di costruzione eliminato restano dove sono (piano fisso).
-    for (SketchObject &sketch : sketches_)
-        if (sketch.datumPlane >= 0) sketch.datumPlane = map.value(sketch.datumPlane, -1);
+    ForgeCad::remapSketchSupports(sketches_, [&](int old) { return old < 0 ? old : map.value(old, -1); });
     extrusions_ = std::move(kept);
     QSet<int> changed;
     refreshSurfacePierceSketches(-1,changed);
@@ -1768,8 +1964,8 @@ void CadViewport::regenerateAfter(int changed) {
     QSet<int> sketches;
     if (changed >= 0 && changed < dirty.size()) {
         dirty[changed] = true;
-        if (ForgeCad::isDatumBody(extrusions_.at(changed))) { followDatum(changed, sketches); refreshSurfacePierceSketches(-1,sketches); }
-        else refreshSurfacePierceSketches(changed,sketches);
+        followDatum(changed, sketches);
+        refreshSurfacePierceSketches(ForgeCad::isDatumBody(extrusions_.at(changed)) ? -1 : changed, sketches);
     }
     regenerateFrom(changed + 1, dirty, sketches);
 }
@@ -1836,6 +2032,8 @@ void CadViewport::restoreDocument(DocumentState state) {
     dimensionPlacing_ = -1;
     ForgeCad::normalizeModelHistory(state);
     sketches_ = std::move(state.sketches);
+    storyPosition_ = -1;
+    insertionSketchSourceSize_ = -1;
     historyPosition_ = -1;
     insertionSourceSize_ = -1;
     extrusions_ = std::move(state.extrusions);
