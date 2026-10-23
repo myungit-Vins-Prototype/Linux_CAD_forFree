@@ -80,7 +80,7 @@ DESCRIPTIONS = {
 
 # Catalogo dei moduli applicativi: descrizioni specifiche condivise da header e sorgente.
 DESCRIPTIONS.update({'tools/open_architecture.py': ('build', 'Avvio locale della mappa: aggiorna i dati a ogni apertura e li mostra nel browser con avanzamento ed errori.'), 'CMakeLists.txt': ('build',
-                    'Definisce eseguibile, dipendenze, sorgenti e suite di test dell’applicazione.'),
+                    'Definisce eseguibile, dipendenze, sorgenti e suite; collega i runner delle tavole ai popup condivisi senza viewport 3D.'),
  'cad_constraints': ('sketch', 'Definisce e applica vincoli geometrici e dimensionali degli sketch.'),
  'cad_cuda_tessellation': ('analysis', 'Adatta il calcolo di tessellazione ai percorsi accelerati CUDA.'),
  'cad_curve_extract': ('features',
@@ -156,7 +156,7 @@ DESCRIPTIONS.update({'tools/open_architecture.py': ('build', 'Avvio locale della
  'cad_macos_menu': ('startup', 'Integrazione dei menu con il comportamento nativo di macOS.'),
  'cad_mass': ('analysis', 'Calcola proprietà di massa, area, volume e momenti dei corpi.'),
  'cad_measure': ('analysis', 'Misura distanze e relazioni tra entità selezionate sulla geometria esatta.'),
- 'forgeCad2026_menu.cpp': ('startup', 'Menu con Fusion esplicito per isolare gli effetti desktop, fondale sfocato, ombra e diagnostica per strati; cache aggiornate al cambio tema.'),
+ 'forgeCad2026_menu.cpp': ('startup', 'Menu con Fusion esplicito, fondale sfocato, ombra e diagnostica; integrazione viewport nell’app e variante autonoma condivisa dai runner delle tavole.'),
  'forgeCad2026_ui_glass': ('startup', 'Aspetto condiviso di vetro UI: impostazioni, palette, sfocatura CPU e ombre arrotondate memorizzate.'),
  'cad_menu.h': ('startup', 'Popup comuni: palette della finestra, angoli antialias e padding dal raggio dei pannelli, spunte separate dalle icone.'),
  'cad_model_history': ('features',

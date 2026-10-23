@@ -27,7 +27,32 @@ void ok(QString s){if(!s.isEmpty())throw std::runtime_error(s.toStdString());}
 QByteArray bytes(const DrawingSheet &s){QByteArray b;ok(encodeDrawingSheet(s,b));return b;}
 void move(DrawingSheetEditor &e,QPointF p,int phase){auto *v=e.canvas();const QPointF local=v->mapFromScene(p),global=v->viewport()->mapToGlobal(local.toPoint());QMouseEvent event(phase==0?QEvent::MouseButtonPress:phase==2?QEvent::MouseButtonRelease:QEvent::MouseMove,local,global,phase==1?Qt::NoButton:Qt::LeftButton,phase==2?Qt::NoButton:Qt::LeftButton,Qt::NoModifier);QApplication::sendEvent(v->viewport(),&event);}
 QGraphicsItem *find(DrawingSheetEditor &e,QString kind,QUuid id={},int end=-1){QApplication::processEvents();for(auto *item:e.canvas()->scene()->items())if(item->data(0).toString()==kind&&(id.isNull()||item->data(3).toUuid()==id)&&(end<0||item->data(2).toInt()==end))return item;throw std::runtime_error(("missing "+kind).toStdString());}
-void menus(){const auto original=QApplication::palette();for(bool dark:{false,true}){auto palette=original;palette.setColor(QPalette::Window,dark?QColor("#202d36"):QColor("#f2f2f2"));palette.setColor(QPalette::WindowText,dark?Qt::white:Qt::black);QApplication::setPalette(palette);CadMenu menu;auto *checked=menu.addAction("Voce selezionabile");checked->setCheckable(true);checked->setChecked(true);menu.addSeparator();menu.addAction("Disabilitata")->setEnabled(false);menu.popup({100,100});QApplication::processEvents();const auto image=menu.grab().toImage();const auto color=image.pixelColor(image.width()/2,image.height()-5);std::cerr<<"menu dark="<<dark<<" pixel="<<color.name().toStdString()<<" alpha="<<color.alpha()<<std::endl;if(!qEnvironmentVariable("FORGECAD_UI_OUTPUT").isEmpty())image.save(qEnvironmentVariable("FORGECAD_UI_OUTPUT")+(dark?"/menu-dark.png":"/menu-light.png"));need(dark?color.lightness()<100:color.lightness()>180,"menu surface follows light/dark theme");menu.close();}QApplication::setPalette(original);}
+void menus() {
+    const auto original=QApplication::palette();
+    for(bool dark:{false,true}) {
+        auto palette=original;
+        palette.setColor(QPalette::Window,dark?QColor("#202d36"):QColor("#f2f2f2"));
+        palette.setColor(QPalette::WindowText,dark?Qt::white:Qt::black);
+        QApplication::setPalette(palette);
+        CadMenu menu;
+        auto *checked=menu.addAction("Voce selezionabile");
+        checked->setCheckable(true);checked->setChecked(true);
+        menu.addSeparator();menu.addAction("Disabilitata")->setEnabled(false);
+        menu.popup({100,100});QApplication::processEvents();
+        const auto image=menu.grab().toImage();
+        // Il margine esterno contiene l'ombra trasparente; campiona il padding
+        // interno sotto l'ultima voce, senza attraversare testo, icone o angoli.
+        const auto sample=QPointF(menu.width()/2.0,menu.actionGeometry(menu.actions().back()).bottom()+3)*image.devicePixelRatio();
+        const auto color=image.pixelColor(sample.toPoint());
+        need(color.alpha()>200,"menu interior contains the glass surface");
+        std::cerr<<"menu dark="<<dark<<" pixel="<<color.name().toStdString()<<" alpha="<<color.alpha()<<std::endl;
+        if(!qEnvironmentVariable("FORGECAD_UI_OUTPUT").isEmpty())
+            image.save(qEnvironmentVariable("FORGECAD_UI_OUTPUT")+(dark?"/menu-dark.png":"/menu-light.png"));
+        need(dark?color.lightness()<100:color.lightness()>180,"menu surface follows light/dark theme");
+        menu.close();
+    }
+    QApplication::setPalette(original);
+}
 void menuIcons() {
     CadMenu menu;
     QPixmap marker(16,16); marker.fill(QColor(255,0,255));

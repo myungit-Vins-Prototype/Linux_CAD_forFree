@@ -1,7 +1,9 @@
 #include "cad_menu.h"
 #include "forgeCad2026_ui_glass.h"
+#ifndef FORGECAD_MENU_STANDALONE
 #include "forgeCad2026_viewport.h"
 #include <QOpenGLWidget>
+#endif
 #include <QPointer>
 #include <QTimer>
 #include <QShowEvent>
@@ -26,8 +28,10 @@ struct CadMenu::Impl {
     QTimer captureTimer,settingsTimer,diagnosticsTimer;
     int diagnosticsCount=0;
     QImage backdrop,shadow,surface;
+#ifndef FORGECAD_MENU_STANDALONE
     QPointer<CadViewport> viewport;
     quint64 frameSerial=0;
+#endif
     bool capturing=false,reloading=false;
     QRect body() const {return self->rect().adjusted(shadowMargin,shadowMargin,-shadowMargin,-shadowMargin);}
     explicit Impl(CadMenu *owner):self(owner) {
@@ -106,12 +110,14 @@ struct CadMenu::Impl {
         QWidget *root=self->parentWidget();while(root && root->parentWidget())root=root->parentWidget();return root;
     }
     void locateViewport() {
+#ifndef FORGECAD_MENU_STANDALONE
         if(viewport)return;
         if(auto *root=ownerWindow())for(auto *gl:root->findChildren<QOpenGLWidget *>())if(auto *cad=dynamic_cast<CadViewport *>(gl)) {
             viewport=cad;
             QObject::connect(cad,&QOpenGLWidget::frameSwapped,self,[this]{if(viewport && viewport->renderedFrameSerial()!=frameSerial)schedule(80);},Qt::QueuedConnection);
             break;
         }
+#endif
     }
     void schedule(int delay=0) {
         if(self->isVisible() && (!captureTimer.isActive() || delay==0))captureTimer.start(delay);
@@ -133,7 +139,9 @@ struct CadMenu::Impl {
         }
         scene=ForgeCad::blurUiImage(std::move(scene),qRound(appearance.blur*dpr));
         backdrop=scene.copy(qRound(margin*dpr),qRound(margin*dpr),qCeil(self->width()*dpr),qCeil(self->height()*dpr));backdrop.setDevicePixelRatio(dpr);
+#ifndef FORGECAD_MENU_STANDALONE
         if(viewport)frameSerial=viewport->renderedFrameSerial();
+#endif
         capturing=false;surface=QImage();self->setProperty("glassBackdropReady",!visible.isEmpty());self->update();
     }
 };
