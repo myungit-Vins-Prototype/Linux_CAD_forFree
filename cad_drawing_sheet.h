@@ -13,6 +13,11 @@ namespace ForgeCad {
 enum class DrawingDerivedKind { None, Orthographic, Section, Detail, Auxiliary };
 enum class DrawingProjectionSide { Left, Right, Above, Below };
 enum class DrawingProjectionMethod { FirstAngle, ThirdAngle };
+// Intervallo rimosso nel piano della vista (mm modello); gap sul foglio (mm).
+struct DrawingViewBreak {
+    bool vertical=false;
+    double start=0,end=0,gap=6;
+};
 struct DrawingViewRelation {
     QUuid parentId;
     DrawingDerivedKind kind=DrawingDerivedKind::None;
@@ -37,6 +42,7 @@ struct DrawingViewLayout {
     bool showCenterMarks=false,showCenterLines=false; // cerchi/ellissi esatti della vista
     bool showCylinderAxes=false; // asse delle superfici cilindriche, sola presentazione
     std::optional<QPointF> titleOffset={}; // origine del titolo rispetto alla vista, mm sul foglio
+    std::optional<DrawingViewBreak> interruption={}; // sola presentazione, misure originali
 };
 struct DrawingDimensionLayout {
     QUuid dimensionId;

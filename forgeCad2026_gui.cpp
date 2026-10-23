@@ -304,6 +304,8 @@ struct PdfWindow::WindowSetup {
     QAction * threePointArcTool{};
     QAction * tangentArcTool{};
     QAction * polygonTool{};
+    QAction * slotTool{};
+    QAction * pointTool{};
     QAction * rectangleTool{};
     QAction * centerRectangleTool{};
     QAction * ellipseTool{};
@@ -2700,6 +2702,8 @@ void PdfWindow::initializeSketchCommands(WindowSetup &setup) {
     auto &threePointArcTool = setup.threePointArcTool;
     auto &tangentArcTool = setup.tangentArcTool;
     auto &polygonTool = setup.polygonTool;
+    auto &slotTool = setup.slotTool;
+    auto &pointTool = setup.pointTool;
     auto &rectangleTool = setup.rectangleTool;
     auto &centerRectangleTool = setup.centerRectangleTool;
     auto &ellipseTool = setup.ellipseTool;
@@ -2793,6 +2797,10 @@ void PdfWindow::initializeSketchCommands(WindowSetup &setup) {
     tangentArcTool = addTool(QStringLiteral("Arco tangente"), DrawingTool::TangentArc, false);
     tangentArcTool->setToolTip(QStringLiteral("Arco tangente: clic sull'estremo di un segmento o di un arco, poi la fine"));
     polygonTool = addTool(QStringLiteral("Poligono"), DrawingTool::Polygon, false);
+    slotTool = addTool(QStringLiteral("Asola"), DrawingTool::Slot, false);
+    slotTool->setToolTip(QStringLiteral("Asola rettilinea: due centri, poi larghezza; lati e archi tangenti"));
+    pointTool = addTool(QStringLiteral("Punto"), DrawingTool::Point, false);
+    pointTool->setToolTip(QStringLiteral("Punto autonomo di riferimento: clic per inserirlo, Selezione per spostarlo"));
     rectangleTool = addTool(QStringLiteral("Rettangolo (due angoli)"), DrawingTool::Rectangle, false);
     rectangleTool->setToolTip(QStringLiteral("Rettangolo: due angoli opposti (Maiusc: quadrato); quattro segmenti orizzontali e verticali"));
     centerRectangleTool = addTool(QStringLiteral("Rettangolo dal centro"), DrawingTool::CenterRectangle, false);
@@ -3272,6 +3280,8 @@ void PdfWindow::initializeToolbarsAndStatus(WindowSetup &setup) {
     auto &threePointArcTool = setup.threePointArcTool;
     auto &tangentArcTool = setup.tangentArcTool;
     auto &polygonTool = setup.polygonTool;
+    auto &slotTool = setup.slotTool;
+    auto &pointTool = setup.pointTool;
     auto &rectangleTool = setup.rectangleTool;
     auto &centerRectangleTool = setup.centerRectangleTool;
     auto &ellipseTool = setup.ellipseTool;
@@ -3337,7 +3347,7 @@ void PdfWindow::initializeToolbarsAndStatus(WindowSetup &setup) {
         {constructionTool, QStringLiteral("constructionLine")}, {splineTool, QStringLiteral("spline")}, {nurbsTool, QStringLiteral("nurbs")},
         {circleTool, QStringLiteral("circle")}, {arcTool, QStringLiteral("arcCenter")}, {threePointArcTool, QStringLiteral("arcThreePoint")},
         {tangentArcTool, QStringLiteral("arcTangent")}, {polygonTool, QStringLiteral("polygon")}, {polygonSidesAction, QStringLiteral("polygonSides")},
-        {rectangleTool, QStringLiteral("rectangle")}, {centerRectangleTool, QStringLiteral("centerRectangle")}, {ellipseTool, QStringLiteral("ellipse")},
+        {slotTool, QStringLiteral("slot")}, {pointTool, QStringLiteral("point")}, {rectangleTool, QStringLiteral("rectangle")}, {centerRectangleTool, QStringLiteral("centerRectangle")}, {ellipseTool, QStringLiteral("ellipse")},
         {trimTool, QStringLiteral("trim")}, {extendTool, QStringLiteral("extend")}, {splitTool, QStringLiteral("split")},
         {sketchFilletTool, QStringLiteral("sketchFillet")}, {sketchChamferTool, QStringLiteral("sketchChamfer")},
         {toggleConstruction, QStringLiteral("toggleConstruction")}, {symmetryAxisAction, QStringLiteral("symmetryAxis")}, {constraintsAction, QStringLiteral("constraints")},
@@ -3580,6 +3590,8 @@ void PdfWindow::initializeToolbarsAndStatus(WindowSetup &setup) {
     drawingToolbar->addAction(selectTool); drawingToolbar->addSeparator();
     flyout(drawingToolbar, {lineTool, constructionTool}, QStringLiteral("Linee: la freccia per le altre"));
     drawingToolbar->addAction(polylineTool);
+    drawingToolbar->addAction(slotTool);
+    drawingToolbar->addAction(pointTool);
     flyout(drawingToolbar, {rectangleTool, centerRectangleTool}, QStringLiteral("Rettangoli: la freccia per gli altri"));
     drawingToolbar->addAction(circleTool);
     flyout(drawingToolbar, {arcTool, threePointArcTool, tangentArcTool}, QStringLiteral("Archi: la freccia per gli altri"));

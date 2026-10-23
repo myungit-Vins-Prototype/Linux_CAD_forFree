@@ -509,6 +509,8 @@ SketchElementSelection CadViewport::findSketchElement(const QPointF &point) cons
     }
     for (int index = 0; index < sketch.curves.size(); ++index) {
         const auto &samples = sketch.curves.at(index).samples;
+        if(sketch.curves.at(index).tool==DrawingTool::Point && samples.size()==1)
+            considerSegment(samples[0],samples[0],1,index);
         for (int sample = 1; sample < samples.size(); ++sample) {
             considerSegment(samples.at(sample - 1), samples.at(sample), 1, index);
         }
@@ -759,7 +761,7 @@ QVector<QPointF> CadViewport::snapCandidates(const SketchObject &sketch) const {
         if ((curve.tool == DrawingTool::Circle || curve.tool == DrawingTool::Arc
              || curve.tool == DrawingTool::Polygon) && !curve.controlPoints.isEmpty())
             points.append(curve.controlPoints.first());
-        if (curve.tool == DrawingTool::Spline || curve.tool == DrawingTool::Nurbs)
+        if (curve.tool == DrawingTool::Spline || curve.tool == DrawingTool::Nurbs || curve.tool == DrawingTool::Point)
             points += curve.controlPoints;
         if (curve.tool == DrawingTool::Ellipse && curve.controlPoints.size() >= 3) {
             const QPointF c = curve.controlPoints.at(0);

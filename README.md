@@ -30,6 +30,7 @@ L'interfaccia è in italiano. Il progetto è sviluppato con l'aiuto dell'intelli
 - Schizzi sui piani XY, XZ e YZ, su piani di costruzione e sulle facce piane dei corpi.
 - Linee, polilinee, linee di costruzione, cerchi, ellissi e poligoni con numero di lati configurabile.
 - Rettangoli per due angoli o dal centro, con possibilità di disegnare quadrati.
+- Asola rettilinea: due centri e larghezza, con segmenti e archi tangenti vincolati; punti autonomi selezionabili, trascinabili e quotabili, esclusi dai profili. Vedi [strumenti dello schizzo](docs/sketch-tools.md).
 - Archi da centro e estremi, per tre punti e tangenti a segmenti o archi.
 - Spline per punti e NURBS; modifica di punti e maniglie, inserimento e rimozione dei punti di controllo.
 - Opzioni per uniformare la curvatura delle spline, rilassare la curva e limitare le oscillazioni.
@@ -96,6 +97,10 @@ Il Loft accetta sezioni e guide da schizzi e bordi esatti, anche spaziali, con e
 - Grafo delle dipendenze tramite **Visualizza → Debug history / storyboard**.
 - Salvataggio delle definizioni parametriche e, facoltativamente, dei corpi già calcolati per accelerare la riapertura.
 - Blocco esclusivo dei documenti aperti e salvataggio tramite file temporaneo per proteggere la scrittura.
+
+### Tavole 2D
+
+Viste proiettate, sezioni, dettagli e ausiliarie; viste interrotte orizzontali o verticali con anteprima e quote del modello completo. Vedi [viste interrotte](docs/drawing-breaks.md) per uso e limiti.
 
 ### Visualizzazione e analisi
 

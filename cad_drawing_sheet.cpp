@@ -1,4 +1,5 @@
 #include "cad_drawing_sheet.h"
+#include "cad_drawing_break.h"
 #include "cad_drawing_annotations.h"
 #include "cad_drawing_derived.h"
 #include "cad_drawing_dimension.h"
@@ -50,6 +51,11 @@ void validate(const DrawingSheet &sheet){
     }
     require(!sheet.revisionTable.visible||sheet.size.width()>=195,"Foglio troppo stretto per la tabella revisioni: minimo 195 mm.");
     ok(validateDrawingRelations(sheet));
+    for(const auto &layout:sheet.views)if(layout.interruption){
+        const auto view=std::find_if(sheet.drawing.views.cbegin(),sheet.drawing.views.cend(),[&](const auto &v){return v.id==layout.viewId;});
+        require(view!=sheet.drawing.views.cend(),"Vista interrotta assente.");ok(validateDrawingBreak(*view,layout));
+        require(std::none_of(sheet.views.cbegin(),sheet.views.cend(),[&](const auto &v){return v.relation.parentId==layout.viewId;}),"La vista interrotta non puo' avere viste dipendenti: rimuovere prima l'interruzione.");
+    }
     require(sheet.axes.size()<=10000,"Troppi assi nella tavola.");QSet<QUuid> axisIds;
     for(const auto &v:sheet.drawing.views)axisIds.insert(v.id);
     for(const auto &d:sheet.drawing.dimensions)axisIds.insert(d.id);
@@ -118,6 +124,7 @@ QString encodeDrawingSheet(const DrawingSheet &sheet,QByteArray &bytes){
         validate(sheet);QByteArray document;ok(encodeDrawingDocument(sheet.drawing,document));QJsonArray views,dimensions;
         for(const auto &view:sheet.views){QJsonArray features;for(auto id:view.features)features.append(QString::number(id));
             QJsonObject object{{"id",view.viewId.toString(QUuid::WithoutBraces)},{"title",view.title},{"position",pointJson(view.position)},{"features",features}};
+            if(view.interruption){const auto &b=*view.interruption;object.insert("interruption",QJsonObject{{"vertical",b.vertical},{"start",b.start},{"end",b.end},{"gap",b.gap}});}
             if(view.titleOffset)object.insert("titleOffset",pointJson(*view.titleOffset));
             if(view.showHiddenLines)object.insert("showHiddenLines",true);
             if(view.showMesh)object.insert("showMesh",true);
@@ -134,7 +141,7 @@ QString encodeDrawingSheet(const DrawingSheet &sheet,QByteArray &bytes){
         bool styled=false;
         for(const auto &dimension:sheet.dimensions){QJsonObject item{{"id",dimension.dimensionId.toString(QUuid::WithoutBraces)},{"position",pointJson(dimension.position)}};
             const auto &p=dimension.presentation;if(p.active()){styled=true;item.insert("presentation",QJsonObject{{"mode",int(p.mode)},{"upper",p.upper},{"lower",p.lower},{"decimals",p.decimals},{"prefix",p.prefix},{"suffix",p.suffix}});if(p.reverseArrows){auto style=item["presentation"].toObject();style.insert("reverseArrows",true);item["presentation"]=style;}}dimensions.append(item);}
-        QJsonObject object{{"format","ForgeCAD.DrawingSheet"},{"schema",std::any_of(sheet.views.cbegin(),sheet.views.cend(),[](const auto &v){return v.relation.kind==DrawingDerivedKind::Auxiliary;})?13:sheet.style.textLayoutActive()?12:(std::any_of(sheet.axes.cbegin(),sheet.axes.cend(),[](const auto &a){return a.endExtension.has_value();})||std::any_of(sheet.dimensions.cbegin(),sheet.dimensions.cend(),[](const auto &d){return d.presentation.reverseArrows;}))?11:std::any_of(sheet.views.cbegin(),sheet.views.cend(),[](const auto &v){return v.relation.kind==DrawingDerivedKind::Detail;})?10:(sheet.style.extensionGap!=0||sheet.style.dimensionOffset!=0)?9:(sheet.style.active()||std::any_of(sheet.views.cbegin(),sheet.views.cend(),[](const auto &v){return v.titleOffset.has_value();}))?8:styled?7:!sheet.annotations.isEmpty()?6:drawingNeedsAxisSchema(sheet.drawing)?5:!sheet.axes.isEmpty()?4:(drawingNeedsSectionSchema(sheet.drawing)||std::any_of(sheet.views.cbegin(),sheet.views.cend(),[](const auto &v){return v.relation.parentId.isNull()&&!v.relation.hatch;}))?3:std::any_of(sheet.views.cbegin(),sheet.views.cend(),[](const auto &v){return !v.relation.parentId.isNull();})?2:1},{"title",sheet.title},
+        QJsonObject object{{"format","ForgeCAD.DrawingSheet"},{"schema",std::any_of(sheet.views.cbegin(),sheet.views.cend(),[](const auto &v){return v.interruption.has_value();})?14:std::any_of(sheet.views.cbegin(),sheet.views.cend(),[](const auto &v){return v.relation.kind==DrawingDerivedKind::Auxiliary;})?13:sheet.style.textLayoutActive()?12:(std::any_of(sheet.axes.cbegin(),sheet.axes.cend(),[](const auto &a){return a.endExtension.has_value();})||std::any_of(sheet.dimensions.cbegin(),sheet.dimensions.cend(),[](const auto &d){return d.presentation.reverseArrows;}))?11:std::any_of(sheet.views.cbegin(),sheet.views.cend(),[](const auto &v){return v.relation.kind==DrawingDerivedKind::Detail;})?10:(sheet.style.extensionGap!=0||sheet.style.dimensionOffset!=0)?9:(sheet.style.active()||std::any_of(sheet.views.cbegin(),sheet.views.cend(),[](const auto &v){return v.titleOffset.has_value();}))?8:styled?7:!sheet.annotations.isEmpty()?6:drawingNeedsAxisSchema(sheet.drawing)?5:!sheet.axes.isEmpty()?4:(drawingNeedsSectionSchema(sheet.drawing)||std::any_of(sheet.views.cbegin(),sheet.views.cend(),[](const auto &v){return v.relation.parentId.isNull()&&!v.relation.hatch;}))?3:std::any_of(sheet.views.cbegin(),sheet.views.cend(),[](const auto &v){return !v.relation.parentId.isNull();})?2:1},{"title",sheet.title},
             {"size",QJsonArray{sheet.size.width(),sheet.size.height()}},{"drawing",QJsonDocument::fromJson(document).object()},
             {"views",views},{"dimensions",dimensions}};
         if(sheet.style.active()){const auto &s=sheet.style;object.insert("style",QJsonObject{{"fontFamily",s.fontFamily},{"dimensionHeight",s.dimensionHeight},{"viewTitleHeight",s.viewTitleHeight},{"arrowLength",s.arrowLength},{"arrow",int(s.arrow)},{"titleGap",s.titleGap},{"titleSnaps",s.titleSnaps}});if(s.extensionGap!=0||s.dimensionOffset!=0)object.insert("dimensionSpacing",QJsonObject{{"extensionGap",s.extensionGap},{"dimensionOffset",s.dimensionOffset}});}
@@ -162,7 +169,7 @@ QString decodeDrawingSheet(const QByteArray &bytes,DrawingSheet &sheet){
     try{
         require(!bytes.isEmpty()&&bytes.size()<=8*1024*1024,"Dimensione del foglio non valida.");
         const auto json=QJsonDocument::fromJson(bytes);const auto object=json.object();
-        require(json.isObject()&&object["format"].toString()==QLatin1String("ForgeCAD.DrawingSheet")&&(object["schema"].toInt(-1)==1||object["schema"].toInt(-1)==2||object["schema"].toInt(-1)==3||object["schema"].toInt(-1)==4||object["schema"].toInt(-1)==5||object["schema"].toInt(-1)==6||object["schema"].toInt(-1)==7||object["schema"].toInt(-1)==8||object["schema"].toInt(-1)==9||object["schema"].toInt(-1)==10||object["schema"].toInt(-1)==11||object["schema"].toInt(-1)==12||object["schema"].toInt(-1)==13),"Formato del foglio non supportato.");
+        require(json.isObject()&&object["format"].toString()==QLatin1String("ForgeCAD.DrawingSheet")&&(object["schema"].toInt(-1)==1||object["schema"].toInt(-1)==2||object["schema"].toInt(-1)==3||object["schema"].toInt(-1)==4||object["schema"].toInt(-1)==5||object["schema"].toInt(-1)==6||object["schema"].toInt(-1)==7||object["schema"].toInt(-1)==8||object["schema"].toInt(-1)==9||object["schema"].toInt(-1)==10||object["schema"].toInt(-1)==11||object["schema"].toInt(-1)==12||object["schema"].toInt(-1)==13||object["schema"].toInt(-1)==14),"Formato del foglio non supportato.");
         const int schema=object["schema"].toInt();
         require(schema>=6||(!object.contains("annotations")&&!object.contains("annotationReferenceSchema")),"Annotazioni estranee allo schema dichiarato.");
         require(schema!=6||object.contains("annotations"),"Annotazioni del foglio assenti.");
@@ -240,6 +247,11 @@ QString decodeDrawingSheet(const QByteArray &bytes,DrawingSheet &sheet){
             require(value.isObject(),"Vista del foglio non valida.");const auto view=value.toObject();DrawingViewLayout layout;
             layout.viewId=readId(view["id"]);require(view["title"].isString()&&view["features"].isArray(),"Vista senza titolo o sorgenti.");
             layout.title=view["title"].toString();layout.position=readPoint(view["position"]);
+            if(view.contains("interruption")){
+                require(schema>=14&&view["interruption"].isObject(),"Interruzione estranea allo schema dichiarato.");const auto b=view["interruption"].toObject();
+                require(b.size()==4&&b["vertical"].isBool()&&b["start"].isDouble()&&b["end"].isDouble()&&b["gap"].isDouble(),"Parametri interruzione incompleti.");
+                layout.interruption=DrawingViewBreak{b["vertical"].toBool(),b["start"].toDouble(),b["end"].toDouble(),b["gap"].toDouble()};
+            }
             if(view.contains("titleOffset")){require(schema>=8,"Posizione del titolo estranea allo schema dichiarato.");layout.titleOffset=readPoint(view["titleOffset"]);}
             require(!view.contains("showHiddenLines")||view["showHiddenLines"].isBool(),"Visibilita' delle linee nascoste non valida.");layout.showHiddenLines=view["showHiddenLines"].toBool(false);
             require(!view.contains("showMesh")||view["showMesh"].isBool(),"Visibilita' della mesh non valida.");layout.showMesh=view["showMesh"].toBool(false);

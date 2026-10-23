@@ -41,7 +41,7 @@ using ForgeCurve = std::shared_ptr<const Kernel::Curve<3>>;
 // grado in CurveObject); ConvertEdges: lo strumento che le crea con un clic.
 // Dimension: lo strumento Quota (prima si scelgono le entita', poi si mette la quota).
 enum class DrawingTool { Line, Polyline, Spline, Nurbs, Circle, Arc, Polygon, ConstructionLine, Trim, Extend, Split, Fillet, Chamfer, Select,
-                         Rectangle, CenterRectangle, Ellipse, ThreePointArc, TangentArc, Converted, ConvertEdges, Dimension };
+                         Rectangle, CenterRectangle, Ellipse, ThreePointArc, TangentArc, Converted, ConvertEdges, Dimension, Slot, Point };
 enum class SnapKind { None, Endpoint, Midpoint, Nearest };
 
 enum class ReferencePlane { XY, XZ, YZ };
@@ -64,6 +64,8 @@ using SketchSegment = QPair<QPointF, QPointF>;
 //  - Rectangle / CenterRectangle: due angoli / centro e angolo (solo per
 //    l'anteprima: il rettangolo diventa quattro segmenti)
 //  - ThreePointArc / TangentArc: solo strumenti di disegno, creano un Arc
+//  - Slot: solo anteprima (due centri e larghezza), diventa due segmenti e due archi
+//  - Point: un punto autonomo, senza geometria di profilo
 // `samples` e' solo un'approssimazione per disegnare e selezionare a schermo.
 // Le entita' di costruzione (`construction`) non fanno parte dei profili:
 // servono da riferimento (assi di rivoluzione, agganci).

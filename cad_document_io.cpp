@@ -71,6 +71,7 @@ constexpr char kMagic[4] = {'F', 'C', 'A', 'D'};
 // 45 schizzi spaziali con entita' e punti XYZ in double.
 // 50 identita' del documento, check-in archiviato e base della copia di lavoro.
 // 51 schizzi autonomi nella storyboard e appoggio associativo su faccia.
+// 52 punti autonomi nello schizzo (DrawingTool::Point).
 constexpr quint16 kVersion = kDocumentFormatVersion;
 constexpr quint8 kZlib = 1;
 
@@ -210,7 +211,12 @@ bool read(ReadStream &in, SketchObject &sketch, quint16 version) {
     quint32 count = 0;
     if (!readCount(in, count, 21)) return false; // campi obbligatori di CurveObject anche nel formato 1
     if (!in.readRecords(sketch.curves, count, [&](CurveObject &curve) {
-        read(in, curve, version); return in.status() == QDataStream::Ok;
+        read(in, curve, version);
+        if (curve.tool == DrawingTool::Point)
+            return version >= 52 && curve.controlPoints.size()==1
+                && std::isfinite(curve.controlPoints[0].x()) && std::isfinite(curve.controlPoints[0].y())
+                && in.status()==QDataStream::Ok;
+        return curve.tool != DrawingTool::Slot && in.status() == QDataStream::Ok;
     })) return false;
     if (!readCount(in, count, 24)) return false;
     sketch.coincidentConstraints.resize(int(count));

@@ -19,6 +19,7 @@ struct DrawingViewVisibility {
     bool meshPrepared=false;
     DrawingCenterGeometry visibleCenters,allCenters; // cache dei riferimenti grafici, senza valutazioni al toggle
     QStringList warnings;
+    QPainterPath breakMarks; // simboli grafici senza riferimenti quotabili
 };
 // Le sezioni con proiezione richiedono il materiale di chiusura (anche vuoto sulle superfici).
 QString drawingViewVisibility(const DrawingModelSnapshot &model,const DrawingView &view,

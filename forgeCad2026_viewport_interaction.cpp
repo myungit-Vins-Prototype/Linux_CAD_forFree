@@ -473,6 +473,9 @@ void CadViewport::mousePressEvent(QMouseEvent *event) {
         // Clic su un segmento: lo seleziona, a meno che si stia disegnando
         // (punto in sospeso) o che il punto si agganci a un estremo o a un
         // punto medio (da li' parte il segmento nuovo, collegato).
+        if(drawingTool_==DrawingTool::Point) {
+            curveControlPoints_={snapPoint(rawPoint)};finalizePrimitive();return;
+        }
         const SketchElementSelection hit = findSketchElement(rawPoint);
         if (hit.kind >= 0 && !hasPendingPoint_ && curveControlPoints_.isEmpty()) {
             snapPoint(rawPoint);
@@ -482,6 +485,15 @@ void CadViewport::mousePressEvent(QMouseEvent *event) {
                 selectSketchElement(rawPoint, false);
                 return;
             }
+        }
+        if(drawingTool_==DrawingTool::Slot) {
+            const auto point=snapPoint(rawPoint);
+            if(curveControlPoints_.size()==1 && pointDistance(point,curveControlPoints_[0])<=ForgeCad::kSketchConnectionTolerance) {
+                showStatus(QStringLiteral("Asola: scegli un secondo centro distinto dal primo"));return;
+            }
+            curveControlPoints_.append(point);hasPendingPoint_=true;
+            if(curveControlPoints_.size()==3)finalizeSlot();
+            update();return;
         }
         if (drawingTool_ == DrawingTool::Rectangle || drawingTool_ == DrawingTool::CenterRectangle) {
             QPointF point = snapPoint(rawPoint);

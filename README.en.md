@@ -30,6 +30,7 @@ The application interface is in Italian. This project is developed with the help
 - Sketches on the XY, XZ, and YZ planes, construction planes, and planar body faces.
 - Lines, polylines, construction lines, circles, ellipses, and polygons with a configurable number of sides.
 - Rectangles defined by two corners or by their center, with an option to draw squares.
+- Straight slots defined by two end centers and their width, with constrained tangent lines and arcs; independent points support selection, dragging and dimensions, and are excluded from profiles. See [sketch tools](docs/sketch-tools.md) (Italian).
 - Arcs defined by a center and endpoints, three-point arcs, and arcs tangent to lines or other arcs.
 - Interpolating splines and NURBS; editing points and handles, and inserting or removing control points.
 - Options to make spline curvature continuous, relax curves, and limit oscillations.
@@ -96,6 +97,10 @@ Loft accepts sections and guides from sketches and exact edges, including spatia
 - A dependency graph through **Visualizza → Debug history / storyboard** (View → Debug history / storyboard).
 - Saving parametric definitions and, optionally, computed bodies to speed up reopening.
 - Exclusive locking of open documents and saving through a temporary file to protect file writes.
+
+### 2D drawings
+
+Projected, section, detail and auxiliary views; horizontal or vertical broken views with previews and full-model dimensions. See [broken views](docs/drawing-breaks.md) (Italian) for usage and limits.
 
 ### Visualization and analysis
 

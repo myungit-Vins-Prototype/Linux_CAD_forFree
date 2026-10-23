@@ -133,6 +133,13 @@ std::map<QString, Draw> &registry() {
         dot(p, {4, 19}, c.ink);
         dot(p, {20, 5}, c.ink);
     };
+    icons["point"] = [](QPainter &p,const IconPalette &c) {
+        line(p,{5,12},{19,12},stroke(c.accent,1.5));line(p,{12,5},{12,19},stroke(c.accent,1.5));dot(p,{12,12},c.ink,2.5);
+    };
+    icons["slot"] = [](QPainter &p,const IconPalette &c) {
+        p.setPen(stroke(c.accent,1.8));p.setBrush(Qt::NoBrush);p.drawRoundedRect(QRectF(2,7,20,10),5,5);
+        line(p,{7,12},{17,12},stroke(c.construction,1,Qt::DashLine));dot(p,{7,12},c.ink,1.3);dot(p,{17,12},c.ink,1.3);
+    };
     icons["polyline"] = [](QPainter &p, const IconPalette &c) {
         p.setPen(stroke(c.accent, 1.8));
         p.setBrush(Qt::NoBrush);
@@ -1373,6 +1380,10 @@ std::map<QString, Draw> &registry() {
         p.setBrush(Qt::NoBrush);p.setPen(stroke(c.ink,1.3));p.drawRect(QRectF(2,5,8,14));p.drawRect(QRectF(16,8,6,8));
         for(double y:{8.,16.})line(p,{3,y},{22,y},stroke(c.construction,.8,Qt::DashLine));
         line(p,{11,12},{16,12},stroke(c.accent,1.5));arrowHead(p,{16,12},{11,12},c.accent,2.5);
+    };
+    icons["drawingBreakView"]=[](QPainter &p,const IconPalette &c){
+        p.setPen(stroke(c.ink,1.5));p.drawLine(3,7,10,7);p.drawLine(14,7,21,7);p.drawLine(3,17,10,17);p.drawLine(14,17,21,17);
+        p.drawLine(3,7,3,17);p.drawLine(21,7,21,17);QPainterPath cut;cut.moveTo(10,5);cut.lineTo(9,10);cut.lineTo(11,14);cut.lineTo(10,19);cut.moveTo(14,5);cut.lineTo(13,10);cut.lineTo(15,14);cut.lineTo(14,19);p.setPen(stroke(c.accent,1.3));p.drawPath(cut);
     };
     icons["drawingAuxiliaryView"]=[](QPainter &p,const IconPalette &c){
         polygon(p,QPolygonF({{2,16},{8,10},{13,15},{7,21}}),c.faceLight,stroke(c.ink,1.3));

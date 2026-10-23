@@ -1,4 +1,5 @@
 #include "cad_curve_solver.h"
+#include "cad_kernel.h"
 
 #include <algorithm>
 #include <cmath>
@@ -73,11 +74,37 @@ CurvePtr<2> makeNurbs(const CurveObject &curve) {
 
 }
 
+bool slotParts(const QVector<QPointF> &points, QVector<SketchSegment> &lines, QVector<CurveObject> &arcs) {
+    lines.clear();arcs.clear();
+    if(points.size()!=3)return false;
+    for(const auto &p:points)if(!std::isfinite(p.x())||!std::isfinite(p.y()))return false;
+    const QPointF a=points[0],b=points[1],axis=b-a;
+    const double length=std::hypot(axis.x(),axis.y());
+    if(length<=kSketchConnectionTolerance)return false;
+    const QPointF normal(-axis.y()/length,axis.x()/length);
+    const double radius=std::abs(QPointF::dotProduct(points[2]-a,normal));
+    if(!std::isfinite(radius)||radius<=kSketchConnectionTolerance)return false;
+    const QPointF offset=radius*normal;
+    lines={{a-offset,b-offset},{b+offset,a+offset}};
+    CurveObject right;right.tool=DrawingTool::Arc;right.controlPoints={b,b-offset,b+offset};
+    CurveObject left;left.tool=DrawingTool::Arc;left.controlPoints={a,a+offset,a-offset};
+    arcs={right,left};return true;
+}
+
 std::vector<ProfileSegment> curveGeometry(const CurveObject &curve) {
     std::vector<ProfileSegment> result;
     const int count = curve.controlPoints.size();
     try {
         switch (curve.tool) {
+        case DrawingTool::Slot: {
+            QVector<SketchSegment> lines;QVector<CurveObject> arcs;
+            if(!slotParts(curve.controlPoints,lines,arcs))break;
+            for(int i=0;i<2;++i) {
+                result.push_back(lineSegment(toVec(lines[i].first),toVec(lines[i].second)));
+                const auto arc=curveGeometry(arcs[i]);result.insert(result.end(),arc.begin(),arc.end());
+            }
+            break;
+        }
         case DrawingTool::Spline:
         case DrawingTool::Nurbs: {
             const CurvePtr<2> c = curve.tool == DrawingTool::Spline ? makeSpline(curve) : makeNurbs(curve);
@@ -281,6 +308,13 @@ void sampleCurve(const Curve<2> &curve, const Interval &range, double angular, d
 }
 
 void recalculateCurve(CurveObject &curve, int quality) {
+    if(curve.tool==DrawingTool::Point) {
+        curve.samples.clear();
+        curve.numericallyValid=curve.controlPoints.size()==1
+            && std::isfinite(curve.controlPoints[0].x()) && std::isfinite(curve.controlPoints[0].y());
+        if(curve.numericallyValid)curve.samples=curve.controlPoints;
+        return;
+    }
     if (curve.tool == DrawingTool::Spline && curve.tangentHandles.size() != curve.controlPoints.size()) initializeTangentHandles(curve);
     curve.samples.clear();
     const std::vector<ProfileSegment> geometry = curveGeometry(curve);

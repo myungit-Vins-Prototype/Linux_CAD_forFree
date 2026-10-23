@@ -19,6 +19,10 @@ namespace ForgeCad {
 // Vuoto se i parametri non definiscono una curva valida.
 std::vector<Kernel::ProfileSegment> curveGeometry(const CurveObject &curve);
 
+// Asola rettilinea: due centri e un punto sulla larghezza. Lati e archi
+// antiorari alternati formano un contorno chiuso, senza approssimare gli archi.
+bool slotParts(const QVector<QPointF> &points, QVector<SketchSegment> &lines, QVector<CurveObject> &arcs);
+
 // Maniglie tangenti iniziali (solo spline): 1/3 della corda tra i vicini.
 void initializeTangentHandles(CurveObject &curve);
 

@@ -1030,6 +1030,12 @@ void CadViewport::drawSketch() {
             }
             QVector<QVector3D> samples;
             samples.reserve(curve.samples.size());
+            if(curve.tool==DrawingTool::Point && curve.controlPoints.size()==1) {
+                QVector<QVector3D> marker;const auto p=curve.controlPoints[0];
+                for(const QPointF &arm:{QPointF(markerSize*0.6,0),QPointF(0,markerSize*0.6)})
+                    marker<<mapSketchPoint(p-arm,sketch)<<mapSketchPoint(p+arm,sketch);
+                overlayRenderer_.draw(GL_LINES,marker,color);continue;
+            }
             for (const QPointF &sample : curve.samples) {
                 const QVector3D world = mapSketchPoint(sample, sketch);
                 samples.push_back(world);

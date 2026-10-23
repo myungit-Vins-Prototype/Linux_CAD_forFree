@@ -8,6 +8,31 @@
 #include "../cad_drawing_dimension.h"
 #include "../cad_drawing_derived.h"
 namespace {
+void brokenNativeFileRevisionTests(){
+    using namespace ForgeCad;using namespace ForgeCad::Kernel;
+    QTemporaryDir temporary;const auto modelPath=temporary.filePath("interrotta.prt"),path=temporary.filePath("interrotta.drw");
+    auto model=clientModel();clientOk(saveDocumentFile(modelPath,model));clientOk(checkoutWorkspaceDocument(modelPath,model,"qa"));RevisionRecord modelRecord;
+    clientOk(checkinWorkspaceDocument(modelPath,model,"M-A","",modelRecord));const auto modelBytes=clientRead(modelPath);
+    DrawingWindow window;clientOk(window.createFromModel(modelPath));DrawingView view;view.kind=DrawingViewKind::ProjectedEdges;view.scale=2;
+    clientOk(window.editor()->insertView(view,{view.id,"Interrotta",{100,100},{model.extrusions[0].featureId}}));
+    double low=std::numeric_limits<double>::infinity(),high=-low;DrawingDimension dimension;bool chosen=false;
+    for(const auto &curve:window.editor()->curves(view.id)){
+        for(double t:{curve.range.lo,curve.range.hi,(curve.range.lo+curve.range.hi)/2}){const auto p=view.plane.toLocal(curve.curve->point(t));low=std::min(low,p.x());high=std::max(high,p.x());}
+        if(!chosen&&curve.kind==DrawingCurveKind::ProjectedEdge&&std::abs(arcLength(*curve.curve,curve.range)-10)<1e-7){dimension=dimensionOfCurve(view,curve,DrawingMeasure::EndpointDistance);chosen=true;}
+    }
+    require(chosen&&high-low>4,"geometria della vista interrotta nativa");clientOk(window.editor()->addDimension(dimension,{120,120}));
+    DrawingViewBreak cut{false,low+(high-low)*.3,low+(high-low)*.7,1};clientOk(window.editor()->setViewBreak(view.id,cut));
+    clientOk(window.savePath(path));clientOk(window.pinModelRevision(modelRecord.version));clientOk(window.savePath(path));
+    clientOk(window.runRevisionAction(DrawingWindow::RevisionAction::Checkout,"qa"));clientOk(window.runRevisionAction(DrawingWindow::RevisionAction::Checkin,{},"Interruzione A"));
+    auto first=window.document().sheet.drawing.version;first.checkinId=window.document().baseCheckinId;clientOk(window.runRevisionAction(DrawingWindow::RevisionAction::Checkout,"qa"));
+    cut.gap=2;clientOk(window.editor()->setViewBreak(view.id,cut));clientOk(window.savePath(path));clientOk(window.runRevisionAction(DrawingWindow::RevisionAction::Checkin,{},"Interruzione B"));
+    DrawingFile loaded;clientOk(loadDrawingFile(path,loaded));require(loaded.sheet.views[0].interruption&&loaded.sheet.views[0].interruption->gap==2,"file drw conserva interruzione B");
+    DrawingWindow archived;clientOk(archived.openRevision(path,first));require(archived.editor()->sheet().views[0].interruption&&archived.editor()->sheet().views[0].interruption->gap==1,"storico A conserva distacco originale");
+    require(archived.editor()->dimensionResult(dimension.id).status==DrawingDimensionStatus::Ready&&std::abs(archived.editor()->dimensionResult(dimension.id).value-10)<1e-7,"quota storica completa invariata");
+    require(archived.editor()->isReadOnly()&&!archived.editor()->findChild<QAction *>("drawingBreakViewAction")->isEnabled()&&!archived.editor()->setViewBreak(view.id,{}).isEmpty(),"storico protegge interruzione");
+    DrawingPdfReport report;clientOk(archived.exportPdfPath(temporary.filePath("interrotta-a.pdf"),report));require(clientRead(modelPath)==modelBytes,"tavola e PDF non riscrivono il modello originale");
+    auto *insert=window.findChild<QAction *>("drawingBreakViewAction");bool inMenu=false;for(auto *action:window.menuBar()->actions())if(action->text()=="Inserisci")inMenu=action->menu()->actions().contains(insert);require(inMenu,"vista interrotta nel menu nativo");
+}
 void auxiliaryNativeFileRevisionTests(){
     using namespace ForgeCad;using namespace ForgeCad::Kernel;
     QTemporaryDir temporary;const auto modelPath=temporary.filePath("ausiliaria.prt"),path=temporary.filePath("ausiliaria.drw");
@@ -36,6 +61,7 @@ void auxiliaryNativeFileRevisionTests(){
     require(inMenu,"vista ausiliaria raggiungibile dal menu della finestra nativa");
 }
 void projectedDrawingFileTests(){
+    brokenNativeFileRevisionTests();
     auxiliaryNativeFileRevisionTests();
     using namespace ForgeCad;using namespace ForgeCad::Kernel;
     QTemporaryDir temporary;const auto sourcePath=temporary.filePath("modello.prt"),drawingPath=temporary.filePath("proiezioni.drw");

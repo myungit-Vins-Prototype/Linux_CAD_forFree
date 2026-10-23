@@ -1188,6 +1188,7 @@ private:
     // verticali, collegati dai vincoli di coincidenza (e agganciati agli altri
     // punti su cui cadono gli angoli).
     void finalizeRectangle();
+    void finalizeSlot();
 
     // Angolo opposto del rettangolo in costruzione: con Maiusc un quadrato.
     QPointF rectangleCorner(const QPointF &anchor, const QPointF &cursor) const;

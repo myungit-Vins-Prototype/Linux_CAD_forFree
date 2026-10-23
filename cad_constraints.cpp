@@ -943,6 +943,7 @@ void implicitDependencies(const System &s, int curve, QVector<int> &out) {
 
 QString curveName(const CurveObject &curve) {
     switch (curve.tool) {
+    case DrawingTool::Point: return QStringLiteral("Punto");
     case DrawingTool::Circle: return QStringLiteral("Cerchio");
     case DrawingTool::Arc: return QStringLiteral("Arco");
     case DrawingTool::Polygon: return QStringLiteral("Poligono");

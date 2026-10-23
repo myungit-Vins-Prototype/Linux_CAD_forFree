@@ -155,10 +155,13 @@ void DrawingWindow::showModelRevisions(){
 }
 QString DrawingWindow::openRevision(const QString &workingPath,const DocumentVersion &version){
     if(editor_)return QStringLiteral("Questa finestra contiene gia' una tavola.");
-    WorkspacePaths paths;auto error=locateDocumentWorkspace(workingPath,paths);if(!error.isEmpty())return error;
+    // Stessa base canonica per il riferimento relativo e la sua successiva risoluzione
+    // (su macOS /var puo' essere un collegamento a /private/var).
+    const auto canonical=canonicalDocumentPath(workingPath);
+    WorkspacePaths paths;auto error=locateDocumentWorkspace(canonical,paths);if(!error.isEmpty())return error;
     RevisionStore store(paths.revisions);DrawingFile archived;error=readDrawingRevision(store,version,archived);if(!error.isEmpty())return error;
-    archived.modelArchivePath=QDir(QFileInfo(workingPath).absolutePath()).relativeFilePath(paths.revisions);
-    loadContents(canonicalDocumentPath(workingPath),std::move(archived));return {};
+    archived.modelArchivePath=QDir(QFileInfo(canonical).absolutePath()).relativeFilePath(paths.revisions);
+    loadContents(canonical,std::move(archived));return {};
 }
 void DrawingWindow::showDrawingHistory(){
     if(path_.isEmpty()){report(QStringLiteral("Salvare prima la tavola nel workspace."));return;}

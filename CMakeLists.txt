@@ -372,6 +372,7 @@ if(FORGECAD_BUILD_VIEW_TESTS)
     set_tests_properties(forgecad_native_revisions_tests PROPERTIES TIMEOUT 120)
     set_tests_properties(forgecad_all_history_tests PROPERTIES TIMEOUT 120)
     forgecad_add_view_test(forgecad_preview_performance_tests --preview-performance)
+    forgecad_add_view_test(forgecad_sketch_slot_point_tests --sketch-slot-point)
     forgecad_add_view_test(forgecad_feature_handle_tests --feature-handles)
     forgecad_add_view_test(forgecad_revolution_history_tests --revolution-history)
     set_tests_properties(forgecad_revolution_history_tests PROPERTIES TIMEOUT 60)
@@ -604,6 +605,14 @@ target_link_libraries(forgecad_drawing_auxiliary_tests PRIVATE Qt6::Widgets forg
 target_compile_options(forgecad_drawing_auxiliary_tests PRIVATE -Wall -Wextra -Wpedantic)
 add_test(NAME forgecad_drawing_auxiliary_tests COMMAND forgecad_drawing_auxiliary_tests)
 set_tests_properties(forgecad_drawing_auxiliary_tests PROPERTIES TIMEOUT 120 ENVIRONMENT "QT_QPA_PLATFORM=offscreen;QT_QPA_OFFSCREEN_NO_GLX=1;QT_QPA_PLATFORMTHEME=;QT_STYLE_OVERRIDE=Fusion")
+
+# Interruzione grafica con misura e riferimenti integrali.
+add_executable(forgecad_drawing_break_tests tests/test_drawing_break.cpp cad_drawing_break.h ${FORGECAD_DETAIL_TEST_SOURCES})
+target_include_directories(forgecad_drawing_break_tests PRIVATE ${PROJECT_SOURCE_DIR})
+target_link_libraries(forgecad_drawing_break_tests PRIVATE Qt6::Widgets forgekernel forgecad_drawing_menus)
+target_compile_options(forgecad_drawing_break_tests PRIVATE -Wall -Wextra -Wpedantic)
+add_test(NAME forgecad_drawing_break_tests COMMAND forgecad_drawing_break_tests)
+set_tests_properties(forgecad_drawing_break_tests PROPERTIES TIMEOUT 120 ENVIRONMENT "QT_QPA_PLATFORM=offscreen;QT_QPA_OFFSCREEN_NO_GLX=1;QT_QPA_PLATFORMTHEME=;QT_STYLE_OVERRIDE=Fusion")
 
 add_executable(forgecad_revision_numbers_tests tests/test_revision_numbers.cpp cad_revision_store.cpp)
 target_include_directories(forgecad_revision_numbers_tests PRIVATE ${PROJECT_SOURCE_DIR})

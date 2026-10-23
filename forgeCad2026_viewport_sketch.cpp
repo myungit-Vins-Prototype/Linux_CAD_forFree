@@ -14,6 +14,8 @@ void CadViewport::setDrawingTool(DrawingTool tool) {
     blendFirst_ = -1;
     trimPreview_.clear();
     convertHover_ = {};
+    if(tool==DrawingTool::Slot)showStatus(QStringLiteral("Asola: primo centro, secondo centro, poi larghezza"));
+    if(tool==DrawingTool::Point)showStatus(QStringLiteral("Punto: clic per inserire un punto; Esc per terminare"));
     dimensionPreviewValid_ = false;
     dimensionHover_ = {};
     if (!panKeyHeld_) unsetCursor();
@@ -850,7 +852,11 @@ QVector<ConstraintRef> CadViewport::constraintSelection() const {
     QVector<ConstraintRef> refs;
     for (const SelectedPoint &point : selectedPoints_)
         if (isValidSelectedPoint(point)) refs.append({point.kind, point.element, point.kind == 2 ? -1 : point.point});
-    for (const SketchElementSelection &element : sketchSelections_) refs.append({element.kind, element.index, -1});
+    for (const SketchElementSelection &element : sketchSelections_) {
+        const auto *sketch=activeSketchObject();
+        const bool point=sketch && element.kind==1 && sketch->curves.value(element.index).tool==DrawingTool::Point;
+        refs.append({element.kind, element.index, point?0:-1});
+    }
     return refs;
 }
 
@@ -1882,6 +1888,13 @@ bool CadViewport::previewCurve(CurveObject &curve) const {
     curve.controlPoints = curveControlPoints_;
     const QPointF cursor = cursorSketchPoint_;
     switch (drawingTool_) {
+    case DrawingTool::Slot:
+        if(curve.controlPoints.size()==1) {
+            curve.tool=DrawingTool::Line;curve.controlPoints.append(cursor);curve.samples=curve.controlPoints;
+            return pointDistance(curve.samples[0],cursor)>ForgeCad::kSketchConnectionTolerance;
+        }
+        if(curve.controlPoints.size()!=2)return false;
+        curve.controlPoints.append(cursor);break;
     case DrawingTool::Circle:
     case DrawingTool::Polygon:
         if (curve.controlPoints.size() != 1) return false;
@@ -1946,6 +1959,12 @@ QStringList CadViewport::previewMeasures() const {
     const QVector<QPointF> &p = curve.controlPoints;
     const auto number = [](double value) { return ForgeCad::formatLength(value, 4); };
     switch (curve.tool) {
+    case DrawingTool::Slot: {
+        const QPointF axis=p[1]-p[0];const double length=pointLength(axis);
+        const double width=2*std::abs(QPointF::dotProduct(p[2]-p[0],QPointF(-axis.y(),axis.x())))/length;
+        return {QStringLiteral("Interasse = %1   Larghezza = %2   Lunghezza totale = %3")
+            .arg(number(length),number(width),number(length+width))};
+    }
     case DrawingTool::Circle: {
         const double r = pointDistance(p.at(0), p.at(1));
         return {QStringLiteral("R = %1   Ø = %2").arg(number(r), number(2.0 * r))};
@@ -3029,6 +3048,33 @@ void CadViewport::finalizeRectangle() {
     }
     sketchEdited();
     update();
+}
+
+void CadViewport::finalizeSlot() {
+    QVector<SketchSegment> lines;QVector<CurveObject> arcs;
+    if(!ForgeCad::slotParts(curveControlPoints_,lines,arcs)) {
+        if(curveControlPoints_.size()==3)curveControlPoints_.removeLast();
+        showStatus(QStringLiteral("Asola: la larghezza deve essere maggiore di zero"));update();return;
+    }
+    if(!activeSketchObject())return;
+    recordUndo();auto &sketch=sketches_[activeSketch_];
+    const int line=sketch.segments.size(),arc=sketch.curves.size();
+    for(const auto &s:lines) {
+        sketch.segments.append(s);sketch.constraints.append(-1);
+        sketch.segmentLengths.append(0);sketch.segmentAngles.append(-1);
+    }
+    for(auto &c:arcs){ForgeCad::recalculateCurve(c,tessellationQuality_);sketch.curves.append(c);}
+    for(int i=0;i<2;++i) {
+        const ConstraintRef side{0,line+i,-1},cap{1,arc+i,-1};
+        sketch.geometricConstraints.append(ForgeCad::makeConstraint(sketch,ConstraintType::Coincident,{{0,line+i,1},{1,arc+i,1}}));
+        sketch.geometricConstraints.append(ForgeCad::makeConstraint(sketch,ConstraintType::Coincident,{{1,arc+i,2},{0,line+1-i,0}}));
+        sketch.geometricConstraints.append(ForgeCad::makeConstraint(sketch,ConstraintType::Tangent,{side,cap}));
+        sketch.geometricConstraints.append(ForgeCad::makeConstraint(sketch,ConstraintType::Tangent,{{0,line+1-i,-1},cap}));
+    }
+    sketch.geometricConstraints.append(ForgeCad::makeConstraint(sketch,ConstraintType::Equal,{{1,arc,-1},{1,arc+1,-1}}));
+    recordPointCoincidences(sketch,{1,arc,0},arcs[0].controlPoints[0]);
+    recordPointCoincidences(sketch,{1,arc+1,0},arcs[1].controlPoints[0]);
+    curveControlPoints_.clear();hasPendingPoint_=false;sketchEdited();update();
 }
 
 QPointF CadViewport::rectangleCorner(const QPointF &anchor, const QPointF &cursor) const {

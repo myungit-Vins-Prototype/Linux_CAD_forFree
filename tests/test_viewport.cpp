@@ -99,6 +99,7 @@ static QString exampleDocumentPath(const char *name) {
 class ViewportInteractionTest {
 public:
 #include "test_sketch_interaction.h"
+#include "test_sketch_slot_point.h"
 #include "test_helix_start_angle.h"
 #include "test_sketch_menu_cancel.h"
 #include "test_document_recovery.h"
@@ -10376,6 +10377,11 @@ int main(int argc, char **argv) {
     if (app.arguments().contains(QStringLiteral("--smooth-zoom"))) {
         try { ViewportInteractionTest::smoothZoom(app.arguments().contains(QStringLiteral("--gl"))); }
         catch (const std::exception &e) { std::cerr<<e.what()<<std::endl;return 1; }
+        return 0;
+    }
+    if (app.arguments().contains(QStringLiteral("--sketch-slot-point"))) {
+        try { ViewportInteractionTest::sketchSlotPoint(app.arguments().contains(QStringLiteral("--gl"))); }
+        catch(const std::exception &e){std::cerr<<e.what()<<std::endl;return 1;}
         return 0;
     }
     if (app.arguments().contains(QStringLiteral("--preview-performance"))) {
