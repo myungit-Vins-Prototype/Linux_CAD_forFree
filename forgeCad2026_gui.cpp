@@ -2930,7 +2930,7 @@ void PdfWindow::initializeSketchCommands(WindowSetup &setup) {
                                                 "poi il vincolo. Un clic sul simbolo di un vincolo nella vista lo seleziona, Canc lo elimina."),
                                  constraintPanel);
     panelHelp->setWordWrap(true);
-    panelHelp->setStyleSheet(QStringLiteral("color: #8aa0b4;"));
+    panelHelp->setStyleSheet(QStringLiteral("color: palette(text);"));
     panelLayout->addWidget(panelHelp);
     auto refreshingPanel = std::make_shared<bool>(false);
     auto refreshPanel = std::make_shared<std::function<void()>>();

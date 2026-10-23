@@ -10,12 +10,16 @@
 #include "forgeCad2026_viewport.h"
 #include "cad_icons.h"
 #include "cad_menu.h"
+#include "forgeCad2026_ui_glass.h"
 #include <QApplication>
 #include <QDialog>
 #include <QDialogButtonBox>
 #include <QDockWidget>
 #include <QKeyEvent>
+#include <QShortcutEvent>
 #include <QStyle>
+#include <QStyleHints>
+#include <QStyleFactory>
 #include <QStyleOptionToolButton>
 #include <QStyleOptionTab>
 #include <QEventLoop>
@@ -210,6 +214,7 @@ struct RibbonPreview::Impl {
     QTabBar *tabBar=nullptr;
     RibbonCornerAccent *cornerAccent=nullptr;
     QGraphicsOpacityEffect *roundedEffect=nullptr;
+    QPointer<UiGlassShadow> shadow;
     QSize maskPixels;
     qreal maskDpr=0;
     int maskRadius=-1;
@@ -261,12 +266,9 @@ struct RibbonPreview::Impl {
     void syncGlass() {
         bool appearanceChanged=false;
         if(!appearanceTimer.isValid() || appearanceTimer.elapsed()>=500) {
-            QSettings settings;
-            const int nextOpacity=qBound(25,settings.value("view/functionPanelOpacity",settings.value("loft/dialogOpacity",88)).toInt(),100);
-            const int nextBlur=qBound(0,settings.value("view/functionPanelBlur",12).toInt(),40);
-            const int nextRadius=qBound(0,settings.value("view/functionPanelCornerRadius",10).toInt(),40);
-            appearanceChanged=opacity!=nextOpacity || blur!=nextBlur || radius!=nextRadius;
-            opacity=nextOpacity;blur=nextBlur;radius=nextRadius;appearanceTimer.restart();
+            const auto appearance=readUiGlassAppearance();
+            appearanceChanged=opacity!=appearance.opacity || blur!=appearance.blur || radius!=appearance.radius;
+            opacity=appearance.opacity;blur=appearance.blur;radius=appearance.radius;appearanceTimer.restart();
             if(appearanceChanged)self->update();
         }
         syncPadding();
@@ -281,6 +283,11 @@ struct RibbonPreview::Impl {
         }
         if(cornerAccent) {
             cornerAccent->setGeometry(self->rect());cornerAccent->setContours(cardRect(0),cardRect(1),radius);cornerAccent->raise();
+        }
+        if(shadow) {
+            shadow->setGeometry(self->geometry().adjusted(-12,-12,12,12));
+            shadow->setCards({QRectF(cardRect(0)).translated(12,12),QRectF(cardRect(1)).translated(12,12)},radius);
+            shadow->setVisible(self->isVisible());shadow->stackUnder(self);
         }
         if(!self->isVisible() || opacity>=100){clearGlass();return;}
         for(int i=0;i<2;++i) {
@@ -493,7 +500,7 @@ struct RibbonPreview::Impl {
     }
 };
 RibbonPreview::RibbonPreview(QMainWindow *window):QWidget(nullptr),impl_(std::make_unique<Impl>(this,window)) {
-    setParent(impl_->viewport);setObjectName("experimentalRibbon");setAttribute(Qt::WA_NoMousePropagation);
+    setParent(impl_->viewport);impl_->shadow=new UiGlassShadow(impl_->viewport);setObjectName("experimentalRibbon");setAttribute(Qt::WA_NoMousePropagation);
     setAttribute(Qt::WA_TranslucentBackground);setAutoFillBackground(false);
     impl_->roundedEffect=new QGraphicsOpacityEffect(this);impl_->roundedEffect->setOpacity(1);
     setGraphicsEffect(impl_->roundedEffect);
@@ -538,7 +545,7 @@ RibbonPreview::RibbonPreview(QMainWindow *window):QWidget(nullptr),impl_(std::ma
     impl_->contextTimer.setInterval(50);connect(&impl_->contextTimer,&QTimer::timeout,this,&RibbonPreview::syncContext);impl_->contextTimer.start();
     setCompact(QSettings().value("ribbon/compact",false).toBool());syncContext();setVisible(QSettings().value("ribbon/visible",true).toBool());impl_->schedule();
 }
-RibbonPreview::~RibbonPreview(){impl_->clearGlass();qApp->removeEventFilter(this);}
+RibbonPreview::~RibbonPreview(){impl_->clearGlass();qApp->removeEventFilter(this);delete impl_->shadow.data();}
 QString RibbonPreview::selectedTab() const {return impl_->tabBar->tabData(impl_->tabBar->currentIndex()).toString();}
 bool RibbonPreview::compact() const {return impl_->compact;}
 void RibbonPreview::setCompact(bool value) {
@@ -570,7 +577,7 @@ void RibbonPreview::selectForAction(QAction *action) {
 }
 bool RibbonPreview::eventFilter(QObject *object,QEvent *event) {
     if(object==this) {
-        if(event->type()==QEvent::Hide)impl_->clearGlass();
+        if(event->type()==QEvent::Hide){impl_->clearGlass();if(impl_->shadow)impl_->shadow->hide();}
         if(event->type()==QEvent::Show || event->type()==QEvent::Move || event->type()==QEvent::Resize)impl_->syncGlass();
     }
     if(object==impl_->viewport && event->type()==QEvent::Resize){impl_->place();impl_->schedule();}
@@ -579,7 +586,12 @@ bool RibbonPreview::eventFilter(QObject *object,QEvent *event) {
         if(dialog==impl_->panel && (event->type()==QEvent::Move||event->type()==QEvent::Resize))impl_->placePanel(dialog);
     }
     QAction *action=nullptr;
-    if(event->type()==QEvent::Shortcut)action=qobject_cast<QAction *>(object);
+    if(event->type()==QEvent::Shortcut) {
+        action=qobject_cast<QAction *>(object);
+        // Zoom e orientamento non interrompono il contesto di lavoro corrente.
+        // L'evento prosegue fino alla QAction, che esegue normalmente il comando.
+        if(action && impl_->paths.value(action).startsWith(QStringLiteral("Visualizza/")))action=nullptr;
+    }
     const auto activateKey=[&]{
         if(event->type()!=QEvent::KeyPress)return false;
         const int key=static_cast<QKeyEvent *>(event)->key();return key==Qt::Key_Return||key==Qt::Key_Enter||key==Qt::Key_Space;
@@ -602,7 +614,7 @@ void RibbonPreview::resizeEvent(QResizeEvent *event){QWidget::resizeEvent(event)
 void RibbonPreview::wheelEvent(QWheelEvent *event){event->accept();}
 void RibbonPreview::paintEvent(QPaintEvent *) {
     QPainter p(this);p.setRenderHint(QPainter::Antialiasing);
-    auto fill=palette().color(QPalette::Window);fill.setAlpha(qRound(255.0*impl_->opacity/100.0));
+    auto fill=uiGlassPalette(this).color(QPalette::Window);fill.setAlpha(qRound(255.0*impl_->opacity/100.0));
     // La curva esterna viene applicata una sola volta dalla maschera alpha.
     // Un secondo rettangolo arrotondato sfalsato creava aloni negli angoli.
     for(int i=0;i<2;++i)p.fillRect(impl_->cardRect(i),fill);
@@ -623,14 +635,18 @@ void RibbonPreview::runSelfTest() {
     const auto menuRadius=QSettings().value("view/functionPanelCornerRadius",10);
     for(int radius:{0,10,40})for(qreal dpr:{1.0,1.5}) {
         QSettings().setValue("view/functionPanelCornerRadius",radius);
-        CadMenu menu(impl_->window);menu.addAction(QStringLiteral("Proprietà di massa…"))->setShortcut(QKeySequence("Ctrl+M"));
+        CadMenu menu(impl_->workspace);menu.addAction(QStringLiteral("Proprietà di massa…"))->setShortcut(QKeySequence("Ctrl+M"));
         auto *checked=menu.addAction(QStringLiteral("Opzione selezionata"));checked->setCheckable(true);checked->setChecked(true);
         auto *sub=addCadMenu(&menu,QStringLiteral("Sottomenu"));sub->addAction(QStringLiteral("Misura…"));
         menu.ensurePolished();menu.adjustSize();
         QImage image(QSize(qCeil(menu.width()*dpr),qCeil(menu.height()*dpr)),QImage::Format_ARGB32_Premultiplied);
         image.setDevicePixelRatio(dpr);image.fill(Qt::transparent);menu.render(&image);
         require(radius==0 || qAlpha(image.pixel(0,0))==0,"angoli del popup trasparenti");
-        require(qAlpha(image.pixel(image.width()/2,image.height()/2))==255,"corpo del menu opaco e leggibile");
+        const auto surface=image.pixelColor(image.width()/2,qRound(16*dpr));
+        const auto expectedColor=uiGlassPalette(impl_->window).color(QPalette::Window);
+        require(qAbs(surface.alpha()-qRound(255.0*readUiGlassAppearance().opacity/100))<=1,"opacità comune anche dal contenitore trasparente della ribbon");
+        require(qAbs(surface.red()-expectedColor.red())<=2 && qAbs(surface.green()-expectedColor.green())<=2 && qAbs(surface.blue()-expectedColor.blue())<=2,"colore menu dalla finestra, senza ereditare trasparenza dei gruppi");
+        require(qAlpha(image.pixel(image.width()/2,image.height()-qRound(6*dpr)))>0,"ombra del popup fuori dal corpo");
         const auto r=menu.actionGeometry(menu.actions().first());
         QPainterPath safe;safe.addRoundedRect(QRectF(menu.rect()),radius,radius);
         require(safe.contains(QPointF(r.topLeft())) && safe.contains(QPointF(r.bottomRight())),"padding menu adeguato al raggio");
@@ -639,6 +655,123 @@ void RibbonPreview::runSelfTest() {
         if(radius==40 && dpr==1.0){const auto capture=qEnvironmentVariable("FORGECAD_MENU_CAPTURE");if(!capture.isEmpty())image.save(capture);}
     }
     QSettings().setValue("view/functionPanelCornerRadius",menuRadius);
+    require(impl_->shadow && impl_->shadow->testAttribute(Qt::WA_TransparentForMouseEvents),"ombra ribbon non intercetta i comandi");
+    if(QGuiApplication::platformName()!=QStringLiteral("offscreen")) {
+        const auto previousAppearance=readUiGlassAppearance();
+        const auto waitForMenu=[](int ms){QEventLoop loop;QTimer::singleShot(ms,&loop,&QEventLoop::quit);loop.exec();};
+        // Prima della prima apertura attendere l'attivazione nativa: altrimenti
+        // il focus iniziale della finestra può richiudere il popup appena creato.
+        if(QGuiApplication::platformName()==QStringLiteral("xcb")) {
+            impl_->window->raise();impl_->window->activateWindow();
+            QElapsedTimer activationWait;activationWait.start();
+            while(!impl_->window->isActiveWindow() && activationWait.elapsed()<1500)waitForMenu(20);
+            require(impl_->window->isActiveWindow(),"finestra nativa attiva prima della prova popup");
+            waitForMenu(100);
+        }
+        // Fondo a bande sottili: la variazione permette di misurare il blur dei popup.
+        class Stripes final : public QWidget {
+        public:using QWidget::QWidget;
+        protected:void paintEvent(QPaintEvent *) override {QPainter p(this);for(int x=0;x<width();x+=4)p.fillRect(x,0,4,height(),(x/4)%2?Qt::white:Qt::black);}
+        } stripes(impl_->viewport);
+        stripes.setGeometry(180,200,400,300);stripes.show();stripes.raise();
+        QSettings().setValue("view/functionPanelOpacity",50);QSettings().setValue("view/functionPanelBlur",0);
+        CadMenu menu(impl_->workspace);menu.addAction(QStringLiteral("Misura…"));menu.addAction(QStringLiteral("Proprietà di massa…"));
+        auto *nested=addCadMenu(&menu,QStringLiteral("Altri comandi"));nested->addAction(QStringLiteral("Esempio"));
+        const auto origin=impl_->viewport->mapToGlobal(QPoint(210,230));menu.popup(origin);
+        QElapsedTimer firstCaptureWait;firstCaptureWait.start();
+        while(!menu.property("glassBackdropReady").toBool() && firstCaptureWait.elapsed()<1500)waitForMenu(20);
+        if(!menu.property("glassBackdropReady").toBool())qWarning("INITIAL menu visible=%d opacity=%d window=%d viewport=%d activePopup=%d",menu.isVisible(),menu.property("glassOpacity").toInt(),impl_->window->isVisible(),impl_->viewport->isVisible(),qApp->activePopupWidget()==&menu);
+        require(menu.property("glassBackdropReady").toBool(),"fondale popup acquisito dalla finestra applicativa");
+        const auto sharp=menu.grab().toImage();
+        QSettings().setValue("view/functionPanelBlur",12);waitForMenu(260);
+        require(menu.property("glassBlur").toInt()==12,"blur comune aggiornato sul menu aperto");
+        const auto blurred=menu.grab().toImage();require(sharp.size()==blurred.size(),"blur conserva geometria del popup");
+        qint64 difference=0;for(int y=20;y<sharp.height()-20;++y)for(int x=20;x<sharp.width()-20;++x)difference+=qAbs(qRed(sharp.pixel(x,y))-qRed(blurred.pixel(x,y)));
+        require(difference>sharp.width()*sharp.height(),"sfocatura del fondale popup effettiva");
+        QSettings().setValue("view/functionPanelOpacity",100);QSettings().setValue("view/functionPanelCornerRadius",24);waitForMenu(260);
+        require(menu.property("glassOpacity").toInt()==100 && menu.property("glassRadius").toInt()==24,"opacità e raggio comuni aggiornati sul popup aperto");
+#if QT_VERSION < QT_VERSION_CHECK(6,5,0)
+        const auto appPalette=qApp->palette();
+#endif
+#if QT_VERSION >= QT_VERSION_CHECK(6,5,0)
+        const auto originalScheme=qApp->styleHints()->colorScheme();
+#endif
+        for(int themeStep=0;themeStep<4;++themeStep) {
+            const bool dark=themeStep%2;
+            if(themeStep>=2)menu.hide();
+#if QT_VERSION >= QT_VERSION_CHECK(6,5,0)
+            // Esercita il controller del tema anche sui backend senza override nativo.
+            require(QMetaObject::invokeMethod(qApp->styleHints(),"colorSchemeChanged",Qt::DirectConnection,Q_ARG(Qt::ColorScheme,dark?Qt::ColorScheme::Dark:Qt::ColorScheme::Light)),"segnale del tema per fixture menu");
+#else
+            auto palette=appPalette;palette.setColor(QPalette::Window,dark?QColor(33,40,50):QColor(245,245,246));qApp->setPalette(palette);
+#endif
+            waitForMenu(260);
+            if(themeStep==1 || themeStep==3) {
+                QString foreign=QStringLiteral("Windows");
+                for(const auto &key:QStyleFactory::keys())if(key.compare(QStringLiteral("Breeze"),Qt::CaseInsensitive)==0)foreign=key;
+                QPointer<QStyle> replacement=QStyleFactory::create(foreign);qApp->setStyle(replacement.data());waitForMenu(60);
+                require(replacement.isNull(),"stile comune ripristinato dopo sostituzione desktop reale");
+                require(menu.testAttribute(Qt::WA_SetStyle),"popup protetto dal polish nativo dello stile desktop");
+            }
+            if(themeStep==3) {
+                qApp->setStyleSheet(qApp->styleSheet()+QStringLiteral(" "));
+                QEvent themeEvent(QEvent::ThemeChange);QApplication::sendEvent(&menu,&themeEvent);
+            }
+            if(themeStep>=2){menu.popup(origin);waitForMenu(80);}
+            const auto image=menu.grab().toImage();
+            require(menu.palette().color(QPalette::Window).alpha()==0 && !menu.autoFillBackground() && !menu.testAttribute(Qt::WA_StyledBackground) && !menu.testAttribute(Qt::WA_OpaquePaintEvent),"Qt non riempie il margine dell'ombra dopo il cambio tema");
+            const auto capture=qEnvironmentVariable("FORGECAD_MENU_THEME_CAPTURE");if(!capture.isEmpty())image.save(capture+QString::number(themeStep)+QStringLiteral(".png"));
+            require(image.pixelColor(image.width()/2,2).alpha()==0,"margine esterno dell'ombra trasparente dopo cambio tema");
+            const auto sample=image.pixelColor(image.width()/2,qRound(16*menu.devicePixelRatioF()));
+            const auto ownerColor=uiGlassPalette(impl_->window).color(QPalette::Window);
+            require((ownerColor.lightness()<128)==dark,"fixture finestra chiara e scura applicata");
+            require(qAbs(sample.red()-ownerColor.red())<=1 && qAbs(sample.green()-ownerColor.green())<=1 && qAbs(sample.blue()-ownerColor.blue())<=1,"menu coerente con palette proprietaria chiara e scura");
+            require(qAbs(menu.palette().color(QPalette::WindowText).lightness()-ownerColor.lightness())>100,"testo menu in contrasto con fondo chiaro e scuro");
+            if(themeStep==3) {
+                QSettings().setValue("view/functionPanelOpacity",88);
+                // Il cambio QStyle può chiudere un popup: riaprirlo sullo stesso widget.
+                if(!menu.isVisible())menu.popup(origin);
+                QElapsedTimer captureWait;captureWait.start();
+                while(!menu.property("glassBackdropReady").toBool() && captureWait.elapsed()<1500)waitForMenu(20);
+                require(menu.property("glassBackdropReady").toBool(),"fondale ricatturato dopo cambio tema e trasparenza");
+                const auto reused=menu.grab().toImage();menu.hide();
+                CadMenu fresh(impl_->workspace);for(auto *action:menu.actions())fresh.addAction(action);
+                fresh.popup(origin);waitForMenu(80);const auto created=fresh.grab().toImage();fresh.hide();
+                require(reused.size()==created.size(),"menu riutilizzato e nuovo hanno la stessa geometria dopo cambio tema");
+                const QPoint top(reused.width()/2,qRound(16*menu.devicePixelRatioF()));
+                const auto a=reused.pixelColor(top),b=created.pixelColor(top);
+                require(qAbs(a.red()-b.red())<=2 && qAbs(a.green()-b.green())<=2 && qAbs(a.blue()-b.blue())<=2,"fondale del menu dopo cambio tema uguale a quello appena creato");
+                require(reused.pixelColor(reused.width()/2,2).alpha()==0 && created.pixelColor(created.width()/2,2).alpha()==0,"margini trasparenti sia nel menu riutilizzato sia in quello nuovo");
+                QSettings().setValue("view/functionPanelOpacity",100);
+            }
+        }
+        menu.hide();nested->popup(origin+QPoint(30,30));waitForMenu(50);
+        require(nested->property("glassOpacity").toInt()==100 && nested->property("glassRadius").toInt()==24,"impostazioni comuni anche ai sottomenu");nested->hide();
+        QSettings().setValue("view/functionPanelOpacity",previousAppearance.opacity);QSettings().setValue("view/functionPanelBlur",previousAppearance.blur);QSettings().setValue("view/functionPanelCornerRadius",previousAppearance.radius);
+        stripes.hide();
+        // Cattura un menu vero della sezione Crea, con le stesse azioni della ribbon.
+        impl_->selectTab("model");waitForMenu(120);
+        // rebuild() nasconde i gruppi vecchi e li elimina con deleteLater:
+        // non catturare un menu appartenente a un gruppo già sostituito.
+        QCoreApplication::sendPostedEvents(nullptr,QEvent::DeferredDelete);
+        QWidget *group=nullptr;
+        for(auto *candidate:findChildren<QWidget *>(QStringLiteral("ribbonGroup_Crea")))if(candidate->isVisible()){group=candidate;break;}
+        require(group,"gruppo Crea corrente e visibile dopo cambio stile");
+        if(group)if(QPointer<QMenu> actual=group->findChild<QMenu *>()) {
+            actual->popup(origin);
+            QElapsedTimer actualWait;actualWait.start();
+            while(actual && !actual->property("glassBackdropReady").toBool() && actualWait.elapsed()<1500)waitForMenu(20);
+            if(!actual || !actual->property("glassBackdropReady").toBool())qWarning("ACTUAL popup alive=%d visible=%d opacity=%d preference=%d",bool(actual),actual?actual->isVisible():false,actual?actual->property("glassOpacity").toInt():-1,readUiGlassAppearance().opacity);
+            require(actual && actual->property("glassBackdropReady").toBool(),"fondale disponibile sul vero menu di sezione");
+            const auto capture=qEnvironmentVariable("FORGECAD_GLASS_MENU_CAPTURE");if(!capture.isEmpty()){actual->grab().save(capture);impl_->window->grab().save(capture+QStringLiteral(".ribbon.png"));}actual->hide();
+        }
+#if QT_VERSION >= QT_VERSION_CHECK(6,5,0)
+        QMetaObject::invokeMethod(qApp->styleHints(),"colorSchemeChanged",Qt::DirectConnection,Q_ARG(Qt::ColorScheme,originalScheme));
+#else
+        qApp->setPalette(appPalette);
+#endif
+        waitForMenu(30);impl_->selectTab("model");
+    }
     // Riproduce la distruzione delle azioni di File recenti al caricamento.
     // Anche un comando personalizzato deve perdere il riferimento prima di riaprire un pannello.
     QAction *transient=nullptr;
@@ -696,9 +829,51 @@ void RibbonPreview::runSelfTest() {
     }
     auto *extrude=impl_->paths.key(QStringLiteral("Funzioni/Estrusione..."));require(extrude,"azione estrusione riutilizzata");
     impl_->selectTab("view");selectForAction(extrude);require(selectedTab()=="model","scheda selezionata per comando");
+    int viewShortcuts=0;
+    for(auto it=impl_->paths.cbegin();it!=impl_->paths.cend();++it) {
+        auto *action=it.key();
+        if(!it.value().startsWith(QStringLiteral("Visualizza/")) || action->shortcut().isEmpty() || !action->isEnabled())continue;
+        for(const auto &tab:{QStringLiteral("model"),QStringLiteral("sketch")}) {
+            impl_->selectTab(tab);int triggered=0;
+            const auto connection=connect(action,&QAction::triggered,this,[&]{++triggered;});
+            QShortcutEvent shortcut(action->shortcut(),0,false);QApplication::sendEvent(action,&shortcut);
+            disconnect(connection);
+            require(triggered==1,"scorciatoia visualizzazione eseguita una sola volta");
+            require(selectedTab()==tab,"scorciatoia visualizzazione conserva la scheda corrente");
+        }
+        ++viewShortcuts;
+    }
+    require(viewShortcuts>=3,"verificate scorciatoie zoom piu, meno e zero");
     setCompact(true);QApplication::processEvents();require(height()==95+2*impl_->contentPadding(),"altezza compatta con padding dinamico");setCompact(false);
     impl_->viewport->createSketch(0,QStringLiteral("Prova ribbon"));syncContext();QApplication::processEvents();
     require(selectedTab()=="sketch" && impl_->tabBar->isTabVisible(2),"entrata schizzo seleziona scheda");
+    // Il Vincoli viene creato insieme alla finestra: deve seguire il tema anche
+    // se il colore cambia prima della prima apertura o mentre resta aperto.
+    FloatingPanel *themeConstraints=nullptr;
+    for(auto *dialog:impl_->window->findChildren<QDialog *>())if(auto *floating=dynamic_cast<FloatingPanel *>(dialog)){themeConstraints=floating;break;}
+    require(themeConstraints,"pannello Vincoli disponibile per cambio tema");
+#if QT_VERSION >= QT_VERSION_CHECK(6,5,0)
+    const auto savedPanelScheme=qApp->styleHints()->colorScheme();
+    const int savedPanelOpacity=themeConstraints->panelOpacity();themeConstraints->setPanelOpacity(100);
+    for(bool dark:{true,false,true,false}) {
+        themeConstraints->setPanelOpacity(100);
+        require(QMetaObject::invokeMethod(qApp->styleHints(),"colorSchemeChanged",Qt::DirectConnection,Q_ARG(Qt::ColorScheme,dark?Qt::ColorScheme::Dark:Qt::ColorScheme::Light)),"notifica tema per pannello Vincoli");
+        QEventLoop themeLoop;QTimer::singleShot(50,&themeLoop,&QEventLoop::quit);themeLoop.exec();
+        const auto color=uiGlassPalette(impl_->window).color(QPalette::Window);
+        require(themeConstraints->panelColor()==color,"Vincoli aggiorna il fondo con la palette della finestra");
+        require(qAbs(themeConstraints->palette().color(QPalette::WindowText).lightness()-color.lightness())>100,"testo Vincoli leggibile in entrambi i temi");
+        if(QGuiApplication::platformName()!=QStringLiteral("offscreen")) {
+            themeConstraints->setPanelOpacity(55);
+            QEventLoop glassLoop;QTimer::singleShot(200,&glassLoop,&QEventLoop::quit);glassLoop.exec();
+            const auto capture=qEnvironmentVariable("FORGECAD_CONSTRAINT_THEME_CAPTURE");
+            if(!capture.isEmpty())themeConstraints->grab().save(capture+(dark?QStringLiteral("-dark.png"):QStringLiteral("-light.png")));
+        }
+
+    }
+    themeConstraints->setPanelOpacity(savedPanelOpacity);
+    QMetaObject::invokeMethod(qApp->styleHints(),"colorSchemeChanged",Qt::DirectConnection,Q_ARG(Qt::ColorScheme,savedPanelScheme));
+    QApplication::processEvents();QApplication::processEvents();
+#endif
     // Il hit-test richiede la finestra visibile; offscreen non mostra il viewport OpenGL.
     if(QGuiApplication::platformName()!=QStringLiteral("offscreen")) {
     FloatingPanel *constraints=nullptr;

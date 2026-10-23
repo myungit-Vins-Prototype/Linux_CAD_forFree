@@ -504,7 +504,7 @@ bool CadViewport::pickSketchReference(const QPoint &position, SketchReferenceHit
     double best = 8.0;
     for (int b = 0; b < extrusions_.size(); ++b) {
         const ExtrusionObject &body = extrusions_.at(b);
-        if (!body.visible || !(ForgeCad::isShapeBody(body) || (ForgeCad::isCurveBody(body) && body.curve))) continue;
+        if (!isBodyDrawn(b) || !(ForgeCad::isShapeBody(body) || (ForgeCad::isCurveBody(body) && body.curve))) continue;
         const QVector<QVector<QVector3D>> &edges = body.display.edges;
         for (int e = 0; e < edges.size(); ++e)
             for (int k = 1; k < edges.at(e).size(); ++k) {
@@ -544,7 +544,7 @@ bool CadViewport::pickSketchReference(const QPoint &position, SketchReferenceHit
         }
     };
     for (int s = 0; s < sketches_.size(); ++s) {
-        if (s == activeSketch_ || !sketches_.at(s).visible) continue;
+        if (s == activeSketch_ || !isSketchDrawn(s)) continue;
         const SketchObject &source = sketches_.at(s);
         for (int index = 0; index < source.segments.size(); ++index) {
             const SketchSegment &segment = source.segments.at(index);
@@ -627,8 +627,9 @@ QString CadViewport::addSectionReferences(int *added ) {
     int cut = 0;
     QString last;
     QApplication::setOverrideCursor(Qt::WaitCursor);
-    for (const ExtrusionObject &body : extrusions_) {
-        if (!body.visible || !ForgeCad::isShapeBody(body)) continue;
+    for (int index=0;index<extrusions_.size();++index) {
+        const auto &body=extrusions_.at(index);
+        if (!isBodyDrawn(index) || !ForgeCad::isShapeBody(body)) continue;
         SketchObject attempt = work;
         const QString error = ForgeCad::appendSectionCurves(attempt, *body.forgeBody, referencesConstruction_, true);
         if (error.isEmpty()) {
@@ -656,7 +657,7 @@ QString CadViewport::addSketchContactReferences(int *added ) {
     int sources = 0;
     QString last;
     for (int index = 0; index < sketches_.size(); ++index) {
-        if (index == activeSketch_ || !sketches_.at(index).visible) continue;
+        if (index == activeSketch_ || !isSketchDrawn(index)) continue;
         SketchObject attempt = work;
         const QString error = ForgeCad::appendSketchContactReferences(attempt, sketches_.at(index));
         if (error.isEmpty()) {
@@ -1299,6 +1300,8 @@ void CadViewport::beginSketchMode(int plane) {
     selectedFace_ = {};
     clearFeatureHighlights();
     sketchMode_ = true;
+    refreshSketchContext();
+    raySelectionCache_.clear();projectedEdges_.clear();
     sketchViewUnlocked_ = false;
     sketchViewRotated_ = false;
     sceneBoundsDirty_ = true;
@@ -1338,6 +1341,8 @@ void CadViewport::endSketchMode() {
     sketchViewUnlocked_ = false;
     sketchViewRotated_ = false;
     sketchMode_ = false;
+    refreshSketchContext();
+    raySelectionCache_.clear();projectedEdges_.clear();
     sceneBoundsDirty_ = true;
     blendFirst_ = -1;
     trimPreview_.clear();

@@ -131,7 +131,7 @@ void CadViewport::finishBoxSelection() {
         if (isSketchDrawn(index) && polylinesInBox(sketchScreenPolylines(sketches_.at(index)), r, window)) add({SceneObjectKind::Sketch, index, -1});
     for (int index = 0; index < extrusions_.size(); ++index) {
         const ExtrusionObject &body = extrusions_.at(index);
-        if (!body.visible) continue;
+        if (!isBodyDrawn(index)) continue;
         QVector<QVector<QPointF>> polylines;
         if (ForgeCad::isDatumBody(body)) {
             if (!body.datumValid) continue;
@@ -702,8 +702,8 @@ QVector<CadViewport::TopologyLabelItem> CadViewport::topologyLabelItems() const 
         if (!sectionRay(origin, towardScene, skipped)) return;
         // Anche un altro corpo visibile puo' coprire l'etichetta, compresi
         // quelli esclusi dal filtro delle etichette per selezione/hover.
-        for (const ExtrusionObject &occluder : extrusions_)
-            if (occluder.visible && ForgeCad::isShapeBody(occluder)
+        for (int index=0;index<extrusions_.size();++index)
+            if (const auto &occluder=extrusions_.at(index);isBodyDrawn(index) && ForgeCad::isShapeBody(occluder)
                 && edgeOccludedByMesh(occluder.display, origin, towardScene, point, visibilityTolerance)) return;
         QRectF box = metrics.boundingRect(QRect(0, 0, 10000, 10000), Qt::AlignCenter, text).adjusted(-3.0, -2.0, 3.0, 2.0);
         box.moveCenter(anchor + offset);
@@ -714,7 +714,7 @@ QVector<CadViewport::TopologyLabelItem> CadViewport::topologyLabelItems() const 
     };
     for (int bodyIndex = 0; bodyIndex < extrusions_.size(); ++bodyIndex) {
         const ExtrusionObject &body = extrusions_.at(bodyIndex);
-        if (!body.visible || !ForgeCad::isShapeBody(body) || (onlyBody >= 0 && bodyIndex != onlyBody)) continue;
+        if (!isBodyDrawn(bodyIndex) || !ForgeCad::isShapeBody(body) || (onlyBody >= 0 && bodyIndex != onlyBody)) continue;
         const BodyDisplay &display = body.display;
         const auto names = body.forgeBody ? ForgeCad::elementNamesOf(*body.forgeBody) : nullptr;
         const auto labelText = [&](bool edge, int index) {
@@ -916,7 +916,7 @@ int CadViewport::gpuPickBody(const QPoint &position) const {
         displayCache_.setMatrices(sceneProjectionMatrix(), sceneModelViewMatrix());
         for (int index = 0; index < extrusions_.size(); ++index) {
             const ExtrusionObject &body = extrusions_.at(index);
-            if (!body.visible || !ForgeCad::isShapeBody(body) || body.display.vertices.isEmpty()) continue;
+            if (!isBodyDrawn(index) || !ForgeCad::isShapeBody(body) || body.display.vertices.isEmpty()) continue;
             if (!pickBodies_.isEmpty() && !pickBodies_.contains(index)) continue;
             const unsigned id = unsigned(index + 1);
             const QVector4D identifier(float(id & 0xFFu) / 255.0f, float((id >> 8) & 0xFFu) / 255.0f,
@@ -947,7 +947,7 @@ SceneSelection CadViewport::pickSceneObject(const QPoint &position, bool exact )
     };
     for (int sketchIndex = 0; sketchIndex < sketches_.size(); ++sketchIndex) {
         const SketchObject &sketch = sketches_.at(sketchIndex);
-        if (!sketch.visible) continue;
+        if (!isSketchDrawn(sketchIndex)) continue;
         for (const auto &segment : sketch.segments) {
             considerSegment(projectWorldPoint(mapSketchPoint(segment.first, sketch)),
                             projectWorldPoint(mapSketchPoint(segment.second, sketch)), sketchIndex);
@@ -963,7 +963,7 @@ SceneSelection CadViewport::pickSceneObject(const QPoint &position, bool exact )
     // Curve (eliche): vicinanza alla polilinea in pixel, come gli schizzi.
     for (int index = 0; index < extrusions_.size(); ++index) {
         const ExtrusionObject &body = extrusions_.at(index);
-        if (!body.visible || !ForgeCad::isCurveBody(body)) continue;
+        if (!isBodyDrawn(index) || !ForgeCad::isCurveBody(body)) continue;
         for (const QVector<QVector3D> &polyline : body.display.edges)
             for (int k = 1; k < polyline.size(); ++k) {
                 const float before = nearestDistance;
@@ -995,7 +995,7 @@ SceneSelection CadViewport::pickSceneObject(const QPoint &position, bool exact )
     const bool reaches = sectionRay(origin, direction, skipped);
     for (int index = 0; index < extrusions_.size() && reaches; ++index) {
         const ExtrusionObject &extrusion = extrusions_.at(index);
-        if (!extrusion.visible || !ForgeCad::isShapeBody(extrusion)) continue;
+        if (!isBodyDrawn(index) || !ForgeCad::isShapeBody(extrusion)) continue;
         FaceHit face;
         bool hit = false;
         double distance = 0.0;
@@ -1035,7 +1035,7 @@ bool CadViewport::pickVisibleSketchEntity(const QPoint &position, int &sketchInd
     };
     for (int s = 0; s < sketches_.size(); ++s) {
         const SketchObject &sketch = sketches_.at(s);
-        if (!sketch.visible) continue;
+        if (!isSketchDrawn(s)) continue;
         for (int e = 0; e < sketch.segments.size(); ++e) {
             if (sketch.isConstructionSegment(e)) continue;
             const SketchSegment &segment = sketch.segments.at(e);
@@ -1155,7 +1155,7 @@ void CadViewport::finishPlaneResize(bool cancel) {
 bool CadViewport::isDatumShown(int index) const {
     if (index < 0 || index >= extrusions_.size()) return false;
     const ExtrusionObject &body = extrusions_.at(index);
-    return ForgeCad::isDatumBody(body) && body.visible && body.datumValid && index != datumPreviewIndex_;
+    return ForgeCad::isDatumBody(body) && isBodyDrawn(index) && body.datumValid && index != datumPreviewIndex_;
 }
 
 int CadViewport::pickDatumPlane(const QPoint &position, bool border, double *distance ) const {
@@ -1192,14 +1192,15 @@ int CadViewport::pickDatumPlane(const QPoint &position, bool border, double *dis
 }
 
 bool CadViewport::referenceBodyEligible(int index) const {
+    if(sketchMode_ && !isBodyDrawn(index))return false;
     const int owner = refPickOwner_ < 0 ? int(extrusions_.size()) : refPickOwner_;
     if (!pickBodies_.isEmpty())
         return pickBodies_.contains(index) && index < owner && index < extrusions_.size() && ForgeCad::isShapeBody(extrusions_.at(index));
-    return index >= 0 && index < owner && index < extrusions_.size() && extrusions_.at(index).visible && ForgeCad::isShapeBody(extrusions_.at(index));
+    return index >= 0 && index < owner && index < extrusions_.size() && isBodyDrawn(index) && ForgeCad::isShapeBody(extrusions_.at(index));
 }
 
 bool CadViewport::referenceSketchEligible(int index) const {
-    if (index < 0 || index >= sketches_.size() || !sketches_.at(index).visible) return false;
+    if (index < 0 || index >= sketches_.size() || !isSketchDrawn(index)) return false;
     const int datum = sketches_.at(index).datumPlane;
     return datum < 0 || refPickOwner_ < 0 || datum < refPickOwner_;
 }
@@ -1208,7 +1209,7 @@ bool CadViewport::curveBodyEndpoint(int index, int end, QVector3D &point, int en
     const int owner = refPickOwner_ < 0 ? int(extrusions_.size()) : refPickOwner_;
     if (index < 0 || index >= owner || index >= extrusions_.size()) return false;
     const ExtrusionObject &body = extrusions_.at(index);
-    if (!body.visible || !ForgeCad::isCurveBody(body) || !body.curve) return false;
+    if (!isBodyDrawn(index) || !ForgeCad::isCurveBody(body) || !body.curve) return false;
     const auto curve=body.curves.isEmpty()?body.curve:body.curves.value(entity);
     if(!curve)return false;
     const ForgeCad::Kernel::Interval domain = curve->domain();
@@ -1351,7 +1352,7 @@ bool CadViewport::pickReference(const QPoint &position, GeometryRef &ref, FaceHi
                     }
                     considerPolyline(polyline, candidate, true);
                 }
-            } else if (b < owner && body.visible && ForgeCad::isCurveBody(body) && body.curve) {
+            } else if (b < owner && isBodyDrawn(b) && ForgeCad::isCurveBody(body) && body.curve) {
                 r.kind = 9;
                 r.featureId = body.featureId;
                 // Il punto sulla polilinea dice quale curva (ProjectedCurve ne ha piu' di una).
@@ -1582,9 +1583,9 @@ void CadViewport::finishEdgePick() {
 }
 
 bool CadViewport::edgePickEligible(int index) const {
-    if (index < 0 || index >= extrusions_.size()) return false;
+    if (index < 0 || index >= extrusions_.size() || (sketchMode_ && !isBodyDrawn(index))) return false;
     const ExtrusionObject &body = extrusions_.at(index);
-    if (!ForgeCad::isShapeBody(body) || (!body.visible && index != edgePickBody_)) return false;
+    if (!ForgeCad::isShapeBody(body) || (!isBodyDrawn(index) && index != edgePickBody_)) return false;
     if (edgePickHelix_) return true;
     return !edgePickExtend_ || !body.solid;
 }

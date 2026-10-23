@@ -153,3 +153,11 @@ Riferimenti: [Qt QWheelEvent](https://doc.qt.io/qt-6/qwheelevent.html),
 Il confronto iniziale con [SolidCraft v0.19.0](https://github.com/tangency-labs/solidcraft/blob/v0.19.0/crates/ui-egui/src/navigation.rs)
 ha guidato lo studio della normalizzazione. Passo e avanzamento uniforme
 attuali sono una taraturaForgeCAD, non una replica del filtroegui.
+
+## Contesto durante la modifica di uno schizzo
+
+In modifica schizzo la vista recupera gli stadi costruiti prima della prima feature che usa quel profilo nella storyboard, limitandosi anche al cursore di inserimento corrente. Uno schizzo nuovo o non ancora usato mostra il modello al cursore. La visibilità temporanea rispetta i corpi nascosti e i consumi delle booleane precedenti, senza modificare il documento, il cursore o la cronologia undo. Rendering, inquadratura e selezione dei riferimenti usano lo stesso contesto; uscendo torna la vista ordinaria.
+
+Per il contesto trasparente un passaggio di sola profondità individua la superficie più vicina fra tutti i corpi, comprese le istanze. Il colore viene miscelato una sola volta su quella superficie: facce posteriori sovrapposte non aumentano l'opacità. Gli spigoli posteriori seguono l'opzione dedicata; lo schizzo rimane sovrapposto e leggibile. Questo è un contesto grafico per disegnare, senza simulazione fisica della trasmissione attraverso tutti gli strati.
+
+Verifica nativa: `forgecad_view_tests --sketch-ghost-render` controlla opacità al35%,25strati,25istanze e corpi sovrapposti. `--render-sketch-context documento.prt indice immagine.png` permette una cattura su un documento senza salvarlo.

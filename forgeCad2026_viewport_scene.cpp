@@ -64,8 +64,9 @@ QVector3D CadViewport::orbitPointAt(const QPoint &position) const {
     double skipped = 0.0;
     const bool reaches = sectionRay(origin, direction, skipped);
     float nearest = std::numeric_limits<float>::max();
-    if (reaches) for (const ExtrusionObject &body : extrusions_) {
-        if (!body.visible || !ForgeCad::isShapeBody(body)) continue;
+    if (reaches) for (int index=0;index<extrusions_.size();++index) {
+        const auto &body=extrusions_.at(index);
+        if (!isBodyDrawn(index) || !ForgeCad::isShapeBody(body)) continue;
         float distance = 0.0f;
         if (meshRayHit(body.display, origin, direction, distance) && distance < nearest
             && !sectionRemoves(origin + distance*direction)) nearest = distance;
@@ -208,16 +209,18 @@ QVector<QVector3D> CadViewport::sketchGeometryPoints(const SketchObject &sketch)
 
 QVector<QVector3D> CadViewport::sceneGeometryPoints(bool planesIfEmpty , bool datumSizes ) const {
     QVector<QVector3D> points;
-    for (const ExtrusionObject &body : extrusions_) {
-        if (!body.visible) continue;
+    for (int index=0;index<extrusions_.size();++index) {
+        const auto &body=extrusions_.at(index);
+        if (!isBodyDrawn(index)) continue;
         for (const QVector<QVector3D> &edge : body.display.edges) points += edge;
         if (body.display.edges.isEmpty()) points += body.display.vertices;
     }
     for (int index = 0; index < sketches_.size(); ++index)
         if (isSketchDrawn(index)) points += sketchGeometryPoints(sketches_.at(index));
     // Piani di costruzione: il centro (la misura automatica dipende dalla scena), gli angoli se la misura e' data.
-    for (const ExtrusionObject &body : extrusions_) {
-        if (!ForgeCad::isDatumBody(body) || !body.visible || !body.datumValid) continue;
+    for (int index=0;index<extrusions_.size();++index) {
+        const auto &body=extrusions_.at(index);
+        if (!ForgeCad::isDatumBody(body) || !isBodyDrawn(index) || !body.datumValid) continue;
         points.append(QVector3D(float(body.datumFrame.origin[0]), float(body.datumFrame.origin[1]), float(body.datumFrame.origin[2])));
         if (datumSizes && body.datum.size > 0.0) points += datumCorners(body.datumFrame, body.datum.size);
     }

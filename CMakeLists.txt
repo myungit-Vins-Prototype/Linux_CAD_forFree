@@ -58,6 +58,9 @@ add_executable(forgecad
     forgeCad2026.cpp
     forgeCad2026_application_theme.cpp
     forgeCad2026_application_theme.h
+    forgeCad2026_menu.cpp
+    forgeCad2026_ui_glass.cpp
+    forgeCad2026_ui_glass.h
     forgeCad2026_gui.cpp
     forgeCad2026_gui.h
     forgeCad2026_ribbon_preview.cpp

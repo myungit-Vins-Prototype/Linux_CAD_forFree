@@ -51,6 +51,8 @@
 #include "fk_parallel.h"
 
 #include "cad_menu.h"
+#include "forgeCad2026_ui_glass.h"
+#include <QScopedValueRollback>
 #include "toolbar_editor.h"
 #include <algorithm>
 #include <cmath>
@@ -242,7 +244,7 @@ protected:
 }
 
 FunctionDialogPanel::FunctionDialogPanel(QWidget *parent , bool exclusive )
-        : QDialog(overlayParent(parent)), exclusive_(exclusive), panelColor_(palette().color(QPalette::Window)), captureTimer_(this) {
+        : QDialog(overlayParent(parent)), exclusive_(exclusive), panelColor_(ForgeCad::uiGlassPalette(parent).color(QPalette::Window)), captureTimer_(this) {
     setAttribute(Qt::WA_NoMousePropagation);
     embedded_ = dynamic_cast<CadViewport *>(parentWidget()) != nullptr;
     if (embedded_) {
@@ -381,10 +383,10 @@ void FunctionDialogPanel::setCornerRadius(int pixels) {
 }
 
 void FunctionDialogPanel::reloadAppearance() {
-    QSettings settings;
-    setPanelOpacity(settings.value(QStringLiteral("view/functionPanelOpacity"), 88).toInt());
-    setBackdropBlur(settings.value(QStringLiteral("view/functionPanelBlur"), 12).toInt());
-    setCornerRadius(settings.value(QStringLiteral("view/functionPanelCornerRadius"), 10).toInt());
+    const auto appearance=ForgeCad::readUiGlassAppearance();
+    setPanelOpacity(appearance.opacity);
+    setBackdropBlur(appearance.blur);
+    setCornerRadius(appearance.radius);
 }
 
 void FunctionDialogPanel::mousePressEvent(QMouseEvent *event) { raise(); event->accept(); }
@@ -399,6 +401,7 @@ void FunctionDialogPanel::contextMenuEvent(QContextMenuEvent *event) { event->ac
 
 void FunctionDialogPanel::showEvent(QShowEvent *event) {
     QDialog::showEvent(event);
+    updatePalette();
     locateViewport();
     if (exclusive_ && viewport_ && !windowLock_)
         if (auto *window = qobject_cast<QMainWindow *>(viewport_->window()))
@@ -420,6 +423,14 @@ void FunctionDialogPanel::hideEvent(QHideEvent *event) {
 void FunctionDialogPanel::changeEvent(QEvent *event) {
     QDialog::changeEvent(event);
     if (event->type() == QEvent::WindowTitleChange) update(0, 0, width(), kHeaderHeight);
+    if (event->type()==QEvent::PaletteChange || event->type()==QEvent::ApplicationPaletteChange || event->type()==QEvent::StyleChange) {
+        // La palette locale serve al contrasto sul vetro. Il colore del pannello
+        // viene invece dalla finestra, senza riusare la copia del tema precedente.
+        // Il confronto evita ricorsione quando updatePalette imposta la palette locale.
+        if(panelColor_!=ForgeCad::uiGlassPalette(parentWidget()).color(QPalette::Window)) {
+            updatePalette();scheduleBackdropCapture(0);update();
+        }
+    }
 }
 
 void FunctionDialogPanel::moveEvent(QMoveEvent *event) {
@@ -459,14 +470,16 @@ void FunctionDialogPanel::paintEvent(QPaintEvent *event) {
     color.setAlpha(qRound(255.0 * opacity_ / 100.0));
     painter.fillRect(rect(), color);
     if (headerVisible_) {
-        // Intestazione: fondo scuro fisso (leggibile su qualsiasi scena), nome del comando, filo arancio.
+        // Intestazione coerente con il tema; il fondo quasi opaco mantiene
+        // leggibili nome e pulsante di chiusura anche sopra una scena contrastata.
         const QRect header(0, 0, width(), kHeaderHeight);
-        painter.fillRect(header, QColor(24, 31, 40, 235));
+        auto headerColor=panelColor_;headerColor.setAlpha(235);
+        painter.fillRect(header,headerColor);
         painter.fillRect(QRect(0, kHeaderHeight - 2, width(), 2), QColor(255, 159, 28));
         QFont font = this->font();
         font.setBold(true);
         painter.setFont(font);
-        painter.setPen(QColor(242, 246, 250));
+        painter.setPen(readableText(panelColor_));
         const int right = headerClose_ && headerClose_->isVisible() ? headerClose_->x() - 6 : width() - 10;
         const QRect text(12, 0, qMax(0, right - 12), kHeaderHeight - 2);
         painter.drawText(text, Qt::AlignVCenter | Qt::AlignLeft,
@@ -573,17 +586,20 @@ void FunctionDialogPanel::applyTransparentStyle() {
         .arg(popup.red()).arg(popup.green()).arg(popup.blue()).arg(popup.alpha());
     const QString fieldRgba = QStringLiteral("rgba(%1,%2,%3,%4)")
         .arg(field.red()).arg(field.green()).arg(field.blue()).arg(field.alpha());
-    setStyleSheet(QStringLiteral(
+    const auto sheet=QStringLiteral(
         "QDialog#functionDialogPanel, QScrollArea#functionDialogScroll, "
         "QScrollArea#functionDialogScroll > QWidget > QWidget, QWidget#functionDialogContents, "
         "QWidget#loftContents, QWidget#loftFooter, QAbstractItemView, QAbstractSpinBox, QPushButton { background: transparent; }"
+        "QDialog#functionDialogPanel, QLabel, QCheckBox, QToolButton, QAbstractItemView, QAbstractSpinBox, QPushButton { color: %5; }"
         "QAbstractItemView::item { background: transparent; }"
         "QComboBox { background-color: %1; color: %2; border: 1px solid rgba(135,170,205,150); padding: 2px 22px 2px 5px; }"
         "QComboBox QAbstractItemView { background-color: %3; color: %4; border: 1px solid #52708d; outline: 0; }"
         "QComboBox QAbstractItemView::item { background-color: %3; color: %4; min-height: 24px; padding: 2px 5px; }"
         "QComboBox QAbstractItemView::item:hover, QComboBox QAbstractItemView::item:selected { background-color: #ff9f1c; color: #101820; font-weight: 800; border: 2px solid #ffe0a3; }"
-        "QSizeGrip#functionPanelResizeGrip { background: transparent; }")
-        .arg(fieldRgba, fieldForeground.name(QColor::HexRgb), popupRgba, popupForeground.name(QColor::HexRgb)));
+        "QSizeGrip#functionPanelResizeGrip { background: transparent; }"
+        "QToolButton#functionPanelHeaderClose { color: %6; }")
+        .arg(fieldRgba, fieldForeground.name(QColor::HexRgb), popupRgba, popupForeground.name(QColor::HexRgb),palette().color(QPalette::WindowText).name(QColor::HexRgb),readableText(panelColor_).name(QColor::HexRgb));
+    if(styleSheet()!=sheet)setStyleSheet(sheet);
 }
 
 QString FunctionDialogPanel::panelSizeSettingsKey() const {
@@ -802,6 +818,10 @@ void FunctionDialogPanel::captureSceneBackdrop() {
 }
 
 void FunctionDialogPanel::updatePalette() {
+    if(updatingPalette_)return;
+    QScopedValueRollback<bool> guard(updatingPalette_,true);
+    const auto ownerColor=ForgeCad::uiGlassPalette(parentWidget()).color(QPalette::Window);
+    if(panelColor_!=ownerColor){panelColor_=ownerColor;backdrop_=QImage();}
     QColor behind = panelColor_;
     if (!backdrop_.isNull()) {
         // Un solo pixel (prima quello centrale) rendeva il testo instabile:
@@ -823,7 +843,7 @@ void FunctionDialogPanel::updatePalette() {
                                             alpha * panelColor_.greenF() + (1.0 - alpha) * behind.greenF(),
                                             alpha * panelColor_.blueF() + (1.0 - alpha) * behind.blueF());
     const QColor foreground = readableText(visible);
-    QPalette p = palette();
+    QPalette p = ForgeCad::uiGlassPalette(parentWidget());
     for (QPalette::ColorGroup group : {QPalette::Active, QPalette::Inactive, QPalette::Disabled}) {
         p.setColor(group, QPalette::WindowText, foreground);
         p.setColor(group, QPalette::Text, foreground);

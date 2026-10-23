@@ -573,7 +573,9 @@ QVector<QPointF> CadViewport::projectSketchPolyline(const QVector<QPointF> &poin
 }
 
 bool CadViewport::isSketchDrawn(int index) const {
-    return sketches_.at(index).visible || (sketchMode_ && index == activeSketch_);
+    if(sketchMode_ && index==activeSketch_)return true;
+    if(sketchMode_ && sketchContextEnd_>=0 && (index>=sketchContextSketches_.size() || !sketchContextSketches_.at(index)))return false;
+    return sketches_.at(index).visible;
 }
 
 QVector<QVector3D> CadViewport::sectionQuad(float scale ) const {

@@ -5,6 +5,13 @@
 #include <QPalette>
 #include <QStyleHints>
 #include <QTimer>
+#include <QStyle>
+#include <QPointer>
+#include <QDir>
+#include <QFile>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QDateTime>
 
 namespace ForgeCad {
 namespace {
@@ -49,6 +56,7 @@ class ApplicationTheme final : public QObject {
     bool fallbackDark_;
     bool applying_ = false;
     bool scheduled_ = false;
+    QPointer<QStyle> commonStyle_;
 #if QT_VERSION >= QT_VERSION_CHECK(6, 5, 0)
     Qt::ColorScheme scheme_;
 #endif
@@ -63,9 +71,34 @@ class ApplicationTheme final : public QObject {
 
     void apply() {
         applying_ = true;
+        // Alcuni temi di piattaforma sostituiscono QStyle durante il cambio OS.
+        // Seguendo la vita dello stile reale funzioniamo anche sotto QStyleSheetStyle.
+        if (!commonStyle_) {
+            commonStyle_=application_.setStyle(QStringLiteral("Fusion"));
+            connect(commonStyle_,&QObject::destroyed,this,[this] {
+                if(QCoreApplication::closingDown())return;
+                trace("external-style-replacement");
+                if(!applying_)schedule();
+            });
+            trace("install-fusion");
+        }
         const auto palette = applicationPalette(dark());
         if (application_.palette() != palette) application_.setPalette(palette);
+        trace("apply-palette");
         applying_ = false;
+    }
+
+    void trace(const char *reason) const {
+        const auto directory=qEnvironmentVariable("FORGECAD_MENU_DIAGNOSTICS");if(directory.isEmpty())return;
+        QDir dir(directory);if(!dir.mkpath(QStringLiteral(".")))return;
+        QFile file(dir.filePath(QStringLiteral("theme.jsonl")));if(!file.open(QIODevice::WriteOnly|QIODevice::Append))return;
+        const auto *style=application_.style();
+        const QJsonObject record{{"time",QDateTime::currentDateTimeUtc().toString(Qt::ISODateWithMs)},
+            {"reason",QString::fromLatin1(reason)},{"qt",QString::fromLatin1(qVersion())},
+            {"backend",QGuiApplication::platformName()},{"styleClass",QString::fromLatin1(style->metaObject()->className())},
+            {"styleName",style->objectName()},{"commonStyleAlive",bool(commonStyle_)},
+            {"dark",dark()},{"windowColor",application_.palette().color(QPalette::Window).name()}};
+        file.write(QJsonDocument(record).toJson(QJsonDocument::Compact));file.write("\n");
     }
 
     void schedule() {
@@ -93,7 +126,6 @@ public:
 #endif
     {
         setObjectName(QString::fromLatin1(themeObjectName));
-        application_.setStyle(QStringLiteral("Fusion"));
         application_.installEventFilter(this);
 #if QT_VERSION >= QT_VERSION_CHECK(6, 5, 0)
         connect(application_.styleHints(), &QStyleHints::colorSchemeChanged, this,

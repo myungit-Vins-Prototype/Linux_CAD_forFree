@@ -160,6 +160,36 @@ const QVector<ModelBody> &CadViewport::modelBodies() const { return modelBodies_
 
 int CadViewport::historyPosition() const { return historyPosition_ < 0 ? int(extrusions_.size()) : historyPosition_; }
 
+bool CadViewport::isBodyDrawn(int index) const {
+    if(index<0 || index>=extrusions_.size())return false;
+    if(sketchMode_ && sketchContextEnd_>=0)return index<sketchContextBodies_.size() && sketchContextBodies_.at(index);
+    return extrusions_.at(index).visible;
+}
+
+void CadViewport::refreshSketchContext() {
+    sketchContextEnd_=-1;sketchContextBodies_.clear();sketchContextSketches_.clear();
+    if(!sketchMode_ || activeSketch_<0 || activeSketch_>=sketches_.size())return;
+    // La storyboard inserisce lo schizzo davanti alla prima feature che lo usa.
+    // Per uno schizzo nuovo/non usato vale invece il cursore di inserimento.
+    int end=historyPosition();
+    for(int i=0;i<end;++i)if(featureSketches(i).contains(activeSketch_)){end=i;break;}
+    sketchContextEnd_=end;
+    sketchContextBodies_.fill(false,extrusions_.size());
+    sketchContextSketches_.fill(false,sketches_.size());sketchContextSketches_[activeSketch_]=true;
+    for(int i=0;i<end;++i) {
+        const auto &feature=extrusions_.at(i);
+        if(!ForgeCad::isShapeBody(feature))sketchContextBodies_[i]=feature.visible && !feature.suppressed && feature.error.isEmpty();
+        for(int sketch:featureSketches(i))if(sketch>=0 && sketch<sketches_.size())sketchContextSketches_[sketch]=true;
+    }
+    // Gli stadi precedenti esistono gia nel kernel: ripristinare solo la loro
+    // visibilita di scena, senza spostare il cursore o modificare preferenze/undo.
+    for(int i:resultBodiesBefore(end)) {
+        bool visible=true;
+        for(const auto &body:modelBodies_)if(body.id==extrusions_.at(i).modelBodyId){visible=body.visible;break;}
+        sketchContextBodies_[i]=visible;
+    }
+}
+
 void CadViewport::applyHistoryPosition() {
     if (historyPosition_ >= 0) {
         QVector<ExtrusionObject> prefix = extrusions_.mid(0, historyPosition());
@@ -1488,6 +1518,7 @@ void CadViewport::documentChanged() {
     if (historyPosition_ > extrusions_.size()) historyPosition_ = extrusions_.size();
     ForgeCad::normalizeModelHistory(extrusions_, modelBodies_);
     applyHistoryPosition();
+    refreshSketchContext();
     sceneBoundsDirty_ = true;
     raySelectionCache_.clear();
     projectedEdges_.clear();

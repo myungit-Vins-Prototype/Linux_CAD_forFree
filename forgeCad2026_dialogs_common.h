@@ -107,6 +107,7 @@ private:
     static QImage blurScene(QImage image, int radius);
     void captureSceneBackdrop();
     void updatePalette();
+    bool updatingPalette_ = false;
     QColor panelColor_;
     int opacity_ = 88;
     int blur_ = 12;

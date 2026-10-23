@@ -1191,7 +1191,8 @@ void CadViewport::drawExtrusions() {
     overlayRenderer_.setStipple(false);
     enableSectionClip();
     QVector<int> sectionSolids;
-    const bool previewing = !preview_.key.isEmpty();
+    const bool previewing = !sketchMode_ && !preview_.key.isEmpty();
+    QVector<int> drawn;
     for (int index = 0; index < extrusions_.size(); ++index) {
         const ExtrusionObject &extrusion = extrusions_.at(index);
         // Con un'anteprima il corpo modificato non si vede. Per raccordi e
@@ -1206,7 +1207,21 @@ void CadViewport::drawExtrusions() {
         if (!pickBodies_.isEmpty() && !pickBodies_.contains(index)) continue;
         const bool forced = replaced || blendBase || index == edgePickBody_ || (previewing && preview_.restored.contains(index))
                          || pickBodies_.contains(index);
-        if ((!extrusion.visible && !forced) || (extrusion.display.vertices.isEmpty() && extrusion.display.edges.isEmpty())) continue;
+        if ((sketchMode_ && !isBodyDrawn(index)) || (!isBodyDrawn(index) && !forced)
+            || (extrusion.display.vertices.isEmpty() && extrusion.display.edges.isEmpty())) continue;
+        drawn.append(index);
+    }
+    // Un solo strato trasparente per pixel: prima trova la superficie piu
+    // vicina fra tutti i corpi, poi applica l'opacita soltanto su quella.
+    if(sketchMode_ && sketchBodyOpacity_<0.999 && displayMode_!=0) {
+        glEnable(GL_DEPTH_TEST);glDepthFunc(GL_LEQUAL);glDepthMask(GL_TRUE);
+        glDisable(GL_BLEND);glColorMask(GL_FALSE,GL_FALSE,GL_FALSE,GL_FALSE);
+        glEnable(GL_POLYGON_OFFSET_FILL);glPolygonOffset(1.0f,2.0f);
+        for(int index:drawn)displayCache_.displayFaces(extrusions_.at(index).display);
+        glDisable(GL_POLYGON_OFFSET_FILL);glColorMask(GL_TRUE,GL_TRUE,GL_TRUE,GL_TRUE);
+    }
+    for(int index:drawn) {
+        const auto &extrusion=extrusions_.at(index);
         const SceneSelection self{SceneObjectKind::Extrusion, index, -1};
         const bool hovered = hover_ == self;
         if (displayMode_ != 0 || index == shapeAnalysisBody_) {
@@ -1214,7 +1229,7 @@ void CadViewport::drawExtrusions() {
             style.color = meshColorForFeature(index);
             style.hoverColor = kHoverColor;
             style.hovered = hovered;
-            style.seeThrough = sketchMode_ && sketchBodyOpacity_ < 0.999;
+            style.seeThrough = sketchMode_ && sketchBodyOpacity_ < 0.999 && displayMode_ != 0;
             style.opacity = float(sketchBodyOpacity_);
             style.analyzing = index == shapeAnalysisBody_;
             style.faceOnly = style.analyzing && shapeAnalysisFace_ >= 0;
@@ -1238,7 +1253,7 @@ void CadViewport::drawExtrusions() {
         sceneRenderer_.drawBodyEdges(displayCache_, overlayRenderer_, extrusion.display, edgeStyle);
         if (!ForgeCad::isCurveBody(extrusion) && index != shapeAnalysisBody_) drawFeatureHighlightEdges(index);
     }
-    if (shapeAnalysisMode_ >= 0) {
+    if (shapeAnalysisMode_ >= 0 && (!sketchMode_ || isBodyDrawn(shapeAnalysisBody_))) {
         const bool through = shapeAnalysisThrough_ && (shapeAnalysisMode_ == 4 || shapeAnalysisMode_ == 5);
         sceneRenderer_.drawAnalysisLines(overlayRenderer_, shapeAnalysis_.grid, shapeAnalysis_.lines, through);
         for (const auto &border : shapeAnalysis_.borders)
@@ -1248,7 +1263,7 @@ void CadViewport::drawExtrusions() {
         if (target.kind != SceneObjectKind::Extrusion || target.index < 0
             || target.index >= extrusions_.size()) return;
         const ExtrusionObject &extrusion = extrusions_.at(target.index);
-        if (!extrusion.visible || (extrusion.display.vertices.isEmpty() && extrusion.display.edges.isEmpty())) return;
+        if (!isBodyDrawn(target.index) || (extrusion.display.vertices.isEmpty() && extrusion.display.edges.isEmpty())) return;
         drawExtrusionOutline(extrusion, color, width);
     };
     if (previewing && (preview_.valid || previewDragVisible_)) drawPreview();

@@ -224,6 +224,9 @@ public:
     const QVector<ModelBody> &modelBodies() const;
     int historyPosition() const;
     void applyHistoryPosition();
+    // Visibilita temporanea della scena, distinta dai flag salvati nel documento.
+    bool isBodyDrawn(int index) const;
+    void refreshSketchContext();
     void setHistoryPosition(int position);
 
     // Corpo della storyboard in cui confluisce ogni corpo logico: un corpo
@@ -1597,6 +1600,8 @@ private:
     std::function<void()> constraintPanelCallback_;
     QVector<SketchObject> sketches_;
     int historyPosition_ = -1;
+    int sketchContextEnd_ = -1;
+    QVector<bool> sketchContextBodies_, sketchContextSketches_;
     QSet<quint64> consumedBodies_; // corpi nascosti dal filtro della scena, preferenza conservata
     int insertionSourceSize_ = -1;
     QVector<ExtrusionObject> extrusions_;

@@ -88,10 +88,25 @@ Per riprodurre il percorso con un documento reale senza modificarlo, il runner u
 ./forgecad-release/ribbon-preview/forgecad-ribbon-preview --test-open-block /percorso/modello.prt
 ```
 
-## Angoli dei menu
+## Sfondo, angoli e ombra dei menu
 
-I popup comuni (menu principali, sottomenu, menu contestuali e menu della ribbon) seguono **Visualizza → Pannelli delle funzioni → Raggio degli angoli**. La preferenza condivisa `view/functionPanelCornerRadius` viene riletta a ogni apertura; raggio zero mantiene gli spigoli retti. Il margine interno cresce con il raggio per proteggere voci, icone e scorciatoie. I menu conservano i propri colori opachi del tema.
+Anche i pannelli incorporati, compreso **Vincoli**, aggiornano tinta e testo dalla palette della finestra principale quando cambia il tema, prima dell’apertura e mentre restano aperti. Intestazione e istruzioni seguono lo stesso tema; le impostazioni di vetro e la geometria salvata restano condivise.
+
+I popup comuni (menu principali, sottomenu, menu contestuali e menu della ribbon) usano le stesse tre impostazioni di **Visualizza → Pannelli delle funzioni**: trasparenza, sfocatura e raggio degli angoli. Le chiavi condivise sono `view/functionPanelOpacity`, `view/functionPanelBlur` e `view/functionPanelCornerRadius`. Vengono rilette anche a popup aperto; raggio zero mantiene gli spigoli retti. Il margine interno cresce con il raggio per proteggere voci, icone e scorciatoie.
+
+Il colore viene dalla palette della finestra applicativa, evitando l'eredità trasparente dei gruppi della ribbon. I popup sono finestre separate: acquisiscono e sfocano la parte sottostante della sola finestra proprietaria, con cache e aggiornamenti legati ai nuovi frame. Non viene acquisito il desktop; se la finestra non è disponibile resta la tinta del tema con l'opacità richiesta. Le icone e le scritte rimangono nitide, mentre il fondale usa una maschera alpha antialias.
+
+Popup e ribbon hanno un'ombra morbida che segue gli angoli. L'ombra della ribbon è separata dalla maschera dei due blocchi e non intercetta il mouse; nei popup viene disegnata nel margine trasparente, senza duplicare quella nativa del sistema. Al cambio di tema o di foglio stile, il popup mantiene trasparente il fondo della finestra Qt e ricrea il fondale dalla palette aggiornata: il margine dell'ombra non riceve una tinta rettangolare.
 
 ## Ridimensionamento dei Vincoli
 
 Il pannello **Vincoli** si ridimensiona trascinando la maniglia nell’angolo inferiore destro. Le dimensioni scelte vengono ricordate. La maniglia resta disponibile con ForgeCAD massimizzato e conserva uno spazio libero rispetto al contenuto e agli angoli arrotondati.
+
+
+### Diagnostica del cambio tema nei popup
+
+Il tema della piattaforma può sostituire l'intero `QStyle` quando cambia l'aspetto del desktop, oltre ad aggiornare la palette. Il controller conserva Fusion anche dopo questa sostituzione; i `CadMenu` condividono uno stile Fusion esplicito, distinto da quello applicativo, così il polish transitorio di Breeze non registra effetti del compositore sul margine trasparente dell'ombra.
+
+Per raccogliere dati durante una prova reale avviare `tools/diagnose_menus.sh`: indica una cartella temporanea e avvia l'app compilata in `forgecad-release`. Aprire un menu, cambiare tema e riaprirlo; la prova non cambia le preferenze del sistema. `FORGECAD_BINARY` permette di indicare un'altra build. Prima chiudere normalmente la propria app se si vuole confrontare la nuova build; lo script non termina processi esistenti.
+
+La cartella contiene `session.log`, `theme.jsonl` (sostituzioni dello stile e backend), `menus.jsonl` (stile esplicito, alpha, attributi Qt e impostazioni) e PNG separati di disegno, ombra, superficie e fondale dei menu. La diagnostica è disattivata nell'avvio normale; salva al massimo20campioni per popup e non acquisisce lo schermo o l'intera finestra. Per un approfondimento Wayland avviare con `FORGECAD_MENU_PROTOCOL_TRACE=1 tools/diagnose_menus.sh`; la traccia del protocollo riguarda soltanto quella istanza e può essere voluminosa.

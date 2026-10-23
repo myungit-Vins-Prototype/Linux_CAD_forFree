@@ -292,15 +292,17 @@ void SceneRenderer::drawBodyFaces(DisplayCache &cache, OverlayRenderer &overlay,
                              float(style.hoverColor.blueF()) * 0.14f, 1.0f);
     }
     // In modalita' schizzo le facce sono trasparenti (opacita' regolabile)
-    // e non scrivono la profondita': lo schizzo dietro i corpi resta leggibile.
+    // Si disegnano solo i campioni del prepass di profondita della scena;
+    // lo schizzo usa un overlay indipendente e resta leggibile anche dietro.
     const bool seeThrough = style.seeThrough;
     cache.setColor(QVector4D(float(color.redF()), float(color.greenF()), float(color.blueF()),
                                      seeThrough ? style.opacity : 1.0f));
     cache.setEmission(emission);
     if (seeThrough) {
         glEnable(GL_BLEND);
-        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+        glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
         glDepthMask(GL_FALSE);
+        glDepthFunc(GL_EQUAL);
     }
     // Le facce vanno un poco indietro nella profondita': spigoli e
     // schizzi che stanno sulla faccia si vedono senza spostarli.
@@ -323,6 +325,7 @@ void SceneRenderer::drawBodyFaces(DisplayCache &cache, OverlayRenderer &overlay,
     if (!seeThrough && !analyzing) highlightFaces();
     if (seeThrough) {
         glDepthMask(GL_TRUE);
+        glDepthFunc(GL_LEQUAL);
         glDisable(GL_BLEND);
     }
     cache.setEmission(QVector4D(0.0f, 0.0f, 0.0f, 1.0f));

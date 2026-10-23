@@ -6,6 +6,9 @@
 #include <QLineEdit>
 #include <QStyle>
 #include <QStyleHints>
+#include <QStyleFactory>
+#include <QPointer>
+#include <memory>
 #include <QTabBar>
 #include <QToolButton>
 #include <QVBoxLayout>
@@ -33,8 +36,9 @@ public:
 
 void chooseScheme(QApplication &app, bool dark) {
 #if QT_VERSION >= QT_VERSION_CHECK(6, 8, 0)
-    app.styleHints()->setColorScheme(dark ? Qt::ColorScheme::Dark : Qt::ColorScheme::Light);
-    if (app.styleHints()->colorScheme() != (dark ? Qt::ColorScheme::Dark : Qt::ColorScheme::Light)) {
+    const bool simulate=app.arguments().contains(QStringLiteral("--simulate-theme"));
+    if(!simulate)app.styleHints()->setColorScheme(dark ? Qt::ColorScheme::Dark : Qt::ColorScheme::Light);
+    if (simulate || app.styleHints()->colorScheme() != (dark ? Qt::ColorScheme::Dark : Qt::ColorScheme::Light)) {
         ++simulatedChanges;
         // Offscreen non espone il tema dell'OS. Esercita la connessione reale
         // al segnale Qt, senza attribuire la prova a un cambio nativo.
@@ -105,6 +109,24 @@ int main(int argc, char **argv) {
             require(events.count == before, "nessun ciclo di eventi generato dalla palette applicativa");
         }
         require(app.palette() == light, "ritorno alla medesima palette chiara");
+        // Plasma può rimpiazzare QStyle, oltre a notificare il nuovo colore.
+        const auto commonPalette=app.palette();
+        for (const auto &styleName : QStyleFactory::keys()) {
+            if (styleName.compare(QStringLiteral("Windows"),Qt::CaseInsensitive)!=0 && styleName.compare(QStringLiteral("Breeze"),Qt::CaseInsensitive)!=0) continue;
+            QPointer<QStyle> replacement=QStyleFactory::create(styleName);app.setStyle(replacement.data());settle();
+            require(app.style()->objectName().compare(QStringLiteral("fusion"),Qt::CaseInsensitive)==0,
+                    "Fusion ripristinato dopo sostituzione esterna dello stile");
+            require(replacement.isNull(),"stile esterno rilasciato senza conservare filtri sui widget");
+            app.setStyleSheet(QStringLiteral("QToolButton { color: palette(button-text); }"));
+            replacement=QStyleFactory::create(styleName);app.setStyle(replacement.data());settle();
+            std::unique_ptr<QStyle> reference(QStyleFactory::create(QStringLiteral("Fusion")));
+            require(replacement.isNull() && app.style()->pixelMetric(QStyle::PM_MenuPanelWidth)==reference->pixelMetric(QStyle::PM_MenuPanelWidth),
+                    "Fusion conservato anche sotto il wrapper del foglio di stile");
+            require(app.palette()==commonPalette,"palette comune conservata dopo sostituzione di stile");
+            app.setStyleSheet(QString());settle();
+            require(app.style()->objectName().compare(QStringLiteral("fusion"),Qt::CaseInsensitive)==0,"rimozione stylesheet non cambia lo stile comune");
+        }
+
 #if QT_VERSION >= QT_VERSION_CHECK(6, 5, 0)
         require(QMetaObject::invokeMethod(app.styleHints(), "colorSchemeChanged", Qt::DirectConnection,
                     Q_ARG(Qt::ColorScheme, Qt::ColorScheme::Unknown)), "schema assente simulato");

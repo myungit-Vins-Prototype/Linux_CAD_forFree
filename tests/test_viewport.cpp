@@ -1901,7 +1901,80 @@ public:
         }
     }
 
+    static void sketchGhostRender() {
+        CadViewport view;view.resize(480,480);view.setGridVisible(false);view.setAxesVisible(false);
+        for(int p=0;p<3;++p)view.setPlaneVisible(p,false);
+        PrimitiveParameters box;
+        require(view.createPrimitive(box,QStringLiteral("Strato frontale")).isEmpty() && view.createPrimitive(box,QStringLiteral("Corpo dietro")).isEmpty(),"corpi per trasparenza schizzo");
+        view.setModelBodyVisible(1,false);
+        view.createSketch(0,QStringLiteral("Schizzo non ancora usato"));view.setDisplayMode(1);
+        BodyDisplay front;front.vertices={{-2,-2,1},{2,-2,1},{2,2,1},{-2,-2,1},{2,2,1},{-2,2,1}};
+        front.normals.fill(QVector3D(0,0,1),front.vertices.size());
+        view.extrusions_[0].display={};view.setViewFrame({1,0,0},{0,0,1});view.fitView({{-3,-3,0},{3,3,1}});
+        view.show();for(int i=0;i<10;++i)QApplication::processEvents();require(view.isValid(),"contesto GL trasparenza schizzo");
+        const auto capture=[&]{view.update();QApplication::processEvents();return view.grabFramebuffer();};
+        const auto background=capture();view.extrusions_[0].display=front;
+        view.setSketchBodyOpacity(1);const auto opaque=capture();
+        view.setSketchBodyOpacity(0.35);const auto single=capture();
+        auto layered=front;
+        for(int layer=1;layer<=24;++layer)for(int v=0;v<front.vertices.size();++v){layered.vertices.append(front.vertices[v]-QVector3D(0,0,float(layer)*0.03f));layered.normals.append(front.normals[v]);}
+        view.extrusions_[0].display=layered;const auto many=capture();
+        BodyDisplay instances=front;instances.instancedBase=std::make_shared<BodyDisplay>(front);
+        for(int layer=0;layer<25;++layer){QMatrix4x4 transform;transform.translate(0,0,-float(layer)*0.03f);instances.instanceTransforms.append(transform);}
+        view.extrusions_[0].display=instances;const auto instanced=capture();
+        view.extrusions_[0].display=front;view.setModelBodyVisible(1,true);
+        auto back=front;for(auto &point:back.vertices)point.setZ(0);
+        view.extrusions_[1].display=back;const auto bodies=capture();
+        int maximum=0,alphaError=0,signal=0;
+        for(int y=single.height()/2-8;y<=single.height()/2+8;++y)for(int x=single.width()/2-8;x<=single.width()/2+8;++x) {
+            const auto pixel=single.pixelColor(x,y),bg=background.pixelColor(x,y),solid=opaque.pixelColor(x,y);
+            signal=qMax(signal,qAbs(solid.red()-bg.red())+qAbs(solid.green()-bg.green())+qAbs(solid.blue()-bg.blue()));
+            for(auto image:{many,instanced,bodies}){const auto other=image.pixelColor(x,y);maximum=qMax(maximum,qMax(qAbs(pixel.red()-other.red()),qMax(qAbs(pixel.green()-other.green()),qAbs(pixel.blue()-other.blue()))));}
+            alphaError=qMax(alphaError,qMax(qAbs(pixel.red()-qRound(0.35*solid.red()+0.65*bg.red())),qMax(qAbs(pixel.green()-qRound(0.35*solid.green()+0.65*bg.green())),qAbs(pixel.blue()-qRound(0.35*solid.blue()+0.65*bg.blue())))));
+        }
+        std::cout<<"ghost hidden-layer max delta="<<maximum<<"; opacity35% error="<<alphaError<<std::endl;
+        require(signal>40,"campione GL contiene effettivamente la superficie");
+        require(maximum<=2,"trasparenza indipendente dagli strati nascosti, dalle istanze e dai corpi sovrapposti");
+        require(alphaError<=3,"opacita35% applicata una sola volta sullo sfondo");
+        view.makeCurrent();require(view.glGetError()==GL_NO_ERROR,"stato OpenGL valido dopo anteprima schizzo");view.doneCurrent();
+        const auto dir=qEnvironmentVariable("FORGECAD_SKETCH_GL_QA_DIR");if(!dir.isEmpty()){QDir().mkpath(dir);single.save(dir+"/ghost-single.png");many.save(dir+"/ghost-many.png");opaque.save(dir+"/ghost-opaque.png");}
+        view.close();
+    }
+
     static void historyPositionRegressions() {
+        {
+            CadViewport edit;
+            PrimitiveParameters box;box.size[0]=box.size[1]=box.size[2]=4;
+            require(edit.createPrimitive(box,QStringLiteral("Base prima dello schizzo")).isEmpty(),"base per contesto schizzo");
+            const int sketch=edit.createSketch(0,QStringLiteral("Profilo intermedio"));
+            edit.sketches_[sketch].segments={{{0,0},{1,0}},{{1,0},{1,1}},{{1,1},{0,1}},{{0,1},{0,0}}};
+            edit.endSketchMode();
+            ExtrusionObject extrusion;extrusion.sketchIndex=sketch;extrusion.distance=2;extrusion.solid=true;
+            require(edit.createExtrusion(extrusion,QStringLiteral("Uso del profilo")).isEmpty(),"feature consumatrice del profilo");
+            require(edit.createScale(0,10,0,{},QStringLiteral("Lavorazione successiva")).isEmpty(),"stadio successivo dello stesso corpo");
+            const auto before=edit.documentState();const int cursor=edit.historyPosition();
+            edit.selectSketch(sketch);
+            const auto points=edit.sceneGeometryPoints(false,false);float extent=0;
+            for(const auto &point:points)extent=qMax(extent,qMax(qAbs(point.x()),qMax(qAbs(point.y()),qAbs(point.z()))));
+            require(extent<=4.01f,"in modifica schizzo si vede lo stadio precedente, senza lavorazioni future");
+            require(edit.historyPosition()==cursor,"il contesto schizzo non sposta il cursore storyboard");
+            for(int i=0;i<before.extrusions.size();++i)require(edit.extrusions_[i].visible==before.extrusions[i].visible,"la visibilita documentale non cambia in modifica schizzo");
+            require(edit.referenceBodyEligible(0) && !edit.referenceBodyEligible(2),"riferimenti limitati allo stesso contesto della vista");
+            edit.endSketchMode();
+            require(edit.extrusions_.at(2).visible && edit.historyPosition()==cursor,"uscita schizzo ripristina la vista finale");
+            edit.setModelBodyVisible(0,false);edit.selectSketch(sketch);
+            require(!edit.isBodyDrawn(0),"il contesto rispetta il corpo nascosto dall'utente");
+            edit.endSketchMode();edit.setModelBodyVisible(0,true);
+            edit.setHistoryPosition(0);edit.selectSketch(sketch);
+            for(int i=0;i<edit.extrusions_.size();++i)require(!edit.isBodyDrawn(i),"il cursore prima dello schizzo limita il contesto");
+            edit.endSketchMode();edit.setHistoryPosition(cursor);
+            const int unused=edit.createSketch(0,QStringLiteral("Profilo non usato"));
+            require(edit.isBodyDrawn(2) && !edit.isBodyDrawn(0),"schizzo non usato mostra i tip al cursore corrente");
+            edit.endSketchMode();edit.selectSketch(sketch);
+            require(!edit.isSketchDrawn(unused),"schizzi non usati successivi esclusi dal contesto");
+            edit.endSketchMode();
+
+        }
         {
             CadViewport timeline;
             PrimitiveParameters primitive;
@@ -5986,6 +6059,18 @@ public:
         for (int i = 0; i < 8; ++i) QApplication::processEvents();
         require(v.grabFramebuffer().save(args.at(1)), "salvataggio dell'immagine");
     }
+    static void renderSketchContext(const QStringList &args) {
+        DocumentState document;
+        require(ForgeCad::loadDocumentFile(args.at(0),document).isEmpty(),"lettura documento per contesto schizzo");
+        CadViewport v;v.resize(1000,900);v.loadDocument(document);
+        const int index=args.at(1).toInt();require(index>=0 && index<v.sketches_.size(),"indice schizzo valido");
+        v.selectSketch(index);v.setSketchBodyOpacity(0.35);v.setViewFrame({1,0,0},{1,-2,1});v.fitAll();v.show();
+        for(int i=0;i<10;++i)QApplication::processEvents();
+        std::cout<<"sketch="<<index<<" boundary="<<v.sketchContextEnd_<<" cursor="<<v.historyPosition()<<" drawn=";
+        for(int i=0;i<v.extrusions_.size();++i)if(v.isBodyDrawn(i))std::cout<<i<<",";
+        std::cout<<std::endl;require(v.grabFramebuffer().save(args.at(2)),"cattura contesto schizzo");
+    }
+
     // Stato del viewport durante "Modifica parametri" della funzione `index`
     // di un documento: --render-edit doc.prt indice prima.png dopo.png.
     static void renderEdit(const QStringList &args) {
@@ -9656,6 +9741,11 @@ int main(int argc, char **argv) {
         catch(const std::exception &e) {std::cerr<<e.what()<<std::endl;return 1;}
         return 0;
     }
+    if (app.arguments().contains(QStringLiteral("--sketch-ghost-render"))) {
+        try { ViewportInteractionTest::sketchGhostRender(); }
+        catch (const std::exception &e) { std::cerr<<e.what()<<std::endl;return 1; }
+        std::cout<<"PASS sketch ghost rendering"<<std::endl;return 0;
+    }
     if (app.arguments().contains(QStringLiteral("--async-lifetime"))) {
         try { ViewportInteractionTest::asyncLifetimeRegressions(); }
         catch (const std::exception &e) { std::cerr << e.what() << std::endl; return 1; }
@@ -10182,6 +10272,8 @@ int main(int argc, char **argv) {
         if (load > 0) { ViewportInteractionTest::benchLoad(app.arguments().mid(load + 1)); return 0; }
         const int bench = int(app.arguments().indexOf(QStringLiteral("--bench-view")));
         if (bench > 0) { ViewportInteractionTest::benchView(app.arguments().mid(bench + 1)); return 0; }
+        const int sketchEdit = int(app.arguments().indexOf(QStringLiteral("--render-sketch-context")));
+        if(sketchEdit>0){ViewportInteractionTest::renderSketchContext(app.arguments().mid(sketchEdit+1));return 0;}
         const int edit = int(app.arguments().indexOf(QStringLiteral("--render-edit")));
         const int displayStatsArg = int(app.arguments().indexOf(QStringLiteral("--display-stats")));
         if (displayStatsArg > 0) { ViewportInteractionTest::displayStats(app.arguments().value(displayStatsArg + 1)); return 0; }
