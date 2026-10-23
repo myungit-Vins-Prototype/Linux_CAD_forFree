@@ -1,5 +1,6 @@
 // Bootstrap separato della prova; l’entrypoint e il binario abituali restano indipendenti.
 #include "forgeCad2026_gui.h"
+#include "forgeCad2026_application_theme.h"
 
 #include <QApplication>
 #include <QFileInfo>
@@ -9,6 +10,7 @@
 #include <QAction>
 #include <QIcon>
 #include <QSurfaceFormat>
+#include <QStyleHints>
 #ifdef Q_OS_MACOS
 #include "cad_macos_menu.h"
 #endif
@@ -49,13 +51,15 @@ static void requestCoreContext() {
 int main(int argc,char **argv) {
     preferDiscreteGpu();requestCoreContext();QCoreApplication::setAttribute(Qt::AA_UseDesktopOpenGL);
     QApplication app(argc,argv);
+    ForgeCad::initializeApplicationTheme(app);
     QCoreApplication::setOrganizationName(QStringLiteral("ForgeCADPreview"));
     QCoreApplication::setApplicationName(QStringLiteral("RibbonExperiment"));
     QGuiApplication::setApplicationDisplayName(QStringLiteral("ForgeCAD — Prova ribbon"));
     QGuiApplication::setDesktopFileName(QStringLiteral("forgecad-ribbon-preview"));
     QCoreApplication::setAttribute(Qt::AA_DontShowIconsInMenus,false);
     const int documentTest=app.arguments().indexOf(QStringLiteral("--test-open-block"));
-    const bool selfTest=app.arguments().contains(QStringLiteral("--self-test")) || documentTest>=0;
+    const int themeTest=app.arguments().indexOf(QStringLiteral("--test-application-theme"));
+    const bool selfTest=app.arguments().contains(QStringLiteral("--self-test")) || documentTest>=0 || themeTest>=0;
     QTemporaryDir settings;
     if(selfTest){QSettings::setDefaultFormat(QSettings::IniFormat);QSettings::setPath(QSettings::IniFormat,QSettings::UserScope,settings.path());}
     QIcon icon;icon.addFile(QStringLiteral(":/icons/forgecad-256.png"));app.setWindowIcon(icon);
@@ -68,6 +72,33 @@ int main(int argc,char **argv) {
 #endif
     if(selfTest) {
         if(QGuiApplication::platformName()!=QStringLiteral("offscreen")){window.resize(1280,800);window.show();QApplication::processEvents();}
+        if(themeTest>=0) {
+#if QT_VERSION >= QT_VERSION_CHECK(6, 8, 0)
+            if(themeTest+1>=app.arguments().size())return 2;
+            const auto directory=app.arguments().at(themeTest+1);
+            if(!QDir().mkpath(directory))return 2;
+            window.resize(1440,900);
+            QRect ribbonGeometry;
+            for(bool dark:{false,true,false}) {
+                const auto scheme=dark?Qt::ColorScheme::Dark:Qt::ColorScheme::Light;
+                app.styleHints()->setColorScheme(scheme);
+                for(int i=0;i<8;++i)QApplication::processEvents();
+                if(app.styleHints()->colorScheme()!=scheme){std::cerr<<"Backend senza override nativo dello schema\n";return 77;}
+                if((ribbon->palette().color(QPalette::Window).lightness()<128)!=dark ||
+                   app.styleSheet().contains(QStringLiteral("#111820"))!=dark) {
+                    std::cerr<<"Tema ribbon o foglio stile finestra non aggiornato\n";return 1;
+                }
+                if(!ribbonGeometry.isNull() && ribbon->geometry()!=ribbonGeometry){std::cerr<<"Geometria ribbon cambiata con il tema\n";return 1;}
+                ribbonGeometry=ribbon->geometry();
+                const auto path=QDir(directory).filePath(dark?QStringLiteral("ribbon-dark.png"):QStringLiteral("ribbon-light.png"));
+                if(!window.grab().save(path))return 1;
+            }
+            std::cout<<"PASS tema nativo Qt: chiaro/scuro/chiaro, ribbon e foglio stile della finestra aperta, geometria invariata\n";
+            return 0;
+#else
+            std::cerr<<"La prova nativa richiede Qt6.8 o successivo\n";return 77;
+#endif
+        }
         if(documentTest>=0) {
             if(documentTest+1>=app.arguments().size())return 2;
             window.resize(1800,1000);QApplication::processEvents();

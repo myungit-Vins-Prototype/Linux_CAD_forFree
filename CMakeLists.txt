@@ -56,6 +56,8 @@ add_subdirectory(kernel)
 
 add_executable(forgecad
     forgeCad2026.cpp
+    forgeCad2026_application_theme.cpp
+    forgeCad2026_application_theme.h
     forgeCad2026_gui.cpp
     forgeCad2026_gui.h
     forgeCad2026_ribbon_preview.cpp
@@ -438,6 +440,13 @@ if(FORGECAD_BUILD_VIEW_TESTS)
     forgecad_add_view_test(forgecad_orbit_pivot_tests --orbit-pivot)
     forgecad_add_view_test(forgecad_smooth_zoom_tests --smooth-zoom)
 endif()
+
+add_executable(forgecad_application_theme_tests tests/test_application_theme.cpp forgeCad2026_application_theme.cpp)
+target_include_directories(forgecad_application_theme_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+target_link_libraries(forgecad_application_theme_tests PRIVATE Qt6::Widgets)
+target_compile_options(forgecad_application_theme_tests PRIVATE -Wall -Wextra -Wpedantic)
+add_test(NAME forgecad_application_theme_tests COMMAND forgecad_application_theme_tests)
+set_tests_properties(forgecad_application_theme_tests PROPERTIES TIMEOUT 15 ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
 
 add_executable(forgecad_shape_analysis_tests tests/test_shape_analysis.cpp cad_shape_analysis.cpp)
 target_include_directories(forgecad_shape_analysis_tests PRIVATE ${PROJECT_SOURCE_DIR})

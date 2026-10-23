@@ -9578,12 +9578,14 @@ public:
     }
 };
 #include "test_blend_history.h"
+#include "../forgeCad2026_application_theme.h"
 int main(int argc, char **argv) {
     QSurfaceFormat format;
     format.setRenderableType(QSurfaceFormat::OpenGL); format.setVersion(3, 3);
     format.setProfile(QSurfaceFormat::CoreProfile); format.setDepthBufferSize(24); format.setStencilBufferSize(8);
     QSurfaceFormat::setDefaultFormat(format);
     QApplication app(argc, argv);
+    ForgeCad::initializeApplicationTheme(app);
     QCoreApplication::setOrganizationName(QStringLiteral("ForgeCADTests"));
     QCoreApplication::setApplicationName(QStringLiteral("Viewport"));
     QTemporaryDir settings;

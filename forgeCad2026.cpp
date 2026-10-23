@@ -1,4 +1,5 @@
 #include "forgeCad2026_gui.h"
+#include "forgeCad2026_application_theme.h"
 
 #include <QApplication>
 #include <QFileInfo>
@@ -38,6 +39,7 @@ int main(int argc, char **argv) {
     requestCoreContext();
     QCoreApplication::setAttribute(Qt::AA_UseDesktopOpenGL);
     QApplication application(argc, argv);
+    ForgeCad::initializeApplicationTheme(application);
 #ifdef Q_OS_MACOS
     // Il tema di piattaforma puo' nascondere le icone dei menu (macOS).
     // Impostarlo dopo QApplication e prima di creare le azioni e i menu.

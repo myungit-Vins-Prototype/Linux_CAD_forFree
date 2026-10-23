@@ -2,6 +2,10 @@
 
 La ribbon approvata è ora inclusa nell’app normale e visibile per default. Le toolbar classiche restano agganciabili e personalizzabili; al primo avvio della nuova interfaccia vengono spente, conservando posizioni e layout. Le successive scelte di visibilità sono rispettate.
 
+L’app normale e il runner usano **Fusion** come stile comune, senza bisogno di `-style Fusion`. Colori e accenti provengono da due palette dell’app: dal sistema viene seguita soltanto la scelta **chiaro/scuro**, anche mentre le finestre sono aperte. Il cambio mantiene il disegno dei controlli. Con Qt 6.5+ viene osservato `QStyleHints::colorSchemeChanged`; se lo schema non è disponibile, viene usata la luminosità della palette ricevuta da Qt. Sui backend meno recenti l’aggiornamento dipende dalle notifiche di palette fornite dalla piattaforma. Font, scala dello schermo e sfondo del viewport conservano le impostazioni esistenti.
+
+Per la verifica nativa del tema (Qt 6.8+, preferenze isolate) usare `forgecad-ribbon-preview --test-application-theme <cartella-catture>`: cambia lo schema della sola app, verifica ribbon e foglio stile nella finestra aperta e salva `ribbon-light.png`/`ribbon-dark.png`. La prova non modifica l’aspetto globale del sistema. Il test CTest `forgecad_application_theme_tests` verifica anche il fallback e distingue richieste native da segnali simulati su offscreen.
+
 In **Opzioni → Barre degli strumenti** si possono riattivare le toolbar, mostrare/nascondere la ribbon e aprire **Personalizza ribbon…**. Anche il clic destro sulla ribbon apre il menu; sul pulsante Compatta apre direttamente l’editor.
 
 L’editor permette, per ogni scheda, di aggiungere, rinominare, mostrare/nascondere, rimuovere e riordinare sezioni; aggiungere, rimuovere e riordinare comandi e separatori; inserire un separatore tra sezioni e scegliere quanti pulsanti promuovere nella ribbon. Il menu della sezione contiene tutti i comandi, anche quelli non promossi. Termina schizzo è protetto dalla rimozione e dall’overflow. Conferma salva, Annulla scarta, Ripristina ricrea la disposizione iniziale solo dopo Conferma.

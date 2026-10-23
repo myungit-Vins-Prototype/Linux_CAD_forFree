@@ -41,6 +41,7 @@ GROUPS = [
 # Descrizioni curate: aggiornare queste voci quando cambia il confine di un modulo.
 DESCRIPTIONS = {
  'forgeCad2026.cpp': ('startup', 'Entry point Qt: avvio, opzioni e apertura della finestra principale.'),
+ 'forgeCad2026_application_theme': ('startup', 'Stile Fusion comune e palette applicative: segue il chiaro/scuro del sistema, con fallback per backend Qt meno recenti.'),
  'forgeCad2026_gui': ('startup', 'PdfWindow: sette fasi di inizializzazione di scena, menu, comandi, opzioni e toolbar; ciclo del documento.'),
  'forgeCad2026_gui_common': ('startup', 'Helper condivisi dalla finestra, dai dialoghi e dal viewport.'),
  'forgeCad2026_viewport.cpp': ('viewport', 'Ciclo di vita e impostazioni pubbliche del coordinatore CadViewport.'),
@@ -320,6 +321,11 @@ def parse_unit(job):
 
 def compilation_jobs(db,files,resource):
     records=json.loads(db.read_text());known=set(files);selected={}
+    # libclang non eredita i percorsi impliciti del driver Apple c++ usato
+    # dalla build. libc++ deve precedere gli header C/builtin (stddef.h).
+    sdk=None
+    if sys.platform=='darwin':
+        sdk=Path(subprocess.check_output(['xcrun','--show-sdk-path'],text=True).strip())
     for record in records:
         path=Path(record['file']).resolve()
         try:rel=path.relative_to(ROOT).as_posix()
@@ -335,6 +341,11 @@ def compilation_jobs(db,files,resource):
                 clean.extend([a,v]);i+=2;continue
             if a.startswith('-I') and len(a)>2 and not os.path.isabs(a[2:]):a='-I'+str((Path(record['directory'])/a[2:]).resolve())
             clean.append(a);i+=1
+        if sdk:
+            if '-isysroot' not in clean and not any(a.startswith('--sysroot=') for a in clean):
+                clean+=['-isysroot',str(sdk)]
+            cxx=sdk/'usr/include/c++/v1'
+            if cxx.is_dir():clean+=['-isystem',str(cxx)]
         if resource:clean+=['-isystem',resource]
         clean+=['-I'+str(ROOT),'-Wno-unknown-attributes']
         selected[rel]=(str(path),clean,str(ROOT),files)
