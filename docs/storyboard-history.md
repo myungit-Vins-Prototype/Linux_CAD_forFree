@@ -35,6 +35,14 @@ lavorazione non ne cambia la posizione. Il cursore conta schizzi e lavorazioni
 separatamente. Durante la modifica si vedono gli stadi precedenti alla posizione
 propria dello schizzo.
 
+Se si conferma un'estrusione o una rivoluzione mentre lo schizzo è aperto,
+il risultato resta visibile con l'opacità dei solidi nello schizzo per la
+sessione corrente. Un'unione sostituisce lo stadio di base, senza sovrapporlo
+al risultato. Le altre lavorazioni future restano escluse; il risultato
+appena creato non diventa un riferimento futuro per lo schizzo. Uscendo e
+riaprendo lo schizzo si torna al suo contesto storico. Questa visibilità è
+temporanea e non viene salvata nel documento.
+
 Dal menu dello schizzo, **Cambia piano di riferimento...** permette di scegliere
 un piano di origine, un datum o una faccia piana di una lavorazione precedente.
 Geometria e quote conservano le coordinate locali sul nuovo piano; gli

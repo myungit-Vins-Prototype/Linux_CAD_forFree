@@ -1191,7 +1191,9 @@ void CadViewport::drawExtrusions() {
     overlayRenderer_.setStipple(false);
     enableSectionClip();
     QVector<int> sectionSolids;
-    const bool previewing = !sketchMode_ && !preview_.key.isEmpty();
+    // I comandi di feature possono partire dallo schizzo: l'editing resta
+    // attivo, ma SketchViewUnlock permette la vista 3D della lavorazione.
+    const bool previewing = (!sketchMode_ || sketchViewUnlocked_) && !preview_.key.isEmpty();
     QVector<int> drawn;
     for (int index = 0; index < extrusions_.size(); ++index) {
         const ExtrusionObject &extrusion = extrusions_.at(index);

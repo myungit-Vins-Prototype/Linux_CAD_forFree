@@ -174,14 +174,17 @@ const QVector<ModelBody> &CadViewport::modelBodies() const { return modelBodies_
 
 int CadViewport::historyPosition() const { return historyPosition_ < 0 ? int(extrusions_.size()) : historyPosition_; }
 
-bool CadViewport::isBodyDrawn(int index) const {
+bool CadViewport::isBodyDrawn(int index, bool includeSketchResults) const {
     if(index<0 || index>=extrusions_.size())return false;
-    if(sketchMode_ && sketchContextEnd_>=0)return index<sketchContextBodies_.size() && sketchContextBodies_.at(index);
+    if(sketchMode_ && sketchContextEnd_>=0) {
+        const auto &bodies = includeSketchResults ? sketchDisplayBodies_ : sketchContextBodies_;
+        return index<bodies.size() && bodies.at(index);
+    }
     return extrusions_.at(index).visible;
 }
 
 void CadViewport::refreshSketchContext() {
-    sketchContextEnd_=-1;sketchContextBodies_.clear();sketchContextSketches_.clear();
+    sketchContextEnd_=-1;sketchContextBodies_.clear();sketchContextSketches_.clear();sketchDisplayBodies_.clear();
     if(!sketchMode_ || activeSketch_<0 || activeSketch_>=sketches_.size())return;
     const auto steps = storyboard();
     const int stop = std::min(storyboardPosition(), storyboardIndex(true, activeSketch_));
@@ -204,6 +207,22 @@ void CadViewport::refreshSketchContext() {
         bool visible=true;
         for(const auto &body:modelBodies_)if(body.id==extrusions_.at(i).modelBodyId){visible=body.visible;break;}
         sketchContextBodies_[i]=visible;
+    }
+    sketchDisplayBodies_ = sketchContextBodies_;
+    if (!sketchSessionFeatures_.isEmpty()) {
+        // Le conferme della sessione sostituiscono gli stadi di base; le
+        // altre lavorazioni future restano escluse, anche dopo Undo/Redo.
+        for (const auto &feature : extrusions_)
+            if (sketchSessionFeatures_.contains(feature.featureId)
+                && !ForgeCad::sketchesOf(feature).contains(activeSketch_))
+                sketchSessionFeatures_.remove(feature.featureId);
+        for (int i=0;i<extrusions_.size();++i)
+            if (ForgeCad::isShapeBody(extrusions_.at(i))) sketchDisplayBodies_[i]=false;
+        for (int i : resultBodiesBefore(end, sketchSessionFeatures_)) {
+            bool visible=true;
+            for (const auto &body : modelBodies_) if (body.id==extrusions_.at(i).modelBodyId) {visible=body.visible;break;}
+            sketchDisplayBodies_[i]=visible;
+        }
     }
 }
 
@@ -327,12 +346,13 @@ QString CadViewport::changeSketchSupport(int index, GeometryRef reference) {
     return {};
 }
 
-QVector<int> CadViewport::resultBodiesBefore(int position) const {
-    const int end = position < 0 ? historyPosition() : std::min(position, historyPosition());
+QVector<int> CadViewport::resultBodiesBefore(int position, const QSet<quint64> &extraFeatures) const {
+    const int end = position < 0 || !extraFeatures.isEmpty() ? historyPosition() : std::min(position, historyPosition());
     QHash<quint64, int> last;
     QSet<quint64> consumed;
     for (int index = 0; index < end; ++index) {
         const ExtrusionObject &feature = extrusions_.at(index);
+        if (position >= 0 && index >= position && !extraFeatures.contains(feature.featureId)) continue;
         if (!feature.modelBodyId || feature.suppressed || !feature.error.isEmpty() || !feature.forgeBody) continue;
         for (int operand : ForgeCad::hiddenOperands(feature))
             if (operand >= 0 && operand < extrusions_.size() && extrusions_.at(operand).modelBodyId != feature.modelBodyId)
@@ -1675,6 +1695,11 @@ void CadViewport::documentChanged() {
         for (int p = 0; p < storyPosition_; ++p) if (!currentStory.at(p).sketch) ++historyPosition_;
     }
     applyHistoryPosition();
+    if (sketchMode_ && activeSketch_>=0 && activeSketch_<sketches_.size())
+        for (const auto &feature : extrusions_)
+            if (newFeatureIds.contains(feature.featureId) && ForgeCad::isShapeBody(feature)
+                && ForgeCad::sketchesOf(feature).contains(activeSketch_))
+                sketchSessionFeatures_.insert(feature.featureId);
     refreshSketchContext();
     sceneBoundsDirty_ = true;
     raySelectionCache_.clear();

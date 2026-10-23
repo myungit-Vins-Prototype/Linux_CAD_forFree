@@ -232,7 +232,8 @@ public:
     int historyPosition() const;
     void applyHistoryPosition();
     // Visibilita temporanea della scena, distinta dai flag salvati nel documento.
-    bool isBodyDrawn(int index) const;
+    // I riferimenti dello schizzo escludono i risultati appena confermati.
+    bool isBodyDrawn(int index, bool includeSketchResults = true) const;
     void refreshSketchContext();
     void setHistoryPosition(int position);
 
@@ -247,7 +248,8 @@ public:
     // (booleana, fusione, cucitura). Indici delle feature, in ordine. Le
     // feature intermedie e i corpi spariti non ci sono: e' l'elenco da offrire
     // come operandi.
-    QVector<int> resultBodiesBefore(int position) const;
+    // extraFeatures ammette solo i risultati della sessione schizzo corrente.
+    QVector<int> resultBodiesBefore(int position, const QSet<quint64> &extraFeatures = {}) const;
 
     QHash<quint64, quint64> storyboardRoots() const;
     QVector<int> featureSketches(int index) const;
@@ -1612,6 +1614,8 @@ private:
     int historyPosition_ = -1;
     int sketchContextEnd_ = -1;
     QVector<bool> sketchContextBodies_, sketchContextSketches_;
+    QVector<bool> sketchDisplayBodies_;
+    QSet<quint64> sketchSessionFeatures_; // solo scena, fino all'uscita dallo schizzo
     QSet<quint64> consumedBodies_; // corpi nascosti dal filtro della scena, preferenza conservata
     int insertionSourceSize_ = -1;
     QVector<ExtrusionObject> extrusions_;

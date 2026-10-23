@@ -1192,11 +1192,11 @@ int CadViewport::pickDatumPlane(const QPoint &position, bool border, double *dis
 }
 
 bool CadViewport::referenceBodyEligible(int index) const {
-    if(sketchMode_ && !isBodyDrawn(index))return false;
+    if(sketchMode_ && !isBodyDrawn(index, false))return false;
     const int owner = refPickOwner_ < 0 ? int(extrusions_.size()) : refPickOwner_;
     if (!pickBodies_.isEmpty())
         return pickBodies_.contains(index) && index < owner && index < extrusions_.size() && ForgeCad::isShapeBody(extrusions_.at(index));
-    return index >= 0 && index < owner && index < extrusions_.size() && isBodyDrawn(index) && ForgeCad::isShapeBody(extrusions_.at(index));
+    return index >= 0 && index < owner && index < extrusions_.size() && isBodyDrawn(index, false) && ForgeCad::isShapeBody(extrusions_.at(index));
 }
 
 bool CadViewport::referenceSketchEligible(int index) const {

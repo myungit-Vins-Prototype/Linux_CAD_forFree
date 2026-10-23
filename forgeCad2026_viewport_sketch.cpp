@@ -504,7 +504,7 @@ bool CadViewport::pickSketchReference(const QPoint &position, SketchReferenceHit
     double best = 8.0;
     for (int b = 0; b < extrusions_.size(); ++b) {
         const ExtrusionObject &body = extrusions_.at(b);
-        if (!isBodyDrawn(b) || !(ForgeCad::isShapeBody(body) || (ForgeCad::isCurveBody(body) && body.curve))) continue;
+        if (!isBodyDrawn(b, false) || !(ForgeCad::isShapeBody(body) || (ForgeCad::isCurveBody(body) && body.curve))) continue;
         const QVector<QVector<QVector3D>> &edges = body.display.edges;
         for (int e = 0; e < edges.size(); ++e)
             for (int k = 1; k < edges.at(e).size(); ++k) {
@@ -629,7 +629,7 @@ QString CadViewport::addSectionReferences(int *added ) {
     QApplication::setOverrideCursor(Qt::WaitCursor);
     for (int index=0;index<extrusions_.size();++index) {
         const auto &body=extrusions_.at(index);
-        if (!isBodyDrawn(index) || !ForgeCad::isShapeBody(body)) continue;
+        if (!isBodyDrawn(index, false) || !ForgeCad::isShapeBody(body)) continue;
         SketchObject attempt = work;
         const QString error = ForgeCad::appendSectionCurves(attempt, *body.forgeBody, referencesConstruction_, true);
         if (error.isEmpty()) {
@@ -1307,6 +1307,7 @@ void CadViewport::beginSketchMode(int plane) {
     selectedFace_ = {};
     clearFeatureHighlights();
     sketchMode_ = true;
+    sketchSessionFeatures_.clear();
     refreshSketchContext();
     raySelectionCache_.clear();projectedEdges_.clear();
     sketchViewUnlocked_ = false;
@@ -1348,6 +1349,7 @@ void CadViewport::endSketchMode() {
     sketchViewUnlocked_ = false;
     sketchViewRotated_ = false;
     sketchMode_ = false;
+    sketchSessionFeatures_.clear();
     refreshSketchContext();
     raySelectionCache_.clear();projectedEdges_.clear();
     sceneBoundsDirty_ = true;

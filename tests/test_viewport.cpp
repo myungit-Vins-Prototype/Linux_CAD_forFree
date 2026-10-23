@@ -103,7 +103,7 @@ public:
 #include "test_sketch_menu_cancel.h"
 #include "test_document_recovery.h"
 #include "test_document_consultation.h"
-    static void previewPerformance() {
+    static void previewPerformance(bool gl = false) {
         using namespace ForgeCad;using namespace ForgeCad::Kernel;
         const auto settle=[](CadViewport &view) {
             QElapsedTimer timer;timer.start();
@@ -152,6 +152,42 @@ public:
                 require(view.grabFramebuffer().save(qEnvironmentVariable("FORGECAD_PREVIEW_QA_DIR")
                         +QString("/preview-%1.png").arg(mode)),"acquisizione anteprima nativa");view.hide();
             }
+            if (gl && mode < 2) {
+                // Estrusione e rivoluzione aperte dallo schizzo lo mantengono
+                // attivo: SketchViewUnlock sospende soltanto l'editing 2D.
+                view.selectSketch(0);
+                view.setSketchViewUnlocked(true);
+                view.resize(1000,750);view.setViewPreset(4);view.fitView(view.preview_.display.vertices);
+                view.show();QApplication::processEvents();
+                require(view.sketchMode_ && view.sketchViewUnlocked_ && view.preview_.valid,
+                        "anteprima valida con schizzo attivo e vista sbloccata");
+                const auto visible = view.grabFramebuffer();
+                require(!visible.isNull(), "framebuffer nativo disponibile per anteprima");
+                // Stessa scena e camera: togliendo solo la validita' della
+                // preview deve sparire una superficie, non un'etichetta UI.
+                view.preview_.valid = false;
+                const auto hidden = view.grabFramebuffer();
+                view.preview_.valid = true;
+                int changed = 0;
+                for (int y=0;y<visible.height();++y)
+                    for (int x=0;x<visible.width();++x)
+                        if (visible.pixel(x,y)!=hidden.pixel(x,y)) ++changed;
+                std::cout << "preview sketch mode=" << mode << " changed_pixels=" << changed << std::endl;
+                const QString directory=qEnvironmentVariable("FORGECAD_PREVIEW_QA_DIR");
+                if (!directory.isEmpty()) {
+                    require(visible.save(directory+QString("/sketch-preview-%1.png").arg(mode)), "cattura anteprima da schizzo");
+                    require(hidden.save(directory+QString("/sketch-without-preview-%1.png").arg(mode)), "cattura controllo senza anteprima");
+                }
+                require(changed>visible.width()*visible.height()/100,
+                        "anteprima estrusione/rivoluzione disegnata anche dallo schizzo");
+                view.setSketchViewUnlocked(false);
+                const auto locked = view.grabFramebuffer();
+                view.preview_.valid = false;
+                const auto lockedWithoutPreview = view.grabFramebuffer();
+                view.preview_.valid = true;
+                require(locked==lockedWithoutPreview, "editing 2D normale continua a escludere le anteprime feature");
+                view.endSketchMode();view.hide();
+            }
             if(mode==0){
                 // Il worker superato non deve sostituire un risultato ripreso dalla cache.
                 auto *pool=QThreadPool::globalInstance();const int threads=pool->maxThreadCount();pool->setMaxThreadCount(1);
@@ -199,6 +235,57 @@ public:
             view.resize(1000,750);view.setViewPreset(4);view.fitView(view.preview_.display.vertices);view.show();QApplication::processEvents();
             require(view.grabFramebuffer().save(qEnvironmentVariable("FORGECAD_PREVIEW_QA_DIR")+"/preview-real.png"),"acquisizione modello reale");view.hide();
             require(file.open(QIODevice::ReadOnly)&&file.readAll()==original,"modello QA originale invariato");
+        }
+        for (bool revolution : {false,true}) for (bool merge : {false,true}) {
+            CadViewport view;
+            PrimitiveParameters box;box.size[0]=3;box.size[1]=3;box.size[2]=1;
+            require(view.createPrimitive(box,QStringLiteral("Base")).isEmpty(),"base conferma da schizzo");
+            const int sketch=view.createSketch(0,QStringLiteral("Profilo"));
+            view.sketches_[sketch].segments={{{2,0},{4,0}},{{4,0},{4,2}},{{4,2},{2,2}},{{2,2},{2,0}}};
+            view.endSketchMode();box.origin[0]=20;
+            require(view.createPrimitive(box,QStringLiteral("Futuro indipendente")).isEmpty(),"feature futura per filtro storico");
+            view.selectSketch(sketch);
+            ExtrusionObject definition;definition.sketchIndex=sketch;definition.distance=5;
+            if(revolution){definition.feature=BodyFeature::Revolution;definition.revolveAxis=-2;definition.revolveAngle=-90;}
+            if(merge){definition.mergeOperation=1;definition.mergeAuto=false;definition.mergeBodies={0};}
+            {
+                const SketchViewUnlock unlock(&view);
+                view.requestPreview(definition);settle(view);
+                const QString error=revolution?view.createBody(definition):view.createExtrusion(definition,QStringLiteral("Estrusione confermata"));
+                require(error.isEmpty(),"conferma della feature da schizzo riuscita");
+                view.clearPreview();
+            }
+            const int result=view.extrusions_.size()-1;
+            require(view.sketchMode_ && !view.sketchViewUnlocked_ && view.preview_.key.isEmpty(),"OK torna allo schizzo senza anteprima");
+            require(view.isBodyDrawn(result),"il solido confermato resta visibile nello schizzo aperto");
+            require(!view.isBodyDrawn(1),"la conferma non mostra lavorazioni future estranee");
+            require(view.isBodyDrawn(0)!=merge,"la fusione sostituisce la base senza sovrapporre gli stadi");
+            require(!view.referenceBodyEligible(result),"il risultato non diventa un riferimento futuro dello schizzo");
+            view.undo();require(view.extrusions_.size()==2,"Undo rimuove il risultato confermato");
+            view.redo();require(view.isBodyDrawn(result),"Redo ripristina il risultato nella stessa sessione schizzo");
+            view.setHistoryPosition(0);require(!view.isBodyDrawn(result),"rollback esclude anche i risultati della sessione");
+            view.setHistoryPosition(view.extrusions_.size());require(view.isBodyDrawn(result),"ritorno al cursore ripristina il risultato della sessione");
+            const int model=view.modelBodyIndexForFeature(result);
+            view.setModelBodyVisible(model,false);require(!view.isBodyDrawn(result),"risultato confermato rispetta il corpo nascosto dall'utente");
+            view.setModelBodyVisible(model,true);require(view.isBodyDrawn(result),"corpo confermato nuovamente visibile");
+            if(gl) {
+                view.resize(900,700);view.setViewPreset(4);view.fitView(view.extrusions_.at(result).display.vertices);
+                view.show();QApplication::processEvents();const auto visible=view.grabFramebuffer();
+                require(!visible.isNull(),"framebuffer dopo OK disponibile");
+                view.sketchDisplayBodies_[result]=false;const auto hidden=view.grabFramebuffer();
+                view.sketchDisplayBodies_[result]=true;
+                int changed=0;
+                for(int y=0;y<visible.height();++y)for(int x=0;x<visible.width();++x)
+                    if(visible.pixel(x,y)!=hidden.pixel(x,y))++changed;
+                require(changed>visible.width()*visible.height()/100,"solido dopo OK effettivamente disegnato in OpenGL");
+                std::cout<<"confirmed revolution="<<revolution<<" merge="<<merge<<" pixels="<<changed<<std::endl;
+                const QString directory=qEnvironmentVariable("FORGECAD_PREVIEW_QA_DIR");
+                if(!directory.isEmpty())require(visible.save(directory+QString("/confirmed-%1-%2.png").arg(revolution).arg(merge)),"cattura solido dopo OK");
+                view.hide();
+            }
+            view.endSketchMode();view.selectSketch(sketch);
+            require(!view.isBodyDrawn(result) && view.isBodyDrawn(0),"riaprire lo schizzo ripristina il solo contesto storico");
+            view.endSketchMode();require(view.isBodyDrawn(result),"uscita schizzo mostra il risultato finale");
         }
         // Ritaglio esatto di una U/V con un foro piu' stretto di un passo grafico.
         std::vector<Vec3> vertices;std::vector<Body::BuildEdge> edges;
@@ -1902,6 +1989,7 @@ public:
     }
 
     static void sketchGhostRender() {
+        for (bool featurePreview : {false, true}) {
         CadViewport view;view.resize(480,480);view.setGridVisible(false);view.setAxesVisible(false);
         for(int p=0;p<3;++p)view.setPlaneVisible(p,false);
         PrimitiveParameters box;
@@ -1910,6 +1998,17 @@ public:
         view.createSketch(0,QStringLiteral("Schizzo non ancora usato"));view.setDisplayMode(1);
         BodyDisplay front;front.vertices={{-2,-2,1},{2,-2,1},{2,2,1},{-2,-2,1},{2,2,1},{-2,2,1}};
         front.normals.fill(QVector3D(0,0,1),front.vertices.size());
+        if (featurePreview) {
+            view.setSketchViewUnlocked(true);
+            view.preview_.key = QStringLiteral("ghost-render-feature-preview");
+            view.preview_.valid = true;
+            view.preview_.definition.feature = BodyFeature::Extrusion;
+            view.preview_.display = front;
+            // Patch visibile in un angolo; il centro misura soltanto i
+            // solidi esistenti, anche con l'anteprima feature attiva.
+            for (auto &point : view.preview_.display.vertices)
+                point = QVector3D(1.5f+0.1f*point.x(),1.5f+0.1f*point.y(),2);
+        }
         view.extrusions_[0].display={};view.setViewFrame({1,0,0},{0,0,1});view.fitView({{-3,-3,0},{3,3,1}});
         view.show();for(int i=0;i<10;++i)QApplication::processEvents();require(view.isValid(),"contesto GL trasparenza schizzo");
         const auto capture=[&]{view.update();QApplication::processEvents();return view.grabFramebuffer();};
@@ -1932,13 +2031,14 @@ public:
             for(auto image:{many,instanced,bodies}){const auto other=image.pixelColor(x,y);maximum=qMax(maximum,qMax(qAbs(pixel.red()-other.red()),qMax(qAbs(pixel.green()-other.green()),qAbs(pixel.blue()-other.blue()))));}
             alphaError=qMax(alphaError,qMax(qAbs(pixel.red()-qRound(0.35*solid.red()+0.65*bg.red())),qMax(qAbs(pixel.green()-qRound(0.35*solid.green()+0.65*bg.green())),qAbs(pixel.blue()-qRound(0.35*solid.blue()+0.65*bg.blue())))));
         }
-        std::cout<<"ghost hidden-layer max delta="<<maximum<<"; opacity35% error="<<alphaError<<std::endl;
+        std::cout<<"ghost feature_preview="<<featurePreview<<" hidden-layer max delta="<<maximum<<"; opacity35% error="<<alphaError<<std::endl;
         require(signal>40,"campione GL contiene effettivamente la superficie");
         require(maximum<=2,"trasparenza indipendente dagli strati nascosti, dalle istanze e dai corpi sovrapposti");
         require(alphaError<=3,"opacita35% applicata una sola volta sullo sfondo");
         view.makeCurrent();require(view.glGetError()==GL_NO_ERROR,"stato OpenGL valido dopo anteprima schizzo");view.doneCurrent();
-        const auto dir=qEnvironmentVariable("FORGECAD_SKETCH_GL_QA_DIR");if(!dir.isEmpty()){QDir().mkpath(dir);single.save(dir+"/ghost-single.png");many.save(dir+"/ghost-many.png");opaque.save(dir+"/ghost-opaque.png");}
+        const auto dir=qEnvironmentVariable("FORGECAD_SKETCH_GL_QA_DIR")+(featurePreview?QStringLiteral("/feature-preview"):QString());if(!qEnvironmentVariable("FORGECAD_SKETCH_GL_QA_DIR").isEmpty()){QDir().mkpath(dir);single.save(dir+"/ghost-single.png");many.save(dir+"/ghost-many.png");opaque.save(dir+"/ghost-opaque.png");}
         view.close();
+        }
     }
 
     static void sketchStoryRegressions() {
@@ -10279,7 +10379,7 @@ int main(int argc, char **argv) {
         return 0;
     }
     if (app.arguments().contains(QStringLiteral("--preview-performance"))) {
-        try { ViewportInteractionTest::previewPerformance(); }
+        try { ViewportInteractionTest::previewPerformance(app.arguments().contains(QStringLiteral("--gl"))); }
         catch (const std::exception &e) { std::cerr<<e.what()<<std::endl;return 1; }
         return 0;
     }
