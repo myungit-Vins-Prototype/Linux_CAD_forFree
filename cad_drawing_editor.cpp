@@ -698,8 +698,12 @@ struct DrawingSheetEditor::Impl{
             for(const auto *paths:{&display.curves,&display.silhouettes})for(const auto &p:*paths){previewScene.addPath(p.visible,QPen(QColor("#303940"),.2));if(layout.showHiddenLines)previewScene.addPath(p.hidden,QPen(QColor("#888888"),.15,Qt::DashLine));}
             previewScene.addPath(display.breakMarks,QPen(QColor("#303940"),.2));const auto box=previewScene.itemsBoundingRect().adjusted(-3,-3,3,3);previewScene.setSceneRect(box);preview->fitInView(box,Qt::KeepAspectRatio);
         };
-        connect(enabled,&QCheckBox::toggled,&dialog,refresh);connect(direction,qOverload<int>(&QComboBox::currentIndexChanged),&dialog,[&]{defaults();refresh();});
-        for(auto *s:{start,end,gap})connect(s,qOverload<double>(&QDoubleSpinBox::valueChanged),&dialog,refresh);
+        // Un solo ritaglio per raffiche di input e per i due valori del cambio direzione.
+        QTimer previewTimer;previewTimer.setSingleShot(true);previewTimer.setInterval(30);
+        connect(&previewTimer,&QTimer::timeout,&dialog,refresh);
+        const auto scheduleRefresh=[&]{buttons->button(QDialogButtonBox::Ok)->setEnabled(false);previewTimer.start();};
+        connect(enabled,&QCheckBox::toggled,&dialog,[&]{previewTimer.stop();refresh();});connect(direction,qOverload<int>(&QComboBox::currentIndexChanged),&dialog,[&]{defaults();scheduleRefresh();});
+        for(auto *s:{start,end,gap})connect(s,qOverload<double>(&QDoubleSpinBox::valueChanged),&dialog,scheduleRefresh);
         connect(buttons,&QDialogButtonBox::rejected,&dialog,&QDialog::reject);connect(buttons,&QDialogButtonBox::accepted,&dialog,[&]{const auto message=owner->setViewBreak(id,candidate().interruption);error->setText(message);if(message.isEmpty())dialog.accept();});
         dialog.resize(560,530);QTimer::singleShot(0,&dialog,refresh);dialog.exec();
     }

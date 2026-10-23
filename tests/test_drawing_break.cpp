@@ -20,6 +20,7 @@
 #include <QTemporaryDir>
 #include <QTimer>
 #include <QFile>
+#include <QEventLoop>
 #include <cmath>
 #include <iostream>
 #include <stdexcept>
@@ -47,6 +48,29 @@ void mappings(){
         require(!std::isfinite(drawingBreakToPaper(view,layout,point(50)).x()),"aggancio nel tratto rimosso non mostrabile");
         const auto gapPoint=vertical?QPointF(4*scale,-30*scale-1):QPointF(30*scale+1,-4*scale);const auto clamped=drawingBreakFromPaper(view,layout,gapPoint);near(vertical?clamped.y():clamped.x(),30,"inversa del distacco aggancia bordo vicino");
         QPainterPath line;line.moveTo(0,0);line.lineTo(vertical?QPointF(0,-100*scale):QPointF(100*scale,0));const auto cut=drawingBreakPath(line,view,layout);require(cut.toSubpathPolygons().size()==2,"nessun segmento attraverso il distacco");near(vertical?cut.boundingRect().height():cut.boundingRect().width(),60*scale+6,"polilinea ritagliata");
+    }
+}
+void clippingPaths(){
+    DrawingView view;view.kind=DrawingViewKind::ProjectedEdges;
+    for(double scale:{.5,1.,2.})for(bool vertical:{false,true}){
+        view.scale=scale;DrawingViewLayout layout;layout.interruption=DrawingViewBreak{vertical,30,70,6};
+        const auto point=[&](double x,double y){return vertical?QPointF(y*scale,-x*scale):QPointF(x*scale,-y*scale);};
+        for(double start:{0.,40.,80.}){
+            QPainterPath curve;curve.moveTo(point(start,0));curve.cubicTo(point(start+3,5),point(start+7,-5),point(start+10,0));
+            const auto cut=drawingBreakPath(curve,view,layout);
+            if(start==40.){require(cut.isEmpty(),"Bezier interna rimossa senza segmenti residui");continue;}
+            const auto offset=start==80.?point(-(40-6/scale),0):QPointF();
+            require(cut==curve.translated(offset),"Bezier esterna conservata esattamente, con traslazione XY");
+            require(cut.elementCount()==4,"nessuna discretizzazione delle Bezier esterne");
+        }
+        QPainterPath separate;separate.moveTo(point(0,0));separate.lineTo(point(100,0));
+        separate.moveTo(point(100,0));separate.lineTo(point(100,10));
+        const auto cut=drawingBreakPath(separate,view,layout);
+        require(cut.toSubpathPolygons().size()==3,"sottopercorsi distinti conservati anche con estremi coincidenti");
+        QPainterPath boundary;boundary.moveTo(point(30,0));boundary.lineTo(point(30,10));
+        require(drawingBreakPath(boundary,view,layout)==boundary,"bordo iniziale incluso");
+        boundary=QPainterPath();boundary.moveTo(point(70,0));boundary.lineTo(point(70,10));
+        require(drawingBreakPath(boundary,view,layout)==boundary.translated(point(-(40-6/scale),0)),"bordo finale incluso e traslato");
     }
 }
 void editorTests(){
@@ -78,7 +102,17 @@ void editorTests(){
     auto scaled=view;scaled.scale=2;ok(editor.updateView(scaled,editor.sheet().views[0]));near(paths(editor,view.id).width(),126+before.width()-100,"distacco invariato al cambio scala");near(editor.dimensionResult(dimension.id).value,100,"scala non altera quota");ok(editor.undo());
     auto larger=model(120);larger.snapshot.version=source.snapshot.version;ok(reopened.updateModel(larger));near(reopened.dimensionResult(dimension.id).value,120,"aggiornamento modello conserva riferimento e misura");near(paths(reopened,view.id).width()-paths(editor,view.id).width(),20,"aggiornamento modello conserva interruzione");
     select(editor,view.id);auto *action=editor.findChild<QAction *>("drawingBreakViewAction");require(action&&action->isEnabled()&&!action->icon().isNull(),"comando con icona disponibile");
-    dialogCommand(editor,action,[&](QDialog *dialog){require(dialog->findChild<QGraphicsView *>("drawingBreakPreview"),"dialogo con anteprima");dialog->findChild<QDoubleSpinBox *>("drawingBreakStart")->setValue(25);require(bytes(editor.sheet())==broken,"anteprima senza modifica documento");const auto output=qEnvironmentVariable("FORGECAD_BREAK_OUTPUT");if(!output.isEmpty())require(dialog->grab().save(output+"/dialog.png"),"immagine dialogo");dialog->reject();});require(bytes(editor.sheet())==broken,"Cancel conserva documento");
+    dialogCommand(editor,action,[&](QDialog *dialog){require(dialog->findChild<QGraphicsView *>("drawingBreakPreview"),"dialogo con anteprima");auto *start=dialog->findChild<QDoubleSpinBox *>("drawingBreakStart");
+        start->setValue(26);start->setValue(25);
+        auto *okButton=dialog->findChild<QDialogButtonBox *>()->button(QDialogButtonBox::Ok);
+        require(!okButton->isEnabled(),"conferma sospesa durante aggiornamento anteprima");
+        QEventLoop wait;QTimer::singleShot(80,&wait,&QEventLoop::quit);wait.exec();
+        require(okButton->isEnabled(),"anteprima aggiornata riabilita conferma");
+        start->setValue(80);QTimer::singleShot(80,&wait,&QEventLoop::quit);wait.exec();
+        require(!okButton->isEnabled(),"intervallo invalido resta non confermabile");
+        start->setValue(25);QTimer::singleShot(80,&wait,&QEventLoop::quit);wait.exec();
+        require(okButton->isEnabled(),"correzione intervallo aggiorna anteprima");
+        require(bytes(editor.sheet())==broken,"anteprima senza modifica documento");const auto output=qEnvironmentVariable("FORGECAD_BREAK_OUTPUT");if(!output.isEmpty())require(dialog->grab().save(output+"/dialog.png"),"immagine dialogo");dialog->reject();});require(bytes(editor.sheet())==broken,"Cancel conserva documento");
     dialogCommand(editor,action,[&](QDialog *dialog){dialog->findChild<QCheckBox *>("drawingBreakEnabled")->setChecked(false);dialog->findChild<QDialogButtonBox *>()->button(QDialogButtonBox::Ok)->click();});require(!editor.sheet().views[0].interruption,"rimozione da dialogo");ok(editor.undo());require(bytes(editor.sheet())==broken,"Undo rimozione");
     QTemporaryDir temporary;const auto output=qEnvironmentVariable("FORGECAD_BREAK_OUTPUT");const auto pdf=output.isEmpty()?temporary.filePath("interrotta.pdf"):output+"/interrotta.pdf";DrawingPdfReport report;ok(editor.exportPdf(pdf,report));require(report.warnings.contains(QStringLiteral("1 quote da verificare.")),"PDF segnala quota con aggancio rimosso");
     editor.setReadOnly(true);require(!action->isEnabled()&&!editor.setViewBreak(view.id,{}).isEmpty(),"sola lettura protegge interruzione");ok(editor.exportPdf(pdf,report));require(bytes(editor.sheet())==broken,"export conserva storico");editor.setReadOnly(false);
@@ -92,4 +126,4 @@ void editorTests(){
     bool verticalGap=false;for(auto *item:vertical.canvas()->scene()->items())if(item->data(0).toString()=="viewShading"){const auto *image=dynamic_cast<QGraphicsPixmapItem *>(item);const auto p=image->mapFromScene(vl.position+QPointF(5,-33));verticalGap=qAlpha(image->pixmap().toImage().pixel(int(p.x()),int(p.y())))==0;}require(verticalGap,"distacco verticale ombreggiato trasparente");
 }
 }
-int main(int argc,char **argv){QApplication app(argc,argv);try{mappings();editorTests();std::cout<<"PASS viste interrotte: mapping XY, quote reali, ombreggiatura, codec, Undo, modello, dialogo, sola lettura e PDF\n";}catch(const std::exception &error){std::cerr<<error.what()<<'\n';return 1;}}
+int main(int argc,char **argv){QApplication app(argc,argv);try{mappings();clippingPaths();editorTests();std::cout<<"PASS viste interrotte: mapping XY, quote reali, ombreggiatura, codec, Undo, modello, dialogo, sola lettura e PDF\n";}catch(const std::exception &error){std::cerr<<error.what()<<'\n';return 1;}}

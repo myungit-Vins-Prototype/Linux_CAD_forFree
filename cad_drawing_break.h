@@ -5,6 +5,7 @@
 #include <QLineF>
 #include <QTransform>
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <limits>
 namespace ForgeCad {
@@ -45,21 +46,34 @@ inline QPointF drawingBreakFromPaper(const DrawingView &view,const DrawingViewLa
 }
 // Taglia solo polilinee di presentazione; non crea estremi o curve di misura.
 inline QPainterPath drawingBreakPath(const QPainterPath &source,const DrawingView &view,const DrawingViewLayout &layout){
-    if(!layout.interruption)return source;
+    if(!layout.interruption||source.isEmpty())return source;
     const auto &b=*layout.interruption;const double lo=(b.vertical?-b.end:b.start)*view.scale,hi=(b.vertical?-b.start:b.end)*view.scale;
-    const double shift=hi-lo-b.gap;QPainterPath result;
-    for(const auto &polygon:source.toSubpathPolygons(QTransform::fromScale(1000,1000)))for(int i=1;i<polygon.size();++i){
+    const double shift=hi-lo-b.gap;
+    // Il rettangolo dei controlli contiene anche le Bezier: evita la discretizzazione
+    // quando l'intero percorso appartiene a una sola zona dell'interruzione.
+    const auto bounds=source.controlPointRect();
+    const double minimum=b.vertical?bounds.top():bounds.left(),maximum=b.vertical?bounds.bottom():bounds.right();
+    if(maximum<=lo)return b.vertical?source.translated(0,shift):source;
+    if(minimum>=hi)return b.vertical?source:source.translated(-shift,0);
+    if(minimum>lo+1e-9&&maximum<hi-1e-9)return {};
+    QPainterPath result;
+    for(const auto &polygon:source.toSubpathPolygons(QTransform::fromScale(1000,1000))){
+      bool connected=false;
+      for(int i=1;i<polygon.size();++i){
         const auto a=polygon[i-1]/1000.,d=polygon[i]/1000.-a;
         const double p=b.vertical?a.y():a.x(),delta=b.vertical?d.y():d.x();
-        QVector<double> cuts{0,1};if(std::abs(delta)>1e-15)for(double edge:{lo,hi}){const auto t=(edge-p)/delta;if(t>0&&t<1)cuts.append(t);}
-        std::sort(cuts.begin(),cuts.end());
-        for(int j=1;j<cuts.size();++j){const double middle=p+delta*(cuts[j-1]+cuts[j])/2;
-            if(middle>lo+1e-9&&middle<hi-1e-9)continue;
+        std::array<double,4> cuts{0,1};int count=2;
+        if(std::abs(delta)>1e-15)for(double edge:{lo,hi}){const auto t=(edge-p)/delta;if(t>0&&t<1)cuts[count++]=t;}
+        // Al massimo quattro valori: ordinamento locale senza il percorso generale di std::sort.
+        for(int k=1;k<count;++k)for(int n=k;n>0&&cuts[n]<cuts[n-1];--n)std::swap(cuts[n],cuts[n-1]);
+        for(int j=1;j<count;++j){const double middle=p+delta*(cuts[j-1]+cuts[j])/2;
+            if(middle>lo+1e-9&&middle<hi-1e-9){connected=false;continue;}
             QPointF offset;if(b.vertical&&middle<=lo+1e-9)offset.setY(shift);else if(!b.vertical&&middle>=hi-1e-9)offset.setX(-shift);
             const auto first=a+cuts[j-1]*d+offset,last=a+cuts[j]*d+offset;
-            if(result.isEmpty()||QLineF(result.currentPosition(),first).length()>1e-8)result.moveTo(first);
-            result.lineTo(last);
+            if(!connected||QLineF(result.currentPosition(),first).length()>1e-8)result.moveTo(first);
+            result.lineTo(last);connected=true;
         }
+      }
     }
     return result;
 }
