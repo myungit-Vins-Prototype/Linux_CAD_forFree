@@ -24,6 +24,13 @@
 // raccordo e' l'arco esatto dal punto di contatto su A a quello su B, come
 // quadrica razionale: poli pA, c + (a + b) / (1 + cos q), pB con peso
 // cos(q / 2) nel mezzo (q angolo dell'arco, a e b i raggi ai contatti).
+// Per i contorni chiusi di un coperchio piano su fianchi B-spline tangenti,
+// se i piani normali al vecchio bordo si ripiegano, si ripete la costruzione
+// fissando una coordinata monotona della SP-curve del fianco. Le due
+// superfici offset restano coincidenti nel centro della palla; il giunto
+// tra fianchi si rifila separatamente nei due parametri sulla stessa
+// cucitura. Si verificano monotonia, regolarita' degli offset e assenza di
+// intersezioni tra i tratti non adiacenti del nuovo contorno piano.
 // Lungo lo spigolo le tre righe (in coordinate omogenee) sono cubiche di
 // Hermite a tratti con gli stessi nodi, raffinate finche' la superficie si
 // scosta meno di 1e-9 dagli archi veri (come le curve del marching e i

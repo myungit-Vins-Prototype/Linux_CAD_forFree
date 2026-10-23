@@ -45,6 +45,7 @@
 #include "fk_primitives.h"
 #include "fk_revolve.h"
 #include "fk_tessellate.h"
+#include "fk_transform.h"
 #include "fk_test_profiles.h"
 
 using namespace fktest;
@@ -1950,4 +1951,182 @@ FK_TEST(BlendMouseInternalNormalJump) {
         FK_CHECK(rejected);
     }
     FK_CHECK(writeBodyBinary(source) == beforeBlend);
+}
+
+
+// Coperchio di Applicatore4, isolato a y >= 13 mm (14 facce). Sui vecchi
+// raccordi elicoidali R0,16 i piani normali al bordo si incrociano gia' a
+// R0,006: rifiutare quel ripiegamento non significa che gli offset reali
+// siano singolari. La guida intrinseca ricostruisce il contorno senza i
+// retracciamenti della semplice rimozione del controllo.
+FK_TEST(BlendPlanarCapOnTangentSplineSupports) {
+    std::ifstream file(std::string(FORGECAD_SOURCE_DIR) + "/kernel/tests/data/applicatore_cap.body", std::ios::binary);
+    FK_CHECK(bool(file));
+    std::stringstream bytes; bytes << file.rdbuf();
+    const Body fixture = readBodyBinary(bytes.str());
+    for (int mode : {0, 1, 2}) {
+        detail::BlendModel model(fixture);
+        if (mode != 0) std::reverse(model.faces.begin(), model.faces.end());
+        Body body = model.build();
+        if (mode == 2) body = transformBody(body, Transform3::rotation(Vec3(1,2,3), normalized(Vec3(1,2,1)), 0.7));
+        // Trova il coperchio dal loop a 12 edge: nessuna dipendenza dagli ID
+        // persistenti, dall'ordine delle fin o dall'orientamento globale.
+        FaceId cap;
+        for (FaceId f : body.faces())
+            if (body.face(f).surface->type() == SurfaceType::Plane && body.face(f).loops.size() == 1
+                && body.loopFins(body.face(f).loops.front()).size() == 12) {
+                const auto &plane = static_cast<const Plane &>(*body.face(f).surface);
+                Vec3 expected(0,14.2,0);
+                if (mode == 2) expected = Transform3::rotation(Vec3(1,2,3), normalized(Vec3(1,2,1)), 0.7).applyToPoint(expected);
+                if (std::fabs(dot(expected-plane.frame().origin(),plane.frame().zDir())) < 1e-8) cap = f;
+            }
+        FK_CHECK(cap.valid()); if (!cap.valid()) continue;
+        const auto &plane = static_cast<const Plane &>(*body.face(cap).surface);
+        const Vec3 outward = body.face(cap).sense ? plane.frame().zDir() : -plane.frame().zDir();
+        std::vector<EdgeId> contour;
+        for (FinId f : body.loopFins(body.face(cap).loops.front())) contour.push_back(body.fin(f).edge);
+        const auto original = writeBodyBinary(body);
+        for (double radius : {0.01, 0.05, 0.1, 0.15, 0.159}) {
+            BodyHistory history;
+            const auto chosen = mode == 1 ? std::vector<EdgeId>{contour[3]} : contour;
+            const Body result = blendEdges(body, chosen, radius, false, &history);
+            CheckOptions checks; checks.loopCrossings = true;
+            FK_CHECK(checkBody(result,checks).empty());
+            FK_CHECK(tessellate(result,{}).failedFaces == 0);
+            for (EdgeId e : result.edges()) {
+                FK_CHECK(!result.isLaminar(e));
+                FK_CHECK(result.edge(e).tolerance < 2e-8);
+            }
+            for (FinId f : result.fins()) FK_CHECK(bool(result.fin(f).pcurve));
+            int created = 0;
+            for (FaceId f : result.faces()) {
+                FK_CHECK(history.isDeclared(EntityKind::Face,f.index));
+                bool inherited = false;
+                for (FaceId source : body.faces()) inherited = inherited || result.face(f).surface == body.face(source).surface;
+                if (inherited) continue;
+                ++created;
+                EdgeId origin;
+                for (const auto &link : history.origins(EntityKind::Face,f.index))
+                    if (link.kind == EntityKind::Edge && link.relation == HistoryRelation::Generated) origin = EdgeId(link.index);
+                FK_CHECK(origin.valid()); if (!origin.valid()) continue;
+                const auto &edge = body.edge(origin);
+                const FaceId side = body.finFace(edge.forward) == cap ? body.finFace(edge.backward) : body.finFace(edge.forward);
+                const auto &surface = *result.face(f).surface;
+                const Interval u = surface.uDomain();
+                for (double fraction : {0.03,0.2,0.5,0.8,0.97}) {
+                    const double t = u.lo + fraction*u.length();
+                    const Vec3 a = surface.point(t,0), b = surface.point(t,1), center = a-radius*outward;
+                    FK_CHECK(std::fabs(dot(a-plane.frame().origin(),outward)) < 2e-8);
+                    FK_CHECK(norm(cross(surface.normal(t,0),outward)) < 2e-6);
+                    const auto projected = projectPoint(*body.face(side).surface,b);
+                    FK_CHECK(projected.distance < 2e-8);
+                    FK_CHECK(norm(cross(surface.normal(t,1),body.face(side).surface->normal(projected.u,projected.v))) < 2e-6);
+                    for (double v : {0.,0.25,0.5,0.75,1.})
+                        FK_CHECK_NEAR(distance(surface.point(t,v),center),radius,2e-8);
+                }
+            }
+            FK_CHECK(created == 12);
+            FK_CHECK(writeBodyBinary(body) == original);
+            // Persistenza: la geometria ricaricata conserva tutti i contatti.
+            FK_CHECK(checkBody(readBodyBinary(writeBodyBinary(result)),checks).empty());
+        }
+        bool rejected = false;
+        try { (void)blendEdges(body,contour,0.2,false); }
+        catch (const std::exception &) { rejected = true; }
+        FK_CHECK(rejected && writeBodyBinary(body) == original);
+    }
+}
+
+// Partenza del solco elicoidale di Applicatore4 (23 facce). La cucitura
+// tangente cono/vecchio raccordo e' un'iso del supporto, ma Newton per
+// intersezioni trasverse non ne trovava la continuazione, anche a R0,001.
+FK_TEST(BlendOpenChainsAtTangentSplineSeams) {
+    std::ifstream file(std::string(FORGECAD_SOURCE_DIR) + "/kernel/tests/data/applicatore_start.body", std::ios::binary);
+    FK_CHECK(bool(file));
+    std::stringstream bytes; bytes << file.rdbuf();
+    const Body fixture = readBodyBinary(bytes.str());
+    const Vec3 locations[] = {Vec3(-1.7449967448207901,0.29061805539976088,-0.092506600137252634),
+                              Vec3(-2.0354934892613477,0.28092546857789052,-0.089421353929156622)};
+    for (int mode : {0, 1, 2}) {
+        detail::BlendModel model(fixture);
+        if (mode != 0) std::reverse(model.faces.begin(), model.faces.end());
+        Body body = model.build();
+        const auto rotation = Transform3::rotation(Vec3(1,2,3), normalized(Vec3(1,2,1)), 0.7);
+        if (mode == 2) body = transformBody(body, rotation);
+        const auto original = writeBodyBinary(body);
+        for (int side : {0, 1}) {
+            const Vec3 location = mode == 2 ? rotation.applyToPoint(locations[side]) : locations[side];
+            const EdgeId selected = nearestEdge(body, location, 1e-6);
+            FK_CHECK(selected.valid()); if (!selected.valid()) continue;
+            const std::vector<double> radii = side == 0 ? std::vector<double>{0.001,0.01,0.05,0.2,0.208}
+                                                       : std::vector<double>{0.001,0.01,0.05,0.06,0.075};
+            for (double radius : radii) {
+                BodyHistory history;
+                Body result;
+                try { result = blendEdges(body, {selected}, radius, false, &history); }
+                catch (const std::exception &error) {
+                    reportFailure(__FILE__, __LINE__, "mode=" + std::to_string(mode) + " side=" + std::to_string(side)
+                                  + " R=" + std::to_string(radius) + ": " + error.what());
+                    continue;
+                }
+                CheckOptions checks; checks.loopCrossings = true;
+                FK_CHECK(checkBody(result, checks).empty());
+                FK_CHECK(tessellate(result, {}).failedFaces == 0);
+                for (EdgeId edge : result.edges()) {
+                    FK_CHECK(!result.isLaminar(edge));
+                    FK_CHECK(result.edge(edge).tolerance < 5e-5);
+                }
+                for (FinId fin : result.fins()) FK_CHECK(bool(result.fin(fin).pcurve));
+                int created = 0, contacts = 0;
+                for (FaceId id : result.faces()) {
+                    FK_CHECK(history.isDeclared(EntityKind::Face, id.index));
+                    bool generated = false;
+                    for (const auto &link : history.origins(EntityKind::Face, id.index))
+                        generated |= link.kind == EntityKind::Edge && link.relation == HistoryRelation::Generated;
+                    if (!generated) continue;
+                    ++created;
+                    const auto &surface = *result.face(id).surface;
+                    // Campiona i contatti effettivamente rifilati, non tutto
+                    // il dominio della superficie di raccordo sottostante.
+                    for (LoopId loop : result.face(id).loops) for (FinId fin : result.loopFins(loop)) {
+                        const auto &fn = result.fin(fin);
+                        const auto &edge = result.edge(fn.edge);
+                        const FinId other = result.otherFin(fin);
+                        const FaceId support = result.finFace(other);
+                        const auto pc = result.fin(other).pcurve;
+                        if (!fn.pcurve || !pc) continue;
+                        const Vec2 mid = fn.pcurve->point(0.5*(edge.range.lo+edge.range.hi));
+                        const bool onA = std::fabs(mid.y()) < 1e-8, onB = std::fabs(mid.y()-1) < 1e-8;
+                        if (!onA && !onB) continue;
+                        ++contacts;
+                        for (double fraction : {0.025,0.1,0.25,0.5,0.75,0.9,0.975}) {
+                            const double t = edge.range.lo + fraction*edge.range.length();
+                            const Vec2 uv = fn.pcurve->point(t), sp = pc->point(t);
+                            const Vec3 normal = result.face(support).surface->normal(sp.x(),sp.y());
+                            FK_CHECK(norm(cross(surface.normal(uv.x(),uv.y()),normal)) < 2e-5);
+                            if (onA) {
+                                const Vec3 outward = (result.face(support).sense ? 1.0 : -1.0)*normal;
+                                const Vec3 center = surface.point(uv.x(),0) + (side == 0 ? radius : -radius)*outward;
+                                for (double v : {0.,0.25,0.5,0.75,1.})
+                                    FK_CHECK_NEAR(distance(surface.point(uv.x(),v),center),radius,2e-8);
+                            }
+                        }
+                    }
+                }
+                FK_CHECK(created == (side == 0 ? 3 : 1));
+                FK_CHECK(contacts >= 2*created);
+                FK_CHECK(checkBody(readBodyBinary(writeBodyBinary(result)), checks).empty());
+                FK_CHECK(writeBodyBinary(body) == original);
+            }
+            // R0,21 produceva una falsa riuscita con errore del raggio e
+            // tolleranza locale macroscopici. Il nuovo percorso deve rifiutarlo.
+            for (double radius : side == 0 ? std::vector<double>{0.21} : std::vector<double>{0.076,0.08}) {
+                bool rejected = false;
+                try { (void)blendEdges(body, {selected}, radius, false); }
+                catch (const std::domain_error &) { rejected = true; }
+                FK_CHECK(rejected);
+                FK_CHECK(writeBodyBinary(body) == original);
+            }
+        }
+    }
 }

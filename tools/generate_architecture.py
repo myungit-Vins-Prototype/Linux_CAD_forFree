@@ -40,6 +40,8 @@ GROUPS = [
  ('build', 'Build e strumenti', 'Configurazione, generazione e confezionamento del software.')]
 # Descrizioni curate: aggiornare queste voci quando cambia il confine di un modulo.
 DESCRIPTIONS = {
+ 'fk_blend_surface': ('kernel', 'Raccordi e smussi a palla rotolante: sezioni normali e guida intrinseca per coperchi piani su fianchi B-spline tangenti, continuazione delle cuciture tangenti, chiusure terminali e controllo dei contorni.'),
+ 'kernel/tests/test_blend.cpp': ('tests', 'Regressioni geometriche dei raccordi: volumi e tangenze, cuciture, supporti consumati, coperchi piani e catene aperte su cuciture tangenti elicoidali, con controlli di raggio, topologia e persistenza.'),
  'forgeCad2026.cpp': ('startup', 'Entry point Qt: avvio, opzioni e apertura della finestra principale.'),
  'forgeCad2026_application_theme': ('startup', 'Stile Fusion comune ripristinato dopo sostituzioni native, palette chiaro/scuro e diagnostica dei cambi tema.'),
  'forgeCad2026_gui': ('startup', 'PdfWindow: sette fasi di inizializzazione di scena, menu, comandi, opzioni e toolbar; ciclo del documento.'),
