@@ -51,6 +51,12 @@ struct DrawingDimensionLayout {
     QPointF position; // posizione del testo sul foglio, indipendente dalla misura
     DrawingDimensionPresentation presentation{};
 };
+struct DrawingDimensionNumbering {
+    bool enabled=false;
+    int firstNumber=1;
+    double diameter=6,rowTolerance=3; // mm sul foglio; righe ancorate al testo più alto
+    bool active()const{return enabled||firstNumber!=1||diameter!=6||rowTolerance!=3;}
+};
 struct DrawingTitleBlock {
     bool visible=false;
     QString code,organization,author,date; // data dichiarata, non aggiornata all’apertura
@@ -92,6 +98,7 @@ struct DrawingSheet {
     QVector<DrawingAxis> axes;
     QVector<DrawingAnnotation> annotations;
     DrawingStyle style;
+    DrawingDimensionNumbering dimensionNumbering;
 };
 // Solo metadati del foglio; nessuna duplicazione della geometria del modello.
 DrawingAttachmentResolver drawingSheetAttachmentResolver(const DrawingSheet &sheet,const DrawingView &view,

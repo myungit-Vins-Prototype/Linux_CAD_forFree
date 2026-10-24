@@ -57,7 +57,9 @@ DrawingDimension last(const DrawingSheetEditor &editor){require(!editor.sheet().
 #include "test_drawing_dimension_center.h"
 #include "test_drawing_ambiguous_snaps.h"
 #include "test_drawing_dimension_series.h"
+#include "test_drawing_dimension_numbering.h"
 int main(int argc,char **argv){QApplication app(argc,argv);try{
+    drawingDimensionNumberingTests();
     drawingDimensionSeriesTests();
     ambiguousSnapTests();
     const double angle=kPi/6;DrawingEditorModel model;model.snapshot.version={QUuid::createUuid(),{}};model.snapshot.bodies={source(makeBox(Frame3(),10,6,4),1),source(makePlaneSheet(Frame3(Vec3(18,0,0),Vec3(0,0,1),Vec3(std::cos(angle),std::sin(angle),0)),4),2),source(makeCylinder(Frame3(Vec3(35,0,0),Vec3(0,0,1),Vec3(1,0,0)),3,8),3)};model.choices={{1,"Corpo"},{2,"Superficie ruotata"},{3,"Cilindro"}};

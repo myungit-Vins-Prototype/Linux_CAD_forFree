@@ -54,6 +54,7 @@ public:
     QString moveViewTitle(const QUuid &id,const QPointF &position);
     QString resetViewTitle(const QUuid &id);
     QString setDrawingStyle(const DrawingStyle &style);
+    QString setDimensionNumbering(const DrawingDimensionNumbering &numbering);
     QString moveDimension(const QUuid &id,const QPointF &position);
     // Centri sul foglio: posizionamento una tantum, senza vincoli persistenti.
     QString alignView(const QUuid &id,const QUuid &reference,ViewAlignment alignment);
