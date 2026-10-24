@@ -51,13 +51,14 @@ void derive(const DrawingView &parent,const DrawingViewRelation &r,DrawingView &
         const double sign=r.reverse?-1:1;const auto normal=sign*cross(tangent,z);
         // I vecchi file conservano il taglio lungo X. Il frame salvato basta a
         // riconoscerli: aprire uno storico non deve cambiarne la presentazione.
-        const bool legacy=r.step.has_value()||(preserveLegacy&&child.kind==DrawingViewKind::Section
+        const bool legacy=r.bend.has_value()||r.step.has_value()||(preserveLegacy&&child.kind==DrawingViewKind::Section
             &&distance(child.plane.xDir(),tangent)<1e-10&&std::abs(dot(child.plane.yDir(),z))>1-1e-10);
         // Ribaltamento di 90 gradi attorno alla linea di taglio, applicato anche
         // agli assi della madre (Rodrigues). La linea mantiene la sua direzione
         // sul foglio: verticale resta verticale, obliqua resta obliqua.
         const auto foldedX=(delta.x()/length)*tangent-sign*(delta.y()/length)*z;
-        child.kind=DrawingViewKind::Section;child.sectionReferences=false;child.step=r.step;
+        child.kind=DrawingViewKind::Section;child.sectionReferences=false;child.step=r.step;child.bend=r.bend;
+        if(child.bend){require(child.bend->at>1e-7&&child.bend->at<length-1e-7,"La cerniera deve essere interna alla lunghezza sviluppata.");child.bend->angle*=sign;}
         if(child.step){for(const auto &step:child.step->transitions())require(step.at>1e-7&&step.at<length-1e-7,"Ogni gradino deve essere interno alla linea di taglio.");child.step->offset*=sign;for(auto &step:child.step->additional)step.offset*=sign;}
         child.plane=Frame3(parent.plane.toGlobal(Vec3(r.cutStart.x(),r.cutStart.y(),0)),normal,legacy?tangent:foldedX);
     }
@@ -232,6 +233,7 @@ QString validateDrawingRelations(const DrawingSheet &sheet){
     try{
         QSet<QString> labels;
         for(const auto &l:sheet.views){const auto &r=l.relation;
+            if(r.bend)require(!r.step&&r.kind==DrawingDerivedKind::Section&&!r.parentId.isNull(),"Sezione angolare senza madre o con gradini incompatibili.");
             if(r.step)require(r.kind==DrawingDerivedKind::Section&&!r.parentId.isNull(),"Gradino senza sezione madre.");
             if(r.parentId.isNull()){require(r.kind==DrawingDerivedKind::None,"Relazione della vista senza madre.");continue;}
             require(r.kind==DrawingDerivedKind::Orthographic||r.kind==DrawingDerivedKind::Section||r.kind==DrawingDerivedKind::Detail||r.kind==DrawingDerivedKind::Auxiliary,"Tipo di relazione non valido.");
@@ -252,7 +254,7 @@ QString validateDrawingRelations(const DrawingSheet &sheet){
         auto expected=sheet;const auto error=synchronizeDrawingViews(expected);if(!error.isEmpty())return error;
         for(const auto &l:sheet.views)if(!l.relation.parentId.isNull()){
             const auto &a=viewFor(sheet,l.viewId),&b=viewFor(expected,l.viewId);const auto &p=layoutFor(expected,l.viewId);
-            require(a.step==b.step&&a.kind==b.kind&&a.scale==b.scale&&a.tolerance==b.tolerance&&l.features==p.features
+            require(a.bend==b.bend&&a.step==b.step&&a.kind==b.kind&&a.scale==b.scale&&a.tolerance==b.tolerance&&l.features==p.features
                 &&distance(a.plane.origin(),b.plane.origin())<1e-9&&distance(a.plane.xDir(),b.plane.xDir())<1e-10
                 &&distance(a.plane.yDir(),b.plane.yDir())<1e-10&&distance(a.plane.zDir(),b.plane.zDir())<1e-10
                 &&QLineF(l.position,p.position).length()<1e-8,"Vista derivata incoerente con la madre.");
@@ -263,12 +265,14 @@ QString validateDrawingRelations(const DrawingSheet &sheet){
 QString drawingSectionHatch(const DrawingModelSnapshot &model,const DrawingView &view,const std::vector<DrawingCurve> &curves,DrawingSectionHatch &result){
     try{
         DrawingSectionHatch prepared;if(view.kind!=DrawingViewKind::Section){result=std::move(prepared);return {};}
-        if(view.step){
-            const auto steps=view.step->transitions();
+        if(view.step||view.bend){
+            const auto steps=view.step?view.step->transitions():std::vector<DrawingSectionTransition>{{view.bend->at,0}};
             for(std::size_t band=0;band<=steps.size();++band){
                 const double left=band?steps[band-1].at*view.scale:-std::numeric_limits<double>::infinity();
                 const double right=band<steps.size()?steps[band].at*view.scale:std::numeric_limits<double>::infinity();
-                auto part=view;part.step.reset();part.plane=Frame3::fromAxes(view.plane.origin()+(band?steps[band-1].offset:0)*view.plane.zDir(),view.plane.xDir(),view.plane.yDir(),view.plane.zDir());
+                auto part=view;part.step.reset();
+                if(view.bend){if(band)part=drawingSectionBentPlane(view);part.bend.reset();}
+                else part.plane=Frame3::fromAxes(view.plane.origin()+(band?steps[band-1].offset:0)*view.plane.zDir(),view.plane.xDir(),view.plane.yDir(),view.plane.zDir());
                 std::vector<DrawingCurve> closed;auto error=sectionDrawingView(model,part,closed);if(!error.isEmpty())return error;
                 DrawingSectionHatch h;error=drawingSectionHatch(model,part,closed,h);if(!error.isEmpty())return error;
                 auto box=h.material.boundingRect().adjusted(-1,-1,1,1);

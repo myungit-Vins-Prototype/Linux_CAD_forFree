@@ -49,6 +49,13 @@ struct DrawingSectionStep {
     bool operator==(const DrawingSectionStep &b)const{return at==b.at&&offset==b.offset&&additional==b.additional;}
     bool operator!=(const DrawingSectionStep &b)const{return !(*this==b);}
 };
+// Due semipiani incidenti: cerniera lungo Y all'ascissa at, angolo in gradi
+// verso +Z dal primo asse X. La vista mostra lo sviluppo rigido sul primo piano.
+struct DrawingSectionBend {
+    double at=0,angle=0;
+    bool operator==(const DrawingSectionBend &b)const{return at==b.at&&angle==b.angle;}
+    bool operator!=(const DrawingSectionBend &b)const{return !(*this==b);}
+};
 struct DrawingView {
     QUuid id = QUuid::createUuid();
     Kernel::Frame3 plane;
@@ -58,7 +65,12 @@ struct DrawingView {
     bool sectionReferences = false; // sezioni del piano quotabili nella vista dei bordi
     DrawingSectionStyle sectionStyle=DrawingSectionStyle::Removed;
     std::optional<DrawingSectionStep> step;
+    std::optional<DrawingSectionBend> bend;
 };
+
+// Rotazione dal secondo piano originale al piano comune della vista.
+Kernel::Transform3 drawingSectionUnfoldTransform(const DrawingView &view);
+DrawingView drawingSectionBentPlane(const DrawingView &view);
 
 inline bool drawingHasProjection(const DrawingView &v){return v.kind==DrawingViewKind::ProjectedEdges||v.sectionStyle!=DrawingSectionStyle::Removed;}
 inline bool drawingHalfSection(const DrawingView &v){return v.sectionStyle==DrawingSectionStyle::HalfRight||v.sectionStyle==DrawingSectionStyle::HalfLeft;}
@@ -82,6 +94,7 @@ struct DrawingCurve {
     Kernel::CurvePtr<3> sourceGeometry; // geometria esatta prima della proiezione, solo cache
     Kernel::Interval sourceRange{};
     int contourSide=0; // lato analitico del raccordo rispetto all'asse e alla vista
+    std::optional<Kernel::Transform3> unfoldedToSource{}; // solo cache, per agganci al piano originale
     bool hasSourceRange=false; // intervallo 3D trattenuto: il parametro della proiezione puo’ essere diverso
 };
 using DrawingSection = DrawingCurve;
@@ -109,7 +122,7 @@ struct DrawingAttachment {
     int curveSide=0,anchorSide=0; // lati UV esatti: Umin/Umax/Vmin/Vmax
     bool polar=false; // frazione angolare nel piano, per punti sulle coniche
     QString vertexName, boundaryName; // origine topologica e orientamento del tratto
-    int clipBoundary=0; // bit 1: piano di taglio; bit 2: asse della mezza sezione; 4: gradino
+    int clipBoundary=0; // bit 1: piano di taglio; bit 2: asse della mezza sezione; 4: gradino; 5: cerniera angolare
     QUuid axisId; // asse associato del foglio: nessun indice o coordinata grafica
 };
 struct DrawingDimension {

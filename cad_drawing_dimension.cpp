@@ -110,12 +110,13 @@ const DrawingCurve &curveFor(const DrawingView &view,const DrawingSourceBody &so
 }
 // L'ancoraggio segue un vertice o il bordo che termina la sezione, mai l'indice/verso del parametro.
 bool anchorAt(const DrawingView &view,const DrawingSourceBody &source,const DrawingCurve &curve,const DrawingAttachment &ref,const Vec3 &point){
-    if(view.step){
-        if(ref.clipBoundary==4){for(const auto &step:view.step->transitions())if(std::abs(view.plane.toLocal(point).x()-step.at)<=view.tolerance)return true;return false;}
+    if(view.step||view.bend){
+        if(ref.clipBoundary==5)return view.bend&&std::abs(view.plane.toLocal(point).x()-view.bend->at)<=view.tolerance;
+        if(ref.clipBoundary==4&&view.step){for(const auto &step:view.step->transitions())if(std::abs(view.plane.toLocal(point).x()-step.at)<=view.tolerance)return true;return false;}
         if(!curve.sourceGeometry)return false;
         const auto shift=curve.sourceGeometry->point(curve.range.lo)-curve.curve->point(curve.range.lo);
-        auto original=curve;original.curve=curve.sourceGeometry;auto plain=view;plain.step.reset();
-        return anchorAt(plain,source,original,ref,point+shift);
+        auto original=curve;original.curve=curve.sourceGeometry;auto plain=view;plain.step.reset();plain.bend.reset();
+        return anchorAt(plain,source,original,ref,curve.unfoldedToSource?curve.unfoldedToSource->applyToPoint(point):point+shift);
     }
     if(ref.clipBoundary){
         if(view.kind!=DrawingViewKind::Section||view.sectionStyle==DrawingSectionStyle::Removed)return false;
@@ -145,11 +146,12 @@ bool anchorAt(const DrawingView &view,const DrawingSourceBody &source,const Draw
     return false;
 }
 void setAnchor(const DrawingView &view,const DrawingSourceBody &source,const DrawingCurve &curve,const Vec3 &point,DrawingAttachment &ref){
-    if(view.step&&curve.sourceGeometry){
+    if((view.step||view.bend)&&curve.sourceGeometry){
         const auto shift=curve.sourceGeometry->point(curve.range.lo)-curve.curve->point(curve.range.lo);
-        auto original=curve;original.curve=curve.sourceGeometry;auto plain=view;plain.step.reset();
-        setAnchor(plain,source,original,point+shift,ref);
-        if(ref.vertexName.isEmpty()&&ref.boundaryName.isEmpty())for(const auto &step:view.step->transitions())if(std::abs(view.plane.toLocal(point).x()-step.at)<=view.tolerance)ref.clipBoundary=4;
+        auto original=curve;original.curve=curve.sourceGeometry;auto plain=view;plain.step.reset();plain.bend.reset();
+        setAnchor(plain,source,original,curve.unfoldedToSource?curve.unfoldedToSource->applyToPoint(point):point+shift,ref);
+        if(ref.vertexName.isEmpty()&&ref.boundaryName.isEmpty()&&view.bend&&std::abs(view.plane.toLocal(point).x()-view.bend->at)<=view.tolerance)ref.clipBoundary=5;
+        if(ref.vertexName.isEmpty()&&ref.boundaryName.isEmpty()&&view.step)for(const auto &step:view.step->transitions())if(std::abs(view.plane.toLocal(point).x()-step.at)<=view.tolerance)ref.clipBoundary=4;
         return;
     }
     for(auto vertex:source.body->vertices()){
@@ -228,7 +230,7 @@ QString validateDrawingAttachments(const DrawingDimension &d,const DrawingView &
         need(d.measure==DrawingMeasure::Angle||d.angleSides==0,"Settore angolare su una quota lineare.");
         if(d.references.empty()){need(int(d.measure)<=3,"Quota senza riferimenti di aggancio.");return {};}
         need(d.references.size()<=2,"Troppi riferimenti della quota.");const DrawingAttachment *primary=nullptr;
-        for(const auto &r:d.references){need(r.clipBoundary>=0&&(r.clipBoundary<=3||(r.clipBoundary==4&&view.step))&&(!r.clipBoundary||(!drawingDatum(r.role)&&r.vertexName.isEmpty()&&r.boundaryName.isEmpty()&&view.kind==DrawingViewKind::Section)),"Origine dell'aggancio di taglio non valida.");need(int(r.role)>=0&&int(r.role)<=12&&std::isfinite(r.fraction)&&r.fraction>=0&&r.fraction<=1,"Aggancio della quota non valido.");
+        for(const auto &r:d.references){need(r.clipBoundary>=0&&(r.clipBoundary<=3||(r.clipBoundary==4&&view.step)||(r.clipBoundary==5&&view.bend))&&(!r.clipBoundary||(!drawingDatum(r.role)&&r.vertexName.isEmpty()&&r.boundaryName.isEmpty()&&view.kind==DrawingViewKind::Section)),"Origine dell'aggancio di taglio non valida.");need(int(r.role)>=0&&int(r.role)<=12&&std::isfinite(r.fraction)&&r.fraction>=0&&r.fraction<=1,"Aggancio della quota non valido.");
             need(r.supportFace.size()<=4096&&r.curveSide>=0&&r.curveSide<=15&&r.anchorSide>=0&&r.anchorSide<=15,"Localizzatore della faccia non valido.");
             need((r.curveSide||r.anchorSide)?!r.supportFace.isEmpty():r.supportFace.isEmpty(),"Faccia di supporto incoerente.");
             need((r.curveSide&3)!=3&&(r.curveSide&12)!=12&&(r.anchorSide&3)!=3&&(r.anchorSide&12)!=12,"Lati UV incompatibili.");

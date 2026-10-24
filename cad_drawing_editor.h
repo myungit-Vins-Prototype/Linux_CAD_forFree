@@ -37,7 +37,7 @@ public:
     // Madre nulla: la linea sul foglio individua la vista proiettata attraversata.
     QString beginSectionLine(const QUuid &parent,const QString &label,bool reverse=false,const QUuid &existing={},DrawingSectionStyle style=DrawingSectionStyle::Removed);
     QString setSectionLine(const QUuid &section,QPointF start,QPointF end);
-    QString beginSectionPlacement(const QUuid &parent,QPointF start,QPointF end,const QString &label,bool reverse=false,DrawingSectionStyle style=DrawingSectionStyle::Removed,std::optional<DrawingSectionStep> step={});
+    QString beginSectionPlacement(const QUuid &parent,QPointF start,QPointF end,const QString &label,bool reverse=false,DrawingSectionStyle style=DrawingSectionStyle::Removed,std::optional<DrawingSectionStep> step={},std::optional<DrawingSectionBend> bend={});
     bool hasSectionLine()const;
     QString detachView(const QUuid &id);
     QString setViewAlignment(const QUuid &id,bool aligned);
