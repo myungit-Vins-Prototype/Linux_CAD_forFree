@@ -55,7 +55,8 @@ struct DrawingDimensionNumbering {
     bool enabled=false;
     int firstNumber=1;
     double diameter=6,rowTolerance=3; // mm sul foglio; righe ancorate al testo più alto
-    bool active()const{return enabled||firstNumber!=1||diameter!=6||rowTolerance!=3;}
+    bool excludeParenthesized=false;
+    bool active()const{return enabled||firstNumber!=1||diameter!=6||rowTolerance!=3||excludeParenthesized;}
 };
 struct DrawingTitleBlock {
     bool visible=false;

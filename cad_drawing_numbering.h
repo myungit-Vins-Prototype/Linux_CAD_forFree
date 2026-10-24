@@ -13,6 +13,12 @@ inline QString validateDrawingDimensionNumbering(const DrawingDimensionNumbering
     if(n.enabled&&count>1000000-n.firstNumber)return QStringLiteral("La numerazione delle quote supera 999999: ridurre il numero iniziale.");
     return {};
 }
+inline bool drawingDimensionParenthesized(const DrawingDimensionPresentation &presentation){
+    return presentation.prefix.trimmed().startsWith('(')&&presentation.suffix.trimmed().endsWith(')');
+}
+inline bool drawingDimensionNumberExcluded(const DrawingDimensionLayout &layout,const DrawingDimensionNumbering &numbering){
+    return layout.presentation.numberingExcluded||(numbering.excludeParenthesized&&drawingDimensionParenthesized(layout.presentation));
+}
 // Ordinamento totale prima per Y, poi righe a banda fissa: nessun confronto
 // approssimato non transitivo e nessuna propagazione della tolleranza tra righe.
 inline QHash<QUuid,int> drawingDimensionNumbers(const DrawingSheet &sheet){
@@ -25,7 +31,8 @@ inline QHash<QUuid,int> drawingDimensionNumbers(const DrawingSheet &sheet){
     for(qsizetype first=0;first<sorted.size();){qsizetype end=first+1;const auto top=sorted[first]->position.y();
         while(end<sorted.size()&&sorted[end]->position.y()-top<=sheet.dimensionNumbering.rowTolerance)++end;
         std::sort(sorted.begin()+first,sorted.begin()+end,byX);
-        for(auto i=first;i<end;++i)out.insert(sorted[i]->dimensionId,number++);
+        // Le esclusioni sono solo visibilità: il numero resta riservato.
+        for(auto i=first;i<end;++i){const auto *layout=sorted[i];if(!drawingDimensionNumberExcluded(*layout,sheet.dimensionNumbering))out.insert(layout->dimensionId,number);++number;}
         first=end;
     }return out;
 }

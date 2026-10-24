@@ -11,7 +11,8 @@ struct DrawingDimensionPresentation {
     int decimals=3;
     QString prefix,suffix;
     bool reverseArrows=false;
-    bool operator==(const DrawingDimensionPresentation &p)const{return mode==p.mode&&upper==p.upper&&lower==p.lower&&decimals==p.decimals&&prefix==p.prefix&&suffix==p.suffix&&reverseArrows==p.reverseArrows;}
+    bool numberingExcluded=false; // nasconde il badge e conserva il posto nella sequenza
+    bool operator==(const DrawingDimensionPresentation &p)const{return mode==p.mode&&upper==p.upper&&lower==p.lower&&decimals==p.decimals&&prefix==p.prefix&&suffix==p.suffix&&reverseArrows==p.reverseArrows&&numberingExcluded==p.numberingExcluded;}
     bool active()const{return !(*this==DrawingDimensionPresentation{});}
 };
 inline QString validateDrawingDimensionPresentation(const DrawingDimensionPresentation &p){
