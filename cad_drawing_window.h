@@ -8,6 +8,8 @@ class QMenu;
 class QDockWidget;
 class QTableWidget;
 class QPushButton;
+class QTabBar;
+class QVBoxLayout;
 namespace ForgeCad {
 // Documento tavola autonomo: il modello viene letto dal file salvato.
 class DrawingToolbarController;
@@ -23,7 +25,15 @@ public:
     QString createFromModel(const QString &modelPath);
     QString openPath(const QString &path);
     QString savePath(const QString &path);
-    QString exportPdfPath(const QString &path,DrawingPdfReport &report)const;
+    QString exportPdfPath(const QString &path,DrawingPdfReport &report,bool allSheets=true)const;
+    int sheetCount()const{return editor_?drawingSheetCount(drawing_):0;}
+    int activeSheet()const{return activeSheet_;}
+    QString setActiveSheet(int index);
+    QString addSheet(const QString &name,const QSizeF &size);
+    QString duplicateSheet(int index);
+    QString renameSheet(int index,const QString &name);
+    QString moveSheet(int from,int to);
+    QString removeSheet(int index);
     QString updateFromSource(const QString &overridePath={});
     DrawingSheetEditor *editor()const{return editor_;}
     const DrawingFile &document()const{return drawing_;}
@@ -34,6 +44,27 @@ protected:
     bool event(QEvent *event)override;
 private:
     void installEditor();
+    void setupSheetActions();
+    void installSheetTabs(QVBoxLayout *layout);
+    void refreshSheetTabs();
+    void showNewSheetDialog();
+    void showManageSheetsDialog();
+    void showPdfExportDialog();
+    QString sheetMutationError();
+    QString commitSheets(DrawingFile prepared,const QUuid &active,const QString &label);
+    void sheetChanged(const DrawingSheet &sheet);
+    void recordSheets(const QString &label);
+    void resetSheetsHistory(bool clean);
+    void markSheetsSaved();
+    QString restoreSheets(bool redo);
+    QString updateSheetsModel(DrawingFile prepared,DrawingEditorModel model);
+    struct SheetHistory {QByteArray bytes;QUuid active;QString label;};
+    QVector<SheetHistory> sheetHistory_;
+    int sheetHistoryIndex_=0,activeSheet_=0;
+    QByteArray savedDrawing_;
+    bool restoringSheets_=false;
+    QTabBar *sheetTabs_=nullptr;
+    QPushButton *newSheetButton_=nullptr;
     DrawingToolbarController *toolbarController_=nullptr;
     void loadContents(const QString &path,DrawingFile drawing);
     QString applySource(DrawingFile drawing,DocumentState source);
@@ -66,7 +97,8 @@ private:
     RevisionRecord availableModelRevision_;
     QMenu *editMenu_=nullptr,*insertMenu_=nullptr,*dimensionMenu_=nullptr,*viewMenu_=nullptr;
     QVector<QAction *> revisionMutationActions_;
-    bool modified_=false,containerDirty_=false,sourceReady_=false,busy_=false;
+    bool modified_=false,containerDirty_=false,sourceReady_=false;
+    mutable bool busy_=false;
     QUuid modelBaseCheckinId_;
     QDockWidget *revisionDock_=nullptr;
     QLabel *revisionStatus_=nullptr;

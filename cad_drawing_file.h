@@ -5,13 +5,21 @@
 
 namespace ForgeCad {
 struct DrawingFile {
-    DrawingSheet sheet;
+    DrawingSheet sheet; // primo foglio; identita' e modello comuni alla tavola
+    QVector<DrawingSheet> otherSheets;
+    QVector<QUuid> sheetIds; // vuoto solo nei file legacy a un foglio
     QString modelPath; // riferimento relativo alla tavola, non identita' del modello
     QByteArray modelDefinitionHash;
     QUuid baseCheckinId;
     QUuid modelArchiveId;
     QString modelArchivePath; // facoltativo: versione precisa del modello nell'archivio
 };
+int drawingSheetCount(const DrawingFile &drawing);
+DrawingSheet &drawingSheetAt(DrawingFile &drawing,int index);
+const DrawingSheet &drawingSheetAt(const DrawingFile &drawing,int index);
+QUuid drawingSheetId(const DrawingFile &drawing,int index);
+void synchronizeDrawingFileVersions(DrawingFile &drawing);
+QString cloneDrawingSheet(const DrawingSheet &source,DrawingSheet &copy);
 QString encodeDrawingFile(const DrawingFile &drawing,QByteArray &bytes);
 QString decodeDrawingFile(const QByteArray &bytes,DrawingFile &drawing);
 QString loadDrawingFile(const QString &path,DrawingFile &drawing);

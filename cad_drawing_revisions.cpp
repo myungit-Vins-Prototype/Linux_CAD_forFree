@@ -45,7 +45,7 @@ bool finish(const Context &c,DrawingFile &drawing,RevisionRecord &record,const D
     if(status.hasSession)require(status.session.archiveId==archive&&status.session.checkout.token==request.checkout.token&&status.phase!=WorkspaceCheckoutPhase::Canceling,
                                  QStringLiteral("Sessione diversa dal check-in pendente."));
     const auto archived=validateOperation(operation);validateDependency(store,archived);
-    auto current=drawing;current.sheet.drawing.version.checkinId=request.checkinId;current.baseCheckinId=request.checkout.baseCheckinId;
+    auto current=drawing;current.sheet.drawing.version.checkinId=request.checkinId;current.baseCheckinId=request.checkout.baseCheckinId;synchronizeDrawingFileVersions(current);
     QByteArray bytes;ok(encodeDrawingFile(current,bytes));const bool matches=bytes==request.payload;
     RevisionRecord receipt;ok(store.checkin(request,receipt));
     drawing.baseCheckinId=receipt.version.checkinId;record=receipt;
@@ -106,7 +106,7 @@ QString checkinWorkspaceDrawing(const QString &path,DrawingFile &drawing,const Q
         ok(store.validateTechnicalRevision(drawing.sheet.drawing.version.documentId,label));
         DrawingRevisionOperation operation;operation.archiveId=status.session.archiveId;operation.workingFile=c.relative;
         auto &request=operation.request;request.checkout=status.session.checkout;request.checkinId=QUuid::createUuid();request.technicalRevision=label;request.comment=comment;
-        auto snapshot=drawing;snapshot.sheet.drawing.version.checkinId=request.checkinId;request.dependencies={snapshot.sheet.drawing.model};ok(encodeDrawingFile(snapshot,request.payload));
+        auto snapshot=drawing;snapshot.sheet.drawing.version.checkinId=request.checkinId;synchronizeDrawingFileVersions(snapshot);request.dependencies={snapshot.sheet.drawing.model};ok(encodeDrawingFile(snapshot,request.payload));
         QByteArray bytes;ok(encodeDrawingRevisionOperation(operation,bytes));writeAtomic(c.pendingPath,bytes);finish(c,drawing,record,documentLock);return {};
     }catch(const std::exception &error){return QString::fromUtf8(error.what());}
 }
@@ -135,7 +135,7 @@ QString pinWorkspaceDrawingModel(const QString &path,DrawingFile &drawing,const 
         const auto c=context(path,identityOf(drawing));
         require(modelVersion.documentId==drawing.sheet.drawing.model.documentId&&!modelVersion.checkinId.isNull(),QStringLiteral("Selezionare un check-in del modello della tavola."));
         RevisionStore store(c.paths.revisions);DocumentState snapshot;ok(readNativeRevision(store,modelVersion,snapshot));
-        auto prepared=drawing;prepared.sheet.drawing.model=modelVersion;ok(store.archiveIdentity(prepared.modelArchiveId));
+        auto prepared=drawing;prepared.sheet.drawing.model=modelVersion;synchronizeDrawingFileVersions(prepared);ok(store.archiveIdentity(prepared.modelArchiveId));
         prepared.modelArchivePath=QDir(QFileInfo(c.file).absolutePath()).relativeFilePath(c.paths.revisions);
         ok(drawingModelDefinitionHash(snapshot,prepared.modelDefinitionHash));drawing=std::move(prepared);return {};
     }catch(const std::exception &error){return QString::fromUtf8(error.what());}

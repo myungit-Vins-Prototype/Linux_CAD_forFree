@@ -10,6 +10,8 @@
 #include <QFileInfo>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QJsonArray>
+#include <functional>
 #include <QSaveFile>
 #include <QSet>
 #include <stdexcept>
@@ -25,6 +27,18 @@ QUuid optionalUuid(const QJsonValue &value){
     const QUuid id(string);require(!id.isNull(),QStringLiteral("Identita' della revisione della tavola non valida."));return id;
 }
 void validate(const DrawingFile &drawing){
+    require(drawingSheetCount(drawing)<=64&&(drawing.sheetIds.isEmpty()?drawing.otherSheets.isEmpty():drawing.sheetIds.size()==drawingSheetCount(drawing)),QStringLiteral("Numero o identita' dei fogli non validi (massimo 64)."));
+    QSet<QUuid> ids;
+    for(const auto &id:drawing.sheetIds){require(!id.isNull()&&!ids.contains(id),QStringLiteral("Identita' del foglio nulla o duplicata."));ids.insert(id);}
+    const auto same=[](const DocumentVersion &a,const DocumentVersion &b){return a.documentId==b.documentId&&a.checkinId==b.checkinId;};
+    for(int i=0;i<drawingSheetCount(drawing);++i){const auto &sheet=drawingSheetAt(drawing,i);
+        require(same(sheet.drawing.version,drawing.sheet.drawing.version)&&same(sheet.drawing.model,drawing.sheet.drawing.model),QStringLiteral("I fogli devono condividere revisione della tavola e modello."));
+        const auto entity=[&](const QUuid &id){require(!ids.contains(id),QStringLiteral("Identita' ripetuta tra fogli o entita'."));ids.insert(id);};
+        for(const auto &v:sheet.drawing.views)entity(v.id);
+        for(const auto &d:sheet.drawing.dimensions)entity(d.id);
+        for(const auto &a:sheet.axes)entity(a.id);
+        for(const auto &n:sheet.annotations)entity(n.id);
+    }
     require(!drawing.modelPath.trimmed().isEmpty()&&drawing.modelPath.size()<=4096&&!drawing.modelPath.contains(QChar(0)),QStringLiteral("Riferimento al modello non valido."));
     require(drawing.modelDefinitionHash.size()==32,QStringLiteral("Impronta della definizione del modello non valida."));
     require(drawing.modelArchivePath.size()<=4096&&!drawing.modelArchivePath.contains(QChar(0))
@@ -35,30 +49,55 @@ void validate(const DrawingFile &drawing){
 bool sameVersion(const DocumentVersion &a,const DocumentVersion &b){return a.documentId==b.documentId&&a.checkinId==b.checkinId;}
 QString resolve(const QString &drawingPath,const QString &reference){return QDir(QFileInfo(drawingPath).absolutePath()).absoluteFilePath(reference);}
 }
+int drawingSheetCount(const DrawingFile &drawing){return 1+int(drawing.otherSheets.size());}
+DrawingSheet &drawingSheetAt(DrawingFile &drawing,int index){return index==0?drawing.sheet:drawing.otherSheets[index-1];}
+const DrawingSheet &drawingSheetAt(const DrawingFile &drawing,int index){return index==0?drawing.sheet:drawing.otherSheets.at(index-1);}
+QUuid drawingSheetId(const DrawingFile &drawing,int index){return drawing.sheetIds.isEmpty()?drawing.sheet.drawing.version.documentId:drawing.sheetIds.at(index);}
+void synchronizeDrawingFileVersions(DrawingFile &drawing){for(auto &sheet:drawing.otherSheets){sheet.drawing.version=drawing.sheet.drawing.version;sheet.drawing.model=drawing.sheet.drawing.model;}}
+QString cloneDrawingSheet(const DrawingSheet &source,DrawingSheet &copy){
+    QByteArray bytes;auto error=encodeDrawingSheet(source,bytes);if(!error.isEmpty())return error;
+    QHash<QString,QString> ids;const auto add=[&](const QUuid &id){ids.insert(text(id),text(QUuid::createUuid()));};
+    for(const auto &v:source.drawing.views)add(v.id);
+        for(const auto &d:source.drawing.dimensions)add(d.id);
+        for(const auto &a:source.axes)add(a.id);
+        for(const auto &n:source.annotations)add(n.id);
+    const QSet<QString> identityKeys{QStringLiteral("id"),QStringLiteral("viewId"),QStringLiteral("parent"),QStringLiteral("axisId"),QStringLiteral("datums")};
+    std::function<QJsonValue(QJsonValue,const QString &)> remap=[&](QJsonValue value,const QString &key)->QJsonValue{
+        if(value.isString()&&identityKeys.contains(key)){const auto found=ids.constFind(value.toString());return found==ids.cend()?value:QJsonValue(*found);}
+        if(value.isArray()){auto array=value.toArray();for(int i=0;i<array.size();++i)array[i]=remap(array[i],key);return array;}
+        if(value.isObject()){auto object=value.toObject();for(auto it=object.begin();it!=object.end();++it)it.value()=remap(it.value(),it.key());return object;}return value;
+    };
+    return decodeDrawingSheet(QJsonDocument(remap(QJsonDocument::fromJson(bytes).object(),QString()).toObject()).toJson(QJsonDocument::Compact),copy);
+}
 QString encodeDrawingFile(const DrawingFile &drawing,QByteArray &bytes){
     try{
-        validate(drawing);QByteArray sheet;ok(encodeDrawingSheet(drawing.sheet,sheet));
-        auto prepared=QJsonDocument(QJsonObject{{"format","ForgeCAD.Drawing"},{"schema",1},
+        validate(drawing);const bool multiple=!drawing.sheetIds.isEmpty();
+        QJsonObject object{{"format","ForgeCAD.Drawing"},{"schema",multiple?2:1},
             {"modelPath",drawing.modelPath},{"modelDefinitionSha256",QString::fromLatin1(drawing.modelDefinitionHash.toHex())},
-            {"baseCheckinId",text(drawing.baseCheckinId)},{"modelArchiveId",text(drawing.modelArchiveId)},
-            {"modelArchivePath",drawing.modelArchivePath},{"sheet",QJsonDocument::fromJson(sheet).object()}}).toJson(QJsonDocument::Compact);
+            {"baseCheckinId",text(drawing.baseCheckinId)},{"modelArchiveId",text(drawing.modelArchiveId)},{"modelArchivePath",drawing.modelArchivePath}};
+        QJsonArray sheets;
+        for(int i=0;i<drawingSheetCount(drawing);++i){QByteArray sheet;ok(encodeDrawingSheet(drawingSheetAt(drawing,i),sheet));const auto value=QJsonDocument::fromJson(sheet).object();
+            if(multiple)sheets.append(QJsonObject{{"id",text(drawingSheetId(drawing,i))},{"sheet",value}});else object["sheet"]=value;}
+        if(multiple)object["sheets"]=sheets;
+        auto prepared=QJsonDocument(object).toJson(QJsonDocument::Compact);
         require(prepared.size()<=9*1024*1024,QStringLiteral("Tavola oltre i limiti del prototipo."));bytes=std::move(prepared);return {};
     }catch(const std::exception &error){return QString::fromUtf8(error.what());}
 }
 QString decodeDrawingFile(const QByteArray &bytes,DrawingFile &drawing){
     try{
         require(!bytes.isEmpty()&&bytes.size()<=9*1024*1024,QStringLiteral("Dimensione del file tavola non valida."));
-        QJsonParseError parse;const auto json=QJsonDocument::fromJson(bytes,&parse);const auto object=json.object();
-        require(parse.error==QJsonParseError::NoError&&json.isObject()&&object["format"].toString()==QLatin1String("ForgeCAD.Drawing")
-                &&object["schema"].toInt(-1)==1,QStringLiteral("Formato del file tavola non valido o non supportato."));
-        require(object["modelPath"].isString()&&object["modelDefinitionSha256"].isString()&&object["modelArchivePath"].isString()&&object["sheet"].isObject(),QStringLiteral("File tavola incompleto."));
+        QJsonParseError parse;const auto json=QJsonDocument::fromJson(bytes,&parse);const auto object=json.object();const auto schema=object["schema"].toDouble(-1);
+        require(parse.error==QJsonParseError::NoError&&json.isObject()&&object["format"].toString()==QLatin1String("ForgeCAD.Drawing")&&(schema==1||schema==2),QStringLiteral("Formato del file tavola non valido o non supportato."));
+        require(object["modelPath"].isString()&&object["modelDefinitionSha256"].isString()&&object["modelArchivePath"].isString(),QStringLiteral("File tavola incompleto."));
         DrawingFile prepared;prepared.modelPath=object["modelPath"].toString();prepared.modelArchivePath=object["modelArchivePath"].toString();
         prepared.baseCheckinId=optionalUuid(object["baseCheckinId"]);prepared.modelArchiveId=optionalUuid(object["modelArchiveId"]);
-        const auto digest=object["modelDefinitionSha256"].toString().toLatin1();
-        prepared.modelDefinitionHash=QByteArray::fromHex(digest);
+        const auto digest=object["modelDefinitionSha256"].toString().toLatin1();prepared.modelDefinitionHash=QByteArray::fromHex(digest);
         require(digest==prepared.modelDefinitionHash.toHex(),QStringLiteral("Impronta del modello malformata."));
-        ok(decodeDrawingSheet(QJsonDocument(object["sheet"].toObject()).toJson(QJsonDocument::Compact),prepared.sheet));validate(prepared);
-        drawing=std::move(prepared);return {};
+        if(schema==1){require(object["sheet"].isObject()&&!object.contains("sheets"),QStringLiteral("Foglio legacy assente o schema multifoglio declassato."));ok(decodeDrawingSheet(QJsonDocument(object["sheet"].toObject()).toJson(QJsonDocument::Compact),prepared.sheet));}
+        else{require(!object.contains("sheet")&&object["sheets"].isArray(),QStringLiteral("Elenco dei fogli assente o ambiguo."));const auto sheets=object["sheets"].toArray();require(!sheets.isEmpty()&&sheets.size()<=64,QStringLiteral("La tavola deve contenere da 1 a 64 fogli."));
+            for(int i=0;i<sheets.size();++i){require(sheets[i].isObject(),QStringLiteral("Voce del foglio non valida."));const auto entry=sheets[i].toObject();require(entry.size()==2&&entry["sheet"].isObject(),QStringLiteral("Dati del foglio incompleti o sconosciuti."));
+                const auto id=optionalUuid(entry["id"]);require(!id.isNull(),QStringLiteral("Identita' del foglio assente."));prepared.sheetIds.append(id);DrawingSheet sheet;ok(decodeDrawingSheet(QJsonDocument(entry["sheet"].toObject()).toJson(QJsonDocument::Compact),sheet));if(i==0)prepared.sheet=std::move(sheet);else prepared.otherSheets.append(std::move(sheet));}}
+        validate(prepared);drawing=std::move(prepared);return {};
     }catch(const std::exception &error){return QString::fromUtf8(error.what());}
 }
 QString loadDrawingFile(const QString &path,DrawingFile &drawing){
@@ -128,5 +167,5 @@ QString loadDrawingModel(const QString &drawingPath,const DrawingFile &drawing,D
         model=std::move(prepared);resolvedPath=path;definitionChanged=changed;return {};
     }catch(const std::exception &error){return QString::fromUtf8(error.what());}
 }
-void forkDrawingIdentity(DrawingFile &drawing){drawing.sheet.drawing.version={QUuid::createUuid(),{}};drawing.baseCheckinId={};}
+void forkDrawingIdentity(DrawingFile &drawing){drawing.sheet.drawing.version={QUuid::createUuid(),{}};drawing.baseCheckinId={};synchronizeDrawingFileVersions(drawing);}
 }

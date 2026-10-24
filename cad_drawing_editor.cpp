@@ -361,6 +361,9 @@ struct DrawingSheetEditor::Impl{
     std::vector<HistoryEntry> history;
     std::size_t historyIndex=0;
     QByteArray savedSheet;
+    std::function<QString(bool)> documentHistory;
+    bool documentUndo=false,documentRedo=false;
+    QString documentUndoLabel,documentRedoLabel;
     QAction *undoAction=nullptr,*redoAction=nullptr;
     std::map<QUuid,std::vector<DrawingSection>> curves;
     std::map<QUuid,std::vector<DrawingSection>> sectionCurves;
@@ -497,10 +500,10 @@ struct DrawingSheetEditor::Impl{
     void notify(){if(changed)changed(state);}
     QByteArray encodedState()const{QByteArray bytes;const auto error=encodeDrawingSheet(state,bytes);if(!error.isEmpty())throw std::runtime_error(error.toStdString());return bytes;}
     void refreshHistoryActions(){
-        const bool previous=historyIndex>0,next=historyIndex+1<history.size();
+        const bool previous=documentHistory?documentUndo:historyIndex>0,next=documentHistory?documentRedo:historyIndex+1<history.size();
         undoAction->setEnabled(!readOnly&&previous);redoAction->setEnabled(!readOnly&&next);
-        undoAction->setText(previous?QStringLiteral("Annulla: %1").arg(history[historyIndex].label):QStringLiteral("Annulla"));
-        redoAction->setText(next?QStringLiteral("Ripristina: %1").arg(history[historyIndex+1].label):QStringLiteral("Ripristina"));
+        undoAction->setText(previous?QStringLiteral("Annulla: %1").arg(documentHistory?documentUndoLabel:history[historyIndex].label):QStringLiteral("Annulla"));
+        redoAction->setText(next?QStringLiteral("Ripristina: %1").arg(documentHistory?documentRedoLabel:history[historyIndex+1].label):QStringLiteral("Ripristina"));
         undoAction->setToolTip(undoAction->text());redoAction->setToolTip(redoAction->text());
     }
     void resetHistory(){history={{encodedState(),{}}};historyIndex=0;refreshHistoryActions();}
@@ -2634,37 +2637,61 @@ void DrawingSheetEditor::setPageContext(DrawingPageContext context){
     impl_->pageContext=std::move(context);for(auto *item:impl_->scene->items())if(auto *page=dynamic_cast<DrawingPageItem *>(item)){page->context=impl_->pageContext;page->update();}
 }
 DrawingPageContext DrawingSheetEditor::pageContext()const{return impl_->pageContext;}
-QString DrawingSheetEditor::exportPdf(const QString &path,DrawingPdfReport &report)const{
-    if(impl_->computing)return QStringLiteral("Attendere il calcolo della vista in corso.");
+QString DrawingSheetEditor::exportPdf(const QString &path,DrawingPdfReport &report)const{return exportPdfPages(path,{this},report);}
+QString DrawingSheetEditor::exportPdfPages(const QString &path,const QVector<const DrawingSheetEditor *> &pages,DrawingPdfReport &report){
     try{
+        if(pages.isEmpty())return QStringLiteral("Nessun foglio da esportare.");
         const QFileInfo info(path);const auto canonical=info.canonicalFilePath();if(info.suffix().compare("pdf",Qt::CaseInsensitive)!=0||(!canonical.isEmpty()&&QFileInfo(canonical).suffix().compare("pdf",Qt::CaseInsensitive)!=0))return QStringLiteral("La destinazione deve essere un file .pdf distinto dai documenti CAD.");
-        if(impl_->model.snapshot.bodies.empty()&&!impl_->state.drawing.views.empty())return QStringLiteral("Modello non disponibile: impossibile esportare le viste.");
-        DrawingRevisionTableLayout revisionLayout;const auto tableError=layoutDrawingRevisionTable(impl_->state,impl_->pageContext,revisionLayout);if(!tableError.isEmpty())return tableError;
-        QGraphicsScene printable;const int missing=impl_->drawSheet(&printable,false);DrawingPdfReport prepared;
-        if(std::any_of(impl_->state.views.cbegin(),impl_->state.views.cend(),[](const auto &v){return v.showMesh;}))prepared.warnings.append(QStringLiteral("Facce ombreggiate raster dalla mesh; bordi e quote restano vettoriali."));
-        if(missing){prepared.warnings.append(QStringLiteral("%1 quote da verificare.").arg(missing));auto *label=printable.addSimpleText(QStringLiteral("QUOTE DA VERIFICARE: %1").arg(missing));fontFor(label);label->setBrush(QColor("#c42b32"));label->setPos(14,3);}
-        int missingAxes=0;for(const auto &a:impl_->state.axes)if(impl_->cachedAxis(a).status!=DrawingDimensionStatus::Ready)++missingAxes;if(missingAxes)prepared.warnings.append(QStringLiteral("%1 assi da verificare.").arg(missingAxes));
-        int missingNotes=0;for(const auto &n:impl_->state.annotations)if(impl_->noteResult(n).status!=DrawingDimensionStatus::Ready)++missingNotes;
+        std::vector<std::unique_ptr<QGraphicsScene>> scenes;DrawingPdfReport combined;
+        for(const auto *editor:pages){
+            if(editor->impl_->computing)return QStringLiteral("Attendere il calcolo della vista in corso.");
+        if(editor->impl_->model.snapshot.bodies.empty()&&!editor->impl_->state.drawing.views.empty())return QStringLiteral("Modello non disponibile: impossibile esportare le viste.");
+        DrawingRevisionTableLayout revisionLayout;const auto tableError=layoutDrawingRevisionTable(editor->impl_->state,editor->impl_->pageContext,revisionLayout);if(!tableError.isEmpty())return tableError;
+        auto printable=std::make_unique<QGraphicsScene>();const int missing=editor->impl_->drawSheet(printable.get(),false);DrawingPdfReport prepared;
+        if(std::any_of(editor->impl_->state.views.cbegin(),editor->impl_->state.views.cend(),[](const auto &v){return v.showMesh;}))prepared.warnings.append(QStringLiteral("Facce ombreggiate raster dalla mesh; bordi e quote restano vettoriali."));
+        if(missing){prepared.warnings.append(QStringLiteral("%1 quote da verificare.").arg(missing));auto *label=printable->addSimpleText(QStringLiteral("QUOTE DA VERIFICARE: %1").arg(missing));fontFor(label);label->setBrush(QColor("#c42b32"));label->setPos(14,3);}
+        int missingAxes=0;for(const auto &a:editor->impl_->state.axes)if(editor->impl_->cachedAxis(a).status!=DrawingDimensionStatus::Ready)++missingAxes;if(missingAxes)prepared.warnings.append(QStringLiteral("%1 assi da verificare.").arg(missingAxes));
+        int missingNotes=0;for(const auto &n:editor->impl_->state.annotations)if(editor->impl_->noteResult(n).status!=DrawingDimensionStatus::Ready)++missingNotes;
         if(missingNotes)prepared.warnings.append(QStringLiteral("%1 richiami da verificare.").arg(missingNotes));
-        const QRectF paper(QPointF(0,0),impl_->state.size);bool outside=false;for(auto *item:printable.items())if(item->data(kindRole).toString()!=QLatin1String("page")&&item->data(kindRole).toString()!=QLatin1String("paper")&&!paper.adjusted(-.1,-.1,.1,.1).contains(item->sceneBoundingRect()))outside=true;
+        const QRectF paper(QPointF(0,0),editor->impl_->state.size);bool outside=false;for(auto *item:printable->items())if(item->data(kindRole).toString()!=QLatin1String("page")&&item->data(kindRole).toString()!=QLatin1String("paper")&&!paper.adjusted(-.1,-.1,.1,.1).contains(item->sceneBoundingRect()))outside=true;
         if(outside)prepared.warnings.append(QStringLiteral("Parte del disegno e' fuori dal foglio e viene ritagliata nel PDF."));
-        for(const auto &[id,paths]:impl_->silhouettes){(void)id;prepared.warnings.append(paths.warnings);}for(const auto &[id,display]:impl_->visibility){(void)id;prepared.warnings.append(display->warnings);}
+        for(const auto &[id,paths]:editor->impl_->silhouettes){(void)id;prepared.warnings.append(paths.warnings);}for(const auto &[id,display]:editor->impl_->visibility){(void)id;prepared.warnings.append(display->warnings);}
+
+            for(const auto &warning:prepared.warnings)combined.warnings.append(pages.size()>1?editor->sheet().title+QStringLiteral(": ")+warning:warning);
+            scenes.push_back(std::move(printable));
+        }
         QSaveFile file(path);if(!file.open(QIODevice::WriteOnly))return QStringLiteral("Impossibile scrivere il PDF: %1").arg(file.errorString());
-        {QPdfWriter writer(&file);writer.setResolution(600);const auto size=impl_->state.size;const QPageSize page(QSizeF(std::min(size.width(),size.height()),std::max(size.width(),size.height())),QPageSize::Millimeter,QStringLiteral("ForgeCAD"),QPageSize::ExactMatch);
-            if(!writer.setPageSize(page)||!writer.setPageOrientation(size.width()>=size.height()?QPageLayout::Landscape:QPageLayout::Portrait)||!writer.setPageMargins(QMarginsF(0,0,0,0),QPageLayout::Millimeter))return QStringLiteral("Formato del PDF non supportato.");
-            writer.setTitle(impl_->state.title);writer.setCreator(QStringLiteral("ForgeCAD"));QPainter painter;if(!painter.begin(&writer))return QStringLiteral("Impossibile inizializzare il PDF vettoriale.");painter.setRenderHint(QPainter::Antialiasing);painter.scale(writer.resolution()/25.4,writer.resolution()/25.4);printable.render(&painter,paper,paper,Qt::IgnoreAspectRatio);if(!painter.end())return QStringLiteral("Scrittura del PDF non riuscita.");}
+        {QPdfWriter writer(&file);writer.setResolution(600);writer.setTitle(pages.front()->sheet().title);writer.setCreator(QStringLiteral("ForgeCAD"));QPainter painter;
+            for(int i=0;i<pages.size();++i){const auto size=pages[i]->sheet().size;const QPageSize page(QSizeF(std::min(size.width(),size.height()),std::max(size.width(),size.height())),QPageSize::Millimeter,QStringLiteral("ForgeCAD"),QPageSize::ExactMatch);
+                if(!writer.setPageSize(page)||!writer.setPageOrientation(size.width()>=size.height()?QPageLayout::Landscape:QPageLayout::Portrait)||!writer.setPageMargins(QMarginsF(0,0,0,0),QPageLayout::Millimeter))return QStringLiteral("Formato del PDF non supportato.");
+                if(i==0){if(!painter.begin(&writer))return QStringLiteral("Impossibile inizializzare il PDF vettoriale.");}else if(!writer.newPage())return QStringLiteral("Impossibile aggiungere una pagina al PDF.");
+                painter.resetTransform();painter.setRenderHint(QPainter::Antialiasing);painter.scale(writer.resolution()/25.4,writer.resolution()/25.4);const QRectF paper(QPointF(0,0),size);scenes[std::size_t(i)]->render(&painter,paper,paper,Qt::IgnoreAspectRatio);
+            }
+            if(!painter.end())return QStringLiteral("Scrittura del PDF non riuscita.");
+        }
         if(file.error()!=QFileDevice::NoError||file.pos()<100||!file.commit())return QStringLiteral("Impossibile completare il PDF: %1").arg(file.errorString());
-        report=std::move(prepared);return {};
+        report=std::move(combined);return {};
     }catch(const std::exception &error){return QString::fromUtf8(error.what());}
 }
-bool DrawingSheetEditor::canUndo()const{return !impl_->readOnly&&impl_->historyIndex>0;}
-bool DrawingSheetEditor::canRedo()const{return !impl_->readOnly&&impl_->historyIndex+1<impl_->history.size();}
+QString DrawingSheetEditor::loadSheet(DrawingSheet sheet){
+    if(impl_->computing)return QStringLiteral("Attendere il calcolo della vista in corso.");
+    QByteArray validation;const auto valid=encodeDrawingSheet(sheet,validation);if(!valid.isEmpty())return valid;
+    const bool readOnly=impl_->readOnly;setReadOnly(true);
+    const auto error=impl_->replaceState(std::move(sheet));
+    if(error.isEmpty()){impl_->pageContext=defaultDrawingPageContext(impl_->state);impl_->resetHistory();impl_->redraw();}
+    setReadOnly(readOnly);return error;
+}
+void DrawingSheetEditor::setDocumentHistory(std::function<QString(bool)> handler,bool undo,bool redo,QString undoLabel,QString redoLabel){
+    impl_->documentHistory=std::move(handler);impl_->documentUndo=undo;impl_->documentRedo=redo;impl_->documentUndoLabel=std::move(undoLabel);impl_->documentRedoLabel=std::move(redoLabel);impl_->refreshHistoryActions();
+}
+bool DrawingSheetEditor::canUndo()const{return !impl_->readOnly&&(impl_->documentHistory?impl_->documentUndo:impl_->historyIndex>0);}
+bool DrawingSheetEditor::canRedo()const{return !impl_->readOnly&&(impl_->documentHistory?impl_->documentRedo:impl_->historyIndex+1<impl_->history.size());}
 QString DrawingSheetEditor::undo(){
     if(impl_->computing)return QStringLiteral("Attendere il calcolo della vista in corso.");
-    return canUndo()?impl_->restore(impl_->historyIndex-1):QStringLiteral("Nessuna modifica annullabile.");}
+    return canUndo()?(impl_->documentHistory?impl_->documentHistory(false):impl_->restore(impl_->historyIndex-1)):QStringLiteral("Nessuna modifica annullabile.");}
 QString DrawingSheetEditor::redo(){
     if(impl_->computing)return QStringLiteral("Attendere il calcolo della vista in corso.");
-    return canRedo()?impl_->restore(impl_->historyIndex+1):QStringLiteral("Nessuna modifica da ripristinare.");}
+    return canRedo()?(impl_->documentHistory?impl_->documentHistory(true):impl_->restore(impl_->historyIndex+1)):QStringLiteral("Nessuna modifica da ripristinare.");}
 void DrawingSheetEditor::markSaved(){impl_->savedSheet=impl_->encodedState();}
 bool DrawingSheetEditor::isModified()const{return impl_->history[impl_->historyIndex].sheet!=impl_->savedSheet;}
 QString DrawingSheetEditor::addDimension(DrawingDimension dimension,const QPointF &position){

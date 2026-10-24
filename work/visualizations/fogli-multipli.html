@@ -1,0 +1,159 @@
+<style>
+#fc-multisheet {color-scheme:light dark;}
+#fc-multisheet .fc-app {--fc-bg:light-dark(#f2f3f5,#282b30);--fc-panel:light-dark(#fafafa,#24272c);--fc-field:light-dark(#fff,#30343a);--fc-line:light-dark(#cbd0d7,#484e58);--fc-text:light-dark(#28323c,#e4e8ef);--fc-muted:light-dark(#586777,#b0bccb);--fc-selected:light-dark(#dbeafd,#25476e);--fc-accent:light-dark(#2869ac,#8ec0ff);--fc-work:light-dark(#cbd0d5,#171b20);--fc-paper:#fff;--fc-ink:#263442;font:14px/1.4 Arial,Helvetica,sans-serif;background:var(--fc-bg);color:var(--fc-text);border:1px solid var(--fc-line);border-radius:8px;overflow:clip;min-height:680px;display:flex;flex-direction:column;}
+#fc-multisheet .fc-app * {box-sizing:border-box;}
+#fc-multisheet .fc-title {padding:9px 110px 9px 13px;min-height:40px;background:var(--fc-panel);border-bottom:1px solid var(--fc-line);font-weight:500;}
+#fc-multisheet .fc-menu {display:flex;gap:18px;padding:5px 12px;font-size:12px;border-bottom:1px solid var(--fc-line);flex-wrap:wrap;}
+#fc-multisheet .fc-toolbar {display:flex;gap:7px;align-items:center;flex-wrap:wrap;padding:8px 10px;border-bottom:1px solid var(--fc-line);}
+#fc-multisheet button,#fc-multisheet input,#fc-multisheet select {font:inherit;color:var(--fc-text);}
+#fc-multisheet button {display:inline-flex;gap:6px;align-items:center;justify-content:center;padding:5px 9px;border:1px solid var(--fc-line);border-radius:4px;background:var(--fc-field);min-height:31px;}
+#fc-multisheet button:hover {background:var(--fc-selected);}
+#fc-multisheet button:disabled {opacity:.45;}
+#fc-multisheet button.fc-primary {background:var(--fc-accent);color:light-dark(#fff,#152537);border-color:var(--fc-accent);}
+#fc-multisheet .fc-divider {height:22px;width:1px;background:var(--fc-line);margin:0 3px;}
+#fc-multisheet .fc-tool-label {color:var(--fc-muted);font-size:12px;white-space:nowrap;}
+#fc-multisheet .fc-workspace {display:grid;grid-template-columns:190px minmax(0,1fr);flex:1;min-width:0;}
+#fc-multisheet .fc-sidebar {background:var(--fc-panel);padding:12px 7px;border-right:1px solid var(--fc-line);min-width:0;}
+#fc-multisheet .fc-side-title {display:flex;gap:7px;align-items:center;padding:3px 7px 10px;font-weight:500;}
+#fc-multisheet .fc-source {font-size:12px;color:var(--fc-muted);padding:7px 8px 13px;border-bottom:1px solid var(--fc-line);margin-bottom:9px;}
+#fc-multisheet .fc-tree button {display:flex;justify-content:flex-start;align-items:flex-start;text-align:left;width:100%;border-color:transparent;background:transparent;margin:2px 0;padding:7px;}
+#fc-multisheet .fc-tree button[aria-current=page] {background:var(--fc-selected);border-color:var(--fc-line);font-weight:500;}
+#fc-multisheet .fc-tree button span {overflow-wrap:anywhere;}
+#fc-multisheet .fc-tree-child {padding:6px 10px 6px 28px;font-size:12px;color:var(--fc-muted);}
+#fc-multisheet .fc-canvas {background:var(--fc-work);padding:18px;display:flex;align-items:center;justify-content:center;min-height:510px;min-width:0;}
+#fc-multisheet .fc-paper {background:var(--fc-paper);color:var(--fc-ink);width:100%;max-width:720px;box-shadow:0 3px 11px #0002;flex:none;}
+#fc-multisheet .fc-paper[data-portrait=true] {max-width:350px;}
+#fc-multisheet .fc-paper svg {display:block;width:100%;}
+#fc-multisheet .fc-sheets {display:flex;gap:5px;align-items:center;flex-wrap:wrap;padding:8px 10px;border-top:1px solid var(--fc-line);background:var(--fc-panel);}
+#fc-multisheet .fc-sheets button {border-radius:4px 4px 0 0;font-size:12px;max-width:100%;overflow-wrap:anywhere;}
+#fc-multisheet .fc-sheets button[aria-selected=true] {background:var(--fc-selected);border-bottom:3px solid var(--fc-accent);font-weight:500;}
+#fc-multisheet .fc-format {font-size:11px;opacity:.8;margin-left:4px;}
+#fc-multisheet .fc-status {display:flex;gap:14px;align-items:center;justify-content:space-between;padding:6px 11px;font-size:12px;color:var(--fc-muted);border-top:1px solid var(--fc-line);flex-wrap:wrap;}
+#fc-multisheet .fc-stage {width:100%;min-width:0;}
+#fc-multisheet .fc-dialog {background:var(--fc-panel);color:var(--fc-text);padding:18px;border:1px solid var(--fc-line);border-radius:6px;width:100%;max-width:680px;box-shadow:0 5px 20px #0002;}
+#fc-multisheet .fc-dialog header {display:flex;gap:12px;align-items:center;justify-content:space-between;font-weight:500;margin-bottom:14px;}
+#fc-multisheet .fc-dialog h3 {font-size:14px;line-height:1.4;font-weight:500;margin:0;}
+#fc-multisheet .fc-dialog .fc-actions {display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;margin-top:17px;}
+#fc-multisheet .fc-dialog label {display:flex;flex-direction:column;gap:5px;min-width:0;}
+#fc-multisheet .fc-dialog input[type=text],#fc-multisheet .fc-dialog select {background:var(--fc-field);border:1px solid var(--fc-line);border-radius:3px;min-width:0;width:100%;padding:6px 8px;}
+#fc-multisheet .fc-form-grid {display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+#fc-multisheet .fc-form-grid .fc-full {grid-column:1/-1;}
+#fc-multisheet .fc-manager-row {display:grid;grid-template-columns:24px 58px minmax(80px,1fr) auto;gap:8px;align-items:center;border-bottom:1px solid var(--fc-line);padding:9px 0;}
+#fc-multisheet .fc-manager-row small {font-size:12px;color:var(--fc-muted);}
+#fc-multisheet .fc-row-tools {display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end;}
+#fc-multisheet .fc-row-tools button {padding:4px;min-width:29px;font-size:12px;}
+#fc-multisheet .fc-thumb {background:var(--fc-paper);border:1px solid var(--fc-line);padding:3px;height:40px;display:grid;place-items:center;}
+#fc-multisheet .fc-thumb span {color:var(--fc-ink);border:1px solid #a8b1ba;width:85%;height:95%;font-size:11px;text-align:right;padding:12px 2px 0 0;}
+#fc-multisheet .fc-manager-row.fc-no-thumb {grid-template-columns:24px minmax(80px,1fr) auto;}
+#fc-multisheet .fc-choice {display:flex!important;flex-direction:row!important;align-items:flex-start;gap:8px!important;padding:10px 0;}
+#fc-multisheet .fc-choice input {margin-top:4px;}
+#fc-multisheet .fc-details {font-size:12px;color:var(--fc-muted);margin:5px 0;}
+#fc-multisheet [hidden] {display:none!important;}
+@media(max-width:640px){#fc-multisheet .fc-workspace{grid-template-columns:1fr;}#fc-multisheet .fc-sidebar{border-right:0;border-bottom:1px solid var(--fc-line);padding:6px;}#fc-multisheet .fc-side-title{padding:3px 6px;}#fc-multisheet .fc-source{padding:2px 6px 6px;margin-bottom:2px;}#fc-multisheet .fc-tree{display:flex;gap:3px;flex-wrap:wrap;}#fc-multisheet .fc-tree button{width:auto;max-width:100%;font-size:12px;}#fc-multisheet .fc-tree-child{display:none;}#fc-multisheet .fc-canvas{padding:10px;min-height:310px;}#fc-multisheet .fc-toolbar{gap:5px;}#fc-multisheet .fc-tool-label,#fc-multisheet .fc-divider{display:none;}#fc-multisheet .fc-title{font-size:12px;}#fc-multisheet .fc-manager-row{grid-template-columns:20px minmax(80px,1fr);}#fc-multisheet .fc-manager-row .fc-thumb{display:none;}#fc-multisheet .fc-manager-row .fc-row-tools{grid-column:2;}#fc-multisheet .fc-manager-row.fc-no-thumb{grid-template-columns:20px minmax(80px,1fr);}#fc-multisheet .fc-dialog{padding:12px;}#fc-multisheet .fc-form-grid{grid-template-columns:1fr;}#fc-multisheet .fc-status{gap:5px;} }
+@media(pointer:coarse){#fc-multisheet button{min-height:44px;}#fc-multisheet input,#fc-multisheet select{font-size:16px;}#fc-multisheet .fc-row-tools button{min-width:44px;}}
+</style>
+<div class="viz-carousel" id="fc-multisheet" aria-label="Proposte per i fogli multipli ForgeCAD" data-previous-label="Precedente" data-next-label="Successiva">
+  <section data-variant="Schede in basso" aria-label="Fogli nelle schede in basso, proposta consigliata"><div class="fc-app" data-layout="tabs" aria-label="ForgeCAD con schede dei fogli"></div></section>
+  <section data-variant="Fogli nell’albero" aria-label="Alternativa con tutti i fogli nell’albero" hidden><div class="fc-app" data-layout="tree" aria-label="ForgeCAD con albero dei fogli"></div></section>
+</div>
+<script>
+(() => {
+ const root=document.getElementById('fc-multisheet');
+ const initial=[{id:1,name:'Generale',format:'A3',orientation:'Orizzontale',kind:'general'},{id:2,name:'Sezioni',format:'A3',orientation:'Orizzontale',kind:'section'},{id:3,name:'Dettagli',format:'A4',orientation:'Verticale',kind:'detail'}];
+ const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+ const icon=name=>`<i data-lucide="${name}" aria-hidden="true"></i>`;
+ const states={};
+ let saved=window.openai?.widgetState?.privateContent?.multisheet||{};
+ const icons=()=>{if(globalThis.lucide)lucide.createIcons({attrs:{width:16,height:16}});};
+ function persist(layout){
+  const active=states[layout];
+  if(window.openai?.setWidgetState)window.openai.setWidgetState({modelContent:{proposta:'Fogli multipli ForgeCAD',disposizione:layout==='tabs'?'Schede in basso':'Fogli nell’albero',foglioAttivo:active.sheets.find(s=>s.id===active.active)?.name},privateContent:{multisheet:Object.fromEntries(Object.entries(states).map(([k,s])=>[k,{sheets:s.sheets,active:s.active,dirty:s.dirty}]))}}).catch(()=>{});
+ }
+ function drawing(svg,sheet,count,index,layout){
+  const width=Math.max(220,Math.round(svg.getBoundingClientRect().width));
+  const height=Math.round(width*(sheet.orientation==='Verticale'?1.414:.707));
+  svg.setAttribute('viewBox',`0 0 ${width} ${height}`);svg.setAttribute('height',height);
+  const narrow=width<430, ink='#263442', accent='#427ca6', cx=width*(narrow?.5:.34),cy=narrow?(height-76)*.45+8:height*.38,unit=narrow?Math.min(width*.44,Math.max(40,(height-108)*.85)):width*.31,partH=unit*.6;
+  const text=(x,y,t,anchor='middle',size=11)=>`<text x="${x}" y="${y}" text-anchor="${anchor}" fill="${ink}" font-family="Arial,sans-serif" font-size="${size}">${esc(t)}</text>`;
+  const line=(x1,y1,x2,y2,dash=false)=>`<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${ink}" stroke-width="1" ${dash?'stroke-dasharray="7 3 1 3"':''}/>`;
+  const circle=(x,y,r)=>`<circle cx="${x}" cy="${y}" r="${r}" fill="none" stroke="${ink}" stroke-width="1.3"/>`;
+  const rect=(x,y,w,h,fill='none')=>`<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${fill}" stroke="${ink}" stroke-width="1.3"/>`;
+  const dimension=(x1,x2,y,t)=>`${line(x1,y-8,x1,y+6)}${line(x2,y-8,x2,y+6)}${line(x1,y,x2,y)}<path d="M ${x1+5} ${y-2} L ${x1} ${y} L ${x1+5} ${y+2} M ${x2-5} ${y-2} L ${x2} ${y} L ${x2-5} ${y+2}" fill="none" stroke="${ink}"/>${text((x1+x2)/2,y-5,t)}`;
+  let shapes='';
+  if(sheet.kind==='general'){
+   shapes=rect(cx-unit/2,cy-partH/2,unit,partH)+circle(cx,cy,unit*.18)+circle(cx,cy,unit*.115);
+   for(const a of [-1,1])for(const b of [-1,1])shapes+=circle(cx+a*unit*.37,cy+b*partH*.3,unit*.035);
+   shapes+=line(cx-unit*.65,cy,cx+unit*.65,cy,true)+line(cx,cy-partH*.8,cx,cy+partH*.8,true);
+   if(!narrow){shapes+=dimension(cx-unit/2,cx+unit/2,cy+partH*.85,'80')+text(cx,cy-partH*.72,'Vista principale')+rect(width*.71,cy-partH/2,unit*.2,partH)+rect(width*.71-unit*.12,cy-unit*.13,unit*.12,unit*.26)+line(width*.65,cy,width*.86,cy,true)+text(width*.76,cy-partH*.72,'Vista laterale');}
+   else shapes+=text(cx,cy+partH*.9,'⌀30 · 4 × ⌀6');
+  }else if(sheet.kind==='section'){
+   const hat=`url(#fc-hatch-${layout})`;
+   shapes=rect(cx-unit/2,cy-partH/2,unit,partH,hat)+rect(cx-unit*.14,cy-partH/2,unit*.28,partH,'#fff')+rect(cx-unit*.34,cy-partH*.13,unit*.68,partH*.26,'#fff')+line(cx-unit*.66,cy,cx+unit*.66,cy,true)+text(cx,narrow?24:cy-partH*.7,'Sezione A–A')+dimension(cx-unit/2,cx+unit/2,cy+partH*.85,'80');
+   if(!narrow)shapes+=rect(width*.71,cy-partH/2,unit*.22,partH,hat)+rect(width*.71,cy-partH*.12,unit*.22,partH*.24,'#fff')+text(width*.75,cy-partH*.72,'Sezione B–B');
+  }else if(sheet.kind==='detail'){
+   const r=width*.25,dy=height*.37;
+   shapes=circle(width*.5,dy,r)+circle(width*.5,dy,r*.53)+circle(width*.5,dy,r*.43)+line(width*.5-r*1.2,dy,width*.5+r*1.2,dy,true)+line(width*.5,dy-r*1.2,width*.5,dy+r*1.2,true)+text(width*.5,dy-r-24,'Dettaglio A · Scala 2:1')+dimension(width*.5-r*.53,width*.5+r*.53,dy+r+31,'⌀30 H7');
+   if(!narrow)shapes+=text(width*.5,dy+r+65,'Raccordo R2 · Smusso 1 × 45°');
+  }else shapes=text(width*.5,height*.42,'Foglio vuoto', 'middle',14);
+  const bx=narrow?12:width*.48,bw=width-bx-12,by=height-66;
+  svg.innerHTML=`<title>${esc(sheet.name)}, foglio ${index+1} di ${count}</title><desc>Proposta di tavola tecnica con formato indipendente e numerazione automatica del cartiglio.</desc><defs><pattern id="fc-hatch-${layout}" width="6" height="6" patternUnits="userSpaceOnUse"><path d="M -1 1 L 1 -1 M 0 6 L 6 0 M 5 7 L 7 5" stroke="#647586" stroke-width=".65"/></pattern></defs><rect x="8" y="8" width="${width-16}" height="${height-16}" fill="none" stroke="${ink}" stroke-width="1"/>${shapes}${rect(bx,by,bw,54)}${line(bx,by+30,bx+bw,by+30)}${line(bx+bw*.56,by+30,bx+bw*.56,by+54)}${text(bx+8,by+12,'SUPPORTO FLANGIATO','start',11)}${text(bx+8,by+25,sheet.name,'start',11)}${text(bx+8,by+46,`${sheet.format} · ${sheet.kind==='detail'?'2:1':'1:1'} · Rev. B`,'start',11)}${text(bx+bw-8,by+46,`Foglio ${index+1}/${count}`,'end',11)}`;
+ }
+ for(const app of root.querySelectorAll('.fc-app')){
+  const layout=app.dataset.layout, previous=saved[layout];
+  const valid=previous&&Array.isArray(previous.sheets)&&previous.sheets.length&&previous.sheets.every(s=>Number.isInteger(s.id)&&typeof s.name==='string'&&['A4','A3','A2'].includes(s.format)&&['Orizzontale','Verticale'].includes(s.orientation)&&['general','section','detail','blank'].includes(s.kind));
+  const state=states[layout]={sheets:valid?previous.sheets:initial.map(s=>({...s})),active:valid?previous.active:1,dirty:valid?!!previous.dirty:false,panel:null,message:'Pronto'};
+  if(!state.sheets.some(s=>s.id===state.active))state.active=state.sheets[0].id;
+  const options={showFormat:true,thumbnails:true};
+  app.innerHTML=`<div class="fc-title"></div><div class="fc-menu"><span>File</span><span>Modifica</span><span>Inserisci</span><span>Visualizza</span><span>Tavola</span></div><div class="fc-toolbar"><button type="button" class="cursor-interaction" data-action="new">${icon('file-plus-2')}Nuovo foglio</button><button type="button" class="cursor-interaction" data-action="manage">${icon('files')}Gestisci fogli</button><span class="fc-divider"></span><span class="fc-tool-label">Vista · Quota · Annotazione</span><button type="button" class="cursor-interaction" data-action="pdf">${icon('file-down')}PDF tavola</button></div><div class="fc-workspace"><aside class="fc-sidebar"><div class="fc-side-title">${icon('folder-open')}Tavola</div><div class="fc-source">Supporto.prt · revisione B</div><nav class="fc-tree" aria-label="Albero della tavola"></nav></aside><div class="fc-canvas"><div class="fc-stage"></div></div></div><div class="fc-sheets" aria-label="Fogli della tavola"></div><div class="fc-status"><span data-status aria-live="polite"></span><span data-current></span></div>`;
+  const stage=app.querySelector('.fc-stage'),tree=app.querySelector('.fc-tree'),strip=app.querySelector('.fc-sheets');
+  const selected=()=>state.sheets.find(s=>s.id===state.active);
+  function chrome(){
+   app.querySelector('.fc-title').textContent=`ForgeCAD — Supporto.drw${state.dirty?' *':''}`;
+   const children=selected().kind==='section'?['Sezione A–A','Sezione B–B','Quote e richiami']:selected().kind==='detail'?['Dettaglio A','Quote e tolleranze']:selected().kind==='blank'?[]:['Vista principale','Vista laterale','Quote e datum'];
+   const item=s=>`<button type="button" class="cursor-interaction" data-select="${s.id}" ${s.id===state.active?'aria-current="page"':''}>${icon('file')}<span>${state.sheets.indexOf(s)+1}. ${esc(s.name)}</span></button>`;
+   tree.innerHTML=(layout==='tree'?state.sheets.map(s=>item(s)+(s.id===state.active?children.map(t=>`<div class="fc-tree-child">${esc(t)}</div>`).join(''):'' )).join(''):item(selected())+children.map(t=>`<div class="fc-tree-child">${esc(t)}</div>`).join(''));
+   strip.innerHTML=layout==='tabs'?state.sheets.map((s,i)=>`<button type="button" role="tab" class="cursor-interaction" aria-selected="${s.id===state.active}" data-select="${s.id}" aria-controls="fc-page-${layout}">${String(i+1).padStart(2,'0')} · ${esc(s.name)}${options.showFormat?`<span class="fc-format">${s.format}</span>`:''}</button>`).join('')+`<button type="button" class="cursor-interaction" data-action="new" aria-label="Aggiungi foglio">${icon('plus')}+ Foglio</button>`:`<span class="fc-tool-label">${state.sheets.length} fogli nella tavola</span><button type="button" class="cursor-interaction" data-action="new">${icon('plus')}Aggiungi foglio</button>`;
+   if(layout==='tabs')strip.setAttribute('role','tablist');
+   app.querySelector('[data-status]').textContent=state.message;
+   const s=selected();app.querySelector('[data-current]').textContent=`Foglio ${state.sheets.indexOf(s)+1}/${state.sheets.length} · ${s.format} ${s.orientation.toLowerCase()}`;
+   icons();
+  }
+  function render(){
+   chrome();
+   if(!state.panel){const s=selected();stage.innerHTML=`<div class="fc-paper" data-portrait="${s.orientation==='Verticale'}" id="fc-page-${layout}"><svg role="img" aria-label="${esc(s.name)}"></svg></div>`;const paper=stage.querySelector('.fc-paper');paper.style.margin='0 auto';drawing(paper.querySelector('svg'),s,state.sheets.length,state.sheets.indexOf(s),layout);return;}
+   if(state.panel==='manage'){
+    stage.innerHTML=`<section class="fc-dialog" role="dialog" aria-label="Gestisci fogli"><header><h3>Gestisci fogli · ${state.sheets.length} fogli</h3><button type="button" class="cursor-interaction" data-action="close" aria-label="Chiudi gestione fogli">${icon('x')}Chiudi</button></header><div>${state.sheets.map((s,i)=>`<div class="fc-manager-row ${options.thumbnails?'':'fc-no-thumb'}" data-row="${s.id}" draggable="true"><span>${i+1}</span>${options.thumbnails?`<div class="fc-thumb" aria-hidden="true"><span>${i+1}</span></div>`:''}<label><input type="text" data-name="${s.id}" value="${esc(s.name)}" aria-label="Nome foglio ${i+1}" maxlength="48"><small>${s.format} · ${s.orientation}</small></label><div class="fc-row-tools"><button type="button" class="cursor-interaction" data-up="${s.id}" aria-label="Sposta ${esc(s.name)} su" ${i===0?'disabled':''}>${icon('chevron-up')}Su</button><button type="button" class="cursor-interaction" data-down="${s.id}" aria-label="Sposta ${esc(s.name)} giù" ${i===state.sheets.length-1?'disabled':''}>${icon('chevron-down')}Giù</button><button type="button" class="cursor-interaction" data-copy="${s.id}" data-tooltip="Duplica foglio" aria-label="Duplica ${esc(s.name)}">${icon('copy')}Duplica</button><button type="button" class="cursor-interaction" data-delete="${s.id}" aria-label="Elimina ${esc(s.name)}" ${state.sheets.length===1?'disabled':''}>${icon('trash-2')}Elimina</button></div></div>`).join('')}</div><div class="fc-actions"><button type="button" class="cursor-interaction" data-action="new">${icon('plus')}Nuovo foglio</button><button type="button" class="fc-primary cursor-interaction" data-action="close">Fine</button></div></section>`;
+   }else if(state.panel==='new'){
+    stage.innerHTML=`<section class="fc-dialog" role="dialog" data-new-form aria-label="Nuovo foglio"><header><h3>Nuovo foglio</h3><button type="button" class="cursor-interaction" data-action="close" aria-label="Chiudi">${icon('x')}Chiudi</button></header><div class="fc-form-grid"><label class="fc-full">Nome<input name="name" type="text" value="Foglio ${state.sheets.length+1}" maxlength="48" required></label><label>Formato<select name="format"><option>A3</option><option>A4</option><option>A2</option></select></label><label>Orientamento<select name="orientation"><option>Orizzontale</option><option>Verticale</option></select></label></div><div class="fc-actions"><button type="button" class="cursor-interaction" data-action="close">Annulla</button><button type="button" data-action="create" class="fc-primary cursor-interaction">Crea foglio</button></div></section>`;
+   }else if(state.panel==='delete'){
+    const target=state.sheets.find(s=>s.id===state.deleteId);
+    stage.innerHTML=`<section class="fc-dialog" role="dialog" aria-label="Elimina foglio"><header><h3>Elimina «${esc(target.name)}»?</h3></header><div>Verranno rimosse le viste e le annotazioni di questo foglio.</div><div class="fc-actions"><button type="button" class="cursor-interaction" data-action="manage">Annulla</button><button type="button" class="cursor-interaction" data-action="confirm-delete">Elimina foglio</button></div></section>`;
+   }else if(state.panel==='pdf'){
+    stage.innerHTML=`<section class="fc-dialog" role="dialog" data-pdf-form aria-label="Esporta PDF"><header><h3>PDF della tavola</h3><button type="button" class="cursor-interaction" data-action="close" aria-label="Chiudi PDF">${icon('x')}Chiudi</button></header><label class="fc-choice"><input type="radio" name="range" value="all" checked><span>Tutti i fogli<div class="fc-details">${state.sheets.length} pagine, nell’ordine della tavola</div></span></label><label class="fc-choice"><input type="radio" name="range" value="current"><span>Solo il foglio attivo<div class="fc-details">${esc(selected().name)} · ${selected().format}</div></span></label><div class="fc-details">Ogni pagina mantiene il formato e l’orientamento del proprio foglio.</div><div class="fc-actions"><button type="button" class="cursor-interaction" data-action="close">Annulla</button><button type="button" data-action="export" class="fc-primary cursor-interaction">Esporta PDF</button></div></section>`;
+   }
+   icons();
+  }
+  function change(message){state.dirty=true;state.message=message;persist(layout);render();}
+  app.addEventListener('click',e=>{
+   const b=e.target.closest('button');if(!b||b.disabled)return;
+   if(b.dataset.select){state.active=Number(b.dataset.select);state.panel=null;state.message='Pronto';persist(layout);render();return;}
+   if(b.dataset.action){const action=b.dataset.action;if(action==='create'){const value=name=>app.querySelector(`[name="${name}"]`).value;const sheet={id:Math.max(...state.sheets.map(s=>s.id))+1,name:value('name').trim()||'Senza titolo',format:value('format'),orientation:value('orientation'),kind:'blank'};state.sheets.push(sheet);state.active=sheet.id;state.panel=null;change('Nuovo foglio creato');return;}if(action==='export'){const all=app.querySelector('input[name=range]:checked').value==='all';state.panel=null;state.message=all?`Anteprima PDF: ${state.sheets.length} pagine, nell’ordine della tavola`:`Anteprima PDF: solo «${selected().name}»`;render();return;}if(action==='close'){state.panel=null;render();return;}if(['new','manage','pdf'].includes(action)){state.panel=action;render();return;}if(action==='confirm-delete'){const i=state.sheets.findIndex(s=>s.id===state.deleteId);state.sheets.splice(i,1);if(state.active===state.deleteId)state.active=state.sheets[Math.min(i,state.sheets.length-1)].id;state.panel='manage';change('Foglio eliminato · numerazione aggiornata');return;}}
+   for(const key of ['up','down','copy','delete'])if(b.dataset[key]){const id=Number(b.dataset[key]),i=state.sheets.findIndex(s=>s.id===id);if(key==='up'||key==='down'){const j=i+(key==='up'?-1:1);[state.sheets[i],state.sheets[j]]=[state.sheets[j],state.sheets[i]];change('Ordine dei fogli aggiornato');}if(key==='copy'){const original=state.sheets[i];const copy={...original,id:Math.max(...state.sheets.map(s=>s.id))+1,name:original.name+' — copia'};state.sheets.splice(i+1,0,copy);change('Foglio duplicato con viste e annotazioni');}if(key==='delete'){state.deleteId=id;state.panel='delete';render();}return;}
+  });
+  app.addEventListener('input',e=>{if(e.target.dataset.name){const sheet=state.sheets.find(s=>s.id===Number(e.target.dataset.name));sheet.name=e.target.value.trim()||'Senza titolo';state.dirty=true;state.message='Nome del foglio aggiornato';persist(layout);chrome();}});
+  let dragId=null;
+  app.addEventListener('dragstart',e=>{const row=e.target.closest('[data-row]');if(row){dragId=Number(row.dataset.row);e.dataTransfer.setData('text/plain',String(dragId));}});
+  app.addEventListener('dragover',e=>{if(e.target.closest('[data-row]'))e.preventDefault();});
+  app.addEventListener('drop',e=>{const row=e.target.closest('[data-row]');if(!row||dragId===null)return;e.preventDefault();const from=state.sheets.findIndex(s=>s.id===dragId),to=state.sheets.findIndex(s=>s.id===Number(row.dataset.row));if(from>=0&&to>=0&&from!==to){const [item]=state.sheets.splice(from,1);state.sheets.splice(to,0,item);change('Ordine dei fogli aggiornato');}dragId=null;});
+  app.addEventListener('keydown',e=>{if(e.key==='Enter'&&state.panel==='new'){e.preventDefault();app.querySelector('[data-action=create]').click();}if(e.key==='Escape'&&state.panel){state.panel=null;render();}});
+  new ResizeObserver(()=>{if(!state.panel){const svg=stage.querySelector('svg');if(svg)drawing(svg,selected(),state.sheets.length,state.sheets.indexOf(selected()),layout);}}).observe(stage);
+  window.addEventListener('openai:set_globals',e=>{
+   const incoming=e.detail?.globals?.widgetState?.privateContent?.multisheet?.[layout];
+   if(incoming&&state.active===incoming.active&&state.dirty===!!incoming.dirty&&JSON.stringify(state.sheets)===JSON.stringify(incoming.sheets))return;
+   if(incoming&&Array.isArray(incoming.sheets)&&incoming.sheets.length&&incoming.sheets.every(s=>Number.isInteger(s.id)&&typeof s.name==='string'&&['A4','A3','A2'].includes(s.format)&&['Orizzontale','Verticale'].includes(s.orientation)&&['general','section','detail','blank'].includes(s.kind))){state.sheets=incoming.sheets.map(s=>({...s}));state.active=state.sheets.some(s=>s.id===incoming.active)?incoming.active:state.sheets[0].id;state.dirty=!!incoming.dirty;state.panel=null;render();}
+  });
+  render();
+  if(globalThis.Tweak){const tweak=new Tweak({container:app,onChange:render});if(layout==='tabs')tweak.addToggle(options,'showFormat',{label:'Formato nelle schede'});tweak.addToggle(options,'thumbnails',{label:'Miniature nel gestore fogli'});}
+ }
+})();
+</script>

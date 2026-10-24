@@ -104,18 +104,18 @@ QString DrawingWindow::runRevisionAction(RevisionAction action,const QString &fi
     busy_=false;
     if(!error.isEmpty()&&drawing_.baseCheckinId!=oldBase){containerDirty_=true;modified_=true;}
     if(error.isEmpty()&&(action==RevisionAction::Checkin||action==RevisionAction::CompletePending)){
-        containerDirty_=false;modified_=false;editor_->markSaved();statusBar()->showMessage(matches?QStringLiteral("Check-in della tavola archiviato."):
+        containerDirty_=false;modified_=false;editor_->markSaved();markSheetsSaved();statusBar()->showMessage(matches?QStringLiteral("Check-in della tavola archiviato."):
             QStringLiteral("Check-in originale completato. Le modifiche successive sono conservate nella copia di lavoro."),10000);
     }
     if(error.isEmpty()){diskFingerprint_.clear();documentFileFingerprint(path_,diskFingerprint_);}
     if(!owned&&!error.isEmpty())lock_.reset();
+    if(error.isEmpty()&&(drawing_.baseCheckinId!=oldBase||action==RevisionAction::Checkin||action==RevisionAction::CompletePending))resetSheetsHistory(!modified_);
     refreshPageContext();refreshTitle();return error;
 }
 QString DrawingWindow::applySource(DrawingFile prepared,DocumentState source){
     DrawingEditorModel geometry;auto error=prepareDrawingEditorModel(source,geometry);if(!error.isEmpty())return error;
-    const bool wasReadOnly=editor_->isReadOnly();editor_->setReadOnly(false);error=editor_->updateModel(geometry);
-    if(!error.isEmpty()){editor_->setReadOnly(wasReadOnly);return error;}
-    modelBaseCheckinId_=source.baseCheckinId;prepared.sheet=editor_->sheet();drawing_=std::move(prepared);model_=std::move(geometry);sourceReady_=true;containerDirty_=true;modified_=true;
+    error=updateSheetsModel(std::move(prepared),geometry);if(!error.isEmpty())return error;
+    modelBaseCheckinId_=source.baseCheckinId;model_=std::move(geometry);sourceReady_=true;containerDirty_=true;modified_=true;
     sourceArchivePath_=drawing_.modelArchivePath.isEmpty()?QString():QDir(QFileInfo(path_).absolutePath()).absoluteFilePath(drawing_.modelArchivePath);
     const auto checkin=drawing_.sheet.drawing.model.checkinId;
     sourceStatus_->setText(checkin.isNull()?QStringLiteral("Sorgente: copia di lavoro salvata %1").arg(sourcePath_):QStringLiteral("Modello fissato al check-in %1").arg(checkin.toString(QUuid::WithoutBraces)));

@@ -13,6 +13,7 @@ struct DrawingProjectRevision {
 };
 struct DrawingPageContext {
     QString modelName,drawingRevision,modelRevision;
+    int sheetNumber=1,sheetCount=1;
     DocumentVersion drawingVersion,modelVersion;
     QVector<DrawingProjectRevision> projectRevisions;
 };

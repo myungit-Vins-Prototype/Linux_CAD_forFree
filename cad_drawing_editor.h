@@ -98,6 +98,11 @@ public:
     void setReadOnly(bool readOnly);
     bool isReadOnly() const;
 private:
+    friend class DrawingWindow;
+    // Navigazione/ripristino del contenitore; non e' una mutazione pubblica.
+    QString loadSheet(DrawingSheet sheet);
+    void setDocumentHistory(std::function<QString(bool)> handler,bool undo,bool redo,QString undoLabel={},QString redoLabel={});
+    static QString exportPdfPages(const QString &path,const QVector<const DrawingSheetEditor *> &pages,DrawingPdfReport &report);
     struct Impl;
     std::unique_ptr<Impl> impl_;
 };

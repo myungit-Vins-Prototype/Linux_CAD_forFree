@@ -76,6 +76,6 @@ void paintDrawingPage(QPainter &painter,const DrawingSheet &sheet,const DrawingP
     cell(0,0,105,12,QStringLiteral("TITOLO"),sheet.title);cell(105,0,70,12,QStringLiteral("CODICE TAVOLA"),sheet.titleBlock.code);
     cell(0,12,105,11,QStringLiteral("MODELLO"),context.modelName);cell(105,12,70,11,QStringLiteral("ORGANIZZAZIONE"),sheet.titleBlock.organization);
     cell(0,23,60,10,QStringLiteral("DISEGNATO DA"),sheet.titleBlock.author);cell(60,23,57,10,QStringLiteral("DATA"),sheet.titleBlock.date);cell(117,23,58,10,QStringLiteral("SCALA / UNITA'"),QStringLiteral("%1 / mm").arg([&]{if(sheet.drawing.views.empty())return QStringLiteral("-");const double scale=sheet.drawing.views[0].scale;for(const auto &view:sheet.drawing.views)if(view.scale!=scale)return QStringLiteral("Vedi viste");return QStringLiteral("%1:1").arg(scale,0,'g',6);}()));
-    cell(0,33,60,9,QStringLiteral("REVISIONE TAVOLA"),context.drawingRevision);cell(60,33,57,9,QStringLiteral("REVISIONE MODELLO"),context.modelRevision);cell(117,33,58,9,QStringLiteral("FORMATO / FOGLIO"),drawingPaperName(sheet.size)+QStringLiteral(" / 1 di 1"));painter.restore();
+    cell(0,33,60,9,QStringLiteral("REVISIONE TAVOLA"),context.drawingRevision);cell(60,33,57,9,QStringLiteral("REVISIONE MODELLO"),context.modelRevision);cell(117,33,58,9,QStringLiteral("FORMATO / FOGLIO"),drawingPaperName(sheet.size)+QStringLiteral(" / %1 di %2").arg(context.sheetNumber).arg(context.sheetCount));painter.restore();
 }
 }
