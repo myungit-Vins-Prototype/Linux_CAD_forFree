@@ -81,6 +81,8 @@ void DrawingWindow::addRevisionMenus(QMenu *file){
         if(QMessageBox::question(this,QStringLiteral("Annulla check-out tavola"),QStringLiteral("Liberare la prenotazione? Le modifiche locali vengono mantenute."),QMessageBox::Yes|QMessageBox::No,QMessageBox::No)==QMessageBox::Yes)
             report(runRevisionAction(RevisionAction::CancelCheckout));
     });
+    auto *restore=revisions->addAction(commandIcon("undo"),QStringLiteral("Ripristina revisione…"));restore->setObjectName("drawingRestoreRevisionAction");revisionMutationActions_.append(restore);
+    restore->setToolTip(QStringLiteral("Recupera tutti i fogli e il modello di una revisione nella copia di lavoro, con Undo e nuovo check-in successivo."));connect(restore,&QAction::triggered,this,[this]{showDrawingHistory(true);});
     auto *history=revisions->addAction(QStringLiteral("Storico dei check-in..."));history->setObjectName("drawingHistoryAction");
     connect(history,&QAction::triggered,this,[this]{showDrawingHistory();});
     for(auto *menu:{model,revisions}){menu->setIcon(commandIcon("storyboard"));for(auto *action:menu->actions()){
@@ -163,17 +165,21 @@ QString DrawingWindow::openRevision(const QString &workingPath,const DocumentVer
     archived.modelArchivePath=QDir(QFileInfo(canonical).absolutePath()).relativeFilePath(paths.revisions);
     loadContents(canonical,std::move(archived));return {};
 }
-void DrawingWindow::showDrawingHistory(){
+void DrawingWindow::showDrawingHistory(bool restoreWorking){
     if(path_.isEmpty()){report(QStringLiteral("Salvare prima la tavola nel workspace."));return;}
     QVector<RevisionRecord> records;const auto error=workspaceDrawingHistory(path_,drawing_,records);if(!error.isEmpty()){report(error);return;}
     QDialog dialog(this);dialog.setWindowTitle(QStringLiteral("Storico della tavola"));dialog.setObjectName("drawingHistoryDialog");auto *layout=new QVBoxLayout(&dialog);
     auto *table=revisionTable(dialog,records);layout->addWidget(table);
     if(records.isEmpty())layout->addWidget(new QLabel(QStringLiteral("Nessun check-in della tavola archiviato."),&dialog));
-    auto *buttons=new QDialogButtonBox(QDialogButtonBox::Open|QDialogButtonBox::Close,&dialog);buttons->button(QDialogButtonBox::Open)->setText(QStringLiteral("Apri copia storica"));
-    buttons->button(QDialogButtonBox::Open)->setEnabled(!records.isEmpty());layout->addWidget(buttons);
-    connect(buttons,&QDialogButtonBox::accepted,&dialog,&QDialog::accept);connect(buttons,&QDialogButtonBox::rejected,&dialog,&QDialog::reject);
-    connect(table,&QTableWidget::cellDoubleClicked,&dialog,[&dialog](int,int){dialog.accept();});dialog.resize(800,360);
-    if(dialog.exec()!=QDialog::Accepted||table->currentRow()<0)return;
+    auto *note=new QLabel(QStringLiteral("Il ripristino sostituisce tutti i fogli e usa il modello della revisione scelta. È annullabile con Undo; Salva e un nuovo check-in ne archiviano il risultato come discendente della base corrente."),&dialog);note->setWordWrap(true);layout->addWidget(note);
+    auto *buttons=new QDialogButtonBox(QDialogButtonBox::Open|QDialogButtonBox::Close,&dialog);buttons->button(QDialogButtonBox::Open)->setText(restoreWorking?QStringLiteral("Ripristina copia di lavoro"):QStringLiteral("Apri copia storica"));
+    const bool canRestore=findChild<QAction *>("drawingRestoreRevisionAction")->isEnabled();
+    buttons->button(QDialogButtonBox::Open)->setEnabled(!records.isEmpty()&&(!restoreWorking||canRestore));layout->addWidget(buttons);
+    if(!restoreWorking){auto *restore=buttons->addButton(QStringLiteral("Ripristina copia di lavoro"),QDialogButtonBox::ActionRole);restore->setObjectName("drawingRestoreHistoryButton");restore->setEnabled(canRestore&&!records.isEmpty());connect(restore,&QPushButton::clicked,&dialog,[&dialog]{dialog.done(2);});}
+    connect(buttons,&QDialogButtonBox::accepted,&dialog,[&dialog,restoreWorking]{dialog.done(restoreWorking?2:QDialog::Accepted);});connect(buttons,&QDialogButtonBox::rejected,&dialog,&QDialog::reject);
+    connect(table,&QTableWidget::cellDoubleClicked,&dialog,[&dialog,restoreWorking,canRestore](int,int){if(!restoreWorking||canRestore)dialog.done(restoreWorking?2:QDialog::Accepted);});dialog.resize(820,420);
+    const int choice=dialog.exec();if((choice!=QDialog::Accepted&&choice!=2)||table->currentRow()<0)return;
+    if(choice==2){report(restoreRevision(records[table->currentRow()].version));return;}
     auto *historical=new DrawingWindow(parentWidget());const auto opened=historical->openRevision(path_,records[table->currentRow()].version);
     if(!opened.isEmpty()){delete historical;report(opened);return;}
     historical->setAttribute(Qt::WA_DeleteOnClose);historical->show();
@@ -197,6 +203,10 @@ void DrawingWindow::installRevisionPanel(){
     const auto openSelectedRevision=[this](int row){if(busy_||!editor_||editor_->isComputing()||row<0)return;auto *item=revisionHistory_->item(row,0);if(!item)return;DocumentVersion version{item->data(Qt::UserRole+1).toUuid(),item->data(Qt::UserRole).toUuid()};auto *window=new DrawingWindow(parentWidget());const auto error=window->openRevision(path_,version);if(!error.isEmpty()){delete window;report(error);return;}window->setAttribute(Qt::WA_DeleteOnClose);window->show();};
     connect(openRevisionButton,&QPushButton::clicked,this,[this,openSelectedRevision]{openSelectedRevision(revisionHistory_->currentRow());});
     connect(revisionHistory_,&QTableWidget::cellDoubleClicked,this,[openSelectedRevision](int row,int){openSelectedRevision(row);});
+    auto *restoreSelected=new QPushButton(commandIcon("undo"),QStringLiteral("Ripristina revisione selezionata"),body);restoreSelected->setObjectName("drawingRestoreSelectedRevision");restoreSelected->setToolTip(QStringLiteral("Sostituisce la copia di lavoro con i fogli e il modello selezionati; annullabile con Undo."));layout->insertWidget(layout->indexOf(tabs)+2,restoreSelected);
+    auto *restoreAction=findChild<QAction *>("drawingRestoreRevisionAction");const auto updateRestore=[this,tabs,restoreSelected,restoreAction]{restoreSelected->setVisible(tabs->currentWidget()==revisionHistory_);restoreSelected->setEnabled(restoreAction->isEnabled()&&revisionHistory_->currentRow()>=0);};
+    connect(restoreAction,&QAction::changed,restoreSelected,updateRestore);connect(revisionHistory_,&QTableWidget::itemSelectionChanged,restoreSelected,updateRestore);connect(tabs,&QTabWidget::currentChanged,restoreSelected,updateRestore);updateRestore();
+    connect(restoreSelected,&QPushButton::clicked,this,[this]{const int row=revisionHistory_->currentRow();if(row<0)return;const auto *item=revisionHistory_->item(row,0);if(item)report(restoreRevision({item->data(Qt::UserRole+1).toUuid(),item->data(Qt::UserRole).toUuid()}));});
     revisionHistory_->setToolTip(QStringLiteral("Seleziona una revisione e premi Apri revisione selezionata; puoi anche fare doppio clic sulla riga."));
     revisionDock_->setWidget(body);addDockWidget(Qt::RightDockWidgetArea,revisionDock_);
     auto *timer=new QTimer(this);timer->setInterval(5000);connect(timer,&QTimer::timeout,this,[this,last=QString()]()mutable{

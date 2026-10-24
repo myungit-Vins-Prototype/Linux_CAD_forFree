@@ -22,6 +22,7 @@ public:
     QString pinModelRevision(const DocumentVersion &version);
     QString useWorkingModel();
     QString openRevision(const QString &workingPath,const DocumentVersion &version);
+    QString restoreRevision(const DocumentVersion &version);
     QString createFromModel(const QString &modelPath);
     QString openPath(const QString &path);
     QString savePath(const QString &path);
@@ -43,7 +44,8 @@ protected:
     void closeEvent(QCloseEvent *event)override;
     bool event(QEvent *event)override;
 private:
-    void installEditor();
+    void installEditor(DrawingSheetEditor *prepared=nullptr);
+    QString restoreDrawingState(DrawingFile prepared,int index,const QString &label,int historyTarget=-1);
     void setupSheetActions();
     void installSheetTabs(QVBoxLayout *layout);
     void refreshSheetTabs();
@@ -70,7 +72,7 @@ private:
     QString applySource(DrawingFile drawing,DocumentState source);
     void addRevisionMenus(QMenu *file);
     void showModelRevisions();
-    void showDrawingHistory();
+    void showDrawingHistory(bool restoreWorking=false);
     void installRevisionPanel();
     void refreshRevisionPanel();
     void showRevisionTableDialog();

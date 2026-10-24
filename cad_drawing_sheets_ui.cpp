@@ -100,6 +100,9 @@ QString DrawingWindow::restoreSheets(bool redo){
     const int target=sheetHistoryIndex_+(redo?1:-1);if(target<0||target>=sheetHistory_.size())return QStringLiteral("Nessuna modifica da ripristinare.");
     DrawingFile prepared;const auto decoded=decodeDrawingFile(sheetHistory_[target].bytes,prepared);if(!decoded.isEmpty())return decoded;
     const auto focus=sheetHistory_[redo?target:sheetHistoryIndex_].active;int index=indexOfSheet(prepared,focus);if(index<0)index=indexOfSheet(prepared,sheetHistory_[target].active);if(index<0)index=0;
+    const auto &a=prepared.sheet.drawing.model;const auto &b=drawing_.sheet.drawing.model;
+    if(a.documentId!=b.documentId||a.checkinId!=b.checkinId||prepared.modelDefinitionHash!=drawing_.modelDefinitionHash||prepared.modelArchiveId!=drawing_.modelArchiveId||prepared.modelArchivePath!=drawing_.modelArchivePath||prepared.modelPath!=drawing_.modelPath)
+        return restoreDrawingState(std::move(prepared),index,{},target);
     const auto context=editor_->pageContext();const auto error=editor_->loadSheet(drawingSheetAt(prepared,index));if(!error.isEmpty())return error;
     drawing_=std::move(prepared);activeSheet_=index;sheetHistoryIndex_=target;modified_=sheetHistory_[target].bytes!=savedDrawing_;containerDirty_=modified_;editor_->setPageContext(context);refreshSheetTabs();refreshTitle();return {};
 }

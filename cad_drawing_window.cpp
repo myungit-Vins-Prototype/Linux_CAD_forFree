@@ -114,17 +114,18 @@ void DrawingWindow::refreshTitle(){
         findChild<QAction *>("drawingCompleteCheckinAction")->setEnabled(revisionStatusCache_.hasPending);
         findChild<QAction *>("drawingCancelCheckoutAction")->setEnabled(revisionStatusCache_.hasSession&&!revisionStatusCache_.hasPending);
     }
+    if(auto *restore=findChild<QAction *>("drawingRestoreRevisionAction"))restore->setEnabled(editor_&&checkin.isNull()&&!busy_&&!editAccess_.readOnly&&lock_&&revisionStatusKnown_&&revisionStatusCache_.hasSession&&!revisionStatusCache_.hasPending&&revisionStatusCache_.phase==WorkspaceCheckoutPhase::Active&&!drawing_.baseCheckinId.isNull());
     if(auto *action=findChild<QAction *>("drawingRevisionTableAction"))action->setEnabled(editor_&&!busy_);
     if(sheetTabs_)sheetTabs_->setEnabled(!busy_);
 
 }
-void DrawingWindow::installEditor(){
+void DrawingWindow::installEditor(DrawingSheetEditor *prepared){
     const int revisionWidth=editor_&&isVisible()&&!revisionDock_->isFloating()?revisionDock_->width():0;
     delete toolbarController_;toolbarController_=nullptr;
     const bool oldBusy=busy_;busy_=true;
     auto *container=new QWidget(this);auto *layout=new QVBoxLayout(container);layout->setContentsMargins(4,4,4,4);
     DrawingSheetEditor *next=nullptr;
-    try { next=new DrawingSheetEditor(drawingSheetAt(drawing_,activeSheet_),model_,container); }
+    try { next=prepared?prepared:new DrawingSheetEditor(drawingSheetAt(drawing_,activeSheet_),model_,container);if(prepared)next->setParent(container); }
     catch(const std::exception &error){
         sourceReady_=false;model_={};model_.snapshot.version=drawing_.sheet.drawing.model;
         sourceStatus_->setText(QStringLiteral("Impossibile generare le viste: %1").arg(QString::fromUtf8(error.what())));
@@ -141,7 +142,7 @@ void DrawingWindow::installEditor(){
     loadLatestModel_=new QPushButton(QStringLiteral("Carica ultima revisione"),modelUpdateNotice_);loadLatestModel_->setObjectName("drawingLoadLatestModelButton");noticeLayout->addWidget(loadLatestModel_);
     connect(loadLatestModel_,&QPushButton::clicked,this,[this]{const auto version=availableModelRevision_.version;if(!version.checkinId.isNull()&&(!path_.isEmpty()||save(false)))report(pinModelRevision(version));});
     modelUpdateNotice_->hide();layout->addWidget(modelUpdateNotice_);
-    layout->addWidget(next,1);installSheetTabs(layout);auto *previous=takeCentralWidget();setCentralWidget(container);editor_=next;delete previous;
+    layout->addWidget(next,1);installSheetTabs(layout);auto *previous=takeCentralWidget();setCentralWidget(container);editor_=next;if(prepared){previous->setEnabled(false);previous->deleteLater();}else delete previous;
     const auto populate=[next,this](QMenu *menu,std::initializer_list<const char *> names){menu->clear();for(auto name:names){auto *action=next->findChild<QAction *>(name);if(!action)action=findChild<QAction *>(name);if(action)menu->addAction(action);}};
     populate(editMenu_,{"drawingOptionsAction","drawingResetViewTitleAction","drawingPageSettingsAction","drawingRevisionTableAction","drawingUndoAction","drawingRedoAction","drawingEditViewAction","drawingAlignViewAction","drawingDetachViewAction","drawingReleaseAlignmentAction","drawingEditSectionLineAction","drawingAlignSectionOrientationAction","drawingReverseSectionAction","drawingSectionHatchAction","drawingEditAxisAction","drawingEditAnnotationAction","drawingDeleteSelectionAction"});
     populate(insertMenu_,{"drawingAddProjectionAction","drawingDerivedViewAction","drawingAuxiliaryViewAction","drawingBreakViewAction","drawingDetailViewAction","drawingAddViewAction","drawingTechnicalSectionAction","drawingSteppedSectionAction","drawingAlignedSectionAction","drawingAxisThroughPointsAction","drawingAxisBetweenLinesAction","drawingAddNoteAction","drawingAddLeaderAction","drawingAddDatumAction","drawingAddGeometricToleranceAction"});

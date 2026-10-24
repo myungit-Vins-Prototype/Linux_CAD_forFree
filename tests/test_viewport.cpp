@@ -91,6 +91,7 @@ static QString exampleDocumentPath(const char *name) {
 #include "test_drawing_revisions.h"
 #include "test_projected_drawing_file.h"
 #include "test_drawing_multisheet.h"
+#include "test_drawing_revision_restore.h"
 #include "test_drawing_mouse.h"
 #include "test_drawing_section_model.h"
 #include "document_regression.h"
@@ -9964,6 +9965,7 @@ int main(int argc, char **argv) {
         try{drawingSectionModelTest(app.arguments().value(app.arguments().indexOf(QStringLiteral("--drawing-section-model"))+1));}
         catch(const std::exception &e){std::cerr<<e.what()<<std::endl;return 1;}return 0;
     }
+    if(app.arguments().contains(QStringLiteral("--drawing-restore"))){try{drawingRevisionRestoreTests();}catch(const std::exception &e){std::cerr<<e.what()<<std::endl;return 1;}return 0;}
     if(app.arguments().contains(QStringLiteral("--drawing-multisheet"))){try{multisheetTests();}catch(const std::exception &e){std::cerr<<e.what()<<std::endl;return 1;}return 0;}
     if (app.arguments().contains(QStringLiteral("--projected-drawings"))) {
         try { projectedDrawingFileTests(); }
