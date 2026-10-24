@@ -7,6 +7,8 @@
 #include <QPointF>
 #include <QSizeF>
 #include <QVector>
+#include <QMap>
+#include <QStringList>
 #include <optional>
 
 namespace ForgeCad {
@@ -56,7 +58,13 @@ struct DrawingDimensionNumbering {
     int firstNumber=1;
     double diameter=6,rowTolerance=3; // mm sul foglio; righe ancorate al testo più alto
     bool excludeParenthesized=false;
-    bool active()const{return enabled||firstNumber!=1||diameter!=6||rowTolerance!=3||excludeParenthesized;}
+    bool persistent=false;
+    int primaryDirection=0,secondaryDirection=1; // destra, sotto, sinistra, sopra
+    QUuid firstDimension;
+    QStringList excludePatterns; // glob su prefisso/suffisso, senza distinzione maiuscole
+    QMap<QUuid,int> assignments; // comprende quote eliminate: i numeri restano riservati
+    int nextNumber=1;
+    bool active()const{return enabled||firstNumber!=1||diameter!=6||rowTolerance!=3||excludeParenthesized||persistent; }
 };
 struct DrawingTitleBlock {
     bool visible=false;

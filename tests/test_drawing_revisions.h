@@ -1,5 +1,6 @@
 #pragma once
 #include "test_drawing_model_update.h"
+#include "../cad_drawing_numbering.h"
 #include "../cad_drawing_revisions.h"
 namespace {
 ForgeCad::DrawingFile revisionDrawingFixture(const QString &path,const QString &sourcePath,QUuid &dimensionId){
@@ -12,6 +13,7 @@ ForgeCad::DrawingFile revisionDrawingFixture(const QString &path,const QString &
     require(index>=0,"curva associativa nella fixture delle revisioni");
     for(auto *item:window.editor()->canvas()->scene()->items())if(item->data(0).toString()=="section"&&item->data(2).toInt()==index)item->setSelected(true);
     clientOk(window.editor()->addSelectedDimension(DrawingMeasure::EndpointDistance));dimensionId=window.editor()->sheet().drawing.dimensions[0].id;
+    auto numbered=window.editor()->sheet();clientOk(renumberDrawingDimensions(numbered));clientOk(window.editor()->setDimensionNumbering(numbered.dimensionNumbering));
     clientOk(window.savePath(path));return window.document();
 }
 void drawingRevisionTests(){
@@ -48,12 +50,13 @@ void drawingRevisionTests(){
         require(!checkinWorkspaceDrawing(path,drawing,label,"interruzione simulata",record).isEmpty()&&QFileInfo::exists(pendingPath),"errore pubblicazione conserva pendente");
         DrawingRevisionOperation operation;clientOk(decodeDrawingRevisionOperation(clientRead(pendingPath),operation));return operation;
     };
+    const auto originalNumbers=archived.sheet.dimensionNumbering.assignments;clientOk(changeDrawingDimensionNumber(drawing.sheet,dimension,42,false));require(drawingNumberingChanges(archived.sheet,drawing.sheet).size()==1,"confronto badge distingue cambio per UUID");
     auto pending=makePending("B");pending.request.technicalRevision="A";QByteArray legacyPending;clientOk(encodeDrawingRevisionOperation(pending,legacyPending));clientWrite(pendingPath,legacyPending);const auto originalPending=clientRead(pendingPath);
     require(!cancelWorkspaceDrawingCheckout(path,drawing).isEmpty(),"pendente impedisce cancellazione prenotazione");
     require(!checkinWorkspaceDrawing(path,drawing,"nuovo","",record).isEmpty()&&clientRead(pendingPath)==originalPending,"nuovo tentativo non sovrascrive pendente");
     RevisionRecord published;clientOk(store.checkin(pending.request,published));require(published.technicalRevision=="2","vecchio pendente tavola rinumerato senza perdere UUID o contenuto");drawing.sheet.title="modifica successiva al pendente";bool matches=true;
     clientOk(completeWorkspaceDrawingCheckin(path,drawing,record,matches));require(!matches&&drawing.sheet.title=="modifica successiva al pendente"&&record.version.checkinId==published.version.checkinId,"risposta persa conserva modifiche successive e pubblica snapshot originale");
-    clientOk(readDrawingRevision(store,record.version,archived));require(archived.sheet.title==unsaved,"contenuto originale del pendente immutato");
+    clientOk(readDrawingRevision(store,record.version,archived));require(archived.sheet.title==unsaved,"contenuto originale del pendente immutato");require(archived.sheet.dimensionNumbering.assignments.value(dimension)==42,"nuovo check-in conserva numero modificato");DrawingFile oldNumbered;clientOk(readDrawingRevision(store,first.version,oldNumbered));require(oldNumbered.sheet.dimensionNumbering.assignments==originalNumbers,"check-in precedente conserva numerazione originale");
     // Interruzione dopo la rimozione della sessione, prima di eliminare il pendente.
     clientWrite(pendingPath,originalPending);clientOk(completeWorkspaceDrawingCheckin(path,drawing,record,matches));
     QVector<RevisionRecord> history;clientOk(workspaceDrawingHistory(path,drawing,history));require(history.size()==2,"ritentativo senza doppio check-in");

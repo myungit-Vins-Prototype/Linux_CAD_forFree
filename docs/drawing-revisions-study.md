@@ -682,6 +682,8 @@ Verifica conclusiva: app Linux compilata e sei suite pertinenti superate, inclus
 
 ## 23. Numerazione delle quote con badge circolari
 
+Nota: comportamento della prima implementazione; il flusso aggiornato e la persistenza sono descritti nella sezione27.
+
 Il comando **Quote → Numerazione quote…**, disponibile anche nella barra dei comandi, abilita sul foglio corrente un cerchio numerato a destra di ciascun testo quota. Il dialogo mostra un’anteprima e permette di scegliere numero iniziale (1–999999), diametro (3–20mm sul foglio) e tolleranza per la stessa riga (0–20mm, predefinita3mm). I badge restano diritti, con dimensioni in mm carta indipendenti dalla scala della vista e con i caratteri convertiti in tracciati vettoriali nel PDF. Il numero compare anche nell’albero della tavola.
 
 L’ordine usa le posizioni salvate dei testi: da sinistra a destra nella riga, poi dall’alto verso il basso. Ogni riga parte dal testo ancora non assegnato più alto e comprende i testi entro la tolleranza verticale da quella posizione; la tolleranza non si propaga fra testi adiacenti. Con tolleranza zero, ogni diversa ordinata avvia una riga. Parità di posizione risolte per UUID mantengono l’ordine ripetibile, indipendente dall’ordine di inserimento.
@@ -736,3 +738,36 @@ La verifica restituisce un’impronta dello stato visto. Il ripristino ripete i 
 Gli archivi creati con le vecchie versioni restano leggibili. **Attiva checkpoint** protegge esplicitamente un catalogo legacy integro dopo la verifica completa; anche la successiva scrittura ordinaria attiva il protocollo. I soli oggetti.bin non contengono i metadati sufficienti: un catalogo legacy già perso e privo di checkpoint richiede una copia esterna. Vecchie applicazioni che scrivono ignorando il puntatore non partecipano al nuovo protocollo: eventuali divergenze vengono segnalate e non sovrascritte dal recupero.
 
 Catalogo, `.prt`, `.drw` e manifesti di rilascio conservano i propri schemi. Il nuovo formato del puntatore è **ForgeCAD.CatalogRecovery schema1**; i checkpoint sono copie integrali del catalogo schema1, con limite16MiB ciascuno. Dopo una scrittura riuscita vengono conservati checkpoint corrente e precedente; la pulizia è cooperativa e un’interruzione può lasciare candidati temporaneamente aggiuntivi, mai selezionati automaticamente. Le prove `damaged-*` non vengono eliminate. Il recupero legge file fino al limite del catalogo; file illeggibili, collegamenti simbolici dei metadati o file oltre il limite richiedono di conservare e risolvere l’ostacolo esterno. Si tratta di recupero dei metadati sullo stesso filesystem, non di un backup degli oggetti o di una garanzia contro guasti fisici del disco. Verifiche effettive, build e limiti di piattaforma nel registro `CLAUDE.md`.
+
+## 27. Badge persistenti e avvio guidato (24 ottobre 2026)
+
+Implementato il pannello non modale **Quote → Numerazione quote**. Alla prima attivazione scegliere il numero iniziale, cliccare la prima quota sulla tavola e poi due frecce ortogonali: prima il verso principale, poi il verso di avanzamento tra righe/colonne. Sono disponibili otto scansioni. La prima quota è evidenziata e le frecce scelte riportano 1 e 2. Se si parte da una quota interna, l'ordine completo viene ruotato: dopo l'ultima si riprendono quelle precedenti, senza omissioni. La tolleranza raggruppa bande ancorate al primo testo; non concatena tolleranze.
+
+L'anteprima mostra i badge sulle quote reali, una croce arancione sulle quote senza badge e il confronto prima/dopo. Conferma applica una sola operazione annullabile; Annulla/Esc conserva il foglio. Cambio foglio, ridisegno e passaggio in sola lettura chiudono la procedura. Per cambiare l'ordine successivamente selezionare **Riassegna esplicitamente i numeri** e ripetere quota/frecce. Con l'opzione disattivata cambiano le impostazioni, conservando le assegnazioni.
+
+### Filtri e riserve
+
+- Parentesi esterne riconosciute da prefisso e suffisso; filtro attivo inizialmente per una nuova assegnazione.
+- Pattern glob separati da `;`, senza distinzione maiuscole/minuscole, applicati separatamente a prefisso e suffisso: `REF*`, `*ISPEZIONE*`, `*REF`. `*` indica qualsiasi testo, `?` un carattere. Non si applicano al valore numerico o alla formattazione delle tolleranze. Massimo 32 pattern, 128 caratteri ciascuno.
+- Le esclusioni prima della prima assegnazione non consumano numeri. Un numero già assegnato resta riservato anche se nascosto, filtrato o se la quota viene eliminata. Nascondere 2 lascia 1,3,4; riattivarlo ripristina 2.
+- Spostamenti di quote e viste conservano i numeri. Nuove quote ammesse ricevono automaticamente il progressivo successivo. La rinumerazione esplicita conserva le riserve delle quote escluse/eliminate; la sequenza può quindi contenere buchi, visibili in anteprima.
+- **Cambia numero quota** sulla quota selezionata mostra il confronto e permette uno scambio esplicito con un'altra quota esistente. Un numero riservato a una quota eliminata non è assegnabile.
+
+### Check-in, compatibilità e duplicazione
+
+Schema22 salva ordine, prima quota, pattern, associazioni UUID→numero e progressivo massimo. I file precedenti restano leggibili e non vengono riscritti all'apertura. Alla prima modifica di una numerazione legacy, i numeri precedenti vengono congelati, incluse le esclusioni, prima di applicare la modifica. Il pannello guidato permette una riassegnazione intenzionale con confronto.
+
+I controlli di accesso esistenti impongono il check-out della copia di lavoro; i check-in storici restano immutabili. Nel dialogo di check-in compare il confronto con la base; nello storico **Confronta badge con la tavola aperta** confronta qualunque revisione selezionata con il documento aperto. Il confronto usa UUID e fogli, distinguendo quote aggiunte, eliminate, escluse, attivate e rinumerate, anche per assegnazioni riservate.
+
+Duplicare un foglio rinnova gli UUID di quote e riserve mantenendo i numeri; ogni foglio conserva una sequenza indipendente. Undo/Redo, file nativo e PDF utilizzano le medesime assegnazioni. Nessuna modifica al kernel geometrico.
+
+### Collaudo manuale
+
+1. Attivare su una tavola non numerata; scegliere una quota interna e i versi basso/sinistra; controllare anteprima, Annulla e poi Conferma/Undo.
+2. Escludere `(25)` e una quota con prefisso `REF controllo` usando `REF*`; verificare che la sequenza iniziale salti entrambe senza consumare numeri.
+3. Nascondere il badge2, spostare la quota4, aggiungere una quota, eliminare la3 e aggiungerne un'altra: nessun riuso automatico; riattivare2 recupera2.
+4. Cambiare un numero occupato: prima senza Scambia (rifiuto), poi con Scambia (due variazioni in anteprima).
+5. Salvare e riaprire; duplicare il foglio e verificare che modifiche alla copia non tocchino l'originale.
+6. Eseguire check-in A, check-out, cambio numero e check-in B. Aprire A e B: numeri originali in A, nuovi in B, confronto nello storico e blocco delle modifiche nelle copie storiche.
+
+Le prove automatiche e gli eventuali limiti di esecuzione sono registrati in CLAUDE.md; il collaudo sul dispositivo dell'utente resta da effettuare.

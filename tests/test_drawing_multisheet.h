@@ -1,5 +1,6 @@
 #pragma once
 #include <QTabBar>
+#include "../cad_drawing_numbering.h"
 #include <QComboBox>
 #include <QLineEdit>
 #include <QRegularExpression>
@@ -21,6 +22,7 @@ void multisheetTests(){
  clientOk(window.editor()->setDimensionNumbering({true,7,6,3,true}));
  clientOk(window.savePath(path));require(!window.isModified()&&QJsonDocument::fromJson(clientRead(path)).object()["schema"].toInt()==1,"salvataggio mono preserva contenitore1");
  auto relation=window.editor()->sheet();DrawingView child;DrawingViewLayout childLayout{child.id,"Derivata",{220,140},{81001}};childLayout.relation.kind=DrawingDerivedKind::Orthographic;childLayout.relation.parentId=view.id;relation.drawing.views.push_back(child);relation.views.append(childLayout);clientOk(synchronizeDrawingViews(relation));DrawingSheet relationCopy;clientOk(cloneDrawingSheet(relation,relationCopy));require(relationCopy.views[1].relation.parentId==relationCopy.drawing.views[0].id&&relationCopy.views[1].relation.parentId!=view.id&&relationCopy.axes[0].id!=axis.id&&relationCopy.axes[0].viewId==relationCopy.drawing.views[0].id,"copia rimappa madre, derivata e asse");
+ auto persistent=window.editor()->sheet();freezeDrawingNumbering(persistent);persistent.dimensionNumbering.firstDimension=dimension.id;const auto deletedId=QUuid::createUuid();persistent.dimensionNumbering.assignments.insert(deletedId,8);persistent.dimensionNumbering.nextNumber=9;DrawingSheet persistentCopy;clientOk(cloneDrawingSheet(persistent,persistentCopy));require(persistentCopy.dimensionNumbering.assignments.size()==2&&!persistentCopy.dimensionNumbering.assignments.contains(dimension.id)&&!persistentCopy.dimensionNumbering.assignments.contains(deletedId)&&persistentCopy.dimensionNumbering.assignments.value(persistentCopy.dimensions[0].dimensionId)==7&&persistentCopy.dimensionNumbering.firstDimension==persistentCopy.dimensions[0].dimensionId,"clone rimappa quote e riserve persistenti mantenendo numeri");
  auto literal=window.editor()->sheet();literal.title=view.id.toString(QUuid::WithoutBraces);DrawingSheet literalCopy;clientOk(cloneDrawingSheet(literal,literalCopy));require(literalCopy.title==literal.title,"copia non sostituisce UUID scritti nei testi liberi");
  const auto first=drawingSheetId(window.document(),0);const auto saved=encoded(window.document());
  clientOk(window.duplicateSheet(0));require(window.sheetCount()==2&&window.activeSheet()==1&&window.isModified(),"duplica seleziona nuovo foglio");const auto copyId=drawingSheetId(window.document(),1);const auto copy=window.editor()->sheet();const auto copyView=copy.drawing.views[0].id,copyDimension=copy.drawing.dimensions[0].id;

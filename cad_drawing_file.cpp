@@ -61,7 +61,8 @@ QString cloneDrawingSheet(const DrawingSheet &source,DrawingSheet &copy){
         for(const auto &d:source.drawing.dimensions)add(d.id);
         for(const auto &a:source.axes)add(a.id);
         for(const auto &n:source.annotations)add(n.id);
-    const QSet<QString> identityKeys{QStringLiteral("id"),QStringLiteral("viewId"),QStringLiteral("parent"),QStringLiteral("axisId"),QStringLiteral("datums")};
+    for(auto it=source.dimensionNumbering.assignments.cbegin();it!=source.dimensionNumbering.assignments.cend();++it)if(!ids.contains(text(it.key())))add(it.key());
+    const QSet<QString> identityKeys{QStringLiteral("firstDimension"),QStringLiteral("id"),QStringLiteral("viewId"),QStringLiteral("parent"),QStringLiteral("axisId"),QStringLiteral("datums")};
     std::function<QJsonValue(QJsonValue,const QString &)> remap=[&](QJsonValue value,const QString &key)->QJsonValue{
         if(value.isString()&&identityKeys.contains(key)){const auto found=ids.constFind(value.toString());return found==ids.cend()?value:QJsonValue(*found);}
         if(value.isArray()){auto array=value.toArray();for(int i=0;i<array.size();++i)array[i]=remap(array[i],key);return array;}

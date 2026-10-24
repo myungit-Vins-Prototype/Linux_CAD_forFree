@@ -1,6 +1,7 @@
 #include "cad_revision_recovery_ui.h"
 #include <QScopedValueRollback>
 #include "cad_drawing_window.h"
+#include "cad_drawing_numbering.h"
 #include "cad_workspace.h"
 #include "cad_icons.h"
 #include "cad_menu.h"
@@ -32,6 +33,16 @@
 
 namespace ForgeCad {
 namespace {
+QString numberingRevisionComparison(const QString &path,const DocumentVersion &version,const DrawingFile &working){
+    WorkspacePaths paths;auto error=locateDocumentWorkspace(canonicalDocumentPath(path),paths);if(!error.isEmpty())return error;
+    RevisionStore store(paths.revisions);DrawingFile previous;error=readDrawingRevision(store,version,previous);if(!error.isEmpty())return error;
+    QStringList changes;QSet<QUuid> matched;
+    for(int i=0;i<drawingSheetCount(working);++i){const auto id=drawingSheetId(working,i);DrawingSheet before;bool found=false;
+        for(int j=0;j<drawingSheetCount(previous);++j)if(drawingSheetId(previous,j)==id){before=drawingSheetAt(previous,j);found=true;matched.insert(id);break;}
+        const auto &after=drawingSheetAt(working,i);const auto lines=drawingNumberingChanges(before,after);if(!lines.isEmpty()){changes.append(QStringLiteral("Foglio %1 — %2%3").arg(i+1).arg(after.title,found?QString():QStringLiteral(" (nuovo)")));changes.append(lines);}}
+    for(int j=0;j<drawingSheetCount(previous);++j)if(!matched.contains(drawingSheetId(previous,j))){changes.append(QStringLiteral("Foglio eliminato: %1").arg(drawingSheetAt(previous,j).title));changes.append(drawingNumberingChanges(drawingSheetAt(previous,j),DrawingSheet{}));}
+    return changes.isEmpty()?QStringLiteral("Nessuna variazione dei badge rispetto al check-in selezionato."):changes.join('\n');
+}
 QTableWidget *revisionTable(QDialog &dialog,const QVector<RevisionRecord> &records){
     auto *table=new QTableWidget(records.size(),5,&dialog);table->setObjectName("drawingRevisionTable");
     table->setHorizontalHeaderLabels({QStringLiteral("Check-in"),QStringLiteral("Revisione"),QStringLiteral("Autore"),QStringLiteral("Data"),QStringLiteral("Commento")});
@@ -68,6 +79,7 @@ void DrawingWindow::addRevisionMenus(QMenu *file){
         auto *revision=new QLineEdit(proposed,&dialog);revision->setObjectName("drawingRevisionLabel");revision->setReadOnly(true);
         auto *comment=new QTextEdit(&dialog);comment->setAcceptRichText(false);comment->setObjectName("drawingRevisionComment");
         layout->addRow(QStringLiteral("Revisione tecnica:"),revision);layout->addRow(QStringLiteral("Commento:"),comment);
+        if(!drawing_.baseCheckinId.isNull()){auto *comparison=new QTextEdit(&dialog);comparison->setReadOnly(true);comparison->setObjectName("drawingCheckinNumberChanges");comparison->setPlainText(numberingRevisionComparison(path_,{drawing_.sheet.drawing.version.documentId,drawing_.baseCheckinId},drawing_));layout->addRow(QStringLiteral("Variazioni badge dalla base:"),comparison);}
         auto *buttons=new QDialogButtonBox(QDialogButtonBox::Ok|QDialogButtonBox::Cancel,&dialog);layout->addRow(buttons);
         connect(buttons,&QDialogButtonBox::accepted,&dialog,&QDialog::accept);connect(buttons,&QDialogButtonBox::rejected,&dialog,&QDialog::reject);
         connect(revision,&QLineEdit::textChanged,&dialog,[buttons](const QString &value){buttons->button(QDialogButtonBox::Ok)->setEnabled(!value.trimmed().isEmpty());});
@@ -181,6 +193,8 @@ void DrawingWindow::showDrawingHistory(bool restoreWorking){
     auto *buttons=new QDialogButtonBox(QDialogButtonBox::Open|QDialogButtonBox::Close,&dialog);buttons->button(QDialogButtonBox::Open)->setText(restoreWorking?QStringLiteral("Ripristina copia di lavoro"):QStringLiteral("Apri copia storica"));
     const bool canRestore=findChild<QAction *>("drawingRestoreRevisionAction")->isEnabled();
     buttons->button(QDialogButtonBox::Open)->setEnabled(!records.isEmpty()&&(!restoreWorking||canRestore));layout->addWidget(buttons);
+    auto *compare=buttons->addButton(QStringLiteral("Confronta badge con la tavola aperta"),QDialogButtonBox::ActionRole);compare->setEnabled(!records.isEmpty());
+    connect(compare,&QPushButton::clicked,&dialog,[&]{if(table->currentRow()<0)return;QDialog result(&dialog);result.setWindowTitle(QStringLiteral("Confronto numerazione per identità quota"));auto *body=new QVBoxLayout(&result);auto *text=new QTextEdit(&result);text->setReadOnly(true);text->setPlainText(numberingRevisionComparison(path_,records[table->currentRow()].version,drawing_));body->addWidget(text);auto *close=new QDialogButtonBox(QDialogButtonBox::Close,&result);body->addWidget(close);connect(close,&QDialogButtonBox::rejected,&result,&QDialog::reject);result.resize(760,440);result.exec();});
     if(!restoreWorking){auto *restore=buttons->addButton(QStringLiteral("Ripristina copia di lavoro"),QDialogButtonBox::ActionRole);restore->setObjectName("drawingRestoreHistoryButton");restore->setEnabled(canRestore&&!records.isEmpty());connect(restore,&QPushButton::clicked,&dialog,[&dialog]{dialog.done(2);});}
     connect(buttons,&QDialogButtonBox::accepted,&dialog,[&dialog,restoreWorking]{dialog.done(restoreWorking?2:QDialog::Accepted);});connect(buttons,&QDialogButtonBox::rejected,&dialog,&QDialog::reject);
     connect(table,&QTableWidget::cellDoubleClicked,&dialog,[&dialog,restoreWorking,canRestore](int,int){if(!restoreWorking||canRestore)dialog.done(restoreWorking?2:QDialog::Accepted);});dialog.resize(820,420);

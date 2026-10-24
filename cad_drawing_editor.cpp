@@ -373,6 +373,22 @@ struct DrawingSheetEditor::Impl{
     QAction *updateAction=nullptr;
     QTreeWidget *tree=nullptr;
     bool syncingSelection=false;
+    QPointer<QDialog> numberingPanel;
+    QVector<QGraphicsItem*> numberingItems;
+    std::function<void(QUuid,int)> numberingPick;
+    void clearNumberingPreview(){for(auto *item:numberingItems)delete item;numberingItems.clear();for(auto *item:scene->items())if(item->data(kindRole).toString()==QLatin1String("dimensionBadge"))item->show();}
+    void cancelNumbering(){if(numberingPanel)numberingPanel->reject();}
+    bool numberingPointer(QPointF point,bool click){
+        if(!numberingPanel)return false;if(!click)return true;
+        for(auto *item:scene->items(point)){if(item->data(kindRole).toString()==QLatin1String("numberingArrow")){numberingPick({},item->data(8).toInt());return true;}
+            for(auto *parent=item;parent;parent=parent->parentItem())if(parent->data(kindRole).toString()==QLatin1String("dimension")){numberingPick(parent->data(idRole).toUuid(),-1);return true;}}
+        return true;
+    }
+    QString prepareNumbering(DrawingSheet &next){
+        cancelNumbering();
+        if((state.dimensionNumbering.enabled||state.dimensionNumbering.persistent)&&!next.dimensionNumbering.persistent){auto previous=state;freezeDrawingNumbering(previous);next.dimensionNumbering.assignments=previous.dimensionNumbering.assignments;next.dimensionNumbering.nextNumber=previous.dimensionNumbering.nextNumber;next.dimensionNumbering.persistent=true;}
+        return extendDrawingNumbering(next);
+    }
     struct HistoryEntry{QByteArray sheet;QString label;};
     std::vector<HistoryEntry> history;
     std::size_t historyIndex=0;
@@ -607,14 +623,14 @@ struct DrawingSheetEditor::Impl{
         for(auto &n:next.annotations)if(n.reference){auto &ref=*n.reference;const auto *old=viewFor(n.viewId);const auto current=std::find_if(next.drawing.views.begin(),next.drawing.views.end(),[&](const auto &v){return v.id==n.viewId;});
             if(current!=next.drawing.views.end()&&ref.axisId.isNull()&&ref.curve.kind==DrawingCurveKind::Section&&current->kind==DrawingViewKind::ProjectedEdges&&!current->sectionReferences)return QStringLiteral("Sono presenti richiami di sezione: conservare i riferimenti del piano.");
             if(old&&current!=next.drawing.views.end()&&!sameGeometry(*old,*current))transportAttachment(ref,*old,*current);}
-        QByteArray bytes;const auto valid=encodeDrawingSheet(next,bytes);if(!valid.isEmpty())return valid;
+        QByteArray bytes;const auto numberingError=prepareNumbering(next);if(!numberingError.isEmpty())return numberingError;const auto valid=encodeDrawingSheet(next,bytes);if(!valid.isEmpty())return valid;
         const auto applied=replaceState(std::move(next));if(!applied.isEmpty())return applied;
         record(label,std::move(bytes));redraw();return {};
     }
     QString applyLayout(DrawingSheet next,const QString &label){
         if(readOnly)return QStringLiteral("La tavola e' in sola lettura.");
         const auto sync=propagateLayout(next);if(!sync.isEmpty())return sync;
-        QByteArray bytes;const auto error=encodeDrawingSheet(next,bytes);if(!error.isEmpty())return error;
+        QByteArray bytes;const auto numberingError=prepareNumbering(next);if(!numberingError.isEmpty())return numberingError;const auto error=encodeDrawingSheet(next,bytes);if(!error.isEmpty())return error;
         if(bytes==history[historyIndex].sheet)return {};
         auto nextResults=results;
         for(const auto &d:next.drawing.dimensions)if(!sameAxisDependencies(next,d))nextResults[d.id]=measured(next,d,curves.at(d.viewId));
@@ -1159,6 +1175,7 @@ struct DrawingSheetEditor::Impl{
         return missing;
     }
     void redraw(){
+        cancelNumbering();
         cancelViewDrag();cancelPlacement();resetQuote();rebuilding=true;scene->clear();paintedPaths.clear();const int missing=drawSheet(scene,true);
         refreshTree();rebuilding=false;selectionFromTree();refreshNotable();
         const bool projected=std::any_of(state.drawing.views.begin(),state.drawing.views.end(),[](const auto &v){return v.kind==DrawingViewKind::ProjectedEdges;});
@@ -2073,20 +2090,69 @@ struct DrawingSheetEditor::Impl{
         connect(buttons,&QDialogButtonBox::rejected,&dialog,&QDialog::reject);connect(buttons,&QDialogButtonBox::accepted,&dialog,[&]{auto next=state;for(auto &p:next.views)if(p.viewId==id){p.title=title->text().trimmed();if(section){p.relation.label=label->text().trimmed().toUpper();p.relation.hatch=flag->isChecked();p.relation.reverse=reverse->isChecked();if(p.relation.bend)p.relation.bend=DrawingSectionBend{stepAt->value(),stepOffset->value()};if(p.relation.step)p.relation.step=sectionStepValues(stepAt->value(),stepOffset->value(),extra);}else{p.relation.aligned=flag->isChecked();if(auxiliary)p.relation.auxiliaryAngle=angle->value();}}for(auto &v:next.drawing.views)if(v.id==id){if(section)v.sectionStyle=DrawingSectionStyle(style->currentIndex());else v.sectionReferences=references->isChecked();}const auto result=changeViews(std::move(next),QStringLiteral("Proprieta' vista derivata"));error->setText(result);if(result.isEmpty())dialog.accept();});dialog.exec();
     }
     void numberingDialog(){
+        if(readOnly||computing)return;if(numberingPanel){numberingPanel->raise();return;}
+        cancelViewDrag();cancelPlacement();resetQuote();
+        auto *dialog=new QDialog(owner,Qt::Tool);dialog->setAttribute(Qt::WA_DeleteOnClose);numberingPanel=dialog;
+        dialog->setObjectName("drawingDimensionNumberingDialog");dialog->setWindowTitle(QStringLiteral("Numerazione quote — foglio corrente"));
+        auto *layout=new QVBoxLayout(dialog);auto *form=new QFormLayout;layout->addLayout(form);
+        auto candidate=std::make_shared<DrawingSheet>(state);freezeDrawingNumbering(*candidate);
+        auto firstId=std::make_shared<QUuid>();auto primary=std::make_shared<int>(-1),secondary=std::make_shared<int>(-1);
+        auto *enabled=new QCheckBox(QStringLiteral("Mostra badge"),dialog);enabled->setObjectName("drawingNumberingEnabled");enabled->setChecked(true);form->addRow(enabled);
+        auto *renumber=new QCheckBox(QStringLiteral("Riassegna esplicitamente i numeri"),dialog);renumber->setChecked(!state.dimensionNumbering.enabled);renumber->setObjectName("drawingNumberingReassign");form->addRow(renumber);
+        auto *exclude=new QCheckBox(QStringLiteral("Escludi quote tra parentesi"),dialog);exclude->setObjectName("drawingNumberingExcludeParenthesized");exclude->setChecked(state.dimensionNumbering.enabled?state.dimensionNumbering.excludeParenthesized:true);form->addRow(exclude);
+        auto *patterns=new QLineEdit(state.dimensionNumbering.excludePatterns.join(';'),dialog);patterns->setObjectName("drawingNumberingPatterns");patterns->setPlaceholderText(QStringLiteral("REF*; *ISPEZIONE*"));form->addRow(QStringLiteral("Pattern su prefisso/suffisso (;):"),patterns);
+        auto *first=new QSpinBox(dialog);first->setObjectName("drawingNumberingFirst");first->setRange(1,999999);first->setValue(state.dimensionNumbering.firstNumber);form->addRow(QStringLiteral("Numero iniziale:"),first);
+        auto *diameter=new NumericInput(dialog);diameter->setObjectName("drawingNumberingDiameter");diameter->setRange(3,20);diameter->setValue(state.dimensionNumbering.diameter);form->addRow(QStringLiteral("Diametro (mm):"),diameter);
+        auto *rows=new NumericInput(dialog);rows->setObjectName("drawingNumberingRows");rows->setRange(0,20);rows->setValue(state.dimensionNumbering.rowTolerance);form->addRow(QStringLiteral("Tolleranza banda (mm):"),rows);
+        auto *instruction=new QLabel(dialog);instruction->setWordWrap(true);instruction->setMinimumHeight(75);layout->addWidget(instruction);
+        auto *comparison=new QPlainTextEdit(dialog);comparison->setReadOnly(true);comparison->setObjectName("drawingNumberingComparison");layout->addWidget(comparison);
+        auto *error=new QLabel(dialog);error->setWordWrap(true);layout->addWidget(error);
+        auto *buttons=new QDialogButtonBox(QDialogButtonBox::Ok|QDialogButtonBox::Cancel,dialog);layout->addWidget(buttons);
+        const auto refresh=[=]{
+            clearNumberingPreview();*candidate=state;freezeDrawingNumbering(*candidate);auto &n=candidate->dimensionNumbering;
+            n.persistent=true;n.enabled=enabled->isChecked();n.firstNumber=first->value();n.diameter=diameter->value();n.rowTolerance=rows->value();n.excludeParenthesized=exclude->isChecked();n.excludePatterns.clear();for(const auto &pattern:patterns->text().split(';',Qt::SkipEmptyParts))n.excludePatterns.append(pattern.trimmed());
+            const bool ready=!renumber->isChecked()||(!firstId->isNull()&&*primary>=0&&*secondary>=0);
+            if(renumber->isChecked()){n.firstDimension=*firstId;n.primaryDirection=*primary<0?0:*primary;n.secondaryDirection=*secondary<0?(n.primaryDirection%2?0:1):*secondary;}
+            QString problem=validateDrawingDimensionNumbering(n,candidate->dimensions.size());
+            if(problem.isEmpty())problem=renumber->isChecked()?renumberDrawingDimensions(*candidate):extendDrawingNumbering(*candidate);
+            n.enabled=enabled->isChecked();
+            if(renumber->isChecked()&&!firstId->isNull()&&!drawingDimensionNumbers(*candidate).contains(*firstId))problem=QStringLiteral("La prima quota è esclusa: scegli un'altra quota o cambia i filtri.");
+            error->setText(problem);buttons->button(QDialogButtonBox::Ok)->setEnabled(ready&&problem.isEmpty());
+            const QStringList directions{QStringLiteral("destra"),QStringLiteral("sotto"),QStringLiteral("sinistra"),QStringLiteral("sopra")};
+            instruction->setText(!renumber->isChecked()?QStringLiteral("I numeri esistenti restano assegnati. Per cambiare l'ordine abilita la riassegnazione."):firstId->isNull()?QStringLiteral("1. Clicca la prima quota sulla tavola."):*primary<0?QStringLiteral("2. Clicca la freccia del verso principale sulla tavola."):*secondary<0?QStringLiteral("3. Clicca la freccia del verso secondario."):QStringLiteral("Ordine: %1, poi %2. La sequenza riparte dall'inizio dopo l'ultima quota. Conferma per applicare in un solo Undo.").arg(directions[*primary],directions[*secondary]));
+            comparison->setPlainText(drawingNumberingChanges(state,*candidate).join('\n'));
+            const auto numbers=drawingDimensionNumbers(*candidate);
+            const auto existing=scene->items();for(auto *item:existing){if(item->data(kindRole).toString()==QLatin1String("dimensionBadge"))item->hide();}
+            for(auto *item:existing)if(item->data(kindRole).toString()==QLatin1String("dimension")){
+                const auto id=item->data(idRole).toUuid();if(numbers.contains(id)){auto *badge=new DimensionBadgeItem(static_cast<QGraphicsSimpleTextItem*>(item),numbers.value(id),n,state.style);badge->setData(kindRole,"numberingPreview");numberingItems.append(badge);}
+                else{auto *mark=scene->addSimpleText(QStringLiteral("×"));fontFor(mark,state.style,4);mark->setBrush(QColor("#c56c23"));mark->setPos(item->sceneBoundingRect().topLeft()-QPointF(5,0));mark->setToolTip(QStringLiteral("Quota esclusa dalle regole o badge disattivati."));numberingItems.append(mark);}
+                if(id==*firstId&&renumber->isChecked()){
+                    auto *highlight=scene->addRect(item->sceneBoundingRect().adjusted(-1,-1,1,1),QPen(QColor("#1677bd"),.3,Qt::DashLine));highlight->setZValue(90);numberingItems.append(highlight);
+                    const QPointF offsets[]{QPointF(18,0),QPointF(0,14),QPointF(-18,0),QPointF(0,-14)};const QStringList arrows{QStringLiteral("→"),QStringLiteral("↓"),QStringLiteral("←"),QStringLiteral("↑")};
+                    for(int d=0;d<4;++d)if(*primary<0||d==*primary||d==*secondary||(*secondary<0&&d%2!=*primary%2)){auto *arrow=scene->addSimpleText((d==*primary?QStringLiteral("1 "):d==*secondary?QStringLiteral("2 "):QString())+arrows[d]);fontFor(arrow,state.style,8);arrow->setPos(item->sceneBoundingRect().center()+offsets[d]);arrow->setBrush(QColor("#1677bd"));arrow->setZValue(100);arrow->setData(kindRole,(d==*primary||d==*secondary)?"numberingDirection":"numberingArrow");arrow->setData(8,d);numberingItems.append(arrow);}
+                }
+            }
+        };
+        numberingPick=[=](QUuid id,int direction){if(!renumber->isChecked())return;if(!id.isNull()){*firstId=id;*primary=-1;*secondary=-1;}else if(*primary<0)*primary=direction;else if(direction%2!=*primary%2)*secondary=direction;refresh();};
+        connect(dialog,&QDialog::finished,owner,[this,dialog]{if(numberingPanel==dialog){clearNumberingPreview();numberingPick={};numberingPanel=nullptr;}});
+        connect(buttons,&QDialogButtonBox::rejected,dialog,&QDialog::reject);
+        connect(buttons,&QDialogButtonBox::accepted,dialog,[=]{auto next=*candidate;dialog->accept();say(applyLayout(std::move(next),QStringLiteral("Assegna numeri quote")));});
+        for(auto *box:{enabled,renumber,exclude})connect(box,&QCheckBox::toggled,dialog,refresh);
+        connect(first,qOverload<int>(&QSpinBox::valueChanged),dialog,refresh);connect(patterns,&QLineEdit::textChanged,dialog,refresh);
+        for(auto *spin:{diameter,rows})connect(spin,qOverload<double>(&QDoubleSpinBox::valueChanged),dialog,refresh);
+        dialog->resize(520,620);dialog->show();refresh();
+    }
+    void changeNumberDialog(){
         if(readOnly||computing)return;
-        QDialog dialog(owner);dialog.setObjectName("drawingDimensionNumberingDialog");dialog.setWindowTitle(QStringLiteral("Numerazione quote"));auto *layout=new QVBoxLayout(&dialog);auto *form=new QFormLayout;layout->addLayout(form);
-        auto *enabled=new QCheckBox(QStringLiteral("Mostra badge circolari sul foglio corrente"),&dialog);enabled->setObjectName("drawingNumberingEnabled");enabled->setChecked(state.dimensionNumbering.enabled);form->addRow(enabled);
-        auto *excludeParenthesized=new QCheckBox(QStringLiteral("Escludi quote tra parentesi"),&dialog);excludeParenthesized->setObjectName("drawingNumberingExcludeParenthesized");excludeParenthesized->setChecked(state.dimensionNumbering.excludeParenthesized);form->addRow(excludeParenthesized);
-        auto *first=new QSpinBox(&dialog);first->setObjectName("drawingNumberingFirst");first->setRange(1,999999);first->setValue(state.dimensionNumbering.firstNumber);form->addRow(QStringLiteral("Numero iniziale:"),first);
-        const auto size=[&](const char *name,double value,double min,double max){auto *spin=new NumericInput(&dialog);spin->setObjectName(name);spin->setDecimals(2);spin->setRange(min,max);spin->setSuffix(QStringLiteral(" mm"));spin->setValue(value);return spin;};
-        auto *diameter=size("drawingNumberingDiameter",state.dimensionNumbering.diameter,3,20),*rows=size("drawingNumberingRows",state.dimensionNumbering.rowTolerance,0,20);form->addRow(QStringLiteral("Diametro badge:"),diameter);form->addRow(QStringLiteral("Tolleranza stessa riga:"),rows);
-        auto *explanation=new QLabel(QStringLiteral("Da sinistra a destra, poi dall’alto verso il basso. La tolleranza raggruppa i testi vicini in altezza rispetto al testo più alto della riga. I numeri si aggiornano dopo inserimenti, eliminazioni e spostamenti; ogni foglio ha la propria sequenza. Le quote escluse mantengono il numero riservato: nascondere il 2 lascia 1, 3, 4. Le parentesi si impostano tramite prefisso e suffisso della quota."),&dialog);explanation->setWordWrap(true);layout->addWidget(explanation);
-        QGraphicsScene preview;auto *canvas=new QGraphicsView(&preview,&dialog);canvas->setObjectName("drawingNumberingPreview");canvas->setMinimumHeight(170);canvas->setRenderHint(QPainter::Antialiasing);layout->addWidget(canvas);
-        const auto candidate=[&]{return DrawingDimensionNumbering{enabled->isChecked(),first->value(),diameter->value(),rows->value(),excludeParenthesized->isChecked()};};
-        const auto refresh=[&]{preview.clear();for(int i=0;i<4;++i){auto *label=preview.addSimpleText(i==1?QStringLiteral("(25,00)"):i%2?QStringLiteral("25,00"):QStringLiteral("12,50"));fontFor(label,state.style,state.style.dimensionHeight);label->setPos((i%2)*55,(i/2)*25);label->setBrush(QColor("#27445e"));if(enabled->isChecked()&&!(i==1&&excludeParenthesized->isChecked()))new DimensionBadgeItem(label,first->value()+i,candidate(),state.style);}preview.setSceneRect(preview.itemsBoundingRect().adjusted(-5,-5,5,5));canvas->fitInView(preview.sceneRect(),Qt::KeepAspectRatio);};
-        auto *error=new QLabel(&dialog);error->setWordWrap(true);layout->addWidget(error);auto *buttons=new QDialogButtonBox(QDialogButtonBox::Ok|QDialogButtonBox::Cancel,&dialog);layout->addWidget(buttons);
-        connect(enabled,&QCheckBox::toggled,&dialog,refresh);connect(excludeParenthesized,&QCheckBox::toggled,&dialog,refresh);connect(first,qOverload<int>(&QSpinBox::valueChanged),&dialog,refresh);for(auto *spin:{diameter,rows})connect(spin,qOverload<double>(&QDoubleSpinBox::valueChanged),&dialog,refresh);
-        connect(buttons,&QDialogButtonBox::rejected,&dialog,&QDialog::reject);connect(buttons,&QDialogButtonBox::accepted,&dialog,[&]{const auto result=owner->setDimensionNumbering(candidate());error->setText(result);if(result.isEmpty())dialog.accept();});dialog.resize(580,470);QTimer::singleShot(0,&dialog,refresh);dialog.exec();
+        cancelNumbering();
+        QUuid id;for(auto *item:scene->selectedItems())if(item->data(kindRole).toString()==QLatin1String("dimension"))id=item->data(idRole).toUuid();
+        if(id.isNull()){say(QStringLiteral("Seleziona una quota con badge."));return;}
+        QDialog dialog(owner);dialog.setWindowTitle(QStringLiteral("Cambia numero quota"));auto *form=new QFormLayout(&dialog);
+        auto *number=new QSpinBox(&dialog);number->setRange(1,999999);number->setValue(drawingDimensionNumbers(state).value(id,1));form->addRow(QStringLiteral("Nuovo numero:"),number);
+        auto *swap=new QCheckBox(QStringLiteral("Scambia se assegnato a un'altra quota"),&dialog);form->addRow(swap);
+        auto *preview=new QPlainTextEdit(&dialog);preview->setReadOnly(true);form->addRow(preview);auto *buttons=new QDialogButtonBox(QDialogButtonBox::Ok|QDialogButtonBox::Cancel,&dialog);form->addRow(buttons);
+        auto next=state;const auto refresh=[&]{next=state;const auto error=changeDrawingDimensionNumber(next,id,number->value(),swap->isChecked());preview->setPlainText(error.isEmpty()?drawingNumberingChanges(state,next).join('\n'):error);buttons->button(QDialogButtonBox::Ok)->setEnabled(error.isEmpty());};
+        connect(number,qOverload<int>(&QSpinBox::valueChanged),&dialog,refresh);connect(swap,&QCheckBox::toggled,&dialog,refresh);connect(buttons,&QDialogButtonBox::accepted,&dialog,&QDialog::accept);connect(buttons,&QDialogButtonBox::rejected,&dialog,&QDialog::reject);refresh();dialog.resize(560,300);if(dialog.exec()==QDialog::Accepted)say(applyLayout(next,QStringLiteral("Cambia numero quota")));
     }
     void styleDialog(){
         if(readOnly)return;
@@ -2162,6 +2228,7 @@ struct DrawingSheetEditor::Impl{
             auto next=state;auto &definitions=next.drawing.dimensions;definitions.erase(std::remove_if(definitions.begin(),definitions.end(),[&](const auto &d){return dimensions.contains(d.id);}),definitions.end());
             next.dimensions.erase(std::remove_if(next.dimensions.begin(),next.dimensions.end(),[&](const auto &p){return dimensions.contains(p.dimensionId);}),next.dimensions.end());
             for(auto id:dimensions)results.erase(id);
+            const auto error=prepareNumbering(next);if(!error.isEmpty()){say(error);return;}
             state=std::move(next);record(QStringLiteral("Elimina quote"));redraw();return;
         }
         if(selected.size()==1&&selected[0]->data(kindRole).toString()==QLatin1String("view")){
@@ -2195,6 +2262,7 @@ DrawingSheetEditor::DrawingSheetEditor(DrawingSheet sheet,DrawingEditorModel mod
     action(QStringLiteral("Ridefinisci linea di taglio..."),"drawingEditSectionLineAction",[this]{const auto id=impl_->selectedView();const auto *l=impl_->layoutFor(id);if(l)impl_->report(beginSectionLine(l->relation.parentId,l->relation.label,l->relation.reverse,id));});
     action(QStringLiteral("Riallinea sezione alla madre"),"drawingAlignSectionOrientationAction",[this]{impl_->report(alignSectionOrientation(impl_->selectedView()));});
     action(QStringLiteral("Inverti verso sezione"),"drawingReverseSectionAction",[this]{impl_->report(reverseSection(impl_->selectedView()));});
+    action(QStringLiteral("Cambia numero quota…"),"drawingChangeDimensionNumberAction",[this]{impl_->changeNumberDialog();});
     action(QStringLiteral("Numerazione quote…"),"drawingDimensionNumberingAction",[this]{impl_->numberingDialog();});
     action(QStringLiteral("Opzioni tavola..."),"drawingOptionsAction",[this]{impl_->styleDialog();});
     action(QStringLiteral("Ripristina posizione nome"),"drawingResetViewTitleAction",[this]{impl_->report(resetViewTitle(impl_->selectedView()));});
@@ -2244,9 +2312,9 @@ DrawingSheetEditor::DrawingSheetEditor(DrawingSheet sheet,DrawingEditorModel mod
     action(QStringLiteral("Impostazioni zoom…"),"drawingZoomPreferencesAction",[this]{ForgeCad::showZoomPreferences(this);});
     impl_->updateAction->setEnabled(false);action(QStringLiteral("Adatta foglio"),"drawingFitAction",[this]{fitSheet();});
     impl_->scene=new QGraphicsScene(this);impl_->view=new SheetCanvas(impl_->scene,this);impl_->view->setObjectName("drawingCanvas");impl_->view->configurePan();impl_->view->setRenderHint(QPainter::Antialiasing);impl_->view->setBackgroundRole(QPalette::Dark);impl_->view->setMouseTracking(true);impl_->view->viewport()->setMouseTracking(true);
-    impl_->view->pointer=[this](QPointF point,Qt::KeyboardModifiers modifiers,bool click){try{return impl_->detail?impl_->detailPointer(point,click):impl_->cut?impl_->cutPointer(point,modifiers,click):impl_->placement?impl_->placementPointer(point,click):impl_->quotePointer(point,modifiers,click);}catch(const std::exception &e){impl_->say(QString::fromUtf8(e.what()));return true;}};
-    impl_->view->drag=[this](QPointF p,Qt::KeyboardModifiers m,int phase){try{return impl_->cutDragPointer(p,m,phase)||impl_->axisDragPointer(p,phase)||impl_->viewDragPointer(p,m,phase);}catch(const std::exception &e){impl_->cancelViewDrag();impl_->say(QString::fromUtf8(e.what()));return true;}};
-    impl_->view->key=[this](int key){if(impl_->viewDrag||impl_->axisDrag||impl_->cutDrag){if(key==Qt::Key_Escape){impl_->cancelViewDrag();return true;}return false;}return impl_->detail?impl_->detailKey(key):impl_->cut?impl_->cutKey(key):impl_->placement?impl_->placementKey(key):impl_->quoteKey(key);};
+    impl_->view->pointer=[this](QPointF point,Qt::KeyboardModifiers modifiers,bool click){try{if(impl_->numberingPanel)return impl_->numberingPointer(point,click);return impl_->detail?impl_->detailPointer(point,click):impl_->cut?impl_->cutPointer(point,modifiers,click):impl_->placement?impl_->placementPointer(point,click):impl_->quotePointer(point,modifiers,click);}catch(const std::exception &e){impl_->say(QString::fromUtf8(e.what()));return true;}};
+    impl_->view->drag=[this](QPointF p,Qt::KeyboardModifiers m,int phase){try{if(impl_->numberingPanel)return true;return impl_->cutDragPointer(p,m,phase)||impl_->axisDragPointer(p,phase)||impl_->viewDragPointer(p,m,phase);}catch(const std::exception &e){impl_->cancelViewDrag();impl_->say(QString::fromUtf8(e.what()));return true;}};
+    impl_->view->key=[this](int key){if(impl_->numberingPanel){if(key==Qt::Key_Escape)impl_->cancelNumbering();return true;}if(impl_->viewDrag||impl_->axisDrag||impl_->cutDrag){if(key==Qt::Key_Escape){impl_->cancelViewDrag();return true;}return false;}return impl_->detail?impl_->detailKey(key):impl_->cut?impl_->cutKey(key):impl_->placement?impl_->placementKey(key):impl_->quoteKey(key);};
     connect(impl_->quoteAction,&QAction::toggled,this,[this](bool checked){impl_->axisInput=-1;impl_->editingAxis={};impl_->quoteType->setEnabled(!impl_->readOnly);if(checked){impl_->cancelViewDrag();impl_->cancelPlacement();}impl_->resetQuote();impl_->view->setCursor(checked?Qt::CrossCursor:Qt::ArrowCursor);impl_->refreshNotable();if(checked)impl_->quoteOverlay();});
     connect(impl_->quoteType,qOverload<int>(&QComboBox::currentIndexChanged),this,[this](int){if(!impl_->quoteAction->isChecked())impl_->quoteAction->setChecked(true);impl_->quoteOverlay();});
     for(const auto &entry:{qMakePair("drawingOriginReferenceAction",DrawingPointRole::Origin),qMakePair("drawingAxisXReferenceAction",DrawingPointRole::AxisX),qMakePair("drawingAxisYReferenceAction",DrawingPointRole::AxisY)}){
@@ -2280,11 +2348,11 @@ DrawingSheetEditor::DrawingSheetEditor(DrawingSheet sheet,DrawingEditorModel mod
         else{menu.addAction(findChild<QAction *>("drawingEditViewAction"));menu.addAction(findChild<QAction *>("drawingAlignViewAction"));menu.addAction(findChild<QAction *>("drawingResetViewTitleAction"));menu.addAction(impl_->hiddenAction);menu.addAction(impl_->shadedAction);menu.addAction(impl_->centersAction);menu.addAction(impl_->centerLinesAction);menu.addAction(impl_->cylinderAxesAction);for(auto name:{"drawingDerivedViewAction","drawingAuxiliaryViewAction","drawingBreakViewAction","drawingDetailViewAction","drawingTechnicalSectionAction","drawingSteppedSectionAction","drawingAlignedSectionAction","drawingDetachViewAction","drawingReleaseAlignmentAction","drawingSectionHatchAction","drawingEditSectionLineAction","drawingAlignSectionOrientationAction","drawingReverseSectionAction"})menu.addAction(findChild<QAction *>(name));}
         menu.addSeparator();menu.addAction(findChild<QAction *>("drawingDeleteSelectionAction"));
         menu.exec(impl_->tree->viewport()->mapToGlobal(point));});
-    for(auto name:{"drawingToggleDimensionNumberAction","drawingResetViewTitleAction","drawingEditAnnotationAction","drawingEditAxisAction","drawingDetachViewAction","drawingReleaseAlignmentAction","drawingSectionHatchAction","drawingEditSectionLineAction","drawingAlignSectionOrientationAction","drawingReverseSectionAction"})toolbar->removeAction(findChild<QAction *>(name));
+    for(auto name:{"drawingChangeDimensionNumberAction","drawingToggleDimensionNumberAction","drawingResetViewTitleAction","drawingEditAnnotationAction","drawingEditAxisAction","drawingDetachViewAction","drawingReleaseAlignmentAction","drawingSectionHatchAction","drawingEditSectionLineAction","drawingAlignSectionOrientationAction","drawingReverseSectionAction"})toolbar->removeAction(findChild<QAction *>(name));
     impl_->message=new QLabel(this);impl_->message->setWordWrap(false);impl_->message->setSizePolicy(QSizePolicy::Ignored,QSizePolicy::Fixed);impl_->message->setMinimumWidth(0);workspace->statusBar()->addWidget(impl_->message,1);workspace->statusBar()->setSizeGripEnabled(false);
     const QPair<const char *,const char *> icons[]={
         {"drawingDimensionNumberingAction","drawingEditDimension"},
-        {"drawingToggleDimensionNumberAction","drawingEditDimension"},
+        {"drawingChangeDimensionNumberAction","drawingEditDimension"},{"drawingToggleDimensionNumberAction","drawingEditDimension"},
         {"drawingOptionsAction","drawingOptions"},
         {"drawingResetViewTitleAction","drawingResetViewTitle"},
         {"drawingDetailViewAction","drawingDetailView"},
@@ -2335,6 +2403,7 @@ DrawingSheetEditor::DrawingSheetEditor(DrawingSheet sheet,DrawingEditorModel mod
     impl_->pageContext=defaultDrawingPageContext(impl_->state);impl_->calculate(impl_->state,impl_->model);impl_->resetHistory();impl_->savedSheet=impl_->history[0].sheet;impl_->redraw();setReadOnly(!impl_->state.drawing.version.checkinId.isNull());QTimer::singleShot(0,this,[this]{fitSheet();});
 }
 DrawingSheetEditor::~DrawingSheetEditor(){
+    impl_->cancelNumbering();
     // La scena emette selectionChanged anche mentre distrugge le etichette.
     // Impl deve essere ancora vivo quando si scollegano questi callback.
     disconnect(impl_->scene,nullptr,this,nullptr);disconnect(impl_->tree,nullptr,this,nullptr);
@@ -2421,7 +2490,7 @@ QString DrawingSheetEditor::beginSectionLine(const QUuid &parent,const QString &
     if(!existing.isNull()){const auto *v=impl_->viewFor(existing);if(v&&(v->step||v->bend))return QStringLiteral("Modifica i piani dalle proprieta’ della sezione.");}
     if(existing.isNull()){next.drawing.views.push_back(test);next.views.append(l);}
     else{const auto *current=impl_->layoutFor(existing);if(!current||current->relation.parentId!=parent||current->relation.kind!=DrawingDerivedKind::Section)return QStringLiteral("Sezione da ridefinire non disponibile.");}
-    const auto error=synchronizeDrawingViews(next);if(!error.isEmpty())return error;QByteArray bytes;const auto valid=encodeDrawingSheet(next,bytes);if(!valid.isEmpty())return valid;
+    const auto error=synchronizeDrawingViews(next);if(!error.isEmpty())return error;QByteArray bytes;const auto numberingError=impl_->prepareNumbering(next);if(!numberingError.isEmpty())return numberingError;const auto valid=encodeDrawingSheet(next,bytes);if(!valid.isEmpty())return valid;
     impl_->quoteAction->setChecked(false);impl_->cancelPlacement();impl_->resetQuote();auto cut=std::make_unique<Impl::CutPlacement>();cut->parent=parent;cut->existing=existing;cut->label=label;cut->reverse=reverse;cut->style=existing.isNull()?style:impl_->viewFor(existing)->sectionStyle;
     cut->item=impl_->scene->addPath({},QPen(QColor("#1469c0"),.3,Qt::DashLine));cut->item->setZValue(50);cut->item->setData(kindRole,"cuttingPreview");cut->item->setAcceptedMouseButtons(Qt::NoButton);QPen markerPen(QColor("#1469c0"),1.5);markerPen.setCosmetic(true);cut->snapMark=impl_->scene->addPath({},markerPen,QColor(255,255,255,210));cut->snapMark->setZValue(52);cut->snapMark->setData(kindRole,"cuttingSnap");cut->snapMark->setAcceptedMouseButtons(Qt::NoButton);cut->snapMark->hide();
     cut->snapLabel=new QGraphicsSimpleTextItem(cut->snapMark);QFont snapFont("DejaVu Sans");snapFont.setPixelSize(12);cut->snapLabel->setFont(snapFont);cut->snapLabel->setBrush(QColor("#1469c0"));cut->snapLabel->setAcceptedMouseButtons(Qt::NoButton);
@@ -2574,7 +2643,7 @@ QString DrawingSheetEditor::removeView(const QUuid &id){
     next.annotations.erase(std::remove_if(next.annotations.begin(),next.annotations.end(),[&](const auto &n){return n.viewId==id;}),next.annotations.end());
     next.drawing.dimensions.erase(std::remove_if(next.drawing.dimensions.begin(),next.drawing.dimensions.end(),[&](const auto &d){return dimensions.contains(d.id);}),next.drawing.dimensions.end());
     next.dimensions.erase(std::remove_if(next.dimensions.begin(),next.dimensions.end(),[&](const auto &p){return dimensions.contains(p.dimensionId);}),next.dimensions.end());
-    QByteArray bytes;const auto error=encodeDrawingSheet(next,bytes);if(!error.isEmpty())return error;
+    QByteArray bytes;const auto numberingError=impl_->prepareNumbering(next);if(!numberingError.isEmpty())return numberingError;const auto error=encodeDrawingSheet(next,bytes);if(!error.isEmpty())return error;
     impl_->state=std::move(next);impl_->curves.erase(id);impl_->silhouettes.erase(id);impl_->visibility.erase(id);impl_->cacheSections();for(auto dimension:dimensions)impl_->results.erase(dimension);
     impl_->record(QStringLiteral("Elimina vista e quote"),std::move(bytes));impl_->redraw();return {};
 }
@@ -2752,7 +2821,7 @@ QString DrawingSheetEditor::addDimension(DrawingDimension dimension,const QPoint
     if(impl_->computing)return QStringLiteral("Attendere il calcolo della vista in corso.");
     if(impl_->readOnly)return QStringLiteral("La tavola e' in sola lettura.");
     try{auto next=impl_->state;next.drawing.dimensions.push_back(dimension);next.dimensions.append({dimension.id,position});
-        QByteArray bytes;const auto error=encodeDrawingSheet(next,bytes);if(!error.isEmpty())return error;
+        QByteArray bytes;const auto numberingError=impl_->prepareNumbering(next);if(!numberingError.isEmpty())return numberingError;const auto error=encodeDrawingSheet(next,bytes);if(!error.isEmpty())return error;
         const auto value=impl_->measured(next,dimension,impl_->curves.at(dimension.viewId));if(value.status!=DrawingDimensionStatus::Ready)return value.message;
         impl_->state=std::move(next);impl_->results[dimension.id]=value;impl_->record(QStringLiteral("Inserisci quota"),std::move(bytes));impl_->redraw();return {};
     }catch(const std::exception &e){return QString::fromUtf8(e.what());}
@@ -2764,7 +2833,7 @@ QString DrawingSheetEditor::addDimensionSeries(const QUuid &view,const std::vect
         for(const auto &entry:placed){const auto &dimension=entry.first;const auto value=impl_->measured(next,dimension,impl_->curves.at(view));if(value.status!=DrawingDimensionStatus::Ready)return value.message;
             QGraphicsSimpleTextItem label(drawingDimensionText(dimension,value.value));fontFor(&label,next.style,next.style.dimensionHeight);
             next.drawing.dimensions.push_back(dimension);next.dimensions.append({dimension.id,entry.second-label.scale()*label.boundingRect().center()});results[dimension.id]=value;}
-        QByteArray bytes;const auto error=encodeDrawingSheet(next,bytes);if(!error.isEmpty())return error;
+        QByteArray bytes;const auto numberingError=impl_->prepareNumbering(next);if(!numberingError.isEmpty())return numberingError;const auto error=encodeDrawingSheet(next,bytes);if(!error.isEmpty())return error;
         impl_->state=std::move(next);impl_->results=std::move(results);impl_->record(QStringLiteral("Inserisci serie di quote"),std::move(bytes));impl_->redraw();return {};
     }catch(const std::exception &e){return QString::fromUtf8(e.what());}
 }
@@ -2781,7 +2850,7 @@ QString DrawingSheetEditor::updateDimension(DrawingDimension dimension,DrawingDi
         auto layout=std::find_if(next.dimensions.begin(),next.dimensions.end(),[&](const auto &p){return p.dimensionId==dimension.id;});
         if(layout==next.dimensions.end())return QStringLiteral("Presentazione quota assente.");
         layout->presentation=std::move(presentation);
-        QByteArray bytes;const auto error=encodeDrawingSheet(next,bytes);if(!error.isEmpty())return error;
+        QByteArray bytes;const auto numberingError=impl_->prepareNumbering(next);if(!numberingError.isEmpty())return numberingError;const auto error=encodeDrawingSheet(next,bytes);if(!error.isEmpty())return error;
         const auto value=impl_->measured(next,dimension,impl_->curves.at(dimension.viewId));if(value.status==DrawingDimensionStatus::Invalid)return value.message;
         if(value.status==DrawingDimensionStatus::Ready){const auto formatted=drawingDimensionLabel(dimension,value.value,layout->presentation);if(!formatted.problem.isEmpty())return formatted.problem;}
         impl_->state=std::move(next);impl_->results[dimension.id]=value;impl_->record(QStringLiteral("Modifica quota"),std::move(bytes));impl_->queueRedraw();return {};
@@ -2804,7 +2873,7 @@ QString DrawingSheetEditor::addSelectedDimension(DrawingMeasure measure){
             return QStringLiteral("La distanza degli estremi lungo questa direzione e' nulla. Scegliere un'altra curva o un altro tipo di quota.");
         const auto formatted=drawingDimensionLabel(dimension,value.value,{});MoveLabel label(formatted.summary);fontFor(&label,impl_->state.style,impl_->state.style.dimensionHeight);label.format(formatted);
         next.dimensions.back().position=impl_->quotePosition(anchor,dimension,impl_->dimensionPresentation(dimension,value))-label.scale()*label.boundingRect().center();
-        QByteArray validation;const auto valid=encodeDrawingSheet(next,validation);if(!valid.isEmpty())return valid;
+        QByteArray validation;const auto numberingError=impl_->prepareNumbering(next);if(!numberingError.isEmpty())return numberingError;const auto valid=encodeDrawingSheet(next,validation);if(!valid.isEmpty())return valid;
         impl_->state=std::move(next);impl_->results[dimension.id]=value;impl_->record(QStringLiteral("Inserisci quota"),std::move(validation));impl_->redraw();return {};
     }catch(const std::exception &error){return QString::fromUtf8(error.what());}
 }
@@ -2827,11 +2896,12 @@ void DrawingSheetEditor::setChangedCallback(std::function<void(const DrawingShee
 void DrawingSheetEditor::setModelProvider(std::function<DrawingEditorModel()> provider){impl_->provider=std::move(provider);impl_->updateAction->setEnabled(bool(impl_->provider)&&!impl_->readOnly);}
 bool DrawingSheetEditor::isReadOnly()const{return impl_->readOnly;}
 void DrawingSheetEditor::setReadOnly(bool readOnly){
+    if(readOnly)impl_->cancelNumbering();
     if(impl_->computing)return;
     impl_->readOnly=readOnly||!impl_->state.drawing.version.checkinId.isNull();
     if(impl_->readOnly){impl_->cancelViewDrag();impl_->cancelPlacement();impl_->quoteAction->setChecked(false);}
     impl_->quoteType->setEnabled(!impl_->readOnly);
-    for(const auto &name:{"drawingAddNoteAction","drawingAddLeaderAction","drawingAddDatumAction","drawingAddGeometricToleranceAction","drawingEditAnnotationAction","drawingAxisThroughPointsAction","drawingAxisBetweenLinesAction","drawingEditAxisAction","drawingDerivedViewAction","drawingAuxiliaryViewAction","drawingBreakViewAction","drawingDetailViewAction","drawingTechnicalSectionAction","drawingSteppedSectionAction","drawingAlignedSectionAction","drawingDetachViewAction","drawingReleaseAlignmentAction","drawingSectionHatchAction","drawingEditSectionLineAction","drawingAlignSectionOrientationAction","drawingReverseSectionAction","drawingDimensionNumberingAction","drawingToggleDimensionNumberAction","drawingOptionsAction","drawingResetViewTitleAction","drawingPageSettingsAction","drawingSmartDimensionAction","drawingChainHorizontalAction","drawingChainVerticalAction","drawingOrdinateXAction","drawingOrdinateYAction","drawingEditDimensionAction","drawingReverseDimensionArrowsAction","drawingOriginReferenceAction","drawingAxisXReferenceAction","drawingAxisYReferenceAction","drawingAddProjectionAction","drawingAddViewAction","drawingEditViewAction","drawingAlignViewAction","drawingEndpointDimensionAction","drawingHorizontalDimensionAction","drawingVerticalDimensionAction","drawingLengthDimensionAction","drawingDeleteSelectionAction"})
+    for(const auto &name:{"drawingAddNoteAction","drawingAddLeaderAction","drawingAddDatumAction","drawingAddGeometricToleranceAction","drawingEditAnnotationAction","drawingAxisThroughPointsAction","drawingAxisBetweenLinesAction","drawingEditAxisAction","drawingDerivedViewAction","drawingAuxiliaryViewAction","drawingBreakViewAction","drawingDetailViewAction","drawingTechnicalSectionAction","drawingSteppedSectionAction","drawingAlignedSectionAction","drawingDetachViewAction","drawingReleaseAlignmentAction","drawingSectionHatchAction","drawingEditSectionLineAction","drawingAlignSectionOrientationAction","drawingReverseSectionAction","drawingDimensionNumberingAction","drawingChangeDimensionNumberAction","drawingToggleDimensionNumberAction","drawingOptionsAction","drawingResetViewTitleAction","drawingPageSettingsAction","drawingSmartDimensionAction","drawingChainHorizontalAction","drawingChainVerticalAction","drawingOrdinateXAction","drawingOrdinateYAction","drawingEditDimensionAction","drawingReverseDimensionArrowsAction","drawingOriginReferenceAction","drawingAxisXReferenceAction","drawingAxisYReferenceAction","drawingAddProjectionAction","drawingAddViewAction","drawingEditViewAction","drawingAlignViewAction","drawingEndpointDimensionAction","drawingHorizontalDimensionAction","drawingVerticalDimensionAction","drawingLengthDimensionAction","drawingDeleteSelectionAction"})
         findChild<QAction *>(QString::fromLatin1(name))->setEnabled(!impl_->readOnly);
     impl_->refreshHiddenAction();impl_->refreshHistoryActions();impl_->updateAction->setEnabled(!impl_->readOnly&&bool(impl_->provider));
     for(auto *item:impl_->scene->items())if(dynamic_cast<MoveLabel *>(item)||dynamic_cast<MoveNote *>(item))item->setFlag(QGraphicsItem::ItemIsMovable,!impl_->readOnly&&item->data(kindRole).toString()!=QLatin1String("view"));
