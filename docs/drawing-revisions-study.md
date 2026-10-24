@@ -643,3 +643,21 @@ Terminologia e famiglie dei simboli confrontate con la [pagina ufficiale ISO 110
 Le annotazioni hanno campi propri e non copiano la specifica nel testo libero. I datum sono collegati tramite UUID: la rinomina aggiorna i cartigli, l’eliminazione o la perdita della geometria segnala i cartigli dipendenti da verificare, con riferimento sconosciuto indicato da “?”. Creare un altro datum con la stessa lettera non riassocia i cartigli orfani. Undo recupera gli identificativi originari. Celle, simboli e caratteri vengono tracciati come percorsi vettoriali nell’editor e nel PDF.
 
 Dopo il dialogo si sceglie il punto di aggancio e si posiziona l’anteprima. Proprietà e Ridefinisci aggancio conservano UUID e specifica; posizione e altezza sono in mm sul foglio. Entrambi i tipi richiedono un aggancio geometrico. Il collegamento identifica il punto del richiamo, non costruisce un sistema datum 3D né calcola la tolleranza. Schema foglio19 solo con annotazioni strutturate; documento geometrico e contenitori invariati. Esiti verificati e limiti nel registro CLAUDE.md.
+
+
+### Prestazioni HLR: indice spaziale degli occludenti analitici (24 ottobre 2026)
+
+Le sfere, i cilindri, i coni e i tori completi già riconosciuti dal motore sono ora raccolti in un indice gerarchico dei loro ingombri proiettati XY. Ogni segmento o intervallo di conica calcola il proprio ingombro una sola volta e interroga l’indice per selezionare i corpi candidati, evitando la precedente scansione integrale e il ricalcolo dell’ingombro per ogni corpo. I candidati conservano l’ordine precedente delle famiglie e delle sorgenti; le intersezioni sulle superfici esatte, i margini e l’unione degli intervalli non cambiano. L’indice è ricostruito durante la preparazione HLR della vista e il suo attraversamento è annullabile.
+
+Il filtro considera soltanto XY: una curva molto dietro un corpo può ancora esserne coperta. L’auto-occlusione non sferica, le rifilature e le sezioni conservano il percorso triangolare esistente. Non cambiano i limiti del riconoscimento analitico, i riferimenti delle quote, i contorni apparenti, la tassellazione, l’ombreggiatura o i formati dei documenti. La preparazione delle mesh e la generazione dei contorni non sono accelerate da questo intervento. In scene con molti ingombri sovrapposti restano necessarie le intersezioni con i singoli candidati.
+
+Le regressioni confrontano i tracciati completi della stessa scena con e senza corpi lontani di tutte e quattro le famiglie, includendo corpi posteriori, frame ruotati, tre scale e archi attraverso la cucitura. Il runner offre inoltre un benchmark opzionale ripetibile:
+
+```sh
+cmake --build forgecad-release --target forgecad_drawing_visibility_tests
+./forgecad-release/forgecad_drawing_visibility_tests --benchmark-index
+```
+
+Il benchmark misura il calcolo di visibilità su 2048 segmenti di contorno con 1, 64 e 512 occludenti sferici esterni, distribuiti oppure molto sovrapposti, dopo un riscaldamento e con mediana di cinque ripetizioni. Include la costruzione dell’indice e riporta l’impronta SHA256 dei tracciati serializzati per confrontare le versioni. È una misura sintetica del solo HLR, non dei tempi dell’intera tavola o di un modello reale. Nessuna soglia temporale rende instabili i test automatici. Tempi effettivi prima/dopo, confronto delle impronte, build e regressioni in `CLAUDE.md`. Restano aperti superfici rifilate/NURBS e sezioni come occludenti esatti, agganci associativi ai contorni generici e fogli multipli.
+
+Nel campione Release verificato di questo incremento, il caso distribuito con 512 occludenti passa da 71,55 a 2,76ms; quello denso da 345,25 a 264,98ms. Le impronte coincidono in tutti e sei i casi. I numeri descrivono questa fixture sullo stesso host, con le sole versioni del motore sostituite; non sono una garanzia di accelerazione generale. Le cinque suite pertinenti e il confronto con il percorso precedente sono passati; dettaglio nel registro.

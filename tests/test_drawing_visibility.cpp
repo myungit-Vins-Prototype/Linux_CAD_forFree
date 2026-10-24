@@ -4,6 +4,10 @@
 #include "fk_sheet.h"
 #include "fk_extrude.h"
 #include <QCoreApplication>
+#include <QCryptographicHash>
+#include <QDataStream>
+#include <QIODevice>
+#include <chrono>
 #include <algorithm>
 #include <iostream>
 #include <stdexcept>
@@ -239,8 +243,61 @@ void torusOcclusion(){
 
 }
 
+// Una scena locale deve restare identica aggiungendo occludenti lontani di
+// tutte le famiglie, anche in un frame ruotato e con archi oltre la cucitura.
+void analyticIndexRegression(){
+ QByteArray fingerprint;QDataStream stream(&fingerprint,QIODevice::WriteOnly);
+ for(bool rotated:{false,true}){
+  const Frame3 frame=rotated?Frame3(Vec3(13,-7,100),Vec3(.3,-.8,1),Vec3(1,0,0)):Frame3();
+  const auto at=[&](Vec3 p){return Frame3(frame.toGlobal(p),frame.zDir(),frame.xDir());};
+  DrawingModelSnapshot local{{QUuid::createUuid(),{}},{source(1,makeCylinder(at(Vec3()),5,1)),source(2,makeBox(at(Vec3(-8,.2,-100)),16,.1,.1)),source(10,makeSphere(at(Vec3(4,0,10)),3)),source(11,makeCylinder(at(Vec3(-4,0,10)),3,4)),source(12,makeCone(at(Vec3(0,4,10)),3,1,4)),source(13,makeTorus(at(Vec3(0,-4,10)),2,1))}};
+  auto crowded=local;
+  for(int i=0;i<16;++i){const auto location=at(Vec3((i%2?1:-1)*(100+20*i),50*(i%3-1),i%2?1000:-1000));Body body;
+   switch(i%4){case 0:body=makeSphere(location,3);break;case 1:body=makeCylinder(location,3,4);break;case 2:body=makeCone(location,3,1,4);break;default:body=makeTorus(location,2,1);break;}
+   crowded.bodies.push_back(source(100+i,std::move(body)));
+  }
+  // Stesso ingombro XY, ma molto dietro: nessun rifiuto scorretto in Z,
+  // nessuna ombra aggiunta dal corpo posteriore.
+  crowded.bodies.push_back(source(200,makeSphere(at(Vec3(0,0,-1000)),6)));
+  DrawingSilhouetteCache cache;
+  for(double scale:{.1,1.,10.}){
+   DrawingView view;view.kind=DrawingViewKind::ProjectedEdges;view.plane=frame;view.scale=scale;
+   std::vector<DrawingCurve> curves;ok(projectDrawingEdges(local,view,curves));
+   curves.erase(std::remove_if(curves.begin(),curves.end(),[](const auto &c){return c.featureId!=1&&c.featureId!=2;}),curves.end());
+   require(!curves.empty(),"curve della scena mista presenti");
+   for(bool trimmed:{false,true}){
+    auto selected=curves;if(trimmed)for(auto &curve:selected)if(curve.featureId==1){curve.hasSourceRange=true;curve.sourceRange={kTwoPi-.4,kTwoPi+.4};curve.range=curve.sourceRange;}
+    DrawingViewVisibility expected,actual;ok(drawingViewVisibility(local,view,selected,{},cache,expected));ok(drawingViewVisibility(crowded,view,selected,{},cache,actual));
+    require(actual.curves.size()==expected.curves.size()&&actual.warnings==expected.warnings,"indice misto conserva risultati e diagnostiche");
+    bool hidden=false,visible=false;
+    for(std::size_t i=0;i<expected.curves.size();++i){require(actual.curves[i].visible==expected.curves[i].visible&&actual.curves[i].hidden==expected.curves[i].hidden,"tracciati identici con corpi lontani, profondita', frame e cucitura");hidden|=!actual.curves[i].hidden.isEmpty();visible|=!actual.curves[i].visible.isEmpty();}
+    require(hidden&&visible,"scena mista comprende porzioni coperte e scoperte");
+    for(const auto &path:actual.curves)stream<<path.visible<<path.hidden;
+   }
+  }
+ }
+ std::cout<<"FINGERPRINT index="<<QCryptographicHash::hash(fingerprint,QCryptographicHash::Sha256).toHex().constData()<<'\n';
+ std::cout<<"PASS indice occludenti misti: tracciati identici, corpi lontani/posteriori, frame ruotato, tre scale e cucitura\n";
+}
+void analyticIndexBenchmark(){
+ for(bool dense:{false,true})for(int count:{1,64,512}){
+  DrawingModelSnapshot model{{QUuid::createUuid(),{}},{source(1,makeSphere(Frame3(),5)),source(2,makeSphere(Frame3(Vec3(4,0,10),Vec3(0,0,1),Vec3(1,0,0)),3))}};
+  for(int i=0;i<count-1;++i)model.bodies.push_back(source(3+i,makeSphere(Frame3((dense?Vec3(4+.005*(i%7),.005*((i/7)%7),10+.01*i):Vec3(100+20*(i%32),100+20*(i/32),10)),Vec3(0,0,1),Vec3(1,0,0)),3)));
+  DrawingSilhouette contour;contour.featureId=1;contour.sourceFace=model.bodies[0].body->faces().front();
+  for(int i=0;i<=2048;++i){const double t=kTwoPi*i/2048;contour.points.push_back(Vec3(5*std::cos(t),5*std::sin(t),0));}
+  DrawingSilhouetteResult silhouettes;silhouettes.paths.push_back(contour);DrawingView view;view.kind=DrawingViewKind::ProjectedEdges;DrawingSilhouetteCache cache;DrawingViewVisibility result;
+  ok(drawingViewVisibility(model,view,{},silhouettes,cache,result));require(!result.silhouettes[0].hidden.isEmpty()&&!result.silhouettes[0].visible.isEmpty(),"benchmark con vera occlusione parziale");
+  std::vector<double> timings;
+  for(int repeat=0;repeat<5;++repeat){const auto start=std::chrono::steady_clock::now();ok(drawingViewVisibility(model,view,{},silhouettes,cache,result));timings.push_back(std::chrono::duration<double,std::milli>(std::chrono::steady_clock::now()-start).count());}
+  std::sort(timings.begin(),timings.end());QByteArray bytes;QDataStream stream(&bytes,QIODevice::WriteOnly);stream<<result.silhouettes[0].visible<<result.silhouettes[0].hidden;
+  std::cout<<"BENCH arrangement="<<(dense?"dense":"sparse")<<" analytic_occluders="<<count<<" segments=2048 median_ms="<<timings[2]<<" sha256="<<QCryptographicHash::hash(bytes,QCryptographicHash::Sha256).toHex().constData()<<'\n';
+ }
+}
+
 }
 int main(int argc,char **argv){QCoreApplication app(argc,argv);try{
+ if(app.arguments().contains(QStringLiteral("--benchmark-index"))){analyticIndexBenchmark();return 0;}
+ analyticIndexRegression();
  conicTransitions();conicDepth();conicLimits();sphereOcclusion();cylinderOcclusion();coneOcclusion();torusOcclusion();
  DrawingModelSnapshot model{{QUuid::createUuid(),{}},{source(1,makeBox(Frame3(),10,6,1))}};DrawingView view;view.kind=DrawingViewKind::ProjectedEdges;std::vector<DrawingCurve> curves;ok(projectDrawingEdges(model,view,curves));DrawingSilhouetteCache cache;DrawingViewVisibility visible;ok(drawingViewVisibility(model,view,curves,{},cache,visible));require(visible.curves.size()==curves.size(),"un risultato per ogni curva esatta");int back=0,front=0;
  for(std::size_t i=0;i<curves.size();++i){const auto &edge=model.bodies[0].body->edge(curves[i].sourceEdge);const auto p=edge.curve->point((edge.range.lo+edge.range.hi)/2);if(std::abs(p.z())<1e-8){++back;require(visible.curves[i].visible.isEmpty()&&visible.curves[i].hidden.isEmpty(),"bordo inferiore coincidente eliminato sotto il contorno visibile");}if(std::abs(p.z()-1)<1e-8){++front;require(!visible.curves[i].visible.isEmpty()&&visible.curves[i].hidden.isEmpty(),"bordi anteriori visibili, nessuna auto-occlusione");}}
