@@ -31,6 +31,11 @@ DrawingDimensionResult evaluateDrawingAttachments(const DrawingDimension &dimens
     const DrawingModelSnapshot &model,const std::vector<DrawingCurve> &curves,const DrawingAttachmentResolver &axes={});
 DrawingDimension drawingDimensionBetween(const DrawingView &view,const DrawingModelSnapshot &model,const std::vector<DrawingCurve> &curves,
     std::vector<DrawingAttachment> references,DrawingMeasure measure,const Kernel::Vec2 &cursor,bool automatic=false,const DrawingAttachmentResolver &axes={});
+// Punti nella stessa vista: catena fra consecutivi oppure ordinate dal primo.
+// Fallisce prima di restituire una serie parziale; non modifica il documento.
+std::vector<DrawingDimension> drawingDimensionSeries(const DrawingView &view,const DrawingModelSnapshot &model,
+    const std::vector<DrawingCurve> &curves,const std::vector<DrawingAttachment> &points,DrawingDimensionSeries kind,
+    const DrawingAttachmentResolver &axes={});
 int drawingAngleSector(const DrawingDimensionResult &base,const Kernel::Vec2 &cursor);
 QString drawingDimensionName(DrawingMeasure measure);
 QString drawingDimensionText(const DrawingDimension &dimension,double value);

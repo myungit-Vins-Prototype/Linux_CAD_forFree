@@ -114,7 +114,7 @@ void validateDocument(const DrawingDocument &document) {
                      : (!reference.faceName.isEmpty() && reference.faceName.size()<=4096 && reference.edgeName.isEmpty()),"Nome del riferimento geometrico non valido.");
         require(edge||reference.kind==DrawingCurveKind::ApparentLine||reference.kind==DrawingCurveKind::ApparentArc ? drawingHasProjection(*view) : (view->kind==DrawingViewKind::Section || view->sectionReferences),"Riferimento estraneo al tipo di vista.");
         }
-        require(int(dimension.measure)>=0&&int(dimension.measure)<=9,"Tipo di quota non supportato.");
+        require(int(dimension.measure)>=0&&int(dimension.measure)<=11,"Tipo di quota non supportato.");
         const auto attachments=validateDrawingAttachments(dimension,*view);require(attachments.isEmpty(),qPrintable(attachments));
         for(const auto &attachment:dimension.references)if(attachment.axisId.isNull()&&!drawingDatum(attachment.role)){
             const auto &r=attachment.curve;require((r.kind==DrawingCurveKind::ProjectedEdge||r.kind==DrawingCurveKind::ApparentLine||r.kind==DrawingCurveKind::ApparentArc)?drawingHasProjection(*view):(view->kind==DrawingViewKind::Section||view->sectionReferences),"Aggancio estraneo al tipo di vista.");
@@ -505,7 +505,8 @@ QString encodeDrawingDocument(const DrawingDocument &document, QByteArray &bytes
         const bool stepped=std::any_of(document.views.begin(),document.views.end(),[](const auto &v){return v.step.has_value();});
         const bool multiple=std::any_of(document.views.begin(),document.views.end(),[](const auto &v){return v.step&&!v.step->additional.empty();});
         const bool bent=std::any_of(document.views.begin(),document.views.end(),[](const auto &v){return v.bend.has_value();});
-        const bool technical=bent||stepped||apparentArc||apparent||axisReferences||drawingNeedsSectionSchema(document);
+        const bool ordinate=std::any_of(document.dimensions.begin(),document.dimensions.end(),[](const auto &d){return drawingOrdinate(d.measure);});
+        const bool technical=ordinate||bent||stepped||apparentArc||apparent||axisReferences||drawingNeedsSectionSchema(document);
         const bool attachments=technical||std::any_of(document.dimensions.begin(),document.dimensions.end(),[](const auto &d){return !d.references.empty()||d.decimals!=2;});
         const bool extended=attachments||std::any_of(document.views.begin(),document.views.end(),[](const auto &view){return view.kind!=DrawingViewKind::Section;})
             ||std::any_of(document.dimensions.begin(),document.dimensions.end(),[](const auto &dimension){return int(dimension.measure)>1;});
@@ -526,7 +527,7 @@ QString encodeDrawingDocument(const DrawingDocument &document, QByteArray &bytes
                 {"role",int(r.role)},{"fraction",r.fraction},{"polar",r.polar},{"supportFace",r.supportFace},{"curveSide",r.curveSide},{"anchorSide",r.anchorSide},{"vertex",r.vertexName},{"boundary",r.boundaryName}});if(technical){auto object=references.last().toObject();if(r.curve.contourSide)object["contourSide"]=r.curve.contourSide;object["clipBoundary"]=r.clipBoundary;if(!r.axisId.isNull())object["axisId"]=uuidText(r.axisId);references[references.size()-1]=object;}}
                 object["references"]=references;object["angleSides"]=dimension.angleSides;object["decimals"]=dimension.decimals;}
             dimensions.append(object);}
-        const QByteArray prepared=QJsonDocument(QJsonObject{{"format","ForgeCAD.DrawingPrototype"},{"schema",bent?10:multiple?9:stepped?8:apparentArc?7:apparent?6:axisReferences?5:technical?4:attachments?3:extended?2:1},
+        const QByteArray prepared=QJsonDocument(QJsonObject{{"format","ForgeCAD.DrawingPrototype"},{"schema",ordinate?11:bent?10:multiple?9:stepped?8:apparentArc?7:apparent?6:axisReferences?5:technical?4:attachments?3:extended?2:1},
             {"version",versionJson(document.version)},{"model",versionJson(document.model)},{"views",views},{"dimensions",dimensions}}).toJson(QJsonDocument::Compact);
         require(prepared.size() <= kMaxDrawingBytes, "Tavola troppo grande per il codec del prototipo.");
         bytes = prepared;
@@ -542,7 +543,7 @@ QString decodeDrawingDocument(const QByteArray &bytes, DrawingDocument &document
         require(parse.error == QJsonParseError::NoError && json.isObject(), "Documento tavola JSON non valido.");
         const auto root = json.object();
         const double schema=root["schema"].toDouble(-1);
-        require(root["format"].toString()==QLatin1String("ForgeCAD.DrawingPrototype")&&(schema==1||schema==2||schema==3||schema==4||schema==5||schema==6||schema==7||schema==8||schema==9||schema==10),"Formato o schema della tavola non supportato.");
+        require(root["format"].toString()==QLatin1String("ForgeCAD.DrawingPrototype")&&(schema==1||schema==2||schema==3||schema==4||schema==5||schema==6||schema==7||schema==8||schema==9||schema==10||schema==11),"Formato o schema della tavola non supportato.");
         require(root["views"].isArray() && root["dimensions"].isArray(), "Elenchi della tavola assenti.");
         const auto views = root["views"].toArray(), dimensions = root["dimensions"].toArray();
         require(views.size() <= qsizetype(kMaxRecords) && dimensions.size() <= qsizetype(kMaxRecords), "Troppi elementi nella tavola.");
@@ -580,7 +581,7 @@ QString decodeDrawingDocument(const QByteArray &bytes, DrawingDocument &document
             require(d["requiresWitness"].isBool(), "Regola di associazione del ramo assente.");
             dimension.section.requiresWitness = d["requiresWitness"].toBool();
             const double measure = d["measure"].toDouble(-1);
-            require(measure==0||measure==1||(schema>=2&&(measure==2||measure==3))||(schema>=3&&measure>=4&&measure<=9&&measure==std::floor(measure)),"Tipo di quota non supportato.");
+            require(measure==0||measure==1||(schema>=2&&(measure==2||measure==3))||(schema>=3&&measure>=4&&measure<=9&&measure==std::floor(measure))||(schema>=11&&(measure==10||measure==11)),"Tipo di quota non supportato.");
             if(schema>=2){const double kind=d["referenceKind"].toDouble(-1);require(kind==0||kind==1||(schema>=6&&kind==2)||(schema>=7&&kind==3),"Tipo di riferimento non supportato.");
                 dimension.section.kind=DrawingCurveKind(int(kind));
                 if(kind==1){require(d["edgeName"].isString(),"Nome del bordo proiettato assente.");dimension.section.edgeName=d["edgeName"].toString();}

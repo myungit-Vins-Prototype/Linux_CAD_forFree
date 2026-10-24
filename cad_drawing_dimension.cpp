@@ -225,7 +225,7 @@ DrawingResolvedAttachment resolve(const DrawingView &view,const DrawingModelSnap
 bool drawingDatum(DrawingPointRole role){return role==DrawingPointRole::Origin||role==DrawingPointRole::AxisX||role==DrawingPointRole::AxisY;}
 QString validateDrawingAttachments(const DrawingDimension &d,const DrawingView &view){
     try{
-        need(int(d.measure)>=0&&int(d.measure)<=9,"Tipo di quota non supportato.");
+        need(int(d.measure)>=0&&int(d.measure)<=11,"Tipo di quota non supportato.");
         need(d.decimals>=0&&d.decimals<=8&&d.angleSides>=0&&d.angleSides<=3,"Presentazione della quota non valida.");
         need(d.measure==DrawingMeasure::Angle||d.angleSides==0,"Settore angolare su una quota lineare.");
         if(d.references.empty()){need(int(d.measure)<=3,"Quota senza riferimenti di aggancio.");return {};}
@@ -292,6 +292,10 @@ DrawingDimensionResult evaluateDrawingAttachments(const DrawingDimension &d,cons
         if(d.measure==M::SectionLength){need(a.curve,"La lunghezza richiede una curva.");out.value=arcLength(*a.curve->curve,a.curve->range);out.first=a.point;out.second=a.point;}
         else if(d.measure==M::Radius||d.measure==M::Diameter){need(a.isCircle&&!a.isPoint,"Raggio e diametro richiedono un cerchio o arco circolare nel piano della vista.");out.value=a.radius*(d.measure==M::Diameter?2:1);out.first=a.center;out.second=a.point;
             out.geometry=d.measure==M::Diameter?DrawingDimensionResult::Geometry::Diameter:DrawingDimensionResult::Geometry::Radius;}
+        else if(drawingOrdinate(d.measure)){
+            need(a.isPoint&&b.isPoint,"Le ordinate richiedono origine e punto associativi.");
+            out.first=a.point;out.second=b.point;out.value=d.measure==M::OrdinateX?b.point.x()-a.point.x():b.point.y()-a.point.y();out.geometry=DrawingDimensionResult::Geometry::Ordinate;
+        }
         else if(d.measure==M::Angle){need(a.isLine&&b.isLine,"La quota angolare richiede due rette.");auto u=normalized(a.second-a.first),v=normalized(b.second-b.first);const double determinant=cross2(u,v);
             need(std::abs(determinant)>1e-10,"Le rette parallele non definiscono un angolo di quota.");out.vertex=a.first+u*(cross2(b.first-a.first,v)/determinant);
             if(d.angleSides&1)u=-u;
@@ -311,7 +315,7 @@ DrawingDimensionResult evaluateDrawingAttachments(const DrawingDimension &d,cons
             const auto delta=out.second-out.first;out.value=d.measure==M::HorizontalDistance?std::abs(delta.x()):d.measure==M::VerticalDistance?std::abs(delta.y()):norm(delta);
             if(d.measure==M::AxisDiameter){out.second=2*out.second-out.first;out.value*=2;}
         }
-        need(std::isfinite(out.value)&&out.value>=0,"Misura non finita.");return out;
+        need(std::isfinite(out.value)&&(out.value>=0||drawingOrdinate(d.measure)),"Misura non finita.");return out;
     }catch(const ReferenceError &e){return {e.status,std::numeric_limits<double>::quiet_NaN(),e.message};}catch(const std::exception &e){return {DrawingDimensionStatus::Invalid,std::numeric_limits<double>::quiet_NaN(),QString::fromUtf8(e.what())};}
 }
 int drawingAngleSector(const DrawingDimensionResult &base,const Vec2 &cursor){
@@ -337,7 +341,20 @@ DrawingDimension drawingDimensionBetween(const DrawingView &view,const DrawingMo
     if(measure==M::Angle)d.angleSides=drawingAngleSector(result,cursor);
     return d;
 }
-QString drawingDimensionName(DrawingMeasure m){switch(m){case DrawingMeasure::SectionLength:return QStringLiteral("Lunghezza");case DrawingMeasure::HorizontalDistance:return QStringLiteral("Orizzontale");case DrawingMeasure::VerticalDistance:return QStringLiteral("Verticale");case DrawingMeasure::Radius:return QStringLiteral("Raggio");case DrawingMeasure::Diameter:return QStringLiteral("Diametro");case DrawingMeasure::AxisRadius:return QStringLiteral("Raggio rispetto asse");case DrawingMeasure::AxisDiameter:return QStringLiteral("Diametro rispetto asse");case DrawingMeasure::Angle:return QStringLiteral("Angolo");default:return QStringLiteral("Distanza");}}
-QString drawingDimensionText(const DrawingDimension &d,double value){const auto number=QString::number(value,'f',d.decimals);if(d.measure==DrawingMeasure::Angle)return number+QStringLiteral("°");
-    const auto prefix=d.measure==DrawingMeasure::Radius||d.measure==DrawingMeasure::AxisRadius?QStringLiteral("R "):d.measure==DrawingMeasure::Diameter||d.measure==DrawingMeasure::AxisDiameter?QStringLiteral("⌀ "):d.measure==DrawingMeasure::SectionLength?QStringLiteral("L = "):QString();return prefix+number+QStringLiteral(" mm");}
+std::vector<DrawingDimension> drawingDimensionSeries(const DrawingView &view,const DrawingModelSnapshot &model,const std::vector<DrawingCurve> &curves,const std::vector<DrawingAttachment> &points,DrawingDimensionSeries kind,const DrawingAttachmentResolver &axes){
+    need(int(kind)>=0&&int(kind)<=3&&points.size()>=2&&points.size()<=64,"Scegliere da 2 a 64 punti della stessa vista.");
+    const bool horizontal=kind==DrawingDimensionSeries::ChainHorizontal||kind==DrawingDimensionSeries::OrdinateX;
+    const bool ordinate=kind==DrawingDimensionSeries::OrdinateX||kind==DrawingDimensionSeries::OrdinateY;
+    std::vector<Vec2> positions;for(const auto &ref:points){const auto p=resolved(view,model,curves,ref,axes);need(p.isPoint,"La serie richiede punti, centri o estremi associativi.");
+        if(ordinate)for(const auto &prior:positions)need(std::abs(horizontal?p.point.x()-prior.x():p.point.y()-prior.y())>view.tolerance,"Le ordinate devono avere coordinate distinte dall’origine e dagli altri punti.");
+        if(!positions.empty())need(std::abs(horizontal?p.point.x()-positions.back().x():p.point.y()-positions.back().y())>view.tolerance,"Due punti consecutivi hanno la stessa coordinata di quota.");
+        positions.push_back(p.point);
+    }
+    std::vector<DrawingDimension> result;for(std::size_t i=1;i<points.size();++i){const auto measure=ordinate?(horizontal?DrawingMeasure::OrdinateX:DrawingMeasure::OrdinateY):(horizontal?DrawingMeasure::HorizontalDistance:DrawingMeasure::VerticalDistance);
+        result.push_back(drawingDimensionBetween(view,model,curves,{points[ordinate?0:i-1],points[i]},measure,positions[i],false,axes));}
+    return result;
+}
+QString drawingDimensionName(DrawingMeasure m){switch(m){case DrawingMeasure::OrdinateX:return QStringLiteral("Ordinata X");case DrawingMeasure::OrdinateY:return QStringLiteral("Ordinata Y");case DrawingMeasure::SectionLength:return QStringLiteral("Lunghezza");case DrawingMeasure::HorizontalDistance:return QStringLiteral("Orizzontale");case DrawingMeasure::VerticalDistance:return QStringLiteral("Verticale");case DrawingMeasure::Radius:return QStringLiteral("Raggio");case DrawingMeasure::Diameter:return QStringLiteral("Diametro");case DrawingMeasure::AxisRadius:return QStringLiteral("Raggio rispetto asse");case DrawingMeasure::AxisDiameter:return QStringLiteral("Diametro rispetto asse");case DrawingMeasure::Angle:return QStringLiteral("Angolo");default:return QStringLiteral("Distanza");}}
+QString drawingDimensionText(const DrawingDimension &d,double value){const auto number=QString::number(std::abs(value)<.5*std::pow(10.,-d.decimals)?0:value,'f',d.decimals);if(d.measure==DrawingMeasure::Angle)return number+QStringLiteral("°");
+    const auto prefix=d.measure==DrawingMeasure::OrdinateX?QStringLiteral("X = "):d.measure==DrawingMeasure::OrdinateY?QStringLiteral("Y = "):d.measure==DrawingMeasure::Radius||d.measure==DrawingMeasure::AxisRadius?QStringLiteral("R "):d.measure==DrawingMeasure::Diameter||d.measure==DrawingMeasure::AxisDiameter?QStringLiteral("⌀ "):d.measure==DrawingMeasure::SectionLength?QStringLiteral("L = "):QString();return prefix+number+QStringLiteral(" mm");}
 }

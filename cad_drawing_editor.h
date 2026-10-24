@@ -87,6 +87,7 @@ public:
     void markSaved();
     bool isModified() const;
     QString addDimension(DrawingDimension dimension,const QPointF &position);
+    QString addDimensionSeries(const QUuid &view,const std::vector<DrawingAttachment> &points,DrawingDimensionSeries kind,const QPointF &baseline);
     QString updateDimension(DrawingDimension dimension);
     QString updateDimension(DrawingDimension dimension,DrawingDimensionPresentation presentation);
     QString addSelectedDimension(DrawingMeasure measure);

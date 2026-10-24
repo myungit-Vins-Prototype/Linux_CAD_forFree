@@ -111,7 +111,9 @@ struct DrawingSectionReference {
     int contourSide=0; // +/-1 soltanto per un arco apparente esatto, schema7
 };
 enum class DrawingMeasure { SectionLength, EndpointDistance, HorizontalDistance, VerticalDistance,
-    Distance, Angle, Radius, Diameter, AxisRadius, AxisDiameter };
+    Distance, Angle, Radius, Diameter, AxisRadius, AxisDiameter, OrdinateX, OrdinateY };
+inline bool drawingOrdinate(DrawingMeasure m){return m==DrawingMeasure::OrdinateX||m==DrawingMeasure::OrdinateY;}
+enum class DrawingDimensionSeries { ChainHorizontal, ChainVertical, OrdinateX, OrdinateY };
 enum class DrawingPointRole { Curve, Start, End, Midpoint, Center, Nearest, Origin, AxisX, AxisY,
     Quadrant0, Quadrant1, Quadrant2, Quadrant3 };
 struct DrawingAttachment {
@@ -146,7 +148,7 @@ struct DrawingDimensionResult {
     DrawingDimensionStatus status = DrawingDimensionStatus::Invalid;
     double value = std::numeric_limits<double>::quiet_NaN();
     QString message;
-    enum class Geometry { None, Linear, Radius, Diameter, Angle } geometry=Geometry::None;
+    enum class Geometry { None, Linear, Radius, Diameter, Angle, Ordinate } geometry=Geometry::None;
     Kernel::Vec2 first{},second{},vertex{},firstDirection{},secondDirection{};
     double sweep=0; // radianti con segno, solo per l'arco della quota angolare
 };

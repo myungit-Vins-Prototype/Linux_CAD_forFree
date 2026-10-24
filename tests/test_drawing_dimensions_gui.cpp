@@ -56,7 +56,9 @@ DrawingDimension last(const DrawingSheetEditor &editor){require(!editor.sheet().
 #include "test_drawing_angular_center.h"
 #include "test_drawing_dimension_center.h"
 #include "test_drawing_ambiguous_snaps.h"
+#include "test_drawing_dimension_series.h"
 int main(int argc,char **argv){QApplication app(argc,argv);try{
+    drawingDimensionSeriesTests();
     ambiguousSnapTests();
     const double angle=kPi/6;DrawingEditorModel model;model.snapshot.version={QUuid::createUuid(),{}};model.snapshot.bodies={source(makeBox(Frame3(),10,6,4),1),source(makePlaneSheet(Frame3(Vec3(18,0,0),Vec3(0,0,1),Vec3(std::cos(angle),std::sin(angle),0)),4),2),source(makeCylinder(Frame3(Vec3(35,0,0),Vec3(0,0,1),Vec3(1,0,0)),3,8),3)};model.choices={{1,"Corpo"},{2,"Superficie ruotata"},{3,"Cilindro"}};
     DrawingSheet sheet;sheet.title="Quotatura associativa";sheet.drawing.model=model.snapshot.version;DrawingSheetEditor editor(sheet,model);editor.resize(1450,900);editor.show();QApplication::processEvents();DrawingView view;view.kind=DrawingViewKind::ProjectedEdges;view.scale=3;ok(editor.insertView(view,{view.id,"Superiore",QPointF(75,120),{1,2,3}}));editor.fitSheet();QApplication::processEvents();editor.markSaved();

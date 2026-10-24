@@ -39,12 +39,12 @@ struct DrawingDimensionLabel {
 };
 inline DrawingDimensionLabel drawingDimensionLabel(const DrawingDimension &d,double nominal,const DrawingDimensionPresentation &p){
     DrawingDimensionLabel t;t.problem=validateDrawingDimensionPresentation(p);
-    if(t.problem.isEmpty()&&(!std::isfinite(nominal)||nominal<0))t.problem=QStringLiteral("Misura nominale non valida.");
-    if(t.problem.isEmpty()&&p.mode!=DrawingToleranceMode::None&&nominal+p.lower<0)t.problem=QStringLiteral("Il limite inferiore della quota e' negativo: verificare la tolleranza.");
+    if(t.problem.isEmpty()&&(!std::isfinite(nominal)||(nominal<0&&!drawingOrdinate(d.measure))))t.problem=QStringLiteral("Misura nominale non valida.");
+    if(t.problem.isEmpty()&&!drawingOrdinate(d.measure)&&p.mode!=DrawingToleranceMode::None&&nominal+p.lower<0)t.problem=QStringLiteral("Il limite inferiore della quota e' negativo: verificare la tolleranza.");
     if(!t.problem.isEmpty()){t.leading=t.summary=QStringLiteral("Tolleranza da verificare");return t;}
     const bool angle=d.measure==DrawingMeasure::Angle;
     const QString unit=angle?QStringLiteral("°"):QStringLiteral(" mm");
-    const QString symbol=d.measure==DrawingMeasure::Radius||d.measure==DrawingMeasure::AxisRadius?QStringLiteral("R "):d.measure==DrawingMeasure::Diameter||d.measure==DrawingMeasure::AxisDiameter?QStringLiteral("⌀ "):d.measure==DrawingMeasure::SectionLength?QStringLiteral("L = "):QString();
+    const QString symbol=d.measure==DrawingMeasure::OrdinateX?QStringLiteral("X = "):d.measure==DrawingMeasure::OrdinateY?QStringLiteral("Y = "):d.measure==DrawingMeasure::Radius||d.measure==DrawingMeasure::AxisRadius?QStringLiteral("R "):d.measure==DrawingMeasure::Diameter||d.measure==DrawingMeasure::AxisDiameter?QStringLiteral("⌀ "):d.measure==DrawingMeasure::SectionLength?QStringLiteral("L = "):QString();
     t.leading=p.prefix+symbol;
     if(p.mode==DrawingToleranceMode::Limits){
         const int precision=std::max(d.decimals,p.decimals);
