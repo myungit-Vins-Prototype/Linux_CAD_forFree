@@ -33,6 +33,8 @@
 #include <QSignalBlocker>
 #include <QSet>
 #include <QStatusBar>
+#include <QTableWidget>
+#include <QHeaderView>
 #include <QTreeWidget>
 #include <QTreeWidgetItemIterator>
 #include <QFormLayout>
@@ -79,6 +81,32 @@ namespace ForgeCad {
 namespace {
 using namespace Kernel;
 constexpr int kindRole=0,viewRole=1,indexRole=2,idRole=3,dimensionGeometryRole=5;
+// The first transition retains its existing numeric fields; later planes use
+// absolute offsets, so deleting a row never silently changes subsequent planes.
+QTableWidget *additionalSectionSteps(QFormLayout *form,const DrawingSectionStep &step){
+    auto *table=new QTableWidget(0,2);table->setObjectName("drawingAdditionalSteps");
+    table->setHorizontalHeaderLabels({QStringLiteral("Distanza dall’inizio (mm)"),QStringLiteral("Scostamento assoluto (mm)")});
+    table->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);table->setMinimumWidth(480);table->setMaximumHeight(170);
+    table->setSelectionBehavior(QAbstractItemView::SelectRows);table->setSelectionMode(QAbstractItemView::SingleSelection);
+    const auto append=[table](double at,double offset){const int row=table->rowCount();table->insertRow(row);
+        for(int column=0;column<2;++column){auto *spin=new QDoubleSpinBox(table);spin->setRange(-1e6,1e6);spin->setDecimals(4);spin->setValue(column?offset:at);table->setCellWidget(row,column,spin);}table->setCurrentCell(row,0);};
+    for(const auto &next:step.additional)append(next.at,next.offset);
+    form->addRow(QStringLiteral("Gradini successivi"),table);
+    auto *buttons=new QWidget;auto *row=new QHBoxLayout(buttons);row->setContentsMargins(0,0,0,0);
+    auto *add=new QPushButton(QStringLiteral("Aggiungi gradino")),*remove=new QPushButton(QStringLiteral("Rimuovi selezionato"));
+    add->setObjectName("drawingAddStep");remove->setObjectName("drawingRemoveStep");row->addWidget(add);row->addWidget(remove);form->addRow(buttons);
+    QObject::connect(add,&QPushButton::clicked,table,[table,append]{if(table->rowCount()>=31)return;const int last=table->rowCount()-1;
+        const auto *firstAt=table->window()->findChild<QDoubleSpinBox *>("drawingStepAt");const auto *firstOffset=table->window()->findChild<QDoubleSpinBox *>("drawingStepOffset");
+        const double at=last>=0?static_cast<QDoubleSpinBox *>(table->cellWidget(last,0))->value():firstAt->value();
+        const double offset=last>=0?static_cast<QDoubleSpinBox *>(table->cellWidget(last,1))->value():firstOffset->value();append(at+5,offset+5);});
+    QObject::connect(remove,&QPushButton::clicked,table,[table]{if(table->currentRow()>=0)table->removeRow(table->currentRow());});
+    return table;
+}
+DrawingSectionStep sectionStepValues(double at,double offset,const QTableWidget *table){
+    DrawingSectionStep result{at,offset};
+    for(int row=0;row<table->rowCount();++row)result.additional.push_back({static_cast<QDoubleSpinBox *>(table->cellWidget(row,0))->value(),static_cast<QDoubleSpinBox *>(table->cellWidget(row,1))->value()});
+    return result;
+}
 QPen technicalPen(QPen pen,bool screen){
     if(screen){pen.setWidthF(std::clamp(pen.widthF()*4.5,.7,2.2));pen.setCosmetic(true);}
     pen.setCapStyle(Qt::FlatCap);pen.setJoinStyle(Qt::RoundJoin);return pen;
@@ -1762,8 +1790,9 @@ struct DrawingSheetEditor::Impl{
             auto a=point(r.cutStart),b=point(r.cutEnd);const auto t=(b-a)/QLineF(a,b).length();const auto n=(r.reverse?-1:1)*QPointF(t.y(),-t.x());const auto *sectionView=viewFor(section.viewId);const bool half=sectionView&&drawingHalfSection(*sectionView);if(r.step){a-=t*3;b+=t*3;}else std::tie(a,b)=cutDisplayEnds(parent.id,a,b,half);
             const auto add=[&](QPainterPath path,QPen pen){auto *item=target->addPath(path,technicalPen(pen,target==this->scene));item->setZValue(5);item->setData(kindRole,"cuttingLine");item->setData(viewRole,parent.id);item->setData(idRole,section.viewId);item->setFlag(QGraphicsItem::ItemIsSelectable,target==this->scene);item->setToolTip(r.step?QStringLiteral("Sezione a gradino: modifica distanza e scostamento dalle proprieta’ della vista."):QStringLiteral("Seleziona la linea di taglio: trascina i punti per modificarla o la linea per spostarla. Ridefinisci linea di taglio per ridisegnarla. Esc annulla."));item->setAcceptedMouseButtons(Qt::NoButton);};
             QPainterPath center;center.moveTo(a);
-            if(r.step){const auto delta=r.cutEnd-r.cutStart;const double length=QLineF(r.cutStart,r.cutEnd).length();const QPointF tangent=delta/length,offset(tangent.y()*r.step->offset,-tangent.x()*r.step->offset);
-                const auto kink=r.cutStart+tangent*r.step->at;center.lineTo(point(kink));center.lineTo(point(kink+offset));b+=QPointF(offset.x()*parent.scale,-offset.y()*parent.scale);}
+            if(r.step){const auto delta=r.cutEnd-r.cutStart;const double length=QLineF(r.cutStart,r.cutEnd).length();const QPointF tangent=delta/length;QPointF offset;
+                for(const auto &step:r.step->transitions()){const auto kink=r.cutStart+tangent*step.at;center.lineTo(point(kink+offset));offset={tangent.y()*step.offset,-tangent.x()*step.offset};center.lineTo(point(kink+offset));}
+                b+=QPointF(offset.x()*parent.scale,-offset.y()*parent.scale);}
             center.lineTo(b);QPen chain(QColor("#222222"),.2);chain.setDashPattern({12,2,2,2});add(center,chain);
             for(const auto p:(half?QVector<QPointF>{b}:QVector<QPointF>{a,b})){QPainterPath arrow;arrow.moveTo(p-n*8);arrow.lineTo(p);arrow.moveTo(p-n*2.5+t);arrow.lineTo(p);arrow.lineTo(p-n*2.5-t);add(arrow,QPen(QColor("#222222"),.4));
                 auto *label=target->addSimpleText(r.label);fontFor(label,.3);label->setBrush(QColor("#222222"));label->setPos(p-n*10+QPointF(1,-2));label->setZValue(6);label->setData(kindRole,"cuttingLabel");label->setData(viewRole,parent.id);label->setData(idRole,section.viewId);label->setFlag(QGraphicsItem::ItemIsSelectable,target==this->scene);label->setAcceptedMouseButtons(Qt::NoButton);}
@@ -1843,15 +1872,16 @@ struct DrawingSheetEditor::Impl{
         if(readOnly||computing)return;
         const auto id=selectedView();const auto *base=viewFor(id);const auto *layout=layoutFor(id);
         if(!base||!layout||base->kind!=DrawingViewKind::ProjectedEdges||drawingIsDetail(*layout)||layout->interruption){say(QStringLiteral("Seleziona una vista proiettata senza interruzione."));return;}
-        QDialog dialog(owner);dialog.setObjectName("drawingSteppedSectionDialog");dialog.setWindowTitle(QStringLiteral("Sezione rimossa a gradino"));auto *form=new QFormLayout(&dialog);
+        QDialog dialog(owner);dialog.setObjectName("drawingSteppedSectionDialog");dialog.setWindowTitle(QStringLiteral("Sezione rimossa a gradini"));auto *form=new QFormLayout(&dialog);
         auto *label=new QLineEdit("G",&dialog);label->setObjectName("drawingStepLabel");label->setMaxLength(8);form->addRow(QStringLiteral("Identificativo"),label);
         const auto spin=[&](const char *name,const QString &title,double value){auto *s=new QDoubleSpinBox(&dialog);s->setObjectName(name);s->setRange(-1e6,1e6);s->setDecimals(4);s->setSuffix(" mm");s->setValue(value);form->addRow(title,s);return s;};
         const auto box=drawingBreakBounds(*visibility.at(id));const double x=box.left()/base->scale,y=-box.center().y()/base->scale,width=std::max(1.,box.width()/base->scale);
         auto *ax=spin("drawingStepStartX","Inizio X",x),*ay=spin("drawingStepStartY","Inizio Y",y),*bx=spin("drawingStepEndX","Fine base X",x+width),*by=spin("drawingStepEndY","Fine base Y",y);
         auto *at=spin("drawingStepAt","Distanza del gradino dall’inizio",width/2),*offset=spin("drawingStepOffset","Scostamento del secondo piano",5);
-        auto *hint=new QLabel(QStringLiteral("Coordinate nel piano madre, in mm modello. Offset positivo a destra della direzione inizio→fine. Un solo gradino; solo contorni del taglio e tratteggio. Dopo OK posiziona l’anteprima sul foglio."),&dialog);hint->setWordWrap(true);form->addRow(hint);
+        auto *extra=additionalSectionSteps(form,DrawingSectionStep{at->value(),offset->value()});
+        auto *hint=new QLabel(QStringLiteral("Coordinate in mm modello. Distanze crescenti dall’inizio; scostamenti assoluti dal primo piano, positivi a destra della direzione inizio→fine. Zero riporta al piano iniziale. Dopo OK posiziona l’anteprima sul foglio."),&dialog);hint->setWordWrap(true);form->addRow(hint);
         auto *error=new QLabel(&dialog);error->setWordWrap(true);form->addRow(error);auto *buttons=new QDialogButtonBox(QDialogButtonBox::Ok|QDialogButtonBox::Cancel,&dialog);form->addRow(buttons);
-        connect(buttons,&QDialogButtonBox::rejected,&dialog,&QDialog::reject);connect(buttons,&QDialogButtonBox::accepted,&dialog,[&]{const auto result=owner->beginSectionPlacement(id,{ax->value(),ay->value()},{bx->value(),by->value()},label->text().trimmed().toUpper(),false,DrawingSectionStyle::Removed,DrawingSectionStep{at->value(),offset->value()});error->setText(result);if(result.isEmpty())dialog.accept();});dialog.exec();
+        connect(buttons,&QDialogButtonBox::rejected,&dialog,&QDialog::reject);connect(buttons,&QDialogButtonBox::accepted,&dialog,[&]{const auto result=owner->beginSectionPlacement(id,{ax->value(),ay->value()},{bx->value(),by->value()},label->text().trimmed().toUpper(),false,DrawingSectionStyle::Removed,sectionStepValues(at->value(),offset->value(),extra));error->setText(result);if(result.isEmpty())dialog.accept();});dialog.exec();
     }
     void beginTechnicalSection(){
         if(readOnly)return;
@@ -1899,13 +1929,14 @@ struct DrawingSheetEditor::Impl{
         for(auto *s:{stepAt,stepOffset}){s->setRange(-1e6,1e6);s->setDecimals(4);s->setSuffix(" mm");}
         stepAt->setObjectName("drawingStepAt");stepOffset->setObjectName("drawingStepOffset");
         if(layout.relation.step){style->setEnabled(false);stepAt->setValue(layout.relation.step->at);stepOffset->setValue(layout.relation.step->offset);form->addRow(QStringLiteral("Distanza del gradino"),stepAt);form->addRow(QStringLiteral("Scostamento del piano"),stepOffset);}else{stepAt->hide();stepOffset->hide();}
+        auto *extra=layout.relation.step?additionalSectionSteps(form,*layout.relation.step):nullptr;
         if(section){form->addRow(QStringLiteral("Tipo:"),style);form->addRow(QStringLiteral("Identificativo:"),label);form->addRow(reverse);}else{style->hide();label->hide();reverse->hide();}form->addRow(flag);
         auto *angle=new NumericInput(&dialog);angle->setObjectName("drawingAuxiliaryAngle");angle->setRange(-360,360);angle->setDecimals(4);angle->setSuffix(QStringLiteral("°"));angle->setValue(layout.relation.auxiliaryAngle);
         if(auxiliary)form->addRow(QStringLiteral("Lato di osservazione:"),angle);else angle->hide();
         auto *references=new QCheckBox(QStringLiteral("Sezioni del piano come riferimenti di quota"),&dialog);references->setObjectName("drawingDerivedSectionReferences");references->setChecked(v->sectionReferences);if(!section)form->addRow(references);else references->hide();
-        auto *note=new QLabel(layout.relation.step?QStringLiteral("Sezione rimossa a un gradino. Distanza e scostamento sono in mm modello; il verso delle frecce non cambia i due piani. Scala e corpi seguono la madre. Maniglie della linea, sgancio e viste dipendenti non disponibili."):section?QStringLiteral("Scala, piano e corpi seguono la madre. Ridefinisci linea di taglio conserva quote e identificativo. Per una mezza sezione indica prima un punto sull’asse: il cambio tipo non riposiziona l’asse automaticamente."):QStringLiteral("Scala, piano e corpi seguono la vista madre. Sgancia vista conserva l'orientamento corrente e permette modifiche indipendenti."),&dialog);note->setWordWrap(true);form->addRow(note);
+        auto *note=new QLabel(layout.relation.step?QStringLiteral("Sezione rimossa a gradini. Distanze crescenti e scostamenti assoluti in mm modello; zero riporta al primo piano. Il verso delle frecce non cambia i piani. Scala e corpi seguono la madre. Maniglie della linea, sgancio e viste dipendenti non disponibili."):section?QStringLiteral("Scala, piano e corpi seguono la madre. Ridefinisci linea di taglio conserva quote e identificativo. Per una mezza sezione indica prima un punto sull’asse: il cambio tipo non riposiziona l’asse automaticamente."):QStringLiteral("Scala, piano e corpi seguono la vista madre. Sgancia vista conserva l'orientamento corrente e permette modifiche indipendenti."),&dialog);note->setWordWrap(true);form->addRow(note);
         auto *error=new QLabel(&dialog);error->setWordWrap(true);form->addRow(error);auto *buttons=new QDialogButtonBox(QDialogButtonBox::Ok|QDialogButtonBox::Cancel,&dialog);form->addRow(buttons);
-        connect(buttons,&QDialogButtonBox::rejected,&dialog,&QDialog::reject);connect(buttons,&QDialogButtonBox::accepted,&dialog,[&]{auto next=state;for(auto &p:next.views)if(p.viewId==id){p.title=title->text().trimmed();if(section){p.relation.label=label->text().trimmed().toUpper();p.relation.hatch=flag->isChecked();p.relation.reverse=reverse->isChecked();if(p.relation.step)p.relation.step=DrawingSectionStep{stepAt->value(),stepOffset->value()};}else{p.relation.aligned=flag->isChecked();if(auxiliary)p.relation.auxiliaryAngle=angle->value();}}for(auto &v:next.drawing.views)if(v.id==id){if(section)v.sectionStyle=DrawingSectionStyle(style->currentIndex());else v.sectionReferences=references->isChecked();}const auto result=changeViews(std::move(next),QStringLiteral("Proprieta' vista derivata"));error->setText(result);if(result.isEmpty())dialog.accept();});dialog.exec();
+        connect(buttons,&QDialogButtonBox::rejected,&dialog,&QDialog::reject);connect(buttons,&QDialogButtonBox::accepted,&dialog,[&]{auto next=state;for(auto &p:next.views)if(p.viewId==id){p.title=title->text().trimmed();if(section){p.relation.label=label->text().trimmed().toUpper();p.relation.hatch=flag->isChecked();p.relation.reverse=reverse->isChecked();if(p.relation.step)p.relation.step=sectionStepValues(stepAt->value(),stepOffset->value(),extra);}else{p.relation.aligned=flag->isChecked();if(auxiliary)p.relation.auxiliaryAngle=angle->value();}}for(auto &v:next.drawing.views)if(v.id==id){if(section)v.sectionStyle=DrawingSectionStyle(style->currentIndex());else v.sectionReferences=references->isChecked();}const auto result=changeViews(std::move(next),QStringLiteral("Proprieta' vista derivata"));error->setText(result);if(result.isEmpty())dialog.accept();});dialog.exec();
     }
     void styleDialog(){
         if(readOnly)return;
@@ -2005,7 +2036,7 @@ DrawingSheetEditor::DrawingSheetEditor(DrawingSheet sheet,DrawingEditorModel mod
     action(QStringLiteral("Vista derivata..."),"drawingDerivedViewAction",[this]{impl_->derivedDialog();});
     action(QStringLiteral("Vista interrotta..."),"drawingBreakViewAction",[this]{impl_->breakDialog();});
     action(QStringLiteral("Vista ausiliaria..."),"drawingAuxiliaryViewAction",[this]{impl_->auxiliaryDialog();});
-    action(QStringLiteral("Sezione a gradino..."),"drawingSteppedSectionAction",[this]{impl_->steppedSectionDialog();});
+    action(QStringLiteral("Sezione a gradini..."),"drawingSteppedSectionAction",[this]{impl_->steppedSectionDialog();});
     action(QStringLiteral("Sezione da linea di taglio"),"drawingTechnicalSectionAction",[this]{impl_->beginTechnicalSection();});
     action(QStringLiteral("Sgancia vista"),"drawingDetachViewAction",[this]{impl_->report(detachView(impl_->selectedView()));});
     action(QStringLiteral("Libera/ripristina allineamento"),"drawingReleaseAlignmentAction",[this]{const auto *l=impl_->layoutFor(impl_->selectedView());impl_->report(setViewAlignment(impl_->selectedView(),l?!l->relation.aligned:false));});

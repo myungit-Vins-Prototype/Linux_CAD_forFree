@@ -605,3 +605,12 @@ Tratteggio e materiale sono calcolati separatamente nei due piani, poi ritagliat
 Limiti di questo incremento: un solo gradino, **sezione rimossa**; niente bordi proiettati posteriori, facce ombreggiate, sezione completa/mezza, sgancio o viste dipendenti. Le maniglie della linea e la ridefinizione grafica sono disabilitate; i parametri del gradino si modificano nelle proprietà. Piani angolari/allineati e gradini multipli restano nella roadmap.
 
 Schema del documento geometrico **8** e del foglio **15**, emessi soltanto in presenza del gradino; i formati precedenti restano leggibili e i downgrade incompatibili vengono rifiutati. Modello `.prt` e contenitore `.drw` invariati. Verifiche effettive e stato dell’eseguibile nel registro `CLAUDE.md`.
+
+
+### Sezioni rimosse a gradini multipli (24 ottobre 2026)
+
+Il comando Sezione a gradini e le proprietà della vista permettono fino a 32 transizioni. Il primo gradino conserva i campi numerici; una tabella consente di aggiungere e rimuovere i successivi. Distanze strettamente crescenti, interne alla linea base, in mm modello. Gli scostamenti sono assoluti rispetto al piano iniziale, non incrementali: zero riporta sul primo piano; due piani consecutivi devono differire oltre la tolleranza.
+
+Ogni fascia ritaglia curve esatte e materiale del relativo piano parallelo. Il raccordo non genera bordi quotabili. Le quote sui bordi reali conservano provenienza e agganci topologici. Se entrambi gli estremi di un ramo appartengono a raccordi compatibili, l’aggancio di estremo è segnalato ambiguo: non si sceglie un raccordo per indice o vicinanza.
+
+Schema documento9/foglio16 solo in presenza di transizioni aggiuntive (`additionalSteps`); il gradino singolo conserva8/15. Vecchi file leggibili, downgrade con perdita dei gradini rifiutato. Restano escluse sezioni complete/mezzesezioni, piani angolari, ombreggiatura, derivate/sgancio e maniglie grafiche. Suite derivati verificata automaticamente con tre piani, quote, aggiornamento modello, archi, frame ruotati, codec, UI, Undo/Redo e PDF; prova manuale differita dall’utente. Esiti complessivi nel registro CLAUDE.md.

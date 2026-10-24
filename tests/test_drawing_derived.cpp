@@ -23,6 +23,7 @@
 #include <QMouseEvent>
 #include <QTemporaryDir>
 #include <QTimer>
+#include <QTableWidget>
 #include <QTreeWidget>
 #include <iostream>
 #include <stdexcept>
@@ -142,8 +143,51 @@ void steppedSectionRegression(){
  const auto output=qEnvironmentVariable("FORGECAD_STEP_OUTPUT");if(!output.isEmpty()){require(e.grab().save(output+"/editor.png"),"cattura gradino");ok(e.exportPdf(output+"/gradino.pdf",report));}
  std::cout<<"PASS gradino: geometria esatta, quote, agganci, assi/richiami, modello, codec, Undo, PDF e protezioni\n";
 }
+void multipleStepsRegression(){
+ DrawingEditorModel model;model.snapshot.version={QUuid::createUuid(),{}};
+ model.snapshot.bodies={source(makeBox(Frame3(),8,4,8)),source(makeBox(Frame3(Vec3(12,6,0),Vec3(0,0,1),Vec3(1,0,0)),8,4,12),2),source(makeBox(Frame3(Vec3(24,0,0),Vec3(0,0,1),Vec3(1,0,0)),8,4,16),3)};model.choices={{1,"Primo"},{2,"Secondo"},{3,"Terzo"}};
+ DrawingSheet sheet;sheet.drawing.model=model.snapshot.version;DrawingSheetEditor e(sheet,model);e.resize(1250,820);e.show();QApplication::processEvents();e.fitSheet();
+ DrawingView parent;parent.kind=DrawingViewKind::ProjectedEdges;ok(e.insertView(parent,{parent.id,"Madre multipla",{50,60},{1,2,3}}));
+ const auto original=bytes(e.sheet());DrawingSectionStep steps{12,-6,{{24,0}}};
+ ok(e.beginSectionPlacement(parent.id,{-2,2},{36,2},"M",false,DrawingSectionStyle::Removed,steps));mouse(e,{160,130},true);const auto id=e.sheet().drawing.views.back().id;
+ require(e.sections(id).size()==12&&view(e,id).step->additional.size()==1,"tre piani e ritorno al piano iniziale");
+ for(const auto &curve:e.sections(id)){const auto p=curve.sourceGeometry->point(curve.range.lo);close(p.y(),curve.featureId==2?8:2,"offset assoluti per tre fasce");}
+ const auto &curves=e.sections(id);const auto edge=std::find_if(curves.begin(),curves.end(),[](const auto &c){return c.featureId==3&&std::abs(arcLength(*c.curve,c.range)-16)<1e-7;});require(edge!=curves.end(),"bordo del terzo piano");
+ DrawingDimension dimension;dimension.viewId=id;dimension.measure=DrawingMeasure::Distance;dimension.references={drawingAttachment(view(e,id),*edge,model.snapshot,DrawingPointRole::Start),drawingAttachment(view(e,id),*edge,model.snapshot,DrawingPointRole::End)};dimension.section=dimension.references[0].curve;ok(e.addDimension(dimension,{200,155}));close(e.dimensionResult(dimension.id).value,16,"quota terzo piano");
+ DrawingAxis axis;axis.viewId=id;axis.references=dimension.references;ok(e.addAxis(axis));DrawingAnnotation note;note.viewId=id;note.reference=dimension.references[0];note.text="Terzo piano";note.position={200,100};ok(e.addAnnotation(note));
+ const auto saved=bytes(e.sheet());auto json=QJsonDocument::fromJson(saved).object();require(json["schema"].toInt()==16&&json["drawing"].toObject()["schema"].toInt()==9,"schema minimo gradini multipli");
+ DrawingSheet decoded;ok(decodeDrawingSheet(saved,decoded));DrawingSheetEditor reopened(decoded,model);close(reopened.dimensionResult(dimension.id).value,16,"riapertura quota multipla");require(reopened.axisResult(axis.id).status==DrawingDimensionStatus::Ready&&reopened.annotationResult(note.id).status==DrawingDimensionStatus::Ready,"riapertura assi e note schema9");
+ json["schema"]=15;require(!decodeDrawingSheet(QJsonDocument(json).toJson(),decoded).isEmpty()&&bytes(decoded)==saved,"downgrade multiplo rifiutato atomicamente");
+ json=QJsonDocument::fromJson(saved).object();auto document=json["drawing"].toObject();document["schema"]=8;DrawingDocument rejected;require(!decodeDrawingDocument(QJsonDocument(document).toJson(),rejected).isEmpty(),"downgrade documento multiplo rifiutato");
+ ok(e.reverseSection(id));close(e.dimensionResult(dimension.id).value,16,"inversione conserva terzo piano");ok(e.undo());require(bytes(e.sheet())==saved,"Undo inversione multipla");
+ auto changed=layout(e,id);changed.relation.step->additional[0].offset=-1;ok(e.updateView(view(e,id),changed));close(e.dimensionResult(dimension.id).value,16,"modifica terzo piano conserva quota");ok(e.undo());require(bytes(e.sheet())==saved,"Undo modifica multipla");
+ for(const auto &bad:std::vector<DrawingSectionStep>{{12,-6,{{12,0}}},{12,-6,{{10,0}}},{12,-6,{{40,0}}},{12,-6,{{24,-6}}},{12,-6,{{24,std::numeric_limits<double>::infinity()}}}}){require(!e.beginSectionPlacement(parent.id,{-2,2},{36,2},"X",false,DrawingSectionStyle::Removed,bad).isEmpty()&&!e.hasViewPlacement()&&bytes(e.sheet())==saved,"gradini invalidi rifiutati atomicamente");}
+ auto grown=model;grown.snapshot.bodies[2]=source(makeBox(Frame3(Vec3(24,0,0),Vec3(0,0,1),Vec3(1,0,0)),8,4,18),3);ok(reopened.updateModel(grown));close(reopened.dimensionResult(dimension.id).value,18,"aggiornamento modello terzo piano");
+ auto excessive=steps;excessive.additional.assign(32,{24,0});auto invalid=view(e,id);invalid.step=excessive;std::vector<DrawingCurve> untouched=e.sections(id);const auto count=untouched.size();require(!sectionDrawingView(model.snapshot,invalid,untouched).isEmpty()&&untouched.size()==count,"limite gradini senza output parziale");
+ const Frame3 frame(Vec3(7,-11,23),normalized(Vec3(1,2,3)),Vec3(1,-1,0));auto rotated=model.snapshot;
+ rotated.bodies={source(makeBox(frame,8,4,8)),source(makeBox(Frame3(frame.toGlobal(Vec3(12,6,0)),frame.zDir(),frame.xDir()),8,4,12),2),source(makeBox(Frame3(frame.toGlobal(Vec3(24,0,0)),frame.zDir(),frame.xDir()),8,4,16),3)};
+ for(double scale:{.5,1.,2.}){auto rv=view(e,id);rv.scale=scale;rv.plane=Frame3(frame.toGlobal(Vec3(-2,2,0)),-frame.yDir(),frame.xDir());std::vector<DrawingCurve> result;ok(sectionDrawingView(rotated,rv,result));require(result.size()==12,"tre piani ruotati a tre scale");for(const auto &curve:result)close(rv.plane.toLocal(curve.curve->point(curve.range.lo)).z(),0,"curve nel piano composto ruotato");}
+ // A continuous bar crosses every divider: no artificial walls, full material.
+ auto bar=model.snapshot;bar.bodies={source(makeBox(Frame3(),32,10,4))};auto v=view(e,id);v.step=DrawingSectionStep{12,-3,{{24,0}}};std::vector<DrawingCurve> pieces;ok(sectionDrawingView(bar,v,pieces));require(pieces.size()==8,"tre fasce senza pareti artificiali");
+ DrawingSectionHatch hatch;ok(drawingSectionHatch(bar,v,pieces,hatch));for(double x:{5.,15.,28.})require(hatch.material.contains({x,-2}),"tratteggio in ogni fascia");
+ double length=0;for(const auto &piece:pieces)length+=arcLength(*piece.curve,piece.range);close(length,72,"perimetro composto senza perdita o duplicazione");
+ // Endpoints of middle strips have two compatible dividers: report ambiguity,
+ // never choose an endpoint from its parameter index.
+ bool ambiguous=false;for(const auto &piece:pieces){const auto a=v.plane.toLocal(piece.curve->point(piece.range.lo)),b=v.plane.toLocal(piece.curve->point(piece.range.hi));if(std::min(a.x(),b.x())>11.9&&std::max(a.x(),b.x())<24.1&&std::abs(a.x()-b.x())>1){const auto ref=drawingAttachment(v,piece,bar,DrawingPointRole::Start);require(resolveDrawingAttachment(v,bar,pieces,ref).status==DrawingDimensionStatus::Ambiguous,"estremo fra due raccordi ambiguo senza associazione arbitraria");ambiguous=true;}}
+ require(ambiguous,"ambiguita raccordi esercitata");
+ auto cylinder=bar;cylinder.bodies={source(makeCylinder(Frame3(Vec3(10,0,0),Vec3(0,1,0),Vec3(1,0,0)),5,10))};
+ for(double scale:{.5,1.,2.}){v.scale=scale;v.step=DrawingSectionStep{10,-3,{{14,0}}};std::vector<DrawingCurve> arcs;ok(sectionDrawingView(cylinder,v,arcs));double perimeter=0;for(const auto &arc:arcs){require(arc.curve->type()==CurveType::Circle,"archi esatti su tre fasce");perimeter+=arcLength(*arc.curve,arc.range);close(norm(drawingPrimitive(v,arc).firstAxis),5,"raggio su tre piani");}close(perimeter,10*kPi,"circonferenza senza duplicazioni nelle fasce multiple");}
+ // UI adds/removes numeric rows and produces an ordinary placement preview.
+ e.canvas()->scene()->clearSelection();for(auto *item:e.canvas()->scene()->items())if(item->data(1).toUuid()==parent.id&&item->flags().testFlag(QGraphicsItem::ItemIsSelectable)){item->setSelected(true);break;}QApplication::processEvents();
+ QTimer::singleShot(0,&e,[&]{auto *dialog=e.findChild<QDialog *>("drawingSteppedSectionDialog");require(dialog,"dialogo gradini multipli");
+  for(const auto &entry:std::vector<std::pair<const char *,double>>{{"drawingStepStartX",-2},{"drawingStepStartY",2},{"drawingStepEndX",36},{"drawingStepEndY",2},{"drawingStepAt",12},{"drawingStepOffset",-6}})dialog->findChild<QDoubleSpinBox *>(entry.first)->setValue(entry.second);
+  auto *table=dialog->findChild<QTableWidget *>("drawingAdditionalSteps");dialog->findChild<QPushButton *>("drawingAddStep")->click();require(table->rowCount()==1,"aggiunta riga gradino");dialog->findChild<QPushButton *>("drawingRemoveStep")->click();require(table->rowCount()==0,"rimozione riga gradino");dialog->findChild<QPushButton *>("drawingAddStep")->click();static_cast<QDoubleSpinBox *>(table->cellWidget(0,0))->setValue(24);static_cast<QDoubleSpinBox *>(table->cellWidget(0,1))->setValue(0);
+  const auto output=qEnvironmentVariable("FORGECAD_STEP_OUTPUT");if(!output.isEmpty())require(dialog->grab().save(output+"/multi-dialog.png"),"cattura tabella gradini");dialog->findChild<QDialogButtonBox *>()->button(QDialogButtonBox::Ok)->click();});e.findChild<QAction *>("drawingSteppedSectionAction")->trigger();require(e.hasViewPlacement()&&bytes(e.sheet())==saved,"anteprima multipla senza mutazioni");mouse(e,{180,175},true);require(e.sheet().drawing.views.back().step->additional.size()==1,"tabella trasferita alla vista");ok(e.undo());require(bytes(e.sheet())==saved,"Undo inserimento da tabella");ok(e.redo());require(e.sheet().drawing.views.back().step->additional.size()==1,"Redo gradini");ok(e.undo());
+ DrawingPdfReport report;QTemporaryDir tmp;ok(e.exportPdf(tmp.filePath("multipla.pdf"),report));const auto output=qEnvironmentVariable("FORGECAD_STEP_OUTPUT");if(!output.isEmpty()){require(e.grab().save(output+"/multi-editor.png"),"cattura gradini multipli");ok(e.exportPdf(output+"/multipla.pdf",report));}
+ std::cout<<"PASS gradini multipli: tre piani, ritorno, quote, codec, Undo, UI, PDF e ambiguita conservativa\n";
+}
 int main(int argc,char **argv){QApplication app(argc,argv);try{
- steppedSectionRegression();
+ steppedSectionRegression();multipleStepsRegression();
  sectionFrameRegression();sectionSnapTests();sectionEditTests();sectionViewSelectionTests();
  sectionOrientationRegression();
  DrawingEditorModel model;model.snapshot.version={QUuid::createUuid(),{}};model.snapshot.bodies={source(makeBox(Frame3(),20,12,8))};model.choices={{1,"Corpo"}};DrawingSheet sheet;sheet.drawing.model=model.snapshot.version;DrawingSheetEditor editor(sheet,model);editor.resize(1250,820);editor.show();QApplication::processEvents();editor.fitSheet();

@@ -111,7 +111,7 @@ const DrawingCurve &curveFor(const DrawingView &view,const DrawingSourceBody &so
 // L'ancoraggio segue un vertice o il bordo che termina la sezione, mai l'indice/verso del parametro.
 bool anchorAt(const DrawingView &view,const DrawingSourceBody &source,const DrawingCurve &curve,const DrawingAttachment &ref,const Vec3 &point){
     if(view.step){
-        if(ref.clipBoundary==4)return std::abs(view.plane.toLocal(point).x()-view.step->at)<=view.tolerance;
+        if(ref.clipBoundary==4){for(const auto &step:view.step->transitions())if(std::abs(view.plane.toLocal(point).x()-step.at)<=view.tolerance)return true;return false;}
         if(!curve.sourceGeometry)return false;
         const auto shift=curve.sourceGeometry->point(curve.range.lo)-curve.curve->point(curve.range.lo);
         auto original=curve;original.curve=curve.sourceGeometry;auto plain=view;plain.step.reset();
@@ -149,7 +149,7 @@ void setAnchor(const DrawingView &view,const DrawingSourceBody &source,const Dra
         const auto shift=curve.sourceGeometry->point(curve.range.lo)-curve.curve->point(curve.range.lo);
         auto original=curve;original.curve=curve.sourceGeometry;auto plain=view;plain.step.reset();
         setAnchor(plain,source,original,point+shift,ref);
-        if(ref.vertexName.isEmpty()&&ref.boundaryName.isEmpty()&&std::abs(view.plane.toLocal(point).x()-view.step->at)<=view.tolerance)ref.clipBoundary=4;
+        if(ref.vertexName.isEmpty()&&ref.boundaryName.isEmpty())for(const auto &step:view.step->transitions())if(std::abs(view.plane.toLocal(point).x()-step.at)<=view.tolerance)ref.clipBoundary=4;
         return;
     }
     for(auto vertex:source.body->vertices()){

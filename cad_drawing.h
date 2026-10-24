@@ -33,11 +33,20 @@ struct DrawingModelSnapshot {
 enum class DrawingSectionStyle { Removed, Full, HalfRight, HalfLeft };
 enum class DrawingViewKind { Section, ProjectedEdges };
 enum class DrawingCurveKind { Section, ProjectedEdge, ApparentLine, ApparentArc };
-// Un gradino fra due piani paralleli: ascissa di transizione e quota del secondo
-// piano nel frame della sezione (mm modello). Il raccordo non e' un bordo misurabile.
+// Transizioni ordinate fra piani paralleli: ascissa e offset assoluto dal primo
+// piano nel frame della sezione (mm modello). I raccordi non sono bordi misurabili.
+struct DrawingSectionTransition {
+    double at=0,offset=0;
+    bool operator==(const DrawingSectionTransition &b)const{return at==b.at&&offset==b.offset;}
+};
 struct DrawingSectionStep {
     double at=0,offset=0;
-    bool operator==(const DrawingSectionStep &b)const{return at==b.at&&offset==b.offset;}
+    std::vector<DrawingSectionTransition> additional{};
+    std::vector<DrawingSectionTransition> transitions()const{
+        std::vector<DrawingSectionTransition> result{{at,offset}};
+        result.insert(result.end(),additional.begin(),additional.end());return result;
+    }
+    bool operator==(const DrawingSectionStep &b)const{return at==b.at&&offset==b.offset&&additional==b.additional;}
     bool operator!=(const DrawingSectionStep &b)const{return !(*this==b);}
 };
 struct DrawingView {

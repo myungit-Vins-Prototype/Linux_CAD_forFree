@@ -58,7 +58,7 @@ void derive(const DrawingView &parent,const DrawingViewRelation &r,DrawingView &
         // sul foglio: verticale resta verticale, obliqua resta obliqua.
         const auto foldedX=(delta.x()/length)*tangent-sign*(delta.y()/length)*z;
         child.kind=DrawingViewKind::Section;child.sectionReferences=false;child.step=r.step;
-        if(child.step){require(child.step->at>1e-7&&child.step->at<length-1e-7,"Il gradino deve essere interno alla linea di taglio.");child.step->offset*=sign;}
+        if(child.step){for(const auto &step:child.step->transitions())require(step.at>1e-7&&step.at<length-1e-7,"Ogni gradino deve essere interno alla linea di taglio.");child.step->offset*=sign;for(auto &step:child.step->additional)step.offset*=sign;}
         child.plane=Frame3(parent.plane.toGlobal(Vec3(r.cutStart.x(),r.cutStart.y(),0)),normal,legacy?tangent:foldedX);
     }
 }
@@ -264,17 +264,24 @@ QString drawingSectionHatch(const DrawingModelSnapshot &model,const DrawingView 
     try{
         DrawingSectionHatch prepared;if(view.kind!=DrawingViewKind::Section){result=std::move(prepared);return {};}
         if(view.step){
-            for(int side=0;side<2;++side){
-                auto part=view;part.step.reset();part.plane=Frame3::fromAxes(view.plane.origin()+(side?view.step->offset:0)*view.plane.zDir(),view.plane.xDir(),view.plane.yDir(),view.plane.zDir());
+            const auto steps=view.step->transitions();
+            for(std::size_t band=0;band<=steps.size();++band){
+                const double left=band?steps[band-1].at*view.scale:-std::numeric_limits<double>::infinity();
+                const double right=band<steps.size()?steps[band].at*view.scale:std::numeric_limits<double>::infinity();
+                auto part=view;part.step.reset();part.plane=Frame3::fromAxes(view.plane.origin()+(band?steps[band-1].offset:0)*view.plane.zDir(),view.plane.xDir(),view.plane.yDir(),view.plane.zDir());
                 std::vector<DrawingCurve> closed;auto error=sectionDrawingView(model,part,closed);if(!error.isEmpty())return error;
                 DrawingSectionHatch h;error=drawingSectionHatch(model,part,closed,h);if(!error.isEmpty())return error;
-                const double boundary=view.step->at*view.scale;auto box=h.material.boundingRect().adjusted(-1,-1,1,1);
-                if(side)box.setLeft(std::max(box.left(),boundary));else box.setRight(std::min(box.right(),boundary));
+                auto box=h.material.boundingRect().adjusted(-1,-1,1,1);
+                box.setLeft(std::max(box.left(),left));box.setRight(std::min(box.right(),right));
                 if(box.width()>0){QPainterPath mask;mask.addRect(box);prepared.material=prepared.material.united(h.material.intersected(mask));}
                 for(int i=0;i+1<h.lines.elementCount();i+=2){const auto a=h.lines.elementAt(i),b=h.lines.elementAt(i+1);QPointF first(a.x,a.y),last(b.x,b.y);
-                    const double fa=(side?1:-1)*(first.x()-boundary),fb=(side?1:-1)*(last.x()-boundary);if(fa<0&&fb<0)continue;
-                    if(fa<0||fb<0){const auto p=first+(last-first)*(fa/(fa-fb));if(fa<0)first=p;else last=p;}
-                    prepared.lines.moveTo(first);prepared.lines.lineTo(last);
+                    bool retained=true;
+                    for(int side=0;side<2;++side){const double boundary=side?right:left;if(!std::isfinite(boundary))continue;
+                        const double fa=(side?-1:1)*(first.x()-boundary),fb=(side?-1:1)*(last.x()-boundary);
+                        if(fa<0&&fb<0){retained=false;break;}
+                        if(fa<0||fb<0){const auto p=first+(last-first)*(fa/(fa-fb));if(fa<0)first=p;else last=p;}
+                    }
+                    if(retained){prepared.lines.moveTo(first);prepared.lines.lineTo(last);}
                 }
                 prepared.warnings.append(h.warnings);
             }

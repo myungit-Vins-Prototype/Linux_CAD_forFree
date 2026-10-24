@@ -58,10 +58,18 @@ bool genericProjection(const Curve<3> &curve){
 void validateView(const DrawingView &view) {
     require(!view.id.isNull(), "Vista senza identita'.");
     require(view.kind==DrawingViewKind::Section || view.kind==DrawingViewKind::ProjectedEdges,"Tipo di vista non supportato.");
-    if(view.step)require(view.kind==DrawingViewKind::Section&&view.sectionStyle==DrawingSectionStyle::Removed
-        &&!view.sectionReferences&&std::isfinite(view.step->at)&&std::isfinite(view.step->offset)
-        &&view.step->at>1e-7&&view.step->at<=1e7&&std::abs(view.step->offset)>view.tolerance&&std::abs(view.step->offset)<=1e7,
-        "Il gradino richiede una sezione rimossa, posizione positiva e offset finito non nullo.");
+    if(view.step){
+        require(view.kind==DrawingViewKind::Section&&view.sectionStyle==DrawingSectionStyle::Removed&&!view.sectionReferences,
+                "I gradini richiedono una sezione rimossa.");
+        require(view.step->additional.size()<32,"Sono ammessi al massimo 32 gradini.");
+        double previousAt=0,previousOffset=0;
+        for(const auto &step:view.step->transitions()){
+            require(std::isfinite(step.at)&&std::isfinite(step.offset)&&step.at>previousAt+1e-7&&step.at<=1e7
+                    &&std::abs(step.offset-previousOffset)>view.tolerance&&std::abs(step.offset)<=1e7,
+                    "Ordina le distanze dei gradini e usa scostamenti finiti diversi dal piano precedente.");
+            previousAt=step.at;previousOffset=step.offset;
+        }
+    }
     require(int(view.sectionStyle)>=0&&int(view.sectionStyle)<=3&&(view.kind==DrawingViewKind::Section||view.sectionStyle==DrawingSectionStyle::Removed),"Presentazione della sezione incoerente con la vista.");
     require(view.kind==DrawingViewKind::ProjectedEdges || !view.sectionReferences,"Riferimenti di sezione incoerenti con il tipo di vista.");
     require(std::isfinite(view.scale) && view.scale > 0, "Scala della vista non valida.");
@@ -205,22 +213,25 @@ QString sectionDrawingView(const DrawingModelSnapshot &model, const DrawingView 
         require(!model.version.documentId.isNull(), "Modello senza identita'.");
         std::vector<DrawingSection> prepared;
         if(view.step){
-            const auto step=*view.step;
-            const Plane divider(Frame3(view.plane.toGlobal(Vec3(step.at,0,0)),view.plane.xDir(),view.plane.yDir()));
-            for(int side=0;side<2;++side){
-                auto part=view;part.step.reset();const Vec3 shift=(side?step.offset:0)*view.plane.zDir();
+            const auto steps=view.step->transitions();
+            for(std::size_t band=0;band<=steps.size();++band){
+                const double left=band?steps[band-1].at:-std::numeric_limits<double>::infinity();
+                const double right=band<steps.size()?steps[band].at:std::numeric_limits<double>::infinity();
+                auto part=view;part.step.reset();const Vec3 shift=(band?steps[band-1].offset:0)*view.plane.zDir();
                 part.plane=Frame3::fromAxes(view.plane.origin()+shift,view.plane.xDir(),view.plane.yDir(),view.plane.zDir());
                 std::vector<DrawingCurve> pieces;const auto error=sectionDrawingView(model,part,pieces);if(!error.isEmpty())return error;
                 for(const auto &piece:pieces){
                     cancellationPoint();std::vector<double> cuts{piece.range.lo,piece.range.hi};
-                    const auto split=intersectCurveSurface(*piece.curve,piece.range,divider,view.tolerance);
-                    // Si ritagliano solo curve esistenti: nessun bordo viene creato sul raccordo.
-                    // Un bordo reale coincidente col raccordo resta parte del contorno.
-                    for(double t:split.parameters)if(t>piece.range.lo&&t<piece.range.hi)cuts.push_back(t);
+                    // Si ritagliano solo curve esistenti, senza creare bordi sui raccordi.
+                    for(double boundary:{left,right})if(std::isfinite(boundary)){
+                        const Plane divider(Frame3(view.plane.toGlobal(Vec3(boundary,0,0)),view.plane.xDir(),view.plane.yDir()));
+                        const auto split=intersectCurveSurface(*piece.curve,piece.range,divider,view.tolerance);
+                        for(double t:split.parameters)if(t>piece.range.lo&&t<piece.range.hi)cuts.push_back(t);
+                    }
                     std::sort(cuts.begin(),cuts.end());cuts.erase(std::unique(cuts.begin(),cuts.end()),cuts.end());
                     for(std::size_t i=1;i<cuts.size();++i){
                         const double x=view.plane.toLocal(piece.curve->point(cuts[i-1]+.5*(cuts[i]-cuts[i-1]))).x();
-                        if(side?x<step.at:x>step.at)continue;
+                        if(x<left||x>right)continue;
                         auto clipped=piece;clipped.range={cuts[i-1],cuts[i]};
                         clipped.sourceGeometry=piece.curve;clipped.sourceRange=clipped.range;clipped.hasSourceRange=true;
                         clipped.curve=translatedCurve(piece.curve,-shift);clipped.multipleBranches=true;
@@ -457,6 +468,7 @@ QString encodeDrawingDocument(const DrawingDocument &document, QByteArray &bytes
         const bool apparent=std::any_of(document.dimensions.begin(),document.dimensions.end(),[](const auto &d){return d.section.kind==DrawingCurveKind::ApparentLine||std::any_of(d.references.begin(),d.references.end(),[](const auto &r){return r.curve.kind==DrawingCurveKind::ApparentLine;});});
         const bool apparentArc=std::any_of(document.dimensions.begin(),document.dimensions.end(),[](const auto &d){return d.section.kind==DrawingCurveKind::ApparentArc||std::any_of(d.references.begin(),d.references.end(),[](const auto &r){return r.curve.kind==DrawingCurveKind::ApparentArc;});});
         const bool stepped=std::any_of(document.views.begin(),document.views.end(),[](const auto &v){return v.step.has_value();});
+        const bool multiple=std::any_of(document.views.begin(),document.views.end(),[](const auto &v){return v.step&&!v.step->additional.empty();});
         const bool technical=stepped||apparentArc||apparent||axisReferences||drawingNeedsSectionSchema(document);
         const bool attachments=technical||std::any_of(document.dimensions.begin(),document.dimensions.end(),[](const auto &d){return !d.references.empty()||d.decimals!=2;});
         const bool extended=attachments||std::any_of(document.views.begin(),document.views.end(),[](const auto &view){return view.kind!=DrawingViewKind::Section;})
@@ -465,7 +477,7 @@ QString encodeDrawingDocument(const DrawingDocument &document, QByteArray &bytes
         for(const auto &view:document.views){QJsonObject object{
             {"id",uuidText(view.id)},{"origin",vectorJson(view.plane.origin())},{"x",vectorJson(view.plane.xDir())},
             {"y",vectorJson(view.plane.yDir())},{"z",vectorJson(view.plane.zDir())},{"scale",view.scale},{"tolerance",view.tolerance}};
-            if(extended){object["kind"]=int(view.kind);object["sectionReferences"]=view.sectionReferences;}if(technical)object["sectionStyle"]=int(view.sectionStyle);if(view.step)object["step"]=QJsonArray{view.step->at,view.step->offset};views.append(object);}
+            if(extended){object["kind"]=int(view.kind);object["sectionReferences"]=view.sectionReferences;}if(technical)object["sectionStyle"]=int(view.sectionStyle);if(view.step)object["step"]=QJsonArray{view.step->at,view.step->offset};if(view.step&&!view.step->additional.empty()){QJsonArray extra;for(const auto &step:view.step->additional)extra.append(QJsonArray{step.at,step.offset});object["additionalSteps"]=extra;}views.append(object);}
         for(const auto &dimension:document.dimensions){QJsonObject object{
             {"id",uuidText(dimension.id)},{"viewId",uuidText(dimension.viewId)},{"featureId",QString::number(dimension.section.featureId)},
             {"faceName",dimension.section.faceName},{"witness",QJsonArray{dimension.section.witness.x(),dimension.section.witness.y()}},
@@ -478,7 +490,7 @@ QString encodeDrawingDocument(const DrawingDocument &document, QByteArray &bytes
                 {"role",int(r.role)},{"fraction",r.fraction},{"polar",r.polar},{"supportFace",r.supportFace},{"curveSide",r.curveSide},{"anchorSide",r.anchorSide},{"vertex",r.vertexName},{"boundary",r.boundaryName}});if(technical){auto object=references.last().toObject();if(r.curve.contourSide)object["contourSide"]=r.curve.contourSide;object["clipBoundary"]=r.clipBoundary;if(!r.axisId.isNull())object["axisId"]=uuidText(r.axisId);references[references.size()-1]=object;}}
                 object["references"]=references;object["angleSides"]=dimension.angleSides;object["decimals"]=dimension.decimals;}
             dimensions.append(object);}
-        const QByteArray prepared=QJsonDocument(QJsonObject{{"format","ForgeCAD.DrawingPrototype"},{"schema",stepped?8:apparentArc?7:apparent?6:axisReferences?5:technical?4:attachments?3:extended?2:1},
+        const QByteArray prepared=QJsonDocument(QJsonObject{{"format","ForgeCAD.DrawingPrototype"},{"schema",multiple?9:stepped?8:apparentArc?7:apparent?6:axisReferences?5:technical?4:attachments?3:extended?2:1},
             {"version",versionJson(document.version)},{"model",versionJson(document.model)},{"views",views},{"dimensions",dimensions}}).toJson(QJsonDocument::Compact);
         require(prepared.size() <= kMaxDrawingBytes, "Tavola troppo grande per il codec del prototipo.");
         bytes = prepared;
@@ -494,7 +506,7 @@ QString decodeDrawingDocument(const QByteArray &bytes, DrawingDocument &document
         require(parse.error == QJsonParseError::NoError && json.isObject(), "Documento tavola JSON non valido.");
         const auto root = json.object();
         const double schema=root["schema"].toDouble(-1);
-        require(root["format"].toString()==QLatin1String("ForgeCAD.DrawingPrototype")&&(schema==1||schema==2||schema==3||schema==4||schema==5||schema==6||schema==7||schema==8),"Formato o schema della tavola non supportato.");
+        require(root["format"].toString()==QLatin1String("ForgeCAD.DrawingPrototype")&&(schema==1||schema==2||schema==3||schema==4||schema==5||schema==6||schema==7||schema==8||schema==9),"Formato o schema della tavola non supportato.");
         require(root["views"].isArray() && root["dimensions"].isArray(), "Elenchi della tavola assenti.");
         const auto views = root["views"].toArray(), dimensions = root["dimensions"].toArray();
         require(views.size() <= qsizetype(kMaxRecords) && dimensions.size() <= qsizetype(kMaxRecords), "Troppi elementi nella tavola.");
@@ -513,6 +525,7 @@ QString decodeDrawingDocument(const QByteArray &bytes, DrawingDocument &document
             else require(!v.contains("sectionStyle"),"Presentazione della sezione estranea allo schema dichiarato.");
             if(v.contains("step")){require(schema>=8&&v["step"].isArray(),"Gradino estraneo allo schema dichiarato.");
                 const auto a=v["step"].toArray();require(a.size()==2&&a[0].isDouble()&&a[1].isDouble(),"Gradino incompleto.");view.step=DrawingSectionStep{a[0].toDouble(),a[1].toDouble()};}
+            if(v.contains("additionalSteps")){require(schema>=9&&view.step&&v["additionalSteps"].isArray(),"Gradini multipli estranei allo schema dichiarato.");const auto extra=v["additionalSteps"].toArray();require(!extra.isEmpty()&&extra.size()<32,"Numero di gradini non valido.");for(const auto &entry:extra){require(entry.isArray(),"Gradino non valido.");const auto a=entry.toArray();require(a.size()==2&&a[0].isDouble()&&a[1].isDouble(),"Gradino incompleto.");view.step->additional.push_back({a[0].toDouble(),a[1].toDouble()});}}
             prepared.views.push_back(std::move(view));
         }
         for (const auto &entry : dimensions) {
