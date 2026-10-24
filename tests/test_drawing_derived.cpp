@@ -10,6 +10,9 @@
 #include <QDialog>
 #include <QDir>
 #include <QDialogButtonBox>
+#include <QDoubleSpinBox>
+#include <QPushButton>
+#include <QLineEdit>
 #include <QGraphicsPathItem>
 #include <QGraphicsView>
 #include <QGraphicsScene>
@@ -87,7 +90,60 @@ void sectionOrientationRegression(){
 
 
 }
+void steppedSectionRegression(){
+ DrawingEditorModel m;m.snapshot.version={QUuid::createUuid(),{}};
+ m.snapshot.bodies={source(makeBox(Frame3(),8,4,8)),source(makeBox(Frame3(Vec3(12,6,0),Vec3(0,0,1),Vec3(1,0,0)),8,4,12),2)};m.choices={{1,"Primo"},{2,"Secondo"}};
+ DrawingSheet sheet;sheet.drawing.model=m.snapshot.version;DrawingSheetEditor e(sheet,m);e.resize(1250,820);e.show();QApplication::processEvents();e.fitSheet();
+ DrawingView parent;parent.kind=DrawingViewKind::ProjectedEdges;ok(e.insertView(parent,{parent.id,"Madre gradino",{50,60},{1,2}}));
+ const auto original=bytes(e.sheet());ok(e.beginSectionPlacement(parent.id,{-2,2},{22,2},"G",false,DrawingSectionStyle::Removed,DrawingSectionStep{12,-6}));
+ require(e.hasViewPlacement(),"anteprima sezione a gradino");mouse(e,{160,130},true);require(!e.hasViewPlacement(),"posizionamento sezione a gradino");const auto id=e.sheet().drawing.views.back().id;
+ require(view(e,id).step&&e.sections(id).size()==8,"due piani tagliano i due corpi distinti");
+ for(const auto &c:e.sections(id)){require(c.sourceGeometry&&c.hasSourceRange,"provenienza della geometria originale conservata");
+  const auto p=c.curve->point(.5*(c.range.lo+c.range.hi)),sourcePoint=c.sourceGeometry->point(.5*(c.range.lo+c.range.hi));
+  close(p.y(),2,"curva nel piano composto");close(sourcePoint.y(),c.featureId==1?2:8,"piani originali distinti");
+ }
+ const auto inserted=bytes(e.sheet());ok(e.undo());require(bytes(e.sheet())==original,"Undo inserimento gradino");ok(e.redo());require(bytes(e.sheet())==inserted,"Redo gradino");
+ const auto &pieces=e.sections(id);const auto edge=std::find_if(pieces.begin(),pieces.end(),[](const auto &c){return c.featureId==2&&std::abs(arcLength(*c.curve,c.range)-12)<1e-7;});require(edge!=pieces.end(),"lato secondo piano quotabile");
+ const auto dim=dimensionOfCurve(view(e,id),*edge);ok(e.addDimension(dim,{200,150}));close(e.dimensionResult(dim.id).value,12,"quota reale del secondo piano");
+ DrawingDimension endpoint;endpoint.viewId=id;endpoint.measure=DrawingMeasure::Distance;endpoint.references={drawingAttachment(view(e,id),*edge,m.snapshot,DrawingPointRole::Start),drawingAttachment(view(e,id),*edge,m.snapshot,DrawingPointRole::End)};endpoint.section=endpoint.references[0].curve;ok(e.addDimension(endpoint,{210,155}));close(e.dimensionResult(endpoint.id).value,12,"agganci estremi sul piano traslato");
+ DrawingAxis axis;axis.viewId=id;axis.references=endpoint.references;ok(e.addAxis(axis));DrawingAnnotation note;note.viewId=id;note.reference=endpoint.references[0];note.text="Secondo piano";note.position={200,100};ok(e.addAnnotation(note));
+ const auto saved=bytes(e.sheet());auto changed=layout(e,id);changed.relation.step=DrawingSectionStep{13,-5};ok(e.updateView(view(e,id),changed));require(view(e,id).step->at==13&&view(e,id).step->offset==-5,"modifica gradino sincronizza definizione");close(e.dimensionResult(endpoint.id).value,12,"modifica offset mantiene agganci nel modello");ok(e.undo());require(bytes(e.sheet())==saved,"Undo parametri del gradino");auto json=QJsonDocument::fromJson(saved).object();require(json["schema"].toInt()==15&&json["drawing"].toObject()["schema"].toInt()==8,"schema minimo gradino");
+ DrawingSheet decoded;ok(decodeDrawingSheet(saved,decoded));DrawingSheetEditor reopened(decoded,m);close(reopened.dimensionResult(dim.id).value,12,"riapertura quota gradino");close(reopened.dimensionResult(endpoint.id).value,12,"riapertura agganci gradino");require(reopened.annotationResult(note.id).status==DrawingDimensionStatus::Ready,"riapertura richiamo gradino");
+ json["schema"]=14;const auto sentinel=bytes(decoded);require(!decodeDrawingSheet(QJsonDocument(json).toJson(),decoded).isEmpty()&&bytes(decoded)==sentinel,"downgrade foglio rifiutato atomicamente");
+ auto doc=json["drawing"].toObject();doc["schema"]=7;DrawingDocument rejected;require(!decodeDrawingDocument(QJsonDocument(doc).toJson(),rejected).isEmpty(),"downgrade geometria rifiutato");
+ ok(e.reverseSection(id));close(e.dimensionResult(dim.id).value,12,"inversione conserva quota");close(e.dimensionResult(endpoint.id).value,12,"inversione conserva agganci");ok(e.undo());require(bytes(e.sheet())==saved,"Undo inversione");
+ auto grown=m;grown.snapshot.bodies[1]=source(makeBox(Frame3(Vec3(12,6,0),Vec3(0,0,1),Vec3(1,0,0)),8,4,14),2);ok(reopened.updateModel(grown));close(reopened.dimensionResult(dim.id).value,14,"aggiornamento quota secondo piano");
+ require(!e.setSectionStyle(id,DrawingSectionStyle::Full).isEmpty()&&bytes(e.sheet())==saved,"stile completo non supportato rifiutato");
+ require(!e.detachView(id).isEmpty(),"sgancio gradino protetto");require(!e.beginDetailCircle(id,"D",2).isEmpty(),"dettaglio di gradino rifiutato prima del posizionamento");
+ for(auto step:std::vector<DrawingSectionStep>{{0,2},{30,2},{12,0},{12,std::numeric_limits<double>::quiet_NaN()}})require(!e.beginSectionPlacement(parent.id,{-2,2},{22,2},"I",false,DrawingSectionStyle::Removed,step).isEmpty()&&!e.hasViewPlacement()&&bytes(e.sheet())==saved,"parametri invalidi non mutano tavola");
+ ok(e.beginSectionPlacement(parent.id,{-2,2},{40,2},"J",false,DrawingSectionStyle::Removed,DrawingSectionStep{30,-6}));mouse(e,{180,160},true);const auto farId=e.sheet().drawing.views.back().id;bool ordered=false;
+ for(auto *item:e.canvas()->scene()->items())if(item->data(0).toString()=="cuttingLine"&&item->data(3).toUuid()==farId)if(const auto *path=dynamic_cast<QGraphicsPathItem *>(item);path&&path->path().elementCount()==4){ordered=path->path().elementAt(3).x>path->path().elementAt(1).x;}
+ require(ordered,"linea del gradino non torna indietro quando il raccordo supera il modello");ok(e.undo());require(bytes(e.sheet())==saved,"Undo caso gradino oltre geometria");
+ QTemporaryDir tmp;DrawingPdfReport report;ok(e.exportPdf(tmp.filePath("gradino.pdf"),report));require(bytes(e.sheet())==saved,"PDF non altera gradino");e.setReadOnly(true);require(!e.findChild<QAction *>("drawingSteppedSectionAction")->isEnabled(),"comando gradino protetto in sola lettura");e.setReadOnly(false);
+ // Il gradino non aggiunge una linea di sezione nel piano di raccordo.
+ DrawingModelSnapshot bar=m.snapshot;bar.bodies={source(makeBox(Frame3(),20,10,4))};DrawingView v=view(e,id);v.step=DrawingSectionStep{12,-3};std::vector<DrawingCurve> c;ok(sectionDrawingView(bar,v,c));require(c.size()==6,"contorno continuo diviso senza bordo del gradino");
+ for(const auto &p:c){const auto a=v.plane.toLocal(p.curve->point(p.range.lo)),b=v.plane.toLocal(p.curve->point(p.range.hi));require(!(std::abs(a.x()-12)<1e-7&&std::abs(b.x()-12)<1e-7),"nessuna falsa parete nel raccordo");}
+ DrawingSectionHatch hatch;ok(drawingSectionHatch(bar,v,c,hatch));require(!hatch.lines.isEmpty()&&hatch.material.contains({11,-2})&&hatch.material.contains({13,-2}),"materiale su entrambi i lati del gradino");
+ bool dividerAnchor=false;for(const auto &piece:c)for(auto role:{DrawingPointRole::Start,DrawingPointRole::End}){
+  const auto p=piece.curve->point(role==DrawingPointRole::Start?piece.range.lo:piece.range.hi);if(std::abs(v.plane.toLocal(p).x()-v.step->at)>1e-7)continue;
+  const auto ref=drawingAttachment(v,piece,bar,role);require(ref.clipBoundary==4,"origine dell’estremo sul raccordo");const auto resolved=resolveDrawingAttachment(v,bar,c,ref);require(resolved.status==DrawingDimensionStatus::Ready,"estremo sul gradino risolto");close(resolved.point.x(),12,"ascissa estremo sul gradino");dividerAnchor=true;
+ }require(dividerAnchor,"aggancio del gradino esercitato");
+ auto round=bar;round.bodies={source(makeCylinder(Frame3(Vec3(10,0,0),Vec3(0,1,0),Vec3(1,0,0)),5,10))};
+ for(double scale:{.5,1.,2.}){v.scale=scale;std::vector<DrawingCurve> arcs;ok(sectionDrawingView(round,v,arcs));double length=0;for(const auto &arc:arcs){require(arc.curve->type()==CurveType::Circle,"archi esatti dopo ritaglio e traslazione");length+=arcLength(*arc.curve,arc.range);const auto primitive=drawingPrimitive(v,arc);close(norm(primitive.firstAxis),5,"raggio indipendente dal piano e dalla scala");}close(length,10*kPi,"circonferenza composta senza perdita o duplicazione");}
+ // Comando UI: finestra raggiungibile, valori e anteprima senza mutare il documento.
+ e.canvas()->scene()->clearSelection();for(auto *item:e.canvas()->scene()->items())if(item->data(1).toUuid()==parent.id&&item->flags().testFlag(QGraphicsItem::ItemIsSelectable)){item->setSelected(true);break;}QApplication::processEvents();
+ bool dialogSeen=false;QTimer::singleShot(0,&e,[&]{auto *dialog=e.findChild<QDialog *>("drawingSteppedSectionDialog");require(dialog,"dialogo gradino raggiungibile");dialogSeen=true;require(dialog->findChild<QDoubleSpinBox *>("drawingStepAt")&&dialog->findChild<QDoubleSpinBox *>("drawingStepOffset"),"campi gradino presenti");const auto output=qEnvironmentVariable("FORGECAD_STEP_OUTPUT");if(!output.isEmpty())require(dialog->grab().save(output+"/dialog.png"),"cattura dialogo gradino");dialog->reject();});e.findChild<QAction *>("drawingSteppedSectionAction")->trigger();require(dialogSeen&&bytes(e.sheet())==saved,"Cancel dialogo conserva la tavola");
+ QTimer::singleShot(0,&e,[&]{auto *dialog=e.findChild<QDialog *>("drawingSteppedSectionDialog");require(dialog,"dialogo gradino conferma");dialog->findChild<QLineEdit *>("drawingStepLabel")->setText("H");
+  for(const auto &entry:std::vector<std::pair<const char *,double>>{{"drawingStepStartX",-2},{"drawingStepStartY",2},{"drawingStepEndX",22},{"drawingStepEndY",2},{"drawingStepAt",12},{"drawingStepOffset",-6}})dialog->findChild<QDoubleSpinBox *>(entry.first)->setValue(entry.second);
+  dialog->findChild<QDialogButtonBox *>()->button(QDialogButtonBox::Ok)->click();});e.findChild<QAction *>("drawingSteppedSectionAction")->trigger();require(e.hasViewPlacement()&&bytes(e.sheet())==saved,"OK prepara anteprima senza inserire");e.cancelViewPlacement();require(bytes(e.sheet())==saved,"annullamento anteprima gradino");
+ const Frame3 rotated(Vec3(7,-11,23),normalized(Vec3(1,2,3)),Vec3(1,-1,0));auto rotatedModel=m.snapshot;
+ rotatedModel.bodies={source(makeBox(rotated,8,4,8)),source(makeBox(Frame3(rotated.toGlobal(Vec3(12,6,0)),rotated.zDir(),rotated.xDir()),8,4,12),2)};
+ for(double scale:{.5,1.,2.}){DrawingView rotatedView;rotatedView.scale=scale;rotatedView.plane=Frame3(rotated.toGlobal(Vec3(-2,2,0)),-rotated.yDir(),rotated.xDir());rotatedView.step=DrawingSectionStep{12,-6};std::vector<DrawingCurve> rotatedCurves;ok(sectionDrawingView(rotatedModel,rotatedView,rotatedCurves));require(rotatedCurves.size()==8,"gradino in frame ruotato e traslato");for(const auto &curve:rotatedCurves)close(rotatedView.plane.toLocal(curve.curve->point(curve.range.lo)).z(),0,"curva nel piano composto ruotato");}
+ const auto output=qEnvironmentVariable("FORGECAD_STEP_OUTPUT");if(!output.isEmpty()){require(e.grab().save(output+"/editor.png"),"cattura gradino");ok(e.exportPdf(output+"/gradino.pdf",report));}
+ std::cout<<"PASS gradino: geometria esatta, quote, agganci, assi/richiami, modello, codec, Undo, PDF e protezioni\n";
+}
 int main(int argc,char **argv){QApplication app(argc,argv);try{
+ steppedSectionRegression();
  sectionFrameRegression();sectionSnapTests();sectionEditTests();sectionViewSelectionTests();
  sectionOrientationRegression();
  DrawingEditorModel model;model.snapshot.version={QUuid::createUuid(),{}};model.snapshot.bodies={source(makeBox(Frame3(),20,12,8))};model.choices={{1,"Corpo"}};DrawingSheet sheet;sheet.drawing.model=model.snapshot.version;DrawingSheetEditor editor(sheet,model);editor.resize(1250,820);editor.show();QApplication::processEvents();editor.fitSheet();

@@ -29,6 +29,7 @@ struct DrawingViewRelation {
     QString label;
     QPointF detailCenter; // piano madre, mm modello
     double detailRadius=0; // ritaglio grafico, mai riferimento di quota
+    std::optional<DrawingSectionStep> step; // offset nel verso tangente x normale della madre
     double auxiliaryAngle=0; // lato d'osservazione nel piano madre, gradi da +X verso +Y
 };
 struct DrawingViewLayout {

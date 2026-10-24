@@ -6,6 +6,7 @@
 #include <QUuid>
 #include <limits>
 #include <memory>
+#include <optional>
 #include <vector>
 
 #include "fk_history.h"
@@ -32,6 +33,13 @@ struct DrawingModelSnapshot {
 enum class DrawingSectionStyle { Removed, Full, HalfRight, HalfLeft };
 enum class DrawingViewKind { Section, ProjectedEdges };
 enum class DrawingCurveKind { Section, ProjectedEdge, ApparentLine, ApparentArc };
+// Un gradino fra due piani paralleli: ascissa di transizione e quota del secondo
+// piano nel frame della sezione (mm modello). Il raccordo non e' un bordo misurabile.
+struct DrawingSectionStep {
+    double at=0,offset=0;
+    bool operator==(const DrawingSectionStep &b)const{return at==b.at&&offset==b.offset;}
+    bool operator!=(const DrawingSectionStep &b)const{return !(*this==b);}
+};
 struct DrawingView {
     QUuid id = QUuid::createUuid();
     Kernel::Frame3 plane;
@@ -40,6 +48,7 @@ struct DrawingView {
     DrawingViewKind kind = DrawingViewKind::Section;
     bool sectionReferences = false; // sezioni del piano quotabili nella vista dei bordi
     DrawingSectionStyle sectionStyle=DrawingSectionStyle::Removed;
+    std::optional<DrawingSectionStep> step;
 };
 
 inline bool drawingHasProjection(const DrawingView &v){return v.kind==DrawingViewKind::ProjectedEdges||v.sectionStyle!=DrawingSectionStyle::Removed;}
@@ -91,7 +100,7 @@ struct DrawingAttachment {
     int curveSide=0,anchorSide=0; // lati UV esatti: Umin/Umax/Vmin/Vmax
     bool polar=false; // frazione angolare nel piano, per punti sulle coniche
     QString vertexName, boundaryName; // origine topologica e orientamento del tratto
-    int clipBoundary=0; // bit 1: piano di taglio; bit 2: asse della mezza sezione
+    int clipBoundary=0; // bit 1: piano di taglio; bit 2: asse della mezza sezione; 4: gradino
     QUuid axisId; // asse associato del foglio: nessun indice o coordinata grafica
 };
 struct DrawingDimension {

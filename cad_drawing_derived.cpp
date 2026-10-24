@@ -51,13 +51,14 @@ void derive(const DrawingView &parent,const DrawingViewRelation &r,DrawingView &
         const double sign=r.reverse?-1:1;const auto normal=sign*cross(tangent,z);
         // I vecchi file conservano il taglio lungo X. Il frame salvato basta a
         // riconoscerli: aprire uno storico non deve cambiarne la presentazione.
-        const bool legacy=preserveLegacy&&child.kind==DrawingViewKind::Section
-            &&distance(child.plane.xDir(),tangent)<1e-10&&std::abs(dot(child.plane.yDir(),z))>1-1e-10;
+        const bool legacy=r.step.has_value()||(preserveLegacy&&child.kind==DrawingViewKind::Section
+            &&distance(child.plane.xDir(),tangent)<1e-10&&std::abs(dot(child.plane.yDir(),z))>1-1e-10);
         // Ribaltamento di 90 gradi attorno alla linea di taglio, applicato anche
         // agli assi della madre (Rodrigues). La linea mantiene la sua direzione
         // sul foglio: verticale resta verticale, obliqua resta obliqua.
         const auto foldedX=(delta.x()/length)*tangent-sign*(delta.y()/length)*z;
-        child.kind=DrawingViewKind::Section;child.sectionReferences=false;
+        child.kind=DrawingViewKind::Section;child.sectionReferences=false;child.step=r.step;
+        if(child.step){require(child.step->at>1e-7&&child.step->at<length-1e-7,"Il gradino deve essere interno alla linea di taglio.");child.step->offset*=sign;}
         child.plane=Frame3(parent.plane.toGlobal(Vec3(r.cutStart.x(),r.cutStart.y(),0)),normal,legacy?tangent:foldedX);
     }
 }
@@ -231,6 +232,7 @@ QString validateDrawingRelations(const DrawingSheet &sheet){
     try{
         QSet<QString> labels;
         for(const auto &l:sheet.views){const auto &r=l.relation;
+            if(r.step)require(r.kind==DrawingDerivedKind::Section&&!r.parentId.isNull(),"Gradino senza sezione madre.");
             if(r.parentId.isNull()){require(r.kind==DrawingDerivedKind::None,"Relazione della vista senza madre.");continue;}
             require(r.kind==DrawingDerivedKind::Orthographic||r.kind==DrawingDerivedKind::Section||r.kind==DrawingDerivedKind::Detail||r.kind==DrawingDerivedKind::Auxiliary,"Tipo di relazione non valido.");
             if(r.kind==DrawingDerivedKind::Auxiliary)require(std::isfinite(r.auxiliaryAngle)&&std::abs(r.auxiliaryAngle)<=360,"Direzione della vista ausiliaria non valida.");
@@ -250,7 +252,7 @@ QString validateDrawingRelations(const DrawingSheet &sheet){
         auto expected=sheet;const auto error=synchronizeDrawingViews(expected);if(!error.isEmpty())return error;
         for(const auto &l:sheet.views)if(!l.relation.parentId.isNull()){
             const auto &a=viewFor(sheet,l.viewId),&b=viewFor(expected,l.viewId);const auto &p=layoutFor(expected,l.viewId);
-            require(a.kind==b.kind&&a.scale==b.scale&&a.tolerance==b.tolerance&&l.features==p.features
+            require(a.step==b.step&&a.kind==b.kind&&a.scale==b.scale&&a.tolerance==b.tolerance&&l.features==p.features
                 &&distance(a.plane.origin(),b.plane.origin())<1e-9&&distance(a.plane.xDir(),b.plane.xDir())<1e-10
                 &&distance(a.plane.yDir(),b.plane.yDir())<1e-10&&distance(a.plane.zDir(),b.plane.zDir())<1e-10
                 &&QLineF(l.position,p.position).length()<1e-8,"Vista derivata incoerente con la madre.");
@@ -261,6 +263,23 @@ QString validateDrawingRelations(const DrawingSheet &sheet){
 QString drawingSectionHatch(const DrawingModelSnapshot &model,const DrawingView &view,const std::vector<DrawingCurve> &curves,DrawingSectionHatch &result){
     try{
         DrawingSectionHatch prepared;if(view.kind!=DrawingViewKind::Section){result=std::move(prepared);return {};}
+        if(view.step){
+            for(int side=0;side<2;++side){
+                auto part=view;part.step.reset();part.plane=Frame3::fromAxes(view.plane.origin()+(side?view.step->offset:0)*view.plane.zDir(),view.plane.xDir(),view.plane.yDir(),view.plane.zDir());
+                std::vector<DrawingCurve> closed;auto error=sectionDrawingView(model,part,closed);if(!error.isEmpty())return error;
+                DrawingSectionHatch h;error=drawingSectionHatch(model,part,closed,h);if(!error.isEmpty())return error;
+                const double boundary=view.step->at*view.scale;auto box=h.material.boundingRect().adjusted(-1,-1,1,1);
+                if(side)box.setLeft(std::max(box.left(),boundary));else box.setRight(std::min(box.right(),boundary));
+                if(box.width()>0){QPainterPath mask;mask.addRect(box);prepared.material=prepared.material.united(h.material.intersected(mask));}
+                for(int i=0;i+1<h.lines.elementCount();i+=2){const auto a=h.lines.elementAt(i),b=h.lines.elementAt(i+1);QPointF first(a.x,a.y),last(b.x,b.y);
+                    const double fa=(side?1:-1)*(first.x()-boundary),fb=(side?1:-1)*(last.x()-boundary);if(fa<0&&fb<0)continue;
+                    if(fa<0||fb<0){const auto p=first+(last-first)*(fa/(fa-fb));if(fa<0)first=p;else last=p;}
+                    prepared.lines.moveTo(first);prepared.lines.lineTo(last);
+                }
+                prepared.warnings.append(h.warnings);
+            }
+            result=std::move(prepared);return {};
+        }
         if(drawingHalfSection(view)){
             auto full=view;full.sectionStyle=DrawingSectionStyle::Removed;std::vector<DrawingCurve> closed;const auto cut=sectionDrawingView(model,full,closed);if(!cut.isEmpty())return cut;
             full.sectionStyle=DrawingSectionStyle::Full;const auto error=drawingSectionHatch(model,full,closed,prepared);if(!error.isEmpty())return error;
