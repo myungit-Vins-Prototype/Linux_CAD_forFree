@@ -40,6 +40,28 @@ struct RevisionCheckinRequest {
     QVector<DocumentVersion> dependencies;
 };
 
+struct RevisionReleaseRequest {
+    QUuid releaseId; // generato una volta e riusato per ritentare la stessa pubblicazione
+    QString name,author,comment;
+    DocumentVersion model;
+    QVector<DocumentVersion> drawings; // ordine di consegna; un check-in per documento
+};
+struct RevisionReleaseMember {
+    DocumentVersion version;
+    QString name,kind,technicalRevision;
+    quint64 sequence=0;
+    QByteArray sha256;
+    qint64 payloadSize=0;
+};
+struct RevisionReleaseManifest {
+    QUuid releaseId,archiveId;
+    QString name,author,comment;
+    QDateTime createdUtc;
+    RevisionReleaseMember model;
+    QVector<RevisionReleaseMember> drawings;
+};
+RevisionReleaseRequest revisionReleaseRequest(const RevisionReleaseManifest &manifest);
+
 // Archivio cooperativo su filesystem locale. Il lock breve protegge il
 // catalogo; le prenotazioni persistono nel catalogo anche dopo la chiusura.
 // Non e' un sistema di autenticazione. I filesystem di rete vanno validati.
@@ -69,6 +91,12 @@ public:
     QString nextTechnicalRevision(const QUuid &documentId, QString &label) const;
     QString validateTechnicalRevision(const QUuid &documentId, const QString &label) const;
     QString read(const DocumentVersion &version, QByteArray &payload) const;
+    // Il backend verifica record, dipendenze e hash; il ponte CAD valida anche i contenuti nativi.
+    QString inspectRelease(const RevisionReleaseRequest &request,RevisionReleaseManifest &manifest) const;
+    QString publishRelease(const RevisionReleaseRequest &request,RevisionReleaseManifest &manifest) const;
+    QString readRelease(const QUuid &id,RevisionReleaseManifest &manifest) const;
+    // Elenco dei manifesti; la verifica dei contenuti avviene con readRelease.
+    QString releases(QVector<RevisionReleaseManifest> &manifests) const;
     QString directory() const { return directory_; }
 private:
     QString directory_;

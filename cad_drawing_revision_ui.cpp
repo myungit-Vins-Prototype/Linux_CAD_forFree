@@ -83,6 +83,8 @@ void DrawingWindow::addRevisionMenus(QMenu *file){
     });
     auto *restore=revisions->addAction(commandIcon("undo"),QStringLiteral("Ripristina revisione…"));restore->setObjectName("drawingRestoreRevisionAction");revisionMutationActions_.append(restore);
     restore->setToolTip(QStringLiteral("Recupera tutti i fogli e il modello di una revisione nella copia di lavoro, con Undo e nuovo check-in successivo."));connect(restore,&QAction::triggered,this,[this]{showDrawingHistory(true);});
+    auto *createRelease=revisions->addAction(QStringLiteral("Nuovo rilascio coordinato…"));createRelease->setObjectName("drawingCreateReleaseAction");connect(createRelease,&QAction::triggered,this,[this]{showNewReleaseDialog();});
+    auto *releases=revisions->addAction(QStringLiteral("Rilasci pubblicati…"));releases->setObjectName("drawingReleasesAction");connect(releases,&QAction::triggered,this,[this]{showReleasesDialog();});
     auto *history=revisions->addAction(QStringLiteral("Storico dei check-in..."));history->setObjectName("drawingHistoryAction");
     connect(history,&QAction::triggered,this,[this]{showDrawingHistory();});
     for(auto *menu:{model,revisions}){menu->setIcon(commandIcon("storyboard"));for(auto *action:menu->actions()){

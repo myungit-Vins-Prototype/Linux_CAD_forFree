@@ -28,6 +28,7 @@ public:
     explicit PdfWindow(QWidget *parent = nullptr);
     // Apre un documento .prt (errori in una finestra di messaggio).
     bool openDocumentPath(const QString &path);
+    QString openArchivedDocument(const QString &workingPath,const ForgeCad::DocumentVersion &version);
 protected:
     void closeEvent(QCloseEvent *event) override;
     bool event(QEvent *event) override;

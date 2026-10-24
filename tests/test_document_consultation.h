@@ -22,6 +22,10 @@
                 &&manualReader.viewport_->extrusions()[0].primitive.size[0]==14,"riapertura esplicita aggiorna consultazione senza prendere esclusiva");
         clientOk(owner.runDocumentRevisionAction(PdfWindow::DocumentRevisionAction::Checkin,{},"prima"));
         require(!owner.documentLock_&&!QFileInfo::exists(path+".lock")&&owner.viewport_->documentReadOnly(),"check-in rilascia esclusiva mantenendo finestra aperta");
+        const auto archivedBytes=clientRead(path);
+        PdfWindow archived;clientOk(archived.openArchivedDocument(temporary.filePath("ancora-diversa.prt"),{owner.viewport_->currentDocument().version.documentId,owner.viewport_->documentBaseCheckinId()}));
+        require(!archived.saveDocumentPath(path)&&clientRead(path)==archivedBytes,"modello storico con ancora diversa non sovrascrive originale per identita logica");
+        require(archived.saveDocumentPath(temporary.filePath("copia-storica.prt")),"modello storico salvabile come nuova copia indipendente");
         PdfWindow third;require(third.openDocumentPath(path)&&third.viewport_->documentReadOnly()&&!QFileInfo::exists(path+".lock"),"due consultazioni di un check-in senza marker");
         require(reader.viewport_->extrusions()[0].primitive.size[0]==10,"lettore conserva snapshot precedente fino alla ripresa");
         clientOk(reader.runDocumentRevisionAction(PdfWindow::DocumentRevisionAction::Checkout,"altro"));

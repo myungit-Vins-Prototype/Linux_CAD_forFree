@@ -4214,6 +4214,13 @@ bool PdfWindow::saveDocumentPath(const QString &path) {
     if(!documentPath_.isEmpty()&&resolved==documentPath_&&documentEditAccess_.readOnly){
         statusBar()->showMessage(documentEditAccess_.reason,10000);return false;
     }
+    const auto current = viewport_->currentDocument();
+    if(!current.version.checkinId.isNull()&&QFileInfo::exists(resolved)){
+        DocumentState existing;const auto error=ForgeCad::loadDocumentFile(resolved,existing);
+        if(!error.isEmpty()||existing.version.documentId==current.version.documentId){
+            statusBar()->showMessage(error.isEmpty()?QStringLiteral("La destinazione appartiene allo stesso modello archiviato. Scegliere un nuovo nome per la copia indipendente."):error,10000);return false;
+        }
+    }
     std::unique_ptr<ForgeCad::DocumentFileLock> candidate;
     const ForgeCad::DocumentFileLock *lock = documentLock_.get();
     if (!lock || lock->path() != resolved) {
@@ -4374,15 +4381,19 @@ void PdfWindow::refreshDocumentRevisionPanel() {
     findChild<QAction *>("revisionCompleteAction")->setEnabled(writableVersion&&known&&status.hasPending);
     findChild<QAction *>("revisionCancelAction")->setEnabled(writableVersion&&known&&status.hasSession&&!status.hasPending);
 }
+QString PdfWindow::openArchivedDocument(const QString &workingPath,const ForgeCad::DocumentVersion &version){
+    if(!documentPath_.isEmpty()||documentModified_)return QStringLiteral("Aprire il modello archiviato in una nuova finestra.");
+    const auto canonical=ForgeCad::canonicalDocumentPath(workingPath);ForgeCad::WorkspacePaths paths;auto error=ForgeCad::locateDocumentWorkspace(canonical,paths);DocumentState source;
+    if(error.isEmpty()){ForgeCad::RevisionStore store(paths.revisions);error=ForgeCad::readNativeRevision(store,version,source);}if(!error.isEmpty())return error;
+    loadingDocument_=true;viewport_->loadDocument(source);documentPath_=canonical;documentModified_=false;loadingDocument_=false;refreshDocumentEditAccess();updateWindowTitle();rebuildModelTree();return {};
+}
 void PdfWindow::openSelectedDocumentRevision() {
     if(foregroundProgressDepth_||viewport_->interactionLocked()||!documentRevisionHistory_)return;
     const int row=documentRevisionHistory_->currentRow();auto *item=row>=0?documentRevisionHistory_->item(row,0):nullptr;if(!item)return;
     const ForgeCad::DocumentVersion version{item->data(Qt::UserRole+1).toUuid(),item->data(Qt::UserRole).toUuid()};
-    ForgeCad::WorkspacePaths paths;auto error=ForgeCad::locateDocumentWorkspace(documentPath_,paths);DocumentState source;
-    if(error.isEmpty()){ForgeCad::RevisionStore store(paths.revisions);error=ForgeCad::readNativeRevision(store,version,source);}
-    if(!error.isEmpty()){QMessageBox::warning(this,QStringLiteral("Revisioni"),error);return;}
-    auto *window=new PdfWindow;window->loadingDocument_=true;window->viewport_->loadDocument(source);window->documentPath_=documentPath_;window->documentModified_=false;window->loadingDocument_=false;
-    window->refreshDocumentEditAccess();window->updateWindowTitle();window->rebuildModelTree();window->setAttribute(Qt::WA_DeleteOnClose);window->show();
+    auto *window=new PdfWindow;const auto error=window->openArchivedDocument(documentPath_,version);
+    if(!error.isEmpty()){delete window;QMessageBox::warning(this,QStringLiteral("Revisioni"),error);return;}
+    window->setAttribute(Qt::WA_DeleteOnClose);window->show();
 }
 
 void PdfWindow::showDocumentRevisions() {

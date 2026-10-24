@@ -115,6 +115,7 @@ void DrawingWindow::refreshTitle(){
         findChild<QAction *>("drawingCancelCheckoutAction")->setEnabled(revisionStatusCache_.hasSession&&!revisionStatusCache_.hasPending);
     }
     if(auto *restore=findChild<QAction *>("drawingRestoreRevisionAction"))restore->setEnabled(editor_&&checkin.isNull()&&!busy_&&!editAccess_.readOnly&&lock_&&revisionStatusKnown_&&revisionStatusCache_.hasSession&&!revisionStatusCache_.hasPending&&revisionStatusCache_.phase==WorkspaceCheckoutPhase::Active&&!drawing_.baseCheckinId.isNull());
+    for(const auto name:{"drawingCreateReleaseAction","drawingReleasesAction"})if(auto *action=findChild<QAction *>(name))action->setEnabled(editor_&&!path_.isEmpty()&&!busy_&&!editor_->isComputing());
     if(auto *action=findChild<QAction *>("drawingRevisionTableAction"))action->setEnabled(editor_&&!busy_);
     if(sheetTabs_)sheetTabs_->setEnabled(!busy_);
 
@@ -240,6 +241,12 @@ QString DrawingWindow::savePath(const QString &path){
         return QStringLiteral("La destinazione deve essere un file .drw distinto dal modello 3D.");
     const bool different=!path_.isEmpty()&&resolved!=path_;
     if(!different){const auto accessError=requireEditAccess();if(!accessError.isEmpty())return accessError;}
+    if(!drawing_.sheet.drawing.version.checkinId.isNull()&&QFileInfo::exists(resolved)){
+        DrawingFile existing;const auto error=loadDrawingFile(resolved,existing);
+        if(!error.isEmpty())return error;
+        if(existing.sheet.drawing.version.documentId==drawing_.sheet.drawing.version.documentId)
+            return QStringLiteral("La destinazione appartiene alla stessa tavola archiviata. Scegliere un nuovo nome per la copia indipendente oppure usare Ripristina revisione sulla copia di lavoro.");
+    }
     auto prepared=drawing_;
     if(different)forkDrawingIdentity(prepared);
     if(!prepared.sheet.drawing.version.checkinId.isNull())return QStringLiteral("Usare Salva con nome per una copia indipendente della tavola archiviata.");

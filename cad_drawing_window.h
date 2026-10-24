@@ -73,6 +73,8 @@ private:
     void addRevisionMenus(QMenu *file);
     void showModelRevisions();
     void showDrawingHistory(bool restoreWorking=false);
+    void showNewReleaseDialog();
+    void showReleasesDialog();
     void installRevisionPanel();
     void refreshRevisionPanel();
     void showRevisionTableDialog();

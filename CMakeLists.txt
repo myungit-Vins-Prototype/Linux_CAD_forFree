@@ -157,6 +157,9 @@ add_executable(forgecad
     cad_drawing_revisions.cpp
     cad_drawing_revision_ui.cpp
     cad_drawing_restore.cpp
+    cad_drawing_release.h
+    cad_drawing_release.cpp
+    cad_drawing_release_ui.cpp
     cad_revision_client_internal.h
     cad_drawing_window.h
     cad_drawing_window.cpp
@@ -340,7 +343,7 @@ if(FORGECAD_BUILD_VIEW_TESTS)
     # Finestra, viewport, storyboard e dialoghi sono unita' separate anche nei test.
     list(REMOVE_ITEM FORGECAD_VIEW_TEST_SOURCES forgeCad2026.cpp ${FORGE_CAD_CUDA_SOURCE} ${FORGECAD_HASH_HEADER})
     list(REMOVE_ITEM FORGECAD_VIEW_TEST_SOURCES cad_macos_menu.h cad_macos_menu.mm)
-    add_executable(forgecad_view_tests tests/test_viewport.cpp tests/test_declared_history_cache.h tests/test_boolean_history.h tests/test_blend_history.h tests/test_extrusion_history.h tests/test_revolution_history.h tests/test_all_history.h tests/test_native_revisions.h tests/test_workspace_revisions.h tests/test_linked_drawing.h tests/test_drawing_workflow.h tests/test_drawing_revisions.h tests/test_projected_drawing_file.h tests/test_drawing_multisheet.h tests/test_drawing_revision_restore.h tests/test_drawing_mouse.h tests/test_drawing_section_model.h cuda_support_cpu.cpp ${FORGECAD_VIEW_TEST_SOURCES})
+    add_executable(forgecad_view_tests tests/test_viewport.cpp tests/test_declared_history_cache.h tests/test_boolean_history.h tests/test_blend_history.h tests/test_extrusion_history.h tests/test_revolution_history.h tests/test_all_history.h tests/test_native_revisions.h tests/test_workspace_revisions.h tests/test_linked_drawing.h tests/test_drawing_workflow.h tests/test_drawing_revisions.h tests/test_projected_drawing_file.h tests/test_drawing_multisheet.h tests/test_drawing_revision_restore.h tests/test_drawing_release.h tests/test_drawing_mouse.h tests/test_drawing_section_model.h cuda_support_cpu.cpp ${FORGECAD_VIEW_TEST_SOURCES})
     add_dependencies(forgecad_view_tests forgecad) # genera l'impronta una sola volta, prima dei test
     target_include_directories(forgecad_view_tests PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/generated)
     target_link_libraries(forgecad_view_tests PRIVATE Qt6::Widgets Qt6::OpenGL Qt6::OpenGLWidgets OpenGL::GL forgekernel ZLIB::ZLIB)
@@ -371,6 +374,8 @@ if(FORGECAD_BUILD_VIEW_TESTS)
     forgecad_add_view_test(forgecad_linked_drawing_tests --linked-drawings)
     forgecad_add_view_test(forgecad_drawing_revisions_tests --drawing-revisions)
     forgecad_add_view_test(forgecad_projected_drawing_file_tests --projected-drawings)
+    forgecad_add_view_test(forgecad_drawing_release_tests --drawing-release)
+    set_tests_properties(forgecad_drawing_release_tests PROPERTIES TIMEOUT 120)
     forgecad_add_view_test(forgecad_drawing_restore_tests --drawing-restore)
     set_tests_properties(forgecad_drawing_restore_tests PROPERTIES TIMEOUT 120)
     forgecad_add_view_test(forgecad_drawing_multisheet_tests --drawing-multisheet)
@@ -487,6 +492,13 @@ target_link_libraries(forgecad_revision_store_tests PRIVATE Qt6::Core)
 target_compile_options(forgecad_revision_store_tests PRIVATE -Wall -Wextra -Wpedantic)
 add_test(NAME forgecad_revision_store_tests COMMAND forgecad_revision_store_tests)
 set_tests_properties(forgecad_revision_store_tests PROPERTIES TIMEOUT 60)
+
+add_executable(forgecad_revision_release_tests tests/test_revision_releases.cpp cad_revision_store.cpp)
+target_include_directories(forgecad_revision_release_tests PRIVATE ${PROJECT_SOURCE_DIR})
+target_link_libraries(forgecad_revision_release_tests PRIVATE Qt6::Core)
+target_compile_options(forgecad_revision_release_tests PRIVATE -Wall -Wextra -Wpedantic)
+add_test(NAME forgecad_revision_release_tests COMMAND forgecad_revision_release_tests)
+set_tests_properties(forgecad_revision_release_tests PROPERTIES TIMEOUT 60)
 
 # Dipendenze del modello: test autonomo, senza includere la GUI o il kernel.
 add_executable(forgecad_feature_dependencies_tests tests/test_feature_dependencies.cpp cad_feature_dependencies.cpp)

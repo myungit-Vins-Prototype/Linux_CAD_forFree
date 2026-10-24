@@ -430,4 +430,84 @@ QString RevisionStore::read(const DocumentVersion &version, QByteArray &payload)
         const auto prepared = readObject(directory_, found->record); payload = prepared; return {};
     } catch (const std::exception &error) { return QString::fromUtf8(error.what()); }
 }
+
+namespace {
+constexpr qint64 maxReleaseBytes=512*1024,maxReleaseListBytes=32*1024*1024;
+constexpr qsizetype maxReleases=1000,maxReleaseDrawings=100;
+bool sameReleaseVersion(const DocumentVersion &a,const DocumentVersion &b){return a.documentId==b.documentId&&a.checkinId==b.checkinId;}
+QJsonObject releaseMemberJson(const RevisionReleaseMember &m){return {{"version",versionJson(m.version)},{"name",m.name},{"kind",m.kind},{"technicalRevision",m.technicalRevision},{"sequence",QString::number(m.sequence)},{"sha256",QString::fromLatin1(m.sha256.toHex())},{"size",QString::number(m.payloadSize)}};}
+QJsonObject releaseJson(const RevisionReleaseManifest &m){
+    QJsonArray drawings;for(const auto &d:m.drawings)drawings.append(releaseMemberJson(d));
+    return {{"format","ForgeCAD.CoordinatedRelease"},{"schema",1},{"releaseId",text(m.releaseId)},{"archiveId",text(m.archiveId)},{"name",m.name},{"author",m.author},{"comment",m.comment},{"createdUtc",m.createdUtc.toUTC().toString(Qt::ISODateWithMs)},{"model",releaseMemberJson(m.model)},{"drawings",drawings}};
+}
+QByteArray compactRelease(const QJsonObject &object){return QJsonDocument(object).toJson(QJsonDocument::Compact);}
+QByteArray encodeRelease(const RevisionReleaseManifest &m){const auto object=releaseJson(m);return compactRelease({{"manifest",object},{"sha256",QString::fromLatin1(digest(compactRelease(object)).toHex())}});}
+QByteArray releaseFingerprint(RevisionReleaseRequest r){
+    return digest(compactRelease({{"releaseId",text(r.releaseId)},{"name",r.name.trimmed()},{"author",r.author.trimmed()},{"comment",r.comment},{"model",versionJson(r.model)},{"drawings",dependenciesJson(r.drawings)}}));
+}
+RevisionReleaseMember readReleaseMember(const QJsonValue &value){
+    require(value.isObject(),QStringLiteral("Membro del rilascio assente."));const auto o=value.toObject();require(o.size()==7&&o["version"].isObject()&&o["version"].toObject().size()==2,QStringLiteral("Membro del rilascio incompleto."));const auto v=o["version"].toObject();RevisionReleaseMember m;
+    m.version={uuid(v["documentId"]),uuid(v["checkinId"])};m.name=string(o["name"],4096,true);m.kind=string(o["kind"],128,true);m.technicalRevision=string(o["technicalRevision"],128,true);m.sha256=hashValue(o["sha256"]);
+    bool valid=false;m.sequence=string(o["sequence"],20,true).toULongLong(&valid);require(valid&&m.sequence>0,QStringLiteral("Sequenza del rilascio non valida."));m.payloadSize=string(o["size"],20,true).toLongLong(&valid);require(valid&&m.payloadSize>=0&&m.payloadSize<=kMaxPayloadBytes,QStringLiteral("Dimensione del membro non valida."));return m;
+}
+QString releaseDirectory(const QString &directory){
+    const auto path=QDir(directory).filePath("releases");const QFileInfo info(path);
+    require(!info.isSymLink()&&(!info.exists()||info.isDir()),QStringLiteral("Cartella dei rilasci non valida."));return path;
+}
+RevisionReleaseManifest readReleaseFile(const QString &path){
+    const QFileInfo info(path);require(!info.isSymLink(),QStringLiteral("Il manifesto non puo' essere un collegamento."));QFile file(path);require(file.open(QIODevice::ReadOnly)&&file.size()>0&&file.size()<=maxReleaseBytes,QStringLiteral("Manifesto assente, illeggibile o oltre i limiti."));
+    const auto bytes=file.read(maxReleaseBytes+1);require(bytes.size()<=maxReleaseBytes,QStringLiteral("Manifesto oltre i limiti."));QJsonParseError error;const auto json=QJsonDocument::fromJson(bytes,&error);const auto root=json.object();
+    require(error.error==QJsonParseError::NoError&&json.isObject()&&root.size()==2&&root["manifest"].isObject(),QStringLiteral("Contenitore del manifesto non valido."));const auto o=root["manifest"].toObject();
+    require(hashValue(root["sha256"])==digest(compactRelease(o)),QStringLiteral("Manifesto del rilascio danneggiato."));require(o.size()==10&&o["format"].toString()==QLatin1String("ForgeCAD.CoordinatedRelease")&&o["schema"].toDouble(-1)==1,QStringLiteral("Formato del rilascio non supportato."));
+    RevisionReleaseManifest m;m.releaseId=uuid(o["releaseId"]);m.archiveId=uuid(o["archiveId"]);m.name=string(o["name"],128,true);m.author=string(o["author"],256,true);m.comment=string(o["comment"],16384);m.createdUtc=date(o["createdUtc"]);m.model=readReleaseMember(o["model"]);
+    require(info.fileName()==text(m.releaseId)+".json"&&m.model.kind==QLatin1String("model")&&o["drawings"].isArray(),QStringLiteral("Identita' o modello del manifesto non validi."));const auto drawings=o["drawings"].toArray();require(!drawings.isEmpty()&&drawings.size()<=maxReleaseDrawings,QStringLiteral("Il rilascio richiede da 1 a 100 tavole."));QSet<QUuid> ids{m.model.version.documentId};
+    for(const auto &value:drawings){auto d=readReleaseMember(value);require(d.kind==QLatin1String("drawing")&&!ids.contains(d.version.documentId),QStringLiteral("Tavola duplicata o tipo errato nel rilascio."));ids.insert(d.version.documentId);m.drawings.append(std::move(d));}return m;
+}
+QVector<RevisionReleaseManifest> releaseList(const QString &directory,const QUuid &archive){
+    const auto path=releaseDirectory(directory);QDir dir(path);QVector<RevisionReleaseManifest> list;if(!dir.exists())return list;
+    const auto files=dir.entryInfoList({"*.json"},QDir::Files|QDir::Hidden|QDir::System,QDir::Name);require(files.size()<=maxReleases,QStringLiteral("Troppi rilasci nell'archivio."));qint64 total=0;
+    for(const auto &file:files){total+=file.size();require(total<=maxReleaseListBytes,QStringLiteral("Elenco rilasci oltre 32 MiB."));auto m=readReleaseFile(file.absoluteFilePath());require(m.archiveId==archive,QStringLiteral("Manifesto di un altro archivio."));list.append(std::move(m));}
+    std::sort(list.begin(),list.end(),[](const auto &a,const auto &b){return a.createdUtc!=b.createdUtc?a.createdUtc<b.createdUtc:a.releaseId<b.releaseId;});return list;
+}
+RevisionReleaseManifest prepareReleaseManifest(const QString &directory,const Catalog &catalog,const RevisionReleaseRequest &r,const QDateTime &created){
+    require(!r.releaseId.isNull()&&!r.model.documentId.isNull()&&!r.model.checkinId.isNull(),QStringLiteral("Identita' del rilascio o versione precisa del modello assenti."));
+    RevisionReleaseManifest m;m.releaseId=r.releaseId;m.archiveId=catalog.archiveId;m.name=string(r.name.trimmed(),128,true);m.author=string(r.author.trimmed(),256,true);m.comment=string(r.comment,16384);m.createdUtc=created;
+    require(!r.drawings.isEmpty()&&r.drawings.size()<=maxReleaseDrawings,QStringLiteral("Selezionare da 1 a 100 tavole archiviate."));
+    QHash<QUuid,const StoredDocument *> documents;for(const auto &d:catalog.documents)documents.insert(d.info.documentId,&d);
+    QHash<QUuid,const RevisionRecord *> records;for(const auto &stored:catalog.revisions)records.insert(stored.record.version.checkinId,&stored.record);
+    const auto member=[&](const DocumentVersion &version,const QString &kind){
+        const auto *record=records.value(version.checkinId,nullptr);const auto *document=documents.value(version.documentId,nullptr);
+        require(record&&document&&sameReleaseVersion(record->version,version)&&document->info.kind==kind,QStringLiteral("Versione o tipo di documento non presente nell'archivio."));
+        require(kind==QLatin1String("model")?record->dependencies.isEmpty():record->dependencies.size()==1&&sameReleaseVersion(record->dependencies[0],r.model),QStringLiteral("La tavola non usa il modello preciso scelto per il rilascio."));
+        readObject(directory,*record);return RevisionReleaseMember{version,document->info.name,kind,record->technicalRevision,record->sequence,record->sha256,record->payloadSize};
+    };
+    m.model=member(r.model,QStringLiteral("model"));QSet<QUuid> ids{r.model.documentId};
+    for(const auto &version:r.drawings){require(!ids.contains(version.documentId),QStringLiteral("Selezionare una sola revisione per tavola."));ids.insert(version.documentId);m.drawings.append(member(version,QStringLiteral("drawing")));}
+    require(encodeRelease(m).size()<=maxReleaseBytes,QStringLiteral("Manifesto oltre 512 KiB."));return m;
+}
+RevisionReleaseManifest verifiedRelease(const QString &directory,const Catalog &catalog,const QUuid &id){
+    require(!id.isNull(),QStringLiteral("Identita' del rilascio assente."));auto m=readReleaseFile(QDir(releaseDirectory(directory)).filePath(text(id)+".json"));require(m.archiveId==catalog.archiveId,QStringLiteral("Il rilascio appartiene a un altro archivio."));
+    const auto expected=prepareReleaseManifest(directory,catalog,revisionReleaseRequest(m),m.createdUtc);require(compactRelease(releaseJson(m))==compactRelease(releaseJson(expected)),QStringLiteral("Manifesto incoerente con i record archiviati."));return m;
+}
+}
+RevisionReleaseRequest revisionReleaseRequest(const RevisionReleaseManifest &m){RevisionReleaseRequest r{m.releaseId,m.name,m.author,m.comment,m.model.version,{}};for(const auto &d:m.drawings)r.drawings.append(d.version);return r;}
+QString RevisionStore::inspectRelease(const RevisionReleaseRequest &request,RevisionReleaseManifest &manifest)const{
+    try{const auto catalog=loadCatalog(directory_);auto prepared=prepareReleaseManifest(directory_,catalog,request,QDateTime::currentDateTimeUtc());manifest=std::move(prepared);return {};}catch(const std::exception &error){return QString::fromUtf8(error.what());}
+}
+QString RevisionStore::publishRelease(const RevisionReleaseRequest &request,RevisionReleaseManifest &manifest)const{
+    RevisionReleaseManifest prepared;const auto error=transaction(directory_,[&](Catalog &catalog){
+        auto candidate=prepareReleaseManifest(directory_,catalog,request,QDateTime::currentDateTimeUtc());const auto path=QDir(releaseDirectory(directory_)).filePath(text(request.releaseId)+".json");
+        if(QFileInfo::exists(path)){auto existing=verifiedRelease(directory_,catalog,request.releaseId);require(releaseFingerprint(request)==releaseFingerprint(revisionReleaseRequest(existing)),QStringLiteral("Identita' del rilascio gia' usata per un'altra operazione."));prepared=std::move(existing);return false;}
+        const auto previous=releaseList(directory_,catalog.archiveId);require(previous.size()<maxReleases,QStringLiteral("Limite di 1000 rilasci raggiunto."));qint64 total=0;
+        for(const auto &m:previous){require(m.model.version.documentId!=request.model.documentId||revisionKey(m.name)!=revisionKey(candidate.name),QStringLiteral("Nome del rilascio gia' usato per questo modello."));total+=QFileInfo(QDir(releaseDirectory(directory_)).filePath(text(m.releaseId)+".json")).size();}
+        const auto bytes=encodeRelease(candidate);require(total+bytes.size()<=maxReleaseListBytes,QStringLiteral("Elenco rilasci oltre 32 MiB."));require(QDir().mkpath(releaseDirectory(directory_)),QStringLiteral("Impossibile creare la cartella rilasci."));QSaveFile file(path);
+        require(file.open(QIODevice::WriteOnly)&&file.write(bytes)==bytes.size()&&file.commit(),QStringLiteral("Pubblicazione del rilascio fallita: ritentare con la stessa identita'."));prepared=std::move(candidate);return false;
+    });if(error.isEmpty())manifest=std::move(prepared);return error;
+}
+QString RevisionStore::readRelease(const QUuid &id,RevisionReleaseManifest &manifest)const{
+    try{const auto catalog=loadCatalog(directory_);auto prepared=verifiedRelease(directory_,catalog,id);manifest=std::move(prepared);return {};}catch(const std::exception &error){return QString::fromUtf8(error.what());}
+}
+QString RevisionStore::releases(QVector<RevisionReleaseManifest> &manifests)const{
+    try{const auto catalog=loadCatalog(directory_);auto prepared=releaseList(directory_,catalog.archiveId);manifests=std::move(prepared);return {};}catch(const std::exception &error){return QString::fromUtf8(error.what());}
+}
 }
