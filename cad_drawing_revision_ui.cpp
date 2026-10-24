@@ -1,3 +1,5 @@
+#include "cad_revision_recovery_ui.h"
+#include <QScopedValueRollback>
 #include "cad_drawing_window.h"
 #include "cad_workspace.h"
 #include "cad_icons.h"
@@ -85,6 +87,8 @@ void DrawingWindow::addRevisionMenus(QMenu *file){
     restore->setToolTip(QStringLiteral("Recupera tutti i fogli e il modello di una revisione nella copia di lavoro, con Undo e nuovo check-in successivo."));connect(restore,&QAction::triggered,this,[this]{showDrawingHistory(true);});
     auto *createRelease=revisions->addAction(QStringLiteral("Nuovo rilascio coordinato…"));createRelease->setObjectName("drawingCreateReleaseAction");connect(createRelease,&QAction::triggered,this,[this]{showNewReleaseDialog();});
     auto *releases=revisions->addAction(QStringLiteral("Rilasci pubblicati…"));releases->setObjectName("drawingReleasesAction");connect(releases,&QAction::triggered,this,[this]{showReleasesDialog();});
+    auto *recovery=revisions->addAction(QStringLiteral("Verifica e recupero catalogo…"));recovery->setObjectName("drawingCatalogRecoveryAction");
+    connect(recovery,&QAction::triggered,this,[this]{if(busy_||!editor_||editor_->isComputing())return;{QScopedValueRollback<bool> guard(busy_,true);refreshTitle();showCatalogRecoveryDialog(this,path_);}revisionStatusKnown_=false;refreshEditAccess();refreshTitle();});
     auto *history=revisions->addAction(QStringLiteral("Storico dei check-in..."));history->setObjectName("drawingHistoryAction");
     connect(history,&QAction::triggered,this,[this]{showDrawingHistory();});
     for(auto *menu:{model,revisions}){menu->setIcon(commandIcon("storyboard"));for(auto *action:menu->actions()){

@@ -107,6 +107,7 @@ public:
 #include "test_sketch_menu_cancel.h"
 #include "test_document_recovery.h"
 #include "test_document_consultation.h"
+#include "test_catalog_recovery_gui.h"
     static void previewPerformance(bool gl = false) {
         using namespace ForgeCad;using namespace ForgeCad::Kernel;
         const auto settle=[](CadViewport &view) {
@@ -9966,6 +9967,7 @@ int main(int argc, char **argv) {
         try{drawingSectionModelTest(app.arguments().value(app.arguments().indexOf(QStringLiteral("--drawing-section-model"))+1));}
         catch(const std::exception &e){std::cerr<<e.what()<<std::endl;return 1;}return 0;
     }
+    if(app.arguments().contains(QStringLiteral("--catalog-recovery"))){try{ViewportInteractionTest::catalogRecoveryGui();}catch(const std::exception &e){std::cerr<<e.what()<<std::endl;return 1;}return 0;}
     if(app.arguments().contains(QStringLiteral("--drawing-release"))){try{drawingReleaseTests();}catch(const std::exception &e){std::cerr<<e.what()<<std::endl;return 1;}return 0;}
     if(app.arguments().contains(QStringLiteral("--drawing-restore"))){try{drawingRevisionRestoreTests();}catch(const std::exception &e){std::cerr<<e.what()<<std::endl;return 1;}return 0;}
     if(app.arguments().contains(QStringLiteral("--drawing-multisheet"))){try{multisheetTests();}catch(const std::exception &e){std::cerr<<e.what()<<std::endl;return 1;}return 0;}

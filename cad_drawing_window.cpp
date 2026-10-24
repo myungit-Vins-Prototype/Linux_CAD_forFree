@@ -115,7 +115,7 @@ void DrawingWindow::refreshTitle(){
         findChild<QAction *>("drawingCancelCheckoutAction")->setEnabled(revisionStatusCache_.hasSession&&!revisionStatusCache_.hasPending);
     }
     if(auto *restore=findChild<QAction *>("drawingRestoreRevisionAction"))restore->setEnabled(editor_&&checkin.isNull()&&!busy_&&!editAccess_.readOnly&&lock_&&revisionStatusKnown_&&revisionStatusCache_.hasSession&&!revisionStatusCache_.hasPending&&revisionStatusCache_.phase==WorkspaceCheckoutPhase::Active&&!drawing_.baseCheckinId.isNull());
-    for(const auto name:{"drawingCreateReleaseAction","drawingReleasesAction"})if(auto *action=findChild<QAction *>(name))action->setEnabled(editor_&&!path_.isEmpty()&&!busy_&&!editor_->isComputing());
+    for(const auto name:{"drawingCreateReleaseAction","drawingReleasesAction","drawingCatalogRecoveryAction"})if(auto *action=findChild<QAction *>(name))action->setEnabled(editor_&&!path_.isEmpty()&&!busy_&&!editor_->isComputing());
     if(auto *action=findChild<QAction *>("drawingRevisionTableAction"))action->setEnabled(editor_&&!busy_);
     if(sheetTabs_)sheetTabs_->setEnabled(!busy_);
 

@@ -62,6 +62,15 @@ struct RevisionReleaseManifest {
 };
 RevisionReleaseRequest revisionReleaseRequest(const RevisionReleaseManifest &manifest);
 
+struct RevisionCatalogRecovery {
+    QUuid archiveId;
+    QByteArray checkpointHash,stateHash;
+    QDateTime createdUtc;
+    int documents=0,revisions=0,checkouts=0,releases=0;
+    bool protectedCatalog=false,catalogMatches=false,canRecover=false;
+    QString conflict,evidencePath;
+};
+
 // Archivio cooperativo su filesystem locale. Il lock breve protegge il
 // catalogo; le prenotazioni persistono nel catalogo anche dopo la chiusura.
 // Non e' un sistema di autenticazione. I filesystem di rete vanno validati.
@@ -97,6 +106,10 @@ public:
     QString readRelease(const QUuid &id,RevisionReleaseManifest &manifest) const;
     // Elenco dei manifesti; la verifica dei contenuti avviene con readRelease.
     QString releases(QVector<RevisionReleaseManifest> &manifests) const;
+    // Il checkpoint e' lo stato pubblicato; catalog.json e' la sua proiezione.
+    QString inspectCatalogRecovery(RevisionCatalogRecovery &result) const;
+    QString protectCatalog(RevisionCatalogRecovery &result) const;
+    QString recoverCatalog(const RevisionCatalogRecovery &expected,RevisionCatalogRecovery &result) const;
     QString directory() const { return directory_; }
 private:
     QString directory_;

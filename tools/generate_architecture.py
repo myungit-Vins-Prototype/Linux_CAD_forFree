@@ -185,7 +185,10 @@ DESCRIPTIONS.update({'tools/open_architecture.py': ('build', 'Avvio locale della
  'cad_revision_client_internal.h': ('documents',
                                     'Helper privati del protocollo revisioni: identità, percorsi, lock e '
                                     'file di sessione.'),
- 'cad_revision_store': ('documents', 'Archivio dei check-in e manifesti di rilascio coordinato: verifica record/payload, pubblicazione atomica idempotente, elenco metadati e lettura verificata.'),
+ 'cad_revision_store': ('documents', 'Archivio dei check-in, rilasci e checkpoint del catalogo: pubblicazione transazionale, puntatore all ultimo stato, verifica di catene/payload/rilasci e recupero esplicito senza rollback o perdita delle prenotazioni.'),
+ 'cad_revision_recovery_ui': ('documents', 'Dialogo condiviso 3D/2D per verificare archivio/checkpoint, attivare la protezione legacy e recuperare l ultimo catalogo registrato conservando il file danneggiato.'),
+ 'tests/test_catalog_recovery.cpp': ('tests', 'Checkpoint/proiezione, interruzioni, recupero atomico/idempotente, concorrenza, token, rilasci, conflitti, corruzione e migrazione legacy.'),
+ 'tests/test_catalog_recovery_gui.h': ('tests', 'Recupero nativo dai menu3D/2D: annulla, catalogo corrotto/assente, legacy, sessioni/pendenti conservati e consegna storica multipagina.'),
  'cad_shape_analysis': ('analysis', 'Campiona e visualizza analisi di curvatura e qualità delle forme.'),
  'cad_sketch_edit': ('sketch', 'Operazioni di modifica della geometria dello sketch.'),
  'cad_sketch_offset': ('sketch', 'Costruzione degli offset delle entità dello sketch.'),

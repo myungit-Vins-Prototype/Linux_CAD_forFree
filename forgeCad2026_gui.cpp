@@ -1,3 +1,5 @@
+#include "cad_revision_recovery_ui.h"
+#include <QScopedValueRollback>
 #include "forgeCad2026_ribbon_preview.h"
 #include "cad_drawing_browser.h"
 #include "cad_drawing_window.h"
@@ -937,6 +939,8 @@ void PdfWindow::initializeFileMenu(WindowSetup &setup) {
     QAction *historyAction = revisionMenu->addAction(QStringLiteral("Storico dei check-in..."));
     historyAction->setObjectName(QStringLiteral("revisionHistoryAction"));
     connect(historyAction,&QAction::triggered,this,[this] { showDocumentRevisions(); });
+    auto *catalogRecovery=revisionMenu->addAction(QStringLiteral("Verifica e recupero catalogo…"));catalogRecovery->setObjectName("documentCatalogRecoveryAction");
+    connect(catalogRecovery,&QAction::triggered,this,[this]{if(foregroundProgressDepth_||viewport_->interactionLocked())return;{QScopedValueRollback<int> guard(foregroundProgressDepth_,foregroundProgressDepth_+1);ForgeCad::showCatalogRecoveryDialog(this,documentPath_);}refreshDocumentEditAccess();updateWindowTitle();refreshDocumentRevisionPanel();});
     recentDocumentsMenu_ = addCadMenu(fileMenu, QStringLiteral("File recenti"));
     recentDocumentsMenu_->setObjectName(QStringLiteral("recentDocumentsMenu"));
     connect(recentDocumentsMenu_, &QMenu::aboutToShow, this, &PdfWindow::refreshRecentDocuments);

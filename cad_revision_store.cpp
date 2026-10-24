@@ -90,13 +90,10 @@ QJsonObject catalogJson(const Catalog &catalog) {
             {"documents", documents}, {"revisions", revisions}};
 }
 
-Catalog loadCatalog(const QString &directory) {
-    require(!directory.isEmpty(), QStringLiteral("Cartella dell'archivio non specificata."));
-    QFile file(QDir(directory).filePath("catalog.json"));
-    require(file.open(QIODevice::ReadOnly) && file.size() > 0 && file.size() <= kMaxCatalogBytes,
-            QStringLiteral("Catalogo revisioni assente, illeggibile o troppo grande."));
+Catalog parseCatalog(const QByteArray &bytes) {
+    require(!bytes.isEmpty()&&bytes.size()<=kMaxCatalogBytes,QStringLiteral("Catalogo assente o oltre i limiti."));
     QJsonParseError error;
-    const auto json = QJsonDocument::fromJson(file.readAll(), &error);
+    const auto json = QJsonDocument::fromJson(bytes, &error);
     require(error.error == QJsonParseError::NoError && json.isObject(), QStringLiteral("Catalogo revisioni danneggiato."));
     const auto root = json.object();
     require(root["format"].toString() == QLatin1String("ForgeCAD.RevisionArchive") && root["schema"].toDouble(-1) == 1,
@@ -161,14 +158,57 @@ Catalog loadCatalog(const QString &directory) {
     return catalog;
 }
 
+// Il puntatore di recupero e' pubblicato prima della proiezione catalog.json.
+// In caso di interruzione i lettori si fermano: soltanto il recupero esplicito
+// puo' applicare l'ultimo stato registrato, mai scegliere uno snapshot vecchio.
+QString recoveryDirectory(const QString &directory,bool create=false){
+    const auto path=QDir(directory).filePath("catalog-recovery");const QFileInfo info(path);
+    require(!info.isSymLink()&&(!info.exists()||info.isDir()),QStringLiteral("Cartella di recupero non valida."));
+    if(create)require(QDir().mkpath(path),QStringLiteral("Impossibile creare la cartella di recupero."));
+    return path;
+}
+QByteArray recoveryRead(const QString &path,qint64 limit,bool allowEmpty=false){
+    const QFileInfo info(path);require(!info.isSymLink(),QStringLiteral("Il file di recupero non puo' essere un collegamento."));QFile file(path);
+    require(file.open(QIODevice::ReadOnly)&&(allowEmpty||file.size()>0)&&file.size()<=limit,QStringLiteral("File assente, illeggibile o oltre i limiti: %1").arg(path));
+    const auto bytes=file.read(limit+1);require(bytes.size()==file.size()&&bytes.size()<=limit,QStringLiteral("Lettura incompleta del file di recupero."));return bytes;
+}
+void recoveryWrite(const QString &path,const QByteArray &bytes){
+    require(!QFileInfo(path).isSymLink(),QStringLiteral("La destinazione del recupero non puo' essere un collegamento."));QSaveFile file(path);
+    require(file.open(QIODevice::WriteOnly)&&file.write(bytes)==bytes.size()&&file.commit(),QStringLiteral("Impossibile pubblicare %1. Conservare i dati e riprovare il recupero.").arg(path));
+}
+struct RecoveryHead {QUuid archiveId;QByteArray hash,previous,bytes;QDateTime created;};
+RecoveryHead readRecoveryHead(const QString &directory){
+    RecoveryHead head;const auto path=QDir(recoveryDirectory(directory)).filePath("head.json");if(!QFileInfo::exists(path)&&!QFileInfo(path).isSymLink()){require(QDir(recoveryDirectory(directory)).entryList(QDir::AllEntries|QDir::NoDotAndDotDot|QDir::Hidden|QDir::System).isEmpty(),QStringLiteral("Puntatore di recupero mancante: conservare i checkpoint, senza scegliere una generazione automaticamente."));return head;}
+    head.bytes=recoveryRead(path,4096);QJsonParseError error;auto o=QJsonDocument::fromJson(head.bytes,&error).object();
+    require(error.error==QJsonParseError::NoError&&o.size()==7&&o["format"].toString()==QLatin1String("ForgeCAD.CatalogRecovery")&&o["schema"].toDouble(-1)==1,QStringLiteral("Puntatore di recupero danneggiato o non supportato."));
+    const auto checksum=hashValue(o.take("checksum"));require(checksum==digest(QJsonDocument(o).toJson(QJsonDocument::Compact)),QStringLiteral("Impronta del puntatore di recupero non valida."));
+    head.archiveId=uuid(o["archiveId"]);head.hash=hashValue(o["sha256"]);require(o["previous"].isString(),QStringLiteral("Base del puntatore di recupero assente."));head.previous=o["previous"].toString().isEmpty()?QByteArray():hashValue(o["previous"]);head.created=date(o["createdUtc"]);return head;
+}
+QString checkpointPath(const QString &directory,const QByteArray &hash){return QDir(recoveryDirectory(directory)).filePath(QString::fromLatin1(hash.toHex())+".json");}
+Catalog loadCatalog(const QString &directory){
+    require(!directory.isEmpty(),QStringLiteral("Cartella dell'archivio non specificata."));const auto bytes=recoveryRead(QDir(directory).filePath("catalog.json"),kMaxCatalogBytes);auto catalog=parseCatalog(bytes);const auto head=readRecoveryHead(directory);
+    require(head.hash.isEmpty()||(head.archiveId==catalog.archiveId&&head.hash==digest(bytes)),QStringLiteral("Il catalogo non corrisponde all'ultimo stato pubblicato. Usare Verifica e recupero catalogo."));return catalog;
+}
+void publishCatalogCheckpoint(const QString &directory,const QByteArray &bytes,const QUuid &archive,const QByteArray &previous){
+    recoveryDirectory(directory,true);const auto hash=digest(bytes);const auto path=checkpointPath(directory,hash);
+    if(QFileInfo::exists(path))require(recoveryRead(path,kMaxCatalogBytes)==bytes,QStringLiteral("Checkpoint esistente danneggiato: recupero necessario."));else recoveryWrite(path,bytes);
+    QJsonObject o{{"format","ForgeCAD.CatalogRecovery"},{"schema",1},{"archiveId",text(archive)},{"sha256",QString::fromLatin1(hash.toHex())},{"previous",QString::fromLatin1(previous.toHex())},{"createdUtc",QDateTime::currentDateTimeUtc().toString(Qt::ISODateWithMs)}};
+    o["checksum"]=QString::fromLatin1(digest(QJsonDocument(o).toJson(QJsonDocument::Compact)).toHex());recoveryWrite(QDir(recoveryDirectory(directory)).filePath("head.json"),QJsonDocument(o).toJson(QJsonDocument::Compact));
+}
+void pruneCatalogCheckpoints(const QString &directory,const QByteArray &current,const QByteArray &previous){
+    const auto files=QDir(recoveryDirectory(directory)).entryInfoList({"*.json"},QDir::Files);
+    for(const auto &file:files){const auto name=file.baseName().toLatin1();if(name.size()!=64||name==current.toHex()||name==previous.toHex()||file.isSymLink())continue;
+        const auto decoded=QByteArray::fromHex(name);if(decoded.size()==32&&decoded.toHex()==name)QFile::remove(file.absoluteFilePath());}
+}
 void saveCatalog(const QString &directory, const Catalog &catalog) {
     require(catalog.documents.size() <= kMaxDocuments && catalog.revisions.size() <= kMaxRevisions,
             QStringLiteral("Archivio oltre i limiti del prototipo."));
     const auto bytes = QJsonDocument(catalogJson(catalog)).toJson(QJsonDocument::Compact);
     require(bytes.size() <= kMaxCatalogBytes, QStringLiteral("Catalogo oltre il limite del prototipo."));
-    QSaveFile file(QDir(directory).filePath("catalog.json"));
-    require(file.open(QIODevice::WriteOnly) && file.write(bytes) == bytes.size() && file.commit(),
-            QStringLiteral("Pubblicazione del catalogo revisioni fallita."));
+    const auto path=QDir(directory).filePath("catalog.json");const auto previous=QFileInfo::exists(path)?digest(recoveryRead(path,kMaxCatalogBytes)):QByteArray();
+    publishCatalogCheckpoint(directory,bytes,catalog.archiveId,previous);
+    recoveryWrite(path,bytes);
+    pruneCatalogCheckpoints(directory,digest(bytes),previous);
 }
 
 QString transaction(const QString &directory, const std::function<bool(Catalog &)> &operation) {
@@ -510,4 +550,42 @@ QString RevisionStore::readRelease(const QUuid &id,RevisionReleaseManifest &mani
 QString RevisionStore::releases(QVector<RevisionReleaseManifest> &manifests)const{
     try{const auto catalog=loadCatalog(directory_);auto prepared=releaseList(directory_,catalog.archiveId);manifests=std::move(prepared);return {};}catch(const std::exception &error){return QString::fromUtf8(error.what());}
 }
+namespace {
+void verifyRecoveryContents(const QString &directory,const Catalog &catalog,RevisionCatalogRecovery &info){
+    QHash<QByteArray,qint64> verified;for(const auto &stored:catalog.revisions){const auto &record=stored.record;if(verified.contains(record.sha256))require(verified.value(record.sha256)==record.payloadSize,QStringLiteral("Dimensioni incoerenti per lo stesso contenuto."));else{readObject(directory,record);verified.insert(record.sha256,record.payloadSize);}}
+    const auto releases=releaseList(directory,catalog.archiveId);for(const auto &release:releases)verifiedRelease(directory,catalog,release.releaseId);info.releases=releases.size();
+}
+RevisionCatalogRecovery inspectRecovery(const QString &directory){
+    const auto head=readRecoveryHead(directory);RevisionCatalogRecovery info;Catalog catalog;QByteArray current;const auto path=QDir(directory).filePath("catalog.json");
+    const bool exists=QFileInfo::exists(path)||QFileInfo(path).isSymLink();if(exists)current=recoveryRead(path,kMaxCatalogBytes,true);
+    if(head.hash.isEmpty()){require(exists,QStringLiteral("Nessun checkpoint disponibile: gli oggetti da soli non ricostruiscono il catalogo."));catalog=parseCatalog(current);info.catalogMatches=true;}
+    else{
+        const auto bytes=recoveryRead(checkpointPath(directory,head.hash),kMaxCatalogBytes);require(digest(bytes)==head.hash,QStringLiteral("Checkpoint del catalogo danneggiato."));catalog=parseCatalog(bytes);
+        require(catalog.archiveId==head.archiveId,QStringLiteral("Checkpoint di un altro archivio."));info.protectedCatalog=true;info.checkpointHash=head.hash;info.createdUtc=head.created;info.catalogMatches=exists&&digest(current)==head.hash;
+        if(exists&&!info.catalogMatches){bool valid=false;try{parseCatalog(current);valid=true;}catch(const std::exception &){}if(valid&&digest(current)!=head.previous)info.conflict=QStringLiteral("Il catalogo attuale e' valido ma divergente: recupero bloccato per non perdere modifiche di un altro writer.");}
+        info.canRecover=!info.catalogMatches&&info.conflict.isEmpty();
+    }
+    info.archiveId=catalog.archiveId;info.documents=catalog.documents.size();info.revisions=catalog.revisions.size();for(const auto &d:catalog.documents)if(!d.checkout.token.isNull())++info.checkouts;
+    verifyRecoveryContents(directory,catalog,info);info.stateHash=digest(head.bytes+(exists?QByteArray("present"):QByteArray("missing"))+current);return info;
+}
+}
+QString RevisionStore::inspectCatalogRecovery(RevisionCatalogRecovery &result)const{
+    try{auto prepared=inspectRecovery(directory_);result=std::move(prepared);return {};}catch(const std::exception &e){return QString::fromUtf8(e.what());}
+}
+QString RevisionStore::protectCatalog(RevisionCatalogRecovery &result)const{
+    try{QLockFile lock(QDir(directory_).filePath("catalog.lock"));lock.setStaleLockTime(0);require(lock.tryLock(0),QStringLiteral("Archivio occupato o non scrivibile; riprovare."));
+        auto prepared=inspectRecovery(directory_);require(prepared.catalogMatches,QStringLiteral("Recuperare prima la proiezione del catalogo."));if(!prepared.protectedCatalog){const auto catalog=loadCatalog(directory_);saveCatalog(directory_,catalog);prepared=inspectRecovery(directory_);}result=std::move(prepared);return {};
+    }catch(const std::exception &e){return QString::fromUtf8(e.what());}
+}
+QString RevisionStore::recoverCatalog(const RevisionCatalogRecovery &expected,RevisionCatalogRecovery &result)const{
+    try{QLockFile lock(QDir(directory_).filePath("catalog.lock"));lock.setStaleLockTime(0);require(lock.tryLock(0),QStringLiteral("Archivio occupato o non scrivibile; riprovare."));auto prepared=inspectRecovery(directory_);
+        require(prepared.protectedCatalog&&expected.archiveId==prepared.archiveId&&expected.checkpointHash==prepared.checkpointHash,QStringLiteral("Il checkpoint e' cambiato: ripetere la verifica."));
+        if(prepared.catalogMatches){result=std::move(prepared);return {};}
+        require(prepared.canRecover&&prepared.stateHash==expected.stateHash,QStringLiteral("Il catalogo e' cambiato o e' divergente: ripetere la verifica."));
+        const auto path=QDir(directory_).filePath("catalog.json");QString evidence;
+        if(QFileInfo::exists(path)){const auto bytes=recoveryRead(path,kMaxCatalogBytes,true);evidence=QDir(recoveryDirectory(directory_)).filePath("damaged-"+text(QUuid::createUuid())+".bin");recoveryWrite(evidence,bytes);}
+        recoveryWrite(path,recoveryRead(checkpointPath(directory_,prepared.checkpointHash),kMaxCatalogBytes));prepared=inspectRecovery(directory_);prepared.evidencePath=evidence;result=std::move(prepared);return {};
+    }catch(const std::exception &e){return QString::fromUtf8(e.what());}
+}
+
 }
