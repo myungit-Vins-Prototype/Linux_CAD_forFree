@@ -63,12 +63,23 @@ struct DrawingRevisionTable {
     bool visible=false;
     QVector<DrawingRevisionNote> notes;
 };
+enum class DrawingTechnicalKind { Datum, FeatureControl };
+enum class DrawingGeometricCharacteristic { Straightness, Flatness, Circularity, Parallelism, Perpendicularity, Position };
+struct DrawingTechnicalAnnotation {
+    DrawingTechnicalKind kind=DrawingTechnicalKind::Datum;
+    QString label; // identificatore del datum: lettere A-Z
+    DrawingGeometricCharacteristic characteristic=DrawingGeometricCharacteristic::Straightness;
+    double tolerance=0; // valore dichiarato in mm, non misura calcolata
+    bool diameter=false;
+    QVector<QUuid> datums; // primario, secondario, terziario; mai etichette congelate
+};
 struct DrawingAnnotation {
     QUuid id=QUuid::createUuid(),viewId; // vista nulla per una nota libera sul foglio
     QString text=QStringLiteral("Nota");
     QPointF position{20,20}; // mm sul foglio, angolo superiore sinistro
     double width=45,height=3; // larghezza di impaginazione e altezza nominale del testo, mm
     std::optional<DrawingAttachment> reference; // punta del richiamo, mai coordinate congelate
+    std::optional<DrawingTechnicalAnnotation> technical{};
 };
 struct DrawingSheet {
     DrawingDocument drawing;

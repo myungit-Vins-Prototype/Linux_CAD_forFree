@@ -38,6 +38,7 @@ void select(DrawingSheetEditor &e,QUuid id,const char *kind){auto *tree=e.findCh
 }
 #include "test_drawing_axis_dimensions.h"
 #include "test_drawing_annotations.h"
+#include "test_drawing_technical_annotations.h"
 #include "test_drawing_tolerances.h"
 #include "test_drawing_options.h"
 int main(int argc,char **argv){QApplication app(argc,argv);try{
@@ -64,7 +65,7 @@ int main(int argc,char **argv){QApplication app(argc,argv);try{
  ok(editor.updateModel(changed));ok(editor.removeView(top.id));need(std::none_of(editor.sheet().axes.begin(),editor.sheet().axes.end(),[&](const auto &a){return a.viewId==top.id;}),"rimuovi vista rimuove assi");ok(editor.undo());need(editor.axisResult(diagonal.id).status==DrawingDimensionStatus::Ready,"Undo vista ripristina assi");
  editor.setReadOnly(true);need(!editor.addAxis(diagonal).isEmpty()&&!editor.updateAxis(median).isEmpty()&&!editor.removeAxis(median.id).isEmpty()&&!editor.beginAxis(DrawingAxisKind::ThroughPoints).isEmpty()&&!editor.setCylinderAxesVisible(front.id,false).isEmpty(),"sola lettura rispettata");
  axisDimensionTests();
- annotationTests();
+ annotationTests();technicalAnnotationTests();
  toleranceTests();
  drawingOptionsTests();
  std::cout<<"PASS assi associati, mediana, superfici cilindriche, snap mouse, proprieta', codec schema 4, undo, aggiornamento, riferimenti mancanti, PDF e sola lettura\n";

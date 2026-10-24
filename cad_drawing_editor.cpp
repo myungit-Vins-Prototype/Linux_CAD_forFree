@@ -76,6 +76,7 @@
 #include <cmath>
 #include <map>
 #include <tuple>
+#include <array>
 #include <stdexcept>
 
 namespace ForgeCad {
@@ -287,7 +288,15 @@ struct MoveLabel final:QGraphicsSimpleTextItem{
 };
 struct MoveNote final:QGraphicsTextItem{
     QPointF pressPosition;std::function<void(QPointF)> moved;std::function<void()> activated;
-    MoveNote(const DrawingAnnotation &note,const QString &text,const DrawingStyle &style={}){configureDrawingAnnotation(*document(),note,text,style);setScale(note.height/12);setFlags(ItemIsMovable|ItemIsSelectable);setZValue(8);}
+    bool technical=false;DrawingTechnicalLayout visual;
+    MoveNote(const DrawingAnnotation &note,const QString &text,const DrawingStyle &style={},const DrawingSheet *sheet=nullptr,bool missing=false){configureDrawingAnnotation(*document(),note,text,style);setScale(note.height/12);setFlags(ItemIsMovable|ItemIsSelectable);setZValue(8);if(note.technical&&sheet){visual=layoutDrawingTechnicalAnnotation(*sheet,note,style,missing);technical=true;setScale(1);}}
+    QRectF boundingRect()const override{return technical?visual.bounds:QGraphicsTextItem::boundingRect();}
+    QPainterPath shape()const override{if(!technical)return QGraphicsTextItem::shape();QPainterPath path;path.addRect(visual.bounds);return path;}
+    void paint(QPainter *p,const QStyleOptionGraphicsItem *option,QWidget *widget)override{
+        if(!technical){QGraphicsTextItem::paint(p,option,widget);return;}
+        p->setPen(QPen(defaultTextColor(),.18));p->setBrush(Qt::NoBrush);p->drawPath(visual.frame);p->drawPath(visual.symbol);p->setPen(Qt::NoPen);p->setBrush(defaultTextColor());p->drawPath(visual.text);
+        if(isSelected()){QPen pen(QColor("#1469c0"),1,Qt::DashLine);pen.setCosmetic(true);p->setPen(pen);p->setBrush(Qt::NoBrush);p->drawRect(visual.bounds);}
+    }
     void mousePressEvent(QGraphicsSceneMouseEvent *e)override{pressPosition=pos();QGraphicsTextItem::mousePressEvent(e);}
     void mouseReleaseEvent(QGraphicsSceneMouseEvent *e)override{QGraphicsTextItem::mouseReleaseEvent(e);if(moved&&pos()!=pressPosition)moved(pos());}
     void mouseDoubleClickEvent(QGraphicsSceneMouseEvent *e)override{if(activated){activated();e->accept();}else QGraphicsTextItem::mouseDoubleClickEvent(e);}
@@ -368,7 +377,7 @@ struct DrawingSheetEditor::Impl{
     QUuid selectedNote()const{const auto items=scene->selectedItems();return items.size()==1&&items[0]->data(kindRole).toString()==QLatin1String("annotation")?items[0]->data(idRole).toUuid():QUuid();}
     DrawingResolvedAttachment noteResult(const DrawingAnnotation &note)const{
         const auto found=curves.find(note.viewId);static const std::vector<DrawingCurve> empty;
-        auto result=resolveDrawingAnnotation(state,note,model.snapshot,found==curves.end()?empty:found->second);
+        auto result=resolveDrawingAnnotation(state,note,model.snapshot,found==curves.end()?empty:found->second,[this](const DrawingAnnotation &datum){return noteResult(datum);});
         const auto *layout=layoutFor(note.viewId);
         if(layout&&result.status==DrawingDimensionStatus::Ready&&drawingBreakRemoves(*layout,{result.point.x(),result.point.y()})){
             result.status=DrawingDimensionStatus::Missing;result.message=QStringLiteral("Aggancio nascosto dall'interruzione della vista.");}
@@ -409,9 +418,33 @@ struct DrawingSheetEditor::Impl{
     Impl(DrawingSheetEditor *widget,DrawingSheet sheet,DrawingEditorModel source):owner(widget),state(std::move(sheet)),model(std::move(source)){}
     void say(const QString &text){message->setText(text);message->setToolTip(text);}
     void report(const QString &error){if(!error.isEmpty())QMessageBox::warning(owner,QStringLiteral("Tavola 2D"),error);}
+    void technicalAnnotationDialog(DrawingTechnicalKind kind,const QUuid &id={}){
+        if(readOnly||computing)return;
+        DrawingAnnotation original;if(!id.isNull()){const auto *n=noteFor(id);if(!n||!n->technical)return;original=*n;kind=n->technical->kind;}
+        else{original.text.clear();original.technical=DrawingTechnicalAnnotation{};original.technical->kind=kind;
+            if(kind==DrawingTechnicalKind::Datum){for(int i=1;i<18279;++i){int value=i;QString label;while(value){--value;label.prepend(QChar('A'+value%26));value/=26;}bool used=false;for(const auto &n:state.annotations)if(n.technical&&n.technical->kind==DrawingTechnicalKind::Datum&&n.technical->label==label)used=true;if(!used){original.technical->label=label;break;}}}
+            else{original.technical->characteristic=DrawingGeometricCharacteristic::Flatness;original.technical->tolerance=.1;}}
+        const bool datum=kind==DrawingTechnicalKind::Datum;QDialog dialog(owner);dialog.setObjectName("drawingTechnicalAnnotationDialog");dialog.setWindowTitle(datum?QStringLiteral("Riferimento datum"):QStringLiteral("Tolleranza geometrica"));auto *form=new QFormLayout(&dialog);
+        auto *label=new QLineEdit(original.technical->label,&dialog);label->setObjectName("drawingDatumLabel");label->setMaxLength(3);if(datum)form->addRow(QStringLiteral("Identificatore:"),label);else label->hide();
+        auto *characteristic=new QComboBox(&dialog);characteristic->setObjectName("drawingGeometricCharacteristic");for(int i=0;i<6;++i)characteristic->addItem(drawingGeometricName(DrawingGeometricCharacteristic(i)),i);characteristic->setCurrentIndex(int(original.technical->characteristic));
+        auto *tolerance=new NumericInput(&dialog);tolerance->setObjectName("drawingGeometricTolerance");tolerance->setDecimals(6);tolerance->setRange(.000001,1e6);tolerance->setSuffix(" mm");tolerance->setValue(datum?.1:original.technical->tolerance);
+        auto *diameter=new QCheckBox(QStringLiteral("Zona di diametro"),&dialog);diameter->setObjectName("drawingGeometricDiameter");diameter->setChecked(original.technical->diameter);
+        std::array<QComboBox *,3> datums;for(int i=0;i<3;++i){auto *choice=new QComboBox(&dialog);choice->setObjectName(QStringLiteral("drawingGeometricDatum%1").arg(i));choice->addItem(QStringLiteral("Nessuno"),QUuid());for(const auto &n:state.annotations)if(n.id!=original.id&&n.technical&&n.technical->kind==DrawingTechnicalKind::Datum)choice->addItem(n.technical->label,n.id);
+            if(i<original.technical->datums.size()){const auto wanted=original.technical->datums[i];int index=choice->findData(wanted);if(index<0){choice->addItem(QStringLiteral("Datum mancante"),wanted);index=choice->count()-1;}choice->setCurrentIndex(index);}datums[std::size_t(i)]=choice;}
+        if(!datum){form->addRow(QStringLiteral("Caratteristica:"),characteristic);form->addRow(QStringLiteral("Tolleranza dichiarata:"),tolerance);form->addRow(diameter);for(int i=0;i<3;++i)form->addRow(QStringLiteral("Datum %1:").arg(i+1),datums[std::size_t(i)]);}else{characteristic->hide();tolerance->hide();diameter->hide();for(auto *choice:datums)choice->hide();}
+        auto *height=new NumericInput(&dialog);height->setObjectName("drawingTechnicalHeight");height->setRange(1,20);height->setDecimals(2);height->setSuffix(" mm sul foglio");height->setValue(original.height);form->addRow(QStringLiteral("Altezza caratteri:"),height);
+        auto *info=new QLabel(QStringLiteral("Simbolo e valore sono dichiarati dall’autore. Scegli un punto della geometria e posiziona il cartiglio; i datum collegati seguono la rinomina. Il comando non calcola la conformità del pezzo alla tolleranza."),&dialog);info->setWordWrap(true);form->addRow(info);
+        bool redefine=false;if(original.reference){auto *status=new QLabel(noteResult(original).message,&dialog);status->setWordWrap(true);form->addRow(status);auto *button=new QPushButton(QStringLiteral("Ridefinisci aggancio"),&dialog);button->setObjectName("drawingAnnotationRedefine");form->addRow(button);connect(button,&QPushButton::clicked,&dialog,[&]{redefine=true;dialog.reject();});}
+        auto *error=new QLabel(&dialog);error->setObjectName("drawingTechnicalError");error->setWordWrap(true);form->addRow(error);auto *buttons=new QDialogButtonBox(QDialogButtonBox::Ok|QDialogButtonBox::Cancel,&dialog);form->addRow(buttons);
+        const auto enableFields=[&]{const bool formOnly=characteristic->currentIndex()<=2;for(auto *choice:datums)choice->setEnabled(!formOnly);diameter->setEnabled(characteristic->currentIndex()==5);if(!diameter->isEnabled())diameter->setChecked(false);};connect(characteristic,qOverload<int>(&QComboBox::currentIndexChanged),&dialog,[&]{enableFields();});enableFields();
+        connect(buttons,&QDialogButtonBox::rejected,&dialog,&QDialog::reject);connect(buttons,&QDialogButtonBox::accepted,&dialog,[&]{auto note=original;note.height=height->value();DrawingTechnicalAnnotation t;t.kind=kind;
+            if(datum)t.label=label->text().trimmed().toUpper();else{t.characteristic=DrawingGeometricCharacteristic(characteristic->currentIndex());t.tolerance=tolerance->value();t.diameter=diameter->isChecked();if(characteristic->currentIndex()>=3){bool gap=false;for(auto *choice:datums){const auto selected=choice->currentData().toUuid();if(selected.isNull())gap=true;else{if(gap){error->setText(QStringLiteral("Compila i datum in ordine, senza lasciare campi intermedi vuoti."));return;}t.datums.append(selected);}}}}
+            note.technical=t;note.text.clear();const auto validation=validateDrawingTechnicalAnnotation(note,&state,false);error->setText(validation);if(!validation.isEmpty())return;
+            const auto result=id.isNull()?owner->beginAnnotation(true):owner->updateAnnotation(note);error->setText(result);if(!result.isEmpty())return;if(id.isNull()){pendingNote=note;quoteOverlay();}dialog.accept();});dialog.resize(500,datum?300:470);dialog.exec();if(redefine)report(owner->beginAnnotation(true,id));
+    }
     void annotationDialog(const QUuid &id={},bool leader=false){
         if(readOnly)return;
-        DrawingAnnotation original;if(!id.isNull()){const auto *n=noteFor(id);if(!n)return;original=*n;}
+        DrawingAnnotation original;if(!id.isNull()){const auto *n=noteFor(id);if(!n)return;if(n->technical){technicalAnnotationDialog(n->technical->kind,id);return;}original=*n;}
         QDialog dialog(owner);dialog.setObjectName("drawingAnnotationDialog");dialog.setWindowTitle(id.isNull()?(leader?QStringLiteral("Nuovo richiamo"):QStringLiteral("Nuova nota")):QStringLiteral("Proprieta' annotazione"));auto *form=new QFormLayout(&dialog);
         auto *text=new QPlainTextEdit(original.text,&dialog);text->setObjectName("drawingAnnotationText");text->setMinimumSize(360,130);form->addRow(QStringLiteral("Testo:"),text);
         auto *symbols=new QComboBox(&dialog);symbols->setObjectName("drawingAnnotationSymbols");symbols->addItems({QStringLiteral("Inserisci simbolo…"),QString::fromUtf8("⌀"),QString::fromUtf8("±"),QString::fromUtf8("°"),QString::fromUtf8("×"),QString::fromUtf8("µ"),QString::fromUtf8("≤"),QString::fromUtf8("≥")});form->addRow(QStringLiteral("Simboli:"),symbols);
@@ -695,7 +728,7 @@ struct DrawingSheetEditor::Impl{
                 child->setIcon(0,commandIcon("dimension"));child->setData(0,Qt::UserRole,"dimension");child->setData(0,Qt::UserRole+1,dimension.id);
                 if(!ready||!formatted.problem.isEmpty()){child->setForeground(0,QColor("#d34b4b"));child->setToolTip(0,ready?formatted.problem:found!=results.end()?found->second.message:QString());}}
         }
-        for(const auto &n:state.annotations){const auto result=noteResult(n);auto *item=new QTreeWidgetItem(n.reference?nodes.value(n.viewId,root):root,{n.text.section('\n',0,0).left(60)});item->setData(0,Qt::UserRole,"annotation");item->setData(0,Qt::UserRole+1,n.id);item->setIcon(0,commandIcon(n.reference?"drawingLeader":"drawingNote"));item->setToolTip(0,n.text);if(result.status!=DrawingDimensionStatus::Ready){item->setForeground(0,QColor("#c42b32"));item->setText(0,item->text(0)+QStringLiteral(" · Da verificare"));item->setToolTip(0,result.message);}}
+        for(const auto &n:state.annotations){const auto result=noteResult(n);auto *item=new QTreeWidgetItem(n.reference?nodes.value(n.viewId,root):root,{drawingAnnotationText(state,n).section('\n',0,0).left(60)});item->setData(0,Qt::UserRole,"annotation");item->setData(0,Qt::UserRole+1,n.id);item->setIcon(0,commandIcon(n.reference?"drawingLeader":"drawingNote"));item->setToolTip(0,drawingAnnotationText(state,n));if(result.status!=DrawingDimensionStatus::Ready){item->setForeground(0,QColor("#c42b32"));item->setText(0,item->text(0)+QStringLiteral(" · Da verificare"));item->setToolTip(0,result.message);}}
         for(const auto &l:state.views)if(!l.relation.parentId.isNull()&&nodes.contains(l.viewId)&&nodes.contains(l.relation.parentId)){
             auto *item=nodes.value(l.viewId);auto *oldParent=item->parent();oldParent->takeChild(oldParent->indexOfChild(item));nodes.value(l.relation.parentId)->addChild(item);
         }
@@ -1093,10 +1126,10 @@ struct DrawingSheetEditor::Impl{
             attachDrag(rendered);
         }
         for(const auto &n:state.annotations){const auto result=noteResult(n);const bool ready=result.status==DrawingDimensionStatus::Ready;
-            auto *item=new MoveNote(n,ready?n.text:QStringLiteral("Riferimento da verificare\n")+n.text,state.style);item->setPos(n.position);item->setDefaultTextColor(ready?QColor("#222222"):QColor("#c42b32"));item->setData(kindRole,"annotation");item->setData(idRole,n.id);item->setData(viewRole,n.viewId);item->setToolTip(ready?QStringLiteral("Doppio clic per modificare. Trascina per posizionare."):result.message);item->setFlag(QGraphicsItem::ItemIsMovable,interactive&&!readOnly);item->setFlag(QGraphicsItem::ItemIsSelectable,interactive);
+            auto *item=new MoveNote(n,ready?drawingAnnotationText(state,n):QStringLiteral("Riferimento da verificare\n")+drawingAnnotationText(state,n),state.style,&state,!ready);item->setPos(n.position);item->setDefaultTextColor(ready?QColor("#222222"):QColor("#c42b32"));item->setData(kindRole,"annotation");item->setData(idRole,n.id);item->setData(viewRole,n.viewId);item->setToolTip(ready?QStringLiteral("Doppio clic per modificare. Trascina per posizionare."):result.message);item->setFlag(QGraphicsItem::ItemIsMovable,interactive&&!readOnly);item->setFlag(QGraphicsItem::ItemIsSelectable,interactive);
             if(interactive){item->activated=[this,id=n.id]{QTimer::singleShot(0,owner,[this,id]{annotationDialog(id);});};item->moved=[this,id=n.id](QPointF p){const auto error=owner->moveAnnotation(id,p);if(!error.isEmpty()){say(error);queueRedraw();}};}scene->addItem(item);
             auto *background=scene->addRect(item->sceneBoundingRect().adjusted(-.5,-.2,.5,.2),QPen(Qt::NoPen),Qt::white);background->setData(viewRole,n.viewId);background->setZValue(6);background->setAcceptedMouseButtons(Qt::NoButton);
-            if(n.reference&&ready)paintLeader(scene,paperLocal(n.viewId,result.point),item->sceneBoundingRect(),QColor("#27445e"),n.viewId,false,n.id);
+            if(n.reference&&ready)paintLeader(scene,paperLocal(n.viewId,result.point),item->sceneBoundingRect(),QColor("#27445e"),n.viewId,false,n.id,n.technical&&n.technical->kind==DrawingTechnicalKind::Datum);
         }
         return missing;
     }
@@ -1120,9 +1153,10 @@ struct DrawingSheetEditor::Impl{
         auto *item=target->addPath(path,technicalPen(QPen(color,.22),target==this->scene),state.style.arrow==DrawingArrowStyle::Filled?QBrush(color):QBrush(Qt::NoBrush));
         item->setData(kindRole,"dimensionArrow");item->setData(viewRole,viewId);item->setZValue(preview?20:4);item->setAcceptedMouseButtons(Qt::NoButton);if(preview)overlay.push_back(item);
     }
-    void paintLeader(QGraphicsScene *target,QPointF anchor,const QRectF &box,QColor color,const QUuid &viewId,bool preview,const QUuid &noteId={}){
+    void paintLeader(QGraphicsScene *target,QPointF anchor,const QRectF &box,QColor color,const QUuid &viewId,bool preview,const QUuid &noteId={},bool datum=false){
         auto *line=target->addPath(drawingAnnotationLeader(anchor,box,false),technicalPen(QPen(color,.22),target==this->scene));line->setData(kindRole,preview?"annotationLeaderPreview":"annotationLeader");line->setData(idRole,noteId);line->setData(viewRole,viewId);line->setZValue(preview?20:4);line->setAcceptedMouseButtons(Qt::NoButton);if(preview)overlay.push_back(line);
-        const bool left=anchor.x()<box.center().x();const QPointF toward((left?box.left():box.right())+(left?-4:4),std::clamp(anchor.y(),box.top(),box.bottom()));paintTip(target,anchor,toward,color,viewId,preview);
+        const bool left=anchor.x()<box.center().x();const QPointF toward((left?box.left():box.right())+(left?-4:4),std::clamp(anchor.y(),box.top(),box.bottom()));if(!datum)paintTip(target,anchor,toward,color,viewId,preview);
+        else{const auto delta=toward-anchor;const double length=std::hypot(delta.x(),delta.y());if(length>1e-8){const auto d=delta/length,n=QPointF(-d.y(),d.x());QPainterPath triangle;triangle.moveTo(anchor);triangle.lineTo(anchor+2.5*d+.9*n);triangle.lineTo(anchor+2.5*d-.9*n);triangle.closeSubpath();auto *mark=target->addPath(triangle,technicalPen(QPen(color,.18),target==this->scene),color);mark->setData(kindRole,"datumMarker");mark->setData(viewRole,viewId);mark->setData(idRole,noteId);mark->setZValue(preview?20:4);mark->setAcceptedMouseButtons(Qt::NoButton);if(preview)overlay.push_back(mark);}}
     }
     QPointF dimensionTextDirection(const DrawingDimension &dimension,const DrawingDimensionResult &result,QPointF anchor)const{
         if(result.status!=DrawingDimensionStatus::Ready)return {1,0};
@@ -1311,8 +1345,8 @@ struct DrawingSheetEditor::Impl{
     void quoteOverlay(){
         clearOverlay();if(!quoteAction->isChecked())return;
         if(pendingNote&&(!noteLeader||pendingNote->reference)){
-            auto note=*pendingNote;note.position=quoteCursor;auto *item=new MoveNote(note,note.text,state.style);item->setPos(note.position);item->setDefaultTextColor(QColor("#1469c0"));item->setFlags({});item->setAcceptedMouseButtons(Qt::NoButton);item->setZValue(30);item->setData(kindRole,"annotationPreview");scene->addItem(item);overlay.push_back(item);
-            if(note.reference){const auto result=noteResult(note);if(result.status==DrawingDimensionStatus::Ready){paintLeader(scene,paperLocal(note.viewId,result.point),item->sceneBoundingRect(),QColor("#1469c0"),note.viewId,true,note.id);}}
+            auto note=*pendingNote;note.position=quoteCursor;auto *item=new MoveNote(note,drawingAnnotationText(state,note),state.style,&state);item->setPos(note.position);item->setDefaultTextColor(QColor("#1469c0"));item->setFlags({});item->setAcceptedMouseButtons(Qt::NoButton);item->setZValue(30);item->setData(kindRole,"annotationPreview");scene->addItem(item);overlay.push_back(item);
+            if(note.reference){const auto result=noteResult(note);if(result.status==DrawingDimensionStatus::Ready){paintLeader(scene,paperLocal(note.viewId,result.point),item->sceneBoundingRect(),QColor("#1469c0"),note.viewId,true,note.id,note.technical&&note.technical->kind==DrawingTechnicalKind::Datum);}}
             say(QStringLiteral("Posiziona il testo con un clic. Esc annulla."));return;
         }
         const auto dot=[&](QPointF p,QColor color,const QString &kind){if(!std::isfinite(p.x())||!std::isfinite(p.y()))return;auto *marker=scene->addEllipse(-4,-4,8,8,QPen(color,1),QBrush(Qt::white));marker->setFlag(QGraphicsItem::ItemIgnoresTransformations);marker->setPos(p);marker->setZValue(40);marker->setData(kindRole,kind);overlay.push_back(marker);};
@@ -2136,6 +2170,8 @@ DrawingSheetEditor::DrawingSheetEditor(DrawingSheet sheet,DrawingEditorModel mod
     impl_->shadedAction=action(QStringLiteral("Mostra facce ombreggiate"),"drawingShadedFacesAction",[this]{const auto error=setShadedFacesVisible(impl_->selectedView(),impl_->shadedAction->isChecked());impl_->refreshHiddenAction();impl_->report(error);});impl_->shadedAction->setCheckable(true);impl_->shadedAction->setToolTip(QStringLiteral("Facce e colori del modello nella vista selezionata; bordi e quote restano esatti."));
     action(QStringLiteral("Nota tecnica…"),"drawingAddNoteAction",[this]{impl_->annotationDialog();})->setIcon(commandIcon("drawingNote"));
     action(QStringLiteral("Richiamo associato…"),"drawingAddLeaderAction",[this]{impl_->annotationDialog({},true);})->setIcon(commandIcon("drawingLeader"));
+    action(QStringLiteral("Riferimento datum…"),"drawingAddDatumAction",[this]{impl_->technicalAnnotationDialog(DrawingTechnicalKind::Datum);})->setIcon(commandIcon("drawingNote"));
+    action(QStringLiteral("Tolleranza geometrica…"),"drawingAddGeometricToleranceAction",[this]{impl_->technicalAnnotationDialog(DrawingTechnicalKind::FeatureControl);})->setIcon(commandIcon("drawingLeader"));
     action(QStringLiteral("Proprieta' annotazione…"),"drawingEditAnnotationAction",[this]{impl_->annotationDialog(impl_->selectedNote());});
     impl_->quoteAction=action(QStringLiteral("Quota intelligente"),"drawingSmartDimensionAction",[]{});impl_->quoteAction->setCheckable(true);
     impl_->quoteType=new QComboBox(toolbar);impl_->quoteType->setObjectName("drawingDimensionType");impl_->quoteType->setToolTip(QStringLiteral("Tipo della quota interattiva"));
@@ -2714,7 +2750,7 @@ void DrawingSheetEditor::setReadOnly(bool readOnly){
     impl_->readOnly=readOnly||!impl_->state.drawing.version.checkinId.isNull();
     if(impl_->readOnly){impl_->cancelViewDrag();impl_->cancelPlacement();impl_->quoteAction->setChecked(false);}
     impl_->quoteType->setEnabled(!impl_->readOnly);
-    for(const auto &name:{"drawingAddNoteAction","drawingAddLeaderAction","drawingEditAnnotationAction","drawingAxisThroughPointsAction","drawingAxisBetweenLinesAction","drawingEditAxisAction","drawingDerivedViewAction","drawingAuxiliaryViewAction","drawingBreakViewAction","drawingDetailViewAction","drawingTechnicalSectionAction","drawingSteppedSectionAction","drawingAlignedSectionAction","drawingDetachViewAction","drawingReleaseAlignmentAction","drawingSectionHatchAction","drawingEditSectionLineAction","drawingAlignSectionOrientationAction","drawingReverseSectionAction","drawingOptionsAction","drawingResetViewTitleAction","drawingPageSettingsAction","drawingSmartDimensionAction","drawingChainHorizontalAction","drawingChainVerticalAction","drawingOrdinateXAction","drawingOrdinateYAction","drawingEditDimensionAction","drawingReverseDimensionArrowsAction","drawingOriginReferenceAction","drawingAxisXReferenceAction","drawingAxisYReferenceAction","drawingAddProjectionAction","drawingAddViewAction","drawingEditViewAction","drawingAlignViewAction","drawingEndpointDimensionAction","drawingHorizontalDimensionAction","drawingVerticalDimensionAction","drawingLengthDimensionAction","drawingDeleteSelectionAction"})
+    for(const auto &name:{"drawingAddNoteAction","drawingAddLeaderAction","drawingAddDatumAction","drawingAddGeometricToleranceAction","drawingEditAnnotationAction","drawingAxisThroughPointsAction","drawingAxisBetweenLinesAction","drawingEditAxisAction","drawingDerivedViewAction","drawingAuxiliaryViewAction","drawingBreakViewAction","drawingDetailViewAction","drawingTechnicalSectionAction","drawingSteppedSectionAction","drawingAlignedSectionAction","drawingDetachViewAction","drawingReleaseAlignmentAction","drawingSectionHatchAction","drawingEditSectionLineAction","drawingAlignSectionOrientationAction","drawingReverseSectionAction","drawingOptionsAction","drawingResetViewTitleAction","drawingPageSettingsAction","drawingSmartDimensionAction","drawingChainHorizontalAction","drawingChainVerticalAction","drawingOrdinateXAction","drawingOrdinateYAction","drawingEditDimensionAction","drawingReverseDimensionArrowsAction","drawingOriginReferenceAction","drawingAxisXReferenceAction","drawingAxisYReferenceAction","drawingAddProjectionAction","drawingAddViewAction","drawingEditViewAction","drawingAlignViewAction","drawingEndpointDimensionAction","drawingHorizontalDimensionAction","drawingVerticalDimensionAction","drawingLengthDimensionAction","drawingDeleteSelectionAction"})
         findChild<QAction *>(QString::fromLatin1(name))->setEnabled(!impl_->readOnly);
     impl_->refreshHiddenAction();impl_->refreshHistoryActions();impl_->updateAction->setEnabled(!impl_->readOnly&&bool(impl_->provider));
     for(auto *item:impl_->scene->items())if(dynamic_cast<MoveLabel *>(item)||dynamic_cast<MoveNote *>(item))item->setFlag(QGraphicsItem::ItemIsMovable,!impl_->readOnly&&item->data(kindRole).toString()!=QLatin1String("view"));
