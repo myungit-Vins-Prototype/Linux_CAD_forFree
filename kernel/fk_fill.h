@@ -58,6 +58,7 @@ struct FillContact {
     std::shared_ptr<const Body> body;
     FaceId face;
     double influence = -1.0; // -1 eredita FillOptions::influence; altrimenti > 0
+    int continuity = -1; // -1 eredita; altrimenti G0/G1/G2 per questo supporto
 
 };
 

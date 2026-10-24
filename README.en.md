@@ -85,6 +85,10 @@ Loft accepts sections and guides from sketches and exact edges, including spatia
 - Adding thickness to turn surfaces into solids.
 - Linear and circular patterns and mirroring of surfaces.
 
+The **Functions → Surfaces** menu also provides extension of one free edge up to a plane or face (including curved faces), an ordered U/V curve network, per-contact G0/G1/G2 continuity in fills, and direct NURBS pole/weight editing with a draggable cage and XYZ table. Networks use 2–16 open curves per family, exactly one 3D crossing per pair, and sewn Coons cells with internal G0 continuity. They do not impose global G1/G2 continuity. The extension reference must cross the full extension within the search distance without cutting the original sheet.
+
+Pole editing supports a single NURBS face, preserving degree, knots and UV trims including holes; extract a face from a sewn body with **Copy faces** first. Drag in the screen plane or edit XYZ/positive weights in the table (up to 4096 poles). Deltas and weight factors follow the upstream surface; a changed knot layout requires explicit reselection. Regularity checks are sampled and do not certify the absence of global self-intersections. These features support regeneration, Undo/Redo, native files and revisions; native format 53 retains reading of older files.
+
 ### Parametric history and documents
 
 - A storyboard containing sketches, features, and bodies, with selection synchronized with the 3D view.

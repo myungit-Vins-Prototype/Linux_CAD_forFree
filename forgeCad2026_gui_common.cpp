@@ -29,6 +29,7 @@ QString featureIconName(const ExtrusionObject &body) {
     if (body.feature == BodyFeature::Revolution) return QStringLiteral("revolve");
     if (body.feature == BodyFeature::Blend) return body.blendChamfer ? QStringLiteral("chamfer") : QStringLiteral("fillet");
     if (body.feature == BodyFeature::SheetTrim) return QStringLiteral("trimSurface");
+    if (body.feature == BodyFeature::SurfaceTools) return body.surfaceTool.mode==0?QStringLiteral("extendSurface"):body.surfaceTool.mode==1?QStringLiteral("loft"):QStringLiteral("spline");
     if (body.feature == BodyFeature::SheetExtend) return QStringLiteral("extendSurface");
     if (body.feature == BodyFeature::Scale) return QStringLiteral("scale");
     if (body.feature == BodyFeature::Helix) return QStringLiteral("helix");

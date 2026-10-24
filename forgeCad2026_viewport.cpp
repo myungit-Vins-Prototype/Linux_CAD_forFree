@@ -290,6 +290,9 @@ bool CadViewport::sketchModeActive() const { return sketchMode_; }
 
 void CadViewport::setEditBodyCallback(std::function<void(int)> callback) { editBodyCallback_ = std::move(callback); }
 
+void CadViewport::setSurfacePoleOverlay(const QVector<QVector3D> &points,int u,int v,int selected){surfacePoleOverlay_=points;surfacePoleU_=u;surfacePoleV_=v;surfacePoleSelected_=selected;update();}
+QPointF CadViewport::surfacePoleScreen(int index)const{return index>=0&&index<surfacePoleOverlay_.size()?projectWorldPoint(surfacePoleOverlay_[index]):QPointF(-1e6,-1e6);}
+QVector3D CadViewport::surfacePoleDragVector(const QPoint &from,const QPoint &to)const{QVector3D a,b,d;camera_.viewRay(from,size(),1,a,d);camera_.viewRay(to,size(),1,b,d);return b-a;}
 void CadViewport::setReferenceMarks(const QVector<GeometryRef> &marks) {
     refMarks_ = marks;
     update();

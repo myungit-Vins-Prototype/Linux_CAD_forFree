@@ -563,6 +563,9 @@ public:
                                  std::function<void(int, int, EdgePoint)> callback);
     // Riferimenti gia' scelti, evidenziati nella vista (finestra del piano).
     void setReferenceMarks(const QVector<GeometryRef> &marks);
+    void setSurfacePoleOverlay(const QVector<QVector3D> &points,int uCount=0,int vCount=0,int selected=-1);
+    QPointF surfacePoleScreen(int index) const;
+    QVector3D surfacePoleDragVector(const QPoint &from,const QPoint &to) const;
     // La voce attiva di un elenco ha un colore distinto dai riferimenti scelti.
     void setReferenceListHighlight(QObject *owner, const QVector<GeometryRef> &refs);
     void clearReferenceListHighlight(QObject *owner);
@@ -1648,6 +1651,8 @@ private:
     FaceHit refHoverFace_;  // faccia sotto il puntatore (per evidenziarne i bordi)
     int refHoverFaceBody_ = -1;
     QVector<GeometryRef> refMarks_;
+    QVector<QVector3D> surfacePoleOverlay_;
+    int surfacePoleU_=0,surfacePoleV_=0,surfacePoleSelected_=-1;
     QPointer<QObject> referenceListOwner_;
     QVector<GeometryRef> referenceListMarks_;
     bool measureValid_ = false;  // linea della misura (finestra Misura)

@@ -1563,6 +1563,7 @@ bool fillDialog(QMainWindow *window, CadViewport *viewport, const QString &title
     faceList->setMinimumHeight(100);
     QVector<GeometryRef> previousFaces = definition.ruledSecond;
     QVector<double> previousInfluences;
+    QVector<int> previousContinuities;for(int i=0;i<previousFaces.size();++i)previousContinuities.append(definition.fillFaceContinuities.value(i,-1));
     for (int i = 0; i < previousFaces.size(); ++i)
         previousInfluences.append(definition.fillFaceInfluences.value(i, definition.fillInfluence));
     faceRow.pick->setObjectName(QStringLiteral("fillPickFaces"));
@@ -1576,6 +1577,7 @@ bool fillDialog(QMainWindow *window, CadViewport *viewport, const QString &title
     continuityBox->addItems({QStringLiteral("Contatto (G0)"), QStringLiteral("Tangenza (G1)"), QStringLiteral("Curvatura (G2)")});
     continuityBox->setCurrentIndex(qBound(0, definition.fillContinuity, 2));
     continuityBox->setToolTip(QStringLiteral("Raccordo con le facce adiacenti lungo i tratti del contorno che stanno sul loro bordo"));
+    auto *contactContinuity=new QComboBox(&dialog);contactContinuity->setObjectName("fillContactContinuity");contactContinuity->addItems({QStringLiteral("Eredita continuita comune"),QStringLiteral("Contatto G0"),QStringLiteral("Tangenza G1"),QStringLiteral("Curvatura G2")});
     auto *influenceBox = new ForgeCad::ExpressionSpinBox(&dialog);
     influenceBox->setObjectName(QStringLiteral("fillFaceInfluence"));
     influenceBox->setDecimals(3);
@@ -1600,6 +1602,7 @@ bool fillDialog(QMainWindow *window, CadViewport *viewport, const QString &title
     form->addRow(QString(), faceRow.row);
     form->addRow(QString(), faceList);
     form->addRow(QStringLiteral("Continuita':"), continuityBox);
+    form->addRow(QStringLiteral("Continuita faccia selezionata:"),contactContinuity);
     form->addRow(QStringLiteral("Influenza faccia selezionata:"), influenceBox);
     form->addRow(QStringLiteral("Peso delle guide:"), weightBox);
     auto *shapeBox = new QCheckBox(QStringLiteral("Usa la faccia selezionata per guidare la forma"), &dialog);
@@ -1668,13 +1671,15 @@ bool fillDialog(QMainWindow *window, CadViewport *viewport, const QString &title
             }
         }
     };
+    const auto effective=[&](int row){const int own=definition.fillFaceContinuities.value(row,-1);return own<0?continuityBox->currentIndex():own;};
     const auto syncFaceControls = [&] {
-        const QSignalBlocker block(influenceBox), shapeBlock(shapeBox);
+        const QSignalBlocker block(influenceBox), shapeBlock(shapeBox),contactBlock(contactContinuity);
         const int row = faceList->currentRow();
-        shapeBox->setEnabled(definition.fillContinuity>0 && row>=0);
+        contactContinuity->setEnabled(row>=0);contactContinuity->setCurrentIndex(definition.fillFaceContinuities.value(row,-1)+1);
+        shapeBox->setEnabled(effective(row)>0 && row>=0);
         shapeBox->setChecked(row>=0 && row==definition.fillShapeFace);
-        shapeWeightBox->setEnabled(definition.fillShapeFace>=0 && definition.fillContinuity>0);
-        influenceBox->setEnabled(definition.fillContinuity > 0 && row >= 0 && row < definition.fillFaceInfluences.size());
+        shapeWeightBox->setEnabled(definition.fillShapeFace>=0 && effective(definition.fillShapeFace)>0);
+        influenceBox->setEnabled(effective(row) > 0 && row >= 0 && row < definition.fillFaceInfluences.size());
         if (row >= 0 && row < definition.fillFaceInfluences.size()) influenceBox->setValue(definition.fillFaceInfluences[row]);
     };
     const auto refresh = [&] {
@@ -1685,19 +1690,21 @@ bool fillDialog(QMainWindow *window, CadViewport *viewport, const QString &title
         const int oldShape=definition.fillShapeFace;
         const GeometryRef shapeRef=previousFaces.value(oldShape);
         int mappedShape=-1;
-        QVector<double> values; int selectedRow = -1;
+        QVector<double> values;QVector<int> continuities; int selectedRow = -1;
         for (int i = 0; i < definition.ruledSecond.size(); ++i) {
             const auto &ref = definition.ruledSecond[i]; double value = definition.fillInfluence;
-            for (int j = 0; j < previousFaces.size(); ++j) if (picker.sameFace(ref, previousFaces[j])) { value = previousInfluences.value(j, definition.fillInfluence); break; }
+            int continuity=-1;for (int j = 0; j < previousFaces.size(); ++j) if (picker.sameFace(ref, previousFaces[j])) { value = previousInfluences.value(j, definition.fillInfluence);continuity=previousContinuities.value(j,-1); break; }
+            continuities.append(continuity);
             if (oldRow >= 0 && picker.sameFace(ref, selected)) selectedRow = i;
             if(oldShape>=0 && picker.sameFace(ref,shapeRef))mappedShape=i;
             values.append(value);
         }
         definition.fillShapeFace=mappedShape;
-        if(continuityBox->currentIndex()==0)definition.fillShapeFace=-1;
+        definition.fillFaceContinuities=std::all_of(continuities.cbegin(),continuities.cend(),[](int c){return c<0;})?QVector<int>{}:continuities;
+        if(definition.fillShapeFace>=0&&effective(definition.fillShapeFace)==0)definition.fillShapeFace=-1;
         definition.fillShapeWeight=shapeWeightBox->value();
         definition.fillFaceInfluences = values;
-        previousFaces = definition.ruledSecond; previousInfluences = values;
+        previousFaces = definition.ruledSecond; previousInfluences = values;previousContinuities=continuities;
         {
             const QSignalBlocker block(faceList);
             faceList->clear();
@@ -1705,7 +1712,7 @@ bool fillDialog(QMainWindow *window, CadViewport *viewport, const QString &title
                 const auto &ref = previousFaces[i];
                 faceList->addItem(QStringLiteral("%1 — F%2 / influenza %3")
                     .arg(ForgeCad::geometryRefText(ref, viewport->sketches(), viewport->extrusions())).arg(ref.point.subshape)
-                    .arg(values[i], 0, 'g', 3) + (i==definition.fillShapeFace ? QStringLiteral(" — guida della forma") : QString()));
+                    .arg(values[i], 0, 'g', 3) + QStringLiteral(" / G%1%2").arg(effective(i)).arg(continuities[i]<0?QStringLiteral(" (comune)"):QString()) + (i==definition.fillShapeFace ? QStringLiteral(" — guida della forma") : QString()));
             }
             faceList->setCurrentRow(selectedRow >= 0 ? selectedRow : faceList->count() ? 0 : -1);
         }
@@ -1771,6 +1778,7 @@ bool fillDialog(QMainWindow *window, CadViewport *viewport, const QString &title
         refresh();
     });
     QObject::connect(continuityBox, &QComboBox::currentIndexChanged, &dialog, refresh);
+    QObject::connect(contactContinuity,qOverload<int>(&QComboBox::currentIndexChanged),&dialog,[&](int value){const int row=faceList->currentRow();if(row<0)return;if(previousContinuities.size()!=previousFaces.size())return;previousContinuities[row]=value-1;refresh();});
     const auto changeFaceInfluence = [&] {
         const int row = faceList->currentRow();
         if (row < 0 || row >= definition.fillFaceInfluences.size()) return;

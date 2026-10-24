@@ -507,7 +507,7 @@ void upgradeTopologyReferences(QVector<ExtrusionObject> &features) {
         upgrade(feature.curveExtraction.source);
         for(auto &ref:feature.curveExtraction.sources)upgrade(ref);
         upgrade(feature.curveExtraction.tool);
-        if (feature.feature == BodyFeature::Blend || feature.feature == BodyFeature::SheetExtend) {
+        if (feature.feature == BodyFeature::Blend || feature.feature == BodyFeature::SheetExtend || (feature.feature==BodyFeature::SurfaceTools&&feature.surfaceTool.mode==0)) {
             const bool sameBase = feature.firstBody >= 0 && feature.firstBody < features.size()
                                && (feature.blendBaseFeature == 0 || feature.blendBaseFeature == features.at(feature.firstBody).featureId);
             // Come buildGeometry: una base sconosciuta (ID zero) usa la

@@ -320,7 +320,7 @@ struct BodyDisplay {
 enum class BodyFeature { Extrusion = 0, Revolution = 1, Primitive = 2, Blend = 3, SheetTrim = 4, SheetExtend = 5, Scale = 6, Helix = 7, Sweep = 8, Loft = 9,
                          Imported = 10, DatumPlane = 11, Pattern = 12, Transform = 13, SurfaceOffset = 14, Sew = 15, Ruled = 16, PlanarSurface = 17,
                          DeleteFace = 18, BoundarySurface = 19, Shell = 20, Thread = 21, FillSurface = 22, Draft = 23,
-                         ProjectedCurve = 24, Thicken = 25, ExtractedCurve = 26, SpatialSketch = 27 };
+                         ProjectedCurve = 24, Thicken = 25, ExtractedCurve = 26, SpatialSketch = 27, SurfaceTools = 28 };
 
 // Riferimento leggero a una sotto-entita' del B-rep. `subshape` e' l'ID
 // topologico al momento della scelta, `geometry` il tipo di curva/superficie.
@@ -594,6 +594,13 @@ struct CurveExtractionParameters {
     SketchFrame view; // direzione di proiezione congelata, indipendente dalla camera
 };
 
+struct SurfacePoleEdit {int u=0,v=0;double dx=0,dy=0,dz=0,weightFactor=1;};
+struct SurfaceToolParameters {
+    int mode=0; // 0 fino a riferimento, 1 rete di curve, 2 poli NURBS
+    double maximum=100,tolerance=1e-6;
+    QByteArray basis;
+    QVector<SurfacePoleEdit> edits;
+};
 struct ExtrusionObject {
     // Identita' persistente della feature e del corpo logico a cui appartiene.
     // Gli indici nel vettore restano il formato operativo delle dipendenze;
@@ -706,6 +713,8 @@ struct ExtrusionObject {
     QVector<double> fillFaceInfluences;
     int fillShapeFace = -1; // indice di ruledSecond, -1 forma libera
     double fillShapeWeight = 1.0;
+    QVector<int> fillFaceContinuities; // -1 eredita; altrimenti G0/G1/G2 per ruledSecond
+    SurfaceToolParameters surfaceTool;
     int fillContinuity = 1;
     double fillInfluence = 1.0;
     double fillGuideWeight = 1.0;

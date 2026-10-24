@@ -424,6 +424,7 @@ struct Sample {
     Vec2 inward;          // contorno: normale interna nel piano dei parametri (nulla se non definita)
     double influence = 1.0;
     double cornerFade = 1.0; // attenua solo il controllo di forma G1 ai vertici
+    int continuity = 0;
     int piece = -1;       // contorno: tratto
     ContactPoint contact;
     Vec3 transverse;     // derivata trasversale coerente con il piano dei parametri
@@ -549,23 +550,30 @@ Body fillSurface(const std::vector<PathSegment> &boundary, const std::vector<Pat
     // Facce adiacenti: per ogni tratto la faccia che ha il tratto sul bordo.
     std::vector<ContactFace> faces;
     std::vector<double> faceInfluences;
+    std::vector<int> faceContinuities;
+    int maximumContinuity=options.continuity;
     int shapeFace = -1;
     for (std::size_t contactIndex = 0; contactIndex < contacts.size(); ++contactIndex) {
         cancellationPoint();
         const FillContact &contact = contacts[contactIndex];
         const double influence = contact.influence == -1.0 ? options.influence : contact.influence;
+        const int continuity=contact.continuity<0?options.continuity:contact.continuity;
+        if(contact.continuity < -1 || continuity>2)throw std::domain_error("riempimento: continuita della faccia non valida");
+        maximumContinuity=std::max(maximumContinuity,continuity);
         if (!std::isfinite(influence) || influence <= 0.0) throw std::domain_error("riempimento: influenza di una faccia non valida");
         if (contact.body && contact.face.valid()) {
             if (int(contactIndex) == options.shapeContact) shapeFace = int(faces.size());
             faces.emplace_back(contact.body, contact.face);
             faceInfluences.push_back(influence);
+            faceContinuities.push_back(continuity);
         }
     }
     const double match = 10.0 * join;
     std::vector<int> pieceContact(std::size_t(pieceCount), -1);
-    for (int k = 0; k < pieceCount && options.continuity > 0; ++k)
+    for (int k = 0; k < pieceCount && maximumContinuity > 0; ++k)
         for (std::size_t f = 0; f < faces.size() && pieceContact[std::size_t(k)] < 0; ++f) {
             cancellationPoint();
+            if(faceContinuities[f]==0)continue;
             bool all = true;
             for (double s : {0.2, 0.5, 0.8}) {
                 FinId fin;
@@ -619,6 +627,7 @@ Body fillSurface(const std::vector<PathSegment> &boundary, const std::vector<Pat
         const int c = pieceContact[std::size_t(k)];
         if (c >= 0 && norm(sample.inward) > 0.0) {
             sample.influence = faceInfluences[std::size_t(c)];
+            sample.continuity=faceContinuities[std::size_t(c)];
             sample.contact = faces[std::size_t(c)].at(sample.point, scale, t);
             if (sample.contact.valid) {
                 const Vec3 d3 = sample.inward.x() * frame.xDir() + sample.inward.y() * frame.yDir();
@@ -642,7 +651,7 @@ Body fillSurface(const std::vector<PathSegment> &boundary, const std::vector<Pat
     // Una patch regolare G1 ha un solo piano tangente al vertice. Anche la
     // tangente dell'altro bordo deve giacervi, pur senza un proprio supporto.
     // Diagnosticare la geometria originale prima dell'approssimazione.
-    if(options.continuity>0) for(int k=0;k<pieceCount;++k) {
+    if(maximumContinuity>0) for(int k=0;k<pieceCount;++k) {
         const int next=(k+1)%pieceCount;
         const Sample a=boundarySample(k,1), b=boundarySample(next,0);
         double worst=0;
@@ -664,7 +673,7 @@ Body fillSurface(const std::vector<PathSegment> &boundary, const std::vector<Pat
     struct ShapeSection { Sample start; double length; };
     std::vector<ShapeSection> shapeSections;
     if (options.shapeContact >= 0 && options.shapeWeight > 0.0) {
-        if (shapeFace < 0 || options.continuity == 0)
+        if (shapeFace < 0 || faceContinuities[std::size_t(shapeFace)] == 0)
             throw std::domain_error("riempimento: la faccia guida della forma richiede un contatto G1/G2 valido");
         for (int k = 0; k < pieceCount; ++k) {
             cancellationPoint();
@@ -722,7 +731,7 @@ Body fillSurface(const std::vector<PathSegment> &boundary, const std::vector<Pat
     const double sign = flip ? -1.0 : 1.0;
 
     // Conflitti tra le guide e la tangenza nei punti in cui arrivano sul bordo.
-    if (options.continuity > 0)
+    if (maximumContinuity > 0)
         for (std::size_t g = 0; g < guides.size(); ++g) {
             cancellationPoint();
             double worst = 0.0;
@@ -827,7 +836,7 @@ Body fillSurface(const std::vector<PathSegment> &boundary, const std::vector<Pat
                     else
                     system.add(rowAt(grid, s.uv.x(), s.uv.y(), {{2, 0, du * du}, {1, 1, 2.0 * du * dv}, {0, 2, dv * dv}}), target(curvature), kCurvatureBias * s.influence * s.cornerFade * h * h * h * h);
                 }
-                if (second)
+                if (second && s.continuity>=2)
                     system.add(rowAt(grid, s.uv.x(), s.uv.y(), {{2, 0, du * du}, {1, 1, 2.0 * du * dv}, {0, 2, dv * dv}}), target((*second)[i]), kTangentWeight * h * h * h * h);
                 if (graph && s.cornerFade > 0.0) {
                     // L'influenza e' locale al supporto: ampiezza della fascia
@@ -968,7 +977,7 @@ Body fillSurface(const std::vector<PathSegment> &boundary, const std::vector<Pat
             return std::make_shared<BSplineSurface>(kDegree, kDegree, grid.uKnots, grid.vKnots, grid.nu, grid.nv, std::move(poles));
         };
         surface = assemble(nullptr);
-        if (options.continuity >= 2 && out.contactPieces > 0) {
+        if (maximumContinuity >= 2 && out.contactPieces > 0) {
             // G2: sul grafico S_dd ha solo la componente N, quindi il target
             // e' diretto. Nel percorso 3D la parte tangente segue la soluzione
             // corrente, mentre quella normale e' fissata dal supporto.
@@ -976,7 +985,7 @@ Body fillSurface(const std::vector<PathSegment> &boundary, const std::vector<Pat
                 std::vector<Vec3> second(edgeSamples.size());
                 for (std::size_t i = 0; i < edgeSamples.size(); ++i) {
                     const Sample &s = edgeSamples[i];
-                    if (!s.contact.valid) continue;
+                    if (!s.contact.valid || s.continuity<2) continue;
                     Vec3 d[9];
                     surface->evaluate(s.uv.x(), s.uv.y(), 2, d);
                     const double du = s.inward.x(), dv = s.inward.y();
@@ -1040,7 +1049,7 @@ Body fillSurface(const std::vector<PathSegment> &boundary, const std::vector<Pat
             if (!(norm(n) > 0.0)) continue;
             const Vec3 nf = sign * normalized(n);
             out.tangentAngle = std::max(out.tangentAngle, std::acos(std::clamp(std::fabs(dot(nf, s.contact.normal)), 0.0, 1.0)));
-            if (options.continuity >= 2) {
+            if (s.continuity >= 2) {
                 const double du = s.inward.x(), dv = s.inward.y();
                 const Vec3 first = du * su + dv * sv;
                 const Vec3 second = du * du * d[Surface::derivativeIndex(2, 0, 2)] + 2.0 * du * dv * d[Surface::derivativeIndex(1, 1, 2)]
@@ -1077,7 +1086,7 @@ Body fillSurface(const std::vector<PathSegment> &boundary, const std::vector<Pat
     if (foldsBack)
         out.notes.push_back("in qualche punto la faccia adiacente prosegue verso l'esterno del contorno (visto dalla sua normale media): "
                             "la tangenza obbliga la superficie a ripiegarsi");
-    if(options.continuity>0 && out.tangentAngle>0.5*kPi/180)
+    if(maximumContinuity>0 && out.tangentAngle>0.5*kPi/180)
         out.notes.push_back("la tangenza ottenuta si discosta di "+degrees(out.tangentAngle)
             +" gradi dalle facce adiacenti: risultato approssimato");
     if (out.boundaryDeviation > tolerance)

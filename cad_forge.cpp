@@ -1689,7 +1689,7 @@ ForgeBody forgeBoundarySurface(const std::vector<PathSegment> &segments, QString
 
 ForgeBody forgeFillSurface(const std::vector<PathSegment> &boundary, const std::vector<PathSegment> &guides,
                            const QVector<QPair<ForgeBody, EdgePoint>> &contacts, int continuity, double influence, double guideWeight,
-                           QString *error, QString *notice, const QVector<double> &faceInfluences, int shapeFace, double shapeWeight) {
+                           QString *error, QString *notice, const QVector<double> &faceInfluences, int shapeFace, double shapeWeight, const QVector<int> &faceContinuities) {
     if (boundary.empty()) {
         setError(error, QStringLiteral("Scegli le curve del contorno."));
         return nullptr;
@@ -1698,6 +1698,7 @@ ForgeBody forgeFillSurface(const std::vector<PathSegment> &boundary, const std::
         if (!faceInfluences.isEmpty() && faceInfluences.size() != contacts.size()) {
             setError(error, QStringLiteral("Numero di influenze diverso dal numero di facce adiacenti.")); return nullptr;
         }
+        if(!faceContinuities.isEmpty()&&faceContinuities.size()!=contacts.size()){setError(error,QStringLiteral("Numero di continuita diverso dai supporti."));return nullptr;}
         std::vector<FillContact> faces;
         for (const auto &[body, reference] : contacts) {
             if (!body) {
@@ -1711,7 +1712,7 @@ ForgeBody forgeFillSurface(const std::vector<PathSegment> &boundary, const std::
                 setError(error, QStringLiteral("Una delle facce adiacenti non esiste piu'."));
                 return nullptr;
             }
-            faces.push_back({body, face, faceInfluences.isEmpty() ? -1.0 : faceInfluences[int(faces.size())]});
+            faces.push_back({body, face, faceInfluences.isEmpty() ? -1.0 : faceInfluences[int(faces.size())],faceContinuities.isEmpty()?-1:faceContinuities[int(faces.size())]});
         }
         FillOptions options;
         options.continuity = continuity;

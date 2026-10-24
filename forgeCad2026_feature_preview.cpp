@@ -94,6 +94,11 @@ QString FeaturePreviewBuilder::previewKey(const ExtrusionObject &d, int index) {
         parts << n(e.x) << n(e.y) << n(e.z) << QString::number(e.subshape) << QString::number(e.geometry) << QString::number(e.context);
     parts << n(d.sewTolerance) << QString::number(d.sewSolid) << QString::number(d.loftSurface) << QString::number(d.sweepSurface);
     parts << QStringLiteral("FS") << QString::number(d.fillContinuity) << n(d.fillInfluence) << n(d.fillGuideWeight);
+    for(int value:d.fillFaceContinuities)parts << QStringLiteral("FC") << QString::number(value);
+    if(d.feature==BodyFeature::SurfaceTools){
+        parts << QStringLiteral("ST") << QString::number(d.surfaceTool.mode) << n(d.surfaceTool.maximum) << n(d.surfaceTool.tolerance) << QString::fromLatin1(d.surfaceTool.basis.toHex());
+        for(const auto &edit:d.surfaceTool.edits)parts << QString::number(edit.u) << QString::number(edit.v) << n(edit.dx) << n(edit.dy) << n(edit.dz) << n(edit.weightFactor);
+    }
     for (double value : d.fillFaceInfluences) parts << QStringLiteral("FI") << n(value);
     parts << QStringLiteral("FS") << QString::number(d.fillShapeFace) << n(d.fillShapeWeight);
     for(const auto &source:d.curveExtraction.sources){parts<<QStringLiteral("ES");ref(source);}

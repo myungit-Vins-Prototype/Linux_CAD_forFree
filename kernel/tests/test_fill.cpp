@@ -434,3 +434,26 @@ FK_TEST(FillReportsBoundaryContactConflictAtCorner) {
         found=found || (note.find("al vertice")!=std::string::npos && note.find("non sono compatibili")!=std::string::npos);
     FK_CHECK(found);
 }
+
+// L'override G0 rilascia il contatto anche con G2 comune; G2 esplicita
+// funziona con impostazione comune G0. Le chiamate precedenti ereditano.
+FK_TEST(FillPerFaceContinuityOverrides) {
+    FaceId side;
+    const auto tube=sideSheet(makeCylinder(Frame3(),1,2),SurfaceType::Cylinder,side);
+    const std::vector<PathSegment> boundary{circle(Vec3(0,0,2),Vec3(1,0,0),Vec3(0,1,0),1,0,kTwoPi)};
+    FillOptions global;global.continuity=2;FillReport inherited,released,explicitG2;
+    const auto legacy=fillSurface(boundary,{},{{tube,side}},global,&inherited);
+    const auto free=fillSurface(boundary,{},{{tube,side,-1,0}},global,&released);
+    global.continuity=0;const auto forced=fillSurface(boundary,{},{{tube,side,-1,2}},global,&explicitG2);
+    checkValid(free);checkValid(forced);
+    FK_CHECK(inherited.contactPieces==1 && released.contactPieces==0 && explicitG2.contactPieces==1);
+    FK_CHECK_NEAR(free.face(free.faces().front()).surface->point(0,0).z(),2,1e-7);
+    FK_CHECK(forced.face(forced.faces().front()).surface->point(0,0).z()>2.1);
+    FK_CHECK(explicitG2.tangentAngle<.5*kPi/180);
+    FK_CHECK_NEAR(inherited.curvatureDeviation,explicitG2.curvatureDeviation,1e-9);
+    FK_CHECK_THROWS(fillSurface(boundary,{},{{tube,side,-1,3}},global));
+    FK_CHECK_THROWS(fillSurface(boundary,{},{{tube,side,-1,-2}},global));
+    global.shapeContact=0;global.shapeWeight=1;
+    FK_CHECK_THROWS(fillSurface(boundary,{},{{tube,side,-1,0}},global));
+    (void)legacy;
+}

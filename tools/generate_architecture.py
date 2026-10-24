@@ -40,6 +40,14 @@ GROUPS = [
  ('build', 'Build e strumenti', 'Configurazione, generazione e confezionamento del software.')]
 # Descrizioni curate: aggiornare queste voci quando cambia il confine di un modulo.
 DESCRIPTIONS = {
+ 'cad_surface_tools': ('features', 'Estensione fino a riferimento, rete U/V e poli/pesi NURBS: costruzione parametrica, storia dichiarata, impronta della base e codec delle estensioni native53.'),
+ 'fk_surface_tools': ('kernel', 'Reti a celle Coons cucite, prolungamento e rifilo al riferimento, modifica relativa di poli/pesi con ricostruzione dei bordi e trim UV conservati.'),
+ 'forgeCad2026_dialogs_surface_tools.cpp': ('dialogs', 'Pannelli per estendere fino a piano/faccia, ordinare famiglie U/V e modificare XYZ/pesi dei poli con gabbia e trascinamento nella vista.'),
+ 'kernel/tests/test_surface_tools.cpp': ('tests', 'Reti non planari, curve invertite e incroci invalidi; estensione a piani/facce curve; poli/pesi, trim/fori, topologia e input degeneri.'),
+ 'kernel/tests/surface_tools_fixture.h': ('tests', 'Fixture condivisa NURBS bicubica con trim UV e foro per prove geometriche e native delle superfici.'),
+ 'tests/test_surface_tools_gui.h': ('tests', 'Funzioni superficie nella storia: dipendenze, rigenerazione, Undo/Redo, UI e mouse, formato53, revisioni e protezione readonly.'),
+ 'fk_fill': ('kernel', 'Riempimenti con contorni/guide, contatti G0/G1/G2 per faccia, influenza locale e guida direzionale della forma; rapporti numerici e controllo di regolarita.'),
+
  'tests/test_drawing_break.cpp': ('tests', 'Viste interrotte: coordinate X/Y, quote originali, ritaglio, codec, dialogo, Undo, modello e PDF.'),
  'tests/test_projected_drawing_file.h': ('tests', 'File nativi e revisioni delle tavole proiettate, ausiliarie e interrotte; protezione dello storico e PDF.'),
  'tests/test_sketch_slot_point.h': ('tests', 'Asola rettilinea e punto autonomo: mouse, geometria esatta, volume, vincoli, Undo/Redo, formato52 e comandi UI.'),

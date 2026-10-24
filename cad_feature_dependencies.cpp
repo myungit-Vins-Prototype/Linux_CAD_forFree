@@ -52,6 +52,12 @@ QVector<int> bodyOperands(const ExtrusionObject &body) {
         if (isBodyRef(body.draftNeutral) && !refs.contains(body.draftNeutral.index)) refs.append(body.draftNeutral.index);
         return refs;
     }
+    case BodyFeature::SurfaceTools: {
+        QVector<int> refs;if(body.surfaceTool.mode!=1)refs.append(body.firstBody);
+        for(const auto *family:{&body.ruledFirst,&body.ruledSecond})for(const auto &ref:*family)if(isBodyRef(ref)&&!refs.contains(ref.index))refs.append(ref.index);
+        if(body.surfaceTool.mode==0&&isBodyRef(body.extentRef)&&!refs.contains(body.extentRef.index))refs.append(body.extentRef.index);
+        return refs;
+    }
     case BodyFeature::Blend:
     case BodyFeature::SheetExtend:
     case BodyFeature::SurfaceOffset:
@@ -157,12 +163,14 @@ QVector<int> sketchesOf(const ExtrusionObject &body) {
             if (isSketchRef(ref)) sketches.append(ref.index);
         return sketches;
     }
+    case BodyFeature::SurfaceTools:
     case BodyFeature::Ruled:
     case BodyFeature::PlanarSurface:
     case BodyFeature::BoundarySurface:
     case BodyFeature::FillSurface: {
         QVector<int> sketches;
         if (body.feature == BodyFeature::PlanarSurface && body.planarRefs.isEmpty()) sketches.append(body.sketchIndex);
+        if(body.feature==BodyFeature::SurfaceTools&&body.surfaceTool.mode==0&&isSketchRef(body.extentRef))sketches.append(body.extentRef.index);
         for (const QVector<GeometryRef> *refs : {&body.ruledFirst, &body.ruledSecond, &body.planarRefs, &body.loftStartFaces, &body.loftEndFaces, &body.loftSections, &body.loftEdgeGuides})
             for (const GeometryRef &ref : *refs)
                 if (isSketchRef(ref) && !sketches.contains(ref.index)) sketches.append(ref.index);

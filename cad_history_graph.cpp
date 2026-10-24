@@ -246,6 +246,7 @@ QString featureType(const ExtrusionObject &feature) {
     case BodyFeature::ProjectedCurve: return QStringLiteral("Curva proiettata");
     case BodyFeature::Thicken: return QStringLiteral("Spessore");
     case BodyFeature::SpatialSketch: return QStringLiteral("Schizzo 3D");
+    case BodyFeature::SurfaceTools: return feature.surfaceTool.mode==0?QStringLiteral("Estendi fino a riferimento"):feature.surfaceTool.mode==1?QStringLiteral("Rete di curve"):QStringLiteral("Poli NURBS");
     case BodyFeature::ExtractedCurve: return QStringLiteral("Curva estratta 3D");
     }
     return QStringLiteral("Feature");
@@ -375,6 +376,11 @@ QVector<Dependency> dependencies(int index, const DocumentState &document) {
     case BodyFeature::Blend:
         addBodyDependency(result, features, index, feature.firstBody,
                           QStringLiteral("base • %1 spigoli").arg(feature.blendEdges.size()));
+        break;
+    case BodyFeature::SurfaceTools:
+        if(feature.surfaceTool.mode!=1)addBodyDependency(result,features,index,feature.firstBody,QStringLiteral("superficie sorgente"));
+        if(feature.surfaceTool.mode==0)addGeometryDependency(result,feature.extentRef,sketches,features,index,QStringLiteral("limite estensione"));
+        for(const auto *family:{&feature.ruledFirst,&feature.ruledSecond})for(const auto &ref:*family)addGeometryDependency(result,ref,sketches,features,index,QStringLiteral("curva rete"));
         break;
     case BodyFeature::SheetExtend:
         addBodyDependency(result, features, index, feature.firstBody,
@@ -540,7 +546,7 @@ QVector<TopologyReferenceResolution> diagnosticReferences(int index, const Docum
         const auto &ref = dependency.topologyRef;
         if (ref.kind >= 3 && ref.kind <= 5) inspect(dependency.index, ref.kind, ref.point, ReferenceState::Same);
     }
-    if (feature.feature == BodyFeature::Blend || feature.feature == BodyFeature::SheetExtend) {
+    if (feature.feature == BodyFeature::Blend || feature.feature == BodyFeature::SheetExtend || (feature.feature==BodyFeature::SurfaceTools&&feature.surfaceTool.mode==0)) {
         const bool same = feature.firstBody >= 0 && feature.firstBody < document.extrusions.size()
             && (!feature.blendBaseFeature || feature.blendBaseFeature == document.extrusions.at(feature.firstBody).featureId);
         for (const auto &ref : feature.blendEdges)

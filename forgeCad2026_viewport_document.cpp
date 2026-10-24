@@ -667,7 +667,7 @@ QString CadViewport::reorderFeatureTo(int index, int target, const QVector<Story
         if (feature.modelBodyId != bodyId) continue;
         if (previous >= 0) {
             if (feature.operation >= 0 || feature.feature == BodyFeature::Blend || feature.feature == BodyFeature::SheetTrim
-                || feature.feature == BodyFeature::SheetExtend || feature.feature == BodyFeature::Scale
+                || feature.feature == BodyFeature::SheetExtend || (feature.feature==BodyFeature::SurfaceTools&&feature.surfaceTool.mode!=1) || feature.feature == BodyFeature::Scale
                 || (feature.feature == BodyFeature::Transform && !feature.move.copy) || feature.feature == BodyFeature::Pattern
                 || feature.feature == BodyFeature::Sew || feature.feature == BodyFeature::DeleteFace
                 || feature.feature == BodyFeature::Draft || feature.feature == BodyFeature::Shell || feature.feature == BodyFeature::Thread
@@ -1642,7 +1642,7 @@ void CadViewport::documentChanged() {
                 if (feature.modelBodyId != bodyId) continue;
                 if (previous >= 0) {
                     if (feature.operation >= 0 || feature.feature == BodyFeature::Blend || feature.feature == BodyFeature::SheetTrim
-                        || feature.feature == BodyFeature::SheetExtend || feature.feature == BodyFeature::Scale
+                        || feature.feature == BodyFeature::SheetExtend || (feature.feature==BodyFeature::SurfaceTools&&feature.surfaceTool.mode!=1) || feature.feature == BodyFeature::Scale
                         || (feature.feature == BodyFeature::Transform && !feature.move.copy) || feature.feature == BodyFeature::Pattern
                         || feature.feature == BodyFeature::Sew || feature.feature == BodyFeature::DeleteFace
                         || feature.feature == BodyFeature::Draft || feature.feature == BodyFeature::Shell || feature.feature == BodyFeature::Thread

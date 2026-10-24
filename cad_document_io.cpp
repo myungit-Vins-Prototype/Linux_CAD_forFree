@@ -1,4 +1,5 @@
 #include "cad_document_io.h"
+#include "cad_surface_tools.h"
 #include "cad_document_read.h"
 #include "cad_workspace.h"
 
@@ -788,7 +789,7 @@ bool read(ReadStream &in, ExtrusionObject &body, quint16 version, int extras) {
         int next = 0;
         forEachEdgePoint(body, [&](EdgePoint &e) { e.name = names.at(next++); });
     }
-    const BodyFeature last = version >= 45 ? BodyFeature::SpatialSketch : version >= 44 ? BodyFeature::ExtractedCurve : version >= 39 ? BodyFeature::Thicken : version >= 38 ? BodyFeature::ProjectedCurve : version >= 36 ? BodyFeature::Draft : version >= 35 ? BodyFeature::FillSurface : version >= 27 ? BodyFeature::Thread : version >= 25 ? BodyFeature::Shell : BodyFeature::PlanarSurface;
+    const BodyFeature last = version >= 53 ? BodyFeature::SurfaceTools : version >= 45 ? BodyFeature::SpatialSketch : version >= 44 ? BodyFeature::ExtractedCurve : version >= 39 ? BodyFeature::Thicken : version >= 38 ? BodyFeature::ProjectedCurve : version >= 36 ? BodyFeature::Draft : version >= 35 ? BodyFeature::FillSurface : version >= 27 ? BodyFeature::Thread : version >= 25 ? BodyFeature::Shell : BodyFeature::PlanarSurface;
     if (int(body.feature) < 0 || int(body.feature) > int(last)) return false;
     return in.status() == QDataStream::Ok;
 }
@@ -1174,6 +1175,10 @@ QString encodeDocument(const DocumentState &state, QByteArray &bytes, bool bodie
         DocumentState normalized = state;
         normalizeModelHistory(normalized);
         upgradeTopologyReferences(normalized.extrusions);
+        const auto surfaceExtras=surfaceToolsExtras(normalized.extrusions);
+        auto checkedSurfaces=normalized.extrusions;
+        const auto surfaceError=applySurfaceToolsExtras(surfaceExtras,checkedSurfaces);
+        if(!surfaceError.isEmpty())return surfaceError;
         QByteArray payload;
         {
             QBuffer buffer(&payload);
@@ -1192,6 +1197,7 @@ QString encodeDocument(const DocumentState &state, QByteArray &bytes, bool bodie
                 out << body.id << body.name << body.visible << body.tipFeatureId << body.meshColor;
             out << qint32(normalized.lengthUnit);
             out << normalized.version.documentId << normalized.version.checkinId << normalized.baseCheckinId;
+            if(!surfaceExtras.isEmpty())out << quint32(0x53524631) << surfaceExtras;
         }
         QByteArray prepared;
         QDataStream out(&prepared, QIODevice::WriteOnly);
@@ -1296,6 +1302,7 @@ QString parsePayload(const QByteArray &payload, quint16 version, int extras, Doc
             || (!loaded.version.checkinId.isNull() && loaded.version.checkinId == loaded.baseCheckinId))
             return QStringLiteral("Il file e' danneggiato (identita' del documento).");
     }
+    if(version>=53){QByteArray extras;if(!buffer.atEnd()){quint32 tag=0;in>>tag>>extras;if(in.status()!=QDataStream::Ok||tag!=0x53524631)return QStringLiteral("Estensioni superfici danneggiate.");}const auto error=applySurfaceToolsExtras(extras,loaded.extrusions);if(!error.isEmpty())return error;}
     if (!buffer.atEnd()) return QStringLiteral("Il file e' danneggiato (dati in piu' alla fine).");
     normalizeModelHistory(loaded);
     return {};

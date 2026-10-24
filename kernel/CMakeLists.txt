@@ -73,6 +73,8 @@ add_library(forgekernel STATIC
     fk_blend_surface.h
     fk_blend_surface.cpp
     fk_sheet.h
+    fk_surface_tools.h
+    fk_surface_tools.cpp
     fk_sheet.cpp
     fk_offset.h
     fk_offset.cpp
@@ -176,6 +178,7 @@ add_executable(forgekernel_tests
     tests/test_planar.cpp
     tests/test_boundary.cpp
     tests/test_fill.cpp
+    tests/test_surface_tools.cpp
     tests/test_project.cpp
     tests/test_thicken.cpp
     tests/test_shell.cpp
@@ -229,3 +232,11 @@ target_link_libraries(forgekernel_tolerance_tests PRIVATE forgekernel)
 target_compile_options(forgekernel_tolerance_tests PRIVATE -Wall -Wextra -Wpedantic)
 set_target_properties(forgekernel_tolerance_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
 add_test(NAME forgekernel_tolerance_tests COMMAND forgekernel_tolerance_tests)
+
+# Geometria delle nuove funzioni, eseguibile anche senza il riferimento OCCT.
+add_executable(forgekernel_surface_tools_tests tests/fk_test_main.cpp tests/test_surface_tools.cpp tests/test_fill.cpp)
+target_link_libraries(forgekernel_surface_tools_tests PRIVATE forgekernel)
+target_compile_options(forgekernel_surface_tools_tests PRIVATE -Wall -Wextra -Wpedantic)
+set_target_properties(forgekernel_surface_tools_tests PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
+add_test(NAME forgekernel_surface_tools_tests COMMAND forgekernel_surface_tools_tests)
+set_tests_properties(forgekernel_surface_tools_tests PROPERTIES TIMEOUT 180)

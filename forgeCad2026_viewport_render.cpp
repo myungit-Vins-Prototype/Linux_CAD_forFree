@@ -389,6 +389,14 @@ void CadViewport::drawReferenceLabels() {
     painter.setPen(QColor(255, 170, 140));
     size = referencePlaneExtents(2);
     if (isPlaneShown(2)) painter.drawText(projectWorldPoint(QVector3D(0.0f, 0.75f * float(size.width()), 0.75f * float(size.height()))), QStringLiteral("Piano YZ"));
+    if(surfacePoleU_>0&&surfacePoleV_>0&&surfacePoleU_*surfacePoleV_==surfacePoleOverlay_.size()){
+        painter.save();
+        painter.setPen(QPen(QColor(70,205,245,180),1,Qt::DashLine));
+        for(int i=0;i<surfacePoleU_;++i)for(int j=0;j<surfacePoleV_;++j){const int k=i*surfacePoleV_+j;const auto p=surfacePoleScreen(k);if(i+1<surfacePoleU_)painter.drawLine(p,surfacePoleScreen(k+surfacePoleV_));if(j+1<surfacePoleV_)painter.drawLine(p,surfacePoleScreen(k+1));}
+        for(int k=0;k<surfacePoleOverlay_.size();++k){const bool selected=k==surfacePoleSelected_;painter.setPen(Qt::black);painter.setBrush(selected?QColor(255,195,50):QColor(65,220,255));painter.drawEllipse(surfacePoleScreen(k),selected?5:3,selected?5:3);}
+        if(surfacePoleSelected_>=0&&surfacePoleSelected_<surfacePoleOverlay_.size()){painter.setPen(QColor(255,210,80));painter.drawText(surfacePoleScreen(surfacePoleSelected_)+QPointF(8,-8),QStringLiteral("P(%1,%2)").arg(surfacePoleSelected_/surfacePoleV_+1).arg(surfacePoleSelected_%surfacePoleV_+1));}
+        painter.restore();
+    }
     drawDatumLabels(painter);
     drawTopologyLabels(painter);
     if (sketchMode_) {

@@ -1,4 +1,5 @@
 #include "cad_feature_build.h"
+#include "cad_surface_tools.h"
 #include "cad_element_names.h"
 #include "cad_topology_ref.h"
 #include "cad_curve_extract.h"
@@ -245,6 +246,7 @@ void buildGeometryImpl(ExtrusionObject &body, int index, const QVector<SketchObj
             body.solid = body.forgeBody && !body.forgeBody->isSheet();
             return;
         }
+        case BodyFeature::SurfaceTools: buildSurfaceTool(body,index,sketches,bodies);return;
         case BodyFeature::SpatialSketch: {
             body.curves=buildSpatialSketch(body.spatialSketch,&body.error);
             if(!body.curves.isEmpty())body.curve=body.curves.first();
@@ -549,7 +551,7 @@ void buildGeometryImpl(ExtrusionObject &body, int index, const QVector<SketchObj
                 contacts.append({bodies.at(ref.index).forgeBody, ref.point});
             }
             body.forgeBody = ForgeCad::forgeFillSurface(boundary, guides, contacts, body.fillContinuity, body.fillInfluence,
-                                                        body.fillGuideWeight, &body.error, &body.notice, body.fillFaceInfluences, body.fillShapeFace, body.fillShapeWeight);
+                                                        body.fillGuideWeight, &body.error, &body.notice, body.fillFaceInfluences, body.fillShapeFace, body.fillShapeWeight, body.fillFaceContinuities);
             body.solid = false;
             return;
         }

@@ -81,9 +81,17 @@ Il Loft accetta sezioni e guide da schizzi e bordi esatti, anche spaziali, con e
 - Selezione di bordi e curve per definire contorni, sezioni e guide.
 - Copia e rimozione di facce.
 - Offset, estensione e taglio delle superfici.
+- **Estendi fino a riferimento**: un bordo libero prosegue fino a un piano o a una faccia, anche curva, entro una distanza massima di ricerca.
+- **Superficie da rete di curve**: due famiglie ordinate U/V, con un solo incrocio 3D per coppia, generano celle di Coons cucite con continuità interna G0.
+- Riempimenti con continuità **G0/G1/G2 per singola faccia adiacente**, ereditabile dall'impostazione comune; influenza e guida della forma restano associate alla faccia.
+- **Modifica poli NURBS**: gabbia selezionabile e trascinabile nella vista, tabella XYZ e pesi; modifiche parametriche relative alla sorgente.
 - Cucitura di più superfici; creazione di un solido quando chiudono un volume valido.
 - Aggiunta di spessore per trasformare superfici in solidi.
 - Ripetizione lineare, circolare e specchio delle superfici.
+
+I nuovi comandi sono nel menu **Funzioni → Superfici**. Le reti accettano 2–16 curve aperte per famiglia; riordinare le curve con Su/Giù quando gli incroci non sono monotoni. Non è una superficie globale Gordon con G1/G2 fra le celle. L'estensione richiede che il riferimento attraversi tutto il prolungamento senza tagliare la superficie iniziale; aumentare la distanza di ricerca se necessario.
+
+L'editor dei poli lavora su una singola faccia NURBS e conserva gradi, nodi e rifilature UV, inclusi i fori. Per una faccia di un corpo cucito usare prima **Copia facce**. Il trascinamento avviene sul piano dello schermo; per il terzo asse usare la tabella o ruotare la vista. Pesi positivi, griglia fino a 4096 poli. Se la struttura della griglia cambia a monte, ricaricare la griglia e riselezionare i poli. I controlli di regolarità sono campionati e non certificano l'assenza globale di auto-intersezioni. Le nuove funzioni partecipano a rigenerazione, Undo/Redo, salvataggio e revisioni; il formato nativo 53 conserva la lettura dei formati precedenti.
 
 ### Storia parametrica e documenti
 

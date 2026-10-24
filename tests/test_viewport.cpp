@@ -19,6 +19,13 @@
 #include "../cad_menu.h"
 #include "../cad_kernel.h"
 #include "../cad_curve_extract.h"
+#include "../cad_surface_tools.h"
+#include "../cad_spatial_sketch.h"
+#include "../kernel/tests/surface_tools_fixture.h"
+#include <QJsonObject>
+#include <QJsonArray>
+#include <QJsonDocument>
+#include <QLocale>
 #include "../cad_measure.h"
 #include "../toolbar_editor.h"
 #include <QOpenGLContext>
@@ -108,6 +115,7 @@ public:
 #include "test_document_recovery.h"
 #include "test_document_consultation.h"
 #include "test_catalog_recovery_gui.h"
+#include "test_surface_tools_gui.h"
     static void previewPerformance(bool gl = false) {
         using namespace ForgeCad;using namespace ForgeCad::Kernel;
         const auto settle=[](CadViewport &view) {
@@ -1467,7 +1475,7 @@ public:
         }
         const auto originalFaces=fill.ruledSecond;
         auto shapeChanged=fill;shapeChanged.fillShapeFace=1;require(CadViewport::previewKey(shapeChanged,4)!=CadViewport::previewKey(fill,4),"shape reference invalidates preview");
-        fill.fillFaceInfluences={0.4,1.2,2.3,3.4};
+        fill.fillFaceInfluences={0.4,1.2,2.3,3.4};fill.fillFaceContinuities={0,1,2,-1};
         auto changed=fill;changed.fillFaceInfluences[1]=2.0;
         require(CadViewport::previewKey(changed,4)!=CadViewport::previewKey(fill,4),"individual face influence invalidates preview cache");
         ExtrusionObject submitted;std::exception_ptr failure;
@@ -1480,8 +1488,9 @@ public:
                 require(list && influence && list->count()==4,"four independently editable supports");
                 list->setCurrentRow(1);require(std::fabs(influence->value()-1.2)<1e-9,"selected face restores its value");
                 influence->setValue(2.5);
+                auto *continuity=dialog->findChild<QComboBox *>("fillContactContinuity");require(continuity&&continuity->currentIndex()==2,"G1 della faccia selezionata");continuity->setCurrentIndex(3);
                 auto *shape=dialog->findChild<QCheckBox *>("fillShapeFace");require(shape,"directional shape control exists");shape->setChecked(true);
-                list->setCurrentRow(2);require(!shape->isChecked(),"selecting another face does not transfer shape reference");list->setCurrentRow(1);require(shape->isChecked(),"shape face remains selected by identity");
+                list->setCurrentRow(2);require(!shape->isChecked(),"selecting another face does not transfer shape reference");continuity->setCurrentIndex(1);require(!shape->isEnabled(),"G0 non guida la forma");list->setCurrentRow(1);require(shape->isChecked()&&continuity->currentIndex()==3,"forma e G2 seguono identita faccia");
                 dialog->findChild<QPushButton *>("fillPickFaces")->click();
                 auto callback=view.refPickFinished_; callback(true,originalFaces[0]);
                 require(list->count()==3 && std::fabs(influence->value()-2.5)<1e-9,"removing another face preserves selection and influence");
@@ -1492,6 +1501,7 @@ public:
         });
         require(fillDialog(&window,&view,"Riempimento",4,fill,[&](const ExtrusionObject &d){submitted=d;return QString();}),"accept individual fill definition");
         if(failure)std::rethrow_exception(failure);
+        require(submitted.fillFaceContinuities==QVector<int>({2,0,-1,-1}),"continuita segue identita dopo rimozione e riaggiunta");
         require(submitted.fillFaceInfluences==QVector<double>({2.5,2.3,3.4,1.0}),"face influence follows identity after remove/add");
         require(submitted.fillShapeFace==0&&submitted.fillShapeWeight==1,"shape reference remaps across removed face");
         buildGeometry(submitted,4,view.sketches_,view.extrusions_);require(submitted.forgeBody && submitted.error.isEmpty(),"fill built with individual support influences");
@@ -1499,6 +1509,7 @@ public:
         DocumentState document;document.extrusions=view.extrusions_;document.extrusions.append(submitted);
         QTemporaryDir dir;DocumentState loaded;const QString path=dir.filePath("individual.prt");
         require(saveDocumentFile(path,document,false).isEmpty() && loadDocumentFile(path,loaded).isEmpty(),"save and reopen individual fill");
+        require(loaded.extrusions.last().fillFaceContinuities==submitted.fillFaceContinuities,"continuita individuali persistenti");
         require(loaded.extrusions.last().fillFaceInfluences==submitted.fillFaceInfluences,"individual influences survive serialization");
         require(loaded.extrusions.last().fillShapeFace==submitted.fillShapeFace&&loaded.extrusions.last().fillShapeWeight==submitted.fillShapeWeight,"directional shape condition survives serialization");
         loaded.extrusions.last().fillFaceInfluences={1.0};
@@ -9910,6 +9921,31 @@ public:
 };
 #include "test_blend_history.h"
 #include "../forgeCad2026_application_theme.h"
+// QA facoltativa con un contesto OpenGL reale: non tocca documenti dell'utente.
+static void surfaceToolsVisualQa() {
+    using namespace ForgeCad; using namespace Kernel;
+    const QString qa="/tmp/forgecad-surface-tools-qa";QDir().mkpath(qa);
+    PdfWindow window;window.resize(1600,1000);for(auto *dock:window.findChildren<QDockWidget *>())dock->hide();
+    CadViewport *view=nullptr;for(auto *child:window.findChildren<QWidget *>())if(auto *candidate=dynamic_cast<CadViewport *>(child)){view=candidate;break;}
+    require(view,"viewport della finestra QA");window.show();QApplication::processEvents();require(view->isValid(),"QA visiva richiede OpenGL valido");
+    for(int mode=0;mode<3;++mode){
+        DocumentState document;ExtrusionObject source;source.feature=BodyFeature::Imported;source.name="Superficie NURBS";
+        const auto base=surface_fixture::patch(true);source.importData=QByteArray::fromStdString(writeStep({{"NURBS",base,false,{0,0,0},nullptr,{}}}));document.extrusions.append(source);
+        ExtrusionObject definition;definition.feature=BodyFeature::SurfaceTools;definition.surfaceTool.mode=mode;definition.firstBody=0;
+        if(mode==0){const auto wall=makePlaneSheet(Frame3(Vec3(14,5,0),Vec3(1,0,0),Vec3(0,0,1)),8);ExtrusionObject target;target.feature=BodyFeature::Imported;target.name="Piano finale";target.importData=QByteArray::fromStdString(writeStep({{"Limite",wall,false,{0,0,0},nullptr,{}}}));document.extrusions.append(target);}
+        if(mode==1){ExtrusionObject curves;curves.feature=BodyFeature::SpatialSketch;curves.name="Curve U/V";curves.spatialSketch.nextId=7;for(int i=0;i<6;++i){SpatialCurve3D entity;entity.id=i+1;entity.points=i<3?QVector<SpatialPoint>{{0.,5.*i,0.},{10.,5.*i,2.*i}}:QVector<SpatialPoint>{{5.*(i-3),0.,0.},{5.*(i-3),10.,2.*(i-3)}};curves.spatialSketch.entities.append(entity);}document.extrusions.append(curves);}
+        view->loadDocument(document);
+        if(mode==0){const auto shape=view->extrusions()[0].forgeBody;definition.blendEdges={edgeReference(*shape,surface_fixture::edgeNear(*shape,Vec3(10,5,0)),Vec3(10,5,0))};const auto target=view->extrusions()[1].forgeBody;definition.extentRef.kind=5;definition.extentRef.index=1;definition.extentRef.featureId=view->extrusions()[1].featureId;definition.extentRef.point=faceReference(*target,target->faces().front(),Vec3(14,5,0));definition.surfaceTool.maximum=10;}
+        if(mode==1){view->setModelBodyVisible(view->modelBodyIndexForFeature(0),false);for(int i=0;i<6;++i){GeometryRef ref;ref.kind=9;ref.index=1;ref.featureId=view->extrusions()[1].featureId;ref.point.subshape=i+1;ref.point.geometry=kSpatialCurveReference;(i<3?definition.ruledFirst:definition.ruledSecond).append(ref);}}
+        if(mode==2){definition.surfaceTool.basis=surfaceBasisHash(view->extrusions()[0].forgeBody);definition.surfaceTool.edits={{1,1,0,0,2,1.4}};}
+        view->setReferencePlanesVisible(false);view->setAxesVisible(false);view->setGridVisible(false);view->setViewNormal(0);view->setViewPreset(4);view->fitAll();QApplication::processEvents();
+        std::exception_ptr failure;bool captured=false;const auto name=QStringList{"estensione","rete","poli"}[mode];
+        QTimer::singleShot(1200,&window,[&]{auto *dialog=window.findChild<QDialog *>("surfaceToolDialog");try{require(dialog,"pannello QA aperto");if(!view->previewError().isEmpty()){dialog->grab().save(qa+"/errore-"+name+".png");for(auto *box:dialog->findChildren<QComboBox *>())std::cerr<<box->objectName().toStdString()<<": "<<box->currentText().toStdString()<<"\n";}require(view->previewError().isEmpty(),qPrintable(view->previewError()));dialog->resize(mode==2?620:480,mode==2?720:650);dialog->move(16,180);const QPointF center(view->width()/2.,view->height()/2.);QMouseEvent press(QEvent::MouseButtonPress,center,center,Qt::MiddleButton,Qt::MiddleButton,Qt::NoModifier);QApplication::sendEvent(view,&press);QMouseEvent move(QEvent::MouseMove,center+QPointF(290,0),center+QPointF(290,0),Qt::NoButton,Qt::MiddleButton,Qt::NoModifier);QApplication::sendEvent(view,&move);QMouseEvent release(QEvent::MouseButtonRelease,center+QPointF(290,0),center+QPointF(290,0),Qt::MiddleButton,Qt::NoButton,Qt::NoModifier);QApplication::sendEvent(view,&release);if(mode==2)dialog->findChild<QTableWidget *>("surfacePolesTable")->selectRow(5);QApplication::processEvents();require(dialog->grab().save(qa+"/dialogo-"+name+".png"),"cattura pannello");require(view->grabFramebuffer().save(qa+"/geometria-"+name+".png"),"cattura B-rep e gabbia");require(window.grab().save(qa+"/ambiente-"+name+".png"),"cattura ambiente3D");captured=true;dialog->reject();}catch(...){failure=std::current_exception();if(dialog)dialog->reject();}});
+        surfaceToolDialog(&window,view,name,-1,definition,[](const ExtrusionObject &){return QString();});if(failure)std::rethrow_exception(failure);require(captured,"QA visiva completata");
+    }
+    std::cout<<"PASS QA OpenGL superfici: estensione, rete, tabella poli e gabbia\n";
+}
+
 int main(int argc, char **argv) {
     QSurfaceFormat format;
     format.setRenderableType(QSurfaceFormat::OpenGL); format.setVersion(3, 3);
@@ -9967,6 +10003,8 @@ int main(int argc, char **argv) {
         try{drawingSectionModelTest(app.arguments().value(app.arguments().indexOf(QStringLiteral("--drawing-section-model"))+1));}
         catch(const std::exception &e){std::cerr<<e.what()<<std::endl;return 1;}return 0;
     }
+    if(app.arguments().contains(QStringLiteral("--surface-tools-visual"))){try{surfaceToolsVisualQa();}catch(const std::exception &e){std::cerr<<e.what()<<std::endl;return 1;}return 0;}
+    if(app.arguments().contains(QStringLiteral("--surface-tools"))){try{ViewportInteractionTest::surfaceTools();}catch(const std::exception &e){std::cerr<<e.what()<<std::endl;return 1;}return 0;}
     if(app.arguments().contains(QStringLiteral("--catalog-recovery"))){try{ViewportInteractionTest::catalogRecoveryGui();}catch(const std::exception &e){std::cerr<<e.what()<<std::endl;return 1;}return 0;}
     if(app.arguments().contains(QStringLiteral("--drawing-release"))){try{drawingReleaseTests();}catch(const std::exception &e){std::cerr<<e.what()<<std::endl;return 1;}return 0;}
     if(app.arguments().contains(QStringLiteral("--drawing-restore"))){try{drawingRevisionRestoreTests();}catch(const std::exception &e){std::cerr<<e.what()<<std::endl;return 1;}return 0;}

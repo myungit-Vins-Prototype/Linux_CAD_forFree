@@ -284,4 +284,6 @@ bool primitiveDialog(QWidget *parent, PrimitiveParameters &parameters,
                             const std::function<QString(const PrimitiveParameters &)> &apply = {},
                             const PreviewSpec<const PrimitiveParameters &> &preview = {});
 
+bool surfaceToolDialog(QMainWindow *window,CadViewport *viewport,const QString &title,int replaced,const ExtrusionObject &initial,const std::function<QString(const ExtrusionObject &)> &apply);
+
 #endif

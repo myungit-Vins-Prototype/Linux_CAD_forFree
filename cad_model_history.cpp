@@ -29,6 +29,7 @@ quint64 inheritedBody(const QVector<ExtrusionObject> &features, const ExtrusionO
     if (isReferenceFeature(feature)) return 0;
     if (feature.operation >= 0) return owner(feature.firstBody);
     switch (feature.feature) {
+    case BodyFeature::SurfaceTools: return feature.surfaceTool.mode==1?0:owner(feature.firstBody);
     case BodyFeature::Blend:
     case BodyFeature::SheetTrim:
     case BodyFeature::SheetExtend:
