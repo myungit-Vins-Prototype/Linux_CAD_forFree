@@ -185,29 +185,87 @@ bool CadViewport::isBodyDrawn(int index, bool includeSketchResults) const {
     return drawn;
 }
 
-// Cache derivata, aggiornata sul thread GUI soltanto quando uno stadio viene
-// effettivamente richiesto (scena, rollback, contesto schizzo o picker).
+// Le mesh richieste vengono calcolate su copie separate; solo il thread GUI
+// pubblica le cache. La vista e gli snapshot restano leggibili durante i worker.
 void CadViewport::ensureBodyDisplay(int index) const {
-    if (index<0 || index>=extrusions_.size()) return;
-    const auto &body=extrusions_.at(index);
-    if (body.display.quality==tessellationQuality_ || (!body.forgeBody && !body.curve)) return;
+    ensureBodyDisplays({index});
+}
+
+void CadViewport::ensureVisibleBodyDisplays() const {
+    QVector<int> requested;
+    for (int index=0;index<extrusions_.size();++index)
+        if (isBodyDrawn(index)) requested.append(index);
+    ensureBodyDisplays(requested);
+}
+
+void CadViewport::ensureBodyDisplays(const QVector<int> &indices) const {
     auto *self=const_cast<CadViewport *>(this);
-    // Durante un worker la vista continua a disegnare lo snapshot corrente;
-    // un paint rientrante non deve avviare un secondo lavoro sulla stessa mesh.
+    // Un paint durante il worker usa la scena precedente senza avviare altro lavoro.
     if (self->responsiveWork_) return;
-    if (body.feature==BodyFeature::Pattern && body.firstBody>=0 && body.firstBody<index)
-        ensureBodyDisplay(body.firstBody);
-    ExtrusionObject next=extrusions_.at(index);
+    QSet<int> requested;
+    const auto collect = [&](auto &&visit, int index) -> void {
+        if (index<0 || index>=extrusions_.size() || requested.contains(index)) return;
+        const auto &body=extrusions_.at(index);
+        if (body.display.quality==tessellationQuality_ || (!body.forgeBody && !body.curve)) return;
+        requested.insert(index);
+        // Le ripetizioni possono usare la mesh della base anche quando e' nascosta.
+        if (body.feature==BodyFeature::Pattern && body.firstBody>=0 && body.firstBody<index)
+            visit(visit,body.firstBody);
+    };
+    for (int index:indices) collect(collect,index);
+    if (requested.isEmpty()) return;
+    auto ordered=requested.values();
+    std::sort(ordered.begin(),ordered.end());
+    struct MeshWork {
+        int index;
+        ExtrusionObject source;
+        BodyDisplay display;
+    };
+    std::vector<MeshWork> pending;
+    pending.reserve(ordered.size());
+    bool replacesDisplay=false;
+    for (int index:ordered) {
+        const auto &old=extrusions_.at(index).display;
+        replacesDisplay=replacesDisplay || !old.vertices.isEmpty() || !old.edges.isEmpty() || bool(old.instancedBase);
+        pending.push_back({index,extrusions_.at(index),{}});
+        // Non trattenere una seconda copia delle vecchie mesh fino alla fine del gruppo.
+        pending.back().source.display={};
+    }
     const int quality=tessellationQuality_;
+    const auto cancellation=ForgeCad::Kernel::currentCancellation;
+    const auto cores=std::max(1u,ForgeCad::Kernel::threadCount(0));
+    // Le mesh nuove sono memoria finale della scena: coda continua per non
+    // attendere il corpo piu' lento a ogni gruppo. Nel cambio qualita' i gruppi
+    // limitano invece la sovrapposizione delle vecchie cache con le nuove.
+    // Il limite e' in risultati in attesa, non in byte.
+    const std::size_t wave=replacesDisplay ? std::size_t(cores)*4 : pending.size();
+    DeferredWork work(self,QStringLiteral("Preparazione di %1 mesh...").arg(pending.size()));
     QElapsedTimer timer;timer.start();
-    self->runWhileResponsive([&]{ForgeCad::tessellateGeometry(next,quality,next.display);});
-    if(index>=self->extrusions_.size() || self->extrusions_.at(index).forgeBody!=next.forgeBody
-        || self->extrusions_.at(index).curve!=next.curve
-        || self->tessellationQuality_!=quality)return;
-    self->extrusions_[index].display=std::move(next.display);
-    ForgeCad::configurePatternInstances(self->extrusions_[index],index,self->sketches_,self->extrusions_);
-    if(qEnvironmentVariableIsSet("FORGECAD_PROFILE"))
-        std::fprintf(stderr,"PROFILO mesh richiesta corpo %d: %lld ms\n",index,static_cast<long long>(timer.elapsed()));
+    for (std::size_t offset=0;offset<pending.size();offset+=wave) {
+        const auto count=std::min(wave,pending.size()-offset);
+        // Con pochi corpi resta disponibile il parallelismo interno sulle facce.
+        const unsigned threads=count>=cores ? cores : 1u;
+        self->runWhileResponsive([&] {
+            ForgeCad::Kernel::CancellationScope scope(cancellation);
+            ForgeCad::Kernel::parallelFor(count,threads,[&](std::size_t k) {
+                auto &item=pending[offset+k];
+                ForgeCad::tessellateGeometry(item.source,quality,item.display);
+            });
+        });
+        if (self->tessellationQuality_!=quality) return;
+        // La base di una ripetizione ha indice minore: pubblicarla per prima.
+        for (std::size_t k=0;k<count;++k) {
+            auto &item=pending[offset+k];
+            if (item.index>=self->extrusions_.size()) continue;
+            const auto &current=self->extrusions_.at(item.index);
+            if (current.featureId!=item.source.featureId || current.forgeBody!=item.source.forgeBody
+                || current.curve!=item.source.curve || current.curves!=item.source.curves) continue;
+            self->extrusions_[item.index].display=std::move(item.display);
+            ForgeCad::configurePatternInstances(self->extrusions_[item.index],item.index,self->sketches_,self->extrusions_);
+        }
+    }
+    if (qEnvironmentVariableIsSet("FORGECAD_PROFILE"))
+        std::fprintf(stderr,"PROFILO mesh richieste: %zu corpi, %u worker, %lld ms\n",pending.size(),cores,static_cast<long long>(timer.elapsed()));
 }
 
 void CadViewport::refreshSketchContext() {
@@ -251,7 +309,7 @@ void CadViewport::refreshSketchContext() {
             sketchDisplayBodies_[i]=visible;
         }
     }
-    for (int index=0;index<extrusions_.size();++index) if (isBodyDrawn(index)) ensureBodyDisplay(index);
+    ensureVisibleBodyDisplays();
 }
 
 void CadViewport::applyHistoryPosition() {
@@ -1729,7 +1787,7 @@ void CadViewport::documentChanged() {
                 && ForgeCad::sketchesOf(feature).contains(activeSketch_))
                 sketchSessionFeatures_.insert(feature.featureId);
     refreshSketchContext();
-    for (int index=0;index<extrusions_.size();++index) if (isBodyDrawn(index)) ensureBodyDisplay(index);
+    ensureVisibleBodyDisplays();
     sceneBoundsDirty_ = true;
     raySelectionCache_.clear();
     projectedEdges_.clear();
@@ -1839,7 +1897,7 @@ void CadViewport::regenerateFrom(int from, QVector<bool> dirty, QSet<int> dirtyS
             refreshSurfacePierceSketches(-1,dirtySketches,s);
     }
     flush();
-    for (int index=0;index<extrusions_.size();++index) if (isBodyDrawn(index)) ensureBodyDisplay(index);
+    ensureVisibleBodyDisplays();
 }
 
 void CadViewport::rebuildParallel(const QVector<int> &indices,
@@ -1877,6 +1935,10 @@ void CadViewport::rebuildParallel(const QVector<int> &indices,
     const QVector<ExtrusionObject> &all = next;
     const int quality = tessellationQuality_;
     const bool eager=qEnvironmentVariableIntValue("FORGECAD_EAGER_MESH")==1;
+    QVector<bool> requested(extrusions_.size(),false);
+    for (int index:indices)
+        requested[index]=isBodyDrawn(index) && extrusions_.at(index).feature!=BodyFeature::Pattern;
+    const auto cores=ForgeCad::Kernel::threadCount(0);
     for (int l = 0; l < levels; ++l) {
         std::vector<int> batch;
         for (int index : indices)
@@ -1887,7 +1949,11 @@ void CadViewport::rebuildParallel(const QVector<int> &indices,
             runWhileResponsive([&] {
                 ForgeCad::Kernel::parallelFor(count, ForgeCad::Kernel::threadCount(0), [&](std::size_t k) {
                     const int index = batch[offset + k];
-                    ForgeCad::buildBody(bodies[index], index, sketches, all, quality, eager);
+                    // Nei gruppi grandi la mesh gia' richiesta usa lo stesso
+                    // worker della geometria: nessuna barriera globale B-rep/mesh.
+                    // Le ripetizioni aspettano la coda che prepara anche le basi.
+                    const bool display=eager || (count>=cores && requested.at(index));
+                    ForgeCad::buildBody(bodies[index], index, sketches, all, quality, display);
                 });
             });
             if (advanced) advanced(int(count), next.at(batch[offset + count - 1]).name);
@@ -2104,8 +2170,11 @@ void CadViewport::restoreDocument(DocumentState state) {
     for (SketchObject &sketch : sketches_) {
         for (CurveObject &curve : sketch.curves) ForgeCad::recalculateCurve(curve, tessellationQuality_);
     }
-    if(qEnvironmentVariableIntValue("FORGECAD_EAGER_MESH")==1)
-        for(int index=0;index<extrusions_.size();++index)ensureBodyDisplay(index);
+    if(qEnvironmentVariableIntValue("FORGECAD_EAGER_MESH")==1) {
+        QVector<int> requested;
+        for (int index=0;index<extrusions_.size();++index) requested.append(index);
+        ensureBodyDisplays(requested);
+    }
     hasPendingPoint_ = false;
     curveControlPoints_.clear();
     sketchSelections_.clear();

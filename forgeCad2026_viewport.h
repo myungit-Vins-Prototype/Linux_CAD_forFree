@@ -1049,6 +1049,8 @@ private:
     // da corpi con indice minore, quindi basta una passata in ordine.
     void regenerateDependents(int sketchIndex);
     void ensureBodyDisplay(int index) const;
+    void ensureBodyDisplays(const QVector<int> &indices) const;
+    void ensureVisibleBodyDisplays() const;
 
     bool hasSurfacePierceSource(int index) const;
     void refreshSurfacePierceSketches(int sourceIndex,QSet<int> &changed,int targetSketch=-1);

@@ -177,6 +177,19 @@ La rigenerazione prepara i B-rep degli stadi intermedi senza tassellarli.
 Scena, rollback, contesto schizzo e picker materializzano le mesh richieste;
 le istantanee Undo conservano le proprie cache. Il cambio qualità riguarda
 gli stadi visibili, gli altri vengono aggiornati quando richiesti.
+Nei grandi gruppi di corpi indipendenti, i worker costruiscono anche la mesh
+quando il corpo è già richiesto dalla scena, senza aspettare che termini la
+geometria di tutti gli altri. Gli stadi nascosti restano differiti; le ripetizioni
+passano dalla coda delle mesh per preparare prima le basi delle istanze.
+Le richieste multiple vengono deduplicate e distribuite sui core disponibili;
+con pochi corpi rimane il parallelismo interno sulle facce. Il calcolo usa copie
+separate e pubblica le cache sul thread GUI. Le mesh nuove usano una coda
+continua; quando si sostituiscono cache esistenti, gruppi di al massimo quattro
+risultati per core limitano la sovrapposizione tra vecchi e nuovi buffer. Questo
+non impone un tetto in byte: la memoria delle mesh finali dipende dal modello. Le basi delle
+ripetizioni vengono preparate anche se nascoste e pubblicate prima delle istanze.
+Un paint durante il worker conserva la scena precedente; cambio qualità o
+geometria rendono inutilizzabili i risultati superati.
 
 Il nuovo filtro GPU delle booleane usa Metal su macOS e CUDA su Linux/NVIDIA.
 I box double già espansi della tolleranza vengono convertiti in intervalli
@@ -220,6 +233,21 @@ mediana di 3 caricamenti alternati, 20 mesh contro 1. Non sono benchmark general
 Sul controllo booleano dei prismi a 256 lati, una singola validazione Metal finale
 misura 68,1387 ms CPU e 69,4297 ms GPU: nessun vantaggio dimostrato del filtro,
 che resta opt-in. Non sommare questi fattori e non estenderli a ogni documento.
+
+Confronto reale del25ottobre su `2550_ASSIEME-ST5674-COMPLETO.prt`,
+AppleM1/16GiB, qualità standard,3processi nuovi per variante in ordine ruotato:
+lettura+ricostruzione 42.265s con mesh differite seriali contro
+29.247s con la nuova pipeline/coda parallela (30.80% di tempo
+in meno, 1.45×). Riferimento eager nello stesso confronto:
+29.923s; gli intervalli si sovrappongono, quindi il risultato pratico è il
+recupero della regressione, senza un vantaggio netto dimostrato sul riferimento.
+Stessi1196B-rep fra stadi e11.746.351triangoli visibili; stessi4record importati
+vuoti in tutte le modalità. PiccoRSS nuovo 1775.2MiB,
+seriale 1822.0MiB. La cache originale supera1GiB
+e viene ignorata: è una misura di apertura con ricostruzione, non con cache
+utilizzabile, né di framerate/GPU. Protocollo e campioni sono versionati in
+[mesh-parallel-2026-10-25.json](benchmarks/mesh-parallel-2026-10-25.json);
+nessuna estrapolazione ad altri modelli o aLinux/NVIDIA.
 
 Per ripetere il benchmark solver usare `forgecad_view_tests --solver-partition --benchmark`
 in ambiente Qt offscreen; senza `--benchmark` esegue soltanto le

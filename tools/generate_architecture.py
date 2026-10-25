@@ -62,7 +62,7 @@ DESCRIPTIONS = {
  'forgeCad2026_viewport.cpp': ('viewport', 'Ciclo di vita e impostazioni pubbliche del coordinatore CadViewport; gabbia poli multipli, proiezione/picking del gizmo e delta vincolati agli assi 3D.'),
  'forgeCad2026_viewport.h': ('viewport', 'Contratto e stato privato del coordinatore GUI della vista 3D.'),
  'forgeCad2026_viewport_internal.h': ('viewport', 'Dipendenze di implementazione e template condivisi dai soli file viewport.'),
- 'forgeCad2026_viewport_document.cpp': ('viewport', 'Documento e storia unificata: schizzi autonomi, riordino, appoggi associativi, contesto storico per i riferimenti e risultati confermati visibili nella sola sessione schizzo corrente.'),
+ 'forgeCad2026_viewport_document.cpp': ('viewport', 'Documento e storia unificata: schizzi autonomi, riordino, appoggi associativi e contesto storico; mesh richieste nei worker della geometria o nella coda differita, pubblicazione GUI, gruppi limitati nel cambio qualita e basi delle ripetizioni prima delle istanze.'),
  'forgeCad2026_viewport_interaction.cpp': ('viewport', 'Eventi Qt di mouse, tastiera, ruota e menu contestuali.'),
  'forgeCad2026_viewport_selection.cpp': ('viewport', 'Filtri di selezione, hover, riferimenti e hit testing di entità e maniglie.'),
  'forgeCad2026_viewport_sketch.cpp': ('viewport', 'Comandi schizzo, asola rettilinea con vincoli e punti autonomi: creazione, modifica, quote e riferimenti.'),
@@ -114,7 +114,7 @@ DESCRIPTIONS.update({'tools/open_architecture.py': ('build', 'Avvio locale della
  'gpu_box_support_cpu.cpp': ('analysis', 'Backend senza GPU: rifiuta i batch e conserva il BVH CPU delle booleane.'),
  'tests/test_gpu_broad_phase.cpp': ('tests', 'Prove GPU reali su contatti double, arrotondamento float, subnormali, overflow e booleana con confronto CPU.'),
  'tests/test_solver_partition.h': ('tests', 'Confronti differenziali solver e DOF denso/sparso, conflitti atomici e benchmark di componenti indipendenti.'),
- 'tests/test_lazy_mesh.h': ('tests', 'Mesh su richiesta: storia di scale, volume analitico, rollback, qualità, snapshot e benchmark eager/differito.'),
+ 'tests/test_lazy_mesh.h': ('tests', 'Mesh su richiesta: worker concorrenti, deduplicazione, cancellazione/errori, snapshot, istanze dipendenti, rollback, qualità e benchmark eager/differito.'),
  'cad_cuda_tessellation': ('analysis', 'Adatta il calcolo di tessellazione ai percorsi accelerati CUDA.'),
  'cad_curve_extract': ('features',
                        'Estrae curve 3D associative dalla geometria sorgente e dai riferimenti della '

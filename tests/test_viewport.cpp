@@ -1,3 +1,4 @@
+#include <condition_variable>
 // I componenti GUI sono dichiarati negli header e compilati separatamente.
 #include "../forgeCad2026_gui.h"
 #include "../forgeCad2026_viewport.h"

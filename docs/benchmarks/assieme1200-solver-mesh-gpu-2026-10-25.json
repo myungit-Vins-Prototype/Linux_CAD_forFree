@@ -1,0 +1,466 @@
+{
+  "date": "2026-10-25",
+  "branch": "solver-mesh-gpu",
+  "commit": "f571152",
+  "input": {
+    "name": "2550_ASSIEME-ST5674-COMPLETO.prt",
+    "bytes": 503577338,
+    "sha256": "beafeeebda808ab58760313564a93c29cfc1fe123efe4f750fcfd4117164f76c",
+    "original_and_copy_unchanged_sha256_verified": true,
+    "sketches": 0,
+    "features": 1200,
+    "format": 36,
+    "stored_cache_declared_uncompressed_bytes": 1907961504,
+    "cache_read_limit_bytes": 1073741824
+  },
+  "hardware": {
+    "cpu": "Apple M1",
+    "ram_gib": 16,
+    "os": "macOS-27.0.1-arm64-arm-64bit-Mach-O",
+    "gpu_backend": "Metal disponibile nella prova gpu"
+  },
+  "protocol": {
+    "quality": 1,
+    "quality_label": "standard, identica in tutti i campioni principali",
+    "valid_repetitions": {
+      "baseline": 3,
+      "optimized": 3,
+      "gpu": 1
+    },
+    "selected_run_indices": {
+      "baseline": [
+        0,
+        1,
+        2
+      ],
+      "optimized": [
+        1,
+        2,
+        3
+      ],
+      "gpu": [
+        0
+      ]
+    },
+    "mode_definitions": {
+      "baseline": "Stessi oggetti Release del branch; FORGECAD_SOLVER_DENSE=1 e FORGECAD_EAGER_MESH=1, GPU off. Non una build separata main.",
+      "optimized": "Solver del branch e mesh differite, GPU off. Nessuno schizzo nel file, quindi il solver non esercitato.",
+      "gpu": "Come optimized con filtro GPU booleano richiesto e Metal disponibile. Singolo controllo, non benchmark GPU ripetuto."
+    },
+    "measurement": "Processi nuovi sequenziali, coppie baseline/optimized in ordine alternato nei primi3giri; il campione optimized00 alterato dallo stop è escluso e sostituito da optimized03. read_plus_load_ms = lettura/decodifica +loadDocument geometria/mesh. Checkpoint scritto prima dei controlli. Hash e verifiche esclusi dal timer. RSS catturata anche subito dopo loadDocument.",
+    "opening_cache": "La cache da1,777GiB supera il limite1GiB preesistente anche in main e viene ignorata. I tempi rappresentano apertura con ricostruzione a partire dalle definizioni dei corpi importati e dalle4feature di raccordo, non apertura con cache utilizzabile.",
+    "clock_control": "Il log energia macOS registra IdleSleep21:56:09→21:56:26; Qt include il periodo mentre Python usa mach_absolute_time. optimized00:load55,282s maggiore di wall41,409s, escluso senza correzioni numeriche. Aggiunto caffeinate-i limitato alla vita del batch rimasto; sostituzione finale eseguita sotto caffeinate-i. Tutti i campioni selezionati superano controllo read+load<=wall+.1s.",
+    "hash_control": "SHA256CommonCrypto nella sola sonda; hash su tutti i B-rep e buffer mesh visibili. Identità con precedenti SHA256Qt verificata su tutte le feature del flacone.",
+    "concurrency": "Nessun altro benchmark/build/generatore architetturale dell’agente durante i campioni finali. Carico esterno, temperatura, frequenza e alimentazione non controllati.",
+    "rendering": "Sonda Qt offscreen; nessuna misura di rendering, upload GPU o framerate; inizializzazione Qt/Metal prima del timer."
+  },
+  "metrics": {
+    "baseline": {
+      "load_ms": {
+        "median": 28828.371875,
+        "min": 26309.774292,
+        "max": 29596.149959,
+        "samples": [
+          26309.774292,
+          28828.371875,
+          29596.149959
+        ]
+      },
+      "read_ms": {
+        "median": 254.7265,
+        "min": 252.184667,
+        "max": 331.6645,
+        "samples": [
+          331.6645,
+          254.7265,
+          252.184667
+        ]
+      },
+      "load_peak_rss_mib": {
+        "median": 1802.53125,
+        "min": 1780.796875,
+        "max": 1807.4375,
+        "samples": [
+          1807.4375,
+          1802.53125,
+          1780.796875
+        ]
+      },
+      "peak_rss_mib": {
+        "median": 1802.53125,
+        "min": 1780.796875,
+        "max": 1807.4375,
+        "samples": [
+          1807.4375,
+          1802.53125,
+          1780.796875
+        ]
+      },
+      "stages_with_triangles": {
+        "median": 1196,
+        "min": 1196,
+        "max": 1196,
+        "samples": [
+          1196,
+          1196,
+          1196
+        ]
+      },
+      "stored_triangles": {
+        "median": 12191269,
+        "min": 12191269,
+        "max": 12191269,
+        "samples": [
+          12191269,
+          12191269,
+          12191269
+        ]
+      },
+      "visible_features": {
+        "median": 1191,
+        "min": 1191,
+        "max": 1191,
+        "samples": [
+          1191,
+          1191,
+          1191
+        ]
+      },
+      "visible_triangles": {
+        "median": 11746351,
+        "min": 11746351,
+        "max": 11746351,
+        "samples": [
+          11746351,
+          11746351,
+          11746351
+        ]
+      },
+      "gpu_pairs": {
+        "median": 0,
+        "min": 0,
+        "max": 0,
+        "samples": [
+          0,
+          0,
+          0
+        ]
+      },
+      "feature_errors": {
+        "median": 4,
+        "min": 4,
+        "max": 4,
+        "samples": [
+          4,
+          4,
+          4
+        ]
+      },
+      "read_plus_load_ms": {
+        "median": 29083.098375,
+        "min": 26641.438791999997,
+        "max": 29848.334626,
+        "samples": [
+          26641.438791999997,
+          29083.098375,
+          29848.334626
+        ]
+      }
+    },
+    "optimized": {
+      "load_ms": {
+        "median": 40506.633458,
+        "min": 39148.537375,
+        "max": 41378.286875,
+        "samples": [
+          39148.537375,
+          41378.286875,
+          40506.633458
+        ]
+      },
+      "read_ms": {
+        "median": 251.011625,
+        "min": 250.465958,
+        "max": 273.963416,
+        "samples": [
+          251.011625,
+          250.465958,
+          273.963416
+        ]
+      },
+      "load_peak_rss_mib": {
+        "median": 1822.234375,
+        "min": 1820.15625,
+        "max": 1825.484375,
+        "samples": [
+          1820.15625,
+          1822.234375,
+          1825.484375
+        ]
+      },
+      "peak_rss_mib": {
+        "median": 1822.234375,
+        "min": 1820.15625,
+        "max": 1825.484375,
+        "samples": [
+          1820.15625,
+          1822.234375,
+          1825.484375
+        ]
+      },
+      "stages_with_triangles": {
+        "median": 1191,
+        "min": 1191,
+        "max": 1191,
+        "samples": [
+          1191,
+          1191,
+          1191
+        ]
+      },
+      "stored_triangles": {
+        "median": 11746351,
+        "min": 11746351,
+        "max": 11746351,
+        "samples": [
+          11746351,
+          11746351,
+          11746351
+        ]
+      },
+      "visible_features": {
+        "median": 1191,
+        "min": 1191,
+        "max": 1191,
+        "samples": [
+          1191,
+          1191,
+          1191
+        ]
+      },
+      "visible_triangles": {
+        "median": 11746351,
+        "min": 11746351,
+        "max": 11746351,
+        "samples": [
+          11746351,
+          11746351,
+          11746351
+        ]
+      },
+      "gpu_pairs": {
+        "median": 0,
+        "min": 0,
+        "max": 0,
+        "samples": [
+          0,
+          0,
+          0
+        ]
+      },
+      "feature_errors": {
+        "median": 4,
+        "min": 4,
+        "max": 4,
+        "samples": [
+          4,
+          4,
+          4
+        ]
+      },
+      "read_plus_load_ms": {
+        "median": 40780.596873999995,
+        "min": 39399.549,
+        "max": 41628.752833,
+        "samples": [
+          39399.549,
+          41628.752833,
+          40780.596873999995
+        ]
+      }
+    },
+    "gpu": {
+      "load_ms": {
+        "median": 40997.600584,
+        "min": 40997.600584,
+        "max": 40997.600584,
+        "samples": [
+          40997.600584
+        ]
+      },
+      "read_ms": {
+        "median": 255.859292,
+        "min": 255.859292,
+        "max": 255.859292,
+        "samples": [
+          255.859292
+        ]
+      },
+      "load_peak_rss_mib": {
+        "median": 1824.484375,
+        "min": 1824.484375,
+        "max": 1824.484375,
+        "samples": [
+          1824.484375
+        ]
+      },
+      "peak_rss_mib": {
+        "median": 1824.484375,
+        "min": 1824.484375,
+        "max": 1824.484375,
+        "samples": [
+          1824.484375
+        ]
+      },
+      "stages_with_triangles": {
+        "median": 1191,
+        "min": 1191,
+        "max": 1191,
+        "samples": [
+          1191
+        ]
+      },
+      "stored_triangles": {
+        "median": 11746351,
+        "min": 11746351,
+        "max": 11746351,
+        "samples": [
+          11746351
+        ]
+      },
+      "visible_features": {
+        "median": 1191,
+        "min": 1191,
+        "max": 1191,
+        "samples": [
+          1191
+        ]
+      },
+      "visible_triangles": {
+        "median": 11746351,
+        "min": 11746351,
+        "max": 11746351,
+        "samples": [
+          11746351
+        ]
+      },
+      "gpu_pairs": {
+        "median": 0,
+        "min": 0,
+        "max": 0,
+        "samples": [
+          0
+        ]
+      },
+      "feature_errors": {
+        "median": 4,
+        "min": 4,
+        "max": 4,
+        "samples": [
+          4
+        ]
+      },
+      "read_plus_load_ms": {
+        "median": 41253.459876,
+        "min": 41253.459876,
+        "max": 41253.459876,
+        "samples": [
+          41253.459876
+        ]
+      }
+    }
+  },
+  "validation": {
+    "feature_or_topology_mismatches": [],
+    "geometry_sha256_mismatches": [],
+    "visible_mesh_or_normals_mismatches": [],
+    "visible_face_coverage_mismatches": [],
+    "feature_errors_per_run": [
+      4,
+      4,
+      4,
+      4,
+      4,
+      4,
+      4
+    ],
+    "same_empty_import_records_in_all_modes": [
+      {
+        "index": 274,
+        "error": "Il corpo importato non contiene geometria."
+      },
+      {
+        "index": 281,
+        "error": "Il corpo importato non contiene geometria."
+      },
+      {
+        "index": 288,
+        "error": "Il corpo importato non contiene geometria."
+      },
+      {
+        "index": 295,
+        "error": "Il corpo importato non contiene geometria."
+      }
+    ],
+    "counts": {
+      "features": 1200,
+      "with_brep_across_history": 1196,
+      "visible_brep": 1191,
+      "faces_across_history": 31480,
+      "visible_faces": 30466,
+      "edges_across_history": 59009,
+      "vertices_across_history": 43033
+    }
+  },
+  "comparison": {
+    "optimized_over_baseline_open_time_ratio": 1.4022095014833507,
+    "open_time_increase_percent": 40.22095014833506,
+    "baseline_median_open_ms": 29083.098375,
+    "optimized_median_open_ms": 40780.596873999995,
+    "load_peak_rss_baseline_median_mib": 1802.53125,
+    "load_peak_rss_optimized_median_mib": 1822.234375
+  },
+  "discarded_or_incomplete_trials": [
+    {
+      "name": "dry-optimized",
+      "quality": 2,
+      "result": "Costruzione/mesh completate; wrapper interrompe dopo300s durante gli hashQt, confermato dal campionamento. Nessun risultato completo, escluso."
+    },
+    {
+      "name": "high-load-00-baseline",
+      "quality": 2,
+      "load_ms_checkpoint": 88957.687042,
+      "read_ms_checkpoint": 1275.91275,
+      "result": "Superato limite diagnostico8GiBRSS durante la verifica dopo il caricamento; processo terminato dal wrapper. Dato singolo incompleto, escluso dal confronto principale."
+    },
+    {
+      "name": "load-00-optimized",
+      "quality": 1,
+      "result": "Interferenza IdleSleep documentata; escluso dai tempi, sostituito integralmente."
+    }
+  ],
+  "interpretation": {
+    "measured": "Regressione del tempo di apertura con ricostruzione sul Mac, circa40%; memoria finale simile. Stessi B-rep, mesh/normali visibili e quattro errori di importazione vuota in tutte le modalità.",
+    "source_evidence": "regenerateFrom distribuisce buildBody con rebuildParallel; nel ramo differito termina con un ciclo sequenziale ensureBodyDisplay sui corpi disegnati. Ogni tessellazione può distribuire le facce al proprio interno, ma non esiste una coda parallela di tutti i corpi da mostrare; il percorso eager sfrutta la distribuzione esterna per corpi. Cinque mesh evitate, risparmio di circa3,65%triangoli memorizzati, a fronte di1191feature visibili.",
+    "inference": "La diversa distribuzione del lavoro fra corpi è una spiegazione della regressione, da confermare con una variante controllata; non è stato misurato quanto incidano singolarmente scheduling, creazione thread o memoria.",
+    "proposed_not_implemented": "Mantenere la selezione differita delle mesh necessarie ma prepararle con una coda parallela e un budget di memoria adeguato agli assiemi. Valutare separatamente la politica per cache grandi.",
+    "gpu": "Zero coppie GPU nel controllo Metal: il numero di corpi non genera da solo una booleana fra essi. Non è una misura della migrazione generale alla GPU.",
+    "solver": "Non esercitato:0schizzi.",
+    "next_platform": "Linux/NVIDIA ancora da provare; risultati macOS non estrapolati."
+  },
+  "limits": [
+    "Confronto sul risultato ricostruito: non prova di identità con i B-rep della vecchia cache originale, che non viene letta.",
+    "Nessuna nuova importazione STEP eseguita: il file è il.prt già importato scelto dall’utente.",
+    "Nessuna misura di volume/massa o checkBody aggiuntivo generalizzato su tutti i corpi; l’identità tra modalità è verificata tramite B-rep serializzato e mesh.",
+    "Qualitàalta non completata; non estrapolare tempi o memoria dello standard alla qualitàalta.",
+    "Nessuna modifica produttiva, nuova build app o installazione; nessun commit/push. Solo sonde, log e documentazione locali."
+  ],
+  "local_artifacts": {
+    "directory": "/Users/myungit/Linux_CAD_forFree/forgecad-release/benchmarks/assieme1200-2026-10-25",
+    "probe_source": "/Users/myungit/Linux_CAD_forFree/forgecad-release/benchmarks/assieme1200-2026-10-25/probe.cpp",
+    "compile_command": "python3 compile_probe.py (adattare root/build se cambia macchina)",
+    "benchmark_driver": "/Users/myungit/Linux_CAD_forFree/forgecad-release/benchmarks/assieme1200-2026-10-25/run_batch.py",
+    "final_selection_and_report": "/Users/myungit/Linux_CAD_forFree/forgecad-release/benchmarks/assieme1200-2026-10-25/finalize.py",
+    "raw_private_runs": "/Users/myungit/Linux_CAD_forFree/forgecad-release/benchmarks/assieme1200-2026-10-25/runs.private.json"
+  }
+}
