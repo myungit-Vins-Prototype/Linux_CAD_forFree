@@ -54,6 +54,33 @@ find_package(OpenCASCADE REQUIRED)
 enable_testing()
 add_subdirectory(kernel)
 
+# Calcolo GPU sperimentale: stesso filtro conservativo con Metal e CUDA.
+if(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
+    set(FORGECAD_BOX_SOURCE gpu_box_support.mm)
+elseif(CMAKE_CUDA_COMPILER)
+    set(FORGECAD_BOX_SOURCE gpu_box_support.cu)
+else()
+    set(FORGECAD_BOX_SOURCE gpu_box_support_cpu.cpp)
+endif()
+add_library(forgecad_compute STATIC cad_gpu_broad_phase.cpp cad_gpu_broad_phase.h gpu_box_support.h ${FORGECAD_BOX_SOURCE})
+target_include_directories(forgecad_compute PUBLIC ${PROJECT_SOURCE_DIR})
+target_link_libraries(forgecad_compute PUBLIC forgekernel)
+target_compile_options(forgecad_compute PRIVATE $<$<COMPILE_LANGUAGE:CXX,OBJCXX>:-Wall;-Wextra;-Wpedantic>)
+if(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
+    target_compile_options(forgecad_compute PRIVATE $<$<COMPILE_LANGUAGE:OBJCXX>:-fobjc-arc>)
+    find_library(FORGECAD_METAL_FRAMEWORK Metal REQUIRED)
+    find_library(FORGECAD_FOUNDATION_FRAMEWORK Foundation REQUIRED)
+    target_link_libraries(forgecad_compute PUBLIC ${FORGECAD_METAL_FRAMEWORK} ${FORGECAD_FOUNDATION_FRAMEWORK})
+elseif(CMAKE_CUDA_COMPILER)
+    set_target_properties(forgecad_compute PROPERTIES CUDA_STANDARD 17 CUDA_STANDARD_REQUIRED ON)
+endif()
+add_executable(forgecad_gpu_broad_phase_tests tests/test_gpu_broad_phase.cpp)
+target_link_libraries(forgecad_gpu_broad_phase_tests PRIVATE forgecad_compute)
+add_test(NAME forgecad_gpu_broad_phase_tests COMMAND forgecad_gpu_broad_phase_tests)
+add_test(NAME forgecad_box_fallback_tests COMMAND forgecad_gpu_broad_phase_tests --cpu-fallback)
+set_tests_properties(forgecad_box_fallback_tests PROPERTIES TIMEOUT 30)
+set_tests_properties(forgecad_gpu_broad_phase_tests PROPERTIES SKIP_RETURN_CODE 77 TIMEOUT 120)
+
 add_executable(forgecad
     forgeCad2026.cpp
     forgeCad2026_application_theme.cpp
@@ -231,6 +258,7 @@ add_executable(forgecad
     ${FORGE_CAD_CUDA_SOURCE}
     icons/forgecad.qrc
 )
+target_link_libraries(forgecad PRIVATE forgecad_compute)
 
 if(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
     target_sources(forgecad PRIVATE cad_macos_menu.h cad_macos_menu.mm)
@@ -254,6 +282,7 @@ file(GLOB FORGECAD_KERNEL_GEOMETRY_SOURCES CONFIGURE_DEPENDS
     ${PROJECT_SOURCE_DIR}/kernel/fk_*.h ${PROJECT_SOURCE_DIR}/kernel/fk_*.cpp)
 forgecad_collect_geometry_sources(FORGECAD_GEOMETRY_SOURCES "${PROJECT_SOURCE_DIR}"
     cad_feature_build.cpp cad_history.cpp cad_document_io.cpp
+    cad_gpu_broad_phase.cpp ${FORGECAD_BOX_SOURCE}
     ${FORGE_CAD_CUDA_SOURCE} ${FORGECAD_KERNEL_GEOMETRY_SOURCES})
 # Un include aggiunto a un modulo del calcolo aggiorna la chiusura alla build
 # successiva, anche quando non e' stato creato alcun file nuovo.
@@ -448,6 +477,10 @@ if(FORGECAD_BUILD_VIEW_TESTS)
     forgecad_add_view_test(forgecad_curve_extraction_tests --curve-extraction)
     set_tests_properties(forgecad_curve_extraction_tests PROPERTIES TIMEOUT 60)
     forgecad_add_view_test(forgecad_handle_constraints_tests --handle-constraints)
+    forgecad_add_view_test(forgecad_solver_partition_tests --solver-partition)
+    forgecad_add_view_test(forgecad_lazy_mesh_tests --lazy-mesh)
+    set_tests_properties(forgecad_lazy_mesh_tests PROPERTIES TIMEOUT 120)
+    set_tests_properties(forgecad_solver_partition_tests PROPERTIES TIMEOUT 120)
     set_tests_properties(forgecad_handle_constraints_tests PROPERTIES TIMEOUT 30)
     forgecad_add_view_test(forgecad_sketch_editing_tests --sketch-editing)
     set_tests_properties(forgecad_sketch_editing_tests PROPERTIES TIMEOUT 60)

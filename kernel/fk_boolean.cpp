@@ -24,6 +24,7 @@
 #include "fk_intersect.h"
 #include "fk_marching.h"
 #include "fk_parallel.h"
+#include "fk_box_batch.h"
 #include "fk_pcurve.h"
 #include "fk_surface_algo.h"
 #include "fk_unify.h"
@@ -1806,7 +1807,22 @@ void BooleanBuilder::computeCuts(std::map<int, std::vector<Piece>> (&cuts)[2]) {
     // Coppie di facce i cui box si toccano, in parallelo (il tracciamento tra
     // B-spline puo' prendere secondi per coppia).
     std::vector<std::pair<FaceId, FaceId>> pairs;
-    for (FaceId fa : bodies_[0].faces())
+    bool accelerated=false;
+    const auto accelerator=getBoxBatchEvaluator();
+    const auto first=bodies_[0].faces(),second=bodies_[1].faces();
+    constexpr std::size_t budget=16*1024*1024;
+    if(accelerator && !second.empty() && first.size()<=budget/second.size()
+        && first.size()*second.size()>=65536) {
+        std::vector<Box> a,b;for(auto f:first)a.push_back(boxes_[0].at(f.index));
+        for(auto f:second)b.push_back(boxes_[1].at(f.index));
+        std::vector<unsigned char> mask;
+        try { accelerated=accelerator->overlaps(a,b,mask) && mask.size()==a.size()*b.size(); }
+        catch(const OperationCancelled &) { throw; }
+        catch(const std::exception &) { accelerated=false; }
+        if(accelerated)for(std::size_t i=0;i<a.size();++i)for(std::size_t j=0;j<b.size();++j)
+            if(mask[i*b.size()+j] && a[i].overlaps(b[j])) pairs.emplace_back(first[i],second[j]);
+    }
+    if(!accelerated)for (FaceId fa : first)
         for (FaceId fb : faceIndex_[1].query(boxes_[0].at(fa.index))) pairs.emplace_back(fa, fb);
     std::vector<PairResult> results(pairs.size());
     const auto compute = [&](std::size_t i) {

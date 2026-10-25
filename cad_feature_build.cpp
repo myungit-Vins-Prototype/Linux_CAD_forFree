@@ -41,7 +41,7 @@ static void appendDistinctSegments(std::vector<ForgeCad::Kernel::PathSegment> &s
 
 // Geometria e tassellazione di un corpo (anche da un thread: non tocca il viewport).
 void buildBody(ExtrusionObject &body, int index, const QVector<SketchObject> &sketches, const QVector<ExtrusionObject> &bodies,
-                      int quality) {
+                      int quality, bool prepareDisplay) {
     QElapsedTimer timer;
     timer.start();
     // Le feature nuove vengono costruite prima di entrare nella storyboard:
@@ -92,8 +92,11 @@ void buildBody(ExtrusionObject &body, int index, const QVector<SketchObject> &sk
         buildGeometry(body, index, sketches, bodies);
     }
     const qint64 built = timer.elapsed();
-    if (!usedSnapshot || body.display.quality != quality) tessellateGeometry(body, quality, body.display);
-    configurePatternInstances(body, index, sketches, bodies);
+    if (!usedSnapshot) body.display = {}; // nessuna mesh della geometria precedente
+    if (prepareDisplay) {
+        if (body.display.quality != quality) tessellateGeometry(body, quality, body.display);
+        configurePatternInstances(body, index, sketches, bodies);
+    }
     if (qEnvironmentVariableIsSet("FORGECAD_PROFILE"))
         std::fprintf(stderr, "PROFILO corpo %d \"%s\": costruzione %lld ms, tassellazione %lld ms (punti valutati con CUDA dall'avvio: %llu)\n",
                      index, qPrintable(body.name), built, timer.elapsed() - built,

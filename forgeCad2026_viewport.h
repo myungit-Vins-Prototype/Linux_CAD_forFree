@@ -1048,6 +1048,7 @@ private:
     // cascata, le booleane che usano corpi rigenerati. I corpi dipendono solo
     // da corpi con indice minore, quindi basta una passata in ordine.
     void regenerateDependents(int sketchIndex);
+    void ensureBodyDisplay(int index) const;
 
     bool hasSurfacePierceSource(int index) const;
     void refreshSurfacePierceSketches(int sourceIndex,QSet<int> &changed,int targetSketch=-1);

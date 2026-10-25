@@ -1220,6 +1220,12 @@ void CadViewport::drawSectionPlane() {
 }
 
 void CadViewport::drawExtrusions() {
+    // Preparare prima di prendere riferimenti: una cache mancante puo' causare
+    // il detach del QVector condiviso con le istantanee Undo.
+    for (int index=0;index<extrusions_.size();++index)
+        if (isBodyDrawn(index) || index==edgePickBody_ || pickBodies_.contains(index)
+            || preview_.replaced.contains(index) || preview_.restored.contains(index)
+            || (!preview_.key.isEmpty() && index==preview_.definition.firstBody)) ensureBodyDisplay(index);
     glDisable(GL_CULL_FACE);
     overlayRenderer_.setStipple(false);
     enableSectionClip();

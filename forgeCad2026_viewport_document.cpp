@@ -177,11 +177,37 @@ int CadViewport::historyPosition() const { return historyPosition_ < 0 ? int(ext
 
 bool CadViewport::isBodyDrawn(int index, bool includeSketchResults) const {
     if(index<0 || index>=extrusions_.size())return false;
+    bool drawn = extrusions_.at(index).visible;
     if(sketchMode_ && sketchContextEnd_>=0) {
         const auto &bodies = includeSketchResults ? sketchDisplayBodies_ : sketchContextBodies_;
-        return index<bodies.size() && bodies.at(index);
+        drawn = index<bodies.size() && bodies.at(index);
     }
-    return extrusions_.at(index).visible;
+    return drawn;
+}
+
+// Cache derivata, aggiornata sul thread GUI soltanto quando uno stadio viene
+// effettivamente richiesto (scena, rollback, contesto schizzo o picker).
+void CadViewport::ensureBodyDisplay(int index) const {
+    if (index<0 || index>=extrusions_.size()) return;
+    const auto &body=extrusions_.at(index);
+    if (body.display.quality==tessellationQuality_ || (!body.forgeBody && !body.curve)) return;
+    auto *self=const_cast<CadViewport *>(this);
+    // Durante un worker la vista continua a disegnare lo snapshot corrente;
+    // un paint rientrante non deve avviare un secondo lavoro sulla stessa mesh.
+    if (self->responsiveWork_) return;
+    if (body.feature==BodyFeature::Pattern && body.firstBody>=0 && body.firstBody<index)
+        ensureBodyDisplay(body.firstBody);
+    ExtrusionObject next=extrusions_.at(index);
+    const int quality=tessellationQuality_;
+    QElapsedTimer timer;timer.start();
+    self->runWhileResponsive([&]{ForgeCad::tessellateGeometry(next,quality,next.display);});
+    if(index>=self->extrusions_.size() || self->extrusions_.at(index).forgeBody!=next.forgeBody
+        || self->extrusions_.at(index).curve!=next.curve
+        || self->tessellationQuality_!=quality)return;
+    self->extrusions_[index].display=std::move(next.display);
+    ForgeCad::configurePatternInstances(self->extrusions_[index],index,self->sketches_,self->extrusions_);
+    if(qEnvironmentVariableIsSet("FORGECAD_PROFILE"))
+        std::fprintf(stderr,"PROFILO mesh richiesta corpo %d: %lld ms\n",index,static_cast<long long>(timer.elapsed()));
 }
 
 void CadViewport::refreshSketchContext() {
@@ -225,6 +251,7 @@ void CadViewport::refreshSketchContext() {
             sketchDisplayBodies_[i]=visible;
         }
     }
+    for (int index=0;index<extrusions_.size();++index) if (isBodyDrawn(index)) ensureBodyDisplay(index);
 }
 
 void CadViewport::applyHistoryPosition() {
@@ -1702,6 +1729,7 @@ void CadViewport::documentChanged() {
                 && ForgeCad::sketchesOf(feature).contains(activeSketch_))
                 sketchSessionFeatures_.insert(feature.featureId);
     refreshSketchContext();
+    for (int index=0;index<extrusions_.size();++index) if (isBodyDrawn(index)) ensureBodyDisplay(index);
     sceneBoundsDirty_ = true;
     raySelectionCache_.clear();
     projectedEdges_.clear();
@@ -1811,6 +1839,7 @@ void CadViewport::regenerateFrom(int from, QVector<bool> dirty, QSet<int> dirtyS
             refreshSurfacePierceSketches(-1,dirtySketches,s);
     }
     flush();
+    for (int index=0;index<extrusions_.size();++index) if (isBodyDrawn(index)) ensureBodyDisplay(index);
 }
 
 void CadViewport::rebuildParallel(const QVector<int> &indices,
@@ -1820,7 +1849,12 @@ void CadViewport::rebuildParallel(const QVector<int> &indices,
                                                : QStringLiteral("Rigenerazione del corpo..."));
     if (indices.size() <= 1) {
         for (int index : indices) {
-            rebuildBody(extrusions_[index], index);
+            auto result=extrusions_.at(index);
+            const auto sketches=sketches_;
+            const auto bodies=extrusions_;
+            const bool eager=qEnvironmentVariableIntValue("FORGECAD_EAGER_MESH")==1;
+            runWhileResponsive([&] { ForgeCad::buildBody(result,index,sketches,bodies,tessellationQuality_,eager); });
+            extrusions_[index]=std::move(result);
             if (advanced) advanced(1, extrusions_.at(index).name);
         }
         return;
@@ -1842,6 +1876,7 @@ void CadViewport::rebuildParallel(const QVector<int> &indices,
     const QVector<SketchObject> sketches = sketches_;
     const QVector<ExtrusionObject> &all = next;
     const int quality = tessellationQuality_;
+    const bool eager=qEnvironmentVariableIntValue("FORGECAD_EAGER_MESH")==1;
     for (int l = 0; l < levels; ++l) {
         std::vector<int> batch;
         for (int index : indices)
@@ -1852,7 +1887,7 @@ void CadViewport::rebuildParallel(const QVector<int> &indices,
             runWhileResponsive([&] {
                 ForgeCad::Kernel::parallelFor(count, ForgeCad::Kernel::threadCount(0), [&](std::size_t k) {
                     const int index = batch[offset + k];
-                    ForgeCad::buildBody(bodies[index], index, sketches, all, quality);
+                    ForgeCad::buildBody(bodies[index], index, sketches, all, quality, eager);
                 });
             });
             if (advanced) advanced(int(count), next.at(batch[offset + count - 1]).name);
@@ -2069,8 +2104,8 @@ void CadViewport::restoreDocument(DocumentState state) {
     for (SketchObject &sketch : sketches_) {
         for (CurveObject &curve : sketch.curves) ForgeCad::recalculateCurve(curve, tessellationQuality_);
     }
-    for (int index = 0; index < extrusions_.size(); ++index)
-        if (extrusions_.at(index).display.quality != tessellationQuality_) tessellateBody(extrusions_[index], index);
+    if(qEnvironmentVariableIntValue("FORGECAD_EAGER_MESH")==1)
+        for(int index=0;index<extrusions_.size();++index)ensureBodyDisplay(index);
     hasPendingPoint_ = false;
     curveControlPoints_.clear();
     sketchSelections_.clear();

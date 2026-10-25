@@ -161,3 +161,67 @@ In modifica schizzo la vista recupera gli stadi costruiti prima della prima feat
 Per il contesto trasparente un passaggio di sola profondità individua la superficie più vicina fra tutti i corpi, comprese le istanze. Il colore viene miscelato una sola volta su quella superficie: facce posteriori sovrapposte non aumentano l'opacità. Gli spigoli posteriori seguono l'opzione dedicata; lo schizzo rimane sovrapposto e leggibile. Questo è un contesto grafico per disegnare, senza simulazione fisica della trasmissione attraverso tutti gli strati.
 
 Verifica nativa: `forgecad_view_tests --sketch-ghost-render` controlla opacità al35%,25strati,25istanze e corpi sovrapposti. `--render-sketch-context documento.prt indice immagine.png` permette una cattura su un documento senza salvarlo.
+
+## Esperimento solver, mesh e GPU — branch codex/solver-mesh-gpu
+
+Il branch sperimentale conserva la geometria B-rep in double. Il solver usa
+derivate analitiche per coincidenza, orizzontalità/verticalità, concentricità,
+punto medio e target; gli altri residui conservano le differenze centrali.
+Jacobiano e analisi dei gradi di libertà sfruttano le componenti indipendenti;
+ogni componente del solve usa Cholesky locale con lo stesso parametro di
+regolarizzazione globale del percorso precedente. Una componente grande e
+connessa mantiene ancora una fattorizzazione densa: non è un solver sparso
+generale con fattorizzazione simbolica riutilizzata.
+
+La rigenerazione prepara i B-rep degli stadi intermedi senza tassellarli.
+Scena, rollback, contesto schizzo e picker materializzano le mesh richieste;
+le istantanee Undo conservano le proprie cache. Il cambio qualità riguarda
+gli stadi visibili, gli altri vengono aggiornati quando richiesti.
+
+Il nuovo filtro GPU delle booleane usa Metal su macOS e CUDA su Linux/NVIDIA.
+I box double già espansi della tolleranza vengono convertiti in intervalli
+float arrotondati verso l'esterno; il filtro non costruisce geometria e può
+solo conservare candidati in eccesso. Tutti i candidati passano dal confronto
+double prima delle intersezioni esatte. Errori, dati fuori campo o oltre il
+budget di16MiB della maschera riportano al BVH CPU. Il filtro sperimentale
+lavora su prodotti fra65.536e16.777.216coppie; il costo è quadratico, quindi
+non sostituisce in generale il BVH e non è abilitato per default.
+
+Avvio della build del branch, senza cambiare le preferenze salvate:
+
+```sh
+python3 tools/run_solver_mesh_gpu.py
+python3 tools/run_solver_mesh_gpu.py --baseline
+python3 tools/run_solver_mesh_gpu.py --gpu --profile
+```
+
+È possibile aggiungere il percorso di un documento. Per confrontare calcoli
+effettivi, modificare uno schizzo o usare **Rigenera tutto**: le cache già
+salvate possono evitare il ricalcolo alla sola apertura. L'opzione baseline
+seleziona `FORGECAD_SOLVER_DENSE=1`, `FORGECAD_EAGER_MESH=1` e disabilita il
+filtro GPU. `--gpu` abilita `FORGECAD_GPU_BROAD_PHASE=1`; la tassellazione CUDA
+già esistente conserva il proprio interruttore separato.
+
+Verifiche riproducibili: `forgecad_view_tests --solver-partition` confronta
+soluzioni e DOF con il percorso denso; `--lazy-mesh` verifica volume analitico,
+rollback, qualità e snapshot. `forgecad_gpu_broad_phase_tests --cpu-fallback`
+controlla errori e cancellazione; `--require-gpu` richiede l'esecuzione reale.
+Senza GPU il test CTest usa lo stato SKIP77, non un falso PASS.
+Il modulo CUDA richiede una verifica separata su Linux/NVIDIA: la compilazione
+del solo backend Metal non la sostituisce. Questo primo percorso non migra
+intersezioni, raccordi, misure o topologia alla GPU.
+
+Misure finali isolate del 25 ottobre, macOS arm64 Release: 100 vincoli orizzontali
+indipendenti 2,75342 → 0,215334 ms (12,79×); 400 vincoli 205,498 → 0,849625 ms;
+800 vincoli 1716,02 → 1,66217 ms. I valori sono **mediane di 5 chiamate alternate**
+per versione nello stesso processo, con copie ripristinate dell'input.
+Storia sintetica di 20 stadi di scala della sfera: 49,7512 → 2,96721 ms (16,77×),
+mediana di 3 caricamenti alternati, 20 mesh contro 1. Non sono benchmark generali.
+Sul controllo booleano dei prismi a 256 lati, una singola validazione Metal finale
+misura 68,1387 ms CPU e 69,4297 ms GPU: nessun vantaggio dimostrato del filtro,
+che resta opt-in. Non sommare questi fattori e non estenderli a ogni documento.
+
+Per ripetere il benchmark solver usare `forgecad_view_tests --solver-partition --benchmark`
+in ambiente Qt offscreen; senza `--benchmark` esegue soltanto le
+regressioni. Protocollo, dati e limiti sono conservati in
+[solver-mesh-gpu-2026-10-25.json](benchmarks/solver-mesh-gpu-2026-10-25.json).

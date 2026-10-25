@@ -109,6 +109,7 @@ static QString exampleDocumentPath(const char *name) {
 #include "test_history_suppression.h"
 #include "test_pattern_placements.h"
 #include "test_zoom_input.h"
+#include "test_solver_partition.h"
 class ViewportInteractionTest {
 public:
 #include "test_sketch_interaction.h"
@@ -121,6 +122,7 @@ public:
 #include "test_surface_tools_gui.h"
 #include "test_document_units.h"
 #include "test_function_panels.h"
+#include "test_lazy_mesh.h"
     static void extrusionActionPreconditions() {
         using namespace ForgeCad;
         PdfWindow window;
@@ -10031,6 +10033,16 @@ int main(int argc, char **argv) {
     format.setProfile(QSurfaceFormat::CoreProfile); format.setDepthBufferSize(24); format.setStencilBufferSize(8);
     QSurfaceFormat::setDefaultFormat(format);
     QApplication app(argc, argv);
+    if (app.arguments().contains(QStringLiteral("--lazy-mesh"))) {
+        try { ViewportInteractionTest::lazyMeshTests(); }
+        catch(const std::exception &error){std::cerr<<error.what()<<std::endl;return 1;}
+        return 0;
+    }
+    if (app.arguments().contains(QStringLiteral("--solver-partition"))) {
+        try { solverPartitionTests(app.arguments().contains(QStringLiteral("--benchmark"))); }
+        catch(const std::exception &error) { std::cerr<<error.what()<<std::endl;return 1; }
+        return 0;
+    }
     ForgeCad::initializeApplicationTheme(app);
     QCoreApplication::setOrganizationName(QStringLiteral("ForgeCADTests"));
     QCoreApplication::setApplicationName(QStringLiteral("Viewport"));

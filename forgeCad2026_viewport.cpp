@@ -88,7 +88,8 @@ void CadViewport::setTessellationQuality(int quality) {
     for (SketchObject &sketch : sketches_) {
         for (CurveObject &curve : sketch.curves) ForgeCad::recalculateCurve(curve, tessellationQuality_);
     }
-    for (int index = 0; index < extrusions_.size(); ++index) tessellateBody(extrusions_[index], index);
+    for (int index = 0; index < extrusions_.size(); ++index)
+        if (qEnvironmentVariableIntValue("FORGECAD_EAGER_MESH")==1 || isBodyDrawn(index)) ensureBodyDisplay(index);
     update();
 }
 
