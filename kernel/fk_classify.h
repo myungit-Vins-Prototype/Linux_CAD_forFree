@@ -2,6 +2,7 @@
 #define FORGECAD_FK_CLASSIFY_H
 
 #include <vector>
+#include <memory>
 #include <utility>
 
 #include "fk_intersect.h"
@@ -22,6 +23,18 @@ double distanceToFaceBoundary(const Body &body, FaceId face, const Vec3 &point);
 // (la faccia e' a sinistra delle fin). Funziona anche sulle superfici
 // periodiche in u senza cucitura. Servono le SP-curve di tutte le fin.
 PointLocation classifyPointOnFace(const Body &body, FaceId face, const Vec3 &point, double tolerance);
+
+// Classificatore esatto riutilizzabile per una faccia immutabile. Prepara
+// estremi parametrici, cammini ai poli e box conservativi dei bordi una volta.
+// Corpo e geometria devono restare vivi e invariati per tutta la sua durata.
+class FaceClassifier {
+public:
+    FaceClassifier(const Body &body, FaceId face, double tolerance);
+    PointLocation classify(const Vec3 &point) const;
+private:
+    struct Data;
+    std::shared_ptr<const Data> data_;
+};
 
 // Parametro t >= 0 del primo punto in cui la semiretta origin + t direction
 // incontra una faccia del body (falso se non la incontra) e, se `face` non e'
@@ -48,14 +61,18 @@ Box faceBox(const Body &body, FaceId face);
 // faccia o passa su un edge).
 class SolidClassifier {
 public:
-    SolidClassifier(const Body &body, double tolerance);
+    // La preparazione delle facce e' utile per molte interrogazioni sullo stesso
+    // corpo (campiture); il percorso occasionale conserva il costo precedente.
+    SolidClassifier(const Body &body, double tolerance, bool prepareFaces = false);
     PointLocation classify(const Vec3 &point) const;
+    PointLocation classifyFace(FaceId face, const Vec3 &point) const;
 
 private:
     const Body &body_;
     double tolerance_;
     std::vector<FaceId> faces_;
     std::vector<Box> boxes_;
+    std::vector<std::pair<FaceId, FaceClassifier>> preparedFaces_;
 };
 
 }

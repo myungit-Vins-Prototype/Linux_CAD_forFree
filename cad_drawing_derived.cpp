@@ -119,7 +119,7 @@ QPainterPath solidSectionMaterial(const Body &body,int region,const DrawingView 
     if(faces.empty())return {};
     double left=1e100,right=-1e100;const auto [bottom,top]=limits(bounds);
     for(int mask=0;mask<8;++mask){const auto q=view.plane.toLocal(Vec3(mask&1?bounds.hi.x():bounds.lo.x(),mask&2?bounds.hi.y():bounds.lo.y(),mask&4?bounds.hi.z():bounds.lo.z()));left=std::min(left,q.x());right=std::max(right,q.x());}
-    left-=1;right+=1;SolidClassifier classifier(body,view.tolerance);
+    left-=1;right+=1;SolidClassifier classifier(body,view.tolerance,true);
     for(auto vertex:body.vertices())levels.push_back(view.plane.toLocal(body.vertex(vertex).point).y());
     for(const auto &curve:curves)if(curve.kind==DrawingCurveKind::Section&&curve.featureId==feature){
         const auto [low,high]=limits(curveBox(*curve.curve,curve.range));levels.push_back(low);levels.push_back(high);
@@ -154,7 +154,7 @@ QPainterPath solidSectionMaterial(const Body &body,int region,const DrawingView 
         for(const auto &face:faces){
             if(y<face.low-view.tolerance||y>face.high+view.tolerance)continue;
             const auto hits=intersectCurveSurface(line,{0,right-left},*body.face(face.id).surface,view.tolerance);
-            for(double t:hits.parameters)if(classifyPointOnFace(body,face.id,line.point(t),view.tolerance)!=PointLocation::Outside)cuts.push_back(left+t);
+            for(double t:hits.parameters)if(classifier.classifyFace(face.id,line.point(t))!=PointLocation::Outside)cuts.push_back(left+t);
         }
         }
         std::sort(cuts.begin(),cuts.end());cuts.erase(std::unique(cuts.begin(),cuts.end(),[&](double a,double b){return b-a<=4*view.tolerance;}),cuts.end());Spans spans;

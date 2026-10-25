@@ -2,6 +2,7 @@
 
 #include "fk_curve_surface.h"
 #include "fk_nurbs.h"
+#include "fk_transform.h"
 
 #include <algorithm>
 #include <cmath>
@@ -86,20 +87,22 @@ Box curveBox(const Curve<3> &curve, const Interval &range) {
 
 namespace {
 
+// Fuori dall'inviluppo dei coefficienti non ci sono radici o quasi-contatti.
+bool outsideBernsteinHull(const std::vector<double> &coefficients, double valueTolerance) {
+    if (coefficients.empty()) return false;
+    const auto bounds = std::minmax_element(coefficients.begin(), coefficients.end());
+    const double magnitude = std::max(std::fabs(*bounds.first), std::fabs(*bounds.second));
+    const double margin = std::max(valueTolerance, 64 * std::numeric_limits<double>::epsilon() * magnitude);
+    return *bounds.first > margin || *bounds.second < -margin;
+}
+
 // Radici del polinomio piu' i punti in cui tocca lo zero senza attraversarlo
 // (tangenze: radici doppie che l'isolamento per cambi di segno puo' perdere
 // per un arrotondamento): minimi di |p| entro valueTolerance.
 std::vector<double> rootsAndTouchings(const BernsteinPolynomial &p, double valueTolerance) {
-    // La base di Bernstein e' positiva su [0,1]: fuori dall'inviluppo dei
-    // coefficienti non ci sono ne' zeri ne' tangenze entro valueTolerance.
-    // Evita soprattutto la ricerca degli estremi di tratti lontani dal piano.
-    const auto &coefficients = p.coefficients();
-    if (!coefficients.empty()) {
-        const auto bounds = std::minmax_element(coefficients.begin(), coefficients.end());
-        const double magnitude = std::max(std::fabs(*bounds.first), std::fabs(*bounds.second));
-        const double margin = std::max(valueTolerance, 64 * std::numeric_limits<double>::epsilon() * magnitude);
-        if (*bounds.first > margin || *bounds.second < -margin) return {};
-    }
+    // Stesso filtro anche prima di costruire il polinomio: nessuna allocazione
+    // per le pezze lontane attraversate dalle scansioni delle sezioni.
+    if (outsideBernsteinHull(p.coefficients(), valueTolerance)) return {};
     std::vector<double> result = p.roots();
     if (p.degree() >= 2)
         for (double s : p.derivative().roots())
@@ -174,10 +177,12 @@ void rootsOf(const Curve<N> &curve, const Interval &range, const Vec<N> &n, doub
             + 64 * std::numeric_limits<double>::epsilon() * magnitude;
         if (low > margin || high < -margin) return;
         const auto segments = spline.cachedBezierSegments();
+        std::vector<double> coefficients;
+        coefficients.reserve(std::size_t(spline.degree()+1));
         for (const BSplineCurve<N> &segment : *segments) {
             const Interval dom = segment.domain();
             if (dom.hi < range.lo || dom.lo > range.hi) continue;
-            std::vector<double> coefficients;
+            coefficients.clear();
             bool onPlane = true;
             double largestWeight = 0.0;
             for (int j = 0; j < segment.poleCount(); ++j) {
@@ -190,7 +195,9 @@ void rootsOf(const Curve<N> &curve, const Interval &range, const Vec<N> &n, doub
                 out.coincident.push_back({std::max(dom.lo, range.lo), std::min(dom.hi, range.hi)});
                 continue;
             }
-            for (double s : rootsAndTouchings(BernsteinPolynomial(coefficients), 0.1 * tolerance * largestWeight * norm(n)))
+            const double valueTolerance=0.1*tolerance*largestWeight*norm(n);
+            if (outsideBernsteinHull(coefficients,valueTolerance)) continue;
+            for (double s : rootsAndTouchings(BernsteinPolynomial(coefficients), valueTolerance))
                 addInRange(out.parameters, dom.lo + s * dom.length(), range);
         }
         return;
@@ -1100,6 +1107,18 @@ PlanarImage planarImage(const Curve<3> &curve, const Interval &range, const Fram
         return out;
     case CurveType::Trimmed:
         return planarImage(*static_cast<const TrimmedCurve<3> &>(curve).basis(), range, frame);
+    case CurveType::Transformed: {
+        // Le isoparametriche delle estrusioni conservano la spline base in
+        // un involucro trasformato. Materializzare la similitudine e' esatto;
+        // per le rette scalate va anche ripristinato il parametro originale.
+        const auto &transformed = static_cast<const TransformedCurve &>(curve);
+        double scale = 1.0;
+        const auto mapped = transformCurve(transformed.basis(), transformed.transform(), &scale);
+        out = planarImage(*mapped, {range.lo * scale, range.hi * scale}, frame);
+        const auto toCurve = out.toCurve;
+        out.toCurve = [toCurve, scale](double t) { return toCurve(t) / scale; };
+        return out;
+    }
     default:
         throw std::domain_error("planarImage: tipo di curva non gestito");
     }

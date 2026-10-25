@@ -600,6 +600,7 @@ struct SurfaceToolParameters {
     double maximum=100,tolerance=1e-6;
     QByteArray basis;
     QVector<SurfacePoleEdit> edits;
+    QVector<GeometryRef> targets; // mode0: riferimenti finali; vuoto nei file con il solo extentRef
 };
 struct ExtrusionObject {
     // Identita' persistente della feature e del corpo logico a cui appartiene.

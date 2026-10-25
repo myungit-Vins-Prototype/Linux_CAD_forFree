@@ -379,7 +379,10 @@ QVector<Dependency> dependencies(int index, const DocumentState &document) {
         break;
     case BodyFeature::SurfaceTools:
         if(feature.surfaceTool.mode!=1)addBodyDependency(result,features,index,feature.firstBody,QStringLiteral("superficie sorgente"));
-        if(feature.surfaceTool.mode==0)addGeometryDependency(result,feature.extentRef,sketches,features,index,QStringLiteral("limite estensione"));
+        if(feature.surfaceTool.mode==0) {
+            const auto targets = feature.surfaceTool.targets.isEmpty() ? QVector<GeometryRef>{feature.extentRef} : feature.surfaceTool.targets;
+            for (const auto &ref : targets) addGeometryDependency(result,ref,sketches,features,index,QStringLiteral("limite estensione"));
+        }
         for(const auto *family:{&feature.ruledFirst,&feature.ruledSecond})for(const auto &ref:*family)addGeometryDependency(result,ref,sketches,features,index,QStringLiteral("curva rete"));
         break;
     case BodyFeature::SheetExtend:

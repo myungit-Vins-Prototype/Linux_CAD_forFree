@@ -177,7 +177,7 @@ static void surfaceTools() {
             require(dialog, "pannello poli aperto");
             auto *table = dialog->findChild<QTableWidget *>("surfacePolesTable");
             require(table && table->rowCount() > 0 && view.surfacePoleOverlay_.size() == table->rowCount(), "gabbia e tabella concordano");
-            require(!dialog->findChild<QComboBox *>("surfaceToolEdge")->isVisible(), "controlli degli altri modi nascosti");
+            require(!dialog->findChild<QListWidget *>("surfaceToolEdge")->isVisible(), "controlli degli altri modi nascosti");
             const int row = table->rowCount() / 2;
             const auto start = view.surfacePoleScreen(row);
             const double x = QLocale().toDouble(table->item(row, 2)->text());
@@ -193,12 +193,14 @@ static void surfaceTools() {
             table->item(row, 5)->setText("0");
             QElapsedTimer validation;
             validation.start();
-            while (validation.elapsed() < 90)
+            while (validation.elapsed() < 2000 && dialog->findChild<QDialogButtonBox *>("surfaceToolButtons")->button(QDialogButtonBox::Ok)->isEnabled())
                 QApplication::processEvents();
             require(!dialog->findChild<QDialogButtonBox *>("surfaceToolButtons")->button(QDialogButtonBox::Ok)->isEnabled(),
                     "peso zero disabilita conferma");
             table->item(row, 5)->setText(QLocale().toString(1.4));
-            validation.restart();while(validation.elapsed()<90)QApplication::processEvents();
+            validation.restart();
+            while (validation.elapsed() < 2000 && !dialog->findChild<QDialogButtonBox *>("surfaceToolButtons")->button(QDialogButtonBox::Ok)->isEnabled())
+                QApplication::processEvents();
             dialog->grab().save(qa + "/poli-pesi.png");
             dialog->findChild<QDialogButtonBox *>("surfaceToolButtons")->button(QDialogButtonBox::Ok)->click();
         } catch (...) {
@@ -207,14 +209,14 @@ static void surfaceTools() {
                 dialog->reject();
         }
     });
-    require(surfaceToolDialog(&window, &view, "Modifica poli NURBS", 5, view.extrusions_[5],
+    const bool polesAccepted = surfaceToolDialog(&window, &view, "Modifica poli NURBS", 5, view.extrusions_[5],
                               [&](const ExtrusionObject &d) {
                                   submitted = d;
                                   return QString();
-                              }),
-            "pannello poli confermato");
+                              });
     if (failure)
         std::rethrow_exception(failure);
+    require(polesAccepted, "pannello poli confermato");
     require(!submitted.surfaceTool.edits.isEmpty() && view.surfacePoleOverlay_.isEmpty(), "parametri acquisiti e gabbia rimossa");
     require(writeBodyBinary(*view.extrusions_[5].forgeBody) == changed, "anteprima sola non modifica modello");
     QTimer::singleShot(0, &window, [&] {
@@ -254,10 +256,12 @@ static void surfaceTools() {
         auto *dialog = window.findChild<QDialog *>("surfaceToolDialog");
         try {
             require(dialog, "pannello estensione aperto");
-            require(dialog->findChild<QComboBox *>("surfaceToolEdge")->count() >= 4, "bordi liberi disponibili");
+            require(dialog->findChild<QListWidget *>("surfaceToolEdge")->count() == 1, "mostra solo il bordo salvato");
             dialog->findChild<QPushButton *>("surfaceToolPickTarget")->click();
             auto callback = view.refPickFinished_;
             require(bool(callback), "picker riferimento attivo");
+            callback(true, view.extrusions_[4].extentRef);
+            require(dialog->findChild<QListWidget *>("surfaceToolTargets")->count() == 0, "secondo clic toglie il target salvato");
             callback(true, view.extrusions_[4].extentRef);
             dialog->grab().save(qa + "/estendi-riferimento.png");
             dialog->findChild<QDialogButtonBox *>("surfaceToolButtons")->button(QDialogButtonBox::Ok)->click();
@@ -276,6 +280,122 @@ static void surfaceTools() {
             "pannello estensione confermato");
     if (failure)
         std::rethrow_exception(failure);
+    // Nuovo comando: niente bordo implicito, picking del bordo seguito dal target.
+    QTimer::singleShot(0, &window, [&] {
+        auto *dialog = window.findChild<QDialog *>("surfaceToolDialog");
+        try {
+            require(dialog, "nuova estensione aperta");
+            auto *list = dialog->findChild<QListWidget *>("surfaceToolEdge");
+            auto *targetBox = dialog->findChild<QComboBox *>("surfaceToolTarget");
+            auto *targetPick = dialog->findChild<QPushButton *>("surfaceToolPickTarget");
+            auto *ok = dialog->findChild<QDialogButtonBox *>("surfaceToolButtons")->button(QDialogButtonBox::Ok);
+            require(list->count() == 0 && targetBox->currentIndex() == -1, "nuovo flusso vuoto anche con definizione precompilata");
+            require(!ok->isEnabled() && !targetPick->isEnabled(), "target e conferma attendono il bordo");
+            require(view.referencePicking() && view.refPickRoles_ == (DatumRoleCurve | DatumRoleLine), "picking bordo attivo automaticamente");
+            auto callback = view.refPickFinished_;
+            callback(true, view.extrusions_[4].extentRef);
+            require(list->count() == 0 && view.referencePicking(), "una faccia non diventa un bordo");
+            GeometryRef boundary;
+            boundary.kind = 4;
+            boundary.index = 0;
+            boundary.featureId = view.extrusions_[0].featureId;
+            boundary.point = edgeReference(*base, edge, Vec3(10, 5, 0));
+            callback(true, boundary);
+            require(list->count() == 1 && targetPick->isEnabled() && !ok->isEnabled(), "bordo scelto, target ancora richiesto");
+            require(view.referencePicking() && view.refPickRoles_ == (DatumRolePlane | DatumRoleFace), "passaggio automatico al target");
+            callback(false, {});
+            require(!view.referencePicking() && list->count() == 1 && !ok->isEnabled(), "Esc conserva il bordo senza applicare");
+            targetPick->click();
+            callback(true, view.extrusions_[4].extentRef);
+            GeometryRef plane; plane.kind = 1; plane.index = 0;
+            callback(true, plane);
+            auto *selected = dialog->findChild<QListWidget *>("surfaceToolTargets");
+            require(selected->count() == 2 && view.referencePicking(), "target multipli senza riavviare il picker");
+            callback(true, plane);
+            require(selected->count() == 1, "secondo clic toglie solo il target indicato");
+            callback(true, plane);
+            selected->setCurrentRow(1);
+            dialog->findChild<QPushButton *>("surfaceToolRemoveTarget")->click();
+            require(selected->count() == 1, "rimozione dalla lista dei target");
+            callback(false, {});
+            require(!view.referencePicking() && selected->count() == 1, "Esc conserva tutti i target scelti");
+            dialog->findChild<QPushButton *>("surfaceToolPickEdge")->click();
+            callback(true, boundary);
+            require(targetBox->currentIndex() == -1 && !ok->isEnabled(), "cambio bordo richiede nuovamente il target");
+            callback(true, view.extrusions_[4].extentRef);
+            // Il pulsante richiama refresh sincrono prima di applicare.
+            QTimer::singleShot(100, dialog, [ok] { ok->click(); });
+        } catch (...) {
+            failure = std::current_exception();
+            if (dialog)
+                dialog->reject();
+        }
+    });
+    require(surfaceToolDialog(&window, &view, "Nuova estensione nella vista", -1, view.extrusions_[4],
+                              [&](const ExtrusionObject &d) {
+                                  require(d.firstBody == 0 && d.blendEdges.size() == 1, "corpo dedotto dal bordo selezionato");
+                                  require(resolveEdgeReference(*base, d.blendEdges.front(), 1e-5) == edge, "bordo grafico esatto");
+                                  require(d.extentRef.kind == 5 && d.extentRef.index == 1, "target grafico esatto");
+                                  return QString();
+                              }), "nuova estensione confermata dopo entrambe le selezioni");
+    if (failure)
+        std::rethrow_exception(failure);
+    require(!view.referencePicking() && view.pickBodies_.isEmpty() && !view.refPickFinished_, "picking ripulito alla chiusura");
+    // Due facce di corpi distinti formano insieme il riferimento spezzato.
+    const std::vector<Vec2> corners{{14, -1}, {16, 5}, {14, 11}};
+    std::vector<ProfileSegment> sides;
+    for (int i = 1; i < int(corners.size()); ++i)
+        sides.push_back({std::make_shared<Line<2>>(corners[i - 1], corners[i] - corners[i - 1]), {0, distance(corners[i - 1], corners[i])}});
+    const auto profile = buildProfile(sides, 1e-9);
+    const auto folded = makeSheetExtrusion(Frame3(Vec3(0, 0, -2), Vec3(0, 0, 1), Vec3(1, 0, 0)), profile.chains, 4);
+    DocumentState multi;
+    multi.extrusions = {imported(surface_fixture::patch(), "Base"), imported(facesAsSheet(folded, {folded.faces()[0]}), "Target A"),
+                         imported(facesAsSheet(folded, {folded.faces()[1]}), "Target B")};
+    CadViewport multiView;
+    multiView.tessellationQuality_ = 0;
+    multiView.loadDocument(multi);
+    auto combined = extension;
+    combined.firstBody = 0;
+    combined.surfaceTool.maximum = 100;
+    const auto multiBase = multiView.extrusions_[0].forgeBody;
+    combined.blendEdges = {edgeReference(*multiBase, surface_fixture::edgeNear(*multiBase, Vec3(10, 5, 0)), Vec3(10, 5, 0))};
+    for (int i : {1, 2}) {
+        GeometryRef ref;
+        ref.kind = 5; ref.index = i; ref.featureId = multiView.extrusions_[i].featureId;
+        const auto shape = multiView.extrusions_[i].forgeBody;
+        Vec3 p; require(faceInteriorPoint(*shape, shape->faces().front(), p), "punto interno target");
+        ref.point = faceReference(*shape, shape->faces().front(), p);
+        combined.surfaceTool.targets.append(ref);
+    }
+    combined.extentRef = combined.surfaceTool.targets.front();
+    clientOk(multiView.createBody(combined));
+    require(bodyOperands(multiView.extrusions_[3]) == QVector<int>({0, 1, 2}), "dipendenze di tutti i target");
+    auto incomplete = multiView.extrusions_[3];
+    incomplete.surfaceTool.targets.removeLast();
+    require(CadViewport::previewKey(incomplete, 3) != CadViewport::previewKey(multiView.extrusions_[3], 3), "anteprima invalida al cambiare dei target");
+    const auto retainedMulti = writeBodyBinary(*multiView.extrusions_[3].forgeBody);
+    require(!multiView.updateBody(3, incomplete).isEmpty() && writeBodyBinary(*multiView.extrusions_[3].forgeBody) == retainedMulti,
+            "target incompleto rifiutato senza perdere il risultato");
+    require(!multiView.moveFeatureTo(3, 1).isEmpty(), "estensione non precede nessuno dei target");
+    require(!multiView.moveFeatureTo(3, 2).isEmpty(), "estensione non precede il secondo target anche se il primo la precede");
+    multi = multiView.currentDocument();
+    QByteArray multiBytes;
+    clientOk(encodeDocument(multi, multiBytes, false));
+    DocumentState multiRestored;
+    clientOk(decodeDocument(multiBytes, multiRestored));
+    require(multiRestored.extrusions[3].surfaceTool.targets.size() == 2 &&
+            multiRestored.extrusions[3].surfaceTool.targets[1].point.name == multi.extrusions[3].surfaceTool.targets[1].point.name,
+            "persistono tutti i target e i nomi topologici");
+    CadViewport multiRebuilt;
+    multiRebuilt.tessellationQuality_ = 0;
+    multiRebuilt.loadDocument(multiRestored);
+    require(multiRebuilt.extrusions_[3].error.isEmpty() && multiRebuilt.extrusions_[3].forgeBody &&
+            checkBody(*multiRebuilt.extrusions_[3].forgeBody, {true, true}).empty(), "riferimento composto rigenerato senza cache");
+    auto malformedMulti = multi.extrusions;
+    malformedMulti[3].surfaceTool.targets.append(malformedMulti[3].surfaceTool.targets.front());
+    const auto beforeMalformed = multiRestored.extrusions[3].surfaceTool.targets.size();
+    require(!applySurfaceToolsExtras(surfaceToolsExtras(malformedMulti), multiRestored.extrusions).isEmpty() &&
+            multiRestored.extrusions[3].surfaceTool.targets.size() == beforeMalformed, "duplicati rifiutati atomicamente dal codec");
     QTemporaryDir dir;
     auto saved = document;
     const auto path = dir.filePath("superfici.prt");

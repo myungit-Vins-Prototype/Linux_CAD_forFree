@@ -11,6 +11,37 @@
 
 using namespace fktest;
 
+FK_TEST(PlanarImageTransformedCurves) {
+    const Frame3 frame(Vec3(1, -2, 3), Vec3(1, 1, 2), Vec3(1, 0, 0));
+    const auto spline = std::make_shared<BSplineCurve<3>>(2, std::vector<double>{0, 0, 0, 1, 1, 1},
+        std::vector<Vec3>{Vec3(0, 0, 0), Vec3(1, 2, 1), Vec3(3, 0, 2)}, std::vector<double>{1, .8, 1});
+    const std::vector<CurvePtr<3>> bases{
+        spline, std::make_shared<Line<3>>(Vec3(), Vec3(1, 2, 0)),
+        std::make_shared<Circle<3>>(Vec3(), Vec3(1, 0, 0), Vec3(0, 1, 0), 2)};
+    for (const auto &base : bases) {
+        const auto inner = std::make_shared<TransformedCurve>(base, Transform3::scaling(Vec3(), 2.5));
+        const auto trimmed = std::make_shared<TrimmedCurve<3>>(inner, .1, .9);
+        const TransformedCurve curve(trimmed, Transform3::translation(Vec3(2, 3, 4)) *
+            Transform3::reflection(Vec3(), Vec3(1, 0, 0)));
+        const auto image = planarImage(curve, curve.domain(), frame);
+        FK_CHECK(bool(image.curve));
+        for (int i = 0; i <= 32; ++i) {
+            const double s = image.range.lo + image.range.length() * i / 32.;
+            const double t = image.toCurve(s);
+            FK_CHECK(curve.domain().contains(t, 1e-10));
+            const auto p = frame.toLocal(curve.point(t));
+            FK_CHECK_NEAR(distance(image.curve->point(s), Vec2(p.x(), p.y())), 0, 1e-9);
+        }
+    }
+    // La proiezione di una retta normale al piano si riduce a un punto.
+    const auto normal = std::make_shared<Line<3>>(Vec3(), Vec3(0, 0, 1));
+    const TransformedCurve line(normal, Transform3::scaling(Vec3(), 3));
+    const auto point = planarImage(line, {1, 2}, Frame3());
+    FK_CHECK(!point.curve);
+    FK_CHECK_NEAR(point.toCurve(point.range.lo), 1, 1e-12);
+    FK_CHECK_NEAR(point.toCurve(point.range.hi), 2, 1e-12);
+}
+
 namespace {
 
 Handle(Geom2d_Curve) occt2d(const Curve<2> &curve, const Interval &range) {
@@ -218,4 +249,17 @@ FK_TEST(PlaneRootsHullKeepsContacts) {
     const auto translated = planeRoots<2>(far, {0,1}, normal, 1e9, 1e-9);
     FK_CHECK(translated.parameters.size() == 1);
     if (!translated.parameters.empty()) FK_CHECK_NEAR(translated.parameters.front(), .5, 1e-12);
+}
+
+FK_TEST(PlaneRootsManySpans) {
+    std::vector<Vec2> poles;std::vector<double> knots{0};
+    for(int i=0;i<=512;++i){poles.push_back(Vec2(i,i%2?1:-1));knots.push_back(i);}
+    knots.push_back(512);
+    const BSplineCurve<2> curve(1,knots,poles);
+    for(double offset : {-2.,0.,2.}){
+        const auto roots=planeRoots<2>(curve,{.25,511.75},Vec2(0,1),offset,1e-10);
+        FK_CHECK(roots.coincident.empty());
+        FK_CHECK(roots.parameters.size()==(offset==0?512:0));
+        if(offset==0)for(std::size_t i=0;i<roots.parameters.size();++i)FK_CHECK_NEAR(roots.parameters[i],i+.5,1e-12);
+    }
 }

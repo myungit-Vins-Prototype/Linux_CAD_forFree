@@ -472,3 +472,42 @@ FK_TEST(TessellateThreadsAndBatchEvaluator) {
         FK_CHECK(same(serial, tessellate(*input, options)));
     }
 }
+
+FK_TEST(PreparedFaceClassification) {
+    const auto box = makeBox(Frame3(), 10, 6, 4);
+    const auto drilled = booleanOperation(box, makeCylinder(Frame3(Vec3(5,3,-1),Vec3(0,0,1),Vec3(1,0,0)),1.5,6), BooleanOperation::Subtract);
+    auto meridian = std::make_shared<BSplineCurve<2>>(3, std::vector<double>{0,0,0,0,1,1,1,1},
+        std::vector<Vec2>{{3,0},{3,4},{2,4},{0,4}});
+    const auto dome = makeRevolution(Frame3(), buildProfile({lineSegment({0,0},{3,0}), {meridian,meridian->domain()},lineSegment({0,4},{0,0})},1e-9).regions.front());
+    const auto cone = makeRevolution(Frame3(), buildProfile({lineSegment({0,-3},{4,-3}),lineSegment({4,-3},{0,5}),lineSegment({0,5},{0,-3})},1e-9).regions.front());
+    for (const auto &body : {box,drilled,makeSphere(Frame3(),4),makeTorus(Frame3(),4,1),dome,cone}) {
+        for (double tolerance : {1e-7,1e-5}) {
+            const SolidClassifier original(body,tolerance), prepared(body,tolerance,true);
+            // Parita', punti esterni/interni e cavita' su un reticolo non allineato.
+            for (int x=-2;x<=6;++x) for (int y=-2;y<=4;++y) for (int z=-1;z<=3;++z) {
+                const Vec3 p(1.7*x+.13,1.9*y+.19,2.1*z+.23);
+                FK_CHECK(original.classify(p)==prepared.classify(p));
+            }
+            for (auto face : body.faces()) {
+                const FaceClassifier classifier(body,face,tolerance);
+                const auto &surface=*body.face(face).surface;
+                // Anche punti sulla superficie ma fuori dalla rifilatura.
+                for (double u : {-1.3,.17,1.1,3.2,6.4}) for (double v : {-.7,.21,1.3,4.7}) {
+                    const auto p=surface.point(u,v);
+                    FK_CHECK(classifier.classify(p)==classifyPointOnFace(body,face,p,tolerance));
+                }
+                for (auto loop : body.face(face).loops) for (auto fin : body.loopFins(loop)) {
+                    const auto &edge=body.edge(body.fin(fin).edge);
+                    for (double fraction : {0.,.37,1.}) {
+                        const auto p=edge.curve->point(edge.range.lo+edge.range.length()*fraction);
+                        FK_CHECK(classifier.classify(p)==PointLocation::Boundary);
+                        for (double delta : {.5*tolerance,2*tolerance}) {
+                            const auto q=p+Vec3(delta,0,0);
+                            FK_CHECK(classifier.classify(q)==classifyPointOnFace(body,face,q,tolerance));
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

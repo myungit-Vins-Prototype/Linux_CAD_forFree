@@ -49,6 +49,7 @@ using ForgeCad::Gui::wrappedNote;
 #include "fk_step.h"
 #include "fk_iges.h"
 #include "fk_classify.h"
+#include "fk_extrude.h"
 #include "fk_sew.h"
 #include "fk_helix.h"
 #include "fk_mass.h"
@@ -102,6 +103,7 @@ static QString exampleDocumentPath(const char *name) {
 #include "test_drawing_release.h"
 #include "test_drawing_mouse.h"
 #include "test_drawing_section_model.h"
+#include "test_drawing_performance.h"
 #include "document_regression.h"
 #include "test_document_read.h"
 #include "test_pattern_placements.h"
@@ -9998,6 +10000,10 @@ int main(int argc, char **argv) {
         try { ViewportInteractionTest::sweepReferences(); }
         catch (const std::exception &e) { std::cerr << e.what() << std::endl; return 1; }
         return 0;
+    }
+    if(app.arguments().contains(QStringLiteral("--drawing-performance"))){
+        try{drawingPerformanceTest(app.arguments().value(app.arguments().indexOf(QStringLiteral("--drawing-performance"))+1));}
+        catch(const std::exception &e){std::cerr<<e.what()<<std::endl;return 1;}return 0;
     }
     if(app.arguments().contains(QStringLiteral("--drawing-section-model"))){
         try{drawingSectionModelTest(app.arguments().value(app.arguments().indexOf(QStringLiteral("--drawing-section-model"))+1));}

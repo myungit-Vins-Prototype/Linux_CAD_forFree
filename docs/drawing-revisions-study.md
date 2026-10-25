@@ -741,7 +741,15 @@ Catalogo, `.prt`, `.drw` e manifesti di rilascio conservano i propri schemi. Il 
 
 ## 27. Badge persistenti e avvio guidato (24 ottobre 2026)
 
-Implementato il pannello non modale **Quote → Numerazione quote**. Alla prima attivazione scegliere il numero iniziale, cliccare la prima quota sulla tavola e poi due frecce ortogonali: prima il verso principale, poi il verso di avanzamento tra righe/colonne. Sono disponibili otto scansioni. La prima quota è evidenziata e le frecce scelte riportano 1 e 2. Se si parte da una quota interna, l'ordine completo viene ruotato: dopo l'ultima si riprendono quelle precedenti, senza omissioni. La tolleranza raggruppa bande ancorate al primo testo; non concatena tolleranze.
+Il pannello non modale **Quote → Numerazione quote** permette di scegliere il numero iniziale, cliccare la prima quota sulla tavola e poi due frecce ortogonali: prima il verso principale, poi quello secondario. Sono disponibili otto scansioni. La prima quota è evidenziata e le frecce scelte riportano 1 e 2.
+
+**Una vista alla volta (25 ottobre 2026):** tutte le quote di una vista ricevono un blocco contiguo della sequenza; solo dopo il completamento si passa alla vista successiva. Le quote appartengono alla vista indicata dalla definizione geometrica, anche quando il testo viene spostato vicino a un'altra vista o sovrapposto. Una sezione o un dettaglio costituisce una vista distinta dalla madre. Si parte dalla vista della prima quota scelta. Se la prima quota è interna, si ruota solo l'ordine delle quote di quella vista: quelle precedenti vengono recuperate prima di passare alle altre viste. Non si ruota più un'unica sequenza globale che possa spezzare la vista iniziale.
+
+Le altre viste con quote vengono ordinate dalle loro origini sul foglio, per bande nel verso secondario e scansione nel principale; l'ordine dei gruppi viene ruotato alla vista iniziale. Le viste prive di quote ammesse non consumano numeri. Una vista senza layout mantiene unite le proprie quote e usa il centro dei loro testi per la posizione del gruppo; quote prive di definizione geometrica confluiscono in un gruppo senza vista.
+
+Dentro ciascuna vista resta il percorso spaziale che completa le zone vicine nel verso scelto. **Tolleranza nella vista** raggruppa testi sfalsati. La scala locale è metà della mediana stimata delle distanze dei vicini nelle due proiezioni ordinate, con minimo pari alla tolleranza impostata; la suddivisione usa il maggior vuoto tra testi e una pila di profondità massima32. A vuoti simili, entro il massimo fra tolleranza e un quarto della scala locale, prevale il taglio nel secondo verso. Le bande locali sono ancorate al primo testo, senza concatenare tolleranze. Senza prima quota valida si conserva la scansione interna a bande legacy, mantenendo comunque i blocchi per vista. Le assegnazioni persistenti già confermate non cambiano senza riassegnazione esplicita.
+
+Regressioni: le coordinate e le appartenenze di **Controllo numero quote.drw** verificano che le otto quote di Vista1 precedano le tre della sezione, anche partendo da una quota interna o da un'altra vista, negli otto versi, con testi sovrapposti, esclusioni e layout mancante. Il flacone resta verificato sul percorso concordato **1 → 4 → 11 → 2 → 3 → 5 → 6 → 7 → 10 → 8 → 9**; il percorso viene ora costruito completando le tre viste separatamente.
 
 L'anteprima mostra i badge sulle quote reali, una croce arancione sulle quote senza badge e il confronto prima/dopo. Conferma applica una sola operazione annullabile; Annulla/Esc conserva il foglio. Cambio foglio, ridisegno e passaggio in sola lettura chiudono la procedura. Per cambiare l'ordine successivamente selezionare **Riassegna esplicitamente i numeri** e ripetere quota/frecce. Con l'opzione disattivata cambiano le impostazioni, conservando le assegnazioni.
 
@@ -771,3 +779,44 @@ Duplicare un foglio rinnova gli UUID di quote e riserve mantenendo i numeri; ogn
 6. Eseguire check-in A, check-out, cambio numero e check-in B. Aprire A e B: numeri originali in A, nuovi in B, confronto nello storico e blocco delle modifiche nelle copie storiche.
 
 Le prove automatiche e gli eventuali limiti di esecuzione sono registrati in CLAUDE.md; il collaudo sul dispositivo dell'utente resta da effettuare.
+
+## 28. Prestazioni delle sezioni e delle intersezioni (25 ottobre 2026)
+
+Il recupero della campitura sui bordi condivisi (`solidSectionMaterial`) deve distinguere il materiale dai fori: il costo principale riscontrato sul flacone è la classificazione esatta ripetuta dei punti, seguita dalle scansioni di recupero sulle facce. Il semplice disegno delle righe di tratteggio non è il collo di bottiglia.
+
+`FaceClassifier` prepara una volta loop, cammini polari, limiti parametrici e box conservativi dei bordi. `SolidClassifier` abilita questa preparazione nel recupero della campitura e la riutilizza anche per classificare le intersezioni delle scansioni. I box scartano solo bordi sicuramente lontani: le curve generiche, per cui il box è soltanto campionato, mantengono la verifica completa. Non cambiano tolleranze, parità delle intersezioni, fori, riferimenti di quota o formato del documento. I dati preparati valgono soltanto durante il calcolo, sul corpo immutabile; non esiste una nuova cache salvata nel `.drw`.
+
+Nelle intersezioni B-spline, `planeRoots` riutilizza il vettore dei coefficienti fra le pezze di Bezier e applica il medesimo filtro dell'inviluppo Bernstein prima di allocare il polinomio. Restano identici la gestione delle tangenze, dei tratti coincidenti, dei pesi razionali e i margini numerici.
+
+### Misurazione riproducibile
+
+Con il runner Release compilato:
+
+```sh
+QT_QPA_PLATFORM=offscreen forgecad-release/forgecad_view_tests \
+  --drawing-performance "/percorso/tavola.drw"
+```
+
+Il comando legge la tavola e il modello senza acquisire lock o scrivere i documenti. Rifiuta un modello diverso dalla versione della tavola. Produce righe JSON con lettura/preparazione modello, curve esatte, contorni, campitura, visibilità e costruzione dell'editor per ciascun foglio. La cache mesh nasce vuota per foglio e viene condivisa fra le viste, come nell'editor. La misura dell'editor è separata e ripete l'intera preparazione; non va sommata ai tempi delle singole fasi. L'impronta SHA256 include tutti i tracciati di visibilità, materiale e tratteggio prima del ritaglio dei dettagli: consente il confronto anche sulla parte non mostrata.
+
+Confrontare eseguibili precedenti e nuovi sullo stesso host, sugli stessi file, senza compilazioni o analisi concorrenti; eseguire più ripetizioni e riportare la mediana. I tempi dell'editor escludono la lettura del modello, già riportata separatamente. Nessun limite temporale rigido nei test automatici: i confronti geometrici verificano correttezza, le misure valutano il beneficio.
+
+Restano distinti la tassellazione e la visibilità ad alta scala, la preparazione della vista completa prima del ritaglio del dettaglio e l'eventuale ricostruzione di un modello privo di cache. Questo intervento non introduce una promessa di apertura istantanea per tutte le tavole. Risultati misurati e verifiche finali nel registro condiviso.
+
+### Risultati sul Mac di verifica
+
+Confronto Release del 25 ottobre 2026, processi separati e build/generatore di questa chat fermi durante le misure utili. Tre ripetizioni sul flacone, esclusa una coppia di riscaldamento contaminata da un controllo statico. Cinque ripetizioni sul primo foglio di Controllo numero quote, per osservare la variabilità del tempo dell'editor. Mediane:
+
+| Operazione sul flacone | Prima | Dopo |
+| --- | ---: | ---: |
+| Preparazione iniziale dell'editor, modello già letto | 37,113 s | 18,291 s |
+| Estrazione curve esatte della vista principale | 0,143 s | 0,036 s |
+| Campitura della sezione | 10,658 s | 4,397 s |
+| Campitura del dettaglio 5:1 | 14,937 s | 6,019 s |
+| Visibilità del dettaglio | 4,530 s | 4,577 s |
+
+La preparazione dell'editor migliora del 50,7%; le campiture di circa 2,4–2,5 volte. Le fasi misurate separatamente non sono una scomposizione dello stesso intervallo dell'editor: sono due preparazioni distinte. Sul flacone i tempi dell'editor variano da 34,349 a 52,756 s prima e da 18,091 a 23,836 s dopo; la mediana riduce l'effetto delle oscillazioni del sistema e dell'esecuzione asincrona.
+
+Sul primo foglio di **Controllo numero quote**, dove la campitura è già sotto il millisecondo, il tempo dell'editor è 2,659 → 2,855 s: **nessun miglioramento netto**, con intervalli 2,625–4,089 s prima e 2,641–3,885 s dopo. Il costo è dominato dalla visibilità, non accelerata da questo intervento. Non si deduce un'accelerazione generale da questi due documenti.
+
+In tutte le ripetizioni le impronte complete dei tracciati delle sette viste coincidono prima/dopo; anche gli originali `.drw` e `.prt` restano invariati. Verificati inoltre 8 test applicativi e 20 test geometrici mirati, compresi fori, bordi, tolleranze, superfici curve, tangenze, pesi razionali, sezioni derivate/dettagli, file nativi e annullamento. Nessuna nuova prova manuale della GUI macOS o suite kernel completa dichiarata. Log e dati grezzi: `/private/tmp/drawing-perf-final/records.json`, log `drawing-perf-*`; diagnostica permanente disponibile con il comando sopra.

@@ -7,6 +7,7 @@
 #include <QSet>
 #include <algorithm>
 #include <cmath>
+#include <limits>
 namespace ForgeCad {
 inline QString validateDrawingDimensionNumbering(const DrawingDimensionNumbering &n,qsizetype count){
     if(n.firstNumber<1||n.firstNumber>999999||!std::isfinite(n.diameter)||n.diameter<3||n.diameter>20
@@ -49,16 +50,86 @@ inline QHash<QUuid,int> drawingDimensionNumbers(const DrawingSheet &sheet){
         first=end;
     }return out;
 }
-// Direzione primaria dentro la banda; secondaria per l'avanzamento fra bande.
-inline QVector<QUuid> drawingNumberingOrder(const DrawingSheet &sheet){
-    const auto &n=sheet.dimensionNumbering;QVector<const DrawingDimensionLayout*> sorted;
-    for(const auto &d:sheet.dimensions)if(!drawingDimensionNumberExcluded(d,n))sorted.append(&d);
+// Ordine spaziale di un singolo gruppo; la rotazione resta interna al gruppo.
+// Le bande legacy servono anche a ordinare le origini delle viste.
+inline QVector<QUuid> drawingNumberingSpatialOrder(QVector<const DrawingDimensionLayout*> sorted,const DrawingDimensionNumbering &n,bool guided){
     const auto coord=[](const DrawingDimensionLayout *d,int direction){return (direction%2?d->position.y():d->position.x())*(direction>=2?-1:1);};
-    const auto along=[&](auto a,auto b){const auto x=coord(a,n.primaryDirection),y=coord(b,n.primaryDirection);return x!=y?x<y:a->dimensionId<b->dimensionId;};
-    std::sort(sorted.begin(),sorted.end(),[&](auto a,auto b){const auto x=coord(a,n.secondaryDirection),y=coord(b,n.secondaryDirection);return x!=y?x<y:along(a,b);});
-    for(qsizetype start=0;start<sorted.size();){auto end=start+1;const auto edge=coord(sorted[start],n.secondaryDirection);while(end<sorted.size()&&coord(sorted[end],n.secondaryDirection)-edge<=n.rowTolerance)++end;std::sort(sorted.begin()+start,sorted.begin()+end,along);start=end;}
-    QVector<QUuid> out;for(auto d:sorted)out.append(d->dimensionId);
-    const auto first=std::find(out.begin(),out.end(),n.firstDimension);if(first!=out.end())std::rotate(out.begin(),first,out.end());return out;
+    const auto before=[&](auto a,auto b,int direction){
+        const auto x=coord(a,direction),y=coord(b,direction);if(x!=y)return x<y;
+        const auto u=coord(a,direction==n.primaryDirection?n.secondaryDirection:n.primaryDirection),v=coord(b,direction==n.primaryDirection?n.secondaryDirection:n.primaryDirection);
+        return u!=v?u<v:a->dimensionId<b->dimensionId;
+    };
+    const auto along=[&](auto a,auto b){return before(a,b,n.primaryDirection);};
+    const auto across=[&](auto a,auto b){return before(a,b,n.secondaryDirection);};
+    QVector<QUuid> out;out.reserve(sorted.size());
+    if(guided&&sorted.size()>2){
+        // Scala locale stimata dai vicini nelle due proiezioni ordinate: O(N log N),
+        // senza confrontare tutte le coppie. La mediana limita l'effetto degli isolati.
+        QHash<QUuid,double> nearest;
+        for(auto d:sorted)nearest.insert(d->dimensionId,std::numeric_limits<double>::infinity());
+        for(int direction:{n.primaryDirection,n.secondaryDirection}){
+            std::sort(sorted.begin(),sorted.end(),[&](auto a,auto b){return before(a,b,direction);});
+            for(qsizetype i=1;i<sorted.size();++i){const auto delta=sorted[i]->position-sorted[i-1]->position;const double squared=QPointF::dotProduct(delta,delta);
+                for(auto d:{sorted[i-1],sorted[i]})nearest[d->dimensionId]=std::min(nearest.value(d->dimensionId),squared);}
+        }
+        QVector<double> distances;distances.reserve(nearest.size());for(double squared:nearest)distances.append(squared);
+        const auto median=distances.begin()+distances.size()/2;std::nth_element(distances.begin(),median,distances.end());
+        const double proximity=std::max(n.rowTolerance,std::sqrt(*median)*.5);
+        struct Region{QVector<const DrawingDimensionLayout*> dimensions;int depth=0;};
+        QVector<Region> pending;pending.append({std::move(sorted),0});
+        while(!pending.isEmpty()){
+            auto region=pending.takeLast();auto &primary=region.dimensions;auto secondary=primary;
+            std::sort(primary.begin(),primary.end(),along);std::sort(secondary.begin(),secondary.end(),across);
+            const auto gap=[&](const auto &items,int direction){QPair<double,qsizetype> widest{0,0};
+                for(qsizetype i=1;i<items.size();++i){const double width=coord(items[i],direction)-coord(items[i-1],direction);if(width>widest.first)widest={width,i};}return widest;};
+            const auto p=gap(primary,n.primaryDirection),s=gap(secondary,n.secondaryDirection);
+            // A vuoti simili prevale il secondo verso: si completa prima la scansione principale.
+            const double gapTolerance=std::max(n.rowTolerance,proximity*.25);
+            const bool splitPrimary=p.first>s.first+gapTolerance;const auto cut=splitPrimary?p:s;
+            if(cut.first>proximity&&region.depth<32){
+                auto &items=splitPrimary?primary:secondary;
+                // Pila esplicita e profondità limitata anche su impaginazioni sbilanciate.
+                pending.append({items.mid(cut.second),region.depth+1});pending.append({items.mid(0,cut.second),region.depth+1});continue;
+            }
+            // Bande locali ancorate al primo testo, senza concatenare tolleranze.
+            for(qsizetype start=0;start<primary.size();){auto end=start+1;const double edge=coord(primary[start],n.primaryDirection);
+                while(end<primary.size()&&coord(primary[end],n.primaryDirection)-edge<=proximity)++end;
+                std::sort(primary.begin()+start,primary.begin()+end,across);for(auto i=start;i<end;++i)out.append(primary[i]->dimensionId);start=end;}
+        }
+    }else{
+        std::sort(sorted.begin(),sorted.end(),across);
+        for(qsizetype start=0;start<sorted.size();){auto end=start+1;const auto edge=coord(sorted[start],n.secondaryDirection);while(end<sorted.size()&&coord(sorted[end],n.secondaryDirection)-edge<=n.rowTolerance)++end;std::sort(sorted.begin()+start,sorted.begin()+end,along);start=end;}
+        for(auto d:sorted)out.append(d->dimensionId);
+    }
+    if(!n.firstDimension.isNull()){const auto first=std::find(out.begin(),out.end(),n.firstDimension);if(first!=out.end())std::rotate(out.begin(),first,out.end());}return out;
+}
+// Le quote di ciascuna vista formano sempre un blocco contiguo, anche quando
+// la prima quota è interna o i testi di viste diverse si sovrappongono.
+inline QVector<QUuid> drawingNumberingOrder(const DrawingSheet &sheet){
+    const auto &n=sheet.dimensionNumbering;
+    QHash<QUuid,QUuid> dimensionViews;for(const auto &d:sheet.drawing.dimensions)dimensionViews.insert(d.id,d.viewId);
+    QHash<QUuid,QVector<const DrawingDimensionLayout*>> groups;
+    QUuid firstView;bool guided=false;
+    for(const auto &d:sheet.dimensions)if(!drawingDimensionNumberExcluded(d,n)){
+        const auto view=dimensionViews.value(d.dimensionId);groups[view].append(&d);
+        if(d.dimensionId==n.firstDimension){firstView=view;guided=true;}
+    }
+    QHash<QUuid,QPointF> positions;for(const auto &v:sheet.views)positions.insert(v.viewId,v.position);
+    QVector<DrawingDimensionLayout> anchors;anchors.reserve(groups.size());
+    for(auto it=groups.cbegin();it!=groups.cend();++it){
+        // Se manca il layout di una vista orfana, usa il centro dei suoi testi.
+        QPointF origin=it.value().front()->position;double left=origin.x(),right=left,top=origin.y(),bottom=top;
+        if(positions.contains(it.key()))origin=positions.value(it.key());
+        else{for(auto d:it.value()){left=std::min(left,d->position.x());right=std::max(right,d->position.x());top=std::min(top,d->position.y());bottom=std::max(bottom,d->position.y());}origin={left*.5+right*.5,top*.5+bottom*.5};}
+        anchors.append({it.key(),origin});
+    }
+    QVector<const DrawingDimensionLayout*> viewAnchors;viewAnchors.reserve(anchors.size());for(const auto &anchor:anchors)viewAnchors.append(&anchor);
+    auto viewNumbering=n;viewNumbering.firstDimension={};
+    auto viewOrder=drawingNumberingSpatialOrder(std::move(viewAnchors),viewNumbering,false);
+    if(guided){const auto first=std::find(viewOrder.begin(),viewOrder.end(),firstView);if(first!=viewOrder.end())std::rotate(viewOrder.begin(),first,viewOrder.end());}
+    QVector<QUuid> out;out.reserve(sheet.dimensions.size());
+    for(const auto &view:viewOrder)out+=drawingNumberingSpatialOrder(groups.value(view),n,guided);
+    return out;
 }
 inline void freezeDrawingNumbering(DrawingSheet &sheet){
     auto &n=sheet.dimensionNumbering;if(n.persistent||!n.enabled)return;
@@ -74,9 +145,10 @@ inline QString extendDrawingNumbering(DrawingSheet &sheet){
 inline QString renumberDrawingDimensions(DrawingSheet &sheet){
     auto candidate=sheet;auto &n=candidate.dimensionNumbering;n.persistent=true;n.enabled=true;
     // L'operazione esplicita conserva le riserve delle quote nascoste o eliminate.
-    for(const auto &id:drawingNumberingOrder(candidate))n.assignments.remove(id);
+    const auto order=drawingNumberingOrder(candidate);
+    for(const auto &id:order)n.assignments.remove(id);
     QSet<int> reserved;for(auto value:n.assignments)reserved.insert(value);
-    int number=n.firstNumber;for(const auto &id:drawingNumberingOrder(candidate)){while(reserved.contains(number))++number;if(number>999999)return QStringLiteral("Numeri dei badge esauriti.");n.assignments.insert(id,number++);}
+    int number=n.firstNumber;for(const auto &id:order){while(reserved.contains(number))++number;if(number>999999)return QStringLiteral("Numeri dei badge esauriti.");n.assignments.insert(id,number++);}
     n.nextNumber=std::max(n.nextNumber,number);for(auto value:n.assignments)n.nextNumber=std::max(n.nextNumber,value+1);
     const auto error=validateDrawingDimensionNumbering(n,candidate.dimensions.size());if(error.isEmpty())sheet=std::move(candidate);return error;
 }

@@ -2,7 +2,10 @@
 
 #include <algorithm>
 #include <cmath>
+#include <map>
+#include <limits>
 #include <stdexcept>
+#include "fk_cancel.h"
 
 #include "fk_curve_algo.h"
 #include "fk_nurbs.h"
@@ -25,24 +28,88 @@ namespace {
 bool degenerateAt(const Surface &surface, double v);
 }
 
-PointLocation classifyPointOnFace(const Body &body, FaceId faceId, const Vec3 &point, double tolerance) {
+namespace {
+bool conservativeBoundary(const Curve<3> &curve, const Interval &range) {
+    switch(curve.type()) {
+    case CurveType::Line: case CurveType::Circle: case CurveType::Ellipse:return true;
+    case CurveType::BSpline:return range.lo>=curve.domain().lo && range.hi<=curve.domain().hi;
+    case CurveType::Trimmed:return conservativeBoundary(*static_cast<const TrimmedCurve<3> &>(curve).basis(),range);
+    case CurveType::Transformed:return conservativeBoundary(*static_cast<const TransformedCurve &>(curve).basis(),range);
+    default:return false;
+    }
+}
+struct PreparedFace {
+    std::vector<FinId> fins;
+    std::vector<LoopPoleWalk> walks;
+    std::vector<std::pair<EdgeId, Box>> boundaries;
+    std::map<int, std::pair<Vec2, Vec2>> limits;
+    struct SplineHull {Vec2 lo{1e300,1e300},hi{-1e300,-1e300};double weightRatio=1;};
+    std::map<int,SplineHull> splineHulls;
+    PreparedFace(const Body &body, FaceId face, double tolerance) {
+        for (auto loop : body.face(face).loops) {
+            const auto more = loopPoleWalks(body, loop, tolerance);
+            walks.insert(walks.end(), more.begin(), more.end());
+            for (auto id : body.loopFins(loop)) {
+                cancellationPoint();
+                fins.push_back(id);
+                const auto &fin = body.fin(id);
+                const auto &edge = body.edge(fin.edge);
+                Box box{{-1e300,-1e300,-1e300},{1e300,1e300,1e300}};
+                if (conservativeBoundary(*edge.curve,edge.range)) {
+                    box=curveBox(*edge.curve,edge.range);
+                    const double magnitude=std::max({1.,norm(box.lo),norm(box.hi)});
+                    box=box.padded(tolerance+64*std::numeric_limits<double>::epsilon()*magnitude);
+                } // Curve generiche: nessuna esclusione da un box solo campionato.
+                boundaries.emplace_back(fin.edge,box);
+                if (!fin.pcurve) continue; // il controllo resta nella classificazione
+                Vec2 lo(1e300, 1e300), hi(-1e300, -1e300);
+                for (int i=0;i<=32;++i) {
+                    const auto point=fin.pcurve->point(edge.range.lo+edge.range.length()*i/32.0);
+                    for (int axis=0;axis<2;++axis) {lo[axis]=std::min(lo[axis],point[axis]);hi[axis]=std::max(hi[axis],point[axis]);}
+                }
+                limits.emplace(id.index,std::make_pair(lo,hi));
+                if(fin.pcurve->type()==CurveType::BSpline){
+                    const auto &spline=static_cast<const BSplineCurve<2> &>(*fin.pcurve);
+                    SplineHull hull;double minWeight=1e300,maxWeight=0;
+                    for(int i=0;i<spline.poleCount();++i){
+                        for(int axis=0;axis<2;++axis){hull.lo[axis]=std::min(hull.lo[axis],spline.poles()[i][axis]);hull.hi[axis]=std::max(hull.hi[axis],spline.poles()[i][axis]);}
+                        minWeight=std::min(minWeight,spline.weight(i));maxWeight=std::max(maxWeight,spline.weight(i));
+                    }
+                    hull.weightRatio=maxWeight/minWeight;splineHulls.emplace(id.index,hull);
+                }
+            }
+        }
+    }
+};
+PointLocation classifyFacePoint(const Body &body, FaceId faceId, const Vec3 &point, double tolerance, const PreparedFace *prepared) {
     const Face &face = body.face(faceId);
     const Surface &surface = *face.surface;
-    if (distanceToFaceBoundary(body, faceId, point) <= tolerance) return PointLocation::Boundary;
+    if (prepared) {
+        for (const auto &boundary : prepared->boundaries) {
+            // Il box e' conservativo: evita soltanto proiezioni sicuramente
+            // lontane. Sui candidati rimane la stessa curva esatta e tolleranza.
+            const auto &box = boundary.second;
+            if (point.x()<box.lo.x() || point.x()>box.hi.x() || point.y()<box.lo.y() || point.y()>box.hi.y() || point.z()<box.lo.z() || point.z()>box.hi.z()) continue;
+            const auto &edge = body.edge(boundary.first);
+            if (projectPoint(*edge.curve, point, edge.range).distance <= tolerance) return PointLocation::Boundary;
+        }
+    } else if (distanceToFaceBoundary(body, faceId, point) <= tolerance) return PointLocation::Boundary;
 
-    std::vector<FinId> fins;
-    for (LoopId l : face.loops)
-        for (FinId f : body.loopFins(l)) fins.push_back(f);
+    std::vector<FinId> localFins;
+    if (!prepared) for (LoopId l : face.loops)
+        for (FinId f : body.loopFins(l)) localFins.push_back(f);
+    const auto &fins = prepared ? prepared->fins : localFins;
     if (fins.empty()) return PointLocation::Inside;  // faccia senza bordo
 
     const SurfaceProjection projection = projectPoint(surface, point);
     const double periods[2] = {surface.isUPeriodic() ? surface.uPeriod() : 0.0, surface.isVPeriodic() ? surface.vPeriod() : 0.0};
     // Cammini dei loop lungo le linee dei poli (tratti orizzontali in (u, v)).
-    std::vector<LoopPoleWalk> walks;
-    for (LoopId l : face.loops) {
+    std::vector<LoopPoleWalk> localWalks;
+    if (!prepared) for (LoopId l : face.loops) {
         const std::vector<LoopPoleWalk> more = loopPoleWalks(body, l, tolerance);
-        walks.insert(walks.end(), more.begin(), more.end());
+        localWalks.insert(localWalks.end(), more.begin(), more.end());
     }
+    const auto &walks = prepared ? prepared->walks : localWalks;
     // Vertice del cono: la faccia sta su una falda sola (dalla parte dei suoi
     // loop); un punto sull'altra falda e' fuori.
     if (surface.type() == SurfaceType::Cone) {
@@ -83,7 +150,10 @@ PointLocation classifyPointOnFace(const Body &body, FaceId faceId, const Vec3 &p
             if (!fin.pcurve) throw std::logic_error("classifyPointOnFace: fin senza SP-curve");
             const Curve<2> &pcurve = *fin.pcurve;
             double lo = 1e300, hi = -1e300;
-            for (int i = 0; i <= 32; ++i) {
+            if (prepared) {
+                const auto &limits = prepared->limits.at(f.index);
+                lo = limits.first[across]; hi = limits.second[across];
+            } else for (int i = 0; i <= 32; ++i) {
                 const double value = pcurve.point(edge.range.lo + edge.range.length() * i / 32.0)[across];
                 lo = std::min(lo, value);
                 hi = std::max(hi, value);
@@ -94,7 +164,19 @@ PointLocation classifyPointOnFace(const Body &body, FaceId faceId, const Vec3 &p
                 kHi = int(std::ceil((hi - c) / period)) + 1;
             }
             for (int k = kLo; k <= kHi; ++k) {
-                const PlaneRoots<2> roots = planeRoots<2>(pcurve, edge.range, normal, c + k * period, 1e-14 * (1.0 + std::fabs(c)));
+                const double offset=c+k*period,tol=1e-14*(1.0+std::fabs(c));
+                if(prepared){
+                    const auto found=prepared->splineHulls.find(f.index);
+                    if(found!=prepared->splineHulls.end()){
+                        // Esattamente il filtro iniziale di planeRoots, con la
+                        // proiezione dei poli gia' preparata sui due assi UV.
+                        const auto &hull=found->second;
+                        const double magnitude=std::max({std::fabs(offset),std::fabs(hull.lo[across]),std::fabs(hull.hi[across])});
+                        const double margin=std::max(tol,.1*tol*hull.weightRatio)+64*std::numeric_limits<double>::epsilon()*magnitude;
+                        if(hull.lo[across]-offset>margin || hull.hi[across]-offset< -margin)continue;
+                    }
+                }
+                const PlaneRoots<2> roots = planeRoots<2>(pcurve, edge.range, normal, offset, tol);
                 if (!roots.coincident.empty()) return -2;
                 for (double t : roots.parameters) {
                     const double margin = 1e-11 * std::max(1.0, edge.range.length());
@@ -208,6 +290,25 @@ PointLocation classifyPointOnFace(const Body &body, FaceId faceId, const Vec3 &p
     return area * faceSign < 0.0 ? PointLocation::Inside : PointLocation::Outside;
 }
 
+} // namespace
+
+PointLocation classifyPointOnFace(const Body &body, FaceId face, const Vec3 &point, double tolerance) {
+    return classifyFacePoint(body, face, point, tolerance, nullptr);
+}
+
+struct FaceClassifier::Data {
+    const Body &body;
+    FaceId face;
+    double tolerance;
+    PreparedFace prepared;
+    Data(const Body &b, FaceId f, double t):body(b),face(f),tolerance(t),prepared(b,f,t){}
+};
+FaceClassifier::FaceClassifier(const Body &body, FaceId face, double tolerance)
+    :data_(std::make_shared<const Data>(body,face,tolerance)){}
+PointLocation FaceClassifier::classify(const Vec3 &point) const {
+    return classifyFacePoint(data_->body,data_->face,point,data_->tolerance,&data_->prepared);
+}
+
 namespace {
 
 bool degenerateAt(const Surface &surface, double v) {
@@ -297,10 +398,11 @@ Box faceBox(const Body &body, FaceId face) {
     return result;
 }
 
-SolidClassifier::SolidClassifier(const Body &body, double tolerance) : body_(body), tolerance_(tolerance) {
+SolidClassifier::SolidClassifier(const Body &body, double tolerance, bool prepareFaces) : body_(body), tolerance_(tolerance) {
     for (FaceId f : body.faces()) {
         faces_.push_back(f);
         boxes_.push_back(faceBox(body, f).padded(tolerance));
+        if (prepareFaces) preparedFaces_.emplace_back(f, FaceClassifier(body,f,tolerance));
     }
 }
 
@@ -381,6 +483,11 @@ bool firstRayHit(const Body &body, const Vec3 &origin, const Vec3 &direction, do
     return true;
 }
 
+PointLocation SolidClassifier::classifyFace(FaceId face, const Vec3 &point) const {
+    for (const auto &prepared : preparedFaces_) if (prepared.first==face) return prepared.second.classify(point);
+    return classifyPointOnFace(body_,face,point,tolerance_);
+}
+
 PointLocation SolidClassifier::classify(const Vec3 &point) const {
     static const Vec3 directions[] = {
         Vec3(0.5773502691896258, 0.5773502691896258, 0.5773502691896258), Vec3(0.2672612419124244, -0.5345224838248488, 0.8017837257372732),
@@ -398,7 +505,7 @@ PointLocation SolidClassifier::classify(const Vec3 &point) const {
             for (double t : hits) {
                 if (t < -tolerance_) continue;
                 const Vec3 x = point + t * direction;
-                const PointLocation location = classifyPointOnFace(body_, faces_[i], x, tolerance_);
+                const PointLocation location = preparedFaces_.empty() ? classifyPointOnFace(body_, faces_[i], x, tolerance_) : preparedFaces_[i].second.classify(x);
                 if (t <= tolerance_) {
                     if (location != PointLocation::Outside) return PointLocation::Boundary;
                     continue;

@@ -1541,7 +1541,7 @@ void CadViewport::remapSketchReferences(int sketchIndex, const QVector<int> &seg
         ref.element.element = map.value(ref.element.element, -1);
     };
     for (ExtrusionObject &body : extrusions_) {
-        for (QVector<GeometryRef> *refs : {&body.datum.refs, &body.pattern.refs, &body.ruledFirst, &body.ruledSecond, &body.planarRefs, &body.loftStartFaces, &body.loftEndFaces, &body.loftSections, &body.loftEdgeGuides})
+        for (QVector<GeometryRef> *refs : {&body.datum.refs, &body.pattern.refs, &body.surfaceTool.targets, &body.ruledFirst, &body.ruledSecond, &body.planarRefs, &body.loftStartFaces, &body.loftEndFaces, &body.loftSections, &body.loftEdgeGuides})
             for (GeometryRef &ref : *refs) remap(ref);
         remap(body.extentRef);
         remap(body.move.axis);

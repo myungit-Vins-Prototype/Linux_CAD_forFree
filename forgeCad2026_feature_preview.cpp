@@ -97,6 +97,7 @@ QString FeaturePreviewBuilder::previewKey(const ExtrusionObject &d, int index) {
     for(int value:d.fillFaceContinuities)parts << QStringLiteral("FC") << QString::number(value);
     if(d.feature==BodyFeature::SurfaceTools){
         parts << QStringLiteral("ST") << QString::number(d.surfaceTool.mode) << n(d.surfaceTool.maximum) << n(d.surfaceTool.tolerance) << QString::fromLatin1(d.surfaceTool.basis.toHex());
+        for(const auto &target:d.surfaceTool.targets) { parts << QStringLiteral("STT"); ref(target); }
         for(const auto &edit:d.surfaceTool.edits)parts << QString::number(edit.u) << QString::number(edit.v) << n(edit.dx) << n(edit.dy) << n(edit.dz) << n(edit.weightFactor);
     }
     for (double value : d.fillFaceInfluences) parts << QStringLiteral("FI") << n(value);

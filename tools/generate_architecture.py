@@ -40,12 +40,12 @@ GROUPS = [
  ('build', 'Build e strumenti', 'Configurazione, generazione e confezionamento del software.')]
 # Descrizioni curate: aggiornare queste voci quando cambia il confine di un modulo.
 DESCRIPTIONS = {
- 'cad_surface_tools': ('features', 'Estensione fino a riferimento, rete U/V e poli/pesi NURBS: costruzione parametrica, storia dichiarata, impronta della base e codec delle estensioni native53.'),
+ 'cad_surface_tools': ('features', 'Estensione fino a riferimenti multipli: raggruppamento delle facce e cucitura del target; rete U/V e poli NURBS, storia e codec opzionale dei target nel formato53.'),
  'fk_surface_tools': ('kernel', 'Reti a celle Coons cucite, prolungamento e rifilo al riferimento, modifica relativa di poli/pesi con ricostruzione dei bordi e trim UV conservati.'),
- 'forgeCad2026_dialogs_surface_tools.cpp': ('dialogs', 'Pannelli per estendere fino a piano/faccia, ordinare famiglie U/V e modificare XYZ/pesi dei poli con gabbia e trascinamento nella vista.'),
- 'kernel/tests/test_surface_tools.cpp': ('tests', 'Reti non planari, curve invertite e incroci invalidi; estensione a piani/facce curve; poli/pesi, trim/fori, topologia e input degeneri.'),
+ 'forgeCad2026_dialogs_surface_tools.cpp': ('dialogs', 'Pannelli superfici: bordo libero iniziale, selezione continua di più target con lista, toggle/rimozione e termine per anteprima; famiglie U/V e poli XYZ/pesi.'),
+ 'kernel/tests/test_surface_tools.cpp': ('tests', 'Reti non planari, curve invertite e incroci invalidi; estensione a piani/facce curve, target spezzati e tra estrusioni ortogonali da spline; poli/pesi, trim/fori, topologia e input degeneri.'),
  'kernel/tests/surface_tools_fixture.h': ('tests', 'Fixture condivisa NURBS bicubica con trim UV e foro per prove geometriche e native delle superfici.'),
- 'tests/test_surface_tools_gui.h': ('tests', 'Funzioni superficie nella storia: dipendenze, rigenerazione, Undo/Redo, UI e mouse, formato53, revisioni e protezione readonly.'),
+ 'tests/test_surface_tools_gui.h': ('tests', 'Funzioni superficie: target multipli e toggle nella vista, facce di corpi diversi cucite, dipendenze/riordino, cache, persistenza e rigenerazione; rete, poli, revisioni e readonly.'),
  'fk_fill': ('kernel', 'Riempimenti con contorni/guide, contatti G0/G1/G2 per faccia, influenza locale e guida direzionale della forma; rapporti numerici e controllo di regolarita.'),
 
  'tests/test_drawing_break.cpp': ('tests', 'Viste interrotte: coordinate X/Y, quote originali, ritaglio, codec, dialogo, Undo, modello e PDF.'),
@@ -113,8 +113,8 @@ DESCRIPTIONS.update({'tools/open_architecture.py': ('build', 'Avvio locale della
                  'Tipi e calcolo geometrico delle viste, incluse sezioni rimosse a gradini multipli e allineate a due piani angolari con contorni esatti e provenienza sui piani originali.'),
  'cad_drawing_annotations.h': ('drawing',
                                'Note, datum e cartigli geometrici con riferimenti associativi e propagazione degli orfani.'),
- 'cad_drawing_numbering.h': ('drawing', 'Badge persistenti per UUID, otto scansioni e prima quota, filtri parentesi e glob, riserve, scambio e confronto revisioni; glifi vettoriali.'),
- 'tests/test_drawing_dimension_numbering.h': ('tests', 'Regressioni badge: otto scansioni, filtri e riserve, scambio, codec20/21/22, pannello non modale con frecce, Undo, orfani e PDF.'),
+ 'cad_drawing_numbering.h': ('drawing', 'Badge persistenti per UUID, blocchi contigui per vista e rotazione locale dalla prima quota; ordine delle viste e percorso spaziale interno in otto versi, filtri, riserve, scambio e confronto; glifi vettoriali.'),
+ 'tests/test_drawing_dimension_numbering.h': ('tests', 'Regressioni badge: viste contigue su coordinate reali di Controllo numero quote, prima interna/altre viste, sovrapposizioni, GUI con blocchi8+3, flacone, otto versi, filtri, riserve, codec, Undo e PDF.'),
  'cad_drawing_technical.h': ('drawing', 'Validazione e disegno vettoriale di datum e cartigli geometrici; riferimenti per UUID e testo derivato.'),
  'cad_drawing_axes.h': ('drawing', 'Convenzioni degli assi e conversioni delle coordinate delle viste 2D.'),
  'cad_drawing_browser': ('drawing', 'Navigazione e scelta di documenti/modelli per le tavole.'),
@@ -123,7 +123,7 @@ DESCRIPTIONS.update({'tools/open_architecture.py': ('build', 'Avvio locale della
  'cad_drawing_compute.h': ('drawing',
                            'Calcolo delle viste su worker con avanzamento, annullamento e blocco '
                            'temporaneo dell’editor.'),
- 'cad_drawing_derived': ('drawing', 'Costruzione e allineamento delle viste ortogonali, ausiliarie e in sezione; composizione del tratteggio delle sezioni a gradini multipli e angolari.'),
+ 'cad_drawing_derived': ('drawing', 'Costruzione e allineamento delle viste ortogonali, ausiliarie e in sezione; composizione del tratteggio delle sezioni a gradini multipli e angolari, recupero del materiale con classificatori esatti preparati e riutilizzati per faccia.'),
  'cad_drawing_break.h': ('drawing', 'Valida e ritaglia le viste interrotte, escludendo i percorsi fuori taglio senza discretizzarli; mappa la presentazione senza alterare curve e misure.'),
  'cad_drawing_detail.h': ('drawing', 'Definizione e gestione del ritaglio delle viste di dettaglio.'),
  'cad_drawing_dimension': ('drawing', 'Geometria e presentazione delle quote 2D: serie in catena e ordinate con segno, agganci topologici e piani originali delle sezioni.'),
@@ -143,6 +143,10 @@ DESCRIPTIONS.update({'tools/open_architecture.py': ('build', 'Avvio locale della
  'cad_drawing_revisions': ('drawing', 'Integra le tavole con il protocollo di revisioni dei documenti.'),
  'cad_drawing_sheet': ('drawing',
                        'Stato e codec del foglio fino allo schema22, assegnazioni persistenti dei numeri e compatibilita legacy, posizione e interruzione grafica delle viste, relazioni madri/derivate.'),
+ 'fk_intersect': ('kernel', 'Intersezioni esatte curve/superfici; proiezione planare di curve trasformate con conservazione dei parametri; radici Bernstein con riuso dei coefficienti e filtro conservativo prima delle allocazioni per le pezze lontane.'),
+ 'kernel/tests/test_intersect.cpp': ('tests', 'Intersezioni curve/superfici e radici Bernstein; immagini planari di spline razionali, coniche e rette trasformate, trim annidati e parametro delle rette scalate.'),
+ 'fk_classify': ('kernel', 'Classificazione esatta faccia/solido; FaceClassifier prepara limiti parametrici, poli e box conservativi dei bordi per interrogazioni ripetute senza cambiare tolleranze.'),
+ 'tests/test_drawing_performance.h': ('tests', 'Benchmark esplicito in sola lettura di tavole reali: tempi modello, curve, contorni, campiture, visibilita e apertura editor; impronte SHA256 dei tracciati.'),
  'cad_drawing_silhouette': ('drawing',
                             'Calcola i contorni apparenti delle superfici nella vista di tavola.'),
  'cad_drawing_style.h': ('drawing', 'Stili grafici e convenzioni di presentazione delle tavole.'),
@@ -166,7 +170,7 @@ DESCRIPTIONS.update({'tools/open_architecture.py': ('build', 'Avvio locale della
  'cad_feature_build': ('features',
                        'Dispatcher di costruzione delle feature dai parametri e dagli operandi '
                        'disponibili.'),
- 'cad_feature_dependencies': ('features', 'Determina le dipendenze delle feature e dei loro riferimenti.'),
+ 'cad_feature_dependencies': ('features', 'Determina dipendenze e operandi delle feature, compresi tutti i target della estensione di superfici.'),
  'cad_features': ('features', 'Tipi e regole comuni delle operazioni parametriche del modello.'),
  'cad_forge': ('features',
                'Adatta sketch e parametri applicativi alle operazioni del kernel geometrico proprio.'),

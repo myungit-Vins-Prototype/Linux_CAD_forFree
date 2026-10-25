@@ -641,7 +641,7 @@ QString CadViewport::reorderFeatureTo(int index, int target, const QVector<Story
         for (int &merged : feature.mergeBodies) merged = mapped(merged);
         for (GeometryRef &ref : feature.datum.refs) remapRef(ref);
         for (GeometryRef &ref : feature.pattern.refs) remapRef(ref);
-        for (QVector<GeometryRef> *refs : {&feature.ruledFirst, &feature.ruledSecond, &feature.planarRefs, &feature.loftStartFaces, &feature.loftEndFaces, &feature.loftSections, &feature.loftEdgeGuides})
+        for (QVector<GeometryRef> *refs : {&feature.surfaceTool.targets, &feature.ruledFirst, &feature.ruledSecond, &feature.planarRefs, &feature.loftStartFaces, &feature.loftEndFaces, &feature.loftSections, &feature.loftEdgeGuides})
             for (GeometryRef &ref : *refs) remapRef(ref);
         remapRef(feature.extentRef);
         remapRef(feature.move.axis);
@@ -1076,7 +1076,7 @@ void CadViewport::removeSketchAt(int index) {
         for (int &section : body.loftSketches) renumber(section);
         for (int &guide : body.loftGuides) renumber(guide);
         for (SketchPathRef &guide : body.loftGuidePaths) renumber(guide.sketch);
-        for (QVector<GeometryRef> *refs : {&body.datum.refs, &body.pattern.refs, &body.ruledFirst, &body.ruledSecond, &body.planarRefs, &body.loftStartFaces, &body.loftEndFaces, &body.loftSections, &body.loftEdgeGuides})
+        for (QVector<GeometryRef> *refs : {&body.datum.refs, &body.pattern.refs, &body.surfaceTool.targets, &body.ruledFirst, &body.ruledSecond, &body.planarRefs, &body.loftStartFaces, &body.loftEndFaces, &body.loftSections, &body.loftEdgeGuides})
             for (GeometryRef &ref : *refs)
                 if (ForgeCad::isSketchRef(ref)) renumber(ref.index);
         if (ForgeCad::isSketchRef(body.extentRef)) renumber(body.extentRef.index);
@@ -1621,7 +1621,7 @@ void CadViewport::documentChanged() {
             for (int &merged : feature.mergeBodies) merged = mapped(merged);
             for (GeometryRef &ref : feature.datum.refs) remapRef(ref);
             for (GeometryRef &ref : feature.pattern.refs) remapRef(ref);
-            for (QVector<GeometryRef> *refs : {&feature.ruledFirst, &feature.ruledSecond, &feature.planarRefs, &feature.loftStartFaces, &feature.loftEndFaces, &feature.loftSections, &feature.loftEdgeGuides})
+            for (QVector<GeometryRef> *refs : {&feature.surfaceTool.targets, &feature.ruledFirst, &feature.ruledSecond, &feature.planarRefs, &feature.loftStartFaces, &feature.loftEndFaces, &feature.loftSections, &feature.loftEdgeGuides})
                 for (GeometryRef &ref : *refs) remapRef(ref);
             remapRef(feature.extentRef);
             remapRef(feature.move.axis);
@@ -1956,7 +1956,7 @@ void CadViewport::removeBodies(const QSet<int> &removed) {
     for (ExtrusionObject &body : kept) {
         if (body.firstBody >= 0) body.firstBody = map.value(body.firstBody, -1);
         if (body.secondBody >= 0) body.secondBody = map.value(body.secondBody, -1);
-        for (QVector<GeometryRef> *refs : {&body.datum.refs, &body.pattern.refs, &body.ruledFirst, &body.ruledSecond, &body.planarRefs, &body.loftStartFaces, &body.loftEndFaces, &body.loftSections, &body.loftEdgeGuides})
+        for (QVector<GeometryRef> *refs : {&body.datum.refs, &body.pattern.refs, &body.surfaceTool.targets, &body.ruledFirst, &body.ruledSecond, &body.planarRefs, &body.loftStartFaces, &body.loftEndFaces, &body.loftSections, &body.loftEdgeGuides})
             for (GeometryRef &ref : *refs)
                 if (ForgeCad::isBodyRef(ref)) ref.index = map.value(ref.index, -1);
         if (ForgeCad::isBodyRef(body.extentRef)) body.extentRef.index = map.value(body.extentRef.index, -1);

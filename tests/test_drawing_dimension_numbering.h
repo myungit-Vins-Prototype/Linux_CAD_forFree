@@ -32,6 +32,122 @@ void drawingDimensionNumberingExclusionTests(DrawingSheetEditor &e,const QVector
  DrawingDimensionPresentation parentheses;parentheses.prefix=" (REF ";parentheses.suffix=" ) ";require(drawingDimensionParenthesized(parentheses),"parentesi esterne con testo e spazi");parentheses.suffix.clear();require(!drawingDimensionParenthesized(parentheses),"parentesi incompleta non esclusa");parentheses.prefix="";parentheses.suffix=")";require(!drawingDimensionParenthesized(parentheses),"sola parentesi chiusa non esclusa");
  std::cout<<"PASS esclusioni: numeri1/3/4 invariati, filtro parentesi facoltativo, selezione multipla/proprieta', codec21/20/standalone, Undo, readonly e PDF\n";
 }
+void nearbyNumberingTests(){
+ // Ricostruzione in mm della disposizione della foto: numeri originali 1..11.
+ // Le viste non intervengono: contano soltanto i testi sul foglio.
+ DrawingSheet sheet;sheet.dimensionNumbering.enabled=true;sheet.dimensionNumbering.persistent=true;
+ const QVector<QPointF> positions{{65,155},{66,15},{97,23},{101,140},{104,37},{145,20},{237,46},{271,13},{281,13},{296,50},{18,82}};
+ const QVector<int> expected{1,4,11,2,3,5,6,7,10,8,9};
+ QVector<QUuid> ids;for(int i=0;i<positions.size();++i){ids.append(QUuid(QStringLiteral("00000000-0000-0000-0000-%1").arg(i+1,12,16,QChar('0'))));sheet.dimensions.append({ids.back(),positions[i]});}
+ sheet.dimensionNumbering.firstDimension=ids.front();
+ const QVector<QPair<int,int>> directions{{0,1},{0,3},{2,1},{2,3},{1,0},{1,2},{3,0},{3,2}};
+ for(const auto &direction:directions){
+  auto trial=sheet;auto &n=trial.dimensionNumbering;n.primaryDirection=direction.first;n.secondaryDirection=direction.second;
+  for(int i=0;i<positions.size();++i){const double p=-positions[i].y(),s=positions[i].x();QPointF transformed;
+   if(n.primaryDirection%2){transformed.setY(p*(n.primaryDirection>=2?-1:1));transformed.setX(s*(n.secondaryDirection>=2?-1:1));}
+   else{transformed.setX(p*(n.primaryDirection>=2?-1:1));transformed.setY(s*(n.secondaryDirection>=2?-1:1));}
+   trial.dimensions[i].position=transformed+QPointF(300,300);
+  }
+  const auto order=drawingNumberingOrder(trial);require(order.size()==expected.size(),"vicinanza: ogni quota compare una volta");
+  for(int i=0;i<expected.size();++i)require(order[i]==ids[expected[i]-1],"vicinanza: percorso foto1/4/11/2/3/5/6/7/10/8/9 negli otto versi");
+  std::reverse(trial.dimensions.begin(),trial.dimensions.end());require(drawingNumberingOrder(trial)==order,"vicinanza indipendente dall'ordine d'inserimento");
+  ok(renumberDrawingDimensions(trial));for(int i=0;i<expected.size();++i)require(drawingDimensionNumbers(trial).value(ids[expected[i]-1])==i+1,"numeri assegnati seguono il percorso vicino");
+  for(auto &d:trial.dimensions)d.position=d.position*2+QPointF(10,-20);require(drawingNumberingOrder(trial)==order,"vicinanza indipendente da traslazione e scala uniforme");
+ }
+ const QVector<QPointF> grid{{80,60},{160,60},{80,145},{160,145}};
+ const QVector<QVector<int>> gridExpected{{0,1,2,3},{2,3,0,1},{1,0,3,2},{3,2,1,0},{0,2,1,3},{1,3,0,2},{2,0,3,1},{3,1,2,0}};
+ for(int i=0;i<directions.size();++i){auto trial=sheet;trial.dimensions.resize(4);trial.dimensionNumbering.primaryDirection=directions[i].first;trial.dimensionNumbering.secondaryDirection=directions[i].second;trial.dimensionNumbering.firstDimension=ids[gridExpected[i].front()];
+  for(int j=0;j<grid.size();++j)trial.dimensions[j].position=grid[j];const auto order=drawingNumberingOrder(trial);
+  for(int j=0;j<4;++j)require(order[j]==ids[gridExpected[i][j]],"griglia guidata conserva la priorita' dei due versi");
+ }
+ auto trial=sheet;trial.dimensionNumbering.primaryDirection=3;trial.dimensionNumbering.secondaryDirection=0;
+ trial.dimensions[4].presentation.numberingExcluded=true;ok(renumberDrawingDimensions(trial));require(!drawingDimensionNumbers(trial).contains(ids[4])&&drawingDimensionNumbers(trial).size()==10,"vicinanza rispetta le esclusioni");
+ trial=sheet;trial.dimensionNumbering.primaryDirection=3;trial.dimensionNumbering.secondaryDirection=0;trial.dimensionNumbering.firstDimension=ids[10];
+ const auto internal=drawingNumberingOrder(trial);QSet<QUuid> unique;for(const auto &id:internal)unique.insert(id);require(internal.front()==ids[10]&&unique.size()==11,"prima interna conserva tutte le quote senza duplicati");
+ std::cout<<"PASS vicinanza: percorso foto1/4/11/2/3/5/6/7/10/8/9, otto versi, inserimento, scala, esclusioni e prima interna\n";
+}
+DrawingSheet viewNumberingFixture(){
+ // Coordinate e appartenenze reali di Controllo numero quote.drw, UUID di test.
+ DrawingSheet sheet;sheet.dimensionNumbering.enabled=true;sheet.dimensionNumbering.persistent=true;
+ const QVector<QPointF> origins{{66.15486663839634,82.98202772868098},{143.8881999717297,35.01536106201431},{249.38664306245064,116.72178623806481}};
+ for(int i=0;i<origins.size();++i){DrawingViewLayout view;view.viewId=QUuid(QStringLiteral("20000000-0000-0000-0000-%1").arg(i+1,12,16,QChar('0')));view.position=origins[i];view.title=QStringLiteral("Vista %1").arg(i+1);sheet.views.append(view);}
+ const QVector<QPointF> positions{{112.82486680175907,48.140361062014335},
+  {59.18221038839634,99.75887782891607},
+  {24.155538067657467,56.107027728680976},
+  {137.5991374717297,25.57775803708567},
+  {23.70840482555839,25.03457731977858},
+  {42.925878079224056,14.586558856494783},
+  {115.28670609192618,30.31392534871302},
+  {90.53360537429752,25.01689242336513},
+  {92.78220618903121,85.93400941366592},
+  {23.67831032685916,90.87847518813953},
+  {64.34098498115596,22.059767600782294}};
+ const QVector<int> belongs{1,0,0,1,0,0,1,0,0,0,0};
+ for(int i=0;i<positions.size();++i){DrawingDimension definition;definition.id=QUuid(QStringLiteral("10000000-0000-0000-0000-%1").arg(i+1,12,16,QChar('0')));definition.viewId=sheet.views[belongs[i]].viewId;sheet.drawing.dimensions.push_back(definition);sheet.dimensions.append({definition.id,positions[i]});}
+ sheet.dimensionNumbering.firstDimension=sheet.dimensions[1].dimensionId;sheet.dimensionNumbering.primaryDirection=3;sheet.dimensionNumbering.secondaryDirection=0;return sheet;
+}
+void viewNumberingTests(){
+ const auto sample=viewNumberingFixture();const QVector<QPair<int,int>> directions{{0,1},{0,3},{2,1},{2,3},{1,0},{1,2},{3,0},{3,2}};
+ const auto check=[&](const DrawingSheet &sheet){
+  QHash<QUuid,QUuid> views;QHash<QUuid,int> counts;for(const auto &d:sheet.drawing.dimensions)views.insert(d.id,d.viewId);
+  for(const auto &d:sheet.dimensions)if(!drawingDimensionNumberExcluded(d,sheet.dimensionNumbering))++counts[views.value(d.dimensionId)];
+  const auto order=drawingNumberingOrder(sheet);QSet<QUuid> closed,unique;QUuid current;bool started=false;
+  for(const auto &id:order){const auto view=views.value(id);if(!started||view!=current){if(started)closed.insert(current);require(!closed.contains(view),"vista: non tornare a una vista dopo essere passati a un'altra");current=view;started=true;}require(!unique.contains(id),"vista: quote senza duplicati");unique.insert(id);}
+  int total=0;for(int count:counts)total+=count;require(order.size()==total,"vista: nessuna quota omessa");
+  const auto first=sheet.dimensionNumbering.firstDimension;require(order.front()==first,"vista: prima quota selezionata rispettata");const auto firstView=views.value(first);
+  for(int i=0;i<counts.value(firstView);++i)require(views.value(order[i])==firstView,"vista: completa tutta la vista iniziale prima delle altre");
+ };
+ for(const auto &direction:directions)for(int first:{1,2,0}){auto trial=sample;trial.dimensionNumbering.primaryDirection=direction.first;trial.dimensionNumbering.secondaryDirection=direction.second;trial.dimensionNumbering.firstDimension=trial.dimensions[first].dimensionId;check(trial);
+  const auto order=drawingNumberingOrder(trial);std::reverse(trial.dimensions.begin(),trial.dimensions.end());std::reverse(trial.drawing.dimensions.begin(),trial.drawing.dimensions.end());std::reverse(trial.views.begin(),trial.views.end());require(drawingNumberingOrder(trial)==order,"vista: ordine indipendente dai vettori");
+  ok(renumberDrawingDimensions(trial));const auto assigned=drawingDimensionNumbers(trial);for(int i=0;i<order.size();++i)require(assigned.value(order[i])==i+1,"vista: numeri seguono gruppi completi");
+ }
+ auto trial=sample;trial.dimensions[2].presentation.numberingExcluded=true;check(trial);
+ trial=sample;for(auto &d:trial.dimensions)d.position={20,20};check(trial);
+ trial=sample;trial.views.removeFirst();check(trial); // Vista senza layout: appartenenza conservata.
+ std::cout<<"PASS una vista alla volta: dati reali Controllo numero quote,8+3 quote, otto versi, prima interna/altra vista, vettori invertiti, esclusioni, sovrapposizioni e layout mancante\n";
+}
+void nearbyNumberingGuiTests(const DrawingEditorModel &model,const DrawingSheet &base){
+ auto sheet=base;const auto prototype=sheet.drawing.dimensions.front();sheet.dimensions.clear();sheet.drawing.dimensions.clear();sheet.dimensionNumbering={};sheet.size={420,297};
+ const QVector<QPointF> positions{{65,155},{66,15},{97,23},{101,140},{104,37},{145,20},{237,46},{271,13},{281,13},{296,50},{18,82}};
+ const QVector<int> expected{1,4,11,2,3,5,6,7,10,8,9};QVector<QUuid> ids;
+ for(const auto &position:positions){auto dimension=prototype;dimension.id=QUuid::createUuid();sheet.drawing.dimensions.push_back(dimension);sheet.dimensions.append({dimension.id,position});ids.append(dimension.id);}
+ DrawingSheetEditor editor(sheet,model);editor.resize(1450,900);editor.show();editor.fitSheet();QApplication::processEvents();editor.markSaved();const auto initial=encoded(editor);
+ editor.findChild<QAction *>("drawingDimensionNumberingAction")->trigger();auto *dialog=editor.findChild<QDialog *>("drawingDimensionNumberingDialog");require(dialog,"pannello per quote vicine");
+ click(editor,dimensionTextItem(editor,ids.front())->sceneBoundingRect().center());
+ const auto arrow=[&](int direction){for(auto *item:editor.canvas()->scene()->items())if(item->data(0).toString()=="numberingArrow"&&item->data(8).toInt()==direction){click(editor,item->sceneBoundingRect().center());return;}throw std::runtime_error("freccia per vicinanza assente");};
+ arrow(3);arrow(0);auto *buttons=dialog->findChild<QDialogButtonBox *>();require(buttons->button(QDialogButtonBox::Ok)->isEnabled(),"alto poi destra confermabile");
+ QHash<QUuid,int> preview;for(auto *item:editor.canvas()->scene()->items())if(item->data(0).toString()=="numberingPreview")preview.insert(item->data(3).toUuid(),item->data(7).toInt());
+ for(int i=0;i<expected.size();++i)require(preview.value(ids[expected[i]-1])==i+1,"anteprima reale segue la sequenza indicata dall'utente");
+ require(encoded(editor)==initial,"anteprima vicinanza non modifica il foglio");
+ const auto qa=QStringLiteral("/tmp/forgecad-numbering-proximity-qa");QDir().mkpath(qa);editor.grab().save(qa+"/anteprima.png");dialog->grab().save(qa+"/pannello.png");
+ buttons->button(QDialogButtonBox::Ok)->click();QApplication::processEvents();require(drawingDimensionNumbers(editor.sheet())==preview,"conferma conserva esattamente l'anteprima");
+ for(int i=0;i<expected.size();++i)require(numberBadge(editor,ids[expected[i]-1])->data(7).toInt()==i+1,"badge confermati seguono il percorso vicino");
+ const auto assigned=encoded(editor);DrawingSheet restored;ok(decodeDrawingSheet(assigned,restored));require(drawingDimensionNumbers(restored)==preview,"salvataggio e riapertura mantengono il percorso");
+ DrawingPdfReport report;ok(editor.exportPdf(qa+"/vicinanza.pdf",report));editor.grab().save(qa+"/confermata.png");
+ ok(editor.undo());require(encoded(editor)==initial,"Undo unico dell'assegnazione per vicinanza");ok(editor.redo());require(encoded(editor)==assigned,"Redo ripristina il percorso confermato");
+ editor.findChild<QAction *>("drawingDimensionNumberingAction")->trigger();dialog=editor.findChild<QDialog *>("drawingDimensionNumberingDialog");require(dialog,"riapertura pannello vicinanza");dialog->findChild<QCheckBox *>("drawingNumberingReassign")->setChecked(true);dialog->reject();QApplication::processEvents();require(encoded(editor)==assigned,"Annulla conserva il percorso precedente");
+ QCoreApplication::sendPostedEvents(nullptr,QEvent::DeferredDelete);
+ std::cout<<"PASS vicinanza GUI: clic alto/destra, anteprima11 quote, conferma, codec, PDF, Undo/Redo e Annulla\n";
+}
+void viewNumberingGuiTests(const DrawingEditorModel &model,const DrawingSheet &base){
+ const auto sample=viewNumberingFixture();auto sheet=base;sheet.dimensions=sample.dimensions;sheet.dimensionNumbering={};sheet.views.clear();sheet.drawing.views.clear();sheet.drawing.dimensions.clear();
+ for(const auto &v:sample.views){auto layout=base.views.front();layout.viewId=v.viewId;layout.position=v.position;layout.title=v.title;sheet.views.append(layout);auto definition=base.drawing.views.front();definition.id=v.viewId;sheet.drawing.views.push_back(definition);}
+ for(const auto &d:sample.drawing.dimensions){auto definition=base.drawing.dimensions.front();definition.id=d.id;definition.viewId=d.viewId;sheet.drawing.dimensions.push_back(definition);}
+ DrawingSheetEditor editor(sheet,model);editor.resize(1450,900);editor.show();editor.fitSheet();QApplication::processEvents();const auto initial=encoded(editor);
+ editor.findChild<QAction *>("drawingDimensionNumberingAction")->trigger();auto *dialog=editor.findChild<QDialog *>("drawingDimensionNumberingDialog");require(dialog,"pannello numerazione per vista");
+ click(editor,dimensionTextItem(editor,sample.dimensionNumbering.firstDimension)->sceneBoundingRect().center());
+ const auto arrow=[&](int direction){for(auto *item:editor.canvas()->scene()->items())if(item->data(0).toString()=="numberingArrow"&&item->data(8).toInt()==direction){click(editor,item->sceneBoundingRect().center());return;}throw std::runtime_error("freccia per vista assente");};
+ arrow(3);arrow(0);auto *buttons=dialog->findChild<QDialogButtonBox *>();require(buttons->button(QDialogButtonBox::Ok)->isEnabled(),"numerazione per vista confermabile");
+ QHash<QUuid,int> preview;for(auto *item:editor.canvas()->scene()->items())if(item->data(0).toString()=="numberingPreview")preview.insert(item->data(3).toUuid(),item->data(7).toInt());
+ require(preview.size()==11,"anteprima per vista comprende tutte le quote");for(const auto &d:sheet.drawing.dimensions){const auto number=preview.value(d.id);require(d.viewId==sample.views[0].viewId?(number>=1&&number<=8):(number>=9&&number<=11),"anteprima completa Vista1 prima della sezione");}
+ require(encoded(editor)==initial,"anteprima per vista non modifica il documento");
+ const auto qa=QStringLiteral("/tmp/forgecad-numbering-views-qa");QDir().mkpath(qa);editor.grab().save(qa+"/anteprima.png");dialog->grab().save(qa+"/pannello.png");
+ buttons->button(QDialogButtonBox::Ok)->click();QApplication::processEvents();require(drawingDimensionNumbers(editor.sheet())==preview,"conferma per vista uguale all'anteprima");
+ const auto assigned=encoded(editor);DrawingSheet restored;ok(decodeDrawingSheet(assigned,restored));require(drawingDimensionNumbers(restored)==preview,"codec conserva i blocchi per vista");
+ DrawingPdfReport report;ok(editor.exportPdf(qa+"/viste.pdf",report));ok(editor.undo());require(encoded(editor)==initial,"Undo unico numerazione per vista");ok(editor.redo());require(encoded(editor)==assigned,"Redo numerazione per vista");
+ QCoreApplication::sendPostedEvents(nullptr,QEvent::DeferredDelete);
+ std::cout<<"PASS GUI una vista alla volta: clic alto/destra, anteprima Vista1=1..8 e sezione=9..11, conferma, codec, PDF, Undo/Redo\n";
+}
 void persistentNumberingTests(DrawingSheetEditor &e,const QVector<QUuid> &ids){
  auto source=e.sheet();source.dimensionNumbering.persistent=true;source.dimensionNumbering.assignments.clear();
  const QVector<QVector<int>> expected{{0,1,2,3},{2,3,0,1},{1,0,3,2},{3,2,1,0},{0,2,1,3},{1,3,0,2},{2,0,3,1},{3,1,2,0}};
@@ -54,6 +170,8 @@ void persistentNumberingTests(DrawingSheetEditor &e,const QVector<QUuid> &ids){
  std::cout<<"PASS badge persistenti: otto scansioni, rotazione, filtri, scambio, riserve, codec22, frecce e Undo\n";
 }
 void drawingDimensionNumberingTests(){
+ viewNumberingTests();
+ nearbyNumberingTests();
  DrawingSheet spatial;spatial.dimensionNumbering.enabled=true;
  const auto add=[&](int id,QPointF position){spatial.dimensions.push_back({QUuid(QStringLiteral("00000000-0000-0000-0000-%1").arg(id,12,16,QChar('0'))),position});};
  add(1,{100,10});add(2,{20,12});add(3,{5,14});add(4,{100,14});add(5,{100,14});
@@ -69,6 +187,8 @@ void drawingDimensionNumberingTests(){
  require(e.isModified()&&items(e,"dimensionBadge")==4&&e.curves(v.id).front().curve.get()==curve,"badge su tutte le quote e cache geometrica conservata");
  for(int i=0;i<4;++i){auto *badge=numberBadge(e,ids[i]);auto *label=dimensionTextItem(e,ids[i]);require(badge->data(7).toInt()==i+1&&!badge->sceneBoundingRect().intersects(label->sceneBoundingRect()),"numero spaziale e spazio libero dal testo");near(badge->sceneBoundingRect().width(),6.3,"diametro in mm carta indipendente dalla scala vista");}
  persistentNumberingTests(e,ids);
+ nearbyNumberingGuiTests(model,e.sheet());
+ viewNumberingGuiTests(model,e.sheet());
  drawingDimensionNumberingExclusionTests(e,ids);
  ok(e.undo());require(encoded(e)==legacy&&!e.isModified(),"Undo numerazione e stato salvato");ok(e.redo());require(encoded(e)==numbered,"Redo numerazione");ok(e.moveDimension(ids[3],{25,25}));QApplication::processEvents();require(numberBadge(e,ids[3])->data(7).toInt()==4&&numberBadge(e,ids[0])->data(7).toInt()==1,"spostamento conserva la sequenza");near(e.dimensionResult(ids[3]).value,6,"badge non altera misura");ok(e.undo());require(encoded(e)==numbered,"Undo spostamento ripristina numeri e disposizione");QApplication::processEvents();
  DrawingDimension extra=e.sheet().drawing.dimensions.front();extra.id=QUuid::createUuid();ok(e.addDimension(extra,{20,20}));QApplication::processEvents();require(items(e,"dimensionBadge")==5&&numberBadge(e,extra.id)->data(7).toInt()==5,"inserimento usa il progressivo successivo");select(e,extra.id);e.findChild<QAction *>("drawingDeleteSelectionAction")->trigger();QApplication::processEvents();require(items(e,"dimensionBadge")==4&&numberBadge(e,ids[0])->data(7).toInt()==1,"eliminazione compatta la sequenza");ok(e.undo());require(e.sheet().drawing.dimensions.size()==5,"Undo cancellazione ripristina quota numerata");ok(e.undo());require(encoded(e)==numbered,"Undo inserimento ripristina sequenza precedente");QApplication::processEvents();

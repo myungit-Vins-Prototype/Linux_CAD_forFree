@@ -89,6 +89,13 @@ bool surfaceToolDialog(QMainWindow *window, CadViewport *viewport, const QString
     definition.feature = BodyFeature::SurfaceTools;
     definition.operation = -1;
     const int mode = definition.surfaceTool.mode, owner = replaced < 0 ? viewport->extrusions().size() : replaced;
+    if (mode == 0 && replaced < 0) {
+        definition.blendEdges.clear();
+        definition.extentRef = {};
+        definition.surfaceTool.targets.clear();
+    }
+    if (mode == 0 && definition.surfaceTool.targets.isEmpty() && definition.extentRef.kind >= 0)
+        definition.surfaceTool.targets = {definition.extentRef};
     FunctionDialogPanel dialog(window);
     dialog.setObjectName("surfaceToolDialog");
     dialog.setWindowTitle(title);
@@ -109,13 +116,16 @@ bool surfaceToolDialog(QMainWindow *window, CadViewport *viewport, const QString
     tolerance->setRange(1e-9, .01);
     tolerance->setValue(definition.surfaceTool.tolerance);
     tolerance->setKeyboardTracking(false);
-    auto *base = new QComboBox(&dialog), *edges = new QComboBox(&dialog), *targets = new QComboBox(&dialog);
+    auto *base = new QComboBox(&dialog), *targets = new QComboBox(&dialog);
+    auto *edges = new QListWidget(&dialog);
+    edges->setMaximumHeight(64);
     base->setObjectName("surfaceToolBase");
     edges->setObjectName("surfaceToolEdge");
     targets->setObjectName("surfaceToolTarget");
     QVector<int> sources;
     QVector<GeometryRef> destinations;
-    QVector<EdgePoint> edgeRefs;
+    int extensionPick = 0;
+    std::function<void(int)> beginExtensionPick;
     auto *maximum = new ExpressionSpinBox(&dialog);
     maximum->setObjectName("surfaceToolMaximum");
     maximum->setRange(1e-6, 1e6);
@@ -154,6 +164,8 @@ bool surfaceToolDialog(QMainWindow *window, CadViewport *viewport, const QString
         status->setText(text);
         buttons->button(QDialogButtonBox::Ok)->setEnabled(false);
         viewport->clearPreview();
+        if (mode == 0)
+            preview.label->setText(QStringLiteral("in attesa delle selezioni"));
     };
     const auto candidates = operandBodies(viewport, replaced, {definition.firstBody}, [&](const ExtrusionObject &b) {
         if (!b.forgeBody || !b.forgeBody->isSheet())
@@ -174,7 +186,8 @@ bool surfaceToolDialog(QMainWindow *window, CadViewport *viewport, const QString
         }
         const int wanted = sources.indexOf(definition.firstBody);
         base->setCurrentIndex(wanted < 0 ? 0 : wanted);
-        form->addRow(QStringLiteral("Superficie:"), base);
+        if (mode != 0)
+            form->addRow(QStringLiteral("Superficie:"), base);
     }
     auto *rowList = new GeometryReferenceList(dialog, viewport, "surfaceNetworkU"),
          *columnList = new GeometryReferenceList(dialog, viewport, "surfaceNetworkV");
@@ -215,8 +228,13 @@ bool surfaceToolDialog(QMainWindow *window, CadViewport *viewport, const QString
         QObject::connect(down, &QPushButton::clicked, &dialog, [move] { move(1); });
         return box;
     };
+    auto *pickEdge = new QPushButton(QStringLiteral("Scegli il bordo nella vista"), &dialog);
+    pickEdge->setObjectName("surfaceToolPickEdge");
     auto *pickReference = new QPushButton(QStringLiteral("Scegli il riferimento nella vista"), &dialog);
     pickReference->setObjectName("surfaceToolPickTarget");
+    auto *targetList = new GeometryReferenceList(dialog, viewport, "surfaceToolTargets");
+    auto *removeTarget = new QPushButton(QStringLiteral("Togli il riferimento selezionato"), &dialog);
+    removeTarget->setObjectName("surfaceToolRemoveTarget");
     if (mode == 1) {
         form->addRow(ForgeCad::Gui::wrappedNote(
             QStringLiteral("Due famiglie ordinate di curve aperte: ogni U deve incrociare ogni V una sola volta. Ogni cella interpola i "
@@ -229,14 +247,17 @@ bool surfaceToolDialog(QMainWindow *window, CadViewport *viewport, const QString
         picker.changed = schedule;
         picker.install();
     } else if (mode == 0) {
-        form->addRow(QStringLiteral("Bordo libero:"), edges);
-        form->addRow(QStringLiteral("Fino al riferimento:"), targets);
+        form->addRow(QStringLiteral("1. Bordo da estendere:"), edges);
+        form->addRow(pickEdge);
+        form->addRow(QStringLiteral("2. Riferimenti da raggiungere:"), targetList);
         form->addRow(pickReference);
+        form->addRow(removeTarget);
+        form->addRow(QStringLiteral("Aggiungi dall'elenco:"), targets);
         form->addRow(QStringLiteral("Distanza massima di ricerca:"), maximum);
         form->addRow(linear);
         form->addRow(ForgeCad::Gui::wrappedNote(
-            QStringLiteral("Il riferimento deve attraversare tutto il prolungamento, senza tagliare la superficie iniziale. Sono "
-                           "disponibili piani e facce, anche curve; la distanza massima limita la ricerca."),
+            QStringLiteral("Clicca tutte le facce del target nella vista; un secondo clic le toglie. Esc o Termina selezione mostra "
+                           "l'anteprima. I riferimenti devono delimitare insieme tutto il prolungamento, senza tagliare la superficie iniziale."),
             &dialog));
         for (int i = 0; i < 3; ++i) {
             GeometryRef ref;
@@ -269,35 +290,87 @@ bool surfaceToolDialog(QMainWindow *window, CadViewport *viewport, const QString
                     targets->addItem(QStringLiteral("%1 / F%2").arg(body.name).arg(face.index));
                 }
         }
-        int wanted = -1;
-        for (int i = 0; i < destinations.size(); ++i)
-            if (destinations[i].kind == definition.extentRef.kind && destinations[i].index == definition.extentRef.index &&
-                destinations[i].point.name == definition.extentRef.point.name &&
-                destinations[i].point.subshape == definition.extentRef.point.subshape)
-                wanted = i;
-        if (wanted >= 0)
-            targets->setCurrentIndex(wanted);
+        targets->setPlaceholderText(QStringLiteral("Aggiungi un piano o una faccia"));
+        targets->setCurrentIndex(-1);
+        beginExtensionPick = [&](int step) {
+            timer.stop();
+            viewport->cancelReferencePick();
+            viewport->clearPreview();
+            extensionPick = step;
+            viewport->setPickBodies(step == 1 ? sources : QVector<int>());
+            const auto error = viewport->beginReferencePick(step == 1 ? DatumRoleCurve | DatumRoleLine : DatumRolePlane | DatumRoleFace, owner);
+            if (refresh)
+                refresh();
+            if (!error.isEmpty()) {
+                extensionPick = 0;
+                viewport->setPickBodies({});
+                fail(error);
+            }
+        };
+        QObject::connect(pickEdge, &QPushButton::clicked, &dialog, [&] { beginExtensionPick(1); });
         QObject::connect(pickReference, &QPushButton::clicked, &dialog, [&] {
-            const auto error = viewport->beginReferencePick(DatumRolePlane | DatumRoleFace, owner);
-            if (!error.isEmpty())
-                status->setText(error);
+            if (extensionPick == 2) {
+                extensionPick = 0;
+                viewport->cancelReferencePick();
+                refresh();
+            } else beginExtensionPick(2);
+        });
+        QObject::connect(removeTarget, &QPushButton::clicked, &dialog, [&] {
+            const int row = targetList->currentRow();
+            if (row >= 0 && row < definition.surfaceTool.targets.size()) {
+                definition.surfaceTool.targets.removeAt(row);
+                definition.extentRef = definition.surfaceTool.targets.value(0);
+                refresh();
+            }
         });
         viewport->setReferencePickCallback([&](bool accepted, GeometryRef ref) {
-            if (!accepted)
-                return;
-            int row = -1;
-            for (int i = 0; i < destinations.size(); ++i)
-                if (destinations[i].kind == ref.kind && destinations[i].index == ref.index &&
-                    (ref.kind != 5 || destinations[i].point.subshape == ref.point.subshape))
-                    row = i;
-            if (row < 0) {
-                destinations.append(ref);
-                targets->addItem(geometryRefText(ref, viewport->sketches(), viewport->extrusions()));
-                row = targets->count() - 1;
-            }
-            targets->setCurrentIndex(row);
+            const int step = extensionPick;
+            extensionPick = 0;
             viewport->cancelReferencePick();
-            schedule();
+            viewport->setPickBodies({});
+            if (!accepted) {
+                refresh();
+                return;
+            }
+            if (step == 1) {
+                const int body = ref.kind == 4 ? resultBodyForPick(viewport, sources, ref.index) : -1;
+                const auto shape = body >= 0 ? viewport->extrusions()[body].forgeBody : ForgeBody{};
+                const auto edge = shape ? resolveEdgeReference(*shape, ref.point, 1e-5) : EdgeId{};
+                if (!edge.valid() || !shape->isLaminar(edge)) {
+                    beginExtensionPick(1);
+                    status->setText(QStringLiteral("Scegli un bordo libero di una superficie aperta."));
+                    return;
+                }
+                definition.firstBody = body;
+                definition.blendEdges = {ref.point};
+                definition.extentRef = {};
+                definition.surfaceTool.targets.clear();
+                {
+                    QSignalBlocker guard(base);
+                    base->setCurrentIndex(sources.indexOf(body));
+                }
+                edges->clear();
+                edges->addItem(QStringLiteral("%1 / E%2").arg(resultBodyLabel(viewport, body)).arg(edge.index));
+                targets->setCurrentIndex(-1);
+                beginExtensionPick(2);
+                return;
+            }
+            if (step != 2)
+                return;
+            if (ref.kind != 1 && ref.kind != 5 && ref.kind != 8) {
+                beginExtensionPick(2);
+                status->setText(QStringLiteral("Scegli un piano o una faccia finale."));
+                return;
+            }
+            auto &selected = definition.surfaceTool.targets;
+            int found = -1;
+            for (int i = 0; i < selected.size(); ++i)
+                if (selected[i].kind == ref.kind && selected[i].index == ref.index &&
+                    (ref.kind != 5 || selected[i].point.subshape == ref.point.subshape)) found = i;
+            if (found >= 0) selected.removeAt(found);
+            else if (selected.size() < 256) selected.append(ref);
+            definition.extentRef = selected.value(0);
+            beginExtensionPick(2);
         });
     } else {
         form->addRow(ForgeCad::Gui::wrappedNote(
@@ -328,23 +401,12 @@ bool surfaceToolDialog(QMainWindow *window, CadViewport *viewport, const QString
         definition.firstBody = sources[base->currentIndex()];
         const auto shape = viewport->extrusions()[definition.firstBody].forgeBody;
         if (mode == 0) {
-            QSignalBlocker guard(edges);
             edges->clear();
-            edgeRefs.clear();
-            const auto selected = prior.isEmpty() ? ForgeCad::Kernel::EdgeId{} : resolveEdgeReference(*shape, prior.front(), 1e-5);
-            int wanted = prior.isEmpty() ? 0 : -1;
-            for (const auto edge : shape->edges())
-                if (shape->isLaminar(edge)) {
-                    const auto &e = shape->edge(edge);
-                    const auto point = e.curve->point((e.range.lo + e.range.hi) / 2);
-                    const auto ref = edgeReference(*shape, edge, point);
-                    if (edge == selected)
-                        wanted = edgeRefs.size();
-                    edgeRefs.append(ref);
-                    edges->addItem(QStringLiteral("E%1").arg(edge.index));
-                }
-            if (!edgeRefs.isEmpty())
-                edges->setCurrentIndex(wanted);
+            const auto selected = prior.isEmpty() ? EdgeId{} : resolveEdgeReference(*shape, prior.front(), 1e-5);
+            if (selected.valid() && shape->isLaminar(selected))
+                edges->addItem(QStringLiteral("%1 / E%2").arg(resultBodyLabel(viewport, definition.firstBody)).arg(selected.index));
+            else
+                definition.blendEdges.clear();
         } else {
             spline = dynamic_cast<const BSplineSurface *>(shape->face(shape->faces().front()).surface.get());
             nu = spline->uPoleCount();
@@ -408,12 +470,22 @@ bool surfaceToolDialog(QMainWindow *window, CadViewport *viewport, const QString
                 return;
             }
         } else if (mode == 0) {
-            if (edges->currentIndex() < 0) {
-                fail(QStringLiteral("La superficie non ha bordi liberi."));
+            const bool hasEdge = !definition.blendEdges.isEmpty();
+            targetList->setReferences(definition.surfaceTool.targets);
+            for (int i = 0; i < definition.surfaceTool.targets.size(); ++i)
+                if (definition.surfaceTool.targets[i].kind == 5)
+                    targetList->item(i)->setText(targetList->item(i)->text() + QStringLiteral(" / F%1").arg(definition.surfaceTool.targets[i].point.subshape));
+            removeTarget->setEnabled(!definition.surfaceTool.targets.isEmpty());
+            targets->setEnabled(hasEdge);
+            pickReference->setEnabled(hasEdge);
+            pickEdge->setText(extensionPick == 1 ? QStringLiteral("Seleziona un bordo nella vista…") : QStringLiteral("Scegli il bordo nella vista"));
+            if (!hasEdge) {
+                viewport->setReferenceMarks({});
+                fail(QStringLiteral("1. Clicca nella vista il bordo libero da estendere."));
                 return;
             }
-            definition.blendEdges = {edgeRefs[edges->currentIndex()]};
-            definition.extentRef = destinations.value(targets->currentIndex());
+            definition.extentRef = definition.surfaceTool.targets.value(0);
+            pickReference->setText(extensionPick == 2 ? QStringLiteral("Termina selezione riferimenti") : QStringLiteral("Scegli i riferimenti nella vista"));
             definition.surfaceTool.maximum = maximum->value();
             definition.extendLinear = linear->isChecked();
             GeometryRef boundary;
@@ -421,7 +493,23 @@ bool surfaceToolDialog(QMainWindow *window, CadViewport *viewport, const QString
             boundary.index = definition.firstBody;
             boundary.featureId = viewport->extrusions()[definition.firstBody].featureId;
             boundary.point = definition.blendEdges.front();
-            viewport->setReferenceMarks({boundary, definition.extentRef});
+            QVector<GeometryRef> marks{boundary};
+            marks += definition.surfaceTool.targets;
+            viewport->setReferenceMarks(marks);
+            if (extensionPick == 1) {
+                fail(QStringLiteral("1. Clicca un altro bordo libero da estendere."));
+                return;
+            }
+            if (definition.surfaceTool.targets.isEmpty()) {
+                fail(QStringLiteral("2. Clicca nella vista le facce o i piani da raggiungere."));
+                return;
+            }
+            if (extensionPick == 2) {
+                viewport->clearPreview();
+                preview.label->setText(QStringLiteral("termina la selezione per vedere l'anteprima"));
+                status->setText(QStringLiteral("Clicca altri riferimenti; un secondo clic li toglie. Esc o Termina per l'anteprima, OK per confermare."));
+                return;
+            }
         } else {
             if (!spline || poles->rowCount() != nu * nv || qint64(nu) * nv > 4096) {
                 fail(QStringLiteral("Griglia NURBS non disponibile o oltre 4096 poli."));
@@ -470,12 +558,27 @@ bool surfaceToolDialog(QMainWindow *window, CadViewport *viewport, const QString
         definition.surfaceTool.edits.clear();
         loadSource();
     });
-    for (auto *combo : {edges, targets})
-        QObject::connect(combo, qOverload<int>(&QComboBox::currentIndexChanged), &dialog, schedule);
+    QObject::connect(targets, qOverload<int>(&QComboBox::currentIndexChanged), &dialog, [&] {
+        const int row = targets->currentIndex();
+        if (mode != 0 || row < 0) return;
+        const auto ref = destinations.value(row);
+        auto &selected = definition.surfaceTool.targets;
+        bool found = false;
+        for (const auto &r : selected)
+            found = found || (r.kind == ref.kind && r.index == ref.index && (ref.kind != 5 || r.point.subshape == ref.point.subshape));
+        if (!found && selected.size() < 256) selected.append(ref);
+        definition.extentRef = selected.value(0);
+        { QSignalBlocker guard(targets); targets->setCurrentIndex(-1); }
+        extensionPick = 0;
+        viewport->cancelReferencePick();
+        viewport->setPickBodies({});
+        timer.stop();
+        refresh();
+    });
     QObject::connect(maximum, &QDoubleSpinBox::valueChanged, &dialog, schedule);
     QObject::connect(tolerance, &QDoubleSpinBox::valueChanged, &dialog, schedule);
     QObject::connect(linear, &QCheckBox::toggled, &dialog, schedule);
-    if (mode == 1)
+    if (mode != 2)
         base->hide();
     if (mode != 0) {
         edges->hide();
@@ -483,6 +586,9 @@ bool surfaceToolDialog(QMainWindow *window, CadViewport *viewport, const QString
         maximum->hide();
         linear->hide();
         pickReference->hide();
+        pickEdge->hide();
+        targetList->hide();
+        removeTarget->hide();
     }
     if (mode != 1) {
         rowList->hide();
@@ -495,8 +601,15 @@ bool surfaceToolDialog(QMainWindow *window, CadViewport *viewport, const QString
     if (mode != 1)
         loadSource();
     refresh();
+    if (mode == 0 && definition.blendEdges.isEmpty())
+        beginExtensionPick(1);
     const bool accepted = runUntilAppliedModeless(window, viewport, dialog, form, buttons, [&] {
         timer.stop();
+        if (mode == 0) {
+            extensionPick = 0;
+            viewport->cancelReferencePick();
+            viewport->setPickBodies({});
+        }
         refresh();
         if (!buttons->button(QDialogButtonBox::Ok)->isEnabled())
             return status->text();
@@ -507,6 +620,8 @@ bool surfaceToolDialog(QMainWindow *window, CadViewport *viewport, const QString
         picker.stop();
     viewport->cancelReferencePick();
     viewport->setReferencePickCallback({});
+    if (mode == 0)
+        viewport->setPickBodies({});
     viewport->setReferenceMarks({});
     viewport->setSurfacePoleOverlay({});
     return accepted;
