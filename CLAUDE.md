@@ -2,6 +2,12 @@
 
 Contesto condiviso del progetto per Claude Code e Codex. La lingua di lavoro è l'italiano (UI, commenti, messaggi).
 
+### 2026-10-25 — Pubblicazione del branch solver-mesh-gpu per Linux x86_64
+
+- Richiesta esplicita dell'utente: fare push per riprendere domani sul PC Linux x86_64. Pubblicato con successo il branch `solver-mesh-gpu` su `origin`, fino al commit `53eb5a6`, comprendente l'implementazione `770d9fc`, la rinomina, i benchmark e il launcher; impostato upstream `origin/solver-mesh-gpu` con `git push -u`. Nessun prefisso legato all'assistente nel nome del branch.
+- Prima del push: git diff --check e mappa --check PASS (477file/6582relazioni); verificata la presenza versionata del backend CUDA, dei dati JSON e del launcher. Modifica locale preesistente .gitignore preservata ed esclusa. Nessuna nuova modifica funzionale, compilazione, installazione o verifica numerica; valgono i risultati dell'esperimento sopra. main resta separato.
+- Ripresa Linux: recuperare origin/solver-mesh-gpu e configurare una cartella di build Linux nuova, senza riusare cache/binari macOS. Sono richieste le dipendenze del README; il backend CUDA deve ancora essere compilato e provato su NVIDIA. Il launcher accetta --build-dir; --gpu --profile abilita il filtro sperimentale, mentre --baseline consente il confronto. Questa registrazione dell'esito viene pubblicata con un commit documentale aggiuntivo e successivo controllo di concordanza locale/remoto.
+
 ### 2026-10-25 — Rinomina branch sperimentale e preferenza sui nomi
 
 - L'utente chiede conferma del commit e di evitare il nome codex nei branch. Verificato il commit locale `770d9fc` («Sperimenta solver per componenti, mesh differite e filtro GPU»); rinominato il branch corrente in `solver-mesh-gpu`, mantenendo invariati commit e codice. Nessun branch omonimo preesistente, nessun push.
