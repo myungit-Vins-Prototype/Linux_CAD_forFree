@@ -157,8 +157,10 @@ bool filletCenter(const SectionSupport &s1, const SectionSupport &s2, const Vec2
 // Punti di un tratto dell'appoggio da `from` a `to` (compresi): gli estremi
 // sulle rette; sui cerchi abbastanza fitti perche' le corde tra i punti
 // scostati di `offset` restino dalla stessa parte della faccia.
-std::vector<Vec2> supportSamples(const SectionFace &face, const Vec2 &from, const Vec2 &to, double offset, bool dense) {
-    if (!face.circle || !dense) return {from, to};
+// Anche un singolo appoggio curvo richiede punti intermedi: la corda fra
+// i soli estremi scostati puo' rientrare nel materiale e lasciare un anello.
+std::vector<Vec2> supportSamples(const SectionFace &face, const Vec2 &from, const Vec2 &to, double offset) {
+    if (!face.circle) return {from, to};
     const bool ccw = cross2(face.base - face.center, face.t) > 0.0;
     const double a0 = angleOf(from - face.center);
     double delta = std::remainder(angleOf(to - face.center) - a0, kTwoPi);
@@ -234,7 +236,7 @@ ProfileRegion blendRegion(const SectionSupport &s1, const SectionSupport &s2, co
             std::vector<Vec2> points;
             for (std::size_t i = 0; i < support.size(); ++i) {
                 const Vec2 to = i + 1 < support.size() ? support[i + 1].base : contact;
-                const std::vector<Vec2> samples = supportSamples(support[i], support[i].base, to, outward, composite);
+                const std::vector<Vec2> samples = supportSamples(support[i], support[i].base, to, outward);
                 for (std::size_t j = 1; j < samples.size(); ++j) points.push_back(samples[j] + side * sectionNormal(support[i], samples[j]));
             }
             return points;

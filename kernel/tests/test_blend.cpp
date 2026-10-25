@@ -295,6 +295,66 @@ FK_TEST(BlendConcaveAndCurvedEdges) {
     FK_CHECK(ours < vDee && ours > vDee - q * q * 4.0);
 }
 
+FK_TEST(BlendSphericalSupportLeavesNoDetachedRing) {
+    // Caso minimo di Raccordo 10: una sfera unitaria tagliata a z=-0,5.
+    // Una sola corda nell'utensile scostato lascia una shell sfera/cono
+    // separata a R0,6, valida per checkBody ma estranea al raccordo.
+    const Vec2 corner(std::sqrt(0.75), -0.5), top(0, 1), axis(0, -0.5);
+    const Body source = makeRevolution(Frame3(), buildProfile({
+        arcSegment(Vec2(), 1, -kPi / 6, kHalfPi), lineSegment(top, axis), lineSegment(axis, corner)}, 1e-9).regions.front());
+    for (int mode : {0, 1}) {
+        const Transform3 transform = mode == 0 ? Transform3() : Transform3::rotation(Vec3(1, 2, 3), normalized(Vec3(1, 2, 1)), 0.7);
+        const Body body = transformBody(source, transform);
+        const auto original = writeBodyBinary(body);
+        const EdgeId edge = nearestEdge(body, transform.applyToPoint(Vec3(corner.x(), 0, corner.y())), 1e-8);
+        FK_CHECK(edge.valid());
+        if (!edge.valid()) continue;
+        for (bool chamfer : {false, true}) for (double radius : {0.1, 0.3, 0.6}) {
+            // Profilo atteso indipendente dall'utensile e dalla booleana:
+            // cerchio tangente a piano/sfera, oppure corda dello smusso.
+            Vec2 center, contact, bottom;
+            double angle;
+            if (chamfer) {
+                angle = -kPi / 6 + 2 * std::asin(radius / 2);
+                contact = Vec2(std::cos(angle), std::sin(angle));
+                bottom = Vec2(corner.x() - radius, -0.5);
+            } else {
+                center = Vec2(std::sqrt(0.75 - radius), radius - 0.5);
+                contact = center / (1 - radius);
+                angle = std::atan2(contact.y(), contact.x());
+                bottom = Vec2(center.x(), -0.5);
+            }
+            std::vector<ProfileSegment> profile{arcSegment(Vec2(), 1, angle, kHalfPi),
+                lineSegment(top, axis), lineSegment(axis, bottom)};
+            profile.push_back(chamfer ? lineSegment(bottom, contact) : arcSegment(center, radius, -kHalfPi, angle));
+            const Body expected = makeRevolution(Frame3(), buildProfile(profile, 1e-9).regions.front());
+            BodyHistory history;
+            const Body result = blendEdges(body, {edge}, radius, chamfer, &history);
+            FK_CHECK(result.shells().size() == 1);
+            FK_CHECK(result.faces().size() == 3);
+            CheckOptions checks; checks.loopCrossings = true;
+            FK_CHECK(checkBody(result, checks).empty());
+            FK_CHECK_NEAR(massProperties(result).volume, massProperties(expected).volume, 1e-8);
+            int generated = 0;
+            for (FaceId f : result.faces()) {
+                const Surface &surface = *result.face(f).surface;
+                if (surface.type() == (chamfer ? SurfaceType::Cone : SurfaceType::Torus)) {
+                    ++generated;
+                    if (!chamfer) FK_CHECK_NEAR(static_cast<const ToroidalSurface &>(surface).minorRadius(), radius, 1e-12);
+                } else FK_CHECK(surface.type() == SurfaceType::Sphere || surface.type() == SurfaceType::Plane);
+            }
+            FK_CHECK(generated == 1);
+            FK_CHECK(history.generated(EntityKind::Face, EntityKind::Edge, 0, edge.index).size() == 1);
+            for (EdgeId e : result.edges()) FK_CHECK(!result.isLaminar(e));
+            const auto mesh = tessellate(result, {});
+            FK_CHECK(mesh.failedFaces == 0 && mesh.faces.size() == 3);
+            const Body reread = readBodyBinary(writeBodyBinary(result));
+            FK_CHECK(reread.shells().size() == 1 && reread.faces().size() == 3 && checkBody(reread, checks).empty());
+            FK_CHECK(writeBodyBinary(body) == original);
+        }
+    }
+}
+
 FK_TEST(BlendTangentChains) {
     // Rettangolo con gli angoli arrotondati: il bordo superiore e' una catena
     // di segmenti e archi tangenti (gli archi sono spigoli circolari aperti,
