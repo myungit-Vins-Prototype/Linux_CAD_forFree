@@ -33,7 +33,18 @@ void validateSnapshot(const DocumentState &document) {
                 "Geometria del documento non disponibile: rigenerare prima del check-in.");
 }
 QByteArray definitionPart(const QByteArray &bytes) {
-    QDataStream in(bytes); in.skipRawData(7); quint32 size = 0; in >> size;
+    QDataStream in(bytes); in.skipRawData(4); quint16 version = 0; in >> version;
+    if (version != kDocumentFormatVersion) {
+        // Un pendente conserva il payload immutabile della versione che lo
+        // ha preparato. Confronta la sua definizione migrata con la copia
+        // corrente, senza riscrivere payload, UUID o impronta della richiesta.
+        DocumentState archived;
+        ok(decodeDocument(bytes, archived));
+        QByteArray definition;
+        ok(encodeDocument(archived, definition, false));
+        return definition;
+    }
+    in.skipRawData(1); quint32 size = 0; in >> size;
     require(in.status() == QDataStream::Ok && bytes.size() >= 11 && qsizetype(size) <= bytes.size()-11,
             "Snapshot nativo incompleto.");
     return bytes.left(11+qsizetype(size));

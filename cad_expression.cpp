@@ -5,7 +5,7 @@
 #include <QLabel>
 #include <QLineEdit>
 #include <QKeyEvent>
-#include <QPointer>
+#include <QVariant>
 #include <QVBoxLayout>
 
 #include <algorithm>
@@ -14,8 +14,7 @@
 namespace ForgeCad {
 
 namespace {
-LengthUnit gDisplayLengthUnit = LengthUnit::Millimeter;
-QVector<QPointer<ExpressionSpinBox>> gMeasurementBoxes;
+constexpr const char *kLengthUnitProperty = "forgecad.documentLengthUnit";
 }
 
 double millimetersPerUnit(LengthUnit unit) {
@@ -48,20 +47,33 @@ QString lengthUnitName(LengthUnit unit) {
     }
 }
 
-LengthUnit displayLengthUnit() { return gDisplayLengthUnit; }
-
-void setDisplayLengthUnit(LengthUnit unit) {
-    gDisplayLengthUnit = unit;
-    for (auto i = gMeasurementBoxes.begin(); i != gMeasurementBoxes.end();) {
-        if (!*i) i = gMeasurementBoxes.erase(i);
-        else {
-            if ((*i)->isLengthMeasurement()) (*i)->setLengthMeasurement(true);
-            ++i;
+LengthUnit displayLengthUnit(const QObject *context) {
+    for (const QObject *owner = context; owner; owner = owner->parent()) {
+        const QVariant value = owner->property(kLengthUnitProperty);
+        if (value.isValid()) {
+            const int unit = value.toInt();
+            if (unit >= int(LengthUnit::Millimeter) && unit <= int(LengthUnit::Foot))
+                return LengthUnit(unit);
         }
     }
+    return LengthUnit::Millimeter;
 }
 
-double lengthInDisplayUnits(double millimeters) { return millimeters / millimetersPerUnit(gDisplayLengthUnit); }
+void setDisplayLengthUnit(LengthUnit unit, QObject *context) {
+    if (!context) return;
+    const auto previous = context->property(kLengthUnitProperty);
+    if (previous.isValid() && previous.toInt() == int(unit)) return;
+    context->setProperty(kLengthUnitProperty, int(unit));
+    // Aggiorna solo questo albero di widget; i contesti espliciti dei pannelli
+    // restano indipendenti e vengono risolti di nuovo da ciascun campo.
+    if (auto *box = dynamic_cast<ExpressionSpinBox *>(context)) box->refreshLengthUnit();
+    for (auto *widget : context->findChildren<QDoubleSpinBox *>())
+        if (auto *box = dynamic_cast<ExpressionSpinBox *>(widget)) box->refreshLengthUnit();
+}
+
+double lengthInDisplayUnits(double millimeters, const QObject *context) {
+    return millimeters / millimetersPerUnit(displayLengthUnit(context));
+}
 
 static QString formattedMeasure(double value, int decimals) {
     QString text = QLocale().toString(value, 'f', decimals);
@@ -71,21 +83,21 @@ static QString formattedMeasure(double value, int decimals) {
     return text;
 }
 
-QString formatLength(double millimeters, int decimals, bool withSymbol) {
-    const QString number = formattedMeasure(lengthInDisplayUnits(millimeters), decimals);
-    return withSymbol ? number + QLatin1Char(' ') + lengthUnitSymbol(gDisplayLengthUnit) : number;
+QString formatLength(double millimeters, int decimals, bool withSymbol, const QObject *context) {
+    const QString number = formattedMeasure(lengthInDisplayUnits(millimeters, context), decimals);
+    return withSymbol ? number + QLatin1Char(' ') + lengthUnitSymbol(displayLengthUnit(context)) : number;
 }
 
-QString formatArea(double squareMillimeters, int decimals, bool withSymbol) {
-    const double scale = millimetersPerUnit(gDisplayLengthUnit);
+QString formatArea(double squareMillimeters, int decimals, bool withSymbol, const QObject *context) {
+    const double scale = millimetersPerUnit(displayLengthUnit(context));
     const QString number = formattedMeasure(squareMillimeters / (scale * scale), std::max(decimals, 8));
-    return withSymbol ? number + QLatin1Char(' ') + lengthUnitSymbol(gDisplayLengthUnit) + QStringLiteral("²") : number;
+    return withSymbol ? number + QLatin1Char(' ') + lengthUnitSymbol(displayLengthUnit(context)) + QStringLiteral("²") : number;
 }
 
-QString formatVolume(double cubicMillimeters, int decimals, bool withSymbol) {
-    const double scale = millimetersPerUnit(gDisplayLengthUnit);
+QString formatVolume(double cubicMillimeters, int decimals, bool withSymbol, const QObject *context) {
+    const double scale = millimetersPerUnit(displayLengthUnit(context));
     const QString number = formattedMeasure(cubicMillimeters / (scale * scale * scale), std::max(decimals, 10));
-    return withSymbol ? number + QLatin1Char(' ') + lengthUnitSymbol(gDisplayLengthUnit) + QStringLiteral("³") : number;
+    return withSymbol ? number + QLatin1Char(' ') + lengthUnitSymbol(displayLengthUnit(context)) + QStringLiteral("³") : number;
 }
 
 void ExpressionSpinBox::keyPressEvent(QKeyEvent *event) {
@@ -275,16 +287,13 @@ ExpressionSpinBox::ExpressionSpinBox(QWidget *parent) : QDoubleSpinBox(parent) {
     setToolTip(QStringLiteral("Si possono scrivere espressioni: 25/2, 3*(4+1.5), sqrt(2)*10, 360/7, sin(30)...\n"
                               "Invio calcola il risultato."));
     setCorrectionMode(QAbstractSpinBox::CorrectToNearestValue);
-    gMeasurementBoxes.append(this);
     refreshLengthUnit();
 }
 
-ExpressionSpinBox::~ExpressionSpinBox() {
-    gMeasurementBoxes.removeAll(this);
-}
+ExpressionSpinBox::~ExpressionSpinBox() = default;
 
 void ExpressionSpinBox::refreshLengthUnit() {
-    if (lengthMeasurement_) QDoubleSpinBox::setSuffix(QStringLiteral(" ") + lengthUnitSymbol(gDisplayLengthUnit));
+    if (lengthMeasurement_) QDoubleSpinBox::setSuffix(QStringLiteral(" ") + lengthUnitSymbol(displayLengthUnit(this)));
 }
 
 void ExpressionSpinBox::setLengthMeasurement(bool enabled) {
@@ -318,25 +327,25 @@ QValidator::State ExpressionSpinBox::validate(QString &text, int &pos) const {
     if (!evaluateExpression(body, value)) return QValidator::Intermediate;
     // Una semplice cifra si accetta come la accetta QDoubleSpinBox; un'espressione
     // fuori dall'intervallo resta intermedia (all'uscita si porta al limite).
-    if (lengthMeasurement_) value *= millimetersPerUnit(gDisplayLengthUnit);
+    if (lengthMeasurement_) value *= millimetersPerUnit(displayLengthUnit(this));
     return value >= minimum() && value <= maximum() ? QValidator::Acceptable : QValidator::Intermediate;
 }
 
 double ExpressionSpinBox::valueFromText(const QString &text) const {
     double value = 0.0;
     if (!evaluateExpression(expressionText(text), value)) return this->value();
-    if (lengthMeasurement_) value *= millimetersPerUnit(gDisplayLengthUnit);
+    if (lengthMeasurement_) value *= millimetersPerUnit(displayLengthUnit(this));
     return qBound(minimum(), value, maximum());
 }
 
 QString ExpressionSpinBox::textFromValue(double value) const {
-    return QDoubleSpinBox::textFromValue(lengthMeasurement_ ? value / millimetersPerUnit(gDisplayLengthUnit) : value);
+    return QDoubleSpinBox::textFromValue(lengthMeasurement_ ? value / millimetersPerUnit(displayLengthUnit(this)) : value);
 }
 
 void ExpressionSpinBox::fixup(QString &input) const {
     double value = 0.0;
     if (evaluateExpression(expressionText(input), value)) {
-        if (lengthMeasurement_) value *= millimetersPerUnit(gDisplayLengthUnit);
+        if (lengthMeasurement_) value *= millimetersPerUnit(displayLengthUnit(this));
         input = prefix() + textFromValue(qBound(minimum(), value, maximum())) + suffix();
     }
 }

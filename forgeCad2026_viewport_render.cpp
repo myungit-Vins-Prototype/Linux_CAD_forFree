@@ -393,8 +393,27 @@ void CadViewport::drawReferenceLabels() {
         painter.save();
         painter.setPen(QPen(QColor(70,205,245,180),1,Qt::DashLine));
         for(int i=0;i<surfacePoleU_;++i)for(int j=0;j<surfacePoleV_;++j){const int k=i*surfacePoleV_+j;const auto p=surfacePoleScreen(k);if(i+1<surfacePoleU_)painter.drawLine(p,surfacePoleScreen(k+surfacePoleV_));if(j+1<surfacePoleV_)painter.drawLine(p,surfacePoleScreen(k+1));}
-        for(int k=0;k<surfacePoleOverlay_.size();++k){const bool selected=k==surfacePoleSelected_;painter.setPen(Qt::black);painter.setBrush(selected?QColor(255,195,50):QColor(65,220,255));painter.drawEllipse(surfacePoleScreen(k),selected?5:3,selected?5:3);}
-        if(surfacePoleSelected_>=0&&surfacePoleSelected_<surfacePoleOverlay_.size()){painter.setPen(QColor(255,210,80));painter.drawText(surfacePoleScreen(surfacePoleSelected_)+QPointF(8,-8),QStringLiteral("P(%1,%2)").arg(surfacePoleSelected_/surfacePoleV_+1).arg(surfacePoleSelected_%surfacePoleV_+1));}
+        for(int k=0;k<surfacePoleOverlay_.size();++k){const bool selected=surfacePoleSelection_.contains(k);painter.setPen(Qt::black);painter.setBrush(selected?QColor(255,195,50):QColor(65,220,255));painter.drawEllipse(surfacePoleScreen(k),selected?5:3,selected?5:3);}
+        if (!surfacePoleSelection_.isEmpty()) {
+            const auto center = surfacePoleGizmoCenter();
+            const std::array<QColor,3> colors{{QColor(245,85,85),QColor(80,215,115),QColor(85,155,255)}};
+            for (int axis=0; axis<3; ++axis) {
+                const auto tip=surfacePoleAxisScreen(axis);
+                const auto d=(tip-center)/std::hypot(tip.x()-center.x(),tip.y()-center.y());
+                const QPointF n(-d.y(),d.x());
+                painter.setPen(QPen(QColor(20,25,30,190),5)); painter.drawLine(center,tip);
+                painter.setPen(QPen(colors[axis],2.5)); painter.drawLine(center,tip);
+                painter.setBrush(colors[axis]); painter.setPen(Qt::NoPen);
+                painter.drawPolygon(QPolygonF{tip,tip-11*d+5*n,tip-11*d-5*n});
+                painter.setPen(colors[axis]);
+                painter.drawText(tip+QPointF(6,-4),surfacePoleLocal_ ? QStringList{"U","V","N"}[axis] : QString(QChar(u'X'+axis)));
+            }
+            painter.setPen(QPen(Qt::white,2)); painter.setBrush(QColor(45,50,60)); painter.drawEllipse(center,6,6);
+            painter.setPen(QColor(255,210,80));
+            const auto label = surfacePoleSelection_.size()>1 ? QStringLiteral("%1 poli").arg(surfacePoleSelection_.size())
+                : QStringLiteral("P(%1,%2)").arg(surfacePoleSelected_/surfacePoleV_+1).arg(surfacePoleSelected_%surfacePoleV_+1);
+            painter.drawText(center+QPointF(10,20),label);
+        }
         painter.restore();
     }
     drawDatumLabels(painter);
@@ -467,7 +486,7 @@ void CadViewport::drawSketchDimensions(QPainter &painter) const {
         painter.setPen(constrained ? QColor(255, 215, 90) : QColor(180, 220, 235));
         painter.drawLine(midpoint, labelPosition);
         painter.drawText(labelPosition + QPointF(4.0, -4.0),
-                         QStringLiteral("L = %1").arg(ForgeCad::formatLength(length, 4)));
+                         QStringLiteral("L = %1").arg(ForgeCad::formatLength(length, 4, true, this)));
         if (index < sketch.segmentAngles.size() && sketch.segmentAngles.at(index) >= 0.0) {
             painter.drawText(labelPosition + QPointF(4.0, 10.0),
                              QStringLiteral("A = %1 deg")

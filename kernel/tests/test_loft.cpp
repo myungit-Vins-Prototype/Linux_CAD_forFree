@@ -700,3 +700,41 @@ FK_TEST(LoftUnequalGuideSpansPreserveGeometryAndContact) {
             FK_CHECK(std::fabs(normalAt(*body.face(f).surface,u,reverse?1:0).z())>1-1e-7);
     }
 }
+
+FK_TEST(LoftG1SingleUlpSpanKeepsDistinctCollocationPoints) {
+    const auto line = [](Vec3 a, Vec3 b) -> PathSegment {
+        return {std::make_shared<Line<3>>(a, b - a), {0, distance(a, b)}};
+    };
+    const auto source = std::make_shared<const Body>(ruledSurface(
+        {line({0,0,0},{10,0,0})}, {line({0,-5,0},{10,-5,0})}));
+    for (bool rational : {false, true}) {
+        const double last = std::nextafter(1.0, 0.0);
+        const auto curve = std::make_shared<BSplineCurve<3>>(3,
+            std::vector<double>{0,0,0,0,last,last,last,1,1,1,1},
+            std::vector<Vec3>{{0,0,0},{3,0,0},{6,0,0},{9,0,0},{9+1.0/3,0,0},{9+2.0/3,0,0},{10,0,0}},
+            rational ? std::vector<double>{1,0.75,1.25,1,0.75,1.25,1} : std::vector<double>{});
+        LoftSection first, second;
+        first.path = {{curve, {0,1}}};
+        second.path = {line({0,10,5},{10,10,5})};
+        for (bool reverse : {false, true}) {
+            LoftOptions options;
+            if (reverse) { options.endContinuity = 1; options.endFaces = {{source, source->faces().front()}}; }
+            else { options.startContinuity = 1; options.startFaces = {{source, source->faces().front()}}; }
+            const Body body = loftSheet(reverse ? std::vector<LoftSection>{second,first} : std::vector<LoftSection>{first,second}, options);
+            FK_CHECK(checkBody(body).empty());
+            for (FaceId face : body.faces()) for (double u : {0.1,0.5,0.9,last,1.0})
+                FK_CHECK(std::fabs(normalAt(*body.face(face).surface,u,reverse ? 1.0 : 0.0).z()) > 1.0 - 1e-4);
+            // Nella campata di un ulp la proiezione restituisce un parametro
+            // double: non puo' rappresentare punti interni come x=9.5.
+            // Verificare entrambi gli estremi geometrici distinti (9 e 10).
+            for (double x : {0.0,3.0,6.0,9.0,10.0}) {
+                double nearest = 1e300;
+                for (EdgeId id : body.edges()) {
+                    const auto &edge = body.edge(id);
+                    nearest = std::min(nearest, projectPoint(*edge.curve, Vec3(x,0,0), edge.range).distance);
+                }
+                FK_CHECK(nearest < 1e-7);
+            }
+        }
+    }
+}

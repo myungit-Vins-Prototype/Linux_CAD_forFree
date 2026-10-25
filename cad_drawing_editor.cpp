@@ -322,18 +322,6 @@ QPainterPath joinedPaths(const QPainterPath &a,const QPainterPath &b){auto resul
 QPointF paperPoint(const DrawingView &view,const DrawingViewLayout &layout,const Vec3 &point){
     const auto local=view.plane.toLocal(point);return layout.position+drawingBreakToPaper(view,layout,{local.x(),local.y()});
 }
-QPainterPath sectionPath(const DrawingView &view,const DrawingViewLayout &layout,const DrawingSection &section){
-    TessellationOptions options;options.deflection=std::clamp(0.03/view.scale,1e-6,1.0);options.angle=0.12;
-    const auto samples=sampleCurve(*section.curve,section.range,options);
-    if(samples.size()>200000)throw std::runtime_error("Curva troppo complessa per l'anteprima della tavola.");
-    QPainterPath path;for(std::size_t i=0;i<samples.size();++i){const auto local=view.plane.toLocal(section.curve->point(samples[i]));const auto point=layout.position+QPointF(local.x()*view.scale,-local.y()*view.scale);
-        if(!std::isfinite(point.x())||!std::isfinite(point.y()))throw std::runtime_error("Curva della tavola non finita.");
-        if(i)path.lineTo(point);else path.moveTo(point);}
-    return path;
-}
-QPainterPath silhouettePath(const DrawingView &view,const DrawingViewLayout &layout,const DrawingSilhouette &contour){
-    QPainterPath path;bool first=true;for(const auto &point:contour.points){const auto local=view.plane.toLocal(point);const auto p=layout.position+QPointF(local.x()*view.scale,-local.y()*view.scale);if(!std::isfinite(p.x())||!std::isfinite(p.y()))throw std::runtime_error("Contorno apparente non finito sul foglio.");if(first){path.moveTo(p);first=false;}else path.lineTo(p);}return path;
-}
 bool sameGeometry(const DrawingView &a,const DrawingView &b){
     return a.bend==b.bend&&a.step==b.step&&a.kind==b.kind&&a.sectionStyle==b.sectionStyle&&a.sectionReferences==b.sectionReferences&&a.tolerance==b.tolerance
         &&distance(a.plane.origin(),b.plane.origin())==0&&distance(a.plane.xDir(),b.plane.xDir())==0
@@ -811,17 +799,7 @@ struct DrawingSheetEditor::Impl{
     }
     void editSelectedView(){if(readOnly)return;const auto id=selectedView();if(id.isNull()){say(QStringLiteral("Seleziona una vista o una sua quota nell'albero o sul foglio."));return;}
         const auto *definition=viewFor(id);if(definition){if(drawingIsDetail(*layoutFor(id)))detailProperties(id);else if(!layoutFor(id)->relation.parentId.isNull())derivedProperties(id);else addViewDialog(definition->kind,id);}}
-    struct ComputedView {std::vector<DrawingCurve> curves;DrawingSilhouetteResult contours;std::shared_ptr<DrawingViewVisibility> display;DrawingSilhouetteCache cache;};
-    static ComputedView buildView(const DrawingModelSnapshot &source,const DrawingView &definition,const DrawingViewLayout &layout,
-        DrawingSilhouetteCache seeds,const std::function<void(int)> &phase,const std::vector<DrawingCurve> *reuseCurves=nullptr,const DrawingSilhouetteResult *reuseContours=nullptr){
-        ComputedView result;result.cache=std::move(seeds);const auto ok=[](const QString &message){if(!message.isEmpty())throw std::runtime_error(message.toStdString());};
-        if(reuseCurves)result.curves=*reuseCurves;else ok(drawingViewCurves(source,definition,result.curves));phase(1);
-        if(reuseContours)result.contours=*reuseContours;else ok(drawingViewSilhouettes(source,definition,result.contours,result.cache));phase(2);
-        DrawingSectionHatch hatch;ok(drawingSectionHatch(source,definition,result.curves,hatch));phase(3);
-        result.display=std::make_shared<DrawingViewVisibility>();ok(drawingViewVisibility(source,definition,result.curves,result.contours,result.cache,*result.display,&hatch.material,layout.showMesh));
-        result.display->sectionHatch=std::move(hatch.lines);result.display->sectionMaterial=std::move(hatch.material);result.display->warnings.append(hatch.warnings);clipDrawingDetailVisibility(definition,layout,*result.display);if(!source.bodies.empty()){ok(drawingBreakFits(definition,layout,drawingBreakBounds(*result.display)));applyDrawingBreak(definition,layout,*result.display);}
-        else if(layout.interruption)result.display->warnings.append(QStringLiteral("Interruzione non verificabile: modello non disponibile."));phase(4);phase(5);return result;
-    }
+    using ComputedView = PreparedDrawingView;
     struct PreparedView {DrawingView definition;DrawingViewLayout layout;DrawingModelSnapshot source;ComputedView result;};
     std::optional<PreparedView> dialogReady;
     static bool sameSource(const DrawingModelSnapshot &a,const DrawingModelSnapshot &b){
@@ -834,23 +812,28 @@ struct DrawingSheetEditor::Impl{
         auto oldCurves=reuseCurves?*reuseCurves:std::vector<DrawingCurve>{};auto oldContours=reuseContours?*reuseContours:DrawingSilhouetteResult{};const bool keepCurves=reuseCurves,keepContours=reuseContours;
         const auto error=runDrawingComputation(owner,computing,QStringLiteral("Calcolo vista: %1").arg(layout.title),output,
             [source,definition,layout,seeds=cache,oldCurves=std::move(oldCurves),oldContours=std::move(oldContours),keepCurves,keepContours](auto phase){
-                return buildView(source,definition,layout,seeds,phase,keepCurves?&oldCurves:nullptr,keepContours?&oldContours:nullptr);
+                return prepareDrawingView(source,definition,layout,seeds,phase,keepCurves?&oldCurves:nullptr,keepContours?&oldContours:nullptr);
             });
         if(error.isEmpty())cache=output.cache;
         return error;
     }
+    void installPrepared(PreparedDrawingSheet prepared){
+        axisCache.clear();state=std::move(prepared.sheet);model=std::move(prepared.model);
+        silhouetteCache=std::move(prepared.cache);curves=std::move(prepared.curves);
+        sectionCurves=std::move(prepared.sections);silhouettes=std::move(prepared.silhouettes);
+        visibility=std::move(prepared.visibility);results=std::move(prepared.dimensions);
+    }
     void calculate(DrawingSheet nextState,DrawingEditorModel nextModel){
-        std::map<QUuid,std::vector<DrawingSection>> prepared;std::map<QUuid,DrawingSilhouetteResult> preparedSilhouettes;std::map<QUuid,std::shared_ptr<const DrawingViewVisibility>> preparedVisibility;DrawingSilhouetteCache seeds;
-        for(const auto &definition:nextState.drawing.views){const auto layout=std::find_if(nextState.views.begin(),nextState.views.end(),[&](const auto &l){return l.viewId==definition.id;});if(layout==nextState.views.end())continue;
-            DrawingModelSnapshot source;source.version=nextModel.snapshot.version;for(const auto &body:nextModel.snapshot.bodies)if(layout->features.contains(body.featureId))source.bodies.push_back(body);
-            ComputedView result;const auto error=computeView(source,definition,*layout,seeds,result);if(!error.isEmpty())throw std::runtime_error(error.toStdString());
-            for(const auto &piece:result.curves)sectionPath(definition,*layout,piece);
-            for(const auto &contour:result.contours.paths)silhouettePath(definition,*layout,contour);
-            prepared[definition.id]=std::move(result.curves);preparedSilhouettes[definition.id]=std::move(result.contours);preparedVisibility[definition.id]=std::move(result.display);
+        if(nextState.drawing.views.empty()){
+            installPrepared(prepareDrawingSheet(std::move(nextState),std::move(nextModel),[](int){}));return;
         }
-        std::map<QUuid,DrawingDimensionResult> measured;
-        for(const auto &d:nextState.drawing.dimensions){const auto v=std::find_if(nextState.drawing.views.begin(),nextState.drawing.views.end(),[&](const auto &v){return v.id==d.viewId;});measured[d.id]=d.references.empty()?evaluateDrawingDimension(nextState.drawing,nextModel.snapshot,d.id):evaluateDrawingAttachments(d,*v,nextModel.snapshot,prepared.at(d.viewId),drawingSheetAttachmentResolver(nextState,*v,nextModel.snapshot,prepared.at(d.viewId)));}
-        axisCache.clear();state=std::move(nextState);model=std::move(nextModel);silhouetteCache=std::move(seeds);curves=std::move(prepared);silhouettes=std::move(preparedSilhouettes);visibility=std::move(preparedVisibility);results=std::move(measured);cacheSections();
+        PreparedDrawingSheet prepared;
+        const auto error=runDrawingComputation(owner,computing,QStringLiteral("Calcolo viste della tavola"),prepared,
+            [sheet=std::move(nextState),model=std::move(nextModel)](auto phase)mutable{
+                return prepareDrawingSheet(std::move(sheet),std::move(model),phase);
+            });
+        if(!error.isEmpty())throw std::runtime_error(error.toStdString());
+        installPrepared(std::move(prepared));
     }
     QString insertionState(const DrawingView &definition,const DrawingViewLayout &layout,DrawingSheet &next,QByteArray &bytes)const{
         next=state;next.drawing.views.push_back(definition);next.views.append(layout);return encodeDrawingSheet(next,bytes);
@@ -858,8 +841,7 @@ struct DrawingSheetEditor::Impl{
     QString insertPrepared(DrawingView definition,DrawingViewLayout layout,std::vector<DrawingCurve> pieces,DrawingSilhouetteResult contours,std::shared_ptr<const DrawingViewVisibility> display={}){
         DrawingSheet next;QByteArray bytes;const auto error=insertionState(definition,layout,next,bytes);if(!error.isEmpty())return error;
         if(pieces.empty()&&contours.paths.empty())return definition.kind==DrawingViewKind::Section?QStringLiteral("Il piano non interseca i corpi selezionati. Modificare posizione o piano."):QStringLiteral("Nessun bordo proiettabile nei corpi selezionati.");
-        for(const auto &piece:pieces)sectionPath(definition,layout,piece);
-        for(const auto &contour:contours.paths)silhouettePath(definition,layout,contour);
+        validateDrawingViewPaths(definition,layout,pieces,contours);
         if(!display){ComputedView result;const auto error=computeView(sourceFor(layout),definition,layout,silhouetteCache,result,&pieces,&contours);if(!error.isEmpty())return error;display=std::move(result.display);}
         state=std::move(next);curves[definition.id]=std::move(pieces);silhouettes[definition.id]=std::move(contours);visibility[definition.id]=std::move(display);cacheSections();record(QStringLiteral("Inserisci vista"),std::move(bytes));redraw();return {};
     }
@@ -1696,7 +1678,7 @@ struct DrawingSheetEditor::Impl{
             const auto [definition,layout]=candidate();const auto invalid=validateCandidate(definition,layout);if(!invalid.isEmpty()){pending=false;errorLabel->setText(invalid);progress->hide();return;}
             auto task=std::make_shared<PreviewTask>();task->generation=generation;task->definition=definition;task->layout=layout;task->source=sourceFor(layout);auto seeds=silhouetteCache;running=task;pending=false;
             QThreadPool::globalInstance()->start([task,seeds=std::move(seeds)]()mutable{
-                try{Kernel::CancellationScope scope(task->cancel);Kernel::cancellationPoint();task->result=buildView(task->source,task->definition,task->layout,std::move(seeds),[&](int phase){task->phase.store(phase,std::memory_order_relaxed);Kernel::cancellationPoint();});
+                try{Kernel::CancellationScope scope(task->cancel);Kernel::cancellationPoint();task->result=prepareDrawingView(task->source,task->definition,task->layout,std::move(seeds),[&](int phase){task->phase.store(phase,std::memory_order_relaxed);Kernel::cancellationPoint();});
                     if(task->result.curves.empty()&&task->result.contours.paths.empty())task->error=task->definition.kind==DrawingViewKind::Section?QStringLiteral("Il piano non interseca i corpi selezionati."):QStringLiteral("Nessuna geometria proiettabile nei corpi selezionati.");
                 }catch(const Kernel::OperationCancelled &){task->error=QStringLiteral("Anteprima annullata.");}catch(const std::exception &e){task->error=QString::fromUtf8(e.what());}
                 task->done.store(true,std::memory_order_release);
@@ -2881,15 +2863,15 @@ QString DrawingSheetEditor::updateModel(DrawingEditorModel model){
     if(impl_->computing)return QStringLiteral("Attendere il calcolo della vista in corso.");
     if(impl_->readOnly)return QStringLiteral("La tavola e' in sola lettura.");
     if(model.snapshot.version.documentId!=impl_->state.drawing.model.documentId)return QStringLiteral("La tavola appartiene a un altro modello.");
-    auto next=impl_->state;
     try{
-        const auto error=retargetDrawingModel(next.drawing,model.snapshot.version);if(!error.isEmpty())return error;
-        for(auto &layout:next.views){QVector<quint64> features;for(auto id:layout.features){const auto current=model.replacements.value(id,id);if(!features.contains(current))features.append(current);}layout.features=features;}
-        for(auto &dimension:next.drawing.dimensions){dimension.section.featureId=model.replacements.value(dimension.section.featureId,dimension.section.featureId);for(auto &ref:dimension.references)if(ref.axisId.isNull()&&!drawingDatum(ref.role))ref.curve.featureId=model.replacements.value(ref.curve.featureId,ref.curve.featureId);}
-        for(auto &axis:next.axes)for(auto &ref:axis.references)if(ref.axisId.isNull()&&!drawingDatum(ref.role))ref.curve.featureId=model.replacements.value(ref.curve.featureId,ref.curve.featureId);
-        for(auto &n:next.annotations)if(n.reference&&n.reference->axisId.isNull())n.reference->curve.featureId=model.replacements.value(n.reference->curve.featureId,n.reference->curve.featureId);
+        auto next=retargetDrawingSheetModel(impl_->state,model);
         impl_->calculate(std::move(next),std::move(model));impl_->cancelPlacement();impl_->pageContext=defaultDrawingPageContext(impl_->state);impl_->resetHistory();impl_->notify();impl_->redraw();return {};
     }catch(const std::exception &error){return QString::fromUtf8(error.what());}
+}
+
+void DrawingSheetEditor::installPreparedModel(PreparedDrawingSheet prepared){
+    impl_->installPrepared(std::move(prepared));impl_->cancelPlacement();
+    impl_->pageContext=defaultDrawingPageContext(impl_->state);impl_->resetHistory();impl_->redraw();
 }
 
 void DrawingSheetEditor::setChangedCallback(std::function<void(const DrawingSheet &)> callback){impl_->changed=std::move(callback);}

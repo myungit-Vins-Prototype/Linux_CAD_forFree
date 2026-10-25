@@ -122,6 +122,21 @@ QString drawingModelDefinitionHash(const DocumentState &document,QByteArray &has
     normalized.lengthUnit=LengthUnit::Millimeter;QByteArray definition;const auto error=encodeDocument(normalized,definition,false);if(!error.isEmpty())return error;
     hash=QCryptographicHash::hash(definition,QCryptographicHash::Sha256);return {};
 }
+QString drawingModelDefinitionMatches(const DocumentState &document,const QByteArray &expected,bool &matches){
+    QByteArray current;const auto error=drawingModelDefinitionHash(document,current);if(!error.isEmpty())return error;
+    if(current==expected){matches=true;return {};}
+    // I vecchi hash non contenevano questi nomi. Un riferimento nuovo o
+    // modificato deve restare una modifica, anche con uguali indici e punti.
+    for(const auto &sketch:document.sketches){
+        if(sketch.support&&!sketch.support->point.name.isEmpty()){matches=false;return {};}
+        for(const auto &constraint:sketch.geometricConstraints)
+            if(constraint.pierce&&!constraint.pierce->surface.point.name.isEmpty()){matches=false;return {};}
+    }
+    auto normalized=document;normalized.version.checkinId={};normalized.baseCheckinId={};normalized.orientation=AxesOrientation{};
+    normalized.lengthUnit=LengthUnit::Millimeter;QByteArray legacy;
+    const auto legacyError=encodeDocumentDefinition53ForHash(normalized,legacy);if(!legacyError.isEmpty())return legacyError;
+    matches=QCryptographicHash::hash(legacy,QCryptographicHash::Sha256)==expected;return {};
+}
 QString prepareDrawingEditorModel(DocumentState &document,DrawingEditorModel &model){
     try{
         normalizeModelHistory(document);
@@ -163,7 +178,7 @@ QString loadDrawingModel(const QString &drawingPath,const DrawingFile &drawing,D
             require(archiveId==drawing.modelArchiveId,QStringLiteral("Archivio del modello diverso da quello richiesto dalla tavola."));
             ok(readNativeRevision(store,expected,prepared));
         }
-        QByteArray digest;ok(drawingModelDefinitionHash(prepared,digest));const bool changed=digest!=drawing.modelDefinitionHash;
+        bool matches=false;ok(drawingModelDefinitionMatches(prepared,drawing.modelDefinitionHash,matches));const bool changed=!matches;
         require(expected.checkinId.isNull()||!changed,QStringLiteral("Lo snapshot archiviato non corrisponde all'impronta della tavola."));
         model=std::move(prepared);resolvedPath=path;definitionChanged=changed;return {};
     }catch(const std::exception &error){return QString::fromUtf8(error.what());}

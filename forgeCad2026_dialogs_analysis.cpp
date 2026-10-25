@@ -76,6 +76,8 @@ using ForgeCad::Gui::runUntilApplied;
 
 void measureDialog(QMainWindow *window, CadViewport *viewport) {
     FunctionDialogPanel dialog(window);
+    dialog.setSizeIdentity(QStringLiteral("measure"), {QStringLiteral("Misura")});
+    if (viewport) ForgeCad::setDisplayLengthUnit(viewport->lengthUnit(), &dialog);
     dialog.setWindowTitle(QStringLiteral("Misura"));
     dialog.setModal(false);
     auto *form = dialog.createScrollableForm();
@@ -88,11 +90,8 @@ void measureDialog(QMainWindow *window, CadViewport *viewport) {
     }
     form->addRow(QStringLiteral("A:"), first);
     form->addRow(QStringLiteral("B:"), second);
-    auto *results = new QLabel(&dialog);
-    results->setWordWrap(true);
+    auto *results = new FunctionMessage(&dialog);
     results->setMinimumWidth(300);
-    results->setMaximumWidth(420);
-    results->setTextInteractionFlags(Qt::TextSelectableByMouse);
     results->setFont(QFontDatabase::systemFont(QFontDatabase::FixedFont));
     form->addRow(results);
     auto *buttons = new QDialogButtonBox(&dialog);
@@ -140,7 +139,7 @@ void measureDialog(QMainWindow *window, CadViewport *viewport) {
             return;
         }
         QApplication::setOverrideCursor(Qt::WaitCursor);
-        const ForgeCad::MeasureReport measure = ForgeCad::measureEntities(entities);
+        const ForgeCad::MeasureReport measure = ForgeCad::measureEntities(entities, &dialog);
         QApplication::restoreOverrideCursor();
         if (!measure.ok) {
             results->setStyleSheet(QStringLiteral("color: #ff7a6a;"));
@@ -235,6 +234,7 @@ QVector<GeometryRef> microFeatureMarks(const ExtrusionObject &body, int index, Q
 
 void shapeAnalysisDialog(QMainWindow *window, CadViewport *viewport) {
     QDialog dialog(window);
+    ForgeCad::setDisplayLengthUnit(viewport->lengthUnit(), &dialog);
     dialog.setWindowTitle(QStringLiteral("Curvatura, zebra e continuità"));
     dialog.resize(660, 600);
     auto *layout = new QVBoxLayout(&dialog);
@@ -480,6 +480,8 @@ void massPropertiesDialog(QWidget *parent, CadViewport *viewport) {
         return;
     }
     FunctionDialogPanel dialog(parent);
+    dialog.setSizeIdentity(QStringLiteral("mass-properties"), {QStringLiteral("Proprieta' di massa")});
+    if (viewport) ForgeCad::setDisplayLengthUnit(viewport->lengthUnit(), &dialog);
     dialog.setWindowTitle(QStringLiteral("Proprieta' di massa"));
     dialog.resize(620, 640);
     auto *layout = new QVBoxLayout(&dialog);
@@ -556,8 +558,8 @@ void massPropertiesDialog(QWidget *parent, CadViewport *viewport) {
             name = bodies.at(index).name;
         }
         const auto num = [](double v, int digits = 6) { return QString::number(v, 'g', digits); };
-        const QString linearUnit = ForgeCad::lengthUnitSymbol(ForgeCad::displayLengthUnit());
-        const double lengthScale = ForgeCad::millimetersPerUnit(ForgeCad::displayLengthUnit());
+        const QString linearUnit = ForgeCad::lengthUnitSymbol(ForgeCad::displayLengthUnit(&dialog));
+        const double lengthScale = ForgeCad::millimetersPerUnit(ForgeCad::displayLengthUnit(&dialog));
         const double inertiaScale = lengthScale * lengthScale;
         QStringList lines;
         QString html = QStringLiteral("<h3>%1</h3>").arg(name.toHtmlEscaped());
@@ -572,23 +574,23 @@ void massPropertiesDialog(QWidget *parent, CadViewport *viewport) {
         }
         html += QStringLiteral("<table>");
         if (r.kind == ForgeCad::MassReport::Kind::Curve) {
-            row(QStringLiteral("Lunghezza"), ForgeCad::formatLength(r.length));
+            row(QStringLiteral("Lunghezza"), ForgeCad::formatLength(r.length, 6, true, &dialog));
             row(QStringLiteral("Baricentro della curva"), QStringLiteral("X %1, Y %2, Z %3")
-                .arg(ForgeCad::formatLength(r.centroid[0]), ForgeCad::formatLength(r.centroid[1]), ForgeCad::formatLength(r.centroid[2])));
+                .arg(ForgeCad::formatLength(r.centroid[0], 6, true, &dialog), ForgeCad::formatLength(r.centroid[1], 6, true, &dialog), ForgeCad::formatLength(r.centroid[2], 6, true, &dialog)));
         } else if (r.kind == ForgeCad::MassReport::Kind::Sheet) {
-            row(QStringLiteral("Area della superficie"), ForgeCad::formatArea(r.area));
+            row(QStringLiteral("Area della superficie"), ForgeCad::formatArea(r.area, 6, true, &dialog));
             if (r.hasCentroid)
                 row(QStringLiteral("Baricentro dell'area"), QStringLiteral("X %1, Y %2, Z %3")
-                    .arg(ForgeCad::formatLength(r.centroid[0]), ForgeCad::formatLength(r.centroid[1]), ForgeCad::formatLength(r.centroid[2])));
+                    .arg(ForgeCad::formatLength(r.centroid[0], 6, true, &dialog), ForgeCad::formatLength(r.centroid[1], 6, true, &dialog), ForgeCad::formatLength(r.centroid[2], 6, true, &dialog)));
         } else {
             const double mass = rho * r.volume;
-            row(QStringLiteral("Volume"), ForgeCad::formatVolume(r.volume));
-            row(QStringLiteral("Area della superficie"), ForgeCad::formatArea(r.area));
+            row(QStringLiteral("Volume"), ForgeCad::formatVolume(r.volume, 6, true, &dialog));
+            row(QStringLiteral("Area della superficie"), ForgeCad::formatArea(r.area, 6, true, &dialog));
             row(QStringLiteral("Densita'"), num(densityBox->value()) + QStringLiteral(" g/cm³"));
             row(QStringLiteral("Massa"), QStringLiteral("<b>%1 g</b> (%2 kg)").arg(num(mass, 9), num(mass * 1e-3, 9)));
             if (r.hasCentroid) {
                 row(QStringLiteral("Baricentro"), QStringLiteral("X %1, Y %2, Z %3")
-                    .arg(ForgeCad::formatLength(r.centroid[0]), ForgeCad::formatLength(r.centroid[1]), ForgeCad::formatLength(r.centroid[2])));
+                    .arg(ForgeCad::formatLength(r.centroid[0], 6, true, &dialog), ForgeCad::formatLength(r.centroid[1], 6, true, &dialog), ForgeCad::formatLength(r.centroid[2], 6, true, &dialog)));
                 // Momenti (Ixx = \\int (y^2 + z^2) dm) e prodotti d'inerzia (Pxy = \\int x y dm), in g mm^2.
                 const auto tensorRows = [&](const double t[3][3], const QString &where) {
                     row(QStringLiteral("Momenti d'inerzia %1").arg(where),
@@ -608,7 +610,7 @@ void massPropertiesDialog(QWidget *parent, CadViewport *viewport) {
                         QStringLiteral("%1 g·%2² lungo (%3, %4, %5), raggio d'inerzia %6")
                             .arg(num(rho * moments[k] / inertiaScale, 9), linearUnit, num(axes[0][k], 6),
                                  num(axes[1][k], 6), num(axes[2][k], 6),
-                                 ForgeCad::formatLength(r.volume > 0.0 ? std::sqrt(std::max(0.0, moments[k]) / r.volume) : 0.0, 6)));
+                                 ForgeCad::formatLength(r.volume > 0.0 ? std::sqrt(std::max(0.0, moments[k]) / r.volume) : 0.0, 6, true, &dialog)));
                 const double origin[3] = {0.0, 0.0, 0.0};
                 double about[3][3];
                 ForgeCad::inertiaAbout(r, origin, about);

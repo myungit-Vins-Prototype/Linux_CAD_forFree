@@ -662,6 +662,37 @@ std::map<QString, Draw> &registry() {
         line(p, {13.5, 12.5}, {18, 11.3}, stroke(c.accent, 1.4));
         arrowHead(p, {20, 10.8}, {14, 12.4}, c.accent, 3.4);
     };
+    icons["surfaceExtendTo"] = [](QPainter &p, const IconPalette &c) {
+        polygon(p,QPolygonF{{2,9},{10,6},{10,20},{2,22}},c.faceMid,stroke(c.ink,1));
+        polygon(p,QPolygonF{{10,6},{19,3},{19,17},{10,20}},c.faceLight,stroke(c.accent,1,Qt::DashLine));
+        line(p,{19,2},{19,20},stroke(c.construction,2.8));
+        line(p,{11,12},{18,10},stroke(c.accent,1.7));
+        arrowHead(p,{18,10},{11,12},c.accent,3.8);
+        line(p,{20,4},{23,6},stroke(c.construction,1));
+        line(p,{20,10},{23,12},stroke(c.construction,1));
+        line(p,{20,16},{23,18},stroke(c.construction,1));
+    };
+    icons["surfaceNetwork"] = [](QPainter &p, const IconPalette &c) {
+        p.setBrush(Qt::NoBrush);
+        for(int i=0;i<3;++i) {
+            QPainterPath row(QPointF(2,6+6*i));row.cubicTo(8,2+6*i,15,10+6*i,22,5+6*i);
+            p.setPen(stroke(c.construction,1.6));p.drawPath(row);
+            QPainterPath column(QPointF(4+7*i,3));column.cubicTo(1+7*i,9,8+7*i,14,3+7*i,22);
+            p.setPen(stroke(c.accent,1.6));p.drawPath(column);
+        }
+        dot(p,{12,12},c.ink,1.7);
+    };
+    icons["surfacePoles"] = [](QPainter &p, const IconPalette &c) {
+        p.setBrush(Qt::NoBrush);
+        for(int i=0;i<3;++i) {
+            line(p,{3.,4.+7*i},{17.,4.+7*i},stroke(c.construction,1,Qt::DashLine));
+            line(p,{3.+7*i,4.},{3.+7*i,18.},stroke(c.construction,1,Qt::DashLine));
+        }
+        for(int i=0;i<3;++i)for(int j=0;j<3;++j)square(p,{3.+7*i,4.+7*j},c.ink,1.2);
+        square(p,{10,11},c.accent,2.2);
+        line(p,{10,11},{22,9},stroke(c.accent,1.7));arrowHead(p,{22,9},{10,11},c.accent,3.6);
+        line(p,{10,11},{12,1},stroke(c.confirm,1.5));arrowHead(p,{12,1},{10,11},c.confirm,3);
+    };
     icons["offsetSurface"] = [](QPainter &p, const IconPalette &c) {
         // Una superficie curva e la sua copia a distanza, con la freccia della normale.
         QPainterPath base;

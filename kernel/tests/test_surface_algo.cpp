@@ -8,6 +8,7 @@
 
 #include "fk_surface_algo.h"
 #include "fk_nurbs.h"
+#include "fk_curve_ops.h"
 #include "fk_test_util.h"
 
 using namespace fktest;
@@ -250,4 +251,32 @@ FK_TEST(ProjectOnSkewRevolutionWindows) {
         for(int i=0;i<=20;++i) for(int j=0;j<=20;++j)
             FK_CHECK(result.distance <= distance(p,surface.point(u.lo+u.length()*i/20.0,v.lo+v.length()*j/20.0))+1e-9);
     }
+}
+
+FK_TEST(SameExtrusionSurfaceRequiresWholeCurveCertificate) {
+    // Ogni campata cubica interseca il piano all'inizio, a meta' e alla fine:
+    // tre campioni la scambiavano per la curva piatta, pur discostandosi di 0.28125.
+    std::vector<double> knots(4, 0.0);
+    std::vector<Vec3> wave{{0, 0, 0}}, flat{{0, 0, 0}};
+    for (int i = 0; i < 40; ++i) {
+        wave.insert(wave.end(), {{i + 1.0 / 3, 1, 0}, {i + 2.0 / 3, -1, 0}, {double(i + 1), 0, 0}});
+        flat.insert(flat.end(), {{i + 1.0 / 3, 0, 0}, {i + 2.0 / 3, 0, 0}, {double(i + 1), 0, 0}});
+        knots.insert(knots.end(), i == 39 ? 4 : 3, double(i + 1));
+    }
+    const auto a = std::make_shared<BSplineCurve<3>>(3, knots, wave);
+    const auto b = std::make_shared<BSplineCurve<3>>(3, knots, flat);
+    const ExtrusionSurface waved(a, Vec3(0, 0, 1)), plane(b, Vec3(0, 0, 1));
+    FK_CHECK_NEAR(projectPoint(plane, waved.point(0.25, 0)).distance, 0.28125, 1e-12);
+    FK_CHECK(!sameSurface(waved, plane, 1e-9));
+    FK_CHECK(!sameSurface(plane, waved, 1e-9));
+    FK_CHECK(sameSurface(waved, ExtrusionSurface(translatedCurve<3>(a, Vec3(0, 0, 7)), Vec3(0, 0, -1)), 1e-9));
+    FK_CHECK(sameSurface(waved, ExtrusionSurface(reversedCurve<3>(a), Vec3(0, 0, 1)), 1e-9));
+    FK_CHECK(sameSurface(waved, ExtrusionSurface(std::make_shared<BSplineCurve<3>>(a->insertKnot(0.25)), Vec3(0, 0, 1)), 1e-9));
+    FK_CHECK(!sameSurface(waved, ExtrusionSurface(translatedCurve<3>(a, Vec3(0, 0.01, 0)), Vec3(0, 0, 1)), 1e-9));
+
+    const auto rational = std::make_shared<BSplineCurve<3>>(3, std::vector<double>{0,0,0,0,1,1,1,1},
+        std::vector<Vec3>{{0,0,0},{1,2,0},{3,2,0},{4,0,0}}, std::vector<double>{1,0.5,2,1});
+    const ExtrusionSurface curved(rational, Vec3(0, 0, 1));
+    FK_CHECK(sameSurface(curved, ExtrusionSurface(std::make_shared<BSplineCurve<3>>(rational->insertKnot(0.5)), Vec3(0, 0, 1)), 1e-9));
+    FK_CHECK(sameSurface(curved, ExtrusionSurface(translatedCurve<3>(rational, Vec3(0,0,10)), Vec3(0, 0, 1)), 1e-9));
 }

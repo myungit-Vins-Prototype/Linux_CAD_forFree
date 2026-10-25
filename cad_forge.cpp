@@ -176,13 +176,6 @@ static ForgeBody declaredExtrusionRoot(Body body, const ExtrusionProvenance &pro
     return result;
 }
 
-static ForgeBody extrusionBoolean(const ForgeBody &a, const ForgeBody &b, Kernel::BooleanOperation operation) {
-    BodyHistory history;
-    Body body = booleanOperation(*a, *b, operation, {}, &history);
-    const ForgeBody result = std::make_shared<const Body>(std::move(body));
-    registerDeclaredHistory(result, {a, b}, std::move(history));
-    return result;
-}
 
 void forgeSketchFrame(const SketchObject &sketch, double distance, Frame3 &frame, double &height) {
     frame = sketchAxes(sketch);
@@ -247,7 +240,7 @@ ForgeBody forgeExtrusion(const SketchObject &sketch, double distance, QString *e
         ForgeBody result = solid(profile.regions.front(), origins);
         for (std::size_t i = 1; i < profile.regions.size(); ++i) {
             const auto next = solid(profile.regions[i], origins);
-            result = extrusionBoolean(result, next, Kernel::BooleanOperation::Unite);
+            result = forgeBooleanWithHistory(result, next, Kernel::BooleanOperation::Unite);
         }
         return result;
     } catch (const std::exception &failure) {
@@ -363,7 +356,7 @@ ForgeBody forgeRevolution(const SketchObject &sketch, const QPointF &point, cons
         };
         ForgeBody result = solid(profile.regions.front());
         for (std::size_t i = 1; i < profile.regions.size(); ++i)
-            result = extrusionBoolean(result, solid(profile.regions[i]), Kernel::BooleanOperation::Unite);
+            result = forgeBooleanWithHistory(result, solid(profile.regions[i]), Kernel::BooleanOperation::Unite);
         return result;
     } catch (const std::exception &failure) {
         setError(error, QStringLiteral("Rivoluzione non riuscita: %1").arg(QString::fromUtf8(failure.what())));
@@ -1075,6 +1068,14 @@ ForgeBody forgeSew(const QVector<ForgeBody> &sheets, double tolerance, bool soli
     }
 }
 
+ForgeBody forgeBooleanWithHistory(const ForgeBody &first, const ForgeBody &second, Kernel::BooleanOperation operation) {
+    Kernel::BodyHistory history;
+    auto body = Kernel::booleanOperation(*first, *second, operation, {}, &history);
+    const auto result = std::make_shared<const Kernel::Body>(std::move(body));
+    registerDeclaredHistory(result, {first, second}, std::move(history));
+    return result;
+}
+
 ForgeBody forgeBoolean(const ForgeBody &first, const ForgeBody &second, ::BooleanOperation operation, QString *error) {
     if (!first || !second) {
         setError(error, QStringLiteral("Uno degli operandi non ha geometria valida."));
@@ -1324,7 +1325,7 @@ ForgeBody forgeThread(const ForgeBody &baseBody, const ThreadParameters &paramet
         const Body cutter = sweptHelicalTool(helix, polygon, profileFrame);
         const auto tool=std::make_shared<const Body>(cutter);
         registerDeclaredHistory(tool,{baseBody},Kernel::detail::generatedFaces(*baseBody,*tool,{{0,EntityKind::Face,info.face,HistoryRelation::Generated}}));
-        const auto result=extrusionBoolean(baseBody,tool,info.internal?Kernel::BooleanOperation::Subtract:Kernel::BooleanOperation::Unite);
+        const auto result=forgeBooleanWithHistory(baseBody,tool,info.internal?Kernel::BooleanOperation::Subtract:Kernel::BooleanOperation::Unite);
         if (result->faces().empty()) throw std::domain_error("il filetto non interseca il corpo");
         return result;
     } catch (const std::exception &failure) {

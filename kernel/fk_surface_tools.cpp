@@ -119,12 +119,13 @@ Body extendSheetTo(const Body &sheet, EdgeId edge, const Body &tool, double maxi
     computePCurves(original);
     computePCurves(cutter);
     const auto expanded = extendSheet(original, {edge}, maximum, linear);
-    demand(splitSheet(expanded, tool, options).size() > 1,
+    auto pieces = splitSheet(expanded, tool, options);
+    demand(pieces.size() > 1,
            "estensione: il riferimento non taglia il prolungamento entro la distanza massima");
     Vec3 keep;
     demand(!sheet.faces().empty() && faceInteriorPoint(sheet, sheet.faces().front(), keep),
            "estensione: punto interno della base non disponibile");
-    auto result = trimSheet(expanded, tool, keep, tolerance);
+    auto result = std::move(pieces[detail::closestSheetPiece(pieces, keep)]);
     computePCurves(result);
     for (const auto e : sheet.edges())
         for (int k = 0; k <= 8; ++k) {

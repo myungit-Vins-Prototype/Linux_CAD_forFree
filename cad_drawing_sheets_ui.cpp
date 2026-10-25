@@ -1,5 +1,6 @@
 #include "cad_drawing_window.h"
 #include "cad_drawing_focus.h"
+#include "cad_drawing_compute.h"
 #include "cad_menu.h"
 #include <QAction>
 #include <QComboBox>
@@ -135,12 +136,30 @@ QString DrawingWindow::removeSheet(int index){
 QString DrawingWindow::updateSheetsModel(DrawingFile prepared,DrawingEditorModel model){
     const bool previousBusy=busy_;busy_=true;refreshTitle();
     const auto finish=[&](QString error){busy_=previousBusy;refreshEditAccess();refreshTitle();return error;};
-    // Prepara tutti i fogli senza modificare documento, editor attivo o storia.
-    try{for(int i=0;i<drawingSheetCount(drawing_);++i){DrawingSheetEditor scratch(drawingSheetAt(drawing_,i),model_);scratch.setReadOnly(false);const auto error=scratch.updateModel(model);if(!error.isEmpty())return finish(error);drawingSheetAt(prepared,i)=scratch.sheet();}
-        synchronizeDrawingFileVersions(prepared);QByteArray bytes;const auto valid=encodeDrawingFile(prepared,bytes);if(!valid.isEmpty())return finish(valid);
-        restoringSheets_=true;const bool readOnly=editor_->isReadOnly();editor_->setReadOnly(false);const auto error=editor_->updateModel(model);restoringSheets_=false;editor_->setReadOnly(readOnly);if(!error.isEmpty())return finish(error);
-        drawing_=std::move(prepared);model_=std::move(model);const auto loaded=editor_->loadSheet(drawingSheetAt(drawing_,activeSheet_));if(!loaded.isEmpty())return finish(loaded);modified_=true;containerDirty_=true;resetSheetsHistory(false);return finish({});
-    }catch(const std::exception &error){restoringSheets_=false;return finish(QString::fromUtf8(error.what()));}
+    // Prepara dati e geometria una sola volta per foglio, senza editor temporanei.
+    // Nessuna mutazione fino alla validazione di tutti i fogli e del contenitore.
+    try{
+        PreparedDrawingSheet active;
+        for(int i=0;i<drawingSheetCount(drawing_);++i){
+            auto sheet=retargetDrawingSheetModel(drawingSheetAt(drawing_,i),model);
+            PreparedDrawingSheet result;
+            if(sheet.drawing.views.empty())result=prepareDrawingSheet(std::move(sheet),model,[](int){});
+            else{
+                bool computing=false;
+                const auto error=runDrawingComputation(this,computing,QStringLiteral("Aggiorna foglio %1 di %2").arg(i+1).arg(drawingSheetCount(drawing_)),result,
+                    [sheet=std::move(sheet),model](auto phase)mutable{return prepareDrawingSheet(std::move(sheet),model,phase);});
+                if(!error.isEmpty())return finish(error);
+            }
+            drawingSheetAt(prepared,i)=result.sheet;
+            if(i==activeSheet_)active=std::move(result);
+        }
+        synchronizeDrawingFileVersions(prepared);
+        QByteArray bytes;const auto valid=encodeDrawingFile(prepared,bytes);if(!valid.isEmpty())return finish(valid);
+        active.sheet=drawingSheetAt(prepared,activeSheet_);
+        editor_->installPreparedModel(std::move(active));
+        drawing_=std::move(prepared);model_=std::move(model);modified_=true;containerDirty_=true;
+        resetSheetsHistory(false);return finish({});
+    }catch(const std::exception &error){return finish(QString::fromUtf8(error.what()));}
 }
 void DrawingWindow::showNewSheetDialog(){
     if(!sheetMutationError().isEmpty())return;

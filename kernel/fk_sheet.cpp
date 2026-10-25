@@ -267,6 +267,17 @@ Body extendPlanarFace(const Body &body, const std::vector<EdgeId> &selected, dou
     return result;
 }
 
+std::size_t detail::closestSheetPiece(const std::vector<Body> &pieces, const Vec3 &keep) {
+    if (pieces.empty()) throw std::invalid_argument("closestSheetPiece: nessun pezzo");
+    std::size_t best = 0;
+    double closest = 1e300;
+    for (std::size_t i = 0; i < pieces.size(); ++i) {
+        const double d = distanceToSheet(pieces[i], keep);
+        if (d < closest) closest = d, best = i;
+    }
+    return best;
+}
+
 Body trimSheet(const Body &sheet, const Body &tool, const Vec3 &keep, double tolerance, BodyHistory *history) {
     if(history)*history={};
     if (!sheet.isSheet()) throw std::domain_error("trimSheet: si tagliano solo le superfici (lamine)");
@@ -275,12 +286,7 @@ Body trimSheet(const Body &sheet, const Body &tool, const Vec3 &keep, double tol
     std::vector<BodyHistory> emitted;
     const std::vector<Body> pieces = splitSheet(sheet, tool, options, history?&emitted:nullptr);
     if (pieces.size() < 2) throw std::domain_error("trimSheet: lo strumento non divide la superficie");
-    std::size_t best = 0;
-    double closest = 1e300;
-    for (std::size_t i = 0; i < pieces.size(); ++i) {
-        const double d = distanceToSheet(pieces[i], keep);
-        if (d < closest) closest = d, best = i;
-    }
+    const std::size_t best = detail::closestSheetPiece(pieces, keep);
     if(history)*history=std::move(emitted[best]);
     return pieces[best];
 }

@@ -82,6 +82,42 @@ int main() {
         extrusion.booleanTools = {3};
         require(bodyOperands(extrusion) == QVector<int>({1, 2, 3}) && sketchesOf(extrusion).isEmpty(),
                 "booleana: soli operandi, nessuna dipendenza residua dal profilo");
+        ExtrusionObject surface;
+        surface.feature = BodyFeature::SurfaceTools;
+        surface.firstBody = 1;
+        surface.surfaceTool.targets = {reference(5, 4), reference(5, 4), reference(7, 6)};
+        surface.ruledFirst = {reference(9, 5), reference(7, 7)};
+        surface.ruledSecond = {reference(9, 4), reference(7, 6)};
+        surface.extentRef = reference(5, 99);
+        require(bodyOperands(surface) == QVector<int>({1, 4, 5}) && sketchesOf(surface) == QVector<int>({6, 7}),
+                "multi-target e rete conservano ordine, deduplica e priorita' sul riferimento legacy");
+        surface.surfaceTool.mode = 1;
+        require(bodyOperands(surface) == QVector<int>({4, 5}), "rete non eredita la superficie sorgente");
+        surface.surfaceTool.mode = 0;
+        surface.surfaceTool.targets.clear();
+        require(bodyOperands(surface) == QVector<int>({1, 5, 4, 99}), "riferimento legacy accodato solo senza target multipli");
+        surface.extentRef = reference(7, 9);
+        require(sketchesOf(surface) == QVector<int>({9, 7, 6}), "riferimento schizzo legacy precede le famiglie di curve");
+
+        ExtrusionObject extraction;
+        extraction.feature = BodyFeature::ExtractedCurve;
+        extraction.curveExtraction.source = reference(9, 88);
+        extraction.curveExtraction.sources = {reference(9, 3), reference(9, 3), reference(7, 4)};
+        extraction.curveExtraction.tool = reference(9, 5);
+        require(bodyOperands(extraction) == QVector<int>({3}) && sketchesOf(extraction) == QVector<int>({4}),
+                "estrazione multipla ignora sorgente legacy e strumento inattivo");
+        extraction.curveExtraction.trimmed = true;
+        require(bodyOperands(extraction) == QVector<int>({3, 5}) && hiddenOperands(extraction) == QVector<int>({3}),
+                "strumento di taglio dipendenza attiva ma non corpo sostituito");
+        extraction.curveExtraction.sources.clear();
+        require(bodyOperands(extraction) == QVector<int>({88, 5}) && hiddenOperands(extraction) == QVector<int>({88}),
+                "estrazione legacy preservata se manca elenco multiplo");
+
+        ExtrusionObject datum;
+        datum.feature = BodyFeature::DatumPlane;
+        datum.datum.refs = {reference(5, 3), reference(5, 3), reference(7, 4), reference(7, 4)};
+        require(bodyOperands(datum) == QVector<int>({3, 3}) && sketchesOf(datum) == QVector<int>({4, 4}),
+                "policy datum conserva riferimenti ripetuti, distinta dalle superfici");
         std::cout << "Dipendenze delle feature senza GUI: OK\n";
     } catch (const std::exception &failure) {
         std::cerr << failure.what() << '\n';

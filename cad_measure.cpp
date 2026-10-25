@@ -33,10 +33,10 @@ QString number(double value, int decimals = 6) {
     }
     return text == QStringLiteral("-0") ? QStringLiteral("0") : text;
 }
-QString length(double value) { return formatLength(value, 6); }
+
 QString angle(double radians) { return number(radians * kDegrees, 6) + QStringLiteral("°"); }
-QString point(const Vec3 &p) {
-    return QStringLiteral("(%1; %2; %3)").arg(formatLength(p.x(), 6, false), formatLength(p.y(), 6, false), formatLength(p.z(), 6));
+QString formattedPoint(const Vec3 &p, const QObject *context) {
+    return QStringLiteral("(%1; %2; %3)").arg(formatLength(p.x(), 6, false, context), formatLength(p.y(), 6, false, context), formatLength(p.z(), 6, true, context));
 }
 QString vector(const Vec3 &d) { return QStringLiteral("(%1; %2; %3)").arg(number(d.x()), number(d.y()), number(d.z())); }
 
@@ -512,7 +512,9 @@ double lineAngle(const Vec3 &a, const Vec3 &b) {
     return std::atan2(norm(cross(a, b)), std::fabs(dot(a, b)));  // [0, 90 gradi]
 }
 
-void describe(const MeasureEntity &e, QStringList &lines, QString &label) {
+void describe(const MeasureEntity &e, QStringList &lines, QString &label, const QObject *context) {
+    const auto length = [context](double value) { return formatLength(value, 6, true, context); };
+    const auto point = [context](const Vec3 &value) { return formattedPoint(value, context); };
     using K = MeasureEntity::Kind;
     switch (e.kind) {
     case K::Point:
@@ -561,8 +563,8 @@ void describe(const MeasureEntity &e, QStringList &lines, QString &label) {
         const double area = faceArea(body, e.face, 1e-10);
         double perimeter = 0.0;
         for (EdgeId edge : faceBoundaryEdges(body, e.face)) perimeter += arcLength(*body.edge(edge).curve, body.edge(edge).range, 1e-10);
-        lines << QStringLiteral("Area: %1").arg(formatArea(area, 6)) << QStringLiteral("Perimetro: %1").arg(length(perimeter));
-        label = QStringLiteral("A %1").arg(formatArea(area, 4));
+        lines << QStringLiteral("Area: %1").arg(formatArea(area, 6, true, context)) << QStringLiteral("Perimetro: %1").arg(length(perimeter));
+        label = QStringLiteral("A %1").arg(formatArea(area, 4, true, context));
         const Surface &s = *face.surface;
         switch (s.type()) {
         case SurfaceType::Plane: {
@@ -681,11 +683,13 @@ bool measureEntity(const GeometryRef &ref, const QVector<SketchObject> &sketches
     }
 }
 
-MeasureReport measureEntities(const QVector<MeasureEntity> &entities) {
+MeasureReport measureEntities(const QVector<MeasureEntity> &entities, const QObject *context) {
+    const auto length = [context](double value) { return formatLength(value, 6, true, context); };
+    const auto point = [context](const Vec3 &value) { return formattedPoint(value, context); };
     MeasureReport report;
     try {
         if (entities.size() == 1) {
-            describe(entities.first(), report.lines, report.label);
+            describe(entities.first(), report.lines, report.label, context);
             report.ok = true;
             return report;
         }

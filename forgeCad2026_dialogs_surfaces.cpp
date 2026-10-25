@@ -83,6 +83,8 @@ bool sweepDialog(QWidget *parent, CadViewport *viewport, const QString &title, i
     for (int index = 0; index < limit; ++index)
         if (ForgeCad::isCurveBody(bodies.at(index)) && bodies.at(index).curve) curves.append(index);
     FunctionDialogPanel dialog(parent);
+    dialog.setSizeIdentity(QStringLiteral("sweep"), {QStringLiteral("sweepDialog")});
+    if (viewport) ForgeCad::setDisplayLengthUnit(viewport->lengthUnit(), &dialog);
     dialog.setWindowTitle(title);
     dialog.setObjectName(QStringLiteral("sweepDialog"));
     auto *form = dialog.createScrollableForm();
@@ -95,8 +97,7 @@ bool sweepDialog(QWidget *parent, CadViewport *viewport, const QString &title, i
     auto *pickProfile = new QPushButton(QStringLiteral("Seleziona sezione nella vista"), &dialog);
     pickProfile->setObjectName(QStringLiteral("sweepPickProfile"));
     pickProfile->setCheckable(true);
-    auto *profileStatus = new QLabel(&dialog); profileStatus->setWordWrap(true);
-    auto *profileBox = new QComboBox(&dialog), *pathTypeBox = new QComboBox(&dialog), *pathSketchBox = new QComboBox(&dialog),
+    auto *profileStatus = new FunctionMessage(&dialog); auto *profileBox = new QComboBox(&dialog), *pathTypeBox = new QComboBox(&dialog), *pathSketchBox = new QComboBox(&dialog),
          *pathChainBox = new QComboBox(&dialog), *curveBox = new QComboBox(&dialog);
     for (const SketchObject &sketch : sketches) {
         profileBox->addItem(sketch.name);
@@ -136,9 +137,8 @@ bool sweepDialog(QWidget *parent, CadViewport *viewport, const QString &title, i
     help->setMaximumWidth(360);
     help->setStyleSheet(QStringLiteral("color: #8aa0b4;"));
     auto *pickPath = new QPushButton(QStringLiteral("Seleziona percorso nella vista"), &dialog);
-    auto *pathStatus = new QLabel(&dialog); pathStatus->setWordWrap(true);
-    auto *pickStatus = new QLabel(QStringLiteral("Puoi scegliere una singola catena cliccando una sua entità nella scena."), &dialog);
-    pickStatus->setWordWrap(true); pickStatus->setStyleSheet(QStringLiteral("color: #8aa0b4;"));
+    auto *pathStatus = new FunctionMessage(&dialog); auto *pickStatus = new FunctionMessage(QStringLiteral("Puoi scegliere una singola catena cliccando una sua entità nella scena."), &dialog);
+    pickStatus->setStyleSheet(QStringLiteral("color: #8aa0b4;"));
     pickPath->setObjectName(QStringLiteral("sweepPickPath"));
     pickPath->setCheckable(true);
     form->addRow(QStringLiteral("Sezione:"), profileSource);
@@ -319,6 +319,8 @@ bool loftDialog(QWidget *parent, CadViewport *viewport, const QString &title, in
                        const std::function<QString(const ExtrusionObject &)> &apply) {
     const QVector<SketchObject> &sketches = viewport->sketches();
     FunctionDialogPanel dialog(parent);
+    dialog.setSizeIdentity(QStringLiteral("loft"), {QStringLiteral("loftDialog")});
+    if (viewport) ForgeCad::setDisplayLengthUnit(viewport->lengthUnit(), &dialog);
     dialog.setObjectName(QStringLiteral("loftDialog"));
     dialog.setWindowTitle(title);
     dialog.setMinimumSize(480, 360);
@@ -465,8 +467,7 @@ bool loftDialog(QWidget *parent, CadViewport *viewport, const QString &title, in
     guideButtonsLayout->addWidget(removeGuide); guideButtonsLayout->addStretch(1);
     auto *pickGuides = new QPushButton(QStringLiteral("Scegli guide nella vista"), &dialog);
     pickGuides->setObjectName(QStringLiteral("loftPickGuides"));
-    auto *pickStatus = new QLabel(QStringLiteral("Spunta gli schizzi interi oppure scegli bordi e curve nella vista; un secondo clic li toglie."), &dialog);
-    pickStatus->setWordWrap(true);
+    auto *pickStatus = new FunctionMessage(QStringLiteral("Spunta gli schizzi interi oppure scegli bordi e curve nella vista; un secondo clic li toglie."), &dialog);
     const auto influence = [&](double value) {
         auto *spin = new QDoubleSpinBox(&dialog);
         spin->setRange(0.0, 100.0);
@@ -755,6 +756,8 @@ bool projectionDialog(QMainWindow *window, CadViewport *viewport, const QString 
     if (!candidates.contains(definition.firstBody)) definition.firstBody = candidates.last();
     if (definition.sketchIndex < 0 || definition.sketchIndex >= viewport->sketches().size()) definition.sketchIndex = viewport->sketches().size() - 1;
     FunctionDialogPanel dialog(window);
+    dialog.setSizeIdentity(QStringLiteral("projection"));
+    if (viewport) ForgeCad::setDisplayLengthUnit(viewport->lengthUnit(), &dialog);
     dialog.setWindowTitle(title);
     auto *form = dialog.createScrollableForm();
     auto *bodyBox = new QComboBox(&dialog);
@@ -772,19 +775,15 @@ bool projectionDialog(QMainWindow *window, CadViewport *viewport, const QString 
                                             "prima faccia del corpo che incontra: la curva sta sulla superficie esatta entro 1e-8 mm. Le entita' "
                                             "collegate danno una sola curva per catena. Di default si proietta verso il corpo. Per tagliare una "
                                             "superficie con lo schizzo proiettato: Taglia superficie, strumento lo schizzo."), &dialog));
-    auto *result = new QLabel(&dialog);
-    result->setWordWrap(true);
-    result->setMaximumWidth(360);
+    auto *result = new FunctionMessage(&dialog);
     result->setStyleSheet(QStringLiteral("color: #9fc6e8;"));
     form->addRow(QStringLiteral("Esito:"), result);
-    auto *status = new QLabel(&dialog);
-    status->setWordWrap(true);
-    status->setMaximumWidth(360);
+    auto *status = new FunctionMessage(&dialog);
     form->addRow(status);
     auto *buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dialog);
     form->addRow(buttons);
     PreviewScope scope(viewport, dialog, form, replaced);
-    QLabel *previewLabel = scope.label;
+    FunctionMessage *previewLabel = scope.label;
     viewport->setPreviewCallback([previewLabel, result, viewport](const QString &error) {
         previewLabel->setText(error.isEmpty() ? QStringLiteral("pronta (in ambra nella vista)") : QStringLiteral("non riuscita: ") + error);
         result->setText(error.isEmpty() ? viewport->previewNotice() : QString());
@@ -832,6 +831,8 @@ bool thickenDialog(QMainWindow *window, CadViewport *viewport, const QString &ti
     }
     if (!(definition.distance > 0.0)) definition.distance = 1.0;
     FunctionDialogPanel dialog(window);
+    dialog.setSizeIdentity(QStringLiteral("thicken"));
+    if (viewport) ForgeCad::setDisplayLengthUnit(viewport->lengthUnit(), &dialog);
     dialog.setWindowTitle(title);
     auto *form = dialog.createScrollableForm();
     auto *bodyBox = new QComboBox(&dialog);
@@ -859,9 +860,7 @@ bool thickenDialog(QMainWindow *window, CadViewport *viewport, const QString &ti
     auto *directionLabel = new QLabel(&dialog);
     directionLabel->setWordWrap(true);
     directionLabel->setMaximumWidth(360);
-    auto *status = new QLabel(&dialog);
-    status->setWordWrap(true);
-    status->setMaximumWidth(360);
+    auto *status = new FunctionMessage(&dialog);
     form->addRow(QStringLiteral("Corpo:"), bodyBox);
     form->addRow(QStringLiteral("Facce:"), faces);
     form->addRow(faceCount);
@@ -1068,6 +1067,8 @@ bool offsetDialog(QMainWindow *window, CadViewport *viewport, const QString &tit
     bool waiting = replaced < 0 && !candidates.contains(definition.firstBody);
     if (waiting) definition.firstBody = candidates.last();
     FunctionDialogPanel dialog(window);
+    dialog.setSizeIdentity(shell ? QStringLiteral("shell") : removal ? QStringLiteral("delete-face") : QStringLiteral("surface-offset"));
+    if (viewport) ForgeCad::setDisplayLengthUnit(viewport->lengthUnit(), &dialog);
     dialog.setWindowTitle(title);
     dialog.setModal(false);
     auto *form = dialog.createScrollableForm();
@@ -1130,10 +1131,8 @@ bool offsetDialog(QMainWindow *window, CadViewport *viewport, const QString &tit
     sewBox->setChecked(definition.offsetSew);
     sewBox->setVisible(!removal);
     if (!removal) form->addRow(sewBox);
-    auto *status = new QLabel(&dialog);
-    status->setWordWrap(true);
+    auto *status = new FunctionMessage(&dialog);
     status->setMinimumWidth(280);
-    status->setMaximumWidth(360);
     form->addRow(status);
     auto *buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dialog);
     form->addRow(buttons);
@@ -1325,6 +1324,8 @@ bool ruledDialog(QMainWindow *window, CadViewport *viewport, const QString &titl
     definition.operation = -1;
     definition.feature = BodyFeature::Ruled;
     FunctionDialogPanel dialog(window);
+    dialog.setSizeIdentity(QStringLiteral("ruled"));
+    if (viewport) ForgeCad::setDisplayLengthUnit(viewport->lengthUnit(), &dialog);
     dialog.setWindowTitle(title);
     dialog.setModal(false);
     auto *form = dialog.createScrollableForm();
@@ -1353,10 +1354,8 @@ bool ruledDialog(QMainWindow *window, CadViewport *viewport, const QString &titl
     form->addRow(QString(), loopBox);
     form->addRow(wrappedNote(QStringLiteral("Ogni curva e' una catena di tratti consecutivi (spigoli dei corpi, entita' degli schizzi, "
                                            "eliche), aperta o chiusa come l'altra. Le rette uniscono i punti alla stessa frazione di lunghezza."), &dialog));
-    auto *status = new QLabel(&dialog);
-    status->setWordWrap(true);
+    auto *status = new FunctionMessage(&dialog);
     status->setMinimumWidth(280);
-    status->setMaximumWidth(360);
     form->addRow(status);
     auto *buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dialog);
     form->addRow(buttons);
@@ -1436,6 +1435,8 @@ bool boundaryDialog(QMainWindow *window, CadViewport *viewport, const QString &t
     definition.operation = -1;
     definition.feature = BodyFeature::BoundarySurface;
     FunctionDialogPanel dialog(window);
+    dialog.setSizeIdentity(QStringLiteral("boundary"));
+    if (viewport) ForgeCad::setDisplayLengthUnit(viewport->lengthUnit(), &dialog);
     dialog.setWindowTitle(title);
     dialog.setModal(false);
     auto *form = dialog.createScrollableForm();
@@ -1457,10 +1458,8 @@ bool boundaryDialog(QMainWindow *window, CadViewport *viewport, const QString &t
     form->addRow(wrappedNote(QStringLiteral("Le curve, in qualsiasi ordine, devono formare un contorno chiuso anche sghembo. Gli angoli vivi "
                                            "dividono il contorno in 3 o 4 lati (un contorno liscio in 4 parti uguali); la superficie li "
                                            "raccorda come una patch di Coons."), &dialog));
-    auto *status = new QLabel(&dialog);
-    status->setWordWrap(true);
+    auto *status = new FunctionMessage(&dialog);
     status->setMinimumWidth(280);
-    status->setMaximumWidth(360);
     form->addRow(status);
     auto *buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dialog);
     form->addRow(buttons);
@@ -1532,6 +1531,8 @@ bool fillDialog(QMainWindow *window, CadViewport *viewport, const QString &title
     definition.operation = -1;
     definition.feature = BodyFeature::FillSurface;
     FunctionDialogPanel dialog(window);
+    dialog.setSizeIdentity(QStringLiteral("fill"), {QStringLiteral("fillDialog")});
+    if (viewport) ForgeCad::setDisplayLengthUnit(viewport->lengthUnit(), &dialog);
     dialog.setObjectName(QStringLiteral("fillDialog"));
     dialog.setWindowTitle(title);
     dialog.setModal(false);
@@ -1618,20 +1619,16 @@ bool fillDialog(QMainWindow *window, CadViewport *viewport, const QString &title
                                            "tangenza o in curvatura; vicino a quei bordi le guide pesano meno, cosi' una guida che arriva "
                                            "con un'altra pendenza non crea una piega. In G1 la curvatura delle facce suggerisce la forma del "
                                            "raccordo; in G2 viene richiesta anche la continuita' di curvatura. L'influenza regola la forma."), &dialog));
-    auto *result = new QLabel(&dialog);
-    result->setWordWrap(true);
-    result->setMaximumWidth(360);
+    auto *result = new FunctionMessage(&dialog);
     result->setStyleSheet(QStringLiteral("color: #9fc6e8;"));
     form->addRow(QStringLiteral("Esito:"), result);
-    auto *status = new QLabel(&dialog);
-    status->setWordWrap(true);
+    auto *status = new FunctionMessage(&dialog);
     status->setMinimumWidth(280);
-    status->setMaximumWidth(360);
     form->addRow(status);
     auto *buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dialog);
     form->addRow(buttons);
     auto scope = std::make_unique<PreviewScope>(viewport, dialog, form, replaced);
-    QLabel *previewLabel = scope->label;
+    FunctionMessage *previewLabel = scope->label;
     viewport->setPreviewCallback([previewLabel, result, viewport](const QString &error) {
         previewLabel->setText(error.isEmpty() ? QStringLiteral("pronta (in ambra nella vista)") : QStringLiteral("non riuscita: ") + error);
         result->setText(error.isEmpty() ? viewport->previewNotice() : QString());
@@ -1840,6 +1837,8 @@ bool planarDialog(QMainWindow *window, CadViewport *viewport, const QString &tit
     definition.feature = BodyFeature::PlanarSurface;
     const QVector<SketchObject> &sketches = viewport->sketches();
     FunctionDialogPanel dialog(window);
+    dialog.setSizeIdentity(QStringLiteral("planar"));
+    if (viewport) ForgeCad::setDisplayLengthUnit(viewport->lengthUnit(), &dialog);
     dialog.setWindowTitle(title);
     dialog.setModal(false);
     auto *form = dialog.createScrollableForm();
@@ -1867,10 +1866,8 @@ bool planarDialog(QMainWindow *window, CadViewport *viewport, const QString &tit
     loopBox->setToolTip(QStringLiteral("Un clic su un bordo libero di una superficie sceglie (o toglie) tutto il suo loop"));
     form->addRow(QString(), loopBox);
     form->addRow(wrappedNote(QStringLiteral("I contorni chiusi complanari delimitano la superficie; quelli dentro un altro sono fori."), &dialog));
-    auto *status = new QLabel(&dialog);
-    status->setWordWrap(true);
+    auto *status = new FunctionMessage(&dialog);
     status->setMinimumWidth(280);
-    status->setMaximumWidth(360);
     form->addRow(status);
     auto *buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dialog);
     form->addRow(buttons);
@@ -1973,6 +1970,8 @@ bool sewDialog(QWidget *parent, CadViewport *viewport, const QString &title, int
             if (bodies.at(index).visible && !bodies.at(index).solid) chosen.append(index);
     }
     FunctionDialogPanel dialog(parent);
+    dialog.setSizeIdentity(QStringLiteral("sew"));
+    if (viewport) ForgeCad::setDisplayLengthUnit(viewport->lengthUnit(), &dialog);
     dialog.setWindowTitle(title);
     auto *form = dialog.createScrollableForm();
     auto *list = new QListWidget(&dialog);
@@ -2062,6 +2061,8 @@ bool trimDialog(QWidget *parent, CadViewport *viewport, const QString &title, in
     }
     const auto label = [&](int index) { return resultBodyLabel(viewport, index); };
     FunctionDialogPanel dialog(parent);
+    dialog.setSizeIdentity(QStringLiteral("trim"));
+    if (viewport) ForgeCad::setDisplayLengthUnit(viewport->lengthUnit(), &dialog);
     dialog.setWindowTitle(title);
     auto *form = dialog.createScrollableForm();
     auto *sheetBox = new QComboBox(&dialog), *toolBox = new QComboBox(&dialog), *partBox = new QComboBox(&dialog);
@@ -2112,9 +2113,7 @@ bool trimDialog(QWidget *parent, CadViewport *viewport, const QString &title, in
     auto *projectNote = wrappedNote(QStringLiteral("Lo schizzo (senza le entita' di costruzione) va lungo la normale del suo piano, di default verso il corpo, "
                                                    "sulla prima faccia che incontra: le facce sotto restano intere. I tratti che ricalcano bordi "
                                                    "esistenti (anche la corda di un bordo curvo corto, entro 0,001 mm) delimitano la regione senza nuovi tagli."), &dialog);
-    auto *projectResult = new QLabel(&dialog);
-    projectResult->setWordWrap(true);
-    projectResult->setMaximumWidth(360);
+    auto *projectResult = new FunctionMessage(&dialog);
     projectResult->setStyleSheet(QStringLiteral("color: #9fc6e8;"));
     form->addRow(QStringLiteral("Metodo dello schizzo:"), methodBox);
     form->addRow(QStringLiteral("Taglio:"), projectModeBox);
@@ -2131,7 +2130,7 @@ bool trimDialog(QWidget *parent, CadViewport *viewport, const QString &title, in
     form->addRow(QStringLiteral("Scelta nella vista:"), choiceHelp);
     const PreviewScope scope(viewport, dialog, form, replaced);
     {
-        QLabel *previewLabel = scope.label;
+        FunctionMessage *previewLabel = scope.label;
         viewport->setPreviewCallback([previewLabel, projectResult, viewport](const QString &error) {
             previewLabel->setText(error.isEmpty() ? QStringLiteral("pronta (in ambra nella vista)") : QStringLiteral("non riuscita: ") + error);
             projectResult->setText(error.isEmpty() ? viewport->previewNotice() : QString());
@@ -2391,6 +2390,8 @@ ExtendDialogResult extendDialog(QWidget *parent, CadViewport *viewport, const QS
                                        double distance, bool linear, bool allowReselect, const std::function<QString(const QVector<EdgePoint> &, double, bool)> &apply) {
     ExtendDialogResult result;
     FunctionDialogPanel dialog(parent);
+    dialog.setSizeIdentity(QStringLiteral("surface-extend"));
+    if (viewport) ForgeCad::setDisplayLengthUnit(viewport->lengthUnit(), &dialog);
     dialog.setWindowTitle(title);
     auto *form = dialog.createScrollableForm();
     auto *distanceBox = new ForgeCad::ExpressionSpinBox(&dialog);
@@ -2412,9 +2413,7 @@ ExtendDialogResult extendDialog(QWidget *parent, CadViewport *viewport, const QS
     auto *edgeCount = new GeometryReferenceList(dialog, viewport, QStringLiteral("extendEdges"));
     form->addRow(QStringLiteral("Bordi:"), edgeCount);
     const auto selectedEdges = [&] { return completeBox->isChecked() ? complete : edges; };
-    auto *previewLabel = new QLabel(QStringLiteral("in calcolo..."), &dialog);
-    previewLabel->setWordWrap(true);
-    previewLabel->setMaximumWidth(360);
+    auto *previewLabel = new FunctionMessage(QStringLiteral("in calcolo..."), &dialog);
     form->addRow(QStringLiteral("Anteprima:"), previewLabel);
     auto *buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dialog);
     if (allowReselect) {

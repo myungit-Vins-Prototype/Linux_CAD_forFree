@@ -95,7 +95,7 @@ HelixDialogResult helixDialog(QWidget *parent, CadViewport *viewport, const QStr
             const double r = std::hypot(curve.controlPoints.at(1).x() - curve.controlPoints.at(0).x(), curve.controlPoints.at(1).y() - curve.controlPoints.at(0).y());
             bases.append({0, s, c, -1, {}});
             labels.append(QStringLiteral("%1: %2 %3 (R %4)%5").arg(sketches.at(s).name, circle ? QStringLiteral("cerchio") : QStringLiteral("arco"))
-                              .arg(c + 1).arg(ForgeCad::formatLength(r)).arg(curve.construction ? QStringLiteral(", costruzione") : QString()));
+                              .arg(c + 1).arg(ForgeCad::formatLength(r, 6, true, viewport)).arg(curve.construction ? QStringLiteral(", costruzione") : QString()));
         }
     int current = -1;
     if (initial.helix.source != 0 && initial.firstBody >= 0 && initial.firstBody < bodies.size()) {
@@ -115,6 +115,8 @@ HelixDialogResult helixDialog(QWidget *parent, CadViewport *viewport, const QStr
         return result;
     }
     FunctionDialogPanel dialog(parent);
+    dialog.setSizeIdentity(QStringLiteral("helix"));
+    if (viewport) ForgeCad::setDisplayLengthUnit(viewport->lengthUnit(), &dialog);
     dialog.setWindowTitle(title);
     auto *form = dialog.createScrollableForm();
     auto *baseRow = new QWidget(&dialog);
@@ -253,6 +255,8 @@ bool datumDialog(QMainWindow *window, CadViewport *viewport, const QString &titl
     DatumParameters &d = definition.datum;
     d.mode = qBound(0, d.mode, int(modes.size()) - 1);
     FunctionDialogPanel dialog(window);
+    dialog.setSizeIdentity(QStringLiteral("datum-plane"));
+    if (viewport) ForgeCad::setDisplayLengthUnit(viewport->lengthUnit(), &dialog);
     dialog.setWindowTitle(title);
     dialog.setModal(false);
     auto *form = dialog.createScrollableForm();
@@ -291,10 +295,8 @@ bool datumDialog(QMainWindow *window, CadViewport *viewport, const QString &titl
     form->addRow(QString(), onCurveBox);
     form->addRow(QString(), flipBox);
     form->addRow(QStringLiteral("Misura a video (mezzo lato):"), sizeBox);
-    auto *status = new QLabel(&dialog);
-    status->setWordWrap(true);
+    auto *status = new FunctionMessage(&dialog);
     status->setMinimumWidth(280);
-    status->setMaximumWidth(360);
     form->addRow(status);
     auto *buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dialog);
     form->addRow(buttons);
@@ -446,6 +448,8 @@ bool sketchPatternDialog(QWidget *parent, CadViewport *viewport, int kind) {
         }
     }
     FunctionDialogPanel dialog(parent);
+    dialog.setSizeIdentity(QStringLiteral("sketch-pattern-%1").arg(kind));
+    if (viewport) ForgeCad::setDisplayLengthUnit(viewport->lengthUnit(), &dialog);
     dialog.setWindowTitle(titles[kind]);
     auto *form = dialog.createScrollableForm();
     form->addRow(wrappedNote(QStringLiteral("%1 entita' selezionate. Un segmento scelto come riferimento non si ripete.").arg(selection.size()), &dialog));
@@ -569,9 +573,7 @@ bool sketchPatternDialog(QWidget *parent, CadViewport *viewport, int kind) {
     form->addRow(QString(), parametricBox);
     if (kind != 2) form->addRow(QString(), dimensionBox);
     else dimensionBox->hide();
-    auto *status = new QLabel(&dialog);
-    status->setWordWrap(true);
-    status->setMaximumWidth(360);
+    auto *status = new FunctionMessage(&dialog);
     form->addRow(QStringLiteral("Anteprima:"), status);
     int excluded = -1;
     const auto current = [&] {
@@ -660,6 +662,8 @@ bool sketchOffsetDialog(QWidget *parent, CadViewport *viewport) {
     }
     static ForgeCad::SketchOffset last;
     FunctionDialogPanel dialog(parent);
+    dialog.setSizeIdentity(QStringLiteral("sketch-offset"));
+    if (viewport) ForgeCad::setDisplayLengthUnit(viewport->lengthUnit(), &dialog);
     dialog.setWindowTitle(title);
     auto *form = dialog.createScrollableForm();
     auto *selectionLabel = wrappedNote(QString(), &dialog);
@@ -689,8 +693,7 @@ bool sketchOffsetDialog(QWidget *parent, CadViewport *viewport) {
     form->addRow(QString(), constructionBox);
     form->addRow(wrappedNote(QStringLiteral("Segmenti e archi restano esatti (paralleli e concentrici); spline ed ellissi diventano "
                                            "curve approssimate entro 1e-7."), &dialog));
-    auto *status = new QLabel(&dialog);
-    status->setWordWrap(true);
+    auto *status = new FunctionMessage(&dialog);
     form->addRow(status);
     const auto current = [&] {
         ForgeCad::SketchOffset offset;
@@ -761,6 +764,8 @@ bool sketchMoveDialog(QWidget *parent, CadViewport *viewport) {
     const QVector<QPointF> points = viewport->selectedSketchPoints();
     static ForgeCad::SketchMove last;
     FunctionDialogPanel dialog(parent);
+    dialog.setSizeIdentity(QStringLiteral("sketch-move"));
+    if (viewport) ForgeCad::setDisplayLengthUnit(viewport->lengthUnit(), &dialog);
     dialog.setWindowTitle(title);
     auto *form = dialog.createScrollableForm();
     form->addRow(wrappedNote(QStringLiteral("%1 entita' selezionate. Prima la rotazione attorno al centro (antiorario), poi la traslazione. "
@@ -802,8 +807,7 @@ bool sketchMoveDialog(QWidget *parent, CadViewport *viewport) {
     form->addRow(QStringLiteral("Centro:"), centerBox);
     form->addRow(QString(), pair(cx, cy));
     form->addRow(QString(), copyBox);
-    auto *status = new QLabel(&dialog);
-    status->setWordWrap(true);
+    auto *status = new FunctionMessage(&dialog);
     form->addRow(status);
     const auto current = [&] {
         ForgeCad::SketchMove move;
@@ -859,7 +863,9 @@ bool spatialSketchDialog(QMainWindow *window,CadViewport *viewport,const QString
     ExtrusionObject definition=initial;definition.feature=BodyFeature::SpatialSketch;definition.operation=-1;definition.sketchIndex=-1;
     auto &p=definition.spatialSketch;
     if(p.entities.isEmpty()){SpatialCurve3D e;e.id=p.nextId++;p.entities.append(e);}
-    FunctionDialogPanel dialog(window);dialog.setObjectName(QStringLiteral("spatialSketchDialog"));dialog.setWindowTitle(title);
+    FunctionDialogPanel dialog(window);
+    dialog.setSizeIdentity(QStringLiteral("spatial-sketch"), {QStringLiteral("spatialSketchDialog")});
+    if (viewport) ForgeCad::setDisplayLengthUnit(viewport->lengthUnit(), &dialog);dialog.setObjectName(QStringLiteral("spatialSketchDialog"));dialog.setWindowTitle(title);
     auto *form=dialog.createScrollableForm();
     auto *entities=new QComboBox(&dialog);entities->setObjectName(QStringLiteral("spatialEntities"));
     auto *newLine=new QPushButton(QStringLiteral("Nuova polilinea"),&dialog),*newSpline=new QPushButton(QStringLiteral("Nuova spline"),&dialog);
@@ -891,7 +897,7 @@ bool spatialSketchDialog(QMainWindow *window,CadViewport *viewport,const QString
     form->addRow(wrappedNote(QStringLiteral("Clic: aggiungi un punto. Trascina con il destro: ruota; tasto centrale: sposta la vista. "
         "Esc interrompe l'inserimento. Puoi cambiare piano e profondita' per ogni punto, oppure modificare XYZ nella tabella. "
         "Le curve non sono vincolate al piano temporaneo."),&dialog));
-    auto *status=new QLabel(&dialog);status->setWordWrap(true);form->addRow(status);
+    auto *status=new FunctionMessage(&dialog);form->addRow(status);
     auto *buttons=new QDialogButtonBox(QDialogButtonBox::Ok|QDialogButtonBox::Cancel,&dialog);form->addRow(buttons);
     QObject::connect(buttons,&QDialogButtonBox::rejected,&dialog,&QDialog::reject);
     auto scope=std::make_unique<PreviewScope>(viewport,dialog,form,replaced);
@@ -911,7 +917,7 @@ bool spatialSketchDialog(QMainWindow *window,CadViewport *viewport,const QString
         if(!p.entities.isEmpty()){
             const auto &e=p.entities[active];kind->setCurrentIndex(e.spline?1:0);closed->setChecked(e.closed);points->setRowCount(e.points.size());
             for(int row=0;row<e.points.size();++row){const auto &q=e.points[row];const double v[3]={q.x,q.y,q.z};
-                for(int col=0;col<3;++col)points->setItem(row,col,new QTableWidgetItem(ForgeCad::formatLength(v[col],9,false)));}
+                for(int col=0;col<3;++col)points->setItem(row,col,new QTableWidgetItem(ForgeCad::formatLength(v[col],9,false, &dialog)));}
         }
         kind->setEnabled(!p.entities.isEmpty());closed->setEnabled(!p.entities.isEmpty());undo->setEnabled(!undos.isEmpty());redo->setEnabled(!redos.isEmpty());
         configure();
@@ -984,7 +990,9 @@ bool extractedCurveDialog(QMainWindow *window, CadViewport *viewport, const QStr
     definition.operation=-1;definition.feature=BodyFeature::ExtractedCurve;definition.sketchIndex=-1;
     auto &p=definition.curveExtraction;
     if(replaced<0) p.view=viewport->curveTrimView();
-    FunctionDialogPanel dialog(window);dialog.setObjectName(QStringLiteral("extractedCurveDialog"));dialog.setWindowTitle(title);dialog.setModal(false);
+    FunctionDialogPanel dialog(window);
+    dialog.setSizeIdentity(QStringLiteral("extracted-curve"), {QStringLiteral("extractedCurveDialog")});
+    if (viewport) ForgeCad::setDisplayLengthUnit(viewport->lengthUnit(), &dialog);dialog.setObjectName(QStringLiteral("extractedCurveDialog"));dialog.setWindowTitle(title);dialog.setModal(false);
     auto *form=dialog.createScrollableForm();
     auto *sourceLabel=new QLabel(&dialog),*toolLabel=new QLabel(&dialog);
     sourceLabel->setWordWrap(true);toolLabel->setWordWrap(true);
@@ -1008,7 +1016,7 @@ bool extractedCurveDialog(QMainWindow *window, CadViewport *viewport, const QStr
     form->addRow(QStringLiteral("Intersezione:"),cutBox);form->addRow(QStringLiteral("Parte:"),sideBox);
     form->addRow(wrappedNote(QStringLiteral("La curva resta legata alla sorgente e conserva la sua forma 3D. "
         "Il segmento e la vista del taglio vengono conservati per la rigenerazione."),&dialog));
-    auto *status=new QLabel(&dialog);status->setWordWrap(true);form->addRow(status);
+    auto *status=new FunctionMessage(&dialog);form->addRow(status);
     auto *buttons=new QDialogButtonBox(QDialogButtonBox::Ok|QDialogButtonBox::Cancel,&dialog);form->addRow(buttons);
     QObject::connect(buttons,&QDialogButtonBox::rejected,&dialog,&QDialog::reject);
     auto scope=std::make_unique<PreviewScope>(viewport,dialog,form,replaced);

@@ -18,6 +18,8 @@
 // due entita' e' la minima: proiezioni esatte alternate da semi presi sulla
 // geometria esatta (mai dalla tassellazione); rette, piani e punti in forma
 // chiusa.
+class QObject;
+
 namespace ForgeCad {
 
 // Tipi di GeometryRef usati solo dalla misura (non si salvano nei documenti):
@@ -57,7 +59,7 @@ struct MeasureReport {
 
 // Una entita': le sue misure (coordinate, lunghezza, raggio, area...); due:
 // distanza minima, componenti, angolo, distanza tra i centri.
-MeasureReport measureEntities(const QVector<MeasureEntity> &entities);
+MeasureReport measureEntities(const QVector<MeasureEntity> &entities, const QObject *context = nullptr);
 
 // Punto medio (a meta' lunghezza) e centro di uno spigolo (falso se non e'
 // un cerchio, un arco o un'ellisse).

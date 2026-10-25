@@ -345,33 +345,34 @@ std::vector<Homogeneous> contactDerivatives(const std::vector<BSplineCurve<3>> &
     std::vector<std::vector<double>> rhs(count, std::vector<double>(4));
     for (int j = 0; j < count; ++j) {
         cancellationPoint();
-        // Media rispetto al primo nodo: sommando direttamente nodi vicini
-        // a 1 si possono ottenere due ascisse uguali su una campata di pochi
-        // ulp, rendendo singolare una collocazione altrimenti valida.
+        // Ascissa di Greville come offset dal primo nodo: su Apple ARM
+        // long double ha la precisione di double. Non ricomporre anchor+offset
+        // prima di valutare le basi: una campata di un ulp perderebbe le
+        // ascisse interne. Anche le distanze dai nodi restano coordinate locali.
         const double anchor = boundary.knots()[j + 1];
-        long double delta = 0.0L;
-        for (int k = 1; k <= degree; ++k) delta += static_cast<long double>(boundary.knots()[j + k]) - anchor;
-        const long double location = static_cast<long double>(anchor) + delta / degree;
-        const double t = static_cast<double>(location);
-        // Anche la base deve usare l'ascissa non arrotondata: una campata
-        // di un solo ulp non contiene abbastanza double per degree+1 righe.
+        double offset = 0.0;
+        for (int k = 1; k <= degree; ++k) offset += (boundary.knots()[j + k] - anchor) / degree;
+        const double t = anchor + offset;
         int knotSpan = degree;
-        while (knotSpan + 1 < count && boundary.knots()[knotSpan + 1] <= location) ++knotSpan;
-        std::vector<long double> precise(degree+1),left(degree+1),right(degree+1);
-        precise[0]=1;
-        for(int jBasis=1; jBasis<=degree; ++jBasis) {
-            left[jBasis]=location-boundary.knots()[knotSpan+1-jBasis];
-            right[jBasis]=boundary.knots()[knotSpan+jBasis]-location;
-            long double saved=0;
-            for(int r=0;r<jBasis;++r) {
-                const long double denominator=right[r+1]+left[jBasis-r];
-                const long double term=denominator!=0?precise[r]/denominator:0;
-                precise[r]=saved+right[r+1]*term;
-                saved=left[jBasis-r]*term;
+        while (knotSpan + 1 < count && boundary.knots()[knotSpan + 1] - anchor <= offset) ++knotSpan;
+        std::vector<double> basis(degree + 1), derivativeBasis(degree + 1), left(degree + 1), right(degree + 1);
+        basis[0] = 1.0;
+        for (int level = 1; level <= degree; ++level) {
+            left[level] = offset - (boundary.knots()[knotSpan + 1 - level] - anchor);
+            right[level] = (boundary.knots()[knotSpan + level] - anchor) - offset;
+            double saved = 0.0, savedDerivative = 0.0;
+            for (int r = 0; r < level; ++r) {
+                const double denominator = right[r + 1] + left[level - r];
+                const double term = denominator != 0.0 ? basis[r] / denominator : 0.0;
+                const double derivative = denominator != 0.0 ? derivativeBasis[r] / denominator : 0.0;
+                basis[r] = saved + right[r + 1] * term;
+                derivativeBasis[r] = savedDerivative - term + right[r + 1] * derivative;
+                saved = left[level - r] * term;
+                savedDerivative = term + left[level - r] * derivative;
             }
-            precise[jBasis]=saved;
+            basis[level] = saved;
+            derivativeBasis[level] = savedDerivative;
         }
-        std::vector<double> basis(precise.begin(),precise.end());
         Vec3 homogeneousPoint, homogeneousNeighbor;
         double w = 0.0, wn = 0.0;
         for (int k = 0; k <= degree; ++k) {
@@ -383,7 +384,14 @@ std::vector<Homogeneous> contactDerivatives(const std::vector<BSplineCurve<3>> &
             homogeneousPoint += basis[k] * boundary.weight(pole) * boundary.poles()[pole];
             homogeneousNeighbor += basis[k] * neighbor.weight(pole) * neighbor.poles()[pole];
         }
-        const Vec3 p = boundary.point(t), normal = contactNormal(contacts, p, 1e-6 * scale);
+        // Posizione e tangente devono usare la stessa ascissa non arrotondata
+        // della matrice; point(t) ricadrebbe sugli estremi della campata stretta.
+        const Vec3 p = homogeneousPoint / w, normal = contactNormal(contacts, p, 1e-6 * scale);
+        Vec3 tangent;
+        for (int k = 0; k <= degree; ++k) {
+            const int pole = knotSpan - degree + k;
+            tangent += derivativeBasis[k] * boundary.weight(pole) * (boundary.poles()[pole] - p) / w;
+        }
         const double sign = atEnd ? -1.0 : 1.0;
         const double dw = sign * (wn - w) / span;
         Vec3 natural = (sign * (homogeneousNeighbor - homogeneousPoint) / span - dw * p) / w;
@@ -406,7 +414,6 @@ std::vector<Homogeneous> contactDerivatives(const std::vector<BSplineCurve<3>> &
             }
         }
         Vec3 direction = natural - dot(natural, normal) * normal;
-        const Vec3 tangent = boundary.derivative(t);
         if (!(norm(cross(direction, tangent)) > 1e-10 * std::max(1.0, norm(natural) * norm(tangent)))) {
             direction = cross(normal, tangent);
             if (dot(direction, natural) < 0.0) direction = -direction;

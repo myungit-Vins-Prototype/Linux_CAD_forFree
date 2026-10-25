@@ -106,6 +106,7 @@ static QString exampleDocumentPath(const char *name) {
 #include "test_drawing_performance.h"
 #include "document_regression.h"
 #include "test_document_read.h"
+#include "test_history_suppression.h"
 #include "test_pattern_placements.h"
 #include "test_zoom_input.h"
 class ViewportInteractionTest {
@@ -118,6 +119,81 @@ public:
 #include "test_document_consultation.h"
 #include "test_catalog_recovery_gui.h"
 #include "test_surface_tools_gui.h"
+#include "test_document_units.h"
+#include "test_function_panels.h"
+    static void extrusionActionPreconditions() {
+        using namespace ForgeCad;
+        PdfWindow window;
+        window.resize(1000, 760);
+        window.show();
+        QApplication::processEvents();
+        auto *view = window.viewport_;
+        QAction *extrude = nullptr;
+        for (auto *action : window.findChildren<QAction *>())
+            if (action->text() == QStringLiteral("Estrusione...")) { extrude = action; break; }
+        require(extrude && extrude->isEnabled(), "azione reale Estrusione disponibile");
+
+        SketchObject valid;
+        valid.name = QStringLiteral("Profilo di prova");
+        valid.segments = {{{0,0},{4,0}},{{4,0},{4,3}},{{4,3},{0,3}},{{0,3},{0,0}}};
+        SketchObject construction = valid;
+        construction.constructionSegments = {0,1,2,3};
+        CurveObject circle; circle.tool = DrawingTool::Circle; circle.controlPoints = {{0,0},{2,0}};
+        circle.construction = true; construction.curves.append(circle);
+        SketchObject pointOnly;
+        CurveObject point; point.tool = DrawingTool::Point; point.controlPoints = {{1,2}}; pointOnly.curves.append(point);
+        SketchObject degenerate; degenerate.segments = {{{1,1},{1,1}}};
+        SketchObject circleOnly; circle.construction = false; circleOnly.curves.append(circle);
+        struct Scenario { const char *name; SketchObject sketch; bool present; int active; int selected; bool warning; };
+        const QVector<Scenario> scenarios = {
+            {"nessuno schizzo", {}, false, -1, -1, true},
+            {"schizzo vuoto attivo", {}, true, 0, -1, true},
+            {"sola geometria di costruzione", construction, true, 0, -1, true},
+            {"soli punti", pointOnly, true, 0, -1, true},
+            {"segmenti degeneri", degenerate, true, 0, -1, true},
+            {"profilo valido senza selezione o schizzo attivo", valid, true, -1, -1, true},
+            {"profilo valido attivo", valid, true, 0, -1, false},
+            {"profilo valido selezionato", valid, true, -1, 0, false},
+            {"curva valida selezionata", circleOnly, true, -1, 0, false}
+        };
+        for (const auto &scenario : scenarios) {
+            DocumentState document;
+            if (scenario.present) document.sketches.append(scenario.sketch);
+            view->loadDocument(document);
+            view->activeSketch_ = scenario.active;
+            view->sketchMode_ = scenario.active >= 0;
+            view->selection_ = scenario.selected >= 0 ? SceneSelection{SceneObjectKind::Sketch, scenario.selected, -1} : SceneSelection{};
+            bool messageSeen = false, informative = false, panelSeen = false, timedOut = false;
+            QString observedMessage; int observedIcon = -1;
+            QElapsedTimer elapsed; elapsed.start();
+            QTimer inspect;
+            QObject::connect(&inspect, &QTimer::timeout, &window, [&] {
+                if (elapsed.elapsed() > 5000) timedOut = true;
+                for (auto *opened : window.findChildren<QDialog *>()) {
+                    if (!opened->isVisible()) continue;
+                    if (auto *message = qobject_cast<QMessageBox *>(opened)) {
+                        messageSeen = true;
+                        observedMessage = message->text(); observedIcon = int(message->icon());
+                        informative = message->icon() == QMessageBox::Information
+                            && message->text().contains(QStringLiteral("schizzo"), Qt::CaseInsensitive)
+                            && message->text().contains(QStringLiteral("profilo"), Qt::CaseInsensitive);
+                        message->reject();
+                    } else if (auto *panel = dynamic_cast<FunctionDialogPanel *>(opened)) {
+                        panelSeen = panel->panelSizeSettingsKey() == QStringLiteral("view/functionPanelSizes/v2/extrusion");
+                        panel->reject();
+                    } else if (timedOut) opened->reject();
+                }
+            });
+            inspect.start(10);
+            extrude->trigger();
+            inspect.stop();
+            require(!timedOut && view->extrusions().isEmpty(), "azione Estrusione annullata senza creare feature o timeout");
+            const bool expected = scenario.warning ? messageSeen && informative && !panelSeen : panelSeen && !messageSeen;
+            require(expected, qPrintable(QStringLiteral("azione Estrusione: %1; message=%2 informative=%3 icon=%4 panel=%5 timeout=%6 text=%7")
+                .arg(QString::fromUtf8(scenario.name)).arg(messageSeen).arg(informative).arg(observedIcon).arg(panelSeen).arg(timedOut).arg(observedMessage)));
+        }
+        std::cout << "PASS extrusion action preconditions: warnings and valid active/selected profiles" << std::endl;
+    }
     static void previewPerformance(bool gl = false) {
         using namespace ForgeCad;using namespace ForgeCad::Kernel;
         const auto settle=[](CadViewport &view) {
@@ -6769,10 +6845,10 @@ public:
                 auto add=editor.spatialAdd_;add({0,0,0});add({3,2,4});
                 auto *table=dialog->findChild<QTableWidget*>("spatialPoints");require(table->rowCount()==2,"punti inseriti nella vista compaiono nella tabella");
                 table->item(1,2)->setText("7.125");
-                require(table->item(1,2)->text().startsWith("7.125"),"modifica XYZ nella tabella");
+                double displayedZ=0; require(ForgeCad::evaluateExpression(table->item(1,2)->text(),displayedZ) && std::abs(displayedZ-7.125)<1e-9,"modifica XYZ nella tabella indipendente dal locale");
                 QKeyEvent undoKey(QEvent::KeyPress,Qt::Key_Z,Qt::ControlModifier);editor.keyPressEvent(&undoKey);
                 require(table->item(1,2)->text().startsWith("4"),"Ctrl Z locale ripristina quota");
-                dialog->findChild<QPushButton*>("spatialRedo")->click();require(table->item(1,2)->text().startsWith("7.125"),"redo locale");
+                dialog->findChild<QPushButton*>("spatialRedo")->click();require(ForgeCad::evaluateExpression(table->item(1,2)->text(),displayedZ) && std::abs(displayedZ-7.125)<1e-9,"redo locale");
                 dialog->findChild<QPushButton*>("spatialNewSpline")->click();add=editor.spatialAdd_;add({0,10,0});add({5,10,3});add({10,10,0});
                 require(dialog->findChild<QComboBox*>("spatialEntities")->count()==2,"seconda entita' spline");
                 dialog->findChild<QDialogButtonBox*>()->button(QDialogButtonBox::Ok)->click();
@@ -7215,18 +7291,18 @@ public:
             require(previews == 1, "cambio di focus senza nuove anteprime");
             value.stepBy(1);
             require(previews == 2, "le frecce aggiornano l'anteprima");
-            setDisplayLengthUnit(LengthUnit::Inch);
+            setDisplayLengthUnit(LengthUnit::Inch, &value);
             value.setRange(0.0, 1000.0);
             value.findChild<QLineEdit *>()->setText(QStringLiteral("2"));
             value.interpretText();
             require(std::fabs(value.value() - 50.8) < 1e-12 && value.suffix().trimmed() == QStringLiteral("in")
-                        && formatLength(25.4) == QStringLiteral("1 in"),
+                        && formatLength(25.4, 6, true, &value) == QStringLiteral("1 in"),
                     "campi in pollici convertiti internamente in millimetri");
             value.setLengthMeasurement(false);
             value.setSuffix(QStringLiteral(" °"));
-            setDisplayLengthUnit(LengthUnit::Foot);
+            setDisplayLengthUnit(LengthUnit::Foot, &value);
             require(value.suffix().trimmed() == QStringLiteral("°"), "gli angoli non cambiano con l'unita' lineare");
-            setDisplayLengthUnit(LengthUnit::Millimeter);
+            setDisplayLengthUnit(LengthUnit::Millimeter, &value);
         }
         {
             // Filettatura parametrica: riconoscimento automatico della faccia
@@ -7795,12 +7871,13 @@ public:
                     && longPanelNote->height() >= 3 * longPanelNote->fontMetrics().height()
                     && longPanelNote->geometry().bottom() < rowAfterLongNote->geometry().top(),
                 "note lunghe a capo senza sovrapporre le righe successive");
-        require(panelScroll->horizontalScrollBarPolicy() == Qt::ScrollBarAlwaysOff
+        require(panelScroll->horizontalScrollBarPolicy() == Qt::ScrollBarAsNeeded
                     && panelScroll->verticalScrollBarPolicy() == Qt::ScrollBarAsNeeded,
                 "pannelli funzione senza tagli orizzontali e con scorrimento verticale");
         scrollablePanel.hide();
         FunctionDialogPanel embeddedPanel(&v);
         embeddedPanel.setWindowTitle(QStringLiteral("Pannello test"));
+        embeddedPanel.setSizeIdentity(QStringLiteral("test-panel"));
         require(embeddedPanel.isEmbedded() && !embeddedPanel.isWindow() && embeddedPanel.parentWidget() == &v,
                 "pannello funzione sovrapposto nelle coordinate del viewport");
         v.setGlassPanel(123, QRect(10, 20, 300, 220), 16, 14, true);
@@ -7840,7 +7917,7 @@ public:
         QApplication::sendEvent(panelGrip, &gripRelease);
         require(embeddedPanel.size() == panelBeforeGrip + QSize(30, 20) && v.size() == viewportBeforeGrip,
                 "il grip ridimensiona soltanto il pannello funzione");
-        require(QSettings().value(QStringLiteral("view/functionPanelSizes/Pannello_test")).toSize() == embeddedPanel.size(),
+        require(QSettings().value(embeddedPanel.panelSizeSettingsKey()).toSize() == embeddedPanel.size(),
                 "ridimensionamento manuale del pannello memorizzato");
         const QPalette panelPalette = embeddedPanel.palette();
         require(std::abs(panelPalette.color(QPalette::WindowText).lightness() - embeddedPanel.panelColor().lightness()) > 100,
@@ -10173,6 +10250,21 @@ int main(int argc, char **argv) {
         try { ViewportInteractionTest::blendPreviewReload(); }
         catch (const std::exception &e) { std::cerr << e.what() << std::endl; return 1; }
         std::cout << "PASS blend preview reload" << std::endl;
+        return 0;
+    }
+    if (app.arguments().contains(QStringLiteral("--function-panels-review"))) {
+        try { ViewportInteractionTest::functionPanelsReview(); ViewportInteractionTest::extrusionActionPreconditions(); }
+        catch (const std::exception &error) { std::cerr << error.what() << std::endl; return 1; }
+        return 0;
+    }
+    if (app.arguments().contains(QStringLiteral("--document-units"))) {
+        try { ViewportInteractionTest::documentUnitsTests(); }
+        catch (const std::exception &error) { std::cerr << error.what() << std::endl; return 1; }
+        return 0;
+    }
+    if (app.arguments().contains(QStringLiteral("--history-suppression"))) {
+        try { historySuppressionTests(); }
+        catch (const std::exception &error) { std::cerr << error.what() << std::endl; return 1; }
         return 0;
     }
     if (app.arguments().contains(QStringLiteral("--review-regressions"))) {

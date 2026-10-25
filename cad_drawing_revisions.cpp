@@ -15,8 +15,8 @@ void validateDependency(RevisionStore &store,const DrawingFile &drawing){
     require(!model.checkinId.isNull(),QStringLiteral("Collegare prima la tavola a un check-in preciso del modello."));
     QUuid archiveId;ok(store.archiveIdentity(archiveId));
     require(archiveId==drawing.modelArchiveId,QStringLiteral("Modello e tavola devono usare lo stesso archivio di workspace."));
-    DocumentState snapshot;ok(readNativeRevision(store,model,snapshot));QByteArray hash;ok(drawingModelDefinitionHash(snapshot,hash));
-    require(hash==drawing.modelDefinitionHash,QStringLiteral("Il modello archiviato non corrisponde alla definizione usata dalla tavola."));
+    DocumentState snapshot;ok(readNativeRevision(store,model,snapshot));bool matches=false;ok(drawingModelDefinitionMatches(snapshot,drawing.modelDefinitionHash,matches));
+    require(matches,QStringLiteral("Il modello archiviato non corrisponde alla definizione usata dalla tavola."));
 }
 DrawingFile validateOperation(const DrawingRevisionOperation &operation){
     const auto &request=operation.request;const auto &q=request.checkout;

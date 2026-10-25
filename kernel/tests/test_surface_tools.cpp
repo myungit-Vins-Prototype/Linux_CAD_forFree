@@ -84,6 +84,22 @@ FK_TEST(SurfaceExtendUntilPlaneAndCurvedFace) {
     const auto curved = extendSheetTo(source, edge, facesAsSheet(cylinder, faces), 10);
     valid(curved);
     FK_CHECK(area(curved) > 140 && area(curved) < 145);
+    // Due pareti dividono il prolungamento in tre parti: deve restare
+    // quella che contiene la base, indipendentemente dall'ordine dei target.
+    const Body nearWall = wall(14), farWall = wall(18);
+    for (bool reverse : {false, true}) {
+        const auto target = sewSheets(reverse ? std::vector<const Body *>{&farWall, &nearWall}
+                                             : std::vector<const Body *>{&nearWall, &farWall}, 1e-6, false);
+        BodyHistory declared;
+        const auto multiple = extendSheetTo(source, edge, target.body, 10, false, 1e-6, &declared);
+        valid(multiple);
+        FK_CHECK_NEAR(area(multiple), 140, 1e-5);
+        FK_CHECK(declared.operandCount() == 1);
+        for (const auto f : multiple.faces()) {
+            for (const auto &origin : declared.origins(EntityKind::Face, f.index))
+                FK_CHECK(origin.operand == 0 && source.contains(FaceId(origin.index)));
+        }
+    }
     FK_CHECK_NEAR(area(source), 100, 1e-8);
 }
 FK_TEST(SurfaceExtendUntilFacetedTarget) {

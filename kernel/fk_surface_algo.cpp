@@ -4,6 +4,8 @@
 #include <queue>
 
 #include "fk_bspline_surface.h"
+#include "fk_bernstein.h"
+#include "fk_curve_ops.h"
 #include "fk_curve_algo.h"
 #include "fk_precision.h"
 #include "fk_nurbs.h"
@@ -767,17 +769,73 @@ double distanceToAxis(const Vec3 &p, const Frame3 &frame) {
     return norm(d - dot(d, frame.zDir()) * frame.zDir());
 }
 
-// Punti della curva base di `from` (sui tratti lisci) tutti sulla superficie `onto`.
-bool baseCurveOn(const ExtrusionSurface &from, const Surface &onto, double tolerance) {
-    const Curve<3> &curve = *from.curve();
-    const Interval domain = curve.domain();
-    std::vector<double> breaks = curve.breakpoints(domain);
-    if (breaks.size() < 2) breaks = {domain.lo, domain.hi};
-    const int perSpan = std::max(2, 64 / int(breaks.size()));
-    for (std::size_t i = 0; i + 1 < breaks.size(); ++i)
-        for (int j = 0; j <= perSpan; ++j)
-            if (projectPoint(onto, curve.point(breaks[i] + (breaks[i + 1] - breaks[i]) * j / perSpan)).distance > tolerance) return false;
+// Certificato sul dominio intero: la differenza di due curve razionali e'
+// (A Wb - B Wa)/(Wa Wb). I coefficienti Bernstein delimitano numeratore e
+// denominatore, quindi nessuna oscillazione tra campioni puo' restare nascosta.
+// La proiezione ortogonale alla generatrice elimina le traslazioni lungo di essa.
+bool sameProjectedBezier(const BSplineCurve<3> &a, const BSplineCurve<3> &b,
+                         const Vec3 &direction, double tolerance) {
+    const Vec3 origin = a.poles().front();
+    const auto coordinate = [&](const BSplineCurve<3> &curve, int axis) {
+        std::vector<double> values;
+        for (int i = 0; i < curve.poleCount(); ++i) {
+            Vec3 p = curve.poles()[i] - origin;
+            p -= dot(p, direction) * direction;
+            values.push_back(curve.weight(i) * p[axis]);
+        }
+        return BernsteinPolynomial(std::move(values));
+    };
+    const auto weights = [](const BSplineCurve<3> &curve) {
+        std::vector<double> values;
+        for (int i = 0; i < curve.poleCount(); ++i) values.push_back(curve.weight(i));
+        return BernsteinPolynomial(std::move(values));
+    };
+    const auto wa = weights(a), wb = weights(b), denominator = wa * wb;
+    const double minimum = *std::min_element(denominator.coefficients().begin(), denominator.coefficients().end());
+    if (!(minimum > 0.0) || !std::isfinite(minimum)) return false;
+    double squared = 0.0;
+    for (int axis = 0; axis < 3; ++axis) {
+        const auto numerator = coordinate(a, axis) * wb - coordinate(b, axis) * wa;
+        double bound = 0.0;
+        for (double coefficient : numerator.coefficients()) {
+            if (!std::isfinite(coefficient)) return false;
+            bound = std::max(bound, std::fabs(coefficient));
+        }
+        squared += (bound / minimum) * (bound / minimum);
+    }
+    return std::isfinite(squared) && squared <= tolerance * tolerance;
+}
+
+bool sameExtrusionProfiles(const Curve<3> &a, const Curve<3> &b, const Vec3 &direction, double tolerance) {
+    const auto ad = a.domain(), bd = b.domain();
+    if (!ad.isFinite() || !bd.isFinite()) return false;
+    // Unione dei breakpoint in coordinate normalizzate: nodi inseriti o
+    // domini affini diversi non cambiano la geometria confrontata.
+    std::vector<double> cuts{0.0, 1.0};
+    for (const auto &piece : rationalBezierPieces(a, ad)) cuts.push_back((piece.domain().hi - ad.lo) / ad.length());
+    for (const auto &piece : rationalBezierPieces(b, bd)) cuts.push_back((piece.domain().hi - bd.lo) / bd.length());
+    std::sort(cuts.begin(), cuts.end());
+    cuts.erase(std::unique(cuts.begin(), cuts.end()), cuts.end());
+    for (std::size_t i = 1; i < cuts.size(); ++i) {
+        const Interval ar{ad.lo + cuts[i - 1] * ad.length(), ad.lo + cuts[i] * ad.length()};
+        const Interval br{bd.lo + cuts[i - 1] * bd.length(), bd.lo + cuts[i] * bd.length()};
+        if (!(ar.length() > 0.0 && br.length() > 0.0)) return false;
+        const auto ap = standardBezierPieces(a, ar), bp = standardBezierPieces(b, br);
+        if (ap.size() != 1 || bp.size() != 1 || !sameProjectedBezier(ap.front(), bp.front(), direction, tolerance)) return false;
+    }
     return true;
+}
+
+bool sameExtrusions(const ExtrusionSurface &a, const ExtrusionSurface &b, double tolerance) {
+    if (!parallelAxes(a.direction(), b.direction())) return false;
+    if (a.curve() == b.curve()) return true;
+    try {
+        if (sameExtrusionProfiles(*a.curve(), *b.curve(), a.direction(), tolerance)) return true;
+        return sameExtrusionProfiles(*a.curve(), *reversedCurve(b.curve()), a.direction(), tolerance);
+    } catch (const std::domain_error &) {
+        // Nessuna rappresentazione esatta disponibile: non dichiarare coincidenza.
+        return false;
+    }
 }
 
 }
@@ -813,7 +871,7 @@ bool sameSurface(const Surface &a, const Surface &b, double tolerance) {
     }
     case SurfaceType::Extrusion: {
         const auto &ea = static_cast<const ExtrusionSurface &>(a), &eb = static_cast<const ExtrusionSurface &>(b);
-        return parallelAxes(ea.direction(), eb.direction()) && baseCurveOn(ea, eb, tolerance) && baseCurveOn(eb, ea, tolerance);
+        return sameExtrusions(ea, eb, tolerance);
     }
     default:
         return false;

@@ -44,7 +44,7 @@ void CadViewport::setLengthUnit(LengthUnit unit) {
     if(documentReadOnly_)return;
     if (unit == lengthUnit_) return;
     lengthUnit_ = unit;
-    ForgeCad::setDisplayLengthUnit(unit);
+    ForgeCad::setDisplayLengthUnit(unit, this);
     documentChanged();
 }
 
@@ -60,7 +60,7 @@ void CadViewport::loadDocument(DocumentState state,
     adoptDocumentIdentity(state.version, state.baseCheckinId);
     if (state.orientationSet) camera_.orientation_ = state.orientation;
     lengthUnit_ = state.lengthUnitSet ? state.lengthUnit : LengthUnit::Millimeter;
-    ForgeCad::setDisplayLengthUnit(lengthUnit_);
+    ForgeCad::setDisplayLengthUnit(lengthUnit_, this);
     ForgeCad::normalizeModelHistory(state);
     sketches_ = std::move(state.sketches);
     storyPosition_ = -1;
@@ -91,6 +91,7 @@ void CadViewport::loadPreviewDocument(DocumentState state) {
     adoptDocumentIdentity(state.version, state.baseCheckinId);
     if (state.orientationSet) camera_.orientation_ = state.orientation;
     lengthUnit_ = state.lengthUnitSet ? state.lengthUnit : LengthUnit::Millimeter;
+    ForgeCad::setDisplayLengthUnit(lengthUnit_, this);
     ForgeCad::normalizeModelHistory(state);
     sketches_ = std::move(state.sketches);
     storyPosition_ = -1;
@@ -2052,6 +2053,8 @@ void CadViewport::tessellateBody(ExtrusionObject &body, int index ) const {
 }
 
 void CadViewport::restoreDocument(DocumentState state) {
+    if (state.lengthUnitSet) lengthUnit_ = state.lengthUnit;
+    ForgeCad::setDisplayLengthUnit(lengthUnit_, this);
     deferredSketches_.clear();for(int index:state.pendingSketchChanges)if(index>=0&&index<state.sketches.size())deferredSketches_.insert(index);
     adoptDocumentIdentity(state.version, state.baseCheckinId);
     dimensionPlacing_ = -1;

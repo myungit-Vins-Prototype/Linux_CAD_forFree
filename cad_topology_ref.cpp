@@ -1,4 +1,5 @@
 #include "cad_topology_ref.h"
+#include "cad_geometry_refs.h"
 
 #include <algorithm>
 #include <exception>
@@ -493,20 +494,7 @@ void upgradeTopologyReferences(QVector<ExtrusionObject> &features) {
         }
     };
     for (ExtrusionObject &feature : features) {
-        for (GeometryRef &ref : feature.datum.refs) upgrade(ref);
-        for (GeometryRef &ref : feature.pattern.refs) upgrade(ref);
-        for (QVector<GeometryRef> *refs : {&feature.surfaceTool.targets, &feature.ruledFirst, &feature.ruledSecond, &feature.planarRefs, &feature.loftStartFaces, &feature.loftEndFaces, &feature.loftSections, &feature.loftEdgeGuides})
-            for (GeometryRef &ref : *refs) upgrade(ref);
-        upgrade(feature.extentRef);
-        upgrade(feature.move.axis);
-        upgrade(feature.revolveAxisRef);
-        upgrade(feature.draftNeutral);
-        upgrade(feature.thickenDirection);
-        upgrade(feature.sweepProfileRef);
-        upgrade(feature.sweepPathRef);
-        upgrade(feature.curveExtraction.source);
-        for(auto &ref:feature.curveExtraction.sources)upgrade(ref);
-        upgrade(feature.curveExtraction.tool);
+        visitGeometryRefs(feature, [&](GeometryRef &ref, GeometryRefFamily, int) { upgrade(ref); });
         if (feature.feature == BodyFeature::Blend || feature.feature == BodyFeature::SheetExtend || (feature.feature==BodyFeature::SurfaceTools&&feature.surfaceTool.mode==0)) {
             const bool sameBase = feature.firstBody >= 0 && feature.firstBody < features.size()
                                && (feature.blendBaseFeature == 0 || feature.blendBaseFeature == features.at(feature.firstBody).featureId);

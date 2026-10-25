@@ -133,28 +133,12 @@ void buildGeometryImpl(ExtrusionObject &body, int index, const QVector<SketchObj
     body.notice.clear();
     body.forgeBody.reset();
     body.curve.reset();
-    for (int sketch : sketchesOf(body)) if (sketch>=0 && sketch<sketches.size())
-        for (const auto &c : sketches.at(sketch).geometricConstraints)
-            if (c.type==ConstraintType::Pierce && (!c.pierce || !c.pierce->error.isEmpty()
-                || ForgeCad::constraintError(sketches.at(sketch),c)>1e-7)) {
-                body.error=QStringLiteral("Vincolo Pierce non risolto nello schizzo %1: %2").arg(sketches.at(sketch).name,
-                    c.pierce ? (c.pierce->error.isEmpty() ? QStringLiteral("punto fuori dalla superficie") : c.pierce->error) : QStringLiteral("riferimento mancante"));
-                return;
-            }
     body.curves.clear();
     body.datumValid = false;
     body.solid = false;
-    for (int sketch : sketchesOf(body)) if (sketch >= 0 && sketch < sketches.size() && !sketches.at(sketch).supportError.isEmpty()) {
-        body.error = QStringLiteral("Appoggio non risolto nello schizzo %1: %2").arg(sketches.at(sketch).name, sketches.at(sketch).supportError);
-        return;
-    }
-    const auto operand = [&](int i) -> const ExtrusionObject * {
-        return i >= 0 && i < index && i < bodies.size() ? &bodies.at(i) : nullptr;
-    };
-    const auto sketch = [&](int i) -> const SketchObject * { return i >= 0 && i < sketches.size() ? &sketches.at(i) : nullptr; };
     if (body.suppressed) {
-        // Una feature soppressa e' un passaggio trasparente nella catena:
-        // conserva un risultato intermedio valido per le feature seguenti.
+        // La soppressione bypassa anche gli input della feature: un appoggio
+        // o un Pierce non piu' valido non deve interrompere la catena.
         const ExtrusionObject *previous = nullptr;
         for (int candidate = index - 1; candidate >= 0; --candidate)
             if (bodies.at(candidate).modelBodyId == body.modelBodyId) { previous = &bodies.at(candidate); break; }
@@ -166,6 +150,22 @@ void buildGeometryImpl(ExtrusionObject &body, int index, const QVector<SketchObj
         }
         return;
     }
+    for (int sketch : sketchesOf(body)) if (sketch>=0 && sketch<sketches.size())
+        for (const auto &c : sketches.at(sketch).geometricConstraints)
+            if (c.type==ConstraintType::Pierce && (!c.pierce || !c.pierce->error.isEmpty()
+                || ForgeCad::constraintError(sketches.at(sketch),c)>1e-7)) {
+                body.error=QStringLiteral("Vincolo Pierce non risolto nello schizzo %1: %2").arg(sketches.at(sketch).name,
+                    c.pierce ? (c.pierce->error.isEmpty() ? QStringLiteral("punto fuori dalla superficie") : c.pierce->error) : QStringLiteral("riferimento mancante"));
+                return;
+            }
+    for (int sketch : sketchesOf(body)) if (sketch >= 0 && sketch < sketches.size() && !sketches.at(sketch).supportError.isEmpty()) {
+        body.error = QStringLiteral("Appoggio non risolto nello schizzo %1: %2").arg(sketches.at(sketch).name, sketches.at(sketch).supportError);
+        return;
+    }
+    const auto operand = [&](int i) -> const ExtrusionObject * {
+        return i >= 0 && i < index && i < bodies.size() ? &bodies.at(i) : nullptr;
+    };
+    const auto sketch = [&](int i) -> const SketchObject * { return i >= 0 && i < sketches.size() ? &sketches.at(i) : nullptr; };
     try {
         if (body.operation >= 0) {
             const ExtrusionObject *first = operand(body.firstBody), *second = operand(body.secondBody);

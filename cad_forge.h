@@ -17,7 +17,13 @@
 // esatta dello schizzo (le curve di cad_curve_solver), il collegamento degli
 // estremi entro kSketchConnectionTolerance e le regole di annidamento dei
 // contorni di fk_profile.
+namespace ForgeCad::Kernel { enum class BooleanOperation; }
+
 namespace ForgeCad {
+
+// Booleana interna: propaga le eccezioni e conserva anche esiti vuoti.
+// Registra la genealogia dichiarata nell'ordine esatto degli operandi.
+ForgeBody forgeBooleanWithHistory(const ForgeBody &first, const ForgeBody &second, Kernel::BooleanOperation operation);
 
 // Tratti esatti dello schizzo nel suo piano (nel nuovo kernel).
 std::vector<Kernel::ProfileSegment> forgeSketchSegments(const SketchObject &sketch);

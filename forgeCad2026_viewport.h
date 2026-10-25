@@ -566,6 +566,12 @@ public:
     void setSurfacePoleOverlay(const QVector<QVector3D> &points,int uCount=0,int vCount=0,int selected=-1);
     QPointF surfacePoleScreen(int index) const;
     QVector3D surfacePoleDragVector(const QPoint &from,const QPoint &to) const;
+    void setSurfacePoleSelection(const QVector<int> &selected, const std::array<QVector3D, 3> &axes, bool local);
+    const std::array<QVector3D, 3> &surfacePoleAxes() const { return surfacePoleAxes_; }
+    QPointF surfacePoleGizmoCenter() const;
+    QPointF surfacePoleAxisScreen(int axis) const;
+    int surfacePoleHandleAt(const QPointF &point) const; // 0..2 assi, 3 centro libero
+    QVector3D surfacePoleAxisDragVector(int axis, const QPoint &from, const QPoint &to) const;
     // La voce attiva di un elenco ha un colore distinto dai riferimenti scelti.
     void setReferenceListHighlight(QObject *owner, const QVector<GeometryRef> &refs);
     void clearReferenceListHighlight(QObject *owner);
@@ -999,7 +1005,7 @@ private:
         double textAngle = 0.0;  // gradi
         QPolygonF textBox;       // per la scelta con il mouse
     };
-    static QString dimensionText(const SketchConstraint &c);
+    QString dimensionText(const SketchConstraint &c) const;
     // Freccia con la punta in `tip` e il corpo dalla parte di `from` (schermo).
     static QPolygonF arrowHead(const QPointF &tip, const QPointF &from);
     bool dimensionGraphic(const SketchObject &sketch, int index, DimensionGraphic &g) const;
@@ -1653,6 +1659,10 @@ private:
     QVector<GeometryRef> refMarks_;
     QVector<QVector3D> surfacePoleOverlay_;
     int surfacePoleU_=0,surfacePoleV_=0,surfacePoleSelected_=-1;
+    QSet<int> surfacePoleSelection_;
+    QVector3D surfacePoleGizmoOrigin_;
+    std::array<QVector3D, 3> surfacePoleAxes_{{{1,0,0},{0,1,0},{0,0,1}}};
+    bool surfacePoleLocal_ = false;
     QPointer<QObject> referenceListOwner_;
     QVector<GeometryRef> referenceListMarks_;
     bool measureValid_ = false;  // linea della misura (finestra Misura)

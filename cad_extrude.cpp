@@ -144,14 +144,6 @@ Body combined(const Body &a, const Body &b, BodyHistory *history) {
 }
 
 
-ForgeBody extrusionBoolean(const ForgeBody &a, const ForgeBody &b, Kernel::BooleanOperation operation) {
-    BodyHistory history;
-    Body body = booleanOperation(*a, *b, operation, {}, &history);
-    const ForgeBody result = std::make_shared<const Body>(std::move(body));
-    registerDeclaredHistory(result, {a, b}, std::move(history));
-    return result;
-}
-
 // L'utensile del limite produce il coperchio finale; quando e' un corpo
 // effettivo il legame Generated mantiene anche la faccia di riferimento.
 ForgeBody extrusionEndTool(Body body, const ForgeBody &owner = {}, int sourceFace = -1) {
@@ -311,7 +303,7 @@ ForgeBody forgeExtrusionFeature(ExtrusionObject &body, int index, const QVector<
                         const Body box = makeBox(Frame3(boxFrame.toGlobal(Vec3(-half, -half, 0.0)), z, x), 2.0 * half, 2.0 * half, 2.0 * half);
                         const ForgeBody owner = body.extentRef.kind == 5 && body.extentRef.index >= 0 && body.extentRef.index < bodies.size()
                             ? bodies.at(body.extentRef.index).forgeBody : ForgeBody{};
-                        result = extrusionBoolean(longer, extrusionEndTool(box, owner, target.face), Kernel::BooleanOperation::Intersect);
+                        result = forgeBooleanWithHistory(longer, extrusionEndTool(box, owner, target.face), Kernel::BooleanOperation::Intersect);
                     }
                 } else {
                     // Faccia curva: il prisma fino oltre il corpo della faccia, meno il
@@ -334,7 +326,7 @@ ForgeBody forgeExtrusionFeature(ExtrusionObject &body, int index, const QVector<
                     const auto base = [&](const Body &b, ShellId shell) { return touchesPlane(b, shell, origin, e, 1e-7 * size); };
                     const ForgeBody tool = extrusionEndTool(solid, bodies.at(owner).forgeBody);
                     for (const Kernel::BooleanOperation op : {Kernel::BooleanOperation::Subtract, Kernel::BooleanOperation::Intersect}) {
-                        const ForgeBody piece = extrusionBoolean(longer, tool, op);
+                        const ForgeBody piece = forgeBooleanWithHistory(longer, tool, op);
                         if (piece->faces().empty()) continue;
                         result = forgeKeepShells(piece, base);
                         if (result) break;
@@ -360,7 +352,7 @@ ForgeBody forgeExtrusionFeature(ExtrusionObject &body, int index, const QVector<
                     setError(error, QStringLiteral("Una superficie nei due versi si estrude solo a distanza."));
                     return nullptr;
                 }
-                result = extrusionBoolean(result, back, Kernel::BooleanOperation::Unite);
+                result = forgeBooleanWithHistory(result, back, Kernel::BooleanOperation::Unite);
             }
         }
     } catch (const std::exception &failure) {
@@ -408,12 +400,12 @@ ForgeBody forgeMergeFeatureResult(ExtrusionObject &body, const ForgeBody &result
     try {
         if (!subtract) {
             ForgeBody united = result;
-            for (int target : targets) united = extrusionBoolean(united, bodies.at(target).forgeBody, Kernel::BooleanOperation::Unite);
+            for (int target : targets) united = forgeBooleanWithHistory(united, bodies.at(target).forgeBody, Kernel::BooleanOperation::Unite);
             return united;
         }
         ForgeBody cut;
         for (int target : targets) {
-            ForgeBody piece = extrusionBoolean(bodies.at(target).forgeBody, result, Kernel::BooleanOperation::Subtract);
+            ForgeBody piece = forgeBooleanWithHistory(bodies.at(target).forgeBody, result, Kernel::BooleanOperation::Subtract);
             if (piece->faces().empty()) continue;
             if (!cut) {
                 cut = std::move(piece);
@@ -421,7 +413,7 @@ ForgeBody forgeMergeFeatureResult(ExtrusionObject &body, const ForgeBody &result
             }
             // I pezzi dei solidi diversi: uniti, o insieme come pezzi separati se si toccano solo lungo uno spigolo.
             try {
-                cut = extrusionBoolean(cut, piece, Kernel::BooleanOperation::Unite);
+                cut = forgeBooleanWithHistory(cut, piece, Kernel::BooleanOperation::Unite);
             } catch (const std::exception &) {
                 BodyHistory history;
                 const ForgeBody joined = std::make_shared<const Body>(combined(*cut, *piece, &history));

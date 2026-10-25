@@ -83,6 +83,8 @@ BlendDialogResult blendDialog(QWidget *parent, CadViewport *viewport, const QStr
     QVector<EdgePoint> selectedEdges = edges;
     bool previewStarted = !pickInView;
     FunctionDialogPanel dialog(parent);
+    dialog.setSizeIdentity(chamfer ? QStringLiteral("chamfer") : QStringLiteral("fillet"));
+    if (viewport) ForgeCad::setDisplayLengthUnit(viewport->lengthUnit(), &dialog);
     dialog.setWindowTitle(title);
     auto *form = dialog.createScrollableForm();
     auto *sizeBox = new ForgeCad::ExpressionSpinBox(&dialog);
@@ -151,10 +153,8 @@ BlendDialogResult blendDialog(QWidget *parent, CadViewport *viewport, const QStr
     describe();
     auto *edgesLabel = new GeometryReferenceList(dialog, viewport, QStringLiteral("blendEdges"));
     form->addRow(QStringLiteral("Spigoli:"), edgesLabel);
-    auto *previewLabel = new QLabel(pickInView ? QStringLiteral("seleziona almeno uno spigolo nella vista")
+    auto *previewLabel = new FunctionMessage(pickInView ? QStringLiteral("seleziona almeno uno spigolo nella vista")
                                                : QStringLiteral("Anteprima in calcolo..."), &dialog);
-    previewLabel->setWordWrap(true);
-    previewLabel->setMaximumWidth(360);
     form->addRow(QStringLiteral("Anteprima:"), previewLabel);
     auto *buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dialog);
     QPushButton *edgesButton = buttons->addButton(QStringLiteral("Spigoli..."), QDialogButtonBox::ActionRole);
@@ -242,6 +242,8 @@ bool scaleDialog(QWidget *parent, CadViewport *viewport, const QString &title, i
         return false;
     }
     FunctionDialogPanel dialog(parent);
+    dialog.setSizeIdentity(QStringLiteral("scale"), {QStringLiteral("Scala"), QStringLiteral("Modifica scala")});
+    if (viewport) ForgeCad::setDisplayLengthUnit(viewport->lengthUnit(), &dialog);
     dialog.setWindowTitle(title);
     auto *form = dialog.createScrollableForm();
     auto *bodyBox = new QComboBox(&dialog);
@@ -346,6 +348,8 @@ bool patternDialog(QMainWindow *window, CadViewport *viewport, const QString &ti
         p.refs.append(y);
     }
     FunctionDialogPanel dialog(window);
+    dialog.setSizeIdentity(QStringLiteral("pattern"));
+    if (viewport) ForgeCad::setDisplayLengthUnit(viewport->lengthUnit(), &dialog);
     dialog.setWindowTitle(title);
     dialog.setModal(false);
     auto *form = dialog.createScrollableForm();
@@ -406,10 +410,8 @@ bool patternDialog(QMainWindow *window, CadViewport *viewport, const QString &ti
     form->addRow(QString(), flipBox2);
     form->addRow(QStringLiteral("Istanze 2:"), countBox2);
     form->addRow(QStringLiteral("Passo 2:"), spacingBox2);
-    auto *status = new QLabel(&dialog);
-    status->setWordWrap(true);
+    auto *status = new FunctionMessage(&dialog);
     status->setMinimumWidth(280);
-    status->setMaximumWidth(360);
     form->addRow(status);
     auto *buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dialog);
     form->addRow(buttons);
@@ -556,6 +558,8 @@ bool extrusionDialog(QMainWindow *window, CadViewport *viewport, const QString &
     definition.operation = -1;
     definition.feature = BodyFeature::Extrusion;
     FunctionDialogPanel dialog(window);
+    dialog.setSizeIdentity(QStringLiteral("extrusion"), {QStringLiteral("Estrusione"), QStringLiteral("Modifica estrusione")});
+    if (viewport) ForgeCad::setDisplayLengthUnit(viewport->lengthUnit(), &dialog);
     dialog.setWindowTitle(title);
     dialog.setModal(false);
     auto *form = dialog.createScrollableForm();
@@ -612,10 +616,8 @@ bool extrusionDialog(QMainWindow *window, CadViewport *viewport, const QString &
     form->addRow(QStringLiteral("Risultato:"), operationBox);
     form->addRow(QString(), autoBox);
     form->addRow(QStringLiteral("Solidi:"), bodyRow);
-    auto *status = new QLabel(&dialog);
-    status->setWordWrap(true);
+    auto *status = new FunctionMessage(&dialog);
     status->setMinimumWidth(280);
-    status->setMaximumWidth(360);
     form->addRow(status);
     auto *buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dialog);
     form->addRow(buttons);
@@ -801,6 +803,8 @@ bool transformDialog(QMainWindow *window, CadViewport *viewport, const QString &
     const bool preselected = candidates.contains(definition.firstBody);
     if (!preselected) definition.firstBody = candidates.last();
     FunctionDialogPanel dialog(window);
+    dialog.setSizeIdentity(QStringLiteral("transform"));
+    if (viewport) ForgeCad::setDisplayLengthUnit(viewport->lengthUnit(), &dialog);
     dialog.setWindowTitle(title);
     dialog.setModal(false);
     auto *form = dialog.createScrollableForm();
@@ -836,10 +840,8 @@ bool transformDialog(QMainWindow *window, CadViewport *viewport, const QString &
     form->addRow(QStringLiteral("Asse:"), axisButton);
     form->addRow(QString(), copyBox);
     form->addRow(wrappedNote(QStringLiteral("Prima la rotazione attorno all'asse (verso destrorso), poi la traslazione."), &dialog));
-    auto *status = new QLabel(&dialog);
-    status->setWordWrap(true);
+    auto *status = new FunctionMessage(&dialog);
     status->setMinimumWidth(280);
-    status->setMaximumWidth(360);
     form->addRow(status);
     auto *buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dialog);
     form->addRow(buttons);
@@ -954,6 +956,8 @@ bool threadDialog(QMainWindow *window, CadViewport *viewport, const QString &tit
     if (selected < 0) selected = candidates.size() - 1, definition.firstBody = candidates.at(selected);
 
     FunctionDialogPanel dialog(window);
+    dialog.setSizeIdentity(QStringLiteral("thread"));
+    if (viewport) ForgeCad::setDisplayLengthUnit(viewport->lengthUnit(), &dialog);
     dialog.setWindowTitle(title);
     dialog.setModal(false);
     auto *form = dialog.createScrollableForm();
@@ -979,8 +983,7 @@ bool threadDialog(QMainWindow *window, CadViewport *viewport, const QString &tit
     lengthBox->setDecimals(6); lengthBox->setRange(0.001, 1e6); lengthBox->setKeyboardTracking(false);
     auto *handBox = new QComboBox(&dialog); handBox->addItems({QStringLiteral("Destrorsa"), QStringLiteral("Sinistrorsa")}); handBox->setCurrentIndex(definition.thread.leftHanded ? 1 : 0);
     auto *reverseBox = new QCheckBox(QStringLiteral("Parti dall'altra estremita' della faccia"), &dialog); reverseBox->setChecked(definition.thread.reverse);
-    auto *status = new QLabel(&dialog); status->setWordWrap(true);
-    form->addRow(surfaceDiagram);
+    auto *status = new FunctionMessage(&dialog); form->addRow(surfaceDiagram);
     form->addRow(QStringLiteral("Corpo:"), bodyBox);
     form->addRow(QStringLiteral("Superficie:"), faceButton);
     form->addRow(faceInfoLabel);
@@ -1010,7 +1013,7 @@ bool threadDialog(QMainWindow *window, CadViewport *viewport, const QString &tit
         if (faceValid) {
             faceInfoLabel->setText(QStringLiteral("%1 • diametro %2 • lunghezza disponibile %3%4")
                                    .arg(faceInfo.internal ? QStringLiteral("Foro interno") : QStringLiteral("Albero esterno"),
-                                        ForgeCad::formatLength(faceInfo.diameter), ForgeCad::formatLength(faceInfo.length),
+                                        ForgeCad::formatLength(faceInfo.diameter, 6, true, &dialog), ForgeCad::formatLength(faceInfo.length, 6, true, &dialog),
                                         faceInfo.conical ? QStringLiteral(" • conica") : QString()));
             lengthBox->setMaximum(qMax(0.001, faceInfo.length));
             if (initializing || lengthBox->value() > faceInfo.length) lengthBox->setValue(definition.thread.length > 0.0 ? qMin(definition.thread.length, faceInfo.length) : faceInfo.length);
@@ -1117,6 +1120,8 @@ bool booleanDialog(QMainWindow *parent, CadViewport *viewport, const QString &ti
         return resultBodyLabel(viewport, index, !used);
     };
     FunctionDialogPanel dialog(parent);
+    dialog.setSizeIdentity(QStringLiteral("boolean"));
+    if (viewport) ForgeCad::setDisplayLengthUnit(viewport->lengthUnit(), &dialog);
     dialog.setWindowTitle(title);
     dialog.setModal(false);
     auto *form = dialog.createScrollableForm();
@@ -1151,8 +1156,7 @@ bool booleanDialog(QMainWindow *parent, CadViewport *viewport, const QString &ti
     pickLayout->setContentsMargins(0, 0, 0, 0);
     pickLayout->addWidget(pickFirst);
     pickLayout->addWidget(pickTools);
-    auto *status = new QLabel(&dialog);
-    status->setWordWrap(true);
+    auto *status = new FunctionMessage(&dialog);
     form->addRow(QStringLiteral("Operazione:"), operationBox);
     form->addRow(QStringLiteral("Oggetto A:"), firstBox);
     form->addRow(QStringLiteral("Strumenti:"), toolList);
@@ -1302,6 +1306,8 @@ bool draftDialog(QMainWindow *window, CadViewport *viewport, const QString &titl
     if (!candidates.contains(definition.firstBody)) definition.firstBody = candidates.last();
     if (definition.draftNeutral.kind < 0) { definition.draftNeutral.kind = 1; definition.draftNeutral.index = 0; }
     FunctionDialogPanel dialog(window);
+    dialog.setSizeIdentity(QStringLiteral("draft"));
+    if (viewport) ForgeCad::setDisplayLengthUnit(viewport->lengthUnit(), &dialog);
     dialog.setWindowTitle(title);
     auto *form = dialog.createScrollableForm();
     auto *bodyBox = new QComboBox(&dialog);
@@ -1320,8 +1326,7 @@ bool draftDialog(QMainWindow *window, CadViewport *viewport, const QString &titl
     angle->setDecimals(4); angle->setRange(-88.9999, 88.9999); angle->setSuffix(QStringLiteral("°"));
     angle->setValue(definition.draftAngle); angle->setKeyboardTracking(false);
     auto *reverse = new QCheckBox(QStringLiteral("Inverti direzione di estrazione"), &dialog); reverse->setChecked(definition.draftReverse);
-    auto *status = new QLabel(&dialog); status->setWordWrap(true); status->setMaximumWidth(360);
-    form->addRow(QStringLiteral("Corpo:"), bodyBox);
+    auto *status = new FunctionMessage(&dialog); form->addRow(QStringLiteral("Corpo:"), bodyBox);
     form->addRow(QStringLiteral("Facce:"), faces); form->addRow(faceCount); form->addRow(clear);
     form->addRow(QStringLiteral("Piano neutro:"), neutralBox); form->addRow(neutralPick); form->addRow(neutralLabel);
     form->addRow(QStringLiteral("Angolo:"), angle); form->addRow(reverse);
@@ -1426,6 +1431,8 @@ bool revolutionDialog(QWidget *parent, CadViewport *viewport, const QString &tit
     const QVector<SketchObject> &sketches = viewport->sketches();
     const QVector<ExtrusionObject> &bodies = viewport->extrusions();
     FunctionDialogPanel dialog(parent);
+    dialog.setSizeIdentity(QStringLiteral("revolution"), {QStringLiteral("Rivoluzione"), QStringLiteral("Modifica rivoluzione")});
+    if (viewport) ForgeCad::setDisplayLengthUnit(viewport->lengthUnit(), &dialog);
     dialog.setWindowTitle(title);
     auto *form = dialog.createScrollableForm();
     form->addRow(new FeatureOperationDiagram(FeatureOperationDiagram::Revolution, &dialog));
@@ -1480,9 +1487,7 @@ bool revolutionDialog(QWidget *parent, CadViewport *viewport, const QString &tit
     bodyList->setMinimumHeight(110);
     BodyPicker picker(dialog, viewport, replaced, fillMergeBodyList(bodyList, viewport, replaced, initial.mergeBodies), nullptr, bodyList);
     QWidget *bodyRow = picker.row(bodyList);
-    auto *pickStatus = new QLabel(&dialog);
-    pickStatus->setWordWrap(true);
-    pickStatus->setMaximumWidth(360);
+    auto *pickStatus = new FunctionMessage(&dialog);
     pickStatus->setStyleSheet(QStringLiteral("color: #8aa0b4;"));
     form->addRow(QStringLiteral("Schizzo:"), sketchBox);
     form->addRow(QStringLiteral("Asse:"), axisBox);
@@ -1658,6 +1663,7 @@ bool primitiveDialog(QWidget *parent, PrimitiveParameters &parameters,
     case PrimitiveKind::Torus: fields = {{QStringLiteral("Raggio maggiore:"), 1e-6}, {QStringLiteral("Raggio minore:"), 1e-6}}; break;
     }
     FunctionDialogPanel dialog(parent);
+    dialog.setSizeIdentity(QStringLiteral("primitive-%1").arg(int(parameters.kind)));
     dialog.setWindowTitle(primitiveTitle(parameters.kind));
     auto *form = dialog.createScrollableForm();
     auto *planeBox = new QComboBox(&dialog);

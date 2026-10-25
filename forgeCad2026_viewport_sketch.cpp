@@ -1957,7 +1957,7 @@ QStringList CadViewport::previewMeasures() const {
     CurveObject curve;
     if (!previewCurve(curve)) return {};
     const QVector<QPointF> &p = curve.controlPoints;
-    const auto number = [](double value) { return ForgeCad::formatLength(value, 4); };
+    const auto number = [this](double value) { return ForgeCad::formatLength(value, 4, true, this); };
     switch (curve.tool) {
     case DrawingTool::Slot: {
         const QPointF axis=p[1]-p[0];const double length=pointLength(axis);
@@ -2201,7 +2201,7 @@ void CadViewport::syncCurveDimensions(SketchObject &sketch, int curve) {
             c.value = ForgeCad::currentMeasure(sketch, c);
 }
 
-QString CadViewport::dimensionText(const SketchConstraint &c) {
+QString CadViewport::dimensionText(const SketchConstraint &c) const {
     auto number = [](double v) {
         QString text = QString::number(v, 'f', 3);
         while (text.contains(QLatin1Char('.')) && (text.endsWith(QLatin1Char('0')) || text.endsWith(QLatin1Char('.')))) text.chop(1);
@@ -2209,11 +2209,11 @@ QString CadViewport::dimensionText(const SketchConstraint &c) {
     };
     switch (c.type) {
     case ConstraintType::Radius:
-    case ConstraintType::AxisRadius: return QStringLiteral("R") + ForgeCad::formatLength(c.value, 3);
+    case ConstraintType::AxisRadius: return QStringLiteral("R") + ForgeCad::formatLength(c.value, 3, true, this);
     case ConstraintType::Diameter:
-    case ConstraintType::AxisDiameter: return QStringLiteral("\u2300") + ForgeCad::formatLength(c.value, 3);
+    case ConstraintType::AxisDiameter: return QStringLiteral("\u2300") + ForgeCad::formatLength(c.value, 3, true, this);
     case ConstraintType::Angle: return number(std::fabs(c.value)) + QStringLiteral("\u00B0");
-    default: return ForgeCad::formatLength(c.value, 3);
+    default: return ForgeCad::formatLength(c.value, 3, true, this);
     }
 }
 
@@ -2432,7 +2432,7 @@ QVector<CadViewport::ConstraintGlyph> CadViewport::constraintGlyphs() const {
         QString text = ForgeCad::constraintSymbol(c.type);
         if (c.type == ConstraintType::Pattern) text += QLatin1Char(' ') + ForgeCad::patternSummary(c.pattern);
         else if (c.type == ConstraintType::Angle) text += QStringLiteral(" %1\u00B0").arg(c.value, 0, 'f', 2);
-        else if (ForgeCad::isDimension(c.type)) text += QLatin1Char(' ') + ForgeCad::formatLength(c.value, 3);
+        else if (ForgeCad::isDimension(c.type)) text += QLatin1Char(' ') + ForgeCad::formatLength(c.value, 3, true, this);
         for (const ForgeCad::ConstraintAnchor &anchor : ForgeCad::constraintAnchors(*sketch, c)) {
             const QPointF screen = projectWorldPoint(mapSketchPoint(anchor.point, *sketch));
             ConstraintGlyph glyph;
@@ -2785,7 +2785,7 @@ void CadViewport::editFreeCurve(int curveIndex, int initialPoint ) {
         points->clear();
         for (int k = 0; k < work.controlPoints.size(); ++k)
             points->addItem(QStringLiteral("P%1   (%2, %3)").arg(k + 1)
-                .arg(ForgeCad::formatLength(work.controlPoints.at(k).x()), ForgeCad::formatLength(work.controlPoints.at(k).y())));
+                .arg(ForgeCad::formatLength(work.controlPoints.at(k).x(), 6, true, this), ForgeCad::formatLength(work.controlPoints.at(k).y(), 6, true, this)));
         if (points->count()) points->setCurrentRow(initialPoint >= 0 ? qBound(0, initialPoint, points->count() - 1) : row);
         initialPoint = -1;
     };

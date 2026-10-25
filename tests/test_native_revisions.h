@@ -2,6 +2,7 @@
 #include "../cad_native_revisions.h"
 #include "../cad_history.h"
 #include "../cad_workspace.h"
+#include "../cad_drawing_release.h"
 #include "fk_body_io.h"
 #include "fk_curve_algo.h"
 
@@ -26,9 +27,150 @@ QByteArray nativeLegacy49Fixture(const QByteArray &current) {
     return nativeFixture(legacyPayload,49,qCompress(restoredCache,9));
 }
 void nativeOk(const QString &error) { if (!error.isEmpty()) throw std::runtime_error(error.toStdString()); }
+void nativePendingPreviousFormatTests() {
+    using namespace ForgeCad;
+    using namespace ForgeCad::Kernel;
+    QTemporaryDir temporary;
+    require(temporary.isValid(), "directory del pendente formato precedente");
+    RevisionStore store(temporary.filePath("archivio"));
+    nativeOk(store.initialize());
+    DocumentState working;
+    ExtrusionObject root;
+    root.feature = BodyFeature::Primitive;
+    root.featureId = 41;
+    root.modelBodyId = 9;
+    root.forgeBody = std::make_shared<const Body>(makeBox(Frame3{}, 1, 1, 1));
+    working.extrusions.append(root);
+    NativeRevisionSession session;
+    nativeOk(beginNativeCheckout(store, working, "Pendente precedente", "progettista", session));
+    RevisionCheckinRequest request;
+    nativeOk(prepareNativeCheckin(working, session, "A", "preparato prima dell'aggiornamento", request));
+    // Nessuno schizzo: il payload 53 e 54 ha esattamente gli stessi campi.
+    // Cambia soltanto l'header, come un pendente prodotto dal writer 53.
+    require(kDocumentFormatVersion == 54, "fixture precedente da rivedere a un nuovo cambio formato");
+    qToBigEndian<quint16>(53, request.payload.data() + 4);
+    const auto originalPayload = request.payload;
+    QByteArray pending;
+    nativeOk(encodeNativeRevisionOperation(session, request, pending));
+    NativeRevisionSession restoredSession;
+    RevisionCheckinRequest restoredRequest;
+    nativeOk(decodeNativeRevisionOperation(pending, restoredSession, restoredRequest));
+    require(restoredRequest.payload == originalPayload && restoredRequest.checkinId == request.checkinId,
+            "riapertura pendente conserva payload e UUID precedenti");
+    auto changed = working;
+    changed.lengthUnit = LengthUnit::Inch;
+    RevisionRecord record;
+    require(!publishNativeCheckin(store, restoredRequest, changed, restoredSession, record).isEmpty(),
+            "migrazione pendente non accetta modifiche successive alla preparazione");
+    QVector<RevisionRecord> history;
+    nativeOk(store.history(working.version.documentId, history));
+    require(history.isEmpty() && !restoredSession.checkout.token.isNull(),
+            "confronto fallito non pubblica e conserva la prenotazione");
+    nativeOk(publishNativeCheckin(store, restoredRequest, working, restoredSession, record));
+    QByteArray archived;
+    nativeOk(store.read(record.version, archived));
+    require(archived == originalPayload && record.version.checkinId == request.checkinId
+            && record.sha256 == QCryptographicHash::hash(originalPayload, QCryptographicHash::Sha256),
+            "pubblicazione pendente archivia byte e impronta originali del formato 53");
+    nativeOk(publishNativeCheckin(store, restoredRequest, working, restoredSession, record));
+    nativeOk(store.history(working.version.documentId, history));
+    require(history.size() == 1, "ritentativo pendente precedente resta idempotente");
+
+    // Vecchia tavola e vecchio rilascio con l'impronta del modello 53.
+    // Il formato della tavola non cambia: la verifica deve riconoscere
+    // quella definizione senza riscrivere gli artefatti archiviati.
+    auto normalized = working;
+    normalized.version.checkinId = {};
+    normalized.baseCheckinId = {};
+    normalized.orientation = AxesOrientation{};
+    normalized.lengthUnit = LengthUnit::Millimeter;
+    QByteArray legacyDefinition;
+    nativeOk(encodeDocumentDefinition53ForHash(normalized, legacyDefinition));
+    const auto legacyHash = QCryptographicHash::hash(legacyDefinition, QCryptographicHash::Sha256);
+    QByteArray currentHash;
+    nativeOk(drawingModelDefinitionHash(working, currentHash));
+    require(currentHash != legacyHash, "nuove impronte usano il formato corrente");
+    DrawingFile drawing;
+    drawing.sheet.drawing.model = record.version;
+    drawing.modelPath = "modello-assente.prt";
+    drawing.modelArchivePath = store.directory();
+    nativeOk(store.archiveIdentity(drawing.modelArchiveId));
+    drawing.modelDefinitionHash = legacyHash;
+    nativeOk(store.registerDocument(drawing.sheet.drawing.version.documentId, "Tavola precedente", "drawing"));
+    RevisionCheckinRequest drawingRequest;
+    nativeOk(store.checkout(drawing.sheet.drawing.version.documentId, "progettista", drawingRequest.checkout));
+    drawingRequest.checkinId = QUuid::createUuid();
+    drawingRequest.technicalRevision = "A";
+    drawingRequest.dependencies = {record.version};
+    drawing.sheet.drawing.version.checkinId = drawingRequest.checkinId;
+    nativeOk(encodeDrawingFile(drawing, drawingRequest.payload));
+    RevisionRecord drawingRecord;
+    nativeOk(store.checkin(drawingRequest, drawingRecord));
+    DrawingFile historicalDrawing;
+    nativeOk(readDrawingRevision(store, drawingRecord.version, historicalDrawing));
+    DocumentState model;
+    QString resolved;
+    bool definitionChanged = true;
+    nativeOk(loadDrawingModel(temporary.filePath("precedente.drw"), historicalDrawing, model, resolved, definitionChanged));
+    require(!definitionChanged && model.version.checkinId == record.version.checkinId,
+            "tavola con hash 53 carica lo snapshot esatto senza falsa modifica");
+    RevisionReleaseRequest release;
+    release.releaseId = QUuid::createUuid();
+    release.name = "Consegna precedente";
+    release.author = "progettista";
+    release.model = record.version;
+    release.drawings = {drawingRecord.version};
+    RevisionReleaseManifest manifest;
+    nativeOk(store.publishRelease(release, manifest));
+    nativeOk(readDrawingRelease(store, release.releaseId, manifest));
+    nativeOk(inspectDrawingRelease(store, release, manifest));
+    QByteArray drawingBytes;
+    nativeOk(store.read(drawingRecord.version, drawingBytes));
+    nativeOk(store.read(record.version, archived));
+    require(drawingBytes == drawingRequest.payload && archived == originalPayload,
+            "verifica della consegna precedente non riscrive modello o tavola");
+
+    auto wrongHashDrawing = historicalDrawing;
+    wrongHashDrawing.modelDefinitionHash[0] = char(wrongHashDrawing.modelDefinitionHash[0] ^ 1);
+    require(!loadDrawingModel(temporary.filePath("errata.drw"), wrongHashDrawing, model, resolved, definitionChanged).isEmpty(),
+            "compatibilita' di formato non accetta impronte storiche errate");
+
+    // Il fallback 53 non deve nascondere i nomi nuovi o una loro modifica.
+    for (bool support : {false, true}) {
+        auto named = working;
+        SketchObject sketch;
+        sketch.segments = {{{0,0},{1,0}}};
+        sketch.constraints = {-1}; sketch.segmentLengths = {0}; sketch.segmentAngles = {-1};
+        auto reference = std::make_shared<GeometryRef>(); reference->kind = 5; reference->index = 0; reference->featureId = root.featureId;
+        auto pierce = std::make_shared<SketchPierceData>(); pierce->surface = *reference;
+        if (support) sketch.support = reference;
+        else { SketchConstraint c; c.type = ConstraintType::Pierce; c.first = {0,0,0}; c.pierce = pierce; sketch.geometricConstraints.append(c); }
+        named.sketches.append(sketch);
+        auto legacyState = named;
+        legacyState.version.checkinId = {}; legacyState.baseCheckinId = {};
+        legacyState.orientation = AxesOrientation{}; legacyState.lengthUnit = LengthUnit::Millimeter;
+        QByteArray oldDefinition;
+        nativeOk(encodeDocumentDefinition53ForHash(legacyState, oldDefinition));
+        const auto oldHash = QCryptographicHash::hash(oldDefinition, QCryptographicHash::Sha256);
+        bool matches = false;
+        nativeOk(drawingModelDefinitionMatches(named, oldHash, matches));
+        require(matches, "fallback storico consentito senza nuovi nomi");
+        (support ? reference->point.name : pierce->surface.point.name) = "faccia-A";
+        nativeOk(drawingModelDefinitionMatches(named, oldHash, matches));
+        require(!matches, "nuovo nome impedisce falsa equivalenza con hash 53");
+        QByteArray namedHash;
+        nativeOk(drawingModelDefinitionHash(named, namedHash));
+        nativeOk(drawingModelDefinitionMatches(named, namedHash, matches));
+        require(matches, "hash corrente conserva la semantica dei nomi");
+        (support ? reference->point.name : pierce->surface.point.name) = "faccia-B";
+        nativeOk(drawingModelDefinitionMatches(named, namedHash, matches));
+        require(!matches, "modifica del solo nome topologico rilevata");
+    }
+}
 void nativeRevisionTests() {
     using namespace ForgeCad;
     using namespace ForgeCad::Kernel;
+    nativePendingPreviousFormatTests();
     QTemporaryDir temporary; require(temporary.isValid(),"directory revisioni native");
     DocumentState initial; ExtrusionObject root; root.feature=BodyFeature::Primitive; root.featureId=71001;
     root.primitive.kind=PrimitiveKind::Box;root.primitive.size[0]=10;root.primitive.size[1]=6;root.primitive.size[2]=4; initial.extrusions={root};

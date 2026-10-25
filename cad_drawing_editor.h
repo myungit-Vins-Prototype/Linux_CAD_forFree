@@ -3,6 +3,7 @@
 #include "cad_drawing_sheet.h"
 #include "cad_drawing_dimension.h"
 #include "cad_drawing_page.h"
+#include "cad_drawing_preparation.h"
 #include <QHash>
 #include <QWidget>
 #include <functional>
@@ -10,12 +11,6 @@
 
 class QGraphicsView;
 namespace ForgeCad {
-struct DrawingFeatureChoice { quint64 id=0; QString name; };
-struct DrawingEditorModel {
-    DrawingModelSnapshot snapshot;
-    QVector<DrawingFeatureChoice> choices;
-    QHash<quint64,quint64> replacements;
-};
 class DrawingSheetEditor final : public QWidget {
 public:
     DrawingSheetEditor(DrawingSheet sheet,DrawingEditorModel model,QWidget *parent=nullptr);
@@ -102,6 +97,7 @@ private:
     friend class DrawingWindow;
     // Navigazione/ripristino del contenitore; non e' una mutazione pubblica.
     QString loadSheet(DrawingSheet sheet);
+    void installPreparedModel(PreparedDrawingSheet prepared);
     void setDocumentHistory(std::function<QString(bool)> handler,bool undo,bool redo,QString undoLabel={},QString redoLabel={});
     static QString exportPdfPages(const QString &path,const QVector<const DrawingSheetEditor *> &pages,DrawingPdfReport &report);
     struct Impl;

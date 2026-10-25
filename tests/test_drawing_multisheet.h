@@ -5,7 +5,57 @@
 #include <QLineEdit>
 #include <QRegularExpression>
 #include <QRadioButton>
+#include <QChildEvent>
+#include <QProgressDialog>
+#include "fk_cancel.h"
 namespace {
+void multisheetPreparationReview(){
+ using namespace ForgeCad;
+ QTemporaryDir temporary;
+ auto source=clientModel();DrawingEditorModel geometry;clientOk(prepareDrawingEditorModel(source,geometry));
+ const auto path=temporary.filePath("preparation.prt");clientOk(saveDocumentFile(path,source));
+ DrawingWindow window;clientOk(window.createFromModel(path));
+ DrawingView view;view.kind=DrawingViewKind::ProjectedEdges;
+ clientOk(window.editor()->insertView(view,{view.id,"Vista conservata",{100,110},{81001}}));
+ clientOk(window.editor()->moveViewTitle(view.id,{120,135}));
+ clientOk(window.duplicateSheet(0));clientOk(window.setActiveSheet(0));
+ const auto encode=[](const DrawingFile &file){QByteArray bytes;clientOk(encodeDrawingFile(file,bytes));return bytes;};
+ const auto before=encode(window.document());const auto active=window.activeSheet();
+ const auto curve=window.editor()->curves(view.id).front().curve;
+ const auto history=window.editor()->canUndo();
+ struct Computations : QObject {
+     int starts=0,cancelAt=0;
+     bool eventFilter(QObject *,QEvent *event)override{
+         if(event->type()==QEvent::ChildAdded){auto *child=static_cast<QChildEvent *>(event)->child();
+             QObject::connect(child,&QObject::objectNameChanged,this,[this,child](const QString &name){
+                 if(name!=QStringLiteral("drawingViewProgress"))return;
+                 ++starts;
+                 if(starts==cancelAt)QTimer::singleShot(0,child,[child]{QMetaObject::invokeMethod(child,"canceled",Qt::DirectConnection);});
+             });
+         }
+         return false;
+     }
+ } computations;
+ QApplication::instance()->installEventFilter(&computations);
+ computations.cancelAt=2;
+ const auto canceled=window.updateFromSource(path);
+ require(!canceled.isEmpty()&&computations.starts==2&&encode(window.document())==before
+         &&window.activeSheet()==active&&window.editor()->curves(view.id).front().curve==curve
+         &&window.editor()->canUndo()==history,"annullamento sul secondo foglio conserva documento, cache attiva e storia");
+ computations.starts=0;computations.cancelAt=0;
+ clientOk(window.updateFromSource(path));
+ require(computations.starts==2,"aggiornamento di due fogli avvia due calcoli, senza editor temporanei o ricalcolo attivo");
+ require(encode(window.document())==before&&window.activeSheet()==active&&!window.editor()->canUndo(),
+         "aggiornamento conserva presentazioni e foglio attivo e azzera la storia come prima");
+ // La preparazione dati conta una visita per vista e non crea progressi/widget.
+ auto sheet=window.editor()->sheet();DrawingView extra=view;extra.id=QUuid::createUuid();
+ sheet.drawing.views.push_back(extra);sheet.views.append({extra.id,"Seconda vista",{200,110},{81001}});
+ int views=0;computations.starts=0;
+ const auto prepared=prepareDrawingSheet(sheet,geometry,[&](int phase){if(phase==5)++views;});
+ require(views==2&&prepared.curves.size()==2&&prepared.visibility.size()==2&&computations.starts==0,
+         "preparazione geometrica indipendente dai widget calcola ciascuna vista una sola volta");
+ std::cout<<"PASS multisheet preparation: two calculations instead of five, cancellation atomic, presentation/history preserved\n";
+}
 void multisheetTests(){
  using namespace ForgeCad;using namespace ForgeCad::Kernel;
  const auto encoded=[](const DrawingFile &file){QByteArray bytes;clientOk(encodeDrawingFile(file,bytes));return bytes;};
@@ -60,6 +110,7 @@ void multisheetTests(){
  require(historical.editor()->sheet().dimensionNumbering.enabled&&historical.editor()->sheet().dimensionNumbering.excludeParenthesized&&historical.editor()->sheet().dimensions[0].presentation.numberingExcluded&&historical.editor()->sheet().dimensionNumbering.firstNumber==7,"storico e clone conservano numerazione per foglio");
  const auto copyPath=temporary.filePath("copia-indipendente.drw");const auto oldDocumentId=historical.document().sheet.drawing.version.documentId;clientOk(historical.savePath(copyPath));require(!historical.editor()->isReadOnly()&&historical.sheetCount()==3&&historical.document().sheet.drawing.version.documentId!=oldDocumentId,"Salva con nome crea intera tavola indipendente");for(int i=0;i<3;++i)require(drawingSheetAt(historical.document(),i).drawing.version.documentId==historical.document().sheet.drawing.version.documentId,"identita' comune rinnovata su ogni foglio");
  clientOk(historical.removeSheet(2));clientOk(historical.removeSheet(1));require(!historical.removeSheet(0).isEmpty(),"ultimo foglio protetto");clientOk(historical.editor()->undo());clientOk(historical.editor()->undo());require(historical.sheetCount()==3&&drawingSheetId(historical.document(),2)==third,"Undo ripristina i fogli rimossi con identita' originale");
+ multisheetPreparationReview();
  std::cout<<"PASS multifoglio: codec1/2, UUID, isolamento datum/quote, schede/riordino, Undo globale, PDF3/1, modello10->16, revisioni A/B e Salva con nome\n";
 }
 }

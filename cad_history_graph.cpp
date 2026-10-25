@@ -1,4 +1,5 @@
 #include "cad_history_graph.h"
+#include "cad_geometry_refs.h"
 #include "cad_forge.h"
 
 #include <algorithm>
@@ -350,6 +351,13 @@ QVector<Dependency> dependencies(int index, const DocumentState &document) {
     const QVector<SketchObject> &sketches = document.sketches;
     const ExtrusionObject &feature = features.at(index);
     QVector<Dependency> result;
+    using Family = GeometryRefFamily;
+    const auto addRefs = [&](Family family, const QString &label, bool numbered = false) {
+        visitGeometryRefs(feature, family, [&](const GeometryRef &ref, Family, int position) {
+            addGeometryDependency(result, ref, sketches, features, index,
+                                  numbered ? label.arg(position + 1) : label);
+        });
+    };
     if (feature.operation >= 0) {
         addBodyDependency(result, features, index, feature.firstBody, QStringLiteral("operando A"));
         addBodyDependency(result, features, index, feature.secondBody, QStringLiteral("operando B"));
@@ -357,20 +365,18 @@ QVector<Dependency> dependencies(int index, const DocumentState &document) {
             addBodyDependency(result, features, index, feature.booleanTools.at(k), QStringLiteral("strumento %1").arg(k + 1));
         return result;
     }
-    for (int k = 0; k < feature.loftStartFaces.size(); ++k)
-        addGeometryDependency(result, feature.loftStartFaces.at(k), sketches, features, index, QStringLiteral("faccia tangente iniziale %1").arg(k + 1));
-    for (int k = 0; k < feature.loftEndFaces.size(); ++k)
-        addGeometryDependency(result, feature.loftEndFaces.at(k), sketches, features, index, QStringLiteral("faccia tangente finale %1").arg(k + 1));
+    addRefs(Family::LoftStartFaces, QStringLiteral("faccia tangente iniziale %1"), true);
+    addRefs(Family::LoftEndFaces, QStringLiteral("faccia tangente finale %1"), true);
     switch (feature.feature) {
     case BodyFeature::Extrusion:
         addSketchDependency(result, sketches, index, feature.sketchIndex, QStringLiteral("profilo"));
         for (int body : feature.mergeBodies) addBodyDependency(result, features, index, body, QStringLiteral("fusione"));
-        if (feature.extent != 0) addGeometryDependency(result, feature.extentRef, sketches, features, index, QStringLiteral("fine estrusione"));
+        if (feature.extent != 0) addRefs(Family::Extent, QStringLiteral("fine estrusione"));
         break;
     case BodyFeature::Revolution:
         addSketchDependency(result, sketches, index, feature.sketchIndex, QStringLiteral("profilo"));
         if (feature.revolveAxis == kRevolveAxisReference)
-            addGeometryDependency(result, feature.revolveAxisRef, sketches, features, index, QStringLiteral("asse"));
+            addRefs(Family::RevolveAxis, QStringLiteral("asse"));
         for (int body : feature.mergeBodies) addBodyDependency(result, features, index, body, QStringLiteral("fusione"));
         break;
     case BodyFeature::Blend:
@@ -380,10 +386,9 @@ QVector<Dependency> dependencies(int index, const DocumentState &document) {
     case BodyFeature::SurfaceTools:
         if(feature.surfaceTool.mode!=1)addBodyDependency(result,features,index,feature.firstBody,QStringLiteral("superficie sorgente"));
         if(feature.surfaceTool.mode==0) {
-            const auto targets = feature.surfaceTool.targets.isEmpty() ? QVector<GeometryRef>{feature.extentRef} : feature.surfaceTool.targets;
-            for (const auto &ref : targets) addGeometryDependency(result,ref,sketches,features,index,QStringLiteral("limite estensione"));
+            addRefs(feature.surfaceTool.targets.isEmpty() ? Family::Extent : Family::SurfaceTargets, QStringLiteral("limite estensione"));
         }
-        for(const auto *family:{&feature.ruledFirst,&feature.ruledSecond})for(const auto &ref:*family)addGeometryDependency(result,ref,sketches,features,index,QStringLiteral("curva rete"));
+        for(auto family:{Family::RuledFirst,Family::RuledSecond})addRefs(family,QStringLiteral("curva rete"));
         break;
     case BodyFeature::SheetExtend:
         addBodyDependency(result, features, index, feature.firstBody,
@@ -399,19 +404,18 @@ QVector<Dependency> dependencies(int index, const DocumentState &document) {
         break;
     case BodyFeature::Draft:
         addBodyDependency(result, features, index, feature.firstBody, QStringLiteral("%1 facce • %2°").arg(feature.offsetFaces.size()).arg(feature.draftAngle));
-        addGeometryDependency(result, feature.draftNeutral, sketches, features, index, QStringLiteral("piano neutro"));
+        addRefs(Family::DraftNeutral, QStringLiteral("piano neutro"));
         break;
     case BodyFeature::Thicken:
         addBodyDependency(result, features, index, feature.firstBody,
                           QStringLiteral("superficie • spessore %1%2").arg(feature.distance)
                               .arg(feature.offsetFaces.isEmpty() ? QString() : QStringLiteral(" • %1 facce").arg(feature.offsetFaces.size())));
-        if (feature.thickenDirection.kind >= 0) addGeometryDependency(result, feature.thickenDirection, sketches, features, index, QStringLiteral("direzione"));
+        if (feature.thickenDirection.kind >= 0) addRefs(Family::ThickenDirection, QStringLiteral("direzione"));
         break;
     case BodyFeature::ExtractedCurve:
-        for(const auto &ref:feature.curveExtraction.sources.isEmpty()?QVector<GeometryRef>{feature.curveExtraction.source}:feature.curveExtraction.sources)
-            addGeometryDependency(result, ref, sketches, features, index, QStringLiteral("bordo sorgente"));
+        addRefs(feature.curveExtraction.sources.isEmpty() ? Family::ExtractedSource : Family::ExtractedSources, QStringLiteral("bordo sorgente"));
         if (feature.curveExtraction.trimmed)
-            addGeometryDependency(result, feature.curveExtraction.tool, sketches, features, index, QStringLiteral("segmento di taglio"));
+            addRefs(Family::ExtractedTool, QStringLiteral("segmento di taglio"));
         break;
     case BodyFeature::ProjectedCurve:
         addBodyDependency(result, features, index, feature.firstBody, QStringLiteral("corpo"));
@@ -444,19 +448,18 @@ QVector<Dependency> dependencies(int index, const DocumentState &document) {
                                feature.helix.source == 1 ? QStringLiteral("spigolo base") : QStringLiteral("faccia base"));
         break;
     case BodyFeature::Sweep:
-        if (feature.sweepProfileRef.kind >= 0) addGeometryDependency(result, feature.sweepProfileRef, sketches, features, index, QStringLiteral("profilo"));
+        if (feature.sweepProfileRef.kind >= 0) addRefs(Family::SweepProfile, QStringLiteral("profilo"));
         else addSketchDependency(result, sketches, index, feature.sketchIndex, QStringLiteral("profilo"));
-        if (feature.sweepPathRef.kind >= 0) addGeometryDependency(result, feature.sweepPathRef, sketches, features, index, QStringLiteral("percorso"));
+        if (feature.sweepPathRef.kind >= 0) addRefs(Family::SweepPath, QStringLiteral("percorso"));
         else if (feature.sweepPath == 0) addSketchDependency(result, sketches, index, feature.pathSketch, QStringLiteral("percorso"));
         else addBodyDependency(result, features, index, feature.firstBody, QStringLiteral("curva percorso"));
         for (int body : feature.mergeBodies) addBodyDependency(result, features, index, body, QStringLiteral("fusione"));
         break;
     case BodyFeature::Loft: {
-        for (int k=0; k<feature.loftSections.size(); ++k) {
-            const auto &ref=feature.loftSections.at(k);
+        visitGeometryRefs(feature, Family::LoftSections, [&](const GeometryRef &ref, Family, int k) {
             if(ref.kind==7 && ref.element.kind==-1) addSketchDependency(result,sketches,index,ref.index,QStringLiteral("sezione %1").arg(k+1));
             else addGeometryDependency(result,ref,sketches,features,index,QStringLiteral("sezione %1").arg(k+1));
-        }
+        });
         for (int k = 0; feature.loftSections.isEmpty() && k < feature.loftSketches.size(); ++k)
             addSketchDependency(result, sketches, index, feature.loftSketches.at(k), QStringLiteral("sezione %1").arg(k + 1));
         const auto order = loftGuideSequence(feature);
@@ -470,41 +473,32 @@ QVector<Dependency> dependencies(int index, const DocumentState &document) {
         break;
     }
     case BodyFeature::DatumPlane:
-        for (int k = 0; k < feature.datum.refs.size(); ++k)
-            addGeometryDependency(result, feature.datum.refs.at(k), sketches, features, index, QStringLiteral("riferimento %1").arg(k + 1));
+        addRefs(Family::Datum, QStringLiteral("riferimento %1"), true);
         break;
     case BodyFeature::Pattern:
         addBodyDependency(result, features, index, feature.firstBody, feature.pattern.featureOnly ? QStringLiteral("feature") : QStringLiteral("corpo"));
-        for (int k = 0; k < feature.pattern.refs.size(); ++k)
-            addGeometryDependency(result, feature.pattern.refs.at(k), sketches, features, index, QStringLiteral("direzione %1").arg(k + 1));
+        addRefs(Family::Pattern, QStringLiteral("direzione %1"), true);
         break;
     case BodyFeature::Ruled:
-        for (int k = 0; k < feature.ruledFirst.size(); ++k)
-            addGeometryDependency(result, feature.ruledFirst.at(k), sketches, features, index, QStringLiteral("prima curva %1").arg(k + 1));
-        for (int k = 0; k < feature.ruledSecond.size(); ++k)
-            addGeometryDependency(result, feature.ruledSecond.at(k), sketches, features, index, QStringLiteral("seconda curva %1").arg(k + 1));
+        addRefs(Family::RuledFirst, QStringLiteral("prima curva %1"), true);
+        addRefs(Family::RuledSecond, QStringLiteral("seconda curva %1"), true);
         break;
     case BodyFeature::PlanarSurface:
         if (feature.planarRefs.isEmpty()) addSketchDependency(result, sketches, index, feature.sketchIndex, QStringLiteral("contorni"));
-        for (int k = 0; k < feature.planarRefs.size(); ++k)
-            addGeometryDependency(result, feature.planarRefs.at(k), sketches, features, index, QStringLiteral("bordo %1").arg(k + 1));
+        addRefs(Family::Planar, QStringLiteral("bordo %1"), true);
         break;
     case BodyFeature::BoundarySurface:
-        for (int k = 0; k < feature.planarRefs.size(); ++k)
-            addGeometryDependency(result, feature.planarRefs.at(k), sketches, features, index, QStringLiteral("curva %1").arg(k + 1));
+        addRefs(Family::Planar, QStringLiteral("curva %1"), true);
         break;
     case BodyFeature::FillSurface:
-        for (int k = 0; k < feature.planarRefs.size(); ++k)
-            addGeometryDependency(result, feature.planarRefs.at(k), sketches, features, index, QStringLiteral("contorno %1").arg(k + 1));
-        for (int k = 0; k < feature.ruledFirst.size(); ++k)
-            addGeometryDependency(result, feature.ruledFirst.at(k), sketches, features, index, QStringLiteral("guida %1").arg(k + 1));
-        for (int k = 0; k < feature.ruledSecond.size(); ++k)
-            addGeometryDependency(result, feature.ruledSecond.at(k), sketches, features, index, QStringLiteral("faccia adiacente %1").arg(k + 1));
+        addRefs(Family::Planar, QStringLiteral("contorno %1"), true);
+        addRefs(Family::RuledFirst, QStringLiteral("guida %1"), true);
+        addRefs(Family::RuledSecond, QStringLiteral("faccia adiacente %1"), true);
         break;
     case BodyFeature::Transform:
         addBodyDependency(result, features, index, feature.firstBody, feature.move.copy ? QStringLiteral("corpo copiato") : QStringLiteral("corpo"));
         if (std::fabs(feature.move.angle) > 0.0)
-            addGeometryDependency(result, feature.move.axis, sketches, features, index, QStringLiteral("asse rotazione"));
+            addRefs(Family::MoveAxis, QStringLiteral("asse rotazione"));
         break;
     default: break;
     }

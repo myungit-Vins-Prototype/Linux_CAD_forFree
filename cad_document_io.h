@@ -21,6 +21,8 @@
 // (coperchi e tratti dello schizzo), leggendo ancora le cache precedenti.
 // Il formato 50 aggiunge identita' del documento, check-in e base della
 // copia di lavoro; la cache geometrica resta 7. Legge i formati precedenti.
+// Il formato 54 conserva anche i nomi topologici degli appoggi degli schizzi
+// e delle superfici dei vincoli Pierce; i formati 1–53 restano leggibili.
 // Fanno eccezione i
 // corpi importati, che non
 // hanno una definizione: il loro body e' in `importData` come testo STEP del
@@ -38,7 +40,7 @@
 namespace ForgeCad {
 
 inline constexpr const char *kDocumentSuffix = "prt";
-inline constexpr quint16 kDocumentFormatVersion = 53;
+inline constexpr quint16 kDocumentFormatVersion = 54;
 
 // Budget in byte, indipendenti dal numero di feature. I chiamanti che devono
 // aprire documenti piu' grandi possono passarne di espliciti agli overload.
@@ -54,6 +56,10 @@ struct DocumentReadLimits {
 // La codifica puo' rappresentare uno snapshot archiviato; il normale Salva
 // su file richiede invece una copia di lavoro.
 QString encodeDocument(const DocumentState &state, QByteArray &bytes, bool bodies = true, int compressionLevel = 9);
+// Solo confronto delle impronte storiche delle tavole: riproduce la definizione
+// 53 senza cache. Rifiuta i nuovi nomi degli schizzi per non scartarne semantica.
+// Non usare per salvataggi o pubblicazioni di nuovi documenti.
+QString encodeDocumentDefinition53ForHash(const DocumentState &state, QByteArray &bytes);
 QString decodeDocument(const QByteArray &bytes, DocumentState &state, bool previewCache = false);
 QString decodeDocument(const QByteArray &bytes, DocumentState &state, const DocumentReadLimits &limits,
                        bool previewCache = false);

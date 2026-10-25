@@ -1,5 +1,6 @@
 #include "cad_model_history.h"
 #include "cad_feature_dependencies.h"
+#include "cad_geometry_refs.h"
 
 #include <algorithm>
 
@@ -112,22 +113,8 @@ void normalizeModelHistory(QVector<ExtrusionObject> &features, QVector<ModelBody
         if (isBodyRef(ref) && !ref.featureId && ref.index >= 0 && ref.index < features.size())
             ref.featureId = features.at(ref.index).featureId;
     };
-    for (ExtrusionObject &feature : features) {
-        for (GeometryRef &ref : feature.datum.refs) bindOwner(ref);
-        for (GeometryRef &ref : feature.pattern.refs) bindOwner(ref);
-        for (QVector<GeometryRef> *refs : {&feature.surfaceTool.targets, &feature.ruledFirst, &feature.ruledSecond, &feature.planarRefs, &feature.loftStartFaces, &feature.loftEndFaces, &feature.loftSections, &feature.loftEdgeGuides})
-            for (GeometryRef &ref : *refs) bindOwner(ref);
-        bindOwner(feature.extentRef);
-        bindOwner(feature.move.axis);
-        bindOwner(feature.revolveAxisRef);
-        bindOwner(feature.draftNeutral);
-        bindOwner(feature.thickenDirection);
-        bindOwner(feature.sweepProfileRef);
-        bindOwner(feature.sweepPathRef);
-        bindOwner(feature.curveExtraction.source);
-        for(auto &ref:feature.curveExtraction.sources)bindOwner(ref);
-        bindOwner(feature.curveExtraction.tool);
-    }
+    for (ExtrusionObject &feature : features)
+        visitGeometryRefs(feature, [&](GeometryRef &ref, GeometryRefFamily, int) { bindOwner(ref); });
 
     QHash<quint64, ModelBody> existing;
     for (const ModelBody &body : modelBodies)
@@ -282,10 +269,11 @@ QString storySketchDependencyError(const QVector<SketchObject> &sketches, const 
             GeometryRef ref; ref.kind = 8; ref.index = sketch.datumPlane;
             const QString error = referenceError(s, ref); if (!error.isEmpty()) return error;
         }
-        if (sketch.support) { const QString error = referenceError(s, *sketch.support); if (!error.isEmpty()) return error; }
-        for (const auto &c : sketch.geometricConstraints) if (c.pierce) {
-            const QString error = referenceError(s, c.pierce->surface); if (!error.isEmpty()) return error;
-        }
+        QString error;
+        visitSketchGeometryRefs(sketch, [&](const GeometryRef &ref, SketchGeometryRefFamily, int) {
+            if (error.isEmpty()) error = referenceError(s, ref);
+        });
+        if (!error.isEmpty()) return error;
     }
     return {};
 }
@@ -293,16 +281,9 @@ QString storySketchDependencyError(const QVector<SketchObject> &sketches, const 
 void remapSketchSupports(QVector<SketchObject> &sketches, const std::function<int(int)> &map) {
     for (auto &sketch : sketches) {
         if (sketch.datumPlane >= 0) sketch.datumPlane = map(sketch.datumPlane);
-        if (sketch.support) {
-            auto ref = std::make_shared<GeometryRef>(*sketch.support);
-            if (isBodyRef(*ref)) ref->index = map(ref->index);
-            sketch.support = std::move(ref);
-        }
-        for (auto &c : sketch.geometricConstraints) if (c.pierce) {
-            auto data = std::make_shared<SketchPierceData>(*c.pierce);
-            if (isBodyRef(data->surface)) data->surface.index = map(data->surface.index);
-            c.pierce = std::move(data);
-        }
+        visitSketchGeometryRefs(sketch, [&](GeometryRef &ref, SketchGeometryRefFamily, int) {
+            if (isBodyRef(ref)) ref.index = map(ref.index);
+        });
     }
 }
 

@@ -22,12 +22,13 @@ bool evaluateExpression(const QString &text, double &value);
 double millimetersPerUnit(LengthUnit unit);
 QString lengthUnitSymbol(LengthUnit unit);
 QString lengthUnitName(LengthUnit unit);
-LengthUnit displayLengthUnit();
-void setDisplayLengthUnit(LengthUnit unit);
-double lengthInDisplayUnits(double millimeters);
-QString formatLength(double millimeters, int decimals = 6, bool withSymbol = true);
-QString formatArea(double squareMillimeters, int decimals = 6, bool withSymbol = true);
-QString formatVolume(double cubicMillimeters, int decimals = 6, bool withSymbol = true);
+// Il contesto eredita l’unità dal documento/antenato; senza contesto usa mm.
+LengthUnit displayLengthUnit(const QObject *context = nullptr);
+void setDisplayLengthUnit(LengthUnit unit, QObject *context);
+double lengthInDisplayUnits(double millimeters, const QObject *context = nullptr);
+QString formatLength(double millimeters, int decimals = 6, bool withSymbol = true, const QObject *context = nullptr);
+QString formatArea(double squareMillimeters, int decimals = 6, bool withSymbol = true, const QObject *context = nullptr);
+QString formatVolume(double cubicMillimeters, int decimals = 6, bool withSymbol = true, const QObject *context = nullptr);
 
 // QDoubleSpinBox che accetta le espressioni: finche' il testo non e' completo
 // resta "intermedio", con Invio (o all'uscita dal campo) si calcola e si
@@ -56,6 +57,7 @@ protected:
 
 private:
     QString expressionText(const QString &text) const;
+    friend void setDisplayLengthUnit(LengthUnit unit, QObject *context);
     void refreshLengthUnit();
     bool lengthMeasurement_ = true;
 };

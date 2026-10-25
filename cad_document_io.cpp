@@ -73,6 +73,8 @@ constexpr char kMagic[4] = {'F', 'C', 'A', 'D'};
 // 50 identita' del documento, check-in archiviato e base della copia di lavoro.
 // 51 schizzi autonomi nella storyboard e appoggio associativo su faccia.
 // 52 punti autonomi nello schizzo (DrawingTool::Point).
+// 53 strumenti sulle superfici e relative estensioni opzionali SRF1.
+// 54 nomi topologici di appoggi schizzo e superfici dei vincoli Pierce.
 constexpr quint16 kVersion = kDocumentFormatVersion;
 constexpr quint8 kZlib = 1;
 
@@ -158,7 +160,7 @@ bool readPattern(ReadStream &in, SketchPatternData &p) {
 void writeRefs(QDataStream &out, const QVector<GeometryRef> &refs);
 bool readRefs(ReadStream &in, QVector<GeometryRef> &refs, quint16 version);
 
-void write(QDataStream &out, const SketchObject &sketch) {
+void write(QDataStream &out, const SketchObject &sketch, quint16 version) {
     out << sketch.name << qint32(sketch.plane) << sketch.segments << sketch.constraints << sketch.segmentLengths
         << sketch.segmentAngles << sketch.visible << sketch.constructionSegments;
     out << quint32(sketch.curves.size());
@@ -178,6 +180,7 @@ void write(QDataStream &out, const SketchObject &sketch) {
             out << bool(c.pierce);
             if (c.pierce) {
                 writeRefs(out,{c.pierce->surface});
+                if (version >= 54) out << c.pierce->surface.point.name;
                 out << c.pierce->name << c.pierce->error << c.pierce->segments << quint32(c.pierce->curves.size());
                 for (const auto &curve : c.pierce->curves) write(out,curve);
             }
@@ -197,6 +200,7 @@ void write(QDataStream &out, const SketchObject &sketch) {
     out << sketch.symmetryAxes;        // formato 13
     out << sketch.storyId << sketch.beforeFeatureId << qint32(sketch.storyOrder); // formato 51
     writeRefs(out, sketch.support ? QVector<GeometryRef>{*sketch.support} : QVector<GeometryRef>{});
+    if (version >= 54 && sketch.support) out << sketch.support->point.name;
 }
 
 // Dimensione minima serializzata, mai sizeof dell'oggetto in memoria.
@@ -251,6 +255,7 @@ bool read(ReadStream &in, SketchObject &sketch, quint16 version) {
                     QVector<GeometryRef> refs;
                     if (!readRefs(in,refs,version) || refs.size()!=1) return false;
                     data->surface=refs.first();
+                    if (version >= 54) in >> data->surface.point.name;
                     quint32 n=0;
                     in >> data->name >> data->error >> data->segments;
                     if (!readCount(in,n,21)) return false;
@@ -293,7 +298,10 @@ bool read(ReadStream &in, SketchObject &sketch, quint16 version) {
         sketch.storyOrder = order;
         QVector<GeometryRef> support;
         if (!readRefs(in, support, version) || support.size() > 1) return false;
-        if (!support.isEmpty()) sketch.support = std::make_shared<GeometryRef>(support.front());
+        if (!support.isEmpty()) {
+            if (version >= 54) in >> support.front().point.name;
+            sketch.support = std::make_shared<GeometryRef>(support.front());
+        }
     }
     if (sketch.plane < 0 || sketch.plane > kFacePlane) return false;
     // Gli array paralleli dei segmenti devono restare allineati.
@@ -1168,7 +1176,8 @@ bool DocumentFileLock::owns(const QString &path) const {
     return marker.open(QIODevice::ReadOnly) && marker.readAll() == identity_;
 }
 
-QString encodeDocument(const DocumentState &state, QByteArray &bytes, bool bodies, int compressionLevel) {
+namespace {
+QString encodeDocumentVersion(const DocumentState &state, QByteArray &bytes, bool bodies, int compressionLevel, quint16 version) {
     try {
         if (state.version.documentId.isNull() || (!state.version.checkinId.isNull() && state.version.checkinId == state.baseCheckinId))
             return QStringLiteral("Identita' del documento non valida.");
@@ -1187,7 +1196,7 @@ QString encodeDocument(const DocumentState &state, QByteArray &bytes, bool bodie
             out.setVersion(QDataStream::Qt_6_0);
             out.setFloatingPointPrecision(QDataStream::DoublePrecision);
             out << quint32(normalized.sketches.size());
-            for (const SketchObject &sketch : normalized.sketches) write(out, sketch);
+            for (const SketchObject &sketch : normalized.sketches) write(out, sketch, version);
             out << quint32(normalized.extrusions.size());
             for (const ExtrusionObject &body : normalized.extrusions) write(out, body);
             for (const double *axis : {normalized.orientation.right, normalized.orientation.up, normalized.orientation.toward})
@@ -1202,7 +1211,7 @@ QString encodeDocument(const DocumentState &state, QByteArray &bytes, bool bodie
         QByteArray prepared;
         QDataStream out(&prepared, QIODevice::WriteOnly);
         out.writeRawData(kMagic, 4);
-        out << kVersion << kZlib;
+        out << version << kZlib;
         const QByteArray compressed = qCompress(payload, qBound(0, compressionLevel, 9));
         out << quint32(compressed.size());
         out.writeRawData(compressed.constData(), int(compressed.size()));
@@ -1214,6 +1223,22 @@ QString encodeDocument(const DocumentState &state, QByteArray &bytes, bool bodie
         bytes = std::move(prepared);
         return {};
     } catch (const std::exception &error) { return QString::fromUtf8(error.what()); }
+}
+}
+
+QString encodeDocument(const DocumentState &state, QByteArray &bytes, bool bodies, int compressionLevel) {
+    return encodeDocumentVersion(state, bytes, bodies, compressionLevel, kVersion);
+}
+
+QString encodeDocumentDefinition53ForHash(const DocumentState &state, QByteArray &bytes) {
+    for (const auto &sketch : state.sketches) {
+        if (sketch.support && !sketch.support->point.name.isEmpty())
+            return QStringLiteral("L'appoggio nominato dello schizzo non e' rappresentabile nel formato 53.");
+        for (const auto &constraint : sketch.geometricConstraints)
+            if (constraint.pierce && !constraint.pierce->surface.point.name.isEmpty())
+                return QStringLiteral("Il riferimento Pierce nominato non e' rappresentabile nel formato 53.");
+    }
+    return encodeDocumentVersion(state, bytes, false, 9, 53);
 }
 
 void forkDocumentIdentity(DocumentState &state) {

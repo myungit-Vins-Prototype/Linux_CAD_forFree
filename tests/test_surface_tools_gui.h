@@ -1,6 +1,16 @@
 static void surfaceTools() {
     using namespace ForgeCad;
     using namespace Kernel;
+    ExtrusionObject iconFeature; iconFeature.feature=BodyFeature::SurfaceTools; iconFeature.operation=-1;
+    QVector<QImage> surfaceIcons;
+    for(int mode=0;mode<3;++mode) {
+        iconFeature.surfaceTool.mode=mode;
+        const auto icon=commandIcon(ForgeCad::Gui::featureIconName(iconFeature));
+        require(!icon.isNull(),"icona della funzione superficie disponibile");
+        surfaceIcons.append(icon.pixmap(32).toImage());
+    }
+    require(surfaceIcons[0]!=surfaceIcons[1] && surfaceIcons[1]!=surfaceIcons[2] && surfaceIcons[0]!=surfaceIcons[2],"icone superfici distinte");
+    require(surfaceIcons[1]!=commandIcon("loft").pixmap(32).toImage() && surfaceIcons[2]!=commandIcon("spline").pixmap(32).toImage(),"rete e poli hanno icone proprie");
     const auto imported = [](const Body &shape, const QString &name) {
         ExtrusionObject b;
         b.feature = BodyFeature::Imported;
@@ -136,7 +146,7 @@ static void surfaceTools() {
         QByteArray suffix;
         QDataStream out(&suffix, QIODevice::WriteOnly);
         out << quint32(0x53524631) << QJsonDocument(root).toJson(QJsonDocument::Compact);
-        return nativeFixture(payload.left(offset) + suffix, 53);
+        return nativeFixture(payload.left(offset) + suffix, kDocumentFormatVersion);
     };
     auto bad = extras;
     auto records = bad["features"].toArray();
@@ -154,7 +164,7 @@ static void surfaceTools() {
     records.append(records.first());
     bad["features"] = records;
     require(!decodeDocument(malformed(bad), restored).isEmpty(), "estensioni duplicate rifiutate");
-    require(!decodeDocument(nativeFixture(payload.left(offset), 53), restored).isEmpty(), "tipo nuovo senza estensioni rifiutato");
+    require(!decodeDocument(nativeFixture(payload.left(offset), kDocumentFormatVersion), restored).isEmpty(), "tipo nuovo senza estensioni rifiutato");
     require(!decodeDocument(nativeFixture(payload, 52), restored).isEmpty(), "declassamento del formato rifiutato");
     QByteArray retainedBytes = "intatto";
     auto invalidDocument = document;
@@ -183,13 +193,64 @@ static void surfaceTools() {
             const double x = QLocale().toDouble(table->item(row, 2)->text());
             QMouseEvent press(QEvent::MouseButtonPress, start, start, Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
             QApplication::sendEvent(&view, &press);
+            const auto dragGeneration=view.preview_.generation;
             QMouseEvent move(QEvent::MouseMove, start + QPointF(14, 5), start + QPointF(14, 5), Qt::NoButton, Qt::LeftButton,
                              Qt::NoModifier);
             QApplication::sendEvent(&view, &move);
+            QElapsedTimer duringDrag;duringDrag.start();
+            while(duringDrag.elapsed()<120)QApplication::processEvents();
+            require(view.preview_.generation==dragGeneration,"nessuna ricostruzione dell'anteprima durante il trascinamento");
+            require(!dialog->findChild<QDialogButtonBox *>("surfaceToolButtons")->button(QDialogButtonBox::Ok)->isEnabled(),"conferma sospesa durante il trascinamento");
             QMouseEvent release(QEvent::MouseButtonRelease, start + QPointF(14, 5), start + QPointF(14, 5), Qt::LeftButton, Qt::NoButton,
                                 Qt::NoModifier);
             QApplication::sendEvent(&view, &release);
             require(QLocale().toDouble(table->item(row, 2)->text()) != x, "trascinamento modifica coordinate");
+            require(view.preview_.generation>dragGeneration,"anteprima richiesta al rilascio");
+            const auto point=[&](int r) {return QVector3D(QLocale().toDouble(table->item(r,2)->text()),QLocale().toDouble(table->item(r,3)->text()),QLocale().toDouble(table->item(r,4)->text()));};
+            const auto send=[&](QEvent::Type type,QPointF p,Qt::KeyboardModifiers mods=Qt::NoModifier) {
+                QMouseEvent e(type,p,p,type==QEvent::MouseMove?Qt::NoButton:Qt::LeftButton,
+                    type==QEvent::MouseButtonRelease?Qt::NoButton:Qt::LeftButton,mods);QApplication::sendEvent(&view,&e);
+            };
+            const int other=row+1,untouched=row+2;
+            send(QEvent::MouseButtonPress,view.surfacePoleScreen(other),Qt::ControlModifier);
+            send(QEvent::MouseButtonRelease,view.surfacePoleScreen(other),Qt::ControlModifier);
+            require(view.surfacePoleSelection_.size()==2,"Ctrl aggiunge un polo senza trascinare");
+            send(QEvent::MouseButtonPress,view.surfacePoleScreen(other),Qt::ControlModifier);
+            send(QEvent::MouseButtonRelease,view.surfacePoleScreen(other),Qt::ControlModifier);
+            require(view.surfacePoleSelection_.size()==1,"Ctrl toglie un polo");
+            send(QEvent::MouseButtonPress,view.surfacePoleScreen(other),Qt::ShiftModifier);
+            send(QEvent::MouseButtonRelease,view.surfacePoleScreen(other),Qt::ShiftModifier);
+            require(view.surfacePoleSelection_.size()==2,"Maiusc aggiunge alla selezione");
+            auto orientation=dialog->findChild<QComboBox *>("surfacePolesOrientation");
+            require(orientation && !view.surfacePoleLocal_,"assi globali predefiniti");
+            for(int axis=0;axis<3;++axis) {
+                const auto before=point(row),second=point(other),fixed=point(untouched);
+                const auto head=view.surfacePoleAxisScreen(axis),center=view.surfacePoleGizmoCenter();
+                require(view.surfacePoleHandleAt(head)==axis,"tutti e tre gli assi sono selezionabili anche lungo la vista");
+                const auto end=head+(head-center)*.3;
+                send(QEvent::MouseButtonPress,head);send(QEvent::MouseMove,end);send(QEvent::MouseButtonRelease,end);
+                const auto delta=point(row)-before;
+                require(delta.length()>1e-5 && ((point(other)-second)-delta).length()<1e-5,"gli assi spostano tutto il gruppo dello stesso delta");
+                for(int k=0;k<3;++k)if(k!=axis)require(std::fabs(delta[k])<1e-5,"vincolo all'asse globale esatto");
+                require((point(untouched)-fixed).length()<1e-7,"poli non selezionati fermi");
+            }
+            table->item(other,4)->setText(QLocale().toString(double(point(other).z())+2.,'g',17));
+            orientation->setCurrentIndex(1);
+            const auto local=view.surfacePoleAxes();
+            require(view.surfacePoleLocal_ && std::fabs(QVector3D::dotProduct(local[0],local[2]))<1e-6 &&
+                QVector3D::dotProduct(QVector3D::crossProduct(local[0],local[1]),local[2])>.999,"assi locali ortonormali e destrorsi");
+            require(std::fabs(local[2].z())<.99999,"normale locale segue la superficie deformata");
+            const auto localBefore=point(row),localSecond=point(other);
+            const auto normalHead=view.surfacePoleAxisScreen(2),normalEnd=normalHead+(normalHead-view.surfacePoleGizmoCenter())*.25;
+            send(QEvent::MouseButtonPress,normalHead);send(QEvent::MouseMove,normalEnd);send(QEvent::MouseButtonRelease,normalEnd);
+            const auto localDelta=point(row)-localBefore;
+            require(localDelta.length()>1e-5 && QVector3D::crossProduct(localDelta,local[2]).length()<1e-5 &&
+                ((point(other)-localSecond)-localDelta).length()<1e-5,"gruppo vincolato alla normale locale congelata durante il gesto");
+            const auto cancelBefore=point(row),cancelOther=point(other);
+            const auto cancelHead=view.surfacePoleAxisScreen(0),cancelEnd=cancelHead+QPointF(15,8);
+            send(QEvent::MouseButtonPress,cancelHead);send(QEvent::MouseMove,cancelEnd);
+            QKeyEvent escape(QEvent::KeyPress,Qt::Key_Escape,Qt::NoModifier);QApplication::sendEvent(&view,&escape);
+            require((point(row)-cancelBefore).length()<1e-7 && (point(other)-cancelOther).length()<1e-7,"Esc ripristina l'intero gruppo");
             table->item(row, 5)->setText("0");
             QElapsedTimer validation;
             validation.start();
@@ -217,7 +278,7 @@ static void surfaceTools() {
     if (failure)
         std::rethrow_exception(failure);
     require(polesAccepted, "pannello poli confermato");
-    require(!submitted.surfaceTool.edits.isEmpty() && view.surfacePoleOverlay_.isEmpty(), "parametri acquisiti e gabbia rimossa");
+    require(submitted.surfaceTool.edits.size()>=2 && view.surfacePoleOverlay_.isEmpty() && view.surfacePoleSelection_.isEmpty(), "parametri acquisiti e gabbia rimossa");
     require(writeBodyBinary(*view.extrusions_[5].forgeBody) == changed, "anteprima sola non modifica modello");
     QTimer::singleShot(0, &window, [&] {
         auto *dialog = window.findChild<QDialog *>("surfaceToolDialog");

@@ -53,6 +53,18 @@ struct WindowLock {
     ~WindowLock();
 };
 
+// Il messaggio ha un riquadro limitato: righe lunghe e molti dettagli non
+// aumentano le dimensioni del pannello della funzione.
+class FunctionMessage final : public QPlainTextEdit {
+public:
+    explicit FunctionMessage(QWidget *parent = nullptr);
+    FunctionMessage(const QString &text, QWidget *parent = nullptr);
+    void setText(const QString &text);
+    QString text() const { return toPlainText(); }
+    QSize sizeHint() const override;
+    QSize minimumSizeHint() const override;
+};
+
 class FunctionDialogPanel : public QDialog {
 public:
     explicit FunctionDialogPanel(QWidget *parent = nullptr, bool exclusive = true);
@@ -60,6 +72,9 @@ public:
     // FloatingPanel ha una barra del titolo propria.
     void setHeaderVisible(bool visible);
     QFormLayout *createScrollableForm();
+    // Identità semantica indipendente dal titolo e condivisa fra creazione/modifica.
+    void setSizeIdentity(const QString &identity, const QStringList &legacyNames = {});
+    QString panelSizeSettingsKey() const;
     QColor panelColor() const;
     int panelOpacity() const;
     int backdropBlur() const;
@@ -87,6 +102,9 @@ protected:
     void paintEvent(QPaintEvent *event) override;
     bool eventFilter(QObject *watched, QEvent *event) override;
 private:
+    QString sizeIdentity_;
+    QStringList legacySizeNames_;
+    QSize preferredPanelSize_;
     bool exclusive_ = true;
     std::unique_ptr<WindowLock> windowLock_;
     static QWidget *overlayParent(QWidget *requested);
@@ -94,7 +112,6 @@ private:
     void updateRoundedMask();
     static QColor readableText(const QColor &background);
     void applyTransparentStyle();
-    QString panelSizeSettingsKey() const;
     QSize naturalPanelSize();
     QSize maximumPanelSize() const;
     void initializePanelSize();
@@ -141,7 +158,7 @@ private:
 // stato, `request` a ogni cambio dei valori; alla chiusura l'anteprima sparisce.
 struct PreviewScope {
     CadViewport *viewport = nullptr;
-    QLabel *label = nullptr;
+    FunctionMessage *label = nullptr;
     int index = -1;  // corpo che l'anteprima sostituisce (modifica), -1 nuovo
     PreviewScope(CadViewport *target, QDialog &dialog, QFormLayout *form, int replacedIndex, QBoxLayout *outside = nullptr);
     void request(const ExtrusionObject &definition) const;
@@ -247,7 +264,8 @@ private:
     ExtrusionObject &definition_;
     QComboBox *modes_[2]{};
     QDoubleSpinBox *influences_[2]{};
-    QLabel *faces_[2]{}, *status_ = nullptr;
+    QLabel *faces_[2]{};
+    FunctionMessage *status_ = nullptr;
     QPushButton *picks_[2]{};
 };
 

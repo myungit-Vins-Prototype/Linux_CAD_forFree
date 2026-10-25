@@ -7,6 +7,7 @@ void CadViewport::calculateShapeAnalysis(const std::function<void()> &work) { ru
 void CadViewport::clearShapeAnalysis() { shapeAnalysisBody_ = -1; shapeAnalysisMode_ = -1; shapeAnalysisFace_ = -1; shapeAnalysisFaceDisplay_ = {}; shapeAnalysis_ = {}; update(); }
 
 CadViewport::CadViewport(QWidget *parent ) : QOpenGLWidget(parent) {
+    ForgeCad::setDisplayLengthUnit(lengthUnit_, this);
     wheelZoom_.scale = [this] { return 1.0 / camera_.zoom_; };
     wheelZoom_.limits = [this] {
         float minimum=0,maximum=0;zoomLimits(minimum,maximum);
@@ -290,9 +291,65 @@ bool CadViewport::sketchModeActive() const { return sketchMode_; }
 
 void CadViewport::setEditBodyCallback(std::function<void(int)> callback) { editBodyCallback_ = std::move(callback); }
 
-void CadViewport::setSurfacePoleOverlay(const QVector<QVector3D> &points,int u,int v,int selected){surfacePoleOverlay_=points;surfacePoleU_=u;surfacePoleV_=v;surfacePoleSelected_=selected;update();}
+void CadViewport::setSurfacePoleOverlay(const QVector<QVector3D> &points,int u,int v,int selected){surfacePoleOverlay_=points;surfacePoleU_=u;surfacePoleV_=v;surfacePoleSelected_=selected;if(points.isEmpty())surfacePoleSelection_.clear();update();}
 QPointF CadViewport::surfacePoleScreen(int index)const{return index>=0&&index<surfacePoleOverlay_.size()?projectWorldPoint(surfacePoleOverlay_[index]):QPointF(-1e6,-1e6);}
 QVector3D CadViewport::surfacePoleDragVector(const QPoint &from,const QPoint &to)const{QVector3D a,b,d;camera_.viewRay(from,size(),1,a,d);camera_.viewRay(to,size(),1,b,d);return b-a;}
+void CadViewport::setSurfacePoleSelection(const QVector<int> &selected, const std::array<QVector3D,3> &axes, bool local) {
+    surfacePoleSelection_.clear();
+    surfacePoleGizmoOrigin_ = {};
+    for (int i : selected) if (i >= 0 && i < surfacePoleOverlay_.size() && !surfacePoleSelection_.contains(i)) {
+        surfacePoleSelection_.insert(i);
+        surfacePoleGizmoOrigin_ += surfacePoleOverlay_[i];
+    }
+    if (!surfacePoleSelection_.isEmpty()) surfacePoleGizmoOrigin_ /= float(surfacePoleSelection_.size());
+    surfacePoleAxes_ = axes;
+    surfacePoleLocal_ = local;
+    update();
+}
+QPointF CadViewport::surfacePoleGizmoCenter() const { return projectWorldPoint(surfacePoleGizmoOrigin_); }
+QPointF CadViewport::surfacePoleAxisScreen(int axis) const {
+    const QPointF center = surfacePoleGizmoCenter();
+    if (axis < 0 || axis > 2) return center;
+    const double length = std::max(1e-12f, surfacePoleDragVector({0,0},{0,70}).length());
+    const auto direction = [&](int i) {
+        QPointF d=projectWorldPoint(surfacePoleGizmoOrigin_ + surfacePoleAxes_[i]*float(length))-center;
+        // Un asse normale allo schermo resta selezionabile in profondita'.
+        if(std::hypot(d.x(),d.y())<10) d=i==1?QPointF(-1,-1):QPointF(1,-1);
+        return d/std::hypot(d.x(),d.y());
+    };
+    const auto d=direction(axis);
+    double pixels=70;
+    // Se due assi si sovrappongono nella proiezione, distanziare le punte
+    // mantiene selezionabile ciascuna freccia senza cambiare il vincolo 3D.
+    for(int i=0;i<axis;++i) if(QPointF::dotProduct(d,direction(i))>.97) pixels=70+24*axis;
+    return center + d*pixels;
+}
+int CadViewport::surfacePoleHandleAt(const QPointF &point) const {
+    if (surfacePoleSelection_.isEmpty()) return -1;
+    const QPointF center = surfacePoleGizmoCenter();
+    if (std::hypot(point.x()-center.x(),point.y()-center.y()) <= 9) return 3;
+    int best = -1; double nearest = 8;
+    for (int axis = 0; axis < 3; ++axis) {
+        const auto tip = surfacePoleAxisScreen(axis), d = tip-center;
+        const double t = QPointF::dotProduct(point-center,d) / QPointF::dotProduct(d,d);
+        if (t < .2 || t > 1.12) continue;
+        const auto e = point - (center + std::clamp(t,0.0,1.0)*d);
+        const double distance = std::hypot(e.x(),e.y());
+        if (distance < nearest) { nearest=distance; best=axis; }
+    }
+    return best;
+}
+QVector3D CadViewport::surfacePoleAxisDragVector(int axis, const QPoint &from, const QPoint &to) const {
+    if (axis < 0 || axis > 2) return surfacePoleDragVector(from,to);
+    const double length = std::max(1e-12f, surfacePoleDragVector({0,0},{0,70}).length());
+    const auto center = surfacePoleGizmoCenter();
+    const auto projected = projectWorldPoint(surfacePoleGizmoOrigin_ + surfacePoleAxes_[axis]*float(length))-center;
+    const double pixels = std::hypot(projected.x(),projected.y());
+    const auto d = surfacePoleAxisScreen(axis)-center;
+    const double along = QPointF::dotProduct(QPointF(to-from),d) / std::hypot(d.x(),d.y());
+    return surfacePoleAxes_[axis]*float(along*length/(pixels<10 ? 70. : pixels));
+}
+
 void CadViewport::setReferenceMarks(const QVector<GeometryRef> &marks) {
     refMarks_ = marks;
     update();

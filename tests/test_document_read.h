@@ -43,9 +43,93 @@ void documentReadMemoryTest() {
     require(after.ru_maxrss - before.ru_maxrss < 16 * 1024, "nessuna allocazione massiva dai conteggi corrotti");
 #endif
 }
+void documentSketchReferenceNameTests() {
+    using namespace ForgeCad;
+    DocumentState original;
+    SketchObject sketch;
+    sketch.segments = {{{0, 0}, {1, 0}}};
+    sketch.constraints = {-1};
+    sketch.segmentLengths = {0};
+    sketch.segmentAngles = {-1};
+    sketch.support = std::make_shared<GeometryRef>();
+    sketch.support->kind = 5;
+    sketch.support->index = 0;
+    sketch.support->featureId = 17;
+    sketch.support->point.subshape = 3;
+    sketch.support->point.name = QStringLiteral("appoggio/faccia/à");
+    SketchConstraint constraint;
+    constraint.type = ConstraintType::Pierce;
+    constraint.first = {0, 0, 0};
+    auto pierce = std::make_shared<SketchPierceData>();
+    pierce->surface = *sketch.support;
+    pierce->surface.point.name = QStringLiteral("pierce/faccia/Ω");
+    pierce->name = QStringLiteral("Etichetta visibile");
+    constraint.pierce = pierce;
+    sketch.geometricConstraints.append(constraint);
+    original.sketches.append(sketch);
+    // Presente anche uno schizzo senza appoggio: nessun nome extra va
+    // consumato quando il riferimento opzionale non esiste.
+    original.sketches.append(SketchObject{});
+    QByteArray definition;
+    for (bool cache : {false, true}) {
+        QByteArray bytes;
+        require(encodeDocument(original, bytes, cache).isEmpty(), "codifica nomi topologici degli schizzi");
+        DocumentState restored;
+        require(decodeDocument(bytes, restored).isEmpty() && restored.sketches.size() == 2,
+                "lettura nomi topologici degli schizzi");
+        const auto &saved = restored.sketches.front();
+        require(saved.support && saved.support->point.name == sketch.support->point.name
+                && saved.support->featureId == 17 && saved.support->point.subshape == 3
+                && saved.geometricConstraints.size() == 1 && saved.geometricConstraints.front().pierce,
+                "appoggio conserva identita' e nome topologico al round trip");
+        const auto &savedPierce = *saved.geometricConstraints.front().pierce;
+        require(savedPierce.surface.point.name == pierce->surface.point.name && savedPierce.name == pierce->name
+                && !restored.sketches.back().support,
+                "Pierce conserva nome topologico distinto dall'etichetta e appoggio assente resta assente");
+        QDataStream header(bytes);
+        header.skipRawData(4); quint16 version = 0; header >> version;
+        require(version == 54, "nuovi nomi protetti dal formato 54");
+        header.skipRawData(1); quint32 size = 0; header >> size;
+        definition = qUncompress(bytes.mid(11, size));
+    }
+    for (const auto &name : {sketch.support->point.name, pierce->surface.point.name}) {
+        QByteArray encodedName;
+        QDataStream nameStream(&encodedName, QIODevice::WriteOnly);
+        nameStream.setVersion(QDataStream::Qt_6_0); nameStream << name;
+        auto corrupt = definition;
+        const auto at = corrupt.indexOf(encodedName);
+        require(at >= 0, "nome presente nella definizione serializzata");
+        qToBigEndian<quint32>(0x7ffffffe, corrupt.data() + at);
+        DocumentState destination;
+        const auto identity = destination.version.documentId;
+        require(!decodeDocument(documentReadFixture(corrupt, 54), destination).isEmpty()
+                && destination.version.documentId == identity && destination.sketches.isEmpty(),
+                "nome topologico malformato rifiutato senza stato parziale");
+    }
+    // Fixture prodotta dal writer 53 precedente: supporto e Pierce avevano
+    // soltanto l'identita' numerica, mentre l'etichetta Pierce era presente.
+    const auto legacy = QByteArray::fromBase64(
+        "RkNBRAA1AQAAAIUAAAJIeNpjYGBg/A8EDBDAyIAG7D+gi8DVI6tl3P8BhwHYABZD8aqDORBkuASygv9IAK9JjFDM+h8NEHABI5paCYYUhkyGYoYChhyGRIZKBl2GNCCdzJCKbBa6+Wj2MGJxG6XuIjlIYWA/Dn1bl5uw3LP0VZi6aHrGdeP1BwiZCwAILnmm");
+    DocumentState restored;
+    require(decodeDocument(legacy, restored).isEmpty() && restored.sketches.size() == 1
+            && restored.sketches.front().support && restored.sketches.front().support->featureId == 1
+            && restored.sketches.front().support->point.name.isEmpty()
+            && restored.sketches.front().geometricConstraints.size() == 1,
+            "appoggio del formato 53 ancora leggibile senza inventare nomi");
+    const auto &legacyPierce = restored.sketches.front().geometricConstraints.front().pierce;
+    require(legacyPierce && legacyPierce->surface.point.name.isEmpty() && legacyPierce->name == "display-face",
+            "Pierce del formato 53 conserva i campi storici");
+    QByteArray legacyAgain;
+    require(encodeDocumentDefinition53ForHash(restored, legacyAgain).isEmpty() && legacyAgain == legacy,
+            "encoder storico per hash riproduce esattamente i byte del writer 53 precedente");
+    QByteArray retained("non modificare");
+    require(!encodeDocumentDefinition53ForHash(original, retained).isEmpty() && retained == "non modificare",
+            "encoder storico non scarta i nuovi nomi per produrre un falso hash equivalente");
+}
 void documentReadTests() {
     using namespace ForgeCad;
     using DocumentReadDetail::DataStream;
+    documentSketchReferenceNameTests();
     const auto rejected = [](const QByteArray &bytes, const DocumentReadLimits &limits = {}) {
         DocumentState destination;
         destination.sketches.append(SketchObject{}); destination.sketches[0].name = "da conservare";

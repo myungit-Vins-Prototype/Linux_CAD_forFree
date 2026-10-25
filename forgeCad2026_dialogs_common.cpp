@@ -243,6 +243,22 @@ protected:
 };
 }
 
+FunctionMessage::FunctionMessage(QWidget *parent) : QPlainTextEdit(parent) {
+    setReadOnly(true);
+    setLineWrapMode(QPlainTextEdit::NoWrap);
+    setHorizontalScrollBarPolicy(Qt::ScrollBarAsNeeded);
+    setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
+    setSizeAdjustPolicy(QAbstractScrollArea::AdjustIgnored);
+    setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+    setMinimumWidth(0);
+    setMaximumHeight(96);
+    setAccessibleName(QStringLiteral("Messaggio della funzione"));
+}
+FunctionMessage::FunctionMessage(const QString &text, QWidget *parent) : FunctionMessage(parent) { setText(text); }
+void FunctionMessage::setText(const QString &text) { if (text != toPlainText()) setPlainText(text); }
+QSize FunctionMessage::sizeHint() const { return QSize(240, 72); }
+QSize FunctionMessage::minimumSizeHint() const { return QSize(80, 48); }
+
 FunctionDialogPanel::FunctionDialogPanel(QWidget *parent , bool exclusive )
         : QDialog(overlayParent(parent)), exclusive_(exclusive), panelColor_(ForgeCad::uiGlassPalette(parent).color(QPalette::Window)), captureTimer_(this) {
     setAttribute(Qt::WA_NoMousePropagation);
@@ -307,7 +323,7 @@ QFormLayout *FunctionDialogPanel::createScrollableForm() {
     scroll->setWidgetResizable(true);
     scroll->setFrameShape(QFrame::NoFrame);
     scroll->setSizeAdjustPolicy(QAbstractScrollArea::AdjustToContents);
-    scroll->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    scroll->setHorizontalScrollBarPolicy(Qt::ScrollBarAsNeeded);
     scroll->setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
     auto *contents = new QWidget(scroll);
     contents->setObjectName(QStringLiteral("functionDialogContents"));
@@ -406,6 +422,16 @@ void FunctionDialogPanel::showEvent(QShowEvent *event) {
     if (exclusive_ && viewport_ && !windowLock_)
         if (auto *window = qobject_cast<QMainWindow *>(viewport_->window()))
             windowLock_ = std::make_unique<WindowLock>(window, viewport_, this);
+    // Conferma e Annulla restano raggiungibili anche quando il form scorre.
+    if (form_) for (auto *buttons : findChildren<QDialogButtonBox *>()) {
+        int row = -1; QFormLayout::ItemRole role;
+        form_->getWidgetPosition(buttons, &row, &role);
+        if (row >= 0) {
+            const auto taken = form_->takeRow(row);
+            delete taken.labelItem; delete taken.fieldItem;
+            static_cast<QVBoxLayout *>(layout())->addWidget(buttons);
+        }
+    }
     initializePanelSize();
     if (embedded_ && !placed_) placeAtLeft();
     raise();
@@ -532,7 +558,10 @@ bool FunctionDialogPanel::eventFilter(QObject *watched, QEvent *event) {
         }
         if (pointer && geometry().contains(position)) { raise(); event->accept(); return true; }
     }
-    if (embedded_ && watched == parentWidget() && event->type() == QEvent::Resize) keepInsideViewport();
+    if (embedded_ && watched == parentWidget() && event->type() == QEvent::Resize) {
+        if (!sizeIdentity_.isEmpty() && preferredPanelSize_.isValid() && !resizing_) resize(preferredPanelSize_.boundedTo(maximumPanelSize()));
+        keepInsideViewport();
+    }
     return QDialog::eventFilter(watched, event);
 }
 
@@ -590,8 +619,9 @@ void FunctionDialogPanel::applyTransparentStyle() {
         "QDialog#functionDialogPanel, QScrollArea#functionDialogScroll, "
         "QScrollArea#functionDialogScroll > QWidget > QWidget, QWidget#functionDialogContents, "
         "QWidget#loftContents, QWidget#loftFooter, QAbstractItemView, QAbstractSpinBox, QPushButton { background: transparent; }"
-        "QDialog#functionDialogPanel, QLabel, QCheckBox, QToolButton, QAbstractItemView, QAbstractSpinBox, QPushButton { color: %5; }"
+        "QDialog#functionDialogPanel, QLabel, QPlainTextEdit, QCheckBox, QToolButton, QAbstractItemView, QAbstractSpinBox, QPushButton { color: %5; }"
         "QAbstractItemView::item { background: transparent; }"
+        "QPlainTextEdit { background-color: %1; color: %2; border: 1px solid rgba(135,170,205,150); }"
         "QComboBox { background-color: %1; color: %2; border: 1px solid rgba(135,170,205,150); padding: 2px 22px 2px 5px; }"
         "QComboBox QAbstractItemView { background-color: %3; color: %4; border: 1px solid #52708d; outline: 0; }"
         "QComboBox QAbstractItemView::item { background-color: %3; color: %4; min-height: 24px; padding: 2px 5px; }"
@@ -602,11 +632,14 @@ void FunctionDialogPanel::applyTransparentStyle() {
     if(styleSheet()!=sheet)setStyleSheet(sheet);
 }
 
+void FunctionDialogPanel::setSizeIdentity(const QString &identity, const QStringList &legacyNames) {
+    Q_ASSERT(!panelSizeInitialized_);
+    sizeIdentity_ = identity;
+    legacySizeNames_ = legacyNames;
+}
 QString FunctionDialogPanel::panelSizeSettingsKey() const {
-    QString id = objectName() != QLatin1String("functionDialogPanel") ? objectName() : windowTitle();
-    if (id.isEmpty()) id = QStringLiteral("panel");
-    id.replace(QRegularExpression(QStringLiteral("[^A-Za-z0-9_-]+")), QStringLiteral("_"));
-    return QStringLiteral("view/functionPanelSizes/") + id;
+    if (sizeIdentity_.isEmpty()) return {}; // nessuna preferenza condivisa per pannelli senza identità
+    return QStringLiteral("view/functionPanelSizes/v2/") + sizeIdentity_;
 }
 
 QSize FunctionDialogPanel::naturalPanelSize() {
@@ -636,16 +669,32 @@ QSize FunctionDialogPanel::maximumPanelSize() const {
 void FunctionDialogPanel::initializePanelSize() {
     if (panelSizeInitialized_) return;
     panelSizeInitialized_ = true;
-    const QSize stored = QSettings().value(panelSizeSettingsKey()).toSize();
-    QSize requested = stored.isValid() ? stored : naturalPanelSize();
-    const QSize maximum = maximumPanelSize();
-    requested = requested.expandedTo(minimumSize()).boundedTo(maximum);
-    resize(requested);
+    QSettings settings;
+    const auto key = panelSizeSettingsKey();
+    QSize stored = key.isEmpty() ? QSize() : settings.value(key).toSize();
+    if (!stored.isValid() && !key.isEmpty()) {
+        // Solo alias espliciti: il vecchio nome condiviso surfaceToolDialog
+        // non viene trasferito alle tre operazioni distinte.
+        QSize migrated;
+        bool conflict = false;
+        for (auto name : legacySizeNames_) {
+            name.replace(QRegularExpression(QStringLiteral("[^A-Za-z0-9_-]+")), QStringLiteral("_"));
+            const auto value = settings.value(QStringLiteral("view/functionPanelSizes/") + name).toSize();
+            if (!value.isValid()) continue;
+            if (migrated.isValid() && migrated != value) conflict = true;
+            migrated = value;
+        }
+        if (migrated.isValid() && !conflict) { stored = migrated; settings.setValue(key, stored); }
+    }
+    preferredPanelSize_ = (stored.isValid() ? stored : naturalPanelSize()).expandedTo(minimumSize());
+    resize(preferredPanelSize_.boundedTo(maximumPanelSize()));
 }
 
 void FunctionDialogPanel::storeManualSize() {
     if (!size().isValid()) return;
-    QSettings().setValue(panelSizeSettingsKey(), size());
+    preferredPanelSize_ = size();
+    const auto key = panelSizeSettingsKey();
+    if (!key.isEmpty()) QSettings().setValue(key, preferredPanelSize_);
 }
 
 void FunctionDialogPanel::focusFirstEditor() {
@@ -907,10 +956,9 @@ void FeatureOperationDiagram::paintEvent(QPaintEvent *) {
 }
 
 bool ForgeCad::Gui::runUntilApplied(QDialog &dialog, QFormLayout *form, QDialogButtonBox *buttons, const std::function<QString()> &apply) {
-    auto *errorLabel = new QLabel(&dialog);
-    errorLabel->setWordWrap(true);
+    auto *errorLabel = new FunctionMessage(&dialog);
+    errorLabel->setObjectName(QStringLiteral("functionApplyError"));
     errorLabel->setStyleSheet(QStringLiteral("color: #ff7b72; font-weight: 600;"));
-    errorLabel->setMaximumWidth(360);
     errorLabel->hide();
     int row = -1;
     QFormLayout::ItemRole role;
@@ -940,10 +988,9 @@ bool ForgeCad::Gui::runUntilApplied(QDialog &dialog, QFormLayout *form, QDialogB
 
 bool runUntilAppliedModeless(QMainWindow *window, CadViewport *viewport, QDialog &dialog, QFormLayout *form, QDialogButtonBox *buttons,
                                     const std::function<QString()> &apply) {
-    auto *errorLabel = new QLabel(&dialog);
-    errorLabel->setWordWrap(true);
+    auto *errorLabel = new FunctionMessage(&dialog);
+    errorLabel->setObjectName(QStringLiteral("functionApplyError"));
     errorLabel->setStyleSheet(QStringLiteral("color: #ff7b72; font-weight: 600;"));
-    errorLabel->setMaximumWidth(360);
     errorLabel->hide();
     int row = -1;
     QFormLayout::ItemRole role;
@@ -974,9 +1021,8 @@ bool runUntilAppliedModeless(QMainWindow *window, CadViewport *viewport, QDialog
 PreviewScope::PreviewScope(CadViewport *target, QDialog &dialog, QFormLayout *form, int replacedIndex, QBoxLayout *outside )
         : viewport(target), index(replacedIndex) {
     if (!viewport) return;
-    label = new QLabel(QStringLiteral("in calcolo..."), &dialog);
-    label->setWordWrap(true);
-    label->setMaximumWidth(360);
+    label = new FunctionMessage(QStringLiteral("in calcolo..."), &dialog);
+    label->setObjectName(QStringLiteral("functionPreviewMessage"));
     if (outside) {
         auto *row = new QWidget(&dialog);
         auto *layout = new QHBoxLayout(row);
@@ -987,7 +1033,7 @@ PreviewScope::PreviewScope(CadViewport *target, QDialog &dialog, QFormLayout *fo
     } else {
         form->addRow(QStringLiteral("Anteprima:"), label);
     }
-    QLabel *status = label;
+    FunctionMessage *status = label;
     viewport->setPreviewCallback([status](const QString &error) {
         status->setText(error.isEmpty() ? QStringLiteral("pronta (in ambra nella vista)") : QStringLiteral("non riuscita: ") + error);
     });
@@ -1369,8 +1415,7 @@ SurfaceEndControls::SurfaceEndControls(QDialog &dialog, QFormLayout &form, CadVi
         });
         QObject::connect(clear, &QPushButton::clicked, &dialog, [this, side] { refs(side).clear(); sync(); });
     }
-    status_ = new QLabel(&dialog);
-    status_->setWordWrap(true);
+    status_ = new FunctionMessage(&dialog);
     form.addRow(status_);
     auto *note = new QLabel(QStringLiteral("La tangenza alle facce richiede che il profilo coincida con il loro bordo. "
                                           "Con tangenza attiva i collegamenti tra i profili diventano curvi. "
@@ -1495,7 +1540,7 @@ void ThreadDiagram::paintEvent(QPaintEvent *) {
         for (int k = 0; k < 5; ++k) { teeth.lineTo(58 + 38 * k, 35); teeth.lineTo(77 + 38 * k, 67); }
         p.setPen(QPen(accent, 2.1)); p.drawPath(teeth);
         p.setPen(ink); p.drawText(QRectF(12, 3, width() - 24, 18), Qt::AlignLeft,
-                                  QStringLiteral("2  Profilo %1°   passo %2").arg(angle_, 0, 'f', 0).arg(ForgeCad::formatLength(pitch_)));
+                                  QStringLiteral("2  Profilo %1°   passo %2").arg(angle_, 0, 'f', 0).arg(ForgeCad::formatLength(pitch_, 6, true, this)));
         p.setPen(QPen(QColor(130, 205, 255), 1.0));
         p.drawLine(77, 29, 115, 29); p.drawLine(77, 25, 77, 33); p.drawLine(115, 25, 115, 33);
         p.drawText(QRectF(77, 12, 38, 15), Qt::AlignCenter, QStringLiteral("P"));
@@ -1510,7 +1555,7 @@ void ThreadDiagram::paintEvent(QPaintEvent *) {
         p.drawPath(helix);
         p.setPen(QPen(QColor(130, 205, 255), 1.0)); p.drawLine(55, 73, 225, 73); p.drawLine(55, 69, 55, 78); p.drawLine(225, 69, 225, 78);
         p.setPen(ink); p.drawText(QRectF(12, 3, width() - 24, 18), Qt::AlignLeft,
-                                  QStringLiteral("3  Lunghezza %1   %2").arg(ForgeCad::formatLength(length_), leftHanded_ ? QStringLiteral("sinistrorsa") : QStringLiteral("destrorsa")));
+                                  QStringLiteral("3  Lunghezza %1   %2").arg(ForgeCad::formatLength(length_, 6, true, this), leftHanded_ ? QStringLiteral("sinistrorsa") : QStringLiteral("destrorsa")));
     }
 }
 

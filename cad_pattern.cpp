@@ -1,4 +1,5 @@
 #include "cad_pattern.h"
+#include "cad_forge.h"
 #include "cad_element_names.h"
 #include "fk_history_tools.h"
 
@@ -83,16 +84,11 @@ static ForgeBody moved(const ForgeBody &base,const Transform3 &transform) {
     BodyHistory history;Body body=transformBody(*base,transform,&history);
     const auto result=std::make_shared<const Body>(std::move(body));registerDeclaredHistory(result,{base},std::move(history));return result;
 }
-static ForgeBody combined(const ForgeBody &a,const ForgeBody &b,Kernel::BooleanOperation operation) {
-    BodyHistory history;Body body=booleanOperation(*a,*b,operation,{},&history);
-    const auto result=std::make_shared<const Body>(std::move(body));registerDeclaredHistory(result,{a,b},std::move(history));return result;
-}
-
 // Unione a coppie (albero bilanciato): le booleane restano tra corpi piccoli.
 ForgeBody uniteAll(std::vector<ForgeBody> bodies) {
     while (bodies.size() > 1) {
         std::vector<ForgeBody> next;
-        for (std::size_t k = 0; k + 1 < bodies.size(); k += 2) next.push_back(combined(bodies[k],bodies[k+1],Kernel::BooleanOperation::Unite));
+        for (std::size_t k = 0; k + 1 < bodies.size(); k += 2) next.push_back(forgeBooleanWithHistory(bodies[k],bodies[k+1],Kernel::BooleanOperation::Unite));
         if (bodies.size() % 2) next.push_back(std::move(bodies.back()));
         bodies = std::move(next);
     }
@@ -202,7 +198,7 @@ ForgeBody forgePatternFeature(const ForgeBody &target, const ForgeBody &tool, ::
         std::vector<ForgeBody> tools{tool};
         for (const Transform3 &t : placements) tools.push_back(moved(tool,t));
         const auto allTools=uniteAll(std::move(tools));
-        const auto result=combined(target,allTools,operation==::BooleanOperation::Union?Kernel::BooleanOperation::Unite:Kernel::BooleanOperation::Subtract);
+        const auto result=forgeBooleanWithHistory(target,allTools,operation==::BooleanOperation::Union?Kernel::BooleanOperation::Unite:Kernel::BooleanOperation::Subtract);
         if (result->faces().empty()) return setError(error, QStringLiteral("Il risultato e' vuoto.")), nullptr;
         return result;
     } catch (const std::exception &failure) {

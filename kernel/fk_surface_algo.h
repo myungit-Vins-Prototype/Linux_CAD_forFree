@@ -41,7 +41,10 @@ bool invertPoint(const Surface &surface, const Vec3 &p, Vec2 &uv, double toleran
 // parametrizzazioni anche diverse: piani coincidenti, cilindri coassiali
 // dello stesso raggio, sfere, coni e tori uguali, superfici estruse in
 // direzioni parallele dalla stessa curva (la curva base di ciascuna sta
-// sull'altra). Per le altre superfici solo se sono lo stesso oggetto.
+// sull'altra). Per le estrusioni il confronto dei profili proiettati usa un
+// certificato sui coefficienti razionali, anche con verso inverso e nodi
+// suddivisi; riparametrizzazioni non certificabili restituiscono false.
+// Per le altre superfici solo se sono lo stesso oggetto.
 bool sameSurface(const Surface &a, const Surface &b, double tolerance);
 
 // Poli: punti in cui la parametrizzazione degenera (Su nulla per ogni u) a
