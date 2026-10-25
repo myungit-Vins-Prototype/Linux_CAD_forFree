@@ -4560,3 +4560,8 @@ Esito: R0,1 e valori provati fino aR0,14 costruibili sull'intera catena diB6:E32
 - Richiesta esplicita dell'utente: «fai commit». Preparato il commit dei quattro file dell'intervento: kernel/fk_blend.cpp, kernel/tests/test_blend.cpp, tools/generate_architecture.py e CLAUDE.md, comprese diagnosi e integrazione. Escluso e preservato work/_review_src.tgz; index.html e graph.json restano artefatti locali ignorati.
 - Controlli prima del commit: git diff --check e mappa --check PASS465file/6525relazioni. Nessuna modifica funzionale o nuova build in questo passaggio; valgono le verifiche già registrate (Blend56/56, Chamfer2/2, applicativi7/7, modello reale e rendering nativo). Pubblicazione remota non richiesta.
 - Esito: commit locale creato su main con messaggio «Corregge la rifilatura dei raccordi su appoggi sferici», contenente soltanto i quattro file previsti. Registrazione finale inclusa nello stesso commit; nessun push. L'archivio work/_review_src.tgz resta l'unico elemento non versionato.
+
+### 2026-10-25 — Push della correzione Raccordo 10 (Codex)
+
+- Richiesta esplicita dell'utente: «fai push». Pubblicato con successo su origin/main il commit08aceb2 («Corregge la rifilatura dei raccordi su appoggi sferici»), avanzamento remoto da d28e09f a08aceb2. Nessuna nuova modifica funzionale, compilazione o installazione; valgono le verifiche registrate nell'integrazione.
+- Preservata ed esclusa dal commit/push la modifica locale concorrente a .gitignore che ignora work/_review_src.tgz. git diff --check PASS. Questo esito viene incluso in un commit documentale separato e pubblicato insieme alla correzione; controllo finale di concordanza HEAD/origin/main a chiusura.
