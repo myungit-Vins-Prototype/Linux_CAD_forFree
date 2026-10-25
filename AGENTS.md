@@ -1,6 +1,7 @@
 # Istruzioni permanenti del progetto
 
 - La lingua di lavoro è l'italiano.
+- Per preferenza esplicita dell'utente, non inserire `codex` nei nomi dei branch, neppure come prefisso `codex/`; usare nomi descrittivi del lavoro.
 - Comunicare sempre all'utente i passaggi cruciali durante le operazioni: decisioni, modifiche sostanziali, verifiche, esiti e problemi che cambiano il lavoro, senza limitarsi alla risposta finale.
 - All'inizio di ogni chat su questo progetto, leggere `CLAUDE.md` e le sezioni pertinenti al lavoro richiesto. È il registro condiviso del progetto, anche per Codex.
 - Per istruzione esplicita dell'utente, aggiornare sempre `CLAUDE.md` prima della risposta finale di ogni intervento, in tutte le chat del progetto, comprese indagini, correzioni e modifiche alla documentazione.

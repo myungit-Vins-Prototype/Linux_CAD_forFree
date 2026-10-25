@@ -2,6 +2,12 @@
 
 Contesto condiviso del progetto per Claude Code e Codex. La lingua di lavoro è l'italiano (UI, commenti, messaggi).
 
+### 2026-10-25 — Rinomina branch sperimentale e preferenza sui nomi
+
+- L'utente chiede conferma del commit e di evitare il nome codex nei branch. Verificato il commit locale `770d9fc` («Sperimenta solver per componenti, mesh differite e filtro GPU»); rinominato il branch corrente in `solver-mesh-gpu`, mantenendo invariati commit e codice. Nessun branch omonimo preesistente, nessun push.
+- Preferenza permanente registrata in AGENTS.md; aggiornati il titolo operativo in docs/viewport-performance.md e il metadato branch nel JSON delle misure. Le voci storiche del registro conservano il nome usato all'epoca. Modifica preesistente .gitignore preservata.
+- Controlli Git, git diff --check e mappa --check PASS (477file/6582relazioni); branch corrente solver-mesh-gpu e commit implementativo770d9fc verificati. Nessuna nuova modifica funzionale, compilazione, installazione o prova numerica necessaria per la rinomina. Questo aggiornamento esclusivamente documentale viene salvato separatamente dal commit dell'implementazione.
+
 ### 2026-10-25 — Esperimento solver, mesh e GPU (Codex, prima versione pronta; migrazione GPU generale aperta)
 
 - L'utente autorizza a provare su un altro branch le proposte dello studio: solver, mesh, quindi migrazione GPU; destinazioni esplicite entrambe macOS e Linux/NVIDIA. Creato `codex/solver-mesh-gpu` da `5473456`, preservata la modifica preesistente a `.gitignore`. La creazione del riferimento Git ha richiesto l'esecuzione autorizzata fuori sandbox; riuscita.

@@ -162,7 +162,7 @@ Per il contesto trasparente un passaggio di sola profondità individua la superf
 
 Verifica nativa: `forgecad_view_tests --sketch-ghost-render` controlla opacità al35%,25strati,25istanze e corpi sovrapposti. `--render-sketch-context documento.prt indice immagine.png` permette una cattura su un documento senza salvarlo.
 
-## Esperimento solver, mesh e GPU — branch codex/solver-mesh-gpu
+## Esperimento solver, mesh e GPU — branch solver-mesh-gpu
 
 Il branch sperimentale conserva la geometria B-rep in double. Il solver usa
 derivate analitiche per coincidenza, orizzontalità/verticalità, concentricità,
