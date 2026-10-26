@@ -1081,6 +1081,7 @@ private:
     // Toglie i corpi (gli operandi di booleane e raccordi eliminati che restano
     // tornano visibili) e rinumera i riferimenti.
     void removeBodies(const QSet<int> &removed);
+    void synchronizePatternResults();
 
     // Elimina le entita' selezionate dello schizzo attivo, con i loro vincoli;
     // gli indici dei segmenti (vincoli, linee di costruzione, assi delle

@@ -59,7 +59,10 @@ QString FeaturePreviewBuilder::previewKey(const ExtrusionObject &d, int index) {
     const PatternParameters &r = d.pattern;
     parts << QStringLiteral("P") << QString::number(r.kind) << QString::number(r.count) << QString::number(r.count2) << n(r.spacing) << n(r.spacing2)
           << n(r.angle) << QString::number(r.spread) << QString::number(r.flip) << QString::number(r.flip2) << QString::number(r.keepOriginal)
-          << QString::number(r.featureOnly);
+          << QString::number(r.featureOnly) << QString::number(d.patternComponent);
+    auto excluded = r.excluded;
+    std::sort(excluded.begin(), excluded.end());
+    for (int occurrence : excluded) parts << QStringLiteral("skip%1").arg(occurrence);
     for (const GeometryRef &g : r.refs) ref(g);
     parts << QStringLiteral("E") << QString::number(d.extent) << QString::number(d.mergeOperation) << QString::number(d.mergeAuto)
           << QString::number(d.mergeProbe) << QString::number(d.extrudeSides) << n(d.distance2)

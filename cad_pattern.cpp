@@ -12,6 +12,9 @@
 #include "cad_datum.h"
 #include "fk_boolean.h"
 #include "fk_topology.h"
+#include "fk_sew.h"
+#include "fk_mass.h"
+#include "fk_classify.h"
 #include "fk_transform.h"
 
 namespace ForgeCad {
@@ -170,7 +173,62 @@ bool patternPlacements(const PatternParameters &p, int owner, const QVector<Sket
     default:
         return setError(error, QStringLiteral("Tipo di ripetizione non valido.")), false;
     }
+    // Filtra dopo aver numerato tutte le posizioni: un'esclusione non sposta
+    // le altre e un indice temporaneamente fuori conteggio resta memorizzato.
+    for (std::size_t i = placements.size(); i > 0; --i)
+        if (p.excluded.contains(int(i))) placements.erase(placements.begin() + (i - 1));
     return true;
+}
+
+QVector<ForgeBody> forgePatternComponents(const ForgeBody &result, QString *error) {
+    if (!result) return {};
+    try {
+        const auto shells = result->shells();
+        if (shells.size() <= 1) return {result};
+        const auto extract = [&](const std::vector<FaceId> &faces) {
+            BodyHistory history;
+            Body piece = facesAsSheet(*result, faces, &history);
+            if (!result->isSheet())
+                for (auto region : piece.regions())
+                    if (region != piece.exteriorRegion()) piece.region(region).solid = true;
+            const auto body = std::make_shared<const Body>(std::move(piece));
+            registerDeclaredHistory(body, {result}, std::move(history));
+            return body;
+        };
+        QVector<ForgeBody> pieces;
+        std::vector<double> volumes;
+        std::vector<std::vector<FaceId>> groups;
+        for (auto shell : shells) {
+            groups.push_back(result->shell(shell).faces);
+            pieces.append(extract(groups.back()));
+            if (!result->isSheet()) volumes.push_back(massProperties(*pieces.last()).volume);
+        }
+        if (result->isSheet()) return pieces;
+        // Le shell interne hanno verso opposto. Non diventano solidi separati:
+        // vanno nel piu' piccolo involucro positivo contenente un loro punto.
+        std::vector<bool> internal(shells.size(), false);
+        for (std::size_t i = 0; i < shells.size(); ++i) if (volumes[i] < 0) {
+            const Vec3 point = pieces[int(i)]->vertex(pieces[int(i)]->vertices().front()).point;
+            int owner = -1;
+            for (std::size_t j = 0; j < shells.size(); ++j)
+                if (volumes[j] > 0 && (owner < 0 || volumes[j] < volumes[owner])
+                    && SolidClassifier(*pieces[int(j)], kLinearResolution).classify(point) == PointLocation::Inside)
+                    owner = int(j);
+            if (owner < 0) throw std::domain_error("shell interna priva di involucro");
+            groups[owner].insert(groups[owner].end(), groups[i].begin(), groups[i].end());
+            internal[i] = true;
+        }
+        QVector<ForgeBody> separated;
+        for (std::size_t i = 0; i < shells.size(); ++i) if (!internal[i]) {
+            if (!(volumes[i] > 0)) throw std::domain_error("componente solida senza volume positivo");
+            separated.append(groups[i].size() == result->shell(shells[i]).faces.size() ? pieces[int(i)] : extract(groups[i]));
+        }
+        if (separated.size() == 1) return {result};
+        return separated;
+    } catch (const std::exception &failure) {
+        setError(error, QStringLiteral("Separazione della ripetizione non riuscita: %1").arg(QString::fromUtf8(failure.what())));
+        return {};
+    }
 }
 
 ForgeBody forgePattern(const ForgeBody &base, const std::vector<Transform3> &placements, bool keepOriginal, QString *error) {
@@ -190,13 +248,15 @@ ForgeBody forgePattern(const ForgeBody &base, const std::vector<Transform3> &pla
 }
 
 ForgeBody forgePatternFeature(const ForgeBody &target, const ForgeBody &tool, ::BooleanOperation operation, const std::vector<Transform3> &placements,
-                              QString *error) {
+                              QString *error, bool keepOriginal) {
     if (!target || !tool) return setError(error, QStringLiteral("Gli operandi della funzione non hanno geometria valida.")), nullptr;
     if (operation != ::BooleanOperation::Union && operation != ::BooleanOperation::Difference)
         return setError(error, QStringLiteral("Si ripetono solo le unioni e le differenze.")), nullptr;
     try {
-        std::vector<ForgeBody> tools{tool};
+        std::vector<ForgeBody> tools;
+        if (keepOriginal) tools.push_back(tool);
         for (const Transform3 &t : placements) tools.push_back(moved(tool,t));
+        if (tools.empty()) return setError(error, QStringLiteral("Nessuna occorrenza attiva.")), nullptr;
         const auto allTools=uniteAll(std::move(tools));
         const auto result=forgeBooleanWithHistory(target,allTools,operation==::BooleanOperation::Union?Kernel::BooleanOperation::Unite:Kernel::BooleanOperation::Subtract);
         if (result->faces().empty()) return setError(error, QStringLiteral("Il risultato e' vuoto.")), nullptr;

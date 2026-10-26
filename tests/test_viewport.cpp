@@ -1110,14 +1110,18 @@ public:
             patternDialog(&window, &view, QStringLiteral("Ripetizione superficie"), -1, initial,
                 [&](const ExtrusionObject &d) { return view.createBody(d, {d.firstBody}); });
             if (failure) std::rethrow_exception(failure);
-            require(view.extrusions_.size() == 2, "comando crea ripetizione superficie");
-            check(view.extrusions_.last(), kind == 2 ? 2 : 4);
-            ExtrusionObject edited = view.extrusions_.last();
+            const auto checkResults = [&](int count) {
+                require(std::count_if(view.extrusions_.at(1).patternResults.begin(), view.extrusions_.at(1).patternResults.end(), [](const auto &part) { return bool(part); }) == count, "ripetizione espone tutte le superfici separate");
+                require(view.resultBodiesBefore(-1).size() == count, "superfici selezionabili come corpi distinti");
+                for (int i : view.resultBodiesBefore(-1)) check(view.extrusions_.at(i), 1);
+            };
+            checkResults(kind == 2 ? 2 : 4);
+            ExtrusionObject edited = view.extrusions_.at(1);
             if (kind == 2) edited.pattern.keepOriginal = false;
             else edited.pattern.count = 3;
             require(view.updateBody(1, edited).isEmpty(), "modifica ripetizione superficie");
-            check(view.extrusions_.last(), kind == 2 ? 1 : 3);
-            view.undo(); check(view.extrusions_.last(), kind == 2 ? 2 : 4);
+            checkResults(kind == 2 ? 1 : 3);
+            view.undo(); checkResults(kind == 2 ? 2 : 4);
         }
         // Salvataggio e rigenerazione mantengono tipo e copie.
         DocumentState document; document.extrusions = bodies; document.extrusions.append(pattern);
@@ -10050,6 +10054,11 @@ int main(int argc, char **argv) {
     if(app.arguments().contains(QStringLiteral("--document-recovery"))){
         try{ViewportInteractionTest::documentRecoveryRegressions();}
         catch(const std::exception &e){std::cerr<<e.what()<<std::endl;return 1;}
+        return 0;
+    }
+    if (app.arguments().contains(QStringLiteral("--pattern-results"))) {
+        try { patternResultTests(); }
+        catch (const std::exception &error) { std::cerr << error.what() << std::endl; return 1; }
         return 0;
     }
     if (app.arguments().contains(QStringLiteral("--pattern-placements"))) {

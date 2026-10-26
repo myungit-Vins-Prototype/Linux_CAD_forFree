@@ -44,7 +44,7 @@ quint64 inheritedBody(const QVector<ExtrusionObject> &features, const ExtrusionO
     case BodyFeature::Transform:
         return feature.move.copy ? 0 : owner(feature.firstBody);
     case BodyFeature::Pattern:
-        return owner(feature.firstBody);
+        return feature.patternComponent > 0 ? 0 : owner(feature.firstBody);
     case BodyFeature::Thicken:
         // Tutta la superficie diventa un solido: lo stesso corpo; facce scelte: un corpo nuovo.
         return feature.offsetFaces.isEmpty() ? owner(feature.firstBody) : 0;

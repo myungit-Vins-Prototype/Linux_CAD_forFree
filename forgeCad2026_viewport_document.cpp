@@ -30,7 +30,10 @@ int CadViewport::rebuildAllFeatures() {
     if(documentReadOnly_)return -1;
     if (extrusions_.isEmpty()) return 0;
     recordUndo();
-    for (ExtrusionObject &body : extrusions_) body.cachedGeometry = false;
+    for (ExtrusionObject &body : extrusions_) {
+        body.cachedGeometry = false;
+        if (body.feature == BodyFeature::Pattern && body.operation < 0 && body.patternComponent < 0) body.patternComponent = 0;
+    }
     regenerateAll();
     documentChanged();
     int failed = 0;
@@ -490,6 +493,15 @@ QString CadViewport::setFeaturesSuppressed(const QVector<int> &indices, bool sup
         if (index >= 0 && index < extrusions_.size() && extrusions_.at(index).modelBodyId
             && extrusions_.at(index).suppressed != suppressed && !list.contains(index))
             list.append(index);
+    // Soppressione della madre e dei risultati come un'unica funzione.
+    for (int i = 0; i < list.size(); ++i) {
+        const int root = list.at(i);
+        if (extrusions_.at(root).feature != BodyFeature::Pattern || extrusions_.at(root).patternComponent != 0) continue;
+        for (int child = root + 1; child < extrusions_.size(); ++child)
+            if (extrusions_.at(child).feature == BodyFeature::Pattern && extrusions_.at(child).patternComponent > 0
+                && extrusions_.at(child).firstBody == root && extrusions_.at(child).suppressed != suppressed && !list.contains(child))
+                list.append(child);
+    }
     if (list.isEmpty()) return {};
     std::sort(list.begin(), list.end());
     QHash<quint64, bool> bodyVisible;
@@ -905,7 +917,16 @@ QString CadViewport::updateBody(int index, const ExtrusionObject &definition) {
             if (!invalid.isEmpty()) return invalid;
         }
     }
+    // Un risultato derivato si modifica attraverso la sua ripetizione madre.
+    if (extrusions_.at(index).feature == BodyFeature::Pattern && extrusions_.at(index).patternComponent > 0) {
+        const int source = extrusions_.at(index).firstBody;
+        if (source < 0 || source >= index) return QStringLiteral("Ripetizione madre non valida.");
+        ExtrusionObject changed = extrusions_.at(source);
+        changed.pattern = definition.pattern;
+        return updateBody(source, changed);
+    }
     ExtrusionObject candidate = withMergeCandidates(definition, index);
+    if (candidate.feature == BodyFeature::Pattern && candidate.operation < 0) candidate.patternComponent = 0;
     candidate.visible = extrusions_.at(index).visible;
     const bool sameBlendPreview = candidate.operation < 0 && candidate.feature == BodyFeature::Blend
         && preview_.key == previewKey(candidate, index);
@@ -934,7 +955,7 @@ QString CadViewport::updateBody(int index, const ExtrusionObject &definition) {
     } else {
         // La stessa definizione dell'anteprima (guscio, offset...): il suo risultato.
         QString previewError;
-        if (takePreviewResult(candidate, index, &previewError)) {
+        if (candidate.feature != BodyFeature::Pattern && takePreviewResult(candidate, index, &previewError)) {
             if (!previewError.isEmpty()) return previewError;
         } else {
             QApplication::setOverrideCursor(Qt::WaitCursor);
@@ -965,6 +986,7 @@ QString CadViewport::updateBody(int index, const ExtrusionObject &definition) {
         regenerateAfter(index);
         QApplication::restoreOverrideCursor();
     }
+    synchronizePatternResults();
     selection_ = {SceneObjectKind::Extrusion, index, -1};
     documentChanged();
     return {};
@@ -1355,8 +1377,9 @@ QString CadViewport::createBody(ExtrusionObject body, const QVector<int> &hide )
     const QString positionError = sketchPositionError(*this, body);
     if (!positionError.isEmpty()) return positionError;
     body = withMergeCandidates(body, int(extrusions_.size()));
+    if (body.feature == BodyFeature::Pattern && body.operation < 0) body.patternComponent = 0;
     QString previewError;
-    if (takePreviewResult(body, -1, &previewError)) {
+    if (body.feature != BodyFeature::Pattern && takePreviewResult(body, -1, &previewError)) {
         if (!previewError.isEmpty()) return previewError;
     } else {
         rebuildBody(body, int(extrusions_.size()));
@@ -1368,10 +1391,62 @@ QString CadViewport::createBody(ExtrusionObject body, const QVector<int> &hide )
     for (int index : hidden)
         if (index >= 0 && index < extrusions_.size()) extrusions_[index].visible = false;
     extrusions_.append(body);
-    selection_ = {SceneObjectKind::Extrusion, int(extrusions_.size()) - 1, -1};
+    const int created = extrusions_.size() - 1;
+    synchronizePatternResults();
+    selection_ = {SceneObjectKind::Extrusion, created, -1};
     hover_ = {};
     documentChanged();
     return {};
+}
+
+// Espone ogni componente come corpo selezionabile. Le dipendenze dei risultati
+// derivati puntano alla madre: una sola booleana e nessun ricalcolo per copia.
+void CadViewport::synchronizePatternResults() {
+    QVector<ExtrusionObject> additions;
+    QSet<int> removed;
+    quint64 nextBody = 1;
+    for (const auto &body : extrusions_) nextBody = qMax(nextBody, body.modelBodyId + 1);
+    for (const auto &body : modelBodies_) nextBody = qMax(nextBody, body.id + 1);
+    for (int root = 0; root < extrusions_.size(); ++root) {
+        const auto source = extrusions_.at(root);
+        if (source.feature != BodyFeature::Pattern || source.patternComponent != 0
+            || source.suppressed || !source.error.isEmpty() || source.patternResults.isEmpty()) continue;
+        QSet<int> present;
+        for (int i = root + 1; i < extrusions_.size(); ++i) {
+            const auto &part = extrusions_.at(i);
+            if (part.feature != BodyFeature::Pattern || part.patternComponent <= 0 || part.firstBody != root) continue;
+            const int slot = part.patternComponent - 1;
+            if (slot < source.patternResults.size() && source.patternResults.at(slot)
+                && source.patternResults.at(slot) != source.forgeBody) { present.insert(slot); continue; }
+            bool referenced = false;
+            for (int j = i + 1; j < extrusions_.size(); ++j)
+                if (ForgeCad::bodyOperands(extrusions_.at(j)).contains(i)) referenced = true;
+            for (const auto &sketch : sketches_)
+                if (sketch.datumPlane == i || (sketch.support && (sketch.support->featureId == part.featureId || sketch.support->index == i))) referenced = true;
+            // Mantiene un errore esplicito se una lavorazione usa una componente
+            // scomparsa; nessun riferimento viene riassegnato a un'altra copia.
+            if (!referenced) removed.insert(i);
+        }
+        for (int component = 0; component < source.patternResults.size(); ++component) {
+            if (!source.patternResults.at(component) || source.patternResults.at(component) == source.forgeBody || present.contains(component)) continue;
+            ExtrusionObject part;
+            part.feature = BodyFeature::Pattern;
+            part.patternComponent = component + 1;
+            part.firstBody = root;
+            part.modelBodyId = nextBody++;
+            part.name = QStringLiteral("%1 — corpo %2").arg(source.name).arg(component + 1);
+            part.forgeBody = source.patternResults.at(component);
+            part.solid = !part.forgeBody->isSheet();
+            tessellateBody(part, extrusions_.size() + additions.size());
+            additions.append(std::move(part));
+        }
+    }
+    extrusions_ += additions;
+    if (!removed.isEmpty()) removeBodies(removed);
+    ForgeCad::normalizeModelHistory(extrusions_, modelBodies_);
+    for (int i = 0; i < extrusions_.size(); ++i)
+        if (extrusions_.at(i).feature == BodyFeature::Pattern && extrusions_.at(i).patternComponent > 0)
+            ForgeCad::registerFeatureGenealogy(extrusions_.at(i), i, sketches_, extrusions_);
 }
 
 QString CadViewport::createDeleteFaces(ExtrusionObject definition) {
@@ -1811,6 +1886,7 @@ void CadViewport::regenerateFrom(int from, QVector<bool> dirty, QSet<int> dirtyS
             refreshSurfacePierceSketches(-1,dirtySketches,s);
     }
     flush();
+    synchronizePatternResults();
 }
 
 void CadViewport::rebuildParallel(const QVector<int> &indices,

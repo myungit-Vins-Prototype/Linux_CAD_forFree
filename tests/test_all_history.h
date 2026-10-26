@@ -101,6 +101,7 @@ static void allHistoryTest() {
             feature.feature=BodyFeature::Imported;ExchangeBody source;source.name="fixture";source.body=box;
             feature.importData=QByteArray::fromStdString(writeStep({source}));feature.importSource=QStringLiteral("fixture.step");
         }
+        if (feature.feature == BodyFeature::Pattern) feature.patternComponent = 0;
         definition.extrusions.append(feature);
         ForgeBody preparedImport;QVector<ImportedPart> preparedParts;QString preparedPath;
         if(mode==32) {

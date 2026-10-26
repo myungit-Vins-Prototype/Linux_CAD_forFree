@@ -23,6 +23,7 @@
 // copia di lavoro; la cache geometrica resta 7. Legge i formati precedenti.
 // Il formato 54 conserva anche i nomi topologici degli appoggi degli schizzi
 // e delle superfici dei vincoli Pierce; i formati 1–53 restano leggibili.
+// Il formato 55 conserva occorrenze escluse e componenti delle ripetizioni.
 // Fanno eccezione i
 // corpi importati, che non
 // hanno una definizione: il loro body e' in `importData` come testo STEP del
@@ -40,7 +41,7 @@
 namespace ForgeCad {
 
 inline constexpr const char *kDocumentSuffix = "prt";
-inline constexpr quint16 kDocumentFormatVersion = 54;
+inline constexpr quint16 kDocumentFormatVersion = 55;
 
 // Budget in byte, indipendenti dal numero di feature. I chiamanti che devono
 // aprire documenti piu' grandi possono passarne di espliciti agli overload.

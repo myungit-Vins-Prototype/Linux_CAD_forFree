@@ -208,7 +208,7 @@ DESCRIPTIONS.update({'tools/open_architecture.py': ('build', 'Avvio locale della
  'cad_native_revisions': ('documents', 'Persistenza delle revisioni native; confronto delle definizioni normalizzato al codec corrente anche per check-in pendenti in formato53.'),
  'cad_numeric_input.h': ('startup', 'Gestione comune dell’input numerico nei controlli dell’interfaccia.'),
  'cad_overlay_renderer': ('render', 'Disegno OpenGL degli overlay e delle loro istanze.'),
- 'cad_pattern': ('features', 'Costruisce le ripetizioni parametriche delle feature.'),
+ 'cad_pattern': ('features', 'Ripetizioni con esclusioni persistenti; separa componenti solide o superfici conservando cavita e genealogia.'),
  'cad_revision_client': ('documents',
                          'Protocollo client per copie di lavoro, sessioni e operazioni sulle revisioni.'),
  'cad_revision_client_internal.h': ('documents',

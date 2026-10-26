@@ -364,7 +364,7 @@ void forEachEdgePoint(Body &body, Visit visit) {
     visit(body.sweepPathRef.point);
 }
 
-void write(QDataStream &out, const ExtrusionObject &body) {
+void write(QDataStream &out, const ExtrusionObject &body, quint16 version) {
     out << body.name << qint32(body.sketchIndex) << qint32(body.plane) << body.distance << body.visible
         << qint32(body.operation) << qint32(body.feature) << qint32(body.revolveAxis) << body.revolveAngle;
     const PrimitiveParameters &p = body.primitive;
@@ -491,6 +491,7 @@ void write(QDataStream &out, const ExtrusionObject &body) {
     QStringList names;
     forEachEdgePoint(body, [&](const EdgePoint &e) { names.append(e.name); });
     out << names;
+    if (version >= 55) out << qint32(body.patternComponent) << body.pattern.excluded;
 }
 
 // `extras` (solo formato 5): i file scritti durante lo sviluppo del formato 5
@@ -796,6 +797,18 @@ bool read(ReadStream &in, ExtrusionObject &body, quint16 version, int extras) {
         if (in.status() != QDataStream::Ok || names.size() != count) return false;
         int next = 0;
         forEachEdgePoint(body, [&](EdgePoint &e) { e.name = names.at(next++); });
+    }
+    if (version >= 55) {
+        qint32 component = -1;
+        quint32 count = 0;
+        in >> component;
+        if (component < -1 || component > 1000000 || !readCount(in, count, 4) || count > 501) return false;
+        body.patternComponent = component;
+        for (quint32 i = 0; i < count; ++i) {
+            qint32 excluded = -1; in >> excluded;
+            if (excluded < 0 || excluded > 500 || body.pattern.excluded.contains(excluded)) return false;
+            body.pattern.excluded.append(excluded);
+        }
     }
     const BodyFeature last = version >= 53 ? BodyFeature::SurfaceTools : version >= 45 ? BodyFeature::SpatialSketch : version >= 44 ? BodyFeature::ExtractedCurve : version >= 39 ? BodyFeature::Thicken : version >= 38 ? BodyFeature::ProjectedCurve : version >= 36 ? BodyFeature::Draft : version >= 35 ? BodyFeature::FillSurface : version >= 27 ? BodyFeature::Thread : version >= 25 ? BodyFeature::Shell : BodyFeature::PlanarSurface;
     if (int(body.feature) < 0 || int(body.feature) > int(last)) return false;
@@ -1198,7 +1211,7 @@ QString encodeDocumentVersion(const DocumentState &state, QByteArray &bytes, boo
             out << quint32(normalized.sketches.size());
             for (const SketchObject &sketch : normalized.sketches) write(out, sketch, version);
             out << quint32(normalized.extrusions.size());
-            for (const ExtrusionObject &body : normalized.extrusions) write(out, body);
+            for (const ExtrusionObject &body : normalized.extrusions) write(out, body, version);
             for (const double *axis : {normalized.orientation.right, normalized.orientation.up, normalized.orientation.toward})
                 for (int k = 0; k < 3; ++k) out << axis[k];
             out << quint32(normalized.modelBodies.size());
@@ -1231,6 +1244,9 @@ QString encodeDocument(const DocumentState &state, QByteArray &bytes, bool bodie
 }
 
 QString encodeDocumentDefinition53ForHash(const DocumentState &state, QByteArray &bytes) {
+    for (const auto &body : state.extrusions)
+        if (body.patternComponent >= 0 || !body.pattern.excluded.isEmpty())
+            return QStringLiteral("La ripetizione non e' rappresentabile nel formato 53.");
     for (const auto &sketch : state.sketches) {
         if (sketch.support && !sketch.support->point.name.isEmpty())
             return QStringLiteral("L'appoggio nominato dello schizzo non e' rappresentabile nel formato 53.");
