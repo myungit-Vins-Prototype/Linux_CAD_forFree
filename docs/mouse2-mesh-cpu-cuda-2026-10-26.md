@@ -39,3 +39,5 @@ ctest --test-dir forgecad-linux-solver -R forgecad_numeric_mesh_comparator_tests
 Richiede Python e NumPy; CTest registra il test Python se entrambi sono disponibili. Nessuna dipendenza nuova per l'applicazione. Snapshot, sonda ricollegata, campioni e log sono locali in `forgecad-linux-solver/benchmarks/mouse-numeric-mesh-2026-10-26/`; [rapporto versionabile JSON](mouse2-mesh-cpu-cuda-2026-10-26.json).
 
 Originale invariato, SHA256 `e0c53c6aeff405c16dcb85660b303590e8fa255b752cc37acb2ab2cbc0b39617`. Ricompilato il runner; nessuna modifica produttiva in questo intervento, nessuna sostituzione dell'app desktop e nessun commit/push. Prossimo punto individuato: rimuovere dalla visualizzazione le faccette che collassano dopo conversione float, mantenendo coerenti picking e mappa delle facce; ancora da implementare e verificare. Restano inoltre aperti macOS, altre GPU e le componenti grandi connesse del solver.
+
+Seguito: [filtro viewport verificato](viewport-degenerate-mesh-2026-10-26.md), 49.279 triangoli senza i 574 degeneri, con triangoli validi e B-rep invariati. I conteggi e il limite sopra descrivono il riferimento precedente.

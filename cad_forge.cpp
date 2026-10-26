@@ -65,6 +65,36 @@ void setError(QString *error, const QString &message) {
 Vec2 toVec(const QPointF &point) { return Vec2(point.x(), point.y()); }
 QVector3D toDisplay(const Vec3 &v) { return QVector3D(float(v.x()), float(v.y()), float(v.z())); }
 
+// Verifica le coordinate effettivamente inviate al renderer. Il B-rep e la
+// triangolazione double restano invariati; nessuna soglia elimina facce sottili.
+bool appendDisplayTriangle(BodyDisplay &display, int face, const std::array<QVector3D, 3> &points,
+                           const std::array<QVector3D, 3> &normals) {
+    for (const QVector3D &point : points)
+        if (!std::isfinite(point.x()) || !std::isfinite(point.y()) || !std::isfinite(point.z())) return false;
+    // Distinzione esplicita anche su ARM con FMA, dove cross(v,v) puo'
+    // lasciare residui. Double evita underflow/overflow dell'area in float.
+    const auto &a=points[0], &b=points[1], &c=points[2];
+    if (a==b || b==c || a==c) return false;
+    const Vec3 u(double(b.x())-a.x(), double(b.y())-a.y(), double(b.z())-a.z());
+    const Vec3 v(double(c.x())-a.x(), double(c.y())-a.y(), double(c.z())-a.z());
+    const Vec3 area=cross(u,v);
+    if (area.x()==0.0 && area.y()==0.0 && area.z()==0.0) return false;
+    display.triangleFaces.append(face);
+    for (int corner=0; corner<3; ++corner) {
+        display.vertices.append(points[corner]);
+        display.normals.append(normals[corner]);
+    }
+    return true;
+}
+
+bool appendDisplayTriangle(BodyDisplay &display, const FaceMesh &face, const std::array<int, 3> &triangle) {
+    return appendDisplayTriangle(display, face.face.index,
+        {toDisplay(face.points[std::size_t(triangle[0])]), toDisplay(face.points[std::size_t(triangle[1])]),
+         toDisplay(face.points[std::size_t(triangle[2])])},
+        {toDisplay(face.normals[std::size_t(triangle[0])]), toDisplay(face.normals[std::size_t(triangle[1])]),
+         toDisplay(face.normals[std::size_t(triangle[2])])});
+}
+
 ProfileSegment lineSegment(const Vec2 &a, const Vec2 &b) {
     return {std::make_shared<Line<2>>(a, b - a), {0.0, distance(a, b)}};
 }
@@ -1847,6 +1877,7 @@ void forgeTessellate(const Body &body, int quality, BodyDisplay &display) {
         Vec3 labelPoint;
         double largest = -1.0;
         for (const std::array<int, 3> &triangle : face.triangles) {
+            if (!appendDisplayTriangle(display, face, triangle)) continue;
             const Vec3 &a = face.points[std::size_t(triangle[0])];
             const Vec3 &b = face.points[std::size_t(triangle[1])];
             const Vec3 &c = face.points[std::size_t(triangle[2])];
@@ -1854,11 +1885,6 @@ void forgeTessellate(const Body &body, int quality, BodyDisplay &display) {
             if (size > largest) {
                 largest = size;
                 labelPoint = (a + b + c) / 3.0;
-            }
-            display.triangleFaces.append(face.face.index);
-            for (int index : triangle) {
-                display.vertices.append(toDisplay(face.points[std::size_t(index)]));
-                display.normals.append(toDisplay(face.normals[std::size_t(index)]));
             }
         }
         if (largest >= 0.0) {
@@ -2151,12 +2177,10 @@ static void forgeLocalPreviewDisplay(const QVector<const Body *> &bases, const B
             for (qsizetype triangle = 0; triangle < existingDisplay->triangleFaces.size(); ++triangle) {
                 const int face = existingDisplay->triangleFaces[triangle];
                 if (!patchFaceSet.count(face)) continue;
-                display.triangleFaces.append(face);
-                for (int corner = 0; corner < 3; ++corner) {
-                    const qsizetype vertex = 3 * triangle + corner;
-                    display.vertices.append(existingDisplay->vertices[vertex]);
-                    display.normals.append(existingDisplay->normals[vertex]);
-                }
+                const qsizetype first = 3 * triangle;
+                appendDisplayTriangle(display, face,
+                    {existingDisplay->vertices[first], existingDisplay->vertices[first+1], existingDisplay->vertices[first+2]},
+                    {existingDisplay->normals[first], existingDisplay->normals[first+1], existingDisplay->normals[first+2]});
             }
             for (qsizetype edge = 0; edge < existingDisplay->edgeIds.size(); ++edge) {
                 if (!patchEdges.count(existingDisplay->edgeIds[edge])) continue;
@@ -2184,13 +2208,7 @@ static void forgeLocalPreviewDisplay(const QVector<const Body *> &bases, const B
     for (const FaceMesh &face : mesh.faces) {
         BodyDisplay *target = patchFaceSet.count(face.face.index) ? &display : retainedDisplay;
         if (!target) continue;
-        for (const std::array<int, 3> &triangle : face.triangles) {
-            target->triangleFaces.append(face.face.index);
-            for (int index : triangle) {
-                target->vertices.append(toDisplay(face.points[std::size_t(index)]));
-                target->normals.append(toDisplay(face.normals[std::size_t(index)]));
-            }
-        }
+        for (const std::array<int, 3> &triangle : face.triangles) appendDisplayTriangle(*target, face, triangle);
     }
     for (std::size_t edgeIndex = 0; edgeIndex < mesh.edges.size(); ++edgeIndex) {
         BodyDisplay *target = patchEdges.count(mesh.edgeIds[edgeIndex].index) ? &display : retainedDisplay;

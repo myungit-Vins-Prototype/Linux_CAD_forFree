@@ -199,6 +199,23 @@ sono incluse in `forgecad_preview_performance_tests`. Corretto il caso reale
 «Rivoluzione 1» del flacone che mostrava soltanto le U/V: prima zero vertici,
 dopo 4.086 vertici alla qualità 1, con lo stesso B-rep e 28 curve U/V.
 
+Conferma Linux del 26 ottobre 2026: integrato il fix Mac `07738e9` e
+ricompilati applicazione, runner e test export in `forgecad-linux-solver`.
+Superati 25 CTest mirati, compresi export CPU, CUDA generico e specializzato;
+QA nativa XCB/OpenGL dell'anteprima superata e superficie verificata
+nell'immagine del flacone locale. L'originale Linux è rimasto invariato
+(SHA256 `eb0dde7213f8ffdcfbf4a8146bcbb8c45f327877466f461784c8500e688ffc15`)
+ed è diverso dal flacone Mac descritto sopra: i 4.086 vertici si riferiscono
+alla sola prova Mac. Log e immagini locali in
+`forgecad-linux-solver/benchmarks/linux-preview-fix-2026-10-26`.
+
+La conversione della mesh in float scarta ora faccette non finite, ripetute
+o collineari nella scena e nelle anteprime locali, mantenendo coerenti
+vertici/normali/FaceId e le etichette delle facce rappresentabili. Nessuna
+soglia elimina facce sottili valide; il picking esatto e il B-rep restano
+invariati. Su mouse2 rimossi i 574 degeneri già individuati, senza cambiare
+i triangoli validi: [verifica CPU/CUDA](viewport-degenerate-mesh-2026-10-26.md).
+
 Il nuovo filtro GPU delle booleane usa Metal su macOS e CUDA su Linux/NVIDIA.
 I box double già espansi della tolleranza vengono convertiti in intervalli
 float arrotondati verso l'esterno; il filtro non costruisce geometria e può
