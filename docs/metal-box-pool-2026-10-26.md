@@ -63,3 +63,9 @@ c++ -O3 -std=c++17 -I. tools/benchmark_metal_boxes.cpp \
 Il test richiede accesso al dispositivo Metal. La compilazione ordinaria non avvia la mappa architetturale: aggiornata separatamente, 485 file/6.623 relazioni e 234 unità senza diagnostiche, `--check` PASS. Collegamenti test/adattatore/backend/contratto verificati nei due versi; il benchmark manuale non è un'unità CMake e ha soltanto catalogo/include, senza copertura AST garantita. HTML e JSON generati restano ignorati da Git.
 
 Campioni, hash e limiti: [rapporto JSON](metal-box-pool-2026-10-26.json). Libreria e oggetto precedenti, binari, runner di confronto e log restano in `forgecad-release/benchmarks/metal-box-pool-2026-10-26/`. Nessun documento CAD è stato modificato o usato dal benchmark sintetico. Installazione desktop e processi dell'utente non sostituiti.
+
+## Integrazione del lavoro Linux concorrente
+
+Prima del push è arrivato `f819646`, con il filtro dei triangoli degeneri viewport e la conferma Linux del fix delle anteprime. Unito al checkpoint Metal `b7c48f8` preservando entrambe le storie; risolti soltanto conflitti documentali nel registro e nella roadmap. I sorgenti Metal e il benchmark sono identici a quelli misurati sopra: il JSON conserva gli hash della misura e distingue quelli successivi all'integrazione.
+
+Versione combinata ricompilata su Mac: 21/21 CTest PASS con GPU reale, inclusi il nuovo filtro, picking, export CPU e anteprime; QA Cocoa/OpenGL sul flacone Mac PASS e immagine ispezionata. Originale invariato. Mappa combinata aggiornata: 486 file/6.637 relazioni, 234 unità senza diagnostiche, `--check` PASS. Il confronto numerico mouse2 CPU/CUDA del filtro rimane una verifica Linux; qui sono confermati i casi sintetici del filtro e la visualizzazione nativa sul flacone.

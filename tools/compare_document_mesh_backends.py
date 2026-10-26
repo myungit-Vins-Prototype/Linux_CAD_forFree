@@ -215,7 +215,8 @@ def main():
         protocol="Processi nuovi sequenziali, qualità1 e rigenerazione completa. Confronto indicizzato con mappa facce/topologia uguale, snapshot fuori timer; non misura framerate o distanza continua delle superfici.")
     report["binary_sha256"] = dict(cpu=sha256(cpu), cuda=sha256(cuda))
     report["sources_sha256"] = {name: sha256(root / name) for name in [
-        "tests/test_viewport.cpp", "tests/test_lazy_mesh.h", "cuda_support.cu", "cad_cuda_tessellation.cpp",
+        "tests/test_viewport.cpp", "tests/test_lazy_mesh.h", "tests/test_display_mesh.h", "cad_forge.cpp",
+        "cuda_support.cu", "cad_cuda_tessellation.cpp",
         "tools/compare_document_mesh_backends.py"]}
     modes = ["cpu", "cuda-generic"] + (["cuda-specialized"] if args.specialized else [])
     reference = None

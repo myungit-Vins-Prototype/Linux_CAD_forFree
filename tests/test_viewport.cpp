@@ -127,6 +127,7 @@ public:
 #include "test_document_units.h"
 #include "test_function_panels.h"
 #include "test_lazy_mesh.h"
+#include "test_display_mesh.h"
     static void extrusionActionPreconditions() {
         using namespace ForgeCad;
         PdfWindow window;
@@ -10325,6 +10326,11 @@ int main(int argc, char **argv) {
             require(option + 1 < app.arguments().size(), "percorso Applicatore richiesto");
             ViewportInteractionTest::applicatorePreview(app.arguments()[option + 1]);
         } catch (const std::exception &error) { std::cerr << error.what() << std::endl; return 1; }
+        return 0;
+    }
+    if (app.arguments().contains(QStringLiteral("--display-mesh"))) {
+        try { ViewportInteractionTest::displayMeshTests(); }
+        catch (const std::exception &error) { std::cerr << error.what() << std::endl; return 1; }
         return 0;
     }
     if (app.arguments().contains(QStringLiteral("--blend-preview-reload"))) {

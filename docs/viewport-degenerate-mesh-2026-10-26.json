@@ -1,0 +1,438 @@
+{
+  "document_sha256": "e0c53c6aeff405c16dcb85660b303590e8fa255b752cc37acb2ab2cbc0b39617",
+  "platform": "Linux-7.3.0-2-cachyos-bore-x86_64-with-glibc2.44",
+  "protocol": "Processi nuovi sequenziali, qualit\u00e01 e rigenerazione completa. Confronto indicizzato con mappa facce/topologia uguale, snapshot fuori timer; non misura framerate o distanza continua delle superfici.",
+  "production_change": "Filtro di triangoli con vertici float non finiti, ripetuti o collineari nella scena e nelle anteprime; geometria esatta invariata.",
+  "runs": [
+    {
+      "name": "0-cpu",
+      "mode": "cpu",
+      "features": 31,
+      "sketches": 13,
+      "breps": 16,
+      "triangles": 49279,
+      "cuda_points": 0
+    },
+    {
+      "name": "0-cuda-generic",
+      "mode": "cuda-generic",
+      "features": 31,
+      "sketches": 13,
+      "breps": 16,
+      "triangles": 49279,
+      "cuda_points": 90675
+    },
+    {
+      "name": "0-cuda-specialized",
+      "mode": "cuda-specialized",
+      "features": 31,
+      "sketches": 13,
+      "breps": 16,
+      "triangles": 49279,
+      "cuda_points": 90675
+    },
+    {
+      "name": "1-cuda-generic",
+      "mode": "cuda-generic",
+      "features": 31,
+      "sketches": 13,
+      "breps": 16,
+      "triangles": 49279,
+      "cuda_points": 90675
+    },
+    {
+      "name": "1-cuda-specialized",
+      "mode": "cuda-specialized",
+      "features": 31,
+      "sketches": 13,
+      "breps": 16,
+      "triangles": 49279,
+      "cuda_points": 90675
+    },
+    {
+      "name": "1-cpu",
+      "mode": "cpu",
+      "features": 31,
+      "sketches": 13,
+      "breps": 16,
+      "triangles": 49279,
+      "cuda_points": 0
+    }
+  ],
+  "before_after": [
+    {
+      "name": "0-cpu",
+      "mode": "cpu",
+      "old_triangles": 49853,
+      "removed": 574,
+      "new_triangles": 49279,
+      "removed_by_face": {
+        "0": 5,
+        "6": 2,
+        "7": 5,
+        "13": 530,
+        "14": 32
+      },
+      "retained_arrays_bitwise_identical": true,
+      "all_brep_hashes_unchanged": true,
+      "visibility_errors_unchanged": true,
+      "passed": true
+    },
+    {
+      "name": "0-cuda-generic",
+      "mode": "cuda-generic",
+      "old_triangles": 49853,
+      "removed": 574,
+      "new_triangles": 49279,
+      "removed_by_face": {
+        "0": 5,
+        "6": 2,
+        "7": 5,
+        "13": 530,
+        "14": 32
+      },
+      "retained_arrays_bitwise_identical": true,
+      "all_brep_hashes_unchanged": true,
+      "visibility_errors_unchanged": true,
+      "passed": true
+    },
+    {
+      "name": "0-cuda-specialized",
+      "mode": "cuda-specialized",
+      "old_triangles": 49853,
+      "removed": 574,
+      "new_triangles": 49279,
+      "removed_by_face": {
+        "0": 5,
+        "6": 2,
+        "7": 5,
+        "13": 530,
+        "14": 32
+      },
+      "retained_arrays_bitwise_identical": true,
+      "all_brep_hashes_unchanged": true,
+      "visibility_errors_unchanged": true,
+      "passed": true
+    },
+    {
+      "name": "1-cuda-generic",
+      "mode": "cuda-generic",
+      "old_triangles": 49853,
+      "removed": 574,
+      "new_triangles": 49279,
+      "removed_by_face": {
+        "0": 5,
+        "6": 2,
+        "7": 5,
+        "13": 530,
+        "14": 32
+      },
+      "retained_arrays_bitwise_identical": true,
+      "all_brep_hashes_unchanged": true,
+      "visibility_errors_unchanged": true,
+      "passed": true
+    },
+    {
+      "name": "1-cuda-specialized",
+      "mode": "cuda-specialized",
+      "old_triangles": 49853,
+      "removed": 574,
+      "new_triangles": 49279,
+      "removed_by_face": {
+        "0": 5,
+        "6": 2,
+        "7": 5,
+        "13": 530,
+        "14": 32
+      },
+      "retained_arrays_bitwise_identical": true,
+      "all_brep_hashes_unchanged": true,
+      "visibility_errors_unchanged": true,
+      "passed": true
+    },
+    {
+      "name": "1-cpu",
+      "mode": "cpu",
+      "old_triangles": 49853,
+      "removed": 574,
+      "new_triangles": 49279,
+      "removed_by_face": {
+        "0": 5,
+        "6": 2,
+        "7": 5,
+        "13": 530,
+        "14": 32
+      },
+      "retained_arrays_bitwise_identical": true,
+      "all_brep_hashes_unchanged": true,
+      "visibility_errors_unchanged": true,
+      "passed": true
+    }
+  ],
+  "cpu_cuda_comparisons": [
+    {
+      "reference": "0-cpu",
+      "candidate": "0-cuda-generic",
+      "passed": true,
+      "visible": [
+        {
+          "index": 30,
+          "vertices": {
+            "shape_equal": true,
+            "reference_count": 147837,
+            "candidate_count": 147837,
+            "numeric_different_rows": 0,
+            "bitwise_different_rows": 0,
+            "max_distance": 0.0,
+            "rms_distance": 0.0,
+            "max_component": 0.0,
+            "worst_row": 0,
+            "passed": true
+          },
+          "normals": {
+            "shape_equal": true,
+            "reference_count": 147837,
+            "candidate_count": 147837,
+            "numeric_different_rows": 23,
+            "bitwise_different_rows": 23,
+            "max_distance": 7.450580596923828e-09,
+            "rms_distance": 6.712576018950931e-11,
+            "max_component": 7.450580596923828e-09,
+            "worst_row": 69313,
+            "passed": true,
+            "reference_zero_normals": 0,
+            "candidate_zero_normals": 0,
+            "zero_mask_equal": true,
+            "max_angle_degrees": 4.2598127208784247e-07
+          },
+          "triangles": {
+            "reference_degenerate": 0,
+            "candidate_degenerate": 0,
+            "degenerate_mask_equal": true,
+            "winding_flips": 0
+          }
+        }
+      ]
+    },
+    {
+      "reference": "0-cpu",
+      "candidate": "0-cuda-specialized",
+      "passed": true,
+      "visible": [
+        {
+          "index": 30,
+          "vertices": {
+            "shape_equal": true,
+            "reference_count": 147837,
+            "candidate_count": 147837,
+            "numeric_different_rows": 0,
+            "bitwise_different_rows": 0,
+            "max_distance": 0.0,
+            "rms_distance": 0.0,
+            "max_component": 0.0,
+            "worst_row": 0,
+            "passed": true
+          },
+          "normals": {
+            "shape_equal": true,
+            "reference_count": 147837,
+            "candidate_count": 147837,
+            "numeric_different_rows": 23,
+            "bitwise_different_rows": 23,
+            "max_distance": 7.450580596923828e-09,
+            "rms_distance": 6.712576018950931e-11,
+            "max_component": 7.450580596923828e-09,
+            "worst_row": 69313,
+            "passed": true,
+            "reference_zero_normals": 0,
+            "candidate_zero_normals": 0,
+            "zero_mask_equal": true,
+            "max_angle_degrees": 4.2598127208784247e-07
+          },
+          "triangles": {
+            "reference_degenerate": 0,
+            "candidate_degenerate": 0,
+            "degenerate_mask_equal": true,
+            "winding_flips": 0
+          }
+        }
+      ]
+    },
+    {
+      "reference": "0-cpu",
+      "candidate": "1-cuda-generic",
+      "passed": true,
+      "visible": [
+        {
+          "index": 30,
+          "vertices": {
+            "shape_equal": true,
+            "reference_count": 147837,
+            "candidate_count": 147837,
+            "numeric_different_rows": 0,
+            "bitwise_different_rows": 0,
+            "max_distance": 0.0,
+            "rms_distance": 0.0,
+            "max_component": 0.0,
+            "worst_row": 0,
+            "passed": true
+          },
+          "normals": {
+            "shape_equal": true,
+            "reference_count": 147837,
+            "candidate_count": 147837,
+            "numeric_different_rows": 23,
+            "bitwise_different_rows": 23,
+            "max_distance": 7.450580596923828e-09,
+            "rms_distance": 6.712576018950931e-11,
+            "max_component": 7.450580596923828e-09,
+            "worst_row": 69313,
+            "passed": true,
+            "reference_zero_normals": 0,
+            "candidate_zero_normals": 0,
+            "zero_mask_equal": true,
+            "max_angle_degrees": 4.2598127208784247e-07
+          },
+          "triangles": {
+            "reference_degenerate": 0,
+            "candidate_degenerate": 0,
+            "degenerate_mask_equal": true,
+            "winding_flips": 0
+          }
+        }
+      ]
+    },
+    {
+      "reference": "0-cpu",
+      "candidate": "1-cuda-specialized",
+      "passed": true,
+      "visible": [
+        {
+          "index": 30,
+          "vertices": {
+            "shape_equal": true,
+            "reference_count": 147837,
+            "candidate_count": 147837,
+            "numeric_different_rows": 0,
+            "bitwise_different_rows": 0,
+            "max_distance": 0.0,
+            "rms_distance": 0.0,
+            "max_component": 0.0,
+            "worst_row": 0,
+            "passed": true
+          },
+          "normals": {
+            "shape_equal": true,
+            "reference_count": 147837,
+            "candidate_count": 147837,
+            "numeric_different_rows": 23,
+            "bitwise_different_rows": 23,
+            "max_distance": 7.450580596923828e-09,
+            "rms_distance": 6.712576018950931e-11,
+            "max_component": 7.450580596923828e-09,
+            "worst_row": 69313,
+            "passed": true,
+            "reference_zero_normals": 0,
+            "candidate_zero_normals": 0,
+            "zero_mask_equal": true,
+            "max_angle_degrees": 4.2598127208784247e-07
+          },
+          "triangles": {
+            "reference_degenerate": 0,
+            "candidate_degenerate": 0,
+            "degenerate_mask_equal": true,
+            "winding_flips": 0
+          }
+        }
+      ]
+    },
+    {
+      "reference": "0-cpu",
+      "candidate": "1-cpu",
+      "passed": true,
+      "visible": [
+        {
+          "index": 30,
+          "vertices": {
+            "shape_equal": true,
+            "reference_count": 147837,
+            "candidate_count": 147837,
+            "numeric_different_rows": 0,
+            "bitwise_different_rows": 0,
+            "max_distance": 0.0,
+            "rms_distance": 0.0,
+            "max_component": 0.0,
+            "worst_row": 0,
+            "passed": true
+          },
+          "normals": {
+            "shape_equal": true,
+            "reference_count": 147837,
+            "candidate_count": 147837,
+            "numeric_different_rows": 0,
+            "bitwise_different_rows": 0,
+            "max_distance": 0.0,
+            "rms_distance": 0.0,
+            "max_component": 0.0,
+            "worst_row": 0,
+            "passed": true,
+            "reference_zero_normals": 0,
+            "candidate_zero_normals": 0,
+            "zero_mask_equal": true,
+            "max_angle_degrees": 0.0
+          },
+          "triangles": {
+            "reference_degenerate": 0,
+            "candidate_degenerate": 0,
+            "degenerate_mask_equal": true,
+            "winding_flips": 0
+          }
+        }
+      ]
+    }
+  ],
+  "native_qa": {
+    "platform": "xcb",
+    "sha256_before": "eb0dde7213f8ffdcfbf4a8146bcbb8c45f327877466f461784c8500e688ffc15",
+    "sha256_after": "eb0dde7213f8ffdcfbf4a8146bcbb8c45f327877466f461784c8500e688ffc15",
+    "original_unchanged": true,
+    "exit_code": 0
+  },
+  "tests": {
+    "ctest_passed": 27,
+    "ctest_failed": 0,
+    "ctest_skipped": 0,
+    "ctest_seconds": 11.82,
+    "regression_failed_before_fix": true
+  },
+  "architecture": {
+    "nodes": 483,
+    "edges": 6636,
+    "units": 231,
+    "diagnostic_units": 0
+  },
+  "binary_sha256": {
+    "cpu": "5c4b78eafc159b44b4e3212462a6005cffa33d22f26b4a0b979bce2c4bfd9376",
+    "cuda": "17f132196053029a02194bef37b29bc3b34ecd9f05d30a14f14251c72af280d3",
+    "app": "15526af2911c6ad76e777975a2dd4b6d8952250914eda31bd645bf4740fb516c"
+  },
+  "sources_sha256": {
+    "tests/test_viewport.cpp": "dbc952c4d390b71fddd2eb6688d5a028919cb619c8b9559f789ec09477f1c70f",
+    "tests/test_lazy_mesh.h": "fdf1793e3a0c79fb95894cb104b47d3b991f8c749104ac523911109dc1ef1f3f",
+    "tests/test_display_mesh.h": "e96e24e9926114a3ae3c290450fe4fafe1f6c8b62b23d0de8af9b3a3e8e67f61",
+    "cad_forge.cpp": "bf16acdab7e4ec2bbdae9dd16ee7fc3f3a71e1e2884d636873e1bbbd16e5fa60",
+    "cuda_support.cu": "38a871b35ecfcd6ea11c9a771bf2f872eded73ea4971a5e8e993a773b37a38f7",
+    "cad_cuda_tessellation.cpp": "c5fe4a3e7323b8476c2d55b4c10de8e88a5f8d0e511f73406cad6039ee1ec325",
+    "tools/compare_document_mesh_backends.py": "a52cfad7bbddac131e588dd119abf560a8ec44896b4699cac3d633410b270628"
+  },
+  "local_report_sha256": "8efc319e9e2845f2a695e5d71412970e7a8a6f5a4479032bfd437f8ca981f6bc",
+  "baseline_report_sha256": "1545a67ab5037f4a3f092c42c9aa9afce17be36e5c11f0dc5ff711107c6e7a32",
+  "input_unchanged": true,
+  "passed": true,
+  "limitations": [
+    "Nessuna nuova misura prestazionale: build/test/generatore concomitanti; campioni temporali diagnostici esclusi.",
+    "Conferma nativa macOS/Metal da eseguire sul Mac; backend compute invariati.",
+    "Filtro alla generazione della mesh o riuso delle patch locali: nessuna riscrittura massiva di cache/documenti salvati.",
+    "Basi istanziate annidate non coperte dalla sonda numerica."
+  ]
+}

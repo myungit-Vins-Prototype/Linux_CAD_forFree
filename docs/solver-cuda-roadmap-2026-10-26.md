@@ -48,12 +48,13 @@ La firma diversa della mesh reale è stata successivamente approfondita: [confro
 
 ## Roadmap successiva, ancora aperta
 
-1. **Verificato su macOS ARM64:** lettore comune, pipeline mesh, regressioni ed export CPU; confronto con cache sui due documenti locali, assieme 10,889→4,027s e flacone0,620→0,388s. [Risultati e identità dei file](macos-common-validation-2026-10-26.md). Corretto un difetto OBJ dipendente dalla contrazione FMA: ripetere la suite export su NVIDIA dopo questo fix comune.
+1. **Verificato su macOS ARM64:** lettore comune, pipeline mesh, regressioni ed export CPU; confronto con cache sui due documenti locali, assieme 10,889→4,027s e flacone0,620→0,388s. [Risultati e identità dei file](macos-common-validation-2026-10-26.md). Corretto un difetto OBJ dipendente dalla contrazione FMA; suite export CPU/CUDA generico/specializzato ripetuta su Linux con successo dopo il fix.
 2. **Completata una prima selezione verificata:** trascinamenti riusciti in7/13schizzi di mouse2; ricerca limitata e intervalli riportati nel [seguito](solver-cuda-export-drag-2026-10-26.md). Ulteriori classi di modifica restano aperte.
 3. **Completato per STL/OBJ:** suite permanente con scrittura/rilettura e confronto CPU/CUDA su patch polinomiale e NURBS con foro; corregge anche degenerazioni/orientamenti introdotti dalla precisione dei formati. [Risultati](solver-cuda-export-drag-2026-10-26.md).
 4. Valutare specializzazioni CUDA su altre GPU e lotti reali; abilitarle per default solo con vantaggio ripetibile. Il pool limita l'inattivo: un budget globale dei lavori simultanei richiede una politica distinta.
 5. Misurare separatamente componenti grandi e connesse del solver, costruzione geometrica e rendering. La partizione non è una fattorizzazione sparsa generale e non trasferisce il kernel esatto sulla GPU.
+6. **Completato su Linux:** filtro delle faccette viewport collassate dopo conversione float, condiviso da scena e anteprime. Su mouse2 rimossi soltanto i 574 degeneri, triangoli validi e 16 B-rep invariati; sei processi CPU/CUDA e 27 CTest PASS. [Risultati](viewport-degenerate-mesh-2026-10-26.md). Nel merge Metal confermati anche test sintetici Mac e QA Cocoa/OpenGL sul flacone; il confronto numerico mouse2 resta Linux.
 
 Prosecuzione specifica Mac: [pool dei buffer Metal e richieste indipendenti](metal-box-pool-2026-10-26.md) implementati e verificati sulla GPU reale. I gruppi di quattro richieste sintetiche migliorano circa2,2×; nessuna accelerazione dell'intero CAD dichiarata. I budget attivo/inattivo descritti nel rapporto valgono soltanto per Metal e non risolvono la politica dei lavori attivi CUDA del punto4.
 
-Applicazione compilata nella build separata; installazione desktop invariata. Nessun commit o push.
+Checkpoint Mac e Linux uniti sul branch, preservando entrambi i lavori. Applicazione compilata nelle build separate; installazioni desktop invariate. Verifiche della versione combinata e pubblicazione finale sono registrate in CLAUDE.md.

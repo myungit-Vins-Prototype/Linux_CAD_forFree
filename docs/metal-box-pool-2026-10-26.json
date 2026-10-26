@@ -7,14 +7,6 @@
     "before": "445b3b29e8e1a7e594a3cfb7b3cc071a6f89ea1af7d57d0d55bf15cdc18b2902",
     "current": "4e8dc21940db6efd1c0cca64bee7388b2922313ccd917a31e58d1cb51b1c343f"
   },
-  "source_sha256": {
-    "gpu_box_support.mm": "8039cada48a5cddbfeaaf7d81a8b5dcacbb884adcb9b37269d99da13600263fb",
-    "metal_box_pool.h": "edccbaba80f0bc2ac4f1d5309517ac28078a6dd12a9232ec4a423e6984b848d2",
-    "tests/test_metal_box_pool.cpp": "63db7903755c9234242abf0e52eb275a2abe7a88dfdf91befb00c469303ddcfd",
-    "CMakeLists.txt": "4247f7cc966bd005c23099f6466b189622de99d27d441e2a19798ea013138d5c",
-    "tools/benchmark_metal_boxes.cpp": "2517eed9b9973530eb462c7e44c291b8ce16b181c8c84339a73c11ba8da690be",
-    "tools/generate_architecture.py": "f042326619a2357c89ac6ccfff73a359cfad85948d16cd6d3365639365d3c315"
-  },
   "benchmark_source_sha256": "2517eed9b9973530eb462c7e44c291b8ce16b181c8c84339a73c11ba8da690be",
   "reference_library_sha256": "8b617113ce1b7cfdb5e18c2228903e29d42e7c2e30c8cbdf56efab857719121a",
   "runs": [
@@ -1587,5 +1579,36 @@
     "pool-repeats.json": "b56a054ca527a7b813c898d99205e183762da202d8689eed9422845557dd0b2b",
     "architecture-final.log": "b53271b4e3b1efe99ca037f9bfabc7e63b5f393677c089de8486ddd010487c4b",
     "run_comparison.py": "578664769eba77338c51a1e2061d884271f5e2e8176f048610bbc51bd403fff0"
+  },
+  "measured_source_sha256": {
+    "gpu_box_support.mm": "8039cada48a5cddbfeaaf7d81a8b5dcacbb884adcb9b37269d99da13600263fb",
+    "metal_box_pool.h": "edccbaba80f0bc2ac4f1d5309517ac28078a6dd12a9232ec4a423e6984b848d2",
+    "tests/test_metal_box_pool.cpp": "63db7903755c9234242abf0e52eb275a2abe7a88dfdf91befb00c469303ddcfd",
+    "CMakeLists.txt": "4247f7cc966bd005c23099f6466b189622de99d27d441e2a19798ea013138d5c",
+    "tools/benchmark_metal_boxes.cpp": "2517eed9b9973530eb462c7e44c291b8ce16b181c8c84339a73c11ba8da690be",
+    "tools/generate_architecture.py": "f042326619a2357c89ac6ccfff73a359cfad85948d16cd6d3365639365d3c315"
+  },
+  "integration": {
+    "remote_commit": "f819646",
+    "local_metal_commit": "b7c48f8",
+    "merge": "risolto, verifiche combinate concluse prima del commit",
+    "scope": "Linux: filtro triangoli viewport e verifica anteprime; backend Metal e sorgente benchmark invariati rispetto alla misura",
+    "measured_metal_sources_unchanged": true,
+    "hardware_ctest_passed": 21,
+    "native_gl": "PASS, flacone Mac in sola lettura e immagine ispezionata",
+    "architecture": {
+      "files": 486,
+      "relations": 6637,
+      "units": 234,
+      "diagnostics": 0,
+      "check": "PASS"
+    },
+    "source_sha256": {
+      "CMakeLists.txt": "87cfd9adb668cf25310cd1745c0d8ce43659258fbacfbde95e35ef797fca8a01",
+      "cad_forge.cpp": "bf16acdab7e4ec2bbdae9dd16ee7fc3f3a71e1e2884d636873e1bbbd16e5fa60",
+      "tests/test_display_mesh.h": "e96e24e9926114a3ae3c290450fe4fafe1f6c8b62b23d0de8af9b3a3e8e67f61",
+      "tests/test_viewport.cpp": "dbc952c4d390b71fddd2eb6688d5a028919cb619c8b9559f789ec09477f1c70f",
+      "tools/generate_architecture.py": "11fe5b43a4b0f029a9fb48f9bf09c1af22f45d3d6306352acc9b7fcbc95f5119"
+    }
   }
 }
