@@ -10122,6 +10122,11 @@ int main(int argc, char **argv) {
         catch(const std::exception &error){std::cerr<<error.what()<<std::endl;return 1;}
         return 0;
     }
+    if (app.arguments().contains(QStringLiteral("--connected-solver-benchmark"))) {
+        try { connectedSolverBenchmark(); }
+        catch(const std::exception &error) { std::cerr<<error.what()<<std::endl;return 1; }
+        return 0;
+    }
     if (app.arguments().contains(QStringLiteral("--solver-partition"))) {
         try { solverPartitionTests(app.arguments().contains(QStringLiteral("--benchmark"))); }
         catch(const std::exception &error) { std::cerr<<error.what()<<std::endl;return 1; }

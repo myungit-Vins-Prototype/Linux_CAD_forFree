@@ -76,6 +76,63 @@ static void solverPartitionTests(bool benchmark = false) {
     }
 }
 
+// Catena connessa: vere modifiche dello schizzo, senza geometria/rendering nel
+// timer. Il runner precedente puo' essere ricollegato con questa stessa fixture.
+static void connectedSolverBenchmark() {
+    using namespace ForgeCad;
+    const bool wasSet = qEnvironmentVariableIsSet("FORGECAD_SOLVER_DENSE");
+    const auto saved = qgetenv("FORGECAD_SOLVER_DENSE");
+    struct Restore { bool set; QByteArray value; ~Restore() {
+        if (set) qputenv("FORGECAD_SOLVER_DENSE",value); else qunsetenv("FORGECAD_SOLVER_DENSE");
+    }} restore{wasSet,saved};
+    qputenv("FORGECAD_SOLVER_DENSE","0");
+    QJsonArray cases;
+    for (int count : {64,256,512}) {
+        SketchObject source;
+        for (int i=0;i<count;++i) {
+            source.segments.append({{double(i),0},{double(i+1),0}});
+            source.geometricConstraints.append(makeConstraint(source,ConstraintType::Horizontal,{{0,i,-1}}));
+        }
+        // Ordine per tipo, come negli schizzi creati in piu' operazioni.
+        for (int i=1;i<count;++i)
+            source.geometricConstraints.append(makeConstraint(source,ConstraintType::Coincident,{{0,i-1,1},{0,i,0}}));
+        const QVector<PointTarget> targets{{{0,0,0},{0,.2}}};
+        QJsonArray samples;
+        QVector<double> times;
+        SketchObject previous;
+        int iterations=0;
+        for (int repeat=-1;repeat<5;++repeat) {
+            auto work=source;
+            QElapsedTimer timer;timer.start();
+            const auto result=solveSketch(work,targets);
+            const double elapsed=timer.nsecsElapsed()/1e6;
+            require(result.ok,"catena connessa: trascinamento riuscito");
+            require(QLineF(work.segments[0].first,targets[0].position).length()<1e-7,"catena connessa: target applicato");
+            for (const auto &c:work.geometricConstraints) {
+                const double error=constraintError(work,c);
+                require(std::isfinite(error) && error<1e-7,"catena connessa: vincoli finali");
+            }
+            for (int i=0;i<count;++i) {
+                const auto &segment=work.segments[i];
+                require(QLineF(segment.first,QPointF(i,.2)).length()<1e-7
+                    && QLineF(segment.second,QPointF(i+1,.2)).length()<1e-7,
+                    "catena connessa: soluzione analitica fino all'ultimo segmento");
+            }
+            if(repeat>=0){samples.append(elapsed);times.append(elapsed);}
+            previous=work;iterations=result.iterations;
+        }
+        std::sort(times.begin(),times.end());
+        QJsonArray geometry;
+        for(const auto &segment:previous.segments)
+            geometry.append(QJsonArray{segment.first.x(),segment.first.y(),segment.second.x(),segment.second.y()});
+        cases.append(QJsonObject{{"segments",count},{"variables",4*count},{"constraint_rows",3*count-2},
+            {"target_rows",2},{"iterations",iterations},{"median_ms",times[2]},
+            {"samples_ms",samples},{"geometry",geometry}});
+    }
+    std::cout<<QJsonDocument(QJsonObject{{"cases",cases},{"protocol",QStringLiteral("5 copie originali, un warmup; verifica fuori timer; solver senza geometria/rendering")}})
+        .toJson(QJsonDocument::Compact).constData()<<std::endl;
+}
+
 // Ricerca limitata fuori timer: punti campionati delle curve non definite,
 // poi segmenti. Ogni target deve riuscire su entrambi i percorsi, senza
 // eliminare vincoli o accettare un punto che in realta' non si e' mosso.

@@ -3,6 +3,7 @@
 #include <charconv>
 #include <array>
 #include <cstdint>
+#include <cstring>
 #include <unordered_map>
 
 #include <algorithm>
@@ -638,9 +639,31 @@ CurvePtr<2> sewnPCurve(const RawEdge &source, const RawEdge &target,
         Vec3 d[4];face.surface->evaluate(uv.x(),uv.y(),1,d);
         speed=std::max({speed,norm(d[Surface::derivativeIndex(1,0,1)]),norm(d[Surface::derivativeIndex(0,1,1)])});
     }
+    // Il fitting torna sugli stessi parametri per campioni e derivate.
+    // Riusare il risultato evita nuove proiezioni globali, senza cambiare
+    // parametro scelto, campionamento, tolleranza o verifica finale in 3D.
+    // Cache solo di questa rimappatura, limitata e svuotabile: nessun dato
+    // trattenuto nel body. Chiavi bit per bit, distinguendo anche +0 e -0.
+    std::unordered_map<std::uint64_t, Vec3> samples;
+    constexpr std::size_t maxSamples = 4096;
+    std::size_t requests = 0, hits = 0, peak = 0;
     const auto fitted=fitCurve([&](double t) {
-        const Vec2 uv=fin.pcurve->point(parameter(t));return Vec3(uv.x(),uv.y(),0);
+        cancellationPoint();
+        ++requests;
+        std::uint64_t key;
+        static_assert(sizeof(key)==sizeof(t));
+        std::memcpy(&key,&t,sizeof(key));
+        const auto found=samples.find(key);
+        if(found!=samples.end()){++hits;return found->second;}
+        const Vec2 uv=fin.pcurve->point(parameter(t));
+        const Vec3 value(uv.x(),uv.y(),0);
+        if(samples.size()>=maxSamples)samples.clear();
+        samples.emplace(key,value);
+        peak=std::max(peak,samples.size());
+        return value;
     },target.range,breaks,1e-8/speed);
+    if(timingEnabled())
+        std::fprintf(stderr,"[cucitura] campioni UV: %zu richieste, %zu riusi, picco %zu voci\n",requests,hits,peak);
     std::vector<Vec2> poles;for(const Vec3 &p:fitted->poles())poles.emplace_back(p.x(),p.y());
     auto result=std::make_shared<BSplineCurve<2>>(fitted->degree(),fitted->knots(),std::move(poles),fitted->weights());
     if(!acceptable(result))throw std::domain_error("cucitura: rimappatura SP-curve fuori tolleranza");

@@ -418,6 +418,13 @@ else()
     set_tests_properties(forgecad_cuda_pool_tests PROPERTIES TIMEOUT 30)
 endif()
 
+# Algebra del solver senza Qt/GPU: riferimento indipendente e componenti connesse.
+add_executable(forgecad_constraint_linear_tests tests/test_constraint_linear.cpp)
+target_include_directories(forgecad_constraint_linear_tests PRIVATE ${PROJECT_SOURCE_DIR})
+target_compile_options(forgecad_constraint_linear_tests PRIVATE -Wall -Wextra -Wpedantic)
+add_test(NAME forgecad_constraint_linear_tests COMMAND forgecad_constraint_linear_tests)
+set_tests_properties(forgecad_constraint_linear_tests PROPERTIES TIMEOUT 30)
+
 # Durata delle mesh CPU/VBO della cache; la variante --gl e' una prova nativa manuale.
 add_executable(forgecad_display_cache_memory_tests tests/test_display_cache_memory.cpp cad_display_cache.cpp)
 target_include_directories(forgecad_display_cache_memory_tests PRIVATE ${PROJECT_SOURCE_DIR})
@@ -546,6 +553,7 @@ if(FORGECAD_BUILD_VIEW_TESTS)
     set_tests_properties(forgecad_curve_extraction_tests PROPERTIES TIMEOUT 60)
     forgecad_add_view_test(forgecad_handle_constraints_tests --handle-constraints)
     forgecad_add_view_test(forgecad_solver_partition_tests --solver-partition)
+    forgecad_add_view_test(forgecad_connected_solver_tests --connected-solver-benchmark)
     forgecad_add_view_test(forgecad_display_mesh_tests --display-mesh)
     forgecad_add_view_test(forgecad_lazy_mesh_tests --lazy-mesh)
     set_tests_properties(forgecad_lazy_mesh_tests PROPERTIES TIMEOUT 120)

@@ -1,0 +1,784 @@
+{
+  "date": "2026-10-26",
+  "reference_commit": "c372139 + ottimizzazione solver a banda locale gi\u00e0 verificata",
+  "scope": "Cache dei campioni nella sola rimappatura UV delle cuciture; nessun cambiamento al solver o ai backend",
+  "sources_sha256": {
+    "kernel/fk_exchange.cpp": "13dc6cf9b66ffbeab4dcca2f17c6f7d592c9e30b6f459a123c5c0de65fa77175",
+    "kernel/tests/test_offset.cpp": "5d077a4fcc3791d7631f571295bf1c50b32475275a8e2d7e9ee3617763647d72",
+    "tools/generate_architecture.py": "fc28eea5c30cffccdd362d76f8a0453f27f842f44d06547997d3501b926cd123"
+  },
+  "previous_exchange_sha256": "b1428a04ab7b20e1a1bb835db5f489b61e95388b1b6d44c5b8a9f02830ec300c",
+  "application_sha256": "dca45844784a30f7d0a46b69ca709c3d98f7dbc0c6cc4248f62ce3ae2d8bf74d",
+  "benchmark": {
+    "platform": "Linux-7.3.0-2-cachyos-bore-x86_64-with-glibc2.44",
+    "document_sha256": "e0c53c6aeff405c16dcb85660b303590e8fa255b752cc37acb2ab2cbc0b39617",
+    "document_bytes": 46745787,
+    "binary_sha256": "f0fe1b5dc1b83a69eb10cf4db352e12b4cc20bb5b626a1420b9bf56295a7f4db",
+    "protocol": "Processi nuovi sequenziali, ordine ruotato, qualit\u00e0 1; firme fuori timer. Tassellazione CPU nel runner; filtro GPU opt-in. RSS include validazione.",
+    "forced_rebuild": true,
+    "profiling_enabled": false,
+    "runs": [
+      {
+        "cached_bodies": 16,
+        "cached_meshes": 5,
+        "cuda_available": false,
+        "cuda_points": 0,
+        "cuda_pool": {
+          "active_bytes": 0,
+          "active_slots": 0,
+          "allocations": 0,
+          "budget_rejections": 0,
+          "idle_bytes": 0,
+          "peak_active_bytes": 0,
+          "peak_active_slots": 0,
+          "reuses": 0
+        },
+        "features": 31,
+        "forced_rebuild": true,
+        "gpu_pairs": 0,
+        "load_seconds": 35.446095814,
+        "open_seconds": 35.706018172,
+        "prepared_meshes": 8,
+        "read_seconds": 0.259922358,
+        "sketches": 13,
+        "valid_bodies": 16,
+        "visible_features": 1,
+        "visible_triangles": 49279,
+        "mode": "reference",
+        "repeat": 0,
+        "wall_seconds": 36.233511382999495,
+        "peak_rss_mib": 726.10546875,
+        "equivalent": true
+      },
+      {
+        "cached_bodies": 16,
+        "cached_meshes": 5,
+        "cuda_available": false,
+        "cuda_points": 0,
+        "cuda_pool": {
+          "active_bytes": 0,
+          "active_slots": 0,
+          "allocations": 0,
+          "budget_rejections": 0,
+          "idle_bytes": 0,
+          "peak_active_bytes": 0,
+          "peak_active_slots": 0,
+          "reuses": 0
+        },
+        "features": 31,
+        "forced_rebuild": true,
+        "gpu_pairs": 0,
+        "load_seconds": 31.251259132,
+        "open_seconds": 31.514163942,
+        "prepared_meshes": 8,
+        "read_seconds": 0.26290481,
+        "sketches": 13,
+        "valid_bodies": 16,
+        "visible_features": 1,
+        "visible_triangles": 49279,
+        "mode": "current",
+        "repeat": 0,
+        "wall_seconds": 32.08243098299863,
+        "peak_rss_mib": 714.5,
+        "equivalent": true
+      },
+      {
+        "cached_bodies": 16,
+        "cached_meshes": 5,
+        "cuda_available": false,
+        "cuda_points": 0,
+        "cuda_pool": {
+          "active_bytes": 0,
+          "active_slots": 0,
+          "allocations": 0,
+          "budget_rejections": 0,
+          "idle_bytes": 0,
+          "peak_active_bytes": 0,
+          "peak_active_slots": 0,
+          "reuses": 0
+        },
+        "features": 31,
+        "forced_rebuild": true,
+        "gpu_pairs": 0,
+        "load_seconds": 31.121170872,
+        "open_seconds": 31.389430175,
+        "prepared_meshes": 8,
+        "read_seconds": 0.268259303,
+        "sketches": 13,
+        "valid_bodies": 16,
+        "visible_features": 1,
+        "visible_triangles": 49279,
+        "mode": "current",
+        "repeat": 1,
+        "wall_seconds": 31.922544099001243,
+        "peak_rss_mib": 729.93359375,
+        "equivalent": true
+      },
+      {
+        "cached_bodies": 16,
+        "cached_meshes": 5,
+        "cuda_available": false,
+        "cuda_points": 0,
+        "cuda_pool": {
+          "active_bytes": 0,
+          "active_slots": 0,
+          "allocations": 0,
+          "budget_rejections": 0,
+          "idle_bytes": 0,
+          "peak_active_bytes": 0,
+          "peak_active_slots": 0,
+          "reuses": 0
+        },
+        "features": 31,
+        "forced_rebuild": true,
+        "gpu_pairs": 0,
+        "load_seconds": 35.452316185,
+        "open_seconds": 35.709789389,
+        "prepared_meshes": 8,
+        "read_seconds": 0.257473204,
+        "sketches": 13,
+        "valid_bodies": 16,
+        "visible_features": 1,
+        "visible_triangles": 49279,
+        "mode": "reference",
+        "repeat": 1,
+        "wall_seconds": 36.23033209499954,
+        "peak_rss_mib": 730.98828125,
+        "equivalent": true
+      },
+      {
+        "cached_bodies": 16,
+        "cached_meshes": 5,
+        "cuda_available": false,
+        "cuda_points": 0,
+        "cuda_pool": {
+          "active_bytes": 0,
+          "active_slots": 0,
+          "allocations": 0,
+          "budget_rejections": 0,
+          "idle_bytes": 0,
+          "peak_active_bytes": 0,
+          "peak_active_slots": 0,
+          "reuses": 0
+        },
+        "features": 31,
+        "forced_rebuild": true,
+        "gpu_pairs": 0,
+        "load_seconds": 35.224220659,
+        "open_seconds": 35.486439813,
+        "prepared_meshes": 8,
+        "read_seconds": 0.262219154,
+        "sketches": 13,
+        "valid_bodies": 16,
+        "visible_features": 1,
+        "visible_triangles": 49279,
+        "mode": "reference",
+        "repeat": 2,
+        "wall_seconds": 36.034142600999985,
+        "peak_rss_mib": 707.8984375,
+        "equivalent": true
+      },
+      {
+        "cached_bodies": 16,
+        "cached_meshes": 5,
+        "cuda_available": false,
+        "cuda_points": 0,
+        "cuda_pool": {
+          "active_bytes": 0,
+          "active_slots": 0,
+          "allocations": 0,
+          "budget_rejections": 0,
+          "idle_bytes": 0,
+          "peak_active_bytes": 0,
+          "peak_active_slots": 0,
+          "reuses": 0
+        },
+        "features": 31,
+        "forced_rebuild": true,
+        "gpu_pairs": 0,
+        "load_seconds": 31.106623437,
+        "open_seconds": 31.365260949,
+        "prepared_meshes": 8,
+        "read_seconds": 0.258637512,
+        "sketches": 13,
+        "valid_bodies": 16,
+        "visible_features": 1,
+        "visible_triangles": 49279,
+        "mode": "current",
+        "repeat": 2,
+        "wall_seconds": 31.93196545200044,
+        "peak_rss_mib": 719.77734375,
+        "equivalent": true
+      },
+      {
+        "cached_bodies": 16,
+        "cached_meshes": 5,
+        "cuda_available": false,
+        "cuda_points": 0,
+        "cuda_pool": {
+          "active_bytes": 0,
+          "active_slots": 0,
+          "allocations": 0,
+          "budget_rejections": 0,
+          "idle_bytes": 0,
+          "peak_active_bytes": 0,
+          "peak_active_slots": 0,
+          "reuses": 0
+        },
+        "features": 31,
+        "forced_rebuild": true,
+        "gpu_pairs": 0,
+        "load_seconds": 30.922704969,
+        "open_seconds": 31.180418306,
+        "prepared_meshes": 8,
+        "read_seconds": 0.257713337,
+        "sketches": 13,
+        "valid_bodies": 16,
+        "visible_features": 1,
+        "visible_triangles": 49279,
+        "mode": "current",
+        "repeat": 3,
+        "wall_seconds": 31.722418481000204,
+        "peak_rss_mib": 710.859375,
+        "equivalent": true
+      },
+      {
+        "cached_bodies": 16,
+        "cached_meshes": 5,
+        "cuda_available": false,
+        "cuda_points": 0,
+        "cuda_pool": {
+          "active_bytes": 0,
+          "active_slots": 0,
+          "allocations": 0,
+          "budget_rejections": 0,
+          "idle_bytes": 0,
+          "peak_active_bytes": 0,
+          "peak_active_slots": 0,
+          "reuses": 0
+        },
+        "features": 31,
+        "forced_rebuild": true,
+        "gpu_pairs": 0,
+        "load_seconds": 35.124947577,
+        "open_seconds": 35.38032225,
+        "prepared_meshes": 8,
+        "read_seconds": 0.255374673,
+        "sketches": 13,
+        "valid_bodies": 16,
+        "visible_features": 1,
+        "visible_triangles": 49279,
+        "mode": "reference",
+        "repeat": 3,
+        "wall_seconds": 35.930810891000874,
+        "peak_rss_mib": 721.2109375,
+        "equivalent": true
+      }
+    ],
+    "revision": "c372139401156915864a7ff671ca90513499d5e1",
+    "sources_sha256": {
+      "CMakeLists.txt": "abd24bc0e5554baacf61aaf0dccc0fae98579fb01df64f2bf292bf7315c4f66c",
+      "tests/test_viewport.cpp": "9a71cadca485a345b2961bef1f97a4aa7b56233575d5badc7838efc725081d37",
+      "tests/test_lazy_mesh.h": "2c9e5bee5cd6d0bfdf5a76eb277390e2dcfeddb57d430d8372841377467695f7",
+      "forgeCad2026_viewport.cpp": "62d7c36d147b50c1c902cf5dd62181e73962510250e13d9158ef1ad38346efd9",
+      "forgeCad2026_viewport_document.cpp": "5e65fe03aa89213c42cc0502e85888702f74cfed32728e096c4a6c4aa6d591fe",
+      "forgeCad2026_viewport_render.cpp": "fc7c5aa743a495d17bc02f897e253144abdcee04a1cde7ad4edc380054d4ceb3",
+      "cad_document_io.cpp": "2c4a6505f84e7eda49c959ad386572198044978b4e4fa7b4026efb5ed75d5300",
+      "cad_document_read.cpp": "800f227843f77e4779b3b5c73208d1163b72756ca1d93dbb3754d64c394479a2",
+      "cad_document_read.h": "b84a4edb46c650b1894f2c1397ff9aea3ee65bc86c849a32cc052ba15c5c70d5",
+      "tools/benchmark_document_mesh.py": "69d5bd1882649e99126621ee4afb1f8047005c825fc3a7c11d1404486faef221"
+    },
+    "logical_cpus": 16,
+    "reference_binary_sha256": "3f2226d5950aa4728950c3a273e8ee50fc6fd35ef20286d0477c3d790a620bd6",
+    "input_unchanged": true,
+    "summary": {
+      "reference": {
+        "median_seconds": 35.5962289925,
+        "min_seconds": 35.38032225,
+        "max_seconds": 35.709789389,
+        "median_read_seconds": 0.258697781,
+        "median_load_seconds": 35.3351582365,
+        "median_peak_rss_mib": 723.658203125
+      },
+      "current": {
+        "median_seconds": 31.377345562000002,
+        "min_seconds": 31.180418306,
+        "max_seconds": 31.514163942,
+        "median_read_seconds": 0.260771161,
+        "median_load_seconds": 31.113897154500002,
+        "median_peak_rss_mib": 717.138671875
+      }
+    }
+  },
+  "speedup": 1.1344563523438815,
+  "time_reduction_percent": 11.852051607457925,
+  "profile": {
+    "before": {
+      "bodies": [
+        {
+          "brep_sha256": "7b9f6e603ebd7ae98290e0c459bed7af702a4830817758304ecbe463201b7130",
+          "drawn": false,
+          "error": "",
+          "index": 0
+        },
+        {
+          "brep_sha256": "851ebc710fd1c6a395c01581dba119de1360c9d8e58112aa18362a2863257b29",
+          "drawn": false,
+          "error": "",
+          "index": 1
+        },
+        {
+          "brep_sha256": "40b5c50d2cb4bdeb73f35daecd3993c1e41c34a39c74d85dc5f018dcec50d876",
+          "drawn": false,
+          "error": "",
+          "index": 2
+        },
+        {
+          "drawn": false,
+          "error": "",
+          "index": 3
+        },
+        {
+          "brep_sha256": "6163200bc1bc77b7c94d1cfaa16c85d09c398ea41b66e172c820b0d97794fb8b",
+          "drawn": false,
+          "error": "",
+          "index": 4
+        },
+        {
+          "brep_sha256": "154412a5ffec3432d04c806305e83b915a06a0a60802061a608ee7e3474aedb9",
+          "drawn": false,
+          "error": "",
+          "index": 5
+        },
+        {
+          "drawn": false,
+          "error": "",
+          "index": 6
+        },
+        {
+          "drawn": false,
+          "error": "",
+          "index": 7
+        },
+        {
+          "drawn": false,
+          "error": "",
+          "index": 8
+        },
+        {
+          "drawn": false,
+          "error": "",
+          "index": 9
+        },
+        {
+          "drawn": false,
+          "error": "",
+          "index": 10
+        },
+        {
+          "brep_sha256": "b9cafed4fd3509ccc13ac4ad02d0977cb9e7d9e266654f5d43937fee53d5a1db",
+          "drawn": false,
+          "error": "",
+          "index": 11
+        },
+        {
+          "drawn": false,
+          "error": "",
+          "index": 12
+        },
+        {
+          "drawn": false,
+          "error": "",
+          "index": 13
+        },
+        {
+          "drawn": false,
+          "error": "",
+          "index": 14
+        },
+        {
+          "brep_sha256": "294a2a418c9cbf4ac33a5e3f7db0163ebf4430dfd96c74719188cb7bb315dc6c",
+          "drawn": false,
+          "error": "",
+          "index": 15
+        },
+        {
+          "drawn": false,
+          "error": "",
+          "index": 16
+        },
+        {
+          "drawn": false,
+          "error": "",
+          "index": 17
+        },
+        {
+          "drawn": false,
+          "error": "",
+          "index": 18
+        },
+        {
+          "drawn": false,
+          "error": "",
+          "index": 19
+        },
+        {
+          "brep_sha256": "251ebe426eddb65a195a47eef92e76d3f9b0e59ee1f8fc37191338ef23d02a75",
+          "drawn": false,
+          "error": "",
+          "index": 20
+        },
+        {
+          "brep_sha256": "989baf178d50d6a625b05dc613e14f0908574d1629a03aa6efa4ca9159f9beff",
+          "drawn": false,
+          "error": "",
+          "index": 21
+        },
+        {
+          "brep_sha256": "c8a7a14d888982a70db676d0621be2e639ad82c889f96d6e7f1c11e49c0cfedd",
+          "drawn": false,
+          "error": "",
+          "index": 22
+        },
+        {
+          "drawn": false,
+          "error": "",
+          "index": 23
+        },
+        {
+          "drawn": false,
+          "error": "",
+          "index": 24
+        },
+        {
+          "brep_sha256": "bf3be0d426c5b690ad087f9fe8b52c2376f88be22cd72a1992cb06a2c0b5ce0d",
+          "drawn": false,
+          "error": "",
+          "index": 25
+        },
+        {
+          "brep_sha256": "b0b965cf888d5dd70f3bddbb0fdc7f8ffe86edfa06ae322690e834894f19d6bd",
+          "drawn": false,
+          "error": "",
+          "index": 26
+        },
+        {
+          "brep_sha256": "386ecd89a4a3d7b38106a25ada2a7f257f63d44b45bdff0258377a6c77b95fe6",
+          "drawn": false,
+          "error": "",
+          "index": 27
+        },
+        {
+          "brep_sha256": "036dd77dc427ebd703a40f594eff25babe00f418abe4d82c5286d1941fdc2168",
+          "drawn": false,
+          "error": "",
+          "index": 28
+        },
+        {
+          "brep_sha256": "b20aaed0ef0ff040bd33c3b8282bae31e1aa8a4abbaa98f553b5353f8fb6a100",
+          "drawn": false,
+          "error": "",
+          "index": 29
+        },
+        {
+          "brep_sha256": "190cd5ccbd7046636c5125c4c3bb61648c0057b19d6ed3f555055b98339776a4",
+          "drawn": true,
+          "error": "",
+          "index": 30,
+          "mesh_sha256": "8d1c3a8068ea325d095325772c12f2a4fd726cde1cde01104d9cc82c78fb9323",
+          "triangles": 49279
+        }
+      ],
+      "cached_bodies": 16,
+      "cached_meshes": 5,
+      "cuda_available": false,
+      "cuda_points": 0,
+      "cuda_pool": {
+        "active_bytes": 0,
+        "active_slots": 0,
+        "allocations": 0,
+        "budget_rejections": 0,
+        "idle_bytes": 0,
+        "peak_active_bytes": 0,
+        "peak_active_slots": 0,
+        "reuses": 0
+      },
+      "features": 31,
+      "forced_rebuild": true,
+      "gpu_pairs": 0,
+      "load_seconds": 35.645212218,
+      "open_seconds": 35.903720598,
+      "prepared_meshes": 8,
+      "read_seconds": 0.25850838,
+      "sketches": 13,
+      "valid_bodies": 16,
+      "visible_features": 1,
+      "visible_triangles": 49279
+    },
+    "after": {
+      "bodies": [
+        {
+          "brep_sha256": "7b9f6e603ebd7ae98290e0c459bed7af702a4830817758304ecbe463201b7130",
+          "drawn": false,
+          "error": "",
+          "index": 0
+        },
+        {
+          "brep_sha256": "851ebc710fd1c6a395c01581dba119de1360c9d8e58112aa18362a2863257b29",
+          "drawn": false,
+          "error": "",
+          "index": 1
+        },
+        {
+          "brep_sha256": "40b5c50d2cb4bdeb73f35daecd3993c1e41c34a39c74d85dc5f018dcec50d876",
+          "drawn": false,
+          "error": "",
+          "index": 2
+        },
+        {
+          "drawn": false,
+          "error": "",
+          "index": 3
+        },
+        {
+          "brep_sha256": "6163200bc1bc77b7c94d1cfaa16c85d09c398ea41b66e172c820b0d97794fb8b",
+          "drawn": false,
+          "error": "",
+          "index": 4
+        },
+        {
+          "brep_sha256": "154412a5ffec3432d04c806305e83b915a06a0a60802061a608ee7e3474aedb9",
+          "drawn": false,
+          "error": "",
+          "index": 5
+        },
+        {
+          "drawn": false,
+          "error": "",
+          "index": 6
+        },
+        {
+          "drawn": false,
+          "error": "",
+          "index": 7
+        },
+        {
+          "drawn": false,
+          "error": "",
+          "index": 8
+        },
+        {
+          "drawn": false,
+          "error": "",
+          "index": 9
+        },
+        {
+          "drawn": false,
+          "error": "",
+          "index": 10
+        },
+        {
+          "brep_sha256": "b9cafed4fd3509ccc13ac4ad02d0977cb9e7d9e266654f5d43937fee53d5a1db",
+          "drawn": false,
+          "error": "",
+          "index": 11
+        },
+        {
+          "drawn": false,
+          "error": "",
+          "index": 12
+        },
+        {
+          "drawn": false,
+          "error": "",
+          "index": 13
+        },
+        {
+          "drawn": false,
+          "error": "",
+          "index": 14
+        },
+        {
+          "brep_sha256": "294a2a418c9cbf4ac33a5e3f7db0163ebf4430dfd96c74719188cb7bb315dc6c",
+          "drawn": false,
+          "error": "",
+          "index": 15
+        },
+        {
+          "drawn": false,
+          "error": "",
+          "index": 16
+        },
+        {
+          "drawn": false,
+          "error": "",
+          "index": 17
+        },
+        {
+          "drawn": false,
+          "error": "",
+          "index": 18
+        },
+        {
+          "drawn": false,
+          "error": "",
+          "index": 19
+        },
+        {
+          "brep_sha256": "251ebe426eddb65a195a47eef92e76d3f9b0e59ee1f8fc37191338ef23d02a75",
+          "drawn": false,
+          "error": "",
+          "index": 20
+        },
+        {
+          "brep_sha256": "989baf178d50d6a625b05dc613e14f0908574d1629a03aa6efa4ca9159f9beff",
+          "drawn": false,
+          "error": "",
+          "index": 21
+        },
+        {
+          "brep_sha256": "c8a7a14d888982a70db676d0621be2e639ad82c889f96d6e7f1c11e49c0cfedd",
+          "drawn": false,
+          "error": "",
+          "index": 22
+        },
+        {
+          "drawn": false,
+          "error": "",
+          "index": 23
+        },
+        {
+          "drawn": false,
+          "error": "",
+          "index": 24
+        },
+        {
+          "brep_sha256": "bf3be0d426c5b690ad087f9fe8b52c2376f88be22cd72a1992cb06a2c0b5ce0d",
+          "drawn": false,
+          "error": "",
+          "index": 25
+        },
+        {
+          "brep_sha256": "b0b965cf888d5dd70f3bddbb0fdc7f8ffe86edfa06ae322690e834894f19d6bd",
+          "drawn": false,
+          "error": "",
+          "index": 26
+        },
+        {
+          "brep_sha256": "386ecd89a4a3d7b38106a25ada2a7f257f63d44b45bdff0258377a6c77b95fe6",
+          "drawn": false,
+          "error": "",
+          "index": 27
+        },
+        {
+          "brep_sha256": "036dd77dc427ebd703a40f594eff25babe00f418abe4d82c5286d1941fdc2168",
+          "drawn": false,
+          "error": "",
+          "index": 28
+        },
+        {
+          "brep_sha256": "b20aaed0ef0ff040bd33c3b8282bae31e1aa8a4abbaa98f553b5353f8fb6a100",
+          "drawn": false,
+          "error": "",
+          "index": 29
+        },
+        {
+          "brep_sha256": "190cd5ccbd7046636c5125c4c3bb61648c0057b19d6ed3f555055b98339776a4",
+          "drawn": true,
+          "error": "",
+          "index": 30,
+          "mesh_sha256": "8d1c3a8068ea325d095325772c12f2a4fd726cde1cde01104d9cc82c78fb9323",
+          "triangles": 49279
+        }
+      ],
+      "cached_bodies": 16,
+      "cached_meshes": 5,
+      "cuda_available": false,
+      "cuda_points": 0,
+      "cuda_pool": {
+        "active_bytes": 0,
+        "active_slots": 0,
+        "allocations": 0,
+        "budget_rejections": 0,
+        "idle_bytes": 0,
+        "peak_active_bytes": 0,
+        "peak_active_slots": 0,
+        "reuses": 0
+      },
+      "features": 31,
+      "forced_rebuild": true,
+      "gpu_pairs": 0,
+      "load_seconds": 31.594001213,
+      "open_seconds": 31.858802214999997,
+      "prepared_meshes": 8,
+      "read_seconds": 0.264801002,
+      "sketches": 13,
+      "valid_bodies": 16,
+      "visible_features": 1,
+      "visible_triangles": 49279
+    },
+    "interpretation": "Singolo profilo diagnostico separato dal confronto senza profiler",
+    "cache_samples": [
+      {
+        "requests": 3807,
+        "hits": 1038,
+        "peak_entries": 2769
+      },
+      {
+        "requests": 4486,
+        "hits": 1233,
+        "peak_entries": 3253
+      },
+      {
+        "requests": 7316,
+        "hits": 1994,
+        "peak_entries": 4096
+      },
+      {
+        "requests": 1135,
+        "hits": 335,
+        "peak_entries": 800
+      },
+      {
+        "requests": 7191,
+        "hits": 2002,
+        "peak_entries": 4096
+      },
+      {
+        "requests": 2376,
+        "hits": 691,
+        "peak_entries": 1685
+      }
+    ],
+    "total_requests": 26311,
+    "total_hits": 7293,
+    "phases_ms": {
+      "splitAtJunctions_cucitura28": 1,
+      "matching_total": 243,
+      "sewnPCurve_total": 17025,
+      "fitCurve_total": 17134,
+      "node_projection_total": 26,
+      "affine_checks_total": 17
+    },
+    "note_phases": "Tempi delle due sonde temporanee distinti, non sommare fasi sovrapposte o diverse esecuzioni"
+  },
+  "checks": {
+    "sew_previous": "9/9 PASS",
+    "sew_current": "9/9 PASS",
+    "offset_current": "19/19 PASS",
+    "ctest": "42/42 PASS,11.22s",
+    "gl_rebuilt_mouse2": "3 riaperture, zero pixel diversi, zero errori GL, input e B-rep conservati",
+    "exact_bodies_and_meshes": true,
+    "architecture": "494 file,6678 relazioni,235 TU,0 diagnostiche; --check e 79498 siti validi",
+    "macos": "Codice comune, non compilato/eseguito qui",
+    "full_kernel_suite": false,
+    "standalone_final": "6/6 PASS dopo ricollegamento CUDA, broad phase e export con la libreria kernel finale"
+  },
+  "limitations": [
+    "Clock, temperatura e carichi esterni non controllati",
+    "Qt offscreen per benchmark, nessuna misura framerate",
+    "Tassellazione CPU e broad phase GPU disattivata, non un confronto CUDA/Metal",
+    "Limite cache in voci, non in byte/RSS"
+  ],
+  "artifacts_local": "/home/myungit/Linux_CAD_forFree/forgecad-linux-solver/benchmarks/sew-rebuild-2026-10-26"
+}
