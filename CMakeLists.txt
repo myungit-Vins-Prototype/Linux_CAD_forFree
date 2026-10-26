@@ -108,6 +108,8 @@ add_executable(forgecad
     cad_shape_analysis.cpp
     cad_display_cache.h
     cad_display_cache.cpp
+    cad_memory.h
+    cad_memory.cpp
     cad_overlay_renderer.h
     cad_overlay_renderer.cpp
     cad_curve_solver.h
@@ -363,6 +365,15 @@ if(CMAKE_CUDA_COMPILER)
     target_compile_options(forgecad_cuda_tests PRIVATE $<$<COMPILE_LANGUAGE:CXX>:-Wall;-Wextra;-Wpedantic>)
     add_test(NAME forgecad_cuda_tests COMMAND forgecad_cuda_tests)
 endif()
+
+# Durata delle mesh CPU/VBO della cache; la variante --gl e' una prova nativa manuale.
+add_executable(forgecad_display_cache_memory_tests tests/test_display_cache_memory.cpp cad_display_cache.cpp)
+target_include_directories(forgecad_display_cache_memory_tests PRIVATE ${PROJECT_SOURCE_DIR})
+target_link_libraries(forgecad_display_cache_memory_tests PRIVATE Qt6::Gui Qt6::OpenGL OpenGL::GL)
+target_compile_options(forgecad_display_cache_memory_tests PRIVATE -Wall -Wextra -Wpedantic)
+add_test(NAME forgecad_display_cache_memory_tests COMMAND forgecad_display_cache_memory_tests)
+set_tests_properties(forgecad_display_cache_memory_tests PROPERTIES TIMEOUT 30
+    ENVIRONMENT "QT_QPA_PLATFORM=offscreen;QT_QPA_OFFSCREEN_NO_GLX=1;QT_QPA_PLATFORMTHEME=;QT_STYLE_OVERRIDE=Fusion")
 
 # Test delle interazioni del viewport (Qt offscreen); --gl verifica anche i VBO
 # quando e' disponibile una sessione grafica con OpenGL desktop.

@@ -1,3 +1,10 @@
+#include <set>
+#if defined(__linux__)
+#include <malloc.h>
+#endif
+#include <QThread>
+#include <QEventLoop>
+#include <QCryptographicHash>
 // I componenti GUI sono dichiarati negli header e compilati separatamente.
 #include "../forgeCad2026_gui.h"
 #include "../forgeCad2026_viewport.h"
@@ -121,6 +128,7 @@ public:
 #include "test_surface_tools_gui.h"
 #include "test_document_units.h"
 #include "test_function_panels.h"
+#include "test_mesh_memory.h"
     static void extrusionActionPreconditions() {
         using namespace ForgeCad;
         PdfWindow window;
@@ -10228,6 +10236,14 @@ int main(int argc, char **argv) {
         const int argument = app.arguments().indexOf(QStringLiteral("--bench-blend-edit"));
         try { ViewportInteractionTest::benchmarkBlendEdit(app.arguments().value(argument + 1), app.arguments().value(argument + 2).toInt()); }
         catch (const std::exception &e) { std::cerr << e.what() << std::endl; return 1; }
+        return 0;
+    }
+    if (app.arguments().contains(QStringLiteral("--mesh-memory-benchmark"))) {
+        try {
+            const int at=app.arguments().indexOf(QStringLiteral("--mesh-memory-benchmark"));
+            require(at+1<app.arguments().size(),"documento richiesto per la sonda memoria");
+            ViewportInteractionTest::meshMemoryBenchmark(app.arguments()[at+1],app.arguments().contains(QStringLiteral("--gl")));
+        } catch(const std::exception &error) { std::cerr<<error.what()<<std::endl;return 1; }
         return 0;
     }
     if (app.arguments().contains(QStringLiteral("--document-regression"))) {

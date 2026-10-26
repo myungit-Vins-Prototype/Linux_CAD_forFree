@@ -7,6 +7,7 @@
 #include <QVector4D>
 #include <algorithm>
 #include <limits>
+#include <set>
 
 namespace ForgeCad {
 namespace {
@@ -16,6 +17,35 @@ void setPrimitiveRestartIndex(GLuint index) {
         QOpenGLContext::currentContext()->getProcAddress("glPrimitiveRestartIndex"));
     if (function) function(index);
 }
+}
+
+DisplayCache::Statistics DisplayCache::statistics() const {
+    Statistics result;result.entries=entries_.size();
+    std::set<const void *> seen;
+    const auto storage=[&](const auto &array) {
+        if (!array.isEmpty() && seen.insert(array.constData()).second)
+            result.sourceStorageBytes+=std::size_t(array.capacity())*sizeof(*array.constData());
+    };
+    const auto source=[&](auto &&visit,const BodyDisplay &display) -> void {
+        storage(display.vertices);storage(display.normals);storage(display.edges);
+        for(const auto &edge:display.edges)storage(edge);
+        storage(display.edgeIds);storage(display.faceIds);storage(display.triangleFaces);
+        storage(display.faceLabelPoints);storage(display.constructionCurves);
+        for(const auto &curve:display.constructionCurves)storage(curve);
+        storage(display.faceEdges);for(const auto &edges:display.faceEdges)storage(edges);
+        storage(display.instanceTransforms);
+        if(display.instancedBase)visit(visit,*display.instancedBase);
+    };
+    for(const auto &entry:entries_) {
+        source(source,entry->source);
+        if(entry->ready) {
+            result.readyBufferBytes+=std::size_t(entry->source.vertices.size()+entry->source.normals.size())*sizeof(QVector3D);
+            result.readyBufferBytes+=std::size_t(entry->lineIndicesCount)*sizeof(GLuint);
+            for(const auto &edge:entry->source.edges)if(edge.size()>=2)
+                result.readyBufferBytes+=std::size_t(edge.size())*sizeof(QVector3D);
+        }
+    }
+    return result;
 }
 
 void DisplayCache::clear() {
@@ -33,6 +63,14 @@ void DisplayCache::beginFrame() {
         return e->used + 2 < frame_;
     }), entries_.end());
 }
+void DisplayCache::endFrame() {
+    // Un viewport statico puo' non disegnare altri frame: non attendere due
+    // ridisegni futuri per liberare le vecchie mesh CPU e i loro VBO.
+    entries_.erase(std::remove_if(entries_.begin(), entries_.end(), [this](const auto &entry) {
+        return entry->used != frame_;
+    }), entries_.end());
+}
+
 void DisplayCache::setMatrices(const QMatrix4x4 &projection, const QMatrix4x4 &modelView) {
     projection_ = projection;
     modelView_ = modelView;

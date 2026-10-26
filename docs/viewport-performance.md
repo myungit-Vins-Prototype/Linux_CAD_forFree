@@ -161,3 +161,11 @@ In modifica schizzo la vista recupera gli stadi costruiti prima della prima feat
 Per il contesto trasparente un passaggio di sola profondità individua la superficie più vicina fra tutti i corpi, comprese le istanze. Il colore viene miscelato una sola volta su quella superficie: facce posteriori sovrapposte non aumentano l'opacità. Gli spigoli posteriori seguono l'opzione dedicata; lo schizzo rimane sovrapposto e leggibile. Questo è un contesto grafico per disegnare, senza simulazione fisica della trasmissione attraverso tutti gli strati.
 
 Verifica nativa: `forgecad_view_tests --sketch-ghost-render` controlla opacità al35%,25strati,25istanze e corpi sovrapposti. `--render-sketch-context documento.prt indice immagine.png` permette una cattura su un documento senza salvarlo.
+
+
+## Rilascio memoria dopo il cambio di qualità (26 ottobre 2026)
+
+La cache CPU/VBO elimina a fine frame le risorse non usate, senza attendere
+altri ridisegni della scena statica. Dopo grandi riduzioni delle mesh, il
+viewport rilascia la cache e richiede la restituzione delle pagine libere
+glibc; Undo e dati vivi restano invariati. [Backport main e verifiche](mesh-memory-main-2026-10-26.md).

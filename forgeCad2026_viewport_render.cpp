@@ -176,6 +176,7 @@ void CadViewport::paintGL() {
     glDisable(GL_SCISSOR_TEST);
     glDisable(GL_STENCIL_TEST);
     drawGpuGlassPanels(pixels, nullptr);
+    displayCache_.endFrame();
     ++renderedFrameSerial_;
 }
 
