@@ -322,6 +322,41 @@ public:
             require(view.preview_.geometry!=first && std::abs(massProperties(*view.preview_.geometry).volume-28)<1e-7,
                     "modifica dell'operando invalida la cache e cambia la geometria");
         }
+        // Una feature nascosta puo' avere solo il B-rep: aprirne l'editor
+        // richiede una mesh dell'anteprima, anche senza cambiare parametri.
+        for (bool revolution : {false,true}) {
+            DocumentState definition;SketchObject profile;
+            profile.segments={{{2,0},{4,0}},{{4,0},{4,2}},{{4,2},{2,2}},{{2,2},{2,0}}};
+            if(revolution)profile.plane=1;
+            definition.sketches.append(profile);
+            ExtrusionObject feature;feature.sketchIndex=0;feature.distance=5;
+            if(revolution){feature.feature=BodyFeature::Revolution;feature.revolveAxis=-2;feature.revolveAngle=90;}
+            definition.extrusions.append(feature);
+            ExtrusionObject next;next.feature=BodyFeature::Scale;next.firstBody=0;next.scaleFactor=1.1;
+            definition.extrusions.append(next);normalizeModelHistory(definition);
+            CadViewport view;view.tessellationQuality_=1;view.loadDocument(definition);
+            require(!view.isBodyDrawn(0) && view.extrusions_[0].forgeBody,"stadio da modificare nascosto ma geometria pronta");
+            const auto geometry=view.extrusions_[0].forgeBody;
+            BodyDisplay expected;tessellateGeometry(view.extrusions_[0],1,expected);
+            for(int cachedQuality : {-1,0,1}) {
+                view.clearPreview();view.extrusions_[0].display={};
+                if(cachedQuality>=0)tessellateGeometry(view.extrusions_[0],cachedQuality,view.extrusions_[0].display);
+                const auto snapshot=view.documentState();
+                view.requestPreview(view.extrusions_[0],0);settle(view);
+                const auto &display=view.preview_.display;
+                require(view.preview_.geometry==geometry,"anteprima stadio nascosto riusa il B-rep senza ricostruirlo");
+                require(display.quality==1 && !display.vertices.isEmpty() && !display.constructionCurves.isEmpty(),
+                        "anteprima riusata contiene superficie e U/V alla qualita' richiesta");
+                require(display.vertices==expected.vertices && display.normals==expected.normals
+                        && display.triangleFaces==expected.triangleFaces && display.edges==expected.edges,
+                        "anteprima riusata concorde con tassellazione esplicita");
+                require(view.extrusions_[0].display.quality==cachedQuality
+                        && snapshot.extrusions[0].display.quality==cachedQuality,
+                        "anteprima non materializza o modifica cache e snapshot dello stadio nascosto");
+                if(cachedQuality==1)require(display.vertices.constData()==snapshot.extrusions[0].display.vertices.constData(),
+                                           "anteprima conserva il riuso del buffer gia' valido");
+            }
+        }
         if(!qEnvironmentVariable("FORGECAD_PREVIEW_QA_FILE").isEmpty()) {
             const QString path=qEnvironmentVariable("FORGECAD_PREVIEW_QA_FILE");QFile file(path);
             require(file.open(QIODevice::ReadOnly),"lettura modello QA anteprima");const auto original=file.readAll();file.close();
@@ -329,6 +364,8 @@ public:
             CadViewport view;view.loadDocument(state);require(!view.extrusions().isEmpty(),"funzione del modello QA disponibile");
             view.requestPreview(view.extrusions().first(),0);settle(view);
             require(!view.preview_.display.constructionCurves.isEmpty(),"U/V sul modello reale");
+            require(!view.preview_.display.vertices.isEmpty() && view.preview_.display.quality==view.tessellationQuality_,
+                    "superficie del modello reale pronta nell'anteprima riusata");
             view.resize(1000,750);view.setViewPreset(4);view.fitView(view.preview_.display.vertices);view.show();QApplication::processEvents();
             require(view.grabFramebuffer().save(qEnvironmentVariable("FORGECAD_PREVIEW_QA_DIR")+"/preview-real.png"),"acquisizione modello reale");view.hide();
             require(file.open(QIODevice::ReadOnly)&&file.readAll()==original,"modello QA originale invariato");

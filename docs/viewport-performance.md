@@ -191,6 +191,14 @@ ripetizioni vengono preparate anche se nascoste e pubblicate prima delle istanze
 Un paint durante il worker conserva la scena precedente; cambio qualità o
 geometria rendono inutilizzabili i risultati superati.
 
+Anche l'editor di una feature nascosta richiede una mesh: il builder delle
+anteprime riusa il B-rep, ma prepara sul worker la visualizzazione se manca
+o ha una qualità diversa. Una cache valida continua a essere condivisa.
+Regressioni per estrusione/rivoluzione con cache assente, obsoleta e valida
+sono incluse in `forgecad_preview_performance_tests`. Corretto il caso reale
+«Rivoluzione 1» del flacone che mostrava soltanto le U/V: prima zero vertici,
+dopo 4.086 vertici alla qualità 1, con lo stesso B-rep e 28 curve U/V.
+
 Il nuovo filtro GPU delle booleane usa Metal su macOS e CUDA su Linux/NVIDIA.
 I box double già espansi della tolleranza vengono convertiti in intervalli
 float arrotondati verso l'esterno; il filtro non costruisce geometria e può

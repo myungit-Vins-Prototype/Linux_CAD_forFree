@@ -75,7 +75,7 @@ DESCRIPTIONS = {
  'forgeCad2026_ribbon_preview_main.cpp': ('startup', 'Avvio separato della prova ribbon, preferenze isolate, cattura e regressione apertura documento/Blocco.'),
  'forgeCad2026_zoom': ('viewport', 'Normalizzazione input per backend, preferenze condivise e animazione temporale dello zoom per vista 3D e tavole.'),
  'forgeCad2026_viewport_scene.cpp': ('viewport', 'Coordinate scena/schermo, raggi, bounds, zoom uniforme al cursore, adattamento vista e piani di riferimento.'),
- 'forgeCad2026_feature_preview': ('features', 'FeaturePreviewBuilder: chiave e calcolo delle anteprime da snapshot, senza possedere widget.'),
+ 'forgeCad2026_feature_preview': ('features', 'FeaturePreviewBuilder: chiave e calcolo delle anteprime da snapshot; riusa il B-rep e prepara sul worker la mesh mancante o di qualita diversa degli stadi nascosti, senza possedere widget.'),
  'forgeCad2026_sketch_curvature': ('sketch', 'SketchCurvatureCache: possiede e invalida i pettini di curvatura al cambio di curva o scala.'),
  'forgeCad2026_camera': ('render', 'Stato e trasformazioni della camera 3D.'),
  'forgeCad2026_scene_renderer': ('render', 'Passate grafiche della scena, FBO/MSAA e disegno di corpi, riferimenti e overlay.'),
