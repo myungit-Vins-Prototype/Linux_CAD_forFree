@@ -80,6 +80,13 @@ add_test(NAME forgecad_gpu_broad_phase_tests COMMAND forgecad_gpu_broad_phase_te
 add_test(NAME forgecad_box_fallback_tests COMMAND forgecad_gpu_broad_phase_tests --cpu-fallback)
 set_tests_properties(forgecad_box_fallback_tests PROPERTIES TIMEOUT 30)
 set_tests_properties(forgecad_gpu_broad_phase_tests PROPERTIES SKIP_RETURN_CODE 77 TIMEOUT 120)
+if(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
+    add_executable(forgecad_metal_box_pool_tests tests/test_metal_box_pool.cpp)
+    target_link_libraries(forgecad_metal_box_pool_tests PRIVATE forgecad_compute)
+    target_compile_options(forgecad_metal_box_pool_tests PRIVATE -Wall -Wextra -Wpedantic)
+    add_test(NAME forgecad_metal_box_pool_tests COMMAND forgecad_metal_box_pool_tests)
+    set_tests_properties(forgecad_metal_box_pool_tests PROPERTIES SKIP_RETURN_CODE 77 TIMEOUT 120)
+endif()
 
 add_executable(forgecad
     forgeCad2026.cpp

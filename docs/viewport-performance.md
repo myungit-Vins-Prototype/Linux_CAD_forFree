@@ -200,6 +200,11 @@ sono incluse in `forgecad_preview_performance_tests`. Corretto il caso reale
 dopo 4.086 vertici alla qualità 1, con lo stesso B-rep e 28 curve U/V.
 
 Il nuovo filtro GPU delle booleane usa Metal su macOS e CUDA su Linux/NVIDIA.
+Sul Mac il [pool Metal verificato](metal-box-pool-2026-10-26.md) riusa i buffer
+e ammette fino a quattro richieste indipendenti, con limiti di 128 MiB attivi
+e 64 MiB inattivi. Il mutex non copre l'attesa GPU; oltre i limiti resta il BVH
+CPU. Questi budget riguardano le lunghezze dei buffer, non la memoria totale
+del processo, e non modificano il backend CUDA.
 I box double già espansi della tolleranza vengono convertiti in intervalli
 float arrotondati verso l'esterno; il filtro non costruisce geometria e può
 solo conservare candidati in eccesso. Tutti i candidati passano dal confronto

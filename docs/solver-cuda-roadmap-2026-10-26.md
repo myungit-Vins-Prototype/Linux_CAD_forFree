@@ -54,4 +54,6 @@ La firma diversa della mesh reale è stata successivamente approfondita: [confro
 4. Valutare specializzazioni CUDA su altre GPU e lotti reali; abilitarle per default solo con vantaggio ripetibile. Il pool limita l'inattivo: un budget globale dei lavori simultanei richiede una politica distinta.
 5. Misurare separatamente componenti grandi e connesse del solver, costruzione geometrica e rendering. La partizione non è una fattorizzazione sparsa generale e non trasferisce il kernel esatto sulla GPU.
 
+Prosecuzione specifica Mac: [pool dei buffer Metal e richieste indipendenti](metal-box-pool-2026-10-26.md) implementati e verificati sulla GPU reale. I gruppi di quattro richieste sintetiche migliorano circa2,2×; nessuna accelerazione dell'intero CAD dichiarata. I budget attivo/inattivo descritti nel rapporto valgono soltanto per Metal e non risolvono la politica dei lavori attivi CUDA del punto4.
+
 Applicazione compilata nella build separata; installazione desktop invariata. Nessun commit o push.
