@@ -43,6 +43,11 @@ void validate(const Mesh &mesh,const char *format) {
         require(polygon.size()==3 || polygon.size()==4, "poligono STL/OBJ non valido");
         for (const auto &[v,n]:polygon)
             require(v>=0 && std::size_t(v)<mesh.points.size() && n>=0 && std::size_t(n)<mesh.normals.size(), "indice OBJ fuori intervallo");
+        for (std::size_t i=0;i<polygon.size();++i)
+            for (std::size_t j=i+1;j<polygon.size();++j) {
+                const auto &p=mesh.points[polygon[i].first], &q=mesh.points[polygon[j].first];
+                require(p[0]!=q[0] || p[1]!=q[1] || p[2]!=q[2], "vertici esportati coincidenti nello stesso poligono");
+            }
         const auto &a=mesh.points[polygon[0].first], &b=mesh.points[polygon[1].first], &c=mesh.points[polygon[2].first];
         const Vec3 oriented=cross(b-a,c-a);
         if(!(norm(oriented)>0)) {

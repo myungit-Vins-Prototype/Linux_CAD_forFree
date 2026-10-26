@@ -1,0 +1,683 @@
+{
+  "setup": {
+    "revision": "27e2bc0e17f766a5455e082b7d500f6d965bee5c",
+    "reference_origin": "Binario finale della pipeline mesh macOS del 25 ottobre, conservato prima del commit Linux 27e2bc0; stessa sonda CommonCrypto. Non ricompilato dai sorgenti nuovi.",
+    "reference_sha256": "3e5dd716e40b5801b2c254c9949ac06b0ff7e1a470e83dda36afe0cb538d0368",
+    "reference_verified_against": "docs/benchmarks/mesh-parallel-2026-10-25.json",
+    "documents": {
+      "flacone_recuperato.prt": {
+        "path": "/Users/myungit/Documents/File_Esempio/flacone_recuperato.prt",
+        "bytes": 16335094,
+        "sha256": "f037619a69380b330c313169812769235f092a4d06c9726995c5b24910c36c44",
+        "format": 50,
+        "definition_compressed_bytes": 8365,
+        "cache_declared_uncompressed_bytes": 35383296
+      },
+      "2550_ASSIEME-ST5674-COMPLETO.prt": {
+        "path": "/Users/myungit/Documents/File_Esempio/2550_ASSIEME-ST5674-COMPLETO.prt",
+        "bytes": 378878911,
+        "sha256": "709d629c8703d5c62157c14a2b3683146f28093411a1c3362f0b5037bb0dab81",
+        "format": 54,
+        "definition_compressed_bytes": 13478674,
+        "cache_declared_uncompressed_bytes": 969408197
+      }
+    },
+    "source_sha256": {
+      "cad_export.cpp": "383dfc1f0610c690ca7047a4a2138cd859997432635415314d2e978b4b7f916d",
+      "tests/test_mesh_export_backends.cpp": "3b79606ea0bb721a8b370e387b425268b4cc12c28007cbf0eb365dbf74ffb87a",
+      "cad_document_read.cpp": "800f227843f77e4779b3b5c73208d1163b72756ca1d93dbb3754d64c394479a2",
+      "cad_document_read.h": "b84a4edb46c650b1894f2c1397ff9aea3ee65bc86c849a32cc052ba15c5c70d5",
+      "cad_document_io.cpp": "2c4a6505f84e7eda49c959ad386572198044978b4e4fa7b4026efb5ed75d5300",
+      "forgeCad2026_viewport_document.cpp": "5e65fe03aa89213c42cc0502e85888702f74cfed32728e096c4a6c4aa6d591fe",
+      "cuda_support.cu": "38a871b35ecfcd6ea11c9a771bf2f872eded73ea4971a5e8e993a773b37a38f7",
+      "cuda_support_cpu.cpp": "ff2ec5e9b19933ae46da99349088ac83934cc0be9c91920b3df30678e430856a",
+      "tools/generate_architecture.py": "77e97166f9ce11e3f9c8aecdaf8d4d208901f17ef742a2b0bfde2147e4c72e9d"
+    },
+    "probe_source_sha256": "45f5386fb532c33f2cc529bc40c80d8890cf485e4e7af076f12f56d4acc4d4e1",
+    "app_sha256": "238997db79a638036c6d46cea4880475291eec17e98836dc792161267d86c63d"
+  },
+  "platform": "macOS-27.0.1-arm64-arm-64bit-Mach-O",
+  "logical_cpus": 8,
+  "binary_sha256": {
+    "before": "3e5dd716e40b5801b2c254c9949ac06b0ff7e1a470e83dda36afe0cb538d0368",
+    "current": "d51ddefc164e7be8ac51760ebd094d6d9f240ecc196df2bc5dd0ee13de19fc7b"
+  },
+  "runs": [
+    {
+      "feature_errors": 0,
+      "gpu_available": false,
+      "gpu_pairs": 0,
+      "load_ms": 278.029333,
+      "load_peak_rss_mib": 290.296875,
+      "meshes_prepared": 10,
+      "mode": "optimized",
+      "peak_rss_mib": 298.875,
+      "quality": 1,
+      "read_ms": 339.723583,
+      "scenario": "snapshot",
+      "source_features": 24,
+      "source_sketches": 11,
+      "stages_with_triangles": 4,
+      "stored_triangles": 44416,
+      "visible_features": 1,
+      "visible_triangles": 19626,
+      "document": "flacone_recuperato.prt",
+      "variant": "before",
+      "iteration": 0,
+      "wall_seconds": 0.8226810420001129,
+      "polled_peak_rss_mib": 246.25,
+      "equivalent": true,
+      "features_signature": "9ad0a4851b52c26c93b390bb4f9d698ad4189b20ebd01c655a72d25ce1286f30",
+      "with_brep": 16
+    },
+    {
+      "feature_errors": 0,
+      "gpu_available": false,
+      "gpu_pairs": 0,
+      "load_ms": 264.8055,
+      "load_peak_rss_mib": 274.984375,
+      "meshes_prepared": 10,
+      "mode": "optimized",
+      "peak_rss_mib": 283.796875,
+      "quality": 1,
+      "read_ms": 122.980292,
+      "scenario": "snapshot",
+      "source_features": 24,
+      "source_sketches": 11,
+      "stages_with_triangles": 4,
+      "stored_triangles": 44416,
+      "visible_features": 1,
+      "visible_triangles": 19626,
+      "document": "flacone_recuperato.prt",
+      "variant": "current",
+      "iteration": 0,
+      "wall_seconds": 1.2335339999999633,
+      "polled_peak_rss_mib": 267.21875,
+      "equivalent": true,
+      "features_signature": "9ad0a4851b52c26c93b390bb4f9d698ad4189b20ebd01c655a72d25ce1286f30",
+      "with_brep": 16
+    },
+    {
+      "feature_errors": 0,
+      "gpu_available": false,
+      "gpu_pairs": 0,
+      "load_ms": 282.937916,
+      "load_peak_rss_mib": 275.96875,
+      "meshes_prepared": 10,
+      "mode": "optimized",
+      "peak_rss_mib": 285.0625,
+      "quality": 1,
+      "read_ms": 119.586667,
+      "scenario": "snapshot",
+      "source_features": 24,
+      "source_sketches": 11,
+      "stages_with_triangles": 4,
+      "stored_triangles": 44416,
+      "visible_features": 1,
+      "visible_triangles": 19626,
+      "document": "flacone_recuperato.prt",
+      "variant": "current",
+      "iteration": 1,
+      "wall_seconds": 0.8283795410002313,
+      "polled_peak_rss_mib": 264.484375,
+      "equivalent": true,
+      "features_signature": "9ad0a4851b52c26c93b390bb4f9d698ad4189b20ebd01c655a72d25ce1286f30",
+      "with_brep": 16
+    },
+    {
+      "feature_errors": 0,
+      "gpu_available": false,
+      "gpu_pairs": 0,
+      "load_ms": 287.558708,
+      "load_peak_rss_mib": 290.15625,
+      "meshes_prepared": 10,
+      "mode": "optimized",
+      "peak_rss_mib": 298.828125,
+      "quality": 1,
+      "read_ms": 349.548584,
+      "scenario": "snapshot",
+      "source_features": 24,
+      "source_sketches": 11,
+      "stages_with_triangles": 4,
+      "stored_triangles": 44416,
+      "visible_features": 1,
+      "visible_triangles": 19626,
+      "document": "flacone_recuperato.prt",
+      "variant": "before",
+      "iteration": 1,
+      "wall_seconds": 0.8318982079999842,
+      "polled_peak_rss_mib": 241.046875,
+      "equivalent": true,
+      "features_signature": "9ad0a4851b52c26c93b390bb4f9d698ad4189b20ebd01c655a72d25ce1286f30",
+      "with_brep": 16
+    },
+    {
+      "feature_errors": 0,
+      "gpu_available": false,
+      "gpu_pairs": 0,
+      "load_ms": 282.594375,
+      "load_peak_rss_mib": 289.0625,
+      "meshes_prepared": 10,
+      "mode": "optimized",
+      "peak_rss_mib": 301.65625,
+      "quality": 1,
+      "read_ms": 337.787042,
+      "scenario": "snapshot",
+      "source_features": 24,
+      "source_sketches": 11,
+      "stages_with_triangles": 4,
+      "stored_triangles": 44416,
+      "visible_features": 1,
+      "visible_triangles": 19626,
+      "document": "flacone_recuperato.prt",
+      "variant": "before",
+      "iteration": 2,
+      "wall_seconds": 0.8221036250001816,
+      "polled_peak_rss_mib": 246.3125,
+      "equivalent": true,
+      "features_signature": "9ad0a4851b52c26c93b390bb4f9d698ad4189b20ebd01c655a72d25ce1286f30",
+      "with_brep": 16
+    },
+    {
+      "feature_errors": 0,
+      "gpu_available": false,
+      "gpu_pairs": 0,
+      "load_ms": 260.571916,
+      "load_peak_rss_mib": 275.6875,
+      "meshes_prepared": 10,
+      "mode": "optimized",
+      "peak_rss_mib": 284.359375,
+      "quality": 1,
+      "read_ms": 119.448917,
+      "scenario": "snapshot",
+      "source_features": 24,
+      "source_sketches": 11,
+      "stages_with_triangles": 4,
+      "stored_triangles": 44416,
+      "visible_features": 1,
+      "visible_triangles": 19626,
+      "document": "flacone_recuperato.prt",
+      "variant": "current",
+      "iteration": 2,
+      "wall_seconds": 0.8339959170002658,
+      "polled_peak_rss_mib": 272.828125,
+      "equivalent": true,
+      "features_signature": "9ad0a4851b52c26c93b390bb4f9d698ad4189b20ebd01c655a72d25ce1286f30",
+      "with_brep": 16
+    },
+    {
+      "feature_errors": 4,
+      "gpu_available": false,
+      "gpu_pairs": 0,
+      "load_ms": 88.082333,
+      "load_peak_rss_mib": 4067.90625,
+      "meshes_prepared": 1191,
+      "mode": "optimized",
+      "peak_rss_mib": 4067.90625,
+      "quality": 1,
+      "read_ms": 10491.249833,
+      "scenario": "snapshot",
+      "source_features": 1203,
+      "source_sketches": 0,
+      "stages_with_triangles": 1191,
+      "stored_triangles": 11746419,
+      "visible_features": 1191,
+      "visible_triangles": 11746419,
+      "document": "2550_ASSIEME-ST5674-COMPLETO.prt",
+      "variant": "before",
+      "iteration": 0,
+      "wall_seconds": 11.90225508399999,
+      "polled_peak_rss_mib": 3912.0625,
+      "equivalent": true,
+      "features_signature": "39ad0cd0966c49515bf28466ec1105e0808d511658218553b60df68f50d760e6",
+      "with_brep": 1199
+    },
+    {
+      "feature_errors": 4,
+      "gpu_available": false,
+      "gpu_pairs": 0,
+      "load_ms": 95.314583,
+      "load_peak_rss_mib": 3690.546875,
+      "meshes_prepared": 1191,
+      "mode": "optimized",
+      "peak_rss_mib": 3690.546875,
+      "quality": 1,
+      "read_ms": 3620.461375,
+      "scenario": "snapshot",
+      "source_features": 1203,
+      "source_sketches": 0,
+      "stages_with_triangles": 1191,
+      "stored_triangles": 11746419,
+      "visible_features": 1191,
+      "visible_triangles": 11746419,
+      "document": "2550_ASSIEME-ST5674-COMPLETO.prt",
+      "variant": "current",
+      "iteration": 0,
+      "wall_seconds": 4.928883500000211,
+      "polled_peak_rss_mib": 2823.28125,
+      "equivalent": true,
+      "features_signature": "39ad0cd0966c49515bf28466ec1105e0808d511658218553b60df68f50d760e6",
+      "with_brep": 1199
+    },
+    {
+      "feature_errors": 4,
+      "gpu_available": false,
+      "gpu_pairs": 0,
+      "load_ms": 117.157334,
+      "load_peak_rss_mib": 3689.875,
+      "meshes_prepared": 1191,
+      "mode": "optimized",
+      "peak_rss_mib": 3689.875,
+      "quality": 1,
+      "read_ms": 3909.864583,
+      "scenario": "snapshot",
+      "source_features": 1203,
+      "source_sketches": 0,
+      "stages_with_triangles": 1191,
+      "stored_triangles": 11746419,
+      "visible_features": 1191,
+      "visible_triangles": 11746419,
+      "document": "2550_ASSIEME-ST5674-COMPLETO.prt",
+      "variant": "current",
+      "iteration": 1,
+      "wall_seconds": 5.344346249999944,
+      "polled_peak_rss_mib": 3213.9375,
+      "equivalent": true,
+      "features_signature": "39ad0cd0966c49515bf28466ec1105e0808d511658218553b60df68f50d760e6",
+      "with_brep": 1199
+    },
+    {
+      "feature_errors": 4,
+      "gpu_available": false,
+      "gpu_pairs": 0,
+      "load_ms": 97.028166,
+      "load_peak_rss_mib": 4066.953125,
+      "meshes_prepared": 1191,
+      "mode": "optimized",
+      "peak_rss_mib": 4066.953125,
+      "quality": 1,
+      "read_ms": 10800.652333,
+      "scenario": "snapshot",
+      "source_features": 1203,
+      "source_sketches": 0,
+      "stages_with_triangles": 1191,
+      "stored_triangles": 11746419,
+      "visible_features": 1191,
+      "visible_triangles": 11746419,
+      "document": "2550_ASSIEME-ST5674-COMPLETO.prt",
+      "variant": "before",
+      "iteration": 1,
+      "wall_seconds": 12.30593487499982,
+      "polled_peak_rss_mib": 3935.53125,
+      "equivalent": true,
+      "features_signature": "39ad0cd0966c49515bf28466ec1105e0808d511658218553b60df68f50d760e6",
+      "with_brep": 1199
+    },
+    {
+      "feature_errors": 4,
+      "gpu_available": false,
+      "gpu_pairs": 0,
+      "load_ms": 89.585416,
+      "load_peak_rss_mib": 4068.203125,
+      "meshes_prepared": 1191,
+      "mode": "optimized",
+      "peak_rss_mib": 4068.203125,
+      "quality": 1,
+      "read_ms": 10799.410708,
+      "scenario": "snapshot",
+      "source_features": 1203,
+      "source_sketches": 0,
+      "stages_with_triangles": 1191,
+      "stored_triangles": 11746419,
+      "visible_features": 1191,
+      "visible_triangles": 11746419,
+      "document": "2550_ASSIEME-ST5674-COMPLETO.prt",
+      "variant": "before",
+      "iteration": 2,
+      "wall_seconds": 12.303212999999687,
+      "polled_peak_rss_mib": 3936.78125,
+      "equivalent": true,
+      "features_signature": "39ad0cd0966c49515bf28466ec1105e0808d511658218553b60df68f50d760e6",
+      "with_brep": 1199
+    },
+    {
+      "feature_errors": 4,
+      "gpu_available": false,
+      "gpu_pairs": 0,
+      "load_ms": 114.700375,
+      "load_peak_rss_mib": 3689.5625,
+      "meshes_prepared": 1191,
+      "mode": "optimized",
+      "peak_rss_mib": 3689.5625,
+      "quality": 1,
+      "read_ms": 4312.20775,
+      "scenario": "snapshot",
+      "source_features": 1203,
+      "source_sketches": 0,
+      "stages_with_triangles": 1191,
+      "stored_triangles": 11746419,
+      "visible_features": 1191,
+      "visible_triangles": 11746419,
+      "document": "2550_ASSIEME-ST5674-COMPLETO.prt",
+      "variant": "current",
+      "iteration": 2,
+      "wall_seconds": 5.742573541999718,
+      "polled_peak_rss_mib": 3213.4375,
+      "equivalent": true,
+      "features_signature": "39ad0cd0966c49515bf28466ec1105e0808d511658218553b60df68f50d760e6",
+      "with_brep": 1199
+    }
+  ],
+  "protocol": "Stessa sonda sorgente, processi nuovi sequenziali, 3 ripetizioni alternate prima/dopo per documento, qualita1 CPU e pipeline differita in entrambe le versioni. Hash fuori timer, caffeinate limitato al confronto. RSS load da getrusage macOS in byte. Nessun controllo termico, frequenza o carico esterno.",
+  "summary": {
+    "flacone_recuperato.prt": {
+      "before": {
+        "read_ms": {
+          "median": 339.723583,
+          "min": 337.787042,
+          "max": 349.548584,
+          "samples": [
+            339.723583,
+            349.548584,
+            337.787042
+          ]
+        },
+        "load_ms": {
+          "median": 282.594375,
+          "min": 278.029333,
+          "max": 287.558708,
+          "samples": [
+            278.029333,
+            287.558708,
+            282.594375
+          ]
+        },
+        "load_peak_rss_mib": {
+          "median": 290.15625,
+          "min": 289.0625,
+          "max": 290.296875,
+          "samples": [
+            290.296875,
+            290.15625,
+            289.0625
+          ]
+        },
+        "peak_rss_mib": {
+          "median": 298.875,
+          "min": 298.828125,
+          "max": 301.65625,
+          "samples": [
+            298.875,
+            298.828125,
+            301.65625
+          ]
+        },
+        "open_ms": {
+          "median": 620.381417,
+          "min": 617.752916,
+          "max": 637.107292,
+          "samples": [
+            617.752916,
+            637.107292,
+            620.381417
+          ]
+        }
+      },
+      "current": {
+        "read_ms": {
+          "median": 119.586667,
+          "min": 119.448917,
+          "max": 122.980292,
+          "samples": [
+            122.980292,
+            119.586667,
+            119.448917
+          ]
+        },
+        "load_ms": {
+          "median": 264.8055,
+          "min": 260.571916,
+          "max": 282.937916,
+          "samples": [
+            264.8055,
+            282.937916,
+            260.571916
+          ]
+        },
+        "load_peak_rss_mib": {
+          "median": 275.6875,
+          "min": 274.984375,
+          "max": 275.96875,
+          "samples": [
+            274.984375,
+            275.96875,
+            275.6875
+          ]
+        },
+        "peak_rss_mib": {
+          "median": 284.359375,
+          "min": 283.796875,
+          "max": 285.0625,
+          "samples": [
+            283.796875,
+            285.0625,
+            284.359375
+          ]
+        },
+        "open_ms": {
+          "median": 387.785792,
+          "min": 380.020833,
+          "max": 402.524583,
+          "samples": [
+            387.785792,
+            402.524583,
+            380.020833
+          ]
+        }
+      },
+      "speedup_open": 1.5998044018074804,
+      "open_reduction_percent": 37.49235851144136
+    },
+    "2550_ASSIEME-ST5674-COMPLETO.prt": {
+      "before": {
+        "read_ms": {
+          "median": 10799.410708,
+          "min": 10491.249833,
+          "max": 10800.652333,
+          "samples": [
+            10491.249833,
+            10800.652333,
+            10799.410708
+          ]
+        },
+        "load_ms": {
+          "median": 89.585416,
+          "min": 88.082333,
+          "max": 97.028166,
+          "samples": [
+            88.082333,
+            97.028166,
+            89.585416
+          ]
+        },
+        "load_peak_rss_mib": {
+          "median": 4067.90625,
+          "min": 4066.953125,
+          "max": 4068.203125,
+          "samples": [
+            4067.90625,
+            4066.953125,
+            4068.203125
+          ]
+        },
+        "peak_rss_mib": {
+          "median": 4067.90625,
+          "min": 4066.953125,
+          "max": 4068.203125,
+          "samples": [
+            4067.90625,
+            4066.953125,
+            4068.203125
+          ]
+        },
+        "open_ms": {
+          "median": 10888.996124,
+          "min": 10579.332166,
+          "max": 10897.680499,
+          "samples": [
+            10579.332166,
+            10897.680499,
+            10888.996124
+          ]
+        }
+      },
+      "current": {
+        "read_ms": {
+          "median": 3909.864583,
+          "min": 3620.461375,
+          "max": 4312.20775,
+          "samples": [
+            3620.461375,
+            3909.864583,
+            4312.20775
+          ]
+        },
+        "load_ms": {
+          "median": 114.700375,
+          "min": 95.314583,
+          "max": 117.157334,
+          "samples": [
+            95.314583,
+            117.157334,
+            114.700375
+          ]
+        },
+        "load_peak_rss_mib": {
+          "median": 3689.875,
+          "min": 3689.5625,
+          "max": 3690.546875,
+          "samples": [
+            3690.546875,
+            3689.875,
+            3689.5625
+          ]
+        },
+        "peak_rss_mib": {
+          "median": 3689.875,
+          "min": 3689.5625,
+          "max": 3690.546875,
+          "samples": [
+            3690.546875,
+            3689.875,
+            3689.5625
+          ]
+        },
+        "open_ms": {
+          "median": 4027.021917,
+          "min": 3715.7759579999997,
+          "max": 4426.908125,
+          "samples": [
+            3715.7759579999997,
+            4027.021917,
+            4426.908125
+          ]
+        }
+      },
+      "speedup_open": 2.7039823344472746,
+      "open_reduction_percent": 63.01750986829536
+    }
+  },
+  "input_unchanged": true,
+  "status": "Verificato su macOS ARM64: parti comuni Linux, apertura con cache, fix OBJ; CUDA/NVIDIA del fix da riprovare su Linux.",
+  "date": "2026-10-26",
+  "inventories": {
+    "flacone_recuperato.prt": {
+      "before": {
+        "features": 24,
+        "cached_bodies": 16,
+        "cached_meshes": 4
+      },
+      "current": {
+        "features": 24,
+        "cached_bodies": 16,
+        "cached_meshes": 4
+      },
+      "timing_used_for_performance": false
+    },
+    "2550_ASSIEME-ST5674-COMPLETO.prt": {
+      "before": {
+        "features": 1203,
+        "cached_bodies": 1199,
+        "cached_meshes": 1191
+      },
+      "current": {
+        "features": 1203,
+        "cached_bodies": 1199,
+        "cached_meshes": 1191
+      },
+      "timing_used_for_performance": false
+    }
+  },
+  "flacone_functional": {
+    "rebuild": {
+      "equivalent": true,
+      "feature_errors": 0,
+      "visible_triangles": 19626,
+      "with_brep": 16,
+      "timing_used_for_performance": false
+    },
+    "edit": {
+      "equivalent": true,
+      "feature_errors": 0,
+      "visible_triangles": 19454,
+      "with_brep": 16,
+      "timing_used_for_performance": false,
+      "edit_sketch": 0,
+      "edit_constraint": 16,
+      "edit_before": 10,
+      "edit_after": 10.009999999999998,
+      "edit_ok": true
+    },
+    "input_unchanged": true
+  },
+  "tests": {
+    "ctest_passed": 17,
+    "ctest_failed": 0,
+    "ctest_skipped": 1,
+    "ctest_skip_reason": "Metal non accessibile nel sandbox; broad-phase SKIP77",
+    "numeric_comparator_passed": 9,
+    "explicit_cuda_requests_skip77": 2,
+    "export_cpu_before_fix": "FAIL: triangolo con indici OBJ 1902/2129/2129 e residuo area2.58210019635e-19",
+    "export_cpu_after_fix": "PASS polinomiale e NURBS con foro"
+  },
+  "architecture": {
+    "files": 482,
+    "relations": 6615,
+    "translation_units": 233,
+    "diagnostics": 0,
+    "check": "PASS",
+    "bidirectional_call_links_checked": 4,
+    "generated_files_ignored": true
+  },
+  "verification_scope": "B-rep binario di tutti i corpi; vertici e normali float32 visibili; conteggi topologici e copertura facce, visibilità/errori. Polilinee, mappe triangolo-faccia, etichette e matrici non confrontate punto per punto da questa sonda. Nessun checkBody, massa, framerate o QA OpenGL.",
+  "local_artifacts": "/Users/myungit/Linux_CAD_forFree/forgecad-release/benchmarks/macos-common-2026-10-26",
+  "limitations": [
+    "Tre campioni per binario/documento, disco non forzato freddo; frequenze, temperatura e carico esterno non controllati.",
+    "Assieme formato54 e hash diverso da precedenti Mac/Linux: tempi non direttamente confrontabili con quei rapporti.",
+    "Riferimento ha già la pipeline mesh parallela; guadagno osservato riguarda soprattutto il lettore cache comune e le copie evitate.",
+    "Nessuna accelerazione GPU misurata; 0coppie broad-phase in tutti12processi; CUDA assente su Mac.",
+    "574degeneri viewport riportati su mouse2 Linux non trattati dal fix OBJ.",
+    "Il lancio iniziale nel sandbox è stato interrotto dal divieto di ps prima di qualsiasi campione completo; conservato separatamente, escluso. Serie completa fuori sandbox per monitorare soltanto i processi della prova, nessun limite8GiB/300s raggiunto."
+  ],
+  "artifacts_sha256": {
+    "probe.cpp": "45f5386fb532c33f2cc529bc40c80d8890cf485e4e7af076f12f56d4acc4d4e1",
+    "compile_probe.py": "1a26d85a4a5253a4b325dfc07902dc70f977ed70beabf50bf4df2572d4a61a2d",
+    "run_comparison.py": "80a43a72cbcbe818b01f1ffbc877585304332c4176c734b0ae5c02ef43b2a4b1",
+    "build-final.log": "2da2c0315d6d7cbaa6c908c5da3ab0b47ddf3701054c216648f7567a9f551339",
+    "regressions-final.log": "602aaba5fb14baa3f67119f190406298de62de1c2b1c3024521ec3cd387e9682",
+    "numeric-comparator.log": "131f22817b6dc84fa5eb9a92c9c597abccef132c55e0e7aacb74097a423b1d49",
+    "architecture-final.log": "b28ad27d09bbf917123fa074a322cfa68c762aa71822efd1cb6a6c5f189a6d57",
+    "fma-probe.cpp": "fcf4fb3de4837a89d5cb7d362a2f4a000bd899767334cb24b461940863e0f60c",
+    "fma-probe.log": "9c8a4848e629bfe10041e239a20efcea3fc5c1235dc35ca6f6172d5bf4f2d242"
+  }
+}

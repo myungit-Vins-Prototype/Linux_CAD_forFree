@@ -116,7 +116,7 @@ DESCRIPTIONS.update({'tools/open_architecture.py': ('build', 'Avvio locale della
  'tools/compare_document_mesh_backends.py': ('tests', 'Snapshot numerici CPU/CUDA su documenti ricostruiti: valori e bit, normali, triangoli, topologia, spigoli/etichette/istanze; processi isolati e verifica degli originali.'),
  'tests/test_compare_document_mesh_backends.py': ('tests', 'Regressioni del comparatore mesh: zeri con segno, soglie, normali, winding, topologia, metadati e snapshot troncati.'),
  'tools/benchmark_document_solver.py': ('tests', 'Confronto riproducibile su schizzi reali: processi isolati, trascinamenti ammissibili denso/partizionato, hash, timer e integrità del documento.'),
- 'tests/test_mesh_export_backends.cpp': ('tests', 'Export STL/OBJ di patch B-spline polinomiali e NURBS con foro: parser indipendenti, scrittura/rilettura, orientamento, confronto geometrico CPU/CUDA e contatori runtime.'),
+ 'tests/test_mesh_export_backends.cpp': ('tests', 'Export STL/OBJ di patch B-spline polinomiali e NURBS con foro: parser indipendenti, scrittura/rilettura, vertici distinti per poligono, orientamento, confronto geometrico CPU/CUDA e contatori runtime.'),
  'tests/test_solver_partition.h': ('tests', 'Confronti solver/DOF denso-partizionato, selezione limitata di trascinamenti reali ammissibili fuori timer, vincoli e geometria verificati, conflitti atomici e benchmark alternati.'),
  'tools/benchmark_document_mesh.py': ('tools', 'Confronti isolati di modalità o binari su documenti reali: ordine ruotato, firme geometriche, lettura/load, RSS e integrità originale.'),
  'tests/test_lazy_mesh.h': ('tests', 'Mesh su richiesta e sonde documenti reali: worker concorrenti, rollback, qualità, firme B-rep e snapshot numerici visibili per confronto CPU/CUDA; basi instanziate annidate rifiutate dalla sonda.'),
@@ -191,7 +191,7 @@ DESCRIPTIONS.update({'tools/open_architecture.py': ('build', 'Avvio locale della
  'cad_element_names': ('features',
                        'Registra genealogia delle feature e nomi topologici persistenti per risolvere i '
                        'riferimenti.'),
- 'cad_export': ('io', 'Esporta B-rep e mesh STL/OBJ; saldatura vertici, orientamento e convessità dei poligoni sui punti effettivamente esportati, anteprime e raffinamento controllato.'),
+ 'cad_export': ('io', 'Esporta B-rep e mesh STL/OBJ; saldatura vertici, rifiuto degli indici ripetuti nei poligoni OBJ, orientamento e convessità sui punti effettivamente esportati, anteprime e raffinamento controllato.'),
  'cad_expression': ('model',
                     'Espressioni e conversioni per documento: contesto unita ereditato dai widget e passato ai formatter, senza stato globale condiviso fra finestre.'),
  'cad_extrude': ('features',

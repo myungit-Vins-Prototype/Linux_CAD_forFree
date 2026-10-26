@@ -48,7 +48,7 @@ La firma diversa della mesh reale è stata successivamente approfondita: [confro
 
 ## Roadmap successiva, ancora aperta
 
-1. Ripetere il lettore comune e le mesh differite su macOS; i risultati Linux non sono una verifica Mac.
+1. **Verificato su macOS ARM64:** lettore comune, pipeline mesh, regressioni ed export CPU; confronto con cache sui due documenti locali, assieme 10,889→4,027s e flacone0,620→0,388s. [Risultati e identità dei file](macos-common-validation-2026-10-26.md). Corretto un difetto OBJ dipendente dalla contrazione FMA: ripetere la suite export su NVIDIA dopo questo fix comune.
 2. **Completata una prima selezione verificata:** trascinamenti riusciti in7/13schizzi di mouse2; ricerca limitata e intervalli riportati nel [seguito](solver-cuda-export-drag-2026-10-26.md). Ulteriori classi di modifica restano aperte.
 3. **Completato per STL/OBJ:** suite permanente con scrittura/rilettura e confronto CPU/CUDA su patch polinomiale e NURBS con foro; corregge anche degenerazioni/orientamenti introdotti dalla precisione dei formati. [Risultati](solver-cuda-export-drag-2026-10-26.md).
 4. Valutare specializzazioni CUDA su altre GPU e lotti reali; abilitarle per default solo con vantaggio ripetibile. Il pool limita l'inattivo: un budget globale dei lavori simultanei richiede una politica distinta.

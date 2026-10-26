@@ -569,6 +569,13 @@ ObjBuildResult buildQuadObj(const QVector<ExportBody> &bodies, const StlExportOp
                 const auto exportPoint = [&](int vertex) -> const Kernel::Vec3 & {
                     return bodyVertexPoints.at(positionIndices[std::size_t(vertex)]);
                 };
+                const auto distinctPositions = [&](const auto &vertices) {
+                    for (std::size_t i = 0; i < vertices.size(); ++i)
+                        for (std::size_t j = i + 1; j < vertices.size(); ++j)
+                            if (positionIndices[std::size_t(vertices[i])] == positionIndices[std::size_t(vertices[j])])
+                                return false;
+                    return true;
+                };
                 const auto oriented = [&](auto vertices) {
                     Kernel::Vec3 normal;
                     for (int vertex : vertices) normal += face.normals[std::size_t(vertex)];
@@ -580,6 +587,7 @@ ObjBuildResult buildQuadObj(const QVector<ExportBody> &bodies, const StlExportOp
                 // La saldatura puo' cambiare verso o convessita' delle sottili
                 // faccette di bordo. Verifica i punti realmente scritti nel file.
                 const auto validQuad = [&](const std::array<int,4> &vertices) {
+                    if (!distinctPositions(vertices)) return false;
                     Kernel::Vec3 normal;
                     for (int vertex : vertices) normal += face.normals[std::size_t(vertex)];
                     for (int i = 0; i < 4; ++i) {
@@ -621,6 +629,10 @@ ObjBuildResult buildQuadObj(const QVector<ExportBody> &bodies, const StlExportOp
                 }
                 for (std::size_t t = 0; t < face.triangles.size(); ++t) {
                     if (used[t]) continue;
+                    // Con due indici saldati uguali il triangolo e' nullo.
+                    // Su ARM la contrazione FMA del prodotto vettoriale puo'
+                    // lasciare un residuo non nullo anche per vettori identici.
+                    if (!distinctPositions(face.triangles[t])) continue;
                     const auto triangle = oriented(face.triangles[t]);
                     const Kernel::Vec3 &a = exportPoint(triangle[0]);
                     const Kernel::Vec3 &b = exportPoint(triangle[1]);

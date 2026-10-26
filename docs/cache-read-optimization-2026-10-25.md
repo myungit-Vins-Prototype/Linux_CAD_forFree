@@ -27,3 +27,5 @@ python3 tools/benchmark_document_mesh.py /percorso/assieme.prt \
 ```
 
 Il codice è comune a Mac e Linux; queste misure sono solo Linux. Non misurano framerate, disco freddo o latenza completa dell'interfaccia.
+
+Il lettore è stato poi compilato e verificato anche su macOS ARM64: [confronto Mac del 26 ottobre](macos-common-validation-2026-10-26.md). I documenti e i binari sono identificati separatamente; l'assieme Mac attuale è diverso da quello Linux di questo rapporto.
