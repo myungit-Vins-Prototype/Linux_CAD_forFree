@@ -216,7 +216,7 @@ def main():
     report["binary_sha256"] = dict(cpu=sha256(cpu), cuda=sha256(cuda))
     report["sources_sha256"] = {name: sha256(root / name) for name in [
         "tests/test_viewport.cpp", "tests/test_lazy_mesh.h", "tests/test_display_mesh.h", "cad_forge.cpp",
-        "cuda_support.cu", "cad_cuda_tessellation.cpp",
+        "cuda_support.cu", "cuda_support.h", "cuda_support_cpu.cpp", "tests/test_cuda_pool.cpp", "cad_cuda_tessellation.cpp",
         "tools/compare_document_mesh_backends.py"]}
     modes = ["cpu", "cuda-generic"] + (["cuda-specialized"] if args.specialized else [])
     reference = None

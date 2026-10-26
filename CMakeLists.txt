@@ -46,6 +46,7 @@ set(CMAKE_AUTORCC ON)
 find_package(Qt6 REQUIRED COMPONENTS Widgets OpenGL OpenGLWidgets)
 find_package(OpenGL REQUIRED)
 find_package(ZLIB REQUIRED)
+find_package(Threads REQUIRED)
 # OpenCASCADE serve solo ai test del kernel (riferimento per i confronti):
 # l'applicazione usa soltanto il kernel proprio.
 find_package(OpenCASCADE REQUIRED)
@@ -142,6 +143,8 @@ add_executable(forgecad
     cad_shape_analysis.cpp
     cad_display_cache.h
     cad_display_cache.cpp
+    cad_memory.h
+    cad_memory.cpp
     cad_overlay_renderer.h
     cad_overlay_renderer.cpp
     cad_curve_solver.h
@@ -401,6 +404,29 @@ if(CMAKE_CUDA_COMPILER)
     set_tests_properties(forgecad_cuda_tests PROPERTIES SKIP_RETURN_CODE 77 TIMEOUT 180)
 endif()
 
+# Budget attivo/inattivo CUDA e richieste/trim concorrenti; stub senza toolkit.
+add_executable(forgecad_cuda_pool_tests tests/test_cuda_pool.cpp ${FORGE_CAD_CUDA_SOURCE})
+target_include_directories(forgecad_cuda_pool_tests PRIVATE ${PROJECT_SOURCE_DIR})
+target_link_libraries(forgecad_cuda_pool_tests PRIVATE Threads::Threads)
+target_compile_options(forgecad_cuda_pool_tests PRIVATE $<$<COMPILE_LANGUAGE:CXX>:-Wall;-Wextra;-Wpedantic>)
+if(CMAKE_CUDA_COMPILER)
+    set_target_properties(forgecad_cuda_pool_tests PROPERTIES CUDA_STANDARD 17 CUDA_STANDARD_REQUIRED ON)
+    add_test(NAME forgecad_cuda_pool_tests COMMAND forgecad_cuda_pool_tests)
+    set_tests_properties(forgecad_cuda_pool_tests PROPERTIES SKIP_RETURN_CODE 77 TIMEOUT 120)
+else()
+    add_test(NAME forgecad_cuda_pool_tests COMMAND forgecad_cuda_pool_tests --cpu-stub)
+    set_tests_properties(forgecad_cuda_pool_tests PROPERTIES TIMEOUT 30)
+endif()
+
+# Durata delle mesh CPU/VBO della cache; la variante --gl e' una prova nativa manuale.
+add_executable(forgecad_display_cache_memory_tests tests/test_display_cache_memory.cpp cad_display_cache.cpp)
+target_include_directories(forgecad_display_cache_memory_tests PRIVATE ${PROJECT_SOURCE_DIR})
+target_link_libraries(forgecad_display_cache_memory_tests PRIVATE Qt6::Gui Qt6::OpenGL OpenGL::GL)
+target_compile_options(forgecad_display_cache_memory_tests PRIVATE -Wall -Wextra -Wpedantic)
+add_test(NAME forgecad_display_cache_memory_tests COMMAND forgecad_display_cache_memory_tests)
+set_tests_properties(forgecad_display_cache_memory_tests PROPERTIES TIMEOUT 30
+    ENVIRONMENT "QT_QPA_PLATFORM=offscreen;QT_QPA_OFFSCREEN_NO_GLX=1;QT_QPA_PLATFORMTHEME=;QT_STYLE_OVERRIDE=Fusion")
+
 # Export STL/OBJ B-spline: CPU sempre disponibile, confronto GPU esplicito.
 add_executable(forgecad_mesh_export_backend_tests tests/test_mesh_export_backends.cpp
     cad_export.cpp cad_cuda_tessellation.cpp ${FORGE_CAD_CUDA_SOURCE})
@@ -492,6 +518,8 @@ if(FORGECAD_BUILD_VIEW_TESTS)
     set_tests_properties(forgecad_native_revisions_tests PROPERTIES TIMEOUT 120)
     set_tests_properties(forgecad_all_history_tests PROPERTIES TIMEOUT 120)
     forgecad_add_view_test(forgecad_preview_performance_tests --preview-performance)
+    forgecad_add_view_test(forgecad_history_preview_mesh_tests --history-preview-mesh)
+    set_tests_properties(forgecad_history_preview_mesh_tests PROPERTIES TIMEOUT 60)
     forgecad_add_view_test(forgecad_sketch_slot_point_tests --sketch-slot-point)
     forgecad_add_view_test(forgecad_feature_handle_tests --feature-handles)
     forgecad_add_view_test(forgecad_revolution_history_tests --revolution-history)

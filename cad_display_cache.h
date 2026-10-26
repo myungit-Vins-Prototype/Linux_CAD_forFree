@@ -23,7 +23,11 @@ public:
         float shininess = 110.0f;
     };
     void setZebra(bool enabled, float frequency, float angle) { zebra_ = enabled; zebraFrequency_ = frequency; zebraAngle_ = angle; }
+    // Conteggi diagnostici delle risorse referenziate, non RSS o memoria driver.
+    struct Statistics { std::size_t entries = 0, sourceStorageBytes = 0, readyBufferBytes = 0; };
+    Statistics statistics() const;
     void beginFrame();
+    void endFrame(); // rilascia le mesh non usate in questo fotogramma
     void clear();
     void setMatrices(const QMatrix4x4 &projection, const QMatrix4x4 &modelView);
     void setClipPlane(const QVector4D &plane, bool enabled);

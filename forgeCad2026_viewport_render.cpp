@@ -142,6 +142,20 @@ void CadViewport::resizeGL(int width, int height) {
 }
 
 void CadViewport::paintGL() {
+    // La preparazione differita puo' processare eventi Qt: il compositore
+    // rende corrente un altro contesto e un paint rientrante non deve creare
+    // VAO o modificare framebuffer/cache del fotogramma ancora in preparazione.
+    if (responsiveWork_) return;
+    QVector<int> requested;
+    for (int index=0;index<extrusions_.size();++index)
+        if (isBodyDrawn(index) || index==edgePickBody_ || pickBodies_.contains(index)
+            || preview_.replaced.contains(index) || preview_.restored.contains(index)
+            || (!preview_.key.isEmpty() && index==preview_.definition.firstBody)) requested.append(index);
+    ensureBodyDisplays(requested);
+    // Ripristinare contesto e FBO del widget prima di qualunque passata GL;
+    // fare soltanto makeCurrent dopo l'inizio della scena perderebbe il FBO MSAA.
+    makeCurrent();
+    glViewport(0,0,qRound(width()*devicePixelRatioF()),qRound(height()*devicePixelRatioF()));
     displayCache_.beginFrame();
     if (!painted_) {
         painted_ = true;
@@ -176,6 +190,7 @@ void CadViewport::paintGL() {
     glDisable(GL_SCISSOR_TEST);
     glDisable(GL_STENCIL_TEST);
     drawGpuGlassPanels(pixels, nullptr);
+    displayCache_.endFrame();
     ++renderedFrameSerial_;
 }
 
@@ -1220,14 +1235,6 @@ void CadViewport::drawSectionPlane() {
 }
 
 void CadViewport::drawExtrusions() {
-    // Preparare prima di prendere riferimenti: una cache mancante puo' causare
-    // il detach del QVector condiviso con le istantanee Undo.
-    QVector<int> requested;
-    for (int index=0;index<extrusions_.size();++index)
-        if (isBodyDrawn(index) || index==edgePickBody_ || pickBodies_.contains(index)
-            || preview_.replaced.contains(index) || preview_.restored.contains(index)
-            || (!preview_.key.isEmpty() && index==preview_.definition.firstBody)) requested.append(index);
-    ensureBodyDisplays(requested);
     glDisable(GL_CULL_FACE);
     overlayRenderer_.setStipple(false);
     enableSectionClip();

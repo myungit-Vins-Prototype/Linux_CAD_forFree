@@ -18,5 +18,6 @@ bool forgecad_cuda_evaluate_surface(void *, const double *, std::size_t, double 
     return false;
 }
 
+ForgeCudaPoolStats forgecad_cuda_pool_stats() { return {}; }
 std::size_t forgecad_cuda_idle_bytes() { return 0; }
 void forgecad_cuda_trim_idle() {}

@@ -1,5 +1,6 @@
 #include "forgeCad2026_viewport_internal.h"
 #include "forgeCad2026_ribbon_preview.h"
+#include "cad_memory.h"
 
 
 void CadViewport::calculateShapeAnalysis(const std::function<void()> &work) { runWhileResponsive(work); }
@@ -84,6 +85,14 @@ void CadViewport::setPolygonSides(int sides) { polygonSides_ = qBound(3, sides, 
 
 void CadViewport::setTessellationQuality(int quality) {
     ScopedWork work(workCallback_, QStringLiteral("Aggiornamento della qualita' della scena..."));
+    const int previousQuality=tessellationQuality_;
+    const auto meshBytes=[this] {
+        quint64 result=0;
+        for(const auto &body:extrusions_)
+            result+=quint64(body.display.vertices.size()+body.display.normals.size())*sizeof(QVector3D);
+        return result;
+    };
+    const quint64 previousBytes=meshBytes();
     tessellationQuality_ = qBound(0, quality, 2);
     for (SketchObject &sketch : sketches_) {
         for (CurveObject &curve : sketch.curves) ForgeCad::recalculateCurve(curve, tessellationQuality_);
@@ -93,6 +102,17 @@ void CadViewport::setTessellationQuality(int quality) {
     for (int index=0;index<extrusions_.size();++index)
         if (eager || isBodyDrawn(index)) requested.append(index);
     ensureBodyDisplays(requested);
+    constexpr quint64 largeReduction=64ull*1024*1024;
+    if(tessellationQuality_<previousQuality && previousBytes>meshBytes()+largeReduction) {
+        // Anche a vista ferma/nascosta, le vecchie copie CPU non devono
+        // restare vive nella cache GL. Gli snapshot Undo restano intatti.
+        if(context() && isValid()) {
+            makeCurrent();displayCache_.clear();doneCurrent();
+        }
+        // Le mesh temporanee dei worker sono gia' distrutte. Su glibc le
+        // loro arene possono trattenere molti GiB liberi senza restituirli.
+        ForgeCad::releaseUnusedHeapMemory();
+    }
     update();
 }
 

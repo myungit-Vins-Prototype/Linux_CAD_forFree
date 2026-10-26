@@ -223,6 +223,8 @@ struct Slot {
     cudaStream_t stream = nullptr;
     double *host = nullptr, *device = nullptr;
     std::size_t capacity = 0;  // in double
+    std::size_t reservedBytes = 0;  // include la crescita ancora da allocare
+    bool cacheable = false;
     Slot() = default;
     Slot(const Slot &) = delete;
     Slot &operator=(const Slot &) = delete;
@@ -242,7 +244,7 @@ struct Slot {
 struct SlotPool {
     std::mutex mutex;
     std::vector<std::unique_ptr<Slot>> freeSlots;
-    std::size_t idleBytes = 0;
+    ForgeCudaPoolStats stats;
 };
 
 SlotPool &slotPool() {
@@ -253,71 +255,118 @@ SlotPool &slotPool() {
     return *pool;
 }
 
-std::unique_ptr<Slot> acquireSlot(std::size_t doubles) {
-    std::unique_ptr<Slot> slot;
-    {
-        auto &pool = slotPool();
-        std::lock_guard<std::mutex> lock(pool.mutex);
-        if (!pool.freeSlots.empty()) {
-            // Preferisci il piu' piccolo slot sufficiente, altrimenti cresci
-            // il piu' grande disponibile. Nessuna allocazione sotto il lock.
-            auto best = pool.freeSlots.begin();
-            for (auto it = pool.freeSlots.begin(); it != pool.freeSlots.end(); ++it) {
-                const auto a = (*it)->capacity, b = (*best)->capacity;
-                if ((a >= doubles && (b < doubles || a < b)) ||
-                    (a < doubles && b < doubles && a > b)) best = it;
-            }
-            slot = std::move(*best);
-            pool.freeSlots.erase(best);
-            pool.idleBytes -= 2 * slot->capacity * sizeof(double);
-        }
-    }
-    if (!slot) {
-        slot = std::make_unique<Slot>();
-        if (cudaStreamCreateWithFlags(&slot->stream, cudaStreamNonBlocking) != cudaSuccess) {
-            return nullptr;
-        }
-    }
-    if (slot->capacity < doubles) {
-        slot->releaseBuffers();
-        const std::size_t capacity = std::max<std::size_t>(doubles, std::size_t(1) << 16);
-        if (cudaMallocHost(&slot->host, capacity * sizeof(double)) != cudaSuccess ||
-            cudaMalloc(&slot->device, capacity * sizeof(double)) != cudaSuccess) {
-            return nullptr;
-        }
-        slot->capacity = capacity;
-    }
-    return slot;
-}
-
 void releaseSlot(Slot *raw) noexcept {
     std::unique_ptr<Slot> slot(raw);
     if (!slot) return;
+    auto &pool = slotPool();
+    const auto reserved = slot->reservedBytes;
     try {
-        auto &pool = slotPool();
         std::lock_guard<std::mutex> lock(pool.mutex);
         const auto bytes = 2 * slot->capacity * sizeof(double);
-        if (bytes <= kForgeCudaIdleBudget - pool.idleBytes) {
+        if (slot->cacheable && !broken.load() && bytes <= kForgeCudaIdleBudget - pool.stats.idleBytes) {
             pool.freeSlots.push_back(std::move(slot));
-            pool.idleBytes += bytes;
+            pool.stats.idleBytes += bytes;
+            pool.stats.activeBytes -= reserved;
+            --pool.stats.activeSlots;
+            return;
         }
-        // Slot eccedenti distrutti dopo il rilascio del lock.
     } catch (...) {
-        // Se il vettore non puo' crescere, distruggi lo slot gia' sincronizzato
-        // fuori dal lock. La restituzione non deve lanciare da un distruttore.
+        // Se il vettore non puo' crescere, distruggi lo slot fuori dal lock.
     }
+    // La prenotazione resta attiva anche durante i free CUDA. Un altro
+    // worker non puo' spenderla prima del rilascio effettivo dei buffer.
+    slot.reset();
+    std::lock_guard<std::mutex> lock(pool.mutex);
+    pool.stats.activeBytes -= reserved;
+    --pool.stats.activeSlots;
 }
 
 struct ReturnSlot {
     void operator()(Slot *slot) const noexcept { releaseSlot(slot); }
 };
+using SlotLease = std::unique_ptr<Slot, ReturnSlot>;
+
+SlotLease acquireSlot(std::size_t count, bool &cudaFailure) {
+    SlotLease slot;
+    std::size_t capacity = 0;
+    {
+        auto &pool = slotPool();
+        std::lock_guard<std::mutex> lock(pool.mutex);
+        // Verifica prima di moltiplicare, allocare o leggere gli array host.
+        if (count > kForgeCudaActiveBudget / (16 * sizeof(double)) ||
+            pool.stats.activeSlots >= kForgeCudaMaxActiveSlots) {
+            ++pool.stats.budgetRejections;
+            return {};
+        }
+        capacity = std::max<std::size_t>(8 * count, std::size_t(1) << 16);
+        const auto available = kForgeCudaActiveBudget - pool.stats.activeBytes;
+        if (2 * capacity * sizeof(double) > available) {
+            ++pool.stats.budgetRejections;
+            return {};
+        }
+        // Preferisci il piu' piccolo slot sufficiente; altrimenti cresci il
+        // piu' grande insufficiente. Un idle sovradimensionato che non entra
+        // nel budget attivo resta nella cache: si puo' creare uno slot minore.
+        auto best = pool.freeSlots.end();
+        for (auto it = pool.freeSlots.begin(); it != pool.freeSlots.end(); ++it) {
+            const auto a = (*it)->capacity;
+            if (2 * a * sizeof(double) > available) continue;
+            if (best == pool.freeSlots.end()) { best = it; continue; }
+            const auto b = (*best)->capacity;
+            if ((a >= capacity && (b < capacity || a < b)) ||
+                (a < capacity && b < capacity && a > b)) best = it;
+        }
+        if (best != pool.freeSlots.end()) {
+            pool.stats.idleBytes -= 2 * (*best)->capacity * sizeof(double);
+            slot.reset(best->release());
+            pool.freeSlots.erase(best);
+        } else {
+            slot.reset(new Slot);
+        }
+        capacity = std::max(capacity, slot->capacity);
+        slot->reservedBytes = 2 * capacity * sizeof(double);
+        slot->cacheable = false;
+        pool.stats.activeBytes += slot->reservedBytes;
+        ++pool.stats.activeSlots;
+        pool.stats.peakActiveBytes = std::max(pool.stats.peakActiveBytes, pool.stats.activeBytes);
+        pool.stats.peakActiveSlots = std::max(pool.stats.peakActiveSlots, pool.stats.activeSlots);
+    }
+    // Il lease restituisce anche le prenotazioni di allocazioni fallite.
+    // Nessuna chiamata CUDA (allocazione, sincronizzazione o free) sotto lock.
+    if (!slot->stream && cudaStreamCreateWithFlags(&slot->stream, cudaStreamNonBlocking) != cudaSuccess) {
+        cudaFailure = true;
+        return {};
+    }
+    const bool allocated = slot->capacity < capacity;
+    if (allocated) {
+        slot->releaseBuffers();
+        if (cudaMallocHost(&slot->host, capacity * sizeof(double)) != cudaSuccess ||
+            cudaMalloc(&slot->device, capacity * sizeof(double)) != cudaSuccess) {
+            cudaFailure = true;
+            return {};
+        }
+        slot->capacity = capacity;
+    }
+    slot->cacheable = true;
+    {
+        auto &pool = slotPool();
+        std::lock_guard<std::mutex> lock(pool.mutex);
+        if (allocated) ++pool.stats.allocations;
+        else ++pool.stats.reuses;
+    }
+    return slot;
+}
 
 }
 
-std::size_t forgecad_cuda_idle_bytes() {
+ForgeCudaPoolStats forgecad_cuda_pool_stats() {
     auto &pool = slotPool();
     std::lock_guard<std::mutex> lock(pool.mutex);
-    return pool.idleBytes;
+    return pool.stats;
+}
+
+std::size_t forgecad_cuda_idle_bytes() {
+    return forgecad_cuda_pool_stats().idleBytes;
 }
 
 void forgecad_cuda_trim_idle() {
@@ -326,7 +375,7 @@ void forgecad_cuda_trim_idle() {
     {
         std::lock_guard<std::mutex> lock(pool.mutex);
         retired.swap(pool.freeSlots);
-        pool.idleBytes = 0;
+        pool.stats.idleBytes = 0;
     }
     // Distruzione CUDA fuori dal lock; nessun buffer attivo viene toccato.
 }
@@ -334,8 +383,9 @@ void forgecad_cuda_trim_idle() {
 bool forgecad_cuda_evaluate_surface(void *handle, const double *uv, std::size_t count, double *points, double *normals) {
     auto *device = static_cast<DeviceSurface *>(handle);
     if (!device || count == 0 || count > std::size_t(1) << 28 || broken.load()) return false;
-    const std::unique_ptr<Slot, ReturnSlot> slot(acquireSlot(8 * count).release());
-    if (!slot) return fail();
+    bool cudaFailure = false;
+    const auto slot = acquireSlot(count, cudaFailure);
+    if (!slot) return cudaFailure ? fail() : false;
     // Ingresso: (u, v); uscita: punti e normali, consecutivi.
     double *hostUV = slot->host, *hostOut = slot->host + 2 * count;
     double *deviceUV = slot->device, *deviceOut = slot->device + 2 * count;

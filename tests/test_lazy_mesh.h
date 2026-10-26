@@ -248,6 +248,12 @@ static void documentMeshBenchmark(const QString &path, bool inventory, bool rebu
         result["gpu_pairs"]=double(gpuBoxPairsProcessed());
         result["cuda_points"]=double(cudaTessellationPoints());
         result["cuda_available"]=cudaTessellationAvailable();
+        const auto pool=forgecad_cuda_pool_stats();
+        result["cuda_pool"]=QJsonObject{{"active_bytes",double(pool.activeBytes)},
+            {"idle_bytes",double(pool.idleBytes)}, {"active_slots",double(pool.activeSlots)},
+            {"peak_active_bytes",double(pool.peakActiveBytes)}, {"peak_active_slots",double(pool.peakActiveSlots)},
+            {"allocations",double(pool.allocations)}, {"reuses",double(pool.reuses)},
+            {"budget_rejections",double(pool.budgetRejections)}};
         QJsonArray bodies;
         qint64 triangles=0;int valid=0,visible=0,prepared=0;
         for(int i=0;i<view.extrusions_.size();++i) {

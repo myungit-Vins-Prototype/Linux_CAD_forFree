@@ -216,6 +216,15 @@ soglia elimina facce sottili valide; il picking esatto e il B-rep restano
 invariati. Su mouse2 rimossi i 574 degeneri già individuati, senza cambiare
 i triangoli validi: [verifica CPU/CUDA](viewport-degenerate-mesh-2026-10-26.md).
 
+Il ciclo bassa→massima→bassa sul grande assieme ha evidenziato pagine libere
+trattenute da glibc e vecchie mesh CPU/VBO conservate fino ad altri frame.
+La cache elimina ora le risorse non usate a fine frame; dopo una riduzione
+di oltre64MiB di vertici/normali il viewport rilascia la cache e richiede il
+ritorno delle pagine libere glibc. Nessuna modifica a Undo o oggetti vivi.
+[Diagnosi RAM e limiti della verifica](mesh-memory-cycle-2026-10-26.md):
+ciclo completo CPU 7,692→0,547–0,562GiB al ritorno basso; confronto nativo
+su64feature, prova grafica completa interrotta per la riserva di memoria.
+
 Il nuovo filtro GPU delle booleane usa Metal su macOS e CUDA su Linux/NVIDIA.
 Sul Mac il [pool Metal verificato](metal-box-pool-2026-10-26.md) riusa i buffer
 e ammette fino a quattro richieste indipendenti, con limiti di 128 MiB attivi
@@ -295,10 +304,14 @@ Protocollo, limiti e riproduzione nel [rapporto Linux](linux-solver-mesh-2026-10
 
 ## Lettura cache e prosecuzione CUDA (26 ottobre 2026)
 
-Il [confronto del lettore a blocchi](cache-read-optimization-2026-10-25.md) misura separatamente l'apertura con cache. Non attribuire questi risultati al solver o alla GPU. Il pool CUDA limita i buffer inattivi a 64 MiB complessivi host/device; gli slot attivi e le superfici caricate restano fuori da questo budget. `forgecad_cuda_trim_idle()` libera gli slot disponibili senza toccare quelli in uso; worker attivi possono successivamente ripopolare la cache.
+Il [confronto del lettore a blocchi](cache-read-optimization-2026-10-25.md) misura separatamente l'apertura con cache. Non attribuire questi risultati al solver o alla GPU. Il pool CUDA limita la cache inattiva a64MiB complessivi host/device. Il [budget dei buffer di lavoro attivi](cuda-active-budget-2026-10-26.md) aggiunge128MiB e al massimo4richieste, con prenotazione prima delle allocazioni e ritorno temporaneo alla CPU sotto pressione. Superfici caricate, contesto/driver e altri backend restano esclusi. `forgecad_cuda_trim_idle()` libera gli slot disponibili senza toccare quelli in uso; worker attivi possono successivamente ripopolare la cache.
 
 Avanzamento, limiti e passi ancora aperti: [roadmap verificata su mouse2 e CUDA](solver-cuda-roadmap-2026-10-26.md). Specializzazioni CUDA opt-in con `FORGECAD_CUDA_SPECIALIZED=1`; il generico rimane predefinito.
 
 [Export B-spline e trascinamenti ammissibili](solver-cuda-export-drag-2026-10-26.md): regressioni permanenti CPU/CUDA degli scrittori STL/OBJ, correzioni sulla geometria realmente serializzata e confronto isolato su7schizzi di mouse2.
 
 [Confronto numerico reale mouse2](mouse2-mesh-cpu-cuda-2026-10-26.md): vertici CPU/CUDA identici, firma diversa limitata a 23 normali; 574 triangoli degeneri comuni del viewport individuati, ancora da filtrare. Nessun benchmark di velocità in questa verifica.
+
+## Anteprime storiche e contesto OpenGL (26 ottobre 2026)
+
+La preparazione delle mesh differite avviene prima delle passate GL: l'event loop responsivo può rendere corrente il contesto del compositore Qt. Ripristino di contesto/FBO e viewport prima del rendering e protezione del paint rientrante evitano di conservare risorse grafiche create nel contesto sbagliato. [Correzione e regressione mouse2](history-preview-mouse2-2026-10-26.md): prima anteprima e tre riaperture identiche al riferimento con cache ricreata, anche dopo rigenerazione completa; 32 CTest e QA nativa PASS.

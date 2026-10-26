@@ -1,6 +1,10 @@
 #include <condition_variable>
+#if defined(__GLIBC__)
+#include <malloc.h>
+#endif
 #include "../cad_gpu_broad_phase.h"
 #include "../cad_cuda_tessellation.h"
+#include "../cuda_support.h"
 #include <QSaveFile>
 // I componenti GUI sono dichiarati negli header e compilati separatamente.
 #include "../forgeCad2026_gui.h"
@@ -128,6 +132,8 @@ public:
 #include "test_function_panels.h"
 #include "test_lazy_mesh.h"
 #include "test_display_mesh.h"
+#include "test_mesh_memory.h"
+#include "test_history_preview_mesh.h"
     static void extrusionActionPreconditions() {
         using namespace ForgeCad;
         PdfWindow window;
@@ -10075,6 +10081,14 @@ int main(int argc, char **argv) {
     format.setProfile(QSurfaceFormat::CoreProfile); format.setDepthBufferSize(24); format.setStencilBufferSize(8);
     QSurfaceFormat::setDefaultFormat(format);
     QApplication app(argc, argv);
+    if (app.arguments().contains(QStringLiteral("--mesh-memory-benchmark"))) {
+        try {
+            const int at=app.arguments().indexOf(QStringLiteral("--mesh-memory-benchmark"));
+            require(at+1<app.arguments().size(),"documento richiesto per la sonda memoria");
+            ViewportInteractionTest::meshMemoryBenchmark(app.arguments()[at+1],app.arguments().contains(QStringLiteral("--gl")));
+        } catch(const std::exception &error) { std::cerr<<error.what()<<std::endl;return 1; }
+        return 0;
+    }
     if (app.arguments().contains(QStringLiteral("--document-mesh-benchmark"))) {
         QTemporaryDir isolatedSettings;
         QSettings::setDefaultFormat(QSettings::IniFormat);
@@ -10613,6 +10627,13 @@ int main(int argc, char **argv) {
     if (app.arguments().contains(QStringLiteral("--sketch-slot-point"))) {
         try { ViewportInteractionTest::sketchSlotPoint(app.arguments().contains(QStringLiteral("--gl"))); }
         catch(const std::exception &e){std::cerr<<e.what()<<std::endl;return 1;}
+        return 0;
+    }
+    if (app.arguments().contains(QStringLiteral("--history-preview-mesh"))) {
+        try { const int index=app.arguments().indexOf(QStringLiteral("--history-preview-mesh"));
+            ViewportInteractionTest::historyPreviewMesh(index+1<app.arguments().size() && !app.arguments().at(index+1).startsWith("--")
+                ?app.arguments().at(index+1):QString(),app.arguments().contains(QStringLiteral("--gl"))); }
+        catch (const std::exception &e) { std::cerr<<e.what()<<std::endl;return 1; }
         return 0;
     }
     if (app.arguments().contains(QStringLiteral("--preview-performance"))) {
