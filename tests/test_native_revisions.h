@@ -14,11 +14,15 @@ QByteArray nativeFixture(const QByteArray &payload, quint16 version, const QByte
     out.writeRawData(compressed.constData(),int(compressed.size()));
     out.writeRawData(cache.constData(),int(cache.size())); return result;
 }
-QByteArray nativeLegacy49Fixture(const QByteArray &current) {
+QByteArray nativeLegacy49Fixture(const QByteArray &current, const DocumentState &state) {
     QDataStream header(current); header.skipRawData(7); quint32 size=0; header >> size;
     const auto payload = qUncompress(current.mid(11,size));
     require(payload.size() >= 48,"metadati nativi da rimuovere per fixture 49");
-    const auto legacyPayload = payload.left(payload.size()-48);
+    QByteArray oldDocument;
+    if (!ForgeCad::encodeDocumentDefinition53ForHash(state, oldDocument).isEmpty()) throw std::runtime_error("fixture 53");
+    const auto oldSize = qFromBigEndian<quint32>(oldDocument.constData()+7);
+    const auto oldPayload = qUncompress(oldDocument.mid(11,oldSize));
+    const auto legacyPayload = oldPayload.left(oldPayload.size()-48);
     const auto cache = qUncompress(current.mid(11+size));
     QDataStream in(cache); QByteArray sourceHash,payloadHash; in >> sourceHash >> payloadHash;
     QByteArray restoredCache; QDataStream out(&restoredCache,QIODevice::WriteOnly);
@@ -45,10 +49,21 @@ void nativePendingPreviousFormatTests() {
     nativeOk(beginNativeCheckout(store, working, "Pendente precedente", "progettista", session));
     RevisionCheckinRequest request;
     nativeOk(prepareNativeCheckin(working, session, "A", "preparato prima dell'aggiornamento", request));
-    // Nessuno schizzo: il payload 53 e 54 ha esattamente gli stessi campi.
-    // Cambia soltanto l'header, come un pendente prodotto dal writer 53.
-    require(kDocumentFormatVersion == 54, "fixture precedente da rivedere a un nuovo cambio formato");
-    qToBigEndian<quint16>(53, request.payload.data() + 4);
+    // Crea davvero il payload storico: il formato corrente contiene campi
+    // aggiuntivi anche quando non ci sono schizzi o ripetizioni.
+    DocumentState previousSnapshot;
+    nativeOk(decodeDocument(request.payload, previousSnapshot));
+    const auto currentSnapshot = request.payload;
+    nativeOk(encodeDocumentDefinition53ForHash(previousSnapshot, request.payload));
+    const auto oldSize = qFromBigEndian<quint32>(request.payload.constData()+7);
+    const auto oldPayload = qUncompress(request.payload.mid(11,oldSize));
+    const auto currentSize = qFromBigEndian<quint32>(currentSnapshot.constData()+7);
+    const auto currentCache = qUncompress(currentSnapshot.mid(11+currentSize));
+    QDataStream cacheReader(currentCache); QByteArray sourceHash,payloadHash; cacheReader >> sourceHash >> payloadHash;
+    QByteArray migratedCache; QDataStream cacheWriter(&migratedCache,QIODevice::WriteOnly);
+    cacheWriter << sourceHash << QCryptographicHash::hash(oldPayload,QCryptographicHash::Sha256);
+    const auto rest = currentCache.mid(cacheReader.device()->pos()); cacheWriter.writeRawData(rest.constData(),int(rest.size()));
+    request.payload = nativeFixture(oldPayload,53,qCompress(migratedCache,9));
     const auto originalPayload = request.payload;
     QByteArray pending;
     nativeOk(encodeNativeRevisionOperation(session, request, pending));
@@ -205,7 +220,7 @@ void nativeRevisionTests() {
     DocumentState loaded;nativeOk(loadDocumentFile(path,loaded));
     require(loaded.version.documentId==identity && loaded.version.checkinId.isNull() && loaded.baseCheckinId.isNull(),"identita' nativa dopo riapertura");
     require(loaded.extrusions[0].forgeBody && writeBodyBinary(*loaded.extrusions[0].forgeBody)==geometry,"B-rep e snapshot riaperti");
-    DocumentState legacy;nativeOk(decodeDocument(nativeLegacy49Fixture(encoded),legacy));
+    DocumentState legacy;nativeOk(decodeDocument(nativeLegacy49Fixture(encoded,working),legacy));
     require(!legacy.version.documentId.isNull() && legacy.version.checkinId.isNull() && legacy.baseCheckinId.isNull(),"migrazione documento 49");
     require(legacy.extrusions[0].forgeBody && writeBodyBinary(*legacy.extrusions[0].forgeBody)==geometry,"cache 49 leggibile senza cambiare geometria");
     QByteArray upgraded;nativeOk(encodeDocument(legacy,upgraded));DocumentState upgradedRead;nativeOk(decodeDocument(upgraded,upgradedRead));

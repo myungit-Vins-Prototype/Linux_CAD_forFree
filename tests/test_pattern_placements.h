@@ -94,3 +94,127 @@ void patternPlacementTests() {
     std::cout << "PASS pattern placements: limiti, overflow, output, griglie, rotazioni e simmetria" << std::endl;
 }
 }
+
+// Risultati applicativi, persistenza e indipendenza delle singole copie.
+void patternResultTests() {
+    using namespace ForgeCad;
+    using namespace ForgeCad::Kernel;
+    for (bool sheet : {false, true}) {
+        ExtrusionObject source;
+        source.feature = BodyFeature::Primitive;
+        source.primitive.kind = PrimitiveKind::Box;
+        source.primitive.size[0] = 2; source.primitive.size[1] = 3; source.primitive.size[2] = 4;
+        if (sheet) {
+            source.feature = BodyFeature::Imported;
+            ExchangeBody exchange; exchange.body = makePlaneSheet(Frame3({3,0,0},{0,0,1},{1,0,0}), 1);
+            source.importData = QByteArray::fromStdString(writeStep({exchange}));
+        }
+        DocumentState initial; initial.extrusions = {source};
+        CadViewport view; view.loadDocument(initial);
+        const auto original = writeBodyBinary(*view.extrusions()[0].forgeBody);
+        ExtrusionObject repeated; repeated.feature = BodyFeature::Pattern;
+        repeated.firstBody = 0; repeated.name = "Ripetizione";
+        repeated.pattern.count = 4; repeated.pattern.spacing = 5;
+        GeometryRef axis; axis.kind = 2; axis.index = 0; repeated.pattern.refs = {axis};
+        const auto check = [&](int count) {
+            const auto tips = view.resultBodiesBefore(-1);
+            require(tips.size() == count, "ogni componente e' un corpo indipendente");
+            QSet<quint64> ids;
+            double total = 0;
+            for (int i : tips) {
+                const auto &part = view.extrusions()[i];
+                require(part.error.isEmpty() && part.forgeBody && part.solid != sheet, "tipo e geometria dei risultati");
+                require(checkBody(*part.forgeBody).empty(), "topologia valida dei risultati separati");
+                ids.insert(part.modelBodyId);
+                total += sheet ? faceArea(*part.forgeBody, part.forgeBody->faces().front()) : massProperties(*part.forgeBody).volume;
+            }
+            require(ids.size() == count, "identita' logiche distinte");
+            require(std::abs(total - count * (sheet ? 4.0 : 24.0)) < 1e-8, "area o volume delle copie disgiunte");
+            require(writeBodyBinary(*view.extrusions()[0].forgeBody) == original, "originale immutato");
+        };
+        require(view.createBody(repeated, {0}).isEmpty(), "creazione ripetizione separata"); check(4);
+        require(view.setFeatureSuppressed(1, true).isEmpty(), "sopprime tutta la ripetizione");
+        require(view.resultBodiesBefore(-1).size() == 1, "soppressione ripristina solo il corpo sorgente");
+        require(view.setFeatureSuppressed(1, false).isEmpty(), "ripristina tutta la ripetizione"); check(4);
+        const auto oldOccurrence = view.extrusions()[3].modelBodyId;
+        const auto oldGeometry = writeBodyBinary(*view.extrusions()[3].forgeBody);
+        auto changed = view.extrusions()[1]; changed.pattern.excluded = {1,3};
+        require(view.updateBody(1, changed).isEmpty(), "esclude occorrenze"); check(2);
+        const auto surviving = view.extrusions()[view.resultBodiesBefore(-1).last()];
+        require(surviving.modelBodyId == oldOccurrence && writeBodyBinary(*surviving.forgeBody) == oldGeometry, "esclusione non rinumera un'altra occorrenza");
+        view.undo(); check(4); view.redo(); check(2);
+        changed = view.extrusions()[1]; changed.pattern.spacing = 9;
+        require(view.updateBody(1, changed).isEmpty(), "cambia passo conservando esclusioni"); check(2);
+        require(view.extrusions()[1].pattern.excluded == QVector<int>({1,3}), "numeri esclusi conservati");
+        QByteArray bytes;
+        require(encodeDocument(view.currentDocument(), bytes).isEmpty(), "salva componenti ed esclusioni");
+        DocumentState restored; require(decodeDocument(bytes, restored).isEmpty(), "legge componenti ed esclusioni");
+        view.loadDocument(restored); check(2);
+        require(view.rebuildAllFeatures() == 0, "rigenera componenti ed esclusioni"); check(2);
+        changed = view.extrusions()[1]; changed.pattern.excluded.clear(); changed.pattern.count = 5;
+        require(view.updateBody(1, changed).isEmpty(), "ripristina copie e aumenta conteggio"); check(5);
+        // Modificare un risultato derivato apre e aggiorna la stessa ripetizione.
+        changed = view.extrusions()[1]; changed.pattern.count = 3;
+        require(view.updateBody(view.resultBodiesBefore(-1).last(), changed).isEmpty(), "modifica attraverso un risultato derivato"); check(3);
+        // Escludere tutto e' un errore transazionale: il documento resta valido.
+        changed = view.extrusions()[1]; changed.pattern.excluded = {0,1,2};
+        require(!view.updateBody(1, changed).isEmpty(), "tutte le occorrenze escluse rifiutate"); check(3);
+        // L'elenco reale del pannello permette esclusione e ripristino.
+        {
+            CadViewport gui; gui.loadDocument(initial);
+            QMainWindow window;
+            std::exception_ptr failure;
+            QTimer::singleShot(0, &window, [&] {
+                auto *dialog = window.findChild<QDialog *>();
+                try {
+                    auto *list = dialog ? dialog->findChild<QListWidget *>("patternOccurrences") : nullptr;
+                    require(list && list->count() == 4, "elenco occorrenze nel pannello");
+                    list->item(1)->setCheckState(Qt::Unchecked);
+                    // refresh ricrea la lista, leggere nuovamente l'elemento.
+                    require(list->item(1)->checkState() == Qt::Unchecked, "spunta esclusione aggiornata");
+                    dialog->findChild<QDialogButtonBox *>()->button(QDialogButtonBox::Ok)->click();
+                    require(dialog->result() == QDialog::Accepted, "pannello applica esclusione");
+                } catch (...) { failure = std::current_exception(); if (dialog) dialog->reject(); }
+            });
+            patternDialog(&window, &gui, "Ripetizione", -1, repeated,
+                [&](const ExtrusionObject &definition) { return gui.createBody(definition, {definition.firstBody}); });
+            if (failure) std::rethrow_exception(failure);
+            require(gui.resultBodiesBefore(-1).size() == 3 && gui.extrusions()[1].pattern.excluded == QVector<int>{1}, "esclusione dal pannello costruisce tre corpi");
+            // Anche le ripetizioni aggregate dei vecchi documenti si separano
+            // quando viene richiesta la rigenerazione completa.
+            auto legacy = initial; legacy.extrusions.append(repeated);
+            gui.loadDocument(legacy);
+            require(gui.rebuildAllFeatures() == 0 && gui.resultBodiesBefore(-1).size() == 4, "rigenera ripetizioni storiche in corpi separati");
+        }
+        // Occorrenze incluse anche in circolare, griglia e specchio.
+        for (int kind : {0,1,2}) {
+            CadViewport other; other.loadDocument(initial);
+            auto def = repeated; def.pattern.kind = kind;
+            def.pattern.count = 4; def.pattern.excluded = {1};
+            if (kind == 0) {
+                def.pattern.count2 = 2; def.pattern.spacing2 = 8;
+                GeometryRef y = axis; y.index = 1; def.pattern.refs.append(y);
+            } else if (kind == 1) {
+                def.pattern.refs[0].index = 2;
+                // Sposta la base solida lontano dall'asse, evitando contatti.
+                if (!sheet) { auto far = initial; far.extrusions[0].primitive.origin[0] = 6; other.loadDocument(far); }
+            } else { def.pattern.refs[0].kind = 1; def.pattern.refs[0].index = 2; }
+            require(other.createBody(def, {0}).isEmpty(), "esclusione nei tre tipi di ripetizione");
+            require(other.resultBodiesBefore(-1).size() == (kind == 0 ? 7 : kind == 1 ? 3 : 1), "numero copie dopo esclusione per tipo");
+        }
+    }
+    // Solidi collegati si uniscono; le shell delle cavita' restano nel solido.
+    QString error;
+    auto outer = std::make_shared<const Body>(makeBox(Frame3(), 6,6,6));
+    auto inner = std::make_shared<const Body>(makeBox(Frame3({1,1,1},{0,0,1},{1,0,0}), 2,2,2));
+    auto hollow = forgeBoolean(outer,inner,::BooleanOperation::Difference,&error);
+    require(hollow && error.isEmpty(), "solido con cavita' di riferimento");
+    auto all = forgePattern(hollow,{Transform3::translation({10,0,0})},true,&error);
+    auto separated = forgePatternComponents(all,&error);
+    require(error.isEmpty() && separated.size() == 2, "cavita' non esposte come corpi");
+    for (const auto &part : separated)
+        require(!part->isSheet() && checkBody(*part).empty() && std::abs(massProperties(*part).volume - 208) < 1e-8, "volume netto delle cavita' conservato");
+    all = forgePattern(outer,{Transform3::translation({6,0,0})},true,&error);
+    require(forgePatternComponents(all,&error).size() == 1, "solidi con faccia comune restano uniti");
+    std::cout << "PASS pattern results: corpi solidi/superfici, esclusioni, storia, cavita' e persistenza" << std::endl;
+}

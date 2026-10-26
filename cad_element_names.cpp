@@ -361,6 +361,9 @@ void registerImportedHistory(const ForgeBody &body) {
 QVector<int> featureGenealogyOperandIndices(const ExtrusionObject &body, int index, const QVector<ExtrusionObject> &bodies) {
     QVector<int> indices;
     if (!body.forgeBody) return indices;
+    if (body.operation < 0 && body.feature == BodyFeature::Pattern && body.patternComponent > 0
+        && body.firstBody >= 0 && body.firstBody < index && body.firstBody < bodies.size())
+        return featureGenealogyOperandIndices(bodies.at(body.firstBody), body.firstBody, bodies);
     QVector<int> operands=historyOperands(body);
     // La ripetizione della funzione ricostruisce target e utensile dagli
     // operandi della funzione originale, prima di ripetere lo strumento.

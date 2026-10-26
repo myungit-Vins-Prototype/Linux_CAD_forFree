@@ -88,7 +88,7 @@ void documentSketchReferenceNameTests() {
                 "Pierce conserva nome topologico distinto dall'etichetta e appoggio assente resta assente");
         QDataStream header(bytes);
         header.skipRawData(4); quint16 version = 0; header >> version;
-        require(version == 54, "nuovi nomi protetti dal formato 54");
+        require(version == kDocumentFormatVersion, "nomi protetti dal formato corrente");
         header.skipRawData(1); quint32 size = 0; header >> size;
         definition = qUncompress(bytes.mid(11, size));
     }
@@ -102,7 +102,7 @@ void documentSketchReferenceNameTests() {
         qToBigEndian<quint32>(0x7ffffffe, corrupt.data() + at);
         DocumentState destination;
         const auto identity = destination.version.documentId;
-        require(!decodeDocument(documentReadFixture(corrupt, 54), destination).isEmpty()
+        require(!decodeDocument(documentReadFixture(corrupt, kDocumentFormatVersion), destination).isEmpty()
                 && destination.version.documentId == identity && destination.sketches.isEmpty(),
                 "nome topologico malformato rifiutato senza stato parziale");
     }

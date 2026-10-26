@@ -53,6 +53,8 @@ void buildBody(ExtrusionObject &body, int index, const QVector<SketchObject> &sk
         for (const auto &feature : bodies) body.featureId = std::max(body.featureId, feature.featureId + 1);
     }
     bool usedSnapshot = body.cachedGeometry && body.forgeBody;
+    // La madre ricrea anche i risultati condivisi dai corpi derivati.
+    if (body.feature == BodyFeature::Pattern && body.patternComponent == 0) usedSnapshot = false;
     for (int sketch : sketchesOf(body)) if (sketch >= 0 && sketch < sketches.size() && !sketches.at(sketch).supportError.isEmpty()) usedSnapshot = false;
     // Le versioni precedenti potevano salvare come raccordo riuscito una
     // booleana no-op, identica alla base. Non perpetuare quel falso
@@ -135,6 +137,7 @@ void buildGeometryImpl(ExtrusionObject &body, int index, const QVector<SketchObj
     body.error.clear();
     body.notice.clear();
     body.forgeBody.reset();
+    body.patternResults.clear();
     body.curve.reset();
     body.curves.clear();
     body.datumValid = false;
@@ -593,6 +596,19 @@ void buildGeometryImpl(ExtrusionObject &body, int index, const QVector<SketchObj
             return;
         }
         case BodyFeature::Pattern: {
+            if (body.patternComponent > 0) {
+                const auto *source = operand(body.firstBody);
+                if (!source || source->feature != BodyFeature::Pattern || !source->error.isEmpty()
+                    || body.patternComponent - 1 >= source->patternResults.size()
+                    || !source->patternResults.at(body.patternComponent - 1)
+                    || source->patternResults.at(body.patternComponent - 1) == source->forgeBody) {
+                    body.error = QStringLiteral("La componente %1 della ripetizione non esiste piu'.").arg(body.patternComponent + 1);
+                    return;
+                }
+                body.forgeBody = source->patternResults.at(body.patternComponent - 1);
+                body.solid = !body.forgeBody->isSheet();
+                return;
+            }
             const ExtrusionObject *base = operand(body.firstBody);
             if (!base || !isShapeBody(*base)) {
                 body.error = QStringLiteral("Il corpo da ripetere non esiste piu' o non ha geometria.");
@@ -634,9 +650,33 @@ void buildGeometryImpl(ExtrusionObject &body, int index, const QVector<SketchObj
                         body.error = QStringLiteral("La ripetizione della funzione vale per un'unione, una differenza o un'estrusione o rivoluzione che si unisce o sottrae.");
                     return;
                 }
-                body.forgeBody = ForgeCad::forgePatternFeature(target, tool, operation, placements, &body.error);
+                body.forgeBody = ForgeCad::forgePatternFeature(target, tool, operation, placements, &body.error, !body.pattern.excluded.contains(0));
             } else {
-                body.forgeBody = ForgeCad::forgePattern(base->forgeBody, placements, body.pattern.kind != 2 || body.pattern.keepOriginal, &body.error);
+                body.forgeBody = ForgeCad::forgePattern(base->forgeBody, placements, (body.pattern.kind != 2 || body.pattern.keepOriginal) && !body.pattern.excluded.contains(0), &body.error);
+            }
+            if (body.forgeBody && body.patternComponent == 0) {
+                body.patternResults = ForgeCad::forgePatternComponents(body.forgeBody, &body.error);
+                // Per copie disgiunte gli slot seguono i numeri originali,
+                // inclusi i buchi delle esclusioni: le lavorazioni su un'altra
+                // occorrenza non vengono spostate alla copia successiva.
+                if (!body.pattern.featureOnly && !body.patternResults.isEmpty()) {
+                    QString splitError;
+                    const int perInstance = ForgeCad::forgePatternComponents(base->forgeBody, &splitError).size();
+                    const int total = body.pattern.kind == 2 ? 2 : body.pattern.count * (body.pattern.kind == 0 ? body.pattern.count2 : 1);
+                    QVector<int> active;
+                    for (int i = 0; i < total; ++i)
+                        if (!body.pattern.excluded.contains(i)
+                            && (i != 0 || body.pattern.kind != 2 || body.pattern.keepOriginal)) active.append(i);
+                    if (perInstance > 0 && body.patternResults.size() == perInstance * active.size()) {
+                        QVector<ForgeCad::ForgeBody> resultSlots(total * perInstance);
+                        int part = 0;
+                        for (int occurrence : active)
+                            for (int c = 0; c < perInstance; ++c) resultSlots[occurrence * perInstance + c] = body.patternResults.at(part++);
+                        body.patternResults = std::move(resultSlots);
+                    }
+                }
+                body.forgeBody.reset();
+                for (const auto &part : body.patternResults) if (part) { body.forgeBody = part; break; }
             }
             body.solid = body.forgeBody && !body.forgeBody->isSheet();
             return;
@@ -708,14 +748,14 @@ void configurePatternInstances(ExtrusionObject &body, int index, const QVector<S
                                       const QVector<ExtrusionObject> &bodies) {
     body.display.instancedBase.reset();
     body.display.instanceTransforms.clear();
-    if (body.operation >= 0 || body.feature != BodyFeature::Pattern || body.pattern.featureOnly
+    if (body.operation >= 0 || body.feature != BodyFeature::Pattern || body.patternComponent >= 0 || body.pattern.featureOnly
         || body.firstBody < 0 || body.firstBody >= index || body.firstBody >= bodies.size()) return;
     const BodyDisplay &base = bodies.at(body.firstBody).display;
     if (base.vertices.isEmpty()) return;
     std::vector<ForgeCad::Kernel::Transform3> placements;
     QString error;
     if (!ForgeCad::patternPlacements(body.pattern, index, sketches, bodies, placements, &error)) return;
-    const bool keepOriginal = body.pattern.kind != 2 || body.pattern.keepOriginal;
+    const bool keepOriginal = (body.pattern.kind != 2 || body.pattern.keepOriginal) && !body.pattern.excluded.contains(0);
     QVector<QMatrix4x4> transforms;
     if (keepOriginal) transforms.append(QMatrix4x4());
     for (const ForgeCad::Kernel::Transform3 &t : placements) {

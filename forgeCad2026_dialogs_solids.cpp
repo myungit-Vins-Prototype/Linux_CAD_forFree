@@ -322,12 +322,17 @@ bool scaleDialog(QWidget *parent, CadViewport *viewport, const QString &title, i
 bool patternDialog(QMainWindow *window, CadViewport *viewport, const QString &title, int replaced, const ExtrusionObject &initial,
                           const std::function<QString(const ExtrusionObject &)> &apply) {
     const QVector<ExtrusionObject> &bodies = viewport->extrusions();
+    ExtrusionObject patternInitial = initial;
+    if (initial.patternComponent > 0 && initial.firstBody >= 0 && initial.firstBody < bodies.size()) {
+        replaced = initial.firstBody;
+        patternInitial = bodies.at(replaced);
+    }
     const QVector<int> candidates = viewport->resultBodiesBefore(replaced);
     if (candidates.isEmpty()) {
         QMessageBox::information(window, title, QStringLiteral("Nella scena non ci sono corpi da ripetere."));
         return false;
     }
-    ExtrusionObject definition = initial;
+    ExtrusionObject definition = patternInitial;
     definition.feature = BodyFeature::Pattern;
     definition.operation = -1;
     PatternParameters &p = definition.pattern;
@@ -410,6 +415,11 @@ bool patternDialog(QMainWindow *window, CadViewport *viewport, const QString &ti
     form->addRow(QString(), flipBox2);
     form->addRow(QStringLiteral("Istanze 2:"), countBox2);
     form->addRow(QStringLiteral("Passo 2:"), spacingBox2);
+    auto *occurrences = new QListWidget(&dialog);
+    occurrences->setObjectName(QStringLiteral("patternOccurrences"));
+    occurrences->setMaximumHeight(150);
+    occurrences->setToolTip(QStringLiteral("Togli la spunta per escludere un'occorrenza; rimettila per ripristinarla."));
+    form->addRow(QStringLiteral("Occorrenze attive:"), occurrences);
     auto *status = new FunctionMessage(&dialog);
     status->setMinimumWidth(280);
     form->addRow(status);
@@ -428,6 +438,7 @@ bool patternDialog(QMainWindow *window, CadViewport *viewport, const QString &ti
     };
     const auto current = [&] {
         ExtrusionObject d = definition;
+        d.patternComponent = -1; // anteprima di tutte le occorrenze
         d.firstBody = candidates.at(bodyBox->currentIndex());
         d.pattern.kind = kindBox->currentIndex();
         d.pattern.featureOnly = whatBox->currentIndex() == 1;
@@ -464,6 +475,20 @@ bool patternDialog(QMainWindow *window, CadViewport *viewport, const QString &ti
         refButton->setText(text(0));
         refButton2->setText(text(1));
         const bool grid = kind == 0 && secondBox->isChecked();
+        {
+            const QSignalBlocker blocker(occurrences);
+            occurrences->clear();
+            const qint64 total = kind == 2 ? 2 : qint64(countBox->value()) * (grid ? countBox2->value() : 1);
+            if (total <= 501) for (int i = 0; i < total; ++i) {
+                if (kind == 2 && i == 0 && !keepBox->isChecked() && whatBox->currentIndex() == 0) continue;
+                auto *item = new QListWidgetItem(i == 0 ? QStringLiteral("1 — originale")
+                    : grid ? QStringLiteral("%1 — riga %2, colonna %3").arg(i + 1).arg(i / countBox->value() + 1).arg(i % countBox->value() + 1)
+                           : QStringLiteral("%1").arg(i + 1), occurrences);
+                item->setData(Qt::UserRole, i);
+                item->setFlags(item->flags() | Qt::ItemIsUserCheckable);
+                item->setCheckState(p.excluded.contains(i) ? Qt::Unchecked : Qt::Checked);
+            }
+        }
         form->setRowVisible(flipBox, kind != 2);
         form->setRowVisible(countBox, kind != 2);
         form->setRowVisible(spacingBox, kind == 0);
@@ -486,6 +511,12 @@ bool patternDialog(QMainWindow *window, CadViewport *viewport, const QString &ti
         }
         scope->request(current());
     };
+    QObject::connect(occurrences, &QListWidget::itemChanged, &dialog, [&](QListWidgetItem *item) {
+        const int occurrence = item->data(Qt::UserRole).toInt();
+        p.excluded.removeAll(occurrence);
+        if (item->checkState() == Qt::Unchecked) p.excluded.append(occurrence);
+        refresh();
+    });
     picker.changed = refresh;
     picker.message = setStatus;
     picker.starting = [&] { active = -1; };

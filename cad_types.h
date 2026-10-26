@@ -482,7 +482,7 @@ struct SketchPathRef {
 };
 
 // Ripetizione (BodyFeature::Pattern) del corpo `firstBody`; le copie si
-// uniscono al corpo in un solo body. Tipi:
+// formano corpi distinti quando disgiunte. Tipi:
 //  - 0 lineare: `count` istanze lungo la direzione di refs[0] ogni `spacing` e,
 //    se count2 > 1, `count2` lungo refs[1] ogni `spacing2` (griglia);
 //  - 1 circolare: `count` istanze attorno all'asse refs[0]; `angle` (gradi)
@@ -508,6 +508,9 @@ struct PatternParameters {
     bool flip = false, flip2 = false;
     bool keepOriginal = true;
     bool featureOnly = false;
+    // Numeri delle occorrenze escluse: 0 originale, 1..500 copie; la griglia
+    // percorre prima la direzione 1. I numeri restano stabili cambiando il passo.
+    QVector<int> excluded;
 };
 
 // Spostamento di un corpo (BodyFeature::Transform): prima la rotazione di
@@ -774,6 +777,10 @@ struct ExtrusionObject {
     ForgeCad::ForgeCurve curve;  // funzioni curva (Helix, ProjectedCurve): la curva esatta (la prima)
     // ProjectedCurve: tutte le curve (curves.first() == curve); non si salva.
     QVector<ForgeCad::ForgeCurve> curves;
+    // Ripetizione: -1 risultato aggregato storico, 0 primo risultato;
+    // >0 risultato derivato, con firstBody che indica la ripetizione madre.
+    int patternComponent = -1;
+    QVector<ForgeCad::ForgeBody> patternResults; // transitorio, ricostruito dalla madre
     ForgeCad::ForgeBody forgeBody;
     QString error;
     // Esito non bloccante del calcolo (scarti della superficie di
