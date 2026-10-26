@@ -146,12 +146,12 @@ QString prepareDrawingEditorModel(DocumentState &document,DrawingEditorModel &mo
         QHash<quint64,quint64> parents;
         for(int index=0;index<document.extrusions.size();++index){const auto &feature=document.extrusions[index];
             if(!feature.modelBodyId||feature.suppressed||!feature.error.isEmpty()||!feature.forgeBody)continue;
-            for(int operand:hiddenOperands(feature))if(operand>=0&&operand<index){const auto id=document.extrusions[operand].modelBodyId;
+            for(int operand:hiddenOperands(feature,document.extrusions))if(operand>=0&&operand<index){const auto id=document.extrusions[operand].modelBodyId;
                 if(id&&id!=feature.modelBodyId&&!parents.contains(id))parents[id]=feature.modelBodyId;}}
         const auto root=[&](quint64 id){QSet<quint64> seen;while(parents.contains(id)){require(!seen.contains(id),QStringLiteral("Dipendenze cicliche dei corpi."));seen.insert(id);id=parents.value(id);}return id;};
         DrawingEditorModel prepared;prepared.snapshot.version=document.version;QVector<quint64> ids;QHash<quint64,quint64> tips;
         for(const auto &body:document.modelBodies){if(root(body.id)!=body.id)continue;const int index=modelBodyTipIndex(document,body.id);
-            if(index<0||!isShapeBody(document.extrusions[index]))continue;
+            if(index<0||!isShapeBody(document.extrusions[index])||isExposedPatternAggregate(index,document.extrusions))continue;
             const auto &feature=document.extrusions[index];
             ids.append(feature.featureId);tips[body.id]=feature.featureId;
             prepared.choices.append({feature.featureId,body.name.isEmpty()?feature.name:body.name});}
