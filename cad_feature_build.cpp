@@ -54,7 +54,7 @@ void buildBody(ExtrusionObject &body, int index, const QVector<SketchObject> &sk
     }
     bool usedSnapshot = body.cachedGeometry && body.forgeBody;
     // La madre ricrea anche i risultati condivisi dai corpi derivati.
-    if (body.feature == BodyFeature::Pattern && body.patternComponent == 0) usedSnapshot = false;
+    if (body.feature == BodyFeature::Pattern && body.patternComponent <= 0) usedSnapshot = false;
     for (int sketch : sketchesOf(body)) if (sketch >= 0 && sketch < sketches.size() && !sketches.at(sketch).supportError.isEmpty()) usedSnapshot = false;
     // Le versioni precedenti potevano salvare come raccordo riuscito una
     // booleana no-op, identica alla base. Non perpetuare quel falso
@@ -601,7 +601,7 @@ void buildGeometryImpl(ExtrusionObject &body, int index, const QVector<SketchObj
                 if (!source || source->feature != BodyFeature::Pattern || !source->error.isEmpty()
                     || body.patternComponent - 1 >= source->patternResults.size()
                     || !source->patternResults.at(body.patternComponent - 1)
-                    || source->patternResults.at(body.patternComponent - 1) == source->forgeBody) {
+                    || (source->patternComponent == 0 && source->patternResults.at(body.patternComponent - 1) == source->forgeBody)) {
                     body.error = QStringLiteral("La componente %1 della ripetizione non esiste piu'.").arg(body.patternComponent + 1);
                     return;
                 }
@@ -654,7 +654,7 @@ void buildGeometryImpl(ExtrusionObject &body, int index, const QVector<SketchObj
             } else {
                 body.forgeBody = ForgeCad::forgePattern(base->forgeBody, placements, (body.pattern.kind != 2 || body.pattern.keepOriginal) && !body.pattern.excluded.contains(0), &body.error);
             }
-            if (body.forgeBody && body.patternComponent == 0) {
+            if (body.forgeBody && body.patternComponent <= 0) {
                 body.patternResults = ForgeCad::forgePatternComponents(body.forgeBody, &body.error);
                 // Per copie disgiunte gli slot seguono i numeri originali,
                 // inclusi i buchi delle esclusioni: le lavorazioni su un'altra
@@ -675,8 +675,12 @@ void buildGeometryImpl(ExtrusionObject &body, int index, const QVector<SketchObj
                         body.patternResults = std::move(resultSlots);
                     }
                 }
-                body.forgeBody.reset();
-                for (const auto &part : body.patternResults) if (part) { body.forgeBody = part; break; }
+                // I consumatori dei documenti precedenti al codec55 usano
+                // l'intero aggregato, inclusi i suoi nomi topologici.
+                if (body.patternComponent == 0) {
+                    body.forgeBody.reset();
+                    for (const auto &part : body.patternResults) if (part) { body.forgeBody = part; break; }
+                }
             }
             body.solid = body.forgeBody && !body.forgeBody->isSheet();
             return;

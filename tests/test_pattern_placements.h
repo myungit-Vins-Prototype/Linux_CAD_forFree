@@ -203,6 +203,72 @@ void patternResultTests() {
             require(other.resultBodiesBefore(-1).size() == (kind == 0 ? 7 : kind == 1 ? 3 : 1), "numero copie dopo esclusione per tipo");
         }
     }
+    // Una ripetizione storica puo' alimentare altre feature come aggregato.
+    // La sua separazione visiva non deve dimezzare l'operando della scala.
+    {
+        DocumentState legacy;
+        ExtrusionObject base; base.feature=BodyFeature::Primitive;
+        base.primitive.kind=PrimitiveKind::Box;
+        base.primitive.size[0]=2; base.primitive.size[1]=3; base.primitive.size[2]=4;
+        base.primitive.origin[0]=5; base.name="Base legacy";
+        ExtrusionObject mirror; mirror.feature=BodyFeature::Pattern; mirror.firstBody=0;
+        mirror.pattern.kind=2; mirror.name="Specchio legacy";
+        GeometryRef plane; plane.kind=1; plane.index=2; mirror.pattern.refs={plane};
+        ExtrusionObject scale; scale.feature=BodyFeature::Scale; scale.firstBody=1;
+        scale.scaleFactor=2; scale.name="Scala aggregato";
+        legacy.extrusions={base,mirror,scale};
+        CadViewport view; view.loadDocument(legacy);
+        const auto verify=[&] {
+            int root=-1,scaled=-1; QVector<int> children;
+            const auto &bodies=view.extrusions();
+            for(int i=0;i<bodies.size();++i) {
+                if(bodies[i].name==mirror.name) root=i;
+                if(bodies[i].name==scale.name) scaled=i;
+            }
+            require(root>=0 && scaled>root,"madre e scala storiche conservate");
+            for(int i=0;i<bodies.size();++i)
+                if(bodies[i].feature==BodyFeature::Pattern && bodies[i].patternComponent>0 && bodies[i].firstBody==root) children.append(i);
+            require(children.size()==2 && children[0]==root+1 && children[1]==root+2 && scaled>children.last(),
+                    "componenti legacy subito dopo la madre e prima dei consumatori");
+            require(bodies[root].patternComponent==-1 && bodies[scaled].firstBody==root,
+                    "consumatore storico mantiene il riferimento all'aggregato");
+            require(bodies[scaled].error.isEmpty() && bodies[scaled].forgeBody
+                    && std::abs(massProperties(*bodies[scaled].forgeBody).volume-384)<1e-8,
+                    "scala storica riceve entrambe le copie");
+            view.setStoryboardPosition(view.storyboard().size());
+            require(view.resultBodiesBefore(-1)==QVector<int>{scaled},"scala aggregata consuma tutti i risultati separati");
+            view.setStoryboardPosition(view.storyboardIndex(false,root)+1);
+            require(view.resultBodiesBefore(-1)==children,"rollback dopo la madre include tutti i risultati");
+            for (int child : children)
+                require(view.extrusions()[child].visible && !view.extrusions()[child].display.vertices.isEmpty(),
+                        "risultati visibili e mesh pronte anche dopo rigenerazioni ripetute");
+            require(bodies[children[0]].modelBodyId!=bodies[children[1]].modelBodyId,"identita' separate nel rollback");
+            view.setStoryboardPosition(view.storyboard().size());
+        };
+        require(view.rebuildAllFeatures()==0,"rigenerazione storia legacy con consumatori"); verify();
+        require(view.rebuildAllFeatures()==0,"seconda rigenerazione senza duplicazioni"); verify();
+        QByteArray bytes; require(encodeDocument(view.currentDocument(),bytes).isEmpty(),"salva aggregato e risultati legacy");
+        DocumentState decoded; require(decodeDocument(bytes,decoded).isEmpty(),"legge aggregato e risultati legacy");
+        view.loadDocument(decoded); verify();
+        require(view.rebuildAllFeatures()==0,"rigenera dopo riapertura legacy"); verify();
+        view.undo(); verify(); view.redo(); verify();
+        int root=-1, child=-1;
+        for(int i=0;i<view.extrusions().size();++i) {
+            if(view.extrusions()[i].name==mirror.name) root=i;
+            if(view.extrusions()[i].patternComponent==2) child=i;
+        }
+        const auto survivingId=view.extrusions()[child].modelBodyId;
+        auto changed=view.extrusions()[root]; changed.pattern.excluded={0};
+        require(view.updateBody(root,changed).isEmpty(),"esclude originale legacy senza cambiare consumatori");
+        view.setStoryboardPosition(view.storyboardIndex(false,root)+1);
+        auto tips=view.resultBodiesBefore(-1);
+        require(tips.size()==1 && view.extrusions()[tips.first()].modelBodyId==survivingId,
+                "originale escluso: una sola copia, nessun aggregato duplicato, ID superstite stabile");
+        require(!view.extrusions()[root].visible,"aggregato legacy nascosto anche se escluso il primo risultato");
+        view.setStoryboardPosition(view.storyboard().size());
+        changed=view.extrusions()[root]; changed.pattern.excluded.clear();
+        require(view.updateBody(root,changed).isEmpty(),"ripristina originale legacy"); verify();
+    }
     // Solidi collegati si uniscono; le shell delle cavita' restano nel solido.
     QString error;
     auto outer = std::make_shared<const Body>(makeBox(Frame3(), 6,6,6));
