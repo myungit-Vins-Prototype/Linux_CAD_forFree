@@ -1,0 +1,146 @@
+{
+  "date": "2026-10-26",
+  "status": "implemented_and_verified_on_linux",
+  "contract": "one mirror/pattern story event, separate ModelBody results",
+  "legacy_aggregate_contract": "preserved, no automatic conversion",
+  "branches": {
+    "dev": {
+      "app_path": "/home/myungit/Linux_CAD_forFree/forgecad-linux-solver/forgecad",
+      "app_sha256": "41ca6bd7470950604f8e87d1ca01d4904ff4af982e59711710f39f535bd43987",
+      "runner_sha256": "e8abe70371b58b7282c9e0b0c6bfee7c5baa6f3f788e186141ebc66b7870cb21",
+      "sources": {
+        "cad_model_history.h": "f2d69beba6ed09a305ec22857583d8dfc0e1efcba704f71bb5d461ffee3d3dc3",
+        "cad_model_history.cpp": "153ed392ab18f219673e55376e43028c0812a7f6ee36053b07d35d721a652da0",
+        "forgeCad2026_gui.cpp": "339ac229b60453dda14630a676b2aa0aa800ca167d4fba6b2335174226a2dee4",
+        "forgeCad2026_viewport_document.cpp": "6e3a9e20740bb37afd0bdb3450d8743b8bcf9615b240b6b42d8618be0dca8359",
+        "tests/test_pattern_history_repair.h": "81d061720576ebbbb01ba128385e883e4472934b3da773dc8735e8677e003620",
+        "tests/test_geometry_refs.cpp": "574baea8d6ae0b994a4df97e3580b1484ce16132481ccf0cfda3b828140a4a95",
+        "tests/test_viewport.cpp": "85961ed053620f2a46fac693df8585d1a62086b695e61204743b7ca0146e4878",
+        "CMakeLists.txt": "cf781a0d2ff87aef461d51c36dc64ecf1bb7d6e5ae704102130ab4289ee2f9e9",
+        "tools/generate_architecture.py": "9059c8cbb248d2001016f68a0802f7e43212841c7bd65deda8c6a72f80dbec0d"
+      },
+      "test_count": 30,
+      "test_seconds": 6.64,
+      "architecture": {
+        "files": 496,
+        "edges": 6744,
+        "units": 235
+      }
+    },
+    "main": {
+      "app_path": "/tmp/forgecad-pattern-main-build-20261026/forgecad",
+      "app_sha256": "7c853fdb19262c2ac533cbd2f288de372aca9df661424d32c2befae17fcf3cb4",
+      "runner_sha256": "ba0992803467361f620bf11d94c9b527b76723b180ffb901c6f592ecdaa8ba9a",
+      "sources": {
+        "cad_model_history.h": "f2d69beba6ed09a305ec22857583d8dfc0e1efcba704f71bb5d461ffee3d3dc3",
+        "cad_model_history.cpp": "153ed392ab18f219673e55376e43028c0812a7f6ee36053b07d35d721a652da0",
+        "forgeCad2026_gui.cpp": "339ac229b60453dda14630a676b2aa0aa800ca167d4fba6b2335174226a2dee4",
+        "forgeCad2026_viewport_document.cpp": "6d5cccd7600f47a51688df641f00156df8e455d66f9c92414e8c062754b74a93",
+        "tests/test_pattern_history_repair.h": "81d061720576ebbbb01ba128385e883e4472934b3da773dc8735e8677e003620",
+        "tests/test_geometry_refs.cpp": "574baea8d6ae0b994a4df97e3580b1484ce16132481ccf0cfda3b828140a4a95",
+        "tests/test_viewport.cpp": "e3242f7b0de9381f2bf4d3704fc9703651fb8d4d3439bec7864ca322edd1b0f5",
+        "CMakeLists.txt": "67771eff6b1118cdf1ec57e70fb958b9842ea8534c9c8ffdd5e318eceff14ca0",
+        "tools/generate_architecture.py": "97ebcbb060b567a7432df28175342f75656de21e4b4ab7c9df73a7fc039e9d81"
+      },
+      "test_count": 29,
+      "test_seconds": 7.61,
+      "architecture": {
+        "files": 470,
+        "edges": 6592,
+        "units": 230
+      }
+    }
+  },
+  "qa": {
+    "dev-old": {
+      "physical_records": 31,
+      "logical_feature_events": 31,
+      "derived_records": 0,
+      "derived_story_rows": 0,
+      "mirror_story_rows": 1,
+      "rebuild_errors": 0,
+      "preview_shells": [
+        2,
+        2,
+        2
+      ],
+      "frame_changed_pixels": [
+        0,
+        0,
+        0
+      ],
+      "both_vs_mirrored_only_pixels": 335967
+    },
+    "dev-new": {
+      "physical_records": 33,
+      "logical_feature_events": 32,
+      "derived_records": 1,
+      "derived_story_rows": 0,
+      "mirror_story_rows": 1,
+      "rebuild_errors": 0,
+      "preview_shells": [
+        2,
+        2,
+        2
+      ],
+      "frame_changed_pixels": [
+        0,
+        0,
+        0
+      ],
+      "both_vs_mirrored_only_pixels": 335822
+    },
+    "main-old": {
+      "physical_records": 31,
+      "logical_feature_events": 31,
+      "derived_records": 0,
+      "derived_story_rows": 0,
+      "mirror_story_rows": 1,
+      "rebuild_errors": 0,
+      "preview_shells": [
+        2,
+        2,
+        2
+      ],
+      "frame_changed_pixels": [
+        0,
+        0,
+        0
+      ],
+      "both_vs_mirrored_only_pixels": 335966
+    },
+    "main-new": {
+      "physical_records": 33,
+      "logical_feature_events": 32,
+      "derived_records": 1,
+      "derived_story_rows": 0,
+      "mirror_story_rows": 1,
+      "rebuild_errors": 0,
+      "preview_shells": [
+        2,
+        2,
+        2
+      ],
+      "frame_changed_pixels": [
+        0,
+        0,
+        0
+      ],
+      "both_vs_mirrored_only_pixels": 335816
+    }
+  },
+  "input_sha256": {
+    "old_checkin": "4b10f45f742ab0a961b323ebdc6e2cb772ef5c02ab67e2ee2bf89bc40f6ddfd9",
+    "new_checkin": "e82737319a26c6b2e863ae10b28b2389eb7e1c2bf37c6264aca98621e8809cf2",
+    "working_file": "85feab827b608cf66d08069d18d1a7faa94e45ae959b5e77f1f18c1e4f2bdba2"
+  },
+  "limits": [
+    "No macOS build performed",
+    "No installed desktop binary replaced",
+    "No push",
+    "No user CAD/archive/session writes",
+    "No performance benchmark in this correction",
+    "QA uses native xcb Mesa Intel UHD P630, no CUDA renderer test"
+  ],
+  "publication_scope": "Local commits of the common history fix; experimental kernel optimizations excluded"
+}

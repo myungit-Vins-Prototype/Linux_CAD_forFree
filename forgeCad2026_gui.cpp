@@ -4652,6 +4652,7 @@ void PdfWindow::rebuildModelTree() {
     }
     for (int index = 0; index < extrusions.size(); ++index) {
         const ExtrusionObject &body = extrusions.at(index);
+        if (ForgeCad::patternSourceIndex(extrusions, index) != index) continue;
         QString label = body.name;
         const bool reference = body.modelBodyId == 0;
         QTreeWidgetItem *parent = reference || !historyRoot ? referenceRoot : historyRoot;

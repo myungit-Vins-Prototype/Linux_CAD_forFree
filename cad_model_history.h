@@ -12,6 +12,14 @@ namespace ForgeCad {
 void normalizeModelHistory(DocumentState &state);
 void normalizeModelHistory(QVector<ExtrusionObject> &features, QVector<ModelBody> &bodies);
 
+// I risultati separati di una ripetizione appartengono alla stessa operazione.
+int patternSourceIndex(const QVector<ExtrusionObject> &features, int index);
+void remapFeatureBodies(QVector<ExtrusionObject> &features, const std::function<int(int)> &map);
+// Da usare dopo la decodifica completa: sposta anche le cache insieme ai record.
+// Restituisce la mappa vecchio->nuovo, vuota quando l'ordine e' gia' corretto.
+QVector<int> normalizePatternResultOrder(QVector<SketchObject> &sketches, QVector<ExtrusionObject> &features);
+int storyFeatureLimit(const QVector<ExtrusionObject> &features, const QVector<StoryStep> &steps, int position);
+
 // Sequenza unificata: gli schizzi conservano una posizione propria anche
 // quando nessuna lavorazione li usa. Gli indici sono solo viste operative.
 QVector<StoryStep> modelStory(const QVector<SketchObject> &sketches, const QVector<ExtrusionObject> &features);

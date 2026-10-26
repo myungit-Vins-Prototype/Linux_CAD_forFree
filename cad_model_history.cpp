@@ -182,19 +182,93 @@ void normalizeModelHistory(DocumentState &state) {
     normalizeSketchHistory(state.sketches, state.extrusions);
 }
 
+int patternSourceIndex(const QVector<ExtrusionObject> &features, int index) {
+    if (index < 0 || index >= features.size()) return index;
+    const auto &part = features.at(index);
+    const int root = part.firstBody;
+    if (part.feature == BodyFeature::Pattern && part.patternComponent > 0
+        && root >= 0 && root < features.size() && root != index
+        && features.at(root).feature == BodyFeature::Pattern && features.at(root).patternComponent == 0)
+        return root;
+    return index;
+}
+
+void remapFeatureBodies(QVector<ExtrusionObject> &features, const std::function<int(int)> &map) {
+    for (auto &feature : features) {
+        feature.firstBody = map(feature.firstBody);
+        feature.secondBody = map(feature.secondBody);
+        for (int &i : feature.booleanTools) i = map(i);
+        for (int &i : feature.mergeBodies) i = map(i);
+        visitGeometryRefs(feature, [&](GeometryRef &ref, GeometryRefFamily, int) {
+            if (isBodyRef(ref)) ref.index = map(ref.index);
+        });
+    }
+}
+
+QVector<int> normalizePatternResultOrder(QVector<SketchObject> &sketches, QVector<ExtrusionObject> &features) {
+    QVector<QVector<int>> children(features.size());
+    for (int i = 0; i < features.size(); ++i) {
+        const int root = patternSourceIndex(features, i);
+        if (root != i) children[root].append(i);
+    }
+    QVector<int> order;
+    for (int i = 0; i < features.size(); ++i) {
+        if (patternSourceIndex(features, i) != i) continue;
+        order.append(i);
+        auto &parts = children[i];
+        std::stable_sort(parts.begin(), parts.end(), [&](int a, int b) {
+            return features.at(a).patternComponent < features.at(b).patternComponent;
+        });
+        order += parts;
+    }
+    bool changed = false;
+    for (int i = 0; i < order.size(); ++i) if (order.at(i) != i) { changed = true; break; }
+    if (!changed) return {};
+    QVector<int> map(features.size(), -1);
+    QVector<ExtrusionObject> reordered;
+    reordered.reserve(features.size());
+    for (int old : order) { map[old] = reordered.size(); reordered.append(features.at(old)); }
+    const auto mapped = [&](int old) { return old >= 0 ? map.value(old, -1) : old; };
+    remapFeatureBodies(reordered, mapped);
+    remapSketchSupports(sketches, mapped);
+    features = std::move(reordered);
+    return map;
+}
+
+int storyFeatureLimit(const QVector<ExtrusionObject> &features, const QVector<StoryStep> &steps, int position) {
+    if (position < 0 || position >= steps.size()) return features.size();
+    int end = 0;
+    for (int p = 0; p < position; ++p) if (!steps.at(p).sketch) {
+        const int root = steps.at(p).index;
+        int limit = root + 1;
+        while (limit < features.size() && patternSourceIndex(features, limit) == root) ++limit;
+        end = std::max(end, limit);
+    }
+    return end;
+}
+
 QVector<StoryStep> modelStory(const QVector<SketchObject> &sketches, const QVector<ExtrusionObject> &features) {
     QHash<quint64, int> featureIndices;
     for (int i = 0; i < features.size(); ++i) if (features.at(i).featureId) featureIndices.insert(features.at(i).featureId, i);
     QVector<QVector<int>> before(features.size() + 1);
-    for (int s = 0; s < sketches.size(); ++s)
-        before[featureIndices.value(sketches.at(s).beforeFeatureId, features.size())].append(s);
+    for (int s = 0; s < sketches.size(); ++s) {
+        int anchor = featureIndices.value(sketches.at(s).beforeFeatureId, features.size());
+        const int root = patternSourceIndex(features, anchor);
+        if (root != anchor) {
+            // Un vecchio ancoraggio fra madre e risultato resta dopo l'intera
+            // operazione, altrimenti lo schizzo precederebbe il suo appoggio.
+            anchor = root + 1;
+            while (anchor < features.size() && patternSourceIndex(features, anchor) != anchor) ++anchor;
+        }
+        before[anchor].append(s);
+    }
     QVector<StoryStep> result;
     for (int f = 0; f <= features.size(); ++f) {
         std::stable_sort(before[f].begin(), before[f].end(), [&](int a, int b) {
             return sketches.at(a).storyOrder < sketches.at(b).storyOrder;
         });
         for (int s : before.at(f)) result.append({true, s});
-        if (f < features.size()) result.append({false, f});
+        if (f < features.size() && patternSourceIndex(features, f) == f) result.append({false, f});
     }
     return result;
 }
@@ -246,6 +320,8 @@ QString storySketchDependencyError(const QVector<SketchObject> &sketches, const 
             return QStringLiteral("Sequenza della storia non valida.");
         positions[step.index] = i;
     }
+    for (int f = 0; f < features.size(); ++f)
+        if (patternSourceIndex(features, f) != f) fp[f] = fp.at(patternSourceIndex(features, f));
     if (sp.contains(-1) || fp.contains(-1)) return QStringLiteral("La storia deve contenere tutti gli schizzi e le lavorazioni.");
     for (int f = 0; f < features.size(); ++f) for (int s : sketchesOf(features.at(f)))
         if (s >= 0 && s < sp.size() && sp.at(s) >= fp.at(f))

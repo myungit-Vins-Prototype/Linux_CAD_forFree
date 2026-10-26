@@ -134,6 +134,7 @@ public:
 #include "test_display_mesh.h"
 #include "test_mesh_memory.h"
 #include "test_history_preview_mesh.h"
+#include "test_pattern_history_repair.h"
     static void extrusionActionPreconditions() {
         using namespace ForgeCad;
         PdfWindow window;
@@ -10147,6 +10148,15 @@ int main(int argc, char **argv) {
     if(app.arguments().contains(QStringLiteral("--document-recovery"))){
         try{ViewportInteractionTest::documentRecoveryRegressions();}
         catch(const std::exception &e){std::cerr<<e.what()<<std::endl;return 1;}
+        return 0;
+    }
+    if (app.arguments().contains(QStringLiteral("--pattern-legacy-history")) || app.arguments().contains(QStringLiteral("--failed-feature-repair"))
+        || app.arguments().contains(QStringLiteral("--pattern-single-story"))) {
+        try {
+            if (app.arguments().contains(QStringLiteral("--pattern-legacy-history"))) ViewportInteractionTest::legacyPatternHistory();
+            else if (app.arguments().contains(QStringLiteral("--pattern-single-story"))) ViewportInteractionTest::patternSingleStory();
+            else ViewportInteractionTest::failedFeatureRepair();
+        } catch (const std::exception &error) { std::cerr << error.what() << std::endl; return 1; }
         return 0;
     }
     if (app.arguments().contains(QStringLiteral("--pattern-results"))) {

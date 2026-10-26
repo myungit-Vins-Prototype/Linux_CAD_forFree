@@ -180,11 +180,13 @@ void patternResultTests() {
                 [&](const ExtrusionObject &definition) { return gui.createBody(definition, {definition.firstBody}); });
             if (failure) std::rethrow_exception(failure);
             require(gui.resultBodiesBefore(-1).size() == 3 && gui.extrusions()[1].pattern.excluded == QVector<int>{1}, "esclusione dal pannello costruisce tre corpi");
-            // Anche le ripetizioni aggregate dei vecchi documenti si separano
-            // quando viene richiesta la rigenerazione completa.
+            // Rigenerare conserva l'aggregato storico: i suoi consumatori
+            // possono usare bordi/facce distribuiti su tutte le componenti.
             auto legacy = initial; legacy.extrusions.append(repeated);
             gui.loadDocument(legacy);
-            require(gui.rebuildAllFeatures() == 0 && gui.resultBodiesBefore(-1).size() == 4, "rigenera ripetizioni storiche in corpi separati");
+            require(gui.rebuildAllFeatures() == 0 && gui.extrusions().size() == 2
+                    && gui.extrusions()[1].patternComponent == -1 && gui.resultBodiesBefore(-1).size() == 1,
+                    "rigenera ripetizioni storiche senza cambiare la struttura dei risultati");
         }
         // Occorrenze incluse anche in circolare, griglia e specchio.
         for (int kind : {0,1,2}) {

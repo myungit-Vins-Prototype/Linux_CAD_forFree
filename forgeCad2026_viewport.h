@@ -1653,6 +1653,7 @@ private:
     bool spatialSnap_=true,spatialPressed_=false,spatialDragged_=false,spatialHoverValid_=false;
     QPoint spatialPress_;
     bool refPicking_ = false;
+    QSet<int> refPickContextBodies_;  // risultati/operandi prima della feature in riparazione
     QVector<int> pickBodies_;
     int refPickRoles_ = 0;
     int refPickOwner_ = -1;

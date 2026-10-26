@@ -1,0 +1,199 @@
+{
+  "date": "2026-10-26",
+  "input_sha256": {
+    "old_checkin": "4b10f45f742ab0a961b323ebdc6e2cb772ef5c02ab67e2ee2bf89bc40f6ddfd9",
+    "latest_checkin": "e82737319a26c6b2e863ae10b28b2389eb7e1c2bf37c6264aca98621e8809cf2",
+    "working_file": "85feab827b608cf66d08069d18d1a7faa94e45ae959b5e77f1f18c1e4f2bdba2"
+  },
+  "input_unchanged": true,
+  "old_checkin_id": "96178ed1-a35d-4afe-b126-89784b3e3da3",
+  "latest_checkin_id": "1f6bd502-c258-4892-8102-e9efcf6b4f18",
+  "before": {
+    "old_feature_count": 31,
+    "after_rebuild_feature_count": 32,
+    "mirror_shells_before": 2,
+    "mirror_shells_after": 1,
+    "failed_features": [
+      28,
+      29,
+      30
+    ],
+    "regression_tests_failed": 2,
+    "hidden_previous_body_eligible": false
+  },
+  "after": {
+    "legacy_results_contract_preserved": true,
+    "new_patterns_still_separate": true,
+    "repair_keeps_feature_identity": true,
+    "undo_redo_verified": true,
+    "format_changed": false,
+    "native_qa": {
+      "old-after": {
+        "rebuild_failures": 0,
+        "preview_shells": [
+          2,
+          2,
+          2
+        ],
+        "first_vs_recreated_gl_cache_changed_pixels": [
+          0,
+          0,
+          0
+        ],
+        "gl_errors": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "both_vs_mirrored_only_changed_pixels": 335965,
+        "derived_result_labels": 0
+      },
+      "new-after": {
+        "rebuild_failures": 0,
+        "preview_shells": [
+          2,
+          2,
+          2
+        ],
+        "first_vs_recreated_gl_cache_changed_pixels": [
+          0,
+          0,
+          0
+        ],
+        "gl_errors": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "both_vs_mirrored_only_changed_pixels": 335815,
+        "derived_result_labels": 1
+      },
+      "main-old-after": {
+        "rebuild_failures": 0,
+        "preview_shells": [
+          2,
+          2,
+          2
+        ],
+        "first_vs_recreated_gl_cache_changed_pixels": [
+          0,
+          0,
+          0
+        ],
+        "gl_errors": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "both_vs_mirrored_only_changed_pixels": 335966,
+        "derived_result_labels": 0
+      },
+      "main-new-after": {
+        "rebuild_failures": 0,
+        "preview_shells": [
+          2,
+          2,
+          2
+        ],
+        "first_vs_recreated_gl_cache_changed_pixels": [
+          0,
+          0,
+          0
+        ],
+        "gl_errors": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "both_vs_mirrored_only_changed_pixels": 335816,
+        "derived_result_labels": 1
+      }
+    }
+  },
+  "branches": {
+    "development": {
+      "revision": "134f45949b5ec6f238a26ae7ff00212e9fdca2e3",
+      "local_changes": true,
+      "app_sha256": "96261d98283d4fb71e918922dbc973094258d435fdf362a5a4208018ed8fc6ea",
+      "runner_sha256": "ad2ea02260659b980c7fbce2804f424dc64fdb257b2b78967a8719960766c657",
+      "sources_sha256": {
+        "CMakeLists.txt": "52f7aca0ffeb36b970a6435d7873f8f62624658da314ba8fd907d6a274bc717f",
+        "forgeCad2026_gui.cpp": "74bf554ca7f74d11c398192297cff41c9602305ea242e68bd18a8e619c93f941",
+        "forgeCad2026_viewport.h": "dda37c42d1176776e10819b17515a5a200284d3fdd55ff87d7bd75a307b2fee5",
+        "forgeCad2026_viewport_document.cpp": "cd75ee403d926773d5ec38da75a9fcdd8854016c444c42513e34c36677d3af62",
+        "forgeCad2026_viewport_selection.cpp": "f44457f8bd5866ff4f4acd202a93f32bde56508d899029d1ec4dda4d85e1ad21",
+        "tests/test_pattern_history_repair.h": "175aa18dc4740accbd0c07a031fa2b21013bc47ffc11f170d89f5d2fb7431a6c",
+        "tests/test_pattern_placements.h": "379d4fd0c36de45a61c7c0ec9dda23360a0204aba7bf87ea7294029467c9e273",
+        "tests/test_viewport.cpp": "ae17ceb968841f091351cfb4ded6765046e55e428f020c336ea67ec4bfe33a87",
+        "tools/generate_architecture.py": "b876a1934eef59cd711f6f798f094888954329e550a9ff4494f5aad95baab8d4"
+      },
+      "ctest_passed": 28,
+      "ctest_seconds": 6.32,
+      "architecture": {
+        "files": 496,
+        "edges": 6736,
+        "translation_units": 235,
+        "diagnostics": 0,
+        "sites": 80028,
+        "checked_both_directions": 4
+      }
+    },
+    "main": {
+      "revision": "4c484ad3b3b6332cbd993ac94ec72fa57633193a",
+      "local_changes": true,
+      "app_sha256": "ed366abde07538e4713d8ea20a614a90464c59b30776c2c8ae22289625a991c9",
+      "runner_sha256": "c02fa5faa5c6466d903c2f1dfe45d0c2f74c300d1387e54809dc56137e6e1e28",
+      "sources_sha256": {
+        "CMakeLists.txt": "1516183490d4b925f10bf7a30075d1c32f5d688e414c4036d92cf6fd860aa9b9",
+        "forgeCad2026_gui.cpp": "74bf554ca7f74d11c398192297cff41c9602305ea242e68bd18a8e619c93f941",
+        "forgeCad2026_viewport.h": "8bb10fc4d6038083d7053cd51b32ac4183bdcd8d7767a5786a2bab3f4d27c201",
+        "forgeCad2026_viewport_document.cpp": "31d60978a17ef2dca4bda464927d96f8bd69366cfae691688ca39c8dd50d582d",
+        "forgeCad2026_viewport_selection.cpp": "f44457f8bd5866ff4f4acd202a93f32bde56508d899029d1ec4dda4d85e1ad21",
+        "tests/test_pattern_history_repair.h": "175aa18dc4740accbd0c07a031fa2b21013bc47ffc11f170d89f5d2fb7431a6c",
+        "tests/test_pattern_placements.h": "379d4fd0c36de45a61c7c0ec9dda23360a0204aba7bf87ea7294029467c9e273",
+        "tests/test_viewport.cpp": "e64bc271a7348f6e05b22a86eb7471ee0d84e456c0fed135d2d19eebcc30f7c4",
+        "tools/generate_architecture.py": "09925171b51a9fffe0b3c7000dba75e88c4ed1fd5f13d58ec7229c4f85c03b8b"
+      },
+      "ctest_passed": 27,
+      "ctest_seconds": 6.14,
+      "architecture": {
+        "files": 470,
+        "edges": 6584,
+        "translation_units": 230,
+        "diagnostics": 0,
+        "sites": 78876,
+        "checked_both_directions": 4
+      }
+    }
+  },
+  "native_macos_tested": false,
+  "installed_desktop_app_changed": false,
+  "commit_or_push": false,
+  "limits": [
+    "La prima meta assente in anteprima non e stata riprodotta come difetto separato del renderer: B-rep di anteprima prima del fix gia con due shell. Nessun renderer modificato.",
+    "Le voci derivate restano passi interni della storia; etichette/tooltip distinguono risultato e madre, non un raggruppamento cronologico nuovo.",
+    "I riferimenti a occorrenze eliminate non vengono assegnati automaticamente ad altre copie.",
+    "Nessuna correzione automatica di file intermedi gia salvati con conversione parziale dichiarata: verificati vecchio check-in integro e copia nuova aggiustata."
+  ],
+  "superseded_storyboard_representation": "pattern-single-story-2026-10-26.json"
+}
