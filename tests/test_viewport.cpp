@@ -1,4 +1,7 @@
 #include <condition_variable>
+#include "../cad_gpu_broad_phase.h"
+#include "../cad_cuda_tessellation.h"
+#include <QSaveFile>
 // I componenti GUI sono dichiarati negli header e compilati separatamente.
 #include "../forgeCad2026_gui.h"
 #include "../forgeCad2026_viewport.h"
@@ -10034,8 +10037,36 @@ int main(int argc, char **argv) {
     format.setProfile(QSurfaceFormat::CoreProfile); format.setDepthBufferSize(24); format.setStencilBufferSize(8);
     QSurfaceFormat::setDefaultFormat(format);
     QApplication app(argc, argv);
+    if (app.arguments().contains(QStringLiteral("--document-mesh-benchmark"))) {
+        QTemporaryDir isolatedSettings;
+        QSettings::setDefaultFormat(QSettings::IniFormat);
+        QSettings::setPath(QSettings::IniFormat,QSettings::UserScope,isolatedSettings.path());
+        QCoreApplication::setOrganizationName(QStringLiteral("ForgeCADBenchmark"));
+        QCoreApplication::setApplicationName(QStringLiteral("DocumentMesh"));
+        try {
+            if(app.arguments().contains(QStringLiteral("--require-cuda")) && !ForgeCad::cudaTessellationAvailable()) {
+                std::cerr<<"CUDA non disponibile: snapshot GPU saltato"<<std::endl;return 77;
+            }
+            ForgeCad::initializeGeometryAcceleration();
+            const int snapshotIndex=app.arguments().indexOf(QStringLiteral("--mesh-snapshot-dir"));
+            const auto snapshotDirectory=snapshotIndex<0?QString():app.arguments().value(snapshotIndex+1);
+            if(snapshotIndex>=0 && (snapshotDirectory.isEmpty() || snapshotDirectory.startsWith(QStringLiteral("--"))))
+                throw std::runtime_error("specificare la directory degli snapshot numerici");
+            const int index=app.arguments().indexOf(QStringLiteral("--document-mesh-benchmark"));
+            ViewportInteractionTest::documentMeshBenchmark(app.arguments().value(index+1),
+                app.arguments().contains(QStringLiteral("--inventory")),
+                app.arguments().contains(QStringLiteral("--rebuild")),snapshotDirectory);
+        } catch(const std::exception &error){std::cerr<<error.what()<<std::endl;return 1;}
+        return 0;
+    }
     if (app.arguments().contains(QStringLiteral("--lazy-mesh"))) {
         try { ViewportInteractionTest::lazyMeshTests(); }
+        catch(const std::exception &error){std::cerr<<error.what()<<std::endl;return 1;}
+        return 0;
+    }
+    if (app.arguments().contains(QStringLiteral("--document-solver-benchmark"))) {
+        try { documentSolverBenchmark(app.arguments().value(app.arguments().indexOf(QStringLiteral("--document-solver-benchmark"))+1),
+            app.arguments().contains(QStringLiteral("--admissible-targets"))); }
         catch(const std::exception &error){std::cerr<<error.what()<<std::endl;return 1;}
         return 0;
     }

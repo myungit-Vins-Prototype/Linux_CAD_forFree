@@ -17,3 +17,6 @@ void forgecad_cuda_release_surface(void *) {}
 bool forgecad_cuda_evaluate_surface(void *, const double *, std::size_t, double *, double *) {
     return false;
 }
+
+std::size_t forgecad_cuda_idle_bytes() { return 0; }
+void forgecad_cuda_trim_idle() {}

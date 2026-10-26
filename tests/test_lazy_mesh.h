@@ -185,3 +185,101 @@ static void lazyMeshTests() {
     std::cout<<"mesh history="<<count<<" eager_ms="<<times[1][1]<<" lazy_ms="<<times[0][1]
              <<" speedup="<<times[1][1]/times[0][1]<<" tessellations="<<count<<"->1"<<std::endl;
 }
+
+// Snapshot numerico diagnostico, esterno al documento e al timer di apertura.
+// Schema esplicito little-endian, count uint64, float32 e int32. Non e' un
+// nuovo formato CAD e non viene mai riletto dall'applicazione.
+static QString writeDocumentMeshSnapshot(const QString &directory,int index,const BodyDisplay &display) {
+    require(!display.instancedBase,"snapshot numerico: base instanziata annidata non coperta");
+    require(QDir().mkpath(directory),"snapshot mesh: directory non disponibile");
+    const QString path=QDir(directory).filePath(QStringLiteral("feature-%1.fcmesh").arg(index));
+    require(!QFileInfo::exists(path),"snapshot mesh: destinazione gia' esistente");
+    QByteArray bytes;QDataStream stream(&bytes,QIODevice::WriteOnly);
+    stream.setVersion(QDataStream::Qt_6_0);stream.setByteOrder(QDataStream::LittleEndian);
+    stream.setFloatingPointPrecision(QDataStream::SinglePrecision);
+    require(stream.writeRawData("FCMSH001",8)==8,"snapshot mesh: intestazione");
+    const auto vectors=[&](const auto &values) {
+        stream<<quint64(values.size());
+        for(const auto &p:values)stream<<p.x()<<p.y()<<p.z();
+    };
+    const auto integers=[&](const auto &values) {
+        stream<<quint64(values.size());
+        for(int value:values)stream<<qint32(value);
+    };
+    vectors(display.vertices);vectors(display.normals);integers(display.triangleFaces);
+    stream<<quint64(display.edges.size());for(const auto &edge:display.edges)vectors(edge);
+    integers(display.edgeIds);integers(display.faceIds);vectors(display.faceLabelPoints);
+    stream<<quint64(display.faceEdges.size());for(const auto &edges:display.faceEdges)integers(edges);
+    stream<<quint64(display.instanceTransforms.size());
+    for(const auto &matrix:display.instanceTransforms)for(int k=0;k<16;++k)stream<<matrix.constData()[k];
+    require(stream.status()==QDataStream::Ok,"snapshot mesh: serializzazione incompleta");
+    QSaveFile file(path);
+    require(file.open(QIODevice::WriteOnly) && file.write(bytes)==bytes.size() && file.commit(),"snapshot mesh: scrittura incompleta");
+    return path;
+}
+
+// Sonda esplicita su documento reale: sola lettura, firme fuori dal timer.
+static void documentMeshBenchmark(const QString &path, bool inventory, bool rebuild,const QString &snapshotDirectory={}) {
+    using namespace ForgeCad;
+    require(!path.isEmpty(), "specificare un documento per --document-mesh-benchmark");
+    require(!inventory || snapshotDirectory.isEmpty(),"snapshot mesh richiede caricamento completo");
+    DocumentState source;
+    QElapsedTimer timer; timer.start();
+    const QString error=loadDocumentFile(path,source);
+    if(!error.isEmpty()) throw std::runtime_error(error.toStdString());
+    const double readSeconds=timer.nsecsElapsed()/1e9;
+    int cachedBodies=0,cachedMeshes=0;
+    for(const auto &body:source.extrusions) {
+        cachedBodies+=bool(body.forgeBody);
+        cachedMeshes+=body.display.quality>=0;
+    }
+    QJsonObject result{{"features",source.extrusions.size()}, {"sketches",source.sketches.size()},
+        {"cached_bodies",cachedBodies}, {"cached_meshes",cachedMeshes}, {"read_seconds",readSeconds}};
+    result["forced_rebuild"]=rebuild;
+    if(!inventory) {
+        if(rebuild) for(auto &body:source.extrusions) {
+            body.cachedGeometry=false;body.forgeBody.reset();body.display={};
+        }
+        CadViewport view;view.tessellationQuality_=1;
+        timer.restart();view.loadDocument(source);
+        const double loadSeconds=timer.nsecsElapsed()/1e9;
+        result["load_seconds"]=loadSeconds;
+        result["open_seconds"]=readSeconds+loadSeconds;
+        result["gpu_pairs"]=double(gpuBoxPairsProcessed());
+        result["cuda_points"]=double(cudaTessellationPoints());
+        result["cuda_available"]=cudaTessellationAvailable();
+        QJsonArray bodies;
+        qint64 triangles=0;int valid=0,visible=0,prepared=0;
+        for(int i=0;i<view.extrusions_.size();++i) {
+            const auto &body=view.extrusions_[i];
+            const bool drawn=view.isBodyDrawn(i);
+            QJsonObject record{{"index",i}, {"drawn",drawn}, {"error",body.error}};
+            if(body.forgeBody) {
+                ++valid;
+                const auto bytes=Kernel::writeBodyBinary(*body.forgeBody);
+                record["brep_sha256"]=QString::fromLatin1(QCryptographicHash::hash(
+                    QByteArrayView(bytes.data(),qsizetype(bytes.size())),QCryptographicHash::Sha256).toHex());
+            }
+            prepared+=body.display.quality>=0;
+            if(drawn) {
+                ++visible;
+                const auto &d=body.display;
+                triangles+=d.vertices.size()/3;
+                require(d.vertices.size()==d.normals.size(),"mesh: normali incomplete");
+                require(d.vertices.size()%3==0,"mesh: triangoli incompleti");
+                QByteArray mesh;QDataStream stream(&mesh,QIODevice::WriteOnly);
+                stream.setVersion(QDataStream::Qt_6_0);
+                stream << d.vertices << d.normals << d.edges << d.edgeIds << d.faceIds
+                       << d.triangleFaces << d.faceLabelPoints << d.faceEdges << d.instanceTransforms;
+                record["mesh_sha256"]=QString::fromLatin1(QCryptographicHash::hash(mesh,QCryptographicHash::Sha256).toHex());
+                record["triangles"]=double(d.vertices.size()/3);
+                if(!snapshotDirectory.isEmpty())record["numeric_snapshot"]=writeDocumentMeshSnapshot(snapshotDirectory,i,d);
+            }
+            bodies.append(record);
+        }
+        result["bodies"]=bodies;result["valid_bodies"]=valid;
+        result["visible_features"]=visible;result["prepared_meshes"]=prepared;
+        result["visible_triangles"]=double(triangles);
+    }
+    std::cout << QJsonDocument(result).toJson(QJsonDocument::Compact).constData() << std::endl;
+}

@@ -5,6 +5,7 @@
 #include <atomic>
 #include <algorithm>
 #include <cstring>
+#include <cstdlib>
 #include <memory>
 #include <mutex>
 #include <vector>
@@ -51,8 +52,11 @@ __device__ int findSpan(const double *knots, int degree, int poleCount, double t
 }
 
 // Funzioni di base non nulle N_{span-p+k, p}(u) e le loro derivate prime.
-__device__ void basis(const double *knots, int span, double u, int p, double *N, double *dN) {
-    double left[kMax], right[kMax], previous[kMax];
+template<int Degree>
+__device__ void basis(const double *knots, int span, double u, int degree, double *N, double *dN) {
+    constexpr int capacity=Degree<0?kMax:Degree+1;
+    const int p=Degree<0?degree:Degree;
+    double left[capacity], right[capacity], previous[capacity];
     N[0] = 1.0;
     for (int j = 1; j <= p; ++j) {
         left[j] = u - knots[span + 1 - j];
@@ -84,15 +88,17 @@ __device__ void basis(const double *knots, int span, double u, int p, double *N,
     }
 }
 
+template<int DegreeU=-1,int DegreeV=-1>
 __global__ void evaluateKernel(ForgeCudaBSplineSurface s, const double *uv, int count, double *points, double *normals) {
     for (int index = blockIdx.x * blockDim.x + threadIdx.x; index < count; index += blockDim.x * gridDim.x) {
         const double u = uv[2 * index], v = uv[2 * index + 1];
-        const int pu = s.uDegree, pv = s.vDegree;
+        const int pu = DegreeU<0?s.uDegree:DegreeU, pv = DegreeV<0?s.vDegree:DegreeV;
         const int su = findSpan(s.uKnots, pu, s.uPoleCount, u);
         const int sv = findSpan(s.vKnots, pv, s.vPoleCount, v);
-        double nu[kMax], dnu[kMax], nv[kMax], dnv[kMax];
-        basis(s.uKnots, su, u, pu, nu, dnu);
-        basis(s.vKnots, sv, v, pv, nv, dnv);
+        constexpr int capacityU=DegreeU<0?kMax:DegreeU+1,capacityV=DegreeV<0?kMax:DegreeV+1;
+        double nu[capacityU], dnu[capacityU], nv[capacityV], dnv[capacityV];
+        basis<DegreeU>(s.uKnots, su, u, pu, nu, dnu);
+        basis<DegreeV>(s.vKnots, sv, v, pv, nv, dnv);
         double a[3] = {0, 0, 0}, au[3] = {0, 0, 0}, av[3] = {0, 0, 0};
         double w = 0.0, wu = 0.0, wv = 0.0;
         for (int i = 0; i <= pu; ++i) {
@@ -236,12 +242,13 @@ struct Slot {
 struct SlotPool {
     std::mutex mutex;
     std::vector<std::unique_ptr<Slot>> freeSlots;
+    std::size_t idleBytes = 0;
 };
 
 SlotPool &slotPool() {
     // Come prima, la cache resta viva fino al termine del processo. Evita
     // distruttori statici CUDA dopo l'arresto del runtime o con worker attivi;
-    // budget e svuotamento esplicito richiedono una politica separata.
+    // la memoria inattiva e' limitata e puo' essere svuotata esplicitamente.
     static SlotPool *const pool = new SlotPool;
     return *pool;
 }
@@ -252,8 +259,17 @@ std::unique_ptr<Slot> acquireSlot(std::size_t doubles) {
         auto &pool = slotPool();
         std::lock_guard<std::mutex> lock(pool.mutex);
         if (!pool.freeSlots.empty()) {
-            slot = std::move(pool.freeSlots.back());
-            pool.freeSlots.pop_back();
+            // Preferisci il piu' piccolo slot sufficiente, altrimenti cresci
+            // il piu' grande disponibile. Nessuna allocazione sotto il lock.
+            auto best = pool.freeSlots.begin();
+            for (auto it = pool.freeSlots.begin(); it != pool.freeSlots.end(); ++it) {
+                const auto a = (*it)->capacity, b = (*best)->capacity;
+                if ((a >= doubles && (b < doubles || a < b)) ||
+                    (a < doubles && b < doubles && a > b)) best = it;
+            }
+            slot = std::move(*best);
+            pool.freeSlots.erase(best);
+            pool.idleBytes -= 2 * slot->capacity * sizeof(double);
         }
     }
     if (!slot) {
@@ -280,7 +296,12 @@ void releaseSlot(Slot *raw) noexcept {
     try {
         auto &pool = slotPool();
         std::lock_guard<std::mutex> lock(pool.mutex);
-        pool.freeSlots.push_back(std::move(slot));
+        const auto bytes = 2 * slot->capacity * sizeof(double);
+        if (bytes <= kForgeCudaIdleBudget - pool.idleBytes) {
+            pool.freeSlots.push_back(std::move(slot));
+            pool.idleBytes += bytes;
+        }
+        // Slot eccedenti distrutti dopo il rilascio del lock.
     } catch (...) {
         // Se il vettore non puo' crescere, distruggi lo slot gia' sincronizzato
         // fuori dal lock. La restituzione non deve lanciare da un distruttore.
@@ -291,6 +312,23 @@ struct ReturnSlot {
     void operator()(Slot *slot) const noexcept { releaseSlot(slot); }
 };
 
+}
+
+std::size_t forgecad_cuda_idle_bytes() {
+    auto &pool = slotPool();
+    std::lock_guard<std::mutex> lock(pool.mutex);
+    return pool.idleBytes;
+}
+
+void forgecad_cuda_trim_idle() {
+    std::vector<std::unique_ptr<Slot>> retired;
+    auto &pool = slotPool();
+    {
+        std::lock_guard<std::mutex> lock(pool.mutex);
+        retired.swap(pool.freeSlots);
+        pool.idleBytes = 0;
+    }
+    // Distruzione CUDA fuori dal lock; nessun buffer attivo viene toccato.
 }
 
 bool forgecad_cuda_evaluate_surface(void *handle, const double *uv, std::size_t count, double *points, double *normals) {
@@ -306,7 +344,22 @@ bool forgecad_cuda_evaluate_surface(void *handle, const double *uv, std::size_t 
     if (ok) {
         const int block = 128;
         const int grid = int((count + block - 1) / block);
-        evaluateKernel<<<grid, block, 0, slot->stream>>>(device->surface, deviceUV, int(count), deviceOut, deviceOut + 3 * count);
+        // Gradi comuni: array piccoli e cicli a limite noto, senza cambiare
+        // double, ordine delle somme o criterio di singolarita'. Gli altri
+        // gradi conservano il percorso generale fino al grado 15.
+        const auto &surface=device->surface;
+        const char *setting=std::getenv("FORGECAD_CUDA_GENERIC");
+        const char *specialized=std::getenv("FORGECAD_CUDA_SPECIALIZED");
+        // Sperimentale: il confronto hardware non dimostra ancora un guadagno stabile.
+        const bool generic=(setting && std::strcmp(setting,"1")==0)
+            || !(specialized && std::strcmp(specialized,"1")==0);
+        if(!generic && surface.uDegree==1 && surface.vDegree==1)
+            evaluateKernel<1,1><<<grid,block,0,slot->stream>>>(surface,deviceUV,int(count),deviceOut,deviceOut+3*count);
+        else if(!generic && surface.uDegree==2 && surface.vDegree==2)
+            evaluateKernel<2,2><<<grid,block,0,slot->stream>>>(surface,deviceUV,int(count),deviceOut,deviceOut+3*count);
+        else if(!generic && surface.uDegree==3 && surface.vDegree==3)
+            evaluateKernel<3,3><<<grid,block,0,slot->stream>>>(surface,deviceUV,int(count),deviceOut,deviceOut+3*count);
+        else evaluateKernel<><<<grid,block,0,slot->stream>>>(surface,deviceUV,int(count),deviceOut,deviceOut+3*count);
         ok = cudaGetLastError() == cudaSuccess;
     }
     ok = ok && cudaMemcpyAsync(hostOut, deviceOut, 6 * count * sizeof(double), cudaMemcpyDeviceToHost, slot->stream) == cudaSuccess;

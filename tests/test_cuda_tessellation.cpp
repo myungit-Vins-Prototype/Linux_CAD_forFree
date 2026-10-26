@@ -1,6 +1,6 @@
 // Valutazione delle superfici B-spline/NURBS sulla GPU (cuda_support.cu,
 // cad_cuda_tessellation) contro il kernel sulla CPU, e tassellazione con
-// l'acceleratore. Senza GPU CUDA il test lo dice e passa.
+// l'acceleratore. Senza GPU CUDA CTest segnala esplicitamente SKIP.
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
@@ -9,6 +9,8 @@
 #include <vector>
 #include <thread>
 #include <atomic>
+#include <chrono>
+#include <cstring>
 
 #include "cad_cuda_tessellation.h"
 #include "cuda_support.h"
@@ -61,11 +63,79 @@ std::shared_ptr<BSplineSurface> randomSurface(std::mt19937 &rng, int pu, int pv,
 
 }
 
-int main() {
+// Benchmark esplicito: superficie gia' caricata, trasferimenti UV/risultati
+// inclusi; verifica CPU fuori timer. Nessun costo di costruzione nel campione.
+int benchmarkSurfaces() {
+    std::mt19937 rng(20261025);
+    for(int degree:{1,2,3,5})for(bool rational:{false,true}) {
+        const auto surface=randomSurface(rng,degree,degree,rational);
+        auto evaluator=ForgeCad::makeTessellationAccelerator();
+        if(!evaluator)return 1;
+        for(std::size_t count:{std::size_t(64),std::size_t(1024),std::size_t(16384)}) {
+            std::vector<Vec2> uv;uv.reserve(count);
+            for(std::size_t i=0;i<count;++i)
+                uv.emplace_back(2.+3.*double(i)/double(count-1),2.+3.*double((i*37)%count)/double(count-1));
+            std::vector<Vec3> points(count),normals(count);
+            if(!evaluator->evaluate(*surface,uv.data(),count,points.data(),normals.data()))return 1;
+            std::vector<double> samples;
+            for(int repeat=0;repeat<9;++repeat) {
+                const auto start=std::chrono::steady_clock::now();
+                if(!evaluator->evaluate(*surface,uv.data(),count,points.data(),normals.data()))return 1;
+                samples.push_back(std::chrono::duration<double,std::milli>(std::chrono::steady_clock::now()-start).count());
+            }
+            double pointError=0,normalError=0;
+            for(std::size_t i=0;i<count;++i) {
+                const auto expected=surface->point(uv[i][0],uv[i][1]);
+                check(isFinite(points[i])&&isFinite(normals[i]),"benchmark CUDA: risultati finiti");
+                pointError=std::max(pointError,distance(points[i],expected)/std::max(1.,norm(expected)));
+                if(squaredNorm(normals[i])!=0.)try {
+                    normalError=std::max(normalError,distance(normals[i],surface->normal(uv[i][0],uv[i][1])));
+                }catch(const std::exception &){}
+            }
+            check(pointError<1e-12 && normalError<1e-9,"benchmark CUDA: stesso riferimento CPU");
+            std::sort(samples.begin(),samples.end());
+            std::printf("BENCH degree=%d rational=%d count=%zu median_ms=%.9g point_error=%.9g normal_error=%.9g\n",
+                degree,int(rational),count,samples[4],pointError,normalError);
+        }
+    }
+    return failures?1:0;
+}
+
+static void idlePoolTests() {
+    forgecad_cuda_trim_idle();
+    check(forgecad_cuda_idle_bytes()==0,"cache CUDA inizialmente vuota");
+    std::mt19937 rng(20261026);
+    auto surface=randomSurface(rng,1,1,false);
+    auto gpu=ForgeCad::makeTessellationAccelerator();
+    if(!gpu){check(false,"acceleratore pool");return;}
+    const auto evaluate=[&](std::size_t count) {
+        std::vector<Vec2> uv(count,Vec2(.5,.5));
+        std::vector<Vec3> points(count),normals(count);
+        check(gpu->evaluate(*surface,uv.data(),count,points.data(),normals.data()),"valutazione pool");
+        for(const auto &p:points)check(isFinite(p)&&distance(p,surface->point(.5,.5))<1e-10,"pool: punti validi");
+        check(forgecad_cuda_idle_bytes()<=kForgeCudaIdleBudget,"cache entro budget");
+    };
+    evaluate(1024);
+    check(forgecad_cuda_idle_bytes()>0,"slot piccolo riutilizzabile");
+    evaluate(600000); // 76,8 MB tra host e device, oltre il budget inattivo.
+    check(forgecad_cuda_idle_bytes()==0,"slot grande rilasciato");
+    evaluate(1024);
+    forgecad_cuda_trim_idle();
+    check(forgecad_cuda_idle_bytes()==0,"svuotamento cache CUDA");
+}
+
+int main(int argc,char **argv) {
+    bool benchmark=false,requireGpu=false;
+    for(int i=1;i<argc;++i) {
+        benchmark=benchmark||std::strcmp(argv[i],"--benchmark")==0;
+        requireGpu=requireGpu||std::strcmp(argv[i],"--require-gpu")==0;
+    }
     if (!ForgeCad::cudaTessellationAvailable()) {
         std::printf("GPU CUDA non disponibile: test saltato\n");
-        return 0;
+        return benchmark||requireGpu?1:77;
     }
+    if(benchmark)return benchmarkSurfaces();
+    idlePoolTests();
     std::unique_ptr<SurfaceBatchEvaluator> gpu = ForgeCad::makeTessellationAccelerator();
     check(gpu != nullptr, "acceleratore creato");
     if (!gpu) return 1;
@@ -75,7 +145,7 @@ int main() {
     std::mt19937 rng(20261002);
     std::vector<std::shared_ptr<BSplineSurface>> surfaces;
     for (int pu : {1, 2, 3, 5, 7, 15})
-        for (int pv : {1, 3, 4})
+        for (int pv : {1, 2, 3, 4})
             for (bool rational : {false, true}) surfaces.push_back(randomSurface(rng, pu, pv, rational));
     double worstPoint = 0.0, worstNormal = 0.0;
     for (const auto &surface : surfaces) {

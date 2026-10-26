@@ -1,0 +1,1611 @@
+{
+  "date": "2026-10-26",
+  "document_sha256": "e0c53c6aeff405c16dcb85660b303590e8fa255b752cc37acb2ab2cbc0b39617",
+  "platform": "Linux-7.3.0-2-cachyos-bore-x86_64-with-glibc2.44",
+  "revision": "6c3f0d8c64ea39eb220f6647d49e5fcaa1644dce",
+  "protocol": "Processi nuovi sequenziali, qualit\u00e01 e rigenerazione completa. Confronto indicizzato con mappa facce/topologia uguale, snapshot fuori timer; non misura framerate o distanza continua delle superfici.",
+  "timing_limit": "Verifica numerica, non benchmark. Generatore architetturale concorrente ai primi processi; tempi diagnostici non utilizzati per accelerazioni.",
+  "position_tolerance_mm": 1e-05,
+  "normal_tolerance": 1e-05,
+  "binary_sha256": {
+    "cpu": "97ed25144be644cc10d4cea05b73abf2ea50bddb720776add513b9305205cd1f",
+    "cuda": "2ea06d4120a3311c2004940871f024613e2d5b0274f219d608b15cd788d1ab9e"
+  },
+  "sources_sha256": {
+    "tests/test_viewport.cpp": "f63e4f872c4df258a4640b9d168e2ee41664473fcdc43668122f0c1fa4022f40",
+    "tests/test_lazy_mesh.h": "fdf1793e3a0c79fb95894cb104b47d3b991f8c749104ac523911109dc1ef1f3f",
+    "cuda_support.cu": "38a871b35ecfcd6ea11c9a771bf2f872eded73ea4971a5e8e993a773b37a38f7",
+    "cad_cuda_tessellation.cpp": "c5fe4a3e7323b8476c2d55b4c10de8e88a5f8d0e511f73406cad6039ee1ec325",
+    "tools/compare_document_mesh_backends.py": "761a65dba55aa74150da6237da519c8608f5263229785340db78fae8c73e0bc3",
+    "CMakeLists.txt": "c00f84564a061915b18636b0f64a1960555568e72668d42cdde6d22308212eda",
+    "tests/test_compare_document_mesh_backends.py": "99af1a316f9affa6dbbac2eeee9be80cd010db0dfb6138334864c3f501f3ce00"
+  },
+  "runs": [
+    {
+      "features": 31,
+      "sketches": 13,
+      "valid_bodies": 16,
+      "visible_features": 1,
+      "visible_triangles": 49853,
+      "cuda_available": false,
+      "cuda_points": 0,
+      "name": "0-cpu",
+      "mode": "cpu",
+      "visible_snapshots": [
+        {
+          "index": 30,
+          "sha256": "e88d4c09078917a37d2dc4f2ce603e320906e04315cafee7bd9cfe0b68331e99"
+        }
+      ]
+    },
+    {
+      "features": 31,
+      "sketches": 13,
+      "valid_bodies": 16,
+      "visible_features": 1,
+      "visible_triangles": 49853,
+      "cuda_available": true,
+      "cuda_points": 90675,
+      "name": "0-cuda-generic",
+      "mode": "cuda-generic",
+      "visible_snapshots": [
+        {
+          "index": 30,
+          "sha256": "ff505c59ea6c22a860890cc1e1400da6ce35460ee24363dceb686478843dbcc1"
+        }
+      ]
+    },
+    {
+      "features": 31,
+      "sketches": 13,
+      "valid_bodies": 16,
+      "visible_features": 1,
+      "visible_triangles": 49853,
+      "cuda_available": true,
+      "cuda_points": 90675,
+      "name": "0-cuda-specialized",
+      "mode": "cuda-specialized",
+      "visible_snapshots": [
+        {
+          "index": 30,
+          "sha256": "ff505c59ea6c22a860890cc1e1400da6ce35460ee24363dceb686478843dbcc1"
+        }
+      ]
+    },
+    {
+      "features": 31,
+      "sketches": 13,
+      "valid_bodies": 16,
+      "visible_features": 1,
+      "visible_triangles": 49853,
+      "cuda_available": true,
+      "cuda_points": 90675,
+      "name": "1-cuda-generic",
+      "mode": "cuda-generic",
+      "visible_snapshots": [
+        {
+          "index": 30,
+          "sha256": "ff505c59ea6c22a860890cc1e1400da6ce35460ee24363dceb686478843dbcc1"
+        }
+      ]
+    },
+    {
+      "features": 31,
+      "sketches": 13,
+      "valid_bodies": 16,
+      "visible_features": 1,
+      "visible_triangles": 49853,
+      "cuda_available": true,
+      "cuda_points": 90675,
+      "name": "1-cuda-specialized",
+      "mode": "cuda-specialized",
+      "visible_snapshots": [
+        {
+          "index": 30,
+          "sha256": "ff505c59ea6c22a860890cc1e1400da6ce35460ee24363dceb686478843dbcc1"
+        }
+      ]
+    },
+    {
+      "features": 31,
+      "sketches": 13,
+      "valid_bodies": 16,
+      "visible_features": 1,
+      "visible_triangles": 49853,
+      "cuda_available": false,
+      "cuda_points": 0,
+      "name": "1-cpu",
+      "mode": "cpu",
+      "visible_snapshots": [
+        {
+          "index": 30,
+          "sha256": "e88d4c09078917a37d2dc4f2ce603e320906e04315cafee7bd9cfe0b68331e99"
+        }
+      ]
+    }
+  ],
+  "comparisons": [
+    {
+      "reference": "0-cpu",
+      "candidate": "0-cuda-generic",
+      "passed": true,
+      "counts_equal": true,
+      "all_brep_visibility_errors_equal": true,
+      "visible": [
+        {
+          "index": 30,
+          "mesh_hash_equal": false,
+          "snapshot_hash_equal": false,
+          "numeric": {
+            "vertices": {
+              "shape_equal": true,
+              "reference_count": 149559,
+              "candidate_count": 149559,
+              "numeric_different_rows": 0,
+              "bitwise_different_rows": 0,
+              "max_distance": 0.0,
+              "rms_distance": 0.0,
+              "max_component": 0.0,
+              "worst_row": 0,
+              "passed": true
+            },
+            "labels": {
+              "shape_equal": true,
+              "reference_count": 19,
+              "candidate_count": 19,
+              "numeric_different_rows": 0,
+              "bitwise_different_rows": 0,
+              "max_distance": 0.0,
+              "rms_distance": 0.0,
+              "max_component": 0.0,
+              "worst_row": 0,
+              "passed": true
+            },
+            "instances": {
+              "shape_equal": true,
+              "reference_count": 0,
+              "candidate_count": 0,
+              "numeric_different_rows": 0,
+              "bitwise_different_rows": 0,
+              "max_distance": 0.0,
+              "rms_distance": 0.0,
+              "max_component": 0.0,
+              "worst_row": null,
+              "passed": true
+            },
+            "normals": {
+              "shape_equal": true,
+              "reference_count": 149559,
+              "candidate_count": 149559,
+              "numeric_different_rows": 23,
+              "bitwise_different_rows": 23,
+              "max_distance": 7.450580596923828e-09,
+              "rms_distance": 6.673820340083433e-11,
+              "max_component": 7.450580596923828e-09,
+              "worst_row": 71035,
+              "passed": true,
+              "reference_zero_normals": 0,
+              "candidate_zero_normals": 0,
+              "zero_mask_equal": true,
+              "max_angle_degrees": 4.2598127208784247e-07
+            },
+            "topology": {
+              "triangle_faces": {
+                "equal": true,
+                "reference_count": 49853,
+                "candidate_count": 49853
+              },
+              "edge_ids": {
+                "equal": true,
+                "reference_count": 43,
+                "candidate_count": 43
+              },
+              "face_ids": {
+                "equal": true,
+                "reference_count": 19,
+                "candidate_count": 19
+              },
+              "face_edges": {
+                "equal": true
+              },
+              "edge_polyline_sizes": {
+                "equal": true
+              }
+            },
+            "edges": {
+              "shape_equal": true,
+              "reference_count": 6199,
+              "candidate_count": 6199,
+              "numeric_different_rows": 0,
+              "bitwise_different_rows": 0,
+              "max_distance": 0.0,
+              "rms_distance": 0.0,
+              "max_component": 0.0,
+              "worst_row": 0,
+              "passed": true
+            },
+            "triangles": {
+              "reference_degenerate": 574,
+              "candidate_degenerate": 574,
+              "degenerate_mask_equal": true,
+              "winding_flips": 0
+            },
+            "passed": true,
+            "covered_faces": [
+              {
+                "face": 0,
+                "triangles": 6255
+              },
+              {
+                "face": 1,
+                "triangles": 1309
+              },
+              {
+                "face": 2,
+                "triangles": 329
+              },
+              {
+                "face": 3,
+                "triangles": 556
+              },
+              {
+                "face": 4,
+                "triangles": 301
+              },
+              {
+                "face": 5,
+                "triangles": 117
+              },
+              {
+                "face": 6,
+                "triangles": 624
+              },
+              {
+                "face": 7,
+                "triangles": 6175
+              },
+              {
+                "face": 8,
+                "triangles": 1309
+              },
+              {
+                "face": 9,
+                "triangles": 329
+              },
+              {
+                "face": 10,
+                "triangles": 556
+              },
+              {
+                "face": 11,
+                "triangles": 301
+              },
+              {
+                "face": 12,
+                "triangles": 117
+              },
+              {
+                "face": 13,
+                "triangles": 1629
+              },
+              {
+                "face": 14,
+                "triangles": 2764
+              },
+              {
+                "face": 15,
+                "triangles": 7366
+              },
+              {
+                "face": 16,
+                "triangles": 7056
+              },
+              {
+                "face": 17,
+                "triangles": 6238
+              },
+              {
+                "face": 18,
+                "triangles": 6522
+              }
+            ],
+            "changed_faces": [
+              {
+                "face": 0,
+                "triangles": 6255,
+                "vertices": {
+                  "shape_equal": true,
+                  "reference_count": 18765,
+                  "candidate_count": 18765,
+                  "numeric_different_rows": 0,
+                  "bitwise_different_rows": 0,
+                  "max_distance": 0.0,
+                  "rms_distance": 0.0,
+                  "max_component": 0.0,
+                  "worst_row": 0,
+                  "passed": true
+                },
+                "normals": {
+                  "shape_equal": true,
+                  "reference_count": 18765,
+                  "candidate_count": 18765,
+                  "numeric_different_rows": 5,
+                  "bitwise_different_rows": 5,
+                  "max_distance": 3.637978807091713e-12,
+                  "rms_distance": 5.938419621990661e-14,
+                  "max_component": 3.637978807091713e-12,
+                  "worst_row": 1545,
+                  "passed": true,
+                  "reference_zero_normals": 0,
+                  "candidate_zero_normals": 0,
+                  "zero_mask_equal": true,
+                  "max_angle_degrees": 2.08440828659722e-10
+                }
+              },
+              {
+                "face": 7,
+                "triangles": 6175,
+                "vertices": {
+                  "shape_equal": true,
+                  "reference_count": 18525,
+                  "candidate_count": 18525,
+                  "numeric_different_rows": 0,
+                  "bitwise_different_rows": 0,
+                  "max_distance": 0.0,
+                  "rms_distance": 0.0,
+                  "max_component": 0.0,
+                  "worst_row": 0,
+                  "passed": true
+                },
+                "normals": {
+                  "shape_equal": true,
+                  "reference_count": 18525,
+                  "candidate_count": 18525,
+                  "numeric_different_rows": 6,
+                  "bitwise_different_rows": 6,
+                  "max_distance": 3.637978807091713e-12,
+                  "rms_distance": 6.547216190168511e-14,
+                  "max_component": 3.637978807091713e-12,
+                  "worst_row": 1560,
+                  "passed": true,
+                  "reference_zero_normals": 0,
+                  "candidate_zero_normals": 0,
+                  "zero_mask_equal": true,
+                  "max_angle_degrees": 2.08440828659722e-10
+                }
+              },
+              {
+                "face": 15,
+                "triangles": 7366,
+                "vertices": {
+                  "shape_equal": true,
+                  "reference_count": 22098,
+                  "candidate_count": 22098,
+                  "numeric_different_rows": 0,
+                  "bitwise_different_rows": 0,
+                  "max_distance": 0.0,
+                  "rms_distance": 0.0,
+                  "max_component": 0.0,
+                  "worst_row": 0,
+                  "passed": true
+                },
+                "normals": {
+                  "shape_equal": true,
+                  "reference_count": 22098,
+                  "candidate_count": 22098,
+                  "numeric_different_rows": 6,
+                  "bitwise_different_rows": 6,
+                  "max_distance": 7.450580596923828e-09,
+                  "rms_distance": 1.2276915244730826e-10,
+                  "max_component": 7.450580596923828e-09,
+                  "worst_row": 3022,
+                  "passed": true,
+                  "reference_zero_normals": 0,
+                  "candidate_zero_normals": 0,
+                  "zero_mask_equal": true,
+                  "max_angle_degrees": 4.2598127208784247e-07
+                }
+              },
+              {
+                "face": 16,
+                "triangles": 7056,
+                "vertices": {
+                  "shape_equal": true,
+                  "reference_count": 21168,
+                  "candidate_count": 21168,
+                  "numeric_different_rows": 0,
+                  "bitwise_different_rows": 0,
+                  "max_distance": 0.0,
+                  "rms_distance": 0.0,
+                  "max_component": 0.0,
+                  "worst_row": 0,
+                  "passed": true
+                },
+                "normals": {
+                  "shape_equal": true,
+                  "reference_count": 21168,
+                  "candidate_count": 21168,
+                  "numeric_different_rows": 6,
+                  "bitwise_different_rows": 6,
+                  "max_distance": 7.450580596923828e-09,
+                  "rms_distance": 1.2543704913956556e-10,
+                  "max_component": 7.450580596923828e-09,
+                  "worst_row": 3020,
+                  "passed": true,
+                  "reference_zero_normals": 0,
+                  "candidate_zero_normals": 0,
+                  "zero_mask_equal": true,
+                  "max_angle_degrees": 4.2598127208784247e-07
+                }
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "reference": "0-cpu",
+      "candidate": "0-cuda-specialized",
+      "passed": true,
+      "counts_equal": true,
+      "all_brep_visibility_errors_equal": true,
+      "visible": [
+        {
+          "index": 30,
+          "mesh_hash_equal": false,
+          "snapshot_hash_equal": false,
+          "numeric": {
+            "vertices": {
+              "shape_equal": true,
+              "reference_count": 149559,
+              "candidate_count": 149559,
+              "numeric_different_rows": 0,
+              "bitwise_different_rows": 0,
+              "max_distance": 0.0,
+              "rms_distance": 0.0,
+              "max_component": 0.0,
+              "worst_row": 0,
+              "passed": true
+            },
+            "labels": {
+              "shape_equal": true,
+              "reference_count": 19,
+              "candidate_count": 19,
+              "numeric_different_rows": 0,
+              "bitwise_different_rows": 0,
+              "max_distance": 0.0,
+              "rms_distance": 0.0,
+              "max_component": 0.0,
+              "worst_row": 0,
+              "passed": true
+            },
+            "instances": {
+              "shape_equal": true,
+              "reference_count": 0,
+              "candidate_count": 0,
+              "numeric_different_rows": 0,
+              "bitwise_different_rows": 0,
+              "max_distance": 0.0,
+              "rms_distance": 0.0,
+              "max_component": 0.0,
+              "worst_row": null,
+              "passed": true
+            },
+            "normals": {
+              "shape_equal": true,
+              "reference_count": 149559,
+              "candidate_count": 149559,
+              "numeric_different_rows": 23,
+              "bitwise_different_rows": 23,
+              "max_distance": 7.450580596923828e-09,
+              "rms_distance": 6.673820340083433e-11,
+              "max_component": 7.450580596923828e-09,
+              "worst_row": 71035,
+              "passed": true,
+              "reference_zero_normals": 0,
+              "candidate_zero_normals": 0,
+              "zero_mask_equal": true,
+              "max_angle_degrees": 4.2598127208784247e-07
+            },
+            "topology": {
+              "triangle_faces": {
+                "equal": true,
+                "reference_count": 49853,
+                "candidate_count": 49853
+              },
+              "edge_ids": {
+                "equal": true,
+                "reference_count": 43,
+                "candidate_count": 43
+              },
+              "face_ids": {
+                "equal": true,
+                "reference_count": 19,
+                "candidate_count": 19
+              },
+              "face_edges": {
+                "equal": true
+              },
+              "edge_polyline_sizes": {
+                "equal": true
+              }
+            },
+            "edges": {
+              "shape_equal": true,
+              "reference_count": 6199,
+              "candidate_count": 6199,
+              "numeric_different_rows": 0,
+              "bitwise_different_rows": 0,
+              "max_distance": 0.0,
+              "rms_distance": 0.0,
+              "max_component": 0.0,
+              "worst_row": 0,
+              "passed": true
+            },
+            "triangles": {
+              "reference_degenerate": 574,
+              "candidate_degenerate": 574,
+              "degenerate_mask_equal": true,
+              "winding_flips": 0
+            },
+            "passed": true,
+            "covered_faces": [
+              {
+                "face": 0,
+                "triangles": 6255
+              },
+              {
+                "face": 1,
+                "triangles": 1309
+              },
+              {
+                "face": 2,
+                "triangles": 329
+              },
+              {
+                "face": 3,
+                "triangles": 556
+              },
+              {
+                "face": 4,
+                "triangles": 301
+              },
+              {
+                "face": 5,
+                "triangles": 117
+              },
+              {
+                "face": 6,
+                "triangles": 624
+              },
+              {
+                "face": 7,
+                "triangles": 6175
+              },
+              {
+                "face": 8,
+                "triangles": 1309
+              },
+              {
+                "face": 9,
+                "triangles": 329
+              },
+              {
+                "face": 10,
+                "triangles": 556
+              },
+              {
+                "face": 11,
+                "triangles": 301
+              },
+              {
+                "face": 12,
+                "triangles": 117
+              },
+              {
+                "face": 13,
+                "triangles": 1629
+              },
+              {
+                "face": 14,
+                "triangles": 2764
+              },
+              {
+                "face": 15,
+                "triangles": 7366
+              },
+              {
+                "face": 16,
+                "triangles": 7056
+              },
+              {
+                "face": 17,
+                "triangles": 6238
+              },
+              {
+                "face": 18,
+                "triangles": 6522
+              }
+            ],
+            "changed_faces": [
+              {
+                "face": 0,
+                "triangles": 6255,
+                "vertices": {
+                  "shape_equal": true,
+                  "reference_count": 18765,
+                  "candidate_count": 18765,
+                  "numeric_different_rows": 0,
+                  "bitwise_different_rows": 0,
+                  "max_distance": 0.0,
+                  "rms_distance": 0.0,
+                  "max_component": 0.0,
+                  "worst_row": 0,
+                  "passed": true
+                },
+                "normals": {
+                  "shape_equal": true,
+                  "reference_count": 18765,
+                  "candidate_count": 18765,
+                  "numeric_different_rows": 5,
+                  "bitwise_different_rows": 5,
+                  "max_distance": 3.637978807091713e-12,
+                  "rms_distance": 5.938419621990661e-14,
+                  "max_component": 3.637978807091713e-12,
+                  "worst_row": 1545,
+                  "passed": true,
+                  "reference_zero_normals": 0,
+                  "candidate_zero_normals": 0,
+                  "zero_mask_equal": true,
+                  "max_angle_degrees": 2.08440828659722e-10
+                }
+              },
+              {
+                "face": 7,
+                "triangles": 6175,
+                "vertices": {
+                  "shape_equal": true,
+                  "reference_count": 18525,
+                  "candidate_count": 18525,
+                  "numeric_different_rows": 0,
+                  "bitwise_different_rows": 0,
+                  "max_distance": 0.0,
+                  "rms_distance": 0.0,
+                  "max_component": 0.0,
+                  "worst_row": 0,
+                  "passed": true
+                },
+                "normals": {
+                  "shape_equal": true,
+                  "reference_count": 18525,
+                  "candidate_count": 18525,
+                  "numeric_different_rows": 6,
+                  "bitwise_different_rows": 6,
+                  "max_distance": 3.637978807091713e-12,
+                  "rms_distance": 6.547216190168511e-14,
+                  "max_component": 3.637978807091713e-12,
+                  "worst_row": 1560,
+                  "passed": true,
+                  "reference_zero_normals": 0,
+                  "candidate_zero_normals": 0,
+                  "zero_mask_equal": true,
+                  "max_angle_degrees": 2.08440828659722e-10
+                }
+              },
+              {
+                "face": 15,
+                "triangles": 7366,
+                "vertices": {
+                  "shape_equal": true,
+                  "reference_count": 22098,
+                  "candidate_count": 22098,
+                  "numeric_different_rows": 0,
+                  "bitwise_different_rows": 0,
+                  "max_distance": 0.0,
+                  "rms_distance": 0.0,
+                  "max_component": 0.0,
+                  "worst_row": 0,
+                  "passed": true
+                },
+                "normals": {
+                  "shape_equal": true,
+                  "reference_count": 22098,
+                  "candidate_count": 22098,
+                  "numeric_different_rows": 6,
+                  "bitwise_different_rows": 6,
+                  "max_distance": 7.450580596923828e-09,
+                  "rms_distance": 1.2276915244730826e-10,
+                  "max_component": 7.450580596923828e-09,
+                  "worst_row": 3022,
+                  "passed": true,
+                  "reference_zero_normals": 0,
+                  "candidate_zero_normals": 0,
+                  "zero_mask_equal": true,
+                  "max_angle_degrees": 4.2598127208784247e-07
+                }
+              },
+              {
+                "face": 16,
+                "triangles": 7056,
+                "vertices": {
+                  "shape_equal": true,
+                  "reference_count": 21168,
+                  "candidate_count": 21168,
+                  "numeric_different_rows": 0,
+                  "bitwise_different_rows": 0,
+                  "max_distance": 0.0,
+                  "rms_distance": 0.0,
+                  "max_component": 0.0,
+                  "worst_row": 0,
+                  "passed": true
+                },
+                "normals": {
+                  "shape_equal": true,
+                  "reference_count": 21168,
+                  "candidate_count": 21168,
+                  "numeric_different_rows": 6,
+                  "bitwise_different_rows": 6,
+                  "max_distance": 7.450580596923828e-09,
+                  "rms_distance": 1.2543704913956556e-10,
+                  "max_component": 7.450580596923828e-09,
+                  "worst_row": 3020,
+                  "passed": true,
+                  "reference_zero_normals": 0,
+                  "candidate_zero_normals": 0,
+                  "zero_mask_equal": true,
+                  "max_angle_degrees": 4.2598127208784247e-07
+                }
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "reference": "0-cpu",
+      "candidate": "1-cuda-generic",
+      "passed": true,
+      "counts_equal": true,
+      "all_brep_visibility_errors_equal": true,
+      "visible": [
+        {
+          "index": 30,
+          "mesh_hash_equal": false,
+          "snapshot_hash_equal": false,
+          "numeric": {
+            "vertices": {
+              "shape_equal": true,
+              "reference_count": 149559,
+              "candidate_count": 149559,
+              "numeric_different_rows": 0,
+              "bitwise_different_rows": 0,
+              "max_distance": 0.0,
+              "rms_distance": 0.0,
+              "max_component": 0.0,
+              "worst_row": 0,
+              "passed": true
+            },
+            "labels": {
+              "shape_equal": true,
+              "reference_count": 19,
+              "candidate_count": 19,
+              "numeric_different_rows": 0,
+              "bitwise_different_rows": 0,
+              "max_distance": 0.0,
+              "rms_distance": 0.0,
+              "max_component": 0.0,
+              "worst_row": 0,
+              "passed": true
+            },
+            "instances": {
+              "shape_equal": true,
+              "reference_count": 0,
+              "candidate_count": 0,
+              "numeric_different_rows": 0,
+              "bitwise_different_rows": 0,
+              "max_distance": 0.0,
+              "rms_distance": 0.0,
+              "max_component": 0.0,
+              "worst_row": null,
+              "passed": true
+            },
+            "normals": {
+              "shape_equal": true,
+              "reference_count": 149559,
+              "candidate_count": 149559,
+              "numeric_different_rows": 23,
+              "bitwise_different_rows": 23,
+              "max_distance": 7.450580596923828e-09,
+              "rms_distance": 6.673820340083433e-11,
+              "max_component": 7.450580596923828e-09,
+              "worst_row": 71035,
+              "passed": true,
+              "reference_zero_normals": 0,
+              "candidate_zero_normals": 0,
+              "zero_mask_equal": true,
+              "max_angle_degrees": 4.2598127208784247e-07
+            },
+            "topology": {
+              "triangle_faces": {
+                "equal": true,
+                "reference_count": 49853,
+                "candidate_count": 49853
+              },
+              "edge_ids": {
+                "equal": true,
+                "reference_count": 43,
+                "candidate_count": 43
+              },
+              "face_ids": {
+                "equal": true,
+                "reference_count": 19,
+                "candidate_count": 19
+              },
+              "face_edges": {
+                "equal": true
+              },
+              "edge_polyline_sizes": {
+                "equal": true
+              }
+            },
+            "edges": {
+              "shape_equal": true,
+              "reference_count": 6199,
+              "candidate_count": 6199,
+              "numeric_different_rows": 0,
+              "bitwise_different_rows": 0,
+              "max_distance": 0.0,
+              "rms_distance": 0.0,
+              "max_component": 0.0,
+              "worst_row": 0,
+              "passed": true
+            },
+            "triangles": {
+              "reference_degenerate": 574,
+              "candidate_degenerate": 574,
+              "degenerate_mask_equal": true,
+              "winding_flips": 0
+            },
+            "passed": true,
+            "covered_faces": [
+              {
+                "face": 0,
+                "triangles": 6255
+              },
+              {
+                "face": 1,
+                "triangles": 1309
+              },
+              {
+                "face": 2,
+                "triangles": 329
+              },
+              {
+                "face": 3,
+                "triangles": 556
+              },
+              {
+                "face": 4,
+                "triangles": 301
+              },
+              {
+                "face": 5,
+                "triangles": 117
+              },
+              {
+                "face": 6,
+                "triangles": 624
+              },
+              {
+                "face": 7,
+                "triangles": 6175
+              },
+              {
+                "face": 8,
+                "triangles": 1309
+              },
+              {
+                "face": 9,
+                "triangles": 329
+              },
+              {
+                "face": 10,
+                "triangles": 556
+              },
+              {
+                "face": 11,
+                "triangles": 301
+              },
+              {
+                "face": 12,
+                "triangles": 117
+              },
+              {
+                "face": 13,
+                "triangles": 1629
+              },
+              {
+                "face": 14,
+                "triangles": 2764
+              },
+              {
+                "face": 15,
+                "triangles": 7366
+              },
+              {
+                "face": 16,
+                "triangles": 7056
+              },
+              {
+                "face": 17,
+                "triangles": 6238
+              },
+              {
+                "face": 18,
+                "triangles": 6522
+              }
+            ],
+            "changed_faces": [
+              {
+                "face": 0,
+                "triangles": 6255,
+                "vertices": {
+                  "shape_equal": true,
+                  "reference_count": 18765,
+                  "candidate_count": 18765,
+                  "numeric_different_rows": 0,
+                  "bitwise_different_rows": 0,
+                  "max_distance": 0.0,
+                  "rms_distance": 0.0,
+                  "max_component": 0.0,
+                  "worst_row": 0,
+                  "passed": true
+                },
+                "normals": {
+                  "shape_equal": true,
+                  "reference_count": 18765,
+                  "candidate_count": 18765,
+                  "numeric_different_rows": 5,
+                  "bitwise_different_rows": 5,
+                  "max_distance": 3.637978807091713e-12,
+                  "rms_distance": 5.938419621990661e-14,
+                  "max_component": 3.637978807091713e-12,
+                  "worst_row": 1545,
+                  "passed": true,
+                  "reference_zero_normals": 0,
+                  "candidate_zero_normals": 0,
+                  "zero_mask_equal": true,
+                  "max_angle_degrees": 2.08440828659722e-10
+                }
+              },
+              {
+                "face": 7,
+                "triangles": 6175,
+                "vertices": {
+                  "shape_equal": true,
+                  "reference_count": 18525,
+                  "candidate_count": 18525,
+                  "numeric_different_rows": 0,
+                  "bitwise_different_rows": 0,
+                  "max_distance": 0.0,
+                  "rms_distance": 0.0,
+                  "max_component": 0.0,
+                  "worst_row": 0,
+                  "passed": true
+                },
+                "normals": {
+                  "shape_equal": true,
+                  "reference_count": 18525,
+                  "candidate_count": 18525,
+                  "numeric_different_rows": 6,
+                  "bitwise_different_rows": 6,
+                  "max_distance": 3.637978807091713e-12,
+                  "rms_distance": 6.547216190168511e-14,
+                  "max_component": 3.637978807091713e-12,
+                  "worst_row": 1560,
+                  "passed": true,
+                  "reference_zero_normals": 0,
+                  "candidate_zero_normals": 0,
+                  "zero_mask_equal": true,
+                  "max_angle_degrees": 2.08440828659722e-10
+                }
+              },
+              {
+                "face": 15,
+                "triangles": 7366,
+                "vertices": {
+                  "shape_equal": true,
+                  "reference_count": 22098,
+                  "candidate_count": 22098,
+                  "numeric_different_rows": 0,
+                  "bitwise_different_rows": 0,
+                  "max_distance": 0.0,
+                  "rms_distance": 0.0,
+                  "max_component": 0.0,
+                  "worst_row": 0,
+                  "passed": true
+                },
+                "normals": {
+                  "shape_equal": true,
+                  "reference_count": 22098,
+                  "candidate_count": 22098,
+                  "numeric_different_rows": 6,
+                  "bitwise_different_rows": 6,
+                  "max_distance": 7.450580596923828e-09,
+                  "rms_distance": 1.2276915244730826e-10,
+                  "max_component": 7.450580596923828e-09,
+                  "worst_row": 3022,
+                  "passed": true,
+                  "reference_zero_normals": 0,
+                  "candidate_zero_normals": 0,
+                  "zero_mask_equal": true,
+                  "max_angle_degrees": 4.2598127208784247e-07
+                }
+              },
+              {
+                "face": 16,
+                "triangles": 7056,
+                "vertices": {
+                  "shape_equal": true,
+                  "reference_count": 21168,
+                  "candidate_count": 21168,
+                  "numeric_different_rows": 0,
+                  "bitwise_different_rows": 0,
+                  "max_distance": 0.0,
+                  "rms_distance": 0.0,
+                  "max_component": 0.0,
+                  "worst_row": 0,
+                  "passed": true
+                },
+                "normals": {
+                  "shape_equal": true,
+                  "reference_count": 21168,
+                  "candidate_count": 21168,
+                  "numeric_different_rows": 6,
+                  "bitwise_different_rows": 6,
+                  "max_distance": 7.450580596923828e-09,
+                  "rms_distance": 1.2543704913956556e-10,
+                  "max_component": 7.450580596923828e-09,
+                  "worst_row": 3020,
+                  "passed": true,
+                  "reference_zero_normals": 0,
+                  "candidate_zero_normals": 0,
+                  "zero_mask_equal": true,
+                  "max_angle_degrees": 4.2598127208784247e-07
+                }
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "reference": "0-cpu",
+      "candidate": "1-cuda-specialized",
+      "passed": true,
+      "counts_equal": true,
+      "all_brep_visibility_errors_equal": true,
+      "visible": [
+        {
+          "index": 30,
+          "mesh_hash_equal": false,
+          "snapshot_hash_equal": false,
+          "numeric": {
+            "vertices": {
+              "shape_equal": true,
+              "reference_count": 149559,
+              "candidate_count": 149559,
+              "numeric_different_rows": 0,
+              "bitwise_different_rows": 0,
+              "max_distance": 0.0,
+              "rms_distance": 0.0,
+              "max_component": 0.0,
+              "worst_row": 0,
+              "passed": true
+            },
+            "labels": {
+              "shape_equal": true,
+              "reference_count": 19,
+              "candidate_count": 19,
+              "numeric_different_rows": 0,
+              "bitwise_different_rows": 0,
+              "max_distance": 0.0,
+              "rms_distance": 0.0,
+              "max_component": 0.0,
+              "worst_row": 0,
+              "passed": true
+            },
+            "instances": {
+              "shape_equal": true,
+              "reference_count": 0,
+              "candidate_count": 0,
+              "numeric_different_rows": 0,
+              "bitwise_different_rows": 0,
+              "max_distance": 0.0,
+              "rms_distance": 0.0,
+              "max_component": 0.0,
+              "worst_row": null,
+              "passed": true
+            },
+            "normals": {
+              "shape_equal": true,
+              "reference_count": 149559,
+              "candidate_count": 149559,
+              "numeric_different_rows": 23,
+              "bitwise_different_rows": 23,
+              "max_distance": 7.450580596923828e-09,
+              "rms_distance": 6.673820340083433e-11,
+              "max_component": 7.450580596923828e-09,
+              "worst_row": 71035,
+              "passed": true,
+              "reference_zero_normals": 0,
+              "candidate_zero_normals": 0,
+              "zero_mask_equal": true,
+              "max_angle_degrees": 4.2598127208784247e-07
+            },
+            "topology": {
+              "triangle_faces": {
+                "equal": true,
+                "reference_count": 49853,
+                "candidate_count": 49853
+              },
+              "edge_ids": {
+                "equal": true,
+                "reference_count": 43,
+                "candidate_count": 43
+              },
+              "face_ids": {
+                "equal": true,
+                "reference_count": 19,
+                "candidate_count": 19
+              },
+              "face_edges": {
+                "equal": true
+              },
+              "edge_polyline_sizes": {
+                "equal": true
+              }
+            },
+            "edges": {
+              "shape_equal": true,
+              "reference_count": 6199,
+              "candidate_count": 6199,
+              "numeric_different_rows": 0,
+              "bitwise_different_rows": 0,
+              "max_distance": 0.0,
+              "rms_distance": 0.0,
+              "max_component": 0.0,
+              "worst_row": 0,
+              "passed": true
+            },
+            "triangles": {
+              "reference_degenerate": 574,
+              "candidate_degenerate": 574,
+              "degenerate_mask_equal": true,
+              "winding_flips": 0
+            },
+            "passed": true,
+            "covered_faces": [
+              {
+                "face": 0,
+                "triangles": 6255
+              },
+              {
+                "face": 1,
+                "triangles": 1309
+              },
+              {
+                "face": 2,
+                "triangles": 329
+              },
+              {
+                "face": 3,
+                "triangles": 556
+              },
+              {
+                "face": 4,
+                "triangles": 301
+              },
+              {
+                "face": 5,
+                "triangles": 117
+              },
+              {
+                "face": 6,
+                "triangles": 624
+              },
+              {
+                "face": 7,
+                "triangles": 6175
+              },
+              {
+                "face": 8,
+                "triangles": 1309
+              },
+              {
+                "face": 9,
+                "triangles": 329
+              },
+              {
+                "face": 10,
+                "triangles": 556
+              },
+              {
+                "face": 11,
+                "triangles": 301
+              },
+              {
+                "face": 12,
+                "triangles": 117
+              },
+              {
+                "face": 13,
+                "triangles": 1629
+              },
+              {
+                "face": 14,
+                "triangles": 2764
+              },
+              {
+                "face": 15,
+                "triangles": 7366
+              },
+              {
+                "face": 16,
+                "triangles": 7056
+              },
+              {
+                "face": 17,
+                "triangles": 6238
+              },
+              {
+                "face": 18,
+                "triangles": 6522
+              }
+            ],
+            "changed_faces": [
+              {
+                "face": 0,
+                "triangles": 6255,
+                "vertices": {
+                  "shape_equal": true,
+                  "reference_count": 18765,
+                  "candidate_count": 18765,
+                  "numeric_different_rows": 0,
+                  "bitwise_different_rows": 0,
+                  "max_distance": 0.0,
+                  "rms_distance": 0.0,
+                  "max_component": 0.0,
+                  "worst_row": 0,
+                  "passed": true
+                },
+                "normals": {
+                  "shape_equal": true,
+                  "reference_count": 18765,
+                  "candidate_count": 18765,
+                  "numeric_different_rows": 5,
+                  "bitwise_different_rows": 5,
+                  "max_distance": 3.637978807091713e-12,
+                  "rms_distance": 5.938419621990661e-14,
+                  "max_component": 3.637978807091713e-12,
+                  "worst_row": 1545,
+                  "passed": true,
+                  "reference_zero_normals": 0,
+                  "candidate_zero_normals": 0,
+                  "zero_mask_equal": true,
+                  "max_angle_degrees": 2.08440828659722e-10
+                }
+              },
+              {
+                "face": 7,
+                "triangles": 6175,
+                "vertices": {
+                  "shape_equal": true,
+                  "reference_count": 18525,
+                  "candidate_count": 18525,
+                  "numeric_different_rows": 0,
+                  "bitwise_different_rows": 0,
+                  "max_distance": 0.0,
+                  "rms_distance": 0.0,
+                  "max_component": 0.0,
+                  "worst_row": 0,
+                  "passed": true
+                },
+                "normals": {
+                  "shape_equal": true,
+                  "reference_count": 18525,
+                  "candidate_count": 18525,
+                  "numeric_different_rows": 6,
+                  "bitwise_different_rows": 6,
+                  "max_distance": 3.637978807091713e-12,
+                  "rms_distance": 6.547216190168511e-14,
+                  "max_component": 3.637978807091713e-12,
+                  "worst_row": 1560,
+                  "passed": true,
+                  "reference_zero_normals": 0,
+                  "candidate_zero_normals": 0,
+                  "zero_mask_equal": true,
+                  "max_angle_degrees": 2.08440828659722e-10
+                }
+              },
+              {
+                "face": 15,
+                "triangles": 7366,
+                "vertices": {
+                  "shape_equal": true,
+                  "reference_count": 22098,
+                  "candidate_count": 22098,
+                  "numeric_different_rows": 0,
+                  "bitwise_different_rows": 0,
+                  "max_distance": 0.0,
+                  "rms_distance": 0.0,
+                  "max_component": 0.0,
+                  "worst_row": 0,
+                  "passed": true
+                },
+                "normals": {
+                  "shape_equal": true,
+                  "reference_count": 22098,
+                  "candidate_count": 22098,
+                  "numeric_different_rows": 6,
+                  "bitwise_different_rows": 6,
+                  "max_distance": 7.450580596923828e-09,
+                  "rms_distance": 1.2276915244730826e-10,
+                  "max_component": 7.450580596923828e-09,
+                  "worst_row": 3022,
+                  "passed": true,
+                  "reference_zero_normals": 0,
+                  "candidate_zero_normals": 0,
+                  "zero_mask_equal": true,
+                  "max_angle_degrees": 4.2598127208784247e-07
+                }
+              },
+              {
+                "face": 16,
+                "triangles": 7056,
+                "vertices": {
+                  "shape_equal": true,
+                  "reference_count": 21168,
+                  "candidate_count": 21168,
+                  "numeric_different_rows": 0,
+                  "bitwise_different_rows": 0,
+                  "max_distance": 0.0,
+                  "rms_distance": 0.0,
+                  "max_component": 0.0,
+                  "worst_row": 0,
+                  "passed": true
+                },
+                "normals": {
+                  "shape_equal": true,
+                  "reference_count": 21168,
+                  "candidate_count": 21168,
+                  "numeric_different_rows": 6,
+                  "bitwise_different_rows": 6,
+                  "max_distance": 7.450580596923828e-09,
+                  "rms_distance": 1.2543704913956556e-10,
+                  "max_component": 7.450580596923828e-09,
+                  "worst_row": 3020,
+                  "passed": true,
+                  "reference_zero_normals": 0,
+                  "candidate_zero_normals": 0,
+                  "zero_mask_equal": true,
+                  "max_angle_degrees": 4.2598127208784247e-07
+                }
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "reference": "0-cpu",
+      "candidate": "1-cpu",
+      "passed": true,
+      "counts_equal": true,
+      "all_brep_visibility_errors_equal": true,
+      "visible": [
+        {
+          "index": 30,
+          "mesh_hash_equal": true,
+          "snapshot_hash_equal": true,
+          "numeric": {
+            "vertices": {
+              "shape_equal": true,
+              "reference_count": 149559,
+              "candidate_count": 149559,
+              "numeric_different_rows": 0,
+              "bitwise_different_rows": 0,
+              "max_distance": 0.0,
+              "rms_distance": 0.0,
+              "max_component": 0.0,
+              "worst_row": 0,
+              "passed": true
+            },
+            "labels": {
+              "shape_equal": true,
+              "reference_count": 19,
+              "candidate_count": 19,
+              "numeric_different_rows": 0,
+              "bitwise_different_rows": 0,
+              "max_distance": 0.0,
+              "rms_distance": 0.0,
+              "max_component": 0.0,
+              "worst_row": 0,
+              "passed": true
+            },
+            "instances": {
+              "shape_equal": true,
+              "reference_count": 0,
+              "candidate_count": 0,
+              "numeric_different_rows": 0,
+              "bitwise_different_rows": 0,
+              "max_distance": 0.0,
+              "rms_distance": 0.0,
+              "max_component": 0.0,
+              "worst_row": null,
+              "passed": true
+            },
+            "normals": {
+              "shape_equal": true,
+              "reference_count": 149559,
+              "candidate_count": 149559,
+              "numeric_different_rows": 0,
+              "bitwise_different_rows": 0,
+              "max_distance": 0.0,
+              "rms_distance": 0.0,
+              "max_component": 0.0,
+              "worst_row": 0,
+              "passed": true,
+              "reference_zero_normals": 0,
+              "candidate_zero_normals": 0,
+              "zero_mask_equal": true,
+              "max_angle_degrees": 0.0
+            },
+            "topology": {
+              "triangle_faces": {
+                "equal": true,
+                "reference_count": 49853,
+                "candidate_count": 49853
+              },
+              "edge_ids": {
+                "equal": true,
+                "reference_count": 43,
+                "candidate_count": 43
+              },
+              "face_ids": {
+                "equal": true,
+                "reference_count": 19,
+                "candidate_count": 19
+              },
+              "face_edges": {
+                "equal": true
+              },
+              "edge_polyline_sizes": {
+                "equal": true
+              }
+            },
+            "edges": {
+              "shape_equal": true,
+              "reference_count": 6199,
+              "candidate_count": 6199,
+              "numeric_different_rows": 0,
+              "bitwise_different_rows": 0,
+              "max_distance": 0.0,
+              "rms_distance": 0.0,
+              "max_component": 0.0,
+              "worst_row": 0,
+              "passed": true
+            },
+            "triangles": {
+              "reference_degenerate": 574,
+              "candidate_degenerate": 574,
+              "degenerate_mask_equal": true,
+              "winding_flips": 0
+            },
+            "passed": true,
+            "covered_faces": [
+              {
+                "face": 0,
+                "triangles": 6255
+              },
+              {
+                "face": 1,
+                "triangles": 1309
+              },
+              {
+                "face": 2,
+                "triangles": 329
+              },
+              {
+                "face": 3,
+                "triangles": 556
+              },
+              {
+                "face": 4,
+                "triangles": 301
+              },
+              {
+                "face": 5,
+                "triangles": 117
+              },
+              {
+                "face": 6,
+                "triangles": 624
+              },
+              {
+                "face": 7,
+                "triangles": 6175
+              },
+              {
+                "face": 8,
+                "triangles": 1309
+              },
+              {
+                "face": 9,
+                "triangles": 329
+              },
+              {
+                "face": 10,
+                "triangles": 556
+              },
+              {
+                "face": 11,
+                "triangles": 301
+              },
+              {
+                "face": 12,
+                "triangles": 117
+              },
+              {
+                "face": 13,
+                "triangles": 1629
+              },
+              {
+                "face": 14,
+                "triangles": 2764
+              },
+              {
+                "face": 15,
+                "triangles": 7366
+              },
+              {
+                "face": 16,
+                "triangles": 7056
+              },
+              {
+                "face": 17,
+                "triangles": 6238
+              },
+              {
+                "face": 18,
+                "triangles": 6522
+              }
+            ],
+            "changed_faces": []
+          }
+        }
+      ]
+    }
+  ],
+  "passed": true,
+  "input_unchanged": true,
+  "limits": [
+    "Confronto indicizzato della mesh visibile, con conteggi e attribuzione alle facce uguali; non distanza continua tra superfici",
+    "574 triangoli degeneri della visualizzazione gia presenti nella CPU, stessa maschera nella GPU; confronto non equivale a validazione completa della mesh",
+    "Snapshot di basi instanziate annidate rifiutati esplicitamente",
+    "Specializzazioni richieste come opzione; non contato separatamente il numero di punti di ciascun kernel specializzato",
+    "Solo Linux e GPU locale; nessun dato macOS, framerate, volume o nuova accelerazione dichiarato"
+  ],
+  "verification": {
+    "ctest_passed": 19,
+    "ctest_failed": 0,
+    "comparator_unit_cases": 9,
+    "cpu_require_cuda_exit": 77,
+    "cuda_hidden_require_cuda_exit": 77,
+    "missing_snapshot_directory_exit": 1,
+    "architecture_files": 482,
+    "architecture_relations": 6622,
+    "translation_units": 231,
+    "translation_unit_diagnostics": 0
+  }
+}

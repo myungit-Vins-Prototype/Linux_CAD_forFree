@@ -391,6 +391,25 @@ if(CMAKE_CUDA_COMPILER)
     target_link_libraries(forgecad_cuda_tests PRIVATE forgekernel)
     target_compile_options(forgecad_cuda_tests PRIVATE $<$<COMPILE_LANGUAGE:CXX>:-Wall;-Wextra;-Wpedantic>)
     add_test(NAME forgecad_cuda_tests COMMAND forgecad_cuda_tests)
+    set_tests_properties(forgecad_cuda_tests PROPERTIES SKIP_RETURN_CODE 77 TIMEOUT 180)
+endif()
+
+# Export STL/OBJ B-spline: CPU sempre disponibile, confronto GPU esplicito.
+add_executable(forgecad_mesh_export_backend_tests tests/test_mesh_export_backends.cpp
+    cad_export.cpp cad_cuda_tessellation.cpp ${FORGE_CAD_CUDA_SOURCE})
+target_include_directories(forgecad_mesh_export_backend_tests PRIVATE ${PROJECT_SOURCE_DIR})
+target_link_libraries(forgecad_mesh_export_backend_tests PRIVATE forgekernel Qt6::Core Qt6::Gui)
+target_compile_options(forgecad_mesh_export_backend_tests PRIVATE $<$<COMPILE_LANGUAGE:CXX>:-Wall;-Wextra;-Wpedantic>)
+add_test(NAME forgecad_mesh_export_cpu_tests COMMAND forgecad_mesh_export_backend_tests)
+set_tests_properties(forgecad_mesh_export_cpu_tests PROPERTIES TIMEOUT 120)
+if(CMAKE_CUDA_COMPILER)
+    set_target_properties(forgecad_mesh_export_backend_tests PROPERTIES CUDA_STANDARD 17 CUDA_STANDARD_REQUIRED ON)
+    add_test(NAME forgecad_mesh_export_cuda_tests COMMAND forgecad_mesh_export_backend_tests --require-gpu)
+    add_test(NAME forgecad_mesh_export_cuda_specialized_tests COMMAND forgecad_mesh_export_backend_tests --require-gpu)
+    set_tests_properties(forgecad_mesh_export_cuda_tests PROPERTIES SKIP_RETURN_CODE 77 TIMEOUT 120
+        ENVIRONMENT "FORGECAD_CUDA_GENERIC=1")
+    set_tests_properties(forgecad_mesh_export_cuda_specialized_tests PROPERTIES SKIP_RETURN_CODE 77 TIMEOUT 120
+        ENVIRONMENT "FORGECAD_CUDA_SPECIALIZED=1;FORGECAD_CUDA_GENERIC=0")
 endif()
 
 # Test delle interazioni del viewport (Qt offscreen); --gl verifica anche i VBO
@@ -398,6 +417,20 @@ endif()
 option(FORGECAD_BUILD_VIEW_TESTS "Compila i test delle interazioni del viewport" OFF)
 if(FORGECAD_BUILD_VIEW_TESTS)
     set(FORGECAD_EXAMPLE_DIR "${PROJECT_SOURCE_DIR}/File_Esempio" CACHE PATH "Cartella dei documenti di esempio per i test GUI")
+    # Il comparatore offline usa NumPy; nessuna nuova dipendenza dell'app.
+    find_package(Python3 QUIET COMPONENTS Interpreter)
+    if(Python3_Interpreter_FOUND)
+        execute_process(COMMAND "${Python3_EXECUTABLE}" -c "import numpy"
+            RESULT_VARIABLE FORGECAD_NUMPY_IMPORT_RESULT OUTPUT_QUIET ERROR_QUIET)
+        if(FORGECAD_NUMPY_IMPORT_RESULT EQUAL 0)
+            add_test(NAME forgecad_numeric_mesh_comparator_tests COMMAND "${Python3_EXECUTABLE}"
+                -m unittest discover -s tests -p test_compare_document_mesh_backends.py -v)
+            set_tests_properties(forgecad_numeric_mesh_comparator_tests PROPERTIES
+                WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}" TIMEOUT 30 ENVIRONMENT "PYTHONDONTWRITEBYTECODE=1")
+        else()
+            message(STATUS "Test comparatore mesh non registrato: NumPy non disponibile")
+        endif()
+    endif()
     get_target_property(FORGECAD_VIEW_TEST_SOURCES forgecad SOURCES)
     # Finestra, viewport, storyboard e dialoghi sono unita' separate anche nei test.
     list(REMOVE_ITEM FORGECAD_VIEW_TEST_SOURCES forgeCad2026.cpp ${FORGE_CAD_CUDA_SOURCE} ${FORGECAD_HASH_HEADER})
@@ -405,7 +438,7 @@ if(FORGECAD_BUILD_VIEW_TESTS)
     add_executable(forgecad_view_tests tests/test_viewport.cpp tests/test_declared_history_cache.h tests/test_boolean_history.h tests/test_blend_history.h tests/test_extrusion_history.h tests/test_revolution_history.h tests/test_all_history.h tests/test_native_revisions.h tests/test_workspace_revisions.h tests/test_linked_drawing.h tests/test_drawing_workflow.h tests/test_drawing_revisions.h tests/test_projected_drawing_file.h tests/test_drawing_multisheet.h tests/test_drawing_revision_restore.h tests/test_drawing_release.h tests/test_catalog_recovery_gui.h tests/test_surface_tools_gui.h tests/test_document_units.h tests/test_history_suppression.h tests/test_function_panels.h tests/test_drawing_mouse.h tests/test_drawing_section_model.h tests/test_drawing_performance.h cuda_support_cpu.cpp ${FORGECAD_VIEW_TEST_SOURCES})
     add_dependencies(forgecad_view_tests forgecad) # genera l'impronta una sola volta, prima dei test
     target_include_directories(forgecad_view_tests PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/generated)
-    target_link_libraries(forgecad_view_tests PRIVATE Qt6::Widgets Qt6::OpenGL Qt6::OpenGLWidgets OpenGL::GL forgekernel ZLIB::ZLIB)
+    target_link_libraries(forgecad_view_tests PRIVATE forgecad_compute Qt6::Widgets Qt6::OpenGL Qt6::OpenGLWidgets OpenGL::GL forgekernel ZLIB::ZLIB)
     target_compile_options(forgecad_view_tests PRIVATE -Wall -Wextra -Wpedantic)
     target_compile_definitions(forgecad_view_tests PRIVATE FORGECAD_HAS_CUDA=0 FORGECAD_SOURCE_DIR="${PROJECT_SOURCE_DIR}")
     add_executable(forgecad_selection_benchmark tests/benchmark_selection.cpp)

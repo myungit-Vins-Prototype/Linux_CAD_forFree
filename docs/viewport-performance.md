@@ -253,3 +253,22 @@ Per ripetere il benchmark solver usare `forgecad_view_tests --solver-partition -
 in ambiente Qt offscreen; senza `--benchmark` esegue soltanto le
 regressioni. Protocollo, dati e limiti sono conservati in
 [solver-mesh-gpu-2026-10-25.json](benchmarks/solver-mesh-gpu-2026-10-25.json).
+
+### Verifica Linux/NVIDIA del 25 ottobre 2026
+
+Build Release e 16 regressioni superate su Xeon W-10885M/Quadro RTX 3000.
+Sul documento Linux da 1204 feature: mediana ricostruzione 24,523 → 23,744 s;
+apertura con cache 7,081 → 5,932 s. Tre campioni per modalità, intervalli
+sovrapposti; risultati geometrici e mesh visibili identici. Nessuna coppia GPU
+esercitata dal documento; CUDA verificato separatamente nei test dedicati.
+Protocollo, limiti e riproduzione nel [rapporto Linux](linux-solver-mesh-2026-10-25.md).
+
+## Lettura cache e prosecuzione CUDA (26 ottobre 2026)
+
+Il [confronto del lettore a blocchi](cache-read-optimization-2026-10-25.md) misura separatamente l'apertura con cache. Non attribuire questi risultati al solver o alla GPU. Il pool CUDA limita i buffer inattivi a 64 MiB complessivi host/device; gli slot attivi e le superfici caricate restano fuori da questo budget. `forgecad_cuda_trim_idle()` libera gli slot disponibili senza toccare quelli in uso; worker attivi possono successivamente ripopolare la cache.
+
+Avanzamento, limiti e passi ancora aperti: [roadmap verificata su mouse2 e CUDA](solver-cuda-roadmap-2026-10-26.md). Specializzazioni CUDA opt-in con `FORGECAD_CUDA_SPECIALIZED=1`; il generico rimane predefinito.
+
+[Export B-spline e trascinamenti ammissibili](solver-cuda-export-drag-2026-10-26.md): regressioni permanenti CPU/CUDA degli scrittori STL/OBJ, correzioni sulla geometria realmente serializzata e confronto isolato su7schizzi di mouse2.
+
+[Confronto numerico reale mouse2](mouse2-mesh-cpu-cuda-2026-10-26.md): vertici CPU/CUDA identici, firma diversa limitata a 23 normali; 574 triangoli degeneri comuni del viewport individuati, ancora da filtrare. Nessun benchmark di velocità in questa verifica.

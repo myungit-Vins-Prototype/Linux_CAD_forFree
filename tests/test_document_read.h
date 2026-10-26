@@ -126,10 +126,56 @@ void documentSketchReferenceNameTests() {
     require(!encodeDocumentDefinition53ForHash(original, retained).isEmpty() && retained == "non modificare",
             "encoder storico non scarta i nuovi nomi per produrre un falso hash equivalente");
 }
+// Oracolo indipendente: QDataStream scalare, due endian e due precisioni.
+// I vettori attraversano piu' blocchi; inclusi bit speciali e indici negativi.
+void documentBulkMeshReadTests() {
+    using ForgeCad::DocumentReadDetail::DataStream;
+    QVector<QVector3D> points;QVector<int> indices;
+    for(int i=0;i<20003;++i) {
+        points.append(QVector3D(float(i)*.125f,float(-i)*.25f,float(i%17)));
+        indices.append(i%2?-i:i);
+    }
+    for(float value:{0.0f,-0.0f,std::numeric_limits<float>::denorm_min(),
+            std::numeric_limits<float>::max(),std::numeric_limits<float>::infinity(),
+            -std::numeric_limits<float>::infinity(),std::numeric_limits<float>::quiet_NaN()})
+        points.append(QVector3D(value,value,value));
+    indices << std::numeric_limits<int>::min() << std::numeric_limits<int>::max();
+    for(auto order:{QDataStream::BigEndian,QDataStream::LittleEndian})
+        for(auto precision:{QDataStream::SinglePrecision,QDataStream::DoublePrecision}) {
+            const auto configure=[&](QDataStream &stream){stream.setVersion(QDataStream::Qt_6_0);
+                stream.setByteOrder(order);stream.setFloatingPointPrecision(precision);};
+            QByteArray bytes;QDataStream out(&bytes,QIODevice::WriteOnly);configure(out);
+            out << points << indices << QVector<QVector<QVector3D>>{points,{},points} << qint32(12345);
+            QVector<QVector3D> expected,actual;QVector<int> expectedIds,actualIds;
+            QVector<QVector<QVector3D>> expectedNested,actualNested;qint32 expectedTail=0,actualTail=0;
+            QDataStream reference(bytes);configure(reference);
+            reference >> expected >> expectedIds >> expectedNested >> expectedTail;
+            DataStream reader(bytes);configure(reader);
+            reader >> actual >> actualIds >> actualNested >> actualTail;
+            require(reference.status()==QDataStream::Ok && reader.status()==QDataStream::Ok
+                && reader.atEnd() && actualTail==expectedTail,"lettura a blocchi: confini e sentinella");
+            QByteArray left,right;QDataStream a(&left,QIODevice::WriteOnly),b(&right,QIODevice::WriteOnly);
+            configure(a);configure(b);a << expected << expectedIds << expectedNested;
+            b << actual << actualIds << actualNested;
+            require(left==right,"lettura a blocchi identica a Qt inclusi NaN, zeri con segno ed endian");
+            for(int cut:{0,3,4,5,65535,65536}) {
+                DataStream truncated(bytes.left(cut));configure(truncated);QVector<QVector3D> result;
+                truncated >> result;
+                require(truncated.status()!=QDataStream::Ok && result.isEmpty(),"vettore troncato rifiutato prima della prenotazione");
+            }
+            QByteArray empty;QDataStream emptyOut(&empty,QIODevice::WriteOnly);configure(emptyOut);
+            emptyOut << QVector<QVector3D>{} << QVector<int>{};
+            DataStream emptyIn(empty);configure(emptyIn);emptyIn >> actual >> actualIds;
+            require(emptyIn.status()==QDataStream::Ok && emptyIn.atEnd() && actual.isEmpty() && actualIds.isEmpty(),
+                "vettori vuoti cancellano la destinazione precedente");
+        }
+}
+
 void documentReadTests() {
     using namespace ForgeCad;
     using DocumentReadDetail::DataStream;
     documentSketchReferenceNameTests();
+    documentBulkMeshReadTests();
     const auto rejected = [](const QByteArray &bytes, const DocumentReadLimits &limits = {}) {
         DocumentState destination;
         destination.sketches.append(SketchObject{}); destination.sketches[0].name = "da conservare";

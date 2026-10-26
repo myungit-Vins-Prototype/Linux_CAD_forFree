@@ -32,4 +32,11 @@ void forgecad_cuda_release_surface(void *handle);
 // piu' thread: ognuno usa il suo stream.
 bool forgecad_cuda_evaluate_surface(void *handle, const double *uv, std::size_t count, double *points, double *normals);
 
+// Budget dei soli buffer inattivi: somma memoria pinned host e device.
+// Gli slot in uso e le superfici caricate non rientrano nella cache.
+constexpr std::size_t kForgeCudaIdleBudget = 64 * 1024 * 1024;
+std::size_t forgecad_cuda_idle_bytes();
+// Libera gli slot attualmente inattivi; i worker attivi possono restituirne altri.
+void forgecad_cuda_trim_idle();
+
 #endif
