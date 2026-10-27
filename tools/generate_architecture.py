@@ -92,6 +92,11 @@ DESCRIPTIONS = {
 }
 
 # Catalogo dei moduli applicativi: descrizioni specifiche condivise da header e sorgente.
+DESCRIPTIONS.update({
+ 'kernel/fk_bspline_basis.cpp': ('kernel', 'Basi e derivate B-spline: specializzazioni dei gradi1..5 e ordini0..2 con algoritmo e ordine aritmetico invariati, fallback generale e cancellazione per chiamata.'),
+ 'kernel/tests/test_bspline.cpp': ('tests', 'Valutazioni B-spline contro OCCT e formule Bernstein, prefissi derivati bit identici, gradi fino31, nodi ripetuti/limiti, buffer, concorrenza e cancellazione.'),
+})
+
 DESCRIPTIONS.update({'tools/open_architecture.py': ('build', 'Avvio locale della mappa: aggiorna i dati a ogni apertura e li mostra nel browser con avanzamento ed errori.'), 'CMakeLists.txt': ('build',
                     'Definisce eseguibile e suite; libreria interna condivisa dai runner delle tavole e impronta geometrica limitata alla chiusura delle dipendenze del calcolo.'),
  'cmake/geometry_sources.cmake': ('build', 'Raccoglie include locali transitivi e implementazioni per l’impronta geometrica; esclude moduli visuali indipendenti e conserva il kernel completo.'),

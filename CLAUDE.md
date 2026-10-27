@@ -3,6 +3,17 @@
 Contesto condiviso del progetto per Claude Code e Codex. La lingua di lavoro è l'italiano (UI, commenti, messaggi).
 
 
+### 2026-10-27 — Ottimizzazione CPU B-spline su main (implementata e verificata)
+
+- Richiesta esplicita: riportare su main la sola ottimizzazione B-spline gia misurata, quindi commit e push. Fetch prima dell'intervento: origin/main abc74a2, usato checkout di pubblicazione pulito basato esattamente su quel commit; conservati branch locali divergenti e tutto il lavoro solver-mesh-gpu, output/ e documenti utente.
+- Copiati solo fk_bspline_basis.cpp e i quattro nuovi test in test_bspline.cpp; descrizioni dei due file aggiornate nel generatore della mappa. Specializzazioni CPU gradi1..5/ordini0..2, fallback generale, stesso algoritmo/ordine aritmetico/tolleranze/API e cancellazione per chiamata. Nessuna ottimizzazione sperimentale loft/proiezioni/solver/GPU inclusa.
+- Prova isolata precedente sulla stessa main: mouse2 congelato SHAa45aa164...,4processi/versione,31,006→27,017s mediana,12,867%tempo in meno, B-rep/mesh/errori/visibilita identici;14/14test B-spline prima/dopo. Il file originale successivamente salvato SHA7ffa6455... e diverso: guadagno riferito alla copia congelata del confronto precedente. Nessun10x globale o prestazioni native macOS dichiarati.
+- Build applicazione/runner, test kernel/applicativi, aggiornamento e ispezione mappa e pubblicazione ancora da completare. Artefatti nello sviluppo benchmarks/bspline-main-integration-2026-10-27. Nessuna scrittura di CAD/archivi/sessioni dell'utente.
+
+- Milestone integrazione: applicazione completa e runner Release main compilati.114/114casi kernel selezionatiPASS (curve/superfici B-spline, loft, massa, offset, shell, cancellazione, tessellazione e algoritmi di superficie).27CTest applicativi:26PASS/1FAIL history_position, stesso messaggio di soppressione riprodotto anche sul binario main precedente, non nascosto. Mappa rigenerata469file/6554relazioni/230TU/0diagnostiche, --checkPASS;79.282siti validi, quattro confini B-spline verificati nei due versi, include distinti; vista ispezionata in Firefox temporaneo. Sonda sul mouse2 salvato piu recente e pubblicazione ancora in corso.
+
+- Verifica finale prima della pubblicazione: ultimo mouse2 SHA7ffa64559f38820ed0f070fa233efc27a2b5ea82ee749e04817a756cb1ae92ce, 36feature/14schizzi/20B-rep/30902triangoli,0errori; copie in memoria prima/dopo B-rep/mesh/errori/visibilita identici. Prova singola per correttezza, non nuovo rapporto di velocita. Originale e snapshot SHAidentici al termine. Documentato in docs/bspline-main-integration-2026-10-27.md; git diff --check e impronte dei sorgenti controllati. App e runner main Release compilati, installazione desktop preservata; nessuna build nativa macOS. Solo questo intervento destinato al commit/push main; lavoro solver locale e branch divergenti preservati.
+
 ### 2026-10-27 — Raccordo 33 di mouse2 dopo riordino (implementato e verificato)
 
 - Richiesta: ultima feature Raccordo 33 non aggiorna il risultato dopo spostamenti di altre feature, anche scegliendo di nuovo la faccia. Atteso il salvataggio esplicito dell'utente prima di riprendere la prova. File attuale /home/myungit/Documenti/File_Esempio/mouse2.prt, SHA256 a45aa16453f08abdd746c21f84e5f86188b78db8bec80e255fa10d1f86f1e24c, copia diagnostica in /tmp/forgecad-blend33-20261027; originale e archivio non scritti.

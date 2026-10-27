@@ -64,8 +64,15 @@ std::vector<double> knotBreakpoints(const std::vector<double> &knots, const Inte
     return result;
 }
 
-void basisFunctionDerivatives(const std::vector<double> &knots, int span, double u, int p, int n, double *ders) {
+// I gradi piccoli e gli ordini comuni mantengono A2.3 e lo stesso ordine
+// aritmetico; dimensioni note al compilatore evitano lavoro generico ripetuto.
+// Gradi/ordini rimanenti conservano il percorso generale.
+namespace {
+template<int Degree, int Order>
+void evaluateBasis(const std::vector<double> &knots, int span, double u, int runtimeDegree, int runtimeOrder, double *ders) {
     cancellationPoint();
+    const int p = Degree < 0 ? runtimeDegree : Degree;
+    const int n = Order < 0 ? runtimeOrder : Order;
     ScratchBuffer<double> ndu((p + 1) * (p + 1));
     ScratchBuffer<double, 16> left(p + 1), right(p + 1);
     auto NDU = [&](int row, int column) -> double & { return ndu[row * (p + 1) + column]; };
@@ -117,6 +124,48 @@ void basisFunctionDerivatives(const std::vector<double> &knots, int span, double
     for (int k = 1; k <= n; ++k) {
         for (int j = 0; j <= p; ++j) ders[k * (p + 1) + j] *= factor;
         factor *= p - k;
+    }
+}
+
+}
+
+void basisFunctionDerivatives(const std::vector<double> &knots, int span, double u, int p, int n, double *ders) {
+    switch (p) {
+    case 1:
+        switch (n) {
+        case 0: return evaluateBasis<1, 0>(knots, span, u, p, n, ders);
+        case 1: return evaluateBasis<1, 1>(knots, span, u, p, n, ders);
+        default: return evaluateBasis<1, -1>(knots, span, u, p, n, ders);
+        }
+    case 2:
+        switch (n) {
+        case 0: return evaluateBasis<2, 0>(knots, span, u, p, n, ders);
+        case 1: return evaluateBasis<2, 1>(knots, span, u, p, n, ders);
+        case 2: return evaluateBasis<2, 2>(knots, span, u, p, n, ders);
+        default: return evaluateBasis<2, -1>(knots, span, u, p, n, ders);
+        }
+    case 3:
+        switch (n) {
+        case 0: return evaluateBasis<3, 0>(knots, span, u, p, n, ders);
+        case 1: return evaluateBasis<3, 1>(knots, span, u, p, n, ders);
+        case 2: return evaluateBasis<3, 2>(knots, span, u, p, n, ders);
+        default: return evaluateBasis<3, -1>(knots, span, u, p, n, ders);
+        }
+    case 4:
+        switch (n) {
+        case 0: return evaluateBasis<4, 0>(knots, span, u, p, n, ders);
+        case 1: return evaluateBasis<4, 1>(knots, span, u, p, n, ders);
+        case 2: return evaluateBasis<4, 2>(knots, span, u, p, n, ders);
+        default: return evaluateBasis<4, -1>(knots, span, u, p, n, ders);
+        }
+    case 5:
+        switch (n) {
+        case 0: return evaluateBasis<5, 0>(knots, span, u, p, n, ders);
+        case 1: return evaluateBasis<5, 1>(knots, span, u, p, n, ders);
+        case 2: return evaluateBasis<5, 2>(knots, span, u, p, n, ders);
+        default: return evaluateBasis<5, -1>(knots, span, u, p, n, ders);
+        }
+    default: return evaluateBasis<-1, -1>(knots, span, u, p, n, ders);
     }
 }
 
