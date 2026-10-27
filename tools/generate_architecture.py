@@ -93,6 +93,8 @@ DESCRIPTIONS = {
 
 # Catalogo dei moduli applicativi: descrizioni specifiche condivise da header e sorgente.
 DESCRIPTIONS.update({
+ 'kernel/fk_marching.cpp': ('kernel', 'Intersezioni superficie/superficie: rami singolari con radici omogenee stabili anche a diagonali nulle; tolleranze conservate.'),
+ 'kernel/tests/test_marching.cpp': ('tests', 'Intersezioni contro OCCT e geometrie analitiche: sella con solo termine misto, diagonali quasi nulle e ordine delle superfici invertito.'),
  'kernel/fk_bspline_basis.cpp': ('kernel', 'Basi e derivate B-spline: specializzazioni dei gradi1..5 e ordini0..2 con algoritmo e ordine aritmetico invariati, fallback generale e cancellazione per chiamata.'),
  'kernel/tests/test_bspline.cpp': ('tests', 'Valutazioni B-spline contro OCCT e formule Bernstein, prefissi derivati bit identici, gradi fino31, nodi ripetuti/limiti, buffer, concorrenza e cancellazione.'),
 })
@@ -191,7 +193,7 @@ DESCRIPTIONS.update({'tools/open_architecture.py': ('build', 'Avvio locale della
                  'Costruisce estrusioni con condizioni di fine e applica la fusione con i corpi '
                  'selezionati.'),
  'cad_feature_build': ('features',
-                       'Costruisce le feature dagli operandi; la soppressione trasferisce il risultato precedente prima di validare gli input inutilizzati.'),
+                       'Costruisce le feature dagli operandi; la soppressione trasferisce il risultato precedente; ripete anche utensili sweep solidi conservando i diagnostici degli operandi.'),
  'cad_feature_dependencies': ('features', 'Dipendenze e operandi delle feature; consumo dei risultati esposti dagli aggregati storici e target delle estensioni.'),
  'cad_features': ('features', 'Tipi e regole comuni delle operazioni parametriche del modello.'),
  'cad_forge': ('features',
@@ -213,8 +215,8 @@ DESCRIPTIONS.update({'tools/open_architecture.py': ('build', 'Avvio locale della
  'cad_native_revisions': ('documents', 'Persistenza delle revisioni native; confronto delle definizioni normalizzato al codec corrente anche per check-in pendenti in formato53.'),
  'cad_numeric_input.h': ('startup', 'Gestione comune dell’input numerico nei controlli dell’interfaccia.'),
  'cad_overlay_renderer': ('render', 'Disegno OpenGL degli overlay e delle loro istanze.'),
- 'tests/test_pattern_placements.h': ('tests', 'Regressioni ripetizioni: posizioni, corpi separati, esclusioni, aggregati legacy con consumatori, rollback e persistenza.'),
- 'cad_pattern': ('features', 'Ripetizioni con esclusioni persistenti; separa componenti solide o superfici conservando cavita e genealogia.'),
+ 'tests/test_pattern_placements.h': ('tests', 'Regressioni ripetizioni: posizioni, corpi separati, esclusioni, aggregati legacy, utensili sweep solidi con volumi analitici, dialogo, Undo/Redo e persistenza.'),
+ 'cad_pattern': ('features', 'Ripetizioni con esclusioni persistenti e idoneita delle feature condivisa tra pannello e builder, inclusi sweep solidi; separa corpi conservando cavita e genealogia.'),
  'cad_revision_client': ('documents',
                          'Protocollo client per copie di lavoro, sessioni e operazioni sulle revisioni.'),
  'cad_revision_client_internal.h': ('documents',

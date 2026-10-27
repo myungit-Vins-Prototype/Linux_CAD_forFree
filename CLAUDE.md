@@ -3,6 +3,24 @@
 Contesto condiviso del progetto per Claude Code e Codex. La lingua di lavoro è l'italiano (UI, commenti, messaggi).
 
 
+### 2026-10-27 — Commit isolato CT0578 per main
+
+- Richiesta esplicita: fare commit del porting appena compilato. Fetch origin prima dello staging: origin/main resta49d69b05eafcffa32960230aad2535d63b01e8cc. Conservato il checkout main locale divergente; commit preparato sul ramo dedicato fix-ct0578-main, basato sull’ultimo main remoto. Nessun push richiesto.
+- Inclusi soltanto supporto alla ripetizione di sweep solidi, diagnostici degli operandi, radici singolari stabili, regressioni analitiche/applicative, descrizioni pertinenti e rapporto CT0578. Esclusi dallo staging fix di soppressione, relativa documentazione e modifiche sperimentali solver, preservati nel filesystem.
+- Applicazione completa Release Linux gia compilata;118/118kernel selezionati,25/25CTest, QA4tagliY e rigenerazione62occorrenzePASS. Queste prove applicative sono state eseguite nel checkout che conserva anche il fix locale della soppressione; non si attribuisce al solo commit CT0578 la correzione di quel difetto preesistente. Sorgenti funzionali confrontati con le impronte della build; nessuna modifica di codice dopo le prove. Mappa aggiornata e controllata,469file/6558relazioni,0diagnostiche; HTML/JSON ignorati.
+
+### 2026-10-27 — CT0578 Sweep4: integrazione su main (implementata e verificata)
+
+- Richiesta: riportare su main e compilare il supporto alla ripetizione circolare della Sweep4 di CT0578. Fetch e base verificati: origin/main49d69b05eafcffa32960230aad2535d63b01e8cc; checkout di integrazione /tmp/forgecad-shell-publish-main-20261027, senza riallineare branch locali divergenti.
+- Applicata soltanto la patch CT0578: idoneita comune pannello/builder per sweep solidi, nome della sorgente, propagazione errori e radici omogenee stabili per intersezioni singolari con diagonali nulle; regressioni analitiche e applicative. Preservati il fix locale di soppressione e tutto il lavoro sperimentale solver; nessun cambiamento a tolleranze, formato o CAD utente.
+- Applicazione completa, test, QA nativa CT0578 e mappa architetturale da verificare su main. Artefatti benchmarks/ct0578-main-2026-10-27; nessun nuovo commit/push richiesto.
+
+- Milestone porting main: sette file funzionali/test applicati e descrizioni aggiornate;118/118 test kernel selezionatiPASS, inclusa MarchingMixedTermSingularBranches. Applicazione completa Release compilata; runner applicativo/QA e mappa ancora in verifica. SHA del fix di soppressione e di tests/test_viewport.cpp identici prima/dopo il porting. CT0578 originale salvato nuovamente dall'utente e ora contiene Ripetizione5: congelata copia SHA56fcf389a7086d30f46c30559bbbbf16938d2e549a099d0d642efd0acf8301bb; prova creazione su snapshot precedente e rigenerazione corrente separate.
+
+- Milestone verifica main: applicazione completa e runner Release compilati;118/118kernel selezionati e25/25CTest pertinentiPASS. QA del dialogo su copia precedente di CT0578PASS:4tagliY, anteprima/mesh, topologia, esclusione1, Undo/Redo, codec con/senza cache e rigenerazione,0GLerrori; stessi volumi della prova solver. Finestra e pannello ispezionati. Ultimo CT0578 congelato SHA56fcf389... contiene Ripetizione5 con62occorrenze della funzione: rigenerazione mainPASS,0errori,263facce, un corpo finale. Nessuna scrittura dei CAD utente; mappa ancora in generazione.
+
+- Chiusura main verificata: mappa469file/6558relazioni/230TU,0diagnostiche; --checkPASS,79446siti con righe valide,5confini nei due versi e include distinti. Viste cad_pattern.cpp e kernel/fk_marching.cpp aperte e ispezionate. Rapporto docs/ct0578-main-integration-2026-10-27.md e verification.json con SHA applicazione, input e risultati; codice preesistente della soppressione e test byte-invariati. Build completa Release Linux in /tmp/forgecad-shell-publish-main-build-20261027/forgecad. L’utente ha salvato ulteriormente l’originale durante le prove: test62occorrenze riferito alla copia congelata SHA56fcf389..., senza scritture delle sonde al CAD/archivi/sessioni/lock. Nessuna compilazione macOS, nessun benchmark velocita o nuova pubblicazione; porting locale sul checkout main49d69b0, senza commit/push. Installazione desktop, branch divergenti e modifiche sperimentali solver preservati.
+
 ### 2026-10-27 — Ottimizzazione CPU B-spline su main (implementata e verificata)
 
 - Richiesta esplicita: riportare su main la sola ottimizzazione B-spline gia misurata, quindi commit e push. Fetch prima dell'intervento: origin/main abc74a2, usato checkout di pubblicazione pulito basato esattamente su quel commit; conservati branch locali divergenti e tutto il lavoro solver-mesh-gpu, output/ e documenti utente.

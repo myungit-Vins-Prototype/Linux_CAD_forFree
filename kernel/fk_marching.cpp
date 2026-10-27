@@ -1188,12 +1188,16 @@ int Marcher::singularBranches(const Params &x, Vec3 directions[2]) const {
         return -2;
     }
     const double root = std::sqrt(disc);
-    for (int k = 0; k < 2; ++k) {
-        cancellationPoint();
-        const double sign = k == 0 ? 1.0 : -1.0;
-        if (std::fabs(d11) >= std::fabs(d22)) directions[k] = normalized(((-d12 + sign * root) / d11) * e1 + e2);
-        else directions[k] = normalized(e1 + ((-d12 + sign * root) / d22) * e2);
-    }
+    // Radici omogenee stabili: con solo il termine misto (d11=d22=0)
+    // i rami sono e1/e2. Dividere per una diagonale produceva 0/0 o inf.
+    // Il numeratore sceglie la somma senza cancellazione; nessuna tolleranza cambia.
+    const double rootNumerator = -d12 - std::copysign(root, d12);
+    const double scale1 = std::max(std::fabs(rootNumerator), std::fabs(d11));
+    const double scale2 = std::max(std::fabs(d22), std::fabs(rootNumerator));
+    cancellationPoint();
+    directions[0] = normalized((rootNumerator / scale1) * e1 + (d11 / scale1) * e2);
+    cancellationPoint();
+    directions[1] = normalized((d22 / scale2) * e1 + (rootNumerator / scale2) * e2);
     return 2;
 }
 

@@ -13,6 +13,10 @@
 // fk_transform), unione dei solidi e raccolta delle superfici in shell separate.
 namespace ForgeCad {
 
+// Ammissibilita condivisa fra pannello e costruzione: strumenti di unione/
+// differenza, estrusioni, rivoluzioni e sweep solidi associati a corpi.
+bool patternFeatureSupported(const ExtrusionObject &source);
+
 // Le trasformazioni delle istanze oltre all'originale (per lo specchio la
 // simmetria), dai riferimenti risolti sulla geometria del corpo `owner`
 // (i corpi dei riferimenti hanno indice minore).

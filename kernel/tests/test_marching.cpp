@@ -442,3 +442,33 @@ FK_TEST(MarchingHigherOrderContactBranches) {
     }
     checkOnSurfaces(result, plane, saddle);
 }
+
+// z = x*y + eps*(x*x-y*y): due rette esatte che si incrociano nell'origine.
+// Per eps=0 la forma quadratica ha diagonali nulle e termine misto non nullo.
+FK_TEST(MarchingMixedTermSingularBranches) {
+    for (double epsilon : {0.0, 1e-15, -1e-15, 1e-7}) {
+        std::vector<Vec3> poles;
+        const double square[3] = {1, -1, 1};
+        for (int i=0;i<3;++i) for (int j=0;j<3;++j)
+            poles.push_back(Vec3(i-1, j-1, (i-1)*(j-1) + epsilon*(square[i]-square[j])));
+        const BSplineSurface saddle(2,2,{-1,-1,-1,1,1,1},{-1,-1,-1,1,1,1},3,3,poles);
+        const Plane plane{Frame3()};
+        const double slope = -2*epsilon/(1+std::sqrt(1+4*epsilon*epsilon));
+        for (bool swap : {false, true}) {
+            const Surface &a = swap ? static_cast<const Surface &>(saddle) : static_cast<const Surface &>(plane);
+            const Surface &b = swap ? static_cast<const Surface &>(plane) : static_cast<const Surface &>(saddle);
+            const auto result = intersectSurfaces(a,b,cube(1.2),{{0,0,0}});
+            FK_CHECK(!result.curves.empty() && !result.singularPoints.empty());
+            checkOnSurfaces(result,a,b);
+            for (double sign : {-1.0,1.0}) {
+                FK_CHECK(distanceToCurves(result,Vec3(sign*.75,sign*.75*slope,0))<1e-8);
+                FK_CHECK(distanceToCurves(result,Vec3(-sign*.75*slope,sign*.75,0))<1e-8);
+            }
+            for (const auto &curve : result.curves) for (int k=0;k<=20;++k) {
+                const Vec3 p = curve.curve->point(curve.range.lo+curve.range.length()*k/20);
+                FK_CHECK(std::fabs(p.z())<1e-8);
+                FK_CHECK(std::fabs(p.x()*p.y()+epsilon*(p.x()*p.x()-p.y()*p.y()))<1e-8);
+            }
+        }
+    }
+}
