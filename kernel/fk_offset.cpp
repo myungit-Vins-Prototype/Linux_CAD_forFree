@@ -1665,4 +1665,320 @@ OffsetResult offsetFaces(const Body &input, const std::vector<FaceId> &faces, do
     return result;
 }
 
+// Offset con intersezione dei supporti e contrazione dei raccordi collassati.
+OffsetResult offsetJoinedFaces(const Body &input, const std::vector<FaceOffset> &specifications, double tolerance) {
+    if (specifications.empty() || !(tolerance > 0.0) || !std::isfinite(tolerance))
+        throw std::invalid_argument("offset cucito: facce o tolleranza non valide");
+    Body body = input;
+    if (computePCurves(body) > 0)
+        throw std::domain_error("offset cucito: SP-curve non calcolabili");
+    std::map<int, FaceOffset> specs;
+    std::set<int> collapsed;
+    double reach = 0.0;
+    for (const auto &spec : specifications) {
+        if (!body.contains(spec.face) || !std::isfinite(spec.distance) || !specs.emplace(spec.face.index, spec).second)
+            throw std::invalid_argument("offset cucito: faccia duplicata, assente o distanza non finita");
+        if (spec.collapse)
+            collapsed.insert(spec.face.index);
+        reach = std::max(reach, std::fabs(spec.distance));
+    }
+    if (specs.size() != body.faces().size())
+        throw std::invalid_argument("offset cucito: specificare tutte le facce del corpo");
+    // Le pieghe delle spline devono diventare bordi prima di intersecare i
+    // supporti. Le nuove pezze ereditano distanza e stato dalla faccia madre.
+    Body split;
+    BodyHistory splitHistory;
+    if (reach > 0.0 && (splitOffsetFaces(body, body.faces(), reach, tolerance, split, splitHistory) ||
+                        splitTrimmedCreases(body, body.faces(), reach, tolerance, split, splitHistory))) {
+        std::vector<FaceOffset> pieces;
+        for (FaceId f : split.faces()) {
+            const auto &origins = splitHistory.origins(EntityKind::Face, f.index);
+            if (origins.size() != 1 || origins.front().kind != EntityKind::Face)
+                throw std::logic_error("offset cucito: origine della pezza non univoca");
+            auto spec = specs.at(origins.front().index);
+            spec.face = f;
+            pieces.push_back(spec);
+        }
+        auto result = offsetJoinedFaces(split, pieces, tolerance);
+        result.history = BodyHistory::compose(splitHistory, result.history, 0);
+        return result;
+    }
+    Box box;
+    int vertexCapacity = 0;
+    for (VertexId v : body.vertices()) {
+        box.add(body.vertex(v).point);
+        vertexCapacity = std::max(vertexCapacity, v.index + 1);
+    }
+    const double scale = std::max(1.0, box.diagonal());
+    const double seamTolerance = std::max(4.0 * tolerance, 1e-10 * scale);
+    const double seamReach = std::max(100.0 * reach, 2.0 * scale);
+    const auto selected = [&](FaceId f) { return specs.count(f.index) && !collapsed.count(f.index); };
+    std::vector<int> parent(std::size_t(vertexCapacity), 0);
+    std::iota(parent.begin(), parent.end(), 0);
+    const auto root = [&](int i) {
+        while (parent[std::size_t(i)] != i) {
+            parent[std::size_t(i)] = parent[std::size_t(parent[std::size_t(i)])];
+            i = parent[std::size_t(i)];
+        }
+        return i;
+    };
+    const auto join = [&](int a, int b) { parent[std::size_t(root(b))] = root(a); };
+    std::set<int> removedEdges;
+    std::map<int, int> railParent;
+    const auto railRoot = [&](int i) {
+        while (railParent.at(i) != i)
+            i = railParent.at(i);
+        return i;
+    };
+    // Le due linee di tangenza diventano un unico bordo fra i supporti.
+    // I bordi trasversali del raccordo (gli archi sulle facce di estremita')
+    // si contraggono a vertici, senza inventare superfici cilindriche.
+    for (int index : collapsed) {
+        const FaceId f{index};
+        std::vector<EdgeId> rails;
+        for (LoopId l : body.face(f).loops)
+            for (FinId fin : body.loopFins(l)) {
+                const EdgeId e = body.fin(fin).edge;
+                const auto other = body.otherFin(fin);
+                const Vec3 p = body.edge(e).curve->point((body.edge(e).range.lo + body.edge(e).range.hi) * 0.5);
+                bool tangent = false;
+                if (other.valid() && selected(body.finFace(other))) {
+                    const auto a = projectPoint(*body.face(f).surface, p), b = projectPoint(*body.face(body.finFace(other)).surface, p);
+                    Vec3 na = normalAt(*body.face(f).surface, a.u, a.v), nb = normalAt(*body.face(body.finFace(other)).surface, b.u, b.v);
+                    if (!body.face(f).sense)
+                        na = -na;
+                    if (!body.face(body.finFace(other)).sense)
+                        nb = -nb;
+                    tangent = dot(na, nb) > 1.0 - 1e-6;
+                }
+                if (tangent)
+                    rails.push_back(e);
+                else {
+                    removedEdges.insert(e.index);
+                    join(body.edgeStart(e).index, body.edgeEnd(e).index);
+                }
+            }
+        if (rails.size() == 2) {
+            const auto a = rails[0], b = rails[1];
+            auto a0 = body.edgeStart(a), a1 = body.edgeEnd(a), b0 = body.edgeStart(b), b1 = body.edgeEnd(b);
+            if (distance(body.vertex(a0).point, body.vertex(b0).point) + distance(body.vertex(a1).point, body.vertex(b1).point) >
+                distance(body.vertex(a0).point, body.vertex(b1).point) + distance(body.vertex(a1).point, body.vertex(b0).point))
+                std::swap(b0, b1);
+            join(a0.index, b0.index);
+            join(a1.index, b1.index);
+            railParent.emplace(a.index, a.index);
+            railParent.emplace(b.index, b.index);
+            railParent[railRoot(b.index)] = railRoot(a.index);
+        } else if (!rails.empty()) {
+            throw std::domain_error("offset cucito: raccordo collassato con appoggi non riconosciuti");
+        }
+    }
+    detail::RawModel model;
+    std::map<int, int> pointOf;
+    std::map<int, std::vector<SeamSurface>> vertexConstraints;
+    std::map<int, Vec3> vertexSeed;
+    std::map<int, int> vertexCount;
+    std::map<int, std::vector<FinId>> edgeUses;
+    for (const auto &[index, spec] : specs) {
+        if (spec.collapse)
+            continue;
+        const FaceId f{index};
+        for (LoopId l : body.face(f).loops)
+            for (FinId finId : body.loopFins(l)) {
+                const auto &fin = body.fin(finId);
+                const int v = root(fin.vertex.index);
+                const Vec3 p = body.vertex(fin.vertex).point;
+                const auto &edge = body.edge(fin.edge);
+                const auto &face = body.face(f);
+                const SeamSurface at{face.surface, fin.pcurve->point(fin.sense ? edge.range.lo : edge.range.hi),
+                                     face.sense ? spec.distance : -spec.distance};
+                vertexConstraints[v].push_back(at);
+                vertexSeed[v] += p + spec.distance * faceNormal(body, f, at.uv);
+                ++vertexCount[v];
+                if (!removedEdges.count(fin.edge.index)) {
+                    const int e = railParent.count(fin.edge.index) ? railRoot(fin.edge.index) : fin.edge.index;
+                    edgeUses[e].push_back(finId);
+                }
+            }
+    }
+    for (const auto &[v, constraints] : vertexConstraints) {
+        pointOf[v] = int(model.points.size());
+        model.points.push_back(seamPoint(vertexSeed.at(v) / double(vertexCount.at(v)), constraints, seamTolerance, seamReach));
+    }
+    std::map<int, int> rawEdgeOf;
+    for (const auto &[index, uses] : edgeUses) {
+        const EdgeId e{index};
+        const auto &edge = body.edge(e);
+        if (uses.size() != 2)
+            throw std::domain_error("offset cucito: appoggio mancante dopo la rimozione del raccordo");
+        detail::RawEdge raw;
+        raw.start = pointOf.at(root(body.edgeStart(e).index));
+        raw.end = pointOf.at(root(body.edgeEnd(e).index));
+        const auto sourceUV = [&](FinId finId, double t) {
+            const auto &fin = body.fin(finId);
+            if (fin.edge == e)
+                return fin.pcurve->point(t);
+            const auto &rail = body.edge(fin.edge);
+            double fraction = (t - edge.range.lo) / edge.range.length();
+            if (dot(edge.curve->derivative((edge.range.lo + edge.range.hi) * 0.5),
+                    rail.curve->derivative((rail.range.lo + rail.range.hi) * 0.5)) < 0.0)
+                fraction = 1.0 - fraction;
+            return fin.pcurve->point(rail.range.lo + fraction * rail.range.length());
+        };
+        const auto incident = [&](double t, const Vec3 &seed) {
+            std::vector<SeamSurface> surfaces;
+            for (FinId fin : uses) {
+                const auto f = body.finFace(fin);
+                const auto &face = body.face(f);
+                surfaces.push_back({face.surface, sourceUV(fin, t), face.sense ? specs.at(f.index).distance : -specs.at(f.index).distance});
+            }
+            Vec3 tangent = normalized(edge.curve->derivative(t));
+            Vec3 axis = std::fabs(tangent.x()) < 0.8 ? Vec3(1, 0, 0) : Vec3(0, 1, 0);
+            surfaces.push_back({std::make_shared<Plane>(Frame3(seed, tangent, axis)), Vec2()});
+            return surfaces;
+        };
+        const auto initial = [&](double t) {
+            const Vec3 p = edge.curve->point(t);
+            Vec3 shift;
+            for (FinId fin : uses) {
+                const auto f = body.finFace(fin);
+                shift += specs.at(f.index).distance * faceNormal(body, f, sourceUV(fin, t));
+            }
+            return p + shift / double(uses.size());
+        };
+        const Vec3 delta0 = model.points[std::size_t(raw.start)] - initial(edge.range.lo);
+        const Vec3 delta1 = model.points[std::size_t(raw.end)] - initial(edge.range.hi);
+        const auto at = [&](double t) {
+            const double fraction = (t - edge.range.lo) / edge.range.length();
+            const Vec3 seed = initial(t) + (1.0 - fraction) * delta0 + fraction * delta1;
+            return seamPoint(seed, incident(t, seed), seamTolerance, seamReach);
+        };
+        raw.curve = offsetCurve(edge.curve, edge.range, at, edge.curve->breakpoints(edge.range), scale, tolerance);
+        // Un bordo che inverte il proprio verso segnala una cavita' che ha
+        // superato le pareti opposte: non accettare un volume ripiegato.
+        for (int k = 0; k <= 16; ++k) {
+            const double t = edge.range.lo + edge.range.length() * k / 16.0;
+            const Vec3 a = edge.curve->derivative(t), b = raw.curve->derivative(t);
+            if (dot(a, b) < -1e-8 * norm(a) * norm(b))
+                throw std::domain_error("offset cucito: lo spessore inverte un bordo della cavita'");
+        }
+        raw.range = edge.range;
+        raw.hasRange = true;
+        rawEdgeOf[index] = int(model.edges.size());
+        model.edges.push_back(std::move(raw));
+    }
+    std::vector<FaceId> sources;
+    for (const auto &[index, spec] : specs) {
+        if (spec.collapse)
+            continue;
+        const auto &face = body.face(FaceId{index});
+        detail::RawFace raw;
+        raw.sense = face.sense;
+        Interval ur{1e300, -1e300}, vr{1e300, -1e300};
+        for (LoopId l : face.loops)
+            for (FinId fin : body.loopFins(l)) {
+                const auto &edge = body.edge(body.fin(fin).edge);
+                for (int k = 0; k <= 16; ++k) {
+                    const auto uv = body.fin(fin).pcurve->point(edge.range.lo + edge.range.length() * k / 16.0);
+                    ur.lo = std::min(ur.lo, uv.x());
+                    ur.hi = std::max(ur.hi, uv.x());
+                    vr.lo = std::min(vr.lo, uv.y());
+                    vr.hi = std::max(vr.hi, uv.y());
+                }
+            }
+        // Include nella finestra anche i prolungamenti dei bordi rifilati.
+        const double signedDistance = face.sense ? spec.distance : -spec.distance;
+        for (LoopId l : face.loops)
+            for (FinId finId : body.loopFins(l)) {
+                const auto &fin = body.fin(finId);
+                if (removedEdges.count(fin.edge.index))
+                    continue;
+                const int e = railParent.count(fin.edge.index) ? railRoot(fin.edge.index) : fin.edge.index;
+                const auto &edge = model.edges[std::size_t(rawEdgeOf.at(e))];
+                const auto &original = body.edge(fin.edge);
+                const bool aligned = dot(edge.curve->derivative((edge.range.lo + edge.range.hi) * 0.5),
+                                         original.curve->derivative((original.range.lo + original.range.hi) * 0.5)) >= 0.0;
+                for (int k = 0; k <= 16; ++k) {
+                    const double fraction = k / 16.0;
+                    const double t = edge.range.lo + fraction * edge.range.length();
+                    const double source = original.range.lo + (aligned ? fraction : 1.0 - fraction) * original.range.length();
+                    const auto uv = projectLocal(*face.surface, edge.curve->point(t), fin.pcurve->point(source), signedDistance);
+                    ur.lo = std::min(ur.lo, uv.x());
+                    ur.hi = std::max(ur.hi, uv.x());
+                    vr.lo = std::min(vr.lo, uv.y());
+                    vr.hi = std::max(vr.hi, uv.y());
+                }
+            }
+        const double eu = 0.005 * std::max(ur.length(), 1e-9), ev = 0.005 * std::max(vr.length(), 1e-9);
+        ur.lo -= eu;
+        ur.hi += eu;
+        vr.lo -= ev;
+        vr.hi += ev;
+        if (face.surface->isUPeriodic() && ur.length() >= 0.98 * face.surface->uPeriod())
+            ur = face.surface->uDomain();
+        if (face.surface->isVPeriodic() && vr.length() >= 0.98 * face.surface->vPeriod())
+            vr = face.surface->vDomain();
+        raw.surface = spec.distance == 0.0 ? face.surface : offsetSurface(*face.surface, signedDistance, ur, vr, tolerance);
+        if (spec.distance == 0.0 && raw.surface->type() == SurfaceType::BSpline)
+            raw.surface = std::make_shared<BSplineSurface>(extendBSplineSurface(static_cast<const BSplineSurface &>(*raw.surface), ur, vr));
+        for (LoopId l : face.loops) {
+            std::vector<detail::RawFin> loop;
+            for (FinId finId : body.loopFins(l)) {
+                const auto &fin = body.fin(finId);
+                if (removedEdges.count(fin.edge.index))
+                    continue;
+                const int e = railParent.count(fin.edge.index) ? railRoot(fin.edge.index) : fin.edge.index;
+                bool sense = fin.sense;
+                if (e != fin.edge.index) {
+                    const auto &a = body.edge(EdgeId{e});
+                    const auto &b = body.edge(fin.edge);
+                    if (dot(a.curve->derivative((a.range.lo + a.range.hi) * .5), b.curve->derivative((b.range.lo + b.range.hi) * .5)) < 0)
+                        sense = !sense;
+                }
+                const auto &targetEdge = model.edges[std::size_t(rawEdgeOf.at(e))];
+                const auto &sourceEdge = body.edge(fin.edge);
+                const bool aligned = dot(targetEdge.curve->derivative((targetEdge.range.lo + targetEdge.range.hi) * 0.5),
+                                         sourceEdge.curve->derivative((sourceEdge.range.lo + sourceEdge.range.hi) * 0.5)) >= 0.0;
+                const auto uvAt = [&](double t) {
+                    const double fraction = (t - targetEdge.range.lo) / targetEdge.range.length();
+                    const double source = sourceEdge.range.lo + (aligned ? fraction : 1.0 - fraction) * sourceEdge.range.length();
+                    const Vec2 uv = projectLocal(*raw.surface, targetEdge.curve->point(t), fin.pcurve->point(source));
+                    return Vec3(uv.x(), uv.y(), 0);
+                };
+                double rate = 1.0;
+                for (int k = 0; k <= 16; ++k) {
+                    const auto uv = uvAt(targetEdge.range.lo + targetEdge.range.length() * k / 16.0);
+                    Vec3 jet[4];
+                    raw.surface->evaluate(uv.x(), uv.y(), 1, jet);
+                    rate = std::max({rate, norm(jet[Surface::derivativeIndex(1, 0, 1)]), norm(jet[Surface::derivativeIndex(0, 1, 1)])});
+                }
+                const auto curve = fitCurve(uvAt, targetEdge.range, {}, 0.1 * tolerance / rate);
+                std::vector<Vec2> poles;
+                for (const auto &p : curve->poles())
+                    poles.emplace_back(p.x(), p.y());
+                auto pc = std::make_shared<BSplineCurve<2>>(curve->degree(), curve->knots(), poles);
+                const double budget = fin.pcurveTolerance + 10.0 * tolerance;
+                for (int k = 0; k <= 64; ++k) {
+                    const double t = targetEdge.range.lo + targetEdge.range.length() * k / 64.0;
+                    const auto uv = pc->point(t);
+                    if (distance(raw.surface->point(uv.x(), uv.y()), targetEdge.curve->point(t)) > budget)
+                        throw std::domain_error("offset cucito: bordo rifilato fuori tolleranza");
+                }
+                loop.push_back({rawEdgeOf.at(e), sense, pc, budget});
+            }
+            if (!loop.empty())
+                raw.loops.push_back(std::move(loop));
+        }
+        if (raw.loops.empty())
+            throw std::domain_error("offset cucito: faccia senza contorno dopo la contrazione");
+        model.faces.push_back(std::move(raw));
+        sources.push_back(FaceId{index});
+    }
+    OffsetResult result;
+    result.body = detail::assembleBody(model, false, &result.notes);
+    result.history = offsetFaceHistory(input, result.body, sources);
+    result.shells = int(result.body.shells().size());
+    return result;
+}
+
 }
