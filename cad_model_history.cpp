@@ -101,7 +101,12 @@ void normalizeModelHistory(QVector<ExtrusionObject> &features, QVector<ModelBody
             feature.modelBodyId = 0;
             continue;
         }
-        if (!feature.modelBodyId) feature.modelBodyId = inheritedBody(features, feature);
+        // Una modifica a monte puo' cambiare il corpo della base lasciando
+        // nei discendenti il vecchio ID, gia' consumato da una cucitura o
+        // booleana. Riallinea tutti gli stadi in ordine di dipendenza, anche
+        // alla lettura di documenti salvati prima di questa correzione.
+        const quint64 inherited = inheritedBody(features, feature);
+        if (inherited) feature.modelBodyId = inherited;
         if (!feature.modelBodyId) feature.modelBodyId = nextBody++;
         bodyIds.insert(feature.modelBodyId);
     }

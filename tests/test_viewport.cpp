@@ -2189,6 +2189,82 @@ public:
         }
     }
 
+    static void bodyOwnerHistoryRegressions() {
+        using namespace ForgeCad;
+        using namespace ForgeCad::Kernel;
+        CadViewport original; original.tessellationQuality_ = 0;
+        PrimitiveParameters box; box.size[0] = box.size[1] = box.size[2] = 10;
+        require(original.createPrimitive(box, QStringLiteral("Prima base")).isEmpty(), "prima base");
+        box.origin[0] = 5;
+        require(original.createPrimitive(box, QStringLiteral("Seconda base")).isEmpty(), "seconda base");
+        box.origin[0] = 40;
+        require(original.createPrimitive(box, QStringLiteral("Corpo indipendente")).isEmpty(), "base indipendente");
+        original.setObjectVisible(SceneObjectKind::Extrusion, 2, false);
+        require(original.createBoolean(::BooleanOperation::Union, 1, {0}, QStringLiteral("Fusione")).isEmpty(), "fusione con prima base consumata");
+        const auto base = original.extrusions_[3].forgeBody;
+        const Vec3 point(15, 5, 10);
+        const auto edge = nearestEdge(*base, point, 1e-8);
+        require(edge.valid(), "spigolo della fusione");
+        require(original.createBlend(3, {edgeReference(*base, edge, point)}, .5, false, QStringLiteral("Raccordo dipendente")).isEmpty(),
+                "raccordo valido dopo fusione");
+        auto stale = original.documentState();
+        const quint64 oldOwner = stale.extrusions[0].modelBodyId, owner = stale.extrusions[1].modelBodyId;
+        const quint64 independent = stale.extrusions[2].modelBodyId;
+        const auto geometry = writeBodyBinary(*stale.extrusions[4].forgeBody);
+        // Stato salvato da una vecchia modifica a monte: la base del raccordo
+        // e' corretta, ma il suo corpo logico e' quello gia' consumato.
+        stale.extrusions[4].modelBodyId = oldOwner;
+        stale.extrusions[4].visible = false; stale.extrusions[3].visible = true;
+        for(auto &body:stale.modelBodies) {
+            if(body.id==oldOwner)body.tipFeatureId=stale.extrusions[4].featureId;
+            if(body.id==owner)body.tipFeatureId=stale.extrusions[3].featureId;
+        }
+        const auto verify = [&](const CadViewport &view, quint64 expectedOwner, int tip, bool visible = true) {
+            require(view.extrusions_[3].modelBodyId==expectedOwner && view.extrusions_[4].modelBodyId==expectedOwner,
+                    "raccordo appartiene al corpo della sua base, non al vecchio corpo consumato");
+            require(view.extrusions_[2].modelBodyId==independent && !view.extrusions_[2].visible,
+                    "identita' e preferenza del corpo indipendente conservate");
+            require(view.isBodyDrawn(tip)==visible && view.extrusions_[tip].visible==visible, "risultato rispetta la visibilita' del corpo proprietario");
+            require(!view.isBodyDrawn(3), "base intermedia non mostrata come risultato");
+            require(view.resultBodiesBefore(-1)==QVector<int>({2,tip}), "solo risultati finali indipendenti");
+            const int model = view.modelBodyIndexForFeature(tip);
+            require(model>=0 && view.modelBodyTip(model)==tip, "tip del corpo aggiornato");
+            for(int i=0;i<stale.extrusions.size();++i) {
+                require(view.extrusions_[i].featureId==stale.extrusions[i].featureId, "ID delle feature conservati");
+                require(view.extrusions_[i].error.isEmpty(), "nessun errore geometrico");
+            }
+        };
+        for(bool cache:{false,true}) {
+            QByteArray bytes; require(encodeDocument(stale, bytes, cache).isEmpty(), "codifica vecchia assegnazione");
+            DocumentState decoded;require(decodeDocument(bytes,decoded,true).isEmpty(),"decodifica vecchio corpo logico");
+            CadViewport view;view.tessellationQuality_=0;view.loadDocument(decoded);verify(view,owner,4);
+            require(writeBodyBinary(*view.extrusions_[4].forgeBody)==geometry,"correzione storia senza cambiare la geometria");
+            require(view.rebuildAllFeatures()==0,"rigenerazione completa della storia riparata");verify(view,owner,4);
+            auto edited=view.extrusions_[4];edited.blendSize=.8;
+            require(view.updateBody(4,edited).isEmpty(),"modifica raggio dopo riparazione");verify(view,owner,4);
+            require(writeBodyBinary(*view.extrusions_[4].forgeBody)!=geometry,"modifica raggio modifica davvero il risultato");
+            view.undo();verify(view,owner,4);view.redo();verify(view,owner,4);
+            view.setHistoryPosition(4);require(view.isBodyDrawn(3),"rollback alla base del raccordo");
+            view.setHistoryPosition(5);verify(view,owner,4);
+            PdfWindow window;window.viewport_->loadDocument(view.documentState());window.rebuildModelTree();
+            bool result=false;
+            for(QTreeWidgetItemIterator it(window.modelTree_);*it;++it)
+                if((*it)->text(0).startsWith(QStringLiteral("Raccordo dipendente")))result=(*it)->text(0).contains(QStringLiteral("risultato"));
+            require(result,"storyboard indica il raccordo come risultato");
+            // Cambiare il primo operando a monte riassegna anche tutti gli
+            // stadi dipendenti, non soltanto la feature direttamente editata.
+            ExtrusionObject scale;scale.feature=BodyFeature::Scale;scale.firstBody=4;scale.scaleFactor=1.1;
+            require(view.createBody(scale).isEmpty(),"secondo modificatore dipendente");verify(view,owner,5);
+            auto fusion=view.extrusions_[3];fusion.firstBody=0;fusion.secondBody=1;
+            require(view.updateBody(3,fusion).isEmpty(),"modifica a monte del corpo proprietario");verify(view,oldOwner,5,false);
+            require(view.extrusions_[5].modelBodyId==oldOwner,"riassegnazione transitiva del secondo modificatore");
+            view.undo();verify(view,owner,5);view.redo();verify(view,oldOwner,5,false);
+            require(encodeDocument(view.documentState(),bytes,cache).isEmpty() && decodeDocument(bytes,decoded,true).isEmpty(),"salvataggio storia riallineata");
+            CadViewport reopened;reopened.tessellationQuality_=0;reopened.loadDocument(decoded);verify(reopened,oldOwner,5,false);
+        }
+        std::cout<<"PASS proprieta' corpo nella storia: cache, riapertura, risultato, modifica, cascata e Undo/Redo"<<std::endl;
+    }
+
     static void datumStoryRegressions() {
         CadViewport view;
         view.tessellationQuality_ = 0;
@@ -10389,6 +10465,11 @@ int main(int argc, char **argv) {
         try { ViewportInteractionTest::storyboardScroll(); }
         catch(const std::exception &e){std::cerr<<e.what()<<std::endl;return 1;}
         std::cout<<"storyboard scroll PASS"<<std::endl;return 0;
+    }
+    if (app.arguments().contains(QStringLiteral("--body-owner-history"))) {
+        try { ViewportInteractionTest::bodyOwnerHistoryRegressions(); }
+        catch (const std::exception &e) { std::cerr << e.what() << std::endl; return 1; }
+        return 0;
     }
     if (app.arguments().contains(QStringLiteral("--datum-story"))) {
         try { ViewportInteractionTest::datumStoryRegressions(); }
