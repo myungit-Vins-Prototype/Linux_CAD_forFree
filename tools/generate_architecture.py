@@ -204,7 +204,7 @@ DESCRIPTIONS.update({'tools/open_architecture.py': ('build', 'Avvio locale della
  'forgeCad2026_ui_glass': ('startup', 'Aspetto condiviso di vetro UI: impostazioni, palette, sfocatura CPU e ombre arrotondate memorizzate.'),
  'cad_menu.h': ('startup', 'Popup comuni: palette della finestra, angoli antialias e padding dal raggio dei pannelli, spunte separate dalle icone.'),
  'cad_model_history': ('features',
-                       'Gestisce corpi logici e sequenza autonoma di schizzi e lavorazioni: identita, migrazione, posizione e dipendenze degli appoggi.'),
+                       'Gestisce corpi logici riallineati alle basi dopo modifiche e riordini e sequenza autonoma di schizzi e lavorazioni: identita, migrazione, posizione e dipendenze degli appoggi.'),
  'cad_native_revisions': ('documents', 'Persistenza delle revisioni native; confronto delle definizioni normalizzato al codec corrente anche per check-in pendenti in formato53.'),
  'cad_numeric_input.h': ('startup', 'Gestione comune dell’input numerico nei controlli dell’interfaccia.'),
  'cad_overlay_renderer': ('render', 'Disegno OpenGL degli overlay e delle loro istanze.'),
