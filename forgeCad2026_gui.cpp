@@ -760,15 +760,15 @@ void PdfWindow::initializeSceneAndTree(WindowSetup &setup) {
                                                                             : QStringLiteral("Sopprimi feature"))
                 : nullptr;
             if (suppress) suppress->setIcon(ForgeCad::commandIcon(QStringLiteral("visibility")));
-            const bool movableStep = storyboardFeature || type == kTreeSketch;
+            const bool datum = type == kTreeExtrusion && index >= 0 && index < viewport->extrusions().size()
+                            && viewport->extrusions().at(index).feature == BodyFeature::DatumPlane;
+            const bool movableStep = storyboardFeature || type == kTreeSketch || datum;
             QAction *changePlane = type == kTreeSketch ? menu.addAction(QStringLiteral("Cambia piano di riferimento...")) : nullptr;
             if (changePlane) changePlane->setIcon(ForgeCad::commandIcon(QStringLiteral("datumPlane")));
             QAction *moveEarlier = movableStep ? menu.addAction(QStringLiteral("Sposta prima nella storia")) : nullptr;
             QAction *moveLater = movableStep ? menu.addAction(QStringLiteral("Sposta dopo nella storia")) : nullptr;
             if (moveEarlier) moveEarlier->setIcon(ForgeCad::commandIcon(QStringLiteral("move")));
             if (moveLater) moveLater->setIcon(ForgeCad::commandIcon(QStringLiteral("move")));
-            const bool datum = type == kTreeExtrusion && index >= 0 && index < viewport->extrusions().size()
-                            && viewport->extrusions().at(index).feature == BodyFeature::DatumPlane;
             QAction *datumSketch = datum ? menu.addAction(QStringLiteral("Nuovo schizzo sul piano")) : nullptr;
             if (datumSketch) datumSketch->setIcon(ForgeCad::commandIcon(QStringLiteral("newSketch")));
             if (datumSketch) datumSketch->setEnabled(viewport->extrusions().at(index).datumValid);
@@ -5034,6 +5034,8 @@ void PdfWindow::rebuildModelTree() {
         historyRoot->addChild(item);
         item->setData(0, Qt::UserRole + 4, p);
         item->setFlags(item->flags() | Qt::ItemIsDropEnabled);
+        if (!step.sketch && extrusions.at(step.index).feature == BodyFeature::DatumPlane)
+            item->setFlags(item->flags() | Qt::ItemIsDragEnabled);
     }
     if (referenceRoot && referenceRoot->childCount() == 0) { delete referenceRoot; referenceRoot = nullptr; }
     const int position = viewport_->storyboardPosition();

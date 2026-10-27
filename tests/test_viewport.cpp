@@ -2147,6 +2147,144 @@ public:
         }
     }
 
+    static void datumStoryRegressions() {
+        CadViewport view;
+        view.tessellationQuality_ = 0;
+        GeometryRef xy; xy.kind = 1; xy.index = 0;
+        ExtrusionObject a; a.name = QStringLiteral("Piano A"); a.feature = BodyFeature::DatumPlane;
+        a.datum.refs = {xy}; a.datum.distance = 3; a.datum.size = 10;
+        require(view.createBody(a).isEmpty(), "primo piano nella storia");
+        const quint64 aid = view.extrusions_[0].featureId;
+        auto b = a; b.name = QStringLiteral("Piano B indipendente"); b.datum.distance = 8;
+        require(view.createBody(b).isEmpty(), "secondo piano indipendente");
+        const quint64 bid = view.extrusions_[1].featureId;
+        view.setObjectVisible(SceneObjectKind::Extrusion, 1, false);
+        PrimitiveParameters box; box.size[0] = box.size[1] = box.size[2] = 4;
+        require(view.createPrimitive(box, QStringLiteral("Corpo indipendente")).isEmpty(), "corpo fra i piani");
+        const quint64 boxid = view.extrusions_[2].featureId;
+        auto c = a; c.name = QStringLiteral("Piano C su A"); c.datum.distance = 2;
+        GeometryRef onA; onA.kind = 8; onA.index = 0; onA.featureId = aid; c.datum.refs = {onA};
+        require(view.createBody(c).isEmpty(), "piano dipendente da altro piano");
+        const quint64 cid = view.extrusions_[3].featureId;
+        const int sketch = view.createDatumSketch(3, QStringLiteral("Profilo su C"));
+        require(sketch >= 0, "schizzo associativo sul piano");
+        view.sketches_[sketch].segments = {{{0,0},{1,0}},{{1,0},{1,1}},{{1,1},{0,1}},{{0,1},{0,0}}};
+        view.endSketchMode();
+        ExtrusionObject extrusion; extrusion.sketchIndex = sketch; extrusion.distance = 2; extrusion.solid = true;
+        require(view.createExtrusion(extrusion, QStringLiteral("Estrusione su C")).isEmpty(), "utilizzatore del piano");
+        const quint64 eid = view.extrusions_.back().featureId;
+        const auto indexOf = [](const CadViewport &v, quint64 id) {
+            for (int i=0;i<v.extrusions_.size();++i) if(v.extrusions_[i].featureId==id) return i;
+            return -1;
+        };
+        const auto verify = [&](const CadViewport &v) {
+            const int ia=indexOf(v,aid), ib=indexOf(v,bid), ic=indexOf(v,cid), ie=indexOf(v,eid);
+            require(ia>=0 && ib>=0 && ic>=0 && ie>=0, "identita' dei piani conservate");
+            require(v.extrusions_[ia].modelBodyId==0 && v.extrusions_[ib].modelBodyId==0 && v.extrusions_[ic].modelBodyId==0,
+                    "i piani non diventano corpi solidi");
+            require(v.extrusions_[ic].datum.refs.front().index==ia && v.extrusions_[ic].datum.refs.front().featureId==aid,
+                    "riferimento fra piani rimappato per identita'");
+            require(v.sketches_[sketch].datumPlane==ic && v.sketches_[sketch].support && v.sketches_[sketch].support->index==ic
+                    && v.sketches_[sketch].support->featureId==cid, "appoggio dello schizzo rimappato");
+            require(std::abs(v.extrusions_[ic].datumFrame.origin[2]-5)<1e-8 && std::abs(v.sketches_[sketch].frame.origin[2]-5)<1e-8,
+                    "geometria del piano e dello schizzo invariata");
+            require(v.extrusions_[ia].visible && !v.extrusions_[ib].visible && v.extrusions_[ic].visible,
+                    "preferenze dei piani indipendenti conservate");
+            for(const auto &feature:v.extrusions_)require(feature.error.isEmpty(),"nessun errore dopo riordino dei piani");
+            const auto body=v.extrusions_[ie].forgeBody;require(bool(body),"solido dipendente disponibile");
+            double low=1e100,high=-1e100;
+            for(auto vertex:body->vertices()){const auto z=body->vertex(vertex).point.z();low=std::min(low,z);high=std::max(high,z);}
+            require(std::abs(low-5)<1e-8 && std::abs(high-7)<1e-8,"solido dipendente rigenerato nella posizione originale");
+        };
+        verify(view);
+        require(view.moveStoryboardStep(view.storyboardIndex(false,0),view.storyboardIndex(false,2)).isEmpty(),
+                "anche il primo piano si sposta oltre feature di altri corpi");
+        require(indexOf(view,aid)==2 && indexOf(view,bid)==0 && indexOf(view,boxid)==1,"ordine fisico dei piani modificato");
+        verify(view);
+        view.undo();require(indexOf(view,aid)==0 && indexOf(view,bid)==1,"Undo dello spostamento piano");verify(view);
+        view.redo();require(indexOf(view,aid)==2,"Redo dello spostamento piano");verify(view);
+        require(!view.moveStoryboardStep(view.storyboardIndex(false,indexOf(view,cid)),0).isEmpty(),
+                "piano non puo' precedere il piano di appoggio");
+        require(!view.moveStoryboardStep(view.storyboardIndex(false,indexOf(view,cid)),view.storyboardIndex(true,sketch)).isEmpty(),
+                "piano non puo' seguire lo schizzo che lo utilizza");
+        verify(view);
+        view.undo();require(indexOf(view,aid)==0,"rifiuti atomici senza nuove voci Undo");view.redo();verify(view);
+        // Muovere un piano scavalcando soltanto uno schizzo non cambia gli
+        // indici delle feature: anche questo percorso deve validare i riferimenti.
+        const int free=view.createSketch(0,QStringLiteral("Schizzo libero"));view.endSketchMode();
+        const int bpos=view.storyboardIndex(false,indexOf(view,bid));
+        require(view.moveStoryboardStep(view.storyboardIndex(true,free),bpos).isEmpty(),"schizzo libero prima del piano");
+        const auto bindex=indexOf(view,bid);
+        require(view.moveStoryboardStep(view.storyboardIndex(false,bindex),view.storyboardIndex(true,free)).isEmpty(),
+                "piano si sposta rispetto a uno schizzo senza riordinare i corpi");
+        require(indexOf(view,bid)==bindex,"indici feature stabili nello scambio con uno schizzo");verify(view);
+        QByteArray encoded;require(ForgeCad::encodeDocument(view.documentState(),encoded,false).isEmpty(),"salvataggio definizione con piano spostato");
+        DocumentState decoded;require(ForgeCad::decodeDocument(encoded,decoded).isEmpty(),"rilettura dei piani spostati");
+        CadViewport reopened;reopened.tessellationQuality_=0;reopened.loadDocument(decoded);verify(reopened);
+        require(reopened.rebuildAllFeatures()==0,"rigenerazione completa dopo riapertura");verify(reopened);
+        reopened.setStoryboardPosition(0);
+        require(!reopened.isBodyDrawn(indexOf(reopened,aid)) && !reopened.isBodyDrawn(indexOf(reopened,cid)),"piani futuri non disegnati");
+        reopened.setStoryboardPosition(reopened.storyboard().size());verify(reopened);
+        require(reopened.isBodyDrawn(indexOf(reopened,aid)) && !reopened.isBodyDrawn(indexOf(reopened,bid)),
+                "rollback conserva piano mostrato e piano nascosto");
+        // Documento con soli piani, senza alcun corpo cui attribuire una storia.
+        CadViewport planes;planes.tessellationQuality_=0;
+        require(planes.createBody(a).isEmpty() && planes.createBody(b).isEmpty(),"storia composta soltanto da piani");
+        planes.setObjectVisible(SceneObjectKind::Extrusion,1,false);
+        require(planes.moveStoryboardStep(0,1).isEmpty() && planes.extrusions_[1].name==a.name,
+                "riordino di un documento senza corpi");
+        require(!planes.extrusions_[0].visible && planes.extrusions_[1].visible,"visibilita' dei soli piani distinta");
+        require(planes.moveFeature(1,-1).isEmpty() && planes.extrusions_[0].name==a.name,
+                "comando di riordino feature disponibile anche per i piani");
+        // Albero e menu reali, compreso il caso in cui Corpi non esiste.
+        for(const auto &state:{view.documentState(),planes.documentState()}) {
+            PdfWindow window;window.resize(1100,800);window.viewport_->loadDocument(state);window.rebuildModelTree();
+            window.show();window.modelTree_->expandAll();QApplication::processEvents();
+            QTreeWidgetItem *planeItem=nullptr;int found=0;
+            for(QTreeWidgetItemIterator it(window.modelTree_);*it;++it) {
+                auto *item=*it;const int type=item->data(0,Qt::UserRole).toInt();
+                if(type==kTreePlane)require(!(item->flags()&Qt::ItemIsDragEnabled),"piani di origine fissi");
+                if(type!=kTreeExtrusion)continue;
+                const int i=item->data(0,Qt::UserRole+1).toInt();
+                if(window.viewport_->extrusions_[i].feature!=BodyFeature::DatumPlane)continue;
+                ++found;planeItem=item;
+                require(item->parent() && item->parent()->data(0,Qt::UserRole+2).toString()==QStringLiteral("H"),"piano nella storia unificata");
+                require(item->flags()&Qt::ItemIsDragEnabled,"piano definito trascinabile");
+                require(item->data(0,Qt::UserRole+4).toInt()==window.viewport_->storyboardIndex(false,i),"posizione autonoma del piano nell'albero");
+            }
+            require(found>0 && planeItem,"piani visibili nell'albero");
+            window.modelTree_->scrollToItem(planeItem);QApplication::processEvents();
+            const quint64 planeToMove=window.viewport_->extrusions_[planeItem->data(0,Qt::UserRole+1).toInt()].featureId;
+            bool menuSeen=false,moves=false,sketchAction=false,visibility=false;
+            QTimer inspect;inspect.setInterval(10);
+            QObject::connect(&inspect,&QTimer::timeout,&window,[&]{
+                auto *menu=qobject_cast<QMenu *>(QApplication::activePopupWidget());if(!menu)return;
+                menuSeen=true;int count=0;QAction *earlier=nullptr;
+                for(auto *action:menu->actions()) {
+                    if(action->text().startsWith(QStringLiteral("Sposta ")) && action->isEnabled())++count;
+                    if(action->text()==QStringLiteral("Sposta prima nella storia"))earlier=action;
+                    sketchAction|=action->text()==QStringLiteral("Nuovo schizzo sul piano");
+                    visibility|=action->text()==QStringLiteral("Mostra") || action->text()==QStringLiteral("Nascondi");
+                }
+                moves=count==2;
+                if(found==2 && earlier) {
+                    menu->setActiveAction(earlier);
+                    QKeyEvent enter(QEvent::KeyPress,Qt::Key_Return,Qt::NoModifier);
+                    QApplication::sendEvent(menu,&enter);
+                } else menu->close();
+            });
+            inspect.start();
+            const auto point=window.modelTree_->visualItemRect(planeItem).center();
+            QMetaObject::invokeMethod(window.modelTree_,"customContextMenuRequested",Qt::DirectConnection,Q_ARG(QPoint,point));inspect.stop();
+            require(menuSeen && moves && sketchAction && visibility,"menu piano: spostamenti, schizzo e visibilita' conservati");
+            if(found==2)require(window.viewport_->extrusions_[0].featureId==planeToMove,
+                                "azione reale Sposta prima riordina il piano dalla UI");
+            const auto dir=qEnvironmentVariable("FORGECAD_DATUM_STORY_QA_DIR");
+            if(!dir.isEmpty()){QDir().mkpath(dir);require(window.modelTree_->grab().save(dir+QStringLiteral("/tree-%1.png").arg(found)),"cattura piani nella storia");}
+        }
+        std::cout<<"PASS piani definiti: riordino, dipendenze, appoggi, Undo/Redo, codec, cursore e UI"<<std::endl;
+    }
+
     static void sketchStoryRegressions() {
         CadViewport view;
         view.tessellationQuality_ = 0;
@@ -10158,6 +10296,11 @@ int main(int argc, char **argv) {
         try { ViewportInteractionTest::storyboardScroll(); }
         catch(const std::exception &e){std::cerr<<e.what()<<std::endl;return 1;}
         std::cout<<"storyboard scroll PASS"<<std::endl;return 0;
+    }
+    if (app.arguments().contains(QStringLiteral("--datum-story"))) {
+        try { ViewportInteractionTest::datumStoryRegressions(); }
+        catch (const std::exception &e) { std::cerr << e.what() << std::endl; return 1; }
+        return 0;
     }
     if (app.arguments().contains(QStringLiteral("--sketch-story"))) {
         try { ViewportInteractionTest::sketchStoryRegressions(); }
