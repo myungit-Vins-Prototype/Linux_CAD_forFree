@@ -95,8 +95,97 @@ void patternPlacementTests() {
 }
 }
 
+// Strumento dello sweep ripetuto attorno a Y, mantenendo il bersaglio fermo.
+static void sweepFeaturePatternTests() {
+    using namespace ForgeCad;
+    using namespace ForgeCad::Kernel;
+    for (int operation : {1, 2}) {
+        DocumentState state;
+        ExchangeBody stock; stock.body = makeCylinder(Frame3({0,0,0}, {0,1,0}, {1,0,0}), 8, 6);
+        ExtrusionObject base; base.feature = BodyFeature::Imported;
+        base.importData = QByteArray::fromStdString(writeStep({stock}));
+        SketchObject profile; profile.plane = kFacePlane;
+        profile.frame.normal[1] = 1; profile.frame.normal[2] = 0;
+        const double start = operation == 1 ? 5 : -1, end = operation == 1 ? 9 : 7;
+        profile.frame.origin[1] = start;
+        CurveObject circle; circle.tool = DrawingTool::Circle;
+        circle.controlPoints = {QPointF(4,0), QPointF(4.5,0)}; profile.curves = {circle};
+        SketchObject path; path.segments = {{QPointF(4,start), QPointF(4,end)}};
+        state.sketches = {profile, path};
+        ExtrusionObject sweep; sweep.feature = BodyFeature::Sweep; sweep.name = QStringLiteral("Sweep da ripetere");
+        sweep.sketchIndex = 0; sweep.pathSketch = 1;
+        sweep.mergeOperation = operation; sweep.mergeAuto = false; sweep.mergeBodies = {0};
+        state.extrusions = {base, sweep};
+        CadViewport view; view.loadDocument(state);
+        require(view.extrusions()[1].error.isEmpty() && view.extrusions()[1].forgeBody,
+                "fixture sweep associato al cilindro");
+        require(patternFeatureSupported(view.extrusions()[1]) && !patternFeatureSupported(view.extrusions()[0]),
+                "stesso criterio per sweep e corpo senza funzione associata");
+        auto unsupported = view.extrusions()[1]; unsupported.sweepSurface = true;
+        require(!patternFeatureSupported(unsupported), "sweep di superficie non offre fusione di funzione");
+        unsupported.sweepSurface = false; unsupported.mergeOperation = 0;
+        require(!patternFeatureSupported(unsupported), "sweep autonomo resta ripetibile come corpo");
+        const auto original = writeBodyBinary(*view.extrusions()[1].forgeBody);
+        const auto volume = [&](int copies) {
+            return M_PI * (64 * 6 + (operation == 1 ? copies * .25 * 3 : -copies * .25 * 6));
+        };
+        const auto check = [&](int copies) {
+            const auto tips = view.resultBodiesBefore(-1);
+            require(tips.size() == 1, "ripetere lo sweep mantiene il corpo di base unico");
+            const auto &result = view.extrusions()[tips.first()];
+            require(result.forgeBody && result.error.isEmpty() && checkBody(*result.forgeBody).empty(),
+                    "topologia della ripetizione sweep");
+            require(std::abs(massProperties(*result.forgeBody).volume - volume(copies)) < 1e-7,
+                    "volume analitico: bersaglio fermo e sole istanze dello strumento");
+            require(writeBodyBinary(*view.extrusions()[1].forgeBody) == original, "sweep sorgente immutato");
+        };
+        require(std::abs(massProperties(*view.extrusions()[1].forgeBody).volume - volume(1)) < 1e-7,
+                "volume analitico dello sweep iniziale");
+        ExtrusionObject repeated; repeated.feature = BodyFeature::Pattern; repeated.firstBody = 1;
+        repeated.pattern.kind = 1; repeated.pattern.featureOnly = true; repeated.pattern.count = 4;
+        repeated.pattern.excluded = {2}; GeometryRef y; y.kind = 2; y.index = 1; repeated.pattern.refs = {y};
+        QMainWindow window; std::exception_ptr failure;
+        QTimer::singleShot(0, &window, [&] {
+            auto *dialog = window.findChild<QDialog *>();
+            try {
+                auto *what = dialog ? dialog->findChild<QComboBox *>("patternWhat") : nullptr;
+                auto *body = dialog ? dialog->findChild<QComboBox *>("patternBody") : nullptr;
+                require(what && what->isEnabled() && what->currentIndex() == 1,
+                        "pannello permette di scegliere la funzione sweep");
+                require(body && body->currentText().contains(sweep.name) && body->currentData().toInt() == 1,
+                        "pannello identifica la feature oltre al corpo logico");
+                dialog->findChild<QDialogButtonBox *>()->button(QDialogButtonBox::Ok)->click();
+                require(dialog->result() == QDialog::Accepted, "pannello crea sweep circolare su Y");
+            } catch (...) { failure = std::current_exception(); if (dialog) dialog->reject(); }
+        });
+        patternDialog(&window, &view, "Ripetizione sweep", -1, repeated,
+            [&](const ExtrusionObject &d) { return view.createBody(d, {d.firstBody}); });
+        if (failure) std::rethrow_exception(failure);
+        check(3);
+        auto changed = view.extrusions()[2]; changed.pattern.excluded = {0,2};
+        require(view.updateBody(2, changed).isEmpty(), "esclusione originale dello sweep"); check(2);
+        changed = view.extrusions()[2]; changed.pattern.excluded.clear();
+        require(view.updateBody(2, changed).isEmpty(), "ripristino occorrenze sweep"); check(4);
+        view.undo(); check(2); view.redo(); check(4);
+        for (bool cache : {false, true}) {
+            QByteArray bytes; DocumentState decoded;
+            require(encodeDocument(view.currentDocument(), bytes, cache).isEmpty()
+                    && decodeDocument(bytes, decoded).isEmpty(), "codec ripetizione sweep");
+            view.loadDocument(decoded); require(view.rebuildAllFeatures() == 0, "rigenera ripetizione sweep"); check(4);
+        }
+        // Non mascherare l'errore specifico della ricostruzione dello strumento.
+        auto broken = view.extrusions(); broken[1].sketchIndex = -1;
+        auto badPattern = repeated;
+        buildGeometry(badPattern, 2, view.sketches(), broken);
+        require(!badPattern.forgeBody && badPattern.error.contains(QStringLiteral("profilo")),
+                "errore del profilo sweep conservato");
+    }
+    std::cout << "PASS sweep feature pattern: Y, volumi analitici, pannello, esclusioni, codec, Undo/Redo" << std::endl;
+}
+
 // Risultati applicativi, persistenza e indipendenza delle singole copie.
 void patternResultTests() {
+    sweepFeaturePatternTests();
     using namespace ForgeCad;
     using namespace ForgeCad::Kernel;
     for (bool sheet : {false, true}) {

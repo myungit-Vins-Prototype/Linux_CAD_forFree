@@ -183,6 +183,12 @@ int CadViewport::historyPosition() const { return historyPosition_ < 0 ? int(ext
 
 bool CadViewport::isBodyDrawn(int index, bool includeSketchResults) const {
     if(index<0 || index>=extrusions_.size())return false;
+    // Il cursore limita la scena dei riferimenti senza sovrascrivere la
+    // preferenza Mostra/Nascondi del piano, che deve sopravvivere al rollback.
+    int referenceEnd = historyPosition();
+    if (refPicking_ && refPickOwner_ >= 0) referenceEnd = refPickOwner_;
+    if (sketchMode_ && sketchContextEnd_ >= 0) referenceEnd = sketchContextEnd_;
+    if (!extrusions_.at(index).modelBodyId && index >= referenceEnd) return false;
     bool drawn = extrusions_.at(index).visible;
     // La scelta in modifica usa la scena prima della feature, anche dopo
     // Azzera/anteprima fallita. Non altera i flag salvati del documento.
@@ -327,7 +333,7 @@ void CadViewport::applyHistoryPosition() {
         QVector<ModelBody> bodies = modelBodies_;
         ForgeCad::normalizeModelHistory(prefix, bodies);
         for (int i = 0; i < extrusions_.size(); ++i)
-            extrusions_[i].visible = i < prefix.size() && prefix.at(i).visible;
+            if (extrusions_.at(i).modelBodyId) extrusions_[i].visible = i < prefix.size() && prefix.at(i).visible;
     }
     // Un operando consumato resta nella storia, ma non e' un corpo
     // indipendente nella posizione corrente. Nasconderlo anche se l'utente
@@ -612,6 +618,11 @@ QString CadViewport::setFeaturesSuppressed(const QVector<int> &indices, bool sup
                                      && ForgeCad::hiddenOperands(extrusions_.at(other)).contains(operand);
             }
             extrusions_[operand].visible = suppressed && !consumedElsewhere;
+            // La soppressione rilascia questo corpo: il vecchio filtro di
+            // consumo non deve ripristinare la visibilita' precedente
+            // durante la normalizzazione della rigenerazione successiva.
+            if (extrusions_.at(operand).visible)
+                consumedBodies_.remove(extrusions_.at(operand).modelBodyId);
         }
     }
     if (list.size() == 1) {
@@ -689,7 +700,7 @@ QString CadViewport::moveFeature(int index, int direction) {
     index = ForgeCad::patternSourceIndex(extrusions_, index);
     QVector<int> features;
     for (int f = 0; f < extrusions_.size(); ++f)
-        if (extrusions_.at(f).modelBodyId && ForgeCad::patternSourceIndex(extrusions_, f) == f) features.append(f);
+        if ((extrusions_.at(f).modelBodyId || extrusions_.at(f).feature == BodyFeature::DatumPlane) && ForgeCad::patternSourceIndex(extrusions_, f) == f) features.append(f);
     const int from = features.indexOf(index), to = from + (direction < 0 ? -1 : 1);
     if (from < 0 || to < 0 || to >= features.size()) return QStringLiteral("Non ci sono altre feature in quella direzione.");
     return moveFeatureTo(index, features.at(to));
@@ -704,14 +715,14 @@ QString CadViewport::reorderFeatureTo(int index, int target, const QVector<Story
     // La storia e' una sola sequenza: il bersaglio puo' essere una feature
     // di un altro corpo, conta solo che le dipendenze restino prima.
     if (index < 0 || index >= extrusions_.size() || target < 0 || target >= extrusions_.size()
-        || !extrusions_.at(index).modelBodyId)
+        || (!extrusions_.at(index).modelBodyId && extrusions_.at(index).feature != BodyFeature::DatumPlane))
         return QStringLiteral("Feature non valida.");
     if (index == target) return {};
     const quint64 bodyId = extrusions_.at(index).modelBodyId;
     int first = -1;
     for (int candidate = 0; candidate < extrusions_.size(); ++candidate)
-        if (extrusions_.at(candidate).modelBodyId == bodyId) { first = candidate; break; }
-    if (index == first) return QStringLiteral("La feature che crea il corpo non si sposta: sposta le feature che la seguono.");
+        if (bodyId && extrusions_.at(candidate).modelBodyId == bodyId) { first = candidate; break; }
+    if (bodyId && index == first) return QStringLiteral("La feature che crea il corpo non si sposta: sposta le feature che la seguono.");
     bool bodyVisible = true;
     for (const ModelBody &body : modelBodies_)
         if (body.id == bodyId) { bodyVisible = body.visible; break; }
@@ -743,7 +754,7 @@ QString CadViewport::reorderFeatureTo(int index, int target, const QVector<Story
     ForgeCad::remapFeatureBodies(reordered, mapped);
 
     for (const ExtrusionObject &feature : reordered)
-        if (feature.modelBodyId == bodyId) {
+        if (bodyId && feature.modelBodyId == bodyId) {
             if (feature.featureId != extrusions_.at(first).featureId)
                 return QStringLiteral("Spostamento non consentito: \"%1\" verrebbe prima di \"%2\", che crea il suo corpo.")
                     .arg(extrusions_.at(index).name, extrusions_.at(first).name);
@@ -754,7 +765,7 @@ QString CadViewport::reorderFeatureTo(int index, int target, const QVector<Story
     int previous = -1;
     for (int current = 0; current < reordered.size(); ++current) {
         ExtrusionObject &feature = reordered[current];
-        if (feature.modelBodyId != bodyId) continue;
+        if (!bodyId || feature.modelBodyId != bodyId) continue;
         if (previous >= 0) {
             if (feature.operation >= 0 || feature.feature == BodyFeature::Blend || feature.feature == BodyFeature::SheetTrim
                 || feature.feature == BodyFeature::SheetExtend || (feature.feature==BodyFeature::SurfaceTools&&feature.surfaceTool.mode!=1) || feature.feature == BodyFeature::Scale
@@ -784,9 +795,9 @@ QString CadViewport::reorderFeatureTo(int index, int target, const QVector<Story
     extrusions_ = std::move(reordered);
     int tip = -1;
     for (int candidate = extrusions_.size() - 1; candidate >= 0; --candidate)
-        if (extrusions_.at(candidate).modelBodyId == bodyId && !extrusions_.at(candidate).suppressed) { tip = candidate; break; }
+        if (bodyId && extrusions_.at(candidate).modelBodyId == bodyId && !extrusions_.at(candidate).suppressed) { tip = candidate; break; }
     for (int candidate = 0; candidate < extrusions_.size(); ++candidate)
-        if (extrusions_.at(candidate).modelBodyId == bodyId) extrusions_[candidate].visible = candidate == tip && bodyVisible;
+        if (bodyId && extrusions_.at(candidate).modelBodyId == bodyId) extrusions_[candidate].visible = candidate == tip && bodyVisible;
     ForgeCad::remapSketchSupports(sketches_, mapped);
     regenerateAll();
     const int moved = map.value(index, -1);

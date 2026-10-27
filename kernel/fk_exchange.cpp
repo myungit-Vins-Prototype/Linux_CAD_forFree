@@ -609,7 +609,10 @@ CurvePtr<2> sewnPCurve(const RawEdge &source, const RawEdge &target,
         if (t == target.range.lo) return first;
         if (t == target.range.hi) return first+slope*target.range.length();
         const Vec3 point = target.curve->point(t);
-        const auto candidates = projectPointCandidates(*source.curve, point, source.range);
+        // Per superare il controllo serve best <= limit; tutti i rami che
+        // possono vincere hanno distanza <= best+1e-10 <= limit+1e-10.
+        const double limit = std::max(1e-7, 10.0 * tolerance);
+        const auto candidates = projectPointCandidatesWithin(*source.curve, point, source.range, limit + 1e-10);
         double best = std::numeric_limits<double>::infinity(), chosen = first;
         for (const auto &q : candidates) best = std::min(best, q.distance);
         if (best>std::max(1e-7,10.0*tolerance))

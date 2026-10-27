@@ -1,6 +1,9 @@
 #include "fk_curve_algo.h"
 
 #include <algorithm>
+#include <limits>
+
+#include "fk_cancel.h"
 
 #include "fk_bernstein.h"
 #include "fk_bspline.h"
@@ -153,10 +156,33 @@ void segmentCandidates(const BSplineCurve<N> &curve, const BSplineCurve<N> &segm
 }
 
 template <int N>
-void bsplineCandidates(const BSplineCurve<N> &curve, const Vec<N> &p, const Interval &range, Candidates<N> &out) {
+void bsplineCandidates(const BSplineCurve<N> &curve, const Vec<N> &p, const Interval &range, Candidates<N> &out,
+                       double maximumDistance) {
     addCandidate<N>(curve, p, range.hi, out);
     const auto segments = curve.cachedBezierSegments();
-    for (const BSplineCurve<N> &segment : *segments) segmentCandidates(curve, segment, p, range, out);
+    for (const BSplineCurve<N> &segment : *segments) {
+        if (std::isfinite(maximumDistance)) {
+            cancellationPoint();
+            const auto span = segment.domain();
+            if (span.hi < range.lo || span.lo > range.hi) continue;
+            // Pesi NURBS positivi: il tratto e' nel convex hull dei poli.
+            // Il box allargato contiene anche la sfera di distanza ammessa;
+            // margine prudenziale per arrotondamenti di valutazione/nodi.
+            bool outside = false;
+            for (int axis = 0; axis < N; ++axis) {
+                double lo = std::numeric_limits<double>::infinity(), hi = -lo;
+                for (const auto &pole : segment.poles()) {
+                    lo = std::min(lo, pole[axis]); hi = std::max(hi, pole[axis]);
+                }
+                const double magnitude = std::max({1.0, std::fabs(lo), std::fabs(hi), std::fabs(p[axis])});
+                const double roundoff = 256.0 * kMachineEpsilon * (segment.degree() + 1) * magnitude;
+                const double reach = maximumDistance + roundoff;
+                outside = outside || lo - p[axis] > reach || p[axis] - hi > reach;
+            }
+            if (outside) continue;
+        }
+        segmentCandidates(curve, segment, p, range, out);
+    }
 }
 
 // Solo il minimo globale su una B-spline: i tratti si esaminano in ordine di
@@ -197,7 +223,8 @@ CurveProjection<N> bsplineMinimum(const BSplineCurve<N> &curve, const Vec<N> &p,
 }
 
 template <int N>
-void collectCandidates(const Curve<N> &curve, const Vec<N> &p, const Interval &range, Candidates<N> &out) {
+void collectCandidates(const Curve<N> &curve, const Vec<N> &p, const Interval &range, Candidates<N> &out,
+                       double maximumDistance = std::numeric_limits<double>::infinity()) {
     if (!(range.lo <= range.hi)) throw std::invalid_argument("projectPoint: intervallo vuoto");
     switch (curve.type()) {
     case CurveType::Line:  // anche su intervalli infiniti
@@ -206,7 +233,7 @@ void collectCandidates(const Curve<N> &curve, const Vec<N> &p, const Interval &r
     case CurveType::Trimmed: {
         const auto &trimmed = static_cast<const TrimmedCurve<N> &>(curve);
         const Interval domain = trimmed.domain();
-        collectCandidates(*trimmed.basis(), p, Interval{std::max(range.lo, domain.lo), std::min(range.hi, domain.hi)}, out);
+        collectCandidates(*trimmed.basis(), p, Interval{std::max(range.lo, domain.lo), std::min(range.hi, domain.hi)}, out, maximumDistance);
         return;
     }
     case CurveType::Transformed:
@@ -217,7 +244,7 @@ void collectCandidates(const Curve<N> &curve, const Vec<N> &p, const Interval &r
             double scale = 1.0;
             if (transformed.transform().isSimilarity(&scale)) {
                 const std::size_t first = out.size();
-                collectCandidates(*transformed.basis(), transformed.transform().inverted().applyToPoint(p), range, out);
+                collectCandidates(*transformed.basis(), transformed.transform().inverted().applyToPoint(p), range, out, maximumDistance / scale);
                 for (std::size_t i = first; i < out.size(); ++i) {
                     out[i].point = transformed.transform().applyToPoint(out[i].point);
                     out[i].distance *= scale;
@@ -235,7 +262,7 @@ void collectCandidates(const Curve<N> &curve, const Vec<N> &p, const Interval &r
         circleCandidates(static_cast<const Circle<N> &>(curve), p, range, out);
         return;
     case CurveType::BSpline:
-        bsplineCandidates(static_cast<const BSplineCurve<N> &>(curve), p, range, out);
+        bsplineCandidates(static_cast<const BSplineCurve<N> &>(curve), p, range, out, maximumDistance);
         return;
     default:
         genericCandidates(curve, p, range, out);
@@ -249,6 +276,18 @@ template <int N>
 std::vector<CurveProjection<N>> projectPointCandidates(const Curve<N> &curve, const Vec<N> &p, const Interval &range) {
     Candidates<N> result;
     collectCandidates(curve, p, range, result);
+    return result;
+}
+
+template <int N>
+std::vector<CurveProjection<N>> projectPointCandidatesWithin(const Curve<N> &curve, const Vec<N> &p,
+                                                            const Interval &range, double maximumDistance) {
+    if (!(maximumDistance >= 0.0) || !isFinite(p))
+        throw std::invalid_argument("projectPointCandidatesWithin: limite o punto non valido");
+    cancellationPoint();
+    Candidates<N> result;
+    collectCandidates(curve, p, range, result, maximumDistance);
+    result.erase(std::remove_if(result.begin(), result.end(), [&](const auto &q) { return q.distance > maximumDistance; }), result.end());
     return result;
 }
 
@@ -303,6 +342,8 @@ double arcLength(const Curve<N> &curve, double tolerance) {
 
 template std::vector<CurveProjection<2>> projectPointCandidates<2>(const Curve<2> &, const Vec2 &, const Interval &);
 template std::vector<CurveProjection<3>> projectPointCandidates<3>(const Curve<3> &, const Vec3 &, const Interval &);
+template std::vector<CurveProjection<2>> projectPointCandidatesWithin<2>(const Curve<2> &, const Vec2 &, const Interval &, double);
+template std::vector<CurveProjection<3>> projectPointCandidatesWithin<3>(const Curve<3> &, const Vec3 &, const Interval &, double);
 template CurveProjection<2> projectPoint<2>(const Curve<2> &, const Vec2 &, const Interval &);
 template CurveProjection<3> projectPoint<3>(const Curve<3> &, const Vec3 &, const Interval &);
 template CurveProjection<2> projectPoint<2>(const Curve<2> &, const Vec2 &);

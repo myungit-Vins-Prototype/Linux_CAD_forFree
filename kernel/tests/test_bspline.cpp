@@ -1,4 +1,9 @@
 #include "fk_test_util.h"
+#include "fk_bspline_basis.h"
+#include "fk_cancel.h"
+#include <array>
+#include <cstring>
+#include <future>
 
 using namespace fktest;
 
@@ -202,4 +207,142 @@ FK_TEST(BSplineValidation) {
     FK_CHECK_THROWS(ok.insertKnot(-0.5));        // fuori dal dominio
     FK_CHECK(ok.insertKnot(0.0).poleCount() == 3);  // estremo gia' clamped: invariata
     FK_CHECK(expandKnots({0.0, 0.5, 1.0}, {3, 1, 3}).size() == 7);
+}
+
+// Ordini piccoli usati dalle quadrature/proiezioni e ordini generali: ogni
+// prefisso deve coincidere bit per bit, con confronto geometrico OCCT indipendente.
+FK_TEST(BSplineLowOrdersMatchOcctAndFullEvaluation) {
+    std::mt19937 rng(271027);
+    const auto check = [&](const auto &curve) {
+        using Vector = std::decay_t<decltype(curve.point(0.0))>;
+        const auto reference = toOcct(curve);
+        const int maximum = std::max(3, curve.degree() + 2);
+        std::vector<double> parameters;
+        const Interval domain = curve.domain();
+        for (double knot : curve.breakpoints(domain)) {
+            parameters.push_back(knot);
+            if (knot > domain.lo) parameters.push_back(std::nextafter(knot, domain.lo));
+            if (knot < domain.hi) parameters.push_back(std::nextafter(knot, domain.hi));
+        }
+        for (int i = 0; i < 12; ++i) parameters.push_back(uniform(rng, domain.lo, domain.hi));
+        std::vector<Vector> full(maximum + 1);
+        Vector guard; for (double &v : guard.c) v = 1234.5;
+        for (double t : parameters) {
+            curve.evaluate(t, maximum, full.data());
+            // Le derivate OCCT possono scegliere l'altro lato a un ulp da
+            // un nodo interno. In quei soli punti verifica prefisso e buffer;
+            // posizione, nodo esatto e punti interni conservano il confronto OCCT.
+            bool adjacent = false;
+            for (double knot : curve.knots())
+                if (knot > domain.lo && knot < domain.hi && t != knot
+                    && (t == std::nextafter(knot, domain.lo) || t == std::nextafter(knot, domain.hi))) adjacent = true;
+            for (int order : {0,1,2,3}) {
+                std::vector<Vector> prefix(order + 3, guard);
+                curve.evaluate(t, order, prefix.data() + 1);
+                FK_CHECK(std::memcmp(prefix.data() + 1, full.data(), (order + 1) * sizeof(Vector)) == 0);
+                FK_CHECK(std::memcmp(prefix.data(), &guard, sizeof(Vector)) == 0);
+                FK_CHECK(std::memcmp(&prefix.back(), &guard, sizeof(Vector)) == 0);
+                for (int k = 0; k <= order; ++k) {
+                    if (k > 0 && adjacent) continue;
+                    const Vector expected = k ? fromOcct(reference->DN(t, k)) : fromOcct(reference->Value(t));
+                    FK_CHECK(near(prefix[k + 1], expected, k ? derivativeTolerance(k) : 1e-12));
+                }
+            }
+        }
+    };
+    for (int degree : {1,2,3,4,5,6,7,9}) for (int trial = 0; trial < 10; ++trial) {
+        const int count = degree + 1 + trial % 7;
+        auto knots = randomKnots(rng, degree, count);
+        if (trial % 3 == 0) { // Anche curve non clamped.
+            knots.resize(count + degree + 1);
+            for (std::size_t i = 0; i < knots.size(); ++i) knots[i] = 0.125 * i - 2.0;
+        }
+        std::vector<Vec2> poles2; std::vector<Vec3> poles3; std::vector<double> weights;
+        for (int i = 0; i < count; ++i) {
+            poles2.push_back(randomVec<2>(rng, 30)); poles3.push_back(randomVec<3>(rng, 30));
+            if (trial % 2) weights.push_back(uniform(rng, 0.2, 5.0));
+        }
+        check(BSplineCurve<2>(degree, knots, poles2, weights));
+        check(BSplineCurve<3>(degree, knots, poles3, weights));
+    }
+}
+
+// Bernstein fornisce un riferimento analitico indipendente per il fallback
+// ad alto grado e per campate corte. Il buffer di uscita resta delimitato.
+FK_TEST(BSplineBasisBernsteinAndBufferBounds) {
+    const auto choose = [](int n, int k) {
+        if (k < 0 || k > n) return 0.0L;
+        long double v = 1;
+        for (int i = 1; i <= k; ++i) v = v * (n - k + i) / i;
+        return v;
+    };
+    for (int p : {1,2,3,4,5,6,9,15,31}) for (double width : {1.0, 1e-6}) {
+        std::vector<double> knots(p + 1, 0); knots.insert(knots.end(), p + 1, width);
+        for (double u : {0.0, 0.03125, 0.25, 0.5, 0.75, 0.96875, 1.0})
+            for (int n = 0; n <= std::min(p, 3); ++n) {
+                const int size = (n + 1) * (p + 1);
+                std::vector<double> values(size + 2, 1234567.25);
+                ForgeCad::Kernel::detail::basisFunctionDerivatives(knots, p, u * width, p, n, values.data() + 1);
+                FK_CHECK(values.front() == 1234567.25 && values.back() == 1234567.25);
+                long double factor = 1;
+                for (int k = 0; k <= n; ++k) {
+                    for (int j = 0; j <= p; ++j) {
+                        long double value = 0, magnitude = 0;
+                        for (int i = 0; i <= k; ++i) {
+                            const int q = j - i, d = p - k;
+                            if (q < 0 || q > d) continue;
+                            long double term = choose(k,i) * choose(d,q) * std::pow((long double)u,q) * std::pow(1-(long double)u,d-q);
+                            magnitude += std::fabs(term);
+                            value += (k-i)%2 ? -term : term;
+                        }
+                        const double expected = double(factor * value);
+                        const double tolerance = double(5e-13L * std::max(1.0L, factor * magnitude));
+                        FK_CHECK_NEAR(values[1 + k * (p + 1) + j], expected, tolerance);
+                    }
+                    factor *= (p - k) / (long double)width;
+                }
+            }
+    }
+}
+
+FK_TEST(BSplineBasisConcurrentAndCancelled) {
+    std::mt19937 rng(719);
+    const auto curve = randomBSpline<3>(rng, true);
+    std::vector<std::array<Vec3,4>> expected(100);
+    for (int i = 0; i < 100; ++i) curve.evaluate(curve.domain().lo + curve.domain().length()*i/99.0,3,expected[i].data());
+    std::vector<std::future<bool>> requests;
+    for (int worker = 0; worker < 4; ++worker) requests.push_back(std::async(std::launch::async, [&] {
+        for (int repeat=0;repeat<4;++repeat) for (int i=0;i<100;++i) for (int order=0;order<=3;++order) {
+            Vec3 out[4]; curve.evaluate(curve.domain().lo + curve.domain().length()*i/99.0,order,out);
+            if (std::memcmp(out,expected[i].data(),(order+1)*sizeof(Vec3))) return false;
+        }
+        return true;
+    }));
+    for (auto &request : requests) FK_CHECK(request.get());
+    const auto token = std::make_shared<std::atomic<bool>>(true);
+    for (int p : {1,2,3,4,5,9,15,31}) for (int n=0;n<=std::min(p,3);++n) {
+        CancellationScope scope(token); bool cancelled = false;
+        std::vector<double> knots(2*p+2,0), values((n+1)*(p+1),77);
+        try { ForgeCad::Kernel::detail::basisFunctionDerivatives(knots,p,0,p,n,values.data()); }
+        catch (const OperationCancelled &) { cancelled = true; }
+        FK_CHECK(cancelled && std::all_of(values.begin(),values.end(),[](double v){return v==77;}));
+    }
+}
+
+
+FK_TEST(BSplineRepeatedKnotOneSidedDerivatives) {
+    for (int p=1;p<=5;++p) {
+        std::vector<double> knots(p+1,0); knots.insert(knots.end(),p,1); knots.insert(knots.end(),p+1,2);
+        std::vector<Vec2> poles;
+        for (int i=0;i<=p;++i) poles.push_back(Vec2(i,0));
+        for (int i=1;i<=p;++i) poles.push_back(Vec2(p,i));
+        const BSplineCurve<2> curve(p,knots,poles);
+        Vec2 left[4],right[4];curve.evaluateLeft(1,3,left);curve.evaluate(1,3,right);
+        FK_CHECK(near(left[0],Vec2(p,0),0) && near(right[0],Vec2(p,0),0));
+        FK_CHECK(near(left[1],Vec2(p,0),0) && near(right[1],Vec2(0,p),0));
+        FK_CHECK(near(left[2],Vec2(),0) && near(right[2],Vec2(),0));
+        FK_CHECK(near(left[3],Vec2(),0) && near(right[3],Vec2(),0));
+        FK_CHECK(near(curve.derivative(std::nextafter(1.0,0.0)),Vec2(p,0),1e-12));
+        FK_CHECK(near(curve.derivative(std::nextafter(1.0,2.0)),Vec2(0,p),1e-12));
+    }
 }

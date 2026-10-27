@@ -359,14 +359,23 @@ bool patternDialog(QMainWindow *window, CadViewport *viewport, const QString &ti
     dialog.setModal(false);
     auto *form = dialog.createScrollableForm();
     auto *bodyBox = new QComboBox(&dialog);
-    for (int index : candidates) bodyBox->addItem(logicalBodyLabel(viewport, index));
+    bodyBox->setObjectName(QStringLiteral("patternBody"));
+    for (int index : candidates) {
+        QString label = logicalBodyLabel(viewport, index);
+        if (ForgeCad::patternFeatureSupported(bodies.at(index)) && !bodies.at(index).name.isEmpty())
+            label += QStringLiteral(" — ") + bodies.at(index).name;
+        bodyBox->addItem(label, index);
+    }
     bodyBox->setCurrentIndex(int(candidates.indexOf(definition.firstBody)));
     bodyBox->setEnabled(replaced < 0);
     BodyPicker picker(dialog, viewport, replaced, candidates, bodyBox);
     auto *kindBox = new QComboBox(&dialog);
+    kindBox->setObjectName(QStringLiteral("patternKind"));
     kindBox->addItems({QStringLiteral("Lineare"), QStringLiteral("Circolare"), QStringLiteral("Specchio")});
     kindBox->setCurrentIndex(qBound(0, p.kind, 2));
     auto *whatBox = new QComboBox(&dialog);
+    whatBox->setObjectName(QStringLiteral("patternWhat"));
+    whatBox->setToolTip(QStringLiteral("La funzione ripete il materiale aggiunto o sottratto, mantenendo il corpo di base."));
     whatBox->addItems({QStringLiteral("Il corpo intero"), QStringLiteral("La funzione (lo strumento dell'unione o della differenza)")});
     whatBox->setCurrentIndex(p.featureOnly ? 1 : 0);
     form->addRow(QStringLiteral("Corpo:"), picker.row(bodyBox));
@@ -460,9 +469,7 @@ bool patternDialog(QMainWindow *window, CadViewport *viewport, const QString &ti
         const int kind = kindBox->currentIndex();
         p.kind = kind;
         const ExtrusionObject &base = bodies.at(candidates.at(bodyBox->currentIndex()));
-        const bool feature = base.operation == 0 || base.operation == 2
-            || (base.operation < 0 && (base.feature == BodyFeature::Extrusion || base.feature == BodyFeature::Revolution)
-                && base.mergeOperation != 0 && !base.mergeBodies.isEmpty());
+        const bool feature = ForgeCad::patternFeatureSupported(base);
         if (!feature && whatBox->currentIndex() == 1) whatBox->setCurrentIndex(0);
         whatBox->setEnabled(feature);
         refLabel->setText(kind == 0 ? QStringLiteral("Direzione:") : kind == 1 ? QStringLiteral("Asse:") : QStringLiteral("Piano di simmetria:"));

@@ -617,6 +617,10 @@ void buildGeometryImpl(ExtrusionObject &body, int index, const QVector<SketchObj
             std::vector<ForgeCad::Kernel::Transform3> placements;
             if (!ForgeCad::patternPlacements(body.pattern, index, sketches, bodies, placements, &body.error)) return;
             if (body.pattern.featureOnly) {
+                if (!ForgeCad::patternFeatureSupported(*base)) {
+                    body.error = QStringLiteral("Scegli un'unione, una differenza o un'estrusione, rivoluzione o sweep solido che si unisce o sottrae.");
+                    return;
+                }
                 // Lo strumento della booleana (o l'estrusione che si unisce o
                 // sottrae) ripetuto, l'operazione una volta sola.
                 ForgeCad::ForgeBody target, tool;
@@ -636,18 +640,23 @@ void buildGeometryImpl(ExtrusionObject &body, int index, const QVector<SketchObj
                     target = first ? first->forgeBody : nullptr;
                     tool = uniteBodies(QVector<int>{base->secondBody} + base->booleanTools);
                     operation = BooleanOperation(base->operation);
-                } else if (mergingFeature(*base) && base->feature != BodyFeature::Sweep && base->mergeOperation != 0 && !base->mergeBodies.isEmpty()) {
+                } else if (mergingFeature(*base) && base->mergeOperation != 0 && !base->mergeBodies.isEmpty()) {
                     ExtrusionObject plain = *base;
                     plain.mergeOperation = 0;
                     plain.mergeProbe = false;
                     buildGeometry(plain, body.firstBody, sketches, bodies);
+                    if (!plain.forgeBody) {
+                        body.error = plain.error;
+                        if (body.error.isEmpty()) body.error = QStringLiteral("Lo strumento della funzione non ha geometria valida.");
+                        return;
+                    }
                     tool = plain.forgeBody;
                     target = uniteBodies(base->mergeBodies);
                     operation = base->mergeOperation == 2 ? BooleanOperation::Difference : BooleanOperation::Union;
                 }
                 if (!target || !tool) {
-                    if (body.error.isEmpty() || base->operation != 0)
-                        body.error = QStringLiteral("La ripetizione della funzione vale per un'unione, una differenza o un'estrusione o rivoluzione che si unisce o sottrae.");
+                    if (body.error.isEmpty())
+                        body.error = QStringLiteral("Gli operandi della funzione da ripetere non hanno geometria valida.");
                     return;
                 }
                 body.forgeBody = ForgeCad::forgePatternFeature(target, tool, operation, placements, &body.error, !body.pattern.excluded.contains(0));

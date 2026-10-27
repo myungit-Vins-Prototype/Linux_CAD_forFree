@@ -22,6 +22,7 @@ add_library(forgekernel STATIC
     fk_bspline_surface.h
     fk_bspline_surface.cpp
     fk_curve_algo.h
+    fk_curve_length_cache.h
     fk_curve_algo.cpp
     fk_surface_algo.h
     fk_surface_algo.cpp

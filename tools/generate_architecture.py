@@ -62,7 +62,7 @@ DESCRIPTIONS = {
  'forgeCad2026_viewport.cpp': ('viewport', 'Ciclo di vita e impostazioni pubbliche del coordinatore CadViewport; gabbia poli multipli, proiezione/picking del gizmo e delta vincolati agli assi 3D.'),
  'forgeCad2026_viewport.h': ('viewport', 'Contratto e stato privato del coordinatore GUI della vista 3D.'),
  'forgeCad2026_viewport_internal.h': ('viewport', 'Dipendenze di implementazione e template condivisi dai soli file viewport.'),
- 'forgeCad2026_viewport_document.cpp': ('viewport', 'Documento e storia unificata: schizzi autonomi, riordino, appoggi associativi e contesto storico; mesh richieste nei worker della geometria o nella coda differita, pubblicazione GUI, gruppi limitati nel cambio qualita e basi delle ripetizioni prima delle istanze.'),
+ 'forgeCad2026_viewport_document.cpp': ('viewport', 'Soppressione: invalida il filtro dei corpi rilasciati prima della normalizzazione; Documento e storia unificata: schizzi e piani autonomi, riordino, appoggi associativi e contesto storico; mesh richieste nei worker della geometria o nella coda differita, pubblicazione GUI, gruppi limitati nel cambio qualita e basi delle ripetizioni prima delle istanze.'),
  'forgeCad2026_viewport_interaction.cpp': ('viewport', 'Eventi Qt di mouse, tastiera, ruota e menu contestuali.'),
  'forgeCad2026_viewport_selection.cpp': ('viewport', 'Filtri di selezione, hover, riferimenti e hit testing di entità e maniglie.'),
  'forgeCad2026_viewport_sketch.cpp': ('viewport', 'Comandi schizzo, asola rettilinea con vincoli e punti autonomi: creazione, modifica, quote e riferimenti.'),
@@ -91,7 +91,18 @@ DESCRIPTIONS = {
  'toolbar_editor.h': ('startup', 'Editor della disposizione e dei comandi delle toolbar.'),
 }
 
+DESCRIPTIONS.update({
+ 'kernel/fk_marching.cpp': ('kernel', 'Intersezioni superficie/superficie: rami singolari della forma quadratica con radici omogenee stabili anche a diagonali nulle; tolleranze conservate.'),
+ 'kernel/tests/test_marching.cpp': ('tests', 'Intersezioni contro OCCT e geometrie analitiche: tangenze, poli e sella con solo termine misto, diagonali quasi nulle e ordine delle superfici invertito.'),
+ 'tests/test_pattern_placements.h': ('tests', 'Ripetizioni: limiti e trasformazioni, corpi separati/esclusioni; sweep in unione/sottrazione attorno a Y con volumi analitici, pannello, persistenza e Undo/Redo.'),
+})
+
 # Catalogo dei moduli applicativi: descrizioni specifiche condivise da header e sorgente.
+DESCRIPTIONS.update({
+ 'kernel/fk_bspline_basis.cpp': ('kernel', 'Basi e derivate B-spline: specializzazioni dei gradi1..5 e ordini0..2 con algoritmo e ordine aritmetico invariati, fallback generale e cancellazione per chiamata.'),
+ 'kernel/tests/test_bspline.cpp': ('tests', 'Valutazioni B-spline contro OCCT e formule Bernstein, prefissi derivati bit identici, gradi fino31, nodi ripetuti/limiti, buffer, concorrenza e cancellazione.'),
+})
+
 DESCRIPTIONS.update({'tools/open_architecture.py': ('build', 'Avvio locale della mappa: aggiorna i dati a ogni apertura e li mostra nel browser con avanzamento ed errori.'), 'CMakeLists.txt': ('build',
                     'Definisce eseguibile e suite; libreria interna condivisa dai runner delle tavole e impronta geometrica limitata alla chiusura delle dipendenze del calcolo.'),
  'cmake/geometry_sources.cmake': ('build', 'Raccoglie include locali transitivi e implementazioni per l’impronta geometrica; esclude moduli visuali indipendenti e conserva il kernel completo.'),
@@ -103,13 +114,15 @@ DESCRIPTIONS.update({'tools/open_architecture.py': ('build', 'Avvio locale della
  'fk_surface_algo': ('kernel', 'Algoritmi sulle superfici: coincidenza delle estrusioni certificata sull intero profilo razionale con coefficienti Bernstein proiettati.'),
  'fk_loft': ('kernel', 'Loft con contatti G1/G2: basi e derivate di collocazione in coordinate locali dei nodi, portabili su ARM anche per campate di un ulp.'),
  'kernel/tests/test_surface_algo.cpp': ('tests', 'Algoritmi di superficie e certificato coincidenza delle estrusioni: onde, NURBS, verso inverso e suddivisione dei nodi.'),
+ 'kernel/fk_loft.cpp': ('kernel', 'Loft esatto con cache locale limitata degli integrali di lunghezza: stessi tratti, tolleranze e ordine di somma, nessuna approssimazione della parametrizzazione.'),
  'kernel/tests/test_loft.cpp': ('tests', 'Loft, contatto e degenerazioni; campate di un ulp con profili razionali/polinomiali in entrambi i versi.'),
  'cad_constraints': ('sketch', 'Vincoli geometrici: derivate analitiche lineari, Jacobiano sparso, solve di norma minima e rango per componenti; riferimento denso selezionabile.'),
  'kernel/fk_mass.cpp': ('kernel', 'Proprieta di massa esatte: quadrature indipendenti per faccia in parallelo, somme nello stesso ordine seriale, errori ordinati e cancellazione; worker annidati e corpi piccoli restano locali.'),
  'kernel/tests/test_mass.cpp': ('tests', 'Massa e area contro formule/OCCT; risultati seriali/paralleli bit identici, input immutato, richieste concorrenti, primo errore e cancellazione.'),
  'tests/test_pattern_history_repair.h': ('tests', 'Una sola feature per specchi e ripetizioni con corpi distinti: GUI, cursore atomico, modifica, riordino, inserimento, Undo/Redo e codec; compatibilita storica e riparazione riferimenti dal pannello.'),
  'forgeCad2026_viewport_selection.cpp': ('viewport', 'Selezione e riferimenti del viewport: in modifica sceglie risultati e operandi precedenti alla feature, anche dopo anteprima fallita o Azzera; Esc ripristina la scena finale.'),
- 'kernel/fk_exchange.cpp': ('kernel', 'Modello di scambio e assemblaggio: cucitura, rimappatura SP-curve con cache locale limitata dei campioni esatti, verifiche geometriche e topologiche conservate.'),
+ 'kernel/tests/test_curve_algo.cpp': ('tests', 'Proiezioni contro OCCT e candidati entro distanza: rami equidistanti, razionali, trasformazioni, limiti e concorrenza; cache lunghezze bit identica, budget e cancellazione.'),
+ 'kernel/fk_exchange.cpp': ('kernel', 'Modello di scambio e assemblaggio: cucitura, campioni UV locali e proiezioni esaustive entro distanza con scarto conservativo dei tratti lontani; verifica 3D e topologia conservate.'),
  'kernel/tests/test_offset.cpp': ('tests', 'Offset e cuciture: parametrizzazioni/versi diversi, curve chiuse, confine della tolleranza, pcurve e orientamento dei solidi; input immutato.'),
  'kernel/fk_constraint_linear.h': ('kernel', 'Algebra del solver: componenti, riordino BFS delle righe, Cholesky a banda stretta o densa con regolarizzazione globale, rango per componenti.'),
  'kernel/fk_box_batch.h': ('kernel', 'Acceleratore esterno opzionale per box: maschera conservativa condivisa dalle booleane con ripiego BVH CPU.'),
@@ -215,7 +228,7 @@ DESCRIPTIONS.update({'tools/open_architecture.py': ('build', 'Avvio locale della
                  'Costruisce estrusioni con condizioni di fine e applica la fusione con i corpi '
                  'selezionati.'),
  'cad_feature_build': ('features',
-                       'Costruisce feature dagli operandi con genealogia; geometria e mesh opzionale, risultati condivisi delle ripetizioni separati per corpo.'),
+                       'Costruisce feature dagli operandi con genealogia; geometria e mesh opzionale, risultati delle ripetizioni separati per corpo e ripetizione dello strumento sweep prima della fusione/sottrazione, errori specifici conservati.'),
  'cad_feature_dependencies': ('features', 'Determina dipendenze e operandi delle feature, compresi tutti i target della estensione di superfici.'),
  'cad_features': ('features', 'Tipi e regole comuni delle operazioni parametriche del modello.'),
  'cad_forge': ('features',
@@ -233,11 +246,11 @@ DESCRIPTIONS.update({'tools/open_architecture.py': ('build', 'Avvio locale della
  'forgeCad2026_ui_glass': ('startup', 'Aspetto condiviso di vetro UI: impostazioni, palette, sfocatura CPU e ombre arrotondate memorizzate.'),
  'cad_menu.h': ('startup', 'Popup comuni: palette della finestra, angoli antialias e padding dal raggio dei pannelli, spunte separate dalle icone.'),
  'cad_model_history': ('features',
-                       'Gestisce corpi logici e sequenza di schizzi e lavorazioni: ripetizione come singolo evento con corpi distinti, ordine dei risultati, rimappatura completa dei riferimenti, cursore e dipendenze degli appoggi.'),
+                       'Gestisce corpi logici riallineati alle basi dopo modifiche e riordini e sequenza di schizzi e lavorazioni: ripetizione come singolo evento con corpi distinti, ordine dei risultati, rimappatura completa dei riferimenti, cursore e dipendenze degli appoggi.'),
  'cad_native_revisions': ('documents', 'Persistenza delle revisioni native; confronto delle definizioni normalizzato al codec corrente anche per check-in pendenti in formato53.'),
  'cad_numeric_input.h': ('startup', 'Gestione comune dell’input numerico nei controlli dell’interfaccia.'),
  'cad_overlay_renderer': ('render', 'Disegno OpenGL degli overlay e delle loro istanze.'),
- 'cad_pattern': ('features', 'Ripetizioni con esclusioni persistenti; separa componenti solide o superfici conservando cavita e genealogia.'),
+ 'cad_pattern': ('features', 'Ripetizioni con esclusioni persistenti e corpi distinti; criterio condiviso UI/costruttore per strumenti di booleane, estrusioni, rivoluzioni e sweep solidi associati; cavita e genealogia conservate.'),
  'cad_revision_client': ('documents',
                          'Protocollo client per copie di lavoro, sessioni e operazioni sulle revisioni.'),
  'cad_revision_client_internal.h': ('documents',

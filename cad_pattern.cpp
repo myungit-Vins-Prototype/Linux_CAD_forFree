@@ -1,5 +1,6 @@
 #include "cad_pattern.h"
 #include "cad_forge.h"
+#include "cad_feature_dependencies.h"
 #include "cad_element_names.h"
 #include "fk_history_tools.h"
 
@@ -98,6 +99,12 @@ ForgeBody uniteAll(std::vector<ForgeBody> bodies) {
     return std::move(bodies.front());
 }
 
+}
+
+bool patternFeatureSupported(const ExtrusionObject &source) {
+    if (source.operation >= 0) return source.operation == 0 || source.operation == 2;
+    return mergingFeature(source) && source.mergeOperation != 0 && !source.mergeBodies.isEmpty()
+        && !(source.feature == BodyFeature::Sweep && source.sweepSurface);
 }
 
 bool patternPlacements(const PatternParameters &p, int owner, const QVector<SketchObject> &sketches, const QVector<ExtrusionObject> &bodies,

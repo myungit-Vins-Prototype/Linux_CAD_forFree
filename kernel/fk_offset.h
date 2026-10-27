@@ -76,6 +76,22 @@ struct OffsetResult {
 OffsetResult offsetFaces(const Body &body, const std::vector<FaceId> &faces, double distance, double tolerance = 1e-7, bool preserveSeams = false,
                          double joinAngle = 0.0);
 
+// Offset per faccia di un contorno chiuso, con intersezione dei supporti.
+// Specificare ogni faccia viva una sola volta. Distanza zero: supporto
+// originale (per esempio la faccia rimossa da uno svuotamento).
+struct FaceOffset {
+    FaceId face;
+    double distance = 0.0;
+    // Raccordo degenere da contrarre: due bordi di tangenza verso i supporti
+    // sopravvissuti, oppure una pezza d'angolo fra raccordi gia' contratti.
+    // Il chiamante determina quali raggi hanno esaurito lo spessore.
+    bool collapse = false;
+};
+// Restituisce una lamina chiusa, da orientare/cucire prima delle booleane.
+// Mantiene le origini delle facce sopravvissute. Rifiuta contorni aperti,
+// raccordi senza appoggi riconosciuti, bordi invertiti e scarti fuori budget.
+OffsetResult offsetJoinedFaces(const Body &body, const std::vector<FaceOffset> &faces, double tolerance = 1e-7);
+
 }
 
 #endif
