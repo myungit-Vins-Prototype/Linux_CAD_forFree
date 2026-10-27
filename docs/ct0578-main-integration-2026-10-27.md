@@ -25,3 +25,7 @@ Artefatti e log: `/home/myungit/Linux_CAD_forFree/forgecad-linux-solver/benchmar
 ## Isolamento del commit
 
 Il commit CT0578 esclude il fix locale della soppressione e la relativa documentazione. I25CTest e la QA applicativa sono stati eseguiti nel checkout che conserva anche quel fix preesistente; il commit CT0578 da solo non corregge la soppressione. Il remoto main e stato ricontrollato prima dello staging ed e ancora49d69b0. Ramo locale dedicato `fix-ct0578-main` per conservare il commit senza riscrivere il ramo locale main divergente.
+
+## Checkpoint completo successivo
+
+L’utente ha successivamente richiesto il commit di tutte le modifiche. Il nuovo commit dopo d8fd740 include anche la soppressione con test, descrizione e rapporto: il checkpoint main completo corrisponde ora ai sorgenti gia compilati e alle prove sopra riportate. Nessuna modifica funzionale successiva alle verifiche e nessun push. Gli esperimenti di solver-mesh-gpu sono committati nel relativo branch.

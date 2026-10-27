@@ -2615,10 +2615,60 @@ public:
             require(timeline.setFeatureSuppressed(2, false).isEmpty()
                     && !timeline.extrusions().at(1).visible && timeline.extrusions().at(2).visible,
                     "reactivation consumes restored operand again");
+            // Il filtro di consumo non deve annullare il ripristino, neppure
+            // dopo rigenerazione, riapertura della cache o navigazione storica.
+            for (int repeat = 0; repeat < 3; ++repeat) {
+                require(timeline.setFeatureSuppressed(2, true).isEmpty()
+                        && timeline.isBodyDrawn(0) && timeline.isBodyDrawn(1) && !timeline.isBodyDrawn(2),
+                        "suppression restores both drawn operands repeatedly");
+                timeline.undo();
+                require(!timeline.extrusions_[2].suppressed && !timeline.isBodyDrawn(1) && timeline.isBodyDrawn(2),
+                        "undo suppression restores consumption");
+                timeline.redo();
+                require(timeline.extrusions_[2].suppressed && timeline.isBodyDrawn(0) && timeline.isBodyDrawn(1),
+                        "redo suppression restores operands");
+                require(timeline.rebuildAllFeatures() == 0 && timeline.isBodyDrawn(0) && timeline.isBodyDrawn(1),
+                        "rebuild preserves restored operands");
+                for (bool cache : {false, true}) {
+                    QByteArray bytes; DocumentState decoded;
+                    require(ForgeCad::encodeDocument(timeline.documentState(), bytes, cache).isEmpty()
+                            && ForgeCad::decodeDocument(bytes, decoded).isEmpty(), "suppressed operands codec");
+                    CadViewport reopened; reopened.loadDocument(decoded);
+                    require(reopened.isBodyDrawn(0) && reopened.isBodyDrawn(1) && !reopened.isBodyDrawn(2),
+                            "suppressed operands survive definition and cache reload");
+                }
+                timeline.setHistoryPosition(2); timeline.setHistoryPosition(3);
+                require(timeline.isBodyDrawn(0) && timeline.isBodyDrawn(1), "cursor preserves restored operands");
+                require(timeline.setFeatureSuppressed(2, false).isEmpty()
+                        && !timeline.isBodyDrawn(1) && timeline.isBodyDrawn(2), "reactivation consumes tool again");
+            }
             timeline.extrusions_[2].error = QStringLiteral("Booleana fallita");
             timeline.setHistoryPosition(3);
             require(timeline.storyboardRoots().value(b) == b && timeline.resultBodiesBefore(-1).contains(1),
                     "failed operation cannot consume a body");
+        }
+        {
+            CadViewport shared;
+            PrimitiveParameters box; box.size[0] = box.size[1] = box.size[2] = 4;
+            auto tool = box; tool.origin[0] = 3;
+            require(shared.createPrimitive(box, QStringLiteral("Base A")).isEmpty()
+                    && shared.createPrimitive(box, QStringLiteral("Base B")).isEmpty()
+                    && shared.createPrimitive(tool, QStringLiteral("Utensile comune")).isEmpty()
+                    && shared.createBoolean(::BooleanOperation::Difference, 0, {2}, QStringLiteral("Taglio A")).isEmpty()
+                    && shared.createBoolean(::BooleanOperation::Difference, 1, {2}, QStringLiteral("Taglio B")).isEmpty(),
+                    "shared operand suppression fixture");
+            require(shared.setFeatureSuppressed(3, true).isEmpty() && !shared.isBodyDrawn(2),
+                    "other active consumer keeps shared operand hidden");
+            require(shared.setFeatureSuppressed(4, true).isEmpty() && shared.isBodyDrawn(2),
+                    "last suppressed consumer releases shared operand");
+            require(shared.setFeaturesSuppressed({3, 4}, false).isEmpty() && !shared.isBodyDrawn(2),
+                    "batch reactivation consumes shared operand");
+            require(shared.setFeaturesSuppressed({3, 4}, true).isEmpty() && shared.isBodyDrawn(2),
+                    "batch suppression releases shared operand");
+            shared.undo();
+            require(!shared.isBodyDrawn(2), "undo batch suppression restores shared consumption");
+            shared.redo();
+            require(shared.isBodyDrawn(2), "redo batch suppression releases shared operand");
         }
         {
             PdfWindow window;

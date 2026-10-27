@@ -62,7 +62,7 @@ DESCRIPTIONS = {
  'forgeCad2026_viewport.cpp': ('viewport', 'Ciclo di vita e impostazioni pubbliche del coordinatore CadViewport; gabbia poli multipli, proiezione/picking del gizmo e delta vincolati agli assi 3D.'),
  'forgeCad2026_viewport.h': ('viewport', 'Contratto e stato privato del coordinatore GUI della vista 3D.'),
  'forgeCad2026_viewport_internal.h': ('viewport', 'Dipendenze di implementazione e template condivisi dai soli file viewport.'),
- 'forgeCad2026_viewport_document.cpp': ('viewport', 'Documento e storia unificata: risultati delle ripetizioni contigui alla madre, rimappatura dei riferimenti, schizzi e piani autonomi e appoggi associativi, contesto storico per i riferimenti e risultati confermati visibili nella sola sessione schizzo corrente.'),
+ 'forgeCad2026_viewport_document.cpp': ('viewport', 'Soppressione: invalida il filtro dei corpi rilasciati prima della normalizzazione; Documento e storia unificata: risultati delle ripetizioni contigui alla madre, rimappatura dei riferimenti, schizzi e piani autonomi e appoggi associativi, contesto storico per i riferimenti e risultati confermati visibili nella sola sessione schizzo corrente.'),
  'forgeCad2026_viewport_interaction.cpp': ('viewport', 'Eventi Qt di mouse, tastiera, ruota e menu contestuali.'),
  'forgeCad2026_viewport_selection.cpp': ('viewport', 'Filtri di selezione, hover, riferimenti e hit testing di entità e maniglie.'),
  'forgeCad2026_viewport_sketch.cpp': ('viewport', 'Comandi schizzo, asola rettilinea con vincoli e punti autonomi: creazione, modifica, quote e riferimenti.'),

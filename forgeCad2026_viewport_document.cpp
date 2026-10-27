@@ -544,6 +544,11 @@ QString CadViewport::setFeaturesSuppressed(const QVector<int> &indices, bool sup
                                      && ForgeCad::hiddenOperands(extrusions_.at(other), extrusions_).contains(operand);
             }
             extrusions_[operand].visible = suppressed && !consumedElsewhere;
+            // La soppressione rilascia questo corpo: il vecchio filtro di
+            // consumo non deve ripristinare la visibilita' precedente
+            // durante la normalizzazione della rigenerazione successiva.
+            if (extrusions_.at(operand).visible)
+                consumedBodies_.remove(extrusions_.at(operand).modelBodyId);
         }
     }
     if (list.size() == 1) {
