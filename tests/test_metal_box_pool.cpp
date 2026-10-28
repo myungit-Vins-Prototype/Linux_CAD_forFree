@@ -4,6 +4,7 @@
 #include <condition_variable>
 #include <iostream>
 #include <mutex>
+#include <random>
 #include <stdexcept>
 #include <string>
 #include <thread>
@@ -22,6 +23,32 @@ static void evaluate(std::size_t na,std::size_t nb,int offset=0) {
     check(forgecad_gpu_box_overlaps(a.data(),na,b.data(),nb,output.data()),"calcolo Metal non eseguito");
     for(std::size_t i=0;i<na;++i)for(std::size_t j=0;j<nb;++j)
         check(output[i*nb+j]==(i%128==(j+offset)%128),"maschera Metal diversa dal riferimento");
+}
+
+static void irregularShapes() {
+    std::mt19937 random(20261028);
+    std::uniform_real_distribution<float> coordinate(-10,10),extent(0,5);
+    for(const auto shape:{std::pair<std::size_t,std::size_t>{1,1},{1,257},{257,1},
+                          {3,517},{513,129},{511,513},{512,512},{512,513},
+                          {1023,1025},{65537,1},{1,65537}}) {
+        const auto na=shape.first,nb=shape.second;
+        std::vector<float> a(na*6),b(nb*6);
+        for(auto *boxes:{&a,&b})for(std::size_t i=0;i<boxes->size();i+=6)
+            for(int k=0;k<3;++k) {
+                (*boxes)[i+k]=coordinate(random);
+                (*boxes)[i+3+k]=(*boxes)[i+k]+extent(random);
+            }
+        // Includere contatto esatto e sovrapposizione, oltre ai box separati.
+        for(int k=0;k<3;++k) {b[k]=a[3+k];b[3+k]=a[3+k]+1;}
+        std::vector<unsigned char> output(na*nb+2,0xcc);
+        check(forgecad_gpu_box_overlaps(a.data(),na,b.data(),nb,output.data()+1),"lotto irregolare non eseguito");
+        check(output.front()==0xcc && output.back()==0xcc,"scrittura fuori maschera");
+        for(std::size_t i=0;i<na;++i)for(std::size_t j=0;j<nb;++j) {
+            bool hit=true;
+            for(int k=0;k<3;++k)hit=hit && a[i*6+k]<=b[j*6+3+k] && b[j*6+k]<=a[i*6+3+k];
+            check(output[1+i*nb+j]==hit,"maschera irregolare diversa dal riferimento CPU");
+        }
+    }
 }
 
 int main(int argc,char **argv) {
@@ -52,6 +79,8 @@ int main(int argc,char **argv) {
         check(!forgecad_gpu_box_overlaps(box,4097,box,4097,&mask)&&mask==0xcc,"maschera oltre limite rifiutata");
         check(!forgecad_gpu_box_overlaps(box,16*1024*1024,box,1,&mask)&&mask==0xcc,
               "limite memoria attiva validato prima di leggere input");
+
+        irregularShapes();
 
         std::mutex mutex;std::condition_variable ready;int arrived=0;bool go=false;
         std::atomic<int> failures{0},done{0};std::vector<std::thread> workers;

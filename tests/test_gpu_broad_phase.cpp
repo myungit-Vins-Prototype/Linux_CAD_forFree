@@ -2,11 +2,14 @@
 #include "gpu_box_support.h"
 #include "fk_boolean.h"
 #include "fk_body_check.h"
+#include "fk_body_io.h"
 #include "fk_extrude.h"
 #include "fk_mass.h"
 #include "fk_cancel.h"
 #include "fk_transform.h"
 #include <chrono>
+#include <algorithm>
+#include <array>
 #include <cmath>
 #include <iostream>
 #include <limits>
@@ -59,9 +62,10 @@ static void fallbackTests() {
 
 int main(int argc,char **argv) {
     try {
+        const bool benchmark=argc>1&&std::string(argv[1])=="--benchmark";
         if(argc>1&&std::string(argv[1])=="--cpu-fallback"){fallbackTests();return 0;}
         auto gpu=makeGpuBoxEvaluator();
-        if(!gpu){std::cout<<"SKIP GPU unavailable ("<<forgecad_gpu_box_backend()<<")\n";return argc>1&&std::string(argv[1])=="--require-gpu"?1:77;}
+        if(!gpu){std::cout<<"SKIP GPU unavailable ("<<forgecad_gpu_box_backend()<<")\n";return benchmark||(argc>1&&std::string(argv[1])=="--require-gpu")?1:77;}
         std::vector<Box> a,b;
         for(int i=0;i<128;++i){a.push_back(box(i*.1,i*.1+.05));b.push_back(box(i*.1+.025,i*.1+.075));}
         std::mt19937 random(20261025);
@@ -110,6 +114,33 @@ int main(int argc,char **argv) {
         check(reference.faces().size()==result.faces().size()&&reference.edges().size()==result.edges().size(),"topologia differente fra CPU e GPU");
         std::cout<<"PASS "<<forgecad_gpu_box_backend()<<" batch_pairs="<<a.size()*b.size()<<" retained="<<retained
                  <<" boolean_cpu_ms="<<cpuMs<<" boolean_gpu_ms="<<gpuMs<<" gpu_pairs="<<gpuBoxPairsProcessed()<<'\n';
+        if(benchmark) {
+            // Confronto della booleana completa, separato dai tempi del solo
+            // filtro. Serializzazione e verifica fuori timer, nessuna soglia CI.
+            const std::array<std::string,2> expectedBodies={writeBodyBinary(reference),writeBodyBinary(result)};
+            std::array<std::vector<double>,2> times;
+            for(int repeat=0;repeat<7;++repeat)for(int step=0;step<2;++step) {
+                const int backend=(repeat+step)%2;
+                setBoxBatchEvaluator(backend?gpu:nullptr);
+                const auto begin=std::chrono::steady_clock::now();
+                const Body measured=booleanOperation(first,second,BooleanOperation::Subtract);
+                const double ms=std::chrono::duration<double,std::milli>(std::chrono::steady_clock::now()-begin).count();
+                check(writeBodyBinary(measured)==expectedBodies[backend],"booleana misurata diversa dal riferimento dello stesso backend");
+                times[backend].push_back(ms);
+            }
+            setBoxBatchEvaluator(nullptr);
+            for(int backend=0;backend<2;++backend) {
+                auto sorted=times[backend];std::sort(sorted.begin(),sorted.end());
+                std::cout<<"{\"backend\":\""<<(backend?forgecad_gpu_box_backend():"CPU")<<"\",\"median_ms\":"
+                         <<sorted[sorted.size()/2]<<",\"samples_ms\":[";
+                for(std::size_t i=0;i<times[backend].size();++i)std::cout<<(i?",":"")<<times[backend][i];
+                // Impronta deterministica per confrontare anche due binari;
+                // non sostituisce l'uguaglianza byte per byte sopra.
+                std::uint64_t hash=14695981039346656037ull;
+                for(unsigned char byte:expectedBodies[backend]) {hash^=byte;hash*=1099511628211ull;}
+                std::cout<<"],\"brep_hash\":\""<<hash<<"\",\"brep_bytes\":"<<expectedBodies[backend].size()<<"}\n";
+            }
+        }
     }catch(const std::exception &e){std::cerr<<e.what()<<'\n';return 1;}
     return 0;
 }

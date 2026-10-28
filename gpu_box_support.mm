@@ -20,7 +20,7 @@ struct Buffers {
 struct MetalBoxes {
     id<MTLDevice> device;
     id<MTLCommandQueue> queue;
-    id<MTLComputePipelineState> pipeline;
+    id<MTLComputePipelineState> pipeline, linearPipeline;
     std::mutex mutex;
     std::array<std::optional<Buffers>, kMetalBoxMaxActiveCalls> idle;
     MetalBoxPoolStats stats;
@@ -30,6 +30,11 @@ struct MetalBoxes {
             if(!device)return;
             NSString *source=@"#include <metal_stdlib>\nusing namespace metal;\n"
                 "kernel void overlap(device const float* a[[buffer(0)]],device const float* b[[buffer(1)]],"
+                "device uchar* result[[buffer(2)]],constant uint2& sizes[[buffer(3)]],uint2 position[[thread_position_in_grid]]) {"
+                "uint ia=position.y,ib=position.x;bool hit=true;"
+                "for(uint k=0;k<3;++k)hit=hit&&(a[ia*6+k]<=b[ib*6+3+k])&&(b[ib*6+k]<=a[ia*6+3+k]);"
+                "result[ia*sizes.y+ib]=hit?1:0;}"
+                "kernel void overlapLinear(device const float* a[[buffer(0)]],device const float* b[[buffer(1)]],"
                 "device uchar* result[[buffer(2)]],constant uint2& sizes[[buffer(3)]],uint index[[thread_position_in_grid]]) {"
                 "if(index>=sizes.x*sizes.y)return;uint ia=index/sizes.y,ib=index%sizes.y;bool hit=true;"
                 "for(uint k=0;k<3;++k)hit=hit&&(a[ia*6+k]<=b[ib*6+3+k])&&(b[ib*6+k]<=a[ia*6+3+k]);"
@@ -45,8 +50,10 @@ struct MetalBoxes {
             NSError *error=nil;
             id<MTLLibrary> library=[device newLibraryWithSource:source options:options error:&error];
             id<MTLFunction> function=[library newFunctionWithName:@"overlap"];
+            id<MTLFunction> linearFunction=[library newFunctionWithName:@"overlapLinear"];
             if(function)pipeline=[device newComputePipelineStateWithFunction:function error:&error];
-            if(pipeline)queue=[device newCommandQueue];
+            if(linearFunction)linearPipeline=[device newComputePipelineStateWithFunction:linearFunction error:&error];
+            if(pipeline&&linearPipeline)queue=[device newCommandQueue];
         }
     }
 };
@@ -127,13 +134,23 @@ bool forgecad_gpu_box_overlaps(const float *first,std::size_t na,const float *se
         id<MTLCommandBuffer> command=[gpu.queue commandBuffer];
         id<MTLComputeCommandEncoder> encoder=[command computeCommandEncoder];
         if(!command||!encoder)return false;
-        [encoder setComputePipelineState:gpu.pipeline];
+        // Sui lotti piccoli prevale il costo fisso; conservare il percorso
+        // lineare anche per gli insiemi con un solo box, misurati separatamente.
+        const bool grid=na>1 && nb>1 && na*nb>=262144;
+        const auto pipeline=grid?gpu.pipeline:gpu.linearPipeline;
+        [encoder setComputePipelineState:pipeline];
         [encoder setBuffer:buffers.a offset:0 atIndex:0];[encoder setBuffer:buffers.b offset:0 atIndex:1];
         [encoder setBuffer:buffers.output offset:0 atIndex:2];
         const unsigned sizes[2]={unsigned(na),unsigned(nb)};
         [encoder setBytes:sizes length:sizeof(sizes) atIndex:3];
-        const auto width=std::min<NSUInteger>(256,gpu.pipeline.maxTotalThreadsPerThreadgroup);
-        [encoder dispatchThreads:MTLSizeMake(na*nb,1,1) threadsPerThreadgroup:MTLSizeMake(width,1,1)];
+        // Un asse per insieme: niente divisione/resto per ogni coppia.
+        // dispatchThreads copre anche le code non multiple del threadgroup.
+        const auto capacity=std::min<NSUInteger>(256,pipeline.maxTotalThreadsPerThreadgroup);
+        if(grid) {
+            const auto width=std::min<NSUInteger>(nb,std::min(capacity,pipeline.threadExecutionWidth));
+            const auto height=std::min<NSUInteger>(na,capacity/width);
+            [encoder dispatchThreads:MTLSizeMake(nb,na,1) threadsPerThreadgroup:MTLSizeMake(width,height,1)];
+        } else [encoder dispatchThreads:MTLSizeMake(na*nb,1,1) threadsPerThreadgroup:MTLSizeMake(capacity,1,1)];
         [encoder endEncoding];[command commit];[command waitUntilCompleted];
         if(command.status!=MTLCommandBufferStatusCompleted)return false;
         std::memcpy(mask,buffers.output.contents,na*nb);lease.completed=true;return true;

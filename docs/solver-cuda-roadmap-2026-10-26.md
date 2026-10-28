@@ -75,6 +75,8 @@ La firma diversa della mesh reale è stata successivamente approfondita: [confro
 
 Prosecuzione specifica Mac: [pool dei buffer Metal e richieste indipendenti](metal-box-pool-2026-10-26.md) implementati e verificati sulla GPU reale. I gruppi di quattro richieste sintetiche migliorano circa2,2×; nessuna accelerazione dell'intero CAD dichiarata. I budget attivo/inattivo descritti nel rapporto valgono soltanto per Metal e sono distinti da quelli dei workspace CUDA del punto4; resta aperto il budget aggregato fra backend e superfici.
 
+Seguito Mac del28ottobre: [griglia Metal 2D per i lotti grandi](metal-grid-2026-10-28.md), kernel lineare conservato per piccoli/monodimensionali. Sul M1, quattro processi/versione: filtro4096² sparso4,818→2,483ms (1,94×), denso7,009→4,624ms, casuale6,262→4,002ms; piccoli senza beneficio stabile, campioni/intervalli nel rapporto. Booleana completa con intervalli sovrapposti e percorso lineare conservato, nessuna accelerazione CAD attribuita. Applicazione/runner compilati,10/10CTestPASS con GPU reale e mappa aggiornata. Prossime priorità proposte: query/suddivisioni condivise, lotti geometrici più fini e preparazione mesh Mac con contratto numerico dedicato; nessuna nuova tassellazione Metal già implementata.
+
 Checkpoint Mac e Linux uniti sul branch, preservando entrambi i lavori. Applicazione compilata nelle build separate; installazioni desktop invariate. Verifiche della versione combinata e pubblicazione finale sono registrate in CLAUDE.md.
 
 Correzione trasversale già verificata su Linux: [rilascio RAM dopo ritorno alla tassellazione bassa](mesh-memory-cycle-2026-10-26.md). Backport pubblicato anche su main in `d513fb8`; sul branch di sviluppo resta incluso nel lavoro locale insieme al nuovo budget CUDA.
