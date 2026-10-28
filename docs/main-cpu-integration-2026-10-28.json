@@ -1,0 +1,118 @@
+{
+  "date": "2026-10-28",
+  "remote_base": "49d69b0",
+  "prerequisites": [
+    "d8fd740",
+    "149b769"
+  ],
+  "development_source": "815d760",
+  "kernel_tests": {
+    "rows": [
+      {
+        "filter": "Surface",
+        "exit_code": 0,
+        "passed": 44
+      },
+      {
+        "filter": "Project",
+        "exit_code": 0,
+        "passed": 25
+      },
+      {
+        "filter": "Boolean",
+        "exit_code": 0,
+        "passed": 38
+      },
+      {
+        "filter": "Intersect",
+        "exit_code": 0,
+        "passed": 5
+      },
+      {
+        "filter": "Marching",
+        "exit_code": 0,
+        "passed": 10
+      },
+      {
+        "filter": "Mass",
+        "exit_code": 0,
+        "passed": 11
+      },
+      {
+        "filter": "Loft",
+        "exit_code": 0,
+        "passed": 42
+      },
+      {
+        "filter": "BSplineSurface",
+        "exit_code": 0,
+        "passed": 7
+      },
+      {
+        "filter": "CurveLength",
+        "exit_code": 0,
+        "passed": 1
+      },
+      {
+        "filter": "cancel_",
+        "exit_code": 0,
+        "passed": 2
+      },
+      {
+        "filter": "Step",
+        "exit_code": 0,
+        "passed": 16
+      },
+      {
+        "filter": "Iges",
+        "exit_code": 0,
+        "passed": 6
+      }
+    ],
+    "unique_passed": 191
+  },
+  "documents": [
+    {
+      "document": "ct",
+      "input_sha256": "049a83c7e6686cd60903f7f54cc43f9dfa4ec133973899625b92c115042f5229",
+      "unchanged": true,
+      "bodies": 30,
+      "rebuild_errors": 0,
+      "same_as_verified_development": true,
+      "wall_functional_only": 17.679980558,
+      "visible_mesh_equal_to_development": true,
+      "cpu_tessellation_verified": true
+    },
+    {
+      "document": "mouse2",
+      "input_sha256": "7ffa64559f38820ed0f070fa233efc27a2b5ea82ee749e04817a756cb1ae92ce",
+      "unchanged": true,
+      "bodies": 36,
+      "rebuild_errors": 0,
+      "same_as_verified_development": true,
+      "wall_functional_only": 7.495311078,
+      "visible_mesh_equal_to_development": false,
+      "cpu_tessellation_verified": true
+    },
+    {
+      "document": "assembly",
+      "input_sha256": "5b3d658321f460e826ff1e3c1415054f003ebc03325aa9e69da2a346be227791",
+      "unchanged": true,
+      "bodies": 1200,
+      "rebuild_errors": 4,
+      "same_as_verified_development": true,
+      "wall_functional_only": 13.999687485,
+      "visible_mesh_equal_to_development": false,
+      "cpu_tessellation_verified": true
+    }
+  ],
+  "architecture": {
+    "files": 472,
+    "relations": 6619,
+    "translation_units": 231,
+    "errors": {}
+  },
+  "application_sha256": "91e5619d1d2655cd9e8bb8452088c15d481a828567bf808c7a325e5d8b777565",
+  "performance_comparison_on_main": false,
+  "local_archive": "/home/myungit/Linux_CAD_forFree/forgecad-linux-solver/benchmarks/main-cpu-integration-2026-10-28"
+}

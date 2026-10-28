@@ -4695,3 +4695,15 @@ Esito: R0,1 e valori provati fino aR0,14 costruibili sull'intera catena diB6:E32
 
 - Richiesta esplicita dell'utente: «fai push». Pubblicato con successo su origin/main il commit08aceb2 («Corregge la rifilatura dei raccordi su appoggi sferici»), avanzamento remoto da d28e09f a08aceb2. Nessuna nuova modifica funzionale, compilazione o installazione; valgono le verifiche registrate nell'integrazione.
 - Preservata ed esclusa dal commit/push la modifica locale concorrente a .gitignore che ignora work/_review_src.tgz. git diff --check PASS. Questo esito viene incluso in un commit documentale separato e pubblicato insieme alla correzione; controllo finale di concordanza HEAD/origin/main a chiusura.
+
+### 2026-10-28 — Trasferimento ottimizzazioni CPU da sviluppo (in corso)
+
+- Richiesta utente:pubblicare le ottimizzazioni di calcolo compatibili anche su main. Origine solver-mesh-gpu815d760,destinazione origin/main49d69b0,worktree temporaneo separato;branch main locale precedente preservato.
+- Trasferiti filtri di proiezione/curve/intersezioni,certificati di distanza,cache locale delle proiezioni,percorso punto B-spline,cache delle lunghezze loft,riuso campioniUV e quadrature di massa parallele,con regressioni. Nessun solver sperimentale,pipeline mesh differita,nuovo backendGPU o modifiche concorrenti draft/storia/dialoghi. Il filtroGPU delle coppie facce resta escluso:main conserva la broad phase CPU.
+- Build e verifiche della combinazione main in avvio;le percentuali del ramo di sviluppo non costituiscono automaticamente misure su main. Commit/push esplicitamente autorizzati sul remoto origin del progetto.
+
+- Prerequisito emerso nella verifica:origin/main49d69b0 non supporta ancora la ripetizione della sweep solida del CT attuale (20errori conseguenti,misura esclusa). Integrati come antenati i due commit main locali già verificati d8fd740 e149b769,su cui sono riapplicate le sole ottimizzazioni CPU. I commit locali restano preservati;nessuna modifica del branch main locale divergente. Ripetizione delle verifiche dopo il riallineamento in corso.
+
+- Milestone kernel:191/191casi pertinenti distintiPASS (superfici,proiezioni,booleane,intersezioni,marching,massa,loft,B-spline,lunghezze,cancellazione,STEP/IGES). La build finale ricompila gli stessi sorgenti kernel testati sopra i prerequisiti applicativi main;controlli documentali e CTest aggiornati in corso.
+
+- Chiusura verifiche porting:app completa e runner compilati,191/191kernel pertinenti distintiPASS e CTest applicativiPASS;CT/mouse2/assieme con B-rep,errori e visibilità identici allo sviluppo;mesh non dichiarate identiche fra le due pipeline,0/0/4errori già noti,inputSHA invariati. Esclusi dal confronto i conteggi delle mesh nascoste,che main prepara e sviluppo differisce. Mappa472file/6619relazioni/231TU,zero diagnostiche,--checkPASS,collegamenti e cattura verificati. Rapporto docs/main-cpu-integration-2026-10-28.md/.json. Nessuna percentuale prestazionale main dedotta dai tempi funzionali sotto compilazione,nessuna installazione desktop o prova macOS. Preparazione commit/push su origin/main autorizzata.

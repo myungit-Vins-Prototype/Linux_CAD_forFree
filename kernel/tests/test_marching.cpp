@@ -472,3 +472,42 @@ FK_TEST(MarchingMixedTermSingularBranches) {
         }
     }
 }
+
+// Due pezze piane NURBS ortogonali: i semi fuori dalle superfici non
+// cambiano l'intersezione. Più di 4096 punti distinti esercitano anche il
+// percorso senza inserimento nella cache; il seme valido arriva per ultimo.
+FK_TEST(MarchingProjectionCacheOverflow) {
+    const std::vector<double> knots{-1,-1,1,1};
+    const BSplineSurface a(1,1,knots,knots,2,2,
+        {Vec3(-1,-1,0),Vec3(-1,1,0),Vec3(1,-1,0),Vec3(1,1,0)});
+    const BSplineSurface b(1,1,knots,knots,2,2,
+        {Vec3(-1,0,-1),Vec3(-1,0,1),Vec3(1,0,-1),Vec3(1,0,1)});
+    const auto reference=intersectSurfaces(a,b,cube(1.5),{Vec3()});
+    std::vector<Vec3> seeds;
+    for(int i=0;i<4101;++i) seeds.emplace_back(-.9+1.8*i/4100.,.25,.25);
+    seeds.emplace_back();
+    const auto result=intersectSurfaces(a,b,cube(1.5),seeds);
+    FK_CHECK(!result.curves.empty());
+    FK_CHECK(result.curves.size()==reference.curves.size());
+    FK_CHECK(result.singularPoints.size()==reference.singularPoints.size());
+    FK_CHECK(result.isolatedPoints.size()==reference.isolatedPoints.size());
+    FK_CHECK(result.tangentPoints.size()==reference.tangentPoints.size());
+    if(result.curves.size()!=reference.curves.size()) return;
+    for(std::size_t i=0;i<result.curves.size();++i) {
+        const auto &x=result.curves[i],&y=reference.curves[i];
+        FK_CHECK(x.range.lo==y.range.lo && x.range.hi==y.range.hi);
+        FK_CHECK(x.closed==y.closed && x.deviation==y.deviation);
+        FK_CHECK(x.splitParameters==y.splitParameters);
+        for(int j=0;j<=32;++j) {
+            const double t=x.range.lo+x.range.length()*j/32.;
+            const auto p=x.curve->point(t);
+            FK_CHECK(distance(p,y.curve->point(t))==0.0);
+            FK_CHECK_NEAR(p.y(),0.,1e-9);FK_CHECK_NEAR(p.z(),0.,1e-9);
+            for(int side=0;side<2;++side) {
+                FK_CHECK(bool(x.pcurves[side])==bool(y.pcurves[side]));
+                if(x.pcurves[side]&&y.pcurves[side])
+                    FK_CHECK(distance(x.pcurves[side]->point(t),y.pcurves[side]->point(t))==0.0);
+            }
+        }
+    }
+}

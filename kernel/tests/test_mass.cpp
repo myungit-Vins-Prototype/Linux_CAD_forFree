@@ -11,6 +11,11 @@
 #include "fk_bspline.h"
 #include "fk_extrude.h"
 #include "fk_mass.h"
+#include "fk_parallel.h"
+#include "fk_body_io.h"
+#include <cstring>
+#include <future>
+#include <typeinfo>
 #include "fk_pcurve.h"
 #include "fk_primitives.h"
 #include "fk_quadrature.h"
@@ -447,4 +452,82 @@ FK_TEST(MassVerticalSplineSkipsNullFlux) {
         calls=0;FK_CHECK_NEAR(faceArea(body,body.faces().front()),1.,1e-12);
         FK_CHECK(calls<30);
     }
+}
+
+
+// Stesse proprieta' bit per bit fra il percorso automatico e quello locale
+// di un worker annidato. La formula del prisma fornisce un riferimento
+// indipendente per volume, anche con verso di estrusione e spessore diversi.
+FK_TEST(MassParallelPreservesResultsAndInput) {
+    const auto equal=[](const MassProperties &a,const MassProperties &b) {
+        const auto same=[](double x,double y){return std::memcmp(&x,&y,sizeof(x))==0;};
+        FK_CHECK(same(a.volume,b.volume) && same(a.area,b.area));
+        for(int i=0;i<3;++i) {
+            FK_CHECK(same(a.centroid[i],b.centroid[i]));
+            for(int j=0;j<3;++j)FK_CHECK(same(a.inertia[i][j],b.inertia[i][j]));
+        }
+    };
+    std::vector<Vec2> polygon;
+    for(int i=0;i<17;++i){const double t=kTwoPi*i/17.;polygon.emplace_back(3*std::cos(t),3*std::sin(t));}
+    const double section=.5*17*9*std::sin(kTwoPi/17.);
+    for(double height:{2.,-2.,1e-4})for(const Vec3 origin:{Vec3(),Vec3(1e5,-2e5,3e5)}) {
+        const Body body=makePrism(Frame3(origin,Vec3(1,2,3),Vec3(2,-1,0)),polygon,{},height);
+        const std::string input=writeBodyBinary(body);
+        const auto serial=[&] {
+            struct Local { unsigned saved=parallelDepth;Local(){++parallelDepth;}~Local(){parallelDepth=saved;} } local;
+            return massProperties(body);
+        };
+        const auto reference=serial();
+        const auto actual=massProperties(body);
+        equal(actual,reference);
+        FK_CHECK_NEAR(actual.volume,section*std::fabs(height),1e-6*section*std::fabs(height));
+        auto first=std::async(std::launch::async,[&]{return massProperties(body);});
+        auto second=std::async(std::launch::async,[&]{return massProperties(body);});
+        equal(first.get(),reference);equal(second.get(),reference);
+        FK_CHECK(writeBodyBinary(body)==input);
+    }
+    // Otto archi NURBS razionali: dieci facce e superfici estruse curve,
+    // con volume/area del cilindro noti senza usare il solver di massa.
+    ProfileRegion region;
+    const Circle<2> circle(Vec2(),Vec2(1,0),Vec2(0,1),3.);
+    for(int i=0;i<8;++i) {
+        const double lo=kTwoPi*i/8.,hi=kTwoPi*(i+1)/8.;
+        auto curve=std::make_shared<BSplineCurve<2>>(toBSpline(circle,lo,hi));
+        region.outer.segments.push_back({curve,{lo,hi}});
+    }
+    const Body curved=makeExtrusion(Frame3(),region,2.);
+    const auto original=writeBodyBinary(curved);
+    const auto actual=massProperties(curved);
+    MassProperties reference;
+    {struct Local { unsigned saved=parallelDepth;Local(){++parallelDepth;}~Local(){parallelDepth=saved;} } local;reference=massProperties(curved);}
+    equal(actual,reference);
+    FK_CHECK(curved.faces().size()==10);
+    FK_CHECK_NEAR(actual.volume,18*kPi,1e-9);
+    FK_CHECK_NEAR(actual.area,30*kPi,1e-9);
+    FK_CHECK_NEAR(distance(actual.centroid,Vec3(0,0,1)),0,1e-10);
+    FK_CHECK(writeBodyBinary(curved)==original);
+}
+
+FK_TEST(MassParallelPreservesFirstFailureAndCancellation) {
+    std::vector<Vec2> polygon;
+    for(int i=0;i<12;++i){const double t=kTwoPi*i/12.;polygon.emplace_back(std::cos(t),std::sin(t));}
+    Body body=makePrism(Frame3(),polygon,{},1.);
+    const auto faces=body.faces();
+    body.face(faces[0]).loops.clear();
+    body.face(faces[1]).surface=nullptr;
+    const auto error=[&] {
+        try{massProperties(body);}
+        catch(const std::exception &e){return std::string(typeid(e).name())+":"+e.what();}
+        return std::string();
+    };
+    std::string reference;
+    {struct Local { unsigned saved=parallelDepth;Local(){++parallelDepth;}~Local(){parallelDepth=saved;} } local;reference=error();}
+    FK_CHECK(!reference.empty());
+    for(int repeat=0;repeat<4;++repeat)FK_CHECK(error()==reference);
+    const Body valid=makePrism(Frame3(),polygon,{},1.);
+    const auto token=std::make_shared<std::atomic<bool>>(true);
+    bool cancelled=false;
+    {CancellationScope scope(token);try{massProperties(valid);}catch(const OperationCancelled &){cancelled=true;}}
+    FK_CHECK(cancelled);
+    FK_CHECK_NEAR(massProperties(valid).volume,3.,1e-10);
 }

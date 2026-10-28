@@ -6,6 +6,7 @@
 
 #include "fk_bspline.h"
 #include "fk_precision.h"
+#include "fk_parallel.h"
 #include "fk_quadrature.h"
 #include "fk_surface_algo.h"
 
@@ -638,12 +639,34 @@ MassProperties massProperties(const Body &body, double relativeTolerance) {
     referenceFrame(body, reference, scale);
     FaceValues flux{};
     double area = 0.0;
-    for (FaceId f : body.faces()) {
-        FaceIntegrator integrator(body, f, reference, scale, relativeTolerance);
-        const FaceValues values = integrator.domainIntegrals();
+    const auto faces = body.faces();
+    const auto integrateFace = [&](FaceId f) {
+        return FaceIntegrator(body, f, reference, scale, relativeTolerance).domainIntegrals();
+    };
+    const auto accumulate = [&](FaceId f, const FaceValues &values) {
         const double s = body.face(f).sense ? 1.0 : -1.0;
         area += values[0];
         for (std::size_t k = 1; k < kFaceValues; ++k) flux[k] += s * values[k];
+    };
+    // Quadrature indipendenti, riduzione nello stesso ordine seriale: nessuna
+    // variazione delle tolleranze o dell'ordine delle somme in virgola mobile.
+    // Corpi piccoli e worker gia' paralleli conservano il percorso locale.
+    if (faces.size() >= 8 && parallelDepth == 0 && threadCount(0) > 1) {
+        std::vector<FaceValues> values(faces.size());
+        std::vector<std::exception_ptr> failures(faces.size());
+        parallelFor(faces.size(), threadCount(0), [&](std::size_t i) {
+            try { values[i] = integrateFace(faces[i]); }
+            catch (const OperationCancelled &) { throw; }
+            catch (...) { failures[i] = std::current_exception(); }
+        });
+        for (std::size_t i = 0; i < faces.size(); ++i) {
+            // Anche in caso di piu' facce invalide si conserva il primo errore
+            // secondo l'ordine originale, dopo aver raggiunto tutti i worker.
+            if (failures[i]) std::rethrow_exception(failures[i]);
+            accumulate(faces[i], values[i]);
+        }
+    } else {
+        for (FaceId f : faces) accumulate(f, integrateFace(f));
     }
 
     MassProperties result;

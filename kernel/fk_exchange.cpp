@@ -3,6 +3,7 @@
 #include <charconv>
 #include <array>
 #include <cstdint>
+#include <cstring>
 #include <unordered_map>
 
 #include <algorithm>
@@ -10,6 +11,7 @@
 #include <cmath>
 #include <exception>
 #include <map>
+#include <limits>
 #include <set>
 #include <stdexcept>
 
@@ -20,6 +22,7 @@
 #include "fk_pcurve.h"
 #include "fk_offset.h"
 #include "fk_surface_algo.h"
+#include "fk_surface_distance.h"
 #include "fk_timing.h"
 
 namespace ForgeCad::Kernel::detail {
@@ -448,9 +451,11 @@ Body assembleBody(const RawModel &input, bool solid, std::vector<std::string> *n
             // Campioni fitti: lo scarto di una B-spline da una superficie libera cambia tra un nodo e l'altro.
             std::vector<double> breaks = edge.curve->breakpoints(edge.range);
             if (breaks.size() < 2 || breaks.size() > 64) breaks = {edge.range.lo, edge.range.hi};
+            Vec2 hint(std::numeric_limits<double>::quiet_NaN(), 0.0);
             for (std::size_t b = 0; b + 1 < breaks.size(); ++b)
                 for (int k = 0; k <= 16; ++k)
-                    deviation = std::max(deviation, projectPoint(surface, edge.curve->point(breaks[b] + (breaks[b + 1] - breaks[b]) * k / 16.0)).distance);
+                    deviation = std::max(deviation, surfaceDeviationAboveTolerance(surface,
+                        edge.curve->point(breaks[b] + (breaks[b + 1] - breaks[b]) * k / 16.0), 1e-7, &hint));
         }
         deviations[i] = deviation;
     };
@@ -513,9 +518,11 @@ Body assembleBody(const RawModel &input, bool solid, std::vector<std::string> *n
                 if (!fin.valid()) continue;
                 const Surface &surface = *body.face(body.finFace(fin)).surface;
                 // Anche nei nodi della curva: lo scarto puo' essere un picco proprio li'.
+                Vec2 hint(std::numeric_limits<double>::quiet_NaN(), 0.0);
                 for (std::size_t b = 0; b < spans; ++b)
                     for (int k = 0; k <= perSpan; ++k)
-                        deviation = std::max(deviation, projectPoint(surface, edge.curve->point(breaks[b] + (breaks[b + 1] - breaks[b]) * k / perSpan)).distance);
+                        deviation = std::max(deviation, surfaceDeviationAboveTolerance(surface,
+                            edge.curve->point(breaks[b] + (breaks[b + 1] - breaks[b]) * k / perSpan), 1e-7, &hint));
             }
             if (deviation > 1e-7 && 1.5 * deviation > edge.tolerance) {
                 edge.tolerance = 1.5 * deviation;
@@ -608,7 +615,10 @@ CurvePtr<2> sewnPCurve(const RawEdge &source, const RawEdge &target,
         if (t == target.range.lo) return first;
         if (t == target.range.hi) return first+slope*target.range.length();
         const Vec3 point = target.curve->point(t);
-        const auto candidates = projectPointCandidates(*source.curve, point, source.range);
+        // Per superare il controllo serve best <= limit; tutti i rami che
+        // possono vincere hanno distanza <= best+1e-10 <= limit+1e-10.
+        const double limit = std::max(1e-7, 10.0 * tolerance);
+        const auto candidates = projectPointCandidatesWithin(*source.curve, point, source.range, limit + 1e-10);
         double best = std::numeric_limits<double>::infinity(), chosen = first;
         for (const auto &q : candidates) best = std::min(best, q.distance);
         if (best>std::max(1e-7,10.0*tolerance))
@@ -638,9 +648,31 @@ CurvePtr<2> sewnPCurve(const RawEdge &source, const RawEdge &target,
         Vec3 d[4];face.surface->evaluate(uv.x(),uv.y(),1,d);
         speed=std::max({speed,norm(d[Surface::derivativeIndex(1,0,1)]),norm(d[Surface::derivativeIndex(0,1,1)])});
     }
+    // Il fitting torna sugli stessi parametri per campioni e derivate.
+    // Riusare il risultato evita nuove proiezioni globali, senza cambiare
+    // parametro scelto, campionamento, tolleranza o verifica finale in 3D.
+    // Cache solo di questa rimappatura, limitata e svuotabile: nessun dato
+    // trattenuto nel body. Chiavi bit per bit, distinguendo anche +0 e -0.
+    std::unordered_map<std::uint64_t, Vec3> samples;
+    constexpr std::size_t maxSamples = 4096;
+    std::size_t requests = 0, hits = 0, peak = 0;
     const auto fitted=fitCurve([&](double t) {
-        const Vec2 uv=fin.pcurve->point(parameter(t));return Vec3(uv.x(),uv.y(),0);
+        cancellationPoint();
+        ++requests;
+        std::uint64_t key;
+        static_assert(sizeof(key)==sizeof(t));
+        std::memcpy(&key,&t,sizeof(key));
+        const auto found=samples.find(key);
+        if(found!=samples.end()){++hits;return found->second;}
+        const Vec2 uv=fin.pcurve->point(parameter(t));
+        const Vec3 value(uv.x(),uv.y(),0);
+        if(samples.size()>=maxSamples)samples.clear();
+        samples.emplace(key,value);
+        peak=std::max(peak,samples.size());
+        return value;
     },target.range,breaks,1e-8/speed);
+    if(timingEnabled())
+        std::fprintf(stderr,"[cucitura] campioni UV: %zu richieste, %zu riusi, picco %zu voci\n",requests,hits,peak);
     std::vector<Vec2> poles;for(const Vec3 &p:fitted->poles())poles.emplace_back(p.x(),p.y());
     auto result=std::make_shared<BSplineCurve<2>>(fitted->degree(),fitted->knots(),std::move(poles),fitted->weights());
     if(!acceptable(result))throw std::domain_error("cucitura: rimappatura SP-curve fuori tolleranza");

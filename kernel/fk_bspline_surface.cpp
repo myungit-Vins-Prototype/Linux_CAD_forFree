@@ -45,6 +45,25 @@ void BSplineSurface::evaluate(double u, double v, int order, Vec3 *out) const {
     detail::basisFunctionDerivatives(uKnots_, su, u, pu, du, nu.data());
     detail::basisFunctionDerivatives(vKnots_, sv, v, pv, dv, nv.data());
 
+    // Il solo punto usa gli stessi termini e lo stesso ordine di somma,
+    // senza preparare i buffer e la ricorrenza delle derivate A4.4.
+    if (order == 0) {
+        Vec3 sum;
+        double weightSum = 0.0;
+        for (int i = 0; i <= pu; ++i) {
+            const double bu = nu[i];
+            if (bu == 0.0) continue;
+            for (int j = 0; j <= pv; ++j) {
+                const int row = su - pu + i, column = sv - pv + j;
+                const double b = bu * nv[j] * weight(row, column);
+                sum += b * pole(row, column);
+                weightSum += b;
+            }
+        }
+        out[0] = isRational() ? sum / weightSum : sum;
+        return;
+    }
+
     // Derivate del numeratore omogeneo A = sum N N w P e del denominatore w.
     const int size = order + 1;
     detail::ScratchBuffer<Vec3, 16> a(size * size);

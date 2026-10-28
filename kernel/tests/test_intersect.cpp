@@ -5,6 +5,8 @@
 #include <Geom2d_TrimmedCurve.hxx>
 #include <gp_Ax22d.hxx>
 
+#include <future>
+#include "fk_cancel.h"
 #include "fk_intersect.h"
 #include "fk_surface_algo.h"
 #include "fk_test_util.h"
@@ -262,4 +264,91 @@ FK_TEST(PlaneRootsManySpans) {
         FK_CHECK(roots.parameters.size()==(offset==0?512:0));
         if(offset==0)for(std::size_t i=0;i<roots.parameters.size();++i)FK_CHECK_NEAR(roots.parameters[i],i+.5,1e-12);
     }
+}
+
+namespace {
+
+BSplineCurve<2> manySpanPolyline(int spans, bool rational, int axis, int shape) {
+    std::vector<double> knots{0.0};
+    std::vector<Vec2> poles;
+    std::vector<double> weights;
+    for (int i = 0; i <= spans; ++i) {
+        knots.push_back(double(i));
+        const double x = shape == 1 ? 0.5 * i : double(i);
+        const double y = shape == 0 ? (i % 2 ? 1.0 : -1.0)
+                        : shape == 2 ? std::fabs(double(i - spans / 2))
+                        : shape == 3 ? 3.0 : 0.0;
+        poles.push_back(axis == 0 ? Vec2(x, y) : Vec2(y, x));
+        if (rational) weights.push_back(0.5 + (i % 5));
+    }
+    knots.push_back(double(spans));
+    return BSplineCurve<2>(1, std::move(knots), std::move(poles), std::move(weights));
+}
+
+}
+
+// Molte pezze, radici note anche quando cadono sui nodi della seconda curva.
+// I pesi cambiano i parametri ma non i segmenti ne' le loro intersezioni.
+FK_TEST(CurveCurveManySpansAnalytic) {
+    for (int spans : {7, 15, 16, 65})
+        for (bool rational : {false, true})
+            for (int axis : {0, 1}) {
+                const auto a = manySpanPolyline(spans, rational, axis, 0);
+                const auto b = manySpanPolyline(2 * spans, !rational, axis, 1);
+                for (bool swapped : {false, true}) {
+                    const auto result = swapped ? intersectCurves(b, b.domain(), a, a.domain(), 1e-9)
+                                                : intersectCurves(a, a.domain(), b, b.domain(), 1e-9);
+                    FK_CHECK(!result.overlap);
+                    FK_CHECK(result.points.size() == std::size_t(spans));
+                    std::vector<double> coordinates;
+                    for (const auto &p : result.points) {
+                        FK_CHECK_NEAR(p.point[1 - axis], 0.0, 1e-8);
+                        FK_CHECK(distance((swapped ? b : a).point(p.s), p.point) <= 1e-8);
+                        FK_CHECK(distance((swapped ? a : b).point(p.t), p.point) <= 1e-8);
+                        coordinates.push_back(p.point[axis]);
+                    }
+                    std::sort(coordinates.begin(), coordinates.end());
+                    for (std::size_t i = 0; i < coordinates.size(); ++i)
+                        FK_CHECK_NEAR(coordinates[i], i + 0.5, 1e-8);
+                }
+                // Range ristretto esatto sul parametro dei vertici, con pesi
+                // uniformi per conservare i limiti geometrici noti.
+                const auto plain = manySpanPolyline(spans, false, axis, 0);
+                const auto partial = intersectCurves(plain, {2.0, double(spans - 2)}, b, b.domain(), 1e-9);
+                FK_CHECK(partial.points.size() == std::size_t(spans - 4));
+                for (const auto &p : partial.points) {
+                    FK_CHECK(p.point[axis] >= 2.5 - 1e-8);
+                    FK_CHECK(p.point[axis] <= spans - 2.5 + 1e-8);
+                }
+            }
+}
+
+FK_TEST(CurveCurveManySpansContactsAndConcurrency) {
+    const auto a = manySpanPolyline(64, true, 0, 2);
+    const auto b = manySpanPolyline(128, false, 0, 1);
+    auto contact = [&] {
+        const auto result = intersectCurves(a, a.domain(), b, b.domain(), 1e-9);
+        FK_CHECK(!result.overlap);
+        FK_CHECK(result.points.size() == 1);
+        if (!result.points.empty()) FK_CHECK_NEAR(distance(result.points.front().point, Vec2(32, 0)), 0.0, 1e-8);
+    };
+    // Le curve sono condivise; ogni chiamata possiede la propria gerarchia.
+    auto pending = std::async(std::launch::async, [&] { return intersectCurves(a, a.domain(), b, b.domain(), 1e-9); });
+    contact();
+    const auto concurrent = pending.get();
+    FK_CHECK(concurrent.points.size() == 1);
+    if (!concurrent.points.empty()) FK_CHECK_NEAR(distance(concurrent.points.front().point, Vec2(32, 0)), 0.0, 1e-8);
+    const auto disjoint = manySpanPolyline(64, false, 0, 3);
+    const auto miss = intersectCurves(disjoint, disjoint.domain(), b, b.domain(), 1e-9);
+    FK_CHECK(miss.points.empty());
+    FK_CHECK(!miss.overlap);
+    auto token = std::make_shared<std::atomic<bool>>(true);
+    bool cancelled = false;
+    {
+        CancellationScope scope(token);
+        try { (void)intersectCurves(a, a.domain(), b, b.domain(), 1e-9); }
+        catch (const OperationCancelled &) { cancelled = true; }
+    }
+    FK_CHECK(cancelled);
+    contact();
 }

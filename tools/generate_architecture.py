@@ -93,8 +93,23 @@ DESCRIPTIONS = {
 
 # Catalogo dei moduli applicativi: descrizioni specifiche condivise da header e sorgente.
 DESCRIPTIONS.update({
- 'kernel/fk_marching.cpp': ('kernel', 'Intersezioni superficie/superficie: rami singolari con radici omogenee stabili anche a diagonali nulle; tolleranze conservate.'),
- 'kernel/tests/test_marching.cpp': ('tests', 'Intersezioni contro OCCT e geometrie analitiche: sella con solo termine misto, diagonali quasi nulle e ordine delle superfici invertito.'),
+ 'kernel/fk_boolean.cpp': ('kernel', 'Booleane esatte: certificati di appartenenza e filtro dei candidati entro tolleranza prima di proiettare gli spigoli; verifica originale e topologia conservate.'),
+ 'kernel/tests/test_mass.cpp': ('tests', 'Massa e area contro formule/OCCT; risultati seriali/paralleli bit identici, input immutato, richieste concorrenti, primo errore e cancellazione.'),
+ 'kernel/tests/test_curve_surface.cpp': ('tests', 'Intersezioni confrontate con OCCT e conservazione della geometria nelle suddivisioni Bezier: razionali, micro domini, gradi alti e divisioni ripetute.'),
+ 'kernel/tests/test_curve_algo.cpp': ('tests', 'Proiezioni contro OCCT, filtro esaustivo e linea analitica4096tratti: range inclusivi/ristretti, estremi e concorrenza; quadratura e cache delle lunghezze.'),
+ 'kernel/tests/test_bspline_surface.cpp': ('tests', 'Superfici B-spline contro OCCT e Bernstein indipendente fino al grado31; limiti dei buffer, nodi ripetuti/stretti, prefissi bit identici, concorrenza e cancellazione.'),
+ 'kernel/tests/test_boolean.cpp': ('tests', 'Booleane contro OCCT, contatti e sweep elicoidali; volumi analitici delle lamelle spline sottili fino a 1e-4 mm, topologia e concordanza parallela.'),
+ 'kernel/fk_surface_distance.h': ('kernel', 'Contratti dei filtri di distanza: candidato entro tolleranza o rigetto conservativo, senza usare il filtro come accettazione geometrica.'),
+ 'kernel/fk_surface_distance.cpp': ('kernel', 'Filtri conservativi di distanza: certificato entro soglia e rigetto tramite BVH dei box Bezier con margine numerico; proiezione globale nei casi incerti.'),
+ 'kernel/fk_mass.cpp': ('kernel', 'Proprieta di massa esatte: quadrature indipendenti per faccia in parallelo, somme nello stesso ordine seriale, errori ordinati e cancellazione; worker annidati e corpi piccoli restano locali.'),
+ 'kernel/fk_loft.cpp': ('kernel', 'Loft esatto con cache locale limitata degli integrali di lunghezza: stessi tratti, tolleranze e ordine di somma, nessuna approssimazione della parametrizzazione.'),
+ 'kernel/fk_intersect.cpp': ('kernel', 'Intersezioni esatte: gerarchia locale dei box Bezier2D con visita in ordine di parametro, scarto conservativo delle coppie separate; Newton e tolleranze invariati.'),
+ 'kernel/fk_exchange.cpp': ('kernel', 'Modello di scambio e assemblaggio: cucitura, campioni UV locali e proiezioni esaustive entro distanza con scarto conservativo dei tratti lontani; verifica 3D e topologia conservate.'),
+ 'kernel/fk_curve_surface.cpp': ('kernel', 'Intersezioni curva-superficie e suddivisione Bezier diretta in coordinate omogenee: stesso ordine di inserimento nodi, ripiego generale per pezze non clamped, nessuna modifica delle tolleranze.'),
+ 'kernel/fk_curve_algo.cpp': ('kernel', 'Proiezioni esatte: limita i tratti Bezier al range con bounds inclusivi, conservando ordine/candidati e filtri conservativi entro distanza; lunghezze e quadratura invariate.'),
+ 'kernel/fk_bspline_surface.cpp': ('kernel', 'Superfici B-spline: percorso del solo punto senza buffer delle derivate, stessi termini e ordine di somma; derivate e cache delle pezze invariate.'),
+ 'kernel/fk_marching.cpp': ('kernel', 'Intersezioni superficie/superficie: riuso limitato delle proiezioni; filtro conservativo delle pezze NURBS prima di proiettare i vertici dei coni; rami singolari e tolleranze conservati.'),
+ 'kernel/tests/test_marching.cpp': ('tests', 'Intersezioni contro OCCT e geometrie analitiche: tangenze, poli e sella con solo termine misto, diagonali quasi nulle e ordine delle superfici invertito.'),
  'kernel/fk_bspline_basis.cpp': ('kernel', 'Basi e derivate B-spline: specializzazioni dei gradi1..5 e ordini0..2 con algoritmo e ordine aritmetico invariati, fallback generale e cancellazione per chiamata.'),
  'kernel/tests/test_bspline.cpp': ('tests', 'Valutazioni B-spline contro OCCT e formule Bernstein, prefissi derivati bit identici, gradi fino31, nodi ripetuti/limiti, buffer, concorrenza e cancellazione.'),
 })

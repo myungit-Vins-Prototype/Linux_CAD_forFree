@@ -13,6 +13,7 @@
 #include "fk_bspline_basis.h"
 #include "fk_bspline_surface.h"
 #include "fk_curve_algo.h"
+#include "fk_curve_length_cache.h"
 #include "fk_curve_ops.h"
 #include "fk_helix.h"
 #include "fk_hermite.h"
@@ -26,6 +27,8 @@
 
 namespace ForgeCad::Kernel {
 namespace {
+
+using LengthCache = detail::CurveLengthCache;
 
 struct Piece {
     CurvePtr<3> curve;
@@ -175,7 +178,7 @@ void startAtGuide(Section &section, const Vec3 &hit, double tolerance) {
 // guida ne ha fissato la cucitura. Serve a trasformare anche le altre guide in
 // vere linee longitudinali della superficie, anziche' usarle soltanto per il
 // parametro tra le sezioni.
-double sectionProgress(const Section &section, const Vec3 &point, double tolerance, bool closed = true) {
+double sectionProgress(const Section &section, const Vec3 &point, double tolerance, bool closed, LengthCache &lengthCache) {
     std::size_t bestPiece = 0;
     CurveProjection<3> best;
     best.distance = 1e300;
@@ -186,14 +189,14 @@ double sectionProgress(const Section &section, const Vec3 &point, double toleran
         const Piece &piece = section.pieces[k];
         const CurveProjection<3> projection = projectPoint(*piece.curve, point, piece.range);
         if (projection.distance < best.distance) best = projection, bestPiece = k;
-        lengths.push_back(arcLength(*piece.curve, piece.range, 1e-13));
+        lengths.push_back(lengthCache.get(*piece.curve, piece.range, 1e-13));
         total += lengths.back();
     }
     if (best.distance > tolerance || !(total > tolerance))
         throw std::domain_error("loft: l'intersezione della guida non appartiene al contorno della sezione");
     double before = 0.0;
     for (std::size_t k = 0; k < bestPiece; ++k) before += lengths[k];
-    double progress = (before + arcLength(*section.pieces[bestPiece].curve,
+    double progress = (before + lengthCache.get(*section.pieces[bestPiece].curve,
                                           {section.pieces[bestPiece].range.lo, best.parameter}, 1e-13)) / total;
     if (closed && progress >= 1.0 - 1e-9) progress = 0.0;
     return progress;
@@ -215,12 +218,12 @@ Vec3 sectionCentroid(const std::vector<Piece> &pieces) {
 }
 
 // Parametro del tratto a cui l'ascissa curvilinea dall'inizio vale `target`.
-double parameterAtLength(const Piece &p, double target) {
-    const double total = arcLength(*p.curve, p.range, 1e-13);
+double parameterAtLength(const Piece &p, double target, LengthCache &lengthCache) {
+    const double total = lengthCache.get(*p.curve, p.range, 1e-13);
     double lo = p.range.lo, hi = p.range.hi, t = p.range.lo + p.range.length() * target / total;
     for (int iteration = 0; iteration < 100; ++iteration) {
         cancellationPoint();
-        const double s = arcLength(*p.curve, {p.range.lo, t}, 1e-14) - target;
+        const double s = lengthCache.get(*p.curve, {p.range.lo, t}, 1e-14) - target;
         if (std::fabs(s) <= 1e-13 * std::max(1.0, total)) break;
         if (s > 0.0) hi = t;
         else lo = t;
@@ -959,6 +962,7 @@ Body loftCore(const std::vector<Section> &sections, const LoftOptions &options, 
               double scale, const std::vector<std::vector<double>> &guideParameters, const std::vector<std::vector<GuideHit>> &guideHits, FaceAliases *labels) {
     const bool ruled = options.ruled && options.startContinuity == 0 && options.endContinuity == 0;
     const std::size_t n = sections.size();
+    LengthCache lengthCache;
     // Sezioni con lo stesso numero di tratti (piu' di uno): tratto con tratto,
     // cosi' gli spigoli vivi (i vertici di due poligoni) si corrispondono. Altrimenti
     // si dividono alle stesse ascisse curvilinee normalizzate.
@@ -970,7 +974,7 @@ Body loftCore(const std::vector<Section> &sections, const LoftOptions &options, 
         cancellationPoint();
         double total = 0.0;
         std::vector<double> lengths;
-        for (const Piece &p : sections[i].pieces) lengths.push_back(arcLength(*p.curve, p.range, 1e-13)), total += lengths.back();
+        for (const Piece &p : sections[i].pieces) lengths.push_back(lengthCache.get(*p.curve, p.range, 1e-13)), total += lengths.back();
         double cumulative = 0.0;
         for (double l : lengths) {
             cancellationPoint();
@@ -994,7 +998,7 @@ Body loftCore(const std::vector<Section> &sections, const LoftOptions &options, 
         localGuidePosition.assign(guideHits.size(), std::vector<double>(n));
         for (std::size_t guide = 0; guide < guideHits.size(); ++guide)
             for (std::size_t i = 0; i < n; ++i)
-                localGuidePosition[guide][i] = sectionProgress(sections[i], guideHits[guide][i].point, 1e-6 * scale, closed);
+                localGuidePosition[guide][i] = sectionProgress(sections[i], guideHits[guide][i].point, 1e-6 * scale, closed, lengthCache);
         for (std::size_t guide = 0; guide < guideHits.size(); ++guide) guideOrder.push_back(guide);
         std::sort(guideOrder.begin(), guideOrder.end(), [&](std::size_t a, std::size_t b) {
             return localGuidePosition[a][0] < localGuidePosition[b][0];
@@ -1070,7 +1074,7 @@ Body loftCore(const std::vector<Section> &sections, const LoftOptions &options, 
         }
         double total = 0.0;
         std::vector<double> lengths;
-        for (const Piece &p : pieces) lengths.push_back(arcLength(*p.curve, p.range, 1e-13)), total += lengths.back();
+        for (const Piece &p : pieces) lengths.push_back(lengthCache.get(*p.curve, p.range, 1e-13)), total += lengths.back();
         // Per ogni taglio: tratto e parametro.
         std::vector<std::pair<std::size_t, double>> at;
         for (double c : localCuts) {
@@ -1079,7 +1083,7 @@ Body loftCore(const std::vector<Section> &sections, const LoftOptions &options, 
             while (k + 1 < pieces.size() && f[k + 1] <= c + 1e-7) ++k;
             if (c >= 1.0 - 1e-12) at.push_back({pieces.size() - 1, pieces.back().range.hi});
             else if (std::fabs(c - f[k]) <= 1e-7) at.push_back({k, pieces[k].range.lo});
-            else at.push_back({k, parameterAtLength(pieces[k], (c - f[k]) * total)});
+            else at.push_back({k, parameterAtLength(pieces[k], (c - f[k]) * total, lengthCache)});
         }
         for (std::size_t m = 0; m < M; ++m) {
             cancellationPoint();

@@ -26,6 +26,7 @@
 #include "fk_parallel.h"
 #include "fk_pcurve.h"
 #include "fk_surface_algo.h"
+#include "fk_surface_distance.h"
 #include "fk_unify.h"
 
 namespace ForgeCad::Kernel {
@@ -542,8 +543,8 @@ void BooleanBuilder::addArcs(const CurvePtr<3> &curve, const Interval &range, co
         // la proiezione cadrebbe sul bordo della faccia e sembrerebbero dentro.
         // Le curve d'intersezione stanno sulle due superfici entro 1e-9 (fk_marching).
         const double onSurface = 10.0 * tolerance_;
-        if (projectPoint(*bodies_[0].face(fa).surface, middle).distance > onSurface
-            || projectPoint(*bodies_[1].face(fb).surface, middle).distance > onSurface)
+        if (surfaceDeviationAboveTolerance(*bodies_[0].face(fa).surface, middle, onSurface) > 0.0
+            || surfaceDeviationAboveTolerance(*bodies_[1].face(fb).surface, middle, onSurface) > 0.0)
             continue;
         const Snap *loSnap = snaps.empty() ? nullptr : snapAt(piece.lo), *hiSnap = snaps.empty() ? nullptr : snapAt(piece.hi);
         if (loSnap || hiSnap) {
@@ -777,7 +778,7 @@ std::vector<Interval> BooleanBuilder::coincidentRanges(const Curve<3> &curve, co
         const Vec3 normal = cross(circle.xAxis(), circle.yAxis());
         if (coaxialRotational(CylindricalSurface(Frame3(circle.center(), normal, circle.xAxis()), circle.radius()), surface, tolerance_)) {
             for (double f : {0.0, 0.37, 0.71})
-                if (projectPoint(surface, curve.point(range.lo + f * range.length())).distance > tolerance_) return {};
+                if (surfaceDeviationAboveTolerance(surface, curve.point(range.lo + f * range.length()), tolerance_) > 0.0) return {};
             return {range};
         }
     }
@@ -872,6 +873,12 @@ std::vector<Interval> BooleanBuilder::splitAtPoints(const Curve<3> &curve, const
         bool inBox = true;
         for (int i = 0; i < 3; ++i) inBox = inBox && x[i] >= box.lo[i] && x[i] <= box.hi[i];
         if (!inBox || distance(x, a) <= 2.0 * tolerance_ || distance(x, b) <= 2.0 * tolerance_) continue;
+        // Per dividere basta sapere se esiste una proiezione entro tolleranza.
+        // Scartare prima i tratti lontani evita di cercarne inutilmente il
+        // minimo globale. Per i candidati vicini resta la proiezione originale,
+        // compresa la sua scelta fra minimi equidistanti.
+        if (curve.type() != CurveType::Line && curve.type() != CurveType::Circle
+            && projectPointCandidatesWithin(curve, x, range, tolerance_).empty()) continue;
         const CurveProjection<3> projection = projectPoint(curve, x, range);
         if (projection.distance <= tolerance_) parameters.push_back(projection.parameter);
     }
@@ -1615,7 +1622,7 @@ Location BooleanBuilder::classify(const SubFace &subFace, const SolidClassifier 
             std::vector<FaceId> origins;
             for (FaceId g : coplanar) {
                 // Coincidenza in parte: il punto deve stare anche sull'altra superficie.
-                if (partial_.count({&surface, otherBody.face(g).surface.get()}) && projectPoint(*otherBody.face(g).surface, z).distance > tolerance_)
+                if (partial_.count({&surface, otherBody.face(g).surface.get()}) && surfaceDeviationAboveTolerance(*otherBody.face(g).surface, z, tolerance_) > 0.0)
                     continue;
                 const PointLocation location = classifyPointOnFace(otherBody, g, z, tolerance_);
                 if (location == PointLocation::Boundary) return false;
@@ -1861,7 +1868,7 @@ void BooleanBuilder::collectCuts(std::map<int, std::vector<Piece>> (&cuts)[2]) {
                 // Pezzi di un arco che esce appena dalla superficie (seme su un edge
                 // tollerante, fuori dal dominio della B-spline): fuori dalla faccia.
                 if (vertexTolerance_ > tolerance_ && (range.lo != arc.range.lo || range.hi != arc.range.hi)
-                    && projectPoint(*bodies_[k].face(arc.face[k]).surface, arc.curve->point(0.5 * (range.lo + range.hi))).distance > 10.0 * tolerance_)
+                    && surfaceDeviationAboveTolerance(*bodies_[k].face(arc.face[k]).surface, arc.curve->point(0.5 * (range.lo + range.hi)), 10.0 * tolerance_) > 0.0)
                     continue;
                 Piece piece;
                 piece.curve = arc.curve;

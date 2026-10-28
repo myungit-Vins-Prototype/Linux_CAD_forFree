@@ -26,6 +26,14 @@ CurveProjection<N> projectPoint(const Curve<N> &curve, const Vec<N> &p, const In
 // si riducono a una curva. Esaustivo per rette, cerchi e B-spline.
 template <int N>
 std::vector<CurveProjection<N>> projectPointCandidates(const Curve<N> &curve, const Vec<N> &p, const Interval &range);
+// Stesso insieme esaustivo, filtrato alla distanza massima (inclusa).
+// Per le B-spline il box conservativo dei poli permette di evitare i tratti
+// che non possono contribuire. Nessun minimo entro il limite viene scartato;
+// ordine e doppioni coincidono col filtro del risultato non limitato.
+// maximumDistance >= 0, anche +infinito; NaN e punti non finiti rifiutati.
+template <int N>
+std::vector<CurveProjection<N>> projectPointCandidatesWithin(const Curve<N> &curve, const Vec<N> &p,
+                                                            const Interval &range, double maximumDistance);
 // Sul dominio della curva. Il dominio (o range) puo' essere infinito solo per
 // la retta, anche se trasformata o limitata.
 template <int N>
