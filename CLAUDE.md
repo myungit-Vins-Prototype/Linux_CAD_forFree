@@ -4,7 +4,7 @@ Contesto condiviso del progetto per Claude Code e Codex. La lingua di lavoro è 
 
 
 
-### 2026-10-28 — Riallineamento Mac/Linux e pubblicazione (verificato, in pubblicazione)
+### 2026-10-28 — Riallineamento Mac/Linux e pubblicazione (completato)
 
 - Richiesta: riallineare e fare push del checkpoint6dad6e4 per proseguire su macOS. Fetch conferma remoto2b679a7; merge ordinario per preservare entrambe le storie, nessun force push o modifica main.
 - Conflitto semantico: il remoto espone componenti anche per aggregati legacy, mentre il checkpoint preserva struttura/riferimenti dei vecchi file. Regola combinata: nessuna migrazione implicita degli aggregati senza derivati; supporto dei derivati gia salvati dalla versione Mac, con aggregato conservato per i consumatori e un solo evento nella storyboard. Preservati fix piani, riallineamento corpi, soppressione, kernel e test framebuffer Mac. In verifica con regressioni di entrambe le varianti e build completa.
@@ -16,6 +16,8 @@ Contesto condiviso del progetto per Claude Code e Codex. La lingua di lavoro è 
 - Chiusura verifiche dopo la correzione:app e runner ricompilati,53/53CTestPASS18,34s e cache OpenGL nativaPASS senza skip. Mouse2/CT/assieme con B-rep, mesh (anche conteggi nascosti), errori e visibilita identici al checkpoint:0/0/4errori, questi ultimi importati senza sorgente gia noti. Originali non scritti, sonde con identita indipendente; nessuna nuova misura prestazionale o build macOS.
 - Mappa rigenerata e ispezionata:499file/6765relazioni/236TU,0diagnostiche,81173siti validi,5confini nei due versi e include distinti; --checkPASS. Risolti i tre conflitti (registro, viewport documento, descrizioni) preservando annotazioni delle due sessioni. Test della variante Mac adattato alla fixture gia dotata di derivati, mentre il test dei vecchi aggregati senza migrazione resta invariato; entrambi PASS. Artefatti in benchmarks/merge-macos-2026-10-28.
 - Ultimo fetch prima del commit conferma remoto2b679a7 immutato. Merge ordinario del checkpoint6dad6e4 con2b679a7 e push autorizzati dall’utente, in esecuzione; main e installazione desktop preservati, nessuna riscrittura della storia.
+
+- Pubblicazione completata: merge306ab974a7eec4fb22a3b2dad514112aa1f24979, push ordinario origin/solver-mesh-gpu2b679a7→306ab97 confermato da git ls-remote. Entrambi i parent (checkpoint6dad6e4 e remoto2b679a7) sono antenati del risultato; nessun force push. Questa annotazione finale viene pubblicata in un commit solo documentale; codice e binari restano quelli verificati. Il Mac puo recuperare il branch e compilare per le verifiche native.
 
 ### 2026-10-28 — Commit del checkpoint per prosecuzione macOS
 
