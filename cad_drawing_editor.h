@@ -44,6 +44,7 @@ public:
     void cancelViewPlacement();
     // Modifica atomica: ID e quote conservati, ricalcolo delle viste dipendenti il cui piano cambia.
     QString updateView(DrawingView view,DrawingViewLayout layout);
+    QString setViewScale(const QUuid &id,DrawingScaleSource source,double customScale);
     enum class ViewAlignment { SameRow, SameColumn };
     QString moveView(const QUuid &id,const QPointF &position);
     QString moveViewTitle(const QUuid &id,const QPointF &position);
@@ -72,7 +73,7 @@ public:
     DrawingResolvedAttachment annotationResult(const QUuid &id)const;
     QString setRevisionTable(const DrawingRevisionTable &table);
     bool isComputing()const;
-    QString setPageSettings(const QString &title,const QSizeF &size,const DrawingTitleBlock &block);
+    QString setPageSettings(const QString &title,const QSizeF &size,const DrawingTitleBlock &block,std::optional<double> scale={});
     void setPageContext(DrawingPageContext context);
     DrawingPageContext pageContext()const;
     QString exportPdf(const QString &path,DrawingPdfReport &report)const;

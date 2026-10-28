@@ -36,6 +36,7 @@ DrawingDocument annotationSupportDocument(const DrawingSheet &sheet){
     return document;
 }
 void validate(const DrawingSheet &sheet){
+    require(std::isfinite(sheet.scale)&&sheet.scale>=1e-6&&sheet.scale<=1e6,"Scala del foglio non valida.");
     require(!sheet.title.trimmed().isEmpty()&&sheet.title.size()<=256,"Titolo della tavola non valido.");
     require(std::isfinite(sheet.size.width())&&std::isfinite(sheet.size.height())&&sheet.size.width()>=50&&sheet.size.height()>=50
             &&sheet.size.width()<=2000&&sheet.size.height()<=2000,"Dimensioni del foglio non valide.");
@@ -127,11 +128,23 @@ DrawingAttachmentResolver drawingSheetAttachmentResolver(const DrawingSheet &she
         out.point=out.first+fraction*(out.second-out.first);return out;
     };
 }
+bool drawingUsesSheetScale(const DrawingSheet &sheet){
+    return sheet.scale!=1.0 || std::any_of(sheet.views.cbegin(),sheet.views.cend(),[](const auto &v){return v.scaleSource.has_value();});
+}
+double drawingSheetScale(const DrawingSheet &sheet){
+    if(!drawingUsesSheetScale(sheet))for(const auto &layout:sheet.views)if(layout.relation.parentId.isNull())
+        for(const auto &view:sheet.drawing.views)if(view.id==layout.viewId)return view.scale;
+    return sheet.scale;
+}
+QString drawingScaleText(double scale){
+    return scale<1.0?QStringLiteral("1:%1").arg(1.0/scale,0,'g',8):QStringLiteral("%1:1").arg(scale,0,'g',8);
+}
 QString encodeDrawingSheet(const DrawingSheet &sheet,QByteArray &bytes){
     try{
         validate(sheet);QByteArray document;ok(encodeDrawingDocument(sheet.drawing,document));QJsonArray views,dimensions;
         for(const auto &view:sheet.views){QJsonArray features;for(auto id:view.features)features.append(QString::number(id));
             QJsonObject object{{"id",view.viewId.toString(QUuid::WithoutBraces)},{"title",view.title},{"position",pointJson(view.position)},{"features",features}};
+            if(view.scaleSource){object.insert("scaleSource",int(*view.scaleSource));object.insert("customScale",*view.customScale);}
             if(view.interruption){const auto &b=*view.interruption;object.insert("interruption",QJsonObject{{"vertical",b.vertical},{"start",b.start},{"end",b.end},{"gap",b.gap}});}
             if(view.titleOffset)object.insert("titleOffset",pointJson(*view.titleOffset));
             if(view.showHiddenLines)object.insert("showHiddenLines",true);
@@ -151,9 +164,10 @@ QString encodeDrawingSheet(const DrawingSheet &sheet,QByteArray &bytes){
         bool styled=false;
         for(const auto &dimension:sheet.dimensions){QJsonObject item{{"id",dimension.dimensionId.toString(QUuid::WithoutBraces)},{"position",pointJson(dimension.position)}};
             const auto &p=dimension.presentation;if(p.active()){styled=true;item.insert("presentation",QJsonObject{{"mode",int(p.mode)},{"upper",p.upper},{"lower",p.lower},{"decimals",p.decimals},{"prefix",p.prefix},{"suffix",p.suffix}});if(p.reverseArrows){auto style=item["presentation"].toObject();style.insert("reverseArrows",true);item["presentation"]=style;}if(p.numberingExcluded){auto style=item["presentation"].toObject();style.insert("numberingExcluded",true);item["presentation"]=style;}}dimensions.append(item);}
-        QJsonObject object{{"format","ForgeCAD.DrawingSheet"},{"schema",sheet.dimensionNumbering.persistent?22:(sheet.dimensionNumbering.excludeParenthesized||std::any_of(sheet.dimensions.cbegin(),sheet.dimensions.cend(),[](const auto &d){return d.presentation.numberingExcluded;}))?21:sheet.dimensionNumbering.active()?20:std::any_of(sheet.annotations.cbegin(),sheet.annotations.cend(),[](const auto &n){return n.technical.has_value();})?19:std::any_of(sheet.drawing.dimensions.cbegin(),sheet.drawing.dimensions.cend(),[](const auto &d){return drawingOrdinate(d.measure);})?18:std::any_of(sheet.drawing.views.cbegin(),sheet.drawing.views.cend(),[](const auto &v){return v.bend.has_value();})?17:std::any_of(sheet.drawing.views.cbegin(),sheet.drawing.views.cend(),[](const auto &v){return v.step&&!v.step->additional.empty();})?16:std::any_of(sheet.drawing.views.cbegin(),sheet.drawing.views.cend(),[](const auto &v){return v.step.has_value();})?15:std::any_of(sheet.views.cbegin(),sheet.views.cend(),[](const auto &v){return v.interruption.has_value();})?14:std::any_of(sheet.views.cbegin(),sheet.views.cend(),[](const auto &v){return v.relation.kind==DrawingDerivedKind::Auxiliary;})?13:sheet.style.textLayoutActive()?12:(std::any_of(sheet.axes.cbegin(),sheet.axes.cend(),[](const auto &a){return a.endExtension.has_value();})||std::any_of(sheet.dimensions.cbegin(),sheet.dimensions.cend(),[](const auto &d){return d.presentation.reverseArrows;}))?11:std::any_of(sheet.views.cbegin(),sheet.views.cend(),[](const auto &v){return v.relation.kind==DrawingDerivedKind::Detail;})?10:(sheet.style.extensionGap!=0||sheet.style.dimensionOffset!=0)?9:(sheet.style.active()||std::any_of(sheet.views.cbegin(),sheet.views.cend(),[](const auto &v){return v.titleOffset.has_value();}))?8:styled?7:!sheet.annotations.isEmpty()?6:drawingNeedsAxisSchema(sheet.drawing)?5:!sheet.axes.isEmpty()?4:(drawingNeedsSectionSchema(sheet.drawing)||std::any_of(sheet.views.cbegin(),sheet.views.cend(),[](const auto &v){return v.relation.parentId.isNull()&&!v.relation.hatch;}))?3:std::any_of(sheet.views.cbegin(),sheet.views.cend(),[](const auto &v){return !v.relation.parentId.isNull();})?2:1},{"title",sheet.title},
+        QJsonObject object{{"format","ForgeCAD.DrawingSheet"},{"schema",drawingUsesSheetScale(sheet)?23:sheet.dimensionNumbering.persistent?22:(sheet.dimensionNumbering.excludeParenthesized||std::any_of(sheet.dimensions.cbegin(),sheet.dimensions.cend(),[](const auto &d){return d.presentation.numberingExcluded;}))?21:sheet.dimensionNumbering.active()?20:std::any_of(sheet.annotations.cbegin(),sheet.annotations.cend(),[](const auto &n){return n.technical.has_value();})?19:std::any_of(sheet.drawing.dimensions.cbegin(),sheet.drawing.dimensions.cend(),[](const auto &d){return drawingOrdinate(d.measure);})?18:std::any_of(sheet.drawing.views.cbegin(),sheet.drawing.views.cend(),[](const auto &v){return v.bend.has_value();})?17:std::any_of(sheet.drawing.views.cbegin(),sheet.drawing.views.cend(),[](const auto &v){return v.step&&!v.step->additional.empty();})?16:std::any_of(sheet.drawing.views.cbegin(),sheet.drawing.views.cend(),[](const auto &v){return v.step.has_value();})?15:std::any_of(sheet.views.cbegin(),sheet.views.cend(),[](const auto &v){return v.interruption.has_value();})?14:std::any_of(sheet.views.cbegin(),sheet.views.cend(),[](const auto &v){return v.relation.kind==DrawingDerivedKind::Auxiliary;})?13:sheet.style.textLayoutActive()?12:(std::any_of(sheet.axes.cbegin(),sheet.axes.cend(),[](const auto &a){return a.endExtension.has_value();})||std::any_of(sheet.dimensions.cbegin(),sheet.dimensions.cend(),[](const auto &d){return d.presentation.reverseArrows;}))?11:std::any_of(sheet.views.cbegin(),sheet.views.cend(),[](const auto &v){return v.relation.kind==DrawingDerivedKind::Detail;})?10:(sheet.style.extensionGap!=0||sheet.style.dimensionOffset!=0)?9:(sheet.style.active()||std::any_of(sheet.views.cbegin(),sheet.views.cend(),[](const auto &v){return v.titleOffset.has_value();}))?8:styled?7:!sheet.annotations.isEmpty()?6:drawingNeedsAxisSchema(sheet.drawing)?5:!sheet.axes.isEmpty()?4:(drawingNeedsSectionSchema(sheet.drawing)||std::any_of(sheet.views.cbegin(),sheet.views.cend(),[](const auto &v){return v.relation.parentId.isNull()&&!v.relation.hatch;}))?3:std::any_of(sheet.views.cbegin(),sheet.views.cend(),[](const auto &v){return !v.relation.parentId.isNull();})?2:1},{"title",sheet.title},
             {"size",QJsonArray{sheet.size.width(),sheet.size.height()}},{"drawing",QJsonDocument::fromJson(document).object()},
             {"views",views},{"dimensions",dimensions}};
+        if(drawingUsesSheetScale(sheet))object.insert("sheetScale",sheet.scale);
         if(sheet.dimensionNumbering.active()){const auto &n=sheet.dimensionNumbering;object.insert("dimensionNumbering",QJsonObject{{"enabled",n.enabled},{"firstNumber",n.firstNumber},{"diameter",n.diameter},{"rowTolerance",n.rowTolerance}});if(n.excludeParenthesized){auto settings=object["dimensionNumbering"].toObject();settings.insert("excludeParenthesized",true);object["dimensionNumbering"]=settings;}}
         if(sheet.dimensionNumbering.persistent){const auto &n=sheet.dimensionNumbering;QJsonArray assignments,patterns;for(auto it=n.assignments.cbegin();it!=n.assignments.cend();++it)assignments.append(QJsonObject{{"id",it.key().toString(QUuid::WithoutBraces)},{"number",it.value()}});for(const auto &pattern:n.excludePatterns)patterns.append(pattern);
             object.insert("numberingAssignments",QJsonObject{{"primary",n.primaryDirection},{"secondary",n.secondaryDirection},{"firstDimension",n.firstDimension.toString(QUuid::WithoutBraces)},{"nextNumber",n.nextNumber},{"patterns",patterns},{"assignments",assignments}});}
@@ -184,7 +198,7 @@ QString decodeDrawingSheet(const QByteArray &bytes,DrawingSheet &sheet){
     try{
         require(!bytes.isEmpty()&&bytes.size()<=8*1024*1024,"Dimensione del foglio non valida.");
         const auto json=QJsonDocument::fromJson(bytes);const auto object=json.object();
-        require(json.isObject()&&object["format"].toString()==QLatin1String("ForgeCAD.DrawingSheet")&&(object["schema"].toInt(-1)==1||object["schema"].toInt(-1)==2||object["schema"].toInt(-1)==3||object["schema"].toInt(-1)==4||object["schema"].toInt(-1)==5||object["schema"].toInt(-1)==6||object["schema"].toInt(-1)==7||object["schema"].toInt(-1)==8||object["schema"].toInt(-1)==9||object["schema"].toInt(-1)==10||object["schema"].toInt(-1)==11||object["schema"].toInt(-1)==12||object["schema"].toInt(-1)==13||object["schema"].toInt(-1)==14||object["schema"].toInt(-1)==15||object["schema"].toInt(-1)==16||object["schema"].toInt(-1)==17||object["schema"].toInt(-1)==18||object["schema"].toInt(-1)==19||object["schema"].toInt(-1)==20||object["schema"].toInt(-1)==21||object["schema"].toInt(-1)==22),"Formato del foglio non supportato.");
+        require(json.isObject()&&object["format"].toString()==QLatin1String("ForgeCAD.DrawingSheet")&&(object["schema"].toInt(-1)==1||object["schema"].toInt(-1)==2||object["schema"].toInt(-1)==3||object["schema"].toInt(-1)==4||object["schema"].toInt(-1)==5||object["schema"].toInt(-1)==6||object["schema"].toInt(-1)==7||object["schema"].toInt(-1)==8||object["schema"].toInt(-1)==9||object["schema"].toInt(-1)==10||object["schema"].toInt(-1)==11||object["schema"].toInt(-1)==12||object["schema"].toInt(-1)==13||object["schema"].toInt(-1)==14||object["schema"].toInt(-1)==15||object["schema"].toInt(-1)==16||object["schema"].toInt(-1)==17||object["schema"].toInt(-1)==18||object["schema"].toInt(-1)==19||object["schema"].toInt(-1)==20||object["schema"].toInt(-1)==21||object["schema"].toInt(-1)==22||object["schema"].toInt(-1)==23),"Formato del foglio non supportato.");
         const int schema=object["schema"].toInt();
         require(schema>=18||object["drawing"].toObject()["schema"].toInt()<11,"Ordinate estranee allo schema del foglio.");
         require(schema>=17||object["drawing"].toObject()["schema"].toInt()<10,"Sezioni angolari estranee allo schema del foglio.");
@@ -203,14 +217,16 @@ QString decodeDrawingSheet(const QByteArray &bytes,DrawingSheet &sheet){
         require(schema>=20||!object.contains("dimensionNumbering"),"Numerazione quote estranea allo schema dichiarato.");
         require(schema!=20||object.contains("dimensionNumbering"),"Numerazione quote assente.");
         DrawingSheet prepared;
+        require((schema==23)==object.contains("sheetScale"),"Scala del foglio incompatibile con lo schema.");
+        if(schema==23){require(object["sheetScale"].isDouble(),"Scala del foglio assente o non numerica.");prepared.scale=object["sheetScale"].toDouble();}
         if(object.contains("dimensionNumbering")){
             require(object["dimensionNumbering"].isObject(),"Numerazione quote non valida.");const auto n=object["dimensionNumbering"].toObject();
             require(n.size()==4+int(n.contains("excludeParenthesized"))&&n["enabled"].isBool()&&n["firstNumber"].isDouble()&&n["firstNumber"].toDouble()==n["firstNumber"].toInt(-1)&&n["diameter"].isDouble()&&n["rowTolerance"].isDouble(),"Numerazione quote incompleta.");
             prepared.dimensionNumbering={n["enabled"].toBool(),n["firstNumber"].toInt(),n["diameter"].toDouble(),n["rowTolerance"].toDouble()};
             if(n.contains("excludeParenthesized")){require(schema>=21&&n["excludeParenthesized"].isBool(),"Esclusione quote tra parentesi incompatibile con lo schema.");prepared.dimensionNumbering.excludeParenthesized=n["excludeParenthesized"].toBool();}
         }
-        require((schema==22)==object.contains("numberingAssignments"),"Schema assegnazioni badge incoerente.");
-        if(schema==22){require(object.contains("dimensionNumbering")&&object["numberingAssignments"].isObject(),"Assegnazioni badge mancanti.");const auto a=object["numberingAssignments"].toObject();require(a.size()==6&&a["patterns"].isArray()&&a["assignments"].isArray()&&a["firstDimension"].isString(),"Assegnazioni badge incomplete.");
+        require((schema>=22||!object.contains("numberingAssignments"))&&(schema!=22||object.contains("numberingAssignments")),"Schema assegnazioni badge incoerente.");
+        if(object.contains("numberingAssignments")){require(object.contains("dimensionNumbering")&&object["numberingAssignments"].isObject(),"Assegnazioni badge mancanti.");const auto a=object["numberingAssignments"].toObject();require(a.size()==6&&a["patterns"].isArray()&&a["assignments"].isArray()&&a["firstDimension"].isString(),"Assegnazioni badge incomplete.");
             auto &n=prepared.dimensionNumbering;n.persistent=true;
             const auto integer=[&](const char *key){require(a[key].isDouble()&&a[key].toDouble()==a[key].toInt(-1),"Intero badge non valido.");return a[key].toInt();};
             n.primaryDirection=integer("primary");n.secondaryDirection=integer("secondary");n.nextNumber=integer("nextNumber");n.firstDimension=QUuid(a["firstDimension"].toString());require(!n.firstDimension.isNull()||a["firstDimension"].toString()==QUuid().toString(QUuid::WithoutBraces),"Prima quota non valida.");
@@ -316,6 +332,12 @@ QString decodeDrawingSheet(const QByteArray &bytes,DrawingSheet &sheet){
                 else require(!r.contains("auxiliaryAngle"),"Direzione ausiliaria estranea alla relazione.");
             }
             if(view.contains("sectionHatch")){require(object["schema"].toInt()>=3&&view["sectionHatch"].isBool()&&layout.relation.parentId.isNull(),"Tratteggio indipendente non valido.");layout.relation.hatch=view["sectionHatch"].toBool();}
+            require(view.contains("scaleSource")==view.contains("customScale"),"Impostazioni scala vista incomplete.");
+            if(view.contains("scaleSource")){
+                const double mode=view["scaleSource"].toDouble(-1);
+                require(schema==23&&view["scaleSource"].isDouble()&&mode==std::floor(mode)&&mode>=0&&mode<=2&&view["customScale"].isDouble(),"Sorgente della scala non valida o estranea allo schema.");
+                layout.scaleSource=DrawingScaleSource(int(mode));layout.customScale=view["customScale"].toDouble();
+            }
             prepared.views.append(std::move(layout));
         }
         for(const auto &value:object["dimensions"].toArray()){require(value.isObject(),"Quota del foglio non valida.");const auto dimension=value.toObject();

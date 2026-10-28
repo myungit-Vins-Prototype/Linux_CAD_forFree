@@ -820,3 +820,14 @@ La preparazione dell'editor migliora del 50,7%; le campiture di circa 2,4–2,5 
 Sul primo foglio di **Controllo numero quote**, dove la campitura è già sotto il millisecondo, il tempo dell'editor è 2,659 → 2,855 s: **nessun miglioramento netto**, con intervalli 2,625–4,089 s prima e 2,641–3,885 s dopo. Il costo è dominato dalla visibilità, non accelerata da questo intervento. Non si deduce un'accelerazione generale da questi due documenti.
 
 In tutte le ripetizioni le impronte complete dei tracciati delle sette viste coincidono prima/dopo; anche gli originali `.drw` e `.prt` restano invariati. Verificati inoltre 8 test applicativi e 20 test geometrici mirati, compresi fori, bordi, tolleranze, superfici curve, tangenze, pesi razionali, sezioni derivate/dettagli, file nativi e annullamento. Nessuna nuova prova manuale della GUI macOS o suite kernel completa dichiarata. Log e dati grezzi: `/private/tmp/drawing-perf-final/records.json`, log `drawing-perf-*`; diagnostica permanente disponibile con il comando sopra.
+
+
+## Scala del foglio e sorgente della scala per vista — 28 ottobre 2026
+
+Nel ramo di sviluppo, **Modifica → Formato foglio e cartiglio…** contiene **Scala del foglio** e mostra il rapporto effettivo:0,5 corrisponde a1:2,1 a1:1,2 a2:1. Il formato della carta resta una scelta distinta. Il cartiglio indica la scala del foglio quando viene usata questa funzione.
+
+In **Modifica vista…**, comprese le proprietà di sezioni,dettagli e ausiliarie, **Usa scala** consente **Scala del foglio**, **Scala personalizzata** o **Scala della vista madre**;l’ultima scelta compare soltanto se esiste una madre. Il valore personalizzato resta conservato quando si sceglie un’altra sorgente. Le nuove viste principali inserite dal dialogo usano il foglio;le derivate ordinarie seguono inizialmente la madre e i dettagli mantengono inizialmente la scala personalizzata.
+
+Una variazione del foglio aggiorna le viste collegate e le figlie che ne ereditano la scala, con un solo Undo. Le viste personalizzate mantengono la loro scala. Le quote continuano a misurare il modello; testo, cartiglio e formato non vengono ridimensionati come geometria. Sganciare una vista che seguiva la madre ne conserva la scala corrente come personalizzata.
+
+Le tavole precedenti conservano l’aspetto all’apertura. Alla prima impostazione della scala di foglio vengono collegate le viste principali alla scala comune;le viste già a scale differenti e i dettagli indipendenti restano tali. Nuovi metadati nello schema23 soltanto quando necessari,con lettura degli schemi precedenti e coesistenza della numerazione persistente. Verifiche e stato della build sono registrati in CLAUDE.md.
