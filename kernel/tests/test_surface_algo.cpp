@@ -381,3 +381,50 @@ FK_TEST(SurfaceDeviationCertificateDegenerateConcurrentAndCancelled) {
     FK_CHECK(cancelled);
     FK_CHECK(request());
 }
+
+
+// Oracolo analitico: pezze piane, punti entro soglia e oltre il piano o il
+// dominio. Un true resta soltanto un candidato, mai un'accettazione.
+FK_TEST(SurfaceToleranceConservativeBounds) {
+    for (double scale : {1e-6, 1.0, 1e6}) for (bool rational : {false, true}) {
+        std::vector<Vec3> poles;
+        const Vec3 origin(7*scale,-3*scale,2*scale);
+        for (int i=0;i<3;++i) for (int j=0;j<3;++j)
+            poles.push_back(origin+Vec3((i-1)*scale,(j-1)*scale,0));
+        const std::vector<double> knots{-1,-1,0,1,1};
+        const BSplineSurface plane(1,1,knots,knots,3,3,poles,
+            rational ? std::vector<double>(9,2.0) : std::vector<double>{});
+        const double tolerance=scale*1e-7;
+        for (double u : {-1.,0.,1.}) for (double v : {-1.,0.,1.}) {
+            const Vec3 p=plane.point(u,v);
+            for (double z : {0.,.5*tolerance,tolerance,std::nextafter(tolerance,2*tolerance)})
+                FK_CHECK(surfaceMayBeWithinTolerance(plane,p+Vec3(0,0,z),tolerance));
+            FK_CHECK(!surfaceMayBeWithinTolerance(plane,p+Vec3(0,0,10*tolerance),tolerance));
+        }
+        FK_CHECK(!surfaceMayBeWithinTolerance(plane,origin+Vec3(2*scale,0,0),tolerance));
+        FK_CHECK(surfaceMayBeWithinTolerance(plane,origin,0.0));
+    }
+    std::mt19937 rng(20261028);
+    for (int trial=0;trial<24;++trial) {
+        const auto surface=randomBSplineSurface(rng,trial%2);
+        const auto u=surface.uDomain(),v=surface.vDomain();
+        for (int i=0;i<=8;++i) {
+            const Vec3 p=surface.point(u.lo+u.length()*i/8.,v.lo+v.length()*.37);
+            FK_CHECK(surfaceMayBeWithinTolerance(surface,p,1e-7));
+            FK_CHECK(surfaceMayBeWithinTolerance(surface,p+Vec3(1e-8,-1e-8,1e-8),1e-7));
+        }
+    }
+    const BSplineSurface point(1,1,{0,0,1,1},{0,0,1,1},2,2,std::vector<Vec3>(4,Vec3(1,2,3)));
+    const auto check=[&] {return surfaceMayBeWithinTolerance(point,Vec3(1,2,3),1e-7)
+        && !surfaceMayBeWithinTolerance(point,Vec3(2,3,4),1e-7);};
+    auto first=std::async(std::launch::async,check),second=std::async(std::launch::async,check);
+    FK_CHECK(first.get());FK_CHECK(second.get());
+    FK_CHECK(surfaceMayBeWithinTolerance(Plane(Frame3()),Vec3(0,0,100),0.0));
+    FK_CHECK_THROWS(surfaceMayBeWithinTolerance(point,Vec3(),-1.0));
+    FK_CHECK_THROWS(surfaceMayBeWithinTolerance(point,Vec3(),std::numeric_limits<double>::infinity()));
+    FK_CHECK_THROWS(surfaceMayBeWithinTolerance(point,Vec3(std::numeric_limits<double>::quiet_NaN(),0,0),1e-7));
+    bool cancelled=false;
+    try {CancellationScope scope(std::make_shared<std::atomic<bool>>(true));surfaceMayBeWithinTolerance(point,Vec3(1,2,3),1e-7);}
+    catch(const OperationCancelled &){cancelled=true;}
+    FK_CHECK(cancelled);
+}

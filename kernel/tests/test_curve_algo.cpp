@@ -337,3 +337,38 @@ FK_TEST(ProjectMinimumManySpansAnalytic) {
     catch (const OperationCancelled &) { cancelled=true; }
     FK_CHECK(cancelled);
 }
+
+
+// Oracolo analitico indipendente: una spline lunga sulla retta x=t. Le
+// interrogazioni attraversano nodi, estremi e intervalli puntuali; i pesi
+// costanti non unitari esercitano anche il percorso razionale.
+FK_TEST(ProjectBoundedRangeKnotEndpoints) {
+    std::vector<double> knots{0.0};
+    std::vector<Vec3> poles;
+    for (int i = 0; i <= 256; ++i) {
+        knots.push_back(double(i));
+        poles.push_back(Vec3(double(i), 0, 0));
+    }
+    knots.push_back(256.0);
+    for (bool rational : {false, true}) {
+        const BSplineCurve<3> curve(1, knots, poles, rational ? std::vector<double>(poles.size(), 2.0) : std::vector<double>{});
+        for (const Interval range : {Interval{0, 0}, Interval{256, 256}, Interval{128, 128},
+                                    Interval{127, 129}, Interval{127.25, 128.75},
+                                    Interval{128, std::nextafter(128.0, 129.0)}, Interval{0, 256}}) {
+            for (double x : {range.lo - .25, range.lo, (range.lo + range.hi) * .5, range.hi, range.hi + .25}) {
+                for (double y : {0.0, 1e-7, 2e-7}) {
+                    const double expectedT = range.clamp(x);
+                    const double expectedDistance = std::hypot(x - expectedT, y);
+                    const auto candidates = projectPointCandidatesWithin(curve, Vec3(x, y, 0), range, 1e-7);
+                    FK_CHECK(candidates.empty() == (expectedDistance > 1e-7));
+                    if (candidates.empty()) continue;
+                    const auto closest = std::min_element(candidates.begin(), candidates.end(),
+                        [](const auto &a, const auto &b) { return a.distance < b.distance; });
+                    FK_CHECK(std::isfinite(closest->parameter) && std::isfinite(closest->distance));
+                    FK_CHECK_NEAR(closest->parameter, expectedT, 1e-12);
+                    FK_CHECK_NEAR(closest->distance, expectedDistance, 1e-12);
+                }
+            }
+        }
+    }
+}

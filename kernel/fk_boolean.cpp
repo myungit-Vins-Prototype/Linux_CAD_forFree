@@ -874,6 +874,12 @@ std::vector<Interval> BooleanBuilder::splitAtPoints(const Curve<3> &curve, const
         bool inBox = true;
         for (int i = 0; i < 3; ++i) inBox = inBox && x[i] >= box.lo[i] && x[i] <= box.hi[i];
         if (!inBox || distance(x, a) <= 2.0 * tolerance_ || distance(x, b) <= 2.0 * tolerance_) continue;
+        // Per dividere basta sapere se esiste una proiezione entro tolleranza.
+        // Scartare prima i tratti lontani evita di cercarne inutilmente il
+        // minimo globale. Per i candidati vicini resta la proiezione originale,
+        // compresa la sua scelta fra minimi equidistanti.
+        if (curve.type() != CurveType::Line && curve.type() != CurveType::Circle
+            && projectPointCandidatesWithin(curve, x, range, tolerance_).empty()) continue;
         const CurveProjection<3> projection = projectPoint(curve, x, range);
         if (projection.distance <= tolerance_) parameters.push_back(projection.parameter);
     }

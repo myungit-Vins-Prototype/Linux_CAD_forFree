@@ -1,9 +1,12 @@
 #include "fk_surface_distance.h"
 
+#include <algorithm>
 #include <cmath>
+#include <vector>
 #include <stdexcept>
 
 #include "fk_cancel.h"
+#include "fk_bspline_surface.h"
 #include "fk_precision.h"
 #include "fk_surface_algo.h"
 
@@ -46,6 +49,36 @@ double surfaceDeviationAboveTolerance(const Surface &surface, const Vec3 &p, dou
     const auto projection = projectPoint(surface, p);
     if (hint) *hint = Vec2(projection.u, projection.v);
     return projection.distance <= tolerance ? 0.0 : projection.distance;
+}
+
+bool surfaceMayBeWithinTolerance(const Surface &surface, const Vec3 &p, double tolerance) {
+    cancellationPoint();
+    if (!(tolerance >= 0.0) || !std::isfinite(tolerance) || !isFinite(p))
+        throw std::invalid_argument("surfaceMayBeWithinTolerance: punto o tolleranza non validi");
+    if (surface.type() != SurfaceType::BSpline) return true;
+    const auto &spline = static_cast<const BSplineSurface &>(surface);
+    const auto tree = spline.cachedPatchTree();
+    if (tree->nodes.empty()) return true;
+    // Il margine copre arrotondamenti di valutazione ed estrazione delle
+    // pezze: i casi vicini al bordo del box restano alla verifica originale.
+    const double factor = 512.0 * kMachineEpsilon * (spline.uDegree() + 1) * (spline.vDegree() + 1);
+    std::vector<int> pending{0};
+    while (!pending.empty()) {
+        cancellationPoint();
+        const auto &node = tree->nodes[std::size_t(pending.back())];
+        pending.pop_back();
+        bool outside = false;
+        for (int axis = 0; axis < 3; ++axis) {
+            const double magnitude = std::max({1.0, std::fabs(node.lo[axis]), std::fabs(node.hi[axis]), std::fabs(p[axis])});
+            const double reach = tolerance + factor * magnitude;
+            outside = outside || node.lo[axis] - p[axis] > reach || p[axis] - node.hi[axis] > reach;
+        }
+        if (outside) continue;
+        if (node.leaf >= 0) return true;
+        pending.push_back(node.first);
+        pending.push_back(node.second);
+    }
+    return false;
 }
 
 }

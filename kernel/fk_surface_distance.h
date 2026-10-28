@@ -14,6 +14,13 @@ namespace ForgeCad::Kernel {
 // in/out per punti consecutivi, locale al chiamante; puo' essere ignorata.
 double surfaceDeviationAboveTolerance(const Surface &surface, const Vec3 &p, double tolerance, Vec2 *hint = nullptr);
 
+// Filtro conservativo sull'intero dominio: false certifica distanza oltre
+// tolerance; true richiede ancora la proiezione/verifica geometrica. Usa i
+// box delle pezze NURBS a pesi positivi; altre superfici restano candidate.
+// tolerance finita e non negativa, p finito. Nessuna distanza approssimata.
+bool surfaceMayBeWithinTolerance(const Surface &surface, const Vec3 &p, double tolerance);
+
+
 }
 
 #endif

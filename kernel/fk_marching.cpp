@@ -11,9 +11,15 @@
 #include "fk_bspline.h"
 #include "fk_curve_algo.h"
 #include "fk_surface_algo.h"
+#include "fk_surface_distance.h"
 #include "fk_curve_surface.h"
 #include "fk_nurbs.h"
 #include <functional>
+#include <map>
+#include <cstdint>
+#include <cstring>
+#include <cstdio>
+#include "fk_timing.h"
 
 namespace ForgeCad::Kernel {
 namespace {
@@ -132,10 +138,55 @@ std::vector<double> surfaceBreaks(const Surface &surface, bool isU, const Interv
     return isU ? surface.uBreakpoints(range) : surface.vBreakpoints(range);
 }
 
+
+// Le superfici restano immutabili durante l'intersezione. Riusa soltanto
+// query identiche bit per bit: nessuna quantizzazione o stima del risultato.
+// La cache appartiene alla singola coppia e al suo worker; il limite è in
+// voci, non in byte. Oltre il limite le nuove query seguono il percorso
+// originale. Piani e cilindri hanno proiezioni dirette già economiche.
+class ProjectionWorkspace {
+    using Key = std::array<std::uint64_t, 3>;
+    static constexpr std::size_t maximumEntries = 4096;
+    const Surface &surface_;
+    std::map<Key, SurfaceProjection> entries_;
+    std::size_t calls_ = 0, hits_ = 0, limited_ = 0;
+
+public:
+    explicit ProjectionWorkspace(const Surface &surface) : surface_(surface) {}
+    ProjectionWorkspace(const ProjectionWorkspace &) = delete;
+    ProjectionWorkspace &operator=(const ProjectionWorkspace &) = delete;
+
+    SurfaceProjection project(const Vec3 &point) {
+        cancellationPoint();
+        if (surface_.type() == SurfaceType::Plane || surface_.type() == SurfaceType::Cylinder)
+            return projectPoint(surface_, point);
+        ++calls_;
+        Key key;
+        static_assert(sizeof(double) == sizeof(std::uint64_t));
+        std::memcpy(key.data(), point.c, 3 * sizeof(double));
+        const auto found = entries_.find(key);
+        if (found != entries_.end()) {
+            ++hits_;
+            return found->second;
+        }
+        const auto value = projectPoint(surface_, point);
+        if (entries_.size() < maximumEntries) entries_.emplace(key, value);
+        else ++limited_;
+        return value;
+    }
+
+    ~ProjectionWorkspace() {
+        if (detail::timingEnabled())
+            std::fprintf(stderr, "[intersezioni] proiezioni: %zu richieste, %zu riusi, %zu oltre limite, %zu voci\n",
+                         calls_, hits_, limited_, entries_.size());
+    }
+};
+
 class Marcher {
 public:
     Marcher(const Surface &a, const Surface &b, const Box &bounds, const SurfaceIntersectionOptions &options)
-        : a_(a), b_(b), bounds_(bounds), tolerance_(options.tolerance), fitTolerance_(options.fitTolerance) {
+        : a_(a), b_(b), projectionA_(a), projectionB_(b), bounds_(bounds),
+          tolerance_(options.tolerance), fitTolerance_(options.fitTolerance) {
         scale_ = std::max(bounds.diagonal(), 1.0);
         h0_ = 0.01 * scale_;
         hMax_ = 0.05 * scale_;
@@ -213,6 +264,7 @@ private:
     IntersectionCurve assemble(const std::vector<Node> &nodes, bool closed) const;
 
     const Surface &a_, &b_;
+    ProjectionWorkspace projectionA_, projectionB_;
     Box bounds_;
     double tolerance_, fitTolerance_, scale_, h0_, hMax_, hMin_;
     double curveDeviation_ = 0.0, pcurveDeviation_ = 0.0;
@@ -926,7 +978,7 @@ bool Marcher::completeToContact(const Node &seed, std::vector<Node> &nodes, Vec3
 }
 
 void Marcher::traceFrom(const Vec3 &seedPoint, SurfaceIntersection &out, bool singularOnly) {
-    const SurfaceProjection pa = projectPoint(a_, seedPoint), pb = projectPoint(b_, seedPoint);
+    const SurfaceProjection pa = projectionA_.project(seedPoint), pb = projectionB_.project(seedPoint);
     if (pa.distance > 100.0 * tolerance_ || pb.distance > 100.0 * tolerance_) return;
     Params x{pa.u, pa.v, pb.u, pb.v};
     Node seed;
@@ -1427,7 +1479,7 @@ void Marcher::registerApexes(SurfaceIntersection &out) {
         if (surface.type() != SurfaceType::Cone) continue;
         const auto &cone = static_cast<const ConicalSurface &>(surface);
         const Vec3 apex = cone.apex();
-        if (!inside(bounds_, apex)) continue;
+        if (!inside(bounds_, apex) || !surfaceMayBeWithinTolerance(other, apex, tolerance_)) continue;
         const SurfaceProjection onOther = projectPoint(other, apex);
         if (onOther.distance > tolerance_) continue;
         Vec3 n;
@@ -1666,8 +1718,9 @@ void subdivisionSeeds(const Surface &a, const Surface &b, const Box &bounds, dou
     const double leafSize = 0.02 * scale;
     const Box area = bounds.padded(10.0 * tolerance);
     std::size_t visits = 0;
+    ProjectionWorkspace projectionA(a), projectionB(b);
     auto newton = [&](Vec3 pa, Vec3 pb) {
-        SurfaceProjection qa = projectPoint(a, pa), qb = projectPoint(b, pb);
+        SurfaceProjection qa = projectionA.project(pa), qb = projectionB.project(pb);
         double x[4] = {qa.u, qa.v, qb.u, qb.v};
         for (int iteration = 0; iteration < 40; ++iteration) {
             cancellationPoint();

@@ -160,7 +160,15 @@ void bsplineCandidates(const BSplineCurve<N> &curve, const Vec<N> &p, const Inte
                        double maximumDistance) {
     addCandidate<N>(curve, p, range.hi, out);
     const auto segments = curve.cachedBezierSegments();
-    for (const BSplineCurve<N> &segment : *segments) {
+    // Tratti ordinati per parametro: includere entrambi i lati dei nodi e
+    // degli intervalli puntuali, conservando l'ordine della scansione completa.
+    // Le interrogazioni su piccoli intervalli non devono scandire tutta la curva.
+    const auto first = std::lower_bound(segments->begin(), segments->end(), range.lo,
+        [](const BSplineCurve<N> &s, double t) { return s.domain().hi < t; });
+    const auto last = std::upper_bound(first, segments->end(), range.hi,
+        [](double t, const BSplineCurve<N> &s) { return t < s.domain().lo; });
+    for (auto it = first; it != last; ++it) {
+        const BSplineCurve<N> &segment = *it;
         if (std::isfinite(maximumDistance)) {
             cancellationPoint();
             const auto span = segment.domain();

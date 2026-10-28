@@ -92,6 +92,7 @@ DESCRIPTIONS = {
 }
 
 DESCRIPTIONS.update({
+ 'kernel/tests/test_curve_algo.cpp': ('tests', 'Proiezioni contro OCCT e oracoli analitici: candidati limitati, soglie, nodi e intervalli puntuali su spline lunghe.'),
  'tests/test_pattern_placements.h': ('tests', 'Ripetizioni nuove e aggregati legacy con derivati salvati dal Mac: volume, un solo evento, esclusioni, rollback e persistenza.'),
 
  'kernel/fk_curve_surface.cpp': ('kernel', 'Intersezioni curva-superficie e suddivisione Bezier diretta in coordinate omogenee: stesso ordine di inserimento nodi, ripiego generale per pezze non clamped, nessuna modifica delle tolleranze.'),
@@ -100,14 +101,16 @@ DESCRIPTIONS.update({
  'tools/benchmark_surface_distance.py': ('build', 'Benchmark riproducibile del predicato di distanza: sonda C++ CPU generata con CMake, casi vicini/misti/esterni, controllo dei risultati e processi alternati; distinto dal CAD completo.'),
  'fk_surface_distance': ('kernel', 'Controlli di distanza con certificato positivo: punto valido entro meta tolleranza o proiezione globale originale; hint locale, cancellazione e nessuna cache persistente.'),
  'kernel/fk_exchange.cpp': ('kernel', 'Importazione B-rep: campioni consecutivi con certificato entro lo scarto gia ignorato; distanza esatta oltre soglia e metadati geometrici invariati.'),
- 'kernel/fk_boolean.cpp': ('kernel', 'Booleane esatte: controlli di appartenenza con certificato positivo entro tolleranza e ripiego sul proiettore globale; intersezioni, topologia e tolleranze conservate.'),
+ 'kernel/fk_boolean.cpp': ('kernel', 'Booleane esatte: certificati di appartenenza e filtro dei candidati entro tolleranza prima di proiettare gli spigoli; verifica originale e topologia conservate.'),
  'kernel/tests/test_surface_algo.cpp': ('tests', 'Proiezioni OCCT e certificati di distanza: piano analitico, confini della tolleranza, curve libere, hint, degenerazioni, concorrenza e cancellazione.'),
  'kernel/fk_intersect.cpp': ('kernel', 'Intersezioni esatte: gerarchia locale dei box Bezier2D con visita in ordine di parametro, scarto conservativo delle coppie separate; Newton e tolleranze invariati.'),
  'kernel/tests/test_intersect.cpp': ('tests', 'Intersezioni contro OCCT e casi analitici con molti tratti: pesi, assi scambiati, range parziali, contatti sui nodi, concorrenza e cancellazione.'),
  'kernel/fk_curve_algo.cpp': ('kernel', 'Proiezioni esatte: limita i tratti Bezier al range con bounds inclusivi, conservando ordine/candidati e filtri conservativi entro distanza; lunghezze e quadratura invariate.'),
  'kernel/fk_bspline_surface.cpp': ('kernel', 'Superfici B-spline: percorso del solo punto senza buffer delle derivate, stessi termini e ordine di somma; derivate e cache delle pezze invariate.'),
  'kernel/tests/test_bspline_surface.cpp': ('tests', 'Superfici B-spline contro OCCT e Bernstein indipendente fino al grado31; limiti dei buffer, nodi ripetuti/stretti, prefissi bit identici, concorrenza e cancellazione.'),
- 'kernel/fk_marching.cpp': ('kernel', 'Intersezioni superficie/superficie: rami singolari della forma quadratica con radici omogenee stabili anche a diagonali nulle; tolleranze conservate.'),
+ 'kernel/fk_marching.cpp': ('kernel', 'Intersezioni superficie/superficie: riuso limitato delle proiezioni; filtro conservativo delle pezze NURBS prima di proiettare i vertici dei coni; rami singolari e tolleranze conservati.'),
+ 'kernel/fk_surface_distance.cpp': ('kernel', 'Filtri conservativi di distanza: certificato entro soglia e rigetto tramite BVH dei box Bezier con margine numerico; proiezione globale nei casi incerti.'),
+ 'kernel/fk_surface_distance.h': ('kernel', 'Contratti dei filtri di distanza: candidato entro tolleranza o rigetto conservativo, senza usare il filtro come accettazione geometrica.'),
  'kernel/tests/test_marching.cpp': ('tests', 'Intersezioni contro OCCT e geometrie analitiche: tangenze, poli e sella con solo termine misto, diagonali quasi nulle e ordine delle superfici invertito.'),
  'tests/test_pattern_placements.h': ('tests', 'Ripetizioni: limiti e trasformazioni, corpi separati/esclusioni; sweep in unione/sottrazione attorno a Y con volumi analitici, pannello, persistenza e Undo/Redo.'),
 })

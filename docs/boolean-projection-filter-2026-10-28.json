@@ -1,0 +1,4217 @@
+{
+  "date": "2026-10-28",
+  "branch": "solver-mesh-gpu",
+  "head": "c57e0e1a8dce5a57eeb1595b26326c782a41a557",
+  "baseline": "Working tree before this intervention, including existing draft/UI changes; frozen kernel library",
+  "summary": [
+    {
+      "label": "current",
+      "metric": "rebuild_seconds",
+      "before": {
+        "median": 42.961211428,
+        "min": 42.905410305,
+        "max": 43.440713218,
+        "samples": [
+          43.440713218,
+          42.905410305,
+          42.961211428
+        ]
+      },
+      "after": {
+        "median": 27.528248215,
+        "min": 27.298137175,
+        "max": 28.245024961,
+        "samples": [
+          27.298137175,
+          27.528248215,
+          28.245024961
+        ]
+      },
+      "speedup": 1.560622786181892,
+      "time_saved_percent": 35.923016833136955
+    },
+    {
+      "label": "historical-sweep",
+      "metric": "sweep_boolean_seconds",
+      "before": {
+        "median": 18.751912463,
+        "min": 18.687759188,
+        "max": 19.17745977,
+        "samples": [
+          18.687759188,
+          19.17745977,
+          18.751912463
+        ]
+      },
+      "after": {
+        "median": 4.117507237,
+        "min": 4.103968719,
+        "max": 4.126019797,
+        "samples": [
+          4.103968719,
+          4.117507237,
+          4.126019797
+        ]
+      },
+      "speedup": 4.554190529283094,
+      "time_saved_percent": 78.04220105482902
+    },
+    {
+      "label": "cuda-mouse2",
+      "metric": "rebuild_seconds",
+      "before": {
+        "median": 7.684239831,
+        "min": 7.574386324,
+        "max": 7.698301425,
+        "samples": [
+          7.698301425,
+          7.684239831,
+          7.574386324
+        ]
+      },
+      "after": {
+        "median": 7.671703291,
+        "min": 7.594935104,
+        "max": 7.773620493,
+        "samples": [
+          7.671703291,
+          7.773620493,
+          7.594935104
+        ]
+      },
+      "speedup": 1.001634127327983,
+      "time_saved_percent": 0.16314613124677407
+    },
+    {
+      "label": "current",
+      "metric": "cached_load_seconds",
+      "before": {
+        "median": 10.581053366,
+        "min": 10.560517251,
+        "max": 10.9436874,
+        "samples": [
+          10.9436874,
+          10.581053366,
+          10.560517251
+        ]
+      },
+      "after": {
+        "median": 10.852108001,
+        "min": 10.354224179,
+        "max": 10.899801711,
+        "samples": [
+          10.354224179,
+          10.899801711,
+          10.852108001
+        ]
+      },
+      "speedup": 0.9750228586948249,
+      "time_saved_percent": -2.561698024045281
+    }
+  ],
+  "formal_runs": [
+    {
+      "label": "current",
+      "repeat": 0,
+      "version": "reference",
+      "data": {
+        "bodies": [
+          {
+            "brep_sha256": "185960addd5f71c0cf6f3f81f345316a085431cf53af43013d4b601da9d0333f",
+            "drawn": false,
+            "error": "",
+            "faces": 12,
+            "index": 0,
+            "name": "Rivoluzione 1",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "dff028f9018bbe71273c1b64acdcad980da255e1fbddf3aa04db9606a06b2a20",
+            "drawn": false,
+            "error": "",
+            "faces": 15,
+            "index": 1,
+            "name": "Rivoluzione 2",
+            "triangles": 0
+          },
+          {
+            "drawn": false,
+            "error": "",
+            "faces": 0,
+            "index": 2,
+            "name": "Piano 1",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "b15ccb6f1f1da99c1401cf1637411bc00255fd026ed1b08e88ce0ad0bf645a15",
+            "drawn": false,
+            "error": "",
+            "faces": 19,
+            "index": 3,
+            "name": "Sweep 4",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "9525ac48d0e927fa881a2c26c06fb56b1813cc94573365f4a9242bd811783d22",
+            "drawn": false,
+            "error": "",
+            "faces": 263,
+            "index": 4,
+            "name": "Ripetizione 5",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "c0fe04110e0f173a13729b4213bd5255eb89c9a3856d87055ae8acb3a4cecc80",
+            "drawn": false,
+            "error": "",
+            "faces": 264,
+            "index": 5,
+            "name": "Rivoluzione 6",
+            "triangles": 0
+          },
+          {
+            "drawn": false,
+            "error": "",
+            "faces": 0,
+            "index": 6,
+            "name": "Piano 2",
+            "triangles": 0
+          },
+          {
+            "drawn": false,
+            "error": "",
+            "faces": 0,
+            "index": 7,
+            "name": "Piano 3",
+            "triangles": 0
+          },
+          {
+            "drawn": false,
+            "error": "",
+            "faces": 0,
+            "index": 8,
+            "name": "Elica 9",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "d9598453bd30003e2db7d11ded2d5443ea0afa128dd2259262ff40d89d489d4d",
+            "drawn": false,
+            "error": "",
+            "faces": 269,
+            "index": 9,
+            "name": "Sweep 10",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "e4b4db5d8fa911fbbb03a63540cf4fd2b2d068212c71039e1a50e3697d4f6953",
+            "drawn": false,
+            "error": "",
+            "faces": 269,
+            "index": 10,
+            "name": "Rivoluzione 11",
+            "triangles": 0
+          },
+          {
+            "drawn": false,
+            "error": "",
+            "faces": 0,
+            "index": 11,
+            "name": "Piano 4",
+            "triangles": 0
+          },
+          {
+            "drawn": false,
+            "error": "",
+            "faces": 0,
+            "index": 12,
+            "name": "Piano 5",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "9b1dcab91da91e91116fe08e9a0a798f75ca17a781c77b7be1228ef43bd8ed8e",
+            "drawn": false,
+            "error": "",
+            "faces": 271,
+            "index": 13,
+            "name": "Sweep 14",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "50c25132fe515cf348d094728ba03727b56668e2ba95237bc2b5fc5c44559092",
+            "drawn": false,
+            "error": "",
+            "faces": 273,
+            "index": 14,
+            "name": "Rivoluzione 15",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "5158a7b97e994c60a9634902f7e5d4f008cd9cd6769d6475d4c440e45f4edca0",
+            "drawn": false,
+            "error": "",
+            "faces": 276,
+            "index": 15,
+            "name": "Rivoluzione 16",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "6b12d769b2a5101edce43f1225fbfd6c220e2fa894a470d8c8a5bf21c59df773",
+            "drawn": false,
+            "error": "",
+            "faces": 277,
+            "index": 16,
+            "name": "Raccordo 17",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "f8f32e55fc09746518a83daf062198bd4dedae94da9b8bccc45cdb846efc9ea1",
+            "drawn": false,
+            "error": "",
+            "faces": 279,
+            "index": 17,
+            "name": "Raccordo 18",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "f6384b299dd48d421395626f30ea31c3fb35f65a5a51e5d17f4b4ec6dae7fdfc",
+            "drawn": false,
+            "error": "",
+            "faces": 4,
+            "index": 18,
+            "name": "Estrusione 19",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "901a3d34eb12c3200b955fd71728e001d9afb11d8365a73c6e76f8f371d08a3f",
+            "drawn": false,
+            "error": "",
+            "faces": 12,
+            "index": 19,
+            "name": "Estrusione 20",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "6e2993b2879beb4a21b4472e0bccce94af45d1f543d79a87fb18aebe29a182c3",
+            "drawn": false,
+            "error": "",
+            "faces": 12,
+            "index": 20,
+            "name": "Intersezione 21",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "1b0f4ce35f52a4172872f75ae14b67dd7fbe2f2c7e61e4ca219a09fe09bc7064",
+            "drawn": false,
+            "error": "",
+            "faces": 6,
+            "index": 21,
+            "name": "Ripetizione 22",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "1f1bf1139859478a8c92692e718aeb1b265d702b1028d9d7abdf7e3baaa31573",
+            "drawn": false,
+            "error": "",
+            "faces": 6,
+            "index": 22,
+            "name": "Ripetizione 22 \u2014 corpo 2",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "bfe9287b25a096ea40f8b53b8746a0cd0b3bd0cee193c1832247878a739f7f86",
+            "drawn": false,
+            "error": "",
+            "faces": 6,
+            "index": 23,
+            "name": "Ripetizione 22 \u2014 corpo 3",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "d0deb89e56fe4845b9d8cc329d914ea097301a81fa69af63c4a6514188b1d946",
+            "drawn": false,
+            "error": "",
+            "faces": 6,
+            "index": 24,
+            "name": "Ripetizione 22 \u2014 corpo 4",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "ce18b2a1927499268632a1c10333e5a25db427a193c440acfb695d07d5f2d191",
+            "drawn": false,
+            "error": "",
+            "faces": 299,
+            "index": 25,
+            "name": "Unione 26",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "ae6c7931b1ea9175e3363d747d5cf137e9f2f357d122d38ac5cdb08855b13293",
+            "drawn": false,
+            "error": "",
+            "faces": 301,
+            "index": 26,
+            "name": "Rivoluzione 27",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "cba78ad62eefa2a2e9ceda3af2ede9ad4f6c8da9fb4e5651819103746bf2b329",
+            "drawn": false,
+            "error": "",
+            "faces": 303,
+            "index": 27,
+            "name": "Raccordo 28",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "fb0cbe8ca5aa949a43fedb1a9b6fdc7f41708b2a507c7659d9b754bcec7fb0c3",
+            "drawn": false,
+            "error": "",
+            "faces": 305,
+            "index": 28,
+            "name": "Raccordo 29",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "b329f13bdc79ad84faf3e6b62fc4719d0662c87726e742731bb7d4c375b1c5c4",
+            "drawn": true,
+            "error": "",
+            "faces": 308,
+            "index": 29,
+            "mesh_sha256": "6eba8eb67ea585d4c0f5bf8a0550881948fa5e0fa4ae7158ebf03a8cbf3e68b2",
+            "name": "Estrusione 30",
+            "triangles": 13254
+          }
+        ],
+        "cached_load_seconds": 10.9436874,
+        "features": 30,
+        "load_cuda_points": 0,
+        "quality": 1,
+        "read_seconds": 0.101431992,
+        "rebuild_cuda_points": 0,
+        "rebuild_errors": 0,
+        "rebuild_seconds": 43.440713218,
+        "sketches": 18
+      }
+    },
+    {
+      "label": "current",
+      "repeat": 0,
+      "version": "cpu",
+      "data": {
+        "bodies": [
+          {
+            "brep_sha256": "185960addd5f71c0cf6f3f81f345316a085431cf53af43013d4b601da9d0333f",
+            "drawn": false,
+            "error": "",
+            "faces": 12,
+            "index": 0,
+            "name": "Rivoluzione 1",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "dff028f9018bbe71273c1b64acdcad980da255e1fbddf3aa04db9606a06b2a20",
+            "drawn": false,
+            "error": "",
+            "faces": 15,
+            "index": 1,
+            "name": "Rivoluzione 2",
+            "triangles": 0
+          },
+          {
+            "drawn": false,
+            "error": "",
+            "faces": 0,
+            "index": 2,
+            "name": "Piano 1",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "b15ccb6f1f1da99c1401cf1637411bc00255fd026ed1b08e88ce0ad0bf645a15",
+            "drawn": false,
+            "error": "",
+            "faces": 19,
+            "index": 3,
+            "name": "Sweep 4",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "9525ac48d0e927fa881a2c26c06fb56b1813cc94573365f4a9242bd811783d22",
+            "drawn": false,
+            "error": "",
+            "faces": 263,
+            "index": 4,
+            "name": "Ripetizione 5",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "c0fe04110e0f173a13729b4213bd5255eb89c9a3856d87055ae8acb3a4cecc80",
+            "drawn": false,
+            "error": "",
+            "faces": 264,
+            "index": 5,
+            "name": "Rivoluzione 6",
+            "triangles": 0
+          },
+          {
+            "drawn": false,
+            "error": "",
+            "faces": 0,
+            "index": 6,
+            "name": "Piano 2",
+            "triangles": 0
+          },
+          {
+            "drawn": false,
+            "error": "",
+            "faces": 0,
+            "index": 7,
+            "name": "Piano 3",
+            "triangles": 0
+          },
+          {
+            "drawn": false,
+            "error": "",
+            "faces": 0,
+            "index": 8,
+            "name": "Elica 9",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "d9598453bd30003e2db7d11ded2d5443ea0afa128dd2259262ff40d89d489d4d",
+            "drawn": false,
+            "error": "",
+            "faces": 269,
+            "index": 9,
+            "name": "Sweep 10",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "e4b4db5d8fa911fbbb03a63540cf4fd2b2d068212c71039e1a50e3697d4f6953",
+            "drawn": false,
+            "error": "",
+            "faces": 269,
+            "index": 10,
+            "name": "Rivoluzione 11",
+            "triangles": 0
+          },
+          {
+            "drawn": false,
+            "error": "",
+            "faces": 0,
+            "index": 11,
+            "name": "Piano 4",
+            "triangles": 0
+          },
+          {
+            "drawn": false,
+            "error": "",
+            "faces": 0,
+            "index": 12,
+            "name": "Piano 5",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "9b1dcab91da91e91116fe08e9a0a798f75ca17a781c77b7be1228ef43bd8ed8e",
+            "drawn": false,
+            "error": "",
+            "faces": 271,
+            "index": 13,
+            "name": "Sweep 14",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "50c25132fe515cf348d094728ba03727b56668e2ba95237bc2b5fc5c44559092",
+            "drawn": false,
+            "error": "",
+            "faces": 273,
+            "index": 14,
+            "name": "Rivoluzione 15",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "5158a7b97e994c60a9634902f7e5d4f008cd9cd6769d6475d4c440e45f4edca0",
+            "drawn": false,
+            "error": "",
+            "faces": 276,
+            "index": 15,
+            "name": "Rivoluzione 16",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "6b12d769b2a5101edce43f1225fbfd6c220e2fa894a470d8c8a5bf21c59df773",
+            "drawn": false,
+            "error": "",
+            "faces": 277,
+            "index": 16,
+            "name": "Raccordo 17",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "f8f32e55fc09746518a83daf062198bd4dedae94da9b8bccc45cdb846efc9ea1",
+            "drawn": false,
+            "error": "",
+            "faces": 279,
+            "index": 17,
+            "name": "Raccordo 18",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "f6384b299dd48d421395626f30ea31c3fb35f65a5a51e5d17f4b4ec6dae7fdfc",
+            "drawn": false,
+            "error": "",
+            "faces": 4,
+            "index": 18,
+            "name": "Estrusione 19",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "901a3d34eb12c3200b955fd71728e001d9afb11d8365a73c6e76f8f371d08a3f",
+            "drawn": false,
+            "error": "",
+            "faces": 12,
+            "index": 19,
+            "name": "Estrusione 20",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "6e2993b2879beb4a21b4472e0bccce94af45d1f543d79a87fb18aebe29a182c3",
+            "drawn": false,
+            "error": "",
+            "faces": 12,
+            "index": 20,
+            "name": "Intersezione 21",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "1b0f4ce35f52a4172872f75ae14b67dd7fbe2f2c7e61e4ca219a09fe09bc7064",
+            "drawn": false,
+            "error": "",
+            "faces": 6,
+            "index": 21,
+            "name": "Ripetizione 22",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "1f1bf1139859478a8c92692e718aeb1b265d702b1028d9d7abdf7e3baaa31573",
+            "drawn": false,
+            "error": "",
+            "faces": 6,
+            "index": 22,
+            "name": "Ripetizione 22 \u2014 corpo 2",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "bfe9287b25a096ea40f8b53b8746a0cd0b3bd0cee193c1832247878a739f7f86",
+            "drawn": false,
+            "error": "",
+            "faces": 6,
+            "index": 23,
+            "name": "Ripetizione 22 \u2014 corpo 3",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "d0deb89e56fe4845b9d8cc329d914ea097301a81fa69af63c4a6514188b1d946",
+            "drawn": false,
+            "error": "",
+            "faces": 6,
+            "index": 24,
+            "name": "Ripetizione 22 \u2014 corpo 4",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "ce18b2a1927499268632a1c10333e5a25db427a193c440acfb695d07d5f2d191",
+            "drawn": false,
+            "error": "",
+            "faces": 299,
+            "index": 25,
+            "name": "Unione 26",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "ae6c7931b1ea9175e3363d747d5cf137e9f2f357d122d38ac5cdb08855b13293",
+            "drawn": false,
+            "error": "",
+            "faces": 301,
+            "index": 26,
+            "name": "Rivoluzione 27",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "cba78ad62eefa2a2e9ceda3af2ede9ad4f6c8da9fb4e5651819103746bf2b329",
+            "drawn": false,
+            "error": "",
+            "faces": 303,
+            "index": 27,
+            "name": "Raccordo 28",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "fb0cbe8ca5aa949a43fedb1a9b6fdc7f41708b2a507c7659d9b754bcec7fb0c3",
+            "drawn": false,
+            "error": "",
+            "faces": 305,
+            "index": 28,
+            "name": "Raccordo 29",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "b329f13bdc79ad84faf3e6b62fc4719d0662c87726e742731bb7d4c375b1c5c4",
+            "drawn": true,
+            "error": "",
+            "faces": 308,
+            "index": 29,
+            "mesh_sha256": "6eba8eb67ea585d4c0f5bf8a0550881948fa5e0fa4ae7158ebf03a8cbf3e68b2",
+            "name": "Estrusione 30",
+            "triangles": 13254
+          }
+        ],
+        "cached_load_seconds": 10.354224179,
+        "features": 30,
+        "load_cuda_points": 0,
+        "quality": 1,
+        "read_seconds": 0.106160453,
+        "rebuild_cuda_points": 0,
+        "rebuild_errors": 0,
+        "rebuild_seconds": 27.298137175,
+        "sketches": 18
+      }
+    },
+    {
+      "label": "current",
+      "repeat": 1,
+      "version": "cpu",
+      "data": {
+        "bodies": [
+          {
+            "brep_sha256": "185960addd5f71c0cf6f3f81f345316a085431cf53af43013d4b601da9d0333f",
+            "drawn": false,
+            "error": "",
+            "faces": 12,
+            "index": 0,
+            "name": "Rivoluzione 1",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "dff028f9018bbe71273c1b64acdcad980da255e1fbddf3aa04db9606a06b2a20",
+            "drawn": false,
+            "error": "",
+            "faces": 15,
+            "index": 1,
+            "name": "Rivoluzione 2",
+            "triangles": 0
+          },
+          {
+            "drawn": false,
+            "error": "",
+            "faces": 0,
+            "index": 2,
+            "name": "Piano 1",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "b15ccb6f1f1da99c1401cf1637411bc00255fd026ed1b08e88ce0ad0bf645a15",
+            "drawn": false,
+            "error": "",
+            "faces": 19,
+            "index": 3,
+            "name": "Sweep 4",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "9525ac48d0e927fa881a2c26c06fb56b1813cc94573365f4a9242bd811783d22",
+            "drawn": false,
+            "error": "",
+            "faces": 263,
+            "index": 4,
+            "name": "Ripetizione 5",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "c0fe04110e0f173a13729b4213bd5255eb89c9a3856d87055ae8acb3a4cecc80",
+            "drawn": false,
+            "error": "",
+            "faces": 264,
+            "index": 5,
+            "name": "Rivoluzione 6",
+            "triangles": 0
+          },
+          {
+            "drawn": false,
+            "error": "",
+            "faces": 0,
+            "index": 6,
+            "name": "Piano 2",
+            "triangles": 0
+          },
+          {
+            "drawn": false,
+            "error": "",
+            "faces": 0,
+            "index": 7,
+            "name": "Piano 3",
+            "triangles": 0
+          },
+          {
+            "drawn": false,
+            "error": "",
+            "faces": 0,
+            "index": 8,
+            "name": "Elica 9",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "d9598453bd30003e2db7d11ded2d5443ea0afa128dd2259262ff40d89d489d4d",
+            "drawn": false,
+            "error": "",
+            "faces": 269,
+            "index": 9,
+            "name": "Sweep 10",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "e4b4db5d8fa911fbbb03a63540cf4fd2b2d068212c71039e1a50e3697d4f6953",
+            "drawn": false,
+            "error": "",
+            "faces": 269,
+            "index": 10,
+            "name": "Rivoluzione 11",
+            "triangles": 0
+          },
+          {
+            "drawn": false,
+            "error": "",
+            "faces": 0,
+            "index": 11,
+            "name": "Piano 4",
+            "triangles": 0
+          },
+          {
+            "drawn": false,
+            "error": "",
+            "faces": 0,
+            "index": 12,
+            "name": "Piano 5",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "9b1dcab91da91e91116fe08e9a0a798f75ca17a781c77b7be1228ef43bd8ed8e",
+            "drawn": false,
+            "error": "",
+            "faces": 271,
+            "index": 13,
+            "name": "Sweep 14",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "50c25132fe515cf348d094728ba03727b56668e2ba95237bc2b5fc5c44559092",
+            "drawn": false,
+            "error": "",
+            "faces": 273,
+            "index": 14,
+            "name": "Rivoluzione 15",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "5158a7b97e994c60a9634902f7e5d4f008cd9cd6769d6475d4c440e45f4edca0",
+            "drawn": false,
+            "error": "",
+            "faces": 276,
+            "index": 15,
+            "name": "Rivoluzione 16",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "6b12d769b2a5101edce43f1225fbfd6c220e2fa894a470d8c8a5bf21c59df773",
+            "drawn": false,
+            "error": "",
+            "faces": 277,
+            "index": 16,
+            "name": "Raccordo 17",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "f8f32e55fc09746518a83daf062198bd4dedae94da9b8bccc45cdb846efc9ea1",
+            "drawn": false,
+            "error": "",
+            "faces": 279,
+            "index": 17,
+            "name": "Raccordo 18",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "f6384b299dd48d421395626f30ea31c3fb35f65a5a51e5d17f4b4ec6dae7fdfc",
+            "drawn": false,
+            "error": "",
+            "faces": 4,
+            "index": 18,
+            "name": "Estrusione 19",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "901a3d34eb12c3200b955fd71728e001d9afb11d8365a73c6e76f8f371d08a3f",
+            "drawn": false,
+            "error": "",
+            "faces": 12,
+            "index": 19,
+            "name": "Estrusione 20",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "6e2993b2879beb4a21b4472e0bccce94af45d1f543d79a87fb18aebe29a182c3",
+            "drawn": false,
+            "error": "",
+            "faces": 12,
+            "index": 20,
+            "name": "Intersezione 21",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "1b0f4ce35f52a4172872f75ae14b67dd7fbe2f2c7e61e4ca219a09fe09bc7064",
+            "drawn": false,
+            "error": "",
+            "faces": 6,
+            "index": 21,
+            "name": "Ripetizione 22",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "1f1bf1139859478a8c92692e718aeb1b265d702b1028d9d7abdf7e3baaa31573",
+            "drawn": false,
+            "error": "",
+            "faces": 6,
+            "index": 22,
+            "name": "Ripetizione 22 \u2014 corpo 2",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "bfe9287b25a096ea40f8b53b8746a0cd0b3bd0cee193c1832247878a739f7f86",
+            "drawn": false,
+            "error": "",
+            "faces": 6,
+            "index": 23,
+            "name": "Ripetizione 22 \u2014 corpo 3",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "d0deb89e56fe4845b9d8cc329d914ea097301a81fa69af63c4a6514188b1d946",
+            "drawn": false,
+            "error": "",
+            "faces": 6,
+            "index": 24,
+            "name": "Ripetizione 22 \u2014 corpo 4",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "ce18b2a1927499268632a1c10333e5a25db427a193c440acfb695d07d5f2d191",
+            "drawn": false,
+            "error": "",
+            "faces": 299,
+            "index": 25,
+            "name": "Unione 26",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "ae6c7931b1ea9175e3363d747d5cf137e9f2f357d122d38ac5cdb08855b13293",
+            "drawn": false,
+            "error": "",
+            "faces": 301,
+            "index": 26,
+            "name": "Rivoluzione 27",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "cba78ad62eefa2a2e9ceda3af2ede9ad4f6c8da9fb4e5651819103746bf2b329",
+            "drawn": false,
+            "error": "",
+            "faces": 303,
+            "index": 27,
+            "name": "Raccordo 28",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "fb0cbe8ca5aa949a43fedb1a9b6fdc7f41708b2a507c7659d9b754bcec7fb0c3",
+            "drawn": false,
+            "error": "",
+            "faces": 305,
+            "index": 28,
+            "name": "Raccordo 29",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "b329f13bdc79ad84faf3e6b62fc4719d0662c87726e742731bb7d4c375b1c5c4",
+            "drawn": true,
+            "error": "",
+            "faces": 308,
+            "index": 29,
+            "mesh_sha256": "6eba8eb67ea585d4c0f5bf8a0550881948fa5e0fa4ae7158ebf03a8cbf3e68b2",
+            "name": "Estrusione 30",
+            "triangles": 13254
+          }
+        ],
+        "cached_load_seconds": 10.899801711,
+        "features": 30,
+        "load_cuda_points": 0,
+        "quality": 1,
+        "read_seconds": 0.10070273,
+        "rebuild_cuda_points": 0,
+        "rebuild_errors": 0,
+        "rebuild_seconds": 27.528248215,
+        "sketches": 18
+      }
+    },
+    {
+      "label": "current",
+      "repeat": 1,
+      "version": "reference",
+      "data": {
+        "bodies": [
+          {
+            "brep_sha256": "185960addd5f71c0cf6f3f81f345316a085431cf53af43013d4b601da9d0333f",
+            "drawn": false,
+            "error": "",
+            "faces": 12,
+            "index": 0,
+            "name": "Rivoluzione 1",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "dff028f9018bbe71273c1b64acdcad980da255e1fbddf3aa04db9606a06b2a20",
+            "drawn": false,
+            "error": "",
+            "faces": 15,
+            "index": 1,
+            "name": "Rivoluzione 2",
+            "triangles": 0
+          },
+          {
+            "drawn": false,
+            "error": "",
+            "faces": 0,
+            "index": 2,
+            "name": "Piano 1",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "b15ccb6f1f1da99c1401cf1637411bc00255fd026ed1b08e88ce0ad0bf645a15",
+            "drawn": false,
+            "error": "",
+            "faces": 19,
+            "index": 3,
+            "name": "Sweep 4",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "9525ac48d0e927fa881a2c26c06fb56b1813cc94573365f4a9242bd811783d22",
+            "drawn": false,
+            "error": "",
+            "faces": 263,
+            "index": 4,
+            "name": "Ripetizione 5",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "c0fe04110e0f173a13729b4213bd5255eb89c9a3856d87055ae8acb3a4cecc80",
+            "drawn": false,
+            "error": "",
+            "faces": 264,
+            "index": 5,
+            "name": "Rivoluzione 6",
+            "triangles": 0
+          },
+          {
+            "drawn": false,
+            "error": "",
+            "faces": 0,
+            "index": 6,
+            "name": "Piano 2",
+            "triangles": 0
+          },
+          {
+            "drawn": false,
+            "error": "",
+            "faces": 0,
+            "index": 7,
+            "name": "Piano 3",
+            "triangles": 0
+          },
+          {
+            "drawn": false,
+            "error": "",
+            "faces": 0,
+            "index": 8,
+            "name": "Elica 9",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "d9598453bd30003e2db7d11ded2d5443ea0afa128dd2259262ff40d89d489d4d",
+            "drawn": false,
+            "error": "",
+            "faces": 269,
+            "index": 9,
+            "name": "Sweep 10",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "e4b4db5d8fa911fbbb03a63540cf4fd2b2d068212c71039e1a50e3697d4f6953",
+            "drawn": false,
+            "error": "",
+            "faces": 269,
+            "index": 10,
+            "name": "Rivoluzione 11",
+            "triangles": 0
+          },
+          {
+            "drawn": false,
+            "error": "",
+            "faces": 0,
+            "index": 11,
+            "name": "Piano 4",
+            "triangles": 0
+          },
+          {
+            "drawn": false,
+            "error": "",
+            "faces": 0,
+            "index": 12,
+            "name": "Piano 5",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "9b1dcab91da91e91116fe08e9a0a798f75ca17a781c77b7be1228ef43bd8ed8e",
+            "drawn": false,
+            "error": "",
+            "faces": 271,
+            "index": 13,
+            "name": "Sweep 14",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "50c25132fe515cf348d094728ba03727b56668e2ba95237bc2b5fc5c44559092",
+            "drawn": false,
+            "error": "",
+            "faces": 273,
+            "index": 14,
+            "name": "Rivoluzione 15",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "5158a7b97e994c60a9634902f7e5d4f008cd9cd6769d6475d4c440e45f4edca0",
+            "drawn": false,
+            "error": "",
+            "faces": 276,
+            "index": 15,
+            "name": "Rivoluzione 16",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "6b12d769b2a5101edce43f1225fbfd6c220e2fa894a470d8c8a5bf21c59df773",
+            "drawn": false,
+            "error": "",
+            "faces": 277,
+            "index": 16,
+            "name": "Raccordo 17",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "f8f32e55fc09746518a83daf062198bd4dedae94da9b8bccc45cdb846efc9ea1",
+            "drawn": false,
+            "error": "",
+            "faces": 279,
+            "index": 17,
+            "name": "Raccordo 18",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "f6384b299dd48d421395626f30ea31c3fb35f65a5a51e5d17f4b4ec6dae7fdfc",
+            "drawn": false,
+            "error": "",
+            "faces": 4,
+            "index": 18,
+            "name": "Estrusione 19",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "901a3d34eb12c3200b955fd71728e001d9afb11d8365a73c6e76f8f371d08a3f",
+            "drawn": false,
+            "error": "",
+            "faces": 12,
+            "index": 19,
+            "name": "Estrusione 20",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "6e2993b2879beb4a21b4472e0bccce94af45d1f543d79a87fb18aebe29a182c3",
+            "drawn": false,
+            "error": "",
+            "faces": 12,
+            "index": 20,
+            "name": "Intersezione 21",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "1b0f4ce35f52a4172872f75ae14b67dd7fbe2f2c7e61e4ca219a09fe09bc7064",
+            "drawn": false,
+            "error": "",
+            "faces": 6,
+            "index": 21,
+            "name": "Ripetizione 22",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "1f1bf1139859478a8c92692e718aeb1b265d702b1028d9d7abdf7e3baaa31573",
+            "drawn": false,
+            "error": "",
+            "faces": 6,
+            "index": 22,
+            "name": "Ripetizione 22 \u2014 corpo 2",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "bfe9287b25a096ea40f8b53b8746a0cd0b3bd0cee193c1832247878a739f7f86",
+            "drawn": false,
+            "error": "",
+            "faces": 6,
+            "index": 23,
+            "name": "Ripetizione 22 \u2014 corpo 3",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "d0deb89e56fe4845b9d8cc329d914ea097301a81fa69af63c4a6514188b1d946",
+            "drawn": false,
+            "error": "",
+            "faces": 6,
+            "index": 24,
+            "name": "Ripetizione 22 \u2014 corpo 4",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "ce18b2a1927499268632a1c10333e5a25db427a193c440acfb695d07d5f2d191",
+            "drawn": false,
+            "error": "",
+            "faces": 299,
+            "index": 25,
+            "name": "Unione 26",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "ae6c7931b1ea9175e3363d747d5cf137e9f2f357d122d38ac5cdb08855b13293",
+            "drawn": false,
+            "error": "",
+            "faces": 301,
+            "index": 26,
+            "name": "Rivoluzione 27",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "cba78ad62eefa2a2e9ceda3af2ede9ad4f6c8da9fb4e5651819103746bf2b329",
+            "drawn": false,
+            "error": "",
+            "faces": 303,
+            "index": 27,
+            "name": "Raccordo 28",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "fb0cbe8ca5aa949a43fedb1a9b6fdc7f41708b2a507c7659d9b754bcec7fb0c3",
+            "drawn": false,
+            "error": "",
+            "faces": 305,
+            "index": 28,
+            "name": "Raccordo 29",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "b329f13bdc79ad84faf3e6b62fc4719d0662c87726e742731bb7d4c375b1c5c4",
+            "drawn": true,
+            "error": "",
+            "faces": 308,
+            "index": 29,
+            "mesh_sha256": "6eba8eb67ea585d4c0f5bf8a0550881948fa5e0fa4ae7158ebf03a8cbf3e68b2",
+            "name": "Estrusione 30",
+            "triangles": 13254
+          }
+        ],
+        "cached_load_seconds": 10.581053366,
+        "features": 30,
+        "load_cuda_points": 0,
+        "quality": 1,
+        "read_seconds": 0.096440897,
+        "rebuild_cuda_points": 0,
+        "rebuild_errors": 0,
+        "rebuild_seconds": 42.905410305,
+        "sketches": 18
+      }
+    },
+    {
+      "label": "current",
+      "repeat": 2,
+      "version": "reference",
+      "data": {
+        "bodies": [
+          {
+            "brep_sha256": "185960addd5f71c0cf6f3f81f345316a085431cf53af43013d4b601da9d0333f",
+            "drawn": false,
+            "error": "",
+            "faces": 12,
+            "index": 0,
+            "name": "Rivoluzione 1",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "dff028f9018bbe71273c1b64acdcad980da255e1fbddf3aa04db9606a06b2a20",
+            "drawn": false,
+            "error": "",
+            "faces": 15,
+            "index": 1,
+            "name": "Rivoluzione 2",
+            "triangles": 0
+          },
+          {
+            "drawn": false,
+            "error": "",
+            "faces": 0,
+            "index": 2,
+            "name": "Piano 1",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "b15ccb6f1f1da99c1401cf1637411bc00255fd026ed1b08e88ce0ad0bf645a15",
+            "drawn": false,
+            "error": "",
+            "faces": 19,
+            "index": 3,
+            "name": "Sweep 4",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "9525ac48d0e927fa881a2c26c06fb56b1813cc94573365f4a9242bd811783d22",
+            "drawn": false,
+            "error": "",
+            "faces": 263,
+            "index": 4,
+            "name": "Ripetizione 5",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "c0fe04110e0f173a13729b4213bd5255eb89c9a3856d87055ae8acb3a4cecc80",
+            "drawn": false,
+            "error": "",
+            "faces": 264,
+            "index": 5,
+            "name": "Rivoluzione 6",
+            "triangles": 0
+          },
+          {
+            "drawn": false,
+            "error": "",
+            "faces": 0,
+            "index": 6,
+            "name": "Piano 2",
+            "triangles": 0
+          },
+          {
+            "drawn": false,
+            "error": "",
+            "faces": 0,
+            "index": 7,
+            "name": "Piano 3",
+            "triangles": 0
+          },
+          {
+            "drawn": false,
+            "error": "",
+            "faces": 0,
+            "index": 8,
+            "name": "Elica 9",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "d9598453bd30003e2db7d11ded2d5443ea0afa128dd2259262ff40d89d489d4d",
+            "drawn": false,
+            "error": "",
+            "faces": 269,
+            "index": 9,
+            "name": "Sweep 10",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "e4b4db5d8fa911fbbb03a63540cf4fd2b2d068212c71039e1a50e3697d4f6953",
+            "drawn": false,
+            "error": "",
+            "faces": 269,
+            "index": 10,
+            "name": "Rivoluzione 11",
+            "triangles": 0
+          },
+          {
+            "drawn": false,
+            "error": "",
+            "faces": 0,
+            "index": 11,
+            "name": "Piano 4",
+            "triangles": 0
+          },
+          {
+            "drawn": false,
+            "error": "",
+            "faces": 0,
+            "index": 12,
+            "name": "Piano 5",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "9b1dcab91da91e91116fe08e9a0a798f75ca17a781c77b7be1228ef43bd8ed8e",
+            "drawn": false,
+            "error": "",
+            "faces": 271,
+            "index": 13,
+            "name": "Sweep 14",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "50c25132fe515cf348d094728ba03727b56668e2ba95237bc2b5fc5c44559092",
+            "drawn": false,
+            "error": "",
+            "faces": 273,
+            "index": 14,
+            "name": "Rivoluzione 15",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "5158a7b97e994c60a9634902f7e5d4f008cd9cd6769d6475d4c440e45f4edca0",
+            "drawn": false,
+            "error": "",
+            "faces": 276,
+            "index": 15,
+            "name": "Rivoluzione 16",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "6b12d769b2a5101edce43f1225fbfd6c220e2fa894a470d8c8a5bf21c59df773",
+            "drawn": false,
+            "error": "",
+            "faces": 277,
+            "index": 16,
+            "name": "Raccordo 17",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "f8f32e55fc09746518a83daf062198bd4dedae94da9b8bccc45cdb846efc9ea1",
+            "drawn": false,
+            "error": "",
+            "faces": 279,
+            "index": 17,
+            "name": "Raccordo 18",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "f6384b299dd48d421395626f30ea31c3fb35f65a5a51e5d17f4b4ec6dae7fdfc",
+            "drawn": false,
+            "error": "",
+            "faces": 4,
+            "index": 18,
+            "name": "Estrusione 19",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "901a3d34eb12c3200b955fd71728e001d9afb11d8365a73c6e76f8f371d08a3f",
+            "drawn": false,
+            "error": "",
+            "faces": 12,
+            "index": 19,
+            "name": "Estrusione 20",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "6e2993b2879beb4a21b4472e0bccce94af45d1f543d79a87fb18aebe29a182c3",
+            "drawn": false,
+            "error": "",
+            "faces": 12,
+            "index": 20,
+            "name": "Intersezione 21",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "1b0f4ce35f52a4172872f75ae14b67dd7fbe2f2c7e61e4ca219a09fe09bc7064",
+            "drawn": false,
+            "error": "",
+            "faces": 6,
+            "index": 21,
+            "name": "Ripetizione 22",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "1f1bf1139859478a8c92692e718aeb1b265d702b1028d9d7abdf7e3baaa31573",
+            "drawn": false,
+            "error": "",
+            "faces": 6,
+            "index": 22,
+            "name": "Ripetizione 22 \u2014 corpo 2",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "bfe9287b25a096ea40f8b53b8746a0cd0b3bd0cee193c1832247878a739f7f86",
+            "drawn": false,
+            "error": "",
+            "faces": 6,
+            "index": 23,
+            "name": "Ripetizione 22 \u2014 corpo 3",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "d0deb89e56fe4845b9d8cc329d914ea097301a81fa69af63c4a6514188b1d946",
+            "drawn": false,
+            "error": "",
+            "faces": 6,
+            "index": 24,
+            "name": "Ripetizione 22 \u2014 corpo 4",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "ce18b2a1927499268632a1c10333e5a25db427a193c440acfb695d07d5f2d191",
+            "drawn": false,
+            "error": "",
+            "faces": 299,
+            "index": 25,
+            "name": "Unione 26",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "ae6c7931b1ea9175e3363d747d5cf137e9f2f357d122d38ac5cdb08855b13293",
+            "drawn": false,
+            "error": "",
+            "faces": 301,
+            "index": 26,
+            "name": "Rivoluzione 27",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "cba78ad62eefa2a2e9ceda3af2ede9ad4f6c8da9fb4e5651819103746bf2b329",
+            "drawn": false,
+            "error": "",
+            "faces": 303,
+            "index": 27,
+            "name": "Raccordo 28",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "fb0cbe8ca5aa949a43fedb1a9b6fdc7f41708b2a507c7659d9b754bcec7fb0c3",
+            "drawn": false,
+            "error": "",
+            "faces": 305,
+            "index": 28,
+            "name": "Raccordo 29",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "b329f13bdc79ad84faf3e6b62fc4719d0662c87726e742731bb7d4c375b1c5c4",
+            "drawn": true,
+            "error": "",
+            "faces": 308,
+            "index": 29,
+            "mesh_sha256": "6eba8eb67ea585d4c0f5bf8a0550881948fa5e0fa4ae7158ebf03a8cbf3e68b2",
+            "name": "Estrusione 30",
+            "triangles": 13254
+          }
+        ],
+        "cached_load_seconds": 10.560517251,
+        "features": 30,
+        "load_cuda_points": 0,
+        "quality": 1,
+        "read_seconds": 0.102059219,
+        "rebuild_cuda_points": 0,
+        "rebuild_errors": 0,
+        "rebuild_seconds": 42.961211428,
+        "sketches": 18
+      }
+    },
+    {
+      "label": "current",
+      "repeat": 2,
+      "version": "cpu",
+      "data": {
+        "bodies": [
+          {
+            "brep_sha256": "185960addd5f71c0cf6f3f81f345316a085431cf53af43013d4b601da9d0333f",
+            "drawn": false,
+            "error": "",
+            "faces": 12,
+            "index": 0,
+            "name": "Rivoluzione 1",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "dff028f9018bbe71273c1b64acdcad980da255e1fbddf3aa04db9606a06b2a20",
+            "drawn": false,
+            "error": "",
+            "faces": 15,
+            "index": 1,
+            "name": "Rivoluzione 2",
+            "triangles": 0
+          },
+          {
+            "drawn": false,
+            "error": "",
+            "faces": 0,
+            "index": 2,
+            "name": "Piano 1",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "b15ccb6f1f1da99c1401cf1637411bc00255fd026ed1b08e88ce0ad0bf645a15",
+            "drawn": false,
+            "error": "",
+            "faces": 19,
+            "index": 3,
+            "name": "Sweep 4",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "9525ac48d0e927fa881a2c26c06fb56b1813cc94573365f4a9242bd811783d22",
+            "drawn": false,
+            "error": "",
+            "faces": 263,
+            "index": 4,
+            "name": "Ripetizione 5",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "c0fe04110e0f173a13729b4213bd5255eb89c9a3856d87055ae8acb3a4cecc80",
+            "drawn": false,
+            "error": "",
+            "faces": 264,
+            "index": 5,
+            "name": "Rivoluzione 6",
+            "triangles": 0
+          },
+          {
+            "drawn": false,
+            "error": "",
+            "faces": 0,
+            "index": 6,
+            "name": "Piano 2",
+            "triangles": 0
+          },
+          {
+            "drawn": false,
+            "error": "",
+            "faces": 0,
+            "index": 7,
+            "name": "Piano 3",
+            "triangles": 0
+          },
+          {
+            "drawn": false,
+            "error": "",
+            "faces": 0,
+            "index": 8,
+            "name": "Elica 9",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "d9598453bd30003e2db7d11ded2d5443ea0afa128dd2259262ff40d89d489d4d",
+            "drawn": false,
+            "error": "",
+            "faces": 269,
+            "index": 9,
+            "name": "Sweep 10",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "e4b4db5d8fa911fbbb03a63540cf4fd2b2d068212c71039e1a50e3697d4f6953",
+            "drawn": false,
+            "error": "",
+            "faces": 269,
+            "index": 10,
+            "name": "Rivoluzione 11",
+            "triangles": 0
+          },
+          {
+            "drawn": false,
+            "error": "",
+            "faces": 0,
+            "index": 11,
+            "name": "Piano 4",
+            "triangles": 0
+          },
+          {
+            "drawn": false,
+            "error": "",
+            "faces": 0,
+            "index": 12,
+            "name": "Piano 5",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "9b1dcab91da91e91116fe08e9a0a798f75ca17a781c77b7be1228ef43bd8ed8e",
+            "drawn": false,
+            "error": "",
+            "faces": 271,
+            "index": 13,
+            "name": "Sweep 14",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "50c25132fe515cf348d094728ba03727b56668e2ba95237bc2b5fc5c44559092",
+            "drawn": false,
+            "error": "",
+            "faces": 273,
+            "index": 14,
+            "name": "Rivoluzione 15",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "5158a7b97e994c60a9634902f7e5d4f008cd9cd6769d6475d4c440e45f4edca0",
+            "drawn": false,
+            "error": "",
+            "faces": 276,
+            "index": 15,
+            "name": "Rivoluzione 16",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "6b12d769b2a5101edce43f1225fbfd6c220e2fa894a470d8c8a5bf21c59df773",
+            "drawn": false,
+            "error": "",
+            "faces": 277,
+            "index": 16,
+            "name": "Raccordo 17",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "f8f32e55fc09746518a83daf062198bd4dedae94da9b8bccc45cdb846efc9ea1",
+            "drawn": false,
+            "error": "",
+            "faces": 279,
+            "index": 17,
+            "name": "Raccordo 18",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "f6384b299dd48d421395626f30ea31c3fb35f65a5a51e5d17f4b4ec6dae7fdfc",
+            "drawn": false,
+            "error": "",
+            "faces": 4,
+            "index": 18,
+            "name": "Estrusione 19",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "901a3d34eb12c3200b955fd71728e001d9afb11d8365a73c6e76f8f371d08a3f",
+            "drawn": false,
+            "error": "",
+            "faces": 12,
+            "index": 19,
+            "name": "Estrusione 20",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "6e2993b2879beb4a21b4472e0bccce94af45d1f543d79a87fb18aebe29a182c3",
+            "drawn": false,
+            "error": "",
+            "faces": 12,
+            "index": 20,
+            "name": "Intersezione 21",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "1b0f4ce35f52a4172872f75ae14b67dd7fbe2f2c7e61e4ca219a09fe09bc7064",
+            "drawn": false,
+            "error": "",
+            "faces": 6,
+            "index": 21,
+            "name": "Ripetizione 22",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "1f1bf1139859478a8c92692e718aeb1b265d702b1028d9d7abdf7e3baaa31573",
+            "drawn": false,
+            "error": "",
+            "faces": 6,
+            "index": 22,
+            "name": "Ripetizione 22 \u2014 corpo 2",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "bfe9287b25a096ea40f8b53b8746a0cd0b3bd0cee193c1832247878a739f7f86",
+            "drawn": false,
+            "error": "",
+            "faces": 6,
+            "index": 23,
+            "name": "Ripetizione 22 \u2014 corpo 3",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "d0deb89e56fe4845b9d8cc329d914ea097301a81fa69af63c4a6514188b1d946",
+            "drawn": false,
+            "error": "",
+            "faces": 6,
+            "index": 24,
+            "name": "Ripetizione 22 \u2014 corpo 4",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "ce18b2a1927499268632a1c10333e5a25db427a193c440acfb695d07d5f2d191",
+            "drawn": false,
+            "error": "",
+            "faces": 299,
+            "index": 25,
+            "name": "Unione 26",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "ae6c7931b1ea9175e3363d747d5cf137e9f2f357d122d38ac5cdb08855b13293",
+            "drawn": false,
+            "error": "",
+            "faces": 301,
+            "index": 26,
+            "name": "Rivoluzione 27",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "cba78ad62eefa2a2e9ceda3af2ede9ad4f6c8da9fb4e5651819103746bf2b329",
+            "drawn": false,
+            "error": "",
+            "faces": 303,
+            "index": 27,
+            "name": "Raccordo 28",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "fb0cbe8ca5aa949a43fedb1a9b6fdc7f41708b2a507c7659d9b754bcec7fb0c3",
+            "drawn": false,
+            "error": "",
+            "faces": 305,
+            "index": 28,
+            "name": "Raccordo 29",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "b329f13bdc79ad84faf3e6b62fc4719d0662c87726e742731bb7d4c375b1c5c4",
+            "drawn": true,
+            "error": "",
+            "faces": 308,
+            "index": 29,
+            "mesh_sha256": "6eba8eb67ea585d4c0f5bf8a0550881948fa5e0fa4ae7158ebf03a8cbf3e68b2",
+            "name": "Estrusione 30",
+            "triangles": 13254
+          }
+        ],
+        "cached_load_seconds": 10.852108001,
+        "features": 30,
+        "load_cuda_points": 0,
+        "quality": 1,
+        "read_seconds": 0.101479314,
+        "rebuild_cuda_points": 0,
+        "rebuild_errors": 0,
+        "rebuild_seconds": 28.245024961,
+        "sketches": 18
+      }
+    },
+    {
+      "label": "historical-sweep",
+      "repeat": 0,
+      "version": "reference",
+      "data": {
+        "cached_load_seconds": 4.24671356,
+        "features": 11,
+        "load_cuda_points": 0,
+        "merge_operation": 1,
+        "quality": 1,
+        "read_seconds": 0.06774185,
+        "result_faces": 269,
+        "result_sha256": "d9598453bd30003e2db7d11ded2d5443ea0afa128dd2259262ff40d89d489d4d",
+        "saved_sweep_sha256": "a257a1916c671c003906bc740102564f4a4b2fa2cb587aec2764680c87a9dcfe",
+        "sketches": 10,
+        "sweep_boolean_seconds": 18.687759188,
+        "sweep_tool_seconds": 0.024503171,
+        "tool_faces": 8,
+        "tool_sha256": "3f155528d3848fad058a720fb30b40c9580dec76505337e87db67e8999129905"
+      }
+    },
+    {
+      "label": "historical-sweep",
+      "repeat": 0,
+      "version": "cpu",
+      "data": {
+        "cached_load_seconds": 3.840644053,
+        "features": 11,
+        "load_cuda_points": 0,
+        "merge_operation": 1,
+        "quality": 1,
+        "read_seconds": 0.060656885,
+        "result_faces": 269,
+        "result_sha256": "d9598453bd30003e2db7d11ded2d5443ea0afa128dd2259262ff40d89d489d4d",
+        "saved_sweep_sha256": "a257a1916c671c003906bc740102564f4a4b2fa2cb587aec2764680c87a9dcfe",
+        "sketches": 10,
+        "sweep_boolean_seconds": 4.103968719,
+        "sweep_tool_seconds": 0.024175858,
+        "tool_faces": 8,
+        "tool_sha256": "3f155528d3848fad058a720fb30b40c9580dec76505337e87db67e8999129905"
+      }
+    },
+    {
+      "label": "historical-sweep",
+      "repeat": 1,
+      "version": "cpu",
+      "data": {
+        "cached_load_seconds": 3.883220699,
+        "features": 11,
+        "load_cuda_points": 0,
+        "merge_operation": 1,
+        "quality": 1,
+        "read_seconds": 0.058533794,
+        "result_faces": 269,
+        "result_sha256": "d9598453bd30003e2db7d11ded2d5443ea0afa128dd2259262ff40d89d489d4d",
+        "saved_sweep_sha256": "a257a1916c671c003906bc740102564f4a4b2fa2cb587aec2764680c87a9dcfe",
+        "sketches": 10,
+        "sweep_boolean_seconds": 4.117507237,
+        "sweep_tool_seconds": 0.023503798,
+        "tool_faces": 8,
+        "tool_sha256": "3f155528d3848fad058a720fb30b40c9580dec76505337e87db67e8999129905"
+      }
+    },
+    {
+      "label": "historical-sweep",
+      "repeat": 1,
+      "version": "reference",
+      "data": {
+        "cached_load_seconds": 4.144286487,
+        "features": 11,
+        "load_cuda_points": 0,
+        "merge_operation": 1,
+        "quality": 1,
+        "read_seconds": 0.060132354,
+        "result_faces": 269,
+        "result_sha256": "d9598453bd30003e2db7d11ded2d5443ea0afa128dd2259262ff40d89d489d4d",
+        "saved_sweep_sha256": "a257a1916c671c003906bc740102564f4a4b2fa2cb587aec2764680c87a9dcfe",
+        "sketches": 10,
+        "sweep_boolean_seconds": 19.17745977,
+        "sweep_tool_seconds": 0.024780444,
+        "tool_faces": 8,
+        "tool_sha256": "3f155528d3848fad058a720fb30b40c9580dec76505337e87db67e8999129905"
+      }
+    },
+    {
+      "label": "historical-sweep",
+      "repeat": 2,
+      "version": "reference",
+      "data": {
+        "cached_load_seconds": 4.116817138,
+        "features": 11,
+        "load_cuda_points": 0,
+        "merge_operation": 1,
+        "quality": 1,
+        "read_seconds": 0.063985905,
+        "result_faces": 269,
+        "result_sha256": "d9598453bd30003e2db7d11ded2d5443ea0afa128dd2259262ff40d89d489d4d",
+        "saved_sweep_sha256": "a257a1916c671c003906bc740102564f4a4b2fa2cb587aec2764680c87a9dcfe",
+        "sketches": 10,
+        "sweep_boolean_seconds": 18.751912463,
+        "sweep_tool_seconds": 0.023873974,
+        "tool_faces": 8,
+        "tool_sha256": "3f155528d3848fad058a720fb30b40c9580dec76505337e87db67e8999129905"
+      }
+    },
+    {
+      "label": "historical-sweep",
+      "repeat": 2,
+      "version": "cpu",
+      "data": {
+        "cached_load_seconds": 3.878929625,
+        "features": 11,
+        "load_cuda_points": 0,
+        "merge_operation": 1,
+        "quality": 1,
+        "read_seconds": 0.060262155,
+        "result_faces": 269,
+        "result_sha256": "d9598453bd30003e2db7d11ded2d5443ea0afa128dd2259262ff40d89d489d4d",
+        "saved_sweep_sha256": "a257a1916c671c003906bc740102564f4a4b2fa2cb587aec2764680c87a9dcfe",
+        "sketches": 10,
+        "sweep_boolean_seconds": 4.126019797,
+        "sweep_tool_seconds": 0.024392985,
+        "tool_faces": 8,
+        "tool_sha256": "3f155528d3848fad058a720fb30b40c9580dec76505337e87db67e8999129905"
+      }
+    },
+    {
+      "label": "cuda-mouse2",
+      "repeat": 0,
+      "version": "cpu",
+      "data": {
+        "bodies": [
+          {
+            "brep_sha256": "7b9f6e603ebd7ae98290e0c459bed7af702a4830817758304ecbe463201b7130",
+            "drawn": false,
+            "error": "",
+            "faces": 1,
+            "index": 0,
+            "name": "Estrusione 2",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "851ebc710fd1c6a395c01581dba119de1360c9d8e58112aa18362a2863257b29",
+            "drawn": false,
+            "error": "",
+            "faces": 1,
+            "index": 1,
+            "name": "Taglio 2",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "40b5c50d2cb4bdeb73f35daecd3993c1e41c34a39c74d85dc5f018dcec50d876",
+            "drawn": false,
+            "error": "",
+            "faces": 2,
+            "index": 2,
+            "name": "Estrusione 3",
+            "triangles": 0
+          },
+          {
+            "drawn": false,
+            "error": "",
+            "faces": 0,
+            "index": 3,
+            "name": "Piano 1",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "6163200bc1bc77b7c94d1cfaa16c85d09c398ea41b66e172c820b0d97794fb8b",
+            "drawn": false,
+            "error": "",
+            "faces": 2,
+            "index": 4,
+            "name": "Loft 6",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "154412a5ffec3432d04c806305e83b915a06a0a60802061a608ee7e3474aedb9",
+            "drawn": false,
+            "error": "",
+            "faces": 1,
+            "index": 5,
+            "name": "Estrusione 6",
+            "triangles": 0
+          },
+          {
+            "drawn": false,
+            "error": "",
+            "faces": 0,
+            "index": 6,
+            "name": "Piano 2",
+            "triangles": 0
+          },
+          {
+            "drawn": false,
+            "error": "",
+            "faces": 0,
+            "index": 7,
+            "name": "Piano 3",
+            "triangles": 0
+          },
+          {
+            "drawn": false,
+            "error": "",
+            "faces": 0,
+            "index": 8,
+            "name": "Curva estratta 3D 1",
+            "triangles": 0
+          },
+          {
+            "drawn": false,
+            "error": "",
+            "faces": 0,
+            "index": 9,
+            "name": "Curva estratta 3D 2",
+            "triangles": 0
+          },
+          {
+            "drawn": false,
+            "error": "",
+            "faces": 0,
+            "index": 10,
+            "name": "Curva estratta 3D 5",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "b9cafed4fd3509ccc13ac4ad02d0977cb9e7d9e266654f5d43937fee53d5a1db",
+            "drawn": false,
+            "error": "",
+            "faces": 1,
+            "index": 11,
+            "name": "Loft 15",
+            "triangles": 0
+          },
+          {
+            "drawn": false,
+            "error": "",
+            "faces": 0,
+            "index": 12,
+            "name": "Curva estratta 3D 6",
+            "triangles": 0
+          },
+          {
+            "drawn": false,
+            "error": "",
+            "faces": 0,
+            "index": 13,
+            "name": "Curva estratta 3D 6",
+            "triangles": 0
+          },
+          {
+            "drawn": false,
+            "error": "",
+            "faces": 0,
+            "index": 14,
+            "name": "Curva tagliata 3D 7",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "294a2a418c9cbf4ac33a5e3f7db0163ebf4430dfd96c74719188cb7bb315dc6c",
+            "drawn": false,
+            "error": "",
+            "faces": 1,
+            "index": 15,
+            "name": "Loft 18",
+            "triangles": 0
+          },
+          {
+            "drawn": false,
+            "error": "",
+            "faces": 0,
+            "index": 16,
+            "name": "Curva estratta 3D 7",
+            "triangles": 0
+          },
+          {
+            "drawn": false,
+            "error": "",
+            "faces": 0,
+            "index": 17,
+            "name": "Curva estratta 3D 8",
+            "triangles": 0
+          },
+          {
+            "drawn": false,
+            "error": "",
+            "faces": 0,
+            "index": 18,
+            "name": "Curva estratta 3D 9",
+            "triangles": 0
+          },
+          {
+            "drawn": false,
+            "error": "",
+            "faces": 0,
+            "index": 19,
+            "name": "Curva tagliata 3D 10",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "251ebe426eddb65a195a47eef92e76d3f9b0e59ee1f8fc37191338ef23d02a75",
+            "drawn": false,
+            "error": "",
+            "faces": 1,
+            "index": 20,
+            "name": "Riempimento 2",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "989baf178d50d6a625b05dc613e14f0908574d1629a03aa6efa4ca9159f9beff",
+            "drawn": false,
+            "error": "",
+            "faces": 1,
+            "index": 21,
+            "name": "Sweep 24",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "c8a7a14d888982a70db676d0621be2e639ad82c889f96d6e7f1c11e49c0cfedd",
+            "drawn": false,
+            "error": "",
+            "faces": 1,
+            "index": 22,
+            "name": "Taglio 25",
+            "triangles": 0
+          },
+          {
+            "drawn": false,
+            "error": "",
+            "faces": 0,
+            "index": 23,
+            "name": "Curva estratta 3D 11",
+            "triangles": 0
+          },
+          {
+            "drawn": false,
+            "error": "",
+            "faces": 0,
+            "index": 24,
+            "name": "Curva estratta 3D 12",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "bf3be0d426c5b690ad087f9fe8b52c2376f88be22cd72a1992cb06a2c0b5ce0d",
+            "drawn": false,
+            "error": "",
+            "faces": 1,
+            "index": 25,
+            "name": "Loft 34",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "b0b965cf888d5dd70f3bddbb0fdc7f8ffe86edfa06ae322690e834894f19d6bd",
+            "drawn": false,
+            "error": "",
+            "faces": 7,
+            "index": 26,
+            "name": "Cucitura 28",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "b0b965cf888d5dd70f3bddbb0fdc7f8ffe86edfa06ae322690e834894f19d6bd",
+            "drawn": false,
+            "error": "",
+            "faces": 7,
+            "index": 27,
+            "name": "Specchio 32",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "ab7abc31fdc19e0cfb8bbb24e7577282c29b1962d955b82336bebcdc761760c5",
+            "drawn": false,
+            "error": "",
+            "faces": 7,
+            "index": 28,
+            "name": "Specchio 32 \u2014 corpo 2",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "a8021cff7c5e87ee6b1c2cb92d4e73499515c367aab9292aa4a029281d8e2f86",
+            "drawn": false,
+            "error": "",
+            "faces": 14,
+            "index": 29,
+            "name": "Cucitura 34",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "c32a7e6559c62e6db759116ab4ef0b6153e3bdbd4e8a6ea0c3efddb681fce5e3",
+            "drawn": false,
+            "error": "",
+            "faces": 1,
+            "index": 30,
+            "name": "Superficie planare 2",
+            "triangles": 0
+          },
+          {
+            "drawn": false,
+            "error": "",
+            "faces": 0,
+            "index": 31,
+            "name": "Piano 4",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "45fa392ad0b80edc75fe07ef704195667127966bd470a50d11610c6a7448ae0f",
+            "drawn": false,
+            "error": "",
+            "faces": 8,
+            "index": 32,
+            "name": "Estrusione 35",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "5547eb4b22240c203f963596ac454b9db93f3d90710d153822563ce20b127870",
+            "drawn": false,
+            "error": "",
+            "faces": 14,
+            "index": 33,
+            "name": "Taglio 36",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "7d8ce06b7de328804f9437f2c4cf0f4223ceec04eca6ddb565ab398956559f9f",
+            "drawn": false,
+            "error": "",
+            "faces": 15,
+            "index": 34,
+            "name": "Solido cucito 36",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "98f2ba10b408379e9e65d8774fef740edf60bdc9f2d837d93e45f69fc878b422",
+            "drawn": true,
+            "error": "",
+            "faces": 19,
+            "index": 35,
+            "mesh_sha256": "5f4417b02a84a1bf45c0327a3875b0180f55691bb5747ddc8b1f6d81fed0a8c8",
+            "name": "Raccordo 33",
+            "triangles": 30422
+          }
+        ],
+        "cached_load_seconds": 0.897232753,
+        "features": 36,
+        "load_cuda_points": 0,
+        "quality": 1,
+        "read_seconds": 0.351657778,
+        "rebuild_cuda_points": 0,
+        "rebuild_errors": 0,
+        "rebuild_seconds": 7.698301425,
+        "sketches": 14
+      }
+    },
+    {
+      "label": "cuda-mouse2",
+      "repeat": 0,
+      "version": "cuda",
+      "data": {
+        "bodies": [
+          {
+            "brep_sha256": "7b9f6e603ebd7ae98290e0c459bed7af702a4830817758304ecbe463201b7130",
+            "drawn": false,
+            "error": "",
+            "faces": 1,
+            "index": 0,
+            "name": "Estrusione 2",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "851ebc710fd1c6a395c01581dba119de1360c9d8e58112aa18362a2863257b29",
+            "drawn": false,
+            "error": "",
+            "faces": 1,
+            "index": 1,
+            "name": "Taglio 2",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "40b5c50d2cb4bdeb73f35daecd3993c1e41c34a39c74d85dc5f018dcec50d876",
+            "drawn": false,
+            "error": "",
+            "faces": 2,
+            "index": 2,
+            "name": "Estrusione 3",
+            "triangles": 0
+          },
+          {
+            "drawn": false,
+            "error": "",
+            "faces": 0,
+            "index": 3,
+            "name": "Piano 1",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "6163200bc1bc77b7c94d1cfaa16c85d09c398ea41b66e172c820b0d97794fb8b",
+            "drawn": false,
+            "error": "",
+            "faces": 2,
+            "index": 4,
+            "name": "Loft 6",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "154412a5ffec3432d04c806305e83b915a06a0a60802061a608ee7e3474aedb9",
+            "drawn": false,
+            "error": "",
+            "faces": 1,
+            "index": 5,
+            "name": "Estrusione 6",
+            "triangles": 0
+          },
+          {
+            "drawn": false,
+            "error": "",
+            "faces": 0,
+            "index": 6,
+            "name": "Piano 2",
+            "triangles": 0
+          },
+          {
+            "drawn": false,
+            "error": "",
+            "faces": 0,
+            "index": 7,
+            "name": "Piano 3",
+            "triangles": 0
+          },
+          {
+            "drawn": false,
+            "error": "",
+            "faces": 0,
+            "index": 8,
+            "name": "Curva estratta 3D 1",
+            "triangles": 0
+          },
+          {
+            "drawn": false,
+            "error": "",
+            "faces": 0,
+            "index": 9,
+            "name": "Curva estratta 3D 2",
+            "triangles": 0
+          },
+          {
+            "drawn": false,
+            "error": "",
+            "faces": 0,
+            "index": 10,
+            "name": "Curva estratta 3D 5",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "b9cafed4fd3509ccc13ac4ad02d0977cb9e7d9e266654f5d43937fee53d5a1db",
+            "drawn": false,
+            "error": "",
+            "faces": 1,
+            "index": 11,
+            "name": "Loft 15",
+            "triangles": 0
+          },
+          {
+            "drawn": false,
+            "error": "",
+            "faces": 0,
+            "index": 12,
+            "name": "Curva estratta 3D 6",
+            "triangles": 0
+          },
+          {
+            "drawn": false,
+            "error": "",
+            "faces": 0,
+            "index": 13,
+            "name": "Curva estratta 3D 6",
+            "triangles": 0
+          },
+          {
+            "drawn": false,
+            "error": "",
+            "faces": 0,
+            "index": 14,
+            "name": "Curva tagliata 3D 7",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "294a2a418c9cbf4ac33a5e3f7db0163ebf4430dfd96c74719188cb7bb315dc6c",
+            "drawn": false,
+            "error": "",
+            "faces": 1,
+            "index": 15,
+            "name": "Loft 18",
+            "triangles": 0
+          },
+          {
+            "drawn": false,
+            "error": "",
+            "faces": 0,
+            "index": 16,
+            "name": "Curva estratta 3D 7",
+            "triangles": 0
+          },
+          {
+            "drawn": false,
+            "error": "",
+            "faces": 0,
+            "index": 17,
+            "name": "Curva estratta 3D 8",
+            "triangles": 0
+          },
+          {
+            "drawn": false,
+            "error": "",
+            "faces": 0,
+            "index": 18,
+            "name": "Curva estratta 3D 9",
+            "triangles": 0
+          },
+          {
+            "drawn": false,
+            "error": "",
+            "faces": 0,
+            "index": 19,
+            "name": "Curva tagliata 3D 10",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "251ebe426eddb65a195a47eef92e76d3f9b0e59ee1f8fc37191338ef23d02a75",
+            "drawn": false,
+            "error": "",
+            "faces": 1,
+            "index": 20,
+            "name": "Riempimento 2",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "989baf178d50d6a625b05dc613e14f0908574d1629a03aa6efa4ca9159f9beff",
+            "drawn": false,
+            "error": "",
+            "faces": 1,
+            "index": 21,
+            "name": "Sweep 24",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "c8a7a14d888982a70db676d0621be2e639ad82c889f96d6e7f1c11e49c0cfedd",
+            "drawn": false,
+            "error": "",
+            "faces": 1,
+            "index": 22,
+            "name": "Taglio 25",
+            "triangles": 0
+          },
+          {
+            "drawn": false,
+            "error": "",
+            "faces": 0,
+            "index": 23,
+            "name": "Curva estratta 3D 11",
+            "triangles": 0
+          },
+          {
+            "drawn": false,
+            "error": "",
+            "faces": 0,
+            "index": 24,
+            "name": "Curva estratta 3D 12",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "bf3be0d426c5b690ad087f9fe8b52c2376f88be22cd72a1992cb06a2c0b5ce0d",
+            "drawn": false,
+            "error": "",
+            "faces": 1,
+            "index": 25,
+            "name": "Loft 34",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "b0b965cf888d5dd70f3bddbb0fdc7f8ffe86edfa06ae322690e834894f19d6bd",
+            "drawn": false,
+            "error": "",
+            "faces": 7,
+            "index": 26,
+            "name": "Cucitura 28",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "b0b965cf888d5dd70f3bddbb0fdc7f8ffe86edfa06ae322690e834894f19d6bd",
+            "drawn": false,
+            "error": "",
+            "faces": 7,
+            "index": 27,
+            "name": "Specchio 32",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "ab7abc31fdc19e0cfb8bbb24e7577282c29b1962d955b82336bebcdc761760c5",
+            "drawn": false,
+            "error": "",
+            "faces": 7,
+            "index": 28,
+            "name": "Specchio 32 \u2014 corpo 2",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "a8021cff7c5e87ee6b1c2cb92d4e73499515c367aab9292aa4a029281d8e2f86",
+            "drawn": false,
+            "error": "",
+            "faces": 14,
+            "index": 29,
+            "name": "Cucitura 34",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "c32a7e6559c62e6db759116ab4ef0b6153e3bdbd4e8a6ea0c3efddb681fce5e3",
+            "drawn": false,
+            "error": "",
+            "faces": 1,
+            "index": 30,
+            "name": "Superficie planare 2",
+            "triangles": 0
+          },
+          {
+            "drawn": false,
+            "error": "",
+            "faces": 0,
+            "index": 31,
+            "name": "Piano 4",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "45fa392ad0b80edc75fe07ef704195667127966bd470a50d11610c6a7448ae0f",
+            "drawn": false,
+            "error": "",
+            "faces": 8,
+            "index": 32,
+            "name": "Estrusione 35",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "5547eb4b22240c203f963596ac454b9db93f3d90710d153822563ce20b127870",
+            "drawn": false,
+            "error": "",
+            "faces": 14,
+            "index": 33,
+            "name": "Taglio 36",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "7d8ce06b7de328804f9437f2c4cf0f4223ceec04eca6ddb565ab398956559f9f",
+            "drawn": false,
+            "error": "",
+            "faces": 15,
+            "index": 34,
+            "name": "Solido cucito 36",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "98f2ba10b408379e9e65d8774fef740edf60bdc9f2d837d93e45f69fc878b422",
+            "drawn": true,
+            "error": "",
+            "faces": 19,
+            "index": 35,
+            "mesh_sha256": "dcd2b72a3d19d433179acb9d08c39610d21d97509e999615e10423c3f6378a82",
+            "name": "Raccordo 33",
+            "triangles": 30422
+          }
+        ],
+        "cached_load_seconds": 0.916097502,
+        "features": 36,
+        "load_cuda_points": 0,
+        "quality": 1,
+        "read_seconds": 0.36710324,
+        "rebuild_cuda_points": 52468,
+        "rebuild_errors": 0,
+        "rebuild_seconds": 7.671703291,
+        "sketches": 14
+      }
+    },
+    {
+      "label": "cuda-mouse2",
+      "repeat": 1,
+      "version": "cuda",
+      "data": {
+        "bodies": [
+          {
+            "brep_sha256": "7b9f6e603ebd7ae98290e0c459bed7af702a4830817758304ecbe463201b7130",
+            "drawn": false,
+            "error": "",
+            "faces": 1,
+            "index": 0,
+            "name": "Estrusione 2",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "851ebc710fd1c6a395c01581dba119de1360c9d8e58112aa18362a2863257b29",
+            "drawn": false,
+            "error": "",
+            "faces": 1,
+            "index": 1,
+            "name": "Taglio 2",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "40b5c50d2cb4bdeb73f35daecd3993c1e41c34a39c74d85dc5f018dcec50d876",
+            "drawn": false,
+            "error": "",
+            "faces": 2,
+            "index": 2,
+            "name": "Estrusione 3",
+            "triangles": 0
+          },
+          {
+            "drawn": false,
+            "error": "",
+            "faces": 0,
+            "index": 3,
+            "name": "Piano 1",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "6163200bc1bc77b7c94d1cfaa16c85d09c398ea41b66e172c820b0d97794fb8b",
+            "drawn": false,
+            "error": "",
+            "faces": 2,
+            "index": 4,
+            "name": "Loft 6",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "154412a5ffec3432d04c806305e83b915a06a0a60802061a608ee7e3474aedb9",
+            "drawn": false,
+            "error": "",
+            "faces": 1,
+            "index": 5,
+            "name": "Estrusione 6",
+            "triangles": 0
+          },
+          {
+            "drawn": false,
+            "error": "",
+            "faces": 0,
+            "index": 6,
+            "name": "Piano 2",
+            "triangles": 0
+          },
+          {
+            "drawn": false,
+            "error": "",
+            "faces": 0,
+            "index": 7,
+            "name": "Piano 3",
+            "triangles": 0
+          },
+          {
+            "drawn": false,
+            "error": "",
+            "faces": 0,
+            "index": 8,
+            "name": "Curva estratta 3D 1",
+            "triangles": 0
+          },
+          {
+            "drawn": false,
+            "error": "",
+            "faces": 0,
+            "index": 9,
+            "name": "Curva estratta 3D 2",
+            "triangles": 0
+          },
+          {
+            "drawn": false,
+            "error": "",
+            "faces": 0,
+            "index": 10,
+            "name": "Curva estratta 3D 5",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "b9cafed4fd3509ccc13ac4ad02d0977cb9e7d9e266654f5d43937fee53d5a1db",
+            "drawn": false,
+            "error": "",
+            "faces": 1,
+            "index": 11,
+            "name": "Loft 15",
+            "triangles": 0
+          },
+          {
+            "drawn": false,
+            "error": "",
+            "faces": 0,
+            "index": 12,
+            "name": "Curva estratta 3D 6",
+            "triangles": 0
+          },
+          {
+            "drawn": false,
+            "error": "",
+            "faces": 0,
+            "index": 13,
+            "name": "Curva estratta 3D 6",
+            "triangles": 0
+          },
+          {
+            "drawn": false,
+            "error": "",
+            "faces": 0,
+            "index": 14,
+            "name": "Curva tagliata 3D 7",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "294a2a418c9cbf4ac33a5e3f7db0163ebf4430dfd96c74719188cb7bb315dc6c",
+            "drawn": false,
+            "error": "",
+            "faces": 1,
+            "index": 15,
+            "name": "Loft 18",
+            "triangles": 0
+          },
+          {
+            "drawn": false,
+            "error": "",
+            "faces": 0,
+            "index": 16,
+            "name": "Curva estratta 3D 7",
+            "triangles": 0
+          },
+          {
+            "drawn": false,
+            "error": "",
+            "faces": 0,
+            "index": 17,
+            "name": "Curva estratta 3D 8",
+            "triangles": 0
+          },
+          {
+            "drawn": false,
+            "error": "",
+            "faces": 0,
+            "index": 18,
+            "name": "Curva estratta 3D 9",
+            "triangles": 0
+          },
+          {
+            "drawn": false,
+            "error": "",
+            "faces": 0,
+            "index": 19,
+            "name": "Curva tagliata 3D 10",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "251ebe426eddb65a195a47eef92e76d3f9b0e59ee1f8fc37191338ef23d02a75",
+            "drawn": false,
+            "error": "",
+            "faces": 1,
+            "index": 20,
+            "name": "Riempimento 2",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "989baf178d50d6a625b05dc613e14f0908574d1629a03aa6efa4ca9159f9beff",
+            "drawn": false,
+            "error": "",
+            "faces": 1,
+            "index": 21,
+            "name": "Sweep 24",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "c8a7a14d888982a70db676d0621be2e639ad82c889f96d6e7f1c11e49c0cfedd",
+            "drawn": false,
+            "error": "",
+            "faces": 1,
+            "index": 22,
+            "name": "Taglio 25",
+            "triangles": 0
+          },
+          {
+            "drawn": false,
+            "error": "",
+            "faces": 0,
+            "index": 23,
+            "name": "Curva estratta 3D 11",
+            "triangles": 0
+          },
+          {
+            "drawn": false,
+            "error": "",
+            "faces": 0,
+            "index": 24,
+            "name": "Curva estratta 3D 12",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "bf3be0d426c5b690ad087f9fe8b52c2376f88be22cd72a1992cb06a2c0b5ce0d",
+            "drawn": false,
+            "error": "",
+            "faces": 1,
+            "index": 25,
+            "name": "Loft 34",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "b0b965cf888d5dd70f3bddbb0fdc7f8ffe86edfa06ae322690e834894f19d6bd",
+            "drawn": false,
+            "error": "",
+            "faces": 7,
+            "index": 26,
+            "name": "Cucitura 28",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "b0b965cf888d5dd70f3bddbb0fdc7f8ffe86edfa06ae322690e834894f19d6bd",
+            "drawn": false,
+            "error": "",
+            "faces": 7,
+            "index": 27,
+            "name": "Specchio 32",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "ab7abc31fdc19e0cfb8bbb24e7577282c29b1962d955b82336bebcdc761760c5",
+            "drawn": false,
+            "error": "",
+            "faces": 7,
+            "index": 28,
+            "name": "Specchio 32 \u2014 corpo 2",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "a8021cff7c5e87ee6b1c2cb92d4e73499515c367aab9292aa4a029281d8e2f86",
+            "drawn": false,
+            "error": "",
+            "faces": 14,
+            "index": 29,
+            "name": "Cucitura 34",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "c32a7e6559c62e6db759116ab4ef0b6153e3bdbd4e8a6ea0c3efddb681fce5e3",
+            "drawn": false,
+            "error": "",
+            "faces": 1,
+            "index": 30,
+            "name": "Superficie planare 2",
+            "triangles": 0
+          },
+          {
+            "drawn": false,
+            "error": "",
+            "faces": 0,
+            "index": 31,
+            "name": "Piano 4",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "45fa392ad0b80edc75fe07ef704195667127966bd470a50d11610c6a7448ae0f",
+            "drawn": false,
+            "error": "",
+            "faces": 8,
+            "index": 32,
+            "name": "Estrusione 35",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "5547eb4b22240c203f963596ac454b9db93f3d90710d153822563ce20b127870",
+            "drawn": false,
+            "error": "",
+            "faces": 14,
+            "index": 33,
+            "name": "Taglio 36",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "7d8ce06b7de328804f9437f2c4cf0f4223ceec04eca6ddb565ab398956559f9f",
+            "drawn": false,
+            "error": "",
+            "faces": 15,
+            "index": 34,
+            "name": "Solido cucito 36",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "98f2ba10b408379e9e65d8774fef740edf60bdc9f2d837d93e45f69fc878b422",
+            "drawn": true,
+            "error": "",
+            "faces": 19,
+            "index": 35,
+            "mesh_sha256": "dcd2b72a3d19d433179acb9d08c39610d21d97509e999615e10423c3f6378a82",
+            "name": "Raccordo 33",
+            "triangles": 30422
+          }
+        ],
+        "cached_load_seconds": 0.90235931,
+        "features": 36,
+        "load_cuda_points": 0,
+        "quality": 1,
+        "read_seconds": 0.366884554,
+        "rebuild_cuda_points": 52468,
+        "rebuild_errors": 0,
+        "rebuild_seconds": 7.773620493,
+        "sketches": 14
+      }
+    },
+    {
+      "label": "cuda-mouse2",
+      "repeat": 1,
+      "version": "cpu",
+      "data": {
+        "bodies": [
+          {
+            "brep_sha256": "7b9f6e603ebd7ae98290e0c459bed7af702a4830817758304ecbe463201b7130",
+            "drawn": false,
+            "error": "",
+            "faces": 1,
+            "index": 0,
+            "name": "Estrusione 2",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "851ebc710fd1c6a395c01581dba119de1360c9d8e58112aa18362a2863257b29",
+            "drawn": false,
+            "error": "",
+            "faces": 1,
+            "index": 1,
+            "name": "Taglio 2",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "40b5c50d2cb4bdeb73f35daecd3993c1e41c34a39c74d85dc5f018dcec50d876",
+            "drawn": false,
+            "error": "",
+            "faces": 2,
+            "index": 2,
+            "name": "Estrusione 3",
+            "triangles": 0
+          },
+          {
+            "drawn": false,
+            "error": "",
+            "faces": 0,
+            "index": 3,
+            "name": "Piano 1",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "6163200bc1bc77b7c94d1cfaa16c85d09c398ea41b66e172c820b0d97794fb8b",
+            "drawn": false,
+            "error": "",
+            "faces": 2,
+            "index": 4,
+            "name": "Loft 6",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "154412a5ffec3432d04c806305e83b915a06a0a60802061a608ee7e3474aedb9",
+            "drawn": false,
+            "error": "",
+            "faces": 1,
+            "index": 5,
+            "name": "Estrusione 6",
+            "triangles": 0
+          },
+          {
+            "drawn": false,
+            "error": "",
+            "faces": 0,
+            "index": 6,
+            "name": "Piano 2",
+            "triangles": 0
+          },
+          {
+            "drawn": false,
+            "error": "",
+            "faces": 0,
+            "index": 7,
+            "name": "Piano 3",
+            "triangles": 0
+          },
+          {
+            "drawn": false,
+            "error": "",
+            "faces": 0,
+            "index": 8,
+            "name": "Curva estratta 3D 1",
+            "triangles": 0
+          },
+          {
+            "drawn": false,
+            "error": "",
+            "faces": 0,
+            "index": 9,
+            "name": "Curva estratta 3D 2",
+            "triangles": 0
+          },
+          {
+            "drawn": false,
+            "error": "",
+            "faces": 0,
+            "index": 10,
+            "name": "Curva estratta 3D 5",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "b9cafed4fd3509ccc13ac4ad02d0977cb9e7d9e266654f5d43937fee53d5a1db",
+            "drawn": false,
+            "error": "",
+            "faces": 1,
+            "index": 11,
+            "name": "Loft 15",
+            "triangles": 0
+          },
+          {
+            "drawn": false,
+            "error": "",
+            "faces": 0,
+            "index": 12,
+            "name": "Curva estratta 3D 6",
+            "triangles": 0
+          },
+          {
+            "drawn": false,
+            "error": "",
+            "faces": 0,
+            "index": 13,
+            "name": "Curva estratta 3D 6",
+            "triangles": 0
+          },
+          {
+            "drawn": false,
+            "error": "",
+            "faces": 0,
+            "index": 14,
+            "name": "Curva tagliata 3D 7",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "294a2a418c9cbf4ac33a5e3f7db0163ebf4430dfd96c74719188cb7bb315dc6c",
+            "drawn": false,
+            "error": "",
+            "faces": 1,
+            "index": 15,
+            "name": "Loft 18",
+            "triangles": 0
+          },
+          {
+            "drawn": false,
+            "error": "",
+            "faces": 0,
+            "index": 16,
+            "name": "Curva estratta 3D 7",
+            "triangles": 0
+          },
+          {
+            "drawn": false,
+            "error": "",
+            "faces": 0,
+            "index": 17,
+            "name": "Curva estratta 3D 8",
+            "triangles": 0
+          },
+          {
+            "drawn": false,
+            "error": "",
+            "faces": 0,
+            "index": 18,
+            "name": "Curva estratta 3D 9",
+            "triangles": 0
+          },
+          {
+            "drawn": false,
+            "error": "",
+            "faces": 0,
+            "index": 19,
+            "name": "Curva tagliata 3D 10",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "251ebe426eddb65a195a47eef92e76d3f9b0e59ee1f8fc37191338ef23d02a75",
+            "drawn": false,
+            "error": "",
+            "faces": 1,
+            "index": 20,
+            "name": "Riempimento 2",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "989baf178d50d6a625b05dc613e14f0908574d1629a03aa6efa4ca9159f9beff",
+            "drawn": false,
+            "error": "",
+            "faces": 1,
+            "index": 21,
+            "name": "Sweep 24",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "c8a7a14d888982a70db676d0621be2e639ad82c889f96d6e7f1c11e49c0cfedd",
+            "drawn": false,
+            "error": "",
+            "faces": 1,
+            "index": 22,
+            "name": "Taglio 25",
+            "triangles": 0
+          },
+          {
+            "drawn": false,
+            "error": "",
+            "faces": 0,
+            "index": 23,
+            "name": "Curva estratta 3D 11",
+            "triangles": 0
+          },
+          {
+            "drawn": false,
+            "error": "",
+            "faces": 0,
+            "index": 24,
+            "name": "Curva estratta 3D 12",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "bf3be0d426c5b690ad087f9fe8b52c2376f88be22cd72a1992cb06a2c0b5ce0d",
+            "drawn": false,
+            "error": "",
+            "faces": 1,
+            "index": 25,
+            "name": "Loft 34",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "b0b965cf888d5dd70f3bddbb0fdc7f8ffe86edfa06ae322690e834894f19d6bd",
+            "drawn": false,
+            "error": "",
+            "faces": 7,
+            "index": 26,
+            "name": "Cucitura 28",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "b0b965cf888d5dd70f3bddbb0fdc7f8ffe86edfa06ae322690e834894f19d6bd",
+            "drawn": false,
+            "error": "",
+            "faces": 7,
+            "index": 27,
+            "name": "Specchio 32",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "ab7abc31fdc19e0cfb8bbb24e7577282c29b1962d955b82336bebcdc761760c5",
+            "drawn": false,
+            "error": "",
+            "faces": 7,
+            "index": 28,
+            "name": "Specchio 32 \u2014 corpo 2",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "a8021cff7c5e87ee6b1c2cb92d4e73499515c367aab9292aa4a029281d8e2f86",
+            "drawn": false,
+            "error": "",
+            "faces": 14,
+            "index": 29,
+            "name": "Cucitura 34",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "c32a7e6559c62e6db759116ab4ef0b6153e3bdbd4e8a6ea0c3efddb681fce5e3",
+            "drawn": false,
+            "error": "",
+            "faces": 1,
+            "index": 30,
+            "name": "Superficie planare 2",
+            "triangles": 0
+          },
+          {
+            "drawn": false,
+            "error": "",
+            "faces": 0,
+            "index": 31,
+            "name": "Piano 4",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "45fa392ad0b80edc75fe07ef704195667127966bd470a50d11610c6a7448ae0f",
+            "drawn": false,
+            "error": "",
+            "faces": 8,
+            "index": 32,
+            "name": "Estrusione 35",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "5547eb4b22240c203f963596ac454b9db93f3d90710d153822563ce20b127870",
+            "drawn": false,
+            "error": "",
+            "faces": 14,
+            "index": 33,
+            "name": "Taglio 36",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "7d8ce06b7de328804f9437f2c4cf0f4223ceec04eca6ddb565ab398956559f9f",
+            "drawn": false,
+            "error": "",
+            "faces": 15,
+            "index": 34,
+            "name": "Solido cucito 36",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "98f2ba10b408379e9e65d8774fef740edf60bdc9f2d837d93e45f69fc878b422",
+            "drawn": true,
+            "error": "",
+            "faces": 19,
+            "index": 35,
+            "mesh_sha256": "5f4417b02a84a1bf45c0327a3875b0180f55691bb5747ddc8b1f6d81fed0a8c8",
+            "name": "Raccordo 33",
+            "triangles": 30422
+          }
+        ],
+        "cached_load_seconds": 0.871938462,
+        "features": 36,
+        "load_cuda_points": 0,
+        "quality": 1,
+        "read_seconds": 0.342219615,
+        "rebuild_cuda_points": 0,
+        "rebuild_errors": 0,
+        "rebuild_seconds": 7.684239831,
+        "sketches": 14
+      }
+    },
+    {
+      "label": "cuda-mouse2",
+      "repeat": 2,
+      "version": "cpu",
+      "data": {
+        "bodies": [
+          {
+            "brep_sha256": "7b9f6e603ebd7ae98290e0c459bed7af702a4830817758304ecbe463201b7130",
+            "drawn": false,
+            "error": "",
+            "faces": 1,
+            "index": 0,
+            "name": "Estrusione 2",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "851ebc710fd1c6a395c01581dba119de1360c9d8e58112aa18362a2863257b29",
+            "drawn": false,
+            "error": "",
+            "faces": 1,
+            "index": 1,
+            "name": "Taglio 2",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "40b5c50d2cb4bdeb73f35daecd3993c1e41c34a39c74d85dc5f018dcec50d876",
+            "drawn": false,
+            "error": "",
+            "faces": 2,
+            "index": 2,
+            "name": "Estrusione 3",
+            "triangles": 0
+          },
+          {
+            "drawn": false,
+            "error": "",
+            "faces": 0,
+            "index": 3,
+            "name": "Piano 1",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "6163200bc1bc77b7c94d1cfaa16c85d09c398ea41b66e172c820b0d97794fb8b",
+            "drawn": false,
+            "error": "",
+            "faces": 2,
+            "index": 4,
+            "name": "Loft 6",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "154412a5ffec3432d04c806305e83b915a06a0a60802061a608ee7e3474aedb9",
+            "drawn": false,
+            "error": "",
+            "faces": 1,
+            "index": 5,
+            "name": "Estrusione 6",
+            "triangles": 0
+          },
+          {
+            "drawn": false,
+            "error": "",
+            "faces": 0,
+            "index": 6,
+            "name": "Piano 2",
+            "triangles": 0
+          },
+          {
+            "drawn": false,
+            "error": "",
+            "faces": 0,
+            "index": 7,
+            "name": "Piano 3",
+            "triangles": 0
+          },
+          {
+            "drawn": false,
+            "error": "",
+            "faces": 0,
+            "index": 8,
+            "name": "Curva estratta 3D 1",
+            "triangles": 0
+          },
+          {
+            "drawn": false,
+            "error": "",
+            "faces": 0,
+            "index": 9,
+            "name": "Curva estratta 3D 2",
+            "triangles": 0
+          },
+          {
+            "drawn": false,
+            "error": "",
+            "faces": 0,
+            "index": 10,
+            "name": "Curva estratta 3D 5",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "b9cafed4fd3509ccc13ac4ad02d0977cb9e7d9e266654f5d43937fee53d5a1db",
+            "drawn": false,
+            "error": "",
+            "faces": 1,
+            "index": 11,
+            "name": "Loft 15",
+            "triangles": 0
+          },
+          {
+            "drawn": false,
+            "error": "",
+            "faces": 0,
+            "index": 12,
+            "name": "Curva estratta 3D 6",
+            "triangles": 0
+          },
+          {
+            "drawn": false,
+            "error": "",
+            "faces": 0,
+            "index": 13,
+            "name": "Curva estratta 3D 6",
+            "triangles": 0
+          },
+          {
+            "drawn": false,
+            "error": "",
+            "faces": 0,
+            "index": 14,
+            "name": "Curva tagliata 3D 7",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "294a2a418c9cbf4ac33a5e3f7db0163ebf4430dfd96c74719188cb7bb315dc6c",
+            "drawn": false,
+            "error": "",
+            "faces": 1,
+            "index": 15,
+            "name": "Loft 18",
+            "triangles": 0
+          },
+          {
+            "drawn": false,
+            "error": "",
+            "faces": 0,
+            "index": 16,
+            "name": "Curva estratta 3D 7",
+            "triangles": 0
+          },
+          {
+            "drawn": false,
+            "error": "",
+            "faces": 0,
+            "index": 17,
+            "name": "Curva estratta 3D 8",
+            "triangles": 0
+          },
+          {
+            "drawn": false,
+            "error": "",
+            "faces": 0,
+            "index": 18,
+            "name": "Curva estratta 3D 9",
+            "triangles": 0
+          },
+          {
+            "drawn": false,
+            "error": "",
+            "faces": 0,
+            "index": 19,
+            "name": "Curva tagliata 3D 10",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "251ebe426eddb65a195a47eef92e76d3f9b0e59ee1f8fc37191338ef23d02a75",
+            "drawn": false,
+            "error": "",
+            "faces": 1,
+            "index": 20,
+            "name": "Riempimento 2",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "989baf178d50d6a625b05dc613e14f0908574d1629a03aa6efa4ca9159f9beff",
+            "drawn": false,
+            "error": "",
+            "faces": 1,
+            "index": 21,
+            "name": "Sweep 24",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "c8a7a14d888982a70db676d0621be2e639ad82c889f96d6e7f1c11e49c0cfedd",
+            "drawn": false,
+            "error": "",
+            "faces": 1,
+            "index": 22,
+            "name": "Taglio 25",
+            "triangles": 0
+          },
+          {
+            "drawn": false,
+            "error": "",
+            "faces": 0,
+            "index": 23,
+            "name": "Curva estratta 3D 11",
+            "triangles": 0
+          },
+          {
+            "drawn": false,
+            "error": "",
+            "faces": 0,
+            "index": 24,
+            "name": "Curva estratta 3D 12",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "bf3be0d426c5b690ad087f9fe8b52c2376f88be22cd72a1992cb06a2c0b5ce0d",
+            "drawn": false,
+            "error": "",
+            "faces": 1,
+            "index": 25,
+            "name": "Loft 34",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "b0b965cf888d5dd70f3bddbb0fdc7f8ffe86edfa06ae322690e834894f19d6bd",
+            "drawn": false,
+            "error": "",
+            "faces": 7,
+            "index": 26,
+            "name": "Cucitura 28",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "b0b965cf888d5dd70f3bddbb0fdc7f8ffe86edfa06ae322690e834894f19d6bd",
+            "drawn": false,
+            "error": "",
+            "faces": 7,
+            "index": 27,
+            "name": "Specchio 32",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "ab7abc31fdc19e0cfb8bbb24e7577282c29b1962d955b82336bebcdc761760c5",
+            "drawn": false,
+            "error": "",
+            "faces": 7,
+            "index": 28,
+            "name": "Specchio 32 \u2014 corpo 2",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "a8021cff7c5e87ee6b1c2cb92d4e73499515c367aab9292aa4a029281d8e2f86",
+            "drawn": false,
+            "error": "",
+            "faces": 14,
+            "index": 29,
+            "name": "Cucitura 34",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "c32a7e6559c62e6db759116ab4ef0b6153e3bdbd4e8a6ea0c3efddb681fce5e3",
+            "drawn": false,
+            "error": "",
+            "faces": 1,
+            "index": 30,
+            "name": "Superficie planare 2",
+            "triangles": 0
+          },
+          {
+            "drawn": false,
+            "error": "",
+            "faces": 0,
+            "index": 31,
+            "name": "Piano 4",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "45fa392ad0b80edc75fe07ef704195667127966bd470a50d11610c6a7448ae0f",
+            "drawn": false,
+            "error": "",
+            "faces": 8,
+            "index": 32,
+            "name": "Estrusione 35",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "5547eb4b22240c203f963596ac454b9db93f3d90710d153822563ce20b127870",
+            "drawn": false,
+            "error": "",
+            "faces": 14,
+            "index": 33,
+            "name": "Taglio 36",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "7d8ce06b7de328804f9437f2c4cf0f4223ceec04eca6ddb565ab398956559f9f",
+            "drawn": false,
+            "error": "",
+            "faces": 15,
+            "index": 34,
+            "name": "Solido cucito 36",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "98f2ba10b408379e9e65d8774fef740edf60bdc9f2d837d93e45f69fc878b422",
+            "drawn": true,
+            "error": "",
+            "faces": 19,
+            "index": 35,
+            "mesh_sha256": "5f4417b02a84a1bf45c0327a3875b0180f55691bb5747ddc8b1f6d81fed0a8c8",
+            "name": "Raccordo 33",
+            "triangles": 30422
+          }
+        ],
+        "cached_load_seconds": 0.894587894,
+        "features": 36,
+        "load_cuda_points": 0,
+        "quality": 1,
+        "read_seconds": 0.360529654,
+        "rebuild_cuda_points": 0,
+        "rebuild_errors": 0,
+        "rebuild_seconds": 7.574386324,
+        "sketches": 14
+      }
+    },
+    {
+      "label": "cuda-mouse2",
+      "repeat": 2,
+      "version": "cuda",
+      "data": {
+        "bodies": [
+          {
+            "brep_sha256": "7b9f6e603ebd7ae98290e0c459bed7af702a4830817758304ecbe463201b7130",
+            "drawn": false,
+            "error": "",
+            "faces": 1,
+            "index": 0,
+            "name": "Estrusione 2",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "851ebc710fd1c6a395c01581dba119de1360c9d8e58112aa18362a2863257b29",
+            "drawn": false,
+            "error": "",
+            "faces": 1,
+            "index": 1,
+            "name": "Taglio 2",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "40b5c50d2cb4bdeb73f35daecd3993c1e41c34a39c74d85dc5f018dcec50d876",
+            "drawn": false,
+            "error": "",
+            "faces": 2,
+            "index": 2,
+            "name": "Estrusione 3",
+            "triangles": 0
+          },
+          {
+            "drawn": false,
+            "error": "",
+            "faces": 0,
+            "index": 3,
+            "name": "Piano 1",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "6163200bc1bc77b7c94d1cfaa16c85d09c398ea41b66e172c820b0d97794fb8b",
+            "drawn": false,
+            "error": "",
+            "faces": 2,
+            "index": 4,
+            "name": "Loft 6",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "154412a5ffec3432d04c806305e83b915a06a0a60802061a608ee7e3474aedb9",
+            "drawn": false,
+            "error": "",
+            "faces": 1,
+            "index": 5,
+            "name": "Estrusione 6",
+            "triangles": 0
+          },
+          {
+            "drawn": false,
+            "error": "",
+            "faces": 0,
+            "index": 6,
+            "name": "Piano 2",
+            "triangles": 0
+          },
+          {
+            "drawn": false,
+            "error": "",
+            "faces": 0,
+            "index": 7,
+            "name": "Piano 3",
+            "triangles": 0
+          },
+          {
+            "drawn": false,
+            "error": "",
+            "faces": 0,
+            "index": 8,
+            "name": "Curva estratta 3D 1",
+            "triangles": 0
+          },
+          {
+            "drawn": false,
+            "error": "",
+            "faces": 0,
+            "index": 9,
+            "name": "Curva estratta 3D 2",
+            "triangles": 0
+          },
+          {
+            "drawn": false,
+            "error": "",
+            "faces": 0,
+            "index": 10,
+            "name": "Curva estratta 3D 5",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "b9cafed4fd3509ccc13ac4ad02d0977cb9e7d9e266654f5d43937fee53d5a1db",
+            "drawn": false,
+            "error": "",
+            "faces": 1,
+            "index": 11,
+            "name": "Loft 15",
+            "triangles": 0
+          },
+          {
+            "drawn": false,
+            "error": "",
+            "faces": 0,
+            "index": 12,
+            "name": "Curva estratta 3D 6",
+            "triangles": 0
+          },
+          {
+            "drawn": false,
+            "error": "",
+            "faces": 0,
+            "index": 13,
+            "name": "Curva estratta 3D 6",
+            "triangles": 0
+          },
+          {
+            "drawn": false,
+            "error": "",
+            "faces": 0,
+            "index": 14,
+            "name": "Curva tagliata 3D 7",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "294a2a418c9cbf4ac33a5e3f7db0163ebf4430dfd96c74719188cb7bb315dc6c",
+            "drawn": false,
+            "error": "",
+            "faces": 1,
+            "index": 15,
+            "name": "Loft 18",
+            "triangles": 0
+          },
+          {
+            "drawn": false,
+            "error": "",
+            "faces": 0,
+            "index": 16,
+            "name": "Curva estratta 3D 7",
+            "triangles": 0
+          },
+          {
+            "drawn": false,
+            "error": "",
+            "faces": 0,
+            "index": 17,
+            "name": "Curva estratta 3D 8",
+            "triangles": 0
+          },
+          {
+            "drawn": false,
+            "error": "",
+            "faces": 0,
+            "index": 18,
+            "name": "Curva estratta 3D 9",
+            "triangles": 0
+          },
+          {
+            "drawn": false,
+            "error": "",
+            "faces": 0,
+            "index": 19,
+            "name": "Curva tagliata 3D 10",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "251ebe426eddb65a195a47eef92e76d3f9b0e59ee1f8fc37191338ef23d02a75",
+            "drawn": false,
+            "error": "",
+            "faces": 1,
+            "index": 20,
+            "name": "Riempimento 2",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "989baf178d50d6a625b05dc613e14f0908574d1629a03aa6efa4ca9159f9beff",
+            "drawn": false,
+            "error": "",
+            "faces": 1,
+            "index": 21,
+            "name": "Sweep 24",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "c8a7a14d888982a70db676d0621be2e639ad82c889f96d6e7f1c11e49c0cfedd",
+            "drawn": false,
+            "error": "",
+            "faces": 1,
+            "index": 22,
+            "name": "Taglio 25",
+            "triangles": 0
+          },
+          {
+            "drawn": false,
+            "error": "",
+            "faces": 0,
+            "index": 23,
+            "name": "Curva estratta 3D 11",
+            "triangles": 0
+          },
+          {
+            "drawn": false,
+            "error": "",
+            "faces": 0,
+            "index": 24,
+            "name": "Curva estratta 3D 12",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "bf3be0d426c5b690ad087f9fe8b52c2376f88be22cd72a1992cb06a2c0b5ce0d",
+            "drawn": false,
+            "error": "",
+            "faces": 1,
+            "index": 25,
+            "name": "Loft 34",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "b0b965cf888d5dd70f3bddbb0fdc7f8ffe86edfa06ae322690e834894f19d6bd",
+            "drawn": false,
+            "error": "",
+            "faces": 7,
+            "index": 26,
+            "name": "Cucitura 28",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "b0b965cf888d5dd70f3bddbb0fdc7f8ffe86edfa06ae322690e834894f19d6bd",
+            "drawn": false,
+            "error": "",
+            "faces": 7,
+            "index": 27,
+            "name": "Specchio 32",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "ab7abc31fdc19e0cfb8bbb24e7577282c29b1962d955b82336bebcdc761760c5",
+            "drawn": false,
+            "error": "",
+            "faces": 7,
+            "index": 28,
+            "name": "Specchio 32 \u2014 corpo 2",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "a8021cff7c5e87ee6b1c2cb92d4e73499515c367aab9292aa4a029281d8e2f86",
+            "drawn": false,
+            "error": "",
+            "faces": 14,
+            "index": 29,
+            "name": "Cucitura 34",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "c32a7e6559c62e6db759116ab4ef0b6153e3bdbd4e8a6ea0c3efddb681fce5e3",
+            "drawn": false,
+            "error": "",
+            "faces": 1,
+            "index": 30,
+            "name": "Superficie planare 2",
+            "triangles": 0
+          },
+          {
+            "drawn": false,
+            "error": "",
+            "faces": 0,
+            "index": 31,
+            "name": "Piano 4",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "45fa392ad0b80edc75fe07ef704195667127966bd470a50d11610c6a7448ae0f",
+            "drawn": false,
+            "error": "",
+            "faces": 8,
+            "index": 32,
+            "name": "Estrusione 35",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "5547eb4b22240c203f963596ac454b9db93f3d90710d153822563ce20b127870",
+            "drawn": false,
+            "error": "",
+            "faces": 14,
+            "index": 33,
+            "name": "Taglio 36",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "7d8ce06b7de328804f9437f2c4cf0f4223ceec04eca6ddb565ab398956559f9f",
+            "drawn": false,
+            "error": "",
+            "faces": 15,
+            "index": 34,
+            "name": "Solido cucito 36",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "98f2ba10b408379e9e65d8774fef740edf60bdc9f2d837d93e45f69fc878b422",
+            "drawn": true,
+            "error": "",
+            "faces": 19,
+            "index": 35,
+            "mesh_sha256": "dcd2b72a3d19d433179acb9d08c39610d21d97509e999615e10423c3f6378a82",
+            "name": "Raccordo 33",
+            "triangles": 30422
+          }
+        ],
+        "cached_load_seconds": 0.901122387,
+        "features": 36,
+        "load_cuda_points": 0,
+        "quality": 1,
+        "read_seconds": 0.327593037,
+        "rebuild_cuda_points": 47063,
+        "rebuild_errors": 0,
+        "rebuild_seconds": 7.594935104,
+        "sketches": 14
+      }
+    }
+  ],
+  "ct_cuda_diagnostic": {
+    "bodies": [
+      {
+        "brep_sha256": "185960addd5f71c0cf6f3f81f345316a085431cf53af43013d4b601da9d0333f",
+        "drawn": false,
+        "error": "",
+        "faces": 12,
+        "index": 0,
+        "name": "Rivoluzione 1",
+        "triangles": 0
+      },
+      {
+        "brep_sha256": "dff028f9018bbe71273c1b64acdcad980da255e1fbddf3aa04db9606a06b2a20",
+        "drawn": false,
+        "error": "",
+        "faces": 15,
+        "index": 1,
+        "name": "Rivoluzione 2",
+        "triangles": 0
+      },
+      {
+        "drawn": false,
+        "error": "",
+        "faces": 0,
+        "index": 2,
+        "name": "Piano 1",
+        "triangles": 0
+      },
+      {
+        "brep_sha256": "b15ccb6f1f1da99c1401cf1637411bc00255fd026ed1b08e88ce0ad0bf645a15",
+        "drawn": false,
+        "error": "",
+        "faces": 19,
+        "index": 3,
+        "name": "Sweep 4",
+        "triangles": 0
+      },
+      {
+        "brep_sha256": "9525ac48d0e927fa881a2c26c06fb56b1813cc94573365f4a9242bd811783d22",
+        "drawn": false,
+        "error": "",
+        "faces": 263,
+        "index": 4,
+        "name": "Ripetizione 5",
+        "triangles": 0
+      },
+      {
+        "brep_sha256": "c0fe04110e0f173a13729b4213bd5255eb89c9a3856d87055ae8acb3a4cecc80",
+        "drawn": false,
+        "error": "",
+        "faces": 264,
+        "index": 5,
+        "name": "Rivoluzione 6",
+        "triangles": 0
+      },
+      {
+        "drawn": false,
+        "error": "",
+        "faces": 0,
+        "index": 6,
+        "name": "Piano 2",
+        "triangles": 0
+      },
+      {
+        "drawn": false,
+        "error": "",
+        "faces": 0,
+        "index": 7,
+        "name": "Piano 3",
+        "triangles": 0
+      },
+      {
+        "drawn": false,
+        "error": "",
+        "faces": 0,
+        "index": 8,
+        "name": "Elica 9",
+        "triangles": 0
+      },
+      {
+        "brep_sha256": "d9598453bd30003e2db7d11ded2d5443ea0afa128dd2259262ff40d89d489d4d",
+        "drawn": false,
+        "error": "",
+        "faces": 269,
+        "index": 9,
+        "name": "Sweep 10",
+        "triangles": 0
+      },
+      {
+        "brep_sha256": "e4b4db5d8fa911fbbb03a63540cf4fd2b2d068212c71039e1a50e3697d4f6953",
+        "drawn": true,
+        "error": "",
+        "faces": 269,
+        "index": 10,
+        "mesh_sha256": "3a93eaff3e95151fb7568b2590bf2bf6bd76c353ae63bee1bf361384a83ab142",
+        "name": "Rivoluzione 11",
+        "triangles": 4108
+      }
+    ],
+    "cached_load_seconds": 4.036795436,
+    "features": 11,
+    "load_cuda_points": 0,
+    "quality": 1,
+    "read_seconds": 0.060955985,
+    "rebuild_cuda_points": 0,
+    "rebuild_errors": 0,
+    "rebuild_seconds": 10.714851332,
+    "sketches": 10
+  },
+  "gpu": "Quadro RTX 3000, 6144 MiB, driver 615.78.08",
+  "cuda_environment": {
+    "CUDA_DISABLE_PERF_BOOST": "1"
+  },
+  "cuda_numeric": {
+    "passed": true,
+    "document_sha256": "7ffa64559f38820ed0f070fa233efc27a2b5ea82ee749e04817a756cb1ae92ce",
+    "different_bodies": [
+      {
+        "index": 35,
+        "vertices": {
+          "shape_equal": true,
+          "reference_count": 91098,
+          "candidate_count": 91098,
+          "numeric_different_rows": 0,
+          "bitwise_different_rows": 0,
+          "max_distance": 0.0,
+          "rms_distance": 0.0,
+          "max_component": 0.0,
+          "worst_row": 0,
+          "passed": true
+        },
+        "normals": {
+          "shape_equal": true,
+          "reference_count": 91098,
+          "candidate_count": 91098,
+          "numeric_different_rows": 3,
+          "bitwise_different_rows": 3,
+          "max_distance": 1.1641532182693481e-10,
+          "rms_distance": 6.680613537241535e-13,
+          "max_component": 1.1641532182693481e-10,
+          "worst_row": 78375,
+          "passed": true,
+          "reference_zero_normals": 0,
+          "candidate_zero_normals": 0,
+          "zero_mask_equal": true,
+          "max_angle_degrees": 6.670103119303557e-09
+        },
+        "topology": {
+          "triangle_faces": {
+            "equal": true,
+            "reference_count": 30366,
+            "candidate_count": 30366
+          },
+          "edge_ids": {
+            "equal": true,
+            "reference_count": 54,
+            "candidate_count": 54
+          },
+          "face_ids": {
+            "equal": true,
+            "reference_count": 19,
+            "candidate_count": 19
+          },
+          "face_edges": {
+            "equal": true
+          },
+          "edge_polyline_sizes": {
+            "equal": true
+          }
+        },
+        "triangles": {
+          "reference_degenerate": 0,
+          "candidate_degenerate": 0,
+          "degenerate_mask_equal": true,
+          "winding_flips": 0
+        }
+      }
+    ],
+    "visible_triangles": 30366
+  },
+  "current_document": {
+    "source": "/home/myungit/Documenti/File_Esempio/CT0578.prt",
+    "sha256": "049a83c7e6686cd60903f7f54cc43f9dfa4ec133973899625b92c115042f5229",
+    "bytes": 12069932
+  },
+  "historical_document_sha256": "b87b96efa0e8971d89f8fe5bdad5b63d8119831d3f09430122d51770dc851fbd",
+  "checks": {
+    "kernel_cases": [
+      "BooleanBoxesGeneralPosition",
+      "BooleanCoplanarBoxes",
+      "BooleanNestedAndDisjoint",
+      "BooleanBoxAndCylinder",
+      "BooleanExtrusionAndBox",
+      "BooleanChained",
+      "BooleanCylinderCylinder",
+      "BooleanCurvedExtrusions",
+      "BooleanRevolvedSolids",
+      "BooleanCoincidentSurfaces",
+      "BooleanStressGrid",
+      "BooleanCylinderFourthOrderCapContact",
+      "BooleanStressCylinderGrid",
+      "BooleanTangentContacts",
+      "BooleanStressCylinders",
+      "BooleanStressGeneral",
+      "BooleanTangentCurves",
+      "BooleanThroughPoles",
+      "BooleanSheets",
+      "BooleanPartialCoincidence",
+      "BooleanVillarceau",
+      "BooleanHigherOrderContacts",
+      "BooleanCoaxialRevolutions",
+      "BooleanCoplanarClosedCircleWithTangentTorus",
+      "BooleanPartialSplineCoincidence",
+      "BooleanParallelMatchesSequential",
+      "BooleanDisjointValidationAndUnification",
+      "BooleanTolerantVertices",
+      "BooleanShellSlabsThroughHoleVertex",
+      "BooleanPartialClosedSplineRevolution",
+      "BooleanThinSplineSlivers",
+      "TessellateBooleans",
+      "BlendChainsMatchBooleanPath",
+      "HistoryBooleanDeclaresCutSplitAndUnchangedFaces",
+      "HistoryBooleanAndUnifyComposeEveryMergedFace",
+      "HistoryBooleanRetainsBothCoincidentOperands",
+      "HistoryBooleanEmptyDisjointAndFailureOutputs",
+      "HistoryBooleanDeclarationsAreThreadDeterministic",
+      "ProjectOnLineAndCircle",
+      "ProjectOnBSplineMatchesOcct",
+      "ProjectOnEllipseMatchesOcct",
+      "ProjectOnTransformedCurve",
+      "ProjectBoundedCandidatesRetainEveryBranch",
+      "ProjectBoundedCandidatesTransformsAndLimits",
+      "ProjectBoundedCandidatesHighDegreeAndNarrowSpans",
+      "ProjectMinimumRestrictedRangesMatchesExhaustive",
+      "ProjectMinimumManySpansAnalytic",
+      "ProjectBoundedRangeKnotEndpoints",
+      "ProjectOnPlaneAndCylinder",
+      "ProjectOnConeSphereTorus",
+      "ProjectOnBSplineSurface",
+      "ProjectOnExtrusionAndRevolution",
+      "ProjectOnPlanarRevolution",
+      "ProjectOnInfiniteExtrusion",
+      "ProjectOnSkewRevolutionWindows",
+      "FillInfluencePreservesProjectionAndTangency",
+      "ProjectedCutPlanarHole",
+      "ProjectedCutBandAlongExistingEdges",
+      "ProjectedCutChordOfCurvedEdge",
+      "ProjectedCutOnCylinderFirstFaceOnly",
+      "ProjectedCurveClosedOnCylinder",
+      "HistoryTrimExtendShellAndProjectionComposeOrigins",
+      "CurveLengthCachePreservesQuadratureAndIdentity",
+      "cancel_scope_and_evaluation",
+      "cancel_running_parallel_workers"
+    ],
+    "kernel_distinct_passed": 65,
+    "ctest_distinct_passed": 53,
+    "ctest_skipped": 0,
+    "initial_fixture_failure": [
+      "forgecad_sketch_story_tests"
+    ],
+    "fixture_reproduced_on_reference": true,
+    "fixture_directory_created": "/tmp/sketch-story",
+    "rerun_passed": true,
+    "analytic_reference": "[  OK  ] ProjectBoundedRangeKnotEndpoints\n1/1 test superati\n",
+    "oracle": "PASS queries=31920 double_values=500233 bit identical"
+  },
+  "other_documents": [
+    {
+      "label": "mouse2",
+      "source": "/home/myungit/Linux_CAD_forFree/forgecad-linux-solver/benchmarks/loft-refinement-2026-10-27/mouse2-input.prt",
+      "sha256": "7ffa64559f38820ed0f070fa233efc27a2b5ea82ee749e04817a756cb1ae92ce",
+      "bodies_mesh_errors_equal": true,
+      "errors": 0
+    },
+    {
+      "label": "assembly",
+      "source": "/home/myungit/Linux_CAD_forFree/forgecad-linux-solver/benchmarks/loft-refinement-2026-10-27/assembly-input.prt",
+      "sha256": "5b3d658321f460e826ff1e3c1415054f003ebc03325aa9e69da2a346be227791",
+      "bodies_mesh_errors_equal": true,
+      "errors": 4
+    }
+  ],
+  "architecture": {
+    "edges": [
+      {
+        "source": "kernel/fk_boolean.cpp",
+        "target": "kernel/fk_curve_algo.h",
+        "kind": "call",
+        "sites": [
+          {
+            "line": 882,
+            "symbol": "ForgeCad::Kernel::projectPointCandidatesWithin",
+            "owner": "ForgeCad::Kernel::BooleanBuilder::splitAtPoints"
+          }
+        ]
+      }
+    ],
+    "validated_sites": 81637,
+    "incoming_outgoing_same_edge": true
+  },
+  "final_fingerprints": {
+    "kernel/fk_boolean.cpp": "3d965b1ae6bddf9049b92bf8ad441a4ef1fc943294de22d704b2f236bb9e94c7",
+    "kernel/fk_curve_algo.cpp": "4055c830965fb2c0741ca9292e18166dcec0c2528f3228bc33fa2f297fa2e60e",
+    "kernel/tests/test_curve_algo.cpp": "f9914a678579fcfa424f5e730448e495f4f710cfd5491f4ddd8af6eff7ddfdcb",
+    "tools/generate_architecture.py": "cde444bf0676e11a14cca5436b8ca75df22b105199e346dcd81c1450bd7b0ef6",
+    "forgecad-linux-solver/forgecad": "522da45bba4afb2bc06b70166005ba078a583bb2f1ae82728a3f3c351fc2ca2d",
+    "forgecad-linux-solver/kernel/libforgekernel.a": "2ec264d6e25e83faca0a8208e9b03aff20557fe3b1a83ada2b7807acf34b2733"
+  },
+  "baseline_library_sha256": "601b46970093f7beec706328275ff61de74e0ead0b13faf3e04998a67022c02e",
+  "artifacts": "/home/myungit/Linux_CAD_forFree/forgecad-linux-solver/benchmarks/boolean-projection-filter-2026-10-28",
+  "limitations": [
+    "Three alternating process pairs per comparison; no confidence intervals or clock/temperature control.",
+    "Current CT and historical CT are distinct documents; speedups must not be multiplied.",
+    "CUDA availability initialized before document timers; transfers and surface upload during rebuild included.",
+    "Geometry tests and numeric snapshots run after timing batches; their times are diagnostic only.",
+    "No native macOS build, new CUDA kernel, 10x global claim, desktop installation, commit or push."
+  ]
+}
