@@ -338,6 +338,8 @@ void CadViewport::applyHistoryPosition() {
     // Un operando consumato resta nella storia, ma non e' un corpo
     // indipendente nella posizione corrente. Nasconderlo anche se l'utente
     // lo aveva mostrato durante il rollback, senza perdere la preferenza.
+    for (int i = 0; i < historyPosition(); ++i)
+        if (ForgeCad::isExposedPatternAggregate(i, extrusions_, historyPosition())) extrusions_[i].visible = false;
     const auto roots = storyboardRoots();
     consumedBodies_.clear();
     for (ExtrusionObject &feature : extrusions_)
@@ -456,14 +458,15 @@ QVector<int> CadViewport::resultBodiesBefore(int position, const QSet<quint64> &
         const ExtrusionObject &feature = extrusions_.at(index);
         if (position >= 0 && index >= position && !extraFeatures.contains(feature.featureId)) continue;
         if (!feature.modelBodyId || feature.suppressed || !feature.error.isEmpty() || !feature.forgeBody) continue;
-        for (int operand : ForgeCad::hiddenOperands(feature))
+        for (int operand : ForgeCad::hiddenOperands(feature, extrusions_))
             if (operand >= 0 && operand < extrusions_.size() && extrusions_.at(operand).modelBodyId != feature.modelBodyId)
                 consumed.insert(extrusions_.at(operand).modelBodyId);
         last.insert(feature.modelBodyId, index);
     }
     QVector<int> result;
     for (auto it = last.cbegin(); it != last.cend(); ++it)
-        if (!consumed.contains(it.key()) && extrusions_.at(it.value()).forgeBody && ForgeCad::isShapeBody(extrusions_.at(it.value())))
+        if (!consumed.contains(it.key()) && !ForgeCad::isExposedPatternAggregate(it.value(), extrusions_, end)
+            && extrusions_.at(it.value()).forgeBody && ForgeCad::isShapeBody(extrusions_.at(it.value())))
             result.append(it.value());
     std::sort(result.begin(), result.end());
     return result;
@@ -474,7 +477,7 @@ QHash<quint64, quint64> CadViewport::storyboardRoots() const {
     for (int index = 0; index < historyPosition(); ++index) {
         const ExtrusionObject &feature = extrusions_.at(index);
         if (!feature.modelBodyId || feature.suppressed || !feature.error.isEmpty() || !feature.forgeBody) continue;
-        for (int operand : ForgeCad::hiddenOperands(feature)) {
+        for (int operand : ForgeCad::hiddenOperands(feature, extrusions_)) {
             if (operand < 0 || operand >= extrusions_.size()) continue;
             const quint64 consumed = extrusions_.at(operand).modelBodyId;
             if (consumed && consumed != feature.modelBodyId && !parent.contains(consumed)) parent.insert(consumed, feature.modelBodyId);
@@ -607,7 +610,7 @@ QString CadViewport::setFeaturesSuppressed(const QVector<int> &indices, bool sup
     for (int index : list) {
         ExtrusionObject &feature = extrusions_[index];
         const quint64 bodyId = feature.modelBodyId;
-        const QVector<int> consumed = ForgeCad::hiddenOperands(feature);
+        const QVector<int> consumed = ForgeCad::hiddenOperands(feature, extrusions_);
         feature.suppressed = suppressed;
         for (int operand : consumed) {
             if (operand < 0 || operand >= extrusions_.size() || extrusions_.at(operand).modelBodyId == bodyId) continue;
@@ -615,7 +618,7 @@ QString CadViewport::setFeaturesSuppressed(const QVector<int> &indices, bool sup
             if (suppressed) {
                 for (int other = 0; other < extrusions_.size() && !consumedElsewhere; ++other)
                     consumedElsewhere = other != index && !extrusions_.at(other).suppressed
-                                     && ForgeCad::hiddenOperands(extrusions_.at(other)).contains(operand);
+                                     && ForgeCad::hiddenOperands(extrusions_.at(other), extrusions_).contains(operand);
             }
             extrusions_[operand].visible = suppressed && !consumedElsewhere;
             // La soppressione rilascia questo corpo: il vecchio filtro di
@@ -1056,7 +1059,7 @@ QString CadViewport::updateBody(int index, const ExtrusionObject &definition) {
     if (!ForgeCad::hasGeometry(candidate)) return candidate.error;
     recordUndo();
     // Gli operandi che la funzione non usa piu' tornano visibili, quelli nuovi si nascondono.
-    const QVector<int> before = ForgeCad::hiddenOperands(extrusions_.at(index)), after = ForgeCad::hiddenOperands(candidate);
+    const QVector<int> before = ForgeCad::hiddenOperands(extrusions_.at(index), extrusions_), after = ForgeCad::hiddenOperands(candidate, extrusions_);
     for (int body : before)
         if (!after.contains(body) && body >= 0 && body < extrusions_.size()) extrusions_[body].visible = true;
     for (int body : after)
@@ -1230,7 +1233,7 @@ QString CadViewport::createExtrusion(const ExtrusionObject &definition, const QS
     extrusion.mergeProbe = false;
     if (!ForgeCad::hasGeometry(extrusion)) return extrusion.error;
     recordUndo();
-    for (int body : ForgeCad::hiddenOperands(extrusion))
+    for (int body : ForgeCad::hiddenOperands(extrusion, extrusions_))
         if (body >= 0 && body < extrusions_.size()) extrusions_[body].visible = false;
     extrusions_.append(extrusion);
     selection_ = {SceneObjectKind::Extrusion, int(extrusions_.size()) - 1, -1};
@@ -1476,7 +1479,7 @@ QString CadViewport::createBody(ExtrusionObject body, const QVector<int> &hide )
     body.mergeProbe = false;
     if (!ForgeCad::hasGeometry(body)) return body.error;
     recordUndo();
-    QVector<int> hidden = hide + ForgeCad::hiddenOperands(body);
+    QVector<int> hidden = hide + ForgeCad::hiddenOperands(body, extrusions_);
     for (int index : hidden)
         if (index >= 0 && index < extrusions_.size()) extrusions_[index].visible = false;
     extrusions_.append(body);
@@ -1491,6 +1494,14 @@ QString CadViewport::createBody(ExtrusionObject body, const QVector<int> &hide )
 // Espone ogni componente come corpo selezionabile. Le dipendenze dei risultati
 // derivati puntano alla madre: una sola booleana e nessun ricalcolo per copia.
 void CadViewport::synchronizePatternResults() {
+    const auto previousStory = storyboard();
+    const int previousPosition = storyboardPosition();
+    QVector<QPair<bool, quint64>> following;
+    if (storyPosition_ >= 0) for (int p = previousPosition; p < previousStory.size(); ++p) {
+        const auto &step = previousStory.at(p);
+        following.append({step.sketch, step.sketch ? quint64(step.index) : extrusions_.at(step.index).featureId});
+    }
+    bool existingGroupGrew = false;
     QVector<ExtrusionObject> additions;
     QSet<int> removed;
     quint64 nextBody = 1;
@@ -1498,7 +1509,8 @@ void CadViewport::synchronizePatternResults() {
     for (const auto &body : modelBodies_) nextBody = qMax(nextBody, body.id + 1);
     for (int root = 0; root < extrusions_.size(); ++root) {
         const auto source = extrusions_.at(root);
-        if (source.feature != BodyFeature::Pattern || source.patternComponent != 0
+        if (source.feature != BodyFeature::Pattern || source.patternComponent > 0
+            || (source.patternComponent < 0 && !ForgeCad::hasDerivedPatternResults(root, extrusions_))
             || source.suppressed || !source.error.isEmpty() || source.patternResults.isEmpty()) continue;
         QSet<int> present;
         for (int i = root + 1; i < extrusions_.size(); ++i) {
@@ -1506,7 +1518,7 @@ void CadViewport::synchronizePatternResults() {
             if (part.feature != BodyFeature::Pattern || part.patternComponent <= 0 || part.firstBody != root) continue;
             const int slot = part.patternComponent - 1;
             if (slot < source.patternResults.size() && source.patternResults.at(slot)
-                && source.patternResults.at(slot) != source.forgeBody) { present.insert(slot); continue; }
+                && (source.patternComponent < 0 || source.patternResults.at(slot) != source.forgeBody)) { present.insert(slot); continue; }
             bool referenced = false;
             for (int j = i + 1; j < extrusions_.size(); ++j)
                 if (ForgeCad::bodyOperands(extrusions_.at(j)).contains(i)) referenced = true;
@@ -1517,22 +1529,59 @@ void CadViewport::synchronizePatternResults() {
             if (!referenced) removed.insert(i);
         }
         for (int component = 0; component < source.patternResults.size(); ++component) {
-            if (!source.patternResults.at(component) || source.patternResults.at(component) == source.forgeBody || present.contains(component)) continue;
+            if (!source.patternResults.at(component) || (source.patternComponent == 0 && source.patternResults.at(component) == source.forgeBody) || present.contains(component)) continue;
             ExtrusionObject part;
             part.feature = BodyFeature::Pattern;
             part.patternComponent = component + 1;
             part.firstBody = root;
-            part.modelBodyId = nextBody++;
+            // Il primo risultato visibile prosegue lo stesso corpo logico;
+            // la madre legacy rimane l'operando aggregato dei consumatori.
+            const int first = int(std::find_if(source.patternResults.begin(), source.patternResults.end(),
+                [](const auto &value) { return bool(value); }) - source.patternResults.begin());
+            part.modelBodyId = source.patternComponent < 0 && component == first ? source.modelBodyId : nextBody++;
             part.name = QStringLiteral("%1 — corpo %2").arg(source.name).arg(component + 1);
             part.forgeBody = source.patternResults.at(component);
             part.solid = !part.forgeBody->isSheet();
             tessellateBody(part, extrusions_.size() + additions.size());
             additions.append(std::move(part));
+            existingGroupGrew = existingGroupGrew || (insertionSourceSize_ >= 0 && root < insertionSourceSize_);
         }
     }
     extrusions_ += additions;
     if (!removed.isEmpty()) removeBodies(removed);
+    // I derivati consumati a valle sono nascosti nella scena, non nelle
+    // preferenze del corpo. Ripristinare il tip prima di normalizzare:
+    // altrimenti una seconda rigenerazione li nasconde anche nel rollback.
+    for (auto &feature : extrusions_) if (feature.feature == BodyFeature::Pattern && feature.patternComponent > 0
+                                          && consumedBodies_.contains(feature.modelBodyId))
+        for (const auto &model : modelBodies_)
+            if (feature.modelBodyId == model.id && feature.featureId == model.tipFeatureId) feature.visible = model.visible;
     ForgeCad::normalizeModelHistory(extrusions_, modelBodies_);
+    // Un unico riordino condiviso rimappa anche riferimenti e appoggi degli
+    // schizzi; i derivati non diventano eventi aggiuntivi nella storyboard.
+    const auto map = ForgeCad::normalizePatternResultOrder(sketches_, extrusions_);
+    if (!map.isEmpty() && selection_.kind == SceneObjectKind::Extrusion)
+        selection_.index = map.value(selection_.index, -1);
+    // La crescita di un gruppo gia' esistente non e' un'inserzione di nuove
+    // operazioni al cursore: documentChanged non deve spostarne la coda.
+    if (existingGroupGrew) insertionSourceSize_ = insertionSketchSourceSize_ = -1;
+    if (storyPosition_ >= 0) {
+        const auto steps = storyboard();
+        int boundary = steps.size();
+        for (const auto &anchor : following) {
+            for (int p = 0; p < steps.size(); ++p) {
+                const auto &step = steps.at(p);
+                if (step.sketch == anchor.first && (step.sketch ? quint64(step.index) : extrusions_.at(step.index).featureId) == anchor.second) {
+                    boundary = p; break;
+                }
+            }
+            if (boundary < steps.size()) break;
+        }
+        storyPosition_ = boundary >= steps.size() ? -1 : boundary;
+        historyPosition_ = -1;
+        if (storyPosition_ >= 0)
+            historyPosition_ = ForgeCad::storyFeatureLimit(extrusions_, steps, storyPosition_);
+    }
     for (int i = 0; i < extrusions_.size(); ++i)
         if (extrusions_.at(i).feature == BodyFeature::Pattern && extrusions_.at(i).patternComponent > 0)
             ForgeCad::registerFeatureGenealogy(extrusions_.at(i), i, sketches_, extrusions_);
@@ -2112,7 +2161,7 @@ void CadViewport::removeBodies(const QSet<int> &removed) {
             const ExtrusionObject &body = extrusions_.at(index);
             QVector<int> hidden{body.firstBody, body.secondBody};
             hidden += body.booleanTools;
-            hidden += ForgeCad::hiddenOperands(body);
+            hidden += ForgeCad::hiddenOperands(body, extrusions_);
             for (int operand : hidden)
                 if (operand >= 0 && operand < extrusions_.size() && !removed.contains(operand)) extrusions_[operand].visible = true;
             continue;

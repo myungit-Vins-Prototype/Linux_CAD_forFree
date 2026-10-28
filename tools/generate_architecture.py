@@ -62,7 +62,7 @@ DESCRIPTIONS = {
  'forgeCad2026_viewport.cpp': ('viewport', 'Ciclo di vita e impostazioni pubbliche del coordinatore CadViewport; gabbia poli multipli, proiezione/picking del gizmo e delta vincolati agli assi 3D.'),
  'forgeCad2026_viewport.h': ('viewport', 'Contratto e stato privato del coordinatore GUI della vista 3D.'),
  'forgeCad2026_viewport_internal.h': ('viewport', 'Dipendenze di implementazione e template condivisi dai soli file viewport.'),
- 'forgeCad2026_viewport_document.cpp': ('viewport', 'Soppressione: invalida il filtro dei corpi rilasciati prima della normalizzazione; Documento e storia unificata: schizzi e piani autonomi, riordino, appoggi associativi e contesto storico; mesh richieste nei worker della geometria o nella coda differita, pubblicazione GUI, gruppi limitati nel cambio qualita e basi delle ripetizioni prima delle istanze.'),
+ 'forgeCad2026_viewport_document.cpp': ('viewport', 'Soppressione: invalida il filtro dei corpi rilasciati; aggregati legacy conservati e risultati derivati gia salvati riuniti in un solo evento. Documento e storia unificata: schizzi e piani autonomi, riordino, appoggi associativi e contesto storico; mesh richieste nei worker della geometria o nella coda differita, pubblicazione GUI, gruppi limitati nel cambio qualita e basi delle ripetizioni prima delle istanze.'),
  'forgeCad2026_viewport_interaction.cpp': ('viewport', 'Eventi Qt di mouse, tastiera, ruota e menu contestuali.'),
  'forgeCad2026_viewport_selection.cpp': ('viewport', 'Filtri di selezione, hover, riferimenti e hit testing di entità e maniglie.'),
  'forgeCad2026_viewport_sketch.cpp': ('viewport', 'Comandi schizzo, asola rettilinea con vincoli e punti autonomi: creazione, modifica, quote e riferimenti.'),
@@ -92,6 +92,8 @@ DESCRIPTIONS = {
 }
 
 DESCRIPTIONS.update({
+ 'tests/test_pattern_placements.h': ('tests', 'Ripetizioni nuove e aggregati legacy con derivati salvati dal Mac: volume, un solo evento, esclusioni, rollback e persistenza.'),
+
  'kernel/fk_curve_surface.cpp': ('kernel', 'Intersezioni curva-superficie e suddivisione Bezier diretta in coordinate omogenee: stesso ordine di inserimento nodi, ripiego generale per pezze non clamped, nessuna modifica delle tolleranze.'),
  'kernel/tests/test_curve_surface.cpp': ('tests', 'Intersezioni confrontate con OCCT e conservazione della geometria nelle suddivisioni Bezier: razionali, micro domini, gradi alti e divisioni ripetute.'),
  'kernel/tests/test_boolean.cpp': ('tests', 'Booleane contro OCCT, contatti e sweep elicoidali; volumi analitici delle lamelle spline sottili fino a 1e-4 mm, topologia e concordanza parallela.'),
@@ -201,7 +203,7 @@ DESCRIPTIONS.update({'tools/open_architecture.py': ('build', 'Avvio locale della
  'cad_drawing_preparation': ('drawing', 'Prepara geometria, curve e visibilita dei fogli senza QWidget; risultati trasferibili all’editor per aggiornamento atomico multifoglio senza ricalcoli.'),
  'cad_geometry_refs.h': ('features', 'Visitatori const/mutabili dei riferimenti geometrici per famiglie; enumerazione condivisa da storia, dipendenze e topologia, distinta dal contratto binario del codec.'),
  'tests/test_geometry_refs.cpp': ('tests', 'Copertura di tutte le famiglie dei riferimenti, support/Pierce e snapshot Undo; rimappatura dei risultati di ripetizione e ancoraggio degli schizzi dopo il gruppo.'),
- 'cad_drawing_file': ('drawing', 'Contenitore .drw mono/multifoglio, identita e riferimenti delle copie; verifica impronte del modello con compatibilita53 limitata alle definizioni senza nuovi nomi support/Pierce.'),
+ 'cad_drawing_file': ('drawing', 'Contenitore .drw mono/multifoglio, identita e riferimenti delle copie, consumo dei derivati di aggregati legacy; verifica impronte del modello con compatibilita53 limitata alle definizioni senza nuovi nomi support/Pierce.'),
  'cad_drawing_focus.h': ('drawing',
                          'Ripristina il focus alla finestra della tavola dopo i dialoghi nativi.'),
  'cad_drawing_page': ('drawing', 'Impaginazione, formati, cartigli numerati N/totale e revisioni delle pagine della tavola.'),
@@ -241,8 +243,8 @@ DESCRIPTIONS.update({'tools/open_architecture.py': ('build', 'Avvio locale della
                  'Costruisce estrusioni con condizioni di fine e applica la fusione con i corpi '
                  'selezionati.'),
  'cad_feature_build': ('features',
-                       'Costruisce feature dagli operandi con genealogia; geometria e mesh opzionale, risultati delle ripetizioni separati per corpo e ripetizione dello strumento sweep prima della fusione/sottrazione, errori specifici conservati.'),
- 'cad_feature_dependencies': ('features', 'Determina dipendenze e operandi delle feature, compresi tutti i target della estensione di superfici.'),
+                       'Costruisce feature dagli operandi con genealogia; geometria e mesh opzionale, risultati delle ripetizioni separati per corpo, aggregati legacy e derivati gia presenti conservati, ripetizione dello strumento sweep prima della fusione/sottrazione, errori specifici conservati.'),
+ 'cad_feature_dependencies': ('features', 'Dipendenze e consumo dei risultati derivati gia presenti negli aggregati legacy; preserva i consumatori storici e distingue definizioni da risultati visibili.'),
  'cad_features': ('features', 'Tipi e regole comuni delle operazioni parametriche del modello.'),
  'cad_forge': ('features',
                'Adatta sketch e parametri al kernel; booleane con genealogia e ordine conservato; conversione mesh float con filtro comune dei triangoli degeneri per scena e anteprime, ID topologici coerenti.'),

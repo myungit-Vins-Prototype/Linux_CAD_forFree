@@ -215,4 +215,46 @@ QVector<int> hiddenOperands(const ExtrusionObject &body) {
 }
 
 
+bool hasDerivedPatternResults(int index, const QVector<ExtrusionObject> &bodies) {
+    if (index < 0 || index >= bodies.size()) return false;
+    for (const auto &part : bodies)
+        if (part.feature == BodyFeature::Pattern && part.patternComponent > 0 && part.firstBody == index) return true;
+    return false;
+}
+
+bool isExposedPatternAggregate(int index, const QVector<ExtrusionObject> &bodies, int end) {
+    if (index < 0 || index >= bodies.size()) return false;
+    const auto &source = bodies.at(index);
+    if (source.feature != BodyFeature::Pattern || source.patternComponent != -1) return false;
+    const int stop = end < 0 ? int(bodies.size()) : qMin(end, int(bodies.size()));
+    for (int i = index + 1; i < stop; ++i) {
+        const auto &part = bodies.at(i);
+        if (part.feature == BodyFeature::Pattern && part.patternComponent > 0 && part.firstBody == index
+            && !part.suppressed && part.error.isEmpty() && part.forgeBody) return true;
+    }
+    return false;
+}
+
+QVector<int> hiddenOperands(const ExtrusionObject &body, const QVector<ExtrusionObject> &bodies) {
+    QVector<int> hidden = hiddenOperands(body);
+    QVector<int> aggregates = hidden;
+    // Un modificatore dello stesso corpo (per esempio Scala) sostituisce
+    // implicitamente la base, anche se non compare in hiddenOperands.
+    if (!(body.feature == BodyFeature::Pattern && body.patternComponent > 0)
+        && body.firstBody >= 0 && body.firstBody < bodies.size()
+        && body.modelBodyId && body.modelBodyId == bodies.at(body.firstBody).modelBodyId)
+        aggregates.append(body.firstBody);
+    for (int root : aggregates) {
+        if (root < 0 || root >= bodies.size()) continue;
+        const auto &source = bodies.at(root);
+        if (source.feature != BodyFeature::Pattern || source.patternComponent != -1) continue;
+        for (int i = root + 1; i < bodies.size(); ++i) {
+            const auto &part = bodies.at(i);
+            if (part.feature == BodyFeature::Pattern && part.patternComponent > 0
+                && part.firstBody == root && !hidden.contains(i)) hidden.append(i);
+        }
+    }
+    return hidden;
+}
+
 }

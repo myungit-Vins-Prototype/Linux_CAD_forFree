@@ -22,6 +22,12 @@ bool usesSketch(const ExtrusionObject &body);
 
 // Operandi consumati dalla feature; distinti dalle semplici dipendenze.
 QVector<int> hiddenOperands(const ExtrusionObject &body);
+// Risultati derivati gia presenti nel documento, anche prima della ricostruzione.
+bool hasDerivedPatternResults(int index, const QVector<ExtrusionObject> &bodies);
+// Aggregato legacy rappresentato da risultati derivati nella storia corrente.
+bool isExposedPatternAggregate(int index, const QVector<ExtrusionObject> &bodies, int end = -1);
+// Include i risultati esposti da un aggregato storico consumato dalla feature.
+QVector<int> hiddenOperands(const ExtrusionObject &body, const QVector<ExtrusionObject> &bodies);
 
 }
 

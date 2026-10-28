@@ -193,7 +193,7 @@ int patternSourceIndex(const QVector<ExtrusionObject> &features, int index) {
     const int root = part.firstBody;
     if (part.feature == BodyFeature::Pattern && part.patternComponent > 0
         && root >= 0 && root < features.size() && root != index
-        && features.at(root).feature == BodyFeature::Pattern && features.at(root).patternComponent == 0)
+        && features.at(root).feature == BodyFeature::Pattern && features.at(root).patternComponent <= 0)
         return root;
     return index;
 }
