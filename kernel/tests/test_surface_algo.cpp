@@ -6,6 +6,10 @@
 #include <Geom_ToroidalSurface.hxx>
 #include <gp_Ax1.hxx>
 
+#include <cstring>
+#include <future>
+#include "fk_cancel.h"
+#include "fk_surface_distance.h"
 #include "fk_surface_algo.h"
 #include "fk_nurbs.h"
 #include "fk_curve_ops.h"
@@ -279,4 +283,101 @@ FK_TEST(SameExtrusionSurfaceRequiresWholeCurveCertificate) {
     const ExtrusionSurface curved(rational, Vec3(0, 0, 1));
     FK_CHECK(sameSurface(curved, ExtrusionSurface(std::make_shared<BSplineCurve<3>>(rational->insertKnot(0.5)), Vec3(0, 0, 1)), 1e-9));
     FK_CHECK(sameSurface(curved, ExtrusionSurface(translatedCurve<3>(rational, Vec3(0,0,10)), Vec3(0, 0, 1)), 1e-9));
+}
+
+namespace {
+BSplineSurface certificatePlane(bool rational) {
+    std::vector<Vec3> poles;
+    std::vector<double> weights;
+    for (int i = 0; i < 4; ++i)
+        for (int j = 0; j < 3; ++j) {
+            poles.push_back(Vec3(i, j, 2));
+            if (rational) weights.push_back(0.1 * (i + 1) * (j + 1));
+        }
+    return BSplineSurface(3, 2, {0,0,0,0,1,1,1,1}, {0,0,0,1,1,1}, 4, 3, poles, weights);
+}
+}
+
+FK_TEST(SurfaceDeviationCertificateAnalytic) {
+    for (bool rational : {false, true}) {
+        const auto surface = certificatePlane(rational);
+        for (double tolerance : {0.0, 1e-14, 1e-7, 1e-4})
+            for (double offset : {0.0, .25, .75, 1.0 - 1e-6, 1.0, 1.0 + 1e-6, 2.0, 1e6}) {
+                Vec3 p = surface.point(.37, .68);
+                p[2] += tolerance == 0.0 ? offset : tolerance * offset;
+                Vec2 hint(-100, 100);
+                const auto exact = projectPoint(surface, p);
+                const double actual = surfaceDeviationAboveTolerance(surface, p, tolerance, &hint);
+                FK_CHECK((actual == 0.0) == (exact.distance <= tolerance));
+                const double expected = exact.distance <= tolerance ? 0.0 : std::fabs(p[2] - 2.0);
+                // Il proiettore originale ferma il branch-and-bound a
+                // 1e-12 * max(1, distanza), anche per punti molto lontani.
+                FK_CHECK_NEAR(actual, expected, 2e-12 * std::max(1.0, expected));
+                if (actual > 0.0) FK_CHECK(std::memcmp(&actual, &exact.distance, sizeof(double)) == 0);
+                FK_CHECK(surface.uDomain().contains(hint[0]) && surface.vDomain().contains(hint[1]));
+                FK_CHECK(surfaceDeviationAboveTolerance(surface, p, tolerance) == actual);
+            }
+        // Fuori dal rettangolo: il certificato non deve accettare il
+        // prolungamento della superficie al di la' dei parametri ammessi.
+        Vec2 hint(-1, -.5);
+        const Vec3 outside(-1, -.5, 2);
+        FK_CHECK_NEAR(surfaceDeviationAboveTolerance(surface, outside, 1e-7, &hint), std::sqrt(1.25), 1e-12);
+    }
+}
+
+FK_TEST(SurfaceDeviationCertificateCurvedAndHints) {
+    std::mt19937 rng(1273);
+    for (int trial = 0; trial < 48; ++trial) {
+        const auto surface = randomBSplineSurface(rng, trial % 2);
+        const auto u = surface.uDomain(), v = surface.vDomain();
+        Vec2 hint(std::numeric_limits<double>::quiet_NaN(), 0);
+        for (int k = 0; k < 8; ++k) {
+            Vec3 p = surface.point(u.lo + u.length() * k / 7.0, v.lo + v.length() * .43);
+            if (k % 3 == 1) p += randomVec<3>(rng, 10.0);
+            if (k % 3 == 2) p += randomVec<3>(rng, 1e-8);
+            const double tolerance = trial % 3 ? 1e-7 : 1e-4;
+            const auto exact = projectPoint(surface, p);
+            const double actual = surfaceDeviationAboveTolerance(surface, p, tolerance, &hint);
+            FK_CHECK((actual == 0.0) == (exact.distance <= tolerance));
+            if (actual > 0.0) FK_CHECK(std::memcmp(&actual, &exact.distance, sizeof(double)) == 0);
+            else FK_CHECK(distance(p, surface.point(hint[0], hint[1])) <= tolerance);
+        }
+    }
+}
+
+FK_TEST(SurfaceDeviationCertificateDegenerateConcurrentAndCancelled) {
+    const BSplineSurface collapsed(1, 1, {0,0,1,1}, {0,0,1,1}, 2, 2, std::vector<Vec3>(4, Vec3(1,2,3)));
+    FK_CHECK(surfaceDeviationAboveTolerance(collapsed, Vec3(1,2,3), 1e-7) == 0.0);
+    FK_CHECK_NEAR(surfaceDeviationAboveTolerance(collapsed, Vec3(2,3,4), 1e-7), std::sqrt(3.), 1e-12);
+    const auto surface = certificatePlane(true);
+    auto request = [&] {
+        Vec2 hint(.5, .5);
+        for (int k = 0; k <= 64; ++k) {
+            const auto p = surface.point(k / 64., .3);
+            if (surfaceDeviationAboveTolerance(surface, p, 1e-7, &hint) != 0.0) return false;
+        }
+        return true;
+    };
+    auto first = std::async(std::launch::async, request);
+    FK_CHECK(request());
+    FK_CHECK(first.get());
+    for (double tolerance : {-1.0, std::numeric_limits<double>::quiet_NaN(), std::numeric_limits<double>::infinity()}) {
+        bool rejected = false;
+        try { (void)surfaceDeviationAboveTolerance(surface, Vec3(), tolerance); }
+        catch (const std::invalid_argument &) { rejected = true; }
+        FK_CHECK(rejected);
+    }
+    bool rejected = false;
+    try { (void)surfaceDeviationAboveTolerance(surface, Vec3(std::numeric_limits<double>::quiet_NaN(),0,0), 1e-7); }
+    catch (const std::invalid_argument &) { rejected = true; }
+    FK_CHECK(rejected);
+    auto token = std::make_shared<std::atomic<bool>>(true);
+    bool cancelled = false;
+    {
+        CancellationScope scope(token);
+        try { (void)surfaceDeviationAboveTolerance(surface, Vec3(), 1e-7); }
+        catch (const OperationCancelled &) { cancelled = true; }
+    }
+    FK_CHECK(cancelled);
+    FK_CHECK(request());
 }

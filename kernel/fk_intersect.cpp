@@ -10,6 +10,7 @@
 #include <limits>
 #include <stdexcept>
 
+#include "fk_cancel.h"
 #include "fk_bernstein.h"
 #include "fk_bspline.h"
 #include "fk_curve_algo.h"
@@ -456,6 +457,71 @@ Box2 polesBox(const BSplineCurve<2> &piece) {
     return box;
 }
 
+// Gerarchia locale dei box dei poli. Le foglie mantengono l'ordine dei
+// parametri: si scartano solo coppie che subdivide scarterebbe al primo
+// controllo, senza cambiare l'ordine di Newton o l'unione dei risultati.
+class PieceBoxTree {
+    struct Node {
+        Box2 box;
+        std::size_t begin = 0, end = 0;
+        int left = -1, right = -1;
+    };
+    std::vector<Box2> boxes_;
+    std::vector<Node> nodes_;
+
+    int build(std::size_t begin, std::size_t end) {
+        cancellationPoint();
+        const int index = int(nodes_.size());
+        nodes_.push_back({Box2(), begin, end});
+        if (end - begin <= 8) {
+            for (std::size_t i = begin; i < end; ++i) {
+                nodes_[index].box.add(boxes_[i].lo);
+                nodes_[index].box.add(boxes_[i].hi);
+            }
+        } else {
+            const std::size_t middle = begin + (end - begin) / 2;
+            const int left = build(begin, middle), right = build(middle, end);
+            nodes_[index].left = left;
+            nodes_[index].right = right;
+            for (int child : {left, right}) {
+                nodes_[index].box.add(nodes_[child].box.lo);
+                nodes_[index].box.add(nodes_[child].box.hi);
+            }
+        }
+        return index;
+    }
+
+    void query(int index, const Box2 &box, double tolerance, std::vector<std::size_t> &out) const {
+        cancellationPoint();
+        const Node &node = nodes_[index];
+        if (!box.overlaps(node.box, tolerance)) return;
+        if (node.left < 0) {
+            for (std::size_t i = node.begin; i < node.end; ++i)
+                if (box.overlaps(boxes_[i], tolerance)) out.push_back(i);
+        } else {
+            query(node.left, box, tolerance, out);
+            query(node.right, box, tolerance, out);
+        }
+    }
+
+public:
+    explicit PieceBoxTree(const std::vector<BSplineCurve<2>> &pieces) {
+        if (pieces.size() < 16) return;
+        boxes_.reserve(pieces.size());
+        for (const auto &piece : pieces) {
+            cancellationPoint();
+            boxes_.push_back(polesBox(piece));
+        }
+        nodes_.reserve(2 * pieces.size());
+        build(0, pieces.size());
+    }
+    bool empty() const { return nodes_.empty(); }
+    void overlapping(const Box2 &box, double tolerance, std::vector<std::size_t> &out) const {
+        out.clear();
+        query(0, box, tolerance, out);
+    }
+};
+
 std::pair<BSplineCurve<2>, BSplineCurve<2>> halves(const BSplineCurve<2> &piece) {
     const Interval dom = piece.domain();
     const std::vector<BSplineCurve<2>> parts = piece.insertKnot(0.5 * (dom.lo + dom.hi), piece.degree()).bezierSegments();
@@ -546,6 +612,8 @@ CurveCurveIntersection intersectCurves(const Curve<2> &a, const Interval &aRange
         }
         if (start < aRange.hi) rest.push_back({start, aRange.hi});
         const std::vector<BSplineCurve<2>> piecesB = bezierPieces(static_cast<const BSplineCurve<2> &>(ub), bRange);
+        const PieceBoxTree pieceBoxesB(piecesB);
+        std::vector<std::size_t> overlapping;
         int leaves = 0;
         try {
         for (const Interval &part : rest) {
@@ -556,8 +624,15 @@ CurveCurveIntersection intersectCurves(const Curve<2> &a, const Interval &aRange
             for (const auto &piece : piecesB)
                 for (const Vec2 &p : piece.poles()) all.add(p);
             const double scale = std::max(all.diagonal(), 1e-300);
-            for (const auto &pa : piecesA)
-                for (const auto &pb : piecesB) subdivide(a, part, b, bRange, pa, pb, 0, scale, tolerance, out, leaves);
+            for (const auto &pa : piecesA) {
+                if (pieceBoxesB.empty()) {
+                    for (const auto &pb : piecesB) subdivide(a, part, b, bRange, pa, pb, 0, scale, tolerance, out, leaves);
+                } else {
+                    pieceBoxesB.overlapping(polesBox(pa), tolerance, overlapping);
+                    for (std::size_t index : overlapping)
+                        subdivide(a, part, b, bRange, pa, piecesB[index], 0, scale, tolerance, out, leaves);
+                }
+            }
         }
         } catch (const std::domain_error &) {
             if (attempt == 1) throw;

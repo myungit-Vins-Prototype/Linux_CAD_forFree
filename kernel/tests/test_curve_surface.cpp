@@ -128,3 +128,42 @@ FK_TEST(LineSurfaceIntersectionsOnNewSurfaces) {
         FK_CHECK_NEAR(across[1], 12.0, 1e-9);
     }
 }
+
+// Pezze razionali e polinomiali: la divisione deve conservare posizione,
+// parametrizzazione e derivate anche su domini e dettagli molto piccoli.
+FK_TEST(BezierPatchSubdivisionPreservesGeometry) {
+    std::mt19937 rng(18477);
+    std::uniform_real_distribution<double> random(-1.0, 1.0);
+    for (int degree : {1, 2, 3, 7, 12, 31})
+        for (bool rational : {false, true})
+            for (double scale : {1e-6, 1.0, 1e5}) {
+                std::vector<double> u(degree + 1, -0.3141592653589793), v(4, 1.125);
+                u.resize(2 * (degree + 1), 2.718281828459045);
+                v.resize(8, 1.125000031);
+                std::vector<Vec3> poles;
+                std::vector<double> weights;
+                for (int i = 0; i < (degree + 1) * 4; ++i) {
+                    poles.emplace_back(scale * random(rng), scale * random(rng), scale * random(rng));
+                    if (rational) weights.push_back(std::exp(4.0 * random(rng)));
+                }
+                const BSplineSurface source(degree, 3, u, v, degree + 1, 4, poles, weights);
+                const auto verify = [&](const BSplineSurface &piece) {
+                    for (double fu : {0.0, 0.17, 0.5, 0.83, 1.0})
+                        for (double fv : {0.0, 0.23, 0.5, 0.91, 1.0}) {
+                            const auto ud = piece.uDomain(), vd = piece.vDomain();
+                            const double x = ud.lo + fu * (ud.hi - ud.lo), y = vd.lo + fv * (vd.hi - vd.lo);
+                            FK_CHECK(distance(piece.point(x, y), source.point(x, y)) <= 2e-12 * scale);
+                            Vec3 a[4], b[4];
+                            piece.evaluate(x, y, 1, a); source.evaluate(x, y, 1, b);
+                            for (int k : {Surface::derivativeIndex(1, 0, 1), Surface::derivativeIndex(0, 1, 1)})
+                                FK_CHECK(distance(a[k], b[k]) <= 2e-10 * std::max(scale, norm(b[k])));
+                        }
+                };
+                for (bool alongU : {false, true}) {
+                    const auto halves = splitPatch(source, alongU);
+                    verify(halves.first); verify(halves.second);
+                    const auto quarters = splitPatch(halves.first, !alongU);
+                    verify(quarters.first); verify(quarters.second);
+                }
+            }
+}

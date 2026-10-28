@@ -6,6 +6,7 @@
 #include <stdexcept>
 
 #include "fk_bernstein.h"
+#include "fk_cancel.h"
 #include "fk_curve_algo.h"
 #include "fk_nurbs.h"
 #include "fk_surface_algo.h"
@@ -182,6 +183,52 @@ std::pair<BSplineSurface, BSplineSurface> splitPatch(const BSplineSurface &patch
     const std::vector<double> &knots = alongU ? patch.uKnots() : patch.vKnots();
     const Interval dom = alongU ? patch.uDomain() : patch.vDomain();
     const double middle = 0.5 * (dom.lo + dom.hi);
+    // Una singola pezza clamped usa direttamente l'inserimento del nodo
+    // in coordinate omogenee. Stesso ordine aritmetico di insertKnot:
+    // evita curve temporanee, estrazione dei tratti e validazioni ripetute.
+    const bool bezier = length == degree + 1
+        && std::all_of(knots.begin(), knots.begin() + degree + 1, [&](double t) { return t == dom.lo; })
+        && std::all_of(knots.end() - degree - 1, knots.end(), [&](double t) { return t == dom.hi; });
+    if (bezier && middle > dom.lo && middle < dom.hi) {
+        std::vector<Vec3> left(std::size_t(nu * nv)), right(left.size());
+        std::vector<double> leftWeights, rightWeights;
+        if (patch.isRational()) { leftWeights.resize(left.size()); rightWeights.resize(left.size()); }
+        std::vector<Vec3> work(length);
+        std::vector<double> weights(length);
+        const double alpha = (middle - dom.lo) / (dom.hi - dom.lo);
+        for (int line = 0; line < lines; ++line) {
+            cancellationPoint();
+            auto index = [&](int k) { return std::size_t(alongU ? k * nv + line : line * nv + k); };
+            for (int k = 0; k < length; ++k) {
+                const int i = alongU ? k : line, j = alongU ? line : k;
+                weights[k] = patch.weight(i, j);
+                work[k] = patch.pole(i, j) * weights[k];
+            }
+            auto store = [&](int k, int w, bool first) {
+                (first ? left : right)[index(k)] = work[w] / weights[w];
+                if (patch.isRational()) (first ? leftWeights : rightWeights)[index(k)] = weights[w];
+            };
+            store(0, 0, true);
+            store(degree, degree, false);
+            for (int level = 1; level <= degree; ++level) {
+                for (int k = 0; k <= degree - level; ++k) {
+                    work[k] = alpha * work[k + 1] + (1.0 - alpha) * work[k];
+                    weights[k] = alpha * weights[k + 1] + (1.0 - alpha) * weights[k];
+                }
+                store(level, 0, true);
+                store(degree - level, degree - level, false);
+            }
+        }
+        auto assemble = [&](bool first) {
+            std::vector<double> splitKnots(std::size_t(2 * (degree + 1)), middle);
+            if (first) std::fill(splitKnots.begin(), splitKnots.begin() + degree + 1, dom.lo);
+            else std::fill(splitKnots.end() - degree - 1, splitKnots.end(), dom.hi);
+            return BSplineSurface(patch.uDegree(), patch.vDegree(), alongU ? splitKnots : patch.uKnots(),
+                                  alongU ? patch.vKnots() : splitKnots, nu, nv,
+                                  std::move(first ? left : right), std::move(first ? leftWeights : rightWeights));
+        };
+        return {assemble(true), assemble(false)};
+    }
     std::vector<BSplineCurve<3>> first, second;
     for (int line = 0; line < lines; ++line) {
         std::vector<Vec3> poles;

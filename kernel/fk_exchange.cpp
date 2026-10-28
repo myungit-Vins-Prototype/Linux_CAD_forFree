@@ -11,6 +11,7 @@
 #include <cmath>
 #include <exception>
 #include <map>
+#include <limits>
 #include <set>
 #include <stdexcept>
 
@@ -21,6 +22,7 @@
 #include "fk_pcurve.h"
 #include "fk_offset.h"
 #include "fk_surface_algo.h"
+#include "fk_surface_distance.h"
 #include "fk_timing.h"
 
 namespace ForgeCad::Kernel::detail {
@@ -449,9 +451,11 @@ Body assembleBody(const RawModel &input, bool solid, std::vector<std::string> *n
             // Campioni fitti: lo scarto di una B-spline da una superficie libera cambia tra un nodo e l'altro.
             std::vector<double> breaks = edge.curve->breakpoints(edge.range);
             if (breaks.size() < 2 || breaks.size() > 64) breaks = {edge.range.lo, edge.range.hi};
+            Vec2 hint(std::numeric_limits<double>::quiet_NaN(), 0.0);
             for (std::size_t b = 0; b + 1 < breaks.size(); ++b)
                 for (int k = 0; k <= 16; ++k)
-                    deviation = std::max(deviation, projectPoint(surface, edge.curve->point(breaks[b] + (breaks[b + 1] - breaks[b]) * k / 16.0)).distance);
+                    deviation = std::max(deviation, surfaceDeviationAboveTolerance(surface,
+                        edge.curve->point(breaks[b] + (breaks[b + 1] - breaks[b]) * k / 16.0), 1e-7, &hint));
         }
         deviations[i] = deviation;
     };
@@ -514,9 +518,11 @@ Body assembleBody(const RawModel &input, bool solid, std::vector<std::string> *n
                 if (!fin.valid()) continue;
                 const Surface &surface = *body.face(body.finFace(fin)).surface;
                 // Anche nei nodi della curva: lo scarto puo' essere un picco proprio li'.
+                Vec2 hint(std::numeric_limits<double>::quiet_NaN(), 0.0);
                 for (std::size_t b = 0; b < spans; ++b)
                     for (int k = 0; k <= perSpan; ++k)
-                        deviation = std::max(deviation, projectPoint(surface, edge.curve->point(breaks[b] + (breaks[b + 1] - breaks[b]) * k / perSpan)).distance);
+                        deviation = std::max(deviation, surfaceDeviationAboveTolerance(surface,
+                            edge.curve->point(breaks[b] + (breaks[b + 1] - breaks[b]) * k / perSpan), 1e-7, &hint));
             }
             if (deviation > 1e-7 && 1.5 * deviation > edge.tolerance) {
                 edge.tolerance = 1.5 * deviation;

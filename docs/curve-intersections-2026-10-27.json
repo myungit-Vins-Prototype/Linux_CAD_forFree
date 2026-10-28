@@ -1,0 +1,1126 @@
+{
+  "branch": "solver-mesh-gpu",
+  "head": "4f842a8b9a02a18d9f4abd1238e936901a3a7d30",
+  "implementation": {
+    "production_file": "kernel/fk_intersect.cpp",
+    "helper": "PieceBoxTree",
+    "local_lifetime": true,
+    "persistent_cache_added": false,
+    "space_complexity": "O(Bezier pieces B)",
+    "minimum_tree_pieces": 16,
+    "leaf_capacity": 8,
+    "original_candidate_order_preserved": true,
+    "newton_tolerances_formats_unchanged": true,
+    "gpu_code_changed": false,
+    "main_changed": false,
+    "native_macos_build_performed": false
+  },
+  "final_source_and_binary_sha256": {
+    "kernel/fk_intersect.cpp": "1d513b7bc9da70bf25e4af164dea2313284bda9465ce5b4349fbcd22ff119adb",
+    "kernel/tests/test_intersect.cpp": "f52558a14790f09838308f7746cbe0af72b42b7520eeb044956d83bdd6f07ca6",
+    "kernel/fk_curve_algo.cpp": "c1214c916fb5993e05ac725c86bf835d6d55957f2ad258d9b1fde1c1071bac47",
+    "kernel/fk_bspline_surface.cpp": "1965598d7b1d9cd036d7997a97034da1129a23a86d517f1bd25b3608da422d4d",
+    "forgecad-linux-solver/forgecad": "02e1146da39dcdff9f26581e5056cd4bd8a5ed3f8b3650d67505de77c5e1ba2d",
+    "forgecad-linux-solver/forgecad_view_tests": "8ae865a1f26d321ee4290d02c9a48bd9a125844057ac07ae86acca57f256723f",
+    "forgecad-linux-solver/kernel/libforgekernel.a": "98e43c06e3ef44128f33e1a1d2d359c946a178b0f91394ceb4dc22ffa54919d7"
+  },
+  "baseline_sha256": {
+    "/home/myungit/Linux_CAD_forFree/forgecad-linux-solver/benchmarks/ct0578-followup-2026-10-27/input.prt": "b87b96efa0e8971d89f8fe5bdad5b63d8119831d3f09430122d51770dc851fbd",
+    "/home/myungit/Linux_CAD_forFree/forgecad-linux-solver/benchmarks/ct0578-followup-2026-10-27/probe-before": "940efe4940795d5166479beceb67bc9535def138a5954ee1c9842ca2bf0bccbf",
+    "/home/myungit/Linux_CAD_forFree/forgecad-linux-solver/benchmarks/ct0578-followup-2026-10-27/kernel-before.a": "6d05d6bd19a4e05205eac4ae70977c1c740b8e606d6453d0370f1ab43e852b56",
+    "/home/myungit/Linux_CAD_forFree/forgecad-linux-solver/benchmarks/ct0578-followup-2026-10-27/fk_curve_algo-before.cpp": "c1214c916fb5993e05ac725c86bf835d6d55957f2ad258d9b1fde1c1071bac47",
+    "/home/myungit/Linux_CAD_forFree/forgecad-linux-solver/forgecad": "4e017283404e4108d70cd186505630236ea26d447ac739185d6a11ceb93cc83b"
+  },
+  "originals_at_end": {
+    "mouse2": {
+      "path": "/home/myungit/Documenti/File_Esempio/mouse2.prt",
+      "source_sha256_at_end": "7ffa64559f38820ed0f070fa233efc27a2b5ea82ee749e04817a756cb1ae92ce",
+      "snapshot_sha256": "7ffa64559f38820ed0f070fa233efc27a2b5ea82ee749e04817a756cb1ae92ce",
+      "unchanged_from_snapshot": true
+    },
+    "assembly": {
+      "path": "/home/myungit/Documenti/File_Esempio/2550_ASSIEME-ST5674-COMPLETO.prt",
+      "source_sha256_at_end": "5b3d658321f460e826ff1e3c1415054f003ebc03325aa9e69da2a346be227791",
+      "snapshot_sha256": "5b3d658321f460e826ff1e3c1415054f003ebc03325aa9e69da2a346be227791",
+      "unchanged_from_snapshot": true
+    },
+    "CT0578": {
+      "path": "/home/myungit/Documenti/File_Esempio/CT0578.prt",
+      "source_sha256_at_end": "b87b96efa0e8971d89f8fe5bdad5b63d8119831d3f09430122d51770dc851fbd",
+      "snapshot_sha256": "b87b96efa0e8971d89f8fe5bdad5b63d8119831d3f09430122d51770dc851fbd",
+      "unchanged_from_snapshot": true
+    }
+  },
+  "additional_inputs": {
+    "mouse2": {
+      "snapshot": "/home/myungit/Linux_CAD_forFree/forgecad-linux-solver/benchmarks/loft-refinement-2026-10-27/mouse2-input.prt",
+      "sha256": "7ffa64559f38820ed0f070fa233efc27a2b5ea82ee749e04817a756cb1ae92ce",
+      "original_metadata": {
+        "source": "/home/myungit/Documenti/File_Esempio/mouse2.prt",
+        "snapshot": "/home/myungit/Linux_CAD_forFree/forgecad-linux-solver/benchmarks/loft-refinement-2026-10-27/mouse2-input.prt",
+        "sha256": "7ffa64559f38820ed0f070fa233efc27a2b5ea82ee749e04817a756cb1ae92ce",
+        "revision": "4f842a8b9a02a18d9f4abd1238e936901a3a7d30",
+        "baseline_runner_sha256": "53d48423d482e9c9b87cf5c009858928e9ab53edd1979c373c41146eafa001a6"
+      }
+    },
+    "assembly": {
+      "snapshot": "/home/myungit/Linux_CAD_forFree/forgecad-linux-solver/benchmarks/loft-refinement-2026-10-27/assembly-input.prt",
+      "sha256": "5b3d658321f460e826ff1e3c1415054f003ebc03325aa9e69da2a346be227791",
+      "original_metadata": {
+        "source": "/home/myungit/Documenti/File_Esempio/2550_ASSIEME-ST5674-COMPLETO.prt",
+        "sha256": "5b3d658321f460e826ff1e3c1415054f003ebc03325aa9e69da2a346be227791",
+        "bytes": 94505715
+      }
+    }
+  },
+  "protocol": {
+    "quality": 1,
+    "cpu_tessellation": true,
+    "controller_command": "CadViewport::rebuildAllFeatures",
+    "cache_timer": "loadDocument only; document reading excluded",
+    "rebuild_includes": "Undo, geometry, normalization, mesh preparation",
+    "rebuild_excludes": "initial load/read, SHA, OpenGL/tree presentation",
+    "fresh_processes": true,
+    "version_order_alternated": true,
+    "simultaneous_benchmarks_profiler_builds_or_tests": false,
+    "frequency_temperature_external_load_filesystem_cache_controlled": false,
+    "ct_repetitions_per_version": 4,
+    "mouse2_repetitions_per_version": 4,
+    "assembly_repetitions_per_version": 4,
+    "first_assembly_pair_triggered_followup": true
+  },
+  "profile": {
+    "samples": 13799,
+    "period_us": 10000,
+    "flat": [
+      {
+        "percent": 20.03,
+        "samples": 2764,
+        "symbol": "lib:libc.so.6"
+      },
+      {
+        "percent": 9.35,
+        "samples": 1290,
+        "symbol": "ForgeCad::Kernel::(anonymous namespace)::subdivide(ForgeCad::Kernel::Curve<2> const&, ForgeCad::Kernel::Interval const&, ForgeCad::Kernel::Curve<2> const&, ForgeCad::Kernel::Interval const&, ForgeCad::Kernel::BSplineCurve<2> const&, ForgeCad::Kernel::BSplineCurve<2> const&, int, double, double, ForgeCad::Kernel::CurveCurveIntersection&, int&)"
+      },
+      {
+        "percent": 8.3,
+        "samples": 1145,
+        "symbol": "lib:libm.so.6"
+      },
+      {
+        "percent": 4.57,
+        "samples": 631,
+        "symbol": "ForgeCad::Kernel::CurveProjection<3> ForgeCad::Kernel::projectPoint<3>(ForgeCad::Kernel::Curve<3> const&, ForgeCad::Kernel::Vec<3> const&, ForgeCad::Kernel::Interval const&)"
+      },
+      {
+        "percent": 3.62,
+        "samples": 500,
+        "symbol": "ForgeCad::Kernel::detail::validateKnotVector(std::vector<double, std::allocator<double> > const&, int, int, char const*)"
+      },
+      {
+        "percent": 3.01,
+        "samples": 416,
+        "symbol": "ForgeCad::Kernel::BernsteinPolynomial::operator*(ForgeCad::Kernel::BernsteinPolynomial const&) const"
+      },
+      {
+        "percent": 2.99,
+        "samples": 413,
+        "symbol": "lib:libstdc++.so.6.0.36"
+      },
+      {
+        "percent": 2.27,
+        "samples": 313,
+        "symbol": "ForgeCad::Kernel::BernsteinPolynomial::evaluate(double) const"
+      },
+      {
+        "percent": 2.24,
+        "samples": 309,
+        "symbol": "ForgeCad::Kernel::(anonymous namespace)::subdivisionSeeds(ForgeCad::Kernel::Surface const&, ForgeCad::Kernel::Surface const&, ForgeCad::Kernel::Box const&, double, std::vector<ForgeCad::Kernel::Vec<3>, std::allocator<ForgeCad::Kernel::Vec<3> > >&)::{lambda(ForgeCad::Kernel::BSplineSurface const&, ForgeCad::Kernel::BSplineSurface const&, int)#1}::operator()(ForgeCad::Kernel::BSplineSurface const&, ForgeCad::Kernel::BSplineSurface const&, int) const"
+      },
+      {
+        "percent": 1.9,
+        "samples": 262,
+        "symbol": "void ForgeCad::Kernel::(anonymous namespace)::evaluateConic<3>(ForgeCad::Kernel::Vec<3> const&, ForgeCad::Kernel::Vec<3> const&, ForgeCad::Kernel::Vec<3> const&, double, int, ForgeCad::Kernel::Vec<3>*)"
+      },
+      {
+        "percent": 1.85,
+        "samples": 255,
+        "symbol": "ForgeCad::Kernel::(anonymous namespace)::BooleanBuilder::buildSubFacesOnce(int, ForgeCad::Kernel::Id<ForgeCad::Kernel::FaceTag>, std::vector<ForgeCad::Kernel::(anonymous namespace)::Piece, std::allocator<ForgeCad::Kernel::(anonymous namespace)::Piece> > const&, int) const"
+      },
+      {
+        "percent": 1.73,
+        "samples": 239,
+        "symbol": "ForgeCad::Kernel::BernsteinPolynomial::BernsteinPolynomial(std::vector<double, std::allocator<double> >)"
+      },
+      {
+        "percent": 1.69,
+        "samples": 233,
+        "symbol": "void std::__introsort_loop<__gnu_cxx::__normal_iterator<std::pair<double, unsigned long>*, std::vector<std::pair<double, unsigned long>, std::allocator<std::pair<double, unsigned long> > > >, long, std::less<void> >(__gnu_cxx::__normal_iterator<std::pair<double, unsigned long>*, std::vector<std::pair<double, unsigned long>, std::allocator<std::pair<double, unsigned long> > > >, __gnu_cxx::__normal_iterator<std::pair<double, unsigned long>*, std::vector<std::pair<double, unsigned long>, std::allocator<std::pair<double, unsigned long> > > >, long, std::less<void>) [clone .isra.0]"
+      },
+      {
+        "percent": 1.38,
+        "samples": 190,
+        "symbol": "ForgeCad::Kernel::ExtrusionSurface::evaluate(double, double, int, ForgeCad::Kernel::Vec<3>*) const"
+      },
+      {
+        "percent": 1.38,
+        "samples": 190,
+        "symbol": "void ForgeCad::Kernel::(anonymous namespace)::collectCandidates<3>(ForgeCad::Kernel::Curve<3> const&, ForgeCad::Kernel::Vec<3> const&, ForgeCad::Kernel::Interval const&, std::vector<ForgeCad::Kernel::CurveProjection<3>, std::allocator<ForgeCad::Kernel::CurveProjection<3> > >&, double)"
+      },
+      {
+        "percent": 1.31,
+        "samples": 181,
+        "symbol": "ForgeCad::Kernel::BSplineCurve<3>::insertKnot(double, int) const"
+      },
+      {
+        "percent": 1.22,
+        "samples": 168,
+        "symbol": "ForgeCad::Kernel::BernsteinPolynomial::elevated(int) const"
+      },
+      {
+        "percent": 1.04,
+        "samples": 143,
+        "symbol": "void ForgeCad::Kernel::(anonymous namespace)::addCandidate<3>(ForgeCad::Kernel::Curve<3> const&, ForgeCad::Kernel::Vec<3> const&, double, std::vector<ForgeCad::Kernel::CurveProjection<3>, std::allocator<ForgeCad::Kernel::CurveProjection<3> > >&)"
+      },
+      {
+        "percent": 1.0,
+        "samples": 138,
+        "symbol": "double ForgeCad::Kernel::distance<3>(ForgeCad::Kernel::Vec<3> const&, ForgeCad::Kernel::Vec<3> const&)"
+      },
+      {
+        "percent": 0.96,
+        "samples": 132,
+        "symbol": "ForgeCad::Kernel::Circle<3>::evaluate(double, int, ForgeCad::Kernel::Vec<3>*) const"
+      },
+      {
+        "percent": 0.93,
+        "samples": 128,
+        "symbol": "ForgeCad::Kernel::BSplineCurve<3>::clamped() const"
+      },
+      {
+        "percent": 0.92,
+        "samples": 127,
+        "symbol": "ForgeCad::Kernel::ConicalSurface::evaluate(double, double, int, ForgeCad::Kernel::Vec<3>*) const"
+      },
+      {
+        "percent": 0.91,
+        "samples": 126,
+        "symbol": "ForgeCad::Kernel::Transform3::applyToPoint(ForgeCad::Kernel::Vec<3> const&) const"
+      },
+      {
+        "percent": 0.86,
+        "samples": 118,
+        "symbol": "void ForgeCad::Kernel::detail::(anonymous namespace)::evaluateBasis<3, 0>(std::vector<double, std::allocator<double> > const&, int, double, int, int, double*) [clone .constprop.0]"
+      },
+      {
+        "percent": 0.8,
+        "samples": 111,
+        "symbol": "ForgeCad::Kernel::BSplineCurve<3>::bezierSegments() const"
+      },
+      {
+        "percent": 0.75,
+        "samples": 104,
+        "symbol": "ForgeCad::Kernel::BSplineCurve<3>::validate() const"
+      },
+      {
+        "percent": 0.71,
+        "samples": 98,
+        "symbol": "ForgeCad::Kernel::CurveProjection<2> ForgeCad::Kernel::projectPoint<2>(ForgeCad::Kernel::Curve<2> const&, ForgeCad::Kernel::Vec<2> const&, ForgeCad::Kernel::Interval const&)"
+      },
+      {
+        "percent": 0.7,
+        "samples": 97,
+        "symbol": "_init"
+      },
+      {
+        "percent": 0.65,
+        "samples": 90,
+        "symbol": "ForgeCad::Kernel::(anonymous namespace)::Candidates::considerInterior(double, double)"
+      },
+      {
+        "percent": 0.64,
+        "samples": 89,
+        "symbol": "ForgeCad::Kernel::splitPatch(ForgeCad::Kernel::BSplineSurface const&, bool)"
+      },
+      {
+        "percent": 0.64,
+        "samples": 89,
+        "symbol": "ForgeCad::Kernel::(anonymous namespace)::radial(ForgeCad::Kernel::Frame3 const&, int, double, double)"
+      },
+      {
+        "percent": 0.64,
+        "samples": 89,
+        "symbol": "ForgeCad::Kernel::(anonymous namespace)::patchBounds(ForgeCad::Kernel::(anonymous namespace)::BezierPatch const&, ForgeCad::Kernel::Vec<3> const&, ForgeCad::Kernel::Vec<3> const*)"
+      },
+      {
+        "percent": 0.63,
+        "samples": 87,
+        "symbol": "ForgeCad::Kernel::intersectCurves(ForgeCad::Kernel::Curve<2> const&, ForgeCad::Kernel::Interval const&, ForgeCad::Kernel::Curve<2> const&, ForgeCad::Kernel::Interval const&, double, bool)"
+      },
+      {
+        "percent": 0.6,
+        "samples": 83,
+        "symbol": "ForgeCad::Kernel::(anonymous namespace)::classifyFacePoint(ForgeCad::Kernel::Body const&, ForgeCad::Kernel::Id<ForgeCad::Kernel::FaceTag>, ForgeCad::Kernel::Vec<3> const&, double, ForgeCad::Kernel::(anonymous namespace)::PreparedFace const*)"
+      },
+      {
+        "percent": 0.57,
+        "samples": 79,
+        "symbol": "ForgeCad::Kernel::(anonymous namespace)::projectOnBSplineSurface(ForgeCad::Kernel::BSplineSurface const&, ForgeCad::Kernel::Vec<3> const&, ForgeCad::Kernel::Interval const&, ForgeCad::Kernel::Interval const&, ForgeCad::Kernel::(anonymous namespace)::Candidates&)"
+      },
+      {
+        "percent": 0.56,
+        "samples": 77,
+        "symbol": "ForgeCad::Kernel::BSplineSurface::evaluate(double, double, int, ForgeCad::Kernel::Vec<3>*) const"
+      },
+      {
+        "percent": 0.56,
+        "samples": 77,
+        "symbol": "ForgeCad::Kernel::BernsteinPolynomial::operator+(ForgeCad::Kernel::BernsteinPolynomial const&) const"
+      },
+      {
+        "percent": 0.54,
+        "samples": 75,
+        "symbol": "void ForgeCad::Kernel::(anonymous namespace)::segmentCandidates<3>(ForgeCad::Kernel::BSplineCurve<3> const&, ForgeCad::Kernel::BSplineCurve<3> const&, ForgeCad::Kernel::Vec<3> const&, ForgeCad::Kernel::Interval const&, std::vector<ForgeCad::Kernel::CurveProjection<3>, std::allocator<ForgeCad::Kernel::CurveProjection<3> > >&)"
+      },
+      {
+        "percent": 0.51,
+        "samples": 71,
+        "symbol": "ForgeCad::Kernel::BSplineCurve<3>::evaluateSpan(int, double, int, ForgeCad::Kernel::Vec<3>*) const"
+      },
+      {
+        "percent": 0.5,
+        "samples": 69,
+        "symbol": "ForgeCad::Kernel::(anonymous namespace)::isolate(ForgeCad::Kernel::BernsteinPolynomial const&, ForgeCad::Kernel::BernsteinPolynomial const&, double, double, double, int, std::vector<double, std::allocator<double> >&)"
+      }
+    ],
+    "inclusive": [
+      {
+        "percent": 99.96,
+        "samples": 13794,
+        "symbol": "lib:libc.so.6"
+      },
+      {
+        "percent": 80.47,
+        "samples": 11104,
+        "symbol": "lib:libstdc++.so.6.0.36"
+      },
+      {
+        "percent": 78.82,
+        "samples": 10877,
+        "symbol": "ForgeCad::Kernel::parallelFor<ForgeCad::Kernel::(anonymous namespace)::BooleanBuilder::computeCuts(std::map<int, std::vector<ForgeCad::Kernel::(anonymous namespace)::Piece, std::allocator<ForgeCad::Kernel::(anonymous namespace)::Piece> >, std::less<int>, std::allocator<std::pair<int const, std::vector<ForgeCad::Kernel::(anonymous namespace)::Piece, std::allocator<ForgeCad::Kernel::(anonymous namespace)::Piece> > > > > (&) [2])::{lambda(unsigned long)#1}>(unsigned long, unsigned int, ForgeCad::Kernel::(anonymous namespace)::BooleanBuilder::computeCuts(std::map<int, std::vector<ForgeCad::Kernel::(anonymous namespace)::Piece, std::allocator<ForgeCad::Kernel::(anonymous namespace)::Piece> >, std::less<int>, std::allocator<std::pair<int const, std::vector<ForgeCad::Kernel::(anonymous namespace)::Piece, std::allocator<ForgeCad::Kernel::(anonymous namespace)::Piece> > > > > (&) [2])::{lambda(unsigned long)#1} const&)::{lambda()#1}::operator()() const"
+      },
+      {
+        "percent": 78.29,
+        "samples": 10803,
+        "symbol": "ForgeCad::Kernel::(anonymous namespace)::BooleanBuilder::pairArcs(ForgeCad::Kernel::Id<ForgeCad::Kernel::FaceTag>, ForgeCad::Kernel::Id<ForgeCad::Kernel::FaceTag>, ForgeCad::Kernel::(anonymous namespace)::BooleanBuilder::PairResult&, bool) const"
+      },
+      {
+        "percent": 76.47,
+        "samples": 10552,
+        "symbol": "ForgeCad::Kernel::(anonymous namespace)::BooleanBuilder::surfaceArcs(ForgeCad::Kernel::Id<ForgeCad::Kernel::FaceTag>, ForgeCad::Kernel::Id<ForgeCad::Kernel::FaceTag>, ForgeCad::Kernel::(anonymous namespace)::BooleanBuilder::PairResult&) const"
+      },
+      {
+        "percent": 59.19,
+        "samples": 8168,
+        "symbol": "ForgeCad::Kernel::intersectSurfaces(ForgeCad::Kernel::Surface const&, ForgeCad::Kernel::Surface const&, ForgeCad::Kernel::Box const&, std::vector<ForgeCad::Kernel::Vec<3>, std::allocator<ForgeCad::Kernel::Vec<3> > > const&, ForgeCad::Kernel::SurfaceIntersectionOptions const&)"
+      },
+      {
+        "percent": 39.02,
+        "samples": 5384,
+        "symbol": "ForgeCad::Kernel::(anonymous namespace)::subdivisionSeeds(ForgeCad::Kernel::Surface const&, ForgeCad::Kernel::Surface const&, ForgeCad::Kernel::Box const&, double, std::vector<ForgeCad::Kernel::Vec<3>, std::allocator<ForgeCad::Kernel::Vec<3> > >&)"
+      },
+      {
+        "percent": 38.65,
+        "samples": 5333,
+        "symbol": "ForgeCad::Kernel::(anonymous namespace)::subdivisionSeeds(ForgeCad::Kernel::Surface const&, ForgeCad::Kernel::Surface const&, ForgeCad::Kernel::Box const&, double, std::vector<ForgeCad::Kernel::Vec<3>, std::allocator<ForgeCad::Kernel::Vec<3> > >&)::{lambda(ForgeCad::Kernel::BSplineSurface const&, ForgeCad::Kernel::BSplineSurface const&, int)#1}::operator()(ForgeCad::Kernel::BSplineSurface const&, ForgeCad::Kernel::BSplineSurface const&, int) const"
+      },
+      {
+        "percent": 25.86,
+        "samples": 3568,
+        "symbol": "ForgeCad::Kernel::CurveProjection<3> ForgeCad::Kernel::projectPoint<3>(ForgeCad::Kernel::Curve<3> const&, ForgeCad::Kernel::Vec<3> const&, ForgeCad::Kernel::Interval const&)"
+      },
+      {
+        "percent": 20.91,
+        "samples": 2885,
+        "symbol": "ForgeCad::Kernel::splitPatch(ForgeCad::Kernel::BSplineSurface const&, bool)"
+      },
+      {
+        "percent": 19.49,
+        "samples": 2689,
+        "symbol": "_start"
+      },
+      {
+        "percent": 19.48,
+        "samples": 2688,
+        "symbol": "ViewportInteractionTest::run(QString const&, int, bool)"
+      },
+      {
+        "percent": 19.48,
+        "samples": 2688,
+        "symbol": "main"
+      },
+      {
+        "percent": 19.44,
+        "samples": 2683,
+        "symbol": "CadViewport::regenerateAll(std::function<void (int, int, QString const&)> const&)"
+      },
+      {
+        "percent": 19.44,
+        "samples": 2683,
+        "symbol": "CadViewport::regenerateFrom(int, QList<bool>, QSet<int>, bool, std::function<void (int, int, QString const&)> const&)"
+      },
+      {
+        "percent": 19.42,
+        "samples": 2680,
+        "symbol": "CadViewport::rebuildParallel(QList<int> const&, std::function<void (int, QString const&)> const&)"
+      },
+      {
+        "percent": 19.42,
+        "samples": 2680,
+        "symbol": "std::_Function_handler<void (), CadViewport::rebuildParallel(QList<int> const&, std::function<void (int, QString const&)> const&)::{lambda()#2}>::_M_invoke(std::_Any_data const&)"
+      },
+      {
+        "percent": 19.42,
+        "samples": 2680,
+        "symbol": "ForgeCad::buildBody(ExtrusionObject&, int, QList<SketchObject> const&, QList<ExtrusionObject> const&, int, bool)"
+      },
+      {
+        "percent": 19.42,
+        "samples": 2680,
+        "symbol": "ForgeCad::buildGeometry(ExtrusionObject&, int, QList<SketchObject> const&, QList<ExtrusionObject> const&)"
+      },
+      {
+        "percent": 19.42,
+        "samples": 2680,
+        "symbol": "ForgeCad::(anonymous namespace)::buildGeometryImpl(ExtrusionObject&, int, QList<SketchObject> const&, QList<ExtrusionObject> const&)"
+      },
+      {
+        "percent": 19.41,
+        "samples": 2678,
+        "symbol": "ForgeCad::Kernel::booleanOperation(ForgeCad::Kernel::Body const&, ForgeCad::Kernel::Body const&, ForgeCad::Kernel::BooleanOperation, ForgeCad::Kernel::BooleanOptions const&, ForgeCad::Kernel::BodyHistory*)"
+      },
+      {
+        "percent": 19.41,
+        "samples": 2678,
+        "symbol": "ForgeCad::forgeBooleanWithHistory(std::shared_ptr<ForgeCad::Kernel::Body const> const&, std::shared_ptr<ForgeCad::Kernel::Body const> const&, ForgeCad::Kernel::BooleanOperation)"
+      },
+      {
+        "percent": 18.88,
+        "samples": 2605,
+        "symbol": "ForgeCad::Kernel::(anonymous namespace)::BooleanBuilder::computeCuts(std::map<int, std::vector<ForgeCad::Kernel::(anonymous namespace)::Piece, std::allocator<ForgeCad::Kernel::(anonymous namespace)::Piece> >, std::less<int>, std::allocator<std::pair<int const, std::vector<ForgeCad::Kernel::(anonymous namespace)::Piece, std::allocator<ForgeCad::Kernel::(anonymous namespace)::Piece> > > > > (&) [2])"
+      },
+      {
+        "percent": 18.29,
+        "samples": 2524,
+        "symbol": "ForgeCad::Kernel::projectPoint(ForgeCad::Kernel::Surface const&, ForgeCad::Kernel::Vec<3> const&)"
+      },
+      {
+        "percent": 18.2,
+        "samples": 2511,
+        "symbol": "ForgeCad::Kernel::projectPoint(ForgeCad::Kernel::Surface const&, ForgeCad::Kernel::Vec<3> const&, ForgeCad::Kernel::Interval const&, ForgeCad::Kernel::Interval const&)"
+      },
+      {
+        "percent": 17.07,
+        "samples": 2355,
+        "symbol": "CadViewport::rebuildAllFeatures()"
+      },
+      {
+        "percent": 16.94,
+        "samples": 2337,
+        "symbol": "ForgeCad::Kernel::intersectCurves(ForgeCad::Kernel::Curve<2> const&, ForgeCad::Kernel::Interval const&, ForgeCad::Kernel::Curve<2> const&, ForgeCad::Kernel::Interval const&, double, bool)"
+      },
+      {
+        "percent": 15.52,
+        "samples": 2142,
+        "symbol": "void ForgeCad::Kernel::(anonymous namespace)::segmentCandidates<3>(ForgeCad::Kernel::BSplineCurve<3> const&, ForgeCad::Kernel::BSplineCurve<3> const&, ForgeCad::Kernel::Vec<3> const&, ForgeCad::Kernel::Interval const&, std::vector<ForgeCad::Kernel::CurveProjection<3>, std::allocator<ForgeCad::Kernel::CurveProjection<3> > >&)"
+      },
+      {
+        "percent": 14.55,
+        "samples": 2008,
+        "symbol": "ForgeCad::Kernel::(anonymous namespace)::BooleanBuilder::splitAtPoints(ForgeCad::Kernel::Curve<3> const&, ForgeCad::Kernel::Interval const&) const"
+      },
+      {
+        "percent": 14.46,
+        "samples": 1995,
+        "symbol": "ForgeCad::forgeMergeFeatureResult(ExtrusionObject&, std::shared_ptr<ForgeCad::Kernel::Body const> const&, int, QList<ExtrusionObject> const&, QString*)"
+      },
+      {
+        "percent": 13.37,
+        "samples": 1845,
+        "symbol": "ForgeCad::Kernel::(anonymous namespace)::BooleanBuilder::collectCuts(std::map<int, std::vector<ForgeCad::Kernel::(anonymous namespace)::Piece, std::allocator<ForgeCad::Kernel::(anonymous namespace)::Piece> >, std::less<int>, std::allocator<std::pair<int const, std::vector<ForgeCad::Kernel::(anonymous namespace)::Piece, std::allocator<ForgeCad::Kernel::(anonymous namespace)::Piece> > > > > (&) [2])"
+      },
+      {
+        "percent": 13.23,
+        "samples": 1826,
+        "symbol": "ForgeCad::Kernel::(anonymous namespace)::Marcher::traceFrom(ForgeCad::Kernel::Vec<3> const&, ForgeCad::Kernel::SurfaceIntersection&, bool)"
+      },
+      {
+        "percent": 11.51,
+        "samples": 1588,
+        "symbol": "ForgeCad::Kernel::(anonymous namespace)::subdivide(ForgeCad::Kernel::Curve<2> const&, ForgeCad::Kernel::Interval const&, ForgeCad::Kernel::Curve<2> const&, ForgeCad::Kernel::Interval const&, ForgeCad::Kernel::BSplineCurve<2> const&, ForgeCad::Kernel::BSplineCurve<2> const&, int, double, double, ForgeCad::Kernel::CurveCurveIntersection&, int&)"
+      },
+      {
+        "percent": 11.45,
+        "samples": 1580,
+        "symbol": "ForgeCad::Kernel::BSplineCurve<3>::bezierSegments() const"
+      },
+      {
+        "percent": 9.13,
+        "samples": 1260,
+        "symbol": "void ForgeCad::Kernel::(anonymous namespace)::collectCandidates<3>(ForgeCad::Kernel::Curve<3> const&, ForgeCad::Kernel::Vec<3> const&, ForgeCad::Kernel::Interval const&, std::vector<ForgeCad::Kernel::CurveProjection<3>, std::allocator<ForgeCad::Kernel::CurveProjection<3> > >&, double)"
+      },
+      {
+        "percent": 8.89,
+        "samples": 1227,
+        "symbol": "ForgeCad::Kernel::Circle<3>::evaluate(double, int, ForgeCad::Kernel::Vec<3>*) const"
+      },
+      {
+        "percent": 8.59,
+        "samples": 1186,
+        "symbol": "std::vector<ForgeCad::Kernel::CurveProjection<3>, std::allocator<ForgeCad::Kernel::CurveProjection<3> > > ForgeCad::Kernel::projectPointCandidates<3>(ForgeCad::Kernel::Curve<3> const&, ForgeCad::Kernel::Vec<3> const&, ForgeCad::Kernel::Interval const&)"
+      },
+      {
+        "percent": 8.3,
+        "samples": 1145,
+        "symbol": "lib:libm.so.6"
+      },
+      {
+        "percent": 7.94,
+        "samples": 1095,
+        "symbol": "void ForgeCad::Kernel::(anonymous namespace)::evaluateConic<3>(ForgeCad::Kernel::Vec<3> const&, ForgeCad::Kernel::Vec<3> const&, ForgeCad::Kernel::Vec<3> const&, double, int, ForgeCad::Kernel::Vec<3>*)"
+      },
+      {
+        "percent": 7.7,
+        "samples": 1063,
+        "symbol": "ForgeCad::Kernel::BSplineCurve<3>::clamped() const"
+      },
+      {
+        "percent": 6.15,
+        "samples": 848,
+        "symbol": "ForgeCad::Kernel::BSplineCurve<3>::insertKnot(double, int) const"
+      },
+      {
+        "percent": 5.92,
+        "samples": 817,
+        "symbol": "ForgeCad::Kernel::TransformedCurve::evaluate(double, int, ForgeCad::Kernel::Vec<3>*) const"
+      },
+      {
+        "percent": 5.85,
+        "samples": 807,
+        "symbol": "ForgeCad::Kernel::detail::validateKnotVector(std::vector<double, std::allocator<double> > const&, int, int, char const*)"
+      },
+      {
+        "percent": 5.62,
+        "samples": 776,
+        "symbol": "ForgeCad::Kernel::(anonymous namespace)::Marcher::traceCurve(ForgeCad::Kernel::(anonymous namespace)::Node const&, ForgeCad::Kernel::SurfaceIntersection&)"
+      },
+      {
+        "percent": 5.62,
+        "samples": 775,
+        "symbol": "ForgeCad::Kernel::(anonymous namespace)::Marcher::knownPoint(ForgeCad::Kernel::Vec<3> const&, ForgeCad::Kernel::SurfaceIntersection const&) const"
+      },
+      {
+        "percent": 5.51,
+        "samples": 760,
+        "symbol": "ForgeCad::Kernel::ExtrusionSurface::evaluate(double, double, int, ForgeCad::Kernel::Vec<3>*) const"
+      },
+      {
+        "percent": 5.18,
+        "samples": 715,
+        "symbol": "ForgeCad::Kernel::(anonymous namespace)::Marcher::trace(ForgeCad::Kernel::(anonymous namespace)::Node&, std::vector<ForgeCad::Kernel::(anonymous namespace)::Node, std::allocator<ForgeCad::Kernel::(anonymous namespace)::Node> >&, ForgeCad::Kernel::Vec<3>&)"
+      },
+      {
+        "percent": 5.09,
+        "samples": 703,
+        "symbol": "ForgeCad::Kernel::(anonymous namespace)::projectOnBSplineSurface(ForgeCad::Kernel::BSplineSurface const&, ForgeCad::Kernel::Vec<3> const&, ForgeCad::Kernel::Interval const&, ForgeCad::Kernel::Interval const&, ForgeCad::Kernel::(anonymous namespace)::Candidates&)"
+      },
+      {
+        "percent": 4.97,
+        "samples": 686,
+        "symbol": "ForgeCad::Kernel::(anonymous namespace)::Marcher::traceSingularBranches(ForgeCad::Kernel::SurfaceIntersection&)"
+      },
+      {
+        "percent": 4.96,
+        "samples": 684,
+        "symbol": "ForgeCad::forgePatternFeature(std::shared_ptr<ForgeCad::Kernel::Body const> const&, std::shared_ptr<ForgeCad::Kernel::Body const> const&, BooleanOperation, std::vector<ForgeCad::Kernel::Transform3, std::allocator<ForgeCad::Kernel::Transform3> > const&, QString*, bool)"
+      }
+    ]
+  },
+  "ct0578": {
+    "samples": [
+      {
+        "version": "before",
+        "repetition": 0,
+        "cached_load_seconds": 5.520107755,
+        "rebuild_seconds": 27.61393399,
+        "peak_rss_mib": 245.88671875,
+        "wall_seconds": 33.71724899900437,
+        "brep_and_full_mesh_equal": true
+      },
+      {
+        "version": "candidate",
+        "repetition": 0,
+        "cached_load_seconds": 5.152253777,
+        "rebuild_seconds": 27.36738789,
+        "peak_rss_mib": 242.16015625,
+        "wall_seconds": 33.117247280999436,
+        "brep_and_full_mesh_equal": true
+      },
+      {
+        "version": "candidate",
+        "repetition": 1,
+        "cached_load_seconds": 5.125012452,
+        "rebuild_seconds": 27.042868593,
+        "peak_rss_mib": 245.40234375,
+        "wall_seconds": 32.76747174499906,
+        "brep_and_full_mesh_equal": true
+      },
+      {
+        "version": "before",
+        "repetition": 1,
+        "cached_load_seconds": 5.554504952,
+        "rebuild_seconds": 27.385209435,
+        "peak_rss_mib": 245.921875,
+        "wall_seconds": 33.47131478501251,
+        "brep_and_full_mesh_equal": true
+      },
+      {
+        "version": "before",
+        "repetition": 2,
+        "cached_load_seconds": 5.589252321,
+        "rebuild_seconds": 27.432566916,
+        "peak_rss_mib": 248.59765625,
+        "wall_seconds": 33.62187748399447,
+        "brep_and_full_mesh_equal": true
+      },
+      {
+        "version": "candidate",
+        "repetition": 2,
+        "cached_load_seconds": 5.03080982,
+        "rebuild_seconds": 27.253407429,
+        "peak_rss_mib": 243.58203125,
+        "wall_seconds": 32.823990086995764,
+        "brep_and_full_mesh_equal": true
+      },
+      {
+        "version": "candidate",
+        "repetition": 3,
+        "cached_load_seconds": 5.026005241,
+        "rebuild_seconds": 26.838882602,
+        "peak_rss_mib": 239.0859375,
+        "wall_seconds": 32.419943353001145,
+        "brep_and_full_mesh_equal": true
+      },
+      {
+        "version": "before",
+        "repetition": 3,
+        "cached_load_seconds": 5.657915281,
+        "rebuild_seconds": 27.314766164,
+        "peak_rss_mib": 249.8203125,
+        "wall_seconds": 33.52118264499586,
+        "brep_and_full_mesh_equal": true
+      }
+    ],
+    "summary": {
+      "cached_load_seconds": {
+        "before": {
+          "samples": [
+            5.520107755,
+            5.554504952,
+            5.589252321,
+            5.657915281
+          ],
+          "median": 5.5718786365,
+          "min": 5.520107755,
+          "max": 5.657915281
+        },
+        "candidate": {
+          "samples": [
+            5.152253777,
+            5.125012452,
+            5.03080982,
+            5.026005241
+          ],
+          "median": 5.077911136,
+          "min": 5.026005241,
+          "max": 5.152253777
+        },
+        "speedup": 1.0972776969250215,
+        "percent_time_saved": 8.865367189876338,
+        "intervals_overlap": false
+      },
+      "rebuild_seconds": {
+        "before": {
+          "samples": [
+            27.61393399,
+            27.385209435,
+            27.432566916,
+            27.314766164
+          ],
+          "median": 27.4088881755,
+          "min": 27.314766164,
+          "max": 27.61393399
+        },
+        "candidate": {
+          "samples": [
+            27.36738789,
+            27.042868593,
+            27.253407429,
+            26.838882602
+          ],
+          "median": 27.148138011,
+          "min": 26.838882602,
+          "max": 27.36738789
+        },
+        "speedup": 1.0096047163306134,
+        "percent_time_saved": 0.9513343366225113,
+        "intervals_overlap": true
+      }
+    },
+    "final_build_sample": {
+      "label": "ct-final",
+      "version": "final",
+      "repetition": 0,
+      "cached_load_seconds": 5.038601479,
+      "rebuild_seconds": 27.194875672,
+      "rebuild_errors": 0,
+      "features": 11,
+      "sketches": 10,
+      "peak_rss_mib": 240.828125,
+      "wall_seconds": 32.82104007698945,
+      "brep_and_full_mesh_equal": true
+    }
+  },
+  "mouse2": {
+    "samples": [
+      {
+        "label": "mouse2",
+        "version": "before",
+        "repetition": 0,
+        "cached_load_seconds": 0.820855705,
+        "rebuild_seconds": 7.085536955,
+        "rebuild_errors": 0,
+        "features": 36,
+        "sketches": 14,
+        "peak_rss_mib": 2831.37890625,
+        "wall_seconds": 9.232533205009531,
+        "brep_and_full_mesh_equal": true
+      },
+      {
+        "label": "mouse2",
+        "version": "final",
+        "repetition": 0,
+        "cached_load_seconds": 0.80959654,
+        "rebuild_seconds": 7.032286355,
+        "rebuild_errors": 0,
+        "features": 36,
+        "sketches": 14,
+        "peak_rss_mib": 2799.859375,
+        "wall_seconds": 9.081019355013268,
+        "brep_and_full_mesh_equal": true
+      },
+      {
+        "label": "mouse2",
+        "version": "final",
+        "repetition": 1,
+        "cached_load_seconds": 0.804964111,
+        "rebuild_seconds": 7.151776234,
+        "rebuild_errors": 0,
+        "features": 36,
+        "sketches": 14,
+        "peak_rss_mib": 2809.14453125,
+        "wall_seconds": 9.229644589999225,
+        "brep_and_full_mesh_equal": true
+      },
+      {
+        "label": "mouse2",
+        "version": "before",
+        "repetition": 1,
+        "cached_load_seconds": 0.806834612,
+        "rebuild_seconds": 7.096309031,
+        "rebuild_errors": 0,
+        "features": 36,
+        "sketches": 14,
+        "peak_rss_mib": 2820.77734375,
+        "wall_seconds": 9.131825288000982,
+        "brep_and_full_mesh_equal": true
+      },
+      {
+        "label": "mouse2",
+        "version": "before",
+        "repetition": 2,
+        "cached_load_seconds": 0.807271777,
+        "rebuild_seconds": 7.0991751,
+        "rebuild_errors": 0,
+        "features": 36,
+        "sketches": 14,
+        "peak_rss_mib": 2771.91015625,
+        "wall_seconds": 9.181922378978925,
+        "brep_and_full_mesh_equal": true
+      },
+      {
+        "label": "mouse2",
+        "version": "final",
+        "repetition": 2,
+        "cached_load_seconds": 0.804299162,
+        "rebuild_seconds": 7.055833662,
+        "rebuild_errors": 0,
+        "features": 36,
+        "sketches": 14,
+        "peak_rss_mib": 2813.11328125,
+        "wall_seconds": 9.129812703991774,
+        "brep_and_full_mesh_equal": true
+      },
+      {
+        "label": "mouse2",
+        "version": "final",
+        "repetition": 3,
+        "cached_load_seconds": 0.829092725,
+        "rebuild_seconds": 7.092303434,
+        "rebuild_errors": 0,
+        "features": 36,
+        "sketches": 14,
+        "peak_rss_mib": 2824.84375,
+        "wall_seconds": 9.181941121991258,
+        "brep_and_full_mesh_equal": true
+      },
+      {
+        "label": "mouse2",
+        "version": "before",
+        "repetition": 3,
+        "cached_load_seconds": 0.806262571,
+        "rebuild_seconds": 7.021846094,
+        "rebuild_errors": 0,
+        "features": 36,
+        "sketches": 14,
+        "peak_rss_mib": 2783.60546875,
+        "wall_seconds": 9.080177672993159,
+        "brep_and_full_mesh_equal": true
+      }
+    ],
+    "summary": {
+      "cached_load_seconds": {
+        "before": {
+          "samples": [
+            0.820855705,
+            0.806834612,
+            0.807271777,
+            0.806262571
+          ],
+          "median": 0.8070531944999999,
+          "min": 0.806262571,
+          "max": 0.820855705
+        },
+        "final": {
+          "samples": [
+            0.80959654,
+            0.804964111,
+            0.804299162,
+            0.829092725
+          ],
+          "median": 0.8072803255000001,
+          "min": 0.804299162,
+          "max": 0.829092725
+        },
+        "speedup": 0.9997186466796902,
+        "percent_time_saved": -0.028143250227863348,
+        "intervals_overlap": true
+      },
+      "rebuild_seconds": {
+        "before": {
+          "samples": [
+            7.085536955,
+            7.096309031,
+            7.0991751,
+            7.021846094
+          ],
+          "median": 7.0909229929999995,
+          "min": 7.021846094,
+          "max": 7.0991751
+        },
+        "final": {
+          "samples": [
+            7.032286355,
+            7.151776234,
+            7.055833662,
+            7.092303434
+          ],
+          "median": 7.074068548,
+          "min": 7.032286355,
+          "max": 7.151776234
+        },
+        "speedup": 1.002382567384757,
+        "percent_time_saved": 0.23769042502137516,
+        "intervals_overlap": true
+      }
+    }
+  },
+  "assembly_path_diagnostic": {
+    "tree_constructions": 0,
+    "positive_control_passed": true,
+    "geometry_and_mesh_equal": true,
+    "diagnostic_timing_excluded_from_comparison": true
+  },
+  "assembly": {
+    "samples": [
+      {
+        "label": "assembly",
+        "version": "before",
+        "repetition": 0,
+        "cached_load_seconds": 3.647130804,
+        "rebuild_seconds": 14.283062809,
+        "rebuild_errors": 4,
+        "features": 1200,
+        "sketches": 0,
+        "peak_rss_mib": 3019.25,
+        "wall_seconds": 25.260511460975977,
+        "brep_and_full_mesh_equal": true
+      },
+      {
+        "label": "assembly",
+        "version": "final",
+        "repetition": 0,
+        "cached_load_seconds": 3.831879289,
+        "rebuild_seconds": 15.088727834,
+        "rebuild_errors": 4,
+        "features": 1200,
+        "sketches": 0,
+        "peak_rss_mib": 3014.640625,
+        "wall_seconds": 26.264322720991913,
+        "brep_and_full_mesh_equal": true
+      },
+      {
+        "label": "assembly",
+        "version": "final",
+        "repetition": 1,
+        "cached_load_seconds": 3.84157242,
+        "rebuild_seconds": 14.451347524,
+        "rebuild_errors": 4,
+        "features": 1200,
+        "sketches": 0,
+        "peak_rss_mib": 3036.6875,
+        "wall_seconds": 25.763940567994723,
+        "brep_and_full_mesh_equal": true
+      },
+      {
+        "label": "assembly",
+        "version": "before",
+        "repetition": 1,
+        "cached_load_seconds": 3.866349546,
+        "rebuild_seconds": 14.497963942,
+        "rebuild_errors": 4,
+        "features": 1200,
+        "sketches": 0,
+        "peak_rss_mib": 3028.7421875,
+        "wall_seconds": 25.86401342699537,
+        "brep_and_full_mesh_equal": true
+      },
+      {
+        "label": "assembly",
+        "version": "before",
+        "repetition": 2,
+        "cached_load_seconds": 3.884567502,
+        "rebuild_seconds": 14.891573314,
+        "rebuild_errors": 4,
+        "features": 1200,
+        "sketches": 0,
+        "peak_rss_mib": 3044.05078125,
+        "wall_seconds": 26.211427378002554,
+        "brep_and_full_mesh_equal": true
+      },
+      {
+        "label": "assembly",
+        "version": "final",
+        "repetition": 2,
+        "cached_load_seconds": 3.787746222,
+        "rebuild_seconds": 15.466739715,
+        "rebuild_errors": 4,
+        "features": 1200,
+        "sketches": 0,
+        "peak_rss_mib": 3048.15625,
+        "wall_seconds": 26.661136722017545,
+        "brep_and_full_mesh_equal": true
+      },
+      {
+        "label": "assembly",
+        "version": "final",
+        "repetition": 3,
+        "cached_load_seconds": 3.817172209,
+        "rebuild_seconds": 15.590269938,
+        "rebuild_errors": 4,
+        "features": 1200,
+        "sketches": 0,
+        "peak_rss_mib": 3041.1875,
+        "wall_seconds": 26.764988144976087,
+        "brep_and_full_mesh_equal": true
+      },
+      {
+        "label": "assembly",
+        "version": "before",
+        "repetition": 3,
+        "cached_load_seconds": 3.890833341,
+        "rebuild_seconds": 15.572104028,
+        "rebuild_errors": 4,
+        "features": 1200,
+        "sketches": 0,
+        "peak_rss_mib": 3081.04296875,
+        "wall_seconds": 26.865991834987653,
+        "brep_and_full_mesh_equal": true
+      }
+    ],
+    "summary": {
+      "cached_load_seconds": {
+        "before": {
+          "samples": [
+            3.647130804,
+            3.866349546,
+            3.884567502,
+            3.890833341
+          ],
+          "median": 3.875458524,
+          "min": 3.647130804,
+          "max": 3.890833341
+        },
+        "final": {
+          "samples": [
+            3.831879289,
+            3.84157242,
+            3.787746222,
+            3.817172209
+          ],
+          "median": 3.824525749,
+          "min": 3.787746222,
+          "max": 3.84157242
+        },
+        "speedup": 1.0133174093580928,
+        "percent_time_saved": 1.3142386812962203,
+        "intervals_overlap": true
+      },
+      "rebuild_seconds": {
+        "before": {
+          "samples": [
+            14.283062809,
+            14.497963942,
+            14.891573314,
+            15.572104028
+          ],
+          "median": 14.694768628,
+          "min": 14.283062809,
+          "max": 15.572104028
+        },
+        "final": {
+          "samples": [
+            15.088727834,
+            14.451347524,
+            15.466739715,
+            15.590269938
+          ],
+          "median": 15.2777337745,
+          "min": 14.451347524,
+          "max": 15.590269938
+        },
+        "speedup": 0.9618421714172671,
+        "percent_time_saved": -3.967161111942885,
+        "intervals_overlap": true
+      }
+    },
+    "preexisting_missing_source_import_errors": [
+      274,
+      281,
+      288,
+      295
+    ]
+  },
+  "oracle": {
+    "bit_identical_curve_curve_cases": 192,
+    "concurrent_requests": 2,
+    "degrees": [
+      1,
+      2,
+      3,
+      5
+    ],
+    "spans": [
+      8,
+      16,
+      33,
+      97
+    ],
+    "rational_polynomial": true,
+    "repeated_knots_and_partial_ranges": true
+  },
+  "new_analytic_tests": {
+    "passed": 2,
+    "total": 2,
+    "also_pass_on_baseline": true,
+    "cases": "degree1 positive rational and polynomial, swapped axes/order, roots at knots, partial ranges, tangent node, disjoint curves, concurrency, cancellation"
+  },
+  "kernel_selected": {
+    "passed": 228,
+    "total": 230,
+    "preexisting_failures_reproduced_on_baseline": [
+      "BlendVanishingAtTangentMitreEnd",
+      "BlendArcsMeetingSegments"
+    ]
+  },
+  "ctest_selected": {
+    "passed": 44,
+    "total": 44,
+    "seconds": 13.15
+  },
+  "native_qa": {
+    "mouse2_frozen": true,
+    "passed": true,
+    "edit_undo_redo_roundtrip": true,
+    "preview_reopens": 3,
+    "changed_pixels_each": 0,
+    "opengl_errors": 0
+  },
+  "architecture": {
+    "files": 496,
+    "edges": 6739,
+    "translation_units": 235,
+    "errors": {},
+    "valid_sites": 80900,
+    "boundaries": [
+      {
+        "source": "kernel/fk_boolean.cpp",
+        "symbol": "intersectCurves",
+        "targets": [
+          "kernel/fk_intersect.cpp"
+        ],
+        "both_directions": true
+      },
+      {
+        "source": "kernel/fk_intersect.cpp",
+        "symbol": "cancellationPoint",
+        "targets": [
+          "kernel/fk_cancel.h"
+        ],
+        "both_directions": true
+      },
+      {
+        "source": "kernel/fk_intersect.cpp",
+        "symbol": "BernsteinPolynomial::roots",
+        "targets": [
+          "kernel/fk_bernstein.cpp"
+        ],
+        "both_directions": true
+      },
+      {
+        "source": "kernel/tests/test_intersect.cpp",
+        "symbol": "intersectCurves",
+        "targets": [
+          "kernel/fk_intersect.cpp"
+        ],
+        "both_directions": true
+      }
+    ],
+    "private_tree_resolved_in_same_file": true,
+    "includes_distinct": true,
+    "visual_inspected": true
+  },
+  "full_linux_app_compiled": true,
+  "commit_push_performed": false
+}

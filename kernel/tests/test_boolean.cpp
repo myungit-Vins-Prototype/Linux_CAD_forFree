@@ -1388,3 +1388,22 @@ FK_TEST(BooleanPartialClosedSplineRevolution) {
     compareAll(pin,ring,true,1e-6);
     }
 }
+
+// Piccole facce laterali e spigoli corti lasciati dal taglio di una spline:
+// il volume atteso viene dal prisma originale, senza un secondo booleano.
+FK_TEST(BooleanThinSplineSlivers) {
+    for (bool rational : {false, true}) {
+        const Operand source = extrusion(Frame3(), {closedSpline(Vec2(0, 0), 2.0, rational)}, 3.0);
+        const double volume = massProperties(source.body).volume;
+        for (double thickness : {1e-2, 1e-3, 1e-4}) {
+            const Body tool = makeBox(Frame3(Vec3(-10, -10, 3.0 - thickness), Vec3(0, 0, 1), Vec3(1, 0, 0)), 20, 20, 1);
+            const Body sliver = booleanOperation(source.body, tool, BooleanOperation::Intersect);
+            const Body remainder = booleanOperation(source.body, tool, BooleanOperation::Subtract);
+            FK_CHECK(checkBody(sliver).empty());
+            FK_CHECK(checkBody(remainder).empty());
+            FK_CHECK(!sliver.faces().empty());
+            FK_CHECK_NEAR(massProperties(sliver).volume, volume * thickness / 3.0, 1e-10 * volume);
+            FK_CHECK_NEAR(massProperties(remainder).volume, volume * (1.0 - thickness / 3.0), 1e-10 * volume);
+        }
+    }
+}

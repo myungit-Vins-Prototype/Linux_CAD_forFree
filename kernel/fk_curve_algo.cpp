@@ -192,10 +192,20 @@ template <int N>
 CurveProjection<N> bsplineMinimum(const BSplineCurve<N> &curve, const Vec<N> &p, const Interval &range) {
     const auto segments = curve.cachedBezierSegments();
     std::vector<std::pair<double, std::size_t>> order;
-    for (std::size_t i = 0; i < segments->size(); ++i) {
-        const BSplineCurve<N> &segment = (*segments)[i];
-        const Interval span = segment.domain();
-        if (span.hi < range.lo || span.lo > range.hi) continue;
+    // Le pezze sono ordinate secondo i nodi. Il test precedente includeva
+    // entrambi i lati di un estremo: bounds inclusivi conservano gli stessi
+    // indici e l'ordine, evitando una scansione di tutti i domini per richiesta.
+    auto first = segments->begin(), last = segments->end();
+    const Interval domain = curve.domain();
+    if (range.lo > domain.lo || range.hi < domain.hi) {
+        first = std::lower_bound(first, last, range.lo,
+            [](const BSplineCurve<N> &s, double t) { return s.domain().hi < t; });
+        last = std::upper_bound(first, last, range.hi,
+            [](double t, const BSplineCurve<N> &s) { return t < s.domain().lo; });
+    }
+    for (auto it = first; it != last; ++it) {
+        const std::size_t i = std::size_t(it - segments->begin());
+        const BSplineCurve<N> &segment = *it;
         double gap = 0.0;
         for (int c = 0; c < N; ++c) {
             double lo = 1e300, hi = -1e300;

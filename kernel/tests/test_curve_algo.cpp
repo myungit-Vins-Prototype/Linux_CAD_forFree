@@ -278,3 +278,62 @@ FK_TEST(ProjectBoundedCandidatesHighDegreeAndNarrowSpans) {
     for(double t:{a,std::nextafter(a,b),(a+b)*.5,b,a+.8})
         for(double maximum:{0.0,1e-7,.01})checkBoundedCandidates(curve,curve.point(t),curve.domain(),maximum);
 }
+
+
+namespace {
+template<int N>
+void restrictedMinimumCases() {
+    std::mt19937 rng(901+N);
+    for (int trial=0;trial<24;++trial) {
+        const auto curve=randomBSpline<N>(rng,trial%2==0);
+        const auto domain=curve.domain();
+        const auto breaks=curve.breakpoints(domain);
+        const double middle=breaks[breaks.size()/2];
+        for (const auto range : {domain,Interval{domain.lo,middle},Interval{middle,domain.hi},
+             Interval{middle,middle},Interval{std::nextafter(middle,domain.lo),std::nextafter(middle,domain.hi)},
+             Interval{domain.lo-domain.length(),domain.lo},Interval{domain.hi,domain.hi+domain.length()}}) {
+            const Vec<N> p=randomVec<N>(rng,100);
+            const auto actual=projectPoint(curve,p,range);
+            double expected=std::min(distance(curve.point(range.lo),p),distance(curve.point(range.hi),p));
+            for (const auto &candidate : projectPointCandidates(curve,p,range))
+                expected=std::min(expected,candidate.distance);
+            FK_CHECK_NEAR(actual.distance,expected,1e-12*std::max(1.,expected));
+            FK_CHECK_NEAR(distance(actual.point,curve.point(actual.parameter)),0.,0.);
+            FK_CHECK(range.contains(actual.parameter));
+        }
+    }
+}
+}
+
+FK_TEST(ProjectMinimumRestrictedRangesMatchesExhaustive) {
+    restrictedMinimumCases<2>(); restrictedMinimumCases<3>();
+}
+
+FK_TEST(ProjectMinimumManySpansAnalytic) {
+    constexpr int spans=4096;
+    std::vector<double> knots{0,0}; std::vector<Vec3> poles;
+    for (int i=0;i<=spans;++i) {
+        const double t=double(i)/spans; poles.emplace_back(t,0,0);
+        if (i>0&&i<spans) knots.push_back(t);
+    }
+    knots.insert(knots.end(),2,1);
+    const BSplineCurve<3> curve(1,knots,poles);
+    const auto check=[&] {
+        for (const auto range : {Interval{0,1},Interval{.25,.75},Interval{.5,.5},
+             Interval{std::nextafter(.5,0.),std::nextafter(.5,1.)},Interval{0,.01}})
+            for (double x : {0.,.125,.3,.5,.75,1.}) {
+                const auto result=projectPoint(curve,Vec3(x,2,0),range);
+                const double t=range.clamp(x);
+                if (std::fabs(result.parameter-t)>1e-13 || distance(result.point,Vec3(t,0,0))>1e-13) return false;
+                if (std::fabs(result.distance-std::hypot(t-x,2.))>1e-13) return false;
+            }
+        return true;
+    };
+    FK_CHECK(check());
+    auto first=std::async(std::launch::async,check),second=std::async(std::launch::async,check);
+    FK_CHECK(first.get());FK_CHECK(second.get());
+    bool cancelled=false;
+    try { CancellationScope scope(std::make_shared<std::atomic<bool>>(true)); projectPoint(curve,Vec3(.5,2,0),{.4,.6}); }
+    catch (const OperationCancelled &) { cancelled=true; }
+    FK_CHECK(cancelled);
+}

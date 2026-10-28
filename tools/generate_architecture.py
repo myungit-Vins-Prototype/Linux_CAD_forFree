@@ -92,6 +92,19 @@ DESCRIPTIONS = {
 }
 
 DESCRIPTIONS.update({
+ 'kernel/fk_curve_surface.cpp': ('kernel', 'Intersezioni curva-superficie e suddivisione Bezier diretta in coordinate omogenee: stesso ordine di inserimento nodi, ripiego generale per pezze non clamped, nessuna modifica delle tolleranze.'),
+ 'kernel/tests/test_curve_surface.cpp': ('tests', 'Intersezioni confrontate con OCCT e conservazione della geometria nelle suddivisioni Bezier: razionali, micro domini, gradi alti e divisioni ripetute.'),
+ 'kernel/tests/test_boolean.cpp': ('tests', 'Booleane contro OCCT, contatti e sweep elicoidali; volumi analitici delle lamelle spline sottili fino a 1e-4 mm, topologia e concordanza parallela.'),
+ 'tools/benchmark_surface_distance.py': ('build', 'Benchmark riproducibile del predicato di distanza: sonda C++ CPU generata con CMake, casi vicini/misti/esterni, controllo dei risultati e processi alternati; distinto dal CAD completo.'),
+ 'fk_surface_distance': ('kernel', 'Controlli di distanza con certificato positivo: punto valido entro meta tolleranza o proiezione globale originale; hint locale, cancellazione e nessuna cache persistente.'),
+ 'kernel/fk_exchange.cpp': ('kernel', 'Importazione B-rep: campioni consecutivi con certificato entro lo scarto gia ignorato; distanza esatta oltre soglia e metadati geometrici invariati.'),
+ 'kernel/fk_boolean.cpp': ('kernel', 'Booleane esatte: controlli di appartenenza con certificato positivo entro tolleranza e ripiego sul proiettore globale; intersezioni, topologia e tolleranze conservate.'),
+ 'kernel/tests/test_surface_algo.cpp': ('tests', 'Proiezioni OCCT e certificati di distanza: piano analitico, confini della tolleranza, curve libere, hint, degenerazioni, concorrenza e cancellazione.'),
+ 'kernel/fk_intersect.cpp': ('kernel', 'Intersezioni esatte: gerarchia locale dei box Bezier2D con visita in ordine di parametro, scarto conservativo delle coppie separate; Newton e tolleranze invariati.'),
+ 'kernel/tests/test_intersect.cpp': ('tests', 'Intersezioni contro OCCT e casi analitici con molti tratti: pesi, assi scambiati, range parziali, contatti sui nodi, concorrenza e cancellazione.'),
+ 'kernel/fk_curve_algo.cpp': ('kernel', 'Proiezioni esatte: limita i tratti Bezier al range con bounds inclusivi, conservando ordine/candidati e filtri conservativi entro distanza; lunghezze e quadratura invariate.'),
+ 'kernel/fk_bspline_surface.cpp': ('kernel', 'Superfici B-spline: percorso del solo punto senza buffer delle derivate, stessi termini e ordine di somma; derivate e cache delle pezze invariate.'),
+ 'kernel/tests/test_bspline_surface.cpp': ('tests', 'Superfici B-spline contro OCCT e Bernstein indipendente fino al grado31; limiti dei buffer, nodi ripetuti/stretti, prefissi bit identici, concorrenza e cancellazione.'),
  'kernel/fk_marching.cpp': ('kernel', 'Intersezioni superficie/superficie: rami singolari della forma quadratica con radici omogenee stabili anche a diagonali nulle; tolleranze conservate.'),
  'kernel/tests/test_marching.cpp': ('tests', 'Intersezioni contro OCCT e geometrie analitiche: tangenze, poli e sella con solo termine misto, diagonali quasi nulle e ordine delle superfici invertito.'),
  'tests/test_pattern_placements.h': ('tests', 'Ripetizioni: limiti e trasformazioni, corpi separati/esclusioni; sweep in unione/sottrazione attorno a Y con volumi analitici, pannello, persistenza e Undo/Redo.'),
@@ -121,7 +134,7 @@ DESCRIPTIONS.update({'tools/open_architecture.py': ('build', 'Avvio locale della
  'kernel/tests/test_mass.cpp': ('tests', 'Massa e area contro formule/OCCT; risultati seriali/paralleli bit identici, input immutato, richieste concorrenti, primo errore e cancellazione.'),
  'tests/test_pattern_history_repair.h': ('tests', 'Una sola feature per specchi e ripetizioni con corpi distinti: GUI, cursore atomico, modifica, riordino, inserimento, Undo/Redo e codec; compatibilita storica e riparazione riferimenti dal pannello.'),
  'forgeCad2026_viewport_selection.cpp': ('viewport', 'Selezione e riferimenti del viewport: in modifica sceglie risultati e operandi precedenti alla feature, anche dopo anteprima fallita o Azzera; Esc ripristina la scena finale.'),
- 'kernel/tests/test_curve_algo.cpp': ('tests', 'Proiezioni contro OCCT e candidati entro distanza: rami equidistanti, razionali, trasformazioni, limiti e concorrenza; cache lunghezze bit identica, budget e cancellazione.'),
+ 'kernel/tests/test_curve_algo.cpp': ('tests', 'Proiezioni contro OCCT, filtro esaustivo e linea analitica4096tratti: range inclusivi/ristretti, estremi e concorrenza; quadratura e cache delle lunghezze.'),
  'kernel/fk_exchange.cpp': ('kernel', 'Modello di scambio e assemblaggio: cucitura, campioni UV locali e proiezioni esaustive entro distanza con scarto conservativo dei tratti lontani; verifica 3D e topologia conservate.'),
  'kernel/tests/test_offset.cpp': ('tests', 'Offset e cuciture: parametrizzazioni/versi diversi, curve chiuse, confine della tolleranza, pcurve e orientamento dei solidi; input immutato.'),
  'kernel/fk_constraint_linear.h': ('kernel', 'Algebra del solver: componenti, riordino BFS delle righe, Cholesky a banda stretta o densa con regolarizzazione globale, rango per componenti.'),
