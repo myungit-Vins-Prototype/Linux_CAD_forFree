@@ -35,6 +35,7 @@ struct DrawingViewRelation {
     std::optional<DrawingSectionStep> step; // offset nel verso tangente x normale della madre
     double auxiliaryAngle=0; // lato d'osservazione nel piano madre, gradi da +X verso +Y
 };
+enum class DrawingScaleSource { Custom, Sheet, Parent };
 struct DrawingViewLayout {
     QUuid viewId;
     QString title;
@@ -47,7 +48,14 @@ struct DrawingViewLayout {
     bool showCylinderAxes=false; // asse delle superfici cilindriche, sola presentazione
     std::optional<QPointF> titleOffset={}; // origine del titolo rispetto alla vista, mm sul foglio
     std::optional<DrawingViewBreak> interruption={}; // sola presentazione, misure originali
+    // Assente nei file storici: indipendente, o madre per le derivate ordinarie.
+    std::optional<DrawingScaleSource> scaleSource={};
+    std::optional<double> customScale={}; // conserva il valore anche usando foglio/madre
 };
+inline DrawingScaleSource drawingViewScaleSource(const DrawingViewLayout &view) {
+    return view.scaleSource.value_or(!view.relation.parentId.isNull() && view.relation.kind!=DrawingDerivedKind::Detail
+        ? DrawingScaleSource::Parent : DrawingScaleSource::Custom);
+}
 struct DrawingDimensionLayout {
     QUuid dimensionId;
     QPointF position; // posizione del testo sul foglio, indipendente dalla misura
@@ -108,7 +116,11 @@ struct DrawingSheet {
     QVector<DrawingAnnotation> annotations;
     DrawingStyle style;
     DrawingDimensionNumbering dimensionNumbering;
+    double scale=1.0; // rapporto foglio/modello; le misure restano in mm modello
 };
+bool drawingUsesSheetScale(const DrawingSheet &sheet);
+QString drawingScaleText(double scale);
+double drawingSheetScale(const DrawingSheet &sheet);
 // Solo metadati del foglio; nessuna duplicazione della geometria del modello.
 DrawingAttachmentResolver drawingSheetAttachmentResolver(const DrawingSheet &sheet,const DrawingView &view,
     const DrawingModelSnapshot &model,const std::vector<DrawingCurve> &curves);

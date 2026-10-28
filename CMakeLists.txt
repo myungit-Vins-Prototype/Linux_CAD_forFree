@@ -721,6 +721,9 @@ function(forgecad_add_drawing_editor_test name timeout)
         ENVIRONMENT "QT_QPA_PLATFORM=offscreen;QT_QPA_OFFSCREEN_NO_GLX=1;QT_QPA_PLATFORMTHEME=;QT_STYLE_OVERRIDE=Fusion")
 endfunction()
 
+forgecad_add_drawing_editor_test(forgecad_drawing_scale_tests 60
+    tests/test_drawing_scale.cpp)
+
 # Primo editor del foglio: prova GUI autonoma senza nuovo contenitore nativo.
 forgecad_add_drawing_editor_test(forgecad_drawing_editor_tests 60
     tests/test_drawing_editor.cpp)

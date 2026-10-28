@@ -208,6 +208,8 @@ QString synchronizeDrawingViews(DrawingSheet &sheet){
             require(!visiting.contains(id),"Ciclo nelle dipendenze delle viste.");
             require(visiting.size()<256,"Gerarchia delle viste troppo profonda.");visiting.insert(id);
             auto &layout=const_cast<DrawingViewLayout &>(layoutFor(sheet,id));const auto &r=layout.relation;
+            auto &definition=const_cast<DrawingView &>(viewFor(sheet,id));
+            const double independentScale=layout.customScale.value_or(definition.scale);
             if(!r.parentId.isNull()){
                 require(r.kind==DrawingDerivedKind::Orthographic||r.kind==DrawingDerivedKind::Section||r.kind==DrawingDerivedKind::Detail||r.kind==DrawingDerivedKind::Auxiliary,"Tipo di vista derivata non valido.");
                 visit(r.parentId);const auto &parent=viewFor(sheet,r.parentId);
@@ -215,6 +217,15 @@ QString synchronizeDrawingViews(DrawingSheet &sheet){
                 require(layoutFor(sheet,r.parentId).relation.kind!=DrawingDerivedKind::Detail,"Non sono supportati dettagli di altri dettagli.");
                 auto &child=const_cast<DrawingView &>(viewFor(sheet,id));derive(parent,r,child);
                 layout.features=layoutFor(sheet,r.parentId).features;layout.position=constrainDrawingViewPosition(sheet,layout,layout.position);
+            }
+            require(!layout.customScale||layout.scaleSource.has_value(),"Scala personalizzata senza sorgente.");
+            require(!layout.scaleSource||layout.customScale.has_value(),"Valore della scala personalizzata assente.");
+            require(!layout.customScale||(std::isfinite(*layout.customScale)&&*layout.customScale>=1e-6&&*layout.customScale<=1e6),"Scala personalizzata non valida.");
+            switch(drawingViewScaleSource(layout)){
+            case DrawingScaleSource::Custom: definition.scale=independentScale;break;
+            case DrawingScaleSource::Sheet: definition.scale=sheet.scale;break;
+            case DrawingScaleSource::Parent: require(!r.parentId.isNull(),"La scala della madre richiede una vista madre.");definition.scale=viewFor(sheet,r.parentId).scale;break;
+            default: throw std::invalid_argument("Sorgente della scala non valida.");
             }
             visiting.remove(id);done.insert(id);
         };
@@ -226,7 +237,7 @@ QString alignDrawingSectionOrientation(DrawingSheet &sheet,const QUuid &id){
     try{
         const auto &layout=layoutFor(sheet,id);require(layout.relation.kind==DrawingDerivedKind::Section&&!layout.relation.parentId.isNull(),"Seleziona una sezione da linea di taglio.");
         const auto &parent=viewFor(sheet,layout.relation.parentId);require(parent.kind==DrawingViewKind::ProjectedEdges,"La vista madre deve essere una proiezione.");
-        auto prepared=viewFor(sheet,id);derive(parent,layout.relation,prepared,false);const_cast<DrawingView &>(viewFor(sheet,id))=std::move(prepared);return {};
+        auto prepared=viewFor(sheet,id);const double scale=prepared.scale;derive(parent,layout.relation,prepared,false);prepared.scale=scale;const_cast<DrawingView &>(viewFor(sheet,id))=std::move(prepared);return {};
     }catch(const std::exception &e){return QString::fromUtf8(e.what());}
 }
 QString validateDrawingRelations(const DrawingSheet &sheet){
@@ -252,6 +263,7 @@ QString validateDrawingRelations(const DrawingSheet &sheet){
             }
         }
         auto expected=sheet;const auto error=synchronizeDrawingViews(expected);if(!error.isEmpty())return error;
+        for(const auto &l:sheet.views){require(viewFor(sheet,l.viewId).scale==viewFor(expected,l.viewId).scale,"Scala della vista incoerente con la sorgente scelta.");}
         for(const auto &l:sheet.views)if(!l.relation.parentId.isNull()){
             const auto &a=viewFor(sheet,l.viewId),&b=viewFor(expected,l.viewId);const auto &p=layoutFor(expected,l.viewId);
             require(a.bend==b.bend&&a.step==b.step&&a.kind==b.kind&&a.scale==b.scale&&a.tolerance==b.tolerance&&l.features==p.features
