@@ -6,6 +6,7 @@ Contesto condiviso del progetto per Claude Code e Codex. La lingua di lavoro è 
 
 - Richiesta esplicita: fare commit e push prima di proseguire con la preparazione delle mesh Mac già autorizzata. Fetch completato: `HEAD` e `origin/solver-mesh-gpu` entrambi a `cb9e4a9`, nessun aggiornamento remoto da integrare. Staging inizialmente vuoto e soltanto i nove file pertinenti modificati/non tracciati.
 - Controlli prima della pubblicazione: `git diff --check` e mappa `--check` PASS (499 file/6764 relazioni); tutte le impronte dei sorgenti/binari nel rapporto Metal coincidono. Restano valide build completa e 10/10 CTest hardware già eseguiti, senza nuova compilazione o ripetizione dei benchmark per questa sola pubblicazione. Artefatti della mappa ignorati Git e CAD originali esclusi. Commit ordinario sul solo branch attuale, poi push senza riscrivere la storia; esito da verificare. Nessun lavoro mesh nuovo incluso in questo checkpoint.
+- Pubblicazione verificata: commit `a1954b4cbe29be3a1128a426729806cfea9c56cd` («Accelera i lotti grandi del filtro Metal con una griglia 2D»), nove file pertinenti; push ordinario `cb9e4a9→a1954b4` completato e hash remoto confermato con `git ls-remote`. Checkout pulito dopo il commit funzionale. Questa registrazione dell'esito viene pubblicata in un commit solo documentale; codice e binari restano quelli misurati. Nessuna riscrittura della storia, modifica di main o installazione desktop.
 
 ### 2026-10-28 — Prosecuzione Metal e priorità prestazionali (implementata e verificata)
 
