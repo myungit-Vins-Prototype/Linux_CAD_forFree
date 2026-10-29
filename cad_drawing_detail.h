@@ -18,6 +18,34 @@ inline QPainterPath drawingDetailBoundary(const DrawingView &view,const DrawingV
     else{for(int i=0;i<r.detailOutline.size();++i){const auto p=r.detailOutline[i];const QPointF q(p.x()*view.scale,-p.y()*view.scale);if(i==0)path.moveTo(q);else path.lineTo(q);}path.closeSubpath();}
     return path;
 }
+// Linea di sola presentazione: estremi sui due contorni, mai riferimenti di quota.
+inline QPainterPath drawingDetailConnector(const DrawingView &parent,const DrawingViewLayout &source,const DrawingView &child,const DrawingViewLayout &detail){
+    QPainterPath result;const auto &r=detail.relation;
+    if(!drawingIsDetail(detail)||!r.detailLinked||r.parentId!=parent.id)return result;
+    const auto a=drawingDetailBoundary(parent,detail).translated(source.position),b=drawingDetailBoundary(child,detail).translated(detail.position);
+    QPointF first=a.boundingRect().center(),last=b.boundingRect().center();
+    if(r.detailOutline.isEmpty()){
+        const double distance=QLineF(first,last).length(),ra=r.detailRadius*parent.scale,rb=r.detailRadius*child.scale;
+        if(distance<=ra+rb+1e-9)return result;
+        const auto direction=(last-first)/distance;result.moveTo(first+ra*direction);result.lineTo(last-rb*direction);return result;
+    }
+    const auto vertices=[&](const DrawingView &view,QPointF position){QVector<QPointF> p;for(const auto &v:r.detailOutline)p.append(position+QPointF(v.x()*view.scale,-v.y()*view.scale));return p;};
+    const auto from=vertices(parent,source.position),to=vertices(child,detail.position);
+    const auto ends=[&](QPointF start,QPointF end,double &exit,double &entry){
+        const auto delta=end-start;const double length2=QPointF::dotProduct(delta,delta);if(length2<1e-18)return false;
+        const auto intersect=[&](const QVector<QPointF> &points,bool furthest,double &value){
+            bool found=false;value=furthest?0:1;const QLineF line(start,end);
+            for(int i=0;i<points.size();++i){QPointF hit;if(line.intersects(QLineF(points[i],points[(i+1)%points.size()]),&hit)!=QLineF::BoundedIntersection)continue;
+                const double t=std::clamp(QPointF::dotProduct(hit-start,delta)/length2,0.,1.);value=found?(furthest?std::max(value,t):std::min(value,t)):t;found=true;}
+            return found;
+        };
+        const bool left=intersect(from,true,exit),right=intersect(to,false,entry);return left&&right;
+    };
+    double exit=0,entry=1;
+    if(!ends(first,last,exit,entry)){first=from.front();last=to.front();if(!ends(first,last,exit,entry))return result;}
+    if(entry<=exit+1e-9)return result;
+    result.moveTo(first+(last-first)*exit);result.lineTo(first+(last-first)*entry);return result;
+}
 inline QRectF drawingDetailBounds(const DrawingView &view,const DrawingViewLayout &layout){
     return drawingDetailBoundary(view,layout).boundingRect();
 }

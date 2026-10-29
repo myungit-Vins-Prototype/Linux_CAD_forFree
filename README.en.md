@@ -42,6 +42,10 @@ Screenshots from the application. Click the images to view them at full resoluti
 | [![Surface generated from U and V curve families, with the parameter panel and preview](docs/images/forgecad-surface-network.png)](docs/images/forgecad-surface-network.png) | [![NURBS control cage with a selected point and the axis manipulator](docs/images/forgecad-nurbs-poles.png)](docs/images/forgecad-nurbs-poles.png) |
 | Two U/V curve families define the surface. | Moving control points using the cage and axis handles. |
 
+[![Mouse drawing with projected views, section, dimensioned detail and isometric view](docs/images/forgecad-2d.png)](docs/images/forgecad-2d.png)
+
+2D drawing with projected views, a section, a dimensioned detail and an isometric view.
+
 ## Features
 
 ### 2D sketches and 3D curves
@@ -123,7 +127,7 @@ Pole editing supports a single NURBS face, preserving degree, knots and UV trims
 
 ### 2D drawings
 
-Projected, section, detail and auxiliary views; horizontal or vertical broken views with previews and full-model dimensions. See [broken views](docs/drawing-breaks.md) (Italian) for usage and limits.
+Projected, section, detail and auxiliary views; horizontal or vertical broken views with previews and full-model dimensions. See [broken views](docs/drawing-breaks.md) (Italian) for usage and limits. Circular, rectangular and polygonal details can be connected to their parent view by a line that follows placement changes.
 
 ### Visualization and analysis
 

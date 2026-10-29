@@ -244,7 +244,7 @@ QString validateDrawingRelations(const DrawingSheet &sheet){
     try{
         QSet<QString> labels;
         for(const auto &l:sheet.views){const auto &r=l.relation;
-            require((r.detailOutline.isEmpty()&&!r.detailLabelOffset)||(r.kind==DrawingDerivedKind::Detail&&!r.parentId.isNull()),"Contorno o lettera senza dettaglio madre.");
+            require((r.detailOutline.isEmpty()&&!r.detailLabelOffset&&!r.detailLinked)||(r.kind==DrawingDerivedKind::Detail&&!r.parentId.isNull()),"Contorno, lettera o collegamento senza dettaglio madre.");
             if(r.bend)require(!r.step&&r.kind==DrawingDerivedKind::Section&&!r.parentId.isNull(),"Sezione angolare senza madre o con gradini incompatibili.");
             if(r.step)require(r.kind==DrawingDerivedKind::Section&&!r.parentId.isNull(),"Gradino senza sezione madre.");
             if(r.parentId.isNull()){require(r.kind==DrawingDerivedKind::None,"Relazione della vista senza madre.");continue;}

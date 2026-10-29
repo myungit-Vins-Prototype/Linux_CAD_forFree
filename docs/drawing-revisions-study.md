@@ -846,3 +846,9 @@ Selezionando il testo di una quota lineare compaiono due maniglie alle estremit�
 I cerchi rappresentati come spline vengono riconosciuti soltanto quando planarità e residuo sull’intera curva sono entro la tolleranza esistente. Per il filetto, una sezione obliqua può avere curvatura variabile anche con profilo circolare: il comando Raggio offre allora **R profilo**, misurato sull’isoparametrica circolare della superficie del raccordo. Il testo distingue questa misura dal raggio di un arco circolare della sezione. Una generica spline non riceve un raggio circolare per semplice somiglianza grafica.
 
 I nuovi controlli e le quote del profilo usano lo schema foglio25 quando necessari; la nuova misura usa lo schema geometrico12. I formati storici restano leggibili e i lettori precedenti rifiutano i nuovi metadati.
+
+### Dettagli collegati (2026-10-29)
+
+Nelle opzioni di creazione e in **Modifica dettaglio** si può attivare **Dettaglio collegato alla vista madre**. Una linea continua unisce il bordo del cerchio, rettangolo o polilinea di ritaglio sulla madre al bordo della vista ingrandita. Il collegamento segue spostamenti, ritaglio e scala, compare durante il posizionamento e nel PDF. Se i contorni si sovrappongono non viene tracciato un segmento rovesciato al loro interno.
+
+Il collegamento è solo grafico: non aggiunge geometria quotabile e non modifica misure o piano della vista. È disattivato per i disegni esistenti; lo schema26 viene usato quando è attivo, mantenendo la lettura dei formati1–25. Le modifiche partecipano ad Annulla/Ripeti e la sola lettura impedisce di applicarle.

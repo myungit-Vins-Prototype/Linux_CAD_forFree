@@ -42,6 +42,10 @@ Schermate reali dell’applicazione. Fare clic sulle immagini per aprirle a pien
 | [![Superficie generata da una rete di curve U e V, con pannello dei parametri e anteprima](docs/images/forgecad-surface-network.png)](docs/images/forgecad-surface-network.png) | [![Gabbia dei poli NURBS con un punto selezionato e il manipolatore degli assi](docs/images/forgecad-nurbs-poles.png)](docs/images/forgecad-nurbs-poles.png) |
 | Due famiglie di curve U/V definiscono la superficie. | Gabbia di controllo e spostamento dei poli lungo gli assi. |
 
+[![Tavola 2D del mouse con viste proiettate, sezione, dettaglio quotato e vista isometrica](docs/images/forgecad-2d.png)](docs/images/forgecad-2d.png)
+
+Tavola 2D con viste proiettate, sezione, dettaglio quotato e vista isometrica.
+
 ## Funzionalità
 
 ### Schizzi 2D e curve 3D
@@ -127,7 +131,7 @@ L'editor dei poli lavora su una singola faccia NURBS e conserva gradi, nodi e ri
 
 ### Tavole 2D
 
-Viste proiettate, sezioni, dettagli e ausiliarie; viste interrotte orizzontali o verticali con anteprima e quote del modello completo. Vedi [viste interrotte](docs/drawing-breaks.md) per uso e limiti.
+Viste proiettate, sezioni, dettagli e ausiliarie; viste interrotte orizzontali o verticali con anteprima e quote del modello completo. Vedi [viste interrotte](docs/drawing-breaks.md) per uso e limiti. I dettagli circolari, rettangolari o a polilinea possono essere collegati alla vista madre con una linea che segue gli spostamenti.
 
 ### Visualizzazione e analisi
 
