@@ -4,12 +4,17 @@
 
 A parametric 3D CAD application for Linux and macOS, written in **C++17** with **Qt 6**, an **OpenGL 3.3 Core** viewport, and a **custom geometry kernel** using a B-rep representation. Build solids and surfaces from sketches, edit their parameters, and rebuild models through a storyboard of modeling operations.
 
+[![A mouse model in ForgeCAD, with surfaces, its parametric storyboard, and the revision panel](docs/images/forgecad-3d.png)](docs/images/forgecad-3d.png)
+
+*Surface modeling, parametric history, and revisions in the ForgeCAD interface.*
+
 The interface uses the common Fusion style and two application palettes, light and dark. It follows the system's light/dark preference while keeping the same control design across platforms. Color scheme detection uses Qt 6.5+; older backends depend on system palette notifications.
 
 The application interface is in Italian. This project is developed with the help of artificial intelligence and is under active development. Italian menu labels are retained below so you can find the commands in the application; English explanations are provided alongside them.
 
 ## Contents
 
+- [Gallery](#gallery)
 - [Features](#features)
 - [Supported formats](#supported-formats)
 - [Requirements](#requirements)
@@ -22,6 +27,20 @@ The application interface is in Italian. This project is developed with the help
 - [Tests and development](#tests-and-development)
 - [Troubleshooting](#troubleshooting)
 - [Limitations and license](#limitations-and-license)
+
+## Gallery
+
+Screenshots from the application. Click the images to view them at full resolution.
+
+| Solid modeling | Feature preview |
+|---|---|
+| [![Solid mouse model with its feature history and reference planes](docs/images/forgecad-solid-modeling.png)](docs/images/forgecad-solid-modeling.png) | [![Shell feature preview showing the walls and openings of a hollow body](docs/images/forgecad-function-preview.png)](docs/images/forgecad-function-preview.png) |
+| Building a body through parametric operations. | Inspecting the shell result before confirming the operation. |
+
+| Surface construction | NURBS control point editing |
+|---|---|
+| [![Surface generated from U and V curve families, with the parameter panel and preview](docs/images/forgecad-surface-network.png)](docs/images/forgecad-surface-network.png) | [![NURBS control cage with a selected point and the axis manipulator](docs/images/forgecad-nurbs-poles.png)](docs/images/forgecad-nurbs-poles.png) |
+| Two U/V curve families define the surface. | Moving control points using the cage and axis handles. |
 
 ## Features
 
