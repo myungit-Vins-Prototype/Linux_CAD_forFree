@@ -1,198 +1,209 @@
-# ForgeCAD — Linux CAD for Free / macOS CAD for Free
+# ForgeCAD — Parametric 3D CAD for Linux and macOS
 
-**Lingua / Language:** Italiano · [English](README.en.md)
+**Language:** English · [Leggi in italiano](README.it.md)
 
-CAD parametrico 3D per Linux e macOS, scritto in **C++17** con **Qt 6**, viewport **OpenGL 3.3 Core** e un **kernel geometrico proprio** basato su rappresentazione B-rep. Permette di costruire solidi e superfici a partire da schizzi, modificarne i parametri e ricostruire il modello attraverso uno storyboard delle operazioni.
+Build parametric solids and freeform surfaces, edit their modeling history, and create 2D technical drawings. ForgeCAD is a free, open-source CAD application for Linux and macOS with its own B-rep geometry kernel.
 
-[![Modello di un mouse in ForgeCAD, con superfici, storyboard parametrico e pannello revisioni](docs/images/forgecad-3d.png)](docs/images/forgecad-3d.png)
+**[Build on Linux](#installing-on-linux) · [Build on macOS](#installing-on-macos) · [Create your first model](#your-first-model-and-controls) · [Report a problem](https://github.com/myungit-Vins-Prototype/Linux_CAD_forFree/issues)**
 
-*Modellazione di superfici, storia parametrica e revisioni nell’interfaccia di ForgeCAD.*
+[![A mouse model in ForgeCAD, with surfaces, its parametric storyboard, and the revision panel](docs/images/forgecad-3d.png)](docs/images/forgecad-3d.png)
 
-L’interfaccia usa lo stile comune Fusion e due palette dell’app, chiara e scura. Segue automaticamente la scelta chiaro/scuro del sistema, mantenendo lo stesso disegno dei controlli tra le piattaforme. Il riconoscimento dello schema usa Qt 6.5+; sui backend precedenti dipende dalle notifiche della palette di sistema.
+*Surface modeling, parametric history, and revisions in the ForgeCAD interface.*
 
-L'interfaccia è in italiano. Il progetto è sviluppato con l'aiuto dell'intelligenza artificiale ed è in evoluzione.
+- **Sketch and constrain:** 2D sketches, dimensions, geometric constraints, and 3D curves.
+- **Model solids and surfaces:** extrude, revolve, sweep, loft, sew surfaces, and edit NURBS control points.
+- **Revise the model:** change feature parameters and rebuild through the parametric storyboard.
+- **Create drawings:** projected views, sections, details, and dimensions.
+- **Exchange geometry:** import/export STEP and IGES; export STL and OBJ.
 
-## Indice
+**Project status:** under active development, with an Italian-language application interface. This project is developed with the help of artificial intelligence. The English guide retains Italian menu labels so you can find the commands in the application. Read the [limitations](#limitations-and-license) before relying on it for a particular workflow.
 
-- [Galleria](#galleria)
-- [Funzionalità](#funzionalità)
-- [Formati supportati](#formati-supportati)
-- [Requisiti](#requisiti)
-- [Scaricare i sorgenti](#scaricare-i-sorgenti)
-- [Installazione su Linux](#installazione-su-linux)
-- [Installazione su macOS](#installazione-su-macos)
-- [CUDA facoltativa](#cuda-facoltativa)
-- [Primo modello e comandi](#primo-modello-e-comandi)
-- [Esempi](#esempi)
-- [Test e sviluppo](#test-e-sviluppo)
-- [Risoluzione dei problemi](#risoluzione-dei-problemi)
-- [Limiti e licenza](#limiti-e-licenza)
+## Get started
 
-## Galleria
+1. Install the [dependencies](#requirements), then follow the source build instructions for [Linux](#installing-on-linux) or [macOS](#installing-on-macos).
+2. Follow [Your first model](#your-first-model-and-controls) to draw a constrained sketch and extrude it into a solid.
+3. Save the parametric model as a ForgeCAD `.prt` document, or choose an [exchange format](#supported-formats) for other applications.
 
-Schermate reali dell’applicazione. Fare clic sulle immagini per aprirle a piena risoluzione.
+## Contents
 
-| Modellazione solida | Anteprima di una funzione |
+- [Get started](#get-started)
+- [Gallery](#gallery)
+- [Features](#features)
+- [Supported formats](#supported-formats)
+- [Requirements](#requirements)
+- [Getting the source](#getting-the-source)
+- [Installing on Linux](#installing-on-linux)
+- [Installing on macOS](#installing-on-macos)
+- [Optional CUDA support](#optional-cuda-support)
+- [Your first model and controls](#your-first-model-and-controls)
+- [Examples](#examples)
+- [Tests and development](#tests-and-development)
+- [Troubleshooting](#troubleshooting)
+- [Limitations and license](#limitations-and-license)
+
+## Gallery
+
+Screenshots from the application. Click the images to view them at full resolution.
+
+| Solid modeling | Feature preview |
 |---|---|
-| [![Modello solido di un mouse con storia delle feature e piani di riferimento](docs/images/forgecad-solid-modeling.png)](docs/images/forgecad-solid-modeling.png) | [![Anteprima dello svuotamento di un corpo con pareti e aperture](docs/images/forgecad-function-preview.png)](docs/images/forgecad-function-preview.png) |
-| Costruzione del corpo con operazioni parametriche. | Controllo del risultato dello svuotamento prima della conferma. |
+| [![Solid mouse model with its feature history and reference planes](docs/images/forgecad-solid-modeling.png)](docs/images/forgecad-solid-modeling.png) | [![Shell feature preview showing the walls and openings of a hollow body](docs/images/forgecad-function-preview.png)](docs/images/forgecad-function-preview.png) |
+| Building a body through parametric operations. | Inspecting the shell result before confirming the operation. |
 
-| Costruzione di superfici | Modifica dei poli NURBS |
+| Surface construction | NURBS control point editing |
 |---|---|
-| [![Superficie generata da una rete di curve U e V, con pannello dei parametri e anteprima](docs/images/forgecad-surface-network.png)](docs/images/forgecad-surface-network.png) | [![Gabbia dei poli NURBS con un punto selezionato e il manipolatore degli assi](docs/images/forgecad-nurbs-poles.png)](docs/images/forgecad-nurbs-poles.png) |
-| Due famiglie di curve U/V definiscono la superficie. | Gabbia di controllo e spostamento dei poli lungo gli assi. |
+| [![Surface generated from U and V curve families, with the parameter panel and preview](docs/images/forgecad-surface-network.png)](docs/images/forgecad-surface-network.png) | [![NURBS control cage with a selected point and the axis manipulator](docs/images/forgecad-nurbs-poles.png)](docs/images/forgecad-nurbs-poles.png) |
+| Two U/V curve families define the surface. | Moving control points using the cage and axis handles. |
 
-[![Tavola 2D del mouse con viste proiettate, sezione, dettaglio quotato e vista isometrica](docs/images/forgecad-2d.png)](docs/images/forgecad-2d.png)
+[![Mouse drawing with projected views, section, dimensioned detail and isometric view](docs/images/forgecad-2d.png)](docs/images/forgecad-2d.png)
 
-Tavola 2D con viste proiettate, sezione, dettaglio quotato e vista isometrica.
+2D drawing with projected views, a section, a dimensioned detail and an isometric view.
 
-## Funzionalità
+## Features
 
-### Schizzi 2D e curve 3D
+### 2D sketches and 3D curves
 
-- Schizzi sui piani XY, XZ e YZ, su piani di costruzione e sulle facce piane dei corpi.
-- Linee, polilinee, linee di costruzione, cerchi, ellissi e poligoni con numero di lati configurabile.
-- Rettangoli per due angoli o dal centro, con possibilità di disegnare quadrati.
-- Asola rettilinea: due centri e larghezza, con segmenti e archi tangenti vincolati; punti autonomi selezionabili, trascinabili e quotabili, esclusi dai profili. Vedi [strumenti dello schizzo](docs/sketch-tools.md).
-- Archi da centro e estremi, per tre punti e tangenti a segmenti o archi.
-- Spline per punti e NURBS; modifica di punti e maniglie, inserimento e rimozione dei punti di controllo.
-- Opzioni per uniformare la curvatura delle spline, rilassare la curva e limitare le oscillazioni.
-- Taglio, estensione, divisione, raccordo e smusso delle entità dello schizzo.
-- Offset delle entità e delle catene; spostamento, rotazione e copia.
-- Ripetizioni lineari e circolari e specchio delle entità dello schizzo.
-- Snap alla geometria, alla griglia e all'origine; riconoscimento di punti medi e quadranti.
-- Riferimenti esterni ad assi, piani, spigoli e curve; conversione degli spigoli e sezioni dei corpi nel piano dello schizzo.
-- **Schizzi 3D** con polilinee e spline definite da punti XYZ nello spazio.
-- Estrazione associativa di bordi 3D, taglio delle curve 3D e proiezione di curve sulle superfici.
-- Eliche e spirali utilizzabili come percorsi di modellazione.
+- Sketches on the XY, XZ, and YZ planes, construction planes, and planar body faces.
+- Lines, polylines, construction lines, circles, ellipses, and polygons with a configurable number of sides.
+- Rectangles defined by two corners or by their center, with an option to draw squares.
+- Straight slots defined by two end centers and their width, with constrained tangent lines and arcs; independent points support selection, dragging and dimensions, and are excluded from profiles. See [sketch tools](docs/sketch-tools.md) (Italian).
+- Arcs defined by a center and endpoints, three-point arcs, and arcs tangent to lines or other arcs.
+- Interpolating splines and NURBS; editing points and handles, and inserting or removing control points.
+- Options to make spline curvature continuous, relax curves, and limit oscillations.
+- Trimming, extending, splitting, filleting, and chamfering sketch entities.
+- Offsetting entities and chains; moving, rotating, and copying.
+- Linear and circular patterns and mirroring of sketch entities.
+- Snapping to geometry, the grid, and the origin; midpoint and quadrant recognition.
+- External references to axes, planes, edges, and curves; edge conversion and body sections in the sketch plane.
+- **3D sketches** with polylines and splines defined by XYZ points in space.
+- Associative extraction of 3D edges, trimming of 3D curves, and projection of curves onto surfaces.
+- Helices and spirals that can be used as modeling paths.
 
-### Quote e vincoli
+### Dimensions and constraints
 
-- Quote di lunghezza, distanza orizzontale/verticale, angolo, raggio e diametro, anche rispetto a un asse.
-- Coincidenza, orizzontalità, verticalità, parallelismo, perpendicolarità e collinearità.
-- Tangenza, uguaglianza, concentricità, simmetria, punto medio, quadrante, punto sull'entità, *pierce* su superficie e geometria fissa.
-- Vincoli associati a offset e ripetizioni.
-- Pannello dei vincoli, gradi di libertà e indicazione dello stato completamente definito dello schizzo.
-- Modifica delle quote tramite doppio clic e posizionamento grafico delle annotazioni.
-- Campi numerici con espressioni: `25/2`, `3*(4+1.5)`, `sqrt(2)*10`, `360/7`. Sono disponibili operatori `+ - * / ^`, parentesi, `pi`, `sqrt`, `abs`, funzioni trigonometriche in gradi, `exp`, `ln` e `log`. Il separatore decimale può essere punto o virgola.
-- Unità del documento: millimetri, centimetri, metri, pollici e piedi.
+- Length, horizontal/vertical distance, angle, radius, and diameter dimensions, including dimensions relative to an axis.
+- Coincident, horizontal, vertical, parallel, perpendicular, and collinear constraints.
+- Tangent, equal, concentric, symmetric, midpoint, quadrant, point-on-entity, surface *pierce*, and fixed-geometry constraints.
+- Constraints associated with offsets and patterns.
+- A constraint panel, degrees-of-freedom reporting, and indication of fully defined sketches.
+- Double-click dimension editing and graphical placement of annotations.
+- Numeric fields accepting expressions: `25/2`, `3*(4+1.5)`, `sqrt(2)*10`, `360/7`. Supported operations include `+ - * / ^`, parentheses, `pi`, `sqrt`, `abs`, trigonometric functions in degrees, `exp`, `ln`, and `log`. Either a dot or a comma can be used as the decimal separator.
+- Document units: millimeters, centimeters, meters, inches, and feet.
 
-### Modellazione solida
+### Solid modeling
 
-| Operazione | Descrizione |
+| Operation | Description |
 |---|---|
-| Primitive | Parallelepipedo, cilindro, sfera, cono e toro |
-| Estrusione | Costruzione da schizzo, estrusione in un verso, simmetrica o in due versi e taglio del corpo |
-| Rivoluzione | Geometria ottenuta ruotando un profilo attorno a un asse |
-| Booleane | Unione, intersezione e differenza A − B |
-| Sweep | Profilo lungo un percorso, con riferimenti a schizzi e curve/bordi 3D |
-| Loft | Collegamento di sezioni con guide e controllo delle condizioni ai profili |
-| Raccordo e smusso | Lavorazione degli spigoli, anche scegliendo i bordi di una faccia |
-| Sformo | Inclinazione delle facce |
-| Svuotamento | Creazione di un corpo cavo |
-| Filettatura automatica | Creazione della feature di filettatura |
-| Ripetizioni e specchio | Copie lineari, circolari e speculari di corpi solidi o di superficie |
-| Trasformazioni | Spostamento, rotazione e scala dei corpi |
-| Piani di costruzione | Riferimenti per nuovi schizzi e operazioni |
+| Primitives | Box, cylinder, sphere, cone, and torus |
+| Extrusion | Sketch-based construction, one-sided, symmetric, or two-sided extrusion, and body cuts |
+| Revolution | Geometry created by revolving a profile around an axis |
+| Booleans | Union, intersection, and difference A − B |
+| Sweep | A profile along a path, referencing sketches and 3D curves/edges |
+| Loft | Connecting sections with guides and control of profile conditions |
+| Fillet and chamfer | Edge operations, including selecting the edges of a face |
+| Draft | Inclining faces |
+| Shell | Creating a hollow body |
+| Automatic threading | Creating a thread feature |
+| Patterns and mirror | Linear, circular, and mirrored copies of solid or surface bodies |
+| Transformations | Moving, rotating, and scaling bodies |
+| Construction planes | References for new sketches and operations |
 
-Il Loft accetta sezioni e guide da schizzi e bordi esatti, anche spaziali, con elenchi ordinabili e riferimenti associativi. Le condizioni G0/G1/G2 disponibili dipendono dal comando e dalla geometria: contatto, tangenza e curvatura richiedono riferimenti compatibili.
+Loft accepts sections and guides from sketches and exact edges, including spatial geometry, with reorderable lists and associative references. Available G0/G1/G2 conditions depend on the command and geometry: contact, tangency, and curvature require compatible references.
 
-### Modellazione di superfici
+### Surface modeling
 
-- Estrusione di profili aperti, Loft di superfici e Sweep di superfici.
-- Superfici planari, rigate, tra curve e di riempimento.
-- Selezione di bordi e curve per definire contorni, sezioni e guide.
-- Copia e rimozione di facce.
-- Offset, estensione e taglio delle superfici.
-- **Estendi fino a riferimento**: un bordo libero prosegue fino a un piano o a una faccia, anche curva, entro una distanza massima di ricerca.
-- **Superficie da rete di curve**: due famiglie ordinate U/V, con un solo incrocio 3D per coppia, generano celle di Coons cucite con continuità interna G0.
-- Riempimenti con continuità **G0/G1/G2 per singola faccia adiacente**, ereditabile dall'impostazione comune; influenza e guida della forma restano associate alla faccia.
-- **Modifica poli NURBS**: gabbia selezionabile e trascinabile nella vista, tabella XYZ e pesi; modifiche parametriche relative alla sorgente.
-- Cucitura di più superfici; creazione di un solido quando chiudono un volume valido.
-- Aggiunta di spessore per trasformare superfici in solidi.
-- Ripetizione lineare, circolare e specchio delle superfici.
+- Extrusion of open profiles, surface Loft, and surface Sweep.
+- Planar, ruled, boundary, and fill surfaces.
+- Selection of edges and curves to define boundaries, sections, and guides.
+- Copying and deleting faces.
+- Offsetting, extending, and trimming surfaces.
+- Sewing multiple surfaces; creating a solid when they enclose a valid volume.
+- Adding thickness to turn surfaces into solids.
+- Linear and circular patterns and mirroring of surfaces.
 
-I nuovi comandi sono nel menu **Funzioni → Superfici**. Le reti accettano 2–16 curve aperte per famiglia; riordinare le curve con Su/Giù quando gli incroci non sono monotoni. Non è una superficie globale Gordon con G1/G2 fra le celle. L'estensione richiede che il riferimento attraversi tutto il prolungamento senza tagliare la superficie iniziale; aumentare la distanza di ricerca se necessario.
+The **Functions → Surfaces** menu also provides extension of one free edge up to a plane or face (including curved faces), an ordered U/V curve network, per-contact G0/G1/G2 continuity in fills, and direct NURBS pole/weight editing with a draggable cage and XYZ table. Networks use 2–16 open curves per family, exactly one 3D crossing per pair, and sewn Coons cells with internal G0 continuity. They do not impose global G1/G2 continuity. The extension reference must cross the full extension within the search distance without cutting the original sheet.
 
-L'editor dei poli lavora su una singola faccia NURBS e conserva gradi, nodi e rifilature UV, inclusi i fori. Per una faccia di un corpo cucito usare prima **Copia facce**. Il trascinamento avviene sul piano dello schermo; per il terzo asse usare la tabella o ruotare la vista. Pesi positivi, griglia fino a 4096 poli. Se la struttura della griglia cambia a monte, ricaricare la griglia e riselezionare i poli. I controlli di regolarità sono campionati e non certificano l'assenza globale di auto-intersezioni. Le nuove funzioni partecipano a rigenerazione, Undo/Redo, salvataggio e revisioni; il formato nativo 54 conserva i nomi topologici degli appoggi degli schizzi e dei vincoli Pierce e legge i formati precedenti.
+Pole editing supports a single NURBS face, preserving degree, knots and UV trims including holes; extract a face from a sewn body with **Copy faces** first. Drag in the screen plane or edit XYZ/positive weights in the table (up to 4096 poles). Deltas and weight factors follow the upstream surface; a changed knot layout requires explicit reselection. Regularity checks are sampled and do not certify the absence of global self-intersections. These features support regeneration, Undo/Redo, native files and revisions; native format 54 preserves topological names for sketch supports and Pierce constraints and reads older files.
 
-### Storia parametrica e documenti
+### Parametric history and documents
 
-- Storyboard con schizzi, feature e corpi; selezione sincronizzata con la vista 3D.
-- Modifica dei parametri delle operazioni e rigenerazione del modello.
-- Spostamento delle feature nella storia nel rispetto delle dipendenze.
-- Soppressione e riattivazione delle feature; cursore per lavorare in una posizione della storia.
-- Selezione multipla, rinomina, visibilità e cancellazione di oggetti e feature.
-- Evidenziazione delle facce di una feature o di un intero corpo.
-- Annulla/ripeti per le modifiche al documento.
-- Grafo delle dipendenze tramite **Visualizza → Debug history / storyboard**.
-- Salvataggio delle definizioni parametriche e, facoltativamente, dei corpi già calcolati per accelerare la riapertura.
-- Blocco esclusivo dei documenti aperti e salvataggio tramite file temporaneo per proteggere la scrittura.
+- A storyboard containing sketches, features, and bodies, with selection synchronized with the 3D view.
+- Editing operation parameters and rebuilding models.
+- Moving features in the history while respecting dependencies.
+- Suppressing and reactivating features; a cursor for working at a position in the history.
+- Multiple selection, renaming, visibility control, and deletion of objects and features.
+- Highlighting the faces of a feature or an entire body.
+- Undo/redo for document changes.
+- A dependency graph through **Visualizza → Debug history / storyboard** (View → Debug history / storyboard).
+- Saving parametric definitions and, optionally, computed bodies to speed up reopening.
+- Exclusive locking of open documents and saving through a temporary file to protect file writes.
 
-### Tavole 2D
+### 2D drawings
 
-Viste proiettate, sezioni, dettagli e ausiliarie; viste interrotte orizzontali o verticali con anteprima e quote del modello completo. Vedi [viste interrotte](docs/drawing-breaks.md) per uso e limiti. I dettagli circolari, rettangolari o a polilinea possono essere collegati alla vista madre con una linea che segue gli spostamenti.
+Projected, section, detail and auxiliary views; horizontal or vertical broken views with previews and full-model dimensions. See [broken views](docs/drawing-breaks.md) (Italian) for usage and limits. Circular, rectangular and polygonal details can be connected to their parent view by a line that follows placement changes.
 
-### Visualizzazione e analisi
+### Visualization and analysis
 
-- Rotazione, pan, zoom e inquadratura della scena.
-- Modalità filo di ferro, ombreggiata e ombreggiata con bordi.
-- Visualizzazione e selezione dei bordi nascosti; identificativi topologici di facce e bordi.
-- Vista in sezione con parametri modificabili.
-- Griglia, piani e assi configurabili, anche in primo piano.
-- Qualità della tassellazione bassa, media o alta; antialiasing MSAA.
-- Illuminazione Studio, Morbida e Ispezione; sfondo, luce ambiente e colori personalizzabili.
-- Trasparenza dei corpi nello schizzo e personalizzazione dei pannelli delle funzioni.
-- Misura della geometria selezionata.
-- Proprietà geometriche e di massa: volume, area, lunghezza, baricentro, tensore d'inerzia e momenti principali, secondo il tipo di geometria.
-- Analisi di curvatura, zebra, continuità delle giunzioni e pettini di curvatura di curve e superfici.
-- Analisi delle micro-geometrie.
-- Tassellazione con CUDA quando compilata e disponibile; percorso CPU in assenza di CUDA.
+ForgeCAD is written in **C++17** with **Qt 6** and an **OpenGL 3.3 Core** viewport. The interface uses the common Fusion style and light/dark application palettes, following the system preference while keeping the same control design across platforms. Color scheme detection uses Qt 6.5+; older backends depend on system palette notifications.
 
-## Formati supportati
+- Rotation, panning, zooming, and fitting the scene into view.
+- Wireframe, shaded, and shaded-with-edges display modes.
+- Display and selection of hidden edges; topological identifiers for faces and edges.
+- A section view with editable parameters.
+- Configurable grid, planes, and axes, with an option to draw axes on top.
+- Low, medium, or high tessellation quality; MSAA antialiasing.
+- Studio, Soft, and Inspection lighting; configurable background, ambient light, and colors.
+- Body transparency while sketching and customization of operation panels.
+- Measurement of selected geometry.
+- Geometric and mass properties: volume, area, length, centroid, inertia tensor, and principal moments, depending on the geometry type.
+- Curvature, zebra, joint continuity, and curvature-comb analysis for curves and surfaces.
+- Analysis of small geometric features.
+- CUDA tessellation when compiled and available; a CPU path when CUDA is absent.
 
-| Formato | Apertura / importazione | Salvataggio / esportazione |
+## Supported formats
+
+| Format | Opening / importing | Saving / exporting |
 |---|---|---|
-| `.prt` di ForgeCAD | Documento nativo con storia parametrica | Documento nativo |
-| STEP (`.step`, `.stp`) | Importazione della geometria | AP242, AP214 e AP203 |
-| IGES (`.igs`, `.iges`) | Importazione della geometria | IGES 5.3: solidi (186) e superfici (144) |
-| STL | — | Mesh triangolare |
-| OBJ | — | Mesh quadrangolare, per esempio per Blender |
+| ForgeCAD `.prt` | Native document with parametric history | Native document |
+| STEP (`.step`, `.stp`) | Geometry import | AP242, AP214, and AP203 |
+| IGES (`.igs`, `.iges`) | Geometry import | IGES 5.3: solids (186) and surfaces (144) |
+| STL | — | Triangle mesh |
+| OBJ | — | Quadrilateral mesh, for example for Blender |
 
-I documenti `.prt` di ForgeCAD hanno una firma interna `FCAD`: l'estensione non indica compatibilità con i documenti di altri CAD. STEP e IGES trasferiscono la geometria senza ricreare lo storyboard parametrico originale. Le esportazioni STEP/IGES usano i corpi visibili.
+ForgeCAD `.prt` documents have an internal `FCAD` signature: the extension does not imply compatibility with documents from other CAD applications. STEP and IGES transfer geometry without recreating the original parametric storyboard. STEP/IGES exports use visible bodies.
 
-## Requisiti
+## Requirements
 
-| Componente | Requisito |
+| Component | Requirement |
 |---|---|
-| Sistema | Linux con sessione grafica oppure macOS |
-| Compilatore | C++17, GCC o Clang; su macOS anche Objective-C++ e AppKit |
-| CMake | 3.21 o successivo |
-| Qt | Qt 6 con Widgets, OpenGL e OpenGLWidgets, inclusi i file di sviluppo |
-| Grafica | Driver e contesto desktop OpenGL 3.3 Core |
-| OpenCASCADE / OCCT | File di sviluppo e configurazione CMake, richiesti per i test dalla build attuale |
-| CUDA | Facoltativa, per la tassellazione su GPU NVIDIA |
+| System | Linux with a graphical session, or macOS |
+| Compiler | C++17, GCC or Clang; on macOS, Objective-C++ and AppKit are also required |
+| CMake | 3.21 or newer |
+| Qt | Qt 6 with Widgets, OpenGL, and OpenGLWidgets, including development files |
+| Graphics | Drivers and a desktop OpenGL 3.3 Core context |
+| OpenCASCADE / OCCT | Development files and CMake configuration, required by the current build for tests |
+| CUDA | Optional, for tessellation on NVIDIA GPUs |
 
-L'applicazione e il kernel proprio non collegano OpenCASCADE per la modellazione o lo scambio STEP/IGES. Tuttavia, i `CMakeLists.txt` attuali richiedono OCCT e configurano i test di confronto anche quando si compila solo il target `forgecad`.
+The application and custom kernel do not link OpenCASCADE for modeling or STEP/IGES exchange. However, the current `CMakeLists.txt` files require OCCT and configure comparison tests even when building only the `forgecad` target.
 
-Le istruzioni seguenti descrivono una compilazione dai sorgenti. Usare una cartella di build nuova su ogni macchina, evitando cache CMake e binari provenienti da un altro sistema.
+The instructions below describe building from source. Use a fresh build directory on each machine, avoiding CMake caches and binaries from another system.
 
-## Scaricare i sorgenti
+## Getting the source
 
-Da GitHub usare **Code → Download ZIP** ed estrarre il progetto, oppure clonare il repository. Questo è il remote attualmente configurato; la directory locale viene chiamata `Linux_CAD_forFree`:
+On GitHub, choose **Code → Download ZIP** and extract the project, or clone the repository. The commands below create a local directory named `Linux_CAD_forFree`:
 
 ```sh
-git clone https://github.com/myungit-Vins-Prototype/pdfReader_C.git Linux_CAD_forFree
+git clone https://github.com/myungit-Vins-Prototype/Linux_CAD_forFree.git Linux_CAD_forFree
 cd Linux_CAD_forFree
 ```
 
-Se il repository viene rinominato o trasferito, usare l'URL del pulsante **Code** sulla sua pagina GitHub.
+If the repository is renamed or transferred, use the URL from the **Code** button on its GitHub page.
 
-## Installazione su Linux
+## Installing on Linux
 
-### 1. Dipendenze
+### 1. Dependencies
 
-**Ubuntu / Debian**, con Qt 6 e OCCT disponibili nei repository:
+**Ubuntu / Debian**, with Qt 6 and OCCT available in the package repositories:
 
 ```sh
 sudo apt update
@@ -202,21 +213,21 @@ sudo apt install build-essential cmake git qt6-base-dev libqt6opengl6-dev zlib1g
   libocct-visualization-dev
 ```
 
-Su Ubuntu alcuni pacchetti si trovano nel repository **Universe**. Su Wayland aggiungere `qt6-wayland`, se disponibile per la distribuzione.
+On Ubuntu, some packages are in the **Universe** repository. On Wayland, also install `qt6-wayland` if it is available for your distribution.
 
-**Arch Linux / distribuzioni compatibili con pacman:**
+**Arch Linux / pacman-compatible distributions:**
 
 ```sh
 sudo pacman -S --needed base-devel cmake git qt6-base opencascade mesa zlib
 ```
 
-Su Wayland aggiungere `qt6-wayland`. Per altre distribuzioni installare gli equivalenti di compilatore C++, CMake, Qt 6, OpenGL, zlib e OCCT con i file di sviluppo. zlib serve alla decompressione incrementale dei documenti con controlli sui limiti di memoria.
+On Wayland, also install `qt6-wayland`. For other distributions, install the equivalent C++ compiler, CMake, Qt 6, OpenGL, zlib, and OCCT packages with their development files. zlib supports incremental document decompression with memory limits.
 
-Riferimenti: [Qt/OpenGL su Ubuntu](https://packages.ubuntu.com/jammy/libqt6opengl6-dev), [OCCT su Ubuntu](https://packages.ubuntu.com/search?keywords=libocct-data-exchange-dev&suite=noble), [Qt su Arch](https://archlinux.org/packages/extra/x86_64/qt6-base/) e [OCCT su Arch](https://archlinux.org/packages/extra/x86_64/opencascade/).
+References: [Qt/OpenGL on Ubuntu](https://packages.ubuntu.com/jammy/libqt6opengl6-dev), [OCCT on Ubuntu](https://packages.ubuntu.com/search?keywords=libocct-data-exchange-dev&suite=noble), [Qt on Arch](https://archlinux.org/packages/extra/x86_64/qt6-base/), and [OCCT on Arch](https://archlinux.org/packages/extra/x86_64/opencascade/).
 
-### 2. Compilazione e avvio
+### 2. Build and run
 
-Dalla directory dei sorgenti:
+From the source directory:
 
 ```sh
 cmake -S . -B build-linux -DCMAKE_BUILD_TYPE=Release
@@ -224,66 +235,66 @@ cmake --build build-linux --target forgecad --parallel 2
 ./build-linux/forgecad
 ```
 
-`--parallel 2` limita il consumo di memoria; aumentare il numero su macchine con risorse sufficienti. Per aprire un documento direttamente:
+`--parallel 2` limits memory use; increase the number on machines with sufficient resources. To open an existing document, replace the path below with your file:
 
 ```sh
-./build-linux/forgecad "File_Esempio/Parallelepipedo.prt"
+./build-linux/forgecad "/path/to/your/model.prt"
 ```
 
-### 3. Integrazione desktop o installazione di sistema
+### 3. Desktop integration or system installation
 
-Lo script incluso aggiunge per l'utente corrente la voce del menu, le icone e l'associazione dei documenti ForgeCAD `.prt`, senza root:
+The included script adds a menu entry, icons, and ForgeCAD `.prt` document associations for the current user, without root privileges:
 
 ```sh
 sh packaging/linux/install-desktop-integration.sh "$PWD/build-linux/forgecad"
 ```
 
-Il collegamento punta al binario compilato: dopo aver spostato la cartella ripetere l'integrazione con il nuovo percorso. Le utility `xdg-mime`, `update-mime-database` e `update-desktop-database` aggiornano le associazioni; installare i pacchetti corrispondenti della distribuzione se necessario.
+The shortcut points to the compiled binary: after moving the directory, run the integration again with the new path. The `xdg-mime`, `update-mime-database`, and `update-desktop-database` utilities update associations; install the corresponding distribution packages if needed.
 
-In alternativa, installare binario e integrazione desktop a livello di sistema:
+Alternatively, install the binary and desktop integration system-wide:
 
 ```sh
 sudo cmake --install build-linux --prefix /usr/local
 forgecad
 ```
 
-Disinstallazione dell'integrazione dell'utente:
+To uninstall the current user's desktop integration:
 
 ```sh
 sh packaging/linux/uninstall-desktop-integration.sh
 ```
 
-Disinstallazione dell'installazione di sistema con il prefisso precedente:
+To uninstall the system installation using the prefix above:
 
 ```sh
 sudo sh packaging/linux/uninstall-desktop-integration.sh --system /usr/local
 ```
 
-Ulteriori dettagli in [packaging/linux/README.md](packaging/linux/README.md).
+Additional details are in [packaging/linux/README.md](packaging/linux/README.md) (in Italian).
 
-## Installazione su macOS
+## Installing on macOS
 
-### 1. Strumenti e dipendenze
+### 1. Tools and dependencies
 
-Installare gli strumenti da riga di comando Apple:
+Install Apple's command-line tools:
 
 ```sh
 xcode-select --install
 ```
 
-Installare [Homebrew](https://brew.sh/) seguendo le istruzioni ufficiali, quindi:
+Install [Homebrew](https://brew.sh/) following its official instructions, then run:
 
 ```sh
 brew install cmake qt opencascade
 ```
 
-Le formule ufficiali sono [Qt](https://formulae.brew.sh/formula/qt) e [OpenCASCADE](https://formulae.brew.sh/formula/opencascade). Usare compilatore e librerie della stessa architettura: arm64 su Apple Silicon oppure x86_64 su Intel.
+The official formulas are [Qt](https://formulae.brew.sh/formula/qt) and [OpenCASCADE](https://formulae.brew.sh/formula/opencascade). Use a compiler and libraries with the same architecture: arm64 on Apple Silicon or x86_64 on Intel.
 
-CMake richiede anche zlib, disponibile nell'SDK installato con i Command Line Tools di Xcode.
+CMake also requires zlib, which is provided by the SDK installed with the Xcode Command Line Tools.
 
-### 2. Compilazione e avvio
+### 2. Build and run
 
-Dalla directory dei sorgenti:
+From the source directory:
 
 ```sh
 cmake -S . -B build-macos \
@@ -293,83 +304,76 @@ cmake --build build-macos --target forgecad --parallel 2
 ./build-macos/forgecad
 ```
 
-`brew --prefix` risolve i percorsi delle dipendenze per Homebrew. La build macOS include l'integrazione nativa dei menu tramite AppKit e usa la tassellazione CPU.
+`brew --prefix` resolves the dependency paths for Homebrew. The macOS build includes native menu integration through AppKit and uses CPU tessellation.
 
-Per aprire un documento:
+To open an existing document, replace the path below with your file:
 
 ```sh
-./build-macos/forgecad "File_Esempio/Parallelepipedo.prt"
+./build-macos/forgecad "/path/to/your/model.prt"
 ```
 
-La configurazione attuale genera un **eseguibile da avviare dal Terminale**. Non crea un bundle `.app` autonomo né un installer `.dmg`; le librerie Homebrew devono rimanere installate. Gli script di integrazione desktop della sezione Linux sono destinati a Linux.
+The current configuration produces an **executable launched from Terminal**. It does not create a standalone `.app` bundle or a `.dmg` installer; the Homebrew libraries must remain installed. The desktop integration scripts in the Linux section are intended for Linux.
 
-## CUDA facoltativa
+## Optional CUDA support
 
-Su Linux CMake cerca automaticamente un compilatore CUDA e controlla anche `/opt/cuda/bin/nvcc`. Se lo trova compila il supporto CUDA, altrimenti usa il percorso CPU.
+On Linux, CMake automatically searches for a CUDA compiler and also checks `/opt/cuda/bin/nvcc`. If found, CUDA support is compiled; otherwise, the CPU path is used.
 
-Servono un toolkit compatibile con il compilatore C++, il driver NVIDIA e una GPU supportata. L'opzione è in **Opzioni → Tassellazione con CUDA**. CUDA accelera la valutazione/tassellazione delle superfici, senza sostituire l'intera modellazione geometrica sulla CPU.
+A toolkit compatible with the C++ compiler, an NVIDIA driver, and a supported GPU are required. The option is under **Opzioni → Tassellazione con CUDA** (Options → CUDA tessellation). CUDA accelerates surface evaluation/tessellation without replacing all CPU geometry modeling.
 
-Su una macchina senza compilatore CUDA, i normali comandi di compilazione producono automaticamente una build CPU. La configurazione attuale non espone un'opzione dedicata per disabilitare CUDA in compilazione: impostare `CMAKE_CUDA_COMPILER=NOTFOUND` non basta quando esiste `/opt/cuda/bin/nvcc`, perché CMake lo seleziona nuovamente. Disattivare la tassellazione CUDA nell'interfaccia cambia il percorso usato durante l'esecuzione, ma non elimina la dipendenza dal toolkit per compilare.
+On a machine without a CUDA compiler, the regular build commands automatically produce a CPU build. The current configuration does not expose a dedicated option to disable CUDA at build time: setting `CMAKE_CUDA_COMPILER=NOTFOUND` is not sufficient when `/opt/cuda/bin/nvcc` exists, because CMake selects it again. Disabling CUDA tessellation in the interface changes the runtime path but does not remove the toolkit dependency for compilation.
 
-## Primo modello e comandi
+## Your first model and controls
 
-1. Avviare ForgeCAD e scegliere **File → Nuovo**.
-2. Impostare le unità da **Opzioni → Unità di misura del documento**.
-3. Creare uno schizzo da **Schizzo → Nuovo schizzo**, scegliendo un piano.
-4. Disegnare un rettangolo o un altro profilo chiuso, aggiungendo quote e vincoli.
-5. Terminare la modalità schizzo e scegliere **Funzioni → Estrusione**.
-6. Impostare la lunghezza e confermare: corpo e feature compaiono nello storyboard.
-7. Riaprire lo schizzo o i parametri della feature per modificare il modello. Usare **Modifica → Rigenera tutto** quando necessario.
-8. Salvare in `.prt` oppure esportare la geometria per altri programmi.
+1. Launch ForgeCAD and choose **File → Nuovo** (New).
+2. Set units under **Opzioni → Unità di misura del documento** (Options → Document units).
+3. Create a sketch through **Schizzo → Nuovo schizzo** (Sketch → New sketch), choosing a plane.
+4. Draw a rectangle or another closed profile, adding dimensions and constraints.
+5. Finish sketch mode and choose **Funzioni → Estrusione** (Features → Extrusion).
+6. Set the length and confirm: the body and feature appear in the storyboard.
+7. Reopen the sketch or feature parameters to modify the model. Use **Modifica → Rigenera tutto** (Edit → Rebuild all) when needed.
+8. Save as `.prt`, or export the geometry for other applications.
 
-### Interazione e scorciatoie
+### Interaction and shortcuts
 
-- Clic per selezionare; `Ctrl` o `Maiusc` per aggiungere/togliere elementi alla selezione.
-- Pulsante centrale trascinato, oppure `Spazio` + trascinamento sinistro, per il pan. Il tasto è personalizzabile in **Opzioni → Tasto per il pan**.
-- Rotella per lo zoom; `+` e `−` per aumentarlo o ridurlo; `0` per inquadrare la scena.
-- Doppio clic sullo schizzo per modificarlo; menu contestuale su feature e corpi per parametri e visibilità.
-- `F2` per rinominare nell'albero, `Canc` per eliminare, `Esc` per interrompere lo strumento o chiudere il pannello attivo.
+- Click to select; use `Ctrl` or `Shift` to add/remove items from the selection.
+- Drag with the middle mouse button, or hold `Space` and drag with the left button, to pan. Customize the key under **Opzioni → Tasto per il pan** (Options → Pan key).
+- Use the mouse wheel to zoom; `+` and `−` to zoom in or out; `0` to fit the scene.
+- Double-click a sketch to edit it; use the context menu on features and bodies for parameters and visibility.
+- `F2` to rename in the tree, `Delete` to delete, and `Esc` to stop the tool or close the active panel.
 
-| Azione | Scorciatoia su Linux |
+| Action | Linux shortcut |
 |---|---|
-| Nuovo / Apri / Salva | `Ctrl+N` / `Ctrl+O` / `Ctrl+S` |
-| Annulla / Ripeti | `Ctrl+Z` / `Ctrl+Shift+Z` oppure `Ctrl+Y` |
-| Importa STEP/IGES | `Ctrl+I` |
-| Rigenera tutto | `Ctrl+B` |
-| Estrusione / Rivoluzione | `Ctrl+E` / `Ctrl+R` |
-| Piano di costruzione | `Ctrl+Shift+P` |
-| Proprietà di massa / Misura | `Ctrl+M` / `Ctrl+Shift+M` |
-| Mostra tutti gli oggetti | `Ctrl+Shift+H` |
-| Vista in sezione | `Ctrl+Shift+X` |
-| Quota nello schizzo | `D` |
-| Taglia / Estendi / Spezza nello schizzo | `T` / `E` / `S` |
-| Raccordo / Smusso nello schizzo | `R` / `M` |
+| New / Open / Save | `Ctrl+N` / `Ctrl+O` / `Ctrl+S` |
+| Undo / Redo | `Ctrl+Z` / `Ctrl+Shift+Z` or `Ctrl+Y` |
+| Import STEP/IGES | `Ctrl+I` |
+| Rebuild all | `Ctrl+B` |
+| Extrusion / Revolution | `Ctrl+E` / `Ctrl+R` |
+| Construction plane | `Ctrl+Shift+P` |
+| Mass properties / Measure | `Ctrl+M` / `Ctrl+Shift+M` |
+| Show all objects | `Ctrl+Shift+H` |
+| Section view | `Ctrl+Shift+X` |
+| Dimension in sketch | `D` |
+| Trim / Extend / Split in sketch | `T` / `E` / `S` |
+| Fillet / Chamfer in sketch | `R` / `M` |
 
-Su macOS le scorciatoie standard seguono le convenzioni di Qt e del sistema. Consultare le combinazioni mostrate nei menu per ciascun comando.
+On macOS, standard shortcuts follow Qt and system conventions. Check the combinations displayed in the menus for each command.
 
-## Esempi
+## Examples
 
-La cartella [File_Esempio](File_Esempio/) contiene documenti `.prt` e file STEP:
+The screenshots above show models created in ForgeCAD. Sample CAD documents are not bundled with the source code. To try the application without external files, follow [Your first model](#your-first-model-and-controls).
 
-- `Parallelepipedo.prt`: punto di partenza semplice.
-- `esempio_elica_sweep_loft.prt`: percorsi, Sweep e Loft.
-- `filetto.prt`: filettatura.
-- `Loft_offset.prt`: Loft e offset di superfici.
-- `TaglioSuperfici.prt`: lavoro con superfici.
-- `Mouse.prt` e `mouse2_loft_corretto.prt`: forme più articolate.
+If you have a local collection of models, open a document through **File → Apri** (Open) and use **Salva con nome** (Save as) to experiment on a copy. Tests that require real documents can use an external example directory; see [Tests and development](#tests-and-development).
 
-Usare **Salva con nome** per sperimentare su una copia.
+## Tests and development
 
-## Test e sviluppo
-
-Il target `forgecad` produce l'applicazione. Per compilare anche i test configurati ed eseguirli:
+The `forgecad` target builds the application. To also build and run the configured tests:
 
 ```sh
 cmake --build build-linux --parallel 2
 ctest --test-dir build-linux --output-on-failure
 ```
 
-Su macOS sostituire `build-linux` con `build-macos`. Per aggiungere le prove delle interazioni del viewport:
+On macOS, replace `build-linux` with `build-macos`. To add viewport interaction tests:
 
 ```sh
 cmake -S . -B build-linux -DFORGECAD_BUILD_VIEW_TESTS=ON
@@ -377,68 +381,66 @@ cmake --build build-linux --parallel 2
 ctest --test-dir build-linux --output-on-failure
 ```
 
-La stessa opzione può essere aggiunta alla configurazione macOS mantenendo i parametri Homebrew. I test del viewport registrati in CTest usano Qt offscreen; le verifiche OpenGL richiedono un ambiente grafico adatto. I test CUDA sono configurati solo quando è disponibile il compilatore CUDA.
+The same option can be added to the macOS configuration while retaining the Homebrew parameters. Viewport tests registered with CTest use Qt offscreen; OpenGL checks require a suitable graphical environment. CUDA tests are configured only when a CUDA compiler is available.
 
-Le prove su documenti reali richiedono i file di esempio. Se sono conservati fuori dal checkout, configurare `-DFORGECAD_EXAMPLE_DIR=/percorso/degli/esempi`: CTest usa questo percorso anche se la variabile d'ambiente omonima è diversa. Nei lanci diretti del runner si può invece impostare la variabile d'ambiente `FORGECAD_EXAMPLE_DIR`. I test salvano le copie nelle cartelle temporanee e conservano gli originali.
+Tests using real documents require the example files. If they are stored outside the checkout, configure `-DFORGECAD_EXAMPLE_DIR=/path/to/examples`: CTest uses this path even when the environment variable of the same name differs. Direct runner invocations can instead use the `FORGECAD_EXAMPLE_DIR` environment variable. Tests save copies in temporary directories and preserve the originals.
 
-La [mappa architetturale interattiva](docs/architecture/index.html), consultabile offline, raggruppa i file per responsabilità e mostra chiamate C++, include e riferimenti a funzione in entrambi i versi. [Guida a generazione e copertura](docs/architecture/README.md). Avviare `python3 tools/open_architecture.py` per **aggiornare la mappa a ogni apertura o ricaricamento** e consultarla nel browser. La build CMake esporta `compile_commands.json`, ma non avvia l’analisi della mappa; Python 3 e i binding libclang servono soltanto per aggiornarla. Rivedere le descrizioni curate dopo modifiche strutturali e verificare con `python3 tools/generate_architecture.py --check`, come richiesto in `AGENTS.md`.
+The offline interactive architecture map (`docs/architecture/index.html`, generated locally) groups files by responsibility and shows incoming/outgoing C++ calls, includes and function references. [Generation and coverage guide](docs/architecture/README.md). Run `python3 tools/open_architecture.py` to **update the map whenever it is opened or reloaded**, then view it in your browser. The CMake build exports `compile_commands.json` without running map analysis; Python 3 and libclang bindings are only needed to update the map. Review curated responsibility descriptions after structural changes and run `python3 tools/generate_architecture.py --check`, as required by `AGENTS.md`.
 
-| Percorso | Contenuto |
+| Path | Contents |
 |---|---|
-| `forgeCad2026.cpp` | Avvio e configurazione OpenGL |
-| `forgeCad2026_gui.h/.cpp` | Finestra principale; sette fasi di inizializzazione per scena, menu, comandi, opzioni e toolbar |
-| `forgeCad2026_viewport.h/.cpp`, `forgeCad2026_viewport_*.cpp` | Coordinatore GUI privato, con implementazioni per documento, interazione, selezione, sketch, anteprime, rendering e scena |
-| `forgeCad2026_feature_preview.h/.cpp` | Chiave e calcolo anteprime su snapshot; ciclo asincrono GUI nel viewport |
-| `forgeCad2026_sketch_curvature.h/.cpp` | Cache dei pettini di curvatura con stato e invalidazione propri |
-| `forgeCad2026_camera.h/.cpp` | Stato camera e calcoli di vista, proiezione, raggi e orbita senza dipendenze dal widget |
-| `forgeCad2026_glass_compositor.h/.cpp` | Compositore OpenGL dei fondali sfocati dei pannelli, con shader e framebuffer propri |
-| `forgeCad2026_gpu_picker.h/.cpp` | Buffer del picking GPU: cache per frame, lettura degli identificativi e risorse proprie |
-| `forgeCad2026_scene_renderer.h/.cpp` | Passata della scena OpenGL: fondale, framebuffer MSAA, risoluzione, opacita', linee di analisi, assi/griglia/piani di riferimento e passata datum, sezioni 3D, anteprime, corpi ed evidenziazioni di selezione/topologia |
-| `cad_display_cache.h/.cpp` | Cache GPU e disegno di facce, spigoli e contorni dei display, comprese le istanze |
-| `forgeCad2026_gui_common.h/.cpp` | Helper grafici condivisi da finestra e viewport |
-| `forgeCad2026_storyboard.h/.cpp` | Albero storyboard, badge e cursore della storia |
-| `forgeCad2026_dialogs.h`, `forgeCad2026_dialogs_*.cpp` | Dialoghi raggruppati per solidi, superfici, schizzi/curve e analisi |
-| `forgeCad2026_dialogs_common.h/.cpp` | Pannelli, anteprime e selettori di riferimenti condivisi |
-| `cad_*.cpp`, `cad_*.h` | Schizzi, vincoli, feature, storia, documenti, analisi e scambio file |
-| `kernel/` | Kernel geometrico, B-rep, curve/superfici e test numerici |
-| `tests/` | Test dell'applicazione e delle interazioni |
-| `packaging/` | Integrazione Linux e metadati macOS |
-| `icons/` | Icone e risorse |
-| `docs/` | Note tecniche e documentazione delle prestazioni |
-| `File_Esempio/` | Modelli di esempio |
+| `forgeCad2026.cpp` | Startup and OpenGL configuration |
+| `forgeCad2026_gui.h/.cpp` | Main window; seven initialization phases for scene, menus, commands, options and toolbars |
+| `forgeCad2026_viewport.h/.cpp`, `forgeCad2026_viewport_*.cpp` | Private GUI coordinator, split into document, interaction, selection, sketch, preview, rendering and scene implementations |
+| `forgeCad2026_feature_preview.h/.cpp` | Snapshot-based preview key and computation; async GUI lifecycle remains in the viewport |
+| `forgeCad2026_sketch_curvature.h/.cpp` | Owned curvature-comb cache and invalidation |
+| `forgeCad2026_camera.h/.cpp` | Camera state and widget-independent view, projection, ray, and orbit calculations |
+| `forgeCad2026_glass_compositor.h/.cpp` | OpenGL compositor for blurred panel backdrops, owning its shaders and framebuffers |
+| `forgeCad2026_gpu_picker.h/.cpp` | GPU picking buffer: per-frame cache, identifier readback and owned resources |
+| `forgeCad2026_scene_renderer.h/.cpp` | OpenGL scene pass: background, MSAA framebuffers, resolve, output opacity, analysis lines, axes/grid/reference planes and datum pass, 3D sections, previews, bodies and selection/topology highlights |
+| `cad_display_cache.h/.cpp` | GPU cache and display rendering: faces, edges, outlines and instances |
+| `forgeCad2026_gui_common.h/.cpp` | GUI helpers shared by the window and viewport |
+| `forgeCad2026_storyboard.h/.cpp` | Storyboard tree, badges, and history cursor |
+| `forgeCad2026_dialogs.h`, `forgeCad2026_dialogs_*.cpp` | Operation dialogs grouped into solids, surfaces, sketches/curves, and analysis |
+| `forgeCad2026_dialogs_common.h/.cpp` | Shared panels, previews, and reference pickers |
+| `cad_*.cpp`, `cad_*.h` | Sketches, constraints, features, history, documents, analysis, and file exchange |
+| `kernel/` | Geometry kernel, B-rep, curves/surfaces, and numerical tests |
+| `tests/` | Application and interaction tests |
+| `packaging/` | Linux integration and macOS metadata |
+| `icons/` | Icons and resources |
+| `docs/` | Technical notes and performance documentation |
+| External example directory | Local CAD models, not included in the repository |
 
-La [politica delle tolleranze](docs/tolerance-policy.md) definisce risoluzione, budget di connessione e approssimazione, tolleranze locali e controlli di validita'.
+## Troubleshooting
 
-## Risoluzione dei problemi
+**CMake cannot find Qt 6 or OpenCASCADE.** Install the development packages. For custom paths, pass `-DCMAKE_PREFIX_PATH="/prefix/qt;/prefix/occt"`, or set `Qt6_DIR` and `OpenCASCADE_DIR` to the directories containing their respective `*Config.cmake` files. On macOS, use the Homebrew configuration above.
 
-**CMake non trova Qt 6 o OpenCASCADE.** Installare i pacchetti di sviluppo. Per percorsi personalizzati passare `-DCMAKE_PREFIX_PATH="/prefisso/qt;/prefisso/occt"`, oppure `Qt6_DIR` e `OpenCASCADE_DIR` con le directory contenenti i rispettivi `*Config.cmake`. Su macOS usare la configurazione Homebrew sopra.
+**CMake cache from another machine or compiler.** Configure a fresh build directory.
 
-**Cache CMake di un'altra macchina o compilatore.** Configurare una nuova cartella di build.
+**Insufficient memory during compilation.** Reduce parallelism to `--parallel 1`.
 
-**Memoria insufficiente durante la compilazione.** Ridurre il parallelismo a `--parallel 1`.
+**CUDA is detected, but configuration or compilation fails.** Check toolkit, compiler, and GPU compatibility; if necessary, specify a supported architecture with `-DCMAKE_CUDA_ARCHITECTURES=...`. The CPU path is selected automatically on a machine without a CUDA compiler; see the CUDA section for the current detection behavior.
 
-**CUDA rilevata, ma configurazione o compilazione falliscono.** Verificare la compatibilità tra toolkit, compilatore e GPU; se necessario specificare un'architettura supportata con `-DCMAKE_CUDA_ARCHITECTURES=...`. Il percorso CPU viene selezionato automaticamente su una macchina senza compilatore CUDA; leggere la sezione CUDA per il comportamento del rilevamento attuale.
-
-**Problemi grafici su Wayland.** Verificare il plugin Qt Wayland e i driver. Con XWayland disponibile, provare come diagnostica:
+**Graphics problems on Wayland.** Check the Qt Wayland plugin and drivers. With XWayland available, try this for diagnosis:
 
 ```sh
 QT_QPA_PLATFORM=xcb ./build-linux/forgecad
 ```
 
-**Problemi su un portatile Linux con GPU Intel + NVIDIA.** L'applicazione tenta di preferire NVIDIA quando rileva la configurazione EGL del driver. Per provare la GPU integrata:
+**Problems on a Linux laptop with Intel + NVIDIA graphics.** The application attempts to prefer NVIDIA when it detects the driver's EGL configuration. To try the integrated GPU:
 
 ```sh
 FORGECAD_IGPU=1 ./build-linux/forgecad
 ```
 
-**Modello diverso dopo un aggiornamento.** Usare **Modifica → Rigenera tutto**. I documenti possono contenere corpi e mesh già calcolati; la rigenerazione aiuta a diagnosticare riferimenti mancanti e feature non valide.
+**The model looks different after an update.** Use **Modifica → Rigenera tutto** (Edit → Rebuild all). Documents can contain precomputed bodies and meshes; rebuilding helps diagnose missing references and invalid features.
 
-**Documento già aperto.** ForgeCAD usa un file `.lock` per evitare scritture concorrenti. Chiudere l'altra istanza che lo sta usando prima di modificarlo.
+**A document is already open.** ForgeCAD uses a `.lock` file to prevent concurrent writes. Close the other instance using the document before editing it.
 
-Per segnalare un problema su GitHub indicare sistema operativo, architettura, versioni di Qt/CMake/OCCT, GPU, errore e passaggi per riprodurlo. Allegare un modello minimo condivisibile quando possibile.
+When reporting a problem on GitHub, include your operating system, architecture, Qt/CMake/OCCT versions, GPU, error message, and reproduction steps. Attach a minimal model that can be shared when possible.
 
-## Limiti e licenza
+## Limitations and license
 
-Le operazioni geometriche e lo scambio STEP/IGES dipendono dalle entità supportate dal kernel proprio; non è garantita la compatibilità con ogni file o configurazione geometrica. Le istruzioni di installazione sono ricavate dalla configurazione del progetto e non certificano il funzionamento su tutte le versioni di Linux e macOS.
+Geometry operations and STEP/IGES exchange depend on the entities supported by the custom kernel; compatibility with every file or geometric configuration is not guaranteed. Installation instructions are based on the project configuration and do not certify operation on every Linux or macOS version.
 
-Il progetto è distribuito con licenza **GNU General Public License v3 (GPLv3)**. Il testo completo è nel file [LICENSE](LICENSE), identico a quello del branch `main`. Le dipendenze mantengono le rispettive licenze.
+The project is distributed under the **GNU General Public License v3 (GPLv3)**. The full text is in [LICENSE](LICENSE), identical to the copy on the `main` branch. Dependencies retain their respective licenses.
