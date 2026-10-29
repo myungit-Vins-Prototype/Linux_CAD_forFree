@@ -2,7 +2,7 @@
   "date": "2026-10-29",
   "branch": "solver-mesh-gpu",
   "base_commit": "4b05855c6b3b41681344a311c8e615429d1af0a2",
-  "status": "parallel implementation verified on solver-mesh-gpu and main; publication authorized",
+  "status": "parallel implementation verified and pushed on solver-mesh-gpu and main",
   "machine": {
     "cpu": "Intel Xeon W-10885M @ 2.40GHz",
     "physical_cores": 8,
@@ -321,5 +321,15 @@
     },
     "desktop_installed": false,
     "macos_windows_tested_in_this_publication": false
+  },
+  "publication": {
+    "verified_at_utc": "2026-10-29T11:46:52.212512+00:00",
+    "functional_commits": {
+      "solver-mesh-gpu": "8010b4b162d6fef9ab37b51e7791d47fb741f0f3",
+      "main": "f8caa11a45153a81c8671f908c5bae8c5e713129"
+    },
+    "functional_push_verified": true,
+    "detail_culling_code_integrated": false,
+    "desktop_installed": false
   }
 }
