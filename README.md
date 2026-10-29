@@ -4,12 +4,17 @@
 
 CAD parametrico 3D per Linux e macOS, scritto in **C++17** con **Qt 6**, viewport **OpenGL 3.3 Core** e un **kernel geometrico proprio** basato su rappresentazione B-rep. Permette di costruire solidi e superfici a partire da schizzi, modificarne i parametri e ricostruire il modello attraverso uno storyboard delle operazioni.
 
+[![Modello di un mouse in ForgeCAD, con superfici, storyboard parametrico e pannello revisioni](docs/images/forgecad-3d.png)](docs/images/forgecad-3d.png)
+
+*Modellazione di superfici, storia parametrica e revisioni nell’interfaccia di ForgeCAD.*
+
 L’interfaccia usa lo stile comune Fusion e due palette dell’app, chiara e scura. Segue automaticamente la scelta chiaro/scuro del sistema, mantenendo lo stesso disegno dei controlli tra le piattaforme. Il riconoscimento dello schema usa Qt 6.5+; sui backend precedenti dipende dalle notifiche della palette di sistema.
 
 L'interfaccia è in italiano. Il progetto è sviluppato con l'aiuto dell'intelligenza artificiale ed è in evoluzione.
 
 ## Indice
 
+- [Galleria](#galleria)
 - [Funzionalità](#funzionalità)
 - [Formati supportati](#formati-supportati)
 - [Requisiti](#requisiti)
@@ -22,6 +27,20 @@ L'interfaccia è in italiano. Il progetto è sviluppato con l'aiuto dell'intelli
 - [Test e sviluppo](#test-e-sviluppo)
 - [Risoluzione dei problemi](#risoluzione-dei-problemi)
 - [Limiti e licenza](#limiti-e-licenza)
+
+## Galleria
+
+Schermate reali dell’applicazione. Fare clic sulle immagini per aprirle a piena risoluzione.
+
+| Modellazione solida | Anteprima di una funzione |
+|---|---|
+| [![Modello solido di un mouse con storia delle feature e piani di riferimento](docs/images/forgecad-solid-modeling.png)](docs/images/forgecad-solid-modeling.png) | [![Anteprima dello svuotamento di un corpo con pareti e aperture](docs/images/forgecad-function-preview.png)](docs/images/forgecad-function-preview.png) |
+| Costruzione del corpo con operazioni parametriche. | Controllo del risultato dello svuotamento prima della conferma. |
+
+| Costruzione di superfici | Modifica dei poli NURBS |
+|---|---|
+| [![Superficie generata da una rete di curve U e V, con pannello dei parametri e anteprima](docs/images/forgecad-surface-network.png)](docs/images/forgecad-surface-network.png) | [![Gabbia dei poli NURBS con un punto selezionato e il manipolatore degli assi](docs/images/forgecad-nurbs-poles.png)](docs/images/forgecad-nurbs-poles.png) |
+| Due famiglie di curve U/V definiscono la superficie. | Gabbia di controllo e spostamento dei poli lungo gli assi. |
 
 ## Funzionalità
 
