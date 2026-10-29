@@ -2,6 +2,22 @@
 
 Contesto condiviso del progetto per Claude Code e Codex. La lingua di lavoro è l'italiano (UI, commenti, messaggi).
 
+### 2026-10-29 — Commit della revisione README su main e solver-mesh-gpu
+
+- Richiesta: creare un commit su entrambi i branch, includendo main come branch predefinito. Verificati i checkout esistenti, indice inizialmente vuoto in entrambi; main pulito, sviluppo con i soli tre README e registro di questo intervento. Nessuna richiesta di push in questo seguito.
+- Porting: README originali identici fra branch; trasferiti README.md inglese, README.it.md italiano e README.en.md di collegamento senza integrare i sorgenti sperimentali. Registri preesistenti di ciascun branch preservati, aggiunta anche a main la nota della revisione.
+- Verifiche: tre README identici nei due checkout, link e ancore locali e sei asset controllati; anteprime bilingui gia ispezionate nel precedente seguito. git diff --check e controllo dello staging limitato ai quattro file documentali prima dei commit. Nessuna build necessaria per questo aggiornamento, nessun artefatto generato incluso.
+- Consegna: commit ordinari della revisione sui due branch esistenti; nessuna riscrittura della storia. Gli hash e lo stato finale saranno verificati dopo i commit e riportati nella risposta; pubblicazione remota da eseguire separatamente.
+
+### 2026-10-29 — README principale in inglese e revisione della presentazione (implementato e verificato)
+
+- Richiesta: rivedere il README esistente per migliorare la presentazione del progetto, mostrando prima l’inglese e un link evidente alla versione italiana. Checkout effettivo Linux /home/myungit/Linux_CAD_forFree, branch solver-mesh-gpu, inizialmente pulito; percorso macOS dichiarato dalla chat inesistente su questo host.
+- Implementato: README.md ora contiene la guida inglese; versione italiana completa in README.it.md, link reciproci nella prima riga dopo il titolo. README.en.md resta come punto d’ingresso con collegamenti alle due guide, evitando una seconda copia inglese da mantenere. Conservate tutte le sei immagini gia selezionate e la guida tecnica; nessun nuovo asset o documento CAD pubblicato.
+- Apertura riorganizzata intorno a uso del programma, cinque funzionalita principali e collegamenti immediati a compilazione Linux/macOS, primo modello e segnalazioni. Aggiunti tre passi iniziali; dettagli C++/Qt/palette spostati nella sezione di visualizzazione. Stato in evoluzione, UI italiana, sviluppo con assistenza IA e limiti conservati.
+- Cause corrette: comando git clone ancora sul vecchio nome pdfReader_C, aggiornato al remote origin verificato; File_Esempio assente e nessun modello versionato, quindi rimossi link/comandi che davano per inclusi i campioni, indicando un percorso personale esplicito e la creazione da zero. Link GitHub alla mappa generata localmente sostituito dalla spiegazione del file locale e dal launcher gia documentato; guida alla mappa versionata conservata.
+- Verifiche: Markdown di entrambe le lingue renderizzato in HTML; ancore interne e destinazioni locali controllate, 12 riferimenti immagine su sei PNG decodificabili; selettore lingue e URL clone controllati. Anteprime desktop inglese/italiana acquisite con Chrome e ispezionate. URL esterni delle dipendenze conservati, senza nuova verifica online. Chrome avviato con escalation dopo il blocco socket del sandbox. Artefatti in /tmp/forgecad-readme-english-20261029.
+- Solo documentazione: nessuna nuova compilazione o regressione applicativa necessaria, nessuna modifica strutturale ai sorgenti; nessuna rigenerazione della mappa richiesta. Modifiche locali sul branch corrente, nessun commit/push o porting su main in questo intervento. Controllo finale sul checkout e git diff --check prima della consegna.
+
 
 
 ### 2026-10-29 — Commit e push su main e solver-mesh-gpu (completati e verificati)
