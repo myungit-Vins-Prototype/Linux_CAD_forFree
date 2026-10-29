@@ -297,6 +297,8 @@ public:
     void showAllObjects();
 
     SceneSelection selection() const;
+    int selectedFeatureIndex() const;
+    int sourceFeatureForFace(const GeometryRef &ref) const;
     QVector<SceneSelection> selectedObjects() const;
     // Selezione di piu' oggetti dall'albero (Ctrl/Maiusc+clic): le funzioni
     // scelte si evidenziano sul modello (facce che hanno creato).

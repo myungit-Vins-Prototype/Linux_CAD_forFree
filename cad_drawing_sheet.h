@@ -31,6 +31,8 @@ struct DrawingViewRelation {
     QString label;
     QPointF detailCenter; // piano madre, mm modello
     double detailRadius=0; // ritaglio grafico, mai riferimento di quota
+    QVector<QPointF> detailOutline; // poligono chiuso implicitamente, piano madre in mm modello; vuoto = cerchio
+    std::optional<QPointF> detailLabelOffset; // posizione della lettera rispetto al centro, mm sul foglio
     std::optional<DrawingSectionBend> bend; // angolo verso destra della direzione iniziale, indipendente dalle frecce
     std::optional<DrawingSectionStep> step; // offset nel verso tangente x normale della madre
     double auxiliaryAngle=0; // lato d'osservazione nel piano madre, gradi da +X verso +Y

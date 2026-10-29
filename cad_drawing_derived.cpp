@@ -244,6 +244,7 @@ QString validateDrawingRelations(const DrawingSheet &sheet){
     try{
         QSet<QString> labels;
         for(const auto &l:sheet.views){const auto &r=l.relation;
+            require((r.detailOutline.isEmpty()&&!r.detailLabelOffset)||(r.kind==DrawingDerivedKind::Detail&&!r.parentId.isNull()),"Contorno o lettera senza dettaglio madre.");
             if(r.bend)require(!r.step&&r.kind==DrawingDerivedKind::Section&&!r.parentId.isNull(),"Sezione angolare senza madre o con gradini incompatibili.");
             if(r.step)require(r.kind==DrawingDerivedKind::Section&&!r.parentId.isNull(),"Gradino senza sezione madre.");
             if(r.parentId.isNull()){require(r.kind==DrawingDerivedKind::None,"Relazione della vista senza madre.");continue;}
@@ -254,6 +255,17 @@ QString validateDrawingRelations(const DrawingSheet &sheet){
             if(r.kind==DrawingDerivedKind::Detail){
                 require(finite(r.detailCenter)&&std::isfinite(r.detailRadius)&&r.detailRadius>1e-7&&r.detailRadius<=1e6,"Ritaglio del dettaglio non valido.");
                 require(!r.aligned,"Il dettaglio ha posizione indipendente.");
+                if(r.detailLabelOffset)require(finite(*r.detailLabelOffset)&&std::abs(r.detailLabelOffset->x())<=1e6&&std::abs(r.detailLabelOffset->y())<=1e6,"Posizione della lettera non valida.");
+                const auto &p=r.detailOutline;
+                if(!p.isEmpty()){
+                    require(p.size()>=3&&p.size()<=4096,"Il contorno richiede almeno tre vertici.");double area=0;
+                    for(int i=0;i<p.size();++i){const auto a=p[i],b=p[(i+1)%p.size()];require(finite(a)&&std::abs(a.x())<=1e6&&std::abs(a.y())<=1e6&&QLineF(a,b).length()>1e-7,"Vertice del contorno non valido.");area+=a.x()*b.y()-a.y()*b.x();
+                        for(int j=i+2;j<p.size();++j){if(i==0&&j==p.size()-1)continue;const QLineF first(a,b),second(p[j],p[(j+1)%p.size()]);QPointF hit;
+                            require(first.intersects(second,&hit)!=QLineF::BoundedIntersection,"Il contorno del dettaglio si incrocia.");
+                            const auto nearSegment=[](QPointF point,const QLineF &line){const auto delta=line.p2()-line.p1();const double t=std::clamp(QPointF::dotProduct(point-line.p1(),delta)/QPointF::dotProduct(delta,delta),0.,1.);return QLineF(point,line.p1()+t*delta).length()<1e-7;};
+                            require(!nearSegment(a,second)&&!nearSegment(b,second)&&!nearSegment(second.p1(),first)&&!nearSegment(second.p2(),first),"Il contorno del dettaglio si sovrappone.");}}
+                    require(std::abs(area)>1e-7,"Il contorno del dettaglio ha area nulla.");
+                }
             }
             if(r.kind==DrawingDerivedKind::Section||r.kind==DrawingDerivedKind::Detail){
                 if(r.kind==DrawingDerivedKind::Section)require(finite(r.cutStart)&&finite(r.cutEnd)&&QLineF(r.cutStart,r.cutEnd).length()>1e-7,"Linea di taglio non valida.");

@@ -150,6 +150,7 @@ struct DrawingDimensionResult {
     QString message;
     enum class Geometry { None, Linear, Radius, Diameter, Angle, Ordinate } geometry=Geometry::None;
     Kernel::Vec2 first{},second{},vertex{},firstDirection{},secondDirection{};
+    bool diametral=false; // riconosciuto dalla geometria corrente, anche per una quota lineare
     double sweep=0; // radianti con segno, solo per l'arco della quota angolare
 };
 

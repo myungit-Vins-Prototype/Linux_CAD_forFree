@@ -9,6 +9,8 @@
 #include "fk_body_io.h"
 #include "fk_tessellate.h"
 #include "fk_transform.h"
+#include "fk_boolean.h"
+#include "fk_history.h"
 using namespace ForgeCad::Kernel;
 
 namespace {
@@ -61,8 +63,7 @@ FK_TEST(DraftRotatedAndInvalid) {
     FK_CHECK_THROWS(draftFaces(box,{FaceId(99999)},Vec3(),Vec3(0,0,1),0.1));
     for (FaceId f : box.faces()) if (std::fabs(static_cast<const Plane &>(*box.face(f).surface).frame().zDir().z())>0.9)
         FK_CHECK_THROWS(draftFaces(box,{f},Vec3(),Vec3(0,0,1),0.1));
-    const Body cylinder = makeCylinder(Frame3(),4,5);
-    FK_CHECK_THROWS(draftFaces(cylinder,{cylinder.faces().front()},Vec3(),Vec3(0,0,1),0.1));
+
 }
 
 FK_TEST(SheetDraftAndBlend) {
@@ -110,4 +111,52 @@ FK_TEST(SheetDraftAndBlend) {
     for (EdgeId e : sheet.edges()) if (sheet.isLaminar(e)) {
         FK_CHECK_THROWS(blendEdges(sheet,{e},0.5,false)); break;
     }
+}
+
+FK_TEST(DraftCurvedAndConcaveSolids) {
+    for (double sign : {-1., 1.}) {
+        const Body cylinder = makeCylinder(Frame3(), 4, 5);
+        FaceId side;
+        for (FaceId f : cylinder.faces()) if (cylinder.face(f).surface->type() == SurfaceType::Cylinder) side = f;
+        const auto bytes = writeBodyBinary(cylinder);
+        const double angle = sign * .2 * kPi / 180., top = 4 - 5 * std::tan(angle);
+        BodyHistory h;
+        const Body drafted = draftFaces(cylinder, {side}, {}, {0,0,1}, angle, &h);
+        FK_CHECK(checkBody(drafted, {true,true}).empty());
+        FK_CHECK_NEAR(massProperties(drafted).volume, kPi*5*(16+4*top+top*top)/3, 1e-6);
+        FK_CHECK(tessellate(drafted, {}).failedFaces == 0);
+        FK_CHECK(writeBodyBinary(cylinder) == bytes);
+        FK_CHECK(h.descendants(EntityKind::Face, 0, side.index).size() == 1);
+        FaceId cone;
+        for (FaceId f : drafted.faces()) if (drafted.face(f).surface->type() == SurfaceType::Cone) cone = f;
+        const double nextAngle = -2*angle, nextTop = 4-5*std::tan(nextAngle);
+        const Body redrafted = draftFaces(drafted,{cone},{},{0,0,1},nextAngle);
+        FK_CHECK_NEAR(massProperties(redrafted).volume,kPi*5*(16+4*nextTop+nextTop*nextTop)/3,1e-6);
+        FK_CHECK(checkBody(redrafted,{true,true}).empty());
+        FK_CHECK_THROWS(draftFaces(cylinder,{side},{},{0,0,1},1.4));
+        const Body again = readBodyBinary(writeBodyBinary(drafted));
+        FK_CHECK(checkBody(again, {true,true}).empty());
+    }
+    // Il foro passante rende il corpo concavo; il fianco da sformare resta
+    // piano, ma il corpo contiene anche una faccia cilindrica.
+    const Body stock = makeBox(Frame3(), 20, 10, 5);
+    const Body hole = makeCylinder(Frame3({10,5,-1},{0,0,1},{1,0,0}), 1, 7);
+    const Body mixed = booleanOperation(stock, hole, BooleanOperation::Subtract);
+    FaceId wall;
+    for (FaceId f : mixed.faces()) if (mixed.face(f).surface->type() == SurfaceType::Plane) {
+        const auto &frame = static_cast<const Plane &>(*mixed.face(f).surface).frame();
+        if (frame.origin().x() == 20 && std::fabs(frame.zDir().x()) > .9) wall = f;
+    }
+    FK_CHECK(wall.valid());
+    BodyHistory h;
+    const Body out = draftFaces(mixed, {wall}, {}, {0,0,1}, .2*kPi/180, &h);
+    FK_CHECK(checkBody(out, {true,true}).empty());
+    FK_CHECK_NEAR(massProperties(out).volume, 1000-5*kPi-125*std::tan(.2*kPi/180), 1e-6);
+    FK_CHECK(tessellate(out, {}).failedFaces == 0);
+    for (FaceId f : out.faces()) if (out.face(f).surface->type() == SurfaceType::Cylinder)
+        FK_CHECK_NEAR(static_cast<const CylindricalSurface &>(*out.face(f).surface).radius(), 1., 1e-12);
+    const Transform3 move = Transform3::translation({12,-7,31}) * Transform3::rotation({}, {1,1,0}, .7);
+    const Body rotated = draftFaces(transformBody(mixed,move), {wall}, move.applyToPoint({}), move.applyToVector({0,0,1}), .2*kPi/180);
+    FK_CHECK(checkBody(rotated, {true,true}).empty());
+    FK_CHECK_NEAR(massProperties(rotated).volume, massProperties(out).volume, 1e-6);
 }

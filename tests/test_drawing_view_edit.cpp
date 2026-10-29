@@ -99,6 +99,7 @@ int main(int argc,char **argv){
         require(distance(editor.sheet().drawing.views[1].plane.origin(),iso.plane.origin())==0&&distance(editor.sheet().drawing.views[1].plane.xDir(),iso.plane.xDir())==0&&editor.sheet().drawing.views[1].scale==iso.scale,"rinomina conserva precisione e piano arbitrario");
         const auto preview=qEnvironmentVariable("FORGECAD_DRAWING_UI_PREVIEW");if(!preview.isEmpty()){QApplication::processEvents();require(editor.grab().save(preview),"anteprima interfaccia tavola");}
         viewDialogPreviewTests();
+        orientedIsometricTests();
         drawingPanTests();
         std::cout<<"PASS drawing tree, view edit, preserved references and atomic validation\n";
     }catch(const std::exception &error){std::cerr<<error.what()<<'\n';return 1;}

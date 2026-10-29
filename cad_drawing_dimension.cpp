@@ -87,8 +87,9 @@ const DrawingCurve &curveFor(const DrawingView &view,const DrawingSourceBody &so
         // Il lato della generatrice rispetto all'asse resta associato anche
         // quando cambia il raggio. Nessuna scelta del ramo piu' vicino.
         const DrawingCurve *chosen=nullptr;
-        for(const auto *c:candidates){const auto &face=source.body->face(c->sourceFace);if(face.surface->type()!=SurfaceType::Cylinder)continue;const auto &cylinder=static_cast<const CylindricalSurface &>(*face.surface);
-            const auto center=local(view,cylinder.frame().origin());const auto axis3=view.plane.directionToLocal(cylinder.frame().zDir());const Vec2 axis(axis3.x(),axis3.y());
+        for(const auto *c:candidates){const auto &face=source.body->face(c->sourceFace);if(face.surface->type()!=SurfaceType::Cylinder&&face.surface->type()!=SurfaceType::Cone)continue;
+            const auto frame=face.surface->type()==SurfaceType::Cone?static_cast<const ConicalSurface &>(*face.surface).frame():static_cast<const CylindricalSurface &>(*face.surface).frame();
+            const auto center=local(view,frame.origin());const auto axis3=view.plane.directionToLocal(frame.zDir());const Vec2 axis(axis3.x(),axis3.y());
             const double wanted=cross2(axis,ref.witness-center),side=cross2(axis,local(view,c->curve->point(.5*(c->range.lo+c->range.hi)))-center);
             if(wanted*side<=0)continue;
             // Facce rifilate con piu' intervalli sullo stesso lato richiedono
@@ -110,6 +111,11 @@ const DrawingCurve &curveFor(const DrawingView &view,const DrawingSourceBody &so
 }
 // L'ancoraggio segue un vertice o il bordo che termina la sezione, mai l'indice/verso del parametro.
 bool anchorAt(const DrawingView &view,const DrawingSourceBody &source,const DrawingCurve &curve,const DrawingAttachment &ref,const Vec3 &point){
+    if(curve.kind==DrawingCurveKind::ApparentLine&&curve.sourceGeometry&&curve.hasSourceRange){
+        const bool first=distance(point,curve.curve->point(curve.range.lo))<=view.tolerance;
+        auto original=curve;original.curve=curve.sourceGeometry;original.range=curve.sourceRange;original.sourceGeometry.reset();
+        return anchorAt(view,source,original,ref,original.curve->point(first?original.range.lo:original.range.hi));
+    }
     if(view.step||view.bend){
         if(ref.clipBoundary==5)return view.bend&&std::abs(view.plane.toLocal(point).x()-view.bend->at)<=view.tolerance;
         if(ref.clipBoundary==4&&view.step){for(const auto &step:view.step->transitions())if(std::abs(view.plane.toLocal(point).x()-step.at)<=view.tolerance)return true;return false;}
@@ -157,14 +163,14 @@ void setAnchor(const DrawingView &view,const DrawingSourceBody &source,const Dra
     for(auto vertex:source.body->vertices()){
         if(curve.kind==DrawingCurveKind::ProjectedEdge&&vertex!=source.body->edgeStart(curve.sourceEdge)&&vertex!=source.body->edgeEnd(curve.sourceEdge))continue;
         const auto q=local(view,source.body->vertex(vertex).point);const auto expected=curve.kind==DrawingCurveKind::ProjectedEdge?view.plane.toGlobal(Vec3(q.x(),q.y(),0)):source.body->vertex(vertex).point;
-        if(curve.kind==DrawingCurveKind::Section){bool incident=false;for(auto loop:source.body->face(curve.sourceFace).loops)for(auto fin:source.body->loopFins(loop))if(source.body->finStart(fin)==vertex||source.body->finEnd(fin)==vertex)incident=true;if(!incident)continue;}
+        if((curve.kind==DrawingCurveKind::Section||curve.kind==DrawingCurveKind::ApparentLine)){bool incident=false;for(auto loop:source.body->face(curve.sourceFace).loops)for(auto fin:source.body->loopFins(loop))if(source.body->finStart(fin)==vertex||source.body->finEnd(fin)==vertex)incident=true;if(!incident)continue;}
         if(distance(expected,point)<=view.tolerance){const auto name=QString::fromStdString(source.names->primary(EntityKind::Vertex,vertex.index));if(!ref.vertexName.isEmpty()&&ref.vertexName!=name)throw ReferenceError{DrawingDimensionStatus::Ambiguous,QStringLiteral("Vertici sovrapposti nell'ancoraggio.")};ref.vertexName=name;
             if(curve.kind==DrawingCurveKind::Section){ref.supportFace=QString::fromStdString(source.names->primary(EntityKind::Face,curve.sourceFace.index));ref.anchorSide=vertexSide(source,curve.sourceFace,vertex);}
             else if(!ref.supportFace.isEmpty()){const auto faces=supportFaces(source,ref.supportFace);if(faces.size()==1)ref.anchorSide=vertexSide(source,faces[0],vertex);}
         }
     }
     if(!ref.curveSide&&!ref.anchorSide)ref.supportFace.clear();
-    if(ref.vertexName.isEmpty()&&curve.kind==DrawingCurveKind::Section){
+    if(ref.vertexName.isEmpty()&&(curve.kind==DrawingCurveKind::Section||curve.kind==DrawingCurveKind::ApparentLine)){
     for(auto loop:source.body->face(curve.sourceFace).loops)for(auto fin:source.body->loopFins(loop)){
         const auto edge=source.body->fin(fin).edge;const auto &e=source.body->edge(edge);
         if(projectPoint(*e.curve,point,e.range).distance<=view.tolerance){const auto name=QString::fromStdString(source.names->primary(EntityKind::Edge,edge.index));
@@ -245,7 +251,7 @@ QString validateDrawingAttachments(const DrawingDimension &d,const DrawingView &
                 need(r.curve.faceName.size()<=4096&&r.curve.edgeName.size()<=4096,"Nome geometrico troppo lungo.");
                 need(!r.polar||r.role==DrawingPointRole::Nearest||r.role==DrawingPointRole::Curve,"Aggancio angolare incompatibile con il tipo di punto.");
                 if(r.role==DrawingPointRole::Start||r.role==DrawingPointRole::End||(r.role==DrawingPointRole::Nearest&&!r.polar))need(!r.vertexName.isEmpty()||!r.boundaryName.isEmpty()||r.clipBoundary,"Punto privo di ancoraggio topologico.");
-                need(r.boundaryName.isEmpty()||r.curve.kind==DrawingCurveKind::Section,"Bordo di sezione su una proiezione.");}
+                need(r.boundaryName.isEmpty()||r.curve.kind==DrawingCurveKind::Section||r.curve.kind==DrawingCurveKind::ApparentLine,"Bordo di sezione su una proiezione.");}
         }
         const bool hasAxis=std::any_of(d.references.begin(),d.references.end(),[](const auto &r){return !r.axisId.isNull();});
         need(primary?same(primary->curve,d.section):(hasAxis&&!d.section.featureId&&d.section.faceName.isEmpty()&&d.section.edgeName.isEmpty()&&d.section.kind==DrawingCurveKind::Section&&!d.section.requiresWitness&&norm(d.section.witness)==0),"Il riferimento principale non corrisponde agli agganci.");
@@ -257,7 +263,13 @@ DrawingAttachment drawingAttachment(const DrawingView &view,const DrawingCurve &
     DrawingAttachment ref;ref.curve=dimensionOfCurve(view,curve).section;ref.role=role;need(!drawingDatum(role),"Usare un riferimento del piano senza curva.");
     if(std::isfinite(parameter))need(parameter>=curve.range.lo&&parameter<=curve.range.hi,"Parametro dell'aggancio fuori dalla curva.");
     const auto &source=sourceFor(model,curve.featureId);setCurveSupport(source,curve,ref);const auto primitive=drawingPrimitive(view,curve);
-    if(curve.kind==DrawingCurveKind::ApparentLine){need(role==DrawingPointRole::Curve||role==DrawingPointRole::Midpoint,"Sul contorno cilindrico scegliere la retta o il punto medio.");return ref;}
+    if(curve.kind==DrawingCurveKind::ApparentLine){
+        if(role==DrawingPointRole::Curve||role==DrawingPointRole::Midpoint)return ref;
+        need(role==DrawingPointRole::Start||role==DrawingPointRole::End,"Sulla generatrice scegliere retta, punto medio o estremo.");
+        need(curve.sourceGeometry&&curve.hasSourceRange,"Generatrice senza geometria sorgente.");
+        setAnchor(view,source,curve,curve.sourceGeometry->point(role==DrawingPointRole::End?curve.sourceRange.hi:curve.sourceRange.lo),ref);
+        need(!ref.vertexName.isEmpty()||!ref.boundaryName.isEmpty(),"Estremo della generatrice senza bordo topologico stabile.");return ref;
+    }
     if(primitive.linearProjection&&role==DrawingPointRole::Curve)return ref;
     if((role==DrawingPointRole::Curve||role==DrawingPointRole::Nearest)&&primitive.kind==DrawingPrimitive::Kind::Conic){
         const auto q=local(view,curve.curve->point(std::isfinite(parameter)?parameter:curve.range.lo))-primitive.center;
@@ -290,6 +302,11 @@ DrawingDimensionResult evaluateDrawingAttachments(const DrawingDimension &d,cons
         DrawingDimensionResult out;out.status=DrawingDimensionStatus::Ready;out.geometry=DrawingDimensionResult::Geometry::Linear;
         using M=DrawingMeasure;
         if(d.measure==M::SectionLength){need(a.curve,"La lunghezza richiede una curva.");out.value=arcLength(*a.curve->curve,a.curve->range);out.first=a.point;out.second=a.point;}
+        else if(d.measure==M::Diameter&&a.curve&&drawingPrimitive(view,*a.curve).linearProjection){
+            const auto primitive=drawingPrimitive(view,*a.curve);
+            need(primitive.sourceCircular&&std::abs(distance(primitive.lineFirst,primitive.lineSecond)-2*primitive.sourceRadius)<=view.tolerance,"Il bordo proiettato non rappresenta un diametro completo.");
+            out.value=2*primitive.sourceRadius;out.first=primitive.lineFirst;out.second=primitive.lineSecond;out.diametral=true;
+        }
         else if(d.measure==M::Radius||d.measure==M::Diameter){need(a.isCircle&&!a.isPoint,"Raggio e diametro richiedono un cerchio o arco circolare nel piano della vista.");out.value=a.radius*(d.measure==M::Diameter?2:1);out.first=a.center;out.second=a.point;
             out.geometry=d.measure==M::Diameter?DrawingDimensionResult::Geometry::Diameter:DrawingDimensionResult::Geometry::Radius;}
         else if(drawingOrdinate(d.measure)){
@@ -315,6 +332,26 @@ DrawingDimensionResult evaluateDrawingAttachments(const DrawingDimension &d,cons
             const auto delta=out.second-out.first;out.value=d.measure==M::HorizontalDistance?std::abs(delta.x()):d.measure==M::VerticalDistance?std::abs(delta.y()):norm(delta);
             if(d.measure==M::AxisDiameter){out.second=2*out.second-out.first;out.value*=2;}
         }
+        if(out.geometry==DrawingDimensionResult::Geometry::Linear&&a.curve&&b.curve&&d.references.size()==2){
+            if(a.isPoint&&b.isPoint&&a.curve->featureId==b.curve->featureId&&a.curve->edgeName==b.curve->edgeName&&a.curve->kind==DrawingCurveKind::ProjectedEdge){
+                const auto p=drawingPrimitive(view,*a.curve);
+                if(p.circular&&distance(.5*(a.point+b.point),p.center)<=view.tolerance&&std::abs(out.value-2*norm(p.firstAxis))<=view.tolerance)out.diametral=true;
+            }
+            if(!a.isPoint&&!b.isPoint&&a.curve->kind==DrawingCurveKind::ApparentLine&&b.curve->kind==DrawingCurveKind::ApparentLine&&a.curve->featureId==b.curve->featureId&&a.curve->sourceFace==b.curve->sourceFace){
+                const auto &surface=sourceFor(model,a.curve->featureId).body->face(a.curve->sourceFace).surface;
+                if(surface->type()==SurfaceType::Cylinder&&std::abs(out.value-2*static_cast<const CylindricalSurface &>(*surface).radius())<=view.tolerance)out.diametral=true;
+            }
+            const auto rotational=[](DrawingCurveKind k){return k==DrawingCurveKind::ApparentLine||k==DrawingCurveKind::Section;};
+            if(a.isPoint&&b.isPoint&&rotational(a.curve->kind)&&rotational(b.curve->kind)&&a.curve->featureId==b.curve->featureId&&a.curve->sourceFace==b.curve->sourceFace){
+                const auto &surface=sourceFor(model,a.curve->featureId).body->face(a.curve->sourceFace).surface;const bool cone=surface->type()==SurfaceType::Cone;
+                if(cone||surface->type()==SurfaceType::Cylinder){
+                    const auto frame=cone?static_cast<const ConicalSurface &>(*surface).frame():static_cast<const CylindricalSurface &>(*surface).frame();
+                    const auto axis3=view.plane.directionToLocal(frame.zDir());const Vec2 axis(axis3.x(),axis3.y());const auto center=local(view,frame.origin()),middle=.5*(a.point+b.point);const double h=dot(middle-center,axis);
+                    const double radius=cone?std::abs(static_cast<const ConicalSurface &>(*surface).referenceRadius()+h*std::tan(static_cast<const ConicalSurface &>(*surface).semiAngle())):static_cast<const CylindricalSurface &>(*surface).radius();
+                    if(std::abs(axis3.z())<1e-10&&std::abs(dot(b.point-a.point,axis))<=view.tolerance&&distance(middle,center+h*axis)<=view.tolerance&&std::abs(out.value-2*radius)<=view.tolerance)out.diametral=true;
+                }
+            }
+        }
         need(std::isfinite(out.value)&&(out.value>=0||drawingOrdinate(d.measure)),"Misura non finita.");return out;
     }catch(const ReferenceError &e){return {e.status,std::numeric_limits<double>::quiet_NaN(),e.message};}catch(const std::exception &e){return {DrawingDimensionStatus::Invalid,std::numeric_limits<double>::quiet_NaN(),QString::fromUtf8(e.what())};}
 }
@@ -324,10 +361,11 @@ int drawingAngleSector(const DrawingDimensionResult &base,const Vec2 &cursor){
 }
 DrawingDimension drawingDimensionBetween(const DrawingView &view,const DrawingModelSnapshot &model,const std::vector<DrawingCurve> &curves,std::vector<DrawingAttachment> refs,DrawingMeasure measure,const Vec2 &cursor,bool automatic,const DrawingAttachmentResolver &axes){
     need(!refs.empty()&&refs.size()<=2,"Selezionare uno o due riferimenti.");using M=DrawingMeasure;auto a=resolved(view,model,curves,refs[0],axes);
-    if(refs.size()==1&&a.isLine&&a.curve&&a.curve->kind!=DrawingCurveKind::ApparentLine&&!drawingPrimitive(view,*a.curve).linearProjection&&(automatic||measure==M::Distance||measure==M::EndpointDistance||measure==M::HorizontalDistance||measure==M::VerticalDistance)){
+    if(refs.size()==1&&a.isLine&&a.curve&&!drawingPrimitive(view,*a.curve).linearProjection&&(automatic||measure==M::Distance||measure==M::EndpointDistance||measure==M::HorizontalDistance||measure==M::VerticalDistance)){
         refs={drawingAttachment(view,*a.curve,model,DrawingPointRole::Start),drawingAttachment(view,*a.curve,model,DrawingPointRole::End)};a=resolved(view,model,curves,refs[0],axes);}
     if(refs.size()==2&&automatic){for(auto &ref:refs){auto r=resolved(view,model,curves,ref,axes);if(!r.isPoint&&r.hasCenter){ref.role=DrawingPointRole::Center;ref.polar=false;ref.fraction=0;ref.vertexName.clear();ref.boundaryName.clear();}}}
     a=resolved(view,model,curves,refs[0],axes);DrawingResolvedAttachment b;if(refs.size()==2)b=resolved(view,model,curves,refs[1],axes);
+    if(automatic&&refs.size()==1&&a.curve&&drawingPrimitive(view,*a.curve).linearProjection){measure=M::Diameter;automatic=false;}
     if(automatic){
         if(refs.size()==1){need(a.isCircle&&!a.isPoint,"Aggiungere un secondo riferimento.");measure=distance(a.first,a.second)<=view.tolerance?M::Diameter:M::Radius;}
         else if(a.isLine&&b.isLine)measure=std::abs(cross2(normalized(a.second-a.first),normalized(b.second-b.first)))<1e-9?M::Distance:M::Angle;

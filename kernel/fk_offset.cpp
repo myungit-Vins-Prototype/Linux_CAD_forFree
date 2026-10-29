@@ -1675,15 +1675,38 @@ OffsetResult offsetJoinedFaces(const Body &input, const std::vector<FaceOffset> 
     std::map<int, FaceOffset> specs;
     std::set<int> collapsed;
     double reach = 0.0;
+    bool replacing = false;
     for (const auto &spec : specifications) {
         if (!body.contains(spec.face) || !std::isfinite(spec.distance) || !specs.emplace(spec.face.index, spec).second)
             throw std::invalid_argument("offset cucito: faccia duplicata, assente o distanza non finita");
+        if (spec.replacement) {
+            replacing = true;
+            if (spec.distance != 0.0 || spec.collapse)
+                throw std::invalid_argument("rifilatura: supporto sostitutivo incompatibile con offset/contrazione");
+        }
         if (spec.collapse)
             collapsed.insert(spec.face.index);
         reach = std::max(reach, std::fabs(spec.distance));
     }
     if (specs.size() != body.faces().size())
         throw std::invalid_argument("offset cucito: specificare tutte le facce del corpo");
+    const auto support = [&](FaceId f) -> SurfacePtr {
+        const auto &spec = specs.at(f.index);
+        return spec.replacement ? spec.replacement : body.face(f).surface;
+    };
+    const auto supportUV = [&](FinId fin, double t) {
+        const FaceId f = body.finFace(fin);
+        if (!specs.at(f.index).replacement) return body.fin(fin).pcurve->point(t);
+        const auto surface = support(f);
+        const auto projection = projectPoint(*surface, body.edge(body.fin(fin).edge).curve->point(t));
+        double u = projection.u, v = projection.v;
+        const Vec2 previous = body.fin(fin).pcurve->point(t);
+        // La proiezione globale restituisce un periodo principale. Il trim
+        // deve invece restare continuo anche attraverso la cucitura del cono.
+        if (surface->isUPeriodic()) u += std::round((previous.x()-u)/surface->uPeriod())*surface->uPeriod();
+        if (surface->isVPeriodic()) v += std::round((previous.y()-v)/surface->vPeriod())*surface->vPeriod();
+        return Vec2(u, v);
+    };
     // Le pieghe delle spline devono diventare bordi prima di intersecare i
     // supporti. Le nuove pezze ereditano distanza e stato dalla faccia madre.
     Body split;
@@ -1790,7 +1813,7 @@ OffsetResult offsetJoinedFaces(const Body &input, const std::vector<FaceOffset> 
                 const Vec3 p = body.vertex(fin.vertex).point;
                 const auto &edge = body.edge(fin.edge);
                 const auto &face = body.face(f);
-                const SeamSurface at{face.surface, fin.pcurve->point(fin.sense ? edge.range.lo : edge.range.hi),
+                const SeamSurface at{support(f), supportUV(finId, fin.sense ? edge.range.lo : edge.range.hi),
                                      face.sense ? spec.distance : -spec.distance};
                 vertexConstraints[v].push_back(at);
                 vertexSeed[v] += p + spec.distance * faceNormal(body, f, at.uv);
@@ -1817,7 +1840,7 @@ OffsetResult offsetJoinedFaces(const Body &input, const std::vector<FaceOffset> 
         const auto sourceUV = [&](FinId finId, double t) {
             const auto &fin = body.fin(finId);
             if (fin.edge == e)
-                return fin.pcurve->point(t);
+                return supportUV(finId, t);
             const auto &rail = body.edge(fin.edge);
             double fraction = (t - edge.range.lo) / edge.range.length();
             if (dot(edge.curve->derivative((edge.range.lo + edge.range.hi) * 0.5),
@@ -1830,7 +1853,7 @@ OffsetResult offsetJoinedFaces(const Body &input, const std::vector<FaceOffset> 
             for (FinId fin : uses) {
                 const auto f = body.finFace(fin);
                 const auto &face = body.face(f);
-                surfaces.push_back({face.surface, sourceUV(fin, t), face.sense ? specs.at(f.index).distance : -specs.at(f.index).distance});
+                surfaces.push_back({support(f), sourceUV(fin, t), face.sense ? specs.at(f.index).distance : -specs.at(f.index).distance});
             }
             Vec3 tangent = normalized(edge.curve->derivative(t));
             Vec3 axis = std::fabs(tangent.x()) < 0.8 ? Vec3(1, 0, 0) : Vec3(0, 1, 0);
@@ -1853,7 +1876,13 @@ OffsetResult offsetJoinedFaces(const Body &input, const std::vector<FaceOffset> 
             const Vec3 seed = initial(t) + (1.0 - fraction) * delta0 + fraction * delta1;
             return seamPoint(seed, incident(t, seed), seamTolerance, seamReach);
         };
-        raw.curve = offsetCurve(edge.curve, edge.range, at, edge.curve->breakpoints(edge.range), scale, tolerance);
+        const bool unchanged = replacing && !specs.at(body.finFace(uses[0]).index).replacement
+            && !specs.at(body.finFace(uses[1]).index).replacement
+            && specs.at(body.finFace(uses[0]).index).distance == 0.0
+            && specs.at(body.finFace(uses[1]).index).distance == 0.0
+            && distance(model.points[std::size_t(raw.start)], body.vertex(body.edgeStart(e)).point) < 1e-12
+            && distance(model.points[std::size_t(raw.end)], body.vertex(body.edgeEnd(e)).point) < 1e-12;
+        raw.curve = unchanged ? edge.curve : offsetCurve(edge.curve, edge.range, at, edge.curve->breakpoints(edge.range), scale, tolerance);
         // Un bordo che inverte il proprio verso segnala una cavita' che ha
         // superato le pareti opposte: non accettare un volume ripiegato.
         for (int k = 0; k <= 16; ++k) {
@@ -1879,7 +1908,7 @@ OffsetResult offsetJoinedFaces(const Body &input, const std::vector<FaceOffset> 
             for (FinId fin : body.loopFins(l)) {
                 const auto &edge = body.edge(body.fin(fin).edge);
                 for (int k = 0; k <= 16; ++k) {
-                    const auto uv = body.fin(fin).pcurve->point(edge.range.lo + edge.range.length() * k / 16.0);
+                    const auto uv = supportUV(fin, edge.range.lo + edge.range.length() * k / 16.0);
                     ur.lo = std::min(ur.lo, uv.x());
                     ur.hi = std::max(ur.hi, uv.x());
                     vr.lo = std::min(vr.lo, uv.y());
@@ -1902,7 +1931,7 @@ OffsetResult offsetJoinedFaces(const Body &input, const std::vector<FaceOffset> 
                     const double fraction = k / 16.0;
                     const double t = edge.range.lo + fraction * edge.range.length();
                     const double source = original.range.lo + (aligned ? fraction : 1.0 - fraction) * original.range.length();
-                    const auto uv = projectLocal(*face.surface, edge.curve->point(t), fin.pcurve->point(source), signedDistance);
+                    const auto uv = projectLocal(*support(FaceId{index}), edge.curve->point(t), supportUV(finId, source), signedDistance);
                     ur.lo = std::min(ur.lo, uv.x());
                     ur.hi = std::max(ur.hi, uv.x());
                     vr.lo = std::min(vr.lo, uv.y());
@@ -1918,7 +1947,7 @@ OffsetResult offsetJoinedFaces(const Body &input, const std::vector<FaceOffset> 
             ur = face.surface->uDomain();
         if (face.surface->isVPeriodic() && vr.length() >= 0.98 * face.surface->vPeriod())
             vr = face.surface->vDomain();
-        raw.surface = spec.distance == 0.0 ? face.surface : offsetSurface(*face.surface, signedDistance, ur, vr, tolerance);
+        raw.surface = spec.distance == 0.0 ? support(FaceId{index}) : offsetSurface(*face.surface, signedDistance, ur, vr, tolerance);
         if (spec.distance == 0.0 && raw.surface->type() == SurfaceType::BSpline)
             raw.surface = std::make_shared<BSplineSurface>(extendBSplineSurface(static_cast<const BSplineSurface &>(*raw.surface), ur, vr));
         for (LoopId l : face.loops) {
@@ -1942,7 +1971,7 @@ OffsetResult offsetJoinedFaces(const Body &input, const std::vector<FaceOffset> 
                 const auto uvAt = [&](double t) {
                     const double fraction = (t - targetEdge.range.lo) / targetEdge.range.length();
                     const double source = sourceEdge.range.lo + (aligned ? fraction : 1.0 - fraction) * sourceEdge.range.length();
-                    const Vec2 uv = projectLocal(*raw.surface, targetEdge.curve->point(t), fin.pcurve->point(source));
+                    const Vec2 uv = projectLocal(*raw.surface, targetEdge.curve->point(t), supportUV(finId, source));
                     return Vec3(uv.x(), uv.y(), 0);
                 };
                 double rate = 1.0;

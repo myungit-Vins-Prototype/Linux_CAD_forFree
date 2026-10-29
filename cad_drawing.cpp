@@ -195,6 +195,7 @@ DrawingPrimitive drawingPrimitive(const DrawingView &view,const DrawingCurve &pi
     // A rigidly unfolded section is measured in its common plane. Original
     // geometry remains the topology witness, not an oblique projection.
     const auto exact=form(*(piece.unfoldedToSource?piece.curve:piece.sourceGeometry?piece.sourceGeometry:piece.curve));DrawingPrimitive out;
+    out.sourceCircular=exact.kind==2&&std::abs(norm(exact.a)-norm(exact.b))<=view.tolerance&&std::abs(dot(exact.a,exact.b))<=view.tolerance*std::max(norm(exact.a),norm(exact.b));out.sourceRadius=norm(exact.a);
     const auto q=view.plane.toLocal(exact.center),a=view.plane.directionToLocal(exact.a),b=view.plane.directionToLocal(exact.b);
     out.center={q.x(),q.y()};out.firstAxis={a.x(),a.y()};out.secondAxis={b.x(),b.y()};
     if(exact.kind==1&&norm(out.firstAxis)>view.tolerance)out.kind=DrawingPrimitive::Kind::Line;
@@ -342,17 +343,21 @@ QString projectDrawingEdges(const DrawingModelSnapshot &model,const DrawingView 
     }catch(const std::exception &error){return QString::fromUtf8(error.what());}
 }
 namespace {
-// Generatrici esatte del cilindro tangenti alla direzione di vista. Il
+// Generatrici esatte di cilindri e coni tangenti alla direzione di vista. Il
 // ritaglio usa i bordi B-rep della faccia e la classificazione sulla faccia;
 // nessun punto della mesh entra nei riferimenti delle quote.
 void appendApparentLines(const DrawingModelSnapshot &model,const DrawingView &view,std::vector<DrawingCurve> &out){
     if(view.kind!=DrawingViewKind::ProjectedEdges)return;
     for(const auto &source:model.bodies)for(auto faceId:source.body->faces()){
-        cancellationPoint();const auto &face=source.body->face(faceId);if(face.surface->type()!=SurfaceType::Cylinder)continue;
-        const auto &cylinder=static_cast<const CylindricalSurface &>(*face.surface);const auto axis=cylinder.frame().zDir(),direction=view.plane.zDir();
+        cancellationPoint();const auto &face=source.body->face(faceId);const bool cone=face.surface->type()==SurfaceType::Cone;
+        if(!cone&&face.surface->type()!=SurfaceType::Cylinder)continue;
+        const auto frame=cone?static_cast<const ConicalSurface &>(*face.surface).frame():static_cast<const CylindricalSurface &>(*face.surface).frame();
+        const double radius=cone?static_cast<const ConicalSurface &>(*face.surface).referenceRadius():static_cast<const CylindricalSurface &>(*face.surface).radius();
+        const double slope=cone?std::tan(static_cast<const ConicalSurface &>(*face.surface).semiAngle()):0;
+        const auto axis=frame.zDir(),direction=view.plane.zDir();
         // Riferimenti analitici per la vista laterale ortogonale al cilindro.
         if(std::abs(dot(axis,direction))>1e-10)continue;
-        const auto radial=normalized(cross(axis,direction));const auto origin=cylinder.frame().origin();
+        const auto radial=normalized(cross(axis,direction));const auto origin=frame.origin();
         const auto bounds=faceBox(*source.body,faceId);double low=1e100,high=-1e100;
         for(int mask=0;mask<8;++mask){const double v=dot(Vec3(mask&1?bounds.hi.x():bounds.lo.x(),mask&2?bounds.hi.y():bounds.lo.y(),mask&4?bounds.hi.z():bounds.lo.z())-origin,axis);low=std::min(low,v);high=std::max(high,v);}
         const Plane meridian(Frame3(origin,cross(axis,radial),axis));std::vector<double> cuts{low,high};
@@ -360,8 +365,9 @@ void appendApparentLines(const DrawingModelSnapshot &model,const DrawingView &vi
             for(double t:hits.parameters)cuts.push_back(dot(edge.curve->point(t)-origin,axis));
             for(const auto &range:hits.coincident)for(double t:{range.lo,range.hi})cuts.push_back(dot(edge.curve->point(t)-origin,axis));}
         std::sort(cuts.begin(),cuts.end());cuts.erase(std::unique(cuts.begin(),cuts.end(),[&](double a,double b){return b-a<=view.tolerance;}),cuts.end());
-        for(double side:{-1.,1.}){auto geometry=std::make_shared<Line<3>>(origin+side*cylinder.radius()*radial,axis);std::vector<Interval> retained;
-            for(std::size_t i=1;i<cuts.size();++i){const Interval range{cuts[i-1],cuts[i]};if(range.length()<=view.tolerance||classifyPointOnFace(*source.body,faceId,geometry->point(.5*(range.lo+range.hi)),view.tolerance)==PointLocation::Outside)continue;
+        const double factor=std::sqrt(1+slope*slope);
+        for(double side:{-1.,1.}){auto geometry=std::make_shared<Line<3>>(origin+side*radius*radial,axis+side*slope*radial);std::vector<Interval> retained;
+            for(std::size_t i=1;i<cuts.size();++i){const Interval range{factor*cuts[i-1],factor*cuts[i]};if(range.length()<=view.tolerance||classifyPointOnFace(*source.body,faceId,geometry->point(.5*(range.lo+range.hi)),view.tolerance)==PointLocation::Outside)continue;
                 if(!retained.empty()&&std::abs(retained.back().hi-range.lo)<=view.tolerance)retained.back().hi=range.hi;else retained.push_back(range);
             }
             for(const auto range:retained){

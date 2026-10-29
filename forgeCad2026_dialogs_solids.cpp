@@ -23,6 +23,7 @@
 #include "cad_mass.h"
 #include "cad_measure.h"
 #include "cad_pattern.h"
+#include "forgeCad2026_storyboard.h"
 #include "cad_extrude.h"
 #include "cad_sketch_refs.h"
 #include "cad_forge.h"
@@ -327,7 +328,14 @@ bool patternDialog(QMainWindow *window, CadViewport *viewport, const QString &ti
         replaced = initial.firstBody;
         patternInitial = bodies.at(replaced);
     }
-    const QVector<int> candidates = viewport->resultBodiesBefore(replaced);
+    const QVector<int> results = viewport->resultBodiesBefore(replaced);
+    QVector<int> candidates = results;
+    const int limit = replaced < 0 ? viewport->historyPosition() : std::min(replaced, viewport->historyPosition());
+    for (int i = 0; i < limit; ++i)
+        if (!bodies.at(i).suppressed && bodies.at(i).error.isEmpty() && bodies.at(i).forgeBody
+            && ForgeCad::patternFeatureSupported(bodies.at(i)) && !candidates.contains(i)) candidates.append(i);
+    if (replaced >= 0 && patternInitial.firstBody >= 0 && patternInitial.firstBody < limit
+        && !candidates.contains(patternInitial.firstBody)) candidates.append(patternInitial.firstBody);
     if (candidates.isEmpty()) {
         QMessageBox::information(window, title, QStringLiteral("Nella scena non ci sono corpi da ripetere."));
         return false;
@@ -337,7 +345,8 @@ bool patternDialog(QMainWindow *window, CadViewport *viewport, const QString &ti
     definition.operation = -1;
     PatternParameters &p = definition.pattern;
     const bool preselected = candidates.contains(definition.firstBody);
-    if (!preselected) definition.firstBody = candidates.last();
+    if (!preselected) definition.firstBody = -1;
+    if (replaced < 0 && preselected && !results.contains(definition.firstBody)) p.featureOnly = true;
     // Riferimenti di partenza: asse X (lineare), asse Z (circolare), piano YZ (specchio).
     const auto defaultRef = [](int kind) {
         GeometryRef ref;
@@ -352,12 +361,33 @@ bool patternDialog(QMainWindow *window, CadViewport *viewport, const QString &ti
         y.index = 1;
         p.refs.append(y);
     }
-    FunctionDialogPanel dialog(window);
+    // Il blocco della finestra e' gestito qui per lasciare selezionabile
+    // la storyboard. Il lock automatico di showEvent la disabiliterebbe di nuovo.
+    FunctionDialogPanel dialog(window, false);
     dialog.setSizeIdentity(QStringLiteral("pattern"));
     if (viewport) ForgeCad::setDisplayLengthUnit(viewport->lengthUnit(), &dialog);
     dialog.setWindowTitle(title);
     dialog.setModal(false);
     auto *form = dialog.createScrollableForm();
+    auto *steps = new QWidget(&dialog);
+    auto *stepsLayout = new QHBoxLayout(steps);
+    stepsLayout->setContentsMargins(0, 0, 0, 0);
+    auto *sourceStep = new QPushButton(QStringLiteral("1. Sorgente"), steps);
+    auto *referenceStep = new QPushButton(QStringLiteral("2. Riferimento"), steps);
+    auto *parametersStep = new QPushButton(QStringLiteral("3. Parametri"), steps);
+    sourceStep->setObjectName(QStringLiteral("patternSourceStep"));
+    referenceStep->setObjectName(QStringLiteral("patternReferenceStep"));
+    parametersStep->setObjectName(QStringLiteral("patternParametersStep"));
+    for (auto *step : {sourceStep, referenceStep, parametersStep}) {
+        step->setCheckable(true);
+        step->setStyleSheet(QStringLiteral("QPushButton:checked { font-weight: 600; border: 1px solid #e8b65b; }"));
+        stepsLayout->addWidget(step);
+    }
+    auto *stepHint = new QLabel(&dialog);
+    stepHint->setObjectName(QStringLiteral("patternStepHint"));
+    stepHint->setWordWrap(true);
+    form->addRow(steps);
+    form->addRow(stepHint);
     auto *bodyBox = new QComboBox(&dialog);
     bodyBox->setObjectName(QStringLiteral("patternBody"));
     for (int index : candidates) {
@@ -367,7 +397,7 @@ bool patternDialog(QMainWindow *window, CadViewport *viewport, const QString &ti
         bodyBox->addItem(label, index);
     }
     bodyBox->setCurrentIndex(int(candidates.indexOf(definition.firstBody)));
-    bodyBox->setEnabled(replaced < 0);
+    bodyBox->setPlaceholderText(QStringLiteral("Scegli dalla vista o dalla storyboard"));
     BodyPicker picker(dialog, viewport, replaced, candidates, bodyBox);
     auto *kindBox = new QComboBox(&dialog);
     kindBox->setObjectName(QStringLiteral("patternKind"));
@@ -376,13 +406,19 @@ bool patternDialog(QMainWindow *window, CadViewport *viewport, const QString &ti
     auto *whatBox = new QComboBox(&dialog);
     whatBox->setObjectName(QStringLiteral("patternWhat"));
     whatBox->setToolTip(QStringLiteral("La funzione ripete il materiale aggiunto o sottratto, mantenendo il corpo di base."));
-    whatBox->addItems({QStringLiteral("Il corpo intero"), QStringLiteral("La funzione (lo strumento dell'unione o della differenza)")});
+    whatBox->addItems({QStringLiteral("Il corpo intero"), QStringLiteral("Una funzione")});
     whatBox->setCurrentIndex(p.featureOnly ? 1 : 0);
-    form->addRow(QStringLiteral("Corpo:"), picker.row(bodyBox));
+    auto *sourceRow = picker.row(bodyBox);
+    auto *sourcePick = sourceRow->findChild<QPushButton *>();
+    sourcePick->setObjectName(QStringLiteral("patternSourcePick"));
+    sourcePick->setText(QStringLiteral("Scegli sorgente"));
+    sourcePick->setToolTip(QStringLiteral("Seleziona una funzione nella storyboard oppure una faccia nella viewport. Un altro clic termina la scelta."));
     form->addRow(QStringLiteral("Tipo:"), kindBox);
     form->addRow(QStringLiteral("Ripeti:"), whatBox);
+    form->addRow(QStringLiteral("Sorgente:"), sourceRow);
     auto *refLabel = new QLabel(&dialog), *refLabel2 = new QLabel(QStringLiteral("Direzione 2:"), &dialog);
     auto *refButton = new QPushButton(&dialog), *refButton2 = new QPushButton(&dialog);
+    refButton->setObjectName(QStringLiteral("patternReferencePick"));
     refButton->setToolTip(QStringLiteral("Scegli nella vista"));
     refButton2->setToolTip(QStringLiteral("Scegli nella vista"));
     auto *flipBox = new QCheckBox(QStringLiteral("Inverti il verso"), &dialog);
@@ -396,6 +432,7 @@ bool patternDialog(QMainWindow *window, CadViewport *viewport, const QString &ti
         return box;
     };
     auto *countBox = new QSpinBox(&dialog);
+    countBox->setObjectName(QStringLiteral("patternCount"));
     countBox->setRange(1, 500);
     countBox->setValue(p.count);
     QDoubleSpinBox *spacingBox = spin(p.spacing, -1e6, 1e6);
@@ -431,6 +468,8 @@ bool patternDialog(QMainWindow *window, CadViewport *viewport, const QString &ti
     form->addRow(QStringLiteral("Occorrenze attive:"), occurrences);
     auto *status = new FunctionMessage(&dialog);
     status->setMinimumWidth(280);
+    status->setObjectName(QStringLiteral("patternError"));
+    status->hide();
     form->addRow(status);
     auto *buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dialog);
     form->addRow(buttons);
@@ -444,13 +483,21 @@ bool patternDialog(QMainWindow *window, CadViewport *viewport, const QString &ti
     const auto setStatus = [status](const QString &text, bool error) {
         status->setStyleSheet(error ? QStringLiteral("color: #ff7a6a;") : QStringLiteral("color: #9fc6e8;"));
         status->setText(text);
+        status->setVisible(error && !text.isEmpty());
     };
     const auto current = [&] {
         ExtrusionObject d = definition;
         d.patternComponent = -1; // anteprima di tutte le occorrenze
-        d.firstBody = candidates.at(bodyBox->currentIndex());
+        d.firstBody = bodyBox->currentIndex() < 0 ? -1 : candidates.at(bodyBox->currentIndex());
         d.pattern.kind = kindBox->currentIndex();
         d.pattern.featureOnly = whatBox->currentIndex() == 1;
+        d.secondBody = -1;
+        if (d.pattern.featureOnly && d.firstBody >= 0)
+            for (int result : results)
+                if (result > d.firstBody && bodies.at(result).modelBodyId == bodies.at(d.firstBody).modelBodyId
+                    && bodies.at(result).modelBodyId != 0) d.secondBody = result;
+        if (replaced >= 0 && patternInitial.secondBody >= 0 && d.firstBody == patternInitial.firstBody && d.pattern.featureOnly)
+            d.secondBody = patternInitial.secondBody;
         d.pattern.flip = flipBox->isChecked();
         d.pattern.count = countBox->value();
         d.pattern.spacing = spacingBox->value();
@@ -468,10 +515,9 @@ bool patternDialog(QMainWindow *window, CadViewport *viewport, const QString &ti
     const auto refresh = [&] {
         const int kind = kindBox->currentIndex();
         p.kind = kind;
-        const ExtrusionObject &base = bodies.at(candidates.at(bodyBox->currentIndex()));
-        const bool feature = ForgeCad::patternFeatureSupported(base);
-        if (!feature && whatBox->currentIndex() == 1) whatBox->setCurrentIndex(0);
-        whatBox->setEnabled(feature);
+        const int source = bodyBox->currentIndex() < 0 ? -1 : candidates.at(bodyBox->currentIndex());
+        const bool feature = source >= 0 && ForgeCad::patternFeatureSupported(bodies.at(source));
+        const bool validSource = source >= 0 && (whatBox->currentIndex() == 0 || feature);
         refLabel->setText(kind == 0 ? QStringLiteral("Direzione:") : kind == 1 ? QStringLiteral("Asse:") : QStringLiteral("Piano di simmetria:"));
         const auto text = [&](int slot) {
             const GeometryRef &ref = p.refs.at(slot);
@@ -509,10 +555,30 @@ bool patternDialog(QMainWindow *window, CadViewport *viewport, const QString &ti
         QVector<GeometryRef> marks{p.refs.at(0)};
         if (grid) marks.append(p.refs.at(1));
         viewport->setReferenceMarks(marks);
-        if (active >= 0) setStatus(QStringLiteral("Clicca nella vista il riferimento (Esc nella vista: annulla la scelta; trascinando lontano dagli oggetti la vista ruota)."), false);
-        else setStatus(picker.active() ? picker.hint() : QString(), false);
-        if (picker.waiting()) {
-            scope->label->setText(picker.hint());
+        const bool choosingSource = !validSource || picker.active();
+        const int step = choosingSource ? 1 : active >= 0 ? 2 : 3;
+        const QString referenceName = kind == 0 ? QStringLiteral("Direzione") : kind == 1 ? QStringLiteral("Asse") : QStringLiteral("Piano");
+        sourceStep->setChecked(step == 1);
+        referenceStep->setChecked(step == 2);
+        parametersStep->setChecked(step == 3);
+        sourceStep->setText(validSource ? QStringLiteral("1. Sorgente ✓") : QStringLiteral("1. Sorgente"));
+        referenceStep->setText(QStringLiteral("2. %1%2").arg(referenceName, validSource && active < 0 ? QStringLiteral(" ✓") : QString()));
+        referenceStep->setEnabled(validSource);
+        parametersStep->setEnabled(validSource);
+        refButton->setEnabled(validSource);
+        refButton2->setEnabled(validSource);
+        for (QWidget *w : QList<QWidget *>{flipBox, countBox, spacingBox, angleBox, spreadBox, keepBox,
+                          secondBox, flipBox2, countBox2, spacingBox2, occurrences}) w->setEnabled(step == 3);
+        sourcePick->setText(picker.active() ? QStringLiteral("Termina scelta") : QStringLiteral("Scegli sorgente"));
+        if (step == 1) stepHint->setText(picker.active()
+            ? QStringLiteral("Passaggio 1 di 3 — Scegli la sorgente. Clicca una funzione nella storyboard o una faccia nella viewport; puoi usare anche l'elenco Sorgente.")
+            : QStringLiteral("Passaggio 1 di 3 — Scegli la sorgente nella storyboard o nell'elenco. Premi Scegli sorgente per selezionarla dalla viewport."));
+        else if (step == 2) stepHint->setText(QStringLiteral("Passaggio 2 di 3 — Scegli %1 nella viewport. Esc annulla questa scelta e conserva il riferimento precedente.").arg(referenceName.toLower()));
+        else stepHint->setText(QStringLiteral("Passaggio 3 di 3 — Regola istanze e misure, poi premi OK. Sorgente: %1. %2: %3.")
+            .arg(bodyBox->currentText(), referenceName, ForgeCad::geometryRefText(p.refs.at(0), viewport->sketches(), viewport->extrusions())));
+        buttons->button(QDialogButtonBox::Ok)->setEnabled(step == 3);
+        form->setRowVisible(scope->label, step == 3);
+        if (step != 3) {
             viewport->clearPreview();
             return;
         }
@@ -524,10 +590,17 @@ bool patternDialog(QMainWindow *window, CadViewport *viewport, const QString &ti
         if (item->checkState() == Qt::Unchecked) p.excluded.append(occurrence);
         refresh();
     });
+    picker.resolve = [&](const GeometryRef &ref) {
+        if (ref.kind != 5) return -1;
+        const int source = whatBox->currentIndex() == 1 ? viewport->sourceFeatureForFace(ref)
+            : resultBodyForPick(viewport, results, ref.index);
+        return candidates.contains(source) ? source : -1;
+    };
     picker.changed = refresh;
     picker.message = setStatus;
-    picker.starting = [&] { active = -1; };
+    picker.starting = [&] { active = -1; setStatus({}, false); };
     const auto pick = [&](int slot) {
+        setStatus({}, false);
         picker.stop();
         active = slot;
         const QString error = viewport->beginReferencePick(roles(slot), replaced);
@@ -547,6 +620,11 @@ bool patternDialog(QMainWindow *window, CadViewport *viewport, const QString &ti
         active = -1;
         refresh();
     });
+    QObject::connect(sourceStep, &QPushButton::clicked, &dialog, [&] { picker.start(); refresh(); });
+    QObject::connect(referenceStep, &QPushButton::clicked, &dialog, [&] { pick(0); });
+    QObject::connect(parametersStep, &QPushButton::clicked, &dialog, [&] {
+        picker.stop(); viewport->cancelReferencePick(); active = -1; setStatus({}, false); refresh();
+    });
     QObject::connect(refButton, &QPushButton::clicked, &dialog, [&] { pick(0); });
     QObject::connect(refButton2, &QPushButton::clicked, &dialog, [&] { pick(1); });
     QObject::connect(kindBox, &QComboBox::currentIndexChanged, &dialog, [&](int kind) {
@@ -557,14 +635,23 @@ bool patternDialog(QMainWindow *window, CadViewport *viewport, const QString &ti
         active = -1;
         refresh();
     });
-    QObject::connect(bodyBox, &QComboBox::currentIndexChanged, &dialog, refresh);
-    QObject::connect(whatBox, &QComboBox::currentIndexChanged, &dialog, refresh);
+    QObject::connect(bodyBox, &QComboBox::currentIndexChanged, &dialog, [&] {
+        picker.stop(); active = -1; setStatus({}, false); refresh();
+    });
+    QObject::connect(whatBox, &QComboBox::currentIndexChanged, &dialog, [&] {
+        setStatus({}, false);
+        if (bodyBox->currentIndex() < 0 || (whatBox->currentIndex() == 1
+            && !ForgeCad::patternFeatureSupported(bodies.at(candidates.at(bodyBox->currentIndex()))))) picker.start();
+        refresh();
+    });
     for (QCheckBox *box : {flipBox, spreadBox, keepBox, secondBox, flipBox2}) QObject::connect(box, &QCheckBox::toggled, &dialog, refresh);
     for (QSpinBox *box : {countBox, countBox2}) QObject::connect(box, &QSpinBox::valueChanged, &dialog, refresh);
     for (QDoubleSpinBox *box : {spacingBox, angleBox, spacingBox2}) QObject::connect(box, &QDoubleSpinBox::valueChanged, &dialog, refresh);
     QObject::connect(buttons, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
     QObject::connect(buttons, &QDialogButtonBox::accepted, &dialog, [&] {
-        if (picker.waiting()) return setStatus(picker.hint(), true);
+        if (bodyBox->currentIndex() < 0 || picker.waiting()) return setStatus(picker.hint(), true);
+        if (whatBox->currentIndex() == 1 && !ForgeCad::patternFeatureSupported(bodies.at(candidates.at(bodyBox->currentIndex()))))
+            return setStatus(QStringLiteral("Scegli una funzione da ripetere."), true);
         QApplication::setOverrideCursor(Qt::WaitCursor);
         const QString error = apply(current());
         QApplication::restoreOverrideCursor();
@@ -574,6 +661,21 @@ bool patternDialog(QMainWindow *window, CadViewport *viewport, const QString &ti
     bool accepted = false;
     {
         const WindowLock lock(window, viewport, &dialog);
+        QDockWidget *dock = window->findChild<QDockWidget *>(QStringLiteral("modelDock"));
+        auto *tree = dock ? dynamic_cast<StoryboardTree *>(dock->widget()) : nullptr;
+        if (tree) {
+            tree->setSourcePickCallback([&](int index, bool whole) {
+                if (whole) index = viewport->modelBodyTip(index);
+                if (!candidates.contains(index)) return setStatus(QStringLiteral("Questa sorgente non e' disponibile in questo punto della storia."), true);
+                picker.stop(); viewport->cancelReferencePick(); active = -1;
+                { const QSignalBlocker block(bodyBox); bodyBox->setCurrentIndex(candidates.indexOf(index)); }
+                whatBox->setCurrentIndex(!whole && ForgeCad::patternFeatureSupported(bodies.at(index)) ? 1 : 0);
+                // Il cambio esplicito sblocca anche la prima scelta obbligatoria.
+                QMetaObject::invokeMethod(bodyBox, "currentIndexChanged", Qt::DirectConnection, Q_ARG(int, bodyBox->currentIndex()));
+                refresh();
+            });
+            dock->setEnabled(true);
+        }
         dialog.show();
         if (replaced < 0 && !preselected) picker.start(true);
         refresh();
@@ -581,6 +683,7 @@ bool patternDialog(QMainWindow *window, CadViewport *viewport, const QString &ti
         QObject::connect(&dialog, &QDialog::finished, &loop, &QEventLoop::quit);
         loop.exec();
         accepted = dialog.result() == QDialog::Accepted;
+        if (tree) { tree->setSourcePickCallback({}); dock->setEnabled(false); }
     }
     viewport->cancelReferencePick();
     viewport->setReferencePickCallback(nullptr);
@@ -1368,7 +1471,7 @@ bool draftDialog(QMainWindow *window, CadViewport *viewport, const QString &titl
     form->addRow(QStringLiteral("Facce:"), faces); form->addRow(faceCount); form->addRow(clear);
     form->addRow(QStringLiteral("Piano neutro:"), neutralBox); form->addRow(neutralPick); form->addRow(neutralLabel);
     form->addRow(QStringLiteral("Angolo:"), angle); form->addRow(reverse);
-    form->addRow(wrappedNote(QStringLiteral("Il piano neutro resta fisso. L'estrazione segue la sua normale: un angolo positivo restringe il corpo in quella direzione, uno negativo lo allarga. Supportati solidi convessi e superfici cucite con facce piane e bordi rettilinei. I bordi aperti conservano la quota lungo l’estrazione."), &dialog));
+    form->addRow(wrappedNote(QStringLiteral("Il piano neutro resta fisso. L'estrazione segue la sua normale: un angolo positivo restringe il corpo in quella direzione, uno negativo lo allarga. Facce piane anche su solidi concavi con superfici curve; facce cilindriche/coniche con asse parallelo all’estrazione. La rifilatura mantiene le adiacenze: collassi e cambi di topologia non risolvibili vengono segnalati. Sulle superfici aperte sono supportate facce piane e bordi rettilinei."), &dialog));
     form->addRow(status);
     auto *buttons = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dialog); form->addRow(buttons);
     PreviewScope scope(viewport, dialog, form, replaced);

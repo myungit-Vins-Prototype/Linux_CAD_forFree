@@ -658,7 +658,7 @@ void PdfWindow::initializeSceneAndTree(WindowSetup &setup) {
     });
     connect(modelTree, &QTreeWidget::customContextMenuRequested, this,
             [this, modelTree, viewport, createSketchOnPlane, editBody](const QPoint &position) {
-        if(viewport->documentReadOnly())return;
+        if(viewport->documentReadOnly() || viewport->interactionLocked())return;
         auto *item = modelTree->itemAt(position);
         if (!item) return;
         const int type = item->data(0, Qt::UserRole).toInt();
@@ -2117,13 +2117,13 @@ void PdfWindow::initializeFeatureCommands(WindowSetup &setup) {
             definition.feature = BodyFeature::Pattern;
             definition.pattern.kind = kind;
             const SceneSelection selection = viewport->selection();
-            if (selection.kind == SceneObjectKind::Extrusion) definition.firstBody = selection.index;
+            if (selection.kind == SceneObjectKind::Extrusion) definition.firstBody = viewport->selectedFeatureIndex();
             patternDialog(this, viewport, kind == 2 ? QStringLiteral("Specchio") : QStringLiteral("Ripetizione"), -1, definition,
                           [viewport](const ExtrusionObject &d) {
                 ExtrusionObject body = d;
                 body.name = QStringLiteral("%1 %2").arg(d.pattern.kind == 2 ? QStringLiteral("Specchio") : QStringLiteral("Ripetizione"))
                                 .arg(viewport->extrusions().size() + 1);
-                return viewport->createBody(body, {d.firstBody});
+                return viewport->createBody(body, d.secondBody >= 0 && d.pattern.featureOnly ? QVector<int>{d.secondBody} : QVector<int>{d.firstBody});
             });
         });
     }
@@ -4500,7 +4500,7 @@ void PdfWindow::scheduleModelTreeRebuild() {
 // Ricostruisce l'albero dallo stato del viewport: origine e piani restano fissi,
 // schizzi ed estrusioni seguono il documento (anche dopo Undo/Redo).
 void PdfWindow::renameTreeItem(QTreeWidgetItem *item) {
-    if(viewport_->documentReadOnly())return;
+    if(viewport_->documentReadOnly() || viewport_->interactionLocked())return;
     if (!item) return;
     const int type = item->data(0, Qt::UserRole).toInt();
     const int index = item->data(0, Qt::UserRole + 1).toInt();

@@ -43,6 +43,7 @@ protected:
 class StoryboardTree final : public QTreeWidget {
 public:
     explicit StoryboardTree(QWidget *parent = nullptr);
+    void setSourcePickCallback(std::function<void(int, bool)> callback);
     void setMoveFeatureCallback(std::function<QString(int, int)> callback);
     void setHistoryPositionCallback(std::function<void(int)> callback);
     enum class CursorMode { Horizontal, Left, Right };
@@ -57,6 +58,8 @@ public:
 protected:
     void updateGeometries() override;
     void mousePressEvent(QMouseEvent *event) override;
+    void mouseDoubleClickEvent(QMouseEvent *event) override;
+    void contextMenuEvent(QContextMenuEvent *event) override;
     void mouseMoveEvent(QMouseEvent *event) override;
     void mouseReleaseEvent(QMouseEvent *event) override;
     void keyPressEvent(QKeyEvent *event) override;
@@ -73,6 +76,8 @@ protected:
     void paintEvent(QPaintEvent *event) override;
 
 private:
+    std::function<void(int, bool)> sourcePicked_;
+    void chooseSource(QTreeWidgetItem *item);
     QTreeWidgetItem *historyRootItem() const;
     int historyPositionAtY(int y) const;
     void updateHistoryRail();

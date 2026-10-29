@@ -4,6 +4,14 @@ Contesto condiviso del progetto per Claude Code e Codex. La lingua di lavoro è 
 
 
 
+### 2026-10-29 — Commit e push su main e solver-mesh-gpu (verifiche concluse, pubblicazione in corso)
+
+- Richiesta esplicita: commit e push su entrambi i branch. Fetch iniziale e secondo controllo: origin/solver-mesh-gpu 4051066 e origin/main abe35b1 coincidenti con i branch locali. Main inizialmente pulito nel worktree /tmp/forgecad-main-cpu-20261028; 37 file modificati nello sviluppo, indice vuoto.
+- Inclusi tutti i cambiamenti della sessione: sorgenti esplicite e flusso storyboard delle ripetizioni, estensione sformo CT0578, dettagli poligonali e lettera indipendente con snap, quote coniche, prefisso diametro e isometrica orientata, test e descrizioni della mappa. Porting della sola differenza locale, preservando gli esperimenti e le differenze preesistenti fra i branch. Patch produttiva applicata senza conflitti; adattate cinque descrizioni del generatore per il contesto main.
+- Integrazione main: app completa, runner applicativo/kernel e tutti i runner 2D interessati compilati Release Linux. 16/16 CTest 3D PASS (1,91 s), 19/19 CTest 2D PASS (34,69 s), 47/47 casi kernel PASS (Draft 5, Shell 17, Offset 25). Nessun test disabilitato, warning preesistenti, nessun errore di build finale. Sviluppo gia' collaudato nel precedente intervento; sorgenti 2D ancora identici al manifesto della consegna.
+- Mappe: sviluppo --check PASS 500 file/6819 relazioni; main rigenerata e --check PASS 473 file/6665 relazioni/232 TU, zero diagnostiche. 81137 siti con righe valide e quattro confini controllati nei due versi, distinguendo include e chiamate; HTML main aperto in Chrome e ispezionato. Primo avvio del pool Python bloccato dal socket del sandbox, completato fuori sandbox senza modificare il generatore. HTML/JSON generati ignorati ed esclusi dai commit.
+- git diff --check PASS su entrambi; manifesti SHA dei 36 file funzionali/test e dei binari main in /tmp/publish-two-branches-2026-10-29. Nessun sorgente cambiato durante build/test, nessuna scrittura dei CAD originali, installazione desktop preservata in questo seguito. Nessuna nuova verifica macOS. Commit ordinari e push atomico da completare, senza riscrivere la storia.
+
 ### 2026-10-27 — Commit di tutte le modifiche richiesto dall’utente
 
 - Correzione esplicita dell’utente: «no bisogna fare il commit di tutto». Autorizzato il checkpoint completo delle modifiche del progetto rimaste nei checkout di sviluppo e integrazione main, inclusi fix di soppressione, test, documentazione e sperimentazioni gia presenti; superata la precedente selezione limitata a CT0578. Nessun push richiesto.

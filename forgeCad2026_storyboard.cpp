@@ -259,7 +259,35 @@ void StoryboardTree::updateGeometries() {
     if (historyRail_) updateHistoryRail();
 }
 
+void StoryboardTree::setSourcePickCallback(std::function<void(int, bool)> callback) {
+    sourcePicked_ = std::move(callback);
+    historyRail_->setEnabled(!sourcePicked_);
+}
+
+void StoryboardTree::chooseSource(QTreeWidgetItem *item) {
+    if (!sourcePicked_ || !item) return;
+    const int type = item->data(0, Qt::UserRole).toInt();
+    if (type == kTreeExtrusion || type == kTreeBody) {
+        setCurrentItem(item);
+        sourcePicked_(item->data(0, Qt::UserRole + 1).toInt(), type == kTreeBody);
+    } else item->setExpanded(!item->isExpanded());
+}
+
+void StoryboardTree::mouseDoubleClickEvent(QMouseEvent *event) {
+    if (sourcePicked_) { event->accept(); return; }
+    QTreeWidget::mouseDoubleClickEvent(event);
+}
+
+void StoryboardTree::contextMenuEvent(QContextMenuEvent *event) {
+    if (sourcePicked_) { event->accept(); return; }
+    QTreeWidget::contextMenuEvent(event);
+}
+
 void StoryboardTree::mousePressEvent(QMouseEvent *event) {
+    if (sourcePicked_) {
+        if (event->button() == Qt::LeftButton) chooseSource(itemAt(event->position().toPoint()));
+        event->accept(); return;
+    }
     if (cursorMode_ == CursorMode::Horizontal && event->button() == Qt::LeftButton
         && isHistoryCursor(itemAt(event->position().toPoint()))) {
         movingHistoryCursor_ = true;
@@ -272,6 +300,7 @@ void StoryboardTree::mousePressEvent(QMouseEvent *event) {
 }
 
 void StoryboardTree::mouseMoveEvent(QMouseEvent *event) {
+    if (sourcePicked_) { event->accept(); return; }
     if (movingHistoryCursor_) {
         // Snap to gaps between direct feature rows, including their details.
         int position = historyCount_;
@@ -307,6 +336,7 @@ void StoryboardTree::mouseMoveEvent(QMouseEvent *event) {
 }
 
 void StoryboardTree::mouseReleaseEvent(QMouseEvent *event) {
+    if (sourcePicked_) { event->accept(); return; }
     if (movingHistoryCursor_ && event->button() == Qt::LeftButton) {
         movingHistoryCursor_ = false;
         clearInsertionLine();
@@ -320,6 +350,12 @@ void StoryboardTree::mouseReleaseEvent(QMouseEvent *event) {
 }
 
 void StoryboardTree::keyPressEvent(QKeyEvent *event) {
+    if (sourcePicked_) {
+        if (event->key() == Qt::Key_Return || event->key() == Qt::Key_Enter || event->key() == Qt::Key_Space) chooseSource(currentItem());
+        else if (event->key() == Qt::Key_Up || event->key() == Qt::Key_Down || event->key() == Qt::Key_Left || event->key() == Qt::Key_Right)
+            QTreeWidget::keyPressEvent(event);
+        event->accept(); return;
+    }
     if (isHistoryCursor(currentItem()) && historyPositionChanged_) {
         int position = historyPosition_;
         if (event->key() == Qt::Key_Home) position = 0;
@@ -335,6 +371,7 @@ void StoryboardTree::keyPressEvent(QKeyEvent *event) {
 }
 
 void StoryboardTree::startDrag(Qt::DropActions actions) {
+    if (sourcePicked_) return;
     draggedItem_ = currentItem();
     if (!isMovableFeature(draggedItem_)) {
         draggedItem_ = nullptr;

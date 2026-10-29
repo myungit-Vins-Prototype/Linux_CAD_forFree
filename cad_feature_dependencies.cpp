@@ -89,6 +89,7 @@ QVector<int> bodyOperands(const ExtrusionObject &body) {
     }
     case BodyFeature::Pattern: {
         QVector<int> bodies{body.firstBody};
+        if (body.pattern.featureOnly && body.secondBody >= 0) bodies.append(body.secondBody);
         appendRefs(bodies, {Family::Pattern}, false);
         return bodies;
     }
@@ -207,6 +208,7 @@ QVector<int> hiddenOperands(const ExtrusionObject &body) {
     }
     if (mergingFeature(body) && body.mergeOperation != 0) return body.mergeBodies;
     if (body.feature == BodyFeature::Transform && !body.move.copy) return {body.firstBody};
+    if (body.feature == BodyFeature::Pattern && body.pattern.featureOnly && body.secondBody >= 0) return {body.secondBody};
     if (body.feature == BodyFeature::Sew) return QVector<int>{body.firstBody} + body.booleanTools;
     if (body.feature == BodyFeature::SheetTrim)
         return body.trimBoth && body.secondBody >= 0 ? QVector<int>{body.firstBody, body.secondBody}
