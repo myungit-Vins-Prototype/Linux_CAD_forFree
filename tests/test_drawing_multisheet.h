@@ -47,13 +47,16 @@ void multisheetPreparationReview(){
  require(computations.starts==2,"aggiornamento di due fogli avvia due calcoli, senza editor temporanei o ricalcolo attivo");
  require(encode(window.document())==before&&window.activeSheet()==active&&!window.editor()->canUndo(),
          "aggiornamento conserva presentazioni e foglio attivo e azzera la storia come prima");
- // La preparazione dati conta una visita per vista e non crea progressi/widget.
+ // La preparazione dati produce entrambe le viste senza widget; la fase5
+ // ora conclude il foglio intero, con progressi aggregati monotoni.
  auto sheet=window.editor()->sheet();DrawingView extra=view;extra.id=QUuid::createUuid();
  sheet.drawing.views.push_back(extra);sheet.views.append({extra.id,"Seconda vista",{200,110},{81001}});
- int views=0;computations.starts=0;
- const auto prepared=prepareDrawingSheet(sheet,geometry,[&](int phase){if(phase==5)++views;});
- require(views==2&&prepared.curves.size()==2&&prepared.visibility.size()==2&&computations.starts==0,
-         "preparazione geometrica indipendente dai widget calcola ciascuna vista una sola volta");
+ int completed=0,previous=-1;computations.starts=0;
+ const auto prepared=prepareDrawingSheet(sheet,geometry,[&](int phase){require(phase>=previous&&phase>=0&&phase<=5,"avanzamento del foglio monotono");previous=phase;if(phase==5)++completed;});
+ require(completed==1&&previous==5&&prepared.curves.size()==2&&prepared.visibility.size()==2&&computations.starts==0,
+         "preparazione dati del foglio senza widget e con un solo completamento");
+ for(const auto &definition:sheet.drawing.views){const auto &curves=prepared.curves.at(definition.id);require(!curves.empty()&&prepared.visibility.at(definition.id),"risultato presente per entrambe le viste");
+     for(const auto &curve:curves)require(curve.viewId==definition.id,"curve associate alla vista corretta");}
  std::cout<<"PASS multisheet preparation: two calculations instead of five, cancellation atomic, presentation/history preserved\n";
 }
 void multisheetTests(){

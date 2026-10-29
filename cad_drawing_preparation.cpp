@@ -5,6 +5,8 @@
 #include "cad_drawing_annotations.h"
 #include "fk_tessellate.h"
 #include "fk_cancel.h"
+#include "fk_parallel.h"
+#include <mutex>
 #include <algorithm>
 #include <cmath>
 #include <stdexcept>
@@ -52,21 +54,57 @@ DrawingSheet retargetDrawingSheetModel(DrawingSheet next,const DrawingEditorMode
     return next;
 }
 PreparedDrawingSheet prepareDrawingSheet(DrawingSheet sheet,DrawingEditorModel model,const std::function<void(int)> &phase){
+    return prepareDrawingSheet(std::move(sheet),std::move(model),phase,0);
+}
+PreparedDrawingSheet prepareDrawingSheet(DrawingSheet sheet,DrawingEditorModel model,const std::function<void(int)> &phase,int threads){
+    if(threads<0)throw std::runtime_error("Numero di worker della tavola non valido.");
     QByteArray validation;
     const auto valid=encodeDrawingSheet(sheet,validation);
     if(!valid.isEmpty())throw std::runtime_error(valid.toStdString());
-    PreparedDrawingSheet prepared;
+    struct Work {const DrawingView *definition;const DrawingViewLayout *layout;DrawingModelSnapshot source;};
+    std::vector<Work> work;
     for(const auto &definition:sheet.drawing.views){
         cancellationPoint();
-        const auto layout=std::find_if(sheet.views.begin(),sheet.views.end(),[&](const auto &l){return l.viewId==definition.id;});
+        const auto layout=std::find_if(sheet.views.cbegin(),sheet.views.cend(),[&](const auto &l){return l.viewId==definition.id;});
         DrawingModelSnapshot source;source.version=model.snapshot.version;
         for(const auto &body:model.snapshot.bodies)if(layout->features.contains(body.featureId))source.bodies.push_back(body);
-        auto result=prepareDrawingView(source,definition,*layout,std::move(prepared.cache),phase);
-        for(const auto &piece:result.curves)if(piece.kind==DrawingCurveKind::Section)prepared.sections[definition.id].push_back(piece);
-        prepared.cache=std::move(result.cache);
-        prepared.curves[definition.id]=std::move(result.curves);
-        prepared.silhouettes[definition.id]=std::move(result.contours);
-        prepared.visibility[definition.id]=std::move(result.display);
+        work.push_back({&definition,&*layout,std::move(source)});
+    }
+    PreparedDrawingSheet prepared;
+    const auto workers=std::min(threadCount(threads),threads?8u:4u);
+    std::mutex progressMutex;std::vector<int> stages(work.size());std::size_t total=0;int reported=-1;
+    const auto progress=[&](std::size_t index,int value){
+        std::lock_guard<std::mutex> lock(progressMutex);total+=value-stages[index];stages[index]=value;
+        const int overall=int(total/work.size());if(overall!=reported){reported=overall;phase(overall);}cancellationPoint();
+    };
+    const auto reusable=[&](const Work &job){
+        if(!drawingHasProjection(*job.definition))return true;
+        const double deflection=drawingVisibilityMeshDeflection(*job.definition);
+        return std::all_of(job.source.bodies.cbegin(),job.source.bodies.cend(),[&](const auto &body){return prepared.cache.canReuse(body,deflection);});
+    };
+    for(std::size_t first=0;first<work.size();){
+        cancellationPoint();std::size_t end=first+1;
+        // Una mesh nuova/piu' fine resta una barriera: le viste successive
+        // devono osservare esattamente la precisione della vecchia sequenza.
+        if(workers>1&&reusable(work[first]))while(end<work.size()&&reusable(work[end]))++end;
+        std::vector<PreparedDrawingView> results(end-first);
+        const auto compute=[&](std::size_t offset,DrawingSilhouetteCache seeds){
+            const auto index=first+offset;const auto &job=work[index];
+            results[offset]=prepareDrawingView(job.source,*job.definition,*job.layout,std::move(seeds),[&](int value){progress(index,value);});
+        };
+        if(end-first>1){
+            // Ogni worker ha la propria mappa; soltanto mesh immutabili sono
+            // condivise. Il budget kernel evita pool paralleli annidati.
+            parallelFor(end-first,workers,[&](std::size_t offset){compute(offset,prepared.cache);});
+        }else{compute(0,std::move(prepared.cache));prepared.cache=std::move(results[0].cache);}
+        for(std::size_t index=first;index<end;++index){
+            const auto &definition=*work[index].definition;auto &result=results[index-first];
+            for(const auto &piece:result.curves)if(piece.kind==DrawingCurveKind::Section)prepared.sections[definition.id].push_back(piece);
+            prepared.curves[definition.id]=std::move(result.curves);
+            prepared.silhouettes[definition.id]=std::move(result.contours);
+            prepared.visibility[definition.id]=std::move(result.display);
+        }
+        first=end;
     }
     for(const auto &dimension:sheet.drawing.dimensions){
         cancellationPoint();
