@@ -12,10 +12,12 @@ struct DrawingDimensionPresentation {
     QString prefix,suffix;
     bool reverseArrows=false;
     bool numberingExcluded=false; // nasconde il badge e conserva il posto nella sequenza
-    bool operator==(const DrawingDimensionPresentation &p)const{return mode==p.mode&&upper==p.upper&&lower==p.lower&&decimals==p.decimals&&prefix==p.prefix&&suffix==p.suffix&&reverseArrows==p.reverseArrows&&numberingExcluded==p.numberingExcluded;}
+    double extensionSlant=0; // gradi rispetto alla perpendicolare alla linea di quota
+    bool operator==(const DrawingDimensionPresentation &p)const{return mode==p.mode&&upper==p.upper&&lower==p.lower&&decimals==p.decimals&&prefix==p.prefix&&suffix==p.suffix&&reverseArrows==p.reverseArrows&&numberingExcluded==p.numberingExcluded&&extensionSlant==p.extensionSlant;}
     bool active()const{return !(*this==DrawingDimensionPresentation{});}
 };
 inline QString validateDrawingDimensionPresentation(const DrawingDimensionPresentation &p){
+    if(!std::isfinite(p.extensionSlant)||std::abs(p.extensionSlant)>80)return QStringLiteral("Inclinazione dei richiami non valida (−80°…80°).");
     if(int(p.mode)<0||int(p.mode)>3||p.decimals<0||p.decimals>8||!std::isfinite(p.upper)||!std::isfinite(p.lower)||std::abs(p.upper)>1e6||std::abs(p.lower)>1e6)
         return QStringLiteral("Tolleranza o precisione non valida.");
     for(const auto &s:{p.prefix,p.suffix}){
@@ -45,7 +47,7 @@ inline DrawingDimensionLabel drawingDimensionLabel(const DrawingDimension &d,dou
     if(!t.problem.isEmpty()){t.leading=t.summary=QStringLiteral("Tolleranza da verificare");return t;}
     const bool angle=d.measure==DrawingMeasure::Angle;
     const QString unit=angle?QStringLiteral("°"):QStringLiteral(" mm");
-    const QString symbol=d.measure==DrawingMeasure::OrdinateX?QStringLiteral("X = "):d.measure==DrawingMeasure::OrdinateY?QStringLiteral("Y = "):d.measure==DrawingMeasure::Radius||d.measure==DrawingMeasure::AxisRadius?QStringLiteral("R "):diametral||d.measure==DrawingMeasure::Diameter||d.measure==DrawingMeasure::AxisDiameter?QStringLiteral("⌀ "):d.measure==DrawingMeasure::SectionLength?QStringLiteral("L = "):QString();
+    const QString symbol=d.measure==DrawingMeasure::ProfileRadius?QStringLiteral("R profilo "):d.measure==DrawingMeasure::OrdinateX?QStringLiteral("X = "):d.measure==DrawingMeasure::OrdinateY?QStringLiteral("Y = "):d.measure==DrawingMeasure::Radius||d.measure==DrawingMeasure::AxisRadius?QStringLiteral("R "):diametral||d.measure==DrawingMeasure::Diameter||d.measure==DrawingMeasure::AxisDiameter?QStringLiteral("⌀ "):d.measure==DrawingMeasure::SectionLength?QStringLiteral("L = "):QString();
     const bool hasDiameter=p.prefix.contains(QChar(0x2300))||p.prefix.contains(QChar(0x00d8));
     t.leading=p.prefix+((symbol==QStringLiteral("⌀ ")&&hasDiameter)?QString():symbol);
     if(p.mode==DrawingToleranceMode::Limits){

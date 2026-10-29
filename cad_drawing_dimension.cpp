@@ -1,5 +1,8 @@
 #include "cad_drawing_dimension.h"
 #include "fk_curve_algo.h"
+#include "fk_bspline_surface.h"
+#include "fk_surface_algo.h"
+#include "cad_drawing_curve_recognition.h"
 #include "fk_classify.h"
 #include "fk_curve_ops.h"
 #include <algorithm>
@@ -228,10 +231,27 @@ DrawingResolvedAttachment resolve(const DrawingView &view,const DrawingModelSnap
     return out;
 }
 }
+std::optional<DrawingProfileRadius> drawingProfileRadius(const DrawingView &view,const DrawingCurve &curve,const DrawingModelSnapshot &model,double parameter){
+    if(curve.kind!=DrawingCurveKind::Section||!curve.sourceFace.valid())return {};
+    const auto &source=sourceFor(model,curve.featureId);const auto &face=source.body->face(curve.sourceFace);
+    if(face.surface->type()!=SurfaceType::BSpline)return {};
+    const auto &surface=static_cast<const BSplineSurface &>(*face.surface);
+    // Le pezze del raccordo hanno un profilo razionale quadratico trasversale.
+    // Una generica spline di sezione non acquisisce un raggio per approssimazione.
+    if(!surface.isRational()||(surface.uDegree()==2)==(surface.vDegree()==2))return {};
+    const auto visiblePoint=curve.curve->point(parameter);
+    const auto original=curve.unfoldedToSource?curve.unfoldedToSource->applyToPoint(visiblePoint):curve.sourceGeometry?curve.sourceGeometry->point(parameter):visiblePoint;
+    const auto uv=projectPoint(surface,original);if(uv.distance>view.tolerance)return {};
+    const auto iso=surface.vDegree()==2?surface.uIsoCurve(uv.u):surface.vIsoCurve(uv.v);
+    const auto circle=drawingRecognizeCircle(iso,view.tolerance);if(!circle)return {};
+    auto center=circle->center;if(curve.unfoldedToSource)center=curve.unfoldedToSource->inverted().applyToPoint(center);
+    else if(curve.sourceGeometry)center+=visiblePoint-original;
+    const auto local=view.plane.toLocal(center);return DrawingProfileRadius{norm(circle->first),{local.x(),local.y()}};
+}
 bool drawingDatum(DrawingPointRole role){return role==DrawingPointRole::Origin||role==DrawingPointRole::AxisX||role==DrawingPointRole::AxisY;}
 QString validateDrawingAttachments(const DrawingDimension &d,const DrawingView &view){
     try{
-        need(int(d.measure)>=0&&int(d.measure)<=11,"Tipo di quota non supportato.");
+        need(int(d.measure)>=0&&int(d.measure)<=12,"Tipo di quota non supportato.");
         need(d.decimals>=0&&d.decimals<=8&&d.angleSides>=0&&d.angleSides<=3,"Presentazione della quota non valida.");
         need(d.measure==DrawingMeasure::Angle||d.angleSides==0,"Settore angolare su una quota lineare.");
         if(d.references.empty()){need(int(d.measure)<=3,"Quota senza riferimenti di aggancio.");return {};}
@@ -255,7 +275,7 @@ QString validateDrawingAttachments(const DrawingDimension &d,const DrawingView &
         }
         const bool hasAxis=std::any_of(d.references.begin(),d.references.end(),[](const auto &r){return !r.axisId.isNull();});
         need(primary?same(primary->curve,d.section):(hasAxis&&!d.section.featureId&&d.section.faceName.isEmpty()&&d.section.edgeName.isEmpty()&&d.section.kind==DrawingCurveKind::Section&&!d.section.requiresWitness&&norm(d.section.witness)==0),"Il riferimento principale non corrisponde agli agganci.");
-        const bool single=d.measure==DrawingMeasure::Radius||d.measure==DrawingMeasure::Diameter||d.measure==DrawingMeasure::SectionLength;
+        const bool single=d.measure==DrawingMeasure::ProfileRadius||d.measure==DrawingMeasure::Radius||d.measure==DrawingMeasure::Diameter||d.measure==DrawingMeasure::SectionLength;
         need(d.references.size()==(single?1u:2u),"Numero di riferimenti incompatibile con il tipo di quota.");return {};
     }catch(const std::exception &e){return QString::fromUtf8(e.what());}
 }
@@ -306,6 +326,10 @@ DrawingDimensionResult evaluateDrawingAttachments(const DrawingDimension &d,cons
             const auto primitive=drawingPrimitive(view,*a.curve);
             need(primitive.sourceCircular&&std::abs(distance(primitive.lineFirst,primitive.lineSecond)-2*primitive.sourceRadius)<=view.tolerance,"Il bordo proiettato non rappresenta un diametro completo.");
             out.value=2*primitive.sourceRadius;out.first=primitive.lineFirst;out.second=primitive.lineSecond;out.diametral=true;
+        }
+        else if(d.measure==M::ProfileRadius){need(a.curve&&!a.isPoint,"Il raggio del profilo richiede una curva del raccordo.");
+            const auto profile=drawingProfileRadius(view,*a.curve,model,fractionParameter(*a.curve,d.references.front().fraction));need(profile.has_value(),"Profilo circolare del raccordo non disponibile: verificare la superficie sorgente.");
+            out.value=profile->radius;out.first=profile->center;out.second=a.point;out.geometry=DrawingDimensionResult::Geometry::Radius;
         }
         else if(d.measure==M::Radius||d.measure==M::Diameter){need(a.isCircle&&!a.isPoint,"Raggio e diametro richiedono un cerchio o arco circolare nel piano della vista.");out.value=a.radius*(d.measure==M::Diameter?2:1);out.first=a.center;out.second=a.point;
             out.geometry=d.measure==M::Diameter?DrawingDimensionResult::Geometry::Diameter:DrawingDimensionResult::Geometry::Radius;}
@@ -374,6 +398,7 @@ DrawingDimension drawingDimensionBetween(const DrawingView &view,const DrawingMo
                 insideY&&!insideX&&std::abs(a.point.y()-b.point.y())>view.tolerance?M::VerticalDistance:M::Distance;}
         else measure=M::Distance;
     }
+    if(refs.size()==1&&measure==M::Radius&&!a.isCircle&&a.curve&&drawingProfileRadius(view,*a.curve,model,fractionParameter(*a.curve,refs.front().fraction)))measure=M::ProfileRadius;
     DrawingDimension d;d.viewId=view.id;d.measure=measure;d.references=std::move(refs);for(const auto &r:d.references)if(r.axisId.isNull()&&!drawingDatum(r.role)){d.section=r.curve;break;}
     auto result=evaluateDrawingAttachments(d,view,model,curves,axes);need(result.status==DrawingDimensionStatus::Ready,qPrintable(result.message));
     if(measure==M::Angle)d.angleSides=drawingAngleSector(result,cursor);
@@ -392,7 +417,7 @@ std::vector<DrawingDimension> drawingDimensionSeries(const DrawingView &view,con
         result.push_back(drawingDimensionBetween(view,model,curves,{points[ordinate?0:i-1],points[i]},measure,positions[i],false,axes));}
     return result;
 }
-QString drawingDimensionName(DrawingMeasure m){switch(m){case DrawingMeasure::OrdinateX:return QStringLiteral("Ordinata X");case DrawingMeasure::OrdinateY:return QStringLiteral("Ordinata Y");case DrawingMeasure::SectionLength:return QStringLiteral("Lunghezza");case DrawingMeasure::HorizontalDistance:return QStringLiteral("Orizzontale");case DrawingMeasure::VerticalDistance:return QStringLiteral("Verticale");case DrawingMeasure::Radius:return QStringLiteral("Raggio");case DrawingMeasure::Diameter:return QStringLiteral("Diametro");case DrawingMeasure::AxisRadius:return QStringLiteral("Raggio rispetto asse");case DrawingMeasure::AxisDiameter:return QStringLiteral("Diametro rispetto asse");case DrawingMeasure::Angle:return QStringLiteral("Angolo");default:return QStringLiteral("Distanza");}}
+QString drawingDimensionName(DrawingMeasure m){switch(m){case DrawingMeasure::ProfileRadius:return QStringLiteral("Raggio profilo raccordo");case DrawingMeasure::OrdinateX:return QStringLiteral("Ordinata X");case DrawingMeasure::OrdinateY:return QStringLiteral("Ordinata Y");case DrawingMeasure::SectionLength:return QStringLiteral("Lunghezza");case DrawingMeasure::HorizontalDistance:return QStringLiteral("Orizzontale");case DrawingMeasure::VerticalDistance:return QStringLiteral("Verticale");case DrawingMeasure::Radius:return QStringLiteral("Raggio");case DrawingMeasure::Diameter:return QStringLiteral("Diametro");case DrawingMeasure::AxisRadius:return QStringLiteral("Raggio rispetto asse");case DrawingMeasure::AxisDiameter:return QStringLiteral("Diametro rispetto asse");case DrawingMeasure::Angle:return QStringLiteral("Angolo");default:return QStringLiteral("Distanza");}}
 QString drawingDimensionText(const DrawingDimension &d,double value){const auto number=QString::number(std::abs(value)<.5*std::pow(10.,-d.decimals)?0:value,'f',d.decimals);if(d.measure==DrawingMeasure::Angle)return number+QStringLiteral("°");
-    const auto prefix=d.measure==DrawingMeasure::OrdinateX?QStringLiteral("X = "):d.measure==DrawingMeasure::OrdinateY?QStringLiteral("Y = "):d.measure==DrawingMeasure::Radius||d.measure==DrawingMeasure::AxisRadius?QStringLiteral("R "):d.measure==DrawingMeasure::Diameter||d.measure==DrawingMeasure::AxisDiameter?QStringLiteral("⌀ "):d.measure==DrawingMeasure::SectionLength?QStringLiteral("L = "):QString();return prefix+number+QStringLiteral(" mm");}
+    const auto prefix=d.measure==DrawingMeasure::ProfileRadius?QStringLiteral("R profilo "):d.measure==DrawingMeasure::OrdinateX?QStringLiteral("X = "):d.measure==DrawingMeasure::OrdinateY?QStringLiteral("Y = "):d.measure==DrawingMeasure::Radius||d.measure==DrawingMeasure::AxisRadius?QStringLiteral("R "):d.measure==DrawingMeasure::Diameter||d.measure==DrawingMeasure::AxisDiameter?QStringLiteral("⌀ "):d.measure==DrawingMeasure::SectionLength?QStringLiteral("L = "):QString();return prefix+number+QStringLiteral(" mm");}
 }

@@ -831,3 +831,18 @@ In **Modifica vista…**, comprese le proprietà di sezioni,dettagli e ausiliari
 Una variazione del foglio aggiorna le viste collegate e le figlie che ne ereditano la scala, con un solo Undo. Le viste personalizzate mantengono la loro scala. Le quote continuano a misurare il modello; testo, cartiglio e formato non vengono ridimensionati come geometria. Sganciare una vista che seguiva la madre ne conserva la scala corrente come personalizzata.
 
 Le tavole precedenti conservano l’aspetto all’apertura. Alla prima impostazione della scala di foglio vengono collegate le viste principali alla scala comune;le viste già a scale differenti e i dettagli indipendenti restano tali. Nuovi metadati nello schema23 soltanto quando necessari,con lettura degli schemi precedenti e coesistenza della numerazione persistente. Verifiche e stato della build sono registrati in CLAUDE.md.
+
+
+## Controlli quote e bordi — 29 ottobre 2026
+
+Il testo delle quote ha sfondo trasparente: le altre entità restano visibili sotto il rettangolo del valore. La sola linea della quota viene ritagliata sotto il proprio testo, anche in anteprima e nel PDF.
+
+In **Opzioni tavola 2D → Quote e frecce**, **Altezza H** indica la distanza punta–base e **Base B** la larghezza totale della freccia. I due valori sono indipendenti e il disegno accanto li illustra. Le tavole precedenti conservano le proporzioni originali finché non si modifica la base.
+
+**Ordinata X/Y** nel selettore attiva la stessa serie dei comandi dedicati: scegliere l’origine, più punti e una posizione libera per confermare il lotto. Dopo la conferma si possono scegliere altri punti e posizionare un altro lotto mantenendo l’origine; Backspace rimuove l’ultimo riferimento, Esc annulla la scelta corrente e un secondo Esc termina. Ogni lotto confermato ha un solo Undo.
+
+Selezionando il testo di una quota lineare compaiono due maniglie alle estremità della linea di quota. Trascinandole lungo quella linea si inclinano i richiami, con anteprima e un solo Undo al rilascio. Esc annulla; **Proprietà quota → Inclinazione richiami** permette la regolazione numerica e il ritorno a0°. Le misure e i riferimenti geometrici rimangono associati al modello.
+
+I cerchi rappresentati come spline vengono riconosciuti soltanto quando planarità e residuo sull’intera curva sono entro la tolleranza esistente. Per il filetto, una sezione obliqua può avere curvatura variabile anche con profilo circolare: il comando Raggio offre allora **R profilo**, misurato sull’isoparametrica circolare della superficie del raccordo. Il testo distingue questa misura dal raggio di un arco circolare della sezione. Una generica spline non riceve un raggio circolare per semplice somiglianza grafica.
+
+I nuovi controlli e le quote del profilo usano lo schema foglio25 quando necessari; la nuova misura usa lo schema geometrico12. I formati storici restano leggibili e i lettori precedenti rifiutano i nuovi metadati.

@@ -16,11 +16,14 @@ struct DrawingStyle {
     DrawingTextOrientation dimensionTextOrientation=DrawingTextOrientation::Horizontal;
     DrawingTextPosition dimensionTextPosition=DrawingTextPosition::Centered;
     double dimensionTextGap=.8; // mm sul foglio
+    double arrowWidth=0; // base totale in mm; zero conserva il rapporto storico 0,65 H
+    double arrowBaseWidth()const{return arrowWidth>0?arrowWidth:arrow==DrawingArrowStyle::Tick?arrowLength:.65*arrowLength;}
     bool textLayoutActive()const{return dimensionTextOrientation!=DrawingTextOrientation::Horizontal||dimensionTextPosition!=DrawingTextPosition::Centered||dimensionTextGap!=.8;}
-    bool operator==(const DrawingStyle &s)const{return fontFamily==s.fontFamily&&dimensionHeight==s.dimensionHeight&&viewTitleHeight==s.viewTitleHeight&&arrowLength==s.arrowLength&&titleGap==s.titleGap&&arrow==s.arrow&&titleSnaps==s.titleSnaps&&extensionGap==s.extensionGap&&dimensionOffset==s.dimensionOffset&&dimensionTextOrientation==s.dimensionTextOrientation&&dimensionTextPosition==s.dimensionTextPosition&&dimensionTextGap==s.dimensionTextGap;}
+    bool operator==(const DrawingStyle &s)const{return fontFamily==s.fontFamily&&dimensionHeight==s.dimensionHeight&&viewTitleHeight==s.viewTitleHeight&&arrowLength==s.arrowLength&&titleGap==s.titleGap&&arrow==s.arrow&&titleSnaps==s.titleSnaps&&extensionGap==s.extensionGap&&dimensionOffset==s.dimensionOffset&&dimensionTextOrientation==s.dimensionTextOrientation&&dimensionTextPosition==s.dimensionTextPosition&&dimensionTextGap==s.dimensionTextGap&&arrowWidth==s.arrowWidth;}
     bool active()const{return !(*this==DrawingStyle{});}
 };
 inline QString validateDrawingStyle(const DrawingStyle &s){
+    if(!std::isfinite(s.arrowWidth)||s.arrowWidth<0||s.arrowWidth>20||(s.arrowWidth>0&&s.arrowWidth<.1))return QStringLiteral("Base freccia non valida (0,1–20 mm).");
     if(int(s.dimensionTextOrientation)<0||int(s.dimensionTextOrientation)>1||int(s.dimensionTextPosition)<0||int(s.dimensionTextPosition)>2||!std::isfinite(s.dimensionTextGap)||s.dimensionTextGap<0||s.dimensionTextGap>20)return QStringLiteral("Orientamento, posizione o distanza del testo quota non validi.");
     for(double x:{s.extensionGap,s.dimensionOffset})if(!std::isfinite(x)||x<0||x>100)return QStringLiteral("Distanza delle quote non valida (0–100 mm sul foglio).");
     if(s.fontFamily.trimmed().isEmpty()||s.fontFamily.size()>256)return QStringLiteral("Famiglia del carattere non valida.");
@@ -32,8 +35,8 @@ inline QString validateDrawingStyle(const DrawingStyle &s){
 inline QFont drawingFont(const DrawingStyle &s){QFont f(s.fontFamily);f.setPixelSize(12);return f;}
 inline QPainterPath drawingArrowPath(const DrawingStyle &s,QPointF tip,QPointF toward){
     QPainterPath path;auto d=toward-tip;const double norm=std::hypot(d.x(),d.y());if(norm<1e-10)return path;d/=norm;const QPointF n(-d.y(),d.x());
-    if(s.arrow==DrawingArrowStyle::Tick){path.moveTo(tip+s.arrowLength*.5*(d+n));path.lineTo(tip-s.arrowLength*.5*(d+n));return path;}
-    path.moveTo(tip+s.arrowLength*d+s.arrowLength*.325*n);path.lineTo(tip);path.lineTo(tip+s.arrowLength*d-s.arrowLength*.325*n);
+    if(s.arrow==DrawingArrowStyle::Tick){path.moveTo(tip+s.arrowLength*.5*d+s.arrowBaseWidth()*.5*n);path.lineTo(tip-s.arrowLength*.5*d-s.arrowBaseWidth()*.5*n);return path;}
+    path.moveTo(tip+s.arrowLength*d+s.arrowBaseWidth()*.5*n);path.lineTo(tip);path.lineTo(tip+s.arrowLength*d-s.arrowBaseWidth()*.5*n);
     if(s.arrow!=DrawingArrowStyle::Open)path.closeSubpath();
     return path;
 }

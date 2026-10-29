@@ -1,4 +1,5 @@
 #include "cad_drawing_editor.h"
+#include "cad_drawing_text_layout.h"
 #include "fk_primitives.h"
 #include "fk_revolve.h"
 #include "fk_sheet.h"
@@ -59,6 +60,7 @@ DrawingDimension last(const DrawingSheetEditor &editor){require(!editor.sheet().
 #include "test_drawing_ambiguous_snaps.h"
 #include "test_drawing_dimension_series.h"
 #include "test_drawing_dimension_numbering.h"
+#include "test_drawing_dimension_controls.h"
 int main(int argc,char **argv){QApplication app(argc,argv);try{
     // Clic reali sul tronco di cono: generatrice e bordo circolare visto di taglio.
     {
@@ -68,6 +70,11 @@ int main(int argc,char **argv){QApplication app(argc,argv);try{
         mode(e,-1);click(e,paper({0,0}),Qt::ShiftModifier);move(e,paper({0,-6}));require(items(e,"dimensionPreview")==1,"anteprima diametro bordo conico");click(e,paper({0,-6}));const auto d=last(e);near(e.dimensionResult(d.id).value,12,"diametro base conica inserito dal mouse");require(e.dimensionResult(d.id).diametral,"diametro riconosciuto dal flusso GUI");
         const auto output=qEnvironmentVariable("FORGECAD_CONE_OUTPUT");if(!output.isEmpty())e.grab().save(output+"/cone-mouse-dimensions.png");
     }
+    // Aprire le opzioni senza modifiche conserva anche basi storiche non
+    // rappresentabili con i due decimali del campo (H3,5 -> B2,275).
+    {DrawingEditorModel model;model.snapshot.version={QUuid::createUuid(),{}};DrawingSheet sheet;sheet.drawing.model=model.snapshot.version;sheet.style.arrowLength=3.5;DrawingSheetEditor legacy(sheet,model);const auto before=encoded(legacy);bool visited=false;
+     QTimer::singleShot(0,&legacy,[&]{auto *dialog=legacy.findChild<QDialog *>("drawingOptionsDialog");require(dialog,"opzioni stile storico");visited=true;dialog->findChild<QDialogButtonBox *>()->button(QDialogButtonBox::Ok)->click();});legacy.findChild<QAction *>("drawingOptionsAction")->trigger();require(visited&&encoded(legacy)==before,"conferma invariata conserva schema8 e base2,275 esatta");}
+    drawingDimensionControlsTests();
     drawingDimensionNumberingTests();
     drawingDimensionSeriesTests();
     ambiguousSnapTests();
@@ -80,7 +87,7 @@ int main(int argc,char **argv){QApplication app(argc,argv);try{
     // Il nuovo inserimento e' centrato: sposta esplicitamente il valore fuori
     // dagli estremi per conservare la regressione del collegamento esterno.
     QApplication::processEvents();const auto offset=dimensionTextItem(editor,diagonal.id)->data(6).toPointF()-editor.sheet().dimensions[0].position;ok(editor.moveDimension(diagonal.id,QPointF(99,70)-offset));QApplication::processEvents();const auto textCenter=dimensionTextItem(editor,diagonal.id)->sceneBoundingRect().center();
-    bool attachedText=false;for(auto *item:editor.canvas()->scene()->items())if(auto *line=qgraphicsitem_cast<QGraphicsLineItem *>(item))if(QLineF(line->line().p1(),textCenter).length()<1e-7||QLineF(line->line().p2(),textCenter).length()<1e-7)attachedText=true;require(attachedText,"testo esterno collegato alla linea di quota");
+    bool attachedText=false;const auto mask=qgraphicsitem_cast<QGraphicsPathItem *>(dimensionTextItem(editor,diagonal.id,"dimensionTextBackground"))->path();for(auto *item:editor.canvas()->scene()->items())if(auto *line=qgraphicsitem_cast<QGraphicsLineItem *>(item))for(auto end:{line->line().p1(),line->line().p2()})if(QLineF(end,textCenter).length()>0&&mask.contains(end+(textCenter-end)*1e-5))attachedText=true;require(attachedText,"richiamo collegato al bordo del testo trasparente, senza attraversarlo");
     // Punto-retta: Maiusc sceglie la retta invece del suo punto medio.
     mode(editor,int(DrawingMeasure::Distance));click(editor,paper({10,6}));click(editor,paper({3,0}),Qt::ShiftModifier);click(editor,QPointF(125,95));auto perpendicular=last(editor);near(editor.dimensionResult(perpendicular.id).value,6,"quota linea-punto dalla GUI");require(perpendicular.references[1].role==DrawingPointRole::Curve,"Maiusc forza riferimento alla retta");
     mode(editor,int(DrawingMeasure::Distance));click(editor,paper({3,0}),Qt::ShiftModifier);click(editor,paper({10,6}));click(editor,QPointF(140,95));near(editor.dimensionResult(last(editor).id).value,6,"linea scelta prima del punto");

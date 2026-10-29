@@ -29,7 +29,9 @@ void checkAngularExtensions(DrawingSheetEditor &e,const DrawingView &v,const Dra
  for(const auto &want:expected){bool found=false;for(const auto &line:actual)if(QLineF(want.p1(),line.p1()).length()<1e-6&&QLineF(want.p2(),line.p2()).length()<1e-6)found=true;require(found,"richiamo angolare dal solo estremo necessario, con distacco in mm foglio");}
  // Un eventuale collegamento al testo e' distinto dai due richiami.
  for(const auto &line:actual){bool witness=false;for(const auto &want:expected)if(QLineF(want.p1(),line.p1()).length()<1e-6&&QLineF(want.p2(),line.p2()).length()<1e-6)witness=true;
-  require(witness||QLineF(line.p2(),anchor).length()<1e-6,"nessun richiamo superfluo dal vertice o sopra il segmento");}
+  bool textEnd=QLineF(line.p2(),anchor).length()<1e-6;
+  for(auto *label:e.canvas()->scene()->items())if(label->data(0).toString()==(preview?"dimensionPreview":"dimension")&&(preview||label->data(3).toUuid()==d.id)){const auto mask=drawingDimensionTextMask(label);for(auto end:{line.p1(),line.p2()})if(mask.contains(end+(anchor-end)*1e-5))textEnd=true;}
+  require(witness||textEnd,"nessun richiamo superfluo dal vertice o sopra il segmento");}
 }
 void drawingAngularExtensionCase(double degrees){
  const double angle=-degrees*kPi/180;DrawingEditorModel model;model.snapshot.version={QUuid::createUuid(),{}};
