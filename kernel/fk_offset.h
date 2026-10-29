@@ -86,6 +86,8 @@ struct FaceOffset {
     // sopravvissuti, oppure una pezza d'angolo fra raccordi gia' contratti.
     // Il chiamante determina quali raggi hanno esaurito lo spessore.
     bool collapse = false;
+    // Supporto sostitutivo: rifila i bordi sulle intersezioni, senza offset.
+    SurfacePtr replacement = {};
 };
 // Restituisce una lamina chiusa, da orientare/cucire prima delle booleane.
 // Mantiene le origini delle facce sopravvissute. Rifiuta contorni aperti,

@@ -3,6 +3,23 @@
 
 SceneSelection CadViewport::selection() const { return selection_; }
 
+int CadViewport::selectedFeatureIndex() const {
+    if (selection_.kind != SceneObjectKind::Extrusion) return -1;
+    return selectedFace_.body == selection_.index && selectedFeature_ >= 0 ? selectedFeature_ : selection_.index;
+}
+
+int CadViewport::sourceFeatureForFace(const GeometryRef &ref) const {
+    if (ref.kind != 5 || ref.index < 0 || ref.index >= extrusions_.size() || !extrusions_.at(ref.index).forgeBody) return -1;
+    QVector<int> chain = operandClosure(ref.index).values();
+    if (!chain.contains(ref.index)) chain.append(ref.index);
+    std::sort(chain.begin(), chain.end());
+    std::vector<std::pair<int, ForgeCad::ForgeBody>> sources;
+    for (int i : chain) if (!extrusions_.at(i).suppressed && extrusions_.at(i).forgeBody)
+        sources.emplace_back(i, extrusions_.at(i).forgeBody);
+    return ForgeCad::forgeFaceOwner(*extrusions_.at(ref.index).forgeBody, ref.point.subshape,
+        {ref.point.x, ref.point.y, ref.point.z}, sources);
+}
+
 QVector<SceneSelection> CadViewport::selectedObjects() const { return selectedObjects_.isEmpty() && selection_.kind != SceneObjectKind::None
                                                              ? QVector<SceneSelection>{selection_} : selectedObjects_; }
 
@@ -33,6 +50,8 @@ void CadViewport::selectObject(SceneObjectKind kind, int index, bool wholeBody )
         return;
     }
     selection_ = {kind, index, -1};
+    selectedFace_ = {};
+    selectedFeature_ = kind == SceneObjectKind::Extrusion ? index : -1;
     selectedObjects_.clear();
     if (kind == SceneObjectKind::Plane) selectedPlane_ = index;
     if (kind == SceneObjectKind::Extrusion && wholeBody) setBodyHighlight(index);

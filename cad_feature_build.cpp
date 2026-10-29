@@ -660,7 +660,20 @@ void buildGeometryImpl(ExtrusionObject &body, int index, const QVector<SketchObj
                         body.error = QStringLiteral("Gli operandi della funzione da ripetere non hanno geometria valida.");
                     return;
                 }
-                body.forgeBody = ForgeCad::forgePatternFeature(target, tool, operation, placements, &body.error, !body.pattern.excluded.contains(0));
+                bool includeOriginal = !body.pattern.excluded.contains(0);
+                if (body.secondBody >= 0) {
+                    const auto *current = operand(body.secondBody);
+                    if (!current || !current->forgeBody || current->modelBodyId != base->modelBodyId || body.secondBody <= body.firstBody) {
+                        body.error = QStringLiteral("Il corpo di destinazione della funzione non e' valido."); return;
+                    }
+                    if (!includeOriginal) {
+                        body.error = QStringLiteral("L'originale appartiene a una funzione precedente: non si puo' escludere mantenendo le lavorazioni successive."); return;
+                    }
+                    target = current->forgeBody;
+                    includeOriginal = false; // gia' presente nel risultato delle lavorazioni successive
+                    if (placements.empty()) { body.forgeBody = target; return; }
+                }
+                body.forgeBody = ForgeCad::forgePatternFeature(target, tool, operation, placements, &body.error, includeOriginal);
             } else {
                 body.forgeBody = ForgeCad::forgePattern(base->forgeBody, placements, (body.pattern.kind != 2 || body.pattern.keepOriginal) && !body.pattern.excluded.contains(0), &body.error);
             }

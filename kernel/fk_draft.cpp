@@ -4,6 +4,9 @@
 #include "fk_pcurve.h"
 #include "fk_precision.h"
 #include "fk_intersect.h"
+#include "fk_offset.h"
+#include "fk_sew.h"
+#include "fk_mass.h"
 #include <algorithm>
 #include <map>
 #include <set>
@@ -27,6 +30,65 @@ Body draftFaces(const Body &input, const std::vector<FaceId> &selected,
     for (FaceId f : selected) {
         if (!input.contains(f)) throw std::domain_error("una faccia scelta non esiste piu'");
         chosen.insert(f.index);
+    }
+    // Conserva il percorso analitico storico per le lamine piane e i
+    // poliedri convessi; gli altri solidi rifilano i supporti adiacenti.
+    bool polyhedral = true, convex = true;
+    for (FaceId f : input.faces()) {
+        const auto &face = input.face(f);
+        if (!face.surface || face.surface->type() != SurfaceType::Plane) { polyhedral = false; continue; }
+        const auto &frame = static_cast<const Plane &>(*face.surface).frame();
+        const Vec3 n = frame.zDir() * (face.sense ? 1.0 : -1.0);
+        for (VertexId v : input.vertices())
+            if (dot(n, input.vertex(v).point - frame.origin()) > tolerance) convex = false;
+    }
+    for (EdgeId e : input.edges())
+        if (!input.edge(e).curve || input.edge(e).curve->type() != CurveType::Line) polyhedral = false;
+    if (!input.isSheet() && (!polyhedral || !convex)) {
+        std::vector<FaceOffset> specs;
+        for (FaceId f : input.faces()) {
+            FaceOffset spec; spec.face = f;
+            const auto &face = input.face(f);
+            if (chosen.count(f.index)) {
+                if (!face.surface) throw std::domain_error("sformo: supporto della faccia assente");
+                if (face.surface->type() == SurfaceType::Plane) {
+                    const auto &frame = static_cast<const Plane &>(*face.surface).frame();
+                    const Vec3 outward = frame.zDir() * (face.sense ? 1.0 : -1.0);
+                    const Vec3 transverse = outward - pull * dot(outward, pull);
+                    const double length = norm(transverse);
+                    if (length < 1e-8) throw std::domain_error("una faccia scelta e' parallela al piano neutro");
+                    const Vec3 normal = transverse / length * std::cos(angle) + pull * std::sin(angle);
+                    const double offset = dot(outward, frame.origin() - origin) * std::cos(angle) / length;
+                    const Vec3 oriented = normal * (face.sense ? 1.0 : -1.0);
+                    spec.replacement = std::make_shared<Plane>(Frame3(origin + normal * offset, oriented, frame.xDir()));
+                } else if (face.surface->type() == SurfaceType::Cylinder || face.surface->type() == SurfaceType::Cone) {
+                    const bool cylinder = face.surface->type() == SurfaceType::Cylinder;
+                    const Frame3 &frame = cylinder ? static_cast<const CylindricalSurface &>(*face.surface).frame()
+                                                  : static_cast<const ConicalSurface &>(*face.surface).frame();
+                    if (norm(cross(frame.zDir(), pull)) > 1e-8)
+                        throw std::domain_error("sformo: l'asse della faccia curva deve essere parallelo all'estrazione");
+                    const double height = dot(origin - frame.origin(), frame.zDir());
+                    const double radius = cylinder ? static_cast<const CylindricalSurface &>(*face.surface).radius()
+                        : static_cast<const ConicalSurface &>(*face.surface).referenceRadius()
+                          + height * std::tan(static_cast<const ConicalSurface &>(*face.surface).semiAngle());
+                    if (radius <= tolerance) throw std::domain_error("sformo: sezione neutra degenere");
+                    const double semiAngle = -angle * dot(frame.zDir(), pull) * (face.sense ? 1.0 : -1.0);
+                    spec.replacement = std::make_shared<ConicalSurface>(Frame3(frame.origin() + frame.zDir() * height,
+                        frame.zDir(), frame.xDir()), semiAngle, radius);
+                } else {
+                    throw std::domain_error("sformo: la faccia scelta richiede una superficie di sformo non ancora supportata");
+                }
+            }
+            specs.push_back(std::move(spec));
+        }
+        auto refitted = offsetJoinedFaces(input, specs, kLinearResolution);
+        BodyHistory sewnHistory;
+        auto sewn = sewSheets({&refitted.body}, kLinearResolution, true, history ? &sewnHistory : nullptr);
+        if (!sewn.solid || sewn.shells != 1) throw std::domain_error("sformo: il risultato non e' un solido chiuso connesso");
+        const auto issues = checkBody(sewn.body, {true, true});
+        if (!issues.empty()) throw std::domain_error("sformo non valido: " + issues.front().message);
+        if (history) *history = detail::transportHistory(sewnHistory, {&refitted.history});
+        return std::move(sewn.body);
     }
     struct Support { Vec3 normal; double offset; };
     std::map<int, Support> supports;

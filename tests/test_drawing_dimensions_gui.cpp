@@ -1,5 +1,6 @@
 #include "cad_drawing_editor.h"
 #include "fk_primitives.h"
+#include "fk_revolve.h"
 #include "fk_sheet.h"
 #include <QAction>
 #include <QApplication>
@@ -59,6 +60,14 @@ DrawingDimension last(const DrawingSheetEditor &editor){require(!editor.sheet().
 #include "test_drawing_dimension_series.h"
 #include "test_drawing_dimension_numbering.h"
 int main(int argc,char **argv){QApplication app(argc,argv);try{
+    // Clic reali sul tronco di cono: generatrice e bordo circolare visto di taglio.
+    {
+        DrawingEditorModel m;m.snapshot.version={QUuid::createUuid(),{}};m.snapshot.bodies={source(makeCone(Frame3(),6,3,10),1)};m.choices={{1,"Tronco di cono"}};DrawingSheet sheet;sheet.drawing.model=m.snapshot.version;DrawingSheetEditor e(sheet,m);e.resize(1450,900);e.show();QApplication::processEvents();e.fitSheet();
+        DrawingView v;v.kind=DrawingViewKind::ProjectedEdges;v.scale=3;v.plane=Frame3({},Vec3(0,-1,0),Vec3(1,0,0));ok(e.insertView(v,{v.id,"Cono",{75,120},{1}}));mode(e,-1);
+        click(e,paper({4.5,5}),Qt::ShiftModifier);move(e,paper({15,5}));require(items(e,"dimensionPreview")==1,"anteprima dopo clic singolo su generatrice conica");click(e,paper({15,5}));near(e.dimensionResult(last(e).id).value,10,"altezza conica inserita dal mouse");
+        mode(e,-1);click(e,paper({0,0}),Qt::ShiftModifier);move(e,paper({0,-6}));require(items(e,"dimensionPreview")==1,"anteprima diametro bordo conico");click(e,paper({0,-6}));const auto d=last(e);near(e.dimensionResult(d.id).value,12,"diametro base conica inserito dal mouse");require(e.dimensionResult(d.id).diametral,"diametro riconosciuto dal flusso GUI");
+        const auto output=qEnvironmentVariable("FORGECAD_CONE_OUTPUT");if(!output.isEmpty())e.grab().save(output+"/cone-mouse-dimensions.png");
+    }
     drawingDimensionNumberingTests();
     drawingDimensionSeriesTests();
     ambiguousSnapTests();

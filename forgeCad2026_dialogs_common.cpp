@@ -1205,7 +1205,8 @@ bool BodyPicker::handle(bool picked, const GeometryRef &ref) {
         return true;
     }
     // Uno spigolo (con gli schizzi si scelgono anche le curve): il suo corpo.
-    const int body = ref.kind == 5 || (sketchStart_ >= 0 && ref.kind == 4) ? resultBodyForPick(viewport_, candidates_, ref.index) : -1;
+    const int body = resolve ? resolve(ref) :
+        (ref.kind == 5 || (sketchStart_ >= 0 && ref.kind == 4) ? resultBodyForPick(viewport_, candidates_, ref.index) : -1);
     handling_ = true;
     if (body < 0) {
         if (message) message(QStringLiteral("Quel corpo non si puo' usare qui (o non esiste in questo punto della storia)."), true);

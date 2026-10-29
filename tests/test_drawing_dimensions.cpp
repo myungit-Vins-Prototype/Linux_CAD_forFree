@@ -124,5 +124,30 @@ int main(){try{
         for(const auto &refs:std::vector<std::vector<DrawingAttachment>>{{a,a,b},{a,b,b},std::vector<DrawingAttachment>(65,a)}){bool rejected=false;try{drawingDimensionSeries(sv,sm,sc,refs,DrawingDimensionSeries::OrdinateX);}catch(const std::exception &){rejected=true;}require(rejected,"coordinate duplicate e limite punti rifiutati");}
         DrawingAttachment datum;datum.role=DrawingPointRole::Origin;auto fromDatum=drawingDimensionSeries(sv,sm,sc,{datum,b},DrawingDimensionSeries::OrdinateY);near(result(sm,sv,fromDatum[0]).value,6,"origine del piano associativa");
     }
+    // Tronco di cono rivoluto: generatrici e punti terminali esatti, anche dopo codec.
+    {
+        DrawingModelSnapshot m{model.version,{source(makeCone(Frame3(),6,3,10))}};
+        DrawingView v;v.kind=DrawingViewKind::ProjectedEdges;v.plane=Frame3({},Vec3(0,-1,0),Vec3(1,0,0));const auto c=curves(m,v);
+        std::vector<const DrawingCurve *> sides;for(const auto &x:c)if(x.kind==DrawingCurveKind::ApparentLine)sides.push_back(&x);
+        require(sides.size()==2,"due generatrici coniche esatte");
+        auto first=drawingAttachment(v,*sides[0],m,DrawingPointRole::Curve),second=drawingAttachment(v,*sides[1],m,DrawingPointRole::Curve);
+        auto angle=drawingDimensionBetween(v,m,c,{first,second},DrawingMeasure::Angle,{0,20});near(result(m,v,angle).value,2*std::atan(.3)*180/kPi,"angolo del tronco di cono");
+        const auto autoSide=drawingDimensionBetween(v,m,c,{first},DrawingMeasure::Distance,{15,5},true);near(result(m,v,autoSide).value,10,"clic singolo generatrice propone altezza");
+        auto start=drawingAttachment(v,*sides[0],m,DrawingPointRole::Start),end=drawingAttachment(v,*sides[0],m,DrawingPointRole::End);
+        const auto opposite=drawingAttachment(v,*sides[1],m,DrawingPointRole::Start);const auto diameter=drawingDimensionBetween(v,m,c,{start,opposite},DrawingMeasure::HorizontalDistance,{0,-5});require(result(m,v,diameter).diametral,"estremi opposti del cono riconosciuti come diametro");near(result(m,v,diameter).value,12,"diametro base tra generatrici");
+        auto height=drawingDimensionBetween(v,m,c,{start,end},DrawingMeasure::VerticalDistance,{15,5});near(result(m,v,height).value,10,"altezza tra estremi della generatrice");
+        DrawingDocument d;d.model=m.version;d.views={v};d.dimensions={height,angle};QByteArray b;ok(encodeDrawingDocument(d,b));DrawingDocument read;ok(decodeDrawingDocument(b,read));near(evaluateDrawingDimension(read,m,height.id).value,10,"riapertura estremi conici associativi");
+        int rims=0;for(const auto &x:c){const auto primitive=drawingPrimitive(v,x);if(!primitive.linearProjection)continue;
+            const auto ref=drawingAttachment(v,x,m,DrawingPointRole::Curve);const auto dimension=drawingDimensionBetween(v,m,c,{ref},DrawingMeasure::Distance,{12,12},true);const auto measured=result(m,v,dimension);
+            require(dimension.measure==DrawingMeasure::Diameter&&measured.diametral&&measured.geometry==DrawingDimensionResult::Geometry::Linear,"cerchio visto di taglio quotato come diametro lineare");
+            require(drawingDimensionLabel(dimension,measured.value,{},measured.diametral).summary.startsWith(QStringLiteral("⌀ ")),"prefisso diametro automatico");near(measured.value,2*primitive.sourceRadius,"diametro esatto sul cono");++rims;
+        }require(rims==2,"entrambi i diametri del tronco quotabili");
+    }
+    {
+        const auto qa=drawingAttachment(view,*circular,cylinder,DrawingPointRole::Quadrant0),qb=drawingAttachment(view,*circular,cylinder,DrawingPointRole::Quadrant2);
+        const auto d=drawingDimensionBetween(view,cylinder,circles,{qa,qb},DrawingMeasure::HorizontalDistance,{0,10});const auto r=result(cylinder,view,d);require(r.diametral,"quadranti opposti riconosciuti come diametro");
+        const auto qc=drawingAttachment(view,*circular,cylinder,DrawingPointRole::Quadrant1);const auto chord=drawingDimensionBetween(view,cylinder,circles,{qa,qc},DrawingMeasure::Distance,{8,8});require(!result(cylinder,view,chord).diametral,"una corda non e' un diametro");
+        require(!result(model,view,horizontal).diametral,"larghezza piana non marcata diametro");DrawingDimensionPresentation manual;manual.prefix=QStringLiteral("⌀ ");require(drawingDimensionLabel(d,6,manual,true).summary.count(QChar(0x2300))==1,"prefisso manuale non duplicato");
+    }
     std::cout<<"PASS associative points, line-point, parallel lines, angular/radial dimensions, schema and surface anchors\n";
 }catch(const std::exception &e){std::cerr<<e.what()<<'\n';return 1;}}

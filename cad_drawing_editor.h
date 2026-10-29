@@ -27,7 +27,8 @@ public:
     QString setViewBreak(const QUuid &id,std::optional<DrawingViewBreak> interruption);
     QString beginAuxiliaryViewPlacement(const QUuid &parent,double angle);
     QString beginDetailCircle(const QUuid &parent,const QString &label,double scale);
-    QString beginDetailViewPlacement(const QUuid &parent,QPointF center,double radius,double scale,const QString &label);
+    QString beginDetailViewPlacement(const QUuid &parent,QPointF center,double radius,double scale,const QString &label,const QVector<QPointF> &outline={});
+    QString moveDetailLabel(const QUuid &id,QPointF paperPosition);
     QString updateDetailView(const QUuid &id,QPointF center,double radius,double scale,const QString &label);
     // Madre nulla: la linea sul foglio individua la vista proiettata attraversata.
     QString beginSectionLine(const QUuid &parent,const QString &label,bool reverse=false,const QUuid &existing={},DrawingSectionStyle style=DrawingSectionStyle::Removed);

@@ -4754,6 +4754,59 @@ public:
         std::cout << "PASS sformo: anteprima, storia, modifica, undo/redo, persistenza e pannello" << std::endl;
     }
 
+    // Caso reale facoltativo, solo su copia: --draft-document file.prt output.prt.
+    static void draftDocumentCase(const QString &path, const QString &output) {
+        using namespace ForgeCad; using namespace ForgeCad::Kernel;
+        DocumentState state; require(loadDocumentFile(path,state).isEmpty(), "lettura copia CT0578");
+        state.version.documentId=QUuid::createUuid(); state.baseCheckinId={};
+        CadViewport view; view.loadDocument(state);
+        require(view.extrusions_.size()>30 && view.extrusions_[30].forgeBody, "B30 disponibile");
+        const auto source=view.extrusions_[30].forgeBody;
+        const auto before=writeBodyBinary(*source);
+        // Il codec/ripristino puo' normalizzare i frame dei predecessori.
+        // Oracolo indipendente: identico roundtrip senza creare lo sformo.
+        std::string reopenedSource;
+        {
+            QByteArray bytes; DocumentState control;
+            require(encodeDocument(view.currentDocument(),bytes,true).isEmpty() && decodeDocument(bytes,control).isEmpty(),"roundtrip controllo senza sformo");
+            CadViewport controlView; controlView.loadDocument(control);
+            reopenedSource=writeBodyBinary(*controlView.extrusions()[30].forgeBody);
+        }
+        std::string expectedSource=before;
+        Vec3 point; require(faceInteriorPoint(*source,FaceId{306},point), "punto faccia F306");
+        ExtrusionObject d; d.feature=BodyFeature::Draft; d.firstBody=30; d.name="Sformo verifica 0,2 gradi"; d.draftAngle=.2;
+        d.offsetFaces={faceReference(*source,FaceId{306},point)};
+        require(faceInteriorPoint(*source,FaceId{24},point), "punto piano F24");
+        d.draftNeutral.kind=5; d.draftNeutral.index=30; d.draftNeutral.point=faceReference(*source,FaceId{24},point);
+        ResolvedRef neutral; QString error; require(resolveGeometryRef(d.draftNeutral,31,view.sketches_,view.extrusions_,neutral,&error), "risoluzione piano neutro UI");
+        view.requestPreview(d,-1); QElapsedTimer timer; timer.start();
+        while (!view.preview_.valid && view.preview_.error.isEmpty() && timer.elapsed()<120000) QApplication::processEvents();
+        if (!view.preview_.error.isEmpty()) std::cerr<<view.preview_.error.toStdString()<<std::endl;
+        require(view.preview_.valid && view.preview_.geometry,"anteprima CT0578");
+        require(view.createBody(d).isEmpty(),"creazione sformo CT0578"); view.clearPreview();
+        const auto check=[&] {
+            const auto &last=view.extrusions_.last(); require(last.forgeBody && last.error.isEmpty(),"geometria sformo presente");
+            require(checkBody(*last.forgeBody,{true,true}).empty(),"topologia sformo CT0578");
+            require(tessellate(*last.forgeBody,{}).failedFaces==0,"mesh sformo CT0578");
+            require(view.resultBodiesBefore(-1)==QVector<int>{31},"unico risultato sformato");
+            require(writeBodyBinary(*source)==before,"input condiviso dello sformo immutato");
+            require(writeBodyBinary(*view.extrusions_[30].forgeBody)==expectedSource,"predecessore uguale al controllo senza sformo");
+            return massProperties(*last.forgeBody).volume;
+        };
+        std::cout<<"CT stage create"<<std::endl;
+        const double volume=check();
+        view.undo(); require(view.extrusions_.size()==31,"undo sformo CT0578"); view.redo();require(std::fabs(check()-volume)<1e-7,"redo sformo CT0578");
+        for (bool cache:{true,false}) {
+            std::cout<<"CT stage codec cache="<<cache<<std::endl;
+            QByteArray bytes; DocumentState restored;
+            require(encodeDocument(view.currentDocument(),bytes,cache).isEmpty() && decodeDocument(bytes,restored).isEmpty(),"codec CT0578 sformo");
+            // Nel caso senza cache rigenera anche i predecessori: riferimenti associativi reali.
+            view.loadDocument(restored); expectedSource=reopenedSource; require(std::fabs(check()-volume)<1e-6,"riapertura e rigenerazione CT0578");
+        }
+        if (!output.isEmpty()) require(saveDocumentFile(output,view.currentDocument()).isEmpty(),"salvataggio copia QA sformata");
+        std::cout<<"PASS CT0578 B30:F306 su F24 0.2deg volume="<<volume<<" faces="<<view.extrusions_.last().forgeBody->faces().size()<<std::endl;
+    }
+
     static void workflowUi() {
         {
             QMainWindow window;
@@ -10894,6 +10947,12 @@ int main(int argc, char **argv) {
     if (app.arguments().contains(QStringLiteral("--projection-features"))) {
         try { ViewportInteractionTest::projectionFeatures(); }
         catch (const std::exception &e) { std::cerr << e.what() << std::endl; return 1; }
+        return 0;
+    }
+    if (app.arguments().contains(QStringLiteral("--draft-document"))) {
+        const int at=app.arguments().indexOf(QStringLiteral("--draft-document"));
+        try { ViewportInteractionTest::draftDocumentCase(app.arguments().value(at+1),app.arguments().value(at+2)); }
+        catch(const std::exception &e){std::cerr<<e.what()<<std::endl;return 1;}
         return 0;
     }
     if (app.arguments().contains(QStringLiteral("--draft"))) {

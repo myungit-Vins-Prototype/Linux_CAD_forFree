@@ -224,6 +224,8 @@ public:
     // Per le finestre che non scelgono altro nella vista.
     void install();
 
+    // Risolutore opzionale: consente di scegliere una feature storica.
+    std::function<int(const GeometryRef &)> resolve;
     std::function<void()> changed, starting;
     std::function<void(const QString &, bool)> message;
 

@@ -1,5 +1,6 @@
 #pragma once
 #include <QElapsedTimer>
+#include <QMouseEvent>
 #include <QDir>
 #include <QEventLoop>
 #include <atomic>
@@ -12,6 +13,13 @@ void previewWait(const std::function<bool()> &ready,const char *why){QElapsedTim
 class PreviewCountedCurve final:public Curve<3>{CurvePtr<3> base_;std::shared_ptr<std::atomic<int>> count_;public:PreviewCountedCurve(CurvePtr<3> base,std::shared_ptr<std::atomic<int>> count):base_(std::move(base)),count_(std::move(count)){}CurveType type()const override{return CurveType::Other;}Interval domain()const override{return base_->domain();}void evaluate(double t,int n,Vec3 *out)const override{++*count_;base_->evaluate(t,n,out);}};
 void previewGuarded(DrawingSheetEditor &e,const char *action,const std::function<void()> &callback){
  std::exception_ptr failure;QTimer::singleShot(0,&e,[&]{try{callback();}catch(...){failure=std::current_exception();if(auto *d=e.findChild<QDialog *>("drawingViewDialog")){std::cerr<<"Errore dialogo: "<<d->findChild<QLabel *>("drawingViewError")->text().toStdString()<<'\n';d->reject();}}});e.findChild<QAction *>(action)->trigger();if(failure)std::rethrow_exception(failure);
+}
+void orientedIsometricTests(){
+ auto shape=std::make_shared<Body>(makeBox(Frame3(),12,8,6));auto names=std::make_shared<ElementNames>(propagateNames(*shape,makeHistory({},*shape),{},"iso"));DrawingEditorModel model{{{QUuid::createUuid(),{}},{{1,shape,names}}},{{1,"Corpo"}},{}};
+ model.frontFrame=Frame3::fromAxes({},Vec3(0,1,0),Vec3(1,0,0),Vec3(0,0,-1));DrawingSheet sheet;sheet.drawing.model=model.snapshot.version;DrawingSheetEditor e(sheet,model);e.show();QApplication::processEvents();
+ previewGuarded(e,"drawingAddProjectionAction",[&]{auto *dialog=e.findChild<QDialog *>("drawingViewDialog");dialog->findChild<QComboBox *>("drawingViewPlane")->setCurrentIndex(6);previewWait([&]{return dialog->findChild<QGraphicsView *>("drawingViewPreview")->property("previewReady").toBool();},"isometrica orientata pronta");confirm(dialog);});require(e.hasViewPlacement(),"isometrica avvia posizionamento");
+ auto *canvas=e.canvas();const QPointF point=canvas->mapFromScene(QPointF(120,90)),global=canvas->viewport()->mapToGlobal(point.toPoint());QMouseEvent press(QEvent::MouseButtonPress,point,global,Qt::LeftButton,Qt::LeftButton,Qt::NoModifier),release(QEvent::MouseButtonRelease,point,global,Qt::LeftButton,Qt::NoButton,Qt::NoModifier);QApplication::sendEvent(canvas->viewport(),&press);QApplication::sendEvent(canvas->viewport(),&release);
+ require(e.sheet().drawing.views.size()==1,"isometrica inserita");const auto &frame=e.sheet().drawing.views.front().plane;require(distance(frame.zDir(),normalized(Vec3(1,1,-1)))<1e-12&&distance(frame.xDir(),normalized(Vec3(0,1,1)))<1e-12,"isometrica segue orientamento 3D con X in alto");DrawingSheet reopened;ok(decodeDrawingSheet(encoded(e),reopened));require(distance(reopened.drawing.views.front().plane.yDir(),frame.yDir())<1e-12,"orientamento isometrico salvato");
 }
 void viewDialogPreviewTests(){
  auto count=std::make_shared<std::atomic<int>>(0);auto shape=std::make_shared<Body>(makeBox(Frame3(),12,8,6));for(auto edge:shape->edges())shape->edge(edge).curve=std::make_shared<PreviewCountedCurve>(shape->edge(edge).curve,count);

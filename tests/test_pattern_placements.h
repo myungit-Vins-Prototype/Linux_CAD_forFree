@@ -173,6 +173,153 @@ static void sweepFeaturePatternTests() {
                     && decodeDocument(bytes, decoded).isEmpty(), "codec ripetizione sweep");
             view.loadDocument(decoded); require(view.rebuildAllFeatures() == 0, "rigenera ripetizione sweep"); check(4);
         }
+        // Una lavorazione successiva deve sopravvivere alla ripetizione
+        // della funzione storica selezionata, in entrambe le modalita'.
+        auto centerProfile = profile; centerProfile.curves[0].controlPoints = {QPointF(0,0), QPointF(.25,0)};
+        auto centerPath = path; centerPath.segments = {{QPointF(0,start), QPointF(0,end)}};
+        state.sketches += QVector<SketchObject>{centerProfile, centerPath};
+        auto later = sweep; later.sketchIndex = 2; later.pathSketch = 3; later.mergeBodies = {1}; later.name = "Lavorazione successiva";
+        state.extrusions.append(later); view.loadDocument(state);
+        const auto laterBytes = writeBodyBinary(*view.extrusions()[2].forgeBody);
+        for (int kind : {0,1}) {
+            auto historical = repeated; historical.secondBody = 2; historical.pattern.kind = kind;
+            historical.pattern.excluded.clear(); historical.pattern.count = kind == 0 ? 2 : 4;
+            historical.pattern.refs[0].index = kind == 0 ? 0 : 1;
+            historical.pattern.spacing = -4;
+            // Lineare: la copia cade al centro dove esiste la lavorazione piu' piccola.
+            buildGeometry(historical, 3, view.sketches(), view.extrusions());
+            require(historical.forgeBody && historical.error.isEmpty(), "ripetizione di funzione storica con bersaglio successivo");
+            const double expected = kind == 0 ? volume(2) : volume(4) + M_PI*.0625*(operation == 1 ? 3 : -6);
+            require(std::abs(massProperties(*historical.forgeBody).volume - expected) < 1e-6,
+                    "le lavorazioni successive sopravvivono e non vengono ripetute");
+            require(bodyOperands(historical).contains(1) && bodyOperands(historical).contains(2), "dipendenze sorgente e destinazione");
+            require(writeBodyBinary(*view.extrusions()[2].forgeBody) == laterBytes, "bersaglio successivo immutato");
+        }
+        {
+            auto historical=repeated; historical.secondBody=2; historical.pattern.excluded.clear();
+            require(view.createBody(historical).isEmpty() && view.resultBodiesBefore(-1)==QVector<int>{3},
+                    "creazione storica sostituisce il risultato successivo nello stesso corpo");
+            const double expected=volume(4)+M_PI*.0625*(operation==1?3:-6);
+            require(std::abs(massProperties(*view.extrusions()[3].forgeBody).volume-expected)<1e-6,"volume storico creato");
+            view.undo();require(view.extrusions().size()==3,"undo ripetizione storica");view.redo();
+            auto invalid=view.extrusions()[3];invalid.pattern.excluded={0};
+            require(!view.updateBody(3,invalid).isEmpty(),"originale storico non escludibile senza annullare i passi successivi");
+            for(bool cache:{true,false}) {
+                QByteArray bytes;DocumentState restored;
+                require(encodeDocument(view.currentDocument(),bytes,cache).isEmpty()&&decodeDocument(bytes,restored).isEmpty(),"codec sorgente storica e bersaglio");
+                view.loadDocument(restored);
+                require(view.extrusions()[3].firstBody==1&&view.extrusions()[3].secondBody==2&&view.rebuildAllFeatures()==0,
+                        "rigenerazione delle dipendenze storiche dopo riapertura");
+                require(std::abs(massProperties(*view.extrusions()[3].forgeBody).volume-expected)<1e-6,"volume storico riletto");
+            }
+            view.loadDocument(state);
+        }
+        // Stato nuovo: nessuna sorgente implicita, poi selezione della funzione storica.
+        {
+            QMainWindow chooser; ExtrusionObject empty; empty.feature = BodyFeature::Pattern;
+            std::exception_ptr error;
+            QTimer::singleShot(0, &chooser, [&] {
+                auto *dialog = chooser.findChild<QDialog *>();
+                try {
+                    auto *body = dialog->findChild<QComboBox *>("patternBody");
+                    auto *what = dialog->findChild<QComboBox *>("patternWhat");
+                    require(body->currentIndex() == -1 && !dialog->findChild<QDialogButtonBox *>()->button(QDialogButtonBox::Ok)->isEnabled(),
+                            "nessuna ultima funzione preimpostata");
+                    what->setCurrentIndex(1);
+                    require(what->currentIndex() == 1, "si puo' scegliere modalita funzione prima della sorgente");
+                    require(body->findData(1) >= 0, "funzione storica disponibile nel pannello");
+                    body->setCurrentIndex(body->findData(1));
+                    dialog->findChild<QDialogButtonBox *>()->button(QDialogButtonBox::Ok)->click();
+                } catch (...) { error = std::current_exception(); dialog->reject(); }
+            });
+            int selected = -1, target = -1;
+            patternDialog(&chooser, &view, "Scelta sorgente", -1, empty, [&](const ExtrusionObject &d) {
+                selected = d.firstBody; target = d.secondBody; return QString();
+            });
+            if (error) std::rethrow_exception(error);
+            require(selected == 1 && target == 2, "pannello distingue sorgente storica e risultato attuale");
+        }
+        {
+            view.setHistoryPosition(2);
+            QMainWindow chooser; ExtrusionObject empty;empty.feature=BodyFeature::Pattern;std::exception_ptr failure;
+            QTimer::singleShot(0,&chooser,[&]{auto *dialog=chooser.findChild<QDialog *>();
+                try {auto *body=dialog->findChild<QComboBox *>("patternBody");
+                    require(body->findData(1)>=0&&body->findData(2)<0,"sorgenti successive al cursore storyboard escluse");
+                }catch(...){failure=std::current_exception();}dialog->reject();});
+            patternDialog(&chooser,&view,"Sorgenti prima del cursore",-1,empty,[](const ExtrusionObject &){return QString();});
+            if(failure)std::rethrow_exception(failure);
+            view.setHistoryPosition(3);
+        }
+        // La faccia visibile appartiene allo sweep storico, non all'ultimo.
+        {
+            const Body &current = *view.extrusions()[2].forgeBody;
+            bool found = false;
+            for (FaceId f : current.faces()) if (current.face(f).surface->type() == SurfaceType::Cylinder
+                && std::fabs(static_cast<const CylindricalSurface &>(*current.face(f).surface).radius()-.5) < 1e-8) {
+                Vec3 point; require(faceInteriorPoint(current,f,point), "punto interno sulla faccia della funzione");
+                GeometryRef ref; ref.kind = 5; ref.index = 2; ref.point = faceReference(current,f,point);
+                require(view.sourceFeatureForFace(ref) == 1, "viewport risale alla funzione della faccia scelta"); found = true;
+            }
+            require(found, "faccia storica ancora visibile dopo la lavorazione successiva");
+        }
+        {
+            QMainWindow chooser; chooser.resize(900,650);
+            // Il viewport deve essere figlio della stessa finestra: solo cosi'
+            // showEvent del pannello incorporato riproduce il blocco reale.
+            auto *attached = new CadViewport(&chooser); chooser.setCentralWidget(attached);
+            attached->loadDocument(state);
+            auto *dock = new QDockWidget(&chooser); dock->setObjectName("modelDock");
+            auto *tree = new StoryboardTree(dock); dock->setWidget(tree); chooser.addDockWidget(Qt::LeftDockWidgetArea,dock);
+            auto *item = new QTreeWidgetItem(tree, {"Sweep storico"}); item->setData(0,Qt::UserRole,kTreeExtrusion); item->setData(0,Qt::UserRole+1,1);
+            item->setFlags(item->flags()|Qt::ItemIsUserCheckable); item->setCheckState(0,Qt::Checked);
+            chooser.show();
+            ExtrusionObject empty; empty.feature = BodyFeature::Pattern;
+            int selected=-1, target=-1; std::exception_ptr error;
+            QTimer::singleShot(80,&chooser,[&] {
+                auto *dialog=chooser.findChild<QDialog *>();
+                try {
+                    require(dock->isEnabled() && tree->isEnabled() && !tree->historyRail()->isEnabled(), "storyboard incorporata selezionabile dopo showEvent");
+                    auto *sourceStep=dialog->findChild<QPushButton *>("patternSourceStep");
+                    auto *refStep=dialog->findChild<QPushButton *>("patternReferenceStep");
+                    auto *parametersStep=dialog->findChild<QPushButton *>("patternParametersStep");
+                    auto *count=dialog->findChild<QSpinBox *>("patternCount");
+                    auto *hint=dialog->findChild<QLabel *>("patternStepHint");
+                    require(sourceStep&&sourceStep->isChecked()&&hint&&hint->text().contains("Passaggio 1")
+                            &&hint->text().contains("storyboard")&&count&&!count->isEnabled(),"passaggio sorgente visibile, parametri in attesa");
+                    QPointF point=tree->visualItemRect(item).center();
+                    QMouseEvent click(QEvent::MouseButtonPress,point,point,Qt::LeftButton,Qt::LeftButton,Qt::NoModifier);
+                    QApplication::sendEvent(tree->viewport(),&click);
+                    auto *body=dialog->findChild<QComboBox *>("patternBody");
+                    require(body->currentData().toInt()==1 && dialog->findChild<QComboBox *>("patternWhat")->currentIndex()==1,
+                            "clic storyboard seleziona la funzione storica");
+                    require(parametersStep->isChecked()&&count->isEnabled()&&hint->text().contains("Passaggio 3")
+                            &&hint->text().contains(sweep.name),"scelta aggiorna passaggio e riepilogo della sorgente");
+                    refStep->click();
+                    require(refStep->isChecked()&&!count->isEnabled()&&attached->referencePicking()
+                            &&hint->text().contains("Passaggio 2")&&dock->isEnabled(),"passaggio riferimento esplicito con storyboard disponibile");
+                    parametersStep->click();
+                    require(parametersStep->isChecked()&&count->isEnabled()&&!attached->referencePicking(),"ritorno ai parametri mantiene asse e sorgente");
+                    require(item->checkState(0)==Qt::Checked && attached->extrusions().size()==3, "scelta senza cambiare visibilita o storia");
+                    dialog->findChild<QDialogButtonBox *>()->button(QDialogButtonBox::Ok)->click();
+                } catch (...) {error=std::current_exception();dialog->reject();}
+            });
+            patternDialog(&chooser,attached,"Scelta storyboard",-1,empty,[&](const ExtrusionObject &d){selected=d.firstBody;target=d.secondBody;return QString();});
+            if(error)std::rethrow_exception(error);
+            require(selected==1&&target==2&&dock->isEnabled()&&tree->historyRail()->isEnabled()&&!attached->interactionLocked(),"scelta storyboard e ripristino controlli");
+        }
+        {
+            DocumentState single;single.extrusions={base};CadViewport plain;plain.loadDocument(single);
+            QMainWindow chooser;ExtrusionObject empty;empty.feature=BodyFeature::Pattern;empty.firstBody=0;std::exception_ptr failure;
+            QTimer::singleShot(0,&chooser,[&]{auto *dialog=chooser.findChild<QDialog *>();
+                try{auto *what=dialog->findChild<QComboBox *>("patternWhat");
+                    require(what->isEnabled(),"modo funzione disponibile anche partendo da corpo senza funzione ripetibile");
+                    what->setCurrentIndex(1);
+                    require(what->currentIndex()==1&&!dialog->findChild<QDialogButtonBox *>()->button(QDialogButtonBox::Ok)->isEnabled(),
+                            "modo funzione rimane attivo in attesa della scelta nella viewport");
+                }catch(...){failure=std::current_exception();}dialog->reject();});
+            patternDialog(&chooser,&plain,"Scelta modo funzione",-1,empty,[](const ExtrusionObject &){return QString();});
+            if(failure)std::rethrow_exception(failure);
+        }
         // Non mascherare l'errore specifico della ricostruzione dello strumento.
         auto broken = view.extrusions(); broken[1].sketchIndex = -1;
         auto badPattern = repeated;
