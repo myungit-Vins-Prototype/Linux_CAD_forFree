@@ -38,3 +38,5 @@ Una riduzione ulteriore del dominio degli occludenti e dei sottoarchi richiede d
 Sorgenti sperimentali, log, dati grezzi, hash e campioni congelati sono conservati localmente in `forgecad-linux-solver/benchmarks/drawing-detail-culling-2026-10-29` (ignorato da Git). Il rapporto JSON affiancato contiene i valori completi e le condizioni di misura.
 
 Il porting su main riguarda soltanto il parallelismo precedente: build completa e 30/30 regressioni superate, CT congelato identico. Questi controlli non costituiscono una regressione completa del prototipo sperimentale.
+
+Pubblicazione verificata sul remoto: parallelismo `solver-mesh-gpu` `8010b4b162d6fef9ab37b51e7791d47fb741f0f3`, `main` `f8caa11a45153a81c8671f908c5bae8c5e713129`. Il codice sperimentale del ritaglio dei dettagli resta escluso dall’applicazione.

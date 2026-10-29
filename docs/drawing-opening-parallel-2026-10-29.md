@@ -1,6 +1,6 @@
 # Apertura 2D: calcolo parallelo delle viste — 29 ottobre 2026
 
-Studio eseguito su `solver-mesh-gpu`, sopra `4b05855`. Il parallelismo è ora verificato anche su `main`; commit e push richiesti esplicitamente. Le misure seguenti restano quelle dello studio sullo sviluppo. Installazione desktop invariata.
+Studio eseguito su `solver-mesh-gpu`, sopra `4b05855`. Il parallelismo è ora verificato, committato e pubblicato su `solver-mesh-gpu` e `main`. Le misure seguenti restano quelle dello studio sullo sviluppo. Installazione desktop invariata.
 
 ## Risultato misurato
 
@@ -51,3 +51,5 @@ I file della cartella esempi CT0578.drw risultano aggiornati durante l’interve
 ## Verifica del porting su main
 
 Applicazione completa e 26 target compilati; **30/30 CTest superati** in 63.50 s. Stessa impronta completa sul CT congelato a 11 viste e costruzione dell’editor riuscita; tempi di queste prove esclusi dai benchmark. Mappa main: 476 file, 6743 relazioni, 233 unità, zero diagnostiche; `--check` superato, chiamate dei cinque simboli verificate nei due versi, include distinti e blocco ispezionato. Differenze del kernel e dei cataloghi dei due branch conservate. Il prototipo del ritaglio dei dettagli resta esterno all’applicazione.
+
+Pubblicazione verificata sul remoto: parallelismo `solver-mesh-gpu` `8010b4b162d6fef9ab37b51e7791d47fb741f0f3`, `main` `f8caa11a45153a81c8671f908c5bae8c5e713129`. Il codice sperimentale del ritaglio dei dettagli resta escluso dall’applicazione.
