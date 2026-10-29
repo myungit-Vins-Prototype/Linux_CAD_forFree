@@ -37,5 +37,8 @@ void validateDrawingViewPaths(const DrawingView &view,const DrawingViewLayout &l
     const std::vector<DrawingCurve> &curves,const DrawingSilhouetteResult &contours);
 // Eccezioni di calcolo/annullamento: nessun argomento o stato vivo viene modificato.
 PreparedDrawingSheet prepareDrawingSheet(DrawingSheet sheet,DrawingEditorModel model,const std::function<void(int)> &phase);
+// 0: automatico, al massimo 4 worker; 1: sequenziale; richieste esplicite
+// limitate a 8. Solo dati nei worker, callback di fase serializzate.
+PreparedDrawingSheet prepareDrawingSheet(DrawingSheet sheet,DrawingEditorModel model,const std::function<void(int)> &phase,int threads);
 DrawingSheet retargetDrawingSheetModel(DrawingSheet sheet,const DrawingEditorModel &model);
 }

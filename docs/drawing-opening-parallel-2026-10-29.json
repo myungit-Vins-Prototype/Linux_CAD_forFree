@@ -1,0 +1,325 @@
+{
+  "date": "2026-10-29",
+  "branch": "solver-mesh-gpu",
+  "base_commit": "4b05855c6b3b41681344a311c8e615429d1af0a2",
+  "status": "parallel implementation verified on solver-mesh-gpu and main; publication authorized",
+  "machine": {
+    "cpu": "Intel Xeon W-10885M @ 2.40GHz",
+    "physical_cores": 8,
+    "logical_cpus": 16,
+    "platform": "Linux",
+    "gui_backend": "Qt offscreen"
+  },
+  "input_sha256": {
+    "CT0578.drw": "029de65ae6de995738f3ebc7ccd871e131242c574f808d2cbd43e431ff75449a",
+    "CT0578.prt": "1de5ad1fa1ac981327a08159b00ab0b407a5c5109a51c9b926feaa87f6b3e192"
+  },
+  "normalization": "Frozen CT0578.drw reported changed model. CT0578-benchmark.drw updates only modelDefinitionSha256 against frozen current CT0578.prt. No original written.",
+  "views": 11,
+  "measurement": {
+    "fresh_processes": true,
+    "filesystem_cache": "warm",
+    "timed_region": "prepareDrawingSheet; model load/preparation timed separately",
+    "interfering_cad_or_compiler_processes": false,
+    "reference_preparation_object": "original app object saved before edits",
+    "source_semantics": "same geometry algorithms/tolerances; shared mesh-deflection expression consolidated after timing"
+  },
+  "summary": {
+    "reference_median_ms": 16484.759061,
+    "parallel_median_ms": 10980.783213,
+    "saved_ms": 5503.975848,
+    "reduction_percent": 33.388269902114764,
+    "speedup": 1.5012370922216112,
+    "reference_median_peak_rss_kib": 1159336,
+    "parallel_median_peak_rss_kib": 1656820
+  },
+  "runs": [
+    {
+      "cpu_ms": 22797.711,
+      "mode": "prepare",
+      "model_ms": 270.004136,
+      "sha256": "0c2a256fa7452a1212c9010262fc0fbbdf916b60ac6ba0fe8625d8c81ea023d3",
+      "views": 11,
+      "wall_ms": 12801.172029,
+      "workers": 2,
+      "tag": "pilot-two",
+      "peak_rss_kib": 1382420
+    },
+    {
+      "cpu_ms": 22391.668,
+      "mode": "prepare",
+      "model_ms": 269.082733,
+      "sha256": "0c2a256fa7452a1212c9010262fc0fbbdf916b60ac6ba0fe8625d8c81ea023d3",
+      "views": 11,
+      "wall_ms": 16471.183796,
+      "workers": 1,
+      "tag": "1-reference",
+      "peak_rss_kib": 1123708
+    },
+    {
+      "cpu_ms": 24243.754,
+      "mode": "prepare",
+      "model_ms": 267.980383,
+      "sha256": "0c2a256fa7452a1212c9010262fc0fbbdf916b60ac6ba0fe8625d8c81ea023d3",
+      "views": 11,
+      "wall_ms": 10980.783213,
+      "workers": 0,
+      "tag": "1-current",
+      "peak_rss_kib": 1656820
+    },
+    {
+      "cpu_ms": 23676.337,
+      "mode": "prepare",
+      "model_ms": 280.707364,
+      "sha256": "0c2a256fa7452a1212c9010262fc0fbbdf916b60ac6ba0fe8625d8c81ea023d3",
+      "views": 11,
+      "wall_ms": 10856.115094,
+      "workers": 0,
+      "tag": "2-current",
+      "peak_rss_kib": 1689060
+    },
+    {
+      "cpu_ms": 23068.959,
+      "mode": "prepare",
+      "model_ms": 274.310203,
+      "sha256": "0c2a256fa7452a1212c9010262fc0fbbdf916b60ac6ba0fe8625d8c81ea023d3",
+      "views": 11,
+      "wall_ms": 16810.036628,
+      "workers": 1,
+      "tag": "2-reference",
+      "peak_rss_kib": 1159336
+    },
+    {
+      "cpu_ms": 22503.893,
+      "mode": "prepare",
+      "model_ms": 266.623671,
+      "sha256": "0c2a256fa7452a1212c9010262fc0fbbdf916b60ac6ba0fe8625d8c81ea023d3",
+      "views": 11,
+      "wall_ms": 16484.759061,
+      "workers": 1,
+      "tag": "3-reference",
+      "peak_rss_kib": 1169904
+    },
+    {
+      "cpu_ms": 24342.965,
+      "mode": "prepare",
+      "model_ms": 270.637238,
+      "sha256": "0c2a256fa7452a1212c9010262fc0fbbdf916b60ac6ba0fe8625d8c81ea023d3",
+      "views": 11,
+      "wall_ms": 11251.266097,
+      "workers": 0,
+      "tag": "3-current",
+      "peak_rss_kib": 1583344
+    },
+    {
+      "mode": "editor",
+      "model_ms": 269.489973,
+      "wall_ms": 17206.282782,
+      "tag": "editor-reference",
+      "peak_rss_kib": 1309528
+    },
+    {
+      "mode": "editor",
+      "model_ms": 273.886106,
+      "wall_ms": 11368.923715,
+      "tag": "editor-current",
+      "peak_rss_kib": 1715588
+    }
+  ],
+  "verification": {
+    "initial_preparation_test": "PASS",
+    "final_build": "PASS: full forgecad application and 25 other targets; view test runner rebuilt after test-only fixture update",
+    "final_ctest": {
+      "distinct_passed": 30,
+      "initial_passed": 29,
+      "initial_failed": 1,
+      "initial_failure": "Multisheet test counted phase5 per view; progress is now aggregated per sheet. Test now checks monotonic progress and both views with matching IDs.",
+      "failed_test_retested": "PASS forgecad_drawing_multisheet_tests in 1.21 seconds",
+      "initial_suite_seconds": 62.29,
+      "production_code_changed_after_initial_suite": false
+    },
+    "architecture": {
+      "files": 503,
+      "relations": 6899,
+      "units": 238,
+      "diagnostics": 0,
+      "validated_sites": 16279,
+      "symbols": {
+        "prepareDrawingSheet": [
+          {
+            "from": "cad_drawing_editor.cpp",
+            "to": "cad_drawing_preparation.cpp"
+          },
+          {
+            "from": "cad_drawing_preparation.cpp",
+            "to": "cad_drawing_preparation.cpp"
+          },
+          {
+            "from": "cad_drawing_sheets_ui.cpp",
+            "to": "cad_drawing_preparation.cpp"
+          },
+          {
+            "from": "tests/test_drawing_multisheet.h",
+            "to": "cad_drawing_preparation.cpp"
+          },
+          {
+            "from": "tests/test_drawing_preparation.cpp",
+            "to": "cad_drawing_preparation.cpp"
+          }
+        ],
+        "prepareDrawingView": [
+          {
+            "from": "cad_drawing_editor.cpp",
+            "to": "cad_drawing_preparation.cpp"
+          },
+          {
+            "from": "cad_drawing_preparation.cpp",
+            "to": "cad_drawing_preparation.cpp"
+          }
+        ],
+        "canReuse": [
+          {
+            "from": "cad_drawing_preparation.cpp",
+            "to": "cad_drawing_silhouette.h"
+          },
+          {
+            "from": "tests/test_drawing_preparation.cpp",
+            "to": "cad_drawing_silhouette.h"
+          }
+        ],
+        "drawingVisibilityMeshDeflection": [
+          {
+            "from": "cad_drawing_preparation.cpp",
+            "to": "cad_drawing_visibility.h"
+          },
+          {
+            "from": "cad_drawing_visibility.cpp",
+            "to": "cad_drawing_visibility.h"
+          }
+        ],
+        "parallelFor": [
+          {
+            "from": "cad_drawing_preparation.cpp",
+            "to": "kernel/fk_parallel.h"
+          }
+        ]
+      }
+    },
+    "desktop_installed": false,
+    "final_frozen_ct": {
+      "result": "PASS",
+      "views": 11,
+      "full_fingerprint": "24526793025eba0c26e0d3b1b1bb280844ae4f7f3c88782059a2fba965a2be0e",
+      "editor_constructed": true,
+      "timings_not_used": true,
+      "reason": "User ForgeCAD development app opened after formal comparisons. Final run checks correctness only."
+    },
+    "executable_sha256": "303f602a74cc5f8e0740a8a0ad76d7621289bc9cb6dccd2911749efe4e60055d",
+    "state_at_study_completion": {
+      "committed": false,
+      "pushed": false,
+      "main_ported": false
+    }
+  },
+  "followups_proposed_only": [
+    "Conservative visibility culling inside detail crop before full-view classification",
+    "Reuse identical section geometry among details with matching geometric inputs"
+  ],
+  "source_sha256_at_delivery": {
+    "CT0578.drw": "bb7748459e60986483ee09d58175c5d80a39b2c91b797f796fd9713f8ec7a5c0",
+    "CT0578.prt": "1de5ad1fa1ac981327a08159b00ab0b407a5c5109a51c9b926feaa87f6b3e192"
+  },
+  "source_files_unchanged_at_delivery": false,
+  "source_working_copy_note": "I file della cartella esempi CT0578.drw risultano aggiornati durante l’intervento dopo il congelamento; conservati senza ripristino. Tutti i confronti usano le copie congelate con SHA iniziali invariati.",
+  "publication_validation": {
+    "date": "2026-10-29",
+    "branches": [
+      "solver-mesh-gpu",
+      "main"
+    ],
+    "application_change": "parallel sheet-view preparation only; detail-culling prototype remains external",
+    "main": {
+      "build_targets": 26,
+      "complete_application_built": true,
+      "ctest_passed": 30,
+      "ctest_total": 30,
+      "ctest_seconds": 63.5,
+      "architecture": {
+        "files": 476,
+        "relations": 6743,
+        "units": 233,
+        "diagnostics": 0,
+        "validated_sites": 16279,
+        "symbols": {
+          "prepareDrawingSheet": [
+            {
+              "source": "cad_drawing_editor.cpp",
+              "target": "cad_drawing_preparation.cpp"
+            },
+            {
+              "source": "cad_drawing_preparation.cpp",
+              "target": "cad_drawing_preparation.cpp"
+            },
+            {
+              "source": "cad_drawing_sheets_ui.cpp",
+              "target": "cad_drawing_preparation.cpp"
+            },
+            {
+              "source": "tests/test_drawing_multisheet.h",
+              "target": "cad_drawing_preparation.cpp"
+            },
+            {
+              "source": "tests/test_drawing_preparation.cpp",
+              "target": "cad_drawing_preparation.cpp"
+            }
+          ],
+          "prepareDrawingView": [
+            {
+              "source": "cad_drawing_editor.cpp",
+              "target": "cad_drawing_preparation.cpp"
+            },
+            {
+              "source": "cad_drawing_preparation.cpp",
+              "target": "cad_drawing_preparation.cpp"
+            }
+          ],
+          "canReuse": [
+            {
+              "source": "cad_drawing_preparation.cpp",
+              "target": "cad_drawing_silhouette.h"
+            },
+            {
+              "source": "tests/test_drawing_preparation.cpp",
+              "target": "cad_drawing_silhouette.h"
+            }
+          ],
+          "drawingVisibilityMeshDeflection": [
+            {
+              "source": "cad_drawing_preparation.cpp",
+              "target": "cad_drawing_visibility.h"
+            },
+            {
+              "source": "cad_drawing_visibility.cpp",
+              "target": "cad_drawing_visibility.h"
+            }
+          ],
+          "parallelFor": [
+            {
+              "source": "cad_drawing_preparation.cpp",
+              "target": "kernel/fk_parallel.h"
+            }
+          ]
+        }
+      },
+      "frozen_ct": {
+        "views": 11,
+        "full_fingerprint": "24526793025eba0c26e0d3b1b1bb280844ae4f7f3c88782059a2fba965a2be0e",
+        "editor_constructed": true,
+        "timings_used_as_benchmark": false
+      },
+      "executable_sha256": "14ebb49244f573dc0cb2c503192ee4611f7fdb4e360fddd162cbbba7c35c50d0"
+    },
+    "desktop_installed": false,
+    "macos_windows_tested_in_this_publication": false
+  }
+}

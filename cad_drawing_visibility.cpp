@@ -309,7 +309,7 @@ public:
             }
             // Il margine di profondita' segue la precisione sul foglio, non il
             // box conservativo delle superfici (che puo' essere molto piu' grande del pezzo).
-            const double deflection=std::clamp(.005/view.scale,1e-6,1.0);
+            const double deflection=drawingVisibilityMeshDeflection(view);
             const auto mesh=cache.seeds(source,deflection);if(mesh->failedFaces)warnings.append(QStringLiteral("Visibilita' incompleta: %1 facce non tassellate nella sorgente %2.").arg(mesh->failedFaces).arg(source.featureId));
             for(const auto &face:mesh->faces){cancellationPoint();const bool planar=source.body->face(face.face).surface->type()==SurfaceType::Plane;
                 for(const auto &indices:face.triangles){const auto a=view.plane.toLocal(face.points.at(indices[0])),b=view.plane.toLocal(face.points.at(indices[1])),c=view.plane.toLocal(face.points.at(indices[2]));

@@ -1,0 +1,253 @@
+{
+  "date": "2026-10-29",
+  "status": "experimental verification complete; not integrated into application",
+  "branch": "solver-mesh-gpu",
+  "git_head": "4b05855c6b3b41681344a311c8e615429d1af0a2",
+  "comparison": "Existing local parallel preparation (4 workers maximum) versus isolated detail-culling prototype v2; no comparison against original sequential pipeline in this study.",
+  "input_sha256": {
+    "CT0578.drw": "029de65ae6de995738f3ebc7ccd871e131242c574f808d2cbd43e431ff75449a",
+    "CT0578.prt": "1de5ad1fa1ac981327a08159b00ab0b407a5c5109a51c9b926feaa87f6b3e192"
+  },
+  "input_note": "Same frozen 11-view CT0578 and normalized benchmark drawing used by previous parallel study. Original CAD documents are never written.",
+  "machine": {
+    "cpu": "Xeon W-10885M",
+    "physical_cores": 8,
+    "logical_cpus": 16,
+    "platform": "Linux Qt offscreen"
+  },
+  "conditions": {
+    "new_process_for_each_run": true,
+    "filesystem_cache": "warm",
+    "app_closed": true,
+    "concurrent_builds": false,
+    "pairs": 3,
+    "alternating_order": true,
+    "timer": "prepareDrawingSheet only, model load separately measured"
+  },
+  "summary": {
+    "reference_median_ms": 11070.702541,
+    "crop_median_ms": 10558.058007,
+    "saved_ms": 512.6445340000009,
+    "reduction_percent": 4.6306413897531655,
+    "speedup": 1.0485548131730398,
+    "reference_median_cpu_ms": 24190.408,
+    "crop_median_cpu_ms": 22522.038,
+    "reference_median_peak_rss_kib": 1628456,
+    "crop_median_peak_rss_kib": 1648884
+  },
+  "runs": [
+    {
+      "cpu_ms": 24190.408,
+      "mode": "prepare",
+      "model_ms": 273.410565,
+      "sha256": "24526793025eba0c26e0d3b1b1bb280844ae4f7f3c88782059a2fba965a2be0e",
+      "views": 11,
+      "wall_ms": 11022.482926,
+      "workers": 0,
+      "tag": "1-reference",
+      "peak_rss_kib": 1541756
+    },
+    {
+      "cpu_ms": 22587.735,
+      "mode": "prepare",
+      "model_ms": 262.148101,
+      "sha256": "24526793025eba0c26e0d3b1b1bb280844ae4f7f3c88782059a2fba965a2be0e",
+      "views": 11,
+      "wall_ms": 10615.562584,
+      "workers": 0,
+      "tag": "1-crop",
+      "peak_rss_kib": 1661296
+    },
+    {
+      "cpu_ms": 22522.038,
+      "mode": "prepare",
+      "model_ms": 272.646941,
+      "sha256": "24526793025eba0c26e0d3b1b1bb280844ae4f7f3c88782059a2fba965a2be0e",
+      "views": 11,
+      "wall_ms": 10558.058007,
+      "workers": 0,
+      "tag": "2-crop",
+      "peak_rss_kib": 1648884
+    },
+    {
+      "cpu_ms": 24947.228,
+      "mode": "prepare",
+      "model_ms": 278.770884,
+      "sha256": "24526793025eba0c26e0d3b1b1bb280844ae4f7f3c88782059a2fba965a2be0e",
+      "views": 11,
+      "wall_ms": 11386.863617,
+      "workers": 0,
+      "tag": "2-reference",
+      "peak_rss_kib": 1628456
+    },
+    {
+      "cpu_ms": 24047.649,
+      "mode": "prepare",
+      "model_ms": 284.365161,
+      "sha256": "24526793025eba0c26e0d3b1b1bb280844ae4f7f3c88782059a2fba965a2be0e",
+      "views": 11,
+      "wall_ms": 11070.702541,
+      "workers": 0,
+      "tag": "3-reference",
+      "peak_rss_kib": 1641824
+    },
+    {
+      "cpu_ms": 22065.811,
+      "mode": "prepare",
+      "model_ms": 275.298749,
+      "sha256": "24526793025eba0c26e0d3b1b1bb280844ae4f7f3c88782059a2fba965a2be0e",
+      "views": 11,
+      "wall_ms": 10362.567603,
+      "workers": 0,
+      "tag": "3-crop",
+      "peak_rss_kib": 1596596
+    },
+    {
+      "mode": "editor",
+      "model_ms": 272.386308,
+      "wall_ms": 11639.785644,
+      "tag": "editor-reference",
+      "peak_rss_kib": 1768944
+    },
+    {
+      "mode": "editor",
+      "model_ms": 279.582593,
+      "wall_ms": 11064.305839,
+      "tag": "editor-crop",
+      "peak_rss_kib": 1682264
+    }
+  ],
+  "prototype": {
+    "location": "/tmp/forgecad-2d-detail-study-20261029",
+    "v1": "Cull apparent-contour chords outside expanded detail bounds; keep cylindrical-face contours for axis eligibility.",
+    "v2": "Also cull non-conic curves when conservative projected source bounds miss detail; disable curve culling when cylinder axes may reach detail.",
+    "paper_margin_mm": 0.05,
+    "unchanged_work": [
+      "exact source geometry and dimension references",
+      "conics",
+      "all mesh preparation and occlusion indexes",
+      "shaded rendering",
+      "visibility metadata and deduplication for retained curves"
+    ],
+    "limitation": "This is partial conservative exclusion, not a full crop-limited visibility implementation; it does not measure the potential of filtering the occlusion index or classifying only sub-arcs of conics."
+  },
+  "validation": {
+    "crop_comparisons_passed": 72,
+    "cases": [
+      "circular/rectangular/concave boundaries",
+      "two scales and frames",
+      "spheres/tori/cylinders with occluding bodies",
+      "visible/hidden paths and hatch",
+      "centers and cylinder axes",
+      "shaded images",
+      "full section",
+      "atomic cancellation"
+    ],
+    "ct_full_fingerprint": "24526793025eba0c26e0d3b1b1bb280844ae4f7f3c88782059a2fba965a2be0e",
+    "identical_ct_runs": 6
+  },
+  "normal_application": {
+    "sources_unchanged": true,
+    "sha256": "303f602a74cc5f8e0740a8a0ad76d7621289bc9cb6dccd2911749efe4e60055d",
+    "parallel_change_preserved": true,
+    "prototype_integrated": false,
+    "rebuilt_for_this_experiment": false
+  },
+  "desktop_installed": false,
+  "publication_validation": {
+    "date": "2026-10-29",
+    "branches": [
+      "solver-mesh-gpu",
+      "main"
+    ],
+    "application_change": "parallel sheet-view preparation only; detail-culling prototype remains external",
+    "main": {
+      "build_targets": 26,
+      "complete_application_built": true,
+      "ctest_passed": 30,
+      "ctest_total": 30,
+      "ctest_seconds": 63.5,
+      "architecture": {
+        "files": 476,
+        "relations": 6743,
+        "units": 233,
+        "diagnostics": 0,
+        "validated_sites": 16279,
+        "symbols": {
+          "prepareDrawingSheet": [
+            {
+              "source": "cad_drawing_editor.cpp",
+              "target": "cad_drawing_preparation.cpp"
+            },
+            {
+              "source": "cad_drawing_preparation.cpp",
+              "target": "cad_drawing_preparation.cpp"
+            },
+            {
+              "source": "cad_drawing_sheets_ui.cpp",
+              "target": "cad_drawing_preparation.cpp"
+            },
+            {
+              "source": "tests/test_drawing_multisheet.h",
+              "target": "cad_drawing_preparation.cpp"
+            },
+            {
+              "source": "tests/test_drawing_preparation.cpp",
+              "target": "cad_drawing_preparation.cpp"
+            }
+          ],
+          "prepareDrawingView": [
+            {
+              "source": "cad_drawing_editor.cpp",
+              "target": "cad_drawing_preparation.cpp"
+            },
+            {
+              "source": "cad_drawing_preparation.cpp",
+              "target": "cad_drawing_preparation.cpp"
+            }
+          ],
+          "canReuse": [
+            {
+              "source": "cad_drawing_preparation.cpp",
+              "target": "cad_drawing_silhouette.h"
+            },
+            {
+              "source": "tests/test_drawing_preparation.cpp",
+              "target": "cad_drawing_silhouette.h"
+            }
+          ],
+          "drawingVisibilityMeshDeflection": [
+            {
+              "source": "cad_drawing_preparation.cpp",
+              "target": "cad_drawing_visibility.h"
+            },
+            {
+              "source": "cad_drawing_visibility.cpp",
+              "target": "cad_drawing_visibility.h"
+            }
+          ],
+          "parallelFor": [
+            {
+              "source": "cad_drawing_preparation.cpp",
+              "target": "kernel/fk_parallel.h"
+            }
+          ]
+        }
+      },
+      "frozen_ct": {
+        "views": 11,
+        "full_fingerprint": "24526793025eba0c26e0d3b1b1bb280844ae4f7f3c88782059a2fba965a2be0e",
+        "editor_constructed": true,
+        "timings_used_as_benchmark": false
+      },
+      "executable_sha256": "14ebb49244f573dc0cb2c503192ee4611f7fdb4e360fddd162cbbba7c35c50d0"
+    },
+    "desktop_installed": false,
+    "macos_windows_tested_in_this_publication": false
+  },
+  "state_at_experiment_completion": {
+    "committed": false,
+    "pushed": false,
+    "main_ported": false
+  }
+}

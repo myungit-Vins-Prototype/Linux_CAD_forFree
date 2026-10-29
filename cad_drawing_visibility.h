@@ -5,11 +5,14 @@
 #include <QPainterPath>
 #include <QImage>
 #include <QRectF>
+#include <algorithm>
 namespace ForgeCad {
 // Sola presentazione: indice XY degli occludenti analitici e classificazione
 // sulla mesh, con tagli parametrici esatti
 // di cerchi/ellissi contro i triangoli; riferimenti delle quote invariati.
 // Coordinate dei tracciati in mm sul foglio, relative all'origine della vista.
+// Unico criterio di precisione per l'occlusione e la pianificazione delle cache.
+inline double drawingVisibilityMeshDeflection(const DrawingView &view){return std::clamp(.005/view.scale,1e-6,1.0);}
 struct DrawingVisiblePath {QPainterPath visible,hidden;};
 struct DrawingViewVisibility {
     std::vector<DrawingVisiblePath> curves,silhouettes;

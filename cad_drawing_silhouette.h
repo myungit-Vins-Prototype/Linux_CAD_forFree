@@ -18,6 +18,12 @@ class DrawingSilhouetteCache {
     std::map<const Kernel::Body *,Entry> entries_;
 public:
     std::shared_ptr<const Kernel::Tessellation> seeds(const DrawingSourceBody &source,double maximumDeflection=1.0);
+    // Query conservativa: la copia locale puo' completare la vista senza
+    // generare o raffinare mesh. Non modifica la cache condivisa per valore.
+    bool canReuse(const DrawingSourceBody &source,double maximumDeflection)const{
+        const auto found=entries_.find(source.body.get());
+        return found!=entries_.end()&&maximumDeflection>0&&found->second.deflection<=maximumDeflection;
+    }
     void clear(){entries_.clear();}
 };
 QString drawingViewSilhouettes(const DrawingModelSnapshot &model,const DrawingView &view,
