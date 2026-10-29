@@ -5,6 +5,8 @@
 #include <QAction>
 #include <QApplication>
 #include <QComboBox>
+#include <QCheckBox>
+#include <QDir>
 #include <QDialog>
 #include <QDialogButtonBox>
 #include <QDoubleSpinBox>
@@ -105,5 +107,50 @@ void freeDetail(){
  e.findChild<QAction *>("drawingDetailViewAction")->trigger();dialog=e.findChild<QDialog *>("drawingDetailDialog");dialog->findChild<QComboBox *>("drawingDetailShape")->setCurrentIndex(1);mouse(e,{32,39},true);mouse(e,{78,57},true);require(e.hasViewPlacement(),"rettangolo da due angoli");escape(e);require(bytes(e.sheet())==original,"annullamento rettangolo atomico");
 }
 
+QPainterPath linkPath(DrawingSheetEditor &e,QUuid id){QApplication::processEvents();return static_cast<QGraphicsPathItem *>(callout(e,id,"detailConnector"))->path();}
+void connectorGeometry(){
+ DrawingView p,c;p.kind=c.kind=DrawingViewKind::ProjectedEdges;p.scale=2;c.scale=4;
+ DrawingViewLayout a,b;a.viewId=p.id;a.position={30,60};b.viewId=c.id;b.position={150,90};b.relation.kind=DrawingDerivedKind::Detail;b.relation.parentId=p.id;b.relation.detailCenter={3,2};b.relation.detailRadius=4;
+ require(drawingDetailConnector(p,a,c,b).isEmpty(),"legacy details have no connector");b.relation.detailLinked=true;
+ const auto circle=drawingDetailConnector(p,a,c,b);require(circle.elementCount()==2,"single straight connector");
+ const auto first=circle.pointAtPercent(0),last=circle.pointAtPercent(1),origin=a.position+QPointF(6,-4),target=b.position+QPointF(12,-8);
+ close(QLineF(first,origin).length(),8,"source circle anchor");close(QLineF(last,target).length(),16,"detail circle anchor");close(QLineF(first,last).length(),QLineF(origin,target).length()-24,"connector only outside circles");
+ b.position=a.position-QPointF(6,-4);require(drawingDetailConnector(p,a,c,b).isEmpty(),"overlapping circles do not draw reversed links");b.position={150,90};
+ for(const auto &outline:QVector<QVector<QPointF>>{{{-4,-3},{4,-3},{4,3},{-4,3}},{{-4,-3},{4,-3},{4,3},{0,0},{-4,3}},{{0,0},{6,0},{0,2}}}){
+  b.relation.detailOutline=outline;const auto path=drawingDetailConnector(p,a,c,b);require(path.elementCount()==2,"polygon connector");
+  const auto source=drawingDetailBoundary(p,b).translated(a.position),destination=drawingDetailBoundary(c,b).translated(b.position);QPainterPathStroker pen;pen.setWidth(1e-5);
+  require(pen.createStroke(source).contains(path.pointAtPercent(0))&&pen.createStroke(destination).contains(path.pointAtPercent(1)),"endpoints on actual polygon boundaries");
+  for(int i=1;i<100;++i){const auto pt=path.pointAtPercent(i/100.);require(!source.contains(pt)&&!destination.contains(pt),"connector outside both polygon interiors");}
+ }
 }
-int main(int argc,char **argv){QApplication app(argc,argv);try{clipping();editorTests();automaticCircle();radialDetail();freeDetail();std::cout<<"PASS detail view: GUI circle/preview, true dimensions, crop and scale edits, model update, section hatch, schema10, Undo/Redo, PDF and read-only\n";return 0;}catch(const std::exception &e){std::cerr<<e.what()<<std::endl;return 1;}}
+void linkedDetails(){
+ DrawingEditorModel m;m.snapshot.version={QUuid::createUuid(),{}};m.snapshot.bodies={source(makeBox(Frame3(),20,12,8))};m.choices={{1,"Corpo dimostrativo"}};
+ for(int shape=0;shape<3;++shape){
+  DrawingSheet s;s.title="Dettaglio collegato";s.drawing.model=m.snapshot.version;DrawingSheetEditor e(s,m);e.resize(1250,820);e.show();QApplication::processEvents();e.fitSheet();
+  DrawingView p;p.kind=DrawingViewKind::ProjectedEdges;p.scale=2;DrawingViewLayout l;l.viewId=p.id;l.title="Vista madre";l.position={35,65};l.features={1};ok(e.insertView(p,l));e.markSaved();const auto base=bytes(e.sheet());
+  e.findChild<QAction *>("drawingDetailViewAction")->trigger();auto *options=e.findChild<QDialog *>("drawingDetailDialog");auto *linked=options->findChild<QCheckBox *>("drawingDetailLinked");require(linked&&!linked->isChecked(),"linked option defaults off");linked->setChecked(true);options->findChild<QComboBox *>("drawingDetailShape")->setCurrentIndex(shape);
+  if(shape==0){mouse(e,{70,45},true);mouse(e,{80,45},true);}else if(shape==1){mouse(e,{59,39},true);mouse(e,{79,57},true);}else{for(const auto &pt:QVector<QPointF>{{59,39},{79,39},{79,59},{69,49},{59,59}})mouse(e,pt,true);QKeyEvent enter(QEvent::KeyPress,Qt::Key_Return,Qt::NoModifier);QApplication::sendEvent(e.canvas(),&enter);}
+  require(e.hasViewPlacement()&&count(e,"detailConnectorPreview")==1&&bytes(e.sheet())==base,"linked floating preview without document changes");mouse(e,{170,105});mouse(e,{170,105},true);const auto id=e.sheet().views.back().viewId;
+  require(layout(e,id).relation.detailLinked&&count(e,"detailConnector")==1&&!linkPath(e,id).isEmpty(),"linked detail inserted from GUI");const auto created=bytes(e.sheet());ok(e.undo());require(bytes(e.sheet())==base&&count(e,"detailConnector")==0,"linked creation undone atomically");ok(e.redo());require(bytes(e.sheet())==created,"linked creation redo");
+  DrawingSheet restored;ok(decodeDrawingSheet(created,restored));require(bytes(restored)==created&&restored.views.back().relation.detailLinked&&QJsonDocument::fromJson(created).object()["schema"].toInt()==26,"linked schema26 roundtrip");
+  for(int schema=1;schema<=25;++schema){auto bad=QJsonDocument::fromJson(created).object();bad["schema"]=schema;require(!decodeDrawingSheet(QJsonDocument(bad).toJson(),restored).isEmpty()&&bytes(restored)==created,"downgrade refused atomically");}
+  auto bad=QJsonDocument::fromJson(created).object();auto views=bad["views"].toArray();auto child=views[1].toObject();auto relation=child["relation"].toObject();relation["detailLinked"]="true";child["relation"]=relation;views[1]=child;bad["views"]=views;require(!decodeDrawingSheet(QJsonDocument(bad).toJson(),restored).isEmpty(),"non-boolean connector rejected");
+  auto invalid=e.sheet();invalid.views.front().relation.detailLinked=true;QByteArray sink;require(!encodeDrawingSheet(invalid,sink).isEmpty(),"connector cannot belong to a root view");
+  const auto curves=e.curves(id).size();const auto toggle=[&](bool enabled,bool accept){e.canvas()->scene()->clearSelection();for(auto *item:e.canvas()->scene()->items())if(item->data(1).toUuid()==id&&(item->flags()&QGraphicsItem::ItemIsSelectable)){item->setSelected(true);break;}
+   bool seen=false;QTimer::singleShot(0,[&]{auto *d=e.findChild<QDialog *>("drawingDetailDialog");require(d,"detail properties opened");auto *check=d->findChild<QCheckBox *>("drawingDetailLinked");require(check,"linked property exists");check->setChecked(enabled);seen=true;d->findChild<QDialogButtonBox *>()->button(accept?QDialogButtonBox::Ok:QDialogButtonBox::Cancel)->click();});e.findChild<QAction *>("drawingEditViewAction")->trigger();require(seen,"properties callback");};
+  toggle(false,false);require(bytes(e.sheet())==created,"cancel link toggle preserves state");toggle(false,true);require(!layout(e,id).relation.detailLinked&&count(e,"detailConnector")==0&&e.curves(id).size()==curves,"disable connection preserves view geometry");ok(e.undo());require(bytes(e.sheet())==created,"toggle undo exact");
+  const auto old=linkPath(e,id);ok(e.moveView(id,layout(e,id).position+QPointF(15,8)));require(linkPath(e,id)!=old,"link follows moved detail");ok(e.undo());require(linkPath(e,id)==old,"move undo restores link");ok(e.moveView(p.id,l.position+QPointF(5,7)));require(linkPath(e,id)!=old,"link follows moved mother");ok(e.undo());
+  ok(e.updateDetailView(id,layout(e,id).relation.detailCenter,layout(e,id).relation.detailRadius,3,"A"));require(linkPath(e,id)!=old,"link follows scale");ok(e.undo());require(linkPath(e,id)==old,"scale undo restores link");
+  if(shape==0){
+   QGraphicsPathItem *geometry=nullptr;for(auto *item:e.canvas()->scene()->items())if(item->data(1).toUuid()==id&&item->data(0).toString()=="projection"){geometry=dynamic_cast<QGraphicsPathItem *>(item);if(geometry&&!geometry->path().isEmpty())break;}
+   require(geometry,"detail geometry for mouse drag");const auto pt=geometry->mapToScene(geometry->path().pointAtPercent(.5));dragEvent(e,pt,0);dragEvent(e,pt+QPointF(12,7),1);require(linkPath(e,id)!=old&&bytes(e.sheet())==created,"live link follows drag before commit");escape(e);require(linkPath(e,id)==old&&bytes(e.sheet())==created,"Escape restores dragged link");
+   auto *ring=dynamic_cast<QGraphicsEllipseItem *>(callout(e,id));require(ring,"circular source delimiter");const auto center=ring->rect().center();const auto press=ring->mapToScene({ring->rect().left(),center.y()});dragEvent(e,press,0);dragEvent(e,press+QPointF(4,3),1);require(linkPath(e,id)!=old&&bytes(e.sheet())==created,"live connector follows source crop");escape(e);require(linkPath(e,id)==old&&bytes(e.sheet())==created,"Escape restores source crop connector");
+  }
+  QTemporaryDir temporary;DrawingPdfReport report;const auto output=qEnvironmentVariable("FORGECAD_DETAIL_LINK_OUTPUT");if(!output.isEmpty())QDir().mkpath(output);ok(e.exportPdf(output.isEmpty()?temporary.filePath("linked.pdf"):output+QStringLiteral("/linked-%1.pdf").arg(shape),report));require(report.warnings.isEmpty(),"linked PDF clean");
+  if(!output.isEmpty()){e.fitSheet();QApplication::processEvents();require(e.grab().save(output+QStringLiteral("/linked-%1.png").arg(shape)),"linked screenshot");}
+  e.setReadOnly(true);require(!e.findChild<QAction *>("drawingEditViewAction")->isEnabled(),"read-only properties protected");
+ }
+}
+
+}
+int main(int argc,char **argv){QApplication app(argc,argv);try{connectorGeometry();linkedDetails();clipping();editorTests();automaticCircle();radialDetail();freeDetail();std::cout<<"PASS detail view: GUI circle/preview, true dimensions, crop and scale edits, model update, section hatch, schema10, Undo/Redo, PDF and read-only\n";return 0;}catch(const std::exception &e){std::cerr<<e.what()<<std::endl;return 1;}}

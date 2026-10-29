@@ -36,6 +36,7 @@ struct DrawingViewRelation {
     std::optional<DrawingSectionBend> bend; // angolo verso destra della direzione iniziale, indipendente dalle frecce
     std::optional<DrawingSectionStep> step; // offset nel verso tangente x normale della madre
     double auxiliaryAngle=0; // lato d'osservazione nel piano madre, gradi da +X verso +Y
+    bool detailLinked=false; // linea grafica fra contorno sulla madre e bordo del dettaglio
 };
 enum class DrawingScaleSource { Custom, Sheet, Parent };
 struct DrawingViewLayout {
