@@ -220,7 +220,7 @@ DESCRIPTIONS.update({'tools/open_architecture.py': ('build', 'Avvio locale della
  'cad_drawing_revision_ui.cpp': ('drawing', 'Comandi delle revisioni, selezione e ripristino nella copia di lavoro, confronto dei badge per UUID prima del check-in e con gli storici, pannello e riapertura con percorsi canonici.'),
  'cad_drawing_revisions': ('drawing', 'Integra le tavole con il protocollo di revisioni dei documenti.'),
  'cad_drawing_sheet': ('drawing',
-                       'Stato e codec del foglio fino allo schema23, scala del foglio e scale delle viste con ereditarieta e compatibilita storica, assegnazioni persistenti dei numeri e compatibilita legacy, posizione e interruzione grafica delle viste, relazioni madri/derivate.'),
+                       'Stato e codec del foglio fino allo schema24, contorni liberi dei dettagli e posizione della lettera, scala del foglio e scale delle viste con ereditarieta e compatibilita storica, assegnazioni persistenti dei numeri e compatibilita legacy, posizione e interruzione grafica delle viste, relazioni madri/derivate.'),
  'fk_sheet': ('kernel', 'Taglio e rifilo di lamine; selezione del pezzo piu vicino condivisa con estensione, senza ripetere le intersezioni.'),
  'fk_intersect': ('kernel', 'Intersezioni esatte curve/superfici; proiezione planare di curve trasformate con conservazione dei parametri; radici Bernstein con riuso dei coefficienti e filtro conservativo prima delle allocazioni per le pezze lontane.'),
  'kernel/tests/test_intersect.cpp': ('tests', 'Intersezioni curve/superfici e radici Bernstein; immagini planari di spline razionali, coniche e rette trasformate, trim annidati e parametro delle rette scalate.'),
