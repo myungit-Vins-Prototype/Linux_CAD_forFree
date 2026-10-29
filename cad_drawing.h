@@ -111,7 +111,7 @@ struct DrawingSectionReference {
     int contourSide=0; // +/-1 soltanto per un arco apparente esatto, schema7
 };
 enum class DrawingMeasure { SectionLength, EndpointDistance, HorizontalDistance, VerticalDistance,
-    Distance, Angle, Radius, Diameter, AxisRadius, AxisDiameter, OrdinateX, OrdinateY };
+    Distance, Angle, Radius, Diameter, AxisRadius, AxisDiameter, OrdinateX, OrdinateY, ProfileRadius };
 inline bool drawingOrdinate(DrawingMeasure m){return m==DrawingMeasure::OrdinateX||m==DrawingMeasure::OrdinateY;}
 enum class DrawingDimensionSeries { ChainHorizontal, ChainVertical, OrdinateX, OrdinateY };
 enum class DrawingPointRole { Curve, Start, End, Midpoint, Center, Nearest, Origin, AxisX, AxisY,

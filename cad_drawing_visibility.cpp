@@ -1,5 +1,6 @@
 #include "cad_drawing_visibility.h"
 #include "cad_drawing_dimension.h"
+#include "cad_drawing_curve_recognition.h"
 #include "fk_classify.h"
 #include "fk_surface_algo.h"
 #include <QSet>
@@ -76,6 +77,18 @@ bool conicForm(const Curve<3> &curve,DisplayConic &out){
         out={c.transform().applyToPoint(out.center),c.transform().applyToVector(out.a),c.transform().applyToVector(out.b)};return true;}
     default:return false;
     }
+}
+// Le coniche NURBS mantengono i propri agganci. La visibilita' usa
+// il cerchio certificato, evitando occlusioni intermittenti delle corde.
+bool recognizedConic(const CurvePtr<3> &geometry,Interval range,double tolerance,DisplayConic &form,Interval &angles){
+    if(geometry->type()!=CurveType::BSpline)return false;
+    const auto circle=drawingRecognizeCircle(static_cast<const BSplineCurve<3> &>(*geometry),tolerance,geometry);if(!circle)return false;
+    const double radius=norm(circle->first);const auto x=circle->first/radius,y=circle->second/radius;
+    const auto angle=[&](double t){const auto p=geometry->point(t)-circle->center;return std::atan2(dot(p,y),dot(p,x));};
+    double previous=angle(range.lo),total=0;const double start=previous;
+    for(int i=1;i<=64;++i){const double next=angle(range.lo+range.length()*i/64),step=std::remainder(next-previous,kTwoPi);if(step< -1e-8)return false;total+=step;previous=next;}
+    if(total<=1e-8||total>kTwoPi+1e-8)return false;
+    form={circle->center,circle->first,circle->second};angles={start,start+total};return true;
 }
 // Zeri di c + a*cos(t) + b*sin(t) su un arco grafico (< pi):
 // conserva anche due tagli ravvicinati alla tangenza.
@@ -516,7 +529,9 @@ QString drawingViewVisibility(const DrawingModelSnapshot &model,const DrawingVie
                     for(auto loop:source->body->face(curve.sourceFace).loops)for(auto fin:source->body->loopFins(loop)){const auto &edge=source->body->edge(source->body->fin(fin).edge);for(auto side:{edge.forward,edge.backward})if(side.valid()){const auto face=source->body->finFace(side);if(std::find(origin.faces.begin(),origin.faces.end(),face)==origin.faces.end())origin.faces.push_back(face);}}
                 }
             }
-            DisplayConic conic;if(conicForm(*geometry,conic)){next.curves.push_back(displayConic(conic,range,*geometry,view,curve.kind!=DrawingCurveKind::Section?index.get():nullptr,origin));continue;}
+            DisplayConic conic;Interval angles;
+            if(recognizedConic(geometry,range,view.tolerance,conic,angles)){const double radius=norm(conic.a);const Circle<3> exact(conic.center,conic.a/radius,conic.b/radius,radius);next.curves.push_back(displayConic(conic,angles,exact,view,curve.kind!=DrawingCurveKind::Section?index.get():nullptr,origin));continue;}
+            if(conicForm(*geometry,conic)){next.curves.push_back(displayConic(conic,range,*geometry,view,curve.kind!=DrawingCurveKind::Section?index.get():nullptr,origin));continue;}
             const auto parameters=sampleCurve(*geometry,range,options);need(parameters.size()<=200000,"Troppi campioni per la visibilita'.");std::vector<Vec3> points;points.reserve(parameters.size());for(auto parameter:parameters)points.push_back(geometry->point(parameter));
             next.curves.push_back(display(points,view,curve.kind!=DrawingCurveKind::Section?index.get():nullptr,origin));}
         if(drawingHasProjection(view)){consolidateLinearPaths(view,curves,next.curves);consolidateConicPaths(view,curves,next.curves);}

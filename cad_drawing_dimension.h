@@ -1,6 +1,7 @@
 #pragma once
 #include "cad_drawing.h"
 #include <functional>
+#include <optional>
 namespace ForgeCad {
 struct DrawingPrimitive {
     enum class Kind { Other, Line, Conic } kind=Kind::Other;
@@ -10,6 +11,9 @@ struct DrawingPrimitive {
     Kernel::Vec2 lineFirst{},lineSecond{};
 };
 DrawingPrimitive drawingPrimitive(const DrawingView &view,const DrawingCurve &curve);
+struct DrawingProfileRadius {double radius;Kernel::Vec2 center;};
+// Raggio del profilo circolare generatore del raccordo, distinto dalla sua sezione obliqua.
+std::optional<DrawingProfileRadius> drawingProfileRadius(const DrawingView &view,const DrawingCurve &curve,const DrawingModelSnapshot &model,double parameter);
 bool drawingDatum(DrawingPointRole role);
 QString validateDrawingAttachments(const DrawingDimension &dimension,const DrawingView &view);
 // Crea un aggancio semantico: vertice/bordo di rifilatura, frazione di lunghezza
