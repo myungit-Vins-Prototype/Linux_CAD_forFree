@@ -1,5 +1,15 @@
 # CLAUDE.md
 
+### 2026-10-30 — Diagnosi e rilancio CI macOS (runner GitHub indisponibile)
+
+- Segnalazione utente: compilazione GitHub macOS non riuscita. Ispezionati run41089009757 del commit91e3d98 e job124177616793: Linux CPU concluso success; macOS CPU/Metal cancelled senza step eseguiti,runner_id0 e nessun log di compilazione.
+- Diagnosi dalle annotazioni GitHub: «The job was not acquired by Runner of type hosted even after multiple attempts»; tre avvisi di capacità ridotta dei runner macOS arm64. Nessun errore del compilatore individuato: esecuzione annullata prima dell’assegnazione del runner, dopo circa15minuti.
+- Rilanciato soltanto il job macOS con gli stessi sorgenti/configurazione/test,senza ripetere Linux o cambiare piattaforma per aggirare il problema. Esito del nuovo tentativo ancora da verificare. Log/API originali in /tmp/forgecad-ci-macos-20261030. Nessuna modifica produttiva,build locale o riavvio dell’app.
+
+
+- Rilancio accettato: attempt2 del run41089009757, nuovo job macOS124208916541. Ultimo controllo API:queued,runner_id/null,nessuno step eseguito;Linux conservato success senza nuova esecuzione. Link:https://github.com/myungit-Vins-Prototype/Linux_CAD_forFree/actions/runs/41089009757/job/124208916541. Diagnosi e rilancio completati; compilazione/test macOS ancora non verificabili finché GitHub non assegna un runner. Nessun fix C++ o cambio del workflow giustificato dai log disponibili. La presente registrazione documentale non altera il codice già pubblicato o le verifiche Linux.
+
+
 ### 2026-10-30 — Commit e push degli incrementi tavole 2D (completati)
 
 - Autorizzazione esplicita: utente chiede commit e push dopo la verifica degli snap già nel primo posizionamento. Fetch origin riuscito; main e origin/main identici al commit6f9c6d8, nessun merge necessario.
