@@ -24,6 +24,8 @@
 // Il formato 54 conserva anche i nomi topologici degli appoggi degli schizzi
 // e delle superfici dei vincoli Pierce; i formati 1–53 restano leggibili.
 // Il formato 55 conserva occorrenze escluse e componenti delle ripetizioni.
+// Il formato 56 usa Zstandard con checksum per definizione e cache; legge
+// ancora i documenti zlib precedenti. Geometria e mesh restano senza perdita.
 // Fanno eccezione i
 // corpi importati, che non
 // hanno una definizione: il loro body e' in `importData` come testo STEP del
@@ -31,8 +33,8 @@
 // legge piu': quei corpi vanno importati di nuovo).
 //
 // Formato: "FCAD" (4 byte), versione (quint16, big endian), metodo di
-// compressione (quint8: 1 = zlib), poi il blocco qCompress (lunghezza
-// originale su 4 byte + dati zlib al livello 9) del contenuto scritto con
+// compressione (quint8: 1 = zlib, 2 = Zstandard), poi un blocco (lunghezza
+// originale su 4 byte + dati compressi al livello 9) del contenuto scritto con
 // QDataStream (Qt_6_0, double a 64 bit): i valori sono esatti, bit per bit.
 // Dal formato 14 la lunghezza del blocco (quint32) lo precede e dopo c'e' un
 // secondo blocco compresso con lo snapshot calcolato (fk_body_io e mesh). Se
@@ -41,7 +43,7 @@
 namespace ForgeCad {
 
 inline constexpr const char *kDocumentSuffix = "prt";
-inline constexpr quint16 kDocumentFormatVersion = 55;
+inline constexpr quint16 kDocumentFormatVersion = 56;
 
 // Budget in byte, indipendenti dal numero di feature. I chiamanti che devono
 // aprire documenti piu' grandi possono passarne di espliciti agli overload.

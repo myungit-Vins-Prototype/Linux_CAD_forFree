@@ -90,7 +90,7 @@ void documentSketchReferenceNameTests() {
         header.skipRawData(4); quint16 version = 0; header >> version;
         require(version == kDocumentFormatVersion, "nomi protetti dal formato corrente");
         header.skipRawData(1); quint32 size = 0; header >> size;
-        definition = qUncompress(bytes.mid(11, size));
+        definition = testDocumentUncompress(bytes,11, size);
     }
     for (const auto &name : {sketch.support->point.name, pierce->surface.point.name}) {
         QByteArray encodedName;
@@ -231,7 +231,7 @@ void documentReadTests() {
             && Kernel::writeBodyBinary(*restored.extrusions[0].forgeBody) == Kernel::writeBodyBinary(*body.forgeBody),
             "round trip di definizione, geometria e mesh senza perdite");
     QDataStream header(encoded); header.skipRawData(7); quint32 length = 0; header >> length;
-    const auto payload = qUncompress(encoded.mid(11,length));
+    const auto payload = testDocumentUncompress(encoded,11,length);
     DocumentReadLimits limits;
     limits.definitionBytes = payload.size()-1; rejected(encoded,limits);
     limits.definitionBytes = payload.size();

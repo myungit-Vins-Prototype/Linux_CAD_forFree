@@ -103,6 +103,9 @@ private:
 
 // Formato qCompress invariato; non alloca la dimensione indicata nell'header
 // e interrompe inflate anche se quell'header dichiara meno dei byte reali.
-bool uncompress(const QByteArray &compressed, qsizetype maximumBytes, QByteArray &result);
+inline constexpr quint8 kZlibCompression = 1, kZstdCompression = 2;
+QByteArray compress(const QByteArray &data, quint8 method = kZstdCompression, int level = 9);
+bool uncompress(const QByteArray &compressed, qsizetype maximumBytes, QByteArray &result,
+                quint8 method = kZlibCompression);
 
 }

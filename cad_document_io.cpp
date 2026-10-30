@@ -77,6 +77,7 @@ constexpr char kMagic[4] = {'F', 'C', 'A', 'D'};
 // 54 nomi topologici di appoggi schizzo e superfici dei vincoli Pierce.
 constexpr quint16 kVersion = kDocumentFormatVersion;
 constexpr quint8 kZlib = 1;
+constexpr quint8 kZstd = 2;
 
 void write(QDataStream &out, const CurveObject &curve) {
     out << qint32(curve.tool) << curve.controlPoints << curve.weights << curve.tangentHandles << qint32(curve.sides)
@@ -994,7 +995,7 @@ bool readDeclaredHistory(const QByteArray &data, int index, const QVector<Extrus
     return true;
 }
 
-QByteArray bodyCache(const QByteArray &payload, const DocumentState &state) {
+QByteArray bodyCache(const QByteArray &payload, const DocumentState &state, quint8 compression) {
     QByteArray cache;
     QBuffer buffer(&cache);
     buffer.open(QIODevice::WriteOnly);
@@ -1026,14 +1027,14 @@ QByteArray bodyCache(const QByteArray &payload, const DocumentState &state) {
         const auto declared = data.empty() ? DeclaredHistorySnapshot() : declaredHistorySnapshot(body, index, state.extrusions);
         chunks.write(writeDeclaredHistory(declared, state.extrusions));
     }
-    return out.status() == QDataStream::Ok ? qCompress(cache, 6) : QByteArray();
+    return out.status() == QDataStream::Ok ? DocumentReadDetail::compress(cache, compression, 9) : QByteArray();
 }
 
 void applyBodyCache(const QByteArray &compressed, const QByteArray &payload, DocumentState &state, bool previewCache,
-                    const DocumentReadLimits &limits) {
+                    const DocumentReadLimits &limits, quint8 compression) {
     (void)previewCache;
     QByteArray cache;
-    if (!DocumentReadDetail::uncompress(compressed, limits.cacheBytes, cache) || cache.isEmpty()) return;
+    if (!DocumentReadDetail::uncompress(compressed, limits.cacheBytes, cache, compression) || cache.isEmpty()) return;
     ReadStream in(cache);
     in.setVersion(QDataStream::Qt_6_0);
     QByteArray sourceHash, payloadHash;
@@ -1224,12 +1225,13 @@ QString encodeDocumentVersion(const DocumentState &state, QByteArray &bytes, boo
         QByteArray prepared;
         QDataStream out(&prepared, QIODevice::WriteOnly);
         out.writeRawData(kMagic, 4);
-        out << version << kZlib;
-        const QByteArray compressed = qCompress(payload, qBound(0, compressionLevel, 9));
+        const quint8 compression = version >= 56 ? kZstd : kZlib;
+        out << version << compression;
+        const QByteArray compressed = DocumentReadDetail::compress(payload, compression, compressionLevel);
         out << quint32(compressed.size());
         out.writeRawData(compressed.constData(), int(compressed.size()));
         if (bodies && state.pendingSketchChanges.isEmpty()) {
-            const QByteArray cache = bodyCache(payload, normalized);
+            const QByteArray cache = bodyCache(payload, normalized, compression);
             out.writeRawData(cache.constData(), int(cache.size()));
         }
         if (out.status() != QDataStream::Ok) return QStringLiteral("Codifica del documento fallita.");
@@ -1395,7 +1397,7 @@ QString decodeDocument(const QByteArray &data, DocumentState &state, const Docum
         quint8 compression = 0;
         header >> version >> compression;
         if (version > kVersion) return QStringLiteral("Il file e' stato scritto da una versione piu' recente di ForgeCAD (formato %1).").arg(version);
-        if (compression != kZlib) return QStringLiteral("Compressione sconosciuta nel file.");
+        if (compression != kZlib && (compression != kZstd || version < 56)) return QStringLiteral("Compressione sconosciuta nel file.");
         QByteArray compressed = data.mid(7), cache;
         if (version >= 14) {
             quint32 size = 0;
@@ -1405,7 +1407,7 @@ QString decodeDocument(const QByteArray &data, DocumentState &state, const Docum
             cache = data.mid(11 + qsizetype(size));
         }
         QByteArray payload;
-        if (!DocumentReadDetail::uncompress(compressed, limits.definitionBytes, payload) || payload.isEmpty())
+        if (!DocumentReadDetail::uncompress(compressed, limits.definitionBytes, payload, compression) || payload.isEmpty())
             return QStringLiteral("Dati compressi del documento non validi o definizione oltre il limite di lettura (%1 byte).").arg(limits.definitionBytes);
         // Formato 5: tre varianti (senza e con i campi della scala e dello smusso),
         // vale la prima che si legge tutta.
@@ -1417,7 +1419,7 @@ QString decodeDocument(const QByteArray &data, DocumentState &state, const Docum
             if (error.isEmpty()) break;
         }
         if (!error.isEmpty()) return error;
-        if (!cache.isEmpty()) applyBodyCache(cache, payload, loaded, previewCache, limits);
+        if (!cache.isEmpty()) applyBodyCache(cache, payload, loaded, previewCache, limits, compression);
         state = std::move(loaded);
         return {};
     } catch (const std::bad_alloc &) {

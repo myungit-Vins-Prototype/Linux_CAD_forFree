@@ -174,6 +174,8 @@ ForgeCAD è scritto in **C++17** con **Qt 6** e una viewport **OpenGL 3.3 Core**
 | STL | — | Mesh triangolare |
 | OBJ | — | Mesh quadrangolare, per esempio per Blender |
 
+Dal formato 56 i nuovi salvataggi usano Zstandard con checksum per definizione e cache, senza perdere precisione geometrica o mesh; richiedono un lettore aggiornato. I file precedenti zlib (1–55) restano leggibili.
+
 I documenti `.prt` di ForgeCAD hanno una firma interna `FCAD`: l'estensione non indica compatibilità con i documenti di altri CAD. STEP e IGES trasferiscono la geometria senza ricreare lo storyboard parametrico originale. Le esportazioni STEP/IGES usano i corpi visibili.
 
 ## Requisiti
@@ -211,7 +213,7 @@ Se il repository viene rinominato o trasferito, usare l'URL del pulsante **Code*
 
 ```sh
 sudo apt update
-sudo apt install build-essential cmake git qt6-base-dev libqt6opengl6-dev zlib1g-dev \
+sudo apt install build-essential cmake git qt6-base-dev libqt6opengl6-dev zlib1g-dev libzstd-dev \
   libgl1-mesa-dev libocct-foundation-dev libocct-modeling-data-dev \
   libocct-modeling-algorithms-dev libocct-data-exchange-dev \
   libocct-visualization-dev
@@ -222,10 +224,10 @@ Su Ubuntu alcuni pacchetti si trovano nel repository **Universe**. Su Wayland ag
 **Arch Linux / distribuzioni compatibili con pacman:**
 
 ```sh
-sudo pacman -S --needed base-devel cmake git qt6-base opencascade mesa zlib
+sudo pacman -S --needed base-devel cmake git qt6-base opencascade mesa zlib zstd
 ```
 
-Su Wayland aggiungere `qt6-wayland`. Per altre distribuzioni installare gli equivalenti di compilatore C++, CMake, Qt 6, OpenGL, zlib e OCCT con i file di sviluppo. zlib serve alla decompressione incrementale dei documenti con controlli sui limiti di memoria.
+Su Wayland aggiungere `qt6-wayland`. Per altre distribuzioni installare gli equivalenti di compilatore C++, CMake, Qt 6, OpenGL, zlib, Zstandard e OCCT con i file di sviluppo. zlib serve alla decompressione incrementale dei documenti con controlli sui limiti di memoria.
 
 Riferimenti: [Qt/OpenGL su Ubuntu](https://packages.ubuntu.com/jammy/libqt6opengl6-dev), [OCCT su Ubuntu](https://packages.ubuntu.com/search?keywords=libocct-data-exchange-dev&suite=noble), [Qt su Arch](https://archlinux.org/packages/extra/x86_64/qt6-base/) e [OCCT su Arch](https://archlinux.org/packages/extra/x86_64/opencascade/).
 
@@ -289,7 +291,7 @@ xcode-select --install
 Installare [Homebrew](https://brew.sh/) seguendo le istruzioni ufficiali, quindi:
 
 ```sh
-brew install cmake qt opencascade
+brew install cmake qt opencascade zstd
 ```
 
 Le formule ufficiali sono [Qt](https://formulae.brew.sh/formula/qt) e [OpenCASCADE](https://formulae.brew.sh/formula/opencascade). Usare compilatore e librerie della stessa architettura: arm64 su Apple Silicon oppure x86_64 su Intel.

@@ -46,6 +46,21 @@ set(CMAKE_AUTORCC ON)
 find_package(Qt6 REQUIRED COMPONENTS Widgets OpenGL OpenGLWidgets)
 find_package(OpenGL REQUIRED)
 find_package(ZLIB REQUIRED)
+# Config package su Homebrew; find_path/find_library anche sulle distribuzioni
+# che forniscono libzstd-dev senza un package CMake.
+find_package(zstd CONFIG QUIET)
+if(TARGET zstd::libzstd_shared)
+    set(FORGECAD_ZSTD_TARGET zstd::libzstd_shared)
+elseif(TARGET zstd::libzstd_static)
+    set(FORGECAD_ZSTD_TARGET zstd::libzstd_static)
+else()
+    find_path(FORGECAD_ZSTD_INCLUDE_DIR zstd.h REQUIRED)
+    find_library(FORGECAD_ZSTD_LIBRARY NAMES zstd REQUIRED)
+    add_library(forgecad_zstd UNKNOWN IMPORTED)
+    set_target_properties(forgecad_zstd PROPERTIES IMPORTED_LOCATION "${FORGECAD_ZSTD_LIBRARY}"
+        INTERFACE_INCLUDE_DIRECTORIES "${FORGECAD_ZSTD_INCLUDE_DIR}")
+    set(FORGECAD_ZSTD_TARGET forgecad_zstd)
+endif()
 # OpenCASCADE serve solo ai test del kernel (riferimento per i confronti):
 # l'applicazione usa soltanto il kernel proprio.
 find_package(OpenCASCADE REQUIRED)
@@ -290,6 +305,7 @@ target_include_directories(forgecad PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/generate
 
 target_link_libraries(forgecad PRIVATE
     ZLIB::ZLIB
+    ${FORGECAD_ZSTD_TARGET}
     Qt6::Widgets
     Qt6::OpenGL
     Qt6::OpenGLWidgets
@@ -387,7 +403,7 @@ if(FORGECAD_BUILD_VIEW_TESTS)
     add_executable(forgecad_view_tests tests/test_viewport.cpp tests/test_declared_history_cache.h tests/test_boolean_history.h tests/test_blend_history.h tests/test_extrusion_history.h tests/test_revolution_history.h tests/test_all_history.h tests/test_native_revisions.h tests/test_workspace_revisions.h tests/test_linked_drawing.h tests/test_drawing_workflow.h tests/test_drawing_revisions.h tests/test_projected_drawing_file.h tests/test_drawing_multisheet.h tests/test_drawing_revision_restore.h tests/test_drawing_release.h tests/test_catalog_recovery_gui.h tests/test_surface_tools_gui.h tests/test_document_units.h tests/test_history_suppression.h tests/test_function_panels.h tests/test_drawing_mouse.h tests/test_drawing_section_model.h tests/test_drawing_performance.h cuda_support_cpu.cpp ${FORGECAD_VIEW_TEST_SOURCES})
     add_dependencies(forgecad_view_tests forgecad) # genera l'impronta una sola volta, prima dei test
     target_include_directories(forgecad_view_tests PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/generated)
-    target_link_libraries(forgecad_view_tests PRIVATE Qt6::Widgets Qt6::OpenGL Qt6::OpenGLWidgets OpenGL::GL forgekernel ZLIB::ZLIB)
+    target_link_libraries(forgecad_view_tests PRIVATE Qt6::Widgets Qt6::OpenGL Qt6::OpenGLWidgets OpenGL::GL forgekernel ZLIB::ZLIB ${FORGECAD_ZSTD_TARGET})
     target_compile_options(forgecad_view_tests PRIVATE -Wall -Wextra -Wpedantic)
     target_compile_definitions(forgecad_view_tests PRIVATE FORGECAD_HAS_CUDA=0 FORGECAD_SOURCE_DIR="${PROJECT_SOURCE_DIR}")
     add_executable(forgecad_selection_benchmark tests/benchmark_selection.cpp)
@@ -527,6 +543,10 @@ target_include_directories(forgecad_shape_analysis_tests PRIVATE ${PROJECT_SOURC
 target_link_libraries(forgecad_shape_analysis_tests PRIVATE Qt6::Widgets Qt6::OpenGL forgekernel)
 add_test(NAME forgecad_shape_analysis_tests COMMAND forgecad_shape_analysis_tests)
 
+add_executable(forgecad_document_compression_tests tests/test_document_compression.cpp cad_document_read.cpp)
+target_include_directories(forgecad_document_compression_tests PRIVATE ${PROJECT_SOURCE_DIR})
+target_link_libraries(forgecad_document_compression_tests PRIVATE Qt6::Gui ZLIB::ZLIB ${FORGECAD_ZSTD_TARGET})
+add_test(NAME forgecad_document_compression_tests COMMAND forgecad_document_compression_tests)
 add_executable(forgecad_snapshot_chunks_tests tests/test_snapshot_chunks.cpp cad_snapshot_chunks.cpp)
 target_include_directories(forgecad_snapshot_chunks_tests PRIVATE ${PROJECT_SOURCE_DIR})
 target_link_libraries(forgecad_snapshot_chunks_tests PRIVATE Qt6::Core)
