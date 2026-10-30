@@ -36,10 +36,15 @@ void key(QWidget *widget,int code,Qt::KeyboardModifiers modifiers){QKeyEvent pre
 void drag(DrawingSheetEditor &editor,const QUuid &id,QPointF delta){
     QApplication::processEvents();auto *view=editor.canvas();auto *item=label(editor,id);require(item,"etichetta da trascinare");view->ensureVisible(item);QApplication::processEvents();
     const QPointF start=view->mapFromScene(item->sceneBoundingRect().center()),end=view->mapFromScene(item->sceneBoundingRect().center()+delta);
+    // Qt 6.10 condivide lo stato globale del puntatore tra gli eventi:
+    // costruire prima move/release sposta anche la posizione globale di press.
+    // Consegnare ogni evento prima di creare il successivo, come input reale.
     QMouseEvent press(QEvent::MouseButtonPress,start,view->viewport()->mapToGlobal(start.toPoint()),Qt::LeftButton,Qt::LeftButton,Qt::NoModifier);
+    QApplication::sendEvent(view->viewport(),&press);
     QMouseEvent move(QEvent::MouseMove,end,view->viewport()->mapToGlobal(end.toPoint()),Qt::NoButton,Qt::LeftButton,Qt::NoModifier);
+    QApplication::sendEvent(view->viewport(),&move);
     QMouseEvent release(QEvent::MouseButtonRelease,end,view->viewport()->mapToGlobal(end.toPoint()),Qt::LeftButton,Qt::NoButton,Qt::NoModifier);
-    QApplication::sendEvent(view->viewport(),&press);QApplication::sendEvent(view->viewport(),&move);QApplication::sendEvent(view->viewport(),&release);QApplication::processEvents();
+    QApplication::sendEvent(view->viewport(),&release);QApplication::processEvents();
 }
 }
 int main(int argc,char **argv){

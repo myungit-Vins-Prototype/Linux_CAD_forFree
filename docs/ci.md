@@ -69,3 +69,30 @@ QT_QPA_PLATFORMTHEME= QT_STYLE_OVERRIDE=Fusion LIBGL_ALWAYS_SOFTWARE=1 \
 Usare una cartella nuova, senza cache provenienti da altre macchine. Su una
 macchina con toolkit CUDA CMake può abilitarlo automaticamente: il risultato
 non rappresenta la stessa configurazione CPU del runner GitHub.
+
+
+### Coerenza numerica tra processori
+
+Il target `forgekernel` richiede `-ffp-contract=off` a GCC/Clang/AppleClang,
+anche per i chiamanti C++ e Objective-C++ che compilano le sue funzioni inline.
+Le operazioni scritte separatamente mantengono arrotondamenti separati: una
+specializzazione B-spline e il percorso generale devono dare gli stessi prefissi
+di derivate, anche quando il processore dispone di FMA. Restano attive le
+ottimizzazioni, la vettorizzazione e le `std::fma` esplicite dei predicati esatti.
+La regola non viene passata al compilatore CUDA.
+
+Su un processore compatibile AVX2/FMA, per riprodurre anche il percorso
+`x86-64-v3`, aggiungere `-DCMAKE_CXX_FLAGS=-march=x86-64-v3` alla configurazione
+in una cartella dedicata. Non usare questa opzione sulle altre architetture.
+
+Il test di trascinamento costruisce e consegna ogni evento del mouse prima di
+creare quello successivo, evitando che lo stato globale condiviso del puntatore
+in Qt 6.10 alteri la posizione della pressione. Il volume del raccordo dell'intero
+bordo arco/segmenti è verificato con sezioni analitiche integrate indipendentemente:
+per questo caso OCCT può restituire un volume superiore a quello del pezzo iniziale.
+I controlli geometrici, di topologia e di tassellazione restano attivi.
+
+Il raccordo che svanisce alla tangenza dei due appoggi raffina il fit in base
+all'incertezza dei campioni interni: la stima singolare di un estremo non deve
+autorizzare uno scarto grande su tutto l'intervallo. La regressione verifica
+anche la distanza dei bordi dagli appoggi cilindrici, oltre al volume rimosso.

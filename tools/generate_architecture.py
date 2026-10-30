@@ -53,9 +53,9 @@ DESCRIPTIONS = {
  'tests/test_projected_drawing_file.h': ('tests', 'File nativi e revisioni delle tavole proiettate, ausiliarie e interrotte; protezione dello storico e PDF.'),
  'tests/test_sketch_slot_point.h': ('tests', 'Asola rettilinea e punto autonomo: mouse, geometria esatta, volume, vincoli, Undo/Redo, formato52 e comandi UI.'),
  'cad_curve_solver': ('sketch', 'Geometria esatta e campionamento delle curve; scomposizione asola in segmenti/archi e punti autonomi senza profilo.'),
- 'fk_blend_surface': ('kernel', 'Raccordi e smussi a palla rotolante: sezioni normali e guida intrinseca per coperchi piani su fianchi B-spline tangenti, continuazione delle cuciture tangenti, chiusure terminali e controllo dei contorni.'),
+ 'fk_blend_surface': ('kernel', 'Raccordi e smussi a palla rotolante: sezioni normali e guida intrinseca per coperchi piani su fianchi B-spline tangenti, continuazione delle cuciture tangenti, chiusure terminali, raffinamento presso le punte singolari e controllo dei contorni.'),
  'fk_blend': ('kernel', 'Raccordi e smussi analitici: sezioni, utensili sottrattivi/additivi con copertura degli appoggi curvi anche singoli, catene tangenti, pezze terminali e genealogia.'),
- 'kernel/tests/test_blend.cpp': ('tests', 'Regressioni geometriche dei raccordi: volumi e tangenze, assenza di anelli residui su appoggi sferici singoli, cuciture, supporti consumati, coperchi piani e catene aperte su cuciture tangenti elicoidali, con controlli di raggio, topologia e persistenza.'),
+ 'kernel/tests/test_blend.cpp': ('tests', 'Regressioni geometriche dei raccordi: volumi analitici indipendenti e confronti OCCT, tangenze, assenza di anelli residui su appoggi sferici singoli, cuciture, supporti consumati, coperchi piani e catene aperte su cuciture tangenti elicoidali, con controlli di raggio, topologia e persistenza.'),
  'forgeCad2026.cpp': ('startup', 'Entry point Qt: avvio, opzioni e apertura della finestra principale.'),
  'forgeCad2026_application_theme': ('startup', 'Stile Fusion comune ripristinato dopo sostituzioni native, palette chiaro/scuro e diagnostica dei cambi tema.'),
  'forgeCad2026_gui': ('startup', 'PdfWindow: sette fasi di inizializzazione di scena, menu, comandi, opzioni e toolbar; ciclo del documento e apertura riutilizzabile dei modelli archiviati in sola lettura.'),
@@ -314,7 +314,7 @@ DESCRIPTIONS.update({'tools/open_architecture.py': ('build', 'Avvio locale della
  'forgeCad2026_glass_compositor': ('render',
                                    'Compositore dei fondali sfocati dei pannelli, con maschera arrotondata '
                                    'analitica e antialias per pixel, shader e framebuffer propri.'),
- 'kernel/CMakeLists.txt': ('build', 'Definisce libreria geometrica e target di verifica del kernel.')})
+ 'kernel/CMakeLists.txt': ('build', 'Definisce libreria geometrica, target di verifica e arrotondamento coerente senza contrazione FMA implicita nei chiamanti CPU C++/Objective-C++.')})
 
 TOKEN_DESCRIPTIONS = {
  'viewport':'Vista e interazione', 'constraint':'Vincoli geometrici', 'solver':'Risoluzione numerica',
