@@ -1,7 +1,7 @@
 # Controlli automatici su GitHub
 
-Il workflow [CI Linux](../.github/workflows/ci.yml) parte a ogni push e pull
-request. Dalla scheda **Actions → CI Linux → Run workflow** si può avviare anche
+Il workflow [CI Linux e macOS](../.github/workflows/ci.yml) parte a ogni push e pull
+request. Dalla scheda **Actions → CI Linux e macOS → Run workflow** si può avviare anche
 manualmente, dopo che il file è stato pubblicato sul branch predefinito.
 
 ## Cosa controlla

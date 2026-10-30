@@ -1,5 +1,17 @@
 # Kernel geometrico ForgeCAD: C++17 puro, senza Qt e senza OpenCASCADE.
 # OpenCASCADE serve solo ai test, come riferimento.
+include(CheckCXXSourceCompiles)
+check_cxx_source_compiles("
+    #include <charconv>
+    int main() {
+        double value = 0;
+        const char text[] = \"1.5\";
+        return int(std::from_chars(text, text + 3, value, std::chars_format::general).ec);
+    }
+" FORGEKERNEL_HAS_FLOAT_FROM_CHARS)
+set_source_files_properties(fk_exchange.cpp PROPERTIES COMPILE_DEFINITIONS
+    FORGEKERNEL_HAS_FLOAT_FROM_CHARS=$<BOOL:${FORGEKERNEL_HAS_FLOAT_FROM_CHARS}>)
+
 add_library(forgekernel STATIC
     fk_precision.h
     fk_math.h

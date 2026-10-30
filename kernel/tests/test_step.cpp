@@ -340,7 +340,8 @@ FK_TEST(StepNumbersIgnoreLocale) {
     // italiano) i numeri si scrivono e si leggono ancora con il punto.
     const std::string saved = std::setlocale(LC_NUMERIC, nullptr);
     const bool comma = std::setlocale(LC_NUMERIC, "it_IT.UTF-8") || std::setlocale(LC_NUMERIC, "de_DE.UTF-8");
-    for (double x : {1.5, -2.0, 1e-7, 123456789.125, 0.1, 6.02214076e23, -3.0e-300}) {
+    for (double x : {1.5, -2.0, 1e-7, 123456789.125, 0.1, 6.02214076e23, -3.0e-300,
+                     std::numeric_limits<double>::denorm_min(), std::numeric_limits<double>::max()}) {
         const std::string s = detail::formatReal(x);
         FK_CHECK(s.find(',') == std::string::npos && s.find('.') != std::string::npos);
         double back = 0.0;
@@ -356,6 +357,24 @@ FK_TEST(StepNumbersIgnoreLocale) {
     (void)comma;  // senza locale a virgola il test verifica solo il formato
     FK_CHECK(read.bodies.size() == 1);
     if (!read.bodies.empty()) FK_CHECK_NEAR(massProperties(read.bodies.front().body, 1e-10).volume, 1.25 * 2.5 * 0.75, 1e-12);
+}
+
+FK_TEST(StepNumbersRespectBufferAndRange) {
+    const char bounded[] = {'+', '.', '5', '9'};
+    double value = 42;
+    FK_CHECK(detail::parseReal(bounded, bounded + 3, value) == 3);
+    FK_CHECK(value == 0.5);
+    for (const std::string text : {"", "+", "-", ".", " 1", "1e9999", "1e-9999"}) {
+        value = 42;
+        FK_CHECK(detail::parseReal(text.data(), text.data() + text.size(), value) == 0);
+        FK_CHECK(value == 42);
+    }
+    for (const std::string text : {"1.E+,", "1.5,", "1.5;"}) {
+        value = 42;
+        const std::size_t used = detail::parseReal(text.data(), text.data() + text.size(), value);
+        FK_CHECK(used == (text[1] == '.' && text[2] == 'E' ? 2 : 3));
+        FK_CHECK(value == (text[2] == 'E' ? 1.0 : 1.5));
+    }
 }
 
 #include <BRepGProp.hxx>

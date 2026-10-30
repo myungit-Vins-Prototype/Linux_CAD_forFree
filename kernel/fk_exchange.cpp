@@ -15,6 +15,15 @@
 #include <set>
 #include <stdexcept>
 
+#if !FORGEKERNEL_HAS_FLOAT_FROM_CHARS
+#include <cerrno>
+#include <cstdlib>
+#include <locale.h>
+#ifdef __APPLE__
+#include <xlocale.h>
+#endif
+#endif
+
 #include "fk_body_check.h"
 #include "fk_curve_algo.h"
 #include "fk_curve_ops.h"
@@ -51,10 +60,47 @@ std::string formatReal(double x) {
 std::size_t parseReal(const char *begin, const char *end, double &value) {
     const char *p = begin;
     if (p < end && *p == '+') ++p;
-    // La grammatica di strtod nel locale "C" ("1.", ".5", "2.E-07").
+    // La grammatica decimale dei file ("1.", ".5", "2.E-07").
+#if FORGEKERNEL_HAS_FLOAT_FROM_CHARS
     const std::from_chars_result r = std::from_chars(p, end, value, std::chars_format::general);
     if (r.ec != std::errc() || r.ptr == p) return 0;
     return std::size_t(r.ptr - begin);
+#else
+    // Alcune libc++ Apple non hanno ancora from_chars(double). Isolare il
+    // token prima di strtod_l: il buffer ricevuto non deve essere terminato
+    // da NUL e il locale dell'applicazione non va cambiato, neppure tra thread.
+    const char *numberEnd = p;
+    if (numberEnd < end && *numberEnd == '-') ++numberEnd;
+    const auto digit = [](char c) { return c >= '0' && c <= '9'; };
+    bool hasDigits = false;
+    while (numberEnd < end && digit(*numberEnd)) ++numberEnd, hasDigits = true;
+    if (numberEnd < end && *numberEnd == '.') {
+        ++numberEnd;
+        while (numberEnd < end && digit(*numberEnd)) ++numberEnd, hasDigits = true;
+    }
+    if (!hasDigits) return 0;
+    if (numberEnd < end && (*numberEnd == 'e' || *numberEnd == 'E')) {
+        const char *exponent = numberEnd + 1;
+        if (exponent < end && (*exponent == '+' || *exponent == '-')) ++exponent;
+        const char *digits = exponent;
+        while (exponent < end && digit(*exponent)) ++exponent;
+        if (exponent != digits) numberEnd = exponent;
+    }
+    struct NumericLocale {
+        locale_t handle = newlocale(LC_NUMERIC_MASK, "C", nullptr);
+        ~NumericLocale() { if (handle) freelocale(handle); }
+    };
+    static const NumericLocale numericLocale;
+    if (!numericLocale.handle) throw std::runtime_error("Locale C non disponibile per STEP/IGES");
+    const std::string token(p, numberEnd);
+    char *parsedEnd = nullptr;
+    errno = 0;
+    const double parsed = strtod_l(token.c_str(), &parsedEnd, numericLocale.handle);
+    if (parsedEnd != token.c_str() + token.size() ||
+        (errno == ERANGE && (parsed == 0.0 || !std::isfinite(parsed)))) return 0;
+    value = parsed;
+    return std::size_t(numberEnd - begin);
+#endif
 }
 namespace {
 
