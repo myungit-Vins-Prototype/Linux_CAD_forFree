@@ -745,3 +745,45 @@ FK_TEST(SewThinSolidRetainsOutwardOrientation) {
         FK_CHECK_NEAR(massProperties(result.body).volume,6e-5,1e-12);
     }
 }
+
+// La rimappatura deve conservare il limite della proiezione in entrambi
+// gli ordini: una lieve bombatura puo' essere cucita, quella oltre soglia
+// deve restare un bordo separato.
+FK_TEST(SewMappedSamplesRetainDistanceLimit) {
+    const double tolerance=1e-6;
+    const auto rectangle=[](bool upper,double bulge) {
+        const double y=upper?1.0:-1.0;
+        const std::vector<Vec3> points{{0,0,0},{1,0,0},{1,y,0},{0,y,0}};
+        std::vector<Body::BuildEdge> edges;
+        std::vector<Body::BuildFin> fins;
+        for(int i=0;i<4;++i) {
+            CurvePtr<3> curve;CurvePtr<2> uv;Interval range;
+            if(i==0 && upper) {
+                range={0,1};const std::vector<double> knots{0,0,0,1,1,1};
+                curve=std::make_shared<BSplineCurve<3>>(2,knots,
+                    std::vector<Vec3>{{0,0,0},{.5,2*bulge,0},{1,0,0}});
+                uv=std::make_shared<BSplineCurve<2>>(2,knots,
+                    std::vector<Vec2>{{0,0},{.5,2*bulge},{1,0}});
+            } else {
+                const Vec3 a=points[i],b=points[(i+1)%4];
+                range={0,distance(a,b)};curve=std::make_shared<Line<3>>(a,b-a);
+                uv=std::make_shared<BSplineCurve<2>>(1,std::vector<double>{0,0,range.hi,range.hi},
+                    std::vector<Vec2>{{a.x(),a.y()},{b.x(),b.y()}});
+            }
+            edges.push_back({i,(i+1)%4,curve,range});fins.push_back({i,true,uv});
+        }
+        if(!upper){std::reverse(fins.begin(),fins.end());for(auto &fin:fins)fin.sense=false;}
+        return Body::buildSheet(points,edges,{{std::make_shared<Plane>(Frame3()),true,{fins}}});
+    };
+    for(double factor:{0.0,.9,1.1})for(bool reverse:{false,true}) {
+        const Body lower=rectangle(false,0),upper=rectangle(true,factor*10*tolerance);
+        const std::string beforeA=writeBodyBinary(lower),beforeB=writeBodyBinary(upper);
+        const auto result=sewSheets(reverse?std::vector<const Body*>{&upper,&lower}:std::vector<const Body*>{&lower,&upper},tolerance,false);
+        const bool merged=factor<=1;
+        FK_CHECK(result.shells==(merged?1:2));
+        FK_CHECK(result.freeEdges==(merged?6:8));
+        FK_CHECK(result.body.edges().size()==std::size_t(merged?7:8));
+        FK_CHECK(checkBody(result.body).empty());
+        FK_CHECK(writeBodyBinary(lower)==beforeA && writeBodyBinary(upper)==beforeB);
+    }
+}

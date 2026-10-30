@@ -194,6 +194,10 @@ QString decodeNativeRevisionOperation(const QByteArray &bytes, NativeRevisionSes
 QString drawingSnapshotOfDocument(const DocumentState &document, const QVector<quint64> &features, DrawingModelSnapshot &snapshot) {
     try {
         require(!document.version.documentId.isNull() && !features.isEmpty(), "Selezionare le feature del documento da rappresentare.");
+        // Anche i B-rep letti dallo snapshot devono avere la stessa genealogia
+        // della rigenerazione: registrare gli operandi prima del risultato.
+        for (int i = 0; i < document.extrusions.size(); ++i)
+            registerFeatureGenealogy(document.extrusions[i], i, document.sketches, document.extrusions);
         DrawingModelSnapshot prepared; prepared.version = document.version; QSet<quint64> selected;
         for (quint64 id : features) {
             require(id && !selected.contains(id), "Feature selezionata nulla o duplicata."); selected.insert(id);

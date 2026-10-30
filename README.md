@@ -2,6 +2,8 @@
 
 **Language:** English · [Leggi in italiano](README.it.md)
 
+[![CI Linux / macOS](https://github.com/myungit-Vins-Prototype/Linux_CAD_forFree/actions/workflows/ci.yml/badge.svg)](https://github.com/myungit-Vins-Prototype/Linux_CAD_forFree/actions/workflows/ci.yml)
+
 Build parametric solids and freeform surfaces, edit their modeling history, and create 2D technical drawings. ForgeCAD is a free, open-source CAD application for Linux and macOS with its own B-rep geometry kernel.
 
 **[Build on Linux](#installing-on-linux) · [Build on macOS](#installing-on-macos) · [Create your first model](#your-first-model-and-controls) · [Report a problem](https://github.com/myungit-Vins-Prototype/Linux_CAD_forFree/issues)**
@@ -306,7 +308,7 @@ cmake --build build-macos --target forgecad --parallel 2
 ./build-macos/forgecad
 ```
 
-`brew --prefix` resolves the dependency paths for Homebrew. The macOS build includes native menu integration through AppKit and uses CPU tessellation.
+`brew --prefix` resolves the dependency paths for Homebrew. The macOS build includes native menu integration through AppKit and supports Metal evaluation of B-spline/NURBS batches of at least 8,192 points; trimming and triangulation remain on the CPU. The “Tassellazione con Metal” option enables this path, with automatic CPU fallback for small batches, unavailable GPUs, or ill-conditioned data.
 
 To open an existing document, replace the path below with your file:
 
@@ -322,7 +324,7 @@ On Linux, CMake automatically searches for a CUDA compiler and also checks `/opt
 
 A toolkit compatible with the C++ compiler, an NVIDIA driver, and a supported GPU are required. The option is under **Opzioni → Tassellazione con CUDA** (Options → CUDA tessellation). CUDA accelerates surface evaluation/tessellation without replacing all CPU geometry modeling.
 
-On a machine without a CUDA compiler, the regular build commands automatically produce a CPU build. The current configuration does not expose a dedicated option to disable CUDA at build time: setting `CMAKE_CUDA_COMPILER=NOTFOUND` is not sufficient when `/opt/cuda/bin/nvcc` exists, because CMake selects it again. Disabling CUDA tessellation in the interface changes the runtime path but does not remove the toolkit dependency for compilation.
+On a machine without a CUDA compiler, the regular build commands automatically produce a CPU build. To explicitly build without CUDA even when the toolkit is installed, configure with `-DFORGECAD_ENABLE_CUDA=OFF`. The default is `ON`, which discovers the toolkit automatically; disabling CUDA in the interface only changes the runtime path. On macOS, the Metal backend remains available independently of CUDA.
 
 ## Your first model and controls
 
@@ -367,6 +369,11 @@ The screenshots above show models created in ForgeCAD. Sample CAD documents are 
 If you have a local collection of models, open a document through **File → Apri** (Open) and use **Salva con nome** (Save as) to experiment on a copy. Tests that require real documents can use an external example directory; see [Tests and development](#tests-and-development).
 
 ## Tests and development
+
+[GitHub Actions CI](docs/ci.md) builds the complete application and runs the
+self-contained CTest suites on Ubuntu 26.04 and macOS 15 after every push and pull request.
+Viewport tests requiring external documents and GPU/native rendering checks
+remain separate; the badge reports the combined workflow result.
 
 The `forgecad` target builds the application. To also build and run the configured tests:
 

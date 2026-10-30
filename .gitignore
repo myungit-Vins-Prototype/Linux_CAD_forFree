@@ -21,3 +21,6 @@ forgecad-cuda-build/
 /docs/architecture/index.html
 /docs/architecture/graph.json
 docs/solidcraft-toolbar-study-2026-10-22.md
+
+# Build Linux separata per i confronti solver/mesh/CUDA.
+forgecad-linux-solver/

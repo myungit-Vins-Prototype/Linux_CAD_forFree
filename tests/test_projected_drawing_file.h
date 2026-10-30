@@ -60,7 +60,75 @@ void auxiliaryNativeFileRevisionTests(){
     for(auto *action:window.menuBar()->actions())if(action->text()=="Inserisci")inMenu=action->menu()->actions().contains(insert);
     require(inMenu,"vista ausiliaria raggiungibile dal menu della finestra nativa");
 }
+void portableDrawingReferencesTests(){
+    using namespace ForgeCad;using namespace ForgeCad::Kernel;
+    auto definition=clientModel();ExtrusionObject offset;
+    offset.feature=BodyFeature::Scale;offset.featureId=81002;
+    offset.modelBodyId=definition.extrusions[0].modelBodyId;offset.firstBody=0;offset.scaleFactor=1.2;
+    definition.extrusions.append(offset);CadViewport viewport;viewport.loadDocument(definition);
+    const auto original=viewport.currentDocument();const auto tip=original.extrusions.back().featureId;
+    require(original.extrusions.back().forgeBody&&original.extrusions.back().error.isEmpty(),"catena portabile costruita");
+    DrawingModelSnapshot built;clientOk(drawingSnapshotOfDocument(original,{tip},built));
+    QByteArray cachedBytes,compactBytes;clientOk(encodeDocument(original,cachedBytes,true));clientOk(encodeDocument(original,compactBytes,false));
+    DocumentState cached,compact;clientOk(decodeDocument(cachedBytes,cached));clientOk(decodeDocument(compactBytes,compact));
+    DrawingModelSnapshot direct;clientOk(drawingSnapshotOfDocument(cached,{tip},direct));
+    require(direct.bodies[0].names->faces==built.bodies[0].names->faces&&direct.bodies[0].names->edges==built.bodies[0].names->edges
+        &&direct.bodies[0].names->vertices==built.bodies[0].names->vertices,"snapshot diretto registra tutta la genealogia");
+    DrawingEditorModel savedModel,rebuilt;clientOk(prepareDrawingEditorModel(cached,savedModel));clientOk(prepareDrawingEditorModel(compact,rebuilt));
+    require(savedModel.snapshot.bodies.size()==1&&rebuilt.snapshot.bodies.size()==1,"stesso corpo logico nei due percorsi");
+    require(savedModel.snapshot.bodies[0].names->faces==rebuilt.snapshot.bodies[0].names->faces
+        &&savedModel.snapshot.bodies[0].names->edges==rebuilt.snapshot.bodies[0].names->edges
+        &&savedModel.snapshot.bodies[0].names->vertices==rebuilt.snapshot.bodies[0].names->vertices,"nomi identici con snapshot o rigenerazione");
+    require(rebuilt.legacySnapshotNames.isEmpty(),"nessuna migrazione per indice sui corpi rigenerati");
+    // Fixture legacy indipendente: riproduce la registrazione della sola punta.
+    DocumentState legacy;clientOk(decodeDocument(cachedBytes,legacy));
+    const int last=legacy.extrusions.size()-1;registerFeatureGenealogy(legacy.extrusions[last],last,legacy.sketches,legacy.extrusions);
+    DrawingEditorModel old;old.snapshot.version=original.version;
+    old.snapshot.bodies.push_back({tip,legacy.extrusions[last].forgeBody,elementNamesOf(*legacy.extrusions[last].forgeBody)});
+    DrawingView view;view.kind=DrawingViewKind::ProjectedEdges;view.plane=Frame3(Vec3(0,0,2),Vec3(0,0,1),Vec3(1,0,0));
+    std::vector<DrawingCurve> curves;clientOk(drawingViewCurves(old.snapshot,view,curves));
+    const auto edge=std::find_if(curves.begin(),curves.end(),[](const auto &c){return c.kind==DrawingCurveKind::ProjectedEdge&&arcLength(*c.curve,c.range)>1;});
+    require(edge!=curves.end(),"bordo legacy misurabile");
+    const auto first=drawingAttachment(view,*edge,old.snapshot,DrawingPointRole::Start),end=drawingAttachment(view,*edge,old.snapshot,DrawingPointRole::End);
+    auto dimension=drawingDimensionBetween(view,old.snapshot,curves,{first,end},DrawingMeasure::Distance,{20,20});
+    DrawingFile file;file.modelPath="parte.prt";file.sheet.drawing.model=original.version;
+    file.sheet.drawing.views.push_back(view);file.sheet.views.append({view.id,"Portabile",{60,90},{tip}});
+    file.sheet.drawing.dimensions.push_back(dimension);file.sheet.dimensions.append({dimension.id,{80,110}});
+    DrawingAxis axis;axis.viewId=view.id;axis.references={first,end};file.sheet.axes.append(axis);
+    DrawingAnnotation note;note.viewId=view.id;note.text="Riferimento portabile";note.position={100,30};note.reference=first;file.sheet.annotations.append(note);
+    clientOk(drawingModelDefinitionHash(original,file.modelDefinitionHash));
+    // Anche un foglio non attivo deve essere migrato e salvato.
+    DrawingSheet second;clientOk(cloneDrawingSheet(file.sheet,second));file.otherSheets.append(second);
+    file.sheetIds={QUuid::createUuid(),QUuid::createUuid()};
+    QTemporaryDir directory;const auto modelPath=directory.filePath("parte.prt"),drawingPath=directory.filePath("parte.drw");
+    clientWrite(modelPath,cachedBytes);clientOk(saveDrawingFile(drawingPath,file));
+    const auto before=file.sheet.drawing.dimensions[0].references;
+    require(upgradeDrawingFileReferences(file,rebuilt)==0,"legacy senza snapshot non riassegnato");
+    DrawingFile foreign=file;foreign.sheet.drawing.model.documentId=QUuid::createUuid();
+    require(upgradeDrawingFileReferences(foreign,savedModel)==0,"nessuna migrazione fra documenti diversi");
+    {
+        DrawingWindow window;clientOk(window.openPath(drawingPath));
+        require(window.isModified(),"migrazione legacy richiede salvataggio della tavola");
+        require(window.editor()->dimensionResult(dimension.id).status==DrawingDimensionStatus::Ready,"quota legacy migrata all'apertura");
+        require(window.document().sheet.drawing.dimensions[0].references[0].curve.edgeName!=before[0].curve.edgeName,"riferimento sostituito da nome genealogico");
+        clientOk(window.savePath(drawingPath));
+    }
+    // Il modello viene spostato insieme alla tavola e perde deliberatamente la cache.
+    clientWrite(modelPath,compactBytes);const auto moved=directory.filePath("trasferiti");require(QDir().mkpath(moved),"cartella destinazione portabile");
+    require(QFile::rename(modelPath,moved+"/parte.prt")&&QFile::rename(drawingPath,moved+"/parte.drw"),"spostamento coppia CAD");
+    DrawingWindow portable;clientOk(portable.openPath(moved+"/parte.drw"));
+    const auto result=portable.editor()->dimensionResult(dimension.id);
+    require(result.status==DrawingDimensionStatus::Ready&&std::abs(result.value-arcLength(*edge->curve,edge->range))<1e-7,"quota conservata dopo trasferimento e rigenerazione");
+    require(portable.editor()->annotationResult(note.id).status==DrawingDimensionStatus::Ready,"annotazione conservata dopo rigenerazione");
+    DrawingFile reopened;clientOk(loadDrawingFile(moved+"/parte.drw",reopened));
+    for(int i=0;i<drawingSheetCount(reopened);++i){DrawingSheetEditor editor(drawingSheetAt(reopened,i),rebuilt);
+        require(editor.dimensionResult(drawingSheetAt(reopened,i).drawing.dimensions.front().id).status==DrawingDimensionStatus::Ready,"riferimenti portabili anche sul foglio non attivo");}
+    auto broken=reopened;broken.sheet.drawing.dimensions[0].references[0].curve.edgeName="bordo-eliminato";
+    require(upgradeDrawingFileReferences(broken,savedModel)==0,"un riferimento realmente assente non viene indovinato");
+}
+
 void projectedDrawingFileTests(){
+    portableDrawingReferencesTests();
     brokenNativeFileRevisionTests();
     auxiliaryNativeFileRevisionTests();
     using namespace ForgeCad;using namespace ForgeCad::Kernel;

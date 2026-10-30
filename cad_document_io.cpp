@@ -10,6 +10,7 @@
 #include <vector>
 
 #include <QBuffer>
+#include <QElapsedTimer>
 #include <QSet>
 #include <QCryptographicHash>
 #include <QDataStream>
@@ -1033,8 +1034,12 @@ QByteArray bodyCache(const QByteArray &payload, const DocumentState &state, quin
 void applyBodyCache(const QByteArray &compressed, const QByteArray &payload, DocumentState &state, bool previewCache,
                     const DocumentReadLimits &limits, quint8 compression) {
     (void)previewCache;
+    const bool profile=qEnvironmentVariableIsSet("FORGECAD_PROFILE_READ");
+    QElapsedTimer timer;if(profile)timer.start();
+    const auto stage=[&](const char *name){if(profile)qInfo("LETTURA cache %s: %lld ms",name,static_cast<long long>(timer.restart()));};
     QByteArray cache;
     if (!DocumentReadDetail::uncompress(compressed, limits.cacheBytes, cache, compression) || cache.isEmpty()) return;
+    stage("decompressione");
     ReadStream in(cache);
     in.setVersion(QDataStream::Qt_6_0);
     QByteArray sourceHash, payloadHash;
@@ -1086,6 +1091,7 @@ void applyBodyCache(const QByteArray &compressed, const QByteArray &payload, Doc
         records.push_back(std::move(record));
     }
     if (!in.atEnd()) return;
+    stage("record e mesh");
 
     // I body sono indipendenti nello snapshot: lettura binaria e indici per il
     // picking vengono ricostruiti su tutti i core. Eventuali record non piu'
@@ -1110,6 +1116,7 @@ void applyBodyCache(const QByteArray &compressed, const QByteArray &payload, Doc
     });
     for (quint32 i = 0; i < count; ++i)
         if (records[i].hasBody && !bodies[i]) return;  // snapshot atomico: niente dipendenze miste
+    stage("B-rep e indici");
     // Si validano anche tutte le dichiarazioni prima di applicare lo snapshot
     // o di registrarle. Una cache incoerente ricade nella rigenerazione dalla
     // definizione, evitando B-rep salvati con nomi di provenienza sbagliati.
@@ -1118,6 +1125,7 @@ void applyBodyCache(const QByteArray &compressed, const QByteArray &payload, Doc
     std::vector<DeclaredHistorySnapshot> histories(count);
     for (quint32 i = 0; i < count; ++i)
         if (!readDeclaredHistory(records[i].declared, int(i), snapshotBodies, histories[i])) return;
+    stage("storia");
     for (quint32 i = 0; i < count; ++i) {
         ExtrusionObject &body = state.extrusions[int(i)];
         if (!bodies[i]) continue;
@@ -1398,14 +1406,16 @@ QString decodeDocument(const QByteArray &data, DocumentState &state, const Docum
         header >> version >> compression;
         if (version > kVersion) return QStringLiteral("Il file e' stato scritto da una versione piu' recente di ForgeCAD (formato %1).").arg(version);
         if (compression != kZlib && (compression != kZstd || version < 56)) return QStringLiteral("Compressione sconosciuta nel file.");
-        QByteArray compressed = data.mid(7), cache;
+        // Viste locali sul buffer del chiamante: nessuna copia dei grandi
+        // blocchi compressi. Non escono da decodeDocument e non vengono mutati.
+        QByteArray compressed, cache;
         if (version >= 14) {
             quint32 size = 0;
             header >> size;
             if (header.status() != QDataStream::Ok || qsizetype(size) > data.size() - 11) return QStringLiteral("Il file e' danneggiato (lunghezza dei dati).");
-            compressed = data.mid(11, qsizetype(size));
-            cache = data.mid(11 + qsizetype(size));
-        }
+            compressed = QByteArray::fromRawData(data.constData()+11,qsizetype(size));
+            cache = QByteArray::fromRawData(data.constData()+11+qsizetype(size),data.size()-11-qsizetype(size));
+        } else compressed = QByteArray::fromRawData(data.constData()+7,data.size()-7);
         QByteArray payload;
         if (!DocumentReadDetail::uncompress(compressed, limits.definitionBytes, payload, compression) || payload.isEmpty())
             return QStringLiteral("Dati compressi del documento non validi o definizione oltre il limite di lettura (%1 byte).").arg(limits.definitionBytes);

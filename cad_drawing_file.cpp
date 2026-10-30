@@ -1,5 +1,7 @@
 #include "cad_drawing_file.h"
 #include "cad_feature_build.h"
+#include "cad_element_names.h"
+#include "fk_cancel.h"
 #include "cad_feature_dependencies.h"
 #include "cad_model_history.h"
 #include "cad_native_revisions.h"
@@ -140,8 +142,11 @@ QString drawingModelDefinitionMatches(const DocumentState &document,const QByteA
 QString prepareDrawingEditorModel(DocumentState &document,DrawingEditorModel &model){
     try{
         normalizeModelHistory(document);
+        QSet<quint64> cached;
         for(int index=0;index<document.extrusions.size();++index){auto &feature=document.extrusions[index];
-            if(!feature.forgeBody)buildGeometry(feature,index,document.sketches,document.extrusions);}
+            if(feature.cachedGeometry&&feature.forgeBody)cached.insert(feature.featureId);
+            if(!feature.forgeBody)buildGeometry(feature,index,document.sketches,document.extrusions);
+            else registerFeatureGenealogy(feature,index,document.sketches,document.extrusions);}
         normalizeModelHistory(document);
         QHash<quint64,quint64> parents;
         for(int index=0;index<document.extrusions.size();++index){const auto &feature=document.extrusions[index];
@@ -164,8 +169,106 @@ QString prepareDrawingEditorModel(DocumentState &document,DrawingEditorModel &mo
             source.color=color.rgba();break;
         }
         for(const auto &feature:document.extrusions){const auto tip=tips.value(root(feature.modelBodyId),0);if(tip)prepared.replacements[feature.featureId]=tip;}
+        for(const auto &source:prepared.snapshot.bodies)if(cached.contains(source.featureId))
+            prepared.legacySnapshotNames.insert(source.featureId,legacyDrawingElementNames(*source.body));
         model=std::move(prepared);return {};
     }catch(const std::exception &error){return QString::fromUtf8(error.what());}
+}
+int upgradeDrawingFileReferences(DrawingFile &drawing,const DrawingEditorModel &model){
+    if(!sameVersion(drawing.sheet.drawing.model,model.snapshot.version)||model.legacySnapshotNames.isEmpty())return 0;
+    auto legacyModel=model.snapshot;
+    for(auto &source:legacyModel.bodies){const auto names=model.legacySnapshotNames.value(source.featureId);
+        if(names&&names->body==source.body.get())source.names=names;}
+    const auto rename=[&](quint64 feature,Kernel::EntityKind kind,QString &name){
+        if(name.isEmpty())return false;
+        const auto legacy=model.legacySnapshotNames.value(feature);
+        const auto source=std::find_if(model.snapshot.bodies.begin(),model.snapshot.bodies.end(),
+            [&](const auto &body){return body.featureId==feature;});
+        if(!legacy||source==model.snapshot.bodies.end()||legacy->body!=source->body.get())return false;
+        if(!source->names->find(kind,name.toStdString()).empty())return false;
+        const auto found=legacy->find(kind,name.toStdString());
+        if(found.empty())return false;
+        const auto replacement=source->names->primary(kind,found.front());
+        if(replacement.empty()||!std::all_of(found.begin(),found.end(),[&](int index){
+            return source->names->primary(kind,index)==replacement;}))return false;
+        name=QString::fromStdString(replacement);return true;
+    };
+    int changed=0;
+    for(int i=0;i<drawingSheetCount(drawing);++i){auto &sheet=drawingSheetAt(drawing,i);
+        std::map<QUuid,std::vector<DrawingCurve>> curves;
+        const auto attachment=[&](const QUuid &viewId,DrawingAttachment &ref){
+            if(!ref.axisId.isNull()||drawingDatum(ref.role))return;
+            auto candidate=ref;const auto feature=ref.curve.featureId;bool renamed=false;
+            renamed|=rename(feature,Kernel::EntityKind::Face,candidate.curve.faceName);
+            renamed|=rename(feature,Kernel::EntityKind::Edge,candidate.curve.edgeName);
+            renamed|=rename(feature,Kernel::EntityKind::Face,candidate.supportFace);
+            renamed|=rename(feature,Kernel::EntityKind::Edge,candidate.boundaryName);
+            renamed|=rename(feature,Kernel::EntityKind::Vertex,candidate.vertexName);
+            if(!renamed)return;
+            const auto source=std::find_if(model.snapshot.bodies.begin(),model.snapshot.bodies.end(),
+                [&](const auto &body){return body.featureId==feature;});
+            // Il lato UV era definito su una faccia legacy univoca. Se il nome
+            // genealogico e' condiviso, decide l'ancoraggio geometrico verificato.
+            if(!candidate.supportFace.isEmpty()&&source->names->find(Kernel::EntityKind::Face,candidate.supportFace.toStdString()).size()!=1){
+                candidate.supportFace.clear();candidate.curveSide=0;candidate.anchorSide=0;
+            }
+            const auto view=std::find_if(sheet.drawing.views.begin(),sheet.drawing.views.end(),[&](const auto &v){return v.id==viewId;});
+            if(view==sheet.drawing.views.end())return;
+            auto found=curves.find(viewId);
+            if(found==curves.end()){
+                std::vector<DrawingCurve> prepared;
+                if(!drawingViewCurves(model.snapshot,*view,prepared).isEmpty())return;
+                found=curves.emplace(viewId,std::move(prepared)).first;
+            }
+            const auto before=resolveDrawingAttachment(*view,legacyModel,found->second,ref);
+            const auto same=[&](const DrawingResolvedAttachment &after){
+                return before.status==DrawingDimensionStatus::Ready&&after.status==DrawingDimensionStatus::Ready
+                    &&before.curve==after.curve&&before.isPoint==after.isPoint&&before.isLine==after.isLine
+                    &&Kernel::distance(before.point,after.point)<=view->tolerance
+                    &&Kernel::distance(before.first,after.first)<=view->tolerance
+                    &&Kernel::distance(before.second,after.second)<=view->tolerance;
+            };
+            auto after=resolveDrawingAttachment(*view,model.snapshot,found->second,candidate);
+            // Un bordo rinominato puo' identificare entrambi gli estremi. Il
+            // creatore di agganci aggiunge anche il lato UV del bordo: usarlo
+            // solo se ritrova l'esatto punto legacy, senza scegliere il piu' vicino.
+            if(!same(after)&&before.status==DrawingDimensionStatus::Ready&&before.curve
+                &&(ref.role==DrawingPointRole::Start||ref.role==DrawingPointRole::End)){
+                for(auto role:{DrawingPointRole::Start,DrawingPointRole::End}){
+                    try{
+                        auto anchored=drawingAttachment(*view,*before.curve,model.snapshot,role);
+                        auto resolved=resolveDrawingAttachment(*view,model.snapshot,found->second,anchored);
+                        if(same(resolved)){candidate=std::move(anchored);after=resolved;break;}
+                    }catch(const Kernel::OperationCancelled &){throw;}
+                    catch(const std::bad_alloc &){throw;}
+                    catch(...){ /* Aggancio ambiguo: resta il riferimento originale. */ }
+                }
+            }
+            // Last resort for unchanged geometry: constrain a shared topological
+            // endpoint by its exact saved position, never by proximity ranking.
+            if(!same(after)&&before.status==DrawingDimensionStatus::Ready&&before.curve
+                &&ref.curve.kind==DrawingCurveKind::Section&&!view->step&&!view->bend
+                &&(ref.role==DrawingPointRole::Start||ref.role==DrawingPointRole::End)){
+                candidate.endpointWitness=view->plane.toGlobal(Kernel::Vec3(before.point.x(),before.point.y(),0));
+                after=resolveDrawingAttachment(*view,model.snapshot,found->second,candidate);
+            }
+            if(!same(after))return;
+            ref=std::move(candidate);++changed;
+        };
+        for(auto &dimension:sheet.drawing.dimensions){
+            if(dimension.references.empty()){
+                DrawingAttachment ref;ref.curve=dimension.section;ref.role=DrawingPointRole::Curve;
+                attachment(dimension.viewId,ref);dimension.section=ref.curve;
+            }else{
+                for(auto &ref:dimension.references)attachment(dimension.viewId,ref);
+                const auto primary=std::find_if(dimension.references.begin(),dimension.references.end(),[](const auto &ref){return ref.axisId.isNull()&&!drawingDatum(ref.role);});
+                if(primary!=dimension.references.end())dimension.section=primary->curve;
+            }
+        }
+        for(auto &axis:sheet.axes)for(auto &ref:axis.references)attachment(axis.viewId,ref);
+        for(auto &note:sheet.annotations)if(note.reference)attachment(note.viewId,*note.reference);
+    }
+    return changed;
 }
 QString loadDrawingModel(const QString &drawingPath,const DrawingFile &drawing,DocumentState &model,QString &resolvedPath,bool &definitionChanged,const QString &overridePath){
     try{

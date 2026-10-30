@@ -141,7 +141,7 @@ QString DrawingWindow::updateSheetsModel(DrawingFile prepared,DrawingEditorModel
     try{
         PreparedDrawingSheet active;
         for(int i=0;i<drawingSheetCount(drawing_);++i){
-            auto sheet=retargetDrawingSheetModel(drawingSheetAt(drawing_,i),model);
+            auto sheet=retargetDrawingSheetModel(drawingSheetAt(prepared,i),model);
             PreparedDrawingSheet result;
             if(sheet.drawing.views.empty())result=prepareDrawingSheet(std::move(sheet),model,[](int){});
             else{

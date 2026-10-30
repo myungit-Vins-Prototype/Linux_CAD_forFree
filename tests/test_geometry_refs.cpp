@@ -106,6 +106,39 @@ int main() {
                 "Pierce verso feature successiva impedisce il riordino");
         require(storySketchDependencyError(sketches, features, {{false,0},{false,1},{true,0}}).isEmpty(),
                 "supporto e Pierce precedenti consentono il riordino");
+        // Risultato in coda a un consumatore: rimappare tutte le famiglie,
+        // senza separare lo schizzo dal gruppo che ne genera l'appoggio.
+        ExtrusionObject root; root.feature = BodyFeature::Pattern; root.patternComponent = 0;
+        root.firstBody = 0; root.featureId = 71; root.modelBodyId = 1;
+        ExtrusionObject part; part.feature = BodyFeature::Pattern; part.patternComponent = 2;
+        part.firstBody = 1; part.featureId = 73; part.modelBodyId = 2;
+        auto consumer = feature; consumer.featureId = 72; consumer.modelBodyId = 2;
+        consumer.firstBody = 3; consumer.secondBody = 3; consumer.booleanTools = {3}; consumer.mergeBodies = {3};
+        visitGeometryRefs(consumer, [](GeometryRef &value, Family, int) { value.index = 3; value.featureId = 73; });
+        features = {source, root, consumer, part};
+        sketch.support = std::make_shared<GeometryRef>(ref(3)); sketch.support->featureId = 73;
+        sketch.storyId = 1; sketch.beforeFeatureId = 73;
+        sketches = {sketch};
+        const auto snapshot = sketches;
+        const auto mapping = normalizePatternResultOrder(sketches, features);
+        require(mapping == QVector<int>({0,1,3,2}) && features[2].featureId == 73 && features[2].firstBody == 1,
+                "i risultati precedono i consumatori con identita' immutate");
+        require(features[3].firstBody == 2 && features[3].secondBody == 2
+                && features[3].booleanTools == QVector<int>{2} && features[3].mergeBodies == QVector<int>{2},
+                "rimappatura di tutti gli operandi diretti");
+        visitGeometryRefs(std::as_const(features[3]), [](const GeometryRef &value, Family, int) {
+            require(value.index == 2 && value.featureId == 73, "tutte le famiglie seguono lo stesso risultato persistente");
+        });
+        require(sketches[0].support->index == 2 && snapshot[0].support->index == 3,
+                "riordino non modifica l'appoggio dello snapshot Undo");
+        const auto story = modelStory(sketches, features);
+        require(story.size() == 4 && !story[1].sketch && story[1].index == 1 && story[2].sketch,
+                "lo schizzo ancorato al risultato viene dopo l'intera ripetizione");
+        require(storySketchDependencyError(sketches, features, story).isEmpty(),
+                "appoggio sul secondo corpo valido dopo il raggruppamento");
+        require(storyFeatureLimit(features, story, 2) == 3 && storyFeatureLimit(features, story, 3) == 3,
+                "cursore e contesto schizzo includono entrambi i risultati nello stesso passo");
+        require(normalizePatternResultOrder(sketches, features).isEmpty(), "normalizzazione idempotente");
         std::cout << "PASS visitatori riferimenti, famiglie, migrazione, supporto/Pierce e Undo\n";
     } catch (const std::exception &error) {
         std::cerr << error.what() << '\n';

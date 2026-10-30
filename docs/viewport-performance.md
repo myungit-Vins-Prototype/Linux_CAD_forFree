@@ -169,3 +169,156 @@ La cache CPU/VBO elimina a fine frame le risorse non usate, senza attendere
 altri ridisegni della scena statica. Dopo grandi riduzioni delle mesh, il
 viewport rilascia la cache e richiede la restituzione delle pagine libere
 glibc; Undo e dati vivi restano invariati. [Backport main e verifiche](mesh-memory-main-2026-10-26.md).
+## Esperimento solver, mesh e GPU — branch solver-mesh-gpu
+
+Il branch sperimentale conserva la geometria B-rep in double. Il solver usa
+derivate analitiche per coincidenza, orizzontalità/verticalità, concentricità,
+punto medio e target; gli altri residui conservano le differenze centrali.
+Jacobiano e analisi dei gradi di libertà sfruttano le componenti indipendenti;
+ogni componente del solve usa Cholesky locale con lo stesso parametro di
+regolarizzazione globale del percorso precedente. Una componente grande e
+connessa mantiene ancora una fattorizzazione densa: non è un solver sparso
+generale con fattorizzazione simbolica riutilizzata.
+
+La rigenerazione prepara i B-rep degli stadi intermedi senza tassellarli.
+Scena, rollback, contesto schizzo e picker materializzano le mesh richieste;
+le istantanee Undo conservano le proprie cache. Il cambio qualità riguarda
+gli stadi visibili, gli altri vengono aggiornati quando richiesti.
+Nei grandi gruppi di corpi indipendenti, i worker costruiscono anche la mesh
+quando il corpo è già richiesto dalla scena, senza aspettare che termini la
+geometria di tutti gli altri. Gli stadi nascosti restano differiti; le ripetizioni
+passano dalla coda delle mesh per preparare prima le basi delle istanze.
+Le richieste multiple vengono deduplicate e distribuite sui core disponibili;
+con pochi corpi rimane il parallelismo interno sulle facce. Il calcolo usa copie
+separate e pubblica le cache sul thread GUI. Le mesh nuove usano una coda
+continua; quando si sostituiscono cache esistenti, gruppi di al massimo quattro
+risultati per core limitano la sovrapposizione tra vecchi e nuovi buffer. Questo
+non impone un tetto in byte: la memoria delle mesh finali dipende dal modello. Le basi delle
+ripetizioni vengono preparate anche se nascoste e pubblicate prima delle istanze.
+Un paint durante il worker conserva la scena precedente; cambio qualità o
+geometria rendono inutilizzabili i risultati superati.
+
+Anche l'editor di una feature nascosta richiede una mesh: il builder delle
+anteprime riusa il B-rep, ma prepara sul worker la visualizzazione se manca
+o ha una qualità diversa. Una cache valida continua a essere condivisa.
+Regressioni per estrusione/rivoluzione con cache assente, obsoleta e valida
+sono incluse in `forgecad_preview_performance_tests`. Corretto il caso reale
+«Rivoluzione 1» del flacone che mostrava soltanto le U/V: prima zero vertici,
+dopo 4.086 vertici alla qualità 1, con lo stesso B-rep e 28 curve U/V.
+
+Conferma Linux del 26 ottobre 2026: integrato il fix Mac `07738e9` e
+ricompilati applicazione, runner e test export in `forgecad-linux-solver`.
+Superati 25 CTest mirati, compresi export CPU, CUDA generico e specializzato;
+QA nativa XCB/OpenGL dell'anteprima superata e superficie verificata
+nell'immagine del flacone locale. L'originale Linux è rimasto invariato
+(SHA256 `eb0dde7213f8ffdcfbf4a8146bcbb8c45f327877466f461784c8500e688ffc15`)
+ed è diverso dal flacone Mac descritto sopra: i 4.086 vertici si riferiscono
+alla sola prova Mac. Log e immagini locali in
+`forgecad-linux-solver/benchmarks/linux-preview-fix-2026-10-26`.
+
+La conversione della mesh in float scarta ora faccette non finite, ripetute
+o collineari nella scena e nelle anteprime locali, mantenendo coerenti
+vertici/normali/FaceId e le etichette delle facce rappresentabili. Nessuna
+soglia elimina facce sottili valide; il picking esatto e il B-rep restano
+invariati. Su mouse2 rimossi i 574 degeneri già individuati, senza cambiare
+i triangoli validi: [verifica CPU/CUDA](viewport-degenerate-mesh-2026-10-26.md).
+
+Il ciclo bassa→massima→bassa sul grande assieme ha evidenziato pagine libere
+trattenute da glibc e vecchie mesh CPU/VBO conservate fino ad altri frame.
+La cache elimina ora le risorse non usate a fine frame; dopo una riduzione
+di oltre64MiB di vertici/normali il viewport rilascia la cache e richiede il
+ritorno delle pagine libere glibc. Nessuna modifica a Undo o oggetti vivi.
+[Diagnosi RAM e limiti della verifica](mesh-memory-cycle-2026-10-26.md):
+ciclo completo CPU 7,692→0,547–0,562GiB al ritorno basso; confronto nativo
+su64feature, prova grafica completa interrotta per la riserva di memoria.
+
+Il nuovo filtro GPU delle booleane usa Metal su macOS e CUDA su Linux/NVIDIA.
+Sul Mac il [pool Metal verificato](metal-box-pool-2026-10-26.md) riusa i buffer
+e ammette fino a quattro richieste indipendenti, con limiti di 128 MiB attivi
+e 64 MiB inattivi. Il mutex non copre l'attesa GPU; oltre i limiti resta il BVH
+CPU. Questi budget riguardano le lunghezze dei buffer, non la memoria totale
+del processo, e non modificano il backend CUDA.
+I box double già espansi della tolleranza vengono convertiti in intervalli
+float arrotondati verso l'esterno; il filtro non costruisce geometria e può
+solo conservare candidati in eccesso. Tutti i candidati passano dal confronto
+double prima delle intersezioni esatte. Errori, dati fuori campo o oltre il
+budget di16MiB della maschera riportano al BVH CPU. Il filtro sperimentale
+lavora su prodotti fra65.536e16.777.216coppie; il costo è quadratico, quindi
+non sostituisce in generale il BVH e non è abilitato per default.
+
+Avvio della build del branch, senza cambiare le preferenze salvate:
+
+```sh
+python3 tools/run_solver_mesh_gpu.py
+python3 tools/run_solver_mesh_gpu.py --baseline
+python3 tools/run_solver_mesh_gpu.py --gpu --profile
+```
+
+È possibile aggiungere il percorso di un documento. Per confrontare calcoli
+effettivi, modificare uno schizzo o usare **Rigenera tutto**: le cache già
+salvate possono evitare il ricalcolo alla sola apertura. L'opzione baseline
+seleziona `FORGECAD_SOLVER_DENSE=1`, `FORGECAD_EAGER_MESH=1` e disabilita il
+filtro GPU. `--gpu` abilita `FORGECAD_GPU_BROAD_PHASE=1`; la tassellazione CUDA
+già esistente conserva il proprio interruttore separato.
+
+Verifiche riproducibili: `forgecad_view_tests --solver-partition` confronta
+soluzioni e DOF con il percorso denso; `--lazy-mesh` verifica volume analitico,
+rollback, qualità e snapshot. `forgecad_gpu_broad_phase_tests --cpu-fallback`
+controlla errori e cancellazione; `--require-gpu` richiede l'esecuzione reale.
+Senza GPU il test CTest usa lo stato SKIP77, non un falso PASS.
+Il modulo CUDA richiede una verifica separata su Linux/NVIDIA: la compilazione
+del solo backend Metal non la sostituisce. Questo primo percorso non migra
+intersezioni, raccordi, misure o topologia alla GPU.
+
+Misure finali isolate del 25 ottobre, macOS arm64 Release: 100 vincoli orizzontali
+indipendenti 2,75342 → 0,215334 ms (12,79×); 400 vincoli 205,498 → 0,849625 ms;
+800 vincoli 1716,02 → 1,66217 ms. I valori sono **mediane di 5 chiamate alternate**
+per versione nello stesso processo, con copie ripristinate dell'input.
+Storia sintetica di 20 stadi di scala della sfera: 49,7512 → 2,96721 ms (16,77×),
+mediana di 3 caricamenti alternati, 20 mesh contro 1. Non sono benchmark generali.
+Sul controllo booleano dei prismi a 256 lati, una singola validazione Metal finale
+misura 68,1387 ms CPU e 69,4297 ms GPU: nessun vantaggio dimostrato del filtro,
+che resta opt-in. Non sommare questi fattori e non estenderli a ogni documento.
+
+Confronto reale del25ottobre su `2550_ASSIEME-ST5674-COMPLETO.prt`,
+AppleM1/16GiB, qualità standard,3processi nuovi per variante in ordine ruotato:
+lettura+ricostruzione 42.265s con mesh differite seriali contro
+29.247s con la nuova pipeline/coda parallela (30.80% di tempo
+in meno, 1.45×). Riferimento eager nello stesso confronto:
+29.923s; gli intervalli si sovrappongono, quindi il risultato pratico è il
+recupero della regressione, senza un vantaggio netto dimostrato sul riferimento.
+Stessi1196B-rep fra stadi e11.746.351triangoli visibili; stessi4record importati
+vuoti in tutte le modalità. PiccoRSS nuovo 1775.2MiB,
+seriale 1822.0MiB. La cache originale supera1GiB
+e viene ignorata: è una misura di apertura con ricostruzione, non con cache
+utilizzabile, né di framerate/GPU. Protocollo e campioni sono versionati in
+[mesh-parallel-2026-10-25.json](benchmarks/mesh-parallel-2026-10-25.json);
+nessuna estrapolazione ad altri modelli o aLinux/NVIDIA.
+
+Per ripetere il benchmark solver usare `forgecad_view_tests --solver-partition --benchmark`
+in ambiente Qt offscreen; senza `--benchmark` esegue soltanto le
+regressioni. Protocollo, dati e limiti sono conservati in
+[solver-mesh-gpu-2026-10-25.json](benchmarks/solver-mesh-gpu-2026-10-25.json).
+
+### Verifica Linux/NVIDIA del 25 ottobre 2026
+
+Build Release e 16 regressioni superate su Xeon W-10885M/Quadro RTX 3000.
+Sul documento Linux da 1204 feature: mediana ricostruzione 24,523 → 23,744 s;
+apertura con cache 7,081 → 5,932 s. Tre campioni per modalità, intervalli
+sovrapposti; risultati geometrici e mesh visibili identici. Nessuna coppia GPU
+esercitata dal documento; CUDA verificato separatamente nei test dedicati.
+Protocollo, limiti e riproduzione nel [rapporto Linux](linux-solver-mesh-2026-10-25.md).
+
+## Lettura cache e prosecuzione CUDA (26 ottobre 2026)
+
+Il [confronto del lettore a blocchi](cache-read-optimization-2026-10-25.md) misura separatamente l'apertura con cache. Non attribuire questi risultati al solver o alla GPU. Il pool CUDA limita la cache inattiva a64MiB complessivi host/device. Il [budget dei buffer di lavoro attivi](cuda-active-budget-2026-10-26.md) aggiunge128MiB e al massimo4richieste, con prenotazione prima delle allocazioni e ritorno temporaneo alla CPU sotto pressione. Superfici caricate, contesto/driver e altri backend restano esclusi. `forgecad_cuda_trim_idle()` libera gli slot disponibili senza toccare quelli in uso; worker attivi possono successivamente ripopolare la cache.
+
+Avanzamento, limiti e passi ancora aperti: [roadmap verificata su mouse2 e CUDA](solver-cuda-roadmap-2026-10-26.md). Specializzazioni CUDA opt-in con `FORGECAD_CUDA_SPECIALIZED=1`; il generico rimane predefinito.
+
+[Export B-spline e trascinamenti ammissibili](solver-cuda-export-drag-2026-10-26.md): regressioni permanenti CPU/CUDA degli scrittori STL/OBJ, correzioni sulla geometria realmente serializzata e confronto isolato su7schizzi di mouse2.
+
+[Confronto numerico reale mouse2](mouse2-mesh-cpu-cuda-2026-10-26.md): vertici CPU/CUDA identici, firma diversa limitata a 23 normali; 574 triangoli degeneri comuni del viewport individuati, ancora da filtrare. Nessun benchmark di velocità in questa verifica.
+
+## Anteprime storiche e contesto OpenGL (26 ottobre 2026)
+
+La preparazione delle mesh differite avviene prima delle passate GL: l'event loop responsivo può rendere corrente il contesto del compositore Qt. Ripristino di contesto/FBO e viewport prima del rendering e protezione del paint rientrante evitano di conservare risorse grafiche create nel contesto sbagliato. [Correzione e regressione mouse2](history-preview-mouse2-2026-10-26.md): prima anteprima e tre riaperture identiche al riferimento con cache ricreata, anche dopo rigenerazione completa; 32 CTest e QA nativa PASS.

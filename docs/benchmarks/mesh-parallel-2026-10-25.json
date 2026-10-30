@@ -1,0 +1,423 @@
+{
+  "date": "2026-10-25",
+  "branch": "solver-mesh-gpu",
+  "base_commit": "f571152",
+  "status": "Implementato e compilato su macOS; report e sorgenti pubblicati insieme sul branch solver-mesh-gpu. Linux/NVIDIA non compilato o misurato su questo host.",
+  "input": {
+    "name": "2550_ASSIEME-ST5674-COMPLETO.prt",
+    "bytes": 503577338,
+    "sha256": "beafeeebda808ab58760313564a93c29cfc1fe123efe4f750fcfd4117164f76c",
+    "copy_unchanged_sha256_verified": true,
+    "original_unchanged_sha256_verified": true,
+    "features": 1200,
+    "sketches": 0
+  },
+  "hardware": {
+    "cpu": "Apple M1",
+    "ram_gib": 16,
+    "os": "macOS-27.0.1-arm64-arm-64bit-Mach-O"
+  },
+  "protocol": {
+    "quality": 1,
+    "quality_label": "standard identica per tutti",
+    "repetitions_per_variant": 3,
+    "execution": "9processi nuovi sequenziali. Ordine ruotato reference/serial/parallel ad ogni giro. caffeinate-i per la durata del batch. Nessuna build, test, analisi architetturale o altro benchmark dell’agente in parallelo. Frequenza, temperatura, alimentazione e carico esterno non controllati.",
+    "timing": "read_plus_load_ms =lettura/decodifica+loadDocument(B-rep e mesh necessarie). InizializzazioneQt/acceleratore e verifiche hash escluse. I tempi lettura+load sono controllati rispetto al cronometroPython del processo.",
+    "memory": "load_peak_rss_mib catturato dopo loadDocument prima delle verifiche, distinto dal picco totale del processo.",
+    "variants": {
+      "reference": "Binario conservato del commitbase, FORGECAD_SOLVER_DENSE=1 eFORGECAD_EAGER_MESH=1; GPUoff. Non una build separata main.",
+      "serial": "Stesso binario conservato, solver del branch e mesh differite preparate una alla volta; GPUoff.",
+      "parallel": "Nuovo binario, medesimi oggettiRelease della nuova app. Nei livelli grandi i worker preparano anche la mesh dei corpi già richiesti; stadi nascosti differiti, ripetizioni nella coda con le basi. Ulteriori richieste: coda continua per nuove mesh, gruppi4×core per sostituire vecchi buffer, pubblicazione GUI."
+    },
+    "cache": "Cache originale dichiara1.907.961.504byte oltre il limite1GiB preesistente. Ignorata in tutti i modi; apertura con ricostruzione dalle definizioni importate e4raccordi. Nessuna nuova importazioneSTEP.",
+    "rendering": "SondaQt offscreen. Non misura framerate, presentazione, uploadGPU o latenza completa dell’app.",
+    "hashes": "Tutti1196B-rep serializzati, mesh/normali di1191feature visibili; SHA256CommonCrypto della sonda verificato uguale aQt sul flacone. Nessuna geometria privata inclusa nel presente report.",
+    "resource_guard": "Per processo limite diagnostico8GiBRSS/300s, nessun limite raggiunto nei campioni selezionati."
+  },
+  "implementation": {
+    "workers": "Limite ai corehardware, evitando parallelismo annidato con fk_parallel; piccoli gruppi mantengono parallelismo interno sulle facce.",
+    "publishing": "Worker su copie indipendenti; GUI pubblica solo risultati corrispondenti aID/geometria/qualità correnti. Basi delle ripetizioni prima delle istanze. Guard per il paint rientrante e propagazione cancellazione.",
+    "memory": "Copie di input senza vecchie mesh; nei cambi qualità gruppi4×core per ridurre sovrapposizione dei buffer. È un limite di risultati, non un tetto in byte né un rilevatore della RAM libera."
+  },
+  "metrics": {
+    "reference": {
+      "read_ms": {
+        "median": 247.232834,
+        "min": 247.115625,
+        "max": 249.496209,
+        "samples": [
+          247.115625,
+          247.232834,
+          249.496209
+        ]
+      },
+      "load_ms": {
+        "median": 29675.935042,
+        "min": 26729.883458,
+        "max": 29920.16975,
+        "samples": [
+          26729.883458,
+          29675.935042,
+          29920.16975
+        ]
+      },
+      "load_peak_rss_mib": {
+        "median": 1803.21875,
+        "min": 1802.484375,
+        "max": 1812.59375,
+        "samples": [
+          1803.21875,
+          1802.484375,
+          1812.59375
+        ]
+      },
+      "peak_rss_mib": {
+        "median": 1803.21875,
+        "min": 1802.484375,
+        "max": 1812.59375,
+        "samples": [
+          1803.21875,
+          1802.484375,
+          1812.59375
+        ]
+      },
+      "stages_with_triangles": {
+        "median": 1196,
+        "min": 1196,
+        "max": 1196,
+        "samples": [
+          1196,
+          1196,
+          1196
+        ]
+      },
+      "stored_triangles": {
+        "median": 12191269,
+        "min": 12191269,
+        "max": 12191269,
+        "samples": [
+          12191269,
+          12191269,
+          12191269
+        ]
+      },
+      "visible_features": {
+        "median": 1191,
+        "min": 1191,
+        "max": 1191,
+        "samples": [
+          1191,
+          1191,
+          1191
+        ]
+      },
+      "visible_triangles": {
+        "median": 11746351,
+        "min": 11746351,
+        "max": 11746351,
+        "samples": [
+          11746351,
+          11746351,
+          11746351
+        ]
+      },
+      "gpu_pairs": {
+        "median": 0,
+        "min": 0,
+        "max": 0,
+        "samples": [
+          0,
+          0,
+          0
+        ]
+      },
+      "read_plus_load_ms": {
+        "median": 29923.167876,
+        "min": 26976.999083,
+        "max": 30169.665959,
+        "samples": [
+          26976.999083,
+          29923.167876,
+          30169.665959
+        ]
+      }
+    },
+    "serial": {
+      "read_ms": {
+        "median": 248.635083,
+        "min": 245.676792,
+        "max": 248.772708,
+        "samples": [
+          248.635083,
+          248.772708,
+          245.676792
+        ]
+      },
+      "load_ms": {
+        "median": 42019.188709,
+        "min": 40307.204708,
+        "max": 42301.696042,
+        "samples": [
+          40307.204708,
+          42301.696042,
+          42019.188709
+        ]
+      },
+      "load_peak_rss_mib": {
+        "median": 1822.015625,
+        "min": 1821.921875,
+        "max": 1822.171875,
+        "samples": [
+          1822.171875,
+          1821.921875,
+          1822.015625
+        ]
+      },
+      "peak_rss_mib": {
+        "median": 1822.015625,
+        "min": 1821.921875,
+        "max": 1822.171875,
+        "samples": [
+          1822.171875,
+          1821.921875,
+          1822.015625
+        ]
+      },
+      "stages_with_triangles": {
+        "median": 1191,
+        "min": 1191,
+        "max": 1191,
+        "samples": [
+          1191,
+          1191,
+          1191
+        ]
+      },
+      "stored_triangles": {
+        "median": 11746351,
+        "min": 11746351,
+        "max": 11746351,
+        "samples": [
+          11746351,
+          11746351,
+          11746351
+        ]
+      },
+      "visible_features": {
+        "median": 1191,
+        "min": 1191,
+        "max": 1191,
+        "samples": [
+          1191,
+          1191,
+          1191
+        ]
+      },
+      "visible_triangles": {
+        "median": 11746351,
+        "min": 11746351,
+        "max": 11746351,
+        "samples": [
+          11746351,
+          11746351,
+          11746351
+        ]
+      },
+      "gpu_pairs": {
+        "median": 0,
+        "min": 0,
+        "max": 0,
+        "samples": [
+          0,
+          0,
+          0
+        ]
+      },
+      "read_plus_load_ms": {
+        "median": 42264.865501,
+        "min": 40555.839791,
+        "max": 42550.46875,
+        "samples": [
+          40555.839791,
+          42550.46875,
+          42264.865501
+        ]
+      }
+    },
+    "parallel": {
+      "read_ms": {
+        "median": 254.682834,
+        "min": 241.510541,
+        "max": 351.878125,
+        "samples": [
+          254.682834,
+          351.878125,
+          241.510541
+        ]
+      },
+      "load_ms": {
+        "median": 28895.414875,
+        "min": 28456.055708,
+        "max": 30979.0855,
+        "samples": [
+          28456.055708,
+          28895.414875,
+          30979.0855
+        ]
+      },
+      "load_peak_rss_mib": {
+        "median": 1775.25,
+        "min": 1768.15625,
+        "max": 1800.796875,
+        "samples": [
+          1768.15625,
+          1775.25,
+          1800.796875
+        ]
+      },
+      "peak_rss_mib": {
+        "median": 1775.25,
+        "min": 1768.15625,
+        "max": 1800.796875,
+        "samples": [
+          1768.15625,
+          1775.25,
+          1800.796875
+        ]
+      },
+      "stages_with_triangles": {
+        "median": 1191,
+        "min": 1191,
+        "max": 1191,
+        "samples": [
+          1191,
+          1191,
+          1191
+        ]
+      },
+      "stored_triangles": {
+        "median": 11746351,
+        "min": 11746351,
+        "max": 11746351,
+        "samples": [
+          11746351,
+          11746351,
+          11746351
+        ]
+      },
+      "visible_features": {
+        "median": 1191,
+        "min": 1191,
+        "max": 1191,
+        "samples": [
+          1191,
+          1191,
+          1191
+        ]
+      },
+      "visible_triangles": {
+        "median": 11746351,
+        "min": 11746351,
+        "max": 11746351,
+        "samples": [
+          11746351,
+          11746351,
+          11746351
+        ]
+      },
+      "gpu_pairs": {
+        "median": 0,
+        "min": 0,
+        "max": 0,
+        "samples": [
+          0,
+          0,
+          0
+        ]
+      },
+      "read_plus_load_ms": {
+        "median": 29247.292999999998,
+        "min": 28710.738542,
+        "max": 31220.596041,
+        "samples": [
+          28710.738542,
+          29247.292999999998,
+          31220.596041
+        ]
+      }
+    }
+  },
+  "validation": {
+    "mismatches": [],
+    "visible_face_coverage_mismatches": [],
+    "feature_errors_per_run": [
+      4,
+      4,
+      4,
+      4,
+      4,
+      4,
+      4,
+      4,
+      4
+    ],
+    "with_brep": 1196,
+    "visible": 1191,
+    "visible_triangles": 11746351
+  },
+  "comparison": {
+    "serial_to_parallel_speedup": 1.445086405124741,
+    "time_reduction_from_serial_percent": 30.799985630362414,
+    "reference_to_parallel_speedup": 1.0231089720337538,
+    "time_change_vs_reference_percent": -2.2587009463730268,
+    "reference_median_open_ms": 29923.167876,
+    "serial_median_open_ms": 42264.865501,
+    "parallel_median_open_ms": 29247.292999999998
+  },
+  "verification": {
+    "build": "Targetforgecad eforgecad_view_tests Release completati; sonda nuova collegata agli stessi oggetti del runner. App installata/Applications invariata.",
+    "tests": "12/12PASS:lazy_mesh,pattern_placement,surface_pattern,history_suppression,boolean_history,blend_history,preview_performance,workflow_ui,storyboard_scroll,async_lifetime,sketch_reference_workflow,document_read.",
+    "new_test_cases": "Sovrapposizione reale dei worker, dedup, cache riusate, stadi nascosti, istantanee, cambio qualità su più gruppi, errore/cancellazione senza pubblicazione parziale del gruppo, GUIattiva/rientro e risultati superati, basi/istanze, assieme sintetico con geometria e mesh uguali ad eager.",
+    "build_warnings": "Solo3warning preesistenti firstDimension nei test delle tavole; nessun nuovo warning produttivo.",
+    "architecture": "PASS:477file/6587relazioni,232unità senza diagnostiche; --check, righe/siti di tutti i file e6chiamate (anche rebuildParallel→buildBody) nei due versi verificate, distinte da include/riferimenti. HTML/graph locali ignoratiGit.",
+    "real_flacone": {
+      "scenarios": [
+        "rebuild",
+        "edit"
+      ],
+      "comparison": "old optimized Release",
+      "geometry_mesh_normals_visibility_identical": true,
+      "feature_errors": 0,
+      "quality": 2,
+      "original_unchanged_sha256_verified": true
+    }
+  },
+  "limits": [
+    "Restano gli stessi4record importati senza geometria in tutti i modi (indici274,281,288,295); non dichiarati1200solidi validi né zeroerrori.",
+    "Nessun nuovo checkBody/massa/volume generalizzato; identità tra varianti verificata tramite B-rep binari e buffer di visualizzazione.",
+    "Non confrontato il risultato con la vecchia cache che supera il budget.",
+    "Nessuna nuova misura ad alta qualità o verifica OpenGL hardware; test GUI in offscreen.",
+    "Solver non esercitato:0schizzi. Nessuna modifica al filtroGPU o alla tessellazioneCUDA, nessuna migrazione generaleGPU e nessun guadagnoGPU attribuito.",
+    "Nessun valore estrapolato aLinux/NVIDIA, ad altri modelli o a10×generale."
+  ],
+  "iterations": {
+    "discarded_overlap": "Primo avvio fermato per controllo architetturale ancora attivo; escluso.",
+    "bounded_prototype": "Gruppi32 anche per mesh nuove:circa32,3–32,5s su due campioni esplorativi, contro riferimento27,2s. Interrotto e conservato, non incluso nelle statistiche finali.",
+    "continuous_prototype": "Separazione globale geometria/mesh, coda continua:primo campione30,301s contro riferimento27,163s e seriale43,207s. Interrotto e conservato, non incluso nelle statistiche finali."
+  },
+  "source_sha256": {
+    "forgeCad2026_viewport.cpp": "d13c4ea5e709214f2fffd59dd362d84acebcbe8a0867a43e10b5861fba043be0",
+    "forgeCad2026_viewport.h": "070a1b5d4b46887dcd9a7210013f4cbad24cb8c2b2291e9229ebb55646c4c5ef",
+    "forgeCad2026_viewport_document.cpp": "5e65fe03aa89213c42cc0502e85888702f74cfed32728e096c4a6c4aa6d591fe",
+    "forgeCad2026_viewport_render.cpp": "15f539a617eab125834c9b60940146a0445d78eae28861dae5f078bb387a0e48",
+    "tests/test_lazy_mesh.h": "4b13cca579fde0765a2c0134a59a181a85243a94a4792b2af20bb50fe4967288",
+    "tests/test_viewport.cpp": "b0c4cd5a61bcfca2798efba0897d4dfb7590edd3c82ecb18dc04d1d84ee976dd",
+    "tools/generate_architecture.py": "a2748056372e1be0d5848d35b60630316d657b118cc07f39301ae63dbfe22a14",
+    "docs/viewport-performance.md": "f5b89b38ffdcd66eeb56201969bee8fac385dad04c710d8c3b31f7af77e047cd"
+  },
+  "binary_sha256": {
+    "preserved_serial_probe": "bae7aa203b18536d8b744d90b49df37c996a70591df3c57470fcc48aa5b49cd0",
+    "new_probe": "3e5dd716e40b5801b2c254c9949ac06b0ff7e1a470e83dda36afe0cb538d0368"
+  },
+  "local_artifacts": "/Users/myungit/Linux_CAD_forFree/forgecad-release/benchmarks/mesh-parallel-2026-10-25"
+}

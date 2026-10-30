@@ -2673,14 +2673,16 @@ void PdfWindow::initializeOptions(WindowSetup &setup) {
     connect(saveBodiesAction, &QAction::toggled, this, [](bool enabled) { QSettings().setValue(QStringLiteral("document/saveBodies"), enabled); });
     // Tassellazione di display con CUDA (cad_cuda_tessellation): i punti delle
     // superfici B-spline si valutano sulla GPU; vale dalla prossima tassellazione.
-    QAction *cudaTessellationAction = optionsMenu->addAction(QStringLiteral("Tassellazione con CUDA"));
+    const QString tessellationBackend = QString::fromUtf8(forgecad_cuda_backend()).startsWith(QStringLiteral("Metal"))
+        ? QStringLiteral("Metal") : QStringLiteral("CUDA");
+    QAction *cudaTessellationAction = optionsMenu->addAction(QStringLiteral("Tassellazione con %1").arg(tessellationBackend));
     cudaTessellationAction->setCheckable(true);
     cudaTessellationAction->setEnabled(ForgeCad::cudaTessellationAvailable());
     cudaTessellationAction->setChecked(ForgeCad::cudaTessellationAvailable() &&
                                        QSettings().value(QStringLiteral("view/cudaTessellation"), true).toBool());
     cudaTessellationAction->setToolTip(ForgeCad::cudaTessellationAvailable()
         ? QStringLiteral("Valuta sulla GPU i punti delle superfici B-spline durante la tassellazione (solo visualizzazione)")
-        : QStringLiteral("Nessuna GPU CUDA disponibile: la tassellazione resta sulla CPU"));
+        : QStringLiteral("GPU non disponibile: la tassellazione resta sulla CPU"));
     ForgeCad::setCudaTessellationEnabled(cudaTessellationAction->isChecked());
     connect(cudaTessellationAction, &QAction::toggled, this, [this](bool enabled) {
         QSettings().setValue(QStringLiteral("view/cudaTessellation"), enabled);
@@ -4152,10 +4154,13 @@ void PdfWindow::openDocument() {
 
 QString PdfWindow::gpuStatusText() const {
     QString cuda;
-    if (!forgecad_cuda_available()) cuda = FORGECAD_HAS_CUDA ? QStringLiteral("CUDA compilato, GPU runtime non disponibile")
+    const bool metal=QString::fromUtf8(forgecad_cuda_backend()).startsWith(QStringLiteral("Metal"));
+    const QString backend=metal?QStringLiteral("Metal"):QStringLiteral("CUDA");
+    if (metal && !forgecad_cuda_available()) cuda=QStringLiteral("Metal non disponibile: tassellazione su CPU");
+    else if (!forgecad_cuda_available()) cuda = FORGECAD_HAS_CUDA ? QStringLiteral("CUDA compilato, GPU runtime non disponibile")
                                                               : QString::fromUtf8(forgecad_cuda_backend());
-    else if (ForgeCad::cudaTessellationEnabled()) cuda = QStringLiteral("CUDA: tassellazione su GPU");
-    else cuda = QStringLiteral("CUDA disponibile (tassellazione su CPU)");
+    else if (ForgeCad::cudaTessellationEnabled()) cuda = QStringLiteral("%1: tassellazione su GPU").arg(backend);
+    else cuda = QStringLiteral("%1 disponibile (tassellazione su CPU)").arg(backend);
     return QStringLiteral("%1 | OpenGL: %2").arg(cuda, glRenderer_);
 }
 
@@ -4652,6 +4657,7 @@ void PdfWindow::rebuildModelTree() {
     }
     for (int index = 0; index < extrusions.size(); ++index) {
         const ExtrusionObject &body = extrusions.at(index);
+        if (ForgeCad::patternSourceIndex(extrusions, index) != index) continue;
         QString label = body.name;
         const bool reference = body.modelBodyId == 0;
         QTreeWidgetItem *parent = reference || !historyRoot ? referenceRoot : historyRoot;

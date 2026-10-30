@@ -1,11 +1,16 @@
 #include <set>
-#if defined(__linux__)
-#include <malloc.h>
-#endif
 #include <QThread>
 #include <QEventLoop>
 #include <QCryptographicHash>
+#include <condition_variable>
+#if defined(__GLIBC__)
+#include <malloc.h>
+#endif
+#include "../cad_gpu_broad_phase.h"
+#include "../cad_cuda_tessellation.h"
 #include "../cad_document_read.h"
+#include "../cuda_support.h"
+#include <QSaveFile>
 // I componenti GUI sono dichiarati negli header e compilati separatamente.
 #include "../forgeCad2026_gui.h"
 #include "../forgeCad2026_viewport.h"
@@ -127,6 +132,7 @@ static QString exampleDocumentPath(const char *name) {
 #include "test_history_suppression.h"
 #include "test_pattern_placements.h"
 #include "test_zoom_input.h"
+#include "test_solver_partition.h"
 class ViewportInteractionTest {
 public:
 #include "test_sketch_interaction.h"
@@ -139,7 +145,11 @@ public:
 #include "test_surface_tools_gui.h"
 #include "test_document_units.h"
 #include "test_function_panels.h"
+#include "test_lazy_mesh.h"
+#include "test_display_mesh.h"
 #include "test_mesh_memory.h"
+#include "test_history_preview_mesh.h"
+#include "test_pattern_history_repair.h"
     static void extrusionActionPreconditions() {
         using namespace ForgeCad;
         PdfWindow window;
@@ -335,6 +345,41 @@ public:
             require(view.preview_.geometry!=first && std::abs(massProperties(*view.preview_.geometry).volume-28)<1e-7,
                     "modifica dell'operando invalida la cache e cambia la geometria");
         }
+        // Una feature nascosta puo' avere solo il B-rep: aprirne l'editor
+        // richiede una mesh dell'anteprima, anche senza cambiare parametri.
+        for (bool revolution : {false,true}) {
+            DocumentState definition;SketchObject profile;
+            profile.segments={{{2,0},{4,0}},{{4,0},{4,2}},{{4,2},{2,2}},{{2,2},{2,0}}};
+            if(revolution)profile.plane=1;
+            definition.sketches.append(profile);
+            ExtrusionObject feature;feature.sketchIndex=0;feature.distance=5;
+            if(revolution){feature.feature=BodyFeature::Revolution;feature.revolveAxis=-2;feature.revolveAngle=90;}
+            definition.extrusions.append(feature);
+            ExtrusionObject next;next.feature=BodyFeature::Scale;next.firstBody=0;next.scaleFactor=1.1;
+            definition.extrusions.append(next);normalizeModelHistory(definition);
+            CadViewport view;view.tessellationQuality_=1;view.loadDocument(definition);
+            require(!view.isBodyDrawn(0) && view.extrusions_[0].forgeBody,"stadio da modificare nascosto ma geometria pronta");
+            const auto geometry=view.extrusions_[0].forgeBody;
+            BodyDisplay expected;tessellateGeometry(view.extrusions_[0],1,expected);
+            for(int cachedQuality : {-1,0,1}) {
+                view.clearPreview();view.extrusions_[0].display={};
+                if(cachedQuality>=0)tessellateGeometry(view.extrusions_[0],cachedQuality,view.extrusions_[0].display);
+                const auto snapshot=view.documentState();
+                view.requestPreview(view.extrusions_[0],0);settle(view);
+                const auto &display=view.preview_.display;
+                require(view.preview_.geometry==geometry,"anteprima stadio nascosto riusa il B-rep senza ricostruirlo");
+                require(display.quality==1 && !display.vertices.isEmpty() && !display.constructionCurves.isEmpty(),
+                        "anteprima riusata contiene superficie e U/V alla qualita' richiesta");
+                require(display.vertices==expected.vertices && display.normals==expected.normals
+                        && display.triangleFaces==expected.triangleFaces && display.edges==expected.edges,
+                        "anteprima riusata concorde con tassellazione esplicita");
+                require(view.extrusions_[0].display.quality==cachedQuality
+                        && snapshot.extrusions[0].display.quality==cachedQuality,
+                        "anteprima non materializza o modifica cache e snapshot dello stadio nascosto");
+                if(cachedQuality==1)require(display.vertices.constData()==snapshot.extrusions[0].display.vertices.constData(),
+                                           "anteprima conserva il riuso del buffer gia' valido");
+            }
+        }
         if(!qEnvironmentVariable("FORGECAD_PREVIEW_QA_FILE").isEmpty()) {
             const QString path=qEnvironmentVariable("FORGECAD_PREVIEW_QA_FILE");QFile file(path);
             require(file.open(QIODevice::ReadOnly),"lettura modello QA anteprima");const auto original=file.readAll();file.close();
@@ -342,6 +387,8 @@ public:
             CadViewport view;view.loadDocument(state);require(!view.extrusions().isEmpty(),"funzione del modello QA disponibile");
             view.requestPreview(view.extrusions().first(),0);settle(view);
             require(!view.preview_.display.constructionCurves.isEmpty(),"U/V sul modello reale");
+            require(!view.preview_.display.vertices.isEmpty() && view.preview_.display.quality==view.tessellationQuality_,
+                    "superficie del modello reale pronta nell'anteprima riusata");
             view.resize(1000,750);view.setViewPreset(4);view.fitView(view.preview_.display.vertices);view.show();QApplication::processEvents();
             require(view.grabFramebuffer().save(qEnvironmentVariable("FORGECAD_PREVIEW_QA_DIR")+"/preview-real.png"),"acquisizione modello reale");view.hide();
             require(file.open(QIODevice::ReadOnly)&&file.readAll()==original,"modello QA originale invariato");
@@ -10371,6 +10418,57 @@ int main(int argc, char **argv) {
     format.setProfile(QSurfaceFormat::CoreProfile); format.setDepthBufferSize(24); format.setStencilBufferSize(8);
     QSurfaceFormat::setDefaultFormat(format);
     QApplication app(argc, argv);
+    if (app.arguments().contains(QStringLiteral("--mesh-memory-benchmark"))) {
+        try {
+            const int at=app.arguments().indexOf(QStringLiteral("--mesh-memory-benchmark"));
+            require(at+1<app.arguments().size(),"documento richiesto per la sonda memoria");
+            ViewportInteractionTest::meshMemoryBenchmark(app.arguments()[at+1],app.arguments().contains(QStringLiteral("--gl")));
+        } catch(const std::exception &error) { std::cerr<<error.what()<<std::endl;return 1; }
+        return 0;
+    }
+    if (app.arguments().contains(QStringLiteral("--document-mesh-benchmark"))) {
+        QTemporaryDir isolatedSettings;
+        QSettings::setDefaultFormat(QSettings::IniFormat);
+        QSettings::setPath(QSettings::IniFormat,QSettings::UserScope,isolatedSettings.path());
+        QCoreApplication::setOrganizationName(QStringLiteral("ForgeCADBenchmark"));
+        QCoreApplication::setApplicationName(QStringLiteral("DocumentMesh"));
+        try {
+            if(app.arguments().contains(QStringLiteral("--require-cuda")) && !ForgeCad::cudaTessellationAvailable()) {
+                std::cerr<<"CUDA non disponibile: snapshot GPU saltato"<<std::endl;return 77;
+            }
+            ForgeCad::initializeGeometryAcceleration();
+            const int snapshotIndex=app.arguments().indexOf(QStringLiteral("--mesh-snapshot-dir"));
+            const auto snapshotDirectory=snapshotIndex<0?QString():app.arguments().value(snapshotIndex+1);
+            if(snapshotIndex>=0 && (snapshotDirectory.isEmpty() || snapshotDirectory.startsWith(QStringLiteral("--"))))
+                throw std::runtime_error("specificare la directory degli snapshot numerici");
+            const int index=app.arguments().indexOf(QStringLiteral("--document-mesh-benchmark"));
+            ViewportInteractionTest::documentMeshBenchmark(app.arguments().value(index+1),
+                app.arguments().contains(QStringLiteral("--inventory")),
+                app.arguments().contains(QStringLiteral("--rebuild")),snapshotDirectory);
+        } catch(const std::exception &error){std::cerr<<error.what()<<std::endl;return 1;}
+        return 0;
+    }
+    if (app.arguments().contains(QStringLiteral("--lazy-mesh"))) {
+        try { ViewportInteractionTest::lazyMeshTests(); }
+        catch(const std::exception &error){std::cerr<<error.what()<<std::endl;return 1;}
+        return 0;
+    }
+    if (app.arguments().contains(QStringLiteral("--document-solver-benchmark"))) {
+        try { documentSolverBenchmark(app.arguments().value(app.arguments().indexOf(QStringLiteral("--document-solver-benchmark"))+1),
+            app.arguments().contains(QStringLiteral("--admissible-targets"))); }
+        catch(const std::exception &error){std::cerr<<error.what()<<std::endl;return 1;}
+        return 0;
+    }
+    if (app.arguments().contains(QStringLiteral("--connected-solver-benchmark"))) {
+        try { connectedSolverBenchmark(); }
+        catch(const std::exception &error) { std::cerr<<error.what()<<std::endl;return 1; }
+        return 0;
+    }
+    if (app.arguments().contains(QStringLiteral("--solver-partition"))) {
+        try { solverPartitionTests(app.arguments().contains(QStringLiteral("--benchmark"))); }
+        catch(const std::exception &error) { std::cerr<<error.what()<<std::endl;return 1; }
+        return 0;
+    }
     ForgeCad::initializeApplicationTheme(app);
     QCoreApplication::setOrganizationName(QStringLiteral("ForgeCADTests"));
     QCoreApplication::setApplicationName(QStringLiteral("Viewport"));
@@ -10382,6 +10480,15 @@ int main(int argc, char **argv) {
     if(app.arguments().contains(QStringLiteral("--document-recovery"))){
         try{ViewportInteractionTest::documentRecoveryRegressions();}
         catch(const std::exception &e){std::cerr<<e.what()<<std::endl;return 1;}
+        return 0;
+    }
+    if (app.arguments().contains(QStringLiteral("--pattern-legacy-history")) || app.arguments().contains(QStringLiteral("--failed-feature-repair"))
+        || app.arguments().contains(QStringLiteral("--pattern-single-story"))) {
+        try {
+            if (app.arguments().contains(QStringLiteral("--pattern-legacy-history"))) ViewportInteractionTest::legacyPatternHistory();
+            else if (app.arguments().contains(QStringLiteral("--pattern-single-story"))) ViewportInteractionTest::patternSingleStory();
+            else ViewportInteractionTest::failedFeatureRepair();
+        } catch (const std::exception &error) { std::cerr << error.what() << std::endl; return 1; }
         return 0;
     }
     if (app.arguments().contains(QStringLiteral("--pattern-results"))) {
@@ -10585,14 +10692,7 @@ int main(int argc, char **argv) {
         catch (const std::exception &e) { std::cerr << e.what() << std::endl; return 1; }
         return 0;
     }
-    if (app.arguments().contains(QStringLiteral("--mesh-memory-benchmark"))) {
-        try {
-            const int at=app.arguments().indexOf(QStringLiteral("--mesh-memory-benchmark"));
-            require(at+1<app.arguments().size(),"documento richiesto per la sonda memoria");
-            ViewportInteractionTest::meshMemoryBenchmark(app.arguments()[at+1],app.arguments().contains(QStringLiteral("--gl")));
-        } catch(const std::exception &error) { std::cerr<<error.what()<<std::endl;return 1; }
-        return 0;
-    }
+
     if (app.arguments().contains(QStringLiteral("--document-regression"))) {
         try {
             const int at=app.arguments().indexOf(QStringLiteral("--document-regression"));
@@ -10607,6 +10707,11 @@ int main(int argc, char **argv) {
             require(option + 1 < app.arguments().size(), "percorso Applicatore richiesto");
             ViewportInteractionTest::applicatorePreview(app.arguments()[option + 1]);
         } catch (const std::exception &error) { std::cerr << error.what() << std::endl; return 1; }
+        return 0;
+    }
+    if (app.arguments().contains(QStringLiteral("--display-mesh"))) {
+        try { ViewportInteractionTest::displayMeshTests(); }
+        catch (const std::exception &error) { std::cerr << error.what() << std::endl; return 1; }
         return 0;
     }
     if (app.arguments().contains(QStringLiteral("--blend-preview-reload"))) {
@@ -10895,6 +11000,13 @@ int main(int argc, char **argv) {
     if (app.arguments().contains(QStringLiteral("--sketch-slot-point"))) {
         try { ViewportInteractionTest::sketchSlotPoint(app.arguments().contains(QStringLiteral("--gl"))); }
         catch(const std::exception &e){std::cerr<<e.what()<<std::endl;return 1;}
+        return 0;
+    }
+    if (app.arguments().contains(QStringLiteral("--history-preview-mesh"))) {
+        try { const int index=app.arguments().indexOf(QStringLiteral("--history-preview-mesh"));
+            ViewportInteractionTest::historyPreviewMesh(index+1<app.arguments().size() && !app.arguments().at(index+1).startsWith("--")
+                ?app.arguments().at(index+1):QString(),app.arguments().contains(QStringLiteral("--gl"))); }
+        catch (const std::exception &e) { std::cerr<<e.what()<<std::endl;return 1; }
         return 0;
     }
     if (app.arguments().contains(QStringLiteral("--preview-performance"))) {

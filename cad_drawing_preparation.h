@@ -13,6 +13,8 @@ struct DrawingEditorModel {
     QVector<DrawingFeatureChoice> choices;
     QHash<quint64,quint64> replacements;
     Kernel::Frame3 frontFrame{Kernel::Vec3(),Kernel::Vec3(0,-1,0),Kernel::Vec3(1,0,0)};
+    // Solo corpi realmente letti dalla cache; mai ricostruiti per indice.
+    QHash<quint64,std::shared_ptr<const Kernel::ElementNames>> legacySnapshotNames;
 };
 // Risultati geometrici trasferibili: nessun widget o stato dell'editor.
 struct PreparedDrawingView {

@@ -346,6 +346,17 @@ QString CadViewport::beginReferencePick(int roles, int owner) {
     refPicking_ = true;
     refPickRoles_ = roles;
     refPickOwner_ = owner;
+    refPickContextBodies_.clear();
+    if (owner >= 0 && owner < extrusions_.size()) {
+        const auto include = [&](int index) {
+            if (index >= 0 && index < owner && !extrusions_.at(index).suppressed
+                && extrusions_.at(index).error.isEmpty() && ForgeCad::isShapeBody(extrusions_.at(index)))
+                refPickContextBodies_.insert(index);
+        };
+        for (int index : resultBodiesBefore(owner)) include(index);
+        // Un riferimento esistente puo' usare anche uno stadio intermedio.
+        for (int index : ForgeCad::bodyOperands(extrusions_.at(owner))) include(index);
+    }
     refHoverValid_ = false;
     setFocus();
     update();
@@ -361,6 +372,8 @@ void CadViewport::setPickBodies(const QVector<int> &bodies) {
 void CadViewport::cancelReferencePick() {
     if (!refPicking_) return;
     refPicking_ = false;
+    refPickOwner_ = -1;
+    refPickContextBodies_.clear();
     refHoverValid_ = false;
     update();
 }

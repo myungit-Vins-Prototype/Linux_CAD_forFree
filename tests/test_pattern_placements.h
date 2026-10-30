@@ -416,11 +416,13 @@ void patternResultTests() {
                 [&](const ExtrusionObject &definition) { return gui.createBody(definition, {definition.firstBody}); });
             if (failure) std::rethrow_exception(failure);
             require(gui.resultBodiesBefore(-1).size() == 3 && gui.extrusions()[1].pattern.excluded == QVector<int>{1}, "esclusione dal pannello costruisce tre corpi");
-            // Anche le ripetizioni aggregate dei vecchi documenti si separano
-            // quando viene richiesta la rigenerazione completa.
+            // Rigenerare conserva l'aggregato storico: i suoi consumatori
+            // possono usare bordi/facce distribuiti su tutte le componenti.
             auto legacy = initial; legacy.extrusions.append(repeated);
             gui.loadDocument(legacy);
-            require(gui.rebuildAllFeatures() == 0 && gui.resultBodiesBefore(-1).size() == 4, "rigenera ripetizioni storiche in corpi separati");
+            require(gui.rebuildAllFeatures() == 0 && gui.extrusions().size() == 2
+                    && gui.extrusions()[1].patternComponent == -1 && gui.resultBodiesBefore(-1).size() == 1,
+                    "rigenera ripetizioni storiche senza cambiare la struttura dei risultati");
         }
         // Occorrenze incluse anche in circolare, griglia e specchio.
         for (int kind : {0,1,2}) {
@@ -452,7 +454,15 @@ void patternResultTests() {
         GeometryRef plane; plane.kind=1; plane.index=2; mirror.pattern.refs={plane};
         ExtrusionObject scale; scale.feature=BodyFeature::Scale; scale.firstBody=1;
         scale.scaleFactor=2; scale.name="Scala aggregato";
-        legacy.extrusions={base,mirror,scale};
+        // Documento gia salvato dal ramo Mac con derivati legacy: non si
+        // richiede una migrazione dei vecchi aggregati privi di componenti.
+        base.modelBodyId=mirror.modelBodyId=scale.modelBodyId=1;
+        ExtrusionObject first, second;
+        first.feature=second.feature=BodyFeature::Pattern;
+        first.firstBody=second.firstBody=1;
+        first.patternComponent=1; second.patternComponent=2;
+        first.modelBodyId=1; second.modelBodyId=2;
+        legacy.extrusions={base,mirror,first,second,scale};
         CadViewport view; view.loadDocument(legacy);
         const auto verify=[&] {
             int root=-1,scaled=-1; QVector<int> children;
@@ -462,6 +472,8 @@ void patternResultTests() {
                 if(bodies[i].name==scale.name) scaled=i;
             }
             require(root>=0 && scaled>root,"madre e scala storiche conservate");
+            require(view.storyboard().size()==3 && view.storyboardIndex(false,root)==view.storyboardIndex(false,root+1),
+                    "aggregato e derivati legacy restano una sola feature nella storia");
             for(int i=0;i<bodies.size();++i)
                 if(bodies[i].feature==BodyFeature::Pattern && bodies[i].patternComponent>0 && bodies[i].firstBody==root) children.append(i);
             require(children.size()==2 && children[0]==root+1 && children[1]==root+2 && scaled>children.last(),

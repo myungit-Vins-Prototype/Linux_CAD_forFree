@@ -13,6 +13,7 @@
 #include "cad_curve_solver.h"
 #include "cad_kernel.h"
 #include "fk_curve_algo.h"
+#include "fk_constraint_linear.h"
 
 namespace ForgeCad {
 namespace {
@@ -1472,7 +1473,58 @@ namespace {
 struct Block {
     std::function<void(QVector<double> &)> evaluate;
     QVector<int> points;
+    Kernel::ConstraintLinear::Rows linearDerivatives;
 };
+
+void pointDerivative(const System &system,const ConstraintRef &ref,int axis,double factor,
+                     Kernel::ConstraintLinear::Row &row) {
+    QVector<int> points;system.pointDependencies(ref,points);
+    for(int point:points)row.push_back({2*point+axis,factor});
+}
+
+void lineDerivative(const System &system,const ConstraintRef &ref,int endpoint,int axis,double factor,
+                    Kernel::ConstraintLinear::Row &row) {
+    if(ref.kind==2)return;
+    if(system.handleIndex(ref)>=0) {
+        const ConstraintRef point=endpoint?ref:ConstraintRef{1,ref.element,(ref.point-kHandlePoint)/2};
+        pointDerivative(system,point,axis,factor,row);
+    } else pointDerivative(system,{0,ref.element,endpoint},axis,factor,row);
+}
+
+Kernel::ConstraintLinear::Rows linearDerivatives(const System &system,const SketchConstraint &c) {
+    using namespace Kernel::ConstraintLinear;
+    Rows rows;
+    switch(c.type) {
+    case ConstraintType::Coincident:
+    case ConstraintType::Concentric:
+    case ConstraintType::Midpoint:
+        rows.resize(2);
+        for(int axis=0;axis<2;++axis) {
+            if(c.type==ConstraintType::Concentric) {
+                pointDerivative(system,{1,c.first.element,0},axis,1,rows[axis]);
+                pointDerivative(system,{1,c.second.element,0},axis,-1,rows[axis]);
+            } else {
+                pointDerivative(system,c.first,axis,1,rows[axis]);
+                if(c.type==ConstraintType::Coincident)pointDerivative(system,c.second,axis,-1,rows[axis]);
+                else for(int endpoint=0;endpoint<2;++endpoint)lineDerivative(system,c.second,endpoint,axis,-.5,rows[axis]);
+            }
+        }
+        break;
+    case ConstraintType::Horizontal:
+    case ConstraintType::Vertical: {
+        rows.resize(1);const int axis=c.type==ConstraintType::Horizontal?1:0;
+        if(shapeOf(system.sketch(),c.first)==Shape::Line) {
+            lineDerivative(system,c.first,0,axis,-1,rows[0]);
+            lineDerivative(system,c.first,1,axis,1,rows[0]);
+        } else {
+            pointDerivative(system,c.first,axis,-1,rows[0]);pointDerivative(system,c.second,axis,1,rows[0]);
+        }
+        break;
+    }
+    default:break;
+    }
+    return rows;
+}
 
 double sketchScale(const System &system) {
     double lo[2] = {1e300, 1e300}, hi[2] = {-1e300, -1e300};
@@ -1543,6 +1595,7 @@ QVector<Block> buildBlocks(const System &system, const SketchObject &sketch, con
         }
         const TangentContact contact = tangentContact(sketch, *c);
         block.evaluate = [&system, c, contact](QVector<double> &out) { equations(system, *c, out, &contact); };
+        block.linearDerivatives=linearDerivatives(system,*c);
         blocks.append(block);
     }
     for (int curve = 0; curve < sketch.curves.size(); ++curve) {
@@ -1596,6 +1649,8 @@ QVector<Block> buildBlocks(const System &system, const SketchObject &sketch, con
             const QPointF d = system.refPoint(point) - goal;
             out << d.x() << d.y();
         };
+        block.linearDerivatives.resize(2);
+        for(int axis=0;axis<2;++axis)pointDerivative(system,point,axis,1,block.linearDerivatives[axis]);
         blocks.append(block);
     }
     if (gauges) {
@@ -1694,6 +1749,51 @@ QVector<double> jacobian(const QVector<Block> &blocks, QVector<double> &x, int m
         row += base.size();
     }
     return J;
+}
+
+// Le colonne sono gia' ordinate nei blocchi. Si conservano solo le derivate
+// non nulle: nessuna matrice globale m*n, nessun confronto fra righe disgiunte.
+Kernel::ConstraintLinear::Rows sparseJacobian(const QVector<Block> &blocks, QVector<double> &x,
+                                             int m, double step, const QVector<int> &columns) {
+    Kernel::ConstraintLinear::Rows rows{std::size_t(m)};
+    int row = 0;
+    QVector<double> base, plus, minus;
+    for (const Block &block : blocks) {
+        base.clear(); block.evaluate(base);
+        if(block.linearDerivatives.size()==std::size_t(base.size()) && !block.linearDerivatives.empty()) {
+            for(std::size_t k=0;k<block.linearDerivatives.size();++k) {
+                auto &output=rows[std::size_t(row)+k];
+                for(const auto &entry:block.linearDerivatives[k]) {
+                    const int mapped=columns.at(entry.column);
+                    if(mapped>=0)output.push_back({mapped,entry.value});
+                }
+                std::sort(output.begin(),output.end(),[](const auto &a,const auto &b){return a.column<b.column;});
+                Kernel::ConstraintLinear::Row merged;
+                for(const auto &entry:output) {
+                    if(!merged.empty() && merged.back().column==entry.column)merged.back().value+=entry.value;
+                    else merged.push_back(entry);
+                }
+                merged.erase(std::remove_if(merged.begin(),merged.end(),[](const auto &entry){return entry.value==0;}),merged.end());
+                output=std::move(merged);
+            }
+            row+=base.size();continue;
+        }
+        for (int point : block.points)
+            for (int axis = 0; axis < 2; ++axis) {
+                const int column = 2 * point + axis, target = columns.at(column);
+                if (target < 0) continue;
+                const double saved = x[column];
+                x[column] = saved + step; plus.clear(); block.evaluate(plus);
+                x[column] = saved - step; minus.clear(); block.evaluate(minus);
+                x[column] = saved;
+                for (int k = 0; k < base.size(); ++k) {
+                    const double value = (plus.at(k) - minus.at(k)) / (2.0 * step);
+                    if (value != 0) rows[std::size_t(row+k)].push_back({target,value});
+                }
+            }
+        row += base.size();
+    }
+    return rows;
 }
 
 }
@@ -1836,41 +1936,49 @@ SketchAnalysis analyzeSketch(const SketchObject &sketch) {
         if (!fixedPoints.contains(k / 2)) columns[k] = k;
     // Non perturbare le coordinate fisse: azzerarle dopo le differenze
     // finite calcolava comunque migliaia di proiezioni su curve copiate.
-    QVector<double> J = jacobian(blocks, x, m, step, &columns, n);
-    // Base ortonormale dello spazio delle righe (Gram-Schmidt modificato, due
-    // passate): la sua dimensione e' il rango; una coordinata e' determinata se
-    // il suo versore sta nello spazio delle righe (norma della sua proiezione 1).
-    double largest = 0.0;
-    for (double v : J) largest = std::max(largest, std::fabs(v));
-    QVector<QVector<double>> basis;
-    for (int i = 0; i < m; ++i) {
-        QVector<double> v(n);
-        for (int k = 0; k < n; ++k) v[k] = J[i * n + k];
-        double original = 0.0;
-        for (double c : v) original += c * c;
-        original = std::sqrt(original);
-        if (!(original > 1e-12 * std::max(largest, 1e-300))) continue;
-        for (int pass = 0; pass < 2; ++pass)
-            for (const QVector<double> &b : basis) {
-                double d = 0.0;
-                for (int k = 0; k < n; ++k) d += b[k] * v[k];
-                for (int k = 0; k < n; ++k) v[k] -= d * b[k];
-            }
-        double remaining = 0.0;
-        for (double c : v) remaining += c * c;
-        remaining = std::sqrt(remaining);
-        if (remaining <= 1e-8 * original) continue;
-        for (double &c : v) c /= remaining;
-        basis.append(v);
-    }
-    analysis.rank = 2 * fixedPoints.size() + basis.size();
-    analysis.degreesOfFreedom = n - analysis.rank;
     QVector<bool> determined(n, false);
-    for (int point : fixedPoints) determined[2 * point] = determined[2 * point + 1] = true;
-    for (int k = 0; k < n; ++k) {
-        double projection = 0.0;
-        for (const QVector<double> &b : basis) projection += b[k] * b[k];
-        determined[k] = determined[k] || projection >= 1.0 - 1e-6;
+    if(qEnvironmentVariableIntValue("FORGECAD_SOLVER_DENSE")==1) {
+        QVector<double> J = jacobian(blocks, x, m, step, &columns, n);
+        // Base ortonormale dello spazio delle righe (Gram-Schmidt modificato, due
+        // passate): la sua dimensione e' il rango; una coordinata e' determinata se
+        // il suo versore sta nello spazio delle righe (norma della sua proiezione 1).
+        double largest = 0.0;
+        for (double v : J) largest = std::max(largest, std::fabs(v));
+        QVector<QVector<double>> basis;
+        for (int i = 0; i < m; ++i) {
+            QVector<double> v(n);
+            for (int k = 0; k < n; ++k) v[k] = J[i * n + k];
+            double original = 0.0;
+            for (double c : v) original += c * c;
+            original = std::sqrt(original);
+            if (!(original > 1e-12 * std::max(largest, 1e-300))) continue;
+            for (int pass = 0; pass < 2; ++pass)
+                for (const QVector<double> &b : basis) {
+                    double d = 0.0;
+                    for (int k = 0; k < n; ++k) d += b[k] * v[k];
+                    for (int k = 0; k < n; ++k) v[k] -= d * b[k];
+                }
+            double remaining = 0.0;
+            for (double c : v) remaining += c * c;
+            remaining = std::sqrt(remaining);
+            if (remaining <= 1e-8 * original) continue;
+            for (double &c : v) c /= remaining;
+            basis.append(v);
+        }
+        analysis.rank = 2 * fixedPoints.size() + basis.size();
+        analysis.degreesOfFreedom = n - analysis.rank;
+        for (int point : fixedPoints) determined[2 * point] = determined[2 * point + 1] = true;
+        for (int k = 0; k < n; ++k) {
+            double projection = 0.0;
+            for (const QVector<double> &b : basis) projection += b[k] * b[k];
+            determined[k] = determined[k] || projection >= 1.0 - 1e-6;
+        }
+    } else {
+        const auto rows=sparseJacobian(blocks,x,m,step,columns);
+        const auto space=Kernel::ConstraintLinear::rowSpace(rows,n);
+        analysis.rank=2*fixedPoints.size()+space.rank;
+        analysis.degreesOfFreedom=n-analysis.rank;
+        for(int k=0;k<n;++k)determined[k]=fixedPoints.contains(k/2)||space.projection[k]>=1.0-1e-6;
     }
     const auto pointDefined = [&](int index) { return determined[2 * index] && determined[2 * index + 1]; };
     for (int i = 0; i < sketch.segments.size(); ++i)
@@ -2007,53 +2115,60 @@ SolveResult solveSketch(SketchObject &sketch, const QVector<PointTarget> &target
             result.residual = current;
             break;
         }
-        const QVector<double> J = jacobian(blocks, x, m, step, &columnMap, n);
-        // Passo di norma minima: dx = -J^T (J J^T + mu I)^-1 r.
-        QVector<double> A(m * m, 0.0);
-        double trace = 0.0;
-        for (int i = 0; i < m; ++i)
-            for (int j = i; j < m; ++j) {
-                double sum = 0.0;
-                for (int k = 0; k < n; ++k) sum += J[i * n + k] * J[j * n + k];
-                A[i * m + j] = A[j * m + i] = sum;
-                if (i == j) trace += sum;
-            }
-        const double mu = 1e-12 * std::max(trace / std::max(m, 1), 1e-300);
-        for (int i = 0; i < m; ++i) A[i * m + i] += mu;
-        // Cholesky (A e' simmetrica definita positiva grazie a mu).
-        QVector<double> L(m * m, 0.0);
-        bool factored = true;
-        for (int i = 0; i < m && factored; ++i)
-            for (int j = 0; j <= i; ++j) {
-                double sum = A[i * m + j];
-                for (int k = 0; k < j; ++k) sum -= L[i * m + k] * L[j * m + k];
-                if (i == j) {
-                    if (!(sum > 0.0)) {
-                        factored = false;
-                        break;
-                    }
-                    L[i * m + i] = std::sqrt(sum);
-                } else {
-                    L[i * m + j] = sum / L[j * m + j];
-                }
-            }
-        if (!factored) break;
-        QVector<double> y(m), z(m);
-        for (int i = 0; i < m; ++i) {
-            double sum = r[i];
-            for (int k = 0; k < i; ++k) sum -= L[i * m + k] * y[k];
-            y[i] = sum / L[i * m + i];
-        }
-        for (int i = m - 1; i >= 0; --i) {
-            double sum = y[i];
-            for (int k = i + 1; k < m; ++k) sum -= L[k * m + i] * z[k];
-            z[i] = sum / L[i * m + i];
-        }
         QVector<double> dx(n, 0.0);
-        for (int k = 0; k < n; ++k) {
-            double sum = 0.0;
-            for (int i = 0; i < m; ++i) sum += J[i * n + k] * z[i];
-            dx[k] = -sum;
+        if (qEnvironmentVariableIntValue("FORGECAD_SOLVER_DENSE") == 1) {
+            const QVector<double> J = jacobian(blocks, x, m, step, &columnMap, n);
+            // Passo di norma minima: dx = -J^T (J J^T + mu I)^-1 r.
+            QVector<double> A(m * m, 0.0);
+            double trace = 0.0;
+            for (int i = 0; i < m; ++i)
+                for (int j = i; j < m; ++j) {
+                    double sum = 0.0;
+                    for (int k = 0; k < n; ++k) sum += J[i * n + k] * J[j * n + k];
+                    A[i * m + j] = A[j * m + i] = sum;
+                    if (i == j) trace += sum;
+                }
+            const double mu = 1e-12 * std::max(trace / std::max(m, 1), 1e-300);
+            for (int i = 0; i < m; ++i) A[i * m + i] += mu;
+            // Cholesky (A e' simmetrica definita positiva grazie a mu).
+            QVector<double> L(m * m, 0.0);
+            bool factored = true;
+            for (int i = 0; i < m && factored; ++i)
+                for (int j = 0; j <= i; ++j) {
+                    double sum = A[i * m + j];
+                    for (int k = 0; k < j; ++k) sum -= L[i * m + k] * L[j * m + k];
+                    if (i == j) {
+                        if (!(sum > 0.0)) {
+                            factored = false;
+                            break;
+                        }
+                        L[i * m + i] = std::sqrt(sum);
+                    } else {
+                        L[i * m + j] = sum / L[j * m + j];
+                    }
+                }
+            if (!factored) break;
+            QVector<double> y(m), z(m);
+            for (int i = 0; i < m; ++i) {
+                double sum = r[i];
+                for (int k = 0; k < i; ++k) sum -= L[i * m + k] * y[k];
+                y[i] = sum / L[i * m + i];
+            }
+            for (int i = m - 1; i >= 0; --i) {
+                double sum = y[i];
+                for (int k = i + 1; k < m; ++k) sum -= L[k * m + i] * z[k];
+                z[i] = sum / L[i * m + i];
+            }
+            for (int k = 0; k < n; ++k) {
+                double sum = 0.0;
+                for (int i = 0; i < m; ++i) sum += J[i * n + k] * z[i];
+                dx[k] = -sum;
+            }
+        } else {
+            const auto rows = sparseJacobian(blocks, x, m, step, columnMap);
+            std::vector<double> delta;
+            if (!Kernel::ConstraintLinear::minimumNormStep(rows, r.constData(), n, delta)) break;
+            std::copy(delta.begin(), delta.end(), dx.begin());
         }
         // Ricerca lineare: il passo si dimezza finche' lo scarto non scende.
         const QVector<double> before = x;

@@ -450,6 +450,19 @@ std::shared_ptr<const ElementNames> elementNamesOf(const Body &body) {
     return entry ? entry->names : nullptr;
 }
 
+std::shared_ptr<const ElementNames> legacyDrawingElementNames(const Body &body) {
+    const auto entry = computed(body);
+    if (!entry || !entry->history) return nullptr;
+    FaceLabels labels;
+    const auto faces = body.faces();
+    if (entry->labeler && std::any_of(faces.begin(), faces.end(), [&](FaceId f) {
+            return !entry->history->isDeclared(EntityKind::Face, f.index); }))
+        labels = entry->labeler(body, *entry->history);
+    return std::make_shared<const ElementNames>(propagateNames(body, *entry->history,
+        std::vector<const ElementNames *>(std::size_t(entry->history->operandCount()), nullptr), entry->tag,
+        labels.empty() ? nullptr : &labels, entry->declaredLabels.get()));
+}
+
 std::shared_ptr<const BodyHistory> featureHistoryOf(const Body &body) {
     const std::shared_ptr<Entry> entry = computed(body);
     return entry ? entry->history : nullptr;

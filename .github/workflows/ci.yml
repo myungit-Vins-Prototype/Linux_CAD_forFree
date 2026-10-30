@@ -1,0 +1,96 @@
+name: CI Linux e macOS
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-test:
+    name: ${{ matrix.name }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-26.04
+            name: Linux CPU
+          - os: macos-15
+            name: macOS CPU e Metal
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    defaults:
+      run:
+        shell: bash
+    env:
+      QT_QPA_PLATFORM: offscreen
+      QT_QPA_OFFSCREEN_NO_GLX: "1"
+      QT_QPA_PLATFORMTHEME: ""
+      QT_STYLE_OVERRIDE: Fusion
+      LIBGL_ALWAYS_SOFTWARE: "1"
+      HOMEBREW_NO_AUTO_UPDATE: "1"
+    steps:
+      - name: Scarica i sorgenti
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Installa le dipendenze
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y \
+            build-essential cmake ninja-build qt6-base-dev libqt6opengl6-dev \
+            libgl1-mesa-dev zlib1g-dev libzstd-dev \
+            libocct-foundation-dev libocct-modeling-data-dev \
+            libocct-modeling-algorithms-dev libocct-data-exchange-dev \
+            libocct-visualization-dev
+
+      - name: Installa le dipendenze macOS
+        if: runner.os == 'macOS'
+        run: brew install cmake ninja qt opencascade zstd
+
+      - name: Configura la build Release
+        run: |
+          forgecad_prefix_args=()
+          if [[ "$RUNNER_OS" == "macOS" ]]; then
+            forgecad_prefix_args+=("-DCMAKE_PREFIX_PATH=$(brew --prefix qt);$(brew --prefix opencascade)")
+          fi
+          cmake -S . -B build-ci -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DFORGECAD_ENABLE_CUDA=OFF \
+            -DFORGECAD_BUILD_VIEW_TESTS=OFF \
+            -DFORGECAD_BUILD_RIBBON_PREVIEW=OFF \
+            "${forgecad_prefix_args[@]}" \
+            2>&1 | tee "$RUNNER_TEMP/configure.log"
+
+      - name: Compila l'applicazione e tutti i test configurati
+        run: cmake --build build-ci --parallel 2 2>&1 | tee "$RUNNER_TEMP/build.log"
+
+      - name: Esegui i test
+        run: |
+          ctest --test-dir build-ci --output-on-failure --no-tests=error \
+            --parallel 2 --timeout 900 \
+            --output-junit "$RUNNER_TEMP/ctest.xml" \
+            2>&1 | tee "$RUNNER_TEMP/ctest.log"
+
+      - name: Conserva i risultati e i log
+        if: ${{ always() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: ci-${{ matrix.os }}-logs
+          retention-days: 7
+          if-no-files-found: warn
+          path: |
+            ${{ runner.temp }}/configure.log
+            ${{ runner.temp }}/build.log
+            ${{ runner.temp }}/ctest.log
+            ${{ runner.temp }}/ctest.xml
+            build-ci/Testing/Temporary/LastTest.log
+            build-ci/Testing/Temporary/LastTestsFailed.log

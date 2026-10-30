@@ -31,9 +31,10 @@ int CadViewport::rebuildAllFeatures() {
     if(documentReadOnly_)return -1;
     if (extrusions_.isEmpty()) return 0;
     recordUndo();
-    for (ExtrusionObject &body : extrusions_) {
-        body.cachedGeometry = false;
-    }
+    // Rigenerare non cambia il contratto dei risultati storici: le feature
+    // successive possono riferirsi a facce/bordi dell'intero aggregato.
+    // Solo le ripetizioni create nel nuovo formato espongono componenti.
+    for (ExtrusionObject &body : extrusions_) body.cachedGeometry = false;
     regenerateAll();
     documentChanged();
     int failed = 0;
@@ -64,6 +65,7 @@ void CadViewport::loadDocument(DocumentState state,
     if (state.orientationSet) camera_.orientation_ = state.orientation;
     lengthUnit_ = state.lengthUnitSet ? state.lengthUnit : LengthUnit::Millimeter;
     ForgeCad::setDisplayLengthUnit(lengthUnit_, this);
+    ForgeCad::normalizePatternResultOrder(state.sketches, state.extrusions);
     ForgeCad::normalizeModelHistory(state);
     sketches_ = std::move(state.sketches);
     storyPosition_ = -1;
@@ -95,6 +97,7 @@ void CadViewport::loadPreviewDocument(DocumentState state) {
     if (state.orientationSet) camera_.orientation_ = state.orientation;
     lengthUnit_ = state.lengthUnitSet ? state.lengthUnit : LengthUnit::Millimeter;
     ForgeCad::setDisplayLengthUnit(lengthUnit_, this);
+    ForgeCad::normalizePatternResultOrder(state.sketches, state.extrusions);
     ForgeCad::normalizeModelHistory(state);
     sketches_ = std::move(state.sketches);
     storyPosition_ = -1;
@@ -186,11 +189,99 @@ bool CadViewport::isBodyDrawn(int index, bool includeSketchResults) const {
     if (refPicking_ && refPickOwner_ >= 0) referenceEnd = refPickOwner_;
     if (sketchMode_ && sketchContextEnd_ >= 0) referenceEnd = sketchContextEnd_;
     if (!extrusions_.at(index).modelBodyId && index >= referenceEnd) return false;
+    bool drawn = extrusions_.at(index).visible;
+    // La scelta in modifica usa la scena prima della feature, anche dopo
+    // Azzera/anteprima fallita. Non altera i flag salvati del documento.
+    if (refPicking_ && refPickOwner_ >= 0 && ForgeCad::isShapeBody(extrusions_.at(index)))
+        drawn = refPickContextBodies_.contains(index);
     if(sketchMode_ && sketchContextEnd_>=0) {
         const auto &bodies = includeSketchResults ? sketchDisplayBodies_ : sketchContextBodies_;
-        return index<bodies.size() && bodies.at(index);
+        drawn = index<bodies.size() && bodies.at(index);
     }
-    return extrusions_.at(index).visible;
+    return drawn;
+}
+
+// Le mesh richieste vengono calcolate su copie separate; solo il thread GUI
+// pubblica le cache. La vista e gli snapshot restano leggibili durante i worker.
+void CadViewport::ensureBodyDisplay(int index) const {
+    ensureBodyDisplays({index});
+}
+
+void CadViewport::ensureVisibleBodyDisplays() const {
+    QVector<int> requested;
+    for (int index=0;index<extrusions_.size();++index)
+        if (isBodyDrawn(index)) requested.append(index);
+    ensureBodyDisplays(requested);
+}
+
+void CadViewport::ensureBodyDisplays(const QVector<int> &indices) const {
+    auto *self=const_cast<CadViewport *>(this);
+    // Un paint durante il worker usa la scena precedente senza avviare altro lavoro.
+    if (self->responsiveWork_) return;
+    QSet<int> requested;
+    const auto collect = [&](auto &&visit, int index) -> void {
+        if (index<0 || index>=extrusions_.size() || requested.contains(index)) return;
+        const auto &body=extrusions_.at(index);
+        if (body.display.quality==tessellationQuality_ || (!body.forgeBody && !body.curve)) return;
+        requested.insert(index);
+        // Le ripetizioni possono usare la mesh della base anche quando e' nascosta.
+        if (body.feature==BodyFeature::Pattern && body.firstBody>=0 && body.firstBody<index)
+            visit(visit,body.firstBody);
+    };
+    for (int index:indices) collect(collect,index);
+    if (requested.isEmpty()) return;
+    auto ordered=requested.values();
+    std::sort(ordered.begin(),ordered.end());
+    struct MeshWork {
+        int index;
+        ExtrusionObject source;
+        BodyDisplay display;
+    };
+    std::vector<MeshWork> pending;
+    pending.reserve(ordered.size());
+    bool replacesDisplay=false;
+    for (int index:ordered) {
+        const auto &old=extrusions_.at(index).display;
+        replacesDisplay=replacesDisplay || !old.vertices.isEmpty() || !old.edges.isEmpty() || bool(old.instancedBase);
+        pending.push_back({index,extrusions_.at(index),{}});
+        // Non trattenere una seconda copia delle vecchie mesh fino alla fine del gruppo.
+        pending.back().source.display={};
+    }
+    const int quality=tessellationQuality_;
+    const auto cancellation=ForgeCad::Kernel::currentCancellation;
+    const auto cores=std::max(1u,ForgeCad::Kernel::threadCount(0));
+    // Le mesh nuove sono memoria finale della scena: coda continua per non
+    // attendere il corpo piu' lento a ogni gruppo. Nel cambio qualita' i gruppi
+    // limitano invece la sovrapposizione delle vecchie cache con le nuove.
+    // Il limite e' in risultati in attesa, non in byte.
+    const std::size_t wave=replacesDisplay ? std::size_t(cores)*4 : pending.size();
+    DeferredWork work(self,QStringLiteral("Preparazione di %1 mesh...").arg(pending.size()));
+    QElapsedTimer timer;timer.start();
+    for (std::size_t offset=0;offset<pending.size();offset+=wave) {
+        const auto count=std::min(wave,pending.size()-offset);
+        // Con pochi corpi resta disponibile il parallelismo interno sulle facce.
+        const unsigned threads=count>=cores ? cores : 1u;
+        self->runWhileResponsive([&] {
+            ForgeCad::Kernel::CancellationScope scope(cancellation);
+            ForgeCad::Kernel::parallelFor(count,threads,[&](std::size_t k) {
+                auto &item=pending[offset+k];
+                ForgeCad::tessellateGeometry(item.source,quality,item.display);
+            });
+        });
+        if (self->tessellationQuality_!=quality) return;
+        // La base di una ripetizione ha indice minore: pubblicarla per prima.
+        for (std::size_t k=0;k<count;++k) {
+            auto &item=pending[offset+k];
+            if (item.index>=self->extrusions_.size()) continue;
+            const auto &current=self->extrusions_.at(item.index);
+            if (current.featureId!=item.source.featureId || current.forgeBody!=item.source.forgeBody
+                || current.curve!=item.source.curve || current.curves!=item.source.curves) continue;
+            self->extrusions_[item.index].display=std::move(item.display);
+            ForgeCad::configurePatternInstances(self->extrusions_[item.index],item.index,self->sketches_,self->extrusions_);
+        }
+    }
+    if (qEnvironmentVariableIsSet("FORGECAD_PROFILE"))
+        std::fprintf(stderr,"PROFILO mesh richieste: %zu corpi, %u worker, %lld ms\n",pending.size(),cores,static_cast<long long>(timer.elapsed()));
 }
 
 void CadViewport::refreshSketchContext() {
@@ -198,12 +289,11 @@ void CadViewport::refreshSketchContext() {
     if(!sketchMode_ || activeSketch_<0 || activeSketch_>=sketches_.size())return;
     const auto steps = storyboard();
     const int stop = std::min(storyboardPosition(), storyboardIndex(true, activeSketch_));
-    int end = 0;
+    const int end = ForgeCad::storyFeatureLimit(extrusions_, steps, stop);
     sketchContextSketches_.fill(false, sketches_.size());
     sketchContextSketches_[activeSketch_] = true;
     for (int p = 0; p < stop; ++p) {
         if (steps.at(p).sketch) sketchContextSketches_[steps.at(p).index] = true;
-        else ++end;
     }
     sketchContextEnd_ = end;
     sketchContextBodies_.fill(false, extrusions_.size());
@@ -234,6 +324,7 @@ void CadViewport::refreshSketchContext() {
             sketchDisplayBodies_[i]=visible;
         }
     }
+    ensureVisibleBodyDisplays();
 }
 
 void CadViewport::applyHistoryPosition() {
@@ -274,6 +365,7 @@ QVector<StoryStep> CadViewport::storyboard() const { return ForgeCad::modelStory
 int CadViewport::storyboardPosition() const { return storyPosition_ < 0 ? storyboard().size() : storyPosition_; }
 
 int CadViewport::storyboardIndex(bool sketch, int index) const {
+    if (!sketch) index = ForgeCad::patternSourceIndex(extrusions_, index);
     const auto steps = storyboard();
     for (int p = 0; p < steps.size(); ++p) if (steps.at(p).sketch == sketch && steps.at(p).index == index) return p;
     return -1;
@@ -281,20 +373,9 @@ int CadViewport::storyboardIndex(bool sketch, int index) const {
 
 void CadViewport::setStoryboardPosition(int position) {
     const auto steps = storyboard();
-    // I risultati appartengono alla stessa operazione della madre: il
-    // cursore subito dopo la madre comprende l'intero gruppo contiguo.
-    while (position > 0 && position < steps.size() && !steps.at(position).sketch) {
-        const auto &part = extrusions_.at(steps.at(position).index);
-        if (part.feature != BodyFeature::Pattern || part.patternComponent <= 0
-            || storyboardIndex(false, part.firstBody) >= position) break;
-        ++position;
-    }
     storyPosition_ = position >= steps.size() ? -1 : qBound(0, position, int(steps.size()));
     historyPosition_ = -1;
-    if (storyPosition_ >= 0) {
-        historyPosition_ = 0;
-        for (int p = 0; p < storyPosition_; ++p) if (!steps.at(p).sketch) ++historyPosition_;
-    }
+    if (storyPosition_ >= 0) historyPosition_ = ForgeCad::storyFeatureLimit(extrusions_, steps, storyPosition_);
     for (ExtrusionObject &feature : extrusions_) for (const ModelBody &body : modelBodies_)
         if (feature.modelBodyId == body.id) feature.visible = feature.featureId == body.tipFeatureId && body.visible;
     selection_ = {};
@@ -305,6 +386,8 @@ QString CadViewport::moveStoryboardStep(int from, int to) {
     if (documentReadOnly_) return QStringLiteral("Documento in sola lettura: eseguire il check-out.");
     if (sketchMode_) return QStringLiteral("Termina la modifica dello schizzo prima di riordinare la storia.");
     auto steps = storyboard();
+    QVector<int> previousFeatures;
+    for (const auto &step : steps) if (!step.sketch) previousFeatures.append(step.index);
     if (from < 0 || to < 0 || from >= steps.size() || to >= steps.size()) return QStringLiteral("Posizione della storia non valida.");
     if (from == to) return {};
     const StoryStep moved = steps.takeAt(from);
@@ -315,8 +398,9 @@ QString CadViewport::moveStoryboardStep(int from, int to) {
         QVector<int> featureOrder;
         for (const auto &step : steps) if (!step.sketch) featureOrder.append(step.index);
         const int destination = featureOrder.indexOf(moved.index);
-        if (destination != moved.index) {
-            const int target = featureOrder.at(destination < moved.index ? destination + 1 : destination - 1);
+        const int original = previousFeatures.indexOf(moved.index);
+        if (destination != original) {
+            const int target = featureOrder.at(destination < original ? destination + 1 : destination - 1);
             return reorderFeatureTo(moved.index, target, steps);
         }
     }
@@ -506,18 +590,11 @@ QString CadViewport::setFeatureSuppressed(int index, bool suppressed) {
 QString CadViewport::setFeaturesSuppressed(const QVector<int> &indices, bool suppressed) {
     if(documentReadOnly_)return QStringLiteral("Documento in sola lettura: eseguire il check-out.");
     QVector<int> list;
-    for (int index : indices)
-        if (index >= 0 && index < extrusions_.size() && extrusions_.at(index).modelBodyId
-            && extrusions_.at(index).suppressed != suppressed && !list.contains(index))
-            list.append(index);
-    // Soppressione della madre e dei risultati come un'unica funzione.
-    for (int i = 0; i < list.size(); ++i) {
-        const int root = list.at(i);
-        if (extrusions_.at(root).feature != BodyFeature::Pattern || extrusions_.at(root).patternComponent > 0) continue;
-        for (int child = root + 1; child < extrusions_.size(); ++child)
-            if (extrusions_.at(child).feature == BodyFeature::Pattern && extrusions_.at(child).patternComponent > 0
-                && extrusions_.at(child).firstBody == root && extrusions_.at(child).suppressed != suppressed && !list.contains(child))
-                list.append(child);
+    for (int selected : indices) {
+        const int root = ForgeCad::patternSourceIndex(extrusions_, selected);
+        for (int index = 0; index < extrusions_.size(); ++index)
+            if (ForgeCad::patternSourceIndex(extrusions_, index) == root && extrusions_.at(index).modelBodyId
+                && extrusions_.at(index).suppressed != suppressed && !list.contains(index)) list.append(index);
     }
     if (list.isEmpty()) return {};
     std::sort(list.begin(), list.end());
@@ -576,8 +653,12 @@ void CadViewport::deleteFeature(int index) { deleteFeatures({index}); }
 void CadViewport::deleteFeatures(const QVector<int> &indices) {
     if(documentReadOnly_)return;
     QVector<int> list;
-    for (int index : indices)
-        if (index >= 0 && index < extrusions_.size() && extrusions_.at(index).modelBodyId && !list.contains(index)) list.append(index);
+    for (int selected : indices) {
+        const int root = ForgeCad::patternSourceIndex(extrusions_, selected);
+        for (int index = 0; index < extrusions_.size(); ++index)
+            if (ForgeCad::patternSourceIndex(extrusions_, index) == root && extrusions_.at(index).modelBodyId
+                && !list.contains(index)) list.append(index);
+    }
     if (list.isEmpty()) return;
     std::sort(list.begin(), list.end(), std::greater<int>());  // dall'ultima: gli indici prima non cambiano
     QHash<quint64, bool> bodyVisible;
@@ -619,8 +700,10 @@ void CadViewport::deleteFeatures(const QVector<int> &indices) {
 }
 
 QString CadViewport::moveFeature(int index, int direction) {
+    index = ForgeCad::patternSourceIndex(extrusions_, index);
     QVector<int> features;
-    for (int f = 0; f < extrusions_.size(); ++f) if ((extrusions_.at(f).modelBodyId || extrusions_.at(f).feature == BodyFeature::DatumPlane)) features.append(f);
+    for (int f = 0; f < extrusions_.size(); ++f)
+        if ((extrusions_.at(f).modelBodyId || extrusions_.at(f).feature == BodyFeature::DatumPlane) && ForgeCad::patternSourceIndex(extrusions_, f) == f) features.append(f);
     const int from = features.indexOf(index), to = from + (direction < 0 ? -1 : 1);
     if (from < 0 || to < 0 || to >= features.size()) return QStringLiteral("Non ci sono altre feature in quella direzione.");
     return moveFeatureTo(index, features.at(to));
@@ -649,15 +732,20 @@ QString CadViewport::reorderFeatureTo(int index, int target, const QVector<Story
 
     QVector<int> order;
     order.reserve(extrusions_.size());
+    QVector<int> group;
     for (int old = 0; old < extrusions_.size(); ++old)
-        if (old != index) order.append(old);
+        if (ForgeCad::patternSourceIndex(extrusions_, old) == index) group.append(old);
+        else order.append(old);
     // `target` e' una feature, non una posizione nel vettore: gli stadi
     // di corpi diversi possono essere intercalati. Salendo si inserisce
     // prima del bersaglio, scendendo dopo, come indica il drag nell'albero.
     int insertion = order.indexOf(target);
     if (insertion < 0) return QStringLiteral("La feature di destinazione non esiste piu'.");
-    if (index < target) ++insertion;
-    order.insert(insertion, index);
+    if (index < target) {
+        ++insertion;
+        while (insertion < order.size() && ForgeCad::patternSourceIndex(extrusions_, order.at(insertion)) == target) ++insertion;
+    }
+    for (int part : group) order.insert(insertion++, part);
     QVector<int> map(extrusions_.size(), -1);
     QVector<ExtrusionObject> reordered;
     reordered.reserve(extrusions_.size());
@@ -666,26 +754,7 @@ QString CadViewport::reorderFeatureTo(int index, int target, const QVector<Story
         reordered.append(extrusions_.at(old));
     }
     const auto mapped = [&](int old) { return old >= 0 ? map.value(old, -1) : old; };
-    const auto remapRef = [&](GeometryRef &ref) {
-        if (ForgeCad::isBodyRef(ref)) ref.index = mapped(ref.index);
-    };
-    for (ExtrusionObject &feature : reordered) {
-        feature.firstBody = mapped(feature.firstBody);
-        feature.secondBody = mapped(feature.secondBody);
-        for (int &tool : feature.booleanTools) tool = mapped(tool);
-        for (int &merged : feature.mergeBodies) merged = mapped(merged);
-        for (GeometryRef &ref : feature.datum.refs) remapRef(ref);
-        for (GeometryRef &ref : feature.pattern.refs) remapRef(ref);
-        for (QVector<GeometryRef> *refs : {&feature.surfaceTool.targets, &feature.ruledFirst, &feature.ruledSecond, &feature.planarRefs, &feature.loftStartFaces, &feature.loftEndFaces, &feature.loftSections, &feature.loftEdgeGuides})
-            for (GeometryRef &ref : *refs) remapRef(ref);
-        remapRef(feature.extentRef);
-        remapRef(feature.move.axis);
-        remapRef(feature.revolveAxisRef);
-        remapRef(feature.draftNeutral);
-        remapRef(feature.thickenDirection);
-        remapRef(feature.curveExtraction.source);
-        remapRef(feature.curveExtraction.tool);
-    }
+    ForgeCad::remapFeatureBodies(reordered, mapped);
 
     for (const ExtrusionObject &feature : reordered)
         if (bodyId && feature.modelBodyId == bodyId) {
@@ -1441,6 +1510,7 @@ void CadViewport::synchronizePatternResults() {
     for (int root = 0; root < extrusions_.size(); ++root) {
         const auto source = extrusions_.at(root);
         if (source.feature != BodyFeature::Pattern || source.patternComponent > 0
+            || (source.patternComponent < 0 && !ForgeCad::hasDerivedPatternResults(root, extrusions_))
             || source.suppressed || !source.error.isEmpty() || source.patternResults.isEmpty()) continue;
         QSet<int> present;
         for (int i = root + 1; i < extrusions_.size(); ++i) {
@@ -1482,60 +1552,16 @@ void CadViewport::synchronizePatternResults() {
     // I derivati consumati a valle sono nascosti nella scena, non nelle
     // preferenze del corpo. Ripristinare il tip prima di normalizzare:
     // altrimenti una seconda rigenerazione li nasconde anche nel rollback.
-    for (auto &feature : extrusions_) if (consumedBodies_.contains(feature.modelBodyId))
+    for (auto &feature : extrusions_) if (feature.feature == BodyFeature::Pattern && feature.patternComponent > 0
+                                          && consumedBodies_.contains(feature.modelBodyId))
         for (const auto &model : modelBodies_)
             if (feature.modelBodyId == model.id && feature.featureId == model.tipFeatureId) feature.visible = model.visible;
     ForgeCad::normalizeModelHistory(extrusions_, modelBodies_);
-    // I risultati di una madre non sono operazioni aggiunte in fondo: devono
-    // precedere ogni consumatore. Rimappare tutti i riferimenti, anche quelli
-    // geometrici multipli e gli appoggi degli schizzi, mantenendo gli ID.
-    QHash<int, QVector<int>> children;
-    for (int i = 0; i < extrusions_.size(); ++i) {
-        const auto &part = extrusions_.at(i);
-        if (part.feature == BodyFeature::Pattern && part.patternComponent > 0
-            && part.firstBody >= 0 && part.firstBody < i) children[part.firstBody].append(i);
-    }
-    QSet<int> derived;
-    for (auto it = children.begin(); it != children.end(); ++it) {
-        std::sort(it.value().begin(), it.value().end(), [&](int a, int b) {
-            return extrusions_.at(a).patternComponent < extrusions_.at(b).patternComponent;
-        });
-        for (int i : it.value()) derived.insert(i);
-    }
-    QVector<int> order;
-    for (int i = 0; i < extrusions_.size(); ++i) if (!derived.contains(i)) {
-        order.append(i); order += children.value(i);
-    }
-    bool reordered = false;
-    for (int i = 0; i < order.size(); ++i) reordered = reordered || order.at(i) != i;
-    if (reordered) {
-        const auto oldStory = storyboard();
-        QVector<int> map(extrusions_.size(), -1);
-        QVector<ExtrusionObject> next;
-        for (int old : order) { map[old] = next.size(); next.append(extrusions_.at(old)); }
-        const auto mapped = [&](int old) { return old < 0 ? old : map.value(old, -1); };
-        for (auto &feature : next) {
-            feature.firstBody = mapped(feature.firstBody);
-            feature.secondBody = mapped(feature.secondBody);
-            for (int &tool : feature.booleanTools) tool = mapped(tool);
-            for (int &merged : feature.mergeBodies) merged = mapped(merged);
-            ForgeCad::visitGeometryRefs(feature, [&](GeometryRef &ref, ForgeCad::GeometryRefFamily, int) {
-                if (ForgeCad::isBodyRef(ref)) ref.index = mapped(ref.index);
-            });
-        }
-        QVector<StoryStep> nextStory;
-        for (auto step : oldStory) {
-            if (!step.sketch && derived.contains(step.index)) continue;
-            const int old = step.index;
-            if (!step.sketch) step.index = mapped(old);
-            nextStory.append(step);
-            if (!step.sketch) for (int child : children.value(old)) nextStory.append({false, mapped(child)});
-        }
-        ForgeCad::remapSketchSupports(sketches_, mapped);
-        if (selection_.kind == SceneObjectKind::Extrusion) selection_.index = mapped(selection_.index);
-        extrusions_ = std::move(next);
-        ForgeCad::placeStorySketches(sketches_, extrusions_, nextStory);
-    }
+    // Un unico riordino condiviso rimappa anche riferimenti e appoggi degli
+    // schizzi; i derivati non diventano eventi aggiuntivi nella storyboard.
+    const auto map = ForgeCad::normalizePatternResultOrder(sketches_, extrusions_);
+    if (!map.isEmpty() && selection_.kind == SceneObjectKind::Extrusion)
+        selection_.index = map.value(selection_.index, -1);
     // La crescita di un gruppo gia' esistente non e' un'inserzione di nuove
     // operazioni al cursore: documentChanged non deve spostarne la coda.
     if (existingGroupGrew) insertionSourceSize_ = insertionSketchSourceSize_ = -1;
@@ -1553,10 +1579,8 @@ void CadViewport::synchronizePatternResults() {
         }
         storyPosition_ = boundary >= steps.size() ? -1 : boundary;
         historyPosition_ = -1;
-        if (storyPosition_ >= 0) {
-            historyPosition_ = 0;
-            for (int p = 0; p < boundary; ++p) if (!steps.at(p).sketch) ++historyPosition_;
-        }
+        if (storyPosition_ >= 0)
+            historyPosition_ = ForgeCad::storyFeatureLimit(extrusions_, steps, storyPosition_);
     }
     for (int i = 0; i < extrusions_.size(); ++i)
         if (extrusions_.at(i).feature == BodyFeature::Pattern && extrusions_.at(i).patternComponent > 0)
@@ -1789,7 +1813,11 @@ void CadViewport::documentChanged() {
                 if (feature.modelBodyId == body.id && feature.featureId == body.tipFeatureId) feature.visible = body.visible;
     // Creation paths append their results. Insert that entire batch at the
     // rollback cursor, preserving persistent IDs and remapping vector indices.
-    if (historyPosition_ >= 0 && insertionSourceSize_ >= 0 && extrusions_.size() > insertionSourceSize_) {
+    bool addedOperation = false;
+    if (addedFeatures > 0)
+        for (int i = insertionSourceSize_; i < extrusions_.size(); ++i)
+            if (ForgeCad::patternSourceIndex(extrusions_, i) == i) addedOperation = true;
+    if (historyPosition_ >= 0 && insertionSourceSize_ >= 0 && addedOperation) {
         const int start = qMin(historyPosition_, insertionSourceSize_);
         const int added = extrusions_.size() - insertionSourceSize_;
         ForgeCad::normalizeModelHistory(extrusions_, modelBodies_);
@@ -1801,27 +1829,7 @@ void CadViewport::documentChanged() {
         QVector<ExtrusionObject> reordered;
         for (int old : order) { map[old] = reordered.size(); reordered.append(extrusions_.at(old)); }
         const auto mapped = [&](int old) { return old >= 0 ? map.value(old, -1) : old; };
-        const auto remapRef = [&](GeometryRef &ref) {
-            if (ForgeCad::isBodyRef(ref)) ref.index = mapped(ref.index);
-        };
-        for (ExtrusionObject &feature : reordered) {
-            feature.firstBody = mapped(feature.firstBody);
-            feature.secondBody = mapped(feature.secondBody);
-            for (int &tool : feature.booleanTools) tool = mapped(tool);
-            for (int &merged : feature.mergeBodies) merged = mapped(merged);
-            for (GeometryRef &ref : feature.datum.refs) remapRef(ref);
-            for (GeometryRef &ref : feature.pattern.refs) remapRef(ref);
-            for (QVector<GeometryRef> *refs : {&feature.surfaceTool.targets, &feature.ruledFirst, &feature.ruledSecond, &feature.planarRefs, &feature.loftStartFaces, &feature.loftEndFaces, &feature.loftSections, &feature.loftEdgeGuides})
-                for (GeometryRef &ref : *refs) remapRef(ref);
-            remapRef(feature.extentRef);
-            remapRef(feature.move.axis);
-            remapRef(feature.revolveAxisRef);
-            remapRef(feature.draftNeutral);
-            remapRef(feature.thickenDirection);
-            remapRef(feature.sweepProfileRef); remapRef(feature.sweepPathRef);
-            remapRef(feature.curveExtraction.source);
-            remapRef(feature.curveExtraction.tool);
-        }
+        ForgeCad::remapFeatureBodies(reordered, mapped);
         QSet<quint64> changedBodies;
         for (int i = start; i < start + added; ++i) changedBodies.insert(reordered.at(i).modelBodyId);
         for (quint64 bodyId : changedBodies) {
@@ -1855,6 +1863,9 @@ void CadViewport::documentChanged() {
         regenerateAll();
     }
     insertionSourceSize_ = -1;
+    const auto outputMap = ForgeCad::normalizePatternResultOrder(sketches_, extrusions_);
+    if (!outputMap.isEmpty() && selection_.kind == SceneObjectKind::Extrusion)
+        selection_.index = outputMap.value(selection_.index, -1);
     if (historyPosition_ > extrusions_.size()) historyPosition_ = extrusions_.size();
     ForgeCad::normalizeModelHistory(extrusions_, modelBodies_);
     ForgeCad::normalizeSketchHistory(sketches_, extrusions_);
@@ -1871,8 +1882,7 @@ void CadViewport::documentChanged() {
         ForgeCad::placeStorySketches(sketches_, extrusions_, old);
         if (insertionPosition >= 0) {
             storyPosition_ = at;
-            historyPosition_ = 0;
-            for (int p = 0; p < at; ++p) if (!old.at(p).sketch) ++historyPosition_;
+            historyPosition_ = ForgeCad::storyFeatureLimit(extrusions_, old, at);
         }
     }
     insertionSketchSourceSize_ = -1;
@@ -1881,8 +1891,7 @@ void CadViewport::documentChanged() {
     else if (storyPosition_ >= 0) {
         // Anche eliminazioni e riordini possono cambiare quanti corpi
         // precedono il cursore: il prefisso geometrico deriva dalla storia.
-        historyPosition_ = 0;
-        for (int p = 0; p < storyPosition_; ++p) if (!currentStory.at(p).sketch) ++historyPosition_;
+        historyPosition_ = ForgeCad::storyFeatureLimit(extrusions_, currentStory, storyPosition_);
     }
     applyHistoryPosition();
     if (sketchMode_ && activeSketch_>=0 && activeSketch_<sketches_.size())
@@ -1891,6 +1900,7 @@ void CadViewport::documentChanged() {
                 && ForgeCad::sketchesOf(feature).contains(activeSketch_))
                 sketchSessionFeatures_.insert(feature.featureId);
     refreshSketchContext();
+    ensureVisibleBodyDisplays();
     sceneBoundsDirty_ = true;
     raySelectionCache_.clear();
     projectedEdges_.clear();
@@ -2001,6 +2011,7 @@ void CadViewport::regenerateFrom(int from, QVector<bool> dirty, QSet<int> dirtyS
     }
     flush();
     synchronizePatternResults();
+    ensureVisibleBodyDisplays();
 }
 
 void CadViewport::rebuildParallel(const QVector<int> &indices,
@@ -2010,7 +2021,12 @@ void CadViewport::rebuildParallel(const QVector<int> &indices,
                                                : QStringLiteral("Rigenerazione del corpo..."));
     if (indices.size() <= 1) {
         for (int index : indices) {
-            rebuildBody(extrusions_[index], index);
+            auto result=extrusions_.at(index);
+            const auto sketches=sketches_;
+            const auto bodies=extrusions_;
+            const bool eager=qEnvironmentVariableIntValue("FORGECAD_EAGER_MESH")==1;
+            runWhileResponsive([&] { ForgeCad::buildBody(result,index,sketches,bodies,tessellationQuality_,eager); });
+            extrusions_[index]=std::move(result);
             if (advanced) advanced(1, extrusions_.at(index).name);
         }
         return;
@@ -2032,6 +2048,11 @@ void CadViewport::rebuildParallel(const QVector<int> &indices,
     const QVector<SketchObject> sketches = sketches_;
     const QVector<ExtrusionObject> &all = next;
     const int quality = tessellationQuality_;
+    const bool eager=qEnvironmentVariableIntValue("FORGECAD_EAGER_MESH")==1;
+    QVector<bool> requested(extrusions_.size(),false);
+    for (int index:indices)
+        requested[index]=isBodyDrawn(index) && extrusions_.at(index).feature!=BodyFeature::Pattern;
+    const auto cores=ForgeCad::Kernel::threadCount(0);
     for (int l = 0; l < levels; ++l) {
         std::vector<int> batch;
         for (int index : indices)
@@ -2042,7 +2063,11 @@ void CadViewport::rebuildParallel(const QVector<int> &indices,
             runWhileResponsive([&] {
                 ForgeCad::Kernel::parallelFor(count, ForgeCad::Kernel::threadCount(0), [&](std::size_t k) {
                     const int index = batch[offset + k];
-                    ForgeCad::buildBody(bodies[index], index, sketches, all, quality);
+                    // Nei gruppi grandi la mesh gia' richiesta usa lo stesso
+                    // worker della geometria: nessuna barriera globale B-rep/mesh.
+                    // Le ripetizioni aspettano la coda che prepara anche le basi.
+                    const bool display=eager || (count>=cores && requested.at(index));
+                    ForgeCad::buildBody(bodies[index], index, sketches, all, quality, display);
                 });
             });
             if (advanced) advanced(int(count), next.at(batch[offset + count - 1]).name);
@@ -2248,6 +2273,7 @@ void CadViewport::restoreDocument(DocumentState state) {
     deferredSketches_.clear();for(int index:state.pendingSketchChanges)if(index>=0&&index<state.sketches.size())deferredSketches_.insert(index);
     adoptDocumentIdentity(state.version, state.baseCheckinId);
     dimensionPlacing_ = -1;
+    ForgeCad::normalizePatternResultOrder(state.sketches, state.extrusions);
     ForgeCad::normalizeModelHistory(state);
     sketches_ = std::move(state.sketches);
     storyPosition_ = -1;
@@ -2259,8 +2285,11 @@ void CadViewport::restoreDocument(DocumentState state) {
     for (SketchObject &sketch : sketches_) {
         for (CurveObject &curve : sketch.curves) ForgeCad::recalculateCurve(curve, tessellationQuality_);
     }
-    for (int index = 0; index < extrusions_.size(); ++index)
-        if (extrusions_.at(index).display.quality != tessellationQuality_) tessellateBody(extrusions_[index], index);
+    if(qEnvironmentVariableIntValue("FORGECAD_EAGER_MESH")==1) {
+        QVector<int> requested;
+        for (int index=0;index<extrusions_.size();++index) requested.append(index);
+        ensureBodyDisplays(requested);
+    }
     hasPendingPoint_ = false;
     curveControlPoints_.clear();
     sketchSelections_.clear();

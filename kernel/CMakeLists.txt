@@ -122,6 +122,15 @@ target_compile_features(forgekernel PUBLIC cxx_std_17)
 # Il kernel e' codice numerico nel percorso caldo (proiezioni, intersezioni):
 # lo si compila ottimizzato anche in Debug, senza perdere i simboli.
 target_compile_options(forgekernel PRIVATE -Wall -Wextra -Wpedantic -O2 -g)
+# Le ricorrenze specializzate e generiche devono arrotondare gli stessi
+# passaggi: la contrazione implicita a FMA cambia i prefissi delle derivate
+# e i segni dei residui geometrici su x86-64-v3. Manteniamo SIMD/O2 e le
+# std::fma esplicite dei predicati esatti. Vale anche per le funzioni inline
+# del kernel compilate nei chiamanti C++/Objective-C++ (non per CUDA).
+target_compile_options(forgekernel PUBLIC
+    "$<$<COMPILE_LANG_AND_ID:CXX,GNU,Clang,AppleClang>:-ffp-contract=off>"
+    "$<$<COMPILE_LANG_AND_ID:OBJCXX,Clang,AppleClang>:-ffp-contract=off>"
+)
 set_target_properties(forgekernel PROPERTIES AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
 
 # Ponte da OpenCASCADE al kernel proprio: solo per i test (confronti con le

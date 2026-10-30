@@ -7,22 +7,25 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
     set(CMAKE_OBJCXX_STANDARD_REQUIRED ON)
 endif()
 
-include(CheckLanguage)
-if(NOT CMAKE_CUDA_COMPILER AND EXISTS "/opt/cuda/bin/nvcc")
-    set(CMAKE_CUDA_COMPILER "/opt/cuda/bin/nvcc" CACHE FILEPATH "CUDA compiler" FORCE)
+option(FORGECAD_ENABLE_CUDA "Abilita CUDA quando il toolkit e' disponibile" ON)
+if(FORGECAD_ENABLE_CUDA)
+    include(CheckLanguage)
+    if(NOT CMAKE_CUDA_COMPILER AND EXISTS "/opt/cuda/bin/nvcc")
+        set(CMAKE_CUDA_COMPILER "/opt/cuda/bin/nvcc" CACHE FILEPATH "CUDA compiler" FORCE)
+    endif()
+    check_language(CUDA)
 endif()
-check_language(CUDA)
 # Senza scelta esplicita, usa native solo quando CMake ha rilevato una GPU.
 # Su macchine senza GPU resta il default del compilatore CUDA; non forzare
 # -arch=native (nvcc avviserebbe e userebbe comunque il proprio default).
 set(FORGECAD_AUTO_CUDA_ARCHITECTURES OFF)
-if(CMAKE_CUDA_COMPILER AND NOT DEFINED CMAKE_CUDA_ARCHITECTURES AND "$ENV{CUDAARCHS}" STREQUAL "")
+if(FORGECAD_ENABLE_CUDA AND CMAKE_CUDA_COMPILER AND NOT DEFINED CMAKE_CUDA_ARCHITECTURES AND "$ENV{CUDAARCHS}" STREQUAL "")
     set(FORGECAD_AUTO_CUDA_ARCHITECTURES ON)
     # OFF lascia scegliere l'architettura al compilatore, anche se il build
     # esistente era stato configurato con native senza una voce nella cache.
     set(CMAKE_CUDA_ARCHITECTURES OFF)
 endif()
-if(CMAKE_CUDA_COMPILER)
+if(FORGECAD_ENABLE_CUDA AND CMAKE_CUDA_COMPILER)
     enable_language(CUDA)
     if(FORGECAD_AUTO_CUDA_ARCHITECTURES AND
        CMAKE_CUDA_ARCHITECTURES_NATIVE MATCHES "^[0-9]+(-real)?(;[0-9]+(-real)?)*$")
@@ -30,7 +33,12 @@ if(CMAKE_CUDA_COMPILER)
     endif()
     set(FORGE_CAD_CUDA_SOURCE cuda_support.cu)
 else()
-    set(FORGE_CAD_CUDA_SOURCE cuda_support_cpu.cpp)
+    if(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
+        set(FORGE_CAD_CUDA_SOURCE cuda_support_metal.mm)
+        set_source_files_properties(cuda_support_metal.mm PROPERTIES COMPILE_OPTIONS "-fobjc-arc")
+    else()
+        set(FORGE_CAD_CUDA_SOURCE cuda_support_cpu.cpp)
+    endif()
 endif()
 
 # Il server della mappa usa le vere opzioni della build, senza eseguire
@@ -61,6 +69,7 @@ else()
         INTERFACE_INCLUDE_DIRECTORIES "${FORGECAD_ZSTD_INCLUDE_DIR}")
     set(FORGECAD_ZSTD_TARGET forgecad_zstd)
 endif()
+find_package(Threads REQUIRED)
 # OpenCASCADE serve solo ai test del kernel (riferimento per i confronti):
 # l'applicazione usa soltanto il kernel proprio.
 find_package(OpenCASCADE REQUIRED)
@@ -68,6 +77,40 @@ find_package(OpenCASCADE REQUIRED)
 # Kernel geometrico proprio (kernel/), validato contro OpenCASCADE nei test.
 enable_testing()
 add_subdirectory(kernel)
+
+# Calcolo GPU sperimentale: stesso filtro conservativo con Metal e CUDA.
+if(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
+    set(FORGECAD_BOX_SOURCE gpu_box_support.mm)
+elseif(FORGECAD_ENABLE_CUDA AND CMAKE_CUDA_COMPILER)
+    set(FORGECAD_BOX_SOURCE gpu_box_support.cu)
+else()
+    set(FORGECAD_BOX_SOURCE gpu_box_support_cpu.cpp)
+endif()
+add_library(forgecad_compute STATIC cad_gpu_broad_phase.cpp cad_gpu_broad_phase.h gpu_box_support.h ${FORGECAD_BOX_SOURCE})
+target_include_directories(forgecad_compute PUBLIC ${PROJECT_SOURCE_DIR})
+target_link_libraries(forgecad_compute PUBLIC forgekernel)
+target_compile_options(forgecad_compute PRIVATE $<$<COMPILE_LANGUAGE:CXX,OBJCXX>:-Wall;-Wextra;-Wpedantic>)
+if(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
+    target_compile_options(forgecad_compute PRIVATE $<$<COMPILE_LANGUAGE:OBJCXX>:-fobjc-arc>)
+    find_library(FORGECAD_METAL_FRAMEWORK Metal REQUIRED)
+    find_library(FORGECAD_FOUNDATION_FRAMEWORK Foundation REQUIRED)
+    target_link_libraries(forgecad_compute PUBLIC ${FORGECAD_METAL_FRAMEWORK} ${FORGECAD_FOUNDATION_FRAMEWORK})
+elseif(FORGECAD_ENABLE_CUDA AND CMAKE_CUDA_COMPILER)
+    set_target_properties(forgecad_compute PROPERTIES CUDA_STANDARD 17 CUDA_STANDARD_REQUIRED ON)
+endif()
+add_executable(forgecad_gpu_broad_phase_tests tests/test_gpu_broad_phase.cpp)
+target_link_libraries(forgecad_gpu_broad_phase_tests PRIVATE forgecad_compute)
+add_test(NAME forgecad_gpu_broad_phase_tests COMMAND forgecad_gpu_broad_phase_tests)
+add_test(NAME forgecad_box_fallback_tests COMMAND forgecad_gpu_broad_phase_tests --cpu-fallback)
+set_tests_properties(forgecad_box_fallback_tests PROPERTIES TIMEOUT 30)
+set_tests_properties(forgecad_gpu_broad_phase_tests PROPERTIES SKIP_RETURN_CODE 77 TIMEOUT 120)
+if(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
+    add_executable(forgecad_metal_box_pool_tests tests/test_metal_box_pool.cpp)
+    target_link_libraries(forgecad_metal_box_pool_tests PRIVATE forgecad_compute)
+    target_compile_options(forgecad_metal_box_pool_tests PRIVATE -Wall -Wextra -Wpedantic)
+    add_test(NAME forgecad_metal_box_pool_tests COMMAND forgecad_metal_box_pool_tests)
+    set_tests_properties(forgecad_metal_box_pool_tests PROPERTIES SKIP_RETURN_CODE 77 TIMEOUT 120)
+endif()
 
 add_executable(forgecad
     forgeCad2026.cpp
@@ -248,6 +291,7 @@ add_executable(forgecad
     ${FORGE_CAD_CUDA_SOURCE}
     icons/forgecad.qrc
 )
+target_link_libraries(forgecad PRIVATE forgecad_compute)
 
 if(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
     target_sources(forgecad PRIVATE cad_macos_menu.h cad_macos_menu.mm)
@@ -271,6 +315,7 @@ file(GLOB FORGECAD_KERNEL_GEOMETRY_SOURCES CONFIGURE_DEPENDS
     ${PROJECT_SOURCE_DIR}/kernel/fk_*.h ${PROJECT_SOURCE_DIR}/kernel/fk_*.cpp)
 forgecad_collect_geometry_sources(FORGECAD_GEOMETRY_SOURCES "${PROJECT_SOURCE_DIR}"
     cad_feature_build.cpp cad_history.cpp cad_document_io.cpp
+    cad_gpu_broad_phase.cpp ${FORGECAD_BOX_SOURCE}
     ${FORGE_CAD_CUDA_SOURCE} ${FORGECAD_KERNEL_GEOMETRY_SOURCES})
 # Un include aggiunto a un modulo del calcolo aggiorna la chiusura alla build
 # successiva, anche quando non e' stato creato alcun file nuovo.
@@ -317,7 +362,7 @@ target_compile_options(forgecad PRIVATE
     $<$<COMPILE_LANGUAGE:CXX>:-Wall;-Wextra;-Wpedantic>
 )
 
-if(CMAKE_CUDA_COMPILER)
+if(FORGECAD_ENABLE_CUDA AND CMAKE_CUDA_COMPILER)
     set_target_properties(forgecad PROPERTIES CUDA_STANDARD 17 CUDA_STANDARD_REQUIRED ON)
     target_compile_definitions(forgecad PRIVATE FORGECAD_HAS_CUDA=1)
 else()
@@ -342,7 +387,7 @@ if(FORGECAD_BUILD_RIBBON_PREVIEW)
     if(FORGECAD_RIBBON_DEFINITIONS)
         target_compile_definitions(forgecad_ribbon_preview PRIVATE ${FORGECAD_RIBBON_DEFINITIONS})
     endif()
-    if(CMAKE_CUDA_COMPILER)
+    if(FORGECAD_ENABLE_CUDA AND CMAKE_CUDA_COMPILER)
         set_target_properties(forgecad_ribbon_preview PROPERTIES CUDA_STANDARD 17 CUDA_STANDARD_REQUIRED ON)
     endif()
     set_target_properties(forgecad_ribbon_preview PROPERTIES
@@ -373,14 +418,50 @@ install(FILES icons/forgecad-document.svg DESTINATION ${CMAKE_INSTALL_DATADIR}/i
 
 # Valutazione delle superfici sulla GPU contro il kernel (solo con nvcc; senza
 # GPU il test si salta).
-if(CMAKE_CUDA_COMPILER)
+if(FORGECAD_ENABLE_CUDA AND CMAKE_CUDA_COMPILER)
     add_executable(forgecad_cuda_tests tests/test_cuda_tessellation.cpp cad_cuda_tessellation.cpp cuda_support.cu)
     set_target_properties(forgecad_cuda_tests PROPERTIES CUDA_STANDARD 17 CUDA_STANDARD_REQUIRED ON)
     target_include_directories(forgecad_cuda_tests PRIVATE ${PROJECT_SOURCE_DIR})
     target_link_libraries(forgecad_cuda_tests PRIVATE forgekernel)
     target_compile_options(forgecad_cuda_tests PRIVATE $<$<COMPILE_LANGUAGE:CXX>:-Wall;-Wextra;-Wpedantic>)
     add_test(NAME forgecad_cuda_tests COMMAND forgecad_cuda_tests)
+    set_tests_properties(forgecad_cuda_tests PROPERTIES SKIP_RETURN_CODE 77 TIMEOUT 180)
 endif()
+
+# Budget attivo/inattivo CUDA e richieste/trim concorrenti; stub senza toolkit.
+add_executable(forgecad_tessellation_availability_tests tests/test_tessellation_availability.cpp cad_cuda_tessellation.cpp)
+target_include_directories(forgecad_tessellation_availability_tests PRIVATE ${PROJECT_SOURCE_DIR})
+target_link_libraries(forgecad_tessellation_availability_tests PRIVATE forgekernel)
+add_test(NAME forgecad_tessellation_availability_tests COMMAND forgecad_tessellation_availability_tests)
+add_executable(forgecad_cuda_pool_tests tests/test_cuda_pool.cpp ${FORGE_CAD_CUDA_SOURCE})
+if(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
+    # Il test di fallback deve continuare a provare lo stub CPU senza Metal.
+    set_property(TARGET forgecad_cuda_pool_tests PROPERTY SOURCES tests/test_cuda_pool.cpp cuda_support_cpu.cpp)
+    add_executable(forgecad_metal_tessellation_tests tests/test_metal_tessellation.cpp cad_cuda_tessellation.cpp cuda_support_metal.mm)
+    target_include_directories(forgecad_metal_tessellation_tests PRIVATE ${PROJECT_SOURCE_DIR})
+    target_link_libraries(forgecad_metal_tessellation_tests PRIVATE forgekernel Threads::Threads ${FORGECAD_METAL_FRAMEWORK} ${FORGECAD_FOUNDATION_FRAMEWORK})
+    add_test(NAME forgecad_metal_tessellation_tests COMMAND forgecad_metal_tessellation_tests)
+    set_tests_properties(forgecad_metal_tessellation_tests PROPERTIES SKIP_RETURN_CODE 77 TIMEOUT 180)
+    set_tests_properties(forgecad_metal_tessellation_tests PROPERTIES ENVIRONMENT "FORGECAD_METAL_MIN_BATCH=2048")
+endif()
+target_include_directories(forgecad_cuda_pool_tests PRIVATE ${PROJECT_SOURCE_DIR})
+target_link_libraries(forgecad_cuda_pool_tests PRIVATE Threads::Threads)
+target_compile_options(forgecad_cuda_pool_tests PRIVATE $<$<COMPILE_LANGUAGE:CXX>:-Wall;-Wextra;-Wpedantic>)
+if(FORGECAD_ENABLE_CUDA AND CMAKE_CUDA_COMPILER)
+    set_target_properties(forgecad_cuda_pool_tests PROPERTIES CUDA_STANDARD 17 CUDA_STANDARD_REQUIRED ON)
+    add_test(NAME forgecad_cuda_pool_tests COMMAND forgecad_cuda_pool_tests)
+    set_tests_properties(forgecad_cuda_pool_tests PROPERTIES SKIP_RETURN_CODE 77 TIMEOUT 120)
+else()
+    add_test(NAME forgecad_cuda_pool_tests COMMAND forgecad_cuda_pool_tests --cpu-stub)
+    set_tests_properties(forgecad_cuda_pool_tests PROPERTIES TIMEOUT 30)
+endif()
+
+# Algebra del solver senza Qt/GPU: riferimento indipendente e componenti connesse.
+add_executable(forgecad_constraint_linear_tests tests/test_constraint_linear.cpp)
+target_include_directories(forgecad_constraint_linear_tests PRIVATE ${PROJECT_SOURCE_DIR})
+target_compile_options(forgecad_constraint_linear_tests PRIVATE -Wall -Wextra -Wpedantic)
+add_test(NAME forgecad_constraint_linear_tests COMMAND forgecad_constraint_linear_tests)
+set_tests_properties(forgecad_constraint_linear_tests PROPERTIES TIMEOUT 30)
 
 # Durata delle mesh CPU/VBO della cache; la variante --gl e' una prova nativa manuale.
 add_executable(forgecad_display_cache_memory_tests tests/test_display_cache_memory.cpp cad_display_cache.cpp)
@@ -391,11 +472,51 @@ add_test(NAME forgecad_display_cache_memory_tests COMMAND forgecad_display_cache
 set_tests_properties(forgecad_display_cache_memory_tests PROPERTIES TIMEOUT 30
     ENVIRONMENT "QT_QPA_PLATFORM=offscreen;QT_QPA_OFFSCREEN_NO_GLX=1;QT_QPA_PLATFORMTHEME=;QT_STYLE_OVERRIDE=Fusion")
 
+# Export STL/OBJ B-spline: CPU sempre disponibile, confronto GPU esplicito.
+add_executable(forgecad_mesh_export_backend_tests tests/test_mesh_export_backends.cpp
+    cad_export.cpp cad_cuda_tessellation.cpp ${FORGE_CAD_CUDA_SOURCE})
+target_include_directories(forgecad_mesh_export_backend_tests PRIVATE ${PROJECT_SOURCE_DIR})
+target_link_libraries(forgecad_mesh_export_backend_tests PRIVATE forgekernel Qt6::Core Qt6::Gui)
+if(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
+    target_link_libraries(forgecad_mesh_export_backend_tests PRIVATE ${FORGECAD_METAL_FRAMEWORK} ${FORGECAD_FOUNDATION_FRAMEWORK})
+    add_test(NAME forgecad_mesh_export_metal_tests COMMAND forgecad_mesh_export_backend_tests --require-gpu)
+    set_tests_properties(forgecad_mesh_export_metal_tests PROPERTIES SKIP_RETURN_CODE 77 TIMEOUT 180)
+    set_tests_properties(forgecad_mesh_export_metal_tests PROPERTIES ENVIRONMENT "FORGECAD_METAL_MIN_BATCH=2048")
+endif()
+target_compile_options(forgecad_mesh_export_backend_tests PRIVATE $<$<COMPILE_LANGUAGE:CXX>:-Wall;-Wextra;-Wpedantic>)
+add_test(NAME forgecad_mesh_export_cpu_tests COMMAND forgecad_mesh_export_backend_tests)
+set_tests_properties(forgecad_mesh_export_cpu_tests PROPERTIES TIMEOUT 120)
+if(FORGECAD_ENABLE_CUDA AND CMAKE_CUDA_COMPILER)
+    set_target_properties(forgecad_mesh_export_backend_tests PROPERTIES CUDA_STANDARD 17 CUDA_STANDARD_REQUIRED ON)
+    add_test(NAME forgecad_mesh_export_cuda_tests COMMAND forgecad_mesh_export_backend_tests --require-gpu)
+    add_test(NAME forgecad_mesh_export_cuda_specialized_tests COMMAND forgecad_mesh_export_backend_tests --require-gpu)
+    set_tests_properties(forgecad_mesh_export_cuda_tests PROPERTIES SKIP_RETURN_CODE 77 TIMEOUT 120
+        ENVIRONMENT "FORGECAD_CUDA_GENERIC=1")
+    set_tests_properties(forgecad_mesh_export_cuda_specialized_tests PROPERTIES SKIP_RETURN_CODE 77 TIMEOUT 120
+        ENVIRONMENT "FORGECAD_CUDA_SPECIALIZED=1;FORGECAD_CUDA_GENERIC=0")
+endif()
+
+# Durata delle mesh CPU/VBO della cache; la variante --gl e' una prova nativa manuale.
+
 # Test delle interazioni del viewport (Qt offscreen); --gl verifica anche i VBO
 # quando e' disponibile una sessione grafica con OpenGL desktop.
 option(FORGECAD_BUILD_VIEW_TESTS "Compila i test delle interazioni del viewport" OFF)
 if(FORGECAD_BUILD_VIEW_TESTS)
     set(FORGECAD_EXAMPLE_DIR "${PROJECT_SOURCE_DIR}/File_Esempio" CACHE PATH "Cartella dei documenti di esempio per i test GUI")
+    # Il comparatore offline usa NumPy; nessuna nuova dipendenza dell'app.
+    find_package(Python3 QUIET COMPONENTS Interpreter)
+    if(Python3_Interpreter_FOUND)
+        execute_process(COMMAND "${Python3_EXECUTABLE}" -c "import numpy"
+            RESULT_VARIABLE FORGECAD_NUMPY_IMPORT_RESULT OUTPUT_QUIET ERROR_QUIET)
+        if(FORGECAD_NUMPY_IMPORT_RESULT EQUAL 0)
+            add_test(NAME forgecad_numeric_mesh_comparator_tests COMMAND "${Python3_EXECUTABLE}"
+                -m unittest discover -s tests -p test_compare_document_mesh_backends.py -v)
+            set_tests_properties(forgecad_numeric_mesh_comparator_tests PROPERTIES
+                WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}" TIMEOUT 30 ENVIRONMENT "PYTHONDONTWRITEBYTECODE=1")
+        else()
+            message(STATUS "Test comparatore mesh non registrato: NumPy non disponibile")
+        endif()
+    endif()
     get_target_property(FORGECAD_VIEW_TEST_SOURCES forgecad SOURCES)
     # Finestra, viewport, storyboard e dialoghi sono unita' separate anche nei test.
     list(REMOVE_ITEM FORGECAD_VIEW_TEST_SOURCES forgeCad2026.cpp ${FORGE_CAD_CUDA_SOURCE} ${FORGECAD_HASH_HEADER})
@@ -403,7 +524,7 @@ if(FORGECAD_BUILD_VIEW_TESTS)
     add_executable(forgecad_view_tests tests/test_viewport.cpp tests/test_declared_history_cache.h tests/test_boolean_history.h tests/test_blend_history.h tests/test_extrusion_history.h tests/test_revolution_history.h tests/test_all_history.h tests/test_native_revisions.h tests/test_workspace_revisions.h tests/test_linked_drawing.h tests/test_drawing_workflow.h tests/test_drawing_revisions.h tests/test_projected_drawing_file.h tests/test_drawing_multisheet.h tests/test_drawing_revision_restore.h tests/test_drawing_release.h tests/test_catalog_recovery_gui.h tests/test_surface_tools_gui.h tests/test_document_units.h tests/test_history_suppression.h tests/test_function_panels.h tests/test_drawing_mouse.h tests/test_drawing_section_model.h tests/test_drawing_performance.h cuda_support_cpu.cpp ${FORGECAD_VIEW_TEST_SOURCES})
     add_dependencies(forgecad_view_tests forgecad) # genera l'impronta una sola volta, prima dei test
     target_include_directories(forgecad_view_tests PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/generated)
-    target_link_libraries(forgecad_view_tests PRIVATE Qt6::Widgets Qt6::OpenGL Qt6::OpenGLWidgets OpenGL::GL forgekernel ZLIB::ZLIB ${FORGECAD_ZSTD_TARGET})
+    target_link_libraries(forgecad_view_tests PRIVATE forgecad_compute Qt6::Widgets Qt6::OpenGL Qt6::OpenGLWidgets OpenGL::GL forgekernel ZLIB::ZLIB ${FORGECAD_ZSTD_TARGET})
     target_compile_options(forgecad_view_tests PRIVATE -Wall -Wextra -Wpedantic)
     target_compile_definitions(forgecad_view_tests PRIVATE FORGECAD_HAS_CUDA=0 FORGECAD_SOURCE_DIR="${PROJECT_SOURCE_DIR}")
     add_executable(forgecad_selection_benchmark tests/benchmark_selection.cpp)
@@ -424,6 +545,11 @@ if(FORGECAD_BUILD_VIEW_TESTS)
     set_tests_properties(forgecad_document_read_tests PROPERTIES TIMEOUT 60)
     forgecad_add_view_test(forgecad_pattern_placement_tests --pattern-placements)
     forgecad_add_view_test(forgecad_pattern_result_tests --pattern-results)
+    forgecad_add_view_test(forgecad_pattern_legacy_history_tests --pattern-legacy-history)
+    forgecad_add_view_test(forgecad_failed_feature_repair_tests --failed-feature-repair)
+    forgecad_add_view_test(forgecad_pattern_single_story_tests --pattern-single-story)
+    set_tests_properties(forgecad_pattern_single_story_tests PROPERTIES TIMEOUT 60)
+    set_tests_properties(forgecad_pattern_legacy_history_tests forgecad_failed_feature_repair_tests PROPERTIES TIMEOUT 60)
     set_tests_properties(forgecad_pattern_result_tests PROPERTIES TIMEOUT 120)
     set_tests_properties(forgecad_pattern_placement_tests PROPERTIES TIMEOUT 30)
     forgecad_add_view_test(forgecad_genealogy_tests --genealogy)
@@ -452,6 +578,8 @@ if(FORGECAD_BUILD_VIEW_TESTS)
     set_tests_properties(forgecad_native_revisions_tests PROPERTIES TIMEOUT 120)
     set_tests_properties(forgecad_all_history_tests PROPERTIES TIMEOUT 120)
     forgecad_add_view_test(forgecad_preview_performance_tests --preview-performance)
+    forgecad_add_view_test(forgecad_history_preview_mesh_tests --history-preview-mesh)
+    set_tests_properties(forgecad_history_preview_mesh_tests PROPERTIES TIMEOUT 60)
     forgecad_add_view_test(forgecad_sketch_slot_point_tests --sketch-slot-point)
     forgecad_add_view_test(forgecad_feature_handle_tests --feature-handles)
     forgecad_add_view_test(forgecad_revolution_history_tests --revolution-history)
@@ -477,6 +605,12 @@ if(FORGECAD_BUILD_VIEW_TESTS)
     forgecad_add_view_test(forgecad_curve_extraction_tests --curve-extraction)
     set_tests_properties(forgecad_curve_extraction_tests PROPERTIES TIMEOUT 60)
     forgecad_add_view_test(forgecad_handle_constraints_tests --handle-constraints)
+    forgecad_add_view_test(forgecad_solver_partition_tests --solver-partition)
+    forgecad_add_view_test(forgecad_connected_solver_tests --connected-solver-benchmark)
+    forgecad_add_view_test(forgecad_display_mesh_tests --display-mesh)
+    forgecad_add_view_test(forgecad_lazy_mesh_tests --lazy-mesh)
+    set_tests_properties(forgecad_lazy_mesh_tests PROPERTIES TIMEOUT 120)
+    set_tests_properties(forgecad_solver_partition_tests PROPERTIES TIMEOUT 120)
     set_tests_properties(forgecad_handle_constraints_tests PROPERTIES TIMEOUT 30)
     forgecad_add_view_test(forgecad_sketch_editing_tests --sketch-editing)
     set_tests_properties(forgecad_sketch_editing_tests PROPERTIES TIMEOUT 60)

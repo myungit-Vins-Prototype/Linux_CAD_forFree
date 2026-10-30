@@ -89,7 +89,7 @@ const DrawingCurve &curveFor(const DrawingView &view,const DrawingSourceBody &so
     if(ref.kind==DrawingCurveKind::ApparentLine){
         // Il lato della generatrice rispetto all'asse resta associato anche
         // quando cambia il raggio. Nessuna scelta del ramo piu' vicino.
-        const DrawingCurve *chosen=nullptr;
+        std::vector<const DrawingCurve *> compatible;
         for(const auto *c:candidates){const auto &face=source.body->face(c->sourceFace);if(face.surface->type()!=SurfaceType::Cylinder&&face.surface->type()!=SurfaceType::Cone)continue;
             const auto frame=face.surface->type()==SurfaceType::Cone?static_cast<const ConicalSurface &>(*face.surface).frame():static_cast<const CylindricalSurface &>(*face.surface).frame();
             const auto center=local(view,frame.origin());const auto axis3=view.plane.directionToLocal(frame.zDir());const Vec2 axis(axis3.x(),axis3.y());
@@ -99,10 +99,20 @@ const DrawingCurve &curveFor(const DrawingView &view,const DrawingSourceBody &so
             // anche l'appartenenza assiale del testimone.
             const double position=dot(ref.witness-center,axis),a=dot(local(view,c->curve->point(c->range.lo))-center,axis),b=dot(local(view,c->curve->point(c->range.hi))-center,axis);
             if(position<std::min(a,b)-view.tolerance||position>std::max(a,b)+view.tolerance)continue;
-            if(chosen)throw ReferenceError{DrawingDimensionStatus::Ambiguous,QStringLiteral("Contorno cilindrico con piu' rami compatibili.")};
+            compatible.push_back(c);
+        }
+        if(compatible.empty())missing(QStringLiteral("Il lato del contorno cilindrico non e' piu' disponibile."));
+        if(compatible.size()==1)return *compatible.front();
+        // Una stessa origine genealogica puo' nominare il cono esterno e il foro.
+        // Disambigua solo se il testimone appartiene a una generatrice esatta;
+        // nessuna scelta del ramo piu' vicino o dipendenza dall'ordine delle facce.
+        const auto witness=view.plane.toGlobal(Vec3(ref.witness.x(),ref.witness.y(),0));
+        const DrawingCurve *chosen=nullptr;
+        for(const auto *c:compatible)if(projectPoint(*c->curve,witness,c->range).distance<=view.tolerance){
+            if(chosen)throw ReferenceError{DrawingDimensionStatus::Ambiguous,QStringLiteral("Piu' generatrici contengono l'ancoraggio della quota.")};
             chosen=c;
         }
-        if(!chosen)missing(QStringLiteral("Il lato del contorno cilindrico non e' piu' disponibile."));
+        if(!chosen)throw ReferenceError{DrawingDimensionStatus::Ambiguous,QStringLiteral("L'ancoraggio non distingue le generatrici della stessa origine.")};
         return *chosen;
     }
     if(candidates.empty())missing(QStringLiteral("Entita' o ramo geometrico non ritrovato."));
@@ -127,6 +137,7 @@ bool anchorAt(const DrawingView &view,const DrawingSourceBody &source,const Draw
         auto original=curve;original.curve=curve.sourceGeometry;auto plain=view;plain.step.reset();plain.bend.reset();
         return anchorAt(plain,source,original,ref,curve.unfoldedToSource?curve.unfoldedToSource->applyToPoint(point):point+shift);
     }
+    if(ref.endpointWitness&&distance(point,*ref.endpointWitness)>view.tolerance)return false;
     if(ref.clipBoundary){
         if(view.kind!=DrawingViewKind::Section||view.sectionStyle==DrawingSectionStyle::Removed)return false;
         if((ref.clipBoundary&2)&&!drawingHalfSection(view))return false;
@@ -257,6 +268,9 @@ QString validateDrawingAttachments(const DrawingDimension &d,const DrawingView &
         if(d.references.empty()){need(int(d.measure)<=3,"Quota senza riferimenti di aggancio.");return {};}
         need(d.references.size()<=2,"Troppi riferimenti della quota.");const DrawingAttachment *primary=nullptr;
         for(const auto &r:d.references){need(r.clipBoundary>=0&&(r.clipBoundary<=3||(r.clipBoundary==4&&view.step)||(r.clipBoundary==5&&view.bend))&&(!r.clipBoundary||(!drawingDatum(r.role)&&r.vertexName.isEmpty()&&r.boundaryName.isEmpty()&&view.kind==DrawingViewKind::Section)),"Origine dell'aggancio di taglio non valida.");need(int(r.role)>=0&&int(r.role)<=12&&std::isfinite(r.fraction)&&r.fraction>=0&&r.fraction<=1,"Aggancio della quota non valido.");
+            need(!r.endpointWitness||(isFinite(*r.endpointWitness)&&r.axisId.isNull()&&!r.polar
+                &&r.curve.kind==DrawingCurveKind::Section&&(r.role==DrawingPointRole::Start||r.role==DrawingPointRole::End)
+                &&(!r.vertexName.isEmpty()||!r.boundaryName.isEmpty())),"Testimone dell'estremo incompatibile con l'aggancio.");
             need(r.supportFace.size()<=4096&&r.curveSide>=0&&r.curveSide<=15&&r.anchorSide>=0&&r.anchorSide<=15,"Localizzatore della faccia non valido.");
             need((r.curveSide||r.anchorSide)?!r.supportFace.isEmpty():r.supportFace.isEmpty(),"Faccia di supporto incoerente.");
             need((r.curveSide&3)!=3&&(r.curveSide&12)!=12&&(r.anchorSide&3)!=3&&(r.anchorSide&12)!=12,"Lati UV incompatibili.");

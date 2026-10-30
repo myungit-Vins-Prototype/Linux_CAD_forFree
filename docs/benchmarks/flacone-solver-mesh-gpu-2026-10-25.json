@@ -1,0 +1,1061 @@
+{
+  "date": "2026-10-25",
+  "branch": "solver-mesh-gpu",
+  "commit": "f571152",
+  "implementation_commit": "770d9fc",
+  "input": {
+    "name": "flacone_recuperato.prt",
+    "bytes": 16335094,
+    "sha256": "f037619a69380b330c313169812769235f092a4d06c9726995c5b24910c36c44",
+    "sketches": 11,
+    "features": 24,
+    "original_unchanged_sha256_verified": true
+  },
+  "hardware": {
+    "cpu": "Apple M1",
+    "ram_gib": 16,
+    "os": "macOS-27.0.1-arm64-arm-64bit-Mach-O",
+    "architecture": "arm64",
+    "gpu_backend": "Metal disponibile, richiesto esplicitamente nel modo gpu"
+  },
+  "protocol": {
+    "source_sha256": "f037619a69380b330c313169812769235f092a4d06c9726995c5b24910c36c44",
+    "quality": 2,
+    "repetitions": 5,
+    "modes": [
+      "baseline",
+      "optimized",
+      "gpu"
+    ],
+    "scenarios": [
+      "snapshot",
+      "rebuild",
+      "edit"
+    ],
+    "method": "Processi nuovi sequenziali; ordine dei tre modi ruotato a ogni giro. Costruzione/modifica escludono lettura e controlli. Apertura riportata anche come lettura+preparazione. Solver: media di20chiamate su input ripristinati, mediana di5processi per modo. Setup GPU prima del timer; nessuna misura rendering/framerate."
+  },
+  "mode_definitions": {
+    "baseline": "Stessi oggetti Release del branch, percorsi di riferimento selezionati con FORGECAD_SOLVER_DENSE=1 e FORGECAD_EAGER_MESH=1; GPU spenta. Non una build separata del vecchio main.",
+    "optimized": "Solver sparso per componenti, derivate analitiche e mesh differite del branch; GPU spenta.",
+    "gpu": "Come optimized, con FORGECAD_GPU_BROAD_PHASE=1 e disponibilità Metal obbligatoria."
+  },
+  "scenario_definitions": {
+    "snapshot": "Lettura del documento con geometria salvata e preparazione della scena. read_plus_load_ms include la lettura/decodifica; esclude avvio Qt/Metal, presentazione e interazione UI. Non una prova di disco a cache fredda.",
+    "rebuild": "Eliminazione delle cache geometriche dalla copia deserializzata e loadDocument. load_ms include ricostruzione B-rep e mesh richieste, esclude lettura e controlli.",
+    "edit": "Apertura come setup, variazione in memoria del raggio vincolo16 dello schizzo0:10→10,01mm. Solve cronometrato separatamente; edit_regenerate_ms misura ricalcolo curva, dipendenze e documentChanged. Nessun salvataggio.",
+    "solver": "Analisi DOF su11schizzi, modifica della prima quota positiva non angolare su7schizzi. Ogni tempo è la somma delle medie di20chiamate per schizzo su copie ripristinate; mediana di5processi per modo."
+  },
+  "metrics": {
+    "snapshot": {
+      "baseline": {
+        "load_ms": {
+          "median": 749.232708,
+          "min": 744.370125,
+          "max": 767.674042,
+          "samples": [
+            752.6785,
+            744.370125,
+            749.232708,
+            749.153959,
+            767.674042
+          ]
+        },
+        "read_ms": {
+          "median": 215.7475,
+          "min": 210.435458,
+          "max": 218.967625,
+          "samples": [
+            218.967625,
+            211.79375,
+            217.51075,
+            215.7475,
+            210.435458
+          ]
+        },
+        "peak_rss_mib": {
+          "median": 345.359375,
+          "min": 345.078125,
+          "max": 349.0625,
+          "samples": [
+            345.21875,
+            345.359375,
+            346.03125,
+            345.078125,
+            349.0625
+          ]
+        },
+        "stages_with_triangles": {
+          "median": 16,
+          "min": 16,
+          "max": 16,
+          "samples": [
+            16,
+            16,
+            16,
+            16,
+            16
+          ]
+        },
+        "stored_triangles": {
+          "median": 906845,
+          "min": 906845,
+          "max": 906845,
+          "samples": [
+            906845,
+            906845,
+            906845,
+            906845,
+            906845
+          ]
+        },
+        "visible_triangles": {
+          "median": 202776,
+          "min": 202776,
+          "max": 202776,
+          "samples": [
+            202776,
+            202776,
+            202776,
+            202776,
+            202776
+          ]
+        },
+        "gpu_pairs": {
+          "median": 0,
+          "min": 0,
+          "max": 0,
+          "samples": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "read_plus_load_ms": {
+          "median": 966.743458,
+          "min": 956.163875,
+          "max": 978.1095,
+          "samples": [
+            971.646125,
+            956.163875,
+            966.743458,
+            964.9014589999999,
+            978.1095
+          ]
+        }
+      },
+      "optimized": {
+        "load_ms": {
+          "median": 26.822834,
+          "min": 26.55675,
+          "max": 27.521791,
+          "samples": [
+            26.679417,
+            27.521791,
+            26.822834,
+            26.841417,
+            26.55675
+          ]
+        },
+        "read_ms": {
+          "median": 211.668083,
+          "min": 211.436084,
+          "max": 213.783834,
+          "samples": [
+            213.783834,
+            211.888917,
+            211.500083,
+            211.668083,
+            211.436084
+          ]
+        },
+        "peak_rss_mib": {
+          "median": 299.515625,
+          "min": 298.875,
+          "max": 301.765625,
+          "samples": [
+            298.875,
+            299.0625,
+            301.765625,
+            299.515625,
+            299.640625
+          ]
+        },
+        "stages_with_triangles": {
+          "median": 4,
+          "min": 4,
+          "max": 4,
+          "samples": [
+            4,
+            4,
+            4,
+            4,
+            4
+          ]
+        },
+        "stored_triangles": {
+          "median": 388618,
+          "min": 388618,
+          "max": 388618,
+          "samples": [
+            388618,
+            388618,
+            388618,
+            388618,
+            388618
+          ]
+        },
+        "visible_triangles": {
+          "median": 202776,
+          "min": 202776,
+          "max": 202776,
+          "samples": [
+            202776,
+            202776,
+            202776,
+            202776,
+            202776
+          ]
+        },
+        "gpu_pairs": {
+          "median": 0,
+          "min": 0,
+          "max": 0,
+          "samples": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "read_plus_load_ms": {
+          "median": 238.5095,
+          "min": 237.992834,
+          "max": 240.463251,
+          "samples": [
+            240.463251,
+            239.410708,
+            238.322917,
+            238.5095,
+            237.992834
+          ]
+        }
+      },
+      "gpu": {
+        "load_ms": {
+          "median": 26.695167,
+          "min": 26.643292,
+          "max": 26.855416,
+          "samples": [
+            26.643292,
+            26.668083,
+            26.817375,
+            26.855416,
+            26.695167
+          ]
+        },
+        "read_ms": {
+          "median": 211.365583,
+          "min": 209.518083,
+          "max": 219.423792,
+          "samples": [
+            216.785292,
+            210.442,
+            209.518083,
+            219.423792,
+            211.365583
+          ]
+        },
+        "peak_rss_mib": {
+          "median": 301.890625,
+          "min": 301.421875,
+          "max": 301.96875,
+          "samples": [
+            301.890625,
+            301.96875,
+            301.890625,
+            301.421875,
+            301.59375
+          ]
+        },
+        "stages_with_triangles": {
+          "median": 4,
+          "min": 4,
+          "max": 4,
+          "samples": [
+            4,
+            4,
+            4,
+            4,
+            4
+          ]
+        },
+        "stored_triangles": {
+          "median": 388618,
+          "min": 388618,
+          "max": 388618,
+          "samples": [
+            388618,
+            388618,
+            388618,
+            388618,
+            388618
+          ]
+        },
+        "visible_triangles": {
+          "median": 202776,
+          "min": 202776,
+          "max": 202776,
+          "samples": [
+            202776,
+            202776,
+            202776,
+            202776,
+            202776
+          ]
+        },
+        "gpu_pairs": {
+          "median": 0,
+          "min": 0,
+          "max": 0,
+          "samples": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "read_plus_load_ms": {
+          "median": 238.06074999999998,
+          "min": 236.335458,
+          "max": 246.27920799999998,
+          "samples": [
+            243.428584,
+            237.110083,
+            236.335458,
+            246.27920799999998,
+            238.06074999999998
+          ]
+        }
+      }
+    },
+    "rebuild": {
+      "baseline": {
+        "load_ms": {
+          "median": 6410.460041,
+          "min": 6308.039542,
+          "max": 6556.194792,
+          "samples": [
+            6327.051584,
+            6461.695209,
+            6556.194792,
+            6308.039542,
+            6410.460041
+          ]
+        },
+        "read_ms": {
+          "median": 212.132,
+          "min": 211.727666,
+          "max": 213.574208,
+          "samples": [
+            211.727666,
+            211.769042,
+            213.231709,
+            213.574208,
+            212.132
+          ]
+        },
+        "peak_rss_mib": {
+          "median": 349.671875,
+          "min": 345.6875,
+          "max": 351.234375,
+          "samples": [
+            349.671875,
+            351.234375,
+            345.6875,
+            347.40625,
+            349.71875
+          ]
+        },
+        "stages_with_triangles": {
+          "median": 16,
+          "min": 16,
+          "max": 16,
+          "samples": [
+            16,
+            16,
+            16,
+            16,
+            16
+          ]
+        },
+        "stored_triangles": {
+          "median": 906845,
+          "min": 906845,
+          "max": 906845,
+          "samples": [
+            906845,
+            906845,
+            906845,
+            906845,
+            906845
+          ]
+        },
+        "visible_triangles": {
+          "median": 202776,
+          "min": 202776,
+          "max": 202776,
+          "samples": [
+            202776,
+            202776,
+            202776,
+            202776,
+            202776
+          ]
+        },
+        "gpu_pairs": {
+          "median": 0,
+          "min": 0,
+          "max": 0,
+          "samples": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        }
+      },
+      "optimized": {
+        "load_ms": {
+          "median": 5794.219334,
+          "min": 5756.815166,
+          "max": 5909.217542,
+          "samples": [
+            5794.219334,
+            5756.815166,
+            5796.683791,
+            5764.140167,
+            5909.217542
+          ]
+        },
+        "read_ms": {
+          "median": 211.204,
+          "min": 209.822791,
+          "max": 220.573166,
+          "samples": [
+            209.822791,
+            210.503917,
+            211.37225,
+            211.204,
+            220.573166
+          ]
+        },
+        "peak_rss_mib": {
+          "median": 341.0625,
+          "min": 336.671875,
+          "max": 343.40625,
+          "samples": [
+            336.671875,
+            342.203125,
+            341.0625,
+            340.609375,
+            343.40625
+          ]
+        },
+        "stages_with_triangles": {
+          "median": 4,
+          "min": 4,
+          "max": 4,
+          "samples": [
+            4,
+            4,
+            4,
+            4,
+            4
+          ]
+        },
+        "stored_triangles": {
+          "median": 388618,
+          "min": 388618,
+          "max": 388618,
+          "samples": [
+            388618,
+            388618,
+            388618,
+            388618,
+            388618
+          ]
+        },
+        "visible_triangles": {
+          "median": 202776,
+          "min": 202776,
+          "max": 202776,
+          "samples": [
+            202776,
+            202776,
+            202776,
+            202776,
+            202776
+          ]
+        },
+        "gpu_pairs": {
+          "median": 0,
+          "min": 0,
+          "max": 0,
+          "samples": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        }
+      },
+      "gpu": {
+        "load_ms": {
+          "median": 5800.217875,
+          "min": 5725.440667,
+          "max": 5842.794875,
+          "samples": [
+            5725.440667,
+            5810.149167,
+            5842.794875,
+            5732.003334,
+            5800.217875
+          ]
+        },
+        "read_ms": {
+          "median": 212.800291,
+          "min": 212.042917,
+          "max": 213.609792,
+          "samples": [
+            212.042917,
+            212.800291,
+            212.918917,
+            213.609792,
+            212.475875
+          ]
+        },
+        "peak_rss_mib": {
+          "median": 342.5625,
+          "min": 341.8125,
+          "max": 344.828125,
+          "samples": [
+            344.46875,
+            344.828125,
+            341.8125,
+            342.453125,
+            342.5625
+          ]
+        },
+        "stages_with_triangles": {
+          "median": 4,
+          "min": 4,
+          "max": 4,
+          "samples": [
+            4,
+            4,
+            4,
+            4,
+            4
+          ]
+        },
+        "stored_triangles": {
+          "median": 388618,
+          "min": 388618,
+          "max": 388618,
+          "samples": [
+            388618,
+            388618,
+            388618,
+            388618,
+            388618
+          ]
+        },
+        "visible_triangles": {
+          "median": 202776,
+          "min": 202776,
+          "max": 202776,
+          "samples": [
+            202776,
+            202776,
+            202776,
+            202776,
+            202776
+          ]
+        },
+        "gpu_pairs": {
+          "median": 0,
+          "min": 0,
+          "max": 0,
+          "samples": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        }
+      }
+    },
+    "edit": {
+      "baseline": {
+        "load_ms": {
+          "median": 762.592541,
+          "min": 752.496666,
+          "max": 770.287334,
+          "samples": [
+            752.496666,
+            766.537083,
+            770.287334,
+            753.960083,
+            762.592541
+          ]
+        },
+        "read_ms": {
+          "median": 212.672,
+          "min": 211.484,
+          "max": 213.3575,
+          "samples": [
+            212.85325,
+            211.484,
+            212.672,
+            212.593959,
+            213.3575
+          ]
+        },
+        "peak_rss_mib": {
+          "median": 430.84375,
+          "min": 430.28125,
+          "max": 431.171875,
+          "samples": [
+            430.828125,
+            430.90625,
+            431.171875,
+            430.28125,
+            430.84375
+          ]
+        },
+        "stages_with_triangles": {
+          "median": 16,
+          "min": 16,
+          "max": 16,
+          "samples": [
+            16,
+            16,
+            16,
+            16,
+            16
+          ]
+        },
+        "stored_triangles": {
+          "median": 902297,
+          "min": 902297,
+          "max": 902297,
+          "samples": [
+            902297,
+            902297,
+            902297,
+            902297,
+            902297
+          ]
+        },
+        "visible_triangles": {
+          "median": 202284,
+          "min": 202284,
+          "max": 202284,
+          "samples": [
+            202284,
+            202284,
+            202284,
+            202284,
+            202284
+          ]
+        },
+        "gpu_pairs": {
+          "median": 0,
+          "min": 0,
+          "max": 0,
+          "samples": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "edit_solve_ms": {
+          "median": 0.198708,
+          "min": 0.181625,
+          "max": 0.251791,
+          "samples": [
+            0.251791,
+            0.198708,
+            0.199792,
+            0.197541,
+            0.181625
+          ]
+        },
+        "edit_regenerate_ms": {
+          "median": 7223.131459,
+          "min": 7169.204917,
+          "max": 7283.16925,
+          "samples": [
+            7207.576667,
+            7283.16925,
+            7281.333209,
+            7169.204917,
+            7223.131459
+          ]
+        }
+      },
+      "optimized": {
+        "load_ms": {
+          "median": 26.920542,
+          "min": 26.819583,
+          "max": 27.66925,
+          "samples": [
+            26.920542,
+            27.0075,
+            26.830625,
+            27.66925,
+            26.819583
+          ]
+        },
+        "read_ms": {
+          "median": 212.647416,
+          "min": 211.980375,
+          "max": 213.472083,
+          "samples": [
+            213.472083,
+            212.165875,
+            211.980375,
+            213.338542,
+            212.647416
+          ]
+        },
+        "peak_rss_mib": {
+          "median": 330.1875,
+          "min": 330,
+          "max": 331.75,
+          "samples": [
+            330.53125,
+            330.15625,
+            331.75,
+            330,
+            330.1875
+          ]
+        },
+        "stages_with_triangles": {
+          "median": 1,
+          "min": 1,
+          "max": 1,
+          "samples": [
+            1,
+            1,
+            1,
+            1,
+            1
+          ]
+        },
+        "stored_triangles": {
+          "median": 202282,
+          "min": 202282,
+          "max": 202282,
+          "samples": [
+            202282,
+            202282,
+            202282,
+            202282,
+            202282
+          ]
+        },
+        "visible_triangles": {
+          "median": 202282,
+          "min": 202282,
+          "max": 202282,
+          "samples": [
+            202282,
+            202282,
+            202282,
+            202282,
+            202282
+          ]
+        },
+        "gpu_pairs": {
+          "median": 0,
+          "min": 0,
+          "max": 0,
+          "samples": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "edit_solve_ms": {
+          "median": 0.236583,
+          "min": 0.222875,
+          "max": 0.252042,
+          "samples": [
+            0.236583,
+            0.222875,
+            0.2375,
+            0.252042,
+            0.23125
+          ]
+        },
+        "edit_regenerate_ms": {
+          "median": 6359.107583,
+          "min": 6349.800708,
+          "max": 6468.267,
+          "samples": [
+            6349.800708,
+            6359.107583,
+            6350.150083,
+            6468.267,
+            6365.675083
+          ]
+        }
+      },
+      "gpu": {
+        "load_ms": {
+          "median": 26.920166,
+          "min": 26.758125,
+          "max": 26.995042,
+          "samples": [
+            26.915625,
+            26.758125,
+            26.995042,
+            26.920416,
+            26.920166
+          ]
+        },
+        "read_ms": {
+          "median": 212.859125,
+          "min": 211.924542,
+          "max": 213.115375,
+          "samples": [
+            212.576541,
+            213.055625,
+            211.924542,
+            213.115375,
+            212.859125
+          ]
+        },
+        "peak_rss_mib": {
+          "median": 333.625,
+          "min": 333.46875,
+          "max": 334.265625,
+          "samples": [
+            333.625,
+            334.265625,
+            333.46875,
+            333.625,
+            334.15625
+          ]
+        },
+        "stages_with_triangles": {
+          "median": 1,
+          "min": 1,
+          "max": 1,
+          "samples": [
+            1,
+            1,
+            1,
+            1,
+            1
+          ]
+        },
+        "stored_triangles": {
+          "median": 202282,
+          "min": 202282,
+          "max": 202282,
+          "samples": [
+            202282,
+            202282,
+            202282,
+            202282,
+            202282
+          ]
+        },
+        "visible_triangles": {
+          "median": 202282,
+          "min": 202282,
+          "max": 202282,
+          "samples": [
+            202282,
+            202282,
+            202282,
+            202282,
+            202282
+          ]
+        },
+        "gpu_pairs": {
+          "median": 0,
+          "min": 0,
+          "max": 0,
+          "samples": [
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "edit_solve_ms": {
+          "median": 0.240083,
+          "min": 0.218584,
+          "max": 0.273292,
+          "samples": [
+            0.218584,
+            0.26025,
+            0.221792,
+            0.273292,
+            0.240083
+          ]
+        },
+        "edit_regenerate_ms": {
+          "median": 6378.85175,
+          "min": 6353.807417,
+          "max": 6504.418167,
+          "samples": [
+            6378.85175,
+            6442.429625,
+            6353.807417,
+            6357.192291,
+            6504.418167
+          ]
+        }
+      }
+    }
+  },
+  "solver": {
+    "baseline": {
+      "analysis_ms": {
+        "median": 0.6278270499999999,
+        "min": 0.6223666,
+        "max": 0.63480835,
+        "samples": [
+          0.63093955,
+          0.63480835,
+          0.6278270499999999,
+          0.6223666,
+          0.62553755
+        ]
+      },
+      "solve_ms": {
+        "median": 0.34727505,
+        "min": 0.34133335,
+        "max": 0.35302915,
+        "samples": [
+          0.35302915,
+          0.34727505,
+          0.3477105,
+          0.34691045,
+          0.34133335
+        ]
+      }
+    },
+    "optimized": {
+      "analysis_ms": {
+        "median": 0.5203938,
+        "min": 0.51194165,
+        "max": 0.5228854,
+        "samples": [
+          0.5203938,
+          0.51194165,
+          0.5213833999999999,
+          0.5228854,
+          0.51443955
+        ]
+      },
+      "solve_ms": {
+        "median": 0.3106333,
+        "min": 0.3103604,
+        "max": 0.31987495,
+        "samples": [
+          0.3103604,
+          0.3133166,
+          0.3106104,
+          0.3106333,
+          0.31987495
+        ]
+      }
+    }
+  },
+  "validation": {
+    "all_feature_errors": 0,
+    "rebuild_exact_mismatches": [],
+    "snapshot_exact_mismatches": [],
+    "edit_topology_mismatches": [],
+    "edit_all_solves_ok": true,
+    "solver_status_mismatches": [],
+    "solver_max_coordinate_delta_mm": 5.9969806898152456e-12,
+    "edited_final_body_sample_comparison": {
+      "vertices": 40,
+      "edge_samples": 3640,
+      "surface_samples": 10404,
+      "spline_poles": 21924,
+      "max_vertex_mm": 3.90800081677079e-14,
+      "max_edge_sample_mm": 4.0734122569220644e-10,
+      "max_surface_sample_mm": 1.1993961379630491e-11,
+      "max_spline_pole_mm": 2.891784679641361e-14,
+      "max_spline_weight_delta": 4.440892098500626e-15,
+      "max_spline_knot_delta": 2.220446049250313e-16,
+      "topology_mismatches": 0,
+      "type_mismatches": 0,
+      "spline_structure_mismatches": 0,
+      "baseline_check_issues": 0,
+      "candidate_check_issues": 0
+    },
+    "edited_body_binary_deterministic_across_5_runs": true,
+    "edited_gpu_body_binary_identical_to_optimized": true,
+    "visible_mesh_hashes_identical_between_modes_in_snapshot_and_rebuild": true,
+    "visible_faces_covered_by_mesh": 36,
+    "final_topology": {
+      "faces": 36,
+      "edges": 56,
+      "vertices": 40,
+      "shells": 1
+    },
+    "all_seven_dimension_edits_successful_in_solver_runs": true
+  },
+  "limitations": [
+    "Sonda offscreen collegata agli stessi oggetti Release del runner; non misura framerate, latenza completa di finestra o avvio app.",
+    "Carico esterno, frequenze CPU e stato termico non controllati;5ripetizioni, ordine ruotato e processi sequenziali dell’agente.",
+    "GPU:zero coppie elaborate in tutte le prove; nessun guadagno Metal misurabile o valutazione del potenziale di una migrazione generale. Il filtro richiede almeno65536coppie facce.",
+    "Hash geometrici confrontati tra modalità all’interno di ciascuno scenario. Le cache originali di alcune feature non sono bit-identiche alla ricostruzione, anche nel percorso baseline; non si usa identità cache/ricostruzione come criterio.",
+    "Dopo modifica le mesh visibili hanno202284triangoli baseline e202282ottimizzato; B-rep confrontato direttamente, senza dedurre correttezza/volume dalle mesh.",
+    "Proprietà di massa esatte esplorate su ricostruzione baseline con budget10s:timeout, nessun volume dichiarato. Controlli esclusi dai timer.",
+    "Nessuna modifica produttiva, installazione, commit o push durante questo confronto. Risultati Linux/NVIDIA ancora da misurare."
+  ],
+  "local_reproduction": {
+    "sources_and_logs": "/Users/myungit/Linux_CAD_forFree/forgecad-release/benchmarks/flacone-2026-10-25",
+    "original_probe_artifacts": "/private/tmp/flacone-solver-mesh-gpu-20261025",
+    "compile": "python3 compile_probe.py (adattare il percorso root/build se si cambia macchina)",
+    "probe_cli": "probe INPUT MODE SCENARIO 2 OUTPUT_JSON",
+    "driver": "run_comparison.py eseguito con QT_QPA_PLATFORM=offscreen; configurare una cartella contenente probe,source.prt,original.json. La sorgente CAD resta privata."
+  },
+  "comparison": {
+    "snapshot": {
+      "time_ratio_baseline_over_optimized": 4.053270238711666,
+      "time_reduction_percent": 75.32856333019014
+    },
+    "rebuild": {
+      "time_ratio_baseline_over_optimized": 1.1063543976293666,
+      "time_reduction_percent": 9.613049657257822
+    },
+    "edit": {
+      "time_ratio_baseline_over_optimized": 1.1358718758446267,
+      "time_reduction_percent": 11.961901578344236
+    },
+    "edit_peak_rss_reduction_percent": 23.362587945165735
+  },
+  "conclusion": "Sul flacone: apertura4,05×, ricostruzione1,11×, modifica quota1,14×; piccoRSS durante modifica−23,36%. Nessun10× complessivo e nessun guadagno GPU dimostrato. L’interpretazione è che la costruzione geometrica domina la rigenerazione, mentre mesh/cache incidono molto sull’apertura."
+}

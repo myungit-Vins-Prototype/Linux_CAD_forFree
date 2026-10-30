@@ -1,0 +1,97 @@
+{
+  "date": "2026-10-25",
+  "branch": "solver-mesh-gpu",
+  "base_commit": "5473456ddc690037f546f6efd8e82ce0e0fae472",
+  "status": "experimental",
+  "host": "macOS arm64, Release; solver/app -O3, kernel -O2 -g",
+  "solver": {
+    "method": "5 chiamate per versione in un processo, input ripristinato, ordine alternato, mediana; costruzione input e controlli fuori timer; nessun build/analisi/altro benchmark dell’agente concorrente",
+    "cases": [
+      {
+        "independent_horizontal_constraints": 100,
+        "dense_median_ms": 2.75342,
+        "partition_median_ms": 0.215334,
+        "speedup": 12.7867
+      },
+      {
+        "independent_horizontal_constraints": 400,
+        "dense_median_ms": 205.498,
+        "partition_median_ms": 0.849625,
+        "speedup": 241.869
+      },
+      {
+        "independent_horizontal_constraints": 800,
+        "dense_median_ms": 1716.02,
+        "partition_median_ms": 1.66217,
+        "speedup": 1032.4
+      }
+    ],
+    "raw_stdout": "solver independent=100 dense_ms=2.75342 partition_ms=0.215334 speedup=12.7867\nsolver independent=400 dense_ms=205.498 partition_ms=0.849625 speedup=241.869\nsolver independent=800 dense_ms=1716.02 partition_ms=1.66217 speedup=1032.4"
+  },
+  "mesh": {
+    "method": "3 caricamenti per versione alternati in un processo, mediana; nessun build/analisi/altro benchmark dell’agente concorrente",
+    "fixture": "sfera di raggio10, seguita da19scale1.001; qualità0",
+    "eager_median_ms": 49.7512,
+    "lazy_median_ms": 2.96721,
+    "speedup": 16.767,
+    "meshes_before": 20,
+    "meshes_after": 1,
+    "raw_stdout": "QOpenGLWidget is not supported on this platform.\nQOpenGLWidget is not supported on this platform.\nQOpenGLWidget is not supported on this platform.\nQOpenGLWidget is not supported on this platform.\nQOpenGLWidget is not supported on this platform.\nQOpenGLWidget is not supported on this platform.\nQOpenGLWidget is not supported on this platform.\nmesh history=20 eager_ms=49.7512 lazy_ms=2.96721 speedup=16.767 tessellations=20->1"
+  },
+  "gpu": {
+    "backend": "Metal",
+    "scope": "filtro conservativo box, controllo e intersezioni finali CPU double",
+    "method": "singola esecuzione di validazione, CPU prima e GPU dopo; nessun guadagno generale dimostrato",
+    "cpu_ms": 68.1387,
+    "gpu_ms": 69.4297,
+    "raw_stdout": "PASS Metal batch_pairs=69696 retained=186 boolean_cpu_ms=68.1387 boolean_gpu_ms=69.4297 gpu_pairs=136260",
+    "cuda": "sorgente predisposto, non compilato né eseguito: nvcc/GPU NVIDIA assenti"
+  },
+  "validation": {
+    "extended_ctest": {
+      "passed": 111,
+      "skipped": 2,
+      "failed": 0,
+      "seconds": 288.5,
+      "exclusions": [
+        "forgekernel_tests",
+        "forgecad_view_tests (fixture esterna assente)",
+        "forgecad_mouse_snapshot_tests (fixture esterna assente)"
+      ]
+    },
+    "final_targeted_ctest": {
+      "passed": 14,
+      "failed": 0,
+      "seconds": 10.72
+    },
+    "kernel_boolean": {
+      "passed": 37,
+      "failed": 0
+    },
+    "kernel_tessellation": {
+      "passed": 11,
+      "failed": 0
+    },
+    "native_ui": {
+      "OpenGL": true,
+      "timer_ticks_during_lazy_mesh": 36,
+      "triangles": 16718
+    },
+    "architecture": {
+      "files": 477,
+      "relations": 6582,
+      "translation_units": 232,
+      "diagnostic_units": 0,
+      "check": "PASS"
+    }
+  },
+  "limits": [
+    "fixture sintetiche, nessuna garanzia di10× su documenti generali",
+    "una componente grande conserva Cholesky denso; niente riuso simbolico",
+    "Metal controllato realmente; CUDA non verificato su questo host",
+    "filtro GPU quadratico e opt-in; BVH CPU predefinito",
+    "migrazione generale di intersezioni/raccordi/misure/topologia GPU non completata",
+    "suite kernel generale non eseguita",
+    "frequenza CPU/carico esterno non controllati; niente intervalli di confidenza"
+  ]
+}

@@ -1,0 +1,931 @@
+{
+  "date": "2026-10-28",
+  "branch": "solver-mesh-gpu",
+  "head": "c57e0e1a8dce5a57eeb1595b26326c782a41a557",
+  "scope": "bounded exact surface projection reuse; no new CUDA kernel",
+  "benchmark": {
+    "scenario": "CT current, rebuildAllFeatures, quality 1",
+    "candidate_before_production_formatting_and_FK_PROFILE_integration": true,
+    "application_closed": true,
+    "alternate_fresh_processes": true,
+    "summary": {
+      "baseline": {
+        "samples": [
+          27.141606251,
+          27.042218322,
+          27.130338527
+        ],
+        "median": 27.130338527,
+        "minimum": 27.042218322,
+        "maximum": 27.141606251
+      },
+      "selective": {
+        "samples": [
+          26.002492685,
+          26.014798551,
+          26.117887382
+        ],
+        "median": 26.014798551,
+        "minimum": 26.002492685,
+        "maximum": 26.117887382
+      }
+    },
+    "time_saved_percent": 4.111780525295772,
+    "pairs": [
+      {
+        "variant": "baseline",
+        "repeat": 0,
+        "seconds": 27.141606251
+      },
+      {
+        "variant": "selective",
+        "repeat": 0,
+        "seconds": 26.002492685
+      },
+      {
+        "variant": "selective",
+        "repeat": 1,
+        "seconds": 26.014798551
+      },
+      {
+        "variant": "baseline",
+        "repeat": 1,
+        "seconds": 27.042218322
+      },
+      {
+        "variant": "baseline",
+        "repeat": 2,
+        "seconds": 27.130338527
+      },
+      {
+        "variant": "selective",
+        "repeat": 2,
+        "seconds": 26.117887382
+      }
+    ]
+  },
+  "production_counts": {
+    "workspaces": 25474,
+    "calls": 3164672,
+    "hits": 1552644,
+    "uncached_after_capacity": 334113,
+    "sum_final_entries": 1277915,
+    "peak_entries_per_surface": 4096
+  },
+  "production_documents": [
+    {
+      "document": "ct",
+      "input": "/tmp/forgecad-subdivision-study-2026-10-28/ct-current.prt",
+      "sha256": "049a83c7e6686cd60903f7f54cc43f9dfa4ec133973899625b92c115042f5229",
+      "brep_mesh_errors_equal": true,
+      "errors": 0,
+      "profiling": true
+    },
+    {
+      "document": "mouse2",
+      "input": "/home/myungit/Linux_CAD_forFree/forgecad-linux-solver/benchmarks/loft-refinement-2026-10-27/mouse2-input.prt",
+      "sha256": "7ffa64559f38820ed0f070fa233efc27a2b5ea82ee749e04817a756cb1ae92ce",
+      "brep_mesh_errors_equal": true,
+      "errors": 0,
+      "profiling": false
+    },
+    {
+      "document": "assembly",
+      "input": "/home/myungit/Linux_CAD_forFree/forgecad-linux-solver/benchmarks/loft-refinement-2026-10-27/assembly-input.prt",
+      "sha256": "5b3d658321f460e826ff1e3c1415054f003ebc03325aa9e69da2a346be227791",
+      "brep_mesh_errors_equal": true,
+      "errors": 4,
+      "profiling": false
+    }
+  ],
+  "checks": [
+    {
+      "label": "reference-overflow",
+      "exit": 0,
+      "summary": "1/1 test superati"
+    },
+    {
+      "label": "Marching",
+      "exit": 0,
+      "summary": "10/10 test superati"
+    },
+    {
+      "label": "Boolean",
+      "exit": 0,
+      "summary": "38/38 test superati"
+    },
+    {
+      "label": "cancel",
+      "exit": 0,
+      "summary": "2/2 test superati"
+    }
+  ],
+  "application_ctest": {
+    "passed": 8,
+    "failed": 0
+  },
+  "cuda": {
+    "batches": 26,
+    "sums": {
+      "n": 50732.0,
+      "prepare_us": 1056.838,
+      "submit_us": 706.88,
+      "wait_us": 33151.359000000004,
+      "copy_us": 222.652,
+      "h2d_ms": 0.71968,
+      "kernel_ms": 29.583424,
+      "d2h_ms": 1.417664,
+      "ok": 26.0
+    },
+    "minimum_batch": 621.0,
+    "maximum_batch": 6142.0,
+    "rows": [
+      {
+        "n": 914.0,
+        "prepare_us": 766.752,
+        "submit_us": 113.4,
+        "wait_us": 1771.693,
+        "copy_us": 3.733,
+        "h2d_ms": 0.032032,
+        "kernel_ms": 0.589152,
+        "d2h_ms": 0.038816,
+        "ok": 1.0
+      },
+      {
+        "n": 914.0,
+        "prepare_us": 1.872,
+        "submit_us": 27.384,
+        "wait_us": 1765.74,
+        "copy_us": 6.143,
+        "h2d_ms": 0.021408,
+        "kernel_ms": 1.665536,
+        "d2h_ms": 0.039744,
+        "ok": 1.0
+      },
+      {
+        "n": 1086.0,
+        "prepare_us": 1.992,
+        "submit_us": 31.355,
+        "wait_us": 1700.814,
+        "copy_us": 4.863,
+        "h2d_ms": 0.022624,
+        "kernel_ms": 1.60912,
+        "d2h_ms": 0.059232,
+        "ok": 1.0
+      },
+      {
+        "n": 705.0,
+        "prepare_us": 25.716,
+        "submit_us": 21.019,
+        "wait_us": 471.213,
+        "copy_us": 3.581,
+        "h2d_ms": 0.016064,
+        "kernel_ms": 0.419392,
+        "d2h_ms": 0.028608,
+        "ok": 1.0
+      },
+      {
+        "n": 1078.0,
+        "prepare_us": 2.088,
+        "submit_us": 20.741,
+        "wait_us": 1653.496,
+        "copy_us": 4.903,
+        "h2d_ms": 0.034144,
+        "kernel_ms": 1.584192,
+        "d2h_ms": 0.030528,
+        "ok": 1.0
+      },
+      {
+        "n": 827.0,
+        "prepare_us": 1.814,
+        "submit_us": 18.208,
+        "wait_us": 488.911,
+        "copy_us": 3.719,
+        "h2d_ms": 0.032512,
+        "kernel_ms": 0.397344,
+        "d2h_ms": 0.027392,
+        "ok": 1.0
+      },
+      {
+        "n": 705.0,
+        "prepare_us": 1.555,
+        "submit_us": 41.776,
+        "wait_us": 467.007,
+        "copy_us": 4.446,
+        "h2d_ms": 0.017056,
+        "kernel_ms": 0.400256,
+        "d2h_ms": 0.051424,
+        "ok": 1.0
+      },
+      {
+        "n": 838.0,
+        "prepare_us": 2.086,
+        "submit_us": 46.749,
+        "wait_us": 629.054,
+        "copy_us": 5.255,
+        "h2d_ms": 0.02304,
+        "kernel_ms": 0.57488,
+        "d2h_ms": 0.042496,
+        "ok": 1.0
+      },
+      {
+        "n": 827.0,
+        "prepare_us": 1.551,
+        "submit_us": 19.235,
+        "wait_us": 420.149,
+        "copy_us": 2.921,
+        "h2d_ms": 0.012512,
+        "kernel_ms": 0.388352,
+        "d2h_ms": 0.025856,
+        "ok": 1.0
+      },
+      {
+        "n": 838.0,
+        "prepare_us": 63.216,
+        "submit_us": 74.793,
+        "wait_us": 579.289,
+        "copy_us": 3.797,
+        "h2d_ms": 0.024576,
+        "kernel_ms": 0.58896,
+        "d2h_ms": 0.02608,
+        "ok": 1.0
+      },
+      {
+        "n": 1899.0,
+        "prepare_us": 149.49,
+        "submit_us": 25.546,
+        "wait_us": 639.102,
+        "copy_us": 33.533,
+        "h2d_ms": 0.022496,
+        "kernel_ms": 0.58576,
+        "d2h_ms": 0.035872,
+        "ok": 1.0
+      },
+      {
+        "n": 662.0,
+        "prepare_us": 1.02,
+        "submit_us": 22.764,
+        "wait_us": 1859.987,
+        "copy_us": 1.988,
+        "h2d_ms": 0.020992,
+        "kernel_ms": 1.813024,
+        "d2h_ms": 0.021632,
+        "ok": 1.0
+      },
+      {
+        "n": 621.0,
+        "prepare_us": 1.035,
+        "submit_us": 17.514,
+        "wait_us": 1664.068,
+        "copy_us": 2.19,
+        "h2d_ms": 0.016032,
+        "kernel_ms": 1.61568,
+        "d2h_ms": 0.030624,
+        "ok": 1.0
+      },
+      {
+        "n": 1701.0,
+        "prepare_us": 1.818,
+        "submit_us": 17.905,
+        "wait_us": 1597.97,
+        "copy_us": 5.41,
+        "h2d_ms": 0.022752,
+        "kernel_ms": 1.531232,
+        "d2h_ms": 0.035872,
+        "ok": 1.0
+      },
+      {
+        "n": 1945.0,
+        "prepare_us": 1.808,
+        "submit_us": 18.036,
+        "wait_us": 579.498,
+        "copy_us": 6.285,
+        "h2d_ms": 0.02192,
+        "kernel_ms": 0.483392,
+        "d2h_ms": 0.066432,
+        "ok": 1.0
+      },
+      {
+        "n": 1895.0,
+        "prepare_us": 2.023,
+        "submit_us": 18.562,
+        "wait_us": 2144.61,
+        "copy_us": 6.701,
+        "h2d_ms": 0.024832,
+        "kernel_ms": 2.06976,
+        "d2h_ms": 0.042304,
+        "ok": 1.0
+      },
+      {
+        "n": 3704.0,
+        "prepare_us": 3.615,
+        "submit_us": 18.385,
+        "wait_us": 1411.498,
+        "copy_us": 13.064,
+        "h2d_ms": 0.026176,
+        "kernel_ms": 1.320288,
+        "d2h_ms": 0.067488,
+        "ok": 1.0
+      },
+      {
+        "n": 3194.0,
+        "prepare_us": 3.436,
+        "submit_us": 21.348,
+        "wait_us": 1859.945,
+        "copy_us": 11.824,
+        "h2d_ms": 0.026624,
+        "kernel_ms": 1.734816,
+        "d2h_ms": 0.0904,
+        "ok": 1.0
+      },
+      {
+        "n": 1633.0,
+        "prepare_us": 2.085,
+        "submit_us": 19.964,
+        "wait_us": 1110.931,
+        "copy_us": 6.198,
+        "h2d_ms": 0.040704,
+        "kernel_ms": 0.957024,
+        "d2h_ms": 0.111744,
+        "ok": 1.0
+      },
+      {
+        "n": 2807.0,
+        "prepare_us": 2.393,
+        "submit_us": 16.279,
+        "wait_us": 1998.969,
+        "copy_us": 8.042,
+        "h2d_ms": 0.029888,
+        "kernel_ms": 1.737248,
+        "d2h_ms": 0.047584,
+        "ok": 1.0
+      },
+      {
+        "n": 3550.0,
+        "prepare_us": 2.794,
+        "submit_us": 16.319,
+        "wait_us": 1905.518,
+        "copy_us": 27.476,
+        "h2d_ms": 0.04512,
+        "kernel_ms": 1.730656,
+        "d2h_ms": 0.087392,
+        "ok": 1.0
+      },
+      {
+        "n": 6142.0,
+        "prepare_us": 5.722,
+        "submit_us": 19.874,
+        "wait_us": 988.94,
+        "copy_us": 19.707,
+        "h2d_ms": 0.048768,
+        "kernel_ms": 0.834816,
+        "d2h_ms": 0.104448,
+        "ok": 1.0
+      },
+      {
+        "n": 3133.0,
+        "prepare_us": 2.747,
+        "submit_us": 15.642,
+        "wait_us": 928.701,
+        "copy_us": 9.667,
+        "h2d_ms": 0.02656,
+        "kernel_ms": 0.831424,
+        "d2h_ms": 0.05728,
+        "ok": 1.0
+      },
+      {
+        "n": 2515.0,
+        "prepare_us": 1.902,
+        "submit_us": 14.23,
+        "wait_us": 1753.134,
+        "copy_us": 7.447,
+        "h2d_ms": 0.038976,
+        "kernel_ms": 1.645664,
+        "d2h_ms": 0.058176,
+        "ok": 1.0
+      },
+      {
+        "n": 5882.0,
+        "prepare_us": 5.631,
+        "submit_us": 16.389,
+        "wait_us": 904.377,
+        "copy_us": 17.047,
+        "h2d_ms": 0.039904,
+        "kernel_ms": 0.76304,
+        "d2h_ms": 0.088896,
+        "ok": 1.0
+      },
+      {
+        "n": 717.0,
+        "prepare_us": 0.677,
+        "submit_us": 13.463,
+        "wait_us": 1856.745,
+        "copy_us": 2.712,
+        "h2d_ms": 0.031968,
+        "kernel_ms": 1.712416,
+        "d2h_ms": 0.101344,
+        "ok": 1.0
+      }
+    ]
+  },
+  "cuda_rebuild_seconds": 7.2657411,
+  "cpu_profile": {
+    "samples": 9137,
+    "period_us": 10000,
+    "flat": [
+      {
+        "percent": 15.53,
+        "samples": 1419,
+        "symbol": "lib:libc.so.6"
+      },
+      {
+        "percent": 10.84,
+        "samples": 990,
+        "symbol": "lib:libm.so.6"
+      },
+      {
+        "percent": 6.41,
+        "samples": 586,
+        "symbol": "ForgeCad::Kernel::CurveProjection<3> ForgeCad::Kernel::projectPoint<3>(ForgeCad::Kernel::Curve<3> const&, ForgeCad::Kernel::Vec<3> const&, ForgeCad::Kernel::Interval const&)"
+      },
+      {
+        "percent": 3.35,
+        "samples": 306,
+        "symbol": "ForgeCad::Kernel::BernsteinPolynomial::evaluate(double) const"
+      },
+      {
+        "percent": 3.21,
+        "samples": 293,
+        "symbol": "ForgeCad::Kernel::BSplineSurface::evaluate(double, double, int, ForgeCad::Kernel::Vec<3>*) const"
+      },
+      {
+        "percent": 3.11,
+        "samples": 284,
+        "symbol": "ForgeCad::Kernel::(anonymous namespace)::projectOnBSplineSurface(ForgeCad::Kernel::BSplineSurface const&, ForgeCad::Kernel::Vec<3> const&, ForgeCad::Kernel::Interval const&, ForgeCad::Kernel::Interval const&, ForgeCad::Kernel::(anonymous namespace)::Candidates&)"
+      },
+      {
+        "percent": 2.82,
+        "samples": 258,
+        "symbol": "void ForgeCad::Kernel::(anonymous namespace)::collectCandidates<3>(ForgeCad::Kernel::Curve<3> const&, ForgeCad::Kernel::Vec<3> const&, ForgeCad::Kernel::Interval const&, std::vector<ForgeCad::Kernel::CurveProjection<3>, std::allocator<ForgeCad::Kernel::CurveProjection<3> > >&, double)"
+      },
+      {
+        "percent": 2.52,
+        "samples": 230,
+        "symbol": "void std::__introsort_loop<__gnu_cxx::__normal_iterator<std::pair<double, unsigned long>*, std::vector<std::pair<double, unsigned long>, std::allocator<std::pair<double, unsigned long> > > >, long, std::less<void> >(__gnu_cxx::__normal_iterator<std::pair<double, unsigned long>*, std::vector<std::pair<double, unsigned long>, std::allocator<std::pair<double, unsigned long> > > >, __gnu_cxx::__normal_iterator<std::pair<double, unsigned long>*, std::vector<std::pair<double, unsigned long>, std::allocator<std::pair<double, unsigned long> > > >, long, std::less<void>) [clone .isra.0]"
+      },
+      {
+        "percent": 2.3,
+        "samples": 210,
+        "symbol": "ForgeCad::Kernel::(anonymous namespace)::patchBounds(ForgeCad::Kernel::(anonymous namespace)::BezierPatch const&, ForgeCad::Kernel::Vec<3> const&, ForgeCad::Kernel::Vec<3> const*)"
+      },
+      {
+        "percent": 2.16,
+        "samples": 197,
+        "symbol": "void ForgeCad::Kernel::(anonymous namespace)::evaluateConic<3>(ForgeCad::Kernel::Vec<3> const&, ForgeCad::Kernel::Vec<3> const&, ForgeCad::Kernel::Vec<3> const&, double, int, ForgeCad::Kernel::Vec<3>*)"
+      },
+      {
+        "percent": 2.09,
+        "samples": 191,
+        "symbol": "ForgeCad::Kernel::(anonymous namespace)::subdivisionSeeds(ForgeCad::Kernel::Surface const&, ForgeCad::Kernel::Surface const&, ForgeCad::Kernel::Box const&, double, std::vector<ForgeCad::Kernel::Vec<3>, std::allocator<ForgeCad::Kernel::Vec<3> > >&)::{lambda(ForgeCad::Kernel::BSplineSurface const&, ForgeCad::Kernel::BSplineSurface const&, int)#1}::operator()(ForgeCad::Kernel::BSplineSurface const&, ForgeCad::Kernel::BSplineSurface const&, int) const"
+      },
+      {
+        "percent": 1.95,
+        "samples": 178,
+        "symbol": "ForgeCad::Kernel::(anonymous namespace)::BooleanBuilder::buildSubFacesOnce(int, ForgeCad::Kernel::Id<ForgeCad::Kernel::FaceTag>, std::vector<ForgeCad::Kernel::(anonymous namespace)::Piece, std::allocator<ForgeCad::Kernel::(anonymous namespace)::Piece> > const&, int) const"
+      },
+      {
+        "percent": 1.94,
+        "samples": 177,
+        "symbol": "double ForgeCad::Kernel::distance<3>(ForgeCad::Kernel::Vec<3> const&, ForgeCad::Kernel::Vec<3> const&)"
+      },
+      {
+        "percent": 1.94,
+        "samples": 177,
+        "symbol": "lib:libstdc++.so.6.0.36"
+      },
+      {
+        "percent": 1.79,
+        "samples": 164,
+        "symbol": "ForgeCad::Kernel::BernsteinPolynomial::operator*(ForgeCad::Kernel::BernsteinPolynomial const&) const"
+      },
+      {
+        "percent": 1.7,
+        "samples": 155,
+        "symbol": "void ForgeCad::Kernel::detail::(anonymous namespace)::evaluateBasis<5, 2>(std::vector<double, std::allocator<double> > const&, int, double, int, int, double*) [clone .constprop.0]"
+      },
+      {
+        "percent": 1.6,
+        "samples": 146,
+        "symbol": "ForgeCad::Kernel::detail::findSpan(std::vector<double, std::allocator<double> > const&, int, int, double)"
+      },
+      {
+        "percent": 1.44,
+        "samples": 132,
+        "symbol": "ForgeCad::Kernel::RevolutionSurface::evaluate(double, double, int, ForgeCad::Kernel::Vec<3>*) const"
+      },
+      {
+        "percent": 1.42,
+        "samples": 130,
+        "symbol": "ForgeCad::Kernel::detail::validateKnotVector(std::vector<double, std::allocator<double> > const&, int, int, char const*)"
+      },
+      {
+        "percent": 1.39,
+        "samples": 127,
+        "symbol": "void ForgeCad::Kernel::detail::(anonymous namespace)::evaluateBasis<5, 0>(std::vector<double, std::allocator<double> > const&, int, double, int, int, double*) [clone .constprop.0]"
+      },
+      {
+        "percent": 1.36,
+        "samples": 124,
+        "symbol": "void ForgeCad::Kernel::detail::(anonymous namespace)::evaluateBasis<3, 0>(std::vector<double, std::allocator<double> > const&, int, double, int, int, double*) [clone .constprop.0]"
+      },
+      {
+        "percent": 1.26,
+        "samples": 115,
+        "symbol": "ForgeCad::Kernel::ExtrusionSurface::evaluate(double, double, int, ForgeCad::Kernel::Vec<3>*) const"
+      },
+      {
+        "percent": 1.23,
+        "samples": 112,
+        "symbol": "ForgeCad::Kernel::Transform3::applyToPoint(ForgeCad::Kernel::Vec<3> const&) const"
+      },
+      {
+        "percent": 1.16,
+        "samples": 106,
+        "symbol": "ForgeCad::Kernel::(anonymous namespace)::projectGeneric(ForgeCad::Kernel::Surface const&, ForgeCad::Kernel::Vec<3> const&, ForgeCad::Kernel::Interval const&, ForgeCad::Kernel::Interval const&, ForgeCad::Kernel::(anonymous namespace)::Candidates&)"
+      },
+      {
+        "percent": 1.04,
+        "samples": 95,
+        "symbol": "void ForgeCad::Kernel::(anonymous namespace)::addCandidate<3>(ForgeCad::Kernel::Curve<3> const&, ForgeCad::Kernel::Vec<3> const&, double, std::vector<ForgeCad::Kernel::CurveProjection<3>, std::allocator<ForgeCad::Kernel::CurveProjection<3> > >&)"
+      },
+      {
+        "percent": 0.9,
+        "samples": 82,
+        "symbol": "ForgeCad::Kernel::ConicalSurface::evaluate(double, double, int, ForgeCad::Kernel::Vec<3>*) const"
+      },
+      {
+        "percent": 0.89,
+        "samples": 81,
+        "symbol": "ForgeCad::Kernel::BSplineCurve<3>::evaluateSpan(int, double, int, ForgeCad::Kernel::Vec<3>*) const"
+      },
+      {
+        "percent": 0.73,
+        "samples": 67,
+        "symbol": "ForgeCad::Kernel::Circle<3>::evaluate(double, int, ForgeCad::Kernel::Vec<3>*) const"
+      },
+      {
+        "percent": 0.69,
+        "samples": 63,
+        "symbol": "ForgeCad::Kernel::(anonymous namespace)::isolate(ForgeCad::Kernel::BernsteinPolynomial const&, ForgeCad::Kernel::BernsteinPolynomial const&, double, double, double, int, std::vector<double, std::allocator<double> >&)"
+      },
+      {
+        "percent": 0.69,
+        "samples": 63,
+        "symbol": "ForgeCad::Kernel::(anonymous namespace)::Candidates::considerInterior(double, double)"
+      },
+      {
+        "percent": 0.68,
+        "samples": 62,
+        "symbol": "ForgeCad::Kernel::BernsteinPolynomial::BernsteinPolynomial(std::vector<double, std::allocator<double> >)"
+      },
+      {
+        "percent": 0.68,
+        "samples": 62,
+        "symbol": "void ForgeCad::Kernel::detail::(anonymous namespace)::evaluateBasis<3, 2>(std::vector<double, std::allocator<double> > const&, int, double, int, int, double*) [clone .constprop.0]"
+      },
+      {
+        "percent": 0.66,
+        "samples": 60,
+        "symbol": "ForgeCad::Kernel::CurveProjection<2> ForgeCad::Kernel::projectPoint<2>(ForgeCad::Kernel::Curve<2> const&, ForgeCad::Kernel::Vec<2> const&, ForgeCad::Kernel::Interval const&)"
+      },
+      {
+        "percent": 0.62,
+        "samples": 57,
+        "symbol": "ForgeCad::Kernel::(anonymous namespace)::radial(ForgeCad::Kernel::Frame3 const&, int, double, double)"
+      },
+      {
+        "percent": 0.61,
+        "samples": 56,
+        "symbol": "ForgeCad::Kernel::splitPatch(ForgeCad::Kernel::BSplineSurface const&, bool)"
+      },
+      {
+        "percent": 0.57,
+        "samples": 52,
+        "symbol": "ForgeCad::Kernel::(anonymous namespace)::classifyFacePoint(ForgeCad::Kernel::Body const&, ForgeCad::Kernel::Id<ForgeCad::Kernel::FaceTag>, ForgeCad::Kernel::Vec<3> const&, double, ForgeCad::Kernel::(anonymous namespace)::PreparedFace const*)"
+      },
+      {
+        "percent": 0.54,
+        "samples": 49,
+        "symbol": "void std::__push_heap<__gnu_cxx::__normal_iterator<ForgeCad::Kernel::(anonymous namespace)::projectOnBSplineSurface(ForgeCad::Kernel::BSplineSurface const&, ForgeCad::Kernel::Vec<3> const&, ForgeCad::Kernel::Interval const&, ForgeCad::Kernel::Interval const&, ForgeCad::Kernel::(anonymous namespace)::Candidates&)::Node*, std::vector<ForgeCad::Kernel::(anonymous namespace)::projectOnBSplineSurface(ForgeCad::Kernel::BSplineSurface const&, ForgeCad::Kernel::Vec<3> const&, ForgeCad::Kernel::Interval const&, ForgeCad::Kernel::Interval const&, ForgeCad::Kernel::(anonymous namespace)::Candidates&)::Node, std::allocator<ForgeCad::Kernel::(anonymous namespace)::projectOnBSplineSurface(ForgeCad::Kernel::BSplineSurface const&, ForgeCad::Kernel::Vec<3> const&, ForgeCad::Kernel::Interval const&, ForgeCad::Kernel::Interval const&, ForgeCad::Kernel::(anonymous namespace)::Candidates&)::Node> > >, long, ForgeCad::Kernel::(anonymous namespace)::projectOnBSplineSurface(ForgeCad::Kernel::BSplineSurface const&, ForgeCad::Kernel::Vec<3> const&, ForgeCad::Kernel::Interval const&, ForgeCad::Kernel::Interval const&, ForgeCad::Kernel::(anonymous namespace)::Candidates&)::Node, std::less<ForgeCad::Kernel::(anonymous namespace)::projectOnBSplineSurface(ForgeCad::Kernel::BSplineSurface const&, ForgeCad::Kernel::Vec<3> const&, ForgeCad::Kernel::Interval const&, ForgeCad::Kernel::Interval const&, ForgeCad::Kernel::(anonymous namespace)::Candidates&)::Node> >(__gnu_cxx::__normal_iterator<ForgeCad::Kernel::(anonymous namespace)::projectOnBSplineSurface(ForgeCad::Kernel::BSplineSurface const&, ForgeCad::Kernel::Vec<3> const&, ForgeCad::Kernel::Interval const&, ForgeCad::Kernel::Interval const&, ForgeCad::Kernel::(anonymous namespace)::Candidates&)::Node*, std::vector<ForgeCad::Kernel::(anonymous namespace)::projectOnBSplineSurface(ForgeCad::Kernel::BSplineSurface const&, ForgeCad::Kernel::Vec<3> const&, ForgeCad::Kernel::Interval const&, ForgeCad::Kernel::Interval const&, ForgeCad::Kernel::(anonymous namespace)::Candidates&)::Node, std::allocator<ForgeCad::Kernel::(anonymous namespace)::projectOnBSplineSurface(ForgeCad::Kernel::BSplineSurface const&, ForgeCad::Kernel::Vec<3> const&, ForgeCad::Kernel::Interval const&, ForgeCad::Kernel::Interval const&, ForgeCad::Kernel::(anonymous namespace)::Candidates&)::Node> > >, long, long, ForgeCad::Kernel::(anonymous namespace)::projectOnBSplineSurface(ForgeCad::Kernel::BSplineSurface const&, ForgeCad::Kernel::Vec<3> const&, ForgeCad::Kernel::Interval const&, ForgeCad::Kernel::Interval const&, ForgeCad::Kernel::(anonymous namespace)::Candidates&)::Node, std::less<ForgeCad::Kernel::(anonymous namespace)::projectOnBSplineSurface(ForgeCad::Kernel::BSplineSurface const&, ForgeCad::Kernel::Vec<3> const&, ForgeCad::Kernel::Interval const&, ForgeCad::Kernel::Interval const&, ForgeCad::Kernel::(anonymous namespace)::Candidates&)::Node>&) [clone .constprop.0]"
+      },
+      {
+        "percent": 0.49,
+        "samples": 45,
+        "symbol": "ForgeCad::Kernel::TransformedCurve::evaluate(double, int, ForgeCad::Kernel::Vec<3>*) const"
+      },
+      {
+        "percent": 0.48,
+        "samples": 44,
+        "symbol": "ForgeCad::Kernel::Surface::point(double, double) const"
+      },
+      {
+        "percent": 0.46,
+        "samples": 42,
+        "symbol": "ForgeCad::Kernel::BSplineCurve<3>::domain() const"
+      }
+    ],
+    "inclusive": [
+      {
+        "percent": 100.0,
+        "samples": 9137,
+        "symbol": "lib:libc.so.6"
+      },
+      {
+        "percent": 84.83,
+        "samples": 7751,
+        "symbol": "lib:libstdc++.so.6.0.36"
+      },
+      {
+        "percent": 79.01,
+        "samples": 7219,
+        "symbol": "ForgeCad::Kernel::parallelFor<ForgeCad::Kernel::(anonymous namespace)::BooleanBuilder::computeCuts(std::map<int, std::vector<ForgeCad::Kernel::(anonymous namespace)::Piece, std::allocator<ForgeCad::Kernel::(anonymous namespace)::Piece> >, std::less<int>, std::allocator<std::pair<int const, std::vector<ForgeCad::Kernel::(anonymous namespace)::Piece, std::allocator<ForgeCad::Kernel::(anonymous namespace)::Piece> > > > > (&) [2])::{lambda(unsigned long)#1}>(unsigned long, unsigned int, ForgeCad::Kernel::(anonymous namespace)::BooleanBuilder::computeCuts(std::map<int, std::vector<ForgeCad::Kernel::(anonymous namespace)::Piece, std::allocator<ForgeCad::Kernel::(anonymous namespace)::Piece> >, std::less<int>, std::allocator<std::pair<int const, std::vector<ForgeCad::Kernel::(anonymous namespace)::Piece, std::allocator<ForgeCad::Kernel::(anonymous namespace)::Piece> > > > > (&) [2])::{lambda(unsigned long)#1} const&)::{lambda()#1}::operator()() const"
+      },
+      {
+        "percent": 78.59,
+        "samples": 7181,
+        "symbol": "ForgeCad::Kernel::(anonymous namespace)::BooleanBuilder::pairArcs(ForgeCad::Kernel::Id<ForgeCad::Kernel::FaceTag>, ForgeCad::Kernel::Id<ForgeCad::Kernel::FaceTag>, ForgeCad::Kernel::(anonymous namespace)::BooleanBuilder::PairResult&, bool) const"
+      },
+      {
+        "percent": 76.02,
+        "samples": 6946,
+        "symbol": "ForgeCad::Kernel::(anonymous namespace)::BooleanBuilder::surfaceArcs(ForgeCad::Kernel::Id<ForgeCad::Kernel::FaceTag>, ForgeCad::Kernel::Id<ForgeCad::Kernel::FaceTag>, ForgeCad::Kernel::(anonymous namespace)::BooleanBuilder::PairResult&) const"
+      },
+      {
+        "percent": 66.72,
+        "samples": 6096,
+        "symbol": "ForgeCad::Kernel::intersectSurfaces(ForgeCad::Kernel::Surface const&, ForgeCad::Kernel::Surface const&, ForgeCad::Kernel::Box const&, std::vector<ForgeCad::Kernel::Vec<3>, std::allocator<ForgeCad::Kernel::Vec<3> > > const&, ForgeCad::Kernel::SurfaceIntersectionOptions const&)"
+      },
+      {
+        "percent": 40.34,
+        "samples": 3686,
+        "symbol": "ForgeCad::Kernel::projectPoint(ForgeCad::Kernel::Surface const&, ForgeCad::Kernel::Vec<3> const&)"
+      },
+      {
+        "percent": 40.31,
+        "samples": 3683,
+        "symbol": "ForgeCad::Kernel::projectPoint(ForgeCad::Kernel::Surface const&, ForgeCad::Kernel::Vec<3> const&, ForgeCad::Kernel::Interval const&, ForgeCad::Kernel::Interval const&)"
+      },
+      {
+        "percent": 24.33,
+        "samples": 2223,
+        "symbol": "ForgeCad::Kernel::(anonymous namespace)::Marcher::traceFrom(ForgeCad::Kernel::Vec<3> const&, ForgeCad::Kernel::SurfaceIntersection&, bool)"
+      },
+      {
+        "percent": 24.01,
+        "samples": 2194,
+        "symbol": "ForgeCad::Kernel::(anonymous namespace)::subdivisionSeeds(ForgeCad::Kernel::Surface const&, ForgeCad::Kernel::Surface const&, ForgeCad::Kernel::Box const&, double, std::vector<ForgeCad::Kernel::Vec<3>, std::allocator<ForgeCad::Kernel::Vec<3> > >&)"
+      },
+      {
+        "percent": 23.67,
+        "samples": 2163,
+        "symbol": "ForgeCad::Kernel::CurveProjection<3> ForgeCad::Kernel::projectPoint<3>(ForgeCad::Kernel::Curve<3> const&, ForgeCad::Kernel::Vec<3> const&, ForgeCad::Kernel::Interval const&)"
+      },
+      {
+        "percent": 23.2,
+        "samples": 2120,
+        "symbol": "ForgeCad::Kernel::(anonymous namespace)::subdivisionSeeds(ForgeCad::Kernel::Surface const&, ForgeCad::Kernel::Surface const&, ForgeCad::Kernel::Box const&, double, std::vector<ForgeCad::Kernel::Vec<3>, std::allocator<ForgeCad::Kernel::Vec<3> > >&)::{lambda(ForgeCad::Kernel::BSplineSurface const&, ForgeCad::Kernel::BSplineSurface const&, int)#1}::operator()(ForgeCad::Kernel::BSplineSurface const&, ForgeCad::Kernel::BSplineSurface const&, int) const"
+      },
+      {
+        "percent": 19.33,
+        "samples": 1766,
+        "symbol": "ForgeCad::Kernel::(anonymous namespace)::projectOnBSplineSurface(ForgeCad::Kernel::BSplineSurface const&, ForgeCad::Kernel::Vec<3> const&, ForgeCad::Kernel::Interval const&, ForgeCad::Kernel::Interval const&, ForgeCad::Kernel::(anonymous namespace)::Candidates&)"
+      },
+      {
+        "percent": 13.88,
+        "samples": 1268,
+        "symbol": "void ForgeCad::Kernel::(anonymous namespace)::collectCandidates<3>(ForgeCad::Kernel::Curve<3> const&, ForgeCad::Kernel::Vec<3> const&, ForgeCad::Kernel::Interval const&, std::vector<ForgeCad::Kernel::CurveProjection<3>, std::allocator<ForgeCad::Kernel::CurveProjection<3> > >&, double)"
+      },
+      {
+        "percent": 11.63,
+        "samples": 1063,
+        "symbol": "void ForgeCad::Kernel::(anonymous namespace)::segmentCandidates<3>(ForgeCad::Kernel::BSplineCurve<3> const&, ForgeCad::Kernel::BSplineCurve<3> const&, ForgeCad::Kernel::Vec<3> const&, ForgeCad::Kernel::Interval const&, std::vector<ForgeCad::Kernel::CurveProjection<3>, std::allocator<ForgeCad::Kernel::CurveProjection<3> > >&)"
+      },
+      {
+        "percent": 11.27,
+        "samples": 1030,
+        "symbol": "ForgeCad::Kernel::Surface::point(double, double) const"
+      },
+      {
+        "percent": 10.84,
+        "samples": 990,
+        "symbol": "lib:libm.so.6"
+      },
+      {
+        "percent": 10.65,
+        "samples": 973,
+        "symbol": "ForgeCad::Kernel::(anonymous namespace)::Marcher::registerApexes(ForgeCad::Kernel::SurfaceIntersection&)"
+      },
+      {
+        "percent": 10.41,
+        "samples": 951,
+        "symbol": "ViewportInteractionTest::run(QString const&, int, bool)"
+      },
+      {
+        "percent": 10.41,
+        "samples": 951,
+        "symbol": "CadViewport::regenerateAll(std::function<void (int, int, QString const&)> const&)"
+      },
+      {
+        "percent": 10.41,
+        "samples": 951,
+        "symbol": "CadViewport::regenerateFrom(int, QList<bool>, QSet<int>, bool, std::function<void (int, int, QString const&)> const&)"
+      },
+      {
+        "percent": 10.41,
+        "samples": 951,
+        "symbol": "main"
+      },
+      {
+        "percent": 10.41,
+        "samples": 951,
+        "symbol": "CadViewport::rebuildAllFeatures()"
+      },
+      {
+        "percent": 10.41,
+        "samples": 951,
+        "symbol": "_start"
+      },
+      {
+        "percent": 9.63,
+        "samples": 880,
+        "symbol": "CadViewport::rebuildParallel(QList<int> const&, std::function<void (int, QString const&)> const&)"
+      },
+      {
+        "percent": 9.63,
+        "samples": 880,
+        "symbol": "ForgeCad::buildGeometry(ExtrusionObject&, int, QList<SketchObject> const&, QList<ExtrusionObject> const&)"
+      },
+      {
+        "percent": 9.63,
+        "samples": 880,
+        "symbol": "ForgeCad::buildBody(ExtrusionObject&, int, QList<SketchObject> const&, QList<ExtrusionObject> const&, int, bool)"
+      },
+      {
+        "percent": 9.62,
+        "samples": 879,
+        "symbol": "ForgeCad::(anonymous namespace)::buildGeometryImpl(ExtrusionObject&, int, QList<SketchObject> const&, QList<ExtrusionObject> const&)"
+      },
+      {
+        "percent": 9.6,
+        "samples": 877,
+        "symbol": "ForgeCad::Kernel::Circle<3>::evaluate(double, int, ForgeCad::Kernel::Vec<3>*) const"
+      },
+      {
+        "percent": 9.52,
+        "samples": 870,
+        "symbol": "std::vector<ForgeCad::Kernel::CurveProjection<3>, std::allocator<ForgeCad::Kernel::CurveProjection<3> > > ForgeCad::Kernel::projectPointCandidates<3>(ForgeCad::Kernel::Curve<3> const&, ForgeCad::Kernel::Vec<3> const&, ForgeCad::Kernel::Interval const&)"
+      },
+      {
+        "percent": 9.02,
+        "samples": 824,
+        "symbol": "std::_Function_handler<void (), CadViewport::rebuildParallel(QList<int> const&, std::function<void (int, QString const&)> const&)::{lambda()#2}>::_M_invoke(std::_Any_data const&)"
+      },
+      {
+        "percent": 8.91,
+        "samples": 814,
+        "symbol": "void ForgeCad::Kernel::(anonymous namespace)::evaluateConic<3>(ForgeCad::Kernel::Vec<3> const&, ForgeCad::Kernel::Vec<3> const&, ForgeCad::Kernel::Vec<3> const&, double, int, ForgeCad::Kernel::Vec<3>*)"
+      },
+      {
+        "percent": 8.88,
+        "samples": 811,
+        "symbol": "ForgeCad::(anonymous namespace)::compute(ForgeCad::(anonymous namespace)::Entry&)"
+      },
+      {
+        "percent": 8.88,
+        "samples": 811,
+        "symbol": "ForgeCad::Kernel::resolveHistory(std::vector<ForgeCad::Kernel::Body const*, std::allocator<ForgeCad::Kernel::Body const*> > const&, ForgeCad::Kernel::Body const&, ForgeCad::Kernel::BodyHistory const*, ForgeCad::Kernel::HistoryOptions const&)"
+      },
+      {
+        "percent": 8.22,
+        "samples": 751,
+        "symbol": "ForgeCad::Kernel::BSplineSurface::evaluate(double, double, int, ForgeCad::Kernel::Vec<3>*) const"
+      },
+      {
+        "percent": 8.1,
+        "samples": 740,
+        "symbol": "ForgeCad::Kernel::booleanOperation(ForgeCad::Kernel::Body const&, ForgeCad::Kernel::Body const&, ForgeCad::Kernel::BooleanOperation, ForgeCad::Kernel::BooleanOptions const&, ForgeCad::Kernel::BodyHistory*)"
+      },
+      {
+        "percent": 8.01,
+        "samples": 732,
+        "symbol": "ForgeCad::Kernel::(anonymous namespace)::Marcher::knownPoint(ForgeCad::Kernel::Vec<3> const&, ForgeCad::Kernel::SurfaceIntersection const&) const"
+      },
+      {
+        "percent": 7.62,
+        "samples": 696,
+        "symbol": "ForgeCad::forgeBooleanWithHistory(std::shared_ptr<ForgeCad::Kernel::Body const> const&, std::shared_ptr<ForgeCad::Kernel::Body const> const&, ForgeCad::Kernel::BooleanOperation)"
+      },
+      {
+        "percent": 7.45,
+        "samples": 681,
+        "symbol": "ForgeCad::Kernel::intersectCurves(ForgeCad::Kernel::Curve<2> const&, ForgeCad::Kernel::Interval const&, ForgeCad::Kernel::Curve<2> const&, ForgeCad::Kernel::Interval const&, double, bool)"
+      },
+      {
+        "percent": 7.4,
+        "samples": 676,
+        "symbol": "ForgeCad::Kernel::(anonymous namespace)::BooleanBuilder::computeCuts(std::map<int, std::vector<ForgeCad::Kernel::(anonymous namespace)::Piece, std::allocator<ForgeCad::Kernel::(anonymous namespace)::Piece> >, std::less<int>, std::allocator<std::pair<int const, std::vector<ForgeCad::Kernel::(anonymous namespace)::Piece, std::allocator<ForgeCad::Kernel::(anonymous namespace)::Piece> > > > > (&) [2])"
+      },
+      {
+        "percent": 6.8,
+        "samples": 621,
+        "symbol": "ForgeCad::Kernel::TransformedCurve::evaluate(double, int, ForgeCad::Kernel::Vec<3>*) const"
+      },
+      {
+        "percent": 6.8,
+        "samples": 621,
+        "symbol": "ForgeCad::Kernel::(anonymous namespace)::projectOnIso(ForgeCad::Kernel::Surface const&, ForgeCad::Kernel::Vec<3> const&, bool, double, ForgeCad::Kernel::Interval const&, ForgeCad::Kernel::(anonymous namespace)::Candidates&)"
+      },
+      {
+        "percent": 6.72,
+        "samples": 614,
+        "symbol": "QRunnable::QGenericRunnable::Helper<ForgeCad::registerFeatureGenealogy(ExtrusionObject const&, int, QList<SketchObject> const&, QList<ExtrusionObject> const&)::{lambda()#1}>::impl(QRunnable::QGenericRunnable::HelperBase::Op, QRunnable::QGenericRunnable::HelperBase*, void*)"
+      },
+      {
+        "percent": 6.72,
+        "samples": 614,
+        "symbol": "lib:libQt6Core.so.6.12.0"
+      },
+      {
+        "percent": 6.72,
+        "samples": 614,
+        "symbol": "ForgeCad::(anonymous namespace)::computed(ForgeCad::Kernel::Body const&)"
+      },
+      {
+        "percent": 6.65,
+        "samples": 608,
+        "symbol": "ForgeCad::Kernel::(anonymous namespace)::projectGeneric(ForgeCad::Kernel::Surface const&, ForgeCad::Kernel::Vec<3> const&, ForgeCad::Kernel::Interval const&, ForgeCad::Kernel::Interval const&, ForgeCad::Kernel::(anonymous namespace)::Candidates&)"
+      },
+      {
+        "percent": 6.63,
+        "samples": 606,
+        "symbol": "ForgeCad::Kernel::(anonymous namespace)::projectOnBoundary(ForgeCad::Kernel::Surface const&, ForgeCad::Kernel::Vec<3> const&, ForgeCad::Kernel::Interval const&, ForgeCad::Kernel::Interval const&, ForgeCad::Kernel::(anonymous namespace)::Candidates&, bool)"
+      },
+      {
+        "percent": 5.7,
+        "samples": 521,
+        "symbol": "ForgeCad::Kernel::(anonymous namespace)::Marcher::traceCurve(ForgeCad::Kernel::(anonymous namespace)::Node const&, ForgeCad::Kernel::SurfaceIntersection&)"
+      },
+      {
+        "percent": 5.58,
+        "samples": 510,
+        "symbol": "ForgeCad::Kernel::ExtrusionSurface::evaluate(double, double, int, ForgeCad::Kernel::Vec<3>*) const"
+      },
+      {
+        "percent": 5.55,
+        "samples": 507,
+        "symbol": "ForgeCad::forgeMergeFeatureResult(ExtrusionObject&, std::shared_ptr<ForgeCad::Kernel::Body const> const&, int, QList<ExtrusionObject> const&, QString*)"
+      }
+    ]
+  },
+  "production_sha256": {
+    "kernel/fk_marching.cpp": "29cdca1c16a878c3f09eb935ca680daff2f4813bb67d1c2be1d0d574a2e1aa0f",
+    "kernel/tests/test_marching.cpp": "0a4ea9e58fd8db56c88ccf1ac2c5286107726e19b27bd9dd53a3da1f247a65be",
+    "forgecad-linux-solver/forgecad": "588ed6afc62e28bee91121312c343bf441f8f0b620de42a580a688bdad84f6f3"
+  },
+  "pilot_samples_not_formal": [
+    {
+      "variant": "baseline",
+      "seconds": 27.070526983
+    },
+    {
+      "variant": "combined",
+      "seconds": 26.020633108
+    },
+    {
+      "variant": "filtered",
+      "seconds": 27.489453463
+    },
+    {
+      "variant": "selective",
+      "seconds": 25.934962884
+    },
+    {
+      "variant": "batch",
+      "seconds": 26.538891579
+    },
+    {
+      "variant": "threshold",
+      "seconds": 26.850191145
+    }
+  ],
+  "excluded_times": "All pilot-* and formal-* from before the user closed the reopened application. Quiet pilot samples are exploratory too. Only quiet-final-* supply the paired performance comparison.",
+  "architecture": {
+    "files": 499,
+    "relations": 6789,
+    "translation_units": 236,
+    "diagnostics": 0,
+    "checked": true,
+    "visual_inspection": true
+  },
+  "artifacts": "/home/myungit/Linux_CAD_forFree/forgecad-linux-solver/benchmarks/surface-query-reuse-2026-10-28"
+}

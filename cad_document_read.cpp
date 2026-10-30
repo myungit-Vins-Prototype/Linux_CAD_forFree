@@ -2,12 +2,66 @@
 
 #include <algorithm>
 #include <array>
+#include <cstring>
 #include <zlib.h>
 #include <zstd.h>
 #include <memory>
 #include <stdexcept>
 
 namespace ForgeCad::DocumentReadDetail {
+
+namespace {
+// La lunghezza viene validata sui byte disponibili prima della prenotazione.
+// Buffer fisso, indipendente dalle lunghezze dichiarate nel documento.
+template<class T, class Decode>
+DataStream &readFixedList(DataStream &stream, QList<T> &values, quint32 width, Decode decode) {
+    values.clear();
+    quint32 count=0;
+    if(!stream.readCount(count,width))return stream;
+    values.reserve(count);
+    std::array<char,65536> buffer;
+    const quint32 perBlock=quint32(buffer.size())/width;
+    for(quint32 offset=0;offset<count;) {
+        const quint32 items=std::min(count-offset,perBlock);
+        const int bytes=int(items*width);
+        if(stream.readRawData(buffer.data(),bytes)!=bytes) {
+            values.clear();stream.setStatus(QDataStream::ReadPastEnd);return stream;
+        }
+        for(quint32 i=0;i<items;++i)values.append(decode(buffer.data()+i*width));
+        offset+=items;
+    }
+    return stream;
+}
+
+template<class Number, class Bits>
+Number readFloating(const char *data,bool bigEndian) {
+    const Bits bits=bigEndian?qFromBigEndian<Bits>(data):qFromLittleEndian<Bits>(data);
+    Number value;static_assert(sizeof(value)==sizeof(bits));
+    std::memcpy(&value,&bits,sizeof(value));return value;
+}
+}
+
+DataStream &DataStream::operator>>(QList<QVector3D> &values) {
+    if(version()!=QDataStream::Qt_6_0)return readList(values);
+    const bool bigEndian=byteOrder()==QDataStream::BigEndian;
+    if(floatingPointPrecision()==QDataStream::SinglePrecision)
+        return readFixedList(*this,values,12,[=](const char *p){
+            return QVector3D(readFloating<float,quint32>(p,bigEndian),
+                readFloating<float,quint32>(p+4,bigEndian),readFloating<float,quint32>(p+8,bigEndian));
+        });
+    return readFixedList(*this,values,24,[=](const char *p){
+        return QVector3D(float(readFloating<double,quint64>(p,bigEndian)),
+            float(readFloating<double,quint64>(p+8,bigEndian)),float(readFloating<double,quint64>(p+16,bigEndian)));
+    });
+}
+
+DataStream &DataStream::operator>>(QList<int> &values) {
+    if(version()!=QDataStream::Qt_6_0)return readList(values);
+    const bool bigEndian=byteOrder()==QDataStream::BigEndian;
+    return readFixedList(*this,values,4,[=](const char *p){
+        return int(bigEndian?qFromBigEndian<qint32>(p):qFromLittleEndian<qint32>(p));
+    });
+}
 
 QByteArray compress(const QByteArray &data, quint8 method, int level) {
     if (method == kZlibCompression) return qCompress(data, std::clamp(level, 0, 9));

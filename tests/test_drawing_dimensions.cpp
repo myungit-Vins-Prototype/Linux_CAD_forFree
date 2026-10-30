@@ -70,6 +70,32 @@ int main(){try{
     auto automaticCircle=drawingDimensionBetween(view,cylinder,circles,{circle},DrawingMeasure::Distance,{10,10},true);require(automaticCircle.measure==DrawingMeasure::Diameter,"cerchio intero propone diametro");near(result(cylinder,view,automaticCircle).value,6,"diametro automatico");
     DrawingView circularSection;circularSection.plane=Frame3(Vec3(0,0,4),Vec3(0,0,1),Vec3(1,0,0));auto cutCircles=curves(cylinder,circularSection);require(!cutCircles.empty(),"sezione circolare del cilindro");
     auto cutCircle=drawingAttachment(circularSection,cutCircles[0],cylinder,DrawingPointRole::Curve);auto sectionRadius=drawingDimensionBetween(circularSection,cylinder,cutCircles,{cutCircle},DrawingMeasure::Radius,{10,10});near(result(cylinder,circularSection,sectionRadius).value,3,"raggio sulla sezione della superficie");
+    // Shared boundary names must never silently swap the measured endpoint.
+    {
+        auto shared=cylinder;auto names=std::make_shared<ElementNames>(*shared.bodies[0].names);
+        for(auto &entry:names->edges)if(!entry.empty())entry={"shared-boundary"};
+        shared.bodies[0].names=names;
+        DrawingView cut;cut.plane=Frame3(Vec3(),normalized(Vec3(1,2,0)),normalized(Vec3(2,-1,0)));auto sections=curves(shared,cut);
+        const auto line=std::find_if(sections.begin(),sections.end(),[&](const auto &c){return shared.bodies[0].body->face(c.sourceFace).surface->type()==SurfaceType::Cylinder;});
+        require(line!=sections.end(),"sezione cilindrica con bordo condiviso");
+        auto first=drawingAttachment(cut,*line,shared,DrawingPointRole::Start);
+        first.anchorSide=0;first.supportFace.clear();
+        require(resolveDrawingAttachment(cut,shared,sections,first).status==DrawingDimensionStatus::Ambiguous,"estremi condivisi richiedono disambiguazione");
+        first.endpointWitness=line->curve->point(line->range.lo);
+        auto end=first;end.role=DrawingPointRole::End;end.endpointWitness=line->curve->point(line->range.hi);
+        auto dim=drawingDimensionBetween(cut,shared,sections,{first,end},DrawingMeasure::Distance,{20,20});
+        near(result(shared,cut,dim).value,8,"testimone esatto conserva la misura");
+        auto reversed=sections;for(auto &c:reversed){c.curve=reversedCurve(c.curve);c.range={-c.range.hi,-c.range.lo};}
+        near(distance(resolveDrawingAttachment(cut,shared,reversed,first).point,resolveDrawingAttachment(cut,shared,sections,first).point),0,"testimone indipendente dal verso dei parametri");
+        DrawingSheet sheet;sheet.drawing.model=shared.version;sheet.drawing.views={cut};sheet.views={{cut.id,"Testimone",{50,50},{1}}};sheet.drawing.dimensions={dim};sheet.dimensions={{dim.id,{70,70}}};DrawingAxis axis;axis.viewId=cut.id;axis.references={first,end};sheet.axes.append(axis);DrawingAnnotation note;note.viewId=cut.id;note.text="Testimone";note.reference=first;sheet.annotations.append(note);QByteArray bytes;ok(encodeDrawingSheet(sheet,bytes));DrawingSheet loaded;ok(decodeDrawingSheet(bytes,loaded));
+        near(result(shared,cut,loaded.drawing.dimensions[0]).value,8,"testimone persistito");
+        require(loaded.axes[0].references[0].endpointWitness&&loaded.annotations[0].reference->endpointWitness,"testimoni persistiti anche negli assi e nelle note");
+        auto wrong=first;wrong.endpointWitness=*wrong.endpointWitness+Vec3(0,0,.01);
+        require(resolveDrawingAttachment(cut,shared,sections,wrong).status==DrawingDimensionStatus::Missing,"punto spostato non recuperato per vicinanza");
+        wrong=first;wrong.boundaryName="deleted";require(resolveDrawingAttachment(cut,shared,sections,wrong).status==DrawingDimensionStatus::Missing,"testimone non sostituisce il vincolo topologico");
+        auto root=QJsonDocument::fromJson(bytes).object();root["schema"]=26;require(!decodeDrawingSheet(QJsonDocument(root).toJson(),loaded).isEmpty(),"foglio declassato rifiuta il testimone");
+        DrawingDocument doc;doc.model=shared.version;doc.views={cut};doc.dimensions={dim};ok(encodeDrawingDocument(doc,bytes));root=QJsonDocument::fromJson(bytes).object();root["schema"]=12;require(!decodeDrawingDocument(QJsonDocument(root).toJson(),doc).isEmpty(),"schema declassato rifiuta il testimone");
+    }
     // Un piano per l'asse del toro conserva due cerchi esatti, anche ruotato/traslato.
     for(const auto &frame:{Frame3(),Frame3(Vec3(12,-7,3),normalized(Vec3(1,2,3)),Vec3(1,0,0))}){
         DrawingModelSnapshot torus{model.version,{source(makeTorus(frame,5,1.5))}};DrawingView meridian;
@@ -123,6 +149,27 @@ int main(){try{
         auto dx=drawingDimensionSeries(sv,sm,sc,{mx,a,b},DrawingDimensionSeries::OrdinateX);DrawingDocument sd;sd.model=sm.version;sd.views={sv};sd.dimensions=dx;QByteArray sb;ok(encodeDrawingDocument(sd,sb));require(QJsonDocument::fromJson(sb).object()["schema"].toInt()==11,"schema ordinate11");DrawingDocument restored;ok(decodeDrawingDocument(sb,restored));near(evaluateDrawingDimension(restored,sm,dx[0].id).value,-5,"riapertura ordinata negativa");auto root=QJsonDocument::fromJson(sb).object();root["schema"]=10;require(!decodeDrawingDocument(QJsonDocument(root).toJson(),restored).isEmpty(),"downgrade ordinate rifiutato");
         for(const auto &refs:std::vector<std::vector<DrawingAttachment>>{{a,a,b},{a,b,b},std::vector<DrawingAttachment>(65,a)}){bool rejected=false;try{drawingDimensionSeries(sv,sm,sc,refs,DrawingDimensionSeries::OrdinateX);}catch(const std::exception &){rejected=true;}require(rejected,"coordinate duplicate e limite punti rifiutati");}
         DrawingAttachment datum;datum.role=DrawingPointRole::Origin;auto fromDatum=drawingDimensionSeries(sv,sm,sc,{datum,b},DrawingDimensionSeries::OrdinateY);near(result(sm,sv,fromDatum[0]).value,6,"origine del piano associativa");
+    }
+    // Due superfici coniche della stessa genealogia: foro ed esterno restano distinti.
+    {
+        ProfileRegion region;const std::vector<Vec2> points{{6,0},{3,10},{1,10},{2,0},{6,0}};
+        for(std::size_t i=1;i<points.size();++i){const auto delta=points[i]-points[i-1];region.outer.segments.push_back({std::make_shared<Line<2>>(points[i-1],delta),{0,norm(delta)},int(i)});}
+        auto body=source(makeRevolution(Frame3(),region));auto names=std::make_shared<ElementNames>(*body.names);
+        for(auto face:body.body->faces())if(body.body->face(face).surface->type()==SurfaceType::Cone)names->faces[std::size_t(face.index)]={"origine:cono"};
+        body.names=names;
+        DrawingModelSnapshot m{model.version,{body}};DrawingView v;v.kind=DrawingViewKind::ProjectedEdges;v.plane=Frame3({},Vec3(0,-1,0),Vec3(1,0,0));const auto c=curves(m,v);
+        std::vector<DrawingAttachment> outer,inner;const DrawingCurve *one=nullptr;
+        for(const auto &curve:c)if(curve.kind==DrawingCurveKind::ApparentLine){
+            auto ref=drawingAttachment(v,curve,m,DrawingPointRole::Curve);const auto resolved=resolveDrawingAttachment(v,m,c,ref);
+            require(resolved.status==DrawingDimensionStatus::Ready&&resolved.curve==&curve,"generatrici interne/esterne con stesso nome risolte sulla curva esatta");
+            if(std::abs(ref.curve.witness.x())>2){outer.push_back(ref);one=&curve;}else inner.push_back(ref);
+        }
+        require(outer.size()==2&&inner.size()==2,"quattro generatrici con nome condiviso");
+        auto angle=drawingDimensionBetween(v,m,c,outer,DrawingMeasure::Angle,{0,15});near(result(m,v,angle).value,2*std::atan(.3)*180/kPi,"angolo esterno del cono cavo");
+        auto innerAngle=drawingDimensionBetween(v,m,c,inner,DrawingMeasure::Angle,{0,15});near(result(m,v,innerAngle).value,2*std::atan(.1)*180/kPi,"angolo del foro distinto dall’esterno");
+        auto offCurve=outer.front();offCurve.curve.witness=offCurve.curve.witness+Vec2(.25,0);require(resolveDrawingAttachment(v,m,c,offCurve).status==DrawingDimensionStatus::Ambiguous,"testimone fuori dalle generatrici non agganciato per vicinanza");
+        auto duplicated=c;duplicated.push_back(*one);require(resolveDrawingAttachment(v,m,duplicated,outer.back()).status==DrawingDimensionStatus::Ambiguous,"due generatrici identiche restano ambigue");
+        DrawingDocument doc;doc.model=m.version;doc.views={v};doc.dimensions={angle,innerAngle};QByteArray bytes;ok(encodeDrawingDocument(doc,bytes));DrawingDocument read;ok(decodeDrawingDocument(bytes,read));near(evaluateDrawingDimension(read,m,angle.id).value,2*std::atan(.3)*180/kPi,"riapertura angolo con genealogia condivisa");
     }
     // Tronco di cono rivoluto: generatrici e punti terminali esatti, anche dopo codec.
     {

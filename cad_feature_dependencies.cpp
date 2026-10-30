@@ -217,6 +217,13 @@ QVector<int> hiddenOperands(const ExtrusionObject &body) {
 }
 
 
+bool hasDerivedPatternResults(int index, const QVector<ExtrusionObject> &bodies) {
+    if (index < 0 || index >= bodies.size()) return false;
+    for (const auto &part : bodies)
+        if (part.feature == BodyFeature::Pattern && part.patternComponent > 0 && part.firstBody == index) return true;
+    return false;
+}
+
 bool isExposedPatternAggregate(int index, const QVector<ExtrusionObject> &bodies, int end) {
     if (index < 0 || index >= bodies.size()) return false;
     const auto &source = bodies.at(index);

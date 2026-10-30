@@ -16,6 +16,7 @@
 #include <map>
 #include <set>
 #include <string>
+#include <stdexcept>
 #include <vector>
 
 #include "cad_cuda_tessellation.h"
@@ -322,12 +323,24 @@ StlBuildResult buildBinaryStl(const QVector<ExportBody> &bodies, const StlExport
                         result.data.clear();
                         return result;
                     }
-                    const Kernel::Vec3 &a = face.points[std::size_t(triangle[0])];
-                    const Kernel::Vec3 &b = face.points[std::size_t(triangle[1])];
-                    const Kernel::Vec3 &c = face.points[std::size_t(triangle[2])];
+                    // STL memorizza float: verifica area e verso dopo la
+                    // conversione, cosi' il file non contiene faccette che
+                    // collassano soltanto durante la scrittura.
+                    const auto storedPoint = [&](int index) {
+                        const auto &point = face.points[std::size_t(index)];
+                        for (int axis = 0; axis < 3; ++axis)
+                            if (!std::isfinite(point[axis]) || std::abs(point[axis]) > std::numeric_limits<float>::max())
+                                throw std::overflow_error("coordinate fuori dall'intervallo STL");
+                        Kernel::Vec3 stored{double(float(point[0])), double(float(point[1])), double(float(point[2]))};
+                        return stored;
+                    };
+                    Kernel::Vec3 a = storedPoint(triangle[0]), b = storedPoint(triangle[1]), c = storedPoint(triangle[2]);
                     Kernel::Vec3 normal = Kernel::cross(b - a, c - a);
                     const double length = Kernel::norm(normal);
-                    if (length <= 1e-20) continue; // gli STL non devono contenere faccette degeneri ai poli
+                    if (length <= 1e-20) continue; // nessuna faccetta degenere nel file
+                    Kernel::Vec3 expected;
+                    for (int vertex : triangle) expected += face.normals[std::size_t(vertex)];
+                    if (Kernel::dot(normal, expected) < 0.0) { std::swap(b, c); normal = -normal; }
                     normal /= length;
                     appendPreviewTriangle(result.preview, a, b, c, normal, normal, normal,
                                           previewTrianglesSeen, result.previewLimited);
@@ -518,7 +531,13 @@ ObjBuildResult buildQuadObj(const QVector<ExportBody> &bodies, const StlExportOp
                 return Cell{qint64(std::floor(point[0] / weldTolerance)), qint64(std::floor(point[1] / weldTolerance)),
                             qint64(std::floor(point[2] / weldTolerance))};
             };
-            auto vertexIndex = [&](const Kernel::Vec3 &point) {
+            auto vertexIndex = [&](const Kernel::Vec3 &rawPoint) {
+                // La geometria usata per saldatura e orientamento deve essere
+                // quella rappresentabile nel file a 12 decimali: una faccetta
+                // sottilissima puo' collassare soltanto dopo la formattazione.
+                const std::array<QString,3> text{QString::number(rawPoint[0], 'f', 12),
+                    QString::number(rawPoint[1], 'f', 12), QString::number(rawPoint[2], 'f', 12)};
+                const Kernel::Vec3 point(text[0].toDouble(), text[1].toDouble(), text[2].toDouble());
                 const Cell home = cell(point);
                 for (int dx = -1; dx <= 1; ++dx)
                     for (int dy = -1; dy <= 1; ++dy)
@@ -531,7 +550,7 @@ ObjBuildResult buildQuadObj(const QVector<ExportBody> &bodies, const StlExportOp
                 const quint64 index = nextVertex++;
                 bodyVertices[home].push_back({point, index});
                 bodyVertexPoints[index] = point;
-                stream << "v " << point[0] << ' ' << point[1] << ' ' << point[2] << '\n';
+                stream << "v " << text[0] << ' ' << text[1] << ' ' << text[2] << '\n';
                 return index;
             };
             for (const Kernel::FaceMesh &face : mesh.faces) {
@@ -547,6 +566,38 @@ ObjBuildResult buildQuadObj(const QVector<ExportBody> &bodies, const StlExportOp
                 std::vector<quint64> positionIndices;
                 positionIndices.reserve(face.points.size());
                 for (const Kernel::Vec3 &point : face.points) positionIndices.push_back(vertexIndex(point));
+                const auto exportPoint = [&](int vertex) -> const Kernel::Vec3 & {
+                    return bodyVertexPoints.at(positionIndices[std::size_t(vertex)]);
+                };
+                const auto distinctPositions = [&](const auto &vertices) {
+                    for (std::size_t i = 0; i < vertices.size(); ++i)
+                        for (std::size_t j = i + 1; j < vertices.size(); ++j)
+                            if (positionIndices[std::size_t(vertices[i])] == positionIndices[std::size_t(vertices[j])])
+                                return false;
+                    return true;
+                };
+                const auto oriented = [&](auto vertices) {
+                    Kernel::Vec3 normal;
+                    for (int vertex : vertices) normal += face.normals[std::size_t(vertex)];
+                    const auto &a = exportPoint(vertices[0]), &b = exportPoint(vertices[1]), &c = exportPoint(vertices[2]);
+                    if (Kernel::dot(Kernel::cross(b - a, c - a), normal) < 0.0)
+                        std::reverse(vertices.begin() + 1, vertices.end());
+                    return vertices;
+                };
+                // La saldatura puo' cambiare verso o convessita' delle sottili
+                // faccette di bordo. Verifica i punti realmente scritti nel file.
+                const auto validQuad = [&](const std::array<int,4> &vertices) {
+                    if (!distinctPositions(vertices)) return false;
+                    Kernel::Vec3 normal;
+                    for (int vertex : vertices) normal += face.normals[std::size_t(vertex)];
+                    for (int i = 0; i < 4; ++i) {
+                        const auto &a = exportPoint(vertices[std::size_t(i)]);
+                        const auto &b = exportPoint(vertices[std::size_t((i + 1) % 4)]);
+                        const auto &c = exportPoint(vertices[std::size_t((i + 2) % 4)]);
+                        if (Kernel::dot(Kernel::cross(b - a, c - b), normal) <= 1e-20) return false;
+                    }
+                    return true;
+                };
                 const quint64 normalBase = nextNormal;
                 for (const Kernel::Vec3 &normal : face.normals) {
                     const double length = Kernel::norm(normal);
@@ -558,10 +609,12 @@ ObjBuildResult buildQuadObj(const QVector<ExportBody> &bodies, const StlExportOp
                 std::vector<char> used(face.triangles.size(), 0);
                 for (const QuadCandidate &candidate : quadCandidates(face)) {
                     if (used[std::size_t(candidate.first)] || used[std::size_t(candidate.second)]) continue;
+                    const auto vertices = oriented(candidate.vertices);
+                    if (!validQuad(vertices)) continue; // conserva i triangoli originali
                     used[std::size_t(candidate.first)] = used[std::size_t(candidate.second)] = 1;
                     std::vector<quint64> polygon;
                     stream << 'f';
-                    for (int vertex : candidate.vertices) {
+                    for (int vertex : vertices) {
                         const quint64 position = positionIndices[std::size_t(vertex)];
                         polygon.push_back(position);
                         stream << ' ' << position << "//" << normalBase + quint64(vertex);
@@ -569,17 +622,21 @@ ObjBuildResult buildQuadObj(const QVector<ExportBody> &bodies, const StlExportOp
                     stream << '\n';
                     recordPolygon(polygon);
                     QVector<QVector3D> previewPolygon;
-                    for (int vertex : candidate.vertices)
+                    for (int vertex : vertices)
                         previewPolygon.append(displayPoint(face.points[std::size_t(vertex)]));
                     appendPreviewPolygon(result.preview, previewPolygon, previewPolygonsSeen, result.previewLimited);
                     ++result.quadCount;
                 }
                 for (std::size_t t = 0; t < face.triangles.size(); ++t) {
                     if (used[t]) continue;
-                    const std::array<int, 3> &triangle = face.triangles[t];
-                    const Kernel::Vec3 &a = face.points[std::size_t(triangle[0])];
-                    const Kernel::Vec3 &b = face.points[std::size_t(triangle[1])];
-                    const Kernel::Vec3 &c = face.points[std::size_t(triangle[2])];
+                    // Con due indici saldati uguali il triangolo e' nullo.
+                    // Su ARM la contrazione FMA del prodotto vettoriale puo'
+                    // lasciare un residuo non nullo anche per vettori identici.
+                    if (!distinctPositions(face.triangles[t])) continue;
+                    const auto triangle = oriented(face.triangles[t]);
+                    const Kernel::Vec3 &a = exportPoint(triangle[0]);
+                    const Kernel::Vec3 &b = exportPoint(triangle[1]);
+                    const Kernel::Vec3 &c = exportPoint(triangle[2]);
                     if (Kernel::norm(Kernel::cross(b - a, c - a)) <= 1e-20) continue;
                     std::vector<quint64> polygon;
                     stream << 'f';

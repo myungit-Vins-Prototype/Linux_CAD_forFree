@@ -1,0 +1,1591 @@
+{
+  "input": {
+    "source": "/home/myungit/Documenti/File_Esempio/CT0578.prt",
+    "sha256": "b87b96efa0e8971d89f8fe5bdad5b63d8119831d3f09430122d51770dc851fbd",
+    "bytes": 10516225,
+    "revision": "4f842a8b9a02a18d9f4abd1238e936901a3a7d30",
+    "runner_sha256": "9c4b350a4b73d0eb9525256ef84c932d8f0726771d7f8e4e847f4626dd8df814",
+    "app_sha256": "77c0b7d98014213e7847458fbbe771b5d4ed282f75800e4be8eebb3626a7bf4a",
+    "surface_source_sha256": "1965598d7b1d9cd036d7997a97034da1129a23a86d517f1bd25b3608da422d4d",
+    "source_sha256_at_end": "b87b96efa0e8971d89f8fe5bdad5b63d8119831d3f09430122d51770dc851fbd",
+    "original_matches_snapshot_at_end": true
+  },
+  "inventory": {
+    "features": [
+      {
+        "blend_refs": 0,
+        "blend_size": 1,
+        "cached": true,
+        "error": "",
+        "excluded_count": 0,
+        "faces": 12,
+        "feature": 1,
+        "index": 0,
+        "mesh_quality": -1,
+        "name": "Rivoluzione 1",
+        "operation": -1,
+        "pattern_count": 3,
+        "pattern_feature_only": false,
+        "pattern_kind": 0,
+        "source": -1
+      },
+      {
+        "blend_refs": 0,
+        "blend_size": 1,
+        "cached": true,
+        "error": "",
+        "excluded_count": 0,
+        "faces": 15,
+        "feature": 1,
+        "index": 1,
+        "mesh_quality": -1,
+        "name": "Rivoluzione 2",
+        "operation": -1,
+        "pattern_count": 3,
+        "pattern_feature_only": false,
+        "pattern_kind": 0,
+        "source": -1
+      },
+      {
+        "blend_refs": 0,
+        "blend_size": 1,
+        "cached": false,
+        "error": "",
+        "excluded_count": 0,
+        "faces": 0,
+        "feature": 11,
+        "index": 2,
+        "mesh_quality": -1,
+        "name": "Piano 1",
+        "operation": -1,
+        "pattern_count": 3,
+        "pattern_feature_only": false,
+        "pattern_kind": 0,
+        "source": -1
+      },
+      {
+        "blend_refs": 0,
+        "blend_size": 1,
+        "cached": true,
+        "error": "",
+        "excluded_count": 0,
+        "faces": 19,
+        "feature": 8,
+        "index": 3,
+        "mesh_quality": -1,
+        "name": "Sweep 4",
+        "operation": -1,
+        "pattern_count": 3,
+        "pattern_feature_only": false,
+        "pattern_kind": 0,
+        "source": -1
+      },
+      {
+        "blend_refs": 0,
+        "blend_size": 1,
+        "cached": true,
+        "error": "",
+        "excluded_count": 0,
+        "faces": 263,
+        "feature": 12,
+        "index": 4,
+        "mesh_quality": -1,
+        "name": "Ripetizione 5",
+        "operation": -1,
+        "pattern_count": 62,
+        "pattern_feature_only": true,
+        "pattern_kind": 1,
+        "source": 3
+      },
+      {
+        "blend_refs": 0,
+        "blend_size": 1,
+        "cached": true,
+        "error": "",
+        "excluded_count": 0,
+        "faces": 264,
+        "feature": 1,
+        "index": 5,
+        "mesh_quality": -1,
+        "name": "Rivoluzione 6",
+        "operation": -1,
+        "pattern_count": 3,
+        "pattern_feature_only": false,
+        "pattern_kind": 0,
+        "source": -1
+      },
+      {
+        "blend_refs": 0,
+        "blend_size": 1,
+        "cached": false,
+        "error": "",
+        "excluded_count": 0,
+        "faces": 0,
+        "feature": 11,
+        "index": 6,
+        "mesh_quality": -1,
+        "name": "Piano 2",
+        "operation": -1,
+        "pattern_count": 3,
+        "pattern_feature_only": false,
+        "pattern_kind": 0,
+        "source": -1
+      },
+      {
+        "blend_refs": 0,
+        "blend_size": 1,
+        "cached": false,
+        "error": "",
+        "excluded_count": 0,
+        "faces": 0,
+        "feature": 11,
+        "index": 7,
+        "mesh_quality": -1,
+        "name": "Piano 3",
+        "operation": -1,
+        "pattern_count": 3,
+        "pattern_feature_only": false,
+        "pattern_kind": 0,
+        "source": -1
+      },
+      {
+        "blend_refs": 0,
+        "blend_size": 1,
+        "cached": false,
+        "error": "",
+        "excluded_count": 0,
+        "faces": 0,
+        "feature": 7,
+        "index": 8,
+        "mesh_quality": -1,
+        "name": "Elica 9",
+        "operation": -1,
+        "pattern_count": 3,
+        "pattern_feature_only": false,
+        "pattern_kind": 0,
+        "source": -1
+      },
+      {
+        "blend_refs": 0,
+        "blend_size": 1,
+        "cached": true,
+        "error": "",
+        "excluded_count": 0,
+        "faces": 269,
+        "feature": 8,
+        "index": 9,
+        "mesh_quality": -1,
+        "name": "Sweep 10",
+        "operation": -1,
+        "pattern_count": 3,
+        "pattern_feature_only": false,
+        "pattern_kind": 0,
+        "source": 8
+      },
+      {
+        "blend_refs": 0,
+        "blend_size": 1,
+        "cached": true,
+        "error": "",
+        "excluded_count": 0,
+        "faces": 269,
+        "feature": 1,
+        "index": 10,
+        "mesh_quality": 1,
+        "name": "Rivoluzione 11",
+        "operation": -1,
+        "pattern_count": 3,
+        "pattern_feature_only": false,
+        "pattern_kind": 0,
+        "source": -1
+      }
+    ],
+    "sketches": 10
+  },
+  "baseline": {
+    "isolated_new_change": "kernel/fk_curve_algo.cpp range selection",
+    "existing_surface_point_optimization_preserved": true,
+    "kernel_sha256": "284a2ec3aaf73aaef98c68481cbfd387b3ce3a3b919dff950827b2ab2f0c2b25"
+  },
+  "final_source_binary_sha256": {
+    "kernel/fk_curve_algo.cpp": "c1214c916fb5993e05ac725c86bf835d6d55957f2ad258d9b1fde1c1071bac47",
+    "kernel/tests/test_curve_algo.cpp": "29d8143e84fde00bdb7cc0583c81a2819dd241dad1618cd8606df56741c7a3cf",
+    "kernel/fk_bspline_surface.cpp": "1965598d7b1d9cd036d7997a97034da1129a23a86d517f1bd25b3608da422d4d",
+    "forgecad-linux-solver/forgecad": "4e017283404e4108d70cd186505630236ea26d447ac739185d6a11ceb93cc83b",
+    "forgecad-linux-solver/forgecad_view_tests": "9e254f5a28460ba9012eb87f0b40977080a8295d704986bf1e2218b6d1a8d6a6",
+    "forgecad-linux-solver/kernel/libforgekernel.a": "6d05d6bd19a4e05205eac4ae70977c1c740b8e606d6453d0370f1ab43e852b56"
+  },
+  "protocol": {
+    "command": "CadViewport::rebuildAllFeatures",
+    "quality_pairs": [
+      0,
+      1,
+      2
+    ],
+    "processes": 6,
+    "fresh_process_per_measurement": true,
+    "repetitions_per_quality_version": 1,
+    "timing_includes": "recordUndo, rigenerazione geometria, normalizzazione e preparazione mesh",
+    "timing_excludes": "lettura, apertura precedente, firme, presentazione OpenGL/albero della finestra",
+    "profiling_during_paired_measurements": false,
+    "simultaneous_builds_tests_profilers": false,
+    "cpu_tessellation": true,
+    "clock_temperature_os_cache_controlled": false
+  },
+  "initial_forced_rebuild": {
+    "bodies": [
+      {
+        "brep_sha256": "185960addd5f71c0cf6f3f81f345316a085431cf53af43013d4b601da9d0333f",
+        "drawn": false,
+        "error": "",
+        "index": 0
+      },
+      {
+        "brep_sha256": "dff028f9018bbe71273c1b64acdcad980da255e1fbddf3aa04db9606a06b2a20",
+        "drawn": false,
+        "error": "",
+        "index": 1
+      },
+      {
+        "drawn": false,
+        "error": "",
+        "index": 2
+      },
+      {
+        "brep_sha256": "b15ccb6f1f1da99c1401cf1637411bc00255fd026ed1b08e88ce0ad0bf645a15",
+        "drawn": false,
+        "error": "",
+        "index": 3
+      },
+      {
+        "brep_sha256": "9525ac48d0e927fa881a2c26c06fb56b1813cc94573365f4a9242bd811783d22",
+        "drawn": false,
+        "error": "",
+        "index": 4
+      },
+      {
+        "brep_sha256": "c0fe04110e0f173a13729b4213bd5255eb89c9a3856d87055ae8acb3a4cecc80",
+        "drawn": false,
+        "error": "",
+        "index": 5
+      },
+      {
+        "drawn": false,
+        "error": "",
+        "index": 6
+      },
+      {
+        "drawn": false,
+        "error": "",
+        "index": 7
+      },
+      {
+        "drawn": false,
+        "error": "",
+        "index": 8
+      },
+      {
+        "brep_sha256": "d9598453bd30003e2db7d11ded2d5443ea0afa128dd2259262ff40d89d489d4d",
+        "drawn": false,
+        "error": "",
+        "index": 9
+      },
+      {
+        "brep_sha256": "e4b4db5d8fa911fbbb03a63540cf4fd2b2d068212c71039e1a50e3697d4f6953",
+        "drawn": true,
+        "error": "",
+        "index": 10,
+        "mesh_sha256": "3a93eaff3e95151fb7568b2590bf2bf6bd76c353ae63bee1bf361384a83ab142",
+        "triangles": 4108
+      }
+    ],
+    "cached_bodies": 7,
+    "cached_meshes": 1,
+    "cuda_available": false,
+    "cuda_points": 0,
+    "cuda_pool": {
+      "active_bytes": 0,
+      "active_slots": 0,
+      "allocations": 0,
+      "budget_rejections": 0,
+      "idle_bytes": 0,
+      "peak_active_bytes": 0,
+      "peak_active_slots": 0,
+      "reuses": 0
+    },
+    "features": 11,
+    "forced_rebuild": true,
+    "gpu_pairs": 0,
+    "load_seconds": 85.058524217,
+    "open_seconds": 85.140760401,
+    "prepared_meshes": 4,
+    "read_seconds": 0.082236184,
+    "sketches": 10,
+    "valid_bodies": 7,
+    "visible_features": 1,
+    "visible_triangles": 4108
+  },
+  "split_sweep_diagnostic": {
+    "cached_load_seconds": 5.655631252,
+    "features": 11,
+    "merge_operation": 1,
+    "quality": 1,
+    "read_seconds": 0.091025072,
+    "result_faces": 269,
+    "result_sha256": "d9598453bd30003e2db7d11ded2d5443ea0afa128dd2259262ff40d89d489d4d",
+    "saved_sweep_sha256": "a257a1916c671c003906bc740102564f4a4b2fa2cb587aec2764680c87a9dcfe",
+    "sketches": 10,
+    "sweep_boolean_seconds": 80.693241908,
+    "sweep_tool_seconds": 0.022998962,
+    "tool_faces": 8,
+    "tool_sha256": "3f155528d3848fad058a720fb30b40c9580dec76505337e87db67e8999129905"
+  },
+  "cpu_profile": {
+    "profile": "/home/myungit/Linux_CAD_forFree/forgecad-linux-solver/benchmarks/ct0578-speed-2026-10-27/split.prof_929469",
+    "timeout_parent_profile_excluded": "/home/myungit/Linux_CAD_forFree/forgecad-linux-solver/benchmarks/ct0578-speed-2026-10-27/split.prof",
+    "summary": {
+      "samples": 13903,
+      "period_us": 10000,
+      "flat": [
+        {
+          "percent": 30.27,
+          "samples": 4208,
+          "symbol": "ForgeCad::Kernel::BSplineCurve<3>::domain() const"
+        },
+        {
+          "percent": 16.18,
+          "samples": 2249,
+          "symbol": "ForgeCad::Kernel::CurveProjection<3> ForgeCad::Kernel::projectPoint<3>(ForgeCad::Kernel::Curve<3> const&, ForgeCad::Kernel::Vec<3> const&, ForgeCad::Kernel::Interval const&)"
+        },
+        {
+          "percent": 11.7,
+          "samples": 1626,
+          "symbol": "lib:libc.so.6"
+        },
+        {
+          "percent": 4.78,
+          "samples": 665,
+          "symbol": "ForgeCad::Kernel::(anonymous namespace)::subdivide(ForgeCad::Kernel::Curve<2> const&, ForgeCad::Kernel::Interval const&, ForgeCad::Kernel::Curve<2> const&, ForgeCad::Kernel::Interval const&, ForgeCad::Kernel::BSplineCurve<2> const&, ForgeCad::Kernel::BSplineCurve<2> const&, int, double, double, ForgeCad::Kernel::CurveCurveIntersection&, int&)"
+        },
+        {
+          "percent": 3.47,
+          "samples": 482,
+          "symbol": "lib:libm.so.6"
+        },
+        {
+          "percent": 2.42,
+          "samples": 337,
+          "symbol": "ForgeCad::Kernel::BernsteinPolynomial::operator*(ForgeCad::Kernel::BernsteinPolynomial const&) const"
+        },
+        {
+          "percent": 2.07,
+          "samples": 288,
+          "symbol": "ForgeCad::Kernel::detail::validateKnotVector(std::vector<double, std::allocator<double> > const&, int, int, char const*)"
+        },
+        {
+          "percent": 1.99,
+          "samples": 277,
+          "symbol": "lib:libstdc++.so.6.0.36"
+        },
+        {
+          "percent": 1.52,
+          "samples": 211,
+          "symbol": "ForgeCad::Kernel::BernsteinPolynomial::BernsteinPolynomial(std::vector<double, std::allocator<double> >)"
+        },
+        {
+          "percent": 1.04,
+          "samples": 144,
+          "symbol": "ForgeCad::Kernel::(anonymous namespace)::subdivisionSeeds(ForgeCad::Kernel::Surface const&, ForgeCad::Kernel::Surface const&, ForgeCad::Kernel::Box const&, double, std::vector<ForgeCad::Kernel::Vec<3>, std::allocator<ForgeCad::Kernel::Vec<3> > >&)::{lambda(ForgeCad::Kernel::BSplineSurface const&, ForgeCad::Kernel::BSplineSurface const&, int)#1}::operator()(ForgeCad::Kernel::BSplineSurface const&, ForgeCad::Kernel::BSplineSurface const&, int) const"
+        },
+        {
+          "percent": 1.0,
+          "samples": 139,
+          "symbol": "ForgeCad::Kernel::BernsteinPolynomial::evaluate(double) const"
+        },
+        {
+          "percent": 0.94,
+          "samples": 130,
+          "symbol": "ForgeCad::Kernel::BernsteinPolynomial::elevated(int) const"
+        },
+        {
+          "percent": 0.83,
+          "samples": 116,
+          "symbol": "void ForgeCad::Kernel::(anonymous namespace)::evaluateConic<3>(ForgeCad::Kernel::Vec<3> const&, ForgeCad::Kernel::Vec<3> const&, ForgeCad::Kernel::Vec<3> const&, double, int, ForgeCad::Kernel::Vec<3>*)"
+        },
+        {
+          "percent": 0.81,
+          "samples": 112,
+          "symbol": "void ForgeCad::Kernel::(anonymous namespace)::addCandidate<3>(ForgeCad::Kernel::Curve<3> const&, ForgeCad::Kernel::Vec<3> const&, double, std::vector<ForgeCad::Kernel::CurveProjection<3>, std::allocator<ForgeCad::Kernel::CurveProjection<3> > >&)"
+        },
+        {
+          "percent": 0.78,
+          "samples": 109,
+          "symbol": "ForgeCad::Kernel::(anonymous namespace)::BooleanBuilder::buildSubFacesOnce(int, ForgeCad::Kernel::Id<ForgeCad::Kernel::FaceTag>, std::vector<ForgeCad::Kernel::(anonymous namespace)::Piece, std::allocator<ForgeCad::Kernel::(anonymous namespace)::Piece> > const&, int) const"
+        },
+        {
+          "percent": 0.77,
+          "samples": 107,
+          "symbol": "ForgeCad::Kernel::BSplineCurve<3>::insertKnot(double, int) const"
+        },
+        {
+          "percent": 0.7,
+          "samples": 97,
+          "symbol": "void std::__introsort_loop<__gnu_cxx::__normal_iterator<std::pair<double, unsigned long>*, std::vector<std::pair<double, unsigned long>, std::allocator<std::pair<double, unsigned long> > > >, long, std::less<void> >(__gnu_cxx::__normal_iterator<std::pair<double, unsigned long>*, std::vector<std::pair<double, unsigned long>, std::allocator<std::pair<double, unsigned long> > > >, __gnu_cxx::__normal_iterator<std::pair<double, unsigned long>*, std::vector<std::pair<double, unsigned long>, std::allocator<std::pair<double, unsigned long> > > >, long, std::less<void>) [clone .isra.0]"
+        },
+        {
+          "percent": 0.69,
+          "samples": 96,
+          "symbol": "ForgeCad::Kernel::(anonymous namespace)::patchBounds(ForgeCad::Kernel::(anonymous namespace)::BezierPatch const&, ForgeCad::Kernel::Vec<3> const&, ForgeCad::Kernel::Vec<3> const*)"
+        },
+        {
+          "percent": 0.62,
+          "samples": 86,
+          "symbol": "void ForgeCad::Kernel::detail::(anonymous namespace)::evaluateBasis<3, 0>(std::vector<double, std::allocator<double> > const&, int, double, int, int, double*) [clone .constprop.0]"
+        },
+        {
+          "percent": 0.61,
+          "samples": 85,
+          "symbol": "ForgeCad::Kernel::ExtrusionSurface::evaluate(double, double, int, ForgeCad::Kernel::Vec<3>*) const"
+        },
+        {
+          "percent": 0.56,
+          "samples": 78,
+          "symbol": "ForgeCad::Kernel::(anonymous namespace)::projectOnBSplineSurface(ForgeCad::Kernel::BSplineSurface const&, ForgeCad::Kernel::Vec<3> const&, ForgeCad::Kernel::Interval const&, ForgeCad::Kernel::Interval const&, ForgeCad::Kernel::(anonymous namespace)::Candidates&)"
+        },
+        {
+          "percent": 0.55,
+          "samples": 77,
+          "symbol": "void ForgeCad::Kernel::(anonymous namespace)::collectCandidates<3>(ForgeCad::Kernel::Curve<3> const&, ForgeCad::Kernel::Vec<3> const&, ForgeCad::Kernel::Interval const&, std::vector<ForgeCad::Kernel::CurveProjection<3>, std::allocator<ForgeCad::Kernel::CurveProjection<3> > >&, double)"
+        },
+        {
+          "percent": 0.54,
+          "samples": 75,
+          "symbol": "void ForgeCad::Kernel::(anonymous namespace)::segmentCandidates<3>(ForgeCad::Kernel::BSplineCurve<3> const&, ForgeCad::Kernel::BSplineCurve<3> const&, ForgeCad::Kernel::Vec<3> const&, ForgeCad::Kernel::Interval const&, std::vector<ForgeCad::Kernel::CurveProjection<3>, std::allocator<ForgeCad::Kernel::CurveProjection<3> > >&)"
+        },
+        {
+          "percent": 0.52,
+          "samples": 72,
+          "symbol": "ForgeCad::Kernel::detail::findSpan(std::vector<double, std::allocator<double> > const&, int, int, double)"
+        },
+        {
+          "percent": 0.5,
+          "samples": 69,
+          "symbol": "_init"
+        },
+        {
+          "percent": 0.49,
+          "samples": 68,
+          "symbol": "ForgeCad::Kernel::BSplineCurve<3>::validate() const"
+        },
+        {
+          "percent": 0.48,
+          "samples": 67,
+          "symbol": "ForgeCad::Kernel::BSplineCurve<3>::clamped() const"
+        },
+        {
+          "percent": 0.48,
+          "samples": 67,
+          "symbol": "ForgeCad::Kernel::BSplineSurface::evaluate(double, double, int, ForgeCad::Kernel::Vec<3>*) const"
+        },
+        {
+          "percent": 0.45,
+          "samples": 63,
+          "symbol": "ForgeCad::Kernel::CurveProjection<2> ForgeCad::Kernel::projectPoint<2>(ForgeCad::Kernel::Curve<2> const&, ForgeCad::Kernel::Vec<2> const&, ForgeCad::Kernel::Interval const&)"
+        },
+        {
+          "percent": 0.45,
+          "samples": 63,
+          "symbol": "ForgeCad::Kernel::Transform3::applyToPoint(ForgeCad::Kernel::Vec<3> const&) const"
+        },
+        {
+          "percent": 0.45,
+          "samples": 63,
+          "symbol": "ForgeCad::Kernel::BernsteinPolynomial::operator+(ForgeCad::Kernel::BernsteinPolynomial const&) const"
+        },
+        {
+          "percent": 0.42,
+          "samples": 59,
+          "symbol": "ForgeCad::Kernel::BSplineCurve<3>::bezierSegments() const"
+        },
+        {
+          "percent": 0.4,
+          "samples": 55,
+          "symbol": "ForgeCad::Kernel::Circle<3>::evaluate(double, int, ForgeCad::Kernel::Vec<3>*) const"
+        },
+        {
+          "percent": 0.4,
+          "samples": 55,
+          "symbol": "double ForgeCad::Kernel::distance<3>(ForgeCad::Kernel::Vec<3> const&, ForgeCad::Kernel::Vec<3> const&)"
+        },
+        {
+          "percent": 0.38,
+          "samples": 53,
+          "symbol": "void ForgeCad::Kernel::detail::(anonymous namespace)::evaluateBasis<5, 0>(std::vector<double, std::allocator<double> > const&, int, double, int, int, double*) [clone .constprop.0]"
+        },
+        {
+          "percent": 0.35,
+          "samples": 49,
+          "symbol": "ForgeCad::Kernel::ConicalSurface::evaluate(double, double, int, ForgeCad::Kernel::Vec<3>*) const"
+        },
+        {
+          "percent": 0.32,
+          "samples": 44,
+          "symbol": "ForgeCad::Kernel::(anonymous namespace)::isolate(ForgeCad::Kernel::BernsteinPolynomial const&, ForgeCad::Kernel::BernsteinPolynomial const&, double, double, double, int, std::vector<double, std::allocator<double> >&)"
+        },
+        {
+          "percent": 0.29,
+          "samples": 41,
+          "symbol": "void std::vector<ForgeCad::Kernel::BSplineCurve<3>, std::allocator<ForgeCad::Kernel::BSplineCurve<3> > >::_M_realloc_append<ForgeCad::Kernel::BSplineCurve<3> const&>(ForgeCad::Kernel::BSplineCurve<3> const&)"
+        },
+        {
+          "percent": 0.29,
+          "samples": 40,
+          "symbol": "ForgeCad::Kernel::(anonymous namespace)::classifyFacePoint(ForgeCad::Kernel::Body const&, ForgeCad::Kernel::Id<ForgeCad::Kernel::FaceTag>, ForgeCad::Kernel::Vec<3> const&, double, ForgeCad::Kernel::(anonymous namespace)::PreparedFace const*)"
+        },
+        {
+          "percent": 0.29,
+          "samples": 40,
+          "symbol": "ForgeCad::Kernel::BSplineCurve<3>::evaluateSpan(int, double, int, ForgeCad::Kernel::Vec<3>*) const"
+        }
+      ],
+      "inclusive": [
+        {
+          "percent": 99.99,
+          "samples": 13901,
+          "symbol": "lib:libc.so.6"
+        },
+        {
+          "percent": 62.28,
+          "samples": 8659,
+          "symbol": "ForgeCad::Kernel::CurveProjection<3> ForgeCad::Kernel::projectPoint<3>(ForgeCad::Kernel::Curve<3> const&, ForgeCad::Kernel::Vec<3> const&, ForgeCad::Kernel::Interval const&)"
+        },
+        {
+          "percent": 60.44,
+          "samples": 8403,
+          "symbol": "_start"
+        },
+        {
+          "percent": 60.43,
+          "samples": 8402,
+          "symbol": "main"
+        },
+        {
+          "percent": 60.43,
+          "samples": 8402,
+          "symbol": "ViewportInteractionTest::run(QString const&, int, bool)"
+        },
+        {
+          "percent": 60.34,
+          "samples": 8389,
+          "symbol": "ForgeCad::forgeBooleanWithHistory(std::shared_ptr<ForgeCad::Kernel::Body const> const&, std::shared_ptr<ForgeCad::Kernel::Body const> const&, ForgeCad::Kernel::BooleanOperation)"
+        },
+        {
+          "percent": 60.34,
+          "samples": 8389,
+          "symbol": "ForgeCad::Kernel::booleanOperation(ForgeCad::Kernel::Body const&, ForgeCad::Kernel::Body const&, ForgeCad::Kernel::BooleanOperation, ForgeCad::Kernel::BooleanOptions const&, ForgeCad::Kernel::BodyHistory*)"
+        },
+        {
+          "percent": 60.07,
+          "samples": 8351,
+          "symbol": "ForgeCad::Kernel::(anonymous namespace)::BooleanBuilder::computeCuts(std::map<int, std::vector<ForgeCad::Kernel::(anonymous namespace)::Piece, std::allocator<ForgeCad::Kernel::(anonymous namespace)::Piece> >, std::less<int>, std::allocator<std::pair<int const, std::vector<ForgeCad::Kernel::(anonymous namespace)::Piece, std::allocator<ForgeCad::Kernel::(anonymous namespace)::Piece> > > > > (&) [2])"
+        },
+        {
+          "percent": 57.89,
+          "samples": 8049,
+          "symbol": "ForgeCad::Kernel::(anonymous namespace)::BooleanBuilder::splitAtPoints(ForgeCad::Kernel::Curve<3> const&, ForgeCad::Kernel::Interval const&) const"
+        },
+        {
+          "percent": 57.89,
+          "samples": 8049,
+          "symbol": "ForgeCad::forgeMergeFeatureResult(ExtrusionObject&, std::shared_ptr<ForgeCad::Kernel::Body const> const&, int, QList<ExtrusionObject> const&, QString*)"
+        },
+        {
+          "percent": 57.52,
+          "samples": 7997,
+          "symbol": "ForgeCad::Kernel::(anonymous namespace)::BooleanBuilder::collectCuts(std::map<int, std::vector<ForgeCad::Kernel::(anonymous namespace)::Piece, std::allocator<ForgeCad::Kernel::(anonymous namespace)::Piece> >, std::less<int>, std::allocator<std::pair<int const, std::vector<ForgeCad::Kernel::(anonymous namespace)::Piece, std::allocator<ForgeCad::Kernel::(anonymous namespace)::Piece> > > > > (&) [2])"
+        },
+        {
+          "percent": 42.22,
+          "samples": 5870,
+          "symbol": "lib:libstdc++.so.6.0.36"
+        },
+        {
+          "percent": 39.58,
+          "samples": 5503,
+          "symbol": "ForgeCad::Kernel::parallelFor<ForgeCad::Kernel::(anonymous namespace)::BooleanBuilder::computeCuts(std::map<int, std::vector<ForgeCad::Kernel::(anonymous namespace)::Piece, std::allocator<ForgeCad::Kernel::(anonymous namespace)::Piece> >, std::less<int>, std::allocator<std::pair<int const, std::vector<ForgeCad::Kernel::(anonymous namespace)::Piece, std::allocator<ForgeCad::Kernel::(anonymous namespace)::Piece> > > > > (&) [2])::{lambda(unsigned long)#1}>(unsigned long, unsigned int, ForgeCad::Kernel::(anonymous namespace)::BooleanBuilder::computeCuts(std::map<int, std::vector<ForgeCad::Kernel::(anonymous namespace)::Piece, std::allocator<ForgeCad::Kernel::(anonymous namespace)::Piece> >, std::less<int>, std::allocator<std::pair<int const, std::vector<ForgeCad::Kernel::(anonymous namespace)::Piece, std::allocator<ForgeCad::Kernel::(anonymous namespace)::Piece> > > > > (&) [2])::{lambda(unsigned long)#1} const&)::{lambda()#1}::operator()() const"
+        },
+        {
+          "percent": 39.37,
+          "samples": 5474,
+          "symbol": "ForgeCad::Kernel::(anonymous namespace)::BooleanBuilder::pairArcs(ForgeCad::Kernel::Id<ForgeCad::Kernel::FaceTag>, ForgeCad::Kernel::Id<ForgeCad::Kernel::FaceTag>, ForgeCad::Kernel::(anonymous namespace)::BooleanBuilder::PairResult&, bool) const"
+        },
+        {
+          "percent": 38.57,
+          "samples": 5363,
+          "symbol": "ForgeCad::Kernel::(anonymous namespace)::BooleanBuilder::surfaceArcs(ForgeCad::Kernel::Id<ForgeCad::Kernel::FaceTag>, ForgeCad::Kernel::Id<ForgeCad::Kernel::FaceTag>, ForgeCad::Kernel::(anonymous namespace)::BooleanBuilder::PairResult&) const"
+        },
+        {
+          "percent": 30.27,
+          "samples": 4208,
+          "symbol": "ForgeCad::Kernel::BSplineCurve<3>::domain() const"
+        },
+        {
+          "percent": 29.5,
+          "samples": 4101,
+          "symbol": "ForgeCad::Kernel::intersectSurfaces(ForgeCad::Kernel::Surface const&, ForgeCad::Kernel::Surface const&, ForgeCad::Kernel::Box const&, std::vector<ForgeCad::Kernel::Vec<3>, std::allocator<ForgeCad::Kernel::Vec<3> > > const&, ForgeCad::Kernel::SurfaceIntersectionOptions const&)"
+        },
+        {
+          "percent": 19.29,
+          "samples": 2682,
+          "symbol": "ForgeCad::Kernel::(anonymous namespace)::subdivisionSeeds(ForgeCad::Kernel::Surface const&, ForgeCad::Kernel::Surface const&, ForgeCad::Kernel::Box const&, double, std::vector<ForgeCad::Kernel::Vec<3>, std::allocator<ForgeCad::Kernel::Vec<3> > >&)"
+        },
+        {
+          "percent": 18.74,
+          "samples": 2605,
+          "symbol": "ForgeCad::Kernel::(anonymous namespace)::subdivisionSeeds(ForgeCad::Kernel::Surface const&, ForgeCad::Kernel::Surface const&, ForgeCad::Kernel::Box const&, double, std::vector<ForgeCad::Kernel::Vec<3>, std::allocator<ForgeCad::Kernel::Vec<3> > >&)::{lambda(ForgeCad::Kernel::BSplineSurface const&, ForgeCad::Kernel::BSplineSurface const&, int)#1}::operator()(ForgeCad::Kernel::BSplineSurface const&, ForgeCad::Kernel::BSplineSurface const&, int) const"
+        },
+        {
+          "percent": 11.93,
+          "samples": 1659,
+          "symbol": "void ForgeCad::Kernel::(anonymous namespace)::segmentCandidates<3>(ForgeCad::Kernel::BSplineCurve<3> const&, ForgeCad::Kernel::BSplineCurve<3> const&, ForgeCad::Kernel::Vec<3> const&, ForgeCad::Kernel::Interval const&, std::vector<ForgeCad::Kernel::CurveProjection<3>, std::allocator<ForgeCad::Kernel::CurveProjection<3> > >&)"
+        },
+        {
+          "percent": 10.64,
+          "samples": 1479,
+          "symbol": "ForgeCad::Kernel::splitPatch(ForgeCad::Kernel::BSplineSurface const&, bool)"
+        },
+        {
+          "percent": 10.62,
+          "samples": 1477,
+          "symbol": "ForgeCad::Kernel::projectPoint(ForgeCad::Kernel::Surface const&, ForgeCad::Kernel::Vec<3> const&)"
+        },
+        {
+          "percent": 10.6,
+          "samples": 1474,
+          "symbol": "ForgeCad::Kernel::projectPoint(ForgeCad::Kernel::Surface const&, ForgeCad::Kernel::Vec<3> const&, ForgeCad::Kernel::Interval const&, ForgeCad::Kernel::Interval const&)"
+        },
+        {
+          "percent": 8.63,
+          "samples": 1200,
+          "symbol": "ForgeCad::Kernel::intersectCurves(ForgeCad::Kernel::Curve<2> const&, ForgeCad::Kernel::Interval const&, ForgeCad::Kernel::Curve<2> const&, ForgeCad::Kernel::Interval const&, double, bool)"
+        },
+        {
+          "percent": 6.28,
+          "samples": 873,
+          "symbol": "ForgeCad::Kernel::BSplineCurve<3>::bezierSegments() const"
+        },
+        {
+          "percent": 6.03,
+          "samples": 838,
+          "symbol": "ForgeCad::Kernel::(anonymous namespace)::subdivide(ForgeCad::Kernel::Curve<2> const&, ForgeCad::Kernel::Interval const&, ForgeCad::Kernel::Curve<2> const&, ForgeCad::Kernel::Interval const&, ForgeCad::Kernel::BSplineCurve<2> const&, ForgeCad::Kernel::BSplineCurve<2> const&, int, double, double, ForgeCad::Kernel::CurveCurveIntersection&, int&)"
+        },
+        {
+          "percent": 5.93,
+          "samples": 825,
+          "symbol": "ForgeCad::Kernel::(anonymous namespace)::Marcher::traceFrom(ForgeCad::Kernel::Vec<3> const&, ForgeCad::Kernel::SurfaceIntersection&, bool)"
+        },
+        {
+          "percent": 5.05,
+          "samples": 702,
+          "symbol": "ForgeCad::Kernel::(anonymous namespace)::projectOnBSplineSurface(ForgeCad::Kernel::BSplineSurface const&, ForgeCad::Kernel::Vec<3> const&, ForgeCad::Kernel::Interval const&, ForgeCad::Kernel::Interval const&, ForgeCad::Kernel::(anonymous namespace)::Candidates&)"
+        },
+        {
+          "percent": 4.39,
+          "samples": 611,
+          "symbol": "ForgeCad::Kernel::BSplineCurve<3>::clamped() const"
+        },
+        {
+          "percent": 4.01,
+          "samples": 558,
+          "symbol": "void ForgeCad::Kernel::(anonymous namespace)::collectCandidates<3>(ForgeCad::Kernel::Curve<3> const&, ForgeCad::Kernel::Vec<3> const&, ForgeCad::Kernel::Interval const&, std::vector<ForgeCad::Kernel::CurveProjection<3>, std::allocator<ForgeCad::Kernel::CurveProjection<3> > >&, double)"
+        },
+        {
+          "percent": 3.85,
+          "samples": 535,
+          "symbol": "ForgeCad::Kernel::Circle<3>::evaluate(double, int, ForgeCad::Kernel::Vec<3>*) const"
+        },
+        {
+          "percent": 3.74,
+          "samples": 520,
+          "symbol": "std::vector<ForgeCad::Kernel::CurveProjection<3>, std::allocator<ForgeCad::Kernel::CurveProjection<3> > > ForgeCad::Kernel::projectPointCandidates<3>(ForgeCad::Kernel::Curve<3> const&, ForgeCad::Kernel::Vec<3> const&, ForgeCad::Kernel::Interval const&)"
+        },
+        {
+          "percent": 3.65,
+          "samples": 507,
+          "symbol": "ForgeCad::Kernel::BernsteinPolynomial::operator+(ForgeCad::Kernel::BernsteinPolynomial const&) const"
+        },
+        {
+          "percent": 3.47,
+          "samples": 482,
+          "symbol": "lib:libm.so.6"
+        },
+        {
+          "percent": 3.45,
+          "samples": 480,
+          "symbol": "void ForgeCad::Kernel::(anonymous namespace)::evaluateConic<3>(ForgeCad::Kernel::Vec<3> const&, ForgeCad::Kernel::Vec<3> const&, ForgeCad::Kernel::Vec<3> const&, double, int, ForgeCad::Kernel::Vec<3>*)"
+        },
+        {
+          "percent": 3.16,
+          "samples": 439,
+          "symbol": "ForgeCad::Kernel::BSplineCurve<3>::insertKnot(double, int) const"
+        },
+        {
+          "percent": 3.11,
+          "samples": 433,
+          "symbol": "ForgeCad::Kernel::(anonymous namespace)::projectOnIso(ForgeCad::Kernel::Surface const&, ForgeCad::Kernel::Vec<3> const&, bool, double, ForgeCad::Kernel::Interval const&, ForgeCad::Kernel::(anonymous namespace)::Candidates&)"
+        },
+        {
+          "percent": 3.06,
+          "samples": 425,
+          "symbol": "void ForgeCad::Kernel::(anonymous namespace)::addCandidate<3>(ForgeCad::Kernel::Curve<3> const&, ForgeCad::Kernel::Vec<3> const&, double, std::vector<ForgeCad::Kernel::CurveProjection<3>, std::allocator<ForgeCad::Kernel::CurveProjection<3> > >&)"
+        },
+        {
+          "percent": 3.01,
+          "samples": 418,
+          "symbol": "ForgeCad::Kernel::(anonymous namespace)::projectOnBoundary(ForgeCad::Kernel::Surface const&, ForgeCad::Kernel::Vec<3> const&, ForgeCad::Kernel::Interval const&, ForgeCad::Kernel::Interval const&, ForgeCad::Kernel::(anonymous namespace)::Candidates&, bool)"
+        },
+        {
+          "percent": 2.99,
+          "samples": 416,
+          "symbol": "ForgeCad::Kernel::detail::validateKnotVector(std::vector<double, std::allocator<double> > const&, int, int, char const*)"
+        },
+        {
+          "percent": 2.99,
+          "samples": 416,
+          "symbol": "ForgeCad::Kernel::BernsteinPolynomial::elevated(int) const"
+        },
+        {
+          "percent": 2.83,
+          "samples": 393,
+          "symbol": "ForgeCad::Kernel::BernsteinPolynomial::operator*(ForgeCad::Kernel::BernsteinPolynomial const&) const"
+        },
+        {
+          "percent": 2.68,
+          "samples": 372,
+          "symbol": "ForgeCad::Kernel::(anonymous namespace)::Marcher::traceCurve(ForgeCad::Kernel::(anonymous namespace)::Node const&, ForgeCad::Kernel::SurfaceIntersection&)"
+        },
+        {
+          "percent": 2.61,
+          "samples": 363,
+          "symbol": "ForgeCad::Kernel::TransformedCurve::evaluate(double, int, ForgeCad::Kernel::Vec<3>*) const"
+        },
+        {
+          "percent": 2.55,
+          "samples": 354,
+          "symbol": "ForgeCad::Kernel::BSplineCurve<3>::validate() const"
+        },
+        {
+          "percent": 2.5,
+          "samples": 348,
+          "symbol": "ForgeCad::Kernel::(anonymous namespace)::Marcher::trace(ForgeCad::Kernel::(anonymous namespace)::Node&, std::vector<ForgeCad::Kernel::(anonymous namespace)::Node, std::allocator<ForgeCad::Kernel::(anonymous namespace)::Node> >&, ForgeCad::Kernel::Vec<3>&)"
+        },
+        {
+          "percent": 2.49,
+          "samples": 346,
+          "symbol": "ForgeCad::Kernel::ExtrusionSurface::evaluate(double, double, int, ForgeCad::Kernel::Vec<3>*) const"
+        },
+        {
+          "percent": 2.47,
+          "samples": 343,
+          "symbol": "ForgeCad::buildGeometry(ExtrusionObject&, int, QList<SketchObject> const&, QList<ExtrusionObject> const&)"
+        },
+        {
+          "percent": 2.47,
+          "samples": 343,
+          "symbol": "ForgeCad::(anonymous namespace)::buildGeometryImpl(ExtrusionObject&, int, QList<SketchObject> const&, QList<ExtrusionObject> const&)"
+        },
+        {
+          "percent": 2.45,
+          "samples": 341,
+          "symbol": "std::_Function_handler<void (), CadViewport::rebuildParallel(QList<int> const&, std::function<void (int, QString const&)> const&)::{lambda()#2}>::_M_invoke(std::_Any_data const&)"
+        }
+      ]
+    }
+  },
+  "pairs": [
+    {
+      "quality": 1,
+      "before_seconds": 85.738865473,
+      "after_seconds": 27.79704751,
+      "speedup": 3.0844594355625508,
+      "percent_time_saved": 67.5794082920848,
+      "before": {
+        "bodies": [
+          {
+            "brep_sha256": "185960addd5f71c0cf6f3f81f345316a085431cf53af43013d4b601da9d0333f",
+            "drawn": false,
+            "error": "",
+            "faces": 12,
+            "index": 0,
+            "name": "Rivoluzione 1",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "dff028f9018bbe71273c1b64acdcad980da255e1fbddf3aa04db9606a06b2a20",
+            "drawn": false,
+            "error": "",
+            "faces": 15,
+            "index": 1,
+            "name": "Rivoluzione 2",
+            "triangles": 0
+          },
+          {
+            "drawn": false,
+            "error": "",
+            "faces": 0,
+            "index": 2,
+            "name": "Piano 1",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "b15ccb6f1f1da99c1401cf1637411bc00255fd026ed1b08e88ce0ad0bf645a15",
+            "drawn": false,
+            "error": "",
+            "faces": 19,
+            "index": 3,
+            "name": "Sweep 4",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "9525ac48d0e927fa881a2c26c06fb56b1813cc94573365f4a9242bd811783d22",
+            "drawn": false,
+            "error": "",
+            "faces": 263,
+            "index": 4,
+            "name": "Ripetizione 5",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "c0fe04110e0f173a13729b4213bd5255eb89c9a3856d87055ae8acb3a4cecc80",
+            "drawn": false,
+            "error": "",
+            "faces": 264,
+            "index": 5,
+            "name": "Rivoluzione 6",
+            "triangles": 0
+          },
+          {
+            "drawn": false,
+            "error": "",
+            "faces": 0,
+            "index": 6,
+            "name": "Piano 2",
+            "triangles": 0
+          },
+          {
+            "drawn": false,
+            "error": "",
+            "faces": 0,
+            "index": 7,
+            "name": "Piano 3",
+            "triangles": 0
+          },
+          {
+            "drawn": false,
+            "error": "",
+            "faces": 0,
+            "index": 8,
+            "name": "Elica 9",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "d9598453bd30003e2db7d11ded2d5443ea0afa128dd2259262ff40d89d489d4d",
+            "drawn": false,
+            "error": "",
+            "faces": 269,
+            "index": 9,
+            "name": "Sweep 10",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "e4b4db5d8fa911fbbb03a63540cf4fd2b2d068212c71039e1a50e3697d4f6953",
+            "drawn": true,
+            "error": "",
+            "faces": 269,
+            "index": 10,
+            "name": "Rivoluzione 11",
+            "triangles": 4108
+          }
+        ],
+        "cached_load_seconds": 5.570092761,
+        "features": 11,
+        "quality": 1,
+        "read_seconds": 0.080374199,
+        "rebuild_errors": 0,
+        "rebuild_seconds": 85.738865473,
+        "sketches": 10,
+        "wall_seconds": 92.17983191501116,
+        "peak_rss_mib": 244.64453125,
+        "geometry_equivalent": true
+      },
+      "after": {
+        "bodies": [
+          {
+            "brep_sha256": "185960addd5f71c0cf6f3f81f345316a085431cf53af43013d4b601da9d0333f",
+            "drawn": false,
+            "error": "",
+            "faces": 12,
+            "index": 0,
+            "name": "Rivoluzione 1",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "dff028f9018bbe71273c1b64acdcad980da255e1fbddf3aa04db9606a06b2a20",
+            "drawn": false,
+            "error": "",
+            "faces": 15,
+            "index": 1,
+            "name": "Rivoluzione 2",
+            "triangles": 0
+          },
+          {
+            "drawn": false,
+            "error": "",
+            "faces": 0,
+            "index": 2,
+            "name": "Piano 1",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "b15ccb6f1f1da99c1401cf1637411bc00255fd026ed1b08e88ce0ad0bf645a15",
+            "drawn": false,
+            "error": "",
+            "faces": 19,
+            "index": 3,
+            "name": "Sweep 4",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "9525ac48d0e927fa881a2c26c06fb56b1813cc94573365f4a9242bd811783d22",
+            "drawn": false,
+            "error": "",
+            "faces": 263,
+            "index": 4,
+            "name": "Ripetizione 5",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "c0fe04110e0f173a13729b4213bd5255eb89c9a3856d87055ae8acb3a4cecc80",
+            "drawn": false,
+            "error": "",
+            "faces": 264,
+            "index": 5,
+            "name": "Rivoluzione 6",
+            "triangles": 0
+          },
+          {
+            "drawn": false,
+            "error": "",
+            "faces": 0,
+            "index": 6,
+            "name": "Piano 2",
+            "triangles": 0
+          },
+          {
+            "drawn": false,
+            "error": "",
+            "faces": 0,
+            "index": 7,
+            "name": "Piano 3",
+            "triangles": 0
+          },
+          {
+            "drawn": false,
+            "error": "",
+            "faces": 0,
+            "index": 8,
+            "name": "Elica 9",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "d9598453bd30003e2db7d11ded2d5443ea0afa128dd2259262ff40d89d489d4d",
+            "drawn": false,
+            "error": "",
+            "faces": 269,
+            "index": 9,
+            "name": "Sweep 10",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "e4b4db5d8fa911fbbb03a63540cf4fd2b2d068212c71039e1a50e3697d4f6953",
+            "drawn": true,
+            "error": "",
+            "faces": 269,
+            "index": 10,
+            "mesh_sha256": "3a93eaff3e95151fb7568b2590bf2bf6bd76c353ae63bee1bf361384a83ab142",
+            "name": "Rivoluzione 11",
+            "triangles": 4108
+          }
+        ],
+        "cached_load_seconds": 5.515066895,
+        "features": 11,
+        "quality": 1,
+        "read_seconds": 0.060373221,
+        "rebuild_errors": 0,
+        "rebuild_seconds": 27.79704751,
+        "sketches": 10,
+        "before_rebuild_seconds": 85.738865473,
+        "speedup": 3.0844594355625508,
+        "wall_seconds": 33.88006563499221,
+        "peak_rss_mib": 244.3203125,
+        "geometry_equivalent": true,
+        "mesh_equivalent_to_initial": true
+      }
+    },
+    {
+      "quality": 0,
+      "before_seconds": 85.510121069,
+      "after_seconds": 27.776043913,
+      "speedup": 3.078556519309748,
+      "percent_time_saved": 67.51724408086513,
+      "before": {
+        "bodies": [
+          {
+            "brep_sha256": "185960addd5f71c0cf6f3f81f345316a085431cf53af43013d4b601da9d0333f",
+            "drawn": false,
+            "error": "",
+            "faces": 12,
+            "index": 0,
+            "name": "Rivoluzione 1",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "dff028f9018bbe71273c1b64acdcad980da255e1fbddf3aa04db9606a06b2a20",
+            "drawn": false,
+            "error": "",
+            "faces": 15,
+            "index": 1,
+            "name": "Rivoluzione 2",
+            "triangles": 0
+          },
+          {
+            "drawn": false,
+            "error": "",
+            "faces": 0,
+            "index": 2,
+            "name": "Piano 1",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "b15ccb6f1f1da99c1401cf1637411bc00255fd026ed1b08e88ce0ad0bf645a15",
+            "drawn": false,
+            "error": "",
+            "faces": 19,
+            "index": 3,
+            "name": "Sweep 4",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "9525ac48d0e927fa881a2c26c06fb56b1813cc94573365f4a9242bd811783d22",
+            "drawn": false,
+            "error": "",
+            "faces": 263,
+            "index": 4,
+            "name": "Ripetizione 5",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "c0fe04110e0f173a13729b4213bd5255eb89c9a3856d87055ae8acb3a4cecc80",
+            "drawn": false,
+            "error": "",
+            "faces": 264,
+            "index": 5,
+            "name": "Rivoluzione 6",
+            "triangles": 0
+          },
+          {
+            "drawn": false,
+            "error": "",
+            "faces": 0,
+            "index": 6,
+            "name": "Piano 2",
+            "triangles": 0
+          },
+          {
+            "drawn": false,
+            "error": "",
+            "faces": 0,
+            "index": 7,
+            "name": "Piano 3",
+            "triangles": 0
+          },
+          {
+            "drawn": false,
+            "error": "",
+            "faces": 0,
+            "index": 8,
+            "name": "Elica 9",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "d9598453bd30003e2db7d11ded2d5443ea0afa128dd2259262ff40d89d489d4d",
+            "drawn": false,
+            "error": "",
+            "faces": 269,
+            "index": 9,
+            "name": "Sweep 10",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "e4b4db5d8fa911fbbb03a63540cf4fd2b2d068212c71039e1a50e3697d4f6953",
+            "drawn": true,
+            "error": "",
+            "faces": 269,
+            "index": 10,
+            "name": "Rivoluzione 11",
+            "triangles": 3232
+          }
+        ],
+        "cached_load_seconds": 5.623762119,
+        "features": 11,
+        "quality": 0,
+        "read_seconds": 0.070806653,
+        "rebuild_errors": 0,
+        "rebuild_seconds": 85.510121069,
+        "sketches": 10,
+        "wall_seconds": 91.97662486799527,
+        "peak_rss_mib": 237.61328125,
+        "geometry_equivalent": true
+      },
+      "after": {
+        "bodies": [
+          {
+            "brep_sha256": "185960addd5f71c0cf6f3f81f345316a085431cf53af43013d4b601da9d0333f",
+            "drawn": false,
+            "error": "",
+            "faces": 12,
+            "index": 0,
+            "name": "Rivoluzione 1",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "dff028f9018bbe71273c1b64acdcad980da255e1fbddf3aa04db9606a06b2a20",
+            "drawn": false,
+            "error": "",
+            "faces": 15,
+            "index": 1,
+            "name": "Rivoluzione 2",
+            "triangles": 0
+          },
+          {
+            "drawn": false,
+            "error": "",
+            "faces": 0,
+            "index": 2,
+            "name": "Piano 1",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "b15ccb6f1f1da99c1401cf1637411bc00255fd026ed1b08e88ce0ad0bf645a15",
+            "drawn": false,
+            "error": "",
+            "faces": 19,
+            "index": 3,
+            "name": "Sweep 4",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "9525ac48d0e927fa881a2c26c06fb56b1813cc94573365f4a9242bd811783d22",
+            "drawn": false,
+            "error": "",
+            "faces": 263,
+            "index": 4,
+            "name": "Ripetizione 5",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "c0fe04110e0f173a13729b4213bd5255eb89c9a3856d87055ae8acb3a4cecc80",
+            "drawn": false,
+            "error": "",
+            "faces": 264,
+            "index": 5,
+            "name": "Rivoluzione 6",
+            "triangles": 0
+          },
+          {
+            "drawn": false,
+            "error": "",
+            "faces": 0,
+            "index": 6,
+            "name": "Piano 2",
+            "triangles": 0
+          },
+          {
+            "drawn": false,
+            "error": "",
+            "faces": 0,
+            "index": 7,
+            "name": "Piano 3",
+            "triangles": 0
+          },
+          {
+            "drawn": false,
+            "error": "",
+            "faces": 0,
+            "index": 8,
+            "name": "Elica 9",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "d9598453bd30003e2db7d11ded2d5443ea0afa128dd2259262ff40d89d489d4d",
+            "drawn": false,
+            "error": "",
+            "faces": 269,
+            "index": 9,
+            "name": "Sweep 10",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "e4b4db5d8fa911fbbb03a63540cf4fd2b2d068212c71039e1a50e3697d4f6953",
+            "drawn": true,
+            "error": "",
+            "faces": 269,
+            "index": 10,
+            "mesh_sha256": "ceb0062061bf03d52d3a0876327409a7c18df6b442b949a97bc21d8f3899c2b8",
+            "name": "Rivoluzione 11",
+            "triangles": 3232
+          }
+        ],
+        "cached_load_seconds": 5.588477986,
+        "features": 11,
+        "quality": 0,
+        "read_seconds": 0.059071798,
+        "rebuild_errors": 0,
+        "rebuild_seconds": 27.776043913,
+        "sketches": 10,
+        "before_rebuild_seconds": 85.510121069,
+        "speedup": 3.078556519309748,
+        "wall_seconds": 33.97192688699579,
+        "peak_rss_mib": 239.0234375,
+        "geometry_equivalent": true,
+        "mesh_equivalent_to_initial": false
+      }
+    },
+    {
+      "quality": 2,
+      "before_seconds": 86.406127276,
+      "after_seconds": 27.544526343,
+      "speedup": 3.1369618123042704,
+      "percent_time_saved": 68.12202188507213,
+      "before": {
+        "bodies": [
+          {
+            "brep_sha256": "185960addd5f71c0cf6f3f81f345316a085431cf53af43013d4b601da9d0333f",
+            "drawn": false,
+            "error": "",
+            "faces": 12,
+            "index": 0,
+            "name": "Rivoluzione 1",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "dff028f9018bbe71273c1b64acdcad980da255e1fbddf3aa04db9606a06b2a20",
+            "drawn": false,
+            "error": "",
+            "faces": 15,
+            "index": 1,
+            "name": "Rivoluzione 2",
+            "triangles": 0
+          },
+          {
+            "drawn": false,
+            "error": "",
+            "faces": 0,
+            "index": 2,
+            "name": "Piano 1",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "b15ccb6f1f1da99c1401cf1637411bc00255fd026ed1b08e88ce0ad0bf645a15",
+            "drawn": false,
+            "error": "",
+            "faces": 19,
+            "index": 3,
+            "name": "Sweep 4",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "9525ac48d0e927fa881a2c26c06fb56b1813cc94573365f4a9242bd811783d22",
+            "drawn": false,
+            "error": "",
+            "faces": 263,
+            "index": 4,
+            "name": "Ripetizione 5",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "c0fe04110e0f173a13729b4213bd5255eb89c9a3856d87055ae8acb3a4cecc80",
+            "drawn": false,
+            "error": "",
+            "faces": 264,
+            "index": 5,
+            "name": "Rivoluzione 6",
+            "triangles": 0
+          },
+          {
+            "drawn": false,
+            "error": "",
+            "faces": 0,
+            "index": 6,
+            "name": "Piano 2",
+            "triangles": 0
+          },
+          {
+            "drawn": false,
+            "error": "",
+            "faces": 0,
+            "index": 7,
+            "name": "Piano 3",
+            "triangles": 0
+          },
+          {
+            "drawn": false,
+            "error": "",
+            "faces": 0,
+            "index": 8,
+            "name": "Elica 9",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "d9598453bd30003e2db7d11ded2d5443ea0afa128dd2259262ff40d89d489d4d",
+            "drawn": false,
+            "error": "",
+            "faces": 269,
+            "index": 9,
+            "name": "Sweep 10",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "e4b4db5d8fa911fbbb03a63540cf4fd2b2d068212c71039e1a50e3697d4f6953",
+            "drawn": true,
+            "error": "",
+            "faces": 269,
+            "index": 10,
+            "name": "Rivoluzione 11",
+            "triangles": 14710
+          }
+        ],
+        "cached_load_seconds": 5.568276713,
+        "features": 11,
+        "quality": 2,
+        "read_seconds": 0.068966933,
+        "rebuild_errors": 0,
+        "rebuild_seconds": 86.406127276,
+        "sketches": 10,
+        "wall_seconds": 92.72976298100548,
+        "peak_rss_mib": 245.15625,
+        "geometry_equivalent": true
+      },
+      "after": {
+        "bodies": [
+          {
+            "brep_sha256": "185960addd5f71c0cf6f3f81f345316a085431cf53af43013d4b601da9d0333f",
+            "drawn": false,
+            "error": "",
+            "faces": 12,
+            "index": 0,
+            "name": "Rivoluzione 1",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "dff028f9018bbe71273c1b64acdcad980da255e1fbddf3aa04db9606a06b2a20",
+            "drawn": false,
+            "error": "",
+            "faces": 15,
+            "index": 1,
+            "name": "Rivoluzione 2",
+            "triangles": 0
+          },
+          {
+            "drawn": false,
+            "error": "",
+            "faces": 0,
+            "index": 2,
+            "name": "Piano 1",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "b15ccb6f1f1da99c1401cf1637411bc00255fd026ed1b08e88ce0ad0bf645a15",
+            "drawn": false,
+            "error": "",
+            "faces": 19,
+            "index": 3,
+            "name": "Sweep 4",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "9525ac48d0e927fa881a2c26c06fb56b1813cc94573365f4a9242bd811783d22",
+            "drawn": false,
+            "error": "",
+            "faces": 263,
+            "index": 4,
+            "name": "Ripetizione 5",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "c0fe04110e0f173a13729b4213bd5255eb89c9a3856d87055ae8acb3a4cecc80",
+            "drawn": false,
+            "error": "",
+            "faces": 264,
+            "index": 5,
+            "name": "Rivoluzione 6",
+            "triangles": 0
+          },
+          {
+            "drawn": false,
+            "error": "",
+            "faces": 0,
+            "index": 6,
+            "name": "Piano 2",
+            "triangles": 0
+          },
+          {
+            "drawn": false,
+            "error": "",
+            "faces": 0,
+            "index": 7,
+            "name": "Piano 3",
+            "triangles": 0
+          },
+          {
+            "drawn": false,
+            "error": "",
+            "faces": 0,
+            "index": 8,
+            "name": "Elica 9",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "d9598453bd30003e2db7d11ded2d5443ea0afa128dd2259262ff40d89d489d4d",
+            "drawn": false,
+            "error": "",
+            "faces": 269,
+            "index": 9,
+            "name": "Sweep 10",
+            "triangles": 0
+          },
+          {
+            "brep_sha256": "e4b4db5d8fa911fbbb03a63540cf4fd2b2d068212c71039e1a50e3697d4f6953",
+            "drawn": true,
+            "error": "",
+            "faces": 269,
+            "index": 10,
+            "mesh_sha256": "ce6f0d67305c2e715a58271e36cc07a630d71a05bb0cb2ce346a75997a47646a",
+            "name": "Rivoluzione 11",
+            "triangles": 14710
+          }
+        ],
+        "cached_load_seconds": 5.63782582,
+        "features": 11,
+        "quality": 2,
+        "read_seconds": 0.059833739,
+        "rebuild_errors": 0,
+        "rebuild_seconds": 27.544526343,
+        "sketches": 10,
+        "before_rebuild_seconds": 86.406127276,
+        "speedup": 3.1369618123042704,
+        "wall_seconds": 33.722818485010066,
+        "peak_rss_mib": 248.99609375,
+        "geometry_equivalent": true,
+        "mesh_equivalent_to_initial": false
+      }
+    }
+  ],
+  "mesh_quality1_byte_equivalent": true,
+  "projection_oracle": {
+    "projections_bit_identical": 3600,
+    "dimensions": [
+      2,
+      3
+    ],
+    "degrees": [
+      1,
+      2,
+      3,
+      5,
+      9
+    ],
+    "ranges": [
+      "full",
+      "partial",
+      "zero-width",
+      "outside",
+      "node-boundary"
+    ],
+    "rational_polynomial": true,
+    "clamped_unclamped": true,
+    "concurrent": true
+  },
+  "kernel_selected": {
+    "passed": 219,
+    "total": 221,
+    "preexisting_failures": [
+      "[ FAIL ] BlendVanishingAtTangentMitreEnd (1 controlli falliti)",
+      "[ FAIL ] BlendArcsMeetingSegments (1 controlli falliti)"
+    ]
+  },
+  "new_ranges_on_baseline": {
+    "passed": 2,
+    "total": 2
+  },
+  "ctest_selected": {
+    "passed": 44,
+    "total": 44,
+    "seconds": 14.5
+  },
+  "architecture": {
+    "files": 496,
+    "edges": 6735,
+    "translation_units": 235,
+    "errors": {},
+    "valid_sites": 80821,
+    "boundaries": [
+      {
+        "source": "kernel/fk_boolean.cpp",
+        "symbol": "projectPoint",
+        "both_directions": true,
+        "targets": [
+          "kernel/fk_curve_algo.h",
+          "kernel/fk_surface_algo.cpp"
+        ]
+      },
+      {
+        "source": "kernel/fk_curve_algo.cpp",
+        "symbol": "BernsteinPolynomial::roots",
+        "both_directions": true,
+        "targets": [
+          "kernel/fk_bernstein.cpp"
+        ]
+      },
+      {
+        "source": "kernel/fk_curve_algo.cpp",
+        "symbol": "cancellationPoint",
+        "both_directions": true,
+        "targets": [
+          "kernel/fk_cancel.h"
+        ]
+      },
+      {
+        "source": "kernel/tests/test_curve_algo.cpp",
+        "symbol": "projectPoint",
+        "both_directions": true,
+        "targets": [
+          "kernel/fk_curve_algo.h"
+        ]
+      }
+    ],
+    "includes_distinct": true,
+    "dependent_template_call_manual": {
+      "source": "kernel/fk_curve_algo.cpp",
+      "definition_line": 192,
+      "call_line": 319,
+      "both_directions_source_verified": true,
+      "limit": "Libclang non emette la chiamata dipendente al template privato bsplineMinimum; verificata nel sorgente, non inventata nel grafo."
+    },
+    "visual_inspected": true
+  },
+  "full_linux_app_compiled": true,
+  "native_macos_build_performed": false,
+  "main_modified": false,
+  "commit_push_performed": false
+}

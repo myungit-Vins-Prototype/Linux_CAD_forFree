@@ -3,8 +3,10 @@
 #include <QOffscreenSurface>
 #include <QOpenGLContext>
 #include <QOpenGLFunctions>
+#include <QOpenGLFramebufferObject>
 #include <QSurfaceFormat>
 #include <iostream>
+#include <memory>
 #include <stdexcept>
 
 static void require(bool ok,const char *message) {if(!ok)throw std::runtime_error(message);}
@@ -27,6 +29,14 @@ int main(int argc,char **argv) {
         if(!context.makeCurrent(&surface)){std::cout<<"SKIP superficie GL non disponibile\n";return 77;}
     }
     try {
+        // La superficie offscreen non garantisce un framebuffer predefinito
+        // utilizzabile su macOS. Mantenerlo vivo fino al rilascio della cache.
+        std::unique_ptr<QOpenGLFramebufferObject> framebuffer;
+        if(gl) {
+            framebuffer=std::make_unique<QOpenGLFramebufferObject>(64,64);
+            require(framebuffer->isValid() && framebuffer->bind(),"framebuffer di prova disponibile");
+            context.functions()->glViewport(0,0,64,64);
+        }
         ForgeCad::DisplayCache cache;cache.beginFrame();
         BodyDisplay high=triangles(10000);high.instancedBase=std::make_shared<BodyDisplay>();
         std::weak_ptr<const BodyDisplay> old=high.instancedBase;
@@ -51,8 +61,8 @@ int main(int argc,char **argv) {
         cache.beginFrame();cache.endFrame();
         require(cache.statistics().entries==0 && cache.statistics().sourceStorageBytes==0,
                 "scena vuota non trattiene mesh o VBO dei frame precedenti");
-        if(gl)require(context.functions()->glGetError()==GL_NO_ERROR,"ciclo reale VBO/VAO senza errori GL");
         cache.clear();
+        if(gl)require(context.functions()->glGetError()==GL_NO_ERROR,"ciclo reale VBO/VAO senza errori GL");
         std::cout<<"PASS memoria cache, rilascio al frame e riuso"<<(gl?" con OpenGL":" senza GPU")<<"\n";
     }catch(const std::exception &error){std::cerr<<error.what()<<std::endl;return 1;}
     if(gl)context.doneCurrent();

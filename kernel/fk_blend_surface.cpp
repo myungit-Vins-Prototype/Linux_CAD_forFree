@@ -584,7 +584,12 @@ public:
             const Section sa = section(a), sb = section(b, knots.count(b) > 0);
             const double h = b - a;
             double error = 0.0;
-            double numericalFloor = std::max({sa.residual, sb.residual, sa.noise, sb.noise});
+            // Alla punta di un raccordo che svanisce il Jacobiano puo' essere
+            // singolare solo nell'estremo: la sua stima di rumore non limita
+            // l'accuratezza dell'intero tratto. Misura il condizionamento nei
+            // punti interni confrontati sotto, cosi' il fit raffina fino alla
+            // piccola zona effettivamente mal condizionata.
+            double numericalFloor = std::max(sa.residual, sb.residual);
             for (double f : {0.2, 0.5, 0.8}) {
                 const Section &exact = section(a + f * h);
                 numericalFloor = std::max({numericalFloor, exact.residual, exact.noise});

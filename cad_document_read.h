@@ -48,6 +48,10 @@ public:
     DataStream &operator>>(QStringList &values) {
         return readList(static_cast<QList<QString> &>(values));
     }
+    // Le mesh hanno milioni di scalari: una lettura a blocchi evita una
+    // chiamata virtuale al dispositivo per ogni coordinata o indice.
+    DataStream &operator>>(QList<QVector3D> &values);
+    DataStream &operator>>(QList<int> &values);
     template<class T> DataStream &operator>>(QList<T> &values) {
         return readList(values);
     }

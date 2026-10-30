@@ -1,0 +1,212 @@
+{
+  "date": "2026-10-28",
+  "branch": "solver-mesh-gpu",
+  "head": "c57e0e1",
+  "host": {
+    "cpu": "Intel Xeon W-10885M",
+    "physical_cores": 8,
+    "logical_threads": 16
+  },
+  "production_change": "Conservative positive-weight BSpline patch BVH rejection before cone-apex projection; uncertain cases use original global projection",
+  "new_parallel_kernel_integrated": false,
+  "new_cuda_kernel_integrated": false,
+  "scaling_single_process_exploratory": [
+    {
+      "threads": 16,
+      "wall": 27.017558721,
+      "cpu": 103.34409500000001,
+      "average_active": 3.8250715420736183,
+      "geometry_equal": true
+    },
+    {
+      "threads": 1,
+      "wall": 60.963366809,
+      "cpu": 63.91383999999999,
+      "average_active": 1.0483974777876672,
+      "geometry_equal": true
+    },
+    {
+      "threads": 8,
+      "wall": 26.504110053,
+      "cpu": 70.691272,
+      "average_active": 2.667181499723604,
+      "geometry_equal": true
+    },
+    {
+      "threads": 2,
+      "wall": 40.112571765,
+      "cpu": 64.70527200000001,
+      "average_active": 1.6130920844237226,
+      "geometry_equal": true
+    },
+    {
+      "threads": 4,
+      "wall": 31.825464062,
+      "cpu": 68.32531,
+      "average_active": 2.1468755291955435,
+      "geometry_equal": true
+    }
+  ],
+  "projection_parallel_pilots": [
+    {
+      "variant": "move",
+      "projection_workers": 0,
+      "batch": 0,
+      "wall_seconds": 27.493655907,
+      "cpu_seconds": 105.342958,
+      "geometry_mesh_errors_visibility_equal": true,
+      "single_process_exploratory": true
+    },
+    {
+      "variant": "bounded-spec1",
+      "projection_workers": 1,
+      "batch": 64,
+      "wall_seconds": 31.008106457,
+      "cpu_seconds": 106.76042299999999,
+      "geometry_mesh_errors_visibility_equal": true,
+      "single_process_exploratory": true
+    },
+    {
+      "variant": "bounded-spec4",
+      "projection_workers": 4,
+      "batch": 64,
+      "wall_seconds": 26.05326427,
+      "cpu_seconds": 108.98474700000001,
+      "geometry_mesh_errors_visibility_equal": true,
+      "single_process_exploratory": true
+    },
+    {
+      "variant": "large-spec4",
+      "projection_workers": 4,
+      "batch": 512,
+      "wall_seconds": 26.687416371,
+      "cpu_seconds": 109.42687900000001,
+      "geometry_mesh_errors_visibility_equal": true,
+      "single_process_exploratory": true
+    },
+    {
+      "variant": "large-spec8",
+      "projection_workers": 8,
+      "batch": 512,
+      "wall_seconds": 25.693789813,
+      "cpu_seconds": 111.414785,
+      "geometry_mesh_errors_visibility_equal": true,
+      "single_process_exploratory": true
+    },
+    {
+      "variant": "apex-filter",
+      "projection_workers": 0,
+      "batch": 0,
+      "wall_seconds": 17.566569654,
+      "cpu_seconds": 93.33644100000001,
+      "geometry_mesh_errors_visibility_equal": true,
+      "single_process_exploratory": true
+    }
+  ],
+  "final_formal_comparison": {
+    "input_sha256": "049a83c7e6686cd60903f7f54cc43f9dfa4ec133973899625b92c115042f5229",
+    "input_unchanged": true,
+    "rows": [
+      {
+        "pair": 1,
+        "variant": "reference",
+        "wall_seconds": 27.019213993,
+        "cpu_seconds": 102.30048299999999,
+        "geometry_mesh_visibility_errors_equal": true
+      },
+      {
+        "pair": 1,
+        "variant": "production",
+        "wall_seconds": 17.163367832,
+        "cpu_seconds": 91.84742300000002,
+        "geometry_mesh_visibility_errors_equal": true
+      },
+      {
+        "pair": 2,
+        "variant": "production",
+        "wall_seconds": 17.369783677,
+        "cpu_seconds": 92.59148200000001,
+        "geometry_mesh_visibility_errors_equal": true
+      },
+      {
+        "pair": 2,
+        "variant": "reference",
+        "wall_seconds": 26.64540105,
+        "cpu_seconds": 101.73635300000001,
+        "geometry_mesh_visibility_errors_equal": true
+      },
+      {
+        "pair": 3,
+        "variant": "reference",
+        "wall_seconds": 26.630442652,
+        "cpu_seconds": 101.80773099999998,
+        "geometry_mesh_visibility_errors_equal": true
+      },
+      {
+        "pair": 3,
+        "variant": "production",
+        "wall_seconds": 17.214054455,
+        "cpu_seconds": 92.00123299999998,
+        "geometry_mesh_visibility_errors_equal": true
+      }
+    ],
+    "medians_seconds": {
+      "reference": 26.64540105,
+      "production": 17.214054455
+    },
+    "time_reduction_percent": 35.39577646927555,
+    "speedup": 1.5478864156991539
+  },
+  "additional_document_validation": [
+    {
+      "document": "mouse2",
+      "input_sha256": "7ffa64559f38820ed0f070fa233efc27a2b5ea82ee749e04817a756cb1ae92ce",
+      "unchanged": true,
+      "bodies": 36,
+      "rebuild_errors": 0,
+      "all_body_fingerprints_visible_mesh_errors_visibility_equal": true,
+      "wall_seconds_functional_only": 7.61737498
+    },
+    {
+      "document": "assembly",
+      "input_sha256": "5b3d658321f460e826ff1e3c1415054f003ebc03325aa9e69da2a346be227791",
+      "unchanged": true,
+      "bodies": 1200,
+      "rebuild_errors": 4,
+      "all_body_fingerprints_visible_mesh_errors_visibility_equal": true,
+      "wall_seconds_functional_only": 13.520497873
+    }
+  ],
+  "kernel_tests": {
+    "filter_counts": {
+      "Surface": 44,
+      "Marching": 10,
+      "Boolean": 38,
+      "cancel_": 2
+    },
+    "distinct_passed": 90,
+    "distinct_failed": 0
+  },
+  "application_tests_passed": 8,
+  "architecture": {
+    "files": 499,
+    "relations": 6794,
+    "translation_units": 236,
+    "errors": {},
+    "check_passed": true,
+    "visual_checked": true
+  },
+  "binary_sha256": {
+    "reference": "fb544f057fbd7843d0ee934a099a5462aed0ef8d18533ec72307fb0fc7e33754",
+    "production": "b935eb52269e04e3df49041a1732bfa15f2f5eb607e242bed4c3c5d75ee37cdc",
+    "development_app": "cb49d92bd8d852f0032d4a64580bd7843b6c7974f5ab8464483521793a4ce9c7"
+  },
+  "limits": [
+    "Single document formal performance comparison, three fresh processes per version",
+    "Scaling and parallel prototypes exploratory single samples; no confidence intervals",
+    "No clock, frequency or temperature control",
+    "Additional executor in prototype is not integrated with shared kernel thread budget",
+    "No 10x application claim, desktop installation, macOS build, commit or push"
+  ],
+  "local_archive": "/home/myungit/Linux_CAD_forFree/forgecad-linux-solver/benchmarks/kernel-parallelism-2026-10-28"
+}

@@ -1134,7 +1134,29 @@ FK_TEST(BlendVanishingAtTangentMitreEnd) {
     const TopoDS_Shape occtBase = occtBlendedShape(BRepPrimAPI_MakeBox(a, b, c).Shape(), top, R, false);
     const double occtV0 = occtBase.IsNull() ? 0.0 : [&] { GProp_GProps p; BRepGProp::VolumeProperties(occtBase, p, 1e-12); return p.Mass(); }();
     for (double r : {0.5, 0.1}) {
-        const double volume = blended(base, {Vec3(a, 0, 1)}, r, false, 0.0);
+        const Body result = blendEdges(base, {nearestEdge(base, Vec3(a, 0, 1), 1e-6)}, r, false);
+        FK_CHECK(checkBody(result).empty());
+        TessellationOptions options;
+        options.deflection = 0.01;
+        FK_CHECK(tessellate(result, options).failedFaces == 0);
+        // Non basta la validita' entro le tolleranze registrate nel B-rep:
+        // una stima singolare alla punta accettava tratti con scarti grandi.
+        // Controllo indipendente sui cilindri di appoggio, anche fra i nodi.
+        double supportGap = 0.0;
+        for (FaceId face : result.faces()) {
+            const auto *cylinder = dynamic_cast<const CylindricalSurface *>(result.face(face).surface.get());
+            if (!cylinder) continue;
+            for (LoopId loop : result.face(face).loops) for (FinId fin : result.loopFins(loop)) {
+                const Edge &edge = result.edge(result.fin(fin).edge);
+                const std::vector<double> knots = edge.curve->breakpoints(edge.range);
+                for (std::size_t k = 0; k + 1 < knots.size(); ++k) for (int j = 0; j <= 4; ++j) {
+                    const Vec3 p = cylinder->frame().toLocal(edge.curve->point(knots[k] + (knots[k + 1] - knots[k]) * j / 4.0));
+                    supportGap = std::max(supportGap, std::fabs(std::hypot(p.x(), p.y()) - cylinder->radius()));
+                }
+            }
+        }
+        FK_CHECK_NEAR(supportGap, 0.0, 1e-5);
+        const double volume = massProperties(result).volume;
         const double removed = v0 - volume, straight = r * r * (1.0 - kPi / 4.0) * (c - R);
         // Oltre al tratto rettilineo, il tratto lungo la mitra (angolo da 90 gradi a zero).
         FK_CHECK(removed > straight);
@@ -1159,10 +1181,38 @@ FK_TEST(BlendArcsMeetingSegments) {
     const Operand block = extrusion(profile, h);
     const std::vector<Vec3> top = edgesAtHeight(block.body, h), bottom = edgesAtHeight(block.body, 0.0);
     const Vec3 onArc(3, 1 + radius, h);
-    for (const auto &[points, chamfer] : {std::pair<std::vector<Vec3>, bool>{top, false}, {{onArc}, false}, {{onArc}, true}, {bottom, true}}) {
+    // Il raccordo dell'intero bordo ha sezioni orizzontali pari all'offset
+    // interno del profilo. Riferimento analitico indipendente: OCCT 7.9 su
+    // Linux produce qui anche un solido di volume maggiore dell'originale.
+    const auto sectionArea = [&](double inset) {
+        const double halfWidth = 3.0 - inset, r = radius - inset;
+        return 2.0 * halfWidth * (1.0 - inset)
+             + halfWidth * std::sqrt(r * r - halfWidth * halfWidth)
+             + r * r * std::asin(halfWidth / r);
+    };
+    const double fillet = 0.3;
+    const auto expectedVolume = [&](int intervals) {
+        // z = h-r+r*sin(theta), inset = r*(1-cos(theta)); Simpson
+        // sul profilo analitico, senza usare la quadratura del kernel.
+        const double step = kHalfPi / intervals;
+        double sum = 0.0;
+        for (int i = 0; i <= intervals; ++i) {
+            const double theta = i * step;
+            const double value = sectionArea(fillet * (1.0 - std::cos(theta))) * fillet * std::cos(theta);
+            sum += (i == 0 || i == intervals ? 1 : i % 2 ? 4 : 2) * value;
+        }
+        return sectionArea(0.0) * (h - fillet) + sum * step / 3.0;
+    };
+    const double expected = expectedVolume(1024);
+    FK_CHECK_NEAR(expected, expectedVolume(2048), 1e-10);
+    FK_CHECK_NEAR(massProperties(block.body).volume, h * sectionArea(0.0), 1e-10);
+    const double rounded = blended(block.body, top, fillet, false, 0.0);
+    FK_CHECK_NEAR(rounded, expected, 1e-8 * expected);
+    FK_CHECK(rounded < massProperties(block.body).volume);
+    for (const auto &[points, chamfer] : {std::pair<std::vector<Vec3>, bool>{{onArc}, false}, {{onArc}, true}, {bottom, true}}) {
         const double ours = blended(block.body, points, 0.3, chamfer, 0.0);
         const double occt = occtBlended(block.shape, points, 0.3, chamfer);
-        FK_CHECK(occt == 0.0 || std::fabs(ours - occt) < 1e-6 * ours);
+        if (occt != 0.0) FK_CHECK_NEAR(ours, occt, 1e-6 * ours);
     }
 }
 

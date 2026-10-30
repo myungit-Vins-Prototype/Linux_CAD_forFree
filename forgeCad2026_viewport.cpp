@@ -97,7 +97,11 @@ void CadViewport::setTessellationQuality(int quality) {
     for (SketchObject &sketch : sketches_) {
         for (CurveObject &curve : sketch.curves) ForgeCad::recalculateCurve(curve, tessellationQuality_);
     }
-    for (int index = 0; index < extrusions_.size(); ++index) tessellateBody(extrusions_[index], index);
+    QVector<int> requested;
+    const bool eager=qEnvironmentVariableIntValue("FORGECAD_EAGER_MESH")==1;
+    for (int index=0;index<extrusions_.size();++index)
+        if (eager || isBodyDrawn(index)) requested.append(index);
+    ensureBodyDisplays(requested);
     constexpr quint64 largeReduction=64ull*1024*1024;
     if(tessellationQuality_<previousQuality && previousBytes>meshBytes()+largeReduction) {
         // Anche a vista ferma/nascosta, le vecchie copie CPU non devono
@@ -105,7 +109,7 @@ void CadViewport::setTessellationQuality(int quality) {
         if(context() && isValid()) {
             makeCurrent();displayCache_.clear();doneCurrent();
         }
-        // Le mesh temporanee sono gia' distrutte. Su glibc le
+        // Le mesh temporanee dei worker sono gia' distrutte. Su glibc le
         // loro arene possono trattenere molti GiB liberi senza restituirli.
         ForgeCad::releaseUnusedHeapMemory();
     }

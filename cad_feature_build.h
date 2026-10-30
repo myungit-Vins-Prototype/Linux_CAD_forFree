@@ -12,7 +12,7 @@ namespace ForgeCad {
 void buildGeometry(ExtrusionObject &body, int index, const QVector<SketchObject> &sketches,
                    const QVector<ExtrusionObject> &bodies);
 void buildBody(ExtrusionObject &body, int index, const QVector<SketchObject> &sketches,
-               const QVector<ExtrusionObject> &bodies, int quality);
+               const QVector<ExtrusionObject> &bodies, int quality, bool prepareDisplay = true);
 void tessellateGeometry(const ExtrusionObject &body, int quality, BodyDisplay &display);
 void configurePatternInstances(ExtrusionObject &body, int index, const QVector<SketchObject> &sketches,
                                const QVector<ExtrusionObject> &bodies);

@@ -1,0 +1,1787 @@
+{
+  "revision_before": "4f842a8b9a02a18d9f4abd1238e936901a3a7d30",
+  "inputs": {
+    "mouse2": {
+      "source": "/home/myungit/Documenti/File_Esempio/mouse2.prt",
+      "snapshot": "/home/myungit/Linux_CAD_forFree/forgecad-linux-solver/benchmarks/loft-refinement-2026-10-27/mouse2-input.prt",
+      "sha256": "7ffa64559f38820ed0f070fa233efc27a2b5ea82ee749e04817a756cb1ae92ce",
+      "revision": "4f842a8b9a02a18d9f4abd1238e936901a3a7d30",
+      "baseline_runner_sha256": "53d48423d482e9c9b87cf5c009858928e9ab53edd1979c373c41146eafa001a6",
+      "source_sha256_at_end": "7ffa64559f38820ed0f070fa233efc27a2b5ea82ee749e04817a756cb1ae92ce",
+      "original_matches_snapshot_at_end": true
+    },
+    "assembly": {
+      "source": "/home/myungit/Documenti/File_Esempio/2550_ASSIEME-ST5674-COMPLETO.prt",
+      "sha256": "5b3d658321f460e826ff1e3c1415054f003ebc03325aa9e69da2a346be227791",
+      "bytes": 94505715,
+      "source_sha256_at_end": "5b3d658321f460e826ff1e3c1415054f003ebc03325aa9e69da2a346be227791",
+      "original_matches_snapshot_at_end": true
+    }
+  },
+  "implementation": {
+    "production_file": "kernel/fk_bspline_surface.cpp",
+    "point_order_only": true,
+    "derivative_path_changed": false,
+    "cpu_cpp17": true,
+    "macos_build_performed": false,
+    "main_modified": false
+  },
+  "source_and_binary_sha256": {
+    "kernel/fk_bspline_surface.cpp": "1965598d7b1d9cd036d7997a97034da1129a23a86d517f1bd25b3608da422d4d",
+    "kernel/tests/test_bspline_surface.cpp": "6408ad38a90d64ecdc41aadc96e550e1d0b0bdf0b104ced9e7fc5f409ed8b122",
+    "tools/generate_architecture.py": "008e4879465cd6af08274b01cbcde5fbf3a8f639bb418f3892a3737b6ff28380",
+    "forgecad-linux-solver/forgecad": "77c0b7d98014213e7847458fbbe771b5d4ed282f75800e4be8eebb3626a7bf4a",
+    "forgecad-linux-solver/forgecad_view_tests": "9c4b350a4b73d0eb9525256ef84c932d8f0726771d7f8e4e847f4626dd8df814",
+    "forgecad-linux-solver/kernel/libforgekernel.a": "284a2ec3aaf73aaef98c68481cbfd387b3ce3a3b919dff950827b2ab2f0c2b25"
+  },
+  "baseline_kernel_sha256": "0d55194a95da1b81d8ab0a3565ebf678a75858782c5c8763092456bcae547cc5",
+  "point_oracle": {
+    "bit_comparisons": 22445748,
+    "orders": [
+      0,
+      1,
+      2,
+      4
+    ],
+    "degree_range": [
+      1,
+      31
+    ],
+    "concurrent_final_requests": 2,
+    "bounds_and_cancellation": true
+  },
+  "microbenchmark": {
+    "protocol": "Quattro lotti alternati in un singolo processo,80000valutazioni/lotto; diagnostico del componente, non misura del CAD completo.",
+    "results": [
+      {
+        "u_degree": 1,
+        "v_degree": 1,
+        "rational": false,
+        "samples": {
+          "after": [
+            3.43048,
+            3.47866,
+            3.49905,
+            3.2007
+          ],
+          "before": [
+            4.55101,
+            4.60141,
+            4.25877,
+            4.26253
+          ]
+        },
+        "summary": {
+          "after": {
+            "median_ms": 3.4545700000000004,
+            "min_ms": 3.2007,
+            "max_ms": 3.49905
+          },
+          "before": {
+            "median_ms": 4.40677,
+            "min_ms": 4.25877,
+            "max_ms": 4.60141
+          }
+        },
+        "speedup": 1.2756348836468792
+      },
+      {
+        "u_degree": 1,
+        "v_degree": 1,
+        "rational": true,
+        "samples": {
+          "after": [
+            3.32058,
+            3.41413,
+            3.42487,
+            3.24151
+          ],
+          "before": [
+            4.612,
+            4.60936,
+            4.74323,
+            4.70796
+          ]
+        },
+        "summary": {
+          "after": {
+            "median_ms": 3.367355,
+            "min_ms": 3.24151,
+            "max_ms": 3.42487
+          },
+          "before": {
+            "median_ms": 4.65998,
+            "min_ms": 4.60936,
+            "max_ms": 4.74323
+          }
+        },
+        "speedup": 1.3838695355850512
+      },
+      {
+        "u_degree": 3,
+        "v_degree": 3,
+        "rational": false,
+        "samples": {
+          "after": [
+            7.49808,
+            11.9377,
+            11.8075,
+            11.8282
+          ],
+          "before": [
+            7.99179,
+            13.0641,
+            14.4746,
+            14.2682
+          ]
+        },
+        "summary": {
+          "after": {
+            "median_ms": 11.81785,
+            "min_ms": 7.49808,
+            "max_ms": 11.9377
+          },
+          "before": {
+            "median_ms": 13.66615,
+            "min_ms": 7.99179,
+            "max_ms": 14.4746
+          }
+        },
+        "speedup": 1.1563990065874927
+      },
+      {
+        "u_degree": 3,
+        "v_degree": 3,
+        "rational": true,
+        "samples": {
+          "after": [
+            12.1145,
+            7.03441,
+            9.55092,
+            7.74057
+          ],
+          "before": [
+            14.1405,
+            12.0447,
+            14.4687,
+            8.42529
+          ]
+        },
+        "summary": {
+          "after": {
+            "median_ms": 8.645745,
+            "min_ms": 7.03441,
+            "max_ms": 12.1145
+          },
+          "before": {
+            "median_ms": 13.092600000000001,
+            "min_ms": 8.42529,
+            "max_ms": 14.4687
+          }
+        },
+        "speedup": 1.514340291091167
+      },
+      {
+        "u_degree": 3,
+        "v_degree": 5,
+        "rational": false,
+        "samples": {
+          "after": [
+            9.86889,
+            9.71153,
+            9.62372,
+            9.40531
+          ],
+          "before": [
+            10.7059,
+            10.879,
+            10.5191,
+            10.3568
+          ]
+        },
+        "summary": {
+          "after": {
+            "median_ms": 9.667625000000001,
+            "min_ms": 9.40531,
+            "max_ms": 9.86889
+          },
+          "before": {
+            "median_ms": 10.6125,
+            "min_ms": 10.3568,
+            "max_ms": 10.879
+          }
+        },
+        "speedup": 1.097736000310314
+      },
+      {
+        "u_degree": 3,
+        "v_degree": 5,
+        "rational": true,
+        "samples": {
+          "after": [
+            9.67984,
+            9.80177,
+            10.0252,
+            9.77679
+          ],
+          "before": [
+            11.2777,
+            11.0326,
+            10.9867,
+            10.644
+          ]
+        },
+        "summary": {
+          "after": {
+            "median_ms": 9.78928,
+            "min_ms": 9.67984,
+            "max_ms": 10.0252
+          },
+          "before": {
+            "median_ms": 11.00965,
+            "min_ms": 10.644,
+            "max_ms": 11.2777
+          }
+        },
+        "speedup": 1.1246639180818203
+      },
+      {
+        "u_degree": 5,
+        "v_degree": 5,
+        "rational": false,
+        "samples": {
+          "after": [
+            12.7326,
+            13.0226,
+            12.6922,
+            12.4047
+          ],
+          "before": [
+            13.9349,
+            14.3397,
+            14.4693,
+            14.0903
+          ]
+        },
+        "summary": {
+          "after": {
+            "median_ms": 12.712399999999999,
+            "min_ms": 12.4047,
+            "max_ms": 13.0226
+          },
+          "before": {
+            "median_ms": 14.215,
+            "min_ms": 13.9349,
+            "max_ms": 14.4693
+          }
+        },
+        "speedup": 1.118199553192159
+      },
+      {
+        "u_degree": 5,
+        "v_degree": 5,
+        "rational": true,
+        "samples": {
+          "after": [
+            12.7117,
+            12.9536,
+            12.7471,
+            12.7528
+          ],
+          "before": [
+            14.0013,
+            14.0328,
+            14.1257,
+            14.2525
+          ]
+        },
+        "summary": {
+          "after": {
+            "median_ms": 12.74995,
+            "min_ms": 12.7117,
+            "max_ms": 12.9536
+          },
+          "before": {
+            "median_ms": 14.07925,
+            "min_ms": 14.0013,
+            "max_ms": 14.2525
+          }
+        },
+        "speedup": 1.1042592323891467
+      },
+      {
+        "u_degree": 9,
+        "v_degree": 9,
+        "rational": false,
+        "samples": {
+          "after": [
+            35.315,
+            34.6316,
+            35.1414,
+            35.7978
+          ],
+          "before": [
+            33.263,
+            33.3166,
+            34.2184,
+            34.0025
+          ]
+        },
+        "summary": {
+          "after": {
+            "median_ms": 35.2282,
+            "min_ms": 34.6316,
+            "max_ms": 35.7978
+          },
+          "before": {
+            "median_ms": 33.659549999999996,
+            "min_ms": 33.263,
+            "max_ms": 34.2184
+          }
+        },
+        "speedup": 0.9554717527435406
+      },
+      {
+        "u_degree": 9,
+        "v_degree": 9,
+        "rational": true,
+        "samples": {
+          "after": [
+            34.2638,
+            33.765,
+            33.3581,
+            34.2269
+          ],
+          "before": [
+            34.1722,
+            33.8689,
+            34.7314,
+            34.863
+          ]
+        },
+        "summary": {
+          "after": {
+            "median_ms": 33.99595,
+            "min_ms": 33.3581,
+            "max_ms": 34.2638
+          },
+          "before": {
+            "median_ms": 34.4518,
+            "min_ms": 33.8689,
+            "max_ms": 34.863
+          }
+        },
+        "speedup": 1.0134089501837718
+      },
+      {
+        "u_degree": 31,
+        "v_degree": 3,
+        "rational": false,
+        "samples": {
+          "after": [
+            92.5623,
+            92.2199,
+            92.3891,
+            92.9607
+          ],
+          "before": [
+            93.0155,
+            93.0022,
+            92.4121,
+            91.15
+          ]
+        },
+        "summary": {
+          "after": {
+            "median_ms": 92.47569999999999,
+            "min_ms": 92.2199,
+            "max_ms": 92.9607
+          },
+          "before": {
+            "median_ms": 92.70715,
+            "min_ms": 91.15,
+            "max_ms": 93.0155
+          }
+        },
+        "speedup": 1.0025028196596513
+      },
+      {
+        "u_degree": 31,
+        "v_degree": 3,
+        "rational": true,
+        "samples": {
+          "after": [
+            96.9942,
+            96.332,
+            96.5731,
+            97.2826
+          ],
+          "before": [
+            95.0577,
+            97.1069,
+            96.3277,
+            97.1923
+          ]
+        },
+        "summary": {
+          "after": {
+            "median_ms": 96.78365,
+            "min_ms": 96.332,
+            "max_ms": 97.2826
+          },
+          "before": {
+            "median_ms": 96.7173,
+            "min_ms": 95.0577,
+            "max_ms": 97.1923
+          }
+        },
+        "speedup": 0.9993144503229626
+      }
+    ]
+  },
+  "application_benchmark": {
+    "mouse2-rebuild": {
+      "platform": "Linux-7.3.0-2-cachyos-bore-x86_64-with-glibc2.44",
+      "document_sha256": "7ffa64559f38820ed0f070fa233efc27a2b5ea82ee749e04817a756cb1ae92ce",
+      "document_bytes": 46324125,
+      "binary_sha256": "9c4b350a4b73d0eb9525256ef84c932d8f0726771d7f8e4e847f4626dd8df814",
+      "protocol": "Processi nuovi sequenziali, ordine ruotato, qualit\u00e0 1; firme fuori timer. Tassellazione CPU nel runner; filtro GPU opt-in. RSS include validazione.",
+      "forced_rebuild": true,
+      "profiling_enabled": false,
+      "runs": [
+        {
+          "cached_bodies": 20,
+          "cached_meshes": 2,
+          "cuda_available": false,
+          "cuda_points": 0,
+          "cuda_pool": {
+            "active_bytes": 0,
+            "active_slots": 0,
+            "allocations": 0,
+            "budget_rejections": 0,
+            "idle_bytes": 0,
+            "peak_active_bytes": 0,
+            "peak_active_slots": 0,
+            "reuses": 0
+          },
+          "features": 36,
+          "forced_rebuild": true,
+          "gpu_pairs": 0,
+          "load_seconds": 7.757140964,
+          "open_seconds": 8.111833865000001,
+          "prepared_meshes": 6,
+          "read_seconds": 0.354692901,
+          "sketches": 14,
+          "valid_bodies": 20,
+          "visible_features": 1,
+          "visible_triangles": 30366,
+          "mode": "reference",
+          "repeat": 0,
+          "wall_seconds": 8.979254510006285,
+          "peak_rss_mib": 1277.73046875,
+          "equivalent": true
+        },
+        {
+          "cached_bodies": 20,
+          "cached_meshes": 2,
+          "cuda_available": false,
+          "cuda_points": 0,
+          "cuda_pool": {
+            "active_bytes": 0,
+            "active_slots": 0,
+            "allocations": 0,
+            "budget_rejections": 0,
+            "idle_bytes": 0,
+            "peak_active_bytes": 0,
+            "peak_active_slots": 0,
+            "reuses": 0
+          },
+          "features": 36,
+          "forced_rebuild": true,
+          "gpu_pairs": 0,
+          "load_seconds": 7.697039923,
+          "open_seconds": 8.054404996,
+          "prepared_meshes": 6,
+          "read_seconds": 0.357365073,
+          "sketches": 14,
+          "valid_bodies": 20,
+          "visible_features": 1,
+          "visible_triangles": 30366,
+          "mode": "current",
+          "repeat": 0,
+          "wall_seconds": 8.979114932997618,
+          "peak_rss_mib": 1308.83984375,
+          "equivalent": true
+        },
+        {
+          "cached_bodies": 20,
+          "cached_meshes": 2,
+          "cuda_available": false,
+          "cuda_points": 0,
+          "cuda_pool": {
+            "active_bytes": 0,
+            "active_slots": 0,
+            "allocations": 0,
+            "budget_rejections": 0,
+            "idle_bytes": 0,
+            "peak_active_bytes": 0,
+            "peak_active_slots": 0,
+            "reuses": 0
+          },
+          "features": 36,
+          "forced_rebuild": true,
+          "gpu_pairs": 0,
+          "load_seconds": 7.649481187,
+          "open_seconds": 7.99361445,
+          "prepared_meshes": 6,
+          "read_seconds": 0.344133263,
+          "sketches": 14,
+          "valid_bodies": 20,
+          "visible_features": 1,
+          "visible_triangles": 30366,
+          "mode": "current",
+          "repeat": 1,
+          "wall_seconds": 8.878327986996737,
+          "peak_rss_mib": 1291.6484375,
+          "equivalent": true
+        },
+        {
+          "cached_bodies": 20,
+          "cached_meshes": 2,
+          "cuda_available": false,
+          "cuda_points": 0,
+          "cuda_pool": {
+            "active_bytes": 0,
+            "active_slots": 0,
+            "allocations": 0,
+            "budget_rejections": 0,
+            "idle_bytes": 0,
+            "peak_active_bytes": 0,
+            "peak_active_slots": 0,
+            "reuses": 0
+          },
+          "features": 36,
+          "forced_rebuild": true,
+          "gpu_pairs": 0,
+          "load_seconds": 7.586340699,
+          "open_seconds": 7.932780803,
+          "prepared_meshes": 6,
+          "read_seconds": 0.346440104,
+          "sketches": 14,
+          "valid_bodies": 20,
+          "visible_features": 1,
+          "visible_triangles": 30366,
+          "mode": "reference",
+          "repeat": 1,
+          "wall_seconds": 8.779188033993705,
+          "peak_rss_mib": 1293.74609375,
+          "equivalent": true
+        },
+        {
+          "cached_bodies": 20,
+          "cached_meshes": 2,
+          "cuda_available": false,
+          "cuda_points": 0,
+          "cuda_pool": {
+            "active_bytes": 0,
+            "active_slots": 0,
+            "allocations": 0,
+            "budget_rejections": 0,
+            "idle_bytes": 0,
+            "peak_active_bytes": 0,
+            "peak_active_slots": 0,
+            "reuses": 0
+          },
+          "features": 36,
+          "forced_rebuild": true,
+          "gpu_pairs": 0,
+          "load_seconds": 7.456625879,
+          "open_seconds": 7.788431585,
+          "prepared_meshes": 6,
+          "read_seconds": 0.331805706,
+          "sketches": 14,
+          "valid_bodies": 20,
+          "visible_features": 1,
+          "visible_triangles": 30366,
+          "mode": "reference",
+          "repeat": 2,
+          "wall_seconds": 8.628852942987578,
+          "peak_rss_mib": 1278.05078125,
+          "equivalent": true
+        },
+        {
+          "cached_bodies": 20,
+          "cached_meshes": 2,
+          "cuda_available": false,
+          "cuda_points": 0,
+          "cuda_pool": {
+            "active_bytes": 0,
+            "active_slots": 0,
+            "allocations": 0,
+            "budget_rejections": 0,
+            "idle_bytes": 0,
+            "peak_active_bytes": 0,
+            "peak_active_slots": 0,
+            "reuses": 0
+          },
+          "features": 36,
+          "forced_rebuild": true,
+          "gpu_pairs": 0,
+          "load_seconds": 7.892625381,
+          "open_seconds": 8.227858306,
+          "prepared_meshes": 6,
+          "read_seconds": 0.335232925,
+          "sketches": 14,
+          "valid_bodies": 20,
+          "visible_features": 1,
+          "visible_triangles": 30366,
+          "mode": "current",
+          "repeat": 2,
+          "wall_seconds": 9.181072923005559,
+          "peak_rss_mib": 1274.9375,
+          "equivalent": true
+        },
+        {
+          "cached_bodies": 20,
+          "cached_meshes": 2,
+          "cuda_available": false,
+          "cuda_points": 0,
+          "cuda_pool": {
+            "active_bytes": 0,
+            "active_slots": 0,
+            "allocations": 0,
+            "budget_rejections": 0,
+            "idle_bytes": 0,
+            "peak_active_bytes": 0,
+            "peak_active_slots": 0,
+            "reuses": 0
+          },
+          "features": 36,
+          "forced_rebuild": true,
+          "gpu_pairs": 0,
+          "load_seconds": 8.033512712,
+          "open_seconds": 8.459783594000001,
+          "prepared_meshes": 6,
+          "read_seconds": 0.426270882,
+          "sketches": 14,
+          "valid_bodies": 20,
+          "visible_features": 1,
+          "visible_triangles": 30366,
+          "mode": "current",
+          "repeat": 3,
+          "wall_seconds": 9.428884123000898,
+          "peak_rss_mib": 1256.53515625,
+          "equivalent": true
+        },
+        {
+          "cached_bodies": 20,
+          "cached_meshes": 2,
+          "cuda_available": false,
+          "cuda_points": 0,
+          "cuda_pool": {
+            "active_bytes": 0,
+            "active_slots": 0,
+            "allocations": 0,
+            "budget_rejections": 0,
+            "idle_bytes": 0,
+            "peak_active_bytes": 0,
+            "peak_active_slots": 0,
+            "reuses": 0
+          },
+          "features": 36,
+          "forced_rebuild": true,
+          "gpu_pairs": 0,
+          "load_seconds": 7.814802394,
+          "open_seconds": 8.165627531,
+          "prepared_meshes": 6,
+          "read_seconds": 0.350825137,
+          "sketches": 14,
+          "valid_bodies": 20,
+          "visible_features": 1,
+          "visible_triangles": 30366,
+          "mode": "reference",
+          "repeat": 3,
+          "wall_seconds": 9.028259501006687,
+          "peak_rss_mib": 1236.83984375,
+          "equivalent": true
+        }
+      ],
+      "revision": "4f842a8b9a02a18d9f4abd1238e936901a3a7d30",
+      "sources_sha256": {
+        "CMakeLists.txt": "f176d326659f7b7a4af21b2039e31d298b4e28c560bece42d4e2d917d7e69ca2",
+        "tests/test_viewport.cpp": "9d710f9e776f65541f481b9a2fe2d0013c876ebe5a4ab2a80ef933011ea54590",
+        "tests/test_lazy_mesh.h": "2c9e5bee5cd6d0bfdf5a76eb277390e2dcfeddb57d430d8372841377467695f7",
+        "forgeCad2026_viewport.cpp": "62d7c36d147b50c1c902cf5dd62181e73962510250e13d9158ef1ad38346efd9",
+        "forgeCad2026_viewport_document.cpp": "d40c460dcd7be91d41504699ff602e9e11636e5ed9c6625655e72ca230422e7e",
+        "forgeCad2026_viewport_render.cpp": "fc7c5aa743a495d17bc02f897e253144abdcee04a1cde7ad4edc380054d4ceb3",
+        "cad_document_io.cpp": "e5ac5f1030adb33aa87eeaae129c77c4f8c110308fd62a84b7d5ae8e712a8e0c",
+        "cad_document_read.cpp": "800f227843f77e4779b3b5c73208d1163b72756ca1d93dbb3754d64c394479a2",
+        "cad_document_read.h": "b84a4edb46c650b1894f2c1397ff9aea3ee65bc86c849a32cc052ba15c5c70d5",
+        "tools/benchmark_document_mesh.py": "69d5bd1882649e99126621ee4afb1f8047005c825fc3a7c11d1404486faef221"
+      },
+      "logical_cpus": 16,
+      "reference_binary_sha256": "53d48423d482e9c9b87cf5c009858928e9ab53edd1979c373c41146eafa001a6",
+      "input_unchanged": true,
+      "summary": {
+        "reference": {
+          "median_seconds": 8.022307334,
+          "min_seconds": 7.788431585,
+          "max_seconds": 8.165627531,
+          "median_read_seconds": 0.3486326205,
+          "median_load_seconds": 7.6717408315,
+          "median_peak_rss_mib": 1277.890625
+        },
+        "current": {
+          "median_seconds": 8.141131651,
+          "min_seconds": 7.99361445,
+          "max_seconds": 8.459783594000001,
+          "median_read_seconds": 0.350749168,
+          "median_load_seconds": 7.794832652,
+          "median_peak_rss_mib": 1283.29296875
+        }
+      },
+      "speedup": 0.9854044471832851,
+      "percent_time_saved": -1.4811738325755774,
+      "geometry_sha256": "a352e4743299f29ec7406d7ac17f9283ed1cc8f16046d33127643c37eb810264",
+      "geometry": {
+        "features": 36,
+        "sketches": 14,
+        "valid_bodies": 20,
+        "visible_triangles": 30366,
+        "cuda_available": false,
+        "cuda_points": 0
+      },
+      "errors": []
+    },
+    "mouse2-cached": {
+      "platform": "Linux-7.3.0-2-cachyos-bore-x86_64-with-glibc2.44",
+      "document_sha256": "7ffa64559f38820ed0f070fa233efc27a2b5ea82ee749e04817a756cb1ae92ce",
+      "document_bytes": 46324125,
+      "binary_sha256": "9c4b350a4b73d0eb9525256ef84c932d8f0726771d7f8e4e847f4626dd8df814",
+      "protocol": "Processi nuovi sequenziali, ordine ruotato, qualit\u00e0 1; firme fuori timer. Tassellazione CPU nel runner; filtro GPU opt-in. RSS include validazione.",
+      "forced_rebuild": false,
+      "profiling_enabled": false,
+      "runs": [
+        {
+          "cached_bodies": 20,
+          "cached_meshes": 2,
+          "cuda_available": false,
+          "cuda_points": 0,
+          "cuda_pool": {
+            "active_bytes": 0,
+            "active_slots": 0,
+            "allocations": 0,
+            "budget_rejections": 0,
+            "idle_bytes": 0,
+            "peak_active_bytes": 0,
+            "peak_active_slots": 0,
+            "reuses": 0
+          },
+          "features": 36,
+          "forced_rebuild": false,
+          "gpu_pairs": 0,
+          "load_seconds": 0.887304631,
+          "open_seconds": 1.234382782,
+          "prepared_meshes": 6,
+          "read_seconds": 0.347078151,
+          "sketches": 14,
+          "valid_bodies": 20,
+          "visible_features": 1,
+          "visible_triangles": 30422,
+          "mode": "reference",
+          "repeat": 0,
+          "wall_seconds": 2.5185471320000943,
+          "peak_rss_mib": 1822.83203125,
+          "equivalent": true
+        },
+        {
+          "cached_bodies": 20,
+          "cached_meshes": 2,
+          "cuda_available": false,
+          "cuda_points": 0,
+          "cuda_pool": {
+            "active_bytes": 0,
+            "active_slots": 0,
+            "allocations": 0,
+            "budget_rejections": 0,
+            "idle_bytes": 0,
+            "peak_active_bytes": 0,
+            "peak_active_slots": 0,
+            "reuses": 0
+          },
+          "features": 36,
+          "forced_rebuild": false,
+          "gpu_pairs": 0,
+          "load_seconds": 0.895805617,
+          "open_seconds": 1.2474465110000001,
+          "prepared_meshes": 6,
+          "read_seconds": 0.351640894,
+          "sketches": 14,
+          "valid_bodies": 20,
+          "visible_features": 1,
+          "visible_triangles": 30422,
+          "mode": "current",
+          "repeat": 0,
+          "wall_seconds": 2.4680851709999843,
+          "peak_rss_mib": 1867.37890625,
+          "equivalent": true
+        },
+        {
+          "cached_bodies": 20,
+          "cached_meshes": 2,
+          "cuda_available": false,
+          "cuda_points": 0,
+          "cuda_pool": {
+            "active_bytes": 0,
+            "active_slots": 0,
+            "allocations": 0,
+            "budget_rejections": 0,
+            "idle_bytes": 0,
+            "peak_active_bytes": 0,
+            "peak_active_slots": 0,
+            "reuses": 0
+          },
+          "features": 36,
+          "forced_rebuild": false,
+          "gpu_pairs": 0,
+          "load_seconds": 0.903945799,
+          "open_seconds": 1.259310928,
+          "prepared_meshes": 6,
+          "read_seconds": 0.355365129,
+          "sketches": 14,
+          "valid_bodies": 20,
+          "visible_features": 1,
+          "visible_triangles": 30422,
+          "mode": "current",
+          "repeat": 1,
+          "wall_seconds": 2.4680431690067053,
+          "peak_rss_mib": 1839.64453125,
+          "equivalent": true
+        },
+        {
+          "cached_bodies": 20,
+          "cached_meshes": 2,
+          "cuda_available": false,
+          "cuda_points": 0,
+          "cuda_pool": {
+            "active_bytes": 0,
+            "active_slots": 0,
+            "allocations": 0,
+            "budget_rejections": 0,
+            "idle_bytes": 0,
+            "peak_active_bytes": 0,
+            "peak_active_slots": 0,
+            "reuses": 0
+          },
+          "features": 36,
+          "forced_rebuild": false,
+          "gpu_pairs": 0,
+          "load_seconds": 0.891129973,
+          "open_seconds": 1.249232726,
+          "prepared_meshes": 6,
+          "read_seconds": 0.358102753,
+          "sketches": 14,
+          "valid_bodies": 20,
+          "visible_features": 1,
+          "visible_triangles": 30422,
+          "mode": "reference",
+          "repeat": 1,
+          "wall_seconds": 2.5182853150035953,
+          "peak_rss_mib": 1853.5625,
+          "equivalent": true
+        },
+        {
+          "cached_bodies": 20,
+          "cached_meshes": 2,
+          "cuda_available": false,
+          "cuda_points": 0,
+          "cuda_pool": {
+            "active_bytes": 0,
+            "active_slots": 0,
+            "allocations": 0,
+            "budget_rejections": 0,
+            "idle_bytes": 0,
+            "peak_active_bytes": 0,
+            "peak_active_slots": 0,
+            "reuses": 0
+          },
+          "features": 36,
+          "forced_rebuild": false,
+          "gpu_pairs": 0,
+          "load_seconds": 0.898614926,
+          "open_seconds": 1.245618135,
+          "prepared_meshes": 6,
+          "read_seconds": 0.347003209,
+          "sketches": 14,
+          "valid_bodies": 20,
+          "visible_features": 1,
+          "visible_triangles": 30422,
+          "mode": "reference",
+          "repeat": 2,
+          "wall_seconds": 2.6181200559949502,
+          "peak_rss_mib": 1799.26171875,
+          "equivalent": true
+        },
+        {
+          "cached_bodies": 20,
+          "cached_meshes": 2,
+          "cuda_available": false,
+          "cuda_points": 0,
+          "cuda_pool": {
+            "active_bytes": 0,
+            "active_slots": 0,
+            "allocations": 0,
+            "budget_rejections": 0,
+            "idle_bytes": 0,
+            "peak_active_bytes": 0,
+            "peak_active_slots": 0,
+            "reuses": 0
+          },
+          "features": 36,
+          "forced_rebuild": false,
+          "gpu_pairs": 0,
+          "load_seconds": 0.896052499,
+          "open_seconds": 1.249340912,
+          "prepared_meshes": 6,
+          "read_seconds": 0.353288413,
+          "sketches": 14,
+          "valid_bodies": 20,
+          "visible_features": 1,
+          "visible_triangles": 30422,
+          "mode": "current",
+          "repeat": 2,
+          "wall_seconds": 2.46863763401052,
+          "peak_rss_mib": 1834.57421875,
+          "equivalent": true
+        },
+        {
+          "cached_bodies": 20,
+          "cached_meshes": 2,
+          "cuda_available": false,
+          "cuda_points": 0,
+          "cuda_pool": {
+            "active_bytes": 0,
+            "active_slots": 0,
+            "allocations": 0,
+            "budget_rejections": 0,
+            "idle_bytes": 0,
+            "peak_active_bytes": 0,
+            "peak_active_slots": 0,
+            "reuses": 0
+          },
+          "features": 36,
+          "forced_rebuild": false,
+          "gpu_pairs": 0,
+          "load_seconds": 0.891173858,
+          "open_seconds": 1.243032818,
+          "prepared_meshes": 6,
+          "read_seconds": 0.35185896,
+          "sketches": 14,
+          "valid_bodies": 20,
+          "visible_features": 1,
+          "visible_triangles": 30422,
+          "mode": "current",
+          "repeat": 3,
+          "wall_seconds": 2.517968034997466,
+          "peak_rss_mib": 1828.23828125,
+          "equivalent": true
+        },
+        {
+          "cached_bodies": 20,
+          "cached_meshes": 2,
+          "cuda_available": false,
+          "cuda_points": 0,
+          "cuda_pool": {
+            "active_bytes": 0,
+            "active_slots": 0,
+            "allocations": 0,
+            "budget_rejections": 0,
+            "idle_bytes": 0,
+            "peak_active_bytes": 0,
+            "peak_active_slots": 0,
+            "reuses": 0
+          },
+          "features": 36,
+          "forced_rebuild": false,
+          "gpu_pairs": 0,
+          "load_seconds": 0.901643798,
+          "open_seconds": 1.299122455,
+          "prepared_meshes": 6,
+          "read_seconds": 0.397478657,
+          "sketches": 14,
+          "valid_bodies": 20,
+          "visible_features": 1,
+          "visible_triangles": 30422,
+          "mode": "reference",
+          "repeat": 3,
+          "wall_seconds": 2.7686614980048034,
+          "peak_rss_mib": 1777.28515625,
+          "equivalent": true
+        }
+      ],
+      "revision": "4f842a8b9a02a18d9f4abd1238e936901a3a7d30",
+      "sources_sha256": {
+        "CMakeLists.txt": "f176d326659f7b7a4af21b2039e31d298b4e28c560bece42d4e2d917d7e69ca2",
+        "tests/test_viewport.cpp": "9d710f9e776f65541f481b9a2fe2d0013c876ebe5a4ab2a80ef933011ea54590",
+        "tests/test_lazy_mesh.h": "2c9e5bee5cd6d0bfdf5a76eb277390e2dcfeddb57d430d8372841377467695f7",
+        "forgeCad2026_viewport.cpp": "62d7c36d147b50c1c902cf5dd62181e73962510250e13d9158ef1ad38346efd9",
+        "forgeCad2026_viewport_document.cpp": "d40c460dcd7be91d41504699ff602e9e11636e5ed9c6625655e72ca230422e7e",
+        "forgeCad2026_viewport_render.cpp": "fc7c5aa743a495d17bc02f897e253144abdcee04a1cde7ad4edc380054d4ceb3",
+        "cad_document_io.cpp": "e5ac5f1030adb33aa87eeaae129c77c4f8c110308fd62a84b7d5ae8e712a8e0c",
+        "cad_document_read.cpp": "800f227843f77e4779b3b5c73208d1163b72756ca1d93dbb3754d64c394479a2",
+        "cad_document_read.h": "b84a4edb46c650b1894f2c1397ff9aea3ee65bc86c849a32cc052ba15c5c70d5",
+        "tools/benchmark_document_mesh.py": "69d5bd1882649e99126621ee4afb1f8047005c825fc3a7c11d1404486faef221"
+      },
+      "logical_cpus": 16,
+      "reference_binary_sha256": "53d48423d482e9c9b87cf5c009858928e9ab53edd1979c373c41146eafa001a6",
+      "input_unchanged": true,
+      "summary": {
+        "reference": {
+          "median_seconds": 1.2474254304999999,
+          "min_seconds": 1.234382782,
+          "max_seconds": 1.299122455,
+          "median_read_seconds": 0.352590452,
+          "median_load_seconds": 0.8948724495,
+          "median_peak_rss_mib": 1811.046875
+        },
+        "current": {
+          "median_seconds": 1.2483937115000001,
+          "min_seconds": 1.243032818,
+          "max_seconds": 1.259310928,
+          "median_read_seconds": 0.3525736865,
+          "median_load_seconds": 0.895929058,
+          "median_peak_rss_mib": 1837.109375
+        }
+      },
+      "speedup": 0.9992243785024864,
+      "percent_time_saved": -0.07762235531882933,
+      "geometry_sha256": "1924f0e2a55ffd2d5ca13ba959d72f0573bf49df1230bb2af10526cad698e0f2",
+      "geometry": {
+        "features": 36,
+        "sketches": 14,
+        "valid_bodies": 20,
+        "visible_triangles": 30422,
+        "cuda_available": false,
+        "cuda_points": 0
+      },
+      "errors": []
+    },
+    "assembly-cached": {
+      "platform": "Linux-7.3.0-2-cachyos-bore-x86_64-with-glibc2.44",
+      "document_sha256": "5b3d658321f460e826ff1e3c1415054f003ebc03325aa9e69da2a346be227791",
+      "document_bytes": 94505715,
+      "binary_sha256": "9c4b350a4b73d0eb9525256ef84c932d8f0726771d7f8e4e847f4626dd8df814",
+      "protocol": "Processi nuovi sequenziali, ordine ruotato, qualit\u00e0 1; firme fuori timer. Tassellazione CPU nel runner; filtro GPU opt-in. RSS include validazione.",
+      "forced_rebuild": false,
+      "profiling_enabled": false,
+      "runs": [
+        {
+          "cached_bodies": 1200,
+          "cached_meshes": 1195,
+          "cuda_available": false,
+          "cuda_points": 0,
+          "cuda_pool": {
+            "active_bytes": 0,
+            "active_slots": 0,
+            "allocations": 0,
+            "budget_rejections": 0,
+            "idle_bytes": 0,
+            "peak_active_bytes": 0,
+            "peak_active_slots": 0,
+            "reuses": 0
+          },
+          "features": 1200,
+          "forced_rebuild": false,
+          "gpu_pairs": 0,
+          "load_seconds": 4.588694727,
+          "open_seconds": 5.387709419,
+          "prepared_meshes": 1195,
+          "read_seconds": 0.799014692,
+          "sketches": 0,
+          "valid_bodies": 1200,
+          "visible_features": 1195,
+          "visible_triangles": 11801062,
+          "mode": "reference",
+          "repeat": 0,
+          "wall_seconds": 12.585342759994091,
+          "peak_rss_mib": 1814.8828125,
+          "equivalent": true
+        },
+        {
+          "cached_bodies": 1200,
+          "cached_meshes": 1195,
+          "cuda_available": false,
+          "cuda_points": 0,
+          "cuda_pool": {
+            "active_bytes": 0,
+            "active_slots": 0,
+            "allocations": 0,
+            "budget_rejections": 0,
+            "idle_bytes": 0,
+            "peak_active_bytes": 0,
+            "peak_active_slots": 0,
+            "reuses": 0
+          },
+          "features": 1200,
+          "forced_rebuild": false,
+          "gpu_pairs": 0,
+          "load_seconds": 4.505902352,
+          "open_seconds": 5.296161779999999,
+          "prepared_meshes": 1195,
+          "read_seconds": 0.790259428,
+          "sketches": 0,
+          "valid_bodies": 1200,
+          "visible_features": 1195,
+          "visible_triangles": 11801062,
+          "mode": "current",
+          "repeat": 0,
+          "wall_seconds": 12.487471638989518,
+          "peak_rss_mib": 1815.1484375,
+          "equivalent": true
+        },
+        {
+          "cached_bodies": 1200,
+          "cached_meshes": 1195,
+          "cuda_available": false,
+          "cuda_points": 0,
+          "cuda_pool": {
+            "active_bytes": 0,
+            "active_slots": 0,
+            "allocations": 0,
+            "budget_rejections": 0,
+            "idle_bytes": 0,
+            "peak_active_bytes": 0,
+            "peak_active_slots": 0,
+            "reuses": 0
+          },
+          "features": 1200,
+          "forced_rebuild": false,
+          "gpu_pairs": 0,
+          "load_seconds": 4.765013473,
+          "open_seconds": 5.558878418,
+          "prepared_meshes": 1195,
+          "read_seconds": 0.793864945,
+          "sketches": 0,
+          "valid_bodies": 1200,
+          "visible_features": 1195,
+          "visible_triangles": 11801062,
+          "mode": "current",
+          "repeat": 1,
+          "wall_seconds": 12.735902318992885,
+          "peak_rss_mib": 1810.6875,
+          "equivalent": true
+        },
+        {
+          "cached_bodies": 1200,
+          "cached_meshes": 1195,
+          "cuda_available": false,
+          "cuda_points": 0,
+          "cuda_pool": {
+            "active_bytes": 0,
+            "active_slots": 0,
+            "allocations": 0,
+            "budget_rejections": 0,
+            "idle_bytes": 0,
+            "peak_active_bytes": 0,
+            "peak_active_slots": 0,
+            "reuses": 0
+          },
+          "features": 1200,
+          "forced_rebuild": false,
+          "gpu_pairs": 0,
+          "load_seconds": 4.583694482,
+          "open_seconds": 5.365697285,
+          "prepared_meshes": 1195,
+          "read_seconds": 0.782002803,
+          "sketches": 0,
+          "valid_bodies": 1200,
+          "visible_features": 1195,
+          "visible_triangles": 11801062,
+          "mode": "reference",
+          "repeat": 1,
+          "wall_seconds": 12.586277417998645,
+          "peak_rss_mib": 1823.85546875,
+          "equivalent": true
+        },
+        {
+          "cached_bodies": 1200,
+          "cached_meshes": 1195,
+          "cuda_available": false,
+          "cuda_points": 0,
+          "cuda_pool": {
+            "active_bytes": 0,
+            "active_slots": 0,
+            "allocations": 0,
+            "budget_rejections": 0,
+            "idle_bytes": 0,
+            "peak_active_bytes": 0,
+            "peak_active_slots": 0,
+            "reuses": 0
+          },
+          "features": 1200,
+          "forced_rebuild": false,
+          "gpu_pairs": 0,
+          "load_seconds": 4.514829098,
+          "open_seconds": 5.304153737,
+          "prepared_meshes": 1195,
+          "read_seconds": 0.789324639,
+          "sketches": 0,
+          "valid_bodies": 1200,
+          "visible_features": 1195,
+          "visible_triangles": 11801062,
+          "mode": "reference",
+          "repeat": 2,
+          "wall_seconds": 12.485542904003523,
+          "peak_rss_mib": 1823.3515625,
+          "equivalent": true
+        },
+        {
+          "cached_bodies": 1200,
+          "cached_meshes": 1195,
+          "cuda_available": false,
+          "cuda_points": 0,
+          "cuda_pool": {
+            "active_bytes": 0,
+            "active_slots": 0,
+            "allocations": 0,
+            "budget_rejections": 0,
+            "idle_bytes": 0,
+            "peak_active_bytes": 0,
+            "peak_active_slots": 0,
+            "reuses": 0
+          },
+          "features": 1200,
+          "forced_rebuild": false,
+          "gpu_pairs": 0,
+          "load_seconds": 4.619113844,
+          "open_seconds": 5.414591536,
+          "prepared_meshes": 1195,
+          "read_seconds": 0.795477692,
+          "sketches": 0,
+          "valid_bodies": 1200,
+          "visible_features": 1195,
+          "visible_triangles": 11801062,
+          "mode": "current",
+          "repeat": 2,
+          "wall_seconds": 12.438658926010248,
+          "peak_rss_mib": 1829.05078125,
+          "equivalent": true
+        },
+        {
+          "cached_bodies": 1200,
+          "cached_meshes": 1195,
+          "cuda_available": false,
+          "cuda_points": 0,
+          "cuda_pool": {
+            "active_bytes": 0,
+            "active_slots": 0,
+            "allocations": 0,
+            "budget_rejections": 0,
+            "idle_bytes": 0,
+            "peak_active_bytes": 0,
+            "peak_active_slots": 0,
+            "reuses": 0
+          },
+          "features": 1200,
+          "forced_rebuild": false,
+          "gpu_pairs": 0,
+          "load_seconds": 4.101804054,
+          "open_seconds": 4.904748327,
+          "prepared_meshes": 1195,
+          "read_seconds": 0.802944273,
+          "sketches": 0,
+          "valid_bodies": 1200,
+          "visible_features": 1195,
+          "visible_triangles": 11801062,
+          "mode": "current",
+          "repeat": 3,
+          "wall_seconds": 11.885025300987763,
+          "peak_rss_mib": 1818.93359375,
+          "equivalent": true
+        },
+        {
+          "cached_bodies": 1200,
+          "cached_meshes": 1195,
+          "cuda_available": false,
+          "cuda_points": 0,
+          "cuda_pool": {
+            "active_bytes": 0,
+            "active_slots": 0,
+            "allocations": 0,
+            "budget_rejections": 0,
+            "idle_bytes": 0,
+            "peak_active_bytes": 0,
+            "peak_active_slots": 0,
+            "reuses": 0
+          },
+          "features": 1200,
+          "forced_rebuild": false,
+          "gpu_pairs": 0,
+          "load_seconds": 4.175518749,
+          "open_seconds": 4.957233683,
+          "prepared_meshes": 1195,
+          "read_seconds": 0.781714934,
+          "sketches": 0,
+          "valid_bodies": 1200,
+          "visible_features": 1195,
+          "visible_triangles": 11801062,
+          "mode": "reference",
+          "repeat": 3,
+          "wall_seconds": 11.886251952004386,
+          "peak_rss_mib": 1807.921875,
+          "equivalent": true
+        }
+      ],
+      "revision": "4f842a8b9a02a18d9f4abd1238e936901a3a7d30",
+      "sources_sha256": {
+        "CMakeLists.txt": "f176d326659f7b7a4af21b2039e31d298b4e28c560bece42d4e2d917d7e69ca2",
+        "tests/test_viewport.cpp": "9d710f9e776f65541f481b9a2fe2d0013c876ebe5a4ab2a80ef933011ea54590",
+        "tests/test_lazy_mesh.h": "2c9e5bee5cd6d0bfdf5a76eb277390e2dcfeddb57d430d8372841377467695f7",
+        "forgeCad2026_viewport.cpp": "62d7c36d147b50c1c902cf5dd62181e73962510250e13d9158ef1ad38346efd9",
+        "forgeCad2026_viewport_document.cpp": "d40c460dcd7be91d41504699ff602e9e11636e5ed9c6625655e72ca230422e7e",
+        "forgeCad2026_viewport_render.cpp": "fc7c5aa743a495d17bc02f897e253144abdcee04a1cde7ad4edc380054d4ceb3",
+        "cad_document_io.cpp": "e5ac5f1030adb33aa87eeaae129c77c4f8c110308fd62a84b7d5ae8e712a8e0c",
+        "cad_document_read.cpp": "800f227843f77e4779b3b5c73208d1163b72756ca1d93dbb3754d64c394479a2",
+        "cad_document_read.h": "b84a4edb46c650b1894f2c1397ff9aea3ee65bc86c849a32cc052ba15c5c70d5",
+        "tools/benchmark_document_mesh.py": "69d5bd1882649e99126621ee4afb1f8047005c825fc3a7c11d1404486faef221"
+      },
+      "logical_cpus": 16,
+      "reference_binary_sha256": "53d48423d482e9c9b87cf5c009858928e9ab53edd1979c373c41146eafa001a6",
+      "input_unchanged": true,
+      "summary": {
+        "reference": {
+          "median_seconds": 5.334925511,
+          "min_seconds": 4.957233683,
+          "max_seconds": 5.387709419,
+          "median_read_seconds": 0.785663721,
+          "median_load_seconds": 4.54926179,
+          "median_peak_rss_mib": 1819.1171875
+        },
+        "current": {
+          "median_seconds": 5.355376657999999,
+          "min_seconds": 4.904748327,
+          "max_seconds": 5.558878418,
+          "median_read_seconds": 0.7946713185000001,
+          "median_load_seconds": 4.562508098,
+          "median_peak_rss_mib": 1817.041015625
+        }
+      },
+      "speedup": 0.9961811935357621,
+      "percent_time_saved": -0.38334456512714166,
+      "geometry_sha256": "6bff0b85e60484325d92b5d08b271d290e5c0947743bc0fc0fd8d88e56c3a790",
+      "geometry": {
+        "features": 1200,
+        "sketches": 0,
+        "valid_bodies": 1200,
+        "visible_triangles": 11801062,
+        "cuda_available": false,
+        "cuda_points": 0
+      },
+      "errors": []
+    },
+    "assembly-rebuild": {
+      "platform": "Linux-7.3.0-2-cachyos-bore-x86_64-with-glibc2.44",
+      "document_sha256": "5b3d658321f460e826ff1e3c1415054f003ebc03325aa9e69da2a346be227791",
+      "document_bytes": 94505715,
+      "binary_sha256": "9c4b350a4b73d0eb9525256ef84c932d8f0726771d7f8e4e847f4626dd8df814",
+      "protocol": "Processi nuovi sequenziali, ordine ruotato, qualit\u00e0 1; firme fuori timer. Tassellazione CPU nel runner; filtro GPU opt-in. RSS include validazione.",
+      "forced_rebuild": true,
+      "profiling_enabled": false,
+      "runs": [
+        {
+          "cached_bodies": 1200,
+          "cached_meshes": 1195,
+          "cuda_available": false,
+          "cuda_points": 0,
+          "cuda_pool": {
+            "active_bytes": 0,
+            "active_slots": 0,
+            "allocations": 0,
+            "budget_rejections": 0,
+            "idle_bytes": 0,
+            "peak_active_bytes": 0,
+            "peak_active_slots": 0,
+            "reuses": 0
+          },
+          "features": 1200,
+          "forced_rebuild": true,
+          "gpu_pairs": 0,
+          "load_seconds": 16.002834448,
+          "open_seconds": 16.782527379,
+          "prepared_meshes": 1191,
+          "read_seconds": 0.779692931,
+          "sketches": 0,
+          "valid_bodies": 1196,
+          "visible_features": 1191,
+          "visible_triangles": 11684901,
+          "mode": "reference",
+          "repeat": 0,
+          "wall_seconds": 23.906617020009435,
+          "peak_rss_mib": 1748.34375,
+          "equivalent": true
+        },
+        {
+          "cached_bodies": 1200,
+          "cached_meshes": 1195,
+          "cuda_available": false,
+          "cuda_points": 0,
+          "cuda_pool": {
+            "active_bytes": 0,
+            "active_slots": 0,
+            "allocations": 0,
+            "budget_rejections": 0,
+            "idle_bytes": 0,
+            "peak_active_bytes": 0,
+            "peak_active_slots": 0,
+            "reuses": 0
+          },
+          "features": 1200,
+          "forced_rebuild": true,
+          "gpu_pairs": 0,
+          "load_seconds": 15.959363915,
+          "open_seconds": 16.731998442000002,
+          "prepared_meshes": 1191,
+          "read_seconds": 0.772634527,
+          "sketches": 0,
+          "valid_bodies": 1196,
+          "visible_features": 1191,
+          "visible_triangles": 11684901,
+          "mode": "current",
+          "repeat": 0,
+          "wall_seconds": 23.606241327011958,
+          "peak_rss_mib": 1758.18359375,
+          "equivalent": true
+        },
+        {
+          "cached_bodies": 1200,
+          "cached_meshes": 1195,
+          "cuda_available": false,
+          "cuda_points": 0,
+          "cuda_pool": {
+            "active_bytes": 0,
+            "active_slots": 0,
+            "allocations": 0,
+            "budget_rejections": 0,
+            "idle_bytes": 0,
+            "peak_active_bytes": 0,
+            "peak_active_slots": 0,
+            "reuses": 0
+          },
+          "features": 1200,
+          "forced_rebuild": true,
+          "gpu_pairs": 0,
+          "load_seconds": 15.923155785,
+          "open_seconds": 16.709229877000002,
+          "prepared_meshes": 1191,
+          "read_seconds": 0.786074092,
+          "sketches": 0,
+          "valid_bodies": 1196,
+          "visible_features": 1191,
+          "visible_triangles": 11684901,
+          "mode": "current",
+          "repeat": 1,
+          "wall_seconds": 23.60825352599204,
+          "peak_rss_mib": 1758.09375,
+          "equivalent": true
+        },
+        {
+          "cached_bodies": 1200,
+          "cached_meshes": 1195,
+          "cuda_available": false,
+          "cuda_points": 0,
+          "cuda_pool": {
+            "active_bytes": 0,
+            "active_slots": 0,
+            "allocations": 0,
+            "budget_rejections": 0,
+            "idle_bytes": 0,
+            "peak_active_bytes": 0,
+            "peak_active_slots": 0,
+            "reuses": 0
+          },
+          "features": 1200,
+          "forced_rebuild": true,
+          "gpu_pairs": 0,
+          "load_seconds": 16.055078795,
+          "open_seconds": 16.858736057,
+          "prepared_meshes": 1191,
+          "read_seconds": 0.803657262,
+          "sketches": 0,
+          "valid_bodies": 1196,
+          "visible_features": 1191,
+          "visible_triangles": 11684901,
+          "mode": "reference",
+          "repeat": 1,
+          "wall_seconds": 23.755275575007545,
+          "peak_rss_mib": 1692.40625,
+          "equivalent": true
+        },
+        {
+          "cached_bodies": 1200,
+          "cached_meshes": 1195,
+          "cuda_available": false,
+          "cuda_points": 0,
+          "cuda_pool": {
+            "active_bytes": 0,
+            "active_slots": 0,
+            "allocations": 0,
+            "budget_rejections": 0,
+            "idle_bytes": 0,
+            "peak_active_bytes": 0,
+            "peak_active_slots": 0,
+            "reuses": 0
+          },
+          "features": 1200,
+          "forced_rebuild": true,
+          "gpu_pairs": 0,
+          "load_seconds": 16.11837498,
+          "open_seconds": 16.926389885,
+          "prepared_meshes": 1191,
+          "read_seconds": 0.808014905,
+          "sketches": 0,
+          "valid_bodies": 1196,
+          "visible_features": 1191,
+          "visible_triangles": 11684901,
+          "mode": "reference",
+          "repeat": 2,
+          "wall_seconds": 24.157430375009426,
+          "peak_rss_mib": 1737.86328125,
+          "equivalent": true
+        },
+        {
+          "cached_bodies": 1200,
+          "cached_meshes": 1195,
+          "cuda_available": false,
+          "cuda_points": 0,
+          "cuda_pool": {
+            "active_bytes": 0,
+            "active_slots": 0,
+            "allocations": 0,
+            "budget_rejections": 0,
+            "idle_bytes": 0,
+            "peak_active_bytes": 0,
+            "peak_active_slots": 0,
+            "reuses": 0
+          },
+          "features": 1200,
+          "forced_rebuild": true,
+          "gpu_pairs": 0,
+          "load_seconds": 15.880543473,
+          "open_seconds": 16.699585817,
+          "prepared_meshes": 1191,
+          "read_seconds": 0.819042344,
+          "sketches": 0,
+          "valid_bodies": 1196,
+          "visible_features": 1191,
+          "visible_triangles": 11684901,
+          "mode": "current",
+          "repeat": 2,
+          "wall_seconds": 23.6061452839931,
+          "peak_rss_mib": 1767.3515625,
+          "equivalent": true
+        },
+        {
+          "cached_bodies": 1200,
+          "cached_meshes": 1195,
+          "cuda_available": false,
+          "cuda_points": 0,
+          "cuda_pool": {
+            "active_bytes": 0,
+            "active_slots": 0,
+            "allocations": 0,
+            "budget_rejections": 0,
+            "idle_bytes": 0,
+            "peak_active_bytes": 0,
+            "peak_active_slots": 0,
+            "reuses": 0
+          },
+          "features": 1200,
+          "forced_rebuild": true,
+          "gpu_pairs": 0,
+          "load_seconds": 16.048706962,
+          "open_seconds": 16.874618536,
+          "prepared_meshes": 1191,
+          "read_seconds": 0.825911574,
+          "sketches": 0,
+          "valid_bodies": 1196,
+          "visible_features": 1191,
+          "visible_triangles": 11684901,
+          "mode": "current",
+          "repeat": 3,
+          "wall_seconds": 23.75709598699177,
+          "peak_rss_mib": 1768.265625,
+          "equivalent": true
+        },
+        {
+          "cached_bodies": 1200,
+          "cached_meshes": 1195,
+          "cuda_available": false,
+          "cuda_points": 0,
+          "cuda_pool": {
+            "active_bytes": 0,
+            "active_slots": 0,
+            "allocations": 0,
+            "budget_rejections": 0,
+            "idle_bytes": 0,
+            "peak_active_bytes": 0,
+            "peak_active_slots": 0,
+            "reuses": 0
+          },
+          "features": 1200,
+          "forced_rebuild": true,
+          "gpu_pairs": 0,
+          "load_seconds": 16.191632023,
+          "open_seconds": 17.034522209000002,
+          "prepared_meshes": 1191,
+          "read_seconds": 0.842890186,
+          "sketches": 0,
+          "valid_bodies": 1196,
+          "visible_features": 1191,
+          "visible_triangles": 11684901,
+          "mode": "reference",
+          "repeat": 3,
+          "wall_seconds": 23.906221519006067,
+          "peak_rss_mib": 1762.00390625,
+          "equivalent": true
+        }
+      ],
+      "revision": "4f842a8b9a02a18d9f4abd1238e936901a3a7d30",
+      "sources_sha256": {
+        "CMakeLists.txt": "f176d326659f7b7a4af21b2039e31d298b4e28c560bece42d4e2d917d7e69ca2",
+        "tests/test_viewport.cpp": "9d710f9e776f65541f481b9a2fe2d0013c876ebe5a4ab2a80ef933011ea54590",
+        "tests/test_lazy_mesh.h": "2c9e5bee5cd6d0bfdf5a76eb277390e2dcfeddb57d430d8372841377467695f7",
+        "forgeCad2026_viewport.cpp": "62d7c36d147b50c1c902cf5dd62181e73962510250e13d9158ef1ad38346efd9",
+        "forgeCad2026_viewport_document.cpp": "d40c460dcd7be91d41504699ff602e9e11636e5ed9c6625655e72ca230422e7e",
+        "forgeCad2026_viewport_render.cpp": "fc7c5aa743a495d17bc02f897e253144abdcee04a1cde7ad4edc380054d4ceb3",
+        "cad_document_io.cpp": "e5ac5f1030adb33aa87eeaae129c77c4f8c110308fd62a84b7d5ae8e712a8e0c",
+        "cad_document_read.cpp": "800f227843f77e4779b3b5c73208d1163b72756ca1d93dbb3754d64c394479a2",
+        "cad_document_read.h": "b84a4edb46c650b1894f2c1397ff9aea3ee65bc86c849a32cc052ba15c5c70d5",
+        "tools/benchmark_document_mesh.py": "69d5bd1882649e99126621ee4afb1f8047005c825fc3a7c11d1404486faef221"
+      },
+      "logical_cpus": 16,
+      "reference_binary_sha256": "53d48423d482e9c9b87cf5c009858928e9ab53edd1979c373c41146eafa001a6",
+      "input_unchanged": true,
+      "summary": {
+        "reference": {
+          "median_seconds": 16.892562971,
+          "min_seconds": 16.782527379,
+          "max_seconds": 17.034522209000002,
+          "median_read_seconds": 0.8058360835,
+          "median_load_seconds": 16.0867268875,
+          "median_peak_rss_mib": 1743.103515625
+        },
+        "current": {
+          "median_seconds": 16.720614159500002,
+          "min_seconds": 16.699585817,
+          "max_seconds": 16.874618536,
+          "median_read_seconds": 0.8025582179999999,
+          "median_load_seconds": 15.941259850000002,
+          "median_peak_rss_mib": 1762.767578125
+        }
+      },
+      "speedup": 1.0102836420875307,
+      "percent_time_saved": 1.0178965252057193,
+      "geometry_sha256": "9c974346539bc1c106eabd1bf0a55ee53e9f9426b25befdb855f8afdb7252342",
+      "geometry": {
+        "features": 1200,
+        "sketches": 0,
+        "valid_bodies": 1196,
+        "visible_triangles": 11684901,
+        "cuda_available": false,
+        "cuda_points": 0
+      },
+      "errors": [
+        {
+          "index": 274,
+          "error": "Il corpo importato non contiene geometria."
+        },
+        {
+          "index": 281,
+          "error": "Il corpo importato non contiene geometria."
+        },
+        {
+          "index": 288,
+          "error": "Il corpo importato non contiene geometria."
+        },
+        {
+          "index": 295,
+          "error": "Il corpo importato non contiene geometria."
+        }
+      ]
+    }
+  },
+  "application_acceleration_demonstrated": false,
+  "kernel_selected": {
+    "passed": 217,
+    "total": 219,
+    "preexisting_failures_confirmed_on_baseline": [
+      "BlendVanishingAtTangentMitreEnd",
+      "BlendArcsMeetingSegments"
+    ]
+  },
+  "new_surface_tests_on_baseline": {
+    "passed": 7,
+    "total": 7
+  },
+  "ctest_selected": {
+    "passed": 44,
+    "total": 44,
+    "seconds": 13.75
+  },
+  "native_qa": {
+    "passed": true,
+    "preview_reopens": 3,
+    "changed_pixels_each": 0,
+    "gl_errors": 0,
+    "rebuild_errors": 0,
+    "blend_owner": 17,
+    "blend_faces": 19,
+    "edit_undo_redo_roundtrip": true
+  },
+  "architecture": {
+    "files": 496,
+    "edges": 6735,
+    "translation_units": 235,
+    "errors": {},
+    "valid_sites": 80801,
+    "boundaries": [
+      {
+        "source": "kernel/fk_bspline_surface.cpp",
+        "symbol": "basisFunctionDerivatives",
+        "both_directions": true,
+        "targets": [
+          "kernel/fk_bspline_basis.cpp"
+        ]
+      },
+      {
+        "source": "kernel/fk_surface.cpp",
+        "symbol": "evaluate",
+        "both_directions": true,
+        "targets": [
+          "kernel/fk_curve.h",
+          "kernel/fk_surface.h"
+        ]
+      },
+      {
+        "source": "kernel/fk_surface_algo.cpp",
+        "symbol": "evaluate",
+        "both_directions": true,
+        "targets": [
+          "kernel/fk_bspline_surface.cpp",
+          "kernel/fk_surface.h"
+        ]
+      },
+      {
+        "source": "kernel/tests/test_bspline_surface.cpp",
+        "symbol": "evaluate",
+        "both_directions": true,
+        "targets": [
+          "kernel/fk_bspline_surface.cpp"
+        ]
+      }
+    ],
+    "includes_distinct": true,
+    "visual_inspected": true
+  },
+  "commit_push_performed": false
+}
