@@ -41,6 +41,10 @@ anche in caso di errore quando quei file sono stati prodotti. Due compilazioni
 simultanee e due test simultanei limitano il consumo di memoria. Un nuovo push
 sullo stesso branch annulla l'esecuzione precedente ancora in corso.
 
+Il limite generale è di quindici minuti per test CTest: la suite generale del
+kernel è una singola voce che racchiude centinaia di casi. I limiti più brevi
+impostati esplicitamente da CMake per le singole suite restano applicati.
+
 Il workflow dispone della sola lettura dei sorgenti e non richiede segreti
 personali. Il token temporaneo fornito da GitHub viene usato dalle azioni;
 la procedura non esegue push, pubblicazioni o installazioni sulle macchine
@@ -59,7 +63,7 @@ cmake --build build-ci --parallel 2
 QT_QPA_PLATFORM=offscreen QT_QPA_OFFSCREEN_NO_GLX=1 \
 QT_QPA_PLATFORMTHEME= QT_STYLE_OVERRIDE=Fusion LIBGL_ALWAYS_SOFTWARE=1 \
   ctest --test-dir build-ci --output-on-failure --no-tests=error \
-    --parallel 2 --timeout 300 --output-junit build-ci/ctest.xml
+    --parallel 2 --timeout 900 --output-junit "$PWD/build-ci/ctest.xml"
 ```
 
 Usare una cartella nuova, senza cache provenienti da altre macchine. Su una

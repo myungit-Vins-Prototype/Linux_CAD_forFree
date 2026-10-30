@@ -56,7 +56,7 @@ jobs:
       - name: Esegui i test
         run: |
           ctest --test-dir build-ci --output-on-failure --no-tests=error \
-            --parallel 2 --timeout 300 \
+            --parallel 2 --timeout 900 \
             --output-junit "$RUNNER_TEMP/ctest.xml" \
             2>&1 | tee "$RUNNER_TEMP/ctest.log"
 
