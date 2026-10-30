@@ -120,6 +120,9 @@ struct DrawingAttachment {
     DrawingSectionReference curve;
     DrawingPointRole role=DrawingPointRole::Curve;
     double fraction=0; // frazione di lunghezza, non parametro della curva
+    // Exact model-space witness for legacy endpoints with shared topology names.
+    // It restricts the named anchor; a moved endpoint must be checked again.
+    std::optional<Kernel::Vec3> endpointWitness;
     QString supportFace;
     int curveSide=0,anchorSide=0; // lati UV esatti: Umin/Umax/Vmin/Vmax
     bool polar=false; // frazione angolare nel piano, per punti sulle coniche

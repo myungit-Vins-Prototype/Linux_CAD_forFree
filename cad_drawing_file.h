@@ -29,6 +29,9 @@ QString drawingModelDefinitionHash(const DocumentState &document,QByteArray &has
 // nuovi nomi topologici degli schizzi che quel formato non rappresentava.
 QString drawingModelDefinitionMatches(const DocumentState &document,const QByteArray &expected,bool &matches);
 QString prepareDrawingEditorModel(DocumentState &document,DrawingEditorModel &model);
+// Migra nomi legacy sullo stesso snapshot verificando identita di curva e punto.
+// Il chiamante deve avere verificato l'impronta della definizione del modello.
+int upgradeDrawingFileReferences(DrawingFile &drawing,const DrawingEditorModel &model);
 // Legge il modello esatto richiesto; non ripiega sull'ultima versione di una
 // copia di lavoro quando la tavola riferisce un check-in preciso.
 QString loadDrawingModel(const QString &drawingPath,const DrawingFile &drawing,DocumentState &model,

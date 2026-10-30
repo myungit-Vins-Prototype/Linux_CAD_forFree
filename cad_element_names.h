@@ -63,6 +63,10 @@ QString featureEvolutionText(const Kernel::Body &body);
 
 // Nomi delle entita' del B-rep (nullptr se non e' registrato).
 std::shared_ptr<const Kernel::ElementNames> elementNamesOf(const Kernel::Body &body);
+// Compatibilita delle vecchie tavole aperte direttamente dallo snapshot:
+// riproduce i nomi della sola feature senza i nomi degli operandi. Usare
+// soltanto sul B-rep salvato, per migrare gli agganci ai nomi completi.
+std::shared_ptr<const Kernel::ElementNames> legacyDrawingElementNames(const Kernel::Body &body);
 // Genealogia rispetto agli operandi registrati (nullptr se non registrato).
 std::shared_ptr<const Kernel::BodyHistory> featureHistoryOf(const Kernel::Body &body);
 // Nome principale dell'entita' (vuoto se non c'e').

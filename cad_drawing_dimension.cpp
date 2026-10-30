@@ -127,6 +127,7 @@ bool anchorAt(const DrawingView &view,const DrawingSourceBody &source,const Draw
         auto original=curve;original.curve=curve.sourceGeometry;auto plain=view;plain.step.reset();plain.bend.reset();
         return anchorAt(plain,source,original,ref,curve.unfoldedToSource?curve.unfoldedToSource->applyToPoint(point):point+shift);
     }
+    if(ref.endpointWitness&&distance(point,*ref.endpointWitness)>view.tolerance)return false;
     if(ref.clipBoundary){
         if(view.kind!=DrawingViewKind::Section||view.sectionStyle==DrawingSectionStyle::Removed)return false;
         if((ref.clipBoundary&2)&&!drawingHalfSection(view))return false;
@@ -257,6 +258,9 @@ QString validateDrawingAttachments(const DrawingDimension &d,const DrawingView &
         if(d.references.empty()){need(int(d.measure)<=3,"Quota senza riferimenti di aggancio.");return {};}
         need(d.references.size()<=2,"Troppi riferimenti della quota.");const DrawingAttachment *primary=nullptr;
         for(const auto &r:d.references){need(r.clipBoundary>=0&&(r.clipBoundary<=3||(r.clipBoundary==4&&view.step)||(r.clipBoundary==5&&view.bend))&&(!r.clipBoundary||(!drawingDatum(r.role)&&r.vertexName.isEmpty()&&r.boundaryName.isEmpty()&&view.kind==DrawingViewKind::Section)),"Origine dell'aggancio di taglio non valida.");need(int(r.role)>=0&&int(r.role)<=12&&std::isfinite(r.fraction)&&r.fraction>=0&&r.fraction<=1,"Aggancio della quota non valido.");
+            need(!r.endpointWitness||(isFinite(*r.endpointWitness)&&r.axisId.isNull()&&!r.polar
+                &&r.curve.kind==DrawingCurveKind::Section&&(r.role==DrawingPointRole::Start||r.role==DrawingPointRole::End)
+                &&(!r.vertexName.isEmpty()||!r.boundaryName.isEmpty())),"Testimone dell'estremo incompatibile con l'aggancio.");
             need(r.supportFace.size()<=4096&&r.curveSide>=0&&r.curveSide<=15&&r.anchorSide>=0&&r.anchorSide<=15,"Localizzatore della faccia non valido.");
             need((r.curveSide||r.anchorSide)?!r.supportFace.isEmpty():r.supportFace.isEmpty(),"Faccia di supporto incoerente.");
             need((r.curveSide&3)!=3&&(r.curveSide&12)!=12&&(r.anchorSide&3)!=3&&(r.anchorSide&12)!=12,"Lati UV incompatibili.");

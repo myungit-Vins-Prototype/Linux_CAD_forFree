@@ -342,6 +342,7 @@ void transportAttachment(DrawingAttachment &ref,const DrawingView &before,const 
 bool sameDimension(const DrawingDimension &a,const DrawingDimension &b){
     if(a.angleSides!=b.angleSides||a.decimals!=b.decimals||a.references.size()!=b.references.size())return false;
     for(std::size_t i=0;i<a.references.size();++i){const auto &x=a.references[i],&y=b.references[i];
+        if(x.endpointWitness.has_value()!=y.endpointWitness.has_value()||(x.endpointWitness&&distance(*x.endpointWitness,*y.endpointWitness)!=0))return false;
         if(x.axisId!=y.axisId||x.clipBoundary!=y.clipBoundary||x.role!=y.role||x.fraction!=y.fraction||x.polar!=y.polar||x.vertexName!=y.vertexName||x.boundaryName!=y.boundaryName||x.supportFace!=y.supportFace||x.curveSide!=y.curveSide||x.anchorSide!=y.anchorSide
             ||x.curve.featureId!=y.curve.featureId||x.curve.kind!=y.curve.kind||x.curve.contourSide!=y.curve.contourSide||x.curve.faceName!=y.curve.faceName||x.curve.edgeName!=y.curve.edgeName||x.curve.requiresWitness!=y.curve.requiresWitness||distance(x.curve.witness,y.curve.witness)!=0)return false;}
     const auto &x=a.section,&y=b.section;

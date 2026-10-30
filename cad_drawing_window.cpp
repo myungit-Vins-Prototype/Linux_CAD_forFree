@@ -198,6 +198,9 @@ void DrawingWindow::loadContents(const QString &path,DrawingFile prepared){
     DrawingEditorModel geometry;geometry.snapshot.version=prepared.sheet.drawing.model;
     if(error.isEmpty()&&!changed)error=prepareDrawingEditorModel(source,geometry);
     const bool available=error.isEmpty()&&!changed;
+    QByteArray beforeUpgrade;
+    const bool canUpgrade=available&&encodeDrawingFile(prepared,beforeUpgrade).isEmpty();
+    const int upgraded=canUpgrade?upgradeDrawingFileReferences(prepared,geometry):0;
     if(!available){geometry={};geometry.snapshot.version=prepared.sheet.drawing.model;}
     activeSheet_=0;modelBaseCheckinId_=available?source.baseCheckinId:QUuid();drawing_=std::move(prepared);model_=std::move(geometry);path_=path;
     sourcePath_=resolved.isEmpty()?QDir(QFileInfo(path_).absolutePath()).absoluteFilePath(drawing_.modelPath):resolved;
@@ -205,7 +208,12 @@ void DrawingWindow::loadContents(const QString &path,DrawingFile prepared){
     sourceReady_=available;containerDirty_=false;modified_=false;
     sourceStatus_->setText(changed?QStringLiteral("Il modello salvato e' cambiato: premere Aggiorna dal .prt salvato per ricalcolare viste e quote."):
         QStringLiteral("Modello non disponibile: %1. Individuare il modello per verificare le quote.").arg(error));
-    installEditor();refreshTitle();
+    installEditor();
+    if(upgraded&&drawing_.sheet.drawing.version.checkinId.isNull()&&!editAccess_.readOnly){
+        savedDrawing_=beforeUpgrade;containerDirty_=true;modified_=true;
+        sourceStatus_->setText(QStringLiteral("Riferimenti della tavola aggiornati per la rigenerazione. Salvare la tavola per conservarli."));
+    }
+    refreshTitle();
 }
 QString DrawingWindow::updateFromSource(const QString &overridePath){
     const auto accessError=requireEditAccess();if(!accessError.isEmpty())return accessError;
@@ -227,6 +235,7 @@ QString DrawingWindow::updateFromSource(const QString &overridePath){
     QByteArray digest;error=drawingModelDefinitionHash(source,digest);if(!error.isEmpty())return error;
     DrawingEditorModel geometry;error=prepareDrawingEditorModel(source,geometry);if(!error.isEmpty())return error;
     auto prepared=drawing_;prepared.modelDefinitionHash=digest;
+    if(!changed)upgradeDrawingFileReferences(prepared,geometry);
     error=updateSheetsModel(std::move(prepared),geometry);if(!error.isEmpty())return error;
     modelBaseCheckinId_=source.baseCheckinId;model_=std::move(geometry);drawing_.modelDefinitionHash=digest;sourcePath_=resolved;
     drawing_.modelPath=path_.isEmpty()?resolved:QDir(QFileInfo(path_).absolutePath()).relativeFilePath(resolved);

@@ -528,7 +528,8 @@ QString encodeDrawingDocument(const DrawingDocument &document, QByteArray &bytes
         const bool bent=std::any_of(document.views.begin(),document.views.end(),[](const auto &v){return v.bend.has_value();});
         const bool ordinate=std::any_of(document.dimensions.begin(),document.dimensions.end(),[](const auto &d){return drawingOrdinate(d.measure);});
         const bool profileRadius=std::any_of(document.dimensions.begin(),document.dimensions.end(),[](const auto &d){return d.measure==DrawingMeasure::ProfileRadius;});
-        const bool technical=profileRadius||ordinate||bent||stepped||apparentArc||apparent||axisReferences||drawingNeedsSectionSchema(document);
+        const bool endpointWitness=std::any_of(document.dimensions.begin(),document.dimensions.end(),[](const auto &d){return std::any_of(d.references.begin(),d.references.end(),[](const auto &r){return r.endpointWitness.has_value();});});
+        const bool technical=endpointWitness||profileRadius||ordinate||bent||stepped||apparentArc||apparent||axisReferences||drawingNeedsSectionSchema(document);
         const bool attachments=technical||std::any_of(document.dimensions.begin(),document.dimensions.end(),[](const auto &d){return !d.references.empty()||d.decimals!=2;});
         const bool extended=attachments||std::any_of(document.views.begin(),document.views.end(),[](const auto &view){return view.kind!=DrawingViewKind::Section;})
             ||std::any_of(document.dimensions.begin(),document.dimensions.end(),[](const auto &dimension){return int(dimension.measure)>1;});
@@ -546,10 +547,10 @@ QString encodeDrawingDocument(const DrawingDocument &document, QByteArray &bytes
             if(attachments){QJsonArray references;for(const auto &r:dimension.references){references.append(QJsonObject{
                 {"featureId",QString::number(r.curve.featureId)},{"faceName",r.curve.faceName},{"edgeName",r.curve.edgeName},{"kind",int(r.curve.kind)},
                 {"witness",QJsonArray{r.curve.witness.x(),r.curve.witness.y()}},{"requiresWitness",r.curve.requiresWitness},
-                {"role",int(r.role)},{"fraction",r.fraction},{"polar",r.polar},{"supportFace",r.supportFace},{"curveSide",r.curveSide},{"anchorSide",r.anchorSide},{"vertex",r.vertexName},{"boundary",r.boundaryName}});if(technical){auto object=references.last().toObject();if(r.curve.contourSide)object["contourSide"]=r.curve.contourSide;object["clipBoundary"]=r.clipBoundary;if(!r.axisId.isNull())object["axisId"]=uuidText(r.axisId);references[references.size()-1]=object;}}
+                {"role",int(r.role)},{"fraction",r.fraction},{"polar",r.polar},{"supportFace",r.supportFace},{"curveSide",r.curveSide},{"anchorSide",r.anchorSide},{"vertex",r.vertexName},{"boundary",r.boundaryName}});if(technical){auto object=references.last().toObject();if(r.endpointWitness)object["endpointWitness"]=vectorJson(*r.endpointWitness);if(r.curve.contourSide)object["contourSide"]=r.curve.contourSide;object["clipBoundary"]=r.clipBoundary;if(!r.axisId.isNull())object["axisId"]=uuidText(r.axisId);references[references.size()-1]=object;}}
                 object["references"]=references;object["angleSides"]=dimension.angleSides;object["decimals"]=dimension.decimals;}
             dimensions.append(object);}
-        const QByteArray prepared=QJsonDocument(QJsonObject{{"format","ForgeCAD.DrawingPrototype"},{"schema",profileRadius?12:ordinate?11:bent?10:multiple?9:stepped?8:apparentArc?7:apparent?6:axisReferences?5:technical?4:attachments?3:extended?2:1},
+        const QByteArray prepared=QJsonDocument(QJsonObject{{"format","ForgeCAD.DrawingPrototype"},{"schema",endpointWitness?13:profileRadius?12:ordinate?11:bent?10:multiple?9:stepped?8:apparentArc?7:apparent?6:axisReferences?5:technical?4:attachments?3:extended?2:1},
             {"version",versionJson(document.version)},{"model",versionJson(document.model)},{"views",views},{"dimensions",dimensions}}).toJson(QJsonDocument::Compact);
         require(prepared.size() <= kMaxDrawingBytes, "Tavola troppo grande per il codec del prototipo.");
         bytes = prepared;
@@ -565,7 +566,7 @@ QString decodeDrawingDocument(const QByteArray &bytes, DrawingDocument &document
         require(parse.error == QJsonParseError::NoError && json.isObject(), "Documento tavola JSON non valido.");
         const auto root = json.object();
         const double schema=root["schema"].toDouble(-1);
-        require(root["format"].toString()==QLatin1String("ForgeCAD.DrawingPrototype")&&(schema==1||schema==2||schema==3||schema==4||schema==5||schema==6||schema==7||schema==8||schema==9||schema==10||schema==11||schema==12),"Formato o schema della tavola non supportato.");
+        require(root["format"].toString()==QLatin1String("ForgeCAD.DrawingPrototype")&&(schema==1||schema==2||schema==3||schema==4||schema==5||schema==6||schema==7||schema==8||schema==9||schema==10||schema==11||schema==12||schema==13),"Formato o schema della tavola non supportato.");
         require(root["views"].isArray() && root["dimensions"].isArray(), "Elenchi della tavola assenti.");
         const auto views = root["views"].toArray(), dimensions = root["dimensions"].toArray();
         require(views.size() <= qsizetype(kMaxRecords) && dimensions.size() <= qsizetype(kMaxRecords), "Troppi elementi nella tavola.");
@@ -627,6 +628,7 @@ QString decodeDrawingDocument(const QByteArray &bytes, DrawingDocument &document
                     const auto witness=r["witness"].toArray();require(r["witness"].isArray()&&witness.size()==2&&witness[0].isDouble()&&witness[1].isDouble()&&r["requiresWitness"].isBool()&&r["fraction"].isDouble()&&r["polar"].isBool(),"Parametri dell'aggancio non validi.");
                     a.curve.witness=Vec2(witness[0].toDouble(),witness[1].toDouble());a.curve.requiresWitness=r["requiresWitness"].toBool();
                     if(schema>=4){const auto boundary=r["clipBoundary"].toDouble(-1);require(boundary>=0&&(boundary<=3||(schema>=8&&boundary==4)||(schema>=10&&boundary==5))&&boundary==std::floor(boundary),"Origine di taglio dell'aggancio non valida.");a.clipBoundary=int(boundary);}else require(!r.contains("clipBoundary"),"Origine di taglio estranea allo schema dichiarato.");
+                    if(r.contains("endpointWitness")){require(schema>=13,"Testimone dell’estremo estraneo allo schema dichiarato.");a.endpointWitness=readVector(r["endpointWitness"]);}
                     if(r.contains("axisId")){require(schema>=5,"Asse estraneo allo schema degli agganci.");a.axisId=readUuid(r["axisId"]);}
                     a.fraction=r["fraction"].toDouble();a.polar=r["polar"].toBool();dimension.references.push_back(std::move(a));
                 }
