@@ -20,6 +20,8 @@ Costruisci solidi parametrici e superfici a forma libera, modifica la storia del
 
 **Stato del progetto:** in sviluppo attivo, con interfaccia dell’applicazione in italiano. Il progetto è sviluppato con l’aiuto dell’intelligenza artificiale. Leggi i [limiti](#limiti-e-licenza) prima di affidarti al programma per un particolare flusso di lavoro.
 
+Lo sviluppo è unificato su `main`. CUDA e Metal restano backend opzionali negli stessi sorgenti; gli esperimenti usano rami brevi e richiedono misure sui casi interessati prima dell’integrazione.
+
 ## Da dove iniziare
 
 1. Installa le [dipendenze](#requisiti), quindi segui le istruzioni di compilazione dai sorgenti per [Linux](#installazione-su-linux) o [macOS](#installazione-su-macos).

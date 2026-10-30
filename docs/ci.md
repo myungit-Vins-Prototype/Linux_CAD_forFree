@@ -83,6 +83,12 @@ Su un processore compatibile AVX2/FMA, per riprodurre anche il percorso
 `x86-64-v3`, aggiungere `-DCMAKE_CXX_FLAGS=-march=x86-64-v3` alla configurazione
 in una cartella dedicata. Non usare questa opzione sulle altre architetture.
 
+Il kernel rileva con una prova di compilazione e link la disponibilità di
+`std::from_chars` per i decimali. Le versioni di libc++ Apple che non lo offrono
+usano `strtod_l` con locale C privato e un token limitato al buffer ricevuto.
+Le regressioni STEP verificano anche subnormali, overflow e input non terminati
+da NUL, senza modificare il locale globale dell'applicazione.
+
 Il test di trascinamento costruisce e consegna ogni evento del mouse prima di
 creare quello successivo, evitando che lo stato globale condiviso del puntatore
 in Qt 6.10 alteri la posizione della pressione. Il volume del raccordo dell'intero

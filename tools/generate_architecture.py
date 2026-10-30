@@ -40,7 +40,7 @@ GROUPS = [
  ('build', 'Build e strumenti', 'Configurazione, generazione e confezionamento del software.')]
 # Descrizioni curate: aggiornare queste voci quando cambia il confine di un modulo.
 DESCRIPTIONS = {
- '.github/workflows/ci.yml': ('build', 'GitHub Actions su Ubuntu26.04: dipendenze, compilazione Release completa e CTest autosufficienti CPU/offscreen; log e JUnit conservati, esclusi viewport con documenti esterni e verifiche GPU native.'),
+ '.github/workflows/ci.yml': ('build', 'GitHub Actions su Ubuntu26.04 e macOS15: compilazione Release completa senza CUDA e CTest autosufficienti CPU/offscreen, Metal su Apple; log e JUnit conservati, GPU assente distinta tramite SKIP.'),
  'cad_surface_tools': ('features', 'Estensione fino a riferimenti multipli: raggruppamento delle facce e cucitura del target; rete U/V e poli NURBS, storia e codec opzionale dei target nel formato53.'),
  'fk_surface_tools': ('kernel', 'Reti a celle Coons cucite, prolungamento e selezione dai pezzi gia intersecati senza secondo split, modifica relativa di poli/pesi con ricostruzione dei bordi e trim UV conservati.'),
  'forgeCad2026_dialogs_surface_tools.cpp': ('dialogs', 'Pannelli superfici: bordo libero iniziale, selezione continua di più target con lista, toggle/rimozione e termine per anteprima; famiglie U/V; poli multipli con gizmo globale/locale e anteprima al rilascio.'),
@@ -146,7 +146,7 @@ DESCRIPTIONS.update({'tools/open_architecture.py': ('build', 'Avvio locale della
  'tests/test_pattern_history_repair.h': ('tests', 'Una sola feature per specchi e ripetizioni con corpi distinti: GUI, cursore atomico, modifica, riordino, inserimento, Undo/Redo e codec; compatibilita storica e riparazione riferimenti dal pannello.'),
  'forgeCad2026_viewport_selection.cpp': ('viewport', 'Selezione e riferimenti del viewport: in modifica sceglie risultati e operandi precedenti alla feature, anche dopo anteprima fallita o Azzera; Esc ripristina la scena finale.'),
  'kernel/tests/test_curve_algo.cpp': ('tests', 'Proiezioni contro OCCT, filtro esaustivo e linea analitica4096tratti: range inclusivi/ristretti, estremi e concorrenza; quadratura e cache delle lunghezze.'),
- 'kernel/fk_exchange.cpp': ('kernel', 'Modello di scambio e assemblaggio: cucitura, campioni UV locali e proiezioni esaustive entro distanza con scarto conservativo dei tratti lontani; verifica 3D e topologia conservate.'),
+ 'kernel/fk_exchange.cpp': ('kernel', 'Modello di scambio e assemblaggio: cucitura, campioni UV locali e proiezioni entro distanza; numeri STEP/IGES indipendenti dal locale, from_chars o fallback strtod_l a buffer limitato per libc++ Apple.'),
  'kernel/tests/test_offset.cpp': ('tests', 'Offset e cuciture: parametrizzazioni/versi diversi, curve chiuse, confine della tolleranza, pcurve e orientamento dei solidi; input immutato.'),
  'kernel/fk_constraint_linear.h': ('kernel', 'Algebra del solver: componenti, riordino BFS delle righe, Cholesky a banda stretta o densa con regolarizzazione globale, rango per componenti.'),
  'kernel/fk_box_batch.h': ('kernel', 'Acceleratore esterno opzionale per box: maschera conservativa condivisa dalle booleane con ripiego BVH CPU.'),
@@ -314,7 +314,7 @@ DESCRIPTIONS.update({'tools/open_architecture.py': ('build', 'Avvio locale della
  'forgeCad2026_glass_compositor': ('render',
                                    'Compositore dei fondali sfocati dei pannelli, con maschera arrotondata '
                                    'analitica e antialias per pixel, shader e framebuffer propri.'),
- 'kernel/CMakeLists.txt': ('build', 'Definisce libreria geometrica, target di verifica e arrotondamento coerente senza contrazione FMA implicita nei chiamanti CPU C++/Objective-C++.')})
+ 'kernel/CMakeLists.txt': ('build', 'Definisce libreria geometrica, test, rilevamento from_chars decimale e arrotondamento coerente senza contrazione FMA implicita nei chiamanti CPU C++/Objective-C++.')})
 
 TOKEN_DESCRIPTIONS = {
  'viewport':'Vista e interazione', 'constraint':'Vincoli geometrici', 'solver':'Risoluzione numerica',

@@ -20,6 +20,8 @@ Build parametric solids and freeform surfaces, edit their modeling history, and 
 
 **Project status:** under active development, with an Italian-language application interface. This project is developed with the help of artificial intelligence. The English guide retains Italian menu labels so you can find the commands in the application. Read the [limitations](#limitations-and-license) before relying on it for a particular workflow.
 
+Development is unified on `main`. CUDA and Metal remain optional backends in the same source tree; experiments use short-lived branches and require workload-specific measurements before integration.
+
 ## Get started
 
 1. Install the [dependencies](#requirements), then follow the source build instructions for [Linux](#installing-on-linux) or [macOS](#installing-on-macos).
