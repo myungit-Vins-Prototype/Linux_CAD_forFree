@@ -1,10 +1,13 @@
 # CLAUDE.md
 
-### 2026-10-30 — Commit e push degli incrementi tavole 2D (in pubblicazione)
+### 2026-10-30 — Commit e push degli incrementi tavole 2D (completati)
 
 - Autorizzazione esplicita: utente chiede commit e push dopo la verifica degli snap già nel primo posizionamento. Fetch origin riuscito; main e origin/main identici al commit6f9c6d8, nessun merge necessario.
 - Ambito: allineamento testi e punte, anteprima e conferma iniziale, rugosità strutturate Ra/Rz, regressioni e roadmap; inclusa la regola .gitignore per gli archivi diagnostici della precedente pulizia. Preparato elenco esplicito dei18file sorgente/test/documentazione; nessuna build, mappa generata, archivio o CAD personale incluso.
 - Preflight: git diff --check e mappa --check PASS; confermati gli esiti già eseguiti della build completa,37/37CTest,GUI offscreen/XCB e PDF identici durante anteprima. Nessun sorgente cambiato dopo quelle verifiche; nessuna ricompilazione o ripetizione dei test per il solo commit. Commit e push ancora da eseguire.
+
+
+- Pubblicazione verificata: commit91e3d98159a7ff5e11a09f58a5835a3c766c91fe «Aggiunge snap grafici delle quote e rugosità Ra/Rz»,18file/733inserimenti/58rimozioni; push origin main riuscito da6f9c6d8 a91e3d98,senza force. Dopo il push HEAD e origin/main identici e working tree pulito. Aggiunta soltanto questa registrazione conclusiva, senza modificare i sorgenti già compilati e verificati. Nessun nuovo test o riavvio dell’app necessario per la pubblicazione; esito della CI remota non verificato in questo intervento.
 
 
 ### 2026-10-30 — Snap durante il primo posizionamento della quota (completato e verificato)
