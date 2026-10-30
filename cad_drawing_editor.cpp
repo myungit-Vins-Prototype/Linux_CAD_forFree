@@ -21,6 +21,7 @@
 #include "cad_toolbar.h"
 #include "fk_classify.h"
 #include "fk_curve_algo.h"
+#include "fk_intersect.h"
 #include "fk_tessellate.h"
 #include <QAction>
 #include <QComboBox>
@@ -704,7 +705,6 @@ struct DrawingSheetEditor::Impl{
         if(auto *a=owner->findChild<QAction *>("drawingDetachViewAction"))a->setEnabled(!readOnly&&layout&&(layout->relation.kind==DrawingDerivedKind::Orthographic||layout->relation.kind==DrawingDerivedKind::Auxiliary));
         if(auto *a=owner->findChild<QAction *>("drawingReleaseAlignmentAction")){a->setEnabled(!readOnly&&layout&&(layout->relation.kind==DrawingDerivedKind::Orthographic||layout->relation.kind==DrawingDerivedKind::Auxiliary));a->setText(layout&&layout->relation.aligned?QStringLiteral("Libera allineamento"):QStringLiteral("Ripristina allineamento"));}
         for(auto name:{"drawingSectionHatchAction","drawingEditSectionLineAction","drawingAlignSectionOrientationAction","drawingReverseSectionAction"})if(auto *a=owner->findChild<QAction *>(name))a->setEnabled(!readOnly&&layout&&layout->relation.kind==DrawingDerivedKind::Section);
-        if(auto *a=owner->findChild<QAction *>("drawingEditSectionLineAction"))if(layout&&(layout->relation.step||layout->relation.bend))a->setEnabled(false);
         if(auto *a=owner->findChild<QAction *>("drawingSectionHatchAction"))a->setEnabled(!readOnly&&definition&&layout&&definition->kind==DrawingViewKind::Section&&(layout->relation.kind==DrawingDerivedKind::Section||drawingIsDetail(*layout)||definition->sectionStyle!=DrawingSectionStyle::Removed));
         if(auto *a=owner->findChild<QAction *>("drawingSectionHatchAction"))a->setText(layout&&layout->relation.hatch?QStringLiteral("Nascondi tratteggio"):QStringLiteral("Mostra tratteggio"));
     }
@@ -1834,6 +1834,8 @@ struct DrawingSheetEditor::Impl{
     }
     struct CutPlacement {
         QUuid parent,existing;QString label;DrawingSectionStyle style=DrawingSectionStyle::Removed;bool reverse=false,started=false;QPointF first,cursor;
+        enum class Mode { Straight, Stepped, Aligned };
+        Mode mode=Mode::Straight;QVector<QPointF> picked;
         QGraphicsPathItem *item=nullptr,*snapMark=nullptr;
         QGraphicsSimpleTextItem *snapLabel=nullptr;
         struct Point {QPointF paper;QString label;};
@@ -1906,8 +1908,89 @@ struct DrawingSheetEditor::Impl{
         }
         return result;
     }
+    void compoundCutHint(){
+        const auto count=cut->picked.size();QString hint;
+        if(cut->mode==CutPlacement::Mode::Aligned)
+            hint=count==0?QStringLiteral("Indica il centro / cerniera della sezione allineata."):count==1?QStringLiteral("Indica il punto del primo ramo."):QStringLiteral("Indica il punto del secondo ramo.");
+        else hint=count==0?QStringLiteral("Indica l’inizio del taglio a gradini."):count==1?QStringLiteral("Indica la fine del primo tratto: definisce la direzione dei piani."):count%2==0?QStringLiteral("Indica lo scostamento perpendicolare del prossimo gradino. Invio termina dopo un tratto completo."):QStringLiteral("Indica la fine del tratto parallelo; poi Invio per terminare o continua con un altro gradino.");
+        say(hint+QStringLiteral(" Snap attivi; Tab cambia snap, Alt esclude snap, R inverte frecce, Backspace torna indietro, Esc annulla."));
+    }
+    std::optional<std::pair<QPointF,QPointF>> cutConstraint(Qt::KeyboardModifiers modifiers)const{
+        const auto &points=cut->picked;
+        if(cut->mode==CutPlacement::Mode::Stepped&&points.size()>=2){
+            const auto t=(points[1]-points[0])/QLineF(points[0],points[1]).length();
+            return std::make_pair(points.back(),points.size()%2==0?QPointF(-t.y(),t.x()):t);
+        }
+        const bool started=cut->mode==CutPlacement::Mode::Straight?cut->started:!points.isEmpty();
+        const auto origin=cut->mode==CutPlacement::Mode::Straight?cut->first:points.value(0);
+        if(started&&(modifiers&Qt::ShiftModifier))return std::make_pair(origin,
+            std::abs(cut->raw.x()-origin.x())>=std::abs(cut->raw.y()-origin.y())?QPointF(1,0):QPointF(0,1));
+        return {};
+    }
+    QPointF constrainedCutPoint(QPointF point,Qt::KeyboardModifiers modifiers)const{
+        const auto constraint=cutConstraint(modifiers);if(!constraint)return point;
+        const auto &[origin,direction]=*constraint;
+        return origin+direction*QPointF::dotProduct(point-origin,direction);
+    }
+    QString finishCompoundCut(){
+        const auto points=cut->picked;const bool aligned=cut->mode==CutPlacement::Mode::Aligned;
+        if(aligned?points.size()!=3:points.size()<4||points.size()%2!=0)
+            return aligned?QStringLiteral("Indica il centro e i due rami."):QStringLiteral("Completa almeno un gradino e il tratto parallelo prima di premere Invio.");
+        const double scale=viewFor(cut->parent)->scale;
+        const auto first=aligned?points[1]:points[0];
+        const auto delta=aligned?points[0]-first:points[1]-first;
+        const double firstLength=std::hypot(delta.x(),delta.y());const auto t=delta/firstLength;
+        const QPointF n(-t.y(),t.x());
+        std::optional<DrawingSectionStep> step;std::optional<DrawingSectionBend> bend;double length=0;
+        if(aligned){
+            const auto second=points[2]-points[0];const double secondLength=std::hypot(second.x(),second.y());
+            const double angle=std::atan2(t.x()*second.y()-t.y()*second.x(),QPointF::dotProduct(t,second))*180/kPi;
+            if(secondLength<1||std::abs(angle)<.1||std::abs(angle)>170)return QStringLiteral("Scegli due rami distinti: angolo di deviazione tra 0,1° e 170°.");
+            length=firstLength+secondLength;bend=DrawingSectionBend{firstLength/scale,angle};
+        }else{
+            length=QPointF::dotProduct(points.back()-first,t);
+            for(qsizetype i=2;i<points.size();i+=2){
+                const double at=QPointF::dotProduct(points[i]-first,t)/scale,offset=QPointF::dotProduct(points[i]-first,n)/scale;
+                if(!step)step=DrawingSectionStep{at,offset};else step->additional.push_back({at,offset});
+            }
+        }
+        const auto a=localPaper(cut->parent,first),b=localPaper(cut->parent,first+t*length);
+        if(cut->existing.isNull())return owner->beginSectionPlacement(cut->parent,{a.x(),a.y()},{b.x(),b.y()},cut->label,cut->reverse,DrawingSectionStyle::Removed,step,bend);
+        auto next=state;
+        for(auto &layout:next.views)if(layout.viewId==cut->existing){auto &r=layout.relation;r.cutStart={a.x(),a.y()};r.cutEnd={b.x(),b.y()};r.step=step;r.bend=bend;r.reverse=cut->reverse;}
+        return changeViews(std::move(next),QStringLiteral("Ridefinisci sezione composta"));
+    }
+    void compoundCutOverlay(){
+        auto points=cut->picked;QPainterPath path;
+        if(cut->mode==CutPlacement::Mode::Aligned){
+            if(points.size()>1){path.moveTo(points[1]);path.lineTo(points[0]);path.lineTo(cut->cursor);}
+            else if(!points.isEmpty()){path.moveTo(points[0]);path.lineTo(cut->cursor);}
+        }else if(!points.isEmpty()){path.moveTo(points[0]);for(qsizetype i=1;i<points.size();++i)path.lineTo(points[i]);path.lineTo(cut->cursor);}
+        if(path.elementCount()>=2){
+            const auto arrow=[&](QPointF p,QPointF tangent){const double length=std::hypot(tangent.x(),tangent.y());if(length<1e-8)return;tangent/=length;const auto n=(cut->reverse?-1:1)*QPointF(tangent.y(),-tangent.x());path.moveTo(p-n*7);path.lineTo(p);path.moveTo(p-n*2+tangent);path.lineTo(p);path.lineTo(p-n*2-tangent);};
+            const auto start=path.elementAt(0),next=path.elementAt(1),end=path.elementAt(path.elementCount()-1),previous=path.elementAt(path.elementCount()-2);
+            arrow({start.x,start.y},{next.x-start.x,next.y-start.y});arrow({end.x,end.y},{end.x-previous.x,end.y-previous.y});
+        }
+        for(const auto &p:points)path.addEllipse(p,.7,.7);
+        const auto p=cut->cursor;path.moveTo(p+QPointF(-2,0));path.lineTo(p+QPointF(2,0));path.moveTo(p+QPointF(0,-2));path.lineTo(p+QPointF(0,2));
+        cut->item->setPath(path);cut->item->show();
+    }
+    void appendCompoundCutPoint(QPointF point){
+        const auto &points=cut->picked;const bool aligned=cut->mode==CutPlacement::Mode::Aligned;
+        const auto previous=aligned?points.value(0):points.value(points.size()-1);
+        if(!points.isEmpty()&&QLineF(previous,point).length()<1){say(QStringLiteral("Scegli un punto distante almeno 1 mm sul foglio."));return;}
+        if(!aligned&&points.size()>=2){
+            const auto t=(points[1]-points[0])/QLineF(points[0],points[1]).length();
+            if(points.size()%2!=0&&QPointF::dotProduct(point-points.back(),t)<1){say(QStringLiteral("Il tratto deve avanzare nella direzione del primo piano."));return;}
+            if(points.size()>=66){say(QStringLiteral("Massimo 32 gradini. Premi Invio per terminare."));return;}
+        }
+        cut->picked.push_back(point);cut->cycle=0;
+        if(aligned&&cut->picked.size()==3){const auto error=finishCompoundCut();if(!error.isEmpty()){cut->picked.removeLast();say(error);}return;}
+        compoundCutHint();cutOverlay();
+    }
     void cutOverlay(){
         if(!cut)return;
+        if(cut->mode!=CutPlacement::Mode::Straight){compoundCutOverlay();return;}
         QPainterPath path;auto a=cut->started?cut->first:cut->cursor,b=cut->cursor;
         auto parent=cut->parent;
         if(parent.isNull()&&cut->started){const auto candidates=cutParents(a,b);if(candidates.size()==1)parent=candidates.front();}
@@ -1922,17 +2005,50 @@ struct DrawingSheetEditor::Impl{
         const double zoom=std::abs(view->transform().m11());
         if(QLineF(cursor,cut->raw).length()*zoom>3||modifiers!=cut->modifiers)cut->cycle=0;
         cut->raw=cursor;cut->modifiers=modifiers;cut->choices.clear();
-        const bool constrained=cut->started&&(modifiers&Qt::ShiftModifier);const bool horizontal=std::abs(cursor.x()-cut->first.x())>=std::abs(cursor.y()-cut->first.y());
-        if(constrained){if(horizontal)cursor.setY(cut->first.y());else cursor.setX(cut->first.x());}
+        cursor=constrainedCutPoint(cursor,modifiers);
+        const auto compatible=[&](QPointF p){return QLineF(p,constrainedCutPoint(p,modifiers)).length()<1e-8;};
         if(!(modifiers&Qt::AltModifier))for(const auto &point:cut->points){
-            if(constrained&&std::abs(horizontal?point.paper.y()-cut->first.y():point.paper.x()-cut->first.x())>1e-8)continue;
-            if(QLineF(point.paper,cursor).length()*zoom<=9)cut->choices.push_back(point);
+            if(compatible(point.paper)&&QLineF(point.paper,cursor).length()*zoom<=9)cut->choices.push_back(point);
+        }
+        if(cut->mode==CutPlacement::Mode::Stepped&&cut->picked.size()>=4&&cut->picked.size()%2==0&&!(modifiers&Qt::AltModifier)){
+            const auto &points=cut->picked;const auto t=(points[1]-points[0])/QLineF(points[0],points[1]).length();const QPointF n(-t.y(),t.x());
+            const double along=QPointF::dotProduct(points.back()-points[0],t);
+            for(qsizetype i=0;i<points.size()-2;i+=2){
+                const auto paper=points[0]+t*along+n*QPointF::dotProduct(points[i]-points[0],n);
+                if(QLineF(paper,cursor).length()*zoom<=9)cut->choices.push_back({paper,i==0?QStringLiteral("Piano iniziale"):QStringLiteral("Piano precedente")});
+            }
+        }
+        // I punti notevoli hanno priorita'; il bordo esatto offre lo snap anche fra i punti.
+        if(cut->choices.empty()&&!(modifiers&Qt::AltModifier)){
+            const double tolerance=9/std::max(.01,zoom);
+            const auto candidates=scene->items(QRectF(cursor-QPointF(tolerance,tolerance),QSizeF(2*tolerance,2*tolerance)),Qt::IntersectsItemBoundingRect);
+            for(auto *item:candidates){
+                const auto kind=item->data(kindRole).toString();if(kind!=QLatin1String("projection"))continue;
+                const auto id=item->data(viewRole).toUuid();if(!cut->parent.isNull()&&cut->parent!=id)continue;
+                const auto *definition=viewFor(id);const auto *layout=layoutFor(id);if(!definition||!layout||drawingIsDetail(*layout)||layout->interruption)continue;
+                const auto index=item->data(indexRole).toULongLong();const auto &piece=curves.at(id).at(index);const auto p=localPaper(id,cursor);
+                const auto append=[&](QPointF paper){
+                    if(compatible(paper)&&QLineF(paper,cursor).length()*zoom<=9&&pointShown(id,std::size_t(index),paper)
+                       &&std::none_of(cut->choices.begin(),cut->choices.end(),[&](const auto &p){return QLineF(p.paper,paper).length()<1e-8;}))
+                        cut->choices.push_back({paper,QStringLiteral("Bordo")});
+                };
+                const auto found=projectPoint(*piece.curve,definition->plane.toGlobal(Vec3(p.x(),p.y(),0)),piece.range);append(paperPoint(*definition,*layout,found.point));
+                if(const auto constraint=cutConstraint(modifiers)){
+                    // Con un vincolo, aggancia l'intersezione col bordo, anche curvo o obliquo.
+                    const auto direction=constraint->second;
+                    const auto normal=direction.y()*definition->plane.xDir()+direction.x()*definition->plane.yDir();
+                    const auto origin=definition->plane.toGlobal(Vec3(p.x(),p.y(),0));
+                    const auto roots=planeRoots(*piece.curve,piece.range,normal,dot(normal,origin),1e-10);
+                    for(double parameter:roots.parameters)append(paperPoint(*definition,*layout,piece.curve->point(parameter)));
+                }
+            }
         }
         std::stable_sort(cut->choices.begin(),cut->choices.end(),[&](const auto &a,const auto &b){return QLineF(a.paper,cursor).length()<QLineF(b.paper,cursor).length();});
         if(!cut->choices.empty()){const auto &point=cut->choices[cut->cycle%cut->choices.size()];cursor=point.paper;cutSnapFeedback(&point);}else cutSnapFeedback(nullptr);
         cut->cursor=cursor;cutOverlay();
         if(!click)return true;
         if(!QRectF(QPointF(),state.size).contains(cursor)){say(QStringLiteral("Scegli un punto sul foglio."));return true;}
+        if(cut->mode!=CutPlacement::Mode::Straight){appendCompoundCutPoint(cursor);return true;}
         if(!cut->started){cut->first=cursor;cut->started=true;say(QStringLiteral("Secondo punto del taglio. Maiusc: orizzontale/verticale; R: inverti frecce; Alt: senza snap; Esc: annulla."));return true;}
         if(QLineF(cut->first,cursor).length()<1){say(QStringLiteral("Scegli un secondo punto distinto, distante almeno 1 mm sul foglio."));return true;}
         auto parent=cut->parent;
@@ -1950,6 +2066,10 @@ struct DrawingSheetEditor::Impl{
     bool cutKey(int key){
         if(!cut)return false;
         if(key==Qt::Key_Escape){cancelCut();say(QStringLiteral("Taglio annullato."));return true;}
+        if(cut->mode!=CutPlacement::Mode::Straight){
+            if(key==Qt::Key_Backspace){if(!cut->picked.isEmpty())cut->picked.removeLast();cut->cycle=0;cutPointer(cut->raw,cut->modifiers,false);compoundCutHint();return true;}
+            if(key==Qt::Key_Return||key==Qt::Key_Enter){const auto error=finishCompoundCut();if(!error.isEmpty())say(error);return true;}
+        }
         if(key==Qt::Key_R){cut->reverse=!cut->reverse;cutOverlay();return true;}
         if(key==Qt::Key_Tab&&!cut->choices.empty()){++cut->cycle;cutPointer(cut->raw,cut->modifiers,false);return true;}
         if(key==Qt::Key_Clear){cut->item->setVisible(false);cut->choices.clear();cutSnapFeedback(nullptr);return true;}
@@ -2041,7 +2161,7 @@ struct DrawingSheetEditor::Impl{
         for(const auto &section:state.views){const auto &r=section.relation;if(r.kind!=DrawingDerivedKind::Section||r.parentId!=parent.id)continue;
             const auto point=[&](QPointF p){return layout.position+QPointF(p.x()*parent.scale,-p.y()*parent.scale);};
             auto a=point(r.cutStart),b=point(r.cutEnd);const auto t=(b-a)/QLineF(a,b).length();const auto n=(r.reverse?-1:1)*QPointF(t.y(),-t.x());const auto *sectionView=viewFor(section.viewId);const bool half=sectionView&&drawingHalfSection(*sectionView);if(r.step||r.bend){a-=t*3;b+=t*3;}else std::tie(a,b)=cutDisplayEnds(parent.id,a,b,half);
-            const auto add=[&](QPainterPath path,QPen pen){auto *item=target->addPath(path,technicalPen(pen,target==this->scene));item->setZValue(5);item->setData(kindRole,"cuttingLine");item->setData(viewRole,parent.id);item->setData(idRole,section.viewId);item->setFlag(QGraphicsItem::ItemIsSelectable,target==this->scene);item->setToolTip((r.step||r.bend)?QStringLiteral("Sezione composta: modifica i piani dalle proprieta’ della vista."):QStringLiteral("Seleziona la linea di taglio: trascina i punti per modificarla o la linea per spostarla. Ridefinisci linea di taglio per ridisegnarla. Esc annulla."));item->setAcceptedMouseButtons(Qt::NoButton);};
+            const auto add=[&](QPainterPath path,QPen pen){auto *item=target->addPath(path,technicalPen(pen,target==this->scene));item->setZValue(5);item->setData(kindRole,"cuttingLine");item->setData(viewRole,parent.id);item->setData(idRole,section.viewId);item->setFlag(QGraphicsItem::ItemIsSelectable,target==this->scene);item->setToolTip((r.step||r.bend)?QStringLiteral("Sezione composta: usa Ridefinisci linea di taglio per scegliere i punti con il mouse."):QStringLiteral("Seleziona la linea di taglio: trascina i punti per modificarla o la linea per spostarla. Ridefinisci linea di taglio per ridisegnarla. Esc annulla."));item->setAcceptedMouseButtons(Qt::NoButton);};
             QPointF endT=t,endN=n;QPainterPath center;center.moveTo(a);
             if(r.step){const auto delta=r.cutEnd-r.cutStart;const double length=QLineF(r.cutStart,r.cutEnd).length();const QPointF tangent=delta/length;QPointF offset;
                 for(const auto &step:r.step->transitions()){const auto kink=r.cutStart+tangent*step.at;center.lineTo(point(kink+offset));offset={tangent.y()*step.offset,-tangent.x()*step.offset};center.lineTo(point(kink+offset));}
@@ -2161,15 +2281,21 @@ struct DrawingSheetEditor::Impl{
         if(!base||!layout||base->kind!=DrawingViewKind::ProjectedEdges||drawingIsDetail(*layout)||layout->interruption){say(QStringLiteral("Seleziona una vista proiettata senza interruzione."));return;}
         QDialog dialog(owner);dialog.setObjectName(aligned?"drawingAlignedSectionDialog":"drawingSteppedSectionDialog");dialog.setWindowTitle(aligned?QStringLiteral("Sezione allineata a due piani"):QStringLiteral("Sezione rimossa a gradini"));auto *form=new QFormLayout(&dialog);
         auto *label=new QLineEdit(aligned?"A":"G",&dialog);label->setObjectName("drawingStepLabel");label->setMaxLength(8);form->addRow(QStringLiteral("Identificativo"),label);
-        const auto spin=[&](const char *name,const QString &title,double value){auto *s=new QDoubleSpinBox(&dialog);s->setObjectName(name);s->setRange(-1e6,1e6);s->setDecimals(4);s->setSuffix(" mm");s->setValue(value);form->addRow(title,s);return s;};
+        auto *manual=new QCheckBox(QStringLiteral("Inserisci coordinate numericamente"),&dialog);manual->setObjectName("drawingSectionManualInput");form->addRow(manual);
+        auto *coordinates=new QWidget(&dialog);auto *coordinateForm=new QFormLayout(coordinates);form->addRow(coordinates);
+        const auto spin=[&](const char *name,const QString &title,double value){auto *s=new QDoubleSpinBox(&dialog);s->setObjectName(name);s->setRange(-1e6,1e6);s->setDecimals(4);s->setSuffix(" mm");s->setValue(value);coordinateForm->addRow(title,s);return s;};
         const auto box=drawingBreakBounds(*visibility.at(id));const double x=box.left()/base->scale,y=-box.center().y()/base->scale,width=std::max(1.,box.width()/base->scale);
         auto *ax=spin("drawingStepStartX","Inizio X",x),*ay=spin("drawingStepStartY","Inizio Y",y),*bx=spin("drawingStepEndX","Fine base X",x+width),*by=spin("drawingStepEndY","Fine base Y",y);
         auto *at=spin("drawingStepAt",aligned?"Distanza della cerniera dall’inizio":"Distanza del gradino dall’inizio",width/2),*offset=spin("drawingStepOffset",aligned?"Angolo del secondo piano":"Scostamento del secondo piano",aligned?45:5);
         if(aligned){offset->setRange(-170,170);offset->setSuffix(QStringLiteral("°"));}
-        auto *extra=aligned?nullptr:additionalSectionSteps(form,DrawingSectionStep{at->value(),offset->value()});
-        auto *hint=new QLabel(aligned?QStringLiteral("Inizio e fine base definiscono la direzione iniziale e la lunghezza sviluppata. Cerniera interna alla base, angolo positivo verso destra nel piano madre. Il secondo tratto viene ribaltato sul primo: le quote descrivono la sezione sviluppata. Dopo OK posiziona l’anteprima."):QStringLiteral("Coordinate in mm modello. Distanze crescenti dall’inizio; scostamenti assoluti dal primo piano, positivi a destra della direzione inizio→fine. Zero riporta al piano iniziale. Dopo OK posiziona l’anteprima sul foglio."),&dialog);hint->setWordWrap(true);form->addRow(hint);
+        auto *extra=aligned?nullptr:additionalSectionSteps(coordinateForm,DrawingSectionStep{at->value(),offset->value()});
+        coordinates->hide();connect(manual,&QCheckBox::toggled,coordinates,&QWidget::setVisible);
+        auto *hint=new QLabel(aligned?QStringLiteral("Premi OK, poi indica sul foglio il centro e i due punti dei rami. Snap a estremi, punti medi, centri e bordi; anteprima prima dell’inserimento."):QStringLiteral("Premi OK e disegna il percorso: inizio, fine primo tratto, scostamento del gradino e fine del tratto parallelo. Ripeti per altri gradini e premi Invio. Snap attivi; Backspace corregge, Esc annulla."),&dialog);hint->setWordWrap(true);form->addRow(hint);
         auto *error=new QLabel(&dialog);error->setWordWrap(true);form->addRow(error);auto *buttons=new QDialogButtonBox(QDialogButtonBox::Ok|QDialogButtonBox::Cancel,&dialog);form->addRow(buttons);
-        connect(buttons,&QDialogButtonBox::rejected,&dialog,&QDialog::reject);connect(buttons,&QDialogButtonBox::accepted,&dialog,[&]{const auto result=owner->beginSectionPlacement(id,{ax->value(),ay->value()},{bx->value(),by->value()},label->text().trimmed().toUpper(),false,DrawingSectionStyle::Removed,aligned?std::optional<DrawingSectionStep>{}:sectionStepValues(at->value(),offset->value(),extra),aligned?std::optional<DrawingSectionBend>{DrawingSectionBend{at->value(),offset->value()}}:std::optional<DrawingSectionBend>{});error->setText(result);if(result.isEmpty())dialog.accept();});dialog.exec();
+        connect(buttons,&QDialogButtonBox::rejected,&dialog,&QDialog::reject);connect(buttons,&QDialogButtonBox::accepted,&dialog,[&]{if(!manual->isChecked()){
+            const auto result=owner->beginSectionLine(id,label->text().trimmed().toUpper());error->setText(result);
+            if(result.isEmpty()){cut->mode=aligned?CutPlacement::Mode::Aligned:CutPlacement::Mode::Stepped;compoundCutHint();dialog.accept();}return;
+        }const auto result=owner->beginSectionPlacement(id,{ax->value(),ay->value()},{bx->value(),by->value()},label->text().trimmed().toUpper(),false,DrawingSectionStyle::Removed,aligned?std::optional<DrawingSectionStep>{}:sectionStepValues(at->value(),offset->value(),extra),aligned?std::optional<DrawingSectionBend>{DrawingSectionBend{at->value(),offset->value()}}:std::optional<DrawingSectionBend>{});error->setText(result);if(result.isEmpty())dialog.accept();});dialog.exec();if(cut)view->setFocus();
     }
     void beginTechnicalSection(){
         if(readOnly)return;
@@ -2225,7 +2351,7 @@ struct DrawingSheetEditor::Impl{
         auto *angle=new NumericInput(&dialog);angle->setObjectName("drawingAuxiliaryAngle");angle->setRange(-360,360);angle->setDecimals(4);angle->setSuffix(QStringLiteral("°"));angle->setValue(layout.relation.auxiliaryAngle);
         if(auxiliary)form->addRow(QStringLiteral("Lato di osservazione:"),angle);else angle->hide();
         auto *references=new QCheckBox(QStringLiteral("Sezioni del piano come riferimenti di quota"),&dialog);references->setObjectName("drawingDerivedSectionReferences");references->setChecked(v->sectionReferences);if(!section)form->addRow(references);else references->hide();
-        auto *note=new QLabel(layout.relation.bend?QStringLiteral("Due piani incidenti, ribaltati sul primo. Distanza della cerniera in mm modello; angolo positivo verso destra. Le quote appartengono allo sviluppo. Maniglie, sgancio e viste dipendenti non disponibili."):layout.relation.step?QStringLiteral("Sezione rimossa a gradini. Distanze crescenti e scostamenti assoluti in mm modello; zero riporta al primo piano. Il verso delle frecce non cambia i piani. I corpi seguono la madre; la scala segue la sorgente scelta. Maniglie della linea, sgancio e viste dipendenti non disponibili."):section?QStringLiteral("Piano e corpi seguono la madre; la scala segue la sorgente scelta. Ridefinisci linea di taglio conserva quote e identificativo. Per una mezza sezione indica prima un punto sull’asse: il cambio tipo non riposiziona l’asse automaticamente."):QStringLiteral("Piano e corpi seguono la vista madre; la scala segue la sorgente scelta. Sgancia vista conserva l'orientamento corrente e permette modifiche indipendenti."),&dialog);note->setWordWrap(true);form->addRow(note);
+        auto *note=new QLabel(layout.relation.bend?QStringLiteral("Due piani incidenti, ribaltati sul primo. Distanza della cerniera in mm modello; angolo positivo verso destra. Le quote appartengono allo sviluppo. Ridefinisci linea di taglio permette di scegliere centro e rami con il mouse. Sgancio e viste dipendenti non disponibili."):layout.relation.step?QStringLiteral("Sezione rimossa a gradini. Distanze crescenti e scostamenti assoluti in mm modello; zero riporta al primo piano. Il verso delle frecce non cambia i piani. I corpi seguono la madre; la scala segue la sorgente scelta. Ridefinisci linea di taglio permette di disegnare il percorso con il mouse. Sgancio e viste dipendenti non disponibili."):section?QStringLiteral("Piano e corpi seguono la madre; la scala segue la sorgente scelta. Ridefinisci linea di taglio conserva quote e identificativo. Per una mezza sezione indica prima un punto sull’asse: il cambio tipo non riposiziona l’asse automaticamente."):QStringLiteral("Piano e corpi seguono la vista madre; la scala segue la sorgente scelta. Sgancia vista conserva l'orientamento corrente e permette modifiche indipendenti."),&dialog);note->setWordWrap(true);form->addRow(note);
         auto *error=new QLabel(&dialog);error->setWordWrap(true);form->addRow(error);auto *buttons=new QDialogButtonBox(QDialogButtonBox::Ok|QDialogButtonBox::Cancel,&dialog);form->addRow(buttons);
         connect(buttons,&QDialogButtonBox::rejected,&dialog,&QDialog::reject);connect(buttons,&QDialogButtonBox::accepted,&dialog,[&]{auto next=state;for(auto &p:next.views)if(p.viewId==id){p.title=title->text().trimmed();if(section){p.relation.label=label->text().trimmed().toUpper();p.relation.hatch=flag->isChecked();p.relation.reverse=reverse->isChecked();if(p.relation.bend)p.relation.bend=DrawingSectionBend{stepAt->value(),stepOffset->value()};if(p.relation.step)p.relation.step=sectionStepValues(stepAt->value(),stepOffset->value(),extra);}else{p.relation.aligned=flag->isChecked();if(auxiliary)p.relation.auxiliaryAngle=angle->value();}}for(auto &v:next.drawing.views)if(v.id==id){for(auto &p:next.views)if(p.viewId==id)chosenScale.apply(v,p);if(section)v.sectionStyle=DrawingSectionStyle(style->currentIndex());else v.sectionReferences=references->isChecked();}const auto result=changeViews(std::move(next),QStringLiteral("Proprieta' vista derivata"));error->setText(result);if(result.isEmpty())dialog.accept();});dialog.exec();
     }
@@ -2656,14 +2782,14 @@ QString DrawingSheetEditor::beginSectionLine(const QUuid &parent,const QString &
     const auto *v=impl_->viewFor(validationParent);if(!v||v->kind!=DrawingViewKind::ProjectedEdges)return QStringLiteral("Inserisci una vista proiettata da sezionare.");
     // Valida identificativo e relazione senza intersecare i corpi o mutare il foglio.
     DrawingSheet next=impl_->state;DrawingView test;test.sectionStyle=style;DrawingViewLayout l;l.viewId=test.id;l.title="Sezione";l.relation.parentId=validationParent;l.relation.kind=DrawingDerivedKind::Section;l.relation.label=label;l.relation.cutEnd={1,0};
-    if(!existing.isNull()){const auto *v=impl_->viewFor(existing);if(v&&(v->step||v->bend))return QStringLiteral("Modifica i piani dalle proprieta’ della sezione.");}
     if(existing.isNull()){next.drawing.views.push_back(test);next.views.append(l);}
     else{const auto *current=impl_->layoutFor(existing);if(!current||current->relation.parentId!=parent||current->relation.kind!=DrawingDerivedKind::Section)return QStringLiteral("Sezione da ridefinire non disponibile.");}
     const auto error=synchronizeDrawingViews(next);if(!error.isEmpty())return error;QByteArray bytes;const auto numberingError=impl_->prepareNumbering(next);if(!numberingError.isEmpty())return numberingError;const auto valid=encodeDrawingSheet(next,bytes);if(!valid.isEmpty())return valid;
     impl_->quoteAction->setChecked(false);impl_->cancelPlacement();impl_->resetQuote();auto cut=std::make_unique<Impl::CutPlacement>();cut->parent=parent;cut->existing=existing;cut->label=label;cut->reverse=reverse;cut->style=existing.isNull()?style:impl_->viewFor(existing)->sectionStyle;
     cut->item=impl_->scene->addPath({},QPen(QColor("#1469c0"),.3,Qt::DashLine));cut->item->setZValue(50);cut->item->setData(kindRole,"cuttingPreview");cut->item->setAcceptedMouseButtons(Qt::NoButton);QPen markerPen(QColor("#1469c0"),1.5);markerPen.setCosmetic(true);cut->snapMark=impl_->scene->addPath({},markerPen,QColor(255,255,255,210));cut->snapMark->setZValue(52);cut->snapMark->setData(kindRole,"cuttingSnap");cut->snapMark->setAcceptedMouseButtons(Qt::NoButton);cut->snapMark->hide();
     cut->snapLabel=new QGraphicsSimpleTextItem(cut->snapMark);QFont snapFont("DejaVu Sans");snapFont.setPixelSize(12);cut->snapLabel->setFont(snapFont);cut->snapLabel->setBrush(QColor("#1469c0"));cut->snapLabel->setAcceptedMouseButtons(Qt::NoButton);
-    impl_->cut=std::move(cut);impl_->refreshCutHandles();impl_->refreshCutPoints();impl_->view->setCursor(Qt::CrossCursor);impl_->view->setFocus();impl_->say(drawingHalfSection(impl_->cut->existing.isNull()?test:*impl_->viewFor(existing))?QStringLiteral("Indica il punto dell’asse della mezza sezione, poi un punto lungo la direzione del taglio. Esc annulla."):QStringLiteral("Primo punto del taglio: la linea sceglie la vista da sezionare. Snap a estremi, punti medi e centri; Tab cambia punto, Alt esclude snap, R inverte le frecce, Esc annulla."));return {};
+    if(!existing.isNull()){const auto &r=impl_->layoutFor(existing)->relation;cut->mode=r.bend?Impl::CutPlacement::Mode::Aligned:r.step?Impl::CutPlacement::Mode::Stepped:Impl::CutPlacement::Mode::Straight;}
+    impl_->cut=std::move(cut);impl_->refreshCutHandles();impl_->refreshCutPoints();impl_->view->setCursor(Qt::CrossCursor);impl_->view->setFocus();impl_->say(drawingHalfSection(impl_->cut->existing.isNull()?test:*impl_->viewFor(existing))?QStringLiteral("Indica il punto dell’asse della mezza sezione, poi un punto lungo la direzione del taglio. Esc annulla."):QStringLiteral("Primo punto del taglio: la linea sceglie la vista da sezionare. Snap a estremi, punti medi, centri e bordi; Tab cambia punto, Alt esclude snap, R inverte le frecce, Esc annulla."));if(impl_->cut->mode!=Impl::CutPlacement::Mode::Straight)impl_->compoundCutHint();return {};
 }
 QString DrawingSheetEditor::alignSectionOrientation(const QUuid &id){
     if(impl_->computing)return QStringLiteral("Attendere il calcolo della vista in corso.");

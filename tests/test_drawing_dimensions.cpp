@@ -150,6 +150,27 @@ int main(){try{
         for(const auto &refs:std::vector<std::vector<DrawingAttachment>>{{a,a,b},{a,b,b},std::vector<DrawingAttachment>(65,a)}){bool rejected=false;try{drawingDimensionSeries(sv,sm,sc,refs,DrawingDimensionSeries::OrdinateX);}catch(const std::exception &){rejected=true;}require(rejected,"coordinate duplicate e limite punti rifiutati");}
         DrawingAttachment datum;datum.role=DrawingPointRole::Origin;auto fromDatum=drawingDimensionSeries(sv,sm,sc,{datum,b},DrawingDimensionSeries::OrdinateY);near(result(sm,sv,fromDatum[0]).value,6,"origine del piano associativa");
     }
+    // Due superfici coniche della stessa genealogia: foro ed esterno restano distinti.
+    {
+        ProfileRegion region;const std::vector<Vec2> points{{6,0},{3,10},{1,10},{2,0},{6,0}};
+        for(std::size_t i=1;i<points.size();++i){const auto delta=points[i]-points[i-1];region.outer.segments.push_back({std::make_shared<Line<2>>(points[i-1],delta),{0,norm(delta)},int(i)});}
+        auto body=source(makeRevolution(Frame3(),region));auto names=std::make_shared<ElementNames>(*body.names);
+        for(auto face:body.body->faces())if(body.body->face(face).surface->type()==SurfaceType::Cone)names->faces[std::size_t(face.index)]={"origine:cono"};
+        body.names=names;
+        DrawingModelSnapshot m{model.version,{body}};DrawingView v;v.kind=DrawingViewKind::ProjectedEdges;v.plane=Frame3({},Vec3(0,-1,0),Vec3(1,0,0));const auto c=curves(m,v);
+        std::vector<DrawingAttachment> outer,inner;const DrawingCurve *one=nullptr;
+        for(const auto &curve:c)if(curve.kind==DrawingCurveKind::ApparentLine){
+            auto ref=drawingAttachment(v,curve,m,DrawingPointRole::Curve);const auto resolved=resolveDrawingAttachment(v,m,c,ref);
+            require(resolved.status==DrawingDimensionStatus::Ready&&resolved.curve==&curve,"generatrici interne/esterne con stesso nome risolte sulla curva esatta");
+            if(std::abs(ref.curve.witness.x())>2){outer.push_back(ref);one=&curve;}else inner.push_back(ref);
+        }
+        require(outer.size()==2&&inner.size()==2,"quattro generatrici con nome condiviso");
+        auto angle=drawingDimensionBetween(v,m,c,outer,DrawingMeasure::Angle,{0,15});near(result(m,v,angle).value,2*std::atan(.3)*180/kPi,"angolo esterno del cono cavo");
+        auto innerAngle=drawingDimensionBetween(v,m,c,inner,DrawingMeasure::Angle,{0,15});near(result(m,v,innerAngle).value,2*std::atan(.1)*180/kPi,"angolo del foro distinto dall’esterno");
+        auto offCurve=outer.front();offCurve.curve.witness=offCurve.curve.witness+Vec2(.25,0);require(resolveDrawingAttachment(v,m,c,offCurve).status==DrawingDimensionStatus::Ambiguous,"testimone fuori dalle generatrici non agganciato per vicinanza");
+        auto duplicated=c;duplicated.push_back(*one);require(resolveDrawingAttachment(v,m,duplicated,outer.back()).status==DrawingDimensionStatus::Ambiguous,"due generatrici identiche restano ambigue");
+        DrawingDocument doc;doc.model=m.version;doc.views={v};doc.dimensions={angle,innerAngle};QByteArray bytes;ok(encodeDrawingDocument(doc,bytes));DrawingDocument read;ok(decodeDrawingDocument(bytes,read));near(evaluateDrawingDimension(read,m,angle.id).value,2*std::atan(.3)*180/kPi,"riapertura angolo con genealogia condivisa");
+    }
     // Tronco di cono rivoluto: generatrici e punti terminali esatti, anche dopo codec.
     {
         DrawingModelSnapshot m{model.version,{source(makeCone(Frame3(),6,3,10))}};

@@ -89,7 +89,7 @@ const DrawingCurve &curveFor(const DrawingView &view,const DrawingSourceBody &so
     if(ref.kind==DrawingCurveKind::ApparentLine){
         // Il lato della generatrice rispetto all'asse resta associato anche
         // quando cambia il raggio. Nessuna scelta del ramo piu' vicino.
-        const DrawingCurve *chosen=nullptr;
+        std::vector<const DrawingCurve *> compatible;
         for(const auto *c:candidates){const auto &face=source.body->face(c->sourceFace);if(face.surface->type()!=SurfaceType::Cylinder&&face.surface->type()!=SurfaceType::Cone)continue;
             const auto frame=face.surface->type()==SurfaceType::Cone?static_cast<const ConicalSurface &>(*face.surface).frame():static_cast<const CylindricalSurface &>(*face.surface).frame();
             const auto center=local(view,frame.origin());const auto axis3=view.plane.directionToLocal(frame.zDir());const Vec2 axis(axis3.x(),axis3.y());
@@ -99,10 +99,20 @@ const DrawingCurve &curveFor(const DrawingView &view,const DrawingSourceBody &so
             // anche l'appartenenza assiale del testimone.
             const double position=dot(ref.witness-center,axis),a=dot(local(view,c->curve->point(c->range.lo))-center,axis),b=dot(local(view,c->curve->point(c->range.hi))-center,axis);
             if(position<std::min(a,b)-view.tolerance||position>std::max(a,b)+view.tolerance)continue;
-            if(chosen)throw ReferenceError{DrawingDimensionStatus::Ambiguous,QStringLiteral("Contorno cilindrico con piu' rami compatibili.")};
+            compatible.push_back(c);
+        }
+        if(compatible.empty())missing(QStringLiteral("Il lato del contorno cilindrico non e' piu' disponibile."));
+        if(compatible.size()==1)return *compatible.front();
+        // Una stessa origine genealogica puo' nominare il cono esterno e il foro.
+        // Disambigua solo se il testimone appartiene a una generatrice esatta;
+        // nessuna scelta del ramo piu' vicino o dipendenza dall'ordine delle facce.
+        const auto witness=view.plane.toGlobal(Vec3(ref.witness.x(),ref.witness.y(),0));
+        const DrawingCurve *chosen=nullptr;
+        for(const auto *c:compatible)if(projectPoint(*c->curve,witness,c->range).distance<=view.tolerance){
+            if(chosen)throw ReferenceError{DrawingDimensionStatus::Ambiguous,QStringLiteral("Piu' generatrici contengono l'ancoraggio della quota.")};
             chosen=c;
         }
-        if(!chosen)missing(QStringLiteral("Il lato del contorno cilindrico non e' piu' disponibile."));
+        if(!chosen)throw ReferenceError{DrawingDimensionStatus::Ambiguous,QStringLiteral("L'ancoraggio non distingue le generatrici della stessa origine.")};
         return *chosen;
     }
     if(candidates.empty())missing(QStringLiteral("Entita' o ramo geometrico non ritrovato."));

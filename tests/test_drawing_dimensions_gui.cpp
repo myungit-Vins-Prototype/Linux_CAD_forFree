@@ -70,6 +70,17 @@ int main(int argc,char **argv){QApplication app(argc,argv);try{
         mode(e,-1);click(e,paper({0,0}),Qt::ShiftModifier);move(e,paper({0,-6}));require(items(e,"dimensionPreview")==1,"anteprima diametro bordo conico");click(e,paper({0,-6}));const auto d=last(e);near(e.dimensionResult(d.id).value,12,"diametro base conica inserito dal mouse");require(e.dimensionResult(d.id).diametral,"diametro riconosciuto dal flusso GUI");
         const auto output=qEnvironmentVariable("FORGECAD_CONE_OUTPUT");if(!output.isEmpty())e.grab().save(output+"/cone-mouse-dimensions.png");
     }
+    // Nome genealogico condiviso fra cono esterno e foro: i clic scelgono le rette visibili.
+    {
+        ProfileRegion region;const std::vector<Vec2> points{{6,0},{3,10},{1,10},{2,0},{6,0}};
+        for(std::size_t i=1;i<points.size();++i){const auto delta=points[i]-points[i-1];region.outer.segments.push_back({std::make_shared<Line<2>>(points[i-1],delta),{0,norm(delta)},int(i)});}
+        auto body=source(makeRevolution(Frame3(),region),1);auto names=std::make_shared<ElementNames>(*body.names);for(auto face:body.body->faces())if(body.body->face(face).surface->type()==SurfaceType::Cone)names->faces[std::size_t(face.index)]={"origine:cono"};body.names=names;
+        DrawingEditorModel model;model.snapshot.version={QUuid::createUuid(),{}};model.snapshot.bodies={body};model.choices={{1,"Cono cavo"}};DrawingSheet sheet;sheet.drawing.model=model.snapshot.version;
+        DrawingSheetEditor e(sheet,model);e.resize(1450,900);e.show();QApplication::processEvents();e.fitSheet();DrawingView v;v.kind=DrawingViewKind::ProjectedEdges;v.scale=3;v.plane=Frame3({},Vec3(0,-1,0),Vec3(1,0,0));ok(e.insertView(v,{v.id,"Cono cavo",{75,120},{1}}));mode(e,int(DrawingMeasure::Angle));
+        click(e,paper({-4.5,5}));click(e,paper({4.5,5}));move(e,paper({0,16}));require(items(e,"dimensionPreview")==1,"anteprima angolo fra due generatrici omonime");click(e,paper({0,16}));
+        require(e.sheet().drawing.dimensions.size()==1&&last(e).measure==DrawingMeasure::Angle,"angolo del cono cavo inserito dal mouse");near(e.dimensionResult(last(e).id).value,2*std::atan(.3)*180/kPi,"valore esterno dal mouse");
+        const auto output=qEnvironmentVariable("FORGECAD_CONE_OUTPUT");if(!output.isEmpty())e.grab().save(output+"/shared-cone-angle.png");
+    }
     // Aprire le opzioni senza modifiche conserva anche basi storiche non
     // rappresentabili con i due decimali del campo (H3,5 -> B2,275).
     {DrawingEditorModel model;model.snapshot.version={QUuid::createUuid(),{}};DrawingSheet sheet;sheet.drawing.model=model.snapshot.version;sheet.style.arrowLength=3.5;DrawingSheetEditor legacy(sheet,model);const auto before=encoded(legacy);bool visited=false;
