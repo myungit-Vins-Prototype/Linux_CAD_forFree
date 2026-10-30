@@ -22,6 +22,8 @@ Build parametric solids and freeform surfaces, edit their modeling history, and 
 
 Development is unified on `main`. CUDA and Metal remain optional backends in the same source tree; experiments use short-lived branches and require workload-specific measurements before integration.
 
+Feature status and next increments: [project roadmap (Italian)](docs/roadmap.md).
+
 ## Get started
 
 1. Install the [dependencies](#requirements), then follow the source build instructions for [Linux](#installing-on-linux) or [macOS](#installing-on-macos).
@@ -145,6 +147,10 @@ Pole editing supports a single NURBS face, preserving degree, knots and UV trims
 ### 2D drawings
 
 Projected, section, detail and auxiliary views; horizontal or vertical broken views with previews and full-model dimensions. See [broken views](docs/drawing-breaks.md) (Italian) for usage and limits. Circular, rectangular and polygonal details can be connected to their parent view by a line that follows placement changes.
+
+**Inserisci → Rugosità superficiale** adds Ra/Rz surface texture specifications in micrometres, with required/prohibited material removal and an optional process. Symbols and leaders follow their geometric attachments and remain vector graphics in PDF; properties, Undo, and `.drw` files preserve structured fields. [Usage and limits (Italian)](docs/drawing-revisions-study.md#rugosità-superficiale-strutturata--30-ottobre-2026).
+
+During initial dimension placement and while dragging dimension text, blinking guides snap its centre to the nearest dimension in the direction of movement, horizontally and vertically. Nearby arrow tips take priority and snap to the same point, including angular and linear dimensions sharing a side; a blinking circle marks the common tip. Alt bypasses snapping, Esc cancels, and release creates one Undo step. [Graphical alignment (Italian)](docs/drawing-revisions-study.md#allineamento-grafico-delle-quote--30-ottobre-2026).
 
 ### Visualization and analysis
 

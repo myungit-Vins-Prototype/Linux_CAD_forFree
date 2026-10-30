@@ -1,5 +1,7 @@
 # Tavole 2D con sezioni associative e gestione delle revisioni
 
+Questo documento conserva lo studio originale e gli incrementi datati. Per distinguere le funzioni oggi presenti dai punti ancora aperti consultare la [roadmap generale](roadmap.md), riesaminata dopo l’unificazione su `main`.
+
 Studio del 15 ottobre 2026. I tre vincoli sono: quotare le sezioni anche di superfici aperte, valutare dove conservare modello e tavole, gestire check-out e tutte le copie di check-in. L'utente ha scelto file tavola separati dal modello: .drw leggeri che riferiscono il .prt, senza copiarne la geometria. I moduli geometrici, il backend locale delle revisioni, i comandi GUI delle revisioni del modello e il primo editor delle tavole sono descritti nelle ultime sezioni. Le parti non ancora implementate restano indicate come proposte.
 
 Per il confronto dei file si assume che «stesso file del 2D» significhi «stesso file del modello 3D»; il chiarimento e' aperto. La gestione concorrente viene considerata per non precludere l'uso futuro su cartella condivisa; il numero di utenti resta da confermare.
@@ -852,3 +854,31 @@ I nuovi controlli e le quote del profilo usano lo schema foglio25 quando necessa
 Nelle opzioni di creazione e in **Modifica dettaglio** si può attivare **Dettaglio collegato alla vista madre**. Una linea continua unisce il bordo del cerchio, rettangolo o polilinea di ritaglio sulla madre al bordo della vista ingrandita. Il collegamento segue spostamenti, ritaglio e scala, compare durante il posizionamento e nel PDF. Se i contorni si sovrappongono non viene tracciato un segmento rovesciato al loro interno.
 
 Il collegamento è solo grafico: non aggiunge geometria quotabile e non modifica misure o piano della vista. È disattivato per i disegni esistenti; lo schema26 viene usato quando è attivo, mantenendo la lettura dei formati1–25. Le modifiche partecipano ad Annulla/Ripeti e la sola lettura impedisce di applicarle.
+
+
+### Rugosità superficiale strutturata — 30 ottobre 2026
+
+**Inserisci → Rugosità superficiale** registra un parametro **Ra** o **Rz**, un limite positivo in **µm**, la scelta fra qualsiasi processo, asportazione richiesta o vietata e un processo di fabbricazione opzionale (64 caratteri su una riga). Il limite ammette da 0,000001 a 1000000 µm con sei decimali. I micrometri sono propri della specifica e non dipendono dalle unità del modello o dalla scala della vista; l'altezza dei caratteri resta in mm sul foglio.
+
+Dopo il dialogo si sceglie un punto geometrico con gli snap esistenti e si posiziona l'anteprima. **Proprietà annotazione** modifica i campi; **Ridefinisci aggancio** cambia esplicitamente il riferimento mantenendo UUID e specifica. Inserimento e modifica supportano Undo/Redo. Una sorgente mancante produce “Da verificare”, elimina il vecchio richiamo e viene segnalata nel rapporto PDF; nessuna riassociazione per prossimità. La duplicazione del foglio rinnova UUID e agganci, conservando i valori.
+
+Simbolo, barra separata di profilo, varianti di asportazione e testo sono percorsi vettoriali condivisi da editor e PDF. Le famiglie dei simboli e l'indicazione minima sono state confrontate con ISO 21920-1:2021, figure 4–5 ([scheda ISO](https://www.iso.org/standard/72196.html), [anteprima della pubblicazione](https://cdn.standards.iteh.ai/samples/72196/5012ce84af1a4629a79764a48401a1db/ISO-21920-1-2021.pdf)). Questo incremento rappresenta una specifica dichiarata: non misura la finitura né verifica la conformità del pezzo. Parametri multipli, filtri, lunghezze di valutazione e direzione dei solchi restano successivi; non si dichiara conformità integrale ISO/ASME.
+
+Il foglio usa lo **schema28 soltanto in presenza di rugosità**. Vecchi fogli e annotazioni datum/GD&T conservano il loro schema; i lettori precedenti rifiutano esplicitamente il nuovo schema. Contenitori `.drw`, formato `.prt` e geometria del modello invariati. Esiti effettivi di build e collaudo nel registro `CLAUDE.md`.
+
+
+### Allineamento grafico delle quote — 30 ottobre 2026
+
+Durante il **primo posizionamento** di una quota, dopo la scelta dei riferimenti e prima del clic di conferma, e durante il successivo trascinamento del testo, una **guida blu tratteggiata e lampeggiante** indica l'allineamento con il testo valido più vicino nel verso del movimento. Spostando verso destra si cercano quote a destra; verso sinistra, quote a sinistra. Per la verticale valgono lo stesso criterio sopra e sotto. Invertire il movimento cambia il lato di ricerca dopo un piccolo margine contro il tremolio del mouse. I riferimenti possono appartenere a viste diverse dello stesso foglio.
+
+L'aggancio usa il **centro visivo del testo**, anche ruotato o sopra/sotto la linea; la soglia di acquisizione è 8 pixel e quella di distacco 12 pixel. Rimane stabile allo zoom. Le quote da verificare, i testi selezionati insieme alla quota trascinata, le note e i badge non sono bersagli. Se interviene la centratura sul punto medio della propria quota, questa ha priorità sulle guide esterne.
+
+**Punte delle frecce coincidenti:** vicino a una punta di un'altra quota valida, lo snap puntuale ha priorità sull'allineamento dei testi. Funziona anche tra una quota angolare e una lineare con lato comune, trascinando l'una o l'altra, sui lati orizzontali, verticali e inclinati. Un cerchio e una croce blu lampeggianti segnano il punto comune. Si regola soltanto l'offset della linea o il raggio dell'arco; le punte devono poter coincidere realmente lungo il movimento ammesso dalla geometria. La semplice vicinanza o la proiezione su un asse non bastano. La centratura propria resta compatibile con questo movimento; la misura e il settore dell'angolo non cambiano.
+
+La soglia delle punte è 8 pixel, con distacco a 12 pixel. La selezione considera la punta più vicina raggiungibile, senza filtro di direzione necessario per le guide dei testi. Vale anche con frecce invertite, testo sopra/sotto o ruotato e richiami obliqui. Raggi, diametri, ordinate e richiami con punta fissa sul modello possono essere bersagli: spostarne il testo non muove la punta, quindi non attiva questo snap. Restano esclusi i bersagli invalidi, nascosti e selezionati insieme.
+
+**Alt** permette il movimento libero escludendo gli agganci. **Esc** annulla il trascinamento; anche la perdita della presa del mouse ripristina l'anteprima. Al rilascio la posizione viene registrata come un solo passo **Undo/Redo**. I valori nominali e i riferimenti geometrici restano associati al modello; la posizione usa il codec esistente. La guida è temporanea nell'editor e non compare nel PDF o nei file. Ogni quota resta spostabile indipendentemente dopo l'allineamento.
+
+Nel primo posizionamento sono già attivi gli allineatori dei testi e lo snap delle punte: il clic conserva esattamente l'ancoraggio e il centro visivo dell'anteprima. Anche una quota esistente selezionata può fare da bersaglio. Alt esclude gli allineatori; Esc annulla riferimenti e anteprima, senza inserire una quota. Uscire dal canvas pulisce gli indicatori; rientrare riprende i riferimenti scelti. Resta rispettata la distanza minima iniziale dalla geometria. Catene e ordinate conservano il proprio posizionamento collettivo.
+
+Build, regressioni, controllo PDF e mappa sono registrati in `CLAUDE.md`.

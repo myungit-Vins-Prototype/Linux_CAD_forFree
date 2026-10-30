@@ -34,4 +34,66 @@ void technicalAnnotationTests(){
  e.setReadOnly(true);need(!e.findChild<QAction *>("drawingAddDatumAction")->isEnabled()&&!e.findChild<QAction *>("drawingAddGeometricToleranceAction")->isEnabled()&&!e.addAnnotation(a).isEmpty()&&!e.updateAnnotation(frame).isEmpty(),"sola lettura blocca cartigli");
  std::cout<<"PASS annotazioni strutturate: sei simboli, datum UUID, rinomina/orfani, geometria, codec19, UI, anteprima, ridefinizione, Undo e PDF vettoriale\n";
 }
+void surfaceTextureTests(){
+ DrawingEditorModel model;model.snapshot.version={QUuid::createUuid(),{}};
+ model.snapshot.bodies={body(1,makeBox(Frame3(),12,8,6)),body(2,makeBox(Frame3(Vec3(40,0,0),Vec3(0,0,1),Vec3(1,0,0)),8,8,6))};model.choices={{1,"Blocco"},{2,"Altro corpo"}};
+ DrawingSheet sheet;sheet.title=QStringLiteral("Rugosità superficiali Ra / Rz");sheet.drawing.model=model.snapshot.version;
+ DrawingSheetEditor e(sheet,model);e.resize(1450,950);e.show();QApplication::processEvents();e.fitSheet();
+ DrawingView view;view.kind=DrawingViewKind::ProjectedEdges;view.scale=3;ok(e.insertView(view,{view.id,"Vista superiore",{60,130},{1,2}}));
+ DrawingAnnotation note;note.text.clear();note.viewId=view.id;note.position={125,55};note.reference=technicalPoint(e,model,view,{12,8});
+ note.technical=DrawingTechnicalAnnotation{};note.technical->kind=DrawingTechnicalKind::SurfaceTexture;note.technical->surfaceTexture=DrawingSurfaceTexture{};
+ const auto base=bytes(e);const auto *cached=e.curves(view.id)[0].curve.get();
+ for(int parameter=0;parameter<2;++parameter)for(int removal=0;removal<3;++removal){
+  auto sample=note;sample.id=QUuid::createUuid();sample.position={125.0+parameter*65,45.0+removal*40};auto &texture=*sample.technical->surfaceTexture;
+  texture.parameter=DrawingRoughnessParameter(parameter);texture.removal=DrawingMaterialRemoval(removal);texture.value=parameter?12.5:3.2;
+  texture.process=removal==1?QStringLiteral("Rettifica"):QString();ok(e.addAnnotation(sample));
+  const auto layout=layoutDrawingTechnicalAnnotation(e.sheet(),sample);need(!layout.symbol.isEmpty()&&!layout.text.isEmpty()&&layout.frame.isEmpty(),"rugosità vettoriale senza cartiglio GD&T");
+  need(layout.bounds.contains(layout.text.boundingRect())&&layout.bounds.contains(layout.symbol.boundingRect()),"ingombro include processo e simbolo");
+  auto *label=dynamic_cast<QGraphicsTextItem *>(noteItem(e,sample.id));need(label&&label->toPlainText().contains(parameter?"Rz 12.5 µm":"Ra 3.2 µm"),"testo accessibile in micrometri");
+  need(e.annotationResult(sample.id).status==DrawingDimensionStatus::Ready&&noteItem(e,sample.id,"annotationLeader"),"aggancio e richiamo rugosità");
+ }
+ const auto saved=bytes(e);need(e.curves(view.id)[0].curve.get()==cached&&e.sheet().drawing.dimensions.empty(),"rugosità riusa geometria senza quote fittizie");
+ DrawingSheet decoded;ok(decodeDrawingSheet(saved,decoded));QByteArray reencoded;ok(encodeDrawingSheet(decoded,reencoded));need(saved==reencoded,"codec28 conserva tutte le specifiche");
+ auto root=QJsonDocument::fromJson(saved).object();need(root["schema"].toInt()==28,"schema28 solo con rugosità");
+ DrawingSheetEditor reopened(decoded,model);need(reopened.annotationResult(decoded.annotations[0].id).status==DrawingDimensionStatus::Ready,"aggancio preservato alla riapertura");
+ for(int malformed=0;malformed<12;++malformed){
+  auto json=root;auto annotations=json["annotations"].toArray();auto n=annotations[0].toObject(),t=n["technical"].toObject();
+  switch(malformed){case 0:json["schema"]=27;break;case 1:t["parameter"]=2;break;case 2:t["parameter"]=.5;break;case 3:t["value"]="3.2";break;case 4:t["value"]=0;break;case 5:t["removal"]=3;break;case 6:t["removal"]=true;break;case 7:t.remove("process");break;case 8:t["process"]="A\nB";break;case 9:t["process"]=QString(65,'A');break;case 10:t["datums"]=QJsonArray{};break;case 11:t["value"]=1.0000001;break;}
+  n["technical"]=t;annotations[0]=n;json["annotations"]=annotations;
+  need(!decodeDrawingSheet(QJsonDocument(json).toJson(),decoded).isEmpty(),"rugosità JSON invalida rifiutata");ok(encodeDrawingSheet(decoded,reencoded));need(reencoded==saved,"errore codec rugosità atomico");
+ }
+ for(int invalid=0;invalid<11;++invalid){
+  auto bad=note;bad.id=QUuid::createUuid();auto &texture=*bad.technical->surfaceTexture;
+  switch(invalid){case 0:texture.value=std::numeric_limits<double>::quiet_NaN();break;case 1:texture.value=std::numeric_limits<double>::infinity();break;case 2:texture.value=-1;break;case 3:texture.parameter=DrawingRoughnessParameter(-1);break;case 4:texture.removal=DrawingMaterialRemoval(-1);break;case 5:bad.technical->datums={QUuid::createUuid()};break;case 6:bad.reference.reset();bad.viewId={};break;case 7:bad.technical->surfaceTexture.reset();break;case 8:bad.technical->kind=DrawingTechnicalKind::Datum;bad.technical->label="A";break;case 9:texture.process=" padding ";break;case 10:bad.technical->tolerance=.05;break;}
+  need(!e.addAnnotation(bad).isEmpty()&&bytes(e)==saved,"specifica rugosità invalida rifiutata atomicamente");
+ }
+ for(const auto value:{.000001,1000000.0}){auto bound=note;bound.id=QUuid::createUuid();bound.technical->surfaceTexture->value=value;ok(e.addAnnotation(bound));ok(e.undo());need(bytes(e)==saved,"limiti rugosità e Undo esatti");}
+ const auto first=e.sheet().annotations[0];select(e,first.id,"annotation");
+ QTimer::singleShot(0,&e,[&]{auto *dialog=e.findChild<QDialog *>("drawingTechnicalAnnotationDialog");need(dialog&&dialog->windowTitle()==QStringLiteral("Rugosità superficiale"),"proprietà rugosità dedicate");
+  dialog->findChild<QComboBox *>("drawingRoughnessParameter")->setCurrentIndex(1);dialog->findChild<QDoubleSpinBox *>("drawingRoughnessValue")->setValue(.8);dialog->findChild<QComboBox *>("drawingMaterialRemoval")->setCurrentIndex(1);dialog->findChild<QLineEdit *>("drawingRoughnessProcess")->setText(" Lappatura ");dialog->findChild<QDialogButtonBox *>()->button(QDialogButtonBox::Ok)->click();});
+ e.findChild<QAction *>("drawingEditAnnotationAction")->trigger();
+ const auto edited=e.sheet().annotations[0];need(edited.id==first.id&&edited.technical->surfaceTexture->value==.8&&edited.technical->surfaceTexture->process=="Lappatura","proprietà conservano UUID e normalizzano processo");
+ ok(e.undo());need(bytes(e)==saved,"Undo proprietà rugosità");ok(e.redo());need(e.sheet().annotations[0].technical->surfaceTexture->parameter==DrawingRoughnessParameter::Rz,"Redo proprietà rugosità");ok(e.undo());
+ const auto originalWidth=noteItem(e,first.id)->boundingRect().width();ok(e.setViewScale(view.id,DrawingScaleSource::Custom,.5));need(e.sheet().annotations[0].technical->surfaceTexture->value==3.2,"scala vista non converte i micrometri");near(noteItem(e,first.id)->boundingRect().width(),originalWidth,"scala vista non ridimensiona il simbolo sul foglio");ok(e.undo());need(bytes(e)==saved,"Undo scala con rugosità");
+ auto grown=model;grown.snapshot.bodies[0]=body(1,makeBox(Frame3(),16,8,6));ok(e.updateModel(grown));near(e.annotationResult(first.id).point.x(),16,"rugosità segue vertice modificato");need(e.sheet().annotations[0].technical->surfaceTexture->value==3.2,"limite dichiarato invariato dopo modifica geometrica");ok(e.updateModel(model));
+ auto absent=model;absent.snapshot.bodies.erase(absent.snapshot.bodies.begin());absent.choices.removeFirst();ok(e.updateModel(absent));need(e.annotationResult(first.id).status==DrawingDimensionStatus::Missing&&!noteItem(e,first.id,"annotationLeader"),"rugosità orfana senza vecchia freccia");
+ const auto missingLayout=layoutDrawingTechnicalAnnotation(e.sheet(),e.sheet().annotations[1],{},true);need(missingLayout.bounds.contains(missingLayout.text.boundingRect()),"avviso orfano e processo inclusi nell'ingombro");
+ QTemporaryDir temporary;DrawingPdfReport report;ok(e.exportPdf(temporary.filePath("orfano.pdf"),report));need(!report.warnings.empty(),"PDF segnala rugosità orfane");ok(e.updateModel(model));
+ // Cancel non muta il foglio; conferma prepara l'aggancio, poi due clic inseriscono il simbolo.
+ auto *action=e.findChild<QAction *>("drawingAddSurfaceTextureAction");need(action&&action->isEnabled(),"comando rugosità disponibile");
+ QTimer::singleShot(0,&e,[&]{e.findChild<QDialog *>("drawingTechnicalAnnotationDialog")->reject();});action->trigger();need(bytes(e)==saved,"Cancel rugosità atomico");
+ QTimer::singleShot(0,&e,[&]{auto *dialog=e.findChild<QDialog *>("drawingTechnicalAnnotationDialog");dialog->findChild<QDoubleSpinBox *>("drawingRoughnessValue")->setValue(1.6);
+  const auto output=qEnvironmentVariable("FORGECAD_SURFACE_TEXTURE_OUTPUT");if(!output.isEmpty()){QDir().mkpath(output);need(dialog->grab().save(output+"/rugosita-dialogo.png"),"cattura dialogo rugosità");}
+  dialog->findChild<QDialogButtonBox *>()->button(QDialogButtonBox::Ok)->click();});action->trigger();need(bytes(e)==saved,"dialogo prepara rugosità senza mutare foglio");
+ mouse(e,{96,106},true);mouse(e,{120,160});need(noteItem(e,{},"annotationPreview"),"anteprima rugosità dopo snap");mouse(e,{120,160},true);
+ need(e.sheet().annotations.size()==7&&e.sheet().annotations.back().technical->surfaceTexture->value==1.6,"rugosità inserita con mouse e snap");ok(e.undo());need(bytes(e)==saved,"un solo Undo inserimento rugosità");
+ select(e,first.id,"annotation");QTimer::singleShot(0,&e,[&]{auto *dialog=e.findChild<QDialog *>("drawingTechnicalAnnotationDialog");dialog->findChild<QPushButton *>("drawingAnnotationRedefine")->click();});e.findChild<QAction *>("drawingEditAnnotationAction")->trigger();mouse(e,{60,130},true);mouse(e,{125,60},true);
+ near(e.annotationResult(first.id).point.x(),0,"ridefinizione esplicita rugosità");need(e.sheet().annotations[0].id==first.id&&e.sheet().annotations[0].technical->surfaceTexture->value==3.2,"ridefinizione conserva identità e specifica");ok(e.undo());need(bytes(e)==saved,"Undo ridefinizione rugosità");
+ const auto output=qEnvironmentVariable("FORGECAD_SURFACE_TEXTURE_OUTPUT");const auto pdfPath=output.isEmpty()?temporary.filePath("rugosita.pdf"):output+"/rugosita.pdf";
+ if(!output.isEmpty()){e.fitSheet();QApplication::processEvents();need(e.grab().save(output+"/rugosita-editor.png"),"cattura sei simboli rugosità");}
+ ok(e.exportPdf(pdfPath,report));QFile pdf(pdfPath);need(pdf.open(QIODevice::ReadOnly)&&!pdf.readAll().contains("/Subtype /Image"),"rugosità PDF interamente vettoriali");
+ const auto annotations=e.sheet().annotations;for(const auto &annotation:annotations)ok(e.removeAnnotation(annotation.id));need(bytes(e)==base,"rimozione di tutte le rugosità ripristina schema legacy");
+ e.setReadOnly(true);need(!action->isEnabled()&&!e.addAnnotation(note).isEmpty(),"sola lettura blocca rugosità");
+ std::cout<<"PASS rugosità: Ra/Rz, tre processi, micrometri, codec28/legacy, input invalidi, proprietà, mouse/snap/anteprima, ridefinizione, modello/orfani, Undo/Redo e PDF vettoriale\n";
+}
 }

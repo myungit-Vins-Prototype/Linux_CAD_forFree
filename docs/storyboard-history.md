@@ -159,9 +159,12 @@ evitando puntatori residui durante aggiornamenti e chiusura.
 
 ## Lavoro successivo
 
-Dopo la stabilizzazione della storyboard, il porting va gestito in un branch
-separato. Le prime attivita' sono una toolchain CMake senza percorsi Linux,
-backend grafico Qt/OpenGL verificato su Windows e macOS ARM64, sostituzione o
-isolamento delle dipendenze specifiche di sistema, pacchetti Qt/OpenCASCADE per
-x64 e arm64, CI multipiattaforma e mantenimento del backend CPU quando CUDA non
-e' disponibile.
+Aggiornamento del 30 ottobre 2026: la proposta originaria di un porting separato
+è superata dall'unificazione su `main`. Compilazione e test Linux/macOS sono
+verificati in CI, con backend CPU e acceleratori CUDA/Metal opzionali nello
+stesso albero dei sorgenti. Stato e prove: [CI](ci.md) e
+[rapporto di unificazione](unificazione-main-2026-10-30.json).
+
+Restano successivi il porting Windows, la preparazione dei relativi pacchetti
+e le verifiche native del backend grafico su quella piattaforma. Le altre
+priorità funzionali e prestazionali sono raccolte nella [roadmap generale](roadmap.md).

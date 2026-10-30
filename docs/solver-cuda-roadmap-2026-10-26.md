@@ -1,5 +1,7 @@
 # Branch solver-mesh-gpu: avanzamento del 26 ottobre 2026
 
+Stato storico degli esperimenti del 26–28 ottobre. Dal 30 ottobre lo sviluppo è unificato su `main`, con CUDA/Metal opzionali; i riferimenti ai rami e ai percorsi di build descrivono le prove originali. Per completati e punti ancora aperti consultare la [roadmap generale](roadmap.md). I tempi riportati restano misure dei rispettivi checkpoint.
+
 ## Implementato
 
 - Lettore cache a blocchi comune alle piattaforme, verificato su Linux: [protocollo e risultati](cache-read-optimization-2026-10-25.md).

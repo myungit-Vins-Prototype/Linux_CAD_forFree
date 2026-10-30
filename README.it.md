@@ -22,6 +22,8 @@ Costruisci solidi parametrici e superfici a forma libera, modifica la storia del
 
 Lo sviluppo è unificato su `main`. CUDA e Metal restano backend opzionali negli stessi sorgenti; gli esperimenti usano rami brevi e richiedono misure sui casi interessati prima dell’integrazione.
 
+Stato delle funzioni e prossimi incrementi: [roadmap generale](docs/roadmap.md).
+
 ## Da dove iniziare
 
 1. Installa le [dipendenze](#requisiti), quindi segui le istruzioni di compilazione dai sorgenti per [Linux](#installazione-su-linux) o [macOS](#installazione-su-macos).
@@ -149,6 +151,10 @@ L'editor dei poli lavora su una singola faccia NURBS e conserva gradi, nodi e ri
 ### Tavole 2D
 
 Viste proiettate, sezioni, dettagli e ausiliarie; viste interrotte orizzontali o verticali con anteprima e quote del modello completo. Vedi [viste interrotte](docs/drawing-breaks.md) per uso e limiti. I dettagli circolari, rettangolari o a polilinea possono essere collegati alla vista madre con una linea che segue gli spostamenti.
+
+**Inserisci → Rugosità superficiale** aggiunge specifiche Ra/Rz in micrometri, con asportazione richiesta/vietata e processo opzionale. Simboli e richiami sono associati alla geometria e vettoriali nel PDF; proprietà, Undo e file `.drw` conservano i campi. [Uso e limiti](docs/drawing-revisions-study.md#rugosità-superficiale-strutturata--30-ottobre-2026).
+
+Durante il primo posizionamento e il trascinamento delle quote, guide lampeggianti agganciano il centro del testo alla quota più vicina nel verso del movimento, in orizzontale e verticale. Vicino alle frecce ha priorità lo snap fra punte coincidenti, anche tra una quota angolare e una lineare con lato comune: un cerchio lampeggiante indica il punto condiviso. Alt esclude gli agganci, Esc annulla; il rilascio crea un solo Undo. [Allineamento grafico](docs/drawing-revisions-study.md#allineamento-grafico-delle-quote--30-ottobre-2026).
 
 ### Visualizzazione e analisi
 

@@ -89,8 +89,16 @@ struct DrawingRevisionTable {
     bool visible=false;
     QVector<DrawingRevisionNote> notes;
 };
-enum class DrawingTechnicalKind { Datum, FeatureControl };
+enum class DrawingTechnicalKind { Datum, FeatureControl, SurfaceTexture };
 enum class DrawingGeometricCharacteristic { Straightness, Flatness, Circularity, Parallelism, Perpendicularity, Position };
+enum class DrawingRoughnessParameter { Ra, Rz };
+enum class DrawingMaterialRemoval { Any, Required, Prohibited };
+struct DrawingSurfaceTexture {
+    DrawingRoughnessParameter parameter=DrawingRoughnessParameter::Ra;
+    double value=3.2; // limite dichiarato in micrometri, indipendente dalle unità del modello
+    DrawingMaterialRemoval removal=DrawingMaterialRemoval::Any;
+    QString process; // processo di fabbricazione opzionale
+};
 struct DrawingTechnicalAnnotation {
     DrawingTechnicalKind kind=DrawingTechnicalKind::Datum;
     QString label; // identificatore del datum: lettere A-Z
@@ -98,6 +106,7 @@ struct DrawingTechnicalAnnotation {
     double tolerance=0; // valore dichiarato in mm, non misura calcolata
     bool diameter=false;
     QVector<QUuid> datums; // primario, secondario, terziario; mai etichette congelate
+    std::optional<DrawingSurfaceTexture> surfaceTexture{};
 };
 struct DrawingAnnotation {
     QUuid id=QUuid::createUuid(),viewId; // vista nulla per una nota libera sul foglio

@@ -24,3 +24,6 @@ docs/solidcraft-toolbar-study-2026-10-22.md
 
 # Build Linux separata per i confronti solver/mesh/CUDA.
 forgecad-linux-solver/
+
+# Materiale diagnostico locale conservato dopo la pulizia delle build.
+/archivi-locali/

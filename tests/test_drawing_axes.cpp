@@ -65,7 +65,7 @@ int main(int argc,char **argv){QApplication app(argc,argv);try{
  ok(editor.updateModel(changed));ok(editor.removeView(top.id));need(std::none_of(editor.sheet().axes.begin(),editor.sheet().axes.end(),[&](const auto &a){return a.viewId==top.id;}),"rimuovi vista rimuove assi");ok(editor.undo());need(editor.axisResult(diagonal.id).status==DrawingDimensionStatus::Ready,"Undo vista ripristina assi");
  editor.setReadOnly(true);need(!editor.addAxis(diagonal).isEmpty()&&!editor.updateAxis(median).isEmpty()&&!editor.removeAxis(median.id).isEmpty()&&!editor.beginAxis(DrawingAxisKind::ThroughPoints).isEmpty()&&!editor.setCylinderAxesVisible(front.id,false).isEmpty(),"sola lettura rispettata");
  axisDimensionTests();
- annotationTests();technicalAnnotationTests();
+ annotationTests();technicalAnnotationTests();surfaceTextureTests();
  toleranceTests();
  drawingOptionsTests();
  std::cout<<"PASS assi associati, mediana, superfici cilindriche, snap mouse, proprieta', codec schema 4, undo, aggiornamento, riferimenti mancanti, PDF e sola lettura\n";

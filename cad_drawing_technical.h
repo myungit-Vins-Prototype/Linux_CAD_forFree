@@ -11,6 +11,7 @@ inline QString drawingGeometricName(DrawingGeometricCharacteristic c){
     switch(c){case DrawingGeometricCharacteristic::Straightness:return QStringLiteral("Rettilineità");case DrawingGeometricCharacteristic::Flatness:return QStringLiteral("Planarità");case DrawingGeometricCharacteristic::Circularity:return QStringLiteral("Circolarità");case DrawingGeometricCharacteristic::Parallelism:return QStringLiteral("Parallelismo");case DrawingGeometricCharacteristic::Perpendicularity:return QStringLiteral("Perpendicolarità");case DrawingGeometricCharacteristic::Position:return QStringLiteral("Posizione");}return {};
 }
 inline QString drawingTechnicalNumber(double value){auto text=QString::number(value,'f',6);while(text.endsWith('0'))text.chop(1);if(text.endsWith('.'))text.chop(1);return text;}
+inline QString drawingRoughnessName(DrawingRoughnessParameter parameter){return parameter==DrawingRoughnessParameter::Ra?QStringLiteral("Ra"):QStringLiteral("Rz");}
 inline const DrawingAnnotation *drawingDatumAnnotation(const DrawingSheet &sheet,const QUuid &id){
     for(const auto &n:sheet.annotations)if(n.id==id&&n.technical&&n.technical->kind==DrawingTechnicalKind::Datum)return &n;
     return nullptr;
@@ -18,8 +19,17 @@ inline const DrawingAnnotation *drawingDatumAnnotation(const DrawingSheet &sheet
 inline QString validateDrawingTechnicalAnnotation(const DrawingAnnotation &note,const DrawingSheet *sheet=nullptr,bool requireAnchor=true){
     if(!note.technical)return {};
     const auto &t=*note.technical;
-    if(!note.text.isEmpty()||int(t.kind)<0||int(t.kind)>1)return QStringLiteral("Dati dell’annotazione strutturata non validi.");
+    if(!note.text.isEmpty()||int(t.kind)<0||int(t.kind)>2)return QStringLiteral("Dati dell’annotazione strutturata non validi.");
     if(requireAnchor&&!note.reference)return QStringLiteral("Il simbolo tecnico richiede un aggancio geometrico.");
+    if(t.kind==DrawingTechnicalKind::SurfaceTexture){
+        if(!t.surfaceTexture||!t.label.isEmpty()||t.characteristic!=DrawingGeometricCharacteristic::Straightness||t.tolerance!=0||t.diameter||!t.datums.isEmpty())return QStringLiteral("Parametri estranei alla rugosità.");
+        const auto &texture=*t.surfaceTexture;
+        if(int(texture.parameter)<0||int(texture.parameter)>1||int(texture.removal)<0||int(texture.removal)>2)return QStringLiteral("Parametro o asportazione della rugosità non validi.");
+        if(!std::isfinite(texture.value)||texture.value<1e-6||texture.value>1e6||std::abs(texture.value*1e6-std::round(texture.value*1e6))>1e-6)return QStringLiteral("Rugosità positiva da 0,000001 a 1000000 µm, con massimo sei decimali.");
+        if(texture.process.size()>64||texture.process!=texture.process.trimmed()||std::any_of(texture.process.cbegin(),texture.process.cend(),[](QChar c){return !c.isPrint();}))return QStringLiteral("Processo di fabbricazione: massimo 64 caratteri stampabili su una riga.");
+        return {};
+    }
+    if(t.surfaceTexture)return QStringLiteral("Rugosità estranea al datum o alla tolleranza geometrica.");
     if(t.kind==DrawingTechnicalKind::Datum){
         if(t.label.isEmpty()||t.label.size()>3||std::any_of(t.label.cbegin(),t.label.cend(),[](QChar c){return c<'A'||c>'Z';}))return QStringLiteral("Il datum richiede da una a tre lettere A–Z.");
         if(t.characteristic!=DrawingGeometricCharacteristic::Straightness||t.tolerance!=0||t.diameter||!t.datums.isEmpty())return QStringLiteral("Parametri di tolleranza estranei al datum.");
@@ -42,11 +52,16 @@ inline QString validateDrawingTechnicalAnnotation(const DrawingAnnotation &note,
 inline QString drawingAnnotationText(const DrawingSheet &sheet,const DrawingAnnotation &note){
     if(!note.technical)return note.text;
     const auto &t=*note.technical;if(t.kind==DrawingTechnicalKind::Datum)return QStringLiteral("Datum %1").arg(t.label);
+    if(t.kind==DrawingTechnicalKind::SurfaceTexture&&t.surfaceTexture){const auto &s=*t.surfaceTexture;QString text=drawingRoughnessName(s.parameter)+QStringLiteral(" ")+drawingTechnicalNumber(s.value)+QStringLiteral(" µm");
+        if(s.removal==DrawingMaterialRemoval::Required)text+=QStringLiteral(" · Asportazione richiesta");
+        if(s.removal==DrawingMaterialRemoval::Prohibited)text+=QStringLiteral(" · Asportazione vietata");
+        if(!s.process.isEmpty())text+=QStringLiteral(" · ")+s.process;
+        return text;}
     QString text=drawingGeometricName(t.characteristic)+QStringLiteral(" | ")+(t.diameter?QStringLiteral("⌀ "):QString())+drawingTechnicalNumber(t.tolerance);
     for(const auto &id:t.datums){const auto *datum=drawingDatumAnnotation(sheet,id);text+=QStringLiteral(" | ")+(datum?datum->technical->label:QStringLiteral("?"));}return text;
 }
 struct DrawingTechnicalLayout {QPainterPath frame,symbol,text;QRectF bounds;};
-// Celle, simboli e caratteri sono vettoriali; nessuna dipendenza da un font GD&T.
+// Celle, simboli e caratteri sono vettoriali; nessuna dipendenza da un font tecnico.
 inline DrawingTechnicalLayout layoutDrawingTechnicalAnnotation(const DrawingSheet &sheet,const DrawingAnnotation &note,const DrawingStyle &style={},bool missing=false){
     DrawingTechnicalLayout out;if(!note.technical)return out;
     const auto &t=*note.technical;const auto font=drawingFont(style);const QFontMetricsF metrics(font);const double scale=note.height/12,h=note.height*2.2;
@@ -54,6 +69,22 @@ inline DrawingTechnicalLayout layoutDrawingTechnicalAnnotation(const DrawingShee
     const auto cellWidth=[&](const QString &text){return std::max(h,metrics.horizontalAdvance(text)*scale+note.height*.8);};
     double x=0;
     if(t.kind==DrawingTechnicalKind::Datum){const double width=cellWidth(t.label);out.frame.addRect(QRectF(0,0,width,h));cellText(t.label,0,width);x=width;}
+    else if(t.kind==DrawingTechnicalKind::SurfaceTexture&&t.surfaceTexture){
+        const auto &s=*t.surfaceTexture;
+        // Indicazione di profilo con barra staccata (ISO 21920-1, figura 4).
+        out.symbol.moveTo(0,h*.55);out.symbol.lineTo(h*.25,h);out.symbol.lineTo(h*.83,0);
+        out.symbol.moveTo(h*.08,h*.31);out.symbol.lineTo(h*.48,h*.31);
+        if(s.removal==DrawingMaterialRemoval::Required){out.symbol.moveTo(0,h*.55);out.symbol.lineTo(h*.51,h*.55);}
+        if(s.removal==DrawingMaterialRemoval::Prohibited)out.symbol.addEllipse(QPointF(h*.25,h*.69),h*.15,h*.15);
+        const auto value=drawingRoughnessName(s.parameter)+QStringLiteral(" ")+drawingTechnicalNumber(s.value);
+        const double width=std::max(cellWidth(value),s.process.isEmpty()?0.0:cellWidth(s.process));
+        out.symbol.moveTo(h*.83,0);out.symbol.lineTo(h+width,0);cellText(value,h,width);
+        if(!s.process.isEmpty()){
+            QPainterPath glyph;glyph.addText(QPointF(0,0),font,s.process);glyph=QTransform::fromScale(scale,scale).map(glyph);
+            const auto box=glyph.boundingRect();glyph.translate(h-box.left(),-note.height*.4-box.bottom());out.text.addPath(glyph);
+        }
+        x=h+width;
+    }
     else{
         x=h;out.frame.moveTo(x,0);out.frame.lineTo(x,h);
         const auto line=[&](double ax,double ay,double bx,double by){out.symbol.moveTo(h*ax,h*ay);out.symbol.lineTo(h*bx,h*by);};
@@ -68,8 +99,8 @@ inline DrawingTechnicalLayout layoutDrawingTechnicalAnnotation(const DrawingShee
         const auto tolerance=(t.diameter?QStringLiteral("⌀ "):QString())+drawingTechnicalNumber(t.tolerance);const double width=cellWidth(tolerance);cellText(tolerance,x,width);x+=width;
         for(const auto &id:t.datums){out.frame.moveTo(x,0);out.frame.lineTo(x,h);const auto *datum=drawingDatumAnnotation(sheet,id);const auto label=datum?datum->technical->label:QStringLiteral("?");const auto w=cellWidth(label);cellText(label,x,w);x+=w;}out.frame.addRect(QRectF(0,0,x,h));
     }
-    out.bounds=QRectF(0,0,x,h);
-    if(missing){QPainterPath warning;warning.addText(QPointF(0,0),font,QStringLiteral("Da verificare"));warning=QTransform::fromScale(scale,scale).map(warning);warning.translate(0,-note.height*.6);out.text.addPath(warning);out.bounds=out.bounds.united(warning.boundingRect());}
+    out.bounds=QRectF(0,0,x,h).united(out.text.boundingRect()).united(out.symbol.boundingRect());
+    if(missing){QPainterPath warning;warning.addText(QPointF(0,0),font,QStringLiteral("Da verificare"));warning=QTransform::fromScale(scale,scale).map(warning);warning.translate(0,out.bounds.top()-note.height*.6);out.text.addPath(warning);out.bounds=out.bounds.united(warning.boundingRect());}
     out.bounds=out.bounds.adjusted(-.2,-.2,.2,.2);return out;
 }
 }
