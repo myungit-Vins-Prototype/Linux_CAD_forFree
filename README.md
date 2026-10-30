@@ -2,6 +2,8 @@
 
 **Language:** English · [Leggi in italiano](README.it.md)
 
+[![CI Linux](https://github.com/myungit-Vins-Prototype/Linux_CAD_forFree/actions/workflows/ci.yml/badge.svg)](https://github.com/myungit-Vins-Prototype/Linux_CAD_forFree/actions/workflows/ci.yml)
+
 Build parametric solids and freeform surfaces, edit their modeling history, and create 2D technical drawings. ForgeCAD is a free, open-source CAD application for Linux and macOS with its own B-rep geometry kernel.
 
 **[Build on Linux](#installing-on-linux) · [Build on macOS](#installing-on-macos) · [Create your first model](#your-first-model-and-controls) · [Report a problem](https://github.com/myungit-Vins-Prototype/Linux_CAD_forFree/issues)**
@@ -367,6 +369,11 @@ The screenshots above show models created in ForgeCAD. Sample CAD documents are 
 If you have a local collection of models, open a document through **File → Apri** (Open) and use **Salva con nome** (Save as) to experiment on a copy. Tests that require real documents can use an external example directory; see [Tests and development](#tests-and-development).
 
 ## Tests and development
+
+[GitHub Actions CI](docs/ci.md) builds the complete application and runs the
+self-contained CTest suites on Ubuntu 26.04 after every push and pull request.
+Viewport tests requiring external documents and GPU/native rendering checks
+remain separate; the badge reports the actual Linux workflow result.
 
 The `forgecad` target builds the application. To also build and run the configured tests:
 

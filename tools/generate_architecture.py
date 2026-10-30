@@ -40,6 +40,7 @@ GROUPS = [
  ('build', 'Build e strumenti', 'Configurazione, generazione e confezionamento del software.')]
 # Descrizioni curate: aggiornare queste voci quando cambia il confine di un modulo.
 DESCRIPTIONS = {
+ '.github/workflows/ci.yml': ('build', 'GitHub Actions su Ubuntu26.04: dipendenze, compilazione Release completa e CTest autosufficienti CPU/offscreen; log e JUnit conservati, esclusi viewport con documenti esterni e verifiche GPU native.'),
  'cad_surface_tools': ('features', 'Estensione fino a riferimenti multipli: raggruppamento delle facce e cucitura del target; rete U/V e poli NURBS, storia e codec opzionale dei target nel formato53.'),
  'fk_surface_tools': ('kernel', 'Reti a celle Coons cucite, prolungamento e selezione dai pezzi gia intersecati senza secondo split, modifica relativa di poli/pesi con ricostruzione dei bordi e trim UV conservati.'),
  'forgeCad2026_dialogs_surface_tools.cpp': ('dialogs', 'Pannelli superfici: bordo libero iniziale, selezione continua di più target con lista, toggle/rimozione e termine per anteprima; famiglie U/V; poli multipli con gizmo globale/locale e anteprima al rilascio.'),
@@ -336,7 +337,7 @@ TOKEN_DESCRIPTIONS = {
 def inventory():
     names = subprocess.check_output(['git','ls-files','--cached','--others','--exclude-standard','-z'], cwd=ROOT).decode().split('\0')
     suffixes = {'.cpp','.h','.hpp','.c','.cu','.cuh','.mm','.py','.sh','.cmake','.qrc','.vert','.frag'}
-    return sorted({n for n in names if n and (Path(n).suffix in suffixes or Path(n).name=='CMakeLists.txt')
+    return sorted({n for n in names if n and (Path(n).suffix in suffixes or Path(n).name=='CMakeLists.txt' or n=='.github/workflows/ci.yml')
                    and not n.startswith(('docs/architecture/', 'build', 'forgecad-release/'))
                    and (ROOT/n).is_file()})
 
