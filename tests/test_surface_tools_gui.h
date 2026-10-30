@@ -137,7 +137,7 @@ static void surfaceTools() {
     header.skipRawData(7);
     quint32 size = 0;
     header >> size;
-    const auto payload = qUncompress(encoded.mid(11, size));
+    const auto payload = testDocumentUncompress(encoded,11, size);
     const auto tag = QByteArray::fromHex("53524631");
     const int offset = payload.lastIndexOf(tag);
     require(offset > 0, "blocco estensioni presente");

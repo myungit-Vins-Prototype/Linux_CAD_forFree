@@ -1,0 +1,958 @@
+{
+  "status": "Implemented and validated on macOS and Linux; publication details in CLAUDE.md and Git history.",
+  "branch": "solver-mesh-gpu",
+  "base_commit": "577c3cdc18d995db6b23c41f21a5d0d39caf80d6",
+  "document": {
+    "format": 56,
+    "cache_format": 7,
+    "compression": "Zstandard level 9 with checksum; 8 MiB maximum window",
+    "legacy": "reads zlib formats 1–55; definition53 hash writer preserved",
+    "geometry_and_mesh": "lossless codec; no quantization/mesh deletion"
+  },
+  "codec_sizes_same_uncompressed_state": [
+    {
+      "sample": "Example1-current",
+      "zlib_bytes": 34805326,
+      "zstd_bytes": 29535894,
+      "definition_sha256": "5be9b60cd47380e191039eaf6189151f8dfa19c0e8d23e19ba70153ea3b8bfcb",
+      "cache_sha256": "e165b774917aeef6e63d972efed1f26fda61c11509d877a778e4801dfeb07d91"
+    },
+    {
+      "sample": "flacone",
+      "zlib_bytes": 12372391,
+      "zstd_bytes": 7915588,
+      "definition_sha256": "fe539332b90347ced472433ce20b3f04efe7aeefaab7098e5fdf828e5d0948d7",
+      "cache_sha256": "8c6eb72dcbc867a6a59059bb4285cd18d1b3498ef6b2615893a2d080898d3fec"
+    },
+    {
+      "sample": "assembly",
+      "zlib_bytes": 378879291,
+      "zstd_bytes": 210076174,
+      "definition_sha256": "9ffe146243aae5aca14c4a0bba7fb76cec0dbd76da3f51cd375bf0985b95e6ea",
+      "cache_sha256": "020cb319e15ff064989e3b1ef50d084561169eb32442975c7dc8aeb2bd3bdfff"
+    }
+  ],
+  "codec_open_benchmarks": [
+    {
+      "sample": "Example1-current",
+      "mode": "zlib",
+      "median_read": 0.263756709,
+      "median_load": 0.002984334,
+      "median_open": 0.266092334,
+      "open_range": [
+        0.265066667,
+        0.291242458
+      ],
+      "gpu_points": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "sample": "Example1-current",
+      "mode": "zstd",
+      "median_read": 0.19598025,
+      "median_load": 0.002420542,
+      "median_open": 0.198400792,
+      "open_range": [
+        0.187950042,
+        0.322926
+      ],
+      "gpu_points": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "sample": "flacone",
+      "mode": "zlib",
+      "median_read": 0.112478791,
+      "median_load": 0.044899667,
+      "median_open": 0.157378458,
+      "open_range": [
+        0.134325,
+        0.161804041
+      ],
+      "gpu_points": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "sample": "flacone",
+      "mode": "zstd",
+      "median_read": 0.067710583,
+      "median_load": 0.0392535,
+      "median_open": 0.106583,
+      "open_range": [
+        0.106484208,
+        0.117758416
+      ],
+      "gpu_points": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "sample": "assembly",
+      "mode": "zlib",
+      "median_read": 1.823970959,
+      "median_load": 0.071487208,
+      "median_open": 1.896073918,
+      "open_range": [
+        1.873890583,
+        1.961118624
+      ],
+      "gpu_points": [
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "sample": "assembly",
+      "mode": "zstd",
+      "median_read": 1.382433375,
+      "median_load": 0.069304875,
+      "median_open": 1.4465087079999999,
+      "open_range": [
+        1.438662041,
+        1.531578
+      ],
+      "gpu_points": [
+        0,
+        0,
+        0
+      ]
+    }
+  ],
+  "benchmark_limits": "3 alternating pairs per file; new processes, warmed filesystem, read + CadViewport load; startup, first OpenGL frame and cold disk excluded. Same B-rep/mesh/error/triangle hashes per codec pair. External load uncontrolled; one Example1 outlier overlaps old interval. Assembly uses cached quality1. Initial quality2 assembly timeout excluded.",
+  "metal": {
+    "scope": "B-spline/NURBS point and normal batches; CPU trimming, triangulation and exact B-rep",
+    "minimum_batch": 8192,
+    "diagnostic_override": "FORGECAD_METAL_MIN_BATCH=512..1048576",
+    "numeric_tests": "48 degree/rational variants, repeated knots and edges, conditioning fallback, concurrent uploads, work buffer budget/reuse; GPU tests outside sandbox",
+    "max_relative_point_error": 5.15e-14,
+    "max_normal_error": 3.31e-14,
+    "flacone_final_gpu_points": 51449,
+    "flacone_visible_triangles": 202774,
+    "example1_gpu_points": 0,
+    "tuning": {
+      "cpu": {
+        "load_median": 0.312193291,
+        "open_median": 0.355298208,
+        "gpu_points": [
+          0,
+          0,
+          0
+        ]
+      },
+      "8192": {
+        "load_median": 0.309347875,
+        "open_median": 0.351911916,
+        "gpu_points": [
+          51449,
+          51449,
+          51449
+        ]
+      },
+      "32768": {
+        "load_median": 0.3099265,
+        "open_median": 0.353377166,
+        "gpu_points": [
+          0,
+          0,
+          0
+        ]
+      }
+    },
+    "application_speedup": "No stable overall CAD speedup claimed; final threshold avoids medium batches with command overhead.",
+    "synthetic_65536_points_normals_ms": {
+      "cpu": 13.905,
+      "metal": 4.427167,
+      "protocol": "5 rounds with alternating order, median; transfers included, shader startup excluded; separate from complete tessellation."
+    },
+    "surface_memory_limit_bytes": 134217728,
+    "surface_limit_validation": "Code reviewed; release exercised by concurrent fixtures. No saturation stress test claimed.",
+    "flacone_snapshot_initial_2048": {
+      "face_vertex_pairs": 104064,
+      "pairs_with_different_normal_bits": 4,
+      "max_normal_difference": 1.4901161193847656e-08,
+      "triangles_cpu_only": 0,
+      "triangles_gpu_only": 0,
+      "unique_vertex_sets_exact": true
+    },
+    "flacone_snapshot_final_8192": {
+      "threshold": 8192,
+      "gpu_points": 51449,
+      "face_vertex_pairs": 104064,
+      "pairs_with_different_normal_bits": 1,
+      "max_normal_difference": 5.820766091346741e-11,
+      "oriented_triangle_multisets_exact": true,
+      "vertex_positions_float_bits_exact": true,
+      "edges_labels_relations_exact": true
+    },
+    "availability": "Backend readiness re-read after failures; isolated fake-backend regression passed"
+  },
+  "tests": {
+    "distinct_passed": 36,
+    "application_selection": 30,
+    "additional": [
+      "geometry_sources",
+      "mesh_export_cpu",
+      "mesh_export_metal",
+      "metal_tessellation",
+      "surface_tools",
+      "tessellation_availability"
+    ],
+    "kernel_general_suite": "not run; geometric algorithms unchanged",
+    "platform": "macOS arm64; no new Linux/Windows validation"
+  },
+  "inputs_verified": [
+    {
+      "sample": "Example1.prt",
+      "bytes": 34805341,
+      "frozen_sha256": "a869466ae111b7219613549ccfb39927377f9333ea6bb429ae413b0d09dae775",
+      "current_sha256": "6cc536b54e84cb1f91e1b66af934f023536a866497b912f8d7e047df5e7d7c0e",
+      "unchanged_since_freeze": false,
+      "frozen_copy_verified": true,
+      "current_bytes": 50199930,
+      "current_modified_at": "2026-10-29T23:12:45.464395+01:00",
+      "note": "Source changed externally during the work; benchmarks remain tied to verified frozen copy. No writes to the source by this intervention."
+    },
+    {
+      "sample": "flacone_recuperato.prt",
+      "bytes": 16335094,
+      "frozen_sha256": "f037619a69380b330c313169812769235f092a4d06c9726995c5b24910c36c44",
+      "current_sha256": "f037619a69380b330c313169812769235f092a4d06c9726995c5b24910c36c44",
+      "unchanged_since_freeze": true,
+      "frozen_copy_verified": true,
+      "current_bytes": 16335094,
+      "current_modified_at": "2026-10-20T06:58:58.804951+02:00"
+    },
+    {
+      "sample": "2550_ASSIEME-ST5674-COMPLETO.prt",
+      "bytes": 378878911,
+      "frozen_sha256": "709d629c8703d5c62157c14a2b3683146f28093411a1c3362f0b5037bb0dab81",
+      "current_sha256": "709d629c8703d5c62157c14a2b3683146f28093411a1c3362f0b5037bb0dab81",
+      "unchanged_since_freeze": true,
+      "frozen_copy_verified": true,
+      "current_bytes": 378878911,
+      "current_modified_at": "2026-10-25T23:00:44.430744+01:00"
+    }
+  ],
+  "application": {
+    "path": "/Users/myungit/Linux_CAD_forFree/forgecad-release/forgecad",
+    "sha256": "6f06763ff0d5156462d7682b63a65459fd591ad5561af1ba84fe50d03260664c",
+    "runner_sha256": "51f3976d54b2ca00040e992d91a77e62970bfe6cfba4eecf5f408688d260ddcb"
+  },
+  "architecture": {
+    "files": 508,
+    "relations": 6919,
+    "translation_units": 245,
+    "errors": {},
+    "backend_resolution": "own TU definition, globally unique definition, otherwise API declaration for ambiguous backends; tested against TU order",
+    "generated_files": "local and ignored by Git",
+    "configuration_digest": "fe0b6a30228d647d6528393559969e4d1e0877e206128e3b956d786ba8af235c",
+    "audit": {
+      "files": 508,
+      "relations": 6919,
+      "translation_units": 245,
+      "diagnostic_units": 0,
+      "sites_valid": 83200,
+      "configuration_digest": "fe0b6a30228d647d6528393559969e4d1e0877e206128e3b956d786ba8af235c",
+      "boundaries": [
+        {
+          "source": "cad_document_io.cpp",
+          "target": "cad_document_read.cpp",
+          "call_sites": 12,
+          "both_directions": true
+        },
+        {
+          "source": "cad_cuda_tessellation.cpp",
+          "target": "cuda_support.h",
+          "call_sites": 4,
+          "both_directions": true
+        },
+        {
+          "source": "tests/test_document_compression.cpp",
+          "target": "cad_document_read.cpp",
+          "call_sites": 8,
+          "both_directions": true
+        },
+        {
+          "source": "tests/test_metal_tessellation.cpp",
+          "target": "cad_cuda_tessellation.cpp",
+          "call_sites": 12,
+          "both_directions": true
+        }
+      ],
+      "false_cpu_backend_link": false,
+      "check": "PASS",
+      "visual_limit": "Metal module inspected previously in browser; final graph and links checked statically after configuration alignment."
+    }
+  },
+  "source_sha256": {
+    "CMakeLists.txt": "3e0d1ffdb3b259680f9233a48d98b40c496c655000e3992f5a3e34546694b851",
+    "cad_cuda_tessellation.cpp": "3ab32be15e8ed144ffb6a7f2582f4ac4c29463f58cecee581db77a94fa0e84c3",
+    "cad_cuda_tessellation.h": "2de10596a42eeee12268f3ed732e162d900f8d364063c803fabf92cfb96b68f8",
+    "cad_document_io.cpp": "c5ab0475f509185108cd08c8ae2504f562f79f450d47c1cd36dc1ff13b01300f",
+    "cad_document_io.h": "1568dc1daab62c1050050239d96777e8a37699531b9e63cf98cb99470a5eeffa",
+    "cad_document_read.cpp": "d3fddf625b30cb9480e5d047e810c8eae680f4db173d39b5dd47313ff9f6cfcc",
+    "cad_document_read.h": "9c7f1dfcf16e6b40248ca2cb0e3fa605f69b6cdf4e5b62a8962c114edf5a1a29",
+    "cuda_support.h": "9e4f3d9fd9e8159faa21f2df35ccc89a271fb34d870d831399acdc62deb1afe7",
+    "cuda_support_metal.mm": "362a5c3d9fbf127a2e1e3f1a59c336982e5dedd2166738acf7b1efb2ff2217ab",
+    "forgeCad2026_gui.cpp": "bf7cfb6e90a58aad110e7454db3e124282b9535f484af2660f7145dbb0af783b",
+    "metal_surface_kernel.h": "0da99626a19388b911358cda9b38d71bbed37a152e9646dee95681ff3580786b",
+    "tests/test_declared_history_cache.h": "567e09c2dcdc7392e5a67af239f312675f3273c620b940d3e495e0359d58e7f5",
+    "tests/test_document_compression.cpp": "46cc834a121cc7915a4380351b1d286cfd1bb43a2b00e716293e6e5a69f66a08",
+    "tests/test_document_read.h": "838b58bbf1ae22d31b67b1f71b6ab74818f59500dcc791150236fa51bc541fec",
+    "tests/test_mesh_export_backends.cpp": "036e14d7dfda2f7234802a19e8185288fa73dc84025db65d0e1f988cdebcfa0a",
+    "tests/test_metal_tessellation.cpp": "d79a5c9b25fbb1838b75e3bc803122014d17d4c3dc5abd996ae1c74bd39ef185",
+    "tests/test_native_revisions.h": "d78b57937b7a704d46a81978dc57783e20ecaf32a57f8759d04567098797f2e0",
+    "tests/test_surface_tools_gui.h": "b2812e7576f086e1a8e4a38630c31454a4abc1d55c4d62ac94ef220247968503",
+    "tests/test_tessellation_availability.cpp": "cd66b4a75a2d005019afd7882ebea578fee1304f7a73c1eb16332b39c77ef7ac",
+    "tests/test_viewport.cpp": "2f239e9d7cc5bc389f99a1891657f5dfc61709f15ce2e1cdc8820a2f51988917",
+    "tools/generate_architecture.py": "8ddb456aab670b2f02856cba538c1ff544095b5e609882ac81bb88899edcf5ff"
+  },
+  "local_artifacts": "/Users/myungit/Linux_CAD_forFree/forgecad-release/benchmarks/zstd-metal-2026-10-29",
+  "open_work": "No shared-entity/delta B-rep storage or Accelerate in this increment. Full GPU trimming/triangulation and Windows validation remain separate work.",
+  "apple_optimization_study": {
+    "production_Accelerate": false,
+    "production_simdgroup_intrinsics": false,
+    "production_vectors": "Metal float2 for hi/lo precision, float3 for normal checks; one thread per UV sample; implicit hardware SIMD",
+    "hardware": "Apple M1, threadExecutionWidth32, generic maxTotalThreadsPerThreadgroup512",
+    "variants": "1/2/4/8 SIMD groups and function constants for cubic polynomial/rational pipelines, with generic fallback; isolated temporary prototypes only",
+    "initial_synthetic": [
+      {
+        "kind": "generic",
+        "simd_groups": 1,
+        "medians": {
+          "2048": 0.504125,
+          "4096": 0.642917,
+          "65536": 3.548708
+        }
+      },
+      {
+        "kind": "generic",
+        "simd_groups": 2,
+        "medians": {
+          "2048": 0.493375,
+          "4096": 0.663208,
+          "65536": 4.4935
+        }
+      },
+      {
+        "kind": "generic",
+        "simd_groups": 4,
+        "medians": {
+          "2048": 0.422167,
+          "4096": 0.59375,
+          "65536": 4.469792
+        }
+      },
+      {
+        "kind": "generic",
+        "simd_groups": 8,
+        "medians": {
+          "2048": 0.438834,
+          "4096": 0.6275,
+          "65536": 4.38525
+        }
+      },
+      {
+        "kind": "specialized",
+        "simd_groups": 1,
+        "medians": {
+          "2048": 0.446,
+          "4096": 0.58325,
+          "65536": 3.840542
+        }
+      },
+      {
+        "kind": "specialized",
+        "simd_groups": 2,
+        "medians": {
+          "2048": 0.48575,
+          "4096": 0.66,
+          "65536": 3.774875
+        }
+      },
+      {
+        "kind": "specialized",
+        "simd_groups": 4,
+        "medians": {
+          "2048": 0.43525,
+          "4096": 0.601625,
+          "65536": 3.825417
+        }
+      },
+      {
+        "kind": "specialized",
+        "simd_groups": 8,
+        "medians": {
+          "2048": 0.419125,
+          "4096": 0.577125,
+          "65536": 3.758083
+        }
+      }
+    ],
+    "confirmation_five_pairs_per_degree": [
+      {
+        "degree": [
+          1,
+          1
+        ],
+        "simd_groups": 4,
+        "medians": {
+          "2048": 0.338458,
+          "4096": 0.441333,
+          "65536": 2.568625
+        }
+      },
+      {
+        "degree": [
+          1,
+          1
+        ],
+        "simd_groups": 1,
+        "medians": {
+          "2048": 0.365625,
+          "4096": 0.501542,
+          "65536": 2.45625
+        }
+      },
+      {
+        "degree": [
+          3,
+          3
+        ],
+        "simd_groups": 4,
+        "medians": {
+          "2048": 0.446708,
+          "4096": 0.595084,
+          "65536": 4.433625
+        }
+      },
+      {
+        "degree": [
+          3,
+          3
+        ],
+        "simd_groups": 1,
+        "medians": {
+          "2048": 0.505292,
+          "4096": 0.618625,
+          "65536": 4.417208
+        }
+      },
+      {
+        "degree": [
+          7,
+          3
+        ],
+        "simd_groups": 4,
+        "medians": {
+          "2048": 0.639625,
+          "4096": 0.820333,
+          "65536": 7.85075
+        }
+      },
+      {
+        "degree": [
+          7,
+          3
+        ],
+        "simd_groups": 1,
+        "medians": {
+          "2048": 0.644958,
+          "4096": 0.8645,
+          "65536": 7.785167
+        }
+      }
+    ],
+    "complete_model_three_rounds": [
+      {
+        "kind": "generic",
+        "simd_groups": 4,
+        "median_load": 0.301879375,
+        "range_load": [
+          0.300224709,
+          0.322121
+        ],
+        "median_process": 0.51193104199956,
+        "gpu_points": [
+          51449,
+          51449,
+          51449
+        ]
+      },
+      {
+        "kind": "generic",
+        "simd_groups": 1,
+        "median_load": 0.299741,
+        "range_load": [
+          0.29811675,
+          0.312240792
+        ],
+        "median_process": 0.505468708999615,
+        "gpu_points": [
+          51449,
+          51449,
+          51449
+        ]
+      },
+      {
+        "kind": "specialized",
+        "simd_groups": 4,
+        "median_load": 0.30510725,
+        "range_load": [
+          0.304275916,
+          0.310871542
+        ],
+        "median_process": 0.5122707079990505,
+        "gpu_points": [
+          51449,
+          51449,
+          51449
+        ]
+      },
+      {
+        "kind": "specialized",
+        "simd_groups": 8,
+        "median_load": 0.312742833,
+        "range_load": [
+          0.311634583,
+          0.342508708
+        ],
+        "median_process": 0.5211446249995788,
+        "gpu_points": [
+          51449,
+          51449,
+          51449
+        ]
+      },
+      {
+        "kind": "cpu",
+        "simd_groups": 4,
+        "median_load": 0.303230792,
+        "range_load": [
+          0.294556125,
+          0.312071792
+        ],
+        "median_process": 0.5070157080008357,
+        "gpu_points": [
+          0,
+          0,
+          0
+        ]
+      }
+    ],
+    "decision": "No prototype adopted. Initial 20% gain from group sizing not confirmed; cubic65536 median4.433625 vs4.417208ms. Function constants do not improve complete flacone load.",
+    "diagnostic_gpu_timestamps": {
+      "calls": 5,
+      "host_call_sum_ms": 8.818709,
+      "gpu_busy_union_ms": 2.77675,
+      "model_load_ms": 303.161375,
+      "limits": "Single diagnostic process, not a benchmark; host call sums may overlap across threads; GPU interval union measured from MTLCommandBuffer timestamps."
+    },
+    "primary_sources": [
+      "https://developer.apple.com/documentation/accelerate",
+      "https://developer.apple.com/documentation/metal/creating-threads-and-threadgroups",
+      "https://developer.apple.com/documentation/metal/using-function-specialization-to-build-pipeline-variants"
+    ]
+  },
+  "measurement_probe": {
+    "sha256": "405aa824ce240b3dc03e8a4a6a27597a3b1b0f180e102150eb8c8ecb2fb8004b",
+    "note": "Codec and chosen-threshold timings measured before the final readiness-cache removal. Compression and numerical kernels unchanged; final failure-fallback regression tested separately."
+  },
+  "linux_alignment": {
+    "host": "VrosaLinuxPibi",
+    "system": "Linux",
+    "architecture": {
+      "files": 508,
+      "relations": 6913,
+      "translation_units": 240,
+      "diagnostic_units": 0,
+      "sites_valid": 83037,
+      "edge_kinds": {
+        "call": 4723,
+        "include": 2176,
+        "reference": 14
+      },
+      "configuration_digest": "a9c93cd882563347adf6b99373042f513b974f5e4e1bfc090f2d81b8ccd80a9f",
+      "boundaries": [
+        {
+          "source": "cad_document_io.cpp",
+          "target": "cad_document_read.cpp",
+          "call_sites": 12,
+          "both_directions": true
+        },
+        {
+          "source": "cad_cuda_tessellation.cpp",
+          "target": "cuda_support.h",
+          "call_sites": 4,
+          "both_directions": true
+        },
+        {
+          "source": "tests/test_document_compression.cpp",
+          "target": "cad_document_read.cpp",
+          "call_sites": 8,
+          "both_directions": true
+        },
+        {
+          "source": "tests/test_tessellation_availability.cpp",
+          "target": "cad_cuda_tessellation.cpp",
+          "call_sites": 6,
+          "both_directions": true
+        }
+      ],
+      "false_cpu_backend_link": false,
+      "check": "PASS",
+      "generated_files_ignored": true,
+      "limits": "CUDA kernels and embedded Metal MSL are not analyzed as C++ AST; backend ambiguity resolves to the API declaration. Final Linux graph checked statically; no native browser inspection in this step."
+    },
+    "based_on_commit": "3337d6d3acd1abfaa56586ca3d96718e1fe765d4",
+    "branch": "solver-mesh-gpu",
+    "build": {
+      "targets": [
+        "forgecad",
+        "forgecad_view_tests",
+        "forgecad_document_compression_tests",
+        "forgecad_tessellation_availability_tests",
+        "forgecad_snapshot_chunks_tests",
+        "forgecad_cuda_tests",
+        "forgecad_cuda_pool_tests",
+        "forgecad_mesh_export_backend_tests",
+        "forgecad_gpu_broad_phase_tests"
+      ],
+      "returncode": 0,
+      "wall_seconds": 372.76217354499386
+    },
+    "application": {
+      "path": "/home/myungit/Linux_CAD_forFree/forgecad-linux-solver/forgecad",
+      "sha256": "f7c070b07cda7cd571186afb25aa2140b2ef135da97b296bcb4b9b4092aa5ea6",
+      "bytes": 92125600,
+      "file": "/home/myungit/Linux_CAD_forFree/forgecad-linux-solver/forgecad: ELF 64-bit LSB pie executable, x86-64, version 1 (GNU/Linux), dynamically linked, interpreter /lib64/ld-linux-x86-64.so.2, BuildID[sha1]=33c1a79924d9fde55c1fcc6318c5f299623da7cf, for GNU/Linux 6.1.0, with debug_info, not stripped",
+      "zstd_dependency": [
+        "libzstd.so.1 => /usr/lib/libzstd.so.1 (0x00007f73dd907000)"
+      ],
+      "missing_dependencies": false
+    },
+    "runner_sha256": "4287509a7fe0a8bf64687359bad082d84f358baed1cb663ea3cf70645b148fc0",
+    "configuration": {
+      "configuration_sha256": "a9c93cd882563347adf6b99373042f513b974f5e4e1bfc090f2d81b8ccd80a9f",
+      "translation_units": 435,
+      "apple_sources_compiled": [],
+      "cuda_source_compiled": true,
+      "zstd_installed": "1.5.7",
+      "configure_exit": 0
+    },
+    "tests": {
+      "returncode": 0,
+      "wall_seconds": 16.982367137010442,
+      "selected": [
+        "forgecad_document_read_tests",
+        "forgecad_document_units_tests",
+        "forgecad_document_recovery_tests",
+        "forgecad_document_access_tests",
+        "forgecad_document_consultation_tests",
+        "forgecad_native_revisions_tests",
+        "forgecad_workspace_revisions_tests",
+        "forgecad_drawing_revisions_tests",
+        "forgecad_drawing_release_tests",
+        "forgecad_drawing_restore_tests",
+        "forgecad_drawing_multisheet_tests",
+        "forgecad_projected_drawing_file_tests",
+        "forgecad_linked_drawing_tests",
+        "forgecad_catalog_recovery_gui_tests",
+        "forgecad_declared_history_cache_tests",
+        "forgecad_pattern_legacy_history_tests",
+        "forgecad_pattern_result_tests",
+        "forgecad_pattern_single_story_tests",
+        "forgecad_pattern_placement_tests",
+        "forgecad_failed_feature_repair_tests",
+        "forgecad_all_history_tests",
+        "forgecad_boolean_history_tests",
+        "forgecad_blend_history_tests",
+        "forgecad_extrusion_history_tests",
+        "forgecad_revolution_history_tests",
+        "forgecad_history_preview_mesh_tests",
+        "forgecad_history_suppression_tests",
+        "forgecad_genealogy_tests",
+        "forgecad_surface_tools_tests",
+        "forgecad_snapshot_chunks_tests",
+        "forgecad_document_compression_tests",
+        "forgecad_tessellation_availability_tests",
+        "forgecad_geometry_sources_tests",
+        "forgecad_mesh_export_cpu_tests",
+        "forgecad_cuda_tests",
+        "forgecad_cuda_pool_tests",
+        "forgecad_mesh_export_cuda_tests",
+        "forgecad_mesh_export_cuda_specialized_tests",
+        "forgecad_gpu_broad_phase_tests",
+        "forgecad_box_fallback_tests"
+      ],
+      "cases": [
+        {
+          "name": "forgecad_gpu_broad_phase_tests",
+          "status": "passed",
+          "time": "0.463574"
+        },
+        {
+          "name": "forgecad_box_fallback_tests",
+          "status": "passed",
+          "time": "0.268678"
+        },
+        {
+          "name": "forgecad_geometry_sources_tests",
+          "status": "passed",
+          "time": "0.0362349"
+        },
+        {
+          "name": "forgecad_cuda_tests",
+          "status": "passed",
+          "time": "0.479532"
+        },
+        {
+          "name": "forgecad_tessellation_availability_tests",
+          "status": "passed",
+          "time": "0.00111696"
+        },
+        {
+          "name": "forgecad_cuda_pool_tests",
+          "status": "passed",
+          "time": "0.445864"
+        },
+        {
+          "name": "forgecad_mesh_export_cpu_tests",
+          "status": "passed",
+          "time": "0.11976"
+        },
+        {
+          "name": "forgecad_mesh_export_cuda_tests",
+          "status": "passed",
+          "time": "0.541259"
+        },
+        {
+          "name": "forgecad_mesh_export_cuda_specialized_tests",
+          "status": "passed",
+          "time": "0.553595"
+        },
+        {
+          "name": "forgecad_document_read_tests",
+          "status": "passed",
+          "time": "0.131126"
+        },
+        {
+          "name": "forgecad_document_units_tests",
+          "status": "passed",
+          "time": "0.118346"
+        },
+        {
+          "name": "forgecad_history_suppression_tests",
+          "status": "passed",
+          "time": "0.0172136"
+        },
+        {
+          "name": "forgecad_pattern_placement_tests",
+          "status": "passed",
+          "time": "0.0159545"
+        },
+        {
+          "name": "forgecad_pattern_result_tests",
+          "status": "passed",
+          "time": "0.821128"
+        },
+        {
+          "name": "forgecad_pattern_legacy_history_tests",
+          "status": "passed",
+          "time": "0.0253736"
+        },
+        {
+          "name": "forgecad_failed_feature_repair_tests",
+          "status": "passed",
+          "time": "0.164366"
+        },
+        {
+          "name": "forgecad_pattern_single_story_tests",
+          "status": "passed",
+          "time": "0.131914"
+        },
+        {
+          "name": "forgecad_genealogy_tests",
+          "status": "passed",
+          "time": "0.0536096"
+        },
+        {
+          "name": "forgecad_declared_history_cache_tests",
+          "status": "passed",
+          "time": "0.0482932"
+        },
+        {
+          "name": "forgecad_boolean_history_tests",
+          "status": "passed",
+          "time": "0.0386864"
+        },
+        {
+          "name": "forgecad_blend_history_tests",
+          "status": "passed",
+          "time": "0.0400781"
+        },
+        {
+          "name": "forgecad_all_history_tests",
+          "status": "passed",
+          "time": "0.451454"
+        },
+        {
+          "name": "forgecad_native_revisions_tests",
+          "status": "passed",
+          "time": "0.0609533"
+        },
+        {
+          "name": "forgecad_workspace_revisions_tests",
+          "status": "passed",
+          "time": "0.245723"
+        },
+        {
+          "name": "forgecad_linked_drawing_tests",
+          "status": "passed",
+          "time": "1.04252"
+        },
+        {
+          "name": "forgecad_drawing_revisions_tests",
+          "status": "passed",
+          "time": "0.705193"
+        },
+        {
+          "name": "forgecad_projected_drawing_file_tests",
+          "status": "passed",
+          "time": "1.01317"
+        },
+        {
+          "name": "forgecad_surface_tools_tests",
+          "status": "passed",
+          "time": "0.720877"
+        },
+        {
+          "name": "forgecad_catalog_recovery_gui_tests",
+          "status": "passed",
+          "time": "0.409594"
+        },
+        {
+          "name": "forgecad_drawing_release_tests",
+          "status": "passed",
+          "time": "0.783444"
+        },
+        {
+          "name": "forgecad_drawing_restore_tests",
+          "status": "passed",
+          "time": "1.16664"
+        },
+        {
+          "name": "forgecad_drawing_multisheet_tests",
+          "status": "passed",
+          "time": "1.03057"
+        },
+        {
+          "name": "forgecad_history_preview_mesh_tests",
+          "status": "passed",
+          "time": "0.0181311"
+        },
+        {
+          "name": "forgecad_revolution_history_tests",
+          "status": "passed",
+          "time": "0.496697"
+        },
+        {
+          "name": "forgecad_extrusion_history_tests",
+          "status": "passed",
+          "time": "0.0798225"
+        },
+        {
+          "name": "forgecad_document_access_tests",
+          "status": "passed",
+          "time": "0.221535"
+        },
+        {
+          "name": "forgecad_document_consultation_tests",
+          "status": "passed",
+          "time": "0.579611"
+        },
+        {
+          "name": "forgecad_document_recovery_tests",
+          "status": "passed",
+          "time": "3.36673"
+        },
+        {
+          "name": "forgecad_document_compression_tests",
+          "status": "passed",
+          "time": "0.013862"
+        },
+        {
+          "name": "forgecad_snapshot_chunks_tests",
+          "status": "passed",
+          "time": "0.0207298"
+        }
+      ]
+    },
+    "source_equality_at_transfer": {
+      "compared_files": 23,
+      "all_equal_to_mac_package": true,
+      "sha256": {
+        "CMakeLists.txt": "3e0d1ffdb3b259680f9233a48d98b40c496c655000e3992f5a3e34546694b851",
+        "cad_cuda_tessellation.cpp": "3ab32be15e8ed144ffb6a7f2582f4ac4c29463f58cecee581db77a94fa0e84c3",
+        "cad_cuda_tessellation.h": "2de10596a42eeee12268f3ed732e162d900f8d364063c803fabf92cfb96b68f8",
+        "cad_document_io.cpp": "c5ab0475f509185108cd08c8ae2504f562f79f450d47c1cd36dc1ff13b01300f",
+        "cad_document_io.h": "1568dc1daab62c1050050239d96777e8a37699531b9e63cf98cb99470a5eeffa",
+        "cad_document_read.cpp": "d3fddf625b30cb9480e5d047e810c8eae680f4db173d39b5dd47313ff9f6cfcc",
+        "cad_document_read.h": "9c7f1dfcf16e6b40248ca2cb0e3fa605f69b6cdf4e5b62a8962c114edf5a1a29",
+        "cuda_support.h": "9e4f3d9fd9e8159faa21f2df35ccc89a271fb34d870d831399acdc62deb1afe7",
+        "cuda_support_metal.mm": "362a5c3d9fbf127a2e1e3f1a59c336982e5dedd2166738acf7b1efb2ff2217ab",
+        "docs/architecture/README.md": "2627e276fdccf02caabbdcec5a076a24f8b9911925ac7bbea9d645e39e816137",
+        "docs/zstd-metal-validation-2026-10-29.json": "ec64663e4804c97fff65b2988c93e25633d08b9b719da20b68f686021c84880b",
+        "forgeCad2026_gui.cpp": "bf7cfb6e90a58aad110e7454db3e124282b9535f484af2660f7145dbb0af783b",
+        "metal_surface_kernel.h": "0da99626a19388b911358cda9b38d71bbed37a152e9646dee95681ff3580786b",
+        "tests/test_declared_history_cache.h": "567e09c2dcdc7392e5a67af239f312675f3273c620b940d3e495e0359d58e7f5",
+        "tests/test_document_compression.cpp": "46cc834a121cc7915a4380351b1d286cfd1bb43a2b00e716293e6e5a69f66a08",
+        "tests/test_document_read.h": "838b58bbf1ae22d31b67b1f71b6ab74818f59500dcc791150236fa51bc541fec",
+        "tests/test_mesh_export_backends.cpp": "036e14d7dfda2f7234802a19e8185288fa73dc84025db65d0e1f988cdebcfa0a",
+        "tests/test_metal_tessellation.cpp": "d79a5c9b25fbb1838b75e3bc803122014d17d4c3dc5abd996ae1c74bd39ef185",
+        "tests/test_native_revisions.h": "d78b57937b7a704d46a81978dc57783e20ecaf32a57f8759d04567098797f2e0",
+        "tests/test_surface_tools_gui.h": "b2812e7576f086e1a8e4a38630c31454a4abc1d55c4d62ac94ef220247968503",
+        "tests/test_tessellation_availability.cpp": "cd66b4a75a2d005019afd7882ebea578fee1304f7a73c1eb16332b39c77ef7ac",
+        "tests/test_viewport.cpp": "2f239e9d7cc5bc389f99a1891657f5dfc61709f15ce2e1cdc8820a2f51988917",
+        "tools/generate_architecture.py": "8ddb456aab670b2f02856cba538c1ff544095b5e609882ac81bb88899edcf5ff"
+      }
+    },
+    "readmes": {
+      "readme_default_english": true,
+      "italian_readme_separate": true,
+      "legacy_english_link_preserved": true,
+      "files": [
+        {
+          "path": "README.md",
+          "local_links_checked": 18,
+          "sha256": "3ebcdb10ae1e78135e27247b318ac9f5224a068f8d2d821cf1ba6da3ae9bba52"
+        },
+        {
+          "path": "README.it.md",
+          "local_links_checked": 19,
+          "sha256": "07130d6ce8e199beea065ced8c7154710f5e55e40f7824689366ee49d96f8b99"
+        },
+        {
+          "path": "README.en.md",
+          "local_links_checked": 2,
+          "sha256": "af4a5528df7a7e178530d6cd553270e1c41172a97e343262232e62b4b791e2e3"
+        }
+      ]
+    },
+    "preservation": "Linux README commit3337d6d, English redirect, local log notes and main worktree retained; no source resets, CAD copies or driver changes.",
+    "local_artifacts": "/home/myungit/Linux_CAD_forFree/forgecad-linux-solver/benchmarks/zstd-metal-sync-2026-10-29",
+    "limits": "No full kernel suite, native GUI first-frame or cold-disk benchmark, Windows build, desktop installation or Accelerate implementation in this step. Source sync and selected regressions verified."
+  }
+}

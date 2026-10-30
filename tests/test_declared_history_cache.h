@@ -118,13 +118,13 @@ static void declaredHistoryCacheTest() {
     QDataStream header(bytes); header.skipRawData(4);
     quint16 fileVersion = 0; quint8 compression = 0; quint32 payloadSize = 0;
     header >> fileVersion >> compression >> payloadSize;
-    require(fileVersion == kDocumentFormatVersion && compression == 1, "definizione parametrica nel formato corrente con identita' del documento");
+    require(fileVersion == kDocumentFormatVersion && compression == 2, "definizione parametrica nel formato corrente con identita' del documento");
     const qsizetype cacheOffset = 11 + qsizetype(payloadSize);
-    const QByteArray prefix = bytes.left(cacheOffset), cacheData = qUncompress(bytes.mid(cacheOffset));
+    const QByteArray prefix = bytes.left(cacheOffset), cacheData = testDocumentUncompress(bytes,cacheOffset);
     QDataStream cacheIn(cacheData); cacheIn.setVersion(QDataStream::Qt_6_0);
     QByteArray sourceHash, payloadHash; quint32 tag = 0, version = 0, count = 0;
     cacheIn >> sourceHash >> payloadHash >> tag >> version >> count;
-    require(version == 7 && count == 4 && payloadHash == QCryptographicHash::hash(qUncompress(bytes.mid(11, payloadSize)), QCryptographicHash::Sha256),
+    require(version == 7 && count == 4 && payloadHash == QCryptographicHash::hash(testDocumentUncompress(bytes,11, payloadSize), QCryptographicHash::Sha256),
         "cache 7 legata alla stessa definizione");
     struct Record { bool has = false; QString error; QByteArray body, history; };
     std::vector<Record> records(count);
@@ -161,7 +161,7 @@ static void declaredHistoryCacheTest() {
             if (cacheVersion >= 6) writer.write(record.history);
         }
         const QString target = directory.filePath(name + QStringLiteral(".prt"));
-        QFile output(target); const QByteArray data = prefix + qCompress(encoded, 6);
+        QFile output(target); const QByteArray data = prefix + testDocumentCompress(encoded, bytes);
         require(out.status() == QDataStream::Ok && output.open(QIODevice::WriteOnly) && output.write(data) == data.size(), "scrittura fixture cache");
         output.close(); return target;
     };

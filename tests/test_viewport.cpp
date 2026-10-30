@@ -4,6 +4,7 @@
 #endif
 #include "../cad_gpu_broad_phase.h"
 #include "../cad_cuda_tessellation.h"
+#include "../cad_document_read.h"
 #include "../cuda_support.h"
 #include <QSaveFile>
 // I componenti GUI sono dichiarati negli header e compilati separatamente.
@@ -88,6 +89,16 @@ using ForgeCad::Gui::wrappedNote;
 
 static void require(bool ok, const char *message) {
     if (!ok) throw std::runtime_error(message);
+}
+
+static QByteArray testDocumentUncompress(const QByteArray &document, qsizetype offset, qsizetype size = -1) {
+    QByteArray result;
+    require(document.size() >= 11 && ForgeCad::DocumentReadDetail::uncompress(document.mid(offset, size),
+        qsizetype(1024)*1024*1024, result, quint8(document.at(6))), "decompressione blocco fixture nativa");
+    return result;
+}
+static QByteArray testDocumentCompress(const QByteArray &data, const QByteArray &document) {
+    return ForgeCad::DocumentReadDetail::compress(data, quint8(document.at(6)), 9);
 }
 
 // Configurabile anche nei lanci diretti del runner; CTest passa la cartella da CMake.
@@ -3941,9 +3952,9 @@ public:
             require(ForgeCad::loadDocumentFile(path,loaded).isEmpty() && loaded.lengthUnit == LengthUnit::Inch, "valid unit round trip");
             QFile file(path); require(file.open(QIODevice::ReadOnly), "read regression document");
             const QByteArray data = file.readAll(); file.close();
-            const QByteArray payload = qUncompress(data.mid(11));
+            const QByteArray payload = testDocumentUncompress(data,11);
             for (int missing = 1; missing <= 4; ++missing) {
-                const QByteArray compressed = qCompress(payload.left(payload.size()-missing));
+                const QByteArray compressed = testDocumentCompress(payload.left(payload.size()-missing), data);
                 QByteArray modified = data.left(7);
                 QDataStream out(&modified,QIODevice::Append); out << quint32(compressed.size());
                 out.writeRawData(compressed.constData(),int(compressed.size()));
@@ -10262,11 +10273,11 @@ public:
             quint32 payloadSize = 0;
             staleHeader >> staleVersion >> staleCompression >> payloadSize;
             const qsizetype cacheOffset = 11 + qsizetype(payloadSize);
-            QByteArray staleCache = qUncompress(staleData.mid(cacheOffset));
-            require(staleVersion >= 14 && staleCompression == 1 && staleCache.size() > 68,
+            QByteArray staleCache = testDocumentUncompress(staleData,cacheOffset);
+            require(staleVersion >= 14 && staleCompression == 2 && staleCache.size() > 68,
                     "blocco cache 3D presente nel documento");
             staleCache[4] = staleCache.at(4) == '0' ? '1' : '0'; // altera soltanto l'impronta dei sorgenti
-            staleData.replace(cacheOffset, staleData.size() - cacheOffset, qCompress(staleCache, 6));
+            staleData.replace(cacheOffset, staleData.size() - cacheOffset, testDocumentCompress(staleCache, staleData));
             require(staleFile.open(QIODevice::WriteOnly | QIODevice::Truncate)
                         && staleFile.write(staleData) == staleData.size(),
                     "scrittura della cache con impronta precedente");

@@ -16,14 +16,14 @@ QByteArray nativeFixture(const QByteArray &payload, quint16 version, const QByte
 }
 QByteArray nativeLegacy49Fixture(const QByteArray &current, const DocumentState &state) {
     QDataStream header(current); header.skipRawData(7); quint32 size=0; header >> size;
-    const auto payload = qUncompress(current.mid(11,size));
+    const auto payload = testDocumentUncompress(current,11,size);
     require(payload.size() >= 48,"metadati nativi da rimuovere per fixture 49");
     QByteArray oldDocument;
     if (!ForgeCad::encodeDocumentDefinition53ForHash(state, oldDocument).isEmpty()) throw std::runtime_error("fixture 53");
     const auto oldSize = qFromBigEndian<quint32>(oldDocument.constData()+7);
-    const auto oldPayload = qUncompress(oldDocument.mid(11,oldSize));
+    const auto oldPayload = testDocumentUncompress(oldDocument,11,oldSize);
     const auto legacyPayload = oldPayload.left(oldPayload.size()-48);
-    const auto cache = qUncompress(current.mid(11+size));
+    const auto cache = testDocumentUncompress(current,11+size);
     QDataStream in(cache); QByteArray sourceHash,payloadHash; in >> sourceHash >> payloadHash;
     QByteArray restoredCache; QDataStream out(&restoredCache,QIODevice::WriteOnly);
     out << sourceHash << QCryptographicHash::hash(legacyPayload,QCryptographicHash::Sha256);
@@ -58,7 +58,7 @@ void nativePendingPreviousFormatTests() {
     const auto oldSize = qFromBigEndian<quint32>(request.payload.constData()+7);
     const auto oldPayload = qUncompress(request.payload.mid(11,oldSize));
     const auto currentSize = qFromBigEndian<quint32>(currentSnapshot.constData()+7);
-    const auto currentCache = qUncompress(currentSnapshot.mid(11+currentSize));
+    const auto currentCache = testDocumentUncompress(currentSnapshot,11+currentSize);
     QDataStream cacheReader(currentCache); QByteArray sourceHash,payloadHash; cacheReader >> sourceHash >> payloadHash;
     QByteArray migratedCache; QDataStream cacheWriter(&migratedCache,QIODevice::WriteOnly);
     cacheWriter << sourceHash << QCryptographicHash::hash(oldPayload,QCryptographicHash::Sha256);
@@ -200,8 +200,8 @@ void nativeRevisionTests() {
     QByteArray encoded;nativeOk(encodeDocument(working,encoded,true));
     QDataStream header(encoded);header.skipRawData(4);quint16 format=0;quint8 compression=0;quint32 payloadSize=0;
     header>>format>>compression>>payloadSize;
-    require(format==kDocumentFormatVersion && compression==1,"formato nativo corrente");
-    const auto cache=qUncompress(encoded.mid(11+payloadSize));QDataStream cacheIn(cache);
+    require(format==kDocumentFormatVersion && compression==2,"formato nativo corrente");
+    const auto cache=testDocumentUncompress(encoded,11+payloadSize);QDataStream cacheIn(cache);
     QByteArray sourceHash,payloadHash;quint32 tag=0,cacheVersion=0;cacheIn>>sourceHash>>payloadHash>>tag>>cacheVersion;
     require(cacheVersion==7,"cache geometrica resta 7");
     const auto path=temporary.filePath("lavoro.prt");
@@ -227,10 +227,10 @@ void nativeRevisionTests() {
     require(upgradedRead.version.documentId==legacy.version.documentId,"identita' migrata conservata nel 50");
     auto invalid=working;invalid.version.documentId={};QByteArray retained("mantieni");
     require(!encodeDocument(invalid,retained).isEmpty() && retained=="mantieni","ID nullo rifiutato atomicamente");
-    auto malformedPayload=qUncompress(encoded.mid(11,payloadSize));malformedPayload.replace(malformedPayload.size()-48,16,QByteArray(16,0));
+    auto malformedPayload=testDocumentUncompress(encoded,11,payloadSize);malformedPayload.replace(malformedPayload.size()-48,16,QByteArray(16,0));
     const auto retainedId=loaded.version.documentId;
     require(!decodeDocument(nativeFixture(malformedPayload,50),loaded).isEmpty() && loaded.version.documentId==retainedId,"identita' corrotta rifiutata senza stato parziale");
-    const auto truncated=qUncompress(encoded.mid(11,payloadSize));
+    const auto truncated=testDocumentUncompress(encoded,11,payloadSize);
     require(!decodeDocument(nativeFixture(truncated.left(truncated.size()-1),50),loaded).isEmpty(),"metadati troncati rifiutati");
     History undo;undo.record(working);auto copied=working;forkDocumentIdentity(copied);copied.baseCheckinId=QUuid::createUuid();
     const auto copyId=copied.version.documentId,copyBase=copied.baseCheckinId;

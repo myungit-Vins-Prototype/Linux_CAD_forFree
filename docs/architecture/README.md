@@ -14,6 +14,8 @@ La freccia è sempre **origine → destinazione**. Le occorrenze sono deduplicat
 
 L’analisi statica non è una traccia runtime: dispatch virtuale, connessioni dinamiche, `std::function`, plugin, macro e rami esclusi dalla configurazione possono introdurre chiamate ulteriori. I file non compilati dalla configurazione e CUDA hanno il catalogo e gli include, ma nessuna copertura AST garantita. L’elenco esatto delle unità analizzate e gli eventuali errori sono in `graph.json` → `analysis`. Le librerie esterne non sono nodi del grafo. I collegamenti ai sorgenti sono relativi al repository; l’ancora `#L` funziona soltanto negli editor che la supportano.
 
+Se più target compilano implementazioni alternative della stessa API (per esempio Metal nell’app e lo stub CPU nel runner), la risoluzione usa la definizione della propria unità quando disponibile. Per chiamate esterne ambigue mostra la dichiarazione nell’header, senza attribuire arbitrariamente un backend. Lo shader Metal incorporato come stringa è descritto nel catalogo ma non analizzato come C++.
+
 ## Calcolo all’apertura nel browser
 
 Dalla radice del repository:

@@ -170,7 +170,12 @@ DESCRIPTIONS.update({'tools/open_architecture.py': ('build', 'Avvio locale della
  'tests/test_display_mesh.h': ('tests', 'Mesh float della scena e anteprime: degenerazioni dopo quantizzazione, facce sottili, cache precedenti immutabili, ID topologici e picking esatto.'),
  'tests/test_history_preview_mesh.h': ('tests', 'Anteprima di stadi nascosti: fixture cucitura e mouse2 reale, tre riaperture, B-rep invariati e prima immagine uguale alla cache GL ricreata.'),
  'tests/test_lazy_mesh.h': ('tests', 'Mesh su richiesta e sonde documenti reali: worker concorrenti, rollback, qualità, firme B-rep, statistiche del pool CUDA e snapshot numerici visibili per confronto CPU/CUDA; basi instanziate annidate rifiutate dalla sonda.'),
- 'cad_cuda_tessellation': ('analysis', 'Adatta il calcolo di tessellazione ai percorsi accelerati CUDA.'),
+ 'cad_cuda_tessellation': ('analysis', 'Adattatore di valutazione B-spline/NURBS per display: CUDA/Linux e Metal/macOS, cache delle superfici, soglia Metal predefinita di 8192 campioni e fallback CPU.'),
+ 'cuda_support_metal.mm': ('analysis', 'Backend Metal delle superfici: coordinate/nodi normalizzati e coppie hi/lo float; buffer condivisi con pool concorrente limitato, budget superfici, controlli numerici e output atomico prima del fallback CPU.'),
+ 'metal_surface_kernel.h': ('analysis', 'Shader Metal incorporato per basi B-spline, derivate e quoziente NURBS in precisione hi/lo float; produce punti e normali del display, senza modificare il B-rep.'),
+ 'tests/test_metal_tessellation.cpp': ('tests', 'Confronti Metal reale/CPU su B-spline e NURBS, gradi 1–15, nodi multipli/estremi, condizionamento, concorrenza, budget e benchmark alternati.'),
+ 'tests/test_tessellation_availability.cpp': ('tests', 'Backend simulato senza GPU: disponibilità dinamica dopo inizializzazione/errore e ritorno CPU coerente con l’interruttore utente.'),
+ 'tests/test_document_compression.cpp': ('tests', 'Codec zlib/Zstandard senza perdita: checksum, limiti di espansione e lunghezze false, troncamenti/code/frame extra e destinazione atomica.'),
  'cad_curve_extract': ('features',
                        'Estrae curve 3D associative dalla geometria sorgente e dai riferimenti della '
                        'feature.'),
@@ -182,8 +187,8 @@ DESCRIPTIONS.update({'tools/open_architecture.py': ('build', 'Avvio locale della
  'tests/test_mesh_memory.h': ('tests', 'Sonda RAM bassa/massima/bassa su documenti: RSS, arene, storage mesh e cache GL, frame reali e trim solo diagnostico; nessun salvataggio CAD.'),
  'tests/test_display_cache_memory.cpp': ('tests', 'Durata cache CPU/VBO: rilascio nel primo frame sostitutivo o vuoto, riuso senza crescita, risorse condivise e variante nativa OpenGL.'),
  'cad_document_io': ('documents',
-                     'Codec nativo 54: nomi topologici di appoggi e Pierce, lettura legacy 1–53 e confronto delle definizioni storiche senza perdita dei nuovi riferimenti.'),
- 'cad_document_read': ('documents', 'Lettura limitata del documento: decompressione controllata e decodifica mesh/indici a blocchi con endian e precisione Qt preservati.'),
+                     'Codec nativo 56 con Zstandard per definizione e cache geometrica: lettura legacy zlib 1–55, mesh/B-rep e genealogia invariati e impronte storiche delle tavole conservate.'),
+ 'cad_document_read': ('documents', 'Compressione Zstandard con checksum e finestra limitata; decompressione streaming zlib/Zstd con budget/output atomico e decodifica mesh/indici a blocchi con endian e precisione Qt preservati.'),
  'cad_document_recovery': ('documents',
                            'Checkpoint di recupero e ripristino dei documenti dopo interruzioni.'),
  'cad_document_version.h': ('documents',
@@ -484,6 +489,24 @@ def aggregate(records):
     return sorted(result.values(),key=lambda e:(e['source'],e['target'],e['kind']))
 
 
+def resolve_calls(results):
+    # Uno stesso simbolo esterno può avere backend diversi in target diversi
+    # (Metal nell'app, stub CPU nel runner). Non scegliere l'ultimo analizzato:
+    # preferire la definizione della TU, poi una definizione globale univoca,
+    # altrimenti mantenere il collegamento alla dichiarazione dell'API.
+    candidates={}
+    for result in results:
+        for usr,definition in result['definitions'].items():
+            candidates.setdefault(usr,set()).add(tuple(definition))
+    unique={usr:next(iter(values)) for usr,values in candidates.items() if len(values)==1}
+    records=[]
+    for result in results:
+        for source,usr,decl,kind,line,symbol,owner in result['calls']:
+            definition=result['definitions'].get(usr) or unique.get(usr)
+            records.append((source,definition[0] if definition else decl,kind,line,symbol,owner))
+    return records
+
+
 def render(graph):
     data=json.dumps(graph,ensure_ascii=False,separators=(',',':')).replace('<','\\u003c')
     return (OUT/'template.html').read_text().replace('/*__GRAPH__*/',data)
@@ -566,19 +589,16 @@ def main():
         for (_,cache),result in zip(pending,pool.map(parse_unit,[j for j,c in pending],chunksize=1)):
             if not result['errors']:write_changed(cache,json.dumps(result))
             results.append(result);print(f"[{len(results)}/{len(jobs)}] {result['file']}"+(' ERRORI' if result['errors'] else ''),flush=True)
-    definitions={};symbols={}
+    symbols={}
     for r in results:
-        definitions.update(r['definitions'])
         for f,syms in r['symbols'].items():symbols.setdefault(f,set()).update(syms)
-    for r in results:
-        for source,usr,decl,kind,line,symbol,owner in r['calls']:
-            target=definitions.get(usr,(decl,))[0];records.append((source,target,kind,line,symbol,owner))
+    records.extend(resolve_calls(results))
     for node in nodes:node['symbols']=sorted(symbols.get(node['id'],[]))
     errors={r['file']:r['errors'] for r in results if r['errors']}
     hashes={f:digest(f) for f in files};hashes['docs/architecture/template.html']=digest('docs/architecture/template.html')
     graph={'version':VERSION,'groups':[{'id':a,'name':b,'description':c} for a,b,c in GROUPS], 'nodes':nodes,'edges':aggregate(records),'hashes':hashes,
            'analysis':{'configurationDigest':configuration_digest,'engine':'libclang: AST della configurazione CMake indicata', 'units':sorted(r['file'] for r in results),'errors':errors,
-           'limits':'Chiamate statiche risolte e indirizzi di funzione nel codice C++ compilato. Include locali rilevati testualmente, anche nei rami condizionali. Dispatch virtuale, segnali/slot dinamici, std::function, plugin e rami esclusi dalla configurazione possono aggiungere chiamate a runtime. CUDA non analizzato via AST; relazioni include disponibili. Le frecce fra file della stessa classe possono rappresentare chiamate a metodi del medesimo oggetto.'}}
+           'limits':'Chiamate statiche risolte e indirizzi di funzione nel codice C++ compilato. Definizioni alternative dello stesso simbolo in target diversi: preferita quella della TU; altrimenti collegamento alla dichiarazione API, senza attribuire un backend ambiguo. Include locali rilevati testualmente, anche nei rami condizionali. Dispatch virtuale, segnali/slot dinamici, std::function, plugin e rami esclusi dalla configurazione possono aggiungere chiamate a runtime. CUDA e shader Metal incorporati non analizzati via AST; relazioni include disponibili. Le frecce fra file della stessa classe possono rappresentare chiamate a metodi del medesimo oggetto.'}}
     if errors:
         for filename,diagnostics in errors.items():
             for diagnostic in diagnostics:print(filename+': '+diagnostic,file=sys.stderr)

@@ -30,7 +30,12 @@ if(CMAKE_CUDA_COMPILER)
     endif()
     set(FORGE_CAD_CUDA_SOURCE cuda_support.cu)
 else()
-    set(FORGE_CAD_CUDA_SOURCE cuda_support_cpu.cpp)
+    if(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
+        set(FORGE_CAD_CUDA_SOURCE cuda_support_metal.mm)
+        set_source_files_properties(cuda_support_metal.mm PROPERTIES COMPILE_OPTIONS "-fobjc-arc")
+    else()
+        set(FORGE_CAD_CUDA_SOURCE cuda_support_cpu.cpp)
+    endif()
 endif()
 
 # Il server della mappa usa le vere opzioni della build, senza eseguire
@@ -46,6 +51,21 @@ set(CMAKE_AUTORCC ON)
 find_package(Qt6 REQUIRED COMPONENTS Widgets OpenGL OpenGLWidgets)
 find_package(OpenGL REQUIRED)
 find_package(ZLIB REQUIRED)
+# Config package su Homebrew; find_path/find_library anche sulle distribuzioni
+# che forniscono libzstd-dev senza un package CMake.
+find_package(zstd CONFIG QUIET)
+if(TARGET zstd::libzstd_shared)
+    set(FORGECAD_ZSTD_TARGET zstd::libzstd_shared)
+elseif(TARGET zstd::libzstd_static)
+    set(FORGECAD_ZSTD_TARGET zstd::libzstd_static)
+else()
+    find_path(FORGECAD_ZSTD_INCLUDE_DIR zstd.h REQUIRED)
+    find_library(FORGECAD_ZSTD_LIBRARY NAMES zstd REQUIRED)
+    add_library(forgecad_zstd UNKNOWN IMPORTED)
+    set_target_properties(forgecad_zstd PROPERTIES IMPORTED_LOCATION "${FORGECAD_ZSTD_LIBRARY}"
+        INTERFACE_INCLUDE_DIRECTORIES "${FORGECAD_ZSTD_INCLUDE_DIR}")
+    set(FORGECAD_ZSTD_TARGET forgecad_zstd)
+endif()
 find_package(Threads REQUIRED)
 # OpenCASCADE serve solo ai test del kernel (riferimento per i confronti):
 # l'applicazione usa soltanto il kernel proprio.
@@ -327,6 +347,7 @@ target_include_directories(forgecad PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/generate
 
 target_link_libraries(forgecad PRIVATE
     ZLIB::ZLIB
+    ${FORGECAD_ZSTD_TARGET}
     Qt6::Widgets
     Qt6::OpenGL
     Qt6::OpenGLWidgets
@@ -405,7 +426,21 @@ if(CMAKE_CUDA_COMPILER)
 endif()
 
 # Budget attivo/inattivo CUDA e richieste/trim concorrenti; stub senza toolkit.
+add_executable(forgecad_tessellation_availability_tests tests/test_tessellation_availability.cpp cad_cuda_tessellation.cpp)
+target_include_directories(forgecad_tessellation_availability_tests PRIVATE ${PROJECT_SOURCE_DIR})
+target_link_libraries(forgecad_tessellation_availability_tests PRIVATE forgekernel)
+add_test(NAME forgecad_tessellation_availability_tests COMMAND forgecad_tessellation_availability_tests)
 add_executable(forgecad_cuda_pool_tests tests/test_cuda_pool.cpp ${FORGE_CAD_CUDA_SOURCE})
+if(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
+    # Il test di fallback deve continuare a provare lo stub CPU senza Metal.
+    set_property(TARGET forgecad_cuda_pool_tests PROPERTY SOURCES tests/test_cuda_pool.cpp cuda_support_cpu.cpp)
+    add_executable(forgecad_metal_tessellation_tests tests/test_metal_tessellation.cpp cad_cuda_tessellation.cpp cuda_support_metal.mm)
+    target_include_directories(forgecad_metal_tessellation_tests PRIVATE ${PROJECT_SOURCE_DIR})
+    target_link_libraries(forgecad_metal_tessellation_tests PRIVATE forgekernel Threads::Threads ${FORGECAD_METAL_FRAMEWORK} ${FORGECAD_FOUNDATION_FRAMEWORK})
+    add_test(NAME forgecad_metal_tessellation_tests COMMAND forgecad_metal_tessellation_tests)
+    set_tests_properties(forgecad_metal_tessellation_tests PROPERTIES SKIP_RETURN_CODE 77 TIMEOUT 180)
+    set_tests_properties(forgecad_metal_tessellation_tests PROPERTIES ENVIRONMENT "FORGECAD_METAL_MIN_BATCH=2048")
+endif()
 target_include_directories(forgecad_cuda_pool_tests PRIVATE ${PROJECT_SOURCE_DIR})
 target_link_libraries(forgecad_cuda_pool_tests PRIVATE Threads::Threads)
 target_compile_options(forgecad_cuda_pool_tests PRIVATE $<$<COMPILE_LANGUAGE:CXX>:-Wall;-Wextra;-Wpedantic>)
@@ -439,6 +474,12 @@ add_executable(forgecad_mesh_export_backend_tests tests/test_mesh_export_backend
     cad_export.cpp cad_cuda_tessellation.cpp ${FORGE_CAD_CUDA_SOURCE})
 target_include_directories(forgecad_mesh_export_backend_tests PRIVATE ${PROJECT_SOURCE_DIR})
 target_link_libraries(forgecad_mesh_export_backend_tests PRIVATE forgekernel Qt6::Core Qt6::Gui)
+if(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
+    target_link_libraries(forgecad_mesh_export_backend_tests PRIVATE ${FORGECAD_METAL_FRAMEWORK} ${FORGECAD_FOUNDATION_FRAMEWORK})
+    add_test(NAME forgecad_mesh_export_metal_tests COMMAND forgecad_mesh_export_backend_tests --require-gpu)
+    set_tests_properties(forgecad_mesh_export_metal_tests PROPERTIES SKIP_RETURN_CODE 77 TIMEOUT 180)
+    set_tests_properties(forgecad_mesh_export_metal_tests PROPERTIES ENVIRONMENT "FORGECAD_METAL_MIN_BATCH=2048")
+endif()
 target_compile_options(forgecad_mesh_export_backend_tests PRIVATE $<$<COMPILE_LANGUAGE:CXX>:-Wall;-Wextra;-Wpedantic>)
 add_test(NAME forgecad_mesh_export_cpu_tests COMMAND forgecad_mesh_export_backend_tests)
 set_tests_properties(forgecad_mesh_export_cpu_tests PROPERTIES TIMEOUT 120)
@@ -478,7 +519,7 @@ if(FORGECAD_BUILD_VIEW_TESTS)
     add_executable(forgecad_view_tests tests/test_viewport.cpp tests/test_declared_history_cache.h tests/test_boolean_history.h tests/test_blend_history.h tests/test_extrusion_history.h tests/test_revolution_history.h tests/test_all_history.h tests/test_native_revisions.h tests/test_workspace_revisions.h tests/test_linked_drawing.h tests/test_drawing_workflow.h tests/test_drawing_revisions.h tests/test_projected_drawing_file.h tests/test_drawing_multisheet.h tests/test_drawing_revision_restore.h tests/test_drawing_release.h tests/test_catalog_recovery_gui.h tests/test_surface_tools_gui.h tests/test_document_units.h tests/test_history_suppression.h tests/test_function_panels.h tests/test_drawing_mouse.h tests/test_drawing_section_model.h tests/test_drawing_performance.h cuda_support_cpu.cpp ${FORGECAD_VIEW_TEST_SOURCES})
     add_dependencies(forgecad_view_tests forgecad) # genera l'impronta una sola volta, prima dei test
     target_include_directories(forgecad_view_tests PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/generated)
-    target_link_libraries(forgecad_view_tests PRIVATE forgecad_compute Qt6::Widgets Qt6::OpenGL Qt6::OpenGLWidgets OpenGL::GL forgekernel ZLIB::ZLIB)
+    target_link_libraries(forgecad_view_tests PRIVATE forgecad_compute Qt6::Widgets Qt6::OpenGL Qt6::OpenGLWidgets OpenGL::GL forgekernel ZLIB::ZLIB ${FORGECAD_ZSTD_TARGET})
     target_compile_options(forgecad_view_tests PRIVATE -Wall -Wextra -Wpedantic)
     target_compile_definitions(forgecad_view_tests PRIVATE FORGECAD_HAS_CUDA=0 FORGECAD_SOURCE_DIR="${PROJECT_SOURCE_DIR}")
     add_executable(forgecad_selection_benchmark tests/benchmark_selection.cpp)
@@ -632,6 +673,10 @@ target_link_libraries(forgecad_shape_analysis_tests PRIVATE Qt6::Widgets Qt6::Op
 add_test(NAME forgecad_shape_analysis_tests COMMAND forgecad_shape_analysis_tests)
 
 add_executable(forgecad_snapshot_chunks_tests tests/test_snapshot_chunks.cpp cad_snapshot_chunks.cpp)
+add_executable(forgecad_document_compression_tests tests/test_document_compression.cpp cad_document_read.cpp)
+target_include_directories(forgecad_document_compression_tests PRIVATE ${PROJECT_SOURCE_DIR})
+target_link_libraries(forgecad_document_compression_tests PRIVATE Qt6::Gui ZLIB::ZLIB ${FORGECAD_ZSTD_TARGET})
+add_test(NAME forgecad_document_compression_tests COMMAND forgecad_document_compression_tests)
 target_include_directories(forgecad_snapshot_chunks_tests PRIVATE ${PROJECT_SOURCE_DIR})
 target_link_libraries(forgecad_snapshot_chunks_tests PRIVATE Qt6::Core)
 add_test(NAME forgecad_snapshot_chunks_tests COMMAND forgecad_snapshot_chunks_tests)

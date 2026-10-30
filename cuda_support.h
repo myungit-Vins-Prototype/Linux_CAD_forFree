@@ -18,6 +18,7 @@ struct ForgeCudaBSplineSurface {
     const double *weights;
 };
 
+// Interfaccia storica condivisa dai backend CUDA, Metal e stub CPU.
 // Grado massimo valutato sulla GPU (oltre resta la CPU).
 constexpr int kForgeCudaMaxDegree = 15;
 
@@ -40,6 +41,8 @@ bool forgecad_cuda_evaluate_surface(void *handle, const double *uv, std::size_t 
 constexpr std::size_t kForgeCudaActiveBudget = 128 * 1024 * 1024;
 constexpr std::size_t kForgeCudaMaxActiveSlots = 4;
 // Cache separata dei soli buffer inattivi.
+// Su Metal i byte contano i buffer condivisi UV/output (64 byte per punto),
+// senza memoria pinned o copie device separate. Stessi limiti di budget/slot.
 constexpr std::size_t kForgeCudaIdleBudget = 64 * 1024 * 1024;
 struct ForgeCudaPoolStats {
     std::size_t activeBytes = 0, idleBytes = 0;

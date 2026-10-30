@@ -6,12 +6,13 @@
 
 #include "fk_surface_batch.h"
 
-// Tassellazione di display accelerata con CUDA: le superfici B-spline/NURBS
+// Tassellazione di display accelerata con CUDA o Metal: le superfici B-spline/NURBS
 // dei punti nuovi del raffinamento (fk_tessellate) si valutano a lotti sulla
 // GPU, il resto sulla CPU. Solo per disegnare: niente di esatto passa di qui.
 namespace ForgeCad {
 
-// GPU con CUDA presente e funzionante (compilato con nvcc e driver attivo).
+// Backend GPU della piattaforma presente e funzionante. I nomi storici CUDA
+// restano compatibili con chiamanti e preferenze; macOS usa Metal.
 bool cudaTessellationAvailable();
 // Interruttore dell'utente (Opzioni -> Tassellazione con CUDA, view/cudaTessellation).
 void setCudaTessellationEnabled(bool enabled);

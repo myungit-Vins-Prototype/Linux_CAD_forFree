@@ -1,6 +1,7 @@
 #include "cad_cuda_tessellation.h"
 
 #include <atomic>
+#include <cstdlib>
 #include <mutex>
 #include <unordered_map>
 #include <vector>
@@ -26,6 +27,19 @@ public:
 
     bool evaluate(const Kernel::Surface &surface, const Kernel::Vec2 *uv, std::size_t count, Kernel::Vec3 *points,
                   Kernel::Vec3 *normals) override {
+#ifdef __APPLE__
+        // Il costo del comando Metal supera il calcolo dei lotti piccoli.
+        // Il tessellatore li valuta sulla CPU, senza upload della superficie.
+        static const std::size_t minimumBatch = [] {
+            const char *setting=std::getenv("FORGECAD_METAL_MIN_BATCH");
+            if(setting) {
+                char *end=nullptr;const auto value=std::strtoull(setting,&end,10);
+                if(end!=setting && *end=='\0' && value>=512 && value<=1048576)return std::size_t(value);
+            }
+            return std::size_t(8192);
+        }();
+        if (count < minimumBatch) return false;
+#endif
         const auto *spline = dynamic_cast<const Kernel::BSplineSurface *>(&surface);
         if (!spline) return false;
         void *handle = nullptr;
@@ -64,8 +78,9 @@ private:
 }
 
 bool cudaTessellationAvailable() {
-    static const bool available = forgecad_cuda_available();
-    return available;
+    // Il backend memorizza già il dispositivo; la sua disponibilità può
+    // invece cambiare dopo un errore del comando e deve attivare il fallback.
+    return forgecad_cuda_available();
 }
 
 void setCudaTessellationEnabled(bool value) {

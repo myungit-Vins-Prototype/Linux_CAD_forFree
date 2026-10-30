@@ -170,6 +170,11 @@ void runCase(bool rational, bool withGpu, const QString &directory) {
     const auto original=writeBodyBinary(source);
     const QVector<ExportBody> bodies{{QStringLiteral("Patch NURBS"),std::make_shared<const Body>(source),{},QColor()}};
     StlExportOptions options;options.maxEdgeLength=0;options.deflection=.001;options.angle=5;
+#ifdef __APPLE__
+    // Anche la patch con foro deve superare la soglia dei lotti Metal:
+    // confronta CPU e GPU alla stessa precisione, senza cambiare il fallback.
+    if(withGpu)options.deflection=.0002;
+#endif
     setCudaTessellationEnabled(false);
     const auto beforeCpu=cudaTessellationPoints();
     const auto cpuStl=buildBinaryStl(bodies,options);const auto cpuObj=buildQuadObj(bodies,options);
