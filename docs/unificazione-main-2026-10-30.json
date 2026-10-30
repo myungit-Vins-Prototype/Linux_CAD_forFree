@@ -1,0 +1,559 @@
+{
+  "date": "2026-10-30",
+  "main_before": "bf3d398a3dd63dbbfbe8baf8086e4f4f8613a5c6",
+  "solver_with_fixes": "cd5c76724dc10a7b557785d22672a10849e7ab7b",
+  "merge": "73f3b7e6abe73bbbfaff2c4b3e58266eb450a80d",
+  "tested_code_commit": "b362f382934253df976430a40a40a4ea5dbddfd8",
+  "source_files_checked": 487,
+  "later_changes": "Documentation and architecture descriptions only; application sources and CMake match the tested commit.",
+  "ci": {
+    "url": "https://github.com/myungit-Vins-Prototype/Linux_CAD_forFree/actions/runs/41043333214",
+    "conclusion": "success",
+    "jobs": [
+      {
+        "platform": "macos",
+        "passed": 51,
+        "skipped": 1,
+        "tests": [
+          {
+            "test": "forgecad_box_fallback_tests",
+            "result": "Passed"
+          },
+          {
+            "test": "forgecad_gpu_broad_phase_tests",
+            "result": "Passed"
+          },
+          {
+            "test": "forgecad_metal_box_pool_tests",
+            "result": "Passed"
+          },
+          {
+            "test": "forgecad_tessellation_availability_tests",
+            "result": "Passed"
+          },
+          {
+            "test": "forgecad_geometry_sources_tests",
+            "result": "Passed"
+          },
+          {
+            "test": "forgecad_cuda_pool_tests",
+            "result": "Passed"
+          },
+          {
+            "test": "forgecad_constraint_linear_tests",
+            "result": "Passed"
+          },
+          {
+            "test": "forgecad_display_cache_memory_tests",
+            "result": "Passed"
+          },
+          {
+            "test": "forgecad_metal_tessellation_tests",
+            "result": "Passed"
+          },
+          {
+            "test": "forgecad_mesh_export_cpu_tests",
+            "result": "Passed"
+          },
+          {
+            "test": "forgecad_application_theme_tests",
+            "result": "Passed"
+          },
+          {
+            "test": "forgecad_shape_analysis_tests",
+            "result": "Passed"
+          },
+          {
+            "test": "forgecad_document_compression_tests",
+            "result": "Passed"
+          },
+          {
+            "test": "forgecad_snapshot_chunks_tests",
+            "result": "Passed"
+          },
+          {
+            "test": "forgecad_drawing_tests",
+            "result": "Passed"
+          },
+          {
+            "test": "forgecad_revision_store_tests",
+            "result": "Passed"
+          },
+          {
+            "test": "forgecad_revision_release_tests",
+            "result": "Passed"
+          },
+          {
+            "test": "forgecad_catalog_recovery_tests",
+            "result": "Passed"
+          },
+          {
+            "test": "forgecad_feature_dependencies_tests",
+            "result": "Passed"
+          },
+          {
+            "test": "forgecad_geometry_refs_tests",
+            "result": "Passed"
+          },
+          {
+            "test": "forgecad_workspace_tests",
+            "result": "Passed"
+          },
+          {
+            "test": "forgecad_mesh_export_metal_tests",
+            "result": "Passed"
+          },
+          {
+            "test": "forgecad_drawing_preparation_tests",
+            "result": "Passed"
+          },
+          {
+            "test": "forgecad_drawing_editor_tests",
+            "result": "Passed"
+          },
+          {
+            "test": "forgecad_projected_drawing_tests",
+            "result": "Passed"
+          },
+          {
+            "test": "forgecad_drawing_scale_tests",
+            "result": "Passed"
+          },
+          {
+            "test": "forgecad_drawing_layout_history_tests",
+            "result": "Passed"
+          },
+          {
+            "test": "forgecad_drawing_dimensions_tests",
+            "result": "Passed"
+          },
+          {
+            "test": "forgecad_drawing_view_edit_tests",
+            "result": "Passed"
+          },
+          {
+            "test": "forgecad_drawing_view_placement_tests",
+            "result": "Passed"
+          },
+          {
+            "test": "forgecad_drawing_silhouette_tests",
+            "result": "Passed"
+          },
+          {
+            "test": "forgecad_drawing_dimensions_gui_tests",
+            "result": "Passed"
+          },
+          {
+            "test": "forgecad_drawing_hidden_lines_tests",
+            "result": "Passed"
+          },
+          {
+            "test": "forgecad_drawing_page_tests",
+            "result": "Passed"
+          },
+          {
+            "test": "forgecad_drawing_derived_tests",
+            "result": "Passed"
+          },
+          {
+            "test": "forgecad_drawing_detail_tests",
+            "result": "Passed"
+          },
+          {
+            "test": "forgecad_drawing_auxiliary_tests",
+            "result": "Passed"
+          },
+          {
+            "test": "forgecad_drawing_break_tests",
+            "result": "Passed"
+          },
+          {
+            "test": "forgecad_revision_numbers_tests",
+            "result": "Passed"
+          },
+          {
+            "test": "forgecad_drawing_presentation_tests",
+            "result": "Passed"
+          },
+          {
+            "test": "forgecad_drawing_complete_sections_tests",
+            "result": "Passed"
+          },
+          {
+            "test": "forgecad_drawing_visibility_tests",
+            "result": "Passed"
+          },
+          {
+            "test": "forgecad_drawing_centers_tests",
+            "result": "Passed"
+          },
+          {
+            "test": "forgecad_drawing_ui_controls_tests",
+            "result": "Passed"
+          },
+          {
+            "test": "forgecad_drawing_axes_tests",
+            "result": "Passed"
+          },
+          {
+            "test": "forgecad_overlay_uniform_tests",
+            "result": "***Skipped"
+          },
+          {
+            "test": "forgecad_drawing_focus_tests",
+            "result": "Passed"
+          },
+          {
+            "test": "forgekernel_history_tests",
+            "result": "Passed"
+          },
+          {
+            "test": "forgekernel_blend_probe_self_test",
+            "result": "Passed"
+          },
+          {
+            "test": "forgekernel_tolerance_tests",
+            "result": "Passed"
+          },
+          {
+            "test": "forgekernel_surface_tools_tests",
+            "result": "Passed"
+          },
+          {
+            "test": "forgekernel_tests",
+            "result": "Passed"
+          }
+        ]
+      },
+      {
+        "platform": "linux",
+        "passed": 47,
+        "skipped": 2,
+        "tests": [
+          {
+            "test": "forgecad_gpu_broad_phase_tests",
+            "result": "***Skipped"
+          },
+          {
+            "test": "forgecad_geometry_sources_tests",
+            "result": "Passed"
+          },
+          {
+            "test": "forgecad_tessellation_availability_tests",
+            "result": "Passed"
+          },
+          {
+            "test": "forgecad_cuda_pool_tests",
+            "result": "Passed"
+          },
+          {
+            "test": "forgecad_constraint_linear_tests",
+            "result": "Passed"
+          },
+          {
+            "test": "forgecad_display_cache_memory_tests",
+            "result": "Passed"
+          },
+          {
+            "test": "forgecad_mesh_export_cpu_tests",
+            "result": "Passed"
+          },
+          {
+            "test": "forgecad_box_fallback_tests",
+            "result": "Passed"
+          },
+          {
+            "test": "forgecad_shape_analysis_tests",
+            "result": "Passed"
+          },
+          {
+            "test": "forgecad_document_compression_tests",
+            "result": "Passed"
+          },
+          {
+            "test": "forgecad_application_theme_tests",
+            "result": "Passed"
+          },
+          {
+            "test": "forgecad_snapshot_chunks_tests",
+            "result": "Passed"
+          },
+          {
+            "test": "forgecad_drawing_tests",
+            "result": "Passed"
+          },
+          {
+            "test": "forgecad_revision_release_tests",
+            "result": "Passed"
+          },
+          {
+            "test": "forgecad_revision_store_tests",
+            "result": "Passed"
+          },
+          {
+            "test": "forgecad_feature_dependencies_tests",
+            "result": "Passed"
+          },
+          {
+            "test": "forgecad_geometry_refs_tests",
+            "result": "Passed"
+          },
+          {
+            "test": "forgecad_workspace_tests",
+            "result": "Passed"
+          },
+          {
+            "test": "forgecad_catalog_recovery_tests",
+            "result": "Passed"
+          },
+          {
+            "test": "forgecad_drawing_scale_tests",
+            "result": "Passed"
+          },
+          {
+            "test": "forgecad_drawing_editor_tests",
+            "result": "Passed"
+          },
+          {
+            "test": "forgecad_projected_drawing_tests",
+            "result": "Passed"
+          },
+          {
+            "test": "forgecad_drawing_preparation_tests",
+            "result": "Passed"
+          },
+          {
+            "test": "forgecad_drawing_layout_history_tests",
+            "result": "Passed"
+          },
+          {
+            "test": "forgecad_drawing_dimensions_tests",
+            "result": "Passed"
+          },
+          {
+            "test": "forgecad_drawing_view_edit_tests",
+            "result": "Passed"
+          },
+          {
+            "test": "forgecad_drawing_view_placement_tests",
+            "result": "Passed"
+          },
+          {
+            "test": "forgecad_drawing_silhouette_tests",
+            "result": "Passed"
+          },
+          {
+            "test": "forgecad_drawing_dimensions_gui_tests",
+            "result": "Passed"
+          },
+          {
+            "test": "forgecad_drawing_hidden_lines_tests",
+            "result": "Passed"
+          },
+          {
+            "test": "forgecad_drawing_page_tests",
+            "result": "Passed"
+          },
+          {
+            "test": "forgecad_drawing_derived_tests",
+            "result": "Passed"
+          },
+          {
+            "test": "forgecad_drawing_detail_tests",
+            "result": "Passed"
+          },
+          {
+            "test": "forgecad_drawing_auxiliary_tests",
+            "result": "Passed"
+          },
+          {
+            "test": "forgecad_drawing_break_tests",
+            "result": "Passed"
+          },
+          {
+            "test": "forgecad_revision_numbers_tests",
+            "result": "Passed"
+          },
+          {
+            "test": "forgecad_drawing_presentation_tests",
+            "result": "Passed"
+          },
+          {
+            "test": "forgecad_drawing_complete_sections_tests",
+            "result": "Passed"
+          },
+          {
+            "test": "forgecad_drawing_centers_tests",
+            "result": "Passed"
+          },
+          {
+            "test": "forgecad_drawing_axes_tests",
+            "result": "Passed"
+          },
+          {
+            "test": "forgecad_drawing_ui_controls_tests",
+            "result": "Passed"
+          },
+          {
+            "test": "forgecad_drawing_focus_tests",
+            "result": "Passed"
+          },
+          {
+            "test": "forgecad_overlay_uniform_tests",
+            "result": "***Skipped"
+          },
+          {
+            "test": "forgecad_drawing_visibility_tests",
+            "result": "Passed"
+          },
+          {
+            "test": "forgekernel_history_tests",
+            "result": "Passed"
+          },
+          {
+            "test": "forgekernel_blend_probe_self_test",
+            "result": "Passed"
+          },
+          {
+            "test": "forgekernel_tolerance_tests",
+            "result": "Passed"
+          },
+          {
+            "test": "forgekernel_surface_tools_tests",
+            "result": "Passed"
+          },
+          {
+            "test": "forgekernel_tests",
+            "result": "Passed"
+          }
+        ]
+      }
+    ]
+  },
+  "local_cpu": {
+    "passed": 47,
+    "skipped": [
+      "forgecad_gpu_broad_phase_tests",
+      "forgecad_overlay_uniform_tests"
+    ],
+    "failed": 0,
+    "seconds": 310.14,
+    "cuda_translation_units": 0
+  },
+  "local_opengl_xcb": "forgecad_overlay_uniform_tests PASS, zero GL errors",
+  "local_cuda": {
+    "hardware": "NVIDIA Quadro RTX 3000",
+    "passed": 7,
+    "skipped": 0,
+    "failed": 0
+  },
+  "parser_compatibility": {
+    "fallback_step_passed": 17,
+    "fallback_iges_passed": 6,
+    "linux_final_number_regressions_passed": 2
+  },
+  "models": [
+    {
+      "document": "ct",
+      "input_sha256": "cf25833b681806b8b806ad13ce92c09853eda64595e445d3c72270e77502c682",
+      "input_unchanged": true,
+      "bodies": 36,
+      "rebuild_errors": 0,
+      "same_brep_errors_visibility": true,
+      "cpu_cuda_points": 0,
+      "performance_comparison": false
+    },
+    {
+      "document": "mouse2",
+      "input_sha256": "7ffa64559f38820ed0f070fa233efc27a2b5ea82ee749e04817a756cb1ae92ce",
+      "input_unchanged": true,
+      "bodies": 36,
+      "rebuild_errors": 0,
+      "same_brep_errors_visibility": true,
+      "cpu_cuda_points": 0,
+      "performance_comparison": false
+    },
+    {
+      "document": "assembly",
+      "input_sha256": "5b3d658321f460e826ff1e3c1415054f003ebc03325aa9e69da2a346be227791",
+      "input_unchanged": true,
+      "bodies": 1200,
+      "rebuild_errors": 4,
+      "same_brep_errors_visibility": true,
+      "cpu_cuda_points": 0,
+      "performance_comparison": false
+    }
+  ],
+  "drawing_ct0578": {
+    "ready": 48,
+    "total": 48,
+    "reopenedReady": 48,
+    "mouseAngle": 9.999999999999998,
+    "upgraded": 91,
+    "axesReady": 1,
+    "axesTotal": 1,
+    "notesReady": 1,
+    "notesTotal": 1,
+    "pdfWarnings": 14
+  },
+  "drawing_input": "Frozen diagnostic copy; the original drawing was updated externally and was never written by these checks.",
+  "architecture_cpu": {
+    "nodes": 509,
+    "edges": 6064,
+    "units": 238,
+    "sites": 69555,
+    "relations": {
+      "kernel/fk_exchange.cpp": {
+        "incoming": 11,
+        "outgoing": 20
+      },
+      "cad_drawing_dimension.cpp": {
+        "incoming": 28,
+        "outgoing": 18
+      },
+      "cad_drawing_editor.cpp": {
+        "incoming": 48,
+        "outgoing": 41
+      }
+    },
+    "browserErrors": []
+  },
+  "architecture_cuda": {
+    "nodes": 509,
+    "edges": 6929,
+    "units": 240,
+    "sites": 83590,
+    "relations": {
+      "kernel/fk_exchange.cpp": {
+        "incoming": 11,
+        "outgoing": 20
+      },
+      "cad_drawing_dimension.cpp": {
+        "incoming": 31,
+        "outgoing": 18
+      },
+      "cad_drawing_editor.cpp": {
+        "incoming": 61,
+        "outgoing": 41
+      }
+    },
+    "browserErrors": []
+  },
+  "application_binaries": {
+    "cpu": {
+      "sha256": "1e6ca92854808e2dd0903e2787dbab38e1af87463b2e352740878dc75f0459ba",
+      "bytes": 90908488
+    },
+    "cuda": {
+      "sha256": "b0d616be39ad0cde51dd0862dbac4d07dcc329a5573d1d9169c808d7fd910d3c",
+      "bytes": 92183296
+    },
+    "desktop": {
+      "sha256": "c9109f3bc8aaa2a6237442d5a6d8877ba490765557c09428505601fc10e16207",
+      "bytes": 92158712
+    }
+  },
+  "solver_archive_tag": "archive/solver-mesh-gpu-20261030",
+  "performance_comparison": false,
+  "local_artifacts": "/home/myungit/Linux_CAD_forFree/forgecad-linux-solver/unificazione-20261030"
+}
